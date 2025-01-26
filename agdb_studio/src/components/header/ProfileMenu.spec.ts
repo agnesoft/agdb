@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { mount } from "@vue/test-utils";
 import useModal from "@/composables/modal/modal";
-import UserMenu from "./UserMenu.vue";
+import ProfileMenu from "./ProfileMenu.vue";
 import { user_change_password } from "@/tests/apiMock";
 import { useContentInputs } from "@/composables/content/inputs";
 import { KEY_MODAL } from "@/composables/modal/constants";
@@ -12,7 +12,7 @@ const { logout } = vi.hoisted(() => {
     };
 });
 
-vi.mock("@/composables/user/auth", () => {
+vi.mock("@/composables/profile/auth", () => {
     return {
         useAuth: () => ({
             logout,
@@ -20,7 +20,7 @@ vi.mock("@/composables/user/auth", () => {
     };
 });
 
-vi.mock("@/composables/user/account", () => {
+vi.mock("@/composables/profile/account", () => {
     return {
         useAccount: () => ({
             username: "testUser",
@@ -32,19 +32,19 @@ vi.mock("@/composables/user/account", () => {
 const { modalIsVisible, closeModal, handleConfirm, onConfirm } = useModal();
 const { setInputValue } = useContentInputs();
 
-describe("UserDropdown", () => {
+describe("ProfileDropdown", () => {
     beforeEach(() => {
         vi.clearAllMocks();
         closeModal();
     });
     it("renders the user actions", () => {
-        const wrapper = mount(UserMenu);
+        const wrapper = mount(ProfileMenu);
         expect(wrapper.text()).toContain("Change password");
         expect(wrapper.text()).toContain("Logout");
     });
 
     it("should logout on click", async () => {
-        const wrapper = mount(UserMenu);
+        const wrapper = mount(ProfileMenu);
         const logoutElement = wrapper.find(".menu-item[data-key=logout]");
         logoutElement.trigger("click");
         await wrapper.vm.$nextTick();
@@ -55,7 +55,7 @@ describe("UserDropdown", () => {
     });
 
     it("should open the change password modal on click", async () => {
-        const wrapper = mount(UserMenu);
+        const wrapper = mount(ProfileMenu);
         const changePasswordElement = wrapper.find(
             ".menu-item[data-key=change-password]",
         );
@@ -66,7 +66,7 @@ describe("UserDropdown", () => {
     });
 
     it("should change password on confirm", async () => {
-        const wrapper = mount(UserMenu);
+        const wrapper = mount(ProfileMenu);
         const changePasswordElement = wrapper.find(
             ".menu-item[data-key=change-password]",
         );
@@ -83,7 +83,7 @@ describe("UserDropdown", () => {
     });
 
     it("should check the length of the new password", async () => {
-        const wrapper = mount(UserMenu);
+        const wrapper = mount(ProfileMenu);
         const changePasswordElement = wrapper.find(
             ".menu-item[data-key=change-password]",
         );
@@ -101,7 +101,7 @@ describe("UserDropdown", () => {
     });
 
     it("should check the match of the new password", async () => {
-        const wrapper = mount(UserMenu);
+        const wrapper = mount(ProfileMenu);
         const changePasswordElement = wrapper.find(
             ".menu-item[data-key=change-password]",
         );
@@ -119,7 +119,7 @@ describe("UserDropdown", () => {
     });
 
     it("should check the match of new password also in the confirm", async () => {
-        const wrapper = mount(UserMenu);
+        const wrapper = mount(ProfileMenu);
         const changePasswordElement = wrapper.find(
             ".menu-item[data-key=change-password]",
         );

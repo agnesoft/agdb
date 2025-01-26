@@ -5,7 +5,7 @@ import {
     USER_VIEW_KEY,
     CHANGE_PASSWORD_KEY,
     LOGOUT_KEY,
-} from "./userActions";
+} from "./profileActions";
 
 const { isAdmin, isAdminView, pushMock } = vi.hoisted(() => {
     return {
@@ -15,7 +15,7 @@ const { isAdmin, isAdminView, pushMock } = vi.hoisted(() => {
     };
 });
 
-vi.mock("@/composables/user/admin", () => {
+vi.mock("@/composables/profile/admin", () => {
     return {
         useAdmin: vi.fn().mockReturnValue({
             isAdmin,
@@ -32,11 +32,11 @@ vi.mock("@/router", () => {
     };
 });
 
-describe("userActions.ts", () => {
+describe("profileActions.ts", () => {
     beforeEach(() => {
         vi.clearAllMocks();
     });
-    it("returns the user actions when admin in user screen", () => {
+    it("returns the profile actions when admin in user screen", () => {
         isAdmin.value = true;
         isAdminView.value = false;
         const { actions } = useUserActions();
@@ -55,7 +55,7 @@ describe("userActions.ts", () => {
         );
     });
 
-    it("returns the user actions when admin in admin screen", () => {
+    it("returns the profile actions when admin in admin screen", () => {
         isAdmin.value = true;
         isAdminView.value = true;
         const { actions } = useUserActions();
@@ -74,7 +74,7 @@ describe("userActions.ts", () => {
         );
     });
 
-    it("returns the user actions when not admin in user screen", () => {
+    it("returns the profile actions when not admin in user screen", () => {
         isAdmin.value = false;
         isAdminView.value = false;
         const { actions } = useUserActions();

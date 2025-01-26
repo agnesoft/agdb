@@ -17,7 +17,7 @@ All URIs are relative to http://localhost:3000, except if the operation defines 
 | [**adminDbOptimize()**](AgdbApi.md#adminDbOptimize) | **POST** /api/v1/admin/db/{owner}/{db}/optimize |  |
 | [**adminDbRemove()**](AgdbApi.md#adminDbRemove) | **DELETE** /api/v1/admin/db/{owner}/{db}/remove |  |
 | [**adminDbRename()**](AgdbApi.md#adminDbRename) | **POST** /api/v1/admin/db/{owner}/{db}/rename |  |
-| [**adminDbRestore()**](AgdbApi.md#adminDbRestore) | **POST** /api/v1/db/admin/{owner}/{db}/restore |  |
+| [**adminDbRestore()**](AgdbApi.md#adminDbRestore) | **POST** /api/v1/admin/db/{owner}/{db}/restore |  |
 | [**adminDbUserAdd()**](AgdbApi.md#adminDbUserAdd) | **PUT** /api/v1/admin/db/{owner}/{db}/user/{username}/add |  |
 | [**adminDbUserList()**](AgdbApi.md#adminDbUserList) | **GET** /api/v1/admin/db/{owner}/{db}/user/list |  |
 | [**adminDbUserRemove()**](AgdbApi.md#adminDbUserRemove) | **DELETE** /api/v1/admin/db/{owner}/{db}/user/{username}/remove |  |

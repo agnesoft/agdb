@@ -144,6 +144,8 @@ async fn in_memory() -> anyhow::Result<()> {
     let status = server.api.admin_db_backup(owner, db).await?;
     assert_eq!(status, 201);
     assert!(Path::new(&server.data_dir).join(owner).join(db).exists());
+    let status = server.api.admin_db_restore(owner, db).await?;
+    assert_eq!(status, 201);
     Ok(())
 }
 

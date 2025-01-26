@@ -4138,7 +4138,7 @@ class AgdbApi
         }
 
 
-        $resourcePath = '/api/v1/db/admin/{owner}/{db}/restore';
+        $resourcePath = '/api/v1/admin/db/{owner}/{db}/restore';
         $formParams = [];
         $queryParams = [];
         $headerParams = [];

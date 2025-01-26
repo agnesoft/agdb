@@ -183,9 +183,6 @@
           "401": {
             "description": "unauthorized"
           },
-          "403": {
-            "description": "memory db cannot have backup"
-          },
           "404": {
             "description": "db / user not found"
           }
@@ -695,6 +692,50 @@
           },
           "467": {
             "description": "invalid db"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/db/{owner}/{db}/restore": {
+      "post": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "admin_db_restore",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db",
+            "in": "path",
+            "description": "db name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "db restored"
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "404": {
+            "description": "db or backup not found"
           }
         },
         "security": [
@@ -1250,50 +1291,6 @@
             "description": "invalid credentials"
           }
         }
-      }
-    },
-    "/api/v1/db/admin/{owner}/{db}/restore": {
-      "post": {
-        "tags": [
-          "agdb"
-        ],
-        "operationId": "admin_db_restore",
-        "parameters": [
-          {
-            "name": "owner",
-            "in": "path",
-            "description": "user name",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "db",
-            "in": "path",
-            "description": "db name",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "201": {
-            "description": "db restored"
-          },
-          "401": {
-            "description": "unauthorized"
-          },
-          "404": {
-            "description": "db or backup not found"
-          }
-        },
-        "security": [
-          {
-            "Token": []
-          }
-        ]
       }
     },
     "/api/v1/db/list": {

@@ -1473,8 +1473,6 @@ declare namespace Paths {
             }
             export interface $401 {
             }
-            export interface $403 {
-            }
             export interface $404 {
             }
         }
@@ -2394,6 +2392,14 @@ export interface OperationMethods {
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.AdminDbRename.Responses.$201>
   /**
+   * admin_db_restore
+   */
+  'admin_db_restore'(
+    parameters?: Parameters<Paths.AdminDbRestore.PathParameters> | null,
+    data?: any,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.AdminDbRestore.Responses.$201>
+  /**
    * admin_db_user_list
    */
   'admin_db_user_list'(
@@ -2505,14 +2511,6 @@ export interface OperationMethods {
     data?: Paths.ClusterUserLogin.RequestBody,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.ClusterUserLogin.Responses.$200>
-  /**
-   * admin_db_restore
-   */
-  'admin_db_restore'(
-    parameters?: Parameters<Paths.AdminDbRestore.PathParameters> | null,
-    data?: any,
-    config?: AxiosRequestConfig  
-  ): OperationResponse<Paths.AdminDbRestore.Responses.$201>
   /**
    * db_list
    */
@@ -2822,6 +2820,16 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AdminDbRename.Responses.$201>
   }
+  ['/api/v1/admin/db/{owner}/{db}/restore']: {
+    /**
+     * admin_db_restore
+     */
+    'post'(
+      parameters?: Parameters<Paths.AdminDbRestore.PathParameters> | null,
+      data?: any,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.AdminDbRestore.Responses.$201>
+  }
   ['/api/v1/admin/db/{owner}/{db}/user/list']: {
     /**
      * admin_db_user_list
@@ -2961,16 +2969,6 @@ export interface PathsDictionary {
       data?: Paths.ClusterUserLogin.RequestBody,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.ClusterUserLogin.Responses.$200>
-  }
-  ['/api/v1/db/admin/{owner}/{db}/restore']: {
-    /**
-     * admin_db_restore
-     */
-    'post'(
-      parameters?: Parameters<Paths.AdminDbRestore.PathParameters> | null,
-      data?: any,
-      config?: AxiosRequestConfig  
-    ): OperationResponse<Paths.AdminDbRestore.Responses.$201>
   }
   ['/api/v1/db/list']: {
     /**

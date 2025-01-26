@@ -10,50 +10,78 @@ use std::sync::OnceLock;
 
 static AGDB_STUDIO: Dir = include_dir!("agdb_studio/dist");
 static AGDB_STUDIO_INDEX_JS: OnceLock<String> = OnceLock::new();
+static AGDB_STUDIO_INDEX_JS_CONTENT: OnceLock<String> = OnceLock::new();
 static AGDB_STUDIO_INDEX_HTML: OnceLock<String> = OnceLock::new();
 
-pub(crate) fn init(config: &Config) {
-    AGDB_STUDIO_INDEX_JS.get_or_init(|| {
-        let index = AGDB_STUDIO
-            .get_dir("assets")
-            .expect("assets dir not found")
-            .files()
-            .find(|f| {
-                f.path().extension().unwrap_or_default() == "js"
-                    && f.path()
-                        .file_stem()
-                        .unwrap_or_default()
-                        .to_string_lossy()
-                        .starts_with("index")
-            })
-            .expect("index.js not found")
-            .contents_utf8()
-            .expect("Failed to read index.js");
+fn init_error(msg: &str) -> ServerError {
+    ServerError::new(StatusCode::INTERNAL_SERVER_ERROR, msg)
+}
 
-        let f = index.replace("\"/studio", &format!("\"{}/studio", config.basepath));
+fn init_index_js_name() -> ServerResult<String> {
+    let index_html = AGDB_STUDIO
+        .get_file("index.html")
+        .ok_or(init_error("1: index.html not found"))?;
+    let index_content = index_html
+        .contents_utf8()
+        .ok_or(init_error("2: index.html could not be read"))?;
 
-        if !config.basepath.is_empty() {
-            f.replace(
-                "http://localhost:3000",
-                &format!(
-                    "{}{}",
-                    config.address.trim_end_matches("/"),
-                    &config.basepath
-                ),
-            )
-        } else {
-            f
-        }
-    });
+    tracing::info!("index_content: {:?}", index_content);
 
-    AGDB_STUDIO_INDEX_HTML.get_or_init(|| {
-        AGDB_STUDIO
-            .get_file("index.html")
-            .expect("index.html not found")
-            .contents_utf8()
-            .expect("Failed to read index.html")
-            .replace("\"/studio/", &format!("\"{}/studio/", config.basepath))
-    });
+    let (_, index_js_suffix) = index_content
+        .split_once("src=\"/studio/assets/index")
+        .ok_or(init_error("1: failed to find index.js in index.html"))?;
+    let (index_js_suffix, _) = index_js_suffix
+        .split_once(".js\"></script>")
+        .ok_or(init_error("2: failed to find index.js in index.html"))?;
+
+    let index_js_name = format!("assets/index{index_js_suffix}.js");
+
+    AGDB_STUDIO_INDEX_JS.set(index_js_name.clone())?;
+
+    Ok(index_js_name)
+}
+
+fn init_index_js_content(filename: &str, config: &Config) -> ServerResult {
+    let index_js = AGDB_STUDIO
+        .get_file(filename)
+        .ok_or(init_error("failed to find index.js in index.html"))?;
+    let content = index_js.contents_utf8().expect("Failed to read index.js");
+    let index_js_content = if !config.basepath.is_empty() {
+        let f = content.replace("\"/studio", &format!("\"{}/studio", config.basepath));
+        f.replace(
+            "http://localhost:3000",
+            &format!(
+                "{}{}",
+                config.address.trim_end_matches("/"),
+                &config.basepath
+            ),
+        )
+    } else {
+        content.to_string()
+    };
+
+    AGDB_STUDIO_INDEX_JS_CONTENT.set(index_js_content)?;
+
+    Ok(())
+}
+
+fn init_index_html(config: &Config) -> ServerResult {
+    let content = AGDB_STUDIO
+        .get_file("index.html")
+        .ok_or(init_error("3: index.html not found"))?
+        .contents_utf8()
+        .ok_or(init_error("4: index.html could not be read"))?
+        .replace("\"/studio/", &format!("\"{}/studio/", config.basepath));
+
+    AGDB_STUDIO_INDEX_HTML.set(content)?;
+
+    Ok(())
+}
+
+pub(crate) fn init(config: &Config) -> ServerResult {
+    let index_js_name = init_index_js_name()?;
+    init_index_js_content(&index_js_name, config)?;
+    init_index_html(config)
 }
 
 async fn studio_index() -> ServerResult<(
@@ -82,8 +110,8 @@ pub(crate) async fn studio(Path(file): Path<String>) -> ServerResult<impl IntoRe
         return studio_index().await;
     }
 
-    if file.ends_with(".js") && file.contains("index") {
-        let content = AGDB_STUDIO_INDEX_JS.get().ok_or(ServerError::new(
+    if AGDB_STUDIO_INDEX_JS.get() == Some(&file) {
+        let content = AGDB_STUDIO_INDEX_JS_CONTENT.get().ok_or(ServerError::new(
             StatusCode::INTERNAL_SERVER_ERROR,
             "index.js not found",
         ))?;

@@ -11,7 +11,7 @@ export const Intro = () => {
                 no query language | performance independnet of data size | 10X
                 cost reduction
             </p>
-            <p>
+            <p className={styles.links}>
                 <a href="/docs/guides/quickstart">Quickstart</a>
                 <a href="/whyagdb">Why agdb?</a>
                 <a href="/enterprise/consultation">Expert consultation</a>

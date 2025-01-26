@@ -1,4 +1,5 @@
 import Image from "next/image";
+import styles from "./logo.module.scss";
 
 export const Logo = () => {
     return (
@@ -8,7 +9,7 @@ export const Logo = () => {
                 alt="logo"
                 width="70"
                 height="70"
-                style={{ width: "3rem", height: "3rem" }}
+                className={styles.logo}
             />
             <span style={{ marginLeft: ".8rem" }}>agdb</span>
         </>

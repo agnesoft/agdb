@@ -11,6 +11,17 @@ export type Column<T extends TRow> = {
     cellComponent?: AsyncComponent | ((row: T) => AsyncComponent);
     valueFormatter?: (value: TCellType) => TCellType;
     actions?: Action<T>[];
+    type?: "string" | "number" | "boolean";
+
+    // TODO: possibly add these later
+    // width?: string;
+    // minWidth?: string;
+    // maxWidth?: string;
+    // align?: "left" | "center" | "right";
+    // headerAlign?: "left" | "center" | "right";
+    // headerComponent?: AsyncComponent;
+    // filterComponent?: AsyncComponent;
+    // filter?: (row: T, filter: string) => boolean;
 };
 
 export type Table<T extends TRow> = {

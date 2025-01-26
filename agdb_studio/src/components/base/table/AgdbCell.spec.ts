@@ -148,4 +148,65 @@ describe("AgdbCell", () => {
         });
         expect(wrapper.html()).toContain("agdb-cell-menu-stub");
     });
+    it("should render boolean cell when it is true", () => {
+        const columns = new Map();
+        columns.set("backup", {
+            key: "backup",
+            title: "Backup",
+            type: "boolean",
+        });
+        const wrapper = mount(AgdbCell, {
+            props: {
+                cellKey: "backup",
+            },
+            global: {
+                provide: {
+                    [INJECT_KEY_COLUMNS]: { value: columns },
+                    [INJECT_KEY_ROW]: {
+                        value: {
+                            role: "admin",
+                            owner: "admin",
+                            db: "test",
+                            db_type: "memory",
+                            size: 2656,
+                            backup: true,
+                        },
+                    },
+                },
+            },
+        });
+
+        expect(wrapper.find(".agdb-cell .positive-icon").exists()).toBe(true);
+    });
+
+    it("should render boolean cell when it is false", () => {
+        const columns = new Map();
+        columns.set("backup", {
+            key: "backup",
+            title: "Backup",
+            type: "boolean",
+        });
+        const wrapper = mount(AgdbCell, {
+            props: {
+                cellKey: "backup",
+            },
+            global: {
+                provide: {
+                    [INJECT_KEY_COLUMNS]: { value: columns },
+                    [INJECT_KEY_ROW]: {
+                        value: {
+                            role: "admin",
+                            owner: "admin",
+                            db: "test",
+                            db_type: "memory",
+                            size: 2656,
+                            backup: false,
+                        },
+                    },
+                },
+            },
+        });
+
+        expect(wrapper.find(".agdb-cell .negative-icon").exists()).toBe(true);
+    });
 });

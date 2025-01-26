@@ -20,7 +20,7 @@ const addUser = async ({ username, password }: AddUserParams) => {
         addNotification({
             type: "success",
             title: "User added",
-            message: `User ${name} added successfully.`,
+            message: `User ${username} added successfully.`,
         });
     });
 };

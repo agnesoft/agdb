@@ -1,6 +1,5 @@
 import type { UserStatus } from "agdb_api/dist/openapi";
 import { useContentInputs } from "../content/inputs";
-import useModal from "../modal/modal";
 import { client } from "@/services/api.service";
 import { KEY_MODAL } from "../modal/constants";
 import { addNotification } from "../notification/notificationStore";
@@ -8,7 +7,6 @@ import { convertArrayOfStringsToContent } from "../content/utils";
 import type { Column, TRow } from "../table/types";
 
 const { getInputValue } = useContentInputs();
-const { openModal } = useModal();
 
 const userActions: Action<UserStatus>[] = [
     {
@@ -40,10 +38,11 @@ const userActions: Action<UserStatus>[] = [
             ]),
             {
                 input: {
-                    type: "password",
+                    type: "text",
                     label: "Password",
                     key: "password",
                     required: true,
+                    autofocus: true,
                 },
             },
         ],
@@ -55,7 +54,7 @@ const userActions: Action<UserStatus>[] = [
         label: "Logout",
         action: async ({ params }) => {
             const cluster = !!getInputValue<string>(KEY_MODAL, "cluster");
-
+            console.log("cluster", cluster);
             if (cluster) {
                 return client.value
                     ?.cluster_admin_user_logout({
@@ -94,7 +93,7 @@ const userActions: Action<UserStatus>[] = [
                 },
             },
         ],
-        confirmationHeader: ({ params }) => `Logout user ${params.username}`,
+        confirmationHeader: ({ params }) => `Logout ${params.username}`,
     },
     {
         key: "delete",
@@ -115,7 +114,7 @@ const userActions: Action<UserStatus>[] = [
                 "Do you want to delete the user?",
             ]),
         ],
-        confirmationHeader: ({ params }) => `Delete user ${params.username}`,
+        confirmationHeader: ({ params }) => `Delete ${params.username}`,
     },
 ];
 
@@ -127,10 +126,12 @@ const userColumns: Column<TRow>[] = [
     {
         key: "admin",
         title: "Admin",
+        type: "boolean",
     },
     {
         key: "login",
         title: "Logged In",
+        type: "boolean",
     },
     {
         key: "actions",

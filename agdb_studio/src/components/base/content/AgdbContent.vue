@@ -34,7 +34,25 @@ onMounted(() => {
             <div v-if="part.component">
                 <component :is="part.component" />
             </div>
-            <div v-if="part.input" class="input-row">
+            <div v-if="part.input && part.input.type === 'checkbox'">
+                <input
+                    class="checkbox"
+                    :name="part.input.key"
+                    :type="part.input.type"
+                    :checked="getInputValue(props.contentKey, part.input.key)"
+                    @change="
+                        (event: Event) => {
+                            setInputValue(
+                                props.contentKey,
+                                part.input?.key,
+                                (event.target as HTMLInputElement).checked,
+                            );
+                        }
+                    "
+                />
+                <label :for="part.input.key">{{ part.input.label }}</label>
+            </div>
+            <div v-else-if="part.input" class="input-row">
                 <label :for="part.input.key">{{ part.input.label }}</label>
                 <div :class="{ 'error-input': part.input.error }">
                     <select
@@ -139,6 +157,10 @@ onMounted(() => {
     border-radius: 5px;
     z-index: 1;
     max-width: 40%;
+}
+
+.checkbox {
+    margin-right: 0.5rem;
 }
 
 @media (max-width: 768px) {

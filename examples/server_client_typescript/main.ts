@@ -8,11 +8,11 @@ async function main() {
   let client = await AgdbApi.client("http://localhost:3000");
 
   // Creates a user using default admin credentials.
-  client.login("admin", "admin");
+  client.login({username: "admin", password: "admin"});
   await client.admin_user_add("user1", { password: "password123" });
 
   // Creates a database using the newly created user.
-  client.login("user1", "password123");
+  client.login({username: "user1", password: "password123"});
   await client.db_add({
     owner: "user1",
     db: "db1",

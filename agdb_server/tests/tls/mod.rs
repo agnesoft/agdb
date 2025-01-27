@@ -2,42 +2,37 @@ use crate::create_cluster;
 use crate::reqwest_client;
 use crate::wait_for_leader;
 use crate::wait_for_ready;
+use crate::ConfigImpl;
 use crate::TestServerImpl;
 use crate::ADMIN;
 use crate::SERVER_DATA_DIR;
 use agdb_api::AgdbApi;
 use agdb_api::ReqwestClient;
-use std::collections::HashMap;
+use tracing::level_filters::LevelFilter;
 
 #[tokio::test]
 async fn https() -> anyhow::Result<()> {
-    let mut config = HashMap::<&str, serde_yml::Value>::new();
     let port = TestServerImpl::next_port();
     let manifest_dir = std::env::var("CARGO_MANIFEST_DIR")?;
-
-    config.insert("bind", format!(":::{port}").into());
-    config.insert("address", format!("https://localhost:{port}").into());
-    config.insert("data_dir", SERVER_DATA_DIR.into());
-    config.insert("basepath", "".into());
-    config.insert("admin", ADMIN.into());
-    config.insert("log_level", "INFO".into());
-    config.insert("pepper_path", "".into());
-    config.insert(
-        "tls_certificate",
-        format!("{manifest_dir}/tests/test_cert.pem").into(),
-    );
-    config.insert(
-        "tls_key",
-        format!("{manifest_dir}/tests/test_cert.key.pem").into(),
-    );
-    config.insert(
-        "tls_root",
-        format!("{manifest_dir}/tests/test_root_ca.pem").into(),
-    );
-    config.insert("cluster_token", "test".into());
-    config.insert("cluster_heartbeat_timeout_ms", 1000.into());
-    config.insert("cluster_term_timeout_ms", 3000.into());
-    config.insert("cluster", Vec::<String>::new().into());
+    let config = ConfigImpl {
+        bind: format!(":::{port}"),
+        address: format!("https://localhost:{port}"),
+        basepath: String::new(),
+        admin: ADMIN.to_string(),
+        log_level: LevelFilter::INFO,
+        data_dir: SERVER_DATA_DIR.into(),
+        pepper_path: String::new(),
+        tls_certificate: format!("{manifest_dir}/tests/test_cert.pem"),
+        tls_key: format!("{manifest_dir}/tests/test_cert.key.pem"),
+        tls_root: format!("{manifest_dir}/tests/test_root_ca.pem"),
+        cluster_token: "test".to_string(),
+        cluster_heartbeat_timeout_ms: 1000,
+        cluster_term_timeout_ms: 3000,
+        cluster: Vec::new(),
+        cluster_node_id: 0,
+        start_time: 0,
+        pepper: None,
+    };
 
     TestServerImpl::with_config(config).await?;
 

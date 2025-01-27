@@ -94,4 +94,12 @@ describe("router", () => {
 
         expect(router.currentRoute.value.name).toBe("admin-users");
     });
+
+    it("loads the not found page", async () => {
+        isLoggedInMock.value = true;
+
+        await router.push("/not-found");
+
+        expect(router.currentRoute.value.name).toBe("not-found");
+    });
 });

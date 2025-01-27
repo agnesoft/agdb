@@ -13,28 +13,23 @@ The `agdb_server` can be run on bare metal by building the binary and running it
 
 ### Install prerequisites
 
-- Git: [official source](https://git-scm.com/) (skip if you already have it).
+- Git: [official source](https://git-scm.com/) (skip if you already have it)
 
-- Rust: [official source](https://www.rust-lang.org/tools/install).
+- Rust: [official source](https://www.rust-lang.org/tools/install)
 
-- [OPTIONAL, REQUIRED FOR STUDIO] Node.js: [official source](https://nodejs.org/en/download/) (skip if you do not need the server GUI).
+- [OPTIONAL, REQUIRED FOR STUDIO] Node.js: [official source](https://nodejs.org/en/download/)
 
-- [OPTIONAL, UNIX ONLY] CMake: [official source](https://cmake.org/download/).
+- [OPTIONAL, UNIX ONLY, REQUIRED FOR TLS] CMake: [official source](https://cmake.org/download/)
 
-- [OPTIONAL, WINDOWS ONLY, REQUIRED FOR TLS] Microsfot Build Tools (includes CMake): [official source](https://learn.microsoft.com/en-us/cpp/build/building-on-the-command-line).
+- [OPTIONAL, WINDOWS ONLY, REQUIRED FOR TLS] Microsoft Build Tools (includes CMake): [official source](https://learn.microsoft.com/en-us/cpp/build/building-on-the-command-line)
 
 ### Install `agdb_server`
 
 ```shell
 cargo install agdb_server --features "tls studio"
-    # the `tls` feature is optional and can be omitted if TLS support is not needed
-    # the `studio` feature is optional can be omitted if you do not need server GUI otherwise you need to build the agdb_api/typescript and agdb_studio projects first to have the required files
+    # The `tls` feature is optional and can be omitted if TLS support is not needed. Requies CMake and on Windows also MSVC.
+    # The `studio` feature is optional can be omitted if you do not need or want server GUI. Requires NPM.
 ```
-
-<Callout>
-    On all platforms the feature `tls` requires `CMake`. On Windows it requires
-    additionally MSVC toolchain. If you do not need TLS simply omit the feature.
-</Callout>
 
 You can also build the server manually. One advantage is that you can use a custom `pepper` value and bake it into the binary instead of using runtime configured value. The `pepper` file is located in sources as `agdb_server/pepper` and contains a random 16 character value that is used internally to additionally "season" the encrypted passwords. When building for production you should change this value to a different one and keep the pepper file as secret in case you needed to rebuild the server or build a new version. It can also be changed via configuration during runtime.
 
@@ -44,20 +39,10 @@ The steps for a manual build (use `bash` on Unix or `git bash` on Windows):
 git clone https://github.com/agnesoft/agdb.git
 cd agdb/
 git checkout $(git describe --tags) # checkout the latest released version
-
-# thse GUI builds can be omitted if "studio" features is not used
-cd agdb_api/typescrtipt
-npm install
-npm run build
-cd ../../agdb_studio
-npm install
-npm run build
-cd ..
-
 echo "1234567891234567" > agdb_server/pepper #use a different value, this value will be a secret
 cargo build --release -p agdb_server --features "tls studio"
-    # the `tls` feature is optional and can be omitted if TLS support is not needed
-    # the `studio` feature is optional can be omitted if you do not need server GUI
+    # The `tls` feature is optional and can be omitted if TLS support is not needed. Requies CMake and on Windows also MSVC.
+    # The `studio` feature is optional can be omitted if you do not need or want server GUI. Requires NPM.
 mv target/release/agdb_server "<location available on your PATH>"
 # Windows: target/release/agdb_server.exe
 ```

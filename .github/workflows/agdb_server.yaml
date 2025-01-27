@@ -16,10 +16,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions-rust-lang/setup-rust-toolchain@v1
-      - run: npm ci && npm run build
-        working-directory: agdb_api/typescript
-      - run: npm ci && npm run build
-        working-directory: agdb_studio
       - run: cargo fmt -p agdb_server -p agdb_api --check
       - run: cargo clippy -p agdb_server -p agdb_api --all-targets --all-features -- -D warnings
       - uses: taiki-e/install-action@cargo-llvm-cov

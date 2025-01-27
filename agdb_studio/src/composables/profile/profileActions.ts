@@ -53,6 +53,7 @@ const accountActions: Action<undefined>[] = [
                             label: "Current password",
                             key: "currentPassword",
                             required: true,
+                            autofocus: true,
                         },
                     },
                     {
@@ -129,11 +130,26 @@ const accountActions: Action<undefined>[] = [
         action: () => {
             openModal({
                 header: "Logout",
-                content: convertArrayOfStringsToContent([
-                    "Are you sure you want to logout?",
-                ]),
+                content: [
+                    ...convertArrayOfStringsToContent([
+                        "Are you sure you want to logout?",
+                    ]),
+                    {
+                        input: {
+                            type: "checkbox",
+                            label: "Logout from all nodes in the cluster",
+                            key: "cluster",
+                            value: false,
+                        },
+                    },
+                ],
                 onConfirm: () => {
-                    logout();
+                    const cluster = !!getInputValue<string>(
+                        KEY_MODAL,
+                        "cluster",
+                    );
+
+                    logout(cluster);
                     return true;
                 },
             });

@@ -45,10 +45,33 @@ describe("LoginForm", () => {
         currentRoute.value.query.redirect = "/home";
         await wrapper.find('input[type="text"]#username').setValue("test");
         await wrapper.find('input[type="password"]#password').setValue("test");
+        await wrapper.find("input[type='checkbox']").setValue(false);
 
         await wrapper.find(".login-form>form").trigger("submit");
 
-        expect(loginMock).toHaveBeenCalled();
+        expect(loginMock).toHaveBeenCalledWith({
+            username: "test",
+            password: "test",
+            cluster: false,
+        });
+        expect(pushMock).toHaveBeenCalledWith("/home");
+    });
+    it("runs successful cluster login on click and redirects from query", async () => {
+        loginMock.mockResolvedValue(true);
+
+        const wrapper = mount(LoginForm);
+        currentRoute.value.query.redirect = "/home";
+        await wrapper.find('input[type="text"]#username').setValue("test");
+        await wrapper.find('input[type="password"]#password').setValue("test");
+        await wrapper.find("input[type='checkbox']").setValue(true);
+
+        await wrapper.find(".login-form>form").trigger("submit");
+
+        expect(loginMock).toHaveBeenCalledWith({
+            username: "test",
+            password: "test",
+            cluster: true,
+        });
         expect(pushMock).toHaveBeenCalledWith("/home");
     });
     it("runs successful login on click and redirects to home", async () => {

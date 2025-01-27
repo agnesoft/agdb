@@ -46,12 +46,12 @@ describe("auth service", () => {
     });
     describe("login", () => {
         it("returns token on success", async () => {
-            login("test", "test").then((token) => {
+            login({ username: "test", password: "test" }).then((token) => {
                 expect(token).toBe("token");
             });
         });
         it("throws error on failure", async () => {
-            login("test", "test").catch((error) => {
+            login({ username: "test", password: "test" }).catch((error) => {
                 expect(error).toBe("error");
             });
         });

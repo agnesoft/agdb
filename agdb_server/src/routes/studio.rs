@@ -24,9 +24,6 @@ fn init_index_js_name() -> ServerResult<String> {
     let index_content = index_html
         .contents_utf8()
         .ok_or(init_error("2: index.html could not be read"))?;
-
-    tracing::info!("index_content: {:?}", index_content);
-
     let (_, index_js_suffix) = index_content
         .split_once("src=\"/studio/assets/index")
         .ok_or(init_error("1: failed to find index.js in index.html"))?;

@@ -7,7 +7,7 @@ description: "Efficient agdb, Agnesoft Graph Database"
 
 In this document we will explore more realistic use of the `agdb`. It should help you understand how to make the best use of the `graph` data schema and how to build complex queries.
 
-The premise that we will be working on is building a database for a social network. The users of the network can create posts and share them with other users to comment and like. You can see the complete code under [tests/efficient_agdb.rs](https://github.com/agnesoft/agdb/blob/main/agdb/tests/efficient_agdb.rs).
+The premise that we will be working on is building a database for a social network. The users of the network can create posts and share them with other users to comment and like. You can see the complete code under [tests/efficient_agdb.rs](https://github.com/agnesoft/agdb/blob/main/agdb/tests/efficient_agdb/mod.rs).
 
 ## The setup
 

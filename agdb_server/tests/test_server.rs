@@ -1,11 +1,14 @@
+#[path = "../src/config.rs"]
+pub mod config;
 mod routes;
 #[cfg(feature = "tls")]
 mod tls;
 
+use crate::config::to_str;
+use crate::config::ConfigImpl;
 use agdb_api::AgdbApi;
 use agdb_api::ClusterStatus;
 use agdb_api::ReqwestClient;
-use anyhow::anyhow;
 use std::collections::HashMap;
 use std::path::Path;
 use std::path::PathBuf;
@@ -18,6 +21,7 @@ use std::time::Instant;
 use tokio::process::Child;
 use tokio::process::Command;
 use tokio::sync::RwLock;
+use tracing::level_filters::LevelFilter;
 
 const ADMIN: &str = "admin";
 const BINARY: &str = "agdb_server";
@@ -99,36 +103,29 @@ pub fn reqwest_client() -> reqwest::Client {
 }
 
 impl TestServerImpl {
-    pub async fn with_config(mut config: HashMap<&str, serde_yml::Value>) -> anyhow::Result<Self> {
-        let address = if let Some(address) = config.get("address") {
-            address
-                .as_str()
-                .ok_or_else(|| anyhow!("Invalid address"))?
-                .to_string()
-        } else {
+    pub async fn with_config(mut config: ConfigImpl) -> anyhow::Result<Self> {
+        if config.address.is_empty() {
             let port = Self::next_port();
             let address = format!("http://{HOST}:{port}");
-            config.insert("bind", format!("{HOST}:{port}").into());
-            config.insert("address", address.to_owned().into());
-            address
+            config.bind = format!("{HOST}:{port}");
+            config.address = address;
         };
 
-        let dir = format!("{BINARY}.{}.test", address.split(':').last().unwrap());
+        let dir = format!(
+            "{BINARY}.{}.test",
+            config.address.split(':').last().unwrap()
+        );
         let data_dir = format!("{dir}/{SERVER_DATA_DIR}");
 
         Self::remove_dir_if_exists(&dir)?;
         std::fs::create_dir(&dir)?;
 
-        let file = std::fs::File::options()
-            .create_new(true)
-            .write(true)
-            .open(Path::new(&dir).join(CONFIG_FILE))?;
-        serde_yml::to_writer(file, &config)?;
+        std::fs::write(Path::new(&dir).join(CONFIG_FILE), to_str(&config))?;
 
-        let api_address = if let Some(basepath) = config.get("basepath") {
-            format!("{address}{}", basepath.as_str().unwrap_or_default())
+        let api_address = if config.basepath.is_empty() {
+            config.address.clone()
         } else {
-            address.clone()
+            format!("{}{}", config.address, config.basepath)
         };
 
         let mut process = Command::new(server_bin()?)
@@ -165,19 +162,25 @@ impl TestServerImpl {
     }
 
     pub async fn new() -> anyhow::Result<Self> {
-        let mut config = HashMap::<&str, serde_yml::Value>::new();
-        config.insert("admin", ADMIN.into());
-        config.insert("data_dir", SERVER_DATA_DIR.into());
-        config.insert("basepath", "".into());
-        config.insert("log_level", "INFO".into());
-        config.insert("pepper_path", "".into());
-        config.insert("tls_certificate", "".into());
-        config.insert("tls_key", "".into());
-        config.insert("tls_root", "".into());
-        config.insert("cluster_token", "test".into());
-        config.insert("cluster_heartbeat_timeout_ms", 1000.into());
-        config.insert("cluster_term_timeout_ms", 3000.into());
-        config.insert("cluster", Vec::<String>::new().into());
+        let config = ConfigImpl {
+            bind: String::new(),
+            address: String::new(),
+            basepath: String::new(),
+            admin: ADMIN.to_string(),
+            log_level: LevelFilter::INFO,
+            data_dir: SERVER_DATA_DIR.into(),
+            pepper_path: String::new(),
+            tls_certificate: String::new(),
+            tls_key: String::new(),
+            tls_root: String::new(),
+            cluster_token: "test".to_string(),
+            cluster_heartbeat_timeout_ms: 1000,
+            cluster_term_timeout_ms: 3000,
+            cluster: Vec::new(),
+            cluster_node_id: 0,
+            start_time: 0,
+            pepper: None,
+        };
 
         Self::with_config(config).await
     }
@@ -420,27 +423,32 @@ pub async fn create_cluster(nodes: usize, tls: bool) -> anyhow::Result<Vec<TestS
 
     for _ in 0..nodes {
         let port = TestServerImpl::next_port();
-        let mut config = HashMap::<&str, serde_yml::Value>::new();
-        config.insert("bind", format!("{HOST}:{port}").into());
-        config.insert("address", format!("{protocol}://{HOST}:{port}").into());
-        config.insert("admin", ADMIN.into());
-        config.insert("basepath", "".into());
-        config.insert("log_level", "INFO".into());
-        config.insert("data_dir", SERVER_DATA_DIR.into());
-        config.insert("pepper_path", "".into());
-        config.insert("tls_certificate", tls_cert.clone().into());
-        config.insert("tls_key", tls_key.clone().into());
-        config.insert("tls_root", tls_root.clone().into());
-        config.insert("cluster_token", "test".into());
-        config.insert("cluster_heartbeat_timeout_ms", 1000.into());
-        config.insert("cluster_term_timeout_ms", 3000.into());
+        let config = ConfigImpl {
+            bind: format!("{HOST}:{port}"),
+            address: format!("{protocol}://{HOST}:{port}"),
+            basepath: String::new(),
+            admin: ADMIN.to_string(),
+            log_level: LevelFilter::INFO,
+            data_dir: SERVER_DATA_DIR.into(),
+            pepper_path: String::new(),
+            tls_certificate: tls_cert.clone(),
+            tls_key: tls_key.clone(),
+            tls_root: tls_root.clone(),
+            cluster_token: "test".to_string(),
+            cluster_heartbeat_timeout_ms: 1000,
+            cluster_term_timeout_ms: 3000,
+            cluster: Vec::new(),
+            cluster_node_id: 0,
+            start_time: 0,
+            pepper: None,
+        };
 
         configs.push(config);
         cluster.push(format!("{protocol}://{HOST}:{port}"));
     }
 
     for config in &mut configs {
-        config.insert("cluster", cluster.clone().into());
+        config.cluster = cluster.clone();
     }
 
     for server in configs

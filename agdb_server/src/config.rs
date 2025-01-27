@@ -1,8 +1,3 @@
-use crate::password::SALT_LEN;
-use crate::server_error::ServerError;
-use crate::server_error::ServerResult;
-use serde::Deserialize;
-use serde::Serialize;
 use std::sync::Arc;
 use std::time::SystemTime;
 use std::time::UNIX_EPOCH;
@@ -10,16 +5,15 @@ use tracing::level_filters::LevelFilter;
 
 pub(crate) type Config = Arc<ConfigImpl>;
 
-#[derive(Debug)]
-pub(crate) struct LogLevel(pub(crate) LevelFilter);
+pub(crate) const SALT_LEN: usize = 16;
 
-#[derive(Debug, Deserialize, Serialize)]
-pub(crate) struct ConfigImpl {
+#[derive(Debug)]
+pub struct ConfigImpl {
     pub(crate) bind: String,
     pub(crate) address: String,
     pub(crate) basepath: String,
     pub(crate) admin: String,
-    pub(crate) log_level: LogLevel,
+    pub(crate) log_level: LevelFilter,
     pub(crate) data_dir: String,
     pub(crate) pepper_path: String,
     pub(crate) tls_certificate: String,
@@ -29,33 +23,33 @@ pub(crate) struct ConfigImpl {
     pub(crate) cluster_heartbeat_timeout_ms: u64,
     pub(crate) cluster_term_timeout_ms: u64,
     pub(crate) cluster: Vec<String>,
-    #[serde(skip)]
     pub(crate) cluster_node_id: usize,
-    #[serde(skip)]
     pub(crate) start_time: u64,
-    #[serde(skip)]
     pub(crate) pepper: Option<[u8; SALT_LEN]>,
 }
 
-pub(crate) fn new(config_file: &str) -> ServerResult<Config> {
+pub(crate) fn new(config_file: &str) -> Config {
     if let Ok(content) = std::fs::read_to_string(config_file) {
-        let mut config_impl: ConfigImpl = serde_yml::from_str(&content)?;
+        let mut config_impl: ConfigImpl = from_str(&content);
         config_impl.cluster_node_id = config_impl
             .cluster
             .iter()
             .position(|x| x == &config_impl.address)
             .unwrap_or(0);
-        config_impl.start_time = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
+        config_impl.start_time = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_secs();
 
         if !config_impl.pepper_path.is_empty() {
-            let pepper_raw = std::fs::read(&config_impl.pepper_path)?;
+            let pepper_raw = std::fs::read(&config_impl.pepper_path).unwrap();
             let pepper = pepper_raw.trim_ascii();
 
             if pepper.len() != SALT_LEN {
-                return Err(ServerError::from(format!(
-                    "invalid pepper length {}, expected 16",
+                panic!(
+                    "invalid pepper length {}, expected {SALT_LEN}",
                     pepper.len()
-                )));
+                );
             }
 
             config_impl.pepper = Some(
@@ -68,13 +62,13 @@ pub(crate) fn new(config_file: &str) -> ServerResult<Config> {
         let config = Config::new(config_impl);
 
         if !config.cluster.is_empty() && !config.cluster.contains(&config.address) {
-            return Err(ServerError::from(format!(
-                "cluster does not contain local node: {}",
-                config.address
-            )));
+            panic!(
+                "cluster does not contain local node: {} ({:?})",
+                config.address, config.cluster
+            );
         }
 
-        return Ok(config);
+        return config;
     }
 
     let config = ConfigImpl {
@@ -82,7 +76,7 @@ pub(crate) fn new(config_file: &str) -> ServerResult<Config> {
         address: "http://localhost:3000".to_string(),
         basepath: "".to_string(),
         admin: "admin".to_string(),
-        log_level: LogLevel(LevelFilter::INFO),
+        log_level: LevelFilter::INFO,
         data_dir: "agdb_server_data".to_string(),
         pepper_path: String::new(),
         tls_certificate: String::new(),
@@ -93,46 +87,152 @@ pub(crate) fn new(config_file: &str) -> ServerResult<Config> {
         cluster_term_timeout_ms: 3000,
         cluster: vec![],
         cluster_node_id: 0,
-        start_time: SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs(),
+        start_time: SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_secs(),
         pepper: None,
     };
 
-    std::fs::write(config_file, serde_yml::to_string(&config)?)?;
+    std::fs::write(config_file, to_str(&config)).unwrap();
 
-    Ok(Config::new(config))
+    Config::new(config)
 }
 
-impl Serialize for LogLevel {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
+pub(crate) fn cluster_from_value(value: &str) -> Vec<String> {
+    let mut cluster = Vec::new();
+
+    for node in value
+        .trim_start_matches('[')
+        .trim_end_matches(']')
+        .trim()
+        .split(',')
     {
-        match self.0 {
-            LevelFilter::OFF => serializer.serialize_str("OFF"),
-            LevelFilter::ERROR => serializer.serialize_str("ERROR"),
-            LevelFilter::WARN => serializer.serialize_str("WARN"),
-            LevelFilter::INFO => serializer.serialize_str("INFO"),
-            LevelFilter::DEBUG => serializer.serialize_str("DEBUG"),
-            LevelFilter::TRACE => serializer.serialize_str("TRACE"),
+        let node = node.trim().trim_matches(['\'', '"']);
+
+        if node.is_empty() {
+            continue;
         }
+
+        cluster.push(node.to_string());
+    }
+
+    cluster
+}
+
+pub(crate) fn from_str(content: &str) -> ConfigImpl {
+    let mut config = ConfigImpl {
+        bind: String::new(),
+        address: String::new(),
+        basepath: String::new(),
+        admin: String::new(),
+        log_level: LevelFilter::INFO,
+        data_dir: String::new(),
+        pepper_path: String::new(),
+        tls_certificate: String::new(),
+        tls_key: String::new(),
+        tls_root: String::new(),
+        cluster_token: String::new(),
+        cluster_heartbeat_timeout_ms: 0,
+        cluster_term_timeout_ms: 0,
+        cluster: vec![],
+        cluster_node_id: 0,
+        start_time: 0,
+        pepper: None,
+    };
+
+    for line in content.lines() {
+        let line = line.trim();
+        if line.is_empty() || line.starts_with('#') {
+            continue;
+        }
+        if let Some((key, value)) = line.split_once(':') {
+            let key = key.trim().trim_matches(['\'', '"']);
+            let value = if let Some((value, _comment)) = value.rsplit_once("#") {
+                value
+            } else {
+                value
+            };
+            let value = value.trim().trim_matches(['\'', '"']).trim();
+
+            match key {
+                "bind" => config.bind = value.to_string(),
+                "address" => config.address = value.to_string(),
+                "basepath" => config.basepath = value.to_string(),
+                "admin" => config.admin = value.to_string(),
+                "log_level" => config.log_level = level_filter_from_str(value),
+                "data_dir" => config.data_dir = value.to_string(),
+                "pepper_path" => config.pepper_path = value.to_string(),
+                "tls_certificate" => config.tls_certificate = value.to_string(),
+                "tls_key" => config.tls_key = value.to_string(),
+                "tls_root" => config.tls_root = value.to_string(),
+                "cluster_token" => config.cluster_token = value.to_string(),
+                "cluster_heartbeat_timeout_ms" => {
+                    config.cluster_heartbeat_timeout_ms = value.parse().unwrap()
+                }
+                "cluster_term_timeout_ms" => {
+                    config.cluster_term_timeout_ms = value.parse().unwrap()
+                }
+                "cluster" => {
+                    config.cluster = cluster_from_value(value);
+                }
+                _ => panic!("Unknown key: {}", key),
+            }
+        }
+    }
+
+    config
+}
+
+pub(crate) fn to_str(config: &ConfigImpl) -> String {
+    let mut buffer = String::new();
+    buffer.push_str(&format!("bind: {}\n", config.bind));
+    buffer.push_str(&format!("address: {}\n", config.address));
+    buffer.push_str(&format!("basepath: {}\n", config.basepath));
+    buffer.push_str(&format!("admin: {}\n", config.admin));
+    buffer.push_str(&format!(
+        "log_level: {}\n",
+        level_filter_to_str(&config.log_level)
+    ));
+    buffer.push_str(&format!("data_dir: {}\n", config.data_dir));
+    buffer.push_str(&format!("pepper_path: {}\n", config.pepper_path));
+    buffer.push_str(&format!("tls_certificate: {}\n", config.tls_certificate));
+    buffer.push_str(&format!("tls_key: {}\n", config.tls_key));
+    buffer.push_str(&format!("tls_root: {}\n", config.tls_root));
+    buffer.push_str(&format!("cluster_token: {}\n", config.cluster_token));
+
+    buffer.push_str(&format!(
+        "cluster_heartbeat_timeout_ms: {}\n",
+        config.cluster_heartbeat_timeout_ms
+    ));
+    buffer.push_str(&format!(
+        "cluster_term_timeout_ms: {}\n",
+        config.cluster_term_timeout_ms
+    ));
+    buffer.push_str(&format!("cluster: [{}]\n", config.cluster.join(", ")));
+    buffer
+}
+
+fn level_filter_to_str(level_filter: &LevelFilter) -> &str {
+    match *level_filter {
+        LevelFilter::OFF => "OFF",
+        LevelFilter::ERROR => "ERROR",
+        LevelFilter::WARN => "WARN",
+        LevelFilter::INFO => "INFO",
+        LevelFilter::DEBUG => "DEBUG",
+        LevelFilter::TRACE => "TRACE",
     }
 }
 
-impl<'de> Deserialize<'de> for LogLevel {
-    fn deserialize<D>(deserializer: D) -> Result<LogLevel, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        let s = String::deserialize(deserializer)?;
-        match s.as_str() {
-            "OFF" => Ok(LogLevel(LevelFilter::OFF)),
-            "ERROR" => Ok(LogLevel(LevelFilter::ERROR)),
-            "WARN" => Ok(LogLevel(LevelFilter::WARN)),
-            "INFO" => Ok(LogLevel(LevelFilter::INFO)),
-            "DEBUG" => Ok(LogLevel(LevelFilter::DEBUG)),
-            "TRACE" => Ok(LogLevel(LevelFilter::TRACE)),
-            _ => Err(serde::de::Error::custom("Invalid log level")),
-        }
+fn level_filter_from_str(level_filter: &str) -> LevelFilter {
+    match level_filter {
+        "OFF" => LevelFilter::OFF,
+        "ERROR" => LevelFilter::ERROR,
+        "WARN" => LevelFilter::WARN,
+        "INFO" => LevelFilter::INFO,
+        "DEBUG" => LevelFilter::DEBUG,
+        "TRACE" => LevelFilter::TRACE,
+        _ => panic!("Invalid log level: {}", level_filter),
     }
 }
 
@@ -162,12 +262,13 @@ mod tests {
     fn default_values() {
         let test_file = TestFile::new("test_config_default.yaml");
         assert!(!std::fs::exists(test_file.filename).unwrap());
-        let _config = config::new(test_file.filename).unwrap();
+        let _config = config::new(test_file.filename);
         assert!(std::fs::exists(test_file.filename).unwrap());
-        let _config = config::new(test_file.filename).unwrap();
+        let _config = config::new(test_file.filename);
     }
 
     #[test]
+    #[should_panic]
     fn invalid_cluster() {
         let test_file = TestFile::new("test_config_invalid_cluster.yaml");
         let config = ConfigImpl {
@@ -175,7 +276,7 @@ mod tests {
             address: "http://localhost:3000".to_string(),
             basepath: "".to_string(),
             admin: "admin".to_string(),
-            log_level: LogLevel(LevelFilter::INFO),
+            log_level: LevelFilter::INFO,
             data_dir: "agdb_server_data".to_string(),
             pepper_path: String::new(),
             tls_certificate: String::new(),
@@ -189,11 +290,9 @@ mod tests {
             start_time: 0,
             pepper: None,
         };
-        std::fs::write(test_file.filename, serde_yml::to_string(&config).unwrap()).unwrap();
-        assert_eq!(
-            config::new(test_file.filename).unwrap_err().description,
-            "cluster does not contain local node: http://localhost:3000"
-        );
+        std::fs::write(test_file.filename, to_str(&config)).unwrap();
+
+        config::new(test_file.filename);
     }
 
     #[test]
@@ -207,7 +306,7 @@ mod tests {
             address: "http://localhost:3000".to_string(),
             basepath: "".to_string(),
             admin: "admin".to_string(),
-            log_level: LogLevel(LevelFilter::INFO),
+            log_level: LevelFilter::INFO,
             data_dir: "agdb_server_data".to_string(),
             pepper_path: pepper_file.filename.to_string(),
             tls_certificate: String::new(),
@@ -222,14 +321,15 @@ mod tests {
             pepper: None,
         };
 
-        std::fs::write(test_file.filename, serde_yml::to_string(&config).unwrap()).unwrap();
+        std::fs::write(test_file.filename, to_str(&config)).unwrap();
 
-        let config = config::new(test_file.filename).unwrap();
+        let config = config::new(test_file.filename);
 
         assert_eq!(config.pepper.as_ref(), Some(pepper));
     }
 
     #[test]
+    #[should_panic]
     fn pepper_missing() {
         let test_file = TestFile::new("pepper_missing.yaml");
         let config = ConfigImpl {
@@ -237,7 +337,7 @@ mod tests {
             address: "http://localhost:3000".to_string(),
             basepath: "".to_string(),
             admin: "admin".to_string(),
-            log_level: LogLevel(LevelFilter::INFO),
+            log_level: LevelFilter::INFO,
             data_dir: "agdb_server_data".to_string(),
             pepper_path: "missing_file".to_string(),
             tls_certificate: String::new(),
@@ -251,12 +351,13 @@ mod tests {
             start_time: 0,
             pepper: None,
         };
-        std::fs::write(test_file.filename, serde_yml::to_string(&config).unwrap()).unwrap();
+        std::fs::write(test_file.filename, to_str(&config)).unwrap();
 
-        assert!(config::new(test_file.filename).is_err());
+        config::new(test_file.filename);
     }
 
     #[test]
+    #[should_panic]
     fn pepper_invalid_len() {
         let test_file = TestFile::new("pepper_invalid_len.yaml");
         let pepper_file = TestFile::new("pepper_invalid_len");
@@ -266,7 +367,7 @@ mod tests {
             address: "http://localhost:3000".to_string(),
             basepath: "".to_string(),
             admin: "admin".to_string(),
-            log_level: LogLevel(LevelFilter::INFO),
+            log_level: LevelFilter::INFO,
             data_dir: "agdb_server_data".to_string(),
             pepper_path: pepper_file.filename.to_string(),
             tls_certificate: String::new(),
@@ -280,52 +381,8 @@ mod tests {
             start_time: 0,
             pepper: None,
         };
-        std::fs::write(test_file.filename, serde_yml::to_string(&config).unwrap()).unwrap();
+        std::fs::write(test_file.filename, to_str(&config)).unwrap();
 
-        assert_eq!(
-            config::new(test_file.filename).unwrap_err().description,
-            "invalid pepper length 10, expected 16"
-        );
-    }
-
-    #[test]
-    fn log_level() {
-        let level = LogLevel(LevelFilter::OFF);
-        let serialized = serde_yml::to_string(&level).unwrap();
-        let other: LogLevel = serde_yml::from_str(&serialized).unwrap();
-        assert_eq!(level.0, other.0);
-
-        let level = LogLevel(LevelFilter::ERROR);
-        let serialized = serde_yml::to_string(&level).unwrap();
-        let other: LogLevel = serde_yml::from_str(&serialized).unwrap();
-        assert_eq!(level.0, other.0);
-
-        let level = LogLevel(LevelFilter::WARN);
-        let serialized = serde_yml::to_string(&level).unwrap();
-        let other: LogLevel = serde_yml::from_str(&serialized).unwrap();
-        assert_eq!(level.0, other.0);
-
-        let level = LogLevel(LevelFilter::INFO);
-        let serialized = serde_yml::to_string(&level).unwrap();
-        let other: LogLevel = serde_yml::from_str(&serialized).unwrap();
-        assert_eq!(level.0, other.0);
-
-        let level = LogLevel(LevelFilter::DEBUG);
-        let serialized = serde_yml::to_string(&level).unwrap();
-        let other: LogLevel = serde_yml::from_str(&serialized).unwrap();
-        assert_eq!(level.0, other.0);
-
-        let level = LogLevel(LevelFilter::TRACE);
-        let serialized = serde_yml::to_string(&level).unwrap();
-        let other: LogLevel = serde_yml::from_str(&serialized).unwrap();
-        assert_eq!(level.0, other.0);
-
-        let serialized = "INVALID".to_string();
-        assert_eq!(
-            serde_yml::from_str::<LogLevel>(&serialized)
-                .unwrap_err()
-                .to_string(),
-            "Invalid log level"
-        );
+        config::new(test_file.filename);
     }
 }

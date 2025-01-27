@@ -1,5 +1,6 @@
 use crate::reqwest_client;
 use crate::wait_for_ready;
+use crate::ConfigImpl;
 use crate::TestServer;
 use crate::TestServerImpl;
 use crate::ADMIN;
@@ -10,8 +11,8 @@ use agdb_api::AgdbApi;
 use agdb_api::DbType;
 use agdb_api::ReqwestClient;
 use reqwest::StatusCode;
-use std::collections::HashMap;
 use std::path::Path;
+use tracing::level_filters::LevelFilter;
 
 #[tokio::test]
 async fn missing() -> anyhow::Result<()> {
@@ -150,19 +151,25 @@ async fn db_list_after_shutdown_corrupted_data() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn basepath_test() -> anyhow::Result<()> {
-    let mut config = HashMap::<&str, serde_yml::Value>::new();
-    config.insert("admin", ADMIN.into());
-    config.insert("data_dir", SERVER_DATA_DIR.into());
-    config.insert("basepath", "/public".into());
-    config.insert("log_level", "INFO".into());
-    config.insert("pepper_path", "".into());
-    config.insert("tls_certificate", "".into());
-    config.insert("tls_key", "".into());
-    config.insert("tls_root", "".into());
-    config.insert("cluster_token", "test".into());
-    config.insert("cluster_heartbeat_timeout_ms", 1000.into());
-    config.insert("cluster_term_timeout_ms", 3000.into());
-    config.insert("cluster", Vec::<String>::new().into());
+    let config = ConfigImpl {
+        bind: String::new(),
+        address: String::new(),
+        basepath: "/public".to_string(),
+        admin: ADMIN.to_string(),
+        log_level: LevelFilter::INFO,
+        data_dir: SERVER_DATA_DIR.into(),
+        pepper_path: String::new(),
+        tls_certificate: String::new(),
+        tls_key: String::new(),
+        tls_root: String::new(),
+        cluster_token: "test".to_string(),
+        cluster_heartbeat_timeout_ms: 1000,
+        cluster_term_timeout_ms: 3000,
+        cluster: Vec::new(),
+        cluster_node_id: 0,
+        start_time: 0,
+        pepper: None,
+    };
 
     let server = TestServerImpl::with_config(config).await?;
 

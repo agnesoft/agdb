@@ -19,9 +19,6 @@ fn run_command(command: &str, dir: &str) {
 
 #[allow(dead_code)]
 fn build_studio() {
-    println!("cargo::rerun-if-changed=../agdb_api/typescript");
-    println!("cargo::rerun-if-changed=../agdb_studio");
-
     if std::env::var("AGDB_DOCKER_BUILD").is_err() {
         run_command("npm ci && npm run build", "../agdb_api/typescript");
         run_command("npm ci && npm run build", "../agdb_studio");
@@ -29,6 +26,9 @@ fn build_studio() {
 }
 
 fn main() {
+    println!("cargo::rerun-if-changed=../agdb_api/typescript/src");
+    println!("cargo::rerun-if-changed=../agdb_studio/src");
+
     #[cfg(feature = "studio")]
     build_studio();
 }

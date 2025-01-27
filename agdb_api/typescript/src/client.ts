@@ -1,17 +1,28 @@
 import { AxiosRequestConfig, OpenAPIClientAxios } from "openapi-client-axios";
 import type { Client } from "./openapi";
 
-type AgdbApi = {
+export type LoginProps = {
+    username: string;
+    password: string;
+    cluster?: boolean;
+};
+
+export type AgdbApi = {
     token: string | undefined;
-    login: (username: string, password: string) => Promise<string>;
-    logout: () => Promise<void>;
+    login: (props: LoginProps) => Promise<string>;
+    logout: (cluster?: boolean) => Promise<void>;
     get_token: () => string | undefined;
     set_token: (token: string) => void;
     reset_token: () => void;
 };
 
-async function login(username: string, password: string): Promise<string> {
-    const token = await this.user_login(null, {
+async function login({
+    username,
+    password,
+    cluster,
+}: LoginProps): Promise<string> {
+    const action = !cluster ? this.user_login : this.cluster_user_login;
+    const token = await action(null, {
         username: username,
         password: password,
     });
@@ -24,8 +35,12 @@ function get_token(): string | undefined {
     return this.token;
 }
 
-async function logout(): Promise<void> {
-    await this.user_logout();
+async function logout(cluster?: boolean): Promise<void> {
+    if (cluster) {
+        await this.cluster_user_logout();
+    } else {
+        await this.user_logout();
+    }
     this.reset_token();
 }
 

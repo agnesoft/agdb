@@ -1,6 +1,7 @@
 import { client, removeToken } from "@/services/api.service";
 import { ACCESS_TOKEN } from "@/constants";
 import { computed, ref, watch } from "vue";
+import type { LoginProps } from "agdb_api/dist/client";
 
 const accessToken = ref<string>();
 
@@ -34,21 +35,24 @@ export const setLocalStorageToken = (token: string): void => {
 
 window.addEventListener("storage", refreshToken);
 
-const login = async (
-    username: string,
-    password: string,
-): Promise<string | undefined> => {
-    return client.value?.login(username, password).then((token) => {
-        setLocalStorageToken(token);
-        return token;
-    });
+const login = async ({
+    username,
+    password,
+    cluster,
+}: LoginProps): Promise<string | undefined> => {
+    return client.value
+        ?.login?.({ username, password, cluster })
+        .then((token) => {
+            setLocalStorageToken(token);
+            return token;
+        });
 };
 
-const logout = async (): Promise<void> => {
+const logout = async (cluster?: boolean): Promise<void> => {
     if (!isLoggedIn.value) {
         return;
     }
-    await client.value?.logout();
+    await client.value?.logout(cluster);
     accessToken.value = undefined;
     removeToken();
 };

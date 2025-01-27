@@ -8,6 +8,7 @@ const { login } = useAuth();
 
 const username = ref("");
 const password = ref("");
+const cluster = ref(false);
 
 const loading = ref(false);
 const error = ref("");
@@ -19,7 +20,11 @@ const clearError = () => {
 const onLogin = async () => {
     loading.value = true;
     clearError();
-    login(username.value, password.value)
+    login({
+        username: username.value,
+        password: password.value,
+        cluster: cluster.value,
+    })
         .then(async () => {
             const redirect = router.currentRoute.value.query.redirect;
             await router.push(
@@ -50,6 +55,12 @@ const onLogin = async () => {
                     required
                 />
             </div>
+            <div class="cluster-login">
+                <input id="cluster-login" v-model="cluster" type="checkbox" />
+                <label for="cluster-login"
+                    >Login in all nodes in the cluster</label
+                >
+            </div>
             <button type="submit" class="button button-success button-lg">
                 <SpinnerIcon v-if="loading" />
                 Login
@@ -75,6 +86,15 @@ const onLogin = async () => {
             position: absolute;
             left: 0.6em;
         }
+    }
+}
+.cluster-login {
+    display: flex;
+    align-items: center;
+    margin-top: 0.5rem;
+    label {
+        margin: 0;
+        margin-left: 0.5rem;
     }
 }
 </style>

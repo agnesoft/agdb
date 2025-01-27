@@ -16,6 +16,10 @@ const autofocusElement = ref();
 onMounted(() => {
     autofocusElement.value?.focus();
 });
+
+const getInputKey = (key: string) => {
+    return `${props.contentKey.toString()}-${key}`;
+};
 </script>
 
 <template>
@@ -36,8 +40,8 @@ onMounted(() => {
             </div>
             <div v-if="part.input && part.input.type === 'checkbox'">
                 <input
+                    :id="getInputKey(part.input.key)"
                     class="checkbox"
-                    :name="part.input.key"
                     :type="part.input.type"
                     :checked="getInputValue(props.contentKey, part.input.key)"
                     @change="
@@ -50,18 +54,22 @@ onMounted(() => {
                         }
                     "
                 />
-                <label :for="part.input.key">{{ part.input.label }}</label>
+                <label :for="getInputKey(part.input.key)">{{
+                    part.input.label
+                }}</label>
             </div>
             <div v-else-if="part.input" class="input-row">
-                <label :for="part.input.key">{{ part.input.label }}</label>
+                <label :for="getInputKey(part.input.key)">{{
+                    part.input.label
+                }}</label>
                 <div :class="{ 'error-input': part.input.error }">
                     <select
                         v-if="
                             inputs.get(part.input.key) !== undefined &&
                             part.input.type === 'select'
                         "
+                        :id="getInputKey(part.input.key)"
                         :value="getInputValue(props.contentKey, part.input.key)"
-                        :name="part.input.key"
                         @change="
                             (event: Event) => {
                                 setInputValue(
@@ -82,13 +90,13 @@ onMounted(() => {
                     </select>
                     <input
                         v-else-if="inputs.get(part.input.key) !== undefined"
+                        :id="getInputKey(part.input.key)"
                         :ref="
                             (el) => {
                                 if (part.input?.autofocus)
                                     autofocusElement = el;
                             }
                         "
-                        :name="part.input.key"
                         :type="part.input.type"
                         :value="getInputValue(props.contentKey, part.input.key)"
                         @input="

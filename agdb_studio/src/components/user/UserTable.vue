@@ -6,7 +6,7 @@ import { useUserStore } from "@/composables/user/userStore";
 import { watchEffect } from "vue";
 import AgdbTable from "../base/table/AgdbTable.vue";
 
-const { users } = useUserStore();
+const { users, fetchUsers } = useUserStore();
 
 const TABLE_KEY = Symbol("users");
 
@@ -14,6 +14,7 @@ addTable({
     name: TABLE_KEY,
     columns: userColumns,
     uniqueKey: "username",
+    fetchData: fetchUsers,
 });
 
 watchEffect(() => {

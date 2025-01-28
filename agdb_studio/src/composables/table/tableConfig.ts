@@ -10,6 +10,7 @@ type AddTableProps<T extends TRow> = {
     columns: Column<T>[];
     rowDetailsComponent?: AsyncComponent;
     uniqueKey?: string | ((row: T) => string);
+    fetchData: () => Promise<void>;
 };
 
 const addTable = ({
@@ -17,6 +18,7 @@ const addTable = ({
     columns,
     rowDetailsComponent,
     uniqueKey,
+    fetchData,
 }: AddTableProps<TRow>): void => {
     const columnMap = new Map<string, Column<TRow>>();
     columns.forEach((column) => {
@@ -28,6 +30,7 @@ const addTable = ({
         data: new Map(),
         rowDetailsComponent,
         uniqueKey,
+        fetchData,
     });
 };
 
@@ -63,6 +66,19 @@ const clearTables = (): void => {
     tables.value.clear();
 };
 
+const fetchData = async (name: symbol | string | undefined): Promise<void> => {
+    if (!name) {
+        tables.value.forEach(async (table) => {
+            await table.fetchData();
+        });
+        return;
+    }
+    const table = getTable(name);
+    if (table) {
+        await table.fetchData();
+    }
+};
+
 export {
     getTable,
     addTable,
@@ -71,4 +87,5 @@ export {
     clearTables,
     getTableColumns,
     getTableColumnsArray,
+    fetchData,
 };

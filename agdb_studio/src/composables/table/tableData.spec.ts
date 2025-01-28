@@ -8,15 +8,17 @@ import {
 } from "./tableData";
 import { TABLE_NAME, tableConfig, tableData } from "@/tests/tableMocks";
 import { addFilter, getTableFilter, setSort } from "./tableFilter";
-import { describe, beforeEach, it, expect } from "vitest";
+import { describe, beforeEach, it, expect, vi } from "vitest";
 import type { TRow } from "./types";
 
 describe("tableData", () => {
+    const fetchDataMock = vi.fn();
     addTable({
         name: TABLE_NAME,
         columns: tableConfig,
         uniqueKey: (row: TRow) =>
             `${row.owner.toString()}/${row.db.toString()}`,
+        fetchData: fetchDataMock,
     });
 
     beforeEach(() => {
@@ -41,6 +43,7 @@ describe("tableData", () => {
             addTable({
                 name: "table_without_unique_key",
                 columns: tableConfig,
+                fetchData: fetchDataMock,
             });
             setTableData("table_without_unique_key", tableData);
             const table = getTable("table_without_unique_key");
@@ -54,6 +57,7 @@ describe("tableData", () => {
                     { key: "value", title: "Value" },
                 ],
                 uniqueKey: "key",
+                fetchData: fetchDataMock,
             });
             setTableData("table_with_string_unique_key", [
                 { key: "key1", value: "value1" },

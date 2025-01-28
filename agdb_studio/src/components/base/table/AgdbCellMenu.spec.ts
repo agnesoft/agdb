@@ -2,25 +2,24 @@ import { mount } from "@vue/test-utils";
 import AgdbCellMenu from "./AgdbCellMenu.vue";
 import { describe, beforeEach, vi, it, expect } from "vitest";
 import { dbActions } from "@/composables/db/dbConfig";
-import { INJECT_KEY_ROW } from "@/composables/table/constants";
+import {
+    INJECT_KEY_ROW,
+    INJECT_KEY_TABLE_NAME,
+} from "@/composables/table/constants";
 import useModal from "@/composables/modal/modal";
 import { convertArrayOfStringsToContent } from "@/composables/content/utils";
 import DropdownContent from "../dropdown/DropdownContent.vue";
 import type { TRow } from "@/composables/table/types";
-const { fetchDatabases } = vi.hoisted(() => {
+const { fetchData } = vi.hoisted(() => {
     return {
-        fetchDatabases: vi.fn(),
+        fetchData: vi.fn(),
     };
 });
 const { modalIsVisible, onConfirm, modal, closeModal } = useModal();
 
-vi.mock("@/composables/db/dbStore", () => {
+vi.mock("@/composables/table/tableConfig", () => {
     return {
-        useDbStore: () => {
-            return {
-                fetchDatabases,
-            };
-        },
+        fetchData,
     };
 });
 describe("AgdbCellMenu", () => {
@@ -89,6 +88,7 @@ describe("AgdbCellMenu", () => {
         await action.trigger("click");
         await wrapper.vm.$nextTick();
         expect(dropdown.isVisible()).toBe(false);
+        expect(fetchData).toHaveBeenCalledOnce();
     });
     it("should open the modal on click when confirmation is required", async () => {
         const deleteAction = vi.fn();
@@ -122,6 +122,7 @@ describe("AgdbCellMenu", () => {
                             backup: 0,
                         },
                     },
+                    [INJECT_KEY_TABLE_NAME]: "databases",
                 },
             },
         });

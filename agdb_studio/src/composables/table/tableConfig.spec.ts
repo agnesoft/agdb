@@ -6,21 +6,29 @@ import {
     getTableColumnsArray,
     removeTable,
     tableExists,
+    fetchData,
 } from "./tableConfig";
 import { TABLE_NAME, tableConfig, columnsMap } from "@/tests/tableMocks";
-import { describe, beforeEach, it, expect } from "vitest";
+import { describe, beforeEach, it, expect, vi } from "vitest";
 
 describe("tableData", () => {
+    const fetchDataMock = vi.fn();
     beforeEach(() => {
+        vi.clearAllMocks();
         clearTables();
     });
     it("should return table configs", () => {
-        addTable({ name: TABLE_NAME, columns: tableConfig });
+        addTable({
+            name: TABLE_NAME,
+            columns: tableConfig,
+            fetchData: fetchDataMock,
+        });
         const table = getTable(TABLE_NAME);
         expect(table).toEqual({
             name: TABLE_NAME,
             columns: columnsMap,
             data: new Map(),
+            fetchData: fetchDataMock,
         });
         const columns = getTableColumns(TABLE_NAME);
         expect(columns).toEqual(columnsMap);
@@ -41,7 +49,11 @@ describe("tableData", () => {
     });
 
     it("should remove table", () => {
-        addTable({ name: TABLE_NAME, columns: tableConfig });
+        addTable({
+            name: TABLE_NAME,
+            columns: tableConfig,
+            fetchData: fetchDataMock,
+        });
         const table = getTable(TABLE_NAME);
         expect(table).toBeDefined();
         removeTable(TABLE_NAME);
@@ -50,8 +62,37 @@ describe("tableData", () => {
     });
 
     it("should check if table exists", () => {
-        addTable({ name: TABLE_NAME, columns: tableConfig });
+        addTable({
+            name: TABLE_NAME,
+            columns: tableConfig,
+            fetchData: fetchDataMock,
+        });
         expect(tableExists(TABLE_NAME)).toBeTruthy();
         expect(tableExists("non_existent_table")).toBeFalsy();
+    });
+
+    it("should fetch data", async () => {
+        addTable({
+            name: TABLE_NAME,
+            columns: tableConfig,
+            fetchData: fetchDataMock,
+        });
+        await fetchData(TABLE_NAME);
+        expect(fetchDataMock).toHaveBeenCalled();
+    });
+
+    it("should fetch data for all tables", async () => {
+        addTable({
+            name: TABLE_NAME,
+            columns: tableConfig,
+            fetchData: fetchDataMock,
+        });
+        addTable({
+            name: "table2",
+            columns: tableConfig,
+            fetchData: fetchDataMock,
+        });
+        await fetchData(undefined);
+        expect(fetchDataMock).toHaveBeenCalledTimes(2);
     });
 });

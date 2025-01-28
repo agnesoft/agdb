@@ -7,10 +7,10 @@ import {
     removeFilter,
     setSort,
 } from "./tableFilter";
-import { describe, beforeEach, it, expect } from "vitest";
+import { describe, beforeEach, it, expect, vi } from "vitest";
 
 describe("tableFilter", () => {
-    addTable({ name: TABLE_NAME, columns: tableConfig });
+    addTable({ name: TABLE_NAME, columns: tableConfig, fetchData: vi.fn() });
     setTableData(TABLE_NAME, tableData);
 
     beforeEach(() => {

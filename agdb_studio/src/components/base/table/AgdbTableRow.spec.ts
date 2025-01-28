@@ -29,10 +29,12 @@ vi.mock("@/composables/db/dbUsersStore", () => {
 });
 
 describe("TableRow", () => {
+    const fetchDataMock = vi.fn();
     addTable({
         name: TABLE_NAME,
         columns: tableConfig,
         rowDetailsComponent: "DbDetails",
+        fetchData: fetchDataMock,
     });
 
     it("should render", () => {
@@ -96,6 +98,7 @@ describe("TableRow", () => {
         addTable({
             name: "table_without_row_details",
             columns: tableConfig,
+            fetchData: fetchDataMock,
         });
         const wrapper = mount(AgdbTableRow, {
             props: {

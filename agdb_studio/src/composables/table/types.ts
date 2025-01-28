@@ -30,4 +30,5 @@ export type Table<T extends TRow> = {
     data?: Map<string, T>;
     rowDetailsComponent?: AsyncComponent;
     uniqueKey?: string | ((row: T) => string);
+    fetchData: () => Promise<void>;
 };

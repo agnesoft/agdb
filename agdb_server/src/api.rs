@@ -33,6 +33,7 @@ use utoipa::OpenApi;
         routes::admin::user::add,
         routes::admin::user::list,
         routes::admin::user::logout,
+        routes::admin::user::logout_all,
         routes::admin::user::delete,
         routes::admin::shutdown,
         routes::admin::status,

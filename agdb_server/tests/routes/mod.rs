@@ -18,6 +18,7 @@ mod admin_user_add_test;
 mod admin_user_change_password_test;
 mod admin_user_delete_test;
 mod admin_user_list_test;
+mod admin_user_logout_all;
 mod admin_user_logout_test;
 mod cluster_test;
 mod db_add_test;

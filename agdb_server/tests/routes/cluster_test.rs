@@ -397,6 +397,40 @@ async fn admin_cluster_logout() -> anyhow::Result<()> {
 }
 
 #[tokio::test]
+async fn admin_cluster_logout_all() -> anyhow::Result<()> {
+    let servers = create_cluster(3, false).await?;
+    let mut client = AgdbApi::new(
+        ReqwestClient::with_client(reqwest_client()),
+        &servers[1].address,
+    );
+
+    let user = &next_user_name();
+    let user2 = &next_user_name();
+
+    client.cluster_user_login(ADMIN, ADMIN).await?;
+    client.admin_user_add(user, user).await?;
+    client.admin_user_add(user2, user2).await?;
+    client.cluster_user_login(user, user).await?;
+    client.cluster_user_login(user2, user2).await?;
+
+    client.user_login(ADMIN, ADMIN).await?;
+    client.cluster_admin_user_logout_all().await?;
+
+    let list = client.admin_user_list().await?.1;
+    assert_eq!(list.iter().filter(|u| !u.admin && u.login).count(), 0);
+
+    let mut client = AgdbApi::new(
+        ReqwestClient::with_client(reqwest_client()),
+        &servers[0].address,
+    );
+    client.user_login(ADMIN, ADMIN).await?;
+    let list = client.admin_user_list().await?.1;
+    assert_eq!(list.iter().filter(|u| !u.admin && u.login).count(), 0);
+
+    Ok(())
+}
+
+#[tokio::test]
 async fn admin_user_delete() -> anyhow::Result<()> {
     let mut cluster = TestCluster::new().await?;
     let client = cluster.apis.get_mut(1).unwrap();

@@ -1850,6 +1850,14 @@ declare namespace Paths {
             }
         }
     }
+    namespace AdminUserLogoutAll {
+        namespace Responses {
+            export interface $201 {
+            }
+            export interface $401 {
+            }
+        }
+    }
     namespace ClusterAdminUserLogout {
         namespace Parameters {
             export type Username = string;
@@ -1863,6 +1871,14 @@ declare namespace Paths {
             export interface $401 {
             }
             export interface $404 {
+            }
+        }
+    }
+    namespace ClusterAdminUserLogoutAll {
+        namespace Responses {
+            export interface $201 {
+            }
+            export interface $401 {
             }
         }
     }
@@ -2446,6 +2462,14 @@ export interface OperationMethods {
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.AdminUserList.Responses.$200>
   /**
+   * admin_user_logout_all
+   */
+  'admin_user_logout_all'(
+    parameters?: Parameters<UnknownParamsObject> | null,
+    data?: any,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.AdminUserLogoutAll.Responses.$201>
+  /**
    * admin_user_add
    */
   'admin_user_add'(
@@ -2477,6 +2501,14 @@ export interface OperationMethods {
     data?: any,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.AdminUserLogout.Responses.$201>
+  /**
+   * cluster_admin_user_logout_all
+   */
+  'cluster_admin_user_logout_all'(
+    parameters?: Parameters<UnknownParamsObject> | null,
+    data?: any,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.ClusterAdminUserLogoutAll.Responses.$201>
   /**
    * cluster_admin_user_logout
    */
@@ -2888,6 +2920,16 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AdminUserList.Responses.$200>
   }
+  ['/api/v1/admin/user/logout_all']: {
+    /**
+     * admin_user_logout_all
+     */
+    'post'(
+      parameters?: Parameters<UnknownParamsObject> | null,
+      data?: any,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.AdminUserLogoutAll.Responses.$201>
+  }
   ['/api/v1/admin/user/{username}/add']: {
     /**
      * admin_user_add
@@ -2927,6 +2969,16 @@ export interface PathsDictionary {
       data?: any,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AdminUserLogout.Responses.$201>
+  }
+  ['/api/v1/cluster/admin/user/logout_all']: {
+    /**
+     * cluster_admin_user_logout_all
+     */
+    'post'(
+      parameters?: Parameters<UnknownParamsObject> | null,
+      data?: any,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.ClusterAdminUserLogoutAll.Responses.$201>
   }
   ['/api/v1/cluster/admin/user/{username}/logout']: {
     /**

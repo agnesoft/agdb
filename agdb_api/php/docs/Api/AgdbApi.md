@@ -28,7 +28,9 @@ All URIs are relative to http://localhost:3000, except if the operation defines 
 | [**adminUserDelete()**](AgdbApi.md#adminUserDelete) | **DELETE** /api/v1/admin/user/{username}/delete |  |
 | [**adminUserList()**](AgdbApi.md#adminUserList) | **GET** /api/v1/admin/user/list |  |
 | [**adminUserLogout()**](AgdbApi.md#adminUserLogout) | **POST** /api/v1/admin/user/{username}/logout |  |
+| [**adminUserLogoutAll()**](AgdbApi.md#adminUserLogoutAll) | **POST** /api/v1/admin/user/logout_all |  |
 | [**clusterAdminUserLogout()**](AgdbApi.md#clusterAdminUserLogout) | **POST** /api/v1/cluster/admin/user/{username}/logout |  |
+| [**clusterAdminUserLogoutAll()**](AgdbApi.md#clusterAdminUserLogoutAll) | **POST** /api/v1/cluster/admin/user/logout_all |  |
 | [**clusterStatus()**](AgdbApi.md#clusterStatus) | **GET** /api/v1/cluster/status |  |
 | [**clusterUserLogin()**](AgdbApi.md#clusterUserLogin) | **POST** /api/v1/cluster/user/login |  |
 | [**clusterUserLogout()**](AgdbApi.md#clusterUserLogout) | **POST** /api/v1/cluster/user/logout |  |
@@ -1482,6 +1484,60 @@ void (empty response body)
 [[Back to Model list]](../../README.md#models)
 [[Back to README]](../../README.md)
 
+## `adminUserLogoutAll()`
+
+```php
+adminUserLogoutAll()
+```
+
+
+
+### Example
+
+```php
+<?php
+require_once(__DIR__ . '/vendor/autoload.php');
+
+
+// Configure Bearer authorization: Token
+$config = Agnesoft\AgdbApi\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
+
+
+$apiInstance = new Agnesoft\AgdbApi\Api\AgdbApi(
+    // If you want use custom http client, pass your client which implements `GuzzleHttp\ClientInterface`.
+    // This is optional, `GuzzleHttp\Client` will be used as default.
+    new GuzzleHttp\Client(),
+    $config
+);
+
+try {
+    $apiInstance->adminUserLogoutAll();
+} catch (Exception $e) {
+    echo 'Exception when calling AgdbApi->adminUserLogoutAll: ', $e->getMessage(), PHP_EOL;
+}
+```
+
+### Parameters
+
+This endpoint does not need any parameter.
+
+### Return type
+
+void (empty response body)
+
+### Authorization
+
+[Token](../../README.md#Token)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: Not defined
+
+[[Back to top]](#) [[Back to API list]](../../README.md#endpoints)
+[[Back to Model list]](../../README.md#models)
+[[Back to README]](../../README.md)
+
 ## `clusterAdminUserLogout()`
 
 ```php
@@ -1521,6 +1577,60 @@ try {
 | Name | Type | Description  | Notes |
 | ------------- | ------------- | ------------- | ------------- |
 | **username** | **string**| user name | |
+
+### Return type
+
+void (empty response body)
+
+### Authorization
+
+[Token](../../README.md#Token)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: Not defined
+
+[[Back to top]](#) [[Back to API list]](../../README.md#endpoints)
+[[Back to Model list]](../../README.md#models)
+[[Back to README]](../../README.md)
+
+## `clusterAdminUserLogoutAll()`
+
+```php
+clusterAdminUserLogoutAll()
+```
+
+
+
+### Example
+
+```php
+<?php
+require_once(__DIR__ . '/vendor/autoload.php');
+
+
+// Configure Bearer authorization: Token
+$config = Agnesoft\AgdbApi\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
+
+
+$apiInstance = new Agnesoft\AgdbApi\Api\AgdbApi(
+    // If you want use custom http client, pass your client which implements `GuzzleHttp\ClientInterface`.
+    // This is optional, `GuzzleHttp\Client` will be used as default.
+    new GuzzleHttp\Client(),
+    $config
+);
+
+try {
+    $apiInstance->clusterAdminUserLogoutAll();
+} catch (Exception $e) {
+    echo 'Exception when calling AgdbApi->clusterAdminUserLogoutAll: ', $e->getMessage(), PHP_EOL;
+}
+```
+
+### Parameters
+
+This endpoint does not need any parameter.
 
 ### Return type
 

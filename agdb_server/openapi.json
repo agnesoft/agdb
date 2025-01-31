@@ -1002,6 +1002,27 @@
         ]
       }
     },
+    "/api/v1/admin/user/logout_all": {
+      "post": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "admin_user_logout_all",
+        "responses": {
+          "201": {
+            "description": "users logged out"
+          },
+          "401": {
+            "description": "admin only"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
     "/api/v1/admin/user/{username}/add": {
       "post": {
         "tags": [
@@ -1169,6 +1190,27 @@
           },
           "404": {
             "description": "user not found"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/cluster/admin/user/logout_all": {
+      "post": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "cluster_admin_user_logout_all",
+        "responses": {
+          "201": {
+            "description": "users logged out"
+          },
+          "401": {
+            "description": "admin only"
           }
         },
         "security": [

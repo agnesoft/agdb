@@ -379,6 +379,18 @@ impl<T: HttpClient> AgdbApi<T> {
             .0)
     }
 
+    pub async fn cluster_admin_user_logout_all(&self) -> AgdbApiResult<u16> {
+        Ok(self
+            .client
+            .post::<(), ()>(
+                &self.url("/cluster/admin/user/logout_all"),
+                &None,
+                &self.token,
+            )
+            .await?
+            .0)
+    }
+
     pub async fn cluster_user_login(
         &mut self,
         username: &str,

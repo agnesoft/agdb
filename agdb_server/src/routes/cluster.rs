@@ -1,4 +1,5 @@
 use crate::action::cluster_login::ClusterLogin;
+use crate::action::cluster_logout::ClusterLogout;
 use crate::action::ClusterAction;
 use crate::cluster;
 use crate::cluster::Cluster;
@@ -57,6 +58,28 @@ pub(crate) async fn admin_logout(
             new_token: String::new(),
         })
         .await?;
+
+    Ok((
+        StatusCode::CREATED,
+        [("commit-index", commit_index.to_string())],
+    ))
+}
+
+#[utoipa::path(post,
+    path = "/api/v1/cluster/admin/user/logout_all",
+    operation_id = "cluster_admin_user_logout_all",
+    tag = "agdb",
+    security(("Token" = [])),
+    responses(
+         (status = 201, description = "users logged out"),
+         (status = 401, description = "admin only"),
+    )
+)]
+pub(crate) async fn admin_logout_all(
+    _admin: AdminId,
+    State(cluster): State<Cluster>,
+) -> ServerResponse<impl IntoResponse> {
+    let (commit_index, _result) = cluster.exec(ClusterLogout {}).await?;
 
     Ok((
         StatusCode::CREATED,

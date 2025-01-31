@@ -33,6 +33,7 @@ use utoipa::OpenApi;
         routes::admin::user::add,
         routes::admin::user::list,
         routes::admin::user::logout,
+        routes::admin::user::logout_all,
         routes::admin::user::delete,
         routes::admin::shutdown,
         routes::admin::status,
@@ -61,6 +62,7 @@ use utoipa::OpenApi;
         routes::cluster::logout,
         routes::cluster::status,
         routes::cluster::admin_logout,
+        routes::cluster::admin_logout_all,
     ),
     components(schemas(
         routes::db::DbTypeParam,

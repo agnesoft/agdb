@@ -338,6 +338,14 @@ impl<T: HttpClient> AgdbApi<T> {
             .0)
     }
 
+    pub async fn admin_user_logout_all(&self) -> AgdbApiResult<u16> {
+        Ok(self
+            .client
+            .post::<(), ()>(&self.url("/admin/user/logout_all"), &None, &self.token)
+            .await?
+            .0)
+    }
+
     pub async fn admin_user_delete(&self, username: &str) -> AgdbApiResult<u16> {
         self.client
             .delete(
@@ -364,6 +372,18 @@ impl<T: HttpClient> AgdbApi<T> {
             .client
             .post::<(), ()>(
                 &self.url(&format!("/cluster/admin/user/{username}/logout")),
+                &None,
+                &self.token,
+            )
+            .await?
+            .0)
+    }
+
+    pub async fn cluster_admin_user_logout_all(&self) -> AgdbApiResult<u16> {
+        Ok(self
+            .client
+            .post::<(), ()>(
+                &self.url("/cluster/admin/user/logout_all"),
                 &None,
                 &self.token,
             )

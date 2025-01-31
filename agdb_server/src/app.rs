@@ -43,6 +43,10 @@ pub(crate) fn app(
         .route("/admin/status", routing::get(routes::admin::status))
         .route("/admin/user/list", routing::get(routes::admin::user::list))
         .route(
+            "/admin/user/logout_all",
+            routing::post(routes::admin::user::logout_all),
+        )
+        .route(
             "/admin/user/{username}/logout",
             routing::post(routes::admin::user::logout),
         )
@@ -176,6 +180,10 @@ pub(crate) fn app(
         .route(
             "/cluster/admin/user/{username}/logout",
             routing::post(routes::cluster::admin_logout),
+        )
+        .route(
+            "/cluster/admin/user/logout_all",
+            routing::post(routes::cluster::admin_logout_all),
         )
         .route("/cluster/status", routing::get(routes::cluster::status))
         .route("/user/login", routing::post(routes::user::login))

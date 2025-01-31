@@ -62,6 +62,7 @@ const COMMITTED: &str = "committed";
 const DB: &str = "db";
 const DBS: &str = "dbs";
 const EXECUTED: &str = "executed";
+const NAME: &str = "name";
 const OWNER: &str = "owner";
 const ROLE: &str = "role";
 const TOKEN: &str = "token";
@@ -141,13 +142,13 @@ impl ServerDb {
             let dbs: Vec<(DbId, String, String)> = t
                 .exec(
                     QueryBuilder::select()
-                        .values("name")
+                        .values(NAME)
                         .search()
                         .from(DBS)
                         .where_()
                         .distance(CountComparison::Equal(2))
                         .and()
-                        .keys("name")
+                        .keys(NAME)
                         .query(),
                 )?
                 .elements
@@ -620,6 +621,25 @@ impl ServerDb {
             .exec_mut(QueryBuilder::remove().ids(ids).query())?;
 
         Ok(dbs)
+    }
+
+    pub(crate) async fn reset_tokens(&self) -> ServerResult<()> {
+        self.0.write().await.exec_mut(
+            QueryBuilder::insert()
+                .values_uniform([(TOKEN, String::new()).into()])
+                .search()
+                .from(USERS)
+                .where_()
+                .distance(CountComparison::Equal(2))
+                .and()
+                .key(TOKEN)
+                .value(Comparison::NotEqual(String::new().into()))
+                .and()
+                .not()
+                .ids(ADMIN)
+                .query(),
+        )?;
+        Ok(())
     }
 
     pub(crate) async fn save_db(&self, db: &Database) -> ServerResult<()> {

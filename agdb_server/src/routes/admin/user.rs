@@ -144,6 +144,25 @@ pub(crate) async fn logout(
     Ok(StatusCode::CREATED)
 }
 
+#[utoipa::path(post,
+    path = "/api/v1/admin/user/logout_all",
+    operation_id = "admin_user_logout_all",
+    tag = "agdb",
+    security(("Token" = [])),
+    responses(
+         (status = 201, description = "users logged out"),
+         (status = 401, description = "admin only"),
+    )
+)]
+pub(crate) async fn logout_all(
+    _admin: AdminId,
+    State(server_db): State<ServerDb>,
+) -> ServerResponse {
+    server_db.reset_tokens().await?;
+
+    Ok(StatusCode::CREATED)
+}
+
 #[utoipa::path(delete,
     path = "/api/v1/admin/user/{username}/delete",
     operation_id = "admin_user_delete",

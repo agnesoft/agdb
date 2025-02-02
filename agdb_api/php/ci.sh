@@ -7,7 +7,7 @@ function coverage() {
     sleep 3
     
     local output
-    output=$(XDEBUG_MODE=coverage ../../vendor/bin/phpunit tests --coverage-filter src/ --coverage-text --coverage-html coverage/)
+    output=$(XDEBUG_MODE=coverage ../../vendor/bin/phpunit tests --coverage-filter src/ --coverage-text --coverage-html coverage/ --coverage-cobertura coverage/coverage-final.xml)
     local error_code=$?
     echo "$output"
     echo ""

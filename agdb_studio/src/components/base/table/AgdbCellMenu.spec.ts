@@ -44,6 +44,7 @@ describe("AgdbCellMenu", () => {
                             backup: 0,
                         },
                     },
+                    [INJECT_KEY_TABLE_NAME]: "databases",
                 },
             },
         });
@@ -74,6 +75,7 @@ describe("AgdbCellMenu", () => {
                             backup: 0,
                         },
                     },
+                    [INJECT_KEY_TABLE_NAME]: "databases",
                 },
             },
         });
@@ -179,6 +181,7 @@ describe("AgdbCellMenu", () => {
                             backup: 0,
                         },
                     },
+                    [INJECT_KEY_TABLE_NAME]: "databases",
                 },
             },
         });
@@ -214,6 +217,11 @@ describe("AgdbCellMenu", () => {
                     },
                 ],
             },
+            global: {
+                provide: {
+                    [INJECT_KEY_TABLE_NAME]: "databases",
+                },
+            },
         });
 
         const trigger = wrapper.find(".trigger");
@@ -242,6 +250,7 @@ describe("AgdbCellMenu", () => {
                             backup: 0,
                         },
                     },
+                    [INJECT_KEY_TABLE_NAME]: "databases",
                 },
             },
         });
@@ -290,6 +299,7 @@ describe("AgdbCellMenu", () => {
                             backup: 0,
                         },
                     },
+                    [INJECT_KEY_TABLE_NAME]: "databases",
                 },
             },
         });
@@ -337,6 +347,7 @@ describe("AgdbCellMenu", () => {
                             backup: 0,
                         },
                     },
+                    [INJECT_KEY_TABLE_NAME]: "databases",
                 },
             },
         });

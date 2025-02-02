@@ -48,17 +48,17 @@
     },
     "exports": {
         ".": {
-            "default": "./dist/index.js",
-            "types": "./dist/index.d.ts"
+            "types": "./dist/index.d.ts",
+            "default": "./dist/index.js"
         },
         "./openapi": "./dist/openapi.d.ts",
         "./client": {
-            "default": "./dist/client.js",
-            "types": "./dist/client.d.ts"
+            "types": "./dist/client.d.ts",
+            "default": "./dist/client.js"
         },
         "./query_builder": {
-            "default": "./dist/query_builder.js",
-            "types": "./dist/query_builder.d.ts"
+            "types": "./dist/query_builder.d.ts",
+            "default": "./dist/query_builder.js"
         }
     }
 }

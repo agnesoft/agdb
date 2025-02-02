@@ -55,20 +55,20 @@ describe("client service", () => {
         });
     });
     describe("errorInterceptor", () => {
-        it("returns error for 401 response", () => {
+        it("returns error for 401 response", async () => {
             const response = {
                 message: "error",
                 response: { status: 401 },
             };
-            expect(
+            await expect(
                 errorInterceptor(response as unknown as AxiosError<string>),
             ).rejects.toBe(response);
         });
-        it("returns error for unknown response", () => {
+        it("returns error for unknown response", async () => {
             const response = {
                 message: "error",
             };
-            expect(
+            await expect(
                 errorInterceptor(response as unknown as AxiosError<string>),
             ).rejects.toBe(response);
         });

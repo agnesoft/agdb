@@ -7,7 +7,9 @@ on:
       - agdb/**
       - agdb_derive/**
       - agdb_server/**
-      - agdb_api/rust/**
+      - agdb_api/**
+      - agdb_studio/**
+      - agdb_web/**
       - .github/workflows/coverage.yaml
 
 env:
@@ -22,6 +24,12 @@ jobs:
       - uses: taiki-e/install-action@cargo-llvm-cov
       - run: rustup component add llvm-tools-preview
       - run: cargo llvm-cov -p agdb -p agdb_api -p agdb_server --all-features --ignore-filename-regex "agdb(_derive|_benchmarks)|api.rs" --lcov --output-path lcov.info
-      - uses: codecov/codecov-action@v3
+      - run: npm ci
+      - run: npm run test
+      - run: composer config --global use-parent-dir true
+      - run: composer install
+      - run: ./ci.sh coverage
+        working-directory: agdb_api/php
+      - uses: codecov/codecov-action@v5
         with:
-          files: lcov.info
+          token: ${{ secrets.CODECOV_TOKEN }}

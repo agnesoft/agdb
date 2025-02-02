@@ -10,14 +10,12 @@ on:
 jobs:
   agdb_web:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: agdb_web
     steps:
       - uses: actions/checkout@v4
       - run: npm ci
       - run: npm run format:check -- --filter=agdb_web
       - run: npm run lint:check -- --filter=agdb_web
+      - run: npm run build -- --filter=agdb_web
       - run: npm run test -- --filter=agdb_web
       - uses: actions/upload-artifact@v4
         if: always()
@@ -26,7 +24,6 @@ jobs:
           path: agdb_web/coverage/
           retention-days: 30
       - run: npx playwright install --with-deps
-      - run: npm run build -- --filter=agdb_web
       - run: npm run test:e2e -- --filter=agdb_web
       - uses: actions/upload-artifact@v4
         if: always()

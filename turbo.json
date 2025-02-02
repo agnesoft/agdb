@@ -2,30 +2,24 @@
     "$schema": "https://turbo.build/schema.json",
     "tasks": {
         "build": {
-            "outputs": ["dist/**"],
-            "dependsOn": ["^build"]
+            "outputs": [
+                "dist/**"
+            ],
+            "dependsOn": [
+                "^build"
+            ]
         },
         "dev": {
             "persistent": true,
             "cache": false
         },
-        "format": {
-            "dependsOn": ["^format"]
-        },
-        "lint": {
-            "dependsOn": ["^lint"]
-        },
-        "test": {
-            "dependsOn": ["^test"]
-        },
-        "type-check": {
-            "dependsOn": ["^type-check"]
-        },
-        "test:e2e": {
-            "dependsOn": ["^test:e2e"]
-        },
-        "before-commit": {
-            "dependsOn": ["^before-commit"]
-        }
+        "format": {},
+        "format:check": {},
+        "lint": {},
+        "lint:check": {},
+        "test": {},
+        "type-check": {},
+        "test:e2e": {},
+        "before-commit": {}
     }
 }

@@ -161,6 +161,8 @@ fn ci() -> Result<(), CIError> {
     println!("Current version: {}", current_version);
     println!("New version: {}", new_version);
 
+    println!("Installing global dependencies");
+    run_command(Command::new(BASH).arg("-c").arg("npm i"))?;
     update_projects(Path::new("./"), &current_version, &new_version)?;
 
     println!("Generating openapi.json");

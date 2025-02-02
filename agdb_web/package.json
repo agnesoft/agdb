@@ -1,5 +1,5 @@
 {
-    "name": "agdb_web_next",
+    "name": "agdb_web",
     "version": "0.1.0",
     "private": true,
     "scripts": {
@@ -7,11 +7,13 @@
         "build": "next build",
         "start": "next start",
         "lint": "next lint",
+        "lint:check": "next lint",
         "format": "prettier . --write",
         "format:check": "prettier . --check",
         "test": "vitest run --coverage",
         "test:e2e": "playwright test",
-        "before-commit": "npm run format && npm run lint && npm run test && npm run test:e2e"
+        "before-commit": "npm run format && npm run lint && npm run build && npm run test && npm run test:e2e",
+        "type-check": "tsc --noEmit"
     },
     "dependencies": {
         "@theguild/remark-mermaid": "^0.2.0",

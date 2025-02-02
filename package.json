@@ -1,0 +1,26 @@
+{
+    "name": "agdb",
+    "packageManager": "npm@11.1.0",
+    "scripts": {
+        "dev": "turbo run dev",
+        "build": "turbo run build",
+        "type-check": "turbo run type-check",
+        "test": "turbo run test",
+        "test:e2e": "turbo run test:e2e",
+        "lint": "turbo run lint",
+        "lint:check": "turbo run lint:check",
+        "format": "turbo run format",
+        "format:check": "turbo run format:check",
+        "before-commit": "turbo run before-commit",
+        "build-studio": "turbo run agdb_studio#build"
+    },
+    "workspaces": [
+        "agdb_studio/**",
+        "agdb_web/**",
+        "agdb_api/**",
+        "agdb_examples/**"
+    ],
+    "devDependencies": {
+        "turbo": "^2.4.0"
+    }
+}

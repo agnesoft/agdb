@@ -6,6 +6,7 @@
     "author": "Agnesoft",
     "type": "module",
     "main": "dist/index.js",
+    "module": "dist/index.js",
     "types": "dist/index.d.ts",
     "keywords": [
         "graph",
@@ -44,5 +45,20 @@
         "typescript": "^5.7.3",
         "vite": "^6.0.11",
         "vitest": "^3.0.3"
+    },
+    "exports": {
+        ".": {
+            "default": "./dist/index.js",
+            "types": "./dist/index.d.ts"
+        },
+        "./openapi": "./dist/openapi.d.ts",
+        "./client": {
+            "default": "./dist/client.js",
+            "types": "./dist/client.d.ts"
+        },
+        "./query_builder": {
+            "default": "./dist/query_builder.js",
+            "types": "./dist/query_builder.d.ts"
+        }
     }
 }

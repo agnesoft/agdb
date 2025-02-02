@@ -1,5 +1,5 @@
 import { client } from "@/services/api.service";
-import type { UserStatus } from "agdb_api/dist/openapi";
+import type { UserStatus } from "@agnesoft/agdb_api/openapi";
 import { ref } from "vue";
 import { addNotification } from "../notification/notificationStore";
 

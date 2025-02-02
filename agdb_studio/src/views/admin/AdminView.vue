@@ -1,4 +1,5 @@
-<script lang="ts" setup></script>
+<script lang="ts" setup>
+import { RouterLink } from "vue-router";</script>
 
 <template>
     <div class="admin-view">
@@ -7,7 +8,7 @@
         <p>Hi there! This is the admin view. Nothing to see here yet.</p>
 
         <p>
-            <router-link to="/admin/db">Go to the database list</router-link>
+            <RouterLink to="/admin/db">Go to the database list</RouterLink>
         </p>
     </div>
 </template>

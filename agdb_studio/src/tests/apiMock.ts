@@ -104,7 +104,7 @@ export const client = vi.fn().mockResolvedValue({
     cluster_admin_user_logout,
     admin_user_change_password,
 });
-vi.mock("agdb_api", () => {
+vi.mock("@agnesoft/agdb_api", () => {
     return {
         AgdbApi: {
             client,

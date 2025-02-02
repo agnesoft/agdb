@@ -1,7 +1,7 @@
 import { client, removeToken } from "@/services/api.service";
 import { ACCESS_TOKEN } from "@/constants";
 import { computed, ref, watch } from "vue";
-import type { LoginProps } from "agdb_api/dist/client";
+import type { LoginProps } from "@agnesoft/agdb_api/dist/client";
 
 const accessToken = ref<string>();
 

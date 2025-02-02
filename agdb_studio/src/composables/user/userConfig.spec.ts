@@ -8,7 +8,7 @@ import {
 } from "@/tests/apiMock";
 import { useContentInputs } from "../content/inputs";
 import { KEY_MODAL } from "../modal/constants";
-import type { UserStatus } from "agdb_api/dist/openapi";
+import type { UserStatus } from "@agnesoft/agdb_api/dist/openapi";
 const { addInput, setInputValue, clearAllInputs } = useContentInputs();
 
 const passwordInput: Input = {

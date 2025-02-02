@@ -19,10 +19,10 @@
         "@kalimahapps/vue-icons": "^1",
         "@vueuse/components": "^12",
         "@vueuse/core": "^12",
-        "agdb_api": "file:../agdb_api/typescript",
         "openapi-client-axios": "^7",
         "vue": "^3",
-        "vue-router": "^4"
+        "vue-router": "^4",
+        "@agnesoft/agdb_api": "*"
     },
     "devDependencies": {
         "@playwright/test": "^1",

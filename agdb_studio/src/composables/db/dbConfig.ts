@@ -1,4 +1,4 @@
-import type { ServerDatabase } from "agdb_api/dist/openapi";
+import type { ServerDatabase } from "@agnesoft/agdb_api/dist/openapi";
 import { dateFormatter } from "@/composables/table/utils";
 import { convertArrayOfStringsToContent } from "@/composables/content/utils";
 import { useContentInputs } from "../content/inputs";

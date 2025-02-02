@@ -22,3 +22,4 @@ openapitools.json
 .openapi-generator/
 composer.lock
 .vscode/
+.turbo/

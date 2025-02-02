@@ -1,5 +1,6 @@
 <script lang="ts" setup>
-import { RouterLink } from "vue-router";</script>
+import { RouterLink } from "vue-router";
+</script>
 
 <template>
     <div class="admin-view">

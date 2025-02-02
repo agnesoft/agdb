@@ -31,6 +31,7 @@ export default mergeConfig(
                     branches: 100,
                     statements: 100,
                 },
+                reporter: ["text", "html", "json"],
             },
             setupFiles: ["./vitest.setup.ts"],
             globals: true,

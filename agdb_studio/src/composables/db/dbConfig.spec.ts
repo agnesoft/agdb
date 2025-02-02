@@ -22,7 +22,7 @@ import {
 import { useContentInputs } from "../content/inputs";
 import { KEY_MODAL } from "../modal/constants";
 import useModal from "../modal/modal";
-import type { ServerDatabase } from "@agnesoft/agdb_api/dist/openapi";
+import type { ServerDatabase } from "@agnesoft/agdb_api/openapi";
 
 const { isAdmin, isAdminView } = vi.hoisted(() => {
     return {

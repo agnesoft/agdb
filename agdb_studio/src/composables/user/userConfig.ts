@@ -1,4 +1,4 @@
-import type { UserStatus } from "@agnesoft/agdb_api/dist/openapi";
+import type { UserStatus } from "@agnesoft/agdb_api/openapi";
 import { useContentInputs } from "../content/inputs";
 import { client } from "@/services/api.service";
 import { KEY_MODAL } from "../modal/constants";

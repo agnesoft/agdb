@@ -16,13 +16,13 @@
         "before-commit": "npm run format && npm run lint && npm run test && npm run test:e2e"
     },
     "dependencies": {
+        "@agnesoft/agdb_api": "*",
         "@kalimahapps/vue-icons": "^1",
         "@vueuse/components": "^12",
         "@vueuse/core": "^12",
         "openapi-client-axios": "^7",
         "vue": "^3",
-        "vue-router": "^4",
-        "@agnesoft/agdb_api": "*"
+        "vue-router": "^4"
     },
     "devDependencies": {
         "@playwright/test": "^1",

@@ -47,9 +47,18 @@
         "vitest": "^3.0.3"
     },
     "exports": {
-        ".": "./dist/index.js",
-        "./dist": "./dist/index.js",
-        "./dist/openapi": "./dist/openapi.d.ts",
-        "./dist/client": "./dist/client.js"
+        ".": {
+            "default": "./dist/index.js",
+            "types": "./dist/index.d.ts"
+        },
+        "./openapi": "./dist/openapi.d.ts",
+        "./client": {
+            "default": "./dist/client.js",
+            "types": "./dist/client.d.ts"
+        },
+        "./query_builder": {
+            "default": "./dist/query_builder.js",
+            "types": "./dist/query_builder.d.ts"
+        }
     }
 }

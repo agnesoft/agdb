@@ -7,7 +7,7 @@ import {
 } from "@/constants";
 import { computed, ref, type ComputedRef } from "vue";
 import { addNotification } from "@/composables/notification/notificationStore";
-import type { AgdbApiClient } from "@agnesoft/agdb_api/dist/client";
+import type { AgdbApiClient } from "@agnesoft/agdb_api/client";
 
 const _client = ref<AgdbApi.AgdbApiClient | undefined>();
 

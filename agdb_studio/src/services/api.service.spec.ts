@@ -10,7 +10,7 @@ import { client } from "@/tests/apiMock";
 import type { AxiosError, AxiosResponse } from "axios";
 import { vi, describe, it, beforeEach, expect } from "vitest";
 import type { ComputedRef } from "vue";
-import type { AgdbApiClient } from "@agnesoft/agdb_api/dist/client";
+import type { AgdbApiClient } from "@agnesoft/agdb_api/client";
 
 describe("client service", () => {
     Object.defineProperty(window, "location", {

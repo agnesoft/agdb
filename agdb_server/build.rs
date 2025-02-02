@@ -28,6 +28,7 @@ fn build_studio() {
 fn main() {
     println!("cargo::rerun-if-changed=../agdb_api/typescript/src");
     println!("cargo::rerun-if-changed=../agdb_studio/src");
+    println!("cargo::rerun-if-changed=../package-lock.json");
 
     #[cfg(feature = "studio")]
     build_studio();

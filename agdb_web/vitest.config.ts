@@ -29,7 +29,7 @@ export default defineConfig({
                 branches: 100,
                 statements: 100,
             },
-            // reporter: ["text", ["html", { subdir: "coverage" }]],
+            reporter: ["text", "html", "json"],
         },
     },
     build: {

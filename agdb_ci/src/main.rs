@@ -8,6 +8,7 @@ use crate::languages::php;
 use crate::languages::rust;
 use crate::languages::typescript;
 use std::path::Path;
+use std::process::Command;
 
 fn ci() -> Result<(), CIError> {
     let current_version = sources::current_version()?;
@@ -15,6 +16,8 @@ fn ci() -> Result<(), CIError> {
     println!("Current version: {}", current_version);
     println!("New version: {}", new_version);
 
+    println!("Installing global dependencies");
+    utilities::run_command(Command::new(utilities::BASH).arg("-c").arg("npm i"))?;
     languages::update_versions(Path::new("./"), &current_version, &new_version)?;
 
     rust::generate_api()?;

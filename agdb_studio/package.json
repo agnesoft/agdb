@@ -11,6 +11,7 @@
         "build-only": "vite build",
         "type-check": "vue-tsc --noEmit -p tsconfig.vitest.json --composite false",
         "lint": "eslint --max-warnings=0 . --fix",
+        "lint:check": "eslint --max-warnings=0 .",
         "format": "prettier --write src/ e2e/",
         "format:check": "prettier --check src/ e2e/",
         "before-commit": "npm run format && npm run lint && npm run test && npm run test:e2e"

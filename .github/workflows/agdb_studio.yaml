@@ -11,17 +11,12 @@ on:
 jobs:
   agdb_studio:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: agdb_studio
     steps:
       - uses: actions/checkout@v4
-      - run: npm ci && npm run build
-        working-directory: agdb_api/typescript
       - run: npm ci
-      - run: npm run format:check
-      - run: npm run lint
-      - run: npm run test
+      - run: npm run format:check -- --filter=agdb_studio
+      - run: npm run lint:check -- --filter=agdb_studio
+      - run: npm run test -- --filter=agdb_studio
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -29,8 +24,8 @@ jobs:
           path: agdb_studio/coverage/
           retention-days: 30
       - run: npx playwright install --with-deps
-      - run: npm run build
-      - run: npm run test:e2e
+      - run: npm run build -- --filter=agdb_studio
+      - run: npm run test:e2e -- --filter=agdb_studio
       - uses: actions/upload-artifact@v4
         if: always()
         with:

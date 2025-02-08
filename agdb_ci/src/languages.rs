@@ -49,3 +49,8 @@ pub(crate) fn update_versions(
 
     Ok(())
 }
+
+trait Language {
+    fn generate_type(ty: &agdb::api::Type) -> String;
+    fn type_name(ty: &agdb::api::Type) -> String;
+}

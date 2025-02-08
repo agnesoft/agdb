@@ -39,7 +39,8 @@ use crate::SearchQuery;
 /// QueryBuilder::search();
 /// QueryBuilder::select();
 /// ```
-pub struct QueryBuilder {}
+#[cfg_attr(feature = "api", derive(agdb::api::ApiDef))]
+pub struct QueryBuilder;
 
 impl QueryBuilder {
     /// Allows inserting data into the database:

@@ -34,15 +34,19 @@ pub fn api_def(item: TokenStream) -> TokenStream {
 
 fn struct_def(name: Ident, fields_types: Vec<(Option<&Ident>, &Type)>) -> proc_macro2::TokenStream {
     let named_types = fields_types.iter().map(|(name, ty)| {
-        let name = if let Some(name) = name {
-            format!("{name}")
+        if let Some(name) = name {
+            quote! {
+                ::agdb::api::NamedType {
+                    name: stringify!(#name),
+                    ty: <#ty as ::agdb::api::ApiDefinition>::def(),
+                }
+            }
         } else {
-            String::new()
-        };
-        quote! {
-            ::agdb::api::NamedType {
-                name: stringify!(#name),
-                ty: <#ty as ::agdb::api::ApiDefinition>::def(),
+            quote! {
+                ::agdb::api::NamedType {
+                    name: "",
+                    ty: <#ty as ::agdb::api::ApiDefinition>::def(),
+                }
             }
         }
     });

@@ -5,7 +5,7 @@ license = "Apache-2.0"
 
 [dependencies]
 anyhow = "1"
-agdb = { version = "0.10.0", path = "../agdb", features = ["serde", "openapi"] }
+agdb = { version = "0.10.0", path = "../agdb", features = ["serde", "openapi", "api"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 utoipa = "5"

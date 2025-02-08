@@ -642,6 +642,42 @@ declare namespace Components {
              */
             QueryValues;
         }
+        /**
+         * Comparison of a value stored under specific `key` to
+         * a value using the comparison operator.
+         */
+        export interface KeyValueComparison {
+            /**
+             * Property key
+             */
+            key: /**
+             * Database value is a strongly types value.
+             *
+             * It is an enum of limited number supported types
+             * that are universal across all platforms
+             * and programming languages.
+             *
+             * The value is constructible from large number of
+             * raw types or associated types (e.g. i32, &str, etc.).
+             * Getting the raw value back as string can be done
+             * with `to_string()` but otherwise requires a `match`.
+             */
+            DbValue;
+            /**
+             * Comparison operator (e.g. Equal, GreaterThan etc.)
+             */
+            value: /**
+             * Comparison of database values ([`DbValue`]) used
+             * by `key()` condition. Supports
+             * the usual set of named comparisons: `==, !=, <, <=, >, =>`
+             * plus `contains()`. The comparisons are type
+             * strict except for the `contains` comparison
+             * which allows vectorized version of the base type. Notably
+             * however it does not support the `bytes` and integral types
+             * where the "contains" makes little sense (i.e. does 3 contain 1?).
+             */
+            Comparison;
+        }
         export type Queries = /* Convenience enum for serializing/deserializing queries. */ QueryType[];
         export type QueriesResults = /**
          * Universal database result. Successful
@@ -742,38 +778,11 @@ declare namespace Components {
              * Tests if the current element has a property `key`
              * with a value that evaluates true against `comparison`.
              */
-            KeyValue: {
-                /**
-                 * Property key
-                 */
-                key: /**
-                 * Database value is a strongly types value.
-                 *
-                 * It is an enum of limited number supported types
-                 * that are universal across all platforms
-                 * and programming languages.
-                 *
-                 * The value is constructible from large number of
-                 * raw types or associated types (e.g. i32, &str, etc.).
-                 * Getting the raw value back as string can be done
-                 * with `to_string()` but otherwise requires a `match`.
-                 */
-                DbValue;
-                /**
-                 * Comparison operator (e.g. Equal, GreaterThan etc.)
-                 */
-                value: /**
-                 * Comparison of database values ([`DbValue`]) used
-                 * by `key()` condition. Supports
-                 * the usual set of named comparisons: `==, !=, <, <=, >, =>`
-                 * plus `contains()`. The comparisons are type
-                 * strict except for the `contains` comparison
-                 * which allows vectorized version of the base type. Notably
-                 * however it does not support the `bytes` and integral types
-                 * where the "contains" makes little sense (i.e. does 3 contain 1?).
-                 */
-                Comparison;
-            };
+            KeyValue: /**
+             * Comparison of a value stored under specific `key` to
+             * a value using the comparison operator.
+             */
+            KeyValueComparison;
         } | {
             /**
              * Test if the current element has **all** of the keys listed.
@@ -3267,6 +3276,7 @@ export type InsertEdgesQuery = Components.Schemas.InsertEdgesQuery;
 export type InsertIndexQuery = Components.Schemas.InsertIndexQuery;
 export type InsertNodesQuery = Components.Schemas.InsertNodesQuery;
 export type InsertValuesQuery = Components.Schemas.InsertValuesQuery;
+export type KeyValueComparison = Components.Schemas.KeyValueComparison;
 export type Queries = Components.Schemas.Queries;
 export type QueriesResults = Components.Schemas.QueriesResults;
 export type QueryAudit = Components.Schemas.QueryAudit;

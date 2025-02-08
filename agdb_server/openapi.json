@@ -3070,6 +3070,24 @@
           }
         }
       },
+      "KeyValueComparison": {
+        "type": "object",
+        "description": "Comparison of a value stored under specific `key` to\na value using the comparison operator.",
+        "required": [
+          "key",
+          "value"
+        ],
+        "properties": {
+          "key": {
+            "$ref": "#/components/schemas/DbValue",
+            "description": "Property key"
+          },
+          "value": {
+            "$ref": "#/components/schemas/Comparison",
+            "description": "Comparison operator (e.g. Equal, GreaterThan etc.)"
+          }
+        }
+      },
       "Queries": {
         "type": "array",
         "items": {
@@ -3211,22 +3229,8 @@
             ],
             "properties": {
               "KeyValue": {
-                "type": "object",
-                "description": "Tests if the current element has a property `key`\nwith a value that evaluates true against `comparison`.",
-                "required": [
-                  "key",
-                  "value"
-                ],
-                "properties": {
-                  "key": {
-                    "$ref": "#/components/schemas/DbValue",
-                    "description": "Property key"
-                  },
-                  "value": {
-                    "$ref": "#/components/schemas/Comparison",
-                    "description": "Comparison operator (e.g. Equal, GreaterThan etc.)"
-                  }
-                }
+                "$ref": "#/components/schemas/KeyValueComparison",
+                "description": "Tests if the current element has a property `key`\nwith a value that evaluates true against `comparison`."
               }
             }
           },

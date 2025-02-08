@@ -1,6 +1,6 @@
 <?php
 /**
- * QueryConditionDataOneOf5KeyValue
+ * KeyValueComparison
  *
  * PHP version 7.4
  *
@@ -32,16 +32,16 @@ use \ArrayAccess;
 use \Agnesoft\AgdbApi\ObjectSerializer;
 
 /**
- * QueryConditionDataOneOf5KeyValue Class Doc Comment
+ * KeyValueComparison Class Doc Comment
  *
  * @category Class
- * @description Tests if the current element has a property &#x60;key&#x60; with a value that evaluates true against &#x60;comparison&#x60;.
+ * @description Comparison of a value stored under specific &#x60;key&#x60; to a value using the comparison operator.
  * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
  * @implements \ArrayAccess<string, mixed>
  */
-class QueryConditionDataOneOf5KeyValue implements ModelInterface, ArrayAccess, \JsonSerializable
+class KeyValueComparison implements ModelInterface, ArrayAccess, \JsonSerializable
 {
     public const DISCRIMINATOR = null;
 
@@ -50,7 +50,7 @@ class QueryConditionDataOneOf5KeyValue implements ModelInterface, ArrayAccess, \
       *
       * @var string
       */
-    protected static $openAPIModelName = 'QueryConditionData_oneOf_5_KeyValue';
+    protected static $openAPIModelName = 'KeyValueComparison';
 
     /**
       * Array of property to type mappings. Used for (de)serialization

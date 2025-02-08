@@ -1,4 +1,4 @@
-# # QueryConditionDataOneOf5KeyValue
+# # KeyValueComparison
 
 ## Properties
 

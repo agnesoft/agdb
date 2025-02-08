@@ -20,7 +20,7 @@ rust-tls = ["reqwest/rustls-tls"]
 native-tls = ["reqwest/native-tls"]
 
 [dependencies]
-agdb = { version = "0.10.0", path = "../../agdb", features = ["serde", "openapi"] }
+agdb = { version = "0.10.0", path = "../../agdb", features = ["serde", "openapi", "api"] }
 reqwest = { version = "0.12", default-features = false, features = ["charset", "http2", "macos-system-configuration", "json"], optional = true }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"

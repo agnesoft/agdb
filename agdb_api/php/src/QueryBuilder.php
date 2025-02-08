@@ -2,6 +2,7 @@
 
 namespace Agnesoft\AgdbApi;
 
+use Agnesoft\AgdbApi\Model\KeyValueComparison;
 use ReflectionClass;
 use stdClass;
 use Agnesoft\AgdbApi\Model\QueryResult;
@@ -942,10 +943,10 @@ class SearchIndexBuilder
         $condition->setLogic(QueryConditionLogic::_AND); // @phpstan-ignore argument.type
         $condition->setModifier(QueryConditionModifier::NONE); // @phpstan-ignore argument.type
         $condition_data = new QueryConditionData();
-        $kv = new QueryConditionDataOneOf5KeyValue();
-        $kv->setKey($this->key);
-        $kv->setValue(new Comparison(["equal" => to_db_value($v)]));
-        $condition_data->setKeyValue($kv);
+        $kvc = new KeyValueComparison();
+        $kvc->setKey($this->key);
+        $kvc->setValue(new Comparison(["equal" => to_db_value($v)]));
+        $condition_data->setKeyValue($kvc);
         $condition->setData($condition_data);
         $this->data->search->setConditions([$condition]);
         return new SearchIndexValueBuilder($this->data);
@@ -1000,10 +1001,10 @@ class SearchWhereKeyBuilder
     public function value(Comparison $comparison): SearchWhereLogicBuilder
     {
         $condition_data = new QueryConditionData();
-        $kv = new QueryConditionDataOneOf5KeyValue();
-        $kv->setKey($this->key);
-        $kv->setValue($comparison);
-        $condition_data->setKeyValue($kv);
+        $kvc = new KeyValueComparison();
+        $kvc->setKey($this->key);
+        $kvc->setValue($comparison);
+        $condition_data->setKeyValue($kvc);
         $this->data->__push_condition($condition_data);
         return new SearchWhereLogicBuilder($this->data);
     }

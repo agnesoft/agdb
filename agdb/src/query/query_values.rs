@@ -6,6 +6,7 @@ use crate::DbUserValue;
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 #[cfg_attr(feature = "derive", derive(agdb::AgdbDeSerialize))]
+#[cfg_attr(feature = "api", derive(agdb::api::ApiDef))]
 #[derive(Clone, Debug, PartialEq)]
 pub enum QueryValues {
     /// Single list of properties (key-value pairs)

@@ -17,7 +17,7 @@ tls = ["dep:axum-server", "dep:rustls", "reqwest/rustls-tls", "agdb_api/rust-tls
 studio = ["dep:include_dir"]
 
 [dependencies]
-agdb = { version = "0.10.0", path = "../agdb", features = ["serde", "openapi"] }
+agdb = { version = "0.10.0", path = "../agdb", features = ["serde", "openapi", "api"] }
 agdb_api = { version = "0.10.0", path = "../agdb_api/rust", features = ["reqwest"] }
 axum = { version = "0.8", features = ["http2"] }
 axum-extra = { version = "0.10", features = ["typed-header"] }

@@ -1,5 +1,6 @@
 use crate::db::db_value::DbValues;
 use crate::query::query_condition::CountComparison;
+use crate::query::query_condition::KeyValueComparison;
 use crate::query::query_condition::QueryCondition;
 use crate::query::query_condition::QueryConditionData;
 use crate::query::query_condition::QueryConditionLogic;
@@ -365,10 +366,10 @@ impl<T: SearchQueryBuilder> WhereKey<T> {
         let condition = QueryCondition {
             logic: self.where_.logic,
             modifier: self.where_.modifier,
-            data: QueryConditionData::KeyValue {
+            data: QueryConditionData::KeyValue(KeyValueComparison {
                 key: self.key,
                 value: comparison,
-            },
+            }),
         };
         self.where_.add_condition(condition);
         WhereLogicOperator(self.where_)

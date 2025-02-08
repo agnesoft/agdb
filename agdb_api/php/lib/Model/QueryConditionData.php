@@ -63,7 +63,7 @@ class QueryConditionData implements ModelInterface, ArrayAccess, \JsonSerializab
         'edge_count_from' => '\Agnesoft\AgdbApi\Model\CountComparison',
         'edge_count_to' => '\Agnesoft\AgdbApi\Model\CountComparison',
         'ids' => '\Agnesoft\AgdbApi\Model\QueryId[]',
-        'key_value' => '\Agnesoft\AgdbApi\Model\QueryConditionDataOneOf5KeyValue',
+        'key_value' => '\Agnesoft\AgdbApi\Model\KeyValueComparison',
         'keys' => '\Agnesoft\AgdbApi\Model\DbValue[]',
         'where' => '\Agnesoft\AgdbApi\Model\QueryCondition[]'
     ];
@@ -501,7 +501,7 @@ class QueryConditionData implements ModelInterface, ArrayAccess, \JsonSerializab
     /**
      * Gets key_value
      *
-     * @return \Agnesoft\AgdbApi\Model\QueryConditionDataOneOf5KeyValue
+     * @return \Agnesoft\AgdbApi\Model\KeyValueComparison
      */
     public function getKeyValue()
     {
@@ -511,7 +511,7 @@ class QueryConditionData implements ModelInterface, ArrayAccess, \JsonSerializab
     /**
      * Sets key_value
      *
-     * @param \Agnesoft\AgdbApi\Model\QueryConditionDataOneOf5KeyValue $key_value key_value
+     * @param \Agnesoft\AgdbApi\Model\KeyValueComparison $key_value Tests if the current element has a property `key` with a value that evaluates true against `comparison`.
      *
      * @return self
      */

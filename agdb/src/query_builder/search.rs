@@ -1,5 +1,6 @@
 use super::where_::Where;
 use crate::db::db_key_order::DbKeyOrders;
+use crate::query::query_condition::KeyValueComparison;
 use crate::Comparison;
 use crate::DbValue;
 use crate::QueryCondition;
@@ -557,10 +558,10 @@ impl<T: SearchQueryBuilder> SearchIndex<T> {
     pub fn value<V: Into<DbValue>>(mut self, value: V) -> SearchIndexValue<T> {
         self.query.search_mut().algorithm = SearchQueryAlgorithm::Index;
         self.query.search_mut().conditions.push(QueryCondition {
-            data: QueryConditionData::KeyValue {
+            data: QueryConditionData::KeyValue(KeyValueComparison {
                 key: self.index,
                 value: Comparison::Equal(value.into()),
-            },
+            }),
             logic: QueryConditionLogic::And,
             modifier: QueryConditionModifier::None,
         });

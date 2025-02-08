@@ -15,6 +15,7 @@ categories = ["database", "database-implementations"]
 
 [features]
 default = ["derive"]
+api = ["derive"]
 derive = ["dep:agdb_derive"]
 openapi = ["dep:utoipa"]
 serde = ["dep:serde"]

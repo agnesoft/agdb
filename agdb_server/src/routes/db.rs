@@ -38,19 +38,19 @@ use serde::Deserialize;
 use utoipa::IntoParams;
 use utoipa::ToSchema;
 
-#[derive(Deserialize, IntoParams, ToSchema)]
+#[derive(Deserialize, IntoParams, ToSchema, agdb::api::ApiDef)]
 #[into_params(parameter_in = Query)]
 pub struct ServerDatabaseRename {
     pub new_db: String,
 }
 
-#[derive(Deserialize, IntoParams, ToSchema)]
+#[derive(Deserialize, IntoParams, ToSchema, agdb::api::ApiDef)]
 #[into_params(parameter_in = Query)]
 pub(crate) struct DbTypeParam {
     pub(crate) db_type: DbType,
 }
 
-#[derive(Deserialize, IntoParams, ToSchema)]
+#[derive(Deserialize, IntoParams, ToSchema, agdb::api::ApiDef)]
 #[into_params(parameter_in = Query)]
 pub struct ServerDatabaseResource {
     pub resource: DbResource,

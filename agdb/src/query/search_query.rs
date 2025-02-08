@@ -17,6 +17,7 @@ use std::cmp::Ordering;
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 #[cfg_attr(feature = "derive", derive(agdb::AgdbDeSerialize))]
+#[cfg_attr(feature = "api", derive(agdb::api::ApiDef))]
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum SearchQueryAlgorithm {
     /// Examines each distance level from the search origin in full
@@ -44,6 +45,7 @@ pub enum SearchQueryAlgorithm {
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 #[cfg_attr(feature = "derive", derive(agdb::AgdbDeSerialize))]
+#[cfg_attr(feature = "api", derive(agdb::api::ApiDef))]
 pub struct SearchQuery {
     /// Search algorithm to be used. Will be bypassed for path
     /// searches that unconditionally use A*.
@@ -99,8 +101,8 @@ impl SearchQuery {
         if self.algorithm == SearchQueryAlgorithm::Index {
             let condition = self.conditions.first().ok_or("Index condition missing")?;
 
-            if let QueryConditionData::KeyValue { key, value } = &condition.data {
-                let ids = db.search_index(key, value.value())?;
+            if let QueryConditionData::KeyValue(kvc) = &condition.data {
+                let ids = db.search_index(&kvc.key, kvc.value.value())?;
                 return Ok(ids);
             } else {
                 return Err("Index condition must be key value".into());

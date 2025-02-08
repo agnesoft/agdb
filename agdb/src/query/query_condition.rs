@@ -7,6 +7,7 @@ use crate::QueryId;
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 #[cfg_attr(feature = "derive", derive(agdb::AgdbDeSerialize))]
+#[cfg_attr(feature = "api", derive(agdb::api::ApiDef))]
 pub enum QueryConditionLogic {
     /// Logical AND (&&)
     And,
@@ -20,6 +21,7 @@ pub enum QueryConditionLogic {
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 #[cfg_attr(feature = "derive", derive(agdb::AgdbDeSerialize))]
+#[cfg_attr(feature = "api", derive(agdb::api::ApiDef))]
 pub enum QueryConditionModifier {
     /// No modifier
     None,
@@ -41,6 +43,7 @@ pub enum QueryConditionModifier {
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 #[cfg_attr(feature = "derive", derive(agdb::AgdbDeSerialize))]
+#[cfg_attr(feature = "api", derive(agdb::api::ApiDef))]
 pub enum QueryConditionData {
     /// Distance from the search origin. Takes count comparison
     /// (e.g. Equal, GreaterThan).
@@ -70,13 +73,7 @@ pub enum QueryConditionData {
 
     /// Tests if the current element has a property `key`
     /// with a value that evaluates true against `comparison`.
-    KeyValue {
-        /// Property key
-        key: DbValue,
-
-        /// Comparison operator (e.g. Equal, GreaterThan etc.)
-        value: Comparison,
-    },
+    KeyValue(KeyValueComparison),
 
     /// Test if the current element has **all** of the keys listed.
     Keys(Vec<DbValue>),
@@ -94,6 +91,7 @@ pub enum QueryConditionData {
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 #[cfg_attr(feature = "derive", derive(agdb::AgdbDeSerialize))]
+#[cfg_attr(feature = "api", derive(agdb::api::ApiDef))]
 pub struct QueryCondition {
     /// Logic operator (e.g. And, Or)
     pub logic: QueryConditionLogic,
@@ -114,6 +112,7 @@ pub struct QueryCondition {
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 #[cfg_attr(feature = "derive", derive(agdb::AgdbDeSerialize))]
+#[cfg_attr(feature = "api", derive(agdb::api::ApiDef))]
 pub enum CountComparison {
     /// property == this
     Equal(u64),
@@ -146,6 +145,7 @@ pub enum CountComparison {
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 #[cfg_attr(feature = "derive", derive(agdb::AgdbDeSerialize))]
+#[cfg_attr(feature = "api", derive(agdb::api::ApiDef))]
 pub enum Comparison {
     /// property == this
     Equal(DbValue),
@@ -167,6 +167,21 @@ pub enum Comparison {
 
     /// property.contains(this)
     Contains(DbValue),
+}
+
+/// Comparison of a value stored under specific `key` to
+/// a value using the comparison operator.
+#[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
+#[cfg_attr(feature = "derive", derive(agdb::AgdbDeSerialize))]
+#[cfg_attr(feature = "api", derive(agdb::api::ApiDef))]
+pub struct KeyValueComparison {
+    /// Property key
+    pub key: DbValue,
+
+    /// Comparison operator (e.g. Equal, GreaterThan etc.)
+    pub value: Comparison,
 }
 
 impl CountComparison {

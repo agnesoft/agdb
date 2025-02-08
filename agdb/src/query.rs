@@ -57,6 +57,7 @@ use crate::{
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 #[cfg_attr(feature = "derive", derive(agdb::AgdbDeSerialize))]
+#[cfg_attr(feature = "api", derive(agdb::api::ApiDef))]
 #[derive(Clone, Debug, PartialEq)]
 #[expect(clippy::large_enum_variant)]
 pub enum QueryType {

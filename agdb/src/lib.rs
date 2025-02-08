@@ -44,6 +44,9 @@ pub use agdb_derive::AgdbDeSerialize;
 #[cfg(feature = "derive")]
 pub use agdb_derive::{UserValue, UserValueMarker};
 
+#[cfg(feature = "api")]
+pub mod api;
+
 pub use db::db_element::DbElement;
 pub use db::db_error::DbError;
 pub use db::db_f64::DbF64;
@@ -70,6 +73,7 @@ pub use query::insert_nodes_query::InsertNodesQuery;
 pub use query::insert_values_query::InsertValuesQuery;
 pub use query::query_condition::Comparison;
 pub use query::query_condition::CountComparison;
+pub use query::query_condition::KeyValueComparison;
 pub use query::query_condition::QueryCondition;
 pub use query::query_condition::QueryConditionData;
 pub use query::query_condition::QueryConditionLogic;

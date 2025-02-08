@@ -100,6 +100,7 @@ use utoipa::OpenApi;
         agdb::InsertValuesQuery,
         agdb::Comparison,
         agdb::CountComparison,
+        agdb::KeyValueComparison,
         agdb::QueryCondition,
         agdb::QueryConditionData,
         agdb::QueryConditionLogic,

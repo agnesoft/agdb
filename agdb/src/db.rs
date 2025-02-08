@@ -1144,13 +1144,13 @@ impl<Store: StorageData> DbImpl<Store> {
                         }
                 })))
             }
-            QueryConditionData::KeyValue { key, value } => Ok(SearchControl::Continue(
+            QueryConditionData::KeyValue(kvc) => Ok(SearchControl::Continue(
                 if let Some((_, kv)) = self
                     .values
                     .iter_key(&self.storage, &DbId(index.0))
-                    .find(|(_, kv)| &kv.key == key)
+                    .find(|(_, kv)| kv.key == kvc.key)
                 {
-                    value.compare(&kv.value)
+                    kvc.value.compare(&kv.value)
                 } else {
                     false
                 },

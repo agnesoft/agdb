@@ -14,6 +14,7 @@ use std::hash::Hasher;
 #[derive(Clone, Copy, Debug)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
+#[cfg_attr(feature = "api", derive(agdb::api::ApiDef))]
 pub struct DbF64(f64);
 
 impl DbF64 {

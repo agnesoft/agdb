@@ -1,3 +1,4 @@
+use agdb::api_def;
 use agdb::AgdbDeSerialize;
 use agdb::DbError;
 use agdb::DbValue;
@@ -21,8 +22,8 @@ use utoipa::ToSchema;
     PartialOrd,
     Ord,
     AgdbDeSerialize,
-    agdb::api::ApiDef,
 )]
+#[api_def()]
 #[serde(rename_all = "snake_case")]
 pub enum DbType {
     #[default]
@@ -44,8 +45,8 @@ pub enum DbType {
     PartialOrd,
     Ord,
     AgdbDeSerialize,
-    agdb::api::ApiDef,
 )]
+#[api_def()]
 #[serde(rename_all = "snake_case")]
 pub enum DbResource {
     #[default]
@@ -55,9 +56,8 @@ pub enum DbResource {
     Backup,
 }
 
-#[derive(
-    Debug, Deserialize, Serialize, ToSchema, PartialEq, Eq, PartialOrd, Ord, agdb::api::ApiDef,
-)]
+#[derive(Debug, Deserialize, Serialize, ToSchema, PartialEq, Eq, PartialOrd, Ord)]
+#[api_def()]
 pub struct DbUser {
     pub username: String,
     pub role: DbUserRole,
@@ -76,8 +76,8 @@ pub struct DbUser {
     PartialOrd,
     Ord,
     AgdbDeSerialize,
-    agdb::api::ApiDef,
 )]
+#[api_def()]
 #[serde(rename_all = "snake_case")]
 pub enum DbUserRole {
     #[default]
@@ -86,20 +86,23 @@ pub enum DbUserRole {
     Read,
 }
 
-#[derive(Deserialize, Serialize, ToSchema, agdb::api::ApiDef)]
+#[derive(Deserialize, Serialize, ToSchema)]
+#[api_def()]
 pub struct ChangePassword {
     pub password: String,
     pub new_password: String,
 }
 
-#[derive(Debug, Default, Clone, Deserialize, Serialize, ToSchema, PartialEq, agdb::api::ApiDef)]
+#[derive(Debug, Default, Clone, Deserialize, Serialize, ToSchema, PartialEq)]
+#[api_def()]
 pub struct ClusterStatus {
     pub address: String,
     pub status: bool,
     pub leader: bool,
 }
 
-#[derive(Debug, Default, Clone, Deserialize, Serialize, ToSchema, PartialEq, agdb::api::ApiDef)]
+#[derive(Debug, Default, Clone, Deserialize, Serialize, ToSchema, PartialEq)]
+#[api_def()]
 pub struct AdminStatus {
     pub uptime: u64,
     pub dbs: u64,
@@ -108,34 +111,28 @@ pub struct AdminStatus {
     pub size: u64,
 }
 
-#[derive(Clone, Deserialize, Serialize, ToSchema, AgdbDeSerialize, agdb::api::ApiDef)]
+#[derive(Clone, Deserialize, Serialize, ToSchema, AgdbDeSerialize)]
+#[api_def()]
 pub struct Queries(pub Vec<QueryType>);
 
-#[derive(Serialize, ToSchema, agdb::api::ApiDef)]
+#[derive(Serialize, ToSchema)]
+#[api_def()]
 pub struct QueriesResults(pub Vec<QueryResult>);
 
-#[derive(Debug, Deserialize, Serialize, ToSchema, PartialEq, agdb::api::ApiDef)]
+#[derive(Debug, Deserialize, Serialize, ToSchema, PartialEq)]
+#[api_def()]
 pub struct QueryAudit {
     pub timestamp: u64,
     pub username: String,
     pub query: QueryType,
 }
 
-#[derive(Debug, Deserialize, Serialize, ToSchema, PartialEq, agdb::api::ApiDef)]
+#[derive(Debug, Deserialize, Serialize, ToSchema, PartialEq)]
+#[api_def()]
 pub struct DbAudit(pub Vec<QueryAudit>);
 
-#[derive(
-    Debug,
-    Default,
-    Deserialize,
-    Serialize,
-    ToSchema,
-    PartialEq,
-    Eq,
-    PartialOrd,
-    Ord,
-    agdb::api::ApiDef,
-)]
+#[derive(Debug, Default, Deserialize, Serialize, ToSchema, PartialEq, Eq, PartialOrd, Ord)]
+#[api_def()]
 pub struct ServerDatabase {
     pub db: String,
     pub owner: String,
@@ -145,20 +142,21 @@ pub struct ServerDatabase {
     pub backup: u64,
 }
 
-#[derive(Deserialize, Serialize, ToSchema, agdb::api::ApiDef)]
+#[derive(Deserialize, Serialize, ToSchema)]
+#[api_def()]
 pub struct UserCredentials {
     pub password: String,
 }
 
-#[derive(Deserialize, Serialize, ToSchema, agdb::api::ApiDef)]
+#[derive(Deserialize, Serialize, ToSchema)]
+#[api_def()]
 pub struct UserLogin {
     pub username: String,
     pub password: String,
 }
 
-#[derive(
-    Debug, Deserialize, Serialize, ToSchema, PartialEq, Eq, PartialOrd, Ord, agdb::api::ApiDef,
-)]
+#[derive(Debug, Deserialize, Serialize, ToSchema, PartialEq, Eq, PartialOrd, Ord)]
+#[api_def()]
 pub struct UserStatus {
     pub username: String,
     pub login: bool,

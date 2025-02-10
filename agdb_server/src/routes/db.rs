@@ -21,6 +21,7 @@ use crate::server_error::ServerError;
 use crate::server_error::ServerResponse;
 use crate::user_id::UserId;
 use crate::utilities::required_role;
+use agdb::api_def;
 use agdb_api::DbAudit;
 use agdb_api::DbResource;
 use agdb_api::DbType;
@@ -38,19 +39,22 @@ use serde::Deserialize;
 use utoipa::IntoParams;
 use utoipa::ToSchema;
 
-#[derive(Deserialize, IntoParams, ToSchema, agdb::api::ApiDef)]
+#[derive(Deserialize, IntoParams, ToSchema)]
+#[api_def()]
 #[into_params(parameter_in = Query)]
 pub struct ServerDatabaseRename {
     pub new_db: String,
 }
 
-#[derive(Deserialize, IntoParams, ToSchema, agdb::api::ApiDef)]
+#[derive(Deserialize, IntoParams, ToSchema)]
+#[api_def()]
 #[into_params(parameter_in = Query)]
 pub(crate) struct DbTypeParam {
     pub(crate) db_type: DbType,
 }
 
-#[derive(Deserialize, IntoParams, ToSchema, agdb::api::ApiDef)]
+#[derive(Deserialize, IntoParams, ToSchema)]
+#[api_def()]
 #[into_params(parameter_in = Query)]
 pub struct ServerDatabaseResource {
     pub resource: DbResource,

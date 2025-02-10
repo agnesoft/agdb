@@ -68,7 +68,7 @@ impl Language for Rust {
                     buf = format!(
                         "pub struct {}({});\n",
                         s.name,
-                        Self::type_name(&s.fields[0].ty)
+                        Self::type_name(&(s.fields[0].ty)())
                     );
                 } else {
                     buf.push_str(&format!("pub struct {} {{\n", s.name));
@@ -76,22 +76,102 @@ impl Language for Rust {
                         buf.push_str(&format!(
                             "    pub {}: {},\n",
                             field.name,
-                            Self::type_name(&field.ty)
+                            Self::type_name(&(field.ty)())
                         ));
                     }
+                    buf.push_str("}\n");
+                }
+
+                if !s.functions.is_empty() {
+                    buf.push_str(format!("impl {} {{\n", s.name).as_str());
+
+                    for function in &s.functions {
+                        buf.push_str(format!("    pub fn {}(", function.name).as_str());
+                        for (i, arg) in function.args.iter().enumerate() {
+                            if i > 0 {
+                                buf.push_str(", ");
+                            }
+                            buf.push_str(
+                                format!("{}: {},", arg.name, Self::type_name(&(arg.ty)())).as_str(),
+                            );
+                        }
+                        buf.push_str(") {\n");
+
+                        for e in &function.expressions {
+                            match e {
+                                agdb::api::Expression::Create { ty } => {
+                                    buf.push_str(
+                                        format!(
+                                            "        let mut {} = {}::default();\n",
+                                            ty.name,
+                                            Self::type_name(&(ty.ty)())
+                                        )
+                                        .as_str(),
+                                    );
+                                }
+                                agdb::api::Expression::CreateArg { ty, arg } => {
+                                    buf.push_str(
+                                        format!(
+                                            "        let mut {} = {}::new({arg});\n",
+                                            ty.name,
+                                            Self::type_name(&(ty.ty)())
+                                        )
+                                        .as_str(),
+                                    );
+                                }
+                                agdb::api::Expression::Assign {
+                                    object,
+                                    fields,
+                                    value,
+                                } => {
+                                    buf.push_str(
+                                        format!(
+                                            "        {}.{} = {};\n",
+                                            if object.is_empty() { "self" } else { object },
+                                            fields
+                                                .iter()
+                                                .map(|f| if *f == "." { "0" } else { f })
+                                                .collect::<Vec<&str>>()
+                                                .join("."),
+                                            value
+                                        )
+                                        .as_str(),
+                                    );
+                                }
+                                agdb::api::Expression::Return(var) => {
+                                    buf.push_str(format!("{var}\n").as_str());
+                                }
+                                agdb::api::Expression::CreateReturn { ty } => {
+                                    buf.push_str(
+                                        format!("        {}::default()\n", Self::type_name(&ty()))
+                                            .as_str(),
+                                    );
+                                }
+                                agdb::api::Expression::CreateReturnArg { ty, arg } => {
+                                    buf.push_str(
+                                        format!("        {}::new({arg})\n", Self::type_name(&ty()))
+                                            .as_str(),
+                                    );
+                                }
+                            }
+                        }
+
+                        buf.push_str("    }\n");
+                    }
+
                     buf.push_str("}\n");
                 }
             }
             Type::Enum(e) => {
                 buf.push_str(&format!("pub enum {} {{\n", e.name));
                 for variant in &e.variants {
-                    if let Type::None = variant.ty {
+                    if let Type::None = (variant.ty)() {
                         buf.push_str(&format!("    {},\n", variant.name));
                     } else {
                         buf.push_str(&format!(
                             "    {}({}),\n",
                             variant.name,
-                            Self::type_name(&variant.ty)
+                            Self::type_name(&(variant.ty)())
                         ));
                     }
                 }
@@ -163,5 +243,19 @@ mod tests {
         let generated = Rust::generate_type(&QueryConditionLogic::def());
         let expected = "pub enum QueryConditionLogic {\n    And,\n    Or,\n}\n";
         assert_eq!(generated, expected);
+    }
+
+    #[test]
+    fn proof_of_generator() {
+        let types = vec![
+            agdb::api::builder::QueryBuilder::def(),
+            agdb::api::builder::Insert::def(),
+            agdb::api::builder::InsertAliases::def(),
+            agdb::api::builder::InsertAliasesIds::def(),
+        ];
+
+        for ty in types {
+            println!("{}", Rust::generate_type(&ty));
+        }
     }
 }

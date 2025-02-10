@@ -1,4 +1,4 @@
-pub use agdb_derive::ApiDef;
+pub mod builder;
 
 pub enum Type {
     None,
@@ -15,7 +15,30 @@ pub enum Type {
 
 pub struct NamedType {
     pub name: &'static str,
-    pub ty: Type,
+    pub ty: fn() -> Type,
+}
+
+pub enum Expression {
+    Create {
+        ty: NamedType,
+    },
+    CreateArg {
+        ty: NamedType,
+        arg: &'static str,
+    },
+    CreateReturn {
+        ty: fn() -> Type,
+    },
+    CreateReturnArg {
+        ty: fn() -> Type,
+        arg: &'static str,
+    },
+    Assign {
+        object: &'static str,
+        fields: Vec<&'static str>,
+        value: &'static str,
+    },
+    Return(&'static str),
 }
 
 pub struct Enum {
@@ -23,9 +46,17 @@ pub struct Enum {
     pub variants: Vec<NamedType>,
 }
 
+pub struct Function {
+    pub name: &'static str,
+    pub args: Vec<NamedType>,
+    pub expressions: Vec<Expression>,
+    pub ret: fn() -> Type,
+}
+
 pub struct Struct {
     pub name: &'static str,
     pub fields: Vec<NamedType>,
+    pub functions: Vec<Function>,
 }
 
 pub trait ApiDefinition {
@@ -77,5 +108,52 @@ impl<T: ApiDefinition> ApiDefinition for Vec<T> {
 impl<T: ApiDefinition> ApiDefinition for Option<T> {
     fn def() -> Type {
         Type::Option(Box::new(T::def()))
+    }
+}
+
+impl Expression {
+    pub fn create(name: &'static str, ty: fn() -> Type) -> Self {
+        Expression::Create {
+            ty: NamedType { name, ty },
+        }
+    }
+
+    pub fn create_arg(name: &'static str, ty: fn() -> Type, arg: &'static str) -> Self {
+        Expression::CreateArg {
+            ty: NamedType { name, ty },
+            arg,
+        }
+    }
+
+    pub fn create_return(ty: fn() -> Type) -> Self {
+        Expression::CreateReturn { ty }
+    }
+
+    pub fn create_return_arg(ty: fn() -> Type, arg: &'static str) -> Self {
+        Expression::CreateReturnArg { ty, arg }
+    }
+
+    pub fn assign(object: &'static str, field: &'static str, value: &'static str) -> Self {
+        Expression::Assign {
+            object,
+            fields: vec![field],
+            value,
+        }
+    }
+
+    pub fn assign_fields(
+        object: &'static str,
+        fields: Vec<&'static str>,
+        value: &'static str,
+    ) -> Self {
+        Expression::Assign {
+            object,
+            fields,
+            value,
+        }
+    }
+
+    pub fn ret(value: &'static str) -> Self {
+        Expression::Return(value)
     }
 }

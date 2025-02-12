@@ -18,7 +18,7 @@
     "dependencies": {
         "@theguild/remark-mermaid": "^0.2.0",
         "highlight.js": "^11",
-        "next": "15",
+        "next": "^15.1.2",
         "nextra": "^3",
         "nextra-theme-docs": "^3",
         "react": "^18",

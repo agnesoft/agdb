@@ -4,7 +4,6 @@ use crate::api::ApiDefinition;
 use crate::api::Expression;
 use crate::api::Function;
 use crate::api::NamedType;
-use crate::api::Type;
 use crate::InsertAliasesQuery;
 use crate::QueryIds;
 
@@ -27,7 +26,7 @@ fn __insert_def() -> Function {
         name: "insert",
         args: vec![],
         expressions: vec![Expression::create_return(Insert::def)],
-        ret: QueryBuilder::def,
+        ret: Insert::def,
     }
 }
 
@@ -43,7 +42,7 @@ fn __aliases_def() -> Function {
             Expression::assign_fields("q", vec![".", "aliases"], "aliases"),
             Expression::ret("q"),
         ],
-        ret: QueryBuilder::def,
+        ret: InsertAliases::def,
     }
 }
 

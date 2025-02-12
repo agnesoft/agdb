@@ -1,3 +1,4 @@
+pub(crate) mod builder;
 pub(crate) mod php;
 pub(crate) mod rust;
 pub(crate) mod typescript;

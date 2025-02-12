@@ -63,15 +63,16 @@ impl Language for Rust {
         match ty {
             Type::Struct(s) => {
                 if s.fields.is_empty() {
-                    buf = format!("pub struct {};\n", s.name);
+                    buf = format!("#[derive(Default)]\npub struct {};\n", s.name);
                 } else if s.fields.len() == 1 && s.fields[0].name.is_empty() {
+                    let n = Self::type_name(&(s.fields[0].ty)());
                     buf = format!(
-                        "pub struct {}({});\n",
+                        "#[derive(Default)]\npub struct {}({n});\nimpl {} {{\n    pub fn new(arg: {n}) -> Self {{ Self(arg) }}\n}}\n",
                         s.name,
-                        Self::type_name(&(s.fields[0].ty)())
+                        s.name
                     );
                 } else {
-                    buf.push_str(&format!("pub struct {} {{\n", s.name));
+                    buf.push_str(&format!("#[derive(Default)]\npub struct {} {{\n", s.name));
                     for field in &s.fields {
                         buf.push_str(&format!(
                             "    pub {}: {},\n",
@@ -87,15 +88,18 @@ impl Language for Rust {
 
                     for function in &s.functions {
                         buf.push_str(format!("    pub fn {}(", function.name).as_str());
-                        for (i, arg) in function.args.iter().enumerate() {
-                            if i > 0 {
-                                buf.push_str(", ");
-                            }
-                            buf.push_str(
-                                format!("{}: {},", arg.name, Self::type_name(&(arg.ty)())).as_str(),
-                            );
-                        }
-                        buf.push_str(") {\n");
+
+                        let mut args = vec!["self".to_string()];
+                        args.extend(
+                            function
+                                .args
+                                .iter()
+                                .map(|a| format!("{}: {},", a.name, Self::type_name(&(a.ty)()))),
+                        );
+                        buf.push_str(args.join(", ").as_str());
+                        buf.push_str(
+                            format!(") -> {} {{\n", Self::type_name(&(function.ret)())).as_str(),
+                        );
 
                         for e in &function.expressions {
                             match e {
@@ -112,9 +116,10 @@ impl Language for Rust {
                                 agdb::api::Expression::CreateArg { ty, arg } => {
                                     buf.push_str(
                                         format!(
-                                            "        let mut {} = {}::new({arg});\n",
+                                            "        let mut {} = {}::new({});\n",
                                             ty.name,
-                                            Self::type_name(&(ty.ty)())
+                                            Self::type_name(&(ty.ty)()),
+                                            if *arg == "." { "self.0" } else { arg },
                                         )
                                         .as_str(),
                                     );
@@ -139,7 +144,13 @@ impl Language for Rust {
                                     );
                                 }
                                 agdb::api::Expression::Return(var) => {
-                                    buf.push_str(format!("{var}\n").as_str());
+                                    buf.push_str(
+                                        format!(
+                                            "        {}\n",
+                                            if *var == "." { "self.0" } else { var }
+                                        )
+                                        .as_str(),
+                                    );
                                 }
                                 agdb::api::Expression::CreateReturn { ty } => {
                                     buf.push_str(
@@ -159,7 +170,7 @@ impl Language for Rust {
                         buf.push_str("    }\n");
                     }
 
-                    buf.push_str("}\n");
+                    buf.push_str("}\n\n");
                 }
             }
             Type::Enum(e) => {
@@ -176,6 +187,21 @@ impl Language for Rust {
                     }
                 }
                 buf.push_str("}\n");
+                buf.push_str(
+                    format!(
+                        "impl Default for {} {{\n    fn default() -> Self {{\n        Self::",
+                        e.name
+                    )
+                    .as_str(),
+                );
+
+                let variant = e.variants.first().unwrap();
+                if let Type::None = (variant.ty)() {
+                    buf.push_str(&format!("{}\n", variant.name));
+                } else {
+                    buf.push_str(&format!("{}(Default::default())\n", variant.name));
+                }
+                buf.push_str("      }\n}\n");
             }
             _ => {}
         }
@@ -248,14 +274,36 @@ mod tests {
     #[test]
     fn proof_of_generator() {
         let types = vec![
+            agdb::DbValue::def(),
+            agdb::DbId::def(),
+            agdb::DbF64::def(),
+            agdb::Comparison::def(),
+            agdb::CountComparison::def(),
+            agdb::KeyValueComparison::def(),
+            agdb::QueryConditionLogic::def(),
+            agdb::QueryConditionModifier::def(),
+            agdb::QueryConditionData::def(),
+            agdb::SearchQueryAlgorithm::def(),
+            agdb::DbKeyOrder::def(),
+            agdb::QueryCondition::def(),
+            agdb::QueryId::def(),
+            agdb::SearchQuery::def(),
+            agdb::QueryIds::def(),
+            agdb::InsertAliasesQuery::def(),
             agdb::api::builder::QueryBuilder::def(),
             agdb::api::builder::Insert::def(),
             agdb::api::builder::InsertAliases::def(),
             agdb::api::builder::InsertAliasesIds::def(),
         ];
 
+        let mut buf = "mod builder {\n".to_string();
+
         for ty in types {
-            println!("{}", Rust::generate_type(&ty));
+            buf.push_str(&Rust::generate_type(&ty));
         }
+
+        buf.push_str("}\n");
+
+        std::fs::write("src/languages/builder.rs", buf).unwrap();
     }
 }

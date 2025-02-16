@@ -1,7 +1,11 @@
 mod definitions;
 
 use core::panic;
-use definitions::{Function, Functions, NamedType, NamedTypes};
+use definitions::Function;
+use definitions::Functions;
+use definitions::NamedType;
+use definitions::NamedTypes;
+use definitions::Type;
 use proc_macro::token_stream::IntoIter;
 use proc_macro::Delimiter;
 use proc_macro::Group;
@@ -23,7 +27,8 @@ pub fn impl_def(_attr: TokenStream, item: TokenStream) -> TokenStream {
         let _name_generics = get_generics(&mut iter);
         let data = next_group(&mut iter);
 
-        let functions = parse_impl_block(name, impl_generics, data.stream());
+        let mut functions = parse_impl_block(name, impl_generics, data.stream());
+        functions.embed_generics();
         println!("{functions}")
     }
 
@@ -37,7 +42,7 @@ fn parse_impl_block(name: Ident, generics: NamedTypes, item: TokenStream) -> Fun
     while let Some(token) = iter.next() {
         if let TokenTree::Ident(accesor) = token {
             if accesor.to_string() == "pub" {
-                functions.push(parse_function(&name, &mut iter));
+                functions.push(parse_function(&mut iter));
             }
         }
     }
@@ -49,7 +54,7 @@ fn parse_impl_block(name: Ident, generics: NamedTypes, item: TokenStream) -> Fun
     }
 }
 
-fn parse_function(ty: &Ident, iter: &mut IntoIter) -> Function {
+fn parse_function(iter: &mut IntoIter) -> Function {
     let _fn = next_ident(iter);
     assert!(_fn.to_string() == "fn");
 
@@ -57,16 +62,14 @@ fn parse_function(ty: &Ident, iter: &mut IntoIter) -> Function {
     let generics = get_generics(iter);
     let args = next_group(iter);
     let args = parse_args(args.stream());
-    let ret = next_ident(iter);
-    let ret_generics = get_generics(iter);
+    let ret = get_ret(iter);
     //let body = next_group(iter);
 
     Function {
         name: name.to_string(),
         generics,
         args,
-        ret: ret.to_string(),
-        ret_generics,
+        ret,
     }
 }
 
@@ -84,20 +87,9 @@ fn parse_args(item: TokenStream) -> NamedTypes {
                     continue;
                 }
 
-                if name == "self" || name == "Self" {
-                    args.push(NamedType {
-                        name: "self".to_string(),
-                        ty: String::new(),
-                    });
-                } else {
-                    let ty = next_ident(&mut iter);
-                    args.push(NamedType {
-                        name,
-                        ty: ty.to_string(),
-                    });
-                }
+                args.push(get_arg(ident, &mut iter));
             }
-            TokenTree::Punct(punct) => {}
+            TokenTree::Punct(_) => {}
             TokenTree::Literal(_) => panic!("Unexpected literals in arguments"),
         }
     }
@@ -138,7 +130,7 @@ fn get_generics(iter: &mut IntoIter) -> NamedTypes {
                 if let Some(token) = new_iter.next() {
                     match token {
                         TokenTree::Group(_) => panic!("Unexpected group in generics"),
-                        TokenTree::Ident(ident) => generics.push(get_generic(ident, &mut new_iter)),
+                        TokenTree::Ident(ident) => generics.push(get_arg(ident, &mut new_iter)),
                         TokenTree::Punct(punct) => {
                             if punct.as_char() == '<' {
                                 depth += 1;
@@ -158,49 +150,77 @@ fn get_generics(iter: &mut IntoIter) -> NamedTypes {
     return NamedTypes(generics);
 }
 
-fn get_generic(ident: Ident, iter: &mut IntoIter) -> NamedType {
+fn get_arg(ident: Ident, iter: &mut IntoIter) -> NamedType {
     let mut it = iter.clone();
 
     if let Some(TokenTree::Punct(p)) = it.next() {
         if p.as_char() == ':' {
-            let ty = next_ident(&mut it);
-            let sub_generic = get_sub_generic(&mut it);
             *iter = it;
-
             return NamedType {
                 name: ident.to_string(),
-                ty: if sub_generic.is_empty() {
-                    ty.to_string()
-                } else {
-                    format!("{}<{}>", ty, sub_generic)
-                },
+                ty: get_type(iter),
             };
         }
     }
 
     return NamedType {
         name: ident.to_string(),
-        ty: String::new(),
+        ty: Type::None,
     };
 }
 
-fn get_sub_generic(iter: &mut IntoIter) -> String {
+fn get_generic_type(iter: &mut IntoIter) -> Type {
     let mut it = iter.clone();
 
     if let Some(TokenTree::Punct(p)) = it.next() {
         if p.as_char() == '<' {
-            let ty = next_ident(&mut it);
+            *iter = it;
 
+            let t = get_type(iter);
+
+            if let Some(TokenTree::Punct(p)) = iter.next() {
+                if p.as_char() != '>' {
+                    panic!("Expected '>', futher nesting not supported");
+                }
+            }
+
+            return t;
+        }
+    }
+
+    Type::None
+}
+
+fn get_type(iter: &mut IntoIter) -> Type {
+    let ty = next_ident(iter);
+    let ty_string = ty.to_string();
+
+    let t = if ty_string == "Into" {
+        let sub_ty = get_generic_type(iter);
+        Type::Into(Box::new(sub_ty))
+    } else if ty_string == "Vec" {
+        let sub_ty = get_generic_type(iter);
+        Type::Vec(Box::new(sub_ty))
+    } else {
+        Type::Named(ty_string)
+    };
+
+    t
+}
+
+fn get_ret(iter: &mut IntoIter) -> Type {
+    let mut it = iter.clone();
+
+    if let Some(TokenTree::Punct(p)) = it.next() {
+        if p.as_char() == '-' {
             if let Some(TokenTree::Punct(p)) = it.next() {
                 if p.as_char() == '>' {
                     *iter = it;
-                    return ty.to_string();
-                } else {
-                    panic!("Further nesting not supported, expected '>'");
+                    return get_type(iter);
                 }
             }
         }
     }
 
-    return String::new();
+    Type::None
 }

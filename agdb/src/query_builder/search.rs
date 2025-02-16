@@ -50,6 +50,7 @@ pub struct SelectOffset<T: SearchQueryBuilder>(pub T);
 /// and other parameters.
 pub struct SearchAlgorithm<T: SearchQueryBuilder>(pub T);
 
+#[cfg_attr(feature = "api", agdb::impl_def())]
 impl<T: SearchQueryBuilder> Search<T> {
     /// Use breadth-first (BFS) search algorithm. This option is redundant as
     /// BFS is the default. BFS means each level of the graph is examined in full

@@ -47,7 +47,7 @@ pub use agdb_derive::{UserValue, UserValueMarker};
 #[cfg(feature = "api")]
 pub mod api;
 #[cfg(feature = "api")]
-pub use agdb_derive::ApiDef;
+pub use agdb_derive::{impl_def, ApiDef};
 
 pub use db::db_element::DbElement;
 pub use db::db_error::DbError;

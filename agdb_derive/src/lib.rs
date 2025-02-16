@@ -11,24 +11,8 @@ use syn::Type;
 
 const DB_ID: &str = "db_id";
 
-#[proc_macro_attribute]
-pub fn api_def(attr: TokenStream, item: TokenStream) -> TokenStream {
-    let functions = if attr.to_string().trim().is_empty() {
-        vec![]
-    } else {
-        attr.to_string()
-            .trim()
-            .split(",")
-            .map(|f| format_ident!("__{}", f.trim()))
-            .collect::<Vec<_>>()
-    };
-
-    let mut i = item.clone();
-    i.extend(api_def_item(item, functions));
-    i
-}
-
-fn api_def_item(item: TokenStream, functions: Vec<Ident>) -> TokenStream {
+#[proc_macro_derive(ApiDef)]
+pub fn api_def(item: TokenStream) -> TokenStream {
     let input = parse_macro_input!(item as DeriveInput);
     let name = input.ident;
     let generics = input.generics;
@@ -40,7 +24,7 @@ fn api_def_item(item: TokenStream, functions: Vec<Ident>) -> TokenStream {
             .map(|f| (f.ident.as_ref(), &f.ty))
             .collect::<Vec<(Option<&Ident>, &Type)>>();
 
-        struct_def(name, generics, fields_types, functions)
+        struct_def(name, generics, fields_types)
     } else if let syn::Data::Enum(data) = input.data {
         enum_def(name, data)
     } else {
@@ -54,7 +38,6 @@ fn struct_def(
     name: Ident,
     generics: Generics,
     fields_types: Vec<(Option<&Ident>, &Type)>,
-    functions: Vec<Ident>,
 ) -> proc_macro2::TokenStream {
     let named_types = fields_types.iter().map(|(name, ty)| {
         if let Some(name) = name {
@@ -84,8 +67,7 @@ fn struct_def(
                     name: stringify!(#name),
                     fields: vec![
                         #(#named_types),*
-                    ],
-                    functions: vec![#(Self::#functions()),*],
+                    ]
                 }))
             }
         }

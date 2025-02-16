@@ -39,7 +39,7 @@ use crate::SearchQuery;
 /// QueryBuilder::search();
 /// QueryBuilder::select();
 /// ```
-#[cfg_attr(feature = "api", agdb::api_def())]
+#[cfg_attr(feature = "api", derive(agdb::ApiDef))]
 pub struct QueryBuilder;
 
 impl QueryBuilder {

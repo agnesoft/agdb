@@ -23,7 +23,7 @@ use crate::StorageData;
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 #[cfg_attr(feature = "derive", derive(agdb::AgdbDeSerialize))]
-#[cfg_attr(feature = "api", agdb::api_def())]
+#[cfg_attr(feature = "api", derive(agdb::ApiDef))]
 #[derive(Clone, Debug, PartialEq)]
 pub struct SelectEdgeCountQuery {
     /// Ids of the nodes to select edge count for.

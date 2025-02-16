@@ -58,7 +58,6 @@ pub struct Function {
 pub struct Struct {
     pub name: &'static str,
     pub fields: Vec<NamedType>,
-    pub functions: Vec<Function>,
 }
 
 pub trait ApiDefinition {

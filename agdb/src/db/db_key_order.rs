@@ -5,7 +5,7 @@ use crate::DbValue;
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 #[cfg_attr(feature = "derive", derive(agdb::AgdbDeSerialize))]
-#[cfg_attr(feature = "api", agdb::api_def())]
+#[cfg_attr(feature = "api", derive(agdb::ApiDef))]
 pub enum DbKeyOrder {
     /// Ascending order (from smallest)
     Asc(DbValue),

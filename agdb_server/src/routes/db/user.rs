@@ -5,7 +5,6 @@ use crate::server_db::ServerDb;
 use crate::server_error::permission_denied;
 use crate::server_error::ServerResponse;
 use crate::user_id::UserId;
-use agdb::api_def;
 use agdb_api::DbUser;
 use agdb_api::DbUserRole;
 use axum::extract::Path;
@@ -18,8 +17,7 @@ use serde::Deserialize;
 use utoipa::IntoParams;
 use utoipa::ToSchema;
 
-#[derive(Deserialize, IntoParams, ToSchema)]
-#[api_def()]
+#[derive(Deserialize, IntoParams, ToSchema, agdb::ApiDef)]
 #[into_params(parameter_in = Query)]
 pub(crate) struct DbUserRoleParam {
     pub(crate) db_role: DbUserRole,

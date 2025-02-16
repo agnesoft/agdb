@@ -1,5 +1,3 @@
-pub mod builder;
-
 pub enum Type {
     None,
     U8,
@@ -30,6 +28,10 @@ pub enum Expression {
         ty: fn() -> Type,
     },
     CreateReturnArg {
+        ty: fn() -> Type,
+        arg: &'static str,
+    },
+    CreateReturnArgT {
         ty: fn() -> Type,
         arg: &'static str,
     },
@@ -131,6 +133,10 @@ impl Expression {
 
     pub fn create_return_arg(ty: fn() -> Type, arg: &'static str) -> Self {
         Expression::CreateReturnArg { ty, arg }
+    }
+
+    pub fn create_return_arg_t(ty: fn() -> Type, arg: &'static str) -> Self {
+        Expression::CreateReturnArgT { ty, arg }
     }
 
     pub fn assign(object: &'static str, field: &'static str, value: &'static str) -> Self {

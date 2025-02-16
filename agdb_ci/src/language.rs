@@ -1,7 +1,6 @@
-pub(crate) mod builder;
-pub(crate) mod php;
-pub(crate) mod rust;
-pub(crate) mod typescript;
+pub mod php;
+pub mod rust;
+pub mod typescript;
 
 use crate::CIError;
 use std::path::Path;
@@ -19,7 +18,7 @@ const IGNORE: [&str; 10] = [
     "coverage",
 ];
 
-pub(crate) fn update_versions(
+pub fn update_versions(
     path: &Path,
     current_version: &str,
     new_version: &str,
@@ -51,7 +50,7 @@ pub(crate) fn update_versions(
     Ok(())
 }
 
-trait Language {
+pub trait Language {
     fn generate_type(ty: &agdb::api::Type) -> String;
     fn type_name(ty: &agdb::api::Type) -> String;
 }

@@ -4,6 +4,7 @@ use quote::quote;
 use syn::parse_macro_input;
 use syn::DataEnum;
 use syn::DeriveInput;
+use syn::Generics;
 use syn::Ident;
 use syn::Index;
 use syn::Type;
@@ -18,7 +19,7 @@ pub fn api_def(attr: TokenStream, item: TokenStream) -> TokenStream {
         attr.to_string()
             .trim()
             .split(",")
-            .map(|f| format_ident!("__{}_def", f.trim()))
+            .map(|f| format_ident!("__{}", f.trim()))
             .collect::<Vec<_>>()
     };
 
@@ -30,6 +31,7 @@ pub fn api_def(attr: TokenStream, item: TokenStream) -> TokenStream {
 fn api_def_item(item: TokenStream, functions: Vec<Ident>) -> TokenStream {
     let input = parse_macro_input!(item as DeriveInput);
     let name = input.ident;
+    let generics = input.generics;
 
     let tokens = if let syn::Data::Struct(data) = input.data {
         let fields_types = data
@@ -38,7 +40,7 @@ fn api_def_item(item: TokenStream, functions: Vec<Ident>) -> TokenStream {
             .map(|f| (f.ident.as_ref(), &f.ty))
             .collect::<Vec<(Option<&Ident>, &Type)>>();
 
-        struct_def(name, fields_types, functions)
+        struct_def(name, generics, fields_types, functions)
     } else if let syn::Data::Enum(data) = input.data {
         enum_def(name, data)
     } else {
@@ -50,6 +52,7 @@ fn api_def_item(item: TokenStream, functions: Vec<Ident>) -> TokenStream {
 
 fn struct_def(
     name: Ident,
+    generics: Generics,
     fields_types: Vec<(Option<&Ident>, &Type)>,
     functions: Vec<Ident>,
 ) -> proc_macro2::TokenStream {
@@ -71,8 +74,10 @@ fn struct_def(
         }
     });
 
+    let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
+
     quote! {
-        impl ::agdb::api::ApiDefinition for #name {
+        impl #impl_generics ::agdb::api::ApiDefinition for #name #ty_generics #where_clause {
             fn def() -> ::agdb::api::Type {
                 static STATIC: ::std::sync::OnceLock<::agdb::api::Struct> = ::std::sync::OnceLock::new();
                 ::agdb::api::Type::Struct(STATIC.get_or_init(|| ::agdb::api::Struct {
@@ -80,7 +85,7 @@ fn struct_def(
                     fields: vec![
                         #(#named_types),*
                     ],
-                    functions: vec![#(#functions()),*],
+                    functions: vec![#(Self::#functions()),*],
                 }))
             }
         }

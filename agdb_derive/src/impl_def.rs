@@ -7,32 +7,45 @@ use definitions::NamedType;
 use definitions::NamedTypes;
 use definitions::Type;
 use proc_macro::token_stream::IntoIter;
-use proc_macro::Delimiter;
 use proc_macro::Group;
 use proc_macro::Ident;
-use proc_macro::Punct;
 use proc_macro::TokenStream;
 use proc_macro::TokenTree;
-use std::fmt::Display;
+use quote::format_ident;
+use quote::quote;
 
 pub fn impl_def(_attr: TokenStream, item: TokenStream) -> TokenStream {
     let i2 = item.clone();
     let mut iter = item.into_iter();
 
     let impl_ident = next_ident(&mut iter);
+    assert_eq!(impl_ident.to_string(), "impl");
 
-    if impl_ident.to_string() == "impl" {
-        let impl_generics = get_generics(&mut iter);
-        let name = next_ident(&mut iter);
-        let _name_generics = get_generics(&mut iter);
-        let data = next_group(&mut iter);
+    let impl_generics = get_generics(&mut iter);
+    let name = next_ident(&mut iter);
+    let n = format_ident!("{}", name.to_string());
+    let name_generics = get_generics(&mut iter);
+    let data = next_group(&mut iter);
 
-        let mut functions = parse_impl_block(name, impl_generics, data.stream());
-        functions.embed_generics();
-        println!("{functions}")
-    }
+    let mut functions = parse_impl_block(name, impl_generics, data.stream());
+    functions.embed_generics();
+    let fs = functions.functions.iter();
 
-    return i2;
+    let tokens = quote! {
+        impl<#name_generics> ::agdb::api::ApiFunctions for #n<#name_generics> {
+            fn functions() -> ::std::vec::Vec<::agdb::api::Function> {
+                vec![#(#fs),*]
+            }
+        }
+    };
+
+    println!("{}", tokens.to_string());
+
+    // let mut token_stream: proc_macro::TokenStream = tokens.into();
+    // token_stream.extend(i2);
+    // token_stream
+
+    i2
 }
 
 fn parse_impl_block(name: Ident, generics: NamedTypes, item: TokenStream) -> Functions {

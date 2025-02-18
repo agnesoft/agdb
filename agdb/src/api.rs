@@ -64,6 +64,10 @@ pub trait ApiDefinition {
     fn def() -> Type;
 }
 
+pub trait ApiFunctions: ApiDefinition {
+    fn functions() -> Vec<Function>;
+}
+
 impl ApiDefinition for u8 {
     fn def() -> Type {
         Type::U8

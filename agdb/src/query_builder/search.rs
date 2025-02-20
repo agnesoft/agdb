@@ -11,23 +11,33 @@ use crate::QueryId;
 use crate::SearchQuery;
 use crate::SearchQueryAlgorithm;
 
+#[cfg(feature = "api")]
+pub trait SearchQueryBuilder: agdb::api::ApiDefinition {
+    fn search_mut(&mut self) -> &mut SearchQuery;
+}
+
+#[cfg(not(feature = "api"))]
 pub trait SearchQueryBuilder {
     fn search_mut(&mut self) -> &mut SearchQuery;
 }
 
 /// Search builder query.
+#[cfg_attr(feature = "api", derive(agdb::ApiDef))]
 pub struct Search<T: SearchQueryBuilder>(pub T);
 
 /// Search builder query that lets you choose search origin
 /// and other parameters.
+#[cfg_attr(feature = "api", derive(agdb::ApiDef))]
 pub struct SearchFrom<T: SearchQueryBuilder>(pub T);
 
 /// Search builder query that lets you choose search destination
 /// and other parameters.
+#[cfg_attr(feature = "api", derive(agdb::ApiDef))]
 pub struct SearchTo<T: SearchQueryBuilder>(pub T);
 
 /// Search builder query that lets you choose an index to search
 /// instead of the graph search.
+#[cfg_attr(feature = "api", derive(agdb::ApiDef))]
 pub struct SearchIndex<T: SearchQueryBuilder> {
     pub index: DbValue,
     pub query: T,
@@ -35,19 +45,24 @@ pub struct SearchIndex<T: SearchQueryBuilder> {
 
 /// Search builder query that lets you choose a a value to find
 /// in the index.
+#[cfg_attr(feature = "api", derive(agdb::ApiDef))]
 pub struct SearchIndexValue<T: SearchQueryBuilder>(pub T);
 
 /// Search builder query that lets you choose limit and offset.
+#[cfg_attr(feature = "api", derive(agdb::ApiDef))]
 pub struct SearchOrderBy<T: SearchQueryBuilder>(pub T);
 
 /// Search builder query that lets you choose conditions.
+#[cfg_attr(feature = "api", derive(agdb::ApiDef))]
 pub struct SelectLimit<T: SearchQueryBuilder>(pub T);
 
 /// Search builder query that lets you choose limit.
+#[cfg_attr(feature = "api", derive(agdb::ApiDef))]
 pub struct SelectOffset<T: SearchQueryBuilder>(pub T);
 
 /// Search builder query that lets you choose search origin
 /// and other parameters.
+#[cfg_attr(feature = "api", derive(agdb::ApiDef))]
 pub struct SearchAlgorithm<T: SearchQueryBuilder>(pub T);
 
 #[cfg_attr(feature = "api", agdb::impl_def())]

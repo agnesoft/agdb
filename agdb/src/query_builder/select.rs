@@ -18,6 +18,7 @@ use crate::SelectValuesQuery;
 
 /// Select builder that lets you choose what
 /// data you want to select form the database.
+#[cfg_attr(feature = "api", derive(agdb::ApiDef))]
 pub struct Select {}
 
 impl Select {

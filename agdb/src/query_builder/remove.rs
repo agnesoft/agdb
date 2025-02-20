@@ -14,6 +14,7 @@ use crate::SearchQuery;
 use crate::SelectValuesQuery;
 
 /// Remove builder to choose what to delete from the database.
+#[cfg_attr(feature = "api", derive(agdb::ApiDef))]
 pub struct Remove {}
 
 impl Remove {

@@ -51,8 +51,8 @@ pub struct Enum {
 pub struct Function {
     pub name: &'static str,
     pub args: Vec<NamedType>,
-    pub expressions: Vec<Expression>,
     pub ret: fn() -> Type,
+    pub expressions: Vec<Expression>,
 }
 
 pub struct Struct {

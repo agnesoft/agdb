@@ -49,6 +49,8 @@ pub mod api;
 #[cfg(feature = "api")]
 pub use agdb_derive::{impl_def, ApiDef};
 #[cfg(feature = "api")]
+pub use db::db_value::DbValues;
+#[cfg(feature = "api")]
 pub use query::{
     query_aliases::QueryAliases,
     query_values::{MultiValues, SingleValues},

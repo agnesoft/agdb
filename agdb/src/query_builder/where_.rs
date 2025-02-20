@@ -11,6 +11,7 @@ use crate::DbValue;
 use crate::QueryIds;
 
 /// Condition builder
+#[cfg_attr(feature = "api", derive(agdb::ApiDef))]
 pub struct Where<T: SearchQueryBuilder> {
     logic: QueryConditionLogic,
     modifier: QueryConditionModifier,
@@ -19,14 +20,17 @@ pub struct Where<T: SearchQueryBuilder> {
 }
 
 /// Condition builder for `key` condition.
+#[cfg_attr(feature = "api", derive(agdb::ApiDef))]
 pub struct WhereKey<T: SearchQueryBuilder> {
     key: DbValue,
     where_: Where<T>,
 }
 
 /// Condition builder setting the logic operator.
+#[cfg_attr(feature = "api", derive(agdb::ApiDef))]
 pub struct WhereLogicOperator<T: SearchQueryBuilder>(pub Where<T>);
 
+#[cfg_attr(feature = "api", agdb::impl_def())]
 impl<T: SearchQueryBuilder> Where<T> {
     /// Sets the condition modifier for the following condition so
     /// that the search will continue beyond current element only
@@ -360,6 +364,7 @@ impl<T: SearchQueryBuilder> Where<T> {
     }
 }
 
+#[cfg_attr(feature = "api", agdb::impl_def())]
 impl<T: SearchQueryBuilder> WhereKey<T> {
     /// Sets the value of the `key` condition to `comparison`.
     pub fn value(mut self, comparison: Comparison) -> WhereLogicOperator<T> {
@@ -376,6 +381,7 @@ impl<T: SearchQueryBuilder> WhereKey<T> {
     }
 }
 
+#[cfg_attr(feature = "api", agdb::impl_def())]
 impl<T: SearchQueryBuilder> WhereLogicOperator<T> {
     /// Sets the logic operator for the following condition
     /// to logical AND (&&). The condition passes only if

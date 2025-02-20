@@ -54,6 +54,7 @@ pub enum DbValue {
     VecString(Vec<String>),
 }
 
+#[cfg_attr(feature = "api", derive(agdb::ApiDef))]
 pub struct DbValues(pub Vec<DbValue>);
 
 const BYTES_META_VALUE: u8 = 1_u8;

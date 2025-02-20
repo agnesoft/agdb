@@ -17,6 +17,7 @@ use crate::SelectValuesQuery;
 #[cfg_attr(feature = "api", derive(agdb::ApiDef))]
 pub struct Remove {}
 
+#[cfg_attr(feature = "api", agdb::impl_def())]
 impl Remove {
     /// List of aliases to delete from the database. It is not an error
     /// if any of the aliases does not exist in the database.

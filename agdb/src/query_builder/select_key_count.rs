@@ -3,12 +3,15 @@ use crate::QueryIds;
 use crate::SelectKeyCountQuery;
 
 /// Select key count builder.
+#[cfg_attr(feature = "api", derive(agdb::ApiDef))]
 pub struct SelectKeyCount(pub SelectKeyCountQuery);
 
 /// Final builder that lets you create
 /// an actual query object.
+#[cfg_attr(feature = "api", derive(agdb::ApiDef))]
 pub struct SelectKeyCountIds(pub SelectKeyCountQuery);
 
+#[cfg_attr(feature = "api", agdb::impl_def())]
 impl SelectKeyCount {
     /// An id or list of ids or search query to select key count of.
     /// All ids specified must exist in the database.
@@ -27,6 +30,7 @@ impl SelectKeyCount {
     }
 }
 
+#[cfg_attr(feature = "api", agdb::impl_def())]
 impl SelectKeyCountIds {
     /// Returns the built `SelectKeyCountQuery` object.
     pub fn query(self) -> SelectKeyCountQuery {

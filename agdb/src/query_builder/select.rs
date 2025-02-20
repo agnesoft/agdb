@@ -21,6 +21,7 @@ use crate::SelectValuesQuery;
 #[cfg_attr(feature = "api", derive(agdb::ApiDef))]
 pub struct Select {}
 
+#[cfg_attr(feature = "api", agdb::impl_def())]
 impl Select {
     /// Select aliases. If no ids are given all aliases
     /// in the database will be selected. Each element

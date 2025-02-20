@@ -5,12 +5,15 @@ use crate::SelectAliasesQuery;
 use crate::SelectAllAliasesQuery;
 
 /// Select aliases builder.
+#[cfg_attr(feature = "api", derive(agdb::ApiDef))]
 pub struct SelectAliases(pub SelectAliasesQuery);
 
 /// Final builder that lets you create
 /// an actual query object.
+#[cfg_attr(feature = "api", derive(agdb::ApiDef))]
 pub struct SelectAliasesIds(pub SelectAliasesQuery);
 
+#[cfg_attr(feature = "api", agdb::impl_def())]
 impl SelectAliases {
     /// An id or list of ids or search query to select aliases of.
     /// All ids specified must exist in the database.
@@ -33,6 +36,7 @@ impl SelectAliases {
     }
 }
 
+#[cfg_attr(feature = "api", agdb::impl_def())]
 impl SelectAliasesIds {
     /// Returns the built `SelectAllAliases` object.
     pub fn query(self) -> SelectAliasesQuery {

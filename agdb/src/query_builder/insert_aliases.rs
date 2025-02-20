@@ -11,6 +11,7 @@ pub struct InsertAliases(pub InsertAliasesQuery);
 #[cfg_attr(feature = "api", derive(agdb::ApiDef))]
 pub struct InsertAliasesIds(pub InsertAliasesQuery);
 
+#[cfg_attr(feature = "api", agdb::impl_def())]
 impl InsertAliases {
     /// Ids of the db elements to be aliased. Only nodes can be aliased
     /// (positive ids) and the ids must exist in the database. NOTE: Search
@@ -22,6 +23,7 @@ impl InsertAliases {
     }
 }
 
+#[cfg_attr(feature = "api", agdb::impl_def())]
 impl InsertAliasesIds {
     /// Returns the built `InsertAliasesQuery` object.
     pub fn query(self) -> InsertAliasesQuery {

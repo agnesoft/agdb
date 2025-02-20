@@ -3,12 +3,15 @@ use crate::QueryIds;
 use crate::SelectEdgeCountQuery;
 
 /// Select edge count builder.
+#[cfg_attr(feature = "api", derive(agdb::ApiDef))]
 pub struct SelectEdgeCount(pub SelectEdgeCountQuery);
 
 /// Final builder that lets you create
 /// an actual query object.
+#[cfg_attr(feature = "api", derive(agdb::ApiDef))]
 pub struct SelectEdgeCountIds(pub SelectEdgeCountQuery);
 
+#[cfg_attr(feature = "api", agdb::impl_def())]
 impl SelectEdgeCount {
     /// An id or list of ids or search query to select edge count of.
     /// All ids specified must exist in the database.
@@ -26,6 +29,7 @@ impl SelectEdgeCount {
     }
 }
 
+#[cfg_attr(feature = "api", agdb::impl_def())]
 impl SelectEdgeCountIds {
     /// Returns the built `SelectEdgeCountQuery` object.
     pub fn query(self) -> SelectEdgeCountQuery {

@@ -5,6 +5,7 @@ use crate::InsertIndexQuery;
 #[cfg_attr(feature = "api", derive(agdb::ApiDef))]
 pub struct InsertIndex(pub DbValue);
 
+#[cfg_attr(feature = "api", agdb::impl_def())]
 impl InsertIndex {
     /// Returns the built `InsertIndexQuery`.
     pub fn query(self) -> InsertIndexQuery {

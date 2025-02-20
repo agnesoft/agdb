@@ -7,6 +7,7 @@ use crate::QueryIds;
 
 /// Insert nodes builder to add aliases or count
 /// or values.
+#[cfg_attr(feature = "api", derive(agdb::ApiDef))]
 pub struct InsertNodes(pub InsertNodesQuery);
 
 /// Insert nodes builder to add values.

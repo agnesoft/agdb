@@ -22,10 +22,12 @@ pub enum QueryValues {
 
 /// Convenient wrapper for the [`QueryBuilder`] to
 /// allow properties conversions. Represents `QueryValues::Single`.
+#[cfg_attr(feature = "api", derive(agdb::ApiDef))]
 pub struct SingleValues(pub Vec<DbKeyValue>);
 
 /// Convenient wrapper for the [`QueryBuilder`] to
 /// allow properties conversions. Represents `QueryValues::Multi`.
+#[cfg_attr(feature = "api", derive(agdb::ApiDef))]
 pub struct MultiValues(pub Vec<Vec<DbKeyValue>>);
 
 impl From<Vec<DbKeyValue>> for SingleValues {

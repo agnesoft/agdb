@@ -48,6 +48,11 @@ pub use agdb_derive::{UserValue, UserValueMarker};
 pub mod api;
 #[cfg(feature = "api")]
 pub use agdb_derive::{impl_def, ApiDef};
+#[cfg(feature = "api")]
+pub use query::{
+    query_aliases::QueryAliases,
+    query_values::{MultiValues, SingleValues},
+};
 
 pub use db::db_element::DbElement;
 pub use db::db_error::DbError;

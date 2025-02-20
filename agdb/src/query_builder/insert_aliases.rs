@@ -3,10 +3,12 @@ use crate::QueryIds;
 
 /// Insert aliases builder to select `ids`
 /// of the aliases.
+#[cfg_attr(feature = "api", derive(agdb::ApiDef))]
 pub struct InsertAliases(pub InsertAliasesQuery);
 
 /// Final builder that lets you create
 /// an actual query object.
+#[cfg_attr(feature = "api", derive(agdb::ApiDef))]
 pub struct InsertAliasesIds(pub InsertAliasesQuery);
 
 impl InsertAliases {

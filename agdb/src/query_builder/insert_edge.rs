@@ -6,6 +6,7 @@ use crate::QueryIds;
 
 /// Insert edges builder that lets you add `from`
 /// (origin) nodes.
+#[cfg_attr(feature = "api", derive(agdb::ApiDef))]
 pub struct InsertEdges(pub InsertEdgesQuery);
 
 /// Insert edges builder that lets you add values.

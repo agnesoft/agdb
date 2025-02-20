@@ -21,6 +21,7 @@ use crate::QueryIds;
 #[cfg_attr(feature = "api", derive(agdb::ApiDef))]
 pub struct Insert {}
 
+#[cfg_attr(feature = "api", agdb::impl_def())]
 impl Insert {
     /// Inserts aliases `names` into the database:
     ///

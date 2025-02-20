@@ -5,6 +5,7 @@ pub enum Type {
     U64,
     F64,
     String,
+    User,
     Enum(&'static Enum),
     Struct(&'static Struct),
     List(Box<Type>),

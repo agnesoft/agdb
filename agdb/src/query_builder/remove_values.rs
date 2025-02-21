@@ -31,6 +31,7 @@ impl RemoveValues {
     }
 }
 
+#[cfg_attr(feature = "api", agdb::impl_def())]
 impl RemoveValuesIds {
     /// Returns the built `RemoveValuesQuery` object.
     pub fn query(self) -> RemoveValuesQuery {

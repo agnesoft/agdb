@@ -1,3 +1,51 @@
+use crate::query_builder::insert::Insert;
+use crate::query_builder::insert_aliases::InsertAliases;
+use crate::query_builder::insert_aliases::InsertAliasesIds;
+use crate::query_builder::insert_edge::InsertEdges;
+use crate::query_builder::insert_edge::InsertEdgesEach;
+use crate::query_builder::insert_edge::InsertEdgesFrom;
+use crate::query_builder::insert_edge::InsertEdgesFromTo;
+use crate::query_builder::insert_edge::InsertEdgesIds;
+use crate::query_builder::insert_edge::InsertEdgesValues;
+use crate::query_builder::insert_nodes::InsertNodes;
+use crate::query_builder::insert_nodes::InsertNodesAliases;
+use crate::query_builder::insert_nodes::InsertNodesCount;
+use crate::query_builder::insert_nodes::InsertNodesIds;
+use crate::query_builder::insert_nodes::InsertNodesValues;
+use crate::query_builder::insert_values::InsertValues;
+use crate::query_builder::insert_values::InsertValuesIds;
+use crate::query_builder::remove::Remove;
+use crate::query_builder::remove_aliases::RemoveAliases;
+use crate::query_builder::remove_ids::RemoveIds;
+use crate::query_builder::remove_index::RemoveIndex;
+use crate::query_builder::remove_values::RemoveValues;
+use crate::query_builder::remove_values::RemoveValuesIds;
+use crate::query_builder::select::Select;
+use crate::query_builder::select_aliases::SelectAliases;
+use crate::query_builder::select_edge_count::SelectEdgeCount;
+use crate::query_builder::select_ids::SelectIds;
+use crate::query_builder::select_indexes::SelectIndexes;
+use crate::query_builder::select_key_count::SelectKeyCount;
+use crate::query_builder::select_keys::SelectKeys;
+use crate::query_builder::select_node_count::SelectNodeCount;
+use crate::query_builder::select_values::SelectValues;
+use crate::DbId;
+use crate::DbKeyValue;
+use crate::DbValue;
+use crate::DbValues;
+use crate::InsertAliasesQuery;
+use crate::InsertEdgesQuery;
+use crate::InsertNodesQuery;
+use crate::InsertValuesQuery;
+use crate::MultiValues;
+use crate::QueryAliases;
+use crate::QueryBuilder;
+use crate::QueryId;
+use crate::QueryIds;
+use crate::QueryValues;
+use crate::RemoveValuesQuery;
+use crate::SingleValues;
+
 pub enum Type {
     None,
     U8,
@@ -165,5 +213,95 @@ impl Expression {
 
     pub fn ret(value: &'static str) -> Self {
         Expression::Return(value)
+    }
+}
+
+struct ApiType {
+    ty: Type,
+    functions: Vec<Function>,
+}
+
+struct API {
+    types: Vec<ApiType>,
+}
+
+fn ty<T: ApiDefinition>() -> ApiType {
+    ApiType {
+        ty: T::def(),
+        functions: vec![],
+    }
+}
+
+fn ty_f<T: ApiFunctions>() -> ApiType {
+    ApiType {
+        ty: T::def(),
+        functions: T::functions(),
+    }
+}
+
+impl API {
+    pub fn new() -> Self {
+        Self {
+            types: vec![
+                //literals
+                ty::<u8>(),
+                ty::<i64>(),
+                ty::<u64>(),
+                ty::<f64>(),
+                ty::<String>(),
+                ty::<bool>(),
+                ty::<Vec<u8>>(),
+                //structs
+                ty::<DbId>(),
+                ty::<QueryId>(),
+                ty::<QueryIds>(),
+                ty::<QueryValues>(),
+                ty::<DbValue>(),
+                ty::<DbValues>(),
+                ty::<DbKeyValue>(),
+                ty::<QueryAliases>(),
+                ty::<SingleValues>(),
+                ty::<MultiValues>(),
+                //queries
+                ty::<InsertAliasesQuery>(),
+                ty::<InsertEdgesQuery>(),
+                ty::<InsertNodesQuery>(),
+                ty::<InsertValuesQuery>(),
+                ty::<RemoveValuesQuery>(),
+                //builders
+                ty_f::<QueryBuilder>(),
+                ty_f::<Insert>(),
+                ty_f::<InsertAliases>(),
+                ty_f::<InsertAliasesIds>(),
+                ty_f::<InsertEdges>(),
+                ty_f::<InsertEdgesEach>(),
+                ty_f::<InsertEdgesFrom>(),
+                ty_f::<InsertEdgesFromTo>(),
+                ty_f::<InsertEdgesIds>(),
+                ty_f::<InsertEdgesValues>(),
+                ty_f::<InsertNodes>(),
+                ty_f::<InsertNodesAliases>(),
+                ty_f::<InsertNodesCount>(),
+                ty_f::<InsertNodesIds>(),
+                ty_f::<InsertNodesValues>(),
+                ty_f::<InsertValues>(),
+                ty_f::<InsertValuesIds>(),
+                ty_f::<Remove>(),
+                ty_f::<RemoveAliases>(),
+                ty_f::<RemoveIds>(),
+                ty_f::<RemoveIndex>(),
+                ty_f::<RemoveValues>(),
+                ty_f::<RemoveValuesIds>(),
+                ty_f::<Select>(),
+                ty_f::<SelectAliases>(),
+                ty_f::<SelectEdgeCount>(),
+                ty_f::<SelectIds>(),
+                ty_f::<SelectIndexes>(),
+                ty_f::<SelectKeys>(),
+                ty_f::<SelectKeyCount>(),
+                ty_f::<SelectNodeCount>(),
+                ty_f::<SelectValues>(),
+            ],
+        }
     }
 }

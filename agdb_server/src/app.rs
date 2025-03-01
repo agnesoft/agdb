@@ -212,7 +212,6 @@ pub(crate) fn app(
 
     let router = router
         .nest("/api/v1", api_v1)
-        .merge(RapiDoc::with_openapi("/api/v1/openapi.json", Api::openapi()).path("/api/v1"))
         .layer(middleware::from_fn_with_state(
             state.clone(),
             forward::forward_to_leader,
@@ -228,5 +227,9 @@ pub(crate) fn app(
         Router::new().nest(&basepath, router)
     } else {
         router
-    })
+    }
+    .merge(
+        RapiDoc::with_openapi(format!("{basepath}/api/v1/openapi.json"), Api::openapi())
+            .path(format!("{basepath}/api/v1")),
+    ))
 }

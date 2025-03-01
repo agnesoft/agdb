@@ -149,6 +149,7 @@ async fn db_list_after_shutdown_corrupted_data() -> anyhow::Result<()> {
     Ok(())
 }
 
+#[cfg(feature = "studio")]
 #[tokio::test]
 async fn basepath_test() -> anyhow::Result<()> {
     let config = ConfigImpl {
@@ -307,6 +308,7 @@ async fn memory_db_from_backup() -> anyhow::Result<()> {
     Ok(())
 }
 
+#[cfg(feature = "studio")]
 #[tokio::test]
 async fn studio() -> anyhow::Result<()> {
     let server = TestServer::new().await?;

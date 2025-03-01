@@ -8,6 +8,7 @@ use crate::routes;
 use crate::server_db::ServerDb;
 use crate::server_error::ServerResult;
 use crate::server_state::ServerState;
+use axum::extract::DefaultBodyLimit;
 use axum::middleware;
 use axum::routing;
 use axum::Router;
@@ -28,6 +29,7 @@ pub(crate) fn app(
     routes::studio::init(&config)?;
 
     let basepath = config.basepath.clone();
+    let request_body_limit = config.request_body_limit;
 
     let state = ServerState {
         cluster,
@@ -221,6 +223,7 @@ pub(crate) fn app(
             logger::logger,
         ))
         .layer(cors)
+        .layer(DefaultBodyLimit::max(request_body_limit as usize))
         .with_state(state);
 
     Ok(if !basepath.is_empty() {

@@ -6,6 +6,8 @@ mod tls;
 
 use crate::config::to_str;
 use crate::config::ConfigImpl;
+use crate::config::DEFAULT_LOG_BODY_LIMIT;
+use crate::config::DEFAULT_REQUEST_BODY_LIMIT;
 use agdb_api::AgdbApi;
 use agdb_api::ClusterStatus;
 use agdb_api::ReqwestClient;
@@ -168,6 +170,8 @@ impl TestServerImpl {
             basepath: String::new(),
             admin: ADMIN.to_string(),
             log_level: LevelFilter::INFO,
+            log_body_limit: DEFAULT_LOG_BODY_LIMIT,
+            request_body_limit: DEFAULT_REQUEST_BODY_LIMIT,
             data_dir: SERVER_DATA_DIR.into(),
             pepper_path: String::new(),
             tls_certificate: String::new(),
@@ -429,6 +433,8 @@ pub async fn create_cluster(nodes: usize, tls: bool) -> anyhow::Result<Vec<TestS
             basepath: String::new(),
             admin: ADMIN.to_string(),
             log_level: LevelFilter::INFO,
+            log_body_limit: DEFAULT_LOG_BODY_LIMIT,
+            request_body_limit: DEFAULT_REQUEST_BODY_LIMIT,
             data_dir: SERVER_DATA_DIR.into(),
             pepper_path: String::new(),
             tls_certificate: tls_cert.clone(),

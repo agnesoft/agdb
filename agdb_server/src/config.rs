@@ -6,6 +6,8 @@ use tracing::level_filters::LevelFilter;
 pub(crate) type Config = Arc<ConfigImpl>;
 
 pub(crate) const SALT_LEN: usize = 16;
+pub(crate) const DEFAULT_LOG_BODY_LIMIT: u64 = 10 * 1024;
+pub(crate) const DEFAULT_REQUEST_BODY_LIMIT: u64 = 10 * 1024 * 1024;
 
 #[derive(Debug)]
 pub struct ConfigImpl {
@@ -14,6 +16,8 @@ pub struct ConfigImpl {
     pub(crate) basepath: String,
     pub(crate) admin: String,
     pub(crate) log_level: LevelFilter,
+    pub(crate) log_body_limit: u64,
+    pub(crate) request_body_limit: u64,
     pub(crate) data_dir: String,
     pub(crate) pepper_path: String,
     pub(crate) tls_certificate: String,
@@ -77,6 +81,8 @@ pub(crate) fn new(config_file: &str) -> Config {
         basepath: "".to_string(),
         admin: "admin".to_string(),
         log_level: LevelFilter::INFO,
+        log_body_limit: DEFAULT_LOG_BODY_LIMIT,
+        request_body_limit: DEFAULT_REQUEST_BODY_LIMIT,
         data_dir: "agdb_server_data".to_string(),
         pepper_path: String::new(),
         tls_certificate: String::new(),
@@ -127,6 +133,8 @@ pub(crate) fn from_str(content: &str) -> ConfigImpl {
         basepath: String::new(),
         admin: String::new(),
         log_level: LevelFilter::INFO,
+        log_body_limit: DEFAULT_LOG_BODY_LIMIT,
+        request_body_limit: DEFAULT_REQUEST_BODY_LIMIT,
         data_dir: String::new(),
         pepper_path: String::new(),
         tls_certificate: String::new(),
@@ -161,6 +169,8 @@ pub(crate) fn from_str(content: &str) -> ConfigImpl {
                 "basepath" => config.basepath = value.to_string(),
                 "admin" => config.admin = value.to_string(),
                 "log_level" => config.log_level = level_filter_from_str(value),
+                "log_body_limit" => config.log_body_limit = value.parse().unwrap(),
+                "request_body_limit" => config.request_body_limit = value.parse().unwrap(),
                 "data_dir" => config.data_dir = value.to_string(),
                 "pepper_path" => config.pepper_path = value.to_string(),
                 "tls_certificate" => config.tls_certificate = value.to_string(),
@@ -193,6 +203,11 @@ pub(crate) fn to_str(config: &ConfigImpl) -> String {
     buffer.push_str(&format!(
         "log_level: {}\n",
         level_filter_to_str(&config.log_level)
+    ));
+    buffer.push_str(&format!("log_body_limit: {}\n", config.log_body_limit));
+    buffer.push_str(&format!(
+        "request_body_limit: {}\n",
+        config.request_body_limit
     ));
     buffer.push_str(&format!("data_dir: {}\n", config.data_dir));
     buffer.push_str(&format!("pepper_path: {}\n", config.pepper_path));
@@ -277,6 +292,8 @@ mod tests {
             basepath: "".to_string(),
             admin: "admin".to_string(),
             log_level: LevelFilter::INFO,
+            log_body_limit: DEFAULT_LOG_BODY_LIMIT,
+            request_body_limit: DEFAULT_REQUEST_BODY_LIMIT,
             data_dir: "agdb_server_data".to_string(),
             pepper_path: String::new(),
             tls_certificate: String::new(),
@@ -307,6 +324,8 @@ mod tests {
             basepath: "".to_string(),
             admin: "admin".to_string(),
             log_level: LevelFilter::INFO,
+            log_body_limit: DEFAULT_LOG_BODY_LIMIT,
+            request_body_limit: DEFAULT_REQUEST_BODY_LIMIT,
             data_dir: "agdb_server_data".to_string(),
             pepper_path: pepper_file.filename.to_string(),
             tls_certificate: String::new(),
@@ -338,6 +357,8 @@ mod tests {
             basepath: "".to_string(),
             admin: "admin".to_string(),
             log_level: LevelFilter::INFO,
+            log_body_limit: DEFAULT_LOG_BODY_LIMIT,
+            request_body_limit: DEFAULT_REQUEST_BODY_LIMIT,
             data_dir: "agdb_server_data".to_string(),
             pepper_path: "missing_file".to_string(),
             tls_certificate: String::new(),
@@ -368,6 +389,8 @@ mod tests {
             basepath: "".to_string(),
             admin: "admin".to_string(),
             log_level: LevelFilter::INFO,
+            log_body_limit: DEFAULT_LOG_BODY_LIMIT,
+            request_body_limit: DEFAULT_REQUEST_BODY_LIMIT,
             data_dir: "agdb_server_data".to_string(),
             pepper_path: pepper_file.filename.to_string(),
             tls_certificate: String::new(),

@@ -1,9 +1,11 @@
+use crate::next_db_name;
 use crate::reqwest_client;
 use crate::wait_for_ready;
 use crate::TestServer;
 use crate::TestServerImpl;
 use crate::ADMIN;
 use crate::CONFIG_FILE;
+use crate::DEFAULT_LOG_BODY_LIMIT;
 use agdb::QueryBuilder;
 use agdb_api::AgdbApi;
 use agdb_api::DbType;
@@ -149,12 +151,17 @@ async fn db_list_after_shutdown_corrupted_data() -> anyhow::Result<()> {
 #[cfg(feature = "studio")]
 #[tokio::test]
 async fn basepath_test() -> anyhow::Result<()> {
+    use crate::DEFAULT_LOG_BODY_LIMIT;
+    use crate::DEFAULT_REQUEST_BODY_LIMIT;
+
     let config = crate::config::ConfigImpl {
         bind: String::new(),
         address: String::new(),
         basepath: "/public".to_string(),
         admin: ADMIN.to_string(),
         log_level: tracing::level_filters::LevelFilter::INFO,
+        log_body_limit: DEFAULT_LOG_BODY_LIMIT,
+        request_body_limit: DEFAULT_REQUEST_BODY_LIMIT,
         data_dir: crate::SERVER_DATA_DIR.into(),
         pepper_path: String::new(),
         tls_certificate: String::new(),
@@ -315,5 +322,80 @@ async fn studio() -> anyhow::Result<()> {
         .await?
         .error_for_status()?;
 
+    Ok(())
+}
+
+#[tokio::test]
+async fn large_payload() -> anyhow::Result<()> {
+    let config = crate::config::ConfigImpl {
+        bind: String::new(),
+        address: String::new(),
+        basepath: String::new(),
+        admin: ADMIN.to_string(),
+        log_level: tracing::level_filters::LevelFilter::INFO,
+        log_body_limit: DEFAULT_LOG_BODY_LIMIT,
+        request_body_limit: 1024,
+        data_dir: crate::SERVER_DATA_DIR.into(),
+        pepper_path: String::new(),
+        tls_certificate: String::new(),
+        tls_key: String::new(),
+        tls_root: String::new(),
+        cluster_token: "test".to_string(),
+        cluster_heartbeat_timeout_ms: 1000,
+        cluster_term_timeout_ms: 3000,
+        cluster: Vec::new(),
+        cluster_node_id: 0,
+        start_time: 0,
+        pepper: None,
+    };
+
+    let server = TestServerImpl::with_config(config).await?;
+    let mut client = AgdbApi::new(
+        ReqwestClient::with_client(reqwest_client()),
+        &server.address,
+    );
+
+    let nums: Vec<u64> = (0..100).collect();
+    let nums_too_big: Vec<u64> = (0..1000).collect();
+    let db = next_db_name();
+    client.user_login(ADMIN, ADMIN).await?;
+    client.db_add(ADMIN, &db, DbType::Memory).await?;
+
+    let err = client
+        .db_exec_mut(
+            ADMIN,
+            &db,
+            &[
+                QueryBuilder::insert()
+                    .nodes()
+                    .values([[("data", nums_too_big).into()]])
+                    .query()
+                    .into(),
+                QueryBuilder::select().ids(":0").query().into(),
+            ],
+        )
+        .await
+        .unwrap_err();
+    assert_eq!(err.status, 413);
+
+    let (status, result) = client
+        .db_exec_mut(
+            ADMIN,
+            &db,
+            &[
+                QueryBuilder::insert()
+                    .nodes()
+                    .values([[("data", nums.clone()).into()]])
+                    .query()
+                    .into(),
+                QueryBuilder::select().ids(":0").query().into(),
+            ],
+        )
+        .await?;
+
+    assert_eq!(status, 200);
+    let data = result[1].elements[0].values[0].value.vec_u64()?;
+
+    assert_eq!(*data, nums);
     Ok(())
 }

@@ -1,18 +1,15 @@
 use crate::reqwest_client;
 use crate::wait_for_ready;
-use crate::ConfigImpl;
 use crate::TestServer;
 use crate::TestServerImpl;
 use crate::ADMIN;
 use crate::CONFIG_FILE;
-use crate::SERVER_DATA_DIR;
 use agdb::QueryBuilder;
 use agdb_api::AgdbApi;
 use agdb_api::DbType;
 use agdb_api::ReqwestClient;
 use reqwest::StatusCode;
 use std::path::Path;
-use tracing::level_filters::LevelFilter;
 
 #[tokio::test]
 async fn missing() -> anyhow::Result<()> {
@@ -152,13 +149,13 @@ async fn db_list_after_shutdown_corrupted_data() -> anyhow::Result<()> {
 #[cfg(feature = "studio")]
 #[tokio::test]
 async fn basepath_test() -> anyhow::Result<()> {
-    let config = ConfigImpl {
+    let config = crate::config::ConfigImpl {
         bind: String::new(),
         address: String::new(),
         basepath: "/public".to_string(),
         admin: ADMIN.to_string(),
-        log_level: LevelFilter::INFO,
-        data_dir: SERVER_DATA_DIR.into(),
+        log_level: tracing::level_filters::LevelFilter::INFO,
+        data_dir: crate::SERVER_DATA_DIR.into(),
         pepper_path: String::new(),
         tls_certificate: String::new(),
         tls_key: String::new(),

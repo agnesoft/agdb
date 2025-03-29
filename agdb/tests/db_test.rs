@@ -644,4 +644,16 @@ fn large_queries() {
 #[test]
 fn convert_db_before_0_11_0() {
     let test_file = TestFile::new();
+    std::fs::copy("tests/test_db_prior_0_11_0.agdb", test_file.file_name()).unwrap();
+    let db = Db::new(test_file.file_name()).unwrap();
+    let result = db
+        .exec(QueryBuilder::select().search().elements().query())
+        .unwrap();
+    assert_eq!(result.elements.len(), 3);
+    assert_eq!(
+        result.elements[0].values,
+        vec![("key1", "value1").into(), ("key2", 123).into()]
+    );
+    assert_eq!(result.elements[1].values, vec![(1, 2).into()]);
+    assert_eq!(result.elements[2].values, vec![("tag", "label").into()]);
 }

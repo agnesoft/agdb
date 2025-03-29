@@ -2,7 +2,7 @@
 import { vOnClickOutside } from "@vueuse/components";
 import { ref } from "vue";
 import DropdownContent from "./DropdownContent.vue";
-import SlideUpTransition from "@/components/transitions/SlideUpTransition.vue";
+import SlideUpTransition from "@agdb-studio/design/src/components/transitions/SlideUpTransition.vue";
 
 const opened = ref(false);
 const close = () => {

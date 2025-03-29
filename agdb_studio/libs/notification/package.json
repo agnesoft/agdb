@@ -2,12 +2,7 @@
     "name": "@agdb-studio/notification",
     "version": "1.0.0",
     "description": "Notification library for AGDB Studio",
-    "main": "dist/index.js",
-    "module": "dist/index.esm.js",
-    "types": "dist/index.d.ts",
-    "files": [
-        "dist"
-    ],
+    "type": "module",
     "scripts": {
         "dev": "vite",
         "build": "run-p type-check \"build-only {@}\" --",
@@ -26,7 +21,7 @@
         "@vueuse/core": "^12",
         "vue": "^3",
         "@kalimahapps/vue-icons": "^1",
-        "@agdb-studio/design": "workspaces:*"
+        "@agdb-studio/design": "workspace:*"
     },
     "devDependencies": {
         "@playwright/test": "^1",

@@ -24,8 +24,8 @@
         "openapi-client-axios": "^7",
         "vue": "^3",
         "vue-router": "^4",
-        "@agdb-studio/design": "workspaces:*",
-        "@agdb-studio/notification": "workspaces:*"
+        "@agdb-studio/design": "workspace:*",
+        "@agdb-studio/notification": "workspace:*"
     },
     "devDependencies": {
         "@playwright/test": "^1",

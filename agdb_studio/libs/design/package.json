@@ -2,12 +2,7 @@
     "name": "@agdb-studio/design",
     "version": "1.0.0",
     "description": "Notification library for AGDB Studio",
-    "main": "dist/index.js",
-    "module": "dist/index.esm.js",
-    "types": "dist/index.d.ts",
-    "files": [
-        "dist"
-    ],
+    "type": "module",
     "scripts": {
         "dev": "vite",
         "build": "run-p type-check \"build-only {@}\" --",

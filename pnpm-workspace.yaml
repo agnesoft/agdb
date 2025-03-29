@@ -1,5 +1,5 @@
 packages:
-  - agdb_studio/*
+  - agdb_studio/**
 
 catalog:
   "@kalimahapps/vue-icons": ^1

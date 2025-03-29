@@ -8,7 +8,7 @@ import {
 import AgdbCell from "./AgdbCell.vue";
 import { getTable } from "@/composables/table/tableConfig";
 import { AkChevronDownSmall, AkChevronUpSmall } from "@kalimahapps/vue-icons";
-import SlideUpTransition from "@/components/transitions/SlideUpTransition.vue";
+import SlideUpTransition from "@agdb-studio/design/src/components/transitions/SlideUpTransition.vue";
 import { getAsyncComponent } from "@/utils/asyncComponents";
 
 const props = defineProps({

@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import { ref, type PropType } from "vue";
 import { AkChevronRightSmall } from "@kalimahapps/vue-icons";
-import SlideUpTransition from "@/components/transitions/SlideUpTransition.vue";
+import SlideUpTransition from "@agdb-studio/design/src/components/transitions/SlideUpTransition.vue";
 
 const props = defineProps({
     actions: { type: Array as PropType<Action<undefined>[]>, required: true },

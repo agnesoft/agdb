@@ -640,3 +640,8 @@ fn large_queries() {
     println!("Avg: {}ms", avg);
     println!("{:?}", times);
 }
+
+#[test]
+fn convert_db_before_0_11_0() {
+    let test_file = TestFile::new();
+}

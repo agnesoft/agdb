@@ -8,7 +8,7 @@ const { removeNotification } = vi.hoisted(() => {
   };
 });
 
-vi.mock("@/composables/notification/notificationStore", () => {
+vi.mock("@/composables/notificationStore", () => {
   return {
     removeNotification,
   };

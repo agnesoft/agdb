@@ -5,20 +5,20 @@
         "src/**/*",
         "src/**/*.vue",
         "src/**/*.ts",
-        "libs/src/**/*",
-        "libs/src/**/*.vue",
-        "libs/src/**/*.ts",
+        "libs/**/src/**/*",
+        "libs/**/src/**/*.vue",
+        "libs/**/src/**/*.ts",
         "app/src/**/*",
         "app/src/**/*.vue",
-        "app/src/**/*.ts"
+        "app/src/**/*.ts",
+        "libs/notification/src/**/*.ts"
     ],
     "exclude": ["src/**/__tests__/*"],
     "compilerOptions": {
         "composite": true,
         "baseUrl": ".",
         "paths": {
-            "@/*": ["./src/*"],
-            // "@agdb-studio/*": ["libs/*/src"]
+            "@/*": ["./src/*"]
         }
     }
 }

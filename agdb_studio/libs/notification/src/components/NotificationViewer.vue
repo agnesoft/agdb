@@ -7,8 +7,8 @@ import {
     hasUnreadNotifications,
     clearNotifications,
     closeViewer,
-} from "libs/notification/composables/notificationStore";
-import FadeTransition from "../transitions/FadeTransition.vue";
+} from "../composables/notificationStore";
+import FadeTransition from "@agdb-studio/design/src/components/transitions/FadeTransition.vue";
 import NotificationItem from "./NotificationItem.vue";
 import {
     CaNotification,

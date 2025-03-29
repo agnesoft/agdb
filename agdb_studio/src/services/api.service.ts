@@ -6,7 +6,7 @@ import {
     MAX_CONNECTION_ATTEMPTS,
 } from "@/constants";
 import { computed, ref, type ComputedRef } from "vue";
-import { addNotification } from "@/composables/notification/notificationStore";
+import { addNotification } from "@agdb-studio/notification/src/composables/notificationStore.ts";
 import type { AgdbApiClient } from "@agnesoft/agdb_api/client";
 
 const _client = ref<AgdbApi.AgdbApiClient | undefined>();

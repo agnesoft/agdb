@@ -21,6 +21,7 @@
         "agdb_examples/**"
     ],
     "devDependencies": {
-        "turbo": "^2.4.0"
+        "turbo": "^2.4.0",
+        "vitest": "catalog:"
     }
 }

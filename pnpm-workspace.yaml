@@ -1,5 +1,7 @@
 packages:
   - agdb_studio/**
+  - agdb_api/**
+  - agdb_web/**
 
 catalog:
   "@kalimahapps/vue-icons": ^1

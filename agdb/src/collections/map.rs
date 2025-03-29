@@ -49,16 +49,16 @@ impl SerializeStatic for MapValueState {
     }
 }
 
-impl VecValue for MapValueState {
-    fn store<D: StorageData>(&self, _storage: &mut Storage<D>) -> Result<Vec<u8>, DbError> {
+impl<D: StorageData> VecValue<D> for MapValueState {
+    fn store(&self, _storage: &mut Storage<D>) -> Result<Vec<u8>, DbError> {
         Ok(self.serialize())
     }
 
-    fn load<D: StorageData>(_storage: &Storage<D>, bytes: &[u8]) -> Result<Self, DbError> {
+    fn load(_storage: &Storage<D>, bytes: &[u8]) -> Result<Self, DbError> {
         Self::deserialize(bytes)
     }
 
-    fn remove<D: StorageData>(_storage: &mut Storage<D>, _bytes: &[u8]) -> Result<(), DbError> {
+    fn remove(_storage: &mut Storage<D>, _bytes: &[u8]) -> Result<(), DbError> {
         Ok(())
     }
 
@@ -147,8 +147,8 @@ impl Serialize for MapDataIndex {
 
 pub struct DbMapData<K, T, D>
 where
-    K: Clone + VecValue,
-    T: Clone + VecValue,
+    K: Clone + VecValue<D>,
+    T: Clone + VecValue<D>,
     D: StorageData,
 {
     storage_index: StorageIndex,
@@ -160,8 +160,8 @@ where
 
 impl<K, T, D> DbMapData<K, T, D>
 where
-    K: Clone + VecValue,
-    T: Clone + VecValue,
+    K: Clone + VecValue<D>,
+    T: Clone + VecValue<D>,
     D: StorageData,
 {
     pub fn new(storage: &mut Storage<D>) -> Result<Self, DbError> {
@@ -212,8 +212,8 @@ where
 
 impl<K, T, D> MapData<K, T, D> for DbMapData<K, T, D>
 where
-    K: Default + Clone + VecValue,
-    T: Default + Clone + VecValue,
+    K: Default + Clone + VecValue<D>,
+    T: Default + Clone + VecValue<D>,
     D: StorageData,
 {
     fn capacity(&self) -> u64 {
@@ -420,8 +420,8 @@ pub type DbMap<K, T, D> = MapImpl<K, T, D, DbMapData<K, T, D>>;
 
 impl<K, T, D> DbMap<K, T, D>
 where
-    K: Default + Clone + VecValue,
-    T: Default + Clone + VecValue,
+    K: Default + Clone + VecValue<D>,
+    T: Default + Clone + VecValue<D>,
     D: StorageData,
 {
     pub fn new(storage: &mut Storage<D>) -> Result<Self, DbError> {

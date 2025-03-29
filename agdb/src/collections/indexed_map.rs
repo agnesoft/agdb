@@ -76,8 +76,8 @@ pub type DbIndexedMap<K, T, D> = IndexedMapImpl<K, T, D, DbMapData<K, T, D>, DbM
 
 impl<K, T, D> DbIndexedMap<K, T, D>
 where
-    K: Default + Clone + VecValue,
-    T: Default + Clone + VecValue,
+    K: Default + Clone + VecValue<D>,
+    T: Default + Clone + VecValue<D>,
     D: StorageData,
 {
     pub fn new(storage: &mut Storage<D>) -> Result<Self, DbError> {

@@ -24,21 +24,31 @@ impl StableHash for DbId {
     }
 }
 
-impl VecValue for DbId {
-    fn store<D: StorageData>(&self, _storage: &mut Storage<D>) -> Result<Vec<u8>, DbError> {
+impl<D: StorageData> VecValue<D> for DbId {
+    fn store(&self, _storage: &mut Storage<D>) -> Result<Vec<u8>, DbError> {
         Ok(self.0.serialize())
     }
 
-    fn load<D: StorageData>(_storage: &Storage<D>, bytes: &[u8]) -> Result<Self, DbError> {
+    fn load(_storage: &Storage<D>, bytes: &[u8]) -> Result<Self, DbError> {
         Ok(Self(i64::deserialize(bytes)?))
     }
 
-    fn remove<D: StorageData>(_storage: &mut Storage<D>, _bytes: &[u8]) -> Result<(), DbError> {
+    fn remove(_storage: &mut Storage<D>, _bytes: &[u8]) -> Result<(), DbError> {
         Ok(())
     }
 
     fn storage_len() -> u64 {
         i64::serialized_size_static()
+    }
+}
+
+impl DbId {
+    pub fn as_index(&self) -> u64 {
+        if self.0 < 0 {
+            (-self.0) as u64
+        } else {
+            self.0 as u64
+        }
     }
 }
 

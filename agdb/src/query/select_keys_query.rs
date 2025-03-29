@@ -1,6 +1,7 @@
 use crate::query_builder::search::SearchQueryBuilder;
 use crate::DbElement;
 use crate::DbImpl;
+use crate::DbValue;
 use crate::Query;
 use crate::QueryError;
 use crate::QueryIds;
@@ -45,7 +46,11 @@ impl Query for SelectKeysQuery {
                 id,
                 from: db.from_id(id),
                 to: db.to_id(id),
-                values: db.keys(id)?,
+                values: db
+                    .keys(id)?
+                    .into_iter()
+                    .map(|k| (k, DbValue::default()).into())
+                    .collect(),
             });
         }
 

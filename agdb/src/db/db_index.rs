@@ -152,24 +152,18 @@ where
     }
 }
 
-impl VecValue for DbValue {
-    fn store<D: StorageData>(
-        &self,
-        storage: &mut crate::storage::Storage<D>,
-    ) -> Result<Vec<u8>, crate::DbError> {
+impl<D: StorageData> VecValue<D> for DbValue {
+    fn store(&self, storage: &mut crate::storage::Storage<D>) -> Result<Vec<u8>, crate::DbError> {
         let index = self.store_db_value(storage)?;
         Ok(index.data().to_vec())
     }
 
-    fn load<D: StorageData>(
-        storage: &crate::storage::Storage<D>,
-        bytes: &[u8],
-    ) -> Result<Self, crate::DbError> {
+    fn load(storage: &crate::storage::Storage<D>, bytes: &[u8]) -> Result<Self, crate::DbError> {
         let index = DbValueIndex::deserialize(bytes)?;
         DbValue::load_db_value(index, storage)
     }
 
-    fn remove<D: StorageData>(
+    fn remove(
         storage: &mut crate::storage::Storage<D>,
         bytes: &[u8],
     ) -> Result<(), crate::DbError> {
@@ -187,14 +181,14 @@ impl VecValue for DbValue {
     }
 }
 
-impl VecValue for DbIndexStorageIndex {
-    fn store<D: StorageData>(&self, _storage: &mut Storage<D>) -> Result<Vec<u8>, DbError> {
+impl<D: StorageData> VecValue<D> for DbIndexStorageIndex {
+    fn store(&self, _storage: &mut Storage<D>) -> Result<Vec<u8>, DbError> {
         let key_index = self.key_index.serialize();
         let ids_index = self.ids_index.serialize();
         Ok([key_index, ids_index].concat())
     }
 
-    fn load<D: StorageData>(_storage: &Storage<D>, bytes: &[u8]) -> Result<Self, DbError> {
+    fn load(_storage: &Storage<D>, bytes: &[u8]) -> Result<Self, DbError> {
         let key_index = DbValueIndex::deserialize(bytes)?;
         let ids_index = StorageIndex::deserialize(&bytes[key_index.serialized_size() as usize..])?;
         Ok(Self {
@@ -203,7 +197,7 @@ impl VecValue for DbIndexStorageIndex {
         })
     }
 
-    fn remove<D: StorageData>(_storage: &mut Storage<D>, _bytes: &[u8]) -> Result<(), DbError> {
+    fn remove(_storage: &mut Storage<D>, _bytes: &[u8]) -> Result<(), DbError> {
         Ok(())
     }
 

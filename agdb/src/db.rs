@@ -17,28 +17,6 @@ use self::db_search_handlers::LimitHandler;
 use self::db_search_handlers::LimitOffsetHandler;
 use self::db_search_handlers::OffsetHandler;
 use self::db_search_handlers::PathHandler;
-use crate::collections::indexed_map::DbIndexedMap;
-use crate::command::Command;
-use crate::db::db_index::DbIndexes;
-use crate::db::db_key_value::DbKeyValues;
-use crate::graph::DbGraph;
-use crate::graph::GraphIndex;
-use crate::graph_search::GraphSearch;
-use crate::graph_search::SearchControl;
-use crate::query::query_condition::QueryCondition;
-use crate::query::query_condition::QueryConditionData;
-use crate::query::query_condition::QueryConditionLogic;
-use crate::query::query_condition::QueryConditionModifier;
-use crate::query::query_id::QueryId;
-use crate::query::Query;
-use crate::query::QueryMut;
-use crate::storage::file_storage::FileStorage;
-use crate::storage::file_storage_memory_mapped::FileStorageMemoryMapped;
-use crate::storage::memory_storage::MemoryStorage;
-use crate::storage::Storage;
-use crate::storage::StorageIndex;
-use crate::utilities::serialize::Serialize;
-use crate::utilities::serialize::SerializeStatic;
 use crate::DbId;
 use crate::DbKeyValue;
 use crate::DbValue;
@@ -48,9 +26,34 @@ use crate::SearchQueryAlgorithm;
 use crate::StorageData;
 use crate::Transaction;
 use crate::TransactionMut;
+use crate::collections::indexed_map::DbIndexedMap;
+use crate::command::Command;
+use crate::db::db_index::DbIndexes;
+use crate::db::db_key_value::DbKeyValues;
+use crate::graph::DbGraph;
+use crate::graph::GraphIndex;
+use crate::graph_search::GraphSearch;
+use crate::graph_search::SearchControl;
+use crate::query::Query;
+use crate::query::QueryMut;
+use crate::query::query_condition::QueryCondition;
+use crate::query::query_condition::QueryConditionData;
+use crate::query::query_condition::QueryConditionLogic;
+use crate::query::query_condition::QueryConditionModifier;
+use crate::query::query_id::QueryId;
+use crate::storage::Storage;
+use crate::storage::StorageIndex;
+use crate::storage::file_storage::FileStorage;
+use crate::storage::file_storage_memory_mapped::FileStorageMemoryMapped;
+use crate::storage::memory_storage::MemoryStorage;
+use crate::utilities::serialize::Serialize;
+use crate::utilities::serialize::SerializeStatic;
+
+const CURRENT_VERSION: u64 = 1;
 
 #[derive(Default)]
 struct DbStorageIndex {
+    version: u64,
     graph: StorageIndex,
     aliases: (StorageIndex, StorageIndex),
     indexes: StorageIndex,
@@ -60,6 +63,7 @@ struct DbStorageIndex {
 impl Serialize for DbStorageIndex {
     fn serialize(&self) -> Vec<u8> {
         [
+            self.version.serialize(),
             self.graph.serialize(),
             self.aliases.0.serialize(),
             self.aliases.1.serialize(),
@@ -72,13 +76,15 @@ impl Serialize for DbStorageIndex {
     fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
         let size = i64::serialized_size_static() as usize;
 
-        let graph = StorageIndex::deserialize(bytes)?;
-        let aliases_1 = StorageIndex::deserialize(&bytes[size..])?;
-        let aliases_2 = StorageIndex::deserialize(&bytes[size * 2..])?;
-        let indexes = StorageIndex::deserialize(&bytes[size * 3..])?;
-        let values = StorageIndex::deserialize(&bytes[size * 4..])?;
+        let version = u64::deserialize(bytes)?;
+        let graph = StorageIndex::deserialize(&bytes[size..])?;
+        let aliases_1 = StorageIndex::deserialize(&bytes[size * 2..])?;
+        let aliases_2 = StorageIndex::deserialize(&bytes[size * 3..])?;
+        let indexes = StorageIndex::deserialize(&bytes[size * 4..])?;
+        let values = StorageIndex::deserialize(&bytes[size * 5..])?;
 
         Ok(Self {
+            version,
             graph,
             aliases: (aliases_1, aliases_2),
             indexes,
@@ -87,7 +93,7 @@ impl Serialize for DbStorageIndex {
     }
 
     fn serialized_size(&self) -> u64 {
-        i64::serialized_size_static() * 5
+        i64::serialized_size_static() * 6
     }
 }
 
@@ -1002,7 +1008,7 @@ impl<Store: StorageData> DbImpl<Store> {
                 from: edge.1,
                 to: edge.2,
             });
-            self.remove_all_values(DbId(edge.0 .0))?;
+            self.remove_all_values(DbId(edge.0.0))?;
         }
 
         self.graph.remove_node(&mut self.storage, graph_index)?;
@@ -1058,26 +1064,33 @@ impl<Store: StorageData> DbImpl<Store> {
         let aliases_storage;
         let indexes_storage;
         let values_storage;
-        let index = storage.value::<DbStorageIndex>(StorageIndex(1));
 
-        if let Ok(index) = index {
-            graph_storage = DbGraph::from_storage(&storage, index.graph)?;
-            aliases_storage = DbIndexedMap::from_storage(&storage, index.aliases)?;
-            indexes_storage = DbIndexes::from_storage(&storage, index.indexes)?;
-            values_storage = DbKeyValues::from_storage(&storage, index.values)?;
-        } else {
+        if storage.value_size(StorageIndex(1)).is_err() {
             storage.insert(&DbStorageIndex::default())?;
             graph_storage = DbGraph::new(&mut storage)?;
             aliases_storage = DbIndexedMap::new(&mut storage)?;
             indexes_storage = DbIndexes::new(&mut storage)?;
             values_storage = DbKeyValues::new(&mut storage)?;
             let db_storage_index = DbStorageIndex {
+                version: CURRENT_VERSION,
                 graph: graph_storage.storage_index(),
                 aliases: aliases_storage.storage_index(),
                 indexes: indexes_storage.storage_index(),
                 values: values_storage.storage_index(),
             };
             storage.insert_at(StorageIndex(1), 0, &db_storage_index)?;
+        } else {
+            let index = if let Ok(index) = storage.value::<DbStorageIndex>(StorageIndex(1)) {
+                index
+            } else {
+                legacy::convert_to_current_version(&mut storage)?;
+                storage.value::<DbStorageIndex>(StorageIndex(1))?
+            };
+
+            graph_storage = DbGraph::from_storage(&storage, index.graph)?;
+            aliases_storage = DbIndexedMap::from_storage(&storage, index.aliases)?;
+            indexes_storage = DbIndexes::from_storage(&storage, index.indexes)?;
+            values_storage = DbKeyValues::from_storage(&storage, index.values)?;
         }
 
         Ok(Self {
@@ -1198,6 +1211,107 @@ impl<Store: StorageData> DbImpl<Store> {
 impl<Store: StorageData> Drop for DbImpl<Store> {
     fn drop(&mut self) {
         let _ = self.storage.shrink_to_fit();
+    }
+}
+
+// TODO: Support for databases created in <= 0.10.0. Remove this at some point in the future.
+mod legacy {
+    use crate::DbError;
+    use crate::DbId;
+    use crate::DbKeyValue;
+    use crate::StorageData;
+    use crate::collections::map::MapIterator;
+    use crate::collections::multi_map::MultiMapStorage;
+    use crate::db::CURRENT_VERSION;
+    use crate::db::DbStorageIndex;
+    use crate::db::db_key_value::DbKeyValues;
+    use crate::storage::Storage;
+    use crate::storage::StorageIndex;
+    use crate::utilities::serialize::Serialize;
+    use crate::utilities::serialize::SerializeStatic;
+    use std::marker::PhantomData;
+
+    struct DbStorageIndexLegacy {
+        graph: StorageIndex,
+        aliases: (StorageIndex, StorageIndex),
+        indexes: StorageIndex,
+        values: StorageIndex,
+    }
+
+    impl Serialize for DbStorageIndexLegacy {
+        fn serialize(&self) -> Vec<u8> {
+            [
+                self.graph.serialize(),
+                self.aliases.0.serialize(),
+                self.aliases.1.serialize(),
+                self.indexes.serialize(),
+                self.values.serialize(),
+            ]
+            .concat()
+        }
+
+        fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
+            let size = i64::serialized_size_static() as usize;
+
+            let graph = StorageIndex::deserialize(bytes)?;
+            let aliases_1 = StorageIndex::deserialize(&bytes[size..])?;
+            let aliases_2 = StorageIndex::deserialize(&bytes[size * 2..])?;
+            let indexes = StorageIndex::deserialize(&bytes[size * 3..])?;
+            let values = StorageIndex::deserialize(&bytes[size * 4..])?;
+
+            Ok(Self {
+                graph,
+                aliases: (aliases_1, aliases_2),
+                indexes,
+                values,
+            })
+        }
+
+        fn serialized_size(&self) -> u64 {
+            i64::serialized_size_static() * 5
+        }
+    }
+
+    pub fn convert_to_current_version<D: StorageData>(
+        storage: &mut Storage<D>,
+    ) -> Result<DbStorageIndex, DbError> {
+        let legacy_index = storage.value::<DbStorageIndexLegacy>(StorageIndex(1))?;
+        let legacy_values =
+            MultiMapStorage::<DbId, DbKeyValue, _>::from_storage(storage, legacy_index.values)?;
+        let t = storage.transaction();
+        let mut values = DbKeyValues::new(storage)?;
+        let mut pos = 0;
+
+        loop {
+            let mut it = MapIterator {
+                pos,
+                data: &legacy_values.data,
+                storage,
+                phantom_data: PhantomData,
+            };
+
+            if let Some((db_id, kv)) = it.next() {
+                pos = it.pos;
+                values.insert_value(storage, db_id.as_index(), &kv)?;
+            } else {
+                break;
+            }
+        }
+
+        legacy_values.remove_from_storage(storage)?;
+
+        let db_storage_index = DbStorageIndex {
+            version: CURRENT_VERSION,
+            graph: legacy_index.graph,
+            aliases: legacy_index.aliases,
+            indexes: legacy_index.indexes,
+            values: values.storage_index(),
+        };
+
+        storage.replace(StorageIndex(1), &db_storage_index)?;
+        storage.commit(t)?;
+        storage.shrink_to_fit()?;
+        Ok(db_storage_index)
     }
 }
 

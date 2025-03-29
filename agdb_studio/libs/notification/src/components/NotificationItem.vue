@@ -2,7 +2,7 @@
 import {
     removeNotification,
     type AgdbNotification,
-} from "@/composables/notification/notificationStore";
+} from "../composables/notificationStore";
 import type { PropType } from "vue";
 import { ClCloseMd } from "@kalimahapps/vue-icons";
 

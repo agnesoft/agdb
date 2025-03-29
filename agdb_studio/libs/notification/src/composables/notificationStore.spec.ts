@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
 import {
     notifications,
     addNotification,
@@ -12,7 +12,6 @@ import {
     type AddNotificationProps,
     closeViewer,
 } from "./notificationStore";
-import { afterEach } from "node:test";
 import { nextTick } from "vue";
 
 const testNotifications: AddNotificationProps[] = [

@@ -7,7 +7,7 @@ import {
     hasUnreadNotifications,
     clearNotifications,
     closeViewer,
-} from "@/composables/notification/notificationStore";
+} from "libs/notification/composables/notificationStore";
 import FadeTransition from "../transitions/FadeTransition.vue";
 import NotificationItem from "./NotificationItem.vue";
 import {

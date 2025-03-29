@@ -5,7 +5,8 @@
         "lib": [],
         "types": ["node", "jsdom", "vitest/globals"],
         "paths": {
-            "@/*": ["./src/*"]
+            "@/*": ["./src/*"],
+            "@agdb-studio/*": ["libs/*/src"]
         }
     }
 }

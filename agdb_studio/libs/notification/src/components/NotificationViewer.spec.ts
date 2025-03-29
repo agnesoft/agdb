@@ -1,7 +1,7 @@
 import { mount } from "@vue/test-utils";
 import { describe, beforeEach, vi, it, expect } from "vitest";
 import NotificationViewer from "./NotificationViewer.vue";
-import * as notificationStore from "@/composables/notification/notificationStore";
+import * as notificationStore from "libs/notification/composables/notificationStore";
 
 const toggleViewerOpenedMock = vi.spyOn(
     notificationStore,

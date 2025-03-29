@@ -6,15 +6,15 @@ const graphData = JSON.parse(JSON.stringify(data));
 </script>
 
 <template>
-    <div class="main-wrapper">
-        <GraphView2d :graph-data="graphData" />
-    </div>
+  <div class="main-wrapper">
+    <GraphView2d :graph-data="graphData" />
+  </div>
 </template>
 
 <style lang="less" scoped>
 .main-wrapper {
-    width: 100%;
-    min-height: 100%;
-    overflow: auto;
+  width: 100%;
+  min-height: 100%;
+  overflow: auto;
 }
 </style>

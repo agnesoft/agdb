@@ -11,33 +11,33 @@ const { users, fetchUsers } = useUserStore();
 const TABLE_KEY = Symbol("users");
 
 addTable({
-    name: TABLE_KEY,
-    columns: userColumns,
-    uniqueKey: "username",
-    fetchData: fetchUsers,
+  name: TABLE_KEY,
+  columns: userColumns,
+  uniqueKey: "username",
+  fetchData: fetchUsers,
 });
 
 watchEffect(() => {
-    setTableData(TABLE_KEY, users.value);
+  setTableData(TABLE_KEY, users.value);
 });
 </script>
 
 <template>
-    <div class="table-wrap">
-        <div v-if="users.length" class="user-table">
-            <AgdbTable :name="TABLE_KEY" />
-        </div>
-
-        <p v-else>No users found</p>
+  <div class="table-wrap">
+    <div v-if="users.length" class="user-table">
+      <AgdbTable :name="TABLE_KEY" />
     </div>
+
+    <p v-else>No users found</p>
+  </div>
 </template>
 
 <style lang="less" scoped>
 .table-wrap {
-    overflow: auto;
+  overflow: auto;
 }
 .user-table {
-    width: 700px;
-    margin: 0 auto;
+  width: 700px;
+  margin: 0 auto;
 }
 </style>

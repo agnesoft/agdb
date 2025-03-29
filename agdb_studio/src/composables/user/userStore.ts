@@ -6,29 +6,29 @@ import { addNotification } from "../../../libs/notification/src/composables/noti
 const users = ref<UserStatus[]>([]);
 
 const fetchUsers = async () => {
-    client.value?.admin_user_list().then((response) => {
-        users.value = response.data;
-    });
+  client.value?.admin_user_list().then((response) => {
+    users.value = response.data;
+  });
 };
 
 type AddUserParams = {
-    username: string;
-    password: string;
+  username: string;
+  password: string;
 };
 const addUser = async ({ username, password }: AddUserParams) => {
-    client.value?.admin_user_add({ username }, { password }).then(() => {
-        addNotification({
-            type: "success",
-            title: "User added",
-            message: `User ${username} added successfully.`,
-        });
+  client.value?.admin_user_add({ username }, { password }).then(() => {
+    addNotification({
+      type: "success",
+      title: "User added",
+      message: `User ${username} added successfully.`,
     });
+  });
 };
 
 export const useUserStore = () => {
-    return {
-        users,
-        fetchUsers,
-        addUser,
-    };
+  return {
+    users,
+    fetchUsers,
+    addUser,
+  };
 };

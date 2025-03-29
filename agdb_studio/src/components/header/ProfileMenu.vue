@@ -5,7 +5,7 @@ import { useUserActions } from "@/composables/profile/profileActions";
 const { actions } = useUserActions();
 </script>
 <template>
-    <div class="profile-dropdown-content">
-        <AgdbMenu :actions="actions" />
-    </div>
+  <div class="profile-dropdown-content">
+    <AgdbMenu :actions="actions" />
+  </div>
 </template>

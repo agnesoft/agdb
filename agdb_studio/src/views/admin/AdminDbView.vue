@@ -3,5 +3,5 @@ import DbView from "@/views/DbView.vue";
 </script>
 
 <template>
-    <DbView />
+  <DbView />
 </template>

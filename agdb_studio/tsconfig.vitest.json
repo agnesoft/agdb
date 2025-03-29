@@ -1,12 +1,3 @@
 {
-    "extends": "./tsconfig.app.json",
-    "exclude": [],
-    "compilerOptions": {
-        "lib": [],
-        "types": ["node", "jsdom", "vitest/globals"],
-        "paths": {
-            "@/*": ["./src/*"],
-            // "@agdb-studio/*": ["libs/*/src"]
-        }
-    }
+    "extends": "@agdb-studio/config/tsconfig.vitest.json"
 }

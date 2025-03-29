@@ -1,3 +1,3 @@
 type StyleObject = {
-    [key: string]: string;
+  [key: string]: string;
 };

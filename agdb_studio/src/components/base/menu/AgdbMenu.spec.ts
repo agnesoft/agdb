@@ -4,51 +4,51 @@ import AgdbMenu from "./AgdbMenu.vue";
 import { dbActions } from "@/composables/db/dbConfig";
 
 describe("AgdbMenu", () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-    });
-    it("should run action on click", () => {
-        const actionMock = vi.fn();
-        const wrapper = mount(AgdbMenu, {
-            props: {
-                actions: [
-                    {
-                        key: "convert",
-                        label: "Convert",
-                        action: vi.fn(),
-                    },
-                    {
-                        key: "backup",
-                        label: "Backup",
-                        action: actionMock,
-                    },
-                ],
-            },
-        });
-
-        expect(wrapper.find(".agdb-menu").exists()).toBe(true);
-        expect(wrapper.find(".agdb-menu").text()).toContain("Convert");
-
-        const backup = wrapper.find(".menu-item[data-key='backup']");
-        backup.trigger("click");
-        expect(actionMock).toHaveBeenCalled();
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+  it("should run action on click", () => {
+    const actionMock = vi.fn();
+    const wrapper = mount(AgdbMenu, {
+      props: {
+        actions: [
+          {
+            key: "convert",
+            label: "Convert",
+            action: vi.fn(),
+          },
+          {
+            key: "backup",
+            label: "Backup",
+            action: actionMock,
+          },
+        ],
+      },
     });
 
-    it("should render the sub menu on hover", async () => {
-        const wrapper = mount(AgdbMenu, {
-            props: {
-                actions: dbActions as unknown as Action<undefined>[],
-            },
-        });
+    expect(wrapper.find(".agdb-menu").exists()).toBe(true);
+    expect(wrapper.find(".agdb-menu").text()).toContain("Convert");
 
-        const convert = wrapper.find(".menu-item[data-key='convert']");
-        await convert.trigger("mouseover");
+    const backup = wrapper.find(".menu-item[data-key='backup']");
+    backup.trigger("click");
+    expect(actionMock).toHaveBeenCalled();
+  });
 
-        expect(wrapper.find(".sub-menu").exists()).toBe(true);
-        expect(wrapper.find(".sub-menu").text()).toContain("Memory");
-
-        await wrapper.trigger("mouseleave");
-
-        expect(wrapper.find(".sub-menu").exists()).toBe(false);
+  it("should render the sub menu on hover", async () => {
+    const wrapper = mount(AgdbMenu, {
+      props: {
+        actions: dbActions as unknown as Action<undefined>[],
+      },
     });
+
+    const convert = wrapper.find(".menu-item[data-key='convert']");
+    await convert.trigger("mouseover");
+
+    expect(wrapper.find(".sub-menu").exists()).toBe(true);
+    expect(wrapper.find(".sub-menu").text()).toContain("Memory");
+
+    await wrapper.trigger("mouseleave");
+
+    expect(wrapper.find(".sub-menu").exists()).toBe(false);
+  });
 });

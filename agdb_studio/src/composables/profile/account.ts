@@ -6,31 +6,31 @@ const username = ref<string | undefined>(undefined);
 const admin = ref<boolean>(false);
 
 const clearStatus = () => {
-    username.value = undefined;
-    admin.value = false;
+  username.value = undefined;
+  admin.value = false;
 };
 
 const { isLoggedIn, token } = useAuth();
 const fetchUserStatus = async () => {
-    if (!isLoggedIn.value) {
-        clearStatus();
-        return;
-    }
+  if (!isLoggedIn.value) {
+    clearStatus();
+    return;
+  }
 
-    return client.value?.user_status()?.then((status) => {
-        username.value = status.data.username;
-        admin.value = status.data.admin;
-    });
+  return client.value?.user_status()?.then((status) => {
+    username.value = status.data.username;
+    admin.value = status.data.admin;
+  });
 };
 watch(
-    () => token.value,
-    () => fetchUserStatus,
+  () => token.value,
+  () => fetchUserStatus,
 );
 
 export const useAccount = (): {
-    username: typeof username;
-    admin: typeof admin;
-    fetchUserStatus: () => Promise<void>;
+  username: typeof username;
+  admin: typeof admin;
+  fetchUserStatus: () => Promise<void>;
 } => {
-    return { username, admin, fetchUserStatus };
+  return { username, admin, fetchUserStatus };
 };

@@ -2,7 +2,7 @@ import { Node, type Coordinates } from "./node";
 import { Edge } from "./edge";
 
 export type ForceDirectedGraphOptions = {
-    is2d: boolean;
+  is2d: boolean;
 };
 
 const ITERATION_COUNT = 500;
@@ -13,258 +13,258 @@ const GRAVITY = 0.1;
 const DAMPER = 0.5;
 
 export interface ForceDirectedGraph {
-    loadGraph(graph: Graph): void;
+  loadGraph(graph: Graph): void;
 
-    simulate(): void;
+  simulate(): void;
 
-    getPerformance(): number;
+  getPerformance(): number;
 
-    getIterations(): number;
+  getIterations(): number;
 
-    getNodes(): Node[];
+  getNodes(): Node[];
 
-    getEdges(): Edge[];
+  getEdges(): Edge[];
 
-    nextPos(): Coordinates;
+  nextPos(): Coordinates;
 
-    findNode(id: number): Node | undefined;
+  findNode(id: number): Node | undefined;
 
-    damperIncrease(): void;
+  damperIncrease(): void;
 
-    step(): boolean;
+  step(): boolean;
 
-    applyForces(): void;
+  applyForces(): void;
 
-    moveNodes(): boolean;
+  moveNodes(): boolean;
 
-    applyAttractionForces(): void;
+  applyAttractionForces(): void;
 
-    applyRepulsionForces(): void;
+  applyRepulsionForces(): void;
 
-    applyGravity(): void;
+  applyGravity(): void;
 }
 
 export const ForceDirectedGraph = (function () {
-    let nodes: Node[] = [];
-    let edges: Edge[] = [];
-    let is2d: boolean;
+  let nodes: Node[] = [];
+  let edges: Edge[] = [];
+  let is2d: boolean;
 
-    let angle1 = 0.1;
-    let angle2 = 0.1;
+  let angle1 = 0.1;
+  let angle2 = 0.1;
 
-    let startTimestamp = 0;
-    let endTimestamp = 0;
+  let startTimestamp = 0;
+  let endTimestamp = 0;
 
-    let iterations = 0;
+  let iterations = 0;
 
-    const ForceDirectedGraph = function (options: ForceDirectedGraphOptions) {
-        is2d = options.is2d;
+  const ForceDirectedGraph = function (options: ForceDirectedGraphOptions) {
+    is2d = options.is2d;
+  };
+
+  ForceDirectedGraph.prototype.loadGraph = function (graph: Graph): void {
+    nodes = [];
+    edges = [];
+    angle1 = 0.1;
+    angle2 = 0.1;
+    for (const element of graph.elements) {
+      if (element.id < 0) {
+        // element is an edge
+        const edge = element as GraphEdge;
+        const from = this.findNode(edge.from);
+        const to = this.findNode(edge.to);
+
+        edges.push(
+          new (Edge as any)({
+            id: edge.id,
+            from: from,
+            to: to,
+            values: edge.values,
+          }),
+        );
+      } else {
+        // element is a node
+        const node = element as GraphNode;
+        nodes.push(
+          new (Node as any)({
+            id: node.id,
+            values: node.values,
+            coordinates: this.nextPos(),
+          }),
+        );
+      }
+    }
+  };
+
+  ForceDirectedGraph.prototype.simulate = function (): void {
+    startTimestamp = Date.now();
+    iterations = 0;
+    while (this.step() && iterations < ITERATION_COUNT) {
+      iterations++;
+    }
+    this.normalizeNodes();
+    endTimestamp = Date.now();
+  };
+
+  ForceDirectedGraph.prototype.normalizeNodes = function (): void {
+    let minX = Infinity;
+    let minY = Infinity;
+    let minZ = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+    let maxZ = -Infinity;
+
+    for (const node of this.getNodes()) {
+      const coordinates = node.getCoordinates();
+      minX = Math.min(minX, coordinates.x);
+      minY = Math.min(minY, coordinates.y);
+      minZ = Math.min(minZ, coordinates.z);
+      maxX = Math.max(maxX, coordinates.x);
+      maxY = Math.max(maxY, coordinates.y);
+      maxZ = Math.max(maxZ, coordinates.z);
+    }
+
+    const centerX = (minX + maxX) / 2.0;
+    const centerY = (minY + maxY) / 2.0;
+    const centerZ = (minZ + maxZ) / 2.0;
+
+    const scaleX = 1.0 / (maxX - minX);
+    const scaleY = 1.0 / (maxY - minY);
+    const scaleZ = maxZ !== minZ ? 1.0 / (maxZ - minZ) : 0.0;
+
+    for (const node of this.getNodes()) {
+      const coordinates = node.getCoordinates();
+      node.setCoordinates(
+        (coordinates.x - centerX) * scaleX,
+        (coordinates.y - centerY) * scaleY,
+        (coordinates.z - centerZ) * scaleZ,
+      );
+    }
+  };
+
+  ForceDirectedGraph.prototype.getPerformance = function (): number {
+    return endTimestamp - startTimestamp;
+  };
+
+  ForceDirectedGraph.prototype.getIterations = function (): number {
+    return iterations;
+  };
+
+  ForceDirectedGraph.prototype.getNodes = function (): Node[] {
+    return nodes;
+  };
+
+  ForceDirectedGraph.prototype.getEdges = function (): Edge[] {
+    return edges;
+  };
+
+  ForceDirectedGraph.prototype.nextPos = function (): Coordinates {
+    angle1 += 0.1;
+    angle2 += 0.1;
+    const distance = 10.0 * angle1;
+    if (is2d) {
+      return {
+        x: Math.cos(angle1) * distance,
+        y: Math.sin(angle1) * distance,
+        z: 0,
+      };
+    }
+
+    return {
+      x: Math.cos(angle1) * distance,
+      y: Math.sin(angle1) * distance + Math.cos(angle2) * distance,
+      z: Math.sin(angle2) * distance,
     };
+  };
 
-    ForceDirectedGraph.prototype.loadGraph = function (graph: Graph): void {
-        nodes = [];
-        edges = [];
-        angle1 = 0.1;
-        angle2 = 0.1;
-        for (const element of graph.elements) {
-            if (element.id < 0) {
-                // element is an edge
-                const edge = element as GraphEdge;
-                const from = this.findNode(edge.from);
-                const to = this.findNode(edge.to);
+  ForceDirectedGraph.prototype.findNode = function (
+    id: number,
+  ): Node | undefined {
+    return nodes.find((node) => node.getId() === id);
+  };
 
-                edges.push(
-                    new (Edge as any)({
-                        id: edge.id,
-                        from: from,
-                        to: to,
-                        values: edge.values,
-                    }),
-                );
-            } else {
-                // element is a node
-                const node = element as GraphNode;
-                nodes.push(
-                    new (Node as any)({
-                        id: node.id,
-                        values: node.values,
-                        coordinates: this.nextPos(),
-                    }),
-                );
-            }
-        }
-    };
+  ForceDirectedGraph.prototype.step = function (): boolean {
+    this.applyForces();
+    return this.moveNodes();
+  };
 
-    ForceDirectedGraph.prototype.simulate = function (): void {
-        startTimestamp = Date.now();
-        iterations = 0;
-        while (this.step() && iterations < ITERATION_COUNT) {
-            iterations++;
-        }
-        this.normalizeNodes();
-        endTimestamp = Date.now();
-    };
+  ForceDirectedGraph.prototype.applyForces = function (): void {
+    this.applyAttractionForces();
+    this.applyRepulsionForces();
+    this.applyGravity();
+  };
 
-    ForceDirectedGraph.prototype.normalizeNodes = function (): void {
-        let minX = Infinity;
-        let minY = Infinity;
-        let minZ = Infinity;
-        let maxX = -Infinity;
-        let maxY = -Infinity;
-        let maxZ = -Infinity;
+  ForceDirectedGraph.prototype.moveNodes = function (): boolean {
+    let totalMovement = 0.0;
+    for (const node of nodes) {
+      totalMovement += node.getVelocityLength();
+      node.move(DAMPER);
+    }
+    return totalMovement >= 10.0;
+  };
 
-        for (const node of this.getNodes()) {
-            const coordinates = node.getCoordinates();
-            minX = Math.min(minX, coordinates.x);
-            minY = Math.min(minY, coordinates.y);
-            minZ = Math.min(minZ, coordinates.z);
-            maxX = Math.max(maxX, coordinates.x);
-            maxY = Math.max(maxY, coordinates.y);
-            maxZ = Math.max(maxZ, coordinates.z);
-        }
+  ForceDirectedGraph.prototype.applyAttractionForces = function (): void {
+    for (const edge of edges) {
+      const from = edge.getFrom();
+      const to = edge.getTo();
+      if (from === undefined || to === undefined) {
+        continue;
+      }
+      const dx = edge.getDx();
+      const dy = edge.getDy();
+      const dz = edge.getDz();
+      const distance = edge.getLength();
+      const force =
+        ATTRACTION_CONSTANT * Math.max(distance - SPRING_LENGTH, 0.0);
 
-        const centerX = (minX + maxX) / 2.0;
-        const centerY = (minY + maxY) / 2.0;
-        const centerZ = (minZ + maxZ) / 2.0;
+      // Apply force to both from and to nodes
+      from.addVelocity(
+        (force * dx) / distance,
+        (force * dy) / distance,
+        is2d ? 0 : (force * dz) / distance,
+      );
+      to.addVelocity(
+        -(force * dx) / distance,
+        -(force * dy) / distance,
+        is2d ? 0 : -(force * dz) / distance,
+      );
+    }
+  };
 
-        const scaleX = 1.0 / (maxX - minX);
-        const scaleY = 1.0 / (maxY - minY);
-        const scaleZ = maxZ !== minZ ? 1.0 / (maxZ - minZ) : 0.0;
+  ForceDirectedGraph.prototype.applyRepulsionForces = function (): void {
+    for (let i = 0; i < nodes.length; i++) {
+      const nodeA = nodes[i];
+      for (let j = i + 1; j < nodes.length; j++) {
+        const nodeB = nodes[j];
+        const dx = nodeB.getX() - nodeA.getX();
+        const dy = nodeB.getY() - nodeA.getY();
+        const dz = nodeB.getZ() - nodeA.getZ();
+        const distance = nodeA.dist(nodeB);
+        const force = REPULSION_CONSTANT / (distance * distance);
 
-        for (const node of this.getNodes()) {
-            const coordinates = node.getCoordinates();
-            node.setCoordinates(
-                (coordinates.x - centerX) * scaleX,
-                (coordinates.y - centerY) * scaleY,
-                (coordinates.z - centerZ) * scaleZ,
-            );
-        }
-    };
+        // Apply force to both nodes
+        nodeA.addVelocity(
+          -(force * dx) / distance,
+          -(force * dy) / distance,
+          is2d ? 0 : -(force * dz) / distance,
+        );
+        nodeB.addVelocity(
+          (force * dx) / distance,
+          (force * dy) / distance,
+          is2d ? 0 : (force * dz) / distance,
+        );
+      }
+    }
+  };
 
-    ForceDirectedGraph.prototype.getPerformance = function (): number {
-        return endTimestamp - startTimestamp;
-    };
+  ForceDirectedGraph.prototype.applyGravity = function (): void {
+    for (const node of nodes) {
+      node.addVelocity(
+        -node.getX() * GRAVITY,
+        -node.getY() * GRAVITY,
+        -node.getZ() * GRAVITY,
+      );
+    }
+  };
 
-    ForceDirectedGraph.prototype.getIterations = function (): number {
-        return iterations;
-    };
-
-    ForceDirectedGraph.prototype.getNodes = function (): Node[] {
-        return nodes;
-    };
-
-    ForceDirectedGraph.prototype.getEdges = function (): Edge[] {
-        return edges;
-    };
-
-    ForceDirectedGraph.prototype.nextPos = function (): Coordinates {
-        angle1 += 0.1;
-        angle2 += 0.1;
-        const distance = 10.0 * angle1;
-        if (is2d) {
-            return {
-                x: Math.cos(angle1) * distance,
-                y: Math.sin(angle1) * distance,
-                z: 0,
-            };
-        }
-
-        return {
-            x: Math.cos(angle1) * distance,
-            y: Math.sin(angle1) * distance + Math.cos(angle2) * distance,
-            z: Math.sin(angle2) * distance,
-        };
-    };
-
-    ForceDirectedGraph.prototype.findNode = function (
-        id: number,
-    ): Node | undefined {
-        return nodes.find((node) => node.getId() === id);
-    };
-
-    ForceDirectedGraph.prototype.step = function (): boolean {
-        this.applyForces();
-        return this.moveNodes();
-    };
-
-    ForceDirectedGraph.prototype.applyForces = function (): void {
-        this.applyAttractionForces();
-        this.applyRepulsionForces();
-        this.applyGravity();
-    };
-
-    ForceDirectedGraph.prototype.moveNodes = function (): boolean {
-        let totalMovement = 0.0;
-        for (const node of nodes) {
-            totalMovement += node.getVelocityLength();
-            node.move(DAMPER);
-        }
-        return totalMovement >= 10.0;
-    };
-
-    ForceDirectedGraph.prototype.applyAttractionForces = function (): void {
-        for (const edge of edges) {
-            const from = edge.getFrom();
-            const to = edge.getTo();
-            if (from === undefined || to === undefined) {
-                continue;
-            }
-            const dx = edge.getDx();
-            const dy = edge.getDy();
-            const dz = edge.getDz();
-            const distance = edge.getLength();
-            const force =
-                ATTRACTION_CONSTANT * Math.max(distance - SPRING_LENGTH, 0.0);
-
-            // Apply force to both from and to nodes
-            from.addVelocity(
-                (force * dx) / distance,
-                (force * dy) / distance,
-                is2d ? 0 : (force * dz) / distance,
-            );
-            to.addVelocity(
-                -(force * dx) / distance,
-                -(force * dy) / distance,
-                is2d ? 0 : -(force * dz) / distance,
-            );
-        }
-    };
-
-    ForceDirectedGraph.prototype.applyRepulsionForces = function (): void {
-        for (let i = 0; i < nodes.length; i++) {
-            const nodeA = nodes[i];
-            for (let j = i + 1; j < nodes.length; j++) {
-                const nodeB = nodes[j];
-                const dx = nodeB.getX() - nodeA.getX();
-                const dy = nodeB.getY() - nodeA.getY();
-                const dz = nodeB.getZ() - nodeA.getZ();
-                const distance = nodeA.dist(nodeB);
-                const force = REPULSION_CONSTANT / (distance * distance);
-
-                // Apply force to both nodes
-                nodeA.addVelocity(
-                    -(force * dx) / distance,
-                    -(force * dy) / distance,
-                    is2d ? 0 : -(force * dz) / distance,
-                );
-                nodeB.addVelocity(
-                    (force * dx) / distance,
-                    (force * dy) / distance,
-                    is2d ? 0 : (force * dz) / distance,
-                );
-            }
-        }
-    };
-
-    ForceDirectedGraph.prototype.applyGravity = function (): void {
-        for (const node of nodes) {
-            node.addVelocity(
-                -node.getX() * GRAVITY,
-                -node.getY() * GRAVITY,
-                -node.getZ() * GRAVITY,
-            );
-        }
-    };
-
-    return ForceDirectedGraph;
+  return ForceDirectedGraph;
 })();

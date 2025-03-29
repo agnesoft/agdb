@@ -5,26 +5,26 @@ import globals from "globals";
 import typescriptEslint from "typescript-eslint";
 
 export default typescriptEslint.config(
-    { ignores: ["*.d.ts", "**/coverage", "**/dist", "**/.gitignore"] },
-    {
-        extends: [
-            eslint.configs.recommended,
-            ...typescriptEslint.configs.recommended,
-            ...eslintPluginVue.configs["flat/recommended"],
-        ],
-        files: ["**/*.{ts,vue}"],
-        languageOptions: {
-            ecmaVersion: "latest",
-            sourceType: "module",
-            globals: globals.browser,
-            parserOptions: {
-                parser: typescriptEslint.parser,
-            },
-        },
+  { ignores: ["*.d.ts", "**/coverage", "**/dist", "**/.gitignore"] },
+  {
+    extends: [
+      eslint.configs.recommended,
+      ...typescriptEslint.configs.recommended,
+      ...eslintPluginVue.configs["flat/recommended"],
+    ],
+    files: ["**/*.{ts,vue}"],
+    languageOptions: {
+      ecmaVersion: "latest",
+      sourceType: "module",
+      globals: globals.browser,
+      parserOptions: {
+        parser: typescriptEslint.parser,
+      },
     },
-    eslintConfigPrettier,
-    {
-        files: ["src/composables/graph/prototype/**/*.{ts,vue}"],
-        rules: { "@typescript-eslint/no-explicit-any": "off" },
-    },
+  },
+  eslintConfigPrettier,
+  {
+    files: ["src/composables/graph/prototype/**/*.{ts,vue}"],
+    rules: { "@typescript-eslint/no-explicit-any": "off" },
+  },
 );

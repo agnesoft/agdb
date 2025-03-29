@@ -19,11 +19,13 @@ catalog:
   "@vitest/coverage-v8": ^3
   "@vitest/coverage-istanbul": ^3
   "@vue/eslint-config-prettier": ^10
+  "eslint-config-prettier": ^10
   "@vue/eslint-config-typescript": ^14
   "@vue/test-utils": ^2
   "@vue/tsconfig": ^0.7
   axios: ^1
   eslint: ^9
+  "@eslint/js": ^9
   eslint-plugin-vue: ^9
   jsdom: ^26
   less: ^4
@@ -33,3 +35,4 @@ catalog:
   vite: ^6
   vitest: ^3
   vue-tsc: ^2
+  globals: ^16.0.0

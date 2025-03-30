@@ -1,6 +1,6 @@
 {
     "name": "@agnesoft/agdb_api",
-    "version": "0.10.0",
+    "version": "0.11.0",
     "license": "Apache-2.0",
     "description": "Agnesoft Graph Database API client for typescript/javascript",
     "author": "Agnesoft",

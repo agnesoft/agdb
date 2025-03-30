@@ -9,7 +9,7 @@ pub(crate) fn current_version() -> Result<String, CIError> {
             .trim()
             .lines()
             .last()
-            .ok_or("tags not found")?
+            .ok_or("tags not found")?[1..]
             .to_string(),
     )
 }

@@ -1,6 +1,6 @@
 [package]
 name = "agdb_api"
-version = "0.10.0"
+version = "0.11.0"
 edition = "2024"
 license = "Apache-2.0"
 homepage = "https://github.com/agnesoft/agdb"
@@ -20,7 +20,7 @@ rust-tls = ["reqwest/rustls-tls"]
 native-tls = ["reqwest/native-tls"]
 
 [dependencies]
-agdb = { version = "0.10.0", path = "../../agdb", features = ["serde", "openapi", "api"] }
+agdb = { version = "0.11.0", path = "../../agdb", features = ["serde", "openapi", "api"] }
 reqwest = { version = "0.12", default-features = false, features = ["charset", "http2", "macos-system-configuration", "json"], optional = true }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"

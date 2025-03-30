@@ -1,7 +1,7 @@
+use crate::ADMIN;
+use crate::TestServer;
 use crate::next_db_name;
 use crate::next_user_name;
-use crate::TestServer;
-use crate::ADMIN;
 use agdb_api::DbType;
 use std::path::Path;
 
@@ -34,17 +34,21 @@ async fn rename_with_backup() -> anyhow::Result<()> {
     let status = server.api.admin_db_rename(owner, db, owner, db2).await?;
     assert_eq!(status, 201);
     assert!(!Path::new(&server.data_dir).join(owner).join(db).exists());
-    assert!(!Path::new(&server.data_dir)
-        .join(owner)
-        .join("backups")
-        .join(format!("{}.bak", db))
-        .exists());
+    assert!(
+        !Path::new(&server.data_dir)
+            .join(owner)
+            .join("backups")
+            .join(format!("{}.bak", db))
+            .exists()
+    );
     assert!(Path::new(&server.data_dir).join(owner).join(db2).exists());
-    assert!(Path::new(&server.data_dir)
-        .join(owner)
-        .join("backups")
-        .join(format!("{}.bak", db2))
-        .exists());
+    assert!(
+        Path::new(&server.data_dir)
+            .join(owner)
+            .join("backups")
+            .join(format!("{}.bak", db2))
+            .exists()
+    );
     Ok(())
 }
 

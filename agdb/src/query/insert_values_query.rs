@@ -1,5 +1,3 @@
-use crate::query::query_values::QueryValues;
-use crate::query_builder::search::SearchQueryBuilder;
 use crate::DbElement;
 use crate::DbId;
 use crate::DbImpl;
@@ -11,6 +9,8 @@ use crate::QueryMut;
 use crate::QueryResult;
 use crate::SearchQuery;
 use crate::StorageData;
+use crate::query::query_values::QueryValues;
+use crate::query_builder::search::SearchQueryBuilder;
 
 /// Query to insert or update key-value pairs (properties)
 /// to existing elements in the database. All `ids` must exist

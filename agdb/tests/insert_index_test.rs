@@ -24,8 +24,17 @@ fn insert_index_with_existing_data() {
             .query(),
         3,
     );
+    db.exec_mut(
+        QueryBuilder::insert()
+            .edges()
+            .from(1)
+            .to(2)
+            .values([[("username", "user4").into()]])
+            .query(),
+        1,
+    );
 
-    db.exec_mut(QueryBuilder::insert().index("username").query(), 3);
+    db.exec_mut(QueryBuilder::insert().index("username").query(), 4);
 }
 
 #[test]

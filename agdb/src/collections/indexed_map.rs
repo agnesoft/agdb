@@ -1,3 +1,5 @@
+use crate::DbError;
+use crate::StorageData;
 use crate::collections::map::DbMap;
 use crate::collections::map::DbMapData;
 use crate::collections::map::MapData;
@@ -7,8 +9,6 @@ use crate::collections::vec::VecValue;
 use crate::storage::Storage;
 use crate::storage::StorageIndex;
 use crate::utilities::stable_hash::StableHash;
-use crate::DbError;
-use crate::StorageData;
 use std::marker::PhantomData;
 
 pub struct IndexedMapImpl<K, T, D, DataKT, DataTK>
@@ -76,8 +76,8 @@ pub type DbIndexedMap<K, T, D> = IndexedMapImpl<K, T, D, DbMapData<K, T, D>, DbM
 
 impl<K, T, D> DbIndexedMap<K, T, D>
 where
-    K: Default + Clone + VecValue,
-    T: Default + Clone + VecValue,
+    K: Default + Clone + VecValue<D>,
+    T: Default + Clone + VecValue<D>,
     D: StorageData,
 {
     pub fn new(storage: &mut Storage<D>) -> Result<Self, DbError> {

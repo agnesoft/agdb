@@ -279,4 +279,12 @@ mod tests {
         let deserialized: Vec<QueryType> = AgdbSerialize::deserialize(&serialized).unwrap();
         assert_eq!(queries, deserialized);
     }
+
+    #[test]
+    fn serialization() {
+        let query: QueryType = QueryBuilder::insert().nodes().count(2).query().into();
+        let serialized = AgdbSerialize::serialize(&query);
+        let deserialized: QueryType = AgdbSerialize::deserialize(&serialized).unwrap();
+        assert_eq!(query, deserialized);
+    }
 }

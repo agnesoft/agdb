@@ -1,10 +1,3 @@
-use crate::db::db_value::DbValues;
-use crate::query::query_aliases::QueryAliases;
-use crate::query_builder::remove_aliases::RemoveAliases;
-use crate::query_builder::remove_ids::RemoveIds;
-use crate::query_builder::remove_index::RemoveIndex;
-use crate::query_builder::remove_values::RemoveValues;
-use crate::query_builder::search::Search;
 use crate::DbValue;
 use crate::QueryIds;
 use crate::RemoveAliasesQuery;
@@ -12,6 +5,13 @@ use crate::RemoveQuery;
 use crate::RemoveValuesQuery;
 use crate::SearchQuery;
 use crate::SelectValuesQuery;
+use crate::db::db_value::DbValues;
+use crate::query::query_aliases::QueryAliases;
+use crate::query_builder::remove_aliases::RemoveAliases;
+use crate::query_builder::remove_ids::RemoveIds;
+use crate::query_builder::remove_index::RemoveIndex;
+use crate::query_builder::remove_values::RemoveValues;
+use crate::query_builder::search::Search;
 
 /// Remove builder to choose what to delete from the database.
 #[cfg_attr(feature = "api", derive(agdb::ApiDef))]

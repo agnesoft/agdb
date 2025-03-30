@@ -1,4 +1,3 @@
-use crate::query::query_values::QueryValues;
 use crate::DbElement;
 use crate::DbId;
 use crate::DbImpl;
@@ -8,6 +7,7 @@ use crate::QueryIds;
 use crate::QueryMut;
 use crate::QueryResult;
 use crate::StorageData;
+use crate::query::query_values::QueryValues;
 
 /// Query to inserts edges to the database. The `from`
 /// and `to` ids must exist in the database. There must be

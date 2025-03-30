@@ -1,7 +1,7 @@
+use crate::ADMIN;
+use crate::TestServer;
 use crate::next_db_name;
 use crate::next_user_name;
-use crate::TestServer;
-use crate::ADMIN;
 use agdb_api::DbType;
 use std::path::Path;
 
@@ -15,13 +15,15 @@ async fn remove() -> anyhow::Result<()> {
     server.api.admin_db_add(owner, db, DbType::Mapped).await?;
     assert!(Path::new(&server.data_dir).join(owner).join(db).exists());
     let status = server.api.admin_db_remove(owner, db).await?;
-    assert!(!server
-        .api
-        .admin_db_list()
-        .await?
-        .1
-        .iter()
-        .any(|d| d.db == *db && d.owner == *owner));
+    assert!(
+        !server
+            .api
+            .admin_db_list()
+            .await?
+            .1
+            .iter()
+            .any(|d| d.db == *db && d.owner == *owner)
+    );
     assert_eq!(status, 204);
     assert!(Path::new(&server.data_dir).join(owner).join(db).exists());
     Ok(())

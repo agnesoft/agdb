@@ -1,6 +1,6 @@
-use crate::query_builder::search::Search;
 use crate::QueryIds;
 use crate::SelectKeysQuery;
+use crate::query_builder::search::Search;
 
 /// Select keys builder.
 #[cfg_attr(feature = "api", derive(agdb::ApiDef))]
@@ -16,7 +16,7 @@ impl SelectKeys {
     /// An id or list of ids or search query to select keys of.
     /// All ids specified must exist in the database.
     pub fn ids<T: Into<QueryIds>>(mut self, ids: T) -> SelectKeysIds {
-        self.0 .0 = ids.into();
+        self.0.0 = ids.into();
 
         SelectKeysIds(self.0)
     }

@@ -1,11 +1,13 @@
+use crate::ADMIN;
+use crate::ConfigImpl;
+use crate::DEFAULT_LOG_BODY_LIMIT;
+use crate::DEFAULT_REQUEST_BODY_LIMIT;
+use crate::SERVER_DATA_DIR;
+use crate::TestServerImpl;
 use crate::create_cluster;
 use crate::reqwest_client;
 use crate::wait_for_leader;
 use crate::wait_for_ready;
-use crate::ConfigImpl;
-use crate::TestServerImpl;
-use crate::ADMIN;
-use crate::SERVER_DATA_DIR;
 use agdb_api::AgdbApi;
 use agdb_api::ReqwestClient;
 use tracing::level_filters::LevelFilter;
@@ -20,6 +22,8 @@ async fn https() -> anyhow::Result<()> {
         basepath: String::new(),
         admin: ADMIN.to_string(),
         log_level: LevelFilter::INFO,
+        log_body_limit: DEFAULT_LOG_BODY_LIMIT,
+        request_body_limit: DEFAULT_REQUEST_BODY_LIMIT,
         data_dir: SERVER_DATA_DIR.into(),
         pepper_path: String::new(),
         tls_certificate: format!("{manifest_dir}/tests/test_cert.pem"),

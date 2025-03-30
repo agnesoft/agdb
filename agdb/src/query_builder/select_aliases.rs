@@ -1,8 +1,8 @@
-use crate::query_builder::search::Search;
 use crate::QueryIds;
 use crate::SearchQuery;
 use crate::SelectAliasesQuery;
 use crate::SelectAllAliasesQuery;
+use crate::query_builder::search::Search;
 
 /// Select aliases builder.
 #[cfg_attr(feature = "api", derive(agdb::ApiDef))]
@@ -18,7 +18,7 @@ impl SelectAliases {
     /// An id or list of ids or search query to select aliases of.
     /// All ids specified must exist in the database.
     pub fn ids<T: Into<QueryIds>>(mut self, ids: T) -> SelectAliasesIds {
-        self.0 .0 = ids.into();
+        self.0.0 = ids.into();
 
         SelectAliasesIds(self.0)
     }
@@ -26,7 +26,7 @@ impl SelectAliases {
     /// Select using the result of a search query as ids.
     /// Equivalent to `ids(QueryBuilder::search()/* ... */)`.
     pub fn search(mut self) -> Search<SelectAliasesQuery> {
-        self.0 .0 = QueryIds::Search(SearchQuery::new());
+        self.0.0 = QueryIds::Search(SearchQuery::new());
         Search(self.0)
     }
 

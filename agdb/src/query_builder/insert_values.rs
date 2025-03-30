@@ -1,7 +1,7 @@
-use crate::query_builder::search::Search;
 use crate::InsertValuesQuery;
 use crate::QueryIds;
 use crate::SearchQuery;
+use crate::query_builder::search::Search;
 
 /// Insert values builder to set ids to which the values
 /// should be inserted.

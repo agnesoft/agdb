@@ -1,5 +1,3 @@
-use crate::db::db_key_order::DbKeyOrder;
-use crate::query_builder::search::SearchQueryBuilder;
 use crate::DbElement;
 use crate::DbId;
 use crate::DbImpl;
@@ -11,6 +9,8 @@ use crate::QueryError;
 use crate::QueryId;
 use crate::QueryResult;
 use crate::StorageData;
+use crate::db::db_key_order::DbKeyOrder;
+use crate::query_builder::search::SearchQueryBuilder;
 use std::cmp::Ordering;
 
 /// Search algorithm to be used

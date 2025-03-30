@@ -1,5 +1,7 @@
 use crate::server_state::ServerState;
 use crate::user_id::UserName;
+use axum::Error as AxumError;
+use axum::RequestPartsExt;
 use axum::body::Body;
 use axum::extract::Request;
 use axum::extract::State;
@@ -7,8 +9,6 @@ use axum::http::StatusCode;
 use axum::middleware::Next;
 use axum::response::IntoResponse;
 use axum::response::Response;
-use axum::Error as AxumError;
-use axum::RequestPartsExt;
 use http_body_util::BodyExt;
 use serde::Serialize;
 use std::collections::HashMap;
@@ -51,11 +51,11 @@ pub(crate) async fn logger(
     let mut log_record = LogRecord::default();
     let skip_body = request.uri().path().ends_with("openapi.json")
         || request.uri().path().starts_with("/studio");
-    let request = request_log(state, request, &mut log_record, skip_body).await?;
+    let request = request_log(&state, request, &mut log_record, skip_body).await?;
     let now = Instant::now();
     let response = next.run(request).await;
     log_record.time = now.elapsed().as_micros();
-    let response = response_log(response, &mut log_record, skip_body).await;
+    let response = response_log(&state, response, &mut log_record, skip_body).await;
 
     log_record.print();
 
@@ -63,7 +63,7 @@ pub(crate) async fn logger(
 }
 
 async fn request_log(
-    state: State<ServerState>,
+    state: &State<ServerState>,
     request: Request,
     log_record: &mut LogRecord,
     skip_body: bool,
@@ -81,12 +81,17 @@ async fn request_log(
     if !skip_body {
         let (mut parts, body) = request.into_parts();
         let bytes = body.collect().await.map_err(map_error)?.to_bytes();
-        log_record.request_body = String::from_utf8_lossy(&bytes).to_string();
+        let log_bytes = if bytes.len() > state.config.log_body_limit as usize {
+            &bytes[..state.config.log_body_limit as usize]
+        } else {
+            &bytes
+        };
+        log_record.request_body = String::from_utf8_lossy(log_bytes).to_string();
 
         mask_password(log_record);
 
         log_record.user = parts
-            .extract_with_state::<UserName, ServerState>(&state)
+            .extract_with_state::<UserName, ServerState>(state)
             .await
             .unwrap_or_default()
             .0;
@@ -138,6 +143,7 @@ fn mask_password(log_record: &mut LogRecord) {
 }
 
 async fn response_log(
+    state: &State<ServerState>,
     response: Response,
     log_record: &mut LogRecord,
     skip_body: bool,
@@ -152,7 +158,12 @@ async fn response_log(
     if !skip_body {
         let (parts, body) = response.into_parts();
         let bytes = body.collect().await.map_err(map_error)?.to_bytes();
-        log_record.response = String::from_utf8_lossy(&bytes).to_string();
+        let log_bytes = if bytes.len() > state.config.log_body_limit as usize {
+            &bytes[..state.config.log_body_limit as usize]
+        } else {
+            &bytes
+        };
+        log_record.response = String::from_utf8_lossy(log_bytes).to_string();
 
         return Ok(Response::from_parts(parts, Body::from(bytes)));
     }

@@ -74,12 +74,12 @@ impl QueryMut for &InsertAliasesQuery {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::query::query_id::QueryId;
-    use crate::query::search_query::SearchQuery;
-    use crate::test_utilities::test_file::TestFile;
     use crate::Db;
     use crate::DbId;
     use crate::SearchQueryAlgorithm;
+    use crate::query::query_id::QueryId;
+    use crate::query::search_query::SearchQuery;
+    use crate::test_utilities::test_file::TestFile;
 
     #[test]
     fn invalid_query() {

@@ -81,8 +81,8 @@ impl From<SearchQuery> for QueryIds {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::query::search_query::SearchQueryAlgorithm;
     use crate::DbId;
+    use crate::query::search_query::SearchQueryAlgorithm;
 
     #[test]
     #[allow(clippy::redundant_clone)]

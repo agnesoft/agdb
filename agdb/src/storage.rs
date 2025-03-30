@@ -7,9 +7,10 @@ mod write_ahead_log;
 
 use self::storage_records::StorageRecord;
 use self::storage_records::StorageRecords;
+use crate::DbError;
+use crate::collections::vec::VecValue;
 use crate::utilities::serialize::Serialize;
 use crate::utilities::serialize::SerializeStatic;
-use crate::DbError;
 use std::borrow::Cow;
 
 const CURRENT_VERSION: u64 = 1;
@@ -35,6 +36,24 @@ impl Serialize for StorageIndex {
 
     fn serialized_size(&self) -> u64 {
         self.0.serialized_size()
+    }
+}
+
+impl<S: StorageData> VecValue<S> for StorageIndex {
+    fn store(&self, _storage: &mut Storage<S>) -> Result<Vec<u8>, DbError> {
+        Ok(self.serialize())
+    }
+
+    fn load(_storage: &Storage<S>, bytes: &[u8]) -> Result<Self, DbError> {
+        Self::deserialize(bytes)
+    }
+
+    fn remove(_storage: &mut Storage<S>, _bytes: &[u8]) -> Result<(), DbError> {
+        Ok(())
+    }
+
+    fn storage_len() -> u64 {
+        StorageIndex::serialized_size_static()
     }
 }
 

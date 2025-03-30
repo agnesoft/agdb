@@ -79,7 +79,16 @@ pub(crate) fn report(
     let padding = config.padding as usize;
     let cell_padding = config.cell_padding as usize;
 
-    println!("{:padding$} | {:cell_padding$} | {:cell_padding$} | {:cell_padding$} | {:cell_padding$} | {:cell_padding$} | {:cell_padding$} | {:cell_padding$} | {:cell_padding$}",
-        description, threads.to_formatted_string(&config.locale), per_thread.to_formatted_string(&config.locale), per_action.to_formatted_string(&config.locale), times.len().to_formatted_string(&config.locale), format_duration(*min, config.locale), format_duration(avg, config.locale), format_duration(*max, config.locale), format_duration(total, config.locale)
-        )
+    println!(
+        "{:padding$} | {:cell_padding$} | {:cell_padding$} | {:cell_padding$} | {:cell_padding$} | {:cell_padding$} | {:cell_padding$} | {:cell_padding$} | {:cell_padding$}",
+        description,
+        threads.to_formatted_string(&config.locale),
+        per_thread.to_formatted_string(&config.locale),
+        per_action.to_formatted_string(&config.locale),
+        times.len().to_formatted_string(&config.locale),
+        format_duration(*min, config.locale),
+        format_duration(avg, config.locale),
+        format_duration(*max, config.locale),
+        format_duration(total, config.locale)
+    )
 }

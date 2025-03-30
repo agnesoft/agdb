@@ -1,10 +1,10 @@
-use crate::query::Query;
-use crate::query::QueryMut;
 use crate::DbImpl;
 use crate::QueryError;
 use crate::QueryResult;
 use crate::StorageData;
 use crate::Transaction;
+use crate::query::Query;
+use crate::query::QueryMut;
 
 /// The `TransactionMut` is a proxy struct that
 /// encapsulates a mutably borrowed [`DbImpl`].

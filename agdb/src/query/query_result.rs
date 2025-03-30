@@ -1,7 +1,7 @@
-use crate::db::db_element::DbElement;
 use crate::DbError;
 use crate::DbId;
 use crate::DbUserValue;
+use crate::db::db_element::DbElement;
 
 /// Universal database result. Successful
 /// execution of a query will always yield

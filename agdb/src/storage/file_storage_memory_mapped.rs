@@ -1,7 +1,7 @@
-use super::file_storage::FileStorage;
-use super::memory_storage::MemoryStorage;
 use super::StorageData;
 use super::StorageSlice;
+use super::file_storage::FileStorage;
+use super::memory_storage::MemoryStorage;
 use crate::DbError;
 
 /// The default implementation of the database storage implementing
@@ -75,9 +75,9 @@ impl StorageData for FileStorageMemoryMapped {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::storage::write_ahead_log::WriteAheadLog;
     use crate::storage::Storage;
     use crate::storage::StorageIndex;
+    use crate::storage::write_ahead_log::WriteAheadLog;
     use crate::test_utilities::test_file::TestFile;
     use crate::utilities::serialize::Serialize;
     use crate::utilities::serialize::SerializeStatic;

@@ -1,7 +1,7 @@
+use crate::ADMIN;
+use crate::TestServer;
 use crate::next_db_name;
 use crate::next_user_name;
-use crate::TestServer;
-use crate::ADMIN;
 use agdb::DbElement;
 use agdb::DbId;
 use agdb::QueryBuilder;
@@ -19,19 +19,23 @@ async fn backup() -> anyhow::Result<()> {
     server.api.admin_user_add(owner, owner).await?;
     server.api.user_login(owner, owner).await?;
     server.api.db_add(owner, db, DbType::Mapped).await?;
-    let queries = &vec![QueryBuilder::insert()
-        .nodes()
-        .aliases(["root"])
-        .query()
-        .into()];
+    let queries = &vec![
+        QueryBuilder::insert()
+            .nodes()
+            .aliases(["root"])
+            .query()
+            .into(),
+    ];
     server.api.db_exec_mut(owner, db, queries).await?;
     let status = server.api.db_backup(owner, db).await?;
     assert_eq!(status, 201);
-    assert!(Path::new(&server.data_dir)
-        .join(owner)
-        .join("backups")
-        .join(format!("{}.bak", db))
-        .exists());
+    assert!(
+        Path::new(&server.data_dir)
+            .join(owner)
+            .join("backups")
+            .join(format!("{}.bak", db))
+            .exists()
+    );
     let queries = &vec![QueryBuilder::remove().ids("root").query().into()];
     server.api.db_exec_mut(owner, db, queries).await?;
     let status = server.api.db_restore(owner, db).await?;
@@ -62,28 +66,34 @@ async fn backup_overwrite() -> anyhow::Result<()> {
     server.api.admin_user_add(owner, owner).await?;
     server.api.user_login(owner, owner).await?;
     server.api.db_add(owner, db, DbType::Mapped).await?;
-    let queries = &vec![QueryBuilder::insert()
-        .nodes()
-        .aliases(["root"])
-        .query()
-        .into()];
+    let queries = &vec![
+        QueryBuilder::insert()
+            .nodes()
+            .aliases(["root"])
+            .query()
+            .into(),
+    ];
     server.api.db_exec_mut(owner, db, queries).await?;
     let status = server.api.db_backup(owner, db).await?;
     assert_eq!(status, 201);
-    assert!(Path::new(&server.data_dir)
-        .join(owner)
-        .join("backups")
-        .join(format!("{}.bak", db))
-        .exists());
+    assert!(
+        Path::new(&server.data_dir)
+            .join(owner)
+            .join("backups")
+            .join(format!("{}.bak", db))
+            .exists()
+    );
     let queries = &vec![QueryBuilder::remove().ids("root").query().into()];
     server.api.db_exec_mut(owner, db, queries).await?;
     let status = server.api.db_backup(owner, db).await?;
     assert_eq!(status, 201);
-    assert!(Path::new(&server.data_dir)
-        .join(owner)
-        .join("backups")
-        .join(format!("{}.bak", db))
-        .exists());
+    assert!(
+        Path::new(&server.data_dir)
+            .join(owner)
+            .join("backups")
+            .join(format!("{}.bak", db))
+            .exists()
+    );
     let status = server.api.db_restore(owner, db).await?;
     assert_eq!(status, 201);
     let queries = &vec![QueryBuilder::select().ids("root").query().into()];
@@ -106,19 +116,23 @@ async fn backup_of_backup() -> anyhow::Result<()> {
     server.api.admin_user_add(owner, owner).await?;
     server.api.user_login(owner, owner).await?;
     server.api.db_add(owner, db, DbType::Mapped).await?;
-    let queries = &vec![QueryBuilder::insert()
-        .nodes()
-        .aliases(["root"])
-        .query()
-        .into()];
+    let queries = &vec![
+        QueryBuilder::insert()
+            .nodes()
+            .aliases(["root"])
+            .query()
+            .into(),
+    ];
     server.api.db_exec_mut(owner, db, queries).await?;
     let status = server.api.db_backup(owner, db).await?;
     assert_eq!(status, 201);
-    assert!(Path::new(&server.data_dir)
-        .join(owner)
-        .join("backups")
-        .join(format!("{}.bak", db))
-        .exists());
+    assert!(
+        Path::new(&server.data_dir)
+            .join(owner)
+            .join("backups")
+            .join(format!("{}.bak", db))
+            .exists()
+    );
     let queries = &vec![QueryBuilder::remove().ids("root").query().into()];
     server.api.db_exec_mut(owner, db, queries).await?;
     let status = server.api.db_restore(owner, db).await?;

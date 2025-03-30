@@ -1,7 +1,7 @@
+use crate::ADMIN;
+use crate::TestServer;
 use crate::next_db_name;
 use crate::next_user_name;
-use crate::TestServer;
-use crate::ADMIN;
 use agdb::CountComparison;
 use agdb::DbElement;
 use agdb::DbId;
@@ -63,12 +63,14 @@ async fn read_only() -> anyhow::Result<()> {
     server.api.admin_user_add(owner, owner).await?;
     server.api.user_login(owner, owner).await?;
     server.api.db_add(owner, db, DbType::Mapped).await?;
-    let queries = &vec![QueryBuilder::insert()
-        .nodes()
-        .aliases("root")
-        .values([[("key", 1.1).into()]])
-        .query()
-        .into()];
+    let queries = &vec![
+        QueryBuilder::insert()
+            .nodes()
+            .aliases("root")
+            .values([[("key", 1.1).into()]])
+            .query()
+            .into(),
+    ];
     let (status, _) = server.api.db_exec_mut(owner, db, queries).await?;
     assert_eq!(status, 200);
     let queries = &vec![QueryBuilder::select().ids("root").query().into()];
@@ -96,12 +98,14 @@ async fn read_queries() -> anyhow::Result<()> {
     server.api.admin_user_add(owner, owner).await?;
     server.api.user_login(owner, owner).await?;
     server.api.db_add(owner, db, DbType::Mapped).await?;
-    let queries = &vec![QueryBuilder::insert()
-        .nodes()
-        .aliases("node1")
-        .values([[("key", "value").into()]])
-        .query()
-        .into()];
+    let queries = &vec![
+        QueryBuilder::insert()
+            .nodes()
+            .aliases("node1")
+            .values([[("key", "value").into()]])
+            .query()
+            .into(),
+    ];
     server.api.db_exec_mut(owner, db, queries).await?;
     let queries = &vec![
         QueryBuilder::search().from(1).query().into(),
@@ -628,11 +632,13 @@ async fn use_result_bad_query() -> anyhow::Result<()> {
     server.api.admin_user_add(owner, owner).await?;
     server.api.user_login(owner, owner).await?;
     server.api.db_add(owner, db, DbType::Mapped).await?;
-    let queries = &vec![QueryBuilder::insert()
-        .aliases("alias")
-        .ids(":bad")
-        .query()
-        .into()];
+    let queries = &vec![
+        QueryBuilder::insert()
+            .aliases("alias")
+            .ids(":bad")
+            .query()
+            .into(),
+    ];
     let error = server
         .api
         .db_exec_mut(owner, db, queries)
@@ -652,11 +658,13 @@ async fn use_result_out_of_bounds() -> anyhow::Result<()> {
     server.api.admin_user_add(owner, owner).await?;
     server.api.user_login(owner, owner).await?;
     server.api.db_add(owner, db, DbType::Mapped).await?;
-    let queries = &vec![QueryBuilder::insert()
-        .aliases("alias")
-        .ids(":1")
-        .query()
-        .into()];
+    let queries = &vec![
+        QueryBuilder::insert()
+            .aliases("alias")
+            .ids(":1")
+            .query()
+            .into(),
+    ];
     let error = server
         .api
         .db_exec_mut(owner, db, queries)

@@ -19,8 +19,9 @@ use agdb::QueryBuilder;
 use agdb::QueryId;
 use std::sync::Arc;
 use std::sync::RwLock;
-use test_db::test_file::TestFile;
+use std::time::Instant;
 use test_db::TestDb;
+use test_db::test_file::TestFile;
 
 #[allow(unused_imports)]
 #[test]
@@ -595,4 +596,64 @@ fn queries_as_reference() {
 
     let query = QueryBuilder::select().ids("root").query();
     db.exec(&query).unwrap();
+}
+
+#[test]
+fn large_queries() {
+    const COUNT: i64 = 10000;
+    let mut db = DbMemory::new("test").unwrap();
+    db.exec_mut(QueryBuilder::insert().nodes().count(COUNT as u64).query())
+        .unwrap();
+
+    let mut now = Instant::now();
+    let mut times = vec![];
+
+    for (from, to) in (1..COUNT).step_by(2).zip((2..COUNT).step_by(2)) {
+        let r = db
+            .exec_mut(QueryBuilder::insert().edges().from(from).to(to).query())
+            .unwrap();
+        let vals: Vec<agdb::DbKeyValue> = (1..10)
+            .map(|j| (format!("key{}", from + j), format!("value{}", from + j)).into())
+            .collect();
+        db.exec_mut(
+            QueryBuilder::insert()
+                .values([vals])
+                .ids(r.elements[0].id)
+                .query(),
+        )
+        .unwrap();
+
+        if to % 1000 == 0 {
+            times.push(now.elapsed());
+            now = Instant::now();
+        }
+    }
+
+    times.push(now.elapsed());
+
+    let min = times.iter().min().unwrap();
+    let max = times.iter().max().unwrap();
+    let avg = times.iter().map(|t| t.as_millis() as u64).sum::<u64>() / times.len() as u64;
+
+    println!("Min: {}ms", min.as_millis());
+    println!("Max: {}ms", max.as_millis());
+    println!("Avg: {}ms", avg);
+    println!("{:?}", times);
+}
+
+#[test]
+fn convert_db_before_0_11_0() {
+    let test_file = TestFile::new();
+    std::fs::copy("tests/test_db_prior_0_11_0.agdb", test_file.file_name()).unwrap();
+    let db = Db::new(test_file.file_name()).unwrap();
+    let result = db
+        .exec(QueryBuilder::select().search().elements().query())
+        .unwrap();
+    assert_eq!(result.elements.len(), 3);
+    assert_eq!(
+        result.elements[0].values,
+        vec![("key1", "value1").into(), ("key2", 123).into()]
+    );
+    assert_eq!(result.elements[1].values, vec![(1, 2).into()]);
+    assert_eq!(result.elements[2].values, vec![("tag", "label").into()]);
 }

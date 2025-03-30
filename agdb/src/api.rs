@@ -1,3 +1,19 @@
+use crate::DbId;
+use crate::DbKeyValue;
+use crate::DbValue;
+use crate::DbValues;
+use crate::InsertAliasesQuery;
+use crate::InsertEdgesQuery;
+use crate::InsertNodesQuery;
+use crate::InsertValuesQuery;
+use crate::MultiValues;
+use crate::QueryAliases;
+use crate::QueryBuilder;
+use crate::QueryId;
+use crate::QueryIds;
+use crate::QueryValues;
+use crate::RemoveValuesQuery;
+use crate::SingleValues;
 use crate::query_builder::insert::Insert;
 use crate::query_builder::insert_aliases::InsertAliases;
 use crate::query_builder::insert_aliases::InsertAliasesIds;
@@ -29,23 +45,8 @@ use crate::query_builder::select_key_count::SelectKeyCount;
 use crate::query_builder::select_keys::SelectKeys;
 use crate::query_builder::select_node_count::SelectNodeCount;
 use crate::query_builder::select_values::SelectValues;
-use crate::DbId;
-use crate::DbKeyValue;
-use crate::DbValue;
-use crate::DbValues;
-use crate::InsertAliasesQuery;
-use crate::InsertEdgesQuery;
-use crate::InsertNodesQuery;
-use crate::InsertValuesQuery;
-use crate::MultiValues;
-use crate::QueryAliases;
-use crate::QueryBuilder;
-use crate::QueryId;
-use crate::QueryIds;
-use crate::QueryValues;
-use crate::RemoveValuesQuery;
-use crate::SingleValues;
 
+#[derive(Debug, PartialEq)]
 pub enum Type {
     None,
     U8,
@@ -60,6 +61,7 @@ pub enum Type {
     Option(Box<Type>),
 }
 
+#[derive(Debug, PartialEq)]
 pub struct NamedType {
     pub name: &'static str,
     pub ty: fn() -> Type,
@@ -92,6 +94,7 @@ pub enum Expression {
     Return(&'static str),
 }
 
+#[derive(Debug, PartialEq)]
 pub struct Enum {
     pub name: &'static str,
     pub variants: Vec<NamedType>,

@@ -1,10 +1,10 @@
+use crate::StorageData;
 use crate::graph::GraphData;
 use crate::graph::GraphImpl;
 use crate::graph::GraphIndex;
 use crate::graph_search::search_impl::SearchIndex;
 use crate::graph_search::search_impl::SearchIterator;
 use crate::storage::Storage;
-use crate::StorageData;
 use std::collections::VecDeque;
 
 pub struct BreadthFirstSearchReverse {
@@ -72,12 +72,12 @@ mod tests {
     use super::super::SearchControl;
     use super::super::SearchHandler;
     use super::*;
+    use crate::DbError;
     use crate::graph::DbGraph;
     use crate::graph::GraphIndex;
     use crate::graph_search::GraphSearch;
     use crate::storage::file_storage::FileStorage;
     use crate::test_utilities::test_file::TestFile;
-    use crate::DbError;
 
     struct Handler {
         pub processor: fn(GraphIndex, u64) -> SearchControl,

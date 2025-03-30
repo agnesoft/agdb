@@ -1,6 +1,6 @@
-use crate::query_builder::search::Search;
 use crate::QueryIds;
 use crate::SelectKeyCountQuery;
+use crate::query_builder::search::Search;
 
 /// Select key count builder.
 #[cfg_attr(feature = "api", derive(agdb::ApiDef))]
@@ -16,7 +16,7 @@ impl SelectKeyCount {
     /// An id or list of ids or search query to select key count of.
     /// All ids specified must exist in the database.
     pub fn ids<T: Into<QueryIds>>(mut self, ids: T) -> SelectKeyCountIds {
-        self.0 .0 = ids.into();
+        self.0.0 = ids.into();
 
         SelectKeyCountIds(self.0)
     }

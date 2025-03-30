@@ -49,6 +49,7 @@ impl From<&DbKeyOrder> for DbKeyOrders {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::AgdbSerialize;
 
     #[test]
     fn derived_from_debug() {
@@ -79,5 +80,13 @@ mod tests {
         let _orders = DbKeyOrders::from([DbKeyOrder::Asc(1.into())]);
         let _orders = DbKeyOrders::from(DbKeyOrder::Asc(1.into()));
         let _orders = DbKeyOrders::from(&DbKeyOrder::Asc(1.into()));
+    }
+
+    #[test]
+    fn derive_serialization() {
+        let order = DbKeyOrder::Asc(1.into());
+        let serialized = order.serialize();
+        let deserialized = DbKeyOrder::deserialize(&serialized).unwrap();
+        assert_eq!(order, deserialized);
     }
 }

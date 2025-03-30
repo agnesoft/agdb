@@ -1,6 +1,6 @@
-use crate::query_builder::search::Search;
 use crate::QueryIds;
 use crate::SelectEdgeCountQuery;
+use crate::query_builder::search::Search;
 
 /// Select edge count builder.
 #[cfg_attr(feature = "api", derive(agdb::ApiDef))]

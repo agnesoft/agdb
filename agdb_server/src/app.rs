@@ -8,9 +8,10 @@ use crate::routes;
 use crate::server_db::ServerDb;
 use crate::server_error::ServerResult;
 use crate::server_state::ServerState;
+use axum::Router;
+use axum::extract::DefaultBodyLimit;
 use axum::middleware;
 use axum::routing;
-use axum::Router;
 use reqwest::Method;
 use tokio::sync::broadcast::Sender;
 use tower_http::cors::CorsLayer;
@@ -28,6 +29,7 @@ pub(crate) fn app(
     routes::studio::init(&config)?;
 
     let basepath = config.basepath.clone();
+    let request_body_limit = config.request_body_limit;
 
     let state = ServerState {
         cluster,
@@ -212,7 +214,6 @@ pub(crate) fn app(
 
     let router = router
         .nest("/api/v1", api_v1)
-        .merge(RapiDoc::with_openapi("/api/v1/openapi.json", Api::openapi()).path("/api/v1"))
         .layer(middleware::from_fn_with_state(
             state.clone(),
             forward::forward_to_leader,
@@ -222,11 +223,16 @@ pub(crate) fn app(
             logger::logger,
         ))
         .layer(cors)
+        .layer(DefaultBodyLimit::max(request_body_limit as usize))
         .with_state(state);
 
     Ok(if !basepath.is_empty() {
         Router::new().nest(&basepath, router)
     } else {
         router
-    })
+    }
+    .merge(
+        RapiDoc::with_openapi(format!("{basepath}/api/v1/openapi.json"), Api::openapi())
+            .path(format!("{basepath}/api/v1")),
+    ))
 }

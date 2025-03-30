@@ -43,7 +43,7 @@ jobs:
           fetch-depth: 0
       - id: new_version
         run: |
-          if [[ "$(git diff HEAD^ --name-only -- Version)" != "" ]]; then echo "new_version=$(cat Version)" >> $GITHUB_OUTPUT; fi
+          if [[ "$(git diff HEAD^ --name-only -- Version)" != "" ]]; then echo "new_version=$(cat Version | xargs)" >> $GITHUB_OUTPUT; fi
           echo "New version: $(cat Version)"
 
   release:

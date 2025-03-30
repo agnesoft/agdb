@@ -1,11 +1,11 @@
-use crate::graph::GraphIndex;
-use crate::graph_search::path_search::PathSearchHandler;
-use crate::graph_search::SearchControl;
-use crate::graph_search::SearchHandler;
 use crate::DbError;
 use crate::DbImpl;
 use crate::QueryCondition;
 use crate::StorageData;
+use crate::graph::GraphIndex;
+use crate::graph_search::SearchControl;
+use crate::graph_search::SearchHandler;
+use crate::graph_search::path_search::PathSearchHandler;
 
 pub struct DefaultHandler<'a, Store: StorageData> {
     db: &'a DbImpl<Store>,

@@ -37,7 +37,7 @@ import {
   admin_db_user_remove,
   admin_db_exec,
   admin_db_exec_mut,
-} from "@/tests/apiMock";
+} from "@agdb-studio/testing/mocks/apiMock";
 
 const { username, isAdmin, isAdminView } = vi.hoisted(() => {
   return {

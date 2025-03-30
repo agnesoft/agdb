@@ -4,7 +4,7 @@ import { convertArrayOfStringsToContent } from "@/composables/content/utils";
 import { useContentInputs } from "../content/inputs";
 import { KEY_MODAL } from "../modal/constants";
 import useModal from "../modal/modal";
-import { addNotification } from "../../../libs/notification/src/composables/notificationStore";
+import { addNotification } from "@agdb-studio/notification/src/composables/notificationStore";
 import { useDbStore } from "./dbStore";
 import {
   dbAudit,

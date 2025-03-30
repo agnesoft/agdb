@@ -6,7 +6,7 @@ import {
   errorInterceptor,
   checkClient,
 } from "./api.service";
-import { client } from "@/tests/apiMock";
+import { client } from "@agdb-studio/testing/mocks/apiMock";
 import type { AxiosError, AxiosResponse } from "axios";
 import { vi, describe, it, beforeEach, expect } from "vitest";
 import type { ComputedRef } from "vue";

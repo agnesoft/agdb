@@ -18,7 +18,7 @@ import {
   db_rename,
   admin_db_copy,
   admin_db_rename,
-} from "@/tests/apiMock";
+} from "@agdb-studio/testing/mocks/apiMock";
 import { useContentInputs } from "../content/inputs";
 import { KEY_MODAL } from "../modal/constants";
 import useModal from "../modal/modal";

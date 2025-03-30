@@ -1,7 +1,7 @@
 import { client } from "@/services/api.service";
 import type { UserStatus } from "@agnesoft/agdb_api/openapi";
 import { ref } from "vue";
-import { addNotification } from "../../../libs/notification/src/composables/notificationStore";
+import { addNotification } from "@agdb-studio/notification/src/composables/notificationStore";
 
 const users = ref<UserStatus[]>([]);
 

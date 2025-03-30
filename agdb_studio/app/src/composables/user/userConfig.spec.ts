@@ -5,7 +5,7 @@ import {
   admin_user_logout,
   admin_user_delete,
   cluster_admin_user_logout,
-} from "@/tests/apiMock";
+} from "@agdb-studio/testing/mocks/apiMock";
 import { useContentInputs } from "../content/inputs";
 import { KEY_MODAL } from "../modal/constants";
 import type { UserStatus } from "@agnesoft/agdb_api/openapi";

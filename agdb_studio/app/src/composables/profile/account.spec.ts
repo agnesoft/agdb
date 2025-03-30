@@ -1,5 +1,5 @@
 import { useAccount } from "./account";
-import { user_status } from "@/tests/apiMock";
+import { user_status } from "@agdb-studio/testing/mocks/apiMock";
 import { vi, describe, it, beforeEach, expect } from "vitest";
 
 const { isLoggedIn, token } = vi.hoisted(() => {

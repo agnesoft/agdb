@@ -1,5 +1,5 @@
 {
-  "name": "agdb_studio_root",
+  "name": "agdb_studio",
   "version": "0.0.0",
   "private": true,
   "scripts": {
@@ -29,6 +29,7 @@
   },
   "devDependencies": {
     "@agdb-studio/config": "workspace:*",
+    "@agdb-studio/testing": "workspace:*",
     "@eslint/js": "catalog:",
     "@playwright/test": "catalog:",
     "@rushstack/eslint-patch": "catalog:",

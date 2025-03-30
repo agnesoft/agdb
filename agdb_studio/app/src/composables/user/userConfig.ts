@@ -2,7 +2,7 @@ import type { UserStatus } from "@agnesoft/agdb_api/openapi";
 import { useContentInputs } from "../content/inputs";
 import { client } from "@/services/api.service";
 import { KEY_MODAL } from "../modal/constants";
-import { addNotification } from "../../../libs/notification/src/composables/notificationStore";
+import { addNotification } from "@agdb-studio/notification/src/composables/notificationStore";
 import { convertArrayOfStringsToContent } from "../content/utils";
 import type { Column, TRow } from "../table/types";
 

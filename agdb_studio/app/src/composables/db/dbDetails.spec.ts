@@ -1,6 +1,10 @@
 import { describe, beforeEach, vi, it, expect } from "vitest";
 import { useDbDetails, type DbDetailsParams } from "./dbDetails";
-import { db_user_list, db_user_add, db_user_remove } from "@/tests/apiMock";
+import {
+  db_user_list,
+  db_user_add,
+  db_user_remove,
+} from "@agdb-studio/testing/mocks/apiMock";
 import { ref } from "vue";
 import { useDbUsersStore } from "./dbUsersStore";
 import useModal from "@/composables/modal/modal";

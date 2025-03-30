@@ -1,6 +1,10 @@
 import { describe, beforeEach, vi, it, expect } from "vitest";
 import { useDbUsersStore } from "./dbUsersStore";
-import { db_user_list, db_user_add, db_user_remove } from "@/tests/apiMock";
+import {
+  db_user_list,
+  db_user_add,
+  db_user_remove,
+} from "@agdb-studio/testing/mocks/apiMock";
 
 const dbIdentification = {
   db: "testDb",

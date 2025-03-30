@@ -1,7 +1,7 @@
 import { ref } from "vue";
 import type { DbType, ServerDatabase } from "@agnesoft/agdb_api/openapi";
 import { useAccount } from "../profile/account";
-import { addNotification } from "../../../libs/notification/src/composables/notificationStore";
+import { addNotification } from "@agdb-studio/notification/src/composables/notificationStore";
 import type { AxiosResponse } from "axios";
 import type { DbIdentification } from "./types";
 import { dbAdd, dbList } from "./dbActions";

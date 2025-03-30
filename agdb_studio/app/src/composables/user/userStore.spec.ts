@@ -1,6 +1,9 @@
 import { vi, describe, it, beforeEach, expect } from "vitest";
 import { useUserStore } from "./userStore";
-import { admin_user_add, admin_user_list } from "@/tests/apiMock";
+import {
+  admin_user_add,
+  admin_user_list,
+} from "@agdb-studio/testing/mocks/apiMock";
 
 admin_user_list.mockResolvedValue({
   data: [

@@ -3,14 +3,9 @@ dist/
 Cargo.lock
 **/*.rs.bk
 lcov.info
-.db.agdb
-db.agdb
+*.agdb
 agdb_benchmarks.yaml
 agdb_server.yaml
-.agdb_benchmarks.agdb
-agdb_benchmarks.agdb
-.agdb_server.agdb
-agdb_server.agdb
 agdb_server_data/
 !.github/workflows/agdb_benchmarks.yaml
 !.github/workflows/agdb_server.yaml

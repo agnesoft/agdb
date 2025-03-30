@@ -100,9 +100,10 @@ impl Serialize for DbStorageIndex {
 /// An instance of the `agdb` database. To create a database:
 ///
 /// ```
+/// # let _test_file = agdb::test_utilities::test_file::TestFile::from("db1.agdb");
 /// use agdb::Db;
 ///
-/// let mut db = Db::new("db.agdb").unwrap();
+/// let mut db = Db::new("db1.agdb").unwrap();
 /// ```
 ///
 /// This will try to create or load the database file path `db.agdb`.
@@ -130,9 +131,10 @@ impl Serialize for DbStorageIndex {
 /// # Examples
 ///
 /// ```
+/// # let _test_file = agdb::test_utilities::test_file::TestFile::from("db2.agdb");
 /// use agdb::{Db, QueryBuilder, QueryError};
 ///
-/// let mut db = Db::new("db.agdb").unwrap();
+/// let mut db = Db::new("db2.agdb").unwrap();
 ///
 /// // Insert single node
 /// db.exec_mut(QueryBuilder::insert().nodes().count(1).query()).unwrap();
@@ -162,10 +164,11 @@ impl Serialize for DbStorageIndex {
 /// The `agdb` is multithreading enabled. It is recommended to use `Arc<RwLock>`:
 ///
 /// ```
+/// # let _test_file = agdb::test_utilities::test_file::TestFile::from("db3.agdb");
 /// use std::sync::{Arc, RwLock};
 /// use agdb::Db;
 ///
-/// let db = Arc::new(RwLock::new(Db::new("db.agdb").unwrap()));
+/// let db = Arc::new(RwLock::new(Db::new("db3.agdb").unwrap()));
 /// db.read().unwrap(); //for a read lock allowing Db::exec() and Db::transaction()
 /// db.write().unwrap(); //for a write lock allowing additionally Db::exec_mut() and Db::transaction_mut()
 /// ```
@@ -1214,7 +1217,7 @@ impl<Store: StorageData> Drop for DbImpl<Store> {
     }
 }
 
-// TODO: Support for databases created in <= 0.10.0. Remove this at some point in the future.
+// TODO: Remove this at some point in the future as it provides support for databases created in <= 0.10.0.
 mod legacy {
     use crate::DbError;
     use crate::DbId;

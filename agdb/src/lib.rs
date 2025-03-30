@@ -8,9 +8,10 @@
 //! # Example
 //!
 //! ```
+//! # let _test_file = agdb::test_utilities::test_file::TestFile::from("db4.agdb");
 //! use agdb::{Db, QueryBuilder};
 //!
-//! let mut db = Db::new("db.agdb").unwrap();
+//! let mut db = Db::new("db4.agdb").unwrap();
 //! db.exec_mut(QueryBuilder::insert().nodes().values([[("key", 123).into()]]).query()).unwrap();
 //!
 //! let result = db.exec(QueryBuilder::select().ids(1).query()).unwrap();
@@ -32,7 +33,7 @@ mod transaction;
 mod transaction_mut;
 mod utilities;
 
-#[cfg(test)]
+//#[cfg(any(test, doctest))] //TODO: Enable once doctest is stabilised
 pub mod test_utilities;
 
 #[cfg(any(feature = "serde", feature = "openapi"))]

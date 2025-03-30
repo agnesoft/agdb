@@ -20,15 +20,15 @@ use axum::response::Response as AxumResponse;
 use reqwest::StatusCode;
 use std::collections::HashMap;
 use std::str::FromStr;
+use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
-use std::sync::Arc;
 use std::time::Duration;
 use tokio::signal;
+use tokio::sync::RwLock;
 use tokio::sync::broadcast;
 use tokio::sync::mpsc::UnboundedReceiver;
 use tokio::sync::mpsc::UnboundedSender;
-use tokio::sync::RwLock;
 
 pub(crate) type Cluster = Arc<ClusterImpl>;
 

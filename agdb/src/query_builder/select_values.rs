@@ -1,6 +1,6 @@
-use crate::query_builder::search::Search;
 use crate::QueryIds;
 use crate::SelectValuesQuery;
+use crate::query_builder::search::Search;
 
 /// Select values builder.
 pub struct SelectValues(pub SelectValuesQuery);

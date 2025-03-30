@@ -4,20 +4,20 @@ mod routes;
 #[cfg(feature = "tls")]
 mod tls;
 
-use crate::config::to_str;
 use crate::config::ConfigImpl;
 use crate::config::DEFAULT_LOG_BODY_LIMIT;
 use crate::config::DEFAULT_REQUEST_BODY_LIMIT;
+use crate::config::to_str;
 use agdb_api::AgdbApi;
 use agdb_api::ClusterStatus;
 use agdb_api::ReqwestClient;
 use std::collections::HashMap;
 use std::path::Path;
 use std::path::PathBuf;
-use std::sync::atomic::AtomicU16;
-use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use std::sync::Weak;
+use std::sync::atomic::AtomicU16;
+use std::sync::atomic::Ordering;
 use std::time::Duration;
 use std::time::Instant;
 use tokio::process::Child;
@@ -144,7 +144,7 @@ impl TestServerImpl {
                         data_dir,
                         address: api_address,
                         process: Some(process),
-                    })
+                    });
                 }
                 Ok(status) => println!("Server at {api_address} is not ready: {status}"),
                 Err(e) => println!("Failed to contact server at {api_address}: {e:?}"),

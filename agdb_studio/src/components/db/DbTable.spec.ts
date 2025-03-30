@@ -11,7 +11,7 @@ const { databases, getDbName } = vi.hoisted(() => {
                     db: "test_db",
                     db_type: "memory",
                     role: "admin",
-                    size: 2656,
+                    size: 2568,
                     backup: 0,
                 },
                 {
@@ -19,7 +19,7 @@ const { databases, getDbName } = vi.hoisted(() => {
                     db: "test_db2",
                     db_type: "memory",
                     role: "admin",
-                    size: 2656,
+                    size: 2568,
                     backup: 0,
                 },
             ],

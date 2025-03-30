@@ -10,11 +10,11 @@ use crate::server_error::ServerResponse;
 use crate::user_id::AdminId;
 use agdb_api::UserCredentials;
 use agdb_api::UserStatus;
+use axum::Json;
 use axum::extract::Path;
 use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
-use axum::Json;
 
 #[utoipa::path(post,
     path = "/api/v1/admin/user/{username}/add",

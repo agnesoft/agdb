@@ -1,3 +1,5 @@
+use crate::DbError;
+use crate::StorageData;
 use crate::collections::multi_map::MultiMapImpl;
 use crate::collections::vec::DbVec;
 use crate::collections::vec::VecValue;
@@ -6,8 +8,6 @@ use crate::storage::StorageIndex;
 use crate::utilities::serialize::Serialize;
 use crate::utilities::serialize::SerializeStatic;
 use crate::utilities::stable_hash::StableHash;
-use crate::DbError;
-use crate::StorageData;
 use std::marker::PhantomData;
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
@@ -49,16 +49,16 @@ impl SerializeStatic for MapValueState {
     }
 }
 
-impl VecValue for MapValueState {
-    fn store<D: StorageData>(&self, _storage: &mut Storage<D>) -> Result<Vec<u8>, DbError> {
+impl<D: StorageData> VecValue<D> for MapValueState {
+    fn store(&self, _storage: &mut Storage<D>) -> Result<Vec<u8>, DbError> {
         Ok(self.serialize())
     }
 
-    fn load<D: StorageData>(_storage: &Storage<D>, bytes: &[u8]) -> Result<Self, DbError> {
+    fn load(_storage: &Storage<D>, bytes: &[u8]) -> Result<Self, DbError> {
         Self::deserialize(bytes)
     }
 
-    fn remove<D: StorageData>(_storage: &mut Storage<D>, _bytes: &[u8]) -> Result<(), DbError> {
+    fn remove(_storage: &mut Storage<D>, _bytes: &[u8]) -> Result<(), DbError> {
         Ok(())
     }
 
@@ -86,7 +86,7 @@ where
     ) -> Result<(), DbError>;
     fn set_key(&mut self, storage: &mut Storage<D>, index: u64, key: &K) -> Result<(), DbError>;
     fn set_value(&mut self, storage: &mut Storage<D>, index: u64, value: &T)
-        -> Result<(), DbError>;
+    -> Result<(), DbError>;
     fn state(&self, storage: &Storage<D>, index: u64) -> Result<MapValueState, DbError>;
     fn swap(&mut self, storage: &mut Storage<D>, index: u64, other: u64) -> Result<(), DbError>;
     fn transaction(&mut self, storage: &mut Storage<D>) -> u64;
@@ -147,8 +147,8 @@ impl Serialize for MapDataIndex {
 
 pub struct DbMapData<K, T, D>
 where
-    K: Clone + VecValue,
-    T: Clone + VecValue,
+    K: Clone + VecValue<D>,
+    T: Clone + VecValue<D>,
     D: StorageData,
 {
     storage_index: StorageIndex,
@@ -160,8 +160,8 @@ where
 
 impl<K, T, D> DbMapData<K, T, D>
 where
-    K: Clone + VecValue,
-    T: Clone + VecValue,
+    K: Clone + VecValue<D>,
+    T: Clone + VecValue<D>,
     D: StorageData,
 {
     pub fn new(storage: &mut Storage<D>) -> Result<Self, DbError> {
@@ -212,8 +212,8 @@ where
 
 impl<K, T, D> MapData<K, T, D> for DbMapData<K, T, D>
 where
-    K: Default + Clone + VecValue,
-    T: Default + Clone + VecValue,
+    K: Default + Clone + VecValue<D>,
+    T: Default + Clone + VecValue<D>,
     D: StorageData,
 {
     fn capacity(&self) -> u64 {
@@ -420,8 +420,8 @@ pub type DbMap<K, T, D> = MapImpl<K, T, D, DbMapData<K, T, D>>;
 
 impl<K, T, D> DbMap<K, T, D>
 where
-    K: Default + Clone + VecValue,
-    T: Default + Clone + VecValue,
+    K: Default + Clone + VecValue<D>,
+    T: Default + Clone + VecValue<D>,
     D: StorageData,
 {
     pub fn new(storage: &mut Storage<D>) -> Result<Self, DbError> {

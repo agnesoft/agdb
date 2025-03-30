@@ -1,6 +1,6 @@
+use crate::action::ClusterAction;
 use crate::action::cluster_login::ClusterLogin;
 use crate::action::cluster_logout::ClusterLogout;
-use crate::action::ClusterAction;
 use crate::cluster;
 use crate::cluster::Cluster;
 use crate::config::Config;
@@ -15,11 +15,11 @@ use crate::user_id::ClusterId;
 use crate::user_id::UserId;
 use agdb_api::ClusterStatus;
 use agdb_api::UserLogin;
+use axum::Json;
 use axum::extract::Path;
 use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
-use axum::Json;
 
 pub(crate) async fn cluster(
     _cluster_id: ClusterId,

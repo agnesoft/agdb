@@ -1,4 +1,3 @@
-use crate::query_builder::search::SearchQueryBuilder;
 use crate::DbElement;
 use crate::DbImpl;
 use crate::DbValue;
@@ -8,6 +7,7 @@ use crate::QueryIds;
 use crate::QueryResult;
 use crate::SearchQuery;
 use crate::StorageData;
+use crate::query_builder::search::SearchQueryBuilder;
 
 /// Query to select elements with only certain properties of
 /// given ids. All ids must exist in the database and all

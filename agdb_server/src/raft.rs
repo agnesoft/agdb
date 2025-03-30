@@ -683,13 +683,13 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
 mod test {
     use super::*;
     use anyhow::anyhow;
+    use std::sync::Arc;
+    use std::sync::OnceLock;
     use std::sync::atomic::AtomicBool;
     use std::sync::atomic::AtomicU64;
     use std::sync::atomic::Ordering;
-    use std::sync::Arc;
-    use std::sync::OnceLock;
-    use tokio::sync::mpsc::Sender;
     use tokio::sync::RwLock;
+    use tokio::sync::mpsc::Sender;
 
     #[derive(Debug, Default, Clone, PartialEq)]
     struct TestStorage {

@@ -1,7 +1,7 @@
+use crate::ADMIN;
+use crate::TestServer;
 use crate::next_db_name;
 use crate::next_user_name;
-use crate::TestServer;
-use crate::ADMIN;
 use agdb_api::DbType;
 use agdb_api::DbUserRole;
 use agdb_api::ServerDatabase;
@@ -25,7 +25,7 @@ async fn db_list() -> anyhow::Result<()> {
         owner: owner1.to_string(),
         db_type: DbType::Memory,
         role: DbUserRole::Admin,
-        size: 2656,
+        size: 2568,
         backup: 0,
     }));
     assert!(list.contains(&ServerDatabase {
@@ -33,7 +33,7 @@ async fn db_list() -> anyhow::Result<()> {
         owner: owner2.to_string(),
         db_type: DbType::Memory,
         role: DbUserRole::Admin,
-        size: 2656,
+        size: 2568,
         backup: 0,
     }));
     Ok(())

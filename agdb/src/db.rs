@@ -17,28 +17,6 @@ use self::db_search_handlers::LimitHandler;
 use self::db_search_handlers::LimitOffsetHandler;
 use self::db_search_handlers::OffsetHandler;
 use self::db_search_handlers::PathHandler;
-use crate::collections::indexed_map::DbIndexedMap;
-use crate::collections::multi_map::MultiMapStorage;
-use crate::command::Command;
-use crate::db::db_index::DbIndexes;
-use crate::graph::DbGraph;
-use crate::graph::GraphIndex;
-use crate::graph_search::GraphSearch;
-use crate::graph_search::SearchControl;
-use crate::query::query_condition::QueryCondition;
-use crate::query::query_condition::QueryConditionData;
-use crate::query::query_condition::QueryConditionLogic;
-use crate::query::query_condition::QueryConditionModifier;
-use crate::query::query_id::QueryId;
-use crate::query::Query;
-use crate::query::QueryMut;
-use crate::storage::file_storage::FileStorage;
-use crate::storage::file_storage_memory_mapped::FileStorageMemoryMapped;
-use crate::storage::memory_storage::MemoryStorage;
-use crate::storage::Storage;
-use crate::storage::StorageIndex;
-use crate::utilities::serialize::Serialize;
-use crate::utilities::serialize::SerializeStatic;
 use crate::DbId;
 use crate::DbKeyValue;
 use crate::DbValue;
@@ -48,9 +26,34 @@ use crate::SearchQueryAlgorithm;
 use crate::StorageData;
 use crate::Transaction;
 use crate::TransactionMut;
+use crate::collections::indexed_map::DbIndexedMap;
+use crate::command::Command;
+use crate::db::db_index::DbIndexes;
+use crate::db::db_key_value::DbKeyValues;
+use crate::graph::DbGraph;
+use crate::graph::GraphIndex;
+use crate::graph_search::GraphSearch;
+use crate::graph_search::SearchControl;
+use crate::query::Query;
+use crate::query::QueryMut;
+use crate::query::query_condition::QueryCondition;
+use crate::query::query_condition::QueryConditionData;
+use crate::query::query_condition::QueryConditionLogic;
+use crate::query::query_condition::QueryConditionModifier;
+use crate::query::query_id::QueryId;
+use crate::storage::Storage;
+use crate::storage::StorageIndex;
+use crate::storage::file_storage::FileStorage;
+use crate::storage::file_storage_memory_mapped::FileStorageMemoryMapped;
+use crate::storage::memory_storage::MemoryStorage;
+use crate::utilities::serialize::Serialize;
+use crate::utilities::serialize::SerializeStatic;
+
+const CURRENT_VERSION: u64 = 1;
 
 #[derive(Default)]
 struct DbStorageIndex {
+    version: u64,
     graph: StorageIndex,
     aliases: (StorageIndex, StorageIndex),
     indexes: StorageIndex,
@@ -60,6 +63,7 @@ struct DbStorageIndex {
 impl Serialize for DbStorageIndex {
     fn serialize(&self) -> Vec<u8> {
         [
+            self.version.serialize(),
             self.graph.serialize(),
             self.aliases.0.serialize(),
             self.aliases.1.serialize(),
@@ -72,13 +76,15 @@ impl Serialize for DbStorageIndex {
     fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
         let size = i64::serialized_size_static() as usize;
 
-        let graph = StorageIndex::deserialize(bytes)?;
-        let aliases_1 = StorageIndex::deserialize(&bytes[size..])?;
-        let aliases_2 = StorageIndex::deserialize(&bytes[size * 2..])?;
-        let indexes = StorageIndex::deserialize(&bytes[size * 3..])?;
-        let values = StorageIndex::deserialize(&bytes[size * 4..])?;
+        let version = u64::deserialize(bytes)?;
+        let graph = StorageIndex::deserialize(&bytes[size..])?;
+        let aliases_1 = StorageIndex::deserialize(&bytes[size * 2..])?;
+        let aliases_2 = StorageIndex::deserialize(&bytes[size * 3..])?;
+        let indexes = StorageIndex::deserialize(&bytes[size * 4..])?;
+        let values = StorageIndex::deserialize(&bytes[size * 5..])?;
 
         Ok(Self {
+            version,
             graph,
             aliases: (aliases_1, aliases_2),
             indexes,
@@ -87,16 +93,17 @@ impl Serialize for DbStorageIndex {
     }
 
     fn serialized_size(&self) -> u64 {
-        i64::serialized_size_static() * 5
+        i64::serialized_size_static() * 6
     }
 }
 
 /// An instance of the `agdb` database. To create a database:
 ///
 /// ```
+/// # let _test_file = agdb::test_utilities::test_file::TestFile::from("db1.agdb");
 /// use agdb::Db;
 ///
-/// let mut db = Db::new("db.agdb").unwrap();
+/// let mut db = Db::new("db1.agdb").unwrap();
 /// ```
 ///
 /// This will try to create or load the database file path `db.agdb`.
@@ -124,9 +131,10 @@ impl Serialize for DbStorageIndex {
 /// # Examples
 ///
 /// ```
+/// # let _test_file = agdb::test_utilities::test_file::TestFile::from("db2.agdb");
 /// use agdb::{Db, QueryBuilder, QueryError};
 ///
-/// let mut db = Db::new("db.agdb").unwrap();
+/// let mut db = Db::new("db2.agdb").unwrap();
 ///
 /// // Insert single node
 /// db.exec_mut(QueryBuilder::insert().nodes().count(1).query()).unwrap();
@@ -156,10 +164,11 @@ impl Serialize for DbStorageIndex {
 /// The `agdb` is multithreading enabled. It is recommended to use `Arc<RwLock>`:
 ///
 /// ```
+/// # let _test_file = agdb::test_utilities::test_file::TestFile::from("db3.agdb");
 /// use std::sync::{Arc, RwLock};
 /// use agdb::Db;
 ///
-/// let db = Arc::new(RwLock::new(Db::new("db.agdb").unwrap()));
+/// let db = Arc::new(RwLock::new(Db::new("db3.agdb").unwrap()));
 /// db.read().unwrap(); //for a read lock allowing Db::exec() and Db::transaction()
 /// db.write().unwrap(); //for a write lock allowing additionally Db::exec_mut() and Db::transaction_mut()
 /// ```
@@ -191,7 +200,8 @@ pub struct DbImpl<Store: StorageData> {
     graph: DbGraph<Store>,
     aliases: DbIndexedMap<String, DbId, Store>,
     indexes: DbIndexes<Store>,
-    values: MultiMapStorage<DbId, DbKeyValue, Store>,
+    //values: MultiMapStorage<DbId, DbKeyValue, Store>,
+    values: DbKeyValues<Store>,
     undo_stack: Vec<Command>,
 }
 
@@ -269,7 +279,8 @@ impl<Store: StorageData> DbImpl<Store> {
         let graph = DbGraph::from_storage(&storage, index.graph)?;
         let aliases = DbIndexedMap::from_storage(&storage, index.aliases)?;
         let indexes = DbIndexes::from_storage(&storage, index.indexes)?;
-        let values = MultiMapStorage::from_storage(&storage, index.values)?;
+        //let values = MultiMapStorage::from_storage(&storage, index.values)?;
+        let values = DbKeyValues::from_storage(&storage, index.values)?;
 
         Ok(Self {
             storage,
@@ -430,7 +441,8 @@ impl<Store: StorageData> DbImpl<Store> {
                             .ids_mut()
                             .insert(&mut self.storage, &key_value.value, id)?;
                     }
-                    self.values.insert(&mut self.storage, id, key_value)?
+                    self.values
+                        .insert_value(&mut self.storage, id.as_index(), key_value)?
                 }
                 Command::InsertNode => self.graph.insert_node(&mut self.storage).map(|_| ())?,
                 Command::RemoveAlias { alias } => {
@@ -446,7 +458,8 @@ impl<Store: StorageData> DbImpl<Store> {
                             .ids_mut()
                             .remove_value(&mut self.storage, &key_value.value, id)?;
                     }
-                    self.values.remove_value(&mut self.storage, id, key_value)?
+                    self.values
+                        .remove_value(&mut self.storage, id.as_index(), &key_value.key)?
                 }
                 Command::RemoveNode { index } => {
                     self.graph.remove_node(&mut self.storage, *index)?
@@ -454,12 +467,7 @@ impl<Store: StorageData> DbImpl<Store> {
                 Command::ReplaceKeyValue { id, key_value } => {
                     let old = self
                         .values
-                        .insert_or_replace(
-                            &mut self.storage,
-                            id,
-                            |v| v.key == key_value.key,
-                            key_value,
-                        )?
+                        .insert_or_replace(&mut self.storage, id.as_index(), key_value)?
                         .expect("old value not found during rollback");
 
                     if let Some(index) = self.indexes.index_mut(&old.key) {
@@ -574,24 +582,30 @@ impl<Store: StorageData> DbImpl<Store> {
             return Err(QueryError::from(format!("Index '{key}' already exists")));
         }
 
-        let values = self
-            .values
-            .iter(&self.storage)
-            .filter_map(|(id, kv)| {
-                if kv.key == *key {
-                    Some((id, kv.value))
-                } else {
-                    None
-                }
-            })
-            .collect::<Vec<(DbId, DbValue)>>();
-
         self.undo_stack
             .push(Command::RemoveIndex { key: key.clone() });
+
         let index = self.indexes.insert(&mut self.storage, key.clone())?;
 
-        for (id, value) in values {
-            index.ids_mut().insert(&mut self.storage, &value, &id)?;
+        for i in 1..self.values.len() {
+            let kvs = self.values.values(&self.storage, i)?;
+            let db_id = if self
+                .graph
+                .node(&self.storage, GraphIndex(i as i64))
+                .is_some()
+            {
+                DbId(i as i64)
+            } else {
+                DbId(-(i as i64))
+            };
+
+            for kv in kvs {
+                if kv.key == *key {
+                    index
+                        .ids_mut()
+                        .insert(&mut self.storage, &kv.value, &db_id)?;
+                }
+            }
         }
 
         Ok(index.ids().len())
@@ -632,7 +646,8 @@ impl<Store: StorageData> DbImpl<Store> {
             id: db_id,
             key_value: key_value.clone(),
         });
-        self.values.insert(&mut self.storage, &db_id, key_value)?;
+        self.values
+            .insert_value(&mut self.storage, db_id.as_index(), key_value)?;
         Ok(())
     }
 
@@ -641,12 +656,10 @@ impl<Store: StorageData> DbImpl<Store> {
         db_id: DbId,
         key_value: &DbKeyValue,
     ) -> Result<(), QueryError> {
-        if let Some(old) = self.values.insert_or_replace(
-            &mut self.storage,
-            &db_id,
-            |kv| kv.key == key_value.key,
-            key_value,
-        )? {
+        if let Some(old) =
+            self.values
+                .insert_or_replace(&mut self.storage, db_id.as_index(), key_value)?
+        {
             if let Some(index) = self.indexes.index_mut(&old.key) {
                 index
                     .ids_mut()
@@ -676,16 +689,12 @@ impl<Store: StorageData> DbImpl<Store> {
         Ok(())
     }
 
-    pub(crate) fn keys(&self, db_id: DbId) -> Result<Vec<DbKeyValue>, DbError> {
-        Ok(self
-            .values
-            .iter_key(&self.storage, &db_id)
-            .map(|kv| (kv.1.key, DbValue::default()).into())
-            .collect())
+    pub(crate) fn keys(&self, db_id: DbId) -> Result<Vec<DbValue>, DbError> {
+        self.values.keys(&self.storage, db_id.as_index())
     }
 
     pub(crate) fn key_count(&self, db_id: DbId) -> Result<u64, DbError> {
-        self.values.values_count(&self.storage, &db_id)
+        self.values.key_count(&self.storage, db_id.as_index())
     }
 
     pub(crate) fn node_count(&self) -> Result<u64, DbError> {
@@ -913,7 +922,7 @@ impl<Store: StorageData> DbImpl<Store> {
     }
 
     pub(crate) fn values(&self, db_id: DbId) -> Result<Vec<DbKeyValue>, DbError> {
-        self.values.values(&self.storage, &db_id)
+        self.values.values(&self.storage, db_id.as_index())
     }
 
     pub(crate) fn values_by_keys(
@@ -921,17 +930,8 @@ impl<Store: StorageData> DbImpl<Store> {
         db_id: DbId,
         keys: &[DbValue],
     ) -> Result<Vec<DbKeyValue>, DbError> {
-        let mut sortable_values: Vec<(usize, DbKeyValue)> = self
-            .values
-            .iter_key(&self.storage, &db_id)
-            .filter_map(|kv| {
-                keys.iter()
-                    .position(|k| *k == kv.1.key)
-                    .map(|pos| (pos, kv.1))
-            })
-            .collect();
-        sortable_values.sort_by_key(|(i, _)| *i);
-        Ok(sortable_values.into_iter().map(|(_, kv)| kv).collect())
+        self.values
+            .values_by_keys(&self.storage, db_id.as_index(), keys)
     }
 
     fn graph_index(&self, id: i64) -> Result<GraphIndex, QueryError> {
@@ -1011,7 +1011,7 @@ impl<Store: StorageData> DbImpl<Store> {
                 from: edge.1,
                 to: edge.2,
             });
-            self.remove_all_values(DbId(edge.0 .0))?;
+            self.remove_all_values(DbId(edge.0.0))?;
         }
 
         self.graph.remove_node(&mut self.storage, graph_index)?;
@@ -1022,7 +1022,7 @@ impl<Store: StorageData> DbImpl<Store> {
     pub(crate) fn remove_keys(&mut self, db_id: DbId, keys: &[DbValue]) -> Result<i64, QueryError> {
         let mut result = 0;
 
-        for key_value in self.values.values(&self.storage, &db_id)? {
+        for key_value in self.values.values(&self.storage, db_id.as_index())? {
             if keys.contains(&key_value.key) {
                 if let Some(index) = self.indexes.index_mut(&key_value.key) {
                     index
@@ -1030,7 +1030,7 @@ impl<Store: StorageData> DbImpl<Store> {
                         .remove_value(&mut self.storage, &key_value.value, &db_id)?;
                 }
                 self.values
-                    .remove_value(&mut self.storage, &db_id, &key_value)?;
+                    .remove_value(&mut self.storage, db_id.as_index(), &key_value.key)?;
                 self.undo_stack.push(Command::InsertKeyValue {
                     id: db_id,
                     key_value,
@@ -1043,7 +1043,7 @@ impl<Store: StorageData> DbImpl<Store> {
     }
 
     fn remove_all_values(&mut self, db_id: DbId) -> Result<(), DbError> {
-        for key_value in self.values.values(&self.storage, &db_id)? {
+        for key_value in self.values.values(&self.storage, db_id.as_index())? {
             if let Some(index) = self.indexes.index_mut(&key_value.key) {
                 index
                     .ids_mut()
@@ -1056,7 +1056,7 @@ impl<Store: StorageData> DbImpl<Store> {
             });
         }
 
-        self.values.remove_key(&mut self.storage, &db_id)?;
+        self.values.remove(&mut self.storage, db_id.as_index())?;
 
         Ok(())
     }
@@ -1067,26 +1067,33 @@ impl<Store: StorageData> DbImpl<Store> {
         let aliases_storage;
         let indexes_storage;
         let values_storage;
-        let index = storage.value::<DbStorageIndex>(StorageIndex(1));
 
-        if let Ok(index) = index {
-            graph_storage = DbGraph::from_storage(&storage, index.graph)?;
-            aliases_storage = DbIndexedMap::from_storage(&storage, index.aliases)?;
-            indexes_storage = DbIndexes::from_storage(&storage, index.indexes)?;
-            values_storage = MultiMapStorage::from_storage(&storage, index.values)?;
-        } else {
+        if storage.value_size(StorageIndex(1)).is_err() {
             storage.insert(&DbStorageIndex::default())?;
             graph_storage = DbGraph::new(&mut storage)?;
             aliases_storage = DbIndexedMap::new(&mut storage)?;
             indexes_storage = DbIndexes::new(&mut storage)?;
-            values_storage = MultiMapStorage::new(&mut storage)?;
+            values_storage = DbKeyValues::new(&mut storage)?;
             let db_storage_index = DbStorageIndex {
+                version: CURRENT_VERSION,
                 graph: graph_storage.storage_index(),
                 aliases: aliases_storage.storage_index(),
                 indexes: indexes_storage.storage_index(),
                 values: values_storage.storage_index(),
             };
             storage.insert_at(StorageIndex(1), 0, &db_storage_index)?;
+        } else {
+            let index = if let Ok(index) = storage.value::<DbStorageIndex>(StorageIndex(1)) {
+                index
+            } else {
+                legacy::convert_to_current_version(&mut storage)?;
+                storage.value::<DbStorageIndex>(StorageIndex(1))?
+            };
+
+            graph_storage = DbGraph::from_storage(&storage, index.graph)?;
+            aliases_storage = DbIndexedMap::from_storage(&storage, index.aliases)?;
+            indexes_storage = DbIndexes::from_storage(&storage, index.indexes)?;
+            values_storage = DbKeyValues::from_storage(&storage, index.values)?;
         }
 
         Ok(Self {
@@ -1145,22 +1152,14 @@ impl<Store: StorageData> DbImpl<Store> {
                 })))
             }
             QueryConditionData::KeyValue(kvc) => Ok(SearchControl::Continue(
-                if let Some((_, kv)) = self
-                    .values
-                    .iter_key(&self.storage, &DbId(index.0))
-                    .find(|(_, kv)| kv.key == kvc.key)
-                {
-                    kvc.value.compare(&kv.value)
+                if let Some(value) = self.values.value(&self.storage, index.as_u64(), &kvc.key)? {
+                    kvc.value.compare(&value)
                 } else {
                     false
                 },
             )),
             QueryConditionData::Keys(values) => {
-                let keys = self
-                    .values
-                    .iter_key(&self.storage, &DbId(index.0))
-                    .map(|(_, kv)| kv.key)
-                    .collect::<Vec<DbValue>>();
+                let keys = self.values.keys(&self.storage, index.as_u64())?;
                 Ok(SearchControl::Continue(
                     values.iter().all(|k| keys.contains(k)),
                 ))
@@ -1218,6 +1217,107 @@ impl<Store: StorageData> Drop for DbImpl<Store> {
     }
 }
 
+// TODO: Remove this at some point in the future as it provides support for databases created in <= 0.10.0.
+mod legacy {
+    use crate::DbError;
+    use crate::DbId;
+    use crate::DbKeyValue;
+    use crate::StorageData;
+    use crate::collections::map::MapIterator;
+    use crate::collections::multi_map::MultiMapStorage;
+    use crate::db::CURRENT_VERSION;
+    use crate::db::DbStorageIndex;
+    use crate::db::db_key_value::DbKeyValues;
+    use crate::storage::Storage;
+    use crate::storage::StorageIndex;
+    use crate::utilities::serialize::Serialize;
+    use crate::utilities::serialize::SerializeStatic;
+    use std::marker::PhantomData;
+
+    pub(crate) struct DbStorageIndexLegacy {
+        pub(crate) graph: StorageIndex,
+        pub(crate) aliases: (StorageIndex, StorageIndex),
+        pub(crate) indexes: StorageIndex,
+        pub(crate) values: StorageIndex,
+    }
+
+    impl Serialize for DbStorageIndexLegacy {
+        fn serialize(&self) -> Vec<u8> {
+            [
+                self.graph.serialize(),
+                self.aliases.0.serialize(),
+                self.aliases.1.serialize(),
+                self.indexes.serialize(),
+                self.values.serialize(),
+            ]
+            .concat()
+        }
+
+        fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
+            let size = i64::serialized_size_static() as usize;
+
+            let graph = StorageIndex::deserialize(bytes)?;
+            let aliases_1 = StorageIndex::deserialize(&bytes[size..])?;
+            let aliases_2 = StorageIndex::deserialize(&bytes[size * 2..])?;
+            let indexes = StorageIndex::deserialize(&bytes[size * 3..])?;
+            let values = StorageIndex::deserialize(&bytes[size * 4..])?;
+
+            Ok(Self {
+                graph,
+                aliases: (aliases_1, aliases_2),
+                indexes,
+                values,
+            })
+        }
+
+        fn serialized_size(&self) -> u64 {
+            i64::serialized_size_static() * 5
+        }
+    }
+
+    pub fn convert_to_current_version<D: StorageData>(
+        storage: &mut Storage<D>,
+    ) -> Result<DbStorageIndex, DbError> {
+        let legacy_index = storage.value::<DbStorageIndexLegacy>(StorageIndex(1))?;
+        let legacy_values =
+            MultiMapStorage::<DbId, DbKeyValue, _>::from_storage(storage, legacy_index.values)?;
+        let t = storage.transaction();
+        let mut values = DbKeyValues::new(storage)?;
+        let mut pos = 0;
+
+        loop {
+            let mut it = MapIterator {
+                pos,
+                data: &legacy_values.data,
+                storage,
+                phantom_data: PhantomData,
+            };
+
+            if let Some((db_id, kv)) = it.next() {
+                pos = it.pos;
+                values.insert_value(storage, db_id.as_index(), &kv)?;
+            } else {
+                break;
+            }
+        }
+
+        legacy_values.remove_from_storage(storage)?;
+
+        let db_storage_index = DbStorageIndex {
+            version: CURRENT_VERSION,
+            graph: legacy_index.graph,
+            aliases: legacy_index.aliases,
+            indexes: legacy_index.indexes,
+            values: values.storage_index(),
+        };
+
+        storage.replace(StorageIndex(1), &db_storage_index)?;
+        storage.commit(t)?;
+        storage.shrink_to_fit()?;
+        Ok(db_storage_index)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1225,7 +1325,7 @@ mod tests {
 
     #[test]
     fn db_storage_index_serialized_size() {
-        assert_eq!(DbStorageIndex::default().serialized_size(), 40);
+        assert_eq!(DbStorageIndex::default().serialized_size(), 48);
     }
 
     #[test]
@@ -1233,5 +1333,23 @@ mod tests {
         let test_file = TestFile::new();
         let db = Db::new(test_file.file_name()).unwrap();
         let _ = format!("{:?}", db);
+    }
+
+    #[test]
+    fn db_storage_index_legacy_serialization() {
+        let index = legacy::DbStorageIndexLegacy {
+            graph: StorageIndex(1),
+            aliases: (StorageIndex(2), StorageIndex(3)),
+            indexes: StorageIndex(4),
+            values: StorageIndex(5),
+        };
+        let serialized = index.serialize();
+        let deserialized = legacy::DbStorageIndexLegacy::deserialize(&serialized).unwrap();
+        assert_eq!(index.graph, deserialized.graph);
+        assert_eq!(index.aliases.0, deserialized.aliases.0);
+        assert_eq!(index.aliases.1, deserialized.aliases.1);
+        assert_eq!(index.indexes, deserialized.indexes);
+        assert_eq!(index.values, deserialized.values);
+        assert_eq!(index.serialized_size(), deserialized.serialized_size());
     }
 }

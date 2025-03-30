@@ -1,8 +1,8 @@
-use crate::query::Query;
 use crate::DbImpl;
 use crate::QueryError;
 use crate::QueryResult;
 use crate::StorageData;
+use crate::query::Query;
 
 /// The `Transaction` is a proxy struct that
 /// encapsulates an immutably borrowed [`DbImpl`].

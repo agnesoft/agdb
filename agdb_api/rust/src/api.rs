@@ -1,8 +1,3 @@
-use crate::api_result::AgdbApiResult;
-use crate::api_types::DbType;
-use crate::api_types::ServerDatabase;
-use crate::api_types::UserCredentials;
-use crate::http_client::HttpClient;
 use crate::AdminStatus;
 use crate::ChangePassword;
 use crate::ClusterStatus;
@@ -12,6 +7,11 @@ use crate::DbUser;
 use crate::DbUserRole;
 use crate::UserLogin;
 use crate::UserStatus;
+use crate::api_result::AgdbApiResult;
+use crate::api_types::DbType;
+use crate::api_types::ServerDatabase;
+use crate::api_types::UserCredentials;
+use crate::http_client::HttpClient;
 use agdb::QueryResult;
 use agdb::QueryType;
 

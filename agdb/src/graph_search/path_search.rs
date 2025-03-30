@@ -1,10 +1,10 @@
+use crate::DbError;
+use crate::StorageData;
 use crate::collections::bit_set::BitSet;
 use crate::graph::GraphData;
 use crate::graph::GraphImpl;
 use crate::graph::GraphIndex;
 use crate::storage::Storage;
-use crate::DbError;
-use crate::StorageData;
 use std::cmp::Ordering;
 
 pub trait PathSearchHandler {

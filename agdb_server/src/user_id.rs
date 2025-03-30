@@ -3,14 +3,14 @@ use crate::server_db::ServerDb;
 use crate::server_error::ServerError;
 use crate::utilities;
 use agdb::DbId;
+use axum::RequestPartsExt;
 use axum::extract::FromRef;
 use axum::extract::FromRequestParts;
-use axum::http::request::Parts;
 use axum::http::StatusCode;
-use axum::RequestPartsExt;
-use axum_extra::headers::authorization::Bearer;
-use axum_extra::headers::Authorization;
+use axum::http::request::Parts;
 use axum_extra::TypedHeader;
+use axum_extra::headers::Authorization;
+use axum_extra::headers::authorization::Bearer;
 
 pub(crate) struct UserId(pub(crate) DbId);
 

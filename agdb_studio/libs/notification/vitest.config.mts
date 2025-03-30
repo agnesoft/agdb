@@ -1,6 +1,6 @@
 import { defineConfig, mergeConfig } from "vitest/config";
 import viteConfig from "./vite.config.mjs";
-import vitestShared from "@agdb-studio/config/vitest.shared";
+import vitestShared from "@agdb-studio/testing/vitest.shared";
 import path from "path";
 
 export default mergeConfig(
@@ -8,7 +8,7 @@ export default mergeConfig(
   defineConfig({
     test: {
       root: path.resolve(__dirname, "."),
-      setupFiles: ["./vitest.setup.ts"],
+      setupFiles: ["@agdb-studio/testing/vitest.setup.ts"],
     },
     resolve: {
       alias: {

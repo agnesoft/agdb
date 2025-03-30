@@ -44,6 +44,8 @@
     "typescript": "catalog:",
     "vite": "catalog:",
     "vitest": "catalog:",
-    "vue-tsc": "catalog:"
+    "vue-tsc": "catalog:",
+    "@agdb-studio/config": "workspace:*",
+    "@agdb-studio/testing": "workspace:*"
   }
 }

@@ -1,7 +1,7 @@
-use super::write_ahead_log::WriteAheadLog;
-use super::write_ahead_log::WriteAheadLogRecord;
 use super::StorageData;
 use super::StorageSlice;
+use super::write_ahead_log::WriteAheadLog;
+use super::write_ahead_log::WriteAheadLogRecord;
 use crate::DbError;
 use std::fs::File;
 use std::fs::OpenOptions;

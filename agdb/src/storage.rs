@@ -7,10 +7,10 @@ mod write_ahead_log;
 
 use self::storage_records::StorageRecord;
 use self::storage_records::StorageRecords;
+use crate::DbError;
 use crate::collections::vec::VecValue;
 use crate::utilities::serialize::Serialize;
 use crate::utilities::serialize::SerializeStatic;
-use crate::DbError;
 use std::borrow::Cow;
 
 const CURRENT_VERSION: u64 = 1;

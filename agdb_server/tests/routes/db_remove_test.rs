@@ -1,7 +1,7 @@
+use crate::ADMIN;
+use crate::TestServer;
 use crate::next_db_name;
 use crate::next_user_name;
-use crate::TestServer;
-use crate::ADMIN;
 use agdb_api::DbType;
 use agdb_api::DbUserRole;
 use std::path::Path;

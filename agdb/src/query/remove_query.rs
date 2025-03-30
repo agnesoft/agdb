@@ -1,4 +1,3 @@
-use crate::query_builder::search::SearchQueryBuilder;
 use crate::DbImpl;
 use crate::QueryError;
 use crate::QueryIds;
@@ -6,6 +5,7 @@ use crate::QueryMut;
 use crate::QueryResult;
 use crate::SearchQuery;
 use crate::StorageData;
+use crate::query_builder::search::SearchQueryBuilder;
 
 /// Query to remove database elements (nodes & edges). It
 /// is not an error if any of the `ids` do not already exist.

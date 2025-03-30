@@ -1,4 +1,3 @@
-use crate::query_builder::search::SearchQueryBuilder;
 use crate::DbImpl;
 use crate::QueryError;
 use crate::QueryIds;
@@ -7,6 +6,7 @@ use crate::QueryResult;
 use crate::SearchQuery;
 use crate::SelectValuesQuery;
 use crate::StorageData;
+use crate::query_builder::search::SearchQueryBuilder;
 
 /// Query to remove properties from existing elements
 /// in the database. All of the specified `ids` must

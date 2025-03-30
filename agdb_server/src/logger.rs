@@ -1,5 +1,7 @@
 use crate::server_state::ServerState;
 use crate::user_id::UserName;
+use axum::Error as AxumError;
+use axum::RequestPartsExt;
 use axum::body::Body;
 use axum::extract::Request;
 use axum::extract::State;
@@ -7,8 +9,6 @@ use axum::http::StatusCode;
 use axum::middleware::Next;
 use axum::response::IntoResponse;
 use axum::response::Response;
-use axum::Error as AxumError;
-use axum::RequestPartsExt;
 use http_body_util::BodyExt;
 use serde::Serialize;
 use std::collections::HashMap;

@@ -1,9 +1,9 @@
 use crate::routes;
+use utoipa::Modify;
+use utoipa::OpenApi;
 use utoipa::openapi::security::Http;
 use utoipa::openapi::security::HttpAuthScheme;
 use utoipa::openapi::security::SecurityScheme;
-use utoipa::Modify;
-use utoipa::OpenApi;
 
 #[derive(OpenApi)]
 #[openapi(

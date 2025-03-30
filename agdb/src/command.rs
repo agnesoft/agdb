@@ -1,7 +1,7 @@
-use crate::graph::GraphIndex;
 use crate::DbId;
 use crate::DbKeyValue;
 use crate::DbValue;
+use crate::graph::GraphIndex;
 
 pub enum Command {
     InsertAlias {

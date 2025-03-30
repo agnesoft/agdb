@@ -1,9 +1,9 @@
+use crate::DbError;
+use crate::StorageData;
 use crate::storage::Storage;
 use crate::storage::StorageIndex;
 use crate::utilities::serialize::Serialize;
 use crate::utilities::serialize::SerializeStatic;
-use crate::DbError;
-use crate::StorageData;
 use std::marker::PhantomData;
 
 pub trait VecData<T, D, E>
@@ -136,7 +136,7 @@ where
     fn remove(&mut self, storage: &mut Storage<D>, index: u64) -> Result<T, E> {
         let offset_from = Self::offset(index + 1);
         let offset_to = Self::offset(index);
-        let move_len = T::storage_len() * (self.len() - index);
+        let move_len = T::storage_len() * (self.len() - index - 1);
         let bytes = storage
             .value_as_bytes_at_size(self.storage_index, Self::offset(index), T::storage_len())?
             .to_vec();
@@ -424,8 +424,8 @@ where
 mod tests {
     use super::*;
     use crate::{
-        storage::file_storage_memory_mapped::FileStorageMemoryMapped,
-        test_utilities::test_file::TestFile, MemoryStorage,
+        MemoryStorage, storage::file_storage_memory_mapped::FileStorageMemoryMapped,
+        test_utilities::test_file::TestFile,
     };
 
     #[test]
@@ -601,11 +601,11 @@ mod tests {
         vec.push(&mut storage, &"World".to_string()).unwrap();
         vec.push(&mut storage, &"!".to_string()).unwrap();
 
-        vec.remove(&mut storage, 2).unwrap();
+        vec.remove(&mut storage, 3).unwrap();
 
         assert_eq!(
             vec.iter(&storage).collect::<Vec<String>>(),
-            vec!["Hello".to_string(), ", ".to_string(), "!".to_string(),]
+            vec!["Hello".to_string(), ", ".to_string(), "World".to_string(),]
         );
     }
 
@@ -914,5 +914,18 @@ mod tests {
         storage.shrink_to_fit().unwrap();
 
         assert!(storage.len() < len)
+    }
+
+    #[test]
+    fn remove_at_end_trivial_after_optimize() {
+        let mut storage: Storage<MemoryStorage> = Storage::new("test").unwrap();
+        let mut vec = DbVec::<u64, MemoryStorage>::new(&mut storage).unwrap();
+        vec.push(&mut storage, &1).unwrap();
+        vec.push(&mut storage, &2).unwrap();
+        vec.push(&mut storage, &3).unwrap();
+        vec.shrink_to_fit(&mut storage).unwrap();
+        vec.remove(&mut storage, 2).unwrap();
+
+        assert_eq!(vec.len(), 2);
     }
 }

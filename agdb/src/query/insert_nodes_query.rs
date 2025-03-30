@@ -1,4 +1,3 @@
-use crate::query::query_values::QueryValues;
 use crate::DbElement;
 use crate::DbId;
 use crate::DbImpl;
@@ -8,6 +7,7 @@ use crate::QueryIds;
 use crate::QueryMut;
 use crate::QueryResult;
 use crate::StorageData;
+use crate::query::query_values::QueryValues;
 
 /// Query to insert nodes to the database. Only one of
 /// `count`, `values` or `aliases` need to be given as the

@@ -1,3 +1,5 @@
+use crate::DbError;
+use crate::StorageData;
 use crate::collections::multi_map::MultiMapImpl;
 use crate::collections::vec::DbVec;
 use crate::collections::vec::VecValue;
@@ -6,8 +8,6 @@ use crate::storage::StorageIndex;
 use crate::utilities::serialize::Serialize;
 use crate::utilities::serialize::SerializeStatic;
 use crate::utilities::stable_hash::StableHash;
-use crate::DbError;
-use crate::StorageData;
 use std::marker::PhantomData;
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
@@ -86,7 +86,7 @@ where
     ) -> Result<(), DbError>;
     fn set_key(&mut self, storage: &mut Storage<D>, index: u64, key: &K) -> Result<(), DbError>;
     fn set_value(&mut self, storage: &mut Storage<D>, index: u64, value: &T)
-        -> Result<(), DbError>;
+    -> Result<(), DbError>;
     fn state(&self, storage: &Storage<D>, index: u64) -> Result<MapValueState, DbError>;
     fn swap(&mut self, storage: &mut Storage<D>, index: u64, other: u64) -> Result<(), DbError>;
     fn transaction(&mut self, storage: &mut Storage<D>) -> u64;

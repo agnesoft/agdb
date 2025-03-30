@@ -1231,11 +1231,11 @@ mod legacy {
     use crate::utilities::serialize::SerializeStatic;
     use std::marker::PhantomData;
 
-    struct DbStorageIndexLegacy {
-        graph: StorageIndex,
-        aliases: (StorageIndex, StorageIndex),
-        indexes: StorageIndex,
-        values: StorageIndex,
+    pub(crate) struct DbStorageIndexLegacy {
+        pub(crate) graph: StorageIndex,
+        pub(crate) aliases: (StorageIndex, StorageIndex),
+        pub(crate) indexes: StorageIndex,
+        pub(crate) values: StorageIndex,
     }
 
     impl Serialize for DbStorageIndexLegacy {
@@ -1322,7 +1322,7 @@ mod tests {
 
     #[test]
     fn db_storage_index_serialized_size() {
-        assert_eq!(DbStorageIndex::default().serialized_size(), 40);
+        assert_eq!(DbStorageIndex::default().serialized_size(), 48);
     }
 
     #[test]
@@ -1330,5 +1330,23 @@ mod tests {
         let test_file = TestFile::new();
         let db = Db::new(test_file.file_name()).unwrap();
         let _ = format!("{:?}", db);
+    }
+
+    #[test]
+    fn db_storage_index_legacy_serialization() {
+        let index = legacy::DbStorageIndexLegacy {
+            graph: StorageIndex(1),
+            aliases: (StorageIndex(2), StorageIndex(3)),
+            indexes: StorageIndex(4),
+            values: StorageIndex(5),
+        };
+        let serialized = index.serialize();
+        let deserialized = legacy::DbStorageIndexLegacy::deserialize(&serialized).unwrap();
+        assert_eq!(index.graph, deserialized.graph);
+        assert_eq!(index.aliases.0, deserialized.aliases.0);
+        assert_eq!(index.aliases.1, deserialized.aliases.1);
+        assert_eq!(index.indexes, deserialized.indexes);
+        assert_eq!(index.values, deserialized.values);
+        assert_eq!(index.serialized_size(), deserialized.serialized_size());
     }
 }

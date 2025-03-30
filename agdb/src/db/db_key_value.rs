@@ -1,3 +1,6 @@
+use crate::DbError;
+use crate::DbValue;
+use crate::StorageData;
 use crate::collections::vec::DbVec;
 use crate::collections::vec::VecValue;
 use crate::db::db_value_index::DbValueIndex;
@@ -5,9 +8,6 @@ use crate::storage::Storage;
 use crate::storage::StorageIndex;
 use crate::utilities::serialize::Serialize;
 use crate::utilities::serialize::SerializeStatic;
-use crate::DbError;
-use crate::DbValue;
-use crate::StorageData;
 
 /// Database key-value pair (aka property) attached to
 /// database elements. It can be constructed from a
@@ -119,7 +119,7 @@ impl<S: StorageData> DbKeyValues<S> {
         let kvs = self.kvs(storage, index)?;
         kvs.remove_from_storage(storage)?;
 
-        if self.0.len() == index - 1 {
+        if self.0.len() - 1 == index {
             self.0.remove(storage, index)?;
         } else {
             self.0.replace(storage, index, &StorageIndex::default())?;
@@ -393,6 +393,8 @@ mod tests {
         kvs.insert_value(&mut storage, 3, &("key3", "value3").into())
             .unwrap();
         kvs.remove_value(&mut storage, 3, &"key2".into()).unwrap();
+        kvs.remove_value(&mut storage, 3, &"key10".into()).unwrap();
+        kvs.remove_value(&mut storage, 10, &"key10".into()).unwrap();
 
         assert_eq!(kvs.len(), 4);
         assert_eq!(

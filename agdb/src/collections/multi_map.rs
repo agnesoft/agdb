@@ -1,3 +1,5 @@
+use crate::DbError;
+use crate::StorageData;
 use crate::collections::bit_set::BitSet;
 use crate::collections::map::DbMapData;
 use crate::collections::map::MapData;
@@ -7,8 +9,6 @@ use crate::collections::vec::VecValue;
 use crate::storage::Storage;
 use crate::storage::StorageIndex;
 use crate::utilities::stable_hash::StableHash;
-use crate::DbError;
-use crate::StorageData;
 use std::marker::PhantomData;
 
 pub struct MultiMapImpl<K, T, D, Data>
@@ -123,7 +123,7 @@ where
                     if self.data.key(storage, pos)? == *key
                         && self.data.value(storage, pos)? == *value =>
                 {
-                    return Ok(true)
+                    return Ok(true);
                 }
                 MapValueState::Valid | MapValueState::Deleted => pos = self.next_pos(pos),
             }
@@ -604,9 +604,9 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::MemoryStorage;
     use crate::storage::file_storage_memory_mapped::FileStorageMemoryMapped;
     use crate::test_utilities::test_file::TestFile;
-    use crate::MemoryStorage;
 
     #[test]
     fn new() {
@@ -673,9 +673,10 @@ mod tests {
         let mut map =
             MultiMapStorage::<u64, String, FileStorageMemoryMapped>::new(&mut storage).unwrap();
 
-        assert!(map
-            .remove_value(&mut storage, &10, &"Hello".to_string())
-            .is_ok());
+        assert!(
+            map.remove_value(&mut storage, &10, &"Hello".to_string())
+                .is_ok()
+        );
     }
 
     #[test]
@@ -686,9 +687,10 @@ mod tests {
             MultiMapStorage::<u64, String, FileStorageMemoryMapped>::new(&mut storage).unwrap();
         map.insert(&mut storage, &11, &"Hello".to_string()).unwrap();
 
-        assert!(map
-            .remove_value(&mut storage, &10, &"Hello".to_string())
-            .is_ok());
+        assert!(
+            map.remove_value(&mut storage, &10, &"Hello".to_string())
+                .is_ok()
+        );
     }
 
     #[test]
@@ -720,9 +722,10 @@ mod tests {
         let mut map =
             MultiMapStorage::<u64, String, FileStorageMemoryMapped>::new(&mut storage).unwrap();
         let p = |v: &String| v == "Hello";
-        assert!(map
-            .insert_or_replace(&mut storage, &10, p, &"World".to_string())
-            .is_ok());
+        assert!(
+            map.insert_or_replace(&mut storage, &10, p, &"World".to_string())
+                .is_ok()
+        );
         p(&"".to_string());
     }
 
@@ -735,9 +738,10 @@ mod tests {
         map.insert(&mut storage, &10, &"World".to_string()).unwrap();
         map.insert(&mut storage, &11, &"Hello".to_string()).unwrap();
 
-        assert!(map
-            .insert_or_replace(&mut storage, &10, |v| v == "Hello", &"World".to_string())
-            .is_ok());
+        assert!(
+            map.insert_or_replace(&mut storage, &10, |v| v == "Hello", &"World".to_string())
+                .is_ok()
+        );
     }
 
     #[test]
@@ -751,9 +755,10 @@ mod tests {
         map.remove_value(&mut storage, &10, &"Hello".to_string())
             .unwrap();
 
-        assert!(map
-            .insert_or_replace(&mut storage, &10, |v| v == "Hello", &"World".to_string())
-            .is_ok());
+        assert!(
+            map.insert_or_replace(&mut storage, &10, |v| v == "Hello", &"World".to_string())
+                .is_ok()
+        );
     }
 
     #[test]

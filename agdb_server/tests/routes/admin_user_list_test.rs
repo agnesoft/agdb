@@ -1,6 +1,6 @@
-use crate::next_user_name;
-use crate::TestServer;
 use crate::ADMIN;
+use crate::TestServer;
+use crate::next_user_name;
 use agdb_api::UserStatus;
 
 #[tokio::test]

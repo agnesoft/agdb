@@ -3,16 +3,16 @@ use crate::action::db_user_remove::DbUserRemove;
 use crate::cluster::Cluster;
 use crate::routes::db::user::DbUserRoleParam;
 use crate::server_db::ServerDb;
-use crate::server_error::permission_denied;
 use crate::server_error::ServerResponse;
+use crate::server_error::permission_denied;
 use crate::user_id::AdminId;
 use agdb_api::DbUser;
+use axum::Json;
 use axum::extract::Path;
 use axum::extract::Query;
 use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
-use axum::Json;
 
 #[utoipa::path(put,
     path = "/api/v1/admin/db/{owner}/{db}/user/{username}/add",

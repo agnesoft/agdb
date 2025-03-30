@@ -1,3 +1,7 @@
+use crate::DbError;
+use crate::DbId;
+use crate::DbValue;
+use crate::StorageData;
 use crate::collections::multi_map::MultiMapStorage;
 use crate::collections::vec::DbVec;
 use crate::collections::vec::VecValue;
@@ -6,10 +10,6 @@ use crate::storage::Storage;
 use crate::storage::StorageIndex;
 use crate::utilities::serialize::Serialize;
 use crate::utilities::serialize::SerializeStatic;
-use crate::DbError;
-use crate::DbId;
-use crate::DbValue;
-use crate::StorageData;
 
 #[derive(Copy, Clone)]
 pub struct DbIndexStorageIndex {

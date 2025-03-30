@@ -1,5 +1,5 @@
-use crate::utilities::run_command;
 use crate::CIError;
+use crate::utilities::run_command;
 use std::path::Path;
 use std::process::Command;
 

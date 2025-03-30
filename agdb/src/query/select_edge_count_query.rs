@@ -1,4 +1,3 @@
-use crate::query_builder::search::SearchQueryBuilder;
 use crate::DbElement;
 use crate::DbImpl;
 use crate::Query;
@@ -7,6 +6,7 @@ use crate::QueryIds;
 use crate::QueryResult;
 use crate::SearchQuery;
 use crate::StorageData;
+use crate::query_builder::search::SearchQueryBuilder;
 
 /// Query to select number of edges of given node ids.
 /// All of the ids must exist in the database. If any

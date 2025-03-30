@@ -13,10 +13,10 @@ use agdb::DbId;
 use agdb_api::ChangePassword;
 use agdb_api::UserLogin;
 use agdb_api::UserStatus;
+use axum::Json;
 use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
-use axum::Json;
 use uuid::Uuid;
 
 pub(crate) async fn do_login(

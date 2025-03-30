@@ -1,6 +1,6 @@
-use crate::graph_search::SearchControl;
 use crate::DbValue;
 use crate::QueryId;
+use crate::graph_search::SearchControl;
 
 /// Logical operator for query conditions
 #[derive(Clone, Copy, Debug, PartialEq)]

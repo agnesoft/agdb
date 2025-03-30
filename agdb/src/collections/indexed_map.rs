@@ -1,3 +1,5 @@
+use crate::DbError;
+use crate::StorageData;
 use crate::collections::map::DbMap;
 use crate::collections::map::DbMapData;
 use crate::collections::map::MapData;
@@ -7,8 +9,6 @@ use crate::collections::vec::VecValue;
 use crate::storage::Storage;
 use crate::storage::StorageIndex;
 use crate::utilities::stable_hash::StableHash;
-use crate::DbError;
-use crate::StorageData;
 use std::marker::PhantomData;
 
 pub struct IndexedMapImpl<K, T, D, DataKT, DataTK>

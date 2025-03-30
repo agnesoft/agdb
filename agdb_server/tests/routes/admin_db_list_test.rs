@@ -25,7 +25,7 @@ async fn db_list() -> anyhow::Result<()> {
         owner: owner1.to_string(),
         db_type: DbType::Memory,
         role: DbUserRole::Admin,
-        size: 2656,
+        size: 2568,
         backup: 0,
     }));
     assert!(list.contains(&ServerDatabase {
@@ -33,7 +33,7 @@ async fn db_list() -> anyhow::Result<()> {
         owner: owner2.to_string(),
         db_type: DbType::Memory,
         role: DbUserRole::Admin,
-        size: 2656,
+        size: 2568,
         backup: 0,
     }));
     Ok(())

@@ -657,3 +657,10 @@ fn convert_db_before_0_11_0() {
     assert_eq!(result.elements[1].values, vec![(1, 2).into()]);
     assert_eq!(result.elements[2].values, vec![("tag", "label").into()]);
 }
+
+#[test]
+fn doc() {
+    use agdb::{Db, QueryBuilder, QueryError};
+
+    let mut db = Db::new("db.agdb").unwrap();
+}

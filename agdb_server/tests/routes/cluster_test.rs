@@ -1,12 +1,12 @@
+use crate::ADMIN;
+use crate::TestCluster;
+use crate::TestServer;
 use crate::create_cluster;
 use crate::next_db_name;
 use crate::next_user_name;
 use crate::reqwest_client;
 use crate::wait_for_leader;
 use crate::wait_for_ready;
-use crate::TestCluster;
-use crate::TestServer;
-use crate::ADMIN;
 use agdb::Comparison;
 use agdb::QueryBuilder;
 use agdb_api::AgdbApi;

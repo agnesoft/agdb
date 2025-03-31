@@ -1,9 +1,9 @@
+use crate::DbError;
+use crate::StorageData;
 use crate::storage::Storage;
 use crate::storage::StorageIndex;
 use crate::utilities::serialize::Serialize;
 use crate::utilities::serialize::SerializeStatic;
-use crate::DbError;
-use crate::StorageData;
 use std::marker::PhantomData;
 
 pub trait VecData<T, D, E>
@@ -21,23 +21,23 @@ where
     fn value(&self, storage: &Storage<D>, index: u64) -> Result<T, E>;
 }
 
-pub trait VecValue: Sized {
-    fn store<D: StorageData>(&self, storage: &mut Storage<D>) -> Result<Vec<u8>, DbError>;
-    fn load<D: StorageData>(storage: &Storage<D>, bytes: &[u8]) -> Result<Self, DbError>;
-    fn remove<D: StorageData>(storage: &mut Storage<D>, bytes: &[u8]) -> Result<(), DbError>;
+pub trait VecValue<D: StorageData>: Sized {
+    fn store(&self, storage: &mut Storage<D>) -> Result<Vec<u8>, DbError>;
+    fn load(storage: &Storage<D>, bytes: &[u8]) -> Result<Self, DbError>;
+    fn remove(storage: &mut Storage<D>, bytes: &[u8]) -> Result<(), DbError>;
     fn storage_len() -> u64;
 }
 
-impl VecValue for u64 {
-    fn store<D: StorageData>(&self, _storage: &mut Storage<D>) -> Result<Vec<u8>, DbError> {
+impl<D: StorageData> VecValue<D> for u64 {
+    fn store(&self, _storage: &mut Storage<D>) -> Result<Vec<u8>, DbError> {
         Ok(self.serialize())
     }
 
-    fn load<D: StorageData>(_storage: &Storage<D>, bytes: &[u8]) -> Result<Self, DbError> {
+    fn load(_storage: &Storage<D>, bytes: &[u8]) -> Result<Self, DbError> {
         Self::deserialize(bytes)
     }
 
-    fn remove<D: StorageData>(_storage: &mut Storage<D>, _bytes: &[u8]) -> Result<(), DbError> {
+    fn remove(_storage: &mut Storage<D>, _bytes: &[u8]) -> Result<(), DbError> {
         Ok(())
     }
 
@@ -46,16 +46,16 @@ impl VecValue for u64 {
     }
 }
 
-impl VecValue for i64 {
-    fn store<D: StorageData>(&self, _storage: &mut Storage<D>) -> Result<Vec<u8>, DbError> {
+impl<D: StorageData> VecValue<D> for i64 {
+    fn store(&self, _storage: &mut Storage<D>) -> Result<Vec<u8>, DbError> {
         Ok(self.serialize())
     }
 
-    fn load<D: StorageData>(_storage: &Storage<D>, bytes: &[u8]) -> Result<Self, DbError> {
+    fn load(_storage: &Storage<D>, bytes: &[u8]) -> Result<Self, DbError> {
         Self::deserialize(bytes)
     }
 
-    fn remove<D: StorageData>(_storage: &mut Storage<D>, _bytes: &[u8]) -> Result<(), DbError> {
+    fn remove(_storage: &mut Storage<D>, _bytes: &[u8]) -> Result<(), DbError> {
         Ok(())
     }
 
@@ -64,18 +64,18 @@ impl VecValue for i64 {
     }
 }
 
-impl VecValue for String {
-    fn store<D: StorageData>(&self, storage: &mut Storage<D>) -> Result<Vec<u8>, DbError> {
+impl<D: StorageData> VecValue<D> for String {
+    fn store(&self, storage: &mut Storage<D>) -> Result<Vec<u8>, DbError> {
         let index = storage.insert(self)?;
         Ok(index.serialize())
     }
 
-    fn load<D: StorageData>(storage: &Storage<D>, bytes: &[u8]) -> Result<Self, DbError> {
+    fn load(storage: &Storage<D>, bytes: &[u8]) -> Result<Self, DbError> {
         let index = StorageIndex::deserialize(bytes)?;
         storage.value(index)
     }
 
-    fn remove<D: StorageData>(storage: &mut Storage<D>, bytes: &[u8]) -> Result<(), DbError> {
+    fn remove(storage: &mut Storage<D>, bytes: &[u8]) -> Result<(), DbError> {
         let index = StorageIndex::deserialize(bytes)?;
         storage.remove(index)
     }
@@ -87,7 +87,7 @@ impl VecValue for String {
 
 pub struct DbVecData<T, D, E>
 where
-    T: Clone + VecValue,
+    T: VecValue<D>,
     D: StorageData,
     E: From<DbError>,
 {
@@ -99,7 +99,7 @@ where
 
 impl<T, D, E> DbVecData<T, D, E>
 where
-    T: Clone + VecValue,
+    T: VecValue<D>,
     D: StorageData,
     E: From<DbError>,
 {
@@ -110,7 +110,7 @@ where
 
 impl<T, D, E> VecData<T, D, E> for DbVecData<T, D, E>
 where
-    T: Clone + VecValue,
+    T: VecValue<D>,
     D: StorageData,
     E: From<DbError>,
 {
@@ -136,7 +136,7 @@ where
     fn remove(&mut self, storage: &mut Storage<D>, index: u64) -> Result<T, E> {
         let offset_from = Self::offset(index + 1);
         let offset_to = Self::offset(index);
-        let move_len = T::storage_len() * (self.len() - index);
+        let move_len = T::storage_len() * (self.len() - index - 1);
         let bytes = storage
             .value_as_bytes_at_size(self.storage_index, Self::offset(index), T::storage_len())?
             .to_vec();
@@ -235,7 +235,7 @@ where
 
 pub struct VecImpl<T, D, Data, E>
 where
-    T: VecValue,
+    T: VecValue<D>,
     D: StorageData,
     Data: VecData<T, D, E>,
     E: From<DbError> + From<String>,
@@ -246,7 +246,7 @@ where
 
 pub struct VecIterator<'a, T, D, Data, E>
 where
-    T: VecValue,
+    T: VecValue<D>,
     D: StorageData,
     Data: VecData<T, D, E>,
     E: From<DbError> + From<String>,
@@ -260,7 +260,7 @@ pub type DbVec<T, D> = VecImpl<T, D, DbVecData<T, D, DbError>, DbError>;
 
 impl<T, D, Data, E> Iterator for VecIterator<'_, T, D, Data, E>
 where
-    T: VecValue,
+    T: VecValue<D>,
     D: StorageData,
     Data: VecData<T, D, E>,
     E: From<DbError> + From<String>,
@@ -277,7 +277,7 @@ where
 
 impl<T, D, Data, E> VecImpl<T, D, Data, E>
 where
-    T: VecValue,
+    T: VecValue<D>,
     D: StorageData,
     Data: VecData<T, D, E>,
     E: From<DbError> + From<String>,
@@ -379,7 +379,7 @@ where
 
 impl<T, D> DbVec<T, D>
 where
-    T: Clone + VecValue,
+    T: VecValue<D>,
     D: StorageData,
 {
     pub fn new(storage: &mut Storage<D>) -> Result<Self, DbError> {
@@ -424,8 +424,8 @@ where
 mod tests {
     use super::*;
     use crate::{
-        storage::file_storage_memory_mapped::FileStorageMemoryMapped,
-        test_utilities::test_file::TestFile, MemoryStorage,
+        MemoryStorage, storage::file_storage_memory_mapped::FileStorageMemoryMapped,
+        test_utilities::test_file::TestFile,
     };
 
     #[test]
@@ -601,11 +601,11 @@ mod tests {
         vec.push(&mut storage, &"World".to_string()).unwrap();
         vec.push(&mut storage, &"!".to_string()).unwrap();
 
-        vec.remove(&mut storage, 2).unwrap();
+        vec.remove(&mut storage, 3).unwrap();
 
         assert_eq!(
             vec.iter(&storage).collect::<Vec<String>>(),
-            vec!["Hello".to_string(), ", ".to_string(), "!".to_string(),]
+            vec!["Hello".to_string(), ", ".to_string(), "World".to_string(),]
         );
     }
 
@@ -914,5 +914,18 @@ mod tests {
         storage.shrink_to_fit().unwrap();
 
         assert!(storage.len() < len)
+    }
+
+    #[test]
+    fn remove_at_end_trivial_after_optimize() {
+        let mut storage: Storage<MemoryStorage> = Storage::new("test").unwrap();
+        let mut vec = DbVec::<u64, MemoryStorage>::new(&mut storage).unwrap();
+        vec.push(&mut storage, &1).unwrap();
+        vec.push(&mut storage, &2).unwrap();
+        vec.push(&mut storage, &3).unwrap();
+        vec.shrink_to_fit(&mut storage).unwrap();
+        vec.remove(&mut storage, 2).unwrap();
+
+        assert_eq!(vec.len(), 2);
     }
 }

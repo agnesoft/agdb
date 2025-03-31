@@ -1,13 +1,13 @@
 use std::mem::swap;
 
+use crate::DbError;
+use crate::StorageData;
 use crate::graph::GraphData;
 use crate::graph::GraphImpl;
 use crate::graph::GraphIndex;
 use crate::graph_search::SearchControl;
 use crate::graph_search::SearchHandler;
 use crate::storage::Storage;
-use crate::DbError;
-use crate::StorageData;
 
 pub struct ElementSearch<'a, D, Data, Handler>
 where

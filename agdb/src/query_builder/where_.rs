@@ -1,3 +1,6 @@
+use crate::Comparison;
+use crate::DbValue;
+use crate::QueryIds;
 use crate::db::db_value::DbValues;
 use crate::query::query_condition::CountComparison;
 use crate::query::query_condition::KeyValueComparison;
@@ -6,9 +9,6 @@ use crate::query::query_condition::QueryConditionData;
 use crate::query::query_condition::QueryConditionLogic;
 use crate::query::query_condition::QueryConditionModifier;
 use crate::query_builder::search::SearchQueryBuilder;
-use crate::Comparison;
-use crate::DbValue;
-use crate::QueryIds;
 
 /// Condition builder
 pub struct Where<T: SearchQueryBuilder> {

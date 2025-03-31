@@ -1,7 +1,7 @@
 [package]
 name = "agdb"
-version = "0.10.0"
-edition = "2021"
+version = "0.11.0"
+edition = "2024"
 license = "Apache-2.0"
 homepage = "https://github.com/agnesoft/agdb"
 repository = "https://github.com/agnesoft/agdb"
@@ -21,7 +21,7 @@ openapi = ["dep:utoipa"]
 serde = ["dep:serde"]
 
 [dependencies]
-agdb_derive = { version = "0.10.0", path = "../agdb_derive", optional = true }
+agdb_derive = { version = "0.11.0", path = "../agdb_derive", optional = true }
 utoipa = { version = "5", optional = true }
 serde = { version = "1", features = ["derive"], optional = true }
 

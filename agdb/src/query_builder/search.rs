@@ -1,6 +1,4 @@
 use super::where_::Where;
-use crate::db::db_key_order::DbKeyOrders;
-use crate::query::query_condition::KeyValueComparison;
 use crate::Comparison;
 use crate::DbValue;
 use crate::QueryCondition;
@@ -10,6 +8,8 @@ use crate::QueryConditionModifier;
 use crate::QueryId;
 use crate::SearchQuery;
 use crate::SearchQueryAlgorithm;
+use crate::db::db_key_order::DbKeyOrders;
+use crate::query::query_condition::KeyValueComparison;
 
 pub trait SearchQueryBuilder {
     fn search_mut(&mut self) -> &mut SearchQuery;

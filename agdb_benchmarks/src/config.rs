@@ -1,5 +1,5 @@
-use crate::bench_result::BenchResult;
 use crate::BENCH_CONFIG_FILE;
+use crate::bench_result::BenchResult;
 use num_format::Locale;
 use serde::Deserialize;
 use serde::Serialize;

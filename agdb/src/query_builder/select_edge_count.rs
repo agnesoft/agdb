@@ -1,6 +1,6 @@
-use crate::query_builder::search::Search;
 use crate::QueryIds;
 use crate::SelectEdgeCountQuery;
+use crate::query_builder::search::Search;
 
 /// Select edge count builder.
 pub struct SelectEdgeCount(pub SelectEdgeCountQuery);

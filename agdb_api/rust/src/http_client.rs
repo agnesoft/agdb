@@ -1,8 +1,8 @@
-use crate::api_result::AgdbApiResult;
 #[cfg(feature = "reqwest")]
 use crate::AgdbApiError;
-use serde::de::DeserializeOwned;
+use crate::api_result::AgdbApiResult;
 use serde::Serialize;
+use serde::de::DeserializeOwned;
 
 #[allow(async_fn_in_trait)]
 pub trait HttpClient {

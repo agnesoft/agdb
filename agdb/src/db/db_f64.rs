@@ -1,6 +1,6 @@
+use crate::DbError;
 use crate::utilities::serialize::Serialize;
 use crate::utilities::stable_hash::StableHash;
-use crate::DbError;
 use std::cmp::Ordering;
 use std::hash::Hash;
 use std::hash::Hasher;

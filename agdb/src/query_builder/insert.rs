@@ -1,3 +1,10 @@
+use crate::DbUserValue;
+use crate::DbValue;
+use crate::InsertAliasesQuery;
+use crate::InsertEdgesQuery;
+use crate::InsertNodesQuery;
+use crate::InsertValuesQuery;
+use crate::QueryIds;
 use crate::query::query_aliases::QueryAliases;
 use crate::query::query_values::MultiValues;
 use crate::query::query_values::QueryValues;
@@ -8,13 +15,6 @@ use crate::query_builder::insert_index::InsertIndex;
 use crate::query_builder::insert_nodes::InsertNodes;
 use crate::query_builder::insert_values::InsertValues;
 use crate::query_builder::insert_values::InsertValuesIds;
-use crate::DbUserValue;
-use crate::DbValue;
-use crate::InsertAliasesQuery;
-use crate::InsertEdgesQuery;
-use crate::InsertNodesQuery;
-use crate::InsertValuesQuery;
-use crate::QueryIds;
 
 /// Insert builder for inserting various data
 /// into the database.

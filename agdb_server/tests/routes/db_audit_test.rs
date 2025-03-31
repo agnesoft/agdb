@@ -1,7 +1,7 @@
+use crate::ADMIN;
+use crate::TestServer;
 use crate::next_db_name;
 use crate::next_user_name;
-use crate::TestServer;
-use crate::ADMIN;
 use agdb::QueryBuilder;
 use agdb_api::DbType;
 use std::path::Path;
@@ -41,12 +41,14 @@ async fn audit_delete_db() -> anyhow::Result<()> {
     server.api.admin_user_add(owner, owner).await?;
     server.api.user_login(owner, owner).await?;
     server.api.db_add(owner, db, DbType::Mapped).await?;
-    let queries = vec![QueryBuilder::insert()
-        .nodes()
-        .aliases("root")
-        .values([[("key", 1.1).into()]])
-        .query()
-        .into()];
+    let queries = vec![
+        QueryBuilder::insert()
+            .nodes()
+            .aliases("root")
+            .values([[("key", 1.1).into()]])
+            .query()
+            .into(),
+    ];
     server.api.db_exec_mut(owner, db, &queries).await?;
     let db_audit_file = Path::new(&server.data_dir)
         .join(owner)
@@ -96,11 +98,13 @@ async fn repeated_query_with_db_audit() -> anyhow::Result<()> {
         .db_exec_mut(
             owner,
             db,
-            &vec![QueryBuilder::insert()
-                .nodes()
-                .aliases("root")
-                .query()
-                .into()],
+            &vec![
+                QueryBuilder::insert()
+                    .nodes()
+                    .aliases("root")
+                    .query()
+                    .into(),
+            ],
         )
         .await?;
     let (status, audit) = server.api.db_audit(owner, db).await?;
@@ -111,11 +115,13 @@ async fn repeated_query_with_db_audit() -> anyhow::Result<()> {
         .db_exec_mut(
             owner,
             db,
-            &vec![QueryBuilder::insert()
-                .nodes()
-                .aliases("root")
-                .query()
-                .into()],
+            &vec![
+                QueryBuilder::insert()
+                    .nodes()
+                    .aliases("root")
+                    .query()
+                    .into(),
+            ],
         )
         .await?;
     let (status, audit2) = server.api.db_audit(owner, db).await?;

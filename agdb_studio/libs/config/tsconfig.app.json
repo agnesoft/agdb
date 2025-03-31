@@ -1,24 +1,12 @@
 {
-    "extends": "@vue/tsconfig/tsconfig.dom.json",
-    "include": [
-        "env.d.ts",
-        "src/**/*",
-        "src/**/*.vue",
-        "src/**/*.ts",
-        "libs/**/src/**/*",
-        "libs/**/src/**/*.vue",
-        "libs/**/src/**/*.ts",
-        "app/src/**/*",
-        "app/src/**/*.vue",
-        "app/src/**/*.ts",
-        "libs/notification/src/**/*.ts"
-    ],
-    "exclude": ["src/**/__tests__/*"],
-    "compilerOptions": {
-        "composite": true,
-        "baseUrl": ".",
-        "paths": {
-            "@/*": ["./src/*"]
-        }
+  "extends": "@vue/tsconfig/tsconfig.dom.json",
+
+  "exclude": ["src/**/__tests__/*"],
+  "compilerOptions": {
+    "composite": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
     }
+  }
 }

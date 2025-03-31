@@ -1,6 +1,7 @@
 import { mount } from "@vue/test-utils";
 import SpinnerIcon from "./SpinnerIcon.vue";
 import LogoIcon from "./LogoIcon.vue";
+import { describe, expect, it } from "vitest";
 
 describe("icons", () => {
   it("renders properly SpinnerIcon", () => {

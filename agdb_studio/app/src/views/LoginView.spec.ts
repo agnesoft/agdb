@@ -1,3 +1,4 @@
+import { describe, expect, it } from "vitest";
 import LoginView from "./LoginView.vue";
 import { mount } from "@vue/test-utils";
 

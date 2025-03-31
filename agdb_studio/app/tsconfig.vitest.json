@@ -1,3 +1,3 @@
 {
-  "extends": "@agdb-studio/config/tsconfig.vitest.json"
+  "extends": ["@agdb-studio/config/tsconfig.vitest.json", "./tsconfig.app.json"]
 }

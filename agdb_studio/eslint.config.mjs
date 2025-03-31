@@ -24,7 +24,7 @@ export default typescriptEslint.config(
   },
   eslintConfigPrettier,
   {
-    files: ["src/composables/graph/prototype/**/*.{ts,vue}"],
+    files: ["**/graph/prototype/**/*.{ts,vue}"],
     rules: { "@typescript-eslint/no-explicit-any": "off" },
   },
 );

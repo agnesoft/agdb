@@ -2,6 +2,10 @@ import { fileURLToPath, URL } from "node:url";
 
 import { defineConfig } from "vite";
 import vue from "@vitejs/plugin-vue";
+import path from "path";
+import { getVueComponentEntries } from "./componentEntries";
+
+const componentEntries = getVueComponentEntries(path.resolve(__dirname, "src"));
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -12,4 +16,22 @@ export default defineConfig({
     },
   },
   base: "/studio/",
+  build: {
+    lib: {
+      entry: componentEntries,
+      formats: ["es"],
+    },
+    rollupOptions: {
+      input: componentEntries,
+      external: ["vue"],
+      output: {
+        preserveModules: true,
+        preserveModulesRoot: "src",
+        globals: {
+          vue: "Vue",
+        },
+        entryFileNames: "[name].js",
+      },
+    },
+  },
 });

@@ -222,7 +222,6 @@ pub(crate) fn app(
             state.clone(),
             logger::logger,
         ))
-        .layer(cors)
         .layer(DefaultBodyLimit::max(request_body_limit as usize))
         .with_state(state);
 
@@ -234,5 +233,6 @@ pub(crate) fn app(
     .merge(
         RapiDoc::with_openapi(format!("{basepath}/api/v1/openapi.json"), Api::openapi())
             .path(format!("{basepath}/api/v1")),
-    ))
+    )
+    .layer(cors))
 }

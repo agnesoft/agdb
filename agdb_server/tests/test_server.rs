@@ -115,7 +115,7 @@ impl TestServerImpl {
 
         let dir = format!(
             "{BINARY}.{}.test",
-            config.address.split(':').last().unwrap()
+            config.address.split(':').next_back().unwrap()
         );
         let data_dir = format!("{dir}/{SERVER_DATA_DIR}");
 

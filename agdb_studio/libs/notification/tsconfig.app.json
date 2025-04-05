@@ -2,7 +2,7 @@
   "extends": "@agdb-studio/config/tsconfig.app.json",
   "include": ["env.d.ts", "src/**/*", "src/**/*.vue", "src/**/*.ts"],
   "compilerOptions": {
-    "typeRoots": ["node_modules", "types"],
+    "typeRoots": ["node_modules", "./types"],
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"]

@@ -11,7 +11,6 @@ export type AgdbNotification = {
   new?: boolean;
   read?: boolean;
 };
-
 const notifications = ref<AgdbNotification[]>([]);
 
 const defaultTimeoutToHide = 3000;

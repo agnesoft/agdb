@@ -4,9 +4,6 @@
   "description": "Notification library for AGDB Studio",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "run-p type-check \"build-only {@}\" --",
-    "preview": "vite preview",
     "test": "vitest run --coverage",
     "test:e2e": "playwright test",
     "build-only": "vite build",

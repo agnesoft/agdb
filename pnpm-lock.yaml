@@ -176,10 +176,10 @@ importers:
     dependencies:
       '@agdb-studio/design':
         specifier: workspace:*
-        version: link:libs/design
+        version: link:libs/core/design
       '@agdb-studio/notification':
         specifier: workspace:*
-        version: link:libs/notification
+        version: link:libs/features/notification
       '@agnesoft/agdb_api':
         specifier: workspace:*
         version: link:../agdb_api/typescript
@@ -202,9 +202,9 @@ importers:
         specifier: 'catalog:'
         version: 4.5.0(vue@3.5.13(typescript@5.8.2))
     devDependencies:
-      '@agdb-studio/config':
+      '@agdb-studio/tsconfig':
         specifier: workspace:*
-        version: link:libs/config
+        version: link:libs/config/tsconfig
       '@eslint/js':
         specifier: 'catalog:'
         version: 9.23.0
@@ -291,13 +291,13 @@ importers:
     dependencies:
       '@agdb-studio/design':
         specifier: workspace:*
-        version: link:../libs/design
+        version: link:../libs/core/design
       '@agdb-studio/notification':
         specifier: workspace:*
-        version: link:../libs/notification
+        version: link:../libs/features/notification
       '@agdb-studio/router':
         specifier: workspace:*
-        version: link:../libs/router
+        version: link:../libs/core/router
       '@agnesoft/agdb_api':
         specifier: workspace:*
         version: link:../../agdb_api/typescript
@@ -320,12 +320,12 @@ importers:
         specifier: 'catalog:'
         version: 4.5.0(vue@3.5.13(typescript@5.8.2))
     devDependencies:
-      '@agdb-studio/config':
-        specifier: workspace:*
-        version: link:../libs/config
       '@agdb-studio/testing':
         specifier: workspace:*
-        version: link:../libs/testing
+        version: link:../libs/config/testing
+      '@agdb-studio/tsconfig':
+        specifier: workspace:*
+        version: link:../libs/config/tsconfig
       '@eslint/js':
         specifier: 'catalog:'
         version: 9.23.0
@@ -408,14 +408,77 @@ importers:
         specifier: 'catalog:'
         version: 2.2.8(typescript@5.8.2)
 
-  agdb_studio/libs/api:
+  agdb_studio/libs/config/testing:
+    devDependencies:
+      '@agdb-studio/tsconfig':
+        specifier: workspace:*
+        version: link:../tsconfig
+      '@rushstack/eslint-patch':
+        specifier: 'catalog:'
+        version: 1.11.0
+      '@tsconfig/node18':
+        specifier: 'catalog:'
+        version: 1.0.3
+      '@types/node':
+        specifier: 'catalog:'
+        version: 22.13.14
+      eslint:
+        specifier: 'catalog:'
+        version: 9.23.0
+      eslint-plugin-vue:
+        specifier: 'catalog:'
+        version: 9.33.0(eslint@9.23.0)
+      prettier:
+        specifier: 'catalog:'
+        version: 3.5.3
+      typescript:
+        specifier: 'catalog:'
+        version: 5.8.2
+      vite:
+        specifier: 'catalog:'
+        version: 6.2.3(@types/node@22.13.14)(less@4.2.2)(sass@1.86.0)(yaml@2.7.0)
+      vitest:
+        specifier: 'catalog:'
+        version: 3.0.9(@types/debug@4.1.12)(@types/node@22.13.14)(jsdom@26.0.0)(less@4.2.2)(sass@1.86.0)(yaml@2.7.0)
+
+  agdb_studio/libs/config/tsconfig:
+    devDependencies:
+      '@rushstack/eslint-patch':
+        specifier: 'catalog:'
+        version: 1.11.0
+      '@tsconfig/node18':
+        specifier: 'catalog:'
+        version: 1.0.3
+      '@types/node':
+        specifier: 'catalog:'
+        version: 22.13.14
+      eslint:
+        specifier: 'catalog:'
+        version: 9.23.0
+      eslint-plugin-vue:
+        specifier: 'catalog:'
+        version: 9.33.0(eslint@9.23.0)
+      prettier:
+        specifier: 'catalog:'
+        version: 3.5.3
+      typescript:
+        specifier: 'catalog:'
+        version: 5.8.2
+      vite:
+        specifier: 'catalog:'
+        version: 6.2.3(@types/node@22.13.14)(less@4.2.2)(sass@1.86.0)(yaml@2.7.0)
+      vitest:
+        specifier: 'catalog:'
+        version: 3.0.9(@types/debug@4.1.12)(@types/node@22.13.14)(jsdom@26.0.0)(less@4.2.2)(sass@1.86.0)(yaml@2.7.0)
+
+  agdb_studio/libs/core/api:
     dependencies:
       '@agdb-studio/design':
         specifier: workspace:*
         version: link:../design
       '@agdb-studio/notification':
         specifier: workspace:*
-        version: link:../notification
+        version: link:../../features/notification
       '@kalimahapps/vue-icons':
         specifier: 'catalog:'
         version: 1.7.1(vue@3.5.13(typescript@5.8.2))
@@ -426,12 +489,12 @@ importers:
         specifier: 'catalog:'
         version: 3.5.13(typescript@5.8.2)
     devDependencies:
-      '@agdb-studio/config':
-        specifier: workspace:*
-        version: link:../config
       '@agdb-studio/testing':
         specifier: workspace:*
-        version: link:../testing
+        version: link:../../config/testing
+      '@agdb-studio/tsconfig':
+        specifier: workspace:*
+        version: link:../../config/tsconfig
       '@eslint/js':
         specifier: 'catalog:'
         version: 9.23.0
@@ -514,7 +577,7 @@ importers:
         specifier: 'catalog:'
         version: 2.2.8(typescript@5.8.2)
 
-  agdb_studio/libs/auth:
+  agdb_studio/libs/core/auth:
     dependencies:
       '@agdb-studio/api':
         specifier: workspace:*
@@ -529,12 +592,12 @@ importers:
         specifier: 'catalog:'
         version: 3.5.13(typescript@5.8.2)
     devDependencies:
-      '@agdb-studio/config':
-        specifier: workspace:*
-        version: link:../config
       '@agdb-studio/testing':
         specifier: workspace:*
-        version: link:../testing
+        version: link:../../config/testing
+      '@agdb-studio/tsconfig':
+        specifier: workspace:*
+        version: link:../../config/tsconfig
       '@eslint/js':
         specifier: 'catalog:'
         version: 9.23.0
@@ -617,37 +680,7 @@ importers:
         specifier: 'catalog:'
         version: 2.2.8(typescript@5.8.2)
 
-  agdb_studio/libs/config:
-    devDependencies:
-      '@rushstack/eslint-patch':
-        specifier: 'catalog:'
-        version: 1.11.0
-      '@tsconfig/node18':
-        specifier: 'catalog:'
-        version: 1.0.3
-      '@types/node':
-        specifier: 'catalog:'
-        version: 22.13.14
-      eslint:
-        specifier: 'catalog:'
-        version: 9.23.0
-      eslint-plugin-vue:
-        specifier: 'catalog:'
-        version: 9.33.0(eslint@9.23.0)
-      prettier:
-        specifier: 'catalog:'
-        version: 3.5.3
-      typescript:
-        specifier: 'catalog:'
-        version: 5.8.2
-      vite:
-        specifier: 'catalog:'
-        version: 6.2.3(@types/node@22.13.14)(less@4.2.2)(sass@1.86.0)(yaml@2.7.0)
-      vitest:
-        specifier: 'catalog:'
-        version: 3.0.9(@types/debug@4.1.12)(@types/node@22.13.14)(jsdom@26.0.0)(less@4.2.2)(sass@1.86.0)(yaml@2.7.0)
-
-  agdb_studio/libs/design:
+  agdb_studio/libs/core/design:
     dependencies:
       '@kalimahapps/vue-icons':
         specifier: 'catalog:'
@@ -659,9 +692,9 @@ importers:
         specifier: 'catalog:'
         version: 3.5.13(typescript@5.8.2)
     devDependencies:
-      '@agdb-studio/config':
+      '@agdb-studio/tsconfig':
         specifier: workspace:*
-        version: link:../config
+        version: link:../../config/tsconfig
       '@playwright/test':
         specifier: 'catalog:'
         version: 1.51.1
@@ -726,110 +759,7 @@ importers:
         specifier: 'catalog:'
         version: 2.2.8(typescript@5.8.2)
 
-  agdb_studio/libs/notification:
-    dependencies:
-      '@agdb-studio/design':
-        specifier: workspace:*
-        version: link:../design
-      '@kalimahapps/vue-icons':
-        specifier: 'catalog:'
-        version: 1.7.1(vue@3.5.13(typescript@5.8.2))
-      '@vueuse/core':
-        specifier: 'catalog:'
-        version: 12.8.2(typescript@5.8.2)
-      vue:
-        specifier: 'catalog:'
-        version: 3.5.13(typescript@5.8.2)
-    devDependencies:
-      '@agdb-studio/config':
-        specifier: workspace:*
-        version: link:../config
-      '@agdb-studio/testing':
-        specifier: workspace:*
-        version: link:../testing
-      '@eslint/js':
-        specifier: 'catalog:'
-        version: 9.23.0
-      '@playwright/test':
-        specifier: 'catalog:'
-        version: 1.51.1
-      '@rushstack/eslint-patch':
-        specifier: 'catalog:'
-        version: 1.11.0
-      '@tsconfig/node18':
-        specifier: 'catalog:'
-        version: 1.0.3
-      '@types/jsdom':
-        specifier: 'catalog:'
-        version: 21.1.7
-      '@types/node':
-        specifier: 'catalog:'
-        version: 22.13.14
-      '@vitejs/plugin-vue':
-        specifier: 'catalog:'
-        version: 5.2.3(vite@6.2.3(@types/node@22.13.14)(less@4.2.2)(sass@1.86.0)(yaml@2.7.0))(vue@3.5.13(typescript@5.8.2))
-      '@vitest/coverage-istanbul':
-        specifier: 'catalog:'
-        version: 3.0.9(vitest@3.0.9(@types/debug@4.1.12)(@types/node@22.13.14)(jsdom@26.0.0)(less@4.2.2)(sass@1.86.0)(yaml@2.7.0))
-      '@vitest/coverage-v8':
-        specifier: 'catalog:'
-        version: 3.0.9(vitest@3.0.9(@types/debug@4.1.12)(@types/node@22.13.14)(jsdom@26.0.0)(less@4.2.2)(sass@1.86.0)(yaml@2.7.0))
-      '@vue/eslint-config-prettier':
-        specifier: 'catalog:'
-        version: 10.2.0(eslint@9.23.0)(prettier@3.5.3)
-      '@vue/eslint-config-typescript':
-        specifier: 'catalog:'
-        version: 14.5.0(eslint-plugin-vue@9.33.0(eslint@9.23.0))(eslint@9.23.0)(typescript@5.8.2)
-      '@vue/test-utils':
-        specifier: 'catalog:'
-        version: 2.4.6
-      '@vue/tsconfig':
-        specifier: 'catalog:'
-        version: 0.7.0(typescript@5.8.2)(vue@3.5.13(typescript@5.8.2))
-      axios:
-        specifier: 'catalog:'
-        version: 1.8.4(debug@4.4.0)
-      eslint:
-        specifier: 'catalog:'
-        version: 9.23.0
-      eslint-config-prettier:
-        specifier: 'catalog:'
-        version: 10.1.1(eslint@9.23.0)
-      eslint-plugin-vue:
-        specifier: 'catalog:'
-        version: 9.33.0(eslint@9.23.0)
-      globals:
-        specifier: 'catalog:'
-        version: 16.0.0
-      jsdom:
-        specifier: 'catalog:'
-        version: 26.0.0
-      less:
-        specifier: 'catalog:'
-        version: 4.2.2
-      npm-run-all2:
-        specifier: 'catalog:'
-        version: 7.0.2
-      prettier:
-        specifier: 'catalog:'
-        version: 3.5.3
-      typescript:
-        specifier: 'catalog:'
-        version: 5.8.2
-      typescript-eslint:
-        specifier: ^8.21.0
-        version: 8.28.0(eslint@9.23.0)(typescript@5.8.2)
-      vite:
-        specifier: 'catalog:'
-        version: 6.2.3(@types/node@22.13.14)(less@4.2.2)(sass@1.86.0)(yaml@2.7.0)
-      vitest:
-        specifier: 'catalog:'
-        version: 3.0.9(@types/debug@4.1.12)(@types/node@22.13.14)(jsdom@26.0.0)(less@4.2.2)(sass@1.86.0)(yaml@2.7.0)
-      vue-tsc:
-        specifier: 'catalog:'
-        version: 2.2.8(typescript@5.8.2)
-
-  agdb_studio/libs/profile:
+  agdb_studio/libs/core/profile:
     dependencies:
       '@agdb-studio/api':
         specifier: workspace:*
@@ -853,12 +783,12 @@ importers:
         specifier: 'catalog:'
         version: 3.5.13(typescript@5.8.2)
     devDependencies:
-      '@agdb-studio/config':
-        specifier: workspace:*
-        version: link:../config
       '@agdb-studio/testing':
         specifier: workspace:*
-        version: link:../testing
+        version: link:../../config/testing
+      '@agdb-studio/tsconfig':
+        specifier: workspace:*
+        version: link:../../config/tsconfig
       '@eslint/js':
         specifier: 'catalog:'
         version: 9.23.0
@@ -941,7 +871,7 @@ importers:
         specifier: 'catalog:'
         version: 2.2.8(typescript@5.8.2)
 
-  agdb_studio/libs/router:
+  agdb_studio/libs/core/router:
     dependencies:
       '@agdb-studio/auth':
         specifier: workspace:*
@@ -959,12 +889,12 @@ importers:
         specifier: 'catalog:'
         version: 3.5.13(typescript@5.8.2)
     devDependencies:
-      '@agdb-studio/config':
-        specifier: workspace:*
-        version: link:../config
       '@agdb-studio/testing':
         specifier: workspace:*
-        version: link:../testing
+        version: link:../../config/testing
+      '@agdb-studio/tsconfig':
+        specifier: workspace:*
+        version: link:../../config/tsconfig
       '@eslint/js':
         specifier: 'catalog:'
         version: 9.23.0
@@ -1047,38 +977,108 @@ importers:
         specifier: 'catalog:'
         version: 2.2.8(typescript@5.8.2)
 
-  agdb_studio/libs/testing:
-    devDependencies:
-      '@agdb-studio/config':
+  agdb_studio/libs/features/notification:
+    dependencies:
+      '@agdb-studio/design':
         specifier: workspace:*
-        version: link:../config
+        version: link:../../core/design
+      '@kalimahapps/vue-icons':
+        specifier: 'catalog:'
+        version: 1.7.1(vue@3.5.13(typescript@5.8.2))
+      '@vueuse/core':
+        specifier: 'catalog:'
+        version: 12.8.2(typescript@5.8.2)
+      vue:
+        specifier: 'catalog:'
+        version: 3.5.13(typescript@5.8.2)
+    devDependencies:
+      '@agdb-studio/testing':
+        specifier: workspace:*
+        version: link:../../config/testing
+      '@agdb-studio/tsconfig':
+        specifier: workspace:*
+        version: link:../../config/tsconfig
+      '@eslint/js':
+        specifier: 'catalog:'
+        version: 9.23.0
+      '@playwright/test':
+        specifier: 'catalog:'
+        version: 1.51.1
       '@rushstack/eslint-patch':
         specifier: 'catalog:'
         version: 1.11.0
       '@tsconfig/node18':
         specifier: 'catalog:'
         version: 1.0.3
+      '@types/jsdom':
+        specifier: 'catalog:'
+        version: 21.1.7
       '@types/node':
         specifier: 'catalog:'
         version: 22.13.14
+      '@vitejs/plugin-vue':
+        specifier: 'catalog:'
+        version: 5.2.3(vite@6.2.3(@types/node@22.13.14)(less@4.2.2)(sass@1.86.0)(yaml@2.7.0))(vue@3.5.13(typescript@5.8.2))
+      '@vitest/coverage-istanbul':
+        specifier: 'catalog:'
+        version: 3.0.9(vitest@3.0.9(@types/debug@4.1.12)(@types/node@22.13.14)(jsdom@26.0.0)(less@4.2.2)(sass@1.86.0)(yaml@2.7.0))
+      '@vitest/coverage-v8':
+        specifier: 'catalog:'
+        version: 3.0.9(vitest@3.0.9(@types/debug@4.1.12)(@types/node@22.13.14)(jsdom@26.0.0)(less@4.2.2)(sass@1.86.0)(yaml@2.7.0))
+      '@vue/eslint-config-prettier':
+        specifier: 'catalog:'
+        version: 10.2.0(eslint@9.23.0)(prettier@3.5.3)
+      '@vue/eslint-config-typescript':
+        specifier: 'catalog:'
+        version: 14.5.0(eslint-plugin-vue@9.33.0(eslint@9.23.0))(eslint@9.23.0)(typescript@5.8.2)
+      '@vue/test-utils':
+        specifier: 'catalog:'
+        version: 2.4.6
+      '@vue/tsconfig':
+        specifier: 'catalog:'
+        version: 0.7.0(typescript@5.8.2)(vue@3.5.13(typescript@5.8.2))
+      axios:
+        specifier: 'catalog:'
+        version: 1.8.4(debug@4.4.0)
       eslint:
         specifier: 'catalog:'
         version: 9.23.0
+      eslint-config-prettier:
+        specifier: 'catalog:'
+        version: 10.1.1(eslint@9.23.0)
       eslint-plugin-vue:
         specifier: 'catalog:'
         version: 9.33.0(eslint@9.23.0)
+      globals:
+        specifier: 'catalog:'
+        version: 16.0.0
+      jsdom:
+        specifier: 'catalog:'
+        version: 26.0.0
+      less:
+        specifier: 'catalog:'
+        version: 4.2.2
+      npm-run-all2:
+        specifier: 'catalog:'
+        version: 7.0.2
       prettier:
         specifier: 'catalog:'
         version: 3.5.3
       typescript:
         specifier: 'catalog:'
         version: 5.8.2
+      typescript-eslint:
+        specifier: ^8.21.0
+        version: 8.28.0(eslint@9.23.0)(typescript@5.8.2)
       vite:
         specifier: 'catalog:'
         version: 6.2.3(@types/node@22.13.14)(less@4.2.2)(sass@1.86.0)(yaml@2.7.0)
       vitest:
         specifier: 'catalog:'
         version: 3.0.9(@types/debug@4.1.12)(@types/node@22.13.14)(jsdom@26.0.0)(less@4.2.2)(sass@1.86.0)(yaml@2.7.0)
+      vue-tsc:
+        specifier: 'catalog:'
+        version: 2.2.8(typescript@5.8.2)
 
   agdb_web:
     dependencies:

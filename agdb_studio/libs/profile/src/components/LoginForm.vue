@@ -1,8 +1,8 @@
 <script lang="ts" setup>
 import { ref } from "vue";
-import { useAuth } from "@/composables/profile/auth";
-import router from "@/router";
-import SpinnerIcon from "@/components/base/icons/SpinnerIcon.vue";
+import { useAuth } from "@agdb-studio/auth/src/auth";
+import router from "@agdb-studio/router/src/router";
+import SpinnerIcon from "@agdb-studio/design/src/components/icons/SpinnerIcon.vue";
 
 const { login } = useAuth();
 

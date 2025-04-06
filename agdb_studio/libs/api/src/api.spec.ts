@@ -5,7 +5,7 @@ import {
   responseInterceptor,
   errorInterceptor,
   checkClient,
-} from "./api.service";
+} from "./api";
 import { client } from "@agdb-studio/testing/mocks/apiMock";
 import type { AxiosError, AxiosResponse } from "axios";
 import { vi, describe, it, beforeEach, expect } from "vitest";

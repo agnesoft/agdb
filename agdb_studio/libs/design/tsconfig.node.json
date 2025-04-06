@@ -1,4 +1,9 @@
 {
   "extends": "@agdb-studio/config/tsconfig.node.json",
-  "include": ["vite.config.*", "vitest.config.*", "componentEntries.ts"]
+  "include": [
+    "vite.config.*",
+    "vitest.config.*",
+    "componentEntries.ts",
+    "globals.d.ts"
+  ]
 }

@@ -1,5 +1,5 @@
-import { client } from "@/services/api.service";
-import { useAuth } from "@/composables/profile/auth";
+import { client } from "@agdb-studio/api/src/api";
+import { useAuth } from "./auth";
 import { ref, watch } from "vue";
 
 const username = ref<string | undefined>(undefined);

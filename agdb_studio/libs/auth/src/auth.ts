@@ -1,5 +1,5 @@
-import { client, removeToken } from "@/services/api.service";
-import { ACCESS_TOKEN } from "@/constants";
+import { client, removeToken } from "@agdb-studio/api/src/api";
+import { ACCESS_TOKEN } from "@agdb-studio/api/src/constants";
 import { computed, ref, watch } from "vue";
 import type { LoginProps } from "@agnesoft/agdb_api/client";
 

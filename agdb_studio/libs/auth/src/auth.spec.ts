@@ -1,6 +1,6 @@
 import { useAuth, setLocalStorageToken, refreshToken } from "./auth";
 import { get_token } from "@agdb-studio/testing/mocks/apiMock";
-import { ACCESS_TOKEN } from "@/constants";
+import { ACCESS_TOKEN } from "@agdb-studio/api/src/constants";
 import { vi, describe, it, beforeEach, expect } from "vitest";
 
 describe("auth service", () => {

@@ -1,5 +1,5 @@
 import { computed } from "vue";
-import { useAccount } from "./account";
+import { useAccount } from "@agdb-studio/auth/src/account";
 import { getRouter } from "@agdb-studio/router/src/router";
 
 const { admin } = useAccount();

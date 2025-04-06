@@ -1,5 +1,5 @@
-import { useAuth } from "./auth";
-import useModal from "../modal/modal";
+import { useAuth } from "@agdb-studio/auth/src/auth";
+import { useModal } from "@agdb-studio/common/src/composables/modal";
 import { useContentInputs } from "../content/inputs";
 import { convertArrayOfStringsToContent } from "../content/utils";
 import { client } from "@/services/api.service";

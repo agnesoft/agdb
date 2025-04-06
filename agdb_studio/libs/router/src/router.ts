@@ -1,20 +1,17 @@
 import {
-  createRouter,
-  createWebHistory,
+  createRouter as createRouterVue,
   type NavigationGuardNext,
   type RouteLocationNormalizedGeneric,
+  type Router,
+  type RouterOptions,
 } from "vue-router";
-import { createRoutes } from "./routes";
 import { useAuth } from "@agdb-studio/auth/src/auth";
 import { useAccount } from "@agdb-studio/auth/src/account";
 
 const { isLoggedIn } = useAuth();
 const { admin, fetchUserStatus } = useAccount();
 
-const router = createRouter({
-  history: createWebHistory(import.meta.env.BASE_URL),
-  routes: createRoutes(),
-});
+let router: Router;
 
 export const beforeEach = async (
   to: RouteLocationNormalizedGeneric,
@@ -45,6 +42,16 @@ export const beforeEach = async (
   }
 };
 
-router.beforeEach(beforeEach);
+export const createRouter = (options: RouterOptions) => {
+  router = createRouterVue(options);
 
-export default router;
+  router.beforeEach(beforeEach);
+  return router;
+};
+
+export const getRouter = () => {
+  if (!router) {
+    throw new Error("Router not created yet. Call createRouter first.");
+  }
+  return router;
+};

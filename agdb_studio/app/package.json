@@ -19,6 +19,7 @@
   "dependencies": {
     "@agdb-studio/design": "workspace:*",
     "@agdb-studio/notification": "workspace:*",
+    "@agdb-studio/router": "workspace:*",
     "@agnesoft/agdb_api": "workspace:*",
     "@kalimahapps/vue-icons": "catalog:",
     "@vueuse/components": "catalog:",

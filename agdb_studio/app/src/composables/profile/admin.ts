@@ -1,6 +1,6 @@
 import { computed } from "vue";
 import { useAccount } from "./account";
-import router from "@/router";
+import { getRouter } from "@agdb-studio/router/src/router";
 
 const { admin } = useAccount();
 
@@ -9,7 +9,7 @@ const isAdmin = computed<boolean>(() => {
 });
 
 const isAdminView = computed<boolean>(() => {
-  return !!router.currentRoute.value.meta.admin;
+  return !!getRouter().currentRoute.value.meta.admin;
 });
 
 export const useAdmin = () => {

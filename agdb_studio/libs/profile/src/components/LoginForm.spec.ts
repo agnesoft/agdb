@@ -25,12 +25,12 @@ vi.mock("@/composables/profile/auth", () => {
     }),
   };
 });
-vi.mock("@/router", () => {
+vi.mock("@agdb-studio/router/src/router", () => {
   return {
-    default: {
+    getRouter: () => ({
+      currentRoute: currentRoute,
       push: pushMock,
-      currentRoute,
-    },
+    }),
   };
 });
 

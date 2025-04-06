@@ -295,6 +295,9 @@ importers:
       '@agdb-studio/notification':
         specifier: workspace:*
         version: link:../libs/notification
+      '@agdb-studio/router':
+        specifier: workspace:*
+        version: link:../libs/router
       '@agnesoft/agdb_api':
         specifier: workspace:*
         version: link:../../agdb_api/typescript

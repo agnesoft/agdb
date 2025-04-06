@@ -3,7 +3,7 @@ import { useAdmin } from "./admin";
 import { triggerRef } from "vue";
 import { useAccount } from "@/composables/profile/account";
 
-import router from "@/router";
+import { getRouter } from "@agdb-studio/router/src/router";
 
 const { isAdmin, isAdminView } = useAdmin();
 const { admin } = useAccount();
@@ -24,6 +24,7 @@ describe("admin.ts", () => {
     [false, false],
     [true, true],
   ])("returns the admin view status %s", (input, expected) => {
+    const router = getRouter();
     router.currentRoute.value.meta.admin = input;
     triggerRef(router.currentRoute);
     expect(isAdminView.value).toBe(expected);

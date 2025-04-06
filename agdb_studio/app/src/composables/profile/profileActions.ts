@@ -1,4 +1,3 @@
-import router from "@/router";
 import { useAuth } from "./auth";
 import useModal from "../modal/modal";
 import { useContentInputs } from "../content/inputs";
@@ -7,6 +6,7 @@ import { client } from "@/services/api.service";
 import { KEY_MODAL } from "../modal/constants";
 import { computed } from "vue";
 import { useAdmin } from "@/composables/profile/admin";
+import { getRouter } from "@agdb-studio/router/src/router";
 
 const { logout } = useAuth();
 const { openModal } = useModal();
@@ -22,7 +22,7 @@ const adminActions: Action<undefined>[] = [
     key: USER_VIEW_KEY,
     label: "User View",
     action: () => {
-      router.push({ name: "home" });
+      getRouter().push({ name: "home" });
       return true;
     },
   },
@@ -33,7 +33,7 @@ const toAdminView: Action<undefined>[] = [
     key: ADMIN_VIEW_KEY,
     label: "Admin View",
     action: () => {
-      router.push({ name: "admin" });
+      getRouter().push({ name: "admin" });
       return true;
     },
   },

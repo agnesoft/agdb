@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import { ref } from "vue";
 import { useAuth } from "@agdb-studio/auth/src/auth";
-import router from "@agdb-studio/router/src/router";
+import { getRouter } from "@agdb-studio/router/src/router";
 import SpinnerIcon from "@agdb-studio/design/src/components/icons/SpinnerIcon.vue";
 
 const { login } = useAuth();
@@ -26,6 +26,7 @@ const onLogin = async () => {
     cluster: cluster.value,
   })
     .then(async () => {
+      const router = getRouter();
       const redirect = router.currentRoute.value.query.redirect;
       await router.push(
         typeof redirect === "string" ? redirect : { name: "home" },

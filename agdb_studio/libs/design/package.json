@@ -4,7 +4,6 @@
   "description": "Notification library for AGDB Studio",
   "type": "module",
   "scripts": {
-    "build": "run-p type-check \"build-only {@}\" --",
     "build-only": "vite build && vue-tsc --declaration --emitDeclarationOnly --outDir dist",
     "test": "echo \"No tests yet\" && exit 0",
     "test:e2e": "playwright test",

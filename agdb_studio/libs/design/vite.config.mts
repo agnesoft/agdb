@@ -16,6 +16,8 @@ export default defineConfig({
     },
   },
   base: "/studio/",
+
+  // not really needed right now, but might be useful in the future
   build: {
     lib: {
       entry: componentEntries,

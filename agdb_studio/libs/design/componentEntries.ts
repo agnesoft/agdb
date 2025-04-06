@@ -1,7 +1,13 @@
 import fs from "fs";
 import path from "path";
 
-// Recursively get all .vue files in src/
+// NOTE: not really needed right now, but might be useful in the future
+
+// This function is used to get all .vue files in the src/ directory
+// and return them as an object where the keys are the names of the files
+// and the values are the paths to the files.
+// This is useful for creating a library of components that can be imported
+// and used in other parts of the application.
 export const getVueComponentEntries = (
   dir: string,
   root = dir,

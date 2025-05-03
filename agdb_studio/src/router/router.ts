@@ -1,3 +1,4 @@
+/* v8 ignore next */
 import {
     createRouter,
     createWebHistory,

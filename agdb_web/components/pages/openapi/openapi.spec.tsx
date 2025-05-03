@@ -25,10 +25,9 @@ describe("openapi", () => {
     });
 
     it("should render the openapi code on click", async () => {
-        const file = await import("../../../../agdb_server/openapi.json");
-
-        //@ts-expect-error mocking the openapi
-        file.default = jsonMock;
+        vi.doMock("../../../../agdb_server/openapi.json", () => ({
+            default: jsonMock,
+        }));
 
         render(<OpenApi />);
         expect(screen.getByText("openapi.json")).toBeDefined();

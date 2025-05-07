@@ -1,6 +1,6 @@
 use proc_macro::TokenStream;
-use quote::quote;
 use quote::ToTokens;
+use quote::quote;
 use syn::Generics;
 use syn::ImplItem;
 use syn::ItemImpl;
@@ -71,7 +71,7 @@ fn arg_type(t: &syn::Type, generics: &Generics) -> proc_macro2::TokenStream {
     generics
         .type_params()
         .find_map(|g| {
-            if g.ident.to_string() == t_str {
+            if g.ident == t_str {
                 if let Some(TypeParamBound::Trait(bound)) = g.bounds.first() {
                     if let Some(bound) = bound.path.segments.first() {
                         let bound_str = bound.ident.to_string();
@@ -119,10 +119,9 @@ fn db_user_value(t: &syn::Type) -> Option<proc_macro2::TokenStream> {
 }
 
 fn return_type(f: &syn::ImplItemFn) -> proc_macro2::TokenStream {
-    let ret_ty = if let ReturnType::Type(_, t) = &f.sig.output {
+    if let ReturnType::Type(_, t) = &f.sig.output {
         quote! { <#t as ::agdb::api::ApiDefinition>::def }
     } else {
         quote! { || ::agdb::api::Type::None }
-    };
-    ret_ty
+    }
 }

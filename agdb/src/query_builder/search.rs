@@ -182,6 +182,7 @@ impl<T: SearchQueryBuilder> Search<T> {
     }
 }
 
+#[cfg_attr(feature = "api", agdb::impl_def())]
 impl<T: SearchQueryBuilder> SearchAlgorithm<T> {
     /// Sets the origin of the search.
     ///
@@ -221,6 +222,7 @@ impl<T: SearchQueryBuilder> SearchAlgorithm<T> {
     }
 }
 
+#[cfg_attr(feature = "api", agdb::impl_def())]
 impl<T: SearchQueryBuilder> SearchFrom<T> {
     /// Sets the limit to number of ids returned. If during the search
     /// the `limit + offset` is hit the search ends and the result is returned.
@@ -327,6 +329,7 @@ impl<T: SearchQueryBuilder> SearchFrom<T> {
     }
 }
 
+#[cfg_attr(feature = "api", agdb::impl_def())]
 impl<T: SearchQueryBuilder> SearchOrderBy<T> {
     /// Sets the limit to number of ids returned. If during the search
     /// the `limit + offset` is hit the search ends and the result is returned.
@@ -397,6 +400,7 @@ impl<T: SearchQueryBuilder> SearchOrderBy<T> {
     }
 }
 
+#[cfg_attr(feature = "api", agdb::impl_def())]
 impl<T: SearchQueryBuilder> SearchTo<T> {
     /// Sets the limit to number of ids returned. If during the search
     /// the `limit + offset` is hit the search ends and the result is returned.
@@ -487,6 +491,7 @@ impl<T: SearchQueryBuilder> SearchTo<T> {
     }
 }
 
+#[cfg_attr(feature = "api", agdb::impl_def())]
 impl<T: SearchQueryBuilder> SelectLimit<T> {
     /// Returns the built query object.
     pub fn query(self) -> T {
@@ -519,6 +524,7 @@ impl<T: SearchQueryBuilder> SelectLimit<T> {
     }
 }
 
+#[cfg_attr(feature = "api", agdb::impl_def())]
 impl<T: SearchQueryBuilder> SelectOffset<T> {
     /// Sets the limit to number of ids returned. If during the search
     /// the `limit + offset` is hit the search ends and the result is returned.
@@ -569,6 +575,7 @@ impl<T: SearchQueryBuilder> SelectOffset<T> {
     }
 }
 
+#[cfg_attr(feature = "api", agdb::impl_def())]
 impl<T: SearchQueryBuilder> SearchIndex<T> {
     /// Sets the value to be searched in the index.
     pub fn value<V: Into<DbValue>>(mut self, value: V) -> SearchIndexValue<T> {
@@ -585,6 +592,7 @@ impl<T: SearchQueryBuilder> SearchIndex<T> {
     }
 }
 
+#[cfg_attr(feature = "api", agdb::impl_def())]
 impl<T: SearchQueryBuilder> SearchIndexValue<T> {
     /// Returns the built q object.
     pub fn query(self) -> T {

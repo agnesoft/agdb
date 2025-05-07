@@ -1,9 +1,12 @@
+use agdb_derive::ApiDef;
+
 use crate::DbId;
 use crate::DbKeyValue;
 use crate::DbValue;
 use crate::DbValues;
 use crate::InsertAliasesQuery;
 use crate::InsertEdgesQuery;
+use crate::InsertIndexQuery;
 use crate::InsertNodesQuery;
 use crate::InsertValuesQuery;
 use crate::MultiValues;
@@ -12,7 +15,17 @@ use crate::QueryBuilder;
 use crate::QueryId;
 use crate::QueryIds;
 use crate::QueryValues;
+use crate::RemoveAliasesQuery;
+use crate::RemoveIndexQuery;
+use crate::RemoveQuery;
 use crate::RemoveValuesQuery;
+use crate::SearchQuery;
+use crate::SelectAliasesQuery;
+use crate::SelectAllAliasesQuery;
+use crate::SelectIndexesQuery;
+use crate::SelectKeyCountQuery;
+use crate::SelectKeysQuery;
+use crate::SelectValuesQuery;
 use crate::SingleValues;
 use crate::query_builder::insert::Insert;
 use crate::query_builder::insert_aliases::InsertAliases;
@@ -23,6 +36,7 @@ use crate::query_builder::insert_edge::InsertEdgesFrom;
 use crate::query_builder::insert_edge::InsertEdgesFromTo;
 use crate::query_builder::insert_edge::InsertEdgesIds;
 use crate::query_builder::insert_edge::InsertEdgesValues;
+use crate::query_builder::insert_index::InsertIndex;
 use crate::query_builder::insert_nodes::InsertNodes;
 use crate::query_builder::insert_nodes::InsertNodesAliases;
 use crate::query_builder::insert_nodes::InsertNodesCount;
@@ -36,15 +50,33 @@ use crate::query_builder::remove_ids::RemoveIds;
 use crate::query_builder::remove_index::RemoveIndex;
 use crate::query_builder::remove_values::RemoveValues;
 use crate::query_builder::remove_values::RemoveValuesIds;
+use crate::query_builder::search::Search;
+use crate::query_builder::search::SearchAlgorithm;
+use crate::query_builder::search::SearchFrom;
+use crate::query_builder::search::SearchIndex;
+use crate::query_builder::search::SearchIndexValue;
+use crate::query_builder::search::SearchOrderBy;
+use crate::query_builder::search::SearchQueryBuilder;
+use crate::query_builder::search::SearchTo;
+use crate::query_builder::search::SelectLimit;
+use crate::query_builder::search::SelectOffset;
 use crate::query_builder::select::Select;
 use crate::query_builder::select_aliases::SelectAliases;
+use crate::query_builder::select_aliases::SelectAliasesIds;
 use crate::query_builder::select_edge_count::SelectEdgeCount;
+use crate::query_builder::select_edge_count::SelectEdgeCountIds;
 use crate::query_builder::select_ids::SelectIds;
 use crate::query_builder::select_indexes::SelectIndexes;
 use crate::query_builder::select_key_count::SelectKeyCount;
+use crate::query_builder::select_key_count::SelectKeyCountIds;
 use crate::query_builder::select_keys::SelectKeys;
+use crate::query_builder::select_keys::SelectKeysIds;
 use crate::query_builder::select_node_count::SelectNodeCount;
 use crate::query_builder::select_values::SelectValues;
+use crate::query_builder::select_values::SelectValuesIds;
+use crate::query_builder::where_::Where;
+use crate::query_builder::where_::WhereKey;
+use crate::query_builder::where_::WhereLogicOperator;
 
 #[derive(Debug, PartialEq)]
 pub enum Type {
@@ -67,6 +99,7 @@ pub struct NamedType {
     pub ty: fn() -> Type,
 }
 
+#[derive(Debug)]
 pub enum Expression {
     Create {
         ty: NamedType,
@@ -100,6 +133,7 @@ pub struct Enum {
     pub variants: Vec<NamedType>,
 }
 
+#[derive(Debug)]
 pub struct Function {
     pub name: &'static str,
     pub args: Vec<NamedType>,
@@ -107,13 +141,25 @@ pub struct Function {
     pub expressions: Vec<Expression>,
 }
 
+#[derive(Debug, PartialEq)]
 pub struct Struct {
     pub name: &'static str,
     pub fields: Vec<NamedType>,
 }
 
+#[derive(ApiDef)]
+struct SearchQueryBuilderDummy {
+    search: SearchQuery,
+}
+
 pub trait ApiDefinition {
     fn def() -> Type;
+}
+
+impl SearchQueryBuilder for SearchQueryBuilderDummy {
+    fn search_mut(&mut self) -> &mut SearchQuery {
+        &mut self.search
+    }
 }
 
 pub trait ApiFunctions: ApiDefinition {
@@ -268,9 +314,22 @@ impl API {
                 //queries
                 ty::<InsertAliasesQuery>(),
                 ty::<InsertEdgesQuery>(),
+                ty::<InsertIndexQuery>(),
                 ty::<InsertNodesQuery>(),
                 ty::<InsertValuesQuery>(),
+                ty::<RemoveAliasesQuery>(),
+                ty::<RemoveIndexQuery>(),
+                ty::<RemoveQuery>(),
                 ty::<RemoveValuesQuery>(),
+                ty::<SearchQuery>(),
+                ty::<SelectAliasesQuery>(),
+                ty::<SelectAllAliasesQuery>(),
+                ty::<SelectEdgeCount>(),
+                ty::<SelectIndexesQuery>(),
+                ty::<SelectKeyCountQuery>(),
+                ty::<SelectKeysQuery>(),
+                ty::<SelectNodeCount>(),
+                ty::<SelectValuesQuery>(),
                 //builders
                 ty_f::<QueryBuilder>(),
                 ty_f::<Insert>(),
@@ -282,6 +341,7 @@ impl API {
                 ty_f::<InsertEdgesFromTo>(),
                 ty_f::<InsertEdgesIds>(),
                 ty_f::<InsertEdgesValues>(),
+                ty_f::<InsertIndex>(),
                 ty_f::<InsertNodes>(),
                 ty_f::<InsertNodesAliases>(),
                 ty_f::<InsertNodesCount>(),
@@ -297,14 +357,42 @@ impl API {
                 ty_f::<RemoveValuesIds>(),
                 ty_f::<Select>(),
                 ty_f::<SelectAliases>(),
+                ty_f::<SelectAliasesIds>(),
                 ty_f::<SelectEdgeCount>(),
+                ty_f::<SelectEdgeCountIds>(),
                 ty_f::<SelectIds>(),
                 ty_f::<SelectIndexes>(),
                 ty_f::<SelectKeys>(),
+                ty_f::<SelectKeysIds>(),
                 ty_f::<SelectKeyCount>(),
+                ty_f::<SelectKeyCountIds>(),
                 ty_f::<SelectNodeCount>(),
                 ty_f::<SelectValues>(),
+                ty_f::<SelectValuesIds>(),
+                //search & where
+                ty_f::<Search<SearchQueryBuilderDummy>>(),
+                ty_f::<SearchAlgorithm<SearchQueryBuilderDummy>>(),
+                ty_f::<SearchFrom<SearchQueryBuilderDummy>>(),
+                ty_f::<SearchTo<SearchQueryBuilderDummy>>(),
+                ty_f::<SearchIndex<SearchQueryBuilderDummy>>(),
+                ty_f::<SearchIndexValue<SearchQueryBuilderDummy>>(),
+                ty_f::<SearchOrderBy<SearchQueryBuilderDummy>>(),
+                ty_f::<SelectLimit<SearchQueryBuilderDummy>>(),
+                ty_f::<SelectOffset<SearchQueryBuilderDummy>>(),
+                ty_f::<Where<SearchQueryBuilderDummy>>(),
+                ty_f::<WhereKey<SearchQueryBuilderDummy>>(),
+                ty_f::<WhereLogicOperator<SearchQueryBuilderDummy>>(),
             ],
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_api() {
+        let _api = API::new();
     }
 }

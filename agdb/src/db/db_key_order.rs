@@ -14,6 +14,7 @@ pub enum DbKeyOrder {
     Desc(DbValue),
 }
 
+#[cfg_attr(feature = "api", derive(agdb::ApiDef))]
 pub struct DbKeyOrders(pub Vec<DbKeyOrder>);
 
 impl From<Vec<DbKeyOrder>> for DbKeyOrders {

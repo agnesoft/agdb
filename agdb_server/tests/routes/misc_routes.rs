@@ -331,6 +331,7 @@ async fn large_payload() -> anyhow::Result<()> {
         bind: String::new(),
         address: String::new(),
         basepath: String::new(),
+        web_staticpaths: Vec::new(),
         admin: ADMIN.to_string(),
         log_level: tracing::level_filters::LevelFilter::INFO,
         log_body_limit: DEFAULT_LOG_BODY_LIMIT,

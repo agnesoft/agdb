@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use crate::api::Api;
 use crate::cluster::Cluster;
 use crate::config::Config;
@@ -12,9 +14,11 @@ use axum::Router;
 use axum::extract::DefaultBodyLimit;
 use axum::middleware;
 use axum::routing;
+use axum::routing::get_service;
 use reqwest::Method;
 use tokio::sync::broadcast::Sender;
 use tower_http::cors::CorsLayer;
+use tower_http::services::ServeDir;
 use utoipa::OpenApi;
 use utoipa_rapidoc::RapiDoc;
 
@@ -29,6 +33,7 @@ pub(crate) fn app(
     routes::studio::init(&config)?;
 
     let basepath = config.basepath.clone();
+    let staticpaths = config.web_staticpaths.clone();    
     let request_body_limit = config.request_body_limit;
 
     let state = ServerState {
@@ -226,7 +231,16 @@ pub(crate) fn app(
         .with_state(state);
 
     Ok(if !basepath.is_empty() {
-        Router::new().nest(&basepath, router)
+        let serve_dir_main = get_service(ServeDir::new("www"));
+        let mut new_router = Router::new().nest(&basepath, router)
+                     .nest(&basepath, Router::new().fallback(serve_dir_main));
+        for (_, static_path) in staticpaths.iter().enumerate() {
+            let serve_dir = get_service(ServeDir::new(static_path));
+            let path = PathBuf::from(basepath.clone()).join(static_path);
+            let path_str = path.to_str().unwrap();
+            new_router = new_router.nest(path_str, Router::new().fallback(serve_dir));
+        }
+        new_router
     } else {
         router
     }

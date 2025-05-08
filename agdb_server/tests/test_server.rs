@@ -168,7 +168,7 @@ impl TestServerImpl {
             bind: String::new(),
             address: String::new(),
             basepath: String::new(),
-            web_staticpaths: Vec::new(),
+            static_roots: Vec::new(),
             admin: ADMIN.to_string(),
             log_level: LevelFilter::INFO,
             log_body_limit: DEFAULT_LOG_BODY_LIMIT,
@@ -432,7 +432,7 @@ pub async fn create_cluster(nodes: usize, tls: bool) -> anyhow::Result<Vec<TestS
             bind: format!("{HOST}:{port}"),
             address: format!("{protocol}://{HOST}:{port}"),
             basepath: String::new(),
-            web_staticpaths: Vec::new(),
+            static_roots: Vec::new(),
             admin: ADMIN.to_string(),
             log_level: LevelFilter::INFO,
             log_body_limit: DEFAULT_LOG_BODY_LIMIT,
@@ -489,4 +489,22 @@ pub async fn create_cluster(nodes: usize, tls: bool) -> anyhow::Result<Vec<TestS
     servers.swap(0, leader);
 
     Ok(servers.into_iter().map(|(s, _)| s).collect())
+}
+
+pub struct TestDir {
+    pub dir: PathBuf,
+}
+
+impl TestDir {
+    pub fn new() -> anyhow::Result<Self> {
+        let dir = format!("static_files_test{}", TestServerImpl::next_port()).into();
+        std::fs::create_dir_all(&dir)?;
+        Ok(Self { dir })
+    }
+}
+
+impl Drop for TestDir {
+    fn drop(&mut self) {
+        let _ = std::fs::remove_dir_all(&self.dir);
+    }
 }

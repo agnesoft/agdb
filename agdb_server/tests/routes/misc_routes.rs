@@ -1,6 +1,7 @@
 use crate::ADMIN;
 use crate::CONFIG_FILE;
 use crate::DEFAULT_LOG_BODY_LIMIT;
+use crate::TestDir;
 use crate::TestServer;
 use crate::TestServerImpl;
 use crate::next_db_name;
@@ -158,7 +159,7 @@ async fn basepath_test() -> anyhow::Result<()> {
         bind: String::new(),
         address: String::new(),
         basepath: "/public".to_string(),
-        web_staticpaths: Vec::new(),
+        static_roots: Vec::new(),
         admin: ADMIN.to_string(),
         log_level: tracing::level_filters::LevelFilter::INFO,
         log_body_limit: DEFAULT_LOG_BODY_LIMIT,
@@ -332,7 +333,7 @@ async fn large_payload() -> anyhow::Result<()> {
         bind: String::new(),
         address: String::new(),
         basepath: String::new(),
-        web_staticpaths: Vec::new(),
+        static_roots: Vec::new(),
         admin: ADMIN.to_string(),
         log_level: tracing::level_filters::LevelFilter::INFO,
         log_body_limit: DEFAULT_LOG_BODY_LIMIT,
@@ -399,5 +400,135 @@ async fn large_payload() -> anyhow::Result<()> {
     let data = result[1].elements[0].values[0].value.vec_u64()?;
 
     assert_eq!(*data, nums);
+    Ok(())
+}
+
+#[tokio::test]
+async fn static_files() -> anyhow::Result<()> {
+    let test_dir1 = TestDir::new()?;
+    let test_dir2 = TestDir::new()?;
+
+    let config = crate::config::ConfigImpl {
+        bind: String::new(),
+        address: String::new(),
+        basepath: String::new(),
+        static_roots: vec![
+            format!(
+                "/test:{}",
+                test_dir1.dir.canonicalize()?.to_string_lossy().to_string()
+            ),
+            format!(
+                "/test2/nested:{}",
+                test_dir2.dir.canonicalize()?.to_string_lossy().to_string()
+            ),
+        ],
+        admin: ADMIN.to_string(),
+        log_level: tracing::level_filters::LevelFilter::INFO,
+        log_body_limit: DEFAULT_LOG_BODY_LIMIT,
+        request_body_limit: 1024,
+        data_dir: crate::SERVER_DATA_DIR.into(),
+        pepper_path: String::new(),
+        tls_certificate: String::new(),
+        tls_key: String::new(),
+        tls_root: String::new(),
+        cluster_token: "test".to_string(),
+        cluster_heartbeat_timeout_ms: 1000,
+        cluster_term_timeout_ms: 3000,
+        cluster: Vec::new(),
+        cluster_node_id: 0,
+        start_time: 0,
+        pepper: None,
+    };
+
+    let path1 = test_dir1.dir.join("index.html");
+    std::fs::write(path1, "Hello, World!")?;
+
+    let path2 = test_dir2.dir.join("index.html");
+    std::fs::write(path2, "Hello, World2!")?;
+
+    let dir = test_dir1.dir.join("sub");
+    std::fs::create_dir_all(dir)?;
+    let path3 = test_dir1.dir.join("sub/index.html");
+    std::fs::write(path3, "Hello, World3!")?;
+
+    let server = TestServerImpl::with_config(config).await?;
+
+    let url = format!("{}/test/index.html", server.address);
+    let content = reqwest::get(url).await?.text().await?;
+    assert_eq!(content, "Hello, World!");
+
+    let url = format!("{}/test2/nested/index.html", server.address);
+    let content = reqwest::get(url).await?.text().await?;
+    assert_eq!(content, "Hello, World2!");
+
+    let url = format!("{}/test/sub/index.html", server.address);
+    let content = reqwest::get(url).await?.text().await?;
+    assert_eq!(content, "Hello, World3!");
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn static_files_with_basepath() -> anyhow::Result<()> {
+    let test_dir1 = TestDir::new()?;
+    let test_dir2 = TestDir::new()?;
+
+    let config = crate::config::ConfigImpl {
+        bind: String::new(),
+        address: String::new(),
+        basepath: "/some_basepath".to_string(),
+        static_roots: vec![
+            format!(
+                "/test:{}",
+                test_dir1.dir.canonicalize()?.to_string_lossy().to_string()
+            ),
+            format!(
+                "/test2/nested:{}",
+                test_dir2.dir.canonicalize()?.to_string_lossy().to_string()
+            ),
+        ],
+        admin: ADMIN.to_string(),
+        log_level: tracing::level_filters::LevelFilter::INFO,
+        log_body_limit: DEFAULT_LOG_BODY_LIMIT,
+        request_body_limit: 1024,
+        data_dir: crate::SERVER_DATA_DIR.into(),
+        pepper_path: String::new(),
+        tls_certificate: String::new(),
+        tls_key: String::new(),
+        tls_root: String::new(),
+        cluster_token: "test".to_string(),
+        cluster_heartbeat_timeout_ms: 1000,
+        cluster_term_timeout_ms: 3000,
+        cluster: Vec::new(),
+        cluster_node_id: 0,
+        start_time: 0,
+        pepper: None,
+    };
+
+    let path1 = test_dir1.dir.join("index.html");
+    std::fs::write(path1, "Hello, World!")?;
+
+    let path2 = test_dir2.dir.join("index.html");
+    std::fs::write(path2, "Hello, World2!")?;
+
+    let dir = test_dir1.dir.join("sub");
+    std::fs::create_dir_all(dir)?;
+    let path3 = test_dir1.dir.join("sub/index.html");
+    std::fs::write(path3, "Hello, World3!")?;
+
+    let server = TestServerImpl::with_config(config).await?;
+
+    let url = format!("{}/test/index.html", server.address);
+    let content = reqwest::get(url).await?.text().await?;
+    assert_eq!(content, "Hello, World!");
+
+    let url = format!("{}/test2/nested/index.html", server.address);
+    let content = reqwest::get(url).await?.text().await?;
+    assert_eq!(content, "Hello, World2!");
+
+    let url = format!("{}/test/sub/index.html", server.address);
+    let content = reqwest::get(url).await?.text().await?;
+    assert_eq!(content, "Hello, World3!");
+
     Ok(())
 }

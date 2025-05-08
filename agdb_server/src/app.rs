@@ -235,7 +235,7 @@ pub(crate) fn app(
         let mut new_router = Router::new()
             .nest(&basepath, router)
             .nest(&basepath, Router::new().fallback(serve_dir_main));
-        for (_, static_path) in staticpaths.iter().enumerate() {
+        for static_path in staticpaths.iter() {
             let serve_dir = get_service(ServeDir::new(static_path));
             let path = PathBuf::from(basepath.clone()).join(static_path);
             let path_str = path.to_str().unwrap();

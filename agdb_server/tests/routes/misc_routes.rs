@@ -158,6 +158,7 @@ async fn basepath_test() -> anyhow::Result<()> {
         bind: String::new(),
         address: String::new(),
         basepath: "/public".to_string(),
+        web_staticpaths: Vec::new(),
         admin: ADMIN.to_string(),
         log_level: tracing::level_filters::LevelFilter::INFO,
         log_body_limit: DEFAULT_LOG_BODY_LIMIT,

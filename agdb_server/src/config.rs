@@ -172,7 +172,7 @@ pub(crate) fn from_str(content: &str) -> ConfigImpl {
                 "basepath" => config.basepath = value.to_string(),
                 "web_staticpaths" => {
                     config.web_staticpaths = cluster_from_value(value);
-                },
+                }
                 "admin" => config.admin = value.to_string(),
                 "log_level" => config.log_level = level_filter_from_str(value),
                 "log_body_limit" => config.log_body_limit = value.parse().unwrap(),
@@ -205,7 +205,10 @@ pub(crate) fn to_str(config: &ConfigImpl) -> String {
     buffer.push_str(&format!("bind: {}\n", config.bind));
     buffer.push_str(&format!("address: {}\n", config.address));
     buffer.push_str(&format!("basepath: {}\n", config.basepath));
-    buffer.push_str(&format!("web_staticpaths: [{}]\n", config.web_staticpaths.join(", ")));
+    buffer.push_str(&format!(
+        "web_staticpaths: [{}]\n",
+        config.web_staticpaths.join(", ")
+    ));
     buffer.push_str(&format!("admin: {}\n", config.admin));
     buffer.push_str(&format!(
         "log_level: {}\n",

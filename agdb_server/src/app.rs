@@ -33,7 +33,7 @@ pub(crate) fn app(
     routes::studio::init(&config)?;
 
     let basepath = config.basepath.clone();
-    let staticpaths = config.web_staticpaths.clone();    
+    let staticpaths = config.web_staticpaths.clone();
     let request_body_limit = config.request_body_limit;
 
     let state = ServerState {
@@ -232,8 +232,9 @@ pub(crate) fn app(
 
     Ok(if !basepath.is_empty() {
         let serve_dir_main = get_service(ServeDir::new("www"));
-        let mut new_router = Router::new().nest(&basepath, router)
-                     .nest(&basepath, Router::new().fallback(serve_dir_main));
+        let mut new_router = Router::new()
+            .nest(&basepath, router)
+            .nest(&basepath, Router::new().fallback(serve_dir_main));
         for (_, static_path) in staticpaths.iter().enumerate() {
             let serve_dir = get_service(ServeDir::new(static_path));
             let path = PathBuf::from(basepath.clone()).join(static_path);

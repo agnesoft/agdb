@@ -3,12 +3,15 @@ use crate::SelectKeysQuery;
 use crate::query_builder::search::Search;
 
 /// Select keys builder.
+#[cfg_attr(feature = "api", derive(agdb::ApiDef))]
 pub struct SelectKeys(pub SelectKeysQuery);
 
 /// Final builder that lets you create
 /// an actual query object.
+#[cfg_attr(feature = "api", derive(agdb::ApiDef))]
 pub struct SelectKeysIds(pub SelectKeysQuery);
 
+#[cfg_attr(feature = "api", agdb::impl_def())]
 impl SelectKeys {
     /// An id or list of ids or search query to select keys of.
     /// All ids specified must exist in the database.
@@ -25,6 +28,7 @@ impl SelectKeys {
     }
 }
 
+#[cfg_attr(feature = "api", agdb::impl_def())]
 impl SelectKeysIds {
     /// Returns the built `SelectKeysQuery` object.
     pub fn query(self) -> SelectKeysQuery {

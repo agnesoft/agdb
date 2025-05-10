@@ -15,6 +15,7 @@ use axum::routing;
 use reqwest::Method;
 use tokio::sync::broadcast::Sender;
 use tower_http::cors::CorsLayer;
+use tower_http::services::ServeDir;
 use utoipa::OpenApi;
 use utoipa_rapidoc::RapiDoc;
 
@@ -29,6 +30,7 @@ pub(crate) fn app(
     routes::studio::init(&config)?;
 
     let basepath = config.basepath.clone();
+    let static_roots = config.static_roots.clone();
     let request_body_limit = config.request_body_limit;
 
     let state = ServerState {
@@ -212,18 +214,30 @@ pub(crate) fn app(
     #[cfg(not(feature = "studio"))]
     let router = Router::new();
 
+    let router = if !static_roots.is_empty() {
+        let mut new_router = router;
+
+        for root in static_roots {
+            let (path, dir) = root.split_once(':').ok_or(format!(
+                "Invalid static root '{root}', must be '<path>:<dir>'"
+            ))?;
+
+            new_router = new_router.nest_service(path, ServeDir::new(dir));
+        }
+
+        new_router
+    } else {
+        router
+    };
+
     let router = router
         .nest("/api/v1", api_v1)
         .layer(middleware::from_fn_with_state(
             state.clone(),
             forward::forward_to_leader,
         ))
-        .layer(middleware::from_fn_with_state(
-            state.clone(),
-            logger::logger,
-        ))
         .layer(DefaultBodyLimit::max(request_body_limit as usize))
-        .with_state(state);
+        .with_state(state.clone());
 
     Ok(if !basepath.is_empty() {
         Router::new().nest(&basepath, router)
@@ -234,5 +248,9 @@ pub(crate) fn app(
         RapiDoc::with_openapi(format!("{basepath}/api/v1/openapi.json"), Api::openapi())
             .path(format!("{basepath}/api/v1")),
     )
+    .layer(middleware::from_fn_with_state(
+        state.clone(),
+        logger::logger,
+    ))
     .layer(cors))
 }

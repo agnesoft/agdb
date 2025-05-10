@@ -22,7 +22,7 @@ struct LogRecord {
     user: String,
     uri: String,
     request_headers: HashMap<String, String>,
-    request_body: String,
+    request: String,
     status: u16,
     time: u128,
     response_headers: HashMap<String, String>,
@@ -49,8 +49,8 @@ pub(crate) async fn logger(
     next: Next,
 ) -> Result<impl IntoResponse, Response> {
     let mut log_record = LogRecord::default();
-    let skip_body = request.uri().path().ends_with("openapi.json")
-        || request.uri().path().starts_with("/studio");
+    let path = request.uri().path();
+    let skip_body = !path.contains("/api/v1/") || path.ends_with("openapi.json");
     let request = request_log(&state, request, &mut log_record, skip_body).await?;
     let now = Instant::now();
     let response = next.run(request).await;
@@ -86,7 +86,7 @@ async fn request_log(
         } else {
             &bytes
         };
-        log_record.request_body = String::from_utf8_lossy(log_bytes).to_string();
+        log_record.request = String::from_utf8_lossy(log_bytes).to_string();
 
         mask_password(log_record);
 
@@ -111,15 +111,15 @@ fn mask_password(log_record: &mut LogRecord) {
         const QUOTE_PATTERN: &str = "\"";
 
         for pattern in PASSWORD_PATTERNS {
-            if let Some(starting_index) = log_record.request_body.find(pattern) {
+            if let Some(starting_index) = log_record.request.find(pattern) {
                 if let Some(start) =
-                    log_record.request_body[starting_index + pattern.len()..].find(QUOTE_PATTERN)
+                    log_record.request[starting_index + pattern.len()..].find(QUOTE_PATTERN)
                 {
                     let mut skip = false;
                     let start = starting_index + pattern.len() + start;
                     let mut end = start + 1;
 
-                    for c in log_record.request_body[start + 1..].chars() {
+                    for c in log_record.request[start + 1..].chars() {
                         end += 1;
 
                         if skip {
@@ -131,10 +131,10 @@ fn mask_password(log_record: &mut LogRecord) {
                         }
                     }
 
-                    log_record.request_body = format!(
+                    log_record.request = format!(
                         "{}\"***\"{}",
-                        &log_record.request_body[..start],
-                        &log_record.request_body[end..]
+                        &log_record.request[..start],
+                        &log_record.request[end..]
                     );
                 }
             }
@@ -189,7 +189,7 @@ mod tests {
             version: "HTTP/1.1".to_string(),
             user: String::new(),
             request_headers: HashMap::new(),
-            request_body: request_body.to_string(),
+            request: request_body.to_string(),
             status: StatusCode::OK.as_u16(),
             time: 0,
             response_headers: HashMap::new(),
@@ -216,7 +216,7 @@ mod tests {
             version: "HTTP/1.1".to_string(),
             user: "user".to_string(),
             request_headers: HashMap::new(),
-            request_body: String::new(),
+            request: String::new(),
             status: 500,
             time: 1,
             response_headers: HashMap::new(),
@@ -229,69 +229,69 @@ mod tests {
     fn mask_password_login() {
         let mut record = log_record("/login", "\"password\":\"password\"");
         mask_password(&mut record);
-        assert_eq!(record.request_body, "\"password\":\"***\"");
+        assert_eq!(record.request, "\"password\":\"***\"");
     }
 
     #[test]
     fn mask_password_change_password() {
         let mut record = log_record("/change_password", "\"password\":\"password\"");
         mask_password(&mut record);
-        assert_eq!(record.request_body, "\"password\":\"***\"");
+        assert_eq!(record.request, "\"password\":\"***\"");
     }
 
     #[test]
     fn mask_password_admin_user_add() {
         let mut record = log_record("/admin/user/user1/add", "\"password\":\"password\"");
         mask_password(&mut record);
-        assert_eq!(record.request_body, "\"password\":\"***\"");
+        assert_eq!(record.request, "\"password\":\"***\"");
     }
 
     #[test]
     fn mask_password_exec() {
         let mut record = log_record("/db/exec", "\"password\":\"password\"");
         mask_password(&mut record);
-        assert_eq!(record.request_body, "\"password\":\"password\"");
+        assert_eq!(record.request, "\"password\":\"password\"");
     }
 
     #[test]
     fn mask_password_spaces() {
         let mut record = log_record("/login", "\"password\" : \" password \" ");
         mask_password(&mut record);
-        assert_eq!(record.request_body, "\"password\" : \"***\" ");
+        assert_eq!(record.request, "\"password\" : \"***\" ");
     }
 
     #[test]
     fn mask_password_quote_in_password() {
         let mut record = log_record("/login", "\"password\":\" pass\\\"word \"");
         mask_password(&mut record);
-        assert_eq!(record.request_body, "\"password\":\"***\"");
+        assert_eq!(record.request, "\"password\":\"***\"");
     }
 
     #[test]
     fn mask_password_no_password() {
         let mut record = log_record("/login", "\"body\":\"value\"");
         mask_password(&mut record);
-        assert_eq!(record.request_body, "\"body\":\"value\"");
+        assert_eq!(record.request, "\"body\":\"value\"");
     }
 
     #[test]
     fn mask_password_no_ending() {
         let mut record = log_record("/login", "\"password\":\"value");
         mask_password(&mut record);
-        assert_eq!(record.request_body, "\"password\":\"***\"");
+        assert_eq!(record.request, "\"password\":\"***\"");
     }
 
     #[test]
     fn mask_password_no_value() {
         let mut record = log_record("/login", "\"password\":\"");
         mask_password(&mut record);
-        assert_eq!(record.request_body, "\"password\":\"***\"");
+        assert_eq!(record.request, "\"password\":\"***\"");
     }
 
     #[test]
     fn mask_password_no_quote() {
         let mut record = log_record("/login", "\"password\":");
         mask_password(&mut record);
-        assert_eq!(record.request_body, "\"password\":");
+        assert_eq!(record.request, "\"password\":");
     }
 }

@@ -147,6 +147,7 @@ pub struct Struct {
     pub fields: Vec<NamedType>,
 }
 
+#[allow(dead_code)]
 #[derive(ApiDef)]
 struct SearchQueryBuilderDummy {
     search: SearchQuery,
@@ -265,15 +266,18 @@ impl Expression {
     }
 }
 
+#[allow(dead_code)]
 struct ApiType {
     ty: Type,
     functions: Vec<Function>,
 }
 
+#[allow(dead_code, clippy::upper_case_acronyms)]
 struct API {
     types: Vec<ApiType>,
 }
 
+#[allow(dead_code)]
 fn ty<T: ApiDefinition>() -> ApiType {
     ApiType {
         ty: T::def(),
@@ -281,6 +285,7 @@ fn ty<T: ApiDefinition>() -> ApiType {
     }
 }
 
+#[allow(dead_code)]
 fn ty_f<T: ApiFunctions>() -> ApiType {
     ApiType {
         ty: T::def(),
@@ -288,6 +293,7 @@ fn ty_f<T: ApiFunctions>() -> ApiType {
     }
 }
 
+#[allow(dead_code)]
 impl API {
     pub fn new() -> Self {
         Self {

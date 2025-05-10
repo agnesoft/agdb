@@ -70,6 +70,7 @@ configs:
       bind: :::3000
       address: https://agdb0:3000
       basepath: ""
+      static_roots: []
       admin: admin
       log_level: INFO
       data_dir: /agdb/data
@@ -86,6 +87,7 @@ configs:
       bind: :::3001
       address: https://agdb1:3001
       basepath: ""
+      static_roots: []
       admin: admin
       log_level: INFO
       data_dir: /agdb/data
@@ -102,6 +104,7 @@ configs:
       bind: :::3002
       address: https://agdb2:3002
       basepath: ""
+      static_roots: []
       admin: admin
       log_level: INFO
       data_dir: /agdb/data

@@ -1,7 +1,7 @@
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::parse_macro_input;
 use syn::DeriveInput;
+use syn::parse_macro_input;
 
 const DB_ID: &str = "db_id";
 
@@ -212,8 +212,7 @@ fn impl_from_db_element(
 }
 
 fn impl_db_id(data: &syn::DataStruct) -> proc_macro2::TokenStream {
-    let db_id = data
-        .fields
+    data.fields
         .iter()
         .find_map(|f| {
             if let Some(name) = &f.ident {
@@ -232,8 +231,7 @@ fn impl_db_id(data: &syn::DataStruct) -> proc_macro2::TokenStream {
         })
         .unwrap_or(quote! {
             ::std::option::Option::None
-        });
-    db_id
+        })
 }
 
 fn is_option_type(f: &syn::Field) -> bool {

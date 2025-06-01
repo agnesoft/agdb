@@ -101,30 +101,46 @@ pub struct NamedType {
 
 #[derive(Debug)]
 pub enum Expression {
-    Create {
-        ty: NamedType,
-    },
-    CreateArg {
-        ty: NamedType,
-        arg: &'static str,
-    },
-    CreateReturn {
-        ty: fn() -> Type,
-    },
-    CreateReturnArg {
-        ty: fn() -> Type,
-        arg: &'static str,
-    },
-    CreateReturnArgT {
-        ty: fn() -> Type,
-        arg: &'static str,
+    Block(Vec<Expression>),
+    Let {
+        name: &'static str,
+        ty: Option<fn() -> Type>,
+        value: Box<Expression>,
     },
     Assign {
-        object: &'static str,
-        fields: Vec<&'static str>,
-        value: &'static str,
+        target: Box<Expression>,
+        value: Box<Expression>,
     },
-    Return(&'static str),
+    Variable(&'static str),
+    Literal(Type),
+    Call {
+        recipient: Option<Box<Expression>>,
+        function: &'static str,
+        args: Vec<Expression>,
+    },
+    If {
+        condition: Box<Expression>,
+        then_branch: Box<Expression>,
+        else_branch: Option<Box<Expression>>,
+    },
+    While {
+        condition: Box<Expression>,
+        body: Box<Expression>,
+    },
+    Return(Option<Box<Expression>>),
+    FieldAccess {
+        base: Box<Expression>,
+        field: &'static str,
+    },
+    Index {
+        base: Box<Expression>,
+        index: Box<Expression>,
+    },
+    Struct {
+        name: &'static str,
+        fields: Vec<(&'static str, Box<Expression>)>,
+    },
+    Unknown(String),
 }
 
 #[derive(Debug, PartialEq)]
@@ -212,57 +228,6 @@ impl<T: ApiDefinition> ApiDefinition for Vec<T> {
 impl<T: ApiDefinition> ApiDefinition for Option<T> {
     fn def() -> Type {
         Type::Option(Box::new(T::def()))
-    }
-}
-
-impl Expression {
-    pub fn create(name: &'static str, ty: fn() -> Type) -> Self {
-        Expression::Create {
-            ty: NamedType { name, ty },
-        }
-    }
-
-    pub fn create_arg(name: &'static str, ty: fn() -> Type, arg: &'static str) -> Self {
-        Expression::CreateArg {
-            ty: NamedType { name, ty },
-            arg,
-        }
-    }
-
-    pub fn create_return(ty: fn() -> Type) -> Self {
-        Expression::CreateReturn { ty }
-    }
-
-    pub fn create_return_arg(ty: fn() -> Type, arg: &'static str) -> Self {
-        Expression::CreateReturnArg { ty, arg }
-    }
-
-    pub fn create_return_arg_t(ty: fn() -> Type, arg: &'static str) -> Self {
-        Expression::CreateReturnArgT { ty, arg }
-    }
-
-    pub fn assign(object: &'static str, field: &'static str, value: &'static str) -> Self {
-        Expression::Assign {
-            object,
-            fields: vec![field],
-            value,
-        }
-    }
-
-    pub fn assign_fields(
-        object: &'static str,
-        fields: Vec<&'static str>,
-        value: &'static str,
-    ) -> Self {
-        Expression::Assign {
-            object,
-            fields,
-            value,
-        }
-    }
-
-    pub fn ret(value: &'static str) -> Self {
-        Expression::Return(value)
     }
 }
 
@@ -400,5 +365,14 @@ mod tests {
     #[test]
     fn test_api() {
         let _api = API::new();
+        for ty in _api.types {
+            for f in ty.functions {
+                for e in f.expressions {
+                    if let Expression::Unknown(a) = e {
+                        println!("{a}");
+                    }
+                }
+            }
+        }
     }
 }

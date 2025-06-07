@@ -1,12 +1,15 @@
 use proc_macro::TokenStream;
 use quote::ToTokens;
 use quote::quote;
+use syn::Expr;
 use syn::Generics;
 use syn::ImplItem;
 use syn::ItemImpl;
 use syn::PathArguments;
 use syn::ReturnType;
 use syn::TypeParamBound;
+use syn::punctuated::Punctuated;
+use syn::token::Comma;
 
 pub fn impl_def(_attr: TokenStream, item: TokenStream) -> TokenStream {
     let mut ret = item.clone();
@@ -331,12 +334,14 @@ fn parse_expr(expr: &syn::Expr) -> proc_macro2::TokenStream {
                 .to_string();
 
             if macro_name == "vec" {
-                //TODO: args
+                let args: Punctuated<Expr, Comma> = syn::parse2(e.mac.tokens.clone())
+                    .map(|args: syn::ExprArray| args.elems)
+                    .unwrap_or_default();
+                let args = args.iter().map(parse_expr);
+
                 quote! {
-                    ::agdb::api::Expression::Call {
-                        recipient: None,
-                        function: #macro_name,
-                        args: vec![],
+                    ::agdb::api::Expression::Array {
+                        elements: vec![#(#args),*],
                     }
                 }
             } else {
@@ -344,24 +349,61 @@ fn parse_expr(expr: &syn::Expr) -> proc_macro2::TokenStream {
             }
         }
         syn::Expr::Let(e) => {
-            //TODO: expr_let
-            let unknown = e.to_token_stream().to_string();
+            let pat = e.pat.to_token_stream().to_string();
+            let expr = parse_expr(&e.expr);
             quote! {
-                ::agdb::api::Expression::Unknown(#unknown.to_string())
+                ::agdb::api::Expression::Let {
+                    name: #pat,
+                    ty: None,
+                    value: Box::new(#expr),
+                }
             }
         }
         syn::Expr::Binary(e) => {
-            //TODO: binary expresions
-            let unknown = e.to_token_stream().to_string();
+            let op = match &e.op {
+                syn::BinOp::Add(_) => quote! { ::agdb::api::Op::Add },
+                syn::BinOp::Sub(_) => quote! { ::agdb::api::Op::Sub },
+                syn::BinOp::Mul(_) => quote! { ::agdb::api::Op::Mul },
+                syn::BinOp::Div(_) => quote! { ::agdb::api::Op::Div },
+                syn::BinOp::Rem(_) => quote! { ::agdb::api::Op::Rem },
+                syn::BinOp::And(_) => quote! { ::agdb::api::Op::And },
+                syn::BinOp::Or(_) => quote! { ::agdb::api::Op::Or },
+                syn::BinOp::BitXor(_) => quote! { ::agdb::api::Op::BitXor },
+                syn::BinOp::BitAnd(_) => quote! { ::agdb::api::Op::BitAnd },
+                syn::BinOp::BitOr(_) => quote! { ::agdb::api::Op::BitOr },
+                syn::BinOp::Shl(_) => quote! { ::agdb::api::Op::Shl },
+                syn::BinOp::Shr(_) => quote! { ::agdb::api::Op::Shr },
+                syn::BinOp::Eq(_) => quote! { ::agdb::api::Op::Eq },
+                syn::BinOp::Lt(_) => quote! { ::agdb::api::Op::Lt },
+                syn::BinOp::Le(_) => quote! { ::agdb::api::Op::Le },
+                syn::BinOp::Ne(_) => quote! { ::agdb::api::Op::Ne },
+                syn::BinOp::Ge(_) => quote! { ::agdb::api::Op::Ge },
+                syn::BinOp::Gt(_) => quote! { ::agdb::api::Op::Gt },
+                _ => unimplemented!("Unsupported binary operator: {e:?}"),
+            };
+            let left = parse_expr(&e.left);
+            let right = parse_expr(&e.right);
             quote! {
-                ::agdb::api::Expression::Unknown(#unknown.to_string())
+                ::agdb::api::Expression::Binary {
+                    op: #op,
+                    left: Box::new(#left),
+                    right: Box::new(#right),
+                }
             }
         }
         syn::Expr::Unary(e) => {
-            //TODO: unary expresions
-            let unknown = e.to_token_stream().to_string();
+            let op = match &e.op {
+                syn::UnOp::Deref(_) => quote! { ::agdb::api::Op::Not },
+                syn::UnOp::Not(_) => quote! { ::agdb::api::Op::Not },
+                syn::UnOp::Neg(_) => quote! { ::agdb::api::Op::Neg },
+                _ => unimplemented!("Unsupported unary operator: {e:?}"),
+            };
+            let expr = parse_expr(&e.expr);
             quote! {
-                ::agdb::api::Expression::Unknown(#unknown.to_string())
+                ::agdb::api::Expression::Unary {
+                    op: #op,
+                    expr: Box::new(#expr),
+                }
             }
         }
         syn::Expr::Closure(e) => {

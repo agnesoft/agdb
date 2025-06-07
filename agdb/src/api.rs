@@ -99,46 +99,82 @@ pub struct NamedType {
     pub ty: fn() -> Type,
 }
 
+#[derive(Debug, PartialEq)]
+pub enum Op {
+    Add,
+    Sub,
+    Mul,
+    Div,
+    Rem,
+    And,
+    Or,
+    BitXor,
+    BitAnd,
+    BitOr,
+    Shl,
+    Shr,
+    Eq,
+    Lt,
+    Le,
+    Ne,
+    Ge,
+    Gt,
+    Not,
+    Neg,
+}
+
 #[derive(Debug)]
 pub enum Expression {
-    Block(Vec<Expression>),
-    Let {
-        name: &'static str,
-        ty: Option<fn() -> Type>,
-        value: Box<Expression>,
+    Array {
+        elements: Vec<Expression>,
     },
     Assign {
         target: Box<Expression>,
         value: Box<Expression>,
     },
-    Variable(&'static str),
-    Literal(Type),
+    Binary {
+        op: Op,
+        left: Box<Expression>,
+        right: Box<Expression>,
+    },
+    Block(Vec<Expression>),
     Call {
         recipient: Option<Box<Expression>>,
         function: &'static str,
         args: Vec<Expression>,
+    },
+    FieldAccess {
+        base: Box<Expression>,
+        field: &'static str,
     },
     If {
         condition: Box<Expression>,
         then_branch: Box<Expression>,
         else_branch: Option<Box<Expression>>,
     },
-    While {
-        condition: Box<Expression>,
-        body: Box<Expression>,
-    },
-    Return(Option<Box<Expression>>),
-    FieldAccess {
-        base: Box<Expression>,
-        field: &'static str,
-    },
     Index {
         base: Box<Expression>,
         index: Box<Expression>,
     },
+    Let {
+        name: &'static str,
+        ty: Option<fn() -> Type>,
+        value: Box<Expression>,
+    },
+    Literal(Type),
+    Return(Option<Box<Expression>>),
     Struct {
         name: &'static str,
         fields: Vec<(&'static str, Box<Expression>)>,
+    },
+    Unary {
+        op: Op,
+        expr: Box<Expression>,
+    },
+    Variable(&'static str),
+    While {
+        condition: Box<Expression>,
+        body: Box<Expression>,
     },
     Unknown(String),
 }

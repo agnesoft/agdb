@@ -1,12 +1,12 @@
 use proc_macro::TokenStream;
 use quote::format_ident;
 use quote::quote;
-use syn::parse_macro_input;
 use syn::DataEnum;
 use syn::DeriveInput;
 use syn::Ident;
 use syn::Index;
 use syn::Type;
+use syn::parse_macro_input;
 
 pub fn agdb_de_serialize(item: TokenStream) -> TokenStream {
     let input = parse_macro_input!(item as DeriveInput);

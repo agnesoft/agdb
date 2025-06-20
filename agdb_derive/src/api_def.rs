@@ -1,11 +1,11 @@
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::parse_macro_input;
 use syn::DataEnum;
 use syn::DeriveInput;
 use syn::Generics;
 use syn::Ident;
 use syn::Type;
+use syn::parse_macro_input;
 
 pub fn api_def(item: TokenStream) -> TokenStream {
     let input = parse_macro_input!(item as DeriveInput);

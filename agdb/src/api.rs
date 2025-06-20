@@ -143,6 +143,10 @@ pub enum Expression {
         function: &'static str,
         args: Vec<Expression>,
     },
+    Closure {
+        ret: Option<fn() -> Type>,
+        body: Vec<Expression>,
+    },
     FieldAccess {
         base: Box<Expression>,
         field: &'static str,

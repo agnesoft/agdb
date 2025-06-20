@@ -34,8 +34,6 @@ pub fn impl_def(_attr: TokenStream, item: TokenStream) -> TokenStream {
          }
     };
 
-    std::fs::write("OUT", t.to_string()).unwrap();
-
     ret.extend(Into::<TokenStream>::into(t));
     ret
 }
@@ -407,10 +405,28 @@ fn parse_expr(expr: &syn::Expr) -> proc_macro2::TokenStream {
             }
         }
         syn::Expr::Closure(e) => {
-            //TODO: closure expresions
-            let unknown = e.to_token_stream().to_string();
+            let body = match &*e.body {
+                syn::Expr::Block(block) => {
+                    let exprs = block.block.stmts.iter().map(parse_stmt);
+                    quote! { vec![#(#exprs),*] }
+                }
+                expr => {
+                    let parsed_expr = parse_expr(expr);
+                    quote! { vec![#parsed_expr] }
+                }
+            };
+
+            let ret_type = if let syn::ReturnType::Type(_, ty) = &e.output {
+                quote! { Some(<#ty as ::agdb::api::ApiDefinition>::def) }
+            } else {
+                quote! { None }
+            };
+
             quote! {
-                ::agdb::api::Expression::Unknown(#unknown.to_string())
+                ::agdb::api::Expression::Closure {
+                    ret: #ret_type,
+                    body: #body,
+                }
             }
         }
         _ => {

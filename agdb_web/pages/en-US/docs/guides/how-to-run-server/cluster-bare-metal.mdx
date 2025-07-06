@@ -20,6 +20,7 @@ First we create the configuration files for our nodes. Notice that the only diff
 bind: :::3000
 address: http://localhost:3000
 basepath: ""
+static_roots: []
 admin: admin
 log_level: INFO
 data_dir: agdb_server_data
@@ -36,6 +37,7 @@ cluster: [http://localhost:3000, http://localhost:3001, http://localhost:3002]
 bind: :::3000
 address: http://localhost:3001
 basepath: ""
+static_roots: []
 admin: admin
 log_level: INFO
 data_dir: agdb_server_data
@@ -52,6 +54,7 @@ cluster: [http://localhost:3000, http://localhost:3001, http://localhost:3002]
 bind: :::3000
 address: http://localhost:3002
 basepath: ""
+static_roots: []
 admin: admin
 log_level: INFO
 data_dir: agdb_server_data

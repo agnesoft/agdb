@@ -20,6 +20,7 @@ async fn https() -> anyhow::Result<()> {
         bind: format!(":::{port}"),
         address: format!("https://localhost:{port}"),
         basepath: String::new(),
+        static_roots: Vec::new(),
         admin: ADMIN.to_string(),
         log_level: LevelFilter::INFO,
         log_body_limit: DEFAULT_LOG_BODY_LIMIT,

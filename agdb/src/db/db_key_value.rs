@@ -16,7 +16,7 @@ use crate::utilities::serialize::SerializeStatic;
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 #[cfg_attr(feature = "derive", derive(agdb::AgdbDeSerialize))]
-#[cfg_attr(feature = "api", derive(agdb::api::ApiDef))]
+#[cfg_attr(feature = "api", derive(agdb::ApiDef))]
 pub struct DbKeyValue {
     /// Key of the property
     pub key: DbValue,

@@ -24,7 +24,7 @@ use std::fmt::Result as DisplayResult;
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 #[cfg_attr(feature = "derive", derive(agdb::AgdbDeSerialize))]
-#[cfg_attr(feature = "api", derive(agdb::api::ApiDef))]
+#[cfg_attr(feature = "api", derive(agdb::ApiDef))]
 pub enum DbValue {
     /// Byte array, sometimes referred to as blob
     Bytes(Vec<u8>),
@@ -54,6 +54,7 @@ pub enum DbValue {
     VecString(Vec<String>),
 }
 
+#[cfg_attr(feature = "api", derive(agdb::ApiDef))]
 pub struct DbValues(pub Vec<DbValue>);
 
 const BYTES_META_VALUE: u8 = 1_u8;

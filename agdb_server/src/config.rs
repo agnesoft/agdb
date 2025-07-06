@@ -14,6 +14,7 @@ pub struct ConfigImpl {
     pub(crate) bind: String,
     pub(crate) address: String,
     pub(crate) basepath: String,
+    pub(crate) static_roots: Vec<String>,
     pub(crate) admin: String,
     pub(crate) log_level: LevelFilter,
     pub(crate) log_body_limit: u64,
@@ -79,6 +80,7 @@ pub(crate) fn new(config_file: &str) -> Config {
         bind: ":::3000".to_string(),
         address: "http://localhost:3000".to_string(),
         basepath: "".to_string(),
+        static_roots: Vec::new(),
         admin: "admin".to_string(),
         log_level: LevelFilter::INFO,
         log_body_limit: DEFAULT_LOG_BODY_LIMIT,
@@ -105,7 +107,7 @@ pub(crate) fn new(config_file: &str) -> Config {
     Config::new(config)
 }
 
-pub(crate) fn cluster_from_value(value: &str) -> Vec<String> {
+pub(crate) fn vec_from_str(value: &str) -> Vec<String> {
     let mut cluster = Vec::new();
 
     for node in value
@@ -131,6 +133,7 @@ pub(crate) fn from_str(content: &str) -> ConfigImpl {
         bind: String::new(),
         address: String::new(),
         basepath: String::new(),
+        static_roots: Vec::new(),
         admin: String::new(),
         log_level: LevelFilter::INFO,
         log_body_limit: DEFAULT_LOG_BODY_LIMIT,
@@ -167,6 +170,7 @@ pub(crate) fn from_str(content: &str) -> ConfigImpl {
                 "bind" => config.bind = value.to_string(),
                 "address" => config.address = value.to_string(),
                 "basepath" => config.basepath = value.to_string(),
+                "static_roots" => config.static_roots = vec_from_str(value),
                 "admin" => config.admin = value.to_string(),
                 "log_level" => config.log_level = level_filter_from_str(value),
                 "log_body_limit" => config.log_body_limit = value.parse().unwrap(),
@@ -183,9 +187,7 @@ pub(crate) fn from_str(content: &str) -> ConfigImpl {
                 "cluster_term_timeout_ms" => {
                     config.cluster_term_timeout_ms = value.parse().unwrap()
                 }
-                "cluster" => {
-                    config.cluster = cluster_from_value(value);
-                }
+                "cluster" => config.cluster = vec_from_str(value),
                 _ => panic!("Unknown key: {}", key),
             }
         }
@@ -199,6 +201,10 @@ pub(crate) fn to_str(config: &ConfigImpl) -> String {
     buffer.push_str(&format!("bind: {}\n", config.bind));
     buffer.push_str(&format!("address: {}\n", config.address));
     buffer.push_str(&format!("basepath: {}\n", config.basepath));
+    buffer.push_str(&format!(
+        "static_roots: {}\n",
+        config.static_roots.join(", ")
+    ));
     buffer.push_str(&format!("admin: {}\n", config.admin));
     buffer.push_str(&format!(
         "log_level: {}\n",
@@ -290,6 +296,7 @@ mod tests {
             bind: ":::3000".to_string(),
             address: "http://localhost:3000".to_string(),
             basepath: "".to_string(),
+            static_roots: vec!["icetool".to_string()],
             admin: "admin".to_string(),
             log_level: LevelFilter::INFO,
             log_body_limit: DEFAULT_LOG_BODY_LIMIT,
@@ -322,6 +329,7 @@ mod tests {
             bind: ":::3000".to_string(),
             address: "http://localhost:3000".to_string(),
             basepath: "".to_string(),
+            static_roots: vec![],
             admin: "admin".to_string(),
             log_level: LevelFilter::INFO,
             log_body_limit: DEFAULT_LOG_BODY_LIMIT,
@@ -355,6 +363,7 @@ mod tests {
             bind: ":::3000".to_string(),
             address: "http://localhost:3000".to_string(),
             basepath: "".to_string(),
+            static_roots: vec![],
             admin: "admin".to_string(),
             log_level: LevelFilter::INFO,
             log_body_limit: DEFAULT_LOG_BODY_LIMIT,
@@ -387,6 +396,7 @@ mod tests {
             bind: ":::3000".to_string(),
             address: "http://localhost:3000".to_string(),
             basepath: "".to_string(),
+            static_roots: vec![],
             admin: "admin".to_string(),
             log_level: LevelFilter::INFO,
             log_body_limit: DEFAULT_LOG_BODY_LIMIT,

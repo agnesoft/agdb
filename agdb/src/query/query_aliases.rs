@@ -1,6 +1,7 @@
 /// Wrapper around `Vec<String>` to provide
 /// several convenient conversions for the
 /// [`QueryBuilder`].
+#[cfg_attr(feature = "api", derive(agdb::ApiDef))]
 pub struct QueryAliases(pub Vec<String>);
 
 impl<T: Into<String>> From<Vec<T>> for QueryAliases {

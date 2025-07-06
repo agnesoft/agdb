@@ -7,7 +7,7 @@ use crate::graph_search::SearchControl;
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 #[cfg_attr(feature = "derive", derive(agdb::AgdbDeSerialize))]
-#[cfg_attr(feature = "api", derive(agdb::api::ApiDef))]
+#[cfg_attr(feature = "api", derive(agdb::ApiDef))]
 pub enum QueryConditionLogic {
     /// Logical AND (&&)
     And,
@@ -21,7 +21,7 @@ pub enum QueryConditionLogic {
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 #[cfg_attr(feature = "derive", derive(agdb::AgdbDeSerialize))]
-#[cfg_attr(feature = "api", derive(agdb::api::ApiDef))]
+#[cfg_attr(feature = "api", derive(agdb::ApiDef))]
 pub enum QueryConditionModifier {
     /// No modifier
     None,
@@ -43,7 +43,7 @@ pub enum QueryConditionModifier {
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 #[cfg_attr(feature = "derive", derive(agdb::AgdbDeSerialize))]
-#[cfg_attr(feature = "api", derive(agdb::api::ApiDef))]
+#[cfg_attr(feature = "api", derive(agdb::ApiDef))]
 pub enum QueryConditionData {
     /// Distance from the search origin. Takes count comparison
     /// (e.g. Equal, GreaterThan).
@@ -91,7 +91,7 @@ pub enum QueryConditionData {
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 #[cfg_attr(feature = "derive", derive(agdb::AgdbDeSerialize))]
-#[cfg_attr(feature = "api", derive(agdb::api::ApiDef))]
+#[cfg_attr(feature = "api", derive(agdb::ApiDef))]
 pub struct QueryCondition {
     /// Logic operator (e.g. And, Or)
     pub logic: QueryConditionLogic,
@@ -112,7 +112,7 @@ pub struct QueryCondition {
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 #[cfg_attr(feature = "derive", derive(agdb::AgdbDeSerialize))]
-#[cfg_attr(feature = "api", derive(agdb::api::ApiDef))]
+#[cfg_attr(feature = "api", derive(agdb::ApiDef))]
 pub enum CountComparison {
     /// property == this
     Equal(u64),
@@ -145,7 +145,7 @@ pub enum CountComparison {
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 #[cfg_attr(feature = "derive", derive(agdb::AgdbDeSerialize))]
-#[cfg_attr(feature = "api", derive(agdb::api::ApiDef))]
+#[cfg_attr(feature = "api", derive(agdb::ApiDef))]
 pub enum Comparison {
     /// property == this
     Equal(DbValue),
@@ -175,7 +175,7 @@ pub enum Comparison {
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 #[cfg_attr(feature = "derive", derive(agdb::AgdbDeSerialize))]
-#[cfg_attr(feature = "api", derive(agdb::api::ApiDef))]
+#[cfg_attr(feature = "api", derive(agdb::ApiDef))]
 pub struct KeyValueComparison {
     /// Property key
     pub key: DbValue,

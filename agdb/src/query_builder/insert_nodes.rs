@@ -7,22 +7,28 @@ use crate::query::query_values::SingleValues;
 
 /// Insert nodes builder to add aliases or count
 /// or values.
+#[cfg_attr(feature = "api", derive(agdb::ApiDef))]
 pub struct InsertNodes(pub InsertNodesQuery);
 
 /// Insert nodes builder to add values.
+#[cfg_attr(feature = "api", derive(agdb::ApiDef))]
 pub struct InsertNodesAliases(pub InsertNodesQuery);
 
 /// Insert nodes builder to add uniform values.
+#[cfg_attr(feature = "api", derive(agdb::ApiDef))]
 pub struct InsertNodesCount(pub InsertNodesQuery);
 
 /// Insert nodes builder to add aliases or count
 /// or values.
+#[cfg_attr(feature = "api", derive(agdb::ApiDef))]
 pub struct InsertNodesIds(pub InsertNodesQuery);
 
 /// Final builder that lets you create
 /// an actual query object.
+#[cfg_attr(feature = "api", derive(agdb::ApiDef))]
 pub struct InsertNodesValues(pub InsertNodesQuery);
 
+#[cfg_attr(feature = "api", agdb::impl_def())]
 impl InsertNodesAliases {
     /// Returns the built `InsertNodesQuery` object.
     pub fn query(self) -> InsertNodesQuery {
@@ -45,6 +51,7 @@ impl InsertNodesAliases {
     }
 }
 
+#[cfg_attr(feature = "api", agdb::impl_def())]
 impl InsertNodesCount {
     /// Returns the built `InsertNodesQuery` object.
     pub fn query(self) -> InsertNodesQuery {
@@ -59,6 +66,7 @@ impl InsertNodesCount {
     }
 }
 
+#[cfg_attr(feature = "api", agdb::impl_def())]
 impl InsertNodesValues {
     /// Returns the built `InsertNodesQuery` object.
     pub fn query(self) -> InsertNodesQuery {
@@ -66,6 +74,7 @@ impl InsertNodesValues {
     }
 }
 
+#[cfg_attr(feature = "api", agdb::impl_def())]
 impl InsertNodes {
     /// A list of `names` of the inserted nodes that will work as aliases
     /// instead of the numerical ids.
@@ -131,6 +140,7 @@ impl InsertNodes {
     }
 }
 
+#[cfg_attr(feature = "api", agdb::impl_def())]
 impl InsertNodesIds {
     /// A list of `names` of the inserted nodes that will work as aliases
     /// instead of the numerical ids.

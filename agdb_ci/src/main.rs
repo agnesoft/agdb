@@ -1,12 +1,12 @@
 mod ci_error;
-mod languages;
+mod language;
 mod sources;
 mod utilities;
 
 use crate::ci_error::CIError;
-use crate::languages::php;
-use crate::languages::rust;
-use crate::languages::typescript;
+use crate::language::php;
+use crate::language::rust;
+use crate::language::typescript;
 use std::path::Path;
 use std::process::Command;
 
@@ -18,7 +18,7 @@ fn ci() -> Result<(), CIError> {
 
     println!("Installing global dependencies");
     utilities::run_command(Command::new(utilities::BASH).arg("-c").arg("npm i"))?;
-    languages::update_versions(Path::new("./"), &current_version, &new_version)?;
+    language::update_versions(Path::new("./"), &current_version, &new_version)?;
 
     rust::generate_api()?;
     typescript::generate_api()?;

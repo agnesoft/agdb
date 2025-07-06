@@ -2,6 +2,7 @@
 import { onMounted, ref, type PropType } from "vue";
 import { useContentInputs } from "@/composables/content/inputs";
 import FadeTransition from "@agdb-studio/design/src/components/transitions/FadeTransition.vue";
+import type { Content } from "@/types/content";
 
 const props = defineProps({
   content: { type: Array as PropType<Content[]>, required: true },

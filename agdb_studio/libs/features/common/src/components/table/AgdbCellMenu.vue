@@ -10,6 +10,12 @@ import {
 import AgdbMenu from "../menu/AgdbMenu.vue";
 import useModal from "@/composables/modal/modal";
 import { fetchData } from "@/composables/table/tableConfig";
+import type {
+  Action,
+  ActionFn,
+  ActionProps,
+  ActionReturn,
+} from "@/types/content";
 
 const props = defineProps({
   actions: { type: Array as PropType<Action<TRow>[]>, required: true },

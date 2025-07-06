@@ -1,7 +1,6 @@
 import { mount } from "@vue/test-utils";
 import AgdbCellMenu from "./AgdbCellMenu.vue";
 import { describe, beforeEach, vi, it, expect } from "vitest";
-import { dbActions } from "@/composables/db/dbConfig";
 import {
   INJECT_KEY_ROW,
   INJECT_KEY_TABLE_NAME,
@@ -10,12 +9,27 @@ import useModal from "@/composables/modal/modal";
 import { convertArrayOfStringsToContent } from "@/composables/content/utils";
 import DropdownContent from "../dropdown/DropdownContent.vue";
 import type { TRow } from "@/composables/table/types";
+import type { Action } from "@/types/content";
 const { fetchData } = vi.hoisted(() => {
   return {
     fetchData: vi.fn(),
   };
 });
 const { modalIsVisible, onConfirm, modal, closeModal } = useModal();
+
+const dbActions: Action<TRow>[] = [
+  {
+    key: "audit",
+    label: "Audit",
+    action: vi.fn(),
+  },
+  {
+    key: "backup",
+    label: "Backup",
+
+    action: vi.fn(),
+  },
+];
 
 vi.mock("@/composables/table/tableConfig", () => {
   return {

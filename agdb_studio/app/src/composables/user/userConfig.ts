@@ -1,6 +1,6 @@
 import type { UserStatus } from "@agnesoft/agdb_api/openapi";
 import { useContentInputs } from "../content/inputs";
-import { client } from "@/services/api.service";
+import { client } from "@agdb-studio/api/src/api";
 import { KEY_MODAL } from "../modal/constants";
 import { addNotification } from "@agdb-studio/notification/src/composables/notificationStore";
 import { convertArrayOfStringsToContent } from "../content/utils";

@@ -1,5 +1,5 @@
-import { useAdmin } from "../profile/admin";
-import { checkClient, client } from "@/services/api.service";
+import { useAdmin } from "@agdb-studio/profile/src/composables/admin";
+import { checkClient, client } from "@agdb-studio/api/src/api";
 import type {
   Components,
   DbResource,

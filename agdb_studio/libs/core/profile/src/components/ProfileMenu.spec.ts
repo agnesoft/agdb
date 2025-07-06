@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { mount } from "@vue/test-utils";
-import useModal from "@/composables/modal/modal";
+import useModal from "@agdb-studio/common/src/composables/modal/modal";
 import ProfileMenu from "./ProfileMenu.vue";
 import { user_change_password } from "@agdb-studio/testing/mocks/apiMock";
-import { useContentInputs } from "@/composables/content/inputs";
-import { KEY_MODAL } from "@/composables/modal/constants";
+import { useContentInputs } from "@agdb-studio/common/src/composables/content/inputs";
+import { KEY_MODAL } from "@agdb-studio/common/src/composables/modal/constants";
 
 const { logout } = vi.hoisted(() => {
   return {

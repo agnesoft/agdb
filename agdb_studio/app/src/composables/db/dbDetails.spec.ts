@@ -7,9 +7,9 @@ import {
 } from "@agdb-studio/testing/mocks/apiMock";
 import { ref } from "vue";
 import { useDbUsersStore } from "./dbUsersStore";
-import useModal from "@/composables/modal/modal";
-import { useContentInputs } from "../content/inputs";
-import { KEY_MODAL } from "../modal/constants";
+import useModal from "@agdb-studio/common/src/composables/modal/modal";
+import { useContentInputs } from "@agdb-studio/common/src/composables/content/inputs";
+import { KEY_MODAL } from "@agdb-studio/common/src/composables/modal/constants";
 
 const dbParams = ref<DbDetailsParams>({
   db: "testDb",

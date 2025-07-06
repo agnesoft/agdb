@@ -1,6 +1,6 @@
 <script lang="ts" setup>
-import AgdbMenu from "../base/menu/AgdbMenu.vue";
-import { useUserActions } from "@/composables/profile/profileActions";
+import AgdbMenu from "@agdb-studio/common/src/components/menu/AgdbMenu.vue";
+import { useUserActions } from "../composables/profileActions";
 
 const { actions } = useUserActions();
 </script>

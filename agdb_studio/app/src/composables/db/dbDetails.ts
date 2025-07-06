@@ -1,11 +1,11 @@
 import type { DbUserRole, ServerDatabase } from "@agnesoft/agdb_api/openapi";
 import { useDbStore } from "./dbStore";
 import { useDbUsersStore } from "./dbUsersStore";
-import { useContentInputs } from "../content/inputs";
+import { useContentInputs } from "@agdb-studio/common/src/composables/content/inputs";
 import { computed, type Ref } from "vue";
-import useModal from "../modal/modal";
-import { KEY_MODAL } from "../modal/constants";
-import { EMPHASIZED_CLASSNAME } from "../content/utils";
+import useModal from "@agdb-studio/common/src/composables/modal/modal";
+import { KEY_MODAL } from "@agdb-studio/common/src/composables/modal/constants";
+import { EMPHASIZED_CLASSNAME } from "@agdb-studio/common/src/composables/content/utils";
 import type { DbIdentification } from "./types";
 
 export type DbDetailsParams = DbIdentification & Pick<ServerDatabase, "role">;

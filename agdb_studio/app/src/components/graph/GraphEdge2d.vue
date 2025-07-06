@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import { type PropType, computed } from "vue";
 import { type Edge } from "@/composables/graph/composable/edge";
+import type { StyleObject } from "@agdb-studio/design/src/types/base";
 
 const props = defineProps({
   edge: {

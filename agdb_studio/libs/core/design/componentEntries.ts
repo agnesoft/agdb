@@ -24,7 +24,7 @@ export const getVueComponentEntries = (
       const relativePath = path.relative(root, fullPath);
       const name = relativePath
         .replace(/\.vue$/, "") // remove extension
-        .replace(/[\/\\]/g, "_"); // convert nested path to flat name
+        .replace(/[/\\]/g, "_"); // convert nested path to flat name
       entries[name] = fullPath;
     }
   }

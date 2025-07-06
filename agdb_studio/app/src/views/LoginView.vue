@@ -1,6 +1,6 @@
 <script lang="ts" setup>
-import LogoIcon from "@/components/base/icons/LogoIcon.vue";
-import LoginForm from "../components/auth/LoginForm.vue";
+import LogoIcon from "@agdb-studio/design/src/components/icons/LogoIcon.vue";
+import LoginForm from "@agdb-studio/profile/src/components/LoginForm.vue";
 </script>
 
 <template>

@@ -1,12 +1,12 @@
 <script lang="ts" setup>
 import { RouterLink, RouterView } from "vue-router";
-import LogoIcon from "@/components/base/icons/LogoIcon.vue";
-import AgdbModal from "@/components/base/modal/AgdbModal.vue";
+import LogoIcon from "@agdb-studio/design/src/components/icons/LogoIcon.vue";
+import AgdbModal from "@agdb-studio/common/src/components/modal/AgdbModal.vue";
 import FadeTransition from "@agdb-studio/design/src/components/transitions/FadeTransition.vue";
 import NotificationViewer from "@agdb-studio/notification/src/components/NotificationViewer.vue";
-import ProfileDropdown from "../header/ProfileDropdown.vue";
+import ProfileDropdown from "@agdb-studio/profile/src/components/ProfileDropdown.vue";
 import { computed } from "vue";
-import { useAdmin } from "@/composables/profile/admin";
+import { useAdmin } from "@agdb-studio/profile/src/composables/admin";
 
 const { isAdminView } = useAdmin();
 

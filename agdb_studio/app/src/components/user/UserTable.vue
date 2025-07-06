@@ -1,10 +1,10 @@
 <script lang="ts" setup>
-import { addTable } from "@/composables/table/tableConfig";
-import { setTableData } from "@/composables/table/tableData";
+import { addTable } from "@agdb-studio/common/src/composables/table/tableConfig";
+import { setTableData } from "@agdb-studio/common/src/composables/table/tableData";
 import { userColumns } from "@/composables/user/userConfig";
 import { useUserStore } from "@/composables/user/userStore";
 import { watchEffect } from "vue";
-import AgdbTable from "../base/table/AgdbTable.vue";
+import AgdbTable from "@agdb-studio/common/src/components/table/AgdbTable.vue";
 
 const { users, fetchUsers } = useUserStore();
 

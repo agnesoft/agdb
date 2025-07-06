@@ -4,7 +4,7 @@ import {
   ACCESS_TOKEN,
   BASE_CONNECTION_TIMEOUT,
   MAX_CONNECTION_ATTEMPTS,
-} from "@/constants";
+} from "./constants";
 import { computed, ref, type ComputedRef } from "vue";
 import { addNotification } from "@agdb-studio/notification/src/composables/notificationStore.ts";
 import type { AgdbApiClient } from "@agnesoft/agdb_api/client";

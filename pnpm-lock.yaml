@@ -289,6 +289,9 @@ importers:
 
   agdb_studio/app:
     dependencies:
+      '@agdb-studio/api':
+        specifier: workspace:*
+        version: link:../libs/core/api
       '@agdb-studio/common':
         specifier: workspace:*
         version: link:../libs/features/common
@@ -298,6 +301,9 @@ importers:
       '@agdb-studio/notification':
         specifier: workspace:*
         version: link:../libs/features/notification
+      '@agdb-studio/profile':
+        specifier: workspace:*
+        version: link:../libs/core/profile
       '@agdb-studio/router':
         specifier: workspace:*
         version: link:../libs/core/router

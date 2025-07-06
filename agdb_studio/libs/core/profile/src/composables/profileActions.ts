@@ -1,12 +1,13 @@
 import { useAuth } from "@agdb-studio/auth/src/auth";
-import { useModal } from "@agdb-studio/common/src/composables/modal";
-import { useContentInputs } from "../content/inputs";
-import { convertArrayOfStringsToContent } from "../content/utils";
-import { client } from "@/services/api.service";
-import { KEY_MODAL } from "../modal/constants";
+import useModal from "@agdb-studio/common/src/composables/modal/modal";
+import { useContentInputs } from "@agdb-studio/common/src/composables/content/inputs";
+import { convertArrayOfStringsToContent } from "@agdb-studio/common/src/composables/content/utils";
+import { client } from "@agdb-studio/api/src/api";
+import { KEY_MODAL } from "@agdb-studio/common/src/composables/modal/constants";
 import { computed } from "vue";
-import { useAdmin } from "@/composables/profile/admin";
+import { useAdmin } from "@/composables/admin";
 import { getRouter } from "@agdb-studio/router/src/router";
+import type { Action } from "@agdb-studio/common/src/types/content";
 
 const { logout } = useAuth();
 const { openModal } = useModal();

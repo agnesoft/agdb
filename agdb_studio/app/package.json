@@ -21,6 +21,8 @@
     "@agdb-studio/notification": "workspace:*",
     "@agdb-studio/router": "workspace:*",
     "@agdb-studio/common": "workspace:*",
+    "@agdb-studio/profile": "workspace:*",
+    "@agdb-studio/api": "workspace:*",
     "@agnesoft/agdb_api": "workspace:*",
     "@kalimahapps/vue-icons": "catalog:",
     "@vueuse/components": "catalog:",

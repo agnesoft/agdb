@@ -1,9 +1,9 @@
 import type { ServerDatabase } from "@agnesoft/agdb_api/openapi";
-import { dateFormatter } from "@/composables/table/utils";
-import { convertArrayOfStringsToContent } from "@/composables/content/utils";
-import { useContentInputs } from "../content/inputs";
-import { KEY_MODAL } from "../modal/constants";
-import useModal from "../modal/modal";
+import { dateFormatter } from "@agdb-studio/common/src/composables/table/utils";
+import { convertArrayOfStringsToContent } from "@agdb-studio/common/src/composables/content/utils";
+import { useContentInputs } from "@agdb-studio/common/src/composables/content/inputs";
+import { KEY_MODAL } from "@agdb-studio/common/src/composables/modal/constants";
+import useModal from "@agdb-studio/common/src/composables/modal/modal";
 import { addNotification } from "@agdb-studio/notification/src/composables/notificationStore";
 import { useDbStore } from "./dbStore";
 import {
@@ -18,8 +18,17 @@ import {
   dbRename,
   dbRestore,
 } from "./dbActions";
-import { useAdmin } from "../profile/admin";
-import type { Column, TRow } from "../table/types";
+import { useAdmin } from "@agdb-studio/profile/src/composables/admin";
+import type {
+  Column,
+  TRow,
+} from "@agdb-studio/common/src/composables/table/types";
+import type {
+  Action,
+  ActionFn,
+  ActionProps,
+} from "@agdb-studio/common/src/types/content";
+import type { Content } from "@agdb-studio/common/src/types/content";
 
 const { getInputValue } = useContentInputs();
 const { openModal } = useModal();

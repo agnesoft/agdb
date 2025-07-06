@@ -3,6 +3,7 @@ import { type PropType, computed, ref } from "vue";
 import GraphEdge2d from "@/components/graph/GraphEdge2d.vue";
 import GraphNode2d from "@/components/graph/GraphNode2d.vue";
 import useForceDirectedGraph from "@/composables/graph/composable/forceDirectedGraph";
+import type { StyleObject } from "@agdb-studio/design/src/types/base";
 
 const props = defineProps({
   graphData: {

@@ -1,3 +1,5 @@
+import type { Action } from "@/types/content";
+
 export type TCellType = string | number | Date | boolean;
 
 export type TRow = Record<string, TCellType>;

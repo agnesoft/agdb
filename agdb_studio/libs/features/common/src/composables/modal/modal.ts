@@ -2,9 +2,10 @@ import { computed, reactive, ref } from "vue";
 import type { Button, Modal } from "./types";
 import { useContentInputs } from "../content/inputs";
 import { KEY_MODAL } from "./constants";
+import type { Content } from "@/types/content";
 
 const { addInput, clearInputs, checkInputsRules } = useContentInputs();
-const modal = reactive<Modal>({
+const modal: Modal = reactive<Modal>({
   header: "",
   content: [],
 });

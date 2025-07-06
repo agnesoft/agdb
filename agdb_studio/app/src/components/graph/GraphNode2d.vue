@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import { type PropType, computed } from "vue";
 import { type Node } from "@/composables/graph/composable/node";
+import type { StyleObject } from "@agdb-studio/design/src/types/base";
 
 const props = defineProps({
   node: {

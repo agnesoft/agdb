@@ -1,7 +1,7 @@
 import { vi, describe, it, beforeEach, expect } from "vitest";
 import { useAdmin } from "./admin";
 import { triggerRef } from "vue";
-import { useAccount } from "@/composables/profile/account";
+import { useAccount } from "@agdb-studio/auth/src/account";
 
 import { getRouter } from "@agdb-studio/router/src/router";
 

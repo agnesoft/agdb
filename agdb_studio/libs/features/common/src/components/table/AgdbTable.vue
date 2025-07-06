@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import { computed, provide } from "vue";
 import { getRows } from "@/composables/table/tableData";
-import AgdbTableRow from "@/components/base/table/AgdbTableRow.vue";
+import AgdbTableRow from "./AgdbTableRow.vue";
 import AgdbTableHeader from "./AgdbTableHeader.vue";
 import { getTableColumns } from "@/composables/table/tableConfig";
 import { type TRow } from "@/composables/table/types";

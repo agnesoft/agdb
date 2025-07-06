@@ -1,15 +1,14 @@
 <script lang="ts" setup>
 import { computed, inject, type PropType, provide, type Ref, ref } from "vue";
-import { type Column, type TRow } from "@/composables/table/types";
+import { type Column, type TRow } from "../../composables/table/types";
 import {
   INJECT_KEY_ROW,
   INJECT_KEY_TABLE_NAME,
-} from "@/composables/table/constants";
+} from "../../composables/table/constants";
 import AgdbCell from "./AgdbCell.vue";
-import { getTable } from "@/composables/table/tableConfig";
+import { getTable } from "../../composables/table/tableConfig";
 import { AkChevronDownSmall, AkChevronUpSmall } from "@kalimahapps/vue-icons";
 import SlideUpTransition from "@agdb-studio/design/src/components/transitions/SlideUpTransition.vue";
-import { getAsyncComponent } from "@/utils/asyncComponents";
 
 const props = defineProps({
   row: {
@@ -31,7 +30,12 @@ const rowData = computed(() => {
 provide(INJECT_KEY_ROW, rowData);
 
 const tableKey = inject<Ref<symbol | string>>(INJECT_KEY_TABLE_NAME);
-const rowDetailsComponent = computed(() => {
+
+const getAsyncComponent = inject<(name: string) => AsyncComponent | undefined>(
+  "getAsyncComponent",
+  (_name: string) => undefined,
+);
+const rowDetailsComponent = computed<AsyncComponent | undefined>(() => {
   const name = tableKey
     ? getTable(tableKey.value)?.rowDetailsComponent
     : undefined;

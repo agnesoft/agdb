@@ -1,14 +1,14 @@
 <script lang="ts" setup>
 import { computed, provide } from "vue";
-import { getRows } from "@/composables/table/tableData";
+import { getRows } from "../../composables/table/tableData";
 import AgdbTableRow from "./AgdbTableRow.vue";
 import AgdbTableHeader from "./AgdbTableHeader.vue";
-import { getTableColumns } from "@/composables/table/tableConfig";
-import { type TRow } from "@/composables/table/types";
+import { getTableColumns } from "../../composables/table/tableConfig";
+import { type TRow } from "../../composables/table/types";
 import {
   INJECT_KEY_COLUMNS,
   INJECT_KEY_TABLE_NAME,
-} from "@/composables/table/constants";
+} from "../../composables/table/constants";
 
 const props = defineProps({
   name: {

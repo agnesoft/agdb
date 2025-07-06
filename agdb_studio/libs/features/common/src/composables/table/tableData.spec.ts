@@ -6,7 +6,7 @@ import {
   clearTableData,
   getRows,
 } from "./tableData";
-import { TABLE_NAME, tableConfig, tableData } from "@/tests/tableMocks";
+import { TABLE_NAME, tableConfig, tableData } from "../../tests/tableMocks";
 import { addFilter, getTableFilter, setSort } from "./tableFilter";
 import { describe, beforeEach, it, expect, vi } from "vitest";
 import type { TRow } from "./types";

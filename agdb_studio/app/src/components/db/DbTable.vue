@@ -1,14 +1,18 @@
 <script lang="ts" setup>
-import AgdbTable from "../base/table/AgdbTable.vue";
+import AgdbTable from "@agdb-studio/common/src/components/table/AgdbTable.vue";
 import { useDbStore } from "@/composables/db/dbStore";
-import { addTable } from "@/composables/table/tableConfig";
-import { setTableData } from "@/composables/table/tableData";
+import { addTable } from "@agdb-studio/common/src/composables/table/tableConfig";
+import { setTableData } from "@agdb-studio/common/src/composables/table/tableData";
 import { watchEffect } from "vue";
 import { dbColumns } from "@/composables/db/dbConfig";
+import { getAsyncComponent } from "@/utils/asyncComponents";
+import { provide } from "vue";
 
 const { databases, getDbName, fetchDatabases } = useDbStore();
 
 const TABLE_KEY = Symbol("databases");
+
+provide("getAsyncComponent", getAsyncComponent);
 
 addTable({
   name: TABLE_KEY,

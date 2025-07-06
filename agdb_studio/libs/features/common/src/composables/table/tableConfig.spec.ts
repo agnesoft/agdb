@@ -8,7 +8,7 @@ import {
   tableExists,
   fetchData,
 } from "./tableConfig";
-import { TABLE_NAME, tableConfig, columnsMap } from "@/tests/tableMocks";
+import { TABLE_NAME, tableConfig, columnsMap } from "../../tests/tableMocks";
 import { describe, beforeEach, it, expect, vi } from "vitest";
 
 describe("tableData", () => {

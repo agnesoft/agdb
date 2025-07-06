@@ -1,8 +1,8 @@
 <script lang="ts" setup>
-import useModal from "@/composables/modal/modal";
+import useModal from "../../composables/modal/modal";
 import { ClCloseMd } from "@kalimahapps/vue-icons";
 import AgdbContent from "../content/AgdbContent.vue";
-import { KEY_MODAL } from "@/composables/modal/constants";
+import { KEY_MODAL } from "../../composables/modal/constants";
 import { nextTick, ref, watch } from "vue";
 
 const { modal, buttons, closeModal, modalIsVisible } = useModal();

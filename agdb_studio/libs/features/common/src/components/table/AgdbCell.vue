@@ -2,8 +2,8 @@
 import {
   INJECT_KEY_COLUMNS,
   INJECT_KEY_ROW,
-} from "@/composables/table/constants";
-import type { Column, TRow } from "@/composables/table/types";
+} from "../../composables/table/constants";
+import type { Column, TRow } from "../../composables/table/types";
 import { computed, inject, type Ref } from "vue";
 import AgdbCellMenu from "./AgdbCellMenu.vue";
 import { BsCheckLg, ClCloseMd } from "@kalimahapps/vue-icons";

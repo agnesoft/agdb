@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { onMounted, ref, type PropType } from "vue";
-import { useContentInputs } from "@/composables/content/inputs";
+import { useContentInputs } from "../../composables/content/inputs";
 import FadeTransition from "@agdb-studio/design/src/components/transitions/FadeTransition.vue";
 import type { Content } from "@/types/content";
 

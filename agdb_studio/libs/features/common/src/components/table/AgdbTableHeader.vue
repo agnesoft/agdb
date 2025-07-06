@@ -1,10 +1,13 @@
 <script lang="ts" setup>
-import { INJECT_KEY_TABLE_NAME } from "@/composables/table/constants";
+import { INJECT_KEY_TABLE_NAME } from "../../composables/table/constants";
 import {
   getTable,
   getTableColumnsArray,
-} from "@/composables/table/tableConfig";
+} from "../../composables/table/tableConfig";
 import { computed, inject, type Ref } from "vue";
+import { TABLE_NAME } from "../../tests/tableMocks";
+
+console.log(TABLE_NAME);
 
 const tableKey = inject<Ref<symbol | string>>(INJECT_KEY_TABLE_NAME);
 const columns = computed(() => {

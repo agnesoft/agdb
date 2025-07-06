@@ -1,6 +1,6 @@
 import { describe, beforeEach, vi, it, expect } from "vitest";
 import useModal from "./modal";
-import { convertArrayOfStringsToContent } from "@/composables/content/utils";
+import { convertArrayOfStringsToContent } from "../content/utils";
 import { useContentInputs } from "../content/inputs";
 import { KEY_MODAL } from "./constants";
 

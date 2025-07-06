@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { convertArrayOfStringsToContent } from "@/composables/content/utils";
+import { convertArrayOfStringsToContent } from "./utils";
 
 describe("Content utils", () => {
   it("converts an array of strings to content", () => {

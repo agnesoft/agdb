@@ -1,4 +1,4 @@
-import { TABLE_NAME, tableConfig, tableData } from "@/tests/tableMocks";
+import { TABLE_NAME, tableConfig, tableData } from "../../tests/tableMocks";
 import { addTable } from "./tableConfig";
 import { setTableData } from "./tableData";
 import {

@@ -1,15 +1,15 @@
 <script lang="ts" setup>
-import type { TRow } from "@/composables/table/types";
+import type { TRow } from "../../composables/table/types";
 import AgdbDropdown from "../dropdown/AgdbDropdown.vue";
 import { MdRoundMenu } from "@kalimahapps/vue-icons";
 import { computed, inject, type PropType, type Ref } from "vue";
 import {
   INJECT_KEY_ROW,
   INJECT_KEY_TABLE_NAME,
-} from "@/composables/table/constants";
+} from "../../composables/table/constants";
 import AgdbMenu from "../menu/AgdbMenu.vue";
-import useModal from "@/composables/modal/modal";
-import { fetchData } from "@/composables/table/tableConfig";
+import useModal from "../../composables/modal/modal";
+import { fetchData } from "../../composables/table/tableConfig";
 import type {
   Action,
   ActionFn,

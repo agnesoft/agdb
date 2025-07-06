@@ -5,7 +5,7 @@ import { convertArrayOfStringsToContent } from "@agdb-studio/common/src/composab
 import { client } from "@agdb-studio/api/src/api";
 import { KEY_MODAL } from "@agdb-studio/common/src/composables/modal/constants";
 import { computed } from "vue";
-import { useAdmin } from "@/composables/admin";
+import { useAdmin } from "./admin";
 import { getRouter } from "@agdb-studio/router/src/router";
 import type { Action } from "@agdb-studio/common/src/types/content";
 

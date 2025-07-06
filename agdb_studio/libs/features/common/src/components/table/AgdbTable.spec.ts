@@ -2,7 +2,7 @@ import { mount } from "@vue/test-utils";
 import AgdbTable from "./AgdbTable.vue";
 import { addTable, clearTables } from "@/composables/table/tableConfig";
 import { setTableData } from "@/composables/table/tableData";
-import { TABLE_NAME, tableConfig, tableData } from "@/tests/tableMocks";
+import { TABLE_NAME, tableConfig, tableData } from "../../tests/tableMocks";
 import { describe, beforeEach, it, expect, vi } from "vitest";
 
 describe("AgdbTable", () => {

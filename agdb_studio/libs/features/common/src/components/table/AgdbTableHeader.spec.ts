@@ -2,7 +2,7 @@ import { shallowMount } from "@vue/test-utils";
 import AgdbTableHeader from "./AgdbTableHeader.vue";
 import { describe, it, expect } from "vitest";
 import { INJECT_KEY_TABLE_NAME } from "@/composables/table/constants";
-import { TABLE_NAME } from "@/tests/tableMocks";
+import { TABLE_NAME } from "../../tests/tableMocks";
 
 describe("TableHeader", () => {
   it("should render", () => {

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { createRouter, getRouter } from "./router";
+import { clearRouter, createRouter, getRouter } from "./router";
 import { createWebHistory, type Router } from "vue-router";
 
 const { isLoggedInMock, logoutMock, admin, fetchUserStatus } = vi.hoisted(
@@ -54,6 +54,23 @@ describe("router", () => {
           path: "/db",
           component: { template: "<div>DB</div>" },
         },
+
+        {
+          path: "/admin",
+          meta: { requiresAdmin: true, admin: true },
+          children: [
+            {
+              path: "",
+              name: "admin",
+              component: { template: "<div>Admin Home</div>" },
+            },
+            {
+              path: "db",
+              name: "admin-db",
+              component: { template: "<div>Admin DB</div>" },
+            },
+          ],
+        },
       ],
     });
     router = getRouter();
@@ -80,43 +97,35 @@ describe("router", () => {
 
     expect(router.currentRoute.value.name).toBe("home");
   });
-  // it("loads the databases page", async () => {
-  //   isLoggedInMock.value = true;
+  it("loads the databases page", async () => {
+    isLoggedInMock.value = true;
 
-  //   await router.push("/db");
+    await router.push("/db");
 
-  //   expect(router.currentRoute.value.name).toBe("db");
-  // });
+    expect(router.currentRoute.value.name).toBe("db");
+  });
 
-  // it("redirects to home if user is not admin", async () => {
-  //   admin.value = false;
+  it("redirects to home if user is not admin", async () => {
+    admin.value = false;
 
-  //   await router.push("/admin");
+    await router.push("/admin");
 
-  //   expect(router.currentRoute.value.name).toBe("home");
-  // });
-  // it("loads the admin page if user is admin", async () => {
-  //   admin.value = true;
+    expect(router.currentRoute.value.name).toBe("home");
+  });
+  it("loads the admin page if user is admin", async () => {
+    admin.value = true;
 
-  //   await router.push("/admin");
+    await router.push("/admin");
 
-  //   expect(router.currentRoute.value.name).toBe("admin");
-  // });
-  // it("loads the admin db page if user is admin", async () => {
-  //   admin.value = true;
+    expect(router.currentRoute.value.name).toBe("admin");
+  });
+  it("loads the admin db page if user is admin", async () => {
+    admin.value = true;
 
-  //   await router.push("/admin/db");
+    await router.push("/admin/db");
 
-  //   expect(router.currentRoute.value.name).toBe("admin-db");
-  // });
-
-  // it("loads the admin users page if user is admin", async () => {
-  //   admin.value = true;
-
-  //   await router.push("/admin/users");
-
-  //   expect(router.currentRoute.value.name).toBe("admin-users");
-  // });
+    expect(router.currentRoute.value.name).toBe("admin-db");
+  });
 
   // it("loads the not found page", async () => {
   //   isLoggedInMock.value = true;
@@ -125,4 +134,12 @@ describe("router", () => {
 
   //   expect(router.currentRoute.value.name).toBe("not-found");
   // });
+  describe("getRouter", () => {
+    it("throws an error if router is not created", () => {
+      clearRouter();
+      expect(() => getRouter()).toThrow(
+        "Router not created yet. Call createRouter first.",
+      );
+    });
+  });
 });

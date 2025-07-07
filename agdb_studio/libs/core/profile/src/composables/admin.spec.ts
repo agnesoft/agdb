@@ -4,9 +4,12 @@ import { triggerRef } from "vue";
 import { useAccount } from "@agdb-studio/auth/src/account";
 
 import { getRouter } from "@agdb-studio/router/src/router";
+import { type Router } from "vue-router";
 
 const { isAdmin, isAdminView } = useAdmin();
 const { admin } = useAccount();
+
+vi.mock("@agdb-studio/router/src/router");
 
 describe("admin.ts", () => {
   beforeEach(() => {
@@ -16,6 +19,15 @@ describe("admin.ts", () => {
     [false, false],
     [true, true],
   ])("returns the admin status %s", (input, expected) => {
+    vi.mocked(getRouter).mockReturnValue({
+      currentRoute: {
+        value: {
+          meta: {
+            admin: input,
+          },
+        },
+      },
+    } as unknown as Router);
     admin.value = input;
     expect(isAdmin.value).toBe(expected);
   });
@@ -24,9 +36,18 @@ describe("admin.ts", () => {
     [false, false],
     [true, true],
   ])("returns the admin view status %s", (input, expected) => {
-    const router = getRouter();
-    router.currentRoute.value.meta.admin = input;
-    triggerRef(router.currentRoute);
+    vi.mocked(getRouter).mockReturnValue({
+      currentRoute: {
+        value: {
+          meta: {
+            admin: input,
+          },
+        },
+      },
+    } as unknown as Router);
+
+    triggerRef(isAdminView);
+
     expect(isAdminView.value).toBe(expected);
   });
 });

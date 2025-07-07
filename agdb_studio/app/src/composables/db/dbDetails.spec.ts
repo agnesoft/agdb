@@ -20,6 +20,26 @@ const { fetchDbUsers } = useDbUsersStore();
 const { modalIsVisible, onConfirm, closeModal } = useModal();
 const { setInputValue, clearAllInputs, getInputValue } = useContentInputs();
 
+vi.mock("@agdb-studio/router/src/router", () => {
+  return {
+    getRouter: vi.fn().mockReturnValue({
+      currentRoute: {
+        value: {
+          name: "db",
+          params: {
+            db: "testDb",
+            owner: "testOwner",
+          },
+          meta: {
+            requiresAdmin: true,
+            admin: true,
+          },
+        },
+      },
+    }),
+  };
+});
+
 describe("dbDetails", () => {
   beforeEach(() => {
     vi.clearAllMocks();

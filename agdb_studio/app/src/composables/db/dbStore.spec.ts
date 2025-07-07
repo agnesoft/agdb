@@ -34,7 +34,7 @@ const { username, admin, dbAdd, dbList } = vi.hoisted(() => {
     }),
   };
 });
-vi.mock("@/composables/profile/account", () => {
+vi.mock("@agdb-studio/auth/src/account", () => {
   return {
     useAccount: () => {
       return {

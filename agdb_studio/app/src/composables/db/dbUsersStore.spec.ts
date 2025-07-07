@@ -6,6 +6,26 @@ import {
   db_user_remove,
 } from "@agdb-studio/testing/mocks/apiMock";
 
+vi.mock("@agdb-studio/router/src/router", () => {
+  return {
+    getRouter: vi.fn().mockReturnValue({
+      currentRoute: {
+        value: {
+          name: "db",
+          params: {
+            db: "testDb",
+            owner: "testOwner",
+          },
+          meta: {
+            requiresAdmin: true,
+            admin: true,
+          },
+        },
+      },
+    }),
+  };
+});
+
 const dbIdentification = {
   db: "testDb",
   owner: "testOwner",

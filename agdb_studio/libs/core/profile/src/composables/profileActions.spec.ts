@@ -6,7 +6,7 @@ import {
   CHANGE_PASSWORD_KEY,
   LOGOUT_KEY,
 } from "./profileActions";
-import type { ActionProps } from "@agdb-studio/common/src/types/content";
+import type { ActionProps } from "@agdb-studio/common/src/composables/content/types";
 
 const { isAdmin, isAdminView, pushMock } = vi.hoisted(() => {
   return {
@@ -25,11 +25,11 @@ vi.mock("./admin", () => {
   };
 });
 
-vi.mock("@/router", () => {
+vi.mock("@agdb-studio/router/src/router", () => {
   return {
-    default: {
+    getRouter: vi.fn().mockReturnValue({
       push: pushMock,
-    },
+    }),
   };
 });
 

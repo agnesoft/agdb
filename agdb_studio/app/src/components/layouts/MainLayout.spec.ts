@@ -13,7 +13,7 @@ const { loginMock, isLoggedInMock, logoutMock } = vi.hoisted(() => {
   };
 });
 
-vi.mock("@/composables/profile/auth", () => {
+vi.mock("@agdb-studio/auth/src/auth", () => {
   return {
     useAuth: () => ({
       login: loginMock,
@@ -26,7 +26,7 @@ vi.mock("@/composables/profile/auth", () => {
 
 const isAdminView = ref(false);
 
-vi.mock("@/composables/profile/admin", () => {
+vi.mock("@agdb-studio/profile/src/composables/admin", () => {
   return {
     useAdmin: () => ({
       isAdminView,

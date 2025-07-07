@@ -13,7 +13,8 @@ import type { DbIdentification } from "./types";
 
 const { isAdminView, isAdmin } = useAdmin();
 
-const shouldRunAdminAction = () => isAdminView.value && isAdmin.value;
+const shouldRunAdminAction: () => boolean = () =>
+  isAdminView.value && isAdmin.value;
 
 export const dbAdd = async (params: {
   owner: string;

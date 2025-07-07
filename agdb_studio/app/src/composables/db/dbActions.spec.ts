@@ -46,7 +46,7 @@ const { username, isAdmin, isAdminView } = vi.hoisted(() => {
     isAdminView: { value: false },
   };
 });
-vi.mock("@/composables/profile/account", () => {
+vi.mock("@agdb-studio/auth/src/account", () => {
   return {
     useAccount: () => {
       return {
@@ -56,7 +56,7 @@ vi.mock("@/composables/profile/account", () => {
   };
 });
 
-vi.mock("@/composables/profile/admin", () => {
+vi.mock("@agdb-studio/profile/src/composables/admin", () => {
   return {
     useAdmin: vi.fn().mockReturnValue({
       isAdmin,

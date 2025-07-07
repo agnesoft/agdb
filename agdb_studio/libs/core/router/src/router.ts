@@ -11,13 +11,13 @@ import { useAccount } from "@agdb-studio/auth/src/account";
 const { isLoggedIn } = useAuth();
 const { admin, fetchUserStatus } = useAccount();
 
-let router: Router;
+let router: Router | undefined = undefined;
 
 export const beforeEach = async (
   to: RouteLocationNormalizedGeneric,
   from: RouteLocationNormalizedGeneric,
   next: NavigationGuardNext,
-) => {
+): Promise<void> => {
   await fetchUserStatus();
 
   if (!isLoggedIn.value) {
@@ -27,10 +27,15 @@ export const beforeEach = async (
       next();
     }
   } else if (to.meta.requiresAdmin) {
+    console.debug(
+      "Admin route detected:",
+      to.fullPath,
+      "Admin status:",
+      admin.value,
+    );
     if (admin.value) {
       next();
     } else {
-      // todo redirect to 404
       next({ name: "home" });
     }
   } else {
@@ -42,14 +47,20 @@ export const beforeEach = async (
   }
 };
 
-export const createRouter = (options: RouterOptions) => {
+export const createRouter = (options: RouterOptions): Router => {
   router = createRouterVue(options);
 
   router.beforeEach(beforeEach);
   return router;
 };
 
-export const getRouter = () => {
+export const clearRouter = (): void => {
+  if (router) {
+    router = undefined;
+  }
+};
+
+export const getRouter = (): Router => {
   if (!router) {
     throw new Error("Router not created yet. Call createRouter first.");
   }

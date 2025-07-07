@@ -4,6 +4,7 @@ import {
   initClient,
   responseInterceptor,
   errorInterceptor,
+  removeToken,
   checkClient,
 } from "./api";
 import { client } from "@agdb-studio/testing/mocks/apiMock";
@@ -78,6 +79,30 @@ describe("client service", () => {
           AgdbApiClient | undefined
         >);
       }).toThrow("Client is not initialized");
+    });
+  });
+  describe("removeToken", () => {
+    it("reloads the page", () => {
+      client.mockResolvedValue({
+        interceptors: {
+          response: {
+            use: vi.fn(),
+          },
+          request: {
+            use: vi.fn(),
+          },
+        },
+        reset_token: vi.fn(),
+      } as unknown as AgdbApiClient);
+      initClient();
+      removeToken();
+      expect(window.location.reload).toHaveBeenCalled();
+    });
+    it("handles undefined client", () => {
+      client.mockResolvedValue(undefined);
+      initClient();
+      expect(() => removeToken()).not.toThrow();
+      expect(window.location.reload).toHaveBeenCalled();
     });
   });
 });

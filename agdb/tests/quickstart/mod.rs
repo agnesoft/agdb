@@ -48,7 +48,7 @@ fn quickstart() -> Result<(), QueryError> {
         )?
         .try_into()?;
 
-    println!("{:?}", users);
+    println!("{users:?}");
     // [User { db_id: Some(DbId(2)), username: "Alice" },
     //  User { db_id: Some(DbId(3)), username: "Bob" },
     //  User { db_id: Some(DbId(4)), username: "John" }]
@@ -66,7 +66,7 @@ fn quickstart() -> Result<(), QueryError> {
         )?
         .try_into()?;
 
-    println!("{:?}", user);
+    println!("{user:?}");
     // User { db_id: Some(DbId(3)), username: "Bob" }
 
     Ok(())

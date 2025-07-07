@@ -33,9 +33,9 @@ fn main() -> Result<(), QueryError> {
     let mut users = vec![];
     for i in 0..100 {
         users.push(User {
-            username: format!("user{}", i),
-            password: format!("password{}", i),
-            token: format!("token{}", i),
+            username: format!("user{i}"),
+            password: format!("password{i}"),
+            token: format!("token{i}"),
         });
     }
     let users = db.exec_mut(QueryBuilder::insert().nodes().values(&users).query())?;
@@ -65,7 +65,7 @@ fn main() -> Result<(), QueryError> {
         )?
         .try_into()?;
 
-    println!("{:?}", user);
+    println!("{user:?}");
 
     Ok(())
 }

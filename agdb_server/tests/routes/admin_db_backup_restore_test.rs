@@ -31,7 +31,7 @@ async fn backup() -> anyhow::Result<()> {
         Path::new(&server.data_dir)
             .join(owner)
             .join("backups")
-            .join(format!("{}.bak", db))
+            .join(format!("{db}.bak"))
             .exists()
     );
     let queries = &vec![QueryBuilder::remove().ids("root").query().into()];
@@ -77,7 +77,7 @@ async fn backup_overwrite() -> anyhow::Result<()> {
         Path::new(&server.data_dir)
             .join(owner)
             .join("backups")
-            .join(format!("{}.bak", db))
+            .join(format!("{db}.bak"))
             .exists()
     );
     let queries = &vec![QueryBuilder::remove().ids("root").query().into()];
@@ -88,7 +88,7 @@ async fn backup_overwrite() -> anyhow::Result<()> {
         Path::new(&server.data_dir)
             .join(owner)
             .join("backups")
-            .join(format!("{}.bak", db))
+            .join(format!("{db}.bak"))
             .exists()
     );
     let status = server.api.admin_db_restore(owner, db).await?;
@@ -126,7 +126,7 @@ async fn backup_of_backup() -> anyhow::Result<()> {
         Path::new(&server.data_dir)
             .join(owner)
             .join("backups")
-            .join(format!("{}.bak", db))
+            .join(format!("{db}.bak"))
             .exists()
     );
     let queries = &vec![QueryBuilder::remove().ids("root").query().into()];

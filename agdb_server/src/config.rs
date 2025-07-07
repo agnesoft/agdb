@@ -188,7 +188,7 @@ pub(crate) fn from_str(content: &str) -> ConfigImpl {
                     config.cluster_term_timeout_ms = value.parse().unwrap()
                 }
                 "cluster" => config.cluster = vec_from_str(value),
-                _ => panic!("Unknown key: {}", key),
+                _ => panic!("Unknown key: {key}"),
             }
         }
     }
@@ -253,7 +253,7 @@ fn level_filter_from_str(level_filter: &str) -> LevelFilter {
         "INFO" => LevelFilter::INFO,
         "DEBUG" => LevelFilter::DEBUG,
         "TRACE" => LevelFilter::TRACE,
-        _ => panic!("Invalid log level: {}", level_filter),
+        _ => panic!("Invalid log level: {level_filter}"),
     }
 }
 

@@ -3,18 +3,6 @@ rm -rf agdb_server_data
 cargo build -r -p agdb_server
 cargo run -r -p agdb_server &
 
-counter=0
-
-while [ $counter -le 10 ]
-do
-    sleep 2
-    if curl -X POST http://localhost:3000/api/v1/status; then
-        break
-    else
-        counter=$((counter+1))
-    fi
-done
-
 npx vitest run --coverage
 error_code=$?
 

@@ -147,7 +147,7 @@ async fn invalid() -> anyhow::Result<()> {
     server.api.db_add(owner, db, DbType::File).await?;
     let status = server
         .api
-        .db_copy(owner, db, &format!("{}/a\0a", owner))
+        .db_copy(owner, db, &format!("{owner}/a\0a"))
         .await
         .unwrap_err()
         .status;

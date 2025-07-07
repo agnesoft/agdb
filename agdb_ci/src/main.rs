@@ -13,8 +13,8 @@ use std::process::Command;
 fn ci() -> Result<(), CIError> {
     let current_version = sources::current_version()?;
     let new_version = sources::new_version()?;
-    println!("Current version: {}", current_version);
-    println!("New version: {}", new_version);
+    println!("Current version: {current_version}");
+    println!("New version: {new_version}");
 
     println!("Installing global dependencies");
     utilities::run_command(Command::new(utilities::BASH).arg("-c").arg("npm i"))?;

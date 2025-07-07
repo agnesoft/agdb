@@ -53,7 +53,7 @@ async fn audit_delete_db() -> anyhow::Result<()> {
     let db_audit_file = Path::new(&server.data_dir)
         .join(owner)
         .join("audit")
-        .join(format!("{}.log", db));
+        .join(format!("{db}.log"));
     assert!(db_audit_file.exists());
     let status = server.api.db_delete(owner, db).await?;
     assert_eq!(status, 204);

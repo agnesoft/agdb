@@ -637,8 +637,8 @@ fn large_queries() {
 
     println!("Min: {}ms", min.as_millis());
     println!("Max: {}ms", max.as_millis());
-    println!("Avg: {}ms", avg);
-    println!("{:?}", times);
+    println!("Avg: {avg}ms");
+    println!("{times:?}");
 }
 
 #[test]

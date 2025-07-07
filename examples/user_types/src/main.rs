@@ -169,7 +169,7 @@ fn main() -> Result<(), QueryError> {
         )?
         .try_into()?;
 
-    println!("{:?}", user);
+    println!("{user:?}");
 
     Ok(())
 }

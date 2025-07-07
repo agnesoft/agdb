@@ -71,7 +71,7 @@ fn main() -> Result<(), QueryError> {
         .to_string();
 
         users.push(UserDb {
-            name: format!("user{}", i),
+            name: format!("user{i}"),
             status,
             age: i,
         });
@@ -89,7 +89,7 @@ fn main() -> Result<(), QueryError> {
     )?;
 
     let user = db.exec(QueryBuilder::select().ids(50).query())?;
-    println!("{:?}", user);
+    println!("{user:?}");
 
     // Migrating the schema from UserDb to UserDb2. The difference is that "age" property
     // is no longer there and the type of the "status" property changed from String to
@@ -127,7 +127,7 @@ fn main() -> Result<(), QueryError> {
     })?;
 
     let user = db.exec(QueryBuilder::select().ids(50).query())?;
-    println!("{:?}", user);
+    println!("{user:?}");
 
     // Finally after you are sure the data in the "old" format is no longer needed you can remove
     // it from the code in any of the subsequent releases of your software.

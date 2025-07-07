@@ -7,7 +7,7 @@ import { KEY_MODAL } from "@agdb-studio/common/src/composables/modal/constants";
 import { computed } from "vue";
 import { useAdmin } from "./admin";
 import { getRouter } from "@agdb-studio/router/src/router";
-import type { Action } from "@agdb-studio/common/src/types/content";
+import type { Action } from "@agdb-studio/common/src/composables/content/types";
 
 const { logout } = useAuth();
 const { openModal } = useModal();

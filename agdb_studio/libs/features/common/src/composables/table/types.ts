@@ -1,4 +1,5 @@
-import type { Action } from "@/types/content";
+import type { AsyncComponent } from "../../types/asyncComponents";
+import type { Action } from "../content/types";
 
 export type TCellType = string | number | Date | boolean;
 

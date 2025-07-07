@@ -13,7 +13,7 @@ const { isLoggedInMock, logoutMock, admin, fetchUserStatus } = vi.hoisted(
   },
 );
 
-vi.mock("@/composables/profile/auth", () => {
+vi.mock("@agdb-studio/auth/src/auth", () => {
   return {
     useAuth: () => ({
       isLoggedIn: isLoggedInMock,
@@ -23,7 +23,7 @@ vi.mock("@/composables/profile/auth", () => {
   };
 });
 
-vi.mock("@/composables/profile/account", () => {
+vi.mock("@agdb-studio/auth/src/account", () => {
   return {
     useAccount: () => ({
       admin,

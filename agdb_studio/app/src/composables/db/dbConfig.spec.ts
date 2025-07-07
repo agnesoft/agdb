@@ -19,10 +19,14 @@ import {
   admin_db_copy,
   admin_db_rename,
 } from "@agdb-studio/testing/mocks/apiMock";
-import { useContentInputs } from "../content/inputs";
-import { KEY_MODAL } from "../modal/constants";
-import useModal from "../modal/modal";
+import { useContentInputs } from "@agdb-studio/common/src/composables/content/inputs";
+import { KEY_MODAL } from "@agdb-studio/common/src/composables/modal/constants";
+import useModal from "@agdb-studio/common/src/composables/modal/modal";
 import type { ServerDatabase } from "@agnesoft/agdb_api/openapi";
+import type {
+  ActionProps,
+  Input,
+} from "@agdb-studio/common/src/composables/content/types";
 
 const { isAdmin, isAdminView } = vi.hoisted(() => {
   return {
@@ -117,7 +121,7 @@ describe("dbConfig", () => {
           (action) => action.key === value,
         );
         const params = { db: "test_db" };
-        subaction?.action({ params });
+        subaction?.action?.({ params } as ActionProps<ServerDatabase>);
         expect(api).toHaveBeenCalledWith({
           ...params,
           [valueKey]: value,

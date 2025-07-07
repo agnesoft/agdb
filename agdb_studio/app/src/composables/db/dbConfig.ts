@@ -27,8 +27,8 @@ import type {
   Action,
   ActionFn,
   ActionProps,
-} from "@agdb-studio/common/src/types/content";
-import type { Content } from "@agdb-studio/common/src/types/content";
+  Content,
+} from "@agdb-studio/common/src/composables/content/types";
 
 const { getInputValue } = useContentInputs();
 const { openModal } = useModal();

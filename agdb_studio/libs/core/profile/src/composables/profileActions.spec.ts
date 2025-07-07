@@ -6,6 +6,7 @@ import {
   CHANGE_PASSWORD_KEY,
   LOGOUT_KEY,
 } from "./profileActions";
+import type { ActionProps } from "@agdb-studio/common/src/types/content";
 
 const { isAdmin, isAdminView, pushMock } = vi.hoisted(() => {
   return {
@@ -15,7 +16,7 @@ const { isAdmin, isAdminView, pushMock } = vi.hoisted(() => {
   };
 });
 
-vi.mock("@/composables/profile/admin", () => {
+vi.mock("./admin", () => {
   return {
     useAdmin: vi.fn().mockReturnValue({
       isAdmin,

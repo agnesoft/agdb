@@ -6,9 +6,13 @@ import {
   admin_user_delete,
   cluster_admin_user_logout,
 } from "@agdb-studio/testing/mocks/apiMock";
-import { useContentInputs } from "../content/inputs";
-import { KEY_MODAL } from "../modal/constants";
+import { useContentInputs } from "@agdb-studio/common/src/composables/content/inputs";
+import { KEY_MODAL } from "@agdb-studio/common/src/composables/modal/constants";
 import type { UserStatus } from "@agnesoft/agdb_api/openapi";
+import type {
+  ActionProps,
+  Input,
+} from "@agdb-studio/common/src/composables/content/types";
 const { addInput, setInputValue, clearAllInputs } = useContentInputs();
 
 const passwordInput: Input = {

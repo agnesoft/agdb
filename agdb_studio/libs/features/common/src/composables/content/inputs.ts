@@ -1,3 +1,4 @@
+import type { Input } from "./types";
 import { reactive, ref, type Reactive } from "vue";
 
 const inputs = ref(new Map<symbol, Map<string, Reactive<Input>>>());

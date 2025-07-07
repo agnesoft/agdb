@@ -15,7 +15,7 @@ import type {
   ActionFn,
   ActionProps,
   ActionReturn,
-} from "@/types/content";
+} from "../../composables/content/types";
 
 const props = defineProps({
   actions: { type: Array as PropType<Action<TRow>[]>, required: true },

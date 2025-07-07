@@ -9,7 +9,7 @@ import useModal from "@/composables/modal/modal";
 import { convertArrayOfStringsToContent } from "@/composables/content/utils";
 import DropdownContent from "../dropdown/DropdownContent.vue";
 import type { TRow } from "@/composables/table/types";
-import type { Action } from "@/types/content";
+import type { Action } from "@/composables/content/types";
 const { fetchData } = vi.hoisted(() => {
   return {
     fetchData: vi.fn(),

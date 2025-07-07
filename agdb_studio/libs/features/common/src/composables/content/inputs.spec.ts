@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { useContentInputs } from "./inputs";
-import type { Input } from "@/types/content";
+import type { Input } from "@/composables/content/types";
 
 const {
   addInput,

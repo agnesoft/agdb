@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { mount } from "@vue/test-utils";
-import LoginForm from "@/components/LoginForm.vue";
+import LoginForm from "./LoginForm.vue";
 
 const { loginMock, logoutMock, pushMock, currentRoute } = vi.hoisted(() => {
   return {
@@ -17,7 +17,7 @@ const { loginMock, logoutMock, pushMock, currentRoute } = vi.hoisted(() => {
   };
 });
 
-vi.mock("@/composables/profile/auth", () => {
+vi.mock("@agdb-studio/auth/src/auth", () => {
   return {
     useAuth: () => ({
       login: loginMock,

@@ -35,7 +35,7 @@ describe("AgdbModal", () => {
     await wrapper.vm.$nextTick();
     expect(wrapper.isVisible()).toBe(false);
   });
-  it("hides a modal when clicked on close button in heades", async () => {
+  it("hides a modal when clicked on close button in headers", async () => {
     const wrapper = mount(AgdbModal, {
       attachTo: document.body,
     });

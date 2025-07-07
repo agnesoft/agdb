@@ -1,9 +1,9 @@
 import { describe, it, expect, vi } from "vitest";
 import { mount } from "@vue/test-utils";
 import ProfileDropdown from "./ProfileDropdown.vue";
-import DropdownContent from "../base/dropdown/DropdownContent.vue";
+import DropdownContent from "@agdb-studio/common/src/components/dropdown/DropdownContent.vue";
 
-vi.mock("@/composables/profile/account", () => {
+vi.mock("@agdb-studio/auth/src/account", () => {
   return {
     useAccount: () => ({
       username: "testUser",

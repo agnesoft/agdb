@@ -1,8 +1,22 @@
 import { describe, beforeEach, vi, it, expect } from "vitest";
 import { mount } from "@vue/test-utils";
 import AgdbMenu from "./AgdbMenu.vue";
-import { dbActions } from "@/composables/db/dbConfig";
+import type { Action } from "@/composables/content/types";
+import type { TRow } from "../../composables/table/types";
 
+const dbActions: Action<TRow>[] = [
+  {
+    key: "audit",
+    label: "Audit",
+    action: vi.fn(),
+  },
+  {
+    key: "backup",
+    label: "Backup",
+
+    action: vi.fn(),
+  },
+];
 describe("AgdbMenu", () => {
   beforeEach(() => {
     vi.clearAllMocks();

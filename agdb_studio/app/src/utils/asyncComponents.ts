@@ -1,3 +1,4 @@
+import type { AsyncComponent } from "@agdb-studio/common/src/types/asyncComponents";
 import { defineAsyncComponent } from "vue";
 
 const asyncComponents: Record<

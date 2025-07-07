@@ -1,10 +1,14 @@
 import type { UserStatus } from "@agnesoft/agdb_api/openapi";
-import { useContentInputs } from "../content/inputs";
+import { useContentInputs } from "@agdb-studio/common/src/composables/content/inputs";
 import { client } from "@agdb-studio/api/src/api";
-import { KEY_MODAL } from "../modal/constants";
+import { KEY_MODAL } from "@agdb-studio/common/src/composables/modal/constants";
 import { addNotification } from "@agdb-studio/notification/src/composables/notificationStore";
-import { convertArrayOfStringsToContent } from "../content/utils";
-import type { Column, TRow } from "../table/types";
+import { convertArrayOfStringsToContent } from "@agdb-studio/common/src/composables/content/utils";
+import type {
+  Column,
+  TRow,
+} from "@agdb-studio/common/src/composables/table/types";
+import type { Action } from "@agdb-studio/common/src/composables/content/types";
 
 const { getInputValue } = useContentInputs();
 

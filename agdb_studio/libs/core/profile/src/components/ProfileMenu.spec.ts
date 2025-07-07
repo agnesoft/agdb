@@ -12,7 +12,7 @@ const { logout } = vi.hoisted(() => {
   };
 });
 
-vi.mock("@/composables/profile/auth", () => {
+vi.mock("@agdb-studio/auth/src/auth", () => {
   return {
     useAuth: () => ({
       logout,
@@ -20,7 +20,7 @@ vi.mock("@/composables/profile/auth", () => {
   };
 });
 
-vi.mock("@/composables/profile/account", () => {
+vi.mock("@agdb-studio/auth/src/account", () => {
   return {
     useAccount: () => ({
       username: "testUser",

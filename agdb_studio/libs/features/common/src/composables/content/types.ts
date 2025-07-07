@@ -1,4 +1,5 @@
 import type { StyleObject } from "@agdb-studio/design/src/types/base";
+import type { AsyncComponent } from "../../types/asyncComponents";
 
 export type ActionProps<T> = {
   event: Event;

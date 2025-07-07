@@ -37,12 +37,23 @@ export default typescriptEslint.config(
       // "import/export": "error",
     },
     settings: {
+      // "import/parsers": {
+      //   "@typescript-eslint/parser": [".ts"],
+      // },
       "import/resolver": {
         node: {
           extensions: [".ts"],
+          project: "tsconfig.json",
+        },
+        alias: {
+          map: [
+            ["@", "./src"],
+            ["@kalimahapps/vue-icons", "./node_modules/@kalimahapps/vue-icons"],
+          ],
+          extensions: [".ts", ".vue"],
         },
         typescript: {
-          project: "<root>/packages/web/tsconfig.json",
+          project: "tsconfig.json",
         },
       },
     },

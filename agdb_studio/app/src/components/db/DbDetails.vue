@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import type { TRow } from "@/composables/table/types";
+import type { TRow } from "@agdb-studio/common/src/composables/table/types";
 import { computed, onMounted, type PropType } from "vue";
 import { useDbUsersStore } from "@/composables/db/dbUsersStore";
 import { ClCloseMd, ChPlus } from "@kalimahapps/vue-icons";

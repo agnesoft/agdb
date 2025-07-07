@@ -1,7 +1,9 @@
 import { describe, beforeEach, vi, it, expect } from "vitest";
 import AgdbContent from "./AgdbContent.vue";
 import { mount } from "@vue/test-utils";
-import { useContentInputs } from "@/composables/content/inputs";
+import { useContentInputs } from "../../composables/content/inputs";
+import type { Input } from "@/composables/content/types";
+import type { AsyncComponent } from "@/types/asyncComponents";
 
 const { addInput, getInputValue, clearAllInputs, checkInputsRules } =
   useContentInputs();

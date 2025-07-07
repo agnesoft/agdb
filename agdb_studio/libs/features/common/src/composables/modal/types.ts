@@ -1,3 +1,5 @@
+import type { Content } from "../content/types";
+
 export type Modal = {
   header: string;
   content: Content[];

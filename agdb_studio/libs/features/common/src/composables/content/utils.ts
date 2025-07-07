@@ -1,3 +1,5 @@
+import type { Content, Paragraph } from "./types";
+
 export type ConvertParams = {
   emphasizedWords?: string[];
 };

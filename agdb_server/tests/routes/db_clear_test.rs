@@ -42,7 +42,7 @@ async fn clear_audit() -> anyhow::Result<()> {
     let db_audit_file = Path::new(&server.data_dir)
         .join(owner)
         .join("audit")
-        .join(format!("{}.log", db));
+        .join(format!("{db}.log"));
     assert!(!db_audit_file.exists());
     Ok(())
 }
@@ -125,7 +125,7 @@ async fn clear_all() -> anyhow::Result<()> {
     let db_audit_file = Path::new(&server.data_dir)
         .join(owner)
         .join("audit")
-        .join(format!("{}.log", db));
+        .join(format!("{db}.log"));
     assert!(!db_audit_file.exists());
     assert_eq!(database.backup, 0);
     Ok(())

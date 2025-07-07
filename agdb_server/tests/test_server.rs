@@ -218,7 +218,7 @@ impl TestServerImpl {
         }
 
         if !address.starts_with("http") {
-            address = format!("http://{}", address);
+            address = format!("http://{address}");
         }
 
         let mut admin = HashMap::<&str, String>::new();
@@ -228,7 +228,7 @@ impl TestServerImpl {
         let client = reqwest_client();
 
         let token: String = client
-            .post(format!("{}/api/v1/user/login", address))
+            .post(format!("{address}/api/v1/user/login"))
             .json(&admin)
             .timeout(CLIENT_TIMEOUT)
             .send()
@@ -237,7 +237,7 @@ impl TestServerImpl {
             .await?;
 
         client
-            .post(format!("{}/api/v1/admin/shutdown", address))
+            .post(format!("{address}/api/v1/admin/shutdown"))
             .timeout(CLIENT_TIMEOUT)
             .bearer_auth(token)
             .send()

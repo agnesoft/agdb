@@ -272,7 +272,7 @@ mod tests {
                 .query()
                 .into(),
         ];
-        let _ = format!("{:?}", queries);
+        let _ = format!("{queries:?}");
         assert_eq!(queries, queries);
 
         let serialized = AgdbSerialize::serialize(&queries);

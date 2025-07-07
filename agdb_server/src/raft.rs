@@ -866,7 +866,7 @@ mod test {
                 }
             }
 
-            panic!("Leader not found within {:?}", TIMEOUT);
+            panic!("Leader not found within {TIMEOUT:?}");
         }
 
         async fn expect_follower(&self, node: u64) {
@@ -884,7 +884,7 @@ mod test {
                 }
             }
 
-            panic!("{node} has not become a followerwithin {:?}", TIMEOUT);
+            panic!("{node} has not become a followerwithin {TIMEOUT:?}");
         }
 
         async fn expect_data(&self, node: u64, data: &[u8]) {
@@ -938,8 +938,7 @@ mod test {
             }
 
             panic!(
-                "{left_node} is not in sync with {right_node} in {:?}:\nLEFT\n{:?}\nRIGHT:\n{:?}",
-                TIMEOUT, left_storage, right_storage
+                "{left_node} is not in sync with {right_node} in {TIMEOUT:?}:\nLEFT\n{left_storage:?}\nRIGHT:\n{right_storage:?}"
             );
         }
 

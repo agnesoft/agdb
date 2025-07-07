@@ -8,26 +8,6 @@ import {
 } from "@/composables/table/constants";
 import { addTable } from "@/composables/table/tableConfig";
 
-const { getDbUsers, fetchDbUsers, isDbRoleType } = vi.hoisted(() => {
-  return {
-    getDbUsers: vi.fn().mockReturnValue([]),
-    fetchDbUsers: vi.fn().mockResolvedValue({ data: [] }),
-    isDbRoleType: vi.fn().mockReturnValue(true),
-  };
-});
-
-vi.mock("@/composables/db/dbUsersStore", () => {
-  return {
-    useDbUsersStore: () => {
-      return {
-        getDbUsers,
-        fetchDbUsers,
-        isDbRoleType,
-      };
-    },
-  };
-});
-
 describe("TableRow", () => {
   const fetchDataMock = vi.fn();
   addTable({
@@ -79,6 +59,12 @@ describe("TableRow", () => {
         provide: {
           [INJECT_KEY_COLUMNS]: { value: columnsMap },
           [INJECT_KEY_TABLE_NAME]: { value: TABLE_NAME },
+          ["getAsyncComponent"]: () => {
+            return {
+              name: "DbDetails",
+              template: "<div>DbDetails</div>",
+            };
+          },
         },
         stubs: {
           transitions: false,

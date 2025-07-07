@@ -29,6 +29,27 @@ const dbActions: Action<TRow>[] = [
 
     action: vi.fn(),
   },
+  {
+    key: "convert",
+    label: "Convert",
+    actions: [
+      {
+        key: "memory",
+        label: "Memory",
+        action: vi.fn(),
+      },
+      {
+        key: "file",
+        label: "File",
+        action: vi.fn(),
+      },
+      {
+        key: "mapped",
+        label: "Mapped",
+        action: vi.fn(),
+      },
+    ],
+  },
 ];
 
 vi.mock("@/composables/table/tableConfig", () => {

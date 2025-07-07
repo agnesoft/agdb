@@ -4,19 +4,6 @@ import AgdbMenu from "./AgdbMenu.vue";
 import type { Action } from "@/composables/content/types";
 import type { TRow } from "../../composables/table/types";
 
-const dbActions: Action<TRow>[] = [
-  {
-    key: "audit",
-    label: "Audit",
-    action: vi.fn(),
-  },
-  {
-    key: "backup",
-    label: "Backup",
-
-    action: vi.fn(),
-  },
-];
 describe("AgdbMenu", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -29,7 +16,6 @@ describe("AgdbMenu", () => {
           {
             key: "convert",
             label: "Convert",
-            action: vi.fn(),
           },
           {
             key: "backup",
@@ -51,7 +37,29 @@ describe("AgdbMenu", () => {
   it("should render the sub menu on hover", async () => {
     const wrapper = mount(AgdbMenu, {
       props: {
-        actions: dbActions as unknown as Action<undefined>[],
+        actions: [
+          {
+            key: "convert",
+            label: "Convert",
+            actions: [
+              {
+                key: "memory",
+                label: "Memory",
+                action: vi.fn(),
+              },
+              {
+                key: "file",
+                label: "File",
+                action: vi.fn(),
+              },
+              {
+                key: "mapped",
+                label: "Mapped",
+                action: vi.fn(),
+              },
+            ],
+          },
+        ],
       },
     });
 

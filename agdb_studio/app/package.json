@@ -14,7 +14,7 @@
     "lint:check": "eslint --max-warnings=0 .",
     "format": "prettier --write src/ e2e/",
     "format:check": "prettier --check src/ e2e/",
-    "before-commit": "npm run format && npm run lint && npm run test && npm run test:e2e"
+    "before-commit": "pnpm run format && pnpm run lint && pnpm run test && pnpm run test:e2e"
   },
   "dependencies": {
     "@agdb-studio/design": "workspace:*",

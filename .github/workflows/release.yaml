@@ -86,9 +86,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           registry-url: "https://registry.npmjs.org"
-      - run: npm ci
+      - run: pnpm i --frozen-lockfile
       - working-directory: agdb_api/typescript
-        run: npm publish --access public
+        run: pnpm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_ORG_TOKEN }}
 

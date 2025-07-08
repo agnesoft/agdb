@@ -13,11 +13,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: npm ci
-      - run: npm run format:check -- --filter=agdb_studio
-      - run: npm run lint:check -- --filter=agdb_studio
-      - run: npm run build -- --filter=agdb_studio
-      - run: npm run test -- --filter=agdb_studio
+      - run: pnpm i --frozen-lockfile
+      - run: pnpm run format:check -- --filter=agdb_studio
+      - run: pnpm run lint:check -- --filter=agdb_studio
+      - run: pnpm run build -- --filter=agdb_studio
+      - run: pnpm run test -- --filter=agdb_studio
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -25,7 +25,7 @@ jobs:
           path: agdb_studio/coverage/
           retention-days: 30
       - run: npx playwright install --with-deps
-      - run: npm run test:e2e -- --filter=agdb_studio
+      - run: pnpm run test:e2e -- --filter=agdb_studio
       - uses: actions/upload-artifact@v4
         if: always()
         with:

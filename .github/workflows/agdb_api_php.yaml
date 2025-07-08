@@ -16,7 +16,7 @@ jobs:
         working-directory: agdb_api/php
     steps:
       - uses: actions/checkout@v4
-      - run: npm ci
+      - run: pnpm i --frozen-lockfile
       - run: ./ci.sh format:check
       - run: composer config --global use-parent-dir true
       - run: composer install

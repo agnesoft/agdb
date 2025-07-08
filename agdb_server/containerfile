@@ -1,10 +1,7 @@
 FROM node:alpine AS builder_studio
 WORKDIR /usr/src/agdb_studio
 COPY . .
-WORKDIR /usr/src/agdb_studio/agdb_api/typescript
-RUN npm ci && npm run build
-WORKDIR /usr/src/agdb_studio/agdb_studio
-RUN npm ci && npm run build
+RUN npm i -g pnpm && pnpm i --frozen-lockfile && pnpm run build --filter @agnesoft/agdb_studio
 
 FROM rust:alpine AS builder_server
 WORKDIR /usr/src/agdb_server

@@ -12,7 +12,7 @@
         "format:check": "prettier . --check",
         "test": "vitest run --coverage",
         "test:e2e": "playwright test",
-        "before-commit": "npm run format && npm run lint && npm run build && npm run test && npm run test:e2e",
+        "before-commit": "pnpm run format && pnpm run lint && pnpm run build && pnpm run test && pnpm run test:e2e",
         "type-check": "tsc --noEmit"
     },
     "dependencies": {

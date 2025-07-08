@@ -21,7 +21,7 @@ fn run_command(command: &str, dir: &str) {
 fn build_studio() {
     if std::env::var("AGDB_DOCKER_BUILD").is_err() {
         run_command(
-            "pnpm i --frozen-lockfile && pnpm run build -- --filter=agdb_studio",
+            "pnpm i --frozen-lockfile && pnpm run build --filter=agdb_studio",
             "../",
         );
     }

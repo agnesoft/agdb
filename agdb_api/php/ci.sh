@@ -8,6 +8,8 @@ function coverage() {
     attempts=0
     max_attempts=10
 
+    echo "Waiting for the server to start..."
+
     while [ $attempts -lt $max_attempts ]; do
         response=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/api/v1/status 2>/dev/null)
         

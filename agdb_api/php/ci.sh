@@ -10,10 +10,10 @@ function coverage() {
 
     echo "Waiting for the server to start..."
 
-    while [ $attempts -lt $max_attempts ]; do
+    while [[ $attempts -lt $max_attempts ]]; do
         response=$(curl -s -w "%{http_code}" http://localhost:3000/api/v1/status)
         
-        if [ "$response" = "200" ]; then
+        if [[ "$response" = "200" ]]; then
             echo "Server is ready!"
             break
         fi
@@ -58,10 +58,10 @@ function coverage() {
 
     echo ""
 
-    if (( $error_code == 1 )); then
-        echo "Tests failed"
-    else
+    if (( $error_code == 0 )); then
         echo "Tests passed"
+    else
+        echo "Tests failed"
     fi
 
     exit $error_code

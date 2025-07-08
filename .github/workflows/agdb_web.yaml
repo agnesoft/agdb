@@ -24,6 +24,7 @@ jobs:
           name: coverage
           path: agdb_web/coverage/
           retention-days: 30
+      - run: pnpm exec playwright install
       - run: pnpm run test:e2e --filter=agdb_web
       - uses: actions/upload-artifact@v4
         if: always()

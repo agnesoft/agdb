@@ -16,7 +16,7 @@ jobs:
       - run: pnpm i --frozen-lockfile
       - run: pnpm run format:check --filter=@agnesoft/agdb_api
       - run: pnpm run lint:check --filter=@agnesoft/agdb_api
-      - run: pnpm run build
+      - run: pnpm run build --filter=@agnesoft/agdb_api
       - uses: actions-rust-lang/setup-rust-toolchain@v1
       - run: pnpm run test --filter=@agnesoft/agdb_api
       - uses: actions/upload-artifact@v4

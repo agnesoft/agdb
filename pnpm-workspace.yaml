@@ -49,6 +49,7 @@ catalog:
   react-dom: ^18
   react: ^18
   sass: ^1
+  turbo: ^2
   typescript-eslint: ^8
   typescript: ~5
   vite: ^6

@@ -3,5 +3,6 @@
   "devDependencies": {
     "@prettier/plugin-php": "catalog:",
     "prettier": "catalog:"
-  }
+  },
+  "scripts": {}
 }

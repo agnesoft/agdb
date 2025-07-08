@@ -10,7 +10,7 @@ catalogs:
       specifier: ^9
       version: 9.23.0
     '@kalimahapps/vue-icons':
-      specifier: 1.7.1
+      specifier: ^1
       version: 1.7.1
     '@openapitools/openapi-generator-cli':
       specifier: ^2
@@ -37,7 +37,7 @@ catalogs:
       specifier: ^21
       version: 21.1.7
     '@types/node':
-      specifier: ^22
+      specifier: 22.13.14
       version: 22.13.14
     '@types/react':
       specifier: ^18
@@ -173,6 +173,9 @@ importers:
       '@openapitools/openapi-generator-cli':
         specifier: 'catalog:'
         version: 2.21.0
+      '@playwright/test':
+        specifier: 'catalog:'
+        version: 1.51.1
       eslint:
         specifier: 'catalog:'
         version: 9.23.0

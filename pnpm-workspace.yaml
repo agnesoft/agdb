@@ -6,7 +6,7 @@ packages:
 
 catalog:
   "@eslint/js": ^9
-  "@kalimahapps/vue-icons": 1.7.1
+  "@kalimahapps/vue-icons": ^1
   "@playwright/test": ^1
   "@openapitools/openapi-generator-cli": ^2
   "@prettier/plugin-php": ^0.22
@@ -15,7 +15,7 @@ catalog:
   "@theguild/remark-mermaid": ^0.2
   "@tsconfig/node18": ^1
   "@types/jsdom": ^21
-  "@types/node": ^22
+  "@types/node": 22.13.14
   "@types/react-dom": ^18
   "@types/react": ^18
   "@typescript-eslint/eslint-plugin": ^8

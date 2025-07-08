@@ -11,7 +11,7 @@ function coverage() {
     echo "Waiting for the server to start..."
 
     while [ $attempts -lt $max_attempts ]; do
-        response=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/api/v1/status 2>/dev/null)
+        response=$(curl -s -w "%{http_code}" http://localhost:3000/api/v1/status)
         
         if [ "$response" = "200" ]; then
             echo "Server is ready!"

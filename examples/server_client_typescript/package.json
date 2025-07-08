@@ -11,10 +11,10 @@
     "start": "tsc && node main.js"
   },
   "devDependencies": {
-    "@typescript-eslint/parser": "^7.16.0",
-    "eslint": "^8.56.0",
-    "prettier": "^3.3.3",
-    "typescript": "^5.5.3"
+    "@typescript-eslint/parser": "catalog:",
+    "eslint": "catalog:",
+    "prettier": "catalog:",
+    "typescript": "catalog:"
   },
   "dependencies": {
     "agdb_api": "file:../../agdb_api/typescript"

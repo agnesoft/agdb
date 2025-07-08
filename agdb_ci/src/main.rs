@@ -19,11 +19,6 @@ fn ci() -> Result<(), CIError> {
 
     println!("Installing global dependencies");
     utilities::run_command(Command::new(utilities::BASH).arg("-c").arg("pnpm i"))?;
-    utilities::run_command(
-        Command::new(utilities::BASH)
-            .arg("-c")
-            .arg("pnpm audit --fix"),
-    )?;
 
     rust::generate_api()?;
     typescript::generate_api()?;

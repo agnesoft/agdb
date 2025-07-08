@@ -20,6 +20,7 @@
     "@kalimahapps/vue-icons": "catalog:"
   },
   "devDependencies": {
+    "@agdb-studio/tsconfig": "workspace:*",
     "@playwright/test": "catalog:",
     "@rushstack/eslint-patch": "catalog:",
     "@tsconfig/node18": "catalog:",
@@ -40,7 +41,6 @@
     "typescript": "catalog:",
     "vite": "catalog:",
     "vitest": "catalog:",
-    "vue-tsc": "catalog:",
-    "@agdb-studio/tsconfig": "workspace:*"
+    "vue-tsc": "catalog:"
   }
 }

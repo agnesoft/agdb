@@ -375,7 +375,7 @@ importers:
         specifier: 'catalog:'
         version: 5.8.2
       typescript-eslint:
-        specifier: ^8.21.0
+        specifier: 'catalog:'
         version: 8.28.0(eslint@9.23.0)(typescript@5.8.2)
       vite:
         specifier: 'catalog:'
@@ -677,7 +677,7 @@ importers:
         specifier: 'catalog:'
         version: 5.8.2
       typescript-eslint:
-        specifier: ^8.21.0
+        specifier: 'catalog:'
         version: 8.28.0(eslint@9.23.0)(typescript@5.8.2)
       vite:
         specifier: 'catalog:'
@@ -974,7 +974,7 @@ importers:
         specifier: 'catalog:'
         version: 5.8.2
       typescript-eslint:
-        specifier: ^8.21.0
+        specifier: 'catalog:'
         version: 8.28.0(eslint@9.23.0)(typescript@5.8.2)
       vite:
         specifier: 'catalog:'
@@ -1080,7 +1080,7 @@ importers:
         specifier: 'catalog:'
         version: 5.8.2
       typescript-eslint:
-        specifier: ^8.21.0
+        specifier: 'catalog:'
         version: 8.28.0(eslint@9.23.0)(typescript@5.8.2)
       vite:
         specifier: 'catalog:'
@@ -1183,7 +1183,7 @@ importers:
         specifier: 'catalog:'
         version: 5.8.2
       typescript-eslint:
-        specifier: ^8.21.0
+        specifier: 'catalog:'
         version: 8.28.0(eslint@9.23.0)(typescript@5.8.2)
       vite:
         specifier: 'catalog:'
@@ -1286,7 +1286,7 @@ importers:
         specifier: 'catalog:'
         version: 5.8.2
       typescript-eslint:
-        specifier: ^8.21.0
+        specifier: 'catalog:'
         version: 8.28.0(eslint@9.23.0)(typescript@5.8.2)
       vite:
         specifier: 'catalog:'

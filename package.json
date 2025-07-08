@@ -19,6 +19,7 @@
         "@playwright/test": "catalog:",
         "eslint": "catalog:",
         "next": "catalog:",
+        "openapicmd": "catalog:",
         "prettier": "catalog:",
         "turbo": "catalog:",
         "typescript": "catalog:",

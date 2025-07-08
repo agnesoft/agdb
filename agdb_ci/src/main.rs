@@ -15,10 +15,15 @@ fn ci() -> Result<(), CIError> {
     let new_version = sources::new_version()?;
     println!("Current version: {current_version}");
     println!("New version: {new_version}");
+    language::update_versions(Path::new("./"), &current_version, &new_version)?;
 
     println!("Installing global dependencies");
     utilities::run_command(Command::new(utilities::BASH).arg("-c").arg("pnpm i"))?;
-    language::update_versions(Path::new("./"), &current_version, &new_version)?;
+    utilities::run_command(
+        Command::new(utilities::BASH)
+            .arg("-c")
+            .arg("pnpm audit --fix"),
+    )?;
 
     rust::generate_api()?;
     typescript::generate_api()?;

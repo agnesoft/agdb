@@ -13,25 +13,6 @@ pub(crate) fn update_version(
         &format!("\"version\": \"{new_version}\""),
     );
     std::fs::write(json, content)?;
-
-    let project_dir = json.parent().expect("Parent directory not found");
-    println!(
-        "Installing dependencies in '{}'",
-        project_dir.to_string_lossy()
-    );
-    utilities::run_command(
-        Command::new(utilities::BASH)
-            .arg("-c")
-            .arg("pnpm install")
-            .current_dir(project_dir),
-    )?;
-    let _ = utilities::run_command(
-        Command::new(utilities::BASH)
-            .arg("-c")
-            .arg("pnpm audit fix")
-            .current_dir(project_dir),
-    );
-
     Ok(())
 }
 

@@ -1318,9 +1318,6 @@ importers:
         specifier: 'catalog:'
         version: 1.86.0
     devDependencies:
-      '@playwright/test':
-        specifier: 'catalog:'
-        version: 1.51.1
       '@testing-library/react':
         specifier: 'catalog:'
         version: 16.3.0(@testing-library/dom@10.4.0)(@types/react-dom@18.3.7(@types/react@18.3.23))(@types/react@18.3.23)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -1354,9 +1351,6 @@ importers:
       jsdom:
         specifier: 'catalog:'
         version: 26.0.0
-      playwright:
-        specifier: ^1.53.2
-        version: 1.53.2
       prettier:
         specifier: 'catalog:'
         version: 3.5.3
@@ -6725,18 +6719,8 @@ packages:
     engines: {node: '>=18'}
     hasBin: true
 
-  playwright-core@1.53.2:
-    resolution: {integrity: sha512-ox/OytMy+2w1jcYEYlOo1Hhp8hZkLCximMTUTMBXjGUA1KoFfiSZ+DU+3a739jsPY0yoKH2TFy9S2fsJas8yAw==}
-    engines: {node: '>=18'}
-    hasBin: true
-
   playwright@1.51.1:
     resolution: {integrity: sha512-kkx+MB2KQRkyxjYPc3a0wLZZoDczmppyGJIvQ43l+aZihkaVvmu/21kiyaHeHjiFxjxNNFnUncKmcGIyOojsaw==}
-    engines: {node: '>=18'}
-    hasBin: true
-
-  playwright@1.53.2:
-    resolution: {integrity: sha512-6K/qQxVFuVQhRQhFsVZ9fGeatxirtrpPgxzBYWyZLEXJzqYwuL4fuNmfOfD5et1tJE4GScKyPNeLhZeRwuTU3A==}
     engines: {node: '>=18'}
     hasBin: true
 
@@ -14833,17 +14817,9 @@ snapshots:
 
   playwright-core@1.51.1: {}
 
-  playwright-core@1.53.2: {}
-
   playwright@1.51.1:
     dependencies:
       playwright-core: 1.51.1
-    optionalDependencies:
-      fsevents: 2.3.2
-
-  playwright@1.53.2:
-    dependencies:
-      playwright-core: 1.53.2
     optionalDependencies:
       fsevents: 2.3.2
 

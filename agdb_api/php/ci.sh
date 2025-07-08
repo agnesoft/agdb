@@ -72,7 +72,7 @@ function openapi() {
 
     echo "PACKAGE: $package"
     
-    pnpm exec @openapitools/openapi-generator-cli generate \
+    pnpm exec openapi-generator-cli generate \
         -i ../../agdb_server/openapi.json \
         -g php \
         -o ./ \

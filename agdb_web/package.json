@@ -26,7 +26,6 @@
         "sass": "catalog:"
     },
     "devDependencies": {
-        "@playwright/test": "catalog:",
         "@testing-library/react": "catalog:",
         "@types/node": "catalog:",
         "@types/react-dom": "catalog:",
@@ -38,7 +37,6 @@
         "eslint-config-prettier": "catalog:",
         "eslint": "catalog:",
         "jsdom": "catalog:",
-        "playwright": "^1.53.2",
         "prettier": "catalog:",
         "typescript": "catalog:",
         "vitest": "catalog:"

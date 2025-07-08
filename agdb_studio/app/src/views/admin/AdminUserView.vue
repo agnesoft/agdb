@@ -2,7 +2,7 @@
 import UserAddForm from "@/components/user/UserAddForm.vue";
 import UserTable from "@/components/user/UserTable.vue";
 import { useUserStore } from "@/composables/user/userStore";
-import { JaRefreshReverse } from "@kalimahapps/vue-icons";
+import { MdRefresh } from "@kalimahapps/vue-icons";
 import { onMounted } from "vue";
 
 const { fetchUsers } = useUserStore();
@@ -15,7 +15,7 @@ onMounted(async () => {
   <div class="admin-user-view">
     <UserAddForm />
     <button class="button refresh" title="refresh" @click="fetchUsers">
-      <JaRefreshReverse />
+      <MdRefresh />
     </button>
     <UserTable class="table" />
   </div>

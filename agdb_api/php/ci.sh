@@ -3,7 +3,6 @@ function coverage() {
     rm -rf agdb_server_data
     cargo build -r -p agdb_server
     cargo run -r -p agdb_server &
-    curl --retry 10 http://localhost:3000/api/v1/status
 
     local output
     output=$(XDEBUG_MODE=coverage ../../vendor/bin/phpunit tests --coverage-filter src/ --coverage-text --coverage-html coverage/ --coverage-cobertura coverage/coverage-final.xml)

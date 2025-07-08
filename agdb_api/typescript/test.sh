@@ -2,7 +2,6 @@ rm -f agdb_server.yaml
 rm -rf agdb_server_data
 cargo build -r -p agdb_server
 cargo run -r -p agdb_server &
-curl --retry 10 http://localhost:3000/api/v1/status
 
 pnpm exec vitest run --coverage
 error_code=$?

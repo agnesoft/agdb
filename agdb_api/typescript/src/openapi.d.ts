@@ -2309,7 +2309,6 @@ declare namespace Paths {
     }
 }
 
-
 export interface OperationMethods {
   /**
    * admin_db_list
@@ -3253,7 +3252,6 @@ export interface PathsDictionary {
 }
 
 export type Client = OpenAPIClient<OperationMethods, PathsDictionary>
-
 
 export type AdminStatus = Components.Schemas.AdminStatus;
 export type ChangePassword = Components.Schemas.ChangePassword;

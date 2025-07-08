@@ -17,7 +17,7 @@ fn ci() -> Result<(), CIError> {
     println!("New version: {new_version}");
 
     println!("Installing global dependencies");
-    utilities::run_command(Command::new(utilities::BASH).arg("-c").arg("npm i"))?;
+    utilities::run_command(Command::new(utilities::BASH).arg("-c").arg("pnpm i"))?;
     language::update_versions(Path::new("./"), &current_version, &new_version)?;
 
     rust::generate_api()?;

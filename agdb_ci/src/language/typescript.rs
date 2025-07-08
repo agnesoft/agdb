@@ -22,13 +22,13 @@ pub(crate) fn update_version(
     utilities::run_command(
         Command::new(utilities::BASH)
             .arg("-c")
-            .arg("npm install")
+            .arg("pnpm install")
             .current_dir(project_dir),
     )?;
     let _ = utilities::run_command(
         Command::new(utilities::BASH)
             .arg("-c")
-            .arg("npm audit fix")
+            .arg("pnpm audit fix")
             .current_dir(project_dir),
     );
 
@@ -40,7 +40,7 @@ pub(crate) fn generate_test_queries() -> Result<(), CIError> {
     utilities::run_command(
         Command::new(utilities::BASH)
             .arg("-c")
-            .arg("npm run test_queries")
+            .arg("pnpm run test_queries")
             .current_dir(Path::new("agdb_api").join("typescript")),
     )?;
     Ok(())
@@ -51,7 +51,7 @@ pub(crate) fn generate_api() -> Result<(), CIError> {
     utilities::run_command(
         Command::new(utilities::BASH)
             .arg("-c")
-            .arg("npm run openapi")
+            .arg("pnpm run openapi")
             .current_dir(Path::new("agdb_api").join("typescript")),
     )?;
     Ok(())

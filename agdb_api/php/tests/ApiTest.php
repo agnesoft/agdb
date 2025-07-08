@@ -38,7 +38,10 @@ final class ApiTest extends TestCase
 
         while ($attempts < $maxAttempts) {
             try {
-                echo "Attempt " . ($attempts + 1) . "/$maxAttempts: Checking if server is ready..." . PHP_EOL;
+                echo "Attempt " .
+                    ($attempts + 1) .
+                    "/$maxAttempts: Checking if server is ready..." .
+                    PHP_EOL;
                 self::$client->status();
                 $success = true;
                 echo "Server is ready!" . PHP_EOL;
@@ -55,7 +58,9 @@ final class ApiTest extends TestCase
         }
 
         if (!$success) {
-            throw new \RuntimeException("Server failed to start after $maxAttempts attempts");
+            throw new \RuntimeException(
+                "Server failed to start after $maxAttempts attempts"
+            );
         }
     }
 

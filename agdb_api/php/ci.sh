@@ -1,25 +1,9 @@
 function coverage() {
     rm -f agdb_server.yaml
     rm -rf agdb_server_data
-
     cargo build -r -p agdb_server
     cargo run -r -p agdb_server &
-    
-    attempts=0
-    max_attempts=10
-
-    echo "Waiting for the server to start..."
-
-    while [[ $attempts -lt $max_attempts ]]; do
-        response=$(curl -s -w "%{http_code}" http://localhost:3000/api/v1/status)
-        
-        if [[ "$response" = "200" ]]; then
-            echo "Server is ready!"
-            break
-        fi
-        
-        attempts=$((attempts + 1))
-    done
+    curl --retry 10 http://localhost:3000/api/v1/status
 
     local output
     output=$(XDEBUG_MODE=coverage ../../vendor/bin/phpunit tests --coverage-filter src/ --coverage-text --coverage-html coverage/ --coverage-cobertura coverage/coverage-final.xml)

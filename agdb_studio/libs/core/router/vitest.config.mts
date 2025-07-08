@@ -4,7 +4,6 @@ import vitestShared from "@agdb-studio/testing/vitest.shared";
 import path from "path";
 
 export default mergeConfig(
-  mergeConfig(viteConfig, vitestShared),
   defineConfig({
     test: {
       root: path.resolve(__dirname, "."),
@@ -16,4 +15,6 @@ export default mergeConfig(
       },
     },
   }),
+
+  mergeConfig(viteConfig, vitestShared),
 );

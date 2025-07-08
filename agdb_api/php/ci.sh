@@ -72,7 +72,7 @@ function analyse() {
 }
 
 function format() {
-    npx prettier --plugin '@prettier/plugin-php' $1 src tests
+    pnpm exec prettier --plugin '@prettier/plugin-php' $1 src tests
 }
 
 function openapi() {
@@ -89,7 +89,7 @@ function openapi() {
 
     echo "PACKAGE: $package"
     
-    npx @openapitools/openapi-generator-cli generate \
+    pnpm exec @openapitools/openapi-generator-cli generate \
         -i ../../agdb_server/openapi.json \
         -g php \
         -o ./ \
@@ -108,7 +108,7 @@ function openapi() {
 }
 
 function test_queries() {
-    node query_test_generator.js && npx prettier --plugin '@prettier/plugin-php' --write tests/QueryTest.php
+    node query_test_generator.js && pnpm exec prettier --plugin '@prettier/plugin-php' --write tests/QueryTest.php
 }
 
 if [[ "$1" == "coverage" ]]; then

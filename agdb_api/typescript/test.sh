@@ -17,7 +17,7 @@ while [ $attempts -lt $max_attempts ]; do
     attempts=$((attempts + 1))
 done
 
-npx vitest run --coverage
+pnpm exec vitest run --coverage
 error_code=$?
 
 token=$(curl -X POST http://localhost:3000/api/v1/user/login -H "Content-Type: application/json" -d '{"username":"admin","password":"admin"}')

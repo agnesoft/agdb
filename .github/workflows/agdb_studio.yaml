@@ -25,7 +25,7 @@ jobs:
           name: coverage
           path: agdb_studio/coverage/
           retention-days: 30
-      - run: npx playwright install --with-deps
+      - run: pnpm exec playwright install --with-deps
       - run: pnpm run test:e2e --filter=agdb_studio
       - uses: actions/upload-artifact@v4
         if: always()

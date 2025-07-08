@@ -49,7 +49,7 @@ pnpm run test
 
 ```sh
 # Install browsers for the first run
-npx playwright install
+pnpm exec playwright install
 
 # When testing on CI, must build the project first
 pnpm run build

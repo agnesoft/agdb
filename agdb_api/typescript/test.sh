@@ -3,6 +3,20 @@ rm -rf agdb_server_data
 cargo build -r -p agdb_server
 cargo run -r -p agdb_server &
 
+attempts=0
+max_attempts=10
+
+while [ $attempts -lt $max_attempts ]; do
+    response=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/api/v1/status 2>/dev/null)
+    
+    if [ "$response" = "200" ]; then
+        echo "Server is ready!"
+        break
+    fi
+    
+    attempts=$((attempts + 1))
+done
+
 npx vitest run --coverage
 error_code=$?
 

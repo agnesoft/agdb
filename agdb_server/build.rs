@@ -28,10 +28,8 @@ fn build_studio() {
 }
 
 fn main() {
-    println!("cargo::rerun-if-changed=../agdb_api/typescript/src");
-    println!("cargo::rerun-if-changed=../agdb_studio/");
-    println!("cargo::rerun-if-changed=../pnpm-lock.json");
-
-    #[cfg(feature = "studio")]
-    build_studio();
+    if !std::fs::exists("../agdb_studio/app/dist").unwrap() {
+        #[cfg(feature = "studio")]
+        build_studio();
+    }
 }

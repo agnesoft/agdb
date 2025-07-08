@@ -3,7 +3,7 @@ import { useDbStore } from "@/composables/db/dbStore";
 import { onMounted } from "vue";
 import DbAddForm from "@/components/db/DbAddForm.vue";
 import DbTable from "@/components/db/DbTable.vue";
-import { JaRefreshReverse } from "@kalimahapps/vue-icons";
+import { MdRefresh } from "@kalimahapps/vue-icons";
 
 const { fetchDatabases } = useDbStore();
 onMounted(async () => {
@@ -16,7 +16,7 @@ onMounted(async () => {
     <div class="header">
       <DbAddForm />
       <button class="button refresh" title="refresh" @click="fetchDatabases">
-        <JaRefreshReverse />
+        <MdRefresh />
       </button>
     </div>
     <DbTable />

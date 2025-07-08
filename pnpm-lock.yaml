@@ -127,7 +127,7 @@ catalogs:
       specifier: ^7
       version: 7.5.5
     openapicmd:
-      specifier: ^2
+      specifier: ^2.6.1
       version: 2.6.1
     prettier:
       specifier: ^3
@@ -8254,7 +8254,7 @@ snapshots:
       '@babel/traverse': 7.27.0
       '@babel/types': 7.27.0
       convert-source-map: 2.0.0
-      debug: 4.4.0
+      debug: 4.4.1(supports-color@8.1.1)
       gensync: 1.0.0-beta.2
       json5: 2.2.3
       semver: 6.3.1

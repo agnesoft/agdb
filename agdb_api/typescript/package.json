@@ -18,34 +18,34 @@
         "/dist"
     ],
     "scripts": {
-        "build": "pnpm exec tsc && pnpm exec copyfiles -f src/openapi.d.ts dist/",
+        "build": "tsc && copyfiles -f src/openapi.d.ts dist/",
         "test": "bash test.sh",
-        "lint": "pnmpm exec eslint --max-warnings=0 \"**/*.ts\" \"**/*.js\" --fix",
-        "lint:check": "pnpm exec eslint --max-warnings=0 \"**/*.ts\" \"**/*.js\"",
-        "format": "pnpm exec prettier --write src/ tests/",
-        "format:check": "pnpm exec prettier --check src/ tests/",
+        "lint": "eslint --max-warnings=0 \"**/*.ts\" \"**/*.js\" --fix",
+        "lint:check": "eslint --max-warnings=0 \"**/*.ts\" \"**/*.js\"",
+        "format": "prettier --write src/ tests/",
+        "format:check": "prettier --check src/ tests/",
         "before-commit": "pnpm run openapi && pnpm run format && pnpm run lint && pnpm run test",
-        "openapi": "pnpm exec openapicmd typegen ../../agdb_server/openapi.json > src/openapi.d.ts",
-        "test_queries": "node query_test_generator.js && pnpm exec prettier --write tests/query.test.ts"
+        "openapi": "pnpm exec openapi typegen ../../agdb_server/openapi.json > src/openapi.d.ts",
+        "test_queries": "node query_test_generator.js && prettier --write tests/query.test.ts"
     },
     "dependencies": {
         "openapi-client-axios": "^7.6.0"
     },
     "devDependencies": {
+        "@eslint/js": "catalog:",
         "@rushstack/eslint-patch": "catalog:",
         "@types/node": "catalog:",
         "@typescript-eslint/eslint-plugin": "catalog:",
         "@typescript-eslint/parser": "catalog:",
-        "typescript-eslint": "catalog:",
         "@vitest/coverage-v8": "catalog:",
         "copyfiles": "catalog:",
         "eslint": "catalog:",
         "openapicmd": "catalog:",
         "prettier": "catalog:",
         "typescript": "catalog:",
+        "typescript-eslint": "catalog:",
         "vite": "catalog:",
-        "vitest": "catalog:",
-        "@eslint/js": "catalog:"
+        "vitest": "catalog:"
     },
     "exports": {
         ".": {

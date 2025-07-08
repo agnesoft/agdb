@@ -12,6 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - run: npm i -g pnpm
       - run: pnpm i --frozen-lockfile
       - run: pnpm run format:check -- --filter=agdb_web
       - run: pnpm run lint:check -- --filter=agdb_web

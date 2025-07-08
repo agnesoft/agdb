@@ -28,6 +28,7 @@ jobs:
         working-directory: examples/server_client_typescript
     steps:
       - uses: actions/checkout@v4
+      - run: npm i -g pnpm
       - run: pnpm i --frozen-lockfile && pnpm run build
         working-directory: agdb_api/typescript
       - run: pnpm i --frozen-lockfile
@@ -41,6 +42,7 @@ jobs:
         working-directory: examples/server_client_php
     steps:
       - uses: actions/checkout@v4
+      - run: npm i -g pnpm
       - run: pnpm i --frozen-lockfile
       - run: npx prettier --plugin '@prettier/plugin-php' --check src
       - run: composer config --global use-parent-dir true

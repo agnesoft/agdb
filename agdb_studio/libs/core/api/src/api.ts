@@ -73,8 +73,8 @@ export const initClient = async (): Promise<void> => {
           });
         }
         console.warn(message);
-        setTimeout(() => {
-          initClient();
+        setTimeout(async () => {
+          await initClient();
         }, timeout);
       }
       return undefined;

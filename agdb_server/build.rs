@@ -20,7 +20,10 @@ fn run_command(command: &str, dir: &str) {
 #[allow(dead_code)]
 fn build_studio() {
     if std::env::var("AGDB_DOCKER_BUILD").is_err() {
-        run_command("npm ci && npm run build -- --filter=agdb_studio", "../");
+        run_command(
+            "pnpm i --frozen-lockfile && pnpm run build -- --filter=agdb_studio",
+            "../",
+        );
     }
 }
 

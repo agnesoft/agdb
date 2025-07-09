@@ -18,33 +18,34 @@
         "/dist"
     ],
     "scripts": {
-        "build": "tsc && npx copyfiles -f src/openapi.d.ts dist/",
+        "build": "tsc && copyfiles -f src/openapi.d.ts dist/",
         "test": "bash test.sh",
         "lint": "eslint --max-warnings=0 \"**/*.ts\" \"**/*.js\" --fix",
         "lint:check": "eslint --max-warnings=0 \"**/*.ts\" \"**/*.js\"",
         "format": "prettier --write src/ tests/",
         "format:check": "prettier --check src/ tests/",
-        "before-commit": "npm run openapi && npm run format && npm run lint && npm run test",
-        "openapi": "npx openapicmd typegen ../../agdb_server/openapi.json > src/openapi.d.ts",
+        "before-commit": "pnpm run openapi && pnpm run format && pnpm run lint && pnpm run test",
+        "openapi": "pnpm exec openapi typegen ../../agdb_server/openapi.json > src/openapi.d.ts",
         "test_queries": "node query_test_generator.js && prettier --write tests/query.test.ts"
     },
     "dependencies": {
-        "openapi-client-axios": "^7.5.5"
+        "openapi-client-axios": "^7.6.0"
     },
     "devDependencies": {
-        "@rushstack/eslint-patch": "^1.10.5",
-        "@types/node": "^22.10.7",
-        "@typescript-eslint/eslint-plugin": "^8.21.0",
-        "@typescript-eslint/parser": "^8.21.0",
-        "typescript-eslint": "^8.21.0",
-        "@vitest/coverage-v8": "^3.0.3",
-        "copyfiles": "^2.4.1",
-        "eslint": "^9.18.0",
-        "openapicmd": "^2.6.1",
-        "prettier": "^3.4.2",
-        "typescript": "^5.7.3",
-        "vite": "^6.0.11",
-        "vitest": "^3.0.3"
+        "@eslint/js": "catalog:",
+        "@rushstack/eslint-patch": "catalog:",
+        "@types/node": "catalog:",
+        "@typescript-eslint/eslint-plugin": "catalog:",
+        "@typescript-eslint/parser": "catalog:",
+        "@vitest/coverage-v8": "catalog:",
+        "copyfiles": "catalog:",
+        "eslint": "catalog:",
+        "openapicmd": "catalog:",
+        "prettier": "catalog:",
+        "typescript": "catalog:",
+        "typescript-eslint": "catalog:",
+        "vite": "catalog:",
+        "vitest": "catalog:"
     },
     "exports": {
         ".": {

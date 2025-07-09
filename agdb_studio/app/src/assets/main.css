@@ -1,0 +1,55 @@
+@import "./base.css";
+
+#app {
+  font-family: var(--base-font);
+  font-weight: normal;
+}
+
+a {
+  text-decoration: none;
+  color: #ff8800;
+  transition: 0.2s;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--base-font);
+  text-wrap: balance;
+}
+
+h1 {
+  font-size: 1.5rem;
+}
+
+h2 {
+  font-size: 1.25rem;
+}
+
+h3 {
+  font-size: 1.125rem;
+}
+
+h4 {
+  font-size: 1rem;
+}
+
+ul {
+  list-style-type: none;
+  padding: 0;
+  margin: 0;
+}
+
+@media (hover: hover) {
+  a:hover {
+    opacity: 0.8;
+  }
+}
+
+.emphasized {
+  color: #ff8800;
+  font-weight: bold;
+}

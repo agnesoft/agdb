@@ -28,11 +28,44 @@ final class ApiTest extends TestCase
         new Agdb();
         $config = Agnesoft\AgdbApi\Configuration::getDefaultConfiguration();
         self::$client = new AgdbApi(new GuzzleHttp\Client(), $config);
+
+        // Wait for server to be ready
+        $attempts = 0;
+        $maxAttempts = 10;
+        $success = false;
+
+        echo "Waiting for server to start..." . PHP_EOL;
+
+        while ($attempts < $maxAttempts) {
+            try {
+                echo "Attempt " .
+                    ($attempts + 1) .
+                    "/$maxAttempts: Checking if server is ready..." .
+                    PHP_EOL;
+                self::$client->status();
+                $success = true;
+                echo "Server is ready!" . PHP_EOL;
+                break;
+            } catch (\Exception $e) {
+                echo "Server not ready yet: " . $e->getMessage() . PHP_EOL;
+                $attempts++;
+
+                if ($attempts < $maxAttempts) {
+                    echo "Waiting 2 seconds before next attempt..." . PHP_EOL;
+                    sleep(2);
+                }
+            }
+        }
+
+        if (!$success) {
+            throw new \RuntimeException(
+                "Server failed to start after $maxAttempts attempts"
+            );
+        }
     }
 
     public function testInsertNodesAndEdges(): void
     {
-        self::$client->status();
         $token = self::$client->userLogin(
             new UserLogin(["username" => "admin", "password" => "admin"])
         );
@@ -59,7 +92,6 @@ final class ApiTest extends TestCase
 
     public function testInsertReadElements(): void
     {
-        self::$client->status();
         $token = self::$client->userLogin(
             new UserLogin(["username" => "admin", "password" => "admin"])
         );
@@ -111,7 +143,6 @@ final class ApiTest extends TestCase
 
     public function testSearch(): void
     {
-        self::$client->status();
         $token = self::$client->userLogin(
             new UserLogin(["username" => "admin", "password" => "admin"])
         );

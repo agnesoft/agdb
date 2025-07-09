@@ -1,11 +1,9 @@
 function coverage() {
     rm -f agdb_server.yaml
     rm -rf agdb_server_data
-
     cargo build -r -p agdb_server
     cargo run -r -p agdb_server &
-    sleep 3
-    
+
     local output
     output=$(XDEBUG_MODE=coverage ../../vendor/bin/phpunit tests --coverage-filter src/ --coverage-text --coverage-html coverage/ --coverage-cobertura coverage/coverage-final.xml)
     local error_code=$?
@@ -43,10 +41,10 @@ function coverage() {
 
     echo ""
 
-    if (( $error_code == 1 )); then
-        echo "Tests failed"
-    else
+    if (( $error_code == 0 )); then
         echo "Tests passed"
+    else
+        echo "Tests failed"
     fi
 
     exit $error_code
@@ -57,7 +55,7 @@ function analyse() {
 }
 
 function format() {
-    npx prettier --plugin '@prettier/plugin-php' $1 src tests
+    pnpm exec prettier --plugin '@prettier/plugin-php' $1 src tests
 }
 
 function openapi() {
@@ -74,7 +72,7 @@ function openapi() {
 
     echo "PACKAGE: $package"
     
-    npx @openapitools/openapi-generator-cli generate \
+    pnpm exec openapi-generator-cli generate \
         -i ../../agdb_server/openapi.json \
         -g php \
         -o ./ \
@@ -93,7 +91,7 @@ function openapi() {
 }
 
 function test_queries() {
-    node query_test_generator.js && npx prettier --plugin '@prettier/plugin-php' --write tests/QueryTest.php
+    node query_test_generator.js && pnpm exec prettier --plugin '@prettier/plugin-php' --write tests/QueryTest.php
 }
 
 if [[ "$1" == "coverage" ]]; then

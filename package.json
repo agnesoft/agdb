@@ -1,6 +1,6 @@
 {
     "name": "agdb",
-    "packageManager": "npm@11.1.0",
+    "packageManager": "pnpm@10.12.4",
     "scripts": {
         "dev": "turbo run dev",
         "build": "turbo run build",
@@ -14,13 +14,16 @@
         "before-commit": "turbo run before-commit",
         "build-studio": "turbo run agdb_studio#build"
     },
-    "workspaces": [
-        "agdb_studio/**",
-        "agdb_web/**",
-        "agdb_api/**",
-        "agdb_examples/**"
-    ],
     "devDependencies": {
-        "turbo": "^2.4.0"
+        "@openapitools/openapi-generator-cli": "catalog:",
+        "@playwright/test": "catalog:",
+        "eslint": "catalog:",
+        "next": "catalog:",
+        "openapicmd": "catalog:",
+        "prettier": "catalog:",
+        "turbo": "catalog:",
+        "typescript": "catalog:",
+        "vite": "catalog:",
+        "vitest": "catalog:"
     }
 }

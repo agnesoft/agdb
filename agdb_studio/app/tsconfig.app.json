@@ -1,0 +1,18 @@
+{
+  "extends": "@agdb-studio/tsconfig/tsconfig.app.json",
+  "include": [
+    "env.d.ts",
+    "src/**/*",
+    "src/**/*.vue",
+    "src/**/*.ts",
+    "../libs/core/design/src/types/base.ts",
+    "../libs/features/common/src/types/asyncComponents.d.ts"
+  ],
+  "compilerOptions": {
+    "typeRoots": ["node_modules", "types"],
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  }
+}

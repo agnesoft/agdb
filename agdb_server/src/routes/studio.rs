@@ -8,7 +8,7 @@ use include_dir::include_dir;
 use reqwest::StatusCode;
 use std::sync::OnceLock;
 
-static AGDB_STUDIO: Dir = include_dir!("agdb_studio/dist");
+static AGDB_STUDIO: Dir = include_dir!("agdb_studio/app/dist");
 static AGDB_STUDIO_INDEX_HTML: OnceLock<String> = OnceLock::new();
 static AGDB_STUDIO_INDEX_JS: OnceLock<String> = OnceLock::new();
 static AGDB_STUDIO_INDEX_JS_CONTENT: OnceLock<String> = OnceLock::new();

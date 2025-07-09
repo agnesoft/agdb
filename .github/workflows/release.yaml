@@ -69,6 +69,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions-rust-lang/setup-rust-toolchain@v1
+      - run: npm i -g pnpm
       - run: |
           cargo publish -p agdb_derive --token ${CRATES_IO_TOKEN}
           cargo publish -p agdb --token ${CRATES_IO_TOKEN}
@@ -86,9 +87,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           registry-url: "https://registry.npmjs.org"
-      - run: npm ci
+      - run: npm i -g pnpm
+      - run: pnpm i --frozen-lockfile
       - working-directory: agdb_api/typescript
-        run: npm publish --access public
+        run: pnpm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_ORG_TOKEN }}
 

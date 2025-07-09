@@ -19,6 +19,12 @@ const testInput: Input = {
 
 describe("AgdbContent", () => {
   const testContentKey = Symbol("test");
+  const checkboxInput: Input = {
+    key: "checkboxKey",
+    label: "Checkbox label",
+    type: "checkbox",
+    value: true,
+  };
   beforeEach(() => {
     vi.clearAllMocks();
     clearAllInputs();
@@ -167,5 +173,52 @@ describe("AgdbContent", () => {
     checkInputsRules(testContentKey);
     await wrapper.vm.$nextTick();
     expect(wrapper.text()).toContain("required");
+  });
+
+  it("renders a checkbox input with correct checked state", () => {
+    addInput(testContentKey, checkboxInput);
+    const wrapper = mount(AgdbContent, {
+      props: {
+        content: [
+          {
+            input: checkboxInput,
+          },
+        ],
+        contentKey: testContentKey,
+      },
+    });
+    const input = wrapper.find('input[type="checkbox"]');
+    expect(input.exists()).toBe(true);
+    expect((input.element as HTMLInputElement).checked).toBe(true);
+    const label = wrapper.find("label");
+    expect(label.text()).toBe("Checkbox label");
+    expect(label.attributes("for")).toBe(
+      `${testContentKey.toString()}-checkboxKey`,
+    );
+  });
+
+  it("updates value when checkbox is toggled", async () => {
+    addInput(testContentKey, { ...checkboxInput, value: false });
+    const wrapper = mount(AgdbContent, {
+      props: {
+        content: [
+          {
+            input: checkboxInput,
+          },
+        ],
+        contentKey: testContentKey,
+      },
+    });
+    const input = wrapper.find('input[type="checkbox"]');
+    expect(getInputValue(testContentKey, checkboxInput.key)).toBe(false);
+    expect((input.element as HTMLInputElement).checked).toBe(false);
+
+    // Simulate checking the checkbox
+    await input.setValue(true);
+    expect(getInputValue(testContentKey, checkboxInput.key)).toBe(true);
+
+    // Simulate unchecking the checkbox
+    await input.setValue(false);
+    expect(getInputValue(testContentKey, checkboxInput.key)).toBe(false);
   });
 });

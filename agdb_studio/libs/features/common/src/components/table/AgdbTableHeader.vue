@@ -26,7 +26,6 @@ const rowsExpandable = computed(() => {
     <div v-for="column in columns" :key="column.key">
       {{ column.title }}
     </div>
-    <div v-if="rowsExpandable"></div>
   </div>
 </template>
 

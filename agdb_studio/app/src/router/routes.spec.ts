@@ -1,6 +1,15 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { createRoutes } from "@/router/routes";
 import type { RouteRecordRaw } from "vue-router";
+
+vi.mock("@/views/LoginView.vue", () => ({ default: vi.fn() }));
+vi.mock("@/views/HomeView.vue", () => ({ default: vi.fn() }));
+vi.mock("@/views/DbView.vue", () => ({ default: vi.fn() }));
+vi.mock("@/views/NotFoundView.vue", () => ({ default: vi.fn() }));
+vi.mock("@/views/admin/AdminView.vue", () => ({ default: vi.fn() }));
+vi.mock("@/views/admin/AdminUserView.vue", () => ({ default: vi.fn() }));
+vi.mock("@/views/admin/AdminDbView.vue", () => ({ default: vi.fn() }));
+vi.mock("@/components/layouts/MainLayout.vue", () => ({ default: vi.fn() }));
 
 const validateRoutes = (routes: RouteRecordRaw[]) => {
   routes.forEach((route) => {

@@ -20,6 +20,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions-rust-lang/setup-rust-toolchain@v1
+      - run: npm i -g pnpm
       - run: cargo build -p agdb_derive -p agdb -p agdb_api -p agdb_server --all-features -r
 
   dev_image:

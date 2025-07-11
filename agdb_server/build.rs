@@ -20,15 +20,16 @@ fn run_command(command: &str, dir: &str) {
 #[allow(dead_code)]
 fn build_studio() {
     if std::env::var("AGDB_DOCKER_BUILD").is_err() {
-        run_command("npm ci && npm run build -- --filter=agdb_studio", "../");
+        run_command(
+            "pnpm i --frozen-lockfile && pnpm run build --filter=agdb_studio",
+            "../",
+        );
     }
 }
 
 fn main() {
-    println!("cargo::rerun-if-changed=../agdb_api/typescript/src");
-    println!("cargo::rerun-if-changed=../agdb_studio/src");
-    println!("cargo::rerun-if-changed=../package-lock.json");
-
-    #[cfg(feature = "studio")]
-    build_studio();
+    if !std::fs::exists("../agdb_studio/app/dist").unwrap() {
+        #[cfg(feature = "studio")]
+        build_studio();
+    }
 }

@@ -3,7 +3,7 @@ rm -rf agdb_server_data
 cargo build -r -p agdb_server
 cargo run -r -p agdb_server &
 
-npx vitest run --coverage
+pnpm exec vitest run --coverage
 error_code=$?
 
 token=$(curl -X POST http://localhost:3000/api/v1/user/login -H "Content-Type: application/json" -d '{"username":"admin","password":"admin"}')

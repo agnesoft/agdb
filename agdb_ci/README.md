@@ -1,6 +1,6 @@
 # description
 
-The `agdb_ci` utility helps automate the release process. It determines the current version by reading the version of the `agdb` crate. It then reads the new version from the `Version` file in the root of the repository. Finally it updates all current versions of to the new one in all packages - Rust, Typescript etc. It bumps both versions of the packages (if present) and of the following dependencies (if declared). For typescript projects it addittionally runs `npm install` to update the dependencies (also updates `package-lock.json`):
+The `agdb_ci` utility helps automate the release process. It determines the current version by reading the version of the `agdb` crate. It then reads the new version from the `Version` file in the root of the repository. Finally, it updates all current versions of to the new one in all packages - Rust, Typescript etc. It bumps both versions of the packages (if present) and of the following dependencies (if declared). For typescript projects it additionally runs `pnpm install` to update the dependencies (also updates `package-lock.json`):
 
 - agdb
 - agdb_derive
@@ -9,7 +9,7 @@ The `agdb_ci` utility helps automate the release process. It determines the curr
 
 # usage
 
-NOTE: Requires Rust toolchain and `npm` to be installed. It is recommended to use [`rustup`](https://www.rust-lang.org/tools/install) to get Rust and [NodeJS](https://nodejs.org/en) to get `npm`.
+NOTE: Requires Rust toolchain and `pnpm` to be installed. It is recommended to use [`rustup`](https://www.rust-lang.org/tools/install) to get Rust and [NodeJS](https://nodejs.org/en) to get `npm` with which you can install the pnpm: `npm i -g pnpm`.
 
 ```
 cargo run --release -p agdb_ci

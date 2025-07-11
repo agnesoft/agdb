@@ -891,10 +891,10 @@ impl Display for DbValue {
     fn fmt(&self, f: &mut Formatter<'_>) -> DisplayResult {
         match self {
             DbValue::Bytes(v) => write!(f, "{}", String::from_utf8_lossy(v)),
-            DbValue::I64(v) => write!(f, "{}", v),
-            DbValue::U64(v) => write!(f, "{}", v),
+            DbValue::I64(v) => write!(f, "{v}"),
+            DbValue::U64(v) => write!(f, "{v}"),
             DbValue::F64(v) => write!(f, "{}", v.to_f64()),
-            DbValue::String(v) => write!(f, "{}", v),
+            DbValue::String(v) => write!(f, "{v}"),
             DbValue::VecI64(v) => write!(
                 f,
                 "[{}]",

@@ -45,7 +45,7 @@ async fn delete_with_backup() -> anyhow::Result<()> {
     let db_backup_path = Path::new(&server.data_dir)
         .join(owner)
         .join("backups")
-        .join(format!("{}.bak", db));
+        .join(format!("{db}.bak"));
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.user_login(owner, owner).await?;

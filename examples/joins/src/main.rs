@@ -72,7 +72,7 @@ fn main() -> Result<(), QueryError> {
         }
     });
 
-    println!("{:?}", user_dbs);
+    println!("{user_dbs:?}");
 
     // If the data is sparse, we need other processing or require better control over the joining
     // you should use a transaction and split the steps into subqueries. The transaction makes
@@ -115,7 +115,7 @@ fn main() -> Result<(), QueryError> {
         Ok(dbs)
     })?;
 
-    println!("{:?}", user_dbs);
+    println!("{user_dbs:?}");
 
     Ok(())
 }

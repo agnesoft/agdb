@@ -1,15 +1,12 @@
 FROM node:alpine AS builder_studio
 WORKDIR /usr/src/agdb_studio
 COPY . .
-WORKDIR /usr/src/agdb_studio/agdb_api/typescript
-RUN npm ci && npm run build
-WORKDIR /usr/src/agdb_studio/agdb_studio
-RUN npm ci && npm run build
+RUN npm i -g pnpm && pnpm i --frozen-lockfile && pnpm run build --filter agdb_studio
 
 FROM rust:alpine AS builder_server
 WORKDIR /usr/src/agdb_server
 COPY . .
-COPY --from=builder_studio /usr/src/agdb_studio/agdb_studio/dist /usr/src/agdb_server/agdb_studio/dist
+COPY --from=builder_studio /usr/src/agdb_studio/agdb_studio/app/dist /usr/src/agdb_server/agdb_studio/app/dist
 RUN apk add --no-cache musl-dev
 RUN AGDB_DOCKER_BUILD=true cargo build -r -p agdb_server --all-features
 

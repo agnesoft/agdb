@@ -582,11 +582,11 @@ class InsertBuilder {
         return new InsertAliasesBuilder(names);
     }
 
-    element<V>(elem: V): InsertValuesIdsBuilder {
+    element<V extends object>(elem: V): InsertValuesIdsBuilder {
         return this.elements([elem]);
     }
 
-    elements<V>(elems: V[]): InsertValuesIdsBuilder {
+    elements<V extends object>(elems: V[]): InsertValuesIdsBuilder {
         const data = {
             ids: { Ids: [] },
             values: { Multi: [] },

@@ -1,1 +1,0 @@
-type AsyncComponent = "DbDetails";

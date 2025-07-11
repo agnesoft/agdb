@@ -38,7 +38,7 @@ async fn rename_with_backup() -> anyhow::Result<()> {
         !Path::new(&server.data_dir)
             .join(owner)
             .join("backups")
-            .join(format!("{}.bak", db))
+            .join(format!("{db}.bak"))
             .exists()
     );
     assert!(Path::new(&server.data_dir).join(owner).join(db2).exists());
@@ -46,7 +46,7 @@ async fn rename_with_backup() -> anyhow::Result<()> {
         Path::new(&server.data_dir)
             .join(owner)
             .join("backups")
-            .join(format!("{}.bak", db2))
+            .join(format!("{db2}.bak"))
             .exists()
     );
     Ok(())

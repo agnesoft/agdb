@@ -1,7 +1,8 @@
 {
   "type": "module",
   "devDependencies": {
-    "@prettier/plugin-php": "^0.22",
-    "prettier": "^3.4"
-  }
+    "@prettier/plugin-php": "catalog:",
+    "prettier": "catalog:"
+  },
+  "scripts": {}
 }

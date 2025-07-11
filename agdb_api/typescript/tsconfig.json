@@ -5,7 +5,8 @@
     "declaration": true,
     "outDir": "./dist",
     "moduleResolution": "node",
-    "baseUrl": "."
+    "baseUrl": ".",
+    "lib": ["es2015"],
   },
   "include": [
     "src/**/*"

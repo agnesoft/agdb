@@ -60,8 +60,7 @@ impl StorageData for UserDbStorage {
             "memory" => Ok(Self::Memory(MemoryStorage::new(name)?)),
             "file" => Ok(Self::File(FileStorage::new(name)?)),
             _ => Err(DbError::from(format!(
-                "Invalid db type '{}', must be one of 'mapped', 'memory', 'file'.",
-                db_type
+                "Invalid db type '{db_type}', must be one of 'mapped', 'memory', 'file'."
             ))),
         }
     }
@@ -146,7 +145,7 @@ mod tests {
         let _test_file_rename_dot = TestFile::new(".file_storage_rename.agdb");
         let test_file_backup = TestFile::new("file_storage_backup.agdb");
         let mut storage = UserDbStorage::new(&format!("file:{}", test_file.0))?;
-        let _ = format!("{:?}", storage);
+        let _ = format!("{storage:?}");
         storage.backup(&test_file_backup.0)?;
         assert!(std::path::Path::new(&test_file_backup.0).exists());
         let other = storage.copy(&test_file_copy.0)?;
@@ -174,7 +173,7 @@ mod tests {
         let _test_file_rename_dot = TestFile::new(".mapped_storage_rename.agdb");
         let test_file2 = TestFile::new("mapped_storage_backup.agdb");
         let mut storage = UserDbStorage::new(&format!("mapped:{}", test_file.0))?;
-        let _ = format!("{:?}", storage);
+        let _ = format!("{storage:?}");
         storage.backup(&test_file2.0)?;
         assert!(std::path::Path::new(&test_file2.0).exists());
         let other = storage.copy(&test_file_copy.0)?;
@@ -196,7 +195,7 @@ mod tests {
     fn memory_storage() -> anyhow::Result<()> {
         let test_file = TestFile::new("backup_test");
         let mut storage = UserDbStorage::new("memory:db_test.agdb")?;
-        let _ = format!("{:?}", storage);
+        let _ = format!("{storage:?}");
         storage.backup(&test_file.0)?;
         let other = storage.copy("db_test_copy.agdb")?;
         assert_eq!(other.name(), "db_test_copy.agdb");

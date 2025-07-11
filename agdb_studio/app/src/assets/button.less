@@ -1,0 +1,59 @@
+.button {
+  display: inline-block;
+  padding: 0.3em 1em;
+  border: none;
+  border-radius: 4px;
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+  transition: opacity 0.4s ease;
+  --backgroundColor: var(--color-background-mute);
+  --color: var(--color-text);
+  --borderColor: var(--color-text);
+  background-color: var(--backgroundColor);
+  color: var(--color);
+  border: 1px solid var(--borderColor);
+}
+
+.button-lg {
+  padding: 10px 20px;
+}
+
+.button-default {
+  --backgroundColor: var(--blue-2);
+  --color: var(--white);
+  --borderColor: var(--blue);
+}
+
+.button-success {
+  --backgroundColor: var(--green-2);
+  --color: var(--white);
+  --borderColor: var(--green);
+}
+
+.button-warning {
+  --backgroundColor: var(--orange-2);
+  --color: var(--black);
+  --borderColor: var(--orange);
+}
+
+.button-danger {
+  --backgroundColor: var(--red-2);
+  --color: var(--white);
+  --borderColor: var(--red);
+}
+
+.button-transparent {
+  --backgroundColor: transparent;
+  --color: var(--color-text);
+  --borderColor: transparent;
+  padding: 0.3em 0.5em;
+}
+
+.button:hover {
+  opacity: 0.8;
+}
+
+.button:active {
+  opacity: 0.6;
+}

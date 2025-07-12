@@ -9,7 +9,7 @@ const tables = ref<Map<symbol | string, Table<TRow>>>(
 type AddTableProps<T extends TRow> = {
   name: symbol | string;
   columns: Column<T>[];
-  rowDetailsComponent?: AsyncComponent;
+  // rowDetailsComponent?: AsyncComponent;
   uniqueKey?: string | ((row: T) => string);
   fetchData: () => Promise<void>;
 };
@@ -17,7 +17,7 @@ type AddTableProps<T extends TRow> = {
 const addTable = ({
   name,
   columns,
-  rowDetailsComponent,
+  // rowDetailsComponent,
   uniqueKey,
   fetchData,
 }: AddTableProps<TRow>): void => {
@@ -29,7 +29,7 @@ const addTable = ({
     name,
     columns: columnMap,
     data: new Map(),
-    rowDetailsComponent,
+    // rowDetailsComponent,
     uniqueKey,
     fetchData,
   });

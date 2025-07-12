@@ -31,7 +31,7 @@ export type Table<T extends TRow> = {
   name: symbol | string;
   columns: Map<string, Column<T>>;
   data?: Map<string, T>;
-  rowDetailsComponent?: AsyncComponent;
+  // rowDetailsComponent?: AsyncComponent;
   uniqueKey?: string | ((row: T) => string);
   fetchData: () => Promise<void>;
 };

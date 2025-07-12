@@ -13,7 +13,7 @@ describe("TableRow", () => {
   addTable({
     name: TABLE_NAME,
     columns: tableConfig,
-    rowDetailsComponent: "DbDetails",
+    // rowDetailsComponent: "DbDetails",
     fetchData: fetchDataMock,
   });
 
@@ -80,38 +80,38 @@ describe("TableRow", () => {
     expect(wrapper.find(".expanded-row").exists()).toBe(true);
   });
 
-  it("should not render expand button if rowDetailsComponent is not set", () => {
-    addTable({
-      name: "table_without_row_details",
-      columns: tableConfig,
-      fetchData: fetchDataMock,
-    });
-    const wrapper = mount(AgdbTableRow, {
-      props: {
-        columns: columnsMap,
-        row: {
-          role: "admin",
-          owner: "admin",
-          db: "app3",
-          db_type: "file",
-          size: 50,
-          backup: 0,
-        },
-      },
-      global: {
-        provide: {
-          [INJECT_KEY_COLUMNS]: { value: columnsMap },
-          [INJECT_KEY_TABLE_NAME]: {
-            value: "table_without_row_details",
-          },
-        },
-        stubs: {
-          transitions: false,
-        },
-      },
-    });
-    expect(wrapper.find(".expand-row").exists()).toBe(false);
-  });
+  // it("should not render expand button if rowDetailsComponent is not set", () => {
+  //   addTable({
+  //     name: "table_without_row_details",
+  //     columns: tableConfig,
+  //     fetchData: fetchDataMock,
+  //   });
+  //   const wrapper = mount(AgdbTableRow, {
+  //     props: {
+  //       columns: columnsMap,
+  //       row: {
+  //         role: "admin",
+  //         owner: "admin",
+  //         db: "app3",
+  //         db_type: "file",
+  //         size: 50,
+  //         backup: 0,
+  //       },
+  //     },
+  //     global: {
+  //       provide: {
+  //         [INJECT_KEY_COLUMNS]: { value: columnsMap },
+  //         [INJECT_KEY_TABLE_NAME]: {
+  //           value: "table_without_row_details",
+  //         },
+  //       },
+  //       stubs: {
+  //         transitions: false,
+  //       },
+  //     },
+  //   });
+  //   expect(wrapper.find(".expand-row").exists()).toBe(false);
+  // });
   it("should handle if tableKey is undefined", () => {
     const wrapper = mount(AgdbTableRow, {
       props: {

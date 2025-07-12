@@ -5,9 +5,6 @@ import {
   getTableColumnsArray,
 } from "../../composables/table/tableConfig";
 import { computed, inject, type Ref } from "vue";
-import { TABLE_NAME } from "../../tests/tableMocks";
-
-console.log(TABLE_NAME);
 
 const tableKey = inject<Ref<symbol | string>>(INJECT_KEY_TABLE_NAME);
 const columns = computed(() => {
@@ -16,8 +13,14 @@ const columns = computed(() => {
   }
   return getTableColumnsArray(tableKey.value);
 });
-const rowsExpandable = computed(() => {
-  return tableKey ? !!getTable(tableKey.value)?.rowDetailsComponent : false;
+// const rowsExpandable = computed(() => {
+//   return tableKey ? !!getTable(tableKey.value)?.rowDetailsComponent : false;
+// });
+defineProps({
+  rowsExpandable: {
+    type: Boolean,
+    default: false,
+  },
 });
 </script>
 

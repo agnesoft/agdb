@@ -21,7 +21,7 @@ const {
   };
 });
 
-vi.mock("@/composables/db/dbUsersStore", () => {
+vi.mock("../composables/dbUsersStore", () => {
   return {
     useDbUsersStore: () => {
       return {
@@ -34,7 +34,7 @@ vi.mock("@/composables/db/dbUsersStore", () => {
 
 const canEditUsers = ref(true);
 
-vi.mock("@/composables/db/dbDetails", () => {
+vi.mock("../composables/dbDetails", () => {
   return {
     useDbDetails: () => {
       return {

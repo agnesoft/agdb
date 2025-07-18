@@ -6,18 +6,14 @@ import { setTableData } from "@agdb-studio/common/src/composables/table/tableDat
 import { watchEffect } from "vue";
 import { dbColumns } from "../composables/dbConfig";
 import DbDetails from "./DbDetails.vue";
-// import { getAsyncComponent } from "@/utils/asyncComponents";
 
 const { databases, getDbName, fetchDatabases } = useDbStore();
 
 const TABLE_KEY = Symbol("databases");
 
-// provide("getAsyncComponent", getAsyncComponent);
-
 addTable({
   name: TABLE_KEY,
   columns: dbColumns,
-  // rowDetailsComponent: "DbDetails",
   uniqueKey: (row) =>
     getDbName({ owner: row.owner.toString(), db: row.db.toString() }),
   fetchData: fetchDatabases,
@@ -33,7 +29,7 @@ watchEffect(() => {
     <div v-if="databases.length" class="db-table">
       <AgdbTable :name="TABLE_KEY">
         <template #rowDetails="{ row }">
-          <DbDetails :db="row" />
+          <DbDetails :row="row" />
         </template>
       </AgdbTable>
     </div>

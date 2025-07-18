@@ -1,5 +1,4 @@
 import type { StyleObject } from "@agdb-studio/design/src/types/base";
-import type { AsyncComponent } from "../../types/asyncComponents";
 
 export type ActionProps<T> = {
   event: Event;
@@ -39,7 +38,6 @@ export type Input = {
 
 export type Content = {
   paragraph?: Paragraph[];
-  component?: AsyncComponent;
   input?: Input;
 };
 

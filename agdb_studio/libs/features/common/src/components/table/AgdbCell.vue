@@ -32,10 +32,7 @@ const formattedValue = computed(() => {
 
 <template>
   <div class="agdb-cell">
-    <div v-if="column?.cellComponent">
-      <component :is="column.cellComponent" :value="value" />
-    </div>
-    <div v-else-if="column?.actions">
+    <div v-if="column?.actions">
       <AgdbCellMenu :actions="column.actions" />
     </div>
     <div v-else-if="column?.type === 'boolean'">

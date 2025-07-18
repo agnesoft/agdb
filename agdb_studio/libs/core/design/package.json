@@ -1,12 +1,11 @@
 {
   "name": "@agdb-studio/design",
   "version": "1.0.0",
-  "description": "Notification library for AGDB Studio",
+  "description": "Design library for AGDB Studio",
   "type": "module",
   "scripts": {
     "build-only": "vite build && vue-tsc --declaration --emitDeclarationOnly --outDir dist",
     "test": "echo \"No tests yet\" && exit 0",
-    "test:e2e": "playwright test",
     "type-check": "vue-tsc --noEmit -p tsconfig.vitest.json --composite false",
     "lint": "eslint --max-warnings=0 . --fix",
     "lint:check": "eslint --max-warnings=0 .",
@@ -15,32 +14,14 @@
     "before-commit": "pnpm run format && pnpm run lint && pnpm run test && pnpm run test:e2e"
   },
   "dependencies": {
-    "@vueuse/core": "catalog:",
-    "vue": "catalog:",
-    "@kalimahapps/vue-icons": "catalog:"
+    "vue": "catalog:"
   },
   "devDependencies": {
     "@agdb-studio/tsconfig": "workspace:*",
-    "@playwright/test": "catalog:",
-    "@rushstack/eslint-patch": "catalog:",
-    "@tsconfig/node18": "catalog:",
-    "@types/jsdom": "catalog:",
-    "@types/node": "catalog:",
-    "@vitejs/plugin-vue": "catalog:",
-    "@vitest/coverage-v8": "catalog:",
-    "@vitest/coverage-istanbul": "catalog:",
-    "@vue/eslint-config-prettier": "catalog:",
-    "@vue/eslint-config-typescript": "catalog:",
-    "@vue/test-utils": "catalog:",
-    "@vue/tsconfig": "catalog:",
-    "eslint": "catalog:",
-    "eslint-plugin-vue": "catalog:",
-    "jsdom": "catalog:",
-    "less": "catalog:",
-    "prettier": "catalog:",
-    "typescript": "catalog:",
+    "@agdb-studio/testing": "workspace:*",
     "vite": "catalog:",
-    "vitest": "catalog:",
-    "vue-tsc": "catalog:"
+    "vue-tsc": "catalog:",
+    "eslint": "catalog:",
+    "prettier": "catalog:"
   }
 }

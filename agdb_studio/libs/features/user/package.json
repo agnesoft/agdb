@@ -5,7 +5,6 @@
   "type": "module",
   "scripts": {
     "test": "vitest run --coverage",
-    "test:e2e": "playwright test",
     "build-only": "vite build",
     "type-check": "vue-tsc --noEmit -p tsconfig.vitest.json --composite false",
     "lint": "eslint --max-warnings=0 . --fix",
@@ -15,43 +14,18 @@
     "before-commit": "pnpm run format && pnpm run lint && pnpm run test && pnpm run test:e2e"
   },
   "dependencies": {
-    "@vueuse/core": "catalog:",
     "vue": "catalog:",
-    "@kalimahapps/vue-icons": "catalog:",
     "@agdb-studio/design": "workspace:*",
     "@agdb-studio/common": "workspace:*",
-    "@agdb-studio/profile": "workspace:*",
     "@agdb-studio/api": "workspace:*"
   },
   "devDependencies": {
     "@agdb-studio/tsconfig": "workspace:*",
     "@agdb-studio/testing": "workspace:*",
-    "@eslint/js": "catalog:",
-    "@playwright/test": "catalog:",
-    "@rushstack/eslint-patch": "catalog:",
-    "@tsconfig/node18": "catalog:",
-    "@types/jsdom": "catalog:",
-    "@types/node": "catalog:",
-    "@vitejs/plugin-vue": "catalog:",
-    "@vitest/coverage-istanbul": "catalog:",
-    "@vitest/coverage-v8": "catalog:",
-    "@vue/eslint-config-prettier": "catalog:",
-    "@vue/eslint-config-typescript": "catalog:",
-    "@vue/test-utils": "catalog:",
-    "@vue/tsconfig": "catalog:",
-    "axios": "catalog:",
-    "eslint": "catalog:",
-    "eslint-config-prettier": "catalog:",
-    "eslint-plugin-vue": "catalog:",
-    "globals": "catalog:",
-    "jsdom": "catalog:",
-    "less": "catalog:",
-    "npm-run-all2": "catalog:",
-    "prettier": "catalog:",
-    "typescript": "catalog:",
-    "typescript-eslint": "catalog:",
     "vite": "catalog:",
     "vitest": "catalog:",
-    "vue-tsc": "catalog:"
+    "vue-tsc": "catalog:",
+    "eslint": "catalog:",
+    "prettier": "catalog:"
   }
 }

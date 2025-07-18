@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { ref } from "vue";
-import { useUserStore } from "@/composables/user/userStore";
+import { useUserStore } from "../composables/userStore";
 
 const username = ref("");
 const password = ref("");

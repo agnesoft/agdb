@@ -1,7 +1,7 @@
 <script lang="ts" setup>
-import UserAddForm from "@/components/user/UserAddForm.vue";
-import UserTable from "@/components/user/UserTable.vue";
-import { useUserStore } from "@/composables/user/userStore";
+import UserAddForm from "@agdb-studio/user/src/components/UserAddForm.vue";
+import UserTable from "@agdb-studio/user/src/components/UserTable.vue";
+import { useUserStore } from "@agdb-studio/user/src/composables/userStore";
 import { MdRefresh } from "@kalimahapps/vue-icons";
 import { onMounted } from "vue";
 

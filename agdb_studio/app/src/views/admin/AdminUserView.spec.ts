@@ -22,7 +22,7 @@ const { users, fetchUsers } = vi.hoisted(() => {
   };
 });
 
-vi.mock("@/composables/user/userStore", () => {
+vi.mock("@agdb-studio/user/src/composables/userStore", () => {
   return {
     useUserStore: () => {
       return { users, fetchUsers };

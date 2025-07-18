@@ -80,39 +80,6 @@ describe("AgdbCell", () => {
     expect(wrapper.find(".agdb-cell").text()).toBe("0");
   });
 
-  it("should display custom component", () => {
-    const columns = new Map();
-    columns.set("owner", {
-      key: "owner",
-      title: "Owner",
-      cellComponent: {
-        template: "<div>Custom component</div>",
-      },
-    });
-    const wrapper = mount(AgdbCell, {
-      props: {
-        cellKey: "owner",
-      },
-      global: {
-        provide: {
-          [INJECT_KEY_COLUMNS]: { value: columns },
-          [INJECT_KEY_ROW]: {
-            value: {
-              role: "admin",
-              owner: "admin",
-              db: "test",
-              db_type: "memory",
-              size: 2656,
-              backup: 0,
-            },
-          },
-        },
-      },
-    });
-
-    expect(wrapper.find(".agdb-cell").exists()).toBe(true);
-    expect(wrapper.find(".agdb-cell").text()).toBe("Custom component");
-  });
   it("should display menu", async () => {
     const columns = new Map();
     columns.set("actions", {

@@ -36,9 +36,6 @@ const getInputKey = (key: string) => {
           {{ text.text }}
         </span>
       </p>
-      <div v-if="part.component">
-        <component :is="part.component" />
-      </div>
       <div v-if="part.input && part.input.type === 'checkbox'">
         <input
           :id="getInputKey(part.input.key)"

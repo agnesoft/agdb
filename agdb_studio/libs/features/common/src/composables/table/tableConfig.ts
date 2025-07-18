@@ -1,6 +1,5 @@
 import { ref } from "vue";
 import type { Column, Table, TRow } from "./types";
-import type { AsyncComponent } from "../../types/asyncComponents";
 
 const tables = ref<Map<symbol | string, Table<TRow>>>(
   new Map<symbol | string, Table<TRow>>(),
@@ -9,7 +8,6 @@ const tables = ref<Map<symbol | string, Table<TRow>>>(
 type AddTableProps<T extends TRow> = {
   name: symbol | string;
   columns: Column<T>[];
-  rowDetailsComponent?: AsyncComponent;
   uniqueKey?: string | ((row: T) => string);
   fetchData: () => Promise<void>;
 };
@@ -17,7 +15,6 @@ type AddTableProps<T extends TRow> = {
 const addTable = ({
   name,
   columns,
-  rowDetailsComponent,
   uniqueKey,
   fetchData,
 }: AddTableProps<TRow>): void => {
@@ -29,7 +26,6 @@ const addTable = ({
     name,
     columns: columnMap,
     data: new Map(),
-    rowDetailsComponent,
     uniqueKey,
     fetchData,
   });

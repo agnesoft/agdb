@@ -1,22 +1,23 @@
 {
-  "name": "agdb_studio",
-  "version": "0.0.0",
-  "private": true,
+  "name": "@agdb-studio/db",
+  "version": "1.0.0",
+  "description": "Database library for AGDB Studio",
+  "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "run-p type-check \"build-only {@}\" --",
-    "preview": "vite preview",
     "test": "vitest run --coverage",
     "test:e2e": "playwright test",
     "build-only": "vite build",
     "type-check": "vue-tsc --noEmit -p tsconfig.vitest.json --composite false",
     "lint": "eslint --max-warnings=0 . --fix",
     "lint:check": "eslint --max-warnings=0 .",
-    "format": "prettier --write src/ e2e/",
-    "format:check": "prettier --check src/ e2e/",
+    "format": "prettier --write src/",
+    "format:check": "prettier --check src/",
     "before-commit": "pnpm run format && pnpm run lint && pnpm run test && pnpm run test:e2e"
   },
   "dependencies": {
+    "@vueuse/core": "catalog:",
+    "vue": "catalog:",
+    "@kalimahapps/vue-icons": "catalog:",
     "@agdb-studio/design": "workspace:*",
     "@agdb-studio/notification": "workspace:*",
     "@agdb-studio/router": "workspace:*",
@@ -24,14 +25,7 @@
     "@agdb-studio/profile": "workspace:*",
     "@agdb-studio/api": "workspace:*",
     "@agdb-studio/auth": "workspace:*",
-    "@agdb-studio/db": "workspace:*",
-    "@agnesoft/agdb_api": "workspace:*",
-    "@kalimahapps/vue-icons": "catalog:",
-    "@vueuse/components": "catalog:",
-    "@vueuse/core": "catalog:",
-    "openapi-client-axios": "catalog:",
-    "vue": "catalog:",
-    "vue-router": "catalog:"
+    "@agnesoft/agdb_api": "workspace:*"
   },
   "devDependencies": {
     "@agdb-studio/tsconfig": "workspace:*",
@@ -59,7 +53,7 @@
     "npm-run-all2": "catalog:",
     "prettier": "catalog:",
     "typescript": "catalog:",
-    "typescript-eslint": "catalog:",
+    "typescript-eslint": "^8.21.0",
     "vite": "catalog:",
     "vitest": "catalog:",
     "vue-tsc": "catalog:"

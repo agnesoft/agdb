@@ -13,8 +13,10 @@
   "devDependencies": {
     "@typescript-eslint/parser": "catalog:",
     "eslint": "catalog:",
+    "@eslint/js": "catalog:",
     "prettier": "catalog:",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "typescript-eslint": "catalog:"
   },
   "dependencies": {
     "agdb_api": "file:../../agdb_api/typescript"

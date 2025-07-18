@@ -3,7 +3,6 @@ import AgdbContent from "./AgdbContent.vue";
 import { mount } from "@vue/test-utils";
 import { useContentInputs } from "../../composables/content/inputs";
 import type { Input } from "@/composables/content/types";
-import type { AsyncComponent } from "@/types/asyncComponents";
 
 const { addInput, getInputValue, clearAllInputs, checkInputsRules } =
   useContentInputs();
@@ -42,9 +41,6 @@ describe("AgdbContent", () => {
             ],
           },
           {
-            component: "my-component" as unknown as AsyncComponent,
-          },
-          {
             input: testInput,
           },
         ],
@@ -52,7 +48,6 @@ describe("AgdbContent", () => {
       },
     });
     expect(wrapper.html()).toContain("Test Body");
-    expect(wrapper.html()).toContain("my-component");
     expect(wrapper.html()).toContain("Test label");
   });
   it("change the input value on user input", async () => {

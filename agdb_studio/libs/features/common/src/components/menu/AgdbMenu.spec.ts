@@ -1,8 +1,6 @@
 import { describe, beforeEach, vi, it, expect } from "vitest";
 import { mount } from "@vue/test-utils";
 import AgdbMenu from "./AgdbMenu.vue";
-import type { Action } from "@/composables/content/types";
-import type { TRow } from "../../composables/table/types";
 
 describe("AgdbMenu", () => {
   beforeEach(() => {

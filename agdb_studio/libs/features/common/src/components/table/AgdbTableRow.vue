@@ -1,15 +1,10 @@
 <script lang="ts" setup>
-import { computed, inject, type PropType, provide, type Ref, ref } from "vue";
+import { computed, type PropType, provide, ref, useSlots } from "vue";
 import { type Column, type TRow } from "../../composables/table/types";
-import {
-  INJECT_KEY_ROW,
-  INJECT_KEY_TABLE_NAME,
-} from "../../composables/table/constants";
+import { INJECT_KEY_ROW } from "../../composables/table/constants";
 import AgdbCell from "./AgdbCell.vue";
-import { getTable } from "../../composables/table/tableConfig";
 import { AkChevronDownSmall, AkChevronUpSmall } from "@kalimahapps/vue-icons";
 import SlideUpTransition from "@agdb-studio/design/src/components/transitions/SlideUpTransition.vue";
-import type { AsyncComponent } from "../../types/asyncComponents";
 
 const props = defineProps({
   row: {
@@ -30,36 +25,21 @@ const rowData = computed(() => {
 });
 provide(INJECT_KEY_ROW, rowData);
 
-const tableKey = inject<Ref<symbol | string>>(INJECT_KEY_TABLE_NAME);
-
-const getAsyncComponent = inject<(name: string) => AsyncComponent | undefined>(
-  "getAsyncComponent",
-  (_name: string) => undefined,
-);
-const rowDetailsComponent = computed<AsyncComponent | undefined>(() => {
-  const name = tableKey
-    ? getTable(tableKey.value)?.rowDetailsComponent
-    : undefined;
-  if (name) {
-    return getAsyncComponent(name);
-  }
-  return undefined;
-});
 const rowExpanded = ref(false);
 const toggleExpandRow = (): void => {
   rowExpanded.value = !rowExpanded.value;
 };
+
+const slots = useSlots();
 </script>
 
 <template>
   <div class="agdb-table-row-wrap">
-    <div
-      :class="['agdb-table-row columns', { expandable: rowDetailsComponent }]"
-    >
+    <div :class="['agdb-table-row columns', { expandable: slots.rowDetails }]">
       <div v-for="cellKey in cellKeys" :key="cellKey">
         <AgdbCell :cell-key="cellKey" />
       </div>
-      <div v-if="rowDetailsComponent">
+      <div v-if="slots.rowDetails">
         <button
           class="button button-transparent expand-row"
           @click="toggleExpandRow"
@@ -70,8 +50,8 @@ const toggleExpandRow = (): void => {
       </div>
     </div>
     <SlideUpTransition>
-      <div v-if="rowExpanded && rowDetailsComponent" class="expanded-row">
-        <component :is="rowDetailsComponent" :row="row" />
+      <div v-if="rowExpanded && slots.rowDetails" class="expanded-row">
+        <slot name="rowDetails" :row="rowData"></slot>
       </div>
     </SlideUpTransition>
   </div>

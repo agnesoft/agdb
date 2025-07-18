@@ -3,7 +3,7 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc main.ts --outDir dist",
     "format": "prettier main.ts --write",
     "format:check": "prettier --check main.ts",
     "lint": "eslint --max-warnings=0 main.ts --fix",
@@ -13,8 +13,10 @@
   "devDependencies": {
     "@typescript-eslint/parser": "catalog:",
     "eslint": "catalog:",
+    "@eslint/js": "catalog:",
     "prettier": "catalog:",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "typescript-eslint": "catalog:"
   },
   "dependencies": {
     "agdb_api": "file:../../agdb_api/typescript"

@@ -1,4 +1,4 @@
-import { defineConfig, mergeConfig } from "vitest/config.js";
+import { defineConfig, mergeConfig } from "vitest/config";
 import viteConfig from "./vite.config.mjs";
 import vitestShared from "@agdb-studio/testing/vitest.shared";
 import path from "path";

@@ -3,7 +3,7 @@ import AgdbTable from "@agdb-studio/common/src/components/table/AgdbTable.vue";
 import { useDbStore } from "../composables/dbStore";
 import { addTable } from "@agdb-studio/common/src/composables/table/tableConfig";
 import { setTableData } from "@agdb-studio/common/src/composables/table/tableData";
-import { watchEffect, provide } from "vue";
+import { watchEffect } from "vue";
 import { dbColumns } from "../composables/dbConfig";
 import DbDetails from "./DbDetails.vue";
 // import { getAsyncComponent } from "@/utils/asyncComponents";

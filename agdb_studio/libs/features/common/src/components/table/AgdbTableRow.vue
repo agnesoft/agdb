@@ -1,23 +1,23 @@
 <script lang="ts" setup>
 import {
   computed,
-  inject,
+  // inject,
   type PropType,
   provide,
-  type Ref,
+  // type Ref,
   ref,
   useSlots,
 } from "vue";
 import { type Column, type TRow } from "../../composables/table/types";
 import {
   INJECT_KEY_ROW,
-  INJECT_KEY_TABLE_NAME,
+  // INJECT_KEY_TABLE_NAME,
 } from "../../composables/table/constants";
 import AgdbCell from "./AgdbCell.vue";
-import { getTable } from "../../composables/table/tableConfig";
+// import { getTable } from "../../composables/table/tableConfig";
 import { AkChevronDownSmall, AkChevronUpSmall } from "@kalimahapps/vue-icons";
 import SlideUpTransition from "@agdb-studio/design/src/components/transitions/SlideUpTransition.vue";
-import type { AsyncComponent } from "../../types/asyncComponents";
+// import type { AsyncComponent } from "../../types/asyncComponents";
 
 const props = defineProps({
   row: {

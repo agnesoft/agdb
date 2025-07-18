@@ -1,6 +1,6 @@
 import { ref } from "vue";
 import type { Column, Table, TRow } from "./types";
-import type { AsyncComponent } from "../../types/asyncComponents";
+// import type { AsyncComponent } from "../../types/asyncComponents";
 
 const tables = ref<Map<symbol | string, Table<TRow>>>(
   new Map<symbol | string, Table<TRow>>(),

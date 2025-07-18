@@ -1,9 +1,6 @@
 <script lang="ts" setup>
 import { INJECT_KEY_TABLE_NAME } from "../../composables/table/constants";
-import {
-  getTable,
-  getTableColumnsArray,
-} from "../../composables/table/tableConfig";
+import { getTableColumnsArray } from "../../composables/table/tableConfig";
 import { computed, inject, type Ref } from "vue";
 
 const tableKey = inject<Ref<symbol | string>>(INJECT_KEY_TABLE_NAME);

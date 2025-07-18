@@ -10,9 +10,6 @@ const columns = computed(() => {
   }
   return getTableColumnsArray(tableKey.value);
 });
-// const rowsExpandable = computed(() => {
-//   return tableKey ? !!getTable(tableKey.value)?.rowDetailsComponent : false;
-// });
 defineProps({
   rowsExpandable: {
     type: Boolean,

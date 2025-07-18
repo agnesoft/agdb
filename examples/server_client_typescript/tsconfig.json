@@ -6,5 +6,7 @@
     "moduleResolution": "node",
     "allowJs": true,
     "esModuleInterop": true,
-  }
+    "outDir": "./dist"
+  },
+  "include": ["main.ts"]
 }

@@ -3,7 +3,7 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "build": "tsc main.ts --outDir dist",
+    "build": "tsc",
     "format": "prettier main.ts --write",
     "format:check": "prettier --check main.ts",
     "lint": "eslint --max-warnings=0 main.ts --fix",

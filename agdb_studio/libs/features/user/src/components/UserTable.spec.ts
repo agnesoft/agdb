@@ -21,7 +21,7 @@ const { users } = vi.hoisted(() => {
   };
 });
 
-vi.mock("@/composables/user/userStore", () => {
+vi.mock("../composables/userStore", () => {
   return {
     useUserStore: () => {
       return { users };

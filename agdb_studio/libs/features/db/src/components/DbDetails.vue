@@ -1,9 +1,9 @@
 <script lang="ts" setup>
 import type { TRow } from "@agdb-studio/common/src/composables/table/types";
 import { computed, onMounted, type PropType } from "vue";
-import { useDbUsersStore } from "@/composables/db/dbUsersStore";
+import { useDbUsersStore } from "../composables/dbUsersStore";
 import { ClCloseMd, ChPlus } from "@kalimahapps/vue-icons";
-import { useDbDetails, type DbDetailsParams } from "@/composables/db/dbDetails";
+import { useDbDetails, type DbDetailsParams } from "../composables/dbDetails";
 
 const props = defineProps({
   row: {

@@ -5,7 +5,7 @@ async function main() {
   // from the root.
 
   // Creates a client connecting to the remote server.
-  let client = await AgdbApi.client("http://localhost:3000");
+  const client = await AgdbApi.client("http://localhost:3000");
 
   // Creates a user using default admin credentials.
   client.login({ username: "admin", password: "admin" });
@@ -60,7 +60,7 @@ async function main() {
 
   // Print the result of the second query.
   console.log(`User (id: ${results[1].elements[0].id})`);
-  for (let { key, value } of results[1].elements[0].values) {
+  for (const { key, value } of results[1].elements[0].values) {
     console.log(`${key["String"]}: ${value["String"]}`);
   }
 }

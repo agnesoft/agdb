@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { computed, provide } from "vue";
+import { computed, provide, useSlots } from "vue";
 import { getRows } from "../../composables/table/tableData";
 import AgdbTableRow from "./AgdbTableRow.vue";
 import AgdbTableHeader from "./AgdbTableHeader.vue";
@@ -26,13 +26,19 @@ const columns = computed(() => {
 const tableKey = computed(() => props.name);
 provide(INJECT_KEY_TABLE_NAME, tableKey);
 provide(INJECT_KEY_COLUMNS, columns);
+
+const slots = useSlots();
 </script>
 
 <template>
   <div class="agdb-table">
-    <AgdbTableHeader :table-key="name" />
+    <AgdbTableHeader :table-key="name" :rows-expandable="!!slots.rowDetails" />
     <template v-for="row in rows" :key="row[0]">
-      <AgdbTableRow :row="row[1]" :columns="columns" />
+      <AgdbTableRow :row="row[1]" :columns="columns">
+        <template v-if="slots.rowDetails" #rowDetails>
+          <slot name="rowDetails" :row="row[1]"></slot>
+        </template>
+      </AgdbTableRow>
     </template>
   </div>
 </template>

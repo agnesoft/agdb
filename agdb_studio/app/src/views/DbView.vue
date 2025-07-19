@@ -1,8 +1,8 @@
 <script lang="ts" setup>
-import { useDbStore } from "@/composables/db/dbStore";
+import { useDbStore } from "@agdb-studio/db/src/composables/dbStore";
 import { onMounted } from "vue";
-import DbAddForm from "@/components/db/DbAddForm.vue";
-import DbTable from "@/components/db/DbTable.vue";
+import DbAddForm from "@agdb-studio/db/src/components/DbAddForm.vue";
+import DbTable from "@agdb-studio/db/src/components/DbTable.vue";
 import { MdRefresh } from "@kalimahapps/vue-icons";
 
 const { fetchDatabases } = useDbStore();

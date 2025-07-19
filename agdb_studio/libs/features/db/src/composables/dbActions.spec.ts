@@ -1,6 +1,6 @@
 import { describe, beforeEach, vi, it, expect } from "vitest";
 
-import * as dbActions from "@/composables/db/dbActions";
+import * as dbActions from "./dbActions";
 
 import {
   db_list,

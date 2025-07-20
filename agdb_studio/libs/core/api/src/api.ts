@@ -18,15 +18,18 @@ export const client = computed((): AgdbApi.AgdbApiClient | undefined => {
 export const removeToken = (): void => {
   client.value?.reset_token();
   localStorage.removeItem(ACCESS_TOKEN);
-  window.location.reload();
+  if (window.location.pathname !== "/studio/login") {
+    window.location.reload();
+  }
 };
 
 export const responseInterceptor = (response: AxiosResponse) => {
+  console.debug("Response Interceptor:", response);
   return response;
 };
 
 export const errorInterceptor = (error: AxiosError) => {
-  console.error(error.message, error.response);
+  console.error(error.message, error.response, error.config);
   if (error.response?.status === 401) {
     removeToken();
   }

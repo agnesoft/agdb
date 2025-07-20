@@ -26,6 +26,7 @@ const onLogin = async () => {
     cluster: cluster.value,
   })
     .then(async () => {
+      console.log("Login successful");
       const router = getRouter();
       const redirect = router.currentRoute.value.query.redirect;
       await router.push(
@@ -34,8 +35,14 @@ const onLogin = async () => {
       loading.value = false;
     })
     .catch((e) => {
+      console.error("Login failed:", e);
       loading.value = false;
-      error.value = e.message;
+      if (e.response && e.response.status === 401) {
+        error.value = "Invalid username or password.";
+      } else {
+        error.value = "An unexpected error occurred. Please try again later.";
+      }
+      password.value = ""; // Clear password field on error
     });
 };
 </script>
@@ -45,20 +52,41 @@ const onLogin = async () => {
     <form @submit.prevent="onLogin">
       <div>
         <label for="username">Username:</label>
-        <input id="username" v-model="username" type="text" required />
+        <input
+          id="username"
+          v-model="username"
+          type="text"
+          required
+          data-testid="inputUsername"
+          autocomplete="on"
+        />
       </div>
       <div>
         <label for="password">Password:</label>
-        <input id="password" v-model="password" type="password" required />
+        <input
+          id="password"
+          v-model="password"
+          type="password"
+          required
+          data-testid="inputPassword"
+          autocomplete="on"
+        />
       </div>
       <div class="cluster-login">
         <input id="cluster-login" v-model="cluster" type="checkbox" />
         <label for="cluster-login">Login in all nodes in the cluster</label>
       </div>
-      <button type="submit" class="button button-success button-lg">
+      <button
+        type="submit"
+        class="button button-success button-lg"
+        data-testid="buttonLogin"
+      >
         <SpinnerIcon v-if="loading" />
         Login
       </button>
+      <div v-if="error" class="error-message" data-testid="errorMessage">
+        {{ error }}
+      </div>
     </form>
   </div>
 </template>
@@ -90,5 +118,10 @@ const onLogin = async () => {
     margin: 0;
     margin-left: 0.5rem;
   }
+}
+.error-message {
+  color: red;
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
 }
 </style>

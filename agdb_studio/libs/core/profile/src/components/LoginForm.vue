@@ -3,7 +3,7 @@ import { ref } from "vue";
 import { useAuth } from "@agdb-studio/auth/src/auth";
 import { getRouter } from "@agdb-studio/router/src/router";
 import SpinnerIcon from "@agdb-studio/design/src/components/icons/SpinnerIcon.vue";
-import { createLogger } from "../../../utils/src/logger/logger";
+import { createLogger } from "@agdb-studio/utils/src/logger/logger";
 
 const { login } = useAuth();
 

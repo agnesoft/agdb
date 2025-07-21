@@ -25,6 +25,7 @@ test("logout user successfully", async ({ page }) => {
   await click(page, "buttonLogin");
 
   await expect(page.locator("div.login-form")).not.toBeVisible();
+  await page.goto("/studio/db");
   // Navigate to the logout endpoint
 
   await click(page, "profile-dropdown");
@@ -46,9 +47,9 @@ test("unsuccessful login attempt", async ({ page }) => {
   await expect(page.locator("div.login-form")).toBeVisible();
 
   // Fill and submit the login form with incorrect credentials
-  await page.fill("[data-testid=inputUsername]", "wronguser");
-  await page.fill("[data-testid=inputPassword]", "wrongpassword");
-  await page.click("[data-testid=buttonLogin]");
+  await fillInput(page, "inputUsername", "wronguser");
+  await fillInput(page, "inputPassword", "wrongpassword");
+  await click(page, "buttonLogin");
 
   // Assert that an error message is displayed
   const errorMessage = page.locator("[data-testid=errorMessage]");

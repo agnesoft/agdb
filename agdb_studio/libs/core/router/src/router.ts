@@ -7,11 +7,14 @@ import {
 } from "vue-router";
 import { useAuth } from "@agdb-studio/auth/src/auth";
 import { useAccount } from "@agdb-studio/auth/src/account";
+import { createLogger } from "@agdb-studio/utils/src/logger/logger";
 
 const { isLoggedIn } = useAuth();
 const { admin, fetchUserStatus } = useAccount();
 
 let router: Router | undefined = undefined;
+
+const logger = createLogger("Router");
 
 export const beforeEach = async (
   to: RouteLocationNormalizedGeneric,
@@ -27,8 +30,8 @@ export const beforeEach = async (
       next();
     }
   } else if (to.meta.requiresAdmin) {
-    console.debug(
-      "Admin route detected:",
+    logger.debug(
+      "Checking admin status for route:",
       to.fullPath,
       "Admin status:",
       admin.value,

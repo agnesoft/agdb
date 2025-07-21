@@ -3,6 +3,7 @@ import { ref } from "vue";
 import { useAuth } from "@agdb-studio/auth/src/auth";
 import { getRouter } from "@agdb-studio/router/src/router";
 import SpinnerIcon from "@agdb-studio/design/src/components/icons/SpinnerIcon.vue";
+import { createLogger } from "../../../utils/src/logger/logger";
 
 const { login } = useAuth();
 
@@ -17,6 +18,8 @@ const clearError = () => {
   error.value = "";
 };
 
+const logger = createLogger("LoginForm");
+
 const onLogin = async () => {
   loading.value = true;
   clearError();
@@ -26,7 +29,7 @@ const onLogin = async () => {
     cluster: cluster.value,
   })
     .then(async () => {
-      console.log("Login successful");
+      logger.info("Login successful for user:", username.value);
       const router = getRouter();
       const redirect = router.currentRoute.value.query.redirect;
       await router.push(
@@ -35,7 +38,7 @@ const onLogin = async () => {
       loading.value = false;
     })
     .catch((e) => {
-      console.error("Login failed:", e);
+      logger.error("Login failed:", e);
       loading.value = false;
       if (e.response && e.response.status === 401) {
         error.value = "Invalid username or password.";

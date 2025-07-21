@@ -8,8 +8,11 @@ import {
 import { computed, ref, type ComputedRef } from "vue";
 import { addNotification } from "@agdb-studio/notification/src/composables/notificationStore.ts";
 import type { AgdbApiClient } from "@agnesoft/agdb_api/client";
+import { createLogger } from "@agdb-studio/utils/src/logger/logger";
 
 const _client = ref<AgdbApi.AgdbApiClient | undefined>();
+
+const logger = createLogger("ApiClient");
 
 export const client = computed((): AgdbApi.AgdbApiClient | undefined => {
   return _client.value;
@@ -24,12 +27,17 @@ export const removeToken = (): void => {
 };
 
 export const responseInterceptor = (response: AxiosResponse) => {
-  console.debug("Response Interceptor:", response);
+  logger.debug("Response Interceptor:", JSON.stringify(response));
   return response;
 };
 
 export const errorInterceptor = (error: AxiosError) => {
-  console.error(error.message, error.response, error.config);
+  logger.error(
+    "Error Interceptor:",
+    error.message,
+    JSON.stringify(error.response),
+    JSON.stringify(error.config),
+  );
   if (error.response?.status === 401) {
     removeToken();
   }
@@ -63,7 +71,7 @@ let connectionAttempts = 0;
 export const initClient = async (): Promise<void> => {
   _client.value = await AgdbApi.client(import.meta.env.VITE_API_URL).catch(
     (error: AxiosError) => {
-      console.error(error.message);
+      logger.error("Failed to initialize client:", error.message);
       if (connectionAttempts < MAX_CONNECTION_ATTEMPTS) {
         connectionAttempts++;
         const timeout = BASE_CONNECTION_TIMEOUT * connectionAttempts;
@@ -75,7 +83,7 @@ export const initClient = async (): Promise<void> => {
             title: "Connection error",
           });
         }
-        console.warn(message);
+        logger.warn(message);
         setTimeout(() => {
           initClient();
         }, timeout);

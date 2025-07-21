@@ -54,6 +54,7 @@ watch(modalIsVisible, async () => {
           :type="button.type ?? 'button'"
           :form="button.type === 'submit' ? 'modal-form' : undefined"
           @click.prevent="button.action"
+          :data-testid="`modal-button-${button.text.replace(/\s+/g, '-').toLowerCase()}`"
         >
           {{ button.text }}
         </button>

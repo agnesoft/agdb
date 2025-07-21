@@ -8,6 +8,7 @@
     "preview": "vite preview",
     "test": "vitest run --coverage",
     "test:e2e": "playwright test",
+    "test:e2e:trace": "playwright test --trace on",
     "build-only": "vite build",
     "type-check": "vue-tsc --noEmit -p tsconfig.vitest.json --composite false",
     "lint": "eslint --max-warnings=0 . --fix",

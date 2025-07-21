@@ -21,6 +21,7 @@ const openSubmenu = (key: string) => {
       :key="action.key"
       class="menu-item"
       :data-key="action.key"
+      :data-testid="`menu-item-${action.key}`"
       @click.prevent="
         (event: MouseEvent) => {
           if (action.actions) {

@@ -14,6 +14,8 @@ export default defineConfig({
       exclude: [
         ...coverageConfigDefaults.exclude,
         "e2e/*",
+        "e2e-utils/*",
+        "playwright-report/*",
         "*.config.*",
         "./src/main.ts",
         "./src/App.vue",

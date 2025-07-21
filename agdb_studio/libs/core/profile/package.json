@@ -19,7 +19,8 @@
     "@agdb-studio/api": "workspace:*",
     "@agdb-studio/router": "workspace:*",
     "@agdb-studio/auth": "workspace:*",
-    "@agdb-studio/common": "workspace:*"
+    "@agdb-studio/common": "workspace:*",
+    "@agdb-studio/utils": "workspace:*"
   },
   "devDependencies": {
     "@agdb-studio/tsconfig": "workspace:*",

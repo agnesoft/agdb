@@ -127,9 +127,9 @@ fn db_user_value(t: &syn::Type) -> Option<proc_macro2::TokenStream> {
 
 fn return_type(f: &syn::ImplItemFn) -> proc_macro2::TokenStream {
     if let ReturnType::Type(_, t) = &f.sig.output {
-        quote! { <#t as ::agdb::api::ApiDefinition>::def }
+        quote! { Some(<#t as ::agdb::api::ApiDefinition>::def) }
     } else {
-        quote! { || ::agdb::api::Type::None }
+        quote! { None }
     }
 }
 
@@ -169,17 +169,19 @@ fn parse_local_stmt(local: &syn::Local) -> proc_macro2::TokenStream {
 fn parse_expr(expr: &syn::Expr) -> proc_macro2::TokenStream {
     match expr {
         syn::Expr::Lit(e) => match &e.lit {
-            syn::Lit::Int(_) => {
-                quote! { ::agdb::api::Expression::Literal(::agdb::api::Type::I64) }
+            syn::Lit::Int(v) => {
+                let v_str = stringify!(v);
+                quote! { ::agdb::api::Expression::Literal(::agdb::api::LiteralValue::I64(#v_str)) }
             }
-            syn::Lit::Float(_) => {
-                quote! { ::agdb::api::Expression::Literal(::agdb::api::Type::F64) }
+            syn::Lit::Float(v) => {
+                let v_str = stringify!(v);
+                quote! { ::agdb::api::Expression::Literal(::agdb::api::LiteralValue::F64(#v_str)) }
             }
-            syn::Lit::Str(_) => {
-                quote! { ::agdb::api::Expression::Literal(::agdb::api::Type::String) }
+            syn::Lit::Str(v) => {
+                quote! { ::agdb::api::Expression::Literal(::agdb::api::LiteralValue::String(#v)) }
             }
-            syn::Lit::Bool(_) => {
-                quote! { ::agdb::api::Expression::Literal(::agdb::api::Type::U8) }
+            syn::Lit::Bool(v) => {
+                quote! { ::agdb::api::Expression::Literal(::agdb::api::LiteralValue::Bool(#v)) }
             }
             _ => unimplemented!("Unsupported literal type"),
         },

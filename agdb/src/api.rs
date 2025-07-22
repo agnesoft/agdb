@@ -1,5 +1,3 @@
-use agdb_derive::ApiDef;
-
 use crate::Comparison;
 use crate::CountComparison;
 use crate::DbF64;
@@ -89,8 +87,11 @@ use crate::query_builder::select_values::SelectValuesIds;
 use crate::query_builder::where_::Where;
 use crate::query_builder::where_::WhereKey;
 use crate::query_builder::where_::WhereLogicOperator;
+use agdb_derive::ApiDef;
+use std::fmt::Display;
+use std::fmt::Formatter;
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Type {
     None,
     U8,
@@ -105,13 +106,21 @@ pub enum Type {
     Option(Box<Type>),
 }
 
+#[derive(Clone, Debug, PartialEq)]
+pub enum LiteralValue {
+    I64(&'static str),
+    F64(&'static str),
+    String(&'static str),
+    Bool(bool),
+}
+
 #[derive(Debug, PartialEq)]
 pub struct NamedType {
     pub name: &'static str,
     pub ty: fn() -> Type,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Op {
     Add,
     Sub,
@@ -135,7 +144,7 @@ pub enum Op {
     Neg,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub enum Expression {
     Array {
         elements: Vec<Expression>,
@@ -177,7 +186,7 @@ pub enum Expression {
         ty: Option<fn() -> Type>,
         value: Box<Expression>,
     },
-    Literal(Type),
+    Literal(LiteralValue),
     Return(Option<Box<Expression>>),
     Struct {
         name: &'static str,
@@ -205,7 +214,7 @@ pub struct Enum {
 pub struct Function {
     pub name: &'static str,
     pub args: Vec<NamedType>,
-    pub ret: fn() -> Type,
+    pub ret: Option<fn() -> Type>,
     pub expressions: Vec<Expression>,
 }
 
@@ -280,6 +289,33 @@ impl<T: ApiDefinition> ApiDefinition for Vec<T> {
 impl<T: ApiDefinition> ApiDefinition for Option<T> {
     fn def() -> Type {
         Type::Option(Box::new(T::def()))
+    }
+}
+
+impl Display for Op {
+    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+        match self {
+            Op::Add => write!(f, "+"),
+            Op::Sub => write!(f, "-"),
+            Op::Mul => write!(f, "*"),
+            Op::Div => write!(f, "/"),
+            Op::Rem => write!(f, "%"),
+            Op::And => write!(f, "&&"),
+            Op::Or => write!(f, "||"),
+            Op::BitXor => write!(f, "^"),
+            Op::BitAnd => write!(f, "&"),
+            Op::BitOr => write!(f, "|"),
+            Op::Shl => write!(f, "<<"),
+            Op::Shr => write!(f, ">>"),
+            Op::Eq => write!(f, "=="),
+            Op::Lt => write!(f, "<"),
+            Op::Le => write!(f, "<="),
+            Op::Ne => write!(f, "!="),
+            Op::Ge => write!(f, ">="),
+            Op::Gt => write!(f, ">"),
+            Op::Not => write!(f, "!"),
+            Op::Neg => write!(f, "-"),
+        }
     }
 }
 

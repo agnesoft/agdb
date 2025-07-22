@@ -170,11 +170,11 @@ fn parse_expr(expr: &syn::Expr) -> proc_macro2::TokenStream {
     match expr {
         syn::Expr::Lit(e) => match &e.lit {
             syn::Lit::Int(v) => {
-                let v_str = stringify!(v);
+                let v_str = v.to_string();
                 quote! { ::agdb::api::Expression::Literal(::agdb::api::LiteralValue::I64(#v_str)) }
             }
             syn::Lit::Float(v) => {
-                let v_str = stringify!(v);
+                let v_str = v.to_string();
                 quote! { ::agdb::api::Expression::Literal(::agdb::api::LiteralValue::F64(#v_str)) }
             }
             syn::Lit::Str(v) => {
@@ -195,19 +195,28 @@ fn parse_expr(expr: &syn::Expr) -> proc_macro2::TokenStream {
             quote! { ::agdb::api::Expression::Variable(#ident) }
         }
         syn::Expr::Call(e) => {
-            let func = match &*e.func {
-                syn::Expr::Path(path) => path
-                    .path
-                    .segments
-                    .last()
-                    .map(|s| s.ident.to_string())
-                    .unwrap_or_default(),
-                _ => "unknown".to_string(),
+            let (recipient, func) = match &*e.func {
+                syn::Expr::Path(path) => {
+                    let mut segments: Vec<String> = path
+                        .path
+                        .segments
+                        .iter()
+                        .map(|s| s.ident.to_string())
+                        .collect();
+                    let func = segments.pop().unwrap_or_default();
+                    let recipient = if let Some(last) = segments.pop() {
+                        quote! { Some(Box::new(::agdb::api::Expression::Variable(#last))) }
+                    } else {
+                        quote! { None }
+                    };
+                    (recipient, func)
+                }
+                _ => panic!("Expected a path for function call"),
             };
             let args = e.args.iter().map(parse_expr);
             quote! {
                 ::agdb::api::Expression::Call {
-                    recipient: None,
+                    recipient: #recipient,
                     function: #func,
                     args: vec![#(#args),*],
                 }

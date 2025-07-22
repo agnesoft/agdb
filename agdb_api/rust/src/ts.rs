@@ -21,9 +21,19 @@ impl TS {
         self.buffer
     }
 
-    fn add_body(&mut self, expressions: &[agdb::api::Expression]) {
-        for expr in expressions {
-            self.add_expression(expr);
+    fn add_body(&mut self, expressions: &[agdb::api::Expression], has_return: bool) {
+        if has_return {
+            for expr in expressions[..expressions.len() - 1].iter() {
+                self.add_expression(expr);
+            }
+            if let Some(expr) = expressions.last() {
+                self.print_indent("return ");
+                self.add_expression(expr);
+            }
+        } else {
+            for expr in expressions {
+                self.add_expression(expr);
+            }
         }
     }
 
@@ -61,7 +71,7 @@ impl TS {
             }
             agdb::api::Expression::Block(expressions) => {
                 self.print("{\n");
-                self.add_body(expressions);
+                self.add_body(expressions, false);
                 self.print("}\n");
             }
             agdb::api::Expression::Call {
@@ -91,7 +101,7 @@ impl TS {
                 };
                 self.print(&format!("(): {ret} => {{\n"));
                 self.indent += 1;
-                self.add_body(body);
+                self.add_body(body, false);
                 self.indent -= 1;
                 self.print("}\n");
             }
@@ -149,13 +159,18 @@ impl TS {
                 }
             }
             agdb::api::Expression::Struct { name, fields } => {
-                self.print(&format!("new {name} {{\n"));
-                for field in fields {
-                    self.print(&format!("    {}: ", field.0));
-                    self.add_sub_expression(&field.1);
-                    self.print(",\n");
+                self.print(&format!("new {name}"));
+                if fields.is_empty() {
+                    self.print(";\n");
+                } else {
+                    self.print(" {\n");
+                    for field in fields {
+                        self.print(&format!("    {}: ", field.0));
+                        self.add_sub_expression(&field.1);
+                        self.print(",\n");
+                    }
+                    self.print("}\n");
                 }
-                self.print("}\n");
             }
             agdb::api::Expression::Unary { op, expr } => {
                 self.print(&format!("{op}"));
@@ -174,9 +189,7 @@ impl TS {
     }
 
     fn add_expression(&mut self, expr: &agdb::api::Expression) {
-        self.print_indent("");
         self.add_sub_expression(expr);
-        self.print(";\n");
     }
 
     fn add_function(&mut self, f: &agdb::api::Function) {
@@ -197,7 +210,9 @@ impl TS {
                 .join(", "),
             ret_val
         ));
-        //self.add_body(&f.expressions);
+        self.indent += 1;
+        self.add_body(&f.expressions, f.ret.is_some());
+        self.indent -= 1;
         self.print("    }\n");
     }
 

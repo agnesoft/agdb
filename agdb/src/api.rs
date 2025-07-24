@@ -1,6 +1,8 @@
-use agdb_derive::ApiDef;
-
+use crate::Comparison;
+use crate::CountComparison;
+use crate::DbF64;
 use crate::DbId;
+use crate::DbKeyOrder;
 use crate::DbKeyValue;
 use crate::DbValue;
 use crate::DbValues;
@@ -9,9 +11,14 @@ use crate::InsertEdgesQuery;
 use crate::InsertIndexQuery;
 use crate::InsertNodesQuery;
 use crate::InsertValuesQuery;
+use crate::KeyValueComparison;
 use crate::MultiValues;
 use crate::QueryAliases;
 use crate::QueryBuilder;
+use crate::QueryCondition;
+use crate::QueryConditionData;
+use crate::QueryConditionLogic;
+use crate::QueryConditionModifier;
 use crate::QueryId;
 use crate::QueryIds;
 use crate::QueryValues;
@@ -20,11 +27,14 @@ use crate::RemoveIndexQuery;
 use crate::RemoveQuery;
 use crate::RemoveValuesQuery;
 use crate::SearchQuery;
+use crate::SearchQueryAlgorithm;
 use crate::SelectAliasesQuery;
 use crate::SelectAllAliasesQuery;
+use crate::SelectEdgeCountQuery;
 use crate::SelectIndexesQuery;
 use crate::SelectKeyCountQuery;
 use crate::SelectKeysQuery;
+use crate::SelectNodeCountQuery;
 use crate::SelectValuesQuery;
 use crate::SingleValues;
 use crate::query_builder::insert::Insert;
@@ -77,8 +87,11 @@ use crate::query_builder::select_values::SelectValuesIds;
 use crate::query_builder::where_::Where;
 use crate::query_builder::where_::WhereKey;
 use crate::query_builder::where_::WhereLogicOperator;
+use agdb_derive::ApiDef;
+use std::fmt::Display;
+use std::fmt::Formatter;
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Type {
     None,
     U8,
@@ -93,13 +106,21 @@ pub enum Type {
     Option(Box<Type>),
 }
 
+#[derive(Clone, Debug, PartialEq)]
+pub enum LiteralValue {
+    I64(&'static str),
+    F64(&'static str),
+    String(&'static str),
+    Bool(bool),
+}
+
 #[derive(Debug, PartialEq)]
 pub struct NamedType {
     pub name: &'static str,
     pub ty: fn() -> Type,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Op {
     Add,
     Sub,
@@ -123,7 +144,7 @@ pub enum Op {
     Neg,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub enum Expression {
     Array {
         elements: Vec<Expression>,
@@ -165,7 +186,7 @@ pub enum Expression {
         ty: Option<fn() -> Type>,
         value: Box<Expression>,
     },
-    Literal(Type),
+    Literal(LiteralValue),
     Return(Option<Box<Expression>>),
     Struct {
         name: &'static str,
@@ -193,7 +214,7 @@ pub struct Enum {
 pub struct Function {
     pub name: &'static str,
     pub args: Vec<NamedType>,
-    pub ret: fn() -> Type,
+    pub ret: Option<fn() -> Type>,
     pub expressions: Vec<Expression>,
 }
 
@@ -205,7 +226,7 @@ pub struct Struct {
 
 #[allow(dead_code)]
 #[derive(ApiDef)]
-struct SearchQueryBuilderDummy {
+struct SearchQueryBuilderHelper {
     search: SearchQuery,
 }
 
@@ -213,7 +234,7 @@ pub trait ApiDefinition {
     fn def() -> Type;
 }
 
-impl SearchQueryBuilder for SearchQueryBuilderDummy {
+impl SearchQueryBuilder for SearchQueryBuilderHelper {
     fn search_mut(&mut self) -> &mut SearchQuery {
         &mut self.search
     }
@@ -271,15 +292,42 @@ impl<T: ApiDefinition> ApiDefinition for Option<T> {
     }
 }
 
+impl Display for Op {
+    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+        match self {
+            Op::Add => write!(f, "+"),
+            Op::Sub => write!(f, "-"),
+            Op::Mul => write!(f, "*"),
+            Op::Div => write!(f, "/"),
+            Op::Rem => write!(f, "%"),
+            Op::And => write!(f, "&&"),
+            Op::Or => write!(f, "||"),
+            Op::BitXor => write!(f, "^"),
+            Op::BitAnd => write!(f, "&"),
+            Op::BitOr => write!(f, "|"),
+            Op::Shl => write!(f, "<<"),
+            Op::Shr => write!(f, ">>"),
+            Op::Eq => write!(f, "=="),
+            Op::Lt => write!(f, "<"),
+            Op::Le => write!(f, "<="),
+            Op::Ne => write!(f, "!="),
+            Op::Ge => write!(f, ">="),
+            Op::Gt => write!(f, ">"),
+            Op::Not => write!(f, "!"),
+            Op::Neg => write!(f, "-"),
+        }
+    }
+}
+
 #[allow(dead_code)]
-struct ApiType {
-    ty: Type,
-    functions: Vec<Function>,
+pub struct ApiType {
+    pub ty: Type,
+    pub functions: Vec<Function>,
 }
 
 #[allow(dead_code, clippy::upper_case_acronyms)]
-struct API {
-    types: Vec<ApiType>,
+pub struct API {
+    pub types: Vec<ApiType>,
 }
 
 #[allow(dead_code)]
@@ -300,7 +348,7 @@ fn ty_f<T: ApiFunctions>() -> ApiType {
 
 #[allow(dead_code)]
 impl API {
-    pub fn new() -> Self {
+    pub fn def() -> Self {
         Self {
             types: vec![
                 //literals
@@ -311,6 +359,7 @@ impl API {
                 ty::<String>(),
                 ty::<bool>(),
                 ty::<Vec<u8>>(),
+                ty::<DbF64>(),
                 //structs
                 ty::<DbId>(),
                 ty::<QueryId>(),
@@ -333,14 +382,23 @@ impl API {
                 ty::<RemoveQuery>(),
                 ty::<RemoveValuesQuery>(),
                 ty::<SearchQuery>(),
+                ty::<SearchQueryAlgorithm>(),
                 ty::<SelectAliasesQuery>(),
                 ty::<SelectAllAliasesQuery>(),
-                ty::<SelectEdgeCount>(),
+                ty::<SelectEdgeCountQuery>(),
                 ty::<SelectIndexesQuery>(),
                 ty::<SelectKeyCountQuery>(),
                 ty::<SelectKeysQuery>(),
-                ty::<SelectNodeCount>(),
+                ty::<SelectNodeCountQuery>(),
                 ty::<SelectValuesQuery>(),
+                ty::<DbKeyOrder>(),
+                ty::<QueryCondition>(),
+                ty::<QueryConditionLogic>(),
+                ty::<QueryConditionModifier>(),
+                ty::<QueryConditionData>(),
+                ty::<CountComparison>(),
+                ty::<Comparison>(),
+                ty::<KeyValueComparison>(),
                 //builders
                 ty_f::<QueryBuilder>(),
                 ty_f::<Insert>(),
@@ -381,18 +439,19 @@ impl API {
                 ty_f::<SelectValues>(),
                 ty_f::<SelectValuesIds>(),
                 //search & where
-                ty_f::<Search<SearchQueryBuilderDummy>>(),
-                ty_f::<SearchAlgorithm<SearchQueryBuilderDummy>>(),
-                ty_f::<SearchFrom<SearchQueryBuilderDummy>>(),
-                ty_f::<SearchTo<SearchQueryBuilderDummy>>(),
-                ty_f::<SearchIndex<SearchQueryBuilderDummy>>(),
-                ty_f::<SearchIndexValue<SearchQueryBuilderDummy>>(),
-                ty_f::<SearchOrderBy<SearchQueryBuilderDummy>>(),
-                ty_f::<SelectLimit<SearchQueryBuilderDummy>>(),
-                ty_f::<SelectOffset<SearchQueryBuilderDummy>>(),
-                ty_f::<Where<SearchQueryBuilderDummy>>(),
-                ty_f::<WhereKey<SearchQueryBuilderDummy>>(),
-                ty_f::<WhereLogicOperator<SearchQueryBuilderDummy>>(),
+                ty_f::<Search<SearchQueryBuilderHelper>>(),
+                ty_f::<SearchAlgorithm<SearchQueryBuilderHelper>>(),
+                ty_f::<SearchFrom<SearchQueryBuilderHelper>>(),
+                ty_f::<SearchTo<SearchQueryBuilderHelper>>(),
+                ty_f::<SearchIndex<SearchQueryBuilderHelper>>(),
+                ty_f::<SearchIndexValue<SearchQueryBuilderHelper>>(),
+                ty_f::<SearchOrderBy<SearchQueryBuilderHelper>>(),
+                ty_f::<SelectLimit<SearchQueryBuilderHelper>>(),
+                ty_f::<SelectOffset<SearchQueryBuilderHelper>>(),
+                ty_f::<Where<SearchQueryBuilderHelper>>(),
+                ty_f::<WhereKey<SearchQueryBuilderHelper>>(),
+                ty_f::<WhereLogicOperator<SearchQueryBuilderHelper>>(),
+                ty::<SearchQueryBuilderHelper>(),
             ],
         }
     }
@@ -404,7 +463,7 @@ mod tests {
 
     #[test]
     fn test_api() {
-        let _api = API::new();
+        let _api = API::def();
         for ty in _api.types {
             for f in ty.functions {
                 for e in f.expressions {

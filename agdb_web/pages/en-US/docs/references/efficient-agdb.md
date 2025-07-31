@@ -110,7 +110,7 @@ The users should be able to create posts. The data we want to store about the po
 - body
 - author
 
-Once again lets define the `Post` type. The specially treated `db_id` field will become useful later on:
+Once again let's define the `Post` type. The specially treated `db_id` field will become useful later on:
 
 ```rs
 #[derive(UserValue)]
@@ -505,7 +505,7 @@ fn liked_posts(db: &Db, offset: u64, limit: u64) -> Result<Vec<PostLiked>, Query
 }
 ```
 
-However this change is not "free" in that caching any information means it now exists in two places and those places must be synchronized (the famous cache invalidation problem). Fortunately this instance is not as hard. We simply make sure that whenever we add or remove `likes` we also update the counter on the post or comment. Since when we do those operations we also have the post/comment `id` doing that would be trivial.
+However, this change is not "free" in that caching any information means it now exists in two places and those places must be synchronized (the famous cache invalidation problem). Fortunately this instance is not as hard. We simply make sure that whenever we add or remove `likes` we also update the counter on the post or comment. Since when we do those operations we also have the post/comment `id` doing that would be trivial.
 
 ### Comments
 

@@ -3,7 +3,6 @@ mod api_error;
 mod api_result;
 mod api_types;
 mod http_client;
-mod ts;
 
 pub use api::AgdbApi;
 pub use api_error::AgdbApiError;

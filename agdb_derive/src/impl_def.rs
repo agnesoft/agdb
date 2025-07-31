@@ -42,7 +42,7 @@ fn parse_function(f: syn::ImplItemFn) -> proc_macro2::TokenStream {
     let name = f.sig.ident.to_string();
     let ret_ty = return_type(&f);
     let mut args = vec![];
-    let mut exprs = vec![];
+    let mut exprs: Vec<proc_macro2::TokenStream> = vec![];
 
     for a in f.sig.inputs {
         if let syn::FnArg::Typed(t) = a {
@@ -51,7 +51,7 @@ fn parse_function(f: syn::ImplItemFn) -> proc_macro2::TokenStream {
     }
 
     for stmt in f.block.stmts {
-        exprs.push(parse_stmt(&stmt));
+        //exprs.push(parse_stmt(&stmt));
     }
 
     let api_func = quote! {

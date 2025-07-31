@@ -7,7 +7,7 @@ import { Callout, Steps } from "nextra/components";
 
 # How to run the server in Kubernetes?
 
-The `agdb_server` can be run in Kubernetes using official Docker image. Optionally you can [build the image](https://github.com/agnesoft/agdb/blob/main/agdb_server/containerfile) yourself and host it at your the place of your choosing. Please refer to the [server-docker](/docs/guides/how-to-run-server/server-docker) guide for available images.
+The `agdb_server` can be run in Kubernetes using official Docker image. Optionally you can [build the image](https://github.com/agnesoft/agdb/blob/main/agdb_server/containerfile) yourself and host it at the repository of your choosing. Please refer to the [server-docker](/docs/guides/how-to-run-server/server-docker) guide for available images.
 
 <Callout>
     This guide is for running `agdb_server` as a single instance. This is only
@@ -64,7 +64,7 @@ stringData:
     pepper: "1234567891234567"
 ```
 
-Followed by the certificates. In production you should create the certificates using kubectl command from secure files rather than embedding them into the manifest. However, for demonstration purposes the following example is provided. It uses self-signed certificate with the corresponding CA. It needs to be provided as `base64` value. You can use e.g. `cat cert.pem | base64` bash command to get the correct value (end of lines do not matter).
+Followed by the certificates. In production, you should create the certificates using kubectl command from secure files rather than embedding them into the manifest. However, for demonstration purposes the following example is provided. It uses self-signed certificate with the corresponding CA. It needs to be provided as `base64` value. You can use e.g. `cat cert.pem | base64` bash command to get the correct value (end of lines do not matter).
 
 <Callout>
     The certificate must be issued (or used as an alternative name - SAN) for

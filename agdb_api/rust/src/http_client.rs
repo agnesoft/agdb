@@ -1,6 +1,8 @@
 #[cfg(feature = "reqwest")]
 use crate::AgdbApiError;
+use crate::api::AgdbApiClient;
 use crate::api_result::AgdbApiResult;
+use agdb::api::ApiDefinition;
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 
@@ -29,6 +31,25 @@ pub trait HttpClient {
 #[cfg(feature = "reqwest")]
 pub struct ReqwestClient {
     pub client: reqwest::Client,
+}
+
+impl AgdbApiClient for ReqwestClient {}
+
+#[cfg(feature = "api")]
+impl ApiDefinition for ReqwestClient {
+    fn def() -> agdb::api::Type {
+        use agdb::api::NamedType;
+
+        static STRUCT: std::sync::OnceLock<agdb::api::Struct> = std::sync::OnceLock::new();
+
+        agdb::api::Type::Struct(STRUCT.get_or_init(|| agdb::api::Struct {
+            name: "ReqwestClient",
+            fields: vec![NamedType {
+                name: "client",
+                ty: || agdb::api::Type::User,
+            }],
+        }))
+    }
 }
 
 #[cfg(feature = "reqwest")]

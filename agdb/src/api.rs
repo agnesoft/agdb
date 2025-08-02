@@ -184,7 +184,7 @@ pub enum Expression {
     Let {
         name: &'static str,
         ty: Option<fn() -> Type>,
-        value: Box<Expression>,
+        value: Option<Box<Expression>>,
     },
     Literal(LiteralValue),
     Return(Option<Box<Expression>>),
@@ -234,6 +234,24 @@ pub trait ApiDefinition {
     fn def() -> Type;
 }
 
+impl Type {
+    pub fn name(&self) -> &'static str {
+        match self {
+            Type::None => "None",
+            Type::U8 => "u8",
+            Type::I64 => "i64",
+            Type::U64 => "u64",
+            Type::F64 => "f64",
+            Type::String => "String",
+            Type::User => "User",
+            Type::Enum(e) => e.name,
+            Type::Struct(s) => s.name,
+            Type::List(_) => "List",
+            Type::Option(_) => "Option",
+        }
+    }
+}
+
 impl SearchQueryBuilder for SearchQueryBuilderHelper {
     fn search_mut(&mut self) -> &mut SearchQuery {
         &mut self.search
@@ -247,6 +265,12 @@ pub trait ApiFunctions: ApiDefinition {
 impl ApiDefinition for u8 {
     fn def() -> Type {
         Type::U8
+    }
+}
+
+impl ApiDefinition for u16 {
+    fn def() -> Type {
+        Type::U64
     }
 }
 
@@ -274,6 +298,12 @@ impl ApiDefinition for String {
     }
 }
 
+impl ApiDefinition for &str {
+    fn def() -> Type {
+        Type::String
+    }
+}
+
 impl ApiDefinition for bool {
     fn def() -> Type {
         Type::U8
@@ -289,6 +319,56 @@ impl<T: ApiDefinition> ApiDefinition for Vec<T> {
 impl<T: ApiDefinition> ApiDefinition for Option<T> {
     fn def() -> Type {
         Type::Option(Box::new(T::def()))
+    }
+}
+
+impl<T: ApiDefinition, E: ApiDefinition> ApiDefinition for Result<T, E> {
+    fn def() -> Type {
+        static ENUM: std::sync::OnceLock<Enum> = std::sync::OnceLock::new();
+        let e = ENUM.get_or_init(|| Enum {
+            name: "Result",
+            variants: vec![
+                NamedType {
+                    name: "Ok",
+                    ty: || T::def(),
+                },
+                NamedType {
+                    name: "Err",
+                    ty: || E::def(),
+                },
+            ],
+        });
+        Type::Enum(e)
+    }
+}
+
+impl<T1: ApiDefinition, T2: ApiDefinition> ApiDefinition for (T1, T2) {
+    fn def() -> Type {
+        static STRUCT: std::sync::OnceLock<agdb::api::Struct> = std::sync::OnceLock::new();
+        static STRUCTNAME: std::sync::OnceLock<String> = std::sync::OnceLock::new();
+        let name = STRUCTNAME
+            .get_or_init(|| format!("{}_{}", T1::def().name(), T2::def().name()))
+            .as_str();
+
+        Type::Struct(STRUCT.get_or_init(|| ::agdb::api::Struct {
+            name,
+            fields: vec![
+                NamedType {
+                    name: "0",
+                    ty: || T1::def(),
+                },
+                NamedType {
+                    name: "1",
+                    ty: || T2::def(),
+                },
+            ],
+        }))
+    }
+}
+
+impl<T: ApiDefinition> ApiDefinition for &[T] {
+    fn def() -> Type {
+        Type::List(Box::new(T::def()))
     }
 }
 

@@ -15,14 +15,23 @@ use crate::http_client::HttpClient;
 use agdb::QueryResult;
 use agdb::QueryType;
 
-pub struct AgdbApi<T: HttpClient> {
+#[cfg(feature = "api")]
+pub trait AgdbApiClient: HttpClient + agdb::api::ApiDefinition {}
+
+#[cfg(not(feature = "api"))]
+pub trait AgdbApiClient: HttpClient {}
+
+#[cfg(feature = "api")]
+#[cfg_attr(feature = "api", derive(agdb::ApiDef))]
+pub struct AgdbApi<T: AgdbApiClient> {
     client: T,
     address: String,
     base_url: String,
     pub token: Option<String>,
 }
 
-impl<T: HttpClient> AgdbApi<T> {
+#[cfg_attr(feature = "api", agdb::impl_def())]
+impl<T: AgdbApiClient> AgdbApi<T> {
     pub fn new(client: T, address: &str) -> Self {
         let base = if address.starts_with("http") || address.starts_with("https") {
             address.to_string()

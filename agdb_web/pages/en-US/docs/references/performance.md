@@ -190,5 +190,5 @@ Some advice:
 - Always measure your use case but do not rely on micro-benchmarks, use realistic workloads. See `Creating users` line in each table which is equivalent to an isolated micro-benchmark and compare it with the rest of the table that demonstrates realistic load with contention.
 - Correct storage backend matters. While the default is usually the best choice offering persistence and speed it comes with certain caveats:
     - Do not use memory mapped database if you store terabytes of data or your data set is likely to exceed your available RAM size.
-    - Do not use memory mapped database if your use case is write heavy with infrequent reads. The memory mapping aids only in reading and slows down the writes a little bit.
+    - Do not use memory mapped database if your use case is write-heavy with infrequent reads. The memory mapping aids only in reading and slows down the writes a little bit.
     - Do not use in-memory cache if you need persistence even though it is the fastest.

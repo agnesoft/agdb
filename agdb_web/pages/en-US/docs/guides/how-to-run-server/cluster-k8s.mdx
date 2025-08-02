@@ -65,7 +65,7 @@ stringData:
     pepper: "1234567891234567"
 ```
 
-Followed by the certificates. In production you should create the certificates using kubectl command from secure files rather than embedding them into the manifest. However, for demonstration purposes the following example is provided. It uses self-signed certificate with the corresponding CA. It needs to be provided as `base64` value. You can use e.g. `cat cert.pem | base64` bash command to get the correct value (end of lines do not matter).
+Followed by the certificates. In production, you should create the certificates using kubectl command from secure files rather than embedding them into the manifest. However, for demonstration purposes the following example is provided. It uses self-signed certificate with the corresponding CA. It needs to be provided as `base64` value. You can use e.g. `cat cert.pem | base64` bash command to get the correct value (end of lines do not matter).
 
 <Callout>
     The certificate must be issued (or used as an alternative name - SAN) for
@@ -89,7 +89,7 @@ data:
 
 ### ConfigMap
 
-The configuration named `agdb-config` via the `ConfigMap` is required as we need specific configuration for each node. Additionally, we specify a custom `start.sh` script that dynamically assigns the deployment index as a cluster index on startup. We are using the same certificate in all servers and it must be valid for all the names it is used for, e.g. `agdb-0.default.svc.cluster.local`, `agdb-1.default.svc.cluster.local`, `agdb-2.default.svc.cluster.local`.
+The configuration named `agdb-config` via the `ConfigMap` is required as we need specific configuration for each node. Additionally, we specify a custom `start.sh` script that dynamically assigns the deployment index as a cluster index on startup. We are using the same certificate in all servers, and it must be valid for all the names it is used for, e.g. `agdb-0.default.svc.cluster.local`, `agdb-1.default.svc.cluster.local`, `agdb-2.default.svc.cluster.local`.
 
 ```yaml
 ---

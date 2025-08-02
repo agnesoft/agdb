@@ -52,7 +52,7 @@ pub mod api;
 pub mod query_builder;
 #[cfg(feature = "api")]
 pub use agdb_derive::{ApiDef, impl_def};
-#[cfg(feature = "api")]
+
 pub use db::Db;
 pub use db::DbFile;
 pub use db::DbFileTransaction;

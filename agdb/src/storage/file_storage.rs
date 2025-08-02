@@ -173,9 +173,62 @@ mod tests {
     use super::*;
     use crate::storage::Storage;
     use crate::storage::StorageIndex;
+    use crate::storage::storage_records::StorageRecord;
     use crate::test_utilities::test_file::TestFile;
     use crate::utilities::serialize::Serialize;
     use crate::utilities::serialize::SerializeStatic;
+
+    #[test]
+    fn bad_db_file_content() {
+        let test_file = TestFile::new();
+        let records = [
+            StorageRecord {
+                index: 0,
+                pos: 0,
+                size: 8,
+            },
+            StorageRecord {
+                index: 1,
+                pos: 24,
+                size: 48,
+            },
+            StorageRecord {
+                index: 1181116006400,
+                pos: 88,
+                size: 0,
+            },
+            StorageRecord {
+                index: 1,
+                pos: 104,
+                size: 0,
+            },
+            StorageRecord {
+                index: 2,
+                pos: 120,
+                size: 16,
+            },
+        ];
+
+        {
+            let mut file = std::fs::File::create(test_file.file_name()).unwrap();
+
+            for record in records {
+                let mut bytes = Vec::with_capacity(
+                    (record.index.serialized_size() + record.size.serialized_size()) as usize,
+                );
+                bytes.extend(record.index.serialize());
+                bytes.extend(record.size.serialize());
+                file.seek(SeekFrom::Start(record.pos)).unwrap();
+                file.write_all(&bytes).unwrap();
+            }
+
+            file.seek(SeekFrom::Start(16)).unwrap();
+            file.write_all(&1_u64.to_le_bytes()).unwrap();
+        }
+
+        let storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+        assert_eq!(storage.records().len(), 2);
+    }
 
     #[test]
     fn bad_file() {

@@ -51,7 +51,7 @@ fn parse_function(f: syn::ImplItemFn) -> proc_macro2::TokenStream {
     }
 
     for stmt in f.block.stmts {
-        //exprs.push(parse_stmt(&stmt));
+        exprs.push(parse_stmt(&stmt));
     }
 
     let api_func = quote! {

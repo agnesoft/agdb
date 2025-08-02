@@ -1,92 +1,5 @@
-use crate::Comparison;
-use crate::CountComparison;
-use crate::DbF64;
-use crate::DbId;
-use crate::DbKeyOrder;
-use crate::DbKeyValue;
-use crate::DbValue;
-use crate::DbValues;
-use crate::InsertAliasesQuery;
-use crate::InsertEdgesQuery;
-use crate::InsertIndexQuery;
-use crate::InsertNodesQuery;
-use crate::InsertValuesQuery;
-use crate::KeyValueComparison;
-use crate::MultiValues;
-use crate::QueryAliases;
-use crate::QueryBuilder;
-use crate::QueryCondition;
-use crate::QueryConditionData;
-use crate::QueryConditionLogic;
-use crate::QueryConditionModifier;
-use crate::QueryId;
-use crate::QueryIds;
-use crate::QueryValues;
-use crate::RemoveAliasesQuery;
-use crate::RemoveIndexQuery;
-use crate::RemoveQuery;
-use crate::RemoveValuesQuery;
 use crate::SearchQuery;
-use crate::SearchQueryAlgorithm;
-use crate::SelectAliasesQuery;
-use crate::SelectAllAliasesQuery;
-use crate::SelectEdgeCountQuery;
-use crate::SelectIndexesQuery;
-use crate::SelectKeyCountQuery;
-use crate::SelectKeysQuery;
-use crate::SelectNodeCountQuery;
-use crate::SelectValuesQuery;
-use crate::SingleValues;
-use crate::query_builder::insert::Insert;
-use crate::query_builder::insert_aliases::InsertAliases;
-use crate::query_builder::insert_aliases::InsertAliasesIds;
-use crate::query_builder::insert_edge::InsertEdges;
-use crate::query_builder::insert_edge::InsertEdgesEach;
-use crate::query_builder::insert_edge::InsertEdgesFrom;
-use crate::query_builder::insert_edge::InsertEdgesFromTo;
-use crate::query_builder::insert_edge::InsertEdgesIds;
-use crate::query_builder::insert_edge::InsertEdgesValues;
-use crate::query_builder::insert_index::InsertIndex;
-use crate::query_builder::insert_nodes::InsertNodes;
-use crate::query_builder::insert_nodes::InsertNodesAliases;
-use crate::query_builder::insert_nodes::InsertNodesCount;
-use crate::query_builder::insert_nodes::InsertNodesIds;
-use crate::query_builder::insert_nodes::InsertNodesValues;
-use crate::query_builder::insert_values::InsertValues;
-use crate::query_builder::insert_values::InsertValuesIds;
-use crate::query_builder::remove::Remove;
-use crate::query_builder::remove_aliases::RemoveAliases;
-use crate::query_builder::remove_ids::RemoveIds;
-use crate::query_builder::remove_index::RemoveIndex;
-use crate::query_builder::remove_values::RemoveValues;
-use crate::query_builder::remove_values::RemoveValuesIds;
-use crate::query_builder::search::Search;
-use crate::query_builder::search::SearchAlgorithm;
-use crate::query_builder::search::SearchFrom;
-use crate::query_builder::search::SearchIndex;
-use crate::query_builder::search::SearchIndexValue;
-use crate::query_builder::search::SearchOrderBy;
 use crate::query_builder::search::SearchQueryBuilder;
-use crate::query_builder::search::SearchTo;
-use crate::query_builder::search::SelectLimit;
-use crate::query_builder::search::SelectOffset;
-use crate::query_builder::select::Select;
-use crate::query_builder::select_aliases::SelectAliases;
-use crate::query_builder::select_aliases::SelectAliasesIds;
-use crate::query_builder::select_edge_count::SelectEdgeCount;
-use crate::query_builder::select_edge_count::SelectEdgeCountIds;
-use crate::query_builder::select_ids::SelectIds;
-use crate::query_builder::select_indexes::SelectIndexes;
-use crate::query_builder::select_key_count::SelectKeyCount;
-use crate::query_builder::select_key_count::SelectKeyCountIds;
-use crate::query_builder::select_keys::SelectKeys;
-use crate::query_builder::select_keys::SelectKeysIds;
-use crate::query_builder::select_node_count::SelectNodeCount;
-use crate::query_builder::select_values::SelectValues;
-use crate::query_builder::select_values::SelectValuesIds;
-use crate::query_builder::where_::Where;
-use crate::query_builder::where_::WhereKey;
-use crate::query_builder::where_::WhereLogicOperator;
 use agdb_derive::ApiDef;
 use std::fmt::Display;
 use std::fmt::Formatter;
@@ -223,9 +136,8 @@ pub struct Struct {
     pub fields: Vec<NamedType>,
 }
 
-#[allow(dead_code)]
 #[derive(ApiDef)]
-struct SearchQueryBuilderHelper {
+pub struct SearchQueryBuilderHelper {
     search: SearchQuery,
 }
 
@@ -415,159 +327,21 @@ impl Display for Op {
     }
 }
 
-#[allow(dead_code)]
 pub struct ApiType {
     pub ty: Type,
     pub functions: Vec<Function>,
 }
 
-#[allow(dead_code, clippy::upper_case_acronyms)]
-pub struct API {
-    pub types: Vec<ApiType>,
-}
-
-#[allow(dead_code)]
-fn ty<T: ApiDefinition>() -> ApiType {
+pub fn ty<T: ApiDefinition>() -> ApiType {
     ApiType {
         ty: T::def(),
         functions: vec![],
     }
 }
 
-#[allow(dead_code)]
-fn ty_f<T: ApiFunctions>() -> ApiType {
+pub fn ty_f<T: ApiFunctions>() -> ApiType {
     ApiType {
         ty: T::def(),
         functions: T::functions(),
-    }
-}
-
-#[allow(dead_code)]
-impl API {
-    pub fn def() -> Self {
-        Self {
-            types: vec![
-                //literals
-                ty::<u8>(),
-                ty::<i64>(),
-                ty::<u64>(),
-                ty::<f64>(),
-                ty::<String>(),
-                ty::<bool>(),
-                ty::<Vec<u8>>(),
-                ty::<DbF64>(),
-                //structs
-                ty::<DbId>(),
-                ty::<QueryId>(),
-                ty::<QueryIds>(),
-                ty::<QueryValues>(),
-                ty::<DbValue>(),
-                ty::<DbValues>(),
-                ty::<DbKeyValue>(),
-                ty::<QueryAliases>(),
-                ty::<SingleValues>(),
-                ty::<MultiValues>(),
-                //queries
-                ty::<InsertAliasesQuery>(),
-                ty::<InsertEdgesQuery>(),
-                ty::<InsertIndexQuery>(),
-                ty::<InsertNodesQuery>(),
-                ty::<InsertValuesQuery>(),
-                ty::<RemoveAliasesQuery>(),
-                ty::<RemoveIndexQuery>(),
-                ty::<RemoveQuery>(),
-                ty::<RemoveValuesQuery>(),
-                ty::<SearchQuery>(),
-                ty::<SearchQueryAlgorithm>(),
-                ty::<SelectAliasesQuery>(),
-                ty::<SelectAllAliasesQuery>(),
-                ty::<SelectEdgeCountQuery>(),
-                ty::<SelectIndexesQuery>(),
-                ty::<SelectKeyCountQuery>(),
-                ty::<SelectKeysQuery>(),
-                ty::<SelectNodeCountQuery>(),
-                ty::<SelectValuesQuery>(),
-                ty::<DbKeyOrder>(),
-                ty::<QueryCondition>(),
-                ty::<QueryConditionLogic>(),
-                ty::<QueryConditionModifier>(),
-                ty::<QueryConditionData>(),
-                ty::<CountComparison>(),
-                ty::<Comparison>(),
-                ty::<KeyValueComparison>(),
-                //builders
-                ty_f::<QueryBuilder>(),
-                ty_f::<Insert>(),
-                ty_f::<InsertAliases>(),
-                ty_f::<InsertAliasesIds>(),
-                ty_f::<InsertEdges>(),
-                ty_f::<InsertEdgesEach>(),
-                ty_f::<InsertEdgesFrom>(),
-                ty_f::<InsertEdgesFromTo>(),
-                ty_f::<InsertEdgesIds>(),
-                ty_f::<InsertEdgesValues>(),
-                ty_f::<InsertIndex>(),
-                ty_f::<InsertNodes>(),
-                ty_f::<InsertNodesAliases>(),
-                ty_f::<InsertNodesCount>(),
-                ty_f::<InsertNodesIds>(),
-                ty_f::<InsertNodesValues>(),
-                ty_f::<InsertValues>(),
-                ty_f::<InsertValuesIds>(),
-                ty_f::<Remove>(),
-                ty_f::<RemoveAliases>(),
-                ty_f::<RemoveIds>(),
-                ty_f::<RemoveIndex>(),
-                ty_f::<RemoveValues>(),
-                ty_f::<RemoveValuesIds>(),
-                ty_f::<Select>(),
-                ty_f::<SelectAliases>(),
-                ty_f::<SelectAliasesIds>(),
-                ty_f::<SelectEdgeCount>(),
-                ty_f::<SelectEdgeCountIds>(),
-                ty_f::<SelectIds>(),
-                ty_f::<SelectIndexes>(),
-                ty_f::<SelectKeys>(),
-                ty_f::<SelectKeysIds>(),
-                ty_f::<SelectKeyCount>(),
-                ty_f::<SelectKeyCountIds>(),
-                ty_f::<SelectNodeCount>(),
-                ty_f::<SelectValues>(),
-                ty_f::<SelectValuesIds>(),
-                //search & where
-                ty_f::<Search<SearchQueryBuilderHelper>>(),
-                ty_f::<SearchAlgorithm<SearchQueryBuilderHelper>>(),
-                ty_f::<SearchFrom<SearchQueryBuilderHelper>>(),
-                ty_f::<SearchTo<SearchQueryBuilderHelper>>(),
-                ty_f::<SearchIndex<SearchQueryBuilderHelper>>(),
-                ty_f::<SearchIndexValue<SearchQueryBuilderHelper>>(),
-                ty_f::<SearchOrderBy<SearchQueryBuilderHelper>>(),
-                ty_f::<SelectLimit<SearchQueryBuilderHelper>>(),
-                ty_f::<SelectOffset<SearchQueryBuilderHelper>>(),
-                ty_f::<Where<SearchQueryBuilderHelper>>(),
-                ty_f::<WhereKey<SearchQueryBuilderHelper>>(),
-                ty_f::<WhereLogicOperator<SearchQueryBuilderHelper>>(),
-                ty::<SearchQueryBuilderHelper>(),
-            ],
-        }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_api() {
-        let api = API::def();
-        for ty in api.types {
-            for f in ty.functions {
-                for e in f.expressions {
-                    if let Expression::Unknown(e) = e {
-                        panic!("Unknown expression in {:?}::{}: {}", ty.ty, f.name, e);
-                    }
-                }
-            }
-        }
     }
 }

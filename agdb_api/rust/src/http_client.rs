@@ -1,34 +1,36 @@
-#[cfg(feature = "reqwest")]
 use crate::AgdbApiError;
-use crate::api::AgdbApiClient;
 use crate::api_result::AgdbApiResult;
+use crate::client::AgdbApiClient;
+#[cfg(feature = "api")]
 use agdb::api::ApiDefinition;
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 
-#[allow(async_fn_in_trait)]
 pub trait HttpClient {
-    async fn delete(&self, uri: &str, token: &Option<String>) -> AgdbApiResult<u16>;
-    async fn get<T: DeserializeOwned + Send>(
+    fn delete(
         &self,
         uri: &str,
         token: &Option<String>,
-    ) -> AgdbApiResult<(u16, T)>;
-    async fn post<T: Serialize, R: DeserializeOwned + Send>(
+    ) -> impl std::future::Future<Output = AgdbApiResult<u16>> + Send;
+    fn get<T: DeserializeOwned + Send>(
         &self,
         uri: &str,
-        json: &Option<T>,
         token: &Option<String>,
-    ) -> AgdbApiResult<(u16, R)>;
-    async fn put<T: Serialize>(
+    ) -> impl std::future::Future<Output = AgdbApiResult<(u16, T)>> + Send;
+    fn post<T: Serialize + Send, R: DeserializeOwned + Send>(
         &self,
         uri: &str,
-        json: &Option<T>,
+        json: Option<T>,
         token: &Option<String>,
-    ) -> AgdbApiResult<u16>;
+    ) -> impl std::future::Future<Output = AgdbApiResult<(u16, R)>> + Send;
+    fn put<T: Serialize + Send>(
+        &self,
+        uri: &str,
+        json: Option<T>,
+        token: &Option<String>,
+    ) -> impl std::future::Future<Output = AgdbApiResult<u16>> + Send;
 }
 
-#[cfg(feature = "reqwest")]
 pub struct ReqwestClient {
     pub client: reqwest::Client,
 }
@@ -52,7 +54,6 @@ impl ApiDefinition for ReqwestClient {
     }
 }
 
-#[cfg(feature = "reqwest")]
 impl ReqwestClient {
     #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
@@ -66,7 +67,6 @@ impl ReqwestClient {
     }
 }
 
-#[cfg(feature = "reqwest")]
 impl HttpClient for ReqwestClient {
     async fn delete(&self, uri: &str, token: &Option<String>) -> AgdbApiResult<u16> {
         let mut request = self.client.delete(uri);
@@ -114,7 +114,7 @@ impl HttpClient for ReqwestClient {
     async fn post<T: Serialize, R: DeserializeOwned>(
         &self,
         uri: &str,
-        json: &Option<T>,
+        json: Option<T>,
         token: &Option<String>,
     ) -> AgdbApiResult<(u16, R)> {
         let mut request = self.client.post(uri);
@@ -122,7 +122,7 @@ impl HttpClient for ReqwestClient {
             request = request.bearer_auth(token);
         }
         if let Some(json) = json {
-            request = request.json(json);
+            request = request.json(&json);
         }
         let response = request.send().await?;
         let status = response.status().as_u16();
@@ -141,15 +141,15 @@ impl HttpClient for ReqwestClient {
         }
     }
 
-    async fn put<T: Serialize>(
+    async fn put<T: Serialize + Send>(
         &self,
         uri: &str,
-        json: &Option<T>,
+        json: Option<T>,
         token: &Option<String>,
     ) -> AgdbApiResult<u16> {
         let mut request = self.client.put(uri);
         if let Some(json) = json {
-            request = request.json(json);
+            request = request.json(&json);
         }
         if let Some(token) = token {
             request = request.bearer_auth(token);

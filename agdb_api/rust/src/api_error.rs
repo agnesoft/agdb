@@ -13,7 +13,6 @@ impl std::fmt::Display for AgdbApiError {
     }
 }
 
-#[cfg(feature = "reqwest")]
 impl From<reqwest::Error> for AgdbApiError {
     fn from(error: reqwest::Error) -> Self {
         Self {
@@ -64,7 +63,6 @@ mod tests {
         );
     }
 
-    #[cfg(feature = "reqwest")]
     #[test]
     fn from_reqwest_error() {
         let error = reqwest::ClientBuilder::new()

@@ -18,7 +18,7 @@ studio = ["dep:include_dir"]
 
 [dependencies]
 agdb = { version = "0.11.2", path = "../agdb", features = ["serde", "openapi", "api"] }
-agdb_api = { version = "0.11.2", path = "../agdb_api/rust", features = ["reqwest"] }
+agdb_api = { version = "0.11.2", path = "../agdb_api/rust" }
 axum = { version = "0.8", features = ["http2"] }
 axum-extra = { version = "0.10", features = ["typed-header"] }
 axum-server = { version = "0.7", features = ["tls-rustls"], optional = true }

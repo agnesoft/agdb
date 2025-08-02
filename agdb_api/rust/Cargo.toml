@@ -15,14 +15,13 @@ categories = ["database", "api-bindings"]
 
 [features]
 default = []
-reqwest = ["dep:reqwest"]
 rust-tls = ["reqwest/rustls-tls"]
 native-tls = ["reqwest/native-tls"]
 api = ["agdb/api"]
 
 [dependencies]
 agdb = { version = "0.11.2", path = "../../agdb", features = ["serde", "openapi"] }
-reqwest = { version = "0.12", default-features = false, features = ["charset", "http2", "macos-system-configuration", "json"], optional = true }
+reqwest = { version = "0.12", default-features = false, features = ["charset", "http2", "macos-system-configuration", "json"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 utoipa = "5"

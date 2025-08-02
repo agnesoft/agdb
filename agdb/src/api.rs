@@ -463,12 +463,12 @@ mod tests {
 
     #[test]
     fn test_api() {
-        let _api = API::def();
-        for ty in _api.types {
+        let api = API::def();
+        for ty in api.types {
             for f in ty.functions {
                 for e in f.expressions {
-                    if let Expression::Unknown(a) = e {
-                        println!("{a}");
+                    if let Expression::Unknown(e) = e {
+                        panic!("Unknown expression in {:?}::{}: {}", ty.ty, f.name, e);
                     }
                 }
             }

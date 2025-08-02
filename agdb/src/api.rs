@@ -103,7 +103,6 @@ pub enum Type {
     Enum(&'static Enum),
     Struct(&'static Struct),
     List(Box<Type>),
-    Option(Box<Type>),
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -246,8 +245,11 @@ impl Type {
             Type::User => "User",
             Type::Enum(e) => e.name,
             Type::Struct(s) => s.name,
-            Type::List(_) => "List",
-            Type::Option(_) => "Option",
+            Type::List(t) => {
+                static LIST_NAME: std::sync::OnceLock<String> = std::sync::OnceLock::new();
+                let name = LIST_NAME.get_or_init(|| format!("List_{}", t.name()));
+                name.as_str()
+            }
         }
     }
 }
@@ -318,7 +320,21 @@ impl<T: ApiDefinition> ApiDefinition for Vec<T> {
 
 impl<T: ApiDefinition> ApiDefinition for Option<T> {
     fn def() -> Type {
-        Type::Option(Box::new(T::def()))
+        static ENUM: std::sync::OnceLock<Enum> = std::sync::OnceLock::new();
+        let e = ENUM.get_or_init(|| Enum {
+            name: "Option",
+            variants: vec![
+                NamedType {
+                    name: "Some",
+                    ty: || T::def(),
+                },
+                NamedType {
+                    name: "None",
+                    ty: || Type::None,
+                },
+            ],
+        });
+        Type::Enum(e)
     }
 }
 

@@ -460,14 +460,16 @@ impl<D: StorageData> Storage<D> {
         while current_pos < end {
             let record = self.read_record(current_pos)?;
 
-            if record.index != 0 {
+            if record.index != 0 && record.size != 0 {
                 let index = record.index as usize;
 
                 if records.len() <= index {
                     records.resize(index + 1, StorageRecord::default());
                 }
 
-                records[index] = record;
+                if records[index].index == 0 {
+                    records[index] = record;
+                }
             }
 
             current_pos = record.end();
@@ -592,8 +594,8 @@ impl<D: StorageData> Storage<D> {
 
         while 0 < pos {
             if CHUNK_SIZE < pos {
-                pos -= CHUNK_SIZE;
                 size = CHUNK_SIZE;
+                pos -= size;
             } else {
                 size = pos;
                 pos = 0;

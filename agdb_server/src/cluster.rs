@@ -149,7 +149,7 @@ impl ClusterNodeImpl {
     async fn send(&self, request: &raft::Request<ClusterAction>) -> Option<raft::Response> {
         match self
             .client
-            .post(&self.url, &Some(request), &self.token)
+            .post(&self.url, Some(request), &self.token)
             .await
         {
             Ok((_, response)) => Some(response),

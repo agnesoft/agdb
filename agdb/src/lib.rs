@@ -27,6 +27,7 @@ mod db;
 mod graph;
 mod graph_search;
 mod query;
+#[cfg(not(feature = "api"))]
 mod query_builder;
 mod storage;
 mod transaction;
@@ -48,14 +49,9 @@ pub use agdb_derive::{UserValue, UserValueMarker};
 #[cfg(feature = "api")]
 pub mod api;
 #[cfg(feature = "api")]
+pub mod query_builder;
+#[cfg(feature = "api")]
 pub use agdb_derive::{ApiDef, impl_def};
-#[cfg(feature = "api")]
-pub use db::db_value::DbValues;
-#[cfg(feature = "api")]
-pub use query::{
-    query_aliases::QueryAliases,
-    query_values::{MultiValues, SingleValues},
-};
 
 pub use db::Db;
 pub use db::DbFile;
@@ -77,6 +73,8 @@ pub use db::db_key_value::DbKeyValue;
 pub use db::db_user_value::DbUserValue;
 pub use db::db_user_value::DbUserValueMarker;
 pub use db::db_value::DbValue;
+#[cfg(feature = "api")]
+pub use db::db_value::DbValues;
 pub use query::Query;
 pub use query::QueryMut;
 pub use query::insert_aliases_query::InsertAliasesQuery;
@@ -110,6 +108,11 @@ pub use query::select_key_count_query::SelectKeyCountQuery;
 pub use query::select_keys_query::SelectKeysQuery;
 pub use query::select_node_count::SelectNodeCountQuery;
 pub use query::select_values_query::SelectValuesQuery;
+#[cfg(feature = "api")]
+pub use query::{
+    query_aliases::QueryAliases,
+    query_values::{MultiValues, SingleValues},
+};
 pub use query_builder::QueryBuilder;
 pub use storage::StorageData;
 pub use storage::StorageSlice;

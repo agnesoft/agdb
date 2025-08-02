@@ -8,7 +8,7 @@ export const Intro = () => {
                 Application native database for any use case.
             </p>
             <p className={styles.subheading}>
-                no query language | performance independnet of data size | 10X
+                no query language | performance independent of data size | 10X
                 cost reduction
             </p>
             <p className={styles.links}>

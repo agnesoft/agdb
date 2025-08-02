@@ -42,7 +42,7 @@ fn parse_function(f: syn::ImplItemFn) -> proc_macro2::TokenStream {
     let name = f.sig.ident.to_string();
     let ret_ty = return_type(&f);
     let mut args = vec![];
-    let mut exprs = vec![];
+    let mut exprs: Vec<proc_macro2::TokenStream> = vec![];
 
     for a in f.sig.inputs {
         if let syn::FnArg::Typed(t) = a {
@@ -127,9 +127,9 @@ fn db_user_value(t: &syn::Type) -> Option<proc_macro2::TokenStream> {
 
 fn return_type(f: &syn::ImplItemFn) -> proc_macro2::TokenStream {
     if let ReturnType::Type(_, t) = &f.sig.output {
-        quote! { <#t as ::agdb::api::ApiDefinition>::def }
+        quote! { Some(<#t as ::agdb::api::ApiDefinition>::def) }
     } else {
-        quote! { || ::agdb::api::Type::None }
+        quote! { None }
     }
 }
 
@@ -148,14 +148,26 @@ fn parse_stmt(stmt: &syn::Stmt) -> proc_macro2::TokenStream {
 fn parse_local_stmt(local: &syn::Local) -> proc_macro2::TokenStream {
     let name = match &local.pat {
         syn::Pat::Ident(ident) => ident.ident.to_string(),
-        _ => unimplemented!("Only identifiers are supported for let statements"),
+        syn::Pat::Lit(lit) => parse_literal_ident(lit),
+        syn::Pat::Tuple(t) => {
+            let names: Vec<String> = t
+                .elems
+                .iter()
+                .map(|e| e.to_token_stream().to_string())
+                .collect();
+            names.join(", ")
+        }
+        _ => unimplemented!(
+            "Only identifiers, literals and tuples are supported for let statements: {:?}",
+            local.pat
+        ),
     };
     let value = match &local.init {
         Some(init) => {
             let expr_tokens = parse_expr(&init.expr);
-            quote! { Box::new(#expr_tokens) }
+            quote! { Some(Box::new(#expr_tokens)) }
         }
-        _ => unimplemented!("Let statements without initialization are not supported"),
+        None => quote! { None },
     };
     quote! {
         ::agdb::api::Expression::Let {
@@ -168,21 +180,7 @@ fn parse_local_stmt(local: &syn::Local) -> proc_macro2::TokenStream {
 
 fn parse_expr(expr: &syn::Expr) -> proc_macro2::TokenStream {
     match expr {
-        syn::Expr::Lit(e) => match &e.lit {
-            syn::Lit::Int(_) => {
-                quote! { ::agdb::api::Expression::Literal(::agdb::api::Type::I64) }
-            }
-            syn::Lit::Float(_) => {
-                quote! { ::agdb::api::Expression::Literal(::agdb::api::Type::F64) }
-            }
-            syn::Lit::Str(_) => {
-                quote! { ::agdb::api::Expression::Literal(::agdb::api::Type::String) }
-            }
-            syn::Lit::Bool(_) => {
-                quote! { ::agdb::api::Expression::Literal(::agdb::api::Type::U8) }
-            }
-            _ => unimplemented!("Unsupported literal type"),
-        },
+        syn::Expr::Lit(e) => parse_literal(e),
         syn::Expr::Path(e) => {
             let ident = e
                 .path
@@ -193,19 +191,28 @@ fn parse_expr(expr: &syn::Expr) -> proc_macro2::TokenStream {
             quote! { ::agdb::api::Expression::Variable(#ident) }
         }
         syn::Expr::Call(e) => {
-            let func = match &*e.func {
-                syn::Expr::Path(path) => path
-                    .path
-                    .segments
-                    .last()
-                    .map(|s| s.ident.to_string())
-                    .unwrap_or_default(),
-                _ => "unknown".to_string(),
+            let (recipient, func) = match &*e.func {
+                syn::Expr::Path(path) => {
+                    let mut segments: Vec<String> = path
+                        .path
+                        .segments
+                        .iter()
+                        .map(|s| s.ident.to_string())
+                        .collect();
+                    let func = segments.pop().unwrap_or_default();
+                    let recipient = if let Some(last) = segments.pop() {
+                        quote! { Some(Box::new(::agdb::api::Expression::Variable(#last))) }
+                    } else {
+                        quote! { None }
+                    };
+                    (recipient, func)
+                }
+                _ => panic!("Expected a path for function call"),
             };
             let args = e.args.iter().map(parse_expr);
             quote! {
                 ::agdb::api::Expression::Call {
-                    recipient: None,
+                    recipient: #recipient,
                     function: #func,
                     args: vec![#(#args),*],
                 }
@@ -342,6 +349,19 @@ fn parse_expr(expr: &syn::Expr) -> proc_macro2::TokenStream {
                         elements: vec![#(#args),*],
                     }
                 }
+            } else if macro_name == "format" {
+                let args: Punctuated<Expr, Comma> = syn::parse2(e.mac.tokens.clone())
+                    .map(|args: syn::ExprArray| args.elems)
+                    .unwrap_or_default();
+                let args = args.iter().map(parse_expr);
+
+                quote! {
+                    ::agdb::api::Expression::Call {
+                        recipient: None,
+                        function: "format",
+                        args: vec![#(#args),*],
+                    }
+                }
             } else {
                 unimplemented!("Unsupported macro: {e:?}");
             }
@@ -353,7 +373,7 @@ fn parse_expr(expr: &syn::Expr) -> proc_macro2::TokenStream {
                 ::agdb::api::Expression::Let {
                     name: #pat,
                     ty: None,
-                    value: Box::new(#expr),
+                    value: Some(Box::new(#expr)),
                 }
             }
         }
@@ -429,8 +449,49 @@ fn parse_expr(expr: &syn::Expr) -> proc_macro2::TokenStream {
                 }
             }
         }
+        syn::Expr::Try(e) => {
+            // skip the ? operator
+            let expr = parse_expr(&e.expr);
+            quote! {
+                #expr
+            }
+        }
+        syn::Expr::Await(e) => {
+            // skip the await operator
+            let expr = parse_expr(&e.base);
+            quote! {
+                #expr
+            }
+        }
         _ => {
             unimplemented!("Unsupported expression type: {expr:?}");
         }
+    }
+}
+
+fn parse_literal_ident(e: &syn::PatLit) -> String {
+    match &e.lit {
+        syn::Lit::Int(v) => v.to_string(),
+        _ => unimplemented!("Unsupported literal identifier type, only Int is supported"),
+    }
+}
+
+fn parse_literal(e: &syn::PatLit) -> proc_macro2::TokenStream {
+    match &e.lit {
+        syn::Lit::Int(v) => {
+            let v_str = v.to_string();
+            quote! { ::agdb::api::Expression::Literal(::agdb::api::LiteralValue::I64(#v_str)) }
+        }
+        syn::Lit::Float(v) => {
+            let v_str = v.to_string();
+            quote! { ::agdb::api::Expression::Literal(::agdb::api::LiteralValue::F64(#v_str)) }
+        }
+        syn::Lit::Str(v) => {
+            quote! { ::agdb::api::Expression::Literal(::agdb::api::LiteralValue::String(#v)) }
+        }
+        syn::Lit::Bool(v) => {
+            quote! { ::agdb::api::Expression::Literal(::agdb::api::LiteralValue::Bool(#v)) }
+        }
+        _ => unimplemented!("Unsupported literal type"),
     }
 }

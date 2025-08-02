@@ -262,6 +262,7 @@ impl<T: SearchQueryBuilder> Where<T> {
     /// // Includes elements WITHOUT the "k" property (key).
     /// QueryBuilder::search().from(1).where_().not().keys("k").query();
     /// ```
+    #[allow(clippy::should_implement_trait)]
     pub fn not(mut self) -> Self {
         self.modifier = QueryConditionModifier::Not;
 

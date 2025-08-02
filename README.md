@@ -167,14 +167,15 @@ For database concepts and primitive data types see [concepts](https://agdb.agnes
 | derive   | yes     | Enables derive macro to enable custom user types to be directly used with the database.                             |
 | opeanapi | no      | Enables `ToSchema` macro on query structs so they can be exported to json OpeanAPI/Swagger schema.                  |
 | serde    | no      | Enables serialiation/deserialization of queries and QueryResult using [`serde`](https://github.com/serde-rs/serde). |
+| api      | no      | Enables annotations on all structs to facilitate API generation for different languages.                            |
 
 ### agdb_api
 
-| Feature    | Default | Description                                                                                                                                 |
-| ---------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| reqwest    | no      | Enables referential implementation of the `HttpClient` trait for agdb API client using [`reqwest`](https://github.com/seanmonstar/reqwest). |
-| rust-tls   | no      | Enables rust-tls for [`reqwest`](https://github.com/seanmonstar/reqwest).                                                                   |
-| native-tls | no      | Enables native-tls for [`reqwest`](https://github.com/seanmonstar/reqwest).                                                                 |
+| Feature    | Default | Description                                                                              |
+| ---------- | ------- | ---------------------------------------------------------------------------------------- |
+| rust-tls   | no      | Enables rust-tls for [`reqwest`](https://github.com/seanmonstar/reqwest).                |
+| native-tls | no      | Enables native-tls for [`reqwest`](https://github.com/seanmonstar/reqwest).              |
+| api        | no      | Enables annotations on all structs to facilitate API generation for different languages. |
 
 ### agdb_server
 

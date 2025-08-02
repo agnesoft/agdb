@@ -1,7 +1,7 @@
 {
-  "name": "@agdb-studio/api",
+  "name": "@agdb-studio/utils",
   "version": "1.0.0",
-  "description": "Api library for AGDB Studio",
+  "description": "Utility library for AGDB Studio",
   "type": "module",
   "scripts": {
     "test": "vitest run --coverage",
@@ -13,11 +13,7 @@
     "format:check": "prettier --check src/",
     "before-commit": "pnpm run format && pnpm run lint && pnpm run test"
   },
-  "dependencies": {
-    "vue": "catalog:",
-    "@agdb-studio/design": "workspace:*",
-    "@agdb-studio/utils": "workspace:*"
-  },
+  "dependencies": {},
   "devDependencies": {
     "@agdb-studio/tsconfig": "workspace:*",
     "@agdb-studio/testing": "workspace:*",

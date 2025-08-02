@@ -15,7 +15,8 @@
   },
   "dependencies": {
     "vue": "catalog:",
-    "@agdb-studio/auth": "workspace:*"
+    "@agdb-studio/auth": "workspace:*",
+    "@agdb-studio/utils": "workspace:*"
   },
   "devDependencies": {
     "@agdb-studio/tsconfig": "workspace:*",

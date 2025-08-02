@@ -599,6 +599,9 @@ importers:
       '@agdb-studio/design':
         specifier: workspace:*
         version: link:../design
+      '@agdb-studio/utils':
+        specifier: workspace:*
+        version: link:../utils
       vue:
         specifier: 'catalog:'
         version: 3.5.18(typescript@5.9.2)
@@ -698,6 +701,9 @@ importers:
       '@agdb-studio/router':
         specifier: workspace:*
         version: link:../router
+      '@agdb-studio/utils':
+        specifier: workspace:*
+        version: link:../utils
       vue:
         specifier: 'catalog:'
         version: 3.5.18(typescript@5.9.2)
@@ -729,9 +735,36 @@ importers:
       '@agdb-studio/auth':
         specifier: workspace:*
         version: link:../auth
+      '@agdb-studio/utils':
+        specifier: workspace:*
+        version: link:../utils
       vue:
         specifier: 'catalog:'
         version: 3.5.18(typescript@5.9.2)
+    devDependencies:
+      '@agdb-studio/testing':
+        specifier: workspace:*
+        version: link:../../config/testing
+      '@agdb-studio/tsconfig':
+        specifier: workspace:*
+        version: link:../../config/tsconfig
+      eslint:
+        specifier: 'catalog:'
+        version: 9.32.0
+      prettier:
+        specifier: 'catalog:'
+        version: 3.6.2
+      vite:
+        specifier: 'catalog:'
+        version: 7.0.6(@types/node@24.1.0)(less@4.4.0)(sass@1.89.2)(yaml@2.8.0)
+      vitest:
+        specifier: 'catalog:'
+        version: 3.2.4(@types/debug@4.1.12)(@types/node@24.1.0)(jsdom@26.1.0)(less@4.4.0)(sass@1.89.2)(yaml@2.8.0)
+      vue-tsc:
+        specifier: 'catalog:'
+        version: 3.0.5(typescript@5.9.2)
+
+  agdb_studio/libs/core/utils:
     devDependencies:
       '@agdb-studio/testing':
         specifier: workspace:*

@@ -43,15 +43,23 @@ const config: PlaywrightTestConfig = {
 
     /* Only on CI systems run the tests headless */
     headless: !!process.env.CI,
+
+    screenshot: "on-first-failure",
   },
 
   /* Configure projects for major browsers */
   projects: [
     {
+      name: "setup",
+      testMatch: /global\.setup\.ts/,
+    },
+    {
       name: "chromium",
+      testMatch: "**/*.spec.ts",
       use: {
         ...devices["Desktop Chrome"],
       },
+      dependencies: ["setup"],
     },
     // {
     //     name: "firefox",

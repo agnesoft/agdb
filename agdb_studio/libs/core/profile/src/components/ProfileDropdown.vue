@@ -8,7 +8,7 @@ const { username } = useAccount();
 </script>
 
 <template>
-  <AgdbDropdown>
+  <AgdbDropdown data-testid="profile-dropdown">
     <template #trigger>
       <div class="user-dropdown-trigger button">
         <ClUser02 />

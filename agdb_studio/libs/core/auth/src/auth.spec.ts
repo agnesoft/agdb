@@ -1,5 +1,8 @@
 import { useAuth, setLocalStorageToken, refreshToken } from "./auth";
-import { get_token } from "@agdb-studio/testing/mocks/apiMock";
+import {
+  get_token,
+  logout as mockLogout,
+} from "@agdb-studio/testing/mocks/apiMock";
 import { ACCESS_TOKEN } from "@agdb-studio/api/src/constants";
 import { vi, describe, it, beforeEach, expect } from "vitest";
 
@@ -39,6 +42,12 @@ describe("auth service", () => {
       expect(isLoggedIn.value).toBe(false);
     });
     it("logs out if logged in", async () => {
+      setLocalStorageToken("test");
+      await logout();
+      expect(isLoggedIn.value).toBe(false);
+    });
+    it("should handle when server logout fails", async () => {
+      mockLogout.mockRejectedValueOnce(new Error("Logout failed"));
       setLocalStorageToken("test");
       await logout();
       expect(isLoggedIn.value).toBe(false);

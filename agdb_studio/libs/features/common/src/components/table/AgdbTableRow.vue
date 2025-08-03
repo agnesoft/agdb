@@ -36,7 +36,7 @@ const slots = useSlots();
 <template>
   <div class="agdb-table-row-wrap">
     <div :class="['agdb-table-row columns', { expandable: slots.rowDetails }]">
-      <div v-for="cellKey in cellKeys" :key="cellKey">
+      <div v-for="cellKey in cellKeys" :key="cellKey" :data-testid="`table-cell-${cellKey}`">
         <AgdbCell :cell-key="cellKey" />
       </div>
       <div v-if="slots.rowDetails">

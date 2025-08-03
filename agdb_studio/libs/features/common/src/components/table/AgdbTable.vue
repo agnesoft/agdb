@@ -34,7 +34,7 @@ const slots = useSlots();
   <div class="agdb-table">
     <AgdbTableHeader :table-key="name" :rows-expandable="!!slots.rowDetails" />
     <template v-for="row in rows" :key="row[0]">
-      <AgdbTableRow :row="row[1]" :columns="columns">
+      <AgdbTableRow :row="row[1]" :columns="columns" data-testid="table-row">
         <template v-if="slots.rowDetails" #rowDetails>
           <slot name="rowDetails" :row="row[1]"></slot>
         </template>

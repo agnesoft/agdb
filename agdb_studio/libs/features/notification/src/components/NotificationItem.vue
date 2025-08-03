@@ -25,6 +25,7 @@ defineProps({
         withSeparator: notification.title && notification.message,
       },
     ]"
+    data-testid="notification-item"
   >
     <h4 class="notification-title">{{ notification.title }}</h4>
     <button

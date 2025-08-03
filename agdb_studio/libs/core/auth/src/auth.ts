@@ -20,6 +20,14 @@ export const refreshToken = (): void => {
     accessToken.value = localStorageToken ?? undefined;
   }
 
+  console.log(
+    "refreshToken",
+    accessToken.value,
+    "prevLogin:",
+    prevLogin,
+    "isLoggedIn:",
+    isLoggedIn.value,
+  );
   if (!isLoggedIn.value && prevLogin) {
     window.location.reload();
   }

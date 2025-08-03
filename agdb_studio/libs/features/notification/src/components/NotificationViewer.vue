@@ -35,7 +35,7 @@ import {
               title="Clear all notifications"
               @click="
                 () => {
-                  clearNotifications(), toggleViewerOpened();
+                  (clearNotifications(), toggleViewerOpened());
                 }
               "
             >

@@ -1,5 +1,7 @@
 import { vi } from "vitest";
 
+export const logout = vi.fn().mockResolvedValue(undefined);
+export const login = vi.fn().mockResolvedValue("token");
 export const get_token = vi.fn();
 export const user_status = vi.fn();
 export const db_list = vi.fn();
@@ -45,8 +47,8 @@ export const cluster_admin_user_logout = vi.fn().mockResolvedValue({});
 export const admin_user_change_password = vi.fn().mockResolvedValue(true);
 
 export const client = vi.fn().mockResolvedValue({
-  login: vi.fn().mockResolvedValue("token"),
-  logout: vi.fn().mockResolvedValue(undefined),
+  login,
+  logout,
   set_token: vi.fn(),
   get_token,
   reset_token: vi.fn(),

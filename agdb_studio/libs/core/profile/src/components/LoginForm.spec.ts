@@ -99,4 +99,17 @@ describe("LoginForm", () => {
     expect(loginMock).toHaveBeenCalled();
     expect(pushMock).not.toHaveBeenCalled();
   });
+  it("should handle failed login", async () => {
+    loginMock.mockRejectedValue({
+      response: { status: 401, data: { message: "error" } },
+    });
+
+    const wrapper = mount(LoginForm);
+    await wrapper.find('input[type="text"]#username').setValue("test");
+    await wrapper.find('input[type="password"]#password').setValue("test");
+
+    await wrapper.find(".login-form>form").trigger("submit");
+
+    expect(wrapper.text()).toContain("Invalid username or password");
+  });
 });

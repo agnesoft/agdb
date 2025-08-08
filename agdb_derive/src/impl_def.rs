@@ -78,24 +78,21 @@ fn arg_type(t: &syn::Type, generics: &Generics) -> proc_macro2::TokenStream {
     generics
         .type_params()
         .find_map(|g| {
-            if g.ident == t_str {
-                if let Some(TypeParamBound::Trait(bound)) = g.bounds.first() {
-                    if let Some(bound) = bound.path.segments.first() {
+            if g.ident == t_str
+                && let Some(TypeParamBound::Trait(bound)) = g.bounds.first()
+                    && let Some(bound) = bound.path.segments.first() {
                         let bound_str = bound.ident.to_string();
                         if bound_str == "Into" {
-                            if let PathArguments::AngleBracketed(ty) = &bound.arguments {
-                                if let syn::GenericArgument::Type(ty) = &ty.args[0] {
+                            if let PathArguments::AngleBracketed(ty) = &bound.arguments
+                                && let syn::GenericArgument::Type(ty) = &ty.args[0] {
                                     return Some(
                                         quote! { <::agdb::#ty as ::agdb::api::ApiDefinition>::def },
                                     );
                                 }
-                            }
                         } else if bound_str == "DbUserValue" {
                             return db_user_value(t);
                         }
                     }
-                }
-            }
 
             None
         })

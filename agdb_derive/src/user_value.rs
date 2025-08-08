@@ -23,11 +23,10 @@ pub fn db_user_value_derive(item: TokenStream) -> TokenStream {
         unimplemented!()
     };
     let has_option = data.fields.iter().any(|f| {
-        if let Some(ident) = &f.ident {
-            if ident != DB_ID {
+        if let Some(ident) = &f.ident
+            && ident != DB_ID {
                 return is_option_type(f);
             }
-        }
 
         false
     });
@@ -43,13 +42,11 @@ pub fn db_user_value_derive(item: TokenStream) -> TokenStream {
         .iter()
         .filter_map(|f| impl_db_values(f, has_option));
     let db_keys = data.fields.iter().filter_map(|f| {
-        if !has_option {
-            if let Some(name) = &f.ident {
-                if name != DB_ID {
+        if !has_option
+            && let Some(name) = &f.ident
+                && name != DB_ID {
                     return Some(name.to_string());
                 }
-            }
-        }
         None
     });
 
@@ -135,8 +132,8 @@ pub fn db_user_value_derive(item: TokenStream) -> TokenStream {
 }
 
 fn impl_db_values(f: &syn::Field, has_option: bool) -> Option<proc_macro2::TokenStream> {
-    if let Some(name) = &f.ident {
-        if name != DB_ID {
+    if let Some(name) = &f.ident
+        && name != DB_ID {
             let key = name.to_string();
 
             if has_option && is_option_type(f) {
@@ -151,7 +148,6 @@ fn impl_db_values(f: &syn::Field, has_option: bool) -> Option<proc_macro2::Token
                 });
             }
         }
-    }
 
     None
 }
@@ -215,8 +211,8 @@ fn impl_db_id(data: &syn::DataStruct) -> proc_macro2::TokenStream {
     data.fields
         .iter()
         .find_map(|f| {
-            if let Some(name) = &f.ident {
-                if name == DB_ID {
+            if let Some(name) = &f.ident
+                && name == DB_ID {
                     return Some(quote! {
                         if let ::std::option::Option::Some(id) = &self.db_id {
                             return ::std::option::Option::Some(id.clone().into());
@@ -225,7 +221,6 @@ fn impl_db_id(data: &syn::DataStruct) -> proc_macro2::TokenStream {
                         }
                     });
                 }
-            }
 
             None
         })
@@ -237,13 +232,11 @@ fn impl_db_id(data: &syn::DataStruct) -> proc_macro2::TokenStream {
 fn is_option_type(f: &syn::Field) -> bool {
     if let syn::Type::Path(type_path) = &f.ty {
         return type_path.path.segments.iter().any(|seg| {
-            if seg.ident == "Option" {
-                if let syn::PathArguments::AngleBracketed(ref args) = seg.arguments {
-                    if let Some(syn::GenericArgument::Type(_)) = args.args.first() {
+            if seg.ident == "Option"
+                && let syn::PathArguments::AngleBracketed(ref args) = seg.arguments
+                    && let Some(syn::GenericArgument::Type(_)) = args.args.first() {
                         return true;
                     }
-                }
-            }
 
             false
         });

@@ -221,9 +221,9 @@ fn t_exec_mut(
 }
 
 fn id_or_result(id: QueryId, results: &[QueryResult]) -> ServerResult<QueryId> {
-    if let QueryId::Alias(alias) = &id {
-        if let Some(index) = alias.strip_prefix(':') {
-            if let Ok(index) = index.parse::<usize>() {
+    if let QueryId::Alias(alias) = &id
+        && let Some(index) = alias.strip_prefix(':')
+            && let Ok(index) = index.parse::<usize>() {
                 return Ok(QueryId::Id(
                     results
                         .get(index)
@@ -243,8 +243,6 @@ fn id_or_result(id: QueryId, results: &[QueryResult]) -> ServerResult<QueryId> {
                         .id,
                 ));
             }
-        }
-    }
 
     Ok(id)
 }
@@ -275,9 +273,9 @@ fn inject_results_search(search: &mut SearchQuery, results: &[QueryResult]) -> S
 
 fn inject_results_ids(ids: &mut Vec<QueryId>, results: &[QueryResult]) -> ServerResult<()> {
     for i in 0..ids.len() {
-        if let QueryId::Alias(alias) = &ids[i] {
-            if let Some(index) = alias.strip_prefix(':') {
-                if let Ok(index) = index.parse::<usize>() {
+        if let QueryId::Alias(alias) = &ids[i]
+            && let Some(index) = alias.strip_prefix(':')
+                && let Ok(index) = index.parse::<usize>() {
                     let result_ids = results
                         .get(index)
                         .ok_or(ServerError::new(
@@ -293,8 +291,6 @@ fn inject_results_ids(ids: &mut Vec<QueryId>, results: &[QueryResult]) -> Server
                         .collect::<Vec<QueryId>>();
                     ids.splice(i..i + 1, result_ids.into_iter());
                 }
-            }
-        }
     }
 
     Ok(())

@@ -28,8 +28,8 @@ where
         follow: bool,
     ) {
         if current_index.index.is_node() {
-            if follow {
-                if let Some(i) = graph
+            if follow
+                && let Some(i) = graph
                     .first_edge_from(storage, current_index.index)
                     .ok()
                     .filter(|i| i.is_valid())
@@ -39,7 +39,6 @@ where
                         distance: current_index.distance + 1,
                     });
                 }
-            }
         } else {
             if let Some(i) = graph
                 .next_edge_from(storage, current_index.index)

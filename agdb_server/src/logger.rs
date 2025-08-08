@@ -111,8 +111,8 @@ fn mask_password(log_record: &mut LogRecord) {
         const QUOTE_PATTERN: &str = "\"";
 
         for pattern in PASSWORD_PATTERNS {
-            if let Some(starting_index) = log_record.request.find(pattern) {
-                if let Some(start) =
+            if let Some(starting_index) = log_record.request.find(pattern)
+                && let Some(start) =
                     log_record.request[starting_index + pattern.len()..].find(QUOTE_PATTERN)
                 {
                     let mut skip = false;
@@ -137,7 +137,6 @@ fn mask_password(log_record: &mut LogRecord) {
                         &log_record.request[end..]
                     );
                 }
-            }
         }
     }
 }

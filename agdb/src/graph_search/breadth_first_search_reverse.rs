@@ -29,8 +29,8 @@ where
         follow: bool,
     ) {
         if current_index.index.is_node() {
-            if follow {
-                if let Some(i) = graph
+            if follow
+                && let Some(i) = graph
                     .first_edge_to(storage, current_index.index)
                     .ok()
                     .filter(|i| i.is_valid())
@@ -40,7 +40,6 @@ where
                         distance: current_index.distance + 1,
                     });
                 }
-            }
         } else {
             if follow {
                 self.stack.push_back(SearchIndex {

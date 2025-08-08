@@ -88,9 +88,10 @@ impl StorageRecords {
 
     pub fn record(&self, index: u64) -> Result<StorageRecord, DbError> {
         if let Some(record) = self.records.get(index as usize)
-            && self.is_valid(record) {
-                return Ok(*record);
-            }
+            && self.is_valid(record)
+        {
+            return Ok(*record);
+        }
 
         Err(DbError::from(format!(
             "Storage error: index ({index}) not found"

@@ -33,12 +33,12 @@ where
                     .first_edge_from(storage, current_index.index)
                     .ok()
                     .filter(|i| i.is_valid())
-                {
-                    self.stack.push(SearchIndex {
-                        index: i,
-                        distance: current_index.distance + 1,
-                    });
-                }
+            {
+                self.stack.push(SearchIndex {
+                    index: i,
+                    distance: current_index.distance + 1,
+                });
+            }
         } else {
             if let Some(i) = graph
                 .next_edge_from(storage, current_index.index)

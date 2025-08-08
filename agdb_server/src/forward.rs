@@ -50,14 +50,15 @@ pub(crate) async fn forward_to_leader(
 
                 if response.status().is_success()
                     && let Some(commit_index) = response.headers_mut().remove("commit-index")
-                        && let Ok(commit_index) = commit_index.to_str()
-                            && let Ok(commit_index) = commit_index.parse::<u64>() {
-                                while let Ok(value) = notifier.recv().await {
-                                    if value == commit_index {
-                                        break;
-                                    }
-                                }
-                            }
+                    && let Ok(commit_index) = commit_index.to_str()
+                    && let Ok(commit_index) = commit_index.parse::<u64>()
+                {
+                    while let Ok(value) = notifier.recv().await {
+                        if value == commit_index {
+                            break;
+                        }
+                    }
+                }
 
                 return response;
             }

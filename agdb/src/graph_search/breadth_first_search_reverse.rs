@@ -34,12 +34,12 @@ where
                     .first_edge_to(storage, current_index.index)
                     .ok()
                     .filter(|i| i.is_valid())
-                {
-                    self.stack.push_back(SearchIndex {
-                        index: i,
-                        distance: current_index.distance + 1,
-                    });
-                }
+            {
+                self.stack.push_back(SearchIndex {
+                    index: i,
+                    distance: current_index.distance + 1,
+                });
+            }
         } else {
             if follow {
                 self.stack.push_back(SearchIndex {

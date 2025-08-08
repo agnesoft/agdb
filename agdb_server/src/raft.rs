@@ -222,11 +222,12 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
             return Some(requests);
         } else {
             if let ClusterState::Election = self.state
-                && self.local().timer.elapsed() >= self.election_timeout {
-                    let requests = self.election();
-                    self.local_mut().timer = Instant::now();
-                    return Some(requests);
-                }
+                && self.local().timer.elapsed() >= self.election_timeout
+            {
+                let requests = self.election();
+                self.local_mut().timer = Instant::now();
+                return Some(requests);
+            }
 
             if self.local().timer.elapsed() > self.term_timeout {
                 self.state = ClusterState::Election;

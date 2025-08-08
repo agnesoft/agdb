@@ -110,15 +110,16 @@ impl QueryMut for InsertNodesQuery {
         } else {
             for (index, key_values) in values.iter().enumerate() {
                 if let Some(alias) = self.aliases.get(index)
-                    && let Ok(db_id) = db.db_id(&QueryId::Alias(alias.to_string())) {
-                        ids.push(db_id);
+                    && let Ok(db_id) = db.db_id(&QueryId::Alias(alias.to_string()))
+                {
+                    ids.push(db_id);
 
-                        for key_value in *key_values {
-                            db.insert_or_replace_key_value(db_id, key_value)?;
-                        }
-
-                        continue;
+                    for key_value in *key_values {
+                        db.insert_or_replace_key_value(db_id, key_value)?;
                     }
+
+                    continue;
+                }
 
                 let db_id = db.insert_node()?;
                 ids.push(db_id);

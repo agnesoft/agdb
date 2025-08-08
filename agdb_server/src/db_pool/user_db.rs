@@ -223,26 +223,27 @@ fn t_exec_mut(
 fn id_or_result(id: QueryId, results: &[QueryResult]) -> ServerResult<QueryId> {
     if let QueryId::Alias(alias) = &id
         && let Some(index) = alias.strip_prefix(':')
-            && let Ok(index) = index.parse::<usize>() {
-                return Ok(QueryId::Id(
-                    results
-                        .get(index)
-                        .ok_or(ServerError::new(
-                            ErrorCode::QueryError.into(),
-                            &format!(
-                                "Results index out of bounds '{index}' (> {})",
-                                results.len()
-                            ),
-                        ))?
-                        .elements
-                        .first()
-                        .ok_or(ServerError::new(
-                            ErrorCode::QueryError.into(),
-                            "No element found in the result",
-                        ))?
-                        .id,
-                ));
-            }
+        && let Ok(index) = index.parse::<usize>()
+    {
+        return Ok(QueryId::Id(
+            results
+                .get(index)
+                .ok_or(ServerError::new(
+                    ErrorCode::QueryError.into(),
+                    &format!(
+                        "Results index out of bounds '{index}' (> {})",
+                        results.len()
+                    ),
+                ))?
+                .elements
+                .first()
+                .ok_or(ServerError::new(
+                    ErrorCode::QueryError.into(),
+                    "No element found in the result",
+                ))?
+                .id,
+        ));
+    }
 
     Ok(id)
 }
@@ -275,22 +276,23 @@ fn inject_results_ids(ids: &mut Vec<QueryId>, results: &[QueryResult]) -> Server
     for i in 0..ids.len() {
         if let QueryId::Alias(alias) = &ids[i]
             && let Some(index) = alias.strip_prefix(':')
-                && let Ok(index) = index.parse::<usize>() {
-                    let result_ids = results
-                        .get(index)
-                        .ok_or(ServerError::new(
-                            ErrorCode::QueryError.into(),
-                            &format!(
-                                "Results index out of bounds '{index}' (> {})",
-                                results.len()
-                            ),
-                        ))?
-                        .ids()
-                        .into_iter()
-                        .map(QueryId::Id)
-                        .collect::<Vec<QueryId>>();
-                    ids.splice(i..i + 1, result_ids.into_iter());
-                }
+            && let Ok(index) = index.parse::<usize>()
+        {
+            let result_ids = results
+                .get(index)
+                .ok_or(ServerError::new(
+                    ErrorCode::QueryError.into(),
+                    &format!(
+                        "Results index out of bounds '{index}' (> {})",
+                        results.len()
+                    ),
+                ))?
+                .ids()
+                .into_iter()
+                .map(QueryId::Id)
+                .collect::<Vec<QueryId>>();
+            ids.splice(i..i + 1, result_ids.into_iter());
+        }
     }
 
     Ok(())

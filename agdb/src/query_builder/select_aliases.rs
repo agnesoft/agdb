@@ -5,12 +5,12 @@ use crate::SelectAllAliasesQuery;
 use crate::query_builder::search::Search;
 
 /// Select aliases builder.
-#[cfg_attr(feature = "api", derive(agdb::ApiDef))]
+#[cfg_attr(feature = "api", derive(agdb::ApiDefImpl))]
 pub struct SelectAliases(pub SelectAliasesQuery);
 
 /// Final builder that lets you create
 /// an actual query object.
-#[cfg_attr(feature = "api", derive(agdb::ApiDef))]
+#[cfg_attr(feature = "api", derive(agdb::ApiDefImpl))]
 pub struct SelectAliasesIds(pub SelectAliasesQuery);
 
 #[cfg_attr(feature = "api", agdb::impl_def())]

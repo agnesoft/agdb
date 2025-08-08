@@ -22,22 +22,22 @@ pub trait SearchQueryBuilder {
 }
 
 /// Search builder query.
-#[cfg_attr(feature = "api", derive(agdb::ApiDef))]
+#[cfg_attr(feature = "api", derive(agdb::ApiDefImpl))]
 pub struct Search<T: SearchQueryBuilder>(pub T);
 
 /// Search builder query that lets you choose search origin
 /// and other parameters.
-#[cfg_attr(feature = "api", derive(agdb::ApiDef))]
+#[cfg_attr(feature = "api", derive(agdb::ApiDefImpl))]
 pub struct SearchFrom<T: SearchQueryBuilder>(pub T);
 
 /// Search builder query that lets you choose search destination
 /// and other parameters.
-#[cfg_attr(feature = "api", derive(agdb::ApiDef))]
+#[cfg_attr(feature = "api", derive(agdb::ApiDefImpl))]
 pub struct SearchTo<T: SearchQueryBuilder>(pub T);
 
 /// Search builder query that lets you choose an index to search
 /// instead of the graph search.
-#[cfg_attr(feature = "api", derive(agdb::ApiDef))]
+#[cfg_attr(feature = "api", derive(agdb::ApiDefImpl))]
 pub struct SearchIndex<T: SearchQueryBuilder> {
     pub index: DbValue,
     pub query: T,
@@ -45,24 +45,24 @@ pub struct SearchIndex<T: SearchQueryBuilder> {
 
 /// Search builder query that lets you choose a a value to find
 /// in the index.
-#[cfg_attr(feature = "api", derive(agdb::ApiDef))]
+#[cfg_attr(feature = "api", derive(agdb::ApiDefImpl))]
 pub struct SearchIndexValue<T: SearchQueryBuilder>(pub T);
 
 /// Search builder query that lets you choose limit and offset.
-#[cfg_attr(feature = "api", derive(agdb::ApiDef))]
+#[cfg_attr(feature = "api", derive(agdb::ApiDefImpl))]
 pub struct SearchOrderBy<T: SearchQueryBuilder>(pub T);
 
 /// Search builder query that lets you choose conditions.
-#[cfg_attr(feature = "api", derive(agdb::ApiDef))]
+#[cfg_attr(feature = "api", derive(agdb::ApiDefImpl))]
 pub struct SelectLimit<T: SearchQueryBuilder>(pub T);
 
 /// Search builder query that lets you choose limit.
-#[cfg_attr(feature = "api", derive(agdb::ApiDef))]
+#[cfg_attr(feature = "api", derive(agdb::ApiDefImpl))]
 pub struct SelectOffset<T: SearchQueryBuilder>(pub T);
 
 /// Search builder query that lets you choose search origin
 /// and other parameters.
-#[cfg_attr(feature = "api", derive(agdb::ApiDef))]
+#[cfg_attr(feature = "api", derive(agdb::ApiDefImpl))]
 pub struct SearchAlgorithm<T: SearchQueryBuilder>(pub T);
 
 #[cfg_attr(feature = "api", agdb::impl_def())]

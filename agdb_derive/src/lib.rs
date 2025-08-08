@@ -98,6 +98,11 @@ pub fn api_def(item: TokenStream) -> TokenStream {
     api_def::api_def(item)
 }
 
+#[proc_macro_derive(ApiDefImpl)]
+pub fn api_def_impl(item: TokenStream) -> TokenStream {
+    api_def::api_def_impl(item)
+}
+
 #[proc_macro_attribute]
 pub fn impl_def(attr: TokenStream, item: TokenStream) -> TokenStream {
     impl_def::impl_def(attr, item)

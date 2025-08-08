@@ -154,10 +154,10 @@ impl TestServerImpl {
         }
 
         let mut status = "running".to_string();
-        if let Ok(Some(s)) = process.try_wait() {
-            if let Some(code) = s.code() {
-                status = code.to_string()
-            }
+        if let Ok(Some(s)) = process.try_wait()
+            && let Some(code) = s.code()
+        {
+            status = code.to_string()
         }
 
         anyhow::bail!("Failed to start server '{api_address}' ({status})")

@@ -48,16 +48,14 @@ pub(crate) async fn forward_to_leader(
                     Err(r) => r,
                 };
 
-                if response.status().is_success() {
-                    if let Some(commit_index) = response.headers_mut().remove("commit-index") {
-                        if let Ok(commit_index) = commit_index.to_str() {
-                            if let Ok(commit_index) = commit_index.parse::<u64>() {
-                                while let Ok(value) = notifier.recv().await {
-                                    if value == commit_index {
-                                        break;
-                                    }
-                                }
-                            }
+                if response.status().is_success()
+                    && let Some(commit_index) = response.headers_mut().remove("commit-index")
+                    && let Ok(commit_index) = commit_index.to_str()
+                    && let Ok(commit_index) = commit_index.parse::<u64>()
+                {
+                    while let Ok(value) = notifier.recv().await {
+                        if value == commit_index {
+                            break;
                         }
                     }
                 }

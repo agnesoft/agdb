@@ -52,7 +52,7 @@ impl StorageData for FileStorageMemoryMapped {
         })
     }
 
-    fn read(&self, pos: u64, value_len: u64) -> Result<StorageSlice, DbError> {
+    fn read(&'_ self, pos: u64, value_len: u64) -> Result<StorageSlice<'_>, DbError> {
         self.memory.read(pos, value_len)
     }
 

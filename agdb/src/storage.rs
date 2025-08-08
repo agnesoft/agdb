@@ -96,7 +96,7 @@ pub trait StorageData: Sized {
 
     /// Reads `value_len` bytes starting at `pos`. Returns [`StorageSlice`]
     /// (COW).
-    fn read(&self, pos: u64, value_len: u64) -> Result<StorageSlice, DbError>;
+    fn read(&'_ self, pos: u64, value_len: u64) -> Result<StorageSlice<'_>, DbError>;
 
     /// Changes the name of the storage changing also the names of the files
     /// (if the storage is file based).
@@ -273,25 +273,25 @@ impl<D: StorageData> Storage<D> {
         T::deserialize(&self.value_as_bytes(index)?)
     }
 
-    pub fn value_as_bytes(&self, index: StorageIndex) -> Result<StorageSlice, DbError> {
+    pub fn value_as_bytes(&'_ self, index: StorageIndex) -> Result<StorageSlice<'_>, DbError> {
         self.value_as_bytes_at(index, 0)
     }
 
     pub fn value_as_bytes_at(
-        &self,
+        &'_ self,
         index: StorageIndex,
         offset: u64,
-    ) -> Result<StorageSlice, DbError> {
+    ) -> Result<StorageSlice<'_>, DbError> {
         let size = self.value_size(index)?;
         self.value_as_bytes_at_size(index, offset, size - std::cmp::min(size, offset))
     }
 
     pub fn value_as_bytes_at_size(
-        &self,
+        &'_ self,
         index: StorageIndex,
         offset: u64,
         size: u64,
-    ) -> Result<StorageSlice, DbError> {
+    ) -> Result<StorageSlice<'_>, DbError> {
         let record = self.record(index.0)?;
         Self::validate_read_size(offset, size, record.size)?;
         let pos = record.value_start() + offset;
@@ -480,7 +480,7 @@ impl<D: StorageData> Storage<D> {
         Ok(())
     }
 
-    fn read_value(&mut self, record: &StorageRecord) -> Result<StorageSlice, DbError> {
+    fn read_value(&'_ mut self, record: &StorageRecord) -> Result<StorageSlice<'_>, DbError> {
         self.data.read(record.value_start(), record.size)
     }
 

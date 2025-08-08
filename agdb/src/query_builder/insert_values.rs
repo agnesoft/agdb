@@ -5,12 +5,12 @@ use crate::query_builder::search::Search;
 
 /// Insert values builder to set ids to which the values
 /// should be inserted.
-#[cfg_attr(feature = "api", derive(agdb::ApiDef))]
+#[cfg_attr(feature = "api", derive(agdb::ApiDefImpl))]
 pub struct InsertValues(pub InsertValuesQuery);
 
 /// Final builder that lets you create
 /// an actual query object.
-#[cfg_attr(feature = "api", derive(agdb::ApiDef))]
+#[cfg_attr(feature = "api", derive(agdb::ApiDefImpl))]
 pub struct InsertValuesIds(pub InsertValuesQuery);
 
 #[cfg_attr(feature = "api", agdb::impl_def())]

@@ -1,7 +1,7 @@
 use crate::query::select_node_count::SelectNodeCountQuery;
 
 /// Select node count builder.
-#[cfg_attr(feature = "api", derive(agdb::ApiDef))]
+#[cfg_attr(feature = "api", derive(agdb::ApiDefImpl))]
 pub struct SelectNodeCount {}
 
 #[cfg_attr(feature = "api", agdb::impl_def())]

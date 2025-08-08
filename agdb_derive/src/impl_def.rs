@@ -114,13 +114,13 @@ fn extract_type(t: &syn::Type) -> &syn::Type {
 fn db_user_value(t: &syn::Type) -> Option<proc_macro2::TokenStream> {
     match t {
         syn::Type::Path(_) => Some(quote! { || ::agdb::api::Type::User }),
-        syn::Type::Array(_) => {
-            Some(quote! { || ::agdb::api::Type::List(Box::new(::agdb::api::Type::User)) })
-        }
+        syn::Type::Array(_) => Some(
+            quote! { || ::agdb::api::Type::List(::agdb::api::List { name: format!("List_{}", ::agdb::api::Type::User.name()), ty: || ::agdb::api::Type::User }) },
+        ),
         syn::Type::Reference(reference) => db_user_value(&reference.elem),
-        syn::Type::Slice(_) => {
-            Some(quote! { || ::agdb::api::Type::List(Box::new(::agdb::api::Type::User)) })
-        }
+        syn::Type::Slice(_) => Some(
+            quote! { || ::agdb::api::Type::List(::agdb::api::List { name: format!("List_{}", ::agdb::api::Type::User.name()), ty: || ::agdb::api::Type::User }) },
+        ),
         _ => None,
     }
 }

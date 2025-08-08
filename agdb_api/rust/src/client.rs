@@ -21,7 +21,7 @@ pub trait AgdbApiClient: HttpClient + agdb::api::ApiDefinition {}
 #[cfg(not(feature = "api"))]
 pub trait AgdbApiClient: HttpClient {}
 
-#[cfg_attr(feature = "api", derive(agdb::ApiDef))]
+#[cfg_attr(feature = "api", derive(agdb::ApiDefImpl))]
 pub struct AgdbApi<T: AgdbApiClient> {
     client: T,
     address: String,

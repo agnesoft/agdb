@@ -111,11 +111,9 @@ pub struct AdminStatus {
 }
 
 #[derive(Clone, Deserialize, Serialize, ToSchema, AgdbDeSerialize)]
-#[cfg_attr(feature = "api", derive(agdb::ApiDef))]
 pub struct Queries(pub Vec<QueryType>);
 
 #[derive(Serialize, ToSchema)]
-#[cfg_attr(feature = "api", derive(agdb::ApiDef))]
 pub struct QueriesResults(pub Vec<QueryResult>);
 
 #[derive(Debug, Deserialize, Serialize, ToSchema, PartialEq)]
@@ -142,7 +140,6 @@ pub struct ServerDatabase {
 }
 
 #[derive(Deserialize, Serialize, ToSchema)]
-#[cfg_attr(feature = "api", derive(agdb::ApiDef))]
 pub struct UserCredentials {
     pub password: String,
 }

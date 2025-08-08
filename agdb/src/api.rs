@@ -4,7 +4,7 @@ use agdb_derive::ApiDef;
 use std::fmt::Display;
 use std::fmt::Formatter;
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug)]
 pub enum Type {
     None,
     U8,
@@ -13,12 +13,26 @@ pub enum Type {
     F64,
     String,
     User,
-    Enum(&'static Enum),
-    Struct(&'static Struct),
-    List(Box<Type>),
+    Enum(Enum),
+    Struct(Struct),
+    List(List),
 }
 
-#[derive(Clone, Debug, PartialEq)]
+impl PartialEq for Type {
+    fn eq(&self, other: &Self) -> bool {
+        self.name().cmp(other.name()) == std::cmp::Ordering::Equal
+    }
+}
+
+impl Eq for Type {}
+
+impl std::hash::Hash for Type {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.name().hash(state);
+    }
+}
+
+#[derive(Clone, Debug)]
 pub enum LiteralValue {
     I64(&'static str),
     F64(&'static str),
@@ -26,13 +40,13 @@ pub enum LiteralValue {
     Bool(bool),
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone)]
 pub struct NamedType {
     pub name: &'static str,
     pub ty: fn() -> Type,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug)]
 pub enum Op {
     Add,
     Sub,
@@ -116,13 +130,13 @@ pub enum Expression {
     Unknown(String),
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone)]
 pub struct Enum {
-    pub name: &'static str,
+    pub name: String,
     pub variants: Vec<NamedType>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Function {
     pub name: &'static str,
     pub args: Vec<NamedType>,
@@ -130,10 +144,17 @@ pub struct Function {
     pub expressions: Vec<Expression>,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone)]
 pub struct Struct {
-    pub name: &'static str,
+    pub name: String,
     pub fields: Vec<NamedType>,
+    pub functions: fn() -> Vec<Function>,
+}
+
+#[derive(Debug, Clone)]
+pub struct List {
+    pub name: String,
+    pub ty: fn() -> Type,
 }
 
 #[derive(ApiDef)]
@@ -141,12 +162,12 @@ pub struct SearchQueryBuilderHelper {
     search: SearchQuery,
 }
 
-pub trait ApiDefinition {
+pub trait ApiDefinition: ApiFunctions {
     fn def() -> Type;
 }
 
 impl Type {
-    pub fn name(&self) -> &'static str {
+    pub fn name(&self) -> &str {
         match self {
             Type::None => "None",
             Type::U8 => "u8",
@@ -155,13 +176,16 @@ impl Type {
             Type::F64 => "f64",
             Type::String => "String",
             Type::User => "User",
-            Type::Enum(e) => e.name,
-            Type::Struct(s) => s.name,
-            Type::List(t) => {
-                static LIST_NAME: std::sync::OnceLock<String> = std::sync::OnceLock::new();
-                let name = LIST_NAME.get_or_init(|| format!("List_{}", t.name()));
-                name.as_str()
-            }
+            Type::Enum(e) => &e.name,
+            Type::Struct(s) => &s.name,
+            Type::List(t) => &t.name,
+        }
+    }
+
+    pub fn functions(&self) -> Vec<Function> {
+        match self {
+            Type::Struct(s) => (s.functions)(),
+            _ => vec![],
         }
     }
 }
@@ -172,8 +196,10 @@ impl SearchQueryBuilder for SearchQueryBuilderHelper {
     }
 }
 
-pub trait ApiFunctions: ApiDefinition {
-    fn functions() -> Vec<Function>;
+pub trait ApiFunctions {
+    fn functions() -> Vec<Function> {
+        Vec::new()
+    }
 }
 
 impl ApiDefinition for u8 {
@@ -182,11 +208,15 @@ impl ApiDefinition for u8 {
     }
 }
 
+impl ApiFunctions for u8 {}
+
 impl ApiDefinition for u16 {
     fn def() -> Type {
         Type::U64
     }
 }
+
+impl ApiFunctions for u16 {}
 
 impl ApiDefinition for i64 {
     fn def() -> Type {
@@ -194,11 +224,15 @@ impl ApiDefinition for i64 {
     }
 }
 
+impl ApiFunctions for i64 {}
+
 impl ApiDefinition for u64 {
     fn def() -> Type {
         Type::U64
     }
 }
+
+impl ApiFunctions for u64 {}
 
 impl ApiDefinition for f64 {
     fn def() -> Type {
@@ -206,11 +240,15 @@ impl ApiDefinition for f64 {
     }
 }
 
+impl ApiFunctions for f64 {}
+
 impl ApiDefinition for String {
     fn def() -> Type {
         Type::String
     }
 }
+
+impl ApiFunctions for String {}
 
 impl ApiDefinition for &str {
     fn def() -> Type {
@@ -218,23 +256,31 @@ impl ApiDefinition for &str {
     }
 }
 
+impl ApiFunctions for &str {}
+
 impl ApiDefinition for bool {
     fn def() -> Type {
         Type::U8
     }
 }
 
+impl ApiFunctions for bool {}
+
 impl<T: ApiDefinition> ApiDefinition for Vec<T> {
     fn def() -> Type {
-        Type::List(Box::new(T::def()))
+        Type::List(List {
+            name: format!("List_{}", T::def().name()),
+            ty: || T::def(),
+        })
     }
 }
 
+impl<T: ApiDefinition> ApiFunctions for Vec<T> {}
+
 impl<T: ApiDefinition> ApiDefinition for Option<T> {
     fn def() -> Type {
-        static ENUM: std::sync::OnceLock<Enum> = std::sync::OnceLock::new();
-        let e = ENUM.get_or_init(|| Enum {
-            name: "Option",
+        Type::Enum(Enum {
+            name: format!("Option_{}", T::def().name()),
             variants: vec![
                 NamedType {
                     name: "Some",
@@ -245,16 +291,16 @@ impl<T: ApiDefinition> ApiDefinition for Option<T> {
                     ty: || Type::None,
                 },
             ],
-        });
-        Type::Enum(e)
+        })
     }
 }
 
+impl<T: ApiDefinition> ApiFunctions for Option<T> {}
+
 impl<T: ApiDefinition, E: ApiDefinition> ApiDefinition for Result<T, E> {
     fn def() -> Type {
-        static ENUM: std::sync::OnceLock<Enum> = std::sync::OnceLock::new();
-        let e = ENUM.get_or_init(|| Enum {
-            name: "Result",
+        Type::Enum(Enum {
+            name: format!("Result_{}_{}", T::def().name(), E::def().name()),
             variants: vec![
                 NamedType {
                     name: "Ok",
@@ -265,21 +311,16 @@ impl<T: ApiDefinition, E: ApiDefinition> ApiDefinition for Result<T, E> {
                     ty: || E::def(),
                 },
             ],
-        });
-        Type::Enum(e)
+        })
     }
 }
 
+impl<T: ApiDefinition, E: ApiDefinition> ApiFunctions for Result<T, E> {}
+
 impl<T1: ApiDefinition, T2: ApiDefinition> ApiDefinition for (T1, T2) {
     fn def() -> Type {
-        static STRUCT: std::sync::OnceLock<agdb::api::Struct> = std::sync::OnceLock::new();
-        static STRUCTNAME: std::sync::OnceLock<String> = std::sync::OnceLock::new();
-        let name = STRUCTNAME
-            .get_or_init(|| format!("{}_{}", T1::def().name(), T2::def().name()))
-            .as_str();
-
-        Type::Struct(STRUCT.get_or_init(|| ::agdb::api::Struct {
-            name,
+        Type::Struct(::agdb::api::Struct {
+            name: format!("Tuple_{}_{}", T1::def().name(), T2::def().name()),
             fields: vec![
                 NamedType {
                     name: "0",
@@ -290,15 +331,23 @@ impl<T1: ApiDefinition, T2: ApiDefinition> ApiDefinition for (T1, T2) {
                     ty: || T2::def(),
                 },
             ],
-        }))
+            functions: || <(T1, T2) as ApiFunctions>::functions(),
+        })
     }
 }
 
+impl<T1: ApiDefinition, T2: ApiDefinition> ApiFunctions for (T1, T2) {}
+
 impl<T: ApiDefinition> ApiDefinition for &[T] {
     fn def() -> Type {
-        Type::List(Box::new(T::def()))
+        Type::List(List {
+            name: format!("List_{}", T::def().name()),
+            ty: || T::def(),
+        })
     }
 }
+
+impl<T: ApiDefinition> ApiFunctions for &[T] {}
 
 impl Display for Op {
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
@@ -324,24 +373,5 @@ impl Display for Op {
             Op::Not => write!(f, "!"),
             Op::Neg => write!(f, "-"),
         }
-    }
-}
-
-pub struct ApiType {
-    pub ty: Type,
-    pub functions: Vec<Function>,
-}
-
-pub fn ty<T: ApiDefinition>() -> ApiType {
-    ApiType {
-        ty: T::def(),
-        functions: vec![],
-    }
-}
-
-pub fn ty_f<T: ApiFunctions>() -> ApiType {
-    ApiType {
-        ty: T::def(),
-        functions: T::functions(),
     }
 }

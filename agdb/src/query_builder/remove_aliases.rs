@@ -2,7 +2,7 @@ use crate::RemoveAliasesQuery;
 
 /// Final builder that lets you create
 /// an actual query object.
-#[cfg_attr(feature = "api", derive(agdb::ApiDef))]
+#[cfg_attr(feature = "api", derive(agdb::ApiDefImpl))]
 pub struct RemoveAliases(pub RemoveAliasesQuery);
 
 #[cfg_attr(feature = "api", agdb::impl_def())]

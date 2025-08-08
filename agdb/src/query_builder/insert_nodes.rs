@@ -7,25 +7,25 @@ use crate::query::query_values::SingleValues;
 
 /// Insert nodes builder to add aliases or count
 /// or values.
-#[cfg_attr(feature = "api", derive(agdb::ApiDef))]
+#[cfg_attr(feature = "api", derive(agdb::ApiDefImpl))]
 pub struct InsertNodes(pub InsertNodesQuery);
 
 /// Insert nodes builder to add values.
-#[cfg_attr(feature = "api", derive(agdb::ApiDef))]
+#[cfg_attr(feature = "api", derive(agdb::ApiDefImpl))]
 pub struct InsertNodesAliases(pub InsertNodesQuery);
 
 /// Insert nodes builder to add uniform values.
-#[cfg_attr(feature = "api", derive(agdb::ApiDef))]
+#[cfg_attr(feature = "api", derive(agdb::ApiDefImpl))]
 pub struct InsertNodesCount(pub InsertNodesQuery);
 
 /// Insert nodes builder to add aliases or count
 /// or values.
-#[cfg_attr(feature = "api", derive(agdb::ApiDef))]
+#[cfg_attr(feature = "api", derive(agdb::ApiDefImpl))]
 pub struct InsertNodesIds(pub InsertNodesQuery);
 
 /// Final builder that lets you create
 /// an actual query object.
-#[cfg_attr(feature = "api", derive(agdb::ApiDef))]
+#[cfg_attr(feature = "api", derive(agdb::ApiDefImpl))]
 pub struct InsertNodesValues(pub InsertNodesQuery);
 
 #[cfg_attr(feature = "api", agdb::impl_def())]

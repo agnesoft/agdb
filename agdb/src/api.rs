@@ -20,7 +20,7 @@ pub enum Type {
 
 impl PartialEq for Type {
     fn eq(&self, other: &Self) -> bool {
-        self.name().cmp(other.name()) == std::cmp::Ordering::Equal
+        self.name() == other.name()
     }
 }
 

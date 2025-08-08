@@ -319,7 +319,7 @@ where
         }
     }
 
-    pub fn edge_iter_to(&self) -> GraphEdgeReverseIterator<D, Data> {
+    pub fn edge_iter_to(&self) -> GraphEdgeReverseIterator<'_, D, Data> {
         GraphEdgeReverseIterator {
             graph: self.graph,
             index: self

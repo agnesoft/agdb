@@ -110,7 +110,7 @@ impl StorageData for FileStorage {
         })
     }
 
-    fn read(&self, pos: u64, value_len: u64) -> Result<StorageSlice, DbError> {
+    fn read(&'_ self, pos: u64, value_len: u64) -> Result<StorageSlice<'_>, DbError> {
         let mut buffer = vec![0_u8; value_len as usize];
 
         if let Ok(_guard) = self.lock.try_lock() {

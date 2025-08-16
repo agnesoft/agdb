@@ -875,7 +875,13 @@ impl<T: TryFrom<DbValue, Error = DbError>> TryFrom<DbValue> for Vec<T> {
             DbValue::VecU64(v) => Ok(v.into_iter().map(DbValue::from).collect()),
             DbValue::VecF64(v) => Ok(v.into_iter().map(DbValue::from).collect()),
             DbValue::VecString(v) => Ok(v.into_iter().map(DbValue::from).collect()),
-            DbValue::Bytes(v) => crate::AgdbSerialize::deserialize(&v),
+            DbValue::Bytes(v) => crate::AgdbSerialize::deserialize(&v).map_err(|mut e| {
+                e.description = format!(
+                    "Cannot convert 'bytes' to 'Vec<DbValue>': {}",
+                    e.description
+                );
+                e
+            }),
             DbValue::I64(_) => DbValue::type_error("i64", "Vec<DbValue>"),
             DbValue::U64(_) => DbValue::type_error("u64", "Vec<DbValue>"),
             DbValue::F64(_) => DbValue::type_error("f64", "Vec<DbValue>"),
@@ -1808,7 +1814,7 @@ mod tests {
         assert_eq!(
             value,
             Err(DbError::from(
-                "Type mismatch. Cannot convert 'bytes' to 'Vec<DbValue>'."
+                "Cannot convert 'bytes' to 'Vec<DbValue>': u64 deserialization error: out of bounds"
             ))
         );
 

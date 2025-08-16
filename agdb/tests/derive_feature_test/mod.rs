@@ -9,10 +9,11 @@ use agdb::DbValue;
 use agdb::QueryBuilder;
 use agdb::QueryId;
 use agdb::QueryResult;
+use agdb::UserDbValue;
 use agdb::UserValue;
 use agdb::UserValueMarker;
 
-#[derive(Default, Debug, Clone, PartialEq, UserValueMarker)]
+#[derive(Default, Debug, Clone, PartialEq, UserValueMarker, UserDbValue, AgdbDeSerialize)]
 enum Status {
     Active,
     #[default]
@@ -41,7 +42,7 @@ struct MyValueWithBool {
     truths: Vec<bool>,
 }
 
-#[derive(Clone, PartialEq, Debug, UserValueMarker)]
+#[derive(Clone, PartialEq, Debug, UserDbValue, UserValueMarker, AgdbDeSerialize)]
 struct Attribute {
     name: String,
     value: String,
@@ -50,52 +51,13 @@ struct Attribute {
 #[derive(UserValue, PartialEq, Debug)]
 struct MyCustomVec {
     vec: Vec<Status>,
-    attribtues: Vec<Attribute>,
+    attributes: Vec<Attribute>,
 }
 
 #[derive(UserValue, PartialEq, Debug)]
 struct WithOption {
     name: String,
     value: Option<u64>,
-}
-
-impl From<Status> for DbValue {
-    fn from(value: Status) -> Self {
-        match value {
-            Status::Active => DbValue::I64(1),
-            Status::Inactive => DbValue::I64(0),
-        }
-    }
-}
-
-impl TryFrom<DbValue> for Status {
-    type Error = DbError;
-
-    fn try_from(value: DbValue) -> std::result::Result<Self, Self::Error> {
-        if value.to_u64()? == 0 {
-            Ok(Status::Inactive)
-        } else {
-            Ok(Status::Active)
-        }
-    }
-}
-
-impl From<Attribute> for DbValue {
-    fn from(value: Attribute) -> Self {
-        DbValue::String(format!("{}:{}", value.name, value.value))
-    }
-}
-
-impl TryFrom<DbValue> for Attribute {
-    type Error = DbError;
-
-    fn try_from(value: DbValue) -> std::result::Result<Self, Self::Error> {
-        let (name, value) = value.string()?.split_once(':').ok_or("Invalid")?;
-        Ok(Attribute {
-            name: name.to_string(),
-            value: value.to_string(),
-        })
-    }
 }
 
 #[test]
@@ -642,7 +604,7 @@ fn insert_vectorized_custom_types() {
     let mut db = TestDb::new();
     let my_type = MyCustomVec {
         vec: vec![Status::Active, Status::Inactive],
-        attribtues: vec![
+        attributes: vec![
             Attribute {
                 name: "name".to_string(),
                 value: "value".to_string(),

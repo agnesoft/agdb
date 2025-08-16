@@ -155,7 +155,17 @@ user.name = "Alice".to_string();
 db.exec_mut(QueryBuilder::insert().element(&user).query())?; //updates the user element with new name
 ```
 
-In some cases you may want to implement the `DbUserValue` trait yourself. For example when you want to omit a field entirely or construct it based on other values.
+In some cases you may want to implement the `DbUserValue` trait yourself. For example when you want to omit a field entirely or construct it based on other values. Additionally, you can use these supporting derive macros:
+
+```rs
+#[derive(UserValueMarker)] // allows using vectorized custom types, e.g. Vec<T> in fields of user defined types
+
+#[derive(UserDbValue)] // derives an implementation converting a user defined type
+                       // to DbValue for easy nesting of user defined types.
+                       // NOTE: it additionally requires agdb::AgdbSerialize trait to be implemented
+
+#[derive(AgdbDeSerialize)] // derives implementation of agdb::Serialize trait for user defined type
+```
 
 Types not directly used in the database but for which the conversions are supported:
 

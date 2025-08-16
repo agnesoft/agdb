@@ -44,7 +44,7 @@ pub use query::QueryType;
 pub use agdb_derive::AgdbDeSerialize;
 
 #[cfg(feature = "derive")]
-pub use agdb_derive::{UserValue, UserValueMarker};
+pub use agdb_derive::{UserDbValue, UserValue, UserValueMarker};
 
 #[cfg(feature = "api")]
 pub mod api;

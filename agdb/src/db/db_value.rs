@@ -682,6 +682,7 @@ impl<T: Into<DbValue> + DbUserValueMarker> From<Vec<T>> for DbValue {
                     .map(|v| v.string().unwrap().to_owned())
                     .collect(),
             ),
+            Some(DbValue::Bytes(_)) => DbValue::Bytes(crate::AgdbSerialize::serialize(&db_values)),
             _ => DbValue::Bytes(Vec::new()),
         }
     }
@@ -874,7 +875,7 @@ impl<T: TryFrom<DbValue, Error = DbError>> TryFrom<DbValue> for Vec<T> {
             DbValue::VecU64(v) => Ok(v.into_iter().map(DbValue::from).collect()),
             DbValue::VecF64(v) => Ok(v.into_iter().map(DbValue::from).collect()),
             DbValue::VecString(v) => Ok(v.into_iter().map(DbValue::from).collect()),
-            DbValue::Bytes(_) => DbValue::type_error("bytes", "Vec<DbValue>"),
+            DbValue::Bytes(v) => crate::AgdbSerialize::deserialize(&v),
             DbValue::I64(_) => DbValue::type_error("i64", "Vec<DbValue>"),
             DbValue::U64(_) => DbValue::type_error("u64", "Vec<DbValue>"),
             DbValue::F64(_) => DbValue::type_error("f64", "Vec<DbValue>"),

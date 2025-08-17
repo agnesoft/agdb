@@ -164,7 +164,7 @@ In some cases you may want to implement the `DbUserValue` trait yourself. For ex
                        // to DbValue for easy nesting of user defined types.
                        // NOTE: it additionally requires agdb::AgdbSerialize trait to be implemented
 
-#[derive(AgdbDeSerialize)] // derives implementation of agdb::Serialize trait for user defined type
+#[derive(AgdbDeSerialize)] // derives implementation of agdb::AgdbSerialize trait (includes both serialize and deserialize) for user defined type
 ```
 
 Types not directly used in the database but for which the conversions are supported:

@@ -1,6 +1,6 @@
 use crate::test_db::TestFile;
 use agdb::QueryError;
-use agdb::{Comparison::Equal, Db, DbId, DbUserValue, QueryBuilder, UserValue};
+use agdb::{Comparison::Equal, Db, DbId, QueryBuilder, UserValue};
 
 #[test]
 fn quickstart() -> Result<(), QueryError> {
@@ -17,15 +17,15 @@ fn quickstart() -> Result<(), QueryError> {
     let users = vec![
         User {
             db_id: None,
-            name: "Alice".to_string(),
+            name: "Alice".into(),
         },
         User {
             db_id: None,
-            name: "Bob".to_string(),
+            name: "Bob".into(),
         },
         User {
             db_id: None,
-            name: "John".to_string(),
+            name: "John".into(),
         },
     ];
 
@@ -42,7 +42,7 @@ fn quickstart() -> Result<(), QueryError> {
     let users: Vec<User> = db
         .exec(
             QueryBuilder::select()
-                .values(User::db_keys())
+                .elements::<User>()
                 .ids(&users_ids)
                 .query(),
         )?

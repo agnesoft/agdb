@@ -93,7 +93,7 @@ cargo add agdb
 Basic usage demonstrating creating a database, inserting graph elements with data and querying them back with select and search. The function using this code must handle `agdb::DbError` and [`agdb::QueryError`](https://agdb.agnesoft.com/docs/references/queries#queryerror) error types for operator `?` to work:
 
 ```rs
-use agdb::{Db, DbId, QueryBuilder, UserValue, DbUserValue, Comparison::Equal};
+use agdb::{Db, DbId, QueryBuilder, UserValue, Comparison::Equal};
 
 let mut db = Db::new("db_file.agdb")?;
 
@@ -101,9 +101,9 @@ db.exec_mut(QueryBuilder::insert().nodes().aliases("users").query())?;
 
 #[derive(Debug, UserValue)]
 struct User { db_id: Option<DbId>, name: String, }
-let users = vec![User { db_id: None, name: "Alice".to_string(), },
-                 User { db_id: None, name: "Bob".to_string(), },
-                 User { db_id: None, name: "John".to_string(), }];
+let users = vec![User { db_id: None, name: "Alice".into(), },
+                 User { db_id: None, name: "Bob".into(), },
+                 User { db_id: None, name: "John".into(), }];
 
 let users_ids = db.exec_mut(QueryBuilder::insert().nodes().values(&users).query())?;
 
@@ -118,13 +118,13 @@ db.exec_mut(
 
 This code creates a database called `user_db.agdb` with a simple graph of 4 nodes. The first node is aliased `users` and 3 user nodes for Alice, Bob and John are then connected with edges to the `users` node. The arbitrary `name` property is attached to the user nodes. Rather than inserting values directly with keys (which is also possible) we use our own type and derive from `agdb::UserValue` to allow it to be used with the database.
 
-You can select the graph elements (both nodes & edges) with their ids to get them back with their associated data (key-value properties). Lets select our users and convert the result into the list (notice we select only values relevant to our `User` type with passing `User::db_keys()`):
+You can select the graph elements (both nodes & edges) with their ids to get them back with their associated data (key-value properties). Let's select our users and convert the result into the list (notice we select only values relevant to our `User` type with passing `User::db_keys()`):
 
 ```rs
 let users: Vec<User> = db
     .exec(
         QueryBuilder::select()
-            .values(User::db_keys())
+            .elements::<User>()
             .ids(&users_ids)
             .query(),
     )?

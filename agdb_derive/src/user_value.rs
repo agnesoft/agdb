@@ -5,7 +5,7 @@ use syn::parse_macro_input;
 
 const DB_ID: &str = "db_id";
 
-pub fn db_user_value_marker_derive(item: TokenStream) -> TokenStream {
+pub fn user_value_marker_derive(item: TokenStream) -> TokenStream {
     let input = parse_macro_input!(item as DeriveInput);
     let name = input.ident;
 
@@ -16,7 +16,7 @@ pub fn db_user_value_marker_derive(item: TokenStream) -> TokenStream {
     tokens.into()
 }
 
-pub fn db_user_value_derive(item: TokenStream) -> TokenStream {
+pub fn user_value_derive(item: TokenStream) -> TokenStream {
     let input = parse_macro_input!(item as DeriveInput);
     let name = input.ident;
     let syn::Data::Struct(data) = input.data else {

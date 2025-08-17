@@ -1,6 +1,7 @@
 mod agdb_de_serialize;
 mod api_def;
 mod impl_def;
+mod user_db_value;
 mod user_value;
 
 use proc_macro::TokenStream;
@@ -57,15 +58,15 @@ use proc_macro::TokenStream;
 /// }
 /// ```
 #[proc_macro_derive(UserValue)]
-pub fn db_user_value_derive(item: TokenStream) -> TokenStream {
-    user_value::db_user_value_derive(item)
+pub fn user_value_derive(item: TokenStream) -> TokenStream {
+    user_value::user_value_derive(item)
 }
 
 /// The helper derive macro to add `agdb` compatibility to
 /// user defined types. This type provides blank implementation
 /// of the `agdb::DbUserValueMarker` trait. This is needed for the
 /// vectorized custom values to be compatible with the database
-/// as the `From` trait implementation witohut it conflicts
+/// as the `From` trait implementation without it conflicts
 /// with the blanket implementations.
 ///
 /// # Examples
@@ -79,8 +80,8 @@ pub fn db_user_value_derive(item: TokenStream) -> TokenStream {
 /// }
 /// ```
 #[proc_macro_derive(UserValueMarker)]
-pub fn db_user_value_marker_derive(item: TokenStream) -> TokenStream {
-    user_value::db_user_value_marker_derive(item)
+pub fn user_value_marker_derive(item: TokenStream) -> TokenStream {
+    user_value::user_value_marker_derive(item)
 }
 
 /// The derive macro to add `agdb` platform agnostic serialization
@@ -91,6 +92,19 @@ pub fn db_user_value_marker_derive(item: TokenStream) -> TokenStream {
 #[proc_macro_derive(AgdbDeSerialize)]
 pub fn agdb_de_serialize(item: TokenStream) -> TokenStream {
     agdb_de_serialize::agdb_de_serialize(item)
+}
+
+/// The derive macro to allow automatically serializing user types
+/// into `DbValue::Bytes`. Useful when deriving `UserValue` for
+/// a custom type with nested custom types or enums as it avoids
+/// the need to manually implement From/TryFrom for such nested types.
+/// It does additionally support enums and vectorized types (`Vec<T>`).
+///
+/// NOTE: It requires both `UserValueMarker` and `AgdbSerialize` traits
+/// to be implemented. You can derive them with `#[derive(UserValueMarker, AgdbSerialize)]`.
+#[proc_macro_derive(UserDbValue)]
+pub fn user_db_value_derive(item: TokenStream) -> TokenStream {
+    user_db_value::user_db_value_derive(item)
 }
 
 #[proc_macro_derive(ApiDef)]

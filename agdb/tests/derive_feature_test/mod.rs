@@ -60,6 +60,14 @@ struct WithOption {
     value: Option<u64>,
 }
 
+#[derive(UserValue, PartialEq, Debug)]
+struct Flattened {
+    db_id: Option<DbId>,
+    category: String,
+    #[agdb::flatten]
+    custom: MyCustomVec,
+}
+
 #[test]
 fn db_user_value() {
     #[derive(Default, Debug, PartialEq, UserValue)]
@@ -896,4 +904,47 @@ fn derive_serialization_empty_struct() {
     let serialized = s.serialize();
     let deserialized = S::deserialize(&serialized).unwrap();
     assert_eq!(s, deserialized);
+}
+
+#[test]
+fn derive_user_value_flatten_nested_struct() {
+    let flattened = Flattened {
+        db_id: Some(DbId(1)),
+        category: "test".into(),
+        custom: MyCustomVec {
+            vec: vec![],
+            attributes: vec![],
+        },
+    };
+
+    let mut db = TestDb::new();
+    db.exec_mut(QueryBuilder::insert().element(&flattened).query(), 1);
+
+    let keys = db
+        .exec_result(QueryBuilder::select().keys().ids(1).query())
+        .elements[0]
+        .values
+        .iter()
+        .map(|kv| kv.key.to_string())
+        .collect::<Vec<String>>();
+
+    assert_eq!(
+        keys,
+        vec![
+            "category".to_string(),
+            "vec".to_string(),
+            "attributes".to_string()
+        ]
+    );
+
+    let retrieved: Flattened = db
+        .exec_result(
+            QueryBuilder::select()
+                .elements::<Flattened>()
+                .ids(1)
+                .query(),
+        )
+        .try_into()
+        .unwrap();
+    assert_eq!(flattened, retrieved);
 }

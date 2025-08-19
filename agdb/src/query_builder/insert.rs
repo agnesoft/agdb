@@ -18,10 +18,10 @@ use crate::query_builder::insert_values::InsertValuesIds;
 
 /// Insert builder for inserting various data
 /// into the database.
-#[cfg_attr(feature = "api", derive(agdb::ApiDef))]
+#[cfg_attr(feature = "api", derive(agdb::ApiDefImpl))]
 pub struct Insert {}
 
-//#[cfg_attr(feature = "api", agdb::impl_def())]
+#[cfg_attr(feature = "api", agdb::impl_def())]
 impl Insert {
     /// Inserts aliases `names` into the database:
     ///

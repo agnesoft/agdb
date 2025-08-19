@@ -1,5 +1,5 @@
 import { ref } from "vue";
-import type { DbType, ServerDatabase } from "@agnesoft/agdb_api/openapi";
+import type { DbKind, ServerDatabase } from "@agnesoft/agdb_api/openapi";
 import { useAccount } from "@agdb-studio/auth/src/account";
 import { addNotification } from "@agdb-studio/notification/src/composables/notificationStore";
 import type { AxiosResponse } from "axios";
@@ -16,7 +16,7 @@ const fetchDatabases = async () => {
 
 export type AddDatabaseProps = {
   name: string;
-  db_type: DbType;
+  db_type: DbKind;
 };
 
 const { username } = useAccount();

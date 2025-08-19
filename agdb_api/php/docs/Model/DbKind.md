@@ -1,4 +1,4 @@
-# # DbType
+# # DbKind
 
 ## Properties
 

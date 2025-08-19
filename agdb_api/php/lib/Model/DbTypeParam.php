@@ -57,7 +57,7 @@ class DbTypeParam implements ModelInterface, ArrayAccess, \JsonSerializable
       * @var string[]
       */
     protected static $openAPITypes = [
-        'db_type' => '\Agnesoft\AgdbApi\Model\DbType'
+        'db_type' => '\Agnesoft\AgdbApi\Model\DbKind'
     ];
 
     /**
@@ -295,7 +295,7 @@ class DbTypeParam implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Gets db_type
      *
-     * @return \Agnesoft\AgdbApi\Model\DbType
+     * @return \Agnesoft\AgdbApi\Model\DbKind
      */
     public function getDbType()
     {
@@ -305,7 +305,7 @@ class DbTypeParam implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets db_type
      *
-     * @param \Agnesoft\AgdbApi\Model\DbType $db_type db_type
+     * @param \Agnesoft\AgdbApi\Model\DbKind $db_type db_type
      *
      * @return self
      */

@@ -3,7 +3,7 @@ use crate::TestServer;
 use crate::next_db_name;
 use crate::next_user_name;
 use agdb::QueryBuilder;
-use agdb_api::DbType;
+use agdb_api::DbKind;
 use agdb_api::DbUserRole;
 
 #[tokio::test]
@@ -14,11 +14,11 @@ async fn memory_to_mapped() -> anyhow::Result<()> {
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.user_login(owner, owner).await?;
-    server.api.db_add(owner, db, DbType::Memory).await?;
-    let status = server.api.db_convert(owner, db, DbType::Mapped).await?;
+    server.api.db_add(owner, db, DbKind::Memory).await?;
+    let status = server.api.db_convert(owner, db, DbKind::Mapped).await?;
     assert_eq!(status, 201);
     let list = server.api.db_list().await?.1;
-    assert_eq!(list[0].db_type, DbType::Mapped);
+    assert_eq!(list[0].db_type, DbKind::Mapped);
 
     Ok(())
 }
@@ -31,11 +31,11 @@ async fn same_type() -> anyhow::Result<()> {
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.user_login(owner, owner).await?;
-    server.api.db_add(owner, db, DbType::Memory).await?;
-    let status = server.api.db_convert(owner, db, DbType::Memory).await?;
+    server.api.db_add(owner, db, DbKind::Memory).await?;
+    let status = server.api.db_convert(owner, db, DbKind::Memory).await?;
     assert_eq!(status, 201);
     let list = server.api.db_list().await?.1;
-    assert_eq!(list[0].db_type, DbType::Memory);
+    assert_eq!(list[0].db_type, DbKind::Memory);
 
     Ok(())
 }
@@ -48,7 +48,7 @@ async fn file_to_memory() -> anyhow::Result<()> {
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.user_login(owner, owner).await?;
-    server.api.db_add(owner, db, DbType::File).await?;
+    server.api.db_add(owner, db, DbKind::File).await?;
     server
         .api
         .db_exec_mut(
@@ -57,10 +57,10 @@ async fn file_to_memory() -> anyhow::Result<()> {
             &[QueryBuilder::insert().nodes().count(1).query().into()],
         )
         .await?;
-    let status = server.api.db_convert(owner, db, DbType::Memory).await?;
+    let status = server.api.db_convert(owner, db, DbKind::Memory).await?;
     assert_eq!(status, 201);
     let list = server.api.db_list().await?.1;
-    assert_eq!(list[0].db_type, DbType::Memory);
+    assert_eq!(list[0].db_type, DbKind::Memory);
     let nodes = server
         .api
         .db_exec(
@@ -89,7 +89,7 @@ async fn db_not_found() -> anyhow::Result<()> {
     server.api.user_login(owner, owner).await?;
     let status = server
         .api
-        .db_convert(owner, db, DbType::Mapped)
+        .db_convert(owner, db, DbKind::Mapped)
         .await
         .unwrap_err()
         .status;
@@ -107,7 +107,7 @@ async fn non_admin() -> anyhow::Result<()> {
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.admin_user_add(user, user).await?;
-    server.api.admin_db_add(owner, db, DbType::Memory).await?;
+    server.api.admin_db_add(owner, db, DbKind::Memory).await?;
     server
         .api
         .admin_db_user_add(owner, db, user, DbUserRole::Write)
@@ -115,7 +115,7 @@ async fn non_admin() -> anyhow::Result<()> {
     server.api.user_login(user, user).await?;
     let status = server
         .api
-        .db_convert(owner, db, DbType::Mapped)
+        .db_convert(owner, db, DbKind::Mapped)
         .await
         .unwrap_err()
         .status;
@@ -128,7 +128,7 @@ async fn no_token() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     let status = server
         .api
-        .db_convert("owner", "db", DbType::Memory)
+        .db_convert("owner", "db", DbKind::Memory)
         .await
         .unwrap_err()
         .status;

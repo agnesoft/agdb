@@ -342,10 +342,10 @@ declare namespace Components {
              */
             DbValue;
         }
+        export type DbKind = "memory" | "mapped" | "file";
         export type DbResource = "all" | "db" | "audit" | "backup";
-        export type DbType = "memory" | "mapped" | "file";
         export interface DbTypeParam {
-            db_type: DbType;
+            db_type: DbKind;
         }
         export interface DbUser {
             role: DbUserRole;
@@ -1399,7 +1399,7 @@ declare namespace Components {
         export interface ServerDatabase {
             backup: number; // int64
             db: string;
-            db_type: DbType;
+            db_type: DbKind;
             owner: string;
             role: DbUserRole;
             size: number; // int64
@@ -1432,7 +1432,7 @@ declare namespace Paths {
     namespace AdminDbAdd {
         namespace Parameters {
             export type Db = string;
-            export type DbType = Components.Schemas.DbType;
+            export type DbType = Components.Schemas.DbKind;
             export type Owner = string;
         }
         export interface PathParameters {
@@ -1510,7 +1510,7 @@ declare namespace Paths {
     namespace AdminDbConvert {
         namespace Parameters {
             export type Db = string;
-            export type DbType = Components.Schemas.DbType;
+            export type DbType = Components.Schemas.DbKind;
             export type Owner = string;
         }
         export interface PathParameters {
@@ -1915,7 +1915,7 @@ declare namespace Paths {
     namespace DbAdd {
         namespace Parameters {
             export type Db = string;
-            export type DbType = Components.Schemas.DbType;
+            export type DbType = Components.Schemas.DbKind;
             export type Owner = string;
         }
         export interface PathParameters {
@@ -2001,7 +2001,7 @@ declare namespace Paths {
     namespace DbConvert {
         namespace Parameters {
             export type Db = string;
-            export type DbType = Components.Schemas.DbType;
+            export type DbType = Components.Schemas.DbKind;
             export type Owner = string;
         }
         export interface PathParameters {
@@ -3266,8 +3266,8 @@ export type DbF64 = Components.Schemas.DbF64;
 export type DbId = Components.Schemas.DbId;
 export type DbKeyOrder = Components.Schemas.DbKeyOrder;
 export type DbKeyValue = Components.Schemas.DbKeyValue;
+export type DbKind = Components.Schemas.DbKind;
 export type DbResource = Components.Schemas.DbResource;
-export type DbType = Components.Schemas.DbType;
 export type DbTypeParam = Components.Schemas.DbTypeParam;
 export type DbUser = Components.Schemas.DbUser;
 export type DbUserRole = Components.Schemas.DbUserRole;

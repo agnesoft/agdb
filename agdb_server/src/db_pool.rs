@@ -10,8 +10,8 @@ use crate::server_error::ServerResult;
 use crate::utilities::remove_file_if_exists;
 use agdb::QueryResult;
 use agdb_api::DbAudit;
+use agdb_api::DbKind;
 use agdb_api::DbResource;
-use agdb_api::DbType;
 use agdb_api::Queries;
 use axum::http::StatusCode;
 use std::collections::HashMap;
@@ -71,7 +71,7 @@ impl DbPool {
             .ok_or_else(|| ServerError::new(StatusCode::NOT_FOUND, "db not found"))
     }
 
-    pub(crate) async fn add_db(&self, owner: &str, db: &str, db_type: DbType) -> ServerResult<u64> {
+    pub(crate) async fn add_db(&self, owner: &str, db: &str, db_type: DbKind) -> ServerResult<u64> {
         let db_path = Path::new(&self.config.data_dir).join(owner).join(db);
         let path = db_path.to_str().ok_or(ErrorCode::DbInvalid)?.to_string();
 
@@ -113,11 +113,11 @@ impl DbPool {
         &self,
         owner: &str,
         db: &str,
-        db_type: DbType,
+        db_type: DbKind,
     ) -> ServerResult<u64> {
         let user_db = self.db(owner, db).await?;
 
-        let backup_path = if db_type == DbType::Memory {
+        let backup_path = if db_type == DbKind::Memory {
             db_file(owner, db, &self.config)
         } else {
             db_backup_file(owner, db, &self.config)
@@ -170,7 +170,7 @@ impl DbPool {
         db: &str,
         database: &mut Database,
     ) -> Result<(), ServerError> {
-        let backup_file = if database.db_type == DbType::Memory {
+        let backup_file = if database.db_type == DbKind::Memory {
             db_file(owner, db, &self.config)
         } else {
             db_backup_file(owner, db, &self.config)
@@ -195,8 +195,8 @@ impl DbPool {
             .ok_or(ErrorCode::DbInvalid)?
             .to_string();
         let user_db = pool.get_mut(&name).ok_or(db_not_found(owner, db))?;
-        *user_db = UserDb::new(&format!("{}:{db_path}", DbType::Memory))?;
-        if database.db_type != DbType::Memory {
+        *user_db = UserDb::new(&format!("{}:{db_path}", DbKind::Memory))?;
+        if database.db_type != DbKind::Memory {
             remove_file_if_exists(db_file(owner, db, &self.config))?;
             remove_file_if_exists(db_file(owner, &format!(".{db}"), &self.config))?;
             *user_db = UserDb::new(&format!("{}:{db_path}", database.db_type))?;
@@ -209,14 +209,14 @@ impl DbPool {
         &self,
         owner: &str,
         db: &str,
-        db_type: DbType,
-        target_type: DbType,
+        db_type: DbKind,
+        target_type: DbKind,
     ) -> ServerResult {
         let db_name = DbName::new(owner, db);
         let mut user_db = self.pool.write().await.remove(&db_name).unwrap();
         let current_path = db_file(owner, db, &self.config);
 
-        if db_type == DbType::Memory {
+        if db_type == DbKind::Memory {
             user_db
                 .0
                 .read()
@@ -389,9 +389,9 @@ impl DbPool {
         &self,
         owner: &str,
         db: &str,
-        db_type: DbType,
+        db_type: DbKind,
     ) -> ServerResult<Option<u64>> {
-        let backup_path = if db_type == DbType::Memory {
+        let backup_path = if db_type == DbKind::Memory {
             db_file(owner, db, &self.config)
         } else {
             db_backup_file(owner, db, &self.config)
@@ -408,7 +408,7 @@ impl DbPool {
         self.pool.write().await.remove(&db_name);
         let current_path = db_file(owner, db, &self.config);
 
-        let backup = if db_type != DbType::Memory {
+        let backup = if db_type != DbKind::Memory {
             let backup_temp = db_backup_dir(owner, &self.config).join(db);
             std::fs::rename(&current_path, &backup_temp)?;
             std::fs::rename(&backup_path, &current_path)?;

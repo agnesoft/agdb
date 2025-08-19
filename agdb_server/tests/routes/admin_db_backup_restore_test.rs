@@ -6,7 +6,7 @@ use agdb::DbElement;
 use agdb::DbId;
 use agdb::QueryBuilder;
 use agdb::QueryResult;
-use agdb_api::DbType;
+use agdb_api::DbKind;
 use std::path::Path;
 
 #[tokio::test]
@@ -16,7 +16,7 @@ async fn backup() -> anyhow::Result<()> {
     let db = &next_db_name();
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
-    server.api.admin_db_add(owner, db, DbType::Mapped).await?;
+    server.api.admin_db_add(owner, db, DbKind::Mapped).await?;
     let queries = &vec![
         QueryBuilder::insert()
             .nodes()
@@ -62,7 +62,7 @@ async fn backup_overwrite() -> anyhow::Result<()> {
     let db = &next_db_name();
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
-    server.api.admin_db_add(owner, db, DbType::Mapped).await?;
+    server.api.admin_db_add(owner, db, DbKind::Mapped).await?;
     let queries = &vec![
         QueryBuilder::insert()
             .nodes()
@@ -111,7 +111,7 @@ async fn backup_of_backup() -> anyhow::Result<()> {
     let db = &next_db_name();
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
-    server.api.admin_db_add(owner, db, DbType::Mapped).await?;
+    server.api.admin_db_add(owner, db, DbKind::Mapped).await?;
     let queries = &vec![
         QueryBuilder::insert()
             .nodes()
@@ -154,7 +154,7 @@ async fn in_memory() -> anyhow::Result<()> {
     let db = &next_db_name();
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
-    server.api.admin_db_add(owner, db, DbType::Memory).await?;
+    server.api.admin_db_add(owner, db, DbKind::Memory).await?;
     let status = server.api.admin_db_backup(owner, db).await?;
     assert_eq!(status, 201);
     assert!(Path::new(&server.data_dir).join(owner).join(db).exists());
@@ -170,7 +170,7 @@ async fn restore_no_backup() -> anyhow::Result<()> {
     let db = &next_db_name();
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
-    server.api.admin_db_add(owner, db, DbType::Mapped).await?;
+    server.api.admin_db_add(owner, db, DbKind::Mapped).await?;
     let status = server
         .api
         .admin_db_restore(owner, db)
@@ -188,7 +188,7 @@ async fn non_admin() -> anyhow::Result<()> {
     let db = &next_db_name();
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
-    server.api.admin_db_add(owner, db, DbType::Memory).await?;
+    server.api.admin_db_add(owner, db, DbKind::Memory).await?;
     server.api.user_login(owner, owner).await?;
     let status = server
         .api

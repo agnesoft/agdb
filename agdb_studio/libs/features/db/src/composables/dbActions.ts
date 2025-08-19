@@ -3,7 +3,7 @@ import { checkClient, client } from "@agdb-studio/api/src/api";
 import type {
   Components,
   DbResource,
-  DbType,
+  DbKind,
   DbUser,
   DbUserRole,
   ServerDatabase,
@@ -19,7 +19,7 @@ const shouldRunAdminAction: () => boolean = () =>
 export const dbAdd = async (params: {
   owner: string;
   db: string;
-  db_type: DbType;
+  db_type: DbKind;
 }): Promise<AxiosResponse> => {
   checkClient(client);
   if (shouldRunAdminAction()) {
@@ -63,7 +63,7 @@ export const dbClear = async (
 };
 
 export const dbConvert = async (
-  params: DbIdentification & { db_type: DbType },
+  params: DbIdentification & { db_type: DbKind },
 ): Promise<AxiosResponse> => {
   checkClient(client);
   if (shouldRunAdminAction()) {

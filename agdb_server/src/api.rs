@@ -72,7 +72,7 @@ use utoipa::openapi::security::SecurityScheme;
         routes::db::user::DbUserRoleParam,
         agdb_api::AdminStatus,
         agdb_api::DbAudit,
-        agdb_api::DbType,
+        agdb_api::DbKind,
         agdb_api::DbUser,
         agdb_api::DbUserRole,
         agdb_api::DbResource,

@@ -5,7 +5,7 @@ use crate::action::ClusterActionResult;
 use crate::server_db::Database;
 use crate::server_error::ServerResult;
 use agdb::DbSerialize;
-use agdb_api::DbType;
+use agdb_api::DbKind;
 use serde::Deserialize;
 use serde::Serialize;
 
@@ -15,7 +15,7 @@ pub(crate) struct DbCopy {
     pub(crate) db: String,
     pub(crate) new_owner: String,
     pub(crate) new_db: String,
-    pub(crate) db_type: DbType,
+    pub(crate) db_type: DbKind,
 }
 
 impl Action for DbCopy {

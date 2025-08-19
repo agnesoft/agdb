@@ -8,7 +8,7 @@ use crate::DbUserRole;
 use crate::UserLogin;
 use crate::UserStatus;
 use crate::api_result::AgdbApiResult;
-use crate::api_types::DbType;
+use crate::api_types::DbKind;
 use crate::api_types::ServerDatabase;
 use crate::api_types::UserCredentials;
 use crate::http_client::HttpClient;
@@ -54,7 +54,7 @@ impl<T: AgdbApiClient> AgdbApi<T> {
         &self.base_url
     }
 
-    pub async fn admin_db_add(&self, owner: &str, db: &str, db_type: DbType) -> AgdbApiResult<u16> {
+    pub async fn admin_db_add(&self, owner: &str, db: &str, db_type: DbKind) -> AgdbApiResult<u16> {
         Ok(self
             .client
             .post::<(), ()>(
@@ -106,7 +106,7 @@ impl<T: AgdbApiClient> AgdbApi<T> {
         &self,
         owner: &str,
         db: &str,
-        db_type: DbType,
+        db_type: DbKind,
     ) -> AgdbApiResult<u16> {
         Ok(self
             .client
@@ -363,7 +363,7 @@ impl<T: AgdbApiClient> AgdbApi<T> {
             .await
     }
 
-    pub async fn db_add(&self, owner: &str, db: &str, db_type: DbType) -> AgdbApiResult<u16> {
+    pub async fn db_add(&self, owner: &str, db: &str, db_type: DbKind) -> AgdbApiResult<u16> {
         Ok(self
             .client
             .post::<(), ()>(
@@ -466,7 +466,7 @@ impl<T: AgdbApiClient> AgdbApi<T> {
             .await
     }
 
-    pub async fn db_convert(&self, owner: &str, db: &str, db_type: DbType) -> AgdbApiResult<u16> {
+    pub async fn db_convert(&self, owner: &str, db: &str, db_type: DbKind) -> AgdbApiResult<u16> {
         Ok(self
             .client
             .post::<(), ()>(

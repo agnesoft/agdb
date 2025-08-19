@@ -2,7 +2,7 @@ use crate::ADMIN;
 use crate::TestServer;
 use crate::next_db_name;
 use crate::next_user_name;
-use agdb_api::DbType;
+use agdb_api::DbKind;
 use agdb_api::DbUserRole;
 use agdb_api::ServerDatabase;
 
@@ -16,8 +16,8 @@ async fn list() -> anyhow::Result<()> {
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.admin_user_add(user, user).await?;
-    server.api.admin_db_add(owner, db1, DbType::Memory).await?;
-    server.api.admin_db_add(user, db2, DbType::Memory).await?;
+    server.api.admin_db_add(owner, db1, DbKind::Memory).await?;
+    server.api.admin_db_add(user, db2, DbKind::Memory).await?;
     server
         .api
         .admin_db_user_add(owner, db1, user, DbUserRole::Read)
@@ -29,7 +29,7 @@ async fn list() -> anyhow::Result<()> {
         ServerDatabase {
             db: db1.to_string(),
             owner: owner.to_string(),
-            db_type: DbType::Memory,
+            db_type: DbKind::Memory,
             role: DbUserRole::Read,
             size: 2568,
             backup: 0,
@@ -37,7 +37,7 @@ async fn list() -> anyhow::Result<()> {
         ServerDatabase {
             db: db2.to_string(),
             owner: user.to_string(),
-            db_type: DbType::Memory,
+            db_type: DbKind::Memory,
             role: DbUserRole::Admin,
             size: 2568,
             backup: 0,
@@ -57,7 +57,7 @@ async fn with_backup() -> anyhow::Result<()> {
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.user_login(owner, owner).await?;
-    server.api.db_add(owner, db, DbType::Mapped).await?;
+    server.api.db_add(owner, db, DbKind::Mapped).await?;
     server.api.db_backup(owner, db).await?;
     let (status, list) = server.api.db_list().await?;
     assert_eq!(status, 200);

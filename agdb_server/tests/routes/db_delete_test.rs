@@ -2,7 +2,7 @@ use crate::ADMIN;
 use crate::TestServer;
 use crate::next_db_name;
 use crate::next_user_name;
-use agdb_api::DbType;
+use agdb_api::DbKind;
 use agdb_api::DbUserRole;
 use std::path::Path;
 
@@ -14,7 +14,7 @@ async fn delete() -> anyhow::Result<()> {
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.user_login(owner, owner).await?;
-    server.api.db_add(owner, db, DbType::Mapped).await?;
+    server.api.db_add(owner, db, DbKind::Mapped).await?;
     assert!(Path::new(&server.data_dir).join(owner).join(db).exists());
     let status = server.api.db_delete(owner, db).await?;
     assert_eq!(status, 204);
@@ -30,7 +30,7 @@ async fn delete_in_memory() -> anyhow::Result<()> {
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.user_login(owner, owner).await?;
-    server.api.db_add(owner, db, DbType::Memory).await?;
+    server.api.db_add(owner, db, DbKind::Memory).await?;
     let status = server.api.db_delete(owner, db).await?;
     assert_eq!(status, 204);
     Ok(())
@@ -49,7 +49,7 @@ async fn delete_with_backup() -> anyhow::Result<()> {
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.user_login(owner, owner).await?;
-    server.api.db_add(owner, db, DbType::Mapped).await?;
+    server.api.db_add(owner, db, DbKind::Mapped).await?;
     server.api.db_backup(owner, db).await?;
     assert!(db_path.exists());
     assert!(db_backup_path.exists());
@@ -69,7 +69,7 @@ async fn delete_in_memory_with_backup() -> anyhow::Result<()> {
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.user_login(owner, owner).await?;
-    server.api.db_add(owner, db, DbType::Memory).await?;
+    server.api.db_add(owner, db, DbKind::Memory).await?;
     assert!(!db_path.exists());
     server.api.db_backup(owner, db).await?;
     assert!(db_path.exists());
@@ -100,7 +100,7 @@ async fn non_owner() -> anyhow::Result<()> {
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.admin_user_add(user, user).await?;
-    server.api.admin_db_add(owner, db, DbType::Mapped).await?;
+    server.api.admin_db_add(owner, db, DbKind::Mapped).await?;
     server
         .api
         .admin_db_user_add(owner, db, user, DbUserRole::Admin)

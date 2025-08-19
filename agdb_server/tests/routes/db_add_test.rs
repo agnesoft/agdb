@@ -2,7 +2,7 @@ use crate::ADMIN;
 use crate::TestServer;
 use crate::next_db_name;
 use crate::next_user_name;
-use agdb_api::DbType;
+use agdb_api::DbKind;
 use std::path::Path;
 
 #[tokio::test]
@@ -13,7 +13,7 @@ async fn add() -> anyhow::Result<()> {
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.user_login(owner, owner).await?;
-    let status = server.api.db_add(owner, db, DbType::File).await?;
+    let status = server.api.db_add(owner, db, DbKind::File).await?;
     assert_eq!(status, 201);
     assert!(Path::new(&server.data_dir).join(owner).join(db).exists());
     Ok(())
@@ -27,11 +27,11 @@ async fn add_same_name_with_previous_backup_after_delete() -> anyhow::Result<()>
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.user_login(owner, owner).await?;
-    let status = server.api.db_add(owner, db, DbType::Mapped).await?;
+    let status = server.api.db_add(owner, db, DbKind::Mapped).await?;
     assert_eq!(status, 201);
     server.api.db_backup(owner, db).await?;
     server.api.db_delete(owner, db).await?;
-    let status = server.api.db_add(owner, db, DbType::Mapped).await?;
+    let status = server.api.db_add(owner, db, DbKind::Mapped).await?;
     assert_eq!(status, 201);
     let list = server.api.db_list().await?.1;
     assert_eq!(list[0].backup, 0);
@@ -46,11 +46,11 @@ async fn add_same_name_with_backup_after_remove() -> anyhow::Result<()> {
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.user_login(owner, owner).await?;
-    let status = server.api.db_add(owner, db, DbType::Mapped).await?;
+    let status = server.api.db_add(owner, db, DbKind::Mapped).await?;
     assert_eq!(status, 201);
     server.api.db_backup(owner, db).await?;
     server.api.db_remove(owner, db).await?;
-    let status = server.api.db_add(owner, db, DbType::Mapped).await?;
+    let status = server.api.db_add(owner, db, DbKind::Mapped).await?;
     assert_eq!(status, 201);
     let list = server.api.db_list().await?.1;
     assert_ne!(list[0].backup, 0);
@@ -67,11 +67,11 @@ async fn add_same_name_different_user() -> anyhow::Result<()> {
     server.api.admin_user_add(owner, owner).await?;
     server.api.admin_user_add(owner2, owner2).await?;
     server.api.user_login(owner, owner).await?;
-    let status = server.api.db_add(owner, db, DbType::File).await?;
+    let status = server.api.db_add(owner, db, DbKind::File).await?;
     assert_eq!(status, 201);
     assert!(Path::new(&server.data_dir).join(owner).join(db).exists());
     server.api.user_login(owner2, owner2).await?;
-    let status = server.api.db_add(owner2, db, DbType::File).await?;
+    let status = server.api.db_add(owner2, db, DbKind::File).await?;
     assert_eq!(status, 201);
     assert!(Path::new(&server.data_dir).join(owner2).join(db).exists());
     Ok(())
@@ -85,11 +85,11 @@ async fn db_already_exists() -> anyhow::Result<()> {
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.user_login(owner, owner).await?;
-    let status = server.api.db_add(owner, db, DbType::File).await?;
+    let status = server.api.db_add(owner, db, DbKind::File).await?;
     assert_eq!(status, 201);
     let status = server
         .api
-        .db_add(owner, db, DbType::File)
+        .db_add(owner, db, DbKind::File)
         .await
         .unwrap_err()
         .status;
@@ -106,7 +106,7 @@ async fn db_user_mismatch() -> anyhow::Result<()> {
     server.api.user_login(owner, owner).await?;
     let status = server
         .api
-        .db_add("some_user", "db", DbType::Mapped)
+        .db_add("some_user", "db", DbKind::Mapped)
         .await
         .unwrap_err()
         .status;
@@ -125,7 +125,7 @@ async fn add_db_other_user() -> anyhow::Result<()> {
     server.api.user_login(owner, owner).await?;
     let status = server
         .api
-        .db_add(owner2, "db", DbType::Mapped)
+        .db_add(owner2, "db", DbKind::Mapped)
         .await
         .unwrap_err()
         .status;
@@ -142,7 +142,7 @@ async fn db_type_invalid() -> anyhow::Result<()> {
     server.api.user_login(owner, owner).await?;
     let status = server
         .api
-        .db_add(owner, "a\0a", DbType::Mapped)
+        .db_add(owner, "a\0a", DbKind::Mapped)
         .await
         .unwrap_err()
         .status;
@@ -155,7 +155,7 @@ async fn no_token() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     let status = server
         .api
-        .db_add("owner", "db", DbType::Mapped)
+        .db_add("owner", "db", DbKind::Mapped)
         .await
         .unwrap_err()
         .status;

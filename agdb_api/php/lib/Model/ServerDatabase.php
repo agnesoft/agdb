@@ -59,7 +59,7 @@ class ServerDatabase implements ModelInterface, ArrayAccess, \JsonSerializable
     protected static $openAPITypes = [
         'backup' => 'int',
         'db' => 'string',
-        'db_type' => '\Agnesoft\AgdbApi\Model\DbType',
+        'db_type' => '\Agnesoft\AgdbApi\Model\DbKind',
         'owner' => 'string',
         'role' => '\Agnesoft\AgdbApi\Model\DbUserRole',
         'size' => 'int'
@@ -412,7 +412,7 @@ class ServerDatabase implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Gets db_type
      *
-     * @return \Agnesoft\AgdbApi\Model\DbType
+     * @return \Agnesoft\AgdbApi\Model\DbKind
      */
     public function getDbType()
     {
@@ -422,7 +422,7 @@ class ServerDatabase implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets db_type
      *
-     * @param \Agnesoft\AgdbApi\Model\DbType $db_type db_type
+     * @param \Agnesoft\AgdbApi\Model\DbKind $db_type db_type
      *
      * @return self
      */

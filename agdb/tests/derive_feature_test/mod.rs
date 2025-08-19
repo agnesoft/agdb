@@ -4,37 +4,35 @@ use agdb::AgdbSerialize;
 use agdb::DbElement;
 use agdb::DbError;
 use agdb::DbId;
-use agdb::DbUserValue;
+use agdb::DbType;
+use agdb::DbTypeMarker;
 use agdb::DbValue;
 use agdb::QueryBuilder;
 use agdb::QueryId;
 use agdb::QueryResult;
-use agdb::UserDbValue;
-use agdb::UserValue;
-use agdb::UserValueMarker;
 
-#[derive(Default, Debug, Clone, PartialEq, UserValueMarker, UserDbValue, AgdbDeSerialize)]
+#[derive(Default, Debug, Clone, PartialEq, DbTypeMarker, DbValue, AgdbDeSerialize)]
 enum Status {
     Active,
     #[default]
     Inactive,
 }
 
-#[derive(UserValue, Debug)]
+#[derive(DbType, Debug)]
 struct User {
     user_id: u64,
     password: String,
     status: Status,
 }
 
-#[derive(UserValue, PartialEq, Debug)]
+#[derive(DbType, PartialEq, Debug)]
 struct MyValue {
     db_id: Option<QueryId>,
     name: String,
     age: u64,
 }
 
-#[derive(UserValue, PartialEq, Debug)]
+#[derive(DbType, PartialEq, Debug)]
 struct MyValueWithBool {
     db_id: Option<QueryId>,
     name: String,
@@ -42,35 +40,35 @@ struct MyValueWithBool {
     truths: Vec<bool>,
 }
 
-#[derive(Clone, PartialEq, Debug, UserDbValue, UserValueMarker, AgdbDeSerialize)]
+#[derive(Clone, PartialEq, Debug, UserDbValue, DbTypeMarker, AgdbDeSerialize)]
 struct Attribute {
     name: String,
     value: String,
 }
 
-#[derive(UserValue, PartialEq, Debug)]
+#[derive(DbType, PartialEq, Debug)]
 struct MyCustomVec {
     vec: Vec<Status>,
     attributes: Vec<Attribute>,
 }
 
-#[derive(UserValue, PartialEq, Debug)]
+#[derive(DbType, PartialEq, Debug)]
 struct WithOption {
     name: String,
     value: Option<u64>,
 }
 
-#[derive(UserValue, PartialEq, Debug)]
+#[derive(DbType, PartialEq, Debug)]
 struct Flattened {
     db_id: Option<DbId>,
     category: String,
-    #[agdb::flatten]
+    #[agdb(flatten)]
     custom: MyCustomVec,
 }
 
 #[test]
 fn db_user_value() {
-    #[derive(Default, Debug, PartialEq, UserValue)]
+    #[derive(Default, Debug, PartialEq, DbType)]
     struct MyData {
         bytes: Vec<u8>,
         u64: u64,
@@ -158,7 +156,7 @@ fn db_user_value() {
 
 #[test]
 fn insert_node_values_custom() {
-    #[derive(UserValue)]
+    #[derive(DbType)]
     struct MyValue {
         name: String,
         age: u64,
@@ -183,7 +181,7 @@ fn insert_node_values_custom() {
 
 #[test]
 fn insert_node_values_uniform_custom() {
-    #[derive(UserValue)]
+    #[derive(DbType)]
     struct MyValue {
         name: String,
         age: u64,
@@ -223,7 +221,7 @@ fn insert_node_values_uniform_custom() {
 
 #[test]
 fn select_custom_value_keys() {
-    #[derive(Debug, Clone, PartialEq, UserValue)]
+    #[derive(Debug, Clone, PartialEq, DbType)]
     struct MyValue {
         name: String,
         age: u64,
@@ -270,7 +268,7 @@ fn select_custom_value_keys() {
 
 #[test]
 fn select_custom_value_with_id() {
-    #[derive(Debug, Clone, PartialEq, UserValue)]
+    #[derive(Debug, Clone, PartialEq, DbType)]
     struct MyValue {
         db_id: Option<DbId>,
         name: String,
@@ -322,7 +320,7 @@ fn select_custom_value_with_id() {
 
 #[test]
 fn insert_single_element() {
-    #[derive(Debug, Clone, PartialEq, UserValue)]
+    #[derive(Debug, Clone, PartialEq, DbType)]
     struct MyValue {
         db_id: Option<DbId>,
         name: String,
@@ -374,7 +372,7 @@ fn insert_single_element() {
 
 #[test]
 fn insert_multiple_elements() {
-    #[derive(Debug, Clone, PartialEq, UserValue)]
+    #[derive(Debug, Clone, PartialEq, DbType)]
     struct MyValue {
         db_id: Option<DbId>,
         name: String,
@@ -429,7 +427,7 @@ fn insert_multiple_elements() {
 fn derived_macro_should_not_panic() {
     let mut db = TestDb::new();
 
-    #[derive(Debug, UserValue)]
+    #[derive(Debug, DbType)]
     struct User {
         value: u64,
     }
@@ -447,10 +445,7 @@ fn derived_macro_should_not_panic() {
         .try_into();
 
     assert!(user.is_err());
-    assert_eq!(
-        user.unwrap_err().description,
-        "Not enough keys: 'value' not found at position 0"
-    );
+    assert_eq!(user.unwrap_err().description, "Key 'value' not found");
 }
 
 #[test]
@@ -908,8 +903,8 @@ fn derive_serialization_empty_struct() {
 
 #[test]
 fn derive_user_value_flatten_nested_struct() {
-    let flattened = Flattened {
-        db_id: Some(DbId(1)),
+    let mut flattened = Flattened {
+        db_id: None,
         category: "test".into(),
         custom: MyCustomVec {
             vec: vec![],
@@ -918,7 +913,7 @@ fn derive_user_value_flatten_nested_struct() {
     };
 
     let mut db = TestDb::new();
-    db.exec_mut(QueryBuilder::insert().element(&flattened).query(), 1);
+    db.exec_mut(QueryBuilder::insert().element(&flattened).query(), 3);
 
     let keys = db
         .exec_result(QueryBuilder::select().keys().ids(1).query())
@@ -946,5 +941,7 @@ fn derive_user_value_flatten_nested_struct() {
         )
         .try_into()
         .unwrap();
+
+    flattened.db_id = Some(DbId(1));
     assert_eq!(flattened, retrieved);
 }

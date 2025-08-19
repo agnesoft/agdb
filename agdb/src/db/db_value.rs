@@ -1,5 +1,5 @@
 use crate::DbError;
-use crate::DbUserValueMarker;
+use crate::DbTypeMarker;
 use crate::StorageData;
 use crate::db::db_f64::DbF64;
 use crate::db::db_value_index::DbValueIndex;
@@ -660,7 +660,7 @@ impl<const N: usize> From<[bool; N]> for DbValue {
     }
 }
 
-impl<T: Into<DbValue> + DbUserValueMarker> From<Vec<T>> for DbValue {
+impl<T: Into<DbValue> + DbTypeMarker> From<Vec<T>> for DbValue {
     fn from(value: Vec<T>) -> Self {
         let db_values = value
             .into_iter()
@@ -688,7 +688,7 @@ impl<T: Into<DbValue> + DbUserValueMarker> From<Vec<T>> for DbValue {
     }
 }
 
-impl<T: Into<DbValue> + Clone + DbUserValueMarker> From<&[T]> for DbValue {
+impl<T: Into<DbValue> + Clone + DbTypeMarker> From<&[T]> for DbValue {
     fn from(value: &[T]) -> Self {
         value.to_vec().into()
     }
@@ -875,13 +875,19 @@ impl<T: TryFrom<DbValue, Error = DbError>> TryFrom<DbValue> for Vec<T> {
             DbValue::VecU64(v) => Ok(v.into_iter().map(DbValue::from).collect()),
             DbValue::VecF64(v) => Ok(v.into_iter().map(DbValue::from).collect()),
             DbValue::VecString(v) => Ok(v.into_iter().map(DbValue::from).collect()),
-            DbValue::Bytes(v) => crate::AgdbSerialize::deserialize(&v).map_err(|mut e| {
-                e.description = format!(
-                    "Cannot convert 'bytes' to 'Vec<DbValue>': {}",
-                    e.description
-                );
-                e
-            }),
+            DbValue::Bytes(v) => {
+                if v.is_empty() {
+                    Ok(vec![])
+                } else {
+                    crate::AgdbSerialize::deserialize(&v).map_err(|mut e| {
+                        e.description = format!(
+                            "Cannot convert 'bytes' to 'Vec<DbValue>': {}",
+                            e.description
+                        );
+                        e
+                    })
+                }
+            }
             DbValue::I64(_) => DbValue::type_error("i64", "Vec<DbValue>"),
             DbValue::U64(_) => DbValue::type_error("u64", "Vec<DbValue>"),
             DbValue::F64(_) => DbValue::type_error("f64", "Vec<DbValue>"),
@@ -961,7 +967,7 @@ mod tests {
         B,
     }
 
-    impl DbUserValueMarker for TestEnumString {}
+    impl DbTypeMarker for TestEnumString {}
 
     impl From<TestEnumString> for DbValue {
         fn from(value: TestEnumString) -> Self {
@@ -1843,7 +1849,7 @@ mod tests {
             B,
         }
 
-        impl DbUserValueMarker for TestEnum {}
+        impl DbTypeMarker for TestEnum {}
 
         impl From<TestEnum> for DbValue {
             fn from(value: TestEnum) -> Self {
@@ -1867,7 +1873,7 @@ mod tests {
             B,
         }
 
-        impl DbUserValueMarker for TestEnum {}
+        impl DbTypeMarker for TestEnum {}
 
         impl From<TestEnum> for DbValue {
             fn from(value: TestEnum) -> Self {
@@ -1891,7 +1897,7 @@ mod tests {
             B,
         }
 
-        impl DbUserValueMarker for TestEnum {}
+        impl DbTypeMarker for TestEnum {}
 
         impl From<TestEnum> for DbValue {
             fn from(value: TestEnum) -> Self {

@@ -1,10 +1,10 @@
 use agdb::Comparison;
+use agdb::DbType;
 use agdb::QueryBuilder;
-use agdb::UserValue;
 use agdb_api::DbType;
 use agdb_api::ReqwestClient;
 
-#[derive(Debug, UserValue)]
+#[derive(Debug, DbType)]
 struct User {
     username: String,
     password: String,

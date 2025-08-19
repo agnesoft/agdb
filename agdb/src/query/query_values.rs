@@ -1,5 +1,5 @@
 use crate::DbKeyValue;
-use crate::DbUserValue;
+use crate::DbType;
 
 /// Helper type distinguishing uniform (`Single`) values
 /// and multiple (`Multi`) values in database queries.
@@ -54,7 +54,7 @@ impl<const N: usize> From<[DbKeyValue; N]> for SingleValues {
     }
 }
 
-impl<T: DbUserValue> From<T> for SingleValues {
+impl<T: DbType> From<T> for SingleValues {
     fn from(value: T) -> Self {
         SingleValues(value.to_db_values())
     }
@@ -114,31 +114,31 @@ impl<const N: usize, const N2: usize> From<[[DbKeyValue; N2]; N]> for MultiValue
     }
 }
 
-impl<T: DbUserValue> From<Vec<T>> for MultiValues {
+impl<T: DbType> From<Vec<T>> for MultiValues {
     fn from(value: Vec<T>) -> Self {
         MultiValues(value.into_iter().map(|v| v.to_db_values()).collect())
     }
 }
 
-impl<T: DbUserValue> From<T> for MultiValues {
+impl<T: DbType> From<T> for MultiValues {
     fn from(value: T) -> Self {
         MultiValues(vec![value.to_db_values()])
     }
 }
 
-impl<T: DbUserValue> From<&[T]> for MultiValues {
+impl<T: DbType> From<&[T]> for MultiValues {
     fn from(value: &[T]) -> Self {
         MultiValues(value.iter().map(|v| v.to_db_values()).collect())
     }
 }
 
-impl<T: DbUserValue, const N: usize> From<[T; N]> for MultiValues {
+impl<T: DbType, const N: usize> From<[T; N]> for MultiValues {
     fn from(value: [T; N]) -> Self {
         MultiValues(value.iter().map(|v| v.to_db_values()).collect())
     }
 }
 
-impl<T: DbUserValue> From<&Vec<T>> for MultiValues {
+impl<T: DbType> From<&Vec<T>> for MultiValues {
     fn from(value: &Vec<T>) -> Self {
         MultiValues(value.iter().map(|v| v.to_db_values()).collect())
     }
@@ -153,7 +153,7 @@ mod tests {
         k: i64,
     }
 
-    impl DbUserValue for S {
+    impl DbType for S {
         type ValueType = S;
 
         fn db_id(&self) -> Option<crate::QueryId> {

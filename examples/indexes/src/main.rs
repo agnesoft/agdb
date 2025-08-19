@@ -1,12 +1,12 @@
 use agdb::DbMemory;
-use agdb::DbUserValue;
+use agdb::DbType;
+use agdb::DbType;
 use agdb::QueryBuilder;
 use agdb::QueryError;
-use agdb::UserValue;
 
-// Deriving from agdb::UserValue to make it possible
+// Deriving from agdb::DbType to make it possible
 // to use directly in the database queries.
-#[derive(Debug, UserValue)]
+#[derive(Debug, DbType)]
 struct User {
     username: String,
     password: String,

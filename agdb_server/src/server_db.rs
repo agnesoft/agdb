@@ -10,15 +10,14 @@ use agdb::Comparison;
 use agdb::CountComparison;
 use agdb::Db;
 use agdb::DbId;
-use agdb::DbUserValue;
+use agdb::DbType;
 use agdb::QueryBuilder;
 use agdb::QueryId;
 use agdb::QueryResult;
 use agdb::SearchQuery;
 use agdb::StorageData;
 use agdb::Transaction;
-use agdb::UserValue;
-use agdb_api::DbType;
+use agdb_api::DbType as ApiDbType;
 use agdb_api::DbUser;
 use agdb_api::DbUserRole;
 use agdb_api::UserStatus;
@@ -26,7 +25,7 @@ use reqwest::StatusCode;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
-#[derive(UserValue)]
+#[derive(DbType)]
 pub(crate) struct ServerUser {
     pub(crate) db_id: Option<DbId>,
     pub(crate) username: String,
@@ -35,12 +34,12 @@ pub(crate) struct ServerUser {
     pub(crate) token: String,
 }
 
-#[derive(Default, UserValue)]
+#[derive(Default, DbType)]
 pub(crate) struct Database {
     pub(crate) db_id: Option<DbId>,
     pub(crate) db: String,
     pub(crate) owner: String,
-    pub(crate) db_type: DbType,
+    pub(crate) db_type: ApiDbType,
     pub(crate) backup: u64,
 }
 
@@ -945,7 +944,7 @@ fn logs<T: StorageData>(
     .try_into()?)
 }
 
-impl DbUserValue for Log<ClusterAction> {
+impl DbType for Log<ClusterAction> {
     type ValueType = Log<ClusterAction>;
 
     fn db_id(&self) -> Option<QueryId> {

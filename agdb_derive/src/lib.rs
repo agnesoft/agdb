@@ -1,13 +1,13 @@
 mod agdb_de_serialize;
 mod api_def;
+mod db_type;
+mod db_value;
 mod impl_def;
-mod user_db_value;
-mod user_value;
 
 use proc_macro::TokenStream;
 
 /// The derive macro to add `agdb` compatibility
-/// to user defined types. It implements [`agdb::DbUserValue`]
+/// to user defined types. It implements [`agdb::UserDbType`]
 /// for the type automatically to allow your type to be read and
 /// stored from/to the database.
 ///
@@ -15,20 +15,26 @@ use proc_macro::TokenStream;
 /// it will be treated specially and will additionally allow
 /// shorthand inserts/updates of the elements directly.
 ///
-/// All database types are supported. User (custom) types must
-/// `impl From<T> for agdb::DbValue` and `impl TryFrom<agdb::DbValue> for T { type Error = agdb::DbError }`.
+/// All database types are supported. User (custom) types must either
+/// `impl From<T> for agdb::DbValue` and `impl TryFrom<agdb::DbValue> for T { type Error = agdb::DbError }`
+/// or you must use `#[agdb(flatten)]` attribute to merge the fields in a flat list (transitively). Flattened
+/// types must themselves be derived from `agdb::DbType` (or implement `agdb::UserDbType`)
+///
+/// NOTE: if the nested struct(s) have keys of the same name the value will
+/// be overwritten by the last encountered field of the same name (transitively).
+/// Use `#[agdb(rename = "new_name")]` to disambiguate.
 ///
 /// `Option` can be used on on any supported type. If a value type is
 /// an `Option` and runtime value is `None` the value will NOT be stored
 /// in the database. When reading elements if a type contains
 /// an `Option` all keys are always retrieved and searched for individual
-/// keys as opposed to standard index based read for non-optional types.
+/// keys.
 ///
 /// # Examples
 ///
 /// ## Standard
 /// ```ignore
-/// #[derive(agdb::UserValue)]
+/// #[derive(DbType)]
 /// struct MyValue {
 ///     num_value: i64,
 ///     string_value: String,
@@ -38,7 +44,7 @@ use proc_macro::TokenStream;
 ///
 /// ## With db_id
 /// ```ignore
-/// #[derive(agdb::UserValue)]
+/// #[derive(DbType)]
 /// struct MyValue {
 ///     db_id: Option<agdb::DbId>, //this field is useful but not mandatory
 ///     num_value: i64,
@@ -49,7 +55,7 @@ use proc_macro::TokenStream;
 ///
 /// ## With optional
 /// ```ignore
-/// #[derive(agdb::UserValue)]
+/// #[derive(DbType)]
 /// struct MyValue {
 ///     db_id: Option<agdb::DbId>, //this field is useful but not mandatory
 ///     num_value: i64,
@@ -57,14 +63,24 @@ use proc_macro::TokenStream;
 ///     vec_value: Vec<u64>,
 /// }
 /// ```
-#[proc_macro_derive(UserValue)]
-pub fn user_value_derive(item: TokenStream) -> TokenStream {
-    user_value::user_value_derive(item)
+///
+/// ## Flatten
+/// ```ignore
+/// #[derive(DbType)]
+/// struct MyValue {
+///     num_value: i64,
+///     #[agdb(flatten)]
+///     nested: NestedStruct,
+/// }
+/// ```
+#[proc_macro_derive(DbType, attributes(agdb))]
+pub fn user_db_type_derive(item: TokenStream) -> TokenStream {
+    db_type::db_type_derive(item)
 }
 
 /// The helper derive macro to add `agdb` compatibility to
 /// user defined types. This type provides blank implementation
-/// of the `agdb::DbUserValueMarker` trait. This is needed for the
+/// of the `agdb::DbTypeMarker` trait. This is needed for the
 /// vectorized custom values to be compatible with the database
 /// as the `From` trait implementation without it conflicts
 /// with the blanket implementations.
@@ -72,16 +88,16 @@ pub fn user_value_derive(item: TokenStream) -> TokenStream {
 /// # Examples
 ///
 /// ```ignore
-/// #[derive(agdb::UserValueMarker, Default, Copy, Clone, Debug)]
+/// #[derive(agdb::DbTypeMarker, Default, Copy, Clone, Debug)]
 /// enum MyEnum {
 ///    #[default]
 ///    A,
 ///    B,
 /// }
 /// ```
-#[proc_macro_derive(UserValueMarker)]
-pub fn user_value_marker_derive(item: TokenStream) -> TokenStream {
-    user_value::user_value_marker_derive(item)
+#[proc_macro_derive(DbTypeMarker)]
+pub fn user_db_type_marker_derive(item: TokenStream) -> TokenStream {
+    db_type::db_type_marker_derive(item)
 }
 
 /// The derive macro to add `agdb` platform agnostic serialization
@@ -95,16 +111,16 @@ pub fn agdb_de_serialize(item: TokenStream) -> TokenStream {
 }
 
 /// The derive macro to allow automatically serializing user types
-/// into `DbValue::Bytes`. Useful when deriving `UserValue` for
+/// into `DbValue::Bytes`. Useful when deriving `DbType` for
 /// a custom type with nested custom types or enums as it avoids
 /// the need to manually implement From/TryFrom for such nested types.
 /// It does additionally support enums and vectorized types (`Vec<T>`).
 ///
-/// NOTE: It requires both `UserValueMarker` and `AgdbSerialize` traits
-/// to be implemented. You can derive them with `#[derive(UserValueMarker, AgdbSerialize)]`.
-#[proc_macro_derive(UserDbValue)]
+/// NOTE: It requires both `DbTypeMarker` and `AgdbSerialize` traits
+/// to be implemented. You can derive them with `#[derive(DbTypeMarker, AgdbSerialize)]`.
+#[proc_macro_derive(DbValue)]
 pub fn user_db_value_derive(item: TokenStream) -> TokenStream {
-    user_db_value::user_db_value_derive(item)
+    db_value::user_db_value_derive(item)
 }
 
 #[proc_macro_derive(ApiDef)]

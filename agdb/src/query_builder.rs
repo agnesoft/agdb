@@ -49,9 +49,9 @@ impl QueryBuilder {
     /// Options:
     ///
     /// ```
-    /// use agdb::{DbId, QueryBuilder, UserValue};
+    /// use agdb::{DbId, QueryBuilder, DbType};
     ///
-    /// #[derive(UserValue)]
+    /// #[derive(DbType)]
     /// struct MyValue { db_id: Option<DbId>, key: String }
     ///
     /// QueryBuilder::insert().nodes();
@@ -112,10 +112,10 @@ impl QueryBuilder {
     ///
     /// ```
     /// use agdb::QueryBuilder;
-    /// use agdb::UserValue;
+    /// use agdb::DbType;
     /// use agdb::DbId;
     ///
-    /// #[derive(UserValue)]
+    /// #[derive(DbType)]
     /// struct MyValue { db_id: Option<DbId>, key: String }
     ///
     /// QueryBuilder::select().ids(1);

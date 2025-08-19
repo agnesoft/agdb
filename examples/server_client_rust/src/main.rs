@@ -1,4 +1,3 @@
-use agdb::Comparison;
 use agdb::DbType;
 use agdb::QueryBuilder;
 use agdb_api::DbKind as ApiDbType;

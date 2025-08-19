@@ -1,4 +1,3 @@
-use agdb::CountComparison;
 use agdb::DbError;
 use agdb::DbId;
 use agdb::DbMemory;

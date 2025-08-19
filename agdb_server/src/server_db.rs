@@ -1011,13 +1011,13 @@ mod tests {
                     .values([
                         vec![
                             ("name", "user/db1").into(),
-                            ("db_type", DbType::Memory).into(),
+                            ("db_type", ApiDbType::Memory).into(),
                             ("backup", 0).into(),
                         ],
                         vec![
                             ("owner", "user").into(),
                             ("db", "db2").into(),
-                            ("db_type", DbType::Memory).into(),
+                            ("db_type", ApiDbType::Memory).into(),
                             ("backup", 0).into(),
                         ],
                     ])
@@ -1032,11 +1032,11 @@ mod tests {
         assert_eq!(dbs.len(), 2);
         assert_eq!(dbs[0].db, "db2");
         assert_eq!(dbs[0].owner, "user");
-        assert_eq!(dbs[0].db_type, DbType::Memory);
+        assert_eq!(dbs[0].db_type, ApiDbType::Memory);
         assert_eq!(dbs[0].backup, 0);
         assert_eq!(dbs[1].db, "db1");
         assert_eq!(dbs[1].owner, "user");
-        assert_eq!(dbs[1].db_type, DbType::Memory);
+        assert_eq!(dbs[1].db_type, ApiDbType::Memory);
         assert_eq!(dbs[1].backup, 0);
 
         Ok(())

@@ -38,9 +38,9 @@ cargo add agdb
 In `main.rs` we create a memory mapped database:
 
 ```rs filename="main.rs"
-use agdb::QueryError;
+use agdb::DbError;
 
-fn main() -> Result<(), QueryError> {
+fn main() -> Result<(), DbError> {
     let mut db = Db::new("agdb_app.agdb")?;
     Ok(())
 }

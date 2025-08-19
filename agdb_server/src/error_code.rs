@@ -7,7 +7,7 @@ pub(crate) enum ErrorCode {
     UserExists,
     DbExists,
     DbInvalid,
-    QueryError,
+    DbError,
 }
 
 impl From<ErrorCode> for StatusCode {
@@ -24,7 +24,7 @@ impl From<&ErrorCode> for StatusCode {
             ErrorCode::UserExists => 463,
             ErrorCode::DbExists => 465,
             ErrorCode::DbInvalid => 467,
-            ErrorCode::QueryError => 470,
+            ErrorCode::DbError => 470,
         })
         .unwrap()
     }
@@ -44,7 +44,7 @@ impl ErrorCode {
             ErrorCode::UserExists => "user exists",
             ErrorCode::DbExists => "db already exists",
             ErrorCode::DbInvalid => "db invalid",
-            ErrorCode::QueryError => "query error",
+            ErrorCode::DbError => "query error",
         }
     }
 }
@@ -63,6 +63,6 @@ mod tests {
         assert_eq!(ErrorCode::UserExists.as_str(), "user exists");
         assert_eq!(ErrorCode::DbExists.as_str(), "db already exists");
         assert_eq!(ErrorCode::DbInvalid.as_str(), "db invalid");
-        assert_eq!(ErrorCode::QueryError.as_str(), "query error");
+        assert_eq!(ErrorCode::DbError.as_str(), "query error");
     }
 }

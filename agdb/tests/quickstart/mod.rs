@@ -1,9 +1,9 @@
 use crate::test_db::TestFile;
-use agdb::QueryError;
+use agdb::DbError;
 use agdb::{Comparison::Equal, Db, DbId, DbType, QueryBuilder};
 
 #[test]
-fn quickstart() -> Result<(), QueryError> {
+fn quickstart() -> Result<(), DbError> {
     let _test_file = TestFile::from("db_file.agdb");
     let mut db = Db::new("db_file.agdb")?;
 

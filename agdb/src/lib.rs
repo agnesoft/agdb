@@ -86,7 +86,6 @@ pub use query::query_condition::QueryCondition;
 pub use query::query_condition::QueryConditionData;
 pub use query::query_condition::QueryConditionLogic;
 pub use query::query_condition::QueryConditionModifier;
-pub use query::query_error::QueryError;
 pub use query::query_id::QueryId;
 pub use query::query_ids::QueryIds;
 pub use query::query_result::QueryResult;

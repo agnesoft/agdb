@@ -1,7 +1,7 @@
 mod test_db;
 
+use agdb::DbError;
 use agdb::QueryBuilder;
-use agdb::QueryError;
 use agdb::QueryId;
 use test_db::TestDb;
 
@@ -50,7 +50,7 @@ fn remove_missing_edges() {
 fn remove_missing_edges_rollback() {
     let mut db = TestDb::new();
     db.transaction_mut_error(
-        |transaction| -> Result<(), QueryError> {
+        |transaction| -> Result<(), DbError> {
             let query = QueryBuilder::remove().ids(-3).query();
             transaction.exec_mut(&query).unwrap();
             Err("error".into())

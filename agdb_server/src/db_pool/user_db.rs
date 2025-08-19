@@ -2,9 +2,9 @@ use crate::db_pool::ErrorCode;
 use crate::db_pool::ServerError;
 use crate::db_pool::user_db_storage::UserDbStorage;
 use crate::server_error::ServerResult;
+use agdb::DbError;
 use agdb::DbImpl;
 use agdb::QueryConditionData;
-use agdb::QueryError;
 use agdb::QueryId;
 use agdb::QueryIds;
 use agdb::QueryResult;
@@ -116,9 +116,9 @@ fn t_exec(
             inject_results(&mut q.ids, results)?;
             t.exec(&*q)
         }
-        _ => Err(QueryError::from("mutable query not allowed")),
+        _ => Err(DbError::from("mutable query not allowed")),
     }
-    .map_err(|e| ServerError::new(ErrorCode::QueryError.into(), &e.description))
+    .map_err(|e| ServerError::new(ErrorCode::DbError.into(), &e.description))
 }
 
 fn audit_query(user: &str, audit: &mut Vec<QueryAudit>, query: QueryType) {
@@ -217,7 +217,7 @@ fn t_exec_mut(
         audit_query(username, audit, q);
     }
 
-    r.map_err(|e| ServerError::new(ErrorCode::QueryError.into(), &e.description))
+    r.map_err(|e| ServerError::new(ErrorCode::DbError.into(), &e.description))
 }
 
 fn id_or_result(id: QueryId, results: &[QueryResult]) -> ServerResult<QueryId> {
@@ -229,7 +229,7 @@ fn id_or_result(id: QueryId, results: &[QueryResult]) -> ServerResult<QueryId> {
             results
                 .get(index)
                 .ok_or(ServerError::new(
-                    ErrorCode::QueryError.into(),
+                    ErrorCode::DbError.into(),
                     &format!(
                         "Results index out of bounds '{index}' (> {})",
                         results.len()
@@ -238,7 +238,7 @@ fn id_or_result(id: QueryId, results: &[QueryResult]) -> ServerResult<QueryId> {
                 .elements
                 .first()
                 .ok_or(ServerError::new(
-                    ErrorCode::QueryError.into(),
+                    ErrorCode::DbError.into(),
                     "No element found in the result",
                 ))?
                 .id,
@@ -254,7 +254,7 @@ fn inject_results(ids: &mut QueryIds, results: &[QueryResult]) -> ServerResult<(
         QueryIds::Search(search) => inject_results_search(search, results),
     }
     .map_err(|mut e| {
-        e.status = ErrorCode::QueryError.into();
+        e.status = ErrorCode::DbError.into();
         e
     })
 }
@@ -281,7 +281,7 @@ fn inject_results_ids(ids: &mut Vec<QueryId>, results: &[QueryResult]) -> Server
             let result_ids = results
                 .get(index)
                 .ok_or(ServerError::new(
-                    ErrorCode::QueryError.into(),
+                    ErrorCode::DbError.into(),
                     &format!(
                         "Results index out of bounds '{index}' (> {})",
                         results.len()

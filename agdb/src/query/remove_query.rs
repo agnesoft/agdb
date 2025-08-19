@@ -1,5 +1,5 @@
+use crate::DbError;
 use crate::DbImpl;
-use crate::QueryError;
 use crate::QueryIds;
 use crate::QueryMut;
 use crate::QueryResult;
@@ -22,10 +22,7 @@ use crate::query_builder::search::SearchQueryBuilder;
 pub struct RemoveQuery(pub QueryIds);
 
 impl QueryMut for RemoveQuery {
-    fn process<Store: StorageData>(
-        &self,
-        db: &mut DbImpl<Store>,
-    ) -> Result<QueryResult, QueryError> {
+    fn process<Store: StorageData>(&self, db: &mut DbImpl<Store>) -> Result<QueryResult, DbError> {
         let mut result = QueryResult::default();
 
         match &self.0 {
@@ -50,10 +47,7 @@ impl QueryMut for RemoveQuery {
 }
 
 impl QueryMut for &RemoveQuery {
-    fn process<Store: StorageData>(
-        &self,
-        db: &mut DbImpl<Store>,
-    ) -> Result<QueryResult, QueryError> {
+    fn process<Store: StorageData>(&self, db: &mut DbImpl<Store>) -> Result<QueryResult, DbError> {
         (*self).process(db)
     }
 }

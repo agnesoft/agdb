@@ -1,7 +1,7 @@
 use crate::DbElement;
+use crate::DbError;
 use crate::DbImpl;
 use crate::Query;
-use crate::QueryError;
 use crate::QueryResult;
 use crate::StorageData;
 
@@ -18,7 +18,7 @@ use crate::StorageData;
 pub struct SelectAllAliasesQuery {}
 
 impl Query for SelectAllAliasesQuery {
-    fn process<Store: StorageData>(&self, db: &DbImpl<Store>) -> Result<QueryResult, QueryError> {
+    fn process<Store: StorageData>(&self, db: &DbImpl<Store>) -> Result<QueryResult, DbError> {
         let mut result = QueryResult::default();
 
         let mut aliases = db.aliases();
@@ -40,7 +40,7 @@ impl Query for SelectAllAliasesQuery {
 }
 
 impl Query for &SelectAllAliasesQuery {
-    fn process<Store: StorageData>(&self, db: &DbImpl<Store>) -> Result<QueryResult, QueryError> {
+    fn process<Store: StorageData>(&self, db: &DbImpl<Store>) -> Result<QueryResult, DbError> {
         (*self).process(db)
     }
 }

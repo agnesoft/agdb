@@ -5,7 +5,6 @@ use agdb::DbMemory;
 use agdb::DbType;
 use agdb::DbValue;
 use agdb::QueryBuilder;
-use agdb::QueryError;
 
 #[derive(Debug, DbType)]
 struct UserDb {
@@ -50,7 +49,7 @@ impl From<UserStatus> for DbValue {
     }
 }
 
-fn main() -> Result<(), QueryError> {
+fn main() -> Result<(), DbError> {
     // Creates in memory database.
     let mut db = DbMemory::new("agdb_example")?;
 

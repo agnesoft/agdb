@@ -1,8 +1,8 @@
 mod test_db;
 
+use agdb::DbError;
 use agdb::DbValue;
 use agdb::QueryBuilder;
-use agdb::QueryError;
 use test_db::TestDb;
 
 #[test]
@@ -46,11 +46,11 @@ fn remove_index_rollback() {
         3,
     );
     db.transaction_mut_error(
-        |t| -> Result<(), QueryError> {
+        |t| -> Result<(), DbError> {
             t.exec_mut(QueryBuilder::remove().index("username").query())?;
-            Err(QueryError::from("error"))
+            Err(DbError::from("error"))
         },
-        QueryError::from("error"),
+        DbError::from("error"),
     );
     db.exec(QueryBuilder::select().indexes().query(), 1);
 }
@@ -111,11 +111,11 @@ fn remove_indexed_key_rollback() {
         3,
     );
     db.transaction_mut_error(
-        |t| -> Result<(), QueryError> {
+        |t| -> Result<(), DbError> {
             t.exec_mut(QueryBuilder::remove().values("username").ids(2).query())?;
-            Err(QueryError::from("error"))
+            Err(DbError::from("error"))
         },
-        QueryError::from("error"),
+        DbError::from("error"),
     );
 
     let result = db.exec_result(QueryBuilder::select().indexes().query());

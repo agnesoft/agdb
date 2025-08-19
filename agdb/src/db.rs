@@ -20,7 +20,6 @@ use self::db_search_handlers::PathHandler;
 use crate::DbId;
 use crate::DbKeyValue;
 use crate::DbValue;
-use crate::QueryError;
 use crate::QueryResult;
 use crate::SearchQueryAlgorithm;
 use crate::StorageData;
@@ -132,7 +131,7 @@ impl Serialize for DbStorageIndex {
 ///
 /// ```
 /// # let _test_file = agdb::test_utilities::test_file::TestFile::from("db2.agdb");
-/// use agdb::{Db, QueryBuilder, QueryError};
+/// use agdb::{Db, QueryBuilder, DbError};
 ///
 /// let mut db = Db::new("db2.agdb").unwrap();
 ///
@@ -140,13 +139,13 @@ impl Serialize for DbStorageIndex {
 /// db.exec_mut(QueryBuilder::insert().nodes().count(1).query()).unwrap();
 ///
 /// // Insert single node as a transaction
-/// db.transaction_mut(|t| -> Result<(), QueryError> { t.exec_mut(QueryBuilder::insert().nodes().count(1).query())?; Ok(()) }).unwrap();
+/// db.transaction_mut(|t| -> Result<(), DbError> { t.exec_mut(QueryBuilder::insert().nodes().count(1).query())?; Ok(()) }).unwrap();
 ///
 /// // Select single database element with id 1
 /// db.exec(QueryBuilder::select().ids(1).query()).unwrap();
 ///
 /// // Select single database element with id 1 as a transaction
-/// db.transaction(|t| -> Result<(), QueryError> { t.exec(QueryBuilder::select().ids(1).query())?; Ok(()) }).unwrap();
+/// db.transaction(|t| -> Result<(), DbError> { t.exec(QueryBuilder::select().ids(1).query())?; Ok(()) }).unwrap();
 ///
 /// // Search the database starting at element 1
 /// db.exec(QueryBuilder::search().from(1).query()).unwrap();
@@ -305,7 +304,7 @@ impl<Store: StorageData> DbImpl<Store> {
     /// It runs the query as a transaction and returns either the result or
     /// error describing what went wrong (e.g. query error, logic error, data
     /// error etc.).
-    pub fn exec<T: Query>(&self, query: T) -> Result<QueryResult, QueryError> {
+    pub fn exec<T: Query>(&self, query: T) -> Result<QueryResult, DbError> {
         self.transaction(|transaction| transaction.exec(query))
     }
 
@@ -322,7 +321,7 @@ impl<Store: StorageData> DbImpl<Store> {
     /// It runs the query as a transaction and returns either the result or
     /// error describing what went wrong (e.g. query error, logic error, data
     /// error etc.).
-    pub fn exec_mut<T: QueryMut>(&mut self, query: T) -> Result<QueryResult, QueryError> {
+    pub fn exec_mut<T: QueryMut>(&mut self, query: T) -> Result<QueryResult, DbError> {
         self.transaction_mut(|transaction| transaction.exec_mut(query))
     }
 
@@ -350,8 +349,8 @@ impl<Store: StorageData> DbImpl<Store> {
     /// Executes immutable transaction. The transaction is running a closure `f`
     /// that will receive `&Transaction` object to run `exec` queries as if run
     /// on the main database object. You shall specify the return type `T`
-    /// (can be `()`) and the error type `E` that must be constructible from the `QueryError`
-    /// (`E` can be `QueryError`).
+    /// (can be `()`) and the error type `E` that must be constructible from the `DbError`
+    /// (`E` can be `DbError`).
     ///
     /// Read transactions cannot be committed or rolled back but their main function is to ensure
     /// that the database data does not change during their duration. Through its generic
@@ -368,8 +367,8 @@ impl<Store: StorageData> DbImpl<Store> {
     /// Executes mutable transaction. The transaction is running a closure `f`
     /// that will receive `&mut Transaction` to execute `exec` and `exec_mut` queries
     /// as if run on the main database object. You shall specify the return type `T`
-    /// (can be `()`) and the error type `E` that must be constructible from the `QueryError`
-    /// (`E` can be `QueryError`).
+    /// (can be `()`) and the error type `E` that must be constructible from the `DbError`
+    /// (`E` can be `DbError`).
     ///
     /// Write transactions are committed if the closure returns `Ok` and rolled back if
     /// the closure returns `Err`. If the code panics and the program exits the write
@@ -381,7 +380,7 @@ impl<Store: StorageData> DbImpl<Store> {
     ///
     /// Through its generic parameters the transaction also allows transforming the query
     /// results into a type `T`.
-    pub fn transaction_mut<T, E: From<QueryError>>(
+    pub fn transaction_mut<T, E: From<DbError>>(
         &mut self,
         f: impl FnOnce(&mut TransactionMut<Store>) -> Result<T, E>,
     ) -> Result<T, E> {
@@ -408,12 +407,12 @@ impl<Store: StorageData> DbImpl<Store> {
         self.storage.len()
     }
 
-    pub(crate) fn commit(&mut self) -> Result<(), QueryError> {
+    pub(crate) fn commit(&mut self) -> Result<(), DbError> {
         self.undo_stack.clear();
         Ok(())
     }
 
-    pub(crate) fn rollback(&mut self) -> Result<(), QueryError> {
+    pub(crate) fn rollback(&mut self) -> Result<(), DbError> {
         let mut undo_stack = vec![];
         std::mem::swap(&mut undo_stack, &mut self.undo_stack);
 
@@ -487,27 +486,27 @@ impl<Store: StorageData> DbImpl<Store> {
         Ok(())
     }
 
-    pub(crate) fn alias(&self, db_id: DbId) -> Result<String, QueryError> {
+    pub(crate) fn alias(&self, db_id: DbId) -> Result<String, DbError> {
         self.aliases
             .key(&self.storage, &db_id)?
-            .ok_or(QueryError::from(format!("Id '{}' not found", db_id.0)))
+            .ok_or(DbError::from(format!("Id '{}' not found", db_id.0)))
     }
 
     pub(crate) fn aliases(&self) -> Vec<(String, DbId)> {
         self.aliases.iter(&self.storage).collect()
     }
 
-    pub(crate) fn db_id(&self, query_id: &QueryId) -> Result<DbId, QueryError> {
+    pub(crate) fn db_id(&self, query_id: &QueryId) -> Result<DbId, DbError> {
         match query_id {
             QueryId::Id(id) => Ok(DbId(self.graph_index(id.0)?.0)),
             QueryId::Alias(alias) => Ok(self
                 .aliases
                 .value(&self.storage, alias)?
-                .ok_or(QueryError::from(format!("Alias '{alias}' not found")))?),
+                .ok_or(DbError::from(format!("Alias '{alias}' not found")))?),
         }
     }
 
-    pub(crate) fn edge_count(&self, db_id: DbId, from: bool, to: bool) -> Result<u64, QueryError> {
+    pub(crate) fn edge_count(&self, db_id: DbId, from: bool, to: bool) -> Result<u64, DbError> {
         let index = self.graph_index(db_id.0)?;
 
         if let Some(node) = self.graph.node(&self.storage, index) {
@@ -568,7 +567,7 @@ impl<Store: StorageData> DbImpl<Store> {
         self.aliases.insert(&mut self.storage, alias, &db_id)
     }
 
-    pub(crate) fn insert_edge(&mut self, from: DbId, to: DbId) -> Result<DbId, QueryError> {
+    pub(crate) fn insert_edge(&mut self, from: DbId, to: DbId) -> Result<DbId, DbError> {
         let index =
             self.graph
                 .insert_edge(&mut self.storage, GraphIndex(from.0), GraphIndex(to.0))?;
@@ -577,9 +576,9 @@ impl<Store: StorageData> DbImpl<Store> {
         Ok(DbId(index.0))
     }
 
-    pub(crate) fn insert_index(&mut self, key: &DbValue) -> Result<u64, QueryError> {
+    pub(crate) fn insert_index(&mut self, key: &DbValue) -> Result<u64, DbError> {
         if self.indexes.index(key).is_some() {
-            return Err(QueryError::from(format!("Index '{key}' already exists")));
+            return Err(DbError::from(format!("Index '{key}' already exists")));
         }
 
         self.undo_stack
@@ -611,11 +610,7 @@ impl<Store: StorageData> DbImpl<Store> {
         Ok(index.ids().len())
     }
 
-    pub(crate) fn insert_new_alias(
-        &mut self,
-        db_id: DbId,
-        alias: &String,
-    ) -> Result<(), QueryError> {
+    pub(crate) fn insert_new_alias(&mut self, db_id: DbId, alias: &String) -> Result<(), DbError> {
         self.undo_stack.push(Command::RemoveAlias {
             alias: alias.clone(),
         });
@@ -635,7 +630,7 @@ impl<Store: StorageData> DbImpl<Store> {
         &mut self,
         db_id: DbId,
         key_value: &DbKeyValue,
-    ) -> Result<(), QueryError> {
+    ) -> Result<(), DbError> {
         if let Some(index) = self.indexes.index_mut(&key_value.key) {
             index
                 .ids_mut()
@@ -655,7 +650,7 @@ impl<Store: StorageData> DbImpl<Store> {
         &mut self,
         db_id: DbId,
         key_value: &DbKeyValue,
-    ) -> Result<(), QueryError> {
+    ) -> Result<(), DbError> {
         if let Some(old) =
             self.values
                 .insert_or_replace(&mut self.storage, db_id.as_index(), key_value)?
@@ -701,7 +696,7 @@ impl<Store: StorageData> DbImpl<Store> {
         self.graph.node_count(&self.storage)
     }
 
-    pub(crate) fn remove(&mut self, query_id: &QueryId) -> Result<bool, QueryError> {
+    pub(crate) fn remove(&mut self, query_id: &QueryId) -> Result<bool, DbError> {
         match query_id {
             QueryId::Id(db_id) => self.remove_id(*db_id),
             QueryId::Alias(alias) => {
@@ -716,7 +711,7 @@ impl<Store: StorageData> DbImpl<Store> {
         }
     }
 
-    pub(crate) fn remove_id(&mut self, db_id: DbId) -> Result<bool, QueryError> {
+    pub(crate) fn remove_id(&mut self, db_id: DbId) -> Result<bool, DbError> {
         if let Ok(graph_index) = self.graph_index(db_id.0) {
             if graph_index.is_node() {
                 self.remove_node(db_id, graph_index, self.aliases.key(&self.storage, &db_id)?)?;
@@ -745,7 +740,7 @@ impl<Store: StorageData> DbImpl<Store> {
         Ok(false)
     }
 
-    pub(crate) fn remove_index(&mut self, key: &DbValue) -> Result<u64, QueryError> {
+    pub(crate) fn remove_index(&mut self, key: &DbValue) -> Result<u64, DbError> {
         let mut count = None;
 
         if let Some(index) = self.indexes.index(key) {
@@ -774,11 +769,11 @@ impl<Store: StorageData> DbImpl<Store> {
         &self,
         key: &DbValue,
         value: &DbValue,
-    ) -> Result<Vec<DbId>, QueryError> {
+    ) -> Result<Vec<DbId>, DbError> {
         if let Some(index) = self.indexes.index(key) {
             Ok(index.ids().values(&self.storage, value)?)
         } else {
-            Err(QueryError::from(format!("Index '{key}' not found")))
+            Err(DbError::from(format!("Index '{key}' not found")))
         }
     }
 
@@ -789,7 +784,7 @@ impl<Store: StorageData> DbImpl<Store> {
         limit: u64,
         offset: u64,
         conditions: &Vec<QueryCondition>,
-    ) -> Result<Vec<DbId>, QueryError> {
+    ) -> Result<Vec<DbId>, DbError> {
         let search = GraphSearch::from((&self.graph, &self.storage));
 
         let indexes = match (limit, offset) {
@@ -852,7 +847,7 @@ impl<Store: StorageData> DbImpl<Store> {
         limit: u64,
         offset: u64,
         conditions: &Vec<QueryCondition>,
-    ) -> Result<Vec<DbId>, QueryError> {
+    ) -> Result<Vec<DbId>, DbError> {
         let search = GraphSearch::from((&self.graph, &self.storage));
 
         let indexes = match (limit, offset) {
@@ -909,7 +904,7 @@ impl<Store: StorageData> DbImpl<Store> {
         from: DbId,
         to: DbId,
         conditions: &Vec<QueryCondition>,
-    ) -> Result<Vec<DbId>, QueryError> {
+    ) -> Result<Vec<DbId>, DbError> {
         Ok(GraphSearch::from((&self.graph, &self.storage))
             .path(
                 GraphIndex(from.0),
@@ -934,7 +929,7 @@ impl<Store: StorageData> DbImpl<Store> {
             .values_by_keys(&self.storage, db_id.as_index(), keys)
     }
 
-    fn graph_index(&self, id: i64) -> Result<GraphIndex, QueryError> {
+    fn graph_index(&self, id: i64) -> Result<GraphIndex, DbError> {
         match id.cmp(&0) {
             std::cmp::Ordering::Less => {
                 if self.graph.edge(&self.storage, GraphIndex(id)).is_some() {
@@ -949,7 +944,7 @@ impl<Store: StorageData> DbImpl<Store> {
             }
         }
 
-        Err(QueryError::from(format!("Id '{id}' not found")))
+        Err(DbError::from(format!("Id '{id}' not found")))
     }
 
     fn node_edges(
@@ -1019,7 +1014,7 @@ impl<Store: StorageData> DbImpl<Store> {
         Ok(())
     }
 
-    pub(crate) fn remove_keys(&mut self, db_id: DbId, keys: &[DbValue]) -> Result<i64, QueryError> {
+    pub(crate) fn remove_keys(&mut self, db_id: DbId, keys: &[DbValue]) -> Result<i64, DbError> {
         let mut result = 0;
 
         for key_value in self.values.values(&self.storage, db_id.as_index())? {

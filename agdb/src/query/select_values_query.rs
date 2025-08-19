@@ -1,8 +1,8 @@
 use crate::DbElement;
+use crate::DbError;
 use crate::DbImpl;
 use crate::DbValue;
 use crate::Query;
-use crate::QueryError;
 use crate::QueryIds;
 use crate::QueryResult;
 use crate::SearchQuery;
@@ -26,7 +26,7 @@ pub struct SelectValuesQuery {
 }
 
 impl Query for SelectValuesQuery {
-    fn process<Store: StorageData>(&self, db: &DbImpl<Store>) -> Result<QueryResult, QueryError> {
+    fn process<Store: StorageData>(&self, db: &DbImpl<Store>) -> Result<QueryResult, DbError> {
         let mut result = QueryResult::default();
 
         let (db_ids, is_search) = match &self.ids {
@@ -55,7 +55,7 @@ impl Query for SelectValuesQuery {
             if !is_search && values.len() != self.keys.len() {
                 for key in &self.keys {
                     if !values.iter().any(|x| x.key == *key) {
-                        return Err(QueryError::from(format!(
+                        return Err(DbError::from(format!(
                             "Missing key '{}' for id '{}'",
                             key, id.0
                         )));
@@ -76,7 +76,7 @@ impl Query for SelectValuesQuery {
 }
 
 impl Query for &SelectValuesQuery {
-    fn process<Store: StorageData>(&self, db: &DbImpl<Store>) -> Result<QueryResult, QueryError> {
+    fn process<Store: StorageData>(&self, db: &DbImpl<Store>) -> Result<QueryResult, DbError> {
         (*self).process(db)
     }
 }

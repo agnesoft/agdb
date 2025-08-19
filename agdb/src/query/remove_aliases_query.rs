@@ -1,5 +1,5 @@
+use crate::DbError;
 use crate::DbImpl;
-use crate::QueryError;
 use crate::QueryMut;
 use crate::QueryResult;
 use crate::StorageData;
@@ -18,10 +18,7 @@ use crate::StorageData;
 pub struct RemoveAliasesQuery(pub Vec<String>);
 
 impl QueryMut for RemoveAliasesQuery {
-    fn process<Store: StorageData>(
-        &self,
-        db: &mut DbImpl<Store>,
-    ) -> Result<QueryResult, QueryError> {
+    fn process<Store: StorageData>(&self, db: &mut DbImpl<Store>) -> Result<QueryResult, DbError> {
         let mut result = QueryResult::default();
 
         for alias in &self.0 {
@@ -35,10 +32,7 @@ impl QueryMut for RemoveAliasesQuery {
 }
 
 impl QueryMut for &RemoveAliasesQuery {
-    fn process<Store: StorageData>(
-        &self,
-        db: &mut DbImpl<Store>,
-    ) -> Result<QueryResult, QueryError> {
+    fn process<Store: StorageData>(&self, db: &mut DbImpl<Store>) -> Result<QueryResult, DbError> {
         (*self).process(db)
     }
 }

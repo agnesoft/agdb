@@ -1,7 +1,7 @@
 use crate::DbElement;
+use crate::DbError;
 use crate::DbImpl;
 use crate::Query;
-use crate::QueryError;
 use crate::QueryIds;
 use crate::QueryResult;
 use crate::SearchQuery;
@@ -22,7 +22,7 @@ use crate::query_builder::search::SearchQueryBuilder;
 pub struct SelectKeyCountQuery(pub QueryIds);
 
 impl Query for SelectKeyCountQuery {
-    fn process<Store: StorageData>(&self, db: &DbImpl<Store>) -> Result<QueryResult, QueryError> {
+    fn process<Store: StorageData>(&self, db: &DbImpl<Store>) -> Result<QueryResult, DbError> {
         let mut result = QueryResult::default();
 
         let db_ids = match &self.0 {
@@ -55,7 +55,7 @@ impl Query for SelectKeyCountQuery {
 }
 
 impl Query for &SelectKeyCountQuery {
-    fn process<Store: StorageData>(&self, db: &DbImpl<Store>) -> Result<QueryResult, QueryError> {
+    fn process<Store: StorageData>(&self, db: &DbImpl<Store>) -> Result<QueryResult, DbError> {
         (*self).process(db)
     }
 }

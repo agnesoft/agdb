@@ -1,7 +1,7 @@
+use agdb::DbError;
 use agdb::DbMemory;
 use agdb::DbType;
 use agdb::QueryBuilder;
-use agdb::QueryError;
 
 // Deriving from agdb::DbType to make it possible
 // to use directly in the database queries.
@@ -12,7 +12,7 @@ struct User {
     token: String,
 }
 
-fn main() -> Result<(), QueryError> {
+fn main() -> Result<(), DbError> {
     // Creates in memory database.
     let mut db = DbMemory::new("agdb_example")?;
 

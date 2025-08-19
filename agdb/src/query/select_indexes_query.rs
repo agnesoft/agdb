@@ -1,8 +1,8 @@
 use crate::DbElement;
+use crate::DbError;
 use crate::DbId;
 use crate::DbImpl;
 use crate::Query;
-use crate::QueryError;
 use crate::QueryResult;
 use crate::StorageData;
 
@@ -20,7 +20,7 @@ use crate::StorageData;
 pub struct SelectIndexesQuery {}
 
 impl Query for SelectIndexesQuery {
-    fn process<Store: StorageData>(&self, db: &DbImpl<Store>) -> Result<QueryResult, QueryError> {
+    fn process<Store: StorageData>(&self, db: &DbImpl<Store>) -> Result<QueryResult, DbError> {
         let mut result = QueryResult::default();
         let indexes = db.indexes();
         result.result = indexes.len() as i64;
@@ -37,7 +37,7 @@ impl Query for SelectIndexesQuery {
 }
 
 impl Query for &SelectIndexesQuery {
-    fn process<Store: StorageData>(&self, db: &DbImpl<Store>) -> Result<QueryResult, QueryError> {
+    fn process<Store: StorageData>(&self, db: &DbImpl<Store>) -> Result<QueryResult, DbError> {
         (*self).process(db)
     }
 }

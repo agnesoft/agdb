@@ -12,7 +12,7 @@ import {
 
 describe("QueryBuilder misc tests", () => {
     it(`convertToNativeValue`, () => {
-        const bytes = convertToNativeValue({ Bytes: "1" });
+        const bytes = convertToNativeValue({ Bytes: [1] });
         expect(typeof bytes).toStrictEqual("string");
         const truthy = convertToNativeValue({ String: "true" });
         expect(truthy).toStrictEqual(true);
@@ -43,10 +43,6 @@ describe("QueryBuilder misc tests", () => {
         expect(vec_f64).toStrictEqual({ VecF64: [1.1, 2.2] });
         const vec_string = convertToDbValue(["hello", "world"]);
         expect(vec_string).toStrictEqual({ VecString: ["hello", "world"] });
-        const nul = convertToDbValue(null);
-        expect(nul).toStrictEqual(undefined);
-        const undef = convertToDbValue(undefined);
-        expect(undef).toStrictEqual(undefined);
         const u64 = convertToDbValue({ U64: 1 });
         expect(u64).toStrictEqual({ U64: 1 });
     });

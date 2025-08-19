@@ -826,7 +826,7 @@ describe("query tests", () => {
             .from(1)
             .where()
             .key("k")
-            .value(Comparison.Equal(1))
+            .value(1)
             .query();
         expect(query).toEqual(test_queries[106][1]);
     });
@@ -917,7 +917,7 @@ describe("query tests", () => {
             .edge()
             .and()
             .key("k")
-            .value(Comparison.Equal(1))
+            .value(1)
             .end_where()
             .query();
         expect(query).toEqual(test_queries[115][1]);

@@ -44,7 +44,7 @@ impl ErrorCode {
             ErrorCode::UserExists => "user exists",
             ErrorCode::DbExists => "db already exists",
             ErrorCode::DbInvalid => "db invalid",
-            ErrorCode::DbError => "query error",
+            ErrorCode::DbError => "db error",
         }
     }
 }
@@ -63,6 +63,6 @@ mod tests {
         assert_eq!(ErrorCode::UserExists.as_str(), "user exists");
         assert_eq!(ErrorCode::DbExists.as_str(), "db already exists");
         assert_eq!(ErrorCode::DbInvalid.as_str(), "db invalid");
-        assert_eq!(ErrorCode::DbError.as_str(), "query error");
+        assert_eq!(ErrorCode::DbError.as_str(), "db error");
     }
 }

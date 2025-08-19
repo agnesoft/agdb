@@ -1,7 +1,7 @@
 use agdb::Comparison;
 use agdb::DbType;
 use agdb::QueryBuilder;
-use agdb_api::DbType;
+use agdb_api::DbType as ApiDbType;
 use agdb_api::ReqwestClient;
 
 #[derive(Debug, DbType)]
@@ -24,7 +24,7 @@ async fn main() -> Result<(), anyhow::Error> {
 
     // Creates a database using the newly created user.
     client.user_login("client", "password111").await?; //overwrites the internal authorization token of the admin to client
-    client.db_add("client", "db", DbType::Memory).await?;
+    client.db_add("client", "db", ApiDbType::Memory).await?;
 
     // Prepare some data to be inserted into the remote database
     let users = vec![

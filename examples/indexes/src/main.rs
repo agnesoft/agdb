@@ -1,6 +1,5 @@
 use agdb::DbMemory;
 use agdb::DbType;
-use agdb::DbType;
 use agdb::QueryBuilder;
 use agdb::QueryError;
 

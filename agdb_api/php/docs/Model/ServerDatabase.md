@@ -6,7 +6,7 @@ Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **backup** | **int** |  |
 **db** | **string** |  |
-**db_type** | [**\Agnesoft\AgdbApi\Model\DbType**](DbType.md) |  |
+**db_type** | [**\Agnesoft\AgdbApi\Model\DbKind**](DbKind.md) |  |
 **owner** | **string** |  |
 **role** | [**\Agnesoft\AgdbApi\Model\DbUserRole**](DbUserRole.md) |  |
 **size** | **int** |  |

@@ -283,7 +283,7 @@ class AgdbApi
      *
      * @param  string $owner user name (required)
      * @param  string $db db name (required)
-     * @param  \Agnesoft\AgdbApi\Model\DbType $db_type db_type (required)
+     * @param  \Agnesoft\AgdbApi\Model\DbKind $db_type db_type (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDbAdd'] to see the possible values for this operation
      *
      * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
@@ -300,7 +300,7 @@ class AgdbApi
      *
      * @param  string $owner user name (required)
      * @param  string $db db name (required)
-     * @param  \Agnesoft\AgdbApi\Model\DbType $db_type (required)
+     * @param  \Agnesoft\AgdbApi\Model\DbKind $db_type (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDbAdd'] to see the possible values for this operation
      *
      * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
@@ -349,7 +349,7 @@ class AgdbApi
      *
      * @param  string $owner user name (required)
      * @param  string $db db name (required)
-     * @param  \Agnesoft\AgdbApi\Model\DbType $db_type (required)
+     * @param  \Agnesoft\AgdbApi\Model\DbKind $db_type (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDbAdd'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
@@ -370,7 +370,7 @@ class AgdbApi
      *
      * @param  string $owner user name (required)
      * @param  string $db db name (required)
-     * @param  \Agnesoft\AgdbApi\Model\DbType $db_type (required)
+     * @param  \Agnesoft\AgdbApi\Model\DbKind $db_type (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDbAdd'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
@@ -409,7 +409,7 @@ class AgdbApi
      *
      * @param  string $owner user name (required)
      * @param  string $db db name (required)
-     * @param  \Agnesoft\AgdbApi\Model\DbType $db_type (required)
+     * @param  \Agnesoft\AgdbApi\Model\DbKind $db_type (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDbAdd'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
@@ -451,7 +451,7 @@ class AgdbApi
         $queryParams = array_merge($queryParams, ObjectSerializer::toQueryValue(
             $db_type,
             'db_type', // param base name
-            'DbType', // openApiType
+            'DbKind', // openApiType
             'form', // style
             true, // explode
             true // required
@@ -1361,7 +1361,7 @@ class AgdbApi
      *
      * @param  string $owner user name (required)
      * @param  string $db db name (required)
-     * @param  \Agnesoft\AgdbApi\Model\DbType $db_type db_type (required)
+     * @param  \Agnesoft\AgdbApi\Model\DbKind $db_type db_type (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDbConvert'] to see the possible values for this operation
      *
      * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
@@ -1378,7 +1378,7 @@ class AgdbApi
      *
      * @param  string $owner user name (required)
      * @param  string $db db name (required)
-     * @param  \Agnesoft\AgdbApi\Model\DbType $db_type (required)
+     * @param  \Agnesoft\AgdbApi\Model\DbKind $db_type (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDbConvert'] to see the possible values for this operation
      *
      * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
@@ -1427,7 +1427,7 @@ class AgdbApi
      *
      * @param  string $owner user name (required)
      * @param  string $db db name (required)
-     * @param  \Agnesoft\AgdbApi\Model\DbType $db_type (required)
+     * @param  \Agnesoft\AgdbApi\Model\DbKind $db_type (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDbConvert'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
@@ -1448,7 +1448,7 @@ class AgdbApi
      *
      * @param  string $owner user name (required)
      * @param  string $db db name (required)
-     * @param  \Agnesoft\AgdbApi\Model\DbType $db_type (required)
+     * @param  \Agnesoft\AgdbApi\Model\DbKind $db_type (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDbConvert'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
@@ -1487,7 +1487,7 @@ class AgdbApi
      *
      * @param  string $owner user name (required)
      * @param  string $db db name (required)
-     * @param  \Agnesoft\AgdbApi\Model\DbType $db_type (required)
+     * @param  \Agnesoft\AgdbApi\Model\DbKind $db_type (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDbConvert'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
@@ -1529,7 +1529,7 @@ class AgdbApi
         $queryParams = array_merge($queryParams, ObjectSerializer::toQueryValue(
             $db_type,
             'db_type', // param base name
-            'DbType', // openApiType
+            'DbKind', // openApiType
             'form', // style
             true, // explode
             true // required
@@ -7738,7 +7738,7 @@ class AgdbApi
      *
      * @param  string $owner user name (required)
      * @param  string $db db name (required)
-     * @param  \Agnesoft\AgdbApi\Model\DbType $db_type db_type (required)
+     * @param  \Agnesoft\AgdbApi\Model\DbKind $db_type db_type (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dbAdd'] to see the possible values for this operation
      *
      * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
@@ -7755,7 +7755,7 @@ class AgdbApi
      *
      * @param  string $owner user name (required)
      * @param  string $db db name (required)
-     * @param  \Agnesoft\AgdbApi\Model\DbType $db_type (required)
+     * @param  \Agnesoft\AgdbApi\Model\DbKind $db_type (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dbAdd'] to see the possible values for this operation
      *
      * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
@@ -7804,7 +7804,7 @@ class AgdbApi
      *
      * @param  string $owner user name (required)
      * @param  string $db db name (required)
-     * @param  \Agnesoft\AgdbApi\Model\DbType $db_type (required)
+     * @param  \Agnesoft\AgdbApi\Model\DbKind $db_type (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dbAdd'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
@@ -7825,7 +7825,7 @@ class AgdbApi
      *
      * @param  string $owner user name (required)
      * @param  string $db db name (required)
-     * @param  \Agnesoft\AgdbApi\Model\DbType $db_type (required)
+     * @param  \Agnesoft\AgdbApi\Model\DbKind $db_type (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dbAdd'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
@@ -7864,7 +7864,7 @@ class AgdbApi
      *
      * @param  string $owner user name (required)
      * @param  string $db db name (required)
-     * @param  \Agnesoft\AgdbApi\Model\DbType $db_type (required)
+     * @param  \Agnesoft\AgdbApi\Model\DbKind $db_type (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dbAdd'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
@@ -7906,7 +7906,7 @@ class AgdbApi
         $queryParams = array_merge($queryParams, ObjectSerializer::toQueryValue(
             $db_type,
             'db_type', // param base name
-            'DbType', // openApiType
+            'DbKind', // openApiType
             'form', // style
             true, // explode
             true // required
@@ -8816,7 +8816,7 @@ class AgdbApi
      *
      * @param  string $owner user name (required)
      * @param  string $db db name (required)
-     * @param  \Agnesoft\AgdbApi\Model\DbType $db_type db_type (required)
+     * @param  \Agnesoft\AgdbApi\Model\DbKind $db_type db_type (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dbConvert'] to see the possible values for this operation
      *
      * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
@@ -8833,7 +8833,7 @@ class AgdbApi
      *
      * @param  string $owner user name (required)
      * @param  string $db db name (required)
-     * @param  \Agnesoft\AgdbApi\Model\DbType $db_type (required)
+     * @param  \Agnesoft\AgdbApi\Model\DbKind $db_type (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dbConvert'] to see the possible values for this operation
      *
      * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
@@ -8882,7 +8882,7 @@ class AgdbApi
      *
      * @param  string $owner user name (required)
      * @param  string $db db name (required)
-     * @param  \Agnesoft\AgdbApi\Model\DbType $db_type (required)
+     * @param  \Agnesoft\AgdbApi\Model\DbKind $db_type (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dbConvert'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
@@ -8903,7 +8903,7 @@ class AgdbApi
      *
      * @param  string $owner user name (required)
      * @param  string $db db name (required)
-     * @param  \Agnesoft\AgdbApi\Model\DbType $db_type (required)
+     * @param  \Agnesoft\AgdbApi\Model\DbKind $db_type (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dbConvert'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
@@ -8942,7 +8942,7 @@ class AgdbApi
      *
      * @param  string $owner user name (required)
      * @param  string $db db name (required)
-     * @param  \Agnesoft\AgdbApi\Model\DbType $db_type (required)
+     * @param  \Agnesoft\AgdbApi\Model\DbKind $db_type (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dbConvert'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
@@ -8984,7 +8984,7 @@ class AgdbApi
         $queryParams = array_merge($queryParams, ObjectSerializer::toQueryValue(
             $db_type,
             'db_type', // param base name
-            'DbType', // openApiType
+            'DbKind', // openApiType
             'form', // style
             true, // explode
             true // required

@@ -1,6 +1,6 @@
 <?php
 /**
- * DbType
+ * DbKind
  *
  * PHP version 8.1
  *
@@ -30,14 +30,14 @@ namespace Agnesoft\AgdbApi\Model;
 use \Agnesoft\AgdbApi\ObjectSerializer;
 
 /**
- * DbType Class Doc Comment
+ * DbKind Class Doc Comment
  *
  * @category Class
  * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
  */
-class DbType
+class DbKind
 {
     /**
      * Possible values of this enum

@@ -60,7 +60,7 @@ $apiInstance = new Agnesoft\AgdbApi\Api\AgdbApi(
 );
 $owner = 'owner_example'; // string | user name
 $db = 'db_example'; // string | db name
-$db_type = new \Agnesoft\AgdbApi\Model\\Agnesoft\AgdbApi\Model\DbType(); // \Agnesoft\AgdbApi\Model\DbType
+$db_type = new \Agnesoft\AgdbApi\Model\\Agnesoft\AgdbApi\Model\DbKind(); // \Agnesoft\AgdbApi\Model\DbKind
 
 try {
     $apiInstance->adminDbAdd($owner, $db, $db_type);
@@ -154,8 +154,8 @@ Class | Method | HTTP request | Description
 - [DbKeyOrderOneOf](docs/Model/DbKeyOrderOneOf.md)
 - [DbKeyOrderOneOf1](docs/Model/DbKeyOrderOneOf1.md)
 - [DbKeyValue](docs/Model/DbKeyValue.md)
+- [DbKind](docs/Model/DbKind.md)
 - [DbResource](docs/Model/DbResource.md)
-- [DbType](docs/Model/DbType.md)
 - [DbTypeParam](docs/Model/DbTypeParam.md)
 - [DbUser](docs/Model/DbUser.md)
 - [DbUserRole](docs/Model/DbUserRole.md)

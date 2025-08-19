@@ -85,7 +85,7 @@ $apiInstance = new Agnesoft\AgdbApi\Api\AgdbApi(
 );
 $owner = 'owner_example'; // string | user name
 $db = 'db_example'; // string | db name
-$db_type = new \Agnesoft\AgdbApi\Model\\Agnesoft\AgdbApi\Model\DbType(); // \Agnesoft\AgdbApi\Model\DbType
+$db_type = new \Agnesoft\AgdbApi\Model\\Agnesoft\AgdbApi\Model\DbKind(); // \Agnesoft\AgdbApi\Model\DbKind
 
 try {
     $apiInstance->adminDbAdd($owner, $db, $db_type);
@@ -100,7 +100,7 @@ try {
 | ------------- | ------------- | ------------- | ------------- |
 | **owner** | **string**| user name | |
 | **db** | **string**| db name | |
-| **db_type** | [**\Agnesoft\AgdbApi\Model\DbType**](../Model/.md)|  | |
+| **db_type** | [**\Agnesoft\AgdbApi\Model\DbKind**](../Model/.md)|  | |
 
 ### Return type
 
@@ -327,7 +327,7 @@ $apiInstance = new Agnesoft\AgdbApi\Api\AgdbApi(
 );
 $owner = 'owner_example'; // string | user name
 $db = 'db_example'; // string | db name
-$db_type = new \Agnesoft\AgdbApi\Model\\Agnesoft\AgdbApi\Model\DbType(); // \Agnesoft\AgdbApi\Model\DbType
+$db_type = new \Agnesoft\AgdbApi\Model\\Agnesoft\AgdbApi\Model\DbKind(); // \Agnesoft\AgdbApi\Model\DbKind
 
 try {
     $apiInstance->adminDbConvert($owner, $db, $db_type);
@@ -342,7 +342,7 @@ try {
 | ------------- | ------------- | ------------- | ------------- |
 | **owner** | **string**| user name | |
 | **db** | **string**| db name | |
-| **db_type** | [**\Agnesoft\AgdbApi\Model\DbType**](../Model/.md)|  | |
+| **db_type** | [**\Agnesoft\AgdbApi\Model\DbKind**](../Model/.md)|  | |
 
 ### Return type
 
@@ -1835,7 +1835,7 @@ $apiInstance = new Agnesoft\AgdbApi\Api\AgdbApi(
 );
 $owner = 'owner_example'; // string | user name
 $db = 'db_example'; // string | db name
-$db_type = new \Agnesoft\AgdbApi\Model\\Agnesoft\AgdbApi\Model\DbType(); // \Agnesoft\AgdbApi\Model\DbType
+$db_type = new \Agnesoft\AgdbApi\Model\\Agnesoft\AgdbApi\Model\DbKind(); // \Agnesoft\AgdbApi\Model\DbKind
 
 try {
     $apiInstance->dbAdd($owner, $db, $db_type);
@@ -1850,7 +1850,7 @@ try {
 | ------------- | ------------- | ------------- | ------------- |
 | **owner** | **string**| user name | |
 | **db** | **string**| db name | |
-| **db_type** | [**\Agnesoft\AgdbApi\Model\DbType**](../Model/.md)|  | |
+| **db_type** | [**\Agnesoft\AgdbApi\Model\DbKind**](../Model/.md)|  | |
 
 ### Return type
 
@@ -2077,7 +2077,7 @@ $apiInstance = new Agnesoft\AgdbApi\Api\AgdbApi(
 );
 $owner = 'owner_example'; // string | user name
 $db = 'db_example'; // string | db name
-$db_type = new \Agnesoft\AgdbApi\Model\\Agnesoft\AgdbApi\Model\DbType(); // \Agnesoft\AgdbApi\Model\DbType
+$db_type = new \Agnesoft\AgdbApi\Model\\Agnesoft\AgdbApi\Model\DbKind(); // \Agnesoft\AgdbApi\Model\DbKind
 
 try {
     $apiInstance->dbConvert($owner, $db, $db_type);
@@ -2092,7 +2092,7 @@ try {
 | ------------- | ------------- | ------------- | ------------- |
 | **owner** | **string**| user name | |
 | **db** | **string**| db name | |
-| **db_type** | [**\Agnesoft\AgdbApi\Model\DbType**](../Model/.md)|  | |
+| **db_type** | [**\Agnesoft\AgdbApi\Model\DbKind**](../Model/.md)|  | |
 
 ### Return type
 

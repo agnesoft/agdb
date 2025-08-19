@@ -3,12 +3,12 @@ use super::ServerDb;
 use crate::action::Action;
 use crate::action::ClusterActionResult;
 use crate::server_error::ServerResult;
-use agdb::AgdbDeSerialize;
+use agdb::DbSerialize;
 use agdb_api::DbResource;
 use serde::Deserialize;
 use serde::Serialize;
 
-#[derive(Clone, Serialize, Deserialize, AgdbDeSerialize)]
+#[derive(Clone, Serialize, Deserialize, DbSerialize)]
 pub(crate) struct DbClear {
     pub(crate) owner: String,
     pub(crate) db: String,

@@ -1,5 +1,5 @@
-mod agdb_de_serialize;
 mod api_def;
+mod db_serialize;
 mod db_type;
 mod db_value;
 mod impl_def;
@@ -105,9 +105,9 @@ pub fn user_db_type_marker_derive(item: TokenStream) -> TokenStream {
 /// complex data structures and do not want or cannot use serde.
 /// It is primarily used internally to serialize the `agdb` data
 /// structures.
-#[proc_macro_derive(AgdbDeSerialize)]
+#[proc_macro_derive(DbSerialize)]
 pub fn agdb_de_serialize(item: TokenStream) -> TokenStream {
-    agdb_de_serialize::agdb_de_serialize(item)
+    db_serialize::db_serialize(item)
 }
 
 /// The derive macro to allow automatically serializing user types

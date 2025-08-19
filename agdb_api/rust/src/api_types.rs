@@ -1,5 +1,5 @@
-use agdb::AgdbDeSerialize;
 use agdb::DbError;
+use agdb::DbSerialize;
 use agdb::DbValue;
 use agdb::QueryResult;
 use agdb::QueryType;
@@ -20,7 +20,7 @@ use utoipa::ToSchema;
     Eq,
     PartialOrd,
     Ord,
-    AgdbDeSerialize,
+    DbSerialize,
 )]
 #[cfg_attr(feature = "api", derive(agdb::ApiDef))]
 #[serde(rename_all = "snake_case")]
@@ -43,7 +43,7 @@ pub enum DbType {
     Eq,
     PartialOrd,
     Ord,
-    AgdbDeSerialize,
+    DbSerialize,
 )]
 #[cfg_attr(feature = "api", derive(agdb::ApiDef))]
 #[serde(rename_all = "snake_case")]
@@ -74,7 +74,7 @@ pub struct DbUser {
     Eq,
     PartialOrd,
     Ord,
-    AgdbDeSerialize,
+    DbSerialize,
 )]
 #[cfg_attr(feature = "api", derive(agdb::ApiDef))]
 #[serde(rename_all = "snake_case")]
@@ -110,7 +110,7 @@ pub struct AdminStatus {
     pub size: u64,
 }
 
-#[derive(Clone, Deserialize, Serialize, ToSchema, AgdbDeSerialize)]
+#[derive(Clone, Deserialize, Serialize, ToSchema, DbSerialize)]
 pub struct Queries(pub Vec<QueryType>);
 
 #[derive(Serialize, ToSchema)]

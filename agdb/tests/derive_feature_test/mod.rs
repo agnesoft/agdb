@@ -1,9 +1,9 @@
 use crate::test_db::TestDb;
-use agdb::AgdbDeSerialize;
 use agdb::AgdbSerialize;
 use agdb::DbElement;
 use agdb::DbError;
 use agdb::DbId;
+use agdb::DbSerialize;
 use agdb::DbType;
 use agdb::DbTypeMarker;
 use agdb::DbValue;
@@ -11,7 +11,7 @@ use agdb::QueryBuilder;
 use agdb::QueryId;
 use agdb::QueryResult;
 
-#[derive(Default, Debug, Clone, PartialEq, DbTypeMarker, DbValue, AgdbDeSerialize)]
+#[derive(Default, Debug, Clone, PartialEq, DbTypeMarker, DbValue, DbSerialize)]
 enum Status {
     Active,
     #[default]
@@ -40,7 +40,7 @@ struct MyValueWithBool {
     truths: Vec<bool>,
 }
 
-#[derive(Clone, PartialEq, Debug, UserDbValue, DbTypeMarker, AgdbDeSerialize)]
+#[derive(Clone, PartialEq, Debug, DbValue, DbTypeMarker, DbSerialize)]
 struct Attribute {
     name: String,
     value: String,
@@ -783,7 +783,7 @@ fn try_from_db_element_bad_conversion() {
 
 #[test]
 fn derived_serialization_struct() {
-    #[derive(AgdbDeSerialize, Debug, PartialEq)]
+    #[derive(DbSerialize, Debug, PartialEq)]
     struct S {
         f1: u64,
         f2: u64,
@@ -798,7 +798,7 @@ fn derived_serialization_struct() {
 
 #[test]
 fn derived_serialization_tuple() {
-    #[derive(AgdbDeSerialize, Debug, PartialEq)]
+    #[derive(DbSerialize, Debug, PartialEq)]
     struct S(u64, u64);
 
     let s = S(1, 2);
@@ -808,24 +808,24 @@ fn derived_serialization_tuple() {
     assert_eq!(s, deserialized);
 }
 
-#[derive(AgdbDeSerialize, Debug, PartialEq)]
+#[derive(DbSerialize, Debug, PartialEq)]
 struct S1 {
     f1: u64,
 }
 
-#[derive(AgdbDeSerialize, Debug, PartialEq)]
+#[derive(DbSerialize, Debug, PartialEq)]
 struct S2(S1);
 
-#[derive(AgdbDeSerialize, Debug, PartialEq)]
+#[derive(DbSerialize, Debug, PartialEq)]
 struct S3(S2, S2);
 
-#[derive(AgdbDeSerialize, Debug, PartialEq)]
+#[derive(DbSerialize, Debug, PartialEq)]
 enum MyOtherEnum {
     A,
     B,
 }
 
-#[derive(AgdbDeSerialize, Debug, PartialEq)]
+#[derive(DbSerialize, Debug, PartialEq)]
 enum MyE {
     A,
     B(u64),
@@ -891,7 +891,7 @@ fn derived_serialization_enum_struct() {
 
 #[test]
 fn derive_serialization_empty_struct() {
-    #[derive(AgdbDeSerialize, PartialEq, Debug)]
+    #[derive(DbSerialize, PartialEq, Debug)]
 
     struct S {}
 

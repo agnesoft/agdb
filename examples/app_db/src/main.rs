@@ -1,4 +1,3 @@
-use agdb::Comparison;
 use agdb::DbError;
 use agdb::DbMemory;
 use agdb::QueryBuilder;
@@ -67,7 +66,7 @@ fn main() -> Result<(), DbError> {
             .from("users")
             .where_()
             .key("username")
-            .value(Comparison::Equal("user1".into()))
+            .value("user1")
             .query(),
     )?;
 

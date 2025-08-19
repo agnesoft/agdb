@@ -37,7 +37,7 @@ In `agdb` the query to find all projects would look like this (using `Rust` as t
 QueryBuilder::search()
     .from("projects")
     .where_()
-        .distance(CountComparison::Equal(2))
+        .distance(2)
     .query();
 ```
 
@@ -62,10 +62,10 @@ Another way the `distance` limits the required work when searching the graph is 
 QueryBuilder::search()
     .from("projects")
     .where_()
-        .distance(CountComparison::Equal(2))
+        .distance(2)
         .and()
         .key("name")
-        .value(Comparison::Equal("B".into()))
+        .value("B")
     .query();
 ```
 
@@ -79,10 +79,11 @@ QueryBuilder::search()
     .from("projects")
     .limit(1) // return maximum 1 element
     .where_()
-        .distance(CountComparison::Equal(2))
+        .distance(2)
         .and()
         .key("name")
-        .value(Comparison::Equal("B".into())).query();
+        .value("B")
+    .query();
 ```
 
 Now the algorithm will do least amount of work necessary to find what we are looking for.
@@ -95,7 +96,8 @@ One of the most ubiquitous actions done in relational databases is joining the d
 QueryBuilder::search()
     .from("projects")
     .where_()
-        .distance(CountComparison::Equal(4)).query();
+        .distance(4)
+    .query();
 ```
 
 Since we know the structure of our graph we also know that the outputs are at distance 4 and can leverage that information to easily extract all outputs. But what if we wanted only outputs of a particular project? Then we would additionally use the `beyond` condition like so:
@@ -104,14 +106,14 @@ Since we know the structure of our graph we also know that the outputs are at di
 QueryBuilder::search()
     .from("projects")
     .where_()
-        .distance(CountComparison::Equal(4))
+        .distance(4)
         .and()
             .beyond()
             .where_()
                 .distance(CountComparison::NotEqual(2))
                 .or()
                 .key("name")
-                .value(Comparison::Equal("B".into()))
+                .value("B")
     .query();
 ```
 
@@ -124,7 +126,7 @@ Yellow elements would be visited, red is where the algorithm would stop and not 
 Let's break it down:
 
 - search starts at the node "projects" (distance 0)
-- we want only elements at distance 4 (the outputs): `.distance(CountComparison::Equal(4))`
+- we want only elements at distance 4 (the outputs): `.distance(4)`
 - additionally we want to limit the search to continue only `beyond` certain elements: `.and().beyond().where_()` (NOTE: the nested `.where_()` is like opening a bracket so we specify multiple conditions for our beyond segment)
 - the beyond conditions then are:
     - continue only if the distance is NOT 2 (`.distance(CountComparison::NotEqual(2))`)

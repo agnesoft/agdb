@@ -65,7 +65,7 @@ async fn main() -> Result<(), anyhow::Error> {
             .from("users")
             .where_()
             .key("username")
-            .value(Comparison::Equal("user1".into()))
+            .value("user1")
             .query()
             .into(),
     ];

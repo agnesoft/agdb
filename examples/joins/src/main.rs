@@ -87,7 +87,7 @@ fn main() -> Result<(), DbError> {
                 .search()
                 .from("user")
                 .where_()
-                .distance(CountComparison::Equal(2))
+                .distance(2)
                 .and()
                 .keys("name")
                 .query(),

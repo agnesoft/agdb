@@ -285,6 +285,18 @@ impl Comparison {
     }
 }
 
+impl From<u64> for CountComparison {
+    fn from(value: u64) -> Self {
+        CountComparison::Equal(value)
+    }
+}
+
+impl<T: Into<DbValue>> From<T> for Comparison {
+    fn from(value: T) -> Self {
+        Comparison::Equal(value.into())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

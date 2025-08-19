@@ -2742,7 +2742,7 @@
     }
   ],
   [
-    "QueryBuilder::search().from(1).where_().edge_count_from(CountComparison::Equal(1)).query()",
+    "QueryBuilder::search().from(1).where_().edge_count_from(1).query()",
     {
       "Search": {
         "algorithm": "BreadthFirst",
@@ -2822,7 +2822,7 @@
     }
   ],
   [
-    "QueryBuilder::search().from(1).where_().key(\"k\").value(Comparison::Equal(1.into())).query()",
+    "QueryBuilder::search().from(1).where_().key(\"k\").value(1).query()",
     {
       "Search": {
         "algorithm": "BreadthFirst",
@@ -3111,7 +3111,7 @@
     }
   ],
   [
-    "QueryBuilder::search().from(1).where_().node().or().where_().edge().and().key(\"k\").value(Comparison::Equal(1.into())).end_where().query()",
+    "QueryBuilder::search().from(1).where_().node().or().where_().edge().and().key(\"k\").value(1).end_where().query()",
     {
       "Search": {
         "algorithm": "BreadthFirst",

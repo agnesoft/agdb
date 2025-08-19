@@ -112,7 +112,7 @@ fn main() -> Result<(), DbError> {
                     .search()
                     .from("users")
                     .where_()
-                    .distance(CountComparison::Equal(2))
+                    .distance(2)
                     .query(),
             )?
             .try_into()?;

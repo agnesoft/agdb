@@ -1,6 +1,6 @@
 use crate::test_db::TestFile;
 use agdb::DbError;
-use agdb::{Comparison::Equal, Db, DbId, DbType, QueryBuilder};
+use agdb::{Db, DbId, DbType, QueryBuilder};
 
 #[test]
 fn quickstart() -> Result<(), DbError> {
@@ -61,7 +61,7 @@ fn quickstart() -> Result<(), DbError> {
                 .from("users")
                 .where_()
                 .key("name")
-                .value(Equal("Bob".into()))
+                .value("Bob")
                 .query(),
         )?
         .try_into()?;

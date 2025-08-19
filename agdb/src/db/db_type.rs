@@ -32,7 +32,7 @@ use crate::QueryId;
 /// Examples:
 ///
 /// ```
-/// use agdb::{DbId, agdb::DbType};
+/// use agdb::{DbId, DbType};
 ///
 /// #[derive(DbType)]
 /// struct MyValueNoId { key: String, another_key: i32 } // "key": "value", "another_key": 10_i64

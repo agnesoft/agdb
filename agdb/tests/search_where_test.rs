@@ -560,14 +560,20 @@ fn search_where_edge_count_defaults_to_equals() {
         .edge_count_to(3)
         .query();
 
-    assert_eq!(query.conditions[0].data, QueryConditionData::EdgeCount(1));
+    assert_eq!(
+        query.conditions[0].data,
+        QueryConditionData::EdgeCount(1.into())
+    );
 
     assert_eq!(
         query.conditions[1].data,
-        QueryConditionData::EdgeCountFrom(2)
+        QueryConditionData::EdgeCountFrom(2.into())
     );
 
-    assert_eq!(query.conditions[2].data, QueryConditionData::EdgeCountTo(3));
+    assert_eq!(
+        query.conditions[2].data,
+        QueryConditionData::EdgeCountTo(3.into())
+    );
 }
 
 #[test]

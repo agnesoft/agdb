@@ -1,4 +1,4 @@
-import test_queries from "../../agdb_server/test_queries.json" assert { type: "json" };
+import test_queries from "../../agdb_server/test_queries.json" with { type: "json" };
 import * as fs from "fs";
 
 let tests = `

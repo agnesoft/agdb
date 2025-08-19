@@ -10,8 +10,8 @@ use crate::wait_for_ready;
 use agdb::Comparison;
 use agdb::QueryBuilder;
 use agdb_api::AgdbApi;
-use agdb_api::DbResource;
 use agdb_api::DbKind;
+use agdb_api::DbResource;
 use agdb_api::DbUserRole;
 use agdb_api::ReqwestClient;
 

@@ -1,7 +1,8 @@
 <?php
+use Agnesoft\AgdbApi\Model\DbKind;
 use PHPUnit\Framework\TestCase;
 use Agnesoft\AgdbApi\Model\DbElement;
-use Agnesoft\AgdbApi\Model\DbType;
+use Agnesoft\AgdbApi\Model\DbKind;
 use Agnesoft\AgdbApi\Model\UserCredentials;
 use Agnesoft\AgdbApi\QueryBuilder;
 use Agnesoft\AgdbApi\Api\AgdbApi;
@@ -81,7 +82,7 @@ final class ApiTest extends TestCase
             ])
         );
         self::$client->getConfig()->setAccessToken($token);
-        self::$client->dbAdd("php_user1", "db1", DbType::MAPPED); // @phpstan-ignore argument.type
+        self::$client->dbAdd("php_user1", "db1", DbKind::MAPPED); // @phpstan-ignore argument.type
         $res = self::$client->dbExecMut("php_user1", "db1", [
             QueryBuilder::insert()->nodes()->aliases("root")->query(),
             QueryBuilder::insert()->nodes()->count(2)->query(),
@@ -107,7 +108,7 @@ final class ApiTest extends TestCase
             ])
         );
         self::$client->getConfig()->setAccessToken($token);
-        self::$client->dbAdd("php_user2", "db1", DbType::MAPPED); // @phpstan-ignore argument.type
+        self::$client->dbAdd("php_user2", "db1", DbKind::MAPPED); // @phpstan-ignore argument.type
 
         $person1 = new User();
         $person1->name = "John";
@@ -158,7 +159,7 @@ final class ApiTest extends TestCase
             ])
         );
         self::$client->getConfig()->setAccessToken($token);
-        self::$client->dbAdd("php_user3", "db1", DbType::MAPPED); // @phpstan-ignore argument.type
+        self::$client->dbAdd("php_user3", "db1", DbKind::MAPPED); // @phpstan-ignore argument.type
         $res = self::$client->dbExecMut("php_user3", "db1", [
             QueryBuilder::insert()->nodes()->count(1)->query(),
             QueryBuilder::insert()->nodes()->count(1)->query(),

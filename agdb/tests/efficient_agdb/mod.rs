@@ -69,7 +69,7 @@ fn register_user(db: &mut Db, user: &User) -> Result<DbId, DbError> {
                 .from("users")
                 .where_()
                 .key("username")
-                .value(Equal(user.username.clone().into()))
+                .value(&user.username)
                 .query(),
         )?
         .result

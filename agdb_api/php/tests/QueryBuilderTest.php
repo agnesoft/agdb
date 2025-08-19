@@ -69,7 +69,7 @@ final class QueryBuilderTest extends TestCase
             ->from(1)
             ->where()
             ->key("float")
-            ->value(ComparisonBuilder::Equal(1.1))
+            ->value(1.1)
             ->query();
         $query2 = QueryBuilder::search()
             ->from(1)
@@ -88,7 +88,7 @@ final class QueryBuilderTest extends TestCase
             ->from(1)
             ->where()
             ->key("bool")
-            ->value(ComparisonBuilder::Equal(true))
+            ->value(true)
             ->query();
         $query2 = QueryBuilder::search()
             ->from(1)
@@ -107,7 +107,7 @@ final class QueryBuilderTest extends TestCase
             ->from(1)
             ->where()
             ->key("array")
-            ->value(ComparisonBuilder::Equal([]))
+            ->value([])
             ->query();
         $query2 = QueryBuilder::search()
             ->from(1)
@@ -126,7 +126,7 @@ final class QueryBuilderTest extends TestCase
             ->from(1)
             ->where()
             ->key("array_f64")
-            ->value(ComparisonBuilder::Equal([1.1]))
+            ->value([1.1])
             ->query();
         $query2 = QueryBuilder::search()
             ->from(1)
@@ -145,7 +145,7 @@ final class QueryBuilderTest extends TestCase
             ->from(1)
             ->where()
             ->key("array_str")
-            ->value(ComparisonBuilder::Equal(["str"]))
+            ->value(["str"])
             ->query();
         $query2 = QueryBuilder::search()
             ->from(1)

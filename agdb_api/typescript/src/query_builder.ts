@@ -15,7 +15,9 @@ interface SearchBuilderData {
     search: Components.Schemas.SearchQuery;
 }
 
-function isComparison(value: any): value is Components.Schemas.Comparison {
+function isComparison(
+    value: Components.Schemas.Comparison | BuilderDbValue,
+): value is Components.Schemas.Comparison {
     return (
         value &&
         typeof value === "object" &&

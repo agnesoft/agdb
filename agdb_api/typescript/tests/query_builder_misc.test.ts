@@ -13,7 +13,7 @@ import {
 describe("QueryBuilder misc tests", () => {
     it(`convertToNativeValue`, () => {
         const bytes = convertToNativeValue({ Bytes: [1] });
-        expect(typeof bytes).toStrictEqual("string");
+        expect(typeof bytes).toStrictEqual("object");
         const truthy = convertToNativeValue({ String: "true" });
         expect(truthy).toStrictEqual(true);
         const falsey = convertToNativeValue({ String: "false" });

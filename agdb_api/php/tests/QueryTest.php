@@ -896,7 +896,7 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
         $query = QueryBuilder::search()
             ->from(1)
             ->where()
-            ->edge_count_from(CountComparisonBuilder::Equal(1))
+            ->edge_count_from(1)
             ->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[103][1], $json);
@@ -923,7 +923,7 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->from(1)
             ->where()
             ->key("k")
-            ->value(ComparisonBuilder::Equal(1))
+            ->value(1)
             ->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[106][1], $json);
@@ -1027,7 +1027,7 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->edge()
             ->and()
             ->key("k")
-            ->value(ComparisonBuilder::Equal(1))
+            ->value(1)
             ->end_where()
             ->query();
         $json = $query->jsonSerialize();

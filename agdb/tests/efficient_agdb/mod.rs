@@ -230,36 +230,34 @@ fn post_titles(db: &Db, ids: Vec<DbId>) -> Result<Vec<String>, DbError> {
 }
 
 fn posts(db: &Db, offset: u64, limit: u64) -> Result<Vec<Post>, DbError> {
-    Ok(db
-        .exec(
-            QueryBuilder::select()
-                .elements::<Post>()
-                .search()
-                .from("posts")
-                .offset(offset)
-                .limit(limit)
-                .where_()
-                .distance(CountComparison::Equal(2))
-                .query(),
-        )?
-        .try_into()?)
+    db.exec(
+        QueryBuilder::select()
+            .elements::<Post>()
+            .search()
+            .from("posts")
+            .offset(offset)
+            .limit(limit)
+            .where_()
+            .distance(CountComparison::Equal(2))
+            .query(),
+    )?
+    .try_into()
 }
 
 fn comments(db: &Db, id: DbId) -> Result<Vec<Comment>, DbError> {
-    Ok(db
-        .exec(
-            QueryBuilder::select()
-                .elements::<Comment>()
-                .search()
-                .depth_first()
-                .from(id)
-                .where_()
-                .node()
-                .and()
-                .distance(CountComparison::GreaterThan(1))
-                .query(),
-        )?
-        .try_into()?)
+    db.exec(
+        QueryBuilder::select()
+            .elements::<Comment>()
+            .search()
+            .depth_first()
+            .from(id)
+            .where_()
+            .node()
+            .and()
+            .distance(CountComparison::GreaterThan(1))
+            .query(),
+    )?
+    .try_into()
 }
 
 fn add_likes_to_posts(db: &mut Db) -> Result<(), DbError> {
@@ -294,20 +292,19 @@ fn add_likes_to_posts(db: &mut Db) -> Result<(), DbError> {
 }
 
 fn liked_posts(db: &Db, offset: u64, limit: u64) -> Result<Vec<PostLiked>, DbError> {
-    Ok(db
-        .exec(
-            QueryBuilder::select()
-                .elements::<PostLiked>()
-                .search()
-                .from("posts")
-                .order_by([DbKeyOrder::Desc("likes".into())])
-                .offset(offset)
-                .limit(limit)
-                .where_()
-                .distance(CountComparison::Equal(2))
-                .query(),
-        )?
-        .try_into()?)
+    db.exec(
+        QueryBuilder::select()
+            .elements::<PostLiked>()
+            .search()
+            .from("posts")
+            .order_by([DbKeyOrder::Desc("likes".into())])
+            .offset(offset)
+            .limit(limit)
+            .where_()
+            .distance(CountComparison::Equal(2))
+            .query(),
+    )?
+    .try_into()
 }
 
 fn mark_top_level_comments(db: &mut Db) -> Result<(), DbError> {

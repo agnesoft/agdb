@@ -376,7 +376,7 @@ Selecting all posts is a fairly straightforward query, but we would rarely need 
 
 ```rs
 fn posts(db: &Db, offset: u64, limit: u64) -> Result<Vec<Post>, DbError> {
-    Ok(db
+    db
         .exec(
             QueryBuilder::select()
                 .elements::<Post>()
@@ -388,7 +388,7 @@ fn posts(db: &Db, offset: u64, limit: u64) -> Result<Vec<Post>, DbError> {
                 .distance(CountComparison::Equal(2))
                 .query(),
         )?
-        .try_into()?)
+        .try_into()
 }
 ```
 
@@ -402,7 +402,7 @@ Now that we have the posts we will want to fetch the comments on them. Our schem
 
 ```rs
 fn comments(db: &Db, id: DbId) -> Result<Vec<Comment>, DbError> {
-    Ok(db
+    db
         .exec(
             QueryBuilder::select()
                 .elements::<Comment>()
@@ -415,7 +415,7 @@ fn comments(db: &Db, id: DbId) -> Result<Vec<Comment>, DbError> {
                 .distance(CountComparison::GreaterThan(1))
                 .query(),
         )?
-        .try_into()?)
+        .try_into()
 }
 ```
 
@@ -488,7 +488,7 @@ This allows us to select and order posts based on likes:
 
 ```rs
 fn liked_posts(db: &Db, offset: u64, limit: u64) -> Result<Vec<PostLiked>, DbError> {
-    Ok(db
+    db
         .exec(
             QueryBuilder::select()
                 .elements::<PostLiked>()
@@ -501,7 +501,7 @@ fn liked_posts(db: &Db, offset: u64, limit: u64) -> Result<Vec<PostLiked>, DbErr
                 .distance(CountComparison::Equal(2))
                 .query(),
         )?
-        .try_into()?)
+        .try_into()
 }
 ```
 

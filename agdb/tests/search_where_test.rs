@@ -545,7 +545,10 @@ fn search_where_distance_defaults_to_equals() {
         .distance(2)
         .query();
 
-    assert_eq!(query.conditions[0].data, QueryConditionData::Distance(2));
+    assert_eq!(
+        query.conditions[0].data,
+        QueryConditionData::Distance(2.into())
+    );
 }
 
 #[test]

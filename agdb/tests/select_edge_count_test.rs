@@ -1,6 +1,5 @@
 mod test_db;
 
-use agdb::CountComparison;
 use agdb::DbElement;
 use agdb::DbId;
 use agdb::QueryBuilder;

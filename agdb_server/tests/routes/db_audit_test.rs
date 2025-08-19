@@ -3,7 +3,7 @@ use crate::TestServer;
 use crate::next_db_name;
 use crate::next_user_name;
 use agdb::QueryBuilder;
-use agdb_api::DbType;
+use agdb_api::DbKind;
 use std::path::Path;
 
 #[tokio::test]
@@ -14,7 +14,7 @@ async fn audit() -> anyhow::Result<()> {
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.user_login(owner, owner).await?;
-    server.api.db_add(owner, db, DbType::Mapped).await?;
+    server.api.db_add(owner, db, DbKind::Mapped).await?;
     let mut queries = vec![
         QueryBuilder::insert()
             .nodes()
@@ -40,7 +40,7 @@ async fn audit_delete_db() -> anyhow::Result<()> {
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.user_login(owner, owner).await?;
-    server.api.db_add(owner, db, DbType::Mapped).await?;
+    server.api.db_add(owner, db, DbKind::Mapped).await?;
     let queries = vec![
         QueryBuilder::insert()
             .nodes()
@@ -69,7 +69,7 @@ async fn audit_db_empty() -> anyhow::Result<()> {
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.user_login(owner, owner).await?;
-    server.api.db_add(owner, db, DbType::Mapped).await?;
+    server.api.db_add(owner, db, DbKind::Mapped).await?;
     let (status, results) = server.api.db_audit(owner, db).await?;
     assert_eq!(status, 200);
     assert_eq!(results.0, vec![]);
@@ -92,7 +92,7 @@ async fn repeated_query_with_db_audit() -> anyhow::Result<()> {
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.user_login(owner, owner).await?;
-    server.api.db_add(owner, db, DbType::Mapped).await?;
+    server.api.db_add(owner, db, DbKind::Mapped).await?;
     server
         .api
         .db_exec_mut(

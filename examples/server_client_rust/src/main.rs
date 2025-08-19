@@ -1,7 +1,7 @@
 use agdb::Comparison;
 use agdb::DbType;
 use agdb::QueryBuilder;
-use agdb_api::DbType as ApiDbType;
+use agdb_api::DbKind as ApiDbType;
 use agdb_api::ReqwestClient;
 
 #[derive(Debug, DbType)]

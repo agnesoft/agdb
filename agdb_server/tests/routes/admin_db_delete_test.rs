@@ -2,7 +2,7 @@ use crate::ADMIN;
 use crate::TestServer;
 use crate::next_db_name;
 use crate::next_user_name;
-use agdb_api::DbType;
+use agdb_api::DbKind;
 use std::path::Path;
 
 #[tokio::test]
@@ -12,7 +12,7 @@ async fn delete() -> anyhow::Result<()> {
     let db = &next_db_name();
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
-    server.api.admin_db_add(owner, db, DbType::Mapped).await?;
+    server.api.admin_db_add(owner, db, DbKind::Mapped).await?;
     assert!(Path::new(&server.data_dir).join(owner).join(db).exists());
     let status = server.api.admin_db_delete(owner, db).await?;
     assert_eq!(status, 204);
@@ -32,7 +32,7 @@ async fn delete_with_backup() -> anyhow::Result<()> {
         .join(format!("{db}.bak"));
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
-    server.api.admin_db_add(owner, db, DbType::Mapped).await?;
+    server.api.admin_db_add(owner, db, DbKind::Mapped).await?;
     server.api.admin_db_backup(owner, db).await?;
     assert!(db_path.exists());
     assert!(db_backup_path.exists());

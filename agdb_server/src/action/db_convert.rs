@@ -4,7 +4,7 @@ use crate::action::Action;
 use crate::action::ClusterActionResult;
 use crate::server_error::ServerResult;
 use agdb::DbSerialize;
-use agdb_api::DbType;
+use agdb_api::DbKind;
 use serde::Deserialize;
 use serde::Serialize;
 
@@ -12,7 +12,7 @@ use serde::Serialize;
 pub(crate) struct DbConvert {
     pub(crate) owner: String,
     pub(crate) db: String,
-    pub(crate) db_type: DbType,
+    pub(crate) db_type: DbKind,
 }
 
 impl Action for DbConvert {

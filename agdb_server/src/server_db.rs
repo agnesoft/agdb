@@ -17,7 +17,7 @@ use agdb::QueryResult;
 use agdb::SearchQuery;
 use agdb::StorageData;
 use agdb::Transaction;
-use agdb_api::DbType as ApiDbType;
+use agdb_api::DbKind;
 use agdb_api::DbUser;
 use agdb_api::DbUserRole;
 use agdb_api::UserStatus;
@@ -39,7 +39,7 @@ pub(crate) struct Database {
     pub(crate) db_id: Option<DbId>,
     pub(crate) db: String,
     pub(crate) owner: String,
-    pub(crate) db_type: ApiDbType,
+    pub(crate) db_type: DbKind,
     pub(crate) backup: u64,
 }
 
@@ -61,7 +61,6 @@ const COMMITTED: &str = "committed";
 const DB: &str = "db";
 const DBS: &str = "dbs";
 const EXECUTED: &str = "executed";
-const NAME: &str = "name";
 const OWNER: &str = "owner";
 const ROLE: &str = "role";
 const TOKEN: &str = "token";
@@ -135,40 +134,6 @@ impl ServerDb {
                 .is_err()
             {
                 t.exec_mut(QueryBuilder::insert().nodes().aliases(CLUSTER_LOG).query())?;
-            }
-
-            // Migration to new Database struct introduced in 0.10.0. Remove in 0.12.0.
-            let dbs: Vec<(DbId, String, String)> = t
-                .exec(
-                    QueryBuilder::select()
-                        .values(NAME)
-                        .search()
-                        .from(DBS)
-                        .where_()
-                        .distance(CountComparison::Equal(2))
-                        .and()
-                        .keys(NAME)
-                        .query(),
-                )?
-                .elements
-                .iter()
-                .filter_map(|e| {
-                    e.values[0]
-                        .value
-                        .to_string()
-                        .split_once('/')
-                        .map(|(owner, db)| (e.id, owner.to_string(), db.to_string()))
-                })
-                .collect::<Vec<(DbId, String, String)>>();
-
-            for (db_id, owner, db) in dbs {
-                t.exec_mut(
-                    QueryBuilder::insert()
-                        .values([[(OWNER, owner).into(), (DB, db).into()]])
-                        .ids(db_id)
-                        .query(),
-                )?;
-                t.exec_mut(QueryBuilder::remove().values("name").ids(db_id).query())?;
             }
 
             Ok(())
@@ -974,71 +939,5 @@ impl DbType for Log<ClusterAction> {
             ("term", self.term).into(),
             ("data", self.data.serialize()).into(),
         ]
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    struct TestFile {
-        filename: &'static str,
-    }
-
-    impl TestFile {
-        fn new(filename: &'static str) -> Self {
-            let _ = std::fs::remove_file(filename);
-            Self { filename }
-        }
-    }
-
-    impl Drop for TestFile {
-        fn drop(&mut self) {
-            let _ = std::fs::remove_file(self.filename);
-        }
-    }
-
-    #[tokio::test]
-    async fn db_upgrade() -> ServerResult {
-        let file = TestFile::new("test_db.db");
-        let _dot_file = TestFile::new(".test_db.db");
-        let mut db = Db::new(file.filename)?;
-        db.transaction_mut(|t| -> ServerResult {
-            t.exec_mut(QueryBuilder::insert().nodes().aliases(DBS).query())?;
-            let user_db = t.exec_mut(
-                QueryBuilder::insert()
-                    .nodes()
-                    .values([
-                        vec![
-                            ("name", "user/db1").into(),
-                            ("db_type", ApiDbType::Memory).into(),
-                            ("backup", 0).into(),
-                        ],
-                        vec![
-                            ("owner", "user").into(),
-                            ("db", "db2").into(),
-                            ("db_type", ApiDbType::Memory).into(),
-                            ("backup", 0).into(),
-                        ],
-                    ])
-                    .query(),
-            )?;
-            t.exec_mut(QueryBuilder::insert().edges().from(DBS).to(user_db).query())?;
-            Ok(())
-        })?;
-
-        let db = ServerDb::new("test_db.db")?;
-        let dbs = db.dbs().await?;
-        assert_eq!(dbs.len(), 2);
-        assert_eq!(dbs[0].db, "db2");
-        assert_eq!(dbs[0].owner, "user");
-        assert_eq!(dbs[0].db_type, ApiDbType::Memory);
-        assert_eq!(dbs[0].backup, 0);
-        assert_eq!(dbs[1].db, "db1");
-        assert_eq!(dbs[1].owner, "user");
-        assert_eq!(dbs[1].db_type, ApiDbType::Memory);
-        assert_eq!(dbs[1].backup, 0);
-
-        Ok(())
     }
 }

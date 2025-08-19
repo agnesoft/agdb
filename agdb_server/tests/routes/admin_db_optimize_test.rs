@@ -3,7 +3,7 @@ use crate::TestServer;
 use crate::next_db_name;
 use crate::next_user_name;
 use agdb::QueryBuilder;
-use agdb_api::DbType;
+use agdb_api::DbKind;
 
 #[tokio::test]
 async fn optimize() -> anyhow::Result<()> {
@@ -12,7 +12,7 @@ async fn optimize() -> anyhow::Result<()> {
     let db = &next_db_name();
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
-    server.api.admin_db_add(owner, db, DbType::Mapped).await?;
+    server.api.admin_db_add(owner, db, DbKind::Mapped).await?;
     let queries = &vec![QueryBuilder::insert().nodes().count(100).query().into()];
     server.api.admin_db_exec_mut(owner, db, queries).await?;
     let original_size = server

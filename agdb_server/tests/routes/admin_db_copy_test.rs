@@ -6,7 +6,7 @@ use crate::next_user_name;
 use agdb::DbElement;
 use agdb::DbId;
 use agdb::QueryBuilder;
-use agdb_api::DbType;
+use agdb_api::DbKind;
 use std::path::Path;
 
 #[tokio::test]
@@ -17,7 +17,7 @@ async fn copy() -> anyhow::Result<()> {
     let db2 = &next_db_name();
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
-    server.api.admin_db_add(owner, db, DbType::Mapped).await?;
+    server.api.admin_db_add(owner, db, DbKind::Mapped).await?;
     let queries = &vec![
         QueryBuilder::insert()
             .nodes()
@@ -55,7 +55,7 @@ async fn copy_to_different_user() -> anyhow::Result<()> {
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.admin_user_add(owner2, owner2).await?;
-    server.api.admin_db_add(owner, db, DbType::Mapped).await?;
+    server.api.admin_db_add(owner, db, DbKind::Mapped).await?;
     let queries = &vec![
         QueryBuilder::insert()
             .nodes()
@@ -91,8 +91,8 @@ async fn copy_target_exists() -> anyhow::Result<()> {
     let db2 = &next_db_name();
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
-    server.api.admin_db_add(owner, db, DbType::Memory).await?;
-    server.api.admin_db_add(owner, db2, DbType::Memory).await?;
+    server.api.admin_db_add(owner, db, DbKind::Memory).await?;
+    server.api.admin_db_add(owner, db2, DbKind::Memory).await?;
     let status = server
         .api
         .admin_db_copy(owner, db, owner, db2)
@@ -110,7 +110,7 @@ async fn target_self() -> anyhow::Result<()> {
     let db = &next_db_name();
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
-    server.api.admin_db_add(owner, db, DbType::Memory).await?;
+    server.api.admin_db_add(owner, db, DbKind::Memory).await?;
     let status = server
         .api
         .admin_db_copy(owner, db, owner, db)
@@ -128,7 +128,7 @@ async fn invalid() -> anyhow::Result<()> {
     let db = &next_db_name();
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
-    server.api.admin_db_add(owner, db, DbType::File).await?;
+    server.api.admin_db_add(owner, db, DbKind::File).await?;
     let status = server
         .api
         .admin_db_copy(owner, db, owner, &format!("{owner}/a\0a"))
@@ -196,7 +196,7 @@ async fn cluster_copy() -> anyhow::Result<()> {
     let client = cluster.apis.get_mut(1).unwrap();
     client.user_login(ADMIN, ADMIN).await?;
     client.admin_user_add(owner, owner).await?;
-    client.admin_db_add(owner, db, DbType::Memory).await?;
+    client.admin_db_add(owner, db, DbKind::Memory).await?;
     client.admin_db_copy(owner, db, owner, db2).await?;
     client.user_login(owner, owner).await?;
     let dbs = client.db_list().await?.1.len();

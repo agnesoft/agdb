@@ -6,7 +6,7 @@ use agdb::DbElement;
 use agdb::DbId;
 use agdb::QueryBuilder;
 use agdb::QueryResult;
-use agdb_api::DbType;
+use agdb_api::DbKind;
 
 #[tokio::test]
 async fn read_write() -> anyhow::Result<()> {
@@ -15,7 +15,7 @@ async fn read_write() -> anyhow::Result<()> {
     let db = &next_db_name();
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
-    server.api.admin_db_add(owner, db, DbType::Mapped).await?;
+    server.api.admin_db_add(owner, db, DbKind::Mapped).await?;
     let queries = &vec![
         QueryBuilder::insert()
             .nodes()
@@ -58,7 +58,7 @@ async fn read_only() -> anyhow::Result<()> {
     let db = &next_db_name();
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
-    server.api.admin_db_add(owner, db, DbType::Mapped).await?;
+    server.api.admin_db_add(owner, db, DbKind::Mapped).await?;
     let queries = &vec![
         QueryBuilder::insert()
             .nodes()
@@ -92,7 +92,7 @@ async fn query_error() -> anyhow::Result<()> {
     let db = &next_db_name();
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
-    server.api.admin_db_add(owner, db, DbType::Mapped).await?;
+    server.api.admin_db_add(owner, db, DbKind::Mapped).await?;
     let queries = &vec![
         QueryBuilder::insert()
             .nodes()

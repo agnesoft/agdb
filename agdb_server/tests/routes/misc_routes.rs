@@ -9,7 +9,7 @@ use crate::reqwest_client;
 use crate::wait_for_ready;
 use agdb::QueryBuilder;
 use agdb_api::AgdbApi;
-use agdb_api::DbType;
+use agdb_api::DbKind;
 use agdb_api::ReqwestClient;
 use reqwest::StatusCode;
 use std::path::Path;
@@ -99,7 +99,7 @@ async fn db_list_after_shutdown() -> anyhow::Result<()> {
         client.user_logout().await?;
         client.user_login("userx", "userxpassword").await?;
         client
-            .db_add("userx", "mydb", agdb_api::DbType::Mapped)
+            .db_add("userx", "mydb", agdb_api::DbKind::Mapped)
             .await?;
         client.user_logout().await?;
         client.user_login(ADMIN, ADMIN).await?;
@@ -130,7 +130,7 @@ async fn db_list_after_shutdown_corrupted_data() -> anyhow::Result<()> {
         client.user_logout().await?;
         client.user_login("userx", "userxpassword").await?;
         client
-            .db_add("userx", "mydb", agdb_api::DbType::Mapped)
+            .db_add("userx", "mydb", agdb_api::DbKind::Mapped)
             .await?;
         client.user_logout().await?;
         client.user_login(ADMIN, ADMIN).await?;
@@ -203,7 +203,7 @@ async fn location_change_after_restart() -> anyhow::Result<()> {
         client.user_logout().await?;
         client.user_login("user1", "userxpassword").await?;
         client
-            .db_add("user1", "mydb", agdb_api::DbType::Mapped)
+            .db_add("user1", "mydb", agdb_api::DbKind::Mapped)
             .await?;
         client
             .db_exec_mut(
@@ -282,7 +282,7 @@ async fn memory_db_from_backup() -> anyhow::Result<()> {
         client.user_login(ADMIN, ADMIN).await?;
         client.admin_user_add(owner, "password123").await?;
         client.user_login(owner, "password123").await?;
-        client.db_add(owner, db, DbType::Memory).await?;
+        client.db_add(owner, db, DbKind::Memory).await?;
         client
             .db_exec_mut(
                 owner,
@@ -362,7 +362,7 @@ async fn large_payload() -> anyhow::Result<()> {
     let nums_too_big: Vec<u64> = (0..1000).collect();
     let db = next_db_name();
     client.user_login(ADMIN, ADMIN).await?;
-    client.db_add(ADMIN, &db, DbType::Memory).await?;
+    client.db_add(ADMIN, &db, DbKind::Memory).await?;
 
     let err = client
         .db_exec_mut(

@@ -1,6 +1,6 @@
 use crate::DbError;
 use crate::DbId;
-use crate::DbUserValue;
+use crate::DbType;
 use crate::db::db_element::DbElement;
 
 /// Universal database result. Successful
@@ -28,7 +28,7 @@ impl QueryResult {
     }
 }
 
-impl<T: DbUserValue<ValueType = T>> TryInto<Vec<T>> for QueryResult {
+impl<T: DbType<ValueType = T>> TryInto<Vec<T>> for QueryResult {
     type Error = DbError;
 
     fn try_into(self) -> Result<Vec<T>, Self::Error> {

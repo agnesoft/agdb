@@ -8,7 +8,7 @@ use syn::Index;
 use syn::Type;
 use syn::parse_macro_input;
 
-pub fn agdb_de_serialize(item: TokenStream) -> TokenStream {
+pub fn db_serialize(item: TokenStream) -> TokenStream {
     let input = parse_macro_input!(item as DeriveInput);
     let name = input.ident;
 

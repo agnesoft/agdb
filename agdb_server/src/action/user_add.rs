@@ -4,11 +4,11 @@ use crate::action::Action;
 use crate::action::ClusterActionResult;
 use crate::server_db::ServerUser;
 use crate::server_error::ServerResult;
-use agdb::AgdbDeSerialize;
+use agdb::DbSerialize;
 use serde::Deserialize;
 use serde::Serialize;
 
-#[derive(Clone, Serialize, Deserialize, AgdbDeSerialize)]
+#[derive(Clone, Serialize, Deserialize, DbSerialize)]
 pub(crate) struct UserAdd {
     pub(crate) user: String,
     pub(crate) password: Vec<u8>,

@@ -16,7 +16,7 @@ use std::cmp::Ordering;
 /// Search algorithm to be used
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
-#[cfg_attr(feature = "derive", derive(agdb::AgdbDeSerialize))]
+#[cfg_attr(feature = "derive", derive(agdb::DbSerialize))]
 #[cfg_attr(feature = "api", derive(agdb::ApiDef))]
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum SearchQueryAlgorithm {
@@ -44,7 +44,7 @@ pub enum SearchQueryAlgorithm {
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
-#[cfg_attr(feature = "derive", derive(agdb::AgdbDeSerialize))]
+#[cfg_attr(feature = "derive", derive(agdb::DbSerialize))]
 #[cfg_attr(feature = "api", derive(agdb::ApiDef))]
 pub struct SearchQuery {
     /// Search algorithm to be used. Will be bypassed for path

@@ -5,30 +5,30 @@ use agdb::Db;
 use agdb::DbId;
 use agdb::DbKeyOrder;
 use agdb::DbKeyValue;
+use agdb::DbType;
 use agdb::QueryBuilder;
 use agdb::QueryError;
 use agdb::QueryId;
-use agdb_derive::UserValue;
 use std::ops::Deref;
 use std::ops::DerefMut;
 use std::sync::Arc;
 use std::sync::RwLock;
 
-#[derive(UserValue)]
+#[derive(DbType)]
 struct User {
     username: String,
     email: String,
     password: String,
 }
 
-#[derive(UserValue)]
+#[derive(DbType)]
 struct Post {
     db_id: Option<DbId>,
     title: String,
     body: String,
 }
 
-#[derive(UserValue)]
+#[derive(DbType)]
 struct PostLiked {
     db_id: Option<DbId>,
     title: String,
@@ -36,7 +36,7 @@ struct PostLiked {
     likes: i64,
 }
 
-#[derive(UserValue)]
+#[derive(DbType)]
 struct Comment {
     body: String,
 }

@@ -4,21 +4,21 @@ use crate::database::Database;
 use crate::utilities;
 use crate::utilities::measured;
 use agdb::DbId;
+use agdb::DbType;
 use agdb::QueryBuilder;
 use agdb::QueryId;
 use agdb::StorageData;
-use agdb::UserValue;
 use std::time::Duration;
 use std::time::Instant;
 use tokio::task::JoinHandle;
 
-#[derive(UserValue)]
+#[derive(DbType)]
 struct Post {
     title: String,
     body: String,
 }
 
-#[derive(UserValue)]
+#[derive(DbType)]
 struct Comment {
     body: String,
 }

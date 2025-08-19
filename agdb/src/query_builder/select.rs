@@ -1,4 +1,4 @@
-use crate::DbUserValue;
+use crate::DbType;
 use crate::QueryIds;
 use crate::SelectAliasesQuery;
 use crate::SelectEdgeCountQuery;
@@ -69,7 +69,7 @@ impl Select {
     /// Select elements with `ids` with only `T::db_keys()`
     /// properties (key-values). All ids specified must
     /// exist in the database. Same as calling `values(T::db_keys())`.
-    pub fn elements<T: DbUserValue>(self) -> SelectValues {
+    pub fn elements<T: DbType>(self) -> SelectValues {
         SelectValues(SelectValuesQuery {
             keys: T::db_keys(),
             ids: QueryIds::Ids(vec![]),

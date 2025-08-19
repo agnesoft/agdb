@@ -124,12 +124,12 @@ All queries return `Result<QueryResult, QueryError>`. The [`QueryResult`](#query
 
 ## Types
 
-### DbUserValue
+### DbType
 
-The `DbUserValue` trait is an interface that can be implemented for user defined types so that they can be seamlessly used with the database:
+The `DbType` trait is an interface that can be implemented for user defined types so that they can be seamlessly used with the database:
 
 ```rs
-pub trait DbUserValue: Sized {
+pub trait DbType: Sized {
     fn db_id(&self) -> Option<DbId>;
     fn db_keys() -> Vec<DbValue>;
     fn from_db_element(element: &DbElement) -> Result<Self, DbError>;
@@ -137,16 +137,16 @@ pub trait DbUserValue: Sized {
 }
 ```
 
-Typically, you would derive this trait with `agdb::UserValue` procedural macro that uses the field names as keys (of type `String`) and losslessly converts the values when reading/writing from/to the database from supported types (e.g. field type `i32` will become `i64` in the database).
+Typically, you would derive this trait with `agdb::DbType` procedural macro that uses the field names as keys (of type `String`) and losslessly converts the values when reading/writing from/to the database from supported types (e.g. field type `i32` will become `i64` in the database).
 
 It is recommended but optional to have `db_id` field of type `Option<T: Into<DbId>>` (e.g. `Option<QueryId>` or `Option<DbId>`) in your user defined types which will further allow you to directly update your values with query shorthands. However, it is optional, and all other features will still work including conversion from `QueryResult` or passing your types to `values()` in the builders.
 
-The `agdb::UserValue` macro also supports `Option`al types. When a value is `None` it will be omitted when saving the object to the database.
+The `agdb::DbType` macro also supports `Option`al types. When a value is `None` it will be omitted when saving the object to the database.
 
 Example:
 
 ```rs
-#[derive(UserValue)]
+#[derive(DbType)]
 struct User { db_id: Option<DbId>, name: String, }
 let user = User { db_id: None, name: "Bob".to_string() };
 db.exec_mut(QueryBuilder::insert().nodes().values(user).query())?;
@@ -155,16 +155,16 @@ user.name = "Alice".to_string();
 db.exec_mut(QueryBuilder::insert().element(&user).query())?; //updates the user element with new name
 ```
 
-In some cases you may want to implement the `DbUserValue` trait yourself. For example when you want to omit a field entirely or construct it based on other values. Additionally, you can use these supporting derive macros:
+You can optionally use `#[agdb(flatten)]` to flatten nested structs, `#[agdb(rename = "new_name")]` to disambiguate the duplicate keys (useful when flattening) or `#[agdb(skip)]` to omit a field (requires for the field's type to implement `Default`). In some cases you may want to implement the `DbType` trait yourself if you want to do some additional transformation besides the supported ones with the derive. Additionally, you can use these supporting derive macros:
 
 ```rs
-#[derive(UserValueMarker)] // allows using vectorized custom types, e.g. Vec<T> in fields of user defined types
+#[derive(DbTypeMarker)] // allows using vectorized custom types, e.g. Vec<T> in fields of user defined types
 
-#[derive(UserDbValue)] // derives an implementation converting a user defined type
-                       // to DbValue for easy nesting of user defined types.
-                       // NOTE: it additionally requires agdb::AgdbSerialize trait to be implemented
+#[derive(DbValue)] // derives an implementation converting a user defined type
+                   // to DbValue for easy nesting of user defined types.
+                   // NOTE: it additionally requires agdb::AgdbSerialize trait to be implemented
 
-#[derive(AgdbDeSerialize)] // derives implementation of agdb::AgdbSerialize trait (includes both serialize and deserialize) for user defined type
+#[derive(DbSerialize)] // derives implementation of agdb::AgdbSerialize trait (includes both serialize and deserialize) for user defined types
 ```
 
 Types not directly used in the database but for which the conversions are supported:
@@ -187,7 +187,7 @@ Types not directly used in the database but for which the conversions are suppor
 
 ### QueryResult
 
-The `QueryResult` is the universal result type for all successful queries. It can be converted to user defined types that implement [`DbUserValue`](#dbuservalue) with `try_into()`. It looks like this:
+The `QueryResult` is the universal result type for all successful queries. It can be converted to user defined types that implement [`DbType`](#dbtype) with `try_into()`. It looks like this:
 
 ```rs
 pub struct QueryResult {
@@ -255,7 +255,7 @@ fn vec_string(&self) -> Result<&Vec<String>, DbError>;
 fn vec_bool(&self) -> Result<Vec<bool>, DbError>;
 ```
 
-The numerical variants (`I64`, `U64`, `DbF64`) will attempt loss-less conversions where possible. To avoid copies all other variants return `&` where conversions are not possible even if they could be done in theory. The special case is `to_string()` provided by the `Display` trait. It converts any values into string (it also copies the `String` variant) and performs possibly lossy conversion from `Bytes` to UTF-8 string. For `bool` conversion details refer to [DbUserValue](#dbuservalue) section.
+The numerical variants (`I64`, `U64`, `DbF64`) will attempt loss-less conversions where possible. To avoid copies all other variants return `&` where conversions are not possible even if they could be done in theory. The special case is `to_string()` provided by the `Display` trait. It converts any values into string (it also copies the `String` variant) and performs possibly lossy conversion from `Bytes` to UTF-8 string. For `bool` conversion details refer to [DbType](#dbtype) section.
 
 ### QueryError, DbError
 
@@ -425,7 +425,7 @@ QueryBuilder::insert().edges().ids(QueryBuilder::search().from(1).where_().edge(
 
 </td></tr></table>
 
-The `from` and `to` represents list of origins and destinations of the edges to be inserted. As per [`QueryIds`](#queryids--queryid) it can be a list, single value, search query or even a result of another query (e.g. [insert nodes](#insert-nodes)) through the call of convenient `QueryResult::ids()` method. All `ids` must be `node`s and all must exist in the database otherwise data error will occur. If the `values` is [`QueryValues::Single`](#queryvalues) all edges will be associated with the copy of the same properties. If `values` is [`QueryValues::Multi`](#queryvalues) then the number of edges being inserted must match the provided values otherwise a logic error will occur. By default, the `from` and `to` are expected to be of equal length specifying at each index the pair of nodes to connect with an edge. If all-to-all is desired set the `each` flag to `true`. The rule about the `values` [`QueryValues::Multi`](#queryvalues) still applies though so there must be enough values for all nodes resulting from the combination. The values can be inferred from user defined types if they implement `DbUserValue` trait (`#derive(agdb::UserValue)`). Both singular and vectorized versions are supported. Optionally one can specify `ids` that facilitates insert-or-update semantics. The field can be a search sub-query. If the resulting list in `ids` is empty the query will insert edges as normal. If the list is not empty all `ids` must exist and refer to existing edges and the query will perform update of values instead. Note: the specified from/to (origin/destination) for the updated edges is not checked against those supplied via `ids`.
+The `from` and `to` represents list of origins and destinations of the edges to be inserted. As per [`QueryIds`](#queryids--queryid) it can be a list, single value, search query or even a result of another query (e.g. [insert nodes](#insert-nodes)) through the call of convenient `QueryResult::ids()` method. All `ids` must be `node`s and all must exist in the database otherwise data error will occur. If the `values` is [`QueryValues::Single`](#queryvalues) all edges will be associated with the copy of the same properties. If `values` is [`QueryValues::Multi`](#queryvalues) then the number of edges being inserted must match the provided values otherwise a logic error will occur. By default, the `from` and `to` are expected to be of equal length specifying at each index the pair of nodes to connect with an edge. If all-to-all is desired set the `each` flag to `true`. The rule about the `values` [`QueryValues::Multi`](#queryvalues) still applies though so there must be enough values for all nodes resulting from the combination. The values can be inferred from user defined types if they implement `DbType` trait (`#derive(agdb::DbType)`). Both singular and vectorized versions are supported. Optionally one can specify `ids` that facilitates insert-or-update semantics. The field can be a search sub-query. If the resulting list in `ids` is empty the query will insert edges as normal. If the list is not empty all `ids` must exist and refer to existing edges and the query will perform update of values instead. Note: the specified from/to (origin/destination) for the updated edges is not checked against those supplied via `ids`.
 
 ### Insert index
 
@@ -501,7 +501,7 @@ QueryBuilder::insert().nodes().ids(QueryBuilder::search().from(1).query()).count
 
 The `count` is the number of nodes to be inserted into the database. It can be omitted (left `0`) if either `values` or `aliases` (or both) are provided. If the `values` is [`QueryValues::Single`](#queryvalues) you must provide either `count` or `aliases`. It is not an error if the count is set to `0`, but the query will be a no-op and return empty result.
 
-If both `values` [`QueryValues::Multi`](#queryvalues) and `aliases` are provided their lengths must be compatible (aliases <= values), otherwise it will result in a logic error. Empty aliases (`""`) are not allowed. The values can be inferred from user defined types if they implement `DbUserValue` trait (`#derive(agdb::UserValue)`). Both singular and vectorized versions are supported. Optionally one can specify `ids` that facilitates insert-or-update semantics. The field can be a search sub-query. If the resulting list in `ids` is empty the query will insert nodes as normal.
+If both `values` [`QueryValues::Multi`](#queryvalues) and `aliases` are provided their lengths must be compatible (aliases <= values), otherwise it will result in a logic error. Empty aliases (`""`) are not allowed. The values can be inferred from user defined types if they implement `DbType` trait (`#derive(agdb::DbType)`). Both singular and vectorized versions are supported. Optionally one can specify `ids` that facilitates insert-or-update semantics. The field can be a search sub-query. If the resulting list in `ids` is empty the query will insert nodes as normal.
 
 If the list is not empty all `ids` must exist and must refer to nodes and the query will perform update instead - both aliases (replacing existing ones if applicable) and values.
 
@@ -531,8 +531,8 @@ pub struct QueryResult {
 </td></tr><tr><td colspan=2><b>Builder</b></td></tr><tr><td colspan=2>
 
 ```rs
-QueryBuilder::insert().element(&T { ... }).query(); //Where T: DbUserValue (i.e. #derive(UserValue))
-QueryBuilder::insert().elements(&vec![T {...}, T {...}]).query(); //Where T: DbUserValue (i.e. #derive(UserValue))
+QueryBuilder::insert().element(&T { ... }).query(); //Where T: DbType (i.e. #derive(agdb::DbType))
+QueryBuilder::insert().elements(&vec![T {...}, T {...}]).query(); //Where T: DbType (i.e. #derive(agdb::DbType))
 QueryBuilder::insert().values([vec![("k", "v").into(), (1, 10).into()], vec![("k", 2).into()]]).ids([1, 2]).query();
 QueryBuilder::insert().values([vec![("k", "v").into(), (1, 10).into()], vec![("k", 2).into()]]).ids(QueryBuilder::search().from("a").query()).query();
 QueryBuilder::insert().values([vec![("k", "v").into(), (1, 10).into()], vec![("k", 2).into()]]).search().from("a").query(); //Equivalent to the previous query
@@ -543,7 +543,7 @@ QueryBuilder::insert().values_uniform([("k", "v").into(), (1, 10).into()]).searc
 
 </td></tr></table>
 
-Inserts or updates key-value pairs (properties) of existing elements or insert new elements (nodes). You need to specify the `ids` [`QueryIds`](#queryids--queryid) and the list of `values`. The `values` can be either [`QueryValues::Single`](#queryvalues) that will insert the single set of properties to all elements identified by `ids` or [`QueryValues::Multi`](#queryvalues) that will insert to each `id` its own set of properties, but their number must match the number of `ids`. If the user defined type contains `db_id` field of type `Option<T: Into<QueryId>>` you can use the shorthand `insert().element() / .insert().elements()` that will infer the values and `ids` from your types. The `values()` will be inferred from user defined types if they implement `DbUserValue` trait (`#derive(agdb::UserValue)`). Both singular and vectorized versions are supported.
+Inserts or updates key-value pairs (properties) of existing elements or insert new elements (nodes). You need to specify the `ids` [`QueryIds`](#queryids--queryid) and the list of `values`. The `values` can be either [`QueryValues::Single`](#queryvalues) that will insert the single set of properties to all elements identified by `ids` or [`QueryValues::Multi`](#queryvalues) that will insert to each `id` its own set of properties, but their number must match the number of `ids`. If the user defined type contains `db_id` field of type `Option<T: Into<QueryId>>` you can use the shorthand `insert().element() / .insert().elements()` that will infer the values and `ids` from your types. The `values()` will be inferred from user defined types if they implement `DbType` trait (`#derive(agdb::DbType)`). Both singular and vectorized versions are supported.
 
 - If an `id` is non-0 or an existing alias that element will be updated in the database with provided values.
 - If an `id` is `0` or a non-existent alias new element (node) will be inserted into the database with that alias.
@@ -966,7 +966,7 @@ QueryBuilder::select().elements::<T>().search().from("a").query(); // Equivalent
 
 </td></tr></table>
 
-Selects elements identified by `ids` [`QueryIds`](#queryids--queryid) or search query with only selected properties (identified by the list of keys). If any of the `ids` does not exist in the database or does not have all the keys associated with it then running the query will return an error. The search query is most commonly used to find, filter or otherwise limit what elements to select. You can limit what properties will be returned. If the list of properties to select is empty all properties will be returned. If you plan to convert the result into your user defined type(s) you should use either `elements::<T>()` variant or supply the list of keys to `values()` with `T::db_keys()` provided through the `DbUserValue` trait (`#derive(UserValue)`) as argument to `values()` otherwise the keys may not be in an expected order even if they are otherwise present.
+Selects elements identified by `ids` [`QueryIds`](#queryids--queryid) or search query with only selected properties (identified by the list of keys). If any of the `ids` does not exist in the database or does not have all the keys associated with it then running the query will return an error. The search query is most commonly used to find, filter or otherwise limit what elements to select. You can limit what properties will be returned. If the list of properties to select is empty all properties will be returned. If you plan to convert the result into your user defined type(s) you should use either `elements::<T>()` variant or supply the list of keys to `values()` with `T::db_keys()` provided through the `DbType` trait (`#derive(DbType)`) as argument to `values()` otherwise the keys may not be in an expected order even if they are otherwise present.
 
 ## Search
 

@@ -147,10 +147,10 @@ mod tests {
     use agdb::Comparison;
     use agdb::CountComparison;
     use agdb::DbKeyOrder;
+    use agdb::DbType;
     use agdb::QueryBuilder;
     use agdb::QueryId;
     use agdb::QueryType;
-    use agdb::UserValue;
     use std::fs::File;
     use std::io::Write;
 
@@ -170,7 +170,7 @@ mod tests {
         };
     }
 
-    #[derive(Default, UserValue)]
+    #[derive(Default, DbType)]
     struct T {
         db_id: Option<QueryId>,
         value1: String,

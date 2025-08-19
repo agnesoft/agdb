@@ -1,6 +1,6 @@
 use crate::SearchQuery;
 use crate::query_builder::search::SearchQueryBuilder;
-use agdb_derive::ApiDef;
+use agdb::ApiDef;
 use std::fmt::Display;
 use std::fmt::Formatter;
 

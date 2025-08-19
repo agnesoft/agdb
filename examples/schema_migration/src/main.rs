@@ -2,12 +2,12 @@ use agdb::CountComparison;
 use agdb::DbError;
 use agdb::DbId;
 use agdb::DbMemory;
+use agdb::DbType;
 use agdb::DbValue;
 use agdb::QueryBuilder;
 use agdb::QueryError;
-use agdb::UserValue;
 
-#[derive(Debug, UserValue)]
+#[derive(Debug, DbType)]
 struct UserDb {
     name: String,
     status: String,
@@ -21,7 +21,7 @@ enum UserStatus {
     Banned,
 }
 
-#[derive(Debug, UserValue)]
+#[derive(Debug, DbType)]
 struct UserDb2 {
     db_id: Option<DbId>,
     name: String,

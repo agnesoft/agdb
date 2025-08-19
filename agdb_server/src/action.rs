@@ -38,12 +38,12 @@ use crate::action::user_delete::UserDelete;
 use crate::db_pool::DbPool;
 use crate::server_db::ServerDb;
 use crate::server_error::ServerResult;
-use agdb::AgdbDeSerialize;
+use agdb::DbSerialize;
 use agdb::QueryResult;
 use serde::Deserialize;
 use serde::Serialize;
 
-#[derive(Clone, AgdbDeSerialize)]
+#[derive(Clone, DbSerialize)]
 pub(crate) enum ClusterAction {
     UserAdd(UserAdd),
     ClusterLogin(ClusterLogin),

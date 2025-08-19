@@ -1,6 +1,6 @@
 use crate::test_db::TestFile;
 use agdb::QueryError;
-use agdb::{Comparison::Equal, Db, DbId, QueryBuilder, UserValue};
+use agdb::{Comparison::Equal, Db, DbId, DbType, QueryBuilder};
 
 #[test]
 fn quickstart() -> Result<(), QueryError> {
@@ -9,7 +9,7 @@ fn quickstart() -> Result<(), QueryError> {
 
     db.exec_mut(QueryBuilder::insert().nodes().aliases("users").query())?;
 
-    #[derive(Debug, UserValue)]
+    #[derive(Debug, DbType)]
     struct User {
         db_id: Option<DbId>,
         name: String,

@@ -48,7 +48,7 @@ The users of our social network will be nodes connected to the `users` node. The
 Lets firs define the `User` struct to hold this information:
 
 ```rs
-#[derive(UserValue)]
+#[derive(DbType)]
 struct User {
     username: String,
     email: String,
@@ -56,7 +56,7 @@ struct User {
 }
 ```
 
-We derive from `agdb::UserValue` so we can use the `User` type directly in our queries. A query creating the user would therefore look like this:
+We derive from `agdb::DbType` so we can use the `User` type directly in our queries. A query creating the user would therefore look like this:
 
 ```rs
 fn register_user(db: &mut Db, user: &User) -> Result<DbId, QueryError> {
@@ -113,7 +113,7 @@ The users should be able to create posts. The data we want to store about the po
 Once again let's define the `Post` type. The specially treated `db_id` field will become useful later on:
 
 ```rs
-#[derive(UserValue)]
+#[derive(DbType)]
 struct Post {
     db_id: Option<DbId>,
     title: String,
@@ -162,7 +162,7 @@ The comments are created by the users and are either top level comments on a pos
 We define the comment type:
 
 ```rs
-#[derive(UserValue)]
+#[derive(DbType)]
 struct Comment {
     body: String,
 }
@@ -475,7 +475,7 @@ fn add_likes_to_posts(db: &mut Db) -> Result<(), QueryError> {
 We are doing a mutable transaction to prevent any new posts, likes or other modifications to interfere while we do this. First we get the `ids` of all the posts. Then we count the `liked` edges of each post (exactly what we would be doing if we did not want to change the schema) and finally we insert a new `likes` property with that count back to the posts. Furthermore, we should update our definition of `Post`:
 
 ```rs
-#[derive(UserValue)]
+#[derive(DbType)]
 struct PostLiked {
     db_id: Option<DbId>,
     title: String,

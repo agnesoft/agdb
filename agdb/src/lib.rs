@@ -41,10 +41,7 @@ pub mod test_utilities;
 pub use query::QueryType;
 
 #[cfg(feature = "derive")]
-pub use agdb_derive::AgdbDeSerialize;
-
-#[cfg(feature = "derive")]
-pub use agdb_derive::{UserDbValue, UserValue, UserValueMarker};
+pub use agdb_derive::{DbSerialize, DbType, DbTypeMarker, DbValue};
 
 #[cfg(feature = "api")]
 pub mod api;
@@ -70,8 +67,8 @@ pub use db::db_id::DbId;
 pub use db::db_key_order::DbKeyOrder;
 pub use db::db_key_order::DbKeyOrders;
 pub use db::db_key_value::DbKeyValue;
-pub use db::db_user_value::DbUserValue;
-pub use db::db_user_value::DbUserValueMarker;
+pub use db::db_type::DbType;
+pub use db::db_type::DbTypeMarker;
 pub use db::db_value::DbValue;
 #[cfg(feature = "api")]
 pub use db::db_value::DbValues;

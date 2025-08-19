@@ -84,9 +84,9 @@ To run queries against the database we call `db_exec` (for read only queries) an
 </Callout>
 
 ```rs
-// We derive from agdb::UserValue
+// We derive from agdb::DbType
 // so we can use the type in the db.
-#[derive(Debug, UserValue)]
+#[derive(Debug, DbType)]
 struct User {
     db_id: Option<DbId>, // The db_id member is optional but
                          // it allows querying your user type
@@ -101,8 +101,8 @@ let users = vec![User { db_id: None, username: "Alice".to_string(), age: 40 },
 
 // We can pass users directly as
 // query paramter thanks to the
-// implementation of the agdb::DbUserValue
-// trait via #[derive(UserValue)].
+// implementation of the agdb::DbType
+// trait via #[derive(DbType)].
 let queries: Vec<QueryType> = vec![QueryBuilder::insert().nodes().aliases("users").query().into(),
                                    QueryBuilder::insert().nodes().values(&users).query().into(),
                                    QueryBuilder::insert().edges().from("users").to(":1").query().into(),

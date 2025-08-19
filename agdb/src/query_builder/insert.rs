@@ -1,4 +1,4 @@
-use crate::DbUserValue;
+use crate::DbType;
 use crate::DbValue;
 use crate::InsertAliasesQuery;
 use crate::InsertEdgesQuery;
@@ -65,11 +65,11 @@ impl Insert {
     }
 
     /// Inserts `elem` into the database. The `elem`
-    /// must implement (or derive) `DbUserValue` that will
+    /// must implement (or derive) `DbType` that will
     /// provide the `DbId` to be inserted to and conversion
     /// to the values. The ids must be `Some` and valid
     /// int the database.
-    pub fn element<T: DbUserValue>(self, elem: &T) -> InsertValuesIds {
+    pub fn element<T: DbType>(self, elem: &T) -> InsertValuesIds {
         InsertValuesIds(InsertValuesQuery {
             ids: QueryIds::Ids(vec![elem.db_id().unwrap_or_default()]),
             values: QueryValues::Multi(vec![elem.to_db_values()]),
@@ -77,11 +77,11 @@ impl Insert {
     }
 
     /// Inserts the `elems` into the database. Each `elem`
-    /// must implement (or derive) `DbUserValue` that will
+    /// must implement (or derive) `DbType` that will
     /// provide the `DbId` to be inserted to and conversion
     /// to the values. The ids must be `Some` and valid
     /// int the database.
-    pub fn elements<T: DbUserValue>(self, elems: &[T]) -> InsertValuesIds {
+    pub fn elements<T: DbType>(self, elems: &[T]) -> InsertValuesIds {
         let mut ids = vec![];
         let mut values = vec![];
         ids.reserve(elems.len());

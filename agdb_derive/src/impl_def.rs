@@ -89,7 +89,7 @@ fn arg_type(t: &syn::Type, generics: &Generics) -> proc_macro2::TokenStream {
                     {
                         return Some(quote! { <::agdb::#ty as ::agdb::api::ApiDefinition>::def });
                     }
-                } else if bound_str == "DbUserValue" {
+                } else if bound_str == "DbType" {
                     return db_user_value(t);
                 }
             }

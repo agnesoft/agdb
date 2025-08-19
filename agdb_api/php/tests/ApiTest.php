@@ -2,7 +2,6 @@
 use Agnesoft\AgdbApi\Model\DbKind;
 use PHPUnit\Framework\TestCase;
 use Agnesoft\AgdbApi\Model\DbElement;
-use Agnesoft\AgdbApi\Model\DbKind;
 use Agnesoft\AgdbApi\Model\UserCredentials;
 use Agnesoft\AgdbApi\QueryBuilder;
 use Agnesoft\AgdbApi\Api\AgdbApi;

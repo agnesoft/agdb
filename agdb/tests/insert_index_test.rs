@@ -1,7 +1,7 @@
 mod test_db;
 
+use agdb::DbError;
 use agdb::QueryBuilder;
-use agdb::QueryError;
 use test_db::TestDb;
 
 #[test]
@@ -66,7 +66,7 @@ fn insert_index_rollback() {
             t.exec_mut(QueryBuilder::insert().index("username").query())?;
             Ok(())
         },
-        QueryError::from("Index 'username' already exists"),
+        DbError::from("Index 'username' already exists"),
     );
     db.exec(QueryBuilder::select().indexes().query(), 0);
 }
@@ -117,16 +117,16 @@ fn update_indexed_value_rollback() {
         1,
     );
     db.transaction_mut_error(
-        |t| -> Result<(), QueryError> {
+        |t| -> Result<(), DbError> {
             t.exec_mut(
                 QueryBuilder::insert()
                     .values([[("username", "user2").into()]])
                     .ids(1)
                     .query(),
             )?;
-            Err(QueryError::from("error"))
+            Err(DbError::from("error"))
         },
-        QueryError::from("error"),
+        DbError::from("error"),
     );
     db.exec(
         QueryBuilder::search()

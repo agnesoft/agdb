@@ -1,7 +1,7 @@
 use crate::DbElement;
+use crate::DbError;
 use crate::DbImpl;
 use crate::Query;
-use crate::QueryError;
 use crate::QueryId;
 use crate::QueryIds;
 use crate::QueryResult;
@@ -23,7 +23,7 @@ use crate::query_builder::search::SearchQueryBuilder;
 pub struct SelectAliasesQuery(pub QueryIds);
 
 impl Query for SelectAliasesQuery {
-    fn process<Store: StorageData>(&self, db: &DbImpl<Store>) -> Result<QueryResult, QueryError> {
+    fn process<Store: StorageData>(&self, db: &DbImpl<Store>) -> Result<QueryResult, DbError> {
         let mut result = QueryResult::default();
 
         match &self.0 {
@@ -69,7 +69,7 @@ impl Query for SelectAliasesQuery {
 }
 
 impl Query for &SelectAliasesQuery {
-    fn process<Store: StorageData>(&self, db: &DbImpl<Store>) -> Result<QueryResult, QueryError> {
+    fn process<Store: StorageData>(&self, db: &DbImpl<Store>) -> Result<QueryResult, DbError> {
         (*self).process(db)
     }
 }

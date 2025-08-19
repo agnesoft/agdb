@@ -1,9 +1,9 @@
 use agdb::Comparison;
+use agdb::DbError;
 use agdb::DbMemory;
 use agdb::QueryBuilder;
-use agdb::QueryError;
 
-fn main() -> Result<(), QueryError> {
+fn main() -> Result<(), DbError> {
     // Creates in memory database.
     let mut db = DbMemory::new("agdb_example")?;
 

@@ -1,7 +1,7 @@
 use agdb::CountComparison;
+use agdb::DbError;
 use agdb::DbMemory;
 use agdb::QueryBuilder;
-use agdb::QueryError;
 
 #[derive(Debug)]
 struct UserDb {
@@ -10,7 +10,7 @@ struct UserDb {
     role: String,
 }
 
-fn main() -> Result<(), QueryError> {
+fn main() -> Result<(), DbError> {
     // Creates in memory database.
     let mut db = DbMemory::new("agdb_example")?;
 
@@ -81,7 +81,7 @@ fn main() -> Result<(), QueryError> {
     // your specialized "join" will always be faster than a generic one the database could offer, particularly
     // when using Rust. Joins on the database side makes sense when you are using an interpreted language
     // which is significnatly slower.
-    let user_dbs = db.transaction(|t| -> Result<Vec<UserDb>, QueryError> {
+    let user_dbs = db.transaction(|t| -> Result<Vec<UserDb>, DbError> {
         let db_names = t.exec(
             QueryBuilder::select()
                 .search()

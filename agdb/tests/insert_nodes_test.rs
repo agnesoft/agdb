@@ -1,16 +1,16 @@
 mod test_db;
 
 use agdb::DbElement;
+use agdb::DbError;
 use agdb::DbId;
 use agdb::QueryBuilder;
-use agdb::QueryError;
 use test_db::TestDb;
 
 #[test]
 fn insert_nodes_aliases_rollback() {
     let mut db = TestDb::new();
     db.transaction_mut_error(
-        |transaction| -> Result<(), QueryError> {
+        |transaction| -> Result<(), DbError> {
             transaction.exec_mut(QueryBuilder::insert().nodes().aliases("alias").query())?;
             Err("error".into())
         },
@@ -90,7 +90,7 @@ fn insert_nodes_aliases_values() {
 fn insert_nodes_aliases_values_rollback() {
     let mut db = TestDb::new();
     db.transaction_mut_error(
-        |transaction| -> Result<(), QueryError> {
+        |transaction| -> Result<(), DbError> {
             transaction
                 .exec_mut(
                     QueryBuilder::insert()

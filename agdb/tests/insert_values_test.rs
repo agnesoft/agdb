@@ -1,9 +1,9 @@
 mod test_db;
 
 use agdb::DbElement;
+use agdb::DbError;
 use agdb::DbId;
 use agdb::QueryBuilder;
-use agdb::QueryError;
 use test_db::TestDb;
 
 #[test]
@@ -11,7 +11,7 @@ fn insert_values_ids_rollback() {
     let mut db = TestDb::new();
     db.exec_mut_ids(QueryBuilder::insert().nodes().count(1).query(), &[1]);
     db.transaction_mut_error(
-        |t| -> Result<(), QueryError> {
+        |t| -> Result<(), DbError> {
             assert_eq!(
                 t.exec_mut(
                     QueryBuilder::insert()
@@ -45,9 +45,9 @@ fn insert_values_ids_rollback() {
                     ],
                 }]
             );
-            Err(QueryError::from("error"))
+            Err(DbError::from("error"))
         },
-        QueryError::from("error"),
+        DbError::from("error"),
     );
     db.exec_elements(
         QueryBuilder::select().ids(1).query(),
@@ -337,16 +337,16 @@ fn insert_values_overwrite_transaction() {
     );
 
     db.transaction_mut_error(
-        |t| -> Result<(), QueryError> {
+        |t| -> Result<(), DbError> {
             t.exec_mut(
                 QueryBuilder::insert()
                     .values_uniform([("key", 20).into(), ("key2", 30).into()])
                     .ids(1)
                     .query(),
             )?;
-            Err(QueryError::from("error"))
+            Err(DbError::from("error"))
         },
-        QueryError::from("error"),
+        DbError::from("error"),
     );
 
     db.exec_elements(

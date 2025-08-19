@@ -1,5 +1,5 @@
+use crate::DbError;
 use crate::DbImpl;
-use crate::QueryError;
 use crate::QueryResult;
 use crate::StorageData;
 use crate::Transaction;
@@ -23,7 +23,7 @@ impl<'a, Store: StorageData> TransactionMut<'a, Store> {
     /// - Select aliases
     /// - Select all aliases
     /// - Search
-    pub fn exec<T: Query>(&self, query: T) -> Result<QueryResult, QueryError> {
+    pub fn exec<T: Query>(&self, query: T) -> Result<QueryResult, DbError> {
         Transaction::new(self.db).exec(query)
     }
 
@@ -36,7 +36,7 @@ impl<'a, Store: StorageData> TransactionMut<'a, Store> {
     /// - Remove elements
     /// - Remove aliases
     /// - Remove values
-    pub fn exec_mut<T: QueryMut>(&mut self, query: T) -> Result<QueryResult, QueryError> {
+    pub fn exec_mut<T: QueryMut>(&mut self, query: T) -> Result<QueryResult, DbError> {
         query.process(self.db)
     }
 
@@ -44,12 +44,12 @@ impl<'a, Store: StorageData> TransactionMut<'a, Store> {
         Self { db: data }
     }
 
-    pub(crate) fn commit(self) -> Result<(), QueryError> {
+    pub(crate) fn commit(self) -> Result<(), DbError> {
         self.db.commit()?;
         Ok(())
     }
 
-    pub(crate) fn rollback(self) -> Result<(), QueryError> {
+    pub(crate) fn rollback(self) -> Result<(), DbError> {
         self.db.rollback()?;
         Ok(())
     }

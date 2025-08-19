@@ -90,7 +90,7 @@ Technical features:
 cargo add agdb
 ```
 
-Basic usage demonstrating creating a database, inserting graph elements with data and querying them back with select and search. The function using this code must handle `agdb::DbError` and [`agdb::QueryError`](https://agdb.agnesoft.com/docs/references/queries#queryerror) error types for operator `?` to work:
+Basic usage demonstrating creating a database, inserting graph elements with data and querying them back with select and search. The function using this code must handle [`agdb::DbError`](https://agdb.agnesoft.com/docs/references/queries#dberror) for operator `?` to work (i.e. `fn foo() -> Result<(), agdb::DbError>`):
 
 ```rs
 use agdb::{Db, DbId, QueryBuilder, DbType, Comparison::Equal};

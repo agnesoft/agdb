@@ -1,6 +1,6 @@
+use crate::DbError;
 use crate::DbImpl;
 use crate::DbValue;
-use crate::QueryError;
 use crate::QueryMut;
 use crate::QueryResult;
 use crate::StorageData;
@@ -15,10 +15,7 @@ use crate::StorageData;
 pub struct InsertIndexQuery(pub DbValue);
 
 impl QueryMut for InsertIndexQuery {
-    fn process<Store: StorageData>(
-        &self,
-        db: &mut DbImpl<Store>,
-    ) -> Result<QueryResult, QueryError> {
+    fn process<Store: StorageData>(&self, db: &mut DbImpl<Store>) -> Result<QueryResult, DbError> {
         let value_count = db.insert_index(&self.0)?;
 
         Ok(QueryResult {
@@ -29,10 +26,7 @@ impl QueryMut for InsertIndexQuery {
 }
 
 impl QueryMut for &InsertIndexQuery {
-    fn process<Store: StorageData>(
-        &self,
-        db: &mut DbImpl<Store>,
-    ) -> Result<QueryResult, QueryError> {
+    fn process<Store: StorageData>(&self, db: &mut DbImpl<Store>) -> Result<QueryResult, DbError> {
         (*self).process(db)
     }
 }

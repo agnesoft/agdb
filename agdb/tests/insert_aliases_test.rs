@@ -1,7 +1,7 @@
 mod test_db;
 
+use agdb::DbError;
 use agdb::QueryBuilder;
-use agdb::QueryError;
 use agdb::QueryId;
 use test_db::TestDb;
 
@@ -38,7 +38,7 @@ fn insert_aliases_rollback() {
     db.exec_mut(QueryBuilder::insert().nodes().aliases("alias").query(), 1);
     db.exec_mut(QueryBuilder::insert().nodes().count(1).query(), 1);
     db.transaction_mut_error(
-        |t| -> Result<(), QueryError> {
+        |t| -> Result<(), DbError> {
             t.exec_mut(
                 QueryBuilder::insert()
                     .aliases(["alias1", "alias2"])

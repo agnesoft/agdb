@@ -1,10 +1,10 @@
 mod test_db;
 
 use agdb::DbElement;
+use agdb::DbError;
 use agdb::DbId;
 use agdb::DbKeyValue;
 use agdb::QueryBuilder;
-use agdb::QueryError;
 use test_db::TestDb;
 
 #[test]
@@ -13,7 +13,7 @@ fn insert_edges_from_to_rollback() {
     db.exec_mut(QueryBuilder::insert().nodes().aliases("alias1").query(), 1);
     db.exec_mut(QueryBuilder::insert().nodes().count(1).query(), 1);
     db.transaction_mut_error(
-        |t| -> Result<(), QueryError> {
+        |t| -> Result<(), DbError> {
             t.exec_mut(QueryBuilder::insert().edges().from("alias1").to(2).query())?;
             Err("error".into())
         },

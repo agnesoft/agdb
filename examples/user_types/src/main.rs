@@ -5,7 +5,6 @@ use agdb::DbType;
 use agdb::DbTypeMarker;
 use agdb::DbValue;
 use agdb::QueryBuilder;
-use agdb::QueryError;
 
 // Enums cannot be derived from agdb::DbType
 // directly because the underlying data type is
@@ -88,7 +87,7 @@ impl From<Property> for DbValue {
     }
 }
 
-fn main() -> Result<(), QueryError> {
+fn main() -> Result<(), DbError> {
     // Creates in memory database.
     let mut db = DbMemory::new("agdb_example")?;
 

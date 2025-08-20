@@ -261,7 +261,7 @@ mod tests {
                 .keys("hidden")
                 .and()
                 .where_()
-                .distance(crate::CountComparison::Equal(2))
+                .distance(2)
                 .or()
                 .key("key")
                 .value(crate::Comparison::NotEqual("value".into()))

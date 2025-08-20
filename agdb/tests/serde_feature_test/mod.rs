@@ -101,7 +101,7 @@ fn conditions() {
             .keys("key")
             .or()
             .key("key")
-            .value(agdb::Comparison::Equal(1.1.into()))
+            .value(1.1)
             .end_where()
             .and()
             .edge_count(agdb::CountComparison::GreaterThan(1))

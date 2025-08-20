@@ -12,8 +12,8 @@ import {
 
 describe("QueryBuilder misc tests", () => {
     it(`convertToNativeValue`, () => {
-        const bytes = convertToNativeValue({ Bytes: "1" });
-        expect(typeof bytes).toStrictEqual("string");
+        const bytes = convertToNativeValue({ Bytes: [1] });
+        expect(typeof bytes).toStrictEqual("object");
         const truthy = convertToNativeValue({ String: "true" });
         expect(truthy).toStrictEqual(true);
         const falsey = convertToNativeValue({ String: "false" });
@@ -43,10 +43,6 @@ describe("QueryBuilder misc tests", () => {
         expect(vec_f64).toStrictEqual({ VecF64: [1.1, 2.2] });
         const vec_string = convertToDbValue(["hello", "world"]);
         expect(vec_string).toStrictEqual({ VecString: ["hello", "world"] });
-        const nul = convertToDbValue(null);
-        expect(nul).toStrictEqual(undefined);
-        const undef = convertToDbValue(undefined);
-        expect(undef).toStrictEqual(undefined);
         const u64 = convertToDbValue({ U64: 1 });
         expect(u64).toStrictEqual({ U64: 1 });
     });
@@ -166,5 +162,43 @@ describe("QueryBuilder misc tests", () => {
             },
         };
         expect(query).toEqual(expected);
+    });
+
+    it("shorthand equal comparisons", () => {
+        const distance = QueryBuilder.search()
+            .from(1)
+            .where()
+            .distance(2)
+            .query();
+        expect(distance["Search"].conditions[0].data).toEqual({
+            Distance: { Equal: 2 },
+        });
+
+        const edge_count = QueryBuilder.search()
+            .from(1)
+            .where()
+            .edge_count(2)
+            .query();
+        expect(edge_count["Search"].conditions[0].data).toEqual({
+            EdgeCount: { Equal: 2 },
+        });
+
+        const edge_count_from = QueryBuilder.search()
+            .from(1)
+            .where()
+            .edge_count_from(2)
+            .query();
+        expect(edge_count_from["Search"].conditions[0].data).toEqual({
+            EdgeCountFrom: { Equal: 2 },
+        });
+
+        const edge_count_to = QueryBuilder.search()
+            .from(1)
+            .where()
+            .edge_count_to(2)
+            .query();
+        expect(edge_count_to["Search"].conditions[0].data).toEqual({
+            EdgeCountTo: { Equal: 2 },
+        });
     });
 });

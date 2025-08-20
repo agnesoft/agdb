@@ -2,7 +2,6 @@ use crate::ADMIN;
 use crate::TestServer;
 use crate::next_db_name;
 use crate::next_user_name;
-use agdb::CountComparison;
 use agdb::DbElement;
 use agdb::DbId;
 use agdb::QueryBuilder;
@@ -426,7 +425,7 @@ async fn use_result_in_insert_ids() -> anyhow::Result<()> {
                     .where_()
                     .node()
                     .and()
-                    .distance(CountComparison::Equal(2))
+                    .distance(2)
                     .query(),
             )
             .count(3)
@@ -502,7 +501,7 @@ async fn reentrant_queries() -> anyhow::Result<()> {
                     .where_()
                     .node()
                     .and()
-                    .distance(CountComparison::Equal(2))
+                    .distance(2)
                     .query(),
             )
             .count(3)

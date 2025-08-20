@@ -1,4 +1,4 @@
-import { QueryBuilder, Comparison, AgdbApi } from "agdb_api";
+import { QueryBuilder, AgdbApi } from "agdb_api";
 
 async function main() {
   // Requires the server to be running. Run it with `cargo run -p agdb_server`
@@ -50,7 +50,7 @@ async function main() {
       .from("users")
       .where()
       .key("username")
-      .value(Comparison.Equal("user1"))
+      .value("user1")
       .query(),
   ];
 

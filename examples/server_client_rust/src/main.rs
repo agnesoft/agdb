@@ -1,4 +1,3 @@
-use agdb::Comparison;
 use agdb::DbType;
 use agdb::QueryBuilder;
 use agdb_api::DbKind as ApiDbType;
@@ -65,7 +64,7 @@ async fn main() -> Result<(), anyhow::Error> {
             .from("users")
             .where_()
             .key("username")
-            .value(Comparison::Equal("user1".into()))
+            .value("user1")
             .query()
             .into(),
     ];

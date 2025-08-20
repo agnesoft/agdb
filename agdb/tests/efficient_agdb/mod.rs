@@ -1,5 +1,4 @@
 use crate::test_db::TestFile;
-use agdb::Comparison::Equal;
 use agdb::CountComparison;
 use agdb::Db;
 use agdb::DbError;
@@ -70,7 +69,7 @@ fn register_user(db: &mut Db, user: &User) -> Result<DbId, DbError> {
                 .from("users")
                 .where_()
                 .key("username")
-                .value(Equal(user.username.clone().into()))
+                .value(&user.username)
                 .query(),
         )?
         .result
@@ -181,10 +180,10 @@ fn login(db: &Db, username: &str, password: &str) -> Result<DbId, DbError> {
                 .from("users")
                 .limit(1)
                 .where_()
-                .distance(CountComparison::Equal(2))
+                .distance(2)
                 .and()
                 .key("username")
-                .value(Equal(username.into()))
+                .value(username)
                 .query(),
         )?
         .elements;
@@ -208,7 +207,7 @@ fn user_posts_ids(db: &Db, user: DbId) -> Result<Vec<DbId>, DbError> {
             QueryBuilder::search()
                 .from(user)
                 .where_()
-                .distance(CountComparison::Equal(2))
+                .distance(2)
                 .and()
                 .beyond()
                 .where_()
@@ -238,7 +237,7 @@ fn posts(db: &Db, offset: u64, limit: u64) -> Result<Vec<Post>, DbError> {
             .offset(offset)
             .limit(limit)
             .where_()
-            .distance(CountComparison::Equal(2))
+            .distance(2)
             .query(),
     )?
     .try_into()
@@ -266,7 +265,7 @@ fn add_likes_to_posts(db: &mut Db) -> Result<(), DbError> {
             QueryBuilder::search()
                 .from("posts")
                 .where_()
-                .distance(CountComparison::Equal(2))
+                .distance(2)
                 .query(),
         )?;
         let mut likes = Vec::<Vec<DbKeyValue>>::new();
@@ -277,7 +276,7 @@ fn add_likes_to_posts(db: &mut Db) -> Result<(), DbError> {
                     QueryBuilder::search()
                         .to(post)
                         .where_()
-                        .distance(CountComparison::Equal(1))
+                        .distance(1)
                         .and()
                         .keys("liked")
                         .query(),
@@ -301,7 +300,7 @@ fn liked_posts(db: &Db, offset: u64, limit: u64) -> Result<Vec<PostLiked>, DbErr
             .offset(offset)
             .limit(limit)
             .where_()
-            .distance(CountComparison::Equal(2))
+            .distance(2)
             .query(),
     )?
     .try_into()
@@ -314,7 +313,7 @@ fn mark_top_level_comments(db: &mut Db) -> Result<(), DbError> {
             .search()
             .from("posts")
             .where_()
-            .distance(CountComparison::Equal(4))
+            .distance(4)
             .query(),
     )?;
     Ok(())

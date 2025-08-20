@@ -44,13 +44,13 @@ impl<T: SearchQueryBuilder> Where<T> {
     /// # Examples
     ///
     /// ```
-    /// use agdb::{QueryBuilder, CountComparison};
+    /// use agdb::QueryBuilder;
     ///
     /// // Only elements with `k` key will be followed during search.
     /// QueryBuilder::search().from(1).where_().beyond().keys("k").query();
     ///
     /// // Only edges or nodes with exactly 1 edge are followed.
-    /// QueryBuilder::search().from(1).where_().beyond().edge().or().edge_count(CountComparison::Equal(1));
+    /// QueryBuilder::search().from(1).where_().beyond().edge().or().edge_count(1);
     /// ```
     pub fn beyond(mut self) -> Self {
         self.modifier = QueryConditionModifier::Beyond;
@@ -66,17 +66,23 @@ impl<T: SearchQueryBuilder> Where<T> {
     /// ```
     /// use agdb::{QueryBuilder, CountComparison};
     ///
+    /// // Search adjacent nodes that are exactly at distance 2 using a shorthand
+    /// QueryBuilder::search().from(1).where_().distance(2).query();
+    ///
     /// // Search at most to distance 2 (1 = first edge, 2 = neighbouring node)
     /// QueryBuilder::search().from(1).where_().distance(CountComparison::LessThanOrEqual(2)).query();
     ///
     /// // Start accepting elements at distance greater than 1 (2+)
     /// QueryBuilder::search().from(1).where_().distance(CountComparison::GreaterThan(1)).query();
     /// ```
-    pub fn distance(mut self, comparison: CountComparison) -> WhereLogicOperator<T> {
+    pub fn distance<Comp: Into<CountComparison>>(
+        mut self,
+        comparison: Comp,
+    ) -> WhereLogicOperator<T> {
         self.add_condition(QueryCondition {
             logic: self.logic,
             modifier: self.modifier,
-            data: QueryConditionData::Distance(comparison),
+            data: QueryConditionData::Distance(comparison.into()),
         });
 
         WhereLogicOperator(self)
@@ -111,13 +117,17 @@ impl<T: SearchQueryBuilder> Where<T> {
     /// ```
     /// use agdb::{QueryBuilder, CountComparison};
     ///
-    /// QueryBuilder::search().from(1).where_().edge_count(CountComparison::Equal(1)).query();
+    /// QueryBuilder::search().from(1).where_().edge_count(1).query(); // same as CountComparison::Equal(1)
+    /// QueryBuilder::search().from(1).where_().edge_count(CountComparison::GreaterThan(1)).query();
     /// ```
-    pub fn edge_count(mut self, comparison: CountComparison) -> WhereLogicOperator<T> {
+    pub fn edge_count<Comp: Into<CountComparison>>(
+        mut self,
+        comparison: Comp,
+    ) -> WhereLogicOperator<T> {
         self.add_condition(QueryCondition {
             logic: self.logic,
             modifier: self.modifier,
-            data: QueryConditionData::EdgeCount(comparison),
+            data: QueryConditionData::EdgeCount(comparison.into()),
         });
 
         WhereLogicOperator(self)
@@ -131,13 +141,17 @@ impl<T: SearchQueryBuilder> Where<T> {
     /// ```
     /// use agdb::{QueryBuilder, CountComparison};
     ///
-    /// QueryBuilder::search().from(1).where_().edge_count_from(CountComparison::Equal(1)).query();
+    /// QueryBuilder::search().from(1).where_().edge_count_from(1).query(); // same as CountComparison::Equal(1)
+    /// QueryBuilder::search().from(1).where_().edge_count_from(CountComparison::GreaterThan(1)).query();
     /// ```
-    pub fn edge_count_from(mut self, comparison: CountComparison) -> WhereLogicOperator<T> {
+    pub fn edge_count_from<Comp: Into<CountComparison>>(
+        mut self,
+        comparison: Comp,
+    ) -> WhereLogicOperator<T> {
         self.add_condition(QueryCondition {
             logic: self.logic,
             modifier: self.modifier,
-            data: QueryConditionData::EdgeCountFrom(comparison),
+            data: QueryConditionData::EdgeCountFrom(comparison.into()),
         });
 
         WhereLogicOperator(self)
@@ -151,13 +165,17 @@ impl<T: SearchQueryBuilder> Where<T> {
     /// ```
     /// use agdb::{QueryBuilder, CountComparison};
     ///
-    /// QueryBuilder::search().from(1).where_().edge_count_to(CountComparison::Equal(1)).query();
+    /// QueryBuilder::search().from(1).where_().edge_count_to(1).query(); // same as CountComparison::Equal(1)
+    /// QueryBuilder::search().from(1).where_().edge_count_to(CountComparison::GreaterThan(0)).query();
     /// ```
-    pub fn edge_count_to(mut self, comparison: CountComparison) -> WhereLogicOperator<T> {
+    pub fn edge_count_to<Comp: Into<CountComparison>>(
+        mut self,
+        comparison: Comp,
+    ) -> WhereLogicOperator<T> {
         self.add_condition(QueryCondition {
             logic: self.logic,
             modifier: self.modifier,
-            data: QueryConditionData::EdgeCountTo(comparison),
+            data: QueryConditionData::EdgeCountTo(comparison.into()),
         });
 
         WhereLogicOperator(self)
@@ -190,7 +208,8 @@ impl<T: SearchQueryBuilder> Where<T> {
     }
 
     /// Initiates the `key` condition that tests the key for a
-    /// particular value set in the next step.
+    /// particular value set in the next step. The value accepts comparison method.
+    /// If a value is given without a method it will default to `Comparison::Equal`.
     ///
     /// # Examples
     ///
@@ -198,7 +217,10 @@ impl<T: SearchQueryBuilder> Where<T> {
     /// use agdb::{QueryBuilder, Comparison};
     ///
     /// // Includes only elements with property `String("k") == 1_i64`
-    /// QueryBuilder::search().from(1).where_().key("k").value(Comparison::Equal(1.into())).query();
+    /// QueryBuilder::search().from(1).where_().key("k").value(Comparison::LessThan(1.into())).query();
+    ///
+    /// // Same as the `key("k").value(Comparison::Equal(1.into()))`
+    /// QueryBuilder::search().from(1).where_().key("k").value(1).query();
     /// ```
     pub fn key<K: Into<DbValue>>(self, key: K) -> WhereKey<T> {
         WhereKey {
@@ -307,7 +329,7 @@ impl<T: SearchQueryBuilder> Where<T> {
     /// QueryBuilder::search()
     ///   .from(1)
     ///   .where_()
-    ///   .distance(CountComparison::Equal(2))
+    ///   .distance(2)
     ///   .and()
     ///   .beyond()
     ///   .where_()
@@ -367,14 +389,15 @@ impl<T: SearchQueryBuilder> Where<T> {
 
 #[cfg_attr(feature = "api", agdb::impl_def())]
 impl<T: SearchQueryBuilder> WhereKey<T> {
-    /// Sets the value of the `key` condition to `comparison`.
-    pub fn value(mut self, comparison: Comparison) -> WhereLogicOperator<T> {
+    /// Sets the value of the `key` condition to `comparison`. Taking comparison method. If
+    /// a value is provided without a method it will default to `Comparison::Equal`).
+    pub fn value<Comp: Into<Comparison>>(mut self, comparison: Comp) -> WhereLogicOperator<T> {
         let condition = QueryCondition {
             logic: self.where_.logic,
             modifier: self.where_.modifier,
             data: QueryConditionData::KeyValue(KeyValueComparison {
                 key: self.key,
-                value: comparison,
+                value: comparison.into(),
             }),
         };
         self.where_.add_condition(condition);

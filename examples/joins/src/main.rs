@@ -1,4 +1,3 @@
-use agdb::CountComparison;
 use agdb::DbError;
 use agdb::DbMemory;
 use agdb::QueryBuilder;
@@ -87,7 +86,7 @@ fn main() -> Result<(), DbError> {
                 .search()
                 .from("user")
                 .where_()
-                .distance(CountComparison::Equal(2))
+                .distance(2)
                 .and()
                 .keys("name")
                 .query(),

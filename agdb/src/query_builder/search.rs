@@ -312,13 +312,13 @@ impl<T: SearchQueryBuilder> SearchFrom<T> {
     ///
     /// QueryBuilder::search().from(1).where_().node();
     /// QueryBuilder::search().from(1).where_().edge();
-    /// QueryBuilder::search().from(1).where_().distance(CountComparison::Equal(1));
+    /// QueryBuilder::search().from(1).where_().distance(1);
     /// QueryBuilder::search().from(1).where_().ids(1);
     /// QueryBuilder::search().from(1).where_().keys("k");
     /// QueryBuilder::search().from(1).where_().key("k");
-    /// QueryBuilder::search().from(1).where_().edge_count(CountComparison::Equal(1));
-    /// QueryBuilder::search().from(1).where_().edge_count_from(CountComparison::Equal(1));
-    /// QueryBuilder::search().from(1).where_().edge_count_to(CountComparison::Equal(1));
+    /// QueryBuilder::search().from(1).where_().edge_count(1);
+    /// QueryBuilder::search().from(1).where_().edge_count_from(CountComparison::LessThan(1));
+    /// QueryBuilder::search().from(1).where_().edge_count_to(CountComparison::GreaterThan(1));
     /// QueryBuilder::search().from(1).where_().where_();
     /// QueryBuilder::search().from(1).where_().not();
     /// QueryBuilder::search().from(1).where_().beyond();
@@ -383,13 +383,13 @@ impl<T: SearchQueryBuilder> SearchOrderBy<T> {
     ///
     /// QueryBuilder::search().from(1).where_().node();
     /// QueryBuilder::search().from(1).where_().edge();
-    /// QueryBuilder::search().from(1).where_().distance(CountComparison::Equal(1));
+    /// QueryBuilder::search().from(1).where_().distance(2);
     /// QueryBuilder::search().from(1).where_().ids(1);
     /// QueryBuilder::search().from(1).where_().keys("k");
     /// QueryBuilder::search().from(1).where_().key("k");
-    /// QueryBuilder::search().from(1).where_().edge_count(CountComparison::Equal(1));
-    /// QueryBuilder::search().from(1).where_().edge_count_from(CountComparison::Equal(1));
-    /// QueryBuilder::search().from(1).where_().edge_count_to(CountComparison::Equal(1));
+    /// QueryBuilder::search().from(1).where_().edge_count(CountComparison::LessThan(1));
+    /// QueryBuilder::search().from(1).where_().edge_count_from(1);
+    /// QueryBuilder::search().from(1).where_().edge_count_to(CountComparison::GreaterThan(1));
     /// QueryBuilder::search().from(1).where_().where_();
     /// QueryBuilder::search().from(1).where_().not();
     /// QueryBuilder::search().from(1).where_().beyond();
@@ -474,13 +474,13 @@ impl<T: SearchQueryBuilder> SearchTo<T> {
     ///
     /// QueryBuilder::search().from(1).where_().node();
     /// QueryBuilder::search().from(1).where_().edge();
-    /// QueryBuilder::search().from(1).where_().distance(CountComparison::Equal(1));
+    /// QueryBuilder::search().from(1).where_().distance(2);
     /// QueryBuilder::search().from(1).where_().ids(1);
     /// QueryBuilder::search().from(1).where_().keys("k");
     /// QueryBuilder::search().from(1).where_().key("k");
-    /// QueryBuilder::search().from(1).where_().edge_count(CountComparison::Equal(1));
-    /// QueryBuilder::search().from(1).where_().edge_count_from(CountComparison::Equal(1));
-    /// QueryBuilder::search().from(1).where_().edge_count_to(CountComparison::Equal(1));
+    /// QueryBuilder::search().from(1).where_().edge_count(1);
+    /// QueryBuilder::search().from(1).where_().edge_count_from(CountComparison::GreaterThan(1));
+    /// QueryBuilder::search().from(1).where_().edge_count_to(CountComparison::LessThan(1));
     /// QueryBuilder::search().from(1).where_().where_();
     /// QueryBuilder::search().from(1).where_().not();
     /// QueryBuilder::search().from(1).where_().beyond();
@@ -507,13 +507,13 @@ impl<T: SearchQueryBuilder> SelectLimit<T> {
     ///
     /// QueryBuilder::search().from(1).where_().node();
     /// QueryBuilder::search().from(1).where_().edge();
-    /// QueryBuilder::search().from(1).where_().distance(CountComparison::Equal(1));
+    /// QueryBuilder::search().from(1).where_().distance(2);
     /// QueryBuilder::search().from(1).where_().ids(1);
     /// QueryBuilder::search().from(1).where_().keys("k");
     /// QueryBuilder::search().from(1).where_().key("k");
-    /// QueryBuilder::search().from(1).where_().edge_count(CountComparison::Equal(1));
-    /// QueryBuilder::search().from(1).where_().edge_count_from(CountComparison::Equal(1));
-    /// QueryBuilder::search().from(1).where_().edge_count_to(CountComparison::Equal(1));
+    /// QueryBuilder::search().from(1).where_().edge_count(1);
+    /// QueryBuilder::search().from(1).where_().edge_count_from(CountComparison::GreaterThan(1));
+    /// QueryBuilder::search().from(1).where_().edge_count_to(CountComparison::LessThan(1));
     /// QueryBuilder::search().from(1).where_().where_();
     /// QueryBuilder::search().from(1).where_().not();
     /// QueryBuilder::search().from(1).where_().beyond();
@@ -558,13 +558,13 @@ impl<T: SearchQueryBuilder> SelectOffset<T> {
     ///
     /// QueryBuilder::search().from(1).where_().node();
     /// QueryBuilder::search().from(1).where_().edge();
-    /// QueryBuilder::search().from(1).where_().distance(CountComparison::Equal(1));
+    /// QueryBuilder::search().from(1).where_().distance(2);
     /// QueryBuilder::search().from(1).where_().ids(1);
     /// QueryBuilder::search().from(1).where_().keys("k");
     /// QueryBuilder::search().from(1).where_().key("k");
-    /// QueryBuilder::search().from(1).where_().edge_count(CountComparison::Equal(1));
-    /// QueryBuilder::search().from(1).where_().edge_count_from(CountComparison::Equal(1));
-    /// QueryBuilder::search().from(1).where_().edge_count_to(CountComparison::Equal(1));
+    /// QueryBuilder::search().from(1).where_().edge_count(1);
+    /// QueryBuilder::search().from(1).where_().edge_count_from(CountComparison::GreaterThan(1));
+    /// QueryBuilder::search().from(1).where_().edge_count_to(CountComparison::LessThan(1));
     /// QueryBuilder::search().from(1).where_().where_();
     /// QueryBuilder::search().from(1).where_().not();
     /// QueryBuilder::search().from(1).where_().beyond();

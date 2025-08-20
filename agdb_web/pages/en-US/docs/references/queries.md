@@ -1144,10 +1144,10 @@ pub enum Comparison {
 QueryBuilder::search().from(1).where_().distance(CountComparison::LessThan(3)).query();
 QueryBuilder::search().from(1).where_().edge().query();
 QueryBuilder::search().from(1).where_().edge_count(CountComparison::GreaterThan(2)).query();
-QueryBuilder::search().from(1).where_().edge_count_from(CountComparison::Equal(1)).query();
+QueryBuilder::search().from(1).where_().edge_count_from(1).query();
 QueryBuilder::search().from(1).where_().edge_count_to(CountComparison::NotEqual(1)).query();
 QueryBuilder::search().from(1).where_().node().query();
-QueryBuilder::search().from(1).where_().key("k").value(Comparison::Equal(1.into())).query();
+QueryBuilder::search().from(1).where_().key("k").value(1).query();
 QueryBuilder::search().from(1).where_().keys(vec!["k1".into(), "k2".into()]).query();
 QueryBuilder::search().from(1).where_().not().keys(vec!["k1".into(), "k2".into()]).query();
 QueryBuilder::search().from(1).where_().ids([1, 2]).query();
@@ -1156,7 +1156,7 @@ QueryBuilder::search().from(1).where_().not().ids([1, 2]).query();
 QueryBuilder::search().from(1).where_().not_beyond().ids("a").query();
 QueryBuilder::search().from(1).where_().node().or().edge().query();
 QueryBuilder::search().from(1).where_().node().and().distance(CountComparison::GreaterThanOrEqual(3)).query();
-QueryBuilder::search().from(1).where_().node().or().where_().edge().and().key("k").value(Comparison::Equal(1.into())).end_where().query();
+QueryBuilder::search().from(1).where_().node().or().where_().edge().and().key("k").value(1).end_where().query();
 QueryBuilder::search().from(1).where_().node().or().where_().edge().and().key("k").value(Comparison::Contains(1.into())).end_where().query();
 QueryBuilder::search().from(1).where_().node().or().where_().edge().and().key("k").value(Comparison::Contains(vec![1, 2].into())).end_where().query();
 ```

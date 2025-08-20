@@ -15,6 +15,22 @@ interface SearchBuilderData {
     search: Components.Schemas.SearchQuery;
 }
 
+function isComparison(
+    value: Components.Schemas.Comparison | BuilderDbValue,
+): value is Components.Schemas.Comparison {
+    return (
+        value &&
+        typeof value === "object" &&
+        ("Equal" in value ||
+            "GreaterThan" in value ||
+            "GreaterThanOrEqual" in value ||
+            "LessThan" in value ||
+            "LessThanOrEqual" in value ||
+            "NotEqual" in value ||
+            "Contains" in value)
+    );
+}
+
 function intoQueryIds(ids: BuilderQueryIds): Components.Schemas.QueryIds {
     if (Array.isArray(ids)) {
         return { Ids: ids.map((id) => intoQueryId(id)) };
@@ -178,10 +194,6 @@ export function convertToDbValue(
         }
 
         return { VecString: value };
-    }
-
-    if (value === null || value === undefined) {
-        return undefined;
     }
 
     return value;
@@ -1052,7 +1064,13 @@ class SearchWhereKeyBuilder {
         this.data = data;
     }
 
-    value(value: Components.Schemas.Comparison): SearchWhereLogicBuilder {
+    value(
+        value: Components.Schemas.Comparison | BuilderDbValue,
+    ): SearchWhereLogicBuilder {
+        if (!isComparison(value)) {
+            value = Comparison.Equal(convertToDbValue(value));
+        }
+
         return push_condition(this.data, {
             data: { KeyValue: { key: this.key, value: value } },
             logic: this.data.logic,
@@ -1080,8 +1098,12 @@ class SearchWhereBuilder {
     }
 
     distance(
-        distance: Components.Schemas.CountComparison,
+        distance: Components.Schemas.CountComparison | number,
     ): SearchWhereLogicBuilder {
+        if (typeof distance === "number") {
+            distance = CountComparison.Equal(distance);
+        }
+
         return push_condition(this, {
             data: { Distance: distance },
             logic: this.logic,
@@ -1098,8 +1120,12 @@ class SearchWhereBuilder {
     }
 
     edge_count(
-        count: Components.Schemas.CountComparison,
+        count: Components.Schemas.CountComparison | number,
     ): SearchWhereLogicBuilder {
+        if (typeof count === "number") {
+            count = CountComparison.Equal(count);
+        }
+
         return push_condition(this, {
             data: { EdgeCount: count },
             logic: this.logic,
@@ -1108,8 +1134,12 @@ class SearchWhereBuilder {
     }
 
     edge_count_from(
-        count: Components.Schemas.CountComparison,
+        count: Components.Schemas.CountComparison | number,
     ): SearchWhereLogicBuilder {
+        if (typeof count === "number") {
+            count = CountComparison.Equal(count);
+        }
+
         return push_condition(this, {
             data: { EdgeCountFrom: count },
             logic: this.logic,
@@ -1118,8 +1148,12 @@ class SearchWhereBuilder {
     }
 
     edge_count_to(
-        count: Components.Schemas.CountComparison,
+        count: Components.Schemas.CountComparison | number,
     ): SearchWhereLogicBuilder {
+        if (typeof count === "number") {
+            count = CountComparison.Equal(count);
+        }
+
         return push_condition(this, {
             data: { EdgeCountTo: count },
             logic: this.logic,

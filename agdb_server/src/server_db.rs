@@ -153,7 +153,7 @@ impl ServerDb {
                         .from(CLUSTER_LOG)
                         .limit(1)
                         .where_()
-                        .distance(CountComparison::Equal(2))
+                        .distance(2)
                         .query(),
                 )?
                 .elements
@@ -168,7 +168,7 @@ impl ServerDb {
                             .from(CLUSTER_LOG)
                             .limit(1)
                             .where_()
-                            .distance(CountComparison::Equal(2))
+                            .distance(2)
                             .and()
                             .not()
                             .keys(COMMITTED)
@@ -268,7 +268,7 @@ impl ServerDb {
                     .search()
                     .from(DBS)
                     .where_()
-                    .distance(CountComparison::Equal(2))
+                    .distance(2)
                     .query(),
             )?
             .try_into()?)
@@ -395,7 +395,7 @@ impl ServerDb {
                     .distance(CountComparison::LessThanOrEqual(2))
                     .and()
                     .key(ROLE)
-                    .value(Comparison::Equal(DbUserRole::Admin.into()))
+                    .value(DbUserRole::Admin)
                     .query(),
             )?
             .result
@@ -522,7 +522,7 @@ impl ServerDb {
                         .from(CLUSTER_LOG)
                         .limit(log_count - from_index)
                         .where_()
-                        .distance(CountComparison::Equal(2))
+                        .distance(2)
                         .query(),
                 )?
                 .ids();
@@ -594,7 +594,7 @@ impl ServerDb {
                 .search()
                 .from(USERS)
                 .where_()
-                .distance(CountComparison::Equal(2))
+                .distance(2)
                 .and()
                 .key(TOKEN)
                 .value(Comparison::NotEqual(String::new().into()))
@@ -748,9 +748,9 @@ impl ServerDb {
                             .depth_first()
                             .from(user)
                             .where_()
-                            .distance(CountComparison::Equal(1))
+                            .distance(1)
                             .or()
-                            .distance(CountComparison::Equal(2))
+                            .distance(2)
                             .query(),
                     )
                     .query(),
@@ -847,7 +847,7 @@ impl ServerDb {
                     .search()
                     .from(USERS)
                     .where_()
-                    .distance(CountComparison::Equal(2))
+                    .distance(2)
                     .query(),
             )?
             .elements
@@ -871,13 +871,13 @@ fn find_user_db_query(user: DbId, owner: &str, db: &str) -> SearchQuery {
         .from(user)
         .limit(1)
         .where_()
-        .distance(CountComparison::Equal(2))
+        .distance(2)
         .and()
         .key(OWNER)
-        .value(Comparison::Equal(owner.into()))
+        .value(owner)
         .and()
         .key(DB)
-        .value(Comparison::Equal(db.into()))
+        .value(db)
         .query()
 }
 

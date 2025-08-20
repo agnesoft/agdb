@@ -69,7 +69,7 @@ final class QueryBuilderTest extends TestCase
             ->from(1)
             ->where()
             ->key("float")
-            ->value(ComparisonBuilder::Equal(1.1))
+            ->value(1.1)
             ->query();
         $query2 = QueryBuilder::search()
             ->from(1)
@@ -88,7 +88,7 @@ final class QueryBuilderTest extends TestCase
             ->from(1)
             ->where()
             ->key("bool")
-            ->value(ComparisonBuilder::Equal(true))
+            ->value(true)
             ->query();
         $query2 = QueryBuilder::search()
             ->from(1)
@@ -107,7 +107,7 @@ final class QueryBuilderTest extends TestCase
             ->from(1)
             ->where()
             ->key("array")
-            ->value(ComparisonBuilder::Equal([]))
+            ->value([])
             ->query();
         $query2 = QueryBuilder::search()
             ->from(1)
@@ -126,7 +126,7 @@ final class QueryBuilderTest extends TestCase
             ->from(1)
             ->where()
             ->key("array_f64")
-            ->value(ComparisonBuilder::Equal([1.1]))
+            ->value([1.1])
             ->query();
         $query2 = QueryBuilder::search()
             ->from(1)
@@ -145,7 +145,7 @@ final class QueryBuilderTest extends TestCase
             ->from(1)
             ->where()
             ->key("array_str")
-            ->value(ComparisonBuilder::Equal(["str"]))
+            ->value(["str"])
             ->query();
         $query2 = QueryBuilder::search()
             ->from(1)
@@ -154,6 +154,74 @@ final class QueryBuilderTest extends TestCase
             ->value(
                 ComparisonBuilder::Equal(new DbValue(["vec_string" => ["str"]]))
             )
+            ->query();
+        $json1 = $query1->jsonSerialize();
+        $json2 = $query2->jsonSerialize();
+        $this->assertEquals($json2, $json1);
+    }
+
+    public function testShorthandComparions_distance(): void
+    {
+        $query1 = QueryBuilder::search()
+            ->from(1)
+            ->where()
+            ->distance(2)
+            ->query();
+        $query2 = QueryBuilder::search()
+            ->from(1)
+            ->where()
+            ->distance(CountComparisonBuilder::Equal(2))
+            ->query();
+        $json1 = $query1->jsonSerialize();
+        $json2 = $query2->jsonSerialize();
+        $this->assertEquals($json2, $json1);
+    }
+
+    public function testShorthandComparions_edge_count(): void
+    {
+        $query1 = QueryBuilder::search()
+            ->from(1)
+            ->where()
+            ->edge_count(2)
+            ->query();
+        $query2 = QueryBuilder::search()
+            ->from(1)
+            ->where()
+            ->edge_count(CountComparisonBuilder::Equal(2))
+            ->query();
+        $json1 = $query1->jsonSerialize();
+        $json2 = $query2->jsonSerialize();
+        $this->assertEquals($json2, $json1);
+    }
+
+    public function testShorthandComparions_edge_count_from(): void
+    {
+        $query1 = QueryBuilder::search()
+            ->from(1)
+            ->where()
+            ->edge_count_from(2)
+            ->query();
+        $query2 = QueryBuilder::search()
+            ->from(1)
+            ->where()
+            ->edge_count_from(CountComparisonBuilder::Equal(2))
+            ->query();
+        $json1 = $query1->jsonSerialize();
+        $json2 = $query2->jsonSerialize();
+        $this->assertEquals($json2, $json1);
+    }
+
+    public function testShorthandComparions_edge_count_to(): void
+    {
+        $query1 = QueryBuilder::search()
+            ->from(1)
+            ->where()
+            ->edge_count_to(2)
+            ->query();
+        $query2 = QueryBuilder::search()
+            ->from(1)
+            ->where()
+            ->edge_count_to(CountComparisonBuilder::Equal(2))
             ->query();
         $json1 = $query1->jsonSerialize();
         $json2 = $query2->jsonSerialize();

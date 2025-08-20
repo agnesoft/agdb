@@ -596,3 +596,49 @@ fn search_where_key_value_defaults_to_equals() {
         })
     );
 }
+
+#[test]
+fn search_where_starts_with() {
+    let db = create_db();
+    db.exec_ids(
+        QueryBuilder::search()
+            .from("docs")
+            .where_()
+            .key("content")
+            .value(Comparison::StartsWith("Lorem".into()))
+            .query(),
+        &[7],
+    );
+    db.exec_ids(
+        QueryBuilder::search()
+            .from("docs")
+            .where_()
+            .key("content")
+            .value(Comparison::StartsWith("ipsum".into()))
+            .query(),
+        &[],
+    );
+}
+
+#[test]
+fn search_where_ends_with() {
+    let db = create_db();
+    db.exec_ids(
+        QueryBuilder::search()
+            .from("docs")
+            .where_()
+            .key("content")
+            .value(Comparison::EndsWith(vec!["adipiscing ", "elit"].into()))
+            .query(),
+        &[7],
+    );
+    db.exec_ids(
+        QueryBuilder::search()
+            .from("docs")
+            .where_()
+            .key("content")
+            .value(Comparison::EndsWith("adipiscing".into()))
+            .query(),
+        &[],
+    );
+}

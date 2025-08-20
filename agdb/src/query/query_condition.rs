@@ -167,6 +167,12 @@ pub enum Comparison {
 
     /// property.contains(this)
     Contains(DbValue),
+
+    /// property.starts_with(this)
+    StartsWith(DbValue),
+
+    /// property.ends_with(this)
+    EndsWith(DbValue),
 }
 
 /// Comparison of a value stored under specific `key` to
@@ -246,6 +252,7 @@ impl Comparison {
             Comparison::LessThan(right) => left < right,
             Comparison::LessThanOrEqual(right) => left <= right,
             Comparison::NotEqual(right) => left != right,
+
             Comparison::Contains(right) => match (left, right) {
                 (DbValue::String(left), DbValue::String(right)) => left.contains(right),
                 (DbValue::String(left), DbValue::VecString(right)) => {
@@ -269,6 +276,38 @@ impl Comparison {
                 }
                 _ => false,
             },
+
+            Comparison::StartsWith(right) => match (left, right) {
+                (DbValue::String(left), DbValue::String(right)) => left.starts_with(right),
+                (DbValue::String(left), DbValue::VecString(right)) => {
+                    left.starts_with(&right.concat())
+                }
+                (DbValue::VecI64(left), DbValue::I64(right)) => left.starts_with(&[*right]),
+                (DbValue::VecI64(left), DbValue::VecI64(right)) => left.starts_with(right),
+                (DbValue::VecU64(left), DbValue::U64(right)) => left.starts_with(&[*right]),
+                (DbValue::VecU64(left), DbValue::VecU64(right)) => left.starts_with(right),
+                (DbValue::VecF64(left), DbValue::F64(right)) => left.starts_with(&[*right]),
+                (DbValue::VecF64(left), DbValue::VecF64(right)) => left.starts_with(right),
+                (DbValue::VecString(left), DbValue::String(right)) => left.first() == Some(right),
+                (DbValue::VecString(left), DbValue::VecString(right)) => left.starts_with(right),
+                _ => false,
+            },
+
+            Comparison::EndsWith(right) => match (left, right) {
+                (DbValue::String(left), DbValue::String(right)) => left.ends_with(right),
+                (DbValue::String(left), DbValue::VecString(right)) => {
+                    left.ends_with(&right.concat())
+                }
+                (DbValue::VecI64(left), DbValue::I64(right)) => left.ends_with(&[*right]),
+                (DbValue::VecI64(left), DbValue::VecI64(right)) => left.ends_with(right),
+                (DbValue::VecU64(left), DbValue::U64(right)) => left.ends_with(&[*right]),
+                (DbValue::VecU64(left), DbValue::VecU64(right)) => left.ends_with(right),
+                (DbValue::VecF64(left), DbValue::F64(right)) => left.ends_with(&[*right]),
+                (DbValue::VecF64(left), DbValue::VecF64(right)) => left.ends_with(right),
+                (DbValue::VecString(left), DbValue::String(right)) => left.last() == Some(right),
+                (DbValue::VecString(left), DbValue::VecString(right)) => left.ends_with(right),
+                _ => false,
+            },
         }
     }
 
@@ -280,7 +319,9 @@ impl Comparison {
             | Comparison::LessThan(value)
             | Comparison::LessThanOrEqual(value)
             | Comparison::NotEqual(value)
-            | Comparison::Contains(value) => value,
+            | Comparison::Contains(value)
+            | Comparison::StartsWith(value)
+            | Comparison::EndsWith(value) => value,
         }
     }
 }
@@ -462,5 +503,93 @@ mod tests {
             Comparison::Contains(DbValue::I64(0)).value(),
             &DbValue::I64(0)
         );
+    }
+
+    #[test]
+    fn starts_with() {
+        let condition = Comparison::StartsWith("a".into());
+        assert!(condition.compare(&"abc".into()));
+        assert!(!condition.compare(&"bca".into()));
+
+        let condition = Comparison::StartsWith(vec!["ab".to_string(), "23".to_string()].into());
+        assert!(condition.compare(&"ab23".into()));
+        assert!(!condition.compare(&"ab2".into()));
+
+        assert!(Comparison::StartsWith(1.into()).compare(&vec![1, 2, 3].into()));
+        assert!(!Comparison::StartsWith(1.into()).compare(&vec![2, 1, 3].into()));
+
+        let condition = Comparison::StartsWith(vec![2, 3].into());
+        assert!(condition.compare(&vec![2, 3].into()));
+        assert!(!condition.compare(&vec![1, 2, 3].into()));
+
+        let condition = Comparison::StartsWith(1_u64.into());
+        assert!(condition.compare(&vec![1_u64, 2_u64, 3_u64].into()));
+        assert!(!condition.compare(&vec![2_u64, 1_u64].into()));
+
+        let condition = Comparison::StartsWith(vec![2_u64, 3_u64].into());
+        assert!(condition.compare(&vec![2_u64, 3_u64, 1_u64].into()));
+        assert!(!condition.compare(&vec![1_u64, 2_u64, 3_u64].into()));
+
+        let condition = Comparison::StartsWith(1.1.into());
+        assert!(condition.compare(&vec![1.1, 2.1, 3.3].into()));
+        assert!(!condition.compare(&vec![2.1, 3.3, 1.1].into()));
+
+        let condition = Comparison::StartsWith(vec![2.2, 3.3].into());
+        assert!(condition.compare(&vec![2.2, 3.3, 3.3].into()));
+        assert!(!condition.compare(&vec![1.1, 3.3, 2.2].into()));
+
+        let condition = Comparison::StartsWith("abc".into());
+        assert!(condition.compare(&vec!["abc".to_string(), "123".to_string()].into()));
+        assert!(!condition.compare(&vec!["0".to_string(), "abc".to_string()].into()));
+
+        let condition = Comparison::StartsWith(vec!["abc".to_string(), "123".to_string()].into());
+        assert!(condition.compare(&vec!["abc".to_string(), "123".to_string()].into()));
+        assert!(!condition.compare(&vec!["123".to_string(), "abc".to_string()].into()));
+
+        assert!(!Comparison::StartsWith("abc".into()).compare(&1.into()));
+    }
+
+    #[test]
+    fn ends_with() {
+        let condition = Comparison::EndsWith("a".into());
+        assert!(condition.compare(&"bca".into()));
+        assert!(!condition.compare(&"abc".into()));
+
+        let condition = Comparison::EndsWith(vec!["ab".to_string(), "23".to_string()].into());
+        assert!(condition.compare(&"ffeeggab23".into()));
+        assert!(!condition.compare(&"ab23ff".into()));
+
+        assert!(Comparison::EndsWith(1.into()).compare(&vec![1, 2, 1].into()));
+        assert!(!Comparison::EndsWith(1.into()).compare(&vec![1, 1, 3].into()));
+
+        let condition = Comparison::EndsWith(vec![2, 3].into());
+        assert!(condition.compare(&vec![4, 5, 2, 3].into()));
+        assert!(!condition.compare(&vec![1, 2, 3, 4, 5].into()));
+
+        let condition = Comparison::EndsWith(1_u64.into());
+        assert!(condition.compare(&vec![1_u64, 2_u64, 1_u64].into()));
+        assert!(!condition.compare(&vec![2_u64, 1_u64, 3_u64].into()));
+
+        let condition = Comparison::EndsWith(vec![2_u64, 3_u64].into());
+        assert!(condition.compare(&vec![1_u64, 2_u64, 3_u64].into()));
+        assert!(!condition.compare(&vec![2_u64, 3_u64, 1_u64].into()));
+
+        let condition = Comparison::EndsWith(1.1.into());
+        assert!(condition.compare(&vec![2.1, 3.3, 1.1].into()));
+        assert!(!condition.compare(&vec![2.1, 3.3, 1.1, 4.4].into()));
+
+        let condition = Comparison::EndsWith(vec![2.2, 3.3].into());
+        assert!(condition.compare(&vec![3.3, 4.4, 2.2, 3.3].into()));
+        assert!(!condition.compare(&vec![1.1, 3.3, 2.2].into()));
+
+        let condition = Comparison::EndsWith("abc".into());
+        assert!(condition.compare(&vec!["123".to_string(), "abc".to_string()].into()));
+        assert!(!condition.compare(&vec!["0".to_string(), "abcdef".to_string()].into()));
+
+        let condition = Comparison::EndsWith(vec!["abc".to_string(), "123".to_string()].into());
+        assert!(condition.compare(&vec!["abc".to_string(), "123".to_string()].into()));
+        assert!(!condition.compare(&vec!["123".to_string(), "abc".to_string()].into()));
+
+        assert!(!Comparison::EndsWith("abc".into()).compare(&1.into()));
     }
 }

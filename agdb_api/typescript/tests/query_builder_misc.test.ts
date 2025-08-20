@@ -163,4 +163,42 @@ describe("QueryBuilder misc tests", () => {
         };
         expect(query).toEqual(expected);
     });
+
+    it("shorthand equal comparisons", () => {
+        const distance = QueryBuilder.search()
+            .from(1)
+            .where()
+            .distance(2)
+            .query();
+        expect(distance["Search"].conditions[0].data).toEqual({
+            Distance: { Equal: 2 },
+        });
+
+        const edge_count = QueryBuilder.search()
+            .from(1)
+            .where()
+            .edge_count(2)
+            .query();
+        expect(edge_count["Search"].conditions[0].data).toEqual({
+            EdgeCount: { Equal: 2 },
+        });
+
+        const edge_count_from = QueryBuilder.search()
+            .from(1)
+            .where()
+            .edge_count_from(2)
+            .query();
+        expect(edge_count_from["Search"].conditions[0].data).toEqual({
+            EdgeCountFrom: { Equal: 2 },
+        });
+
+        const edge_count_to = QueryBuilder.search()
+            .from(1)
+            .where()
+            .edge_count_to(2)
+            .query();
+        expect(edge_count_to["Search"].conditions[0].data).toEqual({
+            EdgeCountTo: { Equal: 2 },
+        });
+    });
 });

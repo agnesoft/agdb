@@ -58,22 +58,6 @@ struct WithOption {
     value: Option<u64>,
 }
 
-#[derive(DbType, PartialEq, Debug)]
-struct Flattened {
-    db_id: Option<DbId>,
-    category: String,
-    #[agdb(flatten)]
-    custom: MyCustomVec,
-}
-
-#[derive(DbType, PartialEq, Debug)]
-struct Skipped {
-    db_id: Option<DbId>,
-    category: String,
-    #[agdb(skip)]
-    custom: MyCustomVec,
-}
-
 #[test]
 fn user_db_types() {
     #[derive(Default, Debug, PartialEq, DbType)]
@@ -911,6 +895,14 @@ fn derive_serialization_empty_struct() {
 
 #[test]
 fn derive_db_type_flatten_nested_struct() {
+    #[derive(DbType, PartialEq, Debug)]
+    struct Flattened {
+        db_id: Option<DbId>,
+        category: String,
+        #[agdb(flatten)]
+        custom: MyCustomVec,
+    }
+
     let mut flattened = Flattened {
         db_id: None,
         category: "test".into(),
@@ -956,8 +948,16 @@ fn derive_db_type_flatten_nested_struct() {
 
 #[test]
 fn derive_db_type_skip_field() {
+    #[derive(DbType, PartialEq, Debug)]
+    struct Skipped {
+        db_id: Option<DbId>,
+        category: String,
+        #[agdb(skip)]
+        custom: MyCustomVec,
+    }
+
     let mut db = TestDb::new();
-    let skipped = Skipped {
+    let mut skipped = Skipped {
         db_id: None,
         category: "category".to_string(),
         custom: MyCustomVec::default(),
@@ -972,4 +972,46 @@ fn derive_db_type_skip_field() {
         .collect::<Vec<String>>();
 
     assert_eq!(keys, vec!["category".to_string()]);
+
+    let retrieved: Skipped = db
+        .exec_result(QueryBuilder::select().elements::<Skipped>().ids(1).query())
+        .try_into()
+        .unwrap();
+
+    skipped.db_id = Some(DbId(1));
+    assert_eq!(skipped, retrieved);
+}
+
+#[test]
+fn derive_db_type_rename_field() {
+    #[derive(DbType, PartialEq, Debug)]
+    struct Renamed {
+        db_id: Option<DbId>,
+        #[agdb(rename = "category_name")]
+        category: String,
+    }
+
+    let mut db = TestDb::new();
+    let mut renamed = Renamed {
+        db_id: None,
+        category: "category".to_string(),
+    };
+    db.exec_mut(QueryBuilder::insert().element(&renamed).query(), 1);
+    let keys = db
+        .exec_result(QueryBuilder::select().keys().ids(1).query())
+        .elements[0]
+        .values
+        .iter()
+        .map(|kv| kv.key.to_string())
+        .collect::<Vec<String>>();
+
+    assert_eq!(keys, vec!["category_name".to_string()]);
+
+    let retrieved: Renamed = db
+        .exec_result(QueryBuilder::select().elements::<Renamed>().ids(1).query())
+        .try_into()
+        .unwrap();
+
+    renamed.db_id = Some(DbId(1));
+    assert_eq!(renamed, retrieved);
 }

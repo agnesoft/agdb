@@ -7,6 +7,7 @@ const DB_ID: &str = "db_id";
 const AGDB: &str = "agdb";
 const FLATTEN: &str = "flatten";
 const SKIP: &str = "skip";
+const RENAME: &str = "rename";
 
 pub fn db_type_marker_derive(item: TokenStream) -> TokenStream {
     let input = parse_macro_input!(item as DeriveInput);
@@ -157,7 +158,7 @@ fn impl_db_key(f: &syn::Field) -> Option<proc_macro2::TokenStream> {
             });
         }
 
-        let name_str = name.to_string();
+        let name_str = field_name(f);
         return Some(quote! {
             keys.push(#name_str.into());
         });
@@ -171,7 +172,7 @@ fn impl_to_db_value(f: &syn::Field) -> Option<proc_macro2::TokenStream> {
         && name != DB_ID
         && !is_skip_type(f)
     {
-        let key = name.to_string();
+        let key = field_name(f);
 
         if is_option_type(f) {
             if is_flatten_type(f) {
@@ -211,7 +212,7 @@ fn impl_from_db_element(f: &syn::Field) -> Option<proc_macro2::TokenStream> {
             });
         }
 
-        let str_name = name.to_string();
+        let str_name = field_name(f);
         let ty = &f.ty;
 
         if is_option_type(f) {
@@ -347,4 +348,24 @@ fn is_skip_type(f: &syn::Field) -> bool {
             found
         })
         .is_some()
+}
+
+fn field_name(f: &syn::Field) -> String {
+    if let Some(attrs) = f.attrs.iter().find(|attr| attr.path().is_ident(AGDB)) {
+        let mut name = None;
+        let _ = attrs.parse_nested_meta(|meta| {
+            if meta.path.is_ident(RENAME)
+                && let Ok(lit_str) = meta.value()
+                && let Ok(syn::Lit::Str(lit_str)) = lit_str.parse()
+            {
+                name = Some(lit_str.value());
+            }
+            Ok(())
+        });
+        if let Some(name) = name {
+            return name;
+        }
+    }
+
+    f.ident.as_ref().expect("named field").to_string()
 }

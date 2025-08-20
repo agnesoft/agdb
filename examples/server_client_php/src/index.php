@@ -7,6 +7,7 @@ use Agnesoft\AgdbApi\Model\DbKind;
 use Agnesoft\AgdbApi\Model\UserLogin;
 use Agnesoft\AgdbApi\Model\UserCredentials;
 use Agnesoft\AgdbApi\QueryBuilder;
+use Agnesoft\AgdbApi\ComparisonBuilder;
 
 // Default config will look for the server at http://localhost:3000
 $config = Agnesoft\AgdbApi\Configuration::getDefaultConfiguration();
@@ -74,7 +75,7 @@ $queries = [
         ->from("users")
         ->where()
         ->key("username")
-        ->value("user1")
+        ->value(ComparisonBuilder::Equal("user1"))
         ->query(),
 ];
 

@@ -164,6 +164,18 @@ class ComparisonBuilder
     ): Comparison {
         return new Comparison(["not_equal" => to_db_value($value)]);
     }
+
+    public static function StartsWith(
+        bool|int|float|string|array|DbValue $value
+    ): Comparison {
+        return new Comparison(["starts_with" => to_db_value($value)]);
+    }
+
+    public static function EndsWith(
+        bool|int|float|string|array|DbValue $value
+    ): Comparison {
+        return new Comparison(["ends_with" => to_db_value($value)]);
+    }
 }
 
 class DbKeyOrderBuilder

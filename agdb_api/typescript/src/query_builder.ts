@@ -27,7 +27,9 @@ function isComparison(
             "LessThan" in value ||
             "LessThanOrEqual" in value ||
             "NotEqual" in value ||
-            "Contains" in value)
+            "Contains" in value ||
+            "StartsWith" in value ||
+            "EndsWith" in value)
     );
 }
 
@@ -271,6 +273,14 @@ export class Comparison {
 
     static Contains(value: BuilderDbValue): Components.Schemas.Comparison {
         return { Contains: convertToDbValue(value) };
+    }
+
+    static StartsWith(value: BuilderDbValue): Components.Schemas.Comparison {
+        return { StartsWith: convertToDbValue(value) };
+    }
+
+    static EndsWith(value: BuilderDbValue): Components.Schemas.Comparison {
+        return { EndsWith: convertToDbValue(value) };
     }
 }
 

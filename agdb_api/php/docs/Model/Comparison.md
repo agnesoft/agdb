@@ -11,5 +11,7 @@ Name | Type | Description | Notes
 **less_than_or_equal** | [**\Agnesoft\AgdbApi\Model\DbValue**](DbValue.md) | property &lt;&#x3D; this |
 **not_equal** | [**\Agnesoft\AgdbApi\Model\DbValue**](DbValue.md) | property !&#x3D; this |
 **contains** | [**\Agnesoft\AgdbApi\Model\DbValue**](DbValue.md) | property.contains(this) |
+**starts_with** | [**\Agnesoft\AgdbApi\Model\DbValue**](DbValue.md) | property.starts_with(this) |
+**ends_with** | [**\Agnesoft\AgdbApi\Model\DbValue**](DbValue.md) | property.ends_with(this) |
 
 [[Back to Model list]](../../README.md#models) [[Back to API list]](../../README.md#endpoints) [[Back to README]](../../README.md)

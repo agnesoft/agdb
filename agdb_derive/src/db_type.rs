@@ -6,6 +6,7 @@ use syn::parse_macro_input;
 const DB_ID: &str = "db_id";
 const AGDB: &str = "agdb";
 const FLATTEN: &str = "flatten";
+const SKIP: &str = "skip";
 
 pub fn db_type_marker_derive(item: TokenStream) -> TokenStream {
     let input = parse_macro_input!(item as DeriveInput);
@@ -147,6 +148,7 @@ fn db_keys(data: &syn::DataStruct) -> proc_macro2::TokenStream {
 fn impl_db_key(f: &syn::Field) -> Option<proc_macro2::TokenStream> {
     if let Some(name) = &f.ident
         && name != DB_ID
+        && !is_skip_type(f)
     {
         if is_flatten_type(f) {
             let ty = &f.ty;
@@ -167,6 +169,7 @@ fn impl_db_key(f: &syn::Field) -> Option<proc_macro2::TokenStream> {
 fn impl_to_db_value(f: &syn::Field) -> Option<proc_macro2::TokenStream> {
     if let Some(name) = &f.ident
         && name != DB_ID
+        && !is_skip_type(f)
     {
         let key = name.to_string();
 
@@ -209,17 +212,22 @@ fn impl_from_db_element(f: &syn::Field) -> Option<proc_macro2::TokenStream> {
         }
 
         let str_name = name.to_string();
+        let ty = &f.ty;
 
         if is_option_type(f) {
             if is_flatten_type(f) {
-                let ty = &f.ty;
-
                 return Some(quote! {
                     #name: if let ::std::result::Result::Ok(value) = #ty::from_db_element(element) {
                         ::std::option::Option::Some(value)
                     } else {
                         ::std::option::Option::None
                     }
+                });
+            }
+
+            if is_skip_type(f) {
+                return Some(quote! {
+                    #name: None
                 });
             }
 
@@ -241,10 +249,14 @@ fn impl_from_db_element(f: &syn::Field) -> Option<proc_macro2::TokenStream> {
         }
 
         if is_flatten_type(f) {
-            let ty = &f.ty;
-
             return Some(quote! {
                 #name: #ty::from_db_element(element)?
+            });
+        }
+
+        if is_skip_type(f) {
+            return Some(quote! {
+                #name: #ty::default()
             });
         }
 
@@ -310,7 +322,24 @@ fn is_flatten_type(f: &syn::Field) -> bool {
         .and_then(|attr| {
             let mut found = None;
             let _ = attr.parse_nested_meta(|meta| {
-                let _: () = if meta.path.is_ident(FLATTEN) {
+                if meta.path.is_ident(FLATTEN) {
+                    found = Some(());
+                };
+                Ok(())
+            });
+            found
+        })
+        .is_some()
+}
+
+fn is_skip_type(f: &syn::Field) -> bool {
+    f.attrs
+        .iter()
+        .find(|attr| attr.path().is_ident(AGDB))
+        .and_then(|attr| {
+            let mut found = None;
+            let _ = attr.parse_nested_meta(|meta| {
+                if meta.path.is_ident(SKIP) {
                     found = Some(());
                 };
                 Ok(())

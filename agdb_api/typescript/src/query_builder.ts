@@ -196,10 +196,6 @@ export function convertToDbValue(
         return { VecString: value };
     }
 
-    if (value === null || value === undefined) {
-        return undefined;
-    }
-
     return value;
 }
 

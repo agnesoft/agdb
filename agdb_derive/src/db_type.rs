@@ -322,7 +322,7 @@ fn is_flatten_type(f: &syn::Field) -> bool {
         .and_then(|attr| {
             let mut found = None;
             let _ = attr.parse_nested_meta(|meta| {
-                let _: () = if meta.path.is_ident(FLATTEN) {
+                if meta.path.is_ident(FLATTEN) {
                     found = Some(());
                 };
                 Ok(())
@@ -339,7 +339,7 @@ fn is_skip_type(f: &syn::Field) -> bool {
         .and_then(|attr| {
             let mut found = None;
             let _ = attr.parse_nested_meta(|meta| {
-                let _: () = if meta.path.is_ident(SKIP) {
+                if meta.path.is_ident(SKIP) {
                     found = Some(());
                 };
                 Ok(())

@@ -999,7 +999,7 @@ class SearchWhereKeyBuilder
         Comparison|bool|int|float|string|array|DbValue $comparison
     ): SearchWhereLogicBuilder {
         if (!($comparison instanceof Comparison)) {
-            $comparison = ComparisonBuilder::Equal($comparison);
+            $comparison = ComparisonBuilder::Equal(to_db_value($comparison));
         }
 
         $condition_data = new QueryConditionData();

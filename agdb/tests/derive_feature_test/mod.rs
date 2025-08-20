@@ -46,7 +46,7 @@ struct Attribute {
     value: String,
 }
 
-#[derive(DbType, PartialEq, Debug)]
+#[derive(DbType, Default, PartialEq, Debug)]
 struct MyCustomVec {
     vec: Vec<Status>,
     attributes: Vec<Attribute>,
@@ -66,8 +66,16 @@ struct Flattened {
     custom: MyCustomVec,
 }
 
+#[derive(DbType, PartialEq, Debug)]
+struct Skipped {
+    db_id: Option<DbId>,
+    category: String,
+    #[agdb(skip)]
+    custom: MyCustomVec,
+}
+
 #[test]
-fn db_user_value() {
+fn user_db_types() {
     #[derive(Default, Debug, PartialEq, DbType)]
     struct MyData {
         bytes: Vec<u8>,
@@ -627,7 +635,7 @@ fn insert_vectorized_custom_types() {
 }
 
 #[test]
-fn select_user_value() {
+fn select_user_type() {
     let mut db = TestDb::new();
     let mut my_value = MyValue {
         db_id: None,
@@ -902,7 +910,7 @@ fn derive_serialization_empty_struct() {
 }
 
 #[test]
-fn derive_user_value_flatten_nested_struct() {
+fn derive_db_type_flatten_nested_struct() {
     let mut flattened = Flattened {
         db_id: None,
         category: "test".into(),
@@ -944,4 +952,24 @@ fn derive_user_value_flatten_nested_struct() {
 
     flattened.db_id = Some(DbId(1));
     assert_eq!(flattened, retrieved);
+}
+
+#[test]
+fn derive_db_type_skip_field() {
+    let mut db = TestDb::new();
+    let skipped = Skipped {
+        db_id: None,
+        category: "category".to_string(),
+        custom: MyCustomVec::default(),
+    };
+    db.exec_mut(QueryBuilder::insert().element(&skipped).query(), 1);
+    let keys = db
+        .exec_result(QueryBuilder::select().keys().ids(1).query())
+        .elements[0]
+        .values
+        .iter()
+        .map(|kv| kv.key.to_string())
+        .collect::<Vec<String>>();
+
+    assert_eq!(keys, vec!["category".to_string()]);
 }

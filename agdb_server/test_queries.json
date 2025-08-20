@@ -3273,6 +3273,115 @@
     }
   ],
   [
+    "QueryBuilder::search().from(1).where_().node().or().where_().edge().and().key(\"k\").value(Comparison::StartsWith(1.into())).end_where().query()",
+    {
+      "Search": {
+        "algorithm": "BreadthFirst",
+        "origin": {
+          "Id": 1
+        },
+        "destination": {
+          "Id": 0
+        },
+        "limit": 0,
+        "offset": 0,
+        "order_by": [],
+        "conditions": [
+          {
+            "logic": "And",
+            "modifier": "None",
+            "data": "Node"
+          },
+          {
+            "logic": "Or",
+            "modifier": "None",
+            "data": {
+              "Where": [
+                {
+                  "logic": "And",
+                  "modifier": "None",
+                  "data": "Edge"
+                },
+                {
+                  "logic": "And",
+                  "modifier": "None",
+                  "data": {
+                    "KeyValue": {
+                      "key": {
+                        "String": "k"
+                      },
+                      "value": {
+                        "StartsWith": {
+                          "I64": 1
+                        }
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  ],
+  [
+    "QueryBuilder::search().from(1).where_().node().or().where_().edge().and().key(\"k\").value(Comparison::EndsWith(([1,2]).into())).end_where().query()",
+    {
+      "Search": {
+        "algorithm": "BreadthFirst",
+        "origin": {
+          "Id": 1
+        },
+        "destination": {
+          "Id": 0
+        },
+        "limit": 0,
+        "offset": 0,
+        "order_by": [],
+        "conditions": [
+          {
+            "logic": "And",
+            "modifier": "None",
+            "data": "Node"
+          },
+          {
+            "logic": "Or",
+            "modifier": "None",
+            "data": {
+              "Where": [
+                {
+                  "logic": "And",
+                  "modifier": "None",
+                  "data": "Edge"
+                },
+                {
+                  "logic": "And",
+                  "modifier": "None",
+                  "data": {
+                    "KeyValue": {
+                      "key": {
+                        "String": "k"
+                      },
+                      "value": {
+                        "EndsWith": {
+                          "VecI64": [
+                            1,
+                            2
+                          ]
+                        }
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  ],
+  [
     "QueryBuilder::search().from(1).order_by([DbKeyOrder::Asc(\"k\".into())]).where_().node().query()",
     {
       "Search": {

@@ -2547,6 +2547,32 @@
                 "description": "property.contains(this)"
               }
             }
+          },
+          {
+            "type": "object",
+            "description": "property.starts_with(this)",
+            "required": [
+              "StartsWith"
+            ],
+            "properties": {
+              "StartsWith": {
+                "$ref": "#/components/schemas/DbValue",
+                "description": "property.starts_with(this)"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "property.ends_with(this)",
+            "required": [
+              "EndsWith"
+            ],
+            "properties": {
+              "EndsWith": {
+                "$ref": "#/components/schemas/DbValue",
+                "description": "property.ends_with(this)"
+              }
+            }
           }
         ],
         "description": "Comparison of database values ([`DbValue`]) used\nby `key()` condition. Supports\nthe usual set of named comparisons: `==, !=, <, <=, >, =>`\nplus `contains()`. The comparisons are type\nstrict except for the `contains` comparison\nwhich allows vectorized version of the base type. Notably\nhowever it does not support the `bytes` and integral types\nwhere the \"contains\" makes little sense (i.e. does 3 contain 1?)."

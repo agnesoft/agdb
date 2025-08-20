@@ -1,6 +1,6 @@
 <?php
 /**
- * Comparison
+ * ComparisonOneOf8
  *
  * PHP version 8.1
  *
@@ -32,16 +32,16 @@ use \ArrayAccess;
 use \Agnesoft\AgdbApi\ObjectSerializer;
 
 /**
- * Comparison Class Doc Comment
+ * ComparisonOneOf8 Class Doc Comment
  *
  * @category Class
- * @description Comparison of database values ([&#x60;DbValue&#x60;]) used by &#x60;key()&#x60; condition. Supports the usual set of named comparisons: &#x60;&#x3D;&#x3D;, !&#x3D;, &lt;, &lt;&#x3D;, &gt;, &#x3D;&gt;&#x60; plus &#x60;contains()&#x60;. The comparisons are type strict except for the &#x60;contains&#x60; comparison which allows vectorized version of the base type. Notably however it does not support the &#x60;bytes&#x60; and integral types where the \&quot;contains\&quot; makes little sense (i.e. does 3 contain 1?).
+ * @description property.ends_with(this)
  * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
  * @implements \ArrayAccess<string, mixed>
  */
-class Comparison implements ModelInterface, ArrayAccess, \JsonSerializable
+class ComparisonOneOf8 implements ModelInterface, ArrayAccess, \JsonSerializable
 {
     public const DISCRIMINATOR = null;
 
@@ -50,7 +50,7 @@ class Comparison implements ModelInterface, ArrayAccess, \JsonSerializable
       *
       * @var string
       */
-    protected static $openAPIModelName = 'Comparison';
+    protected static $openAPIModelName = 'Comparison_oneOf_8';
 
     /**
       * Array of property to type mappings. Used for (de)serialization
@@ -58,14 +58,6 @@ class Comparison implements ModelInterface, ArrayAccess, \JsonSerializable
       * @var string[]
       */
     protected static $openAPITypes = [
-        'equal' => '\Agnesoft\AgdbApi\Model\DbValue',
-        'greater_than' => '\Agnesoft\AgdbApi\Model\DbValue',
-        'greater_than_or_equal' => '\Agnesoft\AgdbApi\Model\DbValue',
-        'less_than' => '\Agnesoft\AgdbApi\Model\DbValue',
-        'less_than_or_equal' => '\Agnesoft\AgdbApi\Model\DbValue',
-        'not_equal' => '\Agnesoft\AgdbApi\Model\DbValue',
-        'contains' => '\Agnesoft\AgdbApi\Model\DbValue',
-        'starts_with' => '\Agnesoft\AgdbApi\Model\DbValue',
         'ends_with' => '\Agnesoft\AgdbApi\Model\DbValue'
     ];
 
@@ -77,14 +69,6 @@ class Comparison implements ModelInterface, ArrayAccess, \JsonSerializable
       * @psalm-var array<string, string|null>
       */
     protected static $openAPIFormats = [
-        'equal' => null,
-        'greater_than' => null,
-        'greater_than_or_equal' => null,
-        'less_than' => null,
-        'less_than_or_equal' => null,
-        'not_equal' => null,
-        'contains' => null,
-        'starts_with' => null,
         'ends_with' => null
     ];
 
@@ -94,14 +78,6 @@ class Comparison implements ModelInterface, ArrayAccess, \JsonSerializable
       * @var boolean[]
       */
     protected static array $openAPINullables = [
-        'equal' => false,
-        'greater_than' => false,
-        'greater_than_or_equal' => false,
-        'less_than' => false,
-        'less_than_or_equal' => false,
-        'not_equal' => false,
-        'contains' => false,
-        'starts_with' => false,
         'ends_with' => false
     ];
 
@@ -191,14 +167,6 @@ class Comparison implements ModelInterface, ArrayAccess, \JsonSerializable
      * @var string[]
      */
     protected static $attributeMap = [
-        'equal' => 'Equal',
-        'greater_than' => 'GreaterThan',
-        'greater_than_or_equal' => 'GreaterThanOrEqual',
-        'less_than' => 'LessThan',
-        'less_than_or_equal' => 'LessThanOrEqual',
-        'not_equal' => 'NotEqual',
-        'contains' => 'Contains',
-        'starts_with' => 'StartsWith',
         'ends_with' => 'EndsWith'
     ];
 
@@ -208,14 +176,6 @@ class Comparison implements ModelInterface, ArrayAccess, \JsonSerializable
      * @var string[]
      */
     protected static $setters = [
-        'equal' => 'setEqual',
-        'greater_than' => 'setGreaterThan',
-        'greater_than_or_equal' => 'setGreaterThanOrEqual',
-        'less_than' => 'setLessThan',
-        'less_than_or_equal' => 'setLessThanOrEqual',
-        'not_equal' => 'setNotEqual',
-        'contains' => 'setContains',
-        'starts_with' => 'setStartsWith',
         'ends_with' => 'setEndsWith'
     ];
 
@@ -225,14 +185,6 @@ class Comparison implements ModelInterface, ArrayAccess, \JsonSerializable
      * @var string[]
      */
     protected static $getters = [
-        'equal' => 'getEqual',
-        'greater_than' => 'getGreaterThan',
-        'greater_than_or_equal' => 'getGreaterThanOrEqual',
-        'less_than' => 'getLessThan',
-        'less_than_or_equal' => 'getLessThanOrEqual',
-        'not_equal' => 'getNotEqual',
-        'contains' => 'getContains',
-        'starts_with' => 'getStartsWith',
         'ends_with' => 'getEndsWith'
     ];
 
@@ -293,14 +245,6 @@ class Comparison implements ModelInterface, ArrayAccess, \JsonSerializable
      */
     public function __construct(?array $data = null)
     {
-        $this->setIfExists('equal', $data ?? [], null);
-        $this->setIfExists('greater_than', $data ?? [], null);
-        $this->setIfExists('greater_than_or_equal', $data ?? [], null);
-        $this->setIfExists('less_than', $data ?? [], null);
-        $this->setIfExists('less_than_or_equal', $data ?? [], null);
-        $this->setIfExists('not_equal', $data ?? [], null);
-        $this->setIfExists('contains', $data ?? [], null);
-        $this->setIfExists('starts_with', $data ?? [], null);
         $this->setIfExists('ends_with', $data ?? [], null);
     }
 
@@ -331,30 +275,6 @@ class Comparison implements ModelInterface, ArrayAccess, \JsonSerializable
     {
         $invalidProperties = [];
 
-        if ($this->container['equal'] === null) {
-            $invalidProperties[] = "'equal' can't be null";
-        }
-        if ($this->container['greater_than'] === null) {
-            $invalidProperties[] = "'greater_than' can't be null";
-        }
-        if ($this->container['greater_than_or_equal'] === null) {
-            $invalidProperties[] = "'greater_than_or_equal' can't be null";
-        }
-        if ($this->container['less_than'] === null) {
-            $invalidProperties[] = "'less_than' can't be null";
-        }
-        if ($this->container['less_than_or_equal'] === null) {
-            $invalidProperties[] = "'less_than_or_equal' can't be null";
-        }
-        if ($this->container['not_equal'] === null) {
-            $invalidProperties[] = "'not_equal' can't be null";
-        }
-        if ($this->container['contains'] === null) {
-            $invalidProperties[] = "'contains' can't be null";
-        }
-        if ($this->container['starts_with'] === null) {
-            $invalidProperties[] = "'starts_with' can't be null";
-        }
         if ($this->container['ends_with'] === null) {
             $invalidProperties[] = "'ends_with' can't be null";
         }
@@ -372,222 +292,6 @@ class Comparison implements ModelInterface, ArrayAccess, \JsonSerializable
         return count($this->listInvalidProperties()) === 0;
     }
 
-
-    /**
-     * Gets equal
-     *
-     * @return \Agnesoft\AgdbApi\Model\DbValue
-     */
-    public function getEqual()
-    {
-        return $this->container['equal'];
-    }
-
-    /**
-     * Sets equal
-     *
-     * @param \Agnesoft\AgdbApi\Model\DbValue $equal property == this
-     *
-     * @return self
-     */
-    public function setEqual($equal)
-    {
-        if (is_null($equal)) {
-            throw new \InvalidArgumentException('non-nullable equal cannot be null');
-        }
-        $this->container['equal'] = $equal;
-
-        return $this;
-    }
-
-    /**
-     * Gets greater_than
-     *
-     * @return \Agnesoft\AgdbApi\Model\DbValue
-     */
-    public function getGreaterThan()
-    {
-        return $this->container['greater_than'];
-    }
-
-    /**
-     * Sets greater_than
-     *
-     * @param \Agnesoft\AgdbApi\Model\DbValue $greater_than property > this
-     *
-     * @return self
-     */
-    public function setGreaterThan($greater_than)
-    {
-        if (is_null($greater_than)) {
-            throw new \InvalidArgumentException('non-nullable greater_than cannot be null');
-        }
-        $this->container['greater_than'] = $greater_than;
-
-        return $this;
-    }
-
-    /**
-     * Gets greater_than_or_equal
-     *
-     * @return \Agnesoft\AgdbApi\Model\DbValue
-     */
-    public function getGreaterThanOrEqual()
-    {
-        return $this->container['greater_than_or_equal'];
-    }
-
-    /**
-     * Sets greater_than_or_equal
-     *
-     * @param \Agnesoft\AgdbApi\Model\DbValue $greater_than_or_equal property >= this
-     *
-     * @return self
-     */
-    public function setGreaterThanOrEqual($greater_than_or_equal)
-    {
-        if (is_null($greater_than_or_equal)) {
-            throw new \InvalidArgumentException('non-nullable greater_than_or_equal cannot be null');
-        }
-        $this->container['greater_than_or_equal'] = $greater_than_or_equal;
-
-        return $this;
-    }
-
-    /**
-     * Gets less_than
-     *
-     * @return \Agnesoft\AgdbApi\Model\DbValue
-     */
-    public function getLessThan()
-    {
-        return $this->container['less_than'];
-    }
-
-    /**
-     * Sets less_than
-     *
-     * @param \Agnesoft\AgdbApi\Model\DbValue $less_than property < this
-     *
-     * @return self
-     */
-    public function setLessThan($less_than)
-    {
-        if (is_null($less_than)) {
-            throw new \InvalidArgumentException('non-nullable less_than cannot be null');
-        }
-        $this->container['less_than'] = $less_than;
-
-        return $this;
-    }
-
-    /**
-     * Gets less_than_or_equal
-     *
-     * @return \Agnesoft\AgdbApi\Model\DbValue
-     */
-    public function getLessThanOrEqual()
-    {
-        return $this->container['less_than_or_equal'];
-    }
-
-    /**
-     * Sets less_than_or_equal
-     *
-     * @param \Agnesoft\AgdbApi\Model\DbValue $less_than_or_equal property <= this
-     *
-     * @return self
-     */
-    public function setLessThanOrEqual($less_than_or_equal)
-    {
-        if (is_null($less_than_or_equal)) {
-            throw new \InvalidArgumentException('non-nullable less_than_or_equal cannot be null');
-        }
-        $this->container['less_than_or_equal'] = $less_than_or_equal;
-
-        return $this;
-    }
-
-    /**
-     * Gets not_equal
-     *
-     * @return \Agnesoft\AgdbApi\Model\DbValue
-     */
-    public function getNotEqual()
-    {
-        return $this->container['not_equal'];
-    }
-
-    /**
-     * Sets not_equal
-     *
-     * @param \Agnesoft\AgdbApi\Model\DbValue $not_equal property != this
-     *
-     * @return self
-     */
-    public function setNotEqual($not_equal)
-    {
-        if (is_null($not_equal)) {
-            throw new \InvalidArgumentException('non-nullable not_equal cannot be null');
-        }
-        $this->container['not_equal'] = $not_equal;
-
-        return $this;
-    }
-
-    /**
-     * Gets contains
-     *
-     * @return \Agnesoft\AgdbApi\Model\DbValue
-     */
-    public function getContains()
-    {
-        return $this->container['contains'];
-    }
-
-    /**
-     * Sets contains
-     *
-     * @param \Agnesoft\AgdbApi\Model\DbValue $contains property.contains(this)
-     *
-     * @return self
-     */
-    public function setContains($contains)
-    {
-        if (is_null($contains)) {
-            throw new \InvalidArgumentException('non-nullable contains cannot be null');
-        }
-        $this->container['contains'] = $contains;
-
-        return $this;
-    }
-
-    /**
-     * Gets starts_with
-     *
-     * @return \Agnesoft\AgdbApi\Model\DbValue
-     */
-    public function getStartsWith()
-    {
-        return $this->container['starts_with'];
-    }
-
-    /**
-     * Sets starts_with
-     *
-     * @param \Agnesoft\AgdbApi\Model\DbValue $starts_with property.starts_with(this)
-     *
-     * @return self
-     */
-    public function setStartsWith($starts_with)
-    {
-        if (is_null($starts_with)) {
-            throw new \InvalidArgumentException('non-nullable starts_with cannot be null');
-        }
-        $this->container['starts_with'] = $starts_with;
-
-        return $this;
-    }
 
     /**
      * Gets ends_with

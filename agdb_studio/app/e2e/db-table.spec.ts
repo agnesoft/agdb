@@ -1,4 +1,4 @@
-import { expect, Page } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
 import { test } from "../e2e-utils/global.setup";
 import { mockLogin } from "../e2e-utils/utils";
 import { DB_ADD_API, DB_LIST_API } from "../e2e-utils/apiPaths";
@@ -7,7 +7,6 @@ import {
   getLocatorByTestId,
   getSelectorByTestId,
   hasText,
-  isHidden,
   isVisible,
 } from "../e2e-utils/elements";
 import { click, fillInput } from "../e2e-utils/interaction";

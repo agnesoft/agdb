@@ -18,8 +18,8 @@ onMounted(async () => {
       <button
         class="button refresh"
         title="refresh"
-        @click="fetchDatabases"
         data-testid="refresh-button"
+        @click="fetchDatabases"
       >
         <MdRefresh />
       </button>

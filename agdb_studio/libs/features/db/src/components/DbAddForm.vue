@@ -11,7 +11,6 @@ const { addDatabase, fetchDatabases } = useDbStore();
 const loading = ref(false);
 
 const add = (event: Event) => {
-  if (loading.value) return;
   if (!name.value) return;
   loading.value = true;
   event.preventDefault();
@@ -52,8 +51,8 @@ const add = (event: Event) => {
       <button
         type="submit"
         class="button"
-        @click="add"
         data-testid="add-db-button"
+        @click="add"
       >
         Add
       </button>

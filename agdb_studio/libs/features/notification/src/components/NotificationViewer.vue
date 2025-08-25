@@ -81,8 +81,11 @@ import {
       :title="`${viewerOpened ? 'Hide' : 'Show'} notifications`"
       @click="toggleViewerOpened"
     >
-      <CaNotification v-if="!hasUnreadNotifications || viewerOpened" />
-      <CaNotificationNew v-else />
+      <CaNotification
+        v-if="!hasUnreadNotifications || viewerOpened"
+        data-testid="notification-icon"
+      />
+      <CaNotificationNew v-else data-testid="notification-new-icon" />
     </button>
   </div>
 </template>

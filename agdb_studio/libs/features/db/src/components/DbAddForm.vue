@@ -11,6 +11,7 @@ const { addDatabase, fetchDatabases } = useDbStore();
 const loading = ref(false);
 
 const add = (event: Event) => {
+  if (!name.value) return;
   loading.value = true;
   event.preventDefault();
 
@@ -34,13 +35,27 @@ const add = (event: Event) => {
   <div class="db-add-form">
     <h2>Add Database</h2>
     <form id="db-add-form" @submit="add">
-      <input v-model="name" type="text" placeholder="Name" name="db-name" />
+      <input
+        v-model="name"
+        type="text"
+        placeholder="Name"
+        name="db-name"
+        data-testid="db-name-input"
+        required
+      />
       <select v-model="db_type" name="db-type">
         <option value="memory">Memory</option>
         <option value="file">File</option>
         <option value="mapped">Mapped</option>
       </select>
-      <button type="submit" class="button" @click="add">Add</button>
+      <button
+        type="submit"
+        class="button"
+        data-testid="add-db-button"
+        @click="add"
+      >
+        Add
+      </button>
     </form>
   </div>
 </template>

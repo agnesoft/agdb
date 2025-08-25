@@ -26,7 +26,7 @@ const addDatabase = async ({ name, db_type }: AddDatabaseProps) => {
     return;
   }
 
-  dbAdd({
+  return dbAdd({
     owner: username.value,
     db: name,
     db_type,

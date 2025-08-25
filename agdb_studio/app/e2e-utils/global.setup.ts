@@ -29,5 +29,7 @@ setup.beforeEach("setup api", async ({ page }) => {
       body: JSON.stringify({ username: "testuser", admin: false, login: true }),
     });
   });
+
+  page.on("console", (msg) => console.log(msg.text()));
 });
 export const test = setup;

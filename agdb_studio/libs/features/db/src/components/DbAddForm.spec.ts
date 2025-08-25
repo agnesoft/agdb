@@ -42,4 +42,14 @@ describe("DbAddForm", () => {
     await wrapper.vm.$nextTick();
     expect(addDatabase).toHaveBeenCalledOnce();
   });
+  it("should not add db when name is empty", async () => {
+    addDatabase.mockResolvedValueOnce(true);
+    expect(addDatabase).not.toHaveBeenCalled();
+    const wrapper = mount(DbAddForm);
+    await wrapper.find("input").setValue("");
+    await wrapper.find("select").setValue("memory");
+    await wrapper.find("button[type=submit]").trigger("click");
+    await wrapper.vm.$nextTick();
+    expect(addDatabase).not.toHaveBeenCalled();
+  });
 });

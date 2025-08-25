@@ -149,6 +149,7 @@ test.describe("Database Table E2E Tests", () => {
     ]);
     await fillInput(page, "db-name-input", "new_db");
     await click(page, "add-db-button");
+    await click(page, "refresh-button");
     await expect(rows).toHaveCount(4);
     const row = rows.nth(3);
     await expect(row).toBeVisible();

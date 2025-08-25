@@ -6,10 +6,10 @@ import {
   DB_LIST_API,
 } from "../e2e-utils/apiPaths";
 import {
-  // containsText,
+  containsText,
   getLocatorByTestId,
   getSelectorByTestId,
-  // hasText,
+  hasText,
   isVisible,
 } from "../e2e-utils/elements";
 import { click, fillInput } from "../e2e-utils/interaction";
@@ -99,25 +99,25 @@ test.describe("Database Table E2E Tests", () => {
     }
   });
 
-  // test("should handle empty database list", async ({ page }) => {
-  //   mockDatabaseListApi(page, []);
-  //   await click(page, "refresh-button");
-  //   const rows = getLocatorByTestId(page, "table-row");
-  //   await expect(rows).toHaveCount(0);
-  //   await hasText(page, "empty-table-message", "No databases found");
-  // });
+  test("should handle empty database list", async ({ page }) => {
+    mockDatabaseListApi(page, []);
+    await click(page, "refresh-button");
+    const rows = getLocatorByTestId(page, "table-row");
+    await expect(rows).toHaveCount(0);
+    await hasText(page, "empty-table-message", "No databases found");
+  });
 
-  // test("should handle API errors gracefully", async ({ page }) => {
-  //   await page.route(DB_LIST_API, async (route) => {
-  //     route.fulfill({
-  //       status: 500,
-  //       contentType: "application/json",
-  //       body: JSON.stringify({ error: "Internal Server Error" }),
-  //     });
-  //   });
-  //   await click(page, "refresh-button");
-  //   await containsText(page, "notification-item", "Internal Server Error");
-  // });
+  test("should handle API errors gracefully", async ({ page }) => {
+    await page.route(DB_LIST_API, async (route) => {
+      route.fulfill({
+        status: 500,
+        contentType: "application/json",
+        body: JSON.stringify({ error: "Internal Server Error" }),
+      });
+    });
+    await click(page, "refresh-button");
+    await containsText(page, "notification-item", "Internal Server Error");
+  });
 
   // test("should add new database", async ({ page }) => {
   //   await page.route(DB_ADD_API, async (route) => {

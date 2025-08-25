@@ -1,10 +1,7 @@
 import { expect, type Page } from "@playwright/test";
 import { test } from "../e2e-utils/global.setup";
 import { mockLogin } from "../e2e-utils/utils";
-import {
-  // DB_ADD_API,
-  DB_LIST_API,
-} from "../e2e-utils/apiPaths";
+import { DB_ADD_API, DB_LIST_API } from "../e2e-utils/apiPaths";
 import {
   containsText,
   getLocatorByTestId,
@@ -56,12 +53,6 @@ const mockDatabaseListApi = async (
 };
 
 test.describe("Database Table E2E Tests", () => {
-  // test("test", async ({ page }) => {
-  //   await mockLogin(page);
-  //   await mockDatabaseListApi(page, mockedDatabaseList);
-  //   await page.goto("/studio/db");
-  //   await isVisible(page, "db-table");
-  // });
   test.beforeEach(async ({ page }) => {
     await mockLogin(page);
     await mockDatabaseListApi(page, mockedDatabaseList);
@@ -119,52 +110,52 @@ test.describe("Database Table E2E Tests", () => {
     await containsText(page, "notification-item", "Internal Server Error");
   });
 
-  // test("should add new database", async ({ page }) => {
-  //   await page.route(DB_ADD_API, async (route) => {
-  //     const request = route.request();
-  //     const body = await request.postDataJSON();
-  //     expect(body).toEqual({
-  //       db: "new_db",
-  //       db_type: "memory",
-  //       owner: "admin",
-  //       role: "admin",
-  //     });
-  //     route.fulfill({
-  //       status: 200,
-  //       contentType: "application/json",
-  //       body: JSON.stringify({
-  //         db: "new_db",
-  //         owner: "admin",
-  //         db_type: "memory",
-  //         role: "admin",
-  //         size: 2568,
-  //         backup: 0,
-  //       }),
-  //     });
-  //   });
+  test("should add new database", async ({ page }) => {
+    await page.route(DB_ADD_API, async (route) => {
+      const request = route.request();
+      const body = await request.postDataJSON();
+      expect(body).toEqual({
+        db: "new_db",
+        db_type: "memory",
+        owner: "admin",
+        role: "admin",
+      });
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          db: "new_db",
+          owner: "admin",
+          db_type: "memory",
+          role: "admin",
+          size: 2568,
+          backup: 0,
+        }),
+      });
+    });
 
-  //   const rows = getLocatorByTestId(page, "table-row");
-  //   await expect(rows).toHaveCount(3);
-  //   await mockDatabaseListApi(page, [
-  //     ...mockedDatabaseList,
-  //     {
-  //       db: "new_db",
-  //       owner: "admin",
-  //       db_type: "memory",
-  //       role: "admin",
-  //       size: 2568,
-  //       backup: 0,
-  //     },
-  //   ]);
-  //   await fillInput(page, "db-name-input", "new_db");
-  //   await click(page, "add-db-button");
-  //   await expect(rows).toHaveCount(4);
-  //   const row = rows.nth(3);
-  //   await expect(row).toBeVisible();
-  //   await expect(row.locator(getSelectorByTestId("table-cell-db"))).toHaveText(
-  //     "new_db",
-  //   );
-  // });
+    const rows = getLocatorByTestId(page, "table-row");
+    await expect(rows).toHaveCount(3);
+    await mockDatabaseListApi(page, [
+      ...mockedDatabaseList,
+      {
+        db: "new_db",
+        owner: "admin",
+        db_type: "memory",
+        role: "admin",
+        size: 2568,
+        backup: 0,
+      },
+    ]);
+    await fillInput(page, "db-name-input", "new_db");
+    await click(page, "add-db-button");
+    await expect(rows).toHaveCount(4);
+    const row = rows.nth(3);
+    await expect(row).toBeVisible();
+    await expect(row.locator(getSelectorByTestId("table-cell-db"))).toHaveText(
+      "new_db",
+    );
+  });
   test("should prevent adding database with empty name", async ({ page }) => {
     const rows = getLocatorByTestId(page, "table-row");
     await expect(rows).toHaveCount(3);

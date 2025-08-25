@@ -5,9 +5,6 @@ import { LOGIN_API } from "../e2e-utils/apiPaths";
 import { hasText, isHidden, isVisible } from "../e2e-utils/elements";
 
 test.describe("Authentication E2E Tests", () => {
-  // test("all tests commented out", () => {
-  //   expect(true).toBe(true);
-  // });
   test.beforeEach(async ({ page }) => {
     await page.goto("/studio/login");
     await isVisible(page, "login_form");

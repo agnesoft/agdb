@@ -1,63 +1,69 @@
 import {
-  expect,
-  // type Page
+  // expect,
+  type Page,
 } from "@playwright/test";
 import { test } from "../e2e-utils/global.setup";
-// import { mockLogin } from "../e2e-utils/utils";
-// import { DB_ADD_API, DB_LIST_API } from "../e2e-utils/apiPaths";
-// import {
-//   containsText,
-//   getLocatorByTestId,
-//   getSelectorByTestId,
-//   hasText,
-//   isVisible,
-// } from "../e2e-utils/elements";
+import { mockLogin } from "../e2e-utils/utils";
+import {
+  // DB_ADD_API,
+  DB_LIST_API,
+} from "../e2e-utils/apiPaths";
+import {
+  // containsText,
+  // getLocatorByTestId,
+  // getSelectorByTestId,
+  // hasText,
+  isVisible,
+} from "../e2e-utils/elements";
 // import { click, fillInput } from "../e2e-utils/interaction";
-// import type { ServerDatabase } from "@agnesoft/agdb_api/openapi" with { "resolution-mode": "import" };
+import type { ServerDatabase } from "@agnesoft/agdb_api/openapi" with { "resolution-mode": "import" };
 
-// const mockedDatabaseList: ServerDatabase[] = [
-//   {
-//     db: "users",
-//     owner: "admin",
-//     db_type: "memory",
-//     role: "admin",
-//     size: 2568,
-//     backup: 0,
-//   },
-//   {
-//     db: "orders",
-//     owner: "admin",
-//     db_type: "memory",
-//     role: "admin",
-//     size: 2568,
-//     backup: 1754213481,
-//   },
-//   {
-//     db: "products",
-//     owner: "admin",
-//     db_type: "memory",
-//     role: "admin",
-//     size: 2568,
-//     backup: 0,
-//   },
-// ];
+const mockedDatabaseList: ServerDatabase[] = [
+  {
+    db: "users",
+    owner: "admin",
+    db_type: "memory",
+    role: "admin",
+    size: 2568,
+    backup: 0,
+  },
+  {
+    db: "orders",
+    owner: "admin",
+    db_type: "memory",
+    role: "admin",
+    size: 2568,
+    backup: 1754213481,
+  },
+  {
+    db: "products",
+    owner: "admin",
+    db_type: "memory",
+    role: "admin",
+    size: 2568,
+    backup: 0,
+  },
+];
 
-// const mockDatabaseListApi = async (
-//   page: Page,
-//   databaseList: ServerDatabase[],
-// ) => {
-//   await page.route(DB_LIST_API, async (route) => {
-//     route.fulfill({
-//       status: 200,
-//       contentType: "application/json",
-//       body: JSON.stringify(databaseList),
-//     });
-//   });
-// };
+const mockDatabaseListApi = async (
+  page: Page,
+  databaseList: ServerDatabase[],
+) => {
+  await page.route(DB_LIST_API, async (route) => {
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(databaseList),
+    });
+  });
+};
 
 test.describe("Database Table E2E Tests", () => {
-  test("test", () => {
-    expect(true).toBe(true);
+  test("test", async ({ page }) => {
+    await mockLogin(page);
+    await mockDatabaseListApi(page, mockedDatabaseList);
+    await page.goto("/studio/db");
+    await isVisible(page, "db-table");
   });
   // test.beforeEach(async ({ page }) => {
   //   await mockLogin(page);

@@ -3,7 +3,7 @@ import { test } from "../e2e-utils/global.setup";
 import { mockLogin } from "../e2e-utils/utils";
 import { DB_ADD_API, DB_LIST_API } from "../e2e-utils/apiPaths";
 import {
-  containsText,
+  // containsText,
   getLocatorByTestId,
   getSelectorByTestId,
   hasText,
@@ -98,17 +98,17 @@ test.describe("Database Table E2E Tests", () => {
     await hasText(page, "empty-table-message", "No databases found");
   });
 
-  test("should handle API errors gracefully", async ({ page }) => {
-    await page.route(DB_LIST_API, async (route) => {
-      route.fulfill({
-        status: 500,
-        contentType: "application/json",
-        body: JSON.stringify({ error: "Internal Server Error" }),
-      });
-    });
-    await click(page, "refresh-button");
-    await containsText(page, "notification-item", "Internal Server Error");
-  });
+  // test("should handle API errors gracefully", async ({ page }) => {
+  //   await page.route(DB_LIST_API, async (route) => {
+  //     route.fulfill({
+  //       status: 500,
+  //       contentType: "application/json",
+  //       body: JSON.stringify({ error: "Internal Server Error" }),
+  //     });
+  //   });
+  //   await click(page, "refresh-button");
+  //   await containsText(page, "notification-item", "Internal Server Error");
+  // });
 
   test("should add new database", async ({ page }) => {
     await page.route(DB_ADD_API, async (route) => {

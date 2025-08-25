@@ -1,7 +1,4 @@
-import {
-  // expect,
-  type Page,
-} from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
 import { test } from "../e2e-utils/global.setup";
 import { mockLogin } from "../e2e-utils/utils";
 import {
@@ -10,12 +7,12 @@ import {
 } from "../e2e-utils/apiPaths";
 import {
   // containsText,
-  // getLocatorByTestId,
+  getLocatorByTestId,
   // getSelectorByTestId,
   // hasText,
   isVisible,
 } from "../e2e-utils/elements";
-// import { click, fillInput } from "../e2e-utils/interaction";
+import { click, fillInput } from "../e2e-utils/interaction";
 import type { ServerDatabase } from "@agnesoft/agdb_api/openapi" with { "resolution-mode": "import" };
 
 const mockedDatabaseList: ServerDatabase[] = [
@@ -59,18 +56,18 @@ const mockDatabaseListApi = async (
 };
 
 test.describe("Database Table E2E Tests", () => {
-  test("test", async ({ page }) => {
-    await mockLogin(page);
-    await mockDatabaseListApi(page, mockedDatabaseList);
-    await page.goto("/studio/db");
-    await isVisible(page, "db-table");
-  });
-  // test.beforeEach(async ({ page }) => {
+  // test("test", async ({ page }) => {
   //   await mockLogin(page);
   //   await mockDatabaseListApi(page, mockedDatabaseList);
   //   await page.goto("/studio/db");
   //   await isVisible(page, "db-table");
   // });
+  test.beforeEach(async ({ page }) => {
+    await mockLogin(page);
+    await mockDatabaseListApi(page, mockedDatabaseList);
+    await page.goto("/studio/db");
+    await isVisible(page, "db-table");
+  });
 
   // test("should display database table with correct data", async ({ page }) => {
   //   const rows = getLocatorByTestId(page, "table-row");
@@ -168,11 +165,11 @@ test.describe("Database Table E2E Tests", () => {
   //     "new_db",
   //   );
   // });
-  // test("should prevent adding database with empty name", async ({ page }) => {
-  //   const rows = getLocatorByTestId(page, "table-row");
-  //   await expect(rows).toHaveCount(3);
-  //   await fillInput(page, "db-name-input", "");
-  //   await click(page, "add-db-button");
-  //   await expect(rows).toHaveCount(3);
-  // });
+  test("should prevent adding database with empty name", async ({ page }) => {
+    const rows = getLocatorByTestId(page, "table-row");
+    await expect(rows).toHaveCount(3);
+    await fillInput(page, "db-name-input", "");
+    await click(page, "add-db-button");
+    await expect(rows).toHaveCount(3);
+  });
 });

@@ -8,7 +8,7 @@ import {
 import {
   // containsText,
   getLocatorByTestId,
-  // getSelectorByTestId,
+  getSelectorByTestId,
   // hasText,
   isVisible,
 } from "../e2e-utils/elements";
@@ -69,35 +69,35 @@ test.describe("Database Table E2E Tests", () => {
     await isVisible(page, "db-table");
   });
 
-  // test("should display database table with correct data", async ({ page }) => {
-  //   const rows = getLocatorByTestId(page, "table-row");
-  //   await expect(rows).toHaveCount(3);
+  test("should display database table with correct data", async ({ page }) => {
+    const rows = getLocatorByTestId(page, "table-row");
+    await expect(rows).toHaveCount(3);
 
-  //   for (let i = 0; i < 3; i++) {
-  //     const row = rows.nth(i);
-  //     await expect(row).toBeVisible();
-  //     await expect(
-  //       row.locator(getSelectorByTestId("table-cell-db")),
-  //     ).toHaveText(["users", "orders", "products"][i]);
-  //     await expect(
-  //       row.locator(getSelectorByTestId("table-cell-owner")),
-  //     ).toHaveText("admin");
-  //     await expect(
-  //       row.locator(getSelectorByTestId("table-cell-db_type")),
-  //     ).toHaveText("memory");
-  //     await expect(
-  //       row.locator(getSelectorByTestId("table-cell-role")),
-  //     ).toHaveText("admin");
-  //     await expect(
-  //       row.locator(getSelectorByTestId("table-cell-size")),
-  //     ).toHaveText("2568");
-  //     await expect(
-  //       row.locator(getSelectorByTestId("table-cell-backup")),
-  //     ).toHaveText(
-  //       ["N/A", new Date(1754213481 * 1000).toUTCString(), "N/A"][i],
-  //     );
-  //   }
-  // });
+    for (let i = 0; i < 3; i++) {
+      const row = rows.nth(i);
+      await expect(row).toBeVisible();
+      await expect(
+        row.locator(getSelectorByTestId("table-cell-db")),
+      ).toHaveText(["users", "orders", "products"][i]);
+      await expect(
+        row.locator(getSelectorByTestId("table-cell-owner")),
+      ).toHaveText("admin");
+      await expect(
+        row.locator(getSelectorByTestId("table-cell-db_type")),
+      ).toHaveText("memory");
+      await expect(
+        row.locator(getSelectorByTestId("table-cell-role")),
+      ).toHaveText("admin");
+      await expect(
+        row.locator(getSelectorByTestId("table-cell-size")),
+      ).toHaveText("2568");
+      await expect(
+        row.locator(getSelectorByTestId("table-cell-backup")),
+      ).toHaveText(
+        ["N/A", new Date(1754213481 * 1000).toUTCString(), "N/A"][i],
+      );
+    }
+  });
 
   // test("should handle empty database list", async ({ page }) => {
   //   mockDatabaseListApi(page, []);

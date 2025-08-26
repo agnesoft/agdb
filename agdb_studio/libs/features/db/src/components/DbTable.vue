@@ -26,7 +26,7 @@ watchEffect(() => {
 
 <template>
   <div class="table-wrap">
-    <div v-if="databases.length" class="db-table">
+    <div v-if="databases.length" class="db-table" data-testid="db-table">
       <AgdbTable :name="TABLE_KEY">
         <template #rowDetails="{ row }">
           <DbDetails :row="row" />
@@ -34,7 +34,7 @@ watchEffect(() => {
       </AgdbTable>
     </div>
 
-    <p v-else>No databases found</p>
+    <p v-else data-testid="empty-table-message">No databases found</p>
   </div>
 </template>
 

@@ -15,7 +15,12 @@ onMounted(async () => {
   <div class="db-view">
     <div class="header">
       <DbAddForm />
-      <button class="button refresh" title="refresh" @click="fetchDatabases">
+      <button
+        class="button refresh"
+        title="refresh"
+        data-testid="refresh-button"
+        @click="fetchDatabases"
+      >
         <MdRefresh />
       </button>
     </div>

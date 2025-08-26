@@ -51,7 +51,7 @@ const onLogin = async () => {
 </script>
 
 <template>
-  <div class="base-form login-form">
+  <div class="base-form login-form" data-testid="login_form">
     <form @submit.prevent="onLogin">
       <div>
         <label for="username">Username:</label>

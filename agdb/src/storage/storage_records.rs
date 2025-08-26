@@ -87,10 +87,10 @@ impl StorageRecords {
     }
 
     pub fn record(&self, index: u64) -> Result<StorageRecord, DbError> {
-        if let Some(record) = self.records.get(index as usize) {
-            if self.is_valid(record) {
-                return Ok(*record);
-            }
+        if let Some(record) = self.records.get(index as usize)
+            && self.is_valid(record)
+        {
+            return Ok(*record);
         }
 
         Err(DbError::from(format!(

@@ -1,7 +1,7 @@
 use crate::DbElement;
+use crate::DbError;
 use crate::DbImpl;
 use crate::Query;
-use crate::QueryError;
 use crate::QueryId;
 use crate::QueryIds;
 use crate::QueryResult;
@@ -17,13 +17,13 @@ use crate::query_builder::search::SearchQueryBuilder;
 /// the value `String`.
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
-#[cfg_attr(feature = "derive", derive(agdb::AgdbDeSerialize))]
+#[cfg_attr(feature = "derive", derive(agdb::DbSerialize))]
 #[cfg_attr(feature = "api", derive(agdb::ApiDef))]
 #[derive(Clone, Debug, PartialEq)]
 pub struct SelectAliasesQuery(pub QueryIds);
 
 impl Query for SelectAliasesQuery {
-    fn process<Store: StorageData>(&self, db: &DbImpl<Store>) -> Result<QueryResult, QueryError> {
+    fn process<Store: StorageData>(&self, db: &DbImpl<Store>) -> Result<QueryResult, DbError> {
         let mut result = QueryResult::default();
 
         match &self.0 {
@@ -69,7 +69,7 @@ impl Query for SelectAliasesQuery {
 }
 
 impl Query for &SelectAliasesQuery {
-    fn process<Store: StorageData>(&self, db: &DbImpl<Store>) -> Result<QueryResult, QueryError> {
+    fn process<Store: StorageData>(&self, db: &DbImpl<Store>) -> Result<QueryResult, DbError> {
         (*self).process(db)
     }
 }

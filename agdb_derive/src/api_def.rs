@@ -7,7 +7,15 @@ use syn::Ident;
 use syn::Type;
 use syn::parse_macro_input;
 
+pub fn api_def_impl(item: TokenStream) -> TokenStream {
+    do_api_def(item, true)
+}
+
 pub fn api_def(item: TokenStream) -> TokenStream {
+    do_api_def(item, false)
+}
+
+fn do_api_def(item: TokenStream, has_impl: bool) -> TokenStream {
     let input = parse_macro_input!(item as DeriveInput);
     let name = input.ident;
     let generics = input.generics;
@@ -19,7 +27,7 @@ pub fn api_def(item: TokenStream) -> TokenStream {
             .map(|f| (f.ident.as_ref(), &f.ty))
             .collect::<Vec<(Option<&Ident>, &Type)>>();
 
-        struct_def(name, generics, fields_types)
+        struct_def(name, generics, fields_types, has_impl)
     } else if let syn::Data::Enum(data) = input.data {
         enum_def(name, data)
     } else {
@@ -33,6 +41,7 @@ fn struct_def(
     name: Ident,
     generics: Generics,
     fields_types: Vec<(Option<&Ident>, &Type)>,
+    has_impl: bool,
 ) -> proc_macro2::TokenStream {
     let named_types = fields_types.iter().map(|(name, ty)| {
         if let Some(name) = name {
@@ -54,18 +63,28 @@ fn struct_def(
 
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
 
+    let impl_def = if !has_impl {
+        quote! {
+            impl #impl_generics ::agdb::api::ApiFunctions for #name #ty_generics #where_clause {}
+        }
+    } else {
+        quote! {}
+    };
+
     quote! {
         impl #impl_generics ::agdb::api::ApiDefinition for #name #ty_generics #where_clause {
             fn def() -> ::agdb::api::Type {
-                static STATIC: ::std::sync::OnceLock<::agdb::api::Struct> = ::std::sync::OnceLock::new();
-                ::agdb::api::Type::Struct(STATIC.get_or_init(|| ::agdb::api::Struct {
-                    name: stringify!(#name),
+                ::agdb::api::Type::Struct(::agdb::api::Struct {
+                    name: stringify!(#name).to_string(),
                     fields: vec![
                         #(#named_types),*
-                    ]
-                }))
+                    ],
+                    functions: <#name #ty_generics as ::agdb::api::ApiFunctions>::functions,
+                })
             }
         }
+
+        #impl_def
     }
 }
 
@@ -94,14 +113,15 @@ fn enum_def(name: Ident, enum_data: DataEnum) -> proc_macro2::TokenStream {
     quote! {
         impl ::agdb::api::ApiDefinition for #name {
             fn def() -> ::agdb::api::Type {
-                static STATIC: ::std::sync::OnceLock<::agdb::api::Enum> = ::std::sync::OnceLock::new();
-                ::agdb::api::Type::Enum(STATIC.get_or_init(|| ::agdb::api::Enum {
-                    name: stringify!(#name),
+                ::agdb::api::Type::Enum(::agdb::api::Enum {
+                    name: stringify!(#name).to_string(),
                     variants: vec![
                         #(#variants),*
                     ],
-                }))
+                })
             }
         }
+
+        impl ::agdb::api::ApiFunctions for #name {}
     }
 }

@@ -1,8 +1,8 @@
 use crate::DbElement;
+use crate::DbError;
 use crate::DbId;
 use crate::DbImpl;
 use crate::Query;
-use crate::QueryError;
 use crate::QueryResult;
 use crate::StorageData;
 
@@ -13,13 +13,13 @@ use crate::StorageData;
 /// a value `u64` represneting number of nodes in teh database.
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
-#[cfg_attr(feature = "derive", derive(agdb::AgdbDeSerialize))]
+#[cfg_attr(feature = "derive", derive(agdb::DbSerialize))]
 #[cfg_attr(feature = "api", derive(agdb::ApiDef))]
 #[derive(Clone, Debug, PartialEq)]
 pub struct SelectNodeCountQuery {}
 
 impl Query for SelectNodeCountQuery {
-    fn process<Store: StorageData>(&self, db: &DbImpl<Store>) -> Result<QueryResult, QueryError> {
+    fn process<Store: StorageData>(&self, db: &DbImpl<Store>) -> Result<QueryResult, DbError> {
         Ok(QueryResult {
             result: 1,
             elements: vec![DbElement {
@@ -33,7 +33,7 @@ impl Query for SelectNodeCountQuery {
 }
 
 impl Query for &SelectNodeCountQuery {
-    fn process<Store: StorageData>(&self, db: &DbImpl<Store>) -> Result<QueryResult, QueryError> {
+    fn process<Store: StorageData>(&self, db: &DbImpl<Store>) -> Result<QueryResult, DbError> {
         (*self).process(db)
     }
 }

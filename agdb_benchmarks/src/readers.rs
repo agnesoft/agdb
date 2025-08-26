@@ -39,7 +39,7 @@ impl<S: StorageData> Reader<S> {
                                 .from(post_id)
                                 .limit(limit)
                                 .where_()
-                                .distance(agdb::CountComparison::Equal(2))
+                                .distance(2)
                                 .query(),
                         )
                         .query(),
@@ -66,7 +66,7 @@ impl<S: StorageData> Reader<S> {
                             .from("posts")
                             .limit(limit)
                             .where_()
-                            .distance(agdb::CountComparison::Equal(2))
+                            .distance(2)
                             .query(),
                     )
                     .query(),
@@ -95,7 +95,7 @@ impl<S: StorageData> Reader<S> {
                     .from("posts")
                     .limit(1)
                     .where_()
-                    .distance(agdb::CountComparison::Equal(2))
+                    .distance(2)
                     .query(),
             )?
             .elements

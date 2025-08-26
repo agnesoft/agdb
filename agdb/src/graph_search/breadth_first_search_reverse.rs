@@ -29,17 +29,16 @@ where
         follow: bool,
     ) {
         if current_index.index.is_node() {
-            if follow {
-                if let Some(i) = graph
+            if follow
+                && let Some(i) = graph
                     .first_edge_to(storage, current_index.index)
                     .ok()
                     .filter(|i| i.is_valid())
-                {
-                    self.stack.push_back(SearchIndex {
-                        index: i,
-                        distance: current_index.distance + 1,
-                    });
-                }
+            {
+                self.stack.push_back(SearchIndex {
+                    index: i,
+                    distance: current_index.distance + 1,
+                });
             }
         } else {
             if follow {

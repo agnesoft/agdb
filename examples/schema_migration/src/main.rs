@@ -1,13 +1,11 @@
-use agdb::CountComparison;
 use agdb::DbError;
 use agdb::DbId;
 use agdb::DbMemory;
+use agdb::DbType;
 use agdb::DbValue;
 use agdb::QueryBuilder;
-use agdb::QueryError;
-use agdb::UserValue;
 
-#[derive(Debug, UserValue)]
+#[derive(Debug, DbType)]
 struct UserDb {
     name: String,
     status: String,
@@ -21,7 +19,7 @@ enum UserStatus {
     Banned,
 }
 
-#[derive(Debug, UserValue)]
+#[derive(Debug, DbType)]
 struct UserDb2 {
     db_id: Option<DbId>,
     name: String,
@@ -50,7 +48,7 @@ impl From<UserStatus> for DbValue {
     }
 }
 
-fn main() -> Result<(), QueryError> {
+fn main() -> Result<(), DbError> {
     // Creates in memory database.
     let mut db = DbMemory::new("agdb_example")?;
 
@@ -113,7 +111,7 @@ fn main() -> Result<(), QueryError> {
                     .search()
                     .from("users")
                     .where_()
-                    .distance(CountComparison::Equal(2))
+                    .distance(2)
                     .query(),
             )?
             .try_into()?;

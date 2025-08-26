@@ -45,7 +45,7 @@ fn public_types() {
     use agdb::DbMemoryTransactionMut;
     use agdb::DbTransaction;
     use agdb::DbTransactionMut;
-    use agdb::DbUserValue;
+    use agdb::DbType;
     use agdb::DbValue;
     use agdb::FileStorage;
     use agdb::FileStorageMemoryMapped;
@@ -61,7 +61,6 @@ fn public_types() {
     use agdb::QueryConditionData;
     use agdb::QueryConditionLogic;
     use agdb::QueryConditionModifier;
-    use agdb::QueryError;
     use agdb::QueryId;
     use agdb::QueryIds;
     use agdb::QueryMut;

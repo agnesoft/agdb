@@ -2,7 +2,7 @@ use crate::ADMIN;
 use crate::TestServer;
 use crate::next_db_name;
 use crate::next_user_name;
-use agdb_api::DbType;
+use agdb_api::DbKind;
 use std::path::Path;
 
 #[tokio::test]
@@ -13,7 +13,7 @@ async fn rename() -> anyhow::Result<()> {
     let db2 = &next_db_name();
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
-    server.api.admin_db_add(owner, db, DbType::Mapped).await?;
+    server.api.admin_db_add(owner, db, DbKind::Mapped).await?;
     let status = server.api.admin_db_rename(owner, db, owner, db2).await?;
     assert_eq!(status, 201);
     assert!(!Path::new(&server.data_dir).join(owner).join(db).exists());
@@ -29,7 +29,7 @@ async fn rename_with_backup() -> anyhow::Result<()> {
     let db2 = &next_db_name();
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
-    server.api.admin_db_add(owner, db, DbType::Mapped).await?;
+    server.api.admin_db_add(owner, db, DbKind::Mapped).await?;
     server.api.admin_db_backup(owner, db).await?;
     let status = server.api.admin_db_rename(owner, db, owner, db2).await?;
     assert_eq!(status, 201);
@@ -61,7 +61,7 @@ async fn transfer() -> anyhow::Result<()> {
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.admin_user_add(owner2, owner2).await?;
-    server.api.admin_db_add(owner, db, DbType::Mapped).await?;
+    server.api.admin_db_add(owner, db, DbKind::Mapped).await?;
     let status = server.api.admin_db_rename(owner, db, owner2, db).await?;
     assert_eq!(status, 201);
     assert!(!Path::new(&server.data_dir).join(owner).join(db).exists());
@@ -76,7 +76,7 @@ async fn user_not_found() -> anyhow::Result<()> {
     let db = &next_db_name();
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
-    server.api.admin_db_add(owner, db, DbType::Mapped).await?;
+    server.api.admin_db_add(owner, db, DbKind::Mapped).await?;
     let status = server
         .api
         .admin_db_rename(owner, db, "not_found", db)
@@ -94,7 +94,7 @@ async fn invalid() -> anyhow::Result<()> {
     let db = &next_db_name();
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
-    server.api.admin_db_add(owner, db, DbType::Mapped).await?;
+    server.api.admin_db_add(owner, db, DbKind::Mapped).await?;
     let status = server
         .api
         .admin_db_rename(owner, db, owner, "a\0a")
@@ -127,7 +127,7 @@ async fn target_self() -> anyhow::Result<()> {
     let db = &next_db_name();
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
-    server.api.admin_db_add(owner, db, DbType::Mapped).await?;
+    server.api.admin_db_add(owner, db, DbKind::Mapped).await?;
     let status = server.api.admin_db_rename(owner, db, owner, db).await?;
     assert_eq!(status, 201);
     Ok(())
@@ -141,8 +141,8 @@ async fn target_exists() -> anyhow::Result<()> {
     let db2 = &next_db_name();
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
-    server.api.admin_db_add(owner, db, DbType::Mapped).await?;
-    server.api.admin_db_add(owner, db2, DbType::Mapped).await?;
+    server.api.admin_db_add(owner, db, DbKind::Mapped).await?;
+    server.api.admin_db_add(owner, db2, DbKind::Mapped).await?;
     let status = server
         .api
         .admin_db_rename(owner, db, owner, db2)

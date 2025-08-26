@@ -41,17 +41,14 @@ pub mod test_utilities;
 pub use query::QueryType;
 
 #[cfg(feature = "derive")]
-pub use agdb_derive::AgdbDeSerialize;
-
-#[cfg(feature = "derive")]
-pub use agdb_derive::{UserValue, UserValueMarker};
+pub use agdb_derive::{DbSerialize, DbType, DbTypeMarker, DbValue};
 
 #[cfg(feature = "api")]
 pub mod api;
 #[cfg(feature = "api")]
 pub mod query_builder;
 #[cfg(feature = "api")]
-pub use agdb_derive::{ApiDef, impl_def};
+pub use agdb_derive::{ApiDef, ApiDefImpl, impl_def};
 
 pub use db::Db;
 pub use db::DbFile;
@@ -70,8 +67,8 @@ pub use db::db_id::DbId;
 pub use db::db_key_order::DbKeyOrder;
 pub use db::db_key_order::DbKeyOrders;
 pub use db::db_key_value::DbKeyValue;
-pub use db::db_user_value::DbUserValue;
-pub use db::db_user_value::DbUserValueMarker;
+pub use db::db_type::DbType;
+pub use db::db_type::DbTypeMarker;
 pub use db::db_value::DbValue;
 #[cfg(feature = "api")]
 pub use db::db_value::DbValues;
@@ -89,7 +86,6 @@ pub use query::query_condition::QueryCondition;
 pub use query::query_condition::QueryConditionData;
 pub use query::query_condition::QueryConditionLogic;
 pub use query::query_condition::QueryConditionModifier;
-pub use query::query_error::QueryError;
 pub use query::query_id::QueryId;
 pub use query::query_ids::QueryIds;
 pub use query::query_result::QueryResult;

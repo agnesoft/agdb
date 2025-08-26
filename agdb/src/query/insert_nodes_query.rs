@@ -1,7 +1,7 @@
 use crate::DbElement;
+use crate::DbError;
 use crate::DbId;
 use crate::DbImpl;
-use crate::QueryError;
 use crate::QueryId;
 use crate::QueryIds;
 use crate::QueryMut;
@@ -27,7 +27,7 @@ use crate::query::query_values::QueryValues;
 /// with their ids but no properties.
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
-#[cfg_attr(feature = "derive", derive(agdb::AgdbDeSerialize))]
+#[cfg_attr(feature = "derive", derive(agdb::DbSerialize))]
 #[cfg_attr(feature = "api", derive(agdb::ApiDef))]
 #[derive(Clone, Debug, PartialEq)]
 pub struct InsertNodesQuery {
@@ -47,10 +47,7 @@ pub struct InsertNodesQuery {
 }
 
 impl QueryMut for InsertNodesQuery {
-    fn process<Store: StorageData>(
-        &self,
-        db: &mut DbImpl<Store>,
-    ) -> Result<QueryResult, QueryError> {
+    fn process<Store: StorageData>(&self, db: &mut DbImpl<Store>) -> Result<QueryResult, DbError> {
         let mut result = QueryResult::default();
         let mut ids = vec![];
         let count = std::cmp::max(self.count, self.aliases.len() as u64);
@@ -58,7 +55,7 @@ impl QueryMut for InsertNodesQuery {
             QueryIds::Ids(ids) => ids
                 .iter()
                 .map(|query_id| db.db_id(query_id))
-                .collect::<Result<Vec<DbId>, QueryError>>()?,
+                .collect::<Result<Vec<DbId>, DbError>>()?,
             QueryIds::Search(search_query) => search_query.search(db)?,
         };
         let values = match &self.values {
@@ -67,7 +64,7 @@ impl QueryMut for InsertNodesQuery {
         };
 
         if values.len() < self.aliases.len() {
-            return Err(QueryError::from(format!(
+            return Err(DbError::from(format!(
                 "Aliases ({}) and values ({}) must have compatible lenghts ({} <= {})",
                 self.aliases.len(),
                 values.len(),
@@ -79,7 +76,7 @@ impl QueryMut for InsertNodesQuery {
         if !query_ids.is_empty() {
             query_ids.iter().try_for_each(|db_id| {
                 if db_id.0 < 0 {
-                    Err(QueryError::from(format!(
+                    Err(DbError::from(format!(
                         "The ids for insert or update must all refer to nodes - edge id '{}' found",
                         db_id.0
                     )))
@@ -89,7 +86,7 @@ impl QueryMut for InsertNodesQuery {
             })?;
 
             if values.len() != query_ids.len() {
-                return Err(QueryError::from(format!(
+                return Err(DbError::from(format!(
                     "Values ({}) and ids ({}) must have the same length",
                     values.len(),
                     query_ids.len()
@@ -109,16 +106,16 @@ impl QueryMut for InsertNodesQuery {
             }
         } else {
             for (index, key_values) in values.iter().enumerate() {
-                if let Some(alias) = self.aliases.get(index) {
-                    if let Ok(db_id) = db.db_id(&QueryId::Alias(alias.to_string())) {
-                        ids.push(db_id);
+                if let Some(alias) = self.aliases.get(index)
+                    && let Ok(db_id) = db.db_id(&QueryId::Alias(alias.to_string()))
+                {
+                    ids.push(db_id);
 
-                        for key_value in *key_values {
-                            db.insert_or_replace_key_value(db_id, key_value)?;
-                        }
-
-                        continue;
+                    for key_value in *key_values {
+                        db.insert_or_replace_key_value(db_id, key_value)?;
                     }
+
+                    continue;
                 }
 
                 let db_id = db.insert_node()?;
@@ -150,10 +147,7 @@ impl QueryMut for InsertNodesQuery {
 }
 
 impl QueryMut for &InsertNodesQuery {
-    fn process<Store: StorageData>(
-        &self,
-        db: &mut DbImpl<Store>,
-    ) -> Result<QueryResult, QueryError> {
+    fn process<Store: StorageData>(&self, db: &mut DbImpl<Store>) -> Result<QueryResult, DbError> {
         (*self).process(db)
     }
 }

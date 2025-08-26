@@ -1,5 +1,5 @@
+use crate::DbError;
 use crate::DbImpl;
-use crate::QueryError;
 use crate::QueryIds;
 use crate::QueryMut;
 use crate::QueryResult;
@@ -15,7 +15,7 @@ use crate::StorageData;
 /// The result will contain number of aliases inserted/updated but no elements.
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
-#[cfg_attr(feature = "derive", derive(agdb::AgdbDeSerialize))]
+#[cfg_attr(feature = "derive", derive(agdb::DbSerialize))]
 #[cfg_attr(feature = "api", derive(agdb::ApiDef))]
 #[derive(Clone, Debug, PartialEq)]
 pub struct InsertAliasesQuery {
@@ -27,23 +27,18 @@ pub struct InsertAliasesQuery {
 }
 
 impl QueryMut for InsertAliasesQuery {
-    fn process<Store: StorageData>(
-        &self,
-        db: &mut DbImpl<Store>,
-    ) -> Result<QueryResult, QueryError> {
+    fn process<Store: StorageData>(&self, db: &mut DbImpl<Store>) -> Result<QueryResult, DbError> {
         let mut result = QueryResult::default();
 
         match &self.ids {
             QueryIds::Ids(ids) => {
                 if ids.len() != self.aliases.len() {
-                    return Err(QueryError::from(
-                        "Ids and aliases must have the same length",
-                    ));
+                    return Err(DbError::from("Ids and aliases must have the same length"));
                 }
 
                 for (id, alias) in ids.iter().zip(&self.aliases) {
                     if alias.is_empty() {
-                        return Err(QueryError::from("Empty alias is not allowed"));
+                        return Err(DbError::from("Empty alias is not allowed"));
                     }
 
                     let db_id = db.db_id(id)?;
@@ -52,7 +47,7 @@ impl QueryMut for InsertAliasesQuery {
                 }
             }
             QueryIds::Search(_) => {
-                return Err(QueryError::from(
+                return Err(DbError::from(
                     "Insert aliases query does not support search queries",
                 ));
             }
@@ -63,10 +58,7 @@ impl QueryMut for InsertAliasesQuery {
 }
 
 impl QueryMut for &InsertAliasesQuery {
-    fn process<Store: StorageData>(
-        &self,
-        db: &mut DbImpl<Store>,
-    ) -> Result<QueryResult, QueryError> {
+    fn process<Store: StorageData>(&self, db: &mut DbImpl<Store>) -> Result<QueryResult, DbError> {
         (*self).process(db)
     }
 }
@@ -99,7 +91,7 @@ mod tests {
         };
         assert_eq!(
             query.process(&mut db).unwrap_err(),
-            QueryError::from("Insert aliases query does not support search queries")
+            DbError::from("Insert aliases query does not support search queries")
         );
     }
 }

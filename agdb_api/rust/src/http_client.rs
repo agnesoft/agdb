@@ -2,7 +2,7 @@ use crate::AgdbApiError;
 use crate::api_result::AgdbApiResult;
 use crate::client::AgdbApiClient;
 #[cfg(feature = "api")]
-use agdb::api::ApiDefinition;
+use agdb::api::{ApiDefinition, ApiFunctions, NamedType, Struct, Type};
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 
@@ -39,20 +39,20 @@ impl AgdbApiClient for ReqwestClient {}
 
 #[cfg(feature = "api")]
 impl ApiDefinition for ReqwestClient {
-    fn def() -> agdb::api::Type {
-        use agdb::api::NamedType;
-
-        static STRUCT: std::sync::OnceLock<agdb::api::Struct> = std::sync::OnceLock::new();
-
-        agdb::api::Type::Struct(STRUCT.get_or_init(|| agdb::api::Struct {
-            name: "ReqwestClient",
+    fn def() -> Type {
+        Type::Struct(Struct {
+            name: "ReqwestClient".to_string(),
             fields: vec![NamedType {
                 name: "client",
-                ty: || agdb::api::Type::User,
+                ty: || Type::User,
             }],
-        }))
+            functions: || <ReqwestClient as ApiFunctions>::functions(),
+        })
     }
 }
+
+#[cfg(feature = "api")]
+impl ApiFunctions for ReqwestClient {}
 
 impl ReqwestClient {
     #[allow(clippy::new_without_default)]

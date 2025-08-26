@@ -1,9 +1,9 @@
 mod test_db;
 
 use agdb::DbElement;
+use agdb::DbError;
 use agdb::DbId;
 use agdb::QueryBuilder;
-use agdb::QueryError;
 use agdb::QueryResult;
 use test_db::TestDb;
 
@@ -68,7 +68,7 @@ fn remove_nodes_no_alias_rollback() {
     let mut db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().nodes().count(1).query(), 1);
     db.transaction_mut_error(
-        |t| -> Result<(), QueryError> {
+        |t| -> Result<(), DbError> {
             t.exec_mut(QueryBuilder::remove().ids(1).query())?;
             Err("error".into())
         },
@@ -81,7 +81,7 @@ fn remove_nodes_no_alias_rollback() {
 fn remove_missing_nodes_rollback() {
     let mut db = TestDb::new();
     db.transaction_mut_error(
-        |t| -> Result<(), QueryError> {
+        |t| -> Result<(), DbError> {
             t.exec_mut(QueryBuilder::remove().ids(1).query())?;
             Err("error".into())
         },
@@ -93,7 +93,7 @@ fn remove_missing_nodes_rollback() {
 fn remove_missing_nodes_alias_rollback() {
     let mut db = TestDb::new();
     db.transaction_mut_error(
-        |t| -> Result<(), QueryError> {
+        |t| -> Result<(), DbError> {
             t.exec_mut(QueryBuilder::remove().ids("alias").query())?;
             Err("error".into())
         },
@@ -123,7 +123,7 @@ fn remove_nodes_with_edges_rollback() {
     db.exec_mut(QueryBuilder::insert().nodes().count(1).query(), 1);
     db.exec_mut(QueryBuilder::insert().edges().from(1).to(1).query(), 1);
     db.transaction_mut_error(
-        |t| -> Result<(), QueryError> {
+        |t| -> Result<(), DbError> {
             t.exec_mut(QueryBuilder::remove().ids(1).query())?;
             Err("error".into())
         },
@@ -176,11 +176,11 @@ fn remove_nodes_with_values_rollback() {
     );
 
     db.transaction_mut_error(
-        |t| -> Result<QueryResult, QueryError> {
+        |t| -> Result<QueryResult, DbError> {
             t.exec_mut(QueryBuilder::remove().ids(1).query()).unwrap();
             t.exec(QueryBuilder::select().ids(1).query())
         },
-        QueryError::from("Id '1' not found"),
+        DbError::from("Id '1' not found"),
     );
 
     db.exec_elements(
@@ -276,7 +276,7 @@ fn remove_nodes_removes_edges_with_all_values_rollback() {
         1,
     );
     db.transaction_mut_error(
-        |t| -> Result<(), QueryError> {
+        |t| -> Result<(), DbError> {
             t.exec_mut(QueryBuilder::remove().ids(2).query())?;
             t.exec_mut(
                 QueryBuilder::insert()
@@ -285,9 +285,9 @@ fn remove_nodes_removes_edges_with_all_values_rollback() {
                     .to([3, 3])
                     .query(),
             )?;
-            Err(QueryError::from("error"))
+            Err(DbError::from("error"))
         },
-        QueryError::from("error"),
+        DbError::from("error"),
     );
     db.exec_elements(
         QueryBuilder::select().ids(-4).query(),

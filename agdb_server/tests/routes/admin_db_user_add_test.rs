@@ -2,7 +2,7 @@ use crate::ADMIN;
 use crate::TestServer;
 use crate::next_db_name;
 use crate::next_user_name;
-use agdb_api::DbType;
+use agdb_api::DbKind;
 use agdb_api::DbUserRole;
 use agdb_api::ServerDatabase;
 
@@ -15,7 +15,7 @@ async fn db_user_add() -> anyhow::Result<()> {
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.admin_user_add(user, user).await?;
-    server.api.admin_db_add(owner, db, DbType::Mapped).await?;
+    server.api.admin_db_add(owner, db, DbKind::Mapped).await?;
     let status = server
         .api
         .admin_db_user_add(owner, db, user, DbUserRole::Write)
@@ -28,7 +28,7 @@ async fn db_user_add() -> anyhow::Result<()> {
         vec![ServerDatabase {
             db: db.to_string(),
             owner: owner.to_string(),
-            db_type: DbType::Mapped,
+            db_type: DbKind::Mapped,
             role: DbUserRole::Write,
             size: 2568,
             backup: 0,
@@ -46,7 +46,7 @@ async fn change_user_role() -> anyhow::Result<()> {
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.admin_user_add(user, user).await?;
-    server.api.admin_db_add(owner, db, DbType::Mapped).await?;
+    server.api.admin_db_add(owner, db, DbKind::Mapped).await?;
     let status = server
         .api
         .admin_db_user_add(owner, db, user, DbUserRole::Write)
@@ -64,7 +64,7 @@ async fn change_user_role() -> anyhow::Result<()> {
         vec![ServerDatabase {
             db: db.to_string(),
             owner: owner.to_string(),
-            db_type: DbType::Mapped,
+            db_type: DbKind::Mapped,
             role: DbUserRole::Read,
             size: 2568,
             backup: 0,
@@ -80,7 +80,7 @@ async fn change_owner_role() -> anyhow::Result<()> {
     let db = &next_db_name();
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
-    server.api.admin_db_add(owner, db, DbType::Mapped).await?;
+    server.api.admin_db_add(owner, db, DbKind::Mapped).await?;
     let status = server
         .api
         .admin_db_user_add(owner, db, owner, DbUserRole::Write)
@@ -116,7 +116,7 @@ async fn user_not_found() -> anyhow::Result<()> {
     let db = &next_db_name();
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
-    server.api.admin_db_add(owner, db, DbType::Mapped).await?;
+    server.api.admin_db_add(owner, db, DbKind::Mapped).await?;
     let status = server
         .api
         .admin_db_user_add(owner, db, "user", DbUserRole::Write)

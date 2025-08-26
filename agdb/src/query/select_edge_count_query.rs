@@ -1,7 +1,7 @@
 use crate::DbElement;
+use crate::DbError;
 use crate::DbImpl;
 use crate::Query;
-use crate::QueryError;
 use crate::QueryIds;
 use crate::QueryResult;
 use crate::SearchQuery;
@@ -22,7 +22,7 @@ use crate::query_builder::search::SearchQueryBuilder;
 /// might be greater than number of unique db elements.
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
-#[cfg_attr(feature = "derive", derive(agdb::AgdbDeSerialize))]
+#[cfg_attr(feature = "derive", derive(agdb::DbSerialize))]
 #[cfg_attr(feature = "api", derive(agdb::ApiDef))]
 #[derive(Clone, Debug, PartialEq)]
 pub struct SelectEdgeCountQuery {
@@ -39,7 +39,7 @@ pub struct SelectEdgeCountQuery {
 }
 
 impl Query for SelectEdgeCountQuery {
-    fn process<Store: StorageData>(&self, db: &DbImpl<Store>) -> Result<QueryResult, QueryError> {
+    fn process<Store: StorageData>(&self, db: &DbImpl<Store>) -> Result<QueryResult, DbError> {
         let mut result = QueryResult::default();
 
         let db_ids = match &self.ids {
@@ -72,7 +72,7 @@ impl Query for SelectEdgeCountQuery {
 }
 
 impl Query for &SelectEdgeCountQuery {
-    fn process<Store: StorageData>(&self, db: &DbImpl<Store>) -> Result<QueryResult, QueryError> {
+    fn process<Store: StorageData>(&self, db: &DbImpl<Store>) -> Result<QueryResult, DbError> {
         (*self).process(db)
     }
 }

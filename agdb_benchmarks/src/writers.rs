@@ -4,21 +4,21 @@ use crate::database::Database;
 use crate::utilities;
 use crate::utilities::measured;
 use agdb::DbId;
+use agdb::DbType;
 use agdb::QueryBuilder;
 use agdb::QueryId;
 use agdb::StorageData;
-use agdb::UserValue;
 use std::time::Duration;
 use std::time::Instant;
 use tokio::task::JoinHandle;
 
-#[derive(UserValue)]
+#[derive(DbType)]
 struct Post {
     title: String,
     body: String,
 }
 
-#[derive(UserValue)]
+#[derive(DbType)]
 struct Comment {
     body: String,
 }
@@ -129,7 +129,7 @@ impl<S: StorageData> Writer<S> {
                     .from("posts")
                     .limit(1)
                     .where_()
-                    .distance(agdb::CountComparison::Equal(2))
+                    .distance(2)
                     .query(),
             )?
             .elements
@@ -190,7 +190,7 @@ pub(crate) fn start_post_writers<S: StorageData + Send + Sync + 'static>(
                     .from("users")
                     .limit(config.posters.count)
                     .where_()
-                    .distance(agdb::CountComparison::Equal(2))
+                    .distance(2)
                     .query(),
             )?
             .elements
@@ -237,7 +237,7 @@ pub(crate) fn start_comment_writers<S: StorageData + Send + Sync + 'static>(
                     .offset(config.posters.count)
                     .limit(config.commenters.count)
                     .where_()
-                    .distance(agdb::CountComparison::Equal(2))
+                    .distance(2)
                     .query(),
             )?
             .elements

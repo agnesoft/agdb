@@ -1,8 +1,8 @@
 use crate::DbElement;
+use crate::DbError;
 use crate::DbId;
 use crate::DbImpl;
 use crate::DbKeyValue;
-use crate::QueryError;
 use crate::QueryId;
 use crate::QueryIds;
 use crate::QueryMut;
@@ -24,7 +24,7 @@ use crate::query_builder::search::SearchQueryBuilder;
 /// NOTE: The result is NOT number of affected elements but individual properties.
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
-#[cfg_attr(feature = "derive", derive(agdb::AgdbDeSerialize))]
+#[cfg_attr(feature = "derive", derive(agdb::DbSerialize))]
 #[cfg_attr(feature = "api", derive(agdb::ApiDef))]
 #[derive(Clone, Debug, PartialEq)]
 pub struct InsertValuesQuery {
@@ -36,10 +36,7 @@ pub struct InsertValuesQuery {
 }
 
 impl QueryMut for InsertValuesQuery {
-    fn process<Store: StorageData>(
-        &self,
-        db: &mut DbImpl<Store>,
-    ) -> Result<QueryResult, QueryError> {
+    fn process<Store: StorageData>(&self, db: &mut DbImpl<Store>) -> Result<QueryResult, DbError> {
         let mut result = QueryResult::default();
 
         match &self.ids {
@@ -51,7 +48,7 @@ impl QueryMut for InsertValuesQuery {
                 }
                 QueryValues::Multi(values) => {
                     if ids.len() != values.len() {
-                        return Err(QueryError::from("Ids and values length do not match"));
+                        return Err(DbError::from("Ids and values length do not match"));
                     }
 
                     for (id, values) in ids.iter().zip(values) {
@@ -70,7 +67,7 @@ impl QueryMut for InsertValuesQuery {
                     }
                     QueryValues::Multi(values) => {
                         if db_ids.len() != values.len() {
-                            return Err(QueryError::from("Ids and values length do not match"));
+                            return Err(DbError::from("Ids and values length do not match"));
                         }
 
                         for (db_id, values) in db_ids.iter().zip(values) {
@@ -86,10 +83,7 @@ impl QueryMut for InsertValuesQuery {
 }
 
 impl QueryMut for &InsertValuesQuery {
-    fn process<Store: StorageData>(
-        &self,
-        db: &mut DbImpl<Store>,
-    ) -> Result<QueryResult, QueryError> {
+    fn process<Store: StorageData>(&self, db: &mut DbImpl<Store>) -> Result<QueryResult, DbError> {
         (*self).process(db)
     }
 }
@@ -99,7 +93,7 @@ fn insert_values<Store: StorageData>(
     id: &QueryId,
     values: &[DbKeyValue],
     result: &mut QueryResult,
-) -> Result<(), QueryError> {
+) -> Result<(), DbError> {
     match db.db_id(id) {
         Ok(db_id) => insert_values_id(db, db_id, values, result),
         Err(e) => match id {
@@ -120,7 +114,7 @@ fn insert_values_new<Store: StorageData>(
     alias: Option<&String>,
     values: &[DbKeyValue],
     result: &mut QueryResult,
-) -> Result<(), QueryError> {
+) -> Result<(), DbError> {
     let db_id = db.insert_node()?;
 
     if let Some(alias) = alias {
@@ -147,7 +141,7 @@ fn insert_values_id<Store: StorageData>(
     db_id: DbId,
     values: &[DbKeyValue],
     result: &mut QueryResult,
-) -> Result<(), QueryError> {
+) -> Result<(), DbError> {
     for key_value in values {
         db.insert_or_replace_key_value(db_id, key_value)?;
         result.result += 1;

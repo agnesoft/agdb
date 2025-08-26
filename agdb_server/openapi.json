@@ -7,7 +7,7 @@
       "name": "Apache-2.0",
       "identifier": "Apache-2.0"
     },
-    "version": "0.11.2"
+    "version": "0.12.0"
   },
   "servers": [
     {
@@ -77,7 +77,7 @@
             "in": "query",
             "required": true,
             "schema": {
-              "$ref": "#/components/schemas/DbType"
+              "$ref": "#/components/schemas/DbKind"
             }
           }
         ],
@@ -283,7 +283,7 @@
             "in": "query",
             "required": true,
             "schema": {
-              "$ref": "#/components/schemas/DbType"
+              "$ref": "#/components/schemas/DbKind"
             }
           }
         ],
@@ -1393,7 +1393,7 @@
             "in": "query",
             "required": true,
             "schema": {
-              "$ref": "#/components/schemas/DbType"
+              "$ref": "#/components/schemas/DbKind"
             }
           }
         ],
@@ -1611,7 +1611,7 @@
             "in": "query",
             "required": true,
             "schema": {
-              "$ref": "#/components/schemas/DbType"
+              "$ref": "#/components/schemas/DbKind"
             }
           }
         ],
@@ -2547,6 +2547,32 @@
                 "description": "property.contains(this)"
               }
             }
+          },
+          {
+            "type": "object",
+            "description": "property.starts_with(this)",
+            "required": [
+              "StartsWith"
+            ],
+            "properties": {
+              "StartsWith": {
+                "$ref": "#/components/schemas/DbValue",
+                "description": "property.starts_with(this)"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "property.ends_with(this)",
+            "required": [
+              "EndsWith"
+            ],
+            "properties": {
+              "EndsWith": {
+                "$ref": "#/components/schemas/DbValue",
+                "description": "property.ends_with(this)"
+              }
+            }
           }
         ],
         "description": "Comparison of database values ([`DbValue`]) used\nby `key()` condition. Supports\nthe usual set of named comparisons: `==, !=, <, <=, >, =>`\nplus `contains()`. The comparisons are type\nstrict except for the `contains` comparison\nwhich allows vectorized version of the base type. Notably\nhowever it does not support the `bytes` and integral types\nwhere the \"contains\" makes little sense (i.e. does 3 contain 1?)."
@@ -2754,6 +2780,14 @@
           }
         }
       },
+      "DbKind": {
+        "type": "string",
+        "enum": [
+          "memory",
+          "mapped",
+          "file"
+        ]
+      },
       "DbResource": {
         "type": "string",
         "enum": [
@@ -2763,14 +2797,6 @@
           "backup"
         ]
       },
-      "DbType": {
-        "type": "string",
-        "enum": [
-          "memory",
-          "mapped",
-          "file"
-        ]
-      },
       "DbTypeParam": {
         "type": "object",
         "required": [
@@ -2778,7 +2804,7 @@
         ],
         "properties": {
           "db_type": {
-            "$ref": "#/components/schemas/DbType"
+            "$ref": "#/components/schemas/DbKind"
           }
         }
       },
@@ -3792,7 +3818,7 @@
             "type": "string"
           },
           "db_type": {
-            "$ref": "#/components/schemas/DbType"
+            "$ref": "#/components/schemas/DbKind"
           },
           "owner": {
             "type": "string"

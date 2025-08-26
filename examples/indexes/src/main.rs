@@ -1,19 +1,18 @@
+use agdb::DbError;
 use agdb::DbMemory;
-use agdb::DbUserValue;
+use agdb::DbType;
 use agdb::QueryBuilder;
-use agdb::QueryError;
-use agdb::UserValue;
 
-// Deriving from agdb::UserValue to make it possible
+// Deriving from agdb::DbType to make it possible
 // to use directly in the database queries.
-#[derive(Debug, UserValue)]
+#[derive(Debug, DbType)]
 struct User {
     username: String,
     password: String,
     token: String,
 }
 
-fn main() -> Result<(), QueryError> {
+fn main() -> Result<(), DbError> {
     // Creates in memory database.
     let mut db = DbMemory::new("agdb_example")?;
 

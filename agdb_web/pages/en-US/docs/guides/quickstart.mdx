@@ -38,9 +38,9 @@ cargo add agdb
 In `main.rs` we create a memory mapped database:
 
 ```rs filename="main.rs"
-use agdb::QueryError;
+use agdb::DbError;
 
-fn main() -> Result<(), QueryError> {
+fn main() -> Result<(), DbError> {
     let mut db = Db::new("agdb_app.agdb")?;
     Ok(())
 }
@@ -65,9 +65,9 @@ db.exec_mut(QueryBuilder::insert()
 We then insert additional nodes representing some users and connect them with the "users" node:
 
 ```rs
-// We derive from agdb::UserValue
+// We derive from agdb::DbType
 // so we can use the type in the db.
-#[derive(Debug, UserValue)]
+#[derive(Debug, DbType)]
 struct User {
     db_id: Option<DbId>, // The db_id member is optional but
                          // it allows insert your user type
@@ -84,8 +84,8 @@ let db_users = db.exec_mut(QueryBuilder::insert()
                                 .nodes()
                                 .values(&users) // We can pass users directly as
                                                 // query parameter thanks to the
-                                                // implementation of the agdb::DbUserValue
-                                                // trait via #[derive(UserValue)].
+                                                // implementation of the agdb::DbType
+                                                // trait via #[derive(DbType)].
                                 .query())?;
 
 db.exec_mut(

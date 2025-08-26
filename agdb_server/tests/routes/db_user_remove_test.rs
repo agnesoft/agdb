@@ -2,7 +2,7 @@ use crate::ADMIN;
 use crate::TestServer;
 use crate::next_db_name;
 use crate::next_user_name;
-use agdb_api::DbType;
+use agdb_api::DbKind;
 use agdb_api::DbUserRole;
 
 #[tokio::test]
@@ -15,7 +15,7 @@ async fn remove() -> anyhow::Result<()> {
     server.api.admin_user_add(owner, owner).await?;
     server.api.admin_user_add(user, user).await?;
     server.api.user_login(owner, owner).await?;
-    server.api.db_add(owner, db, DbType::Mapped).await?;
+    server.api.db_add(owner, db, DbKind::Mapped).await?;
     server
         .api
         .db_user_add(owner, db, user, DbUserRole::Write)
@@ -38,7 +38,7 @@ async fn remove_owner() -> anyhow::Result<()> {
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.admin_user_add(user, user).await?;
-    server.api.admin_db_add(owner, db, DbType::Mapped).await?;
+    server.api.admin_db_add(owner, db, DbKind::Mapped).await?;
     server
         .api
         .admin_db_user_add(owner, db, user, DbUserRole::Admin)
@@ -65,7 +65,7 @@ async fn non_admin() -> anyhow::Result<()> {
     server.api.admin_user_add(owner, owner).await?;
     server.api.admin_user_add(user, user).await?;
     server.api.admin_user_add(other, other).await?;
-    server.api.admin_db_add(owner, db, DbType::Mapped).await?;
+    server.api.admin_db_add(owner, db, DbKind::Mapped).await?;
     server
         .api
         .admin_db_user_add(owner, db, user, DbUserRole::Write)
@@ -94,7 +94,7 @@ async fn remove_self() -> anyhow::Result<()> {
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.admin_user_add(user, user).await?;
-    server.api.admin_db_add(owner, db, DbType::Mapped).await?;
+    server.api.admin_db_add(owner, db, DbKind::Mapped).await?;
     server
         .api
         .admin_db_user_add(owner, db, user, DbUserRole::Read)
@@ -115,7 +115,7 @@ async fn remove_self_owner() -> anyhow::Result<()> {
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.user_login(owner, owner).await?;
-    server.api.db_add(owner, db, DbType::Mapped).await?;
+    server.api.db_add(owner, db, DbKind::Mapped).await?;
     server.api.user_login(owner, owner).await?;
     let status = server
         .api
@@ -154,7 +154,7 @@ async fn user_not_found() -> anyhow::Result<()> {
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.user_login(owner, owner).await?;
-    server.api.db_add(owner, db, DbType::Mapped).await?;
+    server.api.db_add(owner, db, DbKind::Mapped).await?;
     let status = server
         .api
         .db_user_remove(owner, db, "user")

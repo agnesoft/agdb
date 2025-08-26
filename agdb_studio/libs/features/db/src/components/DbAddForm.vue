@@ -1,10 +1,10 @@
 <script lang="ts" setup>
 import { ref } from "vue";
 import { useDbStore } from "../composables/dbStore";
-import type { DbType } from "@agnesoft/agdb_api/openapi";
+import type { DbKind } from "@agnesoft/agdb_api/openapi";
 
 const name = ref("");
-const db_type = ref<DbType>("memory");
+const db_type = ref<DbKind>("memory");
 
 const { addDatabase, fetchDatabases } = useDbStore();
 

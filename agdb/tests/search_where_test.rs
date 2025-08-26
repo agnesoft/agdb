@@ -3,7 +3,9 @@ mod test_db;
 use agdb::Comparison;
 use agdb::CountComparison;
 use agdb::DbKeyOrder;
+use agdb::KeyValueComparison;
 use agdb::QueryBuilder;
+use agdb::QueryConditionData;
 use test_db::TestDb;
 
 #[track_caller]
@@ -168,7 +170,7 @@ fn search_from_where_distance() {
         QueryBuilder::search()
             .from("root")
             .where_()
-            .distance(CountComparison::Equal(2))
+            .distance(2)
             .query(),
         &[3, 2],
     );
@@ -259,7 +261,7 @@ fn search_from_where_edge_count_test() {
         QueryBuilder::search()
             .from("root")
             .where_()
-            .edge_count(CountComparison::Equal(2))
+            .edge_count(2)
             .query(),
         &[1, 8, 7, 6, 15, 14, 12],
     );
@@ -321,7 +323,7 @@ fn search_from_where_key_value() {
             .order_by([DbKeyOrder::Asc("id".into())])
             .where_()
             .key("active")
-            .value(Comparison::Equal(1.into()))
+            .value(1)
             .query(),
         &[12, 14, 15],
     );
@@ -386,17 +388,17 @@ fn search_from_where_where() {
             .where_()
             .where_()
             .key("active")
-            .value(Comparison::Equal(1.into()))
+            .value(1)
             .or()
             .key("active")
-            .value(Comparison::Equal(0.into()))
+            .value(0)
             .end_where()
             .or()
             .where_()
             .edge()
             .and()
             .key("type")
-            .value(Comparison::Equal("writes".into()))
+            .value("writes")
             .query(),
         &[16, 15, 14, 13, 12, -22],
     );
@@ -532,5 +534,111 @@ fn search_path_with_distance() {
             .distance(CountComparison::LessThanOrEqual(2))
             .query(),
         &[1, -4, 2],
+    );
+}
+
+#[test]
+fn search_where_distance_defaults_to_equals() {
+    let query = QueryBuilder::search()
+        .from("root")
+        .where_()
+        .distance(2)
+        .query();
+
+    assert_eq!(
+        query.conditions[0].data,
+        QueryConditionData::Distance(2.into())
+    );
+}
+
+#[test]
+fn search_where_edge_count_defaults_to_equals() {
+    let query = QueryBuilder::search()
+        .from("root")
+        .where_()
+        .edge_count(1)
+        .and()
+        .edge_count_from(2)
+        .and()
+        .edge_count_to(3)
+        .query();
+
+    assert_eq!(
+        query.conditions[0].data,
+        QueryConditionData::EdgeCount(1.into())
+    );
+
+    assert_eq!(
+        query.conditions[1].data,
+        QueryConditionData::EdgeCountFrom(2.into())
+    );
+
+    assert_eq!(
+        query.conditions[2].data,
+        QueryConditionData::EdgeCountTo(3.into())
+    );
+}
+
+#[test]
+fn search_where_key_value_defaults_to_equals() {
+    let query = QueryBuilder::search()
+        .from("root")
+        .where_()
+        .key("active")
+        .value(1)
+        .query();
+
+    assert_eq!(
+        query.conditions[0].data,
+        QueryConditionData::KeyValue(KeyValueComparison {
+            key: "active".into(),
+            value: Comparison::Equal(1.into())
+        })
+    );
+}
+
+#[test]
+fn search_where_starts_with() {
+    let db = create_db();
+    db.exec_ids(
+        QueryBuilder::search()
+            .from("docs")
+            .where_()
+            .key("content")
+            .value(Comparison::StartsWith("Lorem".into()))
+            .query(),
+        &[7],
+    );
+    db.exec_ids(
+        QueryBuilder::search()
+            .from("docs")
+            .where_()
+            .key("content")
+            .value(Comparison::StartsWith("ipsum".into()))
+            .query(),
+        &[],
+    );
+}
+
+#[test]
+fn search_where_ends_with() {
+    let db = create_db();
+    db.exec_ids(
+        QueryBuilder::search()
+            .from("docs")
+            .where_()
+            .key("content")
+            .value(Comparison::EndsWith(vec!["adipiscing ", "elit"].into()))
+            .query(),
+        &[7],
+    );
+    db.exec_ids(
+        QueryBuilder::search()
+            .from("docs")
+            .where_()
+            .key("content")
+            .value(Comparison::EndsWith("adipiscing".into()))
+            .query(),
+        &[],
     );
 }

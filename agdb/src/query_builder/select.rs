@@ -1,4 +1,4 @@
-use crate::DbUserValue;
+use crate::DbType;
 use crate::QueryIds;
 use crate::SelectAliasesQuery;
 use crate::SelectEdgeCountQuery;
@@ -18,7 +18,7 @@ use crate::query_builder::select_values::SelectValues;
 
 /// Select builder that lets you choose what
 /// data you want to select form the database.
-#[cfg_attr(feature = "api", derive(agdb::ApiDef))]
+#[cfg_attr(feature = "api", derive(agdb::ApiDefImpl))]
 pub struct Select {}
 
 #[cfg_attr(feature = "api", agdb::impl_def())]
@@ -69,7 +69,7 @@ impl Select {
     /// Select elements with `ids` with only `T::db_keys()`
     /// properties (key-values). All ids specified must
     /// exist in the database. Same as calling `values(T::db_keys())`.
-    pub fn elements<T: DbUserValue>(self) -> SelectValues {
+    pub fn elements<T: DbType>(self) -> SelectValues {
         SelectValues(SelectValuesQuery {
             keys: T::db_keys(),
             ids: QueryIds::Ids(vec![]),

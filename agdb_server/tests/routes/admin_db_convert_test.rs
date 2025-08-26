@@ -2,7 +2,7 @@ use crate::ADMIN;
 use crate::TestServer;
 use crate::next_db_name;
 use crate::next_user_name;
-use agdb_api::DbType;
+use agdb_api::DbKind;
 
 #[tokio::test]
 async fn memory_to_mapped() -> anyhow::Result<()> {
@@ -11,15 +11,15 @@ async fn memory_to_mapped() -> anyhow::Result<()> {
     let db = &next_db_name();
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
-    server.api.admin_db_add(owner, db, DbType::Memory).await?;
+    server.api.admin_db_add(owner, db, DbKind::Memory).await?;
     let status = server
         .api
-        .admin_db_convert(owner, db, DbType::Mapped)
+        .admin_db_convert(owner, db, DbKind::Mapped)
         .await?;
     assert_eq!(status, 201);
     server.api.user_login(owner, owner).await?;
     let list = server.api.db_list().await?.1;
-    assert_eq!(list[0].db_type, DbType::Mapped);
+    assert_eq!(list[0].db_type, DbKind::Mapped);
 
     Ok(())
 }
@@ -31,15 +31,15 @@ async fn same_type() -> anyhow::Result<()> {
     let db = &next_db_name();
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
-    server.api.admin_db_add(owner, db, DbType::Memory).await?;
+    server.api.admin_db_add(owner, db, DbKind::Memory).await?;
     let status = server
         .api
-        .admin_db_convert(owner, db, DbType::Memory)
+        .admin_db_convert(owner, db, DbKind::Memory)
         .await?;
     assert_eq!(status, 201);
     server.api.user_login(owner, owner).await?;
     let list = server.api.db_list().await?.1;
-    assert_eq!(list[0].db_type, DbType::Memory);
+    assert_eq!(list[0].db_type, DbKind::Memory);
 
     Ok(())
 }
@@ -53,7 +53,7 @@ async fn non_admin() -> anyhow::Result<()> {
     server.api.user_login(user, user).await?;
     let status = server
         .api
-        .admin_db_convert(user, "db", DbType::Mapped)
+        .admin_db_convert(user, "db", DbKind::Mapped)
         .await
         .unwrap_err()
         .status;
@@ -66,7 +66,7 @@ async fn no_token() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     let status = server
         .api
-        .admin_db_convert("owner", "db", DbType::Memory)
+        .admin_db_convert("owner", "db", DbKind::Memory)
         .await
         .unwrap_err()
         .status;

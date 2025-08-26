@@ -1,6 +1,5 @@
 mod test_db;
 
-use agdb::CountComparison;
 use agdb::DbElement;
 use agdb::DbId;
 use agdb::QueryBuilder;
@@ -188,7 +187,7 @@ fn select_edge_count_search() {
                 QueryBuilder::search()
                     .from("node1")
                     .where_()
-                    .edge_count(CountComparison::Equal(4))
+                    .edge_count(4)
                     .query(),
             )
             .query(),
@@ -226,7 +225,7 @@ fn select_edge_count_search_alt() {
             .search()
             .from("node1")
             .where_()
-            .edge_count(CountComparison::Equal(4))
+            .edge_count(4)
             .query(),
         &[DbElement {
             id: DbId(2),
@@ -242,7 +241,7 @@ fn select_edge_count_search_alt() {
             .search()
             .from("node1")
             .where_()
-            .edge_count(CountComparison::Equal(4))
+            .edge_count(4)
             .query(),
         &[DbElement {
             id: DbId(2),
@@ -258,7 +257,7 @@ fn select_edge_count_search_alt() {
             .search()
             .from("node1")
             .where_()
-            .edge_count(CountComparison::Equal(4))
+            .edge_count(4)
             .query(),
         &[DbElement {
             id: DbId(2),

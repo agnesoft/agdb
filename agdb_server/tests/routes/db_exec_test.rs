@@ -2,12 +2,11 @@ use crate::ADMIN;
 use crate::TestServer;
 use crate::next_db_name;
 use crate::next_user_name;
-use agdb::CountComparison;
 use agdb::DbElement;
 use agdb::DbId;
 use agdb::QueryBuilder;
 use agdb::QueryResult;
-use agdb_api::DbType;
+use agdb_api::DbKind;
 use agdb_api::DbUserRole;
 
 #[tokio::test]
@@ -18,7 +17,7 @@ async fn read_write() -> anyhow::Result<()> {
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.user_login(owner, owner).await?;
-    server.api.db_add(owner, db, DbType::Mapped).await?;
+    server.api.db_add(owner, db, DbKind::Mapped).await?;
     let queries = &vec![
         QueryBuilder::insert()
             .nodes()
@@ -62,7 +61,7 @@ async fn read_only() -> anyhow::Result<()> {
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.user_login(owner, owner).await?;
-    server.api.db_add(owner, db, DbType::Mapped).await?;
+    server.api.db_add(owner, db, DbKind::Mapped).await?;
     let queries = &vec![
         QueryBuilder::insert()
             .nodes()
@@ -97,7 +96,7 @@ async fn read_queries() -> anyhow::Result<()> {
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.user_login(owner, owner).await?;
-    server.api.db_add(owner, db, DbType::Mapped).await?;
+    server.api.db_add(owner, db, DbKind::Mapped).await?;
     let queries = &vec![
         QueryBuilder::insert()
             .nodes()
@@ -139,7 +138,7 @@ async fn write_queries() -> anyhow::Result<()> {
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.user_login(owner, owner).await?;
-    server.api.db_add(owner, db, DbType::Mapped).await?;
+    server.api.db_add(owner, db, DbKind::Mapped).await?;
     let queries = &vec![
         QueryBuilder::insert().nodes().count(2).query().into(),
         QueryBuilder::insert()
@@ -194,7 +193,7 @@ async fn use_result_of_previous_query() -> anyhow::Result<()> {
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.user_login(owner, owner).await?;
-    server.api.db_add(owner, db, DbType::Mapped).await?;
+    server.api.db_add(owner, db, DbKind::Mapped).await?;
     let queries = &vec![
         QueryBuilder::insert()
             .nodes()
@@ -257,7 +256,7 @@ async fn use_result_in_subquery() -> anyhow::Result<()> {
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.user_login(owner, owner).await?;
-    server.api.db_add(owner, db, DbType::Mapped).await?;
+    server.api.db_add(owner, db, DbKind::Mapped).await?;
     let queries = &vec![
         QueryBuilder::insert()
             .nodes()
@@ -320,7 +319,7 @@ async fn use_result_in_condition() -> anyhow::Result<()> {
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.user_login(owner, owner).await?;
-    server.api.db_add(owner, db, DbType::Mapped).await?;
+    server.api.db_add(owner, db, DbKind::Mapped).await?;
     let queries = &vec![
         QueryBuilder::insert()
             .nodes()
@@ -360,7 +359,7 @@ async fn use_result_in_search() -> anyhow::Result<()> {
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.user_login(owner, owner).await?;
-    server.api.db_add(owner, db, DbType::Mapped).await?;
+    server.api.db_add(owner, db, DbKind::Mapped).await?;
     let queries = &vec![
         QueryBuilder::insert().nodes().count(1).query().into(),
         QueryBuilder::insert().nodes().count(1).query().into(),
@@ -411,7 +410,7 @@ async fn use_result_in_insert_ids() -> anyhow::Result<()> {
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.user_login(owner, owner).await?;
-    server.api.db_add(owner, db, DbType::Mapped).await?;
+    server.api.db_add(owner, db, DbKind::Mapped).await?;
     let queries = &vec![
         QueryBuilder::insert()
             .nodes()
@@ -426,7 +425,7 @@ async fn use_result_in_insert_ids() -> anyhow::Result<()> {
                     .where_()
                     .node()
                     .and()
-                    .distance(CountComparison::Equal(2))
+                    .distance(2)
                     .query(),
             )
             .count(3)
@@ -487,7 +486,7 @@ async fn reentrant_queries() -> anyhow::Result<()> {
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.user_login(owner, owner).await?;
-    server.api.db_add(owner, db, DbType::Mapped).await?;
+    server.api.db_add(owner, db, DbKind::Mapped).await?;
     let queries = &vec![
         QueryBuilder::insert()
             .nodes()
@@ -502,7 +501,7 @@ async fn reentrant_queries() -> anyhow::Result<()> {
                     .where_()
                     .node()
                     .and()
-                    .distance(CountComparison::Equal(2))
+                    .distance(2)
                     .query(),
             )
             .count(3)
@@ -592,7 +591,7 @@ async fn use_result_in_search_bad_query() -> anyhow::Result<()> {
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.user_login(owner, owner).await?;
-    server.api.db_add(owner, db, DbType::Mapped).await?;
+    server.api.db_add(owner, db, DbKind::Mapped).await?;
     let queries = &vec![QueryBuilder::search().from(":bad").query().into()];
     let error = server.api.db_exec(owner, db, queries).await.unwrap_err();
     assert_eq!(error.status, 470);
@@ -608,7 +607,7 @@ async fn use_result_in_search_empty_result() -> anyhow::Result<()> {
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.user_login(owner, owner).await?;
-    server.api.db_add(owner, db, DbType::Mapped).await?;
+    server.api.db_add(owner, db, DbKind::Mapped).await?;
     let queries = &vec![
         QueryBuilder::remove().ids(0).query().into(),
         QueryBuilder::search().from(":0").query().into(),
@@ -631,7 +630,7 @@ async fn use_result_bad_query() -> anyhow::Result<()> {
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.user_login(owner, owner).await?;
-    server.api.db_add(owner, db, DbType::Mapped).await?;
+    server.api.db_add(owner, db, DbKind::Mapped).await?;
     let queries = &vec![
         QueryBuilder::insert()
             .aliases("alias")
@@ -657,7 +656,7 @@ async fn use_result_out_of_bounds() -> anyhow::Result<()> {
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.user_login(owner, owner).await?;
-    server.api.db_add(owner, db, DbType::Mapped).await?;
+    server.api.db_add(owner, db, DbKind::Mapped).await?;
     let queries = &vec![
         QueryBuilder::insert()
             .aliases("alias")
@@ -683,7 +682,7 @@ async fn query_error() -> anyhow::Result<()> {
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.user_login(owner, owner).await?;
-    server.api.db_add(owner, db, DbType::Mapped).await?;
+    server.api.db_add(owner, db, DbKind::Mapped).await?;
     let queries = &vec![
         QueryBuilder::insert()
             .nodes()
@@ -711,7 +710,7 @@ async fn permission_denied() -> anyhow::Result<()> {
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.admin_user_add(user, user).await?;
-    server.api.admin_db_add(owner, db, DbType::Mapped).await?;
+    server.api.admin_db_add(owner, db, DbKind::Mapped).await?;
     server
         .api
         .admin_db_user_add(owner, db, user, DbUserRole::Read)
@@ -761,7 +760,7 @@ async fn someone_elses_db() -> anyhow::Result<()> {
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.admin_user_add(user, user).await?;
-    server.api.admin_db_add(owner, db, DbType::Memory).await?;
+    server.api.admin_db_add(owner, db, DbKind::Memory).await?;
     server.api.user_login(user, user).await?;
     let status = server.api.db_exec(owner, db, &[]).await.unwrap_err().status;
     assert_eq!(status, 404);

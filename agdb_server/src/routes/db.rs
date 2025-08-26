@@ -22,8 +22,8 @@ use crate::server_error::permission_denied;
 use crate::user_id::UserId;
 use crate::utilities::required_role;
 use agdb_api::DbAudit;
+use agdb_api::DbKind;
 use agdb_api::DbResource;
-use agdb_api::DbType;
 use agdb_api::DbUserRole;
 use agdb_api::Queries;
 use agdb_api::QueriesResults;
@@ -47,7 +47,7 @@ pub struct ServerDatabaseRename {
 #[derive(Deserialize, IntoParams, ToSchema, agdb::ApiDef)]
 #[into_params(parameter_in = Query)]
 pub(crate) struct DbTypeParam {
-    pub(crate) db_type: DbType,
+    pub(crate) db_type: DbKind,
 }
 
 #[derive(Deserialize, IntoParams, ToSchema, agdb::ApiDef)]

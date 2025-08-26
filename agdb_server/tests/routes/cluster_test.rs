@@ -10,8 +10,8 @@ use crate::wait_for_ready;
 use agdb::Comparison;
 use agdb::QueryBuilder;
 use agdb_api::AgdbApi;
+use agdb_api::DbKind;
 use agdb_api::DbResource;
-use agdb_api::DbType;
 use agdb_api::DbUserRole;
 use agdb_api::ReqwestClient;
 
@@ -79,7 +79,7 @@ async fn admin_db_add() -> anyhow::Result<()> {
     let client = cluster.apis.get_mut(1).unwrap();
     client.user_login(ADMIN, ADMIN).await?;
     client.admin_user_add(owner, owner).await?;
-    client.admin_db_add(owner, db, DbType::Memory).await?;
+    client.admin_db_add(owner, db, DbKind::Memory).await?;
     let db_list = client.admin_db_list().await?.1;
     let server_db = db_list
         .iter()
@@ -87,7 +87,7 @@ async fn admin_db_add() -> anyhow::Result<()> {
         .unwrap();
     assert_eq!(server_db.db, *db);
     assert_eq!(server_db.owner, *owner);
-    assert_eq!(server_db.db_type, DbType::Memory);
+    assert_eq!(server_db.db_type, DbKind::Memory);
     Ok(())
 }
 
@@ -99,7 +99,7 @@ async fn admin_db_backup_restore() -> anyhow::Result<()> {
     let client = cluster.apis.get_mut(1).unwrap();
     client.user_login(ADMIN, ADMIN).await?;
     client.admin_user_add(owner, owner).await?;
-    client.admin_db_add(owner, db, DbType::Memory).await?;
+    client.admin_db_add(owner, db, DbKind::Memory).await?;
     client.admin_db_backup(owner, db).await?;
     client
         .admin_db_exec_mut(
@@ -131,7 +131,7 @@ async fn admin_db_clear() -> anyhow::Result<()> {
     let client = cluster.apis.get_mut(1).unwrap();
     client.user_login(ADMIN, ADMIN).await?;
     client.admin_user_add(owner, owner).await?;
-    client.admin_db_add(owner, db, DbType::Memory).await?;
+    client.admin_db_add(owner, db, DbKind::Memory).await?;
     client
         .admin_db_exec_mut(
             owner,
@@ -162,14 +162,14 @@ async fn admin_db_convert() -> anyhow::Result<()> {
     let client = cluster.apis.get_mut(1).unwrap();
     client.user_login(ADMIN, ADMIN).await?;
     client.admin_user_add(owner, owner).await?;
-    client.admin_db_add(owner, db, DbType::Memory).await?;
-    client.admin_db_convert(owner, db, DbType::Mapped).await?;
+    client.admin_db_add(owner, db, DbKind::Memory).await?;
+    client.admin_db_convert(owner, db, DbKind::Mapped).await?;
     let db_list = client.admin_db_list().await?.1;
     let server_db = db_list
         .iter()
         .find(|d| d.db == *db && d.owner == *owner)
         .unwrap();
-    assert_eq!(server_db.db_type, DbType::Mapped);
+    assert_eq!(server_db.db_type, DbKind::Mapped);
     Ok(())
 }
 
@@ -182,7 +182,7 @@ async fn admin_db_copy() -> anyhow::Result<()> {
     let client = cluster.apis.get_mut(1).unwrap();
     client.user_login(ADMIN, ADMIN).await?;
     client.admin_user_add(owner, owner).await?;
-    client.admin_db_add(owner, db, DbType::Memory).await?;
+    client.admin_db_add(owner, db, DbKind::Memory).await?;
     client.admin_db_copy(owner, db, owner, db2).await?;
     client.user_login(owner, owner).await?;
     let dbs = client.db_list().await?.1.len();
@@ -198,7 +198,7 @@ async fn admin_db_delete() -> anyhow::Result<()> {
     let client = cluster.apis.get_mut(1).unwrap();
     client.user_login(ADMIN, ADMIN).await?;
     client.admin_user_add(owner, owner).await?;
-    client.admin_db_add(owner, db, DbType::Memory).await?;
+    client.admin_db_add(owner, db, DbKind::Memory).await?;
     let admin_token = client.token.clone();
     client.user_login(owner, owner).await?;
     let user_token = client.token.clone();
@@ -220,7 +220,7 @@ async fn admin_db_exec() -> anyhow::Result<()> {
     let client = cluster.apis.get_mut(1).unwrap();
     client.user_login(ADMIN, ADMIN).await?;
     client.admin_user_add(owner, owner).await?;
-    client.admin_db_add(owner, db, DbType::Memory).await?;
+    client.admin_db_add(owner, db, DbKind::Memory).await?;
     client
         .admin_db_exec_mut(
             owner,
@@ -254,7 +254,7 @@ async fn admin_db_optimize() -> anyhow::Result<()> {
     let client = cluster.apis.get_mut(1).unwrap();
     client.user_login(ADMIN, ADMIN).await?;
     client.admin_user_add(owner, owner).await?;
-    client.admin_db_add(owner, db, DbType::Memory).await?;
+    client.admin_db_add(owner, db, DbKind::Memory).await?;
     client
         .admin_db_exec_mut(
             owner,
@@ -284,7 +284,7 @@ async fn admin_db_remove() -> anyhow::Result<()> {
     let client = cluster.apis.get_mut(1).unwrap();
     client.user_login(ADMIN, ADMIN).await?;
     client.admin_user_add(owner, owner).await?;
-    client.admin_db_add(owner, db, DbType::Memory).await?;
+    client.admin_db_add(owner, db, DbKind::Memory).await?;
     let admin_token = client.token.clone();
     client.user_login(owner, owner).await?;
     let user_token = client.token.clone();
@@ -307,7 +307,7 @@ async fn admin_db_rename() -> anyhow::Result<()> {
     let client = cluster.apis.get_mut(1).unwrap();
     client.user_login(ADMIN, ADMIN).await?;
     client.admin_user_add(owner, owner).await?;
-    client.admin_db_add(owner, db, DbType::Memory).await?;
+    client.admin_db_add(owner, db, DbKind::Memory).await?;
     client.admin_db_rename(owner, db, owner, db2).await?;
     client.user_login(owner, owner).await?;
     let dbs = client.db_list().await?.1;
@@ -327,7 +327,7 @@ async fn admin_db_user_add_remove() -> anyhow::Result<()> {
     client.user_login(ADMIN, ADMIN).await?;
     client.admin_user_add(owner, owner).await?;
     client.admin_user_add(user, user).await?;
-    client.admin_db_add(owner, db, DbType::Memory).await?;
+    client.admin_db_add(owner, db, DbKind::Memory).await?;
     client
         .admin_db_user_add(owner, db, user, DbUserRole::Read)
         .await?;
@@ -456,11 +456,11 @@ async fn db_add() -> anyhow::Result<()> {
     client.user_login(ADMIN, ADMIN).await?;
     client.admin_user_add(owner, owner).await?;
     client.cluster_user_login(owner, owner).await?;
-    client.db_add(owner, db, DbType::Memory).await?;
+    client.db_add(owner, db, DbKind::Memory).await?;
     let db_list = client.db_list().await?.1;
     assert_eq!(db_list[0].db, *db);
     assert_eq!(db_list[0].owner, *owner);
-    assert_eq!(db_list[0].db_type, DbType::Memory);
+    assert_eq!(db_list[0].db_type, DbKind::Memory);
     Ok(())
 }
 
@@ -473,7 +473,7 @@ async fn db_backup() -> anyhow::Result<()> {
     client.user_login(ADMIN, ADMIN).await?;
     client.admin_user_add(owner, owner).await?;
     client.cluster_user_login(owner, owner).await?;
-    client.db_add(owner, db, DbType::Memory).await?;
+    client.db_add(owner, db, DbKind::Memory).await?;
     client.db_backup(owner, db).await?;
     client
         .db_exec_mut(
@@ -504,7 +504,7 @@ async fn db_clear() -> anyhow::Result<()> {
     client.user_login(ADMIN, ADMIN).await?;
     client.admin_user_add(owner, owner).await?;
     client.cluster_user_login(owner, owner).await?;
-    client.db_add(owner, db, DbType::Memory).await?;
+    client.db_add(owner, db, DbKind::Memory).await?;
     client
         .db_exec_mut(
             owner,
@@ -534,10 +534,10 @@ async fn db_convert() -> anyhow::Result<()> {
     client.user_login(ADMIN, ADMIN).await?;
     client.admin_user_add(owner, owner).await?;
     client.cluster_user_login(owner, owner).await?;
-    client.db_add(owner, db, DbType::Memory).await?;
-    client.db_convert(owner, db, DbType::Mapped).await?;
+    client.db_add(owner, db, DbKind::Memory).await?;
+    client.db_convert(owner, db, DbKind::Mapped).await?;
     let db_list = client.db_list().await?.1;
-    assert_eq!(db_list[0].db_type, DbType::Mapped);
+    assert_eq!(db_list[0].db_type, DbKind::Mapped);
     Ok(())
 }
 
@@ -551,7 +551,7 @@ async fn db_copy() -> anyhow::Result<()> {
     client.user_login(ADMIN, ADMIN).await?;
     client.admin_user_add(owner, owner).await?;
     client.cluster_user_login(owner, owner).await?;
-    client.db_add(owner, db, DbType::Memory).await?;
+    client.db_add(owner, db, DbKind::Memory).await?;
     client.db_copy(owner, db, db2).await?;
     client.user_login(owner, owner).await?;
     let dbs = client.db_list().await?.1.len();
@@ -568,7 +568,7 @@ async fn db_delete() -> anyhow::Result<()> {
     client.user_login(ADMIN, ADMIN).await?;
     client.admin_user_add(owner, owner).await?;
     client.cluster_user_login(owner, owner).await?;
-    client.db_add(owner, db, DbType::Memory).await?;
+    client.db_add(owner, db, DbKind::Memory).await?;
     let dbs = client.db_list().await?.1.len();
     assert_eq!(dbs, 1);
     client.db_delete(owner, db).await?;
@@ -586,7 +586,7 @@ async fn db_exec() -> anyhow::Result<()> {
     client.user_login(ADMIN, ADMIN).await?;
     client.admin_user_add(owner, owner).await?;
     client.cluster_user_login(owner, owner).await?;
-    client.db_add(owner, db, DbType::Memory).await?;
+    client.db_add(owner, db, DbKind::Memory).await?;
     let res = client
         .db_exec_mut(
             owner,
@@ -647,7 +647,7 @@ async fn db_optimize() -> anyhow::Result<()> {
     client.user_login(ADMIN, ADMIN).await?;
     client.admin_user_add(owner, owner).await?;
     client.cluster_user_login(owner, owner).await?;
-    client.db_add(owner, db, DbType::Memory).await?;
+    client.db_add(owner, db, DbKind::Memory).await?;
     client
         .db_exec_mut(
             owner,
@@ -671,7 +671,7 @@ async fn db_remove() -> anyhow::Result<()> {
     client.user_login(ADMIN, ADMIN).await?;
     client.admin_user_add(owner, owner).await?;
     client.cluster_user_login(owner, owner).await?;
-    client.db_add(owner, db, DbType::Memory).await?;
+    client.db_add(owner, db, DbKind::Memory).await?;
     let dbs = client.db_list().await?.1.len();
     assert_eq!(dbs, 1);
     client.db_remove(owner, db).await?;
@@ -690,7 +690,7 @@ async fn db_rename() -> anyhow::Result<()> {
     client.user_login(ADMIN, ADMIN).await?;
     client.admin_user_add(owner, owner).await?;
     client.cluster_user_login(owner, owner).await?;
-    client.db_add(owner, db, DbType::Memory).await?;
+    client.db_add(owner, db, DbKind::Memory).await?;
     client.db_rename(owner, db, db2).await?;
     let dbs = client.db_list().await?.1;
     assert_eq!(dbs.len(), 1);
@@ -710,7 +710,7 @@ async fn db_user_add_remove() -> anyhow::Result<()> {
     client.admin_user_add(owner, owner).await?;
     client.admin_user_add(user, user).await?;
     client.cluster_user_login(owner, owner).await?;
-    client.db_add(owner, db, DbType::Memory).await?;
+    client.db_add(owner, db, DbKind::Memory).await?;
     client
         .db_user_add(owner, db, user, DbUserRole::Read)
         .await?;

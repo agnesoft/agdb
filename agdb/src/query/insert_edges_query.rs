@@ -1,8 +1,8 @@
 use crate::DbElement;
+use crate::DbError;
 use crate::DbId;
 use crate::DbImpl;
 use crate::DbKeyValue;
-use crate::QueryError;
 use crate::QueryIds;
 use crate::QueryMut;
 use crate::QueryResult;
@@ -28,7 +28,7 @@ use crate::query::query_values::QueryValues;
 /// with their ids, origin and destination, but no properties.
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
-#[cfg_attr(feature = "derive", derive(agdb::AgdbDeSerialize))]
+#[cfg_attr(feature = "derive", derive(agdb::DbSerialize))]
 #[cfg_attr(feature = "api", derive(agdb::ApiDef))]
 #[derive(Clone, Debug, PartialEq)]
 pub struct InsertEdgesQuery {
@@ -52,24 +52,21 @@ pub struct InsertEdgesQuery {
 }
 
 impl QueryMut for InsertEdgesQuery {
-    fn process<Store: StorageData>(
-        &self,
-        db: &mut DbImpl<Store>,
-    ) -> Result<QueryResult, QueryError> {
+    fn process<Store: StorageData>(&self, db: &mut DbImpl<Store>) -> Result<QueryResult, DbError> {
         let mut result = QueryResult::default();
 
         let query_ids = match &self.ids {
             QueryIds::Ids(ids) => ids
                 .iter()
                 .map(|query_id| db.db_id(query_id))
-                .collect::<Result<Vec<DbId>, QueryError>>()?,
+                .collect::<Result<Vec<DbId>, DbError>>()?,
             QueryIds::Search(search_query) => search_query.search(db)?,
         };
 
         let ids = if !query_ids.is_empty() {
             query_ids.iter().try_for_each(|db_id| {
                 if db_id.0 > 0 {
-                    Err(QueryError::from(format!(
+                    Err(DbError::from(format!(
                         "The ids for insert or update must all refer to edges - node id '{}' found",
                         db_id.0
                     )))
@@ -116,10 +113,7 @@ impl QueryMut for InsertEdgesQuery {
 }
 
 impl QueryMut for &InsertEdgesQuery {
-    fn process<Store: StorageData>(
-        &self,
-        db: &mut DbImpl<Store>,
-    ) -> Result<QueryResult, QueryError> {
+    fn process<Store: StorageData>(&self, db: &mut DbImpl<Store>) -> Result<QueryResult, DbError> {
         (*self).process(db)
     }
 }
@@ -128,7 +122,7 @@ impl InsertEdgesQuery {
     fn db_ids<Store: StorageData>(
         query_ids: &QueryIds,
         db: &DbImpl<Store>,
-    ) -> Result<Vec<DbId>, QueryError> {
+    ) -> Result<Vec<DbId>, DbError> {
         Ok(match &query_ids {
             QueryIds::Ids(query_ids) => {
                 let mut ids = Vec::with_capacity(query_ids.len());
@@ -152,7 +146,7 @@ impl InsertEdgesQuery {
         db: &mut DbImpl<Store>,
         from: &[DbId],
         to: &[DbId],
-    ) -> Result<Vec<DbId>, QueryError> {
+    ) -> Result<Vec<DbId>, DbError> {
         let mut ids = Vec::with_capacity(from.len());
         let values = self.values(from.len())?;
 
@@ -173,7 +167,7 @@ impl InsertEdgesQuery {
         db: &mut DbImpl<Store>,
         from: &[DbId],
         to: &[DbId],
-    ) -> Result<Vec<DbId>, QueryError> {
+    ) -> Result<Vec<DbId>, DbError> {
         let count = from.len() * to.len();
         let mut ids = Vec::with_capacity(count);
         let values = self.values(count)?;
@@ -195,14 +189,14 @@ impl InsertEdgesQuery {
         Ok(ids)
     }
 
-    fn values(&self, count: usize) -> Result<Vec<&Vec<DbKeyValue>>, QueryError> {
+    fn values(&self, count: usize) -> Result<Vec<&Vec<DbKeyValue>>, DbError> {
         let values = match &self.values {
             QueryValues::Single(v) => vec![v; std::cmp::max(1, count)],
             QueryValues::Multi(v) => v.iter().collect(),
         };
 
         if values.len() != count {
-            return Err(QueryError::from(format!(
+            return Err(DbError::from(format!(
                 "Values len '{}' do not match the insert count '{count}'",
                 values.len()
             )));

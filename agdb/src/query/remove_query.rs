@@ -1,5 +1,5 @@
+use crate::DbError;
 use crate::DbImpl;
-use crate::QueryError;
 use crate::QueryIds;
 use crate::QueryMut;
 use crate::QueryResult;
@@ -16,16 +16,13 @@ use crate::query_builder::search::SearchQueryBuilder;
 /// also removed along with their properties.
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
-#[cfg_attr(feature = "derive", derive(agdb::AgdbDeSerialize))]
+#[cfg_attr(feature = "derive", derive(agdb::DbSerialize))]
 #[cfg_attr(feature = "api", derive(agdb::ApiDef))]
 #[derive(Clone, Debug, PartialEq)]
 pub struct RemoveQuery(pub QueryIds);
 
 impl QueryMut for RemoveQuery {
-    fn process<Store: StorageData>(
-        &self,
-        db: &mut DbImpl<Store>,
-    ) -> Result<QueryResult, QueryError> {
+    fn process<Store: StorageData>(&self, db: &mut DbImpl<Store>) -> Result<QueryResult, DbError> {
         let mut result = QueryResult::default();
 
         match &self.0 {
@@ -50,10 +47,7 @@ impl QueryMut for RemoveQuery {
 }
 
 impl QueryMut for &RemoveQuery {
-    fn process<Store: StorageData>(
-        &self,
-        db: &mut DbImpl<Store>,
-    ) -> Result<QueryResult, QueryError> {
+    fn process<Store: StorageData>(&self, db: &mut DbImpl<Store>) -> Result<QueryResult, DbError> {
         (*self).process(db)
     }
 }

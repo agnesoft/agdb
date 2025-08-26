@@ -23,7 +23,7 @@ use crate::QueryId;
 /// The field `db_id` is skipped in the derive macro
 /// and used only for the `db_id()` method implementation.
 ///
-/// The trait is derivable using `agdb::UserValue`
+/// The trait is derivable using `agdb::DbType`
 /// derive macro. When implementing it by hand you
 /// can apply additional logic, use different keys
 /// and/or their type, skip fields or change their
@@ -32,15 +32,15 @@ use crate::QueryId;
 /// Examples:
 ///
 /// ```
-/// use agdb::{DbId, UserValue};
+/// use agdb::{DbId, DbType};
 ///
-/// #[derive(UserValue)]
+/// #[derive(DbType)]
 /// struct MyValueNoId { key: String, another_key: i32 } // "key": "value", "another_key": 10_i64
 ///
-/// #[derive(UserValue)]
+/// #[derive(DbType)]
 /// struct MyValue { db_id: Option<DbId>, key: String } // "key": "value"
 /// ```
-pub trait DbUserValue: Sized {
+pub trait DbType: Sized {
     type ValueType;
 
     /// Returns the database id if present.
@@ -63,7 +63,7 @@ pub trait DbUserValue: Sized {
 /// Marker trait for user values to get around
 /// conflicting trait implementations between database
 /// and blanket `std` implementations. Implement it
-/// or use the derive macro `agdb::UserValueMarker`
+/// or use the derive macro `agdb::DbTypeMarker`
 /// for custom types that are to be used with the database.
 ///
 /// # Examples
@@ -76,6 +76,6 @@ pub trait DbUserValue: Sized {
 ///   B,
 /// }
 ///
-/// impl agdb::DbUserValueMarker for MyEnum {}
+/// impl agdb::DbTypeMarker for MyEnum {}
 /// ```
-pub trait DbUserValueMarker {}
+pub trait DbTypeMarker {}

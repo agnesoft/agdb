@@ -1,10 +1,9 @@
-use agdb::Comparison;
+use agdb::DbType;
 use agdb::QueryBuilder;
-use agdb::UserValue;
-use agdb_api::DbType;
+use agdb_api::DbKind as ApiDbType;
 use agdb_api::ReqwestClient;
 
-#[derive(Debug, UserValue)]
+#[derive(Debug, DbType)]
 struct User {
     username: String,
     password: String,
@@ -24,7 +23,7 @@ async fn main() -> Result<(), anyhow::Error> {
 
     // Creates a database using the newly created user.
     client.user_login("client", "password111").await?; //overwrites the internal authorization token of the admin to client
-    client.db_add("client", "db", DbType::Memory).await?;
+    client.db_add("client", "db", ApiDbType::Memory).await?;
 
     // Prepare some data to be inserted into the remote database
     let users = vec![
@@ -65,7 +64,7 @@ async fn main() -> Result<(), anyhow::Error> {
             .from("users")
             .where_()
             .key("username")
-            .value(Comparison::Equal("user1".into()))
+            .value("user1")
             .query()
             .into(),
     ];

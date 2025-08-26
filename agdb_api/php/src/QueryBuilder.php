@@ -3,9 +3,7 @@
 namespace Agnesoft\AgdbApi;
 
 use Agnesoft\AgdbApi\Model\KeyValueComparison;
-use ReflectionClass;
 use stdClass;
-use Agnesoft\AgdbApi\Model\QueryResult;
 use Agnesoft\AgdbApi\Model\CountComparison;
 use Agnesoft\AgdbApi\Model\QueryConditionLogic;
 use Agnesoft\AgdbApi\Model\QueryConditionModifier;
@@ -26,7 +24,6 @@ use Agnesoft\AgdbApi\Model\SearchQuery;
 use Agnesoft\AgdbApi\Model\SelectValuesQuery;
 use Agnesoft\AgdbApi\Model\SelectEdgeCountQuery;
 use Agnesoft\AgdbApi\Model\SearchQueryAlgorithm;
-use Agnesoft\AgdbApi\Model\QueryConditionDataOneOf5KeyValue;
 use Agnesoft\AgdbApi\Model\DbKeyOrder;
 
 class SearchQueryBuilder
@@ -166,6 +163,18 @@ class ComparisonBuilder
         bool|int|float|string|array|DbValue $value
     ): Comparison {
         return new Comparison(["not_equal" => to_db_value($value)]);
+    }
+
+    public static function StartsWith(
+        bool|int|float|string|array|DbValue $value
+    ): Comparison {
+        return new Comparison(["starts_with" => to_db_value($value)]);
+    }
+
+    public static function EndsWith(
+        bool|int|float|string|array|DbValue $value
+    ): Comparison {
+        return new Comparison(["ends_with" => to_db_value($value)]);
     }
 }
 
@@ -998,8 +1007,13 @@ class SearchWhereKeyBuilder
         $this->key = $key;
     }
 
-    public function value(Comparison $comparison): SearchWhereLogicBuilder
-    {
+    public function value(
+        Comparison|bool|int|float|string|array|DbValue $comparison
+    ): SearchWhereLogicBuilder {
+        if (!($comparison instanceof Comparison)) {
+            $comparison = ComparisonBuilder::Equal(to_db_value($comparison));
+        }
+
         $condition_data = new QueryConditionData();
         $kvc = new KeyValueComparison();
         $kvc->setKey($this->key);
@@ -1068,8 +1082,11 @@ class SearchWhereBuilder
     }
 
     public function distance(
-        CountComparison $comparison
+        CountComparison|int $comparison
     ): SearchWhereLogicBuilder {
+        if (is_int($comparison)) {
+            $comparison = CountComparisonBuilder::Equal($comparison);
+        }
         $this->__push_condition(
             new QueryConditionData(["distance" => $comparison])
         );
@@ -1083,8 +1100,11 @@ class SearchWhereBuilder
     }
 
     public function edge_count(
-        CountComparison $comparison
+        CountComparison|int $comparison
     ): SearchWhereLogicBuilder {
+        if (is_int($comparison)) {
+            $comparison = CountComparisonBuilder::Equal($comparison);
+        }
         $this->__push_condition(
             new QueryConditionData(["edge_count" => $comparison])
         );
@@ -1092,8 +1112,11 @@ class SearchWhereBuilder
     }
 
     public function edge_count_from(
-        CountComparison $comparison
+        CountComparison|int $comparison
     ): SearchWhereLogicBuilder {
+        if (is_int($comparison)) {
+            $comparison = CountComparisonBuilder::Equal($comparison);
+        }
         $this->__push_condition(
             new QueryConditionData(["edge_count_from" => $comparison])
         );
@@ -1101,8 +1124,11 @@ class SearchWhereBuilder
     }
 
     public function edge_count_to(
-        CountComparison $comparison
+        CountComparison|int $comparison
     ): SearchWhereLogicBuilder {
+        if (is_int($comparison)) {
+            $comparison = CountComparisonBuilder::Equal($comparison);
+        }
         $this->__push_condition(
             new QueryConditionData(["edge_count_to" => $comparison])
         );

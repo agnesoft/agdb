@@ -4,12 +4,12 @@ use crate::database::Database;
 use crate::utilities::format_duration;
 use crate::utilities::measured;
 use crate::utilities::print_flush;
+use agdb::DbType;
 use agdb::QueryBuilder;
 use agdb::StorageData;
-use agdb::UserValue;
 use num_format::ToFormattedString;
 
-#[derive(UserValue)]
+#[derive(DbType)]
 struct User {
     name: String,
     email: String,

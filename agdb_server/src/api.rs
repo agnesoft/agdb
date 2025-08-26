@@ -72,7 +72,7 @@ use utoipa::openapi::security::SecurityScheme;
         routes::db::user::DbUserRoleParam,
         agdb_api::AdminStatus,
         agdb_api::DbAudit,
-        agdb_api::DbType,
+        agdb_api::DbKind,
         agdb_api::DbUser,
         agdb_api::DbUserRole,
         agdb_api::DbResource,
@@ -147,10 +147,10 @@ mod tests {
     use agdb::Comparison;
     use agdb::CountComparison;
     use agdb::DbKeyOrder;
+    use agdb::DbType;
     use agdb::QueryBuilder;
     use agdb::QueryId;
     use agdb::QueryType;
-    use agdb::UserValue;
     use std::fs::File;
     use std::io::Write;
 
@@ -170,7 +170,7 @@ mod tests {
         };
     }
 
-    #[derive(Default, UserValue)]
+    #[derive(Default, DbType)]
     struct T {
         db_id: Option<QueryId>,
         value1: String,
@@ -291,10 +291,10 @@ QueryBuilder::search().from(1).offset(10).limit(5).query(),
 QueryBuilder::search().from(1).where_().distance(CountComparison::LessThan(3)).query(),
 QueryBuilder::search().from(1).where_().edge().query(),
 QueryBuilder::search().from(1).where_().edge_count(CountComparison::GreaterThan(2)).query(),
-QueryBuilder::search().from(1).where_().edge_count_from(CountComparison::Equal(1)).query(),
+QueryBuilder::search().from(1).where_().edge_count_from(1).query(),
 QueryBuilder::search().from(1).where_().edge_count_to(CountComparison::NotEqual(1)).query(),
 QueryBuilder::search().from(1).where_().node().query(),
-QueryBuilder::search().from(1).where_().key("k").value(Comparison::Equal(1.into())).query(),
+QueryBuilder::search().from(1).where_().key("k").value(1).query(),
 QueryBuilder::search().from(1).where_().keys(["k1", "k2"]).query(),
 QueryBuilder::search().from(1).where_().not().keys(["k1", "k2"]).query(),
 QueryBuilder::search().from(1).where_().ids([1, 2]).query(),
@@ -303,9 +303,11 @@ QueryBuilder::search().from(1).where_().not().ids([1, 2]).query(),
 QueryBuilder::search().from(1).where_().not_beyond().ids("a").query(),
 QueryBuilder::search().from(1).where_().node().or().edge().query(),
 QueryBuilder::search().from(1).where_().node().and().distance(CountComparison::GreaterThanOrEqual(3)).query(),
-QueryBuilder::search().from(1).where_().node().or().where_().edge().and().key("k").value(Comparison::Equal(1.into())).end_where().query(),
+QueryBuilder::search().from(1).where_().node().or().where_().edge().and().key("k").value(1).end_where().query(),
 QueryBuilder::search().from(1).where_().node().or().where_().edge().and().key("k").value(Comparison::Contains(1.into())).end_where().query(),
 QueryBuilder::search().from(1).where_().node().or().where_().edge().and().key("k").value(Comparison::Contains(([1, 2]).into())).end_where().query(),
+QueryBuilder::search().from(1).where_().node().or().where_().edge().and().key("k").value(Comparison::StartsWith(1.into())).end_where().query(),
+QueryBuilder::search().from(1).where_().node().or().where_().edge().and().key("k").value(Comparison::EndsWith(([1, 2]).into())).end_where().query(),
 QueryBuilder::search().from(1).order_by([DbKeyOrder::Asc("k".into())]).where_().node().query(),
 QueryBuilder::search().from(1).limit(1).where_().node().query(),
 QueryBuilder::search().from(1).offset(1).where_().node().query(),

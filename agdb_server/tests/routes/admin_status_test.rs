@@ -1,7 +1,7 @@
 use crate::ADMIN;
 use crate::TestServer;
 use crate::next_user_name;
-use agdb_api::DbType;
+use agdb_api::DbKind;
 
 #[tokio::test]
 async fn status() -> anyhow::Result<()> {
@@ -9,7 +9,7 @@ async fn status() -> anyhow::Result<()> {
     server.api.user_login(ADMIN, ADMIN).await?;
     server
         .api
-        .admin_db_add(ADMIN, "status_db", DbType::Memory)
+        .admin_db_add(ADMIN, "status_db", DbKind::Memory)
         .await?;
 
     let (status, admin_status) = server.api.admin_status().await?;

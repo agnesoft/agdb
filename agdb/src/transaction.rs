@@ -1,5 +1,5 @@
+use crate::DbError;
 use crate::DbImpl;
-use crate::QueryError;
 use crate::QueryResult;
 use crate::StorageData;
 use crate::query::Query;
@@ -21,7 +21,7 @@ impl<'a, Store: StorageData> Transaction<'a, Store> {
     /// - Select aliases
     /// - Select all aliases
     /// - Search
-    pub fn exec<T: Query>(&self, query: T) -> Result<QueryResult, QueryError> {
+    pub fn exec<T: Query>(&self, query: T) -> Result<QueryResult, DbError> {
         query.process(self.db)
     }
 

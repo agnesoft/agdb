@@ -3,11 +3,10 @@
 require "vendor/autoload.php";
 
 use Agnesoft\AgdbApi\Api\AgdbApi;
-use Agnesoft\AgdbApi\Model\DbType;
+use Agnesoft\AgdbApi\Model\DbKind;
 use Agnesoft\AgdbApi\Model\UserLogin;
 use Agnesoft\AgdbApi\Model\UserCredentials;
 use Agnesoft\AgdbApi\QueryBuilder;
-use Agnesoft\AgdbApi\ComparisonBuilder;
 
 // Default config will look for the server at http://localhost:3000
 $config = Agnesoft\AgdbApi\Configuration::getDefaultConfiguration();
@@ -41,7 +40,7 @@ $token = $client->userLogin(
 $client->getConfig()->setAccessToken($token);
 
 // Creates memory mapped database "db1" for user "php_user1".
-$client->dbAdd("php_user1", "db1", DbType::MAPPED); // @phpstan-ignore argument.type
+$client->dbAdd("php_user1", "db1", DbKind::MAPPED); // @phpstan-ignore argument.type
 
 // Prepare the queries to be executed on the remote database.
 $queries = [
@@ -75,7 +74,7 @@ $queries = [
         ->from("users")
         ->where()
         ->key("username")
-        ->value(ComparisonBuilder::Equal("user1"))
+        ->value("user1")
         ->query(),
 ];
 

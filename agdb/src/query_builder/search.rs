@@ -22,22 +22,22 @@ pub trait SearchQueryBuilder {
 }
 
 /// Search builder query.
-#[cfg_attr(feature = "api", derive(agdb::ApiDef))]
+#[cfg_attr(feature = "api", derive(agdb::ApiDefImpl))]
 pub struct Search<T: SearchQueryBuilder>(pub T);
 
 /// Search builder query that lets you choose search origin
 /// and other parameters.
-#[cfg_attr(feature = "api", derive(agdb::ApiDef))]
+#[cfg_attr(feature = "api", derive(agdb::ApiDefImpl))]
 pub struct SearchFrom<T: SearchQueryBuilder>(pub T);
 
 /// Search builder query that lets you choose search destination
 /// and other parameters.
-#[cfg_attr(feature = "api", derive(agdb::ApiDef))]
+#[cfg_attr(feature = "api", derive(agdb::ApiDefImpl))]
 pub struct SearchTo<T: SearchQueryBuilder>(pub T);
 
 /// Search builder query that lets you choose an index to search
 /// instead of the graph search.
-#[cfg_attr(feature = "api", derive(agdb::ApiDef))]
+#[cfg_attr(feature = "api", derive(agdb::ApiDefImpl))]
 pub struct SearchIndex<T: SearchQueryBuilder> {
     pub index: DbValue,
     pub query: T,
@@ -45,24 +45,24 @@ pub struct SearchIndex<T: SearchQueryBuilder> {
 
 /// Search builder query that lets you choose a a value to find
 /// in the index.
-#[cfg_attr(feature = "api", derive(agdb::ApiDef))]
+#[cfg_attr(feature = "api", derive(agdb::ApiDefImpl))]
 pub struct SearchIndexValue<T: SearchQueryBuilder>(pub T);
 
 /// Search builder query that lets you choose limit and offset.
-#[cfg_attr(feature = "api", derive(agdb::ApiDef))]
+#[cfg_attr(feature = "api", derive(agdb::ApiDefImpl))]
 pub struct SearchOrderBy<T: SearchQueryBuilder>(pub T);
 
 /// Search builder query that lets you choose conditions.
-#[cfg_attr(feature = "api", derive(agdb::ApiDef))]
+#[cfg_attr(feature = "api", derive(agdb::ApiDefImpl))]
 pub struct SelectLimit<T: SearchQueryBuilder>(pub T);
 
 /// Search builder query that lets you choose limit.
-#[cfg_attr(feature = "api", derive(agdb::ApiDef))]
+#[cfg_attr(feature = "api", derive(agdb::ApiDefImpl))]
 pub struct SelectOffset<T: SearchQueryBuilder>(pub T);
 
 /// Search builder query that lets you choose search origin
 /// and other parameters.
-#[cfg_attr(feature = "api", derive(agdb::ApiDef))]
+#[cfg_attr(feature = "api", derive(agdb::ApiDefImpl))]
 pub struct SearchAlgorithm<T: SearchQueryBuilder>(pub T);
 
 #[cfg_attr(feature = "api", agdb::impl_def())]
@@ -312,13 +312,13 @@ impl<T: SearchQueryBuilder> SearchFrom<T> {
     ///
     /// QueryBuilder::search().from(1).where_().node();
     /// QueryBuilder::search().from(1).where_().edge();
-    /// QueryBuilder::search().from(1).where_().distance(CountComparison::Equal(1));
+    /// QueryBuilder::search().from(1).where_().distance(1);
     /// QueryBuilder::search().from(1).where_().ids(1);
     /// QueryBuilder::search().from(1).where_().keys("k");
     /// QueryBuilder::search().from(1).where_().key("k");
-    /// QueryBuilder::search().from(1).where_().edge_count(CountComparison::Equal(1));
-    /// QueryBuilder::search().from(1).where_().edge_count_from(CountComparison::Equal(1));
-    /// QueryBuilder::search().from(1).where_().edge_count_to(CountComparison::Equal(1));
+    /// QueryBuilder::search().from(1).where_().edge_count(1);
+    /// QueryBuilder::search().from(1).where_().edge_count_from(CountComparison::LessThan(1));
+    /// QueryBuilder::search().from(1).where_().edge_count_to(CountComparison::GreaterThan(1));
     /// QueryBuilder::search().from(1).where_().where_();
     /// QueryBuilder::search().from(1).where_().not();
     /// QueryBuilder::search().from(1).where_().beyond();
@@ -383,13 +383,13 @@ impl<T: SearchQueryBuilder> SearchOrderBy<T> {
     ///
     /// QueryBuilder::search().from(1).where_().node();
     /// QueryBuilder::search().from(1).where_().edge();
-    /// QueryBuilder::search().from(1).where_().distance(CountComparison::Equal(1));
+    /// QueryBuilder::search().from(1).where_().distance(2);
     /// QueryBuilder::search().from(1).where_().ids(1);
     /// QueryBuilder::search().from(1).where_().keys("k");
     /// QueryBuilder::search().from(1).where_().key("k");
-    /// QueryBuilder::search().from(1).where_().edge_count(CountComparison::Equal(1));
-    /// QueryBuilder::search().from(1).where_().edge_count_from(CountComparison::Equal(1));
-    /// QueryBuilder::search().from(1).where_().edge_count_to(CountComparison::Equal(1));
+    /// QueryBuilder::search().from(1).where_().edge_count(CountComparison::LessThan(1));
+    /// QueryBuilder::search().from(1).where_().edge_count_from(1);
+    /// QueryBuilder::search().from(1).where_().edge_count_to(CountComparison::GreaterThan(1));
     /// QueryBuilder::search().from(1).where_().where_();
     /// QueryBuilder::search().from(1).where_().not();
     /// QueryBuilder::search().from(1).where_().beyond();
@@ -474,13 +474,13 @@ impl<T: SearchQueryBuilder> SearchTo<T> {
     ///
     /// QueryBuilder::search().from(1).where_().node();
     /// QueryBuilder::search().from(1).where_().edge();
-    /// QueryBuilder::search().from(1).where_().distance(CountComparison::Equal(1));
+    /// QueryBuilder::search().from(1).where_().distance(2);
     /// QueryBuilder::search().from(1).where_().ids(1);
     /// QueryBuilder::search().from(1).where_().keys("k");
     /// QueryBuilder::search().from(1).where_().key("k");
-    /// QueryBuilder::search().from(1).where_().edge_count(CountComparison::Equal(1));
-    /// QueryBuilder::search().from(1).where_().edge_count_from(CountComparison::Equal(1));
-    /// QueryBuilder::search().from(1).where_().edge_count_to(CountComparison::Equal(1));
+    /// QueryBuilder::search().from(1).where_().edge_count(1);
+    /// QueryBuilder::search().from(1).where_().edge_count_from(CountComparison::GreaterThan(1));
+    /// QueryBuilder::search().from(1).where_().edge_count_to(CountComparison::LessThan(1));
     /// QueryBuilder::search().from(1).where_().where_();
     /// QueryBuilder::search().from(1).where_().not();
     /// QueryBuilder::search().from(1).where_().beyond();
@@ -507,13 +507,13 @@ impl<T: SearchQueryBuilder> SelectLimit<T> {
     ///
     /// QueryBuilder::search().from(1).where_().node();
     /// QueryBuilder::search().from(1).where_().edge();
-    /// QueryBuilder::search().from(1).where_().distance(CountComparison::Equal(1));
+    /// QueryBuilder::search().from(1).where_().distance(2);
     /// QueryBuilder::search().from(1).where_().ids(1);
     /// QueryBuilder::search().from(1).where_().keys("k");
     /// QueryBuilder::search().from(1).where_().key("k");
-    /// QueryBuilder::search().from(1).where_().edge_count(CountComparison::Equal(1));
-    /// QueryBuilder::search().from(1).where_().edge_count_from(CountComparison::Equal(1));
-    /// QueryBuilder::search().from(1).where_().edge_count_to(CountComparison::Equal(1));
+    /// QueryBuilder::search().from(1).where_().edge_count(1);
+    /// QueryBuilder::search().from(1).where_().edge_count_from(CountComparison::GreaterThan(1));
+    /// QueryBuilder::search().from(1).where_().edge_count_to(CountComparison::LessThan(1));
     /// QueryBuilder::search().from(1).where_().where_();
     /// QueryBuilder::search().from(1).where_().not();
     /// QueryBuilder::search().from(1).where_().beyond();
@@ -558,13 +558,13 @@ impl<T: SearchQueryBuilder> SelectOffset<T> {
     ///
     /// QueryBuilder::search().from(1).where_().node();
     /// QueryBuilder::search().from(1).where_().edge();
-    /// QueryBuilder::search().from(1).where_().distance(CountComparison::Equal(1));
+    /// QueryBuilder::search().from(1).where_().distance(2);
     /// QueryBuilder::search().from(1).where_().ids(1);
     /// QueryBuilder::search().from(1).where_().keys("k");
     /// QueryBuilder::search().from(1).where_().key("k");
-    /// QueryBuilder::search().from(1).where_().edge_count(CountComparison::Equal(1));
-    /// QueryBuilder::search().from(1).where_().edge_count_from(CountComparison::Equal(1));
-    /// QueryBuilder::search().from(1).where_().edge_count_to(CountComparison::Equal(1));
+    /// QueryBuilder::search().from(1).where_().edge_count(1);
+    /// QueryBuilder::search().from(1).where_().edge_count_from(CountComparison::GreaterThan(1));
+    /// QueryBuilder::search().from(1).where_().edge_count_to(CountComparison::LessThan(1));
     /// QueryBuilder::search().from(1).where_().where_();
     /// QueryBuilder::search().from(1).where_().not();
     /// QueryBuilder::search().from(1).where_().beyond();

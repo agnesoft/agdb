@@ -1,13 +1,11 @@
-use agdb::Comparison;
 use agdb::DbError;
 use agdb::DbMemory;
+use agdb::DbType;
+use agdb::DbTypeMarker;
 use agdb::DbValue;
 use agdb::QueryBuilder;
-use agdb::QueryError;
-use agdb::UserValue;
-use agdb::UserValueMarker;
 
-// Enums cannot be derived from agdb::UserValue
+// Enums cannot be derived from agdb::DbType
 // directly because the underlying data type is
 // not known and can differ from case to case.
 // Even for the simplest of enums like this one
@@ -23,21 +21,21 @@ enum UserStatus {
     Banned,
 }
 
-// The empty trait `DbUserValueMarker` (deriveable via
-// `agdb::UserValueMarker`) is used to allow the user
+// The empty trait `DbTypeMarker` (deriveable via
+// `agdb::DbTypeMarker`) is used to allow the user
 // types (structs & enums) to be used in vectorized
 // variants of the user types.
-#[derive(Debug, Clone, UserValueMarker)]
+#[derive(Debug, Clone, DbTypeMarker)]
 struct Property {
     name: String,
     value: String,
 }
 
-// Deriving from agdb::UserValue to make it possible
+// Deriving from agdb::DbType to make it possible
 // to use directly in the database queries. Here we
 // demonstrate usiage of custom values, vectorized
 // custom values and optional values.
-#[derive(Debug, UserValue)]
+#[derive(Debug, DbType)]
 struct User {
     username: String,
     password: String,
@@ -46,7 +44,7 @@ struct User {
     extra: Vec<Property>,
 }
 
-// Example implementations of traits expected by agdb::UserValue.
+// Example implementations of traits expected by agdb::DbType.
 impl TryFrom<DbValue> for UserStatus {
     type Error = DbError;
 
@@ -88,7 +86,7 @@ impl From<Property> for DbValue {
     }
 }
 
-fn main() -> Result<(), QueryError> {
+fn main() -> Result<(), DbError> {
     // Creates in memory database.
     let mut db = DbMemory::new("agdb_example")?;
 
@@ -119,7 +117,7 @@ fn main() -> Result<(), QueryError> {
     ];
 
     // Inserts the users as new nodes into the database. This is made
-    // possible by deriving `agdb::UserValue` for the `User` struct.
+    // possible by deriving `agdb::DbType` for the `User` struct.
     let users = db.exec_mut(QueryBuilder::insert().nodes().values(&users).query())?;
 
     // Link the users with the "users" node. Note that we are referring to
@@ -146,15 +144,15 @@ fn main() -> Result<(), QueryError> {
     // SELECT username, password, status FROM users WHERE name = "user1"
     // ```
     //
-    // Internally it uses the `agdb::DbUserValue::db_keys()` to select required keys as the `User` is
-    // required to implement the `DbUserValue` trait. It also changes the sarch algorithm to depth-first
+    // Internally it uses the `agdb::DbType::db_keys()` to select required keys as the `User` is
+    // required to implement the `DbType` trait. It also changes the sarch algorithm to depth-first
     // (default is breadth-first) which is more efficient when searching for a single item only. We could
     // additionally limit the search by adding `limit(1)` to ensure we get only one result back
     // and/or additional condition on `distance(Equal(2))` to stop search beyond users. But since
     // we know the structure of our data (graph) we can safely omit them as unnecessary here.
     //
     // Finally we convert the result into a `User` struct which is again possible due
-    // to deriving agdb::UserValue.
+    // to deriving agdb::DbType.
     let user: User = db
         .exec(
             QueryBuilder::select()
@@ -164,7 +162,7 @@ fn main() -> Result<(), QueryError> {
                 .from("users")
                 .where_()
                 .key("username")
-                .value(Comparison::Equal("user1".into()))
+                .value("user1")
                 .query(),
         )?
         .try_into()?;

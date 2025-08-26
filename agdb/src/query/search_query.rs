@@ -1,11 +1,11 @@
 use crate::DbElement;
+use crate::DbError;
 use crate::DbId;
 use crate::DbImpl;
 use crate::DbValue;
 use crate::Query;
 use crate::QueryCondition;
 use crate::QueryConditionData;
-use crate::QueryError;
 use crate::QueryId;
 use crate::QueryResult;
 use crate::StorageData;
@@ -16,7 +16,7 @@ use std::cmp::Ordering;
 /// Search algorithm to be used
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
-#[cfg_attr(feature = "derive", derive(agdb::AgdbDeSerialize))]
+#[cfg_attr(feature = "derive", derive(agdb::DbSerialize))]
 #[cfg_attr(feature = "api", derive(agdb::ApiDef))]
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum SearchQueryAlgorithm {
@@ -44,7 +44,7 @@ pub enum SearchQueryAlgorithm {
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
-#[cfg_attr(feature = "derive", derive(agdb::AgdbDeSerialize))]
+#[cfg_attr(feature = "derive", derive(agdb::DbSerialize))]
 #[cfg_attr(feature = "api", derive(agdb::ApiDef))]
 pub struct SearchQuery {
     /// Search algorithm to be used. Will be bypassed for path
@@ -75,7 +75,7 @@ pub struct SearchQuery {
 }
 
 impl Query for SearchQuery {
-    fn process<Store: StorageData>(&self, db: &DbImpl<Store>) -> Result<QueryResult, QueryError> {
+    fn process<Store: StorageData>(&self, db: &DbImpl<Store>) -> Result<QueryResult, DbError> {
         let mut result = QueryResult::default();
 
         for id in self.search(db)? {
@@ -97,7 +97,7 @@ impl SearchQuery {
     pub(crate) fn search<Store: StorageData>(
         &self,
         db: &DbImpl<Store>,
-    ) -> Result<Vec<DbId>, QueryError> {
+    ) -> Result<Vec<DbId>, DbError> {
         if self.algorithm == SearchQueryAlgorithm::Index {
             let condition = self.conditions.first().ok_or("Index condition missing")?;
 
@@ -168,7 +168,7 @@ impl SearchQuery {
         &self,
         ids: &mut [DbId],
         db: &DbImpl<Store>,
-    ) -> Result<(), QueryError> {
+    ) -> Result<(), DbError> {
         let keys = self
             .order_by
             .iter()
@@ -206,7 +206,7 @@ impl SearchQuery {
         Ok(())
     }
 
-    fn slice(&self, mut ids: Vec<DbId>) -> Result<Vec<DbId>, QueryError> {
+    fn slice(&self, mut ids: Vec<DbId>) -> Result<Vec<DbId>, DbError> {
         Ok(match (self.limit, self.offset) {
             (0, 0) => ids,
             (0, _) => ids[self.offset as usize..].to_vec(),
@@ -232,7 +232,7 @@ impl SearchQuery {
 }
 
 impl Query for &SearchQuery {
-    fn process<Store: StorageData>(&self, db: &DbImpl<Store>) -> Result<QueryResult, QueryError> {
+    fn process<Store: StorageData>(&self, db: &DbImpl<Store>) -> Result<QueryResult, DbError> {
         (*self).process(db)
     }
 }

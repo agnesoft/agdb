@@ -1,39 +1,38 @@
 use crate::test_db::TestDb;
-use agdb::AgdbDeSerialize;
 use agdb::AgdbSerialize;
 use agdb::DbElement;
 use agdb::DbError;
 use agdb::DbId;
-use agdb::DbUserValue;
+use agdb::DbSerialize;
+use agdb::DbType;
+use agdb::DbTypeMarker;
 use agdb::DbValue;
 use agdb::QueryBuilder;
 use agdb::QueryId;
 use agdb::QueryResult;
-use agdb::UserValue;
-use agdb::UserValueMarker;
 
-#[derive(Default, Debug, Clone, PartialEq, UserValueMarker)]
+#[derive(Default, Debug, Clone, PartialEq, DbTypeMarker, DbValue, DbSerialize)]
 enum Status {
     Active,
     #[default]
     Inactive,
 }
 
-#[derive(UserValue, Debug)]
+#[derive(DbType, Debug)]
 struct User {
     user_id: u64,
     password: String,
     status: Status,
 }
 
-#[derive(UserValue, PartialEq, Debug)]
+#[derive(DbType, PartialEq, Debug)]
 struct MyValue {
     db_id: Option<QueryId>,
     name: String,
     age: u64,
 }
 
-#[derive(UserValue, PartialEq, Debug)]
+#[derive(DbType, PartialEq, Debug)]
 struct MyValueWithBool {
     db_id: Option<QueryId>,
     name: String,
@@ -41,66 +40,27 @@ struct MyValueWithBool {
     truths: Vec<bool>,
 }
 
-#[derive(Clone, PartialEq, Debug, UserValueMarker)]
+#[derive(Clone, PartialEq, Debug, DbValue, DbTypeMarker, DbSerialize)]
 struct Attribute {
     name: String,
     value: String,
 }
 
-#[derive(UserValue, PartialEq, Debug)]
+#[derive(DbType, Default, PartialEq, Debug)]
 struct MyCustomVec {
     vec: Vec<Status>,
-    attribtues: Vec<Attribute>,
+    attributes: Vec<Attribute>,
 }
 
-#[derive(UserValue, PartialEq, Debug)]
+#[derive(DbType, PartialEq, Debug)]
 struct WithOption {
     name: String,
     value: Option<u64>,
 }
 
-impl From<Status> for DbValue {
-    fn from(value: Status) -> Self {
-        match value {
-            Status::Active => DbValue::I64(1),
-            Status::Inactive => DbValue::I64(0),
-        }
-    }
-}
-
-impl TryFrom<DbValue> for Status {
-    type Error = DbError;
-
-    fn try_from(value: DbValue) -> std::result::Result<Self, Self::Error> {
-        if value.to_u64()? == 0 {
-            Ok(Status::Inactive)
-        } else {
-            Ok(Status::Active)
-        }
-    }
-}
-
-impl From<Attribute> for DbValue {
-    fn from(value: Attribute) -> Self {
-        DbValue::String(format!("{}:{}", value.name, value.value))
-    }
-}
-
-impl TryFrom<DbValue> for Attribute {
-    type Error = DbError;
-
-    fn try_from(value: DbValue) -> std::result::Result<Self, Self::Error> {
-        let (name, value) = value.string()?.split_once(':').ok_or("Invalid")?;
-        Ok(Attribute {
-            name: name.to_string(),
-            value: value.to_string(),
-        })
-    }
-}
-
 #[test]
-fn db_user_value() {
-    #[derive(Default, Debug, PartialEq, UserValue)]
+fn user_db_types() {
+    #[derive(Default, Debug, PartialEq, DbType)]
     struct MyData {
         bytes: Vec<u8>,
         u64: u64,
@@ -188,7 +148,7 @@ fn db_user_value() {
 
 #[test]
 fn insert_node_values_custom() {
-    #[derive(UserValue)]
+    #[derive(DbType)]
     struct MyValue {
         name: String,
         age: u64,
@@ -213,7 +173,7 @@ fn insert_node_values_custom() {
 
 #[test]
 fn insert_node_values_uniform_custom() {
-    #[derive(UserValue)]
+    #[derive(DbType)]
     struct MyValue {
         name: String,
         age: u64,
@@ -253,7 +213,7 @@ fn insert_node_values_uniform_custom() {
 
 #[test]
 fn select_custom_value_keys() {
-    #[derive(Debug, Clone, PartialEq, UserValue)]
+    #[derive(Debug, Clone, PartialEq, DbType)]
     struct MyValue {
         name: String,
         age: u64,
@@ -300,7 +260,7 @@ fn select_custom_value_keys() {
 
 #[test]
 fn select_custom_value_with_id() {
-    #[derive(Debug, Clone, PartialEq, UserValue)]
+    #[derive(Debug, Clone, PartialEq, DbType)]
     struct MyValue {
         db_id: Option<DbId>,
         name: String,
@@ -352,7 +312,7 @@ fn select_custom_value_with_id() {
 
 #[test]
 fn insert_single_element() {
-    #[derive(Debug, Clone, PartialEq, UserValue)]
+    #[derive(Debug, Clone, PartialEq, DbType)]
     struct MyValue {
         db_id: Option<DbId>,
         name: String,
@@ -404,7 +364,7 @@ fn insert_single_element() {
 
 #[test]
 fn insert_multiple_elements() {
-    #[derive(Debug, Clone, PartialEq, UserValue)]
+    #[derive(Debug, Clone, PartialEq, DbType)]
     struct MyValue {
         db_id: Option<DbId>,
         name: String,
@@ -459,7 +419,7 @@ fn insert_multiple_elements() {
 fn derived_macro_should_not_panic() {
     let mut db = TestDb::new();
 
-    #[derive(Debug, UserValue)]
+    #[derive(Debug, DbType)]
     struct User {
         value: u64,
     }
@@ -477,10 +437,7 @@ fn derived_macro_should_not_panic() {
         .try_into();
 
     assert!(user.is_err());
-    assert_eq!(
-        user.unwrap_err().description,
-        "Not enough keys: 'value' not found at position 0"
-    );
+    assert_eq!(user.unwrap_err().description, "Key 'value' not found");
 }
 
 #[test]
@@ -642,7 +599,7 @@ fn insert_vectorized_custom_types() {
     let mut db = TestDb::new();
     let my_type = MyCustomVec {
         vec: vec![Status::Active, Status::Inactive],
-        attribtues: vec![
+        attributes: vec![
             Attribute {
                 name: "name".to_string(),
                 value: "value".to_string(),
@@ -662,7 +619,7 @@ fn insert_vectorized_custom_types() {
 }
 
 #[test]
-fn select_user_value() {
+fn select_user_type() {
     let mut db = TestDb::new();
     let mut my_value = MyValue {
         db_id: None,
@@ -818,7 +775,7 @@ fn try_from_db_element_bad_conversion() {
 
 #[test]
 fn derived_serialization_struct() {
-    #[derive(AgdbDeSerialize, Debug, PartialEq)]
+    #[derive(DbSerialize, Debug, PartialEq)]
     struct S {
         f1: u64,
         f2: u64,
@@ -833,7 +790,7 @@ fn derived_serialization_struct() {
 
 #[test]
 fn derived_serialization_tuple() {
-    #[derive(AgdbDeSerialize, Debug, PartialEq)]
+    #[derive(DbSerialize, Debug, PartialEq)]
     struct S(u64, u64);
 
     let s = S(1, 2);
@@ -843,24 +800,24 @@ fn derived_serialization_tuple() {
     assert_eq!(s, deserialized);
 }
 
-#[derive(AgdbDeSerialize, Debug, PartialEq)]
+#[derive(DbSerialize, Debug, PartialEq)]
 struct S1 {
     f1: u64,
 }
 
-#[derive(AgdbDeSerialize, Debug, PartialEq)]
+#[derive(DbSerialize, Debug, PartialEq)]
 struct S2(S1);
 
-#[derive(AgdbDeSerialize, Debug, PartialEq)]
+#[derive(DbSerialize, Debug, PartialEq)]
 struct S3(S2, S2);
 
-#[derive(AgdbDeSerialize, Debug, PartialEq)]
+#[derive(DbSerialize, Debug, PartialEq)]
 enum MyOtherEnum {
     A,
     B,
 }
 
-#[derive(AgdbDeSerialize, Debug, PartialEq)]
+#[derive(DbSerialize, Debug, PartialEq)]
 enum MyE {
     A,
     B(u64),
@@ -926,7 +883,7 @@ fn derived_serialization_enum_struct() {
 
 #[test]
 fn derive_serialization_empty_struct() {
-    #[derive(AgdbDeSerialize, PartialEq, Debug)]
+    #[derive(DbSerialize, PartialEq, Debug)]
 
     struct S {}
 
@@ -934,4 +891,127 @@ fn derive_serialization_empty_struct() {
     let serialized = s.serialize();
     let deserialized = S::deserialize(&serialized).unwrap();
     assert_eq!(s, deserialized);
+}
+
+#[test]
+fn derive_db_type_flatten_nested_struct() {
+    #[derive(DbType, PartialEq, Debug)]
+    struct Flattened {
+        db_id: Option<DbId>,
+        category: String,
+        #[agdb(flatten)]
+        custom: MyCustomVec,
+    }
+
+    let mut flattened = Flattened {
+        db_id: None,
+        category: "test".into(),
+        custom: MyCustomVec {
+            vec: vec![],
+            attributes: vec![],
+        },
+    };
+
+    let mut db = TestDb::new();
+    db.exec_mut(QueryBuilder::insert().element(&flattened).query(), 3);
+
+    let keys = db
+        .exec_result(QueryBuilder::select().keys().ids(1).query())
+        .elements[0]
+        .values
+        .iter()
+        .map(|kv| kv.key.to_string())
+        .collect::<Vec<String>>();
+
+    assert_eq!(
+        keys,
+        vec![
+            "category".to_string(),
+            "vec".to_string(),
+            "attributes".to_string()
+        ]
+    );
+
+    let retrieved: Flattened = db
+        .exec_result(
+            QueryBuilder::select()
+                .elements::<Flattened>()
+                .ids(1)
+                .query(),
+        )
+        .try_into()
+        .unwrap();
+
+    flattened.db_id = Some(DbId(1));
+    assert_eq!(flattened, retrieved);
+}
+
+#[test]
+fn derive_db_type_skip_field() {
+    #[derive(DbType, PartialEq, Debug)]
+    struct Skipped {
+        db_id: Option<DbId>,
+        category: String,
+        #[agdb(skip)]
+        custom: MyCustomVec,
+    }
+
+    let mut db = TestDb::new();
+    let mut skipped = Skipped {
+        db_id: None,
+        category: "category".to_string(),
+        custom: MyCustomVec::default(),
+    };
+    db.exec_mut(QueryBuilder::insert().element(&skipped).query(), 1);
+    let keys = db
+        .exec_result(QueryBuilder::select().keys().ids(1).query())
+        .elements[0]
+        .values
+        .iter()
+        .map(|kv| kv.key.to_string())
+        .collect::<Vec<String>>();
+
+    assert_eq!(keys, vec!["category".to_string()]);
+
+    let retrieved: Skipped = db
+        .exec_result(QueryBuilder::select().elements::<Skipped>().ids(1).query())
+        .try_into()
+        .unwrap();
+
+    skipped.db_id = Some(DbId(1));
+    assert_eq!(skipped, retrieved);
+}
+
+#[test]
+fn derive_db_type_rename_field() {
+    #[derive(DbType, PartialEq, Debug)]
+    struct Renamed {
+        db_id: Option<DbId>,
+        #[agdb(rename = "category_name")]
+        category: String,
+    }
+
+    let mut db = TestDb::new();
+    let mut renamed = Renamed {
+        db_id: None,
+        category: "category".to_string(),
+    };
+    db.exec_mut(QueryBuilder::insert().element(&renamed).query(), 1);
+    let keys = db
+        .exec_result(QueryBuilder::select().keys().ids(1).query())
+        .elements[0]
+        .values
+        .iter()
+        .map(|kv| kv.key.to_string())
+        .collect::<Vec<String>>();
+
+    assert_eq!(keys, vec!["category_name".to_string()]);
+
+    let retrieved: Renamed = db
+        .exec_result(QueryBuilder::select().elements::<Renamed>().ids(1).query())
+        .try_into()
+        .unwrap();
+
+    renamed.db_id = Some(DbId(1));
+    assert_eq!(renamed, retrieved);
 }

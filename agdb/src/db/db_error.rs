@@ -7,10 +7,11 @@ use std::io::Error as IOError;
 use std::num::TryFromIntError;
 use std::panic::Location;
 use std::string::FromUtf8Error;
+use std::sync::PoisonError;
 
 /// Universal `agdb` database error. It represents
 /// any error caused by the database processing such as
-/// loading a database, writing data etc.
+/// loading a database, running queries, writing data etc.
 #[derive(Debug)]
 pub struct DbError {
     /// Error description
@@ -54,6 +55,12 @@ impl Error for DbError {
         }
 
         None
+    }
+}
+
+impl<T> From<PoisonError<T>> for DbError {
+    fn from(value: PoisonError<T>) -> Self {
+        Self::from(value.to_string())
     }
 }
 
@@ -225,5 +232,10 @@ mod tests {
         let error = DbError::from("file not found");
 
         assert!(error.source().is_none());
+    }
+
+    #[test]
+    fn from_poison_error() {
+        let _ = DbError::from(PoisonError::<i32>::new(0));
     }
 }

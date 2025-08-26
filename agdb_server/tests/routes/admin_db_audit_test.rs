@@ -3,7 +3,7 @@ use crate::TestServer;
 use crate::next_db_name;
 use crate::next_user_name;
 use agdb::QueryBuilder;
-use agdb_api::DbType;
+use agdb_api::DbKind;
 
 #[tokio::test]
 async fn admin_audit() -> anyhow::Result<()> {
@@ -13,7 +13,7 @@ async fn admin_audit() -> anyhow::Result<()> {
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.user_login(owner, owner).await?;
-    server.api.db_add(owner, db, DbType::Mapped).await?;
+    server.api.db_add(owner, db, DbKind::Mapped).await?;
     let mut queries = vec![
         QueryBuilder::insert()
             .nodes()
@@ -40,7 +40,7 @@ async fn admin_audit_db_empty() -> anyhow::Result<()> {
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.user_login(owner, owner).await?;
-    server.api.db_add(owner, db, DbType::Mapped).await?;
+    server.api.db_add(owner, db, DbKind::Mapped).await?;
     server.api.user_login(ADMIN, ADMIN).await?;
     let (status, results) = server.api.admin_db_audit(owner, db).await?;
     assert_eq!(status, 200);

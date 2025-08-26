@@ -3,9 +3,9 @@ pub mod test_file;
 
 use agdb::Db;
 use agdb::DbElement;
+use agdb::DbError;
 use agdb::DbTransactionMut;
 use agdb::Query;
-use agdb::QueryError;
 use agdb::QueryMut;
 use agdb::QueryResult;
 
@@ -93,7 +93,7 @@ impl TestDb {
     }
 
     #[track_caller]
-    pub fn transaction_mut<T, E: From<QueryError> + std::fmt::Debug>(
+    pub fn transaction_mut<T, E: From<DbError> + std::fmt::Debug>(
         &mut self,
         f: impl FnMut(&mut DbTransactionMut) -> Result<T, E>,
     ) {
@@ -103,7 +103,7 @@ impl TestDb {
     #[track_caller]
     pub fn transaction_mut_error<
         T: std::fmt::Debug,
-        E: From<QueryError> + std::fmt::Debug + PartialEq,
+        E: From<DbError> + std::fmt::Debug + PartialEq,
     >(
         &mut self,
         f: impl FnMut(&mut DbTransactionMut) -> Result<T, E>,

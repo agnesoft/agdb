@@ -1,5 +1,5 @@
-use agdb::AgdbDeSerialize;
 use agdb::DbError;
+use agdb::DbSerialize;
 use agdb::DbValue;
 use agdb::QueryResult;
 use agdb::QueryType;
@@ -20,11 +20,11 @@ use utoipa::ToSchema;
     Eq,
     PartialOrd,
     Ord,
-    AgdbDeSerialize,
+    DbSerialize,
 )]
 #[cfg_attr(feature = "api", derive(agdb::ApiDef))]
 #[serde(rename_all = "snake_case")]
-pub enum DbType {
+pub enum DbKind {
     #[default]
     Memory,
     Mapped,
@@ -43,7 +43,7 @@ pub enum DbType {
     Eq,
     PartialOrd,
     Ord,
-    AgdbDeSerialize,
+    DbSerialize,
 )]
 #[cfg_attr(feature = "api", derive(agdb::ApiDef))]
 #[serde(rename_all = "snake_case")]
@@ -74,7 +74,7 @@ pub struct DbUser {
     Eq,
     PartialOrd,
     Ord,
-    AgdbDeSerialize,
+    DbSerialize,
 )]
 #[cfg_attr(feature = "api", derive(agdb::ApiDef))]
 #[serde(rename_all = "snake_case")]
@@ -110,12 +110,10 @@ pub struct AdminStatus {
     pub size: u64,
 }
 
-#[derive(Clone, Deserialize, Serialize, ToSchema, AgdbDeSerialize)]
-#[cfg_attr(feature = "api", derive(agdb::ApiDef))]
+#[derive(Clone, Deserialize, Serialize, ToSchema, DbSerialize)]
 pub struct Queries(pub Vec<QueryType>);
 
 #[derive(Serialize, ToSchema)]
-#[cfg_attr(feature = "api", derive(agdb::ApiDef))]
 pub struct QueriesResults(pub Vec<QueryResult>);
 
 #[derive(Debug, Deserialize, Serialize, ToSchema, PartialEq)]
@@ -135,14 +133,13 @@ pub struct DbAudit(pub Vec<QueryAudit>);
 pub struct ServerDatabase {
     pub db: String,
     pub owner: String,
-    pub db_type: DbType,
+    pub db_type: DbKind,
     pub role: DbUserRole,
     pub size: u64,
     pub backup: u64,
 }
 
 #[derive(Deserialize, Serialize, ToSchema)]
-#[cfg_attr(feature = "api", derive(agdb::ApiDef))]
 pub struct UserCredentials {
     pub password: String,
 }
@@ -162,7 +159,7 @@ pub struct UserStatus {
     pub admin: bool,
 }
 
-impl From<&str> for DbType {
+impl From<&str> for DbKind {
     fn from(value: &str) -> Self {
         match value {
             "mapped" => Self::Mapped,
@@ -193,7 +190,7 @@ impl From<&str> for DbUserRole {
     }
 }
 
-impl TryFrom<DbValue> for DbType {
+impl TryFrom<DbValue> for DbKind {
     type Error = DbError;
 
     fn try_from(value: DbValue) -> Result<Self, Self::Error> {
@@ -217,8 +214,8 @@ impl TryFrom<DbValue> for DbUserRole {
     }
 }
 
-impl From<DbType> for DbValue {
-    fn from(value: DbType) -> Self {
+impl From<DbKind> for DbValue {
+    fn from(value: DbKind) -> Self {
         value.to_string().into()
     }
 }
@@ -229,12 +226,12 @@ impl From<DbResource> for DbValue {
     }
 }
 
-impl Display for DbType {
+impl Display for DbKind {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            DbType::File => f.write_str("file"),
-            DbType::Mapped => f.write_str("mapped"),
-            DbType::Memory => f.write_str("memory"),
+            DbKind::File => f.write_str("file"),
+            DbKind::Mapped => f.write_str("mapped"),
+            DbKind::Memory => f.write_str("memory"),
         }
     }
 }
@@ -279,7 +276,7 @@ mod tests {
 
     #[test]
     fn derived_from_debug() {
-        let _ = format!("{:?}", DbType::Memory);
+        let _ = format!("{:?}", DbKind::Memory);
         let _ = format!("{:?}", DbUserRole::Admin);
         let _ = format!(
             "{:?}",
@@ -293,7 +290,7 @@ mod tests {
             ServerDatabase {
                 db: "db".to_string(),
                 owner: "owner".to_string(),
-                db_type: DbType::Memory,
+                db_type: DbKind::Memory,
                 role: DbUserRole::Admin,
                 size: 0,
                 backup: 0
@@ -339,7 +336,7 @@ mod tests {
 
     #[test]
     fn derived_from_parital_ord() {
-        assert!(DbType::Memory < DbType::File);
+        assert!(DbKind::Memory < DbKind::File);
         assert!(DbUserRole::Admin < DbUserRole::Write);
         let user = DbUser {
             username: "user".to_string(),
@@ -353,7 +350,7 @@ mod tests {
         let db = ServerDatabase {
             db: "db".to_string(),
             owner: "owner".to_string(),
-            db_type: DbType::Memory,
+            db_type: DbKind::Memory,
             role: DbUserRole::Admin,
             size: 0,
             backup: 0,
@@ -361,7 +358,7 @@ mod tests {
         let other = ServerDatabase {
             db: "db2".to_string(),
             owner: "owner".to_string(),
-            db_type: DbType::Memory,
+            db_type: DbKind::Memory,
             role: DbUserRole::Admin,
             size: 0,
             backup: 0,
@@ -383,7 +380,7 @@ mod tests {
     #[test]
     fn derived_from_ord() {
         assert_eq!(
-            DbType::Memory.cmp(&DbType::Memory),
+            DbKind::Memory.cmp(&DbKind::Memory),
             std::cmp::Ordering::Equal
         );
         assert_eq!(
@@ -401,7 +398,7 @@ mod tests {
         let db = ServerDatabase {
             db: "db".to_string(),
             owner: "owner".to_string(),
-            db_type: DbType::Memory,
+            db_type: DbKind::Memory,
             role: DbUserRole::Admin,
             size: 0,
             backup: 0,
@@ -462,15 +459,15 @@ mod tests {
 
     #[test]
     fn db_type() {
-        let db_type = DbType::from("mapped");
-        assert_eq!(db_type, DbType::Mapped);
-        let db_type = DbType::from("file");
-        assert_eq!(db_type, DbType::File);
-        let db_type = DbType::from("memory");
-        assert_eq!(db_type, DbType::Memory);
+        let db_type = DbKind::from("mapped");
+        assert_eq!(db_type, DbKind::Mapped);
+        let db_type = DbKind::from("file");
+        assert_eq!(db_type, DbKind::File);
+        let db_type = DbKind::from("memory");
+        assert_eq!(db_type, DbKind::Memory);
 
-        let db_value = DbValue::from(DbType::Memory);
-        let db_type: DbType = db_value.try_into().unwrap();
-        assert_eq!(db_type, DbType::Memory);
+        let db_value = DbValue::from(DbKind::Memory);
+        let db_type: DbKind = db_value.try_into().unwrap();
+        assert_eq!(db_type, DbKind::Memory);
     }
 }

@@ -1,34 +1,33 @@
 use crate::test_db::TestFile;
-use agdb::Comparison::Equal;
 use agdb::CountComparison;
 use agdb::Db;
+use agdb::DbError;
 use agdb::DbId;
 use agdb::DbKeyOrder;
 use agdb::DbKeyValue;
+use agdb::DbType;
 use agdb::QueryBuilder;
-use agdb::QueryError;
 use agdb::QueryId;
-use agdb_derive::UserValue;
 use std::ops::Deref;
 use std::ops::DerefMut;
 use std::sync::Arc;
 use std::sync::RwLock;
 
-#[derive(UserValue)]
+#[derive(DbType)]
 struct User {
     username: String,
     email: String,
     password: String,
 }
 
-#[derive(UserValue)]
+#[derive(DbType)]
 struct Post {
     db_id: Option<DbId>,
     title: String,
     body: String,
 }
 
-#[derive(UserValue)]
+#[derive(DbType)]
 struct PostLiked {
     db_id: Option<DbId>,
     title: String,
@@ -36,14 +35,14 @@ struct PostLiked {
     likes: i64,
 }
 
-#[derive(UserValue)]
+#[derive(DbType)]
 struct Comment {
     body: String,
 }
 
-fn create_db() -> Result<Arc<RwLock<Db>>, QueryError> {
+fn create_db() -> Result<Arc<RwLock<Db>>, DbError> {
     let db = Arc::new(RwLock::new(Db::new("social.agdb")?));
-    db.write()?.transaction_mut(|t| -> Result<(), QueryError> {
+    db.write()?.transaction_mut(|t| -> Result<(), DbError> {
         t.exec_mut(
             QueryBuilder::insert()
                 .nodes()
@@ -63,20 +62,20 @@ fn create_db() -> Result<Arc<RwLock<Db>>, QueryError> {
     Ok(db)
 }
 
-fn register_user(db: &mut Db, user: &User) -> Result<DbId, QueryError> {
-    db.transaction_mut(|t| -> Result<DbId, QueryError> {
+fn register_user(db: &mut Db, user: &User) -> Result<DbId, DbError> {
+    db.transaction_mut(|t| -> Result<DbId, DbError> {
         if t.exec(
             QueryBuilder::search()
                 .from("users")
                 .where_()
                 .key("username")
-                .value(Equal(user.username.clone().into()))
+                .value(&user.username)
                 .query(),
         )?
         .result
             != 0
         {
-            return Err(QueryError::from(format!(
+            return Err(DbError::from(format!(
                 "User {} already exists.",
                 user.username
             )));
@@ -99,8 +98,8 @@ fn register_user(db: &mut Db, user: &User) -> Result<DbId, QueryError> {
     })
 }
 
-fn create_post(db: &mut Db, user: DbId, post: &Post) -> Result<DbId, QueryError> {
-    db.transaction_mut(|t| -> Result<DbId, QueryError> {
+fn create_post(db: &mut Db, user: DbId, post: &Post) -> Result<DbId, DbError> {
+    db.transaction_mut(|t| -> Result<DbId, DbError> {
         let post = t
             .exec_mut(QueryBuilder::insert().element(post).query())?
             .elements[0]
@@ -124,8 +123,8 @@ fn create_comment(
     user: DbId,
     parent: DbId,
     comment: &Comment,
-) -> Result<DbId, QueryError> {
-    db.transaction_mut(|t| -> Result<DbId, QueryError> {
+) -> Result<DbId, DbError> {
+    db.transaction_mut(|t| -> Result<DbId, DbError> {
         let comment = t
             .exec_mut(QueryBuilder::insert().element(comment).query())?
             .elements[0]
@@ -144,7 +143,7 @@ fn create_comment(
     })
 }
 
-fn like(db: &mut Db, user: DbId, id: DbId) -> Result<(), QueryError> {
+fn like(db: &mut Db, user: DbId, id: DbId) -> Result<(), DbError> {
     db.exec_mut(
         QueryBuilder::insert()
             .edges()
@@ -156,8 +155,8 @@ fn like(db: &mut Db, user: DbId, id: DbId) -> Result<(), QueryError> {
     Ok(())
 }
 
-fn remove_like(db: &mut Db, user: DbId, id: DbId) -> Result<(), QueryError> {
-    db.transaction_mut(|t| -> Result<(), QueryError> {
+fn remove_like(db: &mut Db, user: DbId, id: DbId) -> Result<(), DbError> {
+    db.transaction_mut(|t| -> Result<(), DbError> {
         t.exec_mut(
             QueryBuilder::remove()
                 .search()
@@ -171,7 +170,7 @@ fn remove_like(db: &mut Db, user: DbId, id: DbId) -> Result<(), QueryError> {
     })
 }
 
-fn login(db: &Db, username: &str, password: &str) -> Result<DbId, QueryError> {
+fn login(db: &Db, username: &str, password: &str) -> Result<DbId, DbError> {
     let result = db
         .exec(
             QueryBuilder::select()
@@ -181,34 +180,34 @@ fn login(db: &Db, username: &str, password: &str) -> Result<DbId, QueryError> {
                 .from("users")
                 .limit(1)
                 .where_()
-                .distance(CountComparison::Equal(2))
+                .distance(2)
                 .and()
                 .key("username")
-                .value(Equal(username.into()))
+                .value(username)
                 .query(),
         )?
         .elements;
 
     let user = result
         .first()
-        .ok_or(QueryError::from(format!("Username '{username}' not found")))?;
+        .ok_or(DbError::from(format!("Username '{username}' not found")))?;
 
     let pswd = user.values[0].value.to_string();
 
     if password != pswd {
-        return Err(QueryError::from("Password is incorrect"));
+        return Err(DbError::from("Password is incorrect"));
     }
 
     Ok(user.id)
 }
 
-fn user_posts_ids(db: &Db, user: DbId) -> Result<Vec<DbId>, QueryError> {
+fn user_posts_ids(db: &Db, user: DbId) -> Result<Vec<DbId>, DbError> {
     Ok(db
         .exec(
             QueryBuilder::search()
                 .from(user)
                 .where_()
-                .distance(CountComparison::Equal(2))
+                .distance(2)
                 .and()
                 .beyond()
                 .where_()
@@ -220,7 +219,7 @@ fn user_posts_ids(db: &Db, user: DbId) -> Result<Vec<DbId>, QueryError> {
         .ids())
 }
 
-fn post_titles(db: &Db, ids: Vec<DbId>) -> Result<Vec<String>, QueryError> {
+fn post_titles(db: &Db, ids: Vec<DbId>) -> Result<Vec<String>, DbError> {
     Ok(db
         .exec(QueryBuilder::select().values("title").ids(ids).query())?
         .elements
@@ -229,46 +228,44 @@ fn post_titles(db: &Db, ids: Vec<DbId>) -> Result<Vec<String>, QueryError> {
         .collect())
 }
 
-fn posts(db: &Db, offset: u64, limit: u64) -> Result<Vec<Post>, QueryError> {
-    Ok(db
-        .exec(
-            QueryBuilder::select()
-                .elements::<Post>()
-                .search()
-                .from("posts")
-                .offset(offset)
-                .limit(limit)
-                .where_()
-                .distance(CountComparison::Equal(2))
-                .query(),
-        )?
-        .try_into()?)
+fn posts(db: &Db, offset: u64, limit: u64) -> Result<Vec<Post>, DbError> {
+    db.exec(
+        QueryBuilder::select()
+            .elements::<Post>()
+            .search()
+            .from("posts")
+            .offset(offset)
+            .limit(limit)
+            .where_()
+            .distance(2)
+            .query(),
+    )?
+    .try_into()
 }
 
-fn comments(db: &Db, id: DbId) -> Result<Vec<Comment>, QueryError> {
-    Ok(db
-        .exec(
-            QueryBuilder::select()
-                .elements::<Comment>()
-                .search()
-                .depth_first()
-                .from(id)
-                .where_()
-                .node()
-                .and()
-                .distance(CountComparison::GreaterThan(1))
-                .query(),
-        )?
-        .try_into()?)
+fn comments(db: &Db, id: DbId) -> Result<Vec<Comment>, DbError> {
+    db.exec(
+        QueryBuilder::select()
+            .elements::<Comment>()
+            .search()
+            .depth_first()
+            .from(id)
+            .where_()
+            .node()
+            .and()
+            .distance(CountComparison::GreaterThan(1))
+            .query(),
+    )?
+    .try_into()
 }
 
-fn add_likes_to_posts(db: &mut Db) -> Result<(), QueryError> {
-    db.transaction_mut(|t| -> Result<(), QueryError> {
+fn add_likes_to_posts(db: &mut Db) -> Result<(), DbError> {
+    db.transaction_mut(|t| -> Result<(), DbError> {
         let posts = t.exec(
             QueryBuilder::search()
                 .from("posts")
                 .where_()
-                .distance(CountComparison::Equal(2))
+                .distance(2)
                 .query(),
         )?;
         let mut likes = Vec::<Vec<DbKeyValue>>::new();
@@ -279,7 +276,7 @@ fn add_likes_to_posts(db: &mut Db) -> Result<(), QueryError> {
                     QueryBuilder::search()
                         .to(post)
                         .where_()
-                        .distance(CountComparison::Equal(1))
+                        .distance(1)
                         .and()
                         .keys("liked")
                         .query(),
@@ -293,38 +290,37 @@ fn add_likes_to_posts(db: &mut Db) -> Result<(), QueryError> {
     })
 }
 
-fn liked_posts(db: &Db, offset: u64, limit: u64) -> Result<Vec<PostLiked>, QueryError> {
-    Ok(db
-        .exec(
-            QueryBuilder::select()
-                .elements::<PostLiked>()
-                .search()
-                .from("posts")
-                .order_by([DbKeyOrder::Desc("likes".into())])
-                .offset(offset)
-                .limit(limit)
-                .where_()
-                .distance(CountComparison::Equal(2))
-                .query(),
-        )?
-        .try_into()?)
+fn liked_posts(db: &Db, offset: u64, limit: u64) -> Result<Vec<PostLiked>, DbError> {
+    db.exec(
+        QueryBuilder::select()
+            .elements::<PostLiked>()
+            .search()
+            .from("posts")
+            .order_by([DbKeyOrder::Desc("likes".into())])
+            .offset(offset)
+            .limit(limit)
+            .where_()
+            .distance(2)
+            .query(),
+    )?
+    .try_into()
 }
 
-fn mark_top_level_comments(db: &mut Db) -> Result<(), QueryError> {
+fn mark_top_level_comments(db: &mut Db) -> Result<(), DbError> {
     db.exec_mut(
         QueryBuilder::insert()
             .values_uniform([("level", 1).into()])
             .search()
             .from("posts")
             .where_()
-            .distance(CountComparison::Equal(4))
+            .distance(4)
             .query(),
     )?;
     Ok(())
 }
 
 #[test]
-fn efficient_agdb() -> Result<(), QueryError> {
+fn efficient_agdb() -> Result<(), DbError> {
     let _test_file = TestFile::from("social.agdb");
     let db = create_db()?;
 

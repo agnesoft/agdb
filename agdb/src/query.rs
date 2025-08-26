@@ -5,7 +5,6 @@ pub mod insert_nodes_query;
 pub mod insert_values_query;
 pub mod query_aliases;
 pub mod query_condition;
-pub mod query_error;
 pub mod query_id;
 pub mod query_ids;
 pub mod query_result;
@@ -24,24 +23,21 @@ pub mod select_keys_query;
 pub mod select_node_count;
 pub mod select_values_query;
 
+use crate::DbError;
 use crate::DbImpl;
-use crate::QueryError;
 use crate::QueryResult;
 use crate::StorageData;
 
 /// Trait for immutable `agdb` database queries. This
 /// trait is unlikely to be implementable for user types.
 pub trait Query {
-    fn process<Store: StorageData>(&self, db: &DbImpl<Store>) -> Result<QueryResult, QueryError>;
+    fn process<Store: StorageData>(&self, db: &DbImpl<Store>) -> Result<QueryResult, DbError>;
 }
 
 /// Trait for mutable `agdb` database queries. This
 /// trait is unlikely to be implementable for user types.
 pub trait QueryMut {
-    fn process<Store: StorageData>(
-        &self,
-        db: &mut DbImpl<Store>,
-    ) -> Result<QueryResult, QueryError>;
+    fn process<Store: StorageData>(&self, db: &mut DbImpl<Store>) -> Result<QueryResult, DbError>;
 }
 
 #[cfg(any(feature = "serde", feature = "openapi"))]
@@ -56,7 +52,7 @@ use crate::{
 #[cfg(any(feature = "serde", feature = "openapi"))]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
-#[cfg_attr(feature = "derive", derive(agdb::AgdbDeSerialize))]
+#[cfg_attr(feature = "derive", derive(agdb::DbSerialize))]
 #[cfg_attr(feature = "api", derive(agdb::ApiDef))]
 #[derive(Clone, Debug, PartialEq)]
 #[expect(clippy::large_enum_variant)]
@@ -265,7 +261,7 @@ mod tests {
                 .keys("hidden")
                 .and()
                 .where_()
-                .distance(crate::CountComparison::Equal(2))
+                .distance(2)
                 .or()
                 .key("key")
                 .value(crate::Comparison::NotEqual("value".into()))

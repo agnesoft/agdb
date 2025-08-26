@@ -2,7 +2,7 @@ use crate::ADMIN;
 use crate::TestServer;
 use crate::next_db_name;
 use crate::next_user_name;
-use agdb_api::DbType;
+use agdb_api::DbKind;
 use agdb_api::DbUserRole;
 use std::path::Path;
 
@@ -35,7 +35,7 @@ async fn delete_with_other() -> anyhow::Result<()> {
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.admin_user_add(user, user).await?;
-    server.api.admin_db_add(owner, db, DbType::File).await?;
+    server.api.admin_db_add(owner, db, DbKind::File).await?;
     server
         .api
         .admin_db_user_add(owner, db, user, DbUserRole::Write)

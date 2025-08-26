@@ -1,7 +1,7 @@
 use crate::SelectIndexesQuery;
 
 /// Select indexes builder.
-#[cfg_attr(feature = "api", derive(agdb::ApiDef))]
+#[cfg_attr(feature = "api", derive(agdb::ApiDefImpl))]
 pub struct SelectIndexes {}
 
 #[cfg_attr(feature = "api", agdb::impl_def())]

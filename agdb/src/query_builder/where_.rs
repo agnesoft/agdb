@@ -1,4 +1,5 @@
 use crate::Comparison;
+use crate::DbType;
 use crate::DbValue;
 use crate::QueryIds;
 use crate::db::db_value::DbValues;
@@ -181,6 +182,12 @@ impl<T: SearchQueryBuilder> Where<T> {
         WhereLogicOperator(self)
     }
 
+    /// Convenience method equivalent to `keys(E::db_keys())` useful for
+    /// selecting only elements that can be converted to `E`.
+    pub fn element<E: DbType>(self) -> WhereLogicOperator<T> {
+        self.keys(E::db_keys())
+    }
+
     /// Only elements listed in `ids` will pass this condition. It is usually combined
     /// with a modifier like `not_beyond()` or `not()`.
     ///
@@ -254,7 +261,8 @@ impl<T: SearchQueryBuilder> Where<T> {
         WhereLogicOperator(self)
     }
 
-    // Convenience method equivalient to `distance(CountComparison::Equal(2))`.
+    /// Convenience shorthand to select neighboring elements
+    /// equivalient to `distance(CountComparison::Equal(2))`.
     pub fn neighbor(self) -> WhereLogicOperator<T> {
         self.distance(CountComparison::Equal(2))
     }

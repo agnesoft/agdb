@@ -3,6 +3,7 @@ mod test_db;
 use agdb::Comparison;
 use agdb::CountComparison;
 use agdb::DbKeyOrder;
+use agdb::DbType;
 use agdb::KeyValueComparison;
 use agdb::QueryBuilder;
 use agdb::QueryConditionData;
@@ -657,4 +658,26 @@ fn search_neighbor() {
         .query();
 
     assert_eq!(neighbor_query, distance_same);
+}
+
+#[test]
+fn element() {
+    #[derive(DbType)]
+    struct S {
+        id: i32,
+        name: String,
+    }
+
+    let element_search = QueryBuilder::search()
+        .from("root")
+        .where_()
+        .element::<S>()
+        .query();
+    let key_search = QueryBuilder::search()
+        .from("root")
+        .where_()
+        .keys(["id", "name"])
+        .query();
+
+    assert_eq!(element_search, key_search);
 }

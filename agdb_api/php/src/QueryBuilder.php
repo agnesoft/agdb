@@ -1163,6 +1163,11 @@ class SearchWhereBuilder
         return new SearchWhereLogicBuilder($this);
     }
 
+    public function neighbor(): SearchWhereLogicBuilder
+    {
+        return $this->distance(2);
+    }
+
     public function node(): SearchWhereLogicBuilder
     {
         $this->__push_condition("Node");

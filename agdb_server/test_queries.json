@@ -2690,6 +2690,34 @@
     }
   ],
   [
+    "QueryBuilder::search().from(1).where_().neighbor().query()",
+    {
+      "Search": {
+        "algorithm": "BreadthFirst",
+        "origin": {
+          "Id": 1
+        },
+        "destination": {
+          "Id": 0
+        },
+        "limit": 0,
+        "offset": 0,
+        "order_by": [],
+        "conditions": [
+          {
+            "logic": "And",
+            "modifier": "None",
+            "data": {
+              "Distance": {
+                "Equal": 2
+              }
+            }
+          }
+        ]
+      }
+    }
+  ],
+  [
     "QueryBuilder::search().from(1).where_().edge().query()",
     {
       "Search": {

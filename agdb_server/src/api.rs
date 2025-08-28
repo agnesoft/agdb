@@ -289,6 +289,7 @@ QueryBuilder::search().from(1).order_by([DbKeyOrder::Desc("k".into())]).limit(5)
 QueryBuilder::search().from(1).order_by([DbKeyOrder::Desc("k".into())]).offset(10).limit(5).query(),
 QueryBuilder::search().from(1).offset(10).limit(5).query(),
 QueryBuilder::search().from(1).where_().distance(CountComparison::LessThan(3)).query(),
+QueryBuilder::search().from(1).where_().neighbor().query(),
 QueryBuilder::search().from(1).where_().edge().query(),
 QueryBuilder::search().from(1).where_().edge_count(CountComparison::GreaterThan(2)).query(),
 QueryBuilder::search().from(1).where_().edge_count_from(1).query(),

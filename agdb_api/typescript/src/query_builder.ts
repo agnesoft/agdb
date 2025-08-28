@@ -1194,6 +1194,10 @@ class SearchWhereBuilder {
         });
     }
 
+    neighbor(): SearchWhereLogicBuilder {
+        return this.distance(2);
+    }
+
     node(): SearchWhereLogicBuilder {
         return push_condition(this, {
             data: "Node",

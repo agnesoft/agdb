@@ -254,6 +254,11 @@ impl<T: SearchQueryBuilder> Where<T> {
         WhereLogicOperator(self)
     }
 
+    // Convenience method equivalient to `distance(CountComparison::Equal(2))`.
+    pub fn neighbor(self) -> WhereLogicOperator<T> {
+        self.distance(CountComparison::Equal(2))
+    }
+
     /// Only elements that are nodes will pass this condition.
     ///    
     /// # Examples

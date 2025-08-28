@@ -642,3 +642,19 @@ fn search_where_ends_with() {
         &[],
     );
 }
+
+#[test]
+fn search_neighbor() {
+    let neighbor_query = QueryBuilder::search()
+        .from("root")
+        .where_()
+        .neighbor()
+        .query();
+    let distance_same = QueryBuilder::search()
+        .from("root")
+        .where_()
+        .distance(2)
+        .query();
+
+    assert_eq!(neighbor_query, distance_same);
+}

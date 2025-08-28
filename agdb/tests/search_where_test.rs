@@ -171,7 +171,7 @@ fn search_from_where_distance() {
         QueryBuilder::search()
             .from("root")
             .where_()
-            .distance(2)
+            .neighbor()
             .query(),
         &[3, 2],
     );
@@ -543,7 +543,7 @@ fn search_where_distance_defaults_to_equals() {
     let query = QueryBuilder::search()
         .from("root")
         .where_()
-        .distance(2)
+        .neighbor()
         .query();
 
     assert_eq!(
@@ -654,7 +654,7 @@ fn search_neighbor() {
     let distance_same = QueryBuilder::search()
         .from("root")
         .where_()
-        .distance(2)
+        .neighbor()
         .query();
 
     assert_eq!(neighbor_query, distance_same);

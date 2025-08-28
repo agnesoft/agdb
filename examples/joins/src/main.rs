@@ -86,7 +86,7 @@ fn main() -> Result<(), DbError> {
                 .search()
                 .from("user")
                 .where_()
-                .distance(2)
+                .neighbor()
                 .and()
                 .keys("name")
                 .query(),

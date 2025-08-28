@@ -67,8 +67,8 @@ impl<T: SearchQueryBuilder> Where<T> {
     /// ```
     /// use agdb::{QueryBuilder, CountComparison};
     ///
-    /// // Search adjacent nodes that are exactly at distance 2 using a shorthand
-    /// QueryBuilder::search().from(1).where_().distance(2).query();
+    /// // Search adjacent nodes that are exactly at distance 2 (neighbors) using a shorthand
+    /// QueryBuilder::search().from(1).where_().neighbor().query();
     ///
     /// // Search at most to distance 2 (1 = first edge, 2 = neighbouring node)
     /// QueryBuilder::search().from(1).where_().distance(CountComparison::LessThanOrEqual(2)).query();
@@ -336,13 +336,13 @@ impl<T: SearchQueryBuilder> Where<T> {
     /// ```
     /// use agdb::{QueryBuilder, CountComparison};
     ///
-    /// // Select only elements at distance 2 (= nodes)
+    /// // Select only neighbor elements (= nodes)
     /// // but only follow elements with "k" property
     /// // or nodes (this is to follow the starting node)
     /// QueryBuilder::search()
     ///   .from(1)
     ///   .where_()
-    ///   .distance(2)
+    ///   .neighbor()
     ///   .and()
     ///   .beyond()
     ///   .where_()

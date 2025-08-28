@@ -425,7 +425,7 @@ async fn use_result_in_insert_ids() -> anyhow::Result<()> {
                     .where_()
                     .node()
                     .and()
-                    .distance(2)
+                    .neighbor()
                     .query(),
             )
             .count(3)
@@ -501,7 +501,7 @@ async fn reentrant_queries() -> anyhow::Result<()> {
                     .where_()
                     .node()
                     .and()
-                    .distance(2)
+                    .neighbor()
                     .query(),
             )
             .count(3)

@@ -168,7 +168,7 @@ describe("QueryBuilder misc tests", () => {
         const distance = QueryBuilder.search()
             .from(1)
             .where()
-            .distance(2)
+            .neighbor()
             .query();
         expect(distance["Search"].conditions[0].data).toEqual({
             Distance: { Equal: 2 },

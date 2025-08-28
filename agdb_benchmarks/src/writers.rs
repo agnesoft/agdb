@@ -129,7 +129,7 @@ impl<S: StorageData> Writer<S> {
                     .from("posts")
                     .limit(1)
                     .where_()
-                    .distance(2)
+                    .neighbor()
                     .query(),
             )?
             .elements
@@ -190,7 +190,7 @@ pub(crate) fn start_post_writers<S: StorageData + Send + Sync + 'static>(
                     .from("users")
                     .limit(config.posters.count)
                     .where_()
-                    .distance(2)
+                    .neighbor()
                     .query(),
             )?
             .elements
@@ -237,7 +237,7 @@ pub(crate) fn start_comment_writers<S: StorageData + Send + Sync + 'static>(
                     .offset(config.posters.count)
                     .limit(config.commenters.count)
                     .where_()
-                    .distance(2)
+                    .neighbor()
                     .query(),
             )?
             .elements

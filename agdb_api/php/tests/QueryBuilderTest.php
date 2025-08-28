@@ -165,7 +165,7 @@ final class QueryBuilderTest extends TestCase
         $query1 = QueryBuilder::search()
             ->from(1)
             ->where()
-            ->distance(2)
+            ->neighbor()
             ->query();
         $query2 = QueryBuilder::search()
             ->from(1)

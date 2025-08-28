@@ -384,6 +384,7 @@ impl<T: SearchQueryBuilder> SearchOrderBy<T> {
     /// QueryBuilder::search().from(1).where_().node();
     /// QueryBuilder::search().from(1).where_().edge();
     /// QueryBuilder::search().from(1).where_().distance(2);
+    /// QueryBuilder::search().from(1).where_().neighbor();
     /// QueryBuilder::search().from(1).where_().ids(1);
     /// QueryBuilder::search().from(1).where_().keys("k");
     /// QueryBuilder::search().from(1).where_().key("k");
@@ -475,6 +476,7 @@ impl<T: SearchQueryBuilder> SearchTo<T> {
     /// QueryBuilder::search().from(1).where_().node();
     /// QueryBuilder::search().from(1).where_().edge();
     /// QueryBuilder::search().from(1).where_().distance(2);
+    /// QueryBuilder::search().from(1).where_().neighbor();
     /// QueryBuilder::search().from(1).where_().ids(1);
     /// QueryBuilder::search().from(1).where_().keys("k");
     /// QueryBuilder::search().from(1).where_().key("k");
@@ -508,6 +510,7 @@ impl<T: SearchQueryBuilder> SelectLimit<T> {
     /// QueryBuilder::search().from(1).where_().node();
     /// QueryBuilder::search().from(1).where_().edge();
     /// QueryBuilder::search().from(1).where_().distance(2);
+    /// QueryBuilder::search().from(1).where_().neighbor();
     /// QueryBuilder::search().from(1).where_().ids(1);
     /// QueryBuilder::search().from(1).where_().keys("k");
     /// QueryBuilder::search().from(1).where_().key("k");
@@ -559,6 +562,7 @@ impl<T: SearchQueryBuilder> SelectOffset<T> {
     /// QueryBuilder::search().from(1).where_().node();
     /// QueryBuilder::search().from(1).where_().edge();
     /// QueryBuilder::search().from(1).where_().distance(2);
+    /// QueryBuilder::search().from(1).where_().neighbor();
     /// QueryBuilder::search().from(1).where_().ids(1);
     /// QueryBuilder::search().from(1).where_().keys("k");
     /// QueryBuilder::search().from(1).where_().key("k");

@@ -37,7 +37,7 @@ In `agdb` the query to find all projects would look like this (using `Rust` as t
 QueryBuilder::search()
     .from("projects")
     .where_()
-        .distance(2)
+        .neighbor()
     .query();
 ```
 
@@ -62,7 +62,7 @@ Another way the `distance` limits the required work when searching the graph is 
 QueryBuilder::search()
     .from("projects")
     .where_()
-        .distance(2)
+        .neighbor()
         .and()
         .key("name")
         .value("B")
@@ -79,7 +79,7 @@ QueryBuilder::search()
     .from("projects")
     .limit(1) // return maximum 1 element
     .where_()
-        .distance(2)
+        .neighbor()
         .and()
         .key("name")
         .value("B")

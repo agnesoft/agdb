@@ -162,11 +162,7 @@ final class QueryBuilderTest extends TestCase
 
     public function testShorthandComparions_distance(): void
     {
-        $query1 = QueryBuilder::search()
-            ->from(1)
-            ->where()
-            ->distance(2)
-            ->query();
+        $query1 = QueryBuilder::search()->from(1)->where()->neighbor()->query();
         $query2 = QueryBuilder::search()
             ->from(1)
             ->where()

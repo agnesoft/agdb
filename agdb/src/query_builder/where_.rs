@@ -1,4 +1,5 @@
 use crate::Comparison;
+use crate::DbType;
 use crate::DbValue;
 use crate::QueryIds;
 use crate::db::db_value::DbValues;
@@ -66,8 +67,8 @@ impl<T: SearchQueryBuilder> Where<T> {
     /// ```
     /// use agdb::{QueryBuilder, CountComparison};
     ///
-    /// // Search adjacent nodes that are exactly at distance 2 using a shorthand
-    /// QueryBuilder::search().from(1).where_().distance(2).query();
+    /// // Search adjacent nodes that are exactly at distance 2 (neighbors) using a shorthand
+    /// QueryBuilder::search().from(1).where_().neighbor().query();
     ///
     /// // Search at most to distance 2 (1 = first edge, 2 = neighbouring node)
     /// QueryBuilder::search().from(1).where_().distance(CountComparison::LessThanOrEqual(2)).query();
@@ -181,6 +182,12 @@ impl<T: SearchQueryBuilder> Where<T> {
         WhereLogicOperator(self)
     }
 
+    /// Convenience method equivalent to `keys(E::db_keys())` useful for
+    /// selecting only elements that can be converted to `E`.
+    pub fn element<E: DbType>(self) -> WhereLogicOperator<T> {
+        self.keys(E::db_keys())
+    }
+
     /// Only elements listed in `ids` will pass this condition. It is usually combined
     /// with a modifier like `not_beyond()` or `not()`.
     ///
@@ -254,6 +261,12 @@ impl<T: SearchQueryBuilder> Where<T> {
         WhereLogicOperator(self)
     }
 
+    /// Convenience shorthand to select neighboring elements
+    /// equivalient to `distance(CountComparison::Equal(2))`.
+    pub fn neighbor(self) -> WhereLogicOperator<T> {
+        self.distance(CountComparison::Equal(2))
+    }
+
     /// Only elements that are nodes will pass this condition.
     ///    
     /// # Examples
@@ -323,13 +336,13 @@ impl<T: SearchQueryBuilder> Where<T> {
     /// ```
     /// use agdb::{QueryBuilder, CountComparison};
     ///
-    /// // Select only elements at distance 2 (= nodes)
+    /// // Select only neighbor elements (= nodes)
     /// // but only follow elements with "k" property
     /// // or nodes (this is to follow the starting node)
     /// QueryBuilder::search()
     ///   .from(1)
     ///   .where_()
-    ///   .distance(2)
+    ///   .neighbor()
     ///   .and()
     ///   .beyond()
     ///   .where_()

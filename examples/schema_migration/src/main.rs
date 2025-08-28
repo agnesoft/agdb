@@ -111,7 +111,7 @@ fn main() -> Result<(), DbError> {
                     .search()
                     .from("users")
                     .where_()
-                    .distance(2)
+                    .neighbor()
                     .query(),
             )?
             .try_into()?;

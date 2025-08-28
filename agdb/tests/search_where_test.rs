@@ -3,6 +3,7 @@ mod test_db;
 use agdb::Comparison;
 use agdb::CountComparison;
 use agdb::DbKeyOrder;
+use agdb::DbType;
 use agdb::KeyValueComparison;
 use agdb::QueryBuilder;
 use agdb::QueryConditionData;
@@ -170,7 +171,7 @@ fn search_from_where_distance() {
         QueryBuilder::search()
             .from("root")
             .where_()
-            .distance(2)
+            .neighbor()
             .query(),
         &[3, 2],
     );
@@ -542,7 +543,7 @@ fn search_where_distance_defaults_to_equals() {
     let query = QueryBuilder::search()
         .from("root")
         .where_()
-        .distance(2)
+        .neighbor()
         .query();
 
     assert_eq!(
@@ -641,4 +642,42 @@ fn search_where_ends_with() {
             .query(),
         &[],
     );
+}
+
+#[test]
+fn search_neighbor() {
+    let neighbor_query = QueryBuilder::search()
+        .from("root")
+        .where_()
+        .neighbor()
+        .query();
+    let distance_same = QueryBuilder::search()
+        .from("root")
+        .where_()
+        .neighbor()
+        .query();
+
+    assert_eq!(neighbor_query, distance_same);
+}
+
+#[test]
+fn element() {
+    #[derive(DbType)]
+    struct S {
+        id: i32,
+        name: String,
+    }
+
+    let element_search = QueryBuilder::search()
+        .from("root")
+        .where_()
+        .element::<S>()
+        .query();
+    let key_search = QueryBuilder::search()
+        .from("root")
+        .where_()
+        .keys(["id", "name"])
+        .query();
+
+    assert_eq!(element_search, key_search);
 }

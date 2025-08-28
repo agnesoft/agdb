@@ -284,7 +284,7 @@ fn login(db: &Db, username: &str, password: &str) -> Result<DbId, DbError> {
                 .from("users")
                 .limit(1)
                 .where_()
-                .distance(2)
+                .neighbor()
                 .and()
                 .key("username")
                 .value(Equal(username.into()))
@@ -328,7 +328,7 @@ fn user_posts_ids(db: &Db, user: DbId) -> Result<Vec<QueryId>, DbError> {
             QueryBuilder::search()
                 .from(user)
                 .where_()
-                .distance(2)
+                .neighbor()
                 .and()
                 .beyond()
                 .where_()
@@ -385,7 +385,7 @@ fn posts(db: &Db, offset: u64, limit: u64) -> Result<Vec<Post>, DbError> {
                 .offset(offset)
                 .limit(limit)
                 .where_()
-                .distance(2)
+                .neighbor()
                 .query(),
         )?
         .try_into()
@@ -445,7 +445,7 @@ fn add_likes_to_posts(db: &mut Db) -> Result<(), DbError> {
             QueryBuilder::search()
                 .from("posts")
                 .where_()
-                .distance(2)
+                .neighbor()
                 .query(),
         )?;
 
@@ -498,7 +498,7 @@ fn liked_posts(db: &Db, offset: u64, limit: u64) -> Result<Vec<PostLiked>, DbErr
                 .offset(offset)
                 .limit(limit)
                 .where_()
-                .distance(2)
+                .neighbor()
                 .query(),
         )?
         .try_into()

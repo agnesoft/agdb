@@ -153,7 +153,7 @@ impl ServerDb {
                         .from(CLUSTER_LOG)
                         .limit(1)
                         .where_()
-                        .distance(2)
+                        .neighbor()
                         .query(),
                 )?
                 .elements
@@ -168,7 +168,7 @@ impl ServerDb {
                             .from(CLUSTER_LOG)
                             .limit(1)
                             .where_()
-                            .distance(2)
+                            .neighbor()
                             .and()
                             .not()
                             .keys(COMMITTED)
@@ -268,7 +268,7 @@ impl ServerDb {
                     .search()
                     .from(DBS)
                     .where_()
-                    .distance(2)
+                    .neighbor()
                     .query(),
             )?
             .try_into()?)
@@ -522,7 +522,7 @@ impl ServerDb {
                         .from(CLUSTER_LOG)
                         .limit(log_count - from_index)
                         .where_()
-                        .distance(2)
+                        .neighbor()
                         .query(),
                 )?
                 .ids();
@@ -594,7 +594,7 @@ impl ServerDb {
                 .search()
                 .from(USERS)
                 .where_()
-                .distance(2)
+                .neighbor()
                 .and()
                 .key(TOKEN)
                 .value(Comparison::NotEqual(String::new().into()))
@@ -750,7 +750,7 @@ impl ServerDb {
                             .where_()
                             .distance(1)
                             .or()
-                            .distance(2)
+                            .neighbor()
                             .query(),
                     )
                     .query(),
@@ -847,7 +847,7 @@ impl ServerDb {
                     .search()
                     .from(USERS)
                     .where_()
-                    .distance(2)
+                    .neighbor()
                     .query(),
             )?
             .elements
@@ -871,7 +871,7 @@ fn find_user_db_query(user: DbId, owner: &str, db: &str) -> SearchQuery {
         .from(user)
         .limit(1)
         .where_()
-        .distance(2)
+        .neighbor()
         .and()
         .key(OWNER)
         .value(owner)

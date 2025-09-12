@@ -11,6 +11,7 @@ mod serde_feature_test;
 mod test_db;
 
 use agdb::Db;
+use agdb::DbAny;
 use agdb::DbElement;
 use agdb::DbFile;
 use agdb::DbId;
@@ -655,4 +656,42 @@ fn convert_db_before_0_11_0() {
     );
     assert_eq!(result.elements[1].values, vec![(1, 2).into()]);
     assert_eq!(result.elements[2].values, vec![("tag", "label").into()]);
+}
+
+#[test]
+fn db_any() {
+    let test_file1 = TestFile::new();
+    let test_file2 = TestFile::new();
+
+    let dbs = vec![
+        DbAny::new_file(test_file1.file_name()).unwrap(),
+        DbAny::new_mapped(test_file2.file_name()).unwrap(),
+        DbAny::new_memory("memdb").unwrap(),
+    ];
+
+    let names = dbs.iter().map(|db| db.filename()).collect::<Vec<&str>>();
+
+    assert_eq!(
+        names,
+        vec![test_file1.file_name(), test_file2.file_name(), "memdb"]
+    );
+}
+
+#[test]
+fn db_any_struct() {
+    struct MyDb {
+        db: DbAny,
+    }
+
+    let test_file = TestFile::new();
+    let db = DbAny::new(test_file.file_name()).unwrap();
+    let mut my_db = MyDb { db };
+
+    assert_eq!(my_db.db.filename(), test_file.file_name());
+
+    my_db = MyDb {
+        db: DbAny::new_memory("memdb").unwrap(),
+    };
+
+    assert_eq!(my_db.db.filename(), "memdb");
 }

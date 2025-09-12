@@ -1,5 +1,4 @@
 mod user_db;
-mod user_db_storage;
 
 use crate::config::Config;
 use crate::error_code::ErrorCode;
@@ -54,7 +53,7 @@ pub(crate) async fn new(config: Config, server_db: &ServerDb) -> ServerResult<Db
     for db in server_db.dbs().await? {
         let db_path = db_file(&db.owner, &db.db, &config);
         std::fs::create_dir_all(db_audit_dir(&db.owner, &config))?;
-        let server_db = UserDb::new(&format!("{}:{}", db.db_type, db_path.to_string_lossy()))?;
+        let server_db = UserDb::new(db_path.to_string_lossy().as_ref(), db.db_type)?;
         pool.write().await.insert(db.name(), server_db);
     }
 
@@ -77,7 +76,7 @@ impl DbPool {
 
         std::fs::create_dir_all(db_audit_dir(owner, &self.config))?;
 
-        let user_db = UserDb::new(&format!("{db_type}:{path}")).map_err(|mut e| {
+        let user_db = UserDb::new(&path, db_type).map_err(|mut e| {
             e.status = ErrorCode::DbInvalid.into();
             e.description = format!("{}: {}", ErrorCode::DbInvalid.as_str(), e.description);
             e
@@ -195,11 +194,11 @@ impl DbPool {
             .ok_or(ErrorCode::DbInvalid)?
             .to_string();
         let user_db = pool.get_mut(&name).ok_or(db_not_found(owner, db))?;
-        *user_db = UserDb::new(&format!("{}:{db_path}", DbKind::Memory))?;
+        *user_db = UserDb::new(&db_path, DbKind::Memory)?;
         if database.db_type != DbKind::Memory {
             remove_file_if_exists(db_file(owner, db, &self.config))?;
             remove_file_if_exists(db_file(owner, &format!(".{db}"), &self.config))?;
-            *user_db = UserDb::new(&format!("{}:{db_path}", database.db_type))?;
+            *user_db = UserDb::new(&db_path, database.db_type)?;
         }
 
         Ok(())
@@ -224,11 +223,7 @@ impl DbPool {
                 .backup(current_path.to_string_lossy().as_ref())?;
         }
 
-        user_db = UserDb::new(&format!(
-            "{}:{}",
-            target_type,
-            current_path.to_string_lossy()
-        ))?;
+        user_db = UserDb::new(current_path.to_string_lossy().as_ref(), target_type)?;
 
         self.pool.write().await.insert(db_name, user_db);
 
@@ -418,7 +413,7 @@ impl DbPool {
             None
         };
 
-        let user_db = UserDb::new(&format!("{}:{}", db_type, current_path.to_string_lossy()))?;
+        let user_db = UserDb::new(current_path.to_string_lossy().as_ref(), db_type)?;
         self.pool.write().await.insert(db_name, user_db);
 
         Ok(backup)

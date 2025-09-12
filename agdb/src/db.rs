@@ -239,7 +239,7 @@ pub type DbMemoryTransaction<'a> = Transaction<'a, MemoryStorage>;
 /// A convenience alias for the [`TransactionMut`] type for the default [`DbMemory`].
 pub type DbMemoryTransactionMut<'a> = TransactionMut<'a, MemoryStorage>;
 
-// A convenience alias for a Db type that can use any implemented storage (mapper, memory or file).
+/// A convenience alias for a Db type that can use any implemented storage (mapper, memory or file).
 pub type DbAny = DbImpl<AnyStorage>;
 
 /// A convenience alias for the [`Transaction`] type for the default [`DbAny`].

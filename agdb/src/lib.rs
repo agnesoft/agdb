@@ -51,6 +51,9 @@ pub mod query_builder;
 pub use agdb_derive::{ApiDef, ApiDefImpl, impl_def};
 
 pub use db::Db;
+pub use db::DbAny;
+pub use db::DbAnyTransaction;
+pub use db::DbAnyTransactionMut;
 pub use db::DbFile;
 pub use db::DbFileTransaction;
 pub use db::DbFileTransactionMut;
@@ -112,6 +115,7 @@ pub use query::{
 pub use query_builder::QueryBuilder;
 pub use storage::StorageData;
 pub use storage::StorageSlice;
+pub use storage::any_storage::AnyStorage;
 pub use storage::file_storage::FileStorage;
 pub use storage::file_storage_memory_mapped::FileStorageMemoryMapped;
 pub use storage::memory_storage::MemoryStorage;

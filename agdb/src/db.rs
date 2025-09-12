@@ -42,6 +42,7 @@ use crate::query::query_condition::QueryConditionModifier;
 use crate::query::query_id::QueryId;
 use crate::storage::Storage;
 use crate::storage::StorageIndex;
+use crate::storage::any_storage::AnyStorage;
 use crate::storage::file_storage::FileStorage;
 use crate::storage::file_storage_memory_mapped::FileStorageMemoryMapped;
 use crate::storage::memory_storage::MemoryStorage;
@@ -115,6 +116,7 @@ impl Serialize for DbStorageIndex {
 /// - [`Db`]: \[default] File based and memory mapped database.
 /// - [`DbFile`]: File based only (no memory mapping).
 /// - [`DbMemory`]: In-memory database only.
+/// - [`DbAny`]: Database variant that can be any of the other variants.
 ///
 /// For each of these there are convenient using declarations, e.g. `DbTransaction`,
 /// `DbFileTransaction`, `DbMemoryTransactionMut` etc. in case you need to name
@@ -237,6 +239,15 @@ pub type DbMemoryTransaction<'a> = Transaction<'a, MemoryStorage>;
 /// A convenience alias for the [`TransactionMut`] type for the default [`DbMemory`].
 pub type DbMemoryTransactionMut<'a> = TransactionMut<'a, MemoryStorage>;
 
+// A convenience alias for a Db type that can use any implemented storage (mapper, memory or file).
+pub type DbAny = DbImpl<AnyStorage>;
+
+/// A convenience alias for the [`Transaction`] type for the default [`DbAny`].
+pub type DbAnyTransaction<'a> = Transaction<'a, AnyStorage>;
+
+/// A convenience alias for the [`TransactionMut`] type for the default [`DbAny`].
+pub type DbAnyTransactionMut<'a> = TransactionMut<'a, AnyStorage>;
+
 impl<Store: StorageData> std::fmt::Debug for DbImpl<Store> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("agdb::Db").finish_non_exhaustive()
@@ -246,6 +257,8 @@ impl<Store: StorageData> std::fmt::Debug for DbImpl<Store> {
 impl<Store: StorageData> DbImpl<Store> {
     /// Tries to create or load `filename` file as `Db` object. For in-memory storage
     /// this will either load the data from file once (if present) or create an empty database.
+    /// If used with the `DbAny` variant the database will be of variant `Db` (memory mapped). Use
+    /// `DbAny::new_*()` to construct the other variants.
     pub fn new(filename: &str) -> Result<Self, DbError> {
         match Self::try_new(filename) {
             Ok(db) => Ok(db),
@@ -1056,8 +1069,7 @@ impl<Store: StorageData> DbImpl<Store> {
         Ok(())
     }
 
-    fn try_new(filename: &str) -> Result<Self, DbError> {
-        let mut storage = Storage::new(filename)?;
+    fn try_new_with_storage(mut storage: Storage<Store>) -> Result<Self, DbError> {
         let graph_storage;
         let aliases_storage;
         let indexes_storage;
@@ -1099,6 +1111,10 @@ impl<Store: StorageData> DbImpl<Store> {
             values: values_storage,
             undo_stack: vec![],
         })
+    }
+
+    fn try_new(filename: &str) -> Result<Self, DbError> {
+        Self::try_new_with_storage(Storage::new(filename)?)
     }
 
     pub(crate) fn evaluate_condition(
@@ -1209,6 +1225,55 @@ impl<Store: StorageData> DbImpl<Store> {
 impl<Store: StorageData> Drop for DbImpl<Store> {
     fn drop(&mut self) {
         let _ = self.storage.shrink_to_fit();
+    }
+}
+
+impl DbAny {
+    /// Creates a new DbAny instance using DbFile.
+    pub fn new_file(filename: &str) -> Result<Self, DbError> {
+        Self::try_new_any(filename, Self::try_new_file)
+    }
+
+    /// Creates a new DbAny instance using Db.
+    pub fn new_mapped(filename: &str) -> Result<Self, DbError> {
+        Self::try_new_any(filename, Self::try_new_mapped)
+    }
+
+    /// Creates a new DbAny instance using DbMemory.
+    pub fn new_memory(filename: &str) -> Result<Self, DbError> {
+        Self::try_new_any(filename, Self::try_new_memory)
+    }
+
+    fn try_new_any(
+        filename: &str,
+        init: fn(&str) -> Result<DbImpl<AnyStorage>, DbError>,
+    ) -> Result<Self, DbError> {
+        match init(filename) {
+            Ok(db) => Ok(db),
+            Err(error) => {
+                let mut db_error = DbError::from("Failed to create database");
+                db_error.cause = Some(Box::new(error));
+                Err(db_error)
+            }
+        }
+    }
+
+    fn try_new_memory(filename: &str) -> Result<DbImpl<AnyStorage>, DbError> {
+        Self::try_new_with_storage(Storage::with_data(AnyStorage::Memory(MemoryStorage::new(
+            filename,
+        )?))?)
+    }
+
+    fn try_new_file(filename: &str) -> Result<DbImpl<AnyStorage>, DbError> {
+        Self::try_new_with_storage(Storage::with_data(AnyStorage::File(FileStorage::new(
+            filename,
+        )?))?)
+    }
+
+    fn try_new_mapped(filename: &str) -> Result<DbImpl<AnyStorage>, DbError> {
+        Self::try_new_with_storage(Storage::with_data(AnyStorage::MemoryMapped(
+            FileStorageMemoryMapped::new(filename)?,
+        ))?)
     }
 }
 

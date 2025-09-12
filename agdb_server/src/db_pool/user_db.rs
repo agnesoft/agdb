@@ -1,17 +1,17 @@
 use crate::db_pool::ErrorCode;
 use crate::db_pool::ServerError;
-use crate::db_pool::user_db_storage::UserDbStorage;
 use crate::server_error::ServerResult;
+use agdb::DbAny;
+use agdb::DbAnyTransaction;
+use agdb::DbAnyTransactionMut;
 use agdb::DbError;
-use agdb::DbImpl;
 use agdb::QueryConditionData;
 use agdb::QueryId;
 use agdb::QueryIds;
 use agdb::QueryResult;
 use agdb::QueryType;
 use agdb::SearchQuery;
-use agdb::Transaction;
-use agdb::TransactionMut;
+use agdb_api::DbKind;
 use agdb_api::Queries;
 use agdb_api::QueryAudit;
 use std::sync::Arc;
@@ -19,14 +19,16 @@ use std::time::SystemTime;
 use std::time::UNIX_EPOCH;
 use tokio::sync::RwLock;
 
-pub(crate) type UserDbImpl = DbImpl<UserDbStorage>;
-
 #[derive(Clone)]
-pub(crate) struct UserDb(pub(crate) Arc<RwLock<UserDbImpl>>);
+pub(crate) struct UserDb(pub(crate) Arc<RwLock<DbAny>>);
 
 impl UserDb {
-    pub(crate) fn new(name: &str) -> ServerResult<Self> {
-        Ok(Self(Arc::new(RwLock::new(UserDbImpl::new(name)?))))
+    pub(crate) fn new(name: &str, db_type: DbKind) -> ServerResult<Self> {
+        match db_type {
+            DbKind::Memory => Ok(Self(Arc::new(RwLock::new(DbAny::new_memory(name)?)))),
+            DbKind::File => Ok(Self(Arc::new(RwLock::new(DbAny::new_file(name)?)))),
+            DbKind::Mapped => Ok(Self(Arc::new(RwLock::new(DbAny::new_mapped(name)?)))),
+        }
     }
 
     pub(crate) async fn backup(&self, name: &str) -> ServerResult<()> {
@@ -87,7 +89,7 @@ impl UserDb {
 }
 
 fn t_exec(
-    t: &Transaction<UserDbStorage>,
+    t: &DbAnyTransaction,
     q: &mut QueryType,
     results: &[QueryResult],
 ) -> ServerResult<QueryResult> {
@@ -133,7 +135,7 @@ fn audit_query(user: &str, audit: &mut Vec<QueryAudit>, query: QueryType) {
 }
 
 fn t_exec_mut(
-    t: &mut TransactionMut<UserDbStorage>,
+    t: &mut DbAnyTransactionMut,
     mut q: QueryType,
     results: &[QueryResult],
     audit: &mut Vec<QueryAudit>,

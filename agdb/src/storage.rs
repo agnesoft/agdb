@@ -1,3 +1,4 @@
+pub mod any_storage;
 pub mod file_storage;
 pub mod file_storage_memory_mapped;
 pub mod memory_storage;
@@ -122,16 +123,20 @@ pub(crate) struct Storage<D: StorageData> {
 
 impl<D: StorageData> Storage<D> {
     pub fn new(name: &str) -> Result<Self, DbError> {
-        let mut storage = Self {
-            data: D::new(name)?,
+        Self::with_data(D::new(name)?)
+    }
+
+    pub fn with_data(data: D) -> Result<Self, DbError> {
+        let mut s = Self {
+            data,
             records: StorageRecords::new(),
             transactions: 0,
             version: 0,
         };
 
-        storage.read_records()?;
+        s.read_records()?;
 
-        Ok(storage)
+        Ok(s)
     }
 
     pub fn backup(&self, name: &str) -> Result<(), DbError> {

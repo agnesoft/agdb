@@ -624,6 +624,31 @@ impl ServerDb {
         Ok(())
     }
 
+    pub(crate) async fn save_or_get_token(&self, user: DbId, token: &str) -> ServerResult<String> {
+        self.0.write().await.transaction_mut(|t| {
+            let existing_token = t
+                .exec(QueryBuilder::select().values(TOKEN).ids(user).query())?
+                .elements[0]
+                .values[0]
+                .value
+                .string()?
+                .clone();
+
+            if existing_token.is_empty() {
+                t.exec_mut(
+                    QueryBuilder::insert()
+                        .values([[(TOKEN, token).into()]])
+                        .ids(user)
+                        .query(),
+                )?;
+
+                Ok(token.to_string())
+            } else {
+                Ok(existing_token)
+            }
+        })
+    }
+
     pub(crate) async fn save_user(&self, user: ServerUser) -> ServerResult<()> {
         self.0
             .write()

@@ -60,3 +60,49 @@ async fn user_not_found() -> anyhow::Result<()> {
     assert_eq!(status, 401);
     Ok(())
 }
+
+#[tokio::test]
+async fn concurrent_logins() -> anyhow::Result<()> {
+    let mut server = TestServer::new().await?;
+    let user = &next_user_name();
+    server.api.user_login(ADMIN, ADMIN).await?;
+    server.api.admin_user_add(user, user).await?;
+
+    let mut handles = vec![];
+    let mut apis = vec![];
+
+    for _ in 0..3 {
+        apis.push((
+            agdb_api::AgdbApi::new(
+                agdb_api::ReqwestClient::with_client(crate::reqwest_client()),
+                server.api.address(),
+            ),
+            user.to_string(),
+        ));
+    }
+
+    for (mut api, user) in apis {
+        handles.push(tokio::spawn(async move {
+            api.user_login(&user, &user).await.unwrap();
+            api.token.clone().unwrap_or_default()
+        }));
+    }
+
+    let mut tokens = vec![];
+
+    for handle in handles {
+        tokens.push(handle.await?);
+    }
+
+    server.api.user_login(user, user).await?;
+    let token = server.api.token.clone().unwrap();
+    server.api.user_logout().await?;
+
+    assert!(
+        tokens.iter().all(|t| t == &token),
+        "Not all tokens are the same: {:?}",
+        tokens
+    );
+
+    Ok(())
+}

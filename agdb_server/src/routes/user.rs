@@ -58,10 +58,10 @@ pub(crate) async fn login(
     State(server_db): State<ServerDb>,
     Json(request): Json<UserLogin>,
 ) -> ServerResponse<(StatusCode, Json<String>)> {
-    let (user_id, token) = do_login(&server_db, &request.username, &request.password).await?;
+    let (user_id, mut token) = do_login(&server_db, &request.username, &request.password).await?;
 
     if let Some(user_id) = user_id {
-        server_db.save_token(user_id, &token).await?;
+        token = server_db.save_or_get_token(user_id, &token).await?;
     }
 
     Ok((StatusCode::OK, Json(token)))

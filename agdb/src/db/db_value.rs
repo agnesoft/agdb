@@ -9,6 +9,12 @@ use crate::utilities::stable_hash::StableHash;
 use std::fmt::Display;
 use std::fmt::Formatter;
 use std::fmt::Result as DisplayResult;
+use std::net::IpAddr;
+use std::net::SocketAddr;
+use std::path::PathBuf;
+use std::time::Duration;
+use std::time::SystemTime;
+use std::time::UNIX_EPOCH;
 
 /// Database value is a strongly types value.
 ///
@@ -369,6 +375,44 @@ impl DbValue {
 impl Default for DbValue {
     fn default() -> Self {
         Self::I64(0)
+    }
+}
+
+impl From<PathBuf> for DbValue {
+    fn from(value: PathBuf) -> Self {
+        (&value).into()
+    }
+}
+
+impl From<&PathBuf> for DbValue {
+    fn from(value: &PathBuf) -> Self {
+        DbValue::String(value.to_string_lossy().to_string())
+    }
+}
+
+impl From<SystemTime> for DbValue {
+    fn from(value: SystemTime) -> Self {
+        let duration = value
+            .duration_since(UNIX_EPOCH)
+            .unwrap_or_else(|_| Duration::from_secs(0));
+        let secs = duration.as_secs();
+        let nanos = duration.subsec_nanos();
+        let mut bytes = [0_u8; 12];
+        bytes[0..8].copy_from_slice(&secs.to_le_bytes());
+        bytes[8..].copy_from_slice(&nanos.to_le_bytes());
+        DbValue::Bytes(bytes.to_vec())
+    }
+}
+
+impl From<SocketAddr> for DbValue {
+    fn from(value: SocketAddr) -> Self {
+        DbValue::String(value.to_string())
+    }
+}
+
+impl From<IpAddr> for DbValue {
+    fn from(value: IpAddr) -> Self {
+        DbValue::String(value.to_string())
     }
 }
 
@@ -784,6 +828,60 @@ impl From<String> for DbValues {
     }
 }
 
+impl TryFrom<DbValue> for PathBuf {
+    type Error = DbError;
+
+    #[track_caller]
+    fn try_from(value: DbValue) -> Result<Self, Self::Error> {
+        Ok(PathBuf::from(value.string()?.clone()))
+    }
+}
+
+impl TryFrom<DbValue> for SystemTime {
+    type Error = DbError;
+
+    fn try_from(value: DbValue) -> Result<Self, Self::Error> {
+        let bytes = value.bytes()?;
+        if bytes.len() != 12 {
+            return Err(DbError::from(format!(
+                "Invalid SystemTime bytes length (should be 12): {}",
+                bytes.len()
+            )));
+        }
+        let mut secs_bytes = [0_u8; 8];
+        secs_bytes.copy_from_slice(&bytes[0..8]);
+        let mut nanos_bytes = [0_u8; 4];
+        nanos_bytes.copy_from_slice(&bytes[8..12]);
+        let secs = u64::from_le_bytes(secs_bytes);
+        let nanos = u32::from_le_bytes(nanos_bytes);
+        Ok(UNIX_EPOCH + Duration::new(secs, nanos))
+    }
+}
+
+impl TryFrom<DbValue> for SocketAddr {
+    type Error = DbError;
+
+    #[track_caller]
+    fn try_from(value: DbValue) -> Result<Self, Self::Error> {
+        value
+            .string()?
+            .parse::<SocketAddr>()
+            .map_err(|e| DbError::from(format!("Cannot convert string to SocketAddr: {e}")))
+    }
+}
+
+impl TryFrom<DbValue> for IpAddr {
+    type Error = DbError;
+
+    #[track_caller]
+    fn try_from(value: DbValue) -> Result<Self, Self::Error> {
+        value
+            .string()?
+            .parse::<IpAddr>()
+            .map_err(|e| DbError::from(format!("Cannot convert string to IpAddr: {e}")))
+    }
+}
+
 impl TryFrom<DbValue> for Vec<u8> {
     type Error = DbError;
 
@@ -960,6 +1058,8 @@ mod tests {
     use crate::test_utilities::test_file::TestFile;
     use std::cmp::Ordering;
     use std::collections::HashSet;
+    use std::net::IpAddr;
+    use std::net::SocketAddr;
 
     #[derive(Clone)]
     enum TestEnumString {
@@ -1978,5 +2078,52 @@ mod tests {
             DbValues::from(["Hello"].as_slice()).0,
             vec![DbValue::from("Hello")]
         );
+    }
+
+    #[test]
+    fn path_buf() {
+        let path = PathBuf::from("/some/path");
+        let db_value: DbValue = path.clone().into();
+        let path_back: PathBuf = db_value.clone().try_into().unwrap();
+        assert_eq!(path, path_back);
+
+        let string: String = db_value.clone().try_into().unwrap();
+        assert_eq!(string, "/some/path".to_string());
+    }
+
+    #[test]
+    fn system_time() {
+        let time = SystemTime::now();
+        let db_value: DbValue = time.into();
+        let time_back: SystemTime = db_value.clone().try_into().unwrap();
+        assert_eq!(time, time_back);
+
+        let invalid = DbValue::Bytes(vec![]);
+        let result: Result<SystemTime, DbError> = invalid.try_into();
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn socket_addr() {
+        let addr: SocketAddr = "127.0.0.1:8080".parse().unwrap();
+        let db_value: DbValue = addr.into();
+        let addr_back: SocketAddr = db_value.clone().try_into().unwrap();
+        assert_eq!(addr, addr_back);
+
+        let invalid = DbValue::String("invalid".to_string());
+        let result: Result<SocketAddr, DbError> = invalid.try_into();
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn ip_addr() {
+        let addr: IpAddr = "127.0.0.1".parse().unwrap();
+        let db_value: DbValue = addr.into();
+        let addr_back: IpAddr = db_value.clone().try_into().unwrap();
+        assert_eq!(addr, addr_back);
+
+        let invalid = DbValue::String("invalid".to_string());
+        let result: Result<IpAddr, DbError> = invalid.try_into();
+        assert!(result.is_err());
     }
 }

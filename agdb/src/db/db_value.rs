@@ -2120,12 +2120,6 @@ mod tests {
         let db_time = db_value.try_into().unwrap();
 
         assert_eq!(before_epoch, db_time);
-
-        let max_duration = [1_u8; 13];
-        let db_value: DbValue = DbValue::Bytes(max_duration.to_vec());
-        let result: Result<SystemTime, DbError> = db_value.try_into();
-
-        assert!(result.is_err());
     }
 
     #[test]

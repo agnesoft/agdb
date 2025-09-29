@@ -392,14 +392,16 @@ impl From<&PathBuf> for DbValue {
 
 impl From<SystemTime> for DbValue {
     fn from(value: SystemTime) -> Self {
-        let duration = value
-            .duration_since(UNIX_EPOCH)
-            .unwrap_or_else(|_| Duration::from_secs(0));
+        let (duration, before_epoch) = match value.duration_since(UNIX_EPOCH) {
+            Ok(duration) => (duration, false),
+            Err(duration) => (duration.duration(), true),
+        };
         let secs = duration.as_secs();
         let nanos = duration.subsec_nanos();
-        let mut bytes = [0_u8; 12];
+        let mut bytes = [0_u8; 13];
         bytes[0..8].copy_from_slice(&secs.to_le_bytes());
-        bytes[8..].copy_from_slice(&nanos.to_le_bytes());
+        bytes[8..12].copy_from_slice(&nanos.to_le_bytes());
+        bytes[12] = if before_epoch { 0_u8 } else { 1_u8 };
         DbValue::Bytes(bytes.to_vec())
     }
 }
@@ -833,7 +835,7 @@ impl TryFrom<DbValue> for PathBuf {
 
     #[track_caller]
     fn try_from(value: DbValue) -> Result<Self, Self::Error> {
-        Ok(PathBuf::from(value.string()?.clone()))
+        Ok(PathBuf::from(value.string()?))
     }
 }
 
@@ -842,9 +844,9 @@ impl TryFrom<DbValue> for SystemTime {
 
     fn try_from(value: DbValue) -> Result<Self, Self::Error> {
         let bytes = value.bytes()?;
-        if bytes.len() != 12 {
+        if bytes.len() != 13 {
             return Err(DbError::from(format!(
-                "Invalid SystemTime bytes length (should be 12): {}",
+                "Invalid SystemTime bytes length (should be 13): {}",
                 bytes.len()
             )));
         }
@@ -852,9 +854,20 @@ impl TryFrom<DbValue> for SystemTime {
         secs_bytes.copy_from_slice(&bytes[0..8]);
         let mut nanos_bytes = [0_u8; 4];
         nanos_bytes.copy_from_slice(&bytes[8..12]);
+        let before_epoch = bytes[12] == 0_u8;
         let secs = u64::from_le_bytes(secs_bytes);
         let nanos = u32::from_le_bytes(nanos_bytes);
-        Ok(UNIX_EPOCH + Duration::new(secs, nanos))
+        let duration = Duration::new(secs, nanos);
+
+        if before_epoch {
+            Ok(UNIX_EPOCH.checked_sub(duration).ok_or_else(|| {
+                DbError::from("SystemTime before UNIX_EPOCH is too far in the past")
+            })?)
+        } else {
+            Ok(UNIX_EPOCH.checked_add(duration).ok_or_else(|| {
+                DbError::from("SystemTime after UNIX_EPOCH is too far in the future")
+            })?)
+        }
     }
 }
 
@@ -2095,11 +2108,23 @@ mod tests {
     fn system_time() {
         let time = SystemTime::now();
         let db_value: DbValue = time.into();
-        let time_back: SystemTime = db_value.clone().try_into().unwrap();
+        let time_back: SystemTime = db_value.try_into().unwrap();
         assert_eq!(time, time_back);
 
         let invalid = DbValue::Bytes(vec![]);
         let result: Result<SystemTime, DbError> = invalid.try_into();
+        assert!(result.is_err());
+
+        let before_epoch = SystemTime::UNIX_EPOCH - Duration::from_secs(67);
+        let db_value: DbValue = before_epoch.into();
+        let db_time = db_value.try_into().unwrap();
+
+        assert_eq!(before_epoch, db_time);
+
+        let max_duration = [1_u8; 13];
+        let db_value: DbValue = DbValue::Bytes(max_duration.to_vec());
+        let result: Result<SystemTime, DbError> = db_value.try_into();
+
         assert!(result.is_err());
     }
 
@@ -2110,6 +2135,17 @@ mod tests {
         let addr_back: SocketAddr = db_value.clone().try_into().unwrap();
         assert_eq!(addr, addr_back);
 
+        let string: String = db_value.try_into().unwrap();
+        assert_eq!(string, "127.0.0.1:8080".to_string());
+
+        let ipv6: SocketAddr = "[::]:8080".parse().unwrap();
+        let db_value: DbValue = ipv6.into();
+        let addr_back: SocketAddr = db_value.clone().try_into().unwrap();
+        assert_eq!(ipv6, addr_back);
+
+        let string: String = db_value.try_into().unwrap();
+        assert_eq!(string, "[::]:8080".to_string());
+
         let invalid = DbValue::String("invalid".to_string());
         let result: Result<SocketAddr, DbError> = invalid.try_into();
         assert!(result.is_err());
@@ -2119,8 +2155,19 @@ mod tests {
     fn ip_addr() {
         let addr: IpAddr = "127.0.0.1".parse().unwrap();
         let db_value: DbValue = addr.into();
-        let addr_back: IpAddr = db_value.clone().try_into().unwrap();
+        let addr_back: IpAddr = db_value.try_into().unwrap();
         assert_eq!(addr, addr_back);
+
+        let string: String = DbValue::from(addr).try_into().unwrap();
+        assert_eq!(string, "127.0.0.1".to_string());
+
+        let ipv6: IpAddr = "::".parse().unwrap();
+        let db_value: DbValue = ipv6.into();
+        let addr_back: IpAddr = db_value.try_into().unwrap();
+        assert_eq!(ipv6, addr_back);
+
+        let string: String = DbValue::from(ipv6).try_into().unwrap();
+        assert_eq!(string, "::".to_string());
 
         let invalid = DbValue::String("invalid".to_string());
         let result: Result<IpAddr, DbError> = invalid.try_into();

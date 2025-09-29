@@ -17,6 +17,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          components: rustfmt,clippy
       - run: cargo fmt -p examples_app_db -p examples_indexes -p examples_joins -p examples_schema_migration -p examples_server_client -p examples_user_types --check
       - run: cargo clippy -p examples_app_db -p examples_indexes -p examples_joins -p examples_schema_migration -p examples_server_client -p examples_user_types --all-targets --all-features -- -D warnings
       - run: cargo build -p examples_app_db -p examples_indexes -p examples_joins -p examples_schema_migration -p examples_server_client -p examples_user_types --all-features -r

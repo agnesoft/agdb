@@ -14,11 +14,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          components: rustfmt,clippy
       - run: cargo fmt -p agdb --check
       - run: cargo clippy -p agdb --all-targets --all-features -- -D warnings
       - uses: taiki-e/install-action@cargo-llvm-cov
       - run: rustup component add llvm-tools-preview
-      - run: cargo llvm-cov -p agdb --all-features --ignore-filename-regex "agdb_derive" --fail-uncovered-functions 56 --fail-uncovered-lines 267 --show-missing-lines
+      - run: cargo llvm-cov -p agdb --all-features --ignore-filename-regex "agdb_derive" --fail-uncovered-functions 58 --fail-uncovered-lines 275 --show-missing-lines
 
   # merge with the main job once --doctests is stabilized: https://github.com/taiki-e/cargo-llvm-cov/issues/2
   agdb_doctests:

@@ -43,12 +43,12 @@ catalog:
   highlight.js: ^11
   jsdom: ^26
   less: ^4
-  next: ^15
+  next: =15.4
   nextra-theme-docs: ^3
   nextra: ^3
   npm-run-all2: ^8
   openapi-client-axios: ^7
-  openapicmd: ^2.6.1
+  openapicmd: ^2
   playwright: ^1
   prettier: ^3
   react-dom: ^18
@@ -58,7 +58,7 @@ catalog:
   typescript-eslint: ^8
   typescript: ~5
   vite: ^7
-  vitest: ^3.2.4
+  vitest: ^3
   vue-router: ^4
   vue-tsc: ^3
   vue: ^3

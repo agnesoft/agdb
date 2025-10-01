@@ -4,7 +4,7 @@ edition = "2024"
 license = "Apache-2.0"
 
 [dependencies]
-agdb = { version = "0.12.1", path = "../../agdb" }
-agdb_api = { version = "0.12.1", path = "../../agdb_api/rust" }
+agdb = { version = "0.12.2", path = "../../agdb" }
+agdb_api = { version = "0.12.2", path = "../../agdb_api/rust" }
 tokio = { version = "1", features = ["full"] }
 anyhow = "1.0"

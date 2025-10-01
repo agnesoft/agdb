@@ -43,7 +43,7 @@ catalog:
   highlight.js: ^11
   jsdom: ^26
   less: ^4
-  next: ^15
+  next: =15.4
   nextra-theme-docs: ^3
   nextra: ^3
   npm-run-all2: ^8

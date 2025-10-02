@@ -42,7 +42,6 @@ fn parse_function(f: syn::ImplItemFn) -> proc_macro2::TokenStream {
     let name = f.sig.ident.to_string();
     let ret_ty = return_type(&f);
     let mut args = vec![];
-    let mut exprs: Vec<proc_macro2::TokenStream> = vec![];
 
     for a in f.sig.inputs {
         if let syn::FnArg::Typed(t) = a {
@@ -50,9 +49,11 @@ fn parse_function(f: syn::ImplItemFn) -> proc_macro2::TokenStream {
         }
     }
 
-    for stmt in f.block.stmts {
-        exprs.push(parse_stmt(&stmt));
-    }
+    let exprs = if let ReturnType::Default = &f.sig.output {
+        parse_stmts(&f.block.stmts)
+    } else {
+        parse_stmts_return(&f.block.stmts)
+    };
 
     let api_func = quote! {
         ::agdb::api::Function {
@@ -63,6 +64,31 @@ fn parse_function(f: syn::ImplItemFn) -> proc_macro2::TokenStream {
         }
     };
     api_func
+}
+
+fn is_return(stmt: &syn::Stmt) -> bool {
+    matches!(stmt, syn::Stmt::Expr(syn::Expr::Return(_), _))
+}
+
+fn parse_stmts_return(stmts: &[syn::Stmt]) -> Vec<proc_macro2::TokenStream> {
+    let last_idx = stmts.len().saturating_sub(1);
+
+    stmts
+        .iter()
+        .enumerate()
+        .map(|(i, stmt)| {
+            let expr = parse_stmt(stmt);
+            if i == last_idx && !is_return(stmt) {
+                quote! { ::agdb::api::Expression::Return(Some(Box::new(#expr))) }
+            } else {
+                expr
+            }
+        })
+        .collect()
+}
+
+fn parse_stmts(stmts: &[syn::Stmt]) -> Vec<proc_macro2::TokenStream> {
+    stmts.iter().map(parse_stmt).collect()
 }
 
 fn parse_arg(t: syn::PatType, generics: &Generics) -> proc_macro2::TokenStream {
@@ -424,12 +450,16 @@ fn parse_expr(expr: &syn::Expr) -> proc_macro2::TokenStream {
         syn::Expr::Closure(e) => {
             let body = match &*e.body {
                 syn::Expr::Block(block) => {
-                    let exprs = block.block.stmts.iter().map(parse_stmt);
+                    let exprs = parse_stmts_return(&block.block.stmts);
                     quote! { vec![#(#exprs),*] }
                 }
                 expr => {
                     let parsed_expr = parse_expr(expr);
-                    quote! { vec![#parsed_expr] }
+                    if matches!(expr, syn::Expr::Return(_)) {
+                        quote! { vec![#parsed_expr] }
+                    } else {
+                        quote! { vec![::agdb::api::Expression::Return(Some(Box::new(#parsed_expr)))] }
+                    }
                 }
             };
 

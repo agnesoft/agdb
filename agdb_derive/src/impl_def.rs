@@ -50,7 +50,7 @@ fn parse_function(f: syn::ImplItemFn) -> proc_macro2::TokenStream {
     }
 
     let exprs = if let ReturnType::Default = &f.sig.output {
-        parse_stmts(f.block.stmts)
+        parse_stmts(&f.block.stmts)
     } else {
         parse_stmts_return(&f.block.stmts)
     };
@@ -87,8 +87,8 @@ fn parse_stmts_return(stmts: &[syn::Stmt]) -> Vec<proc_macro2::TokenStream> {
         .collect()
 }
 
-fn parse_stmts(stmts: Vec<syn::Stmt>) -> Vec<proc_macro2::TokenStream> {
-    stmts.into_iter().map(|stmt| parse_stmt(&stmt)).collect()
+fn parse_stmts(stmts: &[syn::Stmt]) -> Vec<proc_macro2::TokenStream> {
+    stmts.iter().map(parse_stmt).collect()
 }
 
 fn parse_arg(t: syn::PatType, generics: &Generics) -> proc_macro2::TokenStream {

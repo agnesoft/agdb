@@ -154,7 +154,7 @@ fn impl_db_key(f: &syn::Field) -> Option<proc_macro2::TokenStream> {
         if is_flatten_type(f) {
             let ty = &f.ty;
             return Some(quote! {
-                keys.extend(#ty::db_keys());
+                keys.extend(<#ty as ::agdb::DbType>::db_keys());
             });
         }
 
@@ -218,7 +218,7 @@ fn impl_from_db_element(f: &syn::Field) -> Option<proc_macro2::TokenStream> {
         if is_option_type(f) {
             if is_flatten_type(f) {
                 return Some(quote! {
-                    #name: if let ::std::result::Result::Ok(value) = #ty::from_db_element(element) {
+                    #name: if let ::std::result::Result::Ok(value) = <#ty as ::agdb::DbType>::from_db_element(element) {
                         ::std::option::Option::Some(value)
                     } else {
                         ::std::option::Option::None
@@ -251,13 +251,13 @@ fn impl_from_db_element(f: &syn::Field) -> Option<proc_macro2::TokenStream> {
 
         if is_flatten_type(f) {
             return Some(quote! {
-                #name: #ty::from_db_element(element)?
+                #name: <#ty as ::agdb::DbType>::from_db_element(element)?
             });
         }
 
         if is_skip_type(f) {
             return Some(quote! {
-                #name: #ty::default()
+                #name: <#ty as ::std::default::Default>::default()
             });
         }
 

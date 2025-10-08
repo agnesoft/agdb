@@ -1015,3 +1015,33 @@ fn derive_db_type_rename_field() {
     renamed.db_id = Some(DbId(1));
     assert_eq!(renamed, retrieved);
 }
+
+#[test]
+fn derive_db_type_skip_generic() {
+    #[derive(DbType)]
+    struct S {
+        db_id: Option<DbId>,
+        name: String,
+        #[agdb(skip)]
+        _generic: std::sync::Arc<u64>,
+    }
+}
+
+#[test]
+fn derive_serialize_vec_t() {
+    #[derive(DbSerialize)]
+    struct MyVec<T: AgdbSerialize> {
+        values: Vec<T>,
+    }
+    let _ = MyVec {
+        values: vec![1_u64, 2_u64],
+    };
+}
+
+#[test]
+fn derive_db_value_vec_t() {
+    #[derive(DbValue, DbSerialize)]
+    struct MyVec<T: AgdbSerialize> {
+        values: Vec<T>,
+    }
+}

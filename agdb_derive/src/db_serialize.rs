@@ -3,6 +3,7 @@ use quote::format_ident;
 use quote::quote;
 use syn::DataEnum;
 use syn::DeriveInput;
+use syn::Generics;
 use syn::Ident;
 use syn::Index;
 use syn::Type;
@@ -11,6 +12,7 @@ use syn::parse_macro_input;
 pub fn db_serialize(item: TokenStream) -> TokenStream {
     let input = parse_macro_input!(item as DeriveInput);
     let name = input.ident;
+    let generics = input.generics;
 
     let tokens = if let syn::Data::Struct(data) = input.data {
         let fields_types = data
@@ -20,9 +22,9 @@ pub fn db_serialize(item: TokenStream) -> TokenStream {
             .collect::<Vec<(Option<&Ident>, &Type)>>();
 
         if fields_types.is_empty() || fields_types[0].0.is_some() {
-            serialize_struct(name, fields_types)
+            serialize_struct(name, &generics, fields_types)
         } else {
-            serialize_tuple(name, fields_types)
+            serialize_tuple(name, &generics, fields_types)
         }
     } else if let syn::Data::Enum(data) = input.data {
         serialize_enum(name, data)
@@ -158,8 +160,10 @@ fn serialize_enum(name: Ident, enum_data: DataEnum) -> proc_macro2::TokenStream 
 
 fn serialize_tuple(
     name: Ident,
+    generics: &Generics,
     fields_types: Vec<(Option<&Ident>, &Type)>,
 ) -> proc_macro2::TokenStream {
+    let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
     let names = fields_types
         .iter()
         .enumerate()
@@ -191,7 +195,7 @@ fn serialize_tuple(
     });
 
     quote! {
-        impl ::agdb::AgdbSerialize for #name {
+        impl #impl_generics ::agdb::AgdbSerialize for #name #ty_generics #where_clause {
             fn serialized_size(&self) -> u64 {
                 let mut size = 0;
                 #(
@@ -225,8 +229,10 @@ fn serialize_tuple(
 
 fn serialize_struct(
     name: Ident,
+    generics: &Generics,
     fields_types: Vec<(Option<&Ident>, &Type)>,
 ) -> proc_macro2::TokenStream {
+    let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
     let names = fields_types.iter().map(|(name, _ty)| name.unwrap());
     let sizes = fields_types.iter().map(|(name, _ty)| {
         let name = name.unwrap();
@@ -249,7 +255,7 @@ fn serialize_struct(
     });
 
     quote! {
-        impl ::agdb::AgdbSerialize for #name {
+        impl #impl_generics ::agdb::AgdbSerialize for #name #ty_generics #where_clause {
             fn serialized_size(&self) -> u64 {
                 let mut size = 0;
                 #(

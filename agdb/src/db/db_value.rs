@@ -1064,9 +1064,16 @@ impl StableHash for DbValue {
     }
 }
 
+/// Enables `PathBuf` to be stored as a vector in the database by marking it with the `DbTypeMarker` trait.
 impl DbTypeMarker for PathBuf {}
+
+/// Enables `SystemTime` to be stored as a vector in the database by marking it with the `DbTypeMarker` trait.
 impl DbTypeMarker for SystemTime {}
+
+/// Enables `SocketAddr` to be stored as a vector in the database by marking it with the `DbTypeMarker` trait.
 impl DbTypeMarker for SocketAddr {}
+
+/// Enables `IpAddr` to be stored as a vector in the database by marking it with the `DbTypeMarker` trait.
 impl DbTypeMarker for IpAddr {}
 
 #[cfg(test)]

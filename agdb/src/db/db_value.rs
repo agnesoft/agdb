@@ -1064,6 +1064,11 @@ impl StableHash for DbValue {
     }
 }
 
+impl DbTypeMarker for PathBuf {}
+impl DbTypeMarker for SystemTime {}
+impl DbTypeMarker for SocketAddr {}
+impl DbTypeMarker for IpAddr {}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -2166,5 +2171,56 @@ mod tests {
         let invalid = DbValue::String("invalid".to_string());
         let result: Result<IpAddr, DbError> = invalid.try_into();
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn vec_pathbuf() {
+        let paths = vec![PathBuf::from("/some/path"), PathBuf::from("/other/path")];
+        let db_value: DbValue = paths.clone().into();
+        let paths_back: Vec<PathBuf> = db_value.clone().try_into().unwrap();
+        assert_eq!(paths, paths_back);
+
+        let strings: Vec<String> = db_value.vec_string().unwrap().clone();
+        assert_eq!(
+            strings,
+            vec!["/some/path".to_string(), "/other/path".to_string()]
+        );
+    }
+
+    #[test]
+    fn vec_system_time() {
+        let times = vec![
+            SystemTime::now(),
+            SystemTime::now() + Duration::from_secs(3600),
+        ];
+        let db_value: DbValue = times.clone().into();
+        let times_back: Vec<SystemTime> = db_value.try_into().unwrap();
+        assert_eq!(times, times_back);
+    }
+
+    #[test]
+    fn vec_socket_addr() {
+        let addrs: Vec<SocketAddr> = vec![
+            "127.0.0.1:8080".parse().unwrap(),
+            "[::]:8080".parse().unwrap(),
+        ];
+        let db_value: DbValue = addrs.clone().into();
+        let addrs_back: Vec<SocketAddr> = db_value.clone().try_into().unwrap();
+        assert_eq!(addrs, addrs_back);
+        let strings: Vec<String> = db_value.vec_string().unwrap().clone();
+        assert_eq!(
+            strings,
+            vec!["127.0.0.1:8080".to_string(), "[::]:8080".to_string()]
+        );
+    }
+
+    #[test]
+    fn vec_ip_addr() {
+        let addrs: Vec<IpAddr> = vec!["127.0.0.1".parse().unwrap(), "::".parse().unwrap()];
+        let db_value: DbValue = addrs.clone().into();
+        let addrs_back: Vec<IpAddr> = db_value.clone().try_into().unwrap();
+        assert_eq!(addrs, addrs_back);
+        let strings: Vec<String> = db_value.vec_string().unwrap().clone();
+        assert_eq!(strings, vec!["127.0.0.1".to_string(), "::".to_string()]);
     }
 }

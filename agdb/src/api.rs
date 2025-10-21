@@ -323,11 +323,11 @@ impl<T1: ApiDefinition, T2: ApiDefinition> ApiDefinition for (T1, T2) {
             name: format!("Tuple_{}_{}", T1::def().name(), T2::def().name()),
             fields: vec![
                 NamedType {
-                    name: "0",
+                    name: "",
                     ty: || T1::def(),
                 },
                 NamedType {
-                    name: "1",
+                    name: "",
                     ty: || T2::def(),
                 },
             ],

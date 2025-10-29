@@ -1,5 +1,7 @@
 use crate::AgdbApi;
+use crate::ChangePassword;
 use crate::ReqwestClient;
+use crate::UserLogin;
 use agdb::QueryBuilder;
 use agdb::QueryResult;
 use agdb::api::ApiDefinition;
@@ -22,6 +24,8 @@ impl API {
                 AgdbApi::<ReqwestClient>::def(),
                 QueryBuilder::def(),
                 QueryResult::def(),
+                ChangePassword::def(),
+                UserLogin::def(),
             ],
         }
     }

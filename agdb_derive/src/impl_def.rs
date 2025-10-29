@@ -8,6 +8,7 @@ use syn::ItemImpl;
 use syn::PathArguments;
 use syn::ReturnType;
 use syn::TypeParamBound;
+use syn::parse::Parser;
 use syn::punctuated::Punctuated;
 use syn::token::Comma;
 
@@ -373,8 +374,8 @@ fn parse_expr(expr: &syn::Expr) -> proc_macro2::TokenStream {
                     }
                 }
             } else if macro_name == "format" {
-                let args: Punctuated<Expr, Comma> = syn::parse2(e.mac.tokens.clone())
-                    .map(|args: syn::ExprArray| args.elems)
+                let args: Punctuated<Expr, Comma> = Punctuated::parse_terminated
+                    .parse2(e.mac.tokens.clone())
                     .unwrap_or_default();
                 let args = args.iter().map(parse_expr);
 

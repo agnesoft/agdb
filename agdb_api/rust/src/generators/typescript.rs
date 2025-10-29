@@ -333,7 +333,7 @@ impl Typescript {
                 };
                 match *function {
                     "to_string" | "clone" | "into" => recipient_str,
-                    "Ok" => args_str,
+                    "Ok" | "Some" => args_str,
                     "format" => self.write_format_string(args, s),
                     _ => format!("{recipient_str}{dot}{func}({args_str})"),
                 }
@@ -458,6 +458,11 @@ impl Typescript {
         ty: &Option<fn() -> agdb::api::Type>,
         value: &Option<Box<agdb::api::Expression>>,
     ) -> String {
+        let name = if name.contains(",") {
+            format!("[{name}]")
+        } else {
+            name.to_string()
+        };
         let ty_str = if let Some(ty_fn) = ty {
             format!(": {}", ty_fn().name())
         } else {

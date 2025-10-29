@@ -140,6 +140,7 @@ pub struct ServerDatabase {
 }
 
 #[derive(Deserialize, Serialize, ToSchema)]
+#[cfg_attr(feature = "api", derive(agdb::ApiDef))]
 pub struct UserCredentials {
     pub password: String,
 }

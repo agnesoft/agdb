@@ -20,10 +20,10 @@ async fn copy() -> anyhow::Result<()> {
     server.api.user_login(owner, owner).await?;
     server.api.db_add(owner, db, DbKind::Mapped).await?;
     let queries = &[QueryBuilder::insert()
-            .nodes()
-            .aliases(["root"])
-            .query()
-            .into()];
+        .nodes()
+        .aliases(["root"])
+        .query()
+        .into()];
     server.api.db_exec_mut(owner, db, queries).await?;
     let status = server.api.db_copy(owner, db, db2).await?;
     assert_eq!(status, 201);
@@ -60,10 +60,10 @@ async fn copy_from_different_user() -> anyhow::Result<()> {
         .admin_db_user_add(owner, db, owner2, DbUserRole::Read)
         .await?;
     let queries = &[QueryBuilder::insert()
-            .nodes()
-            .aliases(["root"])
-            .query()
-            .into()];
+        .nodes()
+        .aliases(["root"])
+        .query()
+        .into()];
     server.api.admin_db_exec_mut(owner, db, queries).await?;
     server.api.user_login(owner2, owner2).await?;
     let status = server.api.db_copy(owner, db, db2).await?;

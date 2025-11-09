@@ -16,13 +16,15 @@ async fn read_write() -> anyhow::Result<()> {
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.admin_db_add(owner, db, DbKind::Mapped).await?;
-    let queries = &[QueryBuilder::insert()
+    let queries = &[
+        QueryBuilder::insert()
             .nodes()
             .aliases("root")
             .values([[("key", 1.1).into()]])
             .query()
             .into(),
-        QueryBuilder::select().ids("root").query().into()];
+        QueryBuilder::select().ids("root").query().into(),
+    ];
     let (status, results) = server.api.admin_db_exec_mut(owner, db, queries).await?;
     assert_eq!(status, 200);
     let expected = vec![
@@ -58,11 +60,11 @@ async fn read_only() -> anyhow::Result<()> {
     server.api.admin_user_add(owner, owner).await?;
     server.api.admin_db_add(owner, db, DbKind::Mapped).await?;
     let queries = &[QueryBuilder::insert()
-            .nodes()
-            .aliases("root")
-            .values([[("key", 1.1).into()]])
-            .query()
-            .into()];
+        .nodes()
+        .aliases("root")
+        .values([[("key", 1.1).into()]])
+        .query()
+        .into()];
     let (status, _) = server.api.admin_db_exec_mut(owner, db, queries).await?;
     assert_eq!(status, 200);
     let queries = &[QueryBuilder::select().ids("root").query().into()];
@@ -89,12 +91,14 @@ async fn query_error() -> anyhow::Result<()> {
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.admin_db_add(owner, db, DbKind::Mapped).await?;
-    let queries = &[QueryBuilder::insert()
+    let queries = &[
+        QueryBuilder::insert()
             .nodes()
             .values([[("key", 1.1).into()]])
             .query()
             .into(),
-        QueryBuilder::select().ids("root").query().into()];
+        QueryBuilder::select().ids("root").query().into(),
+    ];
     let error = server
         .api
         .admin_db_exec_mut(owner, db, queries)

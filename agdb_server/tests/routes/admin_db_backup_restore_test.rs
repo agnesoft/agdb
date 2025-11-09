@@ -18,10 +18,10 @@ async fn backup() -> anyhow::Result<()> {
     server.api.admin_user_add(owner, owner).await?;
     server.api.admin_db_add(owner, db, DbKind::Mapped).await?;
     let queries = &[QueryBuilder::insert()
-            .nodes()
-            .aliases(["root"])
-            .query()
-            .into()];
+        .nodes()
+        .aliases(["root"])
+        .query()
+        .into()];
     server.api.admin_db_exec_mut(owner, db, queries).await?;
     let status = server.api.admin_db_backup(owner, db).await?;
     assert_eq!(status, 201);
@@ -62,10 +62,10 @@ async fn backup_overwrite() -> anyhow::Result<()> {
     server.api.admin_user_add(owner, owner).await?;
     server.api.admin_db_add(owner, db, DbKind::Mapped).await?;
     let queries = &[QueryBuilder::insert()
-            .nodes()
-            .aliases(["root"])
-            .query()
-            .into()];
+        .nodes()
+        .aliases(["root"])
+        .query()
+        .into()];
     server.api.admin_db_exec_mut(owner, db, queries).await?;
     let status = server.api.admin_db_backup(owner, db).await?;
     assert_eq!(status, 201);
@@ -109,10 +109,10 @@ async fn backup_of_backup() -> anyhow::Result<()> {
     server.api.admin_user_add(owner, owner).await?;
     server.api.admin_db_add(owner, db, DbKind::Mapped).await?;
     let queries = &[QueryBuilder::insert()
-            .nodes()
-            .aliases(["root"])
-            .query()
-            .into()];
+        .nodes()
+        .aliases(["root"])
+        .query()
+        .into()];
     server.api.admin_db_exec_mut(owner, db, queries).await?;
     let status = server.api.admin_db_backup(owner, db).await?;
     assert_eq!(status, 201);

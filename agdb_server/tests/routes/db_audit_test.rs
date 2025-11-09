@@ -99,10 +99,10 @@ async fn repeated_query_with_db_audit() -> anyhow::Result<()> {
             owner,
             db,
             &[QueryBuilder::insert()
-                    .nodes()
-                    .aliases("root")
-                    .query()
-                    .into()],
+                .nodes()
+                .aliases("root")
+                .query()
+                .into()],
         )
         .await?;
     let (status, audit) = server.api.db_audit(owner, db).await?;
@@ -114,10 +114,10 @@ async fn repeated_query_with_db_audit() -> anyhow::Result<()> {
             owner,
             db,
             &[QueryBuilder::insert()
-                    .nodes()
-                    .aliases("root")
-                    .query()
-                    .into()],
+                .nodes()
+                .aliases("root")
+                .query()
+                .into()],
         )
         .await?;
     let (status, audit2) = server.api.db_audit(owner, db).await?;

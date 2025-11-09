@@ -1047,66 +1047,27 @@ fn derive_db_value_vec_t() {
 }
 
 #[test]
-fn db_type_strong() {
-    #[derive(DbType)]
-    struct Type1 {
-        db_id: Option<DbId>,
-        name: String,
-    }
-
-    #[derive(DbType)]
-    struct Type2 {
-        db_id: Option<DbId>,
+fn derive_db_type_db_id_no_option() {
+    #[derive(DbType, PartialEq)]
+    struct S {
+        db_id: DbId,
         name: String,
     }
 
     let mut db = TestDb::new();
-    let root_id = db
-        .exec_mut_result(QueryBuilder::insert().nodes().aliases("root").query())
-        .elements[0]
-        .id;
-    let ty1 = db
-        .exec_mut_result(
-            QueryBuilder::insert()
-                .element(&Type1 {
-                    db_id: None,
-                    name: "type1".to_string(),
-                })
-                .query(),
-        )
-        .elements[0]
-        .id;
-    let ty2 = db
-        .exec_mut_result(
-            QueryBuilder::insert()
-                .element(&Type2 {
-                    db_id: None,
-                    name: "type2".to_string(),
-                })
-                .query(),
-        )
-        .elements[0]
-        .id;
     db.exec_mut(
         QueryBuilder::insert()
-            .edges()
-            .from(root_id)
-            .to([ty1, ty2])
+            .element(&S {
+                db_id: DbId::default(),
+                name: "name".to_string(),
+            })
             .query(),
-        2,
+        1,
     );
-
-    let ty1_result: Vec<Type1> = db
-        .exec_result(
-            QueryBuilder::select()
-                .elements::<Type1>()
-                .search()
-                .from("root")
-                .query(),
-        )
+    let s: S = db
+        .exec_result(QueryBuilder::select().elements::<S>().ids(1).query())
         .try_into()
         .unwrap();
-
-    assert_eq!(ty1_result.len(), 1);
-    assert_eq!(ty1_result[0].name, "type1");
+    assert_eq!(s.db_id, DbId(1));
+    assert_eq!(s.name, "name");
 }

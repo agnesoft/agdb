@@ -67,8 +67,10 @@ impl Insert {
     /// Inserts `elem` into the database. The `elem`
     /// must implement (or derive) `DbType` that will
     /// provide the `DbId` to be inserted to and conversion
-    /// to the values. The ids must be `Some` and valid
-    /// int the database.
+    /// to the values. If the ids() is `None` new node will
+    /// be inserted. If the ids() is some it must point to
+    /// valid element in the database and its values will be
+    /// replaced.
     pub fn element<T: DbType>(self, elem: &T) -> InsertValuesIds {
         InsertValuesIds(InsertValuesQuery {
             ids: QueryIds::Ids(vec![elem.db_id().unwrap_or_default()]),
@@ -79,8 +81,10 @@ impl Insert {
     /// Inserts the `elems` into the database. Each `elem`
     /// must implement (or derive) `DbType` that will
     /// provide the `DbId` to be inserted to and conversion
-    /// to the values. The ids must be `Some` and valid
-    /// int the database.
+    /// to the values. If the ids() is `None` new nodes will
+    /// be inserted. If the ids() is some it must point to
+    /// valid elements in the database and their values will be
+    /// replaced.
     pub fn elements<T: DbType>(self, elems: &[T]) -> InsertValuesIds {
         let mut ids = vec![];
         let mut values = vec![];

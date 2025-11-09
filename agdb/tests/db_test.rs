@@ -699,7 +699,7 @@ fn db_any_struct() {
 }
 
 #[test]
-fn new_with() {
+fn with_data() {
     let mut db = DbMemory::with_data(MemoryStorage::new("test").unwrap()).unwrap();
     db.exec_mut(QueryBuilder::insert().nodes().count(1).query())
         .unwrap();

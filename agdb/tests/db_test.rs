@@ -16,8 +16,10 @@ use agdb::DbElement;
 use agdb::DbFile;
 use agdb::DbId;
 use agdb::DbMemory;
+use agdb::MemoryStorage;
 use agdb::QueryBuilder;
 use agdb::QueryId;
+use agdb::StorageData;
 use std::sync::Arc;
 use std::sync::RwLock;
 use std::time::Instant;
@@ -694,4 +696,21 @@ fn db_any_struct() {
     };
 
     assert_eq!(my_db.db.filename(), "memdb");
+}
+
+#[test]
+fn new_with() {
+    let mut db = DbMemory::with_data(MemoryStorage::new("test").unwrap()).unwrap();
+    db.exec_mut(QueryBuilder::insert().nodes().count(1).query())
+        .unwrap();
+    let count = db
+        .exec(QueryBuilder::select().node_count().query())
+        .unwrap()
+        .elements[0]
+        .values[0]
+        .value
+        .to_u64()
+        .unwrap();
+
+    assert_eq!(count, 1);
 }

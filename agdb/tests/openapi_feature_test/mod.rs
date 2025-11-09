@@ -5,7 +5,6 @@ use utoipa::OpenApi;
 
 #[derive(OpenApi)]
 #[openapi(components(schemas(
-    agdb::QueryResult,
     agdb::DbElement,
     agdb::DbId,
     agdb::DbKeyValue,

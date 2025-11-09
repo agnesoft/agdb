@@ -1045,3 +1045,29 @@ fn derive_db_value_vec_t() {
         values: Vec<T>,
     }
 }
+
+#[test]
+fn derive_db_type_db_id_no_option() {
+    #[derive(DbType, PartialEq)]
+    struct S {
+        db_id: DbId,
+        name: String,
+    }
+
+    let mut db = TestDb::new();
+    db.exec_mut(
+        QueryBuilder::insert()
+            .element(&S {
+                db_id: DbId::default(),
+                name: "name".to_string(),
+            })
+            .query(),
+        1,
+    );
+    let s: S = db
+        .exec_result(QueryBuilder::select().elements::<S>().ids(1).query())
+        .try_into()
+        .unwrap();
+    assert_eq!(s.db_id, DbId(1));
+    assert_eq!(s.name, "name");
+}

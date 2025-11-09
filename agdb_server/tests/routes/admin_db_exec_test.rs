@@ -16,7 +16,7 @@ async fn read_write() -> anyhow::Result<()> {
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.admin_db_add(owner, db, DbKind::Mapped).await?;
-    let queries = &vec![
+    let queries = &[
         QueryBuilder::insert()
             .nodes()
             .aliases("root")
@@ -59,17 +59,15 @@ async fn read_only() -> anyhow::Result<()> {
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.admin_db_add(owner, db, DbKind::Mapped).await?;
-    let queries = &vec![
-        QueryBuilder::insert()
-            .nodes()
-            .aliases("root")
-            .values([[("key", 1.1).into()]])
-            .query()
-            .into(),
-    ];
+    let queries = &[QueryBuilder::insert()
+        .nodes()
+        .aliases("root")
+        .values([[("key", 1.1).into()]])
+        .query()
+        .into()];
     let (status, _) = server.api.admin_db_exec_mut(owner, db, queries).await?;
     assert_eq!(status, 200);
-    let queries = &vec![QueryBuilder::select().ids("root").query().into()];
+    let queries = &[QueryBuilder::select().ids("root").query().into()];
     let (status, results) = server.api.admin_db_exec(owner, db, queries).await?;
     assert_eq!(status, 200);
     let expected = vec![QueryResult {
@@ -93,7 +91,7 @@ async fn query_error() -> anyhow::Result<()> {
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.admin_db_add(owner, db, DbKind::Mapped).await?;
-    let queries = &vec![
+    let queries = &[
         QueryBuilder::insert()
             .nodes()
             .values([[("key", 1.1).into()]])

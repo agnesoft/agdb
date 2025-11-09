@@ -19,13 +19,11 @@ async fn backup() -> anyhow::Result<()> {
     server.api.admin_user_add(owner, owner).await?;
     server.api.user_login(owner, owner).await?;
     server.api.db_add(owner, db, DbKind::Mapped).await?;
-    let queries = &vec![
-        QueryBuilder::insert()
-            .nodes()
-            .aliases(["root"])
-            .query()
-            .into(),
-    ];
+    let queries = &[QueryBuilder::insert()
+        .nodes()
+        .aliases(["root"])
+        .query()
+        .into()];
     server.api.db_exec_mut(owner, db, queries).await?;
     let status = server.api.db_backup(owner, db).await?;
     assert_eq!(status, 201);
@@ -36,11 +34,11 @@ async fn backup() -> anyhow::Result<()> {
             .join(format!("{db}.bak"))
             .exists()
     );
-    let queries = &vec![QueryBuilder::remove().ids("root").query().into()];
+    let queries = &[QueryBuilder::remove().ids("root").query().into()];
     server.api.db_exec_mut(owner, db, queries).await?;
     let status = server.api.db_restore(owner, db).await?;
     assert_eq!(status, 201);
-    let queries = &vec![QueryBuilder::select().ids("root").query().into()];
+    let queries = &[QueryBuilder::select().ids("root").query().into()];
     let results = server.api.db_exec(owner, db, queries).await?.1;
     assert_eq!(
         results,
@@ -66,13 +64,11 @@ async fn backup_overwrite() -> anyhow::Result<()> {
     server.api.admin_user_add(owner, owner).await?;
     server.api.user_login(owner, owner).await?;
     server.api.db_add(owner, db, DbKind::Mapped).await?;
-    let queries = &vec![
-        QueryBuilder::insert()
-            .nodes()
-            .aliases(["root"])
-            .query()
-            .into(),
-    ];
+    let queries = &[QueryBuilder::insert()
+        .nodes()
+        .aliases(["root"])
+        .query()
+        .into()];
     server.api.db_exec_mut(owner, db, queries).await?;
     let status = server.api.db_backup(owner, db).await?;
     assert_eq!(status, 201);
@@ -83,7 +79,7 @@ async fn backup_overwrite() -> anyhow::Result<()> {
             .join(format!("{db}.bak"))
             .exists()
     );
-    let queries = &vec![QueryBuilder::remove().ids("root").query().into()];
+    let queries = &[QueryBuilder::remove().ids("root").query().into()];
     server.api.db_exec_mut(owner, db, queries).await?;
     let status = server.api.db_backup(owner, db).await?;
     assert_eq!(status, 201);
@@ -96,7 +92,7 @@ async fn backup_overwrite() -> anyhow::Result<()> {
     );
     let status = server.api.db_restore(owner, db).await?;
     assert_eq!(status, 201);
-    let queries = &vec![QueryBuilder::select().ids("root").query().into()];
+    let queries = &[QueryBuilder::select().ids("root").query().into()];
     let results = server
         .api
         .db_exec(owner, db, queries)
@@ -116,13 +112,11 @@ async fn backup_of_backup() -> anyhow::Result<()> {
     server.api.admin_user_add(owner, owner).await?;
     server.api.user_login(owner, owner).await?;
     server.api.db_add(owner, db, DbKind::Mapped).await?;
-    let queries = &vec![
-        QueryBuilder::insert()
-            .nodes()
-            .aliases(["root"])
-            .query()
-            .into(),
-    ];
+    let queries = &[QueryBuilder::insert()
+        .nodes()
+        .aliases(["root"])
+        .query()
+        .into()];
     server.api.db_exec_mut(owner, db, queries).await?;
     let status = server.api.db_backup(owner, db).await?;
     assert_eq!(status, 201);
@@ -133,13 +127,13 @@ async fn backup_of_backup() -> anyhow::Result<()> {
             .join(format!("{db}.bak"))
             .exists()
     );
-    let queries = &vec![QueryBuilder::remove().ids("root").query().into()];
+    let queries = &[QueryBuilder::remove().ids("root").query().into()];
     server.api.db_exec_mut(owner, db, queries).await?;
     let status = server.api.db_restore(owner, db).await?;
     assert_eq!(status, 201);
     let status = server.api.db_restore(owner, db).await?;
     assert_eq!(status, 201);
-    let queries = &vec![QueryBuilder::select().ids("root").query().into()];
+    let queries = &[QueryBuilder::select().ids("root").query().into()];
     let results = server
         .api
         .db_exec(owner, db, queries)

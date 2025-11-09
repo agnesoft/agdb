@@ -98,13 +98,11 @@ async fn repeated_query_with_db_audit() -> anyhow::Result<()> {
         .db_exec_mut(
             owner,
             db,
-            &vec![
-                QueryBuilder::insert()
-                    .nodes()
-                    .aliases("root")
-                    .query()
-                    .into(),
-            ],
+            &[QueryBuilder::insert()
+                .nodes()
+                .aliases("root")
+                .query()
+                .into()],
         )
         .await?;
     let (status, audit) = server.api.db_audit(owner, db).await?;
@@ -115,13 +113,11 @@ async fn repeated_query_with_db_audit() -> anyhow::Result<()> {
         .db_exec_mut(
             owner,
             db,
-            &vec![
-                QueryBuilder::insert()
-                    .nodes()
-                    .aliases("root")
-                    .query()
-                    .into(),
-            ],
+            &[QueryBuilder::insert()
+                .nodes()
+                .aliases("root")
+                .query()
+                .into()],
         )
         .await?;
     let (status, audit2) = server.api.db_audit(owner, db).await?;

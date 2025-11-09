@@ -270,6 +270,19 @@ impl<Store: StorageData> DbImpl<Store> {
         }
     }
 
+    /// Tries to create a new database with the given `data` store.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use agdb::{DbMemory, MemoryStorage, StorageData};
+    ///
+    /// let mut db = DbMemory::with_data(MemoryStorage::new("test").unwrap()).unwrap();
+    /// ```
+    pub fn with_data(data: Store) -> Result<Self, DbError> {
+        Self::try_new_with_storage(Storage::with_data(data)?)
+    }
+
     /// Flushes the underlying file and copies it
     /// to `filename` path. Consider calling `optimize_storage()`
     /// prior to this function to reduce the size of the storage

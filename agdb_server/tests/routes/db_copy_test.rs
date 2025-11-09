@@ -19,18 +19,16 @@ async fn copy() -> anyhow::Result<()> {
     server.api.admin_user_add(owner, owner).await?;
     server.api.user_login(owner, owner).await?;
     server.api.db_add(owner, db, DbKind::Mapped).await?;
-    let queries = &vec![
-        QueryBuilder::insert()
+    let queries = &[QueryBuilder::insert()
             .nodes()
             .aliases(["root"])
             .query()
-            .into(),
-    ];
+            .into()];
     server.api.db_exec_mut(owner, db, queries).await?;
     let status = server.api.db_copy(owner, db, db2).await?;
     assert_eq!(status, 201);
     assert!(Path::new(&server.data_dir).join(owner).join(db2).exists());
-    let queries = &vec![QueryBuilder::select().ids("root").query().into()];
+    let queries = &[QueryBuilder::select().ids("root").query().into()];
     let results = server.api.db_exec(owner, db2, queries).await?.1;
     assert_eq!(results.len(), 1);
     assert_eq!(results[0].result, 1);
@@ -61,19 +59,17 @@ async fn copy_from_different_user() -> anyhow::Result<()> {
         .api
         .admin_db_user_add(owner, db, owner2, DbUserRole::Read)
         .await?;
-    let queries = &vec![
-        QueryBuilder::insert()
+    let queries = &[QueryBuilder::insert()
             .nodes()
             .aliases(["root"])
             .query()
-            .into(),
-    ];
+            .into()];
     server.api.admin_db_exec_mut(owner, db, queries).await?;
     server.api.user_login(owner2, owner2).await?;
     let status = server.api.db_copy(owner, db, db2).await?;
     assert_eq!(status, 201);
     assert!(Path::new(&server.data_dir).join(owner2).join(db2).exists());
-    let queries = &vec![QueryBuilder::select().ids("root").query().into()];
+    let queries = &[QueryBuilder::select().ids("root").query().into()];
     let results = server.api.db_exec(owner2, db2, queries).await?.1;
     assert_eq!(results.len(), 1);
     assert_eq!(results[0].result, 1);

@@ -665,11 +665,9 @@ fn db_any() {
     let test_file1 = TestFile::new();
     let test_file2 = TestFile::new();
 
-    let dbs = vec![
-        DbAny::new_file(test_file1.file_name()).unwrap(),
+    let dbs = [DbAny::new_file(test_file1.file_name()).unwrap(),
         DbAny::new_mapped(test_file2.file_name()).unwrap(),
-        DbAny::new_memory("memdb").unwrap(),
-    ];
+        DbAny::new_memory("memdb").unwrap()];
 
     let names = dbs.iter().map(|db| db.filename()).collect::<Vec<&str>>();
 

@@ -207,9 +207,15 @@ fn impl_to_db_value(f: &syn::Field) -> Option<proc_macro2::TokenStream> {
 fn impl_from_db_element(f: &syn::Field) -> Option<proc_macro2::TokenStream> {
     if let Some(name) = &f.ident {
         if name == DB_ID {
-            return Some(quote! {
-                #name: ::std::option::Option::Some(element.id.into())
-            });
+            if is_option_type(f) {
+                return Some(quote! {
+                    #name: ::std::option::Option::Some(element.id.into())
+                });
+            } else {
+                return Some(quote! {
+                    #name: element.id.into()
+                });
+            }
         }
 
         let str_name = field_name(f);
@@ -283,13 +289,17 @@ fn impl_db_id(data: &syn::DataStruct) -> proc_macro2::TokenStream {
             if let Some(name) = &f.ident
                 && name == DB_ID
             {
-                return Some(quote! {
-                    if let ::std::option::Option::Some(id) = &self.db_id {
-                        return ::std::option::Option::Some(id.clone().into());
-                    } else {
-                        return ::std::option::Option::None;
-                    }
-                });
+                if is_option_type(f) {
+                    return Some(quote! {
+                        if let ::std::option::Option::Some(id) = &self.db_id {
+                            return ::std::option::Option::Some(id.clone().into());
+                        } else {
+                            return ::std::option::Option::None;
+                        }
+                    });
+                } else {
+                    return Some(quote! { Some(self.db_id.into()) });
+                }
             }
 
             None

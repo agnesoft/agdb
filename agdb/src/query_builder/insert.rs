@@ -71,7 +71,7 @@ impl Insert {
     /// be inserted. If the ids() is some it must point to
     /// valid element in the database and its values will be
     /// replaced.
-    pub fn element<T: DbType>(self, elem: &T) -> InsertValuesIds {
+    pub fn element<T: DbType + std::borrow::Borrow<T>>(self, elem: T) -> InsertValuesIds {
         InsertValuesIds(InsertValuesQuery {
             ids: QueryIds::Ids(vec![elem.db_id().unwrap_or_default()]),
             values: QueryValues::Multi(vec![elem.to_db_values()]),

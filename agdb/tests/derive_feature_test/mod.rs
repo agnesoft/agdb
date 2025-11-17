@@ -1137,3 +1137,22 @@ fn derive_db_element() {
     assert_eq!(ty1_result.len(), 1);
     assert_eq!(ty1_result[0].name, "type1");
 }
+
+#[test]
+fn insert_element_by_value() {
+    #[derive(DbElement)]
+    struct Type1 {
+        name: String,
+    }
+
+    let mut db = TestDb::new();
+
+    db.exec_mut(
+        QueryBuilder::insert()
+            .element(Type1 {
+                name: "test".to_string(),
+            })
+            .query(),
+        2,
+    );
+}

@@ -4,6 +4,7 @@ use syn::DeriveInput;
 use syn::parse_macro_input;
 
 const DB_ID: &str = "db_id";
+const DB_ELEMENT_ID: &str = "db_element_id";
 const AGDB: &str = "agdb";
 const FLATTEN: &str = "flatten";
 const SKIP: &str = "skip";
@@ -20,7 +21,15 @@ pub fn db_type_marker_derive(item: TokenStream) -> TokenStream {
     tokens.into()
 }
 
+pub fn db_element_derive(item: TokenStream) -> TokenStream {
+    derive_impl(item, true)
+}
+
 pub fn db_type_derive(item: TokenStream) -> TokenStream {
+    derive_impl(item, false)
+}
+
+pub fn derive_impl(item: TokenStream, element_id: bool) -> TokenStream {
     let input = parse_macro_input!(item as DeriveInput);
     let name = input.ident;
     let syn::Data::Struct(data) = input.data else {
@@ -38,11 +47,22 @@ pub fn db_type_derive(item: TokenStream) -> TokenStream {
 
     let db_id = impl_db_id(&data);
     let from_db_element = data.fields.iter().filter_map(impl_from_db_element);
-    let db_values = to_db_values(&data);
+    let db_values = to_db_values(&data, if element_id { Some(name.clone()) } else { None });
     let keys = if has_option {
         quote! { Vec::new() }
     } else {
         db_keys(&data)
+    };
+    let element_id_tokens = if element_id {
+        let element_id_str = name.to_string();
+        quote! {
+            #[track_caller]
+            fn db_element_id() -> ::std::option::Option<::agdb::DbValue> {
+                ::std::option::Option::Some(#element_id_str.into())
+            }
+        }
+    } else {
+        quote! {}
     };
 
     let tokens = quote! {
@@ -70,6 +90,8 @@ pub fn db_type_derive(item: TokenStream) -> TokenStream {
             fn to_db_values(&self) -> ::std::vec::Vec<::agdb::DbKeyValue> {
                 #db_values
             }
+
+            #element_id_tokens
         }
 
         impl ::agdb::DbType for &#name {
@@ -93,6 +115,11 @@ pub fn db_type_derive(item: TokenStream) -> TokenStream {
             #[track_caller]
             fn to_db_values(&self) -> ::std::vec::Vec<::agdb::DbKeyValue> {
                 #name::to_db_values(*self)
+            }
+
+            #[track_caller]
+            fn db_element_id() -> ::std::option::Option<::agdb::DbValue> {
+                #name::db_element_id()
             }
         }
 
@@ -124,12 +151,25 @@ pub fn db_type_derive(item: TokenStream) -> TokenStream {
     tokens.into()
 }
 
-fn to_db_values(data: &syn::DataStruct) -> proc_macro2::TokenStream {
+fn to_db_values(
+    data: &syn::DataStruct,
+    element_id: Option<syn::Ident>,
+) -> proc_macro2::TokenStream {
     let fields = data.fields.iter().filter_map(impl_to_db_value);
+
+    let element_id_tokens = if let Some(element_id) = element_id {
+        let element_id_str = element_id.to_string();
+        quote! {
+            values.push((#DB_ELEMENT_ID, #element_id_str).into());
+        }
+    } else {
+        quote! {}
+    };
 
     quote! {
         let mut values = vec![];
         #(#fields)*
+        #element_id_tokens
         values
     }
 }

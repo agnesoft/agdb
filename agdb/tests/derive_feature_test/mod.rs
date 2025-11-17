@@ -10,6 +10,7 @@ use agdb::DbValue;
 use agdb::QueryBuilder;
 use agdb::QueryId;
 use agdb::QueryResult;
+use agdb_derive::DbElement;
 
 #[derive(Default, Debug, Clone, PartialEq, DbTypeMarker, DbValue, DbSerialize)]
 enum Status {
@@ -1073,16 +1074,16 @@ fn derive_db_type_db_id_no_option() {
 }
 
 #[test]
-fn db_type_strong() {
-    #[derive(DbType)]
+fn derive_db_element() {
+    #[derive(DbElement)]
     struct Type1 {
-        db_id: Option<DbId>,
+        db_id: DbId,
         name: String,
     }
 
-    #[derive(DbType)]
+    #[derive(DbElement)]
     struct Type2 {
-        db_id: Option<DbId>,
+        db_id: DbId,
         name: String,
     }
 
@@ -1095,7 +1096,7 @@ fn db_type_strong() {
         .exec_mut_result(
             QueryBuilder::insert()
                 .element(&Type1 {
-                    db_id: None,
+                    db_id: DbId::default(),
                     name: "type1".to_string(),
                 })
                 .query(),
@@ -1106,7 +1107,7 @@ fn db_type_strong() {
         .exec_mut_result(
             QueryBuilder::insert()
                 .element(&Type2 {
-                    db_id: None,
+                    db_id: DbId::default(),
                     name: "type2".to_string(),
                 })
                 .query(),

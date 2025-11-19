@@ -10,7 +10,6 @@ use agdb::DbValue;
 use agdb::QueryBuilder;
 use agdb::QueryId;
 use agdb::QueryResult;
-use agdb_derive::DbElement;
 
 #[derive(Default, Debug, Clone, PartialEq, DbTypeMarker, DbValue, DbSerialize)]
 enum Status {

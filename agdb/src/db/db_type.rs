@@ -58,6 +58,13 @@ pub trait DbType: Sized {
     /// Converts the fields (skipping `db_id` if present)
     /// to the database key-values.
     fn to_db_values(&self) -> Vec<DbKeyValue>;
+
+    /// Returns an optional element id. Typically this
+    /// would be a name of the type for which this
+    /// trait is being imeplemented. By default returns `None`.
+    fn db_element_id() -> Option<DbValue> {
+        None
+    }
 }
 
 /// Marker trait for user values to get around

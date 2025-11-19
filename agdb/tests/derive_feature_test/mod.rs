@@ -1071,3 +1071,87 @@ fn derive_db_type_db_id_no_option() {
     assert_eq!(s.db_id, DbId(1));
     assert_eq!(s.name, "name");
 }
+
+#[test]
+fn derive_db_element() {
+    #[derive(DbElement)]
+    struct Type1 {
+        db_id: DbId,
+        name: String,
+    }
+
+    #[derive(DbElement)]
+    struct Type2 {
+        db_id: DbId,
+        name: String,
+    }
+
+    let mut db = TestDb::new();
+    let root_id = db
+        .exec_mut_result(QueryBuilder::insert().nodes().aliases("root").query())
+        .elements[0]
+        .id;
+    let ty1 = db
+        .exec_mut_result(
+            QueryBuilder::insert()
+                .element(&Type1 {
+                    db_id: DbId::default(),
+                    name: "type1".to_string(),
+                })
+                .query(),
+        )
+        .elements[0]
+        .id;
+    let ty2 = db
+        .exec_mut_result(
+            QueryBuilder::insert()
+                .element(&Type2 {
+                    db_id: DbId::default(),
+                    name: "type2".to_string(),
+                })
+                .query(),
+        )
+        .elements[0]
+        .id;
+    db.exec_mut(
+        QueryBuilder::insert()
+            .edges()
+            .from(root_id)
+            .to([ty1, ty2])
+            .query(),
+        2,
+    );
+
+    let ty1_result: Vec<Type1> = db
+        .exec_result(
+            QueryBuilder::select()
+                .elements::<Type1>()
+                .search()
+                .from("root")
+                .query(),
+        )
+        .try_into()
+        .unwrap();
+
+    assert_eq!(ty1_result.len(), 1);
+    assert_eq!(ty1_result[0].name, "type1");
+}
+
+#[test]
+fn insert_element_by_value() {
+    #[derive(DbElement)]
+    struct Type1 {
+        name: String,
+    }
+
+    let mut db = TestDb::new();
+
+    db.exec_mut(
+        QueryBuilder::insert()
+            .element(Type1 {
+                name: "test".to_string(),
+            })
+            .query(),
+        2,
+    );
+}

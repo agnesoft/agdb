@@ -1,10 +1,23 @@
+use crate::Comparison;
+use crate::DbValue;
+use crate::KeyValueComparison;
+use crate::QueryCondition;
+use crate::QueryConditionData;
+use crate::QueryConditionLogic;
+use crate::QueryConditionModifier;
 use crate::QueryIds;
+use crate::SearchQuery;
 use crate::SelectValuesQuery;
 use crate::query_builder::search::Search;
+use crate::query_builder::where_::DB_ELEMENT_ID_KEY;
 
 /// Select values builder.
 #[cfg_attr(feature = "api", derive(agdb::ApiDefImpl))]
-pub struct SelectValues(pub SelectValuesQuery);
+pub struct SelectValues {
+    pub query: SelectValuesQuery,
+    pub element_id: Option<DbValue>,
+    pub limit: u64,
+}
 
 /// Final builder that lets you create
 /// an actual query object.
@@ -16,16 +29,28 @@ impl SelectValues {
     /// An id or list of ids or search query to select values of.
     /// All ids specified must exist in the database.
     pub fn ids<T: Into<QueryIds>>(mut self, ids: T) -> SelectValuesIds {
-        self.0.ids = ids.into();
+        self.query.ids = ids.into();
 
-        SelectValuesIds(self.0)
+        SelectValuesIds(self.query)
     }
 
     /// Select using the result of a search query as ids.
     /// Equivalent to `ids(QueryBuilder::search()/* ... */)`.
     pub fn search(mut self) -> Search<SelectValuesQuery> {
-        self.0.ids = QueryIds::Search(crate::SearchQuery::new());
-        Search(self.0)
+        let mut search = SearchQuery::new();
+        search.limit = self.limit;
+        if let Some(element_id) = self.element_id {
+            search.conditions.push(QueryCondition {
+                logic: QueryConditionLogic::And,
+                modifier: QueryConditionModifier::None,
+                data: QueryConditionData::KeyValue(KeyValueComparison {
+                    key: DB_ELEMENT_ID_KEY.into(),
+                    value: Comparison::Equal(element_id),
+                }),
+            });
+        }
+        self.query.ids = QueryIds::Search(search);
+        Search(self.query)
     }
 }
 

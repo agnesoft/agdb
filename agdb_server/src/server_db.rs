@@ -966,3 +966,23 @@ impl DbType for Log<ClusterAction> {
         ]
     }
 }
+
+impl DbType for &Log<ClusterAction> {
+    type ValueType = Log<ClusterAction>;
+
+    fn db_id(&self) -> Option<QueryId> {
+        Self::ValueType::db_id(*self)
+    }
+
+    fn db_keys() -> Vec<agdb::DbValue> {
+        Self::ValueType::db_keys()
+    }
+
+    fn from_db_element(element: &agdb::DbElement) -> Result<Self::ValueType, agdb::DbError> {
+        Self::ValueType::from_db_element(element)
+    }
+
+    fn to_db_values(&self) -> Vec<agdb::DbKeyValue> {
+        Self::ValueType::to_db_values(*self)
+    }
+}

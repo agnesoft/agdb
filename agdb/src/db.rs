@@ -201,7 +201,6 @@ pub struct DbImpl<Store: StorageData> {
     graph: DbGraph<Store>,
     aliases: DbIndexedMap<String, DbId, Store>,
     indexes: DbIndexes<Store>,
-    //values: MultiMapStorage<DbId, DbKeyValue, Store>,
     values: DbKeyValues<Store>,
     undo_stack: Vec<Command>,
 }

@@ -41,7 +41,7 @@ pub mod test_utilities;
 pub use query::QueryType;
 
 #[cfg(feature = "derive")]
-pub use agdb_derive::{DbSerialize, DbType, DbTypeMarker, DbValue};
+pub use agdb_derive::{DbElement, DbSerialize, DbType, DbTypeMarker, DbValue};
 
 #[cfg(feature = "api")]
 pub mod api;

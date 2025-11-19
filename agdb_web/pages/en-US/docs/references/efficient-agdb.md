@@ -66,7 +66,7 @@ fn register_user(db: &mut Db, user: &User) -> Result<DbId, DbError> {
                 .from("users")
                 .where_()
                 .key("username")
-                .value(Equal(user.username.into()))
+                .value(&user.username)
                 .query(),
         )?
         .result
@@ -234,7 +234,7 @@ fn remove_like(db: &mut Db, user: DbId, id: DbId) -> Result<(), DbError> {
                 .from(user)
                 .to(id)
                 .where_()
-                .keys(vec!["liked".into()])
+                .keys("liked")
                 .query(),
         )?;
         Ok(())
@@ -254,11 +254,11 @@ Still if we were unsure the `id` exists or if we wanted to limit the search area
 .where_()
 .distance(CountComparison::LessThanOrEqual(2))
 .and()
-.keys(vec!["liked".into()])
+.keys("liked")
 .and()
 .beyond()
 .where_()
-.keys(vec!["liked".into()])
+.keys("liked")
 .or()
 .node()
 ```
@@ -287,7 +287,7 @@ fn login(db: &Db, username: &str, password: &str) -> Result<DbId, DbError> {
                 .neighbor()
                 .and()
                 .key("username")
-                .value(Equal(username.into()))
+                .value(username)
                 .query(),
         )?
         .elements;
@@ -332,7 +332,7 @@ fn user_posts_ids(db: &Db, user: DbId) -> Result<Vec<QueryId>, DbError> {
                 .and()
                 .beyond()
                 .where_()
-                .keys(vec!["authored".into()])
+                .keys("authored")
                 .or()
                 .node()
                 .query(),
@@ -459,7 +459,7 @@ fn add_likes_to_posts(db: &mut Db) -> Result<(), DbError> {
                         .where_()
                         .distance(1)
                         .and()
-                        .keys(vec!["liked".into()])
+                        .keys("liked")
                         .query(),
                 )?
                 .result;

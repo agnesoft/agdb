@@ -468,17 +468,18 @@ impl<T: SearchQueryBuilder> WhereLogicOperator<T> {
 
     /// Returns the built `SearchQuery` object.
     pub fn query(mut self) -> T {
+        while self.0.collapse_conditions() {}
+
         if !self.0.query.search_mut().conditions.is_empty() {
             let existing_conditions = std::mem::take(&mut self.0.query.search_mut().conditions);
-            self.0.conditions.push(existing_conditions);
+            self.0.conditions[0].extend(existing_conditions);
         }
-
-        while self.0.collapse_conditions() {}
 
         std::mem::swap(
             &mut self.0.query.search_mut().conditions,
             &mut self.0.conditions[0],
         );
+
         self.0.query
     }
 }

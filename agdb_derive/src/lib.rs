@@ -78,6 +78,15 @@ pub fn user_db_type_derive(item: TokenStream) -> TokenStream {
     db_type::db_type_derive(item)
 }
 
+/// The same as DbType but additionally implements `DbType::db_element_id()` allowing
+/// more streamlined selection and search of strongly typed elements. This derive adds
+/// additional element property to the element representation in the database of type
+/// `(String, String)`, i.e. `("db_element_id", <usertypename>.to_string())`.
+#[proc_macro_derive(DbElement, attributes(agdb))]
+pub fn user_db_element_derive(item: TokenStream) -> TokenStream {
+    db_type::db_element_derive(item)
+}
+
 /// The helper derive macro to add `agdb` compatibility to
 /// user defined types. This type provides blank implementation
 /// of the `agdb::DbTypeMarker` trait. This is needed for the

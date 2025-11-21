@@ -56,7 +56,8 @@ flowchart LR
     select --> edge_count_to("<a href='#select-edge-count'>edge_count</a>") ---> s_e_c_ids("ids")
     select --> select_node_count("<a href='#select-node-count'>node_count</a>")
     select --> values("<a href='#select-values'>values</a>") --> s_v_ids("ids") --> SelectValuesQuery["<a href='#select-values'>SelectValuesQuery</a>"]
-    select --> elements("<a href='#select-values'>values</a>") --> s_v_ids("ids")
+    select --> s_element("<a href='#select-values'>values</a>") --> s_v_ids("ids")
+    select --> s_elements("<a href='#select-values'>values</a>") --> s_v_ids("ids")
 
     search --> index("index") --> s_i_value("value") --> SearchQuery["<a href='#search'>SearchQuery</a>"]
     search --> from("from") --> SearchQuery
@@ -134,12 +135,15 @@ pub trait DbType: Sized {
     fn db_keys() -> Vec<DbValue>;
     fn from_db_element(element: &DbElement) -> Result<Self, DbError>;
     fn to_db_values(&self) -> Vec<DbKeyValue>;
+    fn db_element_id() -> Option<DbValue> { None }
 }
 ```
 
 Typically, you would derive this trait with `agdb::DbType` procedural macro that uses the field names as keys (of type `String`) and losslessly converts the values when reading/writing from/to the database from supported types (e.g. field type `i32` will become `i64` in the database).
 
-It is recommended but optional to have `db_id` field of type `Option<T: Into<DbId>>` (e.g. `Option<QueryId>` or `Option<DbId>`) in your user defined types which will further allow you to directly update your values with query shorthands. However, it is optional, and all other features will still work including conversion from `QueryResult` or passing your types to `values()` in the builders.
+You can also use an alternative derive `agdb::DbElement` that acts like `agdb::DbType` but additionally implements the `db_element_id()` to return the type's name. It is then automatically used as additional property when using it with the `QueryBuilder`. When inserting type that derived `DbElement` an additional property `db_element_id` will be inserted for the given db element. Conversely, when select & searching elements the automatic condition matching the `db_element_id` with the type name is also inserted into the search.
+
+It is recommended but optional to have `db_id` field of type `DbId` or `Option<T: Into<DbId>>` (e.g. `DbId` or `Option<QueryId>` or `Option<DbId>`) in your user defined types which will further allow you to directly update your values with query shorthands. However, it is optional, and all other features will still work including conversion from `QueryResult` or passing your types to `values()` in the builders or type matching when deriving from `DbElement`.
 
 The `agdb::DbType` macro also supports `Option`al types. When a value is `None` it will be omitted when saving the object to the database.
 
@@ -959,6 +963,7 @@ QueryBuilder::select().values(["k".into(), "k2".into()]).ids("a").query();
 QueryBuilder::select().values(["k".into(), "k2".into()]).ids([1, 2]).query();
 QueryBuilder::select().values(["k".into(), "k2".into()]).ids(QueryBuilder::search().from(1).query()).query();
 QueryBuilder::select().values(["k".into(), "k2".into()]).search().from(1).query(); // Equivalent to the previous query
+QueryBuilder::select().element::<T>(); //if followed by search() it will set limit to 1
 QueryBuilder::select().elements::<T>().ids(1).query();
 QueryBuilder::select().elements::<T>().ids(QueryBuilder::search().from("a").query()).query();
 QueryBuilder::select().elements::<T>().search().from("a").query(); // Equivalent to the previous query
@@ -966,7 +971,7 @@ QueryBuilder::select().elements::<T>().search().from("a").query(); // Equivalent
 
 </td></tr></table>
 
-Selects elements identified by `ids` [`QueryIds`](#queryids--queryid) or search query with only selected properties (identified by the list of keys). If any of the `ids` does not exist in the database or does not have all the keys associated with it then running the query will return an error. The search query is most commonly used to find, filter or otherwise limit what elements to select. You can limit what properties will be returned. If the list of properties to select is empty all properties will be returned. If you plan to convert the result into your user defined type(s) you should use either `elements::<T>()` variant or supply the list of keys to `values()` with `T::db_keys()` provided through the `DbType` trait (`#derive(DbType)`) as argument to `values()` otherwise the keys may not be in an expected order even if they are otherwise present.
+Selects elements identified by `ids` [`QueryIds`](#queryids--queryid) or search query with only selected properties (identified by the list of keys). If any of the `ids` does not exist in the database or does not have all the keys associated with it then running the query will return an error. The search query is most commonly used to find, filter or otherwise limit what elements to select. You can limit what properties will be returned. If the list of properties to select is empty all properties will be returned. If you plan to convert the result into your user defined type(s) you should use either `elements::<T>()` variant or supply the list of keys to `values()` with `T::db_keys()` provided through the `DbType` trait (`#[derive(agdb::DbType)]` or `#[derive(agdb::DbElement)]`) as argument to `values()`. If `T` derives from `DbElement` or otherwise implements `DbType::db_element_id()` the "select().search()" query will have automatic condition added, i.e. as if written by hand `key("db_element_id").value("T")` to simplify working with types, especially if they are overlapping. You can also often omit conditions altogether in some cases.
 
 ## Search
 

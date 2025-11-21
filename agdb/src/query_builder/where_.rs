@@ -11,6 +11,8 @@ use crate::query::query_condition::QueryConditionLogic;
 use crate::query::query_condition::QueryConditionModifier;
 use crate::query_builder::search::SearchQueryBuilder;
 
+pub const DB_ELEMENT_ID_KEY: &str = "db_element_id";
+
 /// Condition builder
 #[cfg_attr(feature = "api", derive(agdb::ApiDefImpl))]
 pub struct Where<T: SearchQueryBuilder> {
@@ -182,10 +184,15 @@ impl<T: SearchQueryBuilder> Where<T> {
         WhereLogicOperator(self)
     }
 
-    /// Convenience method equivalent to `keys(E::db_keys())` useful for
-    /// selecting only elements that can be converted to `E`.
+    /// Convenience condition. If `E` returns `Some` from DbType::db_element_id()
+    /// it is equivalent to `key("db_element_id").value(element_id)` otherwise
+    /// it is equivalent to `keys(E::db_keys())`.
     pub fn element<E: DbType>(self) -> WhereLogicOperator<T> {
-        self.keys(E::db_keys())
+        if let Some(element_id) = E::db_element_id() {
+            self.key(DB_ELEMENT_ID_KEY).value(element_id)
+        } else {
+            self.keys(E::db_keys())
+        }
     }
 
     /// Only elements listed in `ids` will pass this condition. It is usually combined
@@ -377,13 +384,19 @@ impl<T: SearchQueryBuilder> Where<T> {
     }
 
     fn add_condition(&mut self, condition: QueryCondition) {
-        self.conditions.last_mut().unwrap().push(condition);
+        self.conditions
+            .last_mut()
+            .expect("Conditions should not be empty")
+            .push(condition);
     }
 
     fn collapse_conditions(&mut self) -> bool {
         if self.conditions.len() > 1 {
             let last_conditions = self.conditions.pop().unwrap_or_default();
-            let current_conditions = self.conditions.last_mut().unwrap();
+            let current_conditions = self
+                .conditions
+                .last_mut()
+                .expect("Expected conditions of length of at least 2");
 
             if let Some(QueryCondition {
                 logic: _,
@@ -456,10 +469,17 @@ impl<T: SearchQueryBuilder> WhereLogicOperator<T> {
     /// Returns the built `SearchQuery` object.
     pub fn query(mut self) -> T {
         while self.0.collapse_conditions() {}
+
+        if !self.0.query.search_mut().conditions.is_empty() {
+            let existing_conditions = std::mem::take(&mut self.0.query.search_mut().conditions);
+            self.0.conditions[0].extend(existing_conditions);
+        }
+
         std::mem::swap(
             &mut self.0.query.search_mut().conditions,
             &mut self.0.conditions[0],
         );
+
         self.0.query
     }
 }

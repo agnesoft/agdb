@@ -15,7 +15,7 @@ async fn optimize() -> anyhow::Result<()> {
     server.api.admin_user_add(owner, owner).await?;
     server.api.user_login(owner, owner).await?;
     server.api.db_add(owner, db, DbKind::Mapped).await?;
-    let queries = &vec![QueryBuilder::insert().nodes().count(100).query().into()];
+    let queries = &[QueryBuilder::insert().nodes().count(100).query().into()];
     server.api.db_exec_mut(owner, db, queries).await?;
     let original_size = server
         .api

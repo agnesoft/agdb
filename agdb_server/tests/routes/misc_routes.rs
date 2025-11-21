@@ -209,7 +209,7 @@ async fn location_change_after_restart() -> anyhow::Result<()> {
             .db_exec_mut(
                 "user1",
                 "mydb",
-                &vec![QueryBuilder::insert().nodes().count(1).query().into()],
+                &[QueryBuilder::insert().nodes().count(1).query().into()],
             )
             .await?;
         client.user_logout().await?;
@@ -225,7 +225,7 @@ async fn location_change_after_restart() -> anyhow::Result<()> {
         .db_exec(
             "user1",
             "mydb",
-            &vec![QueryBuilder::select().ids(1).query().into()],
+            &[QueryBuilder::select().ids(1).query().into()],
         )
         .await?;
 

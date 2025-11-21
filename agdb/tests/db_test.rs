@@ -16,8 +16,10 @@ use agdb::DbElement;
 use agdb::DbFile;
 use agdb::DbId;
 use agdb::DbMemory;
+use agdb::MemoryStorage;
 use agdb::QueryBuilder;
 use agdb::QueryId;
+use agdb::StorageData;
 use std::sync::Arc;
 use std::sync::RwLock;
 use std::time::Instant;
@@ -663,7 +665,7 @@ fn db_any() {
     let test_file1 = TestFile::new();
     let test_file2 = TestFile::new();
 
-    let dbs = vec![
+    let dbs = [
         DbAny::new_file(test_file1.file_name()).unwrap(),
         DbAny::new_mapped(test_file2.file_name()).unwrap(),
         DbAny::new_memory("memdb").unwrap(),
@@ -694,4 +696,53 @@ fn db_any_struct() {
     };
 
     assert_eq!(my_db.db.filename(), "memdb");
+}
+
+#[test]
+fn with_data() {
+    let mut db = DbMemory::with_data(MemoryStorage::new("test").unwrap()).unwrap();
+    db.exec_mut(QueryBuilder::insert().nodes().count(1).query())
+        .unwrap();
+    let count = db
+        .exec(QueryBuilder::select().node_count().query())
+        .unwrap()
+        .elements[0]
+        .values[0]
+        .value
+        .to_u64()
+        .unwrap();
+
+    assert_eq!(count, 1);
+}
+
+#[test]
+fn using_ref_insert_element() {
+    struct S {}
+
+    impl agdb::DbType for S {
+        type ValueType = Self;
+
+        fn db_id(&self) -> Option<QueryId> {
+            None
+        }
+
+        fn db_keys() -> Vec<agdb::DbValue> {
+            vec![]
+        }
+
+        fn from_db_element(_element: &agdb::DbElement) -> Result<Self::ValueType, agdb::DbError> {
+            Ok(S {})
+        }
+
+        fn to_db_values(&self) -> Vec<agdb::DbKeyValue> {
+            vec![]
+        }
+    }
+
+    let mut db = DbMemory::new("test").unwrap();
+    let s = S {};
+    db.exec_mut(QueryBuilder::insert().element(&s).query())
+        .unwrap();
+    db.exec_mut(QueryBuilder::insert().element(s).query())
+        .unwrap();
 }

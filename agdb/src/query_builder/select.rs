@@ -66,14 +66,34 @@ impl Select {
         })
     }
 
-    /// Select elements with `ids` with only `T::db_keys()`
-    /// properties (key-values). All ids specified must
-    /// exist in the database. Same as calling `values(T::db_keys())`.
+    /// Select single element with  `T::db_keys()`
+    /// properties (key-values) that also satisfies T::db_element_id()
+    /// if it returns `Some`.
+    pub fn element<T: DbType>(self) -> SelectValues {
+        SelectValues {
+            query: SelectValuesQuery {
+                keys: T::db_keys(),
+                ids: QueryIds::Ids(vec![]),
+            },
+            element_id: T::db_element_id(),
+            limit: 1,
+        }
+    }
+
+    /// Select elements with `T::db_keys()`
+    /// properties (key-values) that must exist on all
+    /// selected elements. If T::db_element_id()
+    /// returns `Some` this condition is automatically added
+    /// if used in search.
     pub fn elements<T: DbType>(self) -> SelectValues {
-        SelectValues(SelectValuesQuery {
-            keys: T::db_keys(),
-            ids: QueryIds::Ids(vec![]),
-        })
+        SelectValues {
+            query: SelectValuesQuery {
+                keys: T::db_keys(),
+                ids: QueryIds::Ids(vec![]),
+            },
+            element_id: T::db_element_id(),
+            limit: 0,
+        }
     }
 
     /// Select elements with `ids` with all properties (key-values).
@@ -122,9 +142,13 @@ impl Select {
     /// Select elements with `ids` with only `keys` properties (key-values).
     /// All ids specified must exist in the database.
     pub fn values<T: Into<DbValues>>(self, keys: T) -> SelectValues {
-        SelectValues(SelectValuesQuery {
-            keys: Into::<DbValues>::into(keys).0,
-            ids: QueryIds::Ids(vec![]),
-        })
+        SelectValues {
+            query: SelectValuesQuery {
+                keys: Into::<DbValues>::into(keys).0,
+                ids: QueryIds::Ids(vec![]),
+            },
+            element_id: None,
+            limit: 0,
+        }
     }
 }

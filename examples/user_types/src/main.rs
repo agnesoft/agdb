@@ -1,5 +1,7 @@
+use agdb::DbElement;
 use agdb::DbError;
 use agdb::DbMemory;
+use agdb::DbSerialize;
 use agdb::DbType;
 use agdb::DbTypeMarker;
 use agdb::DbValue;
@@ -14,7 +16,7 @@ use agdb::QueryBuilder;
 // possibly other formats (e.g. bytes). Derived
 // implementation would have to make that call which
 // is better to be left on the user.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, DbSerialize, DbValue)]
 enum UserStatus {
     Active,
     Inactive,
@@ -25,10 +27,15 @@ enum UserStatus {
 // `agdb::DbTypeMarker`) is used to allow the user
 // types (structs & enums) to be used in vectorized
 // variants of the user types.
-#[derive(Debug, Clone, DbTypeMarker)]
+#[derive(Debug, Clone, DbTypeMarker, DbSerialize, DbValue)]
 struct Property {
     name: String,
     value: String,
+}
+
+#[derive(Debug, DbType)]
+struct SubProperty {
+    id: i32,
 }
 
 // Deriving from agdb::DbType to make it possible
@@ -39,51 +46,14 @@ struct Property {
 struct User {
     username: String,
     password: String,
+    #[agdb(renamed = "name")]
     display_name: Option<String>,
     status: UserStatus,
     extra: Vec<Property>,
-}
-
-// Example implementations of traits expected by agdb::DbType.
-impl TryFrom<DbValue> for UserStatus {
-    type Error = DbError;
-
-    fn try_from(value: DbValue) -> Result<Self, Self::Error> {
-        match value.to_string().as_str() {
-            "active" => Ok(Self::Active),
-            "inactive" => Ok(Self::Inactive),
-            "banned" => Ok(Self::Banned),
-            _ => Err(DbError::from("Invalid user status")),
-        }
-    }
-}
-impl From<UserStatus> for DbValue {
-    fn from(value: UserStatus) -> Self {
-        match value {
-            UserStatus::Active => "active".into(),
-            UserStatus::Inactive => "inactive".into(),
-            UserStatus::Banned => "banned".into(),
-        }
-    }
-}
-
-impl TryFrom<DbValue> for Property {
-    type Error = DbError;
-
-    fn try_from(value: DbValue) -> Result<Self, Self::Error> {
-        let (name, value) = value.string()?.split_once("=").ok_or("Invalid property")?;
-
-        Ok(Self {
-            name: name.to_string(),
-            value: value.to_string(),
-        })
-    }
-}
-
-impl From<Property> for DbValue {
-    fn from(value: Property) -> Self {
-        format!("{}={}", value.name, value.value).into()
-    }
+    #[agdb(skip)]
+    _skipped: (),
+    #[agdb(flatten)]
+    sub: SubProperty,
 }
 
 fn main() -> Result<(), DbError> {
@@ -92,8 +62,20 @@ fn main() -> Result<(), DbError> {
 
     // Inserts root node for users with an alias. You can loosely
     // think of it akin to a table in relational databases.
-    db.exec_mut(QueryBuilder::insert().nodes().aliases(["users"]).query())?;
+    db.exec_mut(
+        QueryBuilder::insert()
+            .nodes()
+            .aliases(["users", "types"])
+            .query(),
+    )?;
 
+    users(&mut db)?;
+    overlapping_types(&mut db)?;
+
+    Ok(())
+}
+
+fn users(db: &mut DbMemory) -> Result<(), DbError> {
     // Prepare some data to be inserted into the database. In this
     // case a couple of users.
     let users = vec![
@@ -106,6 +88,8 @@ fn main() -> Result<(), DbError> {
                 name: "email".to_string(),
                 value: "user1@example.com".to_string(),
             }],
+            _skipped: (),
+            sub: SubProperty { id: 1 },
         },
         User {
             username: "user2".to_string(),
@@ -113,6 +97,8 @@ fn main() -> Result<(), DbError> {
             display_name: Some("DbUser2".into()),
             status: UserStatus::Inactive,
             extra: vec![],
+            _skipped: (),
+            sub: SubProperty { id: 2 },
         },
     ];
 
@@ -168,6 +154,76 @@ fn main() -> Result<(), DbError> {
         .try_into()?;
 
     println!("{user:?}");
+
+    Ok(())
+}
+
+fn overlapping_types(db: &mut DbMemory) -> Result<(), DbError> {
+    // Deriving from agdb::DbElement acts similar to DbType derive
+    // but additionally implements `DbType::db_element_id()` method
+    // to allow disambiguation of types by using their name as additional
+    // property, i.e. `"db_element_id" = "T"`. If implemented it allows
+    // working with overlapping types and simplifies some queries.
+    #[derive(Debug, DbElement)]
+    struct T1 {
+        name: String,
+    }
+
+    #[derive(Debug, DbElement)]
+    struct T2 {
+        name: String,
+    }
+
+    // Create two type examples with overlapping fields.
+    let type1 = T1 {
+        name: "Type One".to_string(),
+    };
+    let type2 = T2 {
+        name: "Type Two".to_string(),
+    };
+
+    // Insert the types as new nodes into the database.
+    let type1 = db
+        .exec_mut(QueryBuilder::insert().element(type1).query())?
+        .elements[0]
+        .id;
+    let type2 = db
+        .exec_mut(QueryBuilder::insert().element(type2).query())?
+        .elements[0]
+        .id;
+
+    // Link the types with the "types" node.
+    db.exec_mut(
+        QueryBuilder::insert()
+            .edges()
+            .from("types")
+            .to([type1, type2])
+            .query(),
+    )?;
+
+    // Now let's query the overlapping types. Notice we do not need to use any conditions
+    // and we get back each type correctly although both are reachable.
+    let type1: T1 = db
+        .exec(
+            QueryBuilder::select()
+                .element::<T1>()
+                .search()
+                .from("types")
+                .query(),
+        )?
+        .try_into()?;
+    let type2: T2 = db
+        .exec(
+            QueryBuilder::select()
+                .element::<T2>()
+                .search()
+                .from("types")
+                .query(),
+        )?
+        .try_into()?;
+
+    println!("Type1: {type1:?}");
+    println!("Type2: {type2:?}");
 
     Ok(())
 }

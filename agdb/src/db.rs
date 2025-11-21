@@ -201,7 +201,6 @@ pub struct DbImpl<Store: StorageData> {
     graph: DbGraph<Store>,
     aliases: DbIndexedMap<String, DbId, Store>,
     indexes: DbIndexes<Store>,
-    //values: MultiMapStorage<DbId, DbKeyValue, Store>,
     values: DbKeyValues<Store>,
     undo_stack: Vec<Command>,
 }
@@ -268,6 +267,19 @@ impl<Store: StorageData> DbImpl<Store> {
                 Err(db_error)
             }
         }
+    }
+
+    /// Tries to create a new database with the given `data` store.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use agdb::{DbMemory, MemoryStorage, StorageData};
+    ///
+    /// let mut db = DbMemory::with_data(MemoryStorage::new("test").unwrap()).unwrap();
+    /// ```
+    pub fn with_data(data: Store) -> Result<Self, DbError> {
+        Self::try_new_with_storage(Storage::with_data(data)?)
     }
 
     /// Flushes the underlying file and copies it

@@ -3,6 +3,7 @@ use agdb::AgdbSerialize;
 use agdb::DbElement;
 use agdb::DbError;
 use agdb::DbId;
+use agdb::DbMemory;
 use agdb::DbSerialize;
 use agdb::DbType;
 use agdb::DbTypeMarker;
@@ -1025,6 +1026,12 @@ fn derive_db_type_skip_generic() {
         #[agdb(skip)]
         _generic: std::sync::Arc<u64>,
     }
+
+    let _ = S {
+        db_id: None,
+        name: "test".to_string(),
+        _generic: std::sync::Arc::new(42),
+    };
 }
 
 #[test]
@@ -1044,4 +1051,152 @@ fn derive_db_value_vec_t() {
     struct MyVec<T: AgdbSerialize> {
         values: Vec<T>,
     }
+}
+
+#[test]
+fn derive_db_type_db_id_no_option() {
+    #[derive(DbType, PartialEq)]
+    struct S {
+        db_id: DbId,
+        name: String,
+    }
+
+    let mut db = TestDb::new();
+    db.exec_mut(
+        QueryBuilder::insert()
+            .element(&S {
+                db_id: DbId::default(),
+                name: "name".to_string(),
+            })
+            .query(),
+        1,
+    );
+    let s: S = db
+        .exec_result(QueryBuilder::select().elements::<S>().ids(1).query())
+        .try_into()
+        .unwrap();
+    assert_eq!(s.db_id, DbId(1));
+    assert_eq!(s.name, "name");
+}
+
+#[test]
+fn derive_db_element() {
+    #[derive(DbElement)]
+    struct Type1 {
+        db_id: DbId,
+        name: String,
+    }
+
+    #[derive(DbElement)]
+    struct Type2 {
+        db_id: DbId,
+        name: String,
+    }
+
+    let mut db = TestDb::new();
+    let root_id = db
+        .exec_mut_result(QueryBuilder::insert().nodes().aliases("root").query())
+        .elements[0]
+        .id;
+    let ty1 = db
+        .exec_mut_result(
+            QueryBuilder::insert()
+                .element(&Type1 {
+                    db_id: DbId::default(),
+                    name: "type1".to_string(),
+                })
+                .query(),
+        )
+        .elements[0]
+        .id;
+    let ty2 = db
+        .exec_mut_result(
+            QueryBuilder::insert()
+                .element(&Type2 {
+                    db_id: DbId::default(),
+                    name: "type2".to_string(),
+                })
+                .query(),
+        )
+        .elements[0]
+        .id;
+    db.exec_mut(
+        QueryBuilder::insert()
+            .edges()
+            .from(root_id)
+            .to([ty1, ty2])
+            .query(),
+        2,
+    );
+
+    let ty1_result: Vec<Type1> = db
+        .exec_result(
+            QueryBuilder::select()
+                .elements::<Type1>()
+                .search()
+                .from("root")
+                .query(),
+        )
+        .try_into()
+        .unwrap();
+
+    assert_eq!(ty1_result.len(), 1);
+    assert_eq!(ty1_result[0].name, "type1");
+}
+
+#[test]
+fn insert_element_by_value() {
+    #[derive(DbElement)]
+    struct Type1 {
+        name: String,
+    }
+
+    let mut db = TestDb::new();
+
+    db.exec_mut(
+        QueryBuilder::insert()
+            .element(Type1 {
+                name: "test".to_string(),
+            })
+            .query(),
+        2,
+    );
+}
+
+#[test]
+fn implicit_and_explicit_condition_with_db_element_derive() {
+    #[derive(Debug, DbElement)]
+    struct S {
+        title: String,
+    }
+
+    let mut db = DbMemory::new("").unwrap();
+    db.exec_mut(QueryBuilder::insert().nodes().aliases("root").query())
+        .unwrap();
+    db.exec_mut(
+        QueryBuilder::insert()
+            .element(S {
+                title: "test".to_string(),
+            })
+            .query(),
+    )
+    .unwrap();
+    db.exec_mut(QueryBuilder::insert().edges().from("root").to(2).query())
+        .unwrap();
+
+    let _result: S = db
+        .exec(
+            QueryBuilder::select()
+                .elements::<S>()
+                .search()
+                .from("root")
+                .where_()
+                .node()
+                .or()
+                .edge()
+                .query(),
+        )
+        .unwrap()
+        .try_into()
+        .unwrap();
 }

@@ -3,6 +3,7 @@ use agdb::AgdbSerialize;
 use agdb::DbElement;
 use agdb::DbError;
 use agdb::DbId;
+use agdb::DbMemory;
 use agdb::DbSerialize;
 use agdb::DbType;
 use agdb::DbTypeMarker;
@@ -1154,4 +1155,42 @@ fn insert_element_by_value() {
             .query(),
         2,
     );
+}
+
+#[test]
+fn implicit_and_explicit_condition_with_db_element_derive() {
+    #[derive(Debug, DbElement)]
+    struct S {
+        title: String,
+    }
+
+    let mut db = DbMemory::new("").unwrap();
+    db.exec_mut(QueryBuilder::insert().nodes().aliases("root").query())
+        .unwrap();
+    db.exec_mut(
+        QueryBuilder::insert()
+            .element(S {
+                title: "test".to_string(),
+            })
+            .query(),
+    )
+    .unwrap();
+    db.exec_mut(QueryBuilder::insert().edges().from("root").to(2).query())
+        .unwrap();
+
+    let _result: S = db
+        .exec(
+            QueryBuilder::select()
+                .elements::<S>()
+                .search()
+                .from("root")
+                .where_()
+                .node()
+                .or()
+                .edge()
+                .query(),
+        )
+        .unwrap()
+        .try_into()
+        .unwrap();
 }

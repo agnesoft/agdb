@@ -1,6 +1,6 @@
 [package]
 name = "agdb_api"
-version = "0.12.4"
+version = "0.12.5"
 edition = "2024"
 license = "Apache-2.0"
 homepage = "https://github.com/agnesoft/agdb"
@@ -20,7 +20,7 @@ native-tls = ["reqwest/native-tls"]
 api = ["agdb/api"]
 
 [dependencies]
-agdb = { version = "0.12.4", path = "../../agdb", features = ["serde", "openapi"] }
+agdb = { version = "0.12.5", path = "../../agdb", features = ["serde", "openapi"] }
 reqwest = { version = "0.12", default-features = false, features = ["charset", "http2", "macos-system-configuration", "json"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"

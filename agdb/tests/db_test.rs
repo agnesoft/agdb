@@ -714,3 +714,35 @@ fn with_data() {
 
     assert_eq!(count, 1);
 }
+
+#[test]
+fn using_ref_insert_element() {
+    struct S {}
+
+    impl agdb::DbType for S {
+        type ValueType = Self;
+
+        fn db_id(&self) -> Option<QueryId> {
+            None
+        }
+
+        fn db_keys() -> Vec<agdb::DbValue> {
+            vec![]
+        }
+
+        fn from_db_element(_element: &agdb::DbElement) -> Result<Self::ValueType, agdb::DbError> {
+            Ok(S {})
+        }
+
+        fn to_db_values(&self) -> Vec<agdb::DbKeyValue> {
+            vec![]
+        }
+    }
+
+    let mut db = DbMemory::new("test").unwrap();
+    let s = S {};
+    db.exec_mut(QueryBuilder::insert().element(&s).query())
+        .unwrap();
+    db.exec_mut(QueryBuilder::insert().element(s).query())
+        .unwrap();
+}

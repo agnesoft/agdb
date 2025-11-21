@@ -94,35 +94,6 @@ pub fn derive_impl(item: TokenStream, element_id: bool) -> TokenStream {
             #element_id_tokens
         }
 
-        impl ::agdb::DbType for &#name {
-            type ValueType = #name;
-
-            #[track_caller]
-            fn db_id(&self) -> ::std::option::Option<::agdb::QueryId> {
-                #name::db_id(*self)
-            }
-
-            #[track_caller]
-            fn db_keys() -> ::std::vec::Vec<::agdb::DbValue> {
-                #name::db_keys()
-            }
-
-            #[track_caller]
-            fn from_db_element(element: &::agdb::DbElement) -> ::std::result::Result<Self::ValueType, ::agdb::DbError> {
-                #name::from_db_element(element)
-            }
-
-            #[track_caller]
-            fn to_db_values(&self) -> ::std::vec::Vec<::agdb::DbKeyValue> {
-                #name::to_db_values(*self)
-            }
-
-            #[track_caller]
-            fn db_element_id() -> ::std::option::Option<::agdb::DbValue> {
-                #name::db_element_id()
-            }
-        }
-
         impl TryFrom<&::agdb::DbElement> for #name {
             type Error = ::agdb::DbError;
 

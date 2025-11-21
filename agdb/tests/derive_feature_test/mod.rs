@@ -1026,6 +1026,12 @@ fn derive_db_type_skip_generic() {
         #[agdb(skip)]
         _generic: std::sync::Arc<u64>,
     }
+
+    let _ = S {
+        db_id: None,
+        name: "test".to_string(),
+        _generic: std::sync::Arc::new(42),
+    };
 }
 
 #[test]

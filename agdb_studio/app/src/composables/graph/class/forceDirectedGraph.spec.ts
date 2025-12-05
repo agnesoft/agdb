@@ -25,9 +25,9 @@ describe("ForceDirectedGraph 2D", () => {
 
     // position of third node
     const node3 = graph.getNodes()[2];
-    expect(node3.getCoordinates().x).toBeCloseTo(3.684244, 6);
-    expect(node3.getCoordinates().y).toBeCloseTo(1.557673, 6);
-    expect(node3.getCoordinates().z).toBe(0);
+    expect(node3?.getCoordinates().x).toBeCloseTo(3.684244, 6);
+    expect(node3?.getCoordinates().y).toBeCloseTo(1.557673, 6);
+    expect(node3?.getCoordinates().z).toBe(0);
   });
 
   it("should simulate the graph correctly", () => {
@@ -38,9 +38,9 @@ describe("ForceDirectedGraph 2D", () => {
 
     // position of third node
     const node3 = graph.getNodes()[2];
-    expect(node3.getCoordinates().x).toBeCloseTo(results.x, 6);
-    expect(node3.getCoordinates().y).toBeCloseTo(results.y, 6);
-    expect(node3.getCoordinates().z).toBe(results.z);
+    expect(node3?.getCoordinates().x).toBeCloseTo(results.x, 6);
+    expect(node3?.getCoordinates().y).toBeCloseTo(results.y, 6);
+    expect(node3?.getCoordinates().z).toBe(results.z);
   });
 
   it("should calculate the performance", () => {
@@ -71,9 +71,9 @@ describe("ForceDirectedGraph 3D", () => {
 
     // position of third node
     const node3 = graph.getNodes()[2];
-    expect(node3.getCoordinates().x).toBeCloseTo(3.684244, 6);
-    expect(node3.getCoordinates().y).toBeCloseTo(5.241917, 6);
-    expect(node3.getCoordinates().z).toBeCloseTo(1.557673, 6);
+    expect(node3?.getCoordinates().x).toBeCloseTo(3.684244, 6);
+    expect(node3?.getCoordinates().y).toBeCloseTo(5.241917, 6);
+    expect(node3?.getCoordinates().z).toBeCloseTo(1.557673, 6);
   });
 
   it("should simulate the graph correctly", () => {

@@ -216,6 +216,7 @@ const useForceDirectedGraph = function (
       const nodeA = nodes[i];
       for (let j = i + 1; j < nodes.length; j++) {
         const nodeB = nodes[j];
+        if (!nodeA || !nodeB) continue;
         const dx = nodeB.getX() - nodeA.getX();
         const dy = nodeB.getY() - nodeA.getY();
         const dz = nodeB.getZ() - nodeA.getZ();

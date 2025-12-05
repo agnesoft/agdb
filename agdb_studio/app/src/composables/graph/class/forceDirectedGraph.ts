@@ -201,6 +201,7 @@ export default class ForceDirectedGraph {
       const nodeA = this.nodes[i];
       for (let j = i + 1; j < this.nodes.length; j++) {
         const nodeB = this.nodes[j];
+        if (!nodeA || !nodeB) continue;
         const dx = nodeB.getX() - nodeA.getX();
         const dy = nodeB.getY() - nodeA.getY();
         const dz = nodeB.getZ() - nodeA.getZ();

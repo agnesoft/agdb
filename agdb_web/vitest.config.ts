@@ -14,7 +14,6 @@ export default defineConfig({
         root: path.resolve(__dirname, "."),
         coverage: {
             provider: "v8",
-            all: true,
             exclude: [
                 ...coverageConfigDefaults.exclude,
                 "e2e/*",

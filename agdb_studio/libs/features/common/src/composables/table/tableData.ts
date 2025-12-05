@@ -22,8 +22,12 @@ const setTableData = <T extends TRow>(
   table.data = new Map<string, T>();
   for (const rowIndex in data) {
     const rowData: TRow = {};
+    const row = data[rowIndex];
+    if(!row) {
+      continue;
+    }
     table.columns.forEach((column) => {
-      rowData[column.key] = data[rowIndex][column.key];
+      rowData[column.key] = row[column.key] ?? "";
     });
 
     table.data.set(getRowKey(rowData, table.uniqueKey), rowData);
@@ -70,6 +74,9 @@ const getRows = <T extends TRow>(tableName: symbol | string): [string, T][] => {
   });
   const sortedRows = filteredRows.sort((a, b) => {
     for (const [sortKey, sortOrder] of filter.sort) {
+      if(a[1][sortKey] === undefined || b[1][sortKey] === undefined) {
+        continue;
+      }
       if (a[1][sortKey] < b[1][sortKey]) {
         return sortOrder === "asc" ? -1 : 1;
       }

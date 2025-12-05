@@ -1,8 +1,7 @@
-import { expect, describe, it, vi } from "vitest";
+import { expect, describe, it, vi, beforeEach } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 
 import { OpenApi } from "./openapi";
-import { beforeEach } from "node:test";
 
 const jsonMock = {
     openapi: "3.0.0",

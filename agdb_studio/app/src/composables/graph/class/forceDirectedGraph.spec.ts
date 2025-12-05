@@ -1,6 +1,7 @@
 import ForceDirectedGraph from "@/composables/graph/class/forceDirectedGraph";
 import { describe, it, expect, beforeEach } from "vitest";
 import simpleData from "@/tests/data/simpleData.json" assert { type: "json" };
+import Node from "@/composables/graph/class/node";
 
 describe("ForceDirectedGraph 2D", () => {
   let graph: ForceDirectedGraph;
@@ -55,6 +56,34 @@ describe("ForceDirectedGraph 2D", () => {
     graph.loadGraph(graphData);
     const foundNode = graph.findNode(118);
     expect(foundNode?.getId()).toBe(118);
+  });
+});
+
+describe("ForceDirectedGraph undefined node handling", () => {
+  it("skips undefined nodes in repulsion loop without throwing", () => {
+    const graph = new ForceDirectedGraph({ is2d: true });
+
+    // create two real nodes and insert an undefined hole between them
+    const n1 = new Node({
+      id: 1,
+      values: {},
+      coordinates: { x: 0, y: 0, z: 0 },
+    });
+    const n2 = new Node({
+      id: 2,
+      values: {},
+      coordinates: { x: 10, y: 0, z: 0 },
+    });
+
+    // inject internal nodes array with an undefined entry to hit the guard
+    (graph as any).nodes = [n1, undefined, n2];
+
+    // Call the private method directly to exercise the branch
+    expect(() => (graph as any).applyRepulsionForces()).not.toThrow();
+
+    // Velocities for the defined nodes should have been updated
+    expect(n1.getVelocityLength()).toBeGreaterThan(0);
+    expect(n2.getVelocityLength()).toBeGreaterThan(0);
   });
 });
 

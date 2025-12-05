@@ -13,7 +13,8 @@
         "test": "vitest run --coverage",
         "test:e2e": "playwright test",
         "before-commit": "pnpm run format && pnpm run lint && pnpm run build && pnpm run test && pnpm run test:e2e",
-        "type-check": "tsc --noEmit"
+        "type-check": "tsc --noEmit",
+        "host-coverage": "npx vite preview --outDir coverage"
     },
     "dependencies": {
         "@theguild/remark-mermaid": "catalog:",

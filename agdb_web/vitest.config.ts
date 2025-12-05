@@ -21,6 +21,8 @@ export default defineConfig({
                 "middleware.ts",
                 "*/_app.tsx",
                 "**/_meta.ts",
+                "**/*.json",
+                "**/*.scss",
             ],
             thresholds: {
                 lines: 100,

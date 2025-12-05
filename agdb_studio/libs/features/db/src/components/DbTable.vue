@@ -15,7 +15,11 @@ addTable({
   name: TABLE_KEY,
   columns: dbColumns,
   uniqueKey: (row) =>
-    getDbName({ owner: row.owner?.toString() ?? "", db: row.db?.toString() ?? "" }),
+    /* v8 ignore next -- @preserve */
+    getDbName({
+      owner: row.owner?.toString() ?? "",
+      db: row.db?.toString() ?? "",
+    }),
   fetchData: fetchDatabases,
 });
 

@@ -22,10 +22,7 @@ const fetchUserStatus = async () => {
     admin.value = status.data.admin;
   });
 };
-watch(
-  () => token.value,
-  () => fetchUserStatus,
-);
+watch(() => token.value, fetchUserStatus);
 
 export const useAccount = (): {
   username: typeof username;

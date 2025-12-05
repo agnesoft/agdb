@@ -80,6 +80,13 @@ describe("client service", () => {
         >);
       }).toThrow("Client is not initialized");
     });
+    it("does not throw error if client is initialized", () => {
+      expect(() => {
+        checkClient({ value: {} as AgdbApiClient } as unknown as ComputedRef<
+          AgdbApiClient | undefined
+        >);
+      }).not.toThrow();
+    });
   });
   describe("removeToken", () => {
     it("reloads the page", () => {
@@ -103,6 +110,25 @@ describe("client service", () => {
       initClient();
       expect(() => removeToken()).not.toThrow();
       expect(window.location.reload).toHaveBeenCalled();
+    });
+    it("does not reload on login page", () => {
+      Object.defineProperty(window, "location", {
+        value: { pathname: "/studio/login", reload: vi.fn() },
+      });
+      client.mockResolvedValue({
+        interceptors: {
+          response: {
+            use: vi.fn(),
+          },
+          request: {
+            use: vi.fn(),
+          },
+        },
+        reset_token: vi.fn(),
+      } as unknown as AgdbApiClient);
+      initClient();
+      removeToken();
+      expect(window.location.reload).not.toHaveBeenCalled();
     });
   });
 });

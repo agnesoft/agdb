@@ -11,7 +11,8 @@
     "lint:check": "eslint --max-warnings=0 .",
     "format": "prettier --write src/",
     "format:check": "prettier --check src/",
-    "before-commit": "pnpm run format && pnpm run lint && pnpm run test"
+    "before-commit": "pnpm run format && pnpm run lint && pnpm run test",
+    "host-coverage": "npx vite preview --outDir coverage"
   },
   "dependencies": {
     "vue": "catalog:",

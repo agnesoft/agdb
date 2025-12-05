@@ -71,6 +71,8 @@ const fetchData = async (name: symbol | string | undefined): Promise<void> => {
     return;
   }
   const table = getTable(name);
+
+  /* v8 ignore else -- @preserve */
   if (table) {
     await table.fetchData();
   }

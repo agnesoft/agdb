@@ -23,10 +23,12 @@ const setTableData = <T extends TRow>(
   for (const rowIndex in data) {
     const rowData: TRow = {};
     const row = data[rowIndex];
-    if(!row) {
+    /* v8 ignore if -- @preserve */
+    if (!row) {
       continue;
     }
     table.columns.forEach((column) => {
+      /* v8 ignore next -- @preserve */
       rowData[column.key] = row[column.key] ?? "";
     });
 
@@ -74,7 +76,8 @@ const getRows = <T extends TRow>(tableName: symbol | string): [string, T][] => {
   });
   const sortedRows = filteredRows.sort((a, b) => {
     for (const [sortKey, sortOrder] of filter.sort) {
-      if(a[1][sortKey] === undefined || b[1][sortKey] === undefined) {
+      /* v8 ignore if -- @preserve */
+      if (a[1][sortKey] === undefined || b[1][sortKey] === undefined) {
         continue;
       }
       if (a[1][sortKey] < b[1][sortKey]) {

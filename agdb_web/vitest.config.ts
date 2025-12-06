@@ -14,7 +14,6 @@ export default defineConfig({
         root: path.resolve(__dirname, "."),
         coverage: {
             provider: "v8",
-            all: true,
             exclude: [
                 ...coverageConfigDefaults.exclude,
                 "e2e/*",
@@ -22,6 +21,8 @@ export default defineConfig({
                 "middleware.ts",
                 "*/_app.tsx",
                 "**/_meta.ts",
+                "**/*.json",
+                "**/*.scss",
             ],
             thresholds: {
                 lines: 100,

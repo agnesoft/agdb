@@ -14,7 +14,7 @@ catalog:
   "@testing-library/react": ^16
   "@theguild/remark-mermaid": ^0.2
   "@tsconfig/node18": ^18
-  "@types/jsdom": ^21
+  "@types/jsdom": ^27
   "@types/node": ^24
   "@types/react-dom": ^18
   "@types/react": ^18
@@ -22,14 +22,14 @@ catalog:
   "@typescript-eslint/parser": ^8
   "@vitejs/plugin-react": ^4
   "@vitejs/plugin-vue": ^6
-  "@vitest/coverage-istanbul": ^3
-  "@vitest/coverage-v8": ^3
+  "@vitest/coverage-istanbul": ^4
+  "@vitest/coverage-v8": ^4
   "@vue/eslint-config-prettier": ^10
   "@vue/eslint-config-typescript": ^14
   "@vue/test-utils": ^2
-  "@vue/tsconfig": ^0.7
-  "@vueuse/components": ^13
-  "@vueuse/core": ^13
+  "@vue/tsconfig": ^0.8
+  "@vueuse/components": ^14
+  "@vueuse/core": ^14
   axios: ^1
   copyfiles: ^2
   eslint-config-next: ^15
@@ -41,7 +41,7 @@ catalog:
   eslint: ^9
   globals: ^16.0.0
   highlight.js: ^11
-  jsdom: ^26
+  jsdom: ^27
   less: ^4
   next: =15.4
   nextra-theme-docs: ^3
@@ -56,9 +56,9 @@ catalog:
   sass: ^1
   turbo: ^2
   typescript-eslint: ^8
-  typescript: ~5
+  typescript: ^5
   vite: ^7
-  vitest: ^3
+  vitest: ^4
   vue-router: ^4
   vue-tsc: ^3
   vue: ^3

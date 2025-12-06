@@ -34,7 +34,7 @@ const mapActions = (actions: Action<TRow>[]): Action<undefined>[] => {
         ? async ({
             event,
           }: ActionProps<undefined>): Promise<boolean | void> => {
-            /* v8 ignore next */
+            /* v8 ignore if -- @preserve */
             if (!action.action) return false;
             const result = await action.action({
               event,

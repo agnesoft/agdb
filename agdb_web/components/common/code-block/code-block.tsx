@@ -40,6 +40,8 @@ export const CodeBlock: FC<CodeBlockProps> = ({
 
     const handleShowClick = () => {
         setHidden(false);
+
+        /* v8 ignore else -- @preserve */
         if (!code && onLoad) {
             onLoad();
         }

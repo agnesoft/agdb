@@ -37,10 +37,10 @@ export const useI18n = () => {
         setMessages(messages);
     };
 
+    /* v8 ignore next -- @preserve */
     useEffect(() => {
         import(`../messages/${defaultLocale}.json`)
             .then(processFallbackMessages)
-            /* v8 ignore next */
             .catch(() => setFallbackMessages(new Map<string, string>()));
     }, [defaultLocale]);
 

@@ -35,6 +35,7 @@ vi.mock("@agdb-studio/auth/src/account", () => {
 describe("router", () => {
   let router: Router;
   beforeEach(() => {
+    clearRouter();
     vi.clearAllMocks();
     createRouter({
       history: createWebHistory("test"),
@@ -127,13 +128,6 @@ describe("router", () => {
     expect(router.currentRoute.value.name).toBe("admin-db");
   });
 
-  // it("loads the not found page", async () => {
-  //   isLoggedInMock.value = true;
-
-  //   await router.push("/not-found");
-
-  //   expect(router.currentRoute.value.name).toBe("not-found");
-  // });
   describe("getRouter", () => {
     it("throws an error if router is not created", () => {
       clearRouter();

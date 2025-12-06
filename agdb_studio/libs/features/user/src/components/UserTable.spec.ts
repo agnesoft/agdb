@@ -1,25 +1,20 @@
 import { vi, describe, it, beforeEach, expect } from "vitest";
 import UserTable from "./UserTable.vue";
 import { mount, shallowMount } from "@vue/test-utils";
+import { ref, nextTick } from "vue";
 
-const { users } = vi.hoisted(() => {
-  return {
-    users: {
-      value: [
-        {
-          username: "test_user",
-          admin: false,
-          login: false,
-        },
-        {
-          username: "test_user2",
-          admin: false,
-          login: false,
-        },
-      ],
-    },
-  };
-});
+const users = ref([
+  {
+    username: "test_user",
+    admin: false,
+    login: false,
+  },
+  {
+    username: "test_user2",
+    admin: false,
+    login: false,
+  },
+]);
 
 vi.mock("../composables/userStore", () => {
   return {
@@ -41,6 +36,9 @@ describe("UserTable", () => {
   it("should render message when no users", () => {
     users.value = [];
     const wrapper = mount(UserTable);
-    expect(wrapper.text()).toContain("No users found");
+    // wait for Vue to flush reactivity
+    return nextTick().then(() => {
+      expect(wrapper.text()).toContain("No users found");
+    });
   });
 });

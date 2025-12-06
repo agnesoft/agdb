@@ -1,6 +1,5 @@
 import { mount, shallowMount } from "@vue/test-utils";
-import { nextTick } from "vue";
-import DbTable from "./DbTable.vue";
+import { nextTick, ref, type Ref } from "vue";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const DATABASES = [
@@ -21,15 +20,16 @@ const DATABASES = [
     backup: 0,
   },
 ];
-
-const { databases, getDbName } = vi.hoisted(() => {
-  // create a real Vue ref inside the hoisted factory to avoid TDZ when vitest hoists mocks
-  // @ts-ignore
-  const { ref } = require("vue");
-  const databases = ref([] as typeof DATABASES);
+const { getDbName } = vi.hoisted(() => {
   const getDbName = vi.fn().mockImplementation((db) => `${db.owner}/${db.db}`);
-  return { databases, getDbName };
+  return { getDbName };
 });
+
+let { databases } = vi.hoisted(() => {
+  return { databases: null as unknown as Ref<typeof DATABASES> };
+});
+
+databases = ref([] as typeof DATABASES);
 
 vi.mock("../composables/dbStore", () => {
   return {
@@ -37,11 +37,12 @@ vi.mock("../composables/dbStore", () => {
   };
 });
 
+import DbTable from "./DbTable.vue";
+
 describe("DbTable", () => {
   beforeEach(() => {
     databases.value = DATABASES;
-    // reset mock call history
-    getDbName.mockClear && getDbName.mockClear();
+    vi.clearAllMocks();
   });
   it("should create table and render databases", () => {
     const wrapper = shallowMount(DbTable);

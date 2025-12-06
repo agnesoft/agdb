@@ -5,6 +5,7 @@ import AgdbModal from "@agdb-studio/common/src/components/modal/AgdbModal.vue";
 import FadeTransition from "@agdb-studio/design/src/components/transitions/FadeTransition.vue";
 import NotificationViewer from "@agdb-studio/notification/src/components/NotificationViewer.vue";
 import ProfileDropdown from "@agdb-studio/profile/src/components/ProfileDropdown.vue";
+import ClusterStatusIndicator from "@agdb-studio/cluster/src/components/ClusterStatusIndicator.vue";
 import { computed } from "vue";
 import { useAdmin } from "@agdb-studio/profile/src/composables/admin";
 
@@ -37,7 +38,10 @@ const links = computed(() => {
             link.text
           }}</RouterLink>
         </nav>
-        <ProfileDropdown />
+        <div class="header-actions">
+          <ClusterStatusIndicator />
+          <ProfileDropdown />
+        </div>
       </div>
     </header>
     <main>
@@ -141,6 +145,12 @@ nav a:first-of-type {
     width: 100%;
     align-items: center;
     justify-content: space-between;
+  }
+
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
   }
 
   nav {

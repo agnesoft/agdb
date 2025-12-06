@@ -223,7 +223,7 @@ importers:
     dependencies:
       openapi-client-axios:
         specifier: ^7.6.0
-        version: 7.6.0(axios@1.13.2)(js-yaml@4.1.1)
+        version: 7.6.0(axios@1.13.2(debug@4.4.3))(js-yaml@4.1.1)
     devDependencies:
       '@eslint/js':
         specifier: 'catalog:'
@@ -400,6 +400,9 @@ importers:
       '@agdb-studio/auth':
         specifier: workspace:*
         version: link:../libs/core/auth
+      '@agdb-studio/cluster':
+        specifier: workspace:*
+        version: link:../libs/features/cluster
       '@agdb-studio/common':
         specifier: workspace:*
         version: link:../libs/features/common
@@ -765,6 +768,46 @@ importers:
         version: 3.0.5(typescript@5.9.3)
 
   agdb_studio/libs/core/utils:
+    devDependencies:
+      '@agdb-studio/testing':
+        specifier: workspace:*
+        version: link:../../config/testing
+      '@agdb-studio/tsconfig':
+        specifier: workspace:*
+        version: link:../../config/tsconfig
+      eslint:
+        specifier: 'catalog:'
+        version: 9.39.1
+      prettier:
+        specifier: 'catalog:'
+        version: 3.6.2
+      vite:
+        specifier: 'catalog:'
+        version: 7.2.2(@types/node@24.1.0)(less@4.4.0)(sass@1.89.2)(yaml@2.8.0)
+      vitest:
+        specifier: 'catalog:'
+        version: 4.0.15(@types/node@24.1.0)(jsdom@27.2.0)(less@4.4.0)(sass@1.89.2)(yaml@2.8.0)
+      vue-tsc:
+        specifier: 'catalog:'
+        version: 3.0.5(typescript@5.9.3)
+
+  agdb_studio/libs/features/cluster:
+    dependencies:
+      '@agdb-studio/api':
+        specifier: workspace:*
+        version: link:../../core/api
+      '@agdb-studio/design':
+        specifier: workspace:*
+        version: link:../../core/design
+      '@agdb-studio/utils':
+        specifier: workspace:*
+        version: link:../../core/utils
+      '@agnesoft/agdb_api':
+        specifier: workspace:*
+        version: link:../../../../agdb_api/typescript
+      vue:
+        specifier: 'catalog:'
+        version: 3.5.18(typescript@5.9.3)
     devDependencies:
       '@agdb-studio/testing':
         specifier: workspace:*
@@ -14093,7 +14136,7 @@ snapshots:
       js-yaml: 4.1.1
       openapi-types: 12.1.3
 
-  openapi-client-axios@7.6.0(axios@1.13.2)(js-yaml@4.1.1):
+  openapi-client-axios@7.6.0(axios@1.13.2(debug@4.4.3))(js-yaml@4.1.1):
     dependencies:
       axios: 1.13.2(debug@4.4.3)
       bath-es5: 3.0.3

@@ -2,6 +2,7 @@
 import { computed, ref } from "vue";
 import { useClusterStatus } from "../composables/clusterStatus";
 import { PhFillCrownSimple } from "@kalimahapps/vue-icons";
+import FadeTransition from "@agdb-studio/design/src/components/transitions/FadeTransition.vue";
 
 const { servers, overallStatus, isLoading, fetchStatus } = useClusterStatus();
 
@@ -35,33 +36,42 @@ const leaderPosition = computed(() => {
     @mouseenter="handleMouseEnter"
     @mouseleave="handleMouseLeave"
   >
-    <span> Cluster [{{ leaderPosition }}] </span>
+    <FadeTransition>
+      <span v-if="leaderPosition !== -1"> Cluster [{{ leaderPosition }}] </span>
+    </FadeTransition>
     <div
       class="status-indicator"
       :class="overallStatus"
       :title="`Cluster status: ${overallStatus}`"
     />
 
-    <div v-if="showDetails" class="status-details">
-      <div v-if="isLoading" class="loading">Loading...</div>
-      <div v-else-if="servers.length === 0" class="no-servers">
-        No servers found
-      </div>
-      <div v-else class="servers-list">
-        <div
-          v-for="server in servers"
-          :key="server.address"
-          class="server-item"
-          :class="{ offline: !server.status }"
-        >
-          <span class="server-address">{{ server.address }}</span>
-          <PhFillCrownSimple data-testid="crown-icon" v-if="server.leader" />
-          <span class="server-status">
-            {{ server.status ? "Online" : "Offline" }}
-          </span>
+    <FadeTransition>
+      <div v-if="showDetails" class="status-details-wrapper">
+        <div class="status-details">
+          <div v-if="isLoading" class="loading">Loading...</div>
+          <div v-else-if="servers.length === 0" class="no-servers">
+            No servers found
+          </div>
+          <div v-else class="servers-list">
+            <div
+              v-for="server in servers"
+              :key="server.address"
+              class="server-item"
+              :class="{ offline: !server.status }"
+            >
+              <span class="server-address">{{ server.address }}</span>
+              <PhFillCrownSimple
+                data-testid="crown-icon"
+                v-if="server.leader"
+              />
+              <span class="server-status">
+                {{ server.status ? "Online" : "Offline" }}
+              </span>
+            </div>
+          </div>
         </div>
       </div>
-    </div>
+    </FadeTransition>
   </div>
 </template>
 
@@ -99,17 +109,21 @@ const leaderPosition = computed(() => {
   }
 }
 
-.status-details {
+.status-details-wrapper {
   position: absolute;
-  top: calc(100% + 8px);
+  top: calc(100% - 1rem);
   right: 0;
+  z-index: 1000;
+}
+
+.status-details {
   background: var(--color-background);
   border: 1px solid var(--color-border);
   border-radius: 8px;
   padding: 0.75rem;
   min-width: 250px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  z-index: 1000;
+  margin: 1.5rem 0 0 0;
 }
 
 .loading,

@@ -10,7 +10,7 @@ const logger = createLogger("ClusterStatus");
 const POLL_INTERVAL = 15000; // 15 seconds
 
 const servers = ref<ClusterStatus[]>([]);
-const isLoading = ref(false);
+const isLoading = ref(true);
 const lastUpdated = ref<Date | null>(null);
 
 let pollInterval: ReturnType<typeof setInterval> | null = null;
@@ -39,7 +39,6 @@ export const useClusterStatus = () => {
   const fetchStatus = async (): Promise<void> => {
     try {
       checkClient(client);
-      isLoading.value = true;
       const response = await client.value.cluster_status();
       servers.value = response.data;
       lastUpdated.value = new Date();

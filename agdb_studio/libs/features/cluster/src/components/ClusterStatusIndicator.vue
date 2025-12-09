@@ -45,7 +45,12 @@ const statusText = computed(() => {
 <template>
   <div
     class="cluster-status"
+    role="button"
+    tabindex="0"
+    aria-label="Toggle cluster status details"
     @click="handleClick"
+    @keydown.enter="handleClick"
+    @keydown.space.prevent="handleClick"
     @mouseenter="handleMouseEnter"
     @mouseleave="handleMouseLeave"
   >

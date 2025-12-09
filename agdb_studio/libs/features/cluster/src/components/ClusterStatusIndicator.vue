@@ -27,6 +27,19 @@ const handleMouseLeave = () => {
 const leaderPosition = computed(() => {
   return servers.value.findIndex((server) => server.leader);
 });
+
+const statusText = computed(() => {
+  switch (overallStatus.value) {
+    case "green":
+      return "Healthy";
+    case "amber":
+      return "Degraded";
+    case "red":
+      return "Unhealthy";
+    default:
+      return "Unknown";
+  }
+});
 </script>
 
 <template>
@@ -42,7 +55,7 @@ const leaderPosition = computed(() => {
     <div
       class="status-indicator"
       :class="overallStatus"
-      :title="`Cluster status: ${overallStatus}`"
+      :title="`Cluster status: ${statusText}`"
     />
 
     <FadeTransition>
@@ -111,7 +124,7 @@ const leaderPosition = computed(() => {
 
 .status-details-wrapper {
   position: absolute;
-  top: calc(100% - 1rem);
+  top: calc(100% - 0.5rem);
   right: 0;
   z-index: 1000;
 }
@@ -123,7 +136,7 @@ const leaderPosition = computed(() => {
   padding: 0.75rem;
   min-width: 250px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  margin: 1.5rem 0 0 0;
+  margin: 1rem 0 0 0;
 }
 
 .loading,
@@ -149,10 +162,8 @@ const leaderPosition = computed(() => {
   font-size: 0.9rem;
 
   &.offline {
-    opacity: 0.6;
-
     .server-status {
-      color: var(--red-1);
+      color: var(--red-2);
     }
   }
 }

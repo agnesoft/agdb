@@ -17,8 +17,12 @@ let pollInterval: ReturnType<typeof setInterval> | null = null;
 
 export const useClusterStatus = () => {
   const overallStatus = computed((): OverallStatus => {
-    if (servers.value.length === 0) {
+    if (isLoading.value) {
       return "unknown";
+    }
+
+    if (servers.value.length === 0) {
+      return "red";
     }
 
     const allDown = servers.value.every((server) => !server.status);

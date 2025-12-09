@@ -53,7 +53,7 @@ describe("ClusterStatusIndicator", () => {
 
     const indicator = wrapper.find(".status-indicator");
     expect(indicator.exists()).toBe(true);
-    expect(indicator.attributes("style")).toContain("var(--green-1)");
+    expect(indicator.attributes("style")).toContain("var(--green)");
   });
 
   it("should render status indicator with correct color for amber status", () => {
@@ -68,7 +68,7 @@ describe("ClusterStatusIndicator", () => {
     });
 
     const indicator = wrapper.find(".status-indicator");
-    expect(indicator.attributes("style")).toContain("var(--orange-1)");
+    expect(indicator.attributes("style")).toContain("var(--orange)");
   });
 
   it("should render status indicator with correct color for red status", () => {
@@ -83,7 +83,7 @@ describe("ClusterStatusIndicator", () => {
     });
 
     const indicator = wrapper.find(".status-indicator");
-    expect(indicator.attributes("style")).toContain("var(--red-1)");
+    expect(indicator.attributes("style")).toContain("var(--red)");
   });
 
   it("should show details on mouse enter and fetch status", async () => {

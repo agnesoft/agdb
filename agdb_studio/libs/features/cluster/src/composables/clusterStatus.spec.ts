@@ -181,13 +181,14 @@ describe("useClusterStatus", () => {
 
     const vm = mountComposable();
 
-    expect(vm.lastUpdated).toBeNull();
+    const lastUpdatedBefore = vm.lastUpdated;
 
     await vi.runAllTimersAsync();
     await flushPromises();
     await nextTick();
 
     expect(vm.lastUpdated).toBeInstanceOf(Date);
+    expect(vm.lastUpdated).not.toBe(lastUpdatedBefore);
   });
 
   it("should allow manual refresh via fetchStatus", async () => {

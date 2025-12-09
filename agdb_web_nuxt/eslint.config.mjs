@@ -8,5 +8,6 @@ export default withNuxt({
     "@stylistic/semi": ["error", "always"],
     "vue/singleline-html-element-content-newline": "off",
     "vue/max-attributes-per-line": "off",
+    "@stylistic/quote-props": ["error", "as-needed"],
   },
 });

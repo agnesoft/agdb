@@ -11,7 +11,6 @@
     >
       <g
         transform="matrix(1.0064635216 -0.55789184 0.1032464873 0.1862615937 257.945711867 415.6334640175)"
-        id="ltPbvuAQ8fhZs6ubstWom"
       >
         <path
           style="
@@ -33,7 +32,6 @@
       </g>
       <g
         transform="matrix(1.0743122252 0.4123898256 -0.076319096 0.1988180424 252.0308187697 289.0862273102)"
-        id="Zdk6U7on9gmoz22ZyLfBI"
       >
         <path
           style="
@@ -55,7 +53,6 @@
       </g>
       <g
         transform="matrix(0.1601526334 1.1395451985 -0.21089041 0.0296387143 157.1285645374 362.6030348887)"
-        id="Jm6hNq7cCSswQMASj-n93"
       >
         <path
           style="
@@ -77,7 +74,6 @@
       </g>
       <g
         transform="matrix(1.215831237 0 0 1.215831237 432.7893624409 349.8720401991)"
-        id="pNZqjltyI7oKw8vIKZhK1"
       >
         <radialGradient
           id="SVGID_558"
@@ -116,7 +112,6 @@
       </g>
       <g
         transform="matrix(0.673933135 0 0 0.673933135 174.412913623 464.6345247169)"
-        id="SUWcbI03ITr5vNbJoXQXu"
       >
         <radialGradient
           id="SVGID_560"
@@ -155,7 +150,6 @@
       </g>
       <g
         transform="matrix(0.8142240117 0 0 0.8142240117 150.5125572199 242.7809744027)"
-        id="flBNkXRsypnkaF9siRVvT"
       >
         <radialGradient
           id="SVGID_565"

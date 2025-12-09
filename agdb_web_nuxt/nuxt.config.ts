@@ -49,27 +49,35 @@ export default defineNuxtConfig({
   },
 
   llms: {
-    domain: "https://docs-template.nuxt.dev/",
-    title: "Nuxt Docs Template",
+    domain: "https://agdb.agnesoft.com",
+    title: "agdb - Application Native Database",
     description:
-      "A template for building documentation with Nuxt UI and Nuxt Content.",
+      "Application native database for any use case. No query language, performance independent of data size, 10X cost reduction.",
     full: {
-      title: "Nuxt Docs Template - Full Documentation",
-      description: "This is the full documentation for the Nuxt Docs Template.",
+      title: "agdb - Full Documentation",
+      description:
+        "Complete documentation for agdb - Application native database for any use case.",
     },
     sections: [
       {
-        title: "Getting Started",
+        title: "Guides",
         contentCollection: "docs",
         contentFilters: [
-          { field: "path", operator: "LIKE", value: "/getting-started%" },
+          { field: "path", operator: "LIKE", value: "/docs/guides%" },
         ],
       },
       {
-        title: "Essentials",
+        title: "Examples",
         contentCollection: "docs",
         contentFilters: [
-          { field: "path", operator: "LIKE", value: "/essentials%" },
+          { field: "path", operator: "LIKE", value: "/docs/examples%" },
+        ],
+      },
+      {
+        title: "References",
+        contentCollection: "docs",
+        contentFilters: [
+          { field: "path", operator: "LIKE", value: "/docs/references%" },
         ],
       },
     ],

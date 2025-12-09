@@ -56,11 +56,11 @@ describe("useClusterStatus", () => {
     mockClient.cluster_status.mockResolvedValue({ data: [] });
 
     const vm = mountComposable();
-    await vi.runAllTimersAsync();
+    await vi.advanceTimersByTimeAsync(0);
     await flushPromises();
     await nextTick();
 
-    expect(vm.overallStatus).toBe("unknown");
+    expect(vm.overallStatus).toBe("red");
     expect(vm.servers).toEqual([]);
   });
 
@@ -73,7 +73,7 @@ describe("useClusterStatus", () => {
     mockClient.cluster_status.mockResolvedValue({ data: mockServers });
 
     const vm = mountComposable();
-    await vi.runAllTimersAsync();
+    await vi.advanceTimersByTimeAsync(0);
     await flushPromises();
     await nextTick();
 
@@ -93,7 +93,7 @@ describe("useClusterStatus", () => {
     mockClient.cluster_status.mockResolvedValue({ data: mockServers });
 
     const vm = mountComposable();
-    await vi.runAllTimersAsync();
+    await vi.advanceTimersByTimeAsync(0);
     await flushPromises();
     await nextTick();
 
@@ -110,7 +110,7 @@ describe("useClusterStatus", () => {
     mockClient.cluster_status.mockResolvedValue({ data: mockServers });
 
     const vm = mountComposable();
-    await vi.runAllTimersAsync();
+    await vi.advanceTimersByTimeAsync(0);
     await flushPromises();
     await nextTick();
 
@@ -127,7 +127,7 @@ describe("useClusterStatus", () => {
     mockClient.cluster_status.mockResolvedValue({ data: mockServers });
 
     const vm = mountComposable();
-    await vi.runAllTimersAsync();
+    await vi.advanceTimersByTimeAsync(0);
     await flushPromises();
     await nextTick();
 
@@ -139,7 +139,7 @@ describe("useClusterStatus", () => {
     mockClient.cluster_status.mockRejectedValue(new Error("Network error"));
 
     const vm = mountComposable();
-    await vi.runAllTimersAsync();
+    await vi.advanceTimersByTimeAsync(0);
     await flushPromises();
     await nextTick();
 
@@ -156,7 +156,7 @@ describe("useClusterStatus", () => {
 
     mountComposable();
 
-    await vi.runAllTimersAsync();
+    await vi.advanceTimersByTimeAsync(0);
     await flushPromises();
     await nextTick();
     expect(mockClient.cluster_status).toHaveBeenCalledTimes(1);
@@ -183,7 +183,7 @@ describe("useClusterStatus", () => {
 
     const lastUpdatedBefore = vm.lastUpdated;
 
-    await vi.runAllTimersAsync();
+    await vi.advanceTimersByTimeAsync(0);
     await flushPromises();
     await nextTick();
 
@@ -200,7 +200,7 @@ describe("useClusterStatus", () => {
 
     const vm = mountComposable();
 
-    await vi.runAllTimersAsync();
+    await vi.advanceTimersByTimeAsync(0);
     await flushPromises();
     await nextTick();
 

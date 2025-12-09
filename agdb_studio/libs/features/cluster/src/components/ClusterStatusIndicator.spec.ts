@@ -1,22 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { mount } from "@vue/test-utils";
-import { nextTick } from "vue";
+import { nextTick, ref } from "vue";
 import ClusterStatusIndicator from "./ClusterStatusIndicator.vue";
 import type { ClusterStatus } from "@agnesoft/agdb_api/openapi";
 
-const mockServers = vi.hoisted(() => ({
-  value: [] as ClusterStatus[],
-}));
-
-const mockOverallStatus = vi.hoisted(() => ({
-  value: "unknown" as "red" | "amber" | "green" | "unknown",
-}));
-
-const mockIsLoading = vi.hoisted(() => ({
-  value: false,
-}));
-
-const mockFetchStatus = vi.hoisted(() => vi.fn());
+const mockServers = ref<ClusterStatus[]>([]);
+const mockOverallStatus = ref<"red" | "amber" | "green" | "unknown">("unknown");
+const mockIsLoading = ref(false);
+const mockFetchStatus = vi.fn();
 
 vi.mock("../composables/clusterStatus", () => ({
   useClusterStatus: () => ({
@@ -47,13 +38,14 @@ describe("ClusterStatusIndicator", () => {
       global: {
         stubs: {
           CrownIcon: CrownIconStub,
+          FadeTransition: { template: "<div><slot /></div>" },
         },
       },
     });
 
     const indicator = wrapper.find(".status-indicator");
     expect(indicator.exists()).toBe(true);
-    expect(indicator.attributes("style")).toContain("var(--green)");
+    expect(indicator.classes()).toContain("green");
   });
 
   it("should render status indicator with correct color for amber status", () => {
@@ -63,12 +55,13 @@ describe("ClusterStatusIndicator", () => {
       global: {
         stubs: {
           CrownIcon: CrownIconStub,
+          FadeTransition: { template: "<div><slot /></div>" },
         },
       },
     });
 
     const indicator = wrapper.find(".status-indicator");
-    expect(indicator.attributes("style")).toContain("var(--orange)");
+    expect(indicator.classes()).toContain("amber");
   });
 
   it("should render status indicator with correct color for red status", () => {
@@ -78,12 +71,13 @@ describe("ClusterStatusIndicator", () => {
       global: {
         stubs: {
           CrownIcon: CrownIconStub,
+          FadeTransition: { template: "<div><slot /></div>" },
         },
       },
     });
 
     const indicator = wrapper.find(".status-indicator");
-    expect(indicator.attributes("style")).toContain("var(--red)");
+    expect(indicator.classes()).toContain("red");
   });
 
   it("should show details on mouse enter and fetch status", async () => {
@@ -95,6 +89,7 @@ describe("ClusterStatusIndicator", () => {
       global: {
         stubs: {
           CrownIcon: CrownIconStub,
+          FadeTransition: { template: "<div><slot /></div>" },
         },
       },
     });
@@ -117,6 +112,7 @@ describe("ClusterStatusIndicator", () => {
       global: {
         stubs: {
           CrownIcon: CrownIconStub,
+          FadeTransition: { template: "<div><slot /></div>" },
         },
       },
     });
@@ -139,6 +135,7 @@ describe("ClusterStatusIndicator", () => {
       global: {
         stubs: {
           CrownIcon: CrownIconStub,
+          FadeTransition: { template: "<div><slot /></div>" },
         },
       },
     });
@@ -161,6 +158,7 @@ describe("ClusterStatusIndicator", () => {
       global: {
         stubs: {
           CrownIcon: CrownIconStub,
+          FadeTransition: { template: "<div><slot /></div>" },
         },
       },
     });
@@ -180,6 +178,7 @@ describe("ClusterStatusIndicator", () => {
       global: {
         stubs: {
           CrownIcon: CrownIconStub,
+          FadeTransition: { template: "<div><slot /></div>" },
         },
       },
     });
@@ -192,6 +191,7 @@ describe("ClusterStatusIndicator", () => {
   });
 
   it("should render server list with online servers", async () => {
+    mockIsLoading.value = false;
     mockServers.value = [
       { address: "server1:8080", status: true, leader: false },
       { address: "server2:8080", status: true, leader: false },
@@ -201,6 +201,7 @@ describe("ClusterStatusIndicator", () => {
       global: {
         stubs: {
           CrownIcon: CrownIconStub,
+          FadeTransition: { template: "<div><slot /></div>" },
         },
       },
     });
@@ -216,6 +217,7 @@ describe("ClusterStatusIndicator", () => {
   });
 
   it("should show crown icon for leader server", async () => {
+    mockIsLoading.value = false;
     mockServers.value = [
       { address: "server1:8080", status: true, leader: true },
       { address: "server2:8080", status: true, leader: false },
@@ -225,6 +227,10 @@ describe("ClusterStatusIndicator", () => {
       global: {
         stubs: {
           CrownIcon: CrownIconStub,
+          FadeTransition: { template: "<div><slot /></div>" },
+          PhFillCrownSimple: {
+            template: '<div data-testid="crown-icon"></div>',
+          },
         },
       },
     });
@@ -241,6 +247,7 @@ describe("ClusterStatusIndicator", () => {
   });
 
   it("should mark offline servers with offline class", async () => {
+    mockIsLoading.value = false;
     mockServers.value = [
       { address: "server1:8080", status: true, leader: true },
       { address: "server2:8080", status: false, leader: false },
@@ -250,6 +257,10 @@ describe("ClusterStatusIndicator", () => {
       global: {
         stubs: {
           CrownIcon: CrownIconStub,
+          FadeTransition: { template: "<div><slot /></div>" },
+          PhFillCrownSimple: {
+            template: '<div data-testid="crown-icon"></div>',
+          },
         },
       },
     });

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { defineComponent, nextTick } from "vue";
-import { mount, flushPromises } from "@vue/test-utils";
+import { defineComponent, nextTick, type UnwrapRef } from "vue";
+import { mount, flushPromises, type VueWrapper } from "@vue/test-utils";
 import { useClusterStatus } from "./clusterStatus";
 import type { ClusterStatus } from "@agnesoft/agdb_api/openapi";
 
@@ -24,8 +24,11 @@ vi.mock("@agdb-studio/utils/src/logger/logger", () => ({
   }),
 }));
 
+type ComposableReturn = ReturnType<typeof useClusterStatus>;
+type TestComponentInstance = UnwrapRef<ComposableReturn>;
+
 describe("useClusterStatus", () => {
-  let wrapper: any;
+  let wrapper: VueWrapper<TestComponentInstance> | null = null;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -48,7 +51,7 @@ describe("useClusterStatus", () => {
       },
       template: "<div></div>",
     });
-    wrapper = mount(TestComponent);
+    wrapper = mount(TestComponent) as VueWrapper<TestComponentInstance>;
     return wrapper.vm;
   };
 

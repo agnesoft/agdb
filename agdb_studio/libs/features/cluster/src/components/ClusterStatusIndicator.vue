@@ -74,8 +74,8 @@ const statusText = computed(() => {
             >
               <span class="server-address">{{ server.address }}</span>
               <PhFillCrownSimple
-                data-testid="crown-icon"
                 v-if="server.leader"
+                data-testid="crown-icon"
               />
               <span class="server-status">
                 {{ server.status ? "Online" : "Offline" }}

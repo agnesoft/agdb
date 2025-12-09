@@ -76,6 +76,8 @@ const statusText = computed(() => {
               <PhFillCrownSimple
                 v-if="server.leader"
                 data-testid="crown-icon"
+                aria-label="Leader server"
+                title="Leader server"
               />
               <span class="server-status">
                 {{ server.status ? "Online" : "Offline" }}

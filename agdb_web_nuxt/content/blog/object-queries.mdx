@@ -1,0 +1,19 @@
+---
+title: Object queries"
+description: "Blog, Agnesoft Graph Database"
+---
+
+# Object queries
+
+The most ubiquitous database query language is SQL which is text based language created in the 1970s. Its biggest advantage is that being text based it can be used from any language to communicate with the database. However, just like relational (table) bases databases from the same era it has some major flaws:
+
+- It needs to be parsed and interpreted by the database during runtime leading to common syntax errors that are hard or impossible to statically check.
+- Being a separate programming language from the client coding language increases cognitive load on the programmer.
+- It opens up the database to attacks from SQL-injection where the attacker is trying to force the interpreter to treat the user input (e.g. table or column names) as SQL code itself issuing malicious commands such as stealing or damaging the data.
+- Being "Turing-complete" and complex language on itself means it can lead (and often leads) to incredibly complex and unmaintainable queries.
+
+The last point is particularly troublesome because it partially stems from the `schema` issue discussed in the previous points. One common way to avoid changing the schema is to transform the data via queries. This is not only less efficient than representing the data in the correct form directly but also increases the complexity of queries significantly.
+
+The solutions include heavily sanitizing the user inputs in an attempt to prevent SQL injection attacks, wrapping the constructing of SQL in a builder-pattern to prevent syntax errors and easing the cognitive load by letting programmers create their queries in their main coding language. The complexity is often being reduced by the use of stored SQL procedures (pre-created queries). However, all of these options can only mitigate the issues SQL has.
+
+Using native objects representing the queries eliminate all of SQL issues sacrificing the portability between languages. However, that can be relatively easily be made up via already very mature (de)serialization of native objects available in most languages. Using builder pattern to construct these objects further improve their correctness and readability. Native objects carry no additional cognitive load on the programmer and can be easily used just like any other code.

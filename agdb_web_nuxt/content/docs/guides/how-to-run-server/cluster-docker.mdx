@@ -1,0 +1,79 @@
+---
+title: "How to run the cluster in docker?"
+description: "How to run the cluster in docker, Agnesoft Graph Database"
+---
+
+import { Steps } from "nextra/components";
+
+# How to run the cluster in docker?
+
+The `agdb_server` can be run as a cluster in docker . Optionally you can [build the image](https://github.com/agnesoft/agdb/blob/main/agdb_server/containerfile) yourself.
+
+<Steps>
+
+### Install docker
+
+- Windows: https://www.docker.com/products/docker-desktop/
+- Linux: https://docs.docker.com/desktop/setup/install/linux/
+
+### Pull or build the agdb_server image
+
+The image is based on [Alpine Linux](https://alpinelinux.org/) using musl libc. The image is made available on Docker Hub or GitHub packages:
+
+| Vendor     | Tag    | Command                                  | Description                                                                               |
+| ---------- | ------ | ---------------------------------------- | ----------------------------------------------------------------------------------------- |
+| Docker Hub | latest | docker pull agnesoft/agdb:latest         | Equals latest released version                                                            |
+| Docker Hub | 0.x.x  | docker pull agnesoft/agdb:0.x.x          | Released version, e.g. 0.10.0                                                             |
+| Docker Hub | dev    | docker pull agnesoft/agdb:dev            | Equals latest development version on the main branch, refreshed with every commit to main |
+| GitHub     | latest | docker pull ghcr.io/agnesoft/agdb:latest | Equals latest released version                                                            |
+| GitHub     | 0.x.x  | docker pull ghcr.io/agnesoft/agdb:0.x.x  | Released version, e.g. 0.10.0                                                             |
+| GitHub     | dev    | docker pull ghcr.io/agnesoft/agdb:dev    | Equals latest development version on the main branch, refreshed with every commit to main |
+
+If you want to build the image yourself run the following in the root of the checked out `agdb` repository:
+
+```bash
+docker build --pull -t agnesoft/agdb:dev -f agdb_server/containerfile .
+```
+
+### Run the cluster
+
+You will need the `compose.yaml` file from the sources at: https://github.com/agnesoft/agdb/blob/main/agdb_server/compose.yaml
+
+```bash
+# the -f path is where the file resides in the sources, you can change it to the actual location of the compose.yaml file
+docker compose -f agdb_server/compose.yaml up --wait
+```
+
+This command runs the 3 nodes as a docker cluster using docker compose that contains valid cluster configuration. The volumes are provided for each node so that the data is persisted. It exposes the nodes at the ports `3000`, `3001` and `3002`.
+
+By default, it is using TLS self-signed certificates. You can either remove the certificates and related configuration from the `compose.yaml` or provide your own certificates. Refer to the [server configuration](/docs/references/server) for more details.
+
+### Test that the cluster is up with `curl`
+
+The following commands will hit each node and return the list of nodes, their status and which one is the leader. If the servers are connected and operating normally the returned list should be the same from each node.
+
+```bash
+curl -v localhost:3000/api/v1/cluster/status
+curl -v localhost:3001/api/v1/cluster/status
+curl -v localhost:3002/api/v1/cluster/status
+```
+
+### Shutdown the cluster
+
+The cluster can be shutdown either by stopping the containers or programmatically posting to the shutdown endpoints as logged in server admin:
+
+```bash
+# this will produce an admin API token, e.g. "bb2fc207-90d1-45dd-8110-3247c4753cd5"
+token=$(curl -X POST -H 'Content-Type: application/json' localhost:3000/api/v1/user/login -d '{"username":"admin","password":"admin"}')
+curl -X POST -H "Authorization: Bearer ${token}" localhost:3000/api/v1/admin/shutdown
+
+token=$(curl -X POST -H 'Content-Type: application/json' localhost:3001/api/v1/user/login -d '{"username":"admin","password":"admin"}')
+curl -X POST -H "Authorization: Bearer ${token}" localhost:3001/api/v1/admin/shutdown
+
+token=$(curl -X POST -H 'Content-Type: application/json' localhost:3002/api/v1/user/login -d '{"username":"admin","password":"admin"}')
+curl -X POST -H "Authorization: Bearer ${token}" localhost:3002/api/v1/admin/shutdown
+```
+
+While it is technically possible to use cluster login and avoid logins to each node separately it might be fragile and not work well in situations where the cluster is in the bad shapes with nodes not being available etc. Local login and shutdown are guaranteed to work regardless of the overall cluster status.
+
+</Steps>

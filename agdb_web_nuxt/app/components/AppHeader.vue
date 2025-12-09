@@ -38,6 +38,15 @@ const { header } = useAppConfig();
     </template>
 
     <template #right>
+      <template v-if="header?.internalLinks">
+        <UButton
+          v-for="(link, index) of header.internalLinks"
+          :key="index"
+          v-bind="{ color: 'neutral', variant: 'ghost', ...link }"
+          class="invisible lg:visible"
+        />
+      </template>
+
       <UContentSearchButton v-if="header?.search" class="lg:hidden" />
 
       <UColorModeButton v-if="header?.colorMode" />

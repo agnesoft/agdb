@@ -24,6 +24,12 @@ export default defineAppConfig({
     },
     search: true,
     colorMode: true,
+    internalLinks: [
+      { label: "API", to: "/api-docs/openapi" },
+      { label: "Docs", to: "/docs/guides/quickstart" },
+      { label: "Enterprise", to: "/enterprise" },
+      { label: "Blog", to: "/blog" },
+    ],
     links: [
       {
         icon: "i-simple-icons-github",

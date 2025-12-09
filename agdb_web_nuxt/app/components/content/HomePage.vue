@@ -26,6 +26,24 @@
         Expert consultation
       </UButton>
     </div>
+
+    <p class="flex-row">
+      <a href="/docs/docs" class="border-image">
+        <img width="100" src="/images/db.png" alt="db" />
+      </a>
+      <a href="/api-docs/openapi" class="border-image">
+        <img width="100" src="/images/api.png" alt="api" />
+      </a>
+      <a href="docs/references/studio" class="border-image">
+        <img width="100" src="/images/studio.png" alt="studio" />
+      </a>
+      <a href="docs/references/server" class="border-image">
+        <img width="100" src="/images/server.png" alt="server" />
+      </a>
+      <a href="/enterprise/enterprise" class="border-image">
+        <img width="100" src="/images/cloud.png" alt="cloud" />
+      </a>
+    </p>
   </div>
 </template>
 
@@ -57,5 +75,19 @@ h1 {
   justify-content: center;
   align-items: center;
   gap: 1rem;
+}
+
+.flex-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  margin: 2rem 0;
+  flex-wrap: wrap;
+}
+
+.border-image {
+  filter: drop-shadow(1px 1px 1px rgb(0, 0, 0));
 }
 </style>

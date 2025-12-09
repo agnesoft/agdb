@@ -3,12 +3,11 @@ title: Why agdb?
 description: "Why agdb?, Agnesoft Graph Database"
 ---
 
-import { Callout } from "nextra/components";
-
 # Executive Summary
 
-<Callout >
--   `agdb` is application native database.
+::note
+
+- `agdb` is application native database.
 
 - No query language, queries are written in the same language as the application.
 
@@ -16,7 +15,7 @@ import { Callout } from "nextra/components";
 
 - Simple to build, use & scale.
 
-</Callout>
+::
 
 ## Why agdb?
 

@@ -23,6 +23,14 @@ export default defineNuxtConfig({
         },
       },
     },
+    // highlight: {
+    //   theme: {
+    //     default: "vs2015",
+    //     light: "vs",
+    //     dark: "vs",
+    //   },
+    //   langs: ["json", "javascript", "typescript", "bash", "shell"],
+    // },
   },
 
   compatibilityDate: "2024-07-11",

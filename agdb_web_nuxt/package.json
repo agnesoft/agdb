@@ -26,7 +26,7 @@
     "@nuxt/eslint": "^1.10.0",
     "eslint": "^9.39.1",
     "typescript": "^5.9.3",
-    "vue-tsc": "^3.1.5"
-  },
-  "packageManager": "pnpm@10.23.0"
+    "vue-tsc": "^3.1.5",
+    "less": "^4"
+  }
 }

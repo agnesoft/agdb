@@ -1,28 +1,35 @@
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
+import { ref, onMounted, watch } from "vue";
 import { codeToHtml } from "shiki";
+import { useColorMode } from "#imports";
 
 const code = ref<string>();
 const isExpanded = ref(false);
 const highlightedHtml = ref<string>();
+const colorMode = useColorMode();
+
+const highlightCode = async () => {
+  if (!code.value) return;
+
+  const theme = colorMode.value === "dark" ? "houston" : "light-plus";
+
+  highlightedHtml.value = await codeToHtml(code.value, {
+    lang: "json",
+    theme,
+  });
+};
 
 onMounted(async () => {
   try {
     const data = await import("../../../../agdb_server/openapi.json");
     code.value = JSON.stringify(data.default, null, 2);
-
-    // Highlight with Shiki
-    highlightedHtml.value = await codeToHtml(code.value, {
-      lang: "json",
-      themes: {
-        light: "light-plus",
-        dark: "tokyo-night",
-      },
-    });
+    await highlightCode();
   } catch (error) {
     console.error("Failed to load openapi.json:", error);
   }
 });
+
+watch(() => colorMode.value, highlightCode);
 
 const copyCode = () => {
   if (code.value) {
@@ -57,7 +64,7 @@ const copyCode = () => {
   </div>
 </template>
 
-<style scoped lang="less">
+<style lang="less">
 .openapi-wrapper {
   margin: 2rem 0;
 }
@@ -88,7 +95,7 @@ const copyCode = () => {
     margin: 0;
     padding: 1rem;
     overflow-x: auto;
-    max-height: 600px;
+    max-height: 80vh;
     overflow-y: auto;
     background: var(--ui-bg);
 

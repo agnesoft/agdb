@@ -69,7 +69,7 @@ test.describe("Database Table E2E Tests", () => {
       await expect(row).toBeVisible();
       await expect(
         row.locator(getSelectorByTestId("table-cell-db")),
-      ).toHaveText(["users", "orders", "products"][i]);
+      ).toHaveText(["users", "orders", "products"][i] ?? "");
       await expect(
         row.locator(getSelectorByTestId("table-cell-owner")),
       ).toHaveText("admin");
@@ -85,7 +85,7 @@ test.describe("Database Table E2E Tests", () => {
       await expect(
         row.locator(getSelectorByTestId("table-cell-backup")),
       ).toHaveText(
-        ["N/A", new Date(1754213481 * 1000).toUTCString(), "N/A"][i],
+        ["N/A", new Date(1754213481 * 1000).toUTCString(), "N/A"][i] ?? "",
       );
     }
   });

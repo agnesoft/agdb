@@ -1,8 +1,7 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { cleanup, renderHook } from "@testing-library/react";
 import { useHighlight } from "./hooks";
 import { render } from "@testing-library/react";
-import { beforeEach } from "node:test";
 
 const { languagePackMock } = vi.hoisted(() => ({
     languagePackMock: vi.fn(),

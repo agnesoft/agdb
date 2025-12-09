@@ -1,11 +1,6 @@
 {
-  "extends": "./tsconfig.json",
-  "include": ["env.d.ts", "src/**/*", "src/**/*.vue", "src/**/*.spec.ts"],
-  "exclude": [],
-  "compilerOptions": {
-    "composite": true,
-    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.vitest.tsbuildinfo",
-    "lib": [],
-    "types": ["node", "jsdom"]
-  }
+  "extends": [
+    "@agdb-studio/tsconfig/tsconfig.vitest.json",
+    "./tsconfig.app.json"
+  ]
 }

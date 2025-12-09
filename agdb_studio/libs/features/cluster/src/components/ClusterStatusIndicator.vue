@@ -1,24 +1,11 @@
 <script lang="ts" setup>
-import { ref } from "vue";
+import { computed, ref } from "vue";
 import { useClusterStatus } from "../composables/clusterStatus";
-import CrownIcon from "@agdb-studio/design/src/components/icons/CrownIcon.vue";
+import { PhFillCrownSimple } from "@kalimahapps/vue-icons";
 
 const { servers, overallStatus, isLoading, fetchStatus } = useClusterStatus();
 
 const showDetails = ref(false);
-
-const statusColor = (status: typeof overallStatus.value): string => {
-  switch (status) {
-    case "green":
-      return "var(--green-1)";
-    case "amber":
-      return "var(--orange-1)";
-    case "red":
-      return "var(--red-1)";
-    default:
-      return "var(--color-border)";
-  }
-};
 
 const handleClick = async () => {
   showDetails.value = !showDetails.value;
@@ -35,6 +22,10 @@ const handleMouseEnter = () => {
 const handleMouseLeave = () => {
   showDetails.value = false;
 };
+
+const leaderPosition = computed(() => {
+  return servers.value.findIndex((server) => server.leader);
+});
 </script>
 
 <template>
@@ -44,9 +35,10 @@ const handleMouseLeave = () => {
     @mouseenter="handleMouseEnter"
     @mouseleave="handleMouseLeave"
   >
+    <span> Cluster [{{ leaderPosition }}] </span>
     <div
       class="status-indicator"
-      :style="{ backgroundColor: statusColor(overallStatus) }"
+      :class="overallStatus"
       :title="`Cluster status: ${overallStatus}`"
     />
 
@@ -63,7 +55,7 @@ const handleMouseLeave = () => {
           :class="{ offline: !server.status }"
         >
           <span class="server-address">{{ server.address }}</span>
-          <CrownIcon v-if="server.leader" class="crown-icon" />
+          <PhFillCrownSimple data-testid="crown-icon" v-if="server.leader" />
           <span class="server-status">
             {{ server.status ? "Online" : "Offline" }}
           </span>
@@ -76,19 +68,34 @@ const handleMouseLeave = () => {
 <style lang="less" scoped>
 .cluster-status {
   position: relative;
-  display: inline-block;
+  display: inline-flex;
   cursor: pointer;
+  align-items: center;
+  gap: 0.6rem;
 }
 
 .status-indicator {
-  width: 16px;
-  height: 16px;
+  width: 1rem;
+  height: 1rem;
   border-radius: 50%;
   border: 2px solid var(--color-background);
   transition: all 0.3s ease;
 
   &:hover {
     transform: scale(1.2);
+  }
+
+  &.green {
+    background-color: var(--green);
+  }
+  &.amber {
+    background-color: var(--orange);
+  }
+  &.red {
+    background-color: var(--red);
+  }
+  &.unknown {
+    background-color: var(--color-border);
   }
 }
 
@@ -99,7 +106,7 @@ const handleMouseLeave = () => {
   background: var(--color-background);
   border: 1px solid var(--color-border);
   border-radius: 8px;
-  padding: 12px;
+  padding: 0.75rem;
   min-width: 250px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   z-index: 1000;
@@ -109,7 +116,7 @@ const handleMouseLeave = () => {
 .no-servers {
   color: var(--color-text-muted);
   text-align: center;
-  padding: 8px 0;
+  padding: 0.5rem 0;
 }
 
 .servers-list {
@@ -139,13 +146,6 @@ const handleMouseLeave = () => {
 .server-address {
   flex: 1;
   font-weight: 500;
-}
-
-.crown-icon {
-  width: 16px;
-  height: 16px;
-  color: var(--yellow-1);
-  flex-shrink: 0;
 }
 
 .server-status {

@@ -45,7 +45,10 @@ export const useClusterStatus = () => {
       lastUpdated.value = new Date();
       logger.debug("Cluster status fetched:", servers.value.length, "servers");
     } catch (error) {
-      logger.error("Failed to fetch cluster status:", error);
+      logger.error(
+        "Failed to fetch cluster status:",
+        error instanceof Error ? error.message : String(error),
+      );
       servers.value = [];
     } finally {
       isLoading.value = false;

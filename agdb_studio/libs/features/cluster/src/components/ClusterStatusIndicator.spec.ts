@@ -210,9 +210,9 @@ describe("ClusterStatusIndicator", () => {
 
     const servers = wrapper.findAll(".server-item");
     expect(servers).toHaveLength(2);
-    expect(servers[0].text()).toContain("server1:8080");
-    expect(servers[0].text()).toContain("Online");
-    expect(servers[1].text()).toContain("server2:8080");
+    expect(servers[0]?.text()).toContain("server1:8080");
+    expect(servers[0]?.text()).toContain("Online");
+    expect(servers[1]?.text()).toContain("server2:8080");
   });
 
   it("should show crown icon for leader server", async () => {
@@ -233,11 +233,11 @@ describe("ClusterStatusIndicator", () => {
     await nextTick();
 
     const servers = wrapper.findAll(".server-item");
-    const crownIcons = wrapper.findAll(".crown-icon");
+    const crownIcons = wrapper.findAll("[data-testid='crown-icon']");
 
     expect(crownIcons).toHaveLength(1);
-    expect(servers[0].find(".crown-icon").exists()).toBe(true);
-    expect(servers[1].find(".crown-icon").exists()).toBe(false);
+    expect(servers[0]?.find("[data-testid='crown-icon']").exists()).toBe(true);
+    expect(servers[1]?.find("[data-testid='crown-icon']").exists()).toBe(false);
   });
 
   it("should mark offline servers with offline class", async () => {
@@ -258,8 +258,8 @@ describe("ClusterStatusIndicator", () => {
     await nextTick();
 
     const servers = wrapper.findAll(".server-item");
-    expect(servers[0].classes()).not.toContain("offline");
-    expect(servers[1].classes()).toContain("offline");
-    expect(servers[1].text()).toContain("Offline");
+    expect(servers[0]?.classes()).not.toContain("offline");
+    expect(servers[1]?.classes()).toContain("offline");
+    expect(servers[1]?.text()).toContain("Offline");
   });
 });

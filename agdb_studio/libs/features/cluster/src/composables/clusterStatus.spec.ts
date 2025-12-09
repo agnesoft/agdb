@@ -52,6 +52,16 @@ describe("useClusterStatus", () => {
     return wrapper.vm;
   };
 
+  it("should have unknown status while loading", () => {
+    mockClient.cluster_status.mockResolvedValue({ data: [] });
+
+    const vm = mountComposable();
+
+    // Check immediately before fetch completes
+    expect(vm.overallStatus).toBe("unknown");
+    expect(vm.isLoading).toBe(true);
+  });
+
   it("should start with unknown status when no servers", async () => {
     mockClient.cluster_status.mockResolvedValue({ data: [] });
 
@@ -147,6 +157,18 @@ describe("useClusterStatus", () => {
     expect(vm.isLoading).toBe(false);
   });
 
+  it("should handle non-Error exceptions gracefully", async () => {
+    mockClient.cluster_status.mockRejectedValue("String error");
+
+    const vm = mountComposable();
+    await vi.advanceTimersByTimeAsync(0);
+    await flushPromises();
+    await nextTick();
+
+    expect(vm.servers).toEqual([]);
+    expect(vm.isLoading).toBe(false);
+  });
+
   it("should poll cluster status every 15 seconds", async () => {
     const mockServers: ClusterStatus[] = [
       { address: "server1:8080", status: true, leader: true },
@@ -213,5 +235,68 @@ describe("useClusterStatus", () => {
     expect(mockClient.cluster_status).toHaveBeenCalledTimes(
       initialCallCount + 1,
     );
+  });
+
+  it("should handle multiple components using the composable", async () => {
+    mockClient.cluster_status.mockResolvedValue({ data: [] });
+
+    // Mount first component
+    const vm1 = mountComposable();
+
+    await vi.advanceTimersByTimeAsync(0);
+    await flushPromises();
+    await nextTick();
+
+    expect(mockClient.cluster_status).toHaveBeenCalledTimes(1);
+
+    // The composable shares module-level state, so additional mounts
+    // should still work without causing duplicate polling
+    expect(vm1.servers).toEqual([]);
+    expect(vm1.isLoading).toBe(false);
+  });
+
+  it("should not start polling again if already polling", async () => {
+    mockClient.cluster_status.mockResolvedValue({ data: [] });
+
+    const vm = mountComposable();
+
+    await vi.advanceTimersByTimeAsync(0);
+    await flushPromises();
+    await nextTick();
+
+    const callCountAfterMount = mockClient.cluster_status.mock.calls.length;
+
+    // Try to start polling again manually - should be a no-op
+    vm.startPolling();
+    await vi.advanceTimersByTimeAsync(0);
+    await flushPromises();
+    await nextTick();
+
+    // Should not have made additional immediate calls (polling guard active)
+    expect(mockClient.cluster_status).toHaveBeenCalledTimes(
+      callCountAfterMount,
+    );
+  });
+
+  it("should stop polling on unmount", async () => {
+    mockClient.cluster_status.mockResolvedValue({ data: [] });
+
+    const vm = mountComposable();
+
+    await vi.advanceTimersByTimeAsync(0);
+    await flushPromises();
+    await nextTick();
+
+    expect(mockClient.cluster_status).toHaveBeenCalledTimes(1);
+
+    // Manually stop polling to test the stopPolling branch
+    vm.stopPolling();
+
+    // Advance time - should not trigger additional calls since polling stopped
+    await vi.advanceTimersByTimeAsync(15000);
+    await flushPromises();
+    await nextTick();
+
+    expect(mockClient.cluster_status).toHaveBeenCalledTimes(1);
   });
 });

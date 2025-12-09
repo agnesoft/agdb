@@ -89,5 +89,7 @@ export const useClusterStatus = () => {
     isLoading: isLoading as Ref<boolean>,
     lastUpdated: lastUpdated as Ref<Date | null>,
     fetchStatus,
+    startPolling,
+    stopPolling,
   };
 };

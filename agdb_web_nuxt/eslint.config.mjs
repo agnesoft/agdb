@@ -10,6 +10,7 @@ export default withNuxt({
     "vue/max-attributes-per-line": "off",
     "vue/comma-dangle": ["error", "always-multiline"],
     "@stylistic/quote-props": ["error", "as-needed"],
+    "@stylistic/arrow-parens": "off",
     "@stylistic/member-delimiter-style": [
       "error",
       {

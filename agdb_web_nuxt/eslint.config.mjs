@@ -11,6 +11,7 @@ export default withNuxt({
     "vue/comma-dangle": ["error", "always-multiline"],
     "@stylistic/quote-props": ["error", "as-needed"],
     "@stylistic/arrow-parens": "off",
+    "@stylistic/operator-linebreak": "off",
     "@stylistic/member-delimiter-style": [
       "error",
       {
@@ -20,7 +21,7 @@ export default withNuxt({
         },
         singleline: {
           delimiter: "semi",
-          requireLast: true,
+          requireLast: false,
         },
       },
     ],

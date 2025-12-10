@@ -4,8 +4,6 @@ import { useRoute } from "vue-router";
 
 const navigation = inject<Ref<ContentNavigationItem[]>>("navigation");
 
-console.log("Full Navigation:", navigation?.value);
-
 const route = useRoute();
 // Determine top-most folder from current path (e.g., "/docs/guides/..." -> "docs")
 const top = computed(() => route.path.split("/")[1] || "");

@@ -1,6 +1,6 @@
 ---
 title: Contact us
-description: "agdb contact"
+description: "Contact the agdb team at Agnesoft"
 ---
 
 E-mail: agnesoft@agnesoft.com

@@ -1,6 +1,6 @@
 ---
 title: agdb
-description: Application native database for any use case
+description: Application‑native graph database with constant‑time queries and no query language
 ---
 
 ::home-page

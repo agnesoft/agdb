@@ -1,6 +1,6 @@
 ---
 title: License
-description: agdb license
+description: "agdb license (Apache 2.0)"
 ---
 
                                  Apache License

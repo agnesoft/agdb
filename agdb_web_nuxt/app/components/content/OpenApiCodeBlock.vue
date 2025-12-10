@@ -2,6 +2,7 @@
 import { ref, onMounted, watch } from "vue";
 import { codeToHtml } from "shiki";
 import { useColorMode } from "#imports";
+import openapi from "../../../../agdb_server/openapi.json";
 
 const code = ref<string>();
 const isExpanded = ref(false);
@@ -17,12 +18,14 @@ const highlightCode = async () => {
     lang: "json",
     theme,
   });
+
+  console.log("code:", code.value);
+  console.log("Highlighted HTML:", highlightedHtml.value);
 };
 
 onMounted(async () => {
   try {
-    const data = await import("../../../../agdb_server/openapi.json");
-    code.value = JSON.stringify(data.default, null, 2);
+    code.value = JSON.stringify(openapi, null, 2);
     await highlightCode();
   } catch (error) {
     console.error("Failed to load openapi.json:", error);
@@ -39,6 +42,7 @@ const copyCode = () => {
 </script>
 
 <template>
+  {{ code }}
   <div v-if="code" class="openapi-wrapper">
     <UButton v-if="!isExpanded" size="xl" @click="isExpanded = true">
       Show openapi.json

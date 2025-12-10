@@ -3,7 +3,7 @@ import withNuxt from "./.nuxt/eslint.config.mjs";
 
 export default withNuxt({
   rules: {
-    "@stylistic/quotes": ["error", "double"],
+    "@stylistic/quotes": ["error", "double", { avoidEscape: true }],
     "@stylistic/comma-dangle": ["error", "always-multiline"],
     "@stylistic/semi": ["error", "always"],
     "vue/singleline-html-element-content-newline": "off",

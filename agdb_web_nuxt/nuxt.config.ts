@@ -40,6 +40,7 @@ export default defineNuxtConfig({
             "rs",
             "bash",
             "php",
+            "python",
           ],
         },
       },

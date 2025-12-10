@@ -10,6 +10,19 @@ export default withNuxt({
     "vue/max-attributes-per-line": "off",
     "vue/comma-dangle": ["error", "always-multiline"],
     "@stylistic/quote-props": ["error", "as-needed"],
+    "@stylistic/member-delimiter-style": [
+      "error",
+      {
+        multiline: {
+          delimiter: "semi",
+          requireLast: true,
+        },
+        singleline: {
+          delimiter: "semi",
+          requireLast: true,
+        },
+      },
+    ],
     "vue/html-self-closing": [
       "error",
       {

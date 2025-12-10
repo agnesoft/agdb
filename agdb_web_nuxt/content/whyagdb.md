@@ -1,6 +1,6 @@
 ---
 title: Why agdb?
-description: "Why agdb?, Agnesoft Graph Database"
+description: "Why agdb: application‑native database with constant‑time graph queries, no query language, and 10X lower TCO"
 ---
 
 # Executive Summary

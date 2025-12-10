@@ -103,9 +103,9 @@ All interactions with the `agdb` are realized through queries. There are two kin
 
 Immutable queries read the data from the database through `select` and `search` queries. Mutable queries write to or delete from the database through `insert` and `remove` queries. All queries follow the Rust rules about borrowing:
 
-```
+::note
 There can be unlimited number of immutable concurrent queries or exactly one mutable query running against the database.
-```
+::
 
 The queries are executed against the database by calling the corresponding method on the database object:
 

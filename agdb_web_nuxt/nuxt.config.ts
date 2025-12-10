@@ -19,18 +19,31 @@ export default defineNuxtConfig({
     build: {
       markdown: {
         toc: {
-          searchDepth: 1,
+          searchDepth: 3,
+        },
+        highlight: {
+          theme: {
+            default: "github-light", // or "vs", "slack-light", etc.
+            dark: "github-dark", // or "tokyo-night", "dracula", etc.
+          },
+          langs: [
+            "json",
+            "js",
+            "ts",
+            "html",
+            "css",
+            "vue",
+            "shell",
+            "mdc",
+            "md",
+            "yaml",
+            "rs",
+            "bash",
+            "php",
+          ],
         },
       },
     },
-    // highlight: {
-    //   theme: {
-    //     default: "vs2015",
-    //     light: "vs",
-    //     dark: "vs",
-    //   },
-    //   langs: ["json", "javascript", "typescript", "bash", "shell"],
-    // },
   },
 
   compatibilityDate: "2024-07-11",

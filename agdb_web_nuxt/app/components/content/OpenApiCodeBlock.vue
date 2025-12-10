@@ -11,7 +11,7 @@ const colorMode = useColorMode();
 const highlightCode = async () => {
   if (!code.value) return;
 
-  const theme = colorMode.value === "dark" ? "houston" : "light-plus";
+  const theme = colorMode.value === "dark" ? "github-dark" : "github-light";
 
   highlightedHtml.value = await codeToHtml(code.value, {
     lang: "json",

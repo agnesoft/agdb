@@ -3,8 +3,6 @@ title: "Quickstart"
 description: "Quickstart, Agensoft Graph Database"
 ---
 
-import { Callout, Steps } from "nextra/components";
-
 # Quickstart
 
 The following is the quickstart guide for the agdb emebedded/application database.
@@ -46,10 +44,10 @@ fn main() -> Result<(), DbError> {
 }
 ```
 
-<Callout type="info">
-    The namesake file "agdb_app.agdb" will be created in your working directory.
-    The .agdb extension is conventional.
-</Callout>
+::note
+The namesake file "agdb_app.agdb" will be created in your working directory.
+The .agdb extension is conventional.
+::
 
 ### Run queries
 
@@ -98,11 +96,11 @@ db.exec_mut(
 )?;
 ```
 
-<Callout>
-    We could also run all the queries as a single transaction with
-    `transaction()` / `transaction_mut()` instead of exec variants that operate
-    on a single query each time.
-</Callout>
+::tip
+We could also run all the queries as a single transaction with `transaction()`
+/ `transaction_mut()` instead of exec variants that operate on a single query
+each time.
+::
 
 ### Find a user in the database matching some conditions
 
@@ -129,7 +127,7 @@ println!("{:?}", users);
 
 ### Run the program
 
-```
+```bash
 cargo run
 ```
 

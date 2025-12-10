@@ -3,8 +3,6 @@ title: "How to run the cluster in Kubernetes?"
 description: "How to run the cluster in Kubernetes, Agnesoft Graph Database"
 ---
 
-import { Callout, Steps } from "nextra/components";
-
 # How to run the cluster in Kubernetes?
 
 The `agdb_server` can be run in Kubernetes using official Docker image. Optionally you can [build the image](https://github.com/agnesoft/agdb/blob/main/agdb_server/containerfile) yourself and host it at your the place of your choosing. Please refer to the [server-docker](/docs/guides/how-to-run-server/server-docker) guide for available images.
@@ -30,25 +28,25 @@ First we deploy the K8s service of type `ClusterIP` that only allows communicati
 apiVersion: v1
 kind: Service
 metadata:
-    name: agdb
-    labels:
-        app: agdb
+  name: agdb
+  labels:
+    app: agdb
 spec:
-    ports:
-        - port: 3000
-          name: agdb
-    clusterIP: None
-    selector:
-        app: agdb
+  ports:
+    - port: 3000
+      name: agdb
+  clusterIP: None
+  selector:
+    app: agdb
 ```
 
-<Callout type="warning">
-    When accessing the database cluster through the service name each request
-    will be sent to random node (the sessions are not sticky) that may lead to
-    inconsistent view into the cluster's data. Consider specifying a pod to
-    connect to. Instead of `http://agdb.default.svc.cluster.local:3000` use for
-    example `http://agdb-0.agdb.default.svc.cluster.local:3000`.
-</Callout>
+::warning
+When accessing the database cluster through the service name each request
+will be sent to random node (the sessions are not sticky) that may lead to
+inconsistent view into the cluster's data. Consider specifying a pod to
+connect to. Instead of `http://agdb.default.svc.cluster.local:3000` use for
+example `http://agdb-0.agdb.default.svc.cluster.local:3000`.
+::
 
 ### Secrets
 
@@ -58,33 +56,33 @@ Next document is the pepper secret `agdb-pepper`.
 apiVersion: v1
 kind: Secret
 metadata:
-    name: agdb-pepper
-    labels:
-        app: agdb
+  name: agdb-pepper
+  labels:
+    app: agdb
 stringData:
-    pepper: "1234567891234567"
+  pepper: "1234567891234567"
 ```
 
 Followed by the certificates. In production, you should create the certificates using kubectl command from secure files rather than embedding them into the manifest. However, for demonstration purposes the following example is provided. It uses self-signed certificate with the corresponding CA. It needs to be provided as `base64` value. You can use e.g. `cat cert.pem | base64` bash command to get the correct value (end of lines do not matter).
 
-<Callout>
-    The certificate must be issued (or used as an alternative name - SAN) for
-    the DNS names of the servers used in their configuration `address` field.
-    E.g. `agdb-0.default.svc.cluster.local`, `agdb-1.default.svc.cluster.local`,
-    `agdb-2.default.svc.cluster.local`.
-</Callout>
+::tip
+The certificate must be issued (or used as an alternative name - SAN) for the
+DNS names of the servers used in their configuration `address` field. E.g.
+`agdb-0.default.svc.cluster.local`, `agdb-1.default.svc.cluster.local`,
+`agdb-2.default.svc.cluster.local`.
+::
 
 ```yaml
 apiVersion: v1
 kind: Secret
 metadata:
-    name: agdb-certs
-    labels:
-        app: agdb
+  name: agdb-certs
+  labels:
+    app: agdb
 data:
-    cert.pem: ...
-    key.pem: ...
-    root_ca.pem: ...
+  cert.pem: ...
+  key.pem: ...
+  root_ca.pem: ...
 ```
 
 ### ConfigMap
@@ -96,30 +94,30 @@ The configuration named `agdb-config` via the `ConfigMap` is required as we need
 apiVersion: v1
 kind: ConfigMap
 metadata:
-    name: agdb-config
-    labels:
-        app: agdb
+  name: agdb-config
+  labels:
+    app: agdb
 data:
-    start.sh: |
-        cp /agdb/config/agdb_server.yaml /agdb/agdb_server.yaml
-        sed -i "s/{id}/$AGDB_REPLICA_INDEX/g" /agdb/agdb_server.yaml
-        /usr/local/bin/agdb_server
-    agdb_server.yaml: |
-        bind: :::3000
-        address: http://agdb-{id}.agdb.default.svc.cluster.local:3000
-        basepath: ""
-        static_roots: []
-        admin: admin
-        log_level: INFO
-        data_dir: /agdb/data
-        pepper_path: /agdb/pepper/pepper
-        tls_certificate: /agdb/certs/cert.pem
-        tls_key: /agdb/certs/key.pem
-        tls_root: /agdb/certs/root_ca.pem
-        cluster_token: cluster
-        cluster_heartbeat_timeout_ms: 1000
-        cluster_term_timeout_ms: 3000
-        cluster: [http://agdb-0.agdb.default.svc.cluster.local:3000, http://agdb-1.agdb.default.svc.cluster.local:3000, http://agdb-2.agdb.default.svc.cluster.local:3000]
+  start.sh: |
+    cp /agdb/config/agdb_server.yaml /agdb/agdb_server.yaml
+    sed -i "s/{id}/$AGDB_REPLICA_INDEX/g" /agdb/agdb_server.yaml
+    /usr/local/bin/agdb_server
+  agdb_server.yaml: |
+    bind: :::3000
+    address: http://agdb-{id}.agdb.default.svc.cluster.local:3000
+    basepath: ""
+    static_roots: []
+    admin: admin
+    log_level: INFO
+    data_dir: /agdb/data
+    pepper_path: /agdb/pepper/pepper
+    tls_certificate: /agdb/certs/cert.pem
+    tls_key: /agdb/certs/key.pem
+    tls_root: /agdb/certs/root_ca.pem
+    cluster_token: cluster
+    cluster_heartbeat_timeout_ms: 1000
+    cluster_term_timeout_ms: 3000
+    cluster: [http://agdb-0.agdb.default.svc.cluster.local:3000, http://agdb-1.agdb.default.svc.cluster.local:3000, http://agdb-2.agdb.default.svc.cluster.local:3000]
 ```
 
 ### StatefulSet

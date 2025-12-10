@@ -1,0 +1,33 @@
+{
+  "name": "@agdb-studio/cluster",
+  "version": "1.0.0",
+  "description": "Cluster status library for AGDB Studio",
+  "type": "module",
+  "scripts": {
+    "test": "vitest run --coverage",
+    "build-only": "vite build",
+    "type-check": "vue-tsc --noEmit -p tsconfig.vitest.json --composite false",
+    "lint": "eslint --max-warnings=0 . --fix",
+    "lint:check": "eslint --max-warnings=0 .",
+    "format": "prettier --write src/",
+    "format:check": "prettier --check src/",
+    "before-commit": "pnpm run format && pnpm run lint && pnpm run test",
+    "host-coverage": "npx vite preview --outDir coverage"
+  },
+  "dependencies": {
+    "vue": "catalog:",
+    "@agdb-studio/design": "workspace:*",
+    "@agdb-studio/api": "workspace:*",
+    "@agdb-studio/utils": "workspace:*",
+    "@agnesoft/agdb_api": "workspace:*"
+  },
+  "devDependencies": {
+    "@agdb-studio/tsconfig": "workspace:*",
+    "@agdb-studio/testing": "workspace:*",
+    "vite": "catalog:",
+    "vitest": "catalog:",
+    "vue-tsc": "catalog:",
+    "eslint": "catalog:",
+    "prettier": "catalog:"
+  }
+}

@@ -1,7 +1,11 @@
 import { expect, type Page } from "@playwright/test";
 import { test } from "../e2e-utils/global.setup";
 import { mockLogin } from "../e2e-utils/utils";
-import { DB_ADD_API, DB_LIST_API } from "../e2e-utils/apiPaths";
+import {
+  CLUSTER_STATUS_API,
+  DB_ADD_API,
+  DB_LIST_API,
+} from "../e2e-utils/apiPaths";
 import {
   containsText,
   getLocatorByTestId,
@@ -48,6 +52,13 @@ const mockDatabaseListApi = async (
       status: 200,
       contentType: "application/json",
       body: JSON.stringify(databaseList),
+    });
+  });
+  await page.route(CLUSTER_STATUS_API, async (route) => {
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify([]),
     });
   });
 };

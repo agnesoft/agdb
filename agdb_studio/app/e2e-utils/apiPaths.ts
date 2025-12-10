@@ -45,3 +45,5 @@ export const ADMIN_USER_DELETE_API = "**/api/v1/admin/user/delete";
 export const ADMIN_USER_LOGOUT_API = "**/api/v1/admin/user/logout";
 export const CLUSTER_ADMIN_USER_LOGOUT_API =
   "**/api/v1/cluster/admin/user/logout";
+
+export const CLUSTER_STATUS_API = "**/api/v1/cluster/status";

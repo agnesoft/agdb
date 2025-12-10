@@ -27,6 +27,7 @@
     "@agdb-studio/auth": "workspace:*",
     "@agdb-studio/db": "workspace:*",
     "@agdb-studio/user": "workspace:*",
+    "@agdb-studio/cluster": "workspace:*",
     "@agnesoft/agdb_api": "workspace:*",
     "@kalimahapps/vue-icons": "catalog:",
     "@vueuse/components": "catalog:",

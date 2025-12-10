@@ -181,17 +181,19 @@ impl Typescript {
         buffer.push_str("class ReqwestClient {\n");
         buffer.push_str(
             r#"
-  get(url: string, token: string | undefined): [number, string] {
-    return [200, ""]
+  get<T>(url: string, token: string | undefined): [number, T] {
+    return [200, JSON.parse("") as T]
   }
-  delete(url: string, token: string | undefined): [number, string] {
-    return [200, ""]
+  delete(url: string, token: string | undefined): number {
+    return 200;
   }
-  post(url: string, data: string | undefined, token: string | undefined): [number, string] {
-    return [200, ""]
+  post<D, T>(url: string, data: D | undefined, token: string | undefined): [number, T] {
+    const data_str = data ? JSON.stringify(data) : undefined;
+    return [200, JSON.parse("") as T]
   }
-  put(url: string, data: string | undefined, token: string | undefined): [number, string] {
-    return [200, ""]
+  put<D>(url: string, data: D | undefined, token: string | undefined): number {
+    const data_str = data ? JSON.stringify(data) : undefined;
+    return 200;
   }
 "#,
         );
@@ -463,7 +465,9 @@ impl Typescript {
         } else {
             name.to_string()
         };
-        let ty_str = if let Some(ty_fn) = ty {
+        let ty_str = if name == "[status, token]" {
+            String::from(": [number, string]")
+        } else if let Some(ty_fn) = ty {
             format!(": {}", ty_fn().name())
         } else {
             String::new()

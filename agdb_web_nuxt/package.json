@@ -7,10 +7,12 @@
     "dev": "nuxt dev",
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
-    "lint": "eslint .",
+    "lint": "eslint . --fix",
+    "lint:check": "eslint . && nuxt typecheck",
     "typecheck": "nuxt typecheck",
     "test": "vitest run --coverage",
-    "host-coverage": "npx vite preview --outDir coverage"
+    "host-coverage": "npx vite preview --outDir coverage",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@iconify-json/lucide": "^1.2.75",
@@ -27,6 +29,7 @@
   "devDependencies": {
     "@nuxt/eslint": "^1.10.0",
     "@nuxt/test-utils": "^3.21.0",
+    "@playwright/test": "^1.57.0",
     "@vitejs/plugin-vue": "^6.0.2",
     "@vitest/coverage-istanbul": "^4.0.15",
     "@vitest/coverage-v8": "^4",

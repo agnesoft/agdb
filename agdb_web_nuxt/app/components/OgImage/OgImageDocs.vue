@@ -1,11 +1,11 @@
 <script lang="ts" setup>
-const props = withDefaults(defineProps<{ title?: string, description?: string, headline?: string }>(), {
-  title: 'title',
-  description: 'description'
-})
+const props = withDefaults(defineProps<{ title?: string; description?: string; headline?: string }>(), {
+  title: "title",
+  description: "description",
+});
 
-const title = computed(() => (props.title || '').slice(0, 60))
-const description = computed(() => (props.description || '').slice(0, 200))
+const title = computed(() => (props.title || "").slice(0, 60));
+const description = computed(() => (props.description || "").slice(0, 200));
 </script>
 
 <template>

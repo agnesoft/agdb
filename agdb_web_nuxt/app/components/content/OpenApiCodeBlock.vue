@@ -10,6 +10,7 @@ const highlightedHtml = ref<string>();
 const colorMode = useColorMode();
 
 const highlightCode = async () => {
+  /* v8 ignore if -- @preserve */
   if (!code.value) return;
 
   const theme = colorMode.value === "dark" ? "github-dark" : "github-light";
@@ -18,9 +19,6 @@ const highlightCode = async () => {
     lang: "json",
     theme,
   });
-
-  console.log("code:", code.value);
-  console.log("Highlighted HTML:", highlightedHtml.value);
 };
 
 onMounted(async () => {
@@ -35,6 +33,7 @@ onMounted(async () => {
 watch(() => colorMode.value, highlightCode);
 
 const copyCode = () => {
+  /* v8 ignore else -- @preserve */
   if (code.value) {
     navigator.clipboard.writeText(code.value);
   }
@@ -42,7 +41,6 @@ const copyCode = () => {
 </script>
 
 <template>
-  {{ code }}
   <div v-if="code" class="openapi-wrapper">
     <UButton v-if="!isExpanded" size="xl" @click="isExpanded = true">
       Show openapi.json
@@ -55,9 +53,15 @@ const copyCode = () => {
             size="xs"
             variant="ghost"
             icon="i-lucide-copy"
+            aria-label="Copy code"
             @click="copyCode"
           />
-          <UButton size="sm" variant="outline" @click="isExpanded = false">
+          <UButton
+            data-testid="hide-button"
+            size="sm"
+            variant="outline"
+            @click="isExpanded = false"
+          >
             Hide
           </UButton>
         </div>

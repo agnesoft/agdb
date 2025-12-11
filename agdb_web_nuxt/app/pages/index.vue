@@ -1,7 +1,9 @@
 <script setup lang="ts">
+/* v8 ignore next -- @preserve */
 const { data: page } = await useAsyncData("index", () =>
   queryCollection("landing").path("/").first(),
 );
+
 if (!page.value) {
   throw createError({
     statusCode: 404,

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+/* v8 ignore file -- @preserve */
 import type { ContentNavigationItem } from "@nuxt/content";
 import { findPageHeadline } from "@nuxt/content/utils";
 

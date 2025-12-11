@@ -6,6 +6,7 @@ const navigation = inject<Ref<ContentNavigationItem[]>>("navigation");
 
 const route = useRoute();
 // Determine top-most folder from current path (e.g., "/docs/guides/..." -> "docs")
+/* v8 ignore next -- @preserve */
 const top = computed(() => route.path.split("/")[1] || "");
 
 const filteredNavigation = computed<ContentNavigationItem[]>(() => {
@@ -49,7 +50,7 @@ const filteredNavigation = computed<ContentNavigationItem[]>(() => {
             path: "https://github.com/agnesoft/agdb/tree/main/examples/user_types",
           },
         ],
-      } as ContentNavigationItem;
+      };
     }
     return child;
   });

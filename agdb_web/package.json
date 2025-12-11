@@ -1,5 +1,5 @@
 {
-  "name": "agdb_web_nuxt",
+  "name": "agdb_web",
   "private": true,
   "type": "module",
   "scripts": {

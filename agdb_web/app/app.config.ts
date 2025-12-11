@@ -55,7 +55,7 @@ export default defineAppConfig({
     title: "Table of Contents",
     bottom: {
       title: "Community",
-      edit: "https://github.com/agnesoft/agdb/edit/main/agdb_web_nuxt/content",
+      edit: "https://github.com/agnesoft/agdb/edit/main/agdb_web/content",
       links: [
         {
           icon: "i-lucide-star",

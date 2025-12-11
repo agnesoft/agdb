@@ -2,6 +2,7 @@ packages:
   - agdb_studio/**
   - agdb_api/**
   - agdb_web_next/**
+  - agdb_web/**
   - examples/**
 
 catalog:

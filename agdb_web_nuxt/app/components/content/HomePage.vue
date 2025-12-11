@@ -28,7 +28,7 @@
     </div>
 
     <p class="flex-row">
-      <a href="/docs/docs" class="border-image">
+      <a href="/docs" class="border-image">
         <img width="100" src="/images/db.png" alt="db" />
       </a>
       <a href="/api-docs/openapi" class="border-image">
@@ -40,7 +40,7 @@
       <a href="docs/references/server" class="border-image">
         <img width="100" src="/images/server.png" alt="server" />
       </a>
-      <a href="/enterprise/enterprise" class="border-image">
+      <a href="/enterprise" class="border-image">
         <img width="100" src="/images/cloud.png" alt="cloud" />
       </a>
     </p>

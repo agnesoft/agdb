@@ -9,6 +9,7 @@ export default defineNuxtConfig({
     "nuxt-llms",
     "@nuxt/test-utils/module",
   ],
+  ssr: true,
 
   devtools: {
     enabled: true,
@@ -51,11 +52,11 @@ export default defineNuxtConfig({
   compatibilityDate: "2024-07-11",
 
   nitro: {
-    prerender: {
-      routes: ["/"],
-      crawlLinks: true,
-      autoSubfolderIndex: false,
-    },
+    // prerender: {
+    //   routes: ["/"],
+    //   crawlLinks: true,
+    //   autoSubfolderIndex: false,
+    // },
   },
 
   eslint: {

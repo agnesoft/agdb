@@ -38,8 +38,20 @@ export default defineConfig<ConfigOptions>({
     nuxt: {
       rootDir: fileURLToPath(new URL(".", import.meta.url)),
     },
+    baseURL: "http://localhost:3000",
+    headless: isCI,
   },
   projects: devicesToTest.map((p) =>
     typeof p === "string" ? { name: p, use: devices[p] } : p,
   ),
+  webServer: {
+    command: "pnpm run dev",
+    url: "http://localhost:3000",
+    reuseExistingServer: !isCI,
+  },
+  // webServer: {
+  //   command: "npx nuxi dev",
+  //   port: 3000,
+  //   reuseExistingServer: true,
+  // },
 });

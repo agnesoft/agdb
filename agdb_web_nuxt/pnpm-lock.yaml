@@ -69,9 +69,6 @@ importers:
       less:
         specifier: ^4
         version: 4.4.2
-      playwright-core:
-        specifier: ^1.57.0
-        version: 1.57.0
       typescript:
         specifier: ^5.9.3
         version: 5.9.3

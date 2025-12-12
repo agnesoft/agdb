@@ -31,7 +31,8 @@
     "shiki": "^3.19.0",
     "ufo": "^1.6.1",
     "tailwindcss": "^4",
-    "@tailwindcss/vite": "^4"
+    "@tailwindcss/vite": "^4",
+    "unist-util-visit": "^5"
   },
   "devDependencies": {
     "@nuxt/eslint": "^1.10.0",

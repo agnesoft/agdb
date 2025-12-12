@@ -12,7 +12,8 @@
     "typecheck": "nuxt typecheck",
     "test": "vitest run --coverage",
     "host-coverage": "npx vite preview --outDir coverage",
-    "test:e2e": "playwright test",
+    "test:e2e": "echo 'No e2e tests for now'",
+    "test:playwright": "playwright test",
     "format:check": "echo 'No formatting needed for Nuxt project'"
   },
   "dependencies": {

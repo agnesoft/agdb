@@ -1,0 +1,45 @@
+{
+    "name": "agdb_web_next",
+    "version": "0.1.0",
+    "private": true,
+    "scripts": {
+        "dev": "next dev -p 5001",
+        "build": "next build",
+        "start": "next start",
+        "lint": "next lint",
+        "lint:check": "next lint",
+        "format": "prettier . --write",
+        "format:check": "prettier . --check",
+        "test": "vitest run --coverage",
+        "test:e2e": "playwright test",
+        "before-commit": "pnpm run format && pnpm run lint && pnpm run build && pnpm run test && pnpm run test:e2e",
+        "type-check": "tsc --noEmit",
+        "host-coverage": "npx vite preview --outDir coverage"
+    },
+    "dependencies": {
+        "@theguild/remark-mermaid": "catalog:",
+        "highlight.js": "catalog:",
+        "next": "catalog:",
+        "nextra": "catalog:",
+        "nextra-theme-docs": "catalog:",
+        "react": "catalog:",
+        "react-dom": "catalog:",
+        "sass": "catalog:"
+    },
+    "devDependencies": {
+        "@testing-library/react": "catalog:",
+        "@types/node": "catalog:",
+        "@types/react-dom": "catalog:",
+        "@types/react": "catalog:",
+        "@vitejs/plugin-react": "catalog:",
+        "@vitest/coverage-istanbul": "catalog:",
+        "@vitest/coverage-v8": "catalog:",
+        "eslint-config-next": "catalog:",
+        "eslint-config-prettier": "catalog:",
+        "eslint": "catalog:",
+        "jsdom": "catalog:",
+        "prettier": "catalog:",
+        "typescript": "catalog:",
+        "vitest": "catalog:"
+    }
+}

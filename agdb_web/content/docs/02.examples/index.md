@@ -1,0 +1,20 @@
+---
+title: "Examples"
+description: "agdb examples: embedded app, indexes, joins, schema migration, and server clients"
+---
+
+The following links lead you to the example code in the `agdb` repository. For the guided examples see [guides](/docs/guides).
+
+- [app_db](https://github.com/agnesoft/agdb/tree/main/examples/app_db)
+
+- [indexes](https://github.com/agnesoft/agdb/tree/main/examples/indexes)
+
+- [joins](https://github.com/agnesoft/agdb/tree/main/examples/joins)
+
+- [schema migration](https://github.com/agnesoft/agdb/tree/main/examples/schema_migration)
+
+- [server client - rust](https://github.com/agnesoft/agdb/tree/main/examples/server_client_rust)
+
+- [server client - typescript](https://github.com/agnesoft/agdb/tree/main/examples/server_client_typescript)
+
+- [strong types](https://github.com/agnesoft/agdb/tree/main/examples/user_types)

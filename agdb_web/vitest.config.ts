@@ -1,44 +1,60 @@
 import {
-    defineConfig,
-    coverageConfigDefaults,
-    configDefaults,
+  defineConfig,
+  configDefaults,
+  coverageConfigDefaults,
 } from "vitest/config";
-import react from "@vitejs/plugin-react";
 import path from "path";
+import { defineVitestProject } from "@nuxt/test-utils/config";
+import vue from "@vitejs/plugin-vue";
 
 export default defineConfig({
-    plugins: [react()],
-    test: {
-        environment: "jsdom",
-        exclude: [...configDefaults.exclude, "e2e/*"],
-        root: path.resolve(__dirname, "."),
-        coverage: {
-            provider: "v8",
-            exclude: [
-                ...coverageConfigDefaults.exclude,
-                "e2e/*",
-                "*.config.*",
-                "middleware.ts",
-                "*/_app.tsx",
-                "**/_meta.ts",
-                "**/*.json",
-                "**/*.scss",
-            ],
-            thresholds: {
-                lines: 100,
-                functions: 100,
-                branches: 100,
-                statements: 100,
-            },
-            reporter: ["text", "html", "json"],
+  plugins: [vue()],
+  test: {
+    exclude: [...configDefaults.exclude, "e2e/*"],
+    coverage: {
+      provider: "v8",
+      exclude: [
+        ...coverageConfigDefaults.exclude,
+        "e2e/*",
+        "e2e-utils/*",
+        "playwright-report/*",
+        "*.config.*",
+        "src/tests/*",
+        "**/types.ts",
+        "**/assets/**",
+      ],
+      thresholds: {
+        lines: 100,
+        functions: 100,
+        statements: 100,
+      },
+      reporter: ["text", "html", "json"],
+    },
+    projects: [
+      {
+        test: {
+          name: "unit",
+          include: ["app/**/*.{test,spec}.ts"],
+          environment: "jsdom",
+          exclude: [
+            ...coverageConfigDefaults.exclude,
+            "**/*.nuxt.{test,spec}.ts",
+          ],
         },
-    },
-    build: {
-        target: ["es2015", "edge88", "firefox78", "chrome87", "safari12"],
-    },
-    resolve: {
-        alias: {
-            "@": path.resolve(__dirname, "."),
+      },
+      await defineVitestProject({
+        test: {
+          name: "nuxt",
+          include: ["app/**/*.nuxt.{test,spec}.ts"],
+          environment: "nuxt",
         },
+      }),
+    ],
+    globals: true,
+  },
+  resolve: {
+    alias: {
+      "@": path.resolve(__dirname, "."),
     },
+  },
 });

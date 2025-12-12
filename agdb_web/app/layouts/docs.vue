@@ -21,6 +21,7 @@ const filteredNavigation = computed<ContentNavigationItem[]>(() => {
       return {
         ...child,
         children: [
+          ...(child.children || []),
           {
             title: "app_db",
             path: "https://github.com/agnesoft/agdb/tree/main/examples/app_db",

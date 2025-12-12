@@ -67,6 +67,8 @@ h1 {
   font-weight: 100;
   margin-bottom: 3rem;
   opacity: 0.8;
+  text-align: center;
+  padding: 0 1rem;
 }
 
 .links {

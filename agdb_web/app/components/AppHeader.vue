@@ -43,7 +43,7 @@ const { header } = useAppConfig();
           v-for="(link, index) of header.internalLinks"
           :key="index"
           v-bind="{ color: 'neutral', variant: 'ghost', ...link }"
-          class="invisible lg:visible"
+          class="hidden lg:block"
         />
       </template>
 

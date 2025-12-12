@@ -29,6 +29,7 @@
   margin: 2rem 0;
   width: 100%;
   justify-content: center;
+  flex-wrap: wrap;
 
   :deep(a) {
     display: inline-flex;

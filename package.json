@@ -1,29 +1,29 @@
 {
-    "name": "agdb",
-    "packageManager": "pnpm@10.14.0",
-    "scripts": {
-        "dev": "turbo run dev",
-        "build": "turbo run build",
-        "type-check": "turbo run type-check",
-        "test": "turbo run test",
-        "test:e2e": "turbo run test:e2e",
-        "lint": "turbo run lint",
-        "lint:check": "turbo run lint:check",
-        "format": "turbo run format",
-        "format:check": "turbo run format:check",
-        "before-commit": "turbo run before-commit",
-        "build-studio": "turbo run agdb_studio#build"
-    },
-    "devDependencies": {
-        "@openapitools/openapi-generator-cli": "catalog:",
-        "@playwright/test": "catalog:",
-        "eslint": "catalog:",
-        "next": "catalog:",
-        "openapicmd": "catalog:",
-        "prettier": "catalog:",
-        "turbo": "catalog:",
-        "typescript": "catalog:",
-        "vite": "catalog:",
-        "vitest": "catalog:"
-    }
+  "name": "agdb",
+  "packageManager": "pnpm@10.14.0",
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "type-check": "turbo run type-check",
+    "test": "turbo run test",
+    "test:e2e": "turbo run test:e2e",
+    "lint": "turbo run lint",
+    "lint:check": "turbo run lint:check",
+    "format": "turbo run format",
+    "format:check": "turbo run format:check",
+    "before-commit": "turbo run before-commit",
+    "build-studio": "turbo run agdb_studio#build"
+  },
+  "devDependencies": {
+    "@openapitools/openapi-generator-cli": "catalog:",
+    "@playwright/test": "catalog:",
+    "eslint": "catalog:",
+    "next": "15.5.8",
+    "openapicmd": "catalog:",
+    "prettier": "catalog:",
+    "turbo": "catalog:",
+    "typescript": "catalog:",
+    "vite": "catalog:",
+    "vitest": "catalog:"
+  }
 }

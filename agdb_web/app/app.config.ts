@@ -63,12 +63,6 @@ export default defineAppConfig({
           to: "https://github.com/agnesoft/agdb",
           target: "_blank",
         },
-        {
-          icon: "i-lucide-book-open",
-          label: "API Reference",
-          to: "/docs/references/rust",
-          target: "_blank",
-        },
       ],
     },
   },

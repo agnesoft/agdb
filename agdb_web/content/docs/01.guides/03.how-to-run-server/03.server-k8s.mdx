@@ -27,7 +27,7 @@ The example breakdown:
 
 ### Service
 
-First we deploy the K8s service of type `ClusterIP` that only allows communication inside the cluster. As we are running a database server it would typically serve other backends in the same cluster and not be accessible from the outside. If such access is needed consider using `LoadBalancer` type service or `Ingress` controller with the `ClusterIp` service. The port available in the cluster is `3000` under a name of `agdb`. Furthermore we specify selector value `app: agdb` and also a label of the same value.
+First we deploy the K8s service of type `ClusterIP` that only allows communication inside the cluster. As we are running a database server it would typically serve other backends in the same cluster and not be accessible from the outside. If such access is needed consider using `LoadBalancer` type service or `Ingress` controller with the `ClusterIp` service. The port available in the cluster is `3000` under a name of `agdb`. Furthermore, we specify selector value `app: agdb` and also a label of the same value.
 
 ```yaml
 apiVersion: v1

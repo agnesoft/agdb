@@ -51,7 +51,7 @@
     <a href="https://agdb.agnesoft.com/docs/guides/quickstart">Quickstart Db</a> | <a href="https://agdb.agnesoft.com/api-docs/rust">Quickstart Client</a> | <a href="https://agdb.agnesoft.com/docs/references/queries">QUERIES</a> | <a href="#decision-tree">DECISION TREE</a>
 </p>
 <p align="center">
-    <a href="https://agdb.agnesoft.com/blog/blog">Why not SQL?</a>
+    <a href="https://agdb.agnesoft.com/blog">Why not SQL?</a>
 </p>
 
 The Agnesoft Graph Database (aka _agdb_) is application native database without compromises. It is persistent, optionally memory mapped graph database with native object 'no-text' queries. It can be used as a main persistent storage, data analytics platform as well as fast in-memory cache. Its typed schema-less data store allows for flexible and seamless data updates with no downtime or costly migrations. All queries are constructed via a builder pattern or directly as objects with no special language or text parsing.
@@ -222,7 +222,7 @@ The following are planned features:
 
 - [API](https://agdb.agnesoft.com/api-docs/openapi)
 
-- [But why?](https://agdb.agnesoft.com/blog/blog)
+- [But why?](https://agdb.agnesoft.com/blog)
 
 - [Cloud](https://agdb.agnesoft.com/enterprise/cloud)
 

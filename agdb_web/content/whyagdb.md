@@ -51,6 +51,6 @@ The `agdb` redefines how databases are used in applications akin to how DevOps r
 
 - Intrigued or unsure? Book a [technical consultation](/enterprise/consultation) with our experts.
 
-- Want to learn more? Head to our [documentation](/docs/docs).
+- Want to learn more? Head to our [documentation](/docs).
 
-- Interested in peeking behind the scenes? Read our [blog](/blog/blog).
+- Interested in peeking behind the scenes? Read our [blog](/blog).

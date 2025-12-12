@@ -29,7 +29,9 @@
     "nuxt-llms": "0.1.3",
     "nuxt-og-image": "^5.1.12",
     "shiki": "^3.19.0",
-    "ufo": "^1.6.1"
+    "ufo": "^1.6.1",
+    "tailwindcss": "^4",
+    "@tailwindcss/vite": "^4"
   },
   "devDependencies": {
     "@nuxt/eslint": "^1.10.0",

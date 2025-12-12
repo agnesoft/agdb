@@ -32,7 +32,8 @@
     "ufo": "^1.6.1",
     "tailwindcss": "^4",
     "@tailwindcss/vite": "^4",
-    "unist-util-visit": "^5"
+    "unist-util-visit": "^5",
+    "@nuxtjs/mdc": "^0.19"
   },
   "devDependencies": {
     "@nuxt/eslint": "^1.10.0",

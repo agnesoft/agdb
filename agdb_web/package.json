@@ -23,9 +23,13 @@
     "@nuxt/image": "^2.0.0",
     "@nuxt/ui": "^4.2.1",
     "better-sqlite3": "^12.4.6",
+    "@vueuse/core": "^14",
+    "minimark": "^0.2.0",
     "nuxt": "^4.2.1",
     "nuxt-llms": "0.1.3",
-    "nuxt-og-image": "^5.1.12"
+    "nuxt-og-image": "^5.1.12",
+    "shiki": "^3.19.0",
+    "ufo": "^1.6.1"
   },
   "devDependencies": {
     "@nuxt/eslint": "^1.10.0",

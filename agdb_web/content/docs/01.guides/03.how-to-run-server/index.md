@@ -1,5 +1,5 @@
 ---
-title: "How to run the server?"
+title: "Overview"
 description: "Run agdb_server on bare metal, Docker, or Kubernetes — single node or cluster"
 ---
 

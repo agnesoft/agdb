@@ -12,13 +12,10 @@ catalog:
   "@playwright/test": ^1
   "@prettier/plugin-php": ^0.22
   "@rushstack/eslint-patch": ^1
-  "@testing-library/react": ^16
   "@theguild/remark-mermaid": ^0.2
   "@tsconfig/node18": ^18
   "@types/jsdom": ^27
   "@types/node": ^24
-  "@types/react-dom": ^18
-  "@types/react": ^18
   "@typescript-eslint/eslint-plugin": ^8
   "@typescript-eslint/parser": ^8
   "@vitejs/plugin-react": ^4
@@ -33,7 +30,6 @@ catalog:
   "@vueuse/core": ^14
   axios: ^1
   copyfiles: ^2
-  eslint-config-next: ^15
   eslint-config-prettier: ^10
   eslint-import-resolver-alias: ^1
   eslint-import-resolver-typescript: ^4
@@ -44,16 +40,11 @@ catalog:
   highlight.js: ^11
   jsdom: ^27
   less: ^4
-  next: =15.4
-  nextra-theme-docs: ^3
-  nextra: ^3
   npm-run-all2: ^8
   openapi-client-axios: ^7
   openapicmd: ^2
   playwright: ^1
   prettier: ^3
-  react-dom: ^18
-  react: ^18
   sass: ^1
   turbo: ^2
   typescript-eslint: ^8

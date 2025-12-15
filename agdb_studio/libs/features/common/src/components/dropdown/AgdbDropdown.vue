@@ -21,11 +21,11 @@ const buttonRef = ref<HTMLElement>();
       ref="buttonRef"
       type="button"
       class="trigger"
-      @click="toggle"
       title="Display menu"
       aria-haspopup="true"
       :aria-expanded="opened"
       aria-controls="dropdown-content"
+      @click="toggle"
     >
       <slot name="trigger"></slot>
     </button>

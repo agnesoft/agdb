@@ -10,11 +10,12 @@ import { addTable } from "@/composables/table/tableConfig";
 
 describe("TableRow", () => {
   const fetchDataMock = vi.fn();
+  const onRowClick = vi.fn();
   addTable({
     name: TABLE_NAME,
     columns: tableConfig,
-    // rowDetailsComponent: "DbDetails",
     fetchData: fetchDataMock,
+    onRowClick,
   });
 
   it("should render", () => {
@@ -101,5 +102,32 @@ describe("TableRow", () => {
       },
     });
     expect(wrapper.find(".expand-row").exists()).toBe(false);
+  });
+
+  it("should handle row click", async () => {
+    const wrapper = mount(AgdbTableRow, {
+      props: {
+        columns: columnsMap,
+        row: {
+          role: "admin",
+          owner: "admin",
+          db: "app3",
+          db_type: "file",
+          size: 50,
+          backup: 0,
+        },
+      },
+      global: {
+        provide: {
+          [INJECT_KEY_COLUMNS]: { value: columnsMap },
+          [INJECT_KEY_TABLE_NAME]: { value: TABLE_NAME },
+        },
+        stubs: {
+          transitions: false,
+        },
+      },
+    });
+    await wrapper.find(".agdb-table-row").trigger("click");
+    expect(onRowClick).toHaveBeenCalled();
   });
 });

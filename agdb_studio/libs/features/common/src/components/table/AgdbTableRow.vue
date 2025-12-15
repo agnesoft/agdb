@@ -47,10 +47,11 @@ const slots = useSlots();
 const tableKey = inject<Ref<symbol | string>>(INJECT_KEY_TABLE_NAME);
 
 const onRowClick = computed(() =>
-  getTableRowClickHandler<TRow>(tableKey?.value!),
+  tableKey?.value ? getTableRowClickHandler<TRow>(tableKey.value) : undefined,
 );
 
 const handleRowClick = (): void => {
+  /* v8 ignore else -- @preserve */
   if (onRowClick.value) {
     onRowClick.value(props.row);
   }
@@ -76,9 +77,9 @@ const handleRowClick = (): void => {
       <div v-if="slots.rowDetails">
         <button
           class="button button-transparent expand-row"
-          @click.stop="toggleExpandRow"
           :aria-expanded="rowExpanded"
           :title="rowExpanded ? 'Collapse row details' : 'Expand row details'"
+          @click.stop="toggleExpandRow"
         >
           <AkChevronDownSmall v-if="!rowExpanded" />
           <AkChevronUpSmall v-else />

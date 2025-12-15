@@ -29,8 +29,8 @@ watch(modalIsVisible, async () => {
         <button
           class="button button-transparent"
           data-testid="close-modal"
-          @click="closeModal"
           type="button"
+          @click="closeModal"
         >
           <ClCloseMd />
         </button>

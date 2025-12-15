@@ -3,7 +3,7 @@ import AgdbTable from "@agdb-studio/common/src/components/table/AgdbTable.vue";
 import { useDbStore } from "../composables/dbStore";
 import { addTable } from "@agdb-studio/common/src/composables/table/tableConfig";
 import { setTableData } from "@agdb-studio/common/src/composables/table/tableData";
-import { watchEffect } from "vue";
+import { computed, watchEffect } from "vue";
 import { dbColumns } from "../composables/dbConfig";
 import DbDetails from "./DbDetails.vue";
 import { useRouter } from "vue-router";
@@ -15,7 +15,9 @@ const TABLE_KEY = Symbol("databases");
 
 const router = useRouter();
 const { isAdminView } = useAdmin();
-const queryRouteName = isAdminView ? "admin-query" : "query";
+const queryRouteName = computed(() =>
+  isAdminView.value ? "admin-query" : "query",
+);
 
 addTable({
   name: TABLE_KEY,
@@ -28,11 +30,14 @@ addTable({
     }),
   fetchData: fetchDatabases,
   onRowClick: (row) => {
+    if (!row.owner || !row.db) {
+      return;
+    }
     router.push({
-      name: queryRouteName,
+      name: queryRouteName.value,
       params: {
-        owner: row.owner?.toString() ?? "",
-        db: row.db?.toString() ?? "",
+        owner: row.owner?.toString(),
+        db: row.db?.toString(),
       },
     });
   },

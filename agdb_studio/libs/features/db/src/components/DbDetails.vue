@@ -49,8 +49,8 @@ onMounted(() => {
         v-if="canEditUsers"
         class="button button-bordered button-success add-button"
         title="Add user"
-        @click="() => handleAddUser()"
         type="button"
+        @click="() => handleAddUser()"
       >
         <ChPlus class="add-icon" />
       </button>
@@ -73,8 +73,8 @@ onMounted(() => {
           v-if="user.username !== dbParams.owner && canEditUsers"
           class="button button-bordered button-danger remove-button"
           title="Remove user"
-          @click="handleRemoveUser(user.username)"
           type="button"
+          @click="handleRemoveUser(user.username)"
         >
           <ClCloseMd class="remove-icon" />
         </button>

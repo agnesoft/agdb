@@ -31,4 +31,5 @@ export type Table<T extends TRow> = {
   data?: Map<string, T>;
   uniqueKey?: string | ((row: T) => string);
   fetchData: () => Promise<void>;
+  onRowClick?: (row: T) => void;
 };

@@ -6,10 +6,16 @@ import { setTableData } from "@agdb-studio/common/src/composables/table/tableDat
 import { watchEffect } from "vue";
 import { dbColumns } from "../composables/dbConfig";
 import DbDetails from "./DbDetails.vue";
+import { useRouter } from "vue-router";
+import { useAdmin } from "@agdb-studio/profile/src/composables/admin";
 
 const { databases, getDbName, fetchDatabases } = useDbStore();
 
 const TABLE_KEY = Symbol("databases");
+
+const router = useRouter();
+const { isAdminView } = useAdmin();
+const queryRouteName = isAdminView ? "admin-query" : "query";
 
 addTable({
   name: TABLE_KEY,
@@ -21,6 +27,15 @@ addTable({
       db: row.db?.toString() ?? "",
     }),
   fetchData: fetchDatabases,
+  onRowClick: (row) => {
+    router.push({
+      name: queryRouteName,
+      params: {
+        owner: row.owner?.toString() ?? "",
+        db: row.db?.toString() ?? "",
+      },
+    });
+  },
 });
 
 watchEffect(() => {

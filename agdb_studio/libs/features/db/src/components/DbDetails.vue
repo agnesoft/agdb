@@ -47,9 +47,10 @@ onMounted(() => {
       <h2>Database: {{ dbName }}</h2>
       <button
         v-if="canEditUsers"
-        class="button button-transparent add-button"
+        class="button button-bordered button-success add-button"
         title="Add user"
         @click="() => handleAddUser()"
+        type="button"
       >
         <ChPlus class="add-icon" />
       </button>
@@ -70,9 +71,10 @@ onMounted(() => {
         </span>
         <button
           v-if="user.username !== dbParams.owner && canEditUsers"
-          class="button button-transparent remove-button"
+          class="button button-bordered button-danger remove-button"
           title="Remove user"
           @click="handleRemoveUser(user.username)"
+          type="button"
         >
           <ClCloseMd class="remove-icon" />
         </button>
@@ -91,6 +93,7 @@ onMounted(() => {
     border-bottom: 1px solid var(--color-border);
     padding-bottom: 0.5rem;
     display: flex;
+    align-items: center;
   }
 }
 .db-users {
@@ -99,14 +102,14 @@ onMounted(() => {
   margin-top: 0.5rem;
   display: flex;
   gap: 1rem;
+  align-items: center;
   li {
     display: flex;
     align-items: center;
     gap: 0.2rem;
   }
   button {
-    padding: 0;
-    height: 1em;
+    margin: 0 0.5rem;
   }
 }
 .role {
@@ -117,8 +120,7 @@ onMounted(() => {
   color: var(--red);
 }
 .add-button {
-  height: 1em;
-  padding: 0 1rem;
+  margin: 0 1rem;
 }
 .add-icon {
   color: var(--green);

@@ -8,7 +8,8 @@ const opened = ref(false);
 const close = () => {
   opened.value = false;
 };
-const toggle = () => {
+const toggle = (event: MouseEvent) => {
+  event.stopPropagation();
   opened.value = !opened.value;
 };
 const buttonRef = ref<HTMLElement>();
@@ -16,7 +17,16 @@ const buttonRef = ref<HTMLElement>();
 
 <template>
   <div class="agdb-dropdown">
-    <button ref="buttonRef" type="button" class="trigger" @click="toggle">
+    <button
+      ref="buttonRef"
+      type="button"
+      class="trigger"
+      @click="toggle"
+      title="Display menu"
+      aria-haspopup="true"
+      :aria-expanded="opened"
+      aria-controls="dropdown-content"
+    >
       <slot name="trigger"></slot>
     </button>
     <Teleport to="#app">

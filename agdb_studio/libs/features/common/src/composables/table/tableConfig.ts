@@ -10,6 +10,7 @@ type AddTableProps<T extends TRow> = {
   columns: Column<T>[];
   uniqueKey?: string | ((row: T) => string);
   fetchData: () => Promise<void>;
+  onRowClick?: (row: T) => void;
 };
 
 const addTable = ({
@@ -17,6 +18,7 @@ const addTable = ({
   columns,
   uniqueKey,
   fetchData,
+  onRowClick,
 }: AddTableProps<TRow>): void => {
   const columnMap = new Map<string, Column<TRow>>();
   columns.forEach((column) => {
@@ -28,6 +30,7 @@ const addTable = ({
     data: new Map(),
     uniqueKey,
     fetchData,
+    onRowClick,
   });
 };
 
@@ -78,6 +81,13 @@ const fetchData = async (name: symbol | string | undefined): Promise<void> => {
   }
 };
 
+const getTableRowClickHandler = <T extends TRow>(
+  name: symbol | string,
+): ((row: T) => void) | undefined => {
+  const table = getTable<T>(name);
+  return table?.onRowClick;
+};
+
 export {
   getTable,
   addTable,
@@ -87,4 +97,5 @@ export {
   getTableColumns,
   getTableColumnsArray,
   fetchData,
+  getTableRowClickHandler,
 };

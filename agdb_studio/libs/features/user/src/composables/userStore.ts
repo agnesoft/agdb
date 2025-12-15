@@ -16,7 +16,7 @@ type AddUserParams = {
   password: string;
 };
 const addUser = async ({ username, password }: AddUserParams) => {
-  client.value?.admin_user_add({ username }, { password }).then(() => {
+  await client.value?.admin_user_add({ username }, { password }).then(() => {
     addNotification({
       type: "success",
       title: "User added",

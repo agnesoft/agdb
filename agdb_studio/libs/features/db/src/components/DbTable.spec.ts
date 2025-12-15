@@ -20,20 +20,40 @@ const DATABASES = [
     backup: 0,
   },
 ];
-const { getDbName } = vi.hoisted(() => {
+const { getDbName, useRouter, pushMock } = vi.hoisted(() => {
   const getDbName = vi.fn().mockImplementation((db) => `${db.owner}/${db.db}`);
-  return { getDbName };
+  const pushMock = vi.fn();
+  const useRouter = vi.fn().mockReturnValue({
+    push: pushMock,
+  });
+  return { getDbName, useRouter, pushMock };
 });
 
-let { databases } = vi.hoisted(() => {
-  return { databases: null as unknown as Ref<typeof DATABASES> };
+let { isAdminView, databases } = vi.hoisted(() => {
+  return {
+    isAdminView: null as unknown as Ref<boolean>,
+    databases: null as unknown as Ref<typeof DATABASES>,
+  };
 });
 
+isAdminView = ref(false);
 databases = ref([] as typeof DATABASES);
 
 vi.mock("../composables/dbStore", () => {
   return {
     useDbStore: () => ({ databases, getDbName }),
+  };
+});
+
+vi.mock("vue-router", () => {
+  return {
+    useRouter,
+  };
+});
+
+vi.mock("@agdb-studio/profile/src/composables/admin", () => {
+  return {
+    useAdmin: () => ({ isAdminView }),
   };
 });
 
@@ -90,6 +110,43 @@ describe("DbTable", () => {
     expect(getDbName).toHaveBeenCalledWith({
       owner: "test_owner",
       db: "test_db",
+    });
+  });
+
+  describe("row click navigation", () => {
+    it("should open query view when query button clicked", async () => {
+      isAdminView.value = false;
+      const wrapper = mount(DbTable);
+      await wrapper.find(".agdb-table-row").trigger("click");
+      expect(pushMock).toHaveBeenCalledWith({
+        name: "query",
+        params: { owner: "test_owner", db: "test_db" },
+      });
+    });
+    it("should open admin query view when in admin view and query button clicked", async () => {
+      isAdminView.value = true;
+      const wrapper = mount(DbTable);
+      await wrapper.find(".agdb-table-row").trigger("click");
+      expect(pushMock).toHaveBeenCalledWith({
+        name: "admin-query",
+        params: { owner: "test_owner", db: "test_db" },
+      });
+    });
+    it("should not navigate when onRowClick is not set", async () => {
+      isAdminView.value = false;
+      databases.value = [
+        {
+          owner: undefined as unknown as string,
+          db: undefined as unknown as string,
+          db_type: "memory",
+          role: "admin",
+          size: 2656,
+          backup: 0,
+        },
+      ];
+      const wrapper = mount(DbTable);
+      await wrapper.find(".agdb-table-row").trigger("click");
+      expect(pushMock).not.toHaveBeenCalled();
     });
   });
 });

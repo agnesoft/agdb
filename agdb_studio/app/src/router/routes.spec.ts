@@ -54,10 +54,15 @@ describe("routes", () => {
     const adminRoute = mainLayout!.children!.find((r) => r.path === "admin");
     expect(adminRoute).toBeDefined();
     expect(adminRoute!.meta).toEqual({ requiresAdmin: true, admin: true });
-    expect(adminRoute!.children).toHaveLength(3);
+    expect(adminRoute!.children).toHaveLength(4);
 
     const adminChildrenNames = adminRoute!.children!.map((r) => r.name);
-    expect(adminChildrenNames).toEqual(["admin", "admin-users", "admin-db"]);
+    expect(adminChildrenNames).toEqual([
+      "admin",
+      "admin-users",
+      "admin-db",
+      "admin-query",
+    ]);
   });
 
   it("not-found route is present and matches wildcard", () => {

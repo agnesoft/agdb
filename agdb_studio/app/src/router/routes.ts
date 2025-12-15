@@ -22,6 +22,11 @@ export const createRoutes = (): RouteRecordRaw[] => {
           component: () => import("@/views/DbView.vue"),
         },
         {
+          path: "query/:owner/:db",
+          name: "query",
+          component: () => import("@/views/QueryView.vue"),
+        },
+        {
           path: "admin",
           meta: { requiresAdmin: true, admin: true },
           children: [
@@ -39,6 +44,11 @@ export const createRoutes = (): RouteRecordRaw[] => {
               path: "db",
               name: "admin-db",
               component: () => import("@/views/admin/AdminDbView.vue"),
+            },
+            {
+              path: "query/:owner/:db",
+              name: "admin-query",
+              component: () => import("@/views/QueryView.vue"),
             },
           ],
         },

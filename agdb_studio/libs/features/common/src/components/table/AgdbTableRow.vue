@@ -1,10 +1,22 @@
 <script lang="ts" setup>
-import { computed, type PropType, provide, ref, useSlots } from "vue";
+import {
+  computed,
+  inject,
+  type PropType,
+  provide,
+  type Ref,
+  ref,
+  useSlots,
+} from "vue";
 import { type Column, type TRow } from "../../composables/table/types";
-import { INJECT_KEY_ROW } from "../../composables/table/constants";
+import {
+  INJECT_KEY_ROW,
+  INJECT_KEY_TABLE_NAME,
+} from "../../composables/table/constants";
 import AgdbCell from "./AgdbCell.vue";
 import { AkChevronDownSmall, AkChevronUpSmall } from "@kalimahapps/vue-icons";
 import SlideUpTransition from "@agdb-studio/design/src/components/transitions/SlideUpTransition.vue";
+import { getTableRowClickHandler } from "../../composables/table/tableConfig";
 
 const props = defineProps({
   row: {
@@ -31,11 +43,30 @@ const toggleExpandRow = (): void => {
 };
 
 const slots = useSlots();
+
+const tableKey = inject<Ref<symbol | string>>(INJECT_KEY_TABLE_NAME);
+
+const onRowClick = computed(() =>
+  tableKey?.value ? getTableRowClickHandler<TRow>(tableKey.value) : undefined,
+);
+
+const handleRowClick = (): void => {
+  /* v8 ignore else -- @preserve */
+  if (onRowClick.value) {
+    onRowClick.value(props.row);
+  }
+};
 </script>
 
 <template>
   <div class="agdb-table-row-wrap">
-    <div :class="['agdb-table-row columns', { expandable: slots.rowDetails }]">
+    <div
+      :class="[
+        'agdb-table-row columns',
+        { expandable: slots.rowDetails, clickable: !!onRowClick },
+      ]"
+      @click="handleRowClick"
+    >
       <div
         v-for="cellKey in cellKeys"
         :key="cellKey"
@@ -46,7 +77,9 @@ const slots = useSlots();
       <div v-if="slots.rowDetails">
         <button
           class="button button-transparent expand-row"
-          @click="toggleExpandRow"
+          :aria-expanded="rowExpanded"
+          :title="rowExpanded ? 'Collapse row details' : 'Expand row details'"
+          @click.stop="toggleExpandRow"
         >
           <AkChevronDownSmall v-if="!rowExpanded" />
           <AkChevronUpSmall v-else />
@@ -64,9 +97,25 @@ const slots = useSlots();
 <style lang="less" scoped>
 .agdb-table-row-wrap {
   border-bottom: 1px solid var(--color-border);
-  .expanded-row {
-    border: 1px solid var(--color-border);
-    border-bottom: none;
+}
+.expanded-row {
+  border: 1px solid var(--color-border);
+  border-bottom: none;
+}
+.clickable {
+  cursor: pointer;
+  transition: background-color 0.2s ease-in-out;
+  // hover effect on clickable rows but not on buttons inside the row
+  &:not(&:hover:has(button:hover)):hover {
+    background-color: var(--color-background-soft);
   }
+}
+.expand-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  padding: 0;
 }
 </style>

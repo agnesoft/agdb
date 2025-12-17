@@ -132,7 +132,7 @@ describe("DbTable", () => {
         params: { owner: "test_owner", db: "test_db" },
       });
     });
-    it("should not navigate when onRowClick is not set", async () => {
+    it("should not navigate when row has undefined owner or db", async () => {
       isAdminView.value = false;
       databases.value = [
         {

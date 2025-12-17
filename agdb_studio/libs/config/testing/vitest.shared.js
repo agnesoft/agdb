@@ -21,6 +21,8 @@ export default defineConfig({
         "./src/App.vue",
         "src/tests/*",
         "**/types.ts",
+        "**/*.d.ts",
+        "**/*.svg",
       ],
       thresholds: {
         lines: 100,

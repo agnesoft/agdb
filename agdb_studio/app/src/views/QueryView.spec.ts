@@ -8,7 +8,7 @@ vi.mock("vue-router", () => ({
   useRoute,
 }));
 
-vi.mock("../composables/dbStore", () => {
+vi.mock("@agdb-studio/db/src/composables/dbStore", () => {
   return {
     useDbStore: () => ({
       getDbName: vi

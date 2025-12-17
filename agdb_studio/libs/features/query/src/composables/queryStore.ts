@@ -1,90 +1,75 @@
-import type { Query, QueryStep } from "./types";
+import { ref, type Ref } from "vue";
+import type { AddQueryParams, Query, QueryStep } from "./types";
 
-const queries = new Map<symbol, Query>();
+const queries = ref(new Map<string, Ref<Query>>());
 
-const addQuery = (query: Query) => {
-  queries.set(Symbol(query.id), query);
+const getQuery = (queryKey: string): Ref<Query> | undefined => {
+  return queries.value.get(queryKey);
 };
 
-const updateQuery = (query: Query) => {
-  const key = Array.from(queries.keys()).find(
-    (k) => queries.get(k)?.id === query.id,
-  );
-  if (key) {
-    queries.set(key, query);
-  }
+const addQuery = (query: AddQueryParams): Ref<Query> => {
+  const newQuery: Ref<Query> = ref({
+    ...query,
+    isRunning: false,
+  });
+  queries.value.set(query.id, newQuery);
+  return newQuery;
 };
 
 const deleteQuery = (queryId: string) => {
-  const key = Array.from(queries.keys()).find(
-    (k) => queries.get(k)?.id === queryId,
-  );
-  if (key) {
-    queries.delete(key);
-  }
+  queries.value.delete(queryId);
 };
 
 const addQueryStep = (queryId: string, step: QueryStep) => {
-  const query = Array.from(queries.values()).find((q) => q.id === queryId);
-  if (query) {
-    query.steps.push(step);
-    updateQuery(query);
+  const query = getQuery(queryId);
+  if (query?.value) {
+    query.value.steps.push(step);
   }
 };
 
 const updateQueryStep = (queryId: string, step: QueryStep) => {
-  const query = Array.from(queries.values()).find((q) => q.id === queryId);
-  if (query) {
-    const stepIndex = query.steps.findIndex((s) => s.id === step.id);
-    if (stepIndex !== -1) {
-      query.steps[stepIndex] = step;
-      updateQuery(query);
+  const query = getQuery(queryId);
+  if (query?.value) {
+    const index = query.value.steps.findIndex((s) => s.id === step.id);
+    if (index !== -1) {
+      query.value.steps[index] = step;
     }
   }
 };
 
 const deleteQueryStep = (queryId: string, stepId: string) => {
-  const query = Array.from(queries.values()).find((q) => q.id === queryId);
-  if (query) {
-    query.steps = query.steps.filter((s) => s.id !== stepId);
-    updateQuery(query);
+  const query = getQuery(queryId);
+  if (query?.value) {
+    query.value.steps = query.value.steps.filter((s) => s.id !== stepId);
   }
 };
 
 const runQuery = (queryId: string) => {
-  const query = Array.from(queries.values()).find((q) => q.id === queryId);
-  if (query) {
-    query.isRunning = true;
-    updateQuery(query);
+  const query = getQuery(queryId);
+  if (query?.value) {
+    query.value.isRunning = true;
     // Simulate query execution
     setTimeout(() => {
-      query.isRunning = false;
-      query.lastRun = new Date();
-      updateQuery(query);
+      query.value.isRunning = false;
+      query.value.lastRun = new Date();
     }, 1000);
   }
 };
 
 const stopQuery = (queryId: string) => {
-  const query = Array.from(queries.values()).find((q) => q.id === queryId);
-  if (query) {
-    query.isRunning = false;
-    updateQuery(query);
+  const query = getQuery(queryId);
+  if (query?.value) {
+    query.value.isRunning = false;
   }
 };
 
 const clearQueries = () => {
-  queries.clear();
-};
-
-const getQuery = (queryId: string): Query | undefined => {
-  return Array.from(queries.values()).find((q) => q.id === queryId);
+  queries.value.clear();
 };
 
 export const useQueryStore = () => {
   return {
     addQuery,
-    updateQuery,
     deleteQuery,
     addQueryStep,
     updateQueryStep,

@@ -1,16 +1,14 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
 import { useQueryStore } from "./queryStore";
-import type { Query, QueryStep } from "./types";
+import type { AddQueryParams, Query, QueryStep } from "./types";
 
 describe("queryStore", () => {
   const store = useQueryStore();
 
-  const makeQuery = (overrides?: Partial<Query>): Query => ({
+  const makeQuery = (overrides?: Partial<Query>): AddQueryParams => ({
     id: overrides?.id ?? "q1",
     name: overrides?.name ?? "Query 1",
     steps: overrides?.steps ?? [],
-    isRunning: overrides?.isRunning ?? false,
-    lastRun: overrides?.lastRun,
   });
 
   const makeStep = (overrides?: Partial<QueryStep>): QueryStep => ({
@@ -30,103 +28,90 @@ describe("queryStore", () => {
 
   it("adds and retrieves a query", () => {
     const q = makeQuery();
-    store.addQuery(q);
-    const got = store.getQuery(q.id);
+    const queryRef = store.addQuery(q);
+    const got = store.getQuery(queryRef.value.id);
     expect(got).toBeDefined();
-    expect(got?.id).toBe(q.id);
-    expect(got?.name).toBe("Query 1");
-    expect(got?.steps).toEqual([]);
-  });
-
-  it("updates an existing query", () => {
-    const q = makeQuery();
-    store.addQuery(q);
-
-    const updated = { ...q, name: "Updated Query" };
-    store.updateQuery(updated);
-
-    const got = store.getQuery(q.id);
-    expect(got?.name).toBe("Updated Query");
+    expect(got?.value?.id).toBe(queryRef.value.id);
+    expect(got?.value?.name).toBe("Query 1");
+    expect(got?.value?.steps).toEqual([]);
   });
 
   it("deletes a query", () => {
     const q = makeQuery();
-    store.addQuery(q);
+    const queryRef = store.addQuery(q);
 
-    store.deleteQuery(q.id);
-    expect(store.getQuery(q.id)).toBeUndefined();
+    store.deleteQuery(queryRef.value.id);
+    expect(store.getQuery(queryRef.value.id)).toBeUndefined();
   });
 
   it("adds a query step", () => {
     const q = makeQuery();
-    store.addQuery(q);
+    const queryRef = store.addQuery(q);
 
     const step = makeStep();
-    store.addQueryStep(q.id, step);
+    store.addQueryStep(queryRef.value.id, step);
 
-    const got = store.getQuery(q.id);
-    expect(got?.steps.length).toBe(1);
-    expect(got?.steps[0]).toEqual(step);
+    const got = store.getQuery(queryRef.value.id);
+    expect(got?.value?.steps.length).toBe(1);
+    expect(got?.value?.steps[0]).toEqual(step);
   });
 
   it("updates a query step", () => {
     const q = makeQuery();
-    store.addQuery(q);
+    const queryRef = store.addQuery(q);
 
     const step = makeStep();
-    store.addQueryStep(q.id, step);
+    store.addQueryStep(queryRef.value.id, step);
 
     const updatedStep = { ...step, name: "Updated Step" };
-    store.updateQueryStep(q.id, updatedStep);
+    store.updateQueryStep(queryRef.value.id, updatedStep);
 
-    const got = store.getQuery(q.id);
-    expect(got?.steps[0]?.name).toBe("Updated Step");
+    const got = store.getQuery(queryRef.value.id);
+    expect(got?.value?.steps[0]?.name).toBe("Updated Step");
   });
 
   it("deletes a query step", () => {
     const q = makeQuery();
-    store.addQuery(q);
+    const queryRef = store.addQuery(q);
 
     const s1 = makeStep({ id: "s1" });
     const s2 = makeStep({ id: "s2", name: "Step 2" });
-    store.addQueryStep(q.id, s1);
-    store.addQueryStep(q.id, s2);
+    store.addQueryStep(queryRef.value.id, s1);
+    store.addQueryStep(queryRef.value.id, s2);
 
-    store.deleteQueryStep(q.id, "s1");
-    const got = store.getQuery(q.id);
-    expect(got?.steps.length).toBe(1);
-    expect(got?.steps[0]?.id).toBe("s2");
+    store.deleteQueryStep(queryRef.value.id, "s1");
+    const got = store.getQuery(queryRef.value.id);
+    expect(got?.value?.steps.length).toBe(1);
+    expect(got?.value?.steps[0]?.id).toBe("s2");
   });
 
   it("runs a query and sets lastRun after completion", () => {
     vi.useFakeTimers();
 
     const q = makeQuery();
-    store.addQuery(q);
+    const queryRef = store.addQuery(q);
 
-    store.runQuery(q.id);
+    store.runQuery(queryRef.value.id);
     // Immediately marked as running
-    expect(store.getQuery(q.id)?.isRunning).toBe(true);
-
+    expect(store.getQuery(queryRef.value.id)?.value?.isRunning).toBe(true);
     // Advance simulated time to complete execution
     vi.advanceTimersByTime(1000);
 
-    const got = store.getQuery(q.id);
-    expect(got?.isRunning).toBe(false);
-    expect(got?.lastRun).toBeInstanceOf(Date);
+    const got = store.getQuery(queryRef.value.id);
+    expect(got?.value?.isRunning).toBe(false);
+    expect(got?.value?.lastRun).toBeInstanceOf(Date);
   });
 
   it("stops a running query", () => {
     vi.useFakeTimers();
 
     const q = makeQuery();
-    store.addQuery(q);
+    const queryRef = store.addQuery(q);
 
-    store.runQuery(q.id);
-    expect(store.getQuery(q.id)?.isRunning).toBe(true);
-
-    store.stopQuery(q.id);
-    expect(store.getQuery(q.id)?.isRunning).toBe(false);
+    store.runQuery(queryRef.value.id);
+    expect(store.getQuery(queryRef.value.id)?.value?.isRunning).toBe(true);
+    store.stopQuery(queryRef.value.id);
+    expect(store.getQuery(queryRef.value.id)?.value?.isRunning).toBe(false);
   });
 
   it("clears all queries", () => {
@@ -144,10 +129,6 @@ describe("queryStore", () => {
     // none added; operations should be no-ops
     const missingId = "missing";
     const step = makeStep({ id: "x" });
-
-    // updateQuery with missing
-    store.updateQuery(makeQuery({ id: missingId }));
-    expect(store.getQuery(missingId)).toBeUndefined();
 
     // deleteQuery with missing
     store.deleteQuery(missingId);
@@ -168,18 +149,19 @@ describe("queryStore", () => {
   });
 
   it("does not update step when id not found", () => {
-    const q = makeQuery({ id: "qid" });
-    store.addQuery(q);
+    const qid = "qid";
+    const q = makeQuery({ id: qid });
+    const queryRef = store.addQuery(q);
 
     const existing = makeStep({ id: "s1" });
-    store.addQueryStep(q.id, existing);
+    store.addQueryStep(queryRef.value.id, existing);
 
     const nonExisting = makeStep({ id: "s2", name: "Should Not Apply" });
-    store.updateQueryStep(q.id, nonExisting);
+    store.updateQueryStep(queryRef.value.id, nonExisting);
 
-    const got = store.getQuery(q.id);
-    expect(got?.steps.length).toBe(1);
-    expect(got?.steps[0]?.id).toBe("s1");
-    expect(got?.steps[0]?.name).not.toBe("Should Not Apply");
+    const got = store.getQuery(queryRef.value.id);
+    expect(got?.value?.steps.length).toBe(1);
+    expect(got?.value?.steps[0]?.id).toBe("s1");
+    expect(got?.value?.steps[0]?.name).not.toBe("Should Not Apply");
   });
 });

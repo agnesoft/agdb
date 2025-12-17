@@ -7,10 +7,13 @@ export type QueryStep = {
   data?: string;
 };
 
-export type Query = {
+export type AddQueryParams = {
   id: string;
   name: string;
   steps: QueryStep[];
+};
+
+export type Query = {
   isRunning: boolean;
   lastRun?: Date;
-};
+} & AddQueryParams;

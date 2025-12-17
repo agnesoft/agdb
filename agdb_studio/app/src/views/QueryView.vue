@@ -2,6 +2,8 @@
 import { useDbStore } from "@agdb-studio/db/src/composables/dbStore";
 import { useRoute } from "vue-router";
 
+import QueryViewComponent from "@agdb-studio/query/src/components/view/QueryView.vue";
+
 const { getDbName } = useDbStore();
 
 const route = useRoute();
@@ -13,16 +15,19 @@ const dbName = getDbName({
 </script>
 
 <template>
-  <div>
+  <div class="query-view">
     <h1>Database {{ dbName }} query</h1>
-    <div class="query-input">
-      <input type="text" placeholder="Type your query here..." />
-      <button class="button button-primary">Run Query</button>
-    </div>
-    <div class="query-results">
-      <!-- Query results will be displayed here -->
-    </div>
+    <QueryViewComponent :dbName="dbName" />
   </div>
 </template>
 
-<style lang="less" scoped></style>
+<style lang="less" scoped>
+.query-view {
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+</style>

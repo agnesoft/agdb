@@ -2,7 +2,13 @@
 
 <template>
   <div class="query-builder">
-    <div class="query-input" contenteditable="true"></div>
+    <div
+      class="query-input"
+      contenteditable="true"
+      role="textbox"
+      aria-label="Query input"
+      aria-multiline="false"
+    ></div>
     <button type="button" class="button button-primary">Run query</button>
   </div>
 </template>

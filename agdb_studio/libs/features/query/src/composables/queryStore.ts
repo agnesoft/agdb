@@ -1,6 +1,6 @@
 import type { Query, QueryStep } from "./types";
 
-const queries = new Map<Symbol, Query>();
+const queries = new Map<symbol, Query>();
 
 const addQuery = (query: Query) => {
   queries.set(Symbol(query.id), query);

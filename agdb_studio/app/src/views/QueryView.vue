@@ -17,7 +17,7 @@ const dbName = getDbName({
 <template>
   <div class="query-view">
     <h1>Database {{ dbName }} query</h1>
-    <QueryViewComponent :dbName="dbName" />
+    <QueryViewComponent />
   </div>
 </template>
 

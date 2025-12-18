@@ -6,6 +6,9 @@ on:
     paths:
       - agdb_api/typescript/**
       - .github/workflows/agdb_api_typescript.yaml
+      - pnpm-lock.yaml
+      - pnpm-workspace.yaml
+      - package.json
 
 jobs:
   agdb_api_typescript:

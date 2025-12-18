@@ -1,5 +1,5 @@
 import { ref, type Ref } from "vue";
-import type { AddQueryParams, Query, QueryStep } from "./types";
+import type { AddQueryParams, Query, QueryStep, TABS } from "./types";
 
 const queries = ref(new Map<string, Ref<Query>>());
 
@@ -20,27 +20,41 @@ const deleteQuery = (queryId: string) => {
   queries.value.delete(queryId);
 };
 
-const addQueryStep = (queryId: string, step: QueryStep) => {
+const addQueryStep = (
+  queryId: string,
+  tab: (typeof TABS)[number],
+  step: QueryStep,
+) => {
   const query = getQuery(queryId);
   if (query?.value) {
-    query.value.steps.push(step);
+    query.value.steps[tab].push(step);
   }
 };
 
-const updateQueryStep = (queryId: string, step: QueryStep) => {
+const updateQueryStep = (
+  queryId: string,
+  tab: (typeof TABS)[number],
+  step: QueryStep,
+) => {
   const query = getQuery(queryId);
   if (query?.value) {
-    const index = query.value.steps.findIndex((s) => s.id === step.id);
+    const index = query.value.steps[tab].findIndex((s) => s.id === step.id);
     if (index !== -1) {
-      query.value.steps[index] = step;
+      query.value.steps[tab][index] = step;
     }
   }
 };
 
-const deleteQueryStep = (queryId: string, stepId: string) => {
+const deleteQueryStep = (
+  queryId: string,
+  tab: (typeof TABS)[number],
+  stepId: string,
+) => {
   const query = getQuery(queryId);
   if (query?.value) {
-    query.value.steps = query.value.steps.filter((s) => s.id !== stepId);
+    query.value.steps[tab] = query.value.steps[tab].filter(
+      (s) => s.id !== stepId,
+    );
   }
 };
 

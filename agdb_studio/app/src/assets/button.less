@@ -2,11 +2,15 @@
   display: inline-block;
   padding: 0.3em 1em;
   border: none;
-  border-radius: 4px;
+  border-radius: 0.25rem;
   text-align: center;
   text-decoration: none;
   cursor: pointer;
-  transition: opacity 0.4s ease;
+  transition:
+    opacity 0.4s ease,
+    background-color 0.4s ease,
+    color 0.4s ease,
+    border-color 0.4s ease;
   --backgroundColor: var(--color-background-mute);
   --color: var(--color-text);
   --borderColor: var(--color-text);
@@ -62,4 +66,17 @@
 
 .button:active {
   opacity: 0.6;
+}
+
+.button-tab {
+  --backgroundColor: transparent;
+  --color: var(--color-text);
+  --borderColor: transparent;
+  border-bottom: none;
+  border-radius: 0.25rem 0.25rem 0 0;
+  padding: 0.35rem 1rem;
+
+  &.active {
+    --borderColor: var(--color-text);
+  }
 }

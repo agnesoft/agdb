@@ -8,7 +8,11 @@ describe("queryStore", () => {
   const makeQuery = (overrides?: Partial<Query>): AddQueryParams => ({
     id: overrides?.id ?? "q1",
     name: overrides?.name ?? "Query 1",
-    steps: overrides?.steps ?? [],
+    steps: overrides?.steps ?? {
+      exec: [],
+      exec_mut: [],
+      context: [],
+    },
   });
 
   const makeStep = (overrides?: Partial<QueryStep>): QueryStep => ({
@@ -33,7 +37,7 @@ describe("queryStore", () => {
     expect(got).toBeDefined();
     expect(got?.value?.id).toBe(queryRef.value.id);
     expect(got?.value?.name).toBe("Query 1");
-    expect(got?.value?.steps).toEqual([]);
+    expect(got?.value?.steps.exec).toEqual([]);
   });
 
   it("deletes a query", () => {
@@ -49,11 +53,11 @@ describe("queryStore", () => {
     const queryRef = store.addQuery(q);
 
     const step = makeStep();
-    store.addQueryStep(queryRef.value.id, step);
+    store.addQueryStep(queryRef.value.id, "exec", step);
 
     const got = store.getQuery(queryRef.value.id);
-    expect(got?.value?.steps.length).toBe(1);
-    expect(got?.value?.steps[0]).toEqual(step);
+    expect(got?.value?.steps.exec.length).toBe(1);
+    expect(got?.value?.steps.exec[0]).toEqual(step);
   });
 
   it("updates a query step", () => {
@@ -61,13 +65,13 @@ describe("queryStore", () => {
     const queryRef = store.addQuery(q);
 
     const step = makeStep();
-    store.addQueryStep(queryRef.value.id, step);
+    store.addQueryStep(queryRef.value.id, "exec", step);
 
     const updatedStep = { ...step, name: "Updated Step" };
-    store.updateQueryStep(queryRef.value.id, updatedStep);
+    store.updateQueryStep(queryRef.value.id, "exec", updatedStep);
 
     const got = store.getQuery(queryRef.value.id);
-    expect(got?.value?.steps[0]?.name).toBe("Updated Step");
+    expect(got?.value?.steps.exec[0]?.name).toBe("Updated Step");
   });
 
   it("deletes a query step", () => {
@@ -76,13 +80,13 @@ describe("queryStore", () => {
 
     const s1 = makeStep({ id: "s1" });
     const s2 = makeStep({ id: "s2", name: "Step 2" });
-    store.addQueryStep(queryRef.value.id, s1);
-    store.addQueryStep(queryRef.value.id, s2);
+    store.addQueryStep(queryRef.value.id, "exec", s1);
+    store.addQueryStep(queryRef.value.id, "exec", s2);
 
-    store.deleteQueryStep(queryRef.value.id, "s1");
+    store.deleteQueryStep(queryRef.value.id, "exec", "s1");
     const got = store.getQuery(queryRef.value.id);
-    expect(got?.value?.steps.length).toBe(1);
-    expect(got?.value?.steps[0]?.id).toBe("s2");
+    expect(got?.value?.steps.exec.length).toBe(1);
+    expect(got?.value?.steps.exec[0]?.id).toBe("s2");
   });
 
   it("runs a query and sets lastRun after completion", () => {
@@ -135,9 +139,9 @@ describe("queryStore", () => {
     expect(store.getQuery(missingId)).toBeUndefined();
 
     // step operations with missing
-    store.addQueryStep(missingId, step);
-    store.updateQueryStep(missingId, step);
-    store.deleteQueryStep(missingId, step.id);
+    store.addQueryStep(missingId, "exec", step);
+    store.updateQueryStep(missingId, "exec", step);
+    store.deleteQueryStep(missingId, "exec", step.id);
     expect(store.getQuery(missingId)).toBeUndefined();
 
     // run/stop missing
@@ -154,14 +158,14 @@ describe("queryStore", () => {
     const queryRef = store.addQuery(q);
 
     const existing = makeStep({ id: "s1" });
-    store.addQueryStep(queryRef.value.id, existing);
+    store.addQueryStep(queryRef.value.id, "exec", existing);
 
     const nonExisting = makeStep({ id: "s2", name: "Should Not Apply" });
-    store.updateQueryStep(queryRef.value.id, nonExisting);
+    store.updateQueryStep(queryRef.value.id, "exec", nonExisting);
 
     const got = store.getQuery(queryRef.value.id);
-    expect(got?.value?.steps.length).toBe(1);
-    expect(got?.value?.steps[0]?.id).toBe("s1");
-    expect(got?.value?.steps[0]?.name).not.toBe("Should Not Apply");
+    expect(got?.value?.steps.exec.length).toBe(1);
+    expect(got?.value?.steps.exec[0]?.id).toBe("s1");
+    expect(got?.value?.steps.exec[0]?.name).not.toBe("Should Not Apply");
   });
 });

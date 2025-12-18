@@ -55,6 +55,7 @@ const confirmStep = () => {
   if (stepType) {
     emit("confirm-step", stepType);
     content.value = "";
+    activeHintIndex.value = 0;
     if (contentInput.value) {
       contentInput.value.innerText = "";
     }
@@ -89,6 +90,7 @@ const activeHintIndex = ref(0);
 .query-step-input {
   position: relative;
   display: inline-block;
-  width: 100%;
+  flex: 1;
+  min-width: 10rem;
 }
 </style>

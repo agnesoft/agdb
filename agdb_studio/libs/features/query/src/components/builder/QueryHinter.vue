@@ -35,6 +35,7 @@ defineEmits<{
   overflow-y: auto;
   width: max-content;
   min-width: 10rem;
+  border-radius: 0.25rem;
 }
 .hinter-item {
   padding: 0.2rem 0.5rem;
@@ -42,6 +43,7 @@ defineEmits<{
   transition:
     background-color 0.2s ease,
     opacity 0.2s ease;
+  border-radius: 0.25rem;
   &:hover {
     background-color: var(--color-background);
     opacity: 0.8;

@@ -73,7 +73,6 @@ const addStep = (stepType: QueryType) => {
 <style lang="less" scoped>
 .query-builder {
   width: 100%;
-  // height: 2rem;
   display: flex;
   button {
     border-top-left-radius: 0;
@@ -89,10 +88,10 @@ const addStep = (stepType: QueryType) => {
   padding: 0.2rem;
   box-sizing: border-box;
   display: inline-block;
-  // line-height: 2rem;
   transition: background-color 0.4s ease;
   display: flex;
   gap: 0.5rem;
+  flex-wrap: wrap;
   &.context {
     background-color: var(--color-background-soft);
   }

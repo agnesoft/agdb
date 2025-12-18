@@ -8,7 +8,7 @@ const activeTab = ref<TAB>(TABS[0]);
 
 <template>
   <div class="query-builder-tabs">
-    <div class="tabs">
+    <div class="tabs" role="tablist">
       <button
         v-for="tab in TABS"
         :key="tab"
@@ -16,11 +16,18 @@ const activeTab = ref<TAB>(TABS[0]);
         :class="{ active: activeTab === tab }"
         type="button"
         @click="activeTab = tab"
+        role="tab"
+        :aria-selected="activeTab === tab"
+        :id="`query-tabpanel-${tab}`"
+        :tabindex="activeTab === tab ? 0 : -1"
       >
         {{ tab === "context" ? "exec (Context)" : tab }}
       </button>
     </div>
-    <QueryBuilder :tab="activeTab" />
+    <QueryBuilder
+      :tab="activeTab"
+      :aria-controls="`query-tabpanel-${activeTab}`"
+    />
   </div>
 </template>
 

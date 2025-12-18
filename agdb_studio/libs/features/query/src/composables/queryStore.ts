@@ -1,5 +1,5 @@
 import { ref, type Ref } from "vue";
-import type { AddQueryParams, Query, QueryStep, TABS } from "./types";
+import type { AddQueryParams, Query, QueryStep, TAB } from "./types";
 
 const queries = ref(new Map<string, Ref<Query>>());
 
@@ -20,22 +20,14 @@ const deleteQuery = (queryId: string) => {
   queries.value.delete(queryId);
 };
 
-const addQueryStep = (
-  queryId: string,
-  tab: (typeof TABS)[number],
-  step: QueryStep,
-) => {
+const addQueryStep = (queryId: string, tab: TAB, step: QueryStep) => {
   const query = getQuery(queryId);
   if (query?.value) {
     query.value.steps[tab].push(step);
   }
 };
 
-const updateQueryStep = (
-  queryId: string,
-  tab: (typeof TABS)[number],
-  step: QueryStep,
-) => {
+const updateQueryStep = (queryId: string, tab: TAB, step: QueryStep) => {
   const query = getQuery(queryId);
   if (query?.value) {
     const index = query.value.steps[tab].findIndex((s) => s.id === step.id);
@@ -45,11 +37,7 @@ const updateQueryStep = (
   }
 };
 
-const deleteQueryStep = (
-  queryId: string,
-  tab: (typeof TABS)[number],
-  stepId: string,
-) => {
+const deleteQueryStep = (queryId: string, tab: TAB, stepId: string) => {
   const query = getQuery(queryId);
   if (query?.value) {
     query.value.steps[tab] = query.value.steps[tab].filter(

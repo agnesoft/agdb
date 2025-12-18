@@ -41,7 +41,7 @@ fn init_index_js_name() -> ServerResult<String> {
 }
 
 fn init_logo_js(config: &Config) -> ServerResult {
-    AGDB_STUDIO
+    let logo_js = AGDB_STUDIO
         .dirs()
         .find(|d| {
             d.path()
@@ -50,26 +50,27 @@ fn init_logo_js(config: &Config) -> ServerResult {
                 .to_string_lossy()
                 == "assets"
         })
-        .and_then(|d| {
-            d.files()
-                .find(|f| {
-                    f.path()
-                        .file_name()
-                        .expect("file should have valid filename")
-                        .to_string_lossy()
-                        .contains("LogoIcon")
-                })
-                .and_then(|f| {
-                    let content = f.contents_utf8()?;
-                    let logo_js = content.replace(
-                        "/studio/assets/",
-                        format!("{}/studio/assets/", config.basepath).as_str(),
-                    );
-                    AGDB_STUDIO_LOGO_JS_CONTENT.set(logo_js).ok()?;
-                    Some(())
-                })
+        .ok_or(init_error("3: Failed to find assets directory"))?
+        .files()
+        .find(|f| {
+            let file = f
+                .path()
+                .file_name()
+                .expect("file should have valid filename")
+                .to_string_lossy();
+            file.contains("LogoIcon") && file.ends_with(".js")
         })
-        .ok_or(init_error("3: Logo icon not found"))
+        .ok_or(init_error("3: Failed to find LogoIcon JS file"))?
+        .contents_utf8()
+        .ok_or(init_error("3: Failed to read LogoIcon JS file as UTF-8"))?
+        .replace(
+            "/studio/assets/",
+            format!("{}/studio/assets/", config.basepath).as_str(),
+        );
+
+    AGDB_STUDIO_LOGO_JS_CONTENT.set(logo_js)?;
+
+    Ok(())
 }
 
 fn init_index_js_content(filename: &str, config: &Config) -> ServerResult {

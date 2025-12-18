@@ -11,15 +11,15 @@ const activeTab = ref<TAB>(TABS[0]);
     <div class="tabs" role="tablist">
       <button
         v-for="tab in TABS"
+        :id="`query-tabpanel-${tab}`"
         :key="tab"
         class="button button-tab"
         :class="{ active: activeTab === tab }"
         type="button"
-        @click="activeTab = tab"
         role="tab"
         :aria-selected="activeTab === tab"
-        :id="`query-tabpanel-${tab}`"
         :tabindex="activeTab === tab ? 0 : -1"
+        @click="activeTab = tab"
       >
         {{ tab === "context" ? "exec (Context)" : tab }}
       </button>

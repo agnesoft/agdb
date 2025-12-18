@@ -45,6 +45,8 @@
   --z-index-notification: 10;
   --z-index-notification-new: 1100;
   --z-index-dropdown: 400;
+
+  --orange-background: #d8862122;
 }
 
 :root {

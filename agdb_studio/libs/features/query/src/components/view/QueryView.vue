@@ -1,11 +1,11 @@
 <script lang="ts" setup>
-import QueryBuilder from "../builder/QueryBuilder.vue";
+import QueryBuilderTabs from "../builder/QueryBuilderTabs.vue";
 import QueryGraph from "../graph/QueryGraph.vue";
 </script>
 
 <template>
   <div class="query-view">
-    <QueryBuilder />
+    <QueryBuilderTabs />
     <QueryGraph />
   </div>
 </template>

@@ -12,8 +12,6 @@ static AGDB_STUDIO: Dir = include_dir!("agdb_studio/app/dist");
 static AGDB_STUDIO_INDEX_HTML: OnceLock<String> = OnceLock::new();
 static AGDB_STUDIO_INDEX_JS: OnceLock<String> = OnceLock::new();
 static AGDB_STUDIO_INDEX_JS_CONTENT: OnceLock<String> = OnceLock::new();
-static AGDB_STUDIO_LOGO_JS: &str = "LogoIcon-";
-static AGDB_STUDIO_LOGO_JS_CONTENT: OnceLock<String> = OnceLock::new();
 
 fn init_error(msg: &str) -> ServerError {
     ServerError::new(StatusCode::INTERNAL_SERVER_ERROR, msg)
@@ -22,16 +20,16 @@ fn init_error(msg: &str) -> ServerError {
 fn init_index_js_name() -> ServerResult<String> {
     let index_html = AGDB_STUDIO
         .get_file("index.html")
-        .ok_or(init_error("1: index.html not found"))?;
+        .ok_or(init_error("index.html not found"))?;
     let index_content = index_html
         .contents_utf8()
-        .ok_or(init_error("2: index.html could not be read"))?;
+        .ok_or(init_error("index.html could not be read"))?;
     let (_, index_js_suffix) = index_content
         .split_once("src=\"/studio/assets/index")
-        .ok_or(init_error("1: failed to find index.js in index.html"))?;
+        .ok_or(init_error("(src) Failed to find index.js in index.html"))?;
     let (index_js_suffix, _) = index_js_suffix
         .split_once(".js\"></script>")
-        .ok_or(init_error("2: failed to find index.js in index.html"))?;
+        .ok_or(init_error("(script) Failed to find index.js in index.html"))?;
 
     let index_js_name = format!("assets/index{index_js_suffix}.js");
 
@@ -40,43 +38,10 @@ fn init_index_js_name() -> ServerResult<String> {
     Ok(index_js_name)
 }
 
-fn init_logo_js(config: &Config) -> ServerResult {
-    let logo_js = AGDB_STUDIO
-        .dirs()
-        .find(|d| {
-            d.path()
-                .file_name()
-                .expect("dir should have valid filename")
-                .to_string_lossy()
-                == "assets"
-        })
-        .ok_or(init_error("3: Failed to find assets directory"))?
-        .files()
-        .find(|f| {
-            let file = f
-                .path()
-                .file_name()
-                .expect("file should have valid filename")
-                .to_string_lossy();
-            file.contains("LogoIcon") && file.ends_with(".js")
-        })
-        .ok_or(init_error("3: Failed to find LogoIcon JS file"))?
-        .contents_utf8()
-        .ok_or(init_error("3: Failed to read LogoIcon JS file as UTF-8"))?
-        .replace(
-            "/studio/assets/",
-            format!("{}/studio/assets/", config.basepath).as_str(),
-        );
-
-    AGDB_STUDIO_LOGO_JS_CONTENT.set(logo_js)?;
-
-    Ok(())
-}
-
 fn init_index_js_content(filename: &str, config: &Config) -> ServerResult {
     let index_js = AGDB_STUDIO
         .get_file(filename)
-        .ok_or(init_error("failed to find index.js in index.html"))?;
+        .ok_or(init_error("3: Failed to find index.js in index.html"))?;
     let content = index_js.contents_utf8().expect("Failed to read index.js");
     let index_js_content = if !config.basepath.is_empty() {
         let f = content.replace("\"/studio", &format!("\"{}/studio", config.basepath));
@@ -100,9 +65,9 @@ fn init_index_js_content(filename: &str, config: &Config) -> ServerResult {
 fn init_index_html(config: &Config) -> ServerResult {
     let content = AGDB_STUDIO
         .get_file("index.html")
-        .ok_or(init_error("3: index.html not found"))?
+        .ok_or(init_error("index.html not found"))?
         .contents_utf8()
-        .ok_or(init_error("4: index.html could not be read"))?
+        .ok_or(init_error("index.html could not be read"))?
         .replace("\"/studio/", &format!("\"{}/studio/", config.basepath));
 
     AGDB_STUDIO_INDEX_HTML.set(content)?;
@@ -113,8 +78,7 @@ fn init_index_html(config: &Config) -> ServerResult {
 pub(crate) fn init(config: &Config) -> ServerResult {
     let index_js_name = init_index_js_name()?;
     init_index_js_content(&index_js_name, config)?;
-    init_index_html(config)?;
-    init_logo_js(config)
+    init_index_html(config)
 }
 
 async fn studio_index() -> ServerResult<(
@@ -147,19 +111,6 @@ pub(crate) async fn studio(Path(file): Path<String>) -> ServerResult<impl IntoRe
         let content = AGDB_STUDIO_INDEX_JS_CONTENT.get().ok_or(ServerError::new(
             StatusCode::INTERNAL_SERVER_ERROR,
             "index.js not found",
-        ))?;
-
-        return Ok((
-            StatusCode::OK,
-            [("Content-Type", "application/javascript")],
-            content.as_str().as_bytes(),
-        ));
-    }
-
-    if file.contains(AGDB_STUDIO_LOGO_JS) {
-        let content = AGDB_STUDIO_LOGO_JS_CONTENT.get().ok_or(ServerError::new(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "Logo icon not found",
         ))?;
 
         return Ok((

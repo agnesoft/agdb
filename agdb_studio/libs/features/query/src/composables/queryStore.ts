@@ -11,6 +11,11 @@ const addQuery = (query: AddQueryParams): Ref<Query> => {
   const newQuery: Ref<Query> = ref({
     ...query,
     isRunning: false,
+    steps: {
+      exec: [],
+      exec_mut: [],
+      context: [],
+    },
   });
   queries.value.set(query.id, newQuery);
   return newQuery;

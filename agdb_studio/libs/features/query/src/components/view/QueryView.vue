@@ -1,6 +1,18 @@
 <script lang="ts" setup>
+import { onMounted, provide, ref } from "vue";
 import QueryBuilderTabs from "../builder/QueryBuilderTabs.vue";
 import QueryGraph from "../graph/QueryGraph.vue";
+import { useQueryStore } from "../../composables/queryStore";
+
+const queryId = ref<string>();
+const queryStore = useQueryStore();
+
+onMounted(() => {
+  queryId.value = `query-${Math.random().toString(36).substring(2, 9)}`;
+  queryStore.addQuery({ id: queryId.value });
+});
+
+provide("queryId", queryId);
 </script>
 
 <template>

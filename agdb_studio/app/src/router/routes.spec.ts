@@ -10,6 +10,7 @@ vi.mock("@/views/admin/AdminView.vue", () => ({ default: vi.fn() }));
 vi.mock("@/views/admin/AdminUserView.vue", () => ({ default: vi.fn() }));
 vi.mock("@/views/admin/AdminDbView.vue", () => ({ default: vi.fn() }));
 vi.mock("@/components/layouts/MainLayout.vue", () => ({ default: vi.fn() }));
+vi.mock("@/views/QueryView.vue", () => ({ default: vi.fn() }));
 
 const validateRoutes = (routes: RouteRecordRaw[]) => {
   routes.forEach((route) => {

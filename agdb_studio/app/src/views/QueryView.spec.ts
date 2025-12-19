@@ -20,6 +20,15 @@ vi.mock("@agdb-studio/db/src/composables/dbStore", () => {
   };
 });
 
+vi.mock("@agdb-studio/query/src/components/view/QueryView.vue", () => ({
+  default: {
+    name: "QueryView",
+    props: ["owner", "db"],
+    template:
+      '<div class="query-view">Database {{ owner }}/{{ db }} query</div>',
+  },
+}));
+
 describe("QueryView", () => {
   it("renders the query view", () => {
     useRoute.mockReturnValueOnce({

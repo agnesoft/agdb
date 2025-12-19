@@ -20,7 +20,8 @@
     "@agdb-studio/api": "workspace:*",
     "@agdb-studio/utils": "workspace:*",
     "@agdb-studio/db": "workspace:*",
-    "@agnesoft/agdb_api": "workspace:*"
+    "@agnesoft/agdb_api": "workspace:*",
+    "3d-force-graph": "^1.79.0"
   },
   "devDependencies": {
     "@agdb-studio/tsconfig": "workspace:*",

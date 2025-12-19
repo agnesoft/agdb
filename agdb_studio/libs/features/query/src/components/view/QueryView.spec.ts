@@ -1,8 +1,22 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import QueryView from "./QueryView.vue";
 import { mount, flushPromises } from "@vue/test-utils";
 import { useQueryStore } from "../../composables/queryStore";
 
+vi.mock("../graph/QueryGraph.vue", () => ({
+  default: {
+    name: "QueryGraph",
+    template: "<div class='mock-query-graph'>Mock Query Graph</div>",
+  },
+}));
+
+vi.mock("../builder/QueryBuilderTabs.vue", () => ({
+  default: {
+    name: "QueryBuilderTabs",
+    template:
+      "<div class='mock-query-builder-tabs'>Mock Query Builder Tabs</div>",
+  },
+}));
 describe("QueryView", () => {
   let queryStore: ReturnType<typeof useQueryStore>;
 
@@ -46,34 +60,6 @@ describe("QueryView", () => {
     // We can't easily access the queryId, but we can verify the component mounted
     expect(wrapper.find(".query-view").exists()).toBe(true);
   });
-
-  // it("provides queryId to child components", async () => {
-  //   let providedQueryId: string | undefined;
-
-  //   const ChildComponent = {
-  //     template: "<div>{{ queryId }}</div>",
-  //     inject: ["queryId"],
-  //     setup() {
-  //       const queryId = (this as any).queryId;
-  //       providedQueryId = queryId?.value;
-  //       return { queryId };
-  //     },
-  //   };
-
-  //   const wrapper = mount(QueryView, {
-  //     global: {
-  //       stubs: {
-  //         QueryBuilderTabs: ChildComponent,
-  //         QueryGraph: true,
-  //       },
-  //     },
-  //   });
-
-  //   await flushPromises();
-
-  //   // The queryId should be provided
-  //   expect(wrapper.vm).toBeDefined();
-  // });
 
   it("has correct grid layout structure", () => {
     const wrapper = mount(QueryView, {

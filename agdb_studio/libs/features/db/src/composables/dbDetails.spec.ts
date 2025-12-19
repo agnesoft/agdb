@@ -62,7 +62,7 @@ describe("dbDetails", () => {
     const { users } = useDbDetails(dbParams);
     await fetchDbUsers(dbParams.value);
     expect(users.value).toHaveLength(2);
-    expect(users.value?.[0].username).toBe("testUser");
+    expect(users.value?.[0]?.username).toBe("testUser");
   });
   it("should get db name", () => {
     const { dbName } = useDbDetails(dbParams);

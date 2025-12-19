@@ -17,7 +17,7 @@ const validateRoutes = (routes: RouteRecordRaw[]) => {
 
     if (route.children) {
       validateRoutes(route.children);
-    } else {
+    } else if (!route.redirect) {
       expect(route.component).toBeDefined();
     }
   });

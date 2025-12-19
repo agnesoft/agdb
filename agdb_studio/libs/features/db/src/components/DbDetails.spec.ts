@@ -74,15 +74,15 @@ describe("DbDetails", () => {
     expect(wrapper.find("header").text()).toContain("testOwner/testDb");
     const usernames = wrapper.findAll(".username");
     expect(usernames.length).toBe(3);
-    expect(usernames[0].text()).toContain("testUser");
-    expect(usernames[1].text()).toContain("testUser2");
-    expect(usernames[2].text()).toContain("testUser3");
+    expect(usernames[0]?.text()).toContain("testUser");
+    expect(usernames[1]?.text()).toContain("testUser2");
+    expect(usernames[2]?.text()).toContain("testUser3");
 
     const roles = wrapper.findAll(".role");
     expect(roles.length).toBe(3);
-    expect(roles[0].text()).toContain("(R)");
-    expect(roles[1].text()).toContain("(W)");
-    expect(roles[2].text()).toContain("(A)");
+    expect(roles[0]?.text()).toContain("(R)");
+    expect(roles[1]?.text()).toContain("(W)");
+    expect(roles[2]?.text()).toContain("(A)");
   });
 
   it("should add a user", async () => {
@@ -147,15 +147,15 @@ describe("DbDetails", () => {
     await wrapper.vm.$nextTick();
     const items = wrapper.findAll(".user-item");
     expect(items.length).toBe(3);
-    expect(items[0].find(".remove-button").exists()).toBe(true);
-    expect(items[2].find(".remove-button").exists()).toBe(false);
+    expect(items[0]?.find(".remove-button").exists()).toBe(true);
+    expect(items[2]?.find(".remove-button").exists()).toBe(false);
   });
 
   it("should handle username click", async () => {
     const wrapper = mount(DbDetails);
     await wrapper.vm.$nextTick();
     const usernames = wrapper.findAll(".username");
-    await usernames[0].trigger("click");
+    await usernames[0]?.trigger("click");
     await wrapper.vm.$nextTick();
     expect(handleUsernameClick).toHaveBeenCalledWith("testUser", "read");
   });

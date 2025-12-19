@@ -177,7 +177,7 @@ describe("AgdbCellMenu", () => {
     expect(modalIsVisible.value).toBe(true);
     onConfirm.value?.();
     expect(deleteAction).toHaveBeenCalledOnce();
-    expect(modal.content[0].paragraph?.at(0)?.text).toBe(question);
+    expect(modal.content[0]?.paragraph?.[0]?.text).toBe(question);
     expect(modal.header).toBe(header);
   });
   it("should create confirmation content from function", async () => {
@@ -234,7 +234,7 @@ describe("AgdbCellMenu", () => {
     expect(modalIsVisible.value).toBe(true);
     onConfirm.value?.();
     expect(deleteAction).toHaveBeenCalledOnce();
-    expect(modal.content[0].paragraph?.at(0)?.text).toBe(question);
+    expect(modal.content[0]?.paragraph?.[0]?.text).toBe(question);
     expect(modal.header).toBe(header);
   });
 
@@ -349,7 +349,7 @@ describe("AgdbCellMenu", () => {
     await wrapper.vm.$nextTick();
     expect(dropdown.isVisible()).toBe(false);
     expect(header).toHaveBeenCalled();
-    expect(modal.content[0].paragraph?.at(0)?.text).toBe(question);
+    expect(modal.content[0]?.paragraph?.[0]?.text).toBe(question);
     expect(modal.header).toBe("Test Header");
   });
   it("should set the header to the default if no header function is provided", async () => {
@@ -396,7 +396,7 @@ describe("AgdbCellMenu", () => {
     await action.trigger("click");
     await wrapper.vm.$nextTick();
     expect(dropdown.isVisible()).toBe(false);
-    expect(modal.content[0].paragraph?.at(0)?.text).toBe(question);
+    expect(modal.content[0]?.paragraph?.[0]?.text).toBe(question);
     expect(modal.header).toBe("Confirm action");
   });
 });

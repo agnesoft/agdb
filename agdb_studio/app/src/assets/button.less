@@ -1,5 +1,5 @@
 .button {
-  display: inline-block;
+  display: inline-flex;
   padding: 0.3em 1em;
   border: none;
   border-radius: 0.25rem;
@@ -17,6 +17,8 @@
   background-color: var(--backgroundColor);
   color: var(--color);
   border: 1px solid var(--borderColor);
+  align-items: center;
+  justify-content: center;
 }
 
 .button-lg {
@@ -71,7 +73,7 @@
 .button-tab {
   --backgroundColor: transparent;
   --color: var(--color-text);
-  --borderColor: transparent;
+  --borderColor: var(--color-border);
   border-bottom: none;
   border-radius: 0.25rem 0.25rem 0 0;
   padding: 0.35rem 1rem;

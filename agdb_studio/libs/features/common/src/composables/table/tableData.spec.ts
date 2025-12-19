@@ -16,7 +16,7 @@ describe("tableData", () => {
   addTable({
     name: TABLE_NAME,
     columns: tableConfig,
-    uniqueKey: (row: TRow) => `${row.owner.toString()}/${row.db.toString()}`,
+    uniqueKey: (row: TRow) => `${row.owner?.toString()}/${row.db?.toString()}`,
     fetchData: fetchDataMock,
   });
 
@@ -80,7 +80,7 @@ describe("tableData", () => {
     it("should not add row if table does not exist", () => {
       const table = getTable("non_existent_table");
       expect(table).toBeUndefined();
-      addRow("non_existent_table", tableData[0]);
+      addRow("non_existent_table", tableData[0] as TRow);
       expect(table).toBeUndefined();
     });
   });
@@ -140,21 +140,21 @@ describe("tableData", () => {
     it("should return sorted rows in desc order", () => {
       setTableData(TABLE_NAME, tableData);
       setSort(TABLE_NAME, "size", "desc");
-      expect(getRows(TABLE_NAME)[0][1].db).toBe("app3");
-      expect(getRows(TABLE_NAME)[0][1].owner).toBe("admin");
+      expect(getRows(TABLE_NAME)?.[0]?.[1].db).toBe("app3");
+      expect(getRows(TABLE_NAME)?.[0]?.[1].owner).toBe("admin");
     });
     it("should return sorted rows in asc order", () => {
       setTableData(TABLE_NAME, tableData);
       setSort(TABLE_NAME, "size", "asc");
-      expect(getRows(TABLE_NAME)[0][1].db).toBe("app1");
-      expect(getRows(TABLE_NAME)[0][1].owner).toBe("admin");
+      expect(getRows(TABLE_NAME)?.[0]?.[1].db).toBe("app1");
+      expect(getRows(TABLE_NAME)?.[0]?.[1].owner).toBe("admin");
     });
     it("should return sorted rows with multiple sort keys", () => {
       setTableData(TABLE_NAME, tableData);
       setSort(TABLE_NAME, "role", "asc");
       setSort(TABLE_NAME, "owner", "desc");
-      expect(getRows(TABLE_NAME)[0][1].db).toBe("app1");
-      expect(getRows(TABLE_NAME)[0][1].owner).toBe("user");
+      expect(getRows(TABLE_NAME)?.[0]?.[1].db).toBe("app1");
+      expect(getRows(TABLE_NAME)?.[0]?.[1].owner).toBe("user");
     });
     it("should return empty array if table doesn't exist", () => {
       expect(getRows("non_existent_table").length).toBe(0);

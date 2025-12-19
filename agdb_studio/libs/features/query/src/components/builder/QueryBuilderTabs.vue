@@ -13,7 +13,7 @@ const activeTab = ref<TAB>(TABS[0]);
         v-for="tab in TABS"
         :id="`query-tabpanel-${tab}`"
         :key="tab"
-        class="button button-tab"
+        class="button button-tab query-tab"
         :class="{ active: activeTab === tab }"
         type="button"
         role="tab"
@@ -21,7 +21,7 @@ const activeTab = ref<TAB>(TABS[0]);
         :tabindex="activeTab === tab ? 0 : -1"
         @click="activeTab = tab"
       >
-        {{ tab === "context" ? "exec (Context)" : tab }}
+        {{ tab }}
       </button>
     </div>
     <QueryBuilder
@@ -34,7 +34,12 @@ const activeTab = ref<TAB>(TABS[0]);
 <style lang="less" scoped>
 .tabs {
   display: flex;
-  margin-left: 1.5rem;
+  margin-inline: 1.5rem;
   gap: 0.5rem;
+}
+.query-tab {
+  &:last-of-type {
+    margin-left: auto;
+  }
 }
 </style>

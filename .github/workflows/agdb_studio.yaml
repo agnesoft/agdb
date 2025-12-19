@@ -21,6 +21,7 @@ jobs:
       - run: pnpm run format:check --filter=./agdb_studio/**/*
       - run: pnpm run build --filter=./agdb_studio/**/*
       - run: pnpm run lint:check --filter=./agdb_studio/**/*
+      - run: pnpm run type-check --filter=./agdb_studio/**/*
       - run: pnpm run test --filter=./agdb_studio/**/*
       - uses: actions/upload-artifact@v4
         if: always()

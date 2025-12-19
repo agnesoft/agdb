@@ -15,6 +15,6 @@ describe("QueryBuilderTabs", () => {
     await tabs[1]?.trigger("click");
     expect(wrapper.find(".button-tab.active").text()).toBe("exec_mut");
     await tabs[2]?.trigger("click");
-    expect(wrapper.find(".button-tab.active").text()).toBe("exec (Context)");
+    expect(wrapper.find(".button-tab.active").text()).toBe("context");
   });
 });

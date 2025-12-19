@@ -37,7 +37,7 @@ describe("Modal", () => {
       ],
     });
     expect(useModal().buttons.value).toHaveLength(2);
-    expect(useModal().buttons.value[0].text).toBe("Custom Button");
+    expect(useModal().buttons.value[0]?.text).toBe("Custom Button");
   });
   it("calls onConfirm when confirm button is clicked and hides the modal when succesful", () => {
     const onConfirm = vi.fn().mockReturnValue(true);
@@ -46,7 +46,7 @@ describe("Modal", () => {
       content: convertArrayOfStringsToContent(["Test Body"]),
       onConfirm,
     });
-    useModal().buttons.value[1].action();
+    useModal().buttons.value[1]?.action();
     expect(onConfirm).toHaveBeenCalled();
     expect(useModal().modalIsVisible.value).toBe(false);
   });
@@ -57,7 +57,7 @@ describe("Modal", () => {
       content: convertArrayOfStringsToContent(["Test Body"]),
       onConfirm,
     });
-    await useModal().buttons.value[1].action();
+    await useModal().buttons.value[1]?.action();
     expect(onConfirm).toHaveBeenCalled();
     expect(useModal().modalIsVisible.value).toBe(false);
   });
@@ -68,7 +68,7 @@ describe("Modal", () => {
       content: convertArrayOfStringsToContent(["Test Body"]),
       onConfirm,
     });
-    useModal().buttons.value[1].action();
+    useModal().buttons.value[1]?.action();
     expect(onConfirm).toHaveBeenCalled();
     expect(useModal().modalIsVisible.value).toBe(true);
   });
@@ -79,7 +79,7 @@ describe("Modal", () => {
       content: convertArrayOfStringsToContent(["Test Body"]),
       onConfirm,
     });
-    await useModal().buttons.value[1].action();
+    await useModal().buttons.value[1]?.action();
     expect(onConfirm).toHaveBeenCalled();
     expect(useModal().modalIsVisible.value).toBe(true);
   });
@@ -90,7 +90,7 @@ describe("Modal", () => {
       content: convertArrayOfStringsToContent(["Test Body"]),
       onConfirm,
     });
-    await useModal().buttons.value[1].action();
+    await useModal().buttons.value[1]?.action();
     expect(onConfirm).toHaveBeenCalled();
     expect(useModal().modalIsVisible.value).toBe(true);
   });
@@ -111,7 +111,7 @@ describe("Modal", () => {
       ],
       onConfirm,
     });
-    useModal().buttons.value[1].action();
+    useModal().buttons.value[1]?.action();
     expect(onConfirm).not.toHaveBeenCalled();
     expect(useModal().modalIsVisible.value).toBe(true);
   });

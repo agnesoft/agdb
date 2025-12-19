@@ -203,10 +203,10 @@ describe("dbConfig", () => {
       expect(modalIsVisible.value).toBe(true);
       expect(modal.header).toBe("Audit log of test_owner/test_db");
       expect(modal.content).toHaveLength(2);
-      expect(modal.content[0].paragraph?.at(0)?.text).toBe(
+      expect(modal.content[0]?.paragraph?.[0]?.text).toBe(
         "123 | test_user | test_query",
       );
-      expect(modal.content[1].paragraph?.at(0)?.text).toBe(
+      expect(modal.content[1]?.paragraph?.[0]?.text).toBe(
         "456 | test_user2 | test_query2",
       );
     });
@@ -223,7 +223,7 @@ describe("dbConfig", () => {
         params,
       } as ActionProps<ServerDatabase>);
       expect(content).toHaveLength(2);
-      expect(content[1].input?.key).toBe("new_db");
+      expect(content[1]?.input?.key).toBe("new_db");
     });
 
     it("should create correct inputs for copy action for admin", () => {
@@ -240,8 +240,8 @@ describe("dbConfig", () => {
         params,
       } as ActionProps<ServerDatabase>);
       expect(content).toHaveLength(3);
-      expect(content[1].input?.key).toBe("new_db");
-      expect(content[2].input?.key).toBe("new_owner");
+      expect(content[1]?.input?.key).toBe("new_db");
+      expect(content[2]?.input?.key).toBe("new_owner");
     });
 
     it("should create correct inputs for rename action for user", () => {
@@ -256,7 +256,7 @@ describe("dbConfig", () => {
         params,
       } as ActionProps<ServerDatabase>);
       expect(content).toHaveLength(2);
-      expect(content[1].input?.key).toBe("new_db");
+      expect(content[1]?.input?.key).toBe("new_db");
     });
 
     it("should create correct inputs for rename action for admin", () => {
@@ -273,8 +273,8 @@ describe("dbConfig", () => {
         params,
       } as ActionProps<ServerDatabase>);
       expect(content).toHaveLength(3);
-      expect(content[1].input?.key).toBe("new_db");
-      expect(content[2].input?.key).toBe("new_owner");
+      expect(content[1]?.input?.key).toBe("new_db");
+      expect(content[2]?.input?.key).toBe("new_owner");
     });
   });
 

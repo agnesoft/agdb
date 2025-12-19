@@ -8,18 +8,12 @@ describe("queryStore", () => {
   const makeQuery = (overrides?: Partial<Query>): AddQueryParams => ({
     id: overrides?.id ?? "q1",
     name: overrides?.name ?? "Query 1",
-    steps: overrides?.steps ?? {
-      exec: [],
-      exec_mut: [],
-      context: [],
-    },
   });
 
   const makeStep = (overrides?: Partial<QueryStep>): QueryStep => ({
     id: overrides?.id ?? "s1",
     type: overrides?.type ?? "select",
-    name: overrides?.name ?? "Step 1",
-    data: overrides?.data,
+    values: overrides?.values ?? [],
   });
 
   beforeEach(() => {
@@ -69,9 +63,9 @@ describe("queryStore", () => {
 
     const updatedStep = { ...step, name: "Updated Step" };
     store.updateQueryStep(queryRef.value.id, "exec", updatedStep);
-
     const got = store.getQuery(queryRef.value.id);
-    expect(got?.value?.steps.exec[0]?.name).toBe("Updated Step");
+    expect(got?.value?.steps.exec.length).toBe(1);
+    expect(got?.value?.steps.exec[0]).toEqual(updatedStep);
   });
 
   it("deletes a query step", () => {
@@ -79,7 +73,7 @@ describe("queryStore", () => {
     const queryRef = store.addQuery(q);
 
     const s1 = makeStep({ id: "s1" });
-    const s2 = makeStep({ id: "s2", name: "Step 2" });
+    const s2 = makeStep({ id: "s2" });
     store.addQueryStep(queryRef.value.id, "exec", s1);
     store.addQueryStep(queryRef.value.id, "exec", s2);
 
@@ -160,12 +154,11 @@ describe("queryStore", () => {
     const existing = makeStep({ id: "s1" });
     store.addQueryStep(queryRef.value.id, "exec", existing);
 
-    const nonExisting = makeStep({ id: "s2", name: "Should Not Apply" });
+    const nonExisting = makeStep({ id: "s2" });
     store.updateQueryStep(queryRef.value.id, "exec", nonExisting);
 
     const got = store.getQuery(queryRef.value.id);
     expect(got?.value?.steps.exec.length).toBe(1);
     expect(got?.value?.steps.exec[0]?.id).toBe("s1");
-    expect(got?.value?.steps.exec[0]?.name).not.toBe("Should Not Apply");
   });
 });

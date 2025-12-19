@@ -6,6 +6,9 @@ on:
     paths:
       - agdb_web/**
       - .github/workflows/agdb_web.yaml
+      - pnpm-lock.yaml
+      - pnpm-workspace.yaml
+      - package.json
 
 jobs:
   agdb_web:

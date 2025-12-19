@@ -7,6 +7,9 @@ on:
       - agdb_studio/**
       - agdb_api/typescript/**
       - .github/workflows/agdb_studio.yaml
+      - pnpm-lock.yaml
+      - pnpm-workspace.yaml
+      - package.json
 
 jobs:
   agdb_studio:

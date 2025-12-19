@@ -14,7 +14,9 @@ import {
   isVisible,
 } from "../e2e-utils/elements";
 import { click, fillInput } from "../e2e-utils/interaction";
-import type { ServerDatabase } from "@agnesoft/agdb_api/openapi" with { "resolution-mode": "import" };
+import type { ServerDatabase } from "@agnesoft/agdb_api/openapi" with {
+  "resolution-mode": "import",
+};
 
 const mockedDatabaseList: ServerDatabase[] = [
   {

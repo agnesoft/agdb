@@ -10,6 +10,9 @@ on:
       - agdb_server/**
       - agdb_api/**
       - .github/workflows/examples.yaml
+      - pnpm-lock.yaml
+      - pnpm-workspace.yaml
+      - package.json
 
 jobs:
   agdb_examples_rust:

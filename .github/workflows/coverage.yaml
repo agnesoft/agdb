@@ -11,6 +11,9 @@ on:
       - agdb_studio/**
       - agdb_web/**
       - .github/workflows/coverage.yaml
+      - pnpm-lock.yaml
+      - pnpm-workspace.yaml
+      - package.json
 
 env:
   CARGO_TERM_COLOR: always

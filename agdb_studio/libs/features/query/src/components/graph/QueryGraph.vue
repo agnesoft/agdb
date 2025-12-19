@@ -1,10 +1,10 @@
 <script lang="ts" setup>
 import ForceGraph3D, { type ForceGraph3DInstance } from "3d-force-graph";
-import { onMounted, ref } from "vue";
+import { onMounted, onUnmounted, ref } from "vue";
 import { graphDataMock } from "../../mock/graphData";
 
 type GraphNode = {
-  id: string;
+  id: number;
   values: { key: string; value: string }[];
 };
 
@@ -12,12 +12,12 @@ const graphContainer = ref<HTMLElement | null>(null);
 
 const graphData = ref(graphDataMock);
 
-let _graphInstance: ForceGraph3DInstance;
+let graphInstance: ForceGraph3DInstance;
 
 onMounted(() => {
   /* v8 ignore else -- @preserve */
   if (graphContainer.value) {
-    _graphInstance = new ForceGraph3D(graphContainer.value)
+    graphInstance = new ForceGraph3D(graphContainer.value)
       .graphData(graphData.value)
       .nodeAutoColorBy("id")
       .linkAutoColorBy("source")
@@ -30,11 +30,27 @@ onMounted(() => {
       )
       .linkLabel(
         /* v8 ignore next -- @preserve */
-        (link) =>
-          `Source: ${(link.source as GraphNode).id}\nTarget: ${(link.target as GraphNode).id}`,
+        (link) => {
+          const sourceId =
+            link.source && typeof link.source === "object"
+              ? (link.source as GraphNode).id
+              : String(link.source ?? "");
+          const targetId =
+            link.target && typeof link.target === "object"
+              ? (link.target as GraphNode).id
+              : String(link.target ?? "");
+          return `Source: ${sourceId}\nTarget: ${targetId}`;
+        },
       )
       .height(graphContainer.value.clientHeight)
       .width(graphContainer.value.clientWidth);
+  }
+});
+
+onUnmounted(() => {
+  /* v8 ignore else -- @preserve */
+  if (graphInstance) {
+    graphInstance._destructor();
   }
 });
 </script>

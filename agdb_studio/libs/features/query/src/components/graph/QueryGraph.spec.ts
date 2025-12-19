@@ -12,6 +12,7 @@ vi.mock("3d-force-graph", () => {
     linkLabel: vi.fn().mockReturnThis(),
     height: vi.fn().mockReturnThis(),
     width: vi.fn().mockReturnThis(),
+    _destructor: vi.fn(),
   };
 
   const ForceGraph3D = vi.fn(function ForceGraph3DMock(_el: unknown) {

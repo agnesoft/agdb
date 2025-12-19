@@ -14,7 +14,8 @@ export const createRoutes = (): RouteRecordRaw[] => {
         {
           path: "",
           name: "home",
-          component: () => import("@/views/HomeView.vue"),
+          // component: () => import("@/views/HomeView.vue"),
+          redirect: { name: "db" },
         },
         {
           path: "db",
@@ -33,7 +34,8 @@ export const createRoutes = (): RouteRecordRaw[] => {
             {
               path: "",
               name: "admin",
-              component: () => import("@/views/admin/AdminView.vue"),
+              // component: () => import("@/views/admin/AdminView.vue"),
+              redirect: { name: "admin-db" },
             },
             {
               path: "users",

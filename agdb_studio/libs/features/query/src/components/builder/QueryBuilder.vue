@@ -23,17 +23,7 @@ const steps = computed(() => {
   return query.value.steps[props.tab];
 });
 
-// const content = ref("");
-// const contentInput = ref<HTMLElement | null>(null);
-
-// const updateContent = () => {
-//   if (contentInput.value) {
-//     content.value = contentInput.value.innerText;
-//   }
-// };
-
 const addStep = (stepType: QueryType) => {
-  console.log("Adding step:", stepType);
   if (!queryId?.value) return;
   queryStore.addQueryStep(queryId.value, props.tab, {
     id: `step-${Math.random().toString(36).substring(2, 9)}`,
@@ -50,9 +40,7 @@ const addStep = (stepType: QueryType) => {
         :key="step.id"
         class="query-step-wrapper"
       >
-        <!-- <QueryStepInput
-          :prev-step="index > 0 ? steps[index - 1] : undefined"
-        /> -->
+        <!-- <QueryStepInput :prev-step="index > 0 ? steps[index - 1] : undefined" /> -->
         <QueryStep :step="step" />
       </div>
       <QueryStepInput

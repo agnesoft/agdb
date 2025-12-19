@@ -1,10 +1,12 @@
 <script lang="ts" setup>
+import type { QueryType } from "../../composables/types";
+
 const props = defineProps<{
-  hints: string[];
+  hints: QueryType[];
   activeIndex?: number;
 }>();
 defineEmits<{
-  (e: "selectHint", hint: string): void;
+  (e: "selectHint", hint: QueryType): void;
 }>();
 </script>
 
@@ -15,7 +17,7 @@ defineEmits<{
       :key="index"
       class="hinter-item"
       :class="{ active: index === activeIndex }"
-      @click="$emit('selectHint', hint)"
+      @click.stop.prevent="$emit('selectHint', hint)"
     >
       {{ hint }}
     </div>

@@ -72,7 +72,6 @@ const addStep = (stepType: QueryType) => {
   border-radius: 0.25rem 0 0 0.25rem;
   padding: 0.2rem;
   box-sizing: border-box;
-  display: inline-block;
   transition: background-color 0.4s ease;
   display: flex;
   gap: 0.5rem;

@@ -105,6 +105,9 @@ const onFocus = (focus: boolean) => {
       aria-label="Query input"
       aria-multiline="false"
       spellcheck="false"
+      aria-autocomplete="list"
+      aria-haspopup="listbox"
+      :aria-expanded="displayHints"
       @input.stop="updateContent"
       @keydown.stop="onKeyDown"
     ></div>

@@ -6,9 +6,9 @@ import { useQueryStore } from "../../composables/queryStore";
 
 const queryId = ref<string>();
 const queryStore = useQueryStore();
-
 onMounted(() => {
-  queryId.value = `query-${Math.random().toString(36).substring(2, 9)}`;
+  const baseId = crypto.randomUUID();
+  queryId.value = `query-${baseId}`;
   queryStore.addQuery({ id: queryId.value });
 });
 

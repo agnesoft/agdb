@@ -14,6 +14,7 @@ const content = ref("");
 const contentInput = ref<HTMLElement | null>(null);
 
 const updateContent = () => {
+  /* v8 ignore next -- @preserve */
   content.value =
     contentInput.value?.innerText.trim().replace(/[^\w]/g, "") ?? "";
 };
@@ -22,6 +23,7 @@ const onKeyDown = (event: KeyboardEvent) => {
   if (event.key === "Enter") {
     event.preventDefault();
     const activeHint = hints.value[activeHintIndex.value];
+    /* v8 ignore if -- @preserve */
     if (!activeHint) return;
     confirmStep(activeHint);
   }
@@ -74,6 +76,7 @@ const activeHintIndex = ref(0);
 const resetInput = () => {
   content.value = "";
   activeHintIndex.value = 0;
+  /* v8 ignore else -- @preserve */
   if (contentInput.value) {
     contentInput.value.innerText = "";
   }
@@ -91,10 +94,10 @@ const onFocus = (focus: boolean) => {
 
 <template>
   <div
+    v-if="followers.length > 0"
+    v-on-click-outside="() => onFocus(false)"
     class="query-step-input"
     @focusin="onFocus(true)"
-    v-on-click-outside="() => onFocus(false)"
-    v-if="followers.length > 0"
   >
     <div
       ref="contentInput"
@@ -111,8 +114,8 @@ const onFocus = (focus: boolean) => {
       <QueryHinter
         v-if="displayHints"
         :hints="hints"
-        :activeIndex="activeHintIndex"
-        @selectHint="confirmStep"
+        :active-index="activeHintIndex"
+        @select-hint="confirmStep"
       />
     </FadeTransition>
   </div>

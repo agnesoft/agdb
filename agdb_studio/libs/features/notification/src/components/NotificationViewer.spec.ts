@@ -31,7 +31,9 @@ describe("NotificationViewer", () => {
     vi.clearAllMocks();
   });
   it("should close viewer when close button is clicked", async () => {
-    notificationStore.addNotification(testNotifications[0]);
+    notificationStore.addNotification(
+      testNotifications[0] as notificationStore.AddNotificationProps,
+    );
     notificationStore.viewerOpened.value = true;
     const wrapper = mount(NotificationViewer);
     expect(closeViewerMock).not.toHaveBeenCalled();
@@ -40,7 +42,9 @@ describe("NotificationViewer", () => {
   });
 
   it("should clear notifications when clear button is clicked", async () => {
-    notificationStore.addNotification(testNotifications[0]);
+    notificationStore.addNotification(
+      testNotifications[0] as notificationStore.AddNotificationProps,
+    );
     notificationStore.viewerOpened.value = true;
     const wrapper = mount(NotificationViewer);
     expect(clearNotificationsMock).not.toHaveBeenCalled();
@@ -49,7 +53,9 @@ describe("NotificationViewer", () => {
   });
 
   it("should toggle viewer when notification-button is clicked", async () => {
-    notificationStore.addNotification(testNotifications[0]);
+    notificationStore.addNotification(
+      testNotifications[0] as notificationStore.AddNotificationProps,
+    );
     notificationStore.viewerOpened.value = false;
     const wrapper = mount(NotificationViewer);
     expect(toggleViewerOpenedMock).not.toHaveBeenCalled();
@@ -58,10 +64,14 @@ describe("NotificationViewer", () => {
   });
 
   it("should display new notifications when viewer is closed", async () => {
-    notificationStore.addNotification(testNotifications[0]);
+    notificationStore.addNotification(
+      testNotifications[0] as notificationStore.AddNotificationProps,
+    );
     notificationStore.viewerOpened.value = false;
     const wrapper = mount(NotificationViewer);
-    notificationStore.addNotification(testNotifications[1]);
+    notificationStore.addNotification(
+      testNotifications[1] as notificationStore.AddNotificationProps,
+    );
     await wrapper.vm.$nextTick();
     expect(wrapper.find(".notification-flash").text()).toContain(
       "This is a test notification 2",

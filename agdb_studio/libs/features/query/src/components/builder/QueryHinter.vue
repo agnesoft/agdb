@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import type { QueryType } from "../../composables/types";
 
-const props = defineProps<{
+defineProps<{
   hints: QueryType[];
   activeIndex?: number;
 }>();

@@ -57,21 +57,23 @@ describe("notificationStore", () => {
     );
 
     for (let i = 0; i < testNotifications.length; i++) {
-      expect(notifications.value[i].message).toEqual(
-        testNotifications[i].message,
+      expect(notifications.value[i]?.message).toEqual(
+        testNotifications[i]?.message,
       );
-      expect(notifications.value[i].title).toEqual(testNotifications[i].title);
-      expect(newNotifications.value[i].message).toEqual(
-        testNotifications[testNotifications.length - 1 - i].message,
+      expect(notifications.value[i]?.title).toEqual(
+        testNotifications[i]?.title,
       );
-      expect(newNotifications.value[i].title).toEqual(
-        testNotifications[testNotifications.length - 1 - i].title,
+      expect(newNotifications.value[i]?.message).toEqual(
+        testNotifications[testNotifications.length - 1 - i]?.message,
       );
-      expect(notificationsReversed.value[i].message).toEqual(
-        testNotifications[testNotifications.length - 1 - i].message,
+      expect(newNotifications.value[i]?.title).toEqual(
+        testNotifications[testNotifications.length - 1 - i]?.title,
       );
-      expect(notificationsReversed.value[i].title).toEqual(
-        testNotifications[testNotifications.length - 1 - i].title,
+      expect(notificationsReversed.value[i]?.message).toEqual(
+        testNotifications[testNotifications.length - 1 - i]?.message,
+      );
+      expect(notificationsReversed.value[i]?.title).toEqual(
+        testNotifications[testNotifications.length - 1 - i]?.title,
       );
     }
   });
@@ -80,9 +82,9 @@ describe("notificationStore", () => {
     testNotifications.forEach((notification) => {
       addNotification(notification);
     });
-    const id = notifications.value[1].id;
+    const id = notifications.value[1]?.id;
     expect(notifications.value.some((item) => item.id === id)).toEqual(true);
-    removeNotification(notifications.value[1].id);
+    removeNotification(notifications.value[1]?.id ?? "");
     expect(notifications.value.length).toEqual(testNotifications.length - 1);
     expect(notifications.value.some((item) => item.id === id)).toEqual(false);
     expect(newNotifications.value.length).toEqual(testNotifications.length - 1);

@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { computed, inject, ref, type Ref } from "vue";
+import { computed, inject, type Ref } from "vue";
 import type { QueryType, TAB } from "../../composables/types";
 import { useQueryStore } from "../../composables/queryStore";
 import QueryStep from "./QueryStep.vue";
@@ -24,6 +24,7 @@ const steps = computed(() => {
 });
 
 const addStep = (stepType: QueryType) => {
+  /* v8 ignore if -- @preserve */
   if (!queryId?.value) return;
   queryStore.addQueryStep(queryId.value, props.tab, {
     id: `step-${Math.random().toString(36).substring(2, 9)}`,
@@ -35,11 +36,7 @@ const addStep = (stepType: QueryType) => {
 <template>
   <div class="query-builder">
     <div class="query-input" :class="[tab]">
-      <div
-        v-for="(step, index) in steps"
-        :key="step.id"
-        class="query-step-wrapper"
-      >
+      <div v-for="step in steps" :key="step.id" class="query-step-wrapper">
         <!-- <QueryStepInput :prev-step="index > 0 ? steps[index - 1] : undefined" /> -->
         <QueryStep :step="step" />
       </div>

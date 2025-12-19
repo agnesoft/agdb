@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import type { QueryStep } from "../../composables/types";
 
-const props = defineProps<{
+defineProps<{
   step: QueryStep;
 }>();
 </script>

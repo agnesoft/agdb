@@ -5,7 +5,7 @@ export type QueryType = keyof typeof queryApiMock;
 export type QueryStep = {
   id: string;
   type: QueryType;
-  values?: string;
+  values?: string[];
 };
 
 export type AddQueryParams = {

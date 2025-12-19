@@ -63,7 +63,7 @@ describe("dbUsers", () => {
     expect(db_user_list).toHaveBeenCalledOnce();
     const users = getDbUsers(dbIdentification);
     expect(users).toHaveLength(2);
-    expect(users?.[0].username).toBe("testUser");
+    expect(users?.[0]?.username).toBe("testUser");
   });
   it("should add user", async () => {
     await addUser({

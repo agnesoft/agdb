@@ -27,7 +27,7 @@ const addStep = (stepType: QueryType) => {
   /* v8 ignore if -- @preserve */
   if (!queryId?.value) return;
   queryStore.addQueryStep(queryId.value, props.tab, {
-    id: `step-${Math.random().toString(36).substring(2, 9)}`,
+    id: `step-${crypto.randomUUID()}`,
     type: stepType,
   });
 };

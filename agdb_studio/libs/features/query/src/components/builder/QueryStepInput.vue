@@ -46,10 +46,8 @@ const onKeyDown = (event: KeyboardEvent) => {
 };
 
 const followers = computed<QueryType[]>(() => {
-  return queryApiMock[
-    props.prevStep?.type.length ? props.prevStep.type : ""
-  ].followers.filter((f): f is QueryType =>
-    Object.keys(queryApiMock).includes(f),
+  return queryApiMock[props.prevStep?.type ?? ""].followers.filter(
+    (f): f is QueryType => Object.keys(queryApiMock).includes(f),
   ) as QueryType[];
 });
 

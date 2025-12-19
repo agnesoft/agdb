@@ -11,12 +11,14 @@ defineEmits<{
 </script>
 
 <template>
-  <div class="query-hinter">
+  <div class="query-hinter" role="listbox">
     <div
       v-for="(hint, index) in hints"
       :key="index"
       class="hinter-item"
       :class="{ active: index === activeIndex }"
+      role="option"
+      :aria-selected="index === activeIndex"
       @click.stop.prevent="$emit('selectHint', hint)"
     >
       {{ hint }}

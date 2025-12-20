@@ -132,6 +132,28 @@ pub fn user_db_value_derive(item: TokenStream) -> TokenStream {
     db_value::user_db_value_derive(item)
 }
 
+#[proc_macro_derive(TypeDef)]
+pub fn type_def(item: TokenStream) -> TokenStream {
+    api_def::type_def_impl(item)
+}
+
+#[proc_macro_derive(TypeDefImpl)]
+pub fn type_def_impl(item: TokenStream) -> TokenStream {
+    api_def::type_def_impl_impl(item)
+}
+
+#[proc_macro_attribute]
+pub fn trait_def(_attr: TokenStream, item: TokenStream) -> TokenStream {
+    api_def::trait_def_impl(item)
+}
+
+#[proc_macro_attribute]
+pub fn impl_def2(_attr: TokenStream, item: TokenStream) -> TokenStream {
+    api_def::impl_def_impl(item)
+}
+
+// OLD
+
 #[proc_macro_derive(ApiDef)]
 pub fn api_def(item: TokenStream) -> TokenStream {
     api_def::api_def(item)

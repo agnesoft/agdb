@@ -89,7 +89,7 @@ fn tuple(p: &PatTuple, context: ExpressionContext) -> (TokenStream, TokenStream)
     let elems = p.elems.iter().map(|elem| parse_pattern(elem, context).0);
     (
         quote! {
-            ::agdb::api_def::Expression::TuplePattern(&[#(#elems),*])
+            ::agdb::api_def::Expression::Tuple(&[#(#elems),*])
         },
         quote! {
             None

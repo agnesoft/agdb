@@ -85,7 +85,7 @@ fn extract_format_string_with_args(
         {
             if next_char == '{' {
                 format_str.push(next_char);
-                continue; //escaped double quote
+                continue; //escaped brace (double brace)
             }
 
             format_str.push('}');

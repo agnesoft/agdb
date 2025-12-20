@@ -31,7 +31,7 @@ pub(crate) fn parse_break(break_expr: &ExprBreak, context: ExpressionContext) ->
     }
 
     quote! {
-        ::agdb::api_def::Expression::Break {}
+        ::agdb::api_def::Expression::Break
     }
 }
 
@@ -63,6 +63,6 @@ pub(crate) fn parse_continue(
     _context: ExpressionContext,
 ) -> TokenStream {
     quote! {
-        ::agdb::api_def::Expression::Continue {}
+        ::agdb::api_def::Expression::Continue
     }
 }

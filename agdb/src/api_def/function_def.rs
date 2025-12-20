@@ -118,7 +118,7 @@ mod tests {
     }
 
     #[test]
-    fn impl_wih_generics_and_bounds() {
+    fn impl_with_generics_and_bounds() {
         #[agdb::trait_def()]
         trait Debuggable {}
 

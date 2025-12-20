@@ -910,12 +910,16 @@ mod tests {
         #[allow(dead_code)]
         impl StructWithTuple {
             fn tuple_example() {
-                let _ = (1, "hello", true);
+                let t = (1, "hello", true);
+                let (_a, _b, _c) = t;
             }
         }
 
         let e = write_expression(&StructWithTuple::type_def().functions()[0].expressions[0]);
-        assert_eq!(e, "let _ = (1, \"hello\", true)");
+        assert_eq!(e, "let t = (1, \"hello\", true)");
+
+        let e = write_expression(&StructWithTuple::type_def().functions()[0].expressions[1]);
+        assert_eq!(e, "let (_a, _b, _c) = t");
     }
 
     #[test]

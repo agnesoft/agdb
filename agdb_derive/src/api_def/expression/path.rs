@@ -10,14 +10,14 @@ use syn::PathSegment;
 pub(crate) fn parse_path(path: &Path, _context: ExpressionContext) -> TokenStream {
     let mut iter = path.segments.iter();
     let first = iter.next().expect("path should have at least one segment");
-    let first_segment = parse_path_segmenet(first, quote! { None });
+    let first_segment = parse_path_segment(first, quote! { None });
 
     iter.fold(first_segment, |path, segment| {
-        parse_path_segmenet(segment, quote! { Some(&#path) })
+        parse_path_segment(segment, quote! { Some(&#path) })
     })
 }
 
-fn parse_path_segmenet(path: &PathSegment, parent: TokenStream) -> TokenStream {
+fn parse_path_segment(path: &PathSegment, parent: TokenStream) -> TokenStream {
     let ident = &path.ident;
 
     let generics = match &path.arguments {

@@ -20,6 +20,13 @@ pub trait ImplDefinition {
 
 pub trait TypeDefinition: ImplDefinition {
     fn type_def() -> Type;
+    fn generic_type_names() -> Vec<&'static str> {
+        match Self::type_def() {
+            Type::Enum(e) => e.generics.iter().map(|g| g.name).collect(),
+            Type::Struct(s) => s.generics.iter().map(|g| g.name).collect(),
+            Type::Tuple(t) => t.generics.iter().map(|g| g.name).collect(),
+        }
+    }
 }
 
 pub enum Type {
@@ -29,19 +36,18 @@ pub enum Type {
 }
 
 impl Type {
-    pub fn name(&self) -> &'static str {
-        match self {
-            Type::Enum(e) => e.name,
-            Type::Struct(s) => s.name,
-            Type::Tuple(t) => t.name,
-        }
-    }
-
-    pub fn functions(&self) -> &'static [Function] {
+    fn functions(&self) -> &'static [Function] {
         match self {
             Type::Enum(e) => e.functions,
             Type::Struct(s) => s.functions,
             Type::Tuple(t) => t.functions,
+        }
+    }
+    fn name(&self) -> &'static str {
+        match self {
+            Type::Enum(e) => e.name,
+            Type::Struct(s) => s.name,
+            Type::Tuple(t) => t.name,
         }
     }
 }
@@ -90,14 +96,21 @@ impl_type!(String);
 impl_type!(&str);
 impl_type!(());
 
-impl<T: ImplDefinition> TypeDefinition for Option<T> {
+impl<T: TypeDefinition> TypeDefinition for Option<T> {
     fn type_def() -> Type {
         Type::Struct(Struct {
             name: "Option",
-            generics: &[], //TODO
+            generics: &[Generic {
+                name: "T",
+                bounds: &[],
+            }],
             fields: &[],
             functions: &[],
         })
+    }
+
+    fn generic_type_names() -> Vec<&'static str> {
+        vec![T::type_def().name()]
     }
 }
 
@@ -107,14 +120,21 @@ impl<T: ImplDefinition> ImplDefinition for Option<T> {
     }
 }
 
-impl<T: ImplDefinition> TypeDefinition for Vec<T> {
+impl<T: TypeDefinition> TypeDefinition for Vec<T> {
     fn type_def() -> Type {
         Type::Struct(Struct {
             name: "Vec",
-            generics: &[], //TODO
+            generics: &[Generic {
+                name: "T",
+                bounds: &[],
+            }],
             fields: &[],
             functions: &[],
         })
+    }
+
+    fn generic_type_names() -> Vec<&'static str> {
+        vec![T::type_def().name()]
     }
 }
 
@@ -124,14 +144,27 @@ impl<T: ImplDefinition> ImplDefinition for Vec<T> {
     }
 }
 
-impl<T: ImplDefinition, E: ImplDefinition> TypeDefinition for Result<T, E> {
+impl<T: TypeDefinition, E: TypeDefinition> TypeDefinition for Result<T, E> {
     fn type_def() -> Type {
         Type::Struct(Struct {
             name: "Result",
-            generics: &[], //TODO
+            generics: &[
+                Generic {
+                    name: "T",
+                    bounds: &[],
+                },
+                Generic {
+                    name: "E",
+                    bounds: &[],
+                },
+            ],
             fields: &[],
             functions: &[],
         })
+    }
+
+    fn generic_type_names() -> Vec<&'static str> {
+        vec![T::type_def().name(), E::type_def().name()]
     }
 }
 
@@ -141,14 +174,27 @@ impl<T: ImplDefinition, E: ImplDefinition> ImplDefinition for Result<T, E> {
     }
 }
 
-impl<T1: ImplDefinition, T2: ImplDefinition> TypeDefinition for (T1, T2) {
+impl<T1: TypeDefinition, T2: TypeDefinition> TypeDefinition for (T1, T2) {
     fn type_def() -> Type {
         Type::Tuple(Tuple {
             name: "Tuple2",
-            generics: &[], //TODO
+            generics: &[
+                Generic {
+                    name: "T1",
+                    bounds: &[],
+                },
+                Generic {
+                    name: "T2",
+                    bounds: &[],
+                },
+            ],
             fields: &[],
             functions: &[],
         })
+    }
+
+    fn generic_type_names() -> Vec<&'static str> {
+        vec![T1::type_def().name(), T2::type_def().name()]
     }
 }
 
@@ -158,14 +204,21 @@ impl<T1: ImplDefinition, T2: ImplDefinition> ImplDefinition for (T1, T2) {
     }
 }
 
-impl<T: ImplDefinition> TypeDefinition for &[T] {
+impl<T: TypeDefinition> TypeDefinition for &[T] {
     fn type_def() -> Type {
         Type::Struct(Struct {
             name: "Slice",
-            generics: &[], //TODO
+            generics: &[Generic {
+                name: "T",
+                bounds: &[],
+            }],
             fields: &[],
             functions: &[],
         })
+    }
+
+    fn generic_type_names() -> Vec<&'static str> {
+        vec![T::type_def().name()]
     }
 }
 

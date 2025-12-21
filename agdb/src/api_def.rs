@@ -36,6 +36,7 @@ pub enum Type {
 }
 
 impl Type {
+    #[allow(dead_code)]
     fn functions(&self) -> &'static [Function] {
         match self {
             Type::Enum(e) => e.functions,

@@ -161,4 +161,38 @@ describe("queryStore", () => {
     expect(got?.value?.steps.exec.length).toBe(1);
     expect(got?.value?.steps.exec[0]?.id).toBe("s1");
   });
+
+  it("clears query steps for a given tab", () => {
+    const q = makeQuery();
+    const queryRef = store.addQuery(q);
+
+    const s1 = makeStep({ id: "s1" });
+    const s2 = makeStep({ id: "s2" });
+    store.addQueryStep(queryRef.value.id, "exec", s1);
+    store.addQueryStep(queryRef.value.id, "exec", s2);
+
+    store.clearQuerySteps(queryRef.value.id, "exec");
+    const got = store.getQuery(queryRef.value.id);
+    expect(got?.value?.steps.exec.length).toBe(0);
+  });
+
+  it("validates query steps based on followers", () => {
+    const q = makeQuery();
+    const queryRef = store.addQuery(q);
+
+    const step1 = makeStep({ id: "s1", type: "select" });
+    const step2 = makeStep({ id: "s2", type: "search" });
+    const step3 = makeStep({ id: "s3", type: "insert" }); // invalid after search
+
+    store.addQueryStep(queryRef.value.id, "exec", step1);
+    store.addQueryStep(queryRef.value.id, "exec", step2);
+    store.addQueryStep(queryRef.value.id, "exec", step3);
+    store.validateQuerySteps(queryRef.value.id, "exec");
+
+    const got = store.getQuery(queryRef.value.id);
+    expect(got?.value?.steps.exec.length).toBe(3);
+    expect(got?.value?.steps.exec[0]?.invalid).toBe(false); // select valid
+    expect(got?.value?.steps.exec[1]?.invalid).toBe(false); // search valid
+    expect(got?.value?.steps.exec[2]?.invalid).toBe(true); // insert invalid
+  });
 });

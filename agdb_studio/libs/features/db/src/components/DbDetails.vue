@@ -47,7 +47,7 @@ onMounted(() => {
       <h2>Database: {{ dbName }}</h2>
       <button
         v-if="canEditUsers"
-        class="button button-bordered button-success add-button"
+        class="button button-bordered button-success add-button button-circle"
         title="Add user"
         type="button"
         @click="() => handleAddUser()"
@@ -71,7 +71,7 @@ onMounted(() => {
         </span>
         <button
           v-if="user.username !== dbParams.owner && canEditUsers"
-          class="button button-bordered button-danger remove-button"
+          class="button button-bordered button-danger remove-button button-circle"
           title="Remove user"
           type="button"
           @click="handleRemoveUser(user.username)"

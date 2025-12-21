@@ -6,6 +6,7 @@ export type QueryStep = {
   id: string;
   type: QueryType;
   values?: string[];
+  invalid?: boolean;
 };
 
 export type AddQueryParams = {

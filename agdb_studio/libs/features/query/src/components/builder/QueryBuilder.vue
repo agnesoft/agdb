@@ -4,6 +4,7 @@ import type { QueryType, TAB } from "../../composables/types";
 import { useQueryStore } from "../../composables/queryStore";
 import QueryStep from "./QueryStep.vue";
 import QueryStepInput from "./QueryStepInput.vue";
+import { ClCloseMd } from "@kalimahapps/vue-icons";
 
 const props = defineProps<{
   tab: TAB;
@@ -44,10 +45,24 @@ const addStep = (stepType: QueryType) => {
         :prev-step="steps.length > 0 ? steps[steps.length - 1] : undefined"
         @confirm-step="addStep"
       />
+      <button
+        v-if="steps.length"
+        type="button"
+        class="button button-bordered button-danger remove-button button-circle"
+        title="Clear all steps"
+        @click="
+          () => {
+            if (!queryId) return;
+            queryStore.clearQuerySteps(queryId, tab);
+          }
+        "
+      >
+        <ClCloseMd class="remove-query-icon" />
+      </button>
     </div>
     <button
       type="button"
-      class="button"
+      class="button run-query-button"
       :class="[tab === 'exec_mut' ? 'button-warning' : 'button-primary']"
     >
       Run query
@@ -59,10 +74,10 @@ const addStep = (stepType: QueryType) => {
 .query-builder {
   width: 100%;
   display: flex;
-  button {
-    border-top-left-radius: 0;
-    border-bottom-left-radius: 0;
-  }
+}
+.run-query-button {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
 }
 .query-input {
   flex: 1;
@@ -76,11 +91,16 @@ const addStep = (stepType: QueryType) => {
   display: flex;
   gap: 0.5rem;
   flex-wrap: wrap;
+  align-items: center;
+  min-height: 2rem;
   &.context {
     background-color: var(--color-background-soft);
   }
   &.exec_mut {
     background-color: var(--orange-background);
   }
+}
+.remove-query-icon {
+  color: var(--red);
 }
 </style>

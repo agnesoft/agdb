@@ -6,7 +6,7 @@ use crate::DbType;
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 #[cfg_attr(feature = "derive", derive(agdb::DbSerialize))]
-#[cfg_attr(feature = "api", derive(agdb::ApiDef))]
+#[cfg_attr(feature = "api", derive(agdb::TypeDefImpl))]
 #[derive(Clone, Debug, PartialEq)]
 pub enum QueryValues {
     /// Single list of properties (key-value pairs)
@@ -22,12 +22,12 @@ pub enum QueryValues {
 
 /// Convenient wrapper for the [`QueryBuilder`] to
 /// allow properties conversions. Represents `QueryValues::Single`.
-#[cfg_attr(feature = "api", derive(agdb::ApiDef))]
+#[cfg_attr(feature = "api", derive(agdb::TypeDefImpl))]
 pub struct SingleValues(pub Vec<DbKeyValue>);
 
 /// Convenient wrapper for the [`QueryBuilder`] to
 /// allow properties conversions. Represents `QueryValues::Multi`.
-#[cfg_attr(feature = "api", derive(agdb::ApiDef))]
+#[cfg_attr(feature = "api", derive(agdb::TypeDefImpl))]
 pub struct MultiValues(pub Vec<Vec<DbKeyValue>>);
 
 impl From<Vec<DbKeyValue>> for SingleValues {

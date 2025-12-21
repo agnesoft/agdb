@@ -21,7 +21,7 @@ mod tests {
         #[derive(agdb::TypeDef)]
         struct StructWithFunction;
 
-        #[agdb::impl_def2()]
+        #[agdb::impl_def()]
         #[allow(dead_code)]
         impl StructWithFunction {
             fn example_function() {}
@@ -42,7 +42,7 @@ mod tests {
         #[derive(agdb::TypeDef)]
         struct StructWithFunctionArgs;
 
-        #[agdb::impl_def2()]
+        #[agdb::impl_def()]
         #[allow(dead_code)]
         impl StructWithFunctionArgs {
             fn add(a: i32, b: i32) -> i32 {
@@ -68,7 +68,7 @@ mod tests {
         #[derive(agdb::TypeDef)]
         struct StructWithGenericFunction;
 
-        #[agdb::impl_def2()]
+        #[agdb::impl_def()]
         #[allow(dead_code)]
         impl StructWithGenericFunction {
             fn identity<T>(value: T) -> T {
@@ -97,7 +97,7 @@ mod tests {
             value: T,
         }
 
-        #[agdb::impl_def2()]
+        #[agdb::impl_def()]
         #[allow(dead_code)]
         impl<T> StructWithGenericImpl<T> {
             fn generic_method(value: T) -> T {
@@ -119,7 +119,6 @@ mod tests {
 
     #[test]
     fn impl_with_generics_and_bounds() {
-        #[agdb::trait_def()]
         trait Debuggable {}
 
         impl Debuggable for i32 {}
@@ -130,7 +129,7 @@ mod tests {
             value: T,
         }
 
-        #[agdb::impl_def2()]
+        #[agdb::impl_def()]
         #[allow(dead_code)]
         impl<T> StructWithBoundedGenericImpl<T>
         where
@@ -158,7 +157,7 @@ mod tests {
         #[derive(agdb::TypeDef)]
         struct StructWithAsync;
 
-        #[agdb::impl_def2()]
+        #[agdb::impl_def()]
         #[allow(dead_code)]
         impl StructWithAsync {
             async fn async_function() {}

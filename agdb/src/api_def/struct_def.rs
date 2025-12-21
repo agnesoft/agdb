@@ -53,8 +53,8 @@ mod tests {
 
     #[test]
     fn struct_definition_with_generics_with_bounds() {
-        #[agdb::trait_def()]
         trait Bound5 {}
+
         #[derive(agdb::TypeDefImpl)]
         struct GenericStruct<T>
         where

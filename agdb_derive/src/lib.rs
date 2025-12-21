@@ -2,7 +2,6 @@ mod api_def;
 mod db_serialize;
 mod db_type;
 mod db_value;
-mod impl_def;
 
 use proc_macro::TokenStream;
 
@@ -143,28 +142,6 @@ pub fn type_def_impl(item: TokenStream) -> TokenStream {
 }
 
 #[proc_macro_attribute]
-pub fn trait_def(_attr: TokenStream, item: TokenStream) -> TokenStream {
-    api_def::trait_def_impl(item)
-}
-
-#[proc_macro_attribute]
-pub fn impl_def2(_attr: TokenStream, item: TokenStream) -> TokenStream {
+pub fn impl_def(_attr: TokenStream, item: TokenStream) -> TokenStream {
     api_def::impl_def_impl(item)
-}
-
-// OLD
-
-#[proc_macro_derive(ApiDef)]
-pub fn api_def(item: TokenStream) -> TokenStream {
-    api_def::api_def(item)
-}
-
-#[proc_macro_derive(ApiDefImpl)]
-pub fn api_def_impl(item: TokenStream) -> TokenStream {
-    api_def::api_def_impl(item)
-}
-
-#[proc_macro_attribute]
-pub fn impl_def(attr: TokenStream, item: TokenStream) -> TokenStream {
-    impl_def::impl_def(attr, item)
 }

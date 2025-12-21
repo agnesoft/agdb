@@ -92,7 +92,7 @@ mod tests {
         #[derive(agdb::TypeDef)]
         struct OtherType;
 
-        #[agdb::impl_def2()]
+        #[agdb::impl_def()]
         #[allow(dead_code)]
         impl OtherType {
             fn foo() {}

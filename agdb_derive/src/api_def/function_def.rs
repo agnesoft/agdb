@@ -9,87 +9,15 @@ use syn::Generics;
 use syn::Ident;
 use syn::ImplItemFn;
 use syn::Token;
-use syn::TraitItemFn;
 use syn::punctuated::Punctuated;
-
-pub fn parse_trait_functions(name: &Ident, items: &[syn::TraitItem]) -> Vec<TokenStream> {
-    items
-        .iter()
-        .filter_map(|item| match item {
-            syn::TraitItem::Fn(trait_item_fn) => Some(parse_trait_function(name, trait_item_fn)),
-            syn::TraitItem::Type(_) => None, //parsed separately
-            syn::TraitItem::Const(trait_item_const) => {
-                panic!(
-                    "{name}: Trait consts are not supported ('{}')",
-                    trait_item_const.ident
-                )
-            }
-            syn::TraitItem::Macro(_) => {
-                panic!("{name}: Trait macros are not supported")
-            }
-            syn::TraitItem::Verbatim(_) => {
-                panic!("{name}: Verbatim trait items are not supported")
-            }
-            _ => panic!("{name}: Unsupported trait item"),
-        })
-        .collect()
-}
-
-fn parse_trait_function(name: &Ident, trait_item_fn: &TraitItemFn) -> TokenStream {
-    let fn_name = &trait_item_fn.sig.ident;
-    let generics = generics::parse_generics(
-        &Ident::new(&format!("{name}__{fn_name}"), name.span()),
-        &trait_item_fn.sig.generics,
-    );
-    let args = parse_trait_function_args(name, &trait_item_fn.sig.inputs);
-    let fn_ret = match &trait_item_fn.sig.output {
-        syn::ReturnType::Default => quote! { None },
-        syn::ReturnType::Type(_, ty) => quote! {
-            Some(<#ty as ::agdb::api_def::TypeDefinition>::type_def)
-        },
-    };
-    let async_fn = trait_item_fn.sig.asyncness.is_some();
-
-    quote! { ::agdb::api_def::Function {
-            name: stringify!(#fn_name),
-            generics: &[#(#generics),*],
-            args: &[#(#args),*],
-            ret: #fn_ret,
-            async_fn: #async_fn,
-            expressions: &[],
-        }
-    }
-}
-
-fn parse_trait_function_args(
-    name: &Ident,
-    args: &Punctuated<FnArg, Token![,]>,
-) -> Vec<TokenStream> {
-    args.iter()
-        .filter_map(|arg| match arg {
-            FnArg::Receiver(_) => None,
-            FnArg::Typed(pat_type) => {
-                let var_name = match &*pat_type.pat {
-                    syn::Pat::Ident(pat_ident) => &pat_ident.ident,
-                    _ => panic!("{name}: Unsupported argument pattern"),
-                };
-                let var_type = &*pat_type.ty;
-
-                Some(quote! {
-                    ::agdb::api_def::NamedType {
-                        name: stringify!(#var_name),
-                        ty: Some(<#var_type as ::agdb::api_def::TypeDefinition>::type_def),
-                    }
-                })
-            }
-        })
-        .collect()
-}
 
 pub(crate) fn parse_function(input: &ImplItemFn, impl_generics: &Generics) -> TokenStream {
     let name = &input.sig.ident;
     let mut list_generics = generics::list_generics(impl_generics);
     list_generics.extend(generics::list_generics(&input.sig.generics));
+    // Treat `Self` as a special generic-like token to avoid referencing it
+    // inside generated const contexts where `Self` is not permitted.
+    list_generics.push("Self".to_string());
     let generics = generics::parse_generics(name, &input.sig.generics);
     let args = parse_args(name, &input.sig.inputs, &list_generics);
     let ret = parse_ret(&input.sig.output, &list_generics);

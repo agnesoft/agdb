@@ -73,7 +73,7 @@ mod tests {
             assert_eq!(s.generics.len(), 1);
             assert_eq!(s.generics[0].name, "T");
             assert_eq!(s.generics[0].bounds.len(), 1);
-            assert_eq!((s.generics[0].bounds[0])().name, "Bound5");
+            assert_eq!(s.generics[0].bounds[0], "Bound5");
         } else {
             panic!("Expected Type::Struct");
         }

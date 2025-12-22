@@ -36,15 +36,34 @@ pub struct ReqwestClient {
     pub client: reqwest::Client,
 }
 
+#[cfg(feature = "api")]
 impl AgdbApiClient for ReqwestClient {}
 
 #[cfg(feature = "api")]
 impl TypeDefinition for ReqwestClient {
     fn type_def() -> Type {
-        todo!()
+        use agdb::api_def::NamedType;
+
+        Type::Struct(agdb::api_def::struct_def::Struct {
+            name: "ReqwestClient",
+            generics: &[],
+            fields: &[NamedType {
+                name: "client",
+                ty: Some(|| {
+                    Type::Struct(agdb::api_def::struct_def::Struct {
+                        name: "HttpClient",
+                        generics: &[],
+                        fields: &[],
+                        functions: &[],
+                    })
+                }),
+            }],
+            functions: &[],
+        })
     }
 }
 
+#[cfg(feature = "api")]
 impl ImplDefinition for ReqwestClient {
     fn functions() -> &'static [agdb::api_def::Function] {
         &[]

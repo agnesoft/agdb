@@ -49,9 +49,3 @@ pub fn update_versions(
 
     Ok(())
 }
-
-#[allow(dead_code)]
-pub trait Language {
-    fn generate_type(ty: &agdb::api::Type) -> String;
-    fn type_name(ty: &agdb::api::Type) -> String;
-}

@@ -27,7 +27,6 @@ mod db;
 mod graph;
 mod graph_search;
 mod query;
-#[cfg(not(feature = "api"))]
 mod query_builder;
 mod storage;
 mod transaction;
@@ -43,16 +42,10 @@ pub use query::QueryType;
 #[cfg(feature = "derive")]
 pub use agdb_derive::{DbElement, DbSerialize, DbType, DbTypeMarker, DbValue};
 
-#[cfg(feature = "api")] // OLD
-pub mod api;
 #[cfg(feature = "api")]
 pub mod api_def;
-#[cfg(feature = "api")] // OLD
-pub mod query_builder;
-#[cfg(feature = "api")] // OLD
-pub use agdb_derive::{ApiDef, ApiDefImpl, impl_def};
 #[cfg(feature = "api")]
-pub use agdb_derive::{TypeDef, TypeDefImpl, impl_def2, trait_def};
+pub use agdb_derive::{TypeDef, TypeDefImpl, impl_def};
 
 pub use db::Db;
 pub use db::DbAny;
@@ -77,8 +70,6 @@ pub use db::db_key_value::DbKeyValue;
 pub use db::db_type::DbType;
 pub use db::db_type::DbTypeMarker;
 pub use db::db_value::DbValue;
-#[cfg(feature = "api")]
-pub use db::db_value::DbValues;
 pub use query::Query;
 pub use query::QueryMut;
 pub use query::insert_aliases_query::InsertAliasesQuery;
@@ -111,11 +102,6 @@ pub use query::select_key_count_query::SelectKeyCountQuery;
 pub use query::select_keys_query::SelectKeysQuery;
 pub use query::select_node_count::SelectNodeCountQuery;
 pub use query::select_values_query::SelectValuesQuery;
-#[cfg(feature = "api")]
-pub use query::{
-    query_aliases::QueryAliases,
-    query_values::{MultiValues, SingleValues},
-};
 pub use query_builder::QueryBuilder;
 pub use storage::StorageData;
 pub use storage::StorageSlice;

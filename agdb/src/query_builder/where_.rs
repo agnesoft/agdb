@@ -14,7 +14,7 @@ use crate::query_builder::search::SearchQueryBuilder;
 pub const DB_ELEMENT_ID_KEY: &str = "db_element_id";
 
 /// Condition builder
-#[cfg_attr(feature = "api", derive(agdb::ApiDefImpl))]
+#[cfg_attr(feature = "api", derive(agdb::TypeDef))]
 pub struct Where<T: SearchQueryBuilder> {
     logic: QueryConditionLogic,
     modifier: QueryConditionModifier,
@@ -23,14 +23,14 @@ pub struct Where<T: SearchQueryBuilder> {
 }
 
 /// Condition builder for `key` condition.
-#[cfg_attr(feature = "api", derive(agdb::ApiDefImpl))]
+#[cfg_attr(feature = "api", derive(agdb::TypeDef))]
 pub struct WhereKey<T: SearchQueryBuilder> {
     key: DbValue,
     where_: Where<T>,
 }
 
 /// Condition builder setting the logic operator.
-#[cfg_attr(feature = "api", derive(agdb::ApiDefImpl))]
+#[cfg_attr(feature = "api", derive(agdb::TypeDef))]
 pub struct WhereLogicOperator<T: SearchQueryBuilder>(pub Where<T>);
 
 #[cfg_attr(feature = "api", agdb::impl_def())]

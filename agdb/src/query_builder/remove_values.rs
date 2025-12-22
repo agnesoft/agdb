@@ -5,12 +5,12 @@ use crate::query_builder::search::Search;
 
 /// Remove values builder that lets you select the ids from
 /// which to remove the values.
-#[cfg_attr(feature = "api", derive(agdb::ApiDefImpl))]
+#[cfg_attr(feature = "api", derive(agdb::TypeDef))]
 pub struct RemoveValues(pub RemoveValuesQuery);
 
 /// Final builder that lets you create
 /// an actual query object.
-#[cfg_attr(feature = "api", derive(agdb::ApiDefImpl))]
+#[cfg_attr(feature = "api", derive(agdb::TypeDef))]
 pub struct RemoveValuesIds(pub RemoveValuesQuery);
 
 #[cfg_attr(feature = "api", agdb::impl_def())]

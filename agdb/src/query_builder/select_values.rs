@@ -12,7 +12,7 @@ use crate::query_builder::search::Search;
 use crate::query_builder::where_::DB_ELEMENT_ID_KEY;
 
 /// Select values builder.
-#[cfg_attr(feature = "api", derive(agdb::ApiDefImpl))]
+#[cfg_attr(feature = "api", derive(agdb::TypeDef))]
 pub struct SelectValues {
     pub query: SelectValuesQuery,
     pub element_id: Option<DbValue>,
@@ -21,7 +21,7 @@ pub struct SelectValues {
 
 /// Final builder that lets you create
 /// an actual query object.
-#[cfg_attr(feature = "api", derive(agdb::ApiDefImpl))]
+#[cfg_attr(feature = "api", derive(agdb::TypeDef))]
 pub struct SelectValuesIds(pub SelectValuesQuery);
 
 #[cfg_attr(feature = "api", agdb::impl_def())]

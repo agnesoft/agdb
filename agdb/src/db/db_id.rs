@@ -15,7 +15,7 @@ use crate::utilities::stable_hash::StableHash;
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 #[cfg_attr(feature = "derive", derive(agdb::DbSerialize))]
-#[cfg_attr(feature = "api", derive(agdb::ApiDef))]
+#[cfg_attr(feature = "api", derive(agdb::TypeDefImpl))]
 pub struct DbId(pub i64);
 
 impl StableHash for DbId {

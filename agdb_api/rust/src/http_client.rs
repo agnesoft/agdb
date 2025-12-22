@@ -1,9 +1,8 @@
 use crate::AgdbApiError;
 use crate::api_result::AgdbApiResult;
 use crate::client::AgdbApiClient;
-use agdb::api_def::ImplDefinition;
 #[cfg(feature = "api")]
-use agdb::api_def::{Type, TypeDefinition};
+use agdb::api_def::{ImplDefinition, Type, TypeDefinition};
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 
@@ -36,7 +35,6 @@ pub struct ReqwestClient {
     pub client: reqwest::Client,
 }
 
-#[cfg(feature = "api")]
 impl AgdbApiClient for ReqwestClient {}
 
 #[cfg(feature = "api")]

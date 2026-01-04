@@ -43,7 +43,7 @@ pub fn parse_generics(name: &Ident, generics: &Generics) -> Vec<TokenStream> {
         HashMap::new()
     };
 
-    parse_generic_params(name, &generics.params, where_map)
+    parse_generic_list(name, &generics.params, where_map)
 }
 
 pub fn list_generics(generics: &Generics) -> Vec<String> {
@@ -75,7 +75,7 @@ fn parse_where_predicates(
     map
 }
 
-fn parse_generic_params(
+fn parse_generic_list(
     name: &Ident,
     generics: &Punctuated<GenericParam, Token![,]>,
     where_map: HashMap<String, Vec<TokenStream>>,

@@ -37,18 +37,25 @@ pub enum Type {
 
 impl Type {
     #[allow(dead_code)]
-    fn functions(&self) -> &'static [Function] {
+    pub fn functions(&self) -> &'static [Function] {
         match self {
             Type::Enum(e) => e.functions,
             Type::Struct(s) => s.functions,
             Type::Tuple(t) => t.functions,
         }
     }
-    fn name(&self) -> &'static str {
+    pub fn name(&self) -> &'static str {
         match self {
             Type::Enum(e) => e.name,
             Type::Struct(s) => s.name,
             Type::Tuple(t) => t.name,
+        }
+    }
+    pub fn generics(&self) -> &[Generic] {
+        match self {
+            Type::Enum(e) => e.generics,
+            Type::Struct(s) => s.generics,
+            Type::Tuple(t) => t.generics,
         }
     }
 }

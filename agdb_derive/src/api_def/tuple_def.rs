@@ -15,7 +15,7 @@ pub(crate) fn parse_tuple(fields: Option<&FieldsUnnamed>, input: &DeriveInput) -
     quote! {
         impl #impl_generics ::agdb::api_def::TypeDefinition for #name #ty_generic #where_clause {
             fn type_def() -> ::agdb::api_def::Type {
-                ::agdb::api_def::Type::Tuple(::agdb::api_def::tuple_def::Tuple {
+                ::agdb::api_def::Type::TupleStruct(::agdb::api_def::tuple_struct_def::TupleStruct {
                     name: stringify!(#name),
                     generics: &[#(#generics),*],
                     fields: &[#(#fields),*],

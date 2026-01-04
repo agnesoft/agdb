@@ -58,12 +58,7 @@ pub(crate) fn type_def(input: DeriveInput) -> TokenStream {
 
 pub(crate) fn parse_type(ty: &Type, list_generics: &[String]) -> TokenStream {
     if type_contains_generic(ty, list_generics) {
-        quote! { || ::agdb::api_def::Type::Struct(::agdb::api_def::Struct {
-            name: stringify!(#ty),
-            generics: &[],
-            fields: &[],
-            functions: &[],
-        }) }
+        quote! { || ::agdb::api_def::Type::Generic(stringify!(#ty)) }
     } else {
         quote! { <#ty as ::agdb::api_def::TypeDefinition>::type_def }
     }

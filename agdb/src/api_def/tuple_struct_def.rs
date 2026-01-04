@@ -2,7 +2,7 @@ use crate::api_def::Function;
 use crate::api_def::Generic;
 use crate::api_def::Type;
 
-pub struct Tuple {
+pub struct TupleStruct {
     pub name: &'static str,
     pub generics: &'static [Generic],
     pub fields: &'static [fn() -> Type],
@@ -21,7 +21,7 @@ mod tests {
 
         let tuple_def = SomeTuple::type_def();
 
-        if let Type::Tuple(t) = tuple_def {
+        if let Type::TupleStruct(t) = tuple_def {
             assert_eq!(t.name, "SomeTuple");
             assert_eq!(t.generics.len(), 0);
             assert_eq!(t.fields.len(), 0);
@@ -38,7 +38,7 @@ mod tests {
 
         let tuple_def = GenericTuple::<i32>::type_def();
 
-        if let Type::Tuple(t) = tuple_def {
+        if let Type::TupleStruct(t) = tuple_def {
             assert_eq!(t.generics.len(), 1);
             assert_eq!(t.generics[0].name, "T");
             assert_eq!(t.generics[0].bounds.len(), 0);
@@ -61,7 +61,7 @@ mod tests {
 
         let tuple_def = ConcreteTuple::type_def();
 
-        if let Type::Tuple(t) = tuple_def {
+        if let Type::TupleStruct(t) = tuple_def {
             assert_eq!(t.fields.len(), 1);
             if let Type::Struct(s) = (t.fields[0])() {
                 assert_eq!(s.name, "i32");
@@ -81,7 +81,7 @@ mod tests {
 
         let tuple_def = ConcreteTuple::type_def();
 
-        if let Type::Tuple(t) = tuple_def {
+        if let Type::TupleStruct(t) = tuple_def {
             assert_eq!(t.fields.len(), 2);
             if let Type::Struct(s) = (t.fields[0])() {
                 assert_eq!(s.name, "i32");

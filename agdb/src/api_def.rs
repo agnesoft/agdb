@@ -2,7 +2,7 @@ pub mod enum_def;
 pub mod expression_def;
 pub mod function_def;
 pub mod struct_def;
-pub mod tuple_def;
+pub mod tuple_struct_def;
 
 pub use enum_def::Enum;
 pub use expression_def::Expression;
@@ -10,7 +10,7 @@ pub use expression_def::Literal;
 pub use expression_def::Op;
 pub use function_def::Function;
 pub use struct_def::Struct;
-pub use tuple_def::Tuple;
+pub use tuple_struct_def::TupleStruct;
 
 pub trait ImplDefinition {
     fn functions() -> &'static [Function] {
@@ -20,42 +20,61 @@ pub trait ImplDefinition {
 
 pub trait TypeDefinition: ImplDefinition {
     fn type_def() -> Type;
-    fn generic_type_names() -> Vec<&'static str> {
-        match Self::type_def() {
-            Type::Enum(e) => e.generics.iter().map(|g| g.name).collect(),
-            Type::Struct(s) => s.generics.iter().map(|g| g.name).collect(),
-            Type::Tuple(t) => t.generics.iter().map(|g| g.name).collect(),
-        }
-    }
+}
+
+pub enum LiteralType {
+    Bool,
+    I8,
+    I16,
+    I32,
+    I64,
+    U8,
+    U16,
+    U32,
+    U64,
+    F32,
+    F64,
+    String,
+    Str,
+    Unit,
 }
 
 pub enum Type {
+    Literal(LiteralType),
     Enum(Enum),
     Struct(Struct),
-    Tuple(Tuple),
+    TupleStruct(TupleStruct),
+    Tuple(&'static [fn() -> Type]),
+    Slice(fn() -> Type),
+    Vec(fn() -> Type),
+    Option(fn() -> Type),
+    Result(fn() -> Type, fn() -> Type),
+    Generic(&'static str),
 }
 
 impl Type {
-    #[allow(dead_code)]
     pub fn functions(&self) -> &'static [Function] {
         match self {
             Type::Enum(e) => e.functions,
             Type::Struct(s) => s.functions,
-            Type::Tuple(t) => t.functions,
+            Type::TupleStruct(t) => t.functions,
+            _ => &[],
         }
     }
     pub fn name(&self) -> &'static str {
         match self {
             Type::Enum(e) => e.name,
             Type::Struct(s) => s.name,
-            Type::Tuple(t) => t.name,
+            Type::TupleStruct(t) => t.name,
+            _ => "",
         }
     }
     pub fn generics(&self) -> &[Generic] {
         match self {
             Type::Enum(e) => e.generics,
             Type::Struct(s) => s.generics,
-            Type::Tuple(t) => t.generics,
+            Type::TupleStruct(t) => t.generics,
+            _ => &[],
         }
     }
 }
@@ -73,52 +92,35 @@ pub struct Generic {
 // --- Rust types implementations --- //
 
 #[macro_export]
-macro_rules! impl_type {
-    ($ty:ty) => {
+macro_rules! impl_type_literal {
+    ($ty:ty, $literal:path) => {
         impl $crate::api_def::ImplDefinition for $ty {}
 
         impl $crate::api_def::TypeDefinition for $ty {
             fn type_def() -> $crate::api_def::Type {
-                $crate::api_def::Type::Struct($crate::api_def::struct_def::Struct {
-                    name: stringify!($ty),
-                    generics: &[],
-                    fields: &[],
-                    functions: &[],
-                })
+                $crate::api_def::Type::Literal($literal)
             }
         }
     };
 }
 
-impl_type!(bool);
-impl_type!(i8);
-impl_type!(i16);
-impl_type!(i32);
-impl_type!(i64);
-impl_type!(u8);
-impl_type!(u16);
-impl_type!(u32);
-impl_type!(u64);
-impl_type!(f64);
-impl_type!(String);
-impl_type!(&str);
-impl_type!(());
+impl_type_literal!(bool, LiteralType::Bool);
+impl_type_literal!(i8, LiteralType::I8);
+impl_type_literal!(i16, LiteralType::I16);
+impl_type_literal!(i32, LiteralType::I32);
+impl_type_literal!(i64, LiteralType::I64);
+impl_type_literal!(u8, LiteralType::U8);
+impl_type_literal!(u16, LiteralType::U16);
+impl_type_literal!(u32, LiteralType::U32);
+impl_type_literal!(u64, LiteralType::U64);
+impl_type_literal!(f64, LiteralType::F64);
+impl_type_literal!(String, LiteralType::String);
+impl_type_literal!(&str, LiteralType::Str);
+impl_type_literal!((), LiteralType::Unit);
 
 impl<T: TypeDefinition> TypeDefinition for Option<T> {
     fn type_def() -> Type {
-        Type::Struct(Struct {
-            name: "Option",
-            generics: &[Generic {
-                name: "T",
-                bounds: &[],
-            }],
-            fields: &[],
-            functions: &[],
-        })
-    }
-
-    fn generic_type_names() -> Vec<&'static str> {
-        vec![T::type_def().name()]
+        Type::Option(T::type_def)
     }
 }
 
@@ -130,19 +132,7 @@ impl<T: ImplDefinition> ImplDefinition for Option<T> {
 
 impl<T: TypeDefinition> TypeDefinition for Vec<T> {
     fn type_def() -> Type {
-        Type::Struct(Struct {
-            name: "Vec",
-            generics: &[Generic {
-                name: "T",
-                bounds: &[],
-            }],
-            fields: &[],
-            functions: &[],
-        })
-    }
-
-    fn generic_type_names() -> Vec<&'static str> {
-        vec![T::type_def().name()]
+        Type::Vec(T::type_def)
     }
 }
 
@@ -154,25 +144,7 @@ impl<T: ImplDefinition> ImplDefinition for Vec<T> {
 
 impl<T: TypeDefinition, E: TypeDefinition> TypeDefinition for Result<T, E> {
     fn type_def() -> Type {
-        Type::Struct(Struct {
-            name: "Result",
-            generics: &[
-                Generic {
-                    name: "T",
-                    bounds: &[],
-                },
-                Generic {
-                    name: "E",
-                    bounds: &[],
-                },
-            ],
-            fields: &[],
-            functions: &[],
-        })
-    }
-
-    fn generic_type_names() -> Vec<&'static str> {
-        vec![T::type_def().name(), E::type_def().name()]
+        Type::Result(T::type_def, E::type_def)
     }
 }
 
@@ -184,25 +156,7 @@ impl<T: ImplDefinition, E: ImplDefinition> ImplDefinition for Result<T, E> {
 
 impl<T1: TypeDefinition, T2: TypeDefinition> TypeDefinition for (T1, T2) {
     fn type_def() -> Type {
-        Type::Tuple(Tuple {
-            name: "Tuple2",
-            generics: &[
-                Generic {
-                    name: "T1",
-                    bounds: &[],
-                },
-                Generic {
-                    name: "T2",
-                    bounds: &[],
-                },
-            ],
-            fields: &[],
-            functions: &[],
-        })
-    }
-
-    fn generic_type_names() -> Vec<&'static str> {
-        vec![T1::type_def().name(), T2::type_def().name()]
+        Type::Tuple(&[T1::type_def, T2::type_def])
     }
 }
 
@@ -214,19 +168,7 @@ impl<T1: ImplDefinition, T2: ImplDefinition> ImplDefinition for (T1, T2) {
 
 impl<T: TypeDefinition> TypeDefinition for &[T] {
     fn type_def() -> Type {
-        Type::Struct(Struct {
-            name: "Slice",
-            generics: &[Generic {
-                name: "T",
-                bounds: &[],
-            }],
-            fields: &[],
-            functions: &[],
-        })
-    }
-
-    fn generic_type_names() -> Vec<&'static str> {
-        vec![T::type_def().name()]
+        Type::Slice(T::type_def)
     }
 }
 

@@ -1,6 +1,5 @@
 use super::generics;
 use super::struct_def;
-use super::tuple_def;
 use proc_macro2::TokenStream;
 use quote::quote;
 use syn::DataEnum;
@@ -49,7 +48,7 @@ fn parse_variants(
                         ::agdb::api_def::NamedType {
                             name: stringify!(#variant_name),
                             ty: Some(|| ::agdb::api_def::Type::Struct(::agdb::api_def::Struct {
-                                name: stringify!(#variant_name),
+                                name: "",
                                 generics: &[],
                                 fields: &[#(#fields),*],
                                 functions: &[],
@@ -58,17 +57,11 @@ fn parse_variants(
                     }
                 }
                 Fields::Unnamed(fields_unnamed) => {
-                    let fields = tuple_def::parse_unnamed_fields(Some(fields_unnamed), generics);
-
+                    let field_name = fields_unnamed.unnamed.first().map(|f| &f.ty).unwrap();
                     quote! {
                         ::agdb::api_def::NamedType {
                             name: stringify!(#variant_name),
-                            ty: Some(|| ::agdb::api_def::Type::Tuple(::agdb::api_def::Tuple {
-                                name: stringify!(#variant_name),
-                                generics: &[],
-                                fields: &[#(#fields),*],
-                                functions: &[],
-                            })),
+                            ty: Some(<#field_name as ::agdb::api_def::TypeDefinition>::type_def),
                         }
                     }
                 }

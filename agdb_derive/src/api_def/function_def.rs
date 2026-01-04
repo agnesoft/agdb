@@ -8,6 +8,7 @@ use syn::FnArg;
 use syn::Generics;
 use syn::Ident;
 use syn::ImplItemFn;
+use syn::ReturnType;
 use syn::Token;
 use syn::punctuated::Punctuated;
 
@@ -39,10 +40,10 @@ pub(crate) fn parse_function(input: &ImplItemFn, impl_generics: &Generics) -> To
     }
 }
 
-pub(crate) fn parse_ret(output: &syn::ReturnType, generics: &[String]) -> TokenStream {
+pub(crate) fn parse_ret(output: &ReturnType, generics: &[String]) -> TokenStream {
     match output {
-        syn::ReturnType::Default => quote! { None },
-        syn::ReturnType::Type(_, ty) => {
+        ReturnType::Default => quote! { None },
+        ReturnType::Type(_, ty) => {
             let ty_token = type_def::parse_type(ty, generics);
             quote! { Some(#ty_token) }
         }
@@ -69,8 +70,13 @@ fn parse_args(
                     ty: Some(#ty),
                 }
             });
-        } else if let FnArg::Receiver(_) = input {
-            continue;
+        } else if let FnArg::Receiver(r) = input {
+            args.push(quote! {
+                ::agdb::api_def::NamedType {
+                    name: stringify!(#r),
+                    ty: None,
+                }
+            });
         } else {
             panic!(
                 "{name}: Unsupported argument type in function definition: {:?}",

@@ -109,7 +109,7 @@ mod tests {
         if let Type::Enum(e) = enum_def {
             assert_eq!(e.variants.len(), 1);
             assert_eq!(e.variants[0].name, "TupleVariant");
-            if let Type::Tuple(t) = (e.variants[0].ty.unwrap())() {
+            if let Type::TupleStruct(t) = (e.variants[0].ty.unwrap())() {
                 if let Type::Struct(s) = (t.fields[0])() {
                     assert_eq!(s.name, "OtherType");
                     s.functions

@@ -22,6 +22,7 @@ pub trait TypeDefinition: ImplDefinition {
     fn type_def() -> Type;
 }
 
+#[derive(Debug)]
 pub enum LiteralType {
     Bool,
     I8,
@@ -39,6 +40,7 @@ pub enum LiteralType {
     Unit,
 }
 
+#[derive(Debug)]
 pub enum Type {
     Literal(LiteralType),
     Enum(Enum),
@@ -79,11 +81,13 @@ impl Type {
     }
 }
 
+#[derive(Debug)]
 pub struct NamedType {
     pub name: &'static str,
     pub ty: Option<fn() -> Type>,
 }
 
+#[derive(Debug)]
 pub struct Generic {
     pub name: &'static str,
     pub bounds: &'static [&'static str],

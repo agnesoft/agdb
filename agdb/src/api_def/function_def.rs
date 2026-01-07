@@ -3,6 +3,7 @@ use crate::api_def::NamedType;
 use crate::api_def::Type;
 use crate::api_def::expression_def::Expression;
 
+#[derive(Debug)]
 pub struct Function {
     pub name: &'static str,
     pub generics: &'static [Generic],

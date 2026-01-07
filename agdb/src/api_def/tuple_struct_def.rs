@@ -2,6 +2,7 @@ use crate::api_def::Function;
 use crate::api_def::Generic;
 use crate::api_def::Type;
 
+#[derive(Debug)]
 pub struct TupleStruct {
     pub name: &'static str,
     pub generics: &'static [Generic],

@@ -1,14 +1,17 @@
-use std::collections::HashSet;
-
 use crate::AgdbApi;
+use crate::AgdbApiError;
 use crate::ReqwestClient;
+use agdb::DbKeyOrder;
+use agdb::DbKeyValue;
 use agdb::QueryBuilder;
+use agdb::QueryCondition;
 use agdb::api_def::Enum;
 use agdb::api_def::Function;
 use agdb::api_def::Struct;
 use agdb::api_def::TupleStruct;
 use agdb::api_def::Type;
 use agdb::api_def::TypeDefinition;
+use std::collections::HashSet;
 
 pub struct Api {
     type_names: HashSet<String>,
@@ -19,6 +22,10 @@ impl Api {
         let top_level_types = vec![
             QueryBuilder::type_def(),
             AgdbApi::<ReqwestClient>::type_def(),
+            AgdbApiError::type_def(),
+            DbKeyOrder::type_def(),
+            DbKeyValue::type_def(),
+            QueryCondition::type_def(),
         ];
 
         let mut types = vec![];
@@ -244,6 +251,12 @@ mod tests {
         }
 
         fn write_enum(e: &Enum) -> String {
+            if e.name == "QueryValues" {
+                for v in e.variants {
+                    println!("Variant: {:?}", v.ty.unwrap()());
+                }
+            }
+
             let mut buffer = String::new();
             buffer.push_str(&format!(
                 "enum {}{} {{\n",
@@ -287,7 +300,9 @@ mod tests {
                                 .join(", ")
                         );
                     }
-                    _ => {}
+                    _ => {
+                        return format!("    {}({}),\n", variant.name, Self::type_name(&ty));
+                    }
                 }
             }
 
@@ -358,6 +373,10 @@ pub trait HttpClient {
         json: Option<T>,
         token: &Option<String>,
     ) -> impl std::future::Future<Output = AgdbApiResult<u16>> + Send;
+}
+
+pub trait SearchQueryBuilder: agdb::api_def::TypeDefinition {
+    fn search_mut(&mut self) -> &mut SearchQuery;
 }
 
 "#

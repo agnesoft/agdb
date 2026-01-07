@@ -4,6 +4,7 @@ use std::fmt::Display;
 use std::fmt::Formatter;
 use std::fmt::Result as FmtResult;
 
+#[derive(Debug)]
 pub enum Expression {
     // [1, 2, 3]
     Array(&'static [Expression]),
@@ -155,6 +156,7 @@ pub enum Expression {
     Wild,
 }
 
+#[derive(Debug)]
 pub enum Literal {
     I64(i64),
     F64(f64),
@@ -162,6 +164,7 @@ pub enum Literal {
     Bool(bool),
 }
 
+#[derive(Debug)]
 pub enum Op {
     // +
     Add,

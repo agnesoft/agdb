@@ -16,6 +16,12 @@ pub fn user_db_value_derive(item: TokenStream) -> TokenStream {
             }
         }
 
+        impl #impl_generics ::std::convert::From<&#name #ty_generics> for ::agdb::DbValue #where_clause {
+            fn from(value: &#name #ty_generics) -> Self {
+                ::agdb::DbValue::Bytes(::agdb::AgdbSerialize::serialize(value))
+            }
+        }
+
         impl #impl_generics ::std::convert::TryFrom<::agdb::DbValue> for #name #ty_generics #where_clause {
             type Error = ::agdb::DbError;
 

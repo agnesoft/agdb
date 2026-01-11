@@ -1,3 +1,4 @@
+use crate::AgdbSerialize;
 use crate::DbError;
 use crate::DbTypeMarker;
 use crate::StorageData;
@@ -12,9 +13,7 @@ use std::fmt::Result as DisplayResult;
 use std::net::IpAddr;
 use std::net::SocketAddr;
 use std::path::PathBuf;
-use std::time::Duration;
 use std::time::SystemTime;
-use std::time::UNIX_EPOCH;
 
 /// Database value is a strongly types value.
 ///
@@ -392,17 +391,7 @@ impl From<&PathBuf> for DbValue {
 
 impl From<SystemTime> for DbValue {
     fn from(value: SystemTime) -> Self {
-        let (duration, before_epoch) = match value.duration_since(UNIX_EPOCH) {
-            Ok(duration) => (duration, false),
-            Err(duration) => (duration.duration(), true),
-        };
-        let secs = duration.as_secs();
-        let nanos = duration.subsec_nanos();
-        let mut bytes = [0_u8; 13];
-        bytes[0..8].copy_from_slice(&secs.to_le_bytes());
-        bytes[8..12].copy_from_slice(&nanos.to_le_bytes());
-        bytes[12] = if before_epoch { 0_u8 } else { 1_u8 };
-        DbValue::Bytes(bytes.to_vec())
+        DbValue::Bytes(<SystemTime as AgdbSerialize>::serialize(&value))
     }
 }
 
@@ -843,31 +832,7 @@ impl TryFrom<DbValue> for SystemTime {
     type Error = DbError;
 
     fn try_from(value: DbValue) -> Result<Self, Self::Error> {
-        let bytes = value.bytes()?;
-        if bytes.len() != 13 {
-            return Err(DbError::from(format!(
-                "Invalid SystemTime bytes length (should be 13): {}",
-                bytes.len()
-            )));
-        }
-        let mut secs_bytes = [0_u8; 8];
-        secs_bytes.copy_from_slice(&bytes[0..8]);
-        let mut nanos_bytes = [0_u8; 4];
-        nanos_bytes.copy_from_slice(&bytes[8..12]);
-        let before_epoch = bytes[12] == 0_u8;
-        let secs = u64::from_le_bytes(secs_bytes);
-        let nanos = u32::from_le_bytes(nanos_bytes);
-        let duration = Duration::new(secs, nanos);
-
-        if before_epoch {
-            Ok(UNIX_EPOCH.checked_sub(duration).ok_or_else(|| {
-                DbError::from("SystemTime before UNIX_EPOCH is too far in the past")
-            })?)
-        } else {
-            Ok(UNIX_EPOCH.checked_add(duration).ok_or_else(|| {
-                DbError::from("SystemTime after UNIX_EPOCH is too far in the future")
-            })?)
-        }
+        SystemTime::deserialize(value.bytes()?)
     }
 }
 
@@ -900,7 +865,7 @@ impl TryFrom<DbValue> for Vec<u8> {
 
     #[track_caller]
     fn try_from(value: DbValue) -> Result<Self, Self::Error> {
-        Ok(value.bytes()?.clone())
+        Ok(value.bytes()?.to_vec())
     }
 }
 
@@ -1085,6 +1050,7 @@ mod tests {
     use std::collections::HashSet;
     use std::net::IpAddr;
     use std::net::SocketAddr;
+    use std::time::Duration;
 
     #[derive(Clone)]
     enum TestEnumString {
@@ -2043,16 +2009,16 @@ mod tests {
     fn vec_of_user_values_empty() {
         let vec = Vec::<TestEnumString>::new();
         let db_value: DbValue = vec.into();
-        let vec = db_value.bytes().unwrap().clone();
-        assert_eq!(vec, Vec::<u8>::new());
+        let vec = db_value.bytes().unwrap();
+        assert_eq!(*vec, Vec::<u8>::new());
     }
 
     #[test]
     fn vec_of_user_values_slice() {
         let vec = Vec::<TestEnumString>::new();
         let db_value: DbValue = vec.as_slice().into();
-        let vec = db_value.bytes().unwrap().clone();
-        assert_eq!(vec, Vec::<u8>::new());
+        let vec = db_value.bytes().unwrap();
+        assert_eq!(*vec, Vec::<u8>::new());
     }
 
     #[test]
@@ -2229,5 +2195,29 @@ mod tests {
         assert_eq!(addrs, addrs_back);
         let strings: Vec<String> = db_value.vec_string().unwrap().clone();
         assert_eq!(strings, vec!["127.0.0.1".to_string(), "::".to_string()]);
+    }
+
+    #[test]
+    fn derive_db_value_with_std_types() {
+        #[derive(agdb::DbValue, agdb::DbSerialize, PartialEq, Debug)]
+        struct TestStruct {
+            pathbuf: PathBuf,
+            system_time: SystemTime,
+            socket_addr: SocketAddr,
+            ip_addr: IpAddr,
+        }
+
+        let original = TestStruct {
+            pathbuf: PathBuf::from("/some/path"),
+            system_time: SystemTime::now(),
+            socket_addr: "127.0.0.1:1".parse().unwrap(),
+            ip_addr: "::".parse().unwrap(),
+        };
+
+        let db_value: DbValue = (&original).into();
+
+        let struct_back: TestStruct = db_value.try_into().unwrap();
+
+        assert_eq!(original, struct_back);
     }
 }

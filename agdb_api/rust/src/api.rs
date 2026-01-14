@@ -1,10 +1,22 @@
+use crate::AdminStatus;
 use crate::AgdbApi;
 use crate::AgdbApiError;
+use crate::ClusterStatus;
+use crate::DbAudit;
+use crate::DbUser;
 use crate::ReqwestClient;
+use crate::ServerDatabase;
+use crate::UserStatus;
 use agdb::DbKeyOrder;
 use agdb::DbKeyValue;
+use agdb::DbValues;
+use agdb::MultiValues;
+use agdb::QueryAliases;
 use agdb::QueryBuilder;
 use agdb::QueryCondition;
+use agdb::QueryResult;
+use agdb::QueryType;
+use agdb::SingleValues;
 use agdb::api_def::Enum;
 use agdb::api_def::Function;
 use agdb::api_def::Struct;
@@ -26,6 +38,18 @@ impl Api {
             DbKeyOrder::type_def(),
             DbKeyValue::type_def(),
             QueryCondition::type_def(),
+            QueryAliases::type_def(),
+            MultiValues::type_def(),
+            SingleValues::type_def(),
+            DbValues::type_def(),
+            ServerDatabase::type_def(),
+            QueryType::type_def(),
+            QueryResult::type_def(),
+            AdminStatus::type_def(),
+            UserStatus::type_def(),
+            ClusterStatus::type_def(),
+            DbAudit::type_def(),
+            DbUser::type_def(),
         ];
 
         let mut types = vec![];
@@ -179,21 +203,39 @@ mod tests {
             }
         }
 
+        fn generic_decl(generic: &Generic) -> String {
+            if !generic.bounds.is_empty() {
+                return format!(
+                    "{}: {}",
+                    generic.name,
+                    generic
+                        .bounds
+                        .iter()
+                        .map(|g| Self::generic_decl(g))
+                        .collect::<Vec<String>>()
+                        .join(" + ")
+                );
+            }
+
+            if !generic.args.is_empty() {
+                let args = generic
+                    .args
+                    .iter()
+                    .map(|arg| Self::type_name(&arg()))
+                    .collect::<Vec<String>>()
+                    .join(", ");
+                return format!("{}<{}>", generic.name, args);
+            }
+
+            generic.name.to_string()
+        }
+
         fn generics_decl(generics: &[Generic]) -> String {
             if generics.is_empty() {
                 return String::new();
             }
 
-            let generic_decls: Vec<String> = generics
-                .iter()
-                .map(|g| {
-                    if g.bounds.is_empty() {
-                        g.name.to_string()
-                    } else {
-                        format!("{}: {}", g.name, g.bounds.join(" + "))
-                    }
-                })
-                .collect();
+            let generic_decls: Vec<String> = generics.iter().map(Self::generic_decl).collect();
 
             format!("<{}>", generic_decls.join(", "))
         }
@@ -251,12 +293,6 @@ mod tests {
         }
 
         fn write_enum(e: &Enum) -> String {
-            if e.name == "QueryValues" {
-                for v in e.variants {
-                    println!("Variant: {:?}", v.ty.unwrap()());
-                }
-            }
-
             let mut buffer = String::new();
             buffer.push_str(&format!(
                 "enum {}{} {{\n",
@@ -324,6 +360,57 @@ mod tests {
                     .collect::<Vec<String>>()
                     .join("")
             ));
+
+            buffer.push_str(&Self::write_functions(s.functions, s.name, s.generics));
+
+            buffer
+        }
+
+        fn write_functions(functions: &[Function], ty: &str, generics: &[Generic]) -> String {
+            let mut buffer = String::new();
+
+            if !functions.is_empty() {
+                buffer.push_str(&format!(
+                    "impl{} {}{} {{\n",
+                    Self::generics_decl(generics),
+                    ty,
+                    Self::generics(generics)
+                ));
+
+                for f in functions {
+                    buffer.push_str(&format!(
+                        "    pub {}fn {}{}({}){} {{ todo!() }}\n",
+                        if f.async_fn { "async " } else { "" },
+                        f.name,
+                        Self::generics_decl(f.generics),
+                        f.args
+                            .iter()
+                            .map(|arg| {
+                                let ty = if let Some(ty_fn) = &arg.ty {
+                                    format!(": {}", Self::type_name(&ty_fn()))
+                                } else {
+                                    String::new()
+                                };
+                                format!("{}{}", arg.name, ty)
+                            })
+                            .collect::<Vec<String>>()
+                            .join(", "),
+                        if let Some(ret_ty_fn) = &f.ret {
+                            if f.name == "search" {
+                                let x = ret_ty_fn().name();
+                                println!("Function {ty}::{} returns {}", f.name, x);
+                            }
+
+                            format!(" -> {}", Self::type_name(&ret_ty_fn()))
+                        } else {
+                            String::new()
+                        }
+                    ));
+                }
+
+                buffer.push_str("}\n");
+            }
+
             buffer
         }
 
@@ -345,6 +432,8 @@ mod tests {
         fn preamble() -> String {
             r#"use serde::Serialize;
 use serde::de::DeserializeOwned;
+use agdb::DbType;
+use std::borrow::Borrow;
 
 type AgdbApiResult<T> = Result<T, AgdbApiError>;
 

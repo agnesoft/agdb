@@ -90,7 +90,8 @@ pub struct NamedType {
 #[derive(Debug)]
 pub struct Generic {
     pub name: &'static str,
-    pub bounds: &'static [&'static str],
+    pub args: &'static [fn() -> Type],
+    pub bounds: &'static [&'static Generic],
 }
 
 // --- Rust types implementations --- //

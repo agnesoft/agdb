@@ -5,9 +5,12 @@ use std::collections::HashMap;
 use syn::GenericParam;
 use syn::Generics;
 use syn::Ident;
+use syn::PathArguments;
 use syn::Token;
 use syn::TypeParamBound;
 use syn::punctuated::Punctuated;
+
+use crate::api_def::type_def;
 
 pub fn parse_bounds(
     name: &Ident,
@@ -17,14 +20,33 @@ pub fn parse_bounds(
         .iter()
         .filter_map(|st| match st {
             TypeParamBound::Trait(trait_bound) => {
-                let trait_name = &trait_bound
+                let bound = &trait_bound
                     .path
                     .segments
                     .last()
-                    .unwrap_or_else(|| panic!("{name}: Expected trait segment"))
-                    .ident;
+                    .unwrap_or_else(|| panic!("{name}: Expected trait segment"));
+                let bound_name = &bound.ident;
+                let args = if let PathArguments::AngleBracketed(args) = &bound.arguments {
+                    args.args
+                        .iter()
+                        .map(|g| match g {
+                            syn::GenericArgument::Type(ty) => {
+                                type_def::parse_type(ty, &["T".to_string()])
+                            }
+                            _ => panic!("{name}: Unsupported generic argument in bound"),
+                        })
+                        .collect::<Vec<_>>()
+                } else {
+                    vec![]
+                };
 
-                Some(quote! { stringify!(#trait_name) })
+                Some(quote! {
+                    &::agdb::api_def::Generic {
+                        name: stringify!(#bound_name),
+                        args: &[#(#args),*],
+                        bounds: &[],
+                    }
+                })
             }
             TypeParamBound::Lifetime(_) => None,
             TypeParamBound::PreciseCapture(_) => {
@@ -96,6 +118,7 @@ fn parse_generic_list(
                 Some(quote! {
                     ::agdb::api_def::Generic {
                         name: stringify!(#type_name),
+                        args: &[],
                         bounds: &[#(#bounds),*],
                     }
                 })

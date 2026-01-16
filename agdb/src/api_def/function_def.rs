@@ -174,4 +174,25 @@ mod tests {
         assert!(functions[0].async_fn);
         assert!(functions[0].expressions.is_empty());
     }
+
+    #[test]
+    fn generic_return_value() {
+        #[derive(agdb::TypeDef)]
+        struct StructWithGenericReturn;
+
+        #[derive(agdb::TypeDefImpl)]
+        struct GenericReturn<T> {
+            value: T,
+        }
+
+        #[agdb::impl_def()]
+        #[allow(dead_code)]
+        impl StructWithGenericReturn {
+            fn get_value() -> GenericReturn<i32> {
+                GenericReturn { value: 42 }
+            }
+        }
+
+        let function = &StructWithGenericReturn::type_def().functions()[0];
+    }
 }

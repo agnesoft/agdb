@@ -30,13 +30,13 @@ catalog:
   "@vueuse/core": ^14
   axios: ^1
   copyfiles: ^2
+  eslint: ^9
   eslint-config-prettier: ^10
   eslint-import-resolver-alias: ^1
   eslint-import-resolver-typescript: ^4
   eslint-plugin-import: ^2
   eslint-plugin-vue: ^10
-  eslint: ^9
-  globals: ^16.0.0
+  globals: ^17
   highlight.js: ^11
   jsdom: ^27
   less: ^4
@@ -47,13 +47,13 @@ catalog:
   prettier: ^3
   sass: ^1
   turbo: ^2
-  typescript-eslint: ^8
   typescript: ^5
+  typescript-eslint: ^8
   vite: ^7
   vitest: ^4
+  vue: ^3
   vue-router: ^4
   vue-tsc: ^3
-  vue: ^3
 
 ignoredBuiltDependencies:
   - "@parcel/watcher"

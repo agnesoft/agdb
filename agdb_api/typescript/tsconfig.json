@@ -4,8 +4,6 @@
     "module": "ESNext",
     "declaration": true,
     "outDir": "./dist",
-    "moduleResolution": "node",
-    "baseUrl": ".",
     "lib": ["es2015"],
   },
   "include": [

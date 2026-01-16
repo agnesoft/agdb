@@ -1,6 +1,6 @@
 [package]
 name = "agdb_server"
-version = "0.12.5"
+version = "0.12.6"
 edition = "2024"
 license = "Apache-2.0"
 homepage = "https://github.com/agnesoft/agdb"
@@ -17,8 +17,8 @@ tls = ["dep:axum-server", "dep:rustls", "reqwest/rustls", "agdb_api/tls"]
 studio = ["dep:include_dir"]
 
 [dependencies]
-agdb = { version = "0.12.5", path = "../agdb", features = ["serde", "openapi"] }
-agdb_api = { version = "0.12.5", path = "../agdb_api/rust", features = ["api"] }
+agdb = { version = "0.12.6", path = "../agdb", features = ["serde", "openapi"] }
+agdb_api = { version = "0.12.6", path = "../agdb_api/rust", features = ["api"] }
 axum = { version = "0.8", features = ["http2"] }
 axum-extra = { version = "0.12", features = ["typed-header", "routing"] }
 axum-server = { version = "0.8", features = ["tls-rustls"], optional = true }

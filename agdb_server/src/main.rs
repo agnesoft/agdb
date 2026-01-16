@@ -72,8 +72,8 @@ async fn main() -> ServerResult {
 
         tracing::info!("Address: {}", config.address);
         tracing::info!("Listening at {}", config.bind);
-        let listener = std::net::TcpListener::bind(&config.bind)?;
-        return Ok(axum_server::from_tcp_rustls(listener, tls_config)
+        let address = <std::net::SocketAddr as std::str::FromStr>::from_str(&config.address)?;
+        return Ok(axum_server::bind_rustls(address, tls_config)
             .handle(handle)
             .serve(app.into_make_service())
             .await?);

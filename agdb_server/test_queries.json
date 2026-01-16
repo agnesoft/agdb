@@ -1130,7 +1130,7 @@
     }
   ],
   [
-    "QueryBuilder::insert().element(&T::default()).query()",
+    "QueryBuilder::insert().element(T::default()).query()",
     {
       "InsertValues": {
         "ids": {

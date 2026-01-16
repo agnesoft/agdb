@@ -172,11 +172,10 @@ For database concepts and primitive data types see [concepts](https://agdb.agnes
 
 ### agdb_api
 
-| Feature    | Default | Description                                                                              |
-| ---------- | ------- | ---------------------------------------------------------------------------------------- |
-| rust-tls   | no      | Enables rust-tls for [`reqwest`](https://github.com/seanmonstar/reqwest).                |
-| native-tls | no      | Enables native-tls for [`reqwest`](https://github.com/seanmonstar/reqwest).              |
-| api        | no      | Enables annotations on all structs to facilitate API generation for different languages. |
+| Feature | Default | Description                                                                              |
+| ------- | ------- | ---------------------------------------------------------------------------------------- |
+| tls     | no      | Enables rust-tls for [`reqwest`](https://github.com/seanmonstar/reqwest).                |
+| api     | no      | Enables annotations on all structs to facilitate API generation for different languages. |
 
 ### agdb_server
 

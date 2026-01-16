@@ -4,6 +4,6 @@
 
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
-**id** | **int** | Database id is a wrapper around &#x60;i64&#x60;. The id is an identifier of a database element both nodes and edges. The positive ids represent nodes, negative ids represent edges. The value of &#x60;0&#x60; is logically invalid (there cannot be element with id 0) and a default. |
+**id** | **int** | Numerical id as [&#x60;DbId&#x60;] |
 
 [[Back to Model list]](../../README.md#models) [[Back to API list]](../../README.md#endpoints) [[Back to README]](../../README.md)

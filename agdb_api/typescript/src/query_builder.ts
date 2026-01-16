@@ -1,4 +1,4 @@
-import type { Components } from "./openapi";
+import type { Components } from "./openapi.d.ts";
 
 type BuilderQueryId = number | string | Components.Schemas.QueryId;
 type BuilderQueryIds =

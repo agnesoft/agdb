@@ -1,6 +1,6 @@
-import { convertTo, QueryBuilder } from "../src/index";
+import { convertTo, QueryBuilder } from "../src/index.ts";
 import { describe, expect, it } from "vitest";
-import { AgdbApi } from "../src/index";
+import { AgdbApi } from "../src/index.ts";
 
 class MyClass {
     db_id: number | undefined | string;

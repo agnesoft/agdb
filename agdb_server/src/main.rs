@@ -73,8 +73,10 @@ async fn main() -> ServerResult {
 
         tracing::info!("Address: {}", config.address);
         tracing::info!("Listening at {}", config.bind);
-        let listener = TcpListener::bind(&config.bind).await?.local_addr()?;
-        return Ok(axum_server::bind_rustls(listener, tls_config)
+        let address = std::net::ToSocketAddrs::to_socket_addrs(&config.bind)?
+            .next()
+            .expect("failed to parse the config.bind to SocketAddr");
+        return Ok(axum_server::bind_rustls(address, tls_config)
             .handle(handle)
             .serve(app.into_make_service())
             .await?);

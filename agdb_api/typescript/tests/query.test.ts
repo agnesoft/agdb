@@ -307,7 +307,7 @@ describe("query tests", () => {
         expect(query).toEqual(test_queries[32][1]);
     });
 
-    it(`QueryBuilder::insert().element(&T::default()).query()`, () => {
+    it(`QueryBuilder::insert().element(T::default()).query()`, () => {
         const query = QueryBuilder.insert().element(new T()).query();
         expect(query).toEqual(test_queries[33][1]);
     });

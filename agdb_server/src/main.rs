@@ -17,6 +17,7 @@ mod user_id;
 mod utilities;
 
 use server_error::ServerResult;
+use tokio::net::TcpListener;
 use tokio::sync::broadcast;
 
 const CONFIG_FILE: &str = "agdb_server.yaml";
@@ -72,8 +73,8 @@ async fn main() -> ServerResult {
 
         tracing::info!("Address: {}", config.address);
         tracing::info!("Listening at {}", config.bind);
-        let address = <std::net::SocketAddr as std::str::FromStr>::from_str(&config.address)?;
-        return Ok(axum_server::bind_rustls(address, tls_config)
+        let listener = TcpListener::bind(&config.bind).await?.local_addr()?;
+        return Ok(axum_server::bind_rustls(listener, tls_config)
             .handle(handle)
             .serve(app.into_make_service())
             .await?);
@@ -81,7 +82,7 @@ async fn main() -> ServerResult {
 
     tracing::info!("Address: {}", config.address);
     tracing::info!("Listening at {}", config.bind);
-    let listener = tokio::net::TcpListener::bind(&config.bind).await?;
+    let listener = TcpListener::bind(&config.bind).await?;
     axum::serve(listener, app)
         .with_graceful_shutdown(cluster_handle)
         .await?;

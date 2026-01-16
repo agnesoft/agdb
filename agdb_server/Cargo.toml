@@ -13,18 +13,18 @@ categories = ["database", "database-implementations"]
 
 [features]
 default = []
-tls = ["dep:axum-server", "dep:rustls", "reqwest/rustls-tls", "agdb_api/rust-tls"]
+tls = ["dep:axum-server", "dep:rustls", "reqwest/rustls", "agdb_api/tls"]
 studio = ["dep:include_dir"]
 
 [dependencies]
 agdb = { version = "0.12.5", path = "../agdb", features = ["serde", "openapi"] }
 agdb_api = { version = "0.12.5", path = "../agdb_api/rust", features = ["api"] }
 axum = { version = "0.8", features = ["http2"] }
-axum-extra = { version = "0.10", features = ["typed-header"] }
-axum-server = { version = "0.7", features = ["tls-rustls"], optional = true }
+axum-extra = { version = "0.12", features = ["typed-header", "routing"] }
+axum-server = { version = "0.8", features = ["tls-rustls"], optional = true }
 include_dir = { version = "0.7", optional = true }
 http-body-util = "0.1"
-reqwest = { version = "0.12", default-features = false, features = ["charset", "http2", "macos-system-configuration", "json", "stream"] }
+reqwest = { version = "0.13", default-features = false, features = [ "charset", "http2", "system-proxy", "json", "stream"] }
 ring = "0.17"
 rustls = { version = "0.23", optional = true }
 serde = { version = "1", features = ["derive"] }

@@ -12,6 +12,7 @@ pub struct TupleStruct {
 
 #[cfg(test)]
 mod tests {
+    use crate::api_def::LiteralType;
     use crate::api_def::Type;
     use crate::api_def::TypeDefinition;
 
@@ -44,13 +45,13 @@ mod tests {
             assert_eq!(t.generic_params[0].name, "T");
             assert_eq!(t.generic_params[0].bounds.len(), 0);
             assert_eq!(t.fields.len(), 1);
-            if let Type::Struct(s) = (t.fields[0])() {
-                assert_eq!(s.name, "T");
+            if let Type::GenericArg(l) = (t.fields[0])() {
+                assert_eq!(l.name, "T");
             } else {
-                panic!("Expected field type to be T Struct");
+                panic!("Expected field type to be T GenericArg");
             }
         } else {
-            panic!("Expected Type::Tuple");
+            panic!("Expected Type::TupleStruct");
         }
     }
 
@@ -64,13 +65,13 @@ mod tests {
 
         if let Type::TupleStruct(t) = tuple_def {
             assert_eq!(t.fields.len(), 1);
-            if let Type::Struct(s) = (t.fields[0])() {
-                assert_eq!(s.name, "i32");
+            if let Type::Literal(l) = (t.fields[0])() {
+                assert!(matches!(l, LiteralType::I32));
             } else {
-                panic!("Expected field type to be T Struct");
+                panic!("Expected field type to be Literal");
             }
         } else {
-            panic!("Expected Type::Tuple");
+            panic!("Expected Type::TupleStruct");
         }
     }
 
@@ -84,18 +85,18 @@ mod tests {
 
         if let Type::TupleStruct(t) = tuple_def {
             assert_eq!(t.fields.len(), 2);
-            if let Type::Struct(s) = (t.fields[0])() {
-                assert_eq!(s.name, "i32");
+            if let Type::Literal(l) = (t.fields[0])() {
+                assert!(matches!(l, LiteralType::I32));
             } else {
-                panic!("Expected field type to be T Struct");
+                panic!("Expected field type to be Literal");
             }
-            if let Type::Struct(s) = (t.fields[1])() {
-                assert_eq!(s.name, "String");
+            if let Type::Literal(l) = (t.fields[1])() {
+                assert!(matches!(l, LiteralType::String));
             } else {
-                panic!("Expected field type to be T Struct");
+                panic!("Expected field type to be Literal");
             }
         } else {
-            panic!("Expected Type::Tuple");
+            panic!("Expected Type::TupleStruct");
         }
     }
 }

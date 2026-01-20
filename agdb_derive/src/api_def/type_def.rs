@@ -9,39 +9,6 @@ use syn::GenericArgument;
 use syn::PathArguments;
 use syn::Type;
 
-fn type_contains_generic(ty: &Type, generics: &[String]) -> bool {
-    match ty {
-        syn::Type::Path(type_path) => {
-            if let Some(ident_str) = type_path.path.segments.last().map(|s| s.ident.to_string())
-                && generics.contains(&ident_str)
-            {
-                return true;
-            }
-
-            for seg in &type_path.path.segments {
-                if let PathArguments::AngleBracketed(ab) = &seg.arguments {
-                    for arg in &ab.args {
-                        if let GenericArgument::Type(inner_ty) = arg
-                            && type_contains_generic(inner_ty, generics)
-                        {
-                            return true;
-                        }
-                    }
-                }
-            }
-
-            false
-        }
-        syn::Type::Reference(tr) => type_contains_generic(&tr.elem, generics),
-        syn::Type::Slice(ts) => type_contains_generic(&ts.elem, generics),
-        syn::Type::Array(ta) => type_contains_generic(&ta.elem, generics),
-        syn::Type::Tuple(tt) => tt.elems.iter().any(|e| type_contains_generic(e, generics)),
-        syn::Type::Paren(tp) => type_contains_generic(&tp.elem, generics),
-        syn::Type::Group(tg) => type_contains_generic(&tg.elem, generics),
-        _ => false,
-    }
-}
-
 pub(crate) fn type_def(input: DeriveInput) -> TokenStream {
     match &input.data {
         syn::Data::Struct(s) => match &s.fields {
@@ -57,37 +24,84 @@ pub(crate) fn type_def(input: DeriveInput) -> TokenStream {
 }
 
 pub(crate) fn parse_type(ty: &Type, list_generics: &[String]) -> TokenStream {
-    if type_contains_generic(ty, list_generics) {
-        let type_args = extract_generic_args(ty, list_generics);
-        quote! { || ::agdb::api_def::Type::GenericArg(::agdb::api_def::GenericArg {
-            name: stringify!(#ty),
-            args: &[#(#type_args),*],
-        }) }
-    } else {
-        quote! { <#ty as ::agdb::api_def::TypeDefinition>::type_def }
+    if let syn::Type::Path(type_path) = ty
+        && let Some(segment) = type_path.path.segments.last()
+    {
+        let ty_str = segment.ident.to_string();
+
+        // If this is a known generic parameter (like T), create a GenericArg with empty args
+        if list_generics.contains(&ty_str) {
+            return quote! { || ::agdb::api_def::Type::GenericArg(::agdb::api_def::GenericArg {
+                name: #ty_str,
+                args: &[],
+            }) };
+        }
+
+        // If it has angle-bracketed arguments (like Vec<i32> or GenericReturn<T>),
+        // create a GenericArg with the inner type args
+        if let PathArguments::AngleBracketed(ab) = &segment.arguments {
+            let args: Vec<TokenStream> = ab
+                .args
+                .iter()
+                .filter_map(|arg| {
+                    if let GenericArgument::Type(inner_ty) = arg {
+                        Some(parse_type(inner_ty, list_generics))
+                    } else {
+                        None
+                    }
+                })
+                .collect();
+
+            if !args.is_empty() {
+                return quote! { || ::agdb::api_def::Type::GenericArg(::agdb::api_def::GenericArg {
+                    name: #ty_str,
+                    args: &[#(#args),*],
+                }) };
+            }
+        }
     }
+
+    // Check if the type contains any generic parameter in nested positions (like &[T])
+    // If so, we need to use the closure form to avoid requiring T: TypeDefinition
+    if type_contains_generic(ty, list_generics) {
+        let ty_str = quote!(#ty).to_string();
+        return quote! { || ::agdb::api_def::Type::GenericArg(::agdb::api_def::GenericArg {
+            name: #ty_str,
+            args: &[],
+        }) };
+    }
+
+    // No generic parameters - use TypeDefinition::type_def
+    quote! { <#ty as ::agdb::api_def::TypeDefinition>::type_def }
 }
 
-fn extract_generic_args(ty: &Type, list_generics: &[String]) -> Vec<TokenStream> {
+fn type_contains_generic(ty: &Type, generics: &[String]) -> bool {
     match ty {
         syn::Type::Path(type_path) => {
-            if let Some(segment) = type_path.path.segments.last()
-                && let PathArguments::AngleBracketed(ab) = &segment.arguments
-            {
-                return ab
-                    .args
-                    .iter()
-                    .filter_map(|arg| {
-                        if let GenericArgument::Type(inner_ty) = arg {
-                            Some(parse_type(inner_ty, list_generics))
-                        } else {
-                            None
+            if let Some(segment) = type_path.path.segments.last() {
+                let ident_str = segment.ident.to_string();
+                if generics.contains(&ident_str) {
+                    return true;
+                }
+
+                if let PathArguments::AngleBracketed(ab) = &segment.arguments {
+                    for arg in &ab.args {
+                        if let GenericArgument::Type(inner_ty) = arg
+                            && type_contains_generic(inner_ty, generics)
+                        {
+                            return true;
                         }
-                    })
-                    .collect();
+                    }
+                }
             }
-            vec![]
+            false
         }
-        _ => vec![],
+        syn::Type::Reference(tr) => type_contains_generic(&tr.elem, generics),
+        syn::Type::Slice(ts) => type_contains_generic(&ts.elem, generics),
+        syn::Type::Array(ta) => type_contains_generic(&ta.elem, generics),
+        syn::Type::Tuple(tt) => tt.elems.iter().any(|e| type_contains_generic(e, generics)),
+        syn::Type::Paren(tp) => type_contains_generic(&tp.elem, generics),
+        syn::Type::Group(tg) => type_contains_generic(&tg.elem, generics),
+        _ => false,
     }
 }

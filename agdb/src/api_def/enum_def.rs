@@ -110,18 +110,17 @@ mod tests {
         if let Type::Enum(e) = enum_def {
             assert_eq!(e.variants.len(), 1);
             assert_eq!(e.variants[0].name, "TupleVariant");
-            if let Type::TupleStruct(t) = (e.variants[0].ty.unwrap())() {
-                if let Type::Struct(s) = (t.fields[0])() {
-                    assert_eq!(s.name, "OtherType");
-                    s.functions
-                        .iter()
-                        .find(|f| f.name == "foo")
-                        .expect("Expected function foo");
-                } else {
-                    panic!("Expected TupleVariant field type to be OtherType Struct");
-                }
+
+            println!("Variant type: {:?}", e.variants[0].ty.unwrap()());
+
+            if let Type::Struct(s) = (e.variants[0].ty.unwrap())() {
+                assert_eq!(s.name, "OtherType");
+                s.functions
+                    .iter()
+                    .find(|f| f.name == "foo")
+                    .expect("Expected function foo");
             } else {
-                panic!("Expected UnitVariant type to be None");
+                panic!("Expected UnitVariant type not to be None");
             }
         } else {
             panic!("Expected Type::Enum");

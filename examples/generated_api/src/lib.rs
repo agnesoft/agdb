@@ -36,18 +36,18 @@ pub trait SearchQueryBuilder: agdb::api_def::TypeDefinition {
     fn search_mut(&mut self) -> &mut SearchQuery;
 }
 
-enum SearchQueryAlgorithm {
-    BreadthFirst,
-    DepthFirst,
-    Index,
-    Elements,
-}
-
 struct DbId(i64);
 
 enum QueryId {
     Id(i64),
     Alias(String),
+}
+
+enum SearchQueryAlgorithm {
+    BreadthFirst,
+    DepthFirst,
+    Index,
+    Elements,
 }
 
 struct SearchQuery {
@@ -149,8 +149,6 @@ struct InsertNodesIds(InsertNodesQuery);
 
 struct InsertNodes(InsertNodesQuery);
 
-struct Search<T: SearchQueryBuilder>(T);
-
 struct InsertValues(InsertValuesQuery);
 
 struct Insert {}
@@ -215,7 +213,7 @@ impl Remove {
     pub fn index<T: Into<DbValue>>(self, key: T) -> RemoveIndex {
         todo!()
     }
-    pub fn search(self) -> Search<T> {
+    pub fn search(self) -> Search<RemoveQuery> {
         todo!()
     }
     pub fn values<T: Into<DbValues>>(self, keys: T) -> RemoveValues {
@@ -252,7 +250,7 @@ impl SelectValues {
     pub fn ids<T: Into<QueryIds>>(mut self, ids: T) -> SelectValuesIds {
         todo!()
     }
-    pub fn search(mut self) -> Search<T> {
+    pub fn search(mut self) -> Search<SelectValuesQuery> {
         todo!()
     }
 }
@@ -324,7 +322,7 @@ impl Select {
     pub fn node_count(self) -> SelectNodeCount {
         todo!()
     }
-    pub fn search(self) -> Search<T> {
+    pub fn search(self) -> Search<SelectValuesQuery> {
         todo!()
     }
     pub fn values<T: Into<DbValues>>(self, keys: T) -> SelectValues {
@@ -340,7 +338,7 @@ impl QueryBuilder {
     pub fn remove() -> Remove {
         todo!()
     }
-    pub fn search() -> Search<T> {
+    pub fn search() -> Search<SearchQuery> {
         todo!()
     }
     pub fn select() -> Select {
@@ -359,6 +357,59 @@ enum DbResource {
     Db,
     Audit,
     Backup,
+}
+
+enum QueryType {
+    InsertAlias {
+        ids: QueryIds,
+        aliases: Vec<String>,
+    },
+    InsertEdges {
+        from: QueryIds,
+        to: QueryIds,
+        ids: QueryIds,
+        values: QueryValues,
+        each: bool,
+    },
+    InsertIndex(DbValue),
+    InsertNodes {
+        count: u64,
+        values: QueryValues,
+        aliases: Vec<String>,
+        ids: QueryIds,
+    },
+    InsertValues {
+        ids: QueryIds,
+        values: QueryValues,
+    },
+    Remove(QueryIds),
+    RemoveAliases(Vec<String>),
+    RemoveIndex(DbValue),
+    RemoveValues(SelectValuesQuery),
+    Search {
+        algorithm: SearchQueryAlgorithm,
+        origin: QueryId,
+        destination: QueryId,
+        limit: u64,
+        offset: u64,
+        order_by: Vec<DbKeyOrder>,
+        conditions: Vec<QueryCondition>,
+    },
+    SelectAliases(QueryIds),
+    SelectAllAliases {},
+    SelectEdgeCount {
+        ids: QueryIds,
+        from: bool,
+        to: bool,
+    },
+    SelectIndexes {},
+    SelectKeys(QueryIds),
+    SelectKeyCount(QueryIds),
+    SelectNodeCount {},
+    SelectValues {
+        keys: Vec<DbValue>,
+        ids: QueryIds,
+    },
 }
 
 enum DbUserRole {
@@ -383,22 +434,13 @@ impl<T: AgdbApiClient> AgdbApi<T> {
     pub fn base_url(&self) -> &str {
         todo!()
     }
-    pub async fn admin_db_add(
-        &self,
-        owner: &str,
-        db: &str,
-        db_type: DbKind,
-    ) -> Result<u16, AgdbApiError> {
+    pub async fn admin_db_add(&self, owner: &str, db: &str, db_type: DbKind) -> AgdbApiResult<u16> {
         todo!()
     }
-    pub async fn admin_db_audit(
-        &self,
-        owner: &str,
-        db: &str,
-    ) -> Result<(u16, DbAudit), AgdbApiError> {
+    pub async fn admin_db_audit(&self, owner: &str, db: &str) -> AgdbApiResult<(u16, DbAudit)> {
         todo!()
     }
-    pub async fn admin_db_backup(&self, owner: &str, db: &str) -> Result<u16, AgdbApiError> {
+    pub async fn admin_db_backup(&self, owner: &str, db: &str) -> AgdbApiResult<u16> {
         todo!()
     }
     pub async fn admin_db_clear(
@@ -406,7 +448,7 @@ impl<T: AgdbApiClient> AgdbApi<T> {
         owner: &str,
         db: &str,
         resource: DbResource,
-    ) -> Result<(u16, ServerDatabase), AgdbApiError> {
+    ) -> AgdbApiResult<(u16, ServerDatabase)> {
         todo!()
     }
     pub async fn admin_db_convert(
@@ -414,7 +456,7 @@ impl<T: AgdbApiClient> AgdbApi<T> {
         owner: &str,
         db: &str,
         db_type: DbKind,
-    ) -> Result<u16, AgdbApiError> {
+    ) -> AgdbApiResult<u16> {
         todo!()
     }
     pub async fn admin_db_copy(
@@ -423,10 +465,10 @@ impl<T: AgdbApiClient> AgdbApi<T> {
         db: &str,
         new_owner: &str,
         new_db: &str,
-    ) -> Result<u16, AgdbApiError> {
+    ) -> AgdbApiResult<u16> {
         todo!()
     }
-    pub async fn admin_db_delete(&self, owner: &str, db: &str) -> Result<u16, AgdbApiError> {
+    pub async fn admin_db_delete(&self, owner: &str, db: &str) -> AgdbApiResult<u16> {
         todo!()
     }
     pub async fn admin_db_exec(
@@ -434,7 +476,7 @@ impl<T: AgdbApiClient> AgdbApi<T> {
         owner: &str,
         db: &str,
         queries: &[QueryType],
-    ) -> Result<(u16, Vec<QueryResult>), AgdbApiError> {
+    ) -> AgdbApiResult<(u16, Vec<QueryResult>)> {
         todo!()
     }
     pub async fn admin_db_exec_mut(
@@ -442,20 +484,20 @@ impl<T: AgdbApiClient> AgdbApi<T> {
         owner: &str,
         db: &str,
         queries: &[QueryType],
-    ) -> Result<(u16, Vec<QueryResult>), AgdbApiError> {
+    ) -> AgdbApiResult<(u16, Vec<QueryResult>)> {
         todo!()
     }
-    pub async fn admin_db_list(&self) -> Result<(u16, Vec<ServerDatabase>), AgdbApiError> {
+    pub async fn admin_db_list(&self) -> AgdbApiResult<(u16, Vec<ServerDatabase>)> {
         todo!()
     }
     pub async fn admin_db_optimize(
         &self,
         owner: &str,
         db: &str,
-    ) -> Result<(u16, ServerDatabase), AgdbApiError> {
+    ) -> AgdbApiResult<(u16, ServerDatabase)> {
         todo!()
     }
-    pub async fn admin_db_remove(&self, owner: &str, db: &str) -> Result<u16, AgdbApiError> {
+    pub async fn admin_db_remove(&self, owner: &str, db: &str) -> AgdbApiResult<u16> {
         todo!()
     }
     pub async fn admin_db_rename(
@@ -464,10 +506,10 @@ impl<T: AgdbApiClient> AgdbApi<T> {
         db: &str,
         new_owner: &str,
         new_db: &str,
-    ) -> Result<u16, AgdbApiError> {
+    ) -> AgdbApiResult<u16> {
         todo!()
     }
-    pub async fn admin_db_restore(&self, owner: &str, db: &str) -> Result<u16, AgdbApiError> {
+    pub async fn admin_db_restore(&self, owner: &str, db: &str) -> AgdbApiResult<u16> {
         todo!()
     }
     pub async fn admin_db_user_add(
@@ -476,14 +518,14 @@ impl<T: AgdbApiClient> AgdbApi<T> {
         db: &str,
         username: &str,
         db_role: DbUserRole,
-    ) -> Result<u16, AgdbApiError> {
+    ) -> AgdbApiResult<u16> {
         todo!()
     }
     pub async fn admin_db_user_list(
         &self,
         owner: &str,
         db: &str,
-    ) -> Result<(u16, Vec<DbUser>), AgdbApiError> {
+    ) -> AgdbApiResult<(u16, Vec<DbUser>)> {
         todo!()
     }
     pub async fn admin_db_user_remove(
@@ -491,72 +533,63 @@ impl<T: AgdbApiClient> AgdbApi<T> {
         owner: &str,
         db: &str,
         username: &str,
-    ) -> Result<u16, AgdbApiError> {
+    ) -> AgdbApiResult<u16> {
         todo!()
     }
-    pub async fn admin_shutdown(&self) -> Result<u16, AgdbApiError> {
+    pub async fn admin_shutdown(&self) -> AgdbApiResult<u16> {
         todo!()
     }
-    pub async fn admin_status(&self) -> Result<(u16, AdminStatus), AgdbApiError> {
+    pub async fn admin_status(&self) -> AgdbApiResult<(u16, AdminStatus)> {
         todo!()
     }
-    pub async fn admin_user_add(
-        &self,
-        username: &str,
-        password: &str,
-    ) -> Result<u16, AgdbApiError> {
+    pub async fn admin_user_add(&self, username: &str, password: &str) -> AgdbApiResult<u16> {
         todo!()
     }
     pub async fn admin_user_change_password(
         &self,
         username: &str,
         password: &str,
-    ) -> Result<u16, AgdbApiError> {
+    ) -> AgdbApiResult<u16> {
         todo!()
     }
-    pub async fn admin_user_list(&self) -> Result<(u16, Vec<UserStatus>), AgdbApiError> {
+    pub async fn admin_user_list(&self) -> AgdbApiResult<(u16, Vec<UserStatus>)> {
         todo!()
     }
-    pub async fn admin_user_logout(&self, username: &str) -> Result<u16, AgdbApiError> {
+    pub async fn admin_user_logout(&self, username: &str) -> AgdbApiResult<u16> {
         todo!()
     }
-    pub async fn admin_user_logout_all(&self) -> Result<u16, AgdbApiError> {
+    pub async fn admin_user_logout_all(&self) -> AgdbApiResult<u16> {
         todo!()
     }
-    pub async fn admin_user_delete(&self, username: &str) -> Result<u16, AgdbApiError> {
+    pub async fn admin_user_delete(&self, username: &str) -> AgdbApiResult<u16> {
         todo!()
     }
-    pub async fn db_add(
-        &self,
-        owner: &str,
-        db: &str,
-        db_type: DbKind,
-    ) -> Result<u16, AgdbApiError> {
+    pub async fn db_add(&self, owner: &str, db: &str, db_type: DbKind) -> AgdbApiResult<u16> {
         todo!()
     }
-    pub async fn cluster_admin_user_logout(&self, username: &str) -> Result<u16, AgdbApiError> {
+    pub async fn cluster_admin_user_logout(&self, username: &str) -> AgdbApiResult<u16> {
         todo!()
     }
-    pub async fn cluster_admin_user_logout_all(&self) -> Result<u16, AgdbApiError> {
+    pub async fn cluster_admin_user_logout_all(&self) -> AgdbApiResult<u16> {
         todo!()
     }
     pub async fn cluster_user_login(
         &mut self,
         username: &str,
         password: &str,
-    ) -> Result<u16, AgdbApiError> {
+    ) -> AgdbApiResult<u16> {
         todo!()
     }
-    pub async fn cluster_user_logout(&mut self) -> Result<u16, AgdbApiError> {
+    pub async fn cluster_user_logout(&mut self) -> AgdbApiResult<u16> {
         todo!()
     }
-    pub async fn cluster_status(&self) -> Result<(u16, Vec<ClusterStatus>), AgdbApiError> {
+    pub async fn cluster_status(&self) -> AgdbApiResult<(u16, Vec<ClusterStatus>)> {
         todo!()
     }
-    pub async fn db_audit(&self, owner: &str, db: &str) -> Result<(u16, DbAudit), AgdbApiError> {
+    pub async fn db_audit(&self, owner: &str, db: &str) -> AgdbApiResult<(u16, DbAudit)> {
         todo!()
     }
-    pub async fn db_backup(&self, owner: &str, db: &str) -> Result<u16, AgdbApiError> {
+    pub async fn db_backup(&self, owner: &str, db: &str) -> AgdbApiResult<u16> {
         todo!()
     }
     pub async fn db_clear(
@@ -564,21 +597,16 @@ impl<T: AgdbApiClient> AgdbApi<T> {
         owner: &str,
         db: &str,
         resource: DbResource,
-    ) -> Result<(u16, ServerDatabase), AgdbApiError> {
+    ) -> AgdbApiResult<(u16, ServerDatabase)> {
         todo!()
     }
-    pub async fn db_convert(
-        &self,
-        owner: &str,
-        db: &str,
-        db_type: DbKind,
-    ) -> Result<u16, AgdbApiError> {
+    pub async fn db_convert(&self, owner: &str, db: &str, db_type: DbKind) -> AgdbApiResult<u16> {
         todo!()
     }
-    pub async fn db_copy(&self, owner: &str, db: &str, new_db: &str) -> Result<u16, AgdbApiError> {
+    pub async fn db_copy(&self, owner: &str, db: &str, new_db: &str) -> AgdbApiResult<u16> {
         todo!()
     }
-    pub async fn db_delete(&self, owner: &str, db: &str) -> Result<u16, AgdbApiError> {
+    pub async fn db_delete(&self, owner: &str, db: &str) -> AgdbApiResult<u16> {
         todo!()
     }
     pub async fn db_exec(
@@ -586,7 +614,7 @@ impl<T: AgdbApiClient> AgdbApi<T> {
         owner: &str,
         db: &str,
         queries: &[QueryType],
-    ) -> Result<(u16, Vec<QueryResult>), AgdbApiError> {
+    ) -> AgdbApiResult<(u16, Vec<QueryResult>)> {
         todo!()
     }
     pub async fn db_exec_mut(
@@ -594,31 +622,22 @@ impl<T: AgdbApiClient> AgdbApi<T> {
         owner: &str,
         db: &str,
         queries: &[QueryType],
-    ) -> Result<(u16, Vec<QueryResult>), AgdbApiError> {
+    ) -> AgdbApiResult<(u16, Vec<QueryResult>)> {
         todo!()
     }
-    pub async fn db_list(&self) -> Result<(u16, Vec<ServerDatabase>), AgdbApiError> {
+    pub async fn db_list(&self) -> AgdbApiResult<(u16, Vec<ServerDatabase>)> {
         todo!()
     }
-    pub async fn db_optimize(
-        &self,
-        owner: &str,
-        db: &str,
-    ) -> Result<(u16, ServerDatabase), AgdbApiError> {
+    pub async fn db_optimize(&self, owner: &str, db: &str) -> AgdbApiResult<(u16, ServerDatabase)> {
         todo!()
     }
-    pub async fn db_remove(&self, owner: &str, db: &str) -> Result<u16, AgdbApiError> {
+    pub async fn db_remove(&self, owner: &str, db: &str) -> AgdbApiResult<u16> {
         todo!()
     }
-    pub async fn db_rename(
-        &self,
-        owner: &str,
-        db: &str,
-        new_db: &str,
-    ) -> Result<u16, AgdbApiError> {
+    pub async fn db_rename(&self, owner: &str, db: &str, new_db: &str) -> AgdbApiResult<u16> {
         todo!()
     }
-    pub async fn db_restore(&self, owner: &str, db: &str) -> Result<u16, AgdbApiError> {
+    pub async fn db_restore(&self, owner: &str, db: &str) -> AgdbApiResult<u16> {
         todo!()
     }
     pub async fn db_user_add(
@@ -627,14 +646,10 @@ impl<T: AgdbApiClient> AgdbApi<T> {
         db: &str,
         username: &str,
         db_role: DbUserRole,
-    ) -> Result<u16, AgdbApiError> {
+    ) -> AgdbApiResult<u16> {
         todo!()
     }
-    pub async fn db_user_list(
-        &self,
-        owner: &str,
-        db: &str,
-    ) -> Result<(u16, Vec<DbUser>), AgdbApiError> {
+    pub async fn db_user_list(&self, owner: &str, db: &str) -> AgdbApiResult<(u16, Vec<DbUser>)> {
         todo!()
     }
     pub async fn db_user_remove(
@@ -642,30 +657,26 @@ impl<T: AgdbApiClient> AgdbApi<T> {
         owner: &str,
         db: &str,
         username: &str,
-    ) -> Result<u16, AgdbApiError> {
+    ) -> AgdbApiResult<u16> {
         todo!()
     }
-    pub async fn status(&self) -> Result<u16, AgdbApiError> {
+    pub async fn status(&self) -> AgdbApiResult<u16> {
         todo!()
     }
-    pub async fn user_login(
-        &mut self,
-        username: &str,
-        password: &str,
-    ) -> Result<u16, AgdbApiError> {
+    pub async fn user_login(&mut self, username: &str, password: &str) -> AgdbApiResult<u16> {
         todo!()
     }
-    pub async fn user_logout(&mut self) -> Result<u16, AgdbApiError> {
+    pub async fn user_logout(&mut self) -> AgdbApiResult<u16> {
         todo!()
     }
     pub async fn user_change_password(
         &self,
         old_password: &str,
         new_pasword: &str,
-    ) -> Result<u16, AgdbApiError> {
+    ) -> AgdbApiResult<u16> {
         todo!()
     }
-    pub async fn user_status(&self) -> Result<(u16, UserStatus), AgdbApiError> {
+    pub async fn user_status(&self) -> AgdbApiResult<(u16, UserStatus)> {
         todo!()
     }
     pub fn url(&self, uri: &str) -> String {
@@ -760,59 +771,6 @@ struct ServerDatabase {
     role: DbUserRole,
     size: u64,
     backup: u64,
-}
-
-enum QueryType {
-    InsertAlias {
-        ids: QueryIds,
-        aliases: Vec<String>,
-    },
-    InsertEdges {
-        from: QueryIds,
-        to: QueryIds,
-        ids: QueryIds,
-        values: QueryValues,
-        each: bool,
-    },
-    InsertIndex(DbValue),
-    InsertNodes {
-        count: u64,
-        values: QueryValues,
-        aliases: Vec<String>,
-        ids: QueryIds,
-    },
-    InsertValues {
-        ids: QueryIds,
-        values: QueryValues,
-    },
-    Remove(QueryIds),
-    RemoveAliases(Vec<String>),
-    RemoveIndex(DbValue),
-    RemoveValues(SelectValuesQuery),
-    Search {
-        algorithm: SearchQueryAlgorithm,
-        origin: QueryId,
-        destination: QueryId,
-        limit: u64,
-        offset: u64,
-        order_by: Vec<DbKeyOrder>,
-        conditions: Vec<QueryCondition>,
-    },
-    SelectAliases(QueryIds),
-    SelectAllAliases {},
-    SelectEdgeCount {
-        ids: QueryIds,
-        from: bool,
-        to: bool,
-    },
-    SelectIndexes {},
-    SelectKeys(QueryIds),
-    SelectKeyCount(QueryIds),
-    SelectNodeCount {},
-    SelectValues {
-        keys: Vec<DbValue>,
-        ids: QueryIds,
-    },
 }
 
 struct QueryResult {

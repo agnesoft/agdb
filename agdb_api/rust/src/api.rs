@@ -217,8 +217,6 @@ mod tests {
                 return String::new();
             }
 
-            println!("Generics: {generics:?}");
-
             let generic_decls: Vec<String> = generics
                 .iter()
                 .map(|g| {

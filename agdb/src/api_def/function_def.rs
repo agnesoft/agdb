@@ -15,6 +15,8 @@ pub struct Function {
 
 #[cfg(test)]
 mod tests {
+    use crate::api_def::LiteralType;
+    use crate::api_def::Type;
     use crate::api_def::TypeDefinition;
 
     #[test]
@@ -191,8 +193,45 @@ mod tests {
             fn get_value() -> GenericReturn<i32> {
                 GenericReturn { value: 42 }
             }
+            fn get_values() -> GenericReturn<Vec<i32>> {
+                GenericReturn { value: vec![42] }
+            }
         }
 
         let function = &StructWithGenericReturn::type_def().functions()[0];
+        let ret = function.ret.unwrap()();
+
+        match ret {
+            Type::GenericArg(arg) => {
+                assert_eq!(arg.name, "GenericReturn");
+                assert_eq!(arg.args.len(), 1);
+                match &arg.args[0]() {
+                    Type::Literal(LiteralType::I32) => {}
+                    _ => panic!("Expected i32 as generic argument"),
+                }
+            }
+            _ => panic!("Expected GenericArg return type"),
+        }
+        let function2 = &StructWithGenericReturn::type_def().functions()[1];
+        let ret2 = function2.ret.unwrap()();
+
+        match ret2 {
+            Type::GenericArg(arg) => {
+                assert_eq!(arg.name, "GenericReturn");
+                assert_eq!(arg.args.len(), 1);
+                match &arg.args[0]() {
+                    Type::GenericArg(nested_arg) => {
+                        assert_eq!(nested_arg.name, "Vec");
+                        assert_eq!(nested_arg.args.len(), 1);
+                        match &nested_arg.args[0]() {
+                            Type::Literal(LiteralType::I32) => {}
+                            _ => panic!("Expected i32 as Vec generic argument"),
+                        }
+                    }
+                    _ => panic!("Expected Vec<i32> as generic argument"),
+                }
+            }
+            _ => panic!("Expected GenericArg return type"),
+        }
     }
 }

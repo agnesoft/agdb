@@ -1,11 +1,11 @@
 use crate::api_def::Function;
-use crate::api_def::Generic;
+use crate::api_def::GenericParam;
 use crate::api_def::Type;
 
 #[derive(Debug)]
 pub struct TupleStruct {
     pub name: &'static str,
-    pub generics: &'static [Generic],
+    pub generic_params: &'static [GenericParam],
     pub fields: &'static [fn() -> Type],
     pub functions: &'static [Function],
 }
@@ -24,7 +24,7 @@ mod tests {
 
         if let Type::TupleStruct(t) = tuple_def {
             assert_eq!(t.name, "SomeTuple");
-            assert_eq!(t.generics.len(), 0);
+            assert_eq!(t.generic_params.len(), 0);
             assert_eq!(t.fields.len(), 0);
             assert_eq!(t.functions.len(), 0);
         } else {
@@ -40,9 +40,9 @@ mod tests {
         let tuple_def = GenericTuple::<i32>::type_def();
 
         if let Type::TupleStruct(t) = tuple_def {
-            assert_eq!(t.generics.len(), 1);
-            assert_eq!(t.generics[0].name, "T");
-            assert_eq!(t.generics[0].bounds.len(), 0);
+            assert_eq!(t.generic_params.len(), 1);
+            assert_eq!(t.generic_params[0].name, "T");
+            assert_eq!(t.generic_params[0].bounds.len(), 0);
             assert_eq!(t.fields.len(), 1);
             if let Type::Struct(s) = (t.fields[0])() {
                 assert_eq!(s.name, "T");

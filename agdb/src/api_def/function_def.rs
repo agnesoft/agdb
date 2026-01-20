@@ -1,4 +1,4 @@
-use crate::api_def::Generic;
+use crate::api_def::GenericParam;
 use crate::api_def::NamedType;
 use crate::api_def::Type;
 use crate::api_def::expression_def::Expression;
@@ -6,7 +6,7 @@ use crate::api_def::expression_def::Expression;
 #[derive(Debug)]
 pub struct Function {
     pub name: &'static str,
-    pub generics: &'static [Generic],
+    pub generic_params: &'static [GenericParam],
     pub args: &'static [NamedType],
     pub ret: Option<fn() -> Type>,
     pub async_fn: bool,
@@ -32,7 +32,7 @@ mod tests {
 
         assert_eq!(functions.len(), 1);
         assert_eq!(functions[0].name, "example_function");
-        assert!(functions[0].generics.is_empty());
+        assert!(functions[0].generic_params.is_empty());
         assert!(functions[0].args.is_empty());
         assert!(functions[0].ret.is_none());
         assert!(functions[0].expressions.is_empty());
@@ -82,8 +82,8 @@ mod tests {
         assert_eq!(functions.len(), 1);
         let func = &functions[0];
         assert_eq!(func.name, "identity");
-        assert_eq!(func.generics.len(), 1);
-        assert_eq!(func.generics[0].name, "T");
+        assert_eq!(func.generic_params.len(), 1);
+        assert_eq!(func.generic_params[0].name, "T");
         assert_eq!(func.args.len(), 1);
         assert_eq!(func.args[0].name, "value");
         assert_eq!((func.args[0].ty.unwrap())().name(), "T");
@@ -111,7 +111,7 @@ mod tests {
         assert_eq!(functions.len(), 1);
         let func = &functions[0];
         assert_eq!(func.name, "generic_method");
-        assert_eq!(func.generics.len(), 0);
+        assert_eq!(func.generic_params.len(), 0);
         assert_eq!(func.args.len(), 1);
         assert_eq!(func.args[0].name, "value");
         assert_eq!((func.args[0].ty.unwrap())().name(), "T");
@@ -146,7 +146,7 @@ mod tests {
         assert_eq!(functions.len(), 1);
         let func = &functions[0];
         assert_eq!(func.name, "debug_value");
-        assert_eq!(func.generics.len(), 0);
+        assert_eq!(func.generic_params.len(), 0);
         assert_eq!(func.args.len(), 1);
         assert_eq!(func.args[0].name, "value");
         assert_eq!((func.args[0].ty.unwrap())().name(), "T");
@@ -168,7 +168,7 @@ mod tests {
 
         assert_eq!(functions.len(), 1);
         assert_eq!(functions[0].name, "async_function");
-        assert!(functions[0].generics.is_empty());
+        assert!(functions[0].generic_params.is_empty());
         assert!(functions[0].args.is_empty());
         assert!(functions[0].ret.is_none());
         assert!(functions[0].async_fn);

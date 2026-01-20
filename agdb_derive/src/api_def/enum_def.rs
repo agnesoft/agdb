@@ -22,7 +22,7 @@ pub(crate) fn parse_enum(e: &DataEnum, input: &DeriveInput) -> TokenStream {
             fn type_def() -> ::agdb::api_def::Type {
                 ::agdb::api_def::Type::Enum(::agdb::api_def::Enum {
                     name: stringify!(#name),
-                    generics: &[#(#generics),*],
+                    generic_params: &[#(#generics),*],
                     variants: &[#(#variants),*],
                     functions: <#name #ty_generic as ::agdb::api_def::ImplDefinition>::functions(),
                 })
@@ -49,7 +49,7 @@ fn parse_variants(
                             name: stringify!(#variant_name),
                             ty: Some(|| ::agdb::api_def::Type::Struct(::agdb::api_def::Struct {
                                 name: "",
-                                generics: &[],
+                                generic_params: &[],
                                 fields: &[#(#fields),*],
                                 functions: &[],
                             })),

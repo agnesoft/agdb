@@ -31,7 +31,7 @@ pub(crate) fn parse_function(input: &ImplItemFn, impl_generics: &Generics) -> To
     quote! {
         ::agdb::api_def::Function {
             name: stringify!(#name),
-            generics: &[#(#generics),*],
+            generic_params: &[#(#generics),*],
             args: &[#(#args),*],
             ret: #ret,
             async_fn: #async_fn,

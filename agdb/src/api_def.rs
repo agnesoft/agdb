@@ -51,7 +51,7 @@ pub enum Type {
     Vec(fn() -> Type),
     Option(fn() -> Type),
     Result(fn() -> Type, fn() -> Type),
-    Generic(&'static str),
+    GenericArg(GenericArg),
 }
 
 impl Type {
@@ -71,14 +71,6 @@ impl Type {
             _ => "",
         }
     }
-    pub fn generics(&self) -> &[Generic] {
-        match self {
-            Type::Enum(e) => e.generics,
-            Type::Struct(s) => s.generics,
-            Type::TupleStruct(t) => t.generics,
-            _ => &[],
-        }
-    }
 }
 
 #[derive(Debug)]
@@ -88,10 +80,23 @@ pub struct NamedType {
 }
 
 #[derive(Debug)]
-pub struct Generic {
+pub struct GenericParam {
+    pub name: &'static str,
+    pub bounds: &'static [&'static Trait],
+}
+
+#[derive(Debug)]
+pub struct GenericArg {
     pub name: &'static str,
     pub args: &'static [fn() -> Type],
-    pub bounds: &'static [&'static Generic],
+}
+
+#[derive(Debug)]
+pub struct Trait {
+    pub name: &'static str,
+    pub bounds: &'static [&'static Trait],
+    pub generic_params: &'static [GenericParam],
+    pub functions: &'static [Function],
 }
 
 // --- Rust types implementations --- //

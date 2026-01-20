@@ -18,7 +18,7 @@ pub(crate) fn parse_struct(fields: Option<&FieldsNamed>, input: &DeriveInput) ->
             fn type_def() -> ::agdb::api_def::Type {
                 ::agdb::api_def::Type::Struct(::agdb::api_def::struct_def::Struct {
                     name: stringify!(#name),
-                    generics: &[#(#generics),*],
+                    generic_params: &[#(#generics),*],
                     fields: &[#(#fields),*],
                     functions: <#name #ty_generic as ::agdb::api_def::ImplDefinition>::functions()
                 })

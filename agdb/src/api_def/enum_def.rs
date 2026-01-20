@@ -1,11 +1,11 @@
 use crate::api_def::Function;
-use crate::api_def::Generic;
+use crate::api_def::GenericParam;
 use crate::api_def::NamedType;
 
 #[derive(Debug)]
 pub struct Enum {
     pub name: &'static str,
-    pub generics: &'static [Generic],
+    pub generic_params: &'static [GenericParam],
     pub variants: &'static [NamedType],
     pub functions: &'static [Function],
 }
@@ -24,7 +24,7 @@ mod tests {
 
         if let Type::Enum(e) = enum_def {
             assert_eq!(e.name, "SomeEnum");
-            assert_eq!(e.generics.len(), 0);
+            assert_eq!(e.generic_params.len(), 0);
             assert_eq!(e.variants.len(), 0);
         } else {
             panic!("Expected Type::Enum");
@@ -65,9 +65,9 @@ mod tests {
         let enum_def = GenericEnum::<i32, f64>::type_def();
 
         if let Type::Enum(e) = enum_def {
-            assert_eq!(e.generics.len(), 2);
-            assert_eq!(e.generics[0].name, "T");
-            assert_eq!(e.generics[1].name, "U");
+            assert_eq!(e.generic_params.len(), 2);
+            assert_eq!(e.generic_params[0].name, "T");
+            assert_eq!(e.generic_params[1].name, "U");
             assert_eq!(e.variants.len(), 2);
             assert_eq!(e.variants[0].name, "Variant1");
             if let Type::Struct(s) = (e.variants[0].ty.unwrap())() {

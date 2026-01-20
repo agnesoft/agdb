@@ -100,7 +100,7 @@ impl Api {
                 types.extend(self.extract_types(t2()));
                 types
             }
-            Type::Generic(_) => Vec::new(),
+            Type::GenericArg(_) => Vec::new(),
         }
     }
 
@@ -170,8 +170,9 @@ impl Api {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use agdb::api_def::Generic;
+    use agdb::api_def::GenericParam;
     use agdb::api_def::NamedType;
+    use agdb::api_def::Trait;
 
     struct RustApi;
 
@@ -199,54 +200,54 @@ mod tests {
                 | Type::Vec(_)
                 | Type::Option(_)
                 | Type::Result(_, _)
-                | Type::Generic(_) => String::new(),
+                | Type::GenericArg(_) => String::new(),
             }
         }
 
-        fn generic_decl(generic: &Generic) -> String {
-            if !generic.bounds.is_empty() {
-                return format!(
-                    "{}: {}",
-                    generic.name,
-                    generic
-                        .bounds
-                        .iter()
-                        .map(|g| Self::generic_decl(g))
-                        .collect::<Vec<String>>()
-                        .join(" + ")
-                );
+        fn write_bound(t: &Trait) -> String {
+            if t.generic_params.is_empty() {
+                return t.name.to_string();
             }
 
-            if !generic.args.is_empty() {
-                let args = generic
-                    .args
-                    .iter()
-                    .map(|arg| Self::type_name(&arg()))
-                    .collect::<Vec<String>>()
-                    .join(", ");
-                return format!("{}<{}>", generic.name, args);
-            }
-
-            generic.name.to_string()
+            format!("{}{}", t.name, Self::generics(t.generic_params))
         }
 
-        fn generics_decl(generics: &[Generic]) -> String {
+        fn generic_decl(generics: &[GenericParam]) -> String {
             if generics.is_empty() {
                 return String::new();
             }
 
-            let generic_decls: Vec<String> = generics.iter().map(Self::generic_decl).collect();
+            println!("Generics: {generics:?}");
+
+            let generic_decls: Vec<String> = generics
+                .iter()
+                .map(|g| {
+                    let name = g.name;
+                    let bounds = g
+                        .bounds
+                        .iter()
+                        .map(|t| Self::write_bound(t))
+                        .collect::<Vec<String>>()
+                        .join(" + ");
+                    let bounds_str = if !bounds.is_empty() {
+                        format!(": {}", bounds)
+                    } else {
+                        String::new()
+                    };
+                    format!("{}{}", name, bounds_str)
+                })
+                .collect();
 
             format!("<{}>", generic_decls.join(", "))
         }
 
-        fn generics(generics: &[Generic]) -> String {
+        fn generics(generics: &[GenericParam]) -> String {
             if generics.is_empty() {
                 return String::new();
             }
 
-            let generic_names: Vec<&str> = generics.iter().map(|g| g.name).collect();
-            format!("<{}>", generic_names.join(", "))
+            let generic_decls: Vec<String> = generics.iter().map(|g| g.name.to_string()).collect();
+            format!("<{}>", generic_decls.join(", "))
         }
 
         fn type_name(ty: &Type) -> String {
@@ -267,9 +268,11 @@ mod tests {
                     agdb::api_def::LiteralType::Str => "&str".to_string(),
                     agdb::api_def::LiteralType::Unit => "()".to_string(),
                 },
-                Type::Enum(e) => format!("{}{}", e.name, Self::generics(e.generics)),
-                Type::Struct(s) => format!("{}{}", s.name, Self::generics(s.generics)),
-                Type::TupleStruct(t) => format!("{}{}", t.name, Self::generics(t.generics)),
+                Type::Enum(e) => format!("{}{}", e.name, Self::generics(e.generic_params)),
+                Type::Struct(s) => format!("{}{}", s.name, Self::generics(s.generic_params)),
+                Type::TupleStruct(t) => {
+                    format!("{}{}", t.name, Self::generics(t.generic_params))
+                }
                 Type::Tuple(t) => format!(
                     "({})",
                     t.iter()
@@ -288,7 +291,21 @@ mod tests {
                     Self::type_name(&ok()),
                     Self::type_name(&err())
                 ),
-                Type::Generic(name) => name.to_string(),
+                Type::GenericArg(arg) => {
+                    let tys = if !arg.args.is_empty() {
+                        let args = arg
+                            .args
+                            .iter()
+                            .map(|a| Self::type_name(&a()))
+                            .collect::<Vec<String>>()
+                            .join(", ");
+                        format!("<{}>", args)
+                    } else {
+                        String::new()
+                    };
+
+                    format!("{}{}", arg.name, tys)
+                }
             }
         }
 
@@ -297,7 +314,7 @@ mod tests {
             buffer.push_str(&format!(
                 "enum {}{} {{\n",
                 e.name,
-                Self::generics_decl(e.generics)
+                Self::generic_decl(&e.generic_params)
             ));
             for variant in e.variants {
                 buffer.push_str(&Self::write_enum_variant(variant));
@@ -350,7 +367,7 @@ mod tests {
             buffer.push_str(&format!(
                 "struct {}{} {{\n{}}}\n",
                 s.name,
-                Self::generics_decl(s.generics),
+                Self::generic_decl(&s.generic_params),
                 s.fields
                     .iter()
                     .map(|f| {
@@ -361,20 +378,28 @@ mod tests {
                     .join("")
             ));
 
-            buffer.push_str(&Self::write_functions(s.functions, s.name, s.generics));
+            buffer.push_str(&Self::write_functions(
+                s.functions,
+                s.name,
+                &s.generic_params,
+            ));
 
             buffer
         }
 
-        fn write_functions(functions: &[Function], ty: &str, generics: &[Generic]) -> String {
+        fn write_functions(
+            functions: &[Function],
+            ty: &str,
+            generic_params: &[GenericParam],
+        ) -> String {
             let mut buffer = String::new();
 
             if !functions.is_empty() {
                 buffer.push_str(&format!(
                     "impl{} {}{} {{\n",
-                    Self::generics_decl(generics),
+                    Self::generic_decl(generic_params),
                     ty,
-                    Self::generics(generics)
+                    Self::generics(generic_params)
                 ));
 
                 for f in functions {
@@ -382,7 +407,7 @@ mod tests {
                         "    pub {}fn {}{}({}){} {{ todo!() }}\n",
                         if f.async_fn { "async " } else { "" },
                         f.name,
-                        Self::generics_decl(f.generics),
+                        Self::generic_decl(f.generic_params),
                         f.args
                             .iter()
                             .map(|arg| {
@@ -419,7 +444,7 @@ mod tests {
             buffer.push_str(&format!(
                 "struct {}{}({});\n",
                 t.name,
-                Self::generics_decl(t.generics),
+                Self::generic_decl(&t.generic_params),
                 t.fields
                     .iter()
                     .map(|f| Self::type_name(&f()))

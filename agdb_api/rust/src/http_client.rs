@@ -44,13 +44,13 @@ impl TypeDefinition for ReqwestClient {
 
         Type::Struct(agdb::api_def::struct_def::Struct {
             name: "ReqwestClient",
-            generics: &[],
+            generic_params: &[],
             fields: &[NamedType {
                 name: "client",
                 ty: Some(|| {
                     Type::Struct(agdb::api_def::struct_def::Struct {
                         name: "HttpClient",
-                        generics: &[],
+                        generic_params: &[],
                         fields: &[],
                         functions: &[],
                     })

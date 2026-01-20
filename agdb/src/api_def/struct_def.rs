@@ -1,11 +1,11 @@
 use crate::api_def::Function;
-use crate::api_def::Generic;
+use crate::api_def::GenericParam;
 use crate::api_def::NamedType;
 
 #[derive(Debug)]
 pub struct Struct {
     pub name: &'static str,
-    pub generics: &'static [Generic],
+    pub generic_params: &'static [GenericParam],
     pub fields: &'static [NamedType],
     pub functions: &'static [Function],
 }
@@ -24,7 +24,7 @@ mod tests {
 
         if let Type::Struct(s) = struct_def {
             assert_eq!(s.name, "SomeStruct");
-            assert_eq!(s.generics.len(), 0);
+            assert_eq!(s.generic_params.len(), 0);
             assert_eq!(s.fields.len(), 0);
         } else {
             panic!("Expected Type::Struct");
@@ -42,9 +42,9 @@ mod tests {
         let struct_def = GenericStruct::<i32>::type_def();
 
         if let Type::Struct(s) = struct_def {
-            assert_eq!(s.generics.len(), 1);
-            assert_eq!(s.generics[0].name, "T");
-            assert_eq!(s.generics[0].bounds.len(), 0);
+            assert_eq!(s.generic_params.len(), 1);
+            assert_eq!(s.generic_params[0].name, "T");
+            assert_eq!(s.generic_params[0].bounds.len(), 0);
             assert_eq!(s.fields.len(), 1);
             assert_eq!(s.fields[0].name, "field");
         } else {
@@ -71,10 +71,10 @@ mod tests {
         let struct_def = GenericStruct::<BoundedStruct>::type_def();
 
         if let Type::Struct(s) = struct_def {
-            assert_eq!(s.generics.len(), 1);
-            assert_eq!(s.generics[0].name, "T");
-            assert_eq!(s.generics[0].bounds.len(), 1);
-            assert_eq!(s.generics[0].bounds[0].name, "Bound5");
+            assert_eq!(s.generic_params.len(), 1);
+            assert_eq!(s.generic_params[0].name, "T");
+            assert_eq!(s.generic_params[0].bounds.len(), 1);
+            assert_eq!(s.generic_params[0].bounds[0].name, "Bound5");
         } else {
             panic!("Expected Type::Struct");
         }

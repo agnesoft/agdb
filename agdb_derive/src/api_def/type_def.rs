@@ -58,8 +58,36 @@ pub(crate) fn type_def(input: DeriveInput) -> TokenStream {
 
 pub(crate) fn parse_type(ty: &Type, list_generics: &[String]) -> TokenStream {
     if type_contains_generic(ty, list_generics) {
-        quote! { || ::agdb::api_def::Type::Generic(stringify!(#ty)) }
+        let type_args = extract_generic_args(ty, list_generics);
+        quote! { || ::agdb::api_def::Type::GenericArg(::agdb::api_def::GenericArg {
+            name: stringify!(#ty),
+            args: &[#(#type_args),*],
+        }) }
     } else {
         quote! { <#ty as ::agdb::api_def::TypeDefinition>::type_def }
+    }
+}
+
+fn extract_generic_args(ty: &Type, list_generics: &[String]) -> Vec<TokenStream> {
+    match ty {
+        syn::Type::Path(type_path) => {
+            if let Some(segment) = type_path.path.segments.last()
+                && let PathArguments::AngleBracketed(ab) = &segment.arguments
+            {
+                return ab
+                    .args
+                    .iter()
+                    .filter_map(|arg| {
+                        if let GenericArgument::Type(inner_ty) = arg {
+                            Some(parse_type(inner_ty, list_generics))
+                        } else {
+                            None
+                        }
+                    })
+                    .collect();
+            }
+            vec![]
+        }
+        _ => vec![],
     }
 }

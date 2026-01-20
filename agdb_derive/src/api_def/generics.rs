@@ -10,8 +10,6 @@ use syn::Token;
 use syn::TypeParamBound;
 use syn::punctuated::Punctuated;
 
-use crate::api_def::type_def;
-
 pub fn parse_bounds(
     name: &Ident,
     bounds: &Punctuated<TypeParamBound, Token![+]>,
@@ -26,14 +24,20 @@ pub fn parse_bounds(
                     .last()
                     .unwrap_or_else(|| panic!("{name}: Expected trait segment"));
                 let bound_name = &bound.ident;
-                let args = if let PathArguments::AngleBracketed(args) = &bound.arguments {
+                let generic_args = if let PathArguments::AngleBracketed(args) = &bound.arguments {
                     args.args
                         .iter()
-                        .map(|g| match g {
-                            syn::GenericArgument::Type(ty) => {
-                                type_def::parse_type(ty, &["T".to_string()])
+                        .filter_map(|g| match g {
+                            syn::GenericArgument::Type(syn::Type::Path(type_path)) => {
+                                let type_name = &type_path.path.segments.last()?.ident;
+                                Some(quote! {
+                                    ::agdb::api_def::GenericParam {
+                                        name: stringify!(#type_name),
+                                        bounds: &[],
+                                    }
+                                })
                             }
-                            _ => panic!("{name}: Unsupported generic argument in bound"),
+                            _ => None,
                         })
                         .collect::<Vec<_>>()
                 } else {
@@ -41,10 +45,11 @@ pub fn parse_bounds(
                 };
 
                 Some(quote! {
-                    &::agdb::api_def::Generic {
+                    &::agdb::api_def::Trait {
                         name: stringify!(#bound_name),
-                        args: &[#(#args),*],
                         bounds: &[],
+                        generic_params: &[#(#generic_args),*],
+                        functions: &[],
                     }
                 })
             }
@@ -116,9 +121,8 @@ fn parse_generic_list(
                 };
 
                 Some(quote! {
-                    ::agdb::api_def::Generic {
+                    ::agdb::api_def::GenericParam {
                         name: stringify!(#type_name),
-                        args: &[],
                         bounds: &[#(#bounds),*],
                     }
                 })

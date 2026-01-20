@@ -28,7 +28,7 @@ pub(crate) fn parse_closure(e: &ExprClosure, context: ExpressionContext) -> Toke
     quote! {
         ::agdb::api_def::Expression::Closure(::agdb::api_def::Function {
             name: "",
-            generics: &[],
+            generic_params: &[],
             args: &[#(#args),*],
             ret: #ret,
             async_fn: #async_fn,

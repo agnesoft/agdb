@@ -13,4 +13,5 @@ members = [
     "examples/schema_migration",
     "examples/server_client_rust",
     "examples/user_types",
+    "examples/generated_api",
 ]

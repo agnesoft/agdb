@@ -3,7 +3,7 @@ pub mod expression_def;
 pub mod function_def;
 pub mod struct_def;
 pub mod tuple_struct_def;
-
+use crate::SearchQueryBuilder;
 pub use enum_def::Enum;
 pub use expression_def::Expression;
 pub use expression_def::Literal;
@@ -118,6 +118,102 @@ pub struct Trait {
     pub bounds: &'static [&'static Trait],
     pub generic_params: &'static [GenericParam],
     pub functions: &'static [Function],
+}
+
+// --- agdb types --- //
+
+#[derive(agdb::TypeDefImpl)]
+struct SearchQueryBuilderT;
+
+impl SearchQueryBuilder for SearchQueryBuilderT {
+    fn search_mut(&mut self) -> &mut agdb::SearchQuery {
+        unimplemented!()
+    }
+}
+
+pub fn type_defs() -> Vec<Type> {
+    vec![
+        agdb::Comparison::type_def(),
+        agdb::CountComparison::type_def(),
+        agdb::DbElement::type_def(),
+        agdb::DbF64::type_def(),
+        agdb::DbId::type_def(),
+        agdb::DbKeyOrder::type_def(),
+        agdb::DbKeyValue::type_def(),
+        agdb::DbValue::type_def(),
+        agdb::InsertAliasesQuery::type_def(),
+        agdb::InsertEdgesQuery::type_def(),
+        agdb::InsertIndexQuery::type_def(),
+        agdb::InsertNodesQuery::type_def(),
+        agdb::InsertValuesQuery::type_def(),
+        agdb::KeyValueComparison::type_def(),
+        agdb::QueryAliases::type_def(),
+        agdb::QueryBuilder::type_def(),
+        agdb::QueryCondition::type_def(),
+        agdb::QueryConditionData::type_def(),
+        agdb::QueryConditionLogic::type_def(),
+        agdb::QueryConditionModifier::type_def(),
+        agdb::QueryId::type_def(),
+        agdb::QueryIds::type_def(),
+        agdb::QueryResult::type_def(),
+        agdb::QueryType::type_def(),
+        agdb::QueryValues::type_def(),
+        agdb::RemoveAliasesQuery::type_def(),
+        agdb::RemoveIndexQuery::type_def(),
+        agdb::RemoveQuery::type_def(),
+        agdb::RemoveValuesQuery::type_def(),
+        agdb::SearchQuery::type_def(),
+        agdb::SearchQueryAlgorithm::type_def(),
+        agdb::SelectAliasesQuery::type_def(),
+        agdb::SelectAllAliasesQuery::type_def(),
+        agdb::SelectEdgeCountQuery::type_def(),
+        agdb::SelectIndexesQuery::type_def(),
+        agdb::SelectKeyCountQuery::type_def(),
+        agdb::SelectKeysQuery::type_def(),
+        agdb::SelectNodeCountQuery::type_def(),
+        agdb::SelectValuesQuery::type_def(),
+        crate::db::db_value::DbValues::type_def(),
+        crate::query_builder::insert_aliases::InsertAliases::type_def(),
+        crate::query_builder::insert_aliases::InsertAliasesIds::type_def(),
+        crate::query_builder::insert_edge::InsertEdges::type_def(),
+        crate::query_builder::insert_edge::InsertEdgesEach::type_def(),
+        crate::query_builder::insert_edge::InsertEdgesFrom::type_def(),
+        crate::query_builder::insert_edge::InsertEdgesFromTo::type_def(),
+        crate::query_builder::insert_edge::InsertEdgesIds::type_def(),
+        crate::query_builder::insert_edge::InsertEdgesValues::type_def(),
+        crate::query_builder::insert_index::InsertIndex::type_def(),
+        crate::query_builder::insert_nodes::InsertNodes::type_def(),
+        crate::query_builder::insert_nodes::InsertNodesAliases::type_def(),
+        crate::query_builder::insert_nodes::InsertNodesCount::type_def(),
+        crate::query_builder::insert_nodes::InsertNodesIds::type_def(),
+        crate::query_builder::insert_nodes::InsertNodesValues::type_def(),
+        crate::query_builder::insert_values::InsertValues::type_def(),
+        crate::query_builder::insert_values::InsertValuesIds::type_def(),
+        crate::query_builder::insert::Insert::type_def(),
+        crate::query_builder::remove_aliases::RemoveAliases::type_def(),
+        crate::query_builder::remove_ids::RemoveIds::type_def(),
+        crate::query_builder::remove_index::RemoveIndex::type_def(),
+        crate::query_builder::remove_values::RemoveValues::type_def(),
+        crate::query_builder::remove_values::RemoveValuesIds::type_def(),
+        crate::query_builder::remove::Remove::type_def(),
+        crate::query_builder::select_aliases::SelectAliases::type_def(),
+        crate::query_builder::select_aliases::SelectAliasesIds::type_def(),
+        crate::query_builder::select_edge_count::SelectEdgeCount::type_def(),
+        crate::query_builder::select_edge_count::SelectEdgeCountIds::type_def(),
+        crate::query_builder::select_ids::SelectIds::type_def(),
+        crate::query_builder::select_indexes::SelectIndexes::type_def(),
+        crate::query_builder::select_key_count::SelectKeyCount::type_def(),
+        crate::query_builder::select_key_count::SelectKeyCountIds::type_def(),
+        crate::query_builder::select_keys::SelectKeys::type_def(),
+        crate::query_builder::select_keys::SelectKeysIds::type_def(),
+        crate::query_builder::select_node_count::SelectNodeCount::type_def(),
+        crate::query_builder::select_values::SelectValues::type_def(),
+        crate::query_builder::select_values::SelectValuesIds::type_def(),
+        crate::query_builder::select::Select::type_def(),
+        crate::query::query_values::MultiValues::type_def(),
+        crate::query::query_values::SingleValues::type_def(),
+        crate::Search::<SearchQueryBuilderT>::type_def(),
+    ]
 }
 
 // --- Rust types implementations --- //

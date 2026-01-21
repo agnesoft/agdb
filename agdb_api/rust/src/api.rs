@@ -1,26 +1,3 @@
-use crate::AdminStatus;
-use crate::AgdbApi;
-use crate::AgdbApiError;
-use crate::ClusterStatus;
-use crate::DbAudit;
-use crate::DbUser;
-use crate::ReqwestClient;
-use crate::ServerDatabase;
-use crate::UserStatus;
-use agdb::DbKeyOrder;
-use agdb::DbKeyValue;
-use agdb::DbValues;
-use agdb::MultiValues;
-use agdb::QueryAliases;
-use agdb::QueryBuilder;
-use agdb::QueryCondition;
-use agdb::QueryResult;
-use agdb::QueryType;
-use agdb::SingleValues;
-use agdb::api_def::Enum;
-use agdb::api_def::Function;
-use agdb::api_def::Struct;
-use agdb::api_def::TupleStruct;
 use agdb::api_def::Type;
 use agdb::api_def::TypeDefinition;
 use std::collections::HashSet;
@@ -31,138 +8,21 @@ pub struct Api {
 
 impl Api {
     pub fn types() -> Vec<Type> {
-        let top_level_types = vec![
-            QueryBuilder::type_def(),
-            AgdbApi::<ReqwestClient>::type_def(),
-            AgdbApiError::type_def(),
-            DbKeyOrder::type_def(),
-            DbKeyValue::type_def(),
-            QueryCondition::type_def(),
-            QueryAliases::type_def(),
-            MultiValues::type_def(),
-            SingleValues::type_def(),
-            DbValues::type_def(),
-            ServerDatabase::type_def(),
-            QueryType::type_def(),
-            QueryResult::type_def(),
-            AdminStatus::type_def(),
-            UserStatus::type_def(),
-            ClusterStatus::type_def(),
-            DbAudit::type_def(),
-            DbUser::type_def(),
-        ];
-
-        let mut types = vec![];
-        let mut api = Api {
-            type_names: HashSet::new(),
-        };
-
-        for t in top_level_types {
-            types.extend(api.extract_types(t));
-        }
-
-        types
-    }
-
-    fn extract_types(&mut self, t: Type) -> Vec<Type> {
-        if self.type_names.contains(t.name()) {
-            return Vec::new();
-        } else {
-            self.type_names.insert(t.name().to_string());
-        }
-
-        match &t {
-            Type::Enum(e) => {
-                let mut types = self.enum_types(e);
-                types.push(t);
-                types
-            }
-            Type::Struct(s) => {
-                let mut types = self.struct_types(s);
-                types.push(t);
-                types
-            }
-            Type::TupleStruct(ts) => {
-                let mut types = self.tuple_types(ts);
-                types.push(t);
-                types
-            }
-            Type::Literal(_) => Vec::new(),
-            Type::Tuple(items) => items
-                .iter()
-                .flat_map(|ty| self.extract_types(ty()))
-                .collect(),
-            Type::Slice(t) => self.extract_types(t()),
-            Type::Vec(t) => self.extract_types(t()),
-            Type::Option(t) => self.extract_types(t()),
-            Type::Result(t1, t2) => {
-                let mut types = self.extract_types(t1());
-                types.extend(self.extract_types(t2()));
-                types
-            }
-            Type::GenericArg(_) => Vec::new(),
-        }
-    }
-
-    fn enum_types(&mut self, e: &Enum) -> Vec<Type> {
-        let mut types = vec![];
-
-        for variant in e.variants {
-            if let Some(ty_fn) = variant.ty {
-                types.extend(self.extract_types(ty_fn()));
-            }
-        }
-
-        for f in e.functions {
-            types.extend(self.function_types(f));
-        }
-
-        types
-    }
-
-    fn struct_types(&mut self, s: &Struct) -> Vec<Type> {
-        let mut types = vec![];
-
-        for field in s.fields {
-            if let Some(ty_fn) = field.ty {
-                types.extend(self.extract_types(ty_fn()));
-            }
-        }
-
-        for f in s.functions {
-            types.extend(self.function_types(f));
-        }
-
-        types
-    }
-
-    fn tuple_types(&mut self, t: &TupleStruct) -> Vec<Type> {
-        let mut types = vec![];
-
-        for field_fn in t.fields {
-            types.extend(self.extract_types(field_fn()));
-        }
-
-        for f in t.functions {
-            types.extend(self.function_types(f));
-        }
-
-        types
-    }
-
-    fn function_types(&mut self, f: &Function) -> Vec<Type> {
-        let mut types = vec![];
-
-        for arg in f.args {
-            if let Some(ty_fn) = arg.ty {
-                types.extend(self.extract_types(ty_fn()));
-            }
-        }
-
-        if let Some(ret_ty_fn) = &f.ret {
-            types.extend(self.extract_types(ret_ty_fn()));
-        }
-
+        let mut types = agdb::api_def::type_defs();
+        types.extend([
+            crate::AdminStatus::type_def(),
+            crate::AgdbApi::<crate::ReqwestClient>::type_def(),
+            crate::AgdbApiError::type_def(),
+            crate::ClusterStatus::type_def(),
+            crate::DbAudit::type_def(),
+            crate::DbKind::type_def(),
+            crate::DbResource::type_def(),
+            crate::DbUser::type_def(),
+            crate::DbUserRole::type_def(),
+            crate::QueryAudit::type_def(),
+            crate::ServerDatabase::type_def(),
+            crate::UserStatus::type_def(),
+        ]);
         types
     }
 }
@@ -170,9 +30,13 @@ impl Api {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use agdb::api_def::Enum;
+    use agdb::api_def::Function;
     use agdb::api_def::GenericParam;
     use agdb::api_def::NamedType;
+    use agdb::api_def::Struct;
     use agdb::api_def::Trait;
+    use agdb::api_def::TupleStruct;
 
     struct RustApi;
 
@@ -312,7 +176,7 @@ mod tests {
             buffer.push_str(&format!(
                 "enum {}{} {{\n",
                 e.name,
-                Self::generic_decl(&e.generic_params)
+                Self::generic_decl(e.generic_params)
             ));
             for variant in e.variants {
                 buffer.push_str(&Self::write_enum_variant(variant));
@@ -365,7 +229,7 @@ mod tests {
             buffer.push_str(&format!(
                 "struct {}{} {{\n{}}}\n",
                 s.name,
-                Self::generic_decl(&s.generic_params),
+                Self::generic_decl(s.generic_params),
                 s.fields
                     .iter()
                     .map(|f| {
@@ -379,7 +243,7 @@ mod tests {
             buffer.push_str(&Self::write_functions(
                 s.functions,
                 s.name,
-                &s.generic_params,
+                s.generic_params,
             ));
 
             buffer
@@ -419,11 +283,6 @@ mod tests {
                             .collect::<Vec<String>>()
                             .join(", "),
                         if let Some(ret_ty_fn) = &f.ret {
-                            if f.name == "search" {
-                                let x = ret_ty_fn().name();
-                                println!("Function {ty}::{} returns {}", f.name, x);
-                            }
-
                             format!(" -> {}", Self::type_name(&ret_ty_fn()))
                         } else {
                             String::new()
@@ -442,7 +301,7 @@ mod tests {
             buffer.push_str(&format!(
                 "struct {}{}({});\n",
                 t.name,
-                Self::generic_decl(&t.generic_params),
+                Self::generic_decl(t.generic_params),
                 t.fields
                     .iter()
                     .map(|f| Self::type_name(&f()))

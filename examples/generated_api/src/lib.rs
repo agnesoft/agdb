@@ -36,85 +36,47 @@ pub trait SearchQueryBuilder: agdb::api_def::TypeDefinition {
     fn search_mut(&mut self) -> &mut SearchQuery;
 }
 
-struct DbId(i64);
-
-enum QueryId {
-    Id(i64),
-    Alias(String),
+enum Comparison {
+    Equal(DbValue),
+    GreaterThan(DbValue),
+    GreaterThanOrEqual(DbValue),
+    LessThan(DbValue),
+    LessThanOrEqual(DbValue),
+    NotEqual(DbValue),
+    Contains(DbValue),
+    StartsWith(DbValue),
+    EndsWith(DbValue),
 }
 
-enum SearchQueryAlgorithm {
-    BreadthFirst,
-    DepthFirst,
-    Index,
-    Elements,
+enum CountComparison {
+    Equal(u64),
+    GreaterThan(u64),
+    GreaterThanOrEqual(u64),
+    LessThan(u64),
+    LessThanOrEqual(u64),
+    NotEqual(u64),
 }
 
-struct SearchQuery {
-    algorithm: SearchQueryAlgorithm,
-    origin: QueryId,
-    destination: QueryId,
-    limit: u64,
-    offset: u64,
-    order_by: Vec<DbKeyOrder>,
-    conditions: Vec<QueryCondition>,
+struct DbElement {
+    id: DbId,
+    from: Option<DbId>,
+    to: Option<DbId>,
+    values: Vec<DbKeyValue>,
 }
-
-enum QueryIds {
-    Ids(Vec<QueryId>),
-    Search {
-        algorithm: SearchQueryAlgorithm,
-        origin: QueryId,
-        destination: QueryId,
-        limit: u64,
-        offset: u64,
-        order_by: Vec<DbKeyOrder>,
-        conditions: Vec<QueryCondition>,
-    },
-}
-
-struct InsertAliasesQuery {
-    ids: QueryIds,
-    aliases: Vec<String>,
-}
-
-struct InsertAliasesIds(InsertAliasesQuery);
-
-struct InsertAliases(InsertAliasesQuery);
-
-enum QueryValues {
-    Single(Vec<DbKeyValue>),
-    Multi(Vec<Vec<DbKeyValue>>),
-}
-
-struct InsertEdgesQuery {
-    from: QueryIds,
-    to: QueryIds,
-    ids: QueryIds,
-    values: QueryValues,
-    each: bool,
-}
-
-struct InsertEdgesValues(InsertEdgesQuery);
-
-struct InsertEdgesEach(InsertEdgesQuery);
-
-struct InsertEdgesFromTo(InsertEdgesQuery);
-
-struct InsertEdgesFrom(InsertEdgesQuery);
-
-struct InsertEdgesIds(InsertEdgesQuery);
-
-struct InsertEdges(InsertEdgesQuery);
-
-struct InsertValuesQuery {
-    ids: QueryIds,
-    values: QueryValues,
-}
-
-struct InsertValuesIds(InsertValuesQuery);
 
 struct DbF64(f64);
+
+struct DbId(i64);
+
+enum DbKeyOrder {
+    Asc(DbValue),
+    Desc(DbValue),
+}
+
+struct DbKeyValue {
+    key: DbValue,
+    value: DbValue,
+}
 
 enum DbValue {
     Bytes(Vec<u8>),
@@ -128,9 +90,22 @@ enum DbValue {
     VecString(Vec<String>),
 }
 
-struct InsertIndexQuery(DbValue);
+struct DbValues(Vec<DbValue>);
 
-struct InsertIndex(DbValue);
+struct InsertAliasesQuery {
+    ids: QueryIds,
+    aliases: Vec<String>,
+}
+
+struct InsertEdgesQuery {
+    from: QueryIds,
+    to: QueryIds,
+    ids: QueryIds,
+    values: QueryValues,
+    each: bool,
+}
+
+struct InsertIndexQuery(DbValue);
 
 struct InsertNodesQuery {
     count: u64,
@@ -139,196 +114,19 @@ struct InsertNodesQuery {
     ids: QueryIds,
 }
 
-struct InsertNodesValues(InsertNodesQuery);
-
-struct InsertNodesAliases(InsertNodesQuery);
-
-struct InsertNodesCount(InsertNodesQuery);
-
-struct InsertNodesIds(InsertNodesQuery);
-
-struct InsertNodes(InsertNodesQuery);
-
-struct InsertValues(InsertValuesQuery);
-
-struct Insert {}
-impl Insert {
-    pub fn aliases<T: Into<QueryAliases>>(self, names: T) -> InsertAliases {
-        todo!()
-    }
-    pub fn edges(self) -> InsertEdges {
-        todo!()
-    }
-    pub fn element<T: DbType + Borrow<T>>(self, elem: T) -> InsertValuesIds {
-        todo!()
-    }
-    pub fn elements<T: DbType>(self, elems: &[T]) -> InsertValuesIds {
-        todo!()
-    }
-    pub fn index<T: Into<DbValue>>(self, key: T) -> InsertIndex {
-        todo!()
-    }
-    pub fn nodes(self) -> InsertNodes {
-        todo!()
-    }
-    pub fn values<T: Into<MultiValues>>(self, key_values: T) -> InsertValues {
-        todo!()
-    }
-    pub fn values_uniform<T: Into<SingleValues>>(self, key_values: T) -> InsertValues {
-        todo!()
-    }
-}
-
-struct RemoveAliasesQuery(Vec<String>);
-
-struct RemoveAliases(RemoveAliasesQuery);
-
-struct RemoveQuery(QueryIds);
-
-struct RemoveIds(RemoveQuery);
-
-struct RemoveIndexQuery(DbValue);
-
-struct RemoveIndex(DbValue);
-
-struct SelectValuesQuery {
-    keys: Vec<DbValue>,
+struct InsertValuesQuery {
     ids: QueryIds,
+    values: QueryValues,
 }
 
-struct RemoveValuesQuery(SelectValuesQuery);
-
-struct RemoveValuesIds(RemoveValuesQuery);
-
-struct RemoveValues(RemoveValuesQuery);
-
-struct Remove {}
-impl Remove {
-    pub fn aliases<T: Into<QueryAliases>>(self, names: T) -> RemoveAliases {
-        todo!()
-    }
-    pub fn ids<T: Into<QueryIds>>(self, ids: T) -> RemoveIds {
-        todo!()
-    }
-    pub fn index<T: Into<DbValue>>(self, key: T) -> RemoveIndex {
-        todo!()
-    }
-    pub fn search(self) -> Search<RemoveQuery> {
-        todo!()
-    }
-    pub fn values<T: Into<DbValues>>(self, keys: T) -> RemoveValues {
-        todo!()
-    }
+struct KeyValueComparison {
+    key: DbValue,
+    value: Comparison,
 }
 
-struct SelectAliasesQuery(QueryIds);
+struct MultiValues(Vec<Vec<DbKeyValue>>);
 
-struct SelectAliasesIds(SelectAliasesQuery);
-
-struct SelectAllAliasesQuery {}
-
-struct SelectAliases(SelectAliasesQuery);
-
-struct SelectEdgeCountQuery {
-    ids: QueryIds,
-    from: bool,
-    to: bool,
-}
-
-struct SelectEdgeCountIds(SelectEdgeCountQuery);
-
-struct SelectEdgeCount(SelectEdgeCountQuery);
-
-struct SelectValuesIds(SelectValuesQuery);
-
-struct SelectValues {
-    query: SelectValuesQuery,
-    element_id: Option<DbValue>,
-    limit: u64,
-}
-impl SelectValues {
-    pub fn ids<T: Into<QueryIds>>(mut self, ids: T) -> SelectValuesIds {
-        todo!()
-    }
-    pub fn search(mut self) -> Search<SelectValuesQuery> {
-        todo!()
-    }
-}
-
-struct SelectIds(SelectValuesQuery);
-
-struct SelectIndexesQuery {}
-
-struct SelectIndexes {}
-impl SelectIndexes {
-    pub fn query(&self) -> SelectIndexesQuery {
-        todo!()
-    }
-}
-
-struct SelectKeysQuery(QueryIds);
-
-struct SelectKeysIds(SelectKeysQuery);
-
-struct SelectKeys(SelectKeysQuery);
-
-struct SelectKeyCountQuery(QueryIds);
-
-struct SelectKeyCountIds(SelectKeyCountQuery);
-
-struct SelectKeyCount(SelectKeyCountQuery);
-
-struct SelectNodeCountQuery {}
-
-struct SelectNodeCount {}
-impl SelectNodeCount {
-    pub fn query(self) -> SelectNodeCountQuery {
-        todo!()
-    }
-}
-
-struct Select {}
-impl Select {
-    pub fn aliases(self) -> SelectAliases {
-        todo!()
-    }
-    pub fn edge_count(self) -> SelectEdgeCount {
-        todo!()
-    }
-    pub fn edge_count_from(self) -> SelectEdgeCount {
-        todo!()
-    }
-    pub fn edge_count_to(self) -> SelectEdgeCount {
-        todo!()
-    }
-    pub fn element<T: DbType>(self) -> SelectValues {
-        todo!()
-    }
-    pub fn elements<T: DbType>(self) -> SelectValues {
-        todo!()
-    }
-    pub fn ids<T: Into<QueryIds>>(self, ids: T) -> SelectIds {
-        todo!()
-    }
-    pub fn indexes(self) -> SelectIndexes {
-        todo!()
-    }
-    pub fn keys(self) -> SelectKeys {
-        todo!()
-    }
-    pub fn key_count(self) -> SelectKeyCount {
-        todo!()
-    }
-    pub fn node_count(self) -> SelectNodeCount {
-        todo!()
-    }
-    pub fn search(self) -> Search<SelectValuesQuery> {
-        todo!()
-    }
-    pub fn values<T: Into<DbValues>>(self, keys: T) -> SelectValues {
-        todo!()
-    }
-}
+struct QueryAliases(Vec<String>);
 
 struct QueryBuilder {}
 impl QueryBuilder {
@@ -346,17 +144,58 @@ impl QueryBuilder {
     }
 }
 
-enum DbKind {
-    Memory,
-    Mapped,
-    File,
+struct QueryCondition {
+    logic: QueryConditionLogic,
+    modifier: QueryConditionModifier,
+    data: QueryConditionData,
 }
 
-enum DbResource {
-    All,
-    Db,
-    Audit,
-    Backup,
+enum QueryConditionData {
+    Distance(CountComparison),
+    Edge,
+    EdgeCount(CountComparison),
+    EdgeCountFrom(CountComparison),
+    EdgeCountTo(CountComparison),
+    Ids(Vec<QueryId>),
+    KeyValue { key: DbValue, value: Comparison },
+    Keys(Vec<DbValue>),
+    Node,
+    Where(Vec<QueryCondition>),
+}
+
+enum QueryConditionLogic {
+    And,
+    Or,
+}
+
+enum QueryConditionModifier {
+    None,
+    Beyond,
+    Not,
+    NotBeyond,
+}
+
+enum QueryId {
+    Id(i64),
+    Alias(String),
+}
+
+enum QueryIds {
+    Ids(Vec<QueryId>),
+    Search {
+        algorithm: SearchQueryAlgorithm,
+        origin: QueryId,
+        destination: QueryId,
+        limit: u64,
+        offset: u64,
+        order_by: Vec<DbKeyOrder>,
+        conditions: Vec<QueryCondition>,
+    },
+}
+
+struct QueryResult {
+    result: i64,
+    elements: Vec<DbElement>,
 }
 
 enum QueryType {
@@ -412,10 +251,249 @@ enum QueryType {
     },
 }
 
-enum DbUserRole {
-    Admin,
-    Write,
-    Read,
+enum QueryValues {
+    Single(Vec<DbKeyValue>),
+    Multi(Vec<Vec<DbKeyValue>>),
+}
+
+struct RemoveAliasesQuery(Vec<String>);
+
+struct RemoveIndexQuery(DbValue);
+
+struct RemoveQuery(QueryIds);
+
+struct RemoveValuesQuery(SelectValuesQuery);
+
+struct SearchQuery {
+    algorithm: SearchQueryAlgorithm,
+    origin: QueryId,
+    destination: QueryId,
+    limit: u64,
+    offset: u64,
+    order_by: Vec<DbKeyOrder>,
+    conditions: Vec<QueryCondition>,
+}
+
+enum SearchQueryAlgorithm {
+    BreadthFirst,
+    DepthFirst,
+    Index,
+    Elements,
+}
+
+struct SelectAliasesQuery(QueryIds);
+
+struct SelectAllAliasesQuery {}
+
+struct SelectEdgeCountQuery {
+    ids: QueryIds,
+    from: bool,
+    to: bool,
+}
+
+struct SelectIndexesQuery {}
+
+struct SelectKeyCountQuery(QueryIds);
+
+struct SelectKeysQuery(QueryIds);
+
+struct SelectNodeCountQuery {}
+
+struct SelectValuesQuery {
+    keys: Vec<DbValue>,
+    ids: QueryIds,
+}
+
+struct SingleValues(Vec<DbKeyValue>);
+
+struct Insert {}
+impl Insert {
+    pub fn aliases<T: Into<QueryAliases>>(self, names: T) -> InsertAliases {
+        todo!()
+    }
+    pub fn edges(self) -> InsertEdges {
+        todo!()
+    }
+    pub fn element<T: DbType + Borrow<T>>(self, elem: T) -> InsertValuesIds {
+        todo!()
+    }
+    pub fn elements<T: DbType>(self, elems: &[T]) -> InsertValuesIds {
+        todo!()
+    }
+    pub fn index<T: Into<DbValue>>(self, key: T) -> InsertIndex {
+        todo!()
+    }
+    pub fn nodes(self) -> InsertNodes {
+        todo!()
+    }
+    pub fn values<T: Into<MultiValues>>(self, key_values: T) -> InsertValues {
+        todo!()
+    }
+    pub fn values_uniform<T: Into<SingleValues>>(self, key_values: T) -> InsertValues {
+        todo!()
+    }
+}
+
+struct InsertAliases(InsertAliasesQuery);
+
+struct InsertAliasesIds(InsertAliasesQuery);
+
+struct InsertEdges(InsertEdgesQuery);
+
+struct InsertEdgesEach(InsertEdgesQuery);
+
+struct InsertEdgesFrom(InsertEdgesQuery);
+
+struct InsertEdgesFromTo(InsertEdgesQuery);
+
+struct InsertEdgesIds(InsertEdgesQuery);
+
+struct InsertEdgesValues(InsertEdgesQuery);
+
+struct InsertIndex(DbValue);
+
+struct InsertNodes(InsertNodesQuery);
+
+struct InsertNodesAliases(InsertNodesQuery);
+
+struct InsertNodesCount(InsertNodesQuery);
+
+struct InsertNodesIds(InsertNodesQuery);
+
+struct InsertNodesValues(InsertNodesQuery);
+
+struct InsertValues(InsertValuesQuery);
+
+struct InsertValuesIds(InsertValuesQuery);
+
+struct Remove {}
+impl Remove {
+    pub fn aliases<T: Into<QueryAliases>>(self, names: T) -> RemoveAliases {
+        todo!()
+    }
+    pub fn ids<T: Into<QueryIds>>(self, ids: T) -> RemoveIds {
+        todo!()
+    }
+    pub fn index<T: Into<DbValue>>(self, key: T) -> RemoveIndex {
+        todo!()
+    }
+    pub fn search(self) -> Search<RemoveQuery> {
+        todo!()
+    }
+    pub fn values<T: Into<DbValues>>(self, keys: T) -> RemoveValues {
+        todo!()
+    }
+}
+
+struct RemoveAliases(RemoveAliasesQuery);
+
+struct RemoveIds(RemoveQuery);
+
+struct RemoveIndex(DbValue);
+
+struct RemoveValues(RemoveValuesQuery);
+
+struct RemoveValuesIds(RemoveValuesQuery);
+
+struct Search<T: SearchQueryBuilder>(T);
+
+struct Select {}
+impl Select {
+    pub fn aliases(self) -> SelectAliases {
+        todo!()
+    }
+    pub fn edge_count(self) -> SelectEdgeCount {
+        todo!()
+    }
+    pub fn edge_count_from(self) -> SelectEdgeCount {
+        todo!()
+    }
+    pub fn edge_count_to(self) -> SelectEdgeCount {
+        todo!()
+    }
+    pub fn element<T: DbType>(self) -> SelectValues {
+        todo!()
+    }
+    pub fn elements<T: DbType>(self) -> SelectValues {
+        todo!()
+    }
+    pub fn ids<T: Into<QueryIds>>(self, ids: T) -> SelectIds {
+        todo!()
+    }
+    pub fn indexes(self) -> SelectIndexes {
+        todo!()
+    }
+    pub fn keys(self) -> SelectKeys {
+        todo!()
+    }
+    pub fn key_count(self) -> SelectKeyCount {
+        todo!()
+    }
+    pub fn node_count(self) -> SelectNodeCount {
+        todo!()
+    }
+    pub fn search(self) -> Search<SelectValuesQuery> {
+        todo!()
+    }
+    pub fn values<T: Into<DbValues>>(self, keys: T) -> SelectValues {
+        todo!()
+    }
+}
+
+struct SelectAliases(SelectAliasesQuery);
+
+struct SelectAliasesIds(SelectAliasesQuery);
+
+struct SelectEdgeCount(SelectEdgeCountQuery);
+
+struct SelectEdgeCountIds(SelectEdgeCountQuery);
+
+struct SelectIds(SelectValuesQuery);
+
+struct SelectIndexes {}
+impl SelectIndexes {
+    pub fn query(&self) -> SelectIndexesQuery {
+        todo!()
+    }
+}
+
+struct SelectKeyCount(SelectKeyCountQuery);
+
+struct SelectKeyCountIds(SelectKeyCountQuery);
+
+struct SelectKeys(SelectKeysQuery);
+
+struct SelectKeysIds(SelectKeysQuery);
+
+struct SelectNodeCount {}
+impl SelectNodeCount {
+    pub fn query(self) -> SelectNodeCountQuery {
+        todo!()
+    }
+}
+
+struct SelectValues {
+    query: SelectValuesQuery,
+    element_id: Option<DbValue>,
+    limit: u64,
+}
+impl SelectValues {
+    pub fn ids<T: Into<QueryIds>>(mut self, ids: T) -> SelectValuesIds {
+        todo!()
+    }
+    pub fn search(mut self) -> Search<SelectValuesQuery> {
+        todo!()
+    }
+}
+
+struct SelectValuesIds(SelectValuesQuery);
+
+struct AdminStatus {
+    uptime: u64,
+    dbs: u64,
+    users: u64,
+    logged_in_users: u64,
+    size: u64,
 }
 
 struct AgdbApi<T: AgdbApiClient> {
@@ -689,80 +767,43 @@ struct AgdbApiError {
     description: String,
 }
 
-enum DbKeyOrder {
-    Asc(DbValue),
-    Desc(DbValue),
+struct ClusterStatus {
+    address: String,
+    status: bool,
+    leader: bool,
 }
 
-struct DbKeyValue {
-    key: DbValue,
-    value: DbValue,
+struct DbAudit(Vec<QueryAudit>);
+
+enum DbKind {
+    Memory,
+    Mapped,
+    File,
 }
 
-enum QueryConditionLogic {
-    And,
-    Or,
+enum DbResource {
+    All,
+    Db,
+    Audit,
+    Backup,
 }
 
-enum QueryConditionModifier {
-    None,
-    Beyond,
-    Not,
-    NotBeyond,
+struct DbUser {
+    username: String,
+    role: DbUserRole,
 }
 
-enum CountComparison {
-    Equal(u64),
-    GreaterThan(u64),
-    GreaterThanOrEqual(u64),
-    LessThan(u64),
-    LessThanOrEqual(u64),
-    NotEqual(u64),
+enum DbUserRole {
+    Admin,
+    Write,
+    Read,
 }
 
-enum Comparison {
-    Equal(DbValue),
-    GreaterThan(DbValue),
-    GreaterThanOrEqual(DbValue),
-    LessThan(DbValue),
-    LessThanOrEqual(DbValue),
-    NotEqual(DbValue),
-    Contains(DbValue),
-    StartsWith(DbValue),
-    EndsWith(DbValue),
+struct QueryAudit {
+    timestamp: u64,
+    username: String,
+    query: QueryType,
 }
-
-struct KeyValueComparison {
-    key: DbValue,
-    value: Comparison,
-}
-
-enum QueryConditionData {
-    Distance(CountComparison),
-    Edge,
-    EdgeCount(CountComparison),
-    EdgeCountFrom(CountComparison),
-    EdgeCountTo(CountComparison),
-    Ids(Vec<QueryId>),
-    KeyValue { key: DbValue, value: Comparison },
-    Keys(Vec<DbValue>),
-    Node,
-    Where(Vec<QueryCondition>),
-}
-
-struct QueryCondition {
-    logic: QueryConditionLogic,
-    modifier: QueryConditionModifier,
-    data: QueryConditionData,
-}
-
-struct QueryAliases(Vec<String>);
-
-struct MultiValues(Vec<Vec<DbKeyValue>>);
-
-struct SingleValues(Vec<DbKeyValue>);
-
-struct DbValues(Vec<DbValue>);
 
 struct ServerDatabase {
     db: String,
@@ -773,34 +814,8 @@ struct ServerDatabase {
     backup: u64,
 }
 
-struct QueryResult {
-    result: i64,
-    elements: Vec<DbElement>,
-}
-
-struct AdminStatus {
-    uptime: u64,
-    dbs: u64,
-    users: u64,
-    logged_in_users: u64,
-    size: u64,
-}
-
 struct UserStatus {
     username: String,
     login: bool,
     admin: bool,
-}
-
-struct ClusterStatus {
-    address: String,
-    status: bool,
-    leader: bool,
-}
-
-struct DbAudit(Vec<QueryAudit>);
-
-struct DbUser {
-    username: String,
-    role: DbUserRole,
 }

@@ -183,6 +183,7 @@ mod tests {
         struct StructWithGenericReturn;
 
         #[derive(agdb::TypeDefImpl)]
+        #[allow(dead_code)]
         struct GenericReturn<T> {
             value: T,
         }

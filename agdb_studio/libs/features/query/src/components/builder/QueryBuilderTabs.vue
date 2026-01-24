@@ -15,14 +15,15 @@ const handleKeydown = (event: KeyboardEvent) => {
     /* v8 ignore next -- @preserve */
     activeTab.value = TABS[nextIndex] ?? activeTab.value;
     event.preventDefault();
+    tabs.value?.[TABS.indexOf(activeTab.value)]?.focus();
   } else if (event.key === "ArrowLeft") {
     const prevIndex = (currentIndex - 1 + TABS.length) % TABS.length;
 
     /* v8 ignore next -- @preserve */
     activeTab.value = TABS[prevIndex] ?? activeTab.value;
     event.preventDefault();
+    tabs.value?.[TABS.indexOf(activeTab.value)]?.focus();
   }
-  tabs.value?.[TABS.indexOf(activeTab.value)]?.focus();
 };
 
 provide("activeTab", activeTab);

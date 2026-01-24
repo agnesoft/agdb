@@ -14,7 +14,6 @@ describe("QueryBuilder", () => {
 
   it("renders the query builder", () => {
     const wrapper = mount(QueryBuilder, {
-      props: { tab: "exec" },
       global: {
         provide: {
           queryId: ref("test-query-1"),
@@ -73,7 +72,6 @@ describe("QueryBuilder", () => {
     queryStore.addQuery({ id: queryId });
 
     const wrapper = mount(QueryBuilder, {
-      props: { tab: "exec" },
       global: {
         provide: {
           queryId: ref(queryId),
@@ -91,7 +89,6 @@ describe("QueryBuilder", () => {
 
   it("handles missing queryId gracefully", () => {
     const wrapper = mount(QueryBuilder, {
-      props: { tab: "exec" },
       global: {
         provide: {
           queryId: ref(undefined),
@@ -103,7 +100,6 @@ describe("QueryBuilder", () => {
 
   it("shows QueryStepInput component", () => {
     const wrapper = mount(QueryBuilder, {
-      props: { tab: "exec" },
       global: {
         provide: {
           queryId: ref("test-query-4"),
@@ -119,7 +115,6 @@ describe("QueryBuilder", () => {
     queryStore.addQuery({ id: queryId });
 
     const wrapper = mount(QueryBuilder, {
-      props: { tab: "exec" },
       global: {
         provide: {
           queryId: ref(queryId),

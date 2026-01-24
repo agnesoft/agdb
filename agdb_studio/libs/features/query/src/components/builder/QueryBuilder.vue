@@ -36,7 +36,7 @@ const addStep = (stepType: QueryType) => {
   <div class="query-builder">
     <div class="query-input" :class="[tab]">
       <div v-for="step in steps" :key="step.id" class="query-step-wrapper">
-        .
+        <span class="separator">.</span>
         <!-- <QueryStepInput :prev-step="index > 0 ? steps[index - 1] : undefined" /> -->
         <QueryStep :step="step" />
       </div>

@@ -3,12 +3,12 @@ use crate::SelectEdgeCountQuery;
 use crate::query_builder::search::Search;
 
 /// Select edge count builder.
-#[cfg_attr(feature = "api", derive(agdb::ApiDefImpl))]
+#[cfg_attr(feature = "api", derive(agdb::TypeDef))]
 pub struct SelectEdgeCount(pub SelectEdgeCountQuery);
 
 /// Final builder that lets you create
 /// an actual query object.
-#[cfg_attr(feature = "api", derive(agdb::ApiDefImpl))]
+#[cfg_attr(feature = "api", derive(agdb::TypeDef))]
 pub struct SelectEdgeCountIds(pub SelectEdgeCountQuery);
 
 #[cfg_attr(feature = "api", agdb::impl_def())]

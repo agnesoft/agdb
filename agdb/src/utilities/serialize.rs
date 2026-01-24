@@ -1,5 +1,10 @@
 use crate::DbError;
-use std::any::type_name;
+use std::net::IpAddr;
+use std::net::SocketAddr;
+use std::path::PathBuf;
+use std::time::Duration;
+use std::time::SystemTime;
+use std::time::UNIX_EPOCH;
 
 pub trait Serialize: Sized {
     fn serialize(&self) -> Vec<u8>;
@@ -154,7 +159,7 @@ impl<T: Serialize> Serialize for Vec<T> {
             let value = T::deserialize(&bytes[begin..]).map_err(|_| {
                 DbError::from(format!(
                     "Vec<{}> deserialization error: out of bounds",
-                    type_name::<T>()
+                    std::any::type_name::<T>()
                 ))
             })?;
             begin += value.serialized_size() as usize;
@@ -200,10 +205,103 @@ impl Serialize for Vec<u8> {
     }
 }
 
+impl Serialize for PathBuf {
+    fn serialize(&self) -> Vec<u8> {
+        self.to_string_lossy().to_string().serialize()
+    }
+
+    fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
+        let s = String::deserialize(bytes)?;
+        Ok(PathBuf::from(s))
+    }
+
+    fn serialized_size(&self) -> u64 {
+        self.to_string_lossy().to_string().serialized_size()
+    }
+}
+
+impl Serialize for SystemTime {
+    fn serialize(&self) -> Vec<u8> {
+        let (duration, before_epoch) = match self.duration_since(UNIX_EPOCH) {
+            Ok(duration) => (duration, false),
+            Err(duration) => (duration.duration(), true),
+        };
+        let secs = duration.as_secs();
+        let nanos = duration.subsec_nanos();
+        let mut bytes = [0_u8; 13];
+        bytes[0..8].copy_from_slice(&secs.to_le_bytes());
+        bytes[8..12].copy_from_slice(&nanos.to_le_bytes());
+        bytes[12] = if before_epoch { 0_u8 } else { 1_u8 };
+        bytes.to_vec()
+    }
+
+    fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
+        if bytes.len() < 13 {
+            return Err(DbError::from(format!(
+                "Invalid SystemTime bytes length (should be at least 13): {}",
+                bytes.len()
+            )));
+        }
+        let mut secs_bytes = [0_u8; 8];
+        secs_bytes.copy_from_slice(&bytes[0..8]);
+        let mut nanos_bytes = [0_u8; 4];
+        nanos_bytes.copy_from_slice(&bytes[8..12]);
+        let before_epoch = bytes[12] == 0_u8;
+        let secs = u64::from_le_bytes(secs_bytes);
+        let nanos = u32::from_le_bytes(nanos_bytes);
+        let duration = Duration::new(secs, nanos);
+
+        if before_epoch {
+            Ok(UNIX_EPOCH.checked_sub(duration).ok_or_else(|| {
+                DbError::from("SystemTime before UNIX_EPOCH is too far in the past")
+            })?)
+        } else {
+            Ok(UNIX_EPOCH.checked_add(duration).ok_or_else(|| {
+                DbError::from("SystemTime after UNIX_EPOCH is too far in the future")
+            })?)
+        }
+    }
+
+    fn serialized_size(&self) -> u64 {
+        13
+    }
+}
+
+impl Serialize for SocketAddr {
+    fn serialize(&self) -> Vec<u8> {
+        self.to_string().serialize()
+    }
+
+    fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
+        let s = String::deserialize(bytes)?;
+        s.parse()
+            .map_err(|e| DbError::from(format!("Cannot convert string to SocketAddr: {e}")))
+    }
+
+    fn serialized_size(&self) -> u64 {
+        self.to_string().serialized_size()
+    }
+}
+
+impl Serialize for IpAddr {
+    fn serialize(&self) -> Vec<u8> {
+        self.to_string().serialize()
+    }
+
+    fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
+        let s = String::deserialize(bytes)?;
+        s.parse()
+            .map_err(|e| DbError::from(format!("Cannot convert string to IpAddr: {e}")))
+    }
+
+    fn serialized_size(&self) -> u64 {
+        self.to_string().serialized_size()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::f64::consts::PI;
 
     #[test]
     fn i64() {
@@ -251,6 +349,8 @@ mod tests {
 
     #[test]
     fn f64() {
+        use std::f64::consts::PI;
+
         let original = -PI;
         let serialized_size = original.serialized_size();
         let mut bytes = original.serialize();
@@ -396,7 +496,7 @@ mod tests {
             Vec::<String>::deserialize(&bytes),
             Err(DbError::from(format!(
                 "Vec<{}> deserialization error: out of bounds",
-                type_name::<String>()
+                std::any::type_name::<String>()
             )))
         );
 
@@ -407,8 +507,52 @@ mod tests {
             Vec::<String>::deserialize(&bytes),
             Err(DbError::from(format!(
                 "Vec<{}> deserialization error: out of bounds",
-                type_name::<String>()
+                std::any::type_name::<String>()
             )))
         );
+    }
+
+    #[test]
+    fn path_buf() {
+        let original = PathBuf::from("/some/test/path");
+        let serialized_size = original.serialized_size();
+        let bytes = original.serialize();
+
+        assert_eq!(bytes.len() as u64, serialized_size);
+
+        let deserialized = PathBuf::deserialize(&bytes).unwrap();
+
+        assert_eq!(original, deserialized);
+    }
+
+    #[test]
+    fn system_time() {
+        let original = SystemTime::UNIX_EPOCH + Duration::from_secs(1_000_000);
+        let serialized_size = original.serialized_size();
+        let bytes = original.serialize();
+
+        assert_eq!(bytes.len() as u64, serialized_size);
+
+        let deserialized = SystemTime::deserialize(&bytes).unwrap();
+
+        assert_eq!(original, deserialized);
+    }
+
+    #[test]
+    fn socket_address() {
+        let addr: SocketAddr = "127.0.0.1:8080".parse().unwrap();
+        let bytes = addr.serialize();
+        let deserialized = SocketAddr::deserialize(&bytes).unwrap();
+
+        assert_eq!(addr, deserialized);
+    }
+
+    #[test]
+    fn ip_address() {
+        let addr: IpAddr = "127.0.0.1".parse().unwrap();
+        let bytes = addr.serialize();
+        let deserialized = IpAddr::deserialize(&bytes).unwrap();
+
+        assert_eq!(addr, deserialized);
     }
 }

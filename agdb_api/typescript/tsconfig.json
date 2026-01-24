@@ -1,12 +1,11 @@
 {
   "compilerOptions": {
     "target": "ES5",
-    "module": "ESNext",
+    "module": "NodeNext",
     "declaration": true,
     "outDir": "./dist",
-    "moduleResolution": "node",
-    "baseUrl": ".",
-    "lib": ["es2015"],
+    "moduleResolution": "nodenext",
+    "lib": ["es2015"]
   },
   "include": [
     "src/**/*"

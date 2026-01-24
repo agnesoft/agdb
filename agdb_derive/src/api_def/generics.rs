@@ -23,10 +23,8 @@ pub fn parse_bounds(
                     .last()
                     .unwrap_or_else(|| panic!("{name}: Expected trait segment"))
                     .ident;
-                let trait_function =
-                    Ident::new(&format!("__{}_trait_def", trait_name), trait_name.span());
 
-                Some(quote! { #trait_function })
+                Some(quote! { stringify!(#trait_name) })
             }
             TypeParamBound::Lifetime(_) => None,
             TypeParamBound::PreciseCapture(_) => {

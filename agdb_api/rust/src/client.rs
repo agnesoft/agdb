@@ -16,12 +16,12 @@ use agdb::QueryResult;
 use agdb::QueryType;
 
 #[cfg(feature = "api")]
-pub trait AgdbApiClient: HttpClient + agdb::api::ApiDefinition {}
+pub trait AgdbApiClient: HttpClient + agdb::api_def::TypeDefinition {}
 
 #[cfg(not(feature = "api"))]
 pub trait AgdbApiClient: HttpClient {}
 
-#[cfg_attr(feature = "api", derive(agdb::ApiDefImpl))]
+#[cfg_attr(feature = "api", derive(agdb::TypeDef))]
 pub struct AgdbApi<T: AgdbApiClient> {
     client: T,
     address: String,

@@ -1,5 +1,5 @@
 import { AxiosRequestConfig, OpenAPIClientAxios } from "openapi-client-axios";
-import type { Client } from "./openapi";
+import type { Client } from "./openapi.d.ts";
 
 export type LoginProps = {
     username: string;

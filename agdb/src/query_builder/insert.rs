@@ -18,7 +18,7 @@ use crate::query_builder::insert_values::InsertValuesIds;
 
 /// Insert builder for inserting various data
 /// into the database.
-#[cfg_attr(feature = "api", derive(agdb::ApiDefImpl))]
+#[cfg_attr(feature = "api", derive(agdb::TypeDef))]
 pub struct Insert {}
 
 #[cfg_attr(feature = "api", agdb::impl_def())]

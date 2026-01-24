@@ -476,7 +476,7 @@ mod tests {
         #[derive(agdb::TypeDef)]
         struct StructWithArrayExpr;
 
-        #[agdb::impl_def2()]
+        #[agdb::impl_def()]
         #[allow(dead_code)]
         impl StructWithArrayExpr {
             fn get_array() {
@@ -501,7 +501,7 @@ mod tests {
         #[derive(agdb::TypeDef)]
         struct StructWithAssignExpr;
 
-        #[agdb::impl_def2()]
+        #[agdb::impl_def()]
         #[allow(dead_code)]
         impl StructWithAssignExpr {
             fn assign_example() {
@@ -526,7 +526,7 @@ mod tests {
         #[derive(agdb::TypeDef)]
         struct StructWithAsyncBlock;
 
-        #[agdb::impl_def2()]
+        #[agdb::impl_def()]
         #[allow(dead_code)]
         impl StructWithAsyncBlock {
             async fn async_example() {
@@ -543,7 +543,7 @@ mod tests {
         #[derive(agdb::TypeDef)]
         struct StructWithBlock;
 
-        #[agdb::impl_def2()]
+        #[agdb::impl_def()]
         #[allow(dead_code)]
         impl StructWithBlock {
             fn block_example() {
@@ -563,7 +563,7 @@ mod tests {
         #[derive(agdb::TypeDef)]
         struct StructWithForLoop;
 
-        #[agdb::impl_def2()]
+        #[agdb::impl_def()]
         #[allow(dead_code)]
         impl StructWithForLoop {
             fn for_loop_example() {
@@ -600,7 +600,7 @@ mod tests {
 
         fn bar(_i: i32, _s: &str) {}
 
-        #[agdb::impl_def2()]
+        #[agdb::impl_def()]
         #[allow(dead_code)]
         impl StructWithCall {
             fn foo() {
@@ -617,7 +617,7 @@ mod tests {
         #[derive(agdb::TypeDef)]
         struct StructWithCast;
 
-        #[agdb::impl_def2()]
+        #[agdb::impl_def()]
         #[allow(dead_code)]
         impl StructWithCast {
             fn cast_example() -> f64 {
@@ -635,7 +635,7 @@ mod tests {
         #[derive(agdb::TypeDef)]
         struct StructWithClosure;
 
-        #[agdb::impl_def2()]
+        #[agdb::impl_def()]
         #[allow(dead_code)]
         impl StructWithClosure {
             fn closure_example() {
@@ -668,7 +668,7 @@ mod tests {
         #[derive(agdb::TypeDef)]
         struct StructWithConstBlock;
 
-        #[agdb::impl_def2()]
+        #[agdb::impl_def()]
         #[allow(dead_code)]
         impl StructWithConstBlock {
             fn const_block_example() {
@@ -693,7 +693,7 @@ mod tests {
         #[derive(agdb::TypeDefImpl)]
         struct SomeTupleWithField(i32);
 
-        #[agdb::impl_def2()]
+        #[agdb::impl_def()]
         #[allow(dead_code)]
         impl StructWithFieldAccess {
             fn field_access_example(s: SomeStructWithField, s2: SomeTupleWithField) {
@@ -713,7 +713,7 @@ mod tests {
         #[derive(agdb::TypeDef)]
         struct StructWithIndex;
 
-        #[agdb::impl_def2()]
+        #[agdb::impl_def()]
         #[allow(dead_code)]
         impl StructWithIndex {
             fn index_example() {
@@ -731,7 +731,7 @@ mod tests {
         #[derive(agdb::TypeDef)]
         struct StructWithLoop;
 
-        #[agdb::impl_def2()]
+        #[agdb::impl_def()]
         #[allow(dead_code)]
         impl StructWithLoop {
             fn loop_example() {
@@ -754,7 +754,7 @@ mod tests {
         #[derive(agdb::TypeDef)]
         struct StructWithMacro;
 
-        #[agdb::impl_def2()]
+        #[agdb::impl_def()]
         #[allow(dead_code)]
         impl StructWithMacro {
             fn macro_example() {
@@ -791,7 +791,7 @@ mod tests {
             D { x: i32 },
         }
 
-        #[agdb::impl_def2()]
+        #[agdb::impl_def()]
         #[allow(dead_code)]
         impl StructWithMatch {
             fn match_example(x: i32) {
@@ -831,7 +831,7 @@ mod tests {
         #[derive(agdb::TypeDef)]
         struct StructWithMethodCall;
 
-        #[agdb::impl_def2()]
+        #[agdb::impl_def()]
         #[allow(dead_code)]
         impl StructWithMethodCall {
             fn foo(&self, x: i32) -> i32 {
@@ -867,7 +867,7 @@ mod tests {
             y: i32,
         }
 
-        #[agdb::impl_def2()]
+        #[agdb::impl_def()]
         #[allow(dead_code)]
         impl StructWithStructExpr {
             fn create_point() {
@@ -888,7 +888,7 @@ mod tests {
             Ok(42)
         }
 
-        #[agdb::impl_def2()]
+        #[agdb::impl_def()]
         #[allow(dead_code)]
         impl StructWithTryExpr {
             fn try_example() -> Result<i32, String> {
@@ -906,7 +906,7 @@ mod tests {
         #[derive(agdb::TypeDef)]
         struct StructWithTuple;
 
-        #[agdb::impl_def2()]
+        #[agdb::impl_def()]
         #[allow(dead_code)]
         impl StructWithTuple {
             fn tuple_example() {
@@ -927,7 +927,7 @@ mod tests {
         #[derive(agdb::TypeDef)]
         struct StructWithUnary;
 
-        #[agdb::impl_def2()]
+        #[agdb::impl_def()]
         #[allow(dead_code)]
         impl StructWithUnary {
             fn unary_example(v: bool) {
@@ -952,7 +952,7 @@ mod tests {
         #[derive(agdb::TypeDef)]
         struct StructWithWhileLoop;
 
-        #[agdb::impl_def2()]
+        #[agdb::impl_def()]
         #[allow(dead_code)]
         impl StructWithWhileLoop {
             fn while_example() {

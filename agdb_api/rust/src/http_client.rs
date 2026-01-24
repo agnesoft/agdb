@@ -2,7 +2,7 @@ use crate::AgdbApiError;
 use crate::api_result::AgdbApiResult;
 use crate::client::AgdbApiClient;
 #[cfg(feature = "api")]
-use agdb::api::{ApiDefinition, ApiFunctions, NamedType, Struct, Type};
+use agdb::api_def::{ImplDefinition, Type, TypeDefinition};
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 
@@ -38,21 +38,35 @@ pub struct ReqwestClient {
 impl AgdbApiClient for ReqwestClient {}
 
 #[cfg(feature = "api")]
-impl ApiDefinition for ReqwestClient {
-    fn def() -> Type {
-        Type::Struct(Struct {
-            name: "ReqwestClient".to_string(),
-            fields: vec![NamedType {
+impl TypeDefinition for ReqwestClient {
+    fn type_def() -> Type {
+        use agdb::api_def::NamedType;
+
+        Type::Struct(agdb::api_def::struct_def::Struct {
+            name: "ReqwestClient",
+            generics: &[],
+            fields: &[NamedType {
                 name: "client",
-                ty: || Type::User,
+                ty: Some(|| {
+                    Type::Struct(agdb::api_def::struct_def::Struct {
+                        name: "HttpClient",
+                        generics: &[],
+                        fields: &[],
+                        functions: &[],
+                    })
+                }),
             }],
-            functions: || <ReqwestClient as ApiFunctions>::functions(),
+            functions: &[],
         })
     }
 }
 
 #[cfg(feature = "api")]
-impl ApiFunctions for ReqwestClient {}
+impl ImplDefinition for ReqwestClient {
+    fn functions() -> &'static [agdb::api_def::Function] {
+        &[]
+    }
+}
 
 impl ReqwestClient {
     #[allow(clippy::new_without_default)]

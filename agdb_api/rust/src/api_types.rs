@@ -22,7 +22,7 @@ use utoipa::ToSchema;
     Ord,
     DbSerialize,
 )]
-#[cfg_attr(feature = "api", derive(agdb::ApiDef))]
+#[cfg_attr(feature = "api", derive(agdb::TypeDefImpl))]
 #[serde(rename_all = "snake_case")]
 pub enum DbKind {
     #[default]
@@ -45,7 +45,7 @@ pub enum DbKind {
     Ord,
     DbSerialize,
 )]
-#[cfg_attr(feature = "api", derive(agdb::ApiDef))]
+#[cfg_attr(feature = "api", derive(agdb::TypeDefImpl))]
 #[serde(rename_all = "snake_case")]
 pub enum DbResource {
     #[default]
@@ -56,7 +56,7 @@ pub enum DbResource {
 }
 
 #[derive(Debug, Deserialize, Serialize, ToSchema, PartialEq, Eq, PartialOrd, Ord)]
-#[cfg_attr(feature = "api", derive(agdb::ApiDef))]
+#[cfg_attr(feature = "api", derive(agdb::TypeDefImpl))]
 pub struct DbUser {
     pub username: String,
     pub role: DbUserRole,
@@ -76,7 +76,7 @@ pub struct DbUser {
     Ord,
     DbSerialize,
 )]
-#[cfg_attr(feature = "api", derive(agdb::ApiDef))]
+#[cfg_attr(feature = "api", derive(agdb::TypeDefImpl))]
 #[serde(rename_all = "snake_case")]
 pub enum DbUserRole {
     #[default]
@@ -86,14 +86,14 @@ pub enum DbUserRole {
 }
 
 #[derive(Deserialize, Serialize, ToSchema)]
-#[cfg_attr(feature = "api", derive(agdb::ApiDef))]
+#[cfg_attr(feature = "api", derive(agdb::TypeDefImpl))]
 pub struct ChangePassword {
     pub password: String,
     pub new_password: String,
 }
 
 #[derive(Debug, Default, Clone, Deserialize, Serialize, ToSchema, PartialEq)]
-#[cfg_attr(feature = "api", derive(agdb::ApiDef))]
+#[cfg_attr(feature = "api", derive(agdb::TypeDefImpl))]
 pub struct ClusterStatus {
     pub address: String,
     pub status: bool,
@@ -101,7 +101,7 @@ pub struct ClusterStatus {
 }
 
 #[derive(Debug, Default, Clone, Deserialize, Serialize, ToSchema, PartialEq)]
-#[cfg_attr(feature = "api", derive(agdb::ApiDef))]
+#[cfg_attr(feature = "api", derive(agdb::TypeDefImpl))]
 pub struct AdminStatus {
     pub uptime: u64,
     pub dbs: u64,
@@ -117,7 +117,7 @@ pub struct Queries(pub Vec<QueryType>);
 pub struct QueriesResults(pub Vec<QueryResult>);
 
 #[derive(Debug, Deserialize, Serialize, ToSchema, PartialEq)]
-#[cfg_attr(feature = "api", derive(agdb::ApiDef))]
+#[cfg_attr(feature = "api", derive(agdb::TypeDefImpl))]
 pub struct QueryAudit {
     pub timestamp: u64,
     pub username: String,
@@ -125,11 +125,11 @@ pub struct QueryAudit {
 }
 
 #[derive(Debug, Deserialize, Serialize, ToSchema, PartialEq)]
-#[cfg_attr(feature = "api", derive(agdb::ApiDef))]
+#[cfg_attr(feature = "api", derive(agdb::TypeDefImpl))]
 pub struct DbAudit(pub Vec<QueryAudit>);
 
 #[derive(Debug, Default, Deserialize, Serialize, ToSchema, PartialEq, Eq, PartialOrd, Ord)]
-#[cfg_attr(feature = "api", derive(agdb::ApiDef))]
+#[cfg_attr(feature = "api", derive(agdb::TypeDefImpl))]
 pub struct ServerDatabase {
     pub db: String,
     pub owner: String,
@@ -140,19 +140,20 @@ pub struct ServerDatabase {
 }
 
 #[derive(Deserialize, Serialize, ToSchema)]
+#[cfg_attr(feature = "api", derive(agdb::TypeDefImpl))]
 pub struct UserCredentials {
     pub password: String,
 }
 
 #[derive(Deserialize, Serialize, ToSchema)]
-#[cfg_attr(feature = "api", derive(agdb::ApiDef))]
+#[cfg_attr(feature = "api", derive(agdb::TypeDefImpl))]
 pub struct UserLogin {
     pub username: String,
     pub password: String,
 }
 
 #[derive(Debug, Deserialize, Serialize, ToSchema, PartialEq, Eq, PartialOrd, Ord)]
-#[cfg_attr(feature = "api", derive(agdb::ApiDef))]
+#[cfg_attr(feature = "api", derive(agdb::TypeDefImpl))]
 pub struct UserStatus {
     pub username: String,
     pub login: bool,

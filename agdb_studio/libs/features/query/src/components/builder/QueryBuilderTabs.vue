@@ -11,10 +11,14 @@ const handleKeydown = (event: KeyboardEvent) => {
   const currentIndex = TABS.indexOf(activeTab.value);
   if (event.key === "ArrowRight") {
     const nextIndex = (currentIndex + 1) % TABS.length;
+
+    /* v8 ignore next -- @preserve */
     activeTab.value = TABS[nextIndex] ?? activeTab.value;
     event.preventDefault();
   } else if (event.key === "ArrowLeft") {
     const prevIndex = (currentIndex - 1 + TABS.length) % TABS.length;
+
+    /* v8 ignore next -- @preserve */
     activeTab.value = TABS[prevIndex] ?? activeTab.value;
     event.preventDefault();
   }

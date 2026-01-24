@@ -163,7 +163,7 @@ describe("QueryStepInput", () => {
     wrapper.unmount();
   });
 
-  it("should not display component when no followers exist", () => {
+  it("should not display input when no followers exist", () => {
     const prevStep: QueryStep = {
       id: "prev-1",
       type: "limit", // assuming limit has no followers
@@ -171,6 +171,6 @@ describe("QueryStepInput", () => {
     const wrapper = mount(QueryStepInput, {
       props: { prevStep },
     });
-    expect(wrapper.find(".query-step-input").exists()).toBe(false);
+    expect(wrapper.find(".step-input").exists()).toBe(false);
   });
 });

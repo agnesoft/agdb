@@ -28,69 +28,45 @@ describe("QueryBuilder", () => {
 
   it("renders with exec tab styling", () => {
     const wrapper = mount(QueryBuilder, {
-      props: { tab: "exec" },
       global: {
         provide: {
           queryId: ref("test-query-1"),
+          activeTab: ref("exec"),
         },
       },
     });
-    const input = wrapper.find(".query-input");
-    expect(input.classes()).toContain("exec");
-    expect(wrapper.find("button").classes()).toContain("button-primary");
+    expect(wrapper.find(".run-query-button").classes()).toContain(
+      "button-primary",
+    );
   });
 
   it("renders with exec_mut tab styling", () => {
     const wrapper = mount(QueryBuilder, {
-      props: { tab: "exec_mut" },
       global: {
         provide: {
           queryId: ref("test-query-1"),
+          activeTab: ref("exec_mut"),
         },
       },
     });
-    const input = wrapper.find(".query-input");
-    expect(input.classes()).toContain("exec_mut");
-    expect(wrapper.find("button").classes()).toContain("button-warning");
+    expect(wrapper.find(".run-query-button").classes()).toContain(
+      "button-warning",
+    );
   });
 
   it("renders with context tab styling", () => {
     const wrapper = mount(QueryBuilder, {
-      props: { tab: "context" },
       global: {
         provide: {
           queryId: ref("test-query-1"),
+          activeTab: ref("context"),
         },
       },
     });
-    const input = wrapper.find(".query-input");
-    expect(input.classes()).toContain("context");
+    expect(wrapper.find(".run-query-button").classes()).toContain(
+      "button-primary",
+    );
   });
-
-  // it("displays query steps", () => {
-  //   const queryId = "test-query-2";
-
-  //   queryStore.addQueryStep(queryId, "exec", {
-  //     id: "step-1",
-  //     type: "select",
-  //   });
-  //   queryStore.addQueryStep(queryId, "exec", {
-  //     id: "step-2",
-  //     type: "search",
-  //   });
-
-  //   const wrapper = mount(QueryBuilder, {
-  //     props: { tab: "exec" },
-  //     global: {
-  //       provide: {
-  //         queryId: ref(queryId),
-  //       },
-  //     },
-  //   });
-
-  //   const steps = wrapper.findAll(".query-step-wrapper");
-  //   expect(steps.length).toBe(2);
-  // });
 
   it("adds a new step when confirm-step is emitted", async () => {
     const queryId = "test-query-3";
@@ -136,5 +112,32 @@ describe("QueryBuilder", () => {
     });
     const stepInput = wrapper.findComponent({ name: "QueryStepInput" });
     expect(stepInput.exists()).toBe(true);
+  });
+
+  it("can remove all steps", async () => {
+    const queryId = "test-query-5";
+    queryStore.addQuery({ id: queryId });
+
+    const wrapper = mount(QueryBuilder, {
+      props: { tab: "exec" },
+      global: {
+        provide: {
+          queryId: ref(queryId),
+        },
+      },
+    });
+
+    const stepInput = wrapper.findComponent({ name: "QueryStepInput" });
+    await stepInput.vm.$emit("confirm-step", "select");
+    await stepInput.vm.$emit("confirm-step", "search");
+
+    let query = queryStore.getQuery(queryId);
+    expect(query?.value.steps.exec.length).toBe(2);
+
+    const removeButton = wrapper.find(".remove-button");
+    await removeButton.trigger("click");
+
+    query = queryStore.getQuery(queryId);
+    expect(query?.value.steps.exec.length).toBe(0);
   });
 });

@@ -176,6 +176,12 @@ describe("queryStore", () => {
     expect(got?.value?.steps.exec.length).toBe(0);
   });
 
+  it("should handle clearing steps for missing query gracefully", () => {
+    const missingId = "missing";
+    store.clearQuerySteps(missingId, "exec");
+    expect(store.getQuery(missingId)).toBeUndefined();
+  });
+
   it("validates query steps based on followers", () => {
     const q = makeQuery();
     const queryRef = store.addQuery(q);
@@ -194,5 +200,11 @@ describe("queryStore", () => {
     expect(got?.value?.steps.exec[0]?.invalid).toBe(false); // select valid
     expect(got?.value?.steps.exec[1]?.invalid).toBe(false); // search valid
     expect(got?.value?.steps.exec[2]?.invalid).toBe(true); // insert invalid
+  });
+
+  it("should handle validation for missing query gracefully", () => {
+    const missingId = "missing";
+    store.validateQuerySteps(missingId, "exec");
+    expect(store.getQuery(missingId)).toBeUndefined();
   });
 });

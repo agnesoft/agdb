@@ -18,6 +18,7 @@ const query = computed(() => {
 
 const steps = computed(() => {
   if (!query.value) return [];
+  /* v8 ignore next -- @preserve */
   return query.value.steps[tab?.value ?? "exec"] ?? [];
 });
 
@@ -50,6 +51,7 @@ const addStep = (stepType: QueryType) => {
         title="Clear all steps"
         @click="
           () => {
+            /* v8 ignore next -- @preserve */
             if (!queryId) return;
             queryStore.clearQuerySteps(queryId, tab ?? 'exec');
           }

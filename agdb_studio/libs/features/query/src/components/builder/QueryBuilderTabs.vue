@@ -35,6 +35,7 @@ provide("activeTab", activeTab);
         v-for="tab in TABS"
         :id="`query-tabpanel-${tab}`"
         :key="tab"
+        ref="tabs"
         class="button button-tab query-tab"
         :class="{ active: activeTab === tab }"
         type="button"
@@ -42,7 +43,6 @@ provide("activeTab", activeTab);
         :aria-selected="activeTab === tab"
         :tabindex="activeTab === tab ? 0 : -1"
         @click="activeTab = tab"
-        ref="tabs"
       >
         {{ tab }}
       </button>

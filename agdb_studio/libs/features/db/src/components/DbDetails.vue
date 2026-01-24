@@ -117,7 +117,7 @@ onMounted(() => {
   margin-left: 0.2rem;
 }
 .remove-icon {
-  color: var(--red);
+  color: var(--error-color);
 }
 .add-button {
   margin: 0 1rem;

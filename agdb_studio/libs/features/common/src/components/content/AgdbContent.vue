@@ -142,7 +142,7 @@ const getInputKey = (key: string) => {
   .error-input {
     input,
     select {
-      outline: 2px solid var(--red);
+      outline: 2px solid var(--error-color);
     }
   }
 }
@@ -153,7 +153,7 @@ const getInputKey = (key: string) => {
   right: 0;
   background-color: var(--red-2);
   color: var(--white);
-  border: 1px solid var(--red);
+  border: 1px solid var(--error-color);
   padding: 0.1rem 0.5rem;
   border-radius: 5px;
   z-index: 1;

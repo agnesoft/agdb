@@ -6,13 +6,10 @@ import QueryStep from "./QueryStep.vue";
 import QueryStepInput from "./QueryStepInput.vue";
 import { ClCloseMd } from "@kalimahapps/vue-icons";
 
-const props = defineProps<{
-  tab: TAB;
-}>();
-
 const queryStore = useQueryStore();
 
 const queryId = inject<Ref<string>>("queryId");
+const tab = inject<Ref<TAB>>("activeTab");
 
 const query = computed(() => {
   if (!queryId?.value) return null;
@@ -21,13 +18,13 @@ const query = computed(() => {
 
 const steps = computed(() => {
   if (!query.value) return [];
-  return query.value.steps[props.tab];
+  return query.value.steps[tab?.value ?? "exec"] ?? [];
 });
 
 const addStep = (stepType: QueryType) => {
   /* v8 ignore if -- @preserve */
   if (!queryId?.value) return;
-  queryStore.addQueryStep(queryId.value, props.tab, {
+  queryStore.addQueryStep(queryId.value, tab?.value ?? "exec", {
     id: `step-${crypto.randomUUID()}`,
     type: stepType,
   });
@@ -38,6 +35,7 @@ const addStep = (stepType: QueryType) => {
   <div class="query-builder">
     <div class="query-input" :class="[tab]">
       <div v-for="step in steps" :key="step.id" class="query-step-wrapper">
+        .
         <!-- <QueryStepInput :prev-step="index > 0 ? steps[index - 1] : undefined" /> -->
         <QueryStep :step="step" />
       </div>
@@ -53,7 +51,7 @@ const addStep = (stepType: QueryType) => {
         @click="
           () => {
             if (!queryId) return;
-            queryStore.clearQuerySteps(queryId, tab);
+            queryStore.clearQuerySteps(queryId, tab ?? 'exec');
           }
         "
       >
@@ -89,7 +87,7 @@ const addStep = (stepType: QueryType) => {
   box-sizing: border-box;
   transition: background-color 0.4s ease;
   display: flex;
-  gap: 0.5rem;
+  gap: 0.2rem;
   flex-wrap: wrap;
   align-items: center;
   min-height: 2rem;
@@ -101,6 +99,6 @@ const addStep = (stepType: QueryType) => {
   }
 }
 .remove-query-icon {
-  color: var(--red);
+  color: var(--error-color);
 }
 </style>

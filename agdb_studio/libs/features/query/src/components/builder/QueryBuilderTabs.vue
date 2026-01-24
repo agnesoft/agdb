@@ -1,13 +1,31 @@
 <script lang="ts" setup>
-import { ref } from "vue";
+import { provide, ref } from "vue";
 import QueryBuilder from "./QueryBuilder.vue";
 import { type TAB, TABS } from "../../composables/types";
 
 const activeTab = ref<TAB>(TABS[0]);
+
+const tabs = ref<HTMLElement[]>();
+
+const handleKeydown = (event: KeyboardEvent) => {
+  const currentIndex = TABS.indexOf(activeTab.value);
+  if (event.key === "ArrowRight") {
+    const nextIndex = (currentIndex + 1) % TABS.length;
+    activeTab.value = TABS[nextIndex] ?? activeTab.value;
+    event.preventDefault();
+  } else if (event.key === "ArrowLeft") {
+    const prevIndex = (currentIndex - 1 + TABS.length) % TABS.length;
+    activeTab.value = TABS[prevIndex] ?? activeTab.value;
+    event.preventDefault();
+  }
+  tabs.value?.[TABS.indexOf(activeTab.value)]?.focus();
+};
+
+provide("activeTab", activeTab);
 </script>
 
 <template>
-  <div class="query-builder-tabs">
+  <div class="query-builder-tabs" @keydown="handleKeydown">
     <div class="tabs" role="tablist">
       <button
         v-for="tab in TABS"
@@ -20,14 +38,12 @@ const activeTab = ref<TAB>(TABS[0]);
         :aria-selected="activeTab === tab"
         :tabindex="activeTab === tab ? 0 : -1"
         @click="activeTab = tab"
+        ref="tabs"
       >
         {{ tab }}
       </button>
     </div>
-    <QueryBuilder
-      :tab="activeTab"
-      :aria-controls="`query-tabpanel-${activeTab}`"
-    />
+    <QueryBuilder :aria-controls="`query-tabpanel-${activeTab}`" />
   </div>
 </template>
 

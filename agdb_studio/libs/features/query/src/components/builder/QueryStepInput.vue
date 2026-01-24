@@ -92,33 +92,34 @@ const onFocus = (focus: boolean) => {
 
 <template>
   <div
-    v-if="followers.length > 0"
     v-on-click-outside="() => onFocus(false)"
     class="query-step-input"
     @focusin="onFocus(true)"
   >
-    <div
-      ref="contentInput"
-      class="step-input"
-      contenteditable="true"
-      role="textbox"
-      aria-label="Query input"
-      aria-multiline="false"
-      spellcheck="false"
-      aria-autocomplete="list"
-      aria-haspopup="listbox"
-      :aria-expanded="displayHints"
-      @input.stop="updateContent"
-      @keydown.stop="onKeyDown"
-    ></div>
-    <FadeTransition>
-      <QueryHinter
-        v-if="displayHints"
-        :hints="hints"
-        :active-index="activeHintIndex"
-        @select-hint="confirmStep"
-      />
-    </FadeTransition>
+    <div v-if="followers.length > 0">
+      <div
+        ref="contentInput"
+        class="step-input"
+        contenteditable="true"
+        role="textbox"
+        aria-label="Query input"
+        aria-multiline="false"
+        spellcheck="false"
+        aria-autocomplete="list"
+        aria-haspopup="listbox"
+        :aria-expanded="displayHints"
+        @input.stop="updateContent"
+        @keydown.stop="onKeyDown"
+      ></div>
+      <FadeTransition>
+        <QueryHinter
+          v-if="displayHints"
+          :hints="hints"
+          :active-index="activeHintIndex"
+          @select-hint="confirmStep"
+        />
+      </FadeTransition>
+    </div>
   </div>
 </template>
 

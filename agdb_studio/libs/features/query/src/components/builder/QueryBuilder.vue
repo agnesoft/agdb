@@ -4,14 +4,12 @@ import type { QueryType, TAB } from "../../composables/types";
 import { useQueryStore } from "../../composables/queryStore";
 import QueryStep from "./QueryStep.vue";
 import QueryStepInput from "./QueryStepInput.vue";
-
-const props = defineProps<{
-  tab: TAB;
-}>();
+import { ClCloseMd } from "@kalimahapps/vue-icons";
 
 const queryStore = useQueryStore();
 
 const queryId = inject<Ref<string>>("queryId");
+const tab = inject<Ref<TAB>>("activeTab");
 
 const query = computed(() => {
   if (!queryId?.value) return null;
@@ -20,13 +18,14 @@ const query = computed(() => {
 
 const steps = computed(() => {
   if (!query.value) return [];
-  return query.value.steps[props.tab];
+  /* v8 ignore next -- @preserve */
+  return query.value.steps[tab?.value ?? "exec"] ?? [];
 });
 
 const addStep = (stepType: QueryType) => {
   /* v8 ignore if -- @preserve */
   if (!queryId?.value) return;
-  queryStore.addQueryStep(queryId.value, props.tab, {
+  queryStore.addQueryStep(queryId.value, tab?.value ?? "exec", {
     id: `step-${crypto.randomUUID()}`,
     type: stepType,
   });
@@ -37,6 +36,7 @@ const addStep = (stepType: QueryType) => {
   <div class="query-builder">
     <div class="query-input" :class="[tab]">
       <div v-for="step in steps" :key="step.id" class="query-step-wrapper">
+        <span class="separator">.</span>
         <!-- <QueryStepInput :prev-step="index > 0 ? steps[index - 1] : undefined" /> -->
         <QueryStep :step="step" />
       </div>
@@ -44,10 +44,25 @@ const addStep = (stepType: QueryType) => {
         :prev-step="steps.length > 0 ? steps[steps.length - 1] : undefined"
         @confirm-step="addStep"
       />
+      <button
+        v-if="steps.length"
+        type="button"
+        class="button button-bordered button-danger remove-button button-circle"
+        title="Clear all steps"
+        @click="
+          () => {
+            /* v8 ignore next -- @preserve */
+            if (!queryId) return;
+            queryStore.clearQuerySteps(queryId, tab ?? 'exec');
+          }
+        "
+      >
+        <ClCloseMd class="remove-query-icon" />
+      </button>
     </div>
     <button
       type="button"
-      class="button"
+      class="button run-query-button"
       :class="[tab === 'exec_mut' ? 'button-warning' : 'button-primary']"
     >
       Run query
@@ -59,10 +74,10 @@ const addStep = (stepType: QueryType) => {
 .query-builder {
   width: 100%;
   display: flex;
-  button {
-    border-top-left-radius: 0;
-    border-bottom-left-radius: 0;
-  }
+}
+.run-query-button {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
 }
 .query-input {
   flex: 1;
@@ -74,13 +89,18 @@ const addStep = (stepType: QueryType) => {
   box-sizing: border-box;
   transition: background-color 0.4s ease;
   display: flex;
-  gap: 0.5rem;
+  gap: 0.2rem;
   flex-wrap: wrap;
+  align-items: center;
+  min-height: 2rem;
   &.context {
     background-color: var(--color-background-soft);
   }
   &.exec_mut {
     background-color: var(--orange-background);
   }
+}
+.remove-query-icon {
+  color: var(--error-color);
 }
 </style>

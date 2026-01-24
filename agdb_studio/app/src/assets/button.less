@@ -46,7 +46,7 @@
 .button-danger {
   --backgroundColor: var(--red-2);
   --color: var(--white);
-  --borderColor: var(--red);
+  --borderColor: var(--error-color);
 }
 
 .button-transparent {
@@ -59,7 +59,6 @@
 .button-bordered {
   --backgroundColor: var(--color-background);
   --color: var(--color-text);
-  padding: 0.1rem 0.2rem;
 }
 
 .button:hover {
@@ -81,4 +80,11 @@
   &.active {
     --borderColor: var(--color-text);
   }
+}
+
+.button-circle {
+  border-radius: 50%;
+  align-items: center;
+  justify-content: center;
+  padding: 0.1rem;
 }

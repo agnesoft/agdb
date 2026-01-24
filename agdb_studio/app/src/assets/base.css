@@ -106,6 +106,8 @@
     --scrollbar-thumb-hover: var(--color-text);
     --scrollbar-thumb-active: var(--color-text);
     --scrollbar-border-color: var(--divider-dark-2);
+
+    --error-color: var(--red-light);
   }
 }
 

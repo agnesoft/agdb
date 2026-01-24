@@ -122,7 +122,7 @@ const statusText = computed(() => {
     background-color: var(--orange);
   }
   &.red {
-    background-color: var(--red);
+    background-color: var(--error-color);
   }
   &.unknown {
     background-color: var(--color-border);

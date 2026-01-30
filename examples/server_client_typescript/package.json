@@ -8,7 +8,7 @@
     "format:check": "prettier --check main.ts",
     "lint": "eslint --max-warnings=0 main.ts --fix",
     "lint:check": "eslint --max-warnings=0 main.ts",
-    "start": "tsc && node main.js"
+    "start": "tsc && node dist/main.js"
   },
   "devDependencies": {
     "@typescript-eslint/parser": "catalog:",

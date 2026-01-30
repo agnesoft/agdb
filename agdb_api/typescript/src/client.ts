@@ -9,7 +9,7 @@ export type LoginProps = {
 
 export type AgdbApi = {
     token: string | undefined;
-    interceptorId: number | undefined;
+    interceptorId?: number;
     login: (props: LoginProps) => Promise<string>;
     logout: (cluster?: boolean) => Promise<void>;
     get_token: () => string | undefined;

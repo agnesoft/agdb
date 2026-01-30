@@ -37,18 +37,18 @@
     "@nuxtjs/mdc": "^0.19"
   },
   "devDependencies": {
-    "@nuxt/eslint": "^1.10.0",
-    "@nuxt/test-utils": "^3.21.0",
-    "@playwright/test": "^1.57.0",
-    "@vitejs/plugin-vue": "^6.0.2",
-    "@vitest/coverage-istanbul": "^4.0.15",
-    "@vitest/coverage-v8": "^4",
-    "@vue/test-utils": "^2.4.6",
-    "eslint": "^9.39.1",
+    "@nuxt/eslint": "^1",
+    "@nuxt/test-utils": "^3",
+    "@playwright/test": "catalog:",
+    "@vitejs/plugin-vue": "catalog:",
+    "@vitest/coverage-istanbul": "catalog:",
+    "@vitest/coverage-v8": "catalog:",
+    "@vue/test-utils": "catalog:",
+    "eslint": "catalog:",
     "happy-dom": "^20.0.11",
-    "less": "^4",
-    "typescript": "^5.9.3",
-    "vitest": "^4",
-    "vue-tsc": "^3.1.5"
+    "less": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:",
+    "vue-tsc": "catalog:"
   }
 }

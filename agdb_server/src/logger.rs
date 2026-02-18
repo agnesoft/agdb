@@ -35,7 +35,11 @@ impl LogRecord {
 
         match self.status {
             ..=399 => {
-                tracing::info!(message)
+                if self.uri.ends_with("/cluster") {
+                    tracing::debug!(message)
+                } else {
+                    tracing::info!(message)
+                }
             }
             400..=499 => tracing::warn!(message),
             500.. => tracing::error!(message),

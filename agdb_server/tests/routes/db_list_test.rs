@@ -31,7 +31,7 @@ async fn list() -> anyhow::Result<()> {
             owner: owner.to_string(),
             db_type: DbKind::Memory,
             role: DbUserRole::Read,
-            size: 2568,
+            size: 552,
             backup: 0,
         },
         ServerDatabase {
@@ -39,7 +39,7 @@ async fn list() -> anyhow::Result<()> {
             owner: user.to_string(),
             db_type: DbKind::Memory,
             role: DbUserRole::Admin,
-            size: 2568,
+            size: 552,
             backup: 0,
         },
     ];

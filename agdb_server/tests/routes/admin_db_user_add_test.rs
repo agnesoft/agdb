@@ -30,7 +30,7 @@ async fn db_user_add() -> anyhow::Result<()> {
             owner: owner.to_string(),
             db_type: DbKind::Mapped,
             role: DbUserRole::Write,
-            size: 2568,
+            size: 552,
             backup: 0,
         }]
     );
@@ -66,7 +66,7 @@ async fn change_user_role() -> anyhow::Result<()> {
             owner: owner.to_string(),
             db_type: DbKind::Mapped,
             role: DbUserRole::Read,
-            size: 2568,
+            size: 552,
             backup: 0,
         }]
     );

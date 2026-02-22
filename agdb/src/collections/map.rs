@@ -87,6 +87,7 @@ where
     fn set_key(&mut self, storage: &mut Storage<D>, index: u64, key: &K) -> Result<(), DbError>;
     fn set_value(&mut self, storage: &mut Storage<D>, index: u64, value: &T)
     -> Result<(), DbError>;
+    fn shrink_to_fit(&mut self, storage: &mut Storage<D>) -> Result<(), DbError>;
     fn state(&self, storage: &Storage<D>, index: u64) -> Result<MapValueState, DbError>;
     fn swap(&mut self, storage: &mut Storage<D>, index: u64, other: u64) -> Result<(), DbError>;
     fn transaction(&mut self, storage: &mut Storage<D>) -> u64;
@@ -278,6 +279,12 @@ where
         Ok(())
     }
 
+    fn shrink_to_fit(&mut self, storage: &mut Storage<D>) -> Result<(), DbError> {
+        self.states.shrink_to_fit(storage)?;
+        self.keys.shrink_to_fit(storage)?;
+        self.values.shrink_to_fit(storage)
+    }
+
     fn state(&self, storage: &Storage<D>, index: u64) -> Result<MapValueState, DbError> {
         self.states.value(storage, index)
     }
@@ -409,6 +416,10 @@ where
     #[allow(dead_code)]
     pub fn reserve(&mut self, storage: &mut Storage<D>, capacity: u64) -> Result<(), DbError> {
         self.multi_map.reserve(storage, capacity)
+    }
+
+    pub fn shrink_to_fit(&mut self, storage: &mut Storage<D>) -> Result<(), DbError> {
+        self.multi_map.shrink_to_fit(storage)
     }
 
     pub fn value(&self, storage: &Storage<D>, key: &K) -> Result<Option<T>, DbError> {

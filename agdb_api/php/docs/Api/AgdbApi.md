@@ -668,7 +668,7 @@ This endpoint does not need any parameter.
 ## `adminDbOptimize()`
 
 ```php
-adminDbOptimize($owner, $db): \Agnesoft\AgdbApi\Model\ServerDatabase
+adminDbOptimize($owner, $db, $shrink_to_fit): \Agnesoft\AgdbApi\Model\ServerDatabase
 ```
 
 
@@ -692,9 +692,10 @@ $apiInstance = new Agnesoft\AgdbApi\Api\AgdbApi(
 );
 $owner = 'owner_example'; // string | user name
 $db = 'db_example'; // string | db name
+$shrink_to_fit = True; // bool
 
 try {
-    $result = $apiInstance->adminDbOptimize($owner, $db);
+    $result = $apiInstance->adminDbOptimize($owner, $db, $shrink_to_fit);
     print_r($result);
 } catch (Exception $e) {
     echo 'Exception when calling AgdbApi->adminDbOptimize: ', $e->getMessage(), PHP_EOL;
@@ -707,6 +708,7 @@ try {
 | ------------- | ------------- | ------------- | ------------- |
 | **owner** | **string**| user name | |
 | **db** | **string**| db name | |
+| **shrink_to_fit** | **bool**|  | [optional] |
 
 ### Return type
 
@@ -2416,7 +2418,7 @@ This endpoint does not need any parameter.
 ## `dbOptimize()`
 
 ```php
-dbOptimize($owner, $db): \Agnesoft\AgdbApi\Model\ServerDatabase
+dbOptimize($owner, $db, $shrink_to_fit): \Agnesoft\AgdbApi\Model\ServerDatabase
 ```
 
 
@@ -2440,9 +2442,10 @@ $apiInstance = new Agnesoft\AgdbApi\Api\AgdbApi(
 );
 $owner = 'owner_example'; // string | user name
 $db = 'db_example'; // string | db name
+$shrink_to_fit = True; // bool
 
 try {
-    $result = $apiInstance->dbOptimize($owner, $db);
+    $result = $apiInstance->dbOptimize($owner, $db, $shrink_to_fit);
     print_r($result);
 } catch (Exception $e) {
     echo 'Exception when calling AgdbApi->dbOptimize: ', $e->getMessage(), PHP_EOL;
@@ -2455,6 +2458,7 @@ try {
 | ------------- | ------------- | ------------- | ------------- |
 | **owner** | **string**| user name | |
 | **db** | **string**| db name | |
+| **shrink_to_fit** | **bool**|  | [optional] |
 
 ### Return type
 

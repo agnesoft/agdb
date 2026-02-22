@@ -180,6 +180,7 @@ Class | Method | HTTP request | Description
 - [InsertValuesQuery](docs/Model/InsertValuesQuery.md)
 - [KeyValueComparison](docs/Model/KeyValueComparison.md)
 - [LogLevelFilter](docs/Model/LogLevelFilter.md)
+- [OptimizeParam](docs/Model/OptimizeParam.md)
 - [QueryAudit](docs/Model/QueryAudit.md)
 - [QueryCondition](docs/Model/QueryCondition.md)
 - [QueryConditionData](docs/Model/QueryConditionData.md)

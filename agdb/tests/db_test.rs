@@ -780,6 +780,6 @@ fn shrink_to_fit() {
     );
     assert!(
         shrunk_size < optimized_size,
-        "{shrunk_size} (shrunk) <= {optimized_size} (optimized)"
+        "{shrunk_size} (shrunk) < {optimized_size} (optimized)"
     );
 }

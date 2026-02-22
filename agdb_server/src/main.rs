@@ -57,6 +57,7 @@ async fn main() -> ServerResult {
     let cluster_handle = cluster::start_with_shutdown(cluster, shutdown_receiver);
 
     tracing::info!("Process id: {}", std::process::id());
+    tracing::info!("Log level: {}", config.log_level);
     tracing::info!(
         "Data directory: {}",
         std::env::current_dir()?.join(&config.data_dir).display()
@@ -77,6 +78,8 @@ async fn main() -> ServerResult {
         let shutdown_handle = handle.clone();
 
         tracing::info!("TLS enabled");
+        tracing::info!("TLS certificate: {}", config.tls_certificate);
+        tracing::info!("TLS key: {}", config.tls_key);
 
         tokio::spawn(async move {
             cluster_handle.await;

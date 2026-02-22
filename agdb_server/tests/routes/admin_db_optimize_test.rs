@@ -49,7 +49,10 @@ async fn shrink_to_fit() -> anyhow::Result<()> {
         .find(|d| d.db == *db && d.owner == *owner)
         .unwrap()
         .size;
-    let (status, db) = server.api.admin_db_optimize_shrink_to_fit(owner, db).await?;
+    let (status, db) = server
+        .api
+        .admin_db_optimize_shrink_to_fit(owner, db)
+        .await?;
     assert_eq!(status, 200);
     assert!(db.size < original_size);
     Ok(())

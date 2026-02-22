@@ -746,3 +746,40 @@ fn using_ref_insert_element() {
     db.exec_mut(QueryBuilder::insert().element(s).query())
         .unwrap();
 }
+
+#[test]
+fn shrink_to_fit() {
+    let test_file = TestFile::new();
+    let mut db = Db::new(test_file.file_name()).unwrap();
+    db.exec_mut(QueryBuilder::insert().index("key0").query())
+        .unwrap();
+    db.exec_mut(QueryBuilder::insert().nodes().aliases("root").query())
+        .unwrap();
+
+    for i in 0..1000 {
+        let mut values = vec![];
+        for j in 0..(i % 10) {
+            values.push((format!("key{}", j), format!("value{}", j)).into());
+        }
+        let node = db
+            .exec_mut(QueryBuilder::insert().nodes().values([values]).query())
+            .unwrap();
+        db.exec_mut(QueryBuilder::insert().edges().from("root").to(node).query())
+            .unwrap();
+    }
+
+    let size = db.size();
+    db.optimize_storage().unwrap();
+    let optimized_size = db.size();
+    db.shrink_to_fit().unwrap();
+    let shrinked_size = db.size();
+
+    assert!(
+        optimized_size < size,
+        "{optimized_size} (optimized) < {size} (original)"
+    );
+    assert!(
+        shrinked_size <= optimized_size,
+        "{shrinked_size} (shrinked) < {optimized_size} (optimized)"
+    );
+}

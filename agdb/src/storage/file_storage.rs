@@ -943,7 +943,7 @@ mod tests {
         let index2 = storage.insert(&2_i64).unwrap();
         let index3 = storage.insert(&3_i64).unwrap();
         storage.remove(index2).unwrap();
-        storage.shrink_to_fit().unwrap();
+        storage.optimize_storage().unwrap();
 
         let actual_size = std::fs::metadata(test_file.file_name()).unwrap().len();
         let expected_size =
@@ -965,7 +965,7 @@ mod tests {
 
         let actual_size = std::fs::metadata(test_file.file_name()).unwrap().len();
 
-        storage.shrink_to_fit().unwrap();
+        storage.optimize_storage().unwrap();
 
         assert_eq!(
             actual_size,
@@ -995,7 +995,7 @@ mod tests {
             expected_size = std::fs::metadata(test_file.file_name()).unwrap().len();
 
             storage.transaction();
-            storage.shrink_to_fit().unwrap();
+            storage.optimize_storage().unwrap();
         }
 
         let actual_size = std::fs::metadata(test_file.file_name()).unwrap().len();
@@ -1366,7 +1366,7 @@ mod tests {
         let vec = storage.value::<Vec<u64>>(StorageIndex(1)).unwrap();
         let val = storage.value::<i64>(StorageIndex(3)).unwrap();
 
-        storage.shrink_to_fit().unwrap();
+        storage.optimize_storage().unwrap();
 
         assert_eq!(vec, vec![1, 2, 3, 4, 5]);
         assert_eq!(val, -20);
@@ -1397,7 +1397,7 @@ mod tests {
         let vec = storage.value::<Vec<u64>>(StorageIndex(1)).unwrap();
         let val = storage.value::<i64>(StorageIndex(3)).unwrap();
 
-        storage.shrink_to_fit().unwrap();
+        storage.optimize_storage().unwrap();
 
         assert_eq!(vec, vec![1, 2, 3, 4, 5]);
         assert_eq!(val, -20);

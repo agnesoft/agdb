@@ -147,6 +147,16 @@ impl<S: StorageData> DbKeyValues<S> {
         Ok(())
     }
 
+    pub fn shrink_to_fit(&mut self, storage: &mut Storage<S>) -> Result<(), DbError> {
+        for index in 0..self.0.len() {
+            if self.valid_index(storage, index)? {
+                self.kvs(storage, index)?.shrink_to_fit(storage)?;
+            }
+        }
+
+        self.0.shrink_to_fit(storage)
+    }
+
     pub fn value(
         &self,
         storage: &Storage<S>,

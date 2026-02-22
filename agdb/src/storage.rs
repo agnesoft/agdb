@@ -261,7 +261,7 @@ impl<D: StorageData> Storage<D> {
         self.commit(id)
     }
 
-    pub fn shrink_to_fit(&mut self) -> Result<(), DbError> {
+    pub fn optimize_storage(&mut self) -> Result<(), DbError> {
         let id = self.transaction();
         let records = self.records();
         let size = self.shrink_records(records)?;

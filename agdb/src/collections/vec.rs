@@ -345,7 +345,6 @@ where
         self.data.resize(storage, new_len, value)
     }
 
-    #[allow(dead_code)]
     pub fn shrink_to_fit(&mut self, storage: &mut Storage<D>) -> Result<(), E> {
         self.data.reallocate(storage, self.len())
     }
@@ -911,7 +910,7 @@ mod tests {
 
         vec.remove_from_storage(&mut storage).unwrap();
         let len = storage.len();
-        storage.shrink_to_fit().unwrap();
+        storage.optimize_storage().unwrap();
 
         assert!(storage.len() < len)
     }

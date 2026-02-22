@@ -89,15 +89,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
-        with:
-          version: 10.28.2
       - uses: actions/setup-node@v6
         with:
-          registry-url: 'https://registry.npmjs.org'
+          node-version: "24"
+          registry-url: "https://registry.npmjs.org"
       - working-directory: agdb_api/typescript
         run: |
           pnpm install --frozen-lockfile
-          pnpm publish --access public --provenance
+          pnpm publish --provenance --access public
 
   publish_dockerhub_ghcr:
     runs-on: ubuntu-latest

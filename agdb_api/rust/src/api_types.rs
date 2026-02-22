@@ -289,12 +289,12 @@ impl Display for DbUserRole {
 impl Display for LogLevelFilter {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            LogLevelFilter::Off => f.write_str("OFF"),
-            LogLevelFilter::Error => f.write_str("ERROR"),
-            LogLevelFilter::Warn => f.write_str("WARN"),
-            LogLevelFilter::Info => f.write_str("INFO"),
-            LogLevelFilter::Debug => f.write_str("DEBUG"),
-            LogLevelFilter::Trace => f.write_str("TRACE"),
+            LogLevelFilter::Off => f.write_str("off"),
+            LogLevelFilter::Error => f.write_str("error"),
+            LogLevelFilter::Warn => f.write_str("warn"),
+            LogLevelFilter::Info => f.write_str("info"),
+            LogLevelFilter::Debug => f.write_str("debug"),
+            LogLevelFilter::Trace => f.write_str("trace"),
         }
     }
 }
@@ -303,13 +303,13 @@ impl TryFrom<&str> for LogLevelFilter {
     type Error = String;
 
     fn try_from(value: &str) -> Result<Self, String> {
-        match value.trim().to_uppercase().as_str() {
-            "OFF" => Ok(Self::Off),
-            "ERROR" => Ok(Self::Error),
-            "WARN" => Ok(Self::Warn),
-            "INFO" => Ok(Self::Info),
-            "DEBUG" => Ok(Self::Debug),
-            "TRACE" => Ok(Self::Trace),
+        match value.trim().to_lowercase().as_str() {
+            "off" => Ok(Self::Off),
+            "error" => Ok(Self::Error),
+            "warn" => Ok(Self::Warn),
+            "info" => Ok(Self::Info),
+            "debug" => Ok(Self::Debug),
+            "trace" => Ok(Self::Trace),
             _ => Err(format!("Invalid log level: {}", value)),
         }
     }

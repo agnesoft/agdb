@@ -43,11 +43,16 @@ pub(crate) fn new(config_file: &str) -> Result<Config, String> {
             .unwrap_or(0);
         config_impl.start_time = SystemTime::now()
             .duration_since(UNIX_EPOCH)
-            .unwrap()
+            .map_err(|e| format!("Failed to get server start time since UNIX_EPOCH: {e:?}"))?
             .as_secs();
 
         if !config_impl.pepper_path.is_empty() {
-            let pepper_raw = std::fs::read(&config_impl.pepper_path).unwrap();
+            let pepper_raw = std::fs::read(&config_impl.pepper_path).map_err(|e| {
+                format!(
+                    "Failed to read the pepper file '{}': {e:?}",
+                    config_impl.pepper_path
+                )
+            })?;
             let pepper = pepper_raw.trim_ascii();
 
             if pepper.len() != SALT_LEN {
@@ -97,12 +102,13 @@ pub(crate) fn new(config_file: &str) -> Result<Config, String> {
         cluster_node_id: 0,
         start_time: SystemTime::now()
             .duration_since(UNIX_EPOCH)
-            .unwrap()
+            .map_err(|e| format!("Failed to get server start time since UNIX_EPOCH: {e:?}"))?
             .as_secs(),
         pepper: None,
     };
 
-    std::fs::write(config_file, to_str(&config)).unwrap();
+    std::fs::write(config_file, to_str(&config))
+        .map_err(|e| format!("Failed to write config file '{}': {e:?}", config_file))?;
 
     Ok(Config::new(config))
 }
@@ -173,8 +179,16 @@ pub(crate) fn from_str(content: &str) -> Result<ConfigImpl, String> {
                 "static_roots" => config.static_roots = vec_from_str(value),
                 "admin" => config.admin = value.to_string(),
                 "log_level" => config.log_level = value.try_into()?,
-                "log_body_limit" => config.log_body_limit = value.parse().unwrap(),
-                "request_body_limit" => config.request_body_limit = value.parse().unwrap(),
+                "log_body_limit" => {
+                    config.log_body_limit = value
+                        .parse()
+                        .map_err(|e| format!("Invalid log_body_limit: {e:?}"))?
+                }
+                "request_body_limit" => {
+                    config.request_body_limit = value
+                        .parse()
+                        .map_err(|e| format!("Invalid request_body_limit: {e:?}"))?
+                }
                 "data_dir" => config.data_dir = value.to_string(),
                 "pepper_path" => config.pepper_path = value.to_string(),
                 "tls_certificate" => config.tls_certificate = value.to_string(),
@@ -182,10 +196,14 @@ pub(crate) fn from_str(content: &str) -> Result<ConfigImpl, String> {
                 "tls_root" => config.tls_root = value.to_string(),
                 "cluster_token" => config.cluster_token = value.to_string(),
                 "cluster_heartbeat_timeout_ms" => {
-                    config.cluster_heartbeat_timeout_ms = value.parse().unwrap()
+                    config.cluster_heartbeat_timeout_ms = value
+                        .parse()
+                        .map_err(|e| format!("Invalid cluster_heartbeat_timeout_ms: {e:?}"))?
                 }
                 "cluster_term_timeout_ms" => {
-                    config.cluster_term_timeout_ms = value.parse().unwrap()
+                    config.cluster_term_timeout_ms = value
+                        .parse()
+                        .map_err(|e| format!("Invalid cluster_term_timeout_ms: {e:?}"))?
                 }
                 "cluster" => config.cluster = vec_from_str(value),
                 _ => return Err(format!("Unknown key: {key}")),

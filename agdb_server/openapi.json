@@ -564,6 +564,14 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "shrink_to_fit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
           }
         ],
         "responses": {
@@ -1921,6 +1929,14 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "shrink_to_fit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
           }
         ],
         "responses": {
@@ -3156,6 +3172,17 @@
           "debug",
           "trace"
         ]
+      },
+      "OptimizeParam": {
+        "type": "object",
+        "properties": {
+          "shrink_to_fit": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          }
+        }
       },
       "Queries": {
         "type": "array",

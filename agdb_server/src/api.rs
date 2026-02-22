@@ -67,6 +67,7 @@ use utoipa::openapi::security::SecurityScheme;
     ),
     components(schemas(
         routes::db::DbTypeParam,
+        routes::db::OptimizeParam,
         routes::admin::db::ServerDatabaseAdminRename,
         routes::db::ServerDatabaseRename,
         routes::db::ServerDatabaseResource,

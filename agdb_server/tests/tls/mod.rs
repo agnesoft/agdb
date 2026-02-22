@@ -10,7 +10,6 @@ use crate::wait_for_leader;
 use crate::wait_for_ready;
 use agdb_api::AgdbApi;
 use agdb_api::ReqwestClient;
-use tracing::level_filters::LevelFilter;
 
 #[tokio::test]
 async fn https() -> anyhow::Result<()> {
@@ -22,7 +21,7 @@ async fn https() -> anyhow::Result<()> {
         basepath: String::new(),
         static_roots: Vec::new(),
         admin: ADMIN.to_string(),
-        log_level: LevelFilter::INFO,
+        log_level: agdb_api::LogLevelFilter::Info,
         log_body_limit: DEFAULT_LOG_BODY_LIMIT,
         request_body_limit: DEFAULT_REQUEST_BODY_LIMIT,
         data_dir: SERVER_DATA_DIR.into(),

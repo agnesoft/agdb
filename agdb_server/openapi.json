@@ -289,7 +289,7 @@
         ],
         "responses": {
           "201": {
-            "description": "db typ changes"
+            "description": "db type changed"
           },
           "401": {
             "description": "unauthorized"

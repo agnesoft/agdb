@@ -275,9 +275,9 @@ mod tests {
     fn default_values() {
         let test_file = TestFile::new("test_config_default.yaml");
         assert!(!std::fs::exists(test_file.filename).unwrap());
-        let _config = config::new(test_file.filename);
+        config::new(test_file.filename).unwrap();
         assert!(std::fs::exists(test_file.filename).unwrap());
-        let _config = config::new(test_file.filename);
+        config::new(test_file.filename).unwrap();
     }
 
     #[test]

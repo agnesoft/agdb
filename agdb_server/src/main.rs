@@ -17,6 +17,7 @@ mod user_id;
 mod utilities;
 
 pub(crate) use server_error::ServerResult;
+use std::str::FromStr;
 use std::sync::Arc;
 use tokio::net::TcpListener;
 use tokio::sync::broadcast;
@@ -30,9 +31,7 @@ const CONFIG_FILE: &str = "agdb_server.yaml";
 async fn main() -> ServerResult {
     let config = config::new(CONFIG_FILE)?;
 
-    let filter = EnvFilter::builder()
-        .with_default_directive(config.log_level.to_string().parse()?)
-        .from_env_lossy();
+    let filter = EnvFilter::from_str(&config.log_level.to_string())?;
     let (filter_layer, tracing_handle) = reload::Layer::new(filter);
 
     tracing_subscriber::registry()
@@ -78,8 +77,8 @@ async fn main() -> ServerResult {
         let shutdown_handle = handle.clone();
 
         tracing::info!("TLS enabled");
-        tracing::info!("TLS certificate: {}", config.tls_certificate);
-        tracing::info!("TLS key: {}", config.tls_key);
+        tracing::debug!("TLS certificate: {}", config.tls_certificate);
+        tracing::debug!("TLS key: {}", config.tls_key);
 
         tokio::spawn(async move {
             cluster_handle.await;

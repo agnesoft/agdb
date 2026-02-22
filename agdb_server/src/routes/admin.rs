@@ -104,7 +104,7 @@ pub(crate) async fn set_log_level(
         .modify(|filter| {
             *filter = EnvFilter::new(request.new_level.to_string());
         })
-        .map_err(|e| ServerError::new(StatusCode::BAD_REQUEST, &format!("{e:?}")))?;
+        .map_err(|e| ServerError::new(StatusCode::INTERNAL_SERVER_ERROR, &format!("{e:?}")))?;
     tracing::info!("Log level changed to: {}", request.new_level);
     Ok(())
 }

@@ -215,7 +215,7 @@ pub(crate) async fn clear(
         DbTypeParam,
     ),
     responses(
-         (status = 201, description = "db typ changes"),
+         (status = 201, description = "db type changed"),
          (status = 401, description = "unauthorized"),
          (status = 404, description = "user / db not found"),
     )

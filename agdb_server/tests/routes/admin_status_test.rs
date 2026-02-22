@@ -18,6 +18,7 @@ async fn status() -> anyhow::Result<()> {
     assert_ne!(admin_status.users, 0);
     assert_ne!(admin_status.logged_in_users, 0);
     assert_ne!(admin_status.size, 0);
+    assert_eq!(admin_status.log_level, agdb_api::LogLevelFilter::Info);
 
     Ok(())
 }

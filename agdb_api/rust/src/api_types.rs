@@ -9,6 +9,21 @@ use std::fmt::Display;
 use utoipa::ToSchema;
 
 #[derive(
+    Debug, Default, Clone, Copy, Serialize, Deserialize, ToSchema, PartialEq, Eq, PartialOrd, Ord,
+)]
+#[cfg_attr(feature = "api", derive(agdb::TypeDefImpl))]
+#[serde(rename_all = "snake_case")]
+pub enum LogLevelFilter {
+    Off,
+    Error,
+    Warn,
+    #[default]
+    Info,
+    Debug,
+    Trace,
+}
+
+#[derive(
     Copy,
     Clone,
     Debug,
@@ -108,6 +123,7 @@ pub struct AdminStatus {
     pub users: u64,
     pub logged_in_users: u64,
     pub size: u64,
+    pub log_level: LogLevelFilter,
 }
 
 #[derive(Clone, Deserialize, Serialize, ToSchema, DbSerialize)]
@@ -266,6 +282,35 @@ impl Display for DbUserRole {
             DbUserRole::Admin => f.write_str("admin"),
             DbUserRole::Read => f.write_str("read"),
             DbUserRole::Write => f.write_str("write"),
+        }
+    }
+}
+
+impl Display for LogLevelFilter {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            LogLevelFilter::Off => f.write_str("off"),
+            LogLevelFilter::Error => f.write_str("error"),
+            LogLevelFilter::Warn => f.write_str("warn"),
+            LogLevelFilter::Info => f.write_str("info"),
+            LogLevelFilter::Debug => f.write_str("debug"),
+            LogLevelFilter::Trace => f.write_str("trace"),
+        }
+    }
+}
+
+impl TryFrom<&str> for LogLevelFilter {
+    type Error = String;
+
+    fn try_from(value: &str) -> Result<Self, String> {
+        match value.trim().to_lowercase().as_str() {
+            "off" => Ok(Self::Off),
+            "error" => Ok(Self::Error),
+            "warn" => Ok(Self::Warn),
+            "info" => Ok(Self::Info),
+            "debug" => Ok(Self::Debug),
+            "trace" => Ok(Self::Trace),
+            _ => Err(format!("Invalid log level: {}", value)),
         }
     }
 }

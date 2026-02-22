@@ -9,6 +9,7 @@ use crate::UserLogin;
 use crate::UserStatus;
 use crate::api_result::AgdbApiResult;
 use crate::api_types::DbKind;
+use crate::api_types::LogLevelFilter;
 use crate::api_types::ServerDatabase;
 use crate::api_types::UserCredentials;
 use crate::http_client::HttpClient;
@@ -288,6 +289,18 @@ impl<T: AgdbApiClient> AgdbApi<T> {
         Ok(self
             .client
             .post::<(), ()>(&self.url("/admin/shutdown"), None, &self.token)
+            .await?
+            .0)
+    }
+
+    pub async fn admin_set_log_level(&self, level: LogLevelFilter) -> AgdbApiResult<u16> {
+        Ok(self
+            .client
+            .post::<(), ()>(
+                &self.url(&format!("/admin/set_log_level?new_level={level}")),
+                None,
+                &self.token,
+            )
             .await?
             .0)
     }

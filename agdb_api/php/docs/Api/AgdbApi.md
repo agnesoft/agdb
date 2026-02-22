@@ -53,6 +53,7 @@ All URIs are relative to http://localhost:3000, except if the operation defines 
 | [**dbUserAdd()**](AgdbApi.md#dbUserAdd) | **PUT** /api/v1/db/{owner}/{db}/user/{username}/add |  |
 | [**dbUserList()**](AgdbApi.md#dbUserList) | **GET** /api/v1/db/{owner}/{db}/user/list |  |
 | [**dbUserRemove()**](AgdbApi.md#dbUserRemove) | **DELETE** /api/v1/db/{owner}/{db}/user/{username}/remove |  |
+| [**setLogLevel()**](AgdbApi.md#setLogLevel) | **POST** /api/v1/admin/set_log_level |  |
 | [**status()**](AgdbApi.md#status) | **GET** /api/v1/status |  |
 | [**userChangePassword()**](AgdbApi.md#userChangePassword) | **PUT** /api/v1/user/change_password |  |
 | [**userLogin()**](AgdbApi.md#userLogin) | **POST** /api/v1/user/login |  |
@@ -2817,6 +2818,63 @@ try {
 | **owner** | **string**| db owner user name | |
 | **db** | **string**| db name | |
 | **username** | **string**| user name | |
+
+### Return type
+
+void (empty response body)
+
+### Authorization
+
+[Token](../../README.md#Token)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: Not defined
+
+[[Back to top]](#) [[Back to API list]](../../README.md#endpoints)
+[[Back to Model list]](../../README.md#models)
+[[Back to README]](../../README.md)
+
+## `setLogLevel()`
+
+```php
+setLogLevel($new_level)
+```
+
+
+
+### Example
+
+```php
+<?php
+require_once(__DIR__ . '/vendor/autoload.php');
+
+
+// Configure Bearer authorization: Token
+$config = Agnesoft\AgdbApi\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
+
+
+$apiInstance = new Agnesoft\AgdbApi\Api\AgdbApi(
+    // If you want use custom http client, pass your client which implements `GuzzleHttp\ClientInterface`.
+    // This is optional, `GuzzleHttp\Client` will be used as default.
+    new GuzzleHttp\Client(),
+    $config
+);
+$new_level = new \Agnesoft\AgdbApi\Model\\Agnesoft\AgdbApi\Model\LogLevelFilter(); // \Agnesoft\AgdbApi\Model\LogLevelFilter
+
+try {
+    $apiInstance->setLogLevel($new_level);
+} catch (Exception $e) {
+    echo 'Exception when calling AgdbApi->setLogLevel: ', $e->getMessage(), PHP_EOL;
+}
+```
+
+### Parameters
+
+| Name | Type | Description  | Notes |
+| ------------- | ------------- | ------------- | ------------- |
+| **new_level** | [**\Agnesoft\AgdbApi\Model\LogLevelFilter**](../Model/.md)|  | |
 
 ### Return type
 

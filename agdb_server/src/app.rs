@@ -13,9 +13,13 @@ use axum::extract::DefaultBodyLimit;
 use axum::middleware;
 use axum::routing;
 use reqwest::Method;
+use std::sync::Arc;
 use tokio::sync::broadcast::Sender;
 use tower_http::cors::CorsLayer;
 use tower_http::services::ServeDir;
+use tracing_subscriber::EnvFilter;
+use tracing_subscriber::Registry;
+use tracing_subscriber::reload::Handle;
 use utoipa::OpenApi;
 use utoipa_rapidoc::RapiDoc;
 
@@ -25,6 +29,7 @@ pub(crate) fn app(
     db_pool: DbPool,
     server_db: ServerDb,
     shutdown_sender: Sender<()>,
+    tracing_handle: Arc<Handle<EnvFilter, Registry>>,
 ) -> ServerResult<Router> {
     #[cfg(feature = "studio")]
     routes::studio::init(&config)?;
@@ -39,12 +44,17 @@ pub(crate) fn app(
         db_pool,
         server_db,
         shutdown_sender,
+        tracing_handle,
     };
 
     let api_v1 = Router::new()
         .route("/status", routing::get(routes::status))
         .route("/admin/shutdown", routing::post(routes::admin::shutdown))
         .route("/admin/status", routing::get(routes::admin::status))
+        .route(
+            "/admin/set_log_level",
+            routing::post(routes::admin::set_log_level),
+        )
         .route("/admin/user/list", routing::get(routes::admin::user::list))
         .route(
             "/admin/user/logout_all",

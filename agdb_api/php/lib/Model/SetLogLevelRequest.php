@@ -1,6 +1,6 @@
 <?php
 /**
- * ServerDatabase
+ * SetLogLevelRequest
  *
  * PHP version 8.1
  *
@@ -32,7 +32,7 @@ use \ArrayAccess;
 use \Agnesoft\AgdbApi\ObjectSerializer;
 
 /**
- * ServerDatabase Class Doc Comment
+ * SetLogLevelRequest Class Doc Comment
  *
  * @category Class
  * @package  Agnesoft\AgdbApi
@@ -40,7 +40,7 @@ use \Agnesoft\AgdbApi\ObjectSerializer;
  * @link     https://openapi-generator.tech
  * @implements \ArrayAccess<string, mixed>
  */
-class ServerDatabase implements ModelInterface, ArrayAccess, \JsonSerializable
+class SetLogLevelRequest implements ModelInterface, ArrayAccess, \JsonSerializable
 {
     public const DISCRIMINATOR = null;
 
@@ -49,7 +49,7 @@ class ServerDatabase implements ModelInterface, ArrayAccess, \JsonSerializable
       *
       * @var string
       */
-    protected static $openAPIModelName = 'ServerDatabase';
+    protected static $openAPIModelName = 'SetLogLevelRequest';
 
     /**
       * Array of property to type mappings. Used for (de)serialization
@@ -57,12 +57,7 @@ class ServerDatabase implements ModelInterface, ArrayAccess, \JsonSerializable
       * @var string[]
       */
     protected static $openAPITypes = [
-        'backup' => 'int',
-        'db' => 'string',
-        'db_type' => '\Agnesoft\AgdbApi\Model\DbKind',
-        'owner' => 'string',
-        'role' => '\Agnesoft\AgdbApi\Model\DbUserRole',
-        'size' => 'int'
+        'new_level' => '\Agnesoft\AgdbApi\Model\LogLevelFilter'
     ];
 
     /**
@@ -73,12 +68,7 @@ class ServerDatabase implements ModelInterface, ArrayAccess, \JsonSerializable
       * @psalm-var array<string, string|null>
       */
     protected static $openAPIFormats = [
-        'backup' => 'int64',
-        'db' => null,
-        'db_type' => null,
-        'owner' => null,
-        'role' => null,
-        'size' => 'int64'
+        'new_level' => null
     ];
 
     /**
@@ -87,12 +77,7 @@ class ServerDatabase implements ModelInterface, ArrayAccess, \JsonSerializable
       * @var boolean[]
       */
     protected static array $openAPINullables = [
-        'backup' => false,
-        'db' => false,
-        'db_type' => false,
-        'owner' => false,
-        'role' => false,
-        'size' => false
+        'new_level' => false
     ];
 
     /**
@@ -181,12 +166,7 @@ class ServerDatabase implements ModelInterface, ArrayAccess, \JsonSerializable
      * @var string[]
      */
     protected static $attributeMap = [
-        'backup' => 'backup',
-        'db' => 'db',
-        'db_type' => 'db_type',
-        'owner' => 'owner',
-        'role' => 'role',
-        'size' => 'size'
+        'new_level' => 'new_level'
     ];
 
     /**
@@ -195,12 +175,7 @@ class ServerDatabase implements ModelInterface, ArrayAccess, \JsonSerializable
      * @var string[]
      */
     protected static $setters = [
-        'backup' => 'setBackup',
-        'db' => 'setDb',
-        'db_type' => 'setDbType',
-        'owner' => 'setOwner',
-        'role' => 'setRole',
-        'size' => 'setSize'
+        'new_level' => 'setNewLevel'
     ];
 
     /**
@@ -209,12 +184,7 @@ class ServerDatabase implements ModelInterface, ArrayAccess, \JsonSerializable
      * @var string[]
      */
     protected static $getters = [
-        'backup' => 'getBackup',
-        'db' => 'getDb',
-        'db_type' => 'getDbType',
-        'owner' => 'getOwner',
-        'role' => 'getRole',
-        'size' => 'getSize'
+        'new_level' => 'getNewLevel'
     ];
 
     /**
@@ -274,12 +244,7 @@ class ServerDatabase implements ModelInterface, ArrayAccess, \JsonSerializable
      */
     public function __construct(?array $data = null)
     {
-        $this->setIfExists('backup', $data ?? [], null);
-        $this->setIfExists('db', $data ?? [], null);
-        $this->setIfExists('db_type', $data ?? [], null);
-        $this->setIfExists('owner', $data ?? [], null);
-        $this->setIfExists('role', $data ?? [], null);
-        $this->setIfExists('size', $data ?? [], null);
+        $this->setIfExists('new_level', $data ?? [], null);
     }
 
     /**
@@ -309,32 +274,9 @@ class ServerDatabase implements ModelInterface, ArrayAccess, \JsonSerializable
     {
         $invalidProperties = [];
 
-        if ($this->container['backup'] === null) {
-            $invalidProperties[] = "'backup' can't be null";
+        if ($this->container['new_level'] === null) {
+            $invalidProperties[] = "'new_level' can't be null";
         }
-        if (($this->container['backup'] < 0)) {
-            $invalidProperties[] = "invalid value for 'backup', must be bigger than or equal to 0.";
-        }
-
-        if ($this->container['db'] === null) {
-            $invalidProperties[] = "'db' can't be null";
-        }
-        if ($this->container['db_type'] === null) {
-            $invalidProperties[] = "'db_type' can't be null";
-        }
-        if ($this->container['owner'] === null) {
-            $invalidProperties[] = "'owner' can't be null";
-        }
-        if ($this->container['role'] === null) {
-            $invalidProperties[] = "'role' can't be null";
-        }
-        if ($this->container['size'] === null) {
-            $invalidProperties[] = "'size' can't be null";
-        }
-        if (($this->container['size'] < 0)) {
-            $invalidProperties[] = "invalid value for 'size', must be bigger than or equal to 0.";
-        }
-
         return $invalidProperties;
     }
 
@@ -351,173 +293,28 @@ class ServerDatabase implements ModelInterface, ArrayAccess, \JsonSerializable
 
 
     /**
-     * Gets backup
+     * Gets new_level
      *
-     * @return int
+     * @return \Agnesoft\AgdbApi\Model\LogLevelFilter
      */
-    public function getBackup()
+    public function getNewLevel()
     {
-        return $this->container['backup'];
+        return $this->container['new_level'];
     }
 
     /**
-     * Sets backup
+     * Sets new_level
      *
-     * @param int $backup backup
+     * @param \Agnesoft\AgdbApi\Model\LogLevelFilter $new_level new_level
      *
      * @return self
      */
-    public function setBackup($backup)
+    public function setNewLevel($new_level)
     {
-        if (is_null($backup)) {
-            throw new \InvalidArgumentException('non-nullable backup cannot be null');
+        if (is_null($new_level)) {
+            throw new \InvalidArgumentException('non-nullable new_level cannot be null');
         }
-
-        if (($backup < 0)) {
-            throw new \InvalidArgumentException('invalid value for $backup when calling ServerDatabase., must be bigger than or equal to 0.');
-        }
-
-        $this->container['backup'] = $backup;
-
-        return $this;
-    }
-
-    /**
-     * Gets db
-     *
-     * @return string
-     */
-    public function getDb()
-    {
-        return $this->container['db'];
-    }
-
-    /**
-     * Sets db
-     *
-     * @param string $db db
-     *
-     * @return self
-     */
-    public function setDb($db)
-    {
-        if (is_null($db)) {
-            throw new \InvalidArgumentException('non-nullable db cannot be null');
-        }
-        $this->container['db'] = $db;
-
-        return $this;
-    }
-
-    /**
-     * Gets db_type
-     *
-     * @return \Agnesoft\AgdbApi\Model\DbKind
-     */
-    public function getDbType()
-    {
-        return $this->container['db_type'];
-    }
-
-    /**
-     * Sets db_type
-     *
-     * @param \Agnesoft\AgdbApi\Model\DbKind $db_type db_type
-     *
-     * @return self
-     */
-    public function setDbType($db_type)
-    {
-        if (is_null($db_type)) {
-            throw new \InvalidArgumentException('non-nullable db_type cannot be null');
-        }
-        $this->container['db_type'] = $db_type;
-
-        return $this;
-    }
-
-    /**
-     * Gets owner
-     *
-     * @return string
-     */
-    public function getOwner()
-    {
-        return $this->container['owner'];
-    }
-
-    /**
-     * Sets owner
-     *
-     * @param string $owner owner
-     *
-     * @return self
-     */
-    public function setOwner($owner)
-    {
-        if (is_null($owner)) {
-            throw new \InvalidArgumentException('non-nullable owner cannot be null');
-        }
-        $this->container['owner'] = $owner;
-
-        return $this;
-    }
-
-    /**
-     * Gets role
-     *
-     * @return \Agnesoft\AgdbApi\Model\DbUserRole
-     */
-    public function getRole()
-    {
-        return $this->container['role'];
-    }
-
-    /**
-     * Sets role
-     *
-     * @param \Agnesoft\AgdbApi\Model\DbUserRole $role role
-     *
-     * @return self
-     */
-    public function setRole($role)
-    {
-        if (is_null($role)) {
-            throw new \InvalidArgumentException('non-nullable role cannot be null');
-        }
-        $this->container['role'] = $role;
-
-        return $this;
-    }
-
-    /**
-     * Gets size
-     *
-     * @return int
-     */
-    public function getSize()
-    {
-        return $this->container['size'];
-    }
-
-    /**
-     * Sets size
-     *
-     * @param int $size size
-     *
-     * @return self
-     */
-    public function setSize($size)
-    {
-        if (is_null($size)) {
-            throw new \InvalidArgumentException('non-nullable size cannot be null');
-        }
-
-        if (($size < 0)) {
-            throw new \InvalidArgumentException('invalid value for $size when calling ServerDatabase., must be bigger than or equal to 0.');
-        }
-
-        $this->container['size'] = $size;
+        $this->container['new_level'] = $new_level;
 
         return $this;
     }

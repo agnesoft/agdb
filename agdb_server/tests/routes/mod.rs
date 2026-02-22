@@ -13,6 +13,7 @@ mod admin_db_rename_test;
 mod admin_db_user_add_test;
 mod admin_db_user_list_test;
 mod admin_db_user_remove_test;
+mod admin_set_log_level_test;
 mod admin_status_test;
 mod admin_user_add_test;
 mod admin_user_change_password_test;

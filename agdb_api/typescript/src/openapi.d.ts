@@ -10,6 +10,7 @@ declare namespace Components {
     namespace Schemas {
         export interface AdminStatus {
             dbs: number; // int64
+            log_level: LogLevelFilter;
             logged_in_users: number; // int64
             size: number; // int64
             uptime: number; // int64
@@ -712,6 +713,7 @@ declare namespace Components {
              */
             Comparison;
         }
+        export type LogLevelFilter = "off" | "error" | "warn" | "info" | "debug" | "trace";
         export type Queries = /* Convenience enum for serializing/deserializing queries. */ QueryType[];
         export type QueriesResults = /**
          * Universal database result. Successful
@@ -1448,6 +1450,9 @@ declare namespace Components {
         export interface ServerDatabaseResource {
             resource: DbResource;
         }
+        export interface SetLogLevelRequest {
+            new_level: LogLevelFilter;
+        }
         export interface UserCredentials {
             password: string;
         }
@@ -1558,8 +1563,6 @@ declare namespace Paths {
             export interface $201 {
             }
             export interface $401 {
-            }
-            export interface $403 {
             }
             export interface $404 {
             }
@@ -1805,8 +1808,6 @@ declare namespace Paths {
             export interface $202 {
             }
             export interface $401 {
-            }
-            export interface $403 {
             }
         }
     }
@@ -2301,6 +2302,22 @@ declare namespace Paths {
             }
         }
     }
+    namespace SetLogLevel {
+        namespace Parameters {
+            export type NewLevel = Components.Schemas.LogLevelFilter;
+        }
+        export interface QueryParameters {
+            new_level: Parameters.NewLevel;
+        }
+        namespace Responses {
+            export interface $200 {
+            }
+            export interface $400 {
+            }
+            export interface $401 {
+            }
+        }
+    }
     namespace Status {
         namespace Responses {
             export interface $200 {
@@ -2481,6 +2498,14 @@ export interface OperationMethods {
     data?: any,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.AdminDbUserRemove.Responses.$204>
+  /**
+   * set_log_level
+   */
+  'set_log_level'(
+    parameters?: Parameters<Paths.SetLogLevel.QueryParameters> | null,
+    data?: any,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.SetLogLevel.Responses.$200>
   /**
    * admin_shutdown
    */
@@ -2934,6 +2959,16 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AdminDbUserRemove.Responses.$204>
   }
+  ['/api/v1/admin/set_log_level']: {
+    /**
+     * set_log_level
+     */
+    'post'(
+      parameters?: Parameters<Paths.SetLogLevel.QueryParameters> | null,
+      data?: any,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.SetLogLevel.Responses.$200>
+  }
   ['/api/v1/admin/shutdown']: {
     /**
      * admin_shutdown
@@ -3313,6 +3348,7 @@ export type InsertIndexQuery = Components.Schemas.InsertIndexQuery;
 export type InsertNodesQuery = Components.Schemas.InsertNodesQuery;
 export type InsertValuesQuery = Components.Schemas.InsertValuesQuery;
 export type KeyValueComparison = Components.Schemas.KeyValueComparison;
+export type LogLevelFilter = Components.Schemas.LogLevelFilter;
 export type Queries = Components.Schemas.Queries;
 export type QueriesResults = Components.Schemas.QueriesResults;
 export type QueryAudit = Components.Schemas.QueryAudit;
@@ -3343,6 +3379,7 @@ export type ServerDatabase = Components.Schemas.ServerDatabase;
 export type ServerDatabaseAdminRename = Components.Schemas.ServerDatabaseAdminRename;
 export type ServerDatabaseRename = Components.Schemas.ServerDatabaseRename;
 export type ServerDatabaseResource = Components.Schemas.ServerDatabaseResource;
+export type SetLogLevelRequest = Components.Schemas.SetLogLevelRequest;
 export type UserCredentials = Components.Schemas.UserCredentials;
 export type UserLogin = Components.Schemas.UserLogin;
 export type UserStatus = Components.Schemas.UserStatus;

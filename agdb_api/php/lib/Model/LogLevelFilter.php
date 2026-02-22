@@ -1,6 +1,6 @@
 <?php
 /**
- * SearchQueryAlgorithm
+ * LogLevelFilter
  *
  * PHP version 8.1
  *
@@ -30,26 +30,29 @@ namespace Agnesoft\AgdbApi\Model;
 use \Agnesoft\AgdbApi\ObjectSerializer;
 
 /**
- * SearchQueryAlgorithm Class Doc Comment
+ * LogLevelFilter Class Doc Comment
  *
  * @category Class
- * @description Search algorithm to be used
  * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
  */
-class SearchQueryAlgorithm
+class LogLevelFilter
 {
     /**
      * Possible values of this enum
      */
-    public const BREADTH_FIRST = 'BreadthFirst';
+    public const OFF = 'off';
 
-    public const DEPTH_FIRST = 'DepthFirst';
+    public const ERROR = 'error';
 
-    public const INDEX = 'Index';
+    public const WARN = 'warn';
 
-    public const ELEMENTS = 'Elements';
+    public const INFO = 'info';
+
+    public const DEBUG = 'debug';
+
+    public const TRACE = 'trace';
 
     /**
      * Gets allowable values of the enum
@@ -58,10 +61,12 @@ class SearchQueryAlgorithm
     public static function getAllowableEnumValues()
     {
         return [
-            self::BREADTH_FIRST,
-            self::DEPTH_FIRST,
-            self::INDEX,
-            self::ELEMENTS
+            self::OFF,
+            self::ERROR,
+            self::WARN,
+            self::INFO,
+            self::DEBUG,
+            self::TRACE
         ];
     }
 }

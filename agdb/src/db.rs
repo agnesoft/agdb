@@ -803,6 +803,15 @@ impl<Store: StorageData> DbImpl<Store> {
         }
     }
 
+    pub(crate) fn reserve_key_value_capacity(
+        &mut self,
+        db_id: DbId,
+        additional: u64,
+    ) -> Result<(), DbError> {
+        self.values
+            .reserve_capacity(&mut self.storage, db_id.as_index(), additional)
+    }
+
     pub(crate) fn search_index(
         &self,
         key: &DbValue,

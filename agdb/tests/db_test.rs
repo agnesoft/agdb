@@ -750,7 +750,7 @@ fn using_ref_insert_element() {
 #[test]
 fn shrink_to_fit() {
     let test_file = TestFile::new();
-    let mut db = Db::new(test_file.file_name()).unwrap();
+    let mut db = DbMemory::new(test_file.file_name()).unwrap();
     db.exec_mut(QueryBuilder::insert().index("key0").query())
         .unwrap();
     db.exec_mut(QueryBuilder::insert().nodes().aliases("root").query())
@@ -772,14 +772,14 @@ fn shrink_to_fit() {
     db.optimize_storage().unwrap();
     let optimized_size = db.size();
     db.shrink_to_fit().unwrap();
-    let shrinked_size = db.size();
+    let shrunk_size = db.size();
 
     assert!(
         optimized_size < size,
         "{optimized_size} (optimized) < {size} (original)"
     );
     assert!(
-        shrinked_size <= optimized_size,
-        "{shrinked_size} (shrinked) < {optimized_size} (optimized)"
+        shrunk_size < optimized_size,
+        "{shrunk_size} (shrunk) <= {optimized_size} (optimized)"
     );
 }

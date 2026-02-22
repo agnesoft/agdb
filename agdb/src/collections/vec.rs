@@ -307,7 +307,11 @@ where
         if self.data.len() == self.data.capacity() {
             self.data.reallocate(
                 storage,
-                std::cmp::max(64, self.capacity() + self.capacity() / 2),
+                match self.capacity() {
+                    0 => 1,
+                    1 => 2,
+                    _ => self.capacity() + self.capacity() / 2,
+                },
             )?;
         }
 
@@ -328,7 +332,6 @@ where
         self.data.replace(storage, index, value)
     }
 
-    #[allow(dead_code)]
     pub fn reserve(&mut self, storage: &mut Storage<D>, capacity: u64) -> Result<(), E> {
         if self.capacity() < capacity {
             self.data.reallocate(storage, capacity)?;
@@ -338,10 +341,7 @@ where
     }
 
     pub fn resize(&mut self, storage: &mut Storage<D>, new_len: u64, value: &T) -> Result<(), E> {
-        if self.capacity() < new_len {
-            self.data.reallocate(storage, new_len)?;
-        }
-
+        self.reserve(storage, new_len)?;
         self.data.resize(storage, new_len, value)
     }
 
@@ -535,7 +535,7 @@ mod tests {
         vec.push(&mut storage, &"World".to_string()).unwrap();
         vec.push(&mut storage, &"!".to_string()).unwrap();
 
-        assert_eq!(vec.capacity(), 64);
+        assert_eq!(vec.capacity(), 4);
     }
 
     #[test]
@@ -783,16 +783,17 @@ mod tests {
         vec.push(&mut storage, &", ".to_string()).unwrap();
         vec.push(&mut storage, &"World".to_string()).unwrap();
         vec.push(&mut storage, &"!".to_string()).unwrap();
+        vec.push(&mut storage, &"".to_string()).unwrap();
 
-        assert_eq!(vec.capacity(), 64);
-
-        vec.shrink_to_fit(&mut storage).unwrap();
-
-        assert_eq!(vec.capacity(), 4);
+        assert_eq!(vec.capacity(), 6);
 
         vec.shrink_to_fit(&mut storage).unwrap();
 
-        assert_eq!(vec.capacity(), 4);
+        assert_eq!(vec.capacity(), 5);
+
+        vec.shrink_to_fit(&mut storage).unwrap();
+
+        assert_eq!(vec.capacity(), 5);
     }
 
     #[test]

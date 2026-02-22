@@ -65,6 +65,7 @@ impl<S: StorageData> DbKeyValues<S> {
             DbVec::from_storage(storage, storage_index)?
         };
 
+        kvs.reserve(storage, kvs.len() + 1)?;
         kvs.push(storage, value)
     }
 
@@ -89,6 +90,7 @@ impl<S: StorageData> DbKeyValues<S> {
             kvs.replace(storage, index as u64, value)?;
             Ok(Some(kv))
         } else {
+            kvs.reserve(storage, kvs.len() + 1)?;
             kvs.push(storage, value)?;
             Ok(None)
         }
@@ -145,6 +147,30 @@ impl<S: StorageData> DbKeyValues<S> {
         }
 
         Ok(())
+    }
+
+    pub fn reserve_capacity(
+        &mut self,
+        storage: &mut Storage<S>,
+        index: u64,
+        additional: u64,
+    ) -> Result<(), DbError> {
+        if self.0.len() <= index {
+            self.0
+                .resize(storage, index + 1, &StorageIndex::default())?;
+        }
+
+        let storage_index = self.0.value(storage, index)?;
+
+        let mut kvs = if storage_index.0 == 0 {
+            let kvs = DbVec::<DbKeyValue, S>::new(storage)?;
+            self.0.replace(storage, index, &kvs.storage_index())?;
+            kvs
+        } else {
+            DbVec::from_storage(storage, storage_index)?
+        };
+
+        kvs.reserve(storage, additional)
     }
 
     pub fn shrink_to_fit(&mut self, storage: &mut Storage<S>) -> Result<(), DbError> {

@@ -27,7 +27,7 @@ use utoipa::ToSchema;
 #[derive(Deserialize, IntoParams, ToSchema, agdb::TypeDefImpl)]
 #[into_params(parameter_in = Query)]
 pub struct SetLogLevelRequest {
-    pub new_level: String,
+    pub new_level: LogLevelFilter,
 }
 
 #[utoipa::path(post,
@@ -100,15 +100,9 @@ pub(crate) async fn set_log_level(
     State(handle): State<Arc<Handle<EnvFilter, Registry>>>,
     request: Query<SetLogLevelRequest>,
 ) -> Result<(), ServerError> {
-    let log_level: LogLevelFilter = request.new_level.as_str().try_into().map_err(|e| {
-        ServerError::new(
-            StatusCode::BAD_REQUEST,
-            &format!("Invalid log level: {e:?}"),
-        )
-    })?;
     handle
         .modify(|filter| {
-            *filter = EnvFilter::new(log_level.to_string());
+            *filter = EnvFilter::new(request.new_level.to_string());
         })
         .map_err(|e| ServerError::new(StatusCode::BAD_REQUEST, &format!("{e:?}")))?;
     tracing::info!("Log level changed to: {}", request.new_level);

@@ -123,6 +123,7 @@ Class | Method | HTTP request | Description
 *AgdbApi* | [**dbUserAdd**](docs/Api/AgdbApi.md#dbuseradd) | **PUT** /api/v1/db/{owner}/{db}/user/{username}/add | 
 *AgdbApi* | [**dbUserList**](docs/Api/AgdbApi.md#dbuserlist) | **GET** /api/v1/db/{owner}/{db}/user/list | 
 *AgdbApi* | [**dbUserRemove**](docs/Api/AgdbApi.md#dbuserremove) | **DELETE** /api/v1/db/{owner}/{db}/user/{username}/remove | 
+*AgdbApi* | [**setLogLevel**](docs/Api/AgdbApi.md#setloglevel) | **POST** /api/v1/admin/set_log_level | 
 *AgdbApi* | [**status**](docs/Api/AgdbApi.md#status) | **GET** /api/v1/status | 
 *AgdbApi* | [**userChangePassword**](docs/Api/AgdbApi.md#userchangepassword) | **PUT** /api/v1/user/change_password | 
 *AgdbApi* | [**userLogin**](docs/Api/AgdbApi.md#userlogin) | **POST** /api/v1/user/login | 
@@ -178,6 +179,7 @@ Class | Method | HTTP request | Description
 - [InsertNodesQuery](docs/Model/InsertNodesQuery.md)
 - [InsertValuesQuery](docs/Model/InsertValuesQuery.md)
 - [KeyValueComparison](docs/Model/KeyValueComparison.md)
+- [LogLevelFilter](docs/Model/LogLevelFilter.md)
 - [QueryAudit](docs/Model/QueryAudit.md)
 - [QueryCondition](docs/Model/QueryCondition.md)
 - [QueryConditionData](docs/Model/QueryConditionData.md)
@@ -234,6 +236,7 @@ Class | Method | HTTP request | Description
 - [ServerDatabaseAdminRename](docs/Model/ServerDatabaseAdminRename.md)
 - [ServerDatabaseRename](docs/Model/ServerDatabaseRename.md)
 - [ServerDatabaseResource](docs/Model/ServerDatabaseResource.md)
+- [SetLogLevelRequest](docs/Model/SetLogLevelRequest.md)
 - [UserCredentials](docs/Model/UserCredentials.md)
 - [UserLogin](docs/Model/UserLogin.md)
 - [UserStatus](docs/Model/UserStatus.md)

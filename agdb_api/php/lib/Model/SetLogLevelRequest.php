@@ -1,6 +1,6 @@
 <?php
 /**
- * AdminStatus
+ * SetLogLevelRequest
  *
  * PHP version 8.1
  *
@@ -32,7 +32,7 @@ use \ArrayAccess;
 use \Agnesoft\AgdbApi\ObjectSerializer;
 
 /**
- * AdminStatus Class Doc Comment
+ * SetLogLevelRequest Class Doc Comment
  *
  * @category Class
  * @package  Agnesoft\AgdbApi
@@ -40,7 +40,7 @@ use \Agnesoft\AgdbApi\ObjectSerializer;
  * @link     https://openapi-generator.tech
  * @implements \ArrayAccess<string, mixed>
  */
-class AdminStatus implements ModelInterface, ArrayAccess, \JsonSerializable
+class SetLogLevelRequest implements ModelInterface, ArrayAccess, \JsonSerializable
 {
     public const DISCRIMINATOR = null;
 
@@ -49,7 +49,7 @@ class AdminStatus implements ModelInterface, ArrayAccess, \JsonSerializable
       *
       * @var string
       */
-    protected static $openAPIModelName = 'AdminStatus';
+    protected static $openAPIModelName = 'SetLogLevelRequest';
 
     /**
       * Array of property to type mappings. Used for (de)serialization
@@ -57,12 +57,7 @@ class AdminStatus implements ModelInterface, ArrayAccess, \JsonSerializable
       * @var string[]
       */
     protected static $openAPITypes = [
-        'dbs' => 'int',
-        'log_level' => '\Agnesoft\AgdbApi\Model\LogLevelFilter',
-        'logged_in_users' => 'int',
-        'size' => 'int',
-        'uptime' => 'int',
-        'users' => 'int'
+        'new_level' => '\Agnesoft\AgdbApi\Model\LogLevelFilter'
     ];
 
     /**
@@ -73,12 +68,7 @@ class AdminStatus implements ModelInterface, ArrayAccess, \JsonSerializable
       * @psalm-var array<string, string|null>
       */
     protected static $openAPIFormats = [
-        'dbs' => 'int64',
-        'log_level' => null,
-        'logged_in_users' => 'int64',
-        'size' => 'int64',
-        'uptime' => 'int64',
-        'users' => 'int64'
+        'new_level' => null
     ];
 
     /**
@@ -87,12 +77,7 @@ class AdminStatus implements ModelInterface, ArrayAccess, \JsonSerializable
       * @var boolean[]
       */
     protected static array $openAPINullables = [
-        'dbs' => false,
-        'log_level' => false,
-        'logged_in_users' => false,
-        'size' => false,
-        'uptime' => false,
-        'users' => false
+        'new_level' => false
     ];
 
     /**
@@ -181,12 +166,7 @@ class AdminStatus implements ModelInterface, ArrayAccess, \JsonSerializable
      * @var string[]
      */
     protected static $attributeMap = [
-        'dbs' => 'dbs',
-        'log_level' => 'log_level',
-        'logged_in_users' => 'logged_in_users',
-        'size' => 'size',
-        'uptime' => 'uptime',
-        'users' => 'users'
+        'new_level' => 'new_level'
     ];
 
     /**
@@ -195,12 +175,7 @@ class AdminStatus implements ModelInterface, ArrayAccess, \JsonSerializable
      * @var string[]
      */
     protected static $setters = [
-        'dbs' => 'setDbs',
-        'log_level' => 'setLogLevel',
-        'logged_in_users' => 'setLoggedInUsers',
-        'size' => 'setSize',
-        'uptime' => 'setUptime',
-        'users' => 'setUsers'
+        'new_level' => 'setNewLevel'
     ];
 
     /**
@@ -209,12 +184,7 @@ class AdminStatus implements ModelInterface, ArrayAccess, \JsonSerializable
      * @var string[]
      */
     protected static $getters = [
-        'dbs' => 'getDbs',
-        'log_level' => 'getLogLevel',
-        'logged_in_users' => 'getLoggedInUsers',
-        'size' => 'getSize',
-        'uptime' => 'getUptime',
-        'users' => 'getUsers'
+        'new_level' => 'getNewLevel'
     ];
 
     /**
@@ -274,12 +244,7 @@ class AdminStatus implements ModelInterface, ArrayAccess, \JsonSerializable
      */
     public function __construct(?array $data = null)
     {
-        $this->setIfExists('dbs', $data ?? [], null);
-        $this->setIfExists('log_level', $data ?? [], null);
-        $this->setIfExists('logged_in_users', $data ?? [], null);
-        $this->setIfExists('size', $data ?? [], null);
-        $this->setIfExists('uptime', $data ?? [], null);
-        $this->setIfExists('users', $data ?? [], null);
+        $this->setIfExists('new_level', $data ?? [], null);
     }
 
     /**
@@ -309,44 +274,9 @@ class AdminStatus implements ModelInterface, ArrayAccess, \JsonSerializable
     {
         $invalidProperties = [];
 
-        if ($this->container['dbs'] === null) {
-            $invalidProperties[] = "'dbs' can't be null";
+        if ($this->container['new_level'] === null) {
+            $invalidProperties[] = "'new_level' can't be null";
         }
-        if (($this->container['dbs'] < 0)) {
-            $invalidProperties[] = "invalid value for 'dbs', must be bigger than or equal to 0.";
-        }
-
-        if ($this->container['log_level'] === null) {
-            $invalidProperties[] = "'log_level' can't be null";
-        }
-        if ($this->container['logged_in_users'] === null) {
-            $invalidProperties[] = "'logged_in_users' can't be null";
-        }
-        if (($this->container['logged_in_users'] < 0)) {
-            $invalidProperties[] = "invalid value for 'logged_in_users', must be bigger than or equal to 0.";
-        }
-
-        if ($this->container['size'] === null) {
-            $invalidProperties[] = "'size' can't be null";
-        }
-        if (($this->container['size'] < 0)) {
-            $invalidProperties[] = "invalid value for 'size', must be bigger than or equal to 0.";
-        }
-
-        if ($this->container['uptime'] === null) {
-            $invalidProperties[] = "'uptime' can't be null";
-        }
-        if (($this->container['uptime'] < 0)) {
-            $invalidProperties[] = "invalid value for 'uptime', must be bigger than or equal to 0.";
-        }
-
-        if ($this->container['users'] === null) {
-            $invalidProperties[] = "'users' can't be null";
-        }
-        if (($this->container['users'] < 0)) {
-            $invalidProperties[] = "invalid value for 'users', must be bigger than or equal to 0.";
-        }
-
         return $invalidProperties;
     }
 
@@ -363,188 +293,28 @@ class AdminStatus implements ModelInterface, ArrayAccess, \JsonSerializable
 
 
     /**
-     * Gets dbs
-     *
-     * @return int
-     */
-    public function getDbs()
-    {
-        return $this->container['dbs'];
-    }
-
-    /**
-     * Sets dbs
-     *
-     * @param int $dbs dbs
-     *
-     * @return self
-     */
-    public function setDbs($dbs)
-    {
-        if (is_null($dbs)) {
-            throw new \InvalidArgumentException('non-nullable dbs cannot be null');
-        }
-
-        if (($dbs < 0)) {
-            throw new \InvalidArgumentException('invalid value for $dbs when calling AdminStatus., must be bigger than or equal to 0.');
-        }
-
-        $this->container['dbs'] = $dbs;
-
-        return $this;
-    }
-
-    /**
-     * Gets log_level
+     * Gets new_level
      *
      * @return \Agnesoft\AgdbApi\Model\LogLevelFilter
      */
-    public function getLogLevel()
+    public function getNewLevel()
     {
-        return $this->container['log_level'];
+        return $this->container['new_level'];
     }
 
     /**
-     * Sets log_level
+     * Sets new_level
      *
-     * @param \Agnesoft\AgdbApi\Model\LogLevelFilter $log_level log_level
+     * @param \Agnesoft\AgdbApi\Model\LogLevelFilter $new_level new_level
      *
      * @return self
      */
-    public function setLogLevel($log_level)
+    public function setNewLevel($new_level)
     {
-        if (is_null($log_level)) {
-            throw new \InvalidArgumentException('non-nullable log_level cannot be null');
+        if (is_null($new_level)) {
+            throw new \InvalidArgumentException('non-nullable new_level cannot be null');
         }
-        $this->container['log_level'] = $log_level;
-
-        return $this;
-    }
-
-    /**
-     * Gets logged_in_users
-     *
-     * @return int
-     */
-    public function getLoggedInUsers()
-    {
-        return $this->container['logged_in_users'];
-    }
-
-    /**
-     * Sets logged_in_users
-     *
-     * @param int $logged_in_users logged_in_users
-     *
-     * @return self
-     */
-    public function setLoggedInUsers($logged_in_users)
-    {
-        if (is_null($logged_in_users)) {
-            throw new \InvalidArgumentException('non-nullable logged_in_users cannot be null');
-        }
-
-        if (($logged_in_users < 0)) {
-            throw new \InvalidArgumentException('invalid value for $logged_in_users when calling AdminStatus., must be bigger than or equal to 0.');
-        }
-
-        $this->container['logged_in_users'] = $logged_in_users;
-
-        return $this;
-    }
-
-    /**
-     * Gets size
-     *
-     * @return int
-     */
-    public function getSize()
-    {
-        return $this->container['size'];
-    }
-
-    /**
-     * Sets size
-     *
-     * @param int $size size
-     *
-     * @return self
-     */
-    public function setSize($size)
-    {
-        if (is_null($size)) {
-            throw new \InvalidArgumentException('non-nullable size cannot be null');
-        }
-
-        if (($size < 0)) {
-            throw new \InvalidArgumentException('invalid value for $size when calling AdminStatus., must be bigger than or equal to 0.');
-        }
-
-        $this->container['size'] = $size;
-
-        return $this;
-    }
-
-    /**
-     * Gets uptime
-     *
-     * @return int
-     */
-    public function getUptime()
-    {
-        return $this->container['uptime'];
-    }
-
-    /**
-     * Sets uptime
-     *
-     * @param int $uptime uptime
-     *
-     * @return self
-     */
-    public function setUptime($uptime)
-    {
-        if (is_null($uptime)) {
-            throw new \InvalidArgumentException('non-nullable uptime cannot be null');
-        }
-
-        if (($uptime < 0)) {
-            throw new \InvalidArgumentException('invalid value for $uptime when calling AdminStatus., must be bigger than or equal to 0.');
-        }
-
-        $this->container['uptime'] = $uptime;
-
-        return $this;
-    }
-
-    /**
-     * Gets users
-     *
-     * @return int
-     */
-    public function getUsers()
-    {
-        return $this->container['users'];
-    }
-
-    /**
-     * Sets users
-     *
-     * @param int $users users
-     *
-     * @return self
-     */
-    public function setUsers($users)
-    {
-        if (is_null($users)) {
-            throw new \InvalidArgumentException('non-nullable users cannot be null');
-        }
-
-        if (($users < 0)) {
-            throw new \InvalidArgumentException('invalid value for $users when calling AdminStatus., must be bigger than or equal to 0.');
-        }
-
-        $this->container['users'] = $users;
+        $this->container['new_level'] = $new_level;
 
         return $this;
     }

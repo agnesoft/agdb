@@ -2979,15 +2979,16 @@ class AgdbApi
      *
      * @param  string $owner user name (required)
      * @param  string $db db name (required)
+     * @param  bool|null $shrink_to_fit shrink_to_fit (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDbOptimize'] to see the possible values for this operation
      *
      * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
      * @return \Agnesoft\AgdbApi\Model\ServerDatabase
      */
-    public function adminDbOptimize($owner, $db, string $contentType = self::contentTypes['adminDbOptimize'][0])
+    public function adminDbOptimize($owner, $db, $shrink_to_fit = null, string $contentType = self::contentTypes['adminDbOptimize'][0])
     {
-        list($response) = $this->adminDbOptimizeWithHttpInfo($owner, $db, $contentType);
+        list($response) = $this->adminDbOptimizeWithHttpInfo($owner, $db, $shrink_to_fit, $contentType);
         return $response;
     }
 
@@ -2996,15 +2997,16 @@ class AgdbApi
      *
      * @param  string $owner user name (required)
      * @param  string $db db name (required)
+     * @param  bool|null $shrink_to_fit (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDbOptimize'] to see the possible values for this operation
      *
      * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
      * @return array of \Agnesoft\AgdbApi\Model\ServerDatabase, HTTP status code, HTTP response headers (array of strings)
      */
-    public function adminDbOptimizeWithHttpInfo($owner, $db, string $contentType = self::contentTypes['adminDbOptimize'][0])
+    public function adminDbOptimizeWithHttpInfo($owner, $db, $shrink_to_fit = null, string $contentType = self::contentTypes['adminDbOptimize'][0])
     {
-        $request = $this->adminDbOptimizeRequest($owner, $db, $contentType);
+        $request = $this->adminDbOptimizeRequest($owner, $db, $shrink_to_fit, $contentType);
 
         try {
             $options = $this->createHttpClientOption();
@@ -3080,14 +3082,15 @@ class AgdbApi
      *
      * @param  string $owner user name (required)
      * @param  string $db db name (required)
+     * @param  bool|null $shrink_to_fit (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDbOptimize'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Promise\PromiseInterface
      */
-    public function adminDbOptimizeAsync($owner, $db, string $contentType = self::contentTypes['adminDbOptimize'][0])
+    public function adminDbOptimizeAsync($owner, $db, $shrink_to_fit = null, string $contentType = self::contentTypes['adminDbOptimize'][0])
     {
-        return $this->adminDbOptimizeAsyncWithHttpInfo($owner, $db, $contentType)
+        return $this->adminDbOptimizeAsyncWithHttpInfo($owner, $db, $shrink_to_fit, $contentType)
             ->then(
                 function ($response) {
                     return $response[0];
@@ -3100,15 +3103,16 @@ class AgdbApi
      *
      * @param  string $owner user name (required)
      * @param  string $db db name (required)
+     * @param  bool|null $shrink_to_fit (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDbOptimize'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Promise\PromiseInterface
      */
-    public function adminDbOptimizeAsyncWithHttpInfo($owner, $db, string $contentType = self::contentTypes['adminDbOptimize'][0])
+    public function adminDbOptimizeAsyncWithHttpInfo($owner, $db, $shrink_to_fit = null, string $contentType = self::contentTypes['adminDbOptimize'][0])
     {
         $returnType = '\Agnesoft\AgdbApi\Model\ServerDatabase';
-        $request = $this->adminDbOptimizeRequest($owner, $db, $contentType);
+        $request = $this->adminDbOptimizeRequest($owner, $db, $shrink_to_fit, $contentType);
 
         return $this->client
             ->sendAsync($request, $this->createHttpClientOption())
@@ -3151,12 +3155,13 @@ class AgdbApi
      *
      * @param  string $owner user name (required)
      * @param  string $db db name (required)
+     * @param  bool|null $shrink_to_fit (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDbOptimize'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Psr7\Request
      */
-    public function adminDbOptimizeRequest($owner, $db, string $contentType = self::contentTypes['adminDbOptimize'][0])
+    public function adminDbOptimizeRequest($owner, $db, $shrink_to_fit = null, string $contentType = self::contentTypes['adminDbOptimize'][0])
     {
 
         // verify the required parameter 'owner' is set
@@ -3174,6 +3179,7 @@ class AgdbApi
         }
 
 
+
         $resourcePath = '/api/v1/admin/db/{owner}/{db}/optimize';
         $formParams = [];
         $queryParams = [];
@@ -3181,6 +3187,15 @@ class AgdbApi
         $httpBody = '';
         $multipart = false;
 
+        // query params
+        $queryParams = array_merge($queryParams, ObjectSerializer::toQueryValue(
+            $shrink_to_fit,
+            'shrink_to_fit', // param base name
+            'boolean', // openApiType
+            'form', // style
+            true, // explode
+            false // required
+        ) ?? []);
 
 
         // path params
@@ -10413,15 +10428,16 @@ class AgdbApi
      *
      * @param  string $owner user name (required)
      * @param  string $db db name (required)
+     * @param  bool|null $shrink_to_fit shrink_to_fit (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dbOptimize'] to see the possible values for this operation
      *
      * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
      * @return \Agnesoft\AgdbApi\Model\ServerDatabase
      */
-    public function dbOptimize($owner, $db, string $contentType = self::contentTypes['dbOptimize'][0])
+    public function dbOptimize($owner, $db, $shrink_to_fit = null, string $contentType = self::contentTypes['dbOptimize'][0])
     {
-        list($response) = $this->dbOptimizeWithHttpInfo($owner, $db, $contentType);
+        list($response) = $this->dbOptimizeWithHttpInfo($owner, $db, $shrink_to_fit, $contentType);
         return $response;
     }
 
@@ -10430,15 +10446,16 @@ class AgdbApi
      *
      * @param  string $owner user name (required)
      * @param  string $db db name (required)
+     * @param  bool|null $shrink_to_fit (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dbOptimize'] to see the possible values for this operation
      *
      * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
      * @return array of \Agnesoft\AgdbApi\Model\ServerDatabase, HTTP status code, HTTP response headers (array of strings)
      */
-    public function dbOptimizeWithHttpInfo($owner, $db, string $contentType = self::contentTypes['dbOptimize'][0])
+    public function dbOptimizeWithHttpInfo($owner, $db, $shrink_to_fit = null, string $contentType = self::contentTypes['dbOptimize'][0])
     {
-        $request = $this->dbOptimizeRequest($owner, $db, $contentType);
+        $request = $this->dbOptimizeRequest($owner, $db, $shrink_to_fit, $contentType);
 
         try {
             $options = $this->createHttpClientOption();
@@ -10514,14 +10531,15 @@ class AgdbApi
      *
      * @param  string $owner user name (required)
      * @param  string $db db name (required)
+     * @param  bool|null $shrink_to_fit (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dbOptimize'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Promise\PromiseInterface
      */
-    public function dbOptimizeAsync($owner, $db, string $contentType = self::contentTypes['dbOptimize'][0])
+    public function dbOptimizeAsync($owner, $db, $shrink_to_fit = null, string $contentType = self::contentTypes['dbOptimize'][0])
     {
-        return $this->dbOptimizeAsyncWithHttpInfo($owner, $db, $contentType)
+        return $this->dbOptimizeAsyncWithHttpInfo($owner, $db, $shrink_to_fit, $contentType)
             ->then(
                 function ($response) {
                     return $response[0];
@@ -10534,15 +10552,16 @@ class AgdbApi
      *
      * @param  string $owner user name (required)
      * @param  string $db db name (required)
+     * @param  bool|null $shrink_to_fit (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dbOptimize'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Promise\PromiseInterface
      */
-    public function dbOptimizeAsyncWithHttpInfo($owner, $db, string $contentType = self::contentTypes['dbOptimize'][0])
+    public function dbOptimizeAsyncWithHttpInfo($owner, $db, $shrink_to_fit = null, string $contentType = self::contentTypes['dbOptimize'][0])
     {
         $returnType = '\Agnesoft\AgdbApi\Model\ServerDatabase';
-        $request = $this->dbOptimizeRequest($owner, $db, $contentType);
+        $request = $this->dbOptimizeRequest($owner, $db, $shrink_to_fit, $contentType);
 
         return $this->client
             ->sendAsync($request, $this->createHttpClientOption())
@@ -10585,12 +10604,13 @@ class AgdbApi
      *
      * @param  string $owner user name (required)
      * @param  string $db db name (required)
+     * @param  bool|null $shrink_to_fit (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dbOptimize'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Psr7\Request
      */
-    public function dbOptimizeRequest($owner, $db, string $contentType = self::contentTypes['dbOptimize'][0])
+    public function dbOptimizeRequest($owner, $db, $shrink_to_fit = null, string $contentType = self::contentTypes['dbOptimize'][0])
     {
 
         // verify the required parameter 'owner' is set
@@ -10608,6 +10628,7 @@ class AgdbApi
         }
 
 
+
         $resourcePath = '/api/v1/db/{owner}/{db}/optimize';
         $formParams = [];
         $queryParams = [];
@@ -10615,6 +10636,15 @@ class AgdbApi
         $httpBody = '';
         $multipart = false;
 
+        // query params
+        $queryParams = array_merge($queryParams, ObjectSerializer::toQueryValue(
+            $shrink_to_fit,
+            'shrink_to_fit', // param base name
+            'boolean', // openApiType
+            'form', // style
+            true, // explode
+            false // required
+        ) ?? []);
 
 
         // path params

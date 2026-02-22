@@ -199,6 +199,22 @@ impl<T: AgdbApiClient> AgdbApi<T> {
             .await
     }
 
+    pub async fn admin_db_optimize_shrink_to_fit(
+        &self,
+        owner: &str,
+        db: &str,
+    ) -> AgdbApiResult<(u16, ServerDatabase)> {
+        self.client
+            .post::<(), ServerDatabase>(
+                &self.url(&format!(
+                    "/admin/db/{owner}/{db}/optimize?shrink_to_fit=true"
+                )),
+                None,
+                &self.token,
+            )
+            .await
+    }
+
     pub async fn admin_db_remove(&self, owner: &str, db: &str) -> AgdbApiResult<u16> {
         self.client
             .delete(
@@ -547,6 +563,20 @@ impl<T: AgdbApiClient> AgdbApi<T> {
         self.client
             .post::<(), ServerDatabase>(
                 &self.url(&format!("/db/{owner}/{db}/optimize")),
+                None,
+                &self.token,
+            )
+            .await
+    }
+
+    pub async fn db_optimize_shrink_to_fit(
+        &self,
+        owner: &str,
+        db: &str,
+    ) -> AgdbApiResult<(u16, ServerDatabase)> {
+        self.client
+            .post::<(), ServerDatabase>(
+                &self.url(&format!("/db/{owner}/{db}/optimize?shrink_to_fit=true")),
                 None,
                 &self.token,
             )

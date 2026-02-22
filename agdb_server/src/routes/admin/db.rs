@@ -17,6 +17,7 @@ use crate::config::Config;
 use crate::db_pool::DbPool;
 use crate::error_code::ErrorCode;
 use crate::routes::db::DbTypeParam;
+use crate::routes::db::OptimizeParam;
 use crate::routes::db::ServerDatabaseResource;
 use crate::server_db::ServerDb;
 use crate::server_error::ServerResponse;
@@ -461,6 +462,7 @@ pub(crate) async fn list(
     params(
         ("owner" = String, Path, description = "user name"),
         ("db" = String, Path, description = "db name"),
+        OptimizeParam,
     ),
     responses(
          (status = 200, description = "ok", body = ServerDatabase),
@@ -473,6 +475,7 @@ pub(crate) async fn optimize(
     State(cluster): State<Cluster>,
     State(server_db): State<ServerDb>,
     Path((owner, db)): Path<(String, String)>,
+    request: Query<OptimizeParam>,
 ) -> ServerResponse<impl IntoResponse> {
     let owner_id = server_db.user_id(&owner).await?;
     let database = server_db.user_db(owner_id, &owner, &db).await?;
@@ -482,6 +485,7 @@ pub(crate) async fn optimize(
         .exec(DbOptimize {
             owner: owner.clone(),
             db: db.clone(),
+            shrink_to_fit: request.shrink_to_fit.unwrap_or(false),
         })
         .await?;
     let size = db_pool.db_size(&owner, &db).await?;

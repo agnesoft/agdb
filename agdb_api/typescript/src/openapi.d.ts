@@ -714,6 +714,9 @@ declare namespace Components {
             Comparison;
         }
         export type LogLevelFilter = "off" | "error" | "warn" | "info" | "debug" | "trace";
+        export interface OptimizeParam {
+            shrink_to_fit?: boolean | null;
+        }
         export type Queries = /* Convenience enum for serializing/deserializing queries. */ QueryType[];
         export type QueriesResults = /**
          * Universal database result. Successful
@@ -1663,10 +1666,14 @@ declare namespace Paths {
         namespace Parameters {
             export type Db = string;
             export type Owner = string;
+            export type ShrinkToFit = boolean;
         }
         export interface PathParameters {
             owner: Parameters.Owner;
             db: Parameters.Db;
+        }
+        export interface QueryParameters {
+            shrink_to_fit?: Parameters.ShrinkToFit;
         }
         namespace Responses {
             export type $200 = Components.Schemas.ServerDatabase;
@@ -2154,10 +2161,14 @@ declare namespace Paths {
         namespace Parameters {
             export type Db = string;
             export type Owner = string;
+            export type ShrinkToFit = boolean;
         }
         export interface PathParameters {
             owner: Parameters.Owner;
             db: Parameters.Db;
+        }
+        export interface QueryParameters {
+            shrink_to_fit?: Parameters.ShrinkToFit;
         }
         namespace Responses {
             export type $200 = Components.Schemas.ServerDatabase;
@@ -2446,7 +2457,7 @@ export interface OperationMethods {
    * admin_db_optimize
    */
   'admin_db_optimize'(
-    parameters?: Parameters<Paths.AdminDbOptimize.PathParameters> | null,
+    parameters?: Parameters<Paths.AdminDbOptimize.QueryParameters & Paths.AdminDbOptimize.PathParameters> | null,
     data?: any,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.AdminDbOptimize.Responses.$200>
@@ -2694,7 +2705,7 @@ export interface OperationMethods {
    * db_optimize
    */
   'db_optimize'(
-    parameters?: Parameters<Paths.DbOptimize.PathParameters> | null,
+    parameters?: Parameters<Paths.DbOptimize.QueryParameters & Paths.DbOptimize.PathParameters> | null,
     data?: any,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.DbOptimize.Responses.$200>
@@ -2894,7 +2905,7 @@ export interface PathsDictionary {
      * admin_db_optimize
      */
     'post'(
-      parameters?: Parameters<Paths.AdminDbOptimize.PathParameters> | null,
+      parameters?: Parameters<Paths.AdminDbOptimize.QueryParameters & Paths.AdminDbOptimize.PathParameters> | null,
       data?: any,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AdminDbOptimize.Responses.$200>
@@ -3204,7 +3215,7 @@ export interface PathsDictionary {
      * db_optimize
      */
     'post'(
-      parameters?: Parameters<Paths.DbOptimize.PathParameters> | null,
+      parameters?: Parameters<Paths.DbOptimize.QueryParameters & Paths.DbOptimize.PathParameters> | null,
       data?: any,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.DbOptimize.Responses.$200>
@@ -3349,6 +3360,7 @@ export type InsertNodesQuery = Components.Schemas.InsertNodesQuery;
 export type InsertValuesQuery = Components.Schemas.InsertValuesQuery;
 export type KeyValueComparison = Components.Schemas.KeyValueComparison;
 export type LogLevelFilter = Components.Schemas.LogLevelFilter;
+export type OptimizeParam = Components.Schemas.OptimizeParam;
 export type Queries = Components.Schemas.Queries;
 export type QueriesResults = Components.Schemas.QueriesResults;
 export type QueryAudit = Components.Schemas.QueryAudit;

@@ -33,6 +33,32 @@ async fn optimize() -> anyhow::Result<()> {
 }
 
 #[tokio::test]
+async fn shrink_to_fit() -> anyhow::Result<()> {
+    let mut server = TestServer::new().await?;
+    let owner = &next_user_name();
+    let db = &next_db_name();
+    server.api.user_login(ADMIN, ADMIN).await?;
+    server.api.admin_user_add(owner, owner).await?;
+    server.api.user_login(owner, owner).await?;
+    server.api.db_add(owner, db, DbKind::Mapped).await?;
+    let queries = &[QueryBuilder::insert().nodes().count(100).query().into()];
+    server.api.db_exec_mut(owner, db, queries).await?;
+    let original_size = server
+        .api
+        .db_list()
+        .await?
+        .1
+        .iter()
+        .find(|d| d.db == *db && d.owner == *owner)
+        .unwrap()
+        .size;
+    let (status, db) = server.api.db_optimize_shrink_to_fit(owner, db).await?;
+    assert_eq!(status, 200);
+    assert!(db.size < original_size);
+    Ok(())
+}
+
+#[tokio::test]
 async fn permission_denied() -> anyhow::Result<()> {
     let mut server = TestServer::new().await?;
     let owner = &next_user_name();

@@ -100,7 +100,7 @@ jobs:
         run: |
           npm install -g npm@latest
           pnpm install --frozen-lockfile
-          pnpm publish
+          pnpm publish --provenance
 
   publish_dockerhub_ghcr:
     runs-on: ubuntu-latest

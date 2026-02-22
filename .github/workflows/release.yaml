@@ -96,7 +96,7 @@ jobs:
       - working-directory: agdb_api/typescript
         run: |
           pnpm install --frozen-lockfile
-          pnpm publish --provenance
+          pnpm publish --provenance --access public
 
   publish_dockerhub_ghcr:
     runs-on: ubuntu-latest

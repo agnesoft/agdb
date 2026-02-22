@@ -433,10 +433,10 @@ impl<Store: StorageData> DbImpl<Store> {
     }
 
     /// Shrinks all the allocated internal storage buffers to the current size of the data
-    /// and optimizes the storage. This may dramatically reduce the size of the database
+    /// and optimizes the storage. This may further reduce the size of the database
     /// both on disk and in memory at the cost of requiring more allocations upon inserting
-    /// more data. Best to use only when the database will be used for read operations
-    /// only after the initial data population.
+    /// more data. Best to use only when the database is used for read-only operations after
+    /// initial data population.
     pub fn shrink_to_fit(&mut self) -> Result<(), DbError> {
         self.graph.shrink_to_fit(&mut self.storage)?;
         self.aliases.shrink_to_fit(&mut self.storage)?;

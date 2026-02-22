@@ -38,7 +38,6 @@ pub struct SetLogLevelRequest {
     responses(
          (status = 202, description = "server is shutting down"),
          (status = 401, description = "unauthorized"),
-         (status = 403, description = "admin only"),
     )
 )]
 pub(crate) async fn shutdown(
@@ -94,7 +93,6 @@ pub(crate) async fn status(
          (status = 200, description = "log level changed"),
          (status = 400, description = "invalid log level"),
          (status = 401, description = "unauthorized"),
-         (status = 403, description = "admin only"),
     )
 )]
 pub(crate) async fn set_log_level(

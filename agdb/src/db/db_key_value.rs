@@ -153,7 +153,7 @@ impl<S: StorageData> DbKeyValues<S> {
         &mut self,
         storage: &mut Storage<S>,
         index: u64,
-        additional: u64,
+        len: u64,
     ) -> Result<(), DbError> {
         if self.0.len() <= index {
             self.0
@@ -170,7 +170,7 @@ impl<S: StorageData> DbKeyValues<S> {
             DbVec::from_storage(storage, storage_index)?
         };
 
-        kvs.reserve(storage, kvs.len() + additional)
+        kvs.reserve(storage, len)
     }
 
     pub fn shrink_to_fit(&mut self, storage: &mut Storage<S>) -> Result<(), DbError> {

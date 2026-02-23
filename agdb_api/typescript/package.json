@@ -1,6 +1,6 @@
 {
     "name": "@agnesoft/agdb_api",
-    "version": "0.12.8",
+    "version": "0.12.9",
     "license": "Apache-2.0",
     "description": "Agnesoft Graph Database API client for typescript/javascript",
     "author": "Agnesoft",
@@ -8,6 +8,14 @@
     "main": "dist/index.js",
     "module": "dist/index.js",
     "types": "dist/index.d.ts",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/agnesoft/agdb.git"
+    },
+    "bugs": {
+        "url": "https://github.com/agnesoft/agdb/issues"
+    },
+    "homepage": "https://agdb.agnesoft.com/",
     "keywords": [
         "graph",
         "database",

@@ -590,7 +590,7 @@ mod tests {
         let index2 = storage.insert(&2_i64).unwrap();
         let index3 = storage.insert(&3_i64).unwrap();
         storage.remove(index2).unwrap();
-        storage.shrink_to_fit().unwrap();
+        storage.optimize_storage().unwrap();
 
         let expected_size =
             (u64::serialized_size_static() * 2) * 3 + i64::serialized_size_static() * 3;
@@ -608,7 +608,7 @@ mod tests {
         let index2 = storage.insert(&2_i64).unwrap();
         let index3 = storage.insert(&3_i64).unwrap();
 
-        storage.shrink_to_fit().unwrap();
+        storage.optimize_storage().unwrap();
 
         assert_eq!(storage.value(index1), Ok(1_i64));
         assert_eq!(storage.value(index2), Ok(2_i64));

@@ -277,6 +277,36 @@ async fn admin_db_optimize() -> anyhow::Result<()> {
 }
 
 #[tokio::test]
+async fn admin_db_shrink_to_fit() -> anyhow::Result<()> {
+    let mut cluster = TestCluster::new().await?;
+    let owner = &next_user_name();
+    let db = &next_db_name();
+    let client = cluster.apis.get_mut(1).unwrap();
+    client.user_login(ADMIN, ADMIN).await?;
+    client.admin_user_add(owner, owner).await?;
+    client.admin_db_add(owner, db, DbKind::Memory).await?;
+    client
+        .admin_db_exec_mut(
+            owner,
+            db,
+            &[QueryBuilder::insert().nodes().count(100).query().into()],
+        )
+        .await?;
+    let original_size = client
+        .admin_db_list()
+        .await?
+        .1
+        .iter()
+        .find(|d| d.db == *db && d.owner == *owner)
+        .unwrap()
+        .size;
+    client.admin_db_optimize_shrink_to_fit(owner, db).await?;
+    let server_db = client.admin_db_optimize_shrink_to_fit(owner, db).await?.1;
+    assert!(server_db.size < original_size);
+    Ok(())
+}
+
+#[tokio::test]
 async fn admin_db_remove() -> anyhow::Result<()> {
     let mut cluster = TestCluster::new().await?;
     let owner = &next_user_name();
@@ -658,6 +688,30 @@ async fn db_optimize() -> anyhow::Result<()> {
     let original_size = client.db_list().await?.1[0].size;
     client.db_optimize(owner, db).await?;
     let server_db = client.db_optimize(owner, db).await?.1;
+    assert!(server_db.size < original_size);
+    Ok(())
+}
+
+#[tokio::test]
+async fn db_shrink_to_fit() -> anyhow::Result<()> {
+    let mut cluster = TestCluster::new().await?;
+    let owner = &next_user_name();
+    let db = &next_db_name();
+    let client = cluster.apis.get_mut(1).unwrap();
+    client.user_login(ADMIN, ADMIN).await?;
+    client.admin_user_add(owner, owner).await?;
+    client.cluster_user_login(owner, owner).await?;
+    client.db_add(owner, db, DbKind::Memory).await?;
+    client
+        .db_exec_mut(
+            owner,
+            db,
+            &[QueryBuilder::insert().nodes().count(100).query().into()],
+        )
+        .await?;
+    let original_size = client.db_list().await?.1[0].size;
+    client.db_optimize_shrink_to_fit(owner, db).await?;
+    let server_db = client.db_optimize_shrink_to_fit(owner, db).await?.1;
     assert!(server_db.size < original_size);
     Ok(())
 }

@@ -79,6 +79,7 @@ pub trait GraphData<D: StorageData> {
         index: GraphIndex,
         value: i64,
     ) -> Result<(), DbError>;
+    fn shrink_to_fit(&mut self, storage: &mut Storage<D>) -> Result<(), DbError>;
     fn to(&self, storage: &Storage<D>, index: GraphIndex) -> Result<i64, DbError>;
     fn to_meta(&self, storage: &Storage<D>, index: GraphIndex) -> Result<i64, DbError>;
     fn transaction(&mut self, storage: &mut Storage<D>) -> u64;
@@ -273,6 +274,13 @@ where
     ) -> Result<(), DbError> {
         self.to_meta.replace(storage, index.as_u64(), &value)?;
         Ok(())
+    }
+
+    fn shrink_to_fit(&mut self, storage: &mut Storage<D>) -> Result<(), DbError> {
+        self.from.shrink_to_fit(storage)?;
+        self.to.shrink_to_fit(storage)?;
+        self.from_meta.shrink_to_fit(storage)?;
+        self.to_meta.shrink_to_fit(storage)
     }
 
     fn to(&self, storage: &Storage<D>, index: GraphIndex) -> Result<i64, DbError> {
@@ -540,8 +548,20 @@ where
         })
     }
 
-    pub fn node_count(&self, storage: &Storage<D>) -> Result<u64, DbError> {
-        self.data.node_count(storage)
+    pub fn edge_from(&self, storage: &Storage<D>, index: GraphIndex) -> GraphIndex {
+        GraphIndex::from(-self.data.from(storage, index).unwrap_or_default())
+    }
+
+    pub fn edge_to(&self, storage: &Storage<D>, index: GraphIndex) -> GraphIndex {
+        GraphIndex::from(-self.data.to(storage, index).unwrap_or_default())
+    }
+
+    pub fn first_edge_from(
+        &self,
+        storage: &Storage<D>,
+        index: GraphIndex,
+    ) -> Result<GraphIndex, DbError> {
+        Ok(GraphIndex::from(-self.data.from(storage, index)?))
     }
 
     pub fn insert_edge(
@@ -559,6 +579,14 @@ where
         self.data.commit(storage, id)?;
 
         Ok(index)
+    }
+
+    pub fn first_edge_to(
+        &self,
+        storage: &Storage<D>,
+        index: GraphIndex,
+    ) -> Result<GraphIndex, DbError> {
+        Ok(GraphIndex::from(-self.data.to(storage, index)?))
     }
 
     pub fn insert_node(&mut self, storage: &mut Storage<D>) -> Result<GraphIndex, DbError> {
@@ -594,6 +622,10 @@ where
             index,
             storage,
         })
+    }
+
+    pub fn node_count(&self, storage: &Storage<D>) -> Result<u64, DbError> {
+        self.data.node_count(storage)
     }
 
     #[allow(dead_code)]
@@ -642,28 +674,8 @@ where
         self.data.commit(storage, id)
     }
 
-    pub fn first_edge_from(
-        &self,
-        storage: &Storage<D>,
-        index: GraphIndex,
-    ) -> Result<GraphIndex, DbError> {
-        Ok(GraphIndex::from(-self.data.from(storage, index)?))
-    }
-
-    pub fn first_edge_to(
-        &self,
-        storage: &Storage<D>,
-        index: GraphIndex,
-    ) -> Result<GraphIndex, DbError> {
-        Ok(GraphIndex::from(-self.data.to(storage, index)?))
-    }
-
-    pub fn edge_from(&self, storage: &Storage<D>, index: GraphIndex) -> GraphIndex {
-        GraphIndex::from(-self.data.from(storage, index).unwrap_or_default())
-    }
-
-    pub fn edge_to(&self, storage: &Storage<D>, index: GraphIndex) -> GraphIndex {
-        GraphIndex::from(-self.data.to(storage, index).unwrap_or_default())
+    pub fn shrink_to_fit(&mut self, storage: &mut Storage<D>) -> Result<(), DbError> {
+        self.data.shrink_to_fit(storage)
     }
 
     fn free_index(&mut self, storage: &mut Storage<D>, index: GraphIndex) -> Result<(), DbError> {

@@ -78,6 +78,11 @@ impl UserDb {
         Ok(())
     }
 
+    pub(crate) async fn shrink_to_fit(&self) -> ServerResult<()> {
+        self.0.write().await.shrink_to_fit()?;
+        Ok(())
+    }
+
     pub(crate) async fn rename(&self, target_name: &str) -> ServerResult<()> {
         self.0.write().await.rename(target_name)?;
         Ok(())

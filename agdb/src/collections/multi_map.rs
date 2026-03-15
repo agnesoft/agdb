@@ -319,6 +319,10 @@ where
         Ok(())
     }
 
+    pub fn shrink_to_fit(&mut self, storage: &mut Storage<D>) -> Result<(), DbError> {
+        self.data.shrink_to_fit(storage)
+    }
+
     pub fn value(&self, storage: &Storage<D>, key: &K) -> Result<Option<T>, DbError> {
         if self.capacity() == 0 {
             return Ok(None);
@@ -846,7 +850,7 @@ mod tests {
 
         map.remove_from_storage(&mut storage).unwrap();
         let len = storage.len();
-        storage.shrink_to_fit().unwrap();
+        storage.optimize_storage().unwrap();
         assert!(storage.len() < len)
     }
 

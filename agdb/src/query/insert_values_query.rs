@@ -121,6 +121,8 @@ fn insert_values_new<Store: StorageData>(
         db.insert_new_alias(db_id, alias)?;
     }
 
+    db.reserve_key_value_capacity(db_id, values.len() as u64)?;
+
     for key_value in values {
         db.insert_key_value(db_id, key_value)?;
     }
@@ -142,6 +144,8 @@ fn insert_values_id<Store: StorageData>(
     values: &[DbKeyValue],
     result: &mut QueryResult,
 ) -> Result<(), DbError> {
+    db.reserve_key_value_capacity(db_id, values.len() as u64)?;
+
     for key_value in values {
         db.insert_or_replace_key_value(db_id, key_value)?;
         result.result += 1;

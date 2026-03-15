@@ -1,9 +1,9 @@
 {
   "compilerOptions": {
-    "module": "ESNext",
+    "module": "NodeNext",
     "sourceMap": true,
     "lib": ["ES2015", "DOM"],
-    "moduleResolution": "node",
+    "moduleResolution": "nodenext",
     "allowJs": true,
     "esModuleInterop": true,
     "outDir": "./dist"

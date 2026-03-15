@@ -80,6 +80,10 @@ where
         storage.commit(id)
     }
 
+    pub fn shrink_to_fit(&mut self, storage: &mut Storage<D>) -> Result<(), DbError> {
+        self.ids.shrink_to_fit(storage)
+    }
+
     pub fn storage_index(&self) -> DbIndexStorageIndex {
         DbIndexStorageIndex {
             key_index: self.key_index,
@@ -145,6 +149,15 @@ where
         }
 
         Ok(())
+    }
+
+    pub fn shrink_to_fit(&mut self, storage: &mut Storage<D>) -> Result<(), DbError> {
+        for index in &mut self.indexes {
+            index.shrink_to_fit(storage)?;
+        }
+
+        self.indexes.shrink_to_fit();
+        self.storage_indexes.shrink_to_fit(storage)
     }
 
     pub fn storage_index(&self) -> StorageIndex {
@@ -346,7 +359,7 @@ mod tests {
             .unwrap();
         index.remove_from_storage(&mut storage).unwrap();
         let len = storage.len();
-        storage.shrink_to_fit().unwrap();
+        storage.optimize_storage().unwrap();
         assert!(storage.len() < len);
     }
 

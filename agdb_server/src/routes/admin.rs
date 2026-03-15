@@ -3,16 +3,32 @@ pub(crate) mod user;
 
 use crate::config::Config;
 use crate::server_db::ServerDb;
+use crate::server_error::ServerError;
 use crate::server_error::ServerResponse;
 use crate::user_id::AdminId;
 use crate::utilities::get_size;
 use agdb_api::AdminStatus;
+use agdb_api::LogLevelFilter;
 use axum::Json;
+use axum::extract::Query;
 use axum::extract::State;
 use axum::http::StatusCode;
+use serde::Deserialize;
+use std::sync::Arc;
 use std::time::SystemTime;
 use std::time::UNIX_EPOCH;
 use tokio::sync::broadcast::Sender;
+use tracing_subscriber::EnvFilter;
+use tracing_subscriber::Registry;
+use tracing_subscriber::reload::Handle;
+use utoipa::IntoParams;
+use utoipa::ToSchema;
+
+#[derive(Deserialize, IntoParams, ToSchema, agdb::TypeDefImpl)]
+#[into_params(parameter_in = Query)]
+pub struct SetLogLevelRequest {
+    pub new_level: LogLevelFilter,
+}
 
 #[utoipa::path(post,
     path = "/api/v1/admin/shutdown",
@@ -22,7 +38,6 @@ use tokio::sync::broadcast::Sender;
     responses(
          (status = 202, description = "server is shutting down"),
          (status = 401, description = "unauthorized"),
-         (status = 403, description = "admin only"),
     )
 )]
 pub(crate) async fn shutdown(
@@ -41,7 +56,7 @@ pub(crate) async fn shutdown(
     tag = "agdb",
     security(("Token" = [])),
     responses(
-         (status = 200, description = "Server is ready", body = AdminStatus),
+         (status = 200, description = "server is ready", body = AdminStatus),
          (status = 401, description = "unauthorized"),
     )
 )]
@@ -49,6 +64,7 @@ pub(crate) async fn status(
     _admin_id: AdminId,
     State(server_db): State<ServerDb>,
     State(config): State<Config>,
+    State(handle): State<Arc<Handle<EnvFilter, Registry>>>,
 ) -> ServerResponse<(StatusCode, Json<AdminStatus>)> {
     Ok((
         StatusCode::OK,
@@ -58,8 +74,39 @@ pub(crate) async fn status(
             users: server_db.user_count().await?,
             logged_in_users: server_db.user_token_count().await?,
             size: get_size(&config.data_dir).await?,
+            log_level: handle
+                .with_current(|f| f.to_string().as_str().try_into().unwrap_or_default())
+                .unwrap_or_default(),
         }),
     ))
+}
+
+#[utoipa::path(post,
+    path = "/api/v1/admin/set_log_level",
+    operation_id = "set_log_level",
+    tag = "agdb",
+    security(("Token" = [])),
+    params(
+        SetLogLevelRequest
+    ),
+    responses(
+         (status = 200, description = "log level changed"),
+         (status = 400, description = "invalid log level"),
+         (status = 401, description = "unauthorized"),
+    )
+)]
+pub(crate) async fn set_log_level(
+    _admin_id: AdminId,
+    State(handle): State<Arc<Handle<EnvFilter, Registry>>>,
+    request: Query<SetLogLevelRequest>,
+) -> Result<(), ServerError> {
+    handle
+        .modify(|filter| {
+            *filter = EnvFilter::new(request.new_level.to_string());
+        })
+        .map_err(|e| ServerError::new(StatusCode::INTERNAL_SERVER_ERROR, &format!("{e:?}")))?;
+    tracing::info!("Log level changed to: {}", request.new_level);
+    Ok(())
 }
 
 #[cfg(test)]

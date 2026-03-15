@@ -7,7 +7,7 @@
       "name": "Apache-2.0",
       "identifier": "Apache-2.0"
     },
-    "version": "0.12.6"
+    "version": "0.12.10"
   },
   "servers": [
     {
@@ -289,13 +289,10 @@
         ],
         "responses": {
           "201": {
-            "description": "db typ changes"
+            "description": "db type changed"
           },
           "401": {
             "description": "unauthorized"
-          },
-          "403": {
-            "description": "server admin only"
           },
           "404": {
             "description": "user / db not found"
@@ -566,6 +563,14 @@
             "required": true,
             "schema": {
               "type": "string"
+            }
+          },
+          {
+            "name": "shrink_to_fit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean"
             }
           }
         ],
@@ -919,6 +924,40 @@
         ]
       }
     },
+    "/api/v1/admin/set_log_level": {
+      "post": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "set_log_level",
+        "parameters": [
+          {
+            "name": "new_level",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/LogLevelFilter"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "log level changed"
+          },
+          "400": {
+            "description": "invalid log level"
+          },
+          "401": {
+            "description": "unauthorized"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
     "/api/v1/admin/shutdown": {
       "post": {
         "tags": [
@@ -931,9 +970,6 @@
           },
           "401": {
             "description": "unauthorized"
-          },
-          "403": {
-            "description": "admin only"
           }
         },
         "security": [
@@ -951,7 +987,7 @@
         "operationId": "admin_status",
         "responses": {
           "200": {
-            "description": "Server is ready",
+            "description": "server is ready",
             "content": {
               "application/json": {
                 "schema": {
@@ -1893,6 +1929,14 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "shrink_to_fit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
           }
         ],
         "responses": {
@@ -2391,13 +2435,17 @@
           "dbs",
           "users",
           "logged_in_users",
-          "size"
+          "size",
+          "log_level"
         ],
         "properties": {
           "dbs": {
             "type": "integer",
             "format": "int64",
             "minimum": 0
+          },
+          "log_level": {
+            "$ref": "#/components/schemas/LogLevelFilter"
           },
           "logged_in_users": {
             "type": "integer",
@@ -3111,6 +3159,28 @@
           "value": {
             "$ref": "#/components/schemas/Comparison",
             "description": "Comparison operator (e.g. Equal, GreaterThan etc.)"
+          }
+        }
+      },
+      "LogLevelFilter": {
+        "type": "string",
+        "enum": [
+          "off",
+          "error",
+          "warn",
+          "info",
+          "debug",
+          "trace"
+        ]
+      },
+      "OptimizeParam": {
+        "type": "object",
+        "properties": {
+          "shrink_to_fit": {
+            "type": [
+              "boolean",
+              "null"
+            ]
           }
         }
       },
@@ -3867,6 +3937,17 @@
         "properties": {
           "resource": {
             "$ref": "#/components/schemas/DbResource"
+          }
+        }
+      },
+      "SetLogLevelRequest": {
+        "type": "object",
+        "required": [
+          "new_level"
+        ],
+        "properties": {
+          "new_level": {
+            "$ref": "#/components/schemas/LogLevelFilter"
           }
         }
       },

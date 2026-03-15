@@ -314,6 +314,12 @@ impl DbPool {
         Ok(())
     }
 
+    pub(crate) async fn shrink_to_fit_db(&self, owner: &str, db: &str) -> ServerResult {
+        let user_db = self.db(owner, db).await?;
+        user_db.shrink_to_fit().await?;
+        Ok(())
+    }
+
     pub(crate) async fn remove_db(&self, owner: &str, db: &str) -> ServerResult<UserDb> {
         Ok(self
             .pool

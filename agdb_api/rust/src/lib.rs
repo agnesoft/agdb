@@ -14,6 +14,7 @@ pub use api_types::DbKind;
 pub use api_types::DbResource;
 pub use api_types::DbUser;
 pub use api_types::DbUserRole;
+pub use api_types::LogLevelFilter;
 pub use api_types::Queries;
 pub use api_types::QueriesResults;
 pub use api_types::QueryAudit;

@@ -11,11 +11,16 @@ use serde::Serialize;
 pub(crate) struct DbOptimize {
     pub(crate) owner: String,
     pub(crate) db: String,
+    pub(crate) shrink_to_fit: bool,
 }
 
 impl Action for DbOptimize {
     async fn exec(self, _db: ServerDb, db_pool: DbPool) -> ServerResult<ClusterActionResult> {
-        db_pool.optimize_db(&self.owner, &self.db).await?;
+        if self.shrink_to_fit {
+            db_pool.shrink_to_fit_db(&self.owner, &self.db).await?;
+        } else {
+            db_pool.optimize_db(&self.owner, &self.db).await?;
+        }
 
         Ok(ClusterActionResult::None)
     }

@@ -1,7 +1,7 @@
+use agdb_api::LogLevelFilter;
 use std::sync::Arc;
 use std::time::SystemTime;
 use std::time::UNIX_EPOCH;
-use tracing::level_filters::LevelFilter;
 
 pub(crate) type Config = Arc<ConfigImpl>;
 
@@ -16,7 +16,7 @@ pub struct ConfigImpl {
     pub(crate) basepath: String,
     pub(crate) static_roots: Vec<String>,
     pub(crate) admin: String,
-    pub(crate) log_level: LevelFilter,
+    pub(crate) log_level: LogLevelFilter,
     pub(crate) log_body_limit: u64,
     pub(crate) request_body_limit: u64,
     pub(crate) data_dir: String,
@@ -33,9 +33,9 @@ pub struct ConfigImpl {
     pub(crate) pepper: Option<[u8; SALT_LEN]>,
 }
 
-pub(crate) fn new(config_file: &str) -> Config {
+pub(crate) fn new(config_file: &str) -> Result<Config, String> {
     if let Ok(content) = std::fs::read_to_string(config_file) {
-        let mut config_impl: ConfigImpl = from_str(&content);
+        let mut config_impl: ConfigImpl = from_str(&content)?;
         config_impl.cluster_node_id = config_impl
             .cluster
             .iter()
@@ -43,18 +43,23 @@ pub(crate) fn new(config_file: &str) -> Config {
             .unwrap_or(0);
         config_impl.start_time = SystemTime::now()
             .duration_since(UNIX_EPOCH)
-            .unwrap()
+            .map_err(|e| format!("Failed to get server start time since UNIX_EPOCH: {e:?}"))?
             .as_secs();
 
         if !config_impl.pepper_path.is_empty() {
-            let pepper_raw = std::fs::read(&config_impl.pepper_path).unwrap();
+            let pepper_raw = std::fs::read(&config_impl.pepper_path).map_err(|e| {
+                format!(
+                    "Failed to read the pepper file '{}': {e:?}",
+                    config_impl.pepper_path
+                )
+            })?;
             let pepper = pepper_raw.trim_ascii();
 
             if pepper.len() != SALT_LEN {
-                panic!(
+                return Err(format!(
                     "invalid pepper length {}, expected {SALT_LEN}",
                     pepper.len()
-                );
+                ));
             }
 
             config_impl.pepper = Some(
@@ -67,13 +72,13 @@ pub(crate) fn new(config_file: &str) -> Config {
         let config = Config::new(config_impl);
 
         if !config.cluster.is_empty() && !config.cluster.contains(&config.address) {
-            panic!(
+            return Err(format!(
                 "cluster does not contain local node: {} ({:?})",
                 config.address, config.cluster
-            );
+            ));
         }
 
-        return config;
+        return Ok(config);
     }
 
     let config = ConfigImpl {
@@ -82,7 +87,7 @@ pub(crate) fn new(config_file: &str) -> Config {
         basepath: "".to_string(),
         static_roots: Vec::new(),
         admin: "admin".to_string(),
-        log_level: LevelFilter::INFO,
+        log_level: LogLevelFilter::Info,
         log_body_limit: DEFAULT_LOG_BODY_LIMIT,
         request_body_limit: DEFAULT_REQUEST_BODY_LIMIT,
         data_dir: "agdb_server_data".to_string(),
@@ -97,14 +102,15 @@ pub(crate) fn new(config_file: &str) -> Config {
         cluster_node_id: 0,
         start_time: SystemTime::now()
             .duration_since(UNIX_EPOCH)
-            .unwrap()
+            .map_err(|e| format!("Failed to get server start time since UNIX_EPOCH: {e:?}"))?
             .as_secs(),
         pepper: None,
     };
 
-    std::fs::write(config_file, to_str(&config)).unwrap();
+    std::fs::write(config_file, to_str(&config))
+        .map_err(|e| format!("Failed to write config file '{}': {e:?}", config_file))?;
 
-    Config::new(config)
+    Ok(Config::new(config))
 }
 
 pub(crate) fn vec_from_str(value: &str) -> Vec<String> {
@@ -128,14 +134,14 @@ pub(crate) fn vec_from_str(value: &str) -> Vec<String> {
     cluster
 }
 
-pub(crate) fn from_str(content: &str) -> ConfigImpl {
+pub(crate) fn from_str(content: &str) -> Result<ConfigImpl, String> {
     let mut config = ConfigImpl {
         bind: String::new(),
         address: String::new(),
         basepath: String::new(),
         static_roots: Vec::new(),
         admin: String::new(),
-        log_level: LevelFilter::INFO,
+        log_level: LogLevelFilter::Info,
         log_body_limit: DEFAULT_LOG_BODY_LIMIT,
         request_body_limit: DEFAULT_REQUEST_BODY_LIMIT,
         data_dir: String::new(),
@@ -172,9 +178,17 @@ pub(crate) fn from_str(content: &str) -> ConfigImpl {
                 "basepath" => config.basepath = value.to_string(),
                 "static_roots" => config.static_roots = vec_from_str(value),
                 "admin" => config.admin = value.to_string(),
-                "log_level" => config.log_level = level_filter_from_str(value),
-                "log_body_limit" => config.log_body_limit = value.parse().unwrap(),
-                "request_body_limit" => config.request_body_limit = value.parse().unwrap(),
+                "log_level" => config.log_level = value.try_into()?,
+                "log_body_limit" => {
+                    config.log_body_limit = value
+                        .parse()
+                        .map_err(|e| format!("Invalid log_body_limit: {e:?}"))?
+                }
+                "request_body_limit" => {
+                    config.request_body_limit = value
+                        .parse()
+                        .map_err(|e| format!("Invalid request_body_limit: {e:?}"))?
+                }
                 "data_dir" => config.data_dir = value.to_string(),
                 "pepper_path" => config.pepper_path = value.to_string(),
                 "tls_certificate" => config.tls_certificate = value.to_string(),
@@ -182,18 +196,22 @@ pub(crate) fn from_str(content: &str) -> ConfigImpl {
                 "tls_root" => config.tls_root = value.to_string(),
                 "cluster_token" => config.cluster_token = value.to_string(),
                 "cluster_heartbeat_timeout_ms" => {
-                    config.cluster_heartbeat_timeout_ms = value.parse().unwrap()
+                    config.cluster_heartbeat_timeout_ms = value
+                        .parse()
+                        .map_err(|e| format!("Invalid cluster_heartbeat_timeout_ms: {e:?}"))?
                 }
                 "cluster_term_timeout_ms" => {
-                    config.cluster_term_timeout_ms = value.parse().unwrap()
+                    config.cluster_term_timeout_ms = value
+                        .parse()
+                        .map_err(|e| format!("Invalid cluster_term_timeout_ms: {e:?}"))?
                 }
                 "cluster" => config.cluster = vec_from_str(value),
-                _ => panic!("Unknown key: {key}"),
+                _ => return Err(format!("Unknown key: {key}")),
             }
         }
     }
 
-    config
+    Ok(config)
 }
 
 pub(crate) fn to_str(config: &ConfigImpl) -> String {
@@ -206,10 +224,7 @@ pub(crate) fn to_str(config: &ConfigImpl) -> String {
         config.static_roots.join(", ")
     ));
     buffer.push_str(&format!("admin: {}\n", config.admin));
-    buffer.push_str(&format!(
-        "log_level: {}\n",
-        level_filter_to_str(&config.log_level)
-    ));
+    buffer.push_str(&format!("log_level: {}\n", config.log_level));
     buffer.push_str(&format!("log_body_limit: {}\n", config.log_body_limit));
     buffer.push_str(&format!(
         "request_body_limit: {}\n",
@@ -232,29 +247,6 @@ pub(crate) fn to_str(config: &ConfigImpl) -> String {
     ));
     buffer.push_str(&format!("cluster: [{}]\n", config.cluster.join(", ")));
     buffer
-}
-
-fn level_filter_to_str(level_filter: &LevelFilter) -> &str {
-    match *level_filter {
-        LevelFilter::OFF => "OFF",
-        LevelFilter::ERROR => "ERROR",
-        LevelFilter::WARN => "WARN",
-        LevelFilter::INFO => "INFO",
-        LevelFilter::DEBUG => "DEBUG",
-        LevelFilter::TRACE => "TRACE",
-    }
-}
-
-fn level_filter_from_str(level_filter: &str) -> LevelFilter {
-    match level_filter {
-        "OFF" => LevelFilter::OFF,
-        "ERROR" => LevelFilter::ERROR,
-        "WARN" => LevelFilter::WARN,
-        "INFO" => LevelFilter::INFO,
-        "DEBUG" => LevelFilter::DEBUG,
-        "TRACE" => LevelFilter::TRACE,
-        _ => panic!("Invalid log level: {level_filter}"),
-    }
 }
 
 #[cfg(test)]
@@ -283,13 +275,12 @@ mod tests {
     fn default_values() {
         let test_file = TestFile::new("test_config_default.yaml");
         assert!(!std::fs::exists(test_file.filename).unwrap());
-        let _config = config::new(test_file.filename);
+        config::new(test_file.filename).unwrap();
         assert!(std::fs::exists(test_file.filename).unwrap());
-        let _config = config::new(test_file.filename);
+        config::new(test_file.filename).unwrap();
     }
 
     #[test]
-    #[should_panic]
     fn invalid_cluster() {
         let test_file = TestFile::new("test_config_invalid_cluster.yaml");
         let config = ConfigImpl {
@@ -298,7 +289,7 @@ mod tests {
             basepath: "".to_string(),
             static_roots: vec!["icetool".to_string()],
             admin: "admin".to_string(),
-            log_level: LevelFilter::INFO,
+            log_level: LogLevelFilter::Info,
             log_body_limit: DEFAULT_LOG_BODY_LIMIT,
             request_body_limit: DEFAULT_REQUEST_BODY_LIMIT,
             data_dir: "agdb_server_data".to_string(),
@@ -316,7 +307,7 @@ mod tests {
         };
         std::fs::write(test_file.filename, to_str(&config)).unwrap();
 
-        config::new(test_file.filename);
+        config::new(test_file.filename).unwrap_err();
     }
 
     #[test]
@@ -331,7 +322,7 @@ mod tests {
             basepath: "".to_string(),
             static_roots: vec![],
             admin: "admin".to_string(),
-            log_level: LevelFilter::INFO,
+            log_level: LogLevelFilter::Info,
             log_body_limit: DEFAULT_LOG_BODY_LIMIT,
             request_body_limit: DEFAULT_REQUEST_BODY_LIMIT,
             data_dir: "agdb_server_data".to_string(),
@@ -350,13 +341,12 @@ mod tests {
 
         std::fs::write(test_file.filename, to_str(&config)).unwrap();
 
-        let config = config::new(test_file.filename);
+        let config = config::new(test_file.filename).unwrap();
 
         assert_eq!(config.pepper.as_ref(), Some(pepper));
     }
 
     #[test]
-    #[should_panic]
     fn pepper_missing() {
         let test_file = TestFile::new("pepper_missing.yaml");
         let config = ConfigImpl {
@@ -365,7 +355,7 @@ mod tests {
             basepath: "".to_string(),
             static_roots: vec![],
             admin: "admin".to_string(),
-            log_level: LevelFilter::INFO,
+            log_level: LogLevelFilter::Info,
             log_body_limit: DEFAULT_LOG_BODY_LIMIT,
             request_body_limit: DEFAULT_REQUEST_BODY_LIMIT,
             data_dir: "agdb_server_data".to_string(),
@@ -383,11 +373,10 @@ mod tests {
         };
         std::fs::write(test_file.filename, to_str(&config)).unwrap();
 
-        config::new(test_file.filename);
+        config::new(test_file.filename).unwrap_err();
     }
 
     #[test]
-    #[should_panic]
     fn pepper_invalid_len() {
         let test_file = TestFile::new("pepper_invalid_len.yaml");
         let pepper_file = TestFile::new("pepper_invalid_len");
@@ -398,7 +387,7 @@ mod tests {
             basepath: "".to_string(),
             static_roots: vec![],
             admin: "admin".to_string(),
-            log_level: LevelFilter::INFO,
+            log_level: LogLevelFilter::Info,
             log_body_limit: DEFAULT_LOG_BODY_LIMIT,
             request_body_limit: DEFAULT_REQUEST_BODY_LIMIT,
             data_dir: "agdb_server_data".to_string(),
@@ -416,6 +405,6 @@ mod tests {
         };
         std::fs::write(test_file.filename, to_str(&config)).unwrap();
 
-        config::new(test_file.filename);
+        config::new(test_file.filename).unwrap_err();
     }
 }

@@ -56,14 +56,13 @@ describe("openapi test", () => {
     });
 
     it("insert nodes with edges", async () => {
-        const admin_client = await AgdbApi.client("http://localhost:3000");
-        await admin_client.login({
+        const client = await AgdbApi.client("http://localhost:3000");
+        await client.login({
             username: "admin",
             password: "admin",
         });
-        await admin_client.admin_user_add("user1", { password: "password123" });
+        await client.admin_user_add("user1", { password: "password123" });
 
-        const client = await AgdbApi.client("http://localhost:3000");
         await client.login({
             username: "user1",
             password: "password123",

@@ -83,17 +83,20 @@ jobs:
     runs-on: ubuntu-latest
     needs: [release, new_version]
     if: needs.new_version.outputs.new_version != ''
+    permissions:
+      id-token: write # Required for OIDC
+      contents: read
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v6
         with:
+          node-version: "24"
           registry-url: "https://registry.npmjs.org"
-      - run: npm i -g pnpm
-      - run: pnpm i --frozen-lockfile
       - working-directory: agdb_api/typescript
-        run: pnpm publish --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_ORG_TOKEN }}
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm publish --provenance --access public
 
   publish_dockerhub_ghcr:
     runs-on: ubuntu-latest

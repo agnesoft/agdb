@@ -10,6 +10,7 @@ declare namespace Components {
     namespace Schemas {
         export interface AdminStatus {
             dbs: number; // int64
+            log_level: LogLevelFilter;
             logged_in_users: number; // int64
             size: number; // int64
             uptime: number; // int64
@@ -711,6 +712,10 @@ declare namespace Components {
              * where the "contains" makes little sense (i.e. does 3 contain 1?).
              */
             Comparison;
+        }
+        export type LogLevelFilter = "off" | "error" | "warn" | "info" | "debug" | "trace";
+        export interface OptimizeParam {
+            shrink_to_fit?: boolean | null;
         }
         export type Queries = /* Convenience enum for serializing/deserializing queries. */ QueryType[];
         export type QueriesResults = /**
@@ -1448,6 +1453,9 @@ declare namespace Components {
         export interface ServerDatabaseResource {
             resource: DbResource;
         }
+        export interface SetLogLevelRequest {
+            new_level: LogLevelFilter;
+        }
         export interface UserCredentials {
             password: string;
         }
@@ -1559,8 +1567,6 @@ declare namespace Paths {
             }
             export interface $401 {
             }
-            export interface $403 {
-            }
             export interface $404 {
             }
         }
@@ -1660,10 +1666,14 @@ declare namespace Paths {
         namespace Parameters {
             export type Db = string;
             export type Owner = string;
+            export type ShrinkToFit = boolean;
         }
         export interface PathParameters {
             owner: Parameters.Owner;
             db: Parameters.Db;
+        }
+        export interface QueryParameters {
+            shrink_to_fit?: Parameters.ShrinkToFit;
         }
         namespace Responses {
             export type $200 = Components.Schemas.ServerDatabase;
@@ -1805,8 +1815,6 @@ declare namespace Paths {
             export interface $202 {
             }
             export interface $401 {
-            }
-            export interface $403 {
             }
         }
     }
@@ -2153,10 +2161,14 @@ declare namespace Paths {
         namespace Parameters {
             export type Db = string;
             export type Owner = string;
+            export type ShrinkToFit = boolean;
         }
         export interface PathParameters {
             owner: Parameters.Owner;
             db: Parameters.Db;
+        }
+        export interface QueryParameters {
+            shrink_to_fit?: Parameters.ShrinkToFit;
         }
         namespace Responses {
             export type $200 = Components.Schemas.ServerDatabase;
@@ -2301,6 +2313,22 @@ declare namespace Paths {
             }
         }
     }
+    namespace SetLogLevel {
+        namespace Parameters {
+            export type NewLevel = Components.Schemas.LogLevelFilter;
+        }
+        export interface QueryParameters {
+            new_level: Parameters.NewLevel;
+        }
+        namespace Responses {
+            export interface $200 {
+            }
+            export interface $400 {
+            }
+            export interface $401 {
+            }
+        }
+    }
     namespace Status {
         namespace Responses {
             export interface $200 {
@@ -2429,7 +2457,7 @@ export interface OperationMethods {
    * admin_db_optimize
    */
   'admin_db_optimize'(
-    parameters?: Parameters<Paths.AdminDbOptimize.PathParameters> | null,
+    parameters?: Parameters<Paths.AdminDbOptimize.QueryParameters & Paths.AdminDbOptimize.PathParameters> | null,
     data?: any,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.AdminDbOptimize.Responses.$200>
@@ -2481,6 +2509,14 @@ export interface OperationMethods {
     data?: any,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.AdminDbUserRemove.Responses.$204>
+  /**
+   * set_log_level
+   */
+  'set_log_level'(
+    parameters?: Parameters<Paths.SetLogLevel.QueryParameters> | null,
+    data?: any,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.SetLogLevel.Responses.$200>
   /**
    * admin_shutdown
    */
@@ -2669,7 +2705,7 @@ export interface OperationMethods {
    * db_optimize
    */
   'db_optimize'(
-    parameters?: Parameters<Paths.DbOptimize.PathParameters> | null,
+    parameters?: Parameters<Paths.DbOptimize.QueryParameters & Paths.DbOptimize.PathParameters> | null,
     data?: any,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.DbOptimize.Responses.$200>
@@ -2869,7 +2905,7 @@ export interface PathsDictionary {
      * admin_db_optimize
      */
     'post'(
-      parameters?: Parameters<Paths.AdminDbOptimize.PathParameters> | null,
+      parameters?: Parameters<Paths.AdminDbOptimize.QueryParameters & Paths.AdminDbOptimize.PathParameters> | null,
       data?: any,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AdminDbOptimize.Responses.$200>
@@ -2933,6 +2969,16 @@ export interface PathsDictionary {
       data?: any,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AdminDbUserRemove.Responses.$204>
+  }
+  ['/api/v1/admin/set_log_level']: {
+    /**
+     * set_log_level
+     */
+    'post'(
+      parameters?: Parameters<Paths.SetLogLevel.QueryParameters> | null,
+      data?: any,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.SetLogLevel.Responses.$200>
   }
   ['/api/v1/admin/shutdown']: {
     /**
@@ -3169,7 +3215,7 @@ export interface PathsDictionary {
      * db_optimize
      */
     'post'(
-      parameters?: Parameters<Paths.DbOptimize.PathParameters> | null,
+      parameters?: Parameters<Paths.DbOptimize.QueryParameters & Paths.DbOptimize.PathParameters> | null,
       data?: any,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.DbOptimize.Responses.$200>
@@ -3313,6 +3359,8 @@ export type InsertIndexQuery = Components.Schemas.InsertIndexQuery;
 export type InsertNodesQuery = Components.Schemas.InsertNodesQuery;
 export type InsertValuesQuery = Components.Schemas.InsertValuesQuery;
 export type KeyValueComparison = Components.Schemas.KeyValueComparison;
+export type LogLevelFilter = Components.Schemas.LogLevelFilter;
+export type OptimizeParam = Components.Schemas.OptimizeParam;
 export type Queries = Components.Schemas.Queries;
 export type QueriesResults = Components.Schemas.QueriesResults;
 export type QueryAudit = Components.Schemas.QueryAudit;
@@ -3343,6 +3391,7 @@ export type ServerDatabase = Components.Schemas.ServerDatabase;
 export type ServerDatabaseAdminRename = Components.Schemas.ServerDatabaseAdminRename;
 export type ServerDatabaseRename = Components.Schemas.ServerDatabaseRename;
 export type ServerDatabaseResource = Components.Schemas.ServerDatabaseResource;
+export type SetLogLevelRequest = Components.Schemas.SetLogLevelRequest;
 export type UserCredentials = Components.Schemas.UserCredentials;
 export type UserLogin = Components.Schemas.UserLogin;
 export type UserStatus = Components.Schemas.UserStatus;

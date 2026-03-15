@@ -67,6 +67,11 @@ where
         self.values_to_keys.remove(storage, value)
     }
 
+    pub fn shrink_to_fit(&mut self, storage: &mut Storage<D>) -> Result<(), DbError> {
+        self.keys_to_values.shrink_to_fit(storage)?;
+        self.values_to_keys.shrink_to_fit(storage)
+    }
+
     pub fn value(&self, storage: &Storage<D>, key: &K) -> Result<Option<T>, DbError> {
         self.keys_to_values.value(storage, key)
     }

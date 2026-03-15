@@ -16,17 +16,27 @@ mod server_state;
 mod user_id;
 mod utilities;
 
-use server_error::ServerResult;
+pub(crate) use server_error::ServerResult;
+use std::str::FromStr;
+use std::sync::Arc;
 use tokio::net::TcpListener;
 use tokio::sync::broadcast;
+use tracing_subscriber::EnvFilter;
+use tracing_subscriber::prelude::*;
+use tracing_subscriber::reload;
 
 const CONFIG_FILE: &str = "agdb_server.yaml";
 
 #[tokio::main]
 async fn main() -> ServerResult {
-    let config = config::new(CONFIG_FILE);
-    tracing_subscriber::fmt()
-        .with_max_level(config.log_level)
+    let config = config::new(CONFIG_FILE)?;
+
+    let filter = EnvFilter::from_str(&config.log_level.to_string())?;
+    let (filter_layer, tracing_handle) = reload::Layer::new(filter);
+
+    tracing_subscriber::registry()
+        .with(filter_layer)
+        .with(tracing_subscriber::fmt::layer())
         .init();
 
     password::init(config.pepper);
@@ -41,10 +51,12 @@ async fn main() -> ServerResult {
         db_pool,
         server_db,
         shutdown_sender.clone(),
+        Arc::new(tracing_handle),
     )?;
     let cluster_handle = cluster::start_with_shutdown(cluster, shutdown_receiver);
 
     tracing::info!("Process id: {}", std::process::id());
+    tracing::info!("Log level: {}", config.log_level);
     tracing::info!(
         "Data directory: {}",
         std::env::current_dir()?.join(&config.data_dir).display()
@@ -65,6 +77,8 @@ async fn main() -> ServerResult {
         let shutdown_handle = handle.clone();
 
         tracing::info!("TLS enabled");
+        tracing::debug!("TLS certificate: {}", config.tls_certificate);
+        tracing::debug!("TLS key: {}", config.tls_key);
 
         tokio::spawn(async move {
             cluster_handle.await;

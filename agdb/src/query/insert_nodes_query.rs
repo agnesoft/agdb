@@ -94,6 +94,7 @@ impl QueryMut for InsertNodesQuery {
             }
 
             for ((index, db_id), key_values) in query_ids.iter().enumerate().zip(values) {
+                db.reserve_key_value_capacity(*db_id, key_values.len() as u64)?;
                 for key_value in key_values {
                     db.insert_or_replace_key_value(*db_id, key_value)?;
                 }
@@ -111,6 +112,8 @@ impl QueryMut for InsertNodesQuery {
                 {
                     ids.push(db_id);
 
+                    db.reserve_key_value_capacity(db_id, key_values.len() as u64)?;
+
                     for key_value in *key_values {
                         db.insert_or_replace_key_value(db_id, key_value)?;
                     }
@@ -124,6 +127,8 @@ impl QueryMut for InsertNodesQuery {
                 if let Some(alias) = self.aliases.get(index) {
                     db.insert_new_alias(db_id, alias)?;
                 }
+
+                db.reserve_key_value_capacity(db_id, key_values.len() as u64)?;
 
                 for key_value in *key_values {
                     db.insert_key_value(db_id, key_value)?;

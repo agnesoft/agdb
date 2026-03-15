@@ -9,6 +9,7 @@ export type LoginProps = {
 
 export type AgdbApi = {
     token: string | undefined;
+    interceptorId?: number;
     login: (props: LoginProps) => Promise<string>;
     logout: (cluster?: boolean) => Promise<void>;
     get_token: () => string | undefined;
@@ -46,17 +47,23 @@ async function logout(cluster?: boolean): Promise<void> {
 
 function set_token(token: string): void {
     this.token = token;
-    this.interceptors.request.use((config: AxiosRequestConfig) => {
-        config.headers.Authorization = `Bearer ${token}`;
-        return config;
-    });
+    if (this.interceptorId !== undefined) {
+        this.interceptors.request.eject(this.interceptorId);
+    }
+    this.interceptorId = this.interceptors.request.use(
+        (config: AxiosRequestConfig) => {
+            config.headers.Authorization = `Bearer ${token}`;
+            return config;
+        },
+    );
 }
 
 function reset_token(): void {
     this.token = undefined;
-    this.interceptors.request.use((config: AxiosRequestConfig) => {
-        return config;
-    });
+    if (this.interceptorId !== undefined) {
+        this.interceptors.request.eject(this.interceptorId);
+        this.interceptorId = undefined;
+    }
 }
 
 export type AgdbApiClient = Client & AgdbApi;
@@ -68,6 +75,7 @@ export async function client(address: string): Promise<AgdbApiClient> {
     });
     const client = await api.init<AgdbApiClient>();
     client.token = undefined;
+    client.interceptorId = undefined;
     client.login = login;
     client.logout = logout;
     client.set_token = set_token;

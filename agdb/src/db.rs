@@ -362,7 +362,7 @@ impl<Store: StorageData> DbImpl<Store> {
     /// be desired to perform the storage file optimization without fully shutting
     /// down.
     pub fn optimize_storage(&mut self) -> Result<(), DbError> {
-        self.storage.shrink_to_fit()
+        self.storage.optimize_storage()
     }
 
     /// Changes the name of the database changing also the names of the files
@@ -430,6 +430,19 @@ impl<Store: StorageData> DbImpl<Store> {
     /// block size.
     pub fn size(&self) -> u64 {
         self.storage.len()
+    }
+
+    /// Shrinks all the allocated internal storage buffers to the current size of the data
+    /// and optimizes the storage. This may further reduce the size of the database
+    /// both on disk and in memory at the cost of requiring more allocations upon inserting
+    /// more data. Best to use only when the database is used for read-only operations after
+    /// initial data population.
+    pub fn shrink_to_fit(&mut self) -> Result<(), DbError> {
+        self.graph.shrink_to_fit(&mut self.storage)?;
+        self.aliases.shrink_to_fit(&mut self.storage)?;
+        self.indexes.shrink_to_fit(&mut self.storage)?;
+        self.values.shrink_to_fit(&mut self.storage)?;
+        self.optimize_storage()
     }
 
     pub(crate) fn commit(&mut self) -> Result<(), DbError> {
@@ -788,6 +801,15 @@ impl<Store: StorageData> DbImpl<Store> {
         } else {
             Ok(0)
         }
+    }
+
+    pub(crate) fn reserve_key_value_capacity(
+        &mut self,
+        db_id: DbId,
+        additional: u64,
+    ) -> Result<(), DbError> {
+        self.values
+            .reserve_capacity(&mut self.storage, db_id.as_index(), additional)
     }
 
     pub(crate) fn search_index(
@@ -1236,7 +1258,7 @@ impl<Store: StorageData> DbImpl<Store> {
 
 impl<Store: StorageData> Drop for DbImpl<Store> {
     fn drop(&mut self) {
-        let _ = self.storage.shrink_to_fit();
+        let _ = self.storage.optimize_storage();
     }
 }
 
@@ -1385,7 +1407,7 @@ mod legacy {
 
         storage.replace(StorageIndex(1), &db_storage_index)?;
         storage.commit(t)?;
-        storage.shrink_to_fit()?;
+        storage.optimize_storage()?;
         Ok(db_storage_index)
     }
 }

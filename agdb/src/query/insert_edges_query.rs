@@ -78,6 +78,7 @@ impl QueryMut for InsertEdgesQuery {
             let mut ids = vec![];
 
             for (db_id, key_values) in query_ids.iter().zip(self.values(query_ids.len())?) {
+                db.reserve_key_value_capacity(*db_id, key_values.len() as u64)?;
                 for key_value in key_values {
                     db.insert_or_replace_key_value(*db_id, key_value)?;
                 }
@@ -154,6 +155,8 @@ impl InsertEdgesQuery {
             let db_id = db.insert_edge(*from, *to)?;
             ids.push(db_id);
 
+            db.reserve_key_value_capacity(db_id, key_values.len() as u64)?;
+
             for key_value in key_values {
                 db.insert_key_value(db_id, key_value)?;
             }
@@ -177,6 +180,8 @@ impl InsertEdgesQuery {
             for to in to {
                 let db_id = db.insert_edge(*from, *to)?;
                 ids.push(db_id);
+
+                db.reserve_key_value_capacity(db_id, values[index].len() as u64)?;
 
                 for key_value in values[index] {
                     db.insert_key_value(db_id, key_value)?;

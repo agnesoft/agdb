@@ -23,7 +23,6 @@ use std::time::Instant;
 use tokio::process::Child;
 use tokio::process::Command;
 use tokio::sync::RwLock;
-use tracing::level_filters::LevelFilter;
 
 const ADMIN: &str = "admin";
 const BINARY: &str = "agdb_server";
@@ -170,7 +169,7 @@ impl TestServerImpl {
             basepath: String::new(),
             static_roots: Vec::new(),
             admin: ADMIN.to_string(),
-            log_level: LevelFilter::INFO,
+            log_level: agdb_api::LogLevelFilter::Info,
             log_body_limit: DEFAULT_LOG_BODY_LIMIT,
             request_body_limit: DEFAULT_REQUEST_BODY_LIMIT,
             data_dir: SERVER_DATA_DIR.into(),
@@ -434,7 +433,7 @@ pub async fn create_cluster(nodes: usize, tls: bool) -> anyhow::Result<Vec<TestS
             basepath: String::new(),
             static_roots: Vec::new(),
             admin: ADMIN.to_string(),
-            log_level: LevelFilter::INFO,
+            log_level: agdb_api::LogLevelFilter::Info,
             log_body_limit: DEFAULT_LOG_BODY_LIMIT,
             request_body_limit: DEFAULT_REQUEST_BODY_LIMIT,
             data_dir: SERVER_DATA_DIR.into(),

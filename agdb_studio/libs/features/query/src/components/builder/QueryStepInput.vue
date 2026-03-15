@@ -1,7 +1,7 @@
 <script lang="ts" setup>
-import { computed, ref } from "vue";
+import { computed, inject, ref, type Ref } from "vue";
 import { queryApiMock } from "../../mock/queryApiMock";
-import type { QueryStep, QueryType } from "../../composables/types";
+import type { QueryStep, QueryType, TAB } from "../../composables/types";
 import QueryHinter from "./QueryHinter.vue";
 import FadeTransition from "@agdb-studio/design/src/components/transitions/FadeTransition.vue";
 import { vOnClickOutside } from "@vueuse/components";
@@ -45,10 +45,20 @@ const onKeyDown = (event: KeyboardEvent) => {
   }
 };
 
+const tab = inject<Ref<TAB>>("activeTab");
+
+const prevStepType = computed(() => {
+  return (
+    props.prevStep?.type ?? (tab?.value === "exec_mut" ? "exec_mut" : "exec")
+  );
+});
+
 const followers = computed<QueryType[]>(() => {
-  return queryApiMock[props.prevStep?.type ?? ""].followers.filter(
-    (f): f is QueryType => Object.keys(queryApiMock).includes(f),
-  ) as QueryType[];
+  return (
+    queryApiMock[prevStepType.value]?.followers.filter((f): f is QueryType =>
+      Object.keys(queryApiMock).includes(f),
+    ) ?? []
+  );
 });
 
 const hints = computed<QueryType[]>(() => {

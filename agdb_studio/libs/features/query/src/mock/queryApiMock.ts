@@ -1,5 +1,3 @@
-import { a } from "node_modules/vitest/dist/chunks/suite.d.BJWk38HB";
-
 export const VALUE_TYPES = [
   "string",
   "unsigned",
@@ -47,7 +45,24 @@ export const NUMBER = ["unsigned"] as const;
 
 export type NumberType = (typeof NUMBER)[number];
 
-export const queryApiMock = {
+export type QueryArguments = {
+  schema: (readonly (
+    | ValueType
+    | IdType
+    | NumberType
+    | OrderDirection
+    | Comparison
+  )[])[];
+  repeatable: boolean;
+};
+
+export type QueryApiMockType = {
+  followers: string[];
+  arguments?: QueryArguments;
+  values?: string[];
+};
+
+export const queryApiMock: Record<string, QueryApiMockType> = {
   exec: {
     followers: ["select", "search"],
   },

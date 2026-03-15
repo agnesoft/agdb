@@ -89,7 +89,8 @@ const validateQuerySteps = (queryId: string, tab: TAB) => {
   const query = getQuery(queryId);
   if (!query?.value) return;
   const steps = query.value.steps[tab];
-  let followers: string[] = queryApiMock[""].followers;
+  let followers: string[] =
+    queryApiMock[tab === "exec_mut" ? "exec_mut" : "exec"]?.followers ?? [];
 
   for (const step of steps) {
     if (!followers.includes(step.type)) {
@@ -97,7 +98,7 @@ const validateQuerySteps = (queryId: string, tab: TAB) => {
       followers = [];
     } else {
       step.invalid = false;
-      followers = queryApiMock[step.type].followers;
+      followers = queryApiMock[step.type]?.followers ?? [];
     }
   }
 };

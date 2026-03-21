@@ -251,9 +251,9 @@ pub(crate) fn app(
         .with_state(state.clone());
 
     let mut openapi = Api::openapi();
-    openapi.servers = Some(vec![utoipa::openapi::Server::new(format!(
-        "{address}{basepath}",
-    ))]);
+    let normalized_address = address.trim_end_matches('/');
+    let server_url = format!("{normalized_address}{basepath}");
+    openapi.servers = Some(vec![utoipa::openapi::Server::new(server_url)]);
 
     Ok(if !basepath.is_empty() {
         Router::new().nest(&basepath, router)

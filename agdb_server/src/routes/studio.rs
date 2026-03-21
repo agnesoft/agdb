@@ -12,6 +12,8 @@ static AGDB_STUDIO: Dir = include_dir!("agdb_studio/app/dist");
 static AGDB_STUDIO_INDEX_HTML: OnceLock<String> = OnceLock::new();
 static AGDB_STUDIO_INDEX_JS: OnceLock<String> = OnceLock::new();
 static AGDB_STUDIO_INDEX_JS_CONTENT: OnceLock<String> = OnceLock::new();
+static AGDB_STUDIO_INDEX_LOGO_JS: OnceLock<String> = OnceLock::new();
+static AGDB_STUDIO_INDEX_LOGO_JS_CONTENT: OnceLock<String> = OnceLock::new();
 
 fn init_error(msg: &str) -> ServerError {
     ServerError::new(StatusCode::INTERNAL_SERVER_ERROR, msg)
@@ -45,14 +47,12 @@ fn init_index_js_content(filename: &str, config: &Config) -> ServerResult {
     let content = index_js.contents_utf8().expect("Failed to read index.js");
     let index_js_content = if !config.basepath.is_empty() {
         let f = content.replace("\"/studio", &format!("\"{}/studio", config.basepath));
-        f.replace(
-            "http://localhost:3000",
-            &format!(
-                "{}{}",
-                config.address.trim_end_matches("/"),
-                &config.basepath
-            ),
-        )
+        let address = format!(
+            "{}{}",
+            config.address.trim_end_matches("/"),
+            &config.basepath
+        );
+        f.replace("https://localhost:3000", &address)
     } else {
         content.to_string()
     };
@@ -78,7 +78,43 @@ fn init_index_html(config: &Config) -> ServerResult {
 pub(crate) fn init(config: &Config) -> ServerResult {
     let index_js_name = init_index_js_name()?;
     init_index_js_content(&index_js_name, config)?;
+    init_index_logo_js(config)?;
     init_index_html(config)
+}
+
+fn init_index_logo_js(config: &Config) -> ServerResult {
+    for file in AGDB_STUDIO
+        .get_dir("assets")
+        .ok_or(init_error("Failed to get assets directory"))?
+        .files()
+    {
+        if file.path().extension().is_some_and(|ext| ext == "js") {
+            let path = file.path();
+            if path
+                .file_name()
+                .ok_or(init_error("Failed to read filename of assets js file"))?
+                .to_string_lossy()
+                .starts_with("index")
+            {
+                let content = file
+                    .contents_utf8()
+                    .ok_or(init_error("Failed to read one of the index.js"))?;
+                if content.contains("/studio/assets/logo") {
+                    let logo_js_name = path
+                        .to_str()
+                        .ok_or(init_error("Failed to read path of logo js file"))?;
+                    let content = content.replace(
+                        "/studio/assets/logo",
+                        &format!("{}/studio/assets/logo", config.basepath),
+                    );
+                    AGDB_STUDIO_INDEX_LOGO_JS.set(logo_js_name.to_string())?;
+                    AGDB_STUDIO_INDEX_LOGO_JS_CONTENT.set(content)?;
+                }
+            }
+        }
+    }
+
+    Ok(())
 }
 
 async fn studio_index() -> ServerResult<(
@@ -112,6 +148,21 @@ pub(crate) async fn studio(Path(file): Path<String>) -> ServerResult<impl IntoRe
             StatusCode::INTERNAL_SERVER_ERROR,
             "index.js not found",
         ))?;
+
+        return Ok((
+            StatusCode::OK,
+            [("Content-Type", "application/javascript")],
+            content.as_str().as_bytes(),
+        ));
+    }
+
+    if AGDB_STUDIO_INDEX_LOGO_JS.get() == Some(&file) {
+        let content = AGDB_STUDIO_INDEX_LOGO_JS_CONTENT
+            .get()
+            .ok_or(ServerError::new(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "logo js not found",
+            ))?;
 
         return Ok((
             StatusCode::OK,

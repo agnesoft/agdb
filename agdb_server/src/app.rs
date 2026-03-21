@@ -34,6 +34,7 @@ pub(crate) fn app(
     #[cfg(feature = "studio")]
     routes::studio::init(&config)?;
 
+    let address = config.address.clone();
     let basepath = config.basepath.clone();
     let static_roots = config.static_roots.clone();
     let request_body_limit = config.request_body_limit;
@@ -249,13 +250,18 @@ pub(crate) fn app(
         .layer(DefaultBodyLimit::max(request_body_limit as usize))
         .with_state(state.clone());
 
+    let mut openapi = Api::openapi();
+    let normalized_address = address.trim_end_matches('/');
+    let server_url = format!("{normalized_address}{basepath}");
+    openapi.servers = Some(vec![utoipa::openapi::Server::new(server_url)]);
+
     Ok(if !basepath.is_empty() {
         Router::new().nest(&basepath, router)
     } else {
         router
     }
     .merge(
-        RapiDoc::with_openapi(format!("{basepath}/api/v1/openapi.json"), Api::openapi())
+        RapiDoc::with_openapi(format!("{basepath}/api/v1/openapi.json"), openapi)
             .path(format!("{basepath}/api/v1")),
     )
     .layer(middleware::from_fn_with_state(

@@ -44,27 +44,21 @@ fn init_index_js_content(filename: &str, config: &Config) -> ServerResult {
     let index_js = AGDB_STUDIO
         .get_file(filename)
         .ok_or(init_error("3: Failed to find index.js in index.html"))?;
-    let content = index_js.contents_utf8().expect("Failed to read index.js");
-    let index_js_content = if !config.basepath.is_empty() {
-        let f = content.replace("\"/studio", &format!("\"{}/studio", config.basepath));
-        let address = format!(
-            "{}{}",
-            config.address.trim_end_matches("/"),
-            &config.basepath
-        );
-        if f.contains("https://localhost:3000") {
-            tracing::warn!(
-                "index.js contains 'https://localhost:3000', which will be replaced with the server address. If this is intentional, you can ignore this warning."
-            );
-        } else {
-            tracing::warn!("index.js does not contain 'https://localhost:3000'!!!");
-        }
-        f.replace("https://localhost:3000", &address)
-    } else {
-        content.to_string()
+    let mut content = index_js
+        .contents_utf8()
+        .expect("Failed to read index.js")
+        .to_string();
+    if !config.basepath.is_empty() {
+        content = content.replace("\"/studio", &format!("\"{}/studio", config.basepath));
     };
+    let address = format!(
+        "{}{}",
+        config.address.trim_end_matches("/"),
+        &config.basepath
+    );
+    content = content.replace("https://localhost:3000", &address);
 
-    AGDB_STUDIO_INDEX_JS_CONTENT.set(index_js_content)?;
+    AGDB_STUDIO_INDEX_JS_CONTENT.set(content)?;
 
     Ok(())
 }
@@ -87,12 +81,6 @@ pub(crate) fn init(config: &Config) -> ServerResult {
     init_index_js_content(&index_js_name, config)?;
     init_index_logo_js(config)?;
     init_index_html(config)?;
-
-    tracing::warn!(
-        "Files: {}, {}",
-        AGDB_STUDIO_INDEX_JS.get().unwrap_or(&"".to_string()),
-        AGDB_STUDIO_INDEX_LOGO_JS.get().unwrap_or(&"".to_string())
-    );
 
     Ok(())
 }

@@ -52,6 +52,13 @@ fn init_index_js_content(filename: &str, config: &Config) -> ServerResult {
             config.address.trim_end_matches("/"),
             &config.basepath
         );
+        if f.contains("https://localhost:3000") {
+            tracing::warn!(
+                "index.js contains 'https://localhost:3000', which will be replaced with the server address. If this is intentional, you can ignore this warning."
+            );
+        } else {
+            tracing::warn!("index.js does not contain 'https://localhost:3000'!!!");
+        }
         f.replace("https://localhost:3000", &address)
     } else {
         content.to_string()
@@ -79,7 +86,15 @@ pub(crate) fn init(config: &Config) -> ServerResult {
     let index_js_name = init_index_js_name()?;
     init_index_js_content(&index_js_name, config)?;
     init_index_logo_js(config)?;
-    init_index_html(config)
+    init_index_html(config)?;
+
+    tracing::warn!(
+        "Files: {}, {}",
+        AGDB_STUDIO_INDEX_JS.get().unwrap_or(&"".to_string()),
+        AGDB_STUDIO_INDEX_LOGO_JS.get().unwrap_or(&"".to_string())
+    );
+
+    Ok(())
 }
 
 fn init_index_logo_js(config: &Config) -> ServerResult {

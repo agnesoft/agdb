@@ -46,7 +46,7 @@ fn init_index_js_content(filename: &str, config: &Config) -> ServerResult {
         .ok_or(init_error("3: Failed to find index.js in index.html"))?;
     let mut content = index_js
         .contents_utf8()
-        .expect("Failed to read index.js")
+        .ok_or(init_error("index.js could not be read"))?
         .to_string();
     if !config.basepath.is_empty() {
         content = content.replace("\"/studio", &format!("\"{}/studio", config.basepath));

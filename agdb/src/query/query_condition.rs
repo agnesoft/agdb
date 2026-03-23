@@ -27,14 +27,16 @@ pub enum QueryConditionModifier {
     None,
 
     /// Continues the search beyond the current element
-    /// if the condition being modified passes.
+    /// if the condition being modified passes. Only controls
+    /// traversal, does not affect element selection.
     Beyond,
 
     /// Reversal of the result (equivalent to `!`).
     Not,
 
     /// Stops the search beyond the current element
-    /// if the condition being modified passes.
+    /// if the condition being modified passes. Only controls
+    /// traversal, does not affect element selection.
     NotBeyond,
 }
 

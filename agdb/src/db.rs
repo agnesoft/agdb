@@ -1229,18 +1229,18 @@ impl<Store: StorageData> DbImpl<Store> {
 
             match condition.modifier {
                 QueryConditionModifier::Beyond => {
-                    if control.is_true() {
-                        control = control.and(SearchControl::Continue(true));
+                    if control.is_true() || distance == 0 {
+                        control = SearchControl::Continue(result.is_true());
                     } else {
-                        control = SearchControl::Stop(true);
+                        control = SearchControl::Stop(result.is_true());
                     }
                 }
                 QueryConditionModifier::Not => control.flip(),
                 QueryConditionModifier::NotBeyond => {
                     if control.is_true() {
-                        control = control.and(SearchControl::Stop(true));
+                        control = SearchControl::Stop(result.is_true());
                     } else {
-                        control = SearchControl::Continue(true);
+                        control = SearchControl::Continue(result.is_true());
                     }
                 }
                 _ => {}

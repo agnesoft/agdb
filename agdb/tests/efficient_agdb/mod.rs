@@ -207,13 +207,10 @@ fn user_posts_ids(db: &Db, user: DbId) -> Result<Vec<DbId>, DbError> {
             QueryBuilder::search()
                 .from(user)
                 .where_()
-                .neighbor()
-                .and()
                 .beyond()
-                .where_()
                 .keys("authored")
-                .or()
-                .node()
+                .and()
+                .neighbor()
                 .query(),
         )?
         .ids())

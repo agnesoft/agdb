@@ -681,3 +681,63 @@ fn element() {
 
     assert_eq!(element_search, key_search);
 }
+
+#[test]
+fn beyond_simplified() {
+    let db = create_db();
+    db.exec_ids(
+        QueryBuilder::search()
+            .from("root")
+            .where_()
+            .beyond()
+            .edge()
+            .query(),
+        &[1, -5, -4, 3, 2],
+    );
+}
+
+#[test]
+fn beyond_simplified_select_condition() {
+    let db = create_db();
+    db.exec_ids(
+        QueryBuilder::search()
+            .from("root")
+            .where_()
+            .neighbor()
+            .and()
+            .beyond()
+            .edge()
+            .query(),
+        &[3, 2],
+    );
+}
+
+#[test]
+fn not_beyond_at_distance_0() {
+    let db = create_db();
+    db.exec_ids(
+        QueryBuilder::search()
+            .from("root")
+            .where_()
+            .not_beyond()
+            .ids("root")
+            .query(),
+        &[1],
+    );
+}
+
+#[test]
+fn not_beyond_or() {
+    let db = create_db();
+    db.exec_ids(
+        QueryBuilder::search()
+            .from("root")
+            .where_()
+            .ids("docs")
+            .or()
+            .not_beyond()
+            .ids("root")
+            .query(),
+        &[3],
+    );
+}

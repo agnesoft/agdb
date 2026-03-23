@@ -41,7 +41,13 @@ impl<T: SearchQueryBuilder> Where<T> {
     /// `not_beyond()`.
     ///
     /// NOTE: This modifier only controls traversal (whether the search
-    /// continues past an element). It does affect element selection.
+    /// continues past an element). It does not affect which elements
+    /// are selected by the conditions.
+    ///
+    /// Also note that `beyond()` does not block traversal from the
+    /// starting element at distance 0; it only affects whether the
+    /// search continues past elements where the modified condition
+    /// is evaluated.
     ///
     /// # Examples
     ///

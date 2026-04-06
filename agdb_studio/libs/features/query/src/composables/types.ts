@@ -2,10 +2,19 @@ import { queryApiMock } from "../mock/queryApiMock";
 
 export type QueryType = keyof typeof queryApiMock;
 
+/** One field's user input: the selected type option and an optional literal value. */
+export type QueryStepFieldValue = {
+  selectedOption: string;
+  value?: string;
+};
+
+/** One "row" of arguments — one `QueryStepFieldValue` per field in the schema. */
+export type QueryStepArgEntry = QueryStepFieldValue[];
+
 export type QueryStep = {
   id: string;
   type: QueryType;
-  values?: string[];
+  args?: QueryStepArgEntry[];
   invalid?: boolean;
 };
 

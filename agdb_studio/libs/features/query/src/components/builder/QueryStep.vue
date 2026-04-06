@@ -1,8 +1,10 @@
 <script lang="ts" setup>
+import { computed, inject, type Ref } from "vue";
 import { ClCloseMd } from "@kalimahapps/vue-icons";
 import type { QueryStep, TAB } from "../../composables/types";
 import { useQueryStore } from "../../composables/queryStore";
-import { inject, type Ref } from "vue";
+import { queryApiMock } from "../../mock/queryApiMock";
+import QueryArgument from "./arguments/QueryArgument.vue";
 
 const queryStore = useQueryStore();
 
@@ -11,6 +13,9 @@ const props = defineProps<{
 }>();
 const queryId = inject<Ref<string>>("queryId");
 const tab = inject<Ref<TAB>>("activeTab");
+
+const stepDef = computed(() => queryApiMock[props.step.type]);
+const stepArguments = computed(() => stepDef.value?.arguments ?? null);
 
 const removeStep = () => {
   if (!queryId?.value || !tab?.value) return;
@@ -30,7 +35,14 @@ const removeStep = () => {
         <ClCloseMd class="remove-query-icon" />
       </button>
     </div>
-    <div class="label" :class="{ invalid: step.invalid }">{{ step.type }}</div>
+    <div class="label" :class="{ invalid: step.invalid }">
+      <span>{{ step.type }}</span>
+      <QueryArgument
+        v-if="stepArguments"
+        :arguments="stepArguments"
+        :step="step"
+      />
+    </div>
   </div>
 </template>
 
@@ -45,6 +57,9 @@ const removeStep = () => {
   }
 }
 .label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
   font-weight: 500;
   color: var(--color-text);
   padding: 0rem 0.5rem;

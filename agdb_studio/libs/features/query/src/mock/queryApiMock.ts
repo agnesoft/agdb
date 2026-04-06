@@ -45,21 +45,57 @@ export const NUMBER = ["unsigned"] as const;
 
 export type NumberType = (typeof NUMBER)[number];
 
+/** The kind of value an option expects from the user, or null if it takes no value. */
+export type OptionValueType =
+  | "string"
+  | "number"
+  | "boolean"
+  | "string[]"
+  | "number[]"
+  | "boolean[]"
+  | null;
+
+/** Maps every possible option name to the value type the user must enter, or null for no value. */
+export const OPTION_TYPE_MAP: Record<string, OptionValueType> = {
+  // VALUE_TYPES
+  string: "string",
+  unsigned: "number",
+  signed: "number",
+  boolean: "boolean",
+  float: "number",
+  "string[]": "string[]",
+  "unsigned[]": "number[]",
+  "signed[]": "number[]",
+  "boolean[]": "boolean[]",
+  "float[]": "number[]",
+  // ORDER_DIRECTIONS
+  asc: null,
+  desc: null,
+  // COUNT_COMPARISONS / COMPARISON
+  equal: null,
+  greaterThan: null,
+  greaterThanOrEqual: null,
+  lessThan: null,
+  lessThanOrEqual: null,
+  notEqual: null,
+  contains: null,
+  startsWith: null,
+  endsWith: null,
+};
+
+export type ArgumentField = {
+  /** The set of options the user can choose from (type selector). */
+  options: readonly string[];
+};
+
 export type QueryArguments = {
-  schema: (readonly (
-    | ValueType
-    | IdType
-    | NumberType
-    | OrderDirection
-    | Comparison
-  )[])[];
+  fields: ArgumentField[];
   repeatable: boolean;
 };
 
 export type QueryApiMockType = {
   followers: string[];
   arguments?: QueryArguments;
-  values?: string[];
 };
 
 export const queryApiMock: Record<string, QueryApiMockType> = {
@@ -75,7 +111,7 @@ export const queryApiMock: Record<string, QueryApiMockType> = {
   values: {
     followers: ["key_count", "search", "from", "limit", "values"],
     arguments: {
-      schema: [VALUE_TYPES, VALUE_TYPES],
+      fields: [{ options: VALUE_TYPES }, { options: VALUE_TYPES }],
       repeatable: true,
     },
   },
@@ -88,34 +124,37 @@ export const queryApiMock: Record<string, QueryApiMockType> = {
   from: {
     followers: ["limit", "values", "orderBy", "distance", "compare"],
     arguments: {
-      schema: [IDS],
+      fields: [{ options: IDS }],
       repeatable: false,
     },
   },
   orderBy: {
     followers: ["limit", "values"],
     arguments: {
-      schema: [ORDER_DIRECTIONS, VALUE_TYPES],
+      fields: [{ options: ORDER_DIRECTIONS }, { options: VALUE_TYPES }],
       repeatable: false,
     },
   },
   distance: {
     followers: ["limit", "values"],
     arguments: {
-      schema: [COUNT_COMPARISONS, NUMBER],
+      fields: [{ options: COUNT_COMPARISONS }, { options: NUMBER }],
       repeatable: false,
     },
   },
   compare: {
     followers: ["limit", "values"],
     arguments: {
-      schema: [COMPARISON, VALUE_TYPES],
+      fields: [{ options: COMPARISON }, { options: VALUE_TYPES }],
       repeatable: false,
     },
   },
   limit: {
     followers: [],
-    values: ["number"],
+    arguments: {
+      fields: [{ options: NUMBER }],
+      repeatable: false,
+    },
   },
   insert: {
     followers: ["values"],

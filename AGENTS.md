@@ -4,15 +4,16 @@ The Agnesoft Graph Database (aka agdb) is a graph database. The main components 
 
 # Available commands
 
-- OpenAPI,API refresh and version bump: `cargo run -r -p agdb_ci`. Run when agdb_server/src/api.rs, agdb_server/openapi.json or Version file change.
+- OpenAPI, API refresh and version bump: `cargo run -r -p agdb_ci`. Run when agdb_server/src/api.rs, agdb_server/openapi.json or Version file changes.
 
 ## Rust
 
 - Build package: `cargo build -r --all-features -p <package>`
 - Build all: `cargo build -r --all-features`
-- Format `cargo fmt`
+- Format: `cargo fmt`
 - Test package: `cargo test -r --all-features -p <package>`
-- Test all: `cargp test -r --all-features`
+- Test package with coverage: `cargo llvm-cov -p <package> --show-missing-lines`
+- Test all: `cargo test -r --all-features`
 - Test debug: `cargo test --all-features -p <package>`
 - Lint package: `cargo clippy --all-features -p <package>`
 - Lint all: `cargo clippy --all-features`
@@ -27,7 +28,7 @@ The Agnesoft Graph Database (aka agdb) is a graph database. The main components 
 
 ## PHP
 
-- Test: `cd agdb_api/php/ && ./ci.sh coverage`
+- Test with coverage: `cd agdb_api/php/ && ./ci.sh coverage`
 - Lint: `cd agdb_api/php/ && ./ci.sh analyse`
 - Format: `cd agdb_api/php/ && ./ci.sh format`
 

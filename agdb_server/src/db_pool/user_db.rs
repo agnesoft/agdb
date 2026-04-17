@@ -298,7 +298,7 @@ fn inject_results_ids(ids: &mut Vec<QueryId>, results: &[QueryResult]) -> Server
                 .into_iter()
                 .map(QueryId::Id)
                 .collect::<Vec<QueryId>>();
-            ids.splice(i..i + 1, result_ids.into_iter());
+            ids.splice(i..i + 1, result_ids);
         }
     }
 

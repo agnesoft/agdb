@@ -1,39 +1,41 @@
 # AGENTS.md
 
-The Agnesoft Graph Database (aka agdb) is a graph database. Main components of the repository are `agdb` rust package that is the database itself. The `agdb_server` is the server version of the database itself using `agdb`. API client packages are available for Rust, TypeScript and PHP and the OpenAPI spec which is located under `agdb_server/openapi.json`.
+The Agnesoft Graph Database (aka agdb) is a graph database. The main components of this repository are `agdb` (rust package) that is the database itself. The `agdb_server` (rust package) is the server version of the database. API client packages are available for Rust, TypeScript, and PHP. The OpenAPI specification is located at `agdb_server/openapi.json`.
 
 # Available commands
 
-- Rust: `cargo <command> --all-features -r -p <package>`
-- TypeScript: `pnpm run <command> --filter <package>`
-- PHP: `cd agdb_api/php/ && ./ci.sh <command>`
-- OpenAPI & API refresh: `cargo run -r -p agdb_ci`. Only run when agdb_server/src/api.rs or agdb_server/openapi.json change.
+- OpenAPI,API refresh and version bump: `cargo run -r -p agdb_ci`. Run when agdb_server/src/api.rs, agdb_server/openapi.json or Version file change.
 
-## Rust <command>
+## Rust
 
-- build
-- test
-- clippy
+- Build package: `cargo build -r --all-features -p <package>`
+- Build all: `cargo build -r --all-features`
+- Format `cargo fmt`
+- Test package: `cargo test -r --all-features -p <package>`
+- Test all: `cargp test -r --all-features`
+- Test debug: `cargo test --all-features -p <package>`
+- Lint package: `cargo clippy --all-features -p <package>`
+- Lint all: `cargo clippy --all-features`
 
-## TypeScript <command>
+## TypeScript
 
-- build
-- format
-- test
-- test:e2e
-- lint
+- Build: `pnpm run build --filter <package>`
+- Format: `pnpm run format --filter <package>`
+- Test: `pnpm run test --filter <package>`
+- Run e2e tests: `pnpm run test:e2e --filter <package>`
+- Lint: `pnpm run lint --filter <package>`
 
-## PHP <command>
+## PHP
 
-- coverage
-- analysis
-- format
+- Test: `cd agdb_api/php/ && ./ci.sh coverage`
+- Lint: `cd agdb_api/php/ && ./ci.sh analyse`
+- Format: `cd agdb_api/php/ && ./ci.sh format`
 
-# Available <package>
+# Available packages
 
-All packages are exact names of packages directly usable in the available commands.
+The packages are curated lists of main packages. They contain exact names of packages directly usable in the available commands.
 
-## Rust <package>
+## Rust
 
 - agdb
 - agdb_benchmarks
@@ -48,7 +50,7 @@ All packages are exact names of packages directly usable in the available comman
 - examples_server_client
 - examples_user_types
 
-## TypeScript <package>
+## TypeScript
 
 - agdb_studio
 - @agnesoft/agdb_api

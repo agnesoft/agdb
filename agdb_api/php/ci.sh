@@ -61,6 +61,7 @@ function format() {
 function openapi() {
     rm -rf lib/
     rm -rf docs/
+    rm -rf .openapi-generator/
 
     echo "OSTYPE: $OSTYPE"
 

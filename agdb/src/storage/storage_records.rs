@@ -59,7 +59,7 @@ impl StorageRecords {
             }
         }
 
-        res.sort_by(|left, right| left.pos.cmp(&right.pos));
+        res.sort_by_key(|left| left.pos);
 
         res
     }

@@ -280,7 +280,7 @@ fn inject_results_search(search: &mut SearchQuery, results: &[QueryResult]) -> S
 }
 
 fn inject_results_ids(ids: &mut Vec<QueryId>, results: &[QueryResult]) -> ServerResult<()> {
-    for i in 0..ids.len() {
+    for i in (0..ids.len()).rev() {
         if let QueryId::Alias(alias) = &ids[i]
             && let Some(index) = alias.strip_prefix(':')
             && let Ok(index) = index.parse::<usize>()
@@ -298,7 +298,7 @@ fn inject_results_ids(ids: &mut Vec<QueryId>, results: &[QueryResult]) -> Server
                 .into_iter()
                 .map(QueryId::Id)
                 .collect::<Vec<QueryId>>();
-            ids.splice(i..i + 1, result_ids.into_iter());
+            ids.splice(i..i + 1, result_ids);
         }
     }
 

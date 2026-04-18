@@ -25,7 +25,6 @@ final class ApiTest extends TestCase
 
     public static function setUpBeforeClass(): void
     {
-        new Agdb();
         $config = Agnesoft\AgdbApi\Configuration::getDefaultConfiguration();
         self::$client = new AgdbApi(new GuzzleHttp\Client(), $config);
 

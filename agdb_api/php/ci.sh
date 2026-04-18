@@ -51,7 +51,7 @@ function coverage() {
 }
 
 function analyse() {
-    ../../vendor/bin/phpstan analyse --level=9 -v src tests
+    ../../vendor/bin/phpstan analyse --memory-limit=1G --level=9 -v src tests
 }
 
 function format() {

@@ -1,4 +1,4 @@
-# # DbTypeParam
+# DbTypeParam
 
 ## Properties
 

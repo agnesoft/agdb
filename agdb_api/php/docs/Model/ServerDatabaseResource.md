@@ -1,4 +1,4 @@
-# # ServerDatabaseResource
+# ServerDatabaseResource
 
 ## Properties
 

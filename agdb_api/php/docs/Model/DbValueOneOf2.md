@@ -1,4 +1,4 @@
-# # DbValueOneOf2
+# DbValueOneOf2
 
 ## Properties
 

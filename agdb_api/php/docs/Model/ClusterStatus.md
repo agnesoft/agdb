@@ -1,4 +1,4 @@
-# # ClusterStatus
+# ClusterStatus
 
 ## Properties
 

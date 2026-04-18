@@ -1,4 +1,4 @@
-# # QueryValuesOneOf
+# QueryValuesOneOf
 
 ## Properties
 

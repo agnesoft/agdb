@@ -1,4 +1,4 @@
-# # AdminStatus
+# AdminStatus
 
 ## Properties
 

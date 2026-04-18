@@ -1,4 +1,4 @@
-# # DbResource
+# DbResource
 
 ## Properties
 

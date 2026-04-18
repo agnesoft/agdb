@@ -1,4 +1,4 @@
-# # SelectValuesQuery
+# SelectValuesQuery
 
 ## Properties
 

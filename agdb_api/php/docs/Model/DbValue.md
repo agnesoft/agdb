@@ -1,4 +1,4 @@
-# # DbValue
+# DbValue
 
 ## Properties
 

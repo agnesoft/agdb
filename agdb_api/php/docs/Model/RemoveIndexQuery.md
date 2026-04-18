@@ -1,4 +1,4 @@
-# # RemoveIndexQuery
+# RemoveIndexQuery
 
 ## Properties
 

@@ -1,4 +1,4 @@
-# # UserStatus
+# UserStatus
 
 ## Properties
 

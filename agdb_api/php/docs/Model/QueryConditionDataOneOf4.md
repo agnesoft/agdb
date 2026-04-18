@@ -1,4 +1,4 @@
-# # QueryConditionDataOneOf4
+# QueryConditionDataOneOf4
 
 ## Properties
 

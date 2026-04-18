@@ -1,4 +1,4 @@
-# # SelectAliasesQuery
+# SelectAliasesQuery
 
 ## Properties
 

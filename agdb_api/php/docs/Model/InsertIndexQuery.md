@@ -1,4 +1,4 @@
-# # InsertIndexQuery
+# InsertIndexQuery
 
 ## Properties
 

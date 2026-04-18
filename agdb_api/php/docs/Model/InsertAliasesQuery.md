@@ -1,4 +1,4 @@
-# # InsertAliasesQuery
+# InsertAliasesQuery
 
 ## Properties
 

@@ -1,4 +1,4 @@
-# # QueryAudit
+# QueryAudit
 
 ## Properties
 

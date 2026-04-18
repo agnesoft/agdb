@@ -1,4 +1,4 @@
-# # CountComparison
+# CountComparison
 
 ## Properties
 

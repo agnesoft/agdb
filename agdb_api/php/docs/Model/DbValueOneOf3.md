@@ -1,4 +1,4 @@
-# # DbValueOneOf3
+# DbValueOneOf3
 
 ## Properties
 

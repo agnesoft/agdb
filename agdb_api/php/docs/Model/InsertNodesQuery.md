@@ -1,4 +1,4 @@
-# # InsertNodesQuery
+# InsertNodesQuery
 
 ## Properties
 

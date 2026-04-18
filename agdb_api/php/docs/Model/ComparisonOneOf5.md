@@ -1,4 +1,4 @@
-# # ComparisonOneOf5
+# ComparisonOneOf5
 
 ## Properties
 

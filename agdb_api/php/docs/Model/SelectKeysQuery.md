@@ -1,4 +1,4 @@
-# # SelectKeysQuery
+# SelectKeysQuery
 
 ## Properties
 

@@ -1,4 +1,4 @@
-# # Comparison
+# Comparison
 
 ## Properties
 

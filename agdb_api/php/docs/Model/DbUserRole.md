@@ -1,4 +1,4 @@
-# # DbUserRole
+# DbUserRole
 
 ## Properties
 

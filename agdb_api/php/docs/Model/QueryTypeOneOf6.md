@@ -1,4 +1,4 @@
-# # QueryTypeOneOf6
+# QueryTypeOneOf6
 
 ## Properties
 

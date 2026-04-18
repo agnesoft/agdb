@@ -1,4 +1,4 @@
-# # SelectEdgeCountQuery
+# SelectEdgeCountQuery
 
 ## Properties
 

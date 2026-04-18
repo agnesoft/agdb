@@ -1,4 +1,4 @@
-# # SelectKeyCountQuery
+# SelectKeyCountQuery
 
 ## Properties
 

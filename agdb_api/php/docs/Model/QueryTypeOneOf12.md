@@ -1,4 +1,4 @@
-# # QueryTypeOneOf12
+# QueryTypeOneOf12
 
 ## Properties
 

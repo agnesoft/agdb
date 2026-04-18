@@ -1,4 +1,4 @@
-# # RemoveValuesQuery
+# RemoveValuesQuery
 
 ## Properties
 

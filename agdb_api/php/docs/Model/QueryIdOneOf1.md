@@ -1,4 +1,4 @@
-# # QueryIdOneOf1
+# QueryIdOneOf1
 
 ## Properties
 

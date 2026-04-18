@@ -1,4 +1,4 @@
-# # CountComparisonOneOf3
+# CountComparisonOneOf3
 
 ## Properties
 

@@ -1,4 +1,4 @@
-# # InsertEdgesQuery
+# InsertEdgesQuery
 
 ## Properties
 

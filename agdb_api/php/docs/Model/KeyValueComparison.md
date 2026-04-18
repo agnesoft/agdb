@@ -1,4 +1,4 @@
-# # KeyValueComparison
+# KeyValueComparison
 
 ## Properties
 

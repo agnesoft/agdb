@@ -1,4 +1,4 @@
-# # DbKind
+# DbKind
 
 ## Properties
 

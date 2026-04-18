@@ -1,4 +1,4 @@
-# # ComparisonOneOf8
+# ComparisonOneOf8
 
 ## Properties
 

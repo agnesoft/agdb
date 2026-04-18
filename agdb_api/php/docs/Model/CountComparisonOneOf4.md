@@ -1,4 +1,4 @@
-# # CountComparisonOneOf4
+# CountComparisonOneOf4
 
 ## Properties
 

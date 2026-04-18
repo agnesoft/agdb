@@ -1,4 +1,4 @@
-# # QueryTypeOneOf3
+# QueryTypeOneOf3
 
 ## Properties
 

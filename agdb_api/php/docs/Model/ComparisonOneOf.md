@@ -1,4 +1,4 @@
-# # ComparisonOneOf
+# ComparisonOneOf
 
 ## Properties
 

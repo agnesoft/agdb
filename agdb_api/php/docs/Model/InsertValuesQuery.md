@@ -1,4 +1,4 @@
-# # InsertValuesQuery
+# InsertValuesQuery
 
 ## Properties
 

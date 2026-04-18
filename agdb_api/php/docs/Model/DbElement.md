@@ -1,4 +1,4 @@
-# # DbElement
+# DbElement
 
 ## Properties
 

@@ -1,4 +1,4 @@
-# # UserCredentials
+# UserCredentials
 
 ## Properties
 

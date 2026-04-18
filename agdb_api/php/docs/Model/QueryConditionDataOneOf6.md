@@ -1,4 +1,4 @@
-# # QueryConditionDataOneOf6
+# QueryConditionDataOneOf6
 
 ## Properties
 

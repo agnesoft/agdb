@@ -1,4 +1,4 @@
-# # DbValueOneOf6
+# DbValueOneOf6
 
 ## Properties
 

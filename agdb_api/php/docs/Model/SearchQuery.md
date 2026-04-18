@@ -1,4 +1,4 @@
-# # SearchQuery
+# SearchQuery
 
 ## Properties
 

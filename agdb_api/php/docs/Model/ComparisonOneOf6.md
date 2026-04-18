@@ -1,4 +1,4 @@
-# # ComparisonOneOf6
+# ComparisonOneOf6
 
 ## Properties
 

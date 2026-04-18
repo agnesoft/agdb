@@ -1,4 +1,4 @@
-# # QueryCondition
+# QueryCondition
 
 ## Properties
 

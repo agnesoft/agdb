@@ -18,7 +18,7 @@ jobs:
   agdb_examples_rust:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           components: rustfmt,clippy
@@ -32,7 +32,7 @@ jobs:
       run:
         working-directory: examples/server_client_typescript
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - run: npm i -g pnpm
       - run: pnpm i --frozen-lockfile && pnpm run build
         working-directory: agdb_api/typescript
@@ -46,7 +46,7 @@ jobs:
       run:
         working-directory: examples/server_client_php
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - run: npm i -g pnpm
       - run: pnpm i --frozen-lockfile
       - run: pnpm exec prettier --plugin '@prettier/plugin-php' --check src

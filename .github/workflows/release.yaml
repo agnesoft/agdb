@@ -18,7 +18,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: actions-rust-lang/setup-rust-toolchain@v1
       - run: npm i -g pnpm
       - run: cargo build -p agdb_derive -p agdb -p agdb_api -p agdb_server --all-features -r
@@ -26,7 +26,7 @@ jobs:
   dev_image:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - run: docker build --pull -t agnesoft/agdb:dev -f agdb_server/containerfile .
       - run: echo "${{ secrets.DOCKER_HUB_TOKEN }}" | docker login -u agnesoft --password-stdin
       - run: docker push agnesoft/agdb:dev
@@ -39,7 +39,7 @@ jobs:
     outputs:
       new_version: ${{ steps.new_version.outputs.new_version }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
       - id: new_version
@@ -52,7 +52,7 @@ jobs:
     needs: [build, new_version]
     if: needs.new_version.outputs.new_version != ''
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - run: |
           git config user.name "${GITHUB_ACTOR}"
           git config user.email "${GITHUB_ACTOR}@users.noreply.github.com"
@@ -68,7 +68,7 @@ jobs:
     needs: [release, new_version]
     if: needs.new_version.outputs.new_version != ''
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: actions-rust-lang/setup-rust-toolchain@v1
       - run: npm i -g pnpm
       - run: |
@@ -87,8 +87,8 @@ jobs:
       id-token: write # Required for OIDC
       contents: read
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v6
         with:
           node-version: "24"
@@ -103,7 +103,7 @@ jobs:
     needs: [release, new_version]
     if: needs.new_version.outputs.new_version != ''
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - run: docker build -t agnesoft/agdb:latest -f agdb_server/containerfile .
       - run: docker tag agnesoft/agdb:latest agnesoft/agdb:${{ needs.new_version.outputs.new_version }}
       - run: echo "${{ secrets.DOCKER_HUB_TOKEN }}" | docker login -u agnesoft --password-stdin

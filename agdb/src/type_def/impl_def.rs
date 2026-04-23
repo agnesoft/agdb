@@ -14,6 +14,8 @@ pub struct Impl {
 #[cfg(test)]
 mod tests {
     use crate::type_def::ImplDefinition;
+    use crate::type_def::Literal;
+    use crate::type_def::Type;
 
     #[derive(agdb::TypeDefImpl)]
     #[allow(dead_code)]
@@ -124,5 +126,84 @@ mod tests {
         let def = ConstImplS::<1>::impl_def();
 
         assert_eq!(def.name, "ConstImplS");
+    }
+
+    #[test]
+    fn impl_function_with_nested_generic_containers() {
+        #[derive(agdb::TypeDef)]
+        struct S;
+
+        #[agdb::impl_def]
+        #[allow(dead_code)]
+        impl S {
+            async fn transform<T: agdb::type_def::TypeDefinition + Send>(
+                &self,
+                input: Result<(u16, T), Option<Vec<T>>>,
+            ) -> Option<Result<T, Vec<T>>> {
+                let _ = input;
+                None
+            }
+        }
+
+        let def = S::impl_def();
+        assert_eq!(def.functions.len(), 1);
+
+        let f = &def.functions[0];
+        assert_eq!(f.name, "transform");
+        assert!(f.async_fn);
+        assert_eq!(f.generics.len(), 1);
+        assert_eq!(f.generics[0].name, "T");
+        assert_eq!(f.generics[0].bounds.len(), 2);
+
+        assert_eq!(f.args.len(), 2);
+        assert_eq!(f.args[0].name, "self");
+        assert_eq!(f.args[1].name, "input");
+
+        let Type::Result { ok, err } = (f.args[1].ty.expect("expected type function"))() else {
+            panic!("Expected Result argument");
+        };
+
+        let Type::Tuple(ok_fields) = ok() else {
+            panic!("Expected tuple in Result::Ok");
+        };
+        assert_eq!(ok_fields.len(), 2);
+        assert!(matches!((ok_fields[0])(), Type::Literal(Literal::U16)));
+        let Type::Generic(ok_t) = (ok_fields[1])() else {
+            panic!("Expected generic T in tuple");
+        };
+        assert_eq!(ok_t.name, "T");
+
+        let Type::Option(err_inner) = err() else {
+            panic!("Expected Option in Result::Err");
+        };
+        let Type::Vec(err_vec_inner) = err_inner() else {
+            panic!("Expected Vec in Option<Vec<T>>");
+        };
+        let Type::Generic(err_t) = err_vec_inner() else {
+            panic!("Expected generic T in Vec<T>");
+        };
+        assert_eq!(err_t.name, "T");
+
+        let Type::Option(ret_inner) = (f.ret)() else {
+            panic!("Expected Option return type");
+        };
+        let Type::Result {
+            ok: ret_ok,
+            err: ret_err,
+        } = ret_inner()
+        else {
+            panic!("Expected Result inside Option");
+        };
+        let Type::Generic(ret_ok_t) = ret_ok() else {
+            panic!("Expected generic T in Result::Ok");
+        };
+        assert_eq!(ret_ok_t.name, "T");
+        let Type::Vec(ret_err_vec_inner) = ret_err() else {
+            panic!("Expected Vec<T> in Result::Err");
+        };
+        let Type::Generic(ret_err_t) = ret_err_vec_inner() else {
+            panic!("Expected generic T in Vec<T>");
+        };
+        assert_eq!(ret_err_t.name, "T");
     }
 }

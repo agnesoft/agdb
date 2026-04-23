@@ -1,86 +1,92 @@
 use crate::AgdbApiError;
 use crate::api_result::AgdbApiResult;
 use crate::client::AgdbApiClient;
-#[cfg(feature = "api")]
-use agdb::api_def::{ImplDefinition, Type, TypeDefinition};
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 
-pub trait HttpClient {
-    fn delete(
-        &self,
-        uri: &str,
-        token: &Option<String>,
-    ) -> impl std::future::Future<Output = AgdbApiResult<u16>> + Send;
-    fn get<T: DeserializeOwned + Send>(
-        &self,
-        uri: &str,
-        token: &Option<String>,
-    ) -> impl std::future::Future<Output = AgdbApiResult<(u16, T)>> + Send;
-    fn post<T: Serialize + Send, R: DeserializeOwned + Send>(
-        &self,
-        uri: &str,
-        json: Option<T>,
-        token: &Option<String>,
-    ) -> impl std::future::Future<Output = AgdbApiResult<(u16, R)>> + Send;
-    fn put<T: Serialize + Send>(
-        &self,
-        uri: &str,
-        json: Option<T>,
-        token: &Option<String>,
-    ) -> impl std::future::Future<Output = AgdbApiResult<u16>> + Send;
-}
-
-pub struct ReqwestClient {
-    pub client: reqwest::Client,
-}
-
-impl AgdbApiClient for ReqwestClient {}
+#[cfg(feature = "api")]
+use agdb::type_def::{ImplDefinition, Type, TypeDefinition};
 
 #[cfg(feature = "api")]
-impl TypeDefinition for ReqwestClient {
-    fn type_def() -> Type {
-        use agdb::api_def::NamedType;
+#[cfg_attr(feature = "api", agdb::trait_def())]
+pub trait HttpClient {
+    async fn delete(&self, uri: &str, token: &Option<String>) -> AgdbApiResult<u16>;
+    async fn get<T: DeserializeOwned + Send>(
+        &self,
+        uri: &str,
+        token: &Option<String>,
+    ) -> AgdbApiResult<(u16, T)>;
+    async fn post<T: Serialize + Send, R: DeserializeOwned + Send>(
+        &self,
+        uri: &str,
+        json: Option<T>,
+        token: &Option<String>,
+    ) -> AgdbApiResult<(u16, R)>;
+    async fn put<T: Serialize + Send>(
+        &self,
+        uri: &str,
+        json: Option<T>,
+        token: &Option<String>,
+    ) -> AgdbApiResult<u16>;
+}
 
-        Type::Struct(agdb::api_def::struct_def::Struct {
-            name: "ReqwestClient",
+#[cfg(feature = "api")]
+pub struct ReqwestClientTypeDef(pub reqwest::Client);
+
+#[cfg(feature = "api")]
+impl std::ops::Deref for ReqwestClientTypeDef {
+    type Target = reqwest::Client;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+#[cfg(feature = "api")]
+impl std::ops::DerefMut for ReqwestClientTypeDef {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
+#[cfg(feature = "api")]
+impl TypeDefinition for ReqwestClientTypeDef {
+    fn type_def() -> Type {
+        Type::Struct(agdb::type_def::Struct {
+            name: "reqwest::Client",
             generics: &[],
-            fields: &[NamedType {
-                name: "client",
-                ty: Some(|| {
-                    Type::Struct(agdb::api_def::struct_def::Struct {
-                        name: "HttpClient",
-                        generics: &[],
-                        fields: &[],
-                        functions: &[],
-                    })
-                }),
-            }],
+            fields: &[],
             functions: &[],
         })
     }
 }
 
 #[cfg(feature = "api")]
-impl ImplDefinition for ReqwestClient {
-    fn functions() -> &'static [agdb::api_def::Function] {
-        &[]
-    }
+impl ImplDefinition for ReqwestClientTypeDef {}
+
+#[cfg_attr(feature = "api", derive(agdb::TypeDef))]
+pub struct ReqwestClient {
+    pub client: ReqwestClientTypeDef,
 }
+
+impl AgdbApiClient for ReqwestClient {}
 
 impl ReqwestClient {
     #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         Self {
-            client: reqwest::Client::new(),
+            client: ReqwestClientTypeDef(reqwest::Client::new()),
         }
     }
 
     pub fn with_client(client: reqwest::Client) -> Self {
-        Self { client }
+        Self {
+            client: ReqwestClientTypeDef(client),
+        }
     }
 }
 
+#[cfg_attr(feature = "api", agdb::impl_def())]
 impl HttpClient for ReqwestClient {
     async fn delete(&self, uri: &str, token: &Option<String>) -> AgdbApiResult<u16> {
         let mut request = self.client.delete(uri);

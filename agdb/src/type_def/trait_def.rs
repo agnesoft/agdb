@@ -121,7 +121,10 @@ mod tests {
         assert_eq!(b.args[0].name, "v");
         assert!(b.async_fn);
         assert!(
-            matches!((b.args[0].ty.expect("expected type function"))(), Type::Literal(Literal::I32),),
+            matches!(
+                (b.args[0].ty.expect("expected type function"))(),
+                Type::Literal(Literal::I32),
+            ),
             "Got: {:?}",
             (b.args[0].ty.expect("expected type function"))()
         );
@@ -241,7 +244,10 @@ mod tests {
         assert_eq!(f.name, "with_default");
         assert_eq!(f.args.len(), 0);
         assert!(!f.async_fn);
-        assert!(!f.body.is_empty(), "Expected a body for default implementation");
+        assert!(
+            !f.body.is_empty(),
+            "Expected a body for default implementation"
+        );
         assert_eq!(f.body.len(), 1);
     }
 
@@ -260,7 +266,10 @@ mod tests {
         assert_eq!(def.functions.len(), 1);
         let f = &def.functions[0];
         assert_eq!(f.name, "without_default");
-        assert!(f.body.is_empty(), "Expected empty body for trait function without default implementation");
+        assert!(
+            f.body.is_empty(),
+            "Expected empty body for trait function without default implementation"
+        );
     }
 
     #[test]
@@ -326,7 +335,10 @@ mod tests {
         assert_eq!(f.generics[0].name, "T");
         assert_eq!(f.args.len(), 1);
         assert_eq!(f.args[0].name, "val");
-        assert!(!f.body.is_empty(), "Expected body for default generic function");
+        assert!(
+            !f.body.is_empty(),
+            "Expected body for default generic function"
+        );
     }
 
     #[test]
@@ -348,5 +360,76 @@ mod tests {
         assert_eq!(f.name, "async_with_default");
         assert!(f.async_fn);
         assert!(!f.body.is_empty());
+    }
+
+    #[test]
+    fn trait_function_with_nested_generic_containers() {
+        #[agdb::trait_def]
+        #[allow(dead_code)]
+        trait HttpLike {
+            async fn fetch<T: agdb::type_def::TypeDefinition + Send>(
+                &self,
+                input: Option<T>,
+            ) -> Result<(u16, T), Option<Vec<T>>>;
+        }
+
+        let Type::Trait(def) = __HttpLike_type_def() else {
+            panic!("Expected a trait type definition");
+        };
+
+        assert_eq!(def.functions.len(), 1);
+        let f = &def.functions[0];
+        assert_eq!(f.name, "fetch");
+        assert!(f.async_fn);
+        assert_eq!(f.generics.len(), 1);
+        assert_eq!(f.generics[0].name, "T");
+        assert_eq!(f.generics[0].bounds.len(), 2);
+
+        let Type::Trait(type_def_bound) = (f.generics[0].bounds[0])() else {
+            panic!("Expected TypeDefinition bound");
+        };
+        assert_eq!(type_def_bound.name, "TypeDefinition");
+
+        let Type::Trait(send_bound) = (f.generics[0].bounds[1])() else {
+            panic!("Expected Send bound");
+        };
+        assert_eq!(send_bound.name, "Send");
+
+        assert_eq!(f.args.len(), 2);
+        assert_eq!(f.args[0].name, "self");
+        assert_eq!(f.args[1].name, "input");
+
+        let Type::Option(arg_inner) = (f.args[1].ty.expect("expected type function"))() else {
+            panic!("Expected Option<T> argument");
+        };
+        let Type::Generic(arg_t) = arg_inner() else {
+            panic!("Expected generic inner type for Option<T>");
+        };
+        assert_eq!(arg_t.name, "T");
+
+        let Type::Result { ok, err } = (f.ret)() else {
+            panic!("Expected Result return type");
+        };
+
+        let Type::Tuple(ok_fields) = ok() else {
+            panic!("Expected tuple in Result::Ok");
+        };
+        assert_eq!(ok_fields.len(), 2);
+        assert!(matches!((ok_fields[0])(), Type::Literal(Literal::U16)));
+        let Type::Generic(ok_t) = (ok_fields[1])() else {
+            panic!("Expected generic T in tuple");
+        };
+        assert_eq!(ok_t.name, "T");
+
+        let Type::Option(err_inner) = err() else {
+            panic!("Expected Option in Result::Err");
+        };
+        let Type::Vec(vec_inner) = err_inner() else {
+            panic!("Expected Vec in Option<Vec<T>>");
+        };
+        let Type::Generic(err_t) = vec_inner() else {
+            panic!("Expected generic T in Vec<T>");
+        };
+        assert_eq!(err_t.name, "T");
     }
 }

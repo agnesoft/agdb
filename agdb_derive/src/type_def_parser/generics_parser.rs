@@ -135,6 +135,76 @@ pub(crate) fn parse_type(ty: &syn::Type, generics: &[Generic]) -> TokenStream2 {
                 bounds: &[#(#bounds),*],
             })
         }
+    } else if let syn::Type::Tuple(tuple) = ty {
+        let fields = tuple
+            .elems
+            .iter()
+            .map(|elem| parse_type(elem, generics))
+            .collect::<Vec<_>>();
+        quote! {
+            || ::agdb::type_def::Type::Tuple(&[#(#fields),*])
+        }
+    } else if let syn::Type::Path(type_path) = ty {
+        if type_path.qself.is_none()
+            && let Some(last) = type_path.path.segments.last()
+        {
+            let ident = last.ident.to_string();
+
+            if ident == "Option"
+                && let syn::PathArguments::AngleBracketed(args) = &last.arguments
+                && let Some(syn::GenericArgument::Type(inner_ty)) = args.args.first()
+            {
+                let inner = parse_type(inner_ty, generics);
+                return quote! {
+                    || ::agdb::type_def::Type::Option(#inner)
+                };
+            }
+
+            if ident == "Vec"
+                && let syn::PathArguments::AngleBracketed(args) = &last.arguments
+                && let Some(syn::GenericArgument::Type(inner_ty)) = args.args.first()
+            {
+                let inner = parse_type(inner_ty, generics);
+                return quote! {
+                    || ::agdb::type_def::Type::Vec(#inner)
+                };
+            }
+
+            if ident == "Result"
+                && let syn::PathArguments::AngleBracketed(args) = &last.arguments
+            {
+                let mut type_args = args.args.iter().filter_map(|arg| {
+                    if let syn::GenericArgument::Type(ty) = arg {
+                        Some(ty)
+                    } else {
+                        None
+                    }
+                });
+
+                if let (Some(ok_ty), Some(err_ty)) = (type_args.next(), type_args.next()) {
+                    let ok = parse_type(ok_ty, generics);
+                    let err = parse_type(err_ty, generics);
+                    return quote! {
+                        || ::agdb::type_def::Type::Result {
+                            ok: #ok,
+                            err: #err,
+                        }
+                    };
+                }
+            }
+        }
+
+        if type_contains_generic(ty, generics) {
+            quote! {
+                || ::agdb::type_def::Type::Generic(::agdb::type_def::Generic {
+                    kind: ::agdb::type_def::GenericKind::Type,
+                    name: stringify!(#ty),
+                    bounds: &[],
+                })
+            }
+        } else {
+            quote! { <#ty as ::agdb::type_def::TypeDefinition>::type_def }
+        }
     } else if let syn::Type::Reference(type_ref) = ty {
         let mutable = type_ref.mutability.is_some();
         let lifetime = if let Some(lt) = &type_ref.lifetime {
@@ -162,5 +232,38 @@ pub(crate) fn parse_type(ty: &syn::Type, generics: &[Generic]) -> TokenStream2 {
         }
     } else {
         quote! { <#ty as ::agdb::type_def::TypeDefinition>::type_def }
+    }
+}
+
+fn type_contains_generic(ty: &syn::Type, generics: &[Generic]) -> bool {
+    match ty {
+        syn::Type::Path(type_path) => {
+            if let Some(ident_str) = type_path.path.segments.last().map(|s| s.ident.to_string())
+                && generics.iter().any(|g| g.name == ident_str)
+            {
+                return true;
+            }
+
+            for seg in &type_path.path.segments {
+                if let syn::PathArguments::AngleBracketed(ab) = &seg.arguments {
+                    for arg in &ab.args {
+                        if let syn::GenericArgument::Type(inner_ty) = arg
+                            && type_contains_generic(inner_ty, generics)
+                        {
+                            return true;
+                        }
+                    }
+                }
+            }
+
+            false
+        }
+        syn::Type::Reference(tr) => type_contains_generic(&tr.elem, generics),
+        syn::Type::Slice(ts) => type_contains_generic(&ts.elem, generics),
+        syn::Type::Array(ta) => type_contains_generic(&ta.elem, generics),
+        syn::Type::Tuple(tt) => tt.elems.iter().any(|e| type_contains_generic(e, generics)),
+        syn::Type::Paren(tp) => type_contains_generic(&tp.elem, generics),
+        syn::Type::Group(tg) => type_contains_generic(&tg.elem, generics),
+        _ => false,
     }
 }

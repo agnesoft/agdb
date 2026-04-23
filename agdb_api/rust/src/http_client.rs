@@ -9,6 +9,7 @@ use agdb::type_def::{ImplDefinition, Type, TypeDefinition};
 
 #[cfg(feature = "api")]
 #[cfg_attr(feature = "api", agdb::trait_def())]
+#[allow(async_fn_in_trait)]
 pub trait HttpClient {
     async fn delete(&self, uri: &str, token: &Option<String>) -> AgdbApiResult<u16>;
     async fn get<T: DeserializeOwned + Send>(

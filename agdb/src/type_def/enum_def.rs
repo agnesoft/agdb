@@ -46,13 +46,19 @@ mod tests {
         assert_eq!(e.variants.len(), 2);
         assert_eq!(e.variants[0].name, "A");
         assert!(
-            matches!((e.variants[0].ty.expect("expected type function"))(), Type::Literal(Literal::Unit),),
+            matches!(
+                (e.variants[0].ty.expect("expected type function"))(),
+                Type::Literal(Literal::Unit),
+            ),
             "Got: {:?}",
             (e.variants[0].ty.expect("expected type function"))()
         );
         assert_eq!(e.variants[1].name, "B");
         assert!(
-            matches!((e.variants[1].ty.expect("expected type function"))(), Type::Literal(Literal::Unit),),
+            matches!(
+                (e.variants[1].ty.expect("expected type function"))(),
+                Type::Literal(Literal::Unit),
+            ),
             "Got: {:?}",
             (e.variants[1].ty.expect("expected type function"))()
         );
@@ -74,7 +80,10 @@ mod tests {
         assert_eq!(e.variants.len(), 1);
         assert_eq!(e.variants[0].name, "A");
         assert!(
-            matches!((e.variants[0].ty.expect("expected type function"))(), Type::Literal(Literal::String)),
+            matches!(
+                (e.variants[0].ty.expect("expected type function"))(),
+                Type::Literal(Literal::String)
+            ),
             "Got: {:?}",
             (e.variants[0].ty.expect("expected type function"))()
         );
@@ -101,7 +110,10 @@ mod tests {
         assert_eq!(s.fields.len(), 1);
         assert_eq!(s.fields[0].name, "_a");
         assert!(
-            matches!((s.fields[0].ty.expect("expected type function"))(), Type::Literal(Literal::String)),
+            matches!(
+                (s.fields[0].ty.expect("expected type function"))(),
+                Type::Literal(Literal::String)
+            ),
             "Got: {:?}",
             (s.fields[0].ty.expect("expected type function"))()
         );

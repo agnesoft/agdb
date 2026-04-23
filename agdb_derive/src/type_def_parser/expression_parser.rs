@@ -294,7 +294,9 @@ fn parse_method_call(e: &ExprMethodCall, generics: &[Generic]) -> TokenStream2 {
             gt.args
                 .iter()
                 .filter_map(|ga| match ga {
-                    GenericArgument::Type(ty) => Some(quote! { <#ty as ::agdb::type_def::TypeDefinition>::type_def }),
+                    GenericArgument::Type(ty) => {
+                        Some(quote! { <#ty as ::agdb::type_def::TypeDefinition>::type_def })
+                    }
                     _ => None,
                 })
                 .collect::<Vec<_>>()
@@ -363,7 +365,10 @@ fn parse_closure_arg(pat: &Pat, generics: &[Generic]) -> (TokenStream2, TokenStr
         }
         Pat::Ident(p) => {
             let name = &p.ident;
-            (quote! { #name }, quote! { <() as ::agdb::type_def::TypeDefinition>::type_def })
+            (
+                quote! { #name },
+                quote! { <() as ::agdb::type_def::TypeDefinition>::type_def },
+            )
         }
         _ => panic!(
             "Unsupported closure argument pattern: {}",
@@ -826,7 +831,9 @@ fn parse_path_segment(segment: &PathSegment, parent: TokenStream2) -> TokenStrea
             .args
             .iter()
             .filter_map(|ga| match ga {
-                GenericArgument::Type(ty) => Some(quote! { <#ty as ::agdb::type_def::TypeDefinition>::type_def }),
+                GenericArgument::Type(ty) => {
+                    Some(quote! { <#ty as ::agdb::type_def::TypeDefinition>::type_def })
+                }
                 _ => None,
             })
             .collect::<Vec<_>>(),
@@ -1010,7 +1017,10 @@ fn parse_pattern(pat: &Pat, generics: &[Generic]) -> (TokenStream2, TokenStream2
                 quote! { None },
             )
         }
-        Pat::Wild(_) => (quote! { ::agdb::type_def::Expression::Wild }, quote! { None }),
+        Pat::Wild(_) => (
+            quote! { ::agdb::type_def::Expression::Wild },
+            quote! { None },
+        ),
         _ => panic!("Unsupported pattern: {}", pat.to_token_stream()),
     }
 }

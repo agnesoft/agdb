@@ -53,12 +53,18 @@ mod tests {
         assert_eq!(def.args[0].name, "a");
         assert_eq!(def.args[1].name, "b");
         assert!(
-            matches!((def.args[0].ty.expect("expected type function"))(), Type::Literal(Literal::I32),),
+            matches!(
+                (def.args[0].ty.expect("expected type function"))(),
+                Type::Literal(Literal::I32),
+            ),
             "Got: {:?}",
             (def.args[0].ty.expect("expected type function"))()
         );
         assert!(
-            matches!((def.args[1].ty.expect("expected type function"))(), Type::Literal(Literal::String),),
+            matches!(
+                (def.args[1].ty.expect("expected type function"))(),
+                Type::Literal(Literal::String),
+            ),
             "Got: {:?}",
             (def.args[1].ty.expect("expected type function"))()
         );

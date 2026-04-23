@@ -1,7 +1,7 @@
-mod type_def_parser;
 mod db_serialize;
 mod db_type;
 mod db_value;
+mod type_def_parser;
 
 use proc_macro::TokenStream;
 

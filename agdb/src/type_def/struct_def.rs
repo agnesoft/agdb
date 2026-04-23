@@ -73,13 +73,15 @@ mod tests {
         assert_eq!(s.fields.len(), 2);
         assert_eq!(s.fields[0].name, "");
 
-        let Type::Literal(Literal::I32) = (s.fields[0].ty.expect("expected type function"))() else {
+        let Type::Literal(Literal::I32) = (s.fields[0].ty.expect("expected type function"))()
+        else {
             panic!("Expected a literal type definition");
         };
 
         assert_eq!(s.fields[1].name, "");
 
-        let Type::Literal(Literal::String) = (s.fields[1].ty.expect("expected type function"))() else {
+        let Type::Literal(Literal::String) = (s.fields[1].ty.expect("expected type function"))()
+        else {
             panic!("Expected a literal type definition");
         };
     }

@@ -17,7 +17,10 @@ pub(crate) fn parse_function(input: &ItemFn) -> TokenStream2 {
     let args = parse_args(&input.sig.inputs, &current_generics);
     let ret = parse_ret(&input.sig.output, &current_generics);
     let async_fn = input.sig.asyncness.is_some();
-    let body = crate::type_def_parser::expression_parser::parse_block_stmts(&input.block, &current_generics);
+    let body = crate::type_def_parser::expression_parser::parse_block_stmts(
+        &input.block,
+        &current_generics,
+    );
     let lt_params = generics_parser::parse_lifetime_params(&input.sig.generics);
     let lt_generics = if lt_params.is_empty() {
         quote! {}
@@ -71,7 +74,9 @@ pub(crate) fn parse_trait_fn(
     let ret = parse_ret(&sig.output, current_generics);
     let async_fn = sig.asyncness.is_some();
     let body = default_block
-        .map(|block| crate::type_def_parser::expression_parser::parse_block_stmts(block, current_generics))
+        .map(|block| {
+            crate::type_def_parser::expression_parser::parse_block_stmts(block, current_generics)
+        })
         .unwrap_or_default();
 
     quote! {

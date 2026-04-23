@@ -1,4 +1,4 @@
-mod api_def;
+mod type_def_parser;
 mod db_serialize;
 mod db_type;
 mod db_value;
@@ -133,15 +133,25 @@ pub fn user_db_value_derive(item: TokenStream) -> TokenStream {
 
 #[proc_macro_derive(TypeDef)]
 pub fn type_def(item: TokenStream) -> TokenStream {
-    api_def::type_def_impl(item)
+    type_def_parser::type_def_impl(item)
 }
 
 #[proc_macro_derive(TypeDefImpl)]
 pub fn type_def_impl(item: TokenStream) -> TokenStream {
-    api_def::type_def_impl_impl(item)
+    type_def_parser::type_def_impl_impl(item)
 }
 
 #[proc_macro_attribute]
 pub fn impl_def(_attr: TokenStream, item: TokenStream) -> TokenStream {
-    api_def::impl_def_impl(item)
+    type_def_parser::impl_def_impl(item)
+}
+
+#[proc_macro_attribute]
+pub fn trait_def(_attr: TokenStream, item: TokenStream) -> TokenStream {
+    type_def_parser::trait_def_impl(item)
+}
+
+#[proc_macro_attribute]
+pub fn fn_def(_attr: TokenStream, item: TokenStream) -> TokenStream {
+    type_def_parser::fn_def_impl(item)
 }

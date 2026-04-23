@@ -1,13 +1,11 @@
 use crate::AgdbApiError;
 use crate::api_result::AgdbApiResult;
 use crate::client::AgdbApiClient;
+#[cfg(feature = "api")]
+use agdb::type_def::{ImplDefinition, Type, TypeDefinition};
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 
-#[cfg(feature = "api")]
-use agdb::type_def::{ImplDefinition, Type, TypeDefinition};
-
-#[cfg(feature = "api")]
 #[cfg_attr(feature = "api", agdb::trait_def())]
 #[allow(async_fn_in_trait)]
 pub trait HttpClient {
@@ -31,10 +29,8 @@ pub trait HttpClient {
     ) -> AgdbApiResult<u16>;
 }
 
-#[cfg(feature = "api")]
 pub struct ReqwestClientTypeDef(pub reqwest::Client);
 
-#[cfg(feature = "api")]
 impl std::ops::Deref for ReqwestClientTypeDef {
     type Target = reqwest::Client;
 
@@ -43,7 +39,6 @@ impl std::ops::Deref for ReqwestClientTypeDef {
     }
 }
 
-#[cfg(feature = "api")]
 impl std::ops::DerefMut for ReqwestClientTypeDef {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0

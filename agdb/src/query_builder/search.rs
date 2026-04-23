@@ -12,6 +12,7 @@ use crate::db::db_key_order::DbKeyOrders;
 use crate::query::query_condition::KeyValueComparison;
 
 #[cfg(feature = "api")]
+#[cfg_attr(feature = "api", agdb::trait_def())]
 pub trait SearchQueryBuilder: agdb::type_def::TypeDefinition {
     fn search_mut(&mut self) -> &mut SearchQuery;
 }

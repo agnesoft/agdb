@@ -17,7 +17,8 @@ use agdb::QueryResult;
 use agdb::QueryType;
 
 #[cfg(feature = "api")]
-pub trait AgdbApiClient: HttpClient + agdb::api_def::TypeDefinition {}
+#[cfg_attr(feature = "api", agdb::trait_def())]
+pub trait AgdbApiClient: HttpClient + agdb::type_def::TypeDefinition {}
 
 #[cfg(not(feature = "api"))]
 pub trait AgdbApiClient: HttpClient {}

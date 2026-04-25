@@ -34,7 +34,7 @@ pub(crate) fn type_def_impl_impl(item: TokenStream) -> TokenStream {
     quote! {
         #def
 
-        impl #impl_generics ::agdb::api_def::ImplDefinition for #name #ty_generic #where_clause {}
+        impl #impl_generics ::agdb::type_def::ImplDefinition for #name #ty_generic #where_clause {}
     }
     .into()
 }

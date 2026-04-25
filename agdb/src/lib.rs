@@ -43,9 +43,9 @@ pub use query::QueryType;
 pub use agdb_derive::{DbElement, DbSerialize, DbType, DbTypeMarker, DbValue};
 
 #[cfg(feature = "api")]
-pub mod api_def;
+pub mod type_def;
 #[cfg(feature = "api")]
-pub use agdb_derive::{TypeDef, TypeDefImpl, impl_def};
+pub use agdb_derive::{TypeDef, TypeDefImpl, fn_def, impl_def, trait_def};
 
 pub use db::Db;
 pub use db::DbAny;

@@ -9,15 +9,7 @@ use syn::ReturnType;
 use syn::punctuated::Punctuated;
 use syn::token::Comma;
 
-pub(crate) fn parse_function(input: &ItemFn) -> TokenStream2 {
-    parse_function_internal(input, quote! { ::agdb::type_def::Type::Function })
-}
-
-pub(crate) fn parse_test_function(input: &ItemFn) -> TokenStream2 {
-    parse_function_internal(input, quote! { ::agdb::type_def::Type::Test })
-}
-
-fn parse_function_internal(input: &ItemFn, wrapper: TokenStream2) -> TokenStream2 {
+pub(crate) fn parse_function_internal(input: &ItemFn, wrapper: TokenStream2) -> TokenStream2 {
     let name_str = input.sig.ident.to_string();
     let fn_name = crate::type_def_parser::type_def_fn(&name_str);
     let current_generics = generics_parser::extract_generics(&input.sig.generics);

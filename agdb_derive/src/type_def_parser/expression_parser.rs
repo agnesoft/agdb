@@ -723,7 +723,7 @@ fn parse_macro_by_name(
                 }
             }
         }
-        // Common macros treated as calls with string arguments
+        // Common macros treated as function calls
         "panic" | "todo" | "unimplemented" | "println" | "eprintln" | "dbg" | "assert"
         | "assert_eq" | "assert_ne" | "debug_assert" | "debug_assert_eq" | "debug_assert_ne"
         | "matches" | "unreachable" | "write" | "writeln" => {

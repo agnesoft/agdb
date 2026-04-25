@@ -44,7 +44,7 @@ pub(crate) fn impl_def_impl(item: TokenStream) -> TokenStream {
     let def_impl = match syn::parse::<syn::ItemImpl>(item) {
         Ok(input) => impl_parser::parse_impl(&input),
         Err(_) => {
-            return compile_error(it, "Only impl blocks are supported");
+            return crate::compile_error(it, "Only impl blocks are supported").into();
         }
     };
 
@@ -61,7 +61,7 @@ pub(crate) fn trait_def_impl(item: TokenStream) -> TokenStream {
     let def_fn = match syn::parse::<syn::ItemTrait>(item) {
         Ok(input) => trait_parser::parse_trait(&input),
         Err(_) => {
-            return compile_error(it, "Only traits are supported");
+            return crate::compile_error(it, "Only traits are supported").into();
         }
     };
 
@@ -87,7 +87,7 @@ fn parse_fn_attr_impl(item: TokenStream, wrapper: TokenStream2) -> TokenStream {
     let def_fn = match syn::parse::<syn::ItemFn>(item) {
         Ok(input) => function_parser::parse_function_internal(&input, wrapper),
         Err(_) => {
-            return compile_error(it, "Only functions are supported");
+            return crate::compile_error(it, "Only functions are supported").into();
         }
     };
 
@@ -97,12 +97,6 @@ fn parse_fn_attr_impl(item: TokenStream, wrapper: TokenStream2) -> TokenStream {
         #def_fn
     }
     .into()
-}
-
-fn compile_error(span: TokenStream2, message: &str) -> TokenStream {
-    syn::Error::new_spanned(span, message)
-        .to_compile_error()
-        .into()
 }
 
 pub(crate) fn type_def_fn(name: &String) -> TokenStream2 {

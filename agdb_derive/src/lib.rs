@@ -4,6 +4,12 @@ mod db_value;
 mod type_def_parser;
 
 use proc_macro::TokenStream;
+use proc_macro2::TokenStream as TokenStream2;
+use quote::ToTokens;
+
+pub(crate) fn compile_error(span: impl ToTokens, message: impl AsRef<str>) -> TokenStream2 {
+    syn::Error::new_spanned(span, message.as_ref()).to_compile_error()
+}
 
 /// The derive macro to add `agdb` compatibility
 /// to user defined types. It implements [`agdb::UserDbType`]
@@ -154,4 +160,9 @@ pub fn trait_def(_attr: TokenStream, item: TokenStream) -> TokenStream {
 #[proc_macro_attribute]
 pub fn fn_def(_attr: TokenStream, item: TokenStream) -> TokenStream {
     type_def_parser::fn_def_impl(item)
+}
+
+#[proc_macro_attribute]
+pub fn test_def(_attr: TokenStream, item: TokenStream) -> TokenStream {
+    type_def_parser::test_def_impl(item)
 }

@@ -92,7 +92,10 @@ pub(crate) fn parse_expression(e: &Expr, generics: &[Generic]) -> TokenStream2 {
         Expr::Tuple(e) => parse_tuple(e, generics),
         Expr::Unary(e) => parse_unary(e, generics),
         Expr::While(e) => parse_while(e, generics),
-        _ => panic!("Unsupported expression: {}", e.to_token_stream()),
+        _ => crate::compile_error(
+            e,
+            format!("Unsupported expression: {}", e.to_token_stream()),
+        ),
     }
 }
 
@@ -224,7 +227,7 @@ fn parse_unary(e: &ExprUnary, generics: &[Generic]) -> TokenStream2 {
         syn::UnOp::Deref(_) => quote! { ::agdb::type_def::Op::Deref },
         syn::UnOp::Not(_) => quote! { ::agdb::type_def::Op::Not },
         syn::UnOp::Neg(_) => quote! { ::agdb::type_def::Op::Neg },
-        _ => panic!("Unsupported unary operator: {:?}", e.op),
+        _ => crate::compile_error(e.op, format!("Unsupported unary operator: {:?}", e.op)),
     };
     quote! {
         ::agdb::type_def::Expression::Unary {
@@ -264,7 +267,7 @@ fn parse_binop(op: &BinOp) -> TokenStream2 {
         BinOp::BitOrAssign(_) => quote! { ::agdb::type_def::Op::BitOrAssign },
         BinOp::ShlAssign(_) => quote! { ::agdb::type_def::Op::ShlAssign },
         BinOp::ShrAssign(_) => quote! { ::agdb::type_def::Op::ShrAssign },
-        _ => panic!("Unsupported binary operator"),
+        _ => crate::compile_error(op, "Unsupported binary operator"),
     }
 }
 
@@ -328,7 +331,7 @@ fn parse_closure(e: &ExprClosure, generics: &[Generic]) -> TokenStream2 {
             let (name_tokens, ty_tokens) = parse_closure_arg(pat, generics);
             quote! {
                 ::agdb::type_def::Variable {
-                    name: stringify!(#name_tokens),
+                    name: #name_tokens,
                     ty: Some(#ty_tokens),
                 }
             }
@@ -359,30 +362,40 @@ fn parse_closure(e: &ExprClosure, generics: &[Generic]) -> TokenStream2 {
 fn parse_closure_arg(pat: &Pat, generics: &[Generic]) -> (TokenStream2, TokenStream2) {
     match pat {
         Pat::Type(p) => {
-            let name = extract_pat_ident(&p.pat);
             let ty = generics_parser::parse_type(&p.ty, generics);
-            (quote! { #name }, ty)
+            match p.pat.as_ref() {
+                Pat::Ident(pat_ident) => {
+                    let name = pat_ident.ident.to_string();
+                    (quote! { #name }, ty)
+                }
+                _ => (
+                    crate::compile_error(
+                        &p.pat,
+                        format!(
+                            "Expected identifier pattern, got: {}",
+                            p.pat.to_token_stream()
+                        ),
+                    ),
+                    ty,
+                ),
+            }
         }
         Pat::Ident(p) => {
-            let name = &p.ident;
+            let name = p.ident.to_string();
             (
                 quote! { #name },
                 quote! { <() as ::agdb::type_def::TypeDefinition>::type_def },
             )
         }
-        _ => panic!(
-            "Unsupported closure argument pattern: {}",
-            pat.to_token_stream()
-        ),
-    }
-}
-
-fn extract_pat_ident(pat: &Pat) -> &syn::Ident {
-    match pat {
-        Pat::Ident(p) => &p.ident,
-        _ => panic!(
-            "Expected identifier pattern, got: {}",
-            pat.to_token_stream()
+        _ => (
+            crate::compile_error(
+                pat,
+                format!(
+                    "Unsupported closure argument pattern: {}",
+                    pat.to_token_stream()
+                ),
+            ),
+            quote! { <() as ::agdb::type_def::TypeDefinition>::type_def },
         ),
     }
 }
@@ -471,7 +484,7 @@ fn parse_if(e: &syn::ExprIf, generics: &[Generic]) -> TokenStream2 {
         let else_tokens = match else_expr.as_ref() {
             Expr::If(else_if) => parse_if(else_if, generics),
             Expr::Block(else_block) => parse_block(&else_block.block, generics),
-            _ => panic!("Unsupported else branch"),
+            _ => crate::compile_error(else_expr, "Unsupported else branch"),
         };
         quote! { Some(&#else_tokens) }
     } else {
@@ -648,7 +661,7 @@ fn parse_literal(lit: &Lit) -> TokenStream2 {
                     let v = i.base10_parse::<usize>().unwrap();
                     quote! { ::agdb::type_def::Expression::Literal(::agdb::type_def::LiteralValue::Usize(#v)) }
                 }
-                _ => panic!("Unsupported integer suffix: {suffix}"),
+                _ => crate::compile_error(i, format!("Unsupported integer suffix: {suffix}")),
             }
         }
         Lit::Float(f) => {
@@ -662,7 +675,7 @@ fn parse_literal(lit: &Lit) -> TokenStream2 {
                     let v = f.base10_parse::<f64>().unwrap();
                     quote! { ::agdb::type_def::Expression::Literal(::agdb::type_def::LiteralValue::F64(#v)) }
                 }
-                _ => panic!("Unsupported float suffix: {suffix}"),
+                _ => crate::compile_error(f, format!("Unsupported float suffix: {suffix}")),
             }
         }
         Lit::Bool(b) => {
@@ -677,7 +690,7 @@ fn parse_literal(lit: &Lit) -> TokenStream2 {
                 ::agdb::type_def::Expression::Literal(::agdb::type_def::LiteralValue::Str(#value))
             }
         }
-        _ => panic!("Unsupported literal: {:?}", lit),
+        _ => crate::compile_error(lit, format!("Unsupported literal: {:?}", lit)),
     }
 }
 
@@ -713,7 +726,10 @@ fn parse_macro_by_name(
             let format_string_expr = args_iter
                 .next()
                 .expect("format! requires at least one argument");
-            let format_string = extract_format_string(&format_string_expr);
+            let format_string = match extract_format_string(&format_string_expr) {
+                Ok(v) => v,
+                Err(err) => return err,
+            };
             let (fmt_str, fmt_args) =
                 extract_format_parts(&format_string, &mut args_iter, generics);
             quote! {
@@ -723,10 +739,10 @@ fn parse_macro_by_name(
                 }
             }
         }
-        // Common macros treated as calls with string arguments
+        // Common macros treated as function calls
         "panic" | "todo" | "unimplemented" | "println" | "eprintln" | "dbg" | "assert"
         | "assert_eq" | "assert_ne" | "debug_assert" | "debug_assert_eq" | "debug_assert_ne"
-        | "unreachable" | "write" | "writeln" => {
+        | "matches" | "unreachable" | "write" | "writeln" => {
             let macro_args = args.iter().map(|arg| parse_expression(arg, generics));
             quote! {
                 ::agdb::type_def::Expression::Call {
@@ -740,20 +756,26 @@ fn parse_macro_by_name(
                 }
             }
         }
-        _ => panic!("Unsupported macro: {name}"),
+        _ => crate::compile_error(tokens, format!("Unsupported macro: {name}")),
     }
 }
 
-fn extract_format_string(e: &Expr) -> String {
+fn extract_format_string(e: &Expr) -> Result<String, TokenStream2> {
     match e {
         Expr::Lit(expr_lit) => {
             if let Lit::Str(lit_str) = &expr_lit.lit {
-                lit_str.value()
+                Ok(lit_str.value())
             } else {
-                panic!("First argument to format! must be a string literal");
+                Err(crate::compile_error(
+                    expr_lit,
+                    "First argument to format! must be a string literal",
+                ))
             }
         }
-        _ => panic!("First argument to format! must be a string literal"),
+        _ => Err(crate::compile_error(
+            e,
+            "First argument to format! must be a string literal",
+        )),
     }
 }
 
@@ -911,7 +933,12 @@ fn parse_struct(e: &ExprStruct, generics: &[Generic]) -> TokenStream2 {
 fn parse_struct_field(field: &FieldValue, generics: &[Generic]) -> TokenStream2 {
     let field_name = match &field.member {
         Member::Named(ident) => ident,
-        Member::Unnamed(_) => panic!("Unnamed fields are not supported in struct expressions"),
+        Member::Unnamed(_) => {
+            return crate::compile_error(
+                &field.member,
+                "Unnamed fields are not supported in struct expressions",
+            );
+        }
     };
     let field_value = parse_expression(&field.expr, generics);
     quote! {
@@ -1021,6 +1048,12 @@ fn parse_pattern(pat: &Pat, generics: &[Generic]) -> (TokenStream2, TokenStream2
             quote! { ::agdb::type_def::Expression::Wild },
             quote! { None },
         ),
-        _ => panic!("Unsupported pattern: {}", pat.to_token_stream()),
+        _ => (
+            crate::compile_error(
+                pat,
+                format!("Unsupported pattern: {}", pat.to_token_stream()),
+            ),
+            quote! { None },
+        ),
     }
 }

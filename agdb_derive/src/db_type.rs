@@ -33,7 +33,7 @@ pub fn derive_impl(item: TokenStream, element_id: bool) -> TokenStream {
     let input = parse_macro_input!(item as DeriveInput);
     let name = input.ident;
     let syn::Data::Struct(data) = input.data else {
-        unimplemented!()
+        return crate::compile_error(&name, "Only structs are supported").into();
     };
     let has_option = data.fields.iter().any(|f| {
         if let Some(ident) = &f.ident

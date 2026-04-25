@@ -23,6 +23,7 @@ pub trait TypeDefinition {
         match Self::type_def() {
             Type::Enum(e) => e.generics.iter().map(|g| g.name).collect(),
             Type::Function(f) => f.generics.iter().map(|g| g.name).collect(),
+            Type::Test(f) => f.generics.iter().map(|g| g.name).collect(),
             Type::Struct(s) => s.generics.iter().map(|g| g.name).collect(),
             Type::Trait(t) => t.generics.iter().map(|g| g.name).collect(),
             Type::Impl(i) => i.generics.iter().map(|g| g.name).collect(),
@@ -51,6 +52,7 @@ pub trait ImplDefinition: TypeDefinition {
 pub enum Type {
     Enum(Enum),
     Function(Function),
+    Test(Function),
     Generic(Generic),
     Impl(Impl),
     Literal(Literal),
@@ -71,6 +73,7 @@ impl Type {
         match self {
             Type::Enum(e) => e.name,
             Type::Function(_) => "fn",
+            Type::Test(_) => "test",
             Type::Generic(g) => g.name,
             Type::Impl(i) => i.name,
             Type::Literal(l) => l.name(),
@@ -379,6 +382,7 @@ mod tests {
 
         assert_eq!(def.name, "Type");
         assert!(def.variants.iter().any(|v| v.name == "Function"));
+        assert!(def.variants.iter().any(|v| v.name == "Test"));
         assert!(def.variants.iter().any(|v| v.name == "Trait"));
     }
 

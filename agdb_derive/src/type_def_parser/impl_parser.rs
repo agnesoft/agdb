@@ -28,7 +28,7 @@ pub(crate) fn parse_impl(input: &syn::ItemImpl) -> TokenStream2 {
         .iter()
         .map(|item| match item {
             ImplItem::Fn(impl_fn) => function_parser::parse_signature(&impl_fn.sig),
-            _ => panic!("Only function items are supported in impl blocks"),
+            _ => crate::compile_error(item, "Only function items are supported in impl blocks"),
         })
         .collect::<Vec<_>>();
 

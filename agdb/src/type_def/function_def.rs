@@ -15,9 +15,94 @@ pub struct Function {
 
 #[cfg(test)]
 mod tests {
+    use crate::type_def::Expression;
     use crate::type_def::GenericKind;
     use crate::type_def::Literal;
     use crate::type_def::Type;
+
+    #[agdb::test_def]
+    #[test]
+    fn plain_test_function() {
+        let value = 1;
+        assert!(value == 1);
+    }
+
+    #[agdb::test_def]
+    #[tokio::test]
+    async fn tokio_async_test_function() {
+        let value = 1;
+        assert_eq!(value, 1);
+        assert!(matches!(Some(value), Some(1)));
+    }
+
+    #[test]
+    fn plain_test_type_def() {
+        let Type::Test(def) = __plain_test_function_type_def() else {
+            panic!("Expected a test type definition");
+        };
+
+        assert_eq!(def.name, "plain_test_function");
+        assert!(!def.async_fn);
+        assert_eq!(def.body.len(), 2);
+        assert!(
+            matches!(
+                &def.body[1],
+                Expression::Call {
+                    function: Expression::Path {
+                        ident: "assert",
+                        ..
+                    },
+                    ..
+                }
+            ),
+            "Got: {:?}",
+            def.body[1]
+        );
+    }
+
+    #[test]
+    fn tokio_test_type_def() {
+        let Type::Test(def) = __tokio_async_test_function_type_def() else {
+            panic!("Expected a test type definition");
+        };
+
+        assert_eq!(def.name, "tokio_async_test_function");
+        assert!(def.async_fn);
+        assert_eq!(def.body.len(), 3);
+
+        assert!(
+            matches!(
+                &def.body[1],
+                Expression::Call {
+                    function: Expression::Path {
+                        ident: "assert_eq",
+                        ..
+                    },
+                    ..
+                }
+            ),
+            "Got: {:?}",
+            def.body[1]
+        );
+
+        let Expression::Call { args, .. } = &def.body[2] else {
+            panic!("Expected assert! call in body");
+        };
+        assert!(
+            matches!(
+                &args[0],
+                Expression::Call {
+                    function: Expression::Path {
+                        ident: "matches",
+                        ..
+                    },
+                    ..
+                }
+            ),
+            "Got: {:?}",
+            args[0]
+        );
+    }
 
     #[test]
     fn empty_function() {

@@ -188,6 +188,7 @@ mod tests {
             "tuple_expr" => __tuple_expr_type_def(),
             "format_expr" => __format_expr_type_def(),
             "vec_macro_expr" => __vec_macro_expr_type_def(),
+            "assert_macros_expr" => __assert_macros_expr_type_def(),
             "match_expr" => __match_expr_type_def(),
             "struct_expr" => __struct_expr_type_def(),
             "implicit_return" => __implicit_return_type_def(),
@@ -1244,6 +1245,71 @@ mod tests {
                 assert_eq!(elems.len(), 3);
             }
             _ => panic!("Got: {:?}", body[0]),
+        }
+    }
+
+    #[agdb::fn_def]
+    #[allow(unused)]
+    fn assert_macros_expr() {
+        let x = 42;
+        assert!(x > 0);
+        assert_eq!(x, 42);
+        let _matched = matches!(Some(x), Some(42));
+    }
+
+    #[test]
+    fn test_assert_macros() {
+        let body = get_body("assert_macros_expr");
+        assert_eq!(body.len(), 4);
+
+        assert!(
+            matches!(
+                &body[1],
+                Expression::Call {
+                    function: Expression::Path {
+                        ident: "assert",
+                        ..
+                    },
+                    ..
+                }
+            ),
+            "Got: {:?}",
+            body[1]
+        );
+
+        assert!(
+            matches!(
+                &body[2],
+                Expression::Call {
+                    function: Expression::Path {
+                        ident: "assert_eq",
+                        ..
+                    },
+                    ..
+                }
+            ),
+            "Got: {:?}",
+            body[2]
+        );
+
+        match &body[3] {
+            Expression::Let {
+                value: Some(Expression::Call { function, .. }),
+                ..
+            } => {
+                assert!(
+                    matches!(
+                        function,
+                        Expression::Path {
+                            ident: "matches",
+                            ..
+                        }
+                    ),
+                    "Got: {:?}",
+                    function
+                );
+            }
+            _ => panic!("Got: {:?}", body[3]),
         }
     }
 

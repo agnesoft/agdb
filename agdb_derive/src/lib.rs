@@ -155,3 +155,8 @@ pub fn trait_def(_attr: TokenStream, item: TokenStream) -> TokenStream {
 pub fn fn_def(_attr: TokenStream, item: TokenStream) -> TokenStream {
     type_def_parser::fn_def_impl(item)
 }
+
+#[proc_macro_attribute]
+pub fn test_def(_attr: TokenStream, item: TokenStream) -> TokenStream {
+    type_def_parser::test_def_impl(item)
+}

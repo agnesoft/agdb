@@ -87,6 +87,22 @@ pub(crate) fn fn_def_impl(item: TokenStream) -> TokenStream {
     .into()
 }
 
+pub(crate) fn test_def_impl(item: TokenStream) -> TokenStream {
+    let it: TokenStream2 = item.clone().into();
+    let def_fn = if let Ok(input) = syn::parse::<syn::ItemFn>(item) {
+        function_parser::parse_test_function(&input)
+    } else {
+        unimplemented!("Only functions are supported")
+    };
+
+    quote! {
+        #it
+
+        #def_fn
+    }
+    .into()
+}
+
 pub(crate) fn type_def_fn(name: &String) -> TokenStream2 {
     let bound_fn_name = Ident::new(
         &format!("__{name}_type_def"),

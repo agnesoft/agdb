@@ -31,10 +31,11 @@ pub(crate) fn parse_trait(input: &ItemTrait) -> TokenStream2 {
     });
 
     let def_struct = Ident::new(&format!("{name_str}Def"), Span::call_site());
+    let vis = &input.vis;
 
     quote! {
         #[allow(non_camel_case_types)]
-        pub struct #def_struct;
+        #vis struct #def_struct;
 
         impl ::agdb::type_def::TypeDefinition for #def_struct {
             fn type_def() -> ::agdb::type_def::Type {

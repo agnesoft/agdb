@@ -1,5 +1,7 @@
 use crate::type_def_parser::function_parser;
 use crate::type_def_parser::generics_parser;
+use proc_macro2::Ident;
+use proc_macro2::Span;
 use proc_macro2::TokenStream as TokenStream2;
 use quote::quote;
 use syn::ItemTrait;
@@ -7,13 +9,6 @@ use syn::TraitItem;
 
 pub(crate) fn parse_trait(input: &ItemTrait) -> TokenStream2 {
     let name_str = input.ident.to_string();
-    let fn_name = crate::type_def_parser::type_def_fn(&name_str);
-    let lt_params = generics_parser::parse_lifetime_params(&input.generics);
-    let lt_generics = if lt_params.is_empty() {
-        quote! {}
-    } else {
-        quote! { <#(#lt_params),*> }
-    };
     let generics = generics_parser::parse_generics(&input.generics);
     let bounds = input
         .supertraits
@@ -35,14 +30,22 @@ pub(crate) fn parse_trait(input: &ItemTrait) -> TokenStream2 {
         _ => None,
     });
 
+    let def_struct = Ident::new(&format!("{name_str}Def"), Span::call_site());
+    let vis = &input.vis;
+
     quote! {
-        fn #fn_name #lt_generics () -> ::agdb::type_def::Type {
-            ::agdb::type_def::Type::Trait(::agdb::type_def::Trait {
-                name: #name_str,
-                generics: &[#(#generics),*],
-                bounds: &[#(#bounds),*],
-                functions: &[#(#functions),*],
-            })
+        #[allow(non_camel_case_types)]
+        #vis struct #def_struct;
+
+        impl ::agdb::type_def::TypeDefinition for #def_struct {
+            fn type_def() -> ::agdb::type_def::Type {
+                ::agdb::type_def::Type::Trait(::agdb::type_def::Trait {
+                    name: #name_str,
+                    generics: &[#(#generics),*],
+                    bounds: &[#(#bounds),*],
+                    functions: &[#(#functions),*],
+                })
+            }
         }
     }
 }

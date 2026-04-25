@@ -873,7 +873,7 @@ fn empty_trait() {
     #[expect(dead_code)]
     trait MyTrait {}
 
-    let Type::Trait(def) = __MyTrait_type_def() else {
+    let Type::Trait(def) = MyTraitDef::type_def() else {
         panic!("Expected a trait type definition");
     };
 
@@ -886,7 +886,7 @@ fn trait_with_generics() {
     #[expect(dead_code)]
     trait MyTrait<T: agdb::type_def::TypeDefinition> {}
 
-    let Type::Trait(def) = __MyTrait_type_def() else {
+    let Type::Trait(def) = MyTraitDef::type_def() else {
         panic!("Expected a trait type definition");
     };
 
@@ -905,7 +905,7 @@ fn trait_with_where_clause() {
     {
     }
 
-    let Type::Trait(def) = __MyTrait_type_def() else {
+    let Type::Trait(def) = MyTraitDef::type_def() else {
         panic!("Expected a trait type definition");
     };
 
@@ -919,7 +919,7 @@ fn trait_with_supertrait() {
     #[expect(dead_code)]
     trait MyTrait: agdb::type_def::TypeDefinition {}
 
-    let Type::Trait(def) = __MyTrait_type_def() else {
+    let Type::Trait(def) = MyTraitDef::type_def() else {
         panic!("Expected a trait type definition");
     };
 
@@ -935,7 +935,7 @@ fn trait_with_functions() {
         async fn b(v: i32) -> String;
     }
 
-    let Type::Trait(def) = __MyTrait_type_def() else {
+    let Type::Trait(def) = MyTraitDef::type_def() else {
         panic!("Expected a trait type definition");
     };
 
@@ -958,7 +958,7 @@ fn trait_function_with_generics() {
         fn id<T: agdb::type_def::TypeDefinition>(v: T) -> T;
     }
 
-    let Type::Trait(def) = __MyTrait_type_def() else {
+    let Type::Trait(def) = MyTraitDef::type_def() else {
         panic!("Expected a trait type definition");
     };
 
@@ -979,7 +979,7 @@ fn trait_with_lifetime() {
         fn get(&'a self) -> &'a str;
     }
 
-    let Type::Trait(def) = __MyLifetimeTrait_type_def() else {
+    let Type::Trait(def) = MyLifetimeTraitDef::type_def() else {
         panic!("Expected trait type definition");
     };
 
@@ -996,7 +996,7 @@ fn trait_with_const_generic() {
     #[expect(dead_code)]
     trait MyConstTrait<const N: usize> {}
 
-    let Type::Trait(def) = __MyConstTrait_type_def() else {
+    let Type::Trait(def) = MyConstTraitDef::type_def() else {
         panic!("Expected trait type definition");
     };
 
@@ -1014,7 +1014,7 @@ fn trait_function_with_default_implementation() {
         }
     }
 
-    let Type::Trait(def) = __MyTrait_type_def() else {
+    let Type::Trait(def) = MyTraitDef::type_def() else {
         panic!("Expected a trait type definition");
     };
 
@@ -1031,7 +1031,7 @@ fn trait_function_without_default_implementation() {
         fn without_default();
     }
 
-    let Type::Trait(def) = __MyTrait_type_def() else {
+    let Type::Trait(def) = MyTraitDef::type_def() else {
         panic!("Expected a trait type definition");
     };
 
@@ -1053,7 +1053,7 @@ fn trait_mixed_default_and_non_default_functions() {
         }
     }
 
-    let Type::Trait(def) = __MyTrait_type_def() else {
+    let Type::Trait(def) = MyTraitDef::type_def() else {
         panic!("Expected a trait type definition");
     };
 
@@ -1074,7 +1074,7 @@ fn trait_default_function_with_generics() {
         }
     }
 
-    let Type::Trait(def) = __MyTrait_type_def() else {
+    let Type::Trait(def) = MyTraitDef::type_def() else {
         panic!("Expected a trait type definition");
     };
 
@@ -1092,7 +1092,7 @@ fn trait_default_async_function() {
         }
     }
 
-    let Type::Trait(def) = __MyTrait_type_def() else {
+    let Type::Trait(def) = MyTraitDef::type_def() else {
         panic!("Expected a trait type definition");
     };
 

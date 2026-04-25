@@ -15,6 +15,7 @@ mod tests {
     use crate::type_def::GenericKind;
     use crate::type_def::Literal;
     use crate::type_def::Type;
+    use crate::type_def::TypeDefinition;
 
     #[test]
     fn empty_trait() {
@@ -22,7 +23,7 @@ mod tests {
         #[allow(dead_code)]
         trait MyTrait {}
 
-        let Type::Trait(def) = __MyTrait_type_def() else {
+        let Type::Trait(def) = MyTraitDef::type_def() else {
             panic!("Expected a trait type definition");
         };
 
@@ -35,7 +36,7 @@ mod tests {
         #[allow(dead_code)]
         trait MyTrait<T: agdb::type_def::TypeDefinition> {}
 
-        let Type::Trait(def) = __MyTrait_type_def() else {
+        let Type::Trait(def) = MyTraitDef::type_def() else {
             panic!("Expected a trait type definition");
         };
 
@@ -59,7 +60,7 @@ mod tests {
         {
         }
 
-        let Type::Trait(def) = __MyTrait_type_def() else {
+        let Type::Trait(def) = MyTraitDef::type_def() else {
             panic!("Expected a trait type definition");
         };
 
@@ -79,7 +80,7 @@ mod tests {
         #[allow(dead_code)]
         trait MyTrait: agdb::type_def::TypeDefinition {}
 
-        let Type::Trait(def) = __MyTrait_type_def() else {
+        let Type::Trait(def) = MyTraitDef::type_def() else {
             panic!("Expected a trait type definition");
         };
 
@@ -99,7 +100,7 @@ mod tests {
             async fn b(v: i32) -> String;
         }
 
-        let Type::Trait(def) = __MyTrait_type_def() else {
+        let Type::Trait(def) = MyTraitDef::type_def() else {
             panic!("Expected a trait type definition");
         };
 
@@ -143,7 +144,7 @@ mod tests {
             fn id<T: agdb::type_def::TypeDefinition>(v: T) -> T;
         }
 
-        let Type::Trait(def) = __MyTrait_type_def() else {
+        let Type::Trait(def) = MyTraitDef::type_def() else {
             panic!("Expected a trait type definition");
         };
 
@@ -178,7 +179,7 @@ mod tests {
             fn get(&'a self) -> &'a str;
         }
 
-        let Type::Trait(def) = __MyLifetimeTrait_type_def() else {
+        let Type::Trait(def) = MyLifetimeTraitDef::type_def() else {
             panic!("Expected trait type definition");
         };
 
@@ -210,7 +211,7 @@ mod tests {
         #[allow(dead_code)]
         trait MyConstTrait<const N: usize> {}
 
-        let Type::Trait(def) = __MyConstTrait_type_def() else {
+        let Type::Trait(def) = MyConstTraitDef::type_def() else {
             panic!("Expected trait type definition");
         };
 
@@ -235,7 +236,7 @@ mod tests {
             }
         }
 
-        let Type::Trait(def) = __MyTrait_type_def() else {
+        let Type::Trait(def) = MyTraitDef::type_def() else {
             panic!("Expected a trait type definition");
         };
 
@@ -259,7 +260,7 @@ mod tests {
             fn without_default();
         }
 
-        let Type::Trait(def) = __MyTrait_type_def() else {
+        let Type::Trait(def) = MyTraitDef::type_def() else {
             panic!("Expected a trait type definition");
         };
 
@@ -287,7 +288,7 @@ mod tests {
             }
         }
 
-        let Type::Trait(def) = __MyTrait_type_def() else {
+        let Type::Trait(def) = MyTraitDef::type_def() else {
             panic!("Expected a trait type definition");
         };
 
@@ -324,7 +325,7 @@ mod tests {
             }
         }
 
-        let Type::Trait(def) = __MyTrait_type_def() else {
+        let Type::Trait(def) = MyTraitDef::type_def() else {
             panic!("Expected a trait type definition");
         };
 
@@ -351,7 +352,7 @@ mod tests {
             }
         }
 
-        let Type::Trait(def) = __MyTrait_type_def() else {
+        let Type::Trait(def) = MyTraitDef::type_def() else {
             panic!("Expected a trait type definition");
         };
 
@@ -373,7 +374,7 @@ mod tests {
             ) -> Result<(u16, T), Option<Vec<T>>>;
         }
 
-        let Type::Trait(def) = __HttpLike_type_def() else {
+        let Type::Trait(def) = HttpLikeDef::type_def() else {
             panic!("Expected a trait type definition");
         };
 

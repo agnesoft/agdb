@@ -88,24 +88,28 @@ pub(crate) fn parse_generics(generics: &Generics) -> Vec<TokenStream2> {
 }
 
 pub(crate) fn parse_type_param_bound(bound: &TypeParamBound) -> TokenStream2 {
-    let name = extract_type_param_bound(bound);
-
-    quote! {
-        || ::agdb::type_def::Type::Trait(::agdb::type_def::Trait {
-            name: #name,
-            generics: &[],
-            bounds: &[],
-            functions: &[],
-        })
+    match extract_type_param_bound(bound) {
+        Ok(name) => quote! {
+            || ::agdb::type_def::Type::Trait(::agdb::type_def::Trait {
+                name: #name,
+                generics: &[],
+                bounds: &[],
+                functions: &[],
+            })
+        },
+        Err(e) => e,
     }
 }
 
-fn extract_type_param_bound(bound: &TypeParamBound) -> String {
+fn extract_type_param_bound(bound: &TypeParamBound) -> Result<String, TokenStream2> {
     match bound {
         TypeParamBound::Trait(trait_bound) => {
-            trait_bound.path.segments.last().unwrap().ident.to_string()
+            Ok(trait_bound.path.segments.last().unwrap().ident.to_string())
         }
-        _ => unimplemented!("Only trait bounds are supported for now"),
+        _ => Err(crate::compile_error(
+            proc_macro2::TokenStream::new(),
+            "Only trait bounds are supported",
+        )),
     }
 }
 

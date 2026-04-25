@@ -18,7 +18,7 @@ pub(crate) fn type_def_impl(item: TokenStream) -> TokenStream {
     match &input.data {
         syn::Data::Struct(s) => struct_parser::parse_struct(&input, s),
         syn::Data::Enum(e) => enum_parser::parse_enum(&input, e),
-        _ => unimplemented!("Only structs and enums are supported for now"),
+        _ => crate::compile_error(&input.ident, "Only structs and enums are supported"),
     }
     .into()
 }

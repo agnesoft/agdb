@@ -29,7 +29,7 @@ pub fn db_serialize(item: TokenStream) -> TokenStream {
     } else if let syn::Data::Enum(data) = input.data {
         serialize_enum(name, data)
     } else {
-        unimplemented!()
+        crate::compile_error(&name, "Only structs and enums are supported")
     };
 
     tokens.into()

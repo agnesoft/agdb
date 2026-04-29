@@ -155,7 +155,7 @@ async fn basepath_test() -> anyhow::Result<()> {
     use crate::DEFAULT_LOG_BODY_LIMIT;
     use crate::DEFAULT_REQUEST_BODY_LIMIT;
 
-    let config = crate::config::ConfigImpl {
+    let config = agdb_api::ConfigImpl {
         bind: String::new(),
         address: String::new(),
         basepath: "/public".to_string(),
@@ -329,7 +329,7 @@ async fn studio() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn large_payload() -> anyhow::Result<()> {
-    let config = crate::config::ConfigImpl {
+    let config = agdb_api::ConfigImpl {
         bind: String::new(),
         address: String::new(),
         basepath: String::new(),
@@ -408,7 +408,7 @@ async fn static_files() -> anyhow::Result<()> {
     let test_dir1 = TestDir::new()?;
     let test_dir2 = TestDir::new()?;
 
-    let config = crate::config::ConfigImpl {
+    let config = agdb_api::ConfigImpl {
         bind: String::new(),
         address: String::new(),
         basepath: String::new(),
@@ -473,7 +473,7 @@ async fn static_files_with_basepath() -> anyhow::Result<()> {
     let test_dir1 = TestDir::new()?;
     let test_dir2 = TestDir::new()?;
 
-    let config = crate::config::ConfigImpl {
+    let config = agdb_api::ConfigImpl {
         bind: String::new(),
         address: String::new(),
         basepath: "/some_basepath".to_string(),

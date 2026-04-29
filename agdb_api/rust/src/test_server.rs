@@ -1,13 +1,10 @@
-mod routes;
-#[cfg(feature = "tls")]
-mod tls;
-
-use agdb_api::AgdbApi;
-use agdb_api::ClusterStatus;
-use agdb_api::ConfigImpl;
-use agdb_api::DEFAULT_LOG_BODY_LIMIT;
-use agdb_api::DEFAULT_REQUEST_BODY_LIMIT;
-use agdb_api::ReqwestClient;
+use crate::AgdbApi;
+use crate::ClusterStatus;
+use crate::ConfigImpl;
+use crate::DEFAULT_LOG_BODY_LIMIT;
+use crate::DEFAULT_REQUEST_BODY_LIMIT;
+use crate::ReqwestClient;
+use crate::config_to_str;
 use std::collections::HashMap;
 use std::path::Path;
 use std::path::PathBuf;
@@ -118,10 +115,7 @@ impl TestServerImpl {
         Self::remove_dir_if_exists(&dir)?;
         std::fs::create_dir(&dir)?;
 
-        std::fs::write(
-            Path::new(&dir).join(CONFIG_FILE),
-            agdb_api::config_to_str(&config),
-        )?;
+        std::fs::write(Path::new(&dir).join(CONFIG_FILE), config_to_str(&config))?;
 
         let api_address = if config.basepath.is_empty() {
             config.address.clone()
@@ -169,7 +163,7 @@ impl TestServerImpl {
             basepath: String::new(),
             static_roots: Vec::new(),
             admin: ADMIN.to_string(),
-            log_level: agdb_api::LogLevelFilter::Info,
+            log_level: crate::LogLevelFilter::Info,
             log_body_limit: DEFAULT_LOG_BODY_LIMIT,
             request_body_limit: DEFAULT_REQUEST_BODY_LIMIT,
             data_dir: SERVER_DATA_DIR.into(),
@@ -433,7 +427,7 @@ pub async fn create_cluster(nodes: usize, tls: bool) -> anyhow::Result<Vec<TestS
             basepath: String::new(),
             static_roots: Vec::new(),
             admin: ADMIN.to_string(),
-            log_level: agdb_api::LogLevelFilter::Info,
+            log_level: crate::LogLevelFilter::Info,
             log_body_limit: DEFAULT_LOG_BODY_LIMIT,
             request_body_limit: DEFAULT_REQUEST_BODY_LIMIT,
             data_dir: SERVER_DATA_DIR.into(),

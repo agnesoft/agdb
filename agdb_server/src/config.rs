@@ -1,37 +1,13 @@
+use agdb_api::ConfigImpl;
+use agdb_api::DEFAULT_LOG_BODY_LIMIT;
+use agdb_api::DEFAULT_REQUEST_BODY_LIMIT;
 use agdb_api::LogLevelFilter;
+use agdb_api::SALT_LEN;
 use std::sync::Arc;
 use std::time::SystemTime;
 use std::time::UNIX_EPOCH;
 
 pub(crate) type Config = Arc<ConfigImpl>;
-
-pub(crate) const SALT_LEN: usize = 16;
-pub(crate) const DEFAULT_LOG_BODY_LIMIT: u64 = 10 * 1024;
-pub(crate) const DEFAULT_REQUEST_BODY_LIMIT: u64 = 10 * 1024 * 1024;
-
-#[derive(Debug)]
-pub struct ConfigImpl {
-    pub(crate) bind: String,
-    pub(crate) address: String,
-    pub(crate) basepath: String,
-    pub(crate) static_roots: Vec<String>,
-    pub(crate) admin: String,
-    pub(crate) log_level: LogLevelFilter,
-    pub(crate) log_body_limit: u64,
-    pub(crate) request_body_limit: u64,
-    pub(crate) data_dir: String,
-    pub(crate) pepper_path: String,
-    pub(crate) tls_certificate: String,
-    pub(crate) tls_key: String,
-    pub(crate) tls_root: String,
-    pub(crate) cluster_token: String,
-    pub(crate) cluster_heartbeat_timeout_ms: u64,
-    pub(crate) cluster_term_timeout_ms: u64,
-    pub(crate) cluster: Vec<String>,
-    pub(crate) cluster_node_id: usize,
-    pub(crate) start_time: u64,
-    pub(crate) pepper: Option<[u8; SALT_LEN]>,
-}
 
 pub(crate) fn new(config_file: &str) -> Result<Config, String> {
     if let Ok(content) = std::fs::read_to_string(config_file) {
@@ -88,8 +64,8 @@ pub(crate) fn new(config_file: &str) -> Result<Config, String> {
         static_roots: Vec::new(),
         admin: "admin".to_string(),
         log_level: LogLevelFilter::Info,
-        log_body_limit: DEFAULT_LOG_BODY_LIMIT,
-        request_body_limit: DEFAULT_REQUEST_BODY_LIMIT,
+        log_body_limit: agdb_api::DEFAULT_LOG_BODY_LIMIT,
+        request_body_limit: agdb_api::DEFAULT_REQUEST_BODY_LIMIT,
         data_dir: "agdb_server_data".to_string(),
         pepper_path: String::new(),
         tls_certificate: String::new(),
@@ -107,7 +83,7 @@ pub(crate) fn new(config_file: &str) -> Result<Config, String> {
         pepper: None,
     };
 
-    std::fs::write(config_file, to_str(&config))
+    std::fs::write(config_file, agdb_api::config_to_str(&config))
         .map_err(|e| format!("Failed to write config file '{}': {e:?}", config_file))?;
 
     Ok(Config::new(config))
@@ -214,41 +190,6 @@ pub(crate) fn from_str(content: &str) -> Result<ConfigImpl, String> {
     Ok(config)
 }
 
-pub(crate) fn to_str(config: &ConfigImpl) -> String {
-    let mut buffer = String::new();
-    buffer.push_str(&format!("bind: {}\n", config.bind));
-    buffer.push_str(&format!("address: {}\n", config.address));
-    buffer.push_str(&format!("basepath: {}\n", config.basepath));
-    buffer.push_str(&format!(
-        "static_roots: {}\n",
-        config.static_roots.join(", ")
-    ));
-    buffer.push_str(&format!("admin: {}\n", config.admin));
-    buffer.push_str(&format!("log_level: {}\n", config.log_level));
-    buffer.push_str(&format!("log_body_limit: {}\n", config.log_body_limit));
-    buffer.push_str(&format!(
-        "request_body_limit: {}\n",
-        config.request_body_limit
-    ));
-    buffer.push_str(&format!("data_dir: {}\n", config.data_dir));
-    buffer.push_str(&format!("pepper_path: {}\n", config.pepper_path));
-    buffer.push_str(&format!("tls_certificate: {}\n", config.tls_certificate));
-    buffer.push_str(&format!("tls_key: {}\n", config.tls_key));
-    buffer.push_str(&format!("tls_root: {}\n", config.tls_root));
-    buffer.push_str(&format!("cluster_token: {}\n", config.cluster_token));
-
-    buffer.push_str(&format!(
-        "cluster_heartbeat_timeout_ms: {}\n",
-        config.cluster_heartbeat_timeout_ms
-    ));
-    buffer.push_str(&format!(
-        "cluster_term_timeout_ms: {}\n",
-        config.cluster_term_timeout_ms
-    ));
-    buffer.push_str(&format!("cluster: [{}]\n", config.cluster.join(", ")));
-    buffer
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -305,7 +246,7 @@ mod tests {
             start_time: 0,
             pepper: None,
         };
-        std::fs::write(test_file.filename, to_str(&config)).unwrap();
+        std::fs::write(test_file.filename, agdb_api::config_to_str(&config)).unwrap();
 
         config::new(test_file.filename).unwrap_err();
     }
@@ -339,7 +280,7 @@ mod tests {
             pepper: None,
         };
 
-        std::fs::write(test_file.filename, to_str(&config)).unwrap();
+        std::fs::write(test_file.filename, agdb_api::config_to_str(&config)).unwrap();
 
         let config = config::new(test_file.filename).unwrap();
 
@@ -371,7 +312,7 @@ mod tests {
             start_time: 0,
             pepper: None,
         };
-        std::fs::write(test_file.filename, to_str(&config)).unwrap();
+        std::fs::write(test_file.filename, agdb_api::config_to_str(&config)).unwrap();
 
         config::new(test_file.filename).unwrap_err();
     }
@@ -403,7 +344,7 @@ mod tests {
             start_time: 0,
             pepper: None,
         };
-        std::fs::write(test_file.filename, to_str(&config)).unwrap();
+        std::fs::write(test_file.filename, agdb_api::config_to_str(&config)).unwrap();
 
         config::new(test_file.filename).unwrap_err();
     }

@@ -1,7 +1,7 @@
+use agdb_api::DbKind;
 use agdb_api::test_server::ADMIN;
 use agdb_api::test_server::TestServer;
 use agdb_api::test_server::next_user_name;
-use agdb_api::DbKind;
 
 #[tokio::test]
 async fn status() -> anyhow::Result<()> {

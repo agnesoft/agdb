@@ -34,13 +34,19 @@ pub struct ConfigImpl {
     pub(crate) pepper: Option<[u8; SALT_LEN]>,
 }
 
+impl ConfigImpl {
+    pub fn server_url(&self) -> String {
+        format!("{}{}", self.address, self.basepath)
+    }
+}
+
 pub(crate) fn new(config_file: &str) -> Result<Config, String> {
     if let Ok(content) = std::fs::read_to_string(config_file) {
         let mut config_impl: ConfigImpl = from_str(&content)?;
         config_impl.cluster_node_id = config_impl
             .cluster
             .iter()
-            .position(|x| x == &config_impl.address)
+            .position(|x| x == &config_impl.server_url())
             .unwrap_or(0);
         config_impl.start_time = SystemTime::now()
             .duration_since(UNIX_EPOCH)

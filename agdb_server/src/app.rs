@@ -34,7 +34,7 @@ pub(crate) fn app(
     #[cfg(feature = "studio")]
     routes::studio::init(&config)?;
 
-    let address = config.address.clone();
+    let server_url = config.server_url();
     let basepath = config.basepath.clone();
     let static_roots = config.static_roots.clone();
     let request_body_limit = config.request_body_limit;
@@ -251,8 +251,6 @@ pub(crate) fn app(
         .with_state(state.clone());
 
     let mut openapi = Api::openapi();
-    let normalized_address = address.trim_end_matches('/');
-    let server_url = format!("{normalized_address}{basepath}");
     openapi.servers = Some(vec![utoipa::openapi::Server::new(server_url)]);
 
     Ok(if !basepath.is_empty() {

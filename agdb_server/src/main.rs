@@ -91,7 +91,7 @@ async fn main() -> ServerResult {
             shutdown_handle.graceful_shutdown(Some(std::time::Duration::from_secs(5)));
         });
 
-        tracing::info!("Address: {}{}", config.address, config.basepath);
+        tracing::info!("Address: {}", config.server_url());
         tracing::info!("Listening at {}", config.bind);
         let address = std::net::ToSocketAddrs::to_socket_addrs(&config.bind)?
             .next()
@@ -102,7 +102,7 @@ async fn main() -> ServerResult {
             .await?);
     }
 
-    tracing::info!("Address: {}{}", config.address, config.basepath);
+    tracing::info!("Address: {}", config.server_url());
     tracing::info!("Listening at {}", config.bind);
     let listener = TcpListener::bind(&config.bind).await?;
     axum::serve(listener, app)

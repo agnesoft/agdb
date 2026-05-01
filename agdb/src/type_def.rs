@@ -36,7 +36,7 @@ pub trait TypeDefinition {
     }
 }
 
-#[derive(Debug, agdb::TypeDefImpl)]
+#[derive(Debug, agdb::TypeDef)]
 pub enum Type {
     Enum(Enum),
     Function(Function),
@@ -88,40 +88,40 @@ impl Type {
     }
 }
 
-#[derive(Debug, agdb::TypeDefImpl)]
+#[derive(Debug, agdb::TypeDef)]
 pub struct Variable {
     pub name: &'static str,
     pub ty: Option<fn() -> Type>,
 }
 
-#[derive(Debug, agdb::TypeDefImpl)]
+#[derive(Debug, agdb::TypeDef)]
 pub struct Generic {
     pub kind: GenericKind,
     pub name: &'static str,
     pub bounds: &'static [fn() -> Type],
 }
 
-#[derive(Debug, agdb::TypeDefImpl)]
+#[derive(Debug, agdb::TypeDef)]
 pub enum GenericKind {
     Type,
     Lifetime,
     Const,
 }
 
-#[derive(Debug, agdb::TypeDefImpl)]
+#[derive(Debug, agdb::TypeDef)]
 pub struct Reference {
     pub mutable: bool,
     pub lifetime: Option<&'static str>,
     pub ty: fn() -> Type,
 }
 
-#[derive(Debug, agdb::TypeDefImpl)]
+#[derive(Debug, agdb::TypeDef)]
 pub struct Pointer {
     pub kind: PointerKind,
     pub ty: fn() -> Type,
 }
 
-#[derive(Debug, agdb::TypeDefImpl)]
+#[derive(Debug, agdb::TypeDef)]
 pub enum PointerKind {
     Arc,
     ArcWeak,
@@ -142,7 +142,7 @@ pub enum PointerKind {
     UnsafeCell,
 }
 
-#[derive(Debug, agdb::TypeDefImpl)]
+#[derive(Debug, agdb::TypeDef)]
 pub enum Literal {
     Bool,
     F32,

@@ -1,7 +1,7 @@
 use crate::type_def::Generic;
 use crate::type_def::Variable;
 
-#[derive(Debug, agdb::TypeDefImpl)]
+#[derive(Debug, agdb::TypeDef)]
 pub struct Enum {
     pub name: &'static str,
     pub generics: &'static [Generic],
@@ -17,7 +17,7 @@ mod tests {
 
     #[test]
     fn empty_enum() {
-        #[derive(agdb::TypeDefImpl)]
+        #[derive(agdb::TypeDef)]
         enum E {}
 
         let Type::Enum(e) = E::type_def() else {
@@ -29,7 +29,7 @@ mod tests {
 
     #[test]
     fn enum_with_variants() {
-        #[derive(agdb::TypeDefImpl)]
+        #[derive(agdb::TypeDef)]
         #[allow(dead_code)]
         enum E {
             A,
@@ -64,7 +64,7 @@ mod tests {
 
     #[test]
     fn enum_with_typed_variant() {
-        #[derive(agdb::TypeDefImpl)]
+        #[derive(agdb::TypeDef)]
         #[allow(dead_code)]
         enum E {
             A(String),
@@ -89,7 +89,7 @@ mod tests {
 
     #[test]
     fn enum_with_struct_variant() {
-        #[derive(agdb::TypeDefImpl)]
+        #[derive(agdb::TypeDef)]
         #[allow(dead_code)]
         enum E {
             A { _a: String },
@@ -119,7 +119,7 @@ mod tests {
 
     #[test]
     fn enum_with_tuple_variant() {
-        #[derive(agdb::TypeDefImpl)]
+        #[derive(agdb::TypeDef)]
         #[allow(dead_code)]
         enum E {
             A(String, i32),
@@ -150,7 +150,7 @@ mod tests {
 
     #[test]
     fn generic_enum() {
-        #[derive(agdb::TypeDefImpl)]
+        #[derive(agdb::TypeDef)]
         #[allow(dead_code)]
         enum E<T> {
             A(T),
@@ -184,7 +184,7 @@ mod tests {
 
         impl MyTrait for i32 {}
 
-        #[derive(agdb::TypeDefImpl)]
+        #[derive(agdb::TypeDef)]
         #[allow(dead_code)]
         enum E<T: agdb::type_def::TypeDefinition + MyTrait> {
             A(T),
@@ -235,7 +235,7 @@ mod tests {
 
     #[test]
     fn generic_enum_with_where_clause() {
-        #[derive(agdb::TypeDefImpl)]
+        #[derive(agdb::TypeDef)]
         #[allow(dead_code)]
         enum E<T>
         where
@@ -277,7 +277,7 @@ mod tests {
 
     #[test]
     fn generic_enum_with_struct_variant() {
-        #[derive(agdb::TypeDefImpl)]
+        #[derive(agdb::TypeDef)]
         #[allow(dead_code)]
         enum E<T> {
             A { _a: T },
@@ -310,7 +310,7 @@ mod tests {
 
     #[test]
     fn generic_enum_with_tuple_variant_multiple_types() {
-        #[derive(agdb::TypeDefImpl)]
+        #[derive(agdb::TypeDef)]
         #[allow(dead_code)]
         enum E<T> {
             A(T, i32),
@@ -348,7 +348,7 @@ mod tests {
 
     #[test]
     fn enum_with_lifetime() {
-        #[derive(agdb::TypeDefImpl)]
+        #[derive(agdb::TypeDef)]
         #[allow(dead_code)]
         enum E<'a> {
             A(&'a str),
@@ -367,7 +367,7 @@ mod tests {
 
     #[test]
     fn enum_with_const_generic() {
-        #[derive(agdb::TypeDefImpl)]
+        #[derive(agdb::TypeDef)]
         #[allow(dead_code)]
         enum E<const N: usize> {
             A,

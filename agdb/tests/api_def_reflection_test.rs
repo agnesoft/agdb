@@ -126,7 +126,7 @@ fn function_pointer_type_def() {
 
 #[test]
 fn empty_struct() {
-    #[derive(agdb::TypeDefImpl)]
+    #[derive(agdb::TypeDef)]
     struct S {}
 
     let Type::Struct(s) = S::type_def() else {
@@ -138,7 +138,7 @@ fn empty_struct() {
 
 #[test]
 fn empty_struct_no_braces() {
-    #[derive(agdb::TypeDefImpl)]
+    #[derive(agdb::TypeDef)]
     struct S;
 
     let Type::Struct(s) = S::type_def() else {
@@ -150,7 +150,7 @@ fn empty_struct_no_braces() {
 
 #[test]
 fn struct_with_fields() {
-    #[derive(agdb::TypeDefImpl)]
+    #[derive(agdb::TypeDef)]
     struct S {
         _a: i32,
         _b: String,
@@ -167,7 +167,7 @@ fn struct_with_fields() {
 
 #[test]
 fn tuple_struct_with_fields() {
-    #[derive(agdb::TypeDefImpl)]
+    #[derive(agdb::TypeDef)]
     #[expect(dead_code)]
     struct S(i32, String);
 
@@ -190,7 +190,7 @@ fn tuple_struct_with_fields() {
 
 #[test]
 fn field_types() {
-    #[derive(agdb::TypeDefImpl)]
+    #[derive(agdb::TypeDef)]
     struct S {
         _a: i32,
     }
@@ -207,7 +207,7 @@ fn field_types() {
 
 #[test]
 fn generic_struct() {
-    #[derive(agdb::TypeDefImpl)]
+    #[derive(agdb::TypeDef)]
     struct S<T> {
         _a: T,
     }
@@ -231,7 +231,7 @@ fn generic_struct_with_bounds() {
 
     impl MyTrait for i32 {}
 
-    #[derive(agdb::TypeDefImpl)]
+    #[derive(agdb::TypeDef)]
     struct S<T: agdb::type_def::TypeDefinition + MyTrait> {
         _a: T,
     }
@@ -252,7 +252,7 @@ fn generic_struct_with_bounds() {
 
 #[test]
 fn generic_struct_with_where_clause() {
-    #[derive(agdb::TypeDefImpl)]
+    #[derive(agdb::TypeDef)]
     struct S<T>
     where
         T: agdb::type_def::TypeDefinition,
@@ -275,7 +275,7 @@ fn generic_struct_with_where_clause() {
 
 #[test]
 fn generic_tuple_struct() {
-    #[derive(agdb::TypeDefImpl)]
+    #[derive(agdb::TypeDef)]
     struct S<T>(T);
 
     let Type::Struct(s) = S::<i32>::type_def() else {
@@ -292,7 +292,7 @@ fn generic_tuple_struct() {
 
 #[test]
 fn struct_with_lifetime() {
-    #[derive(agdb::TypeDefImpl)]
+    #[derive(agdb::TypeDef)]
     struct S<'a> {
         _a: &'a str,
     }
@@ -308,7 +308,7 @@ fn struct_with_lifetime() {
 
 #[test]
 fn struct_with_const_generic() {
-    #[derive(agdb::TypeDefImpl)]
+    #[derive(agdb::TypeDef)]
     struct S<const N: usize>;
 
     let Type::Struct(s) = S::<1>::type_def() else {
@@ -327,7 +327,7 @@ fn struct_with_const_generic() {
 
 #[test]
 fn empty_enum() {
-    #[derive(agdb::TypeDefImpl)]
+    #[derive(agdb::TypeDef)]
     enum E {}
 
     let Type::Enum(e) = E::type_def() else {
@@ -339,7 +339,7 @@ fn empty_enum() {
 
 #[test]
 fn enum_with_variants() {
-    #[derive(agdb::TypeDefImpl)]
+    #[derive(agdb::TypeDef)]
     #[expect(dead_code)]
     enum E {
         A,
@@ -365,7 +365,7 @@ fn enum_with_variants() {
 
 #[test]
 fn enum_with_typed_variant() {
-    #[derive(agdb::TypeDefImpl)]
+    #[derive(agdb::TypeDef)]
     #[expect(dead_code)]
     enum E {
         A(String),
@@ -383,7 +383,7 @@ fn enum_with_typed_variant() {
 
 #[test]
 fn enum_with_struct_variant() {
-    #[derive(agdb::TypeDefImpl)]
+    #[derive(agdb::TypeDef)]
     #[expect(dead_code)]
     enum E {
         A { _a: String },
@@ -406,7 +406,7 @@ fn enum_with_struct_variant() {
 
 #[test]
 fn enum_with_tuple_variant() {
-    #[derive(agdb::TypeDefImpl)]
+    #[derive(agdb::TypeDef)]
     #[expect(dead_code)]
     enum E {
         A(String, i32),
@@ -426,7 +426,7 @@ fn enum_with_tuple_variant() {
 
 #[test]
 fn generic_enum() {
-    #[derive(agdb::TypeDefImpl)]
+    #[derive(agdb::TypeDef)]
     #[expect(dead_code)]
     enum E<T> {
         A(T),
@@ -451,7 +451,7 @@ fn generic_enum_with_bounds() {
 
     impl MyTrait for i32 {}
 
-    #[derive(agdb::TypeDefImpl)]
+    #[derive(agdb::TypeDef)]
     #[expect(dead_code)]
     enum E<T: agdb::type_def::TypeDefinition + MyTrait> {
         A(T),
@@ -470,7 +470,7 @@ fn generic_enum_with_bounds() {
 
 #[test]
 fn generic_enum_with_where_clause() {
-    #[derive(agdb::TypeDefImpl)]
+    #[derive(agdb::TypeDef)]
     #[expect(dead_code)]
     enum E<T>
     where
@@ -491,7 +491,7 @@ fn generic_enum_with_where_clause() {
 
 #[test]
 fn generic_enum_with_struct_variant() {
-    #[derive(agdb::TypeDefImpl)]
+    #[derive(agdb::TypeDef)]
     #[expect(dead_code)]
     enum E<T> {
         A { _a: T },
@@ -512,7 +512,7 @@ fn generic_enum_with_struct_variant() {
 
 #[test]
 fn generic_enum_with_tuple_variant_multiple_types() {
-    #[derive(agdb::TypeDefImpl)]
+    #[derive(agdb::TypeDef)]
     #[expect(dead_code)]
     enum E<T> {
         A(T, i32),
@@ -534,7 +534,7 @@ fn generic_enum_with_tuple_variant_multiple_types() {
 
 #[test]
 fn enum_with_lifetime() {
-    #[derive(agdb::TypeDefImpl)]
+    #[derive(agdb::TypeDef)]
     #[expect(dead_code)]
     enum E<'a> {
         A(&'a str),
@@ -550,7 +550,7 @@ fn enum_with_lifetime() {
 
 #[test]
 fn enum_with_const_generic() {
-    #[derive(agdb::TypeDefImpl)]
+    #[derive(agdb::TypeDef)]
     #[expect(dead_code)]
     enum E<const N: usize> {
         A,

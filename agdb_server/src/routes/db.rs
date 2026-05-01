@@ -38,25 +38,25 @@ use serde::Deserialize;
 use utoipa::IntoParams;
 use utoipa::ToSchema;
 
-#[derive(Deserialize, IntoParams, ToSchema, agdb::TypeDefImpl)]
+#[derive(Deserialize, IntoParams, ToSchema, agdb::TypeDef)]
 #[into_params(parameter_in = Query)]
 pub struct ServerDatabaseRename {
     pub new_db: String,
 }
 
-#[derive(Deserialize, IntoParams, ToSchema, agdb::TypeDefImpl)]
+#[derive(Deserialize, IntoParams, ToSchema, agdb::TypeDef)]
 #[into_params(parameter_in = Query)]
 pub(crate) struct DbTypeParam {
     pub(crate) db_type: DbKind,
 }
 
-#[derive(Deserialize, IntoParams, ToSchema, agdb::TypeDefImpl)]
+#[derive(Deserialize, IntoParams, ToSchema, agdb::TypeDef)]
 #[into_params(parameter_in = Query)]
 pub struct ServerDatabaseResource {
     pub resource: DbResource,
 }
 
-#[derive(Deserialize, IntoParams, ToSchema, agdb::TypeDefImpl)]
+#[derive(Deserialize, IntoParams, ToSchema, agdb::TypeDef)]
 #[into_params(parameter_in = Query)]
 pub struct OptimizeParam {
     pub shrink_to_fit: Option<bool>,

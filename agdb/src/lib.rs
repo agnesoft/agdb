@@ -46,7 +46,7 @@ pub use agdb_derive::{DbElement, DbSerialize, DbType, DbTypeMarker, DbValue};
 pub mod type_def;
 
 #[cfg(feature = "api")]
-pub use agdb_derive::{TypeDef, TypeDefImpl, fn_def, impl_def, test_def, trait_def};
+pub use agdb_derive::{TypeDef, fn_def, impl_def, test_def, trait_def};
 
 #[cfg(feature = "api")]
 #[rustfmt::skip]

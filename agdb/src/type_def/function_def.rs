@@ -3,7 +3,7 @@ use crate::type_def::Type;
 use crate::type_def::Variable;
 use crate::type_def::expression_def::Expression;
 
-#[derive(Debug, agdb::TypeDefImpl)]
+#[derive(Debug, agdb::TypeDef)]
 pub struct Function {
     pub name: &'static str,
     pub generics: &'static [Generic],

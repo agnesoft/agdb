@@ -39,7 +39,7 @@ use serde::Deserialize;
 use utoipa::IntoParams;
 use utoipa::ToSchema;
 
-#[derive(Deserialize, IntoParams, ToSchema, agdb::TypeDefImpl)]
+#[derive(Deserialize, IntoParams, ToSchema, agdb::TypeDef)]
 #[into_params(parameter_in = Query)]
 pub struct ServerDatabaseAdminRename {
     pub new_owner: String,

@@ -29,7 +29,7 @@ use std::time::SystemTime;
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 #[cfg_attr(feature = "derive", derive(agdb::DbSerialize))]
-#[cfg_attr(feature = "api", derive(agdb::TypeDefImpl))]
+#[cfg_attr(feature = "api", derive(agdb::TypeDef))]
 pub enum DbValue {
     /// Byte array, sometimes referred to as blob
     Bytes(Vec<u8>),
@@ -59,7 +59,7 @@ pub enum DbValue {
     VecString(Vec<String>),
 }
 
-#[cfg_attr(feature = "api", derive(agdb::TypeDefImpl))]
+#[cfg_attr(feature = "api", derive(agdb::TypeDef))]
 pub struct DbValues(pub Vec<DbValue>);
 
 const BYTES_META_VALUE: u8 = 1_u8;

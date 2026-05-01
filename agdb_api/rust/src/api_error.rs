@@ -1,5 +1,5 @@
 #[derive(Debug)]
-#[cfg_attr(feature = "api", derive(agdb::TypeDefImpl))]
+#[cfg_attr(feature = "api", derive(agdb::TypeDef))]
 pub struct AgdbApiError {
     pub status: u16,
     pub description: String,

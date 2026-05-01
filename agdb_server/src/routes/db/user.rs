@@ -17,7 +17,7 @@ use serde::Deserialize;
 use utoipa::IntoParams;
 use utoipa::ToSchema;
 
-#[derive(Deserialize, IntoParams, ToSchema, agdb::TypeDefImpl)]
+#[derive(Deserialize, IntoParams, ToSchema, agdb::TypeDef)]
 #[into_params(parameter_in = Query)]
 pub(crate) struct DbUserRoleParam {
     pub(crate) db_role: DbUserRole,

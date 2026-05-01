@@ -2,7 +2,7 @@ use crate::type_def::Function;
 use crate::type_def::Generic;
 use crate::type_def::Type;
 
-#[derive(Debug, agdb::TypeDefImpl)]
+#[derive(Debug, agdb::TypeDef)]
 pub struct Impl {
     pub name: &'static str,
     pub generics: &'static [Generic],
@@ -17,13 +17,13 @@ mod tests {
     use crate::type_def::Type;
     use crate::type_def::TypeDefinition;
 
-    #[derive(agdb::TypeDefImpl)]
+    #[derive(agdb::TypeDef)]
     #[allow(dead_code)]
     struct ConstImplS<const N: usize>;
 
     #[test]
     fn empty_impl() {
-        #[derive(agdb::TypeDefImpl)]
+        #[derive(agdb::TypeDef)]
         struct S;
 
         assert!(S::impl_defs().is_empty());
@@ -35,7 +35,7 @@ mod tests {
         #[allow(dead_code)]
         trait MyTrait {}
 
-        #[derive(agdb::TypeDefImpl)]
+        #[derive(agdb::TypeDef)]
         struct S;
 
         assert!(S::impl_defs().is_empty());

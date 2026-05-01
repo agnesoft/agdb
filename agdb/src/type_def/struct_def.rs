@@ -1,7 +1,7 @@
 use crate::type_def::Generic;
 use crate::type_def::Variable;
 
-#[derive(Debug, agdb::TypeDefImpl)]
+#[derive(Debug, agdb::TypeDef)]
 pub struct Struct {
     pub name: &'static str,
     pub generics: &'static [Generic],
@@ -17,7 +17,7 @@ mod tests {
 
     #[test]
     fn empty_struct() {
-        #[derive(agdb::TypeDefImpl)]
+        #[derive(agdb::TypeDef)]
         struct S {}
 
         let Type::Struct(s) = S::type_def() else {
@@ -29,7 +29,7 @@ mod tests {
 
     #[test]
     fn empty_struct_no_braces() {
-        #[derive(agdb::TypeDefImpl)]
+        #[derive(agdb::TypeDef)]
         struct S;
 
         let Type::Struct(s) = S::type_def() else {
@@ -41,7 +41,7 @@ mod tests {
 
     #[test]
     fn struct_with_fields() {
-        #[derive(agdb::TypeDefImpl)]
+        #[derive(agdb::TypeDef)]
         struct S {
             _a: i32,
             _b: String,
@@ -59,7 +59,7 @@ mod tests {
 
     #[test]
     fn tuple_struct_with_fields() {
-        #[derive(agdb::TypeDefImpl)]
+        #[derive(agdb::TypeDef)]
         #[allow(dead_code)]
         struct S(i32, String);
 
@@ -86,7 +86,7 @@ mod tests {
 
     #[test]
     fn field_types() {
-        #[derive(agdb::TypeDefImpl)]
+        #[derive(agdb::TypeDef)]
         struct S {
             _a: i32,
         }
@@ -104,7 +104,7 @@ mod tests {
 
     #[test]
     fn generic_struct() {
-        #[derive(agdb::TypeDefImpl)]
+        #[derive(agdb::TypeDef)]
         struct S<T> {
             _a: T,
         }
@@ -134,7 +134,7 @@ mod tests {
 
         impl MyTrait for i32 {}
 
-        #[derive(agdb::TypeDefImpl)]
+        #[derive(agdb::TypeDef)]
         struct S<T: agdb::type_def::TypeDefinition + MyTrait> {
             _a: T,
         }
@@ -170,7 +170,7 @@ mod tests {
 
     #[test]
     fn generic_struct_with_where_clause() {
-        #[derive(agdb::TypeDefImpl)]
+        #[derive(agdb::TypeDef)]
         struct S<T>
         where
             T: agdb::type_def::TypeDefinition,
@@ -203,7 +203,7 @@ mod tests {
 
     #[test]
     fn generic_tuple_struct() {
-        #[derive(agdb::TypeDefImpl)]
+        #[derive(agdb::TypeDef)]
         struct S<T>(T);
 
         let Type::Struct(s) = S::<i32>::type_def() else {
@@ -226,7 +226,7 @@ mod tests {
 
     #[test]
     fn struct_with_lifetime() {
-        #[derive(agdb::TypeDefImpl)]
+        #[derive(agdb::TypeDef)]
         #[allow(dead_code)]
         struct S<'a> {
             _a: &'a str,
@@ -245,7 +245,7 @@ mod tests {
 
     #[test]
     fn struct_with_const_generic() {
-        #[derive(agdb::TypeDefImpl)]
+        #[derive(agdb::TypeDef)]
         #[allow(dead_code)]
         struct S<const N: usize>;
 

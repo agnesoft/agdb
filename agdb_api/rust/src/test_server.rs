@@ -1,11 +1,15 @@
 use crate::AgdbApi;
+use crate::AgdbApiError;
 use crate::ClusterStatus;
 use crate::ConfigImpl;
 use crate::DEFAULT_LOG_BODY_LIMIT;
 use crate::DEFAULT_REQUEST_BODY_LIMIT;
 use crate::ReqwestClient;
 use crate::config_to_str;
+use agdb::type_def::Struct;
+use agdb::type_def::TypeDefinition;
 use std::collections::HashMap;
+use std::env::VarError;
 use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -39,13 +43,83 @@ static COUNTER: AtomicU16 = AtomicU16::new(1);
 static SERVER: std::sync::OnceLock<RwLock<Weak<TestServerImpl>>> = std::sync::OnceLock::new();
 static CLUSTER: std::sync::OnceLock<RwLock<Weak<ClusterImpl>>> = std::sync::OnceLock::new();
 
-fn server_bin() -> anyhow::Result<PathBuf> {
+#[derive(Debug, agdb::TypeDefImpl)]
+pub struct TestError {
+    description: String,
+}
+
+#[cfg_attr(feature = "api", agdb::fn_def())]
+fn bail(description: String) -> TestError {
+    TestError { description }
+}
+
+impl From<std::io::Error> for TestError {
+    #[track_caller]
+    fn from(error: std::io::Error) -> Self {
+        TestError {
+            description: error.to_string(),
+        }
+    }
+}
+
+impl From<reqwest::Error> for TestError {
+    #[track_caller]
+    fn from(error: reqwest::Error) -> Self {
+        TestError {
+            description: error.to_string(),
+        }
+    }
+}
+
+impl From<AgdbApiError> for TestError {
+    #[track_caller]
+    fn from(error: AgdbApiError) -> Self {
+        TestError {
+            description: error.to_string(),
+        }
+    }
+}
+
+impl From<VarError> for TestError {
+    #[track_caller]
+    fn from(error: VarError) -> Self {
+        TestError {
+            description: error.to_string(),
+        }
+    }
+}
+
+impl From<tokio::task::JoinError> for TestError {
+    #[track_caller]
+    fn from(error: tokio::task::JoinError) -> Self {
+        TestError {
+            description: error.to_string(),
+        }
+    }
+}
+
+pub struct TestServerProcess(pub Child);
+
+impl TypeDefinition for TestServerProcess {
+    fn type_def() -> agdb::type_def::Type {
+        agdb::type_def::Type::Struct(Struct {
+            name: "TestServerProcess",
+            generics: &[],
+            fields: &[],
+            functions: &[],
+        })
+    }
+}
+
+#[cfg_attr(feature = "api", agdb::fn_def())]
+fn server_bin() -> Result<PathBuf, TestError> {
     let mut path = std::env::current_exe()?;
     path.pop();
     path.pop();
     Ok(path.join(format!("{BINARY}{}", std::env::consts::EXE_SUFFIX)))
 }
 
+#[derive(agdb::TypeDef)]
 pub struct TestServer {
     pub dir: String,
     pub data_dir: String,
@@ -53,13 +127,15 @@ pub struct TestServer {
     pub server: Arc<TestServerImpl>,
 }
 
+#[derive(agdb::TypeDef)]
 pub struct TestServerImpl {
     pub dir: String,
     pub data_dir: String,
     pub address: String,
-    pub process: Option<Child>,
+    pub process: Option<TestServerProcess>,
 }
 
+#[derive(agdb::TypeDef)]
 pub struct TestCluster {
     apis: Vec<AgdbApi<ReqwestClient>>,
     _cluster: Arc<ClusterImpl>,
@@ -97,8 +173,9 @@ pub fn reqwest_client() -> reqwest::Client {
         .unwrap()
 }
 
+#[cfg_attr(feature = "api", agdb::impl_def())]
 impl TestServerImpl {
-    pub async fn with_config(mut config: ConfigImpl) -> anyhow::Result<Self> {
+    pub async fn with_config(mut config: ConfigImpl) -> Result<Self, TestError> {
         if config.address.is_empty() {
             let port = Self::next_port();
             let address = format!("http://{HOST}:{port}");
@@ -136,7 +213,7 @@ impl TestServerImpl {
                         dir,
                         data_dir,
                         address: api_address,
-                        process: Some(process),
+                        process: Some(TestServerProcess(process)),
                     });
                 }
                 Ok(status) => println!("Server at {api_address} is not ready: {status}"),
@@ -153,10 +230,12 @@ impl TestServerImpl {
             status = code.to_string()
         }
 
-        anyhow::bail!("Failed to start server '{api_address}' ({status})")
+        Err(bail(format!(
+            "Failed to start server '{api_address}' ({status})"
+        )))
     }
 
-    pub async fn new() -> anyhow::Result<Self> {
+    pub async fn new() -> Result<Self, TestError> {
         let config = ConfigImpl {
             bind: String::new(),
             address: String::new(),
@@ -187,26 +266,29 @@ impl TestServerImpl {
         PORT.fetch_add(1, Ordering::Relaxed) + std::process::id() as u16
     }
 
-    pub fn restart(&mut self) -> anyhow::Result<()> {
-        self.process = Some(
+    pub fn restart(&mut self) -> Result<(), TestError> {
+        self.process = Some(TestServerProcess(
             Command::new(server_bin()?)
                 .current_dir(&self.dir)
                 .kill_on_drop(true)
                 .spawn()?,
-        );
+        ));
         Ok(())
     }
 
-    pub async fn wait(&mut self) -> anyhow::Result<()> {
+    pub async fn wait(&mut self) -> Result<(), TestError> {
         if let Some(p) = self.process.as_mut() {
-            p.wait().await?;
+            p.0.wait().await?;
         }
 
         Ok(())
     }
 
-    async fn shutdown_server(mut process: Child, mut address: String) -> anyhow::Result<()> {
-        if process.try_wait()?.is_some() {
+    async fn shutdown_server(
+        mut process: TestServerProcess,
+        mut address: String,
+    ) -> Result<(), TestError> {
+        if process.0.try_wait()?.is_some() {
             return Ok(());
         }
 
@@ -237,25 +319,25 @@ impl TestServerImpl {
             .await?;
 
         for _ in 0..SHUTDOWN_RETRY_ATTEMPTS {
-            if process.try_wait()?.is_some() {
+            if process.0.try_wait()?.is_some() {
                 return Ok(());
             }
             std::thread::sleep(SHUTDOWN_RETRY_TIMEOUT);
         }
 
-        process.kill().await?;
+        process.0.kill().await?;
 
         for _ in 0..SHUTDOWN_RETRY_ATTEMPTS {
-            if process.try_wait()?.is_some() {
+            if process.0.try_wait()?.is_some() {
                 return Ok(());
             }
             std::thread::sleep(SHUTDOWN_RETRY_TIMEOUT);
         }
 
-        anyhow::bail!("Failed to shutdown server")
+        Err(bail("Failed to shutdown server".to_string()))
     }
 
-    fn remove_dir_if_exists(dir: &str) -> anyhow::Result<()> {
+    fn remove_dir_if_exists(dir: &str) -> Result<(), TestError> {
         if Path::new(dir).exists() {
             std::fs::remove_dir_all(dir)?;
         }
@@ -264,8 +346,9 @@ impl TestServerImpl {
     }
 }
 
+#[cfg_attr(feature = "api", agdb::impl_def())]
 impl TestServer {
-    pub async fn new() -> anyhow::Result<Self> {
+    pub async fn new() -> Result<Self, TestError> {
         let global_server = SERVER.get_or_init(|| RwLock::new(Weak::new()));
         let mut server_guard = global_server.write().await;
 
@@ -297,6 +380,7 @@ impl TestServer {
     }
 }
 
+#[cfg_attr(feature = "api", agdb::impl_def())]
 impl Drop for TestServerImpl {
     fn drop(&mut self) {
         static DROP_RUNTIME: std::sync::OnceLock<tokio::runtime::Runtime> =
@@ -327,8 +411,9 @@ impl Drop for TestServerImpl {
     }
 }
 
+#[cfg_attr(feature = "api", agdb::impl_def())]
 impl TestCluster {
-    async fn new() -> anyhow::Result<Self> {
+    async fn new() -> Result<Self, TestError> {
         let global_cluster = CLUSTER.get_or_init(|| RwLock::new(Weak::new()));
         let mut cluster_guard = global_cluster.write().await;
 
@@ -349,7 +434,7 @@ impl TestCluster {
                         &s.address,
                     ))
                 })
-                .collect::<anyhow::Result<Vec<AgdbApi<ReqwestClient>>>>()?,
+                .collect::<Result<Vec<AgdbApi<ReqwestClient>>, TestError>>()?,
             _cluster: nodes,
         };
 
@@ -359,15 +444,18 @@ impl TestCluster {
     }
 }
 
+#[cfg_attr(feature = "api", agdb::fn_def())]
 pub fn next_user_name() -> String {
     format!("db_user{}", COUNTER.fetch_add(1, Ordering::SeqCst))
 }
 
+#[cfg_attr(feature = "api", agdb::fn_def())]
 pub fn next_db_name() -> String {
     format!("db{}", COUNTER.fetch_add(1, Ordering::SeqCst))
 }
 
-pub async fn wait_for_ready(api: &AgdbApi<ReqwestClient>) -> anyhow::Result<()> {
+#[cfg_attr(feature = "api", agdb::fn_def())]
+pub async fn wait_for_ready(api: &AgdbApi<ReqwestClient>) -> Result<(), TestError> {
     for _ in 0..RETRY_ATTEMPS {
         if api.status().await.is_ok() {
             return Ok(());
@@ -376,10 +464,15 @@ pub async fn wait_for_ready(api: &AgdbApi<ReqwestClient>) -> anyhow::Result<()> 
         std::thread::sleep(RETRY_TIMEOUT);
     }
 
-    anyhow::bail!("Server not ready")
+    Err(TestError {
+        description: "Server not ready".to_string(),
+    })
 }
 
-pub async fn wait_for_leader(api: &AgdbApi<ReqwestClient>) -> anyhow::Result<Vec<ClusterStatus>> {
+#[cfg_attr(feature = "api", agdb::fn_def())]
+pub async fn wait_for_leader(
+    api: &AgdbApi<ReqwestClient>,
+) -> Result<Vec<ClusterStatus>, TestError> {
     let now = Instant::now();
 
     while now.elapsed().as_millis() < TEST_TIMEOUT {
@@ -392,12 +485,13 @@ pub async fn wait_for_leader(api: &AgdbApi<ReqwestClient>) -> anyhow::Result<Vec
         std::thread::sleep(std::time::Duration::from_millis(POLL_INTERVAL));
     }
 
-    Err(anyhow::anyhow!(
-        "Leader not found within {TEST_TIMEOUT}seconds"
-    ))
+    Err(TestError {
+        description: format!("Leader not found within {TEST_TIMEOUT}seconds"),
+    })
 }
 
-pub async fn create_cluster(nodes: usize, tls: bool) -> anyhow::Result<Vec<TestServerImpl>> {
+#[cfg_attr(feature = "api", agdb::fn_def())]
+pub async fn create_cluster(nodes: usize, tls: bool) -> Result<Vec<TestServerImpl>, TestError> {
     let mut configs = Vec::with_capacity(nodes);
     let mut cluster = Vec::with_capacity(nodes);
     let mut servers = Vec::with_capacity(nodes);

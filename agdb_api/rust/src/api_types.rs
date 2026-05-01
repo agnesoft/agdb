@@ -13,6 +13,7 @@ pub const DEFAULT_LOG_BODY_LIMIT: u64 = 10 * 1024;
 pub const DEFAULT_REQUEST_BODY_LIMIT: u64 = 10 * 1024 * 1024;
 
 #[derive(Debug)]
+#[cfg_attr(feature = "api", derive(agdb::TypeDefImpl))]
 pub struct ConfigImpl {
     pub bind: String,
     pub address: String,

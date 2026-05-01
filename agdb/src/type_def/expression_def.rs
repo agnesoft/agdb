@@ -206,6 +206,8 @@ mod tests {
             "range_inclusive" => __range_inclusive_type_def(),
             "range_from" => __range_from_type_def(),
             "range_to" => __range_to_type_def(),
+            "range_to_inclusive" => __range_to_inclusive_type_def(),
+            "range_full" => __range_full_type_def(),
             _ => panic!("Unknown test function: {name}"),
         };
         let Type::Function(def) = func_type else {
@@ -1641,6 +1643,60 @@ mod tests {
                     end
                 );
             }
+            _ => panic!("Got: {:?}", body[0]),
+        }
+    }
+
+    #[agdb::fn_def]
+    #[allow(unused)]
+    fn range_to_inclusive() {
+        let _r = ..=10;
+    }
+
+    #[test]
+    fn test_range_to_inclusive() {
+        let body = get_body("range_to_inclusive");
+        assert_eq!(body.len(), 1);
+        match &body[0] {
+            Expression::Let {
+                value:
+                    Some(Expression::Range {
+                        start: None,
+                        end: Some(end),
+                        inclusive: true,
+                    }),
+                ..
+            } => {
+                assert!(
+                    matches!(end, Expression::Literal(LiteralValue::I32(10))),
+                    "Got end: {:?}",
+                    end
+                );
+            }
+            _ => panic!("Got: {:?}", body[0]),
+        }
+    }
+
+    #[agdb::fn_def]
+    #[allow(unused)]
+    fn range_full() {
+        let _r = ..;
+    }
+
+    #[test]
+    fn test_range_full() {
+        let body = get_body("range_full");
+        assert_eq!(body.len(), 1);
+        match &body[0] {
+            Expression::Let {
+                value:
+                    Some(Expression::Range {
+                        start: None,
+                        end: None,
+                        inclusive: false,
+                    }),
+                ..
+            } => {}
             _ => panic!("Got: {:?}", body[0]),
         }
     }

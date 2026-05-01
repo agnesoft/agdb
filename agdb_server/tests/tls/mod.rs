@@ -3,9 +3,9 @@ use agdb_api::ReqwestClient;
 use agdb_api::config_impl::ConfigImpl;
 use agdb_api::test_server::ADMIN;
 use agdb_api::test_server::TestServerImpl;
-use agdb_api::test_server::create_cluster;
 use agdb_api::test_server::reqwest_client;
-use agdb_api::test_server::wait_for_leader;
+use agdb_api::test_server::test_cluster::create_cluster;
+use agdb_api::test_server::test_cluster::wait_for_leader;
 use agdb_api::test_server::wait_for_ready;
 
 #[tokio::test]

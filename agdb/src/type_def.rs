@@ -290,7 +290,7 @@ impl TypeDefinition for std::path::PathBuf {
             generics: &[],
             fields: &[Variable {
                 name: "inner",
-                ty: Some(|| Type::Vec(Box::<u8>::type_def)),
+                ty: Some(|| Type::Vec(u8::type_def)),
             }],
         })
     }

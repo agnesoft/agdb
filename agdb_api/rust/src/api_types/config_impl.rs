@@ -35,6 +35,7 @@ impl ConfigImpl {
     }
 }
 
+#[cfg_attr(feature = "api", agdb::fn_def())]
 pub fn config_to_str(config: &ConfigImpl) -> String {
     let mut buffer = String::new();
     buffer.push_str(&format!("bind: {}\n", config.bind));

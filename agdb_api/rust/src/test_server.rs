@@ -1,15 +1,17 @@
+pub mod test_error;
+
 use crate::AgdbApi;
-use crate::AgdbApiError;
 use crate::ClusterStatus;
-use crate::ConfigImpl;
-use crate::DEFAULT_LOG_BODY_LIMIT;
-use crate::DEFAULT_REQUEST_BODY_LIMIT;
 use crate::ReqwestClient;
-use crate::config_to_str;
+use crate::config_impl::ConfigImpl;
+use crate::config_impl::DEFAULT_LOG_BODY_LIMIT;
+use crate::config_impl::DEFAULT_REQUEST_BODY_LIMIT;
+use crate::config_impl::config_to_str;
+use crate::test_server::test_error::bail;
+use crate::test_server::test_error::TestError;
 use agdb::type_def::Struct;
 use agdb::type_def::TypeDefinition;
 use std::collections::HashMap;
-use std::env::VarError;
 use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -43,61 +45,6 @@ static COUNTER: AtomicU16 = AtomicU16::new(1);
 static SERVER: std::sync::OnceLock<RwLock<Weak<TestServerImpl>>> = std::sync::OnceLock::new();
 static CLUSTER: std::sync::OnceLock<RwLock<Weak<ClusterImpl>>> = std::sync::OnceLock::new();
 
-#[derive(Debug, agdb::TypeDefImpl)]
-pub struct TestError {
-    description: String,
-}
-
-#[cfg_attr(feature = "api", agdb::fn_def())]
-fn bail(description: String) -> TestError {
-    TestError { description }
-}
-
-impl From<std::io::Error> for TestError {
-    #[track_caller]
-    fn from(error: std::io::Error) -> Self {
-        TestError {
-            description: error.to_string(),
-        }
-    }
-}
-
-impl From<reqwest::Error> for TestError {
-    #[track_caller]
-    fn from(error: reqwest::Error) -> Self {
-        TestError {
-            description: error.to_string(),
-        }
-    }
-}
-
-impl From<AgdbApiError> for TestError {
-    #[track_caller]
-    fn from(error: AgdbApiError) -> Self {
-        TestError {
-            description: error.to_string(),
-        }
-    }
-}
-
-impl From<VarError> for TestError {
-    #[track_caller]
-    fn from(error: VarError) -> Self {
-        TestError {
-            description: error.to_string(),
-        }
-    }
-}
-
-impl From<tokio::task::JoinError> for TestError {
-    #[track_caller]
-    fn from(error: tokio::task::JoinError) -> Self {
-        TestError {
-            description: error.to_string(),
-        }
-    }
-}
-
 pub struct TestServerProcess(pub Child);
 
 impl TypeDefinition for TestServerProcess {
@@ -106,7 +53,6 @@ impl TypeDefinition for TestServerProcess {
             name: "TestServerProcess",
             generics: &[],
             fields: &[],
-            functions: &[],
         })
     }
 }
@@ -230,9 +176,7 @@ impl TestServerImpl {
             status = code.to_string()
         }
 
-        Err(bail(format!(
-            "Failed to start server '{api_address}' ({status})"
-        )))
+        bail!("Failed to start server '{api_address}' ({status})")
     }
 
     pub async fn new() -> Result<Self, TestError> {
@@ -334,7 +278,7 @@ impl TestServerImpl {
             std::thread::sleep(SHUTDOWN_RETRY_TIMEOUT);
         }
 
-        Err(bail("Failed to shutdown server".to_string()))
+        bail!("Failed to shutdown server")
     }
 
     fn remove_dir_if_exists(dir: &str) -> Result<(), TestError> {
@@ -464,9 +408,7 @@ pub async fn wait_for_ready(api: &AgdbApi<ReqwestClient>) -> Result<(), TestErro
         std::thread::sleep(RETRY_TIMEOUT);
     }
 
-    Err(TestError {
-        description: "Server not ready".to_string(),
-    })
+    bail!("Server not ready")
 }
 
 #[cfg_attr(feature = "api", agdb::fn_def())]
@@ -485,9 +427,7 @@ pub async fn wait_for_leader(
         std::thread::sleep(std::time::Duration::from_millis(POLL_INTERVAL));
     }
 
-    Err(TestError {
-        description: format!("Leader not found within {TEST_TIMEOUT}seconds"),
-    })
+    bail!("Leader not found within {TEST_TIMEOUT}seconds")
 }
 
 #[cfg_attr(feature = "api", agdb::fn_def())]
@@ -571,11 +511,11 @@ pub async fn create_cluster(nodes: usize, tls: bool) -> Result<Vec<TestServerImp
     let leader = statuses[0]
         .iter()
         .enumerate()
-        .find_map(|(i, s)| if s.leader { Some(i) } else { None })
+        .find_map(|x| if x.1.leader { Some(x.0) } else { None })
         .unwrap();
     servers.swap(0, leader);
 
-    Ok(servers.into_iter().map(|(s, _)| s).collect())
+    Ok(servers.into_iter().map(|x| x.0).collect())
 }
 
 pub struct TestDir {
@@ -583,7 +523,7 @@ pub struct TestDir {
 }
 
 impl TestDir {
-    pub fn new() -> anyhow::Result<Self> {
+    pub fn new() -> Result<Self, TestError> {
         let dir = format!("static_files_test{}", TestServerImpl::next_port()).into();
         std::fs::create_dir_all(&dir)?;
         Ok(Self { dir })

@@ -4,10 +4,10 @@ mod tls;
 
 use agdb_api::AgdbApi;
 use agdb_api::ClusterStatus;
-use agdb_api::ConfigImpl;
-use agdb_api::DEFAULT_LOG_BODY_LIMIT;
-use agdb_api::DEFAULT_REQUEST_BODY_LIMIT;
 use agdb_api::ReqwestClient;
+use agdb_api::config_impl::ConfigImpl;
+use agdb_api::config_impl::DEFAULT_LOG_BODY_LIMIT;
+use agdb_api::config_impl::DEFAULT_REQUEST_BODY_LIMIT;
 use std::collections::HashMap;
 use std::path::Path;
 use std::path::PathBuf;
@@ -120,7 +120,7 @@ impl TestServerImpl {
 
         std::fs::write(
             Path::new(&dir).join(CONFIG_FILE),
-            agdb_api::config_to_str(&config),
+            agdb_api::config_impl::config_to_str(&config),
         )?;
 
         let api_address = if config.basepath.is_empty() {

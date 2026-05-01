@@ -16,7 +16,8 @@ categories = ["database", "api-bindings"]
 [features]
 default = []
 tls = ["reqwest/default-tls"]
-api = ["agdb/api", "dep:tokio", "dep:anyhow"]
+api = ["agdb/api"]
+test_server = ["dep:tokio"]
 
 [dependencies]
 agdb = { version = "0.12.10", path = "../../agdb", features = ["serde", "openapi"] }
@@ -25,4 +26,4 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 utoipa = "5"
 tokio = { version = "1", features = ["full"], optional = true }
-anyhow = { version = "1", optional = true}
+

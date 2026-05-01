@@ -277,8 +277,6 @@ impl<T: TypeDefinition> TypeDefinition for std::sync::Arc<T> {
     }
 }
 
-impl<T: TypeDefinition> ImplDefinition for std::sync::Arc<T> {}
-
 impl<const N: usize, T: TypeDefinition> TypeDefinition for [T; N] {
     fn type_def() -> Type {
         Type::Slice(T::type_def)
@@ -294,7 +292,6 @@ impl TypeDefinition for std::path::PathBuf {
                 name: "inner",
                 ty: Some(|| Type::Vec(Box::<u8>::type_def)),
             }],
-            functions: &[],
         })
     }
 }

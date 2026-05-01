@@ -1,6 +1,6 @@
 use crate::error_code::ErrorCode;
 use crate::server_error::ServerResult;
-use agdb_api::SALT_LEN;
+use agdb_api::config_impl::SALT_LEN;
 use ring::digest;
 use ring::pbkdf2;
 use ring::rand::SecureRandom;

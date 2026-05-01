@@ -1,10 +1,10 @@
-use crate::ADMIN;
-use crate::TestServer;
-use crate::TestServerImpl;
-use crate::next_user_name;
-use crate::reqwest_client;
 use agdb_api::AgdbApi;
 use agdb_api::ReqwestClient;
+use agdb_api::test_server::ADMIN;
+use agdb_api::test_server::TestServer;
+use agdb_api::test_server::TestServerImpl;
+use agdb_api::test_server::next_user_name;
+use agdb_api::test_server::reqwest_client;
 
 #[tokio::test]
 async fn set_log_level() -> anyhow::Result<()> {

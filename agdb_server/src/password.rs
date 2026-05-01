@@ -1,5 +1,6 @@
 use crate::error_code::ErrorCode;
 use crate::server_error::ServerResult;
+use agdb_api::config_impl::SALT_LEN;
 use ring::digest;
 use ring::pbkdf2;
 use ring::rand::SecureRandom;
@@ -10,7 +11,6 @@ use std::num::NonZeroU32;
 use std::sync::OnceLock;
 
 pub(crate) const PASSWORD_LEN: usize = digest::SHA256_OUTPUT_LEN;
-pub(crate) const SALT_LEN: usize = 16;
 
 pub(crate) static BUILTIN_PEPPER: &[u8; SALT_LEN] = std::include_bytes!("../pepper");
 pub(crate) static PEPPER: OnceLock<[u8; SALT_LEN]> = OnceLock::new();

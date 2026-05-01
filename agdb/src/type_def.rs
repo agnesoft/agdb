@@ -268,6 +268,34 @@ impl<T: TypeDefinition, V: TypeDefinition> TypeDefinition for (T, V) {
     }
 }
 
+impl<T: TypeDefinition> TypeDefinition for std::sync::Arc<T> {
+    fn type_def() -> Type {
+        Type::Pointer(Pointer {
+            kind: PointerKind::Arc,
+            ty: T::type_def,
+        })
+    }
+}
+
+impl<const N: usize, T: TypeDefinition> TypeDefinition for [T; N] {
+    fn type_def() -> Type {
+        Type::Slice(T::type_def)
+    }
+}
+
+impl TypeDefinition for std::path::PathBuf {
+    fn type_def() -> Type {
+        Type::Struct(Struct {
+            name: "PathBuf",
+            generics: &[],
+            fields: &[Variable {
+                name: "inner",
+                ty: Some(|| Type::Vec(u8::type_def)),
+            }],
+        })
+    }
+}
+
 macro_rules! impl_type_def_fn_ptr {
     ($(($($arg:ident),*)),* $(,)?) => {
         $(

@@ -5,6 +5,8 @@ mod api_result;
 mod api_types;
 mod client;
 mod http_client;
+#[cfg(feature = "test_server")]
+pub mod test_server;
 
 pub use api_error::AgdbApiError;
 pub use api_result::AgdbApiResult;
@@ -24,6 +26,7 @@ pub use api_types::ServerDatabase;
 pub use api_types::UserCredentials;
 pub use api_types::UserLogin;
 pub use api_types::UserStatus;
+pub use api_types::config_impl;
 pub use client::AgdbApi;
 pub use http_client::HttpClient;
 pub use http_client::ReqwestClient;

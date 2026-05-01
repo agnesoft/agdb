@@ -583,6 +583,83 @@ mod tests {
     }
 
     #[test]
+    fn shrink_value_in_place_does_not_grow_storage() {
+        let mut storage = Storage::<MemoryStorage>::new("storage").unwrap();
+
+        let index1 = storage
+            .insert(&vec![1_i64, 2_i64, 3_i64, 4_i64, 5_i64])
+            .unwrap();
+        let index2 = storage.insert(&10_i64).unwrap();
+        let index3 = storage.insert(&20_i64).unwrap();
+
+        let size_before = storage.len();
+
+        storage.resize_value(index1, 24).unwrap();
+
+        assert_eq!(storage.len(), size_before);
+        assert_eq!(storage.value_size(index1).unwrap(), 24);
+
+        assert_eq!(storage.value::<i64>(index2), Ok(10_i64));
+        assert_eq!(storage.value::<i64>(index3), Ok(20_i64));
+    }
+
+    #[test]
+    fn shrink_value_at_end_truncates_storage() {
+        let mut storage = Storage::<MemoryStorage>::new("storage").unwrap();
+
+        let index1 = storage
+            .insert(&vec![1_i64, 2_i64, 3_i64, 4_i64, 5_i64])
+            .unwrap();
+
+        let size_before = storage.len();
+
+        storage.resize_value(index1, 24).unwrap();
+
+        assert_eq!(storage.len(), size_before - 24);
+        assert_eq!(storage.value_size(index1).unwrap(), 24);
+    }
+
+    #[test]
+    fn shrink_value_small_reclaim_falls_back_to_move_to_end() {
+        let mut storage = Storage::<MemoryStorage>::new("storage").unwrap();
+
+        let index1 = storage.insert(&vec![1_i64, 2_i64]).unwrap(); // size=24
+        let _index2 = storage.insert(&99_i64).unwrap();
+
+        let size_before = storage.len();
+
+        storage.resize_value(index1, 16).unwrap();
+
+        assert!(storage.len() > size_before);
+        assert_eq!(storage.value_size(index1).unwrap(), 16);
+        assert_eq!(storage.value::<i64>(_index2), Ok(99_i64));
+    }
+
+    #[test]
+    fn shrink_value_in_place_reclaimed_by_optimize_storage() {
+        let mut storage = Storage::<MemoryStorage>::new("storage").unwrap();
+
+        let index1 = storage
+            .insert(&vec![1_i64, 2_i64, 3_i64, 4_i64, 5_i64])
+            .unwrap();
+        let index2 = storage.insert(&42_i64).unwrap();
+        let index3 = storage.insert(&43_i64).unwrap();
+
+        let size_before = storage.value_size(index1).unwrap();
+        storage.resize_value(index1, 16).unwrap();
+        let reclaimed_size = size_before - 16;
+        let before_optimize = storage.len();
+
+        storage.optimize_storage().unwrap();
+
+        assert_eq!(storage.len(), before_optimize - reclaimed_size);
+
+        assert_eq!(storage.value_size(index1).unwrap(), 16);
+        assert_eq!(storage.value::<i64>(index2), Ok(42_i64));
+        assert_eq!(storage.value::<i64>(index3), Ok(43_i64));
+    }
+
+    #[test]
     fn shrink_to_fit() {
         let mut storage = Storage::<MemoryStorage>::new("storage").unwrap();
 

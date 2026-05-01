@@ -174,6 +174,19 @@ pub(crate) fn parse_type(ty: &syn::Type, generics: &[Generic]) -> TokenStream2 {
                 };
             }
 
+            if ident == "Box"
+                && let syn::PathArguments::AngleBracketed(args) = &last.arguments
+                && let Some(syn::GenericArgument::Type(inner_ty)) = args.args.first()
+            {
+                let inner = parse_type(inner_ty, generics);
+                return quote! {
+                    || ::agdb::type_def::Type::Pointer(::agdb::type_def::Pointer {
+                        kind: ::agdb::type_def::PointerKind::Box,
+                        ty: #inner,
+                    })
+                };
+            }
+
             if ident == "Result"
                 && let syn::PathArguments::AngleBracketed(args) = &last.arguments
             {
@@ -206,6 +219,11 @@ pub(crate) fn parse_type(ty: &syn::Type, generics: &[Generic]) -> TokenStream2 {
                     bounds: &[],
                 })
             }
+        } else if let syn::Type::Path(type_path) = ty
+            && type_path.qself.is_none()
+            && type_path.path.is_ident("Self")
+        {
+            quote! { || ::agdb::type_def::Type::SelfType(false) }
         } else {
             quote! { <#ty as ::agdb::type_def::TypeDefinition>::type_def }
         }

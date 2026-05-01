@@ -2,7 +2,7 @@ use crate::AgdbApiError;
 use crate::api_result::AgdbApiResult;
 use crate::client::AgdbApiClient;
 #[cfg(feature = "api")]
-use agdb::type_def::{ImplDefinition, Type, TypeDefinition};
+use agdb::type_def::{Type, TypeDefinition};
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 
@@ -52,13 +52,9 @@ impl TypeDefinition for ReqwestClientTypeDef {
             name: "reqwest::Client",
             generics: &[],
             fields: &[],
-            functions: &[],
         })
     }
 }
-
-#[cfg(feature = "api")]
-impl ImplDefinition for ReqwestClientTypeDef {}
 
 #[cfg_attr(feature = "api", derive(agdb::TypeDef))]
 pub struct ReqwestClient {

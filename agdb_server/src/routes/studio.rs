@@ -51,12 +51,7 @@ fn init_index_js_content(filename: &str, config: &Config) -> ServerResult {
     if !config.basepath.is_empty() {
         content = content.replace("\"/studio", &format!("\"{}/studio", config.basepath));
     };
-    let address = format!(
-        "{}{}",
-        config.address.trim_end_matches("/"),
-        &config.basepath
-    );
-    content = content.replace("https://localhost:3000", &address);
+    content = content.replace("https://localhost:3000", &config.server_url());
 
     AGDB_STUDIO_INDEX_JS_CONTENT.set(content)?;
 

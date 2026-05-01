@@ -1,5 +1,6 @@
 use crate::type_def_parser::generics_parser;
 use crate::type_def_parser::generics_parser::Generic;
+use crate::type_def_parser::impl_parser;
 use proc_macro2::TokenStream as TokenStream2;
 use quote::quote;
 use syn::DataStruct;
@@ -13,6 +14,10 @@ pub(crate) fn parse_struct(input: &DeriveInput, s: &DataStruct) -> TokenStream2 
     let fields = parse_fields(&s.fields, &current_generics);
     let (impl_generics, ty_generic, where_clause) = input.generics.split_for_impl();
 
+    let impl_names = impl_parser::parse_type_def_impls(&input.attrs);
+    let impl_defs_method =
+        impl_parser::generate_impl_defs_method(&impl_names, &name.to_string(), &input.generics);
+
     quote! {
         impl #impl_generics ::agdb::type_def::TypeDefinition for #name #ty_generic #where_clause {
             fn type_def() -> ::agdb::type_def::Type {
@@ -20,9 +25,9 @@ pub(crate) fn parse_struct(input: &DeriveInput, s: &DataStruct) -> TokenStream2 
                     name: stringify!(#name),
                     generics: &[#(#generics),*],
                     fields: &[#(#fields),*],
-                    functions: <#name #ty_generic as ::agdb::type_def::ImplDefinition>::functions(),
                 })
             }
+            #impl_defs_method
         }
     }
 }

@@ -170,7 +170,7 @@ pub(crate) async fn new(config: &Config, db: &ServerDb, db_pool: &DbPool) -> Ser
     let index = config
         .cluster
         .iter()
-        .position(|url| url == &config.address)
+        .position(|url| url == &config.server_url())
         .unwrap_or_default();
     let mut sorted_cluster: Vec<String> =
         config.cluster.iter().map(|url| url.to_string()).collect();

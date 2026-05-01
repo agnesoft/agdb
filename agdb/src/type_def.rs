@@ -30,21 +30,9 @@ pub trait TypeDefinition {
             _ => vec![],
         }
     }
-}
 
-pub trait ImplDefinition: TypeDefinition {
-    fn impl_def() -> Impl {
-        Impl {
-            name: Self::type_def().name(),
-            generics: &[],
-            trait_: None,
-            ty: Self::type_def,
-            functions: Self::functions(),
-        }
-    }
-
-    fn functions() -> &'static [Function] {
-        &[]
+    fn impl_defs() -> Vec<Impl> {
+        vec![]
     }
 }
 
@@ -203,7 +191,6 @@ macro_rules! impl_type_def_literal {
                     Type::Literal(Literal::$variant)
                 }
             }
-            impl ImplDefinition for $ty {}
         )*
     };
 }
@@ -231,14 +218,12 @@ impl<T: TypeDefinition> TypeDefinition for &[T] {
         Type::Slice(T::type_def)
     }
 }
-impl<T: TypeDefinition> ImplDefinition for &[T] {}
 
 impl<T: TypeDefinition> TypeDefinition for Vec<T> {
     fn type_def() -> Type {
         Type::Vec(T::type_def)
     }
 }
-impl<T: TypeDefinition> ImplDefinition for Vec<T> {}
 
 impl<T: TypeDefinition, E: TypeDefinition> TypeDefinition for Result<T, E> {
     fn type_def() -> Type {
@@ -248,14 +233,12 @@ impl<T: TypeDefinition, E: TypeDefinition> TypeDefinition for Result<T, E> {
         }
     }
 }
-impl<T: TypeDefinition, E: TypeDefinition> ImplDefinition for Result<T, E> {}
 
 impl<T: TypeDefinition> TypeDefinition for Option<T> {
     fn type_def() -> Type {
         Type::Option(T::type_def)
     }
 }
-impl<T: TypeDefinition> ImplDefinition for Option<T> {}
 
 impl<T: TypeDefinition> TypeDefinition for Box<T> {
     fn type_def() -> Type {
@@ -265,7 +248,6 @@ impl<T: TypeDefinition> TypeDefinition for Box<T> {
         })
     }
 }
-impl<T: TypeDefinition> ImplDefinition for Box<T> {}
 
 impl<T> TypeDefinition for &T
 where
@@ -279,14 +261,12 @@ where
         })
     }
 }
-impl<T> ImplDefinition for &T where T: TypeDefinition {}
 
 impl<T: TypeDefinition, V: TypeDefinition> TypeDefinition for (T, V) {
     fn type_def() -> Type {
         Type::Tuple(&[T::type_def, V::type_def])
     }
 }
-impl<T: TypeDefinition, V: TypeDefinition> ImplDefinition for (T, V) {}
 
 impl<T: TypeDefinition> TypeDefinition for std::sync::Arc<T> {
     fn type_def() -> Type {
@@ -341,7 +321,6 @@ macro_rules! impl_type_def_fn_ptr {
                     })
                 }
             }
-            impl<R: TypeDefinition, $($arg: TypeDefinition),*> ImplDefinition for fn($($arg),*) -> R {}
         )*
     };
 }
@@ -365,7 +344,6 @@ impl TypeDefinition for fn() -> Type {
         })
     }
 }
-impl ImplDefinition for fn() -> Type {}
 
 #[cfg(test)]
 mod tests {

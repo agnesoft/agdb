@@ -91,8 +91,6 @@ use agdb::SingleValues;
 use agdb::Where;
 use agdb::WhereKey;
 use agdb::WhereLogicOperator;
-use agdb::type_def::Impl;
-use agdb::type_def::ImplDefinition;
 use agdb::type_def::Type;
 use agdb::type_def::TypeDefinition;
 
@@ -114,136 +112,127 @@ use crate::UserCredentials;
 use crate::UserLogin;
 use crate::UserStatus;
 
-macro_rules! type_entry {
-    ($ty:ty) => {
-        (<$ty>::type_def(), vec![])
-    };
-    ($ty:ty, impl) => {
-        (<$ty>::type_def(), vec![<$ty>::impl_def()])
-    };
-}
-
 pub struct Api;
 
 impl Api {
-    pub fn type_defs() -> Vec<(Type, Vec<Impl>)> {
+    pub fn type_defs() -> Vec<Type> {
         vec![
             // agdb DB types
-            type_entry!(DbElement),
-            type_entry!(DbF64),
-            type_entry!(DbId),
-            type_entry!(DbKeyOrder),
-            type_entry!(DbKeyOrders),
-            type_entry!(DbKeyValue),
-            type_entry!(DbValue),
-            type_entry!(DbValues),
+            DbElement::type_def(),
+            DbF64::type_def(),
+            DbId::type_def(),
+            DbKeyOrder::type_def(),
+            DbKeyOrders::type_def(),
+            DbKeyValue::type_def(),
+            DbValue::type_def(),
+            DbValues::type_def(),
             // agdb query types
-            type_entry!(QueryType),
-            type_entry!(QueryAliases),
-            type_entry!(InsertAliasesQuery),
-            type_entry!(InsertEdgesQuery),
-            type_entry!(InsertIndexQuery),
-            type_entry!(InsertNodesQuery),
-            type_entry!(InsertValuesQuery),
-            type_entry!(Comparison),
-            type_entry!(CountComparison),
-            type_entry!(KeyValueComparison),
-            type_entry!(QueryCondition),
-            type_entry!(QueryConditionData),
-            type_entry!(QueryConditionLogic),
-            type_entry!(QueryConditionModifier),
-            type_entry!(QueryId),
-            type_entry!(QueryIds),
-            type_entry!(QueryResult),
-            type_entry!(QueryValues),
-            type_entry!(SingleValues),
-            type_entry!(MultiValues),
-            type_entry!(RemoveAliasesQuery),
-            type_entry!(RemoveIndexQuery),
-            type_entry!(RemoveQuery),
-            type_entry!(RemoveValuesQuery),
-            type_entry!(SearchQuery),
-            type_entry!(SearchQueryAlgorithm),
-            type_entry!(SelectAliasesQuery),
-            type_entry!(SelectAllAliasesQuery),
-            type_entry!(SelectEdgeCountQuery),
-            type_entry!(SelectIndexesQuery),
-            type_entry!(SelectKeyCountQuery),
-            type_entry!(SelectKeysQuery),
-            type_entry!(SelectNodeCountQuery),
-            type_entry!(SelectValuesQuery),
-            // agdb QueryBuilder types (with impl blocks)
-            type_entry!(QueryBuilder, impl),
-            type_entry!(Insert, impl),
-            type_entry!(InsertAliases, impl),
-            type_entry!(InsertAliasesIds, impl),
-            type_entry!(InsertEdges, impl),
-            type_entry!(InsertEdgesEach, impl),
-            type_entry!(InsertEdgesFrom, impl),
-            type_entry!(InsertEdgesFromTo, impl),
-            type_entry!(InsertEdgesIds, impl),
-            type_entry!(InsertEdgesValues, impl),
-            type_entry!(InsertIndex, impl),
-            type_entry!(InsertNodes, impl),
-            type_entry!(InsertNodesAliases, impl),
-            type_entry!(InsertNodesCount, impl),
-            type_entry!(InsertNodesIds, impl),
-            type_entry!(InsertNodesValues, impl),
-            type_entry!(InsertValues, impl),
-            type_entry!(InsertValuesIds, impl),
-            type_entry!(Remove, impl),
-            type_entry!(RemoveAliases, impl),
-            type_entry!(RemoveIds, impl),
-            type_entry!(RemoveIndex, impl),
-            type_entry!(RemoveValues, impl),
-            type_entry!(RemoveValuesIds, impl),
+            QueryType::type_def(),
+            QueryAliases::type_def(),
+            InsertAliasesQuery::type_def(),
+            InsertEdgesQuery::type_def(),
+            InsertIndexQuery::type_def(),
+            InsertNodesQuery::type_def(),
+            InsertValuesQuery::type_def(),
+            Comparison::type_def(),
+            CountComparison::type_def(),
+            KeyValueComparison::type_def(),
+            QueryCondition::type_def(),
+            QueryConditionData::type_def(),
+            QueryConditionLogic::type_def(),
+            QueryConditionModifier::type_def(),
+            QueryId::type_def(),
+            QueryIds::type_def(),
+            QueryResult::type_def(),
+            QueryValues::type_def(),
+            SingleValues::type_def(),
+            MultiValues::type_def(),
+            RemoveAliasesQuery::type_def(),
+            RemoveIndexQuery::type_def(),
+            RemoveQuery::type_def(),
+            RemoveValuesQuery::type_def(),
+            SearchQuery::type_def(),
+            SearchQueryAlgorithm::type_def(),
+            SelectAliasesQuery::type_def(),
+            SelectAllAliasesQuery::type_def(),
+            SelectEdgeCountQuery::type_def(),
+            SelectIndexesQuery::type_def(),
+            SelectKeyCountQuery::type_def(),
+            SelectKeysQuery::type_def(),
+            SelectNodeCountQuery::type_def(),
+            SelectValuesQuery::type_def(),
+            // agdb QueryBuilder types
+            QueryBuilder::type_def(),
+            Insert::type_def(),
+            InsertAliases::type_def(),
+            InsertAliasesIds::type_def(),
+            InsertEdges::type_def(),
+            InsertEdgesEach::type_def(),
+            InsertEdgesFrom::type_def(),
+            InsertEdgesFromTo::type_def(),
+            InsertEdgesIds::type_def(),
+            InsertEdgesValues::type_def(),
+            InsertIndex::type_def(),
+            InsertNodes::type_def(),
+            InsertNodesAliases::type_def(),
+            InsertNodesCount::type_def(),
+            InsertNodesIds::type_def(),
+            InsertNodesValues::type_def(),
+            InsertValues::type_def(),
+            InsertValuesIds::type_def(),
+            Remove::type_def(),
+            RemoveAliases::type_def(),
+            RemoveIds::type_def(),
+            RemoveIndex::type_def(),
+            RemoveValues::type_def(),
+            RemoveValuesIds::type_def(),
             // Generic search/where builder types (monomorphised with SearchQuery)
-            type_entry!(Search<SearchQuery>, impl),
-            type_entry!(SearchAlgorithm<SearchQuery>, impl),
-            type_entry!(SearchFrom<SearchQuery>, impl),
-            type_entry!(SearchTo<SearchQuery>, impl),
-            type_entry!(SearchIndexBuilder<SearchQuery>, impl),
-            type_entry!(SearchIndexValue<SearchQuery>, impl),
-            type_entry!(SearchOrderBy<SearchQuery>, impl),
-            type_entry!(SelectLimit<SearchQuery>, impl),
-            type_entry!(SelectOffset<SearchQuery>, impl),
-            type_entry!(Select, impl),
-            type_entry!(SelectAliases, impl),
-            type_entry!(SelectAliasesIds, impl),
-            type_entry!(SelectEdgeCount, impl),
-            type_entry!(SelectEdgeCountIds, impl),
-            type_entry!(SelectIds, impl),
-            type_entry!(SelectIndexes, impl),
-            type_entry!(SelectKeyCount, impl),
-            type_entry!(SelectKeyCountIds, impl),
-            type_entry!(SelectKeys, impl),
-            type_entry!(SelectKeysIds, impl),
-            type_entry!(SelectNodeCount, impl),
-            type_entry!(SelectValues, impl),
-            type_entry!(SelectValuesIds, impl),
-            type_entry!(Where<SearchQuery>, impl),
-            type_entry!(WhereKey<SearchQuery>, impl),
-            type_entry!(WhereLogicOperator<SearchQuery>, impl),
+            Search::<SearchQuery>::type_def(),
+            SearchAlgorithm::<SearchQuery>::type_def(),
+            SearchFrom::<SearchQuery>::type_def(),
+            SearchTo::<SearchQuery>::type_def(),
+            SearchIndexBuilder::<SearchQuery>::type_def(),
+            SearchIndexValue::<SearchQuery>::type_def(),
+            SearchOrderBy::<SearchQuery>::type_def(),
+            SelectLimit::<SearchQuery>::type_def(),
+            SelectOffset::<SearchQuery>::type_def(),
+            Select::type_def(),
+            SelectAliases::type_def(),
+            SelectAliasesIds::type_def(),
+            SelectEdgeCount::type_def(),
+            SelectEdgeCountIds::type_def(),
+            SelectIds::type_def(),
+            SelectIndexes::type_def(),
+            SelectKeyCount::type_def(),
+            SelectKeyCountIds::type_def(),
+            SelectKeys::type_def(),
+            SelectKeysIds::type_def(),
+            SelectNodeCount::type_def(),
+            SelectValues::type_def(),
+            SelectValuesIds::type_def(),
+            Where::<SearchQuery>::type_def(),
+            WhereKey::<SearchQuery>::type_def(),
+            WhereLogicOperator::<SearchQuery>::type_def(),
             // agdb_api traits
-            type_entry!(SearchQueryBuilderDef),
-            type_entry!(HttpClientDef),
-            type_entry!(AgdbApiClientDef),
+            SearchQueryBuilderDef::type_def(),
+            HttpClientDef::type_def(),
+            AgdbApiClientDef::type_def(),
             // agdb_api types
-            type_entry!(AgdbApiError),
-            type_entry!(AdminStatus),
-            type_entry!(ChangePassword),
-            type_entry!(ClusterStatus),
-            type_entry!(DbAudit),
-            type_entry!(DbKind),
-            type_entry!(DbResource),
-            type_entry!(DbUser),
-            type_entry!(DbUserRole),
-            type_entry!(LogLevelFilter),
-            type_entry!(QueryAudit),
-            type_entry!(ServerDatabase),
-            type_entry!(UserCredentials),
-            type_entry!(UserLogin),
-            type_entry!(UserStatus),
+            AgdbApiError::type_def(),
+            AdminStatus::type_def(),
+            ChangePassword::type_def(),
+            ClusterStatus::type_def(),
+            DbAudit::type_def(),
+            DbKind::type_def(),
+            DbResource::type_def(),
+            DbUser::type_def(),
+            DbUserRole::type_def(),
+            LogLevelFilter::type_def(),
+            QueryAudit::type_def(),
+            ServerDatabase::type_def(),
+            UserCredentials::type_def(),
+            UserLogin::type_def(),
+            UserStatus::type_def(),
         ]
     }
 }
@@ -271,7 +260,7 @@ mod tests {
         }
     }
 
-    fn collect_from_impl(i: &Impl, out: &mut Vec<fn() -> Type>) {
+    fn collect_from_impl(i: &agdb::type_def::Impl, out: &mut Vec<fn() -> Type>) {
         out.push(i.ty);
         if let Some(t) = i.trait_ {
             out.push(t);
@@ -303,9 +292,6 @@ mod tests {
                 for g in e.generics {
                     collect_from_generic(g, out);
                 }
-                for f in e.functions {
-                    collect_from_function(f, out);
-                }
             }
             Type::Struct(s) => {
                 for v in s.fields {
@@ -315,9 +301,6 @@ mod tests {
                 }
                 for g in s.generics {
                     collect_from_generic(g, out);
-                }
-                for f in s.functions {
-                    collect_from_function(f, out);
                 }
             }
             Type::Function(f) | Type::Test(f) => collect_from_function(f, out),
@@ -342,11 +325,8 @@ mod tests {
         let mut visited: HashSet<usize> = HashSet::new();
         let mut queue: Vec<fn() -> Type> = Vec::new();
 
-        for (ty, impls) in &roots {
+        for ty in &roots {
             collect_fn_ptrs(ty, &mut queue);
-            for impl_ in impls {
-                collect_from_impl(impl_, &mut queue);
-            }
         }
 
         while let Some(f) = queue.pop() {
@@ -388,7 +368,6 @@ mod tests {
         "DbTypeMarker",
         // agdb reflection meta-traits (infrastructure, not public API types)
         "TypeDefinition",
-        "ImplDefinition",
     ];
 
     fn type_name(ty: &Type) -> Option<&'static str> {
@@ -405,16 +384,13 @@ mod tests {
         let roots = Api::type_defs();
 
         // Build set of all root type names.
-        let root_names: HashSet<&'static str> = roots.iter().map(|(ty, _)| ty.name()).collect();
+        let root_names: HashSet<&'static str> = roots.iter().map(|ty| ty.name()).collect();
 
         let mut visited: HashSet<usize> = HashSet::new();
         let mut queue: Vec<fn() -> Type> = Vec::new();
 
-        for (ty, impls) in &roots {
+        for ty in &roots {
             collect_fn_ptrs(ty, &mut queue);
-            for impl_ in impls {
-                collect_from_impl(impl_, &mut queue);
-            }
         }
 
         let mut missing: Vec<&'static str> = Vec::new();

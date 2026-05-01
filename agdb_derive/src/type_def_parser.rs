@@ -7,10 +7,10 @@ pub(crate) mod struct_parser;
 pub(crate) mod trait_parser;
 
 use proc_macro::TokenStream;
+use proc_macro2::Ident;
 use proc_macro2::TokenStream as TokenStream2;
 use quote::quote;
 use syn::DeriveInput;
-use syn::Ident;
 
 pub(crate) fn type_def_impl(item: TokenStream) -> TokenStream {
     let input = syn::parse_macro_input!(item as DeriveInput);
@@ -23,23 +23,8 @@ pub(crate) fn type_def_impl(item: TokenStream) -> TokenStream {
     .into()
 }
 
-pub(crate) fn type_def_impl_impl(item: TokenStream) -> TokenStream {
-    let it = item.clone();
-    let def: TokenStream2 = type_def_impl(item).into();
-
-    let input = syn::parse_macro_input!(it as DeriveInput);
-    let name = input.ident;
-    let (impl_generics, ty_generic, where_clause) = input.generics.split_for_impl();
-
-    quote! {
-        #def
-
-        impl #impl_generics ::agdb::type_def::ImplDefinition for #name #ty_generic #where_clause {}
-    }
-    .into()
-}
-
-pub(crate) fn impl_def_impl(item: TokenStream) -> TokenStream {
+pub(crate) fn impl_def_impl(attr: TokenStream, item: TokenStream) -> TokenStream {
+    let _ = attr;
     let it: TokenStream2 = item.clone().into();
     let def_impl = match syn::parse::<syn::ItemImpl>(item) {
         Ok(input) => impl_parser::parse_impl(&input),

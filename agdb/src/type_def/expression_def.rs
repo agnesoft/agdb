@@ -57,6 +57,11 @@ pub enum Expression {
         parent: Option<&'static Expression>,
         generics: &'static [fn() -> Type],
     },
+    Range {
+        start: Option<&'static Expression>,
+        end: Option<&'static Expression>,
+        inclusive: bool,
+    },
     Reference(&'static Expression),
     Return(Option<&'static Expression>),
     Struct {
@@ -197,6 +202,10 @@ mod tests {
             "path_expr" => __path_expr_type_def(),
             "let_pattern_tuple" => __let_pattern_tuple_type_def(),
             "for_pattern" => __for_pattern_type_def(),
+            "range_half_open" => __range_half_open_type_def(),
+            "range_inclusive" => __range_inclusive_type_def(),
+            "range_from" => __range_from_type_def(),
+            "range_to" => __range_to_type_def(),
             _ => panic!("Unknown test function: {name}"),
         };
         let Type::Function(def) = func_type else {
@@ -1502,6 +1511,137 @@ mod tests {
                 );
             }
             _ => panic!("Got: {:?}", body[1]),
+        }
+    }
+
+    #[agdb::fn_def]
+    #[allow(unused)]
+    fn range_half_open() {
+        let _r = 0..10;
+    }
+
+    #[test]
+    fn test_range_half_open() {
+        let body = get_body("range_half_open");
+        assert_eq!(body.len(), 1);
+        match &body[0] {
+            Expression::Let {
+                value:
+                    Some(Expression::Range {
+                        start: Some(start),
+                        end: Some(end),
+                        inclusive: false,
+                    }),
+                ..
+            } => {
+                assert!(
+                    matches!(start, Expression::Literal(LiteralValue::I32(0))),
+                    "Got start: {:?}",
+                    start
+                );
+                assert!(
+                    matches!(end, Expression::Literal(LiteralValue::I32(10))),
+                    "Got end: {:?}",
+                    end
+                );
+            }
+            _ => panic!("Got: {:?}", body[0]),
+        }
+    }
+
+    #[agdb::fn_def]
+    #[allow(unused)]
+    fn range_inclusive() {
+        let _r = 1..=5;
+    }
+
+    #[test]
+    fn test_range_inclusive() {
+        let body = get_body("range_inclusive");
+        assert_eq!(body.len(), 1);
+        match &body[0] {
+            Expression::Let {
+                value:
+                    Some(Expression::Range {
+                        start: Some(start),
+                        end: Some(end),
+                        inclusive: true,
+                    }),
+                ..
+            } => {
+                assert!(
+                    matches!(start, Expression::Literal(LiteralValue::I32(1))),
+                    "Got start: {:?}",
+                    start
+                );
+                assert!(
+                    matches!(end, Expression::Literal(LiteralValue::I32(5))),
+                    "Got end: {:?}",
+                    end
+                );
+            }
+            _ => panic!("Got: {:?}", body[0]),
+        }
+    }
+
+    #[agdb::fn_def]
+    #[allow(unused)]
+    fn range_from() {
+        let start = 3;
+        let _r = start..;
+    }
+
+    #[test]
+    fn test_range_from() {
+        let body = get_body("range_from");
+        assert_eq!(body.len(), 2);
+        match &body[1] {
+            Expression::Let {
+                value:
+                    Some(Expression::Range {
+                        start: Some(start),
+                        end: None,
+                        inclusive: false,
+                    }),
+                ..
+            } => {
+                assert!(
+                    matches!(start, Expression::Ident("start")),
+                    "Got start: {:?}",
+                    start
+                );
+            }
+            _ => panic!("Got: {:?}", body[1]),
+        }
+    }
+
+    #[agdb::fn_def]
+    #[allow(unused)]
+    fn range_to() {
+        let _r = ..10;
+    }
+
+    #[test]
+    fn test_range_to() {
+        let body = get_body("range_to");
+        assert_eq!(body.len(), 1);
+        match &body[0] {
+            Expression::Let {
+                value:
+                    Some(Expression::Range {
+                        start: None,
+                        end: Some(end),
+                        inclusive: false,
+                    }),
+                ..
+            } => {
+                assert!(
+                    matches!(end, Expression::Literal(LiteralValue::I32(10))),
+                    "Got end: {:?}",
+                    end
+                );
+            }
+            _ => panic!("Got: {:?}", body[0]),
         }
     }
 }

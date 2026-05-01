@@ -7,8 +7,8 @@ use crate::config_impl::ConfigImpl;
 use crate::config_impl::DEFAULT_LOG_BODY_LIMIT;
 use crate::config_impl::DEFAULT_REQUEST_BODY_LIMIT;
 use crate::config_impl::config_to_str;
-use crate::test_server::test_error::bail;
 use crate::test_server::test_error::TestError;
+use crate::test_server::test_error::bail;
 use agdb::type_def::Struct;
 use agdb::type_def::TypeDefinition;
 use std::collections::HashMap;
@@ -24,15 +24,16 @@ use tokio::process::Child;
 use tokio::process::Command;
 use tokio::sync::RwLock;
 
-const ADMIN: &str = "admin";
+pub const ADMIN: &str = "admin";
+pub const CONFIG_FILE: &str = "agdb_server.yaml";
+pub const SERVER_DATA_DIR: &str = "agdb_server_data";
+
 const BINARY: &str = "agdb_server";
-const CONFIG_FILE: &str = "agdb_server.yaml";
 const DEFAULT_PORT: u16 = 3000;
 const HOST: &str = "localhost";
 const POLL_INTERVAL: u64 = 100;
 const RETRY_TIMEOUT: Duration = Duration::from_secs(1);
 const RETRY_ATTEMPS: u16 = 10;
-const SERVER_DATA_DIR: &str = "agdb_server_data";
 const SHUTDOWN_RETRY_TIMEOUT: Duration = Duration::from_millis(100);
 const SHUTDOWN_RETRY_ATTEMPTS: u16 = 100;
 const TEST_TIMEOUT: u128 = 30000;
@@ -83,8 +84,8 @@ pub struct TestServerImpl {
 
 #[derive(agdb::TypeDef)]
 pub struct TestCluster {
-    apis: Vec<AgdbApi<ReqwestClient>>,
-    _cluster: Arc<ClusterImpl>,
+    pub apis: Vec<AgdbApi<ReqwestClient>>,
+    pub cluster: Arc<ClusterImpl>,
 }
 
 #[cfg(feature = "tls")]
@@ -357,7 +358,7 @@ impl Drop for TestServerImpl {
 
 #[cfg_attr(feature = "api", agdb::impl_def())]
 impl TestCluster {
-    async fn new() -> Result<Self, TestError> {
+    pub async fn new() -> Result<Self, TestError> {
         let global_cluster = CLUSTER.get_or_init(|| RwLock::new(Weak::new()));
         let mut cluster_guard = global_cluster.write().await;
 
@@ -379,7 +380,7 @@ impl TestCluster {
                     ))
                 })
                 .collect::<Result<Vec<AgdbApi<ReqwestClient>>, TestError>>()?,
-            _cluster: nodes,
+            cluster: nodes,
         };
 
         cluster.apis[1].cluster_user_login(ADMIN, ADMIN).await?;

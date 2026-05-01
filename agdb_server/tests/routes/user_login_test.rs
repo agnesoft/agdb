@@ -1,6 +1,6 @@
-use crate::ADMIN;
-use crate::TestServer;
-use crate::next_user_name;
+use agdb_api::test_server::ADMIN;
+use agdb_api::test_server::TestServer;
+use agdb_api::test_server::next_user_name;
 
 #[tokio::test]
 async fn login() -> anyhow::Result<()> {
@@ -74,7 +74,7 @@ async fn concurrent_logins() -> anyhow::Result<()> {
     for _ in 0..3 {
         apis.push((
             agdb_api::AgdbApi::new(
-                agdb_api::ReqwestClient::with_client(crate::reqwest_client()),
+                agdb_api::ReqwestClient::with_client(agdb_api::test_server::reqwest_client()),
                 server.api.address(),
             ),
             user.to_string(),

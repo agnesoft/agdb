@@ -1,16 +1,15 @@
-use crate::ADMIN;
-use crate::CONFIG_FILE;
-use crate::DEFAULT_LOG_BODY_LIMIT;
-use crate::TestDir;
-use crate::TestServer;
-use crate::TestServerImpl;
-use crate::next_db_name;
-use crate::reqwest_client;
-use crate::wait_for_ready;
 use agdb::QueryBuilder;
 use agdb_api::AgdbApi;
 use agdb_api::DbKind;
 use agdb_api::ReqwestClient;
+use agdb_api::test_server::ADMIN;
+use agdb_api::test_server::CONFIG_FILE;
+use agdb_api::test_server::TestDir;
+use agdb_api::test_server::TestServer;
+use agdb_api::test_server::TestServerImpl;
+use agdb_api::test_server::next_db_name;
+use agdb_api::test_server::reqwest_client;
+use agdb_api::test_server::wait_for_ready;
 use reqwest::StatusCode;
 use std::path::Path;
 
@@ -152,8 +151,8 @@ async fn db_list_after_shutdown_corrupted_data() -> anyhow::Result<()> {
 #[cfg(feature = "studio")]
 #[tokio::test]
 async fn basepath_test() -> anyhow::Result<()> {
-    use crate::DEFAULT_LOG_BODY_LIMIT;
-    use crate::DEFAULT_REQUEST_BODY_LIMIT;
+    use agdb_api::config_impl::DEFAULT_LOG_BODY_LIMIT;
+    use agdb_api::config_impl::DEFAULT_REQUEST_BODY_LIMIT;
 
     let config = agdb_api::config_impl::ConfigImpl {
         bind: String::new(),
@@ -164,7 +163,7 @@ async fn basepath_test() -> anyhow::Result<()> {
         log_level: agdb_api::LogLevelFilter::Info,
         log_body_limit: DEFAULT_LOG_BODY_LIMIT,
         request_body_limit: DEFAULT_REQUEST_BODY_LIMIT,
-        data_dir: crate::SERVER_DATA_DIR.into(),
+        data_dir: agdb_api::test_server::SERVER_DATA_DIR.into(),
         pepper_path: String::new(),
         tls_certificate: String::new(),
         tls_key: String::new(),
@@ -336,9 +335,9 @@ async fn large_payload() -> anyhow::Result<()> {
         static_roots: Vec::new(),
         admin: ADMIN.to_string(),
         log_level: agdb_api::LogLevelFilter::Info,
-        log_body_limit: DEFAULT_LOG_BODY_LIMIT,
-        request_body_limit: 1024,
-        data_dir: crate::SERVER_DATA_DIR.into(),
+        log_body_limit: agdb_api::config_impl::DEFAULT_LOG_BODY_LIMIT,
+        request_body_limit: agdb_api::config_impl::DEFAULT_REQUEST_BODY_LIMIT,
+        data_dir: agdb_api::test_server::SERVER_DATA_DIR.into(),
         pepper_path: String::new(),
         tls_certificate: String::new(),
         tls_key: String::new(),
@@ -424,9 +423,9 @@ async fn static_files() -> anyhow::Result<()> {
         ],
         admin: ADMIN.to_string(),
         log_level: agdb_api::LogLevelFilter::Info,
-        log_body_limit: DEFAULT_LOG_BODY_LIMIT,
-        request_body_limit: 1024,
-        data_dir: crate::SERVER_DATA_DIR.into(),
+        log_body_limit: agdb_api::config_impl::DEFAULT_LOG_BODY_LIMIT,
+        request_body_limit: agdb_api::config_impl::DEFAULT_REQUEST_BODY_LIMIT,
+        data_dir: agdb_api::test_server::SERVER_DATA_DIR.into(),
         pepper_path: String::new(),
         tls_certificate: String::new(),
         tls_key: String::new(),
@@ -489,9 +488,9 @@ async fn static_files_with_basepath() -> anyhow::Result<()> {
         ],
         admin: ADMIN.to_string(),
         log_level: agdb_api::LogLevelFilter::Info,
-        log_body_limit: DEFAULT_LOG_BODY_LIMIT,
-        request_body_limit: 1024,
-        data_dir: crate::SERVER_DATA_DIR.into(),
+        log_body_limit: agdb_api::config_impl::DEFAULT_LOG_BODY_LIMIT,
+        request_body_limit: agdb_api::config_impl::DEFAULT_REQUEST_BODY_LIMIT,
+        data_dir: agdb_api::test_server::SERVER_DATA_DIR.into(),
         pepper_path: String::new(),
         tls_certificate: String::new(),
         tls_key: String::new(),

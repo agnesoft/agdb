@@ -336,7 +336,7 @@ async fn large_payload() -> anyhow::Result<()> {
         admin: ADMIN.to_string(),
         log_level: agdb_api::LogLevelFilter::Info,
         log_body_limit: agdb_api::config_impl::DEFAULT_LOG_BODY_LIMIT,
-        request_body_limit: agdb_api::config_impl::DEFAULT_REQUEST_BODY_LIMIT,
+        request_body_limit: 1024,
         data_dir: agdb_api::test_server::SERVER_DATA_DIR.into(),
         pepper_path: String::new(),
         tls_certificate: String::new(),

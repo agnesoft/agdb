@@ -16,6 +16,7 @@ mod server_state;
 mod user_id;
 mod utilities;
 
+use agdb_api::LogLevelFilter;
 pub(crate) use server_error::ServerResult;
 use std::str::FromStr;
 use std::sync::Arc;
@@ -29,15 +30,20 @@ const CONFIG_FILE: &str = "agdb_server.yaml";
 
 #[tokio::main]
 async fn main() -> ServerResult {
-    let config = config::new(CONFIG_FILE)?;
-
-    let filter = EnvFilter::from_str(&config.log_level.to_string())?;
+    let filter = EnvFilter::from_str(LogLevelFilter::Info.to_string().as_str())?;
     let (filter_layer, tracing_handle) = reload::Layer::new(filter);
 
     tracing_subscriber::registry()
         .with(filter_layer)
         .with(tracing_subscriber::fmt::layer())
         .init();
+
+    let config = config::new(CONFIG_FILE)?;
+
+    if config.log_level != LogLevelFilter::Info {
+        let new_filter = EnvFilter::from_str(&config.log_level.to_string())?;
+        tracing_handle.reload(new_filter)?;
+    }
 
     password::init(config.pepper);
 
@@ -85,7 +91,7 @@ async fn main() -> ServerResult {
             shutdown_handle.graceful_shutdown(Some(std::time::Duration::from_secs(5)));
         });
 
-        tracing::info!("Address: {}{}", config.address, config.basepath);
+        tracing::info!("Address: {}", config.server_url());
         tracing::info!("Listening at {}", config.bind);
         let address = std::net::ToSocketAddrs::to_socket_addrs(&config.bind)?
             .next()
@@ -96,7 +102,7 @@ async fn main() -> ServerResult {
             .await?);
     }
 
-    tracing::info!("Address: {}{}", config.address, config.basepath);
+    tracing::info!("Address: {}", config.server_url());
     tracing::info!("Listening at {}", config.bind);
     let listener = TcpListener::bind(&config.bind).await?;
     axum::serve(listener, app)

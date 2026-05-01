@@ -14,6 +14,7 @@ use syn::ExprField;
 use syn::ExprIndex;
 use syn::ExprMacro;
 use syn::ExprMethodCall;
+use syn::ExprRange;
 use syn::ExprReference;
 use syn::ExprStruct;
 use syn::ExprTry;
@@ -85,6 +86,7 @@ pub(crate) fn parse_expression(e: &Expr, generics: &[Generic]) -> TokenStream2 {
         Expr::MethodCall(e) => parse_method_call(e, generics),
         Expr::Paren(e) => parse_expression(&e.expr, generics),
         Expr::Path(e) => parse_path(&e.path),
+        Expr::Range(e) => parse_range(e, generics),
         Expr::Reference(e) => parse_reference(e, generics),
         Expr::Return(e) => parse_return(e, generics),
         Expr::Struct(e) => parse_struct(e, generics),
@@ -882,6 +884,33 @@ fn path_to_string(path: &Path) -> String {
         .expect("path should not be empty")
         .ident
         .to_string()
+}
+
+// ---------------------------------------------------------------------------
+// Range
+// ---------------------------------------------------------------------------
+
+fn parse_range(e: &ExprRange, generics: &[Generic]) -> TokenStream2 {
+    let start = if let Some(start) = &e.start {
+        let s = parse_expression(start, generics);
+        quote! { Some(&#s) }
+    } else {
+        quote! { None }
+    };
+    let end = if let Some(end) = &e.end {
+        let v = parse_expression(end, generics);
+        quote! { Some(&#v) }
+    } else {
+        quote! { None }
+    };
+    let inclusive = matches!(e.limits, syn::RangeLimits::Closed(_));
+    quote! {
+        ::agdb::type_def::Expression::Range {
+            start: #start,
+            end: #end,
+            inclusive: #inclusive,
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------

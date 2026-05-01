@@ -175,7 +175,13 @@ pub(crate) fn from_str(content: &str) -> Result<ConfigImpl, String> {
             match key {
                 "bind" => config.bind = value.to_string(),
                 "address" => config.address = value.to_string(),
-                "basepath" => config.basepath = value.to_string(),
+                "basepath" => {
+                    config.basepath = if value.is_empty() || value.starts_with('/') {
+                        value.to_string()
+                    } else {
+                        format!("/{value}")
+                    }
+                }
                 "static_roots" => config.static_roots = vec_from_str(value),
                 "admin" => config.admin = value.to_string(),
                 "log_level" => config.log_level = value.try_into()?,

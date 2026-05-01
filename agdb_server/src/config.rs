@@ -43,11 +43,13 @@ impl ConfigImpl {
 pub(crate) fn new(config_file: &str) -> Result<Config, String> {
     if let Ok(content) = std::fs::read_to_string(config_file) {
         let mut config_impl: ConfigImpl = from_str(&content)?;
+
         config_impl.cluster_node_id = config_impl
             .cluster
             .iter()
             .position(|x| x == &config_impl.server_url())
-            .unwrap_or(0);
+            .unwrap_or_default();
+
         config_impl.start_time = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .map_err(|e| format!("Failed to get server start time since UNIX_EPOCH: {e:?}"))?
@@ -78,10 +80,11 @@ pub(crate) fn new(config_file: &str) -> Result<Config, String> {
 
         let config = Config::new(config_impl);
 
-        if !config.cluster.is_empty() && !config.cluster.contains(&config.address) {
+        if !config.cluster.is_empty() && !config.cluster.contains(&config.server_url()) {
             return Err(format!(
-                "cluster does not contain local node: {} ({:?})",
-                config.address, config.cluster
+                "Cluster does not contain local node: {} ({:?})",
+                config.server_url(),
+                config.cluster
             ));
         }
 
@@ -188,6 +191,8 @@ pub(crate) fn from_str(content: &str) -> Result<ConfigImpl, String> {
                     } else {
                         format!("/{value}")
                     }
+                    .trim_end_matches('/')
+                    .to_string()
                 }
                 "static_roots" => config.static_roots = vec_from_str(value),
                 "admin" => config.admin = value.to_string(),
@@ -224,6 +229,12 @@ pub(crate) fn from_str(content: &str) -> Result<ConfigImpl, String> {
         }
     }
 
+    normalize_address(&mut config);
+
+    Ok(config)
+}
+
+fn normalize_address(config: &mut ConfigImpl) {
     if let Some((protocol, address)) = config.address.split_once("://") {
         if let Some((url, path)) = address.split_once('/') {
             if !path.is_empty() {
@@ -236,8 +247,6 @@ pub(crate) fn from_str(content: &str) -> Result<ConfigImpl, String> {
     } else if let Some((address, _)) = config.address.split_once('/') {
         config.address = address.to_string();
     }
-
-    Ok(config)
 }
 
 pub(crate) fn to_str(config: &ConfigImpl) -> String {
@@ -304,36 +313,6 @@ mod tests {
         config::new(test_file.filename).unwrap();
         assert!(std::fs::exists(test_file.filename).unwrap());
         config::new(test_file.filename).unwrap();
-    }
-
-    #[test]
-    fn invalid_cluster() {
-        let test_file = TestFile::new("test_config_invalid_cluster.yaml");
-        let config = ConfigImpl {
-            bind: ":::3000".to_string(),
-            address: "http://localhost:3000".to_string(),
-            basepath: "".to_string(),
-            static_roots: vec!["icetool".to_string()],
-            admin: "admin".to_string(),
-            log_level: LogLevelFilter::Info,
-            log_body_limit: DEFAULT_LOG_BODY_LIMIT,
-            request_body_limit: DEFAULT_REQUEST_BODY_LIMIT,
-            data_dir: "agdb_server_data".to_string(),
-            pepper_path: String::new(),
-            tls_certificate: String::new(),
-            tls_key: String::new(),
-            tls_root: String::new(),
-            cluster_token: "cluster".to_string(),
-            cluster_heartbeat_timeout_ms: 1000,
-            cluster_term_timeout_ms: 3000,
-            cluster: vec!["http://localhost:3001".to_string()],
-            cluster_node_id: 0,
-            start_time: 0,
-            pepper: None,
-        };
-        std::fs::write(test_file.filename, to_str(&config)).unwrap();
-
-        config::new(test_file.filename).unwrap_err();
     }
 
     #[test]
@@ -432,5 +411,80 @@ mod tests {
         std::fs::write(test_file.filename, to_str(&config)).unwrap();
 
         config::new(test_file.filename).unwrap_err();
+    }
+
+    #[test]
+    fn address_with_base_path_ignored() {
+        let config_file = "address: http://localhost:3000/api";
+        let config = config::from_str(config_file).unwrap();
+        assert_eq!(config.address, "http://localhost:3000");
+    }
+
+    #[test]
+    fn address_without_protocol_with_base_path_ignored() {
+        let config_file = "address: localhost:3000/api";
+        let config = config::from_str(config_file).unwrap();
+        assert_eq!(config.address, "localhost:3000");
+    }
+
+    #[test]
+    fn address_with_trailing_slash_ignored() {
+        let config_file = "address: http://localhost:3000/";
+        let config = config::from_str(config_file).unwrap();
+        assert_eq!(config.address, "http://localhost:3000");
+    }
+
+    #[test]
+    fn address_without_protocol_trailing_slash_ignored() {
+        let config_file = "address: localhost:3000/";
+        let config = config::from_str(config_file).unwrap();
+        assert_eq!(config.address, "localhost:3000");
+    }
+
+    #[test]
+    fn base_path_not_starting_with_slash_prepended() {
+        let config_file = "basepath: api";
+        let config = config::from_str(config_file).unwrap();
+        assert_eq!(config.basepath, "/api");
+    }
+
+    #[test]
+    fn base_path_ending_with_slash() {
+        let config_file = "basepath: api/";
+        let config = config::from_str(config_file).unwrap();
+        assert_eq!(config.basepath, "/api");
+    }
+
+    #[test]
+    fn server_url_with_base_path() {
+        let config_file = "address: http://localhost:3000\nbasepath: /api/";
+        let config = config::from_str(config_file).unwrap();
+        assert_eq!(config.server_url(), "http://localhost:3000/api");
+    }
+
+    #[test]
+    fn server_url_without_base_path() {
+        let config_file = "address: http://localhost:3000";
+        let config = config::from_str(config_file).unwrap();
+        assert_eq!(config.server_url(), "http://localhost:3000");
+    }
+
+    #[test]
+    fn cluster_node_id() {
+        let test_file = TestFile::new("cluster_node_id.yaml");
+        std::fs::write(test_file.filename, "address: http://localhost:3000\nbasepath: api/\ncluster: [http://localhost:3001, http://localhost:3000/api, http://localhost:3002]").unwrap();
+        let config = config::new(test_file.filename).unwrap();
+        assert_eq!(config.cluster_node_id, 1);
+    }
+
+    #[test]
+    fn cluster_node_not_found() {
+        let test_file = TestFile::new("cluster_node_not_found.yaml");
+        std::fs::write(test_file.filename, "address: http://localhost:3000\nbasepath: api/\ncluster: [http://localhost:3001, http://localhost:3002]").unwrap();
+        let err = config::new(test_file.filename).unwrap_err();
+        assert_eq!(
+            err,
+            "Cluster does not contain local node: http://localhost:3000/api ([\"http://localhost:3001\", \"http://localhost:3002\"])"
+        );
     }
 }

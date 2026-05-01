@@ -24,7 +24,7 @@ use tracing_subscriber::reload::Handle;
 use utoipa::IntoParams;
 use utoipa::ToSchema;
 
-#[derive(Deserialize, IntoParams, ToSchema, agdb::TypeDefImpl)]
+#[derive(Deserialize, IntoParams, ToSchema, agdb::TypeDef)]
 #[into_params(parameter_in = Query)]
 pub struct SetLogLevelRequest {
     pub new_level: LogLevelFilter,

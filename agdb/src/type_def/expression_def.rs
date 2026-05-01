@@ -1,7 +1,7 @@
 use crate::type_def::Function;
 use crate::type_def::Type;
 
-#[derive(Debug, agdb::TypeDefImpl)]
+#[derive(Debug, agdb::TypeDef)]
 pub enum Expression {
     Array(&'static [Expression]),
     Assign {
@@ -93,7 +93,7 @@ pub enum Expression {
     Wild,
 }
 
-#[derive(Debug, agdb::TypeDefImpl)]
+#[derive(Debug, agdb::TypeDef)]
 pub enum LiteralValue {
     Bool(bool),
     F32(f32),
@@ -112,7 +112,7 @@ pub enum LiteralValue {
     Usize(usize),
 }
 
-#[derive(Debug, agdb::TypeDefImpl)]
+#[derive(Debug, agdb::TypeDef)]
 pub enum Op {
     Add,
     AddAssign,

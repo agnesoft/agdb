@@ -2,7 +2,7 @@ use crate::type_def::Function;
 use crate::type_def::Generic;
 use crate::type_def::Type;
 
-#[derive(Debug, agdb::TypeDefImpl)]
+#[derive(Debug, agdb::TypeDef)]
 pub struct Trait {
     pub name: &'static str,
     pub generics: &'static [Generic],

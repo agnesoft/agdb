@@ -142,11 +142,6 @@ pub fn type_def(item: TokenStream) -> TokenStream {
     type_def_parser::type_def_impl(item)
 }
 
-#[proc_macro_derive(TypeDefImpl, attributes(type_def))]
-pub fn type_def_impl(item: TokenStream) -> TokenStream {
-    type_def_parser::type_def_impl(item)
-}
-
 #[proc_macro_attribute]
 pub fn impl_def(attr: TokenStream, item: TokenStream) -> TokenStream {
     type_def_parser::impl_def_impl(attr, item)

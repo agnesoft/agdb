@@ -2,7 +2,7 @@ use crate::AgdbApiError;
 use std::env::VarError;
 
 #[derive(Debug)]
-#[cfg_attr(feature = "api", derive(agdb::TypeDefImpl))]
+#[cfg_attr(feature = "api", derive(agdb::TypeDef))]
 pub struct TestError {
     description: String,
 }

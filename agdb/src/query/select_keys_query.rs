@@ -17,7 +17,7 @@ use crate::query_builder::search::SearchQueryBuilder;
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 #[cfg_attr(feature = "derive", derive(agdb::DbSerialize))]
-#[cfg_attr(feature = "api", derive(agdb::TypeDefImpl))]
+#[cfg_attr(feature = "api", derive(agdb::TypeDef))]
 #[derive(Clone, Debug, PartialEq)]
 pub struct SelectKeysQuery(pub QueryIds);
 

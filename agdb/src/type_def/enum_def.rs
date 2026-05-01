@@ -1,4 +1,3 @@
-use crate::type_def::Function;
 use crate::type_def::Generic;
 use crate::type_def::Variable;
 
@@ -7,7 +6,6 @@ pub struct Enum {
     pub name: &'static str,
     pub generics: &'static [Generic],
     pub variants: &'static [Variable],
-    pub functions: &'static [Function],
 }
 
 #[cfg(test)]

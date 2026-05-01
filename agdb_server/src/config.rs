@@ -2,6 +2,7 @@ use agdb_api::LogLevelFilter;
 use std::sync::Arc;
 use std::time::SystemTime;
 use std::time::UNIX_EPOCH;
+use tracing::warn;
 
 pub(crate) type Config = Arc<ConfigImpl>;
 
@@ -215,6 +216,17 @@ pub(crate) fn from_str(content: &str) -> Result<ConfigImpl, String> {
                 _ => return Err(format!("Unknown key: {key}")),
             }
         }
+    }
+
+    if let Some((protocol, address)) = config.address.split_once("://") {
+        if let Some((url, _)) = address.split_once('/') {
+            warn!(
+                "Path component in address is ignored, use 'basepath' to specify the path component of the address."
+            );
+            config.address = format!("{protocol}://{url}");
+        }
+    } else if let Some((address, _)) = config.address.split_once('/') {
+        config.address = address.to_string();
     }
 
     Ok(config)

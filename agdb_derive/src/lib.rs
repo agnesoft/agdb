@@ -137,19 +137,19 @@ pub fn user_db_value_derive(item: TokenStream) -> TokenStream {
     db_value::user_db_value_derive(item)
 }
 
-#[proc_macro_derive(TypeDef)]
+#[proc_macro_derive(TypeDef, attributes(type_def))]
 pub fn type_def(item: TokenStream) -> TokenStream {
     type_def_parser::type_def_impl(item)
 }
 
-#[proc_macro_derive(TypeDefImpl)]
+#[proc_macro_derive(TypeDefImpl, attributes(type_def))]
 pub fn type_def_impl(item: TokenStream) -> TokenStream {
-    type_def_parser::type_def_impl_impl(item)
+    type_def_parser::type_def_impl(item)
 }
 
 #[proc_macro_attribute]
-pub fn impl_def(_attr: TokenStream, item: TokenStream) -> TokenStream {
-    type_def_parser::impl_def_impl(item)
+pub fn impl_def(attr: TokenStream, item: TokenStream) -> TokenStream {
+    type_def_parser::impl_def_impl(attr, item)
 }
 
 #[proc_macro_attribute]

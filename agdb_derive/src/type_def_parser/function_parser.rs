@@ -114,10 +114,11 @@ fn parse_args(args: &Punctuated<FnArg, Comma>, generics: &[Generic]) -> Vec<Toke
             FnArg::Receiver(rec) => {
                 if let Some(_token) = rec.colon_token {
                     let ty = &rec.ty;
+                    let ty_def = generics_parser::parse_type(ty, generics);
                     quote! {
                         ::agdb::type_def::Variable {
                             name: "self",
-                            ty: Some(<#ty as ::agdb::type_def::TypeDefinition>::type_def),
+                            ty: Some(#ty_def),
                         }
                     }
                 } else {

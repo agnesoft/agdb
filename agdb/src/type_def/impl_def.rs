@@ -13,9 +13,9 @@ pub struct Impl {
 
 #[cfg(test)]
 mod tests {
-    use crate::type_def::ImplDefinition;
     use crate::type_def::Literal;
     use crate::type_def::Type;
+    use crate::type_def::TypeDefinition;
 
     #[derive(agdb::TypeDefImpl)]
     #[allow(dead_code)]
@@ -26,10 +26,7 @@ mod tests {
         #[derive(agdb::TypeDefImpl)]
         struct S;
 
-        let def = S::impl_def();
-
-        assert_eq!(def.name, "S");
-        assert!(def.trait_.is_none());
+        assert!(S::impl_defs().is_empty());
     }
 
     #[test]
@@ -41,96 +38,18 @@ mod tests {
         #[derive(agdb::TypeDefImpl)]
         struct S;
 
-        let def = S::impl_def();
-
-        assert_eq!(def.name, "S");
-        // Note: Trait binding detection requires impl block with #[agdb::impl_def] macro
-        // which conflicts with TypeDefImpl derive in tests
-    }
-
-    #[test]
-    fn impl_with_function_self_ref() {
-        #[derive(agdb::TypeDefImpl)]
-        struct S;
-
-        let def = S::impl_def();
-
-        assert_eq!(def.name, "S");
-        // Note: Function details require impl block with #[agdb::impl_def] macro
-        // which conflicts with TypeDefImpl derive in tests
-    }
-
-    #[test]
-    fn impl_with_function_self_mut_ref() {
-        #[derive(agdb::TypeDefImpl)]
-        struct S;
-
-        let def = S::impl_def();
-
-        assert_eq!(def.name, "S");
-    }
-
-    #[test]
-    fn impl_with_function_self() {
-        #[derive(agdb::TypeDefImpl)]
-        struct S;
-
-        let def = S::impl_def();
-
-        assert_eq!(def.name, "S");
-    }
-
-    #[test]
-    fn impl_with_function_self_mut() {
-        #[derive(agdb::TypeDefImpl)]
-        #[allow(dead_code)]
-        struct S {
-            i: i32,
-        }
-
-        let def = S::impl_def();
-
-        assert_eq!(def.name, "S");
-    }
-
-    #[test]
-    fn impl_with_function_self_box() {
-        #[derive(agdb::TypeDefImpl)]
-        #[allow(dead_code)]
-        struct S {
-            i: i32,
-        }
-
-        let def = S::impl_def();
-
-        assert_eq!(def.name, "S");
-    }
-
-    #[test]
-    fn impl_with_lifetime() {
-        #[derive(agdb::TypeDefImpl)]
-        #[allow(dead_code)]
-        struct S<'a> {
-            a: &'a str,
-        }
-
-        let def = S::impl_def();
-
-        assert_eq!(def.name, "S");
-        // Note: impl_def() captures impl block generics, not struct generics
-        // Struct generics are captured through type_def() method
+        assert!(S::impl_defs().is_empty());
     }
 
     #[test]
     fn impl_with_const_generic() {
-        let def = ConstImplS::<1>::impl_def();
-
-        assert_eq!(def.name, "ConstImplS");
+        assert!(ConstImplS::<1>::impl_defs().is_empty());
     }
 
     #[test]
     fn impl_function_with_nested_generic_containers() {
         #[derive(agdb::TypeDef)]
+        #[type_def(inherent)]
         struct S;
 
         #[agdb::impl_def]
@@ -145,7 +64,9 @@ mod tests {
             }
         }
 
-        let def = S::impl_def();
+        let defs = S::impl_defs();
+        assert_eq!(defs.len(), 1);
+        let def = &defs[0];
         assert_eq!(def.functions.len(), 1);
 
         let f = &def.functions[0];
@@ -205,5 +126,61 @@ mod tests {
             panic!("Expected generic T in Vec<T>");
         };
         assert_eq!(ret_err_t.name, "T");
+    }
+
+    #[test]
+    fn multiple_impl_blocks_with_drop() {
+        #[derive(agdb::TypeDef)]
+        #[type_def(inherent, Drop)]
+        struct S;
+
+        #[agdb::impl_def]
+        #[allow(dead_code)]
+        impl S {
+            fn method(&self) -> i32 {
+                42
+            }
+        }
+
+        #[agdb::impl_def]
+        impl Drop for S {
+            fn drop(&mut self) {}
+        }
+
+        let defs = S::impl_defs();
+        assert_eq!(defs.len(), 2);
+
+        // Inherent impl: no trait
+        assert!(defs[0].trait_.is_none());
+        assert_eq!(defs[0].functions.len(), 1);
+        assert_eq!(defs[0].functions[0].name, "method");
+
+        // Drop impl: trait is Drop
+        let trait_type = defs[1].trait_.expect("expected trait on Drop impl")();
+        assert!(
+            matches!(&trait_type, crate::type_def::Type::Trait(t) if t.name == "Drop"),
+            "Got: {:?}",
+            trait_type
+        );
+        assert_eq!(defs[1].functions.len(), 1);
+        assert_eq!(defs[1].functions[0].name, "drop");
+    }
+
+    #[test]
+    fn inherent_only() {
+        #[derive(agdb::TypeDef)]
+        #[type_def(inherent)]
+        struct S;
+
+        #[agdb::impl_def]
+        #[allow(dead_code)]
+        impl S {
+            fn helper(&self) {}
+        }
+
+        let defs = S::impl_defs();
+        assert_eq!(defs.len(), 1);
+        assert!(defs[0].trait_.is_none());
+        assert_eq!(defs[0].functions[0].name, "helper");
     }
 }

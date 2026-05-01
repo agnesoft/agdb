@@ -2,7 +2,6 @@
 
 use agdb::type_def::Expression;
 use agdb::type_def::GenericKind;
-use agdb::type_def::ImplDefinition;
 use agdb::type_def::Literal;
 use agdb::type_def::LiteralValue;
 use agdb::type_def::Op;
@@ -690,12 +689,14 @@ fn function_with_const_generic() {
 #[test]
 fn empty_impl() {
     #[derive(agdb::TypeDef)]
+    #[type_def(inherent)]
     struct S;
 
     #[agdb::impl_def]
     impl S {}
 
-    let def = S::impl_def();
+    let defs = S::impl_defs();
+    let def = &defs[0];
 
     assert_eq!(def.name, "S");
     assert!(def.trait_.is_none());
@@ -708,12 +709,14 @@ fn impl_for_trait() {
     trait MyTrait {}
 
     #[derive(agdb::TypeDef)]
+    #[type_def(MyTrait)]
     struct S;
 
     #[agdb::impl_def]
     impl MyTrait for S {}
 
-    let def = S::impl_def();
+    let defs = S::impl_defs();
+    let def = &defs[0];
     let Some(tr) = def.trait_ else {
         panic!("Expected a trait bound");
     };
@@ -726,6 +729,7 @@ fn impl_for_trait() {
 #[test]
 fn impl_with_function_self_ref() {
     #[derive(agdb::TypeDef)]
+    #[type_def(inherent)]
     struct S;
 
     #[agdb::impl_def]
@@ -736,7 +740,8 @@ fn impl_with_function_self_ref() {
         }
     }
 
-    let def = S::impl_def();
+    let defs = S::impl_defs();
+    let def = &defs[0];
     assert_eq!(def.functions[0].name, "foo");
     assert!(matches!(
         named_type(&def.functions[0].args[0]),
@@ -747,6 +752,7 @@ fn impl_with_function_self_ref() {
 #[test]
 fn impl_with_function_self_mut_ref() {
     #[derive(agdb::TypeDef)]
+    #[type_def(inherent)]
     struct S;
 
     #[agdb::impl_def]
@@ -757,7 +763,8 @@ fn impl_with_function_self_mut_ref() {
         }
     }
 
-    let def = S::impl_def();
+    let defs = S::impl_defs();
+    let def = &defs[0];
     let Type::Reference(reference) = named_type(&def.functions[0].args[0]) else {
         panic!("Expected reference type definition");
     };
@@ -767,6 +774,7 @@ fn impl_with_function_self_mut_ref() {
 #[test]
 fn impl_with_function_self() {
     #[derive(agdb::TypeDef)]
+    #[type_def(inherent)]
     struct S;
 
     #[agdb::impl_def]
@@ -777,7 +785,8 @@ fn impl_with_function_self() {
         }
     }
 
-    let def = S::impl_def();
+    let defs = S::impl_defs();
+    let def = &defs[0];
     assert!(matches!(
         named_type(&def.functions[0].args[0]),
         Type::SelfType(false)
@@ -787,6 +796,7 @@ fn impl_with_function_self() {
 #[test]
 fn impl_with_function_self_mut() {
     #[derive(agdb::TypeDef)]
+    #[type_def(inherent)]
     struct S {
         i: i32,
     }
@@ -800,7 +810,8 @@ fn impl_with_function_self_mut() {
         }
     }
 
-    let def = S::impl_def();
+    let defs = S::impl_defs();
+    let def = &defs[0];
     assert!(matches!(
         named_type(&def.functions[0].args[0]),
         Type::SelfType(true)
@@ -810,6 +821,7 @@ fn impl_with_function_self_mut() {
 #[test]
 fn impl_with_function_self_box() {
     #[derive(agdb::TypeDef)]
+    #[type_def(inherent)]
     #[expect(dead_code)]
     struct S {
         i: i32,
@@ -823,7 +835,8 @@ fn impl_with_function_self_box() {
         }
     }
 
-    let def = S::impl_def();
+    let defs = S::impl_defs();
+    let def = &defs[0];
     let Type::Pointer(pointer) = named_type(&def.functions[0].args[0]) else {
         panic!("Expected pointer type definition");
     };
@@ -833,6 +846,7 @@ fn impl_with_function_self_box() {
 #[test]
 fn impl_with_lifetime() {
     #[derive(agdb::TypeDef)]
+    #[type_def(inherent)]
     struct S<'a> {
         a: &'a str,
     }
@@ -845,7 +859,8 @@ fn impl_with_lifetime() {
         }
     }
 
-    let def = S::impl_def();
+    let defs = S::impl_defs();
+    let def = &defs[0];
     assert!(matches!(def.generics[0].kind, GenericKind::Lifetime));
     let Type::Reference(reference) = named_type(&def.functions[0].args[0]) else {
         panic!("Expected reference type definition");
@@ -857,12 +872,14 @@ fn impl_with_lifetime() {
 #[test]
 fn impl_with_const_generic() {
     #[derive(agdb::TypeDef)]
+    #[type_def(inherent)]
     struct ConstImplS<const N: usize>;
 
     #[agdb::impl_def]
     impl<const N: usize> ConstImplS<N> {}
 
-    let def = ConstImplS::<1>::impl_def();
+    let defs = ConstImplS::<1>::impl_defs();
+    let def = &defs[0];
     assert!(matches!(def.generics[0].kind, GenericKind::Const));
     assert_eq!(def.generics[0].name, "N");
 }

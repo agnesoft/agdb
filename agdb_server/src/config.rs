@@ -219,10 +219,12 @@ pub(crate) fn from_str(content: &str) -> Result<ConfigImpl, String> {
     }
 
     if let Some((protocol, address)) = config.address.split_once("://") {
-        if let Some((url, _)) = address.split_once('/') {
-            warn!(
-                "Path component in address is ignored, use 'basepath' to specify the path component of the address."
-            );
+        if let Some((url, path)) = address.split_once('/') {
+            if !path.is_empty() {
+                warn!(
+                    "Path component in address is ignored, use 'basepath' to specify the path component of the address."
+                );
+            }
             config.address = format!("{protocol}://{url}");
         }
     } else if let Some((address, _)) = config.address.split_once('/') {

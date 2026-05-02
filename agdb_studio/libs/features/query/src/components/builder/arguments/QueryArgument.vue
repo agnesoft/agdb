@@ -2,8 +2,10 @@
 import { computed, inject, onMounted, type Ref } from "vue";
 import {
   OPTION_TYPE_MAP,
+  VALUE_TYPES,
   type QueryArguments,
 } from "../../../mock/queryApiMock";
+import QueryArgumentDropdown from "./QueryArgumentDropdown.vue";
 import type {
   QueryStep,
   QueryStepArgEntry,
@@ -20,6 +22,24 @@ const props = defineProps<{
 const queryId = inject<Ref<string>>("queryId");
 const tab = inject<Ref<TAB>>("activeTab");
 const queryStore = useQueryStore();
+
+const VALUE_TYPE_SHORTCUTS: Record<string, string> = {
+  string: "s",
+  unsigned: "u",
+  signed: "i",
+  boolean: "b",
+  float: "f",
+  "string[]": "s[]",
+  "unsigned[]": "u[]",
+  "signed[]": "i[]",
+  "boolean[]": "b[]",
+  "float[]": "f[]",
+};
+
+const valueTypeSet = new Set<string>(VALUE_TYPES);
+
+const isValueTypeField = (field: QueryArguments["fields"][number]) =>
+  field.options.every((option) => valueTypeSet.has(option));
 
 const makeEmptyEntry = (): QueryStepArgEntry =>
   props.arguments.fields.map((field) => ({
@@ -73,27 +93,25 @@ const removeEntry = (index: number) =>
         :key="fieldIndex"
         class="arg-field"
       >
-        <select
-          class="arg-select"
-          :value="entry[fieldIndex]?.selectedOption"
-          @change="
+        <QueryArgumentDropdown
+          :options="field.options"
+          :model-value="entry[fieldIndex]?.selectedOption"
+          :is-value-type-field="isValueTypeField(field)"
+          :shortcuts="VALUE_TYPE_SHORTCUTS"
+          @update:model-value="
             updateField(entryIndex, fieldIndex, {
-              selectedOption: ($event.target as HTMLSelectElement).value,
+              selectedOption: $event,
               value: undefined,
             })
           "
-        >
-          <option v-for="opt in field.options" :key="opt" :value="opt">
-            {{ opt }}
-          </option>
-        </select>
+        />
         <input
           v-if="
             OPTION_TYPE_MAP[entry[fieldIndex]?.selectedOption ?? ''] != null
           "
           class="arg-input"
           :value="entry[fieldIndex]?.value ?? ''"
-          :placeholder="entry[fieldIndex]?.selectedOption ?? 'value'"
+          placeholder="value"
           @input="
             updateField(entryIndex, fieldIndex, {
               value: ($event.target as HTMLInputElement).value,
@@ -143,7 +161,6 @@ const removeEntry = (index: number) =>
   gap: 0.25rem;
 }
 
-.arg-select,
 .arg-input {
   font-size: 0.75rem;
   padding: 0.15rem 0.3rem;

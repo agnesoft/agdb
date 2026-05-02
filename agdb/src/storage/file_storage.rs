@@ -1451,4 +1451,29 @@ mod tests {
         assert_eq!(vec, value1);
         assert_eq!(storage.version(), 1);
     }
+
+    #[test]
+    fn file_storage_with_non_empty_hole_is_readable() {
+        let test_file = TestFile::new();
+
+        let index1;
+        let index2;
+        let index3;
+
+        {
+            let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+            index1 = storage
+                .insert(&vec![1_i64, 2_i64, 3_i64, 4_i64, 5_i64])
+                .unwrap();
+            index2 = storage.insert(&42_i64).unwrap();
+            index3 = storage.insert(&43_i64).unwrap();
+            storage.resize_value(index1, 16).unwrap();
+        }
+
+        let storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+
+        assert_eq!(storage.value_size(index1).unwrap(), 16);
+        assert_eq!(storage.value::<i64>(index2), Ok(42_i64));
+        assert_eq!(storage.value::<i64>(index3), Ok(43_i64));
+    }
 }

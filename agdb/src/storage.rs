@@ -545,10 +545,29 @@ impl<D: StorageData> Storage<D> {
             self.set_size(record.index, new_size);
             self.truncate(record.end())
         } else {
+            let empty_size = record.size - new_size;
             record.size = new_size;
             self.set_size(record.index, new_size);
-            self.move_to_end(record, new_size)
+
+            if empty_size >= Self::record_serialized_size() {
+                self.data.write(
+                    record.pos + record.index.serialized_size(),
+                    &new_size.serialize(),
+                )?;
+                let empty_pos = record.value_start() + new_size;
+                let empty_data_size = empty_size - Self::record_serialized_size();
+                self.write_empty(empty_pos, empty_data_size)
+            } else {
+                self.move_to_end(record, new_size)
+            }
         }
+    }
+
+    fn write_empty(&mut self, pos: u64, data_size: u64) -> Result<(), DbError> {
+        let mut bytes = Vec::with_capacity(Self::record_serialized_size() as usize);
+        bytes.extend(0_u64.serialize());
+        bytes.extend(data_size.serialize());
+        self.data.write(pos, &bytes)
     }
 
     fn truncate(&mut self, size: u64) -> Result<(), DbError> {

@@ -69,7 +69,7 @@ const removeEntry = (index: number) =>
       class="arg-entry"
     >
       <div
-        v-for="(field, fieldIndex) in arguments.fields"
+        v-for="(field, fieldIndex) in props.arguments.fields"
         :key="fieldIndex"
         class="arg-field"
       >
@@ -102,7 +102,7 @@ const removeEntry = (index: number) =>
         />
       </div>
       <button
-        v-if="arguments.repeatable && entries.length > 1"
+        v-if="props.arguments.repeatable && entries.length > 1"
         type="button"
         class="button button-danger arg-remove-entry"
         title="Remove entry"
@@ -112,7 +112,7 @@ const removeEntry = (index: number) =>
       </button>
     </div>
     <button
-      v-if="arguments.repeatable"
+      v-if="props.arguments.repeatable"
       type="button"
       class="button button-secondary arg-add-entry"
       title="Add entry"

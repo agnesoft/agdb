@@ -1,10 +1,12 @@
 <script lang="ts" setup>
-import { computed, inject, type Ref } from "vue";
+import { computed, inject, ref, type Ref } from "vue";
+import { vOnClickOutside } from "@vueuse/components";
 import { ClCloseMd } from "@kalimahapps/vue-icons";
 import type { QueryStep, TAB } from "../../composables/types";
 import { useQueryStore } from "../../composables/queryStore";
 import { queryApiMock } from "../../mock/queryApiMock";
 import QueryArgument from "./arguments/QueryArgument.vue";
+import QueryArgumentDisplay from "./arguments/QueryArgumentDisplay.vue";
 
 const queryStore = useQueryStore();
 
@@ -16,6 +18,8 @@ const tab = inject<Ref<TAB>>("activeTab");
 
 const stepDef = computed(() => queryApiMock[props.step.type]);
 const stepArguments = computed(() => stepDef.value?.arguments ?? null);
+// Start in edit mode automatically when the step has no args yet (newly added).
+const isEditingArgs = ref(!props.step.args?.length);
 
 const removeStep = () => {
   if (!queryId?.value || !tab?.value) return;
@@ -35,13 +39,23 @@ const removeStep = () => {
         <ClCloseMd class="remove-query-icon" />
       </button>
     </div>
-    <div class="label" :class="{ invalid: step.invalid }">
+    <div
+      class="label"
+      :class="{ invalid: step.invalid }"
+      v-on-click-outside="() => (isEditingArgs = false)"
+    >
       <span>{{ step.type }}</span>
-      <QueryArgument
-        v-if="stepArguments"
-        :arguments="stepArguments"
-        :step="step"
-      />
+      <template v-if="stepArguments">
+        <QueryArgumentDisplay
+          :arguments="stepArguments"
+          :step="step"
+          class="arg-display-trigger"
+          @click="isEditingArgs = true"
+        />
+        <div v-if="isEditingArgs" class="arg-editor-popup">
+          <QueryArgument :arguments="stepArguments" :step="step" />
+        </div>
+      </template>
     </div>
   </div>
 </template>
@@ -57,6 +71,7 @@ const removeStep = () => {
   }
 }
 .label {
+  position: relative;
   display: inline-flex;
   align-items: center;
   gap: 0.25rem;
@@ -87,5 +102,25 @@ const removeStep = () => {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.arg-display-trigger {
+  cursor: pointer;
+
+  &:hover {
+    color: var(--color-text);
+  }
+}
+
+.arg-editor-popup {
+  position: absolute;
+  top: calc(100% + 0.25rem);
+  left: 0;
+  z-index: var(--z-index-dropdown);
+  padding: 0.2rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.25rem;
+  background-color: var(--color-background);
+  box-shadow: 0 0.25rem 0.75rem rgb(0 0 0 / 16%);
 }
 </style>

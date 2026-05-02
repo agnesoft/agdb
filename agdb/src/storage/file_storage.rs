@@ -1453,7 +1453,7 @@ mod tests {
     }
 
     #[test]
-    fn file_storage_with_empty_hole_is_readable() {
+    fn file_storage_with_non_empty_hole_is_readable() {
         let test_file = TestFile::new();
 
         let index1;

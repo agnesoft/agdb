@@ -624,7 +624,7 @@ mod tests {
         let mut storage = Storage::<MemoryStorage>::new("storage").unwrap();
 
         let index1 = storage.insert(&vec![1_i64, 2_i64]).unwrap(); // size=24
-        let _index2 = storage.insert(&99_i64).unwrap();
+        let index2 = storage.insert(&99_i64).unwrap();
 
         let size_before = storage.len();
 
@@ -632,7 +632,7 @@ mod tests {
 
         assert!(storage.len() > size_before);
         assert_eq!(storage.value_size(index1).unwrap(), 16);
-        assert_eq!(storage.value::<i64>(_index2), Ok(99_i64));
+        assert_eq!(storage.value::<i64>(index2), Ok(99_i64));
     }
 
     #[test]

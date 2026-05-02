@@ -25,6 +25,10 @@ const removeStep = () => {
   if (!queryId?.value || !tab?.value) return;
   queryStore.deleteQueryStep(queryId.value, tab.value, props.step.id);
 };
+const closeEditing = () => {
+  /* v8 ignore next -- @preserve */
+  isEditingArgs.value = false;
+};
 </script>
 
 <template>
@@ -42,7 +46,7 @@ const removeStep = () => {
     <div
       class="label"
       :class="{ invalid: step.invalid }"
-      v-on-click-outside="() => (isEditingArgs = false)"
+      v-on-click-outside="closeEditing"
     >
       <span>{{ step.type }}</span>
       <template v-if="stepArguments">

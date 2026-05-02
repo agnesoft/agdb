@@ -207,4 +207,23 @@ describe("queryStore", () => {
     store.validateQuerySteps(missingId, "exec");
     expect(store.getQuery(missingId)).toBeUndefined();
   });
+
+  it("validates query steps for exec_mut tab", () => {
+    const q = makeQuery();
+    const queryRef = store.addQuery(q);
+
+    const step1 = makeStep({ id: "s1", type: "insert" });
+    const step2 = makeStep({ id: "s2", type: "values" });
+    const step3 = makeStep({ id: "s3", type: "select" }); // invalid after values in exec_mut
+
+    store.addQueryStep(queryRef.value.id, "exec_mut", step1);
+    store.addQueryStep(queryRef.value.id, "exec_mut", step2);
+    store.addQueryStep(queryRef.value.id, "exec_mut", step3);
+    store.validateQuerySteps(queryRef.value.id, "exec_mut");
+
+    const got = store.getQuery(queryRef.value.id);
+    expect(got?.value?.steps.exec_mut[0]?.invalid).toBe(false); // insert valid
+    expect(got?.value?.steps.exec_mut[1]?.invalid).toBe(false); // values valid
+    expect(got?.value?.steps.exec_mut[2]?.invalid).toBe(true); // select invalid
+  });
 });

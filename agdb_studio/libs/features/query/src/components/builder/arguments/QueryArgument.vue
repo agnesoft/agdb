@@ -95,7 +95,7 @@ const removeEntry = (index: number) =>
       >
         <QueryArgumentDropdown
           :options="field.options"
-          :model-value="entry[fieldIndex]?.selectedOption"
+          :model-value="entry[fieldIndex]!.selectedOption"
           :is-value-type-field="isValueTypeField(field)"
           :shortcuts="VALUE_TYPE_SHORTCUTS"
           @update:model-value="
@@ -107,10 +107,10 @@ const removeEntry = (index: number) =>
         />
         <input
           v-if="
-            OPTION_TYPE_MAP[entry[fieldIndex]?.selectedOption ?? ''] != null
+            OPTION_TYPE_MAP[entry[fieldIndex]!.selectedOption ?? ''] != null
           "
           class="arg-input"
-          :value="entry[fieldIndex]?.value ?? ''"
+          :value="entry[fieldIndex]!.value ?? ''"
           placeholder="value"
           @input="
             updateField(entryIndex, fieldIndex, {

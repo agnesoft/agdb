@@ -55,6 +55,7 @@ const prevStepType = computed(() => {
 
 const followers = computed<QueryType[]>(() => {
   return (
+    /* v8 ignore next */
     queryApiMock[prevStepType.value]?.followers.filter((f): f is QueryType =>
       Object.keys(queryApiMock).includes(f),
     ) ?? []

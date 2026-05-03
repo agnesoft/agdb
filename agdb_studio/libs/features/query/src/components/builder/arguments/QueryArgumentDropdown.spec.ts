@@ -25,7 +25,6 @@ describe("QueryArgumentDropdown", () => {
         props: {
           options: VALUE_TYPE_OPTIONS,
           modelValue: "string",
-          isValueTypeField: true,
           shortcuts: VALUE_TYPE_SHORTCUTS,
         },
       });
@@ -37,7 +36,6 @@ describe("QueryArgumentDropdown", () => {
         props: {
           options: VALUE_TYPE_OPTIONS,
           modelValue: "",
-          isValueTypeField: true,
           shortcuts: VALUE_TYPE_SHORTCUTS,
         },
       });
@@ -49,7 +47,6 @@ describe("QueryArgumentDropdown", () => {
         props: {
           options: ["custom"],
           modelValue: "custom",
-          isValueTypeField: true,
           shortcuts: {},
         },
       });
@@ -61,7 +58,6 @@ describe("QueryArgumentDropdown", () => {
         props: {
           options: VALUE_TYPE_OPTIONS,
           modelValue: "string[]",
-          isValueTypeField: true,
           shortcuts: VALUE_TYPE_SHORTCUTS,
         },
       });
@@ -73,7 +69,6 @@ describe("QueryArgumentDropdown", () => {
         props: {
           options: NON_VALUE_OPTIONS,
           modelValue: "asc",
-          isValueTypeField: false,
         },
       });
       expect(wrapper.find(".arg-select-label").text()).toBe("asc");
@@ -84,7 +79,6 @@ describe("QueryArgumentDropdown", () => {
         props: {
           options: NON_VALUE_OPTIONS,
           modelValue: "asc",
-          isValueTypeField: false,
         },
       });
       expect(wrapper.find(".arg-options").exists()).toBe(false);
@@ -97,7 +91,6 @@ describe("QueryArgumentDropdown", () => {
         props: {
           options: NON_VALUE_OPTIONS,
           modelValue: "asc",
-          isValueTypeField: false,
         },
       });
       await wrapper.find(".arg-select-trigger").trigger("click");
@@ -109,7 +102,6 @@ describe("QueryArgumentDropdown", () => {
         props: {
           options: NON_VALUE_OPTIONS,
           modelValue: "asc",
-          isValueTypeField: false,
         },
       });
       await wrapper.find(".arg-select-trigger").trigger("click");
@@ -122,7 +114,6 @@ describe("QueryArgumentDropdown", () => {
         props: {
           options: VALUE_TYPE_OPTIONS,
           modelValue: "string",
-          isValueTypeField: true,
           shortcuts: VALUE_TYPE_SHORTCUTS,
         },
       });
@@ -137,7 +128,6 @@ describe("QueryArgumentDropdown", () => {
         props: {
           options: NON_VALUE_OPTIONS,
           modelValue: "asc",
-          isValueTypeField: false,
         },
       });
       await wrapper.find(".arg-select-trigger").trigger("click");
@@ -151,7 +141,6 @@ describe("QueryArgumentDropdown", () => {
         props: {
           options: NON_VALUE_OPTIONS,
           modelValue: "desc",
-          isValueTypeField: false,
         },
       });
       await wrapper.find(".arg-select-trigger").trigger("click");
@@ -165,7 +154,6 @@ describe("QueryArgumentDropdown", () => {
         props: {
           options: NON_VALUE_OPTIONS,
           modelValue: "asc",
-          isValueTypeField: false,
         },
       });
       await wrapper.find(".arg-select-trigger").trigger("click");
@@ -179,7 +167,6 @@ describe("QueryArgumentDropdown", () => {
         props: {
           options: NON_VALUE_OPTIONS,
           modelValue: "asc",
-          isValueTypeField: false,
         },
       });
       await wrapper.find(".arg-select-trigger").trigger("click");
@@ -193,12 +180,12 @@ describe("QueryArgumentDropdown", () => {
         props: {
           options: ["custom"],
           modelValue: "custom",
-          isValueTypeField: true,
           shortcuts: {},
         },
       });
       await wrapper.find(".arg-select-trigger").trigger("click");
-      const opt = wrapper.find(".arg-option-shortcut");
+      const opt = wrapper.find(".arg-option-full");
+      expect(wrapper.find(".arg-option-shortcut").exists()).toBe(false);
       expect(opt.text()).toBe("custom");
     });
 
@@ -207,7 +194,6 @@ describe("QueryArgumentDropdown", () => {
         props: {
           options: NON_VALUE_OPTIONS,
           modelValue: "asc",
-          isValueTypeField: false,
         },
       });
       await wrapper.find(".arg-select-trigger").trigger("click");

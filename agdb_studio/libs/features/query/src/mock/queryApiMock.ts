@@ -83,6 +83,34 @@ export const OPTION_TYPE_MAP: Record<string, OptionValueType> = {
   endsWith: null,
 };
 
+/** Maps option names to compact labels used in query argument dropdowns. */
+export const OPTION_SHORTCUT_MAP: Record<string, string> = {
+  // VALUE_TYPES / IDS / NUMBER
+  string: "s",
+  unsigned: "u",
+  signed: "i",
+  boolean: "b",
+  float: "f",
+  "string[]": "s[]",
+  "unsigned[]": "u[]",
+  "signed[]": "i[]",
+  "boolean[]": "b[]",
+  "float[]": "f[]",
+  // ORDER_DIRECTIONS
+  asc: "↑",
+  desc: "↓",
+  // COUNT_COMPARISONS / COMPARISON
+  equal: "=",
+  greaterThan: ">",
+  greaterThanOrEqual: "≥",
+  lessThan: "<",
+  lessThanOrEqual: "≤",
+  notEqual: "≠",
+  contains: "∋",
+  startsWith: "⊢",
+  endsWith: "⊣",
+};
+
 export type ArgumentField = {
   /** The set of options the user can choose from (type selector). */
   options: readonly string[];

@@ -1,8 +1,8 @@
 <script lang="ts" setup>
 import { computed, inject, onMounted, type Ref } from "vue";
 import {
+  OPTION_SHORTCUT_MAP,
   OPTION_TYPE_MAP,
-  VALUE_TYPES,
   type QueryArguments,
 } from "../../../mock/queryApiMock";
 import QueryArgumentDropdown from "./QueryArgumentDropdown.vue";
@@ -22,24 +22,6 @@ const props = defineProps<{
 const queryId = inject<Ref<string>>("queryId");
 const tab = inject<Ref<TAB>>("activeTab");
 const queryStore = useQueryStore();
-
-const VALUE_TYPE_SHORTCUTS: Record<string, string> = {
-  string: "s",
-  unsigned: "u",
-  signed: "i",
-  boolean: "b",
-  float: "f",
-  "string[]": "s[]",
-  "unsigned[]": "u[]",
-  "signed[]": "i[]",
-  "boolean[]": "b[]",
-  "float[]": "f[]",
-};
-
-const valueTypeSet = new Set<string>(VALUE_TYPES);
-
-const isValueTypeField = (field: QueryArguments["fields"][number]) =>
-  field.options.every((option) => valueTypeSet.has(option));
 
 const makeEmptyEntry = (): QueryStepArgEntry =>
   props.arguments.fields.map((field) => ({
@@ -96,8 +78,7 @@ const removeEntry = (index: number) =>
         <QueryArgumentDropdown
           :options="field.options"
           :model-value="entry[fieldIndex]!.selectedOption"
-          :is-value-type-field="isValueTypeField(field)"
-          :shortcuts="VALUE_TYPE_SHORTCUTS"
+          :shortcuts="OPTION_SHORTCUT_MAP"
           @update:model-value="
             updateField(entryIndex, fieldIndex, {
               selectedOption: $event,

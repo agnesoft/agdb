@@ -1,11 +1,11 @@
 <script lang="ts" setup>
 import { computed, ref } from "vue";
+import { vOnClickOutside } from "@vueuse/components";
 
 const props = withDefaults(
   defineProps<{
     options: readonly string[];
     modelValue?: string;
-    isValueTypeField: boolean;
     shortcuts?: Record<string, string>;
   }>(),
   {
@@ -20,9 +20,12 @@ const emit = defineEmits<{
 
 const isOpen = ref(false);
 
+const hasShortcuts = computed(() =>
+  props.options.some((option) => props.shortcuts[option] != null),
+);
+
 const closedLabel = computed(() => {
   if (!props.modelValue) return "";
-  if (!props.isValueTypeField) return props.modelValue;
   return props.shortcuts[props.modelValue] ?? props.modelValue;
 });
 
@@ -60,9 +63,11 @@ const selectOption = (option: string) => {
         type="button"
         class="arg-option"
         :class="{ 'arg-option-selected': opt === modelValue }"
+        role="option"
+        :aria-selected="opt === modelValue"
         @click="selectOption(opt)"
       >
-        <template v-if="isValueTypeField">
+        <template v-if="hasShortcuts">
           <span class="arg-option-shortcut">{{ shortcuts[opt] ?? opt }}</span>
           <span class="arg-option-full">{{ opt }}</span>
         </template>

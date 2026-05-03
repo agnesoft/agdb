@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import { computed } from "vue";
 import {
+  OPTION_SHORTCUT_MAP,
   OPTION_TYPE_MAP,
   type QueryArguments,
 } from "../../../mock/queryApiMock";
@@ -19,8 +20,14 @@ const display = computed(() => {
     .map((entry) => {
       const parts = entry
         .flatMap((fv) => {
+          const optionLabel =
+            OPTION_SHORTCUT_MAP[fv.selectedOption] ?? fv.selectedOption;
           const hasValue = OPTION_TYPE_MAP[fv.selectedOption] != null;
-          return hasValue && fv.value ? [fv.value] : [];
+          const hasLiteralValue =
+            fv.value !== undefined && fv.value !== null && fv.value !== "";
+          return hasValue && hasLiteralValue
+            ? [optionLabel, fv.value]
+            : [optionLabel];
         })
         .join(", ");
       return `(${parts})`;

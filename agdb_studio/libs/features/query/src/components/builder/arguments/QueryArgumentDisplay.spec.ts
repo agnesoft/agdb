@@ -53,7 +53,7 @@ describe("QueryArgumentDisplay", () => {
     expect(wrapper.find(".arg-display").classes()).not.toContain("placeholder");
   });
 
-  it("displays values in parentheses for a single entry", () => {
+  it("displays option shortcuts with values for a single entry", () => {
     const step = makeStep({
       args: [
         [
@@ -65,10 +65,10 @@ describe("QueryArgumentDisplay", () => {
     const wrapper = mount(QueryArgumentDisplay, {
       props: { arguments: VALUE_ARGS, step },
     });
-    expect(wrapper.find(".arg-display").text()).toBe("(hello, 42)");
+    expect(wrapper.find(".arg-display").text()).toBe("(s, hello, u, 42)");
   });
 
-  it("shows multiple entries comma-separated", () => {
+  it("shows multiple entries with shortcuts comma-separated", () => {
     const step = makeStep({
       args: [
         [
@@ -84,10 +84,12 @@ describe("QueryArgumentDisplay", () => {
     const wrapper = mount(QueryArgumentDisplay, {
       props: { arguments: VALUE_ARGS, step },
     });
-    expect(wrapper.find(".arg-display").text()).toBe("(a, 1), (b, 2)");
+    expect(wrapper.find(".arg-display").text()).toBe(
+      "(s, a, u, 1), (i, b, s, 2)",
+    );
   });
 
-  it("omits fields with no value entered", () => {
+  it("keeps option shortcut even when value is missing", () => {
     const step = makeStep({
       args: [
         [
@@ -99,10 +101,10 @@ describe("QueryArgumentDisplay", () => {
     const wrapper = mount(QueryArgumentDisplay, {
       props: { arguments: VALUE_ARGS, step },
     });
-    expect(wrapper.find(".arg-display").text()).toBe("(hello)");
+    expect(wrapper.find(".arg-display").text()).toBe("(s, hello, u)");
   });
 
-  it("omits options that take no value entirely", () => {
+  it("shows shortcut for options that take no value", () => {
     const step = makeStep({
       type: "orderBy",
       args: [[{ selectedOption: "asc", value: undefined }]],
@@ -110,11 +112,10 @@ describe("QueryArgumentDisplay", () => {
     const wrapper = mount(QueryArgumentDisplay, {
       props: { arguments: NO_VALUE_ARGS, step },
     });
-    // asc takes no value so nothing to display — shows placeholder
-    expect(wrapper.find(".arg-display").text()).toBe("()");
+    expect(wrapper.find(".arg-display").text()).toBe("(↑)");
   });
 
-  it("shows empty parentheses when all fields have no value type", () => {
+  it("shows symbolic shortcut for no-value direction options", () => {
     const step = makeStep({
       type: "orderBy",
       args: [[{ selectedOption: "desc", value: undefined }]],
@@ -122,6 +123,6 @@ describe("QueryArgumentDisplay", () => {
     const wrapper = mount(QueryArgumentDisplay, {
       props: { arguments: NO_VALUE_ARGS, step },
     });
-    expect(wrapper.find(".arg-display").text()).toBe("()");
+    expect(wrapper.find(".arg-display").text()).toBe("(↓)");
   });
 });

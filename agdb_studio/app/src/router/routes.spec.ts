@@ -11,6 +11,9 @@ vi.mock("@/views/admin/AdminUserView.vue", () => ({ default: vi.fn() }));
 vi.mock("@/views/admin/AdminDbView.vue", () => ({ default: vi.fn() }));
 vi.mock("@/components/layouts/MainLayout.vue", () => ({ default: vi.fn() }));
 vi.mock("@/views/QueryView.vue", () => ({ default: vi.fn() }));
+vi.mock("@agdb-studio/query/src/components/view/QueryView.vue", () => ({
+  default: vi.fn(),
+}));
 
 const validateRoutes = (routes: RouteRecordRaw[]) => {
   routes.forEach((route) => {
@@ -30,22 +33,22 @@ describe("routes", () => {
     expect(routes).toHaveLength(2);
     validateRoutes(routes);
   });
-  it("all route components are async import functions", () => {
+
+  it("loads all lazy route components", async () => {
     const routes = createRoutes();
 
-    const checkComponentIsAsyncImport = (route: RouteRecordRaw) => {
+    const loadRouteComponents = async (route: RouteRecordRaw) => {
       if (route.component) {
-        expect(typeof route.component).toBe("function");
-        // Only call if it's a function (async import)
-        const result = (route.component as () => Promise<unknown>)();
-        expect(result).toBeInstanceOf(Promise);
+        const loaded = await (route.component as () => Promise<unknown>)();
+        expect(loaded).toBeDefined();
       }
+
       if (route.children) {
-        route.children.forEach(checkComponentIsAsyncImport);
+        await Promise.all(route.children.map(loadRouteComponents));
       }
     };
 
-    routes.forEach(checkComponentIsAsyncImport);
+    await Promise.all(routes.map(loadRouteComponents));
   });
 
   it("admin routes have correct meta and children", () => {

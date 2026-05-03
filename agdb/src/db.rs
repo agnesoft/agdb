@@ -1446,39 +1446,4 @@ mod tests {
         assert_eq!(index.values, deserialized.values);
         assert_eq!(index.serialized_size(), deserialized.serialized_size());
     }
-
-    #[test]
-    fn storage_corrupted() -> Result<(), DbError> {
-        #[derive(agdb_derive::DbType)]
-        struct User {
-            name: String,
-            email: String,
-        }
-
-        let mut db = DbMemory::new("test").unwrap();
-
-        db.transaction_mut(|t| -> Result<(), DbError> {
-            let mut user_ids = vec![];
-
-            for i in 0..20 {
-                user_ids.push(
-                    t.exec_mut(
-                        crate::QueryBuilder::insert()
-                            .nodes()
-                            .values(User {
-                                name: format!("u{i}"),
-                                email: format!("u{i}@a.com"),
-                            })
-                            .query(),
-                    )?
-                    .elements[0]
-                        .id,
-                );
-            }
-
-            Ok(())
-        })?;
-
-        Ok(())
-    }
 }

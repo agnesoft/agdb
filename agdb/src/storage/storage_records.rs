@@ -60,6 +60,26 @@ impl StorageRecords {
         record
     }
 
+    pub fn clear_free(&mut self) {
+        self.free_pos_size.clear();
+        self.free_size_pos.clear();
+        self.free_size = 0;
+    }
+
+    pub fn records(&self) -> Vec<StorageRecord> {
+        let mut res = Vec::with_capacity(self.records.len());
+
+        for record in &self.records {
+            if self.is_valid(record) {
+                res.push(*record);
+            }
+        }
+
+        res.sort_by_key(|left| left.pos);
+
+        res
+    }
+
     pub fn set_pos(&mut self, index: u64, pos: u64) {
         if let Some(i) = self.records.get_mut(index as usize) {
             i.pos = pos;
@@ -141,22 +161,13 @@ impl StorageRecords {
         None
     }
 
-    pub fn take_first_free(&mut self) -> Option<(u64, u64)> {
-        if let Some((&pos, &size)) = self.free_pos_size.iter().next() {
-            self.remove_free(pos);
-            Some((pos, size))
-        } else {
-            None
-        }
-    }
-
     pub fn mark_free(&mut self, pos: u64, size: u64) {
         self.free_pos_size.insert(pos, size);
         self.free_size_pos.entry(size).or_default().insert(pos);
         self.free_size += size;
     }
 
-    pub fn mark_free_compact(&mut self, pos: u64, size: u64) {
+    pub fn mark_free_compact(&mut self, pos: u64, size: u64) -> u64 {
         let mut end_pos = pos + HEADER_SIZE + size;
         let mut size = size;
 
@@ -166,8 +177,10 @@ impl StorageRecords {
         }
 
         self.mark_free(pos, size);
+        size
     }
 
+    #[allow(dead_code)]
     pub fn free_size(&self) -> u64 {
         self.free_size
     }

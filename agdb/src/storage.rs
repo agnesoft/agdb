@@ -246,7 +246,7 @@ impl<D: StorageData> Storage<D> {
         if self.is_at_end(&record) {
             self.truncate(record.pos)?;
         } else {
-            self.invalidate_record(&record)?;
+            self.invalidate_record(record)?;
         }
 
         self.commit(id)
@@ -281,82 +281,33 @@ impl<D: StorageData> Storage<D> {
         self.commit(id)
     }
 
+    fn shrink_index(&mut self, record: &StorageRecord, current_pos: u64) -> Result<u64, DbError> {
+        if record.pos != current_pos {
+            let bytes = self.read_value(record)?.to_vec();
+            self.set_pos(record.index, current_pos);
+            self.write_record(&StorageRecord {
+                index: record.index,
+                pos: current_pos,
+                size: record.size,
+            })?;
+            self.data
+                .write(current_pos + Self::record_serialized_size(), &bytes)?;
+        }
+
+        Ok(current_pos + Self::record_serialized_size() + record.size)
+    }
+
     pub fn optimize_storage(&mut self) -> Result<(), DbError> {
         let id = self.transaction();
-        while self.records.free_size() > 0 {
-            self.compact_step()?;
+        let mut current_pos = Self::current_version_record().end();
+
+        for record in self.records.records() {
+            current_pos = self.shrink_index(&record, current_pos)?;
         }
+
+        self.truncate(current_pos)?;
+        self.records.clear_free();
         self.commit(id)
-    }
-
-    fn incremental_compact(&mut self) -> Result<(), DbError> {
-        if self.records.free_size() == 0 {
-            return Ok(());
-        }
-
-        let ratio = self.records.free_size() as f64 / self.data.len() as f64;
-        let steps = ((ratio * 8.0) as usize).clamp(1, 8);
-
-        self.compact(steps)
-    }
-
-    fn compact(&mut self, steps: usize) -> Result<(), DbError> {
-        let mut step = 0;
-
-        while step < steps && self.records.free_size() > 0 {
-            step += 1;
-            self.compact_step()?;
-        }
-
-        Ok(())
-    }
-
-    fn compact_step(&mut self) -> Result<(), DbError> {
-        let Some((free_pos, mut free_size)) = self.records.take_first_free() else {
-            return Ok(());
-        };
-
-        let mut free_end = free_pos + Self::record_serialized_size() + free_size;
-        let file_len = self.data.len();
-
-        if free_end >= file_len {
-            self.truncate(free_pos)?;
-            return Ok(());
-        }
-
-        let mut next_record = self.read_record(free_end)?;
-
-        while next_record.index == 0 {
-            self.records.remove_free(free_end);
-            free_size += Self::record_serialized_size() + next_record.size;
-            free_end = free_pos + Self::record_serialized_size() + free_size;
-
-            if free_end >= file_len {
-                self.truncate(free_pos)?;
-                return Ok(());
-            }
-
-            next_record = self.read_record(free_end)?;
-        }
-
-        let bytes = self
-            .data
-            .read(next_record.value_start(), next_record.size)?
-            .to_vec();
-        next_record.pos = free_pos;
-        let size = next_record.size;
-        self.resize_in_place(&mut next_record, size, free_size)?;
-        self.data.write(next_record.value_start(), &bytes)?;
-
-        let free_pos = next_record.end();
-        let free_end = next_record.end() + Self::record_serialized_size() + free_size;
-
-        if free_end >= file_len {
-            self.records.remove_free(free_pos);
-            self.truncate(free_pos)?;
-        }
-
-        Ok(())
     }
 
     pub fn transaction(&mut self) -> u64 {
@@ -429,7 +380,6 @@ impl<D: StorageData> Storage<D> {
             self.transactions -= 1;
 
             if self.transactions == 0 {
-                self.incremental_compact()?;
                 self.data.flush()?;
             }
         }
@@ -463,7 +413,7 @@ impl<D: StorageData> Storage<D> {
             .data
             .read(record.value_start(), std::cmp::min(record.size, new_size))?
             .to_vec();
-        self.invalidate_record(record)?;
+        self.invalidate_record(*record)?;
         self.update_record(record, free_pos, new_size)?;
         self.data.write(record.value_start(), &bytes)?;
 
@@ -478,8 +428,8 @@ impl<D: StorageData> Storage<D> {
     }
 
     fn free_a_region(&mut self, pos: u64, size: u64) -> Result<(), DbError> {
+        let size = self.records.mark_free_compact(pos, size);
         self.write_free_header(pos, size)?;
-        self.records.mark_free_compact(pos, size);
         Ok(())
     }
 
@@ -567,9 +517,10 @@ impl<D: StorageData> Storage<D> {
         u64::deserialize(&bytes)
     }
 
-    fn invalidate_record(&mut self, record: &StorageRecord) -> Result<(), DbError> {
-        self.data.write(record.pos, &0_u64.serialize())?;
-        self.records.mark_free_compact(record.pos, record.size);
+    fn invalidate_record(&mut self, mut record: StorageRecord) -> Result<(), DbError> {
+        record.index = 0;
+        record.size = self.records.mark_free_compact(record.pos, record.size);
+        self.write_record(&record)?;
         Ok(())
     }
 
@@ -581,7 +532,7 @@ impl<D: StorageData> Storage<D> {
         let mut bytes = self.read_value(record)?.to_vec();
         bytes.resize(new_size as usize, 0_u8);
         let len = self.len();
-        self.invalidate_record(record)?;
+        self.invalidate_record(*record)?;
         self.update_record(record, len, new_size)?;
         self.append(&bytes)
     }

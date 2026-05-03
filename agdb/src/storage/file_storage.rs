@@ -1676,8 +1676,10 @@ mod tests {
             2 * i64::serialized_size_static() + 16
         );
 
-        assert!(storage.records.take_first_free().is_some());
-        assert!(storage.records.take_first_free().is_none());
+        assert_eq!(
+            storage.records.free_size(),
+            2 * i64::serialized_size_static() + 16
+        );
     }
 
     #[test]
@@ -1685,25 +1687,25 @@ mod tests {
         let test_file = TestFile::new();
         let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
 
-        let index1 = storage.insert(&1_i64).unwrap();
-        let _index2 = storage.insert(&2_i64).unwrap();
+        let _index1 = storage.insert(&1_i64).unwrap();
+        let index2 = storage.insert(&2_i64).unwrap();
         let index3 = storage.insert(&3_i64).unwrap();
         let index4 = storage.insert(&4_i64).unwrap();
         let _index5 = storage.insert(&5_i64).unwrap();
-        let _index6 = storage.insert(&6_i64).unwrap();
-        let _index7 = storage.insert(&7_i64).unwrap();
 
-        storage.remove(index1).unwrap(); //slides index2 to start of file, free region before index3
-        storage.remove(index4).unwrap(); //slides index4 to start of index3, free region after index3
+        storage.remove(index4).unwrap();
         storage.remove(index3).unwrap();
+        storage.remove(index2).unwrap();
 
         assert_eq!(
             storage.records.free_size(),
             3 * i64::serialized_size_static() + 2 * 16
         );
 
-        assert!(storage.records.take_first_free().is_some());
-        assert!(storage.records.take_first_free().is_none());
+        assert_eq!(
+            storage.records.free_size(),
+            3 * i64::serialized_size_static() + 2 * 16
+        );
     }
 
     #[test]
@@ -1722,7 +1724,7 @@ mod tests {
         let size_before_compaction = storage.len();
         assert_eq!(
             storage.records.free_size(),
-            Storage::<FileStorage>::record_serialized_size() + 2 * i64::serialized_size_static()
+            2 * i64::serialized_size_static()
         );
         storage.optimize_storage().unwrap();
         let size_after_compaction = size_before_compaction

@@ -8,6 +8,7 @@ import { queryApiMock } from "../../mock/queryApiMock";
 import QueryArgument from "./arguments/QueryArgument.vue";
 import QueryArgumentDisplay from "./arguments/QueryArgumentDisplay.vue";
 
+/* v8 ignore next -- @preserve */
 const queryStore = useQueryStore();
 
 const props = defineProps<{

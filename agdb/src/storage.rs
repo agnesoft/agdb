@@ -467,7 +467,7 @@ impl<D: StorageData> Storage<D> {
         self.update_record(record, free_pos, new_size)?;
         self.data.write(record.value_start(), &bytes)?;
 
-        if free_size >= new_size {
+        if free_size > new_size {
             self.free_a_region(
                 record.end(),
                 free_size - new_size - Self::record_serialized_size(),

@@ -832,6 +832,7 @@ mod tests {
     #[test]
     fn remove_from_storage() {
         let mut storage: Storage<MemoryStorage> = Storage::new("test").unwrap();
+        let empty_len = storage.len();
         let mut map = MultiMapStorage::<String, String, MemoryStorage>::new(&mut storage).unwrap();
 
         map.insert(
@@ -849,9 +850,8 @@ mod tests {
         .unwrap();
 
         map.remove_from_storage(&mut storage).unwrap();
-        let len = storage.len();
         storage.optimize_storage().unwrap();
-        assert!(storage.len() < len)
+        assert_eq!(storage.len(), empty_len);
     }
 
     #[test]

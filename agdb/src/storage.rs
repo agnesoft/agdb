@@ -247,7 +247,6 @@ impl<D: StorageData> Storage<D> {
             self.truncate(record.pos)?;
         } else {
             self.invalidate_record(&record)?;
-            self.incremental_compact()?;
         }
 
         self.commit(id)
@@ -298,12 +297,10 @@ impl<D: StorageData> Storage<D> {
         let ratio = self.records.free_size() as f64 / self.data.len() as f64;
         let steps = ((ratio * 8.0) as usize).clamp(1, 8);
 
-        let id = self.transaction();
-        self.compact(steps)?;
-        self.commit(id)
+        self.compact(steps)
     }
 
-    fn compact(&mut self, steps: usize) -> Result<usize, DbError> {
+    fn compact(&mut self, steps: usize) -> Result<(), DbError> {
         let mut step = 0;
 
         while step < steps && self.records.free_size() > 0 {
@@ -311,7 +308,7 @@ impl<D: StorageData> Storage<D> {
             self.compact_step()?;
         }
 
-        Ok(step)
+        Ok(())
     }
 
     fn compact_step(&mut self) -> Result<(), DbError> {
@@ -319,7 +316,7 @@ impl<D: StorageData> Storage<D> {
             return Ok(());
         };
 
-        let free_end = free_pos + Self::record_serialized_size() + free_size;
+        let mut free_end = free_pos + Self::record_serialized_size() + free_size;
         let file_len = self.data.len();
 
         if free_end >= file_len {
@@ -329,9 +326,17 @@ impl<D: StorageData> Storage<D> {
 
         let mut next_record = self.read_record(free_end)?;
 
-        if next_record.index == 0 {
+        while next_record.index == 0 {
             self.records.remove_free(free_end);
             free_size += Self::record_serialized_size() + next_record.size;
+            free_end = free_pos + Self::record_serialized_size() + free_size;
+
+            if free_end >= file_len {
+                self.truncate(free_pos)?;
+                return Ok(());
+            }
+
+            next_record = self.read_record(free_end)?;
         }
 
         let bytes = self
@@ -424,6 +429,7 @@ impl<D: StorageData> Storage<D> {
             self.transactions -= 1;
 
             if self.transactions == 0 {
+                self.incremental_compact()?;
                 self.data.flush()?;
             }
         }
@@ -461,8 +467,11 @@ impl<D: StorageData> Storage<D> {
         self.update_record(record, free_pos, new_size)?;
         self.data.write(record.value_start(), &bytes)?;
 
-        if free_size > new_size {
-            self.free_a_region(record.end(), free_size - new_size)?;
+        if free_size >= new_size {
+            self.free_a_region(
+                record.end(),
+                free_size - new_size - Self::record_serialized_size(),
+            )?;
         }
 
         Ok(())
@@ -601,10 +610,19 @@ impl<D: StorageData> Storage<D> {
         self.validate_or_update_version()?;
 
         let end = self.len();
+        let max_records = end / Self::record_serialized_size();
         let mut current_pos = Self::current_version_record().end();
 
         while current_pos < end {
             let record = self.read_record(current_pos)?;
+
+            if record.index != 0 && record.index > max_records {
+                return Err(DbError::from(format!(
+                    "Storage error: invalid record index ({}) exceeds maximum ({})",
+                    record.index, max_records
+                )));
+            }
+
             self.records.set_record(record);
             current_pos = record.end();
         }

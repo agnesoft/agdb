@@ -226,8 +226,7 @@ mod tests {
             file.write_all(&1_u64.to_le_bytes()).unwrap();
         }
 
-        let storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-        storage.record(1181116006400).unwrap_err();
+        Storage::<FileStorage>::new(test_file.file_name()).unwrap_err();
     }
 
     #[test]
@@ -1742,6 +1741,7 @@ mod tests {
         let test_file = TestFile::new();
         let index1;
         let index2;
+        let index3;
 
         {
             let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
@@ -1749,6 +1749,7 @@ mod tests {
                 .insert(&vec![1_i64, 2_i64, 3_i64, 4_i64, 5_i64])
                 .unwrap();
             index2 = storage.insert(&42_i64).unwrap();
+            index3 = storage.insert(&43_i64).unwrap();
             storage.resize_value(index1, 16).unwrap();
         }
 
@@ -1756,6 +1757,7 @@ mod tests {
 
         assert_eq!(storage.value_size(index1).unwrap(), 16);
         assert_eq!(storage.value::<i64>(index2), Ok(42_i64));
+        assert_eq!(storage.value::<i64>(index3), Ok(43_i64));
         assert_eq!(storage.records.free_size(), 16);
     }
 
@@ -1828,29 +1830,22 @@ mod tests {
     fn free_region_at_eof_after_reload_is_truncated_by_optimize() {
         let test_file = TestFile::new();
         let index1;
-        let value_size_before_resize;
+        let index2;
 
         {
             let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-            index1 = storage
-                .insert(&vec![1_i64, 2_i64, 3_i64, 4_i64, 5_i64])
-                .unwrap();
-            value_size_before_resize = storage.value_size(index1).unwrap();
-            let index2 = storage.insert(&99_i64).unwrap();
-
-            storage.resize_value(index1, 8).unwrap();
-            storage.remove(index2).unwrap();
+            index1 = storage.insert_bytes(&[1u8; 8]).unwrap();
+            index2 = storage.insert(&999_i64).unwrap();
+            storage.resize_value(index1, 4).unwrap();
         }
 
         let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-        assert_eq!(
-            storage.records.free_size(),
-            value_size_before_resize - 8 - 16
-        );
+        assert_eq!(storage.records.free_size(), 8);
 
         storage.optimize_storage().unwrap();
 
         assert_eq!(storage.records.free_size(), 0);
-        assert_eq!(storage.value_size(index1).unwrap(), 8);
+        assert_eq!(storage.value::<i64>(index2), Ok(999_i64));
+        assert_eq!(storage.value_size(index1).unwrap(), 4);
     }
 }

@@ -163,18 +163,29 @@ impl StorageRecords {
         None
     }
 
-    pub fn mark_free_compact(&mut self, pos: u64, size: u64) -> u64 {
+    pub fn mark_free_compact(&mut self, pos: u64, size: u64) -> (u64, u64) {
+        let mut pos = pos;
         let mut end_pos = pos + STORAGE_RECORD_SIZE + size;
-        let mut size = size;
 
         while let Some(next_size) = self.free_pos_size.get(&end_pos).cloned() {
             self.remove_free(end_pos);
             end_pos += STORAGE_RECORD_SIZE + next_size;
-            size += STORAGE_RECORD_SIZE + next_size;
         }
 
+        while let Some((prev_pos, _)) = self
+            .free_pos_size
+            .range(..pos)
+            .next_back()
+            .filter(|(prev_pos, size)| *prev_pos + STORAGE_RECORD_SIZE + *size == pos)
+            .map(|(prev_pos, size)| (*prev_pos, *size))
+        {
+            self.remove_free(prev_pos);
+            pos = prev_pos;
+        }
+
+        let size = end_pos - pos - STORAGE_RECORD_SIZE;
         self.mark_free(pos, size);
-        size
+        (pos, size)
     }
 
     #[allow(dead_code)]

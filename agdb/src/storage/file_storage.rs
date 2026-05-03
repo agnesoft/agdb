@@ -1678,6 +1678,26 @@ mod tests {
     }
 
     #[test]
+    fn removing_after_free_region_merges_them() {
+        let test_file = TestFile::new();
+        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+
+        let _index1 = storage.insert(&1_i64).unwrap();
+        let index2 = storage.insert(&2_i64).unwrap();
+        let index3 = storage.insert(&3_i64).unwrap();
+        let _index4 = storage.insert(&4_i64).unwrap();
+        let _index5 = storage.insert(&5_i64).unwrap();
+
+        storage.remove(index2).unwrap();
+        storage.remove(index3).unwrap();
+
+        assert_eq!(
+            storage.records.free_size(),
+            2 * i64::serialized_size_static() + 16
+        );
+    }
+
+    #[test]
     fn removing_record_between_two_free_regions_merges_all_three() {
         let test_file = TestFile::new();
         let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();

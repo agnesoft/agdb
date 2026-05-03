@@ -425,7 +425,7 @@ impl<D: StorageData> Storage<D> {
     }
 
     fn free_a_region(&mut self, pos: u64, size: u64) -> Result<(), DbError> {
-        let size = self.records.mark_free_compact(pos, size);
+        let (pos, size) = self.records.mark_free_compact(pos, size);
 
         self.write_record(&StorageRecord {
             index: 0,

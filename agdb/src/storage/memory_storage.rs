@@ -496,6 +496,26 @@ mod tests {
     }
 
     #[test]
+    fn resize_value_greater_uses_exact_free_region_without_underflow() {
+        let mut storage = Storage::<MemoryStorage>::new("storage").unwrap();
+
+        let _index1 = storage.insert(&11_i64).unwrap();
+        let index2 = storage.insert_bytes(&[1_u8; 16]).unwrap();
+        let index3 = storage.insert(&33_i64).unwrap();
+        let index4 = storage.insert(&44_i64).unwrap();
+
+        let tx = storage.transaction();
+        storage.remove(index2).unwrap();
+        storage
+            .resize_value(index3, i64::serialized_size_static() * 2)
+            .unwrap();
+        storage.commit(tx).unwrap();
+
+        assert_eq!(storage.value_size(index3).unwrap(), 16);
+        assert_eq!(storage.value::<i64>(index4), Ok(44_i64));
+    }
+
+    #[test]
     fn resize_value_missing_index() {
         let mut storage = Storage::<MemoryStorage>::new("storage").unwrap();
 

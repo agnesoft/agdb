@@ -173,13 +173,14 @@ mod tests {
     use super::*;
     use crate::storage::Storage;
     use crate::storage::StorageIndex;
+    use crate::storage::storage_records::STORAGE_RECORD_SIZE;
     use crate::storage::storage_records::StorageRecord;
     use crate::test_utilities::test_file::TestFile;
     use crate::utilities::serialize::Serialize;
     use crate::utilities::serialize::SerializeStatic;
 
     #[test]
-    fn bad_db_file_content() {
+    fn bad_record_size() {
         let test_file = TestFile::new();
         let records = [
             StorageRecord {
@@ -193,9 +194,9 @@ mod tests {
                 size: 48,
             },
             StorageRecord {
-                index: 1181116006400,
+                index: 4,
                 pos: 88,
-                size: 0,
+                size: 321654876,
             },
             StorageRecord {
                 index: 1,
@@ -226,8 +227,7 @@ mod tests {
             file.write_all(&1_u64.to_le_bytes()).unwrap();
         }
 
-        let storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-        assert_eq!(storage.records().len(), 2);
+        Storage::<FileStorage>::new(test_file.file_name()).unwrap_err();
     }
 
     #[test]
@@ -994,7 +994,10 @@ mod tests {
 
             expected_size = std::fs::metadata(test_file.file_name()).unwrap().len();
 
-            storage.transaction();
+            {
+                let this = &mut storage;
+                this.begin_transaction()
+            };
             storage.optimize_storage().unwrap();
         }
 
@@ -1020,7 +1023,10 @@ mod tests {
 
         {
             let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-            let id = storage.transaction();
+            let id = {
+                let this = &mut storage;
+                this.begin_transaction()
+            };
             index = storage.insert(&1_i64).unwrap();
             storage.commit(id).unwrap();
             assert_eq!(storage.value::<i64>(index), Ok(1_i64));
@@ -1044,7 +1050,10 @@ mod tests {
 
         {
             let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-            storage.transaction();
+            {
+                let this = &mut storage;
+                this.begin_transaction()
+            };
             index = storage.insert(&1_i64).unwrap();
             assert_eq!(storage.value::<i64>(index), Ok(1_i64));
         }
@@ -1066,8 +1075,14 @@ mod tests {
 
         {
             let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-            let _ = storage.transaction();
-            let id2 = storage.transaction();
+            let _ = {
+                let this = &mut storage;
+                this.begin_transaction()
+            };
+            let id2 = {
+                let this = &mut storage;
+                this.begin_transaction()
+            };
             index = storage.insert(&1_i64).unwrap();
             assert_eq!(storage.value::<i64>(index), Ok(1_i64));
             storage.commit(id2).unwrap();
@@ -1087,8 +1102,14 @@ mod tests {
     fn transaction_commit_mismatch() {
         let test_file = TestFile::new();
         let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-        let id1 = storage.transaction();
-        let id2 = storage.transaction();
+        let id1 = {
+            let this = &mut storage;
+            this.begin_transaction()
+        };
+        let id2 = {
+            let this = &mut storage;
+            this.begin_transaction()
+        };
         let index = storage.insert(&1_i64).unwrap();
         assert_eq!(storage.value::<i64>(index), Ok(1_i64));
 
@@ -1453,7 +1474,7 @@ mod tests {
     }
 
     #[test]
-    fn file_storage_with_non_empty_hole_is_readable() {
+    fn file_storage_with_non_empty_free_region_is_readable() {
         let test_file = TestFile::new();
 
         let index1;
@@ -1475,5 +1496,367 @@ mod tests {
         assert_eq!(storage.value_size(index1).unwrap(), 16);
         assert_eq!(storage.value::<i64>(index2), Ok(42_i64));
         assert_eq!(storage.value::<i64>(index3), Ok(43_i64));
+    }
+
+    #[test]
+    fn remove_at_non_end_adds_free_region() {
+        let test_file = TestFile::new();
+        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+
+        let _index1 = storage.insert(&1_i64).unwrap();
+        let index2 = storage.insert(&2_i64).unwrap();
+        let _index3 = storage.insert(&3_i64).unwrap();
+        let _index4 = storage.insert_bytes(&[1u8; 256]).unwrap();
+
+        let size_before = storage.len();
+
+        assert_eq!(storage.records.free_size(), 0);
+        storage.remove(index2).unwrap();
+        assert_eq!(storage.len(), size_before);
+        assert_eq!(storage.records.free_size(), i64::serialized_size_static());
+    }
+
+    #[test]
+    fn remove_at_end_truncates_file() {
+        let test_file = TestFile::new();
+        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+
+        let _index1 = storage.insert(&1_i64).unwrap();
+        let index2 = storage.insert(&2_i64).unwrap();
+
+        let size_after_truncate =
+            storage.len() - STORAGE_RECORD_SIZE - i64::serialized_size_static();
+
+        storage.remove(index2).unwrap();
+
+        assert_eq!(storage.len(), size_after_truncate);
+        assert_eq!(storage.records.free_size(), 0);
+    }
+
+    #[test]
+    fn insert_after_remove_reuses_free_region() {
+        let test_file = TestFile::new();
+        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+
+        let _index1 = storage.insert(&1_i64).unwrap();
+        let index2 = storage.insert(&2_i64).unwrap();
+        let _index3 = storage.insert(&3_i64).unwrap();
+        let _index4 = storage.insert(&4_i64).unwrap();
+
+        storage.remove(index2).unwrap();
+        let size_after_remove = storage.len();
+
+        assert_eq!(storage.records.free_size(), i64::serialized_size_static());
+        let index4 = storage.insert(&99_i64).unwrap();
+        assert_eq!(storage.len(), size_after_remove);
+        assert_eq!(storage.value::<i64>(index4), Ok(99_i64));
+        assert_eq!(storage.records.free_size(), 0);
+    }
+
+    #[test]
+    fn insert_after_remove_does_not_reuse_if_free_region_is_larger_less_than_header_size() {
+        let test_file = TestFile::new();
+        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+
+        let _index1 = storage.insert(&1_i64).unwrap();
+        let index2 = storage.insert(&2_i64).unwrap();
+        let _index3 = storage.insert(&3_i64).unwrap();
+        let _index4 = storage.insert(&4_i64).unwrap();
+
+        storage.remove(index2).unwrap();
+        let size_after_remove = storage.len();
+
+        // Every free needs space for the header (16 bytes).
+        // Free region after remove is 8 bytes + HEADER_SIZE (16) = 24 bytes.
+        // Request is for 4 bytes + HEADER_SIZE (16) = 20 bytes.
+        // Free region would need to be split - remainder of 4 bytes.
+        // 4 bytes < HEADER_SIZE (16) → cannot split, append instead.
+        let index4 = storage.insert_bytes(&[0u8; 4]).unwrap();
+
+        assert!(storage.len() > size_after_remove);
+        assert_eq!(storage.value_as_bytes(index4).unwrap().len(), 4);
+        assert_eq!(storage.records.free_size(), 8);
+    }
+
+    #[test]
+    fn free_region_survives_reload() {
+        let test_file = TestFile::new();
+        let index2;
+
+        {
+            let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+            let _index1 = storage.insert(&1_i64).unwrap();
+            index2 = storage.insert(&2_i64).unwrap();
+            let _index3 = storage.insert(&3_i64).unwrap();
+            let _index4 = storage.insert(&4_i64).unwrap();
+            storage.remove(index2).unwrap();
+        }
+
+        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+        assert_eq!(storage.records.free_size(), i64::serialized_size_static());
+
+        let size_before = storage.len();
+        let index4 = storage.insert(&42_i64).unwrap();
+        assert_eq!(storage.len(), size_before);
+        assert_eq!(storage.value::<i64>(index4), Ok(42_i64));
+        assert_eq!(storage.records.free_size(), 0);
+    }
+
+    #[test]
+    fn insert_splits_large_free_region() {
+        let test_file = TestFile::new();
+        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+
+        let _index1 = storage.insert(&1_i64).unwrap();
+        let index2 = storage.insert_bytes(&[0u8; 40]).unwrap();
+        let _index3 = storage.insert(&3_i64).unwrap();
+        let _index4 = storage.insert(&4_i64).unwrap();
+        let _index5 = storage.insert(&5_i64).unwrap();
+
+        storage.remove(index2).unwrap();
+        let size_after_remove = storage.len();
+
+        assert_eq!(storage.records.free_size(), 40);
+
+        // Every free needs space for the header (16 bytes).
+        // Free region after remove is 40 bytes + HEADER_SIZE (16) = 56 bytes.
+        // Request is for 4 bytes + HEADER_SIZE (16) = 20 bytes.
+        // Free region would need to be split - remainder of 36 bytes.
+        // 36 bytes ≥ HEADER_SIZE (16) → can split, new free region of 20 bytes + HEADER_SIZE (16).
+        let index4 = storage.insert_bytes(&[0u8; 4]).unwrap();
+
+        assert_eq!(storage.len(), size_after_remove);
+        assert_eq!(storage.value_as_bytes(index4).unwrap().len(), 4);
+        assert_eq!(storage.records.free_size(), 20);
+    }
+
+    #[test]
+    fn insert_splits_large_free_region_survives_reload() {
+        let test_file = TestFile::new();
+
+        let index4;
+        let size_after_remove;
+
+        {
+            let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+            let _index1 = storage.insert(&1_i64).unwrap();
+            let index2 = storage.insert_bytes(&[0u8; 40]).unwrap();
+            let _index3 = storage.insert(&3_i64).unwrap();
+            let _index4 = storage.insert(&4_i64).unwrap();
+            let _index5 = storage.insert(&5_i64).unwrap();
+
+            storage.remove(index2).unwrap();
+            size_after_remove = storage.len();
+            index4 = storage.insert_bytes(&[0u8; 4]).unwrap();
+        }
+
+        let storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+
+        assert_eq!(storage.len(), size_after_remove);
+        assert_eq!(storage.value_as_bytes(index4).unwrap().len(), 4);
+        assert_eq!(storage.records.free_size(), 20);
+    }
+
+    #[test]
+    fn removing_before_free_region_merges_them() {
+        let test_file = TestFile::new();
+        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+
+        let _index1 = storage.insert(&1_i64).unwrap();
+        let index2 = storage.insert(&2_i64).unwrap();
+        let index3 = storage.insert(&3_i64).unwrap();
+        let _index4 = storage.insert(&4_i64).unwrap();
+        let _index5 = storage.insert(&5_i64).unwrap();
+
+        storage.remove(index3).unwrap();
+        storage.remove(index2).unwrap();
+
+        assert_eq!(
+            storage.records.free_size(),
+            2 * i64::serialized_size_static() + 16
+        );
+    }
+
+    #[test]
+    fn removing_after_free_region_merges_them() {
+        let test_file = TestFile::new();
+        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+
+        let _index1 = storage.insert(&1_i64).unwrap();
+        let index2 = storage.insert(&2_i64).unwrap();
+        let index3 = storage.insert(&3_i64).unwrap();
+        let _index4 = storage.insert(&4_i64).unwrap();
+        let _index5 = storage.insert(&5_i64).unwrap();
+
+        storage.remove(index2).unwrap();
+        storage.remove(index3).unwrap();
+
+        assert_eq!(
+            storage.records.free_size(),
+            2 * i64::serialized_size_static() + 16
+        );
+    }
+
+    #[test]
+    fn removing_record_between_two_free_regions_merges_all_three() {
+        let test_file = TestFile::new();
+        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+
+        let _index1 = storage.insert(&1_i64).unwrap();
+        let index2 = storage.insert(&2_i64).unwrap();
+        let index3 = storage.insert(&3_i64).unwrap();
+        let index4 = storage.insert(&4_i64).unwrap();
+        let _index5 = storage.insert(&5_i64).unwrap();
+
+        storage.remove(index4).unwrap();
+        storage.remove(index3).unwrap();
+        storage.remove(index2).unwrap();
+
+        assert_eq!(
+            storage.records.free_size(),
+            3 * i64::serialized_size_static() + 2 * 16
+        );
+    }
+
+    #[test]
+    fn optimize_storage_removes_all_free_regions() {
+        let test_file = TestFile::new();
+        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+
+        let index1 = storage.insert(&1_i64).unwrap();
+        let index2 = storage.insert(&2_i64).unwrap();
+        let index3 = storage.insert(&3_i64).unwrap();
+        let index4 = storage.insert(&4_i64).unwrap();
+        let index5 = storage.insert(&5_i64).unwrap();
+        storage.remove(index1).unwrap();
+        storage.remove(index4).unwrap();
+
+        let size_before_compaction = storage.len();
+        assert_eq!(
+            storage.records.free_size(),
+            2 * i64::serialized_size_static()
+        );
+        storage.optimize_storage().unwrap();
+        let size_after_compaction =
+            size_before_compaction - 2 * (STORAGE_RECORD_SIZE + i64::serialized_size_static());
+
+        assert_eq!(storage.len(), size_after_compaction);
+        assert_eq!(storage.value::<i64>(index2), Ok(2_i64));
+        assert_eq!(storage.value::<i64>(index3), Ok(3_i64));
+        assert_eq!(storage.value::<i64>(index5), Ok(5_i64));
+        assert_eq!(storage.records.free_size(), 0);
+    }
+
+    #[test]
+    fn shrink_value_persists_free_region_on_reload() {
+        let test_file = TestFile::new();
+        let index1;
+        let index2;
+        let index3;
+
+        {
+            let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+            index1 = storage
+                .insert(&vec![1_i64, 2_i64, 3_i64, 4_i64, 5_i64])
+                .unwrap();
+            index2 = storage.insert(&42_i64).unwrap();
+            index3 = storage.insert(&43_i64).unwrap();
+            storage.resize_value(index1, 16).unwrap();
+        }
+
+        let storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+
+        assert_eq!(storage.value_size(index1).unwrap(), 16);
+        assert_eq!(storage.value::<i64>(index2), Ok(42_i64));
+        assert_eq!(storage.value::<i64>(index3), Ok(43_i64));
+        assert_eq!(storage.records.free_size(), 16);
+    }
+
+    #[test]
+    fn replace_smaller_reuses_space_and_persists() {
+        let test_file = TestFile::new();
+        let index_big;
+        let index_next;
+        let index_new;
+
+        {
+            let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+            index_big = storage
+                .insert(&vec![1_i64, 2_i64, 3_i64, 4_i64, 5_i64])
+                .unwrap();
+            index_next = storage.insert(&99_i64).unwrap();
+
+            storage.replace(index_big, &42_i64).unwrap();
+            index_new = storage.insert(&7_i64).unwrap();
+        }
+
+        let storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+        assert_eq!(storage.value::<i64>(index_big), Ok(42_i64));
+        assert_eq!(storage.value::<i64>(index_next), Ok(99_i64));
+        assert_eq!(storage.value::<i64>(index_new), Ok(7_i64));
+        assert_eq!(storage.records.free_size(), 0);
+    }
+
+    #[test]
+    fn shrink_move_to_end_frees_old_position() {
+        let test_file = TestFile::new();
+        let index1;
+        let index2;
+
+        {
+            let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+            index1 = storage.insert_bytes(&[1u8; 8]).unwrap();
+            index2 = storage.insert(&999_i64).unwrap();
+            storage.resize_value(index1, 4).unwrap();
+        }
+
+        let storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+        assert_eq!(storage.value::<i64>(index2), Ok(999_i64));
+        assert_eq!(storage.value_size(index1).unwrap(), 4);
+        assert_eq!(storage.records.free_size(), 8);
+    }
+
+    #[test]
+    fn compacted_file_reloads_correctly() {
+        let test_file = TestFile::new();
+        let index1;
+        let index3;
+
+        {
+            let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+            index1 = storage.insert(&11_i64).unwrap();
+            let index2 = storage.insert(&22_i64).unwrap();
+            index3 = storage.insert(&33_i64).unwrap();
+            storage.remove(index2).unwrap();
+            storage.optimize_storage().unwrap();
+        }
+
+        let storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+        assert_eq!(storage.value::<i64>(index1), Ok(11_i64));
+        assert_eq!(storage.value::<i64>(index3), Ok(33_i64));
+        assert_eq!(storage.records.free_size(), 0);
+    }
+
+    #[test]
+    fn free_region_at_eof_after_reload_is_truncated_by_optimize() {
+        let test_file = TestFile::new();
+        let index1;
+        let index2;
+
+        {
+            let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+            index1 = storage.insert_bytes(&[1u8; 8]).unwrap();
+            index2 = storage.insert(&999_i64).unwrap();
+            storage.resize_value(index1, 4).unwrap();
+        }
+
+        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+        assert_eq!(storage.records.free_size(), 8);
+
+        storage.optimize_storage().unwrap();
+
+        assert_eq!(storage.records.free_size(), 0);
+        assert_eq!(storage.value::<i64>(index2), Ok(999_i64));
+        assert_eq!(storage.value_size(index1).unwrap(), 4);
     }
 }

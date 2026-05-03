@@ -357,8 +357,8 @@ mod tests {
                 &DbId(1),
             )
             .unwrap();
-        index.remove_from_storage(&mut storage).unwrap();
         let len = storage.len();
+        index.remove_from_storage(&mut storage).unwrap();
         storage.optimize_storage().unwrap();
         assert!(storage.len() < len);
     }

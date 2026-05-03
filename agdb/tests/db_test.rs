@@ -675,7 +675,7 @@ fn db_any() {
 
     assert_eq!(
         names,
-        vec![test_file1.file_name(), test_file2.file_name(), "memdb"]
+        &[test_file1.file_name(), test_file2.file_name(), "memdb"]
     );
 }
 

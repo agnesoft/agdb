@@ -1675,11 +1675,6 @@ mod tests {
             storage.records.free_size(),
             2 * i64::serialized_size_static() + 16
         );
-
-        assert_eq!(
-            storage.records.free_size(),
-            2 * i64::serialized_size_static() + 16
-        );
     }
 
     #[test]
@@ -1696,11 +1691,6 @@ mod tests {
         storage.remove(index4).unwrap();
         storage.remove(index3).unwrap();
         storage.remove(index2).unwrap();
-
-        assert_eq!(
-            storage.records.free_size(),
-            3 * i64::serialized_size_static() + 2 * 16
-        );
 
         assert_eq!(
             storage.records.free_size(),

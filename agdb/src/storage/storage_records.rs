@@ -151,7 +151,7 @@ impl StorageRecords {
         if let Some(size) = self
             .free_pos_size
             .get(&end_pos)
-            .filter(|s| **s >= min_size)
+            .filter(|size| (HEADER_SIZE + **size) == min_size || **size >= min_size + HEADER_SIZE)
             .cloned()
         {
             self.remove_free(end_pos);
@@ -161,18 +161,13 @@ impl StorageRecords {
         None
     }
 
-    pub fn mark_free(&mut self, pos: u64, size: u64) {
-        self.free_pos_size.insert(pos, size);
-        self.free_size_pos.entry(size).or_default().insert(pos);
-        self.free_size += size;
-    }
-
     pub fn mark_free_compact(&mut self, pos: u64, size: u64) -> u64 {
         let mut end_pos = pos + HEADER_SIZE + size;
         let mut size = size;
 
-        while let Some((next_free, next_size)) = self.take_free_after(end_pos, 0) {
-            end_pos = next_free + HEADER_SIZE + next_size;
+        while let Some(next_size) = self.free_pos_size.get(&end_pos).cloned() {
+            self.remove_free(end_pos);
+            end_pos += HEADER_SIZE + next_size;
             size += HEADER_SIZE + next_size;
         }
 
@@ -185,7 +180,13 @@ impl StorageRecords {
         self.free_size
     }
 
-    pub fn remove_free(&mut self, pos: u64) {
+    fn mark_free(&mut self, pos: u64, size: u64) {
+        self.free_pos_size.insert(pos, size);
+        self.free_size_pos.entry(size).or_default().insert(pos);
+        self.free_size += size;
+    }
+
+    fn remove_free(&mut self, pos: u64) {
         let size = self.free_pos_size.remove(&pos).unwrap_or_default();
 
         if let Some(positions) = self.free_size_pos.get_mut(&size) {

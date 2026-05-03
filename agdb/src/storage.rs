@@ -243,10 +243,11 @@ impl<D: StorageData> Storage<D> {
 
         let id = self.transaction();
         self.remove_index(index.0);
+
         if self.is_at_end(&record) {
             self.truncate(record.pos)?;
         } else {
-            self.invalidate_record(record)?;
+            self.free_a_region(record.pos, record.size)?;
         }
 
         self.commit(id)
@@ -281,15 +282,16 @@ impl<D: StorageData> Storage<D> {
         self.commit(id)
     }
 
-    fn shrink_index(&mut self, record: &StorageRecord, current_pos: u64) -> Result<u64, DbError> {
+    fn shrink_index(
+        &mut self,
+        mut record: StorageRecord,
+        current_pos: u64,
+    ) -> Result<u64, DbError> {
         if record.pos != current_pos {
-            let bytes = self.read_value(record)?.to_vec();
-            self.set_pos(record.index, current_pos);
-            self.write_record(&StorageRecord {
-                index: record.index,
-                pos: current_pos,
-                size: record.size,
-            })?;
+            let bytes = self.read_value(&record)?.to_vec();
+            record.pos = current_pos;
+            self.records.set_pos(record.index, current_pos);
+            self.write_record(&record)?;
             self.data
                 .write(current_pos + Self::record_serialized_size(), &bytes)?;
         }
@@ -302,7 +304,7 @@ impl<D: StorageData> Storage<D> {
         let mut current_pos = Self::current_version_record().end();
 
         for record in self.records.records() {
-            current_pos = self.shrink_index(&record, current_pos)?;
+            current_pos = self.shrink_index(record, current_pos)?;
         }
 
         self.truncate(current_pos)?;
@@ -394,7 +396,7 @@ impl<D: StorageData> Storage<D> {
             .records
             .take_free_after(record.end(), new_size - record.size)
         {
-            self.resize_in_place(record, new_size, free_size)
+            self.enlarge_in_place(record, new_size, free_size)
         } else if let Some((free_pos, free_size)) = self.records.take_free(new_size) {
             self.enlarge_move_to(record, new_size, free_pos, free_size)
         } else {
@@ -409,11 +411,9 @@ impl<D: StorageData> Storage<D> {
         free_pos: u64,
         free_size: u64,
     ) -> Result<(), DbError> {
-        let bytes = self
-            .data
-            .read(record.value_start(), std::cmp::min(record.size, new_size))?
-            .to_vec();
-        self.invalidate_record(*record)?;
+        let mut bytes = self.data.read(record.value_start(), record.size)?.to_vec();
+        bytes.resize(new_size as usize, 0_u8);
+        self.free_a_region(record.pos, record.size)?;
         self.update_record(record, free_pos, new_size)?;
         self.data.write(record.value_start(), &bytes)?;
 
@@ -429,26 +429,35 @@ impl<D: StorageData> Storage<D> {
 
     fn free_a_region(&mut self, pos: u64, size: u64) -> Result<(), DbError> {
         let size = self.records.mark_free_compact(pos, size);
-        self.write_free_header(pos, size)?;
-        Ok(())
+
+        self.write_record(&StorageRecord {
+            index: 0,
+            pos,
+            size,
+        })
     }
 
-    fn resize_in_place(
+    fn enlarge_in_place(
         &mut self,
         record: &mut StorageRecord,
         new_size: u64,
         free_size: u64,
     ) -> Result<(), DbError> {
         let old_size = record.size;
-        let extra_size = if new_size < old_size {
-            (old_size - new_size) - Self::record_serialized_size()
-        } else {
-            (old_size + free_size) - new_size
-        };
-        self.update_record(record, record.pos, new_size)?;
+        let old_end = record.end();
+        let header_size = Self::record_serialized_size();
+        let remainder = (old_size + header_size + free_size) - new_size;
+        record.size = new_size;
+        self.records.set_size(record.index, new_size);
+        self.data.write(
+            record.pos + record.index.serialized_size(),
+            &record.size.serialize(),
+        )?;
+        self.data
+            .write(old_end, &vec![0_u8; (new_size - old_size) as usize])?;
 
-        if extra_size > 0 {
-            self.free_a_region(record.end(), extra_size)?;
+        if remainder != 0 {
+            self.free_a_region(record.end(), remainder - Self::record_serialized_size())?;
         }
 
         Ok(())
@@ -457,7 +466,7 @@ impl<D: StorageData> Storage<D> {
     fn enlarge_at_end(&mut self, record: &mut StorageRecord, new_size: u64) -> Result<(), DbError> {
         let old_size = record.size;
         record.size = new_size;
-        self.set_size(record.index, new_size);
+        self.records.set_size(record.index, new_size);
         self.data.write(
             record.pos + record.index.serialized_size(),
             &record.size.serialize(),
@@ -480,7 +489,6 @@ impl<D: StorageData> Storage<D> {
         Ok(())
     }
 
-    #[allow(clippy::comparison_chain)]
     fn erase_bytes(
         &mut self,
         pos: u64,
@@ -517,13 +525,6 @@ impl<D: StorageData> Storage<D> {
         u64::deserialize(&bytes)
     }
 
-    fn invalidate_record(&mut self, mut record: StorageRecord) -> Result<(), DbError> {
-        record.index = 0;
-        record.size = self.records.mark_free_compact(record.pos, record.size);
-        self.write_record(&record)?;
-        Ok(())
-    }
-
     fn is_at_end(&mut self, record: &StorageRecord) -> bool {
         self.len() == record.end()
     }
@@ -532,7 +533,7 @@ impl<D: StorageData> Storage<D> {
         let mut bytes = self.read_value(record)?.to_vec();
         bytes.resize(new_size as usize, 0_u8);
         let len = self.len();
-        self.invalidate_record(*record)?;
+        self.free_a_region(record.pos, record.size)?;
         self.update_record(record, len, new_size)?;
         self.append(&bytes)
     }
@@ -599,24 +600,26 @@ impl<D: StorageData> Storage<D> {
         self.records.remove_index(index);
     }
 
-    fn set_pos(&mut self, index: u64, pos: u64) {
-        self.records.set_pos(index, pos);
-    }
-
-    fn set_size(&mut self, index: u64, size: u64) {
-        self.records.set_size(index, size);
-    }
-
     fn shrink_value(&mut self, record: &mut StorageRecord, new_size: u64) -> Result<(), DbError> {
         if self.is_at_end(record) {
             record.size = new_size;
-            self.set_size(record.index, new_size);
+            self.records.set_size(record.index, new_size);
+            self.data.write(
+                record.pos + record.index.serialized_size(),
+                &record.size.serialize(),
+            )?;
             self.truncate(record.end())
         } else {
             let free_size = record.size - new_size;
 
             if free_size >= Self::record_serialized_size() {
-                self.resize_in_place(record, new_size, free_size)
+                record.size = new_size;
+                self.records.set_size(record.index, new_size);
+                self.data.write(
+                    record.pos + record.index.serialized_size(),
+                    &record.size.serialize(),
+                )?;
+                self.free_a_region(record.end(), free_size - Self::record_serialized_size())
             } else {
                 self.move_to_end(record, new_size)
             }
@@ -639,10 +642,10 @@ impl<D: StorageData> Storage<D> {
         new_pos: u64,
         new_size: u64,
     ) -> Result<(), DbError> {
-        self.set_pos(record.index, new_pos);
-        self.set_size(record.index, new_size);
         record.pos = new_pos;
         record.size = new_size;
+        self.records.set_pos(record.index, new_pos);
+        self.records.set_size(record.index, new_size);
         self.write_record(record)
     }
 
@@ -712,14 +715,6 @@ impl<D: StorageData> Storage<D> {
         }
 
         Ok(())
-    }
-
-    fn write_free_header(&mut self, pos: u64, size: u64) -> Result<(), DbError> {
-        self.write_record(&StorageRecord {
-            index: 0,
-            pos,
-            size,
-        })
     }
 
     fn write_record(&mut self, record: &StorageRecord) -> Result<(), DbError> {

@@ -1,5 +1,9 @@
 use crate::DbError;
 use crate::utilities::serialize::Serialize;
+use std::collections::BTreeMap;
+use std::collections::BTreeSet;
+
+const HEADER_SIZE: u64 = 16;
 
 #[derive(Debug, Clone, Copy, Default)]
 pub struct StorageRecord {
@@ -21,12 +25,18 @@ impl StorageRecord {
 #[derive(Debug, Clone)]
 pub struct StorageRecords {
     records: Vec<StorageRecord>,
+    free_pos_size: BTreeMap<u64, u64>,
+    free_size_pos: BTreeMap<u64, BTreeSet<u64>>,
+    free_size: u64,
 }
 
 impl StorageRecords {
     pub fn new() -> Self {
         Self {
             records: vec![StorageRecord::default()],
+            free_pos_size: BTreeMap::new(),
+            free_size_pos: BTreeMap::new(),
+            free_size: 0,
         }
     }
 
@@ -50,31 +60,29 @@ impl StorageRecords {
         record
     }
 
-    pub fn records(&self) -> Vec<StorageRecord> {
-        let mut res = Vec::with_capacity(self.records.len());
-
-        for record in &self.records {
-            if self.is_valid(record) {
-                res.push(*record);
-            }
-        }
-
-        res.sort_by_key(|left| left.pos);
-
-        res
-    }
-
     pub fn set_pos(&mut self, index: u64, pos: u64) {
         if let Some(i) = self.records.get_mut(index as usize) {
             i.pos = pos;
         }
     }
 
-    pub fn set_records(&mut self, records: Vec<StorageRecord>) {
-        self.records = records;
+    pub fn set_record(&mut self, record: StorageRecord) {
+        if record.index == 0 {
+            self.mark_free(record.pos, record.size);
+        } else {
+            let index = record.index as usize;
 
+            if self.records.len() <= index {
+                self.records.resize(index + 1, StorageRecord::default());
+            }
+
+            self.records[index] = record;
+        }
+    }
+
+    pub fn rebuild_free_index(&mut self) {
         for index in 1..self.records.len() {
-            if !self.is_valid(&self.records[index]) {
+            if self.records[index].index == 0 {
                 self.remove_index(index as u64);
             }
         }
@@ -106,6 +114,76 @@ impl StorageRecords {
             record.pos = u64::MAX;
             self.records[0].index = index;
         }
+    }
+
+    pub fn take_free(&mut self, min_size: u64) -> Option<(u64, u64)> {
+        let (&data_size, positions) = self
+            .free_size_pos
+            .range_mut(min_size..)
+            .find(|(size, _)| **size == min_size || **size >= min_size + HEADER_SIZE)?;
+        let pos = *positions.iter().next()?;
+        self.remove_free(pos);
+
+        Some((pos, data_size))
+    }
+
+    pub fn take_free_after(&mut self, end_pos: u64, min_size: u64) -> Option<(u64, u64)> {
+        if let Some(size) = self
+            .free_pos_size
+            .get(&end_pos)
+            .filter(|s| **s >= min_size)
+            .cloned()
+        {
+            self.remove_free(end_pos);
+            return Some((end_pos, size));
+        }
+
+        None
+    }
+
+    pub fn take_first_free(&mut self) -> Option<(u64, u64)> {
+        if let Some((&pos, &size)) = self.free_pos_size.iter().next() {
+            self.remove_free(pos);
+            Some((pos, size))
+        } else {
+            None
+        }
+    }
+
+    pub fn mark_free(&mut self, pos: u64, size: u64) {
+        self.free_pos_size.insert(pos, size);
+        self.free_size_pos.entry(size).or_default().insert(pos);
+        self.free_size += size;
+    }
+
+    pub fn mark_free_compact(&mut self, pos: u64, size: u64) {
+        let mut end_pos = pos + HEADER_SIZE + size;
+        let mut size = size;
+
+        while let Some((next_free, next_size)) = self.take_free_after(end_pos, 0) {
+            end_pos = next_free + HEADER_SIZE + next_size;
+            size += HEADER_SIZE + next_size;
+        }
+
+        self.mark_free(pos, size);
+    }
+
+    pub fn free_size(&self) -> u64 {
+        self.free_size
+    }
+
+    pub fn remove_free(&mut self, pos: u64) {
+        let size = self.free_pos_size.remove(&pos).unwrap_or_default();
+
+        if let Some(positions) = self.free_size_pos.get_mut(&size) {
+            positions.remove(&pos);
+
+            if positions.is_empty() {
+                self.free_size_pos.remove(&size);
+            }
+        }
+
+        self.free_size -= size;
     }
 
     fn is_valid(&self, record: &StorageRecord) -> bool {

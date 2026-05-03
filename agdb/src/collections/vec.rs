@@ -909,8 +909,8 @@ mod tests {
         )
         .unwrap();
 
-        vec.remove_from_storage(&mut storage).unwrap();
         let len = storage.len();
+        vec.remove_from_storage(&mut storage).unwrap();
         storage.optimize_storage().unwrap();
 
         assert!(storage.len() < len)

@@ -45,9 +45,9 @@ const closeEditing = () => {
       </button>
     </div>
     <div
+      v-on-click-outside="closeEditing"
       class="label"
       :class="{ invalid: step.invalid }"
-      v-on-click-outside="closeEditing"
     >
       <span>{{ step.type }}</span>
       <template v-if="stepArguments">

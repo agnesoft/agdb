@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { mount } from "@vue/test-utils";
 import QueryStep from "./QueryStep.vue";
 import type { QueryStep as QueryStepType } from "../../composables/types";
-import { nextTick, ref } from "vue";
+import { ref } from "vue";
 
 const { deleteQueryStep, updateQueryStep } = vi.hoisted(() => ({
   deleteQueryStep: vi.fn(),

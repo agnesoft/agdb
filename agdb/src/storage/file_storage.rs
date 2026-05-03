@@ -173,6 +173,7 @@ mod tests {
     use super::*;
     use crate::storage::Storage;
     use crate::storage::StorageIndex;
+    use crate::storage::storage_records::STORAGE_RECORD_SIZE;
     use crate::storage::storage_records::StorageRecord;
     use crate::test_utilities::test_file::TestFile;
     use crate::utilities::serialize::Serialize;
@@ -1523,9 +1524,8 @@ mod tests {
         let _index1 = storage.insert(&1_i64).unwrap();
         let index2 = storage.insert(&2_i64).unwrap();
 
-        let size_after_truncate = storage.len()
-            - Storage::<FileStorage>::record_serialized_size()
-            - i64::serialized_size_static();
+        let size_after_truncate =
+            storage.len() - STORAGE_RECORD_SIZE - i64::serialized_size_static();
 
         storage.remove(index2).unwrap();
 
@@ -1717,9 +1717,8 @@ mod tests {
             2 * i64::serialized_size_static()
         );
         storage.optimize_storage().unwrap();
-        let size_after_compaction = size_before_compaction
-            - 2 * (Storage::<FileStorage>::record_serialized_size()
-                + i64::serialized_size_static());
+        let size_after_compaction =
+            size_before_compaction - 2 * (STORAGE_RECORD_SIZE + i64::serialized_size_static());
 
         assert_eq!(storage.len(), size_after_compaction);
         assert_eq!(storage.value::<i64>(index2), Ok(2_i64));

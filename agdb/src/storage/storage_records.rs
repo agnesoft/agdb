@@ -1,9 +1,8 @@
 use crate::DbError;
-use crate::utilities::serialize::Serialize;
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 
-const HEADER_SIZE: u64 = 16;
+pub(crate) const STORAGE_RECORD_SIZE: u64 = 16; // 8 bytes for index + 8 bytes for size
 
 #[derive(Debug, Clone, Copy, Default)]
 pub struct StorageRecord {
@@ -14,7 +13,7 @@ pub struct StorageRecord {
 
 impl StorageRecord {
     pub fn value_start(&self) -> u64 {
-        self.pos + self.index.serialized_size() + self.size.serialized_size()
+        self.pos + STORAGE_RECORD_SIZE
     }
 
     pub fn end(&self) -> u64 {
@@ -140,7 +139,7 @@ impl StorageRecords {
         let (&data_size, positions) = self
             .free_size_pos
             .range_mut(min_size..)
-            .find(|(size, _)| **size == min_size || **size >= min_size + HEADER_SIZE)?;
+            .find(|(size, _)| **size == min_size || **size >= min_size + STORAGE_RECORD_SIZE)?;
         let pos = *positions.iter().next()?;
         self.remove_free(pos);
 
@@ -151,7 +150,10 @@ impl StorageRecords {
         if let Some(size) = self
             .free_pos_size
             .get(&end_pos)
-            .filter(|size| (HEADER_SIZE + **size) == min_size || **size >= min_size + HEADER_SIZE)
+            .filter(|size| {
+                (STORAGE_RECORD_SIZE + **size) == min_size
+                    || **size >= min_size + STORAGE_RECORD_SIZE
+            })
             .cloned()
         {
             self.remove_free(end_pos);
@@ -162,13 +164,13 @@ impl StorageRecords {
     }
 
     pub fn mark_free_compact(&mut self, pos: u64, size: u64) -> u64 {
-        let mut end_pos = pos + HEADER_SIZE + size;
+        let mut end_pos = pos + STORAGE_RECORD_SIZE + size;
         let mut size = size;
 
         while let Some(next_size) = self.free_pos_size.get(&end_pos).cloned() {
             self.remove_free(end_pos);
-            end_pos += HEADER_SIZE + next_size;
-            size += HEADER_SIZE + next_size;
+            end_pos += STORAGE_RECORD_SIZE + next_size;
+            size += STORAGE_RECORD_SIZE + next_size;
         }
 
         self.mark_free(pos, size);

@@ -605,8 +605,10 @@ impl<D: StorageData> Storage<D> {
         if self.is_at_end(record) {
             record.size = new_size;
             self.records.set_size(record.index, new_size);
-            self.data
-                .write(record.pos + STORAGE_RECORD_SIZE, &record.size.serialize())?;
+            self.data.write(
+                record.pos + record.size.serialized_size(),
+                &record.size.serialize(),
+            )?;
             self.truncate(record.end())
         } else {
             let free_size = record.size - new_size;
@@ -614,8 +616,10 @@ impl<D: StorageData> Storage<D> {
             if free_size >= STORAGE_RECORD_SIZE {
                 record.size = new_size;
                 self.records.set_size(record.index, new_size);
-                self.data
-                    .write(record.pos + STORAGE_RECORD_SIZE, &record.size.serialize())?;
+                self.data.write(
+                    record.pos + record.index.serialized_size(),
+                    &record.size.serialize(),
+                )?;
                 self.free_a_region(record.end(), free_size - STORAGE_RECORD_SIZE)
             } else {
                 self.move_to_end(record, new_size)

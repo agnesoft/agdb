@@ -559,20 +559,12 @@ impl<D: StorageData> Storage<D> {
         self.validate_or_update_version()?;
 
         let end = self.len();
-        let max_records = end / STORAGE_RECORD_SIZE;
         let mut current_pos = Self::current_version_record().end();
 
         while current_pos < end {
             let record = self.read_record(current_pos)?;
 
-            if record.index != 0 && record.index > max_records {
-                return Err(DbError::from(format!(
-                    "Storage error: invalid record index ({}) exceeds maximum ({})",
-                    record.index, max_records
-                )));
-            }
-
-            if (end - current_pos) < record.size {
+            if (end - current_pos + STORAGE_RECORD_SIZE) < record.size {
                 return Err(DbError::from(format!(
                     "Storage error: invalid record size ({}) exceeds remaining storage ({})",
                     record.size,

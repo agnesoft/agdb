@@ -150,10 +150,7 @@ impl StorageRecords {
         if let Some(size) = self
             .free_pos_size
             .get(&end_pos)
-            .filter(|size| {
-                (STORAGE_RECORD_SIZE + **size) == min_size
-                    || **size >= min_size + STORAGE_RECORD_SIZE
-            })
+            .filter(|size| (STORAGE_RECORD_SIZE + **size) == min_size || **size >= min_size)
             .cloned()
         {
             self.remove_free(end_pos);

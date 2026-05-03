@@ -180,7 +180,7 @@ mod tests {
     use crate::utilities::serialize::SerializeStatic;
 
     #[test]
-    fn bad_db_file_content() {
+    fn bad_record_size() {
         let test_file = TestFile::new();
         let records = [
             StorageRecord {
@@ -194,9 +194,9 @@ mod tests {
                 size: 48,
             },
             StorageRecord {
-                index: 1181116006400,
+                index: 4,
                 pos: 88,
-                size: 0,
+                size: 321654876,
             },
             StorageRecord {
                 index: 1,

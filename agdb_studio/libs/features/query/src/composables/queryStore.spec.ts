@@ -13,7 +13,6 @@ describe("queryStore", () => {
   const makeStep = (overrides?: Partial<QueryStep>): QueryStep => ({
     id: overrides?.id ?? "s1",
     type: overrides?.type ?? "select",
-    values: overrides?.values ?? [],
   });
 
   beforeEach(() => {

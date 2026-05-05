@@ -1,4 +1,5 @@
 use crate::DbError;
+use crate::DbErrorKind;
 use crate::DbImpl;
 use crate::QueryIds;
 use crate::QueryMut;
@@ -33,12 +34,22 @@ impl QueryMut for InsertAliasesQuery {
         match &self.ids {
             QueryIds::Ids(ids) => {
                 if ids.len() != self.aliases.len() {
-                    return Err(DbError::from("Ids and aliases must have the same length"));
+                    return Err(DbError::new(
+                        DbErrorKind::NotEnoughData,
+                        format!(
+                            "Ids ({}) must match aliases ({})",
+                            ids.len(),
+                            self.aliases.len()
+                        ),
+                    ));
                 }
 
                 for (id, alias) in ids.iter().zip(&self.aliases) {
                     if alias.is_empty() {
-                        return Err(DbError::from("Empty alias is not allowed"));
+                        return Err(DbError::new(
+                            DbErrorKind::NotEnoughData,
+                            "Empty alias is not allowed",
+                        ));
                     }
 
                     let db_id = db.db_id(id)?;
@@ -47,8 +58,9 @@ impl QueryMut for InsertAliasesQuery {
                 }
             }
             QueryIds::Search(_) => {
-                return Err(DbError::from(
-                    "Insert aliases query does not support search queries",
+                return Err(DbError::new(
+                    DbErrorKind::NotAllowed,
+                    "Insert aliases query does not allow search queries",
                 ));
             }
         }
@@ -91,7 +103,10 @@ mod tests {
         };
         assert_eq!(
             query.process(&mut db).unwrap_err(),
-            DbError::from("Insert aliases query does not support search queries")
+            DbError::new(
+                DbErrorKind::NotAllowed,
+                "Insert aliases query does not allow search queries",
+            )
         );
     }
 }

@@ -72,7 +72,7 @@ fn select_values_ids_missing_key() {
             .values(["key", "key2"])
             .ids(["alias1", "alias2"])
             .query(),
-        "Missing key 'key2' for id '2'",
+        "Key 'key2' for id '2' not found",
     );
 }
 

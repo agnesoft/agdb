@@ -679,7 +679,7 @@ fn with_option_some_wrong_type() {
 
     assert_eq!(
         err_text,
-        "Failed to convert value of 'value': Type mismatch. Cannot convert 'string' to 'u64'"
+        "Failed to convert value of 'value': Cannot convert 'string' to 'u64'"
     );
 }
 
@@ -726,7 +726,7 @@ fn with_option_bad_value() {
 
     assert_eq!(
         err_text,
-        "Failed to convert value of 'name': Type mismatch. Cannot convert 'i64' to 'string'"
+        "Failed to convert value of 'name': Cannot convert 'i64' to 'string'"
     );
 }
 
@@ -770,7 +770,7 @@ fn try_from_db_element_bad_conversion() {
 
     assert_eq!(
         err_text,
-        "Failed to convert value of 'password': Type mismatch. Cannot convert 'i64' to 'string'"
+        "Failed to convert value of 'password': Cannot convert 'i64' to 'string'"
     );
 }
 

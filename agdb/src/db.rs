@@ -12,6 +12,7 @@ mod db_search_handlers;
 mod db_value_index;
 
 use self::db_error::DbError;
+use self::db_error::DbErrorKind;
 use self::db_search_handlers::DefaultHandler;
 use self::db_search_handlers::LimitHandler;
 use self::db_search_handlers::LimitOffsetHandler;
@@ -262,7 +263,10 @@ impl<Store: StorageData> DbImpl<Store> {
         match Self::try_new(filename) {
             Ok(db) => Ok(db),
             Err(error) => {
-                let mut db_error = DbError::from("Failed to create database");
+                let mut db_error = DbError::new(
+                    DbErrorKind::DbCreate,
+                    format!("Failed to create database: {filename}"),
+                );
                 db_error.cause = Some(Box::new(error));
                 Err(db_error)
             }
@@ -525,9 +529,10 @@ impl<Store: StorageData> DbImpl<Store> {
     }
 
     pub(crate) fn alias(&self, db_id: DbId) -> Result<String, DbError> {
-        self.aliases
-            .key(&self.storage, &db_id)?
-            .ok_or(DbError::from(format!("Id '{}' not found", db_id.0)))
+        self.aliases.key(&self.storage, &db_id)?.ok_or(DbError::new(
+            DbErrorKind::NotFound,
+            format!("Id '{}' not found", db_id.0),
+        ))
     }
 
     pub(crate) fn aliases(&self) -> Vec<(String, DbId)> {
@@ -537,10 +542,15 @@ impl<Store: StorageData> DbImpl<Store> {
     pub(crate) fn db_id(&self, query_id: &QueryId) -> Result<DbId, DbError> {
         match query_id {
             QueryId::Id(id) => Ok(DbId(self.graph_index(id.0)?.0)),
-            QueryId::Alias(alias) => Ok(self
-                .aliases
-                .value(&self.storage, alias)?
-                .ok_or(DbError::from(format!("Alias '{alias}' not found")))?),
+            QueryId::Alias(alias) => {
+                Ok(self
+                    .aliases
+                    .value(&self.storage, alias)?
+                    .ok_or(DbError::new(
+                        DbErrorKind::NotFound,
+                        format!("Alias '{alias}' not found"),
+                    ))?)
+            }
         }
     }
 
@@ -616,7 +626,10 @@ impl<Store: StorageData> DbImpl<Store> {
 
     pub(crate) fn insert_index(&mut self, key: &DbValue) -> Result<u64, DbError> {
         if self.indexes.index(key).is_some() {
-            return Err(DbError::from(format!("Index '{key}' already exists")));
+            return Err(DbError::new(
+                DbErrorKind::NotAllowed,
+                format!("Index '{key}' already exists"),
+            ));
         }
 
         self.undo_stack
@@ -820,7 +833,10 @@ impl<Store: StorageData> DbImpl<Store> {
         if let Some(index) = self.indexes.index(key) {
             Ok(index.ids().values(&self.storage, value)?)
         } else {
-            Err(DbError::from(format!("Index '{key}' not found")))
+            Err(DbError::new(
+                DbErrorKind::NotFound,
+                format!("Index '{key}' not found"),
+            ))
         }
     }
 
@@ -991,7 +1007,10 @@ impl<Store: StorageData> DbImpl<Store> {
             }
         }
 
-        Err(DbError::from(format!("Id '{id}' not found")))
+        Err(DbError::new(
+            DbErrorKind::NotFound,
+            format!("Id '{id}' not found"),
+        ))
     }
 
     fn node_edges(
@@ -1002,7 +1021,10 @@ impl<Store: StorageData> DbImpl<Store> {
         let node = self
             .graph
             .node(&self.storage, graph_index)
-            .ok_or(DbError::from("Data integrity corrupted"))?;
+            .ok_or(DbError::new(
+                DbErrorKind::NotFound,
+                format!("Node {} not found", graph_index.0),
+            ))?;
 
         for edge in node.edge_iter_from() {
             edges.push((edge.index(), edge.index_from(), edge.index_to()));
@@ -1023,7 +1045,10 @@ impl<Store: StorageData> DbImpl<Store> {
             let edge = self
                 .graph
                 .edge(&self.storage, graph_index)
-                .ok_or(DbError::from("Graph integrity corrupted"))?;
+                .ok_or(DbError::new(
+                    DbErrorKind::NotFound,
+                    format!("Edge {} not found", graph_index.0),
+                ))?;
             (edge.index_from(), edge.index_to())
         };
 
@@ -1285,7 +1310,10 @@ impl DbAny {
         match init(filename) {
             Ok(db) => Ok(db),
             Err(error) => {
-                let mut db_error = DbError::from("Failed to create database");
+                let mut db_error = DbError::new(
+                    DbErrorKind::DbCreate,
+                    format!("Failed to create database: {filename}"),
+                );
                 db_error.cause = Some(Box::new(error));
                 Err(db_error)
             }

@@ -2,6 +2,7 @@ mod test_db;
 
 use agdb::DbElement;
 use agdb::DbError;
+use agdb::DbErrorKind;
 use agdb::DbId;
 use agdb::QueryBuilder;
 use agdb::QueryResult;
@@ -17,7 +18,7 @@ fn remove_nodes_rollback() {
                 .unwrap();
             t.exec(QueryBuilder::select().ids(DbId(1)).query())
         },
-        "Id '1' not found".into(),
+        DbError::new(DbErrorKind::NotFound, "Id '1' not found"),
     );
     db.exec(QueryBuilder::select().ids(String::from("alias")).query(), 1);
 }
@@ -70,9 +71,9 @@ fn remove_nodes_no_alias_rollback() {
     db.transaction_mut_error(
         |t| -> Result<(), DbError> {
             t.exec_mut(QueryBuilder::remove().ids(1).query())?;
-            Err("error".into())
+            Err(DbError::new(DbErrorKind::NotAllowed, "error"))
         },
-        "error".into(),
+        DbError::new(DbErrorKind::NotAllowed, "error"),
     );
     db.exec_ids(QueryBuilder::select().ids(1).query(), &[1]);
 }
@@ -83,9 +84,9 @@ fn remove_missing_nodes_rollback() {
     db.transaction_mut_error(
         |t| -> Result<(), DbError> {
             t.exec_mut(QueryBuilder::remove().ids(1).query())?;
-            Err("error".into())
+            Err(DbError::new(DbErrorKind::NotAllowed, "error"))
         },
-        "error".into(),
+        DbError::new(DbErrorKind::NotAllowed, "error"),
     );
 }
 
@@ -95,9 +96,9 @@ fn remove_missing_nodes_alias_rollback() {
     db.transaction_mut_error(
         |t| -> Result<(), DbError> {
             t.exec_mut(QueryBuilder::remove().ids("alias").query())?;
-            Err("error".into())
+            Err(DbError::new(DbErrorKind::NotAllowed, "error"))
         },
-        "error".into(),
+        DbError::new(DbErrorKind::NotAllowed, "error"),
     );
 }
 
@@ -125,9 +126,9 @@ fn remove_nodes_with_edges_rollback() {
     db.transaction_mut_error(
         |t| -> Result<(), DbError> {
             t.exec_mut(QueryBuilder::remove().ids(1).query())?;
-            Err("error".into())
+            Err(DbError::new(DbErrorKind::NotAllowed, "error"))
         },
-        "error".into(),
+        DbError::new(DbErrorKind::NotAllowed, "error"),
     );
     db.exec_ids(QueryBuilder::select().ids(-2).query(), &[-2]);
 }
@@ -180,7 +181,7 @@ fn remove_nodes_with_values_rollback() {
             t.exec_mut(QueryBuilder::remove().ids(1).query()).unwrap();
             t.exec(QueryBuilder::select().ids(1).query())
         },
-        DbError::from("Id '1' not found"),
+        DbError::new(DbErrorKind::NotFound, "Id '1' not found"),
     );
 
     db.exec_elements(
@@ -285,9 +286,9 @@ fn remove_nodes_removes_edges_with_all_values_rollback() {
                     .to([3, 3])
                     .query(),
             )?;
-            Err(DbError::from("error"))
+            Err(DbError::new(DbErrorKind::NotAllowed, "error"))
         },
-        DbError::from("error"),
+        DbError::new(DbErrorKind::NotAllowed, "error"),
     );
     db.exec_elements(
         QueryBuilder::select().ids(-4).query(),

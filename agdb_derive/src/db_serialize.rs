@@ -150,7 +150,7 @@ fn serialize_enum(name: Ident, enum_data: DataEnum) -> proc_macro2::TokenStream 
                     #(
                         #deserializers
                     ),*
-                    _ => ::std::result::Result::Err(::agdb::DbError::from("Invalid enum variant"))
+                    _ => ::std::result::Result::Err(::agdb::DbError::new(::agdb::DbErrorKind::TypeError, "Invalid enum variant"))
                 }
 
             }

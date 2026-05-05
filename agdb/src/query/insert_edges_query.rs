@@ -1,5 +1,6 @@
 use crate::DbElement;
 use crate::DbError;
+use crate::DbErrorKind;
 use crate::DbId;
 use crate::DbImpl;
 use crate::DbKeyValue;
@@ -66,10 +67,12 @@ impl QueryMut for InsertEdgesQuery {
         let ids = if !query_ids.is_empty() {
             query_ids.iter().try_for_each(|db_id| {
                 if db_id.0 > 0 {
-                    Err(DbError::from(format!(
+                    Err(DbError::new(DbErrorKind::NotAllowed,
+                        format!(
                         "The ids for insert or update must all refer to edges - node id '{}' found",
                         db_id.0
-                    )))
+                        ),
+                    ))
                 } else {
                     Ok(())
                 }
@@ -201,10 +204,10 @@ impl InsertEdgesQuery {
         };
 
         if values.len() != count {
-            return Err(DbError::from(format!(
-                "Values len '{}' do not match the insert count '{count}'",
-                values.len()
-            )));
+            return Err(DbError::new(
+                DbErrorKind::NotEnoughData,
+                format!("Values ({}) must match count ({count})", values.len()),
+            ));
         }
 
         Ok(values)

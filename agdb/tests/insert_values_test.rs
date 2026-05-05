@@ -2,6 +2,7 @@ mod test_db;
 
 use agdb::DbElement;
 use agdb::DbError;
+use agdb::DbErrorKind;
 use agdb::DbId;
 use agdb::QueryBuilder;
 use test_db::TestDb;
@@ -45,9 +46,9 @@ fn insert_values_ids_rollback() {
                     ],
                 }]
             );
-            Err(DbError::from("error"))
+            Err(DbError::new(DbErrorKind::NotAllowed, "error"))
         },
-        DbError::from("error"),
+        DbError::new(DbErrorKind::NotAllowed, "error"),
     );
     db.exec_elements(
         QueryBuilder::select().ids(1).query(),
@@ -98,7 +99,7 @@ fn insert_values_invalid_length() {
             .values([[("key", "value").into()]])
             .ids([1, 2])
             .query(),
-        "Ids and values length do not match",
+        "Ids (2) must match values (1)",
     )
 }
 
@@ -293,7 +294,7 @@ fn insert_values_search_invalid_length() {
             .values([[("key1", "value1").into()], [("key2", "value2").into()]])
             .ids(QueryBuilder::search().from(1).query())
             .query(),
-        "Ids and values length do not match",
+        "Ids (3) must match values (2)",
     );
 }
 
@@ -344,9 +345,9 @@ fn insert_values_overwrite_transaction() {
                     .ids(1)
                     .query(),
             )?;
-            Err(DbError::from("error"))
+            Err(DbError::new(DbErrorKind::NotAllowed, "error"))
         },
-        DbError::from("error"),
+        DbError::new(DbErrorKind::NotAllowed, "error"),
     );
 
     db.exec_elements(

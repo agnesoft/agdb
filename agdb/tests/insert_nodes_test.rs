@@ -2,6 +2,7 @@ mod test_db;
 
 use agdb::DbElement;
 use agdb::DbError;
+use agdb::DbErrorKind;
 use agdb::DbId;
 use agdb::QueryBuilder;
 use test_db::TestDb;
@@ -12,9 +13,9 @@ fn insert_nodes_aliases_rollback() {
     db.transaction_mut_error(
         |transaction| -> Result<(), DbError> {
             transaction.exec_mut(QueryBuilder::insert().nodes().aliases("alias").query())?;
-            Err("error".into())
+            Err(DbError::new(DbErrorKind::NotAllowed, "error"))
         },
-        "error".into(),
+        DbError::new(DbErrorKind::NotAllowed, "error"),
     );
     db.exec_error(
         QueryBuilder::select().ids("alias").query(),
@@ -123,9 +124,9 @@ fn insert_nodes_aliases_values_rollback() {
                     },
                 ],
             );
-            Err("error".into())
+            Err(DbError::new(DbErrorKind::NotAllowed, "error"))
         },
-        "error".into(),
+        DbError::new(DbErrorKind::NotAllowed, "error"),
     );
     db.exec_error(
         QueryBuilder::select().ids("alias1").query(),
@@ -280,7 +281,7 @@ fn insert_nodes_aliases_values_mismatched_length() {
             .aliases(["alias", "alias2"])
             .values([[("key", 1).into()]])
             .query(),
-        "Aliases (2) and values (1) must have compatible lenghts (2 <= 1)",
+        "Aliases (2) must match values (1)",
     );
 }
 
@@ -374,7 +375,7 @@ fn insert_or_replace_mismatch_length() {
             .ids([1, 2])
             .values([[]])
             .query(),
-        "Values (1) and ids (2) must have the same length",
+        "Values (1) must match ids (2)",
     );
 }
 

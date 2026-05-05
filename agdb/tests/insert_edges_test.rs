@@ -2,6 +2,7 @@ mod test_db;
 
 use agdb::DbElement;
 use agdb::DbError;
+use agdb::DbErrorKind;
 use agdb::DbId;
 use agdb::DbKeyValue;
 use agdb::QueryBuilder;
@@ -15,9 +16,9 @@ fn insert_edges_from_to_rollback() {
     db.transaction_mut_error(
         |t| -> Result<(), DbError> {
             t.exec_mut(QueryBuilder::insert().edges().from("alias1").to(2).query())?;
-            Err("error".into())
+            Err(DbError::new(DbErrorKind::NotAllowed, "error"))
         },
-        "error".into(),
+        DbError::new(DbErrorKind::NotAllowed, "error"),
     );
     db.exec_error(QueryBuilder::select().ids(-3).query(), "Id '-3' not found");
 }
@@ -236,7 +237,7 @@ fn insert_edges_from_to_values_bad_length() {
             .to(["alias3", "alias4"])
             .values([[("key", "value").into()]])
             .query(),
-        "Values len '1' do not match the insert count '2'",
+        "Values (1) must match count (2)",
     );
 }
 
@@ -258,7 +259,7 @@ fn insert_edges_from_to_values_each_bad_length() {
             .each()
             .values([[("key", "value").into()]])
             .query(),
-        "Values len '1' do not match the insert count '4'",
+        "Values (1) must match count (4)",
     );
 }
 
@@ -417,7 +418,7 @@ fn insert_or_update_mismatch_length() {
             .to(2)
             .values(Vec::<Vec<DbKeyValue>>::new())
             .query(),
-        "Values len '0' do not match the insert count '1'",
+        "Values (0) must match count (1)",
     );
 }
 

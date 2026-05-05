@@ -1,4 +1,5 @@
 use crate::DbError;
+use crate::DbErrorKind;
 use crate::StorageData;
 use crate::collections::vec::DbVec;
 use crate::storage::Storage;
@@ -708,7 +709,10 @@ where
     }
 
     fn invalid_index(index: GraphIndex) -> DbError {
-        DbError::from(format!("'{}' is invalid index", index.0))
+        DbError::new(
+            DbErrorKind::InvalidIndex,
+            format!("'{}' is invalid index", index.0),
+        )
     }
 
     fn is_removed_index(&self, storage: &Storage<D>, index: GraphIndex) -> Result<bool, DbError> {
@@ -1140,7 +1144,10 @@ mod tests {
 
         assert_eq!(
             graph.insert_edge(&mut storage, GraphIndex::from(1), GraphIndex::from(2)),
-            Err(DbError::from("'1' is invalid index"))
+            Err(DbError::new(
+                DbErrorKind::InvalidIndex,
+                "'1' is invalid index",
+            ))
         );
     }
 
@@ -1153,7 +1160,10 @@ mod tests {
 
         assert_eq!(
             graph.insert_edge(&mut storage, from, GraphIndex::from(2)),
-            Err(DbError::from("'2' is invalid index"))
+            Err(DbError::new(
+                DbErrorKind::InvalidIndex,
+                "'2' is invalid index",
+            ))
         );
     }
 

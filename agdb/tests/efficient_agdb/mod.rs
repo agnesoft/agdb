@@ -2,6 +2,7 @@ use crate::test_db::TestFile;
 use agdb::CountComparison;
 use agdb::Db;
 use agdb::DbError;
+use agdb::DbErrorKind;
 use agdb::DbId;
 use agdb::DbKeyOrder;
 use agdb::DbKeyValue;
@@ -75,10 +76,10 @@ fn register_user(db: &mut Db, user: &User) -> Result<DbId, DbError> {
         .result
             != 0
         {
-            return Err(DbError::from(format!(
-                "User {} already exists.",
-                user.username
-            )));
+            return Err(DbError::new(
+                DbErrorKind::NotAllowed,
+                format!("User {} already exists.", user.username),
+            ));
         }
 
         let user = t
@@ -188,14 +189,18 @@ fn login(db: &Db, username: &str, password: &str) -> Result<DbId, DbError> {
         )?
         .elements;
 
-    let user = result
-        .first()
-        .ok_or(DbError::from(format!("Username '{username}' not found")))?;
+    let user = result.first().ok_or(DbError::new(
+        DbErrorKind::NotFound,
+        format!("Username '{username}' not found"),
+    ))?;
 
     let pswd = user.values[0].value.to_string();
 
     if password != pswd {
-        return Err(DbError::from("Password is incorrect"));
+        return Err(DbError::new(
+            DbErrorKind::NotAllowed,
+            "Password is incorrect",
+        ));
     }
 
     Ok(user.id)

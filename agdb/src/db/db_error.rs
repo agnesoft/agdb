@@ -105,13 +105,26 @@ impl DbError {
 impl Display for DbErrorType {
     fn fmt(&self, f: &mut Formatter<'_>) -> FMTResult {
         match self {
-            DbErrorType::DbCreate => write!(f, "Db create"),
-            DbErrorType::InvalidIndex => write!(f, "Invalid index"),
-            DbErrorType::NotEnoughData => write!(f, "Not enough data"),
-            DbErrorType::NotFound => write!(f, "Not found"),
-            DbErrorType::OutOfBounds => write!(f, "Out of bounds"),
-            DbErrorType::NotAllowed => write!(f, "Not allowed"),
-            DbErrorType::TypeError => write!(f, "Type error"),
+            DbErrorType::DbCreate => write!(f, "DbCreate"),
+            DbErrorType::InvalidIndex => write!(f, "InvalidIndex"),
+            DbErrorType::NotEnoughData => write!(f, "NotEnoughData"),
+            DbErrorType::NotFound => write!(f, "NotFound"),
+            DbErrorType::OutOfBounds => write!(f, "OutOfBounds"),
+            DbErrorType::NotAllowed => write!(f, "NotAllowed"),
+            DbErrorType::TypeError => write!(f, "TypeError"),
+        }
+    }
+}
+
+impl Display for DbErrorCategory {
+    fn fmt(&self, f: &mut Formatter<'_>) -> FMTResult {
+        match self {
+            DbErrorCategory::Collections => write!(f, "Collections"),
+            DbErrorCategory::Db => write!(f, "Db"),
+            DbErrorCategory::Graph => write!(f, "Graph"),
+            DbErrorCategory::Query => write!(f, "Query"),
+            DbErrorCategory::Serialization => write!(f, "Serialization"),
+            DbErrorCategory::Storage => write!(f, "Storage"),
         }
     }
 }
@@ -122,11 +135,15 @@ impl Display for DbError {
         if let Some(cause) = &self.cause {
             write!(
                 f,
-                "{} (at {})\ncaused by\n  {}",
-                self.description, location, cause
+                "[{}:{}] {} (at {})\ncaused by\n  {}",
+                self.category, self.ty, self.description, location, cause
             )
         } else {
-            write!(f, "{} (at {})", self.description, location)
+            write!(
+                f,
+                "[{}:{}] {} (at {})",
+                self.category, self.ty, self.description, location
+            )
         }
     }
 }
@@ -202,7 +219,7 @@ mod tests {
         assert_eq!(
             error.to_string(),
             format!(
-                "outer error (at {}:{}:{})",
+                "[Db:NotEnoughData] outer error (at {}:{}:{})",
                 file.replace('\\', "/"),
                 line + 1,
                 col__
@@ -226,7 +243,7 @@ mod tests {
         assert_eq!(
             error.to_string(),
             format!(
-                "outer error (at {}:{}:{})\ncaused by\n  inner error (at {}:{}:{})",
+                "[Db:NotEnoughData] outer error (at {}:{}:{})\ncaused by\n  [Db:NotEnoughData] inner error (at {}:{}:{})",
                 file.replace('\\', "/"),
                 line + 1,
                 column___,
@@ -254,7 +271,7 @@ mod tests {
         assert_eq!(
             new_error.source().unwrap().to_string(),
             format!(
-                "open error (at {}:{}:{})",
+                "[Db:NotEnoughData] open error (at {}:{}:{})",
                 file.replace('\\', "/"),
                 line + 1,
                 col__

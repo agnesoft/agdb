@@ -1,6 +1,6 @@
 use crate::DbElement;
 use crate::DbError;
-use crate::DbErrorKind;
+use crate::DbErrorType;
 use crate::DbId;
 use crate::DbImpl;
 use crate::DbKeyValue;
@@ -49,8 +49,7 @@ impl QueryMut for InsertValuesQuery {
                 }
                 QueryValues::Multi(values) => {
                     if ids.len() != values.len() {
-                        return Err(DbError::new(
-                            DbErrorKind::NotEnoughData,
+                        return Err(DbError::query(DbErrorType::NotEnoughData,
                             format!("Ids ({}) must match values ({})", ids.len(), values.len()),
                         ));
                     }
@@ -71,8 +70,7 @@ impl QueryMut for InsertValuesQuery {
                     }
                     QueryValues::Multi(values) => {
                         if db_ids.len() != values.len() {
-                            return Err(DbError::new(
-                                DbErrorKind::NotEnoughData,
+                            return Err(DbError::query(DbErrorType::NotEnoughData,
                                 format!(
                                     "Ids ({}) must match values ({})",
                                     db_ids.len(),

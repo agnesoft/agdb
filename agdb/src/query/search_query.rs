@@ -1,6 +1,6 @@
 use crate::DbElement;
 use crate::DbError;
-use crate::DbErrorKind;
+use crate::DbErrorType;
 use crate::DbId;
 use crate::DbImpl;
 use crate::DbValue;
@@ -103,14 +103,13 @@ impl SearchQuery {
             let condition = self
                 .conditions
                 .first()
-                .ok_or_else(|| DbError::new(DbErrorKind::NotFound, "Index condition missing"))?;
+                .ok_or_else(|| DbError::query(DbErrorType::NotFound, "Index condition missing"))?;
 
             if let QueryConditionData::KeyValue(kvc) = &condition.data {
                 let ids = db.search_index(&kvc.key, kvc.value.value())?;
                 return Ok(ids);
             } else {
-                return Err(DbError::new(
-                    DbErrorKind::NotAllowed,
+                return Err(DbError::query(DbErrorType::NotAllowed,
                     "Index condition must be key value",
                 ));
             }

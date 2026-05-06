@@ -1,6 +1,6 @@
 use crate::DbElement;
 use crate::DbError;
-use crate::DbErrorKind;
+use crate::DbErrorType;
 use crate::DbImpl;
 use crate::DbValue;
 use crate::Query;
@@ -56,8 +56,7 @@ impl Query for SelectValuesQuery {
             if !is_search && values.len() != self.keys.len() {
                 for key in &self.keys {
                     if !values.iter().any(|x| x.key == *key) {
-                        return Err(DbError::new(
-                            DbErrorKind::NotFound,
+                        return Err(DbError::query(DbErrorType::NotFound,
                             format!("Key '{}' for id '{}' not found", key, id.0),
                         ));
                     }

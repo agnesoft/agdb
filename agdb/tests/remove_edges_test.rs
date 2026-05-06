@@ -1,7 +1,7 @@
 mod test_db;
 
 use agdb::DbError;
-use agdb::DbErrorKind;
+use agdb::DbErrorType;
 use agdb::QueryBuilder;
 use agdb::QueryId;
 use test_db::TestDb;
@@ -20,7 +20,7 @@ fn remove_edges_rollback() {
             t.exec_mut(QueryBuilder::remove().ids(-3).query())?;
             t.exec(QueryBuilder::select().ids(-3).query())
         },
-        DbError::new(DbErrorKind::NotFound, "Id '-3' not found"),
+        DbError::db(DbErrorType::NotFound, "Id '-3' not found"),
     );
     db.exec(QueryBuilder::select().ids(-3).query(), 1);
 }
@@ -54,9 +54,9 @@ fn remove_missing_edges_rollback() {
         |transaction| -> Result<(), DbError> {
             let query = QueryBuilder::remove().ids(-3).query();
             transaction.exec_mut(&query).unwrap();
-            Err(DbError::new(DbErrorKind::NotAllowed, "error"))
+            Err(DbError::db(DbErrorType::NotAllowed, "error"))
         },
-        DbError::new(DbErrorKind::NotAllowed, "error"),
+        DbError::db(DbErrorType::NotAllowed, "error"),
     );
 }
 

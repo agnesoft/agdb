@@ -9,7 +9,7 @@ mod write_ahead_log;
 use self::storage_records::StorageRecord;
 use self::storage_records::StorageRecords;
 use crate::DbError;
-use crate::DbErrorKind;
+use crate::DbErrorType;
 use crate::collections::vec::VecValue;
 use crate::storage::storage_records::STORAGE_RECORD_SIZE;
 use crate::utilities::serialize::Serialize;
@@ -373,8 +373,8 @@ impl<D: StorageData> Storage<D> {
 
     fn end_transaction(&mut self, id: u64) -> Result<(), DbError> {
         if self.transactions != id {
-            return Err(DbError::new(
-                DbErrorKind::NotAllowed,
+            return Err(DbError::storage(
+                DbErrorType::NotAllowed,
                 format!(
                     "Cannot end transaction '{id}'. Transaction '{}' in progress.",
                     self.transactions
@@ -515,8 +515,8 @@ impl<D: StorageData> Storage<D> {
 
     fn extract_version(&mut self, record: &StorageRecord) -> Result<u64, DbError> {
         if record.size < u64::serialized_size_static() {
-            return Err(DbError::new(
-                DbErrorKind::NotEnoughData,
+            return Err(DbError::storage(
+                DbErrorType::NotEnoughData,
                 format!(
                     "Invalid version record size ({} < {})",
                     record.size,
@@ -572,8 +572,8 @@ impl<D: StorageData> Storage<D> {
             let record = self.read_record(current_pos)?;
 
             if (end - current_pos + STORAGE_RECORD_SIZE) < record.size {
-                return Err(DbError::new(
-                    DbErrorKind::OutOfBounds,
+                return Err(DbError::storage(
+                    DbErrorType::OutOfBounds,
                     format!(
                         "Invalid record size ({}) exceeds remaining storage ({})",
                         record.size,
@@ -654,8 +654,8 @@ impl<D: StorageData> Storage<D> {
 
     fn validate_or_update_version(&mut self) -> Result<(), DbError> {
         if self.version > CURRENT_VERSION {
-            return Err(DbError::new(
-                DbErrorKind::NotAllowed,
+            return Err(DbError::storage(
+                DbErrorType::NotAllowed,
                 format!(
                     "Storage version '{}' is higher than the current version '{CURRENT_VERSION}'",
                     self.version
@@ -707,17 +707,17 @@ impl<D: StorageData> Storage<D> {
 
     fn validate_read_size(offset: u64, read_size: u64, value_size: u64) -> Result<(), DbError> {
         if offset > value_size {
-            return Err(DbError::new(
-                DbErrorKind::OutOfBounds,
-                format!("Storage error: offset ({offset}) out of bounds ({value_size})"),
+            return Err(DbError::storage(
+                DbErrorType::OutOfBounds,
+                format!("Offset ({offset}) out of bounds ({value_size})"),
             ));
         }
 
         if (offset + read_size) > value_size {
-            return Err(DbError::new(
-                DbErrorKind::OutOfBounds,
+            return Err(DbError::storage(
+                DbErrorType::OutOfBounds,
                 format!(
-                    "Storage error: value size ({}) out of bounds ({value_size})",
+                    "Value size ({}) out of bounds ({value_size})",
                     offset + read_size,
                 ),
             ));

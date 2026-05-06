@@ -2,7 +2,7 @@ mod test_db;
 
 use agdb::DbElement;
 use agdb::DbError;
-use agdb::DbErrorKind;
+use agdb::DbErrorType;
 use agdb::DbId;
 use agdb::DbKeyValue;
 use agdb::QueryBuilder;
@@ -16,9 +16,9 @@ fn insert_edges_from_to_rollback() {
     db.transaction_mut_error(
         |t| -> Result<(), DbError> {
             t.exec_mut(QueryBuilder::insert().edges().from("alias1").to(2).query())?;
-            Err(DbError::new(DbErrorKind::NotAllowed, "error"))
+            Err(DbError::db(DbErrorType::NotAllowed, "error"))
         },
-        DbError::new(DbErrorKind::NotAllowed, "error"),
+        DbError::db(DbErrorType::NotAllowed, "error"),
     );
     db.exec_error(QueryBuilder::select().ids(-3).query(), "Id '-3' not found");
 }

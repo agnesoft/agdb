@@ -10,14 +10,24 @@ use std::string::FromUtf8Error;
 use std::sync::PoisonError;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum DbErrorKind {
+pub enum DbErrorType {
     DbCreate,
     InvalidIndex,
+    NotAllowed,
     NotEnoughData,
     NotFound,
     OutOfBounds,
-    NotAllowed,
     TypeError,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DbErrorCategory {
+    Collections,
+    Db,
+    Graph,
+    Query,
+    Serialization,
+    Storage,
 }
 
 /// Universal `agdb` database error. It represents
@@ -28,8 +38,11 @@ pub struct DbError {
     /// Error description
     pub description: String,
 
-    /// Error category to enable typed handling
-    pub kind: DbErrorKind,
+    /// Error category, e.g. graph, db, storage etc.
+    pub category: DbErrorCategory,
+
+    /// Error type, e.g. not found, not enough data etc.
+    pub ty: DbErrorType,
 
     /// Optional error that caused this error
     pub cause: Option<Box<DbError>>,
@@ -41,13 +54,44 @@ pub struct DbError {
 impl DbError {
     /// Creates an error with an explicit kind.
     #[track_caller]
-    pub fn new(kind: DbErrorKind, description: impl Into<String>) -> Self {
+    pub fn new(category: DbErrorCategory, ty: DbErrorType, description: impl Into<String>) -> Self {
         DbError {
             description: description.into(),
-            kind,
+            category,
+            ty,
             cause: None,
             source_location: *Location::caller(),
         }
+    }
+
+    #[track_caller]
+    pub fn collections(ty: DbErrorType, description: impl Into<String>) -> Self {
+        Self::new(DbErrorCategory::Collections, ty, description)
+    }
+
+    #[track_caller]
+    pub fn db(ty: DbErrorType, description: impl Into<String>) -> Self {
+        Self::new(DbErrorCategory::Db, ty, description)
+    }
+
+    #[track_caller]
+    pub fn graph(ty: DbErrorType, description: impl Into<String>) -> Self {
+        Self::new(DbErrorCategory::Graph, ty, description)
+    }
+
+    #[track_caller]
+    pub fn query(ty: DbErrorType, description: impl Into<String>) -> Self {
+        Self::new(DbErrorCategory::Query, ty, description)
+    }
+
+    #[track_caller]
+    pub fn serialization(ty: DbErrorType, description: impl Into<String>) -> Self {
+        Self::new(DbErrorCategory::Serialization, ty, description)
+    }
+
+    #[track_caller]
+    pub fn storage(ty: DbErrorType, description: impl Into<String>) -> Self {
+        Self::new(DbErrorCategory::Storage, ty, description)
     }
 
     /// Sets the `cause` of this error to `error`.
@@ -58,16 +102,16 @@ impl DbError {
     }
 }
 
-impl Display for DbErrorKind {
+impl Display for DbErrorType {
     fn fmt(&self, f: &mut Formatter<'_>) -> FMTResult {
         match self {
-            DbErrorKind::DbCreate => write!(f, "Db create"),
-            DbErrorKind::InvalidIndex => write!(f, "Invalid index"),
-            DbErrorKind::NotEnoughData => write!(f, "Not enough data"),
-            DbErrorKind::NotFound => write!(f, "Not found"),
-            DbErrorKind::OutOfBounds => write!(f, "Out of bounds"),
-            DbErrorKind::NotAllowed => write!(f, "Not allowed"),
-            DbErrorKind::TypeError => write!(f, "Type error"),
+            DbErrorType::DbCreate => write!(f, "Db create"),
+            DbErrorType::InvalidIndex => write!(f, "Invalid index"),
+            DbErrorType::NotEnoughData => write!(f, "Not enough data"),
+            DbErrorType::NotFound => write!(f, "Not found"),
+            DbErrorType::OutOfBounds => write!(f, "Out of bounds"),
+            DbErrorType::NotAllowed => write!(f, "Not allowed"),
+            DbErrorType::TypeError => write!(f, "Type error"),
         }
     }
 }
@@ -100,43 +144,41 @@ impl Error for DbError {
 impl<T> From<PoisonError<T>> for DbError {
     #[track_caller]
     fn from(value: PoisonError<T>) -> Self {
-        Self::new(DbErrorKind::TypeError, value.to_string())
+        DbError::db(DbErrorType::TypeError, value.to_string())
     }
 }
 
 impl From<IOError> for DbError {
     #[track_caller]
     fn from(error: IOError) -> Self {
-        DbError::new(DbErrorKind::TypeError, error.to_string())
+        DbError::db(DbErrorType::TypeError, error.to_string())
     }
 }
 
 impl From<FromUtf8Error> for DbError {
     #[track_caller]
     fn from(error: FromUtf8Error) -> Self {
-        DbError::new(DbErrorKind::TypeError, error.to_string())
+        DbError::db(DbErrorType::TypeError, error.to_string())
     }
 }
 
 impl From<TryFromSliceError> for DbError {
     #[track_caller]
     fn from(error: TryFromSliceError) -> Self {
-        DbError::new(DbErrorKind::NotEnoughData, error.to_string())
+        DbError::db(DbErrorType::NotEnoughData, error.to_string())
     }
 }
 
 impl From<TryFromIntError> for DbError {
     #[track_caller]
     fn from(error: TryFromIntError) -> Self {
-        DbError::new(DbErrorKind::TypeError, error.to_string())
+        DbError::db(DbErrorType::TypeError, error.to_string())
     }
 }
 
 impl PartialEq for DbError {
     fn eq(&self, other: &Self) -> bool {
-        self.description == other.description
-            && self.kind == other.kind
-            && self.cause == other.cause
+        self.description == other.description && self.ty == other.ty && self.cause == other.cause
     }
 }
 
@@ -147,7 +189,7 @@ mod tests {
 
     #[test]
     fn derived_from_debug() {
-        let error = DbError::new(DbErrorKind::NotEnoughData, "error");
+        let error = DbError::db(DbErrorType::NotEnoughData, "error");
         let _ = format!("{error:?}");
     }
 
@@ -156,7 +198,7 @@ mod tests {
         let file = file!();
         let col__ = column!();
         let line = line!();
-        let error = DbError::new(DbErrorKind::NotEnoughData, "outer error");
+        let error = DbError::db(DbErrorType::NotEnoughData, "outer error");
         assert_eq!(
             error.to_string(),
             format!(
@@ -173,11 +215,11 @@ mod tests {
         let file = file!();
         let column___ = column!();
         let line = line!();
-        let mut error = DbError::new(DbErrorKind::NotEnoughData, "outer error");
+        let mut error = DbError::db(DbErrorType::NotEnoughData, "outer error");
         let inner_column_adjusted = column!();
         let inner_line = line!();
-        error.cause = Some(Box::new(DbError::new(
-            DbErrorKind::NotEnoughData,
+        error.cause = Some(Box::new(DbError::db(
+            DbErrorType::NotEnoughData,
             "inner error",
         )));
 
@@ -207,8 +249,8 @@ mod tests {
         let file = file!();
         let col__ = column!();
         let line = line!();
-        let error = DbError::new(DbErrorKind::NotEnoughData, "open error");
-        let new_error = DbError::new(DbErrorKind::NotEnoughData, "file not found").caused_by(error);
+        let error = DbError::db(DbErrorType::NotEnoughData, "open error");
+        let new_error = DbError::db(DbErrorType::NotEnoughData, "file not found").caused_by(error);
         assert_eq!(
             new_error.source().unwrap().to_string(),
             format!(
@@ -222,12 +264,12 @@ mod tests {
 
     #[test]
     fn caused_by() {
-        let error = DbError::new(DbErrorKind::NotEnoughData, "file not found");
-        let new_error = DbError::new(DbErrorKind::NotEnoughData, "open error").caused_by(error);
+        let error = DbError::db(DbErrorType::NotEnoughData, "file not found");
+        let new_error = DbError::db(DbErrorType::NotEnoughData, "open error").caused_by(error);
         assert_eq!(
             new_error.cause,
-            Some(Box::new(DbError::new(
-                DbErrorKind::NotEnoughData,
+            Some(Box::new(DbError::db(
+                DbErrorType::NotEnoughData,
                 "file not found"
             )))
         );
@@ -259,7 +301,7 @@ mod tests {
 
     #[test]
     fn source_none() {
-        let error = DbError::new(DbErrorKind::NotEnoughData, "file not found");
+        let error = DbError::db(DbErrorType::NotEnoughData, "file not found");
 
         assert!(error.source().is_none());
     }
@@ -272,13 +314,13 @@ mod tests {
     #[test]
     fn from_io_error_has_kind() {
         let error = DbError::from(IOError::from(ErrorKind::NotFound));
-        assert_eq!(error.kind, DbErrorKind::TypeError);
+        assert_eq!(error.ty, DbErrorType::TypeError);
     }
 
     #[test]
     fn from_string_has_no_kind() {
-        let error = DbError::new(DbErrorKind::NotEnoughData, "error");
+        let error = DbError::db(DbErrorType::NotEnoughData, "error");
 
-        assert_eq!(error.kind, DbErrorKind::NotEnoughData);
+        assert_eq!(error.ty, DbErrorType::NotEnoughData);
     }
 }

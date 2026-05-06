@@ -123,8 +123,8 @@ fn t_exec(
             inject_results(&mut q.ids, results)?;
             t.exec(&*q)
         }
-        _ => Err(DbError::new(
-            agdb::DbErrorKind::NotAllowed,
+        _ => Err(DbError::query(
+            agdb::DbErrorType::NotAllowed,
             "mutable query not allowed",
         )),
     }

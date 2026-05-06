@@ -1,5 +1,5 @@
 use crate::DbError;
-use crate::DbErrorKind;
+use crate::DbErrorType;
 use crate::utilities::serialize::Serialize;
 use crate::utilities::serialize::SerializeStatic;
 
@@ -74,8 +74,7 @@ impl Serialize for DbValueIndex {
 
     fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
         if bytes.len() < 16 {
-            return Err(DbError::new(
-                DbErrorKind::NotEnoughData,
+            return Err(DbError::db(DbErrorType::NotEnoughData,
                 format!(
                     "DbValueIndex deserialization error: got {} bytes, expected at least 16 bytes",
                     bytes.len()

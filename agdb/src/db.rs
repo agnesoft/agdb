@@ -12,7 +12,7 @@ mod db_search_handlers;
 mod db_value_index;
 
 use self::db_error::DbError;
-use self::db_error::DbErrorKind;
+use self::db_error::DbErrorType;
 use self::db_search_handlers::DefaultHandler;
 use self::db_search_handlers::LimitHandler;
 use self::db_search_handlers::LimitOffsetHandler;
@@ -263,8 +263,7 @@ impl<Store: StorageData> DbImpl<Store> {
         match Self::try_new(filename) {
             Ok(db) => Ok(db),
             Err(error) => {
-                let mut db_error = DbError::new(
-                    DbErrorKind::DbCreate,
+                let mut db_error = DbError::db(DbErrorType::DbCreate,
                     format!("Failed to create database: {filename}"),
                 );
                 db_error.cause = Some(Box::new(error));
@@ -529,8 +528,7 @@ impl<Store: StorageData> DbImpl<Store> {
     }
 
     pub(crate) fn alias(&self, db_id: DbId) -> Result<String, DbError> {
-        self.aliases.key(&self.storage, &db_id)?.ok_or(DbError::new(
-            DbErrorKind::NotFound,
+        self.aliases.key(&self.storage, &db_id)?.ok_or(DbError::db(DbErrorType::NotFound,
             format!("Id '{}' not found", db_id.0),
         ))
     }
@@ -546,8 +544,7 @@ impl<Store: StorageData> DbImpl<Store> {
                 Ok(self
                     .aliases
                     .value(&self.storage, alias)?
-                    .ok_or(DbError::new(
-                        DbErrorKind::NotFound,
+                    .ok_or(DbError::db(DbErrorType::NotFound,
                         format!("Alias '{alias}' not found"),
                     ))?)
             }
@@ -626,8 +623,7 @@ impl<Store: StorageData> DbImpl<Store> {
 
     pub(crate) fn insert_index(&mut self, key: &DbValue) -> Result<u64, DbError> {
         if self.indexes.index(key).is_some() {
-            return Err(DbError::new(
-                DbErrorKind::NotAllowed,
+            return Err(DbError::db(DbErrorType::NotAllowed,
                 format!("Index '{key}' already exists"),
             ));
         }
@@ -833,8 +829,7 @@ impl<Store: StorageData> DbImpl<Store> {
         if let Some(index) = self.indexes.index(key) {
             Ok(index.ids().values(&self.storage, value)?)
         } else {
-            Err(DbError::new(
-                DbErrorKind::NotFound,
+            Err(DbError::db(DbErrorType::NotFound,
                 format!("Index '{key}' not found"),
             ))
         }
@@ -1007,8 +1002,7 @@ impl<Store: StorageData> DbImpl<Store> {
             }
         }
 
-        Err(DbError::new(
-            DbErrorKind::NotFound,
+        Err(DbError::db(DbErrorType::NotFound,
             format!("Id '{id}' not found"),
         ))
     }
@@ -1021,8 +1015,7 @@ impl<Store: StorageData> DbImpl<Store> {
         let node = self
             .graph
             .node(&self.storage, graph_index)
-            .ok_or(DbError::new(
-                DbErrorKind::NotFound,
+            .ok_or(DbError::db(DbErrorType::NotFound,
                 format!("Node {} not found", graph_index.0),
             ))?;
 
@@ -1045,8 +1038,7 @@ impl<Store: StorageData> DbImpl<Store> {
             let edge = self
                 .graph
                 .edge(&self.storage, graph_index)
-                .ok_or(DbError::new(
-                    DbErrorKind::NotFound,
+                .ok_or(DbError::db(DbErrorType::NotFound,
                     format!("Edge {} not found", graph_index.0),
                 ))?;
             (edge.index_from(), edge.index_to())
@@ -1310,8 +1302,7 @@ impl DbAny {
         match init(filename) {
             Ok(db) => Ok(db),
             Err(error) => {
-                let mut db_error = DbError::new(
-                    DbErrorKind::DbCreate,
+                let mut db_error = DbError::db(DbErrorType::DbCreate,
                     format!("Failed to create database: {filename}"),
                 );
                 db_error.cause = Some(Box::new(error));

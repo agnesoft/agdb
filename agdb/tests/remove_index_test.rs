@@ -1,7 +1,7 @@
 mod test_db;
 
 use agdb::DbError;
-use agdb::DbErrorKind;
+use agdb::DbErrorType;
 use agdb::DbValue;
 use agdb::QueryBuilder;
 use test_db::TestDb;
@@ -49,9 +49,9 @@ fn remove_index_rollback() {
     db.transaction_mut_error(
         |t| -> Result<(), DbError> {
             t.exec_mut(QueryBuilder::remove().index("username").query())?;
-            Err(DbError::new(DbErrorKind::NotAllowed, "error"))
+            Err(DbError::db(DbErrorType::NotAllowed, "error"))
         },
-        DbError::new(DbErrorKind::NotAllowed, "error"),
+        DbError::db(DbErrorType::NotAllowed, "error"),
     );
     db.exec(QueryBuilder::select().indexes().query(), 1);
 }
@@ -114,9 +114,9 @@ fn remove_indexed_key_rollback() {
     db.transaction_mut_error(
         |t| -> Result<(), DbError> {
             t.exec_mut(QueryBuilder::remove().values("username").ids(2).query())?;
-            Err(DbError::new(DbErrorKind::NotAllowed, "error"))
+            Err(DbError::db(DbErrorType::NotAllowed, "error"))
         },
-        DbError::new(DbErrorKind::NotAllowed, "error"),
+        DbError::db(DbErrorType::NotAllowed, "error"),
     );
 
     let result = db.exec_result(QueryBuilder::select().indexes().query());

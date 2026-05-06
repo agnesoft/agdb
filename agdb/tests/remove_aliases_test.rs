@@ -1,7 +1,7 @@
 mod test_db;
 
 use agdb::DbError;
-use agdb::DbErrorKind;
+use agdb::DbErrorType;
 use agdb::QueryBuilder;
 use agdb::QueryResult;
 use test_db::TestDb;
@@ -38,7 +38,7 @@ fn remove_aliases_rollback() {
             t.exec_mut(QueryBuilder::remove().aliases(["alias", "alias2"]).query())?;
             t.exec(QueryBuilder::select().ids("alias2").query())
         },
-        DbError::new(DbErrorKind::NotFound, "Alias 'alias2' not found"),
+        DbError::db(DbErrorType::NotFound, "Alias 'alias2' not found"),
     );
 
     db.exec(QueryBuilder::select().ids("alias2").query(), 1);
@@ -56,8 +56,8 @@ fn remove_missing_alias_rollback() {
     db.transaction_mut_error(
         |t| -> Result<(), DbError> {
             t.exec_mut(QueryBuilder::remove().aliases("alias").query())?;
-            Err(DbError::new(DbErrorKind::NotAllowed, "error"))
+            Err(DbError::db(DbErrorType::NotAllowed, "error"))
         },
-        DbError::new(DbErrorKind::NotAllowed, "error"),
+        DbError::db(DbErrorType::NotAllowed, "error"),
     );
 }

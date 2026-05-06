@@ -2,7 +2,7 @@ mod test_db;
 
 use agdb::DbElement;
 use agdb::DbError;
-use agdb::DbErrorKind;
+use agdb::DbErrorType;
 use agdb::DbId;
 use agdb::QueryBuilder;
 use test_db::TestDb;
@@ -46,9 +46,9 @@ fn insert_values_ids_rollback() {
                     ],
                 }]
             );
-            Err(DbError::new(DbErrorKind::NotAllowed, "error"))
+            Err(DbError::db(DbErrorType::NotAllowed, "error"))
         },
-        DbError::new(DbErrorKind::NotAllowed, "error"),
+        DbError::db(DbErrorType::NotAllowed, "error"),
     );
     db.exec_elements(
         QueryBuilder::select().ids(1).query(),
@@ -345,9 +345,9 @@ fn insert_values_overwrite_transaction() {
                     .ids(1)
                     .query(),
             )?;
-            Err(DbError::new(DbErrorKind::NotAllowed, "error"))
+            Err(DbError::db(DbErrorType::NotAllowed, "error"))
         },
-        DbError::new(DbErrorKind::NotAllowed, "error"),
+        DbError::db(DbErrorType::NotAllowed, "error"),
     );
 
     db.exec_elements(

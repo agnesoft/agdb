@@ -1,5 +1,5 @@
 use crate::DbError;
-use crate::DbErrorKind;
+use crate::DbErrorType;
 use crate::StorageData;
 use crate::storage::Storage;
 use crate::storage::StorageIndex;
@@ -367,8 +367,8 @@ where
 
     fn validate_index(&self, index: u64) -> Result<(), E> {
         if self.len() <= index {
-            return Err(E::from(DbError::new(
-                DbErrorKind::NotFound,
+            return Err(E::from(DbError::collections(
+                DbErrorType::OutOfBounds,
                 format!("Index ({index}) out of bounds ({})", self.len()),
             )));
         }
@@ -423,11 +423,10 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::DbErrorKind;
-    use crate::{
-        MemoryStorage, storage::file_storage_memory_mapped::FileStorageMemoryMapped,
-        test_utilities::test_file::TestFile,
-    };
+    use crate::DbErrorType;
+    use crate::MemoryStorage;
+    use crate::storage::file_storage_memory_mapped::FileStorageMemoryMapped;
+    use crate::test_utilities::test_file::TestFile;
 
     #[test]
     fn from_storage_index() {
@@ -470,7 +469,7 @@ mod tests {
             )
             .err()
             .unwrap(),
-            DbError::new(DbErrorKind::NotFound, "Storage error: index (1) not found")
+            DbError::collections(DbErrorType::NotFound, "Index (1) not found")
         );
     }
 
@@ -619,8 +618,8 @@ mod tests {
 
         assert_eq!(
             vec.remove(&mut storage, 0),
-            Err(DbError::new(
-                DbErrorKind::NotFound,
+            Err(DbError::collections(
+                DbErrorType::OutOfBounds,
                 "Index (0) out of bounds (0)"
             ))
         );
@@ -774,8 +773,8 @@ mod tests {
 
         assert_eq!(
             vec.replace(&mut storage, 0, &"".to_string()),
-            Err(DbError::new(
-                DbErrorKind::NotFound,
+            Err(DbError::collections(
+                DbErrorType::OutOfBounds,
                 "Index (0) out of bounds (0)"
             ))
         );
@@ -869,15 +868,15 @@ mod tests {
         vec.push(&mut storage, &"!".to_string()).unwrap();
         assert_eq!(
             vec.swap(&mut storage, 1, 10),
-            Err(DbError::new(
-                DbErrorKind::NotFound,
+            Err(DbError::collections(
+                DbErrorType::OutOfBounds,
                 "Index (10) out of bounds (4)"
             ))
         );
         assert_eq!(
             vec.swap(&mut storage, 10, 1),
-            Err(DbError::new(
-                DbErrorKind::NotFound,
+            Err(DbError::collections(
+                DbErrorType::OutOfBounds,
                 "Index (10) out of bounds (4)"
             ))
         );
@@ -909,8 +908,8 @@ mod tests {
 
         assert_eq!(
             vec.value(&storage, 0),
-            Err(DbError::new(
-                DbErrorKind::NotFound,
+            Err(DbError::collections(
+                DbErrorType::OutOfBounds,
                 "Index (0) out of bounds (0)"
             ))
         );

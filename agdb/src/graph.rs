@@ -1,5 +1,5 @@
 use crate::DbError;
-use crate::DbErrorKind;
+use crate::DbErrorType;
 use crate::StorageData;
 use crate::collections::vec::DbVec;
 use crate::storage::Storage;
@@ -709,8 +709,7 @@ where
     }
 
     fn invalid_index(index: GraphIndex) -> DbError {
-        DbError::new(
-            DbErrorKind::InvalidIndex,
+        DbError::graph(DbErrorType::InvalidIndex,
             format!("'{}' is invalid index", index.0),
         )
     }
@@ -1144,8 +1143,7 @@ mod tests {
 
         assert_eq!(
             graph.insert_edge(&mut storage, GraphIndex::from(1), GraphIndex::from(2)),
-            Err(DbError::new(
-                DbErrorKind::InvalidIndex,
+            Err(DbError::graph(DbErrorType::InvalidIndex,
                 "'1' is invalid index",
             ))
         );
@@ -1160,8 +1158,7 @@ mod tests {
 
         assert_eq!(
             graph.insert_edge(&mut storage, from, GraphIndex::from(2)),
-            Err(DbError::new(
-                DbErrorKind::InvalidIndex,
+            Err(DbError::graph(DbErrorType::InvalidIndex,
                 "'2' is invalid index",
             ))
         );

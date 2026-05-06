@@ -1,7 +1,7 @@
 mod test_db;
 
 use agdb::DbError;
-use agdb::DbErrorKind;
+use agdb::DbErrorType;
 use agdb::QueryBuilder;
 use agdb::QueryId;
 use test_db::TestDb;
@@ -53,7 +53,7 @@ fn insert_aliases_rollback() {
             t.exec(QueryBuilder::select().ids("alias").query())?;
             Ok(())
         },
-        DbError::new(DbErrorKind::NotFound, "Alias 'alias' not found"),
+        DbError::db(DbErrorType::NotFound, "Alias 'alias' not found"),
     );
 
     db.exec(QueryBuilder::select().ids("alias").query(), 1);

@@ -1,5 +1,5 @@
 use crate::DbError;
-use crate::DbErrorKind;
+use crate::DbErrorType;
 use crate::StorageData;
 use crate::collections::multi_map::MultiMapImpl;
 use crate::collections::vec::DbVec;
@@ -25,8 +25,8 @@ impl Serialize for MapValueState {
             Some(0) => Ok(MapValueState::Empty),
             Some(1) => Ok(MapValueState::Valid),
             Some(2) => Ok(MapValueState::Deleted),
-            x => Err(DbError::new(
-                DbErrorKind::TypeError,
+            x => Err(DbError::collections(
+                DbErrorType::TypeError,
                 format!("MapValueState deserialization error. Unknown value: {x:?}"),
             )),
         }
@@ -122,9 +122,13 @@ impl Serialize for MapDataIndex {
 
     fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
         if bytes.len() < Self::serialized_size_static() as usize {
-            return Err(DbError::new(
-                DbErrorKind::NotEnoughData,
-                "MapDataStorageIndex deserialization error",
+            return Err(DbError::collections(
+                DbErrorType::NotEnoughData,
+                format!(
+                    "MapDataStorageIndex deserialization error: got {} bytes, expected at least {} bytes",
+                    bytes.len(),
+                    Self::serialized_size_static(),
+                ),
             ));
         }
 
@@ -577,7 +581,7 @@ mod tests {
             )
             .err()
             .unwrap(),
-            DbError::new(DbErrorKind::NotFound, "Storage error: index (1) not found")
+            DbError::collections(DbErrorType::NotFound, "Index (1) not found")
         );
     }
 
@@ -854,9 +858,9 @@ mod tests {
     fn bad_deserialize() {
         assert_eq!(
             MapDataIndex::deserialize(&Vec::<u8>::new()).err().unwrap(),
-            DbError::new(
-                DbErrorKind::NotEnoughData,
-                "MapDataStorageIndex deserialization error"
+            DbError::collections(
+                DbErrorType::NotEnoughData,
+                "MapDataStorageIndex deserialization error: got 0 bytes, expected at least 32 bytes"
             )
         );
     }
@@ -875,8 +879,8 @@ mod tests {
     fn map_value_state_bad_deserialize() {
         assert_eq!(
             MapValueState::deserialize(&Vec::<u8>::new()).err().unwrap(),
-            DbError::new(
-                DbErrorKind::TypeError,
+            DbError::collections(
+                DbErrorType::TypeError,
                 "MapValueState deserialization error. Unknown value: None"
             )
         );

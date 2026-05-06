@@ -204,7 +204,8 @@ impl InsertEdgesQuery {
         };
 
         if values.len() != count {
-            return Err(DbError::query(DbErrorType::NotEnoughData,
+            return Err(DbError::query(
+                DbErrorType::NotEnoughData,
                 format!("Values ({}) must match count ({count})", values.len()),
             ));
         }

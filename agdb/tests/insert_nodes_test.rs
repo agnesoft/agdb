@@ -281,7 +281,7 @@ fn insert_nodes_aliases_values_mismatched_length() {
             .aliases(["alias", "alias2"])
             .values([[("key", 1).into()]])
             .query(),
-        "Aliases (2) must match values (1)",
+        "Aliases (2) must be less than or equal to values (1)",
     );
 }
 

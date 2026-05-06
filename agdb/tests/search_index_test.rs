@@ -122,7 +122,7 @@ fn missing_condition() {
         conditions: vec![],
     };
 
-    db.exec_error(query, "Index condition missing");
+    db.exec_error(query, "Index condition is required for index search");
 }
 
 #[test]

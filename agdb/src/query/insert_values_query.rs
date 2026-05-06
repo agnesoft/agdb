@@ -49,7 +49,8 @@ impl QueryMut for InsertValuesQuery {
                 }
                 QueryValues::Multi(values) => {
                     if ids.len() != values.len() {
-                        return Err(DbError::query(DbErrorType::NotEnoughData,
+                        return Err(DbError::query(
+                            DbErrorType::NotEnoughData,
                             format!("Ids ({}) must match values ({})", ids.len(), values.len()),
                         ));
                     }
@@ -70,7 +71,8 @@ impl QueryMut for InsertValuesQuery {
                     }
                     QueryValues::Multi(values) => {
                         if db_ids.len() != values.len() {
-                            return Err(DbError::query(DbErrorType::NotEnoughData,
+                            return Err(DbError::query(
+                                DbErrorType::NotEnoughData,
                                 format!(
                                     "Ids ({}) must match values ({})",
                                     db_ids.len(),

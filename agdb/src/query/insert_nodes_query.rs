@@ -65,9 +65,10 @@ impl QueryMut for InsertNodesQuery {
         };
 
         if values.len() < self.aliases.len() {
-            return Err(DbError::query(DbErrorType::NotEnoughData,
+            return Err(DbError::query(
+                DbErrorType::NotEnoughData,
                 format!(
-                    "Aliases ({}) must match values ({})",
+                    "Aliases ({}) must be less than or equal to values ({})",
                     self.aliases.len(),
                     values.len()
                 ),
@@ -89,7 +90,8 @@ impl QueryMut for InsertNodesQuery {
             })?;
 
             if values.len() != query_ids.len() {
-                return Err(DbError::query(DbErrorType::NotEnoughData,
+                return Err(DbError::query(
+                    DbErrorType::NotEnoughData,
                     format!(
                         "Values ({}) must match ids ({})",
                         values.len(),

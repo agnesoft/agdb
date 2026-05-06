@@ -32,7 +32,9 @@ impl Serialize for i64 {
         Ok(Self::from_le_bytes(
             bytes
                 .get(0..std::mem::size_of::<Self>())
-                .ok_or_else(|| DbError::serialization(DbErrorType::OutOfBounds, "i64 deserialization error"))?
+                .ok_or_else(|| {
+                    DbError::serialization(DbErrorType::OutOfBounds, "i64 deserialization error")
+                })?
                 .try_into()?,
         ))
     }
@@ -51,7 +53,9 @@ impl Serialize for u64 {
         Ok(Self::from_le_bytes(
             bytes
                 .get(0..std::mem::size_of::<Self>())
-                .ok_or_else(|| DbError::serialization(DbErrorType::OutOfBounds, "u64 deserialization error"))?
+                .ok_or_else(|| {
+                    DbError::serialization(DbErrorType::OutOfBounds, "u64 deserialization error")
+                })?
                 .try_into()?,
         ))
     }
@@ -70,7 +74,9 @@ impl Serialize for f64 {
         Ok(Self::from_le_bytes(
             bytes
                 .get(0..std::mem::size_of::<Self>())
-                .ok_or_else(|| DbError::serialization(DbErrorType::OutOfBounds, "f64 deserialization error"))?
+                .ok_or_else(|| {
+                    DbError::serialization(DbErrorType::OutOfBounds, "f64 deserialization error")
+                })?
                 .try_into()?,
         ))
     }
@@ -132,7 +138,8 @@ impl Serialize for bool {
     fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
         bytes
             .first()
-            .ok_or(DbError::serialization(DbErrorType::OutOfBounds,
+            .ok_or(DbError::serialization(
+                DbErrorType::OutOfBounds,
                 "bool deserialization error",
             ))
             .map(|&b| b != 0)
@@ -162,7 +169,8 @@ impl<T: Serialize> Serialize for Vec<T> {
 
         for _ in 0..len {
             let value = T::deserialize(&bytes[begin..]).map_err(|_| {
-                DbError::serialization(DbErrorType::OutOfBounds,
+                DbError::serialization(
+                    DbErrorType::OutOfBounds,
                     format!("Vec<{}> deserialization error", std::any::type_name::<T>()),
                 )
             })?;
@@ -200,7 +208,9 @@ impl Serialize for Vec<u8> {
 
         Ok(bytes
             .get(begin..end)
-            .ok_or_else(|| DbError::serialization(DbErrorType::OutOfBounds, "Vec<u8> deserialization error"))?
+            .ok_or_else(|| {
+                DbError::serialization(DbErrorType::OutOfBounds, "Vec<u8> deserialization error")
+            })?
             .to_vec())
     }
 
@@ -241,7 +251,8 @@ impl Serialize for SystemTime {
 
     fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
         if bytes.len() < 13 {
-            return Err(DbError::serialization(DbErrorType::NotEnoughData,
+            return Err(DbError::serialization(
+                DbErrorType::NotEnoughData,
                 format!(
                     "SystemTime deserialization error: got {} bytes, expected at least 13 bytes",
                     bytes.len()
@@ -259,13 +270,15 @@ impl Serialize for SystemTime {
 
         if before_epoch {
             Ok(UNIX_EPOCH.checked_sub(duration).ok_or_else(|| {
-                DbError::serialization(DbErrorType::OutOfBounds,
+                DbError::serialization(
+                    DbErrorType::OutOfBounds,
                     "SystemTime before UNIX_EPOCH is too far in the past",
                 )
             })?)
         } else {
             Ok(UNIX_EPOCH.checked_add(duration).ok_or_else(|| {
-                DbError::serialization(DbErrorType::OutOfBounds,
+                DbError::serialization(
+                    DbErrorType::OutOfBounds,
                     "SystemTime after UNIX_EPOCH is too far in the future",
                 )
             })?)
@@ -285,7 +298,8 @@ impl Serialize for SocketAddr {
     fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
         let s = String::deserialize(bytes)?;
         s.parse().map_err(|e| {
-            DbError::serialization(DbErrorType::TypeError,
+            DbError::serialization(
+                DbErrorType::TypeError,
                 format!("Cannot convert string to SocketAddr: {e}"),
             )
         })
@@ -304,7 +318,8 @@ impl Serialize for IpAddr {
     fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
         let s = String::deserialize(bytes)?;
         s.parse().map_err(|e| {
-            DbError::serialization(DbErrorType::TypeError,
+            DbError::serialization(
+                DbErrorType::TypeError,
                 format!("Cannot convert string to IpAddr: {e}"),
             )
         })
@@ -337,7 +352,8 @@ mod tests {
     fn i64_out_of_bounds() {
         assert_eq!(
             i64::deserialize(&Vec::<u8>::new()),
-            Err(DbError::serialization(DbErrorType::OutOfBounds,
+            Err(DbError::serialization(
+                DbErrorType::OutOfBounds,
                 "i64 deserialization error"
             ))
         );
@@ -361,7 +377,8 @@ mod tests {
     fn u64_out_of_bounds() {
         assert_eq!(
             u64::deserialize(&Vec::<u8>::new()),
-            Err(DbError::serialization(DbErrorType::OutOfBounds,
+            Err(DbError::serialization(
+                DbErrorType::OutOfBounds,
                 "u64 deserialization error"
             ))
         );
@@ -387,7 +404,8 @@ mod tests {
     fn f64_out_of_bounds() {
         assert_eq!(
             f64::deserialize(&Vec::<u8>::new()),
-            Err(DbError::serialization(DbErrorType::OutOfBounds,
+            Err(DbError::serialization(
+                DbErrorType::OutOfBounds,
                 "f64 deserialization error"
             ))
         );
@@ -438,7 +456,8 @@ mod tests {
 
         assert_eq!(
             String::deserialize(&bytes),
-            Err(DbError::serialization(DbErrorType::OutOfBounds,
+            Err(DbError::serialization(
+                DbErrorType::OutOfBounds,
                 "String deserialization error"
             ))
         );
@@ -465,7 +484,8 @@ mod tests {
 
         assert_eq!(
             Vec::<u8>::deserialize(&bytes),
-            Err(DbError::serialization(DbErrorType::OutOfBounds,
+            Err(DbError::serialization(
+                DbErrorType::OutOfBounds,
                 "Vec<u8> deserialization error"
             ))
         );
@@ -492,7 +512,8 @@ mod tests {
 
         assert_eq!(
             Vec::<u64>::deserialize(&bytes),
-            Err(DbError::serialization(DbErrorType::OutOfBounds,
+            Err(DbError::serialization(
+                DbErrorType::OutOfBounds,
                 "Vec<u64> deserialization error"
             ))
         );
@@ -518,7 +539,8 @@ mod tests {
 
         assert_eq!(
             Vec::<String>::deserialize(&bytes),
-            Err(DbError::serialization(DbErrorType::OutOfBounds,
+            Err(DbError::serialization(
+                DbErrorType::OutOfBounds,
                 format!(
                     "Vec<{}> deserialization error",
                     std::any::type_name::<String>()
@@ -531,7 +553,8 @@ mod tests {
 
         assert_eq!(
             Vec::<String>::deserialize(&bytes),
-            Err(DbError::serialization(DbErrorType::OutOfBounds,
+            Err(DbError::serialization(
+                DbErrorType::OutOfBounds,
                 format!(
                     "Vec<{}> deserialization error",
                     std::any::type_name::<String>()

@@ -76,7 +76,8 @@ fn register_user(db: &mut Db, user: &User) -> Result<DbId, DbError> {
         .result
             != 0
         {
-            return Err(DbError::db(DbErrorType::NotAllowed,
+            return Err(DbError::db(
+                DbErrorType::NotAllowed,
                 format!("User {} already exists.", user.username),
             ));
         }
@@ -188,14 +189,16 @@ fn login(db: &Db, username: &str, password: &str) -> Result<DbId, DbError> {
         )?
         .elements;
 
-    let user = result.first().ok_or(DbError::db(DbErrorType::NotFound,
+    let user = result.first().ok_or(DbError::db(
+        DbErrorType::NotFound,
         format!("Username '{username}' not found"),
     ))?;
 
     let pswd = user.values[0].value.to_string();
 
     if password != pswd {
-        return Err(DbError::db(DbErrorType::NotAllowed,
+        return Err(DbError::db(
+            DbErrorType::NotAllowed,
             "Password is incorrect",
         ));
     }

@@ -100,16 +100,19 @@ impl SearchQuery {
         db: &DbImpl<Store>,
     ) -> Result<Vec<DbId>, DbError> {
         if self.algorithm == SearchQueryAlgorithm::Index {
-            let condition = self
-                .conditions
-                .first()
-                .ok_or_else(|| DbError::query(DbErrorType::NotFound, "Index condition missing"))?;
+            let condition = self.conditions.first().ok_or_else(|| {
+                DbError::query(
+                    DbErrorType::NotEnoughData,
+                    "Index condition is required for index search",
+                )
+            })?;
 
             if let QueryConditionData::KeyValue(kvc) = &condition.data {
                 let ids = db.search_index(&kvc.key, kvc.value.value())?;
                 return Ok(ids);
             } else {
-                return Err(DbError::query(DbErrorType::NotAllowed,
+                return Err(DbError::query(
+                    DbErrorType::NotAllowed,
                     "Index condition must be key value",
                 ));
             }

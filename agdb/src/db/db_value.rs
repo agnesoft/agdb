@@ -366,7 +366,8 @@ impl DbValue {
 
     #[track_caller]
     fn type_error<T>(from: &str, to: &str) -> Result<T, DbError> {
-        Err(DbError::db(DbErrorType::TypeError,
+        Err(DbError::db(
+            DbErrorType::TypeError,
             format!("Cannot convert '{from}' to '{to}'."),
         ))
     }
@@ -843,7 +844,8 @@ impl TryFrom<DbValue> for SocketAddr {
     #[track_caller]
     fn try_from(value: DbValue) -> Result<Self, Self::Error> {
         value.string()?.parse::<SocketAddr>().map_err(|e| {
-            DbError::db(DbErrorType::TypeError,
+            DbError::db(
+                DbErrorType::TypeError,
                 format!("Cannot convert string to SocketAddr: {e}"),
             )
         })
@@ -856,7 +858,8 @@ impl TryFrom<DbValue> for IpAddr {
     #[track_caller]
     fn try_from(value: DbValue) -> Result<Self, Self::Error> {
         value.string()?.parse::<IpAddr>().map_err(|e| {
-            DbError::db(DbErrorType::TypeError,
+            DbError::db(
+                DbErrorType::TypeError,
                 format!("Cannot convert string to IpAddr: {e}"),
             )
         })
@@ -1221,49 +1224,57 @@ mod tests {
         assert_eq!(DbValue::from(1_usize).to_u64().unwrap(), 1_u64);
         assert_eq!(
             DbValue::from(-1_i64).to_u64(),
-            Err(DbError::db(DbErrorType::TypeError,
+            Err(DbError::db(
+                DbErrorType::TypeError,
                 "out of range integral type conversion attempted"
             ))
         );
         assert_eq!(
             DbValue::from(vec![0_u8; 1]).to_u64(),
-            Err(DbError::db(DbErrorType::TypeError,
+            Err(DbError::db(
+                DbErrorType::TypeError,
                 "Cannot convert 'bytes' to 'u64'."
             ))
         );
         assert_eq!(
             DbValue::from(1.1).to_u64(),
-            Err(DbError::db(DbErrorType::TypeError,
+            Err(DbError::db(
+                DbErrorType::TypeError,
                 "Cannot convert 'f64' to 'u64'."
             ))
         );
         assert_eq!(
             DbValue::from("").to_u64(),
-            Err(DbError::db(DbErrorType::TypeError,
+            Err(DbError::db(
+                DbErrorType::TypeError,
                 "Cannot convert 'string' to 'u64'."
             ))
         );
         assert_eq!(
             DbValue::from(vec![0_u64]).to_u64(),
-            Err(DbError::db(DbErrorType::TypeError,
+            Err(DbError::db(
+                DbErrorType::TypeError,
                 "Cannot convert 'vec<u64>' to 'u64'."
             ))
         );
         assert_eq!(
             DbValue::from(vec![0_i64]).to_u64(),
-            Err(DbError::db(DbErrorType::TypeError,
+            Err(DbError::db(
+                DbErrorType::TypeError,
                 "Cannot convert 'vec<i64>' to 'u64'."
             ))
         );
         assert_eq!(
             DbValue::from(vec![1.1]).to_u64(),
-            Err(DbError::db(DbErrorType::TypeError,
+            Err(DbError::db(
+                DbErrorType::TypeError,
                 "Cannot convert 'vec<f64>' to 'u64'."
             ))
         );
         assert_eq!(
             DbValue::from(vec![""]).to_u64(),
-            Err(DbError::db(DbErrorType::TypeError,
+            Err(DbError::db(
+                DbErrorType::TypeError,
                 "Cannot convert 'vec<string>' to 'u64'."
             ))
         );
@@ -1275,49 +1286,57 @@ mod tests {
         assert_eq!(DbValue::from(1_u64).to_i64().unwrap(), 1_i64);
         assert_eq!(
             DbValue::from(u64::MAX).to_i64(),
-            Err(DbError::db(DbErrorType::TypeError,
+            Err(DbError::db(
+                DbErrorType::TypeError,
                 "out of range integral type conversion attempted"
             ))
         );
         assert_eq!(
             DbValue::from(vec![0_u8; 1]).to_i64(),
-            Err(DbError::db(DbErrorType::TypeError,
+            Err(DbError::db(
+                DbErrorType::TypeError,
                 "Cannot convert 'bytes' to 'i64'."
             ))
         );
         assert_eq!(
             DbValue::from(1.1).to_i64(),
-            Err(DbError::db(DbErrorType::TypeError,
+            Err(DbError::db(
+                DbErrorType::TypeError,
                 "Cannot convert 'f64' to 'i64'."
             ))
         );
         assert_eq!(
             DbValue::from("").to_i64(),
-            Err(DbError::db(DbErrorType::TypeError,
+            Err(DbError::db(
+                DbErrorType::TypeError,
                 "Cannot convert 'string' to 'i64'."
             ))
         );
         assert_eq!(
             DbValue::from(vec![0_u64]).to_i64(),
-            Err(DbError::db(DbErrorType::TypeError,
+            Err(DbError::db(
+                DbErrorType::TypeError,
                 "Cannot convert 'vec<u64>' to 'i64'."
             ))
         );
         assert_eq!(
             DbValue::from(vec![0_i64]).to_i64(),
-            Err(DbError::db(DbErrorType::TypeError,
+            Err(DbError::db(
+                DbErrorType::TypeError,
                 "Cannot convert 'vec<i64>' to 'i64'."
             ))
         );
         assert_eq!(
             DbValue::from(vec![1.1]).to_i64(),
-            Err(DbError::db(DbErrorType::TypeError,
+            Err(DbError::db(
+                DbErrorType::TypeError,
                 "Cannot convert 'vec<f64>' to 'i64'."
             ))
         );
         assert_eq!(
             DbValue::from(vec![""]).to_i64(),
-            Err(DbError::db(DbErrorType::TypeError,
+            Err(DbError::db(
+                DbErrorType::TypeError,
                 "Cannot convert 'vec<string>' to 'i64'."
             ))
         );
@@ -1337,49 +1356,57 @@ mod tests {
         assert_eq!(DbValue::from(1_u64).to_f64().unwrap(), DbF64::from(1.0_f64));
         assert_eq!(
             DbValue::from(i64::MAX).to_f64(),
-            Err(DbError::db(DbErrorType::TypeError,
+            Err(DbError::db(
+                DbErrorType::TypeError,
                 "out of range integral type conversion attempted"
             ))
         );
         assert_eq!(
             DbValue::from(u64::MAX).to_f64(),
-            Err(DbError::db(DbErrorType::TypeError,
+            Err(DbError::db(
+                DbErrorType::TypeError,
                 "out of range integral type conversion attempted"
             ))
         );
         assert_eq!(
             DbValue::from(vec![0_u8; 1]).to_f64(),
-            Err(DbError::db(DbErrorType::TypeError,
+            Err(DbError::db(
+                DbErrorType::TypeError,
                 "Cannot convert 'bytes' to 'f64'."
             ))
         );
         assert_eq!(
             DbValue::from("").to_f64(),
-            Err(DbError::db(DbErrorType::TypeError,
+            Err(DbError::db(
+                DbErrorType::TypeError,
                 "Cannot convert 'string' to 'f64'."
             ))
         );
         assert_eq!(
             DbValue::from(vec![0_u64]).to_f64(),
-            Err(DbError::db(DbErrorType::TypeError,
+            Err(DbError::db(
+                DbErrorType::TypeError,
                 "Cannot convert 'vec<u64>' to 'f64'."
             ))
         );
         assert_eq!(
             DbValue::from(vec![0_i64]).to_f64(),
-            Err(DbError::db(DbErrorType::TypeError,
+            Err(DbError::db(
+                DbErrorType::TypeError,
                 "Cannot convert 'vec<i64>' to 'f64'."
             ))
         );
         assert_eq!(
             DbValue::from(vec![1.1]).to_f64(),
-            Err(DbError::db(DbErrorType::TypeError,
+            Err(DbError::db(
+                DbErrorType::TypeError,
                 "Cannot convert 'vec<f64>' to 'f64'."
             ))
         );
         assert_eq!(
             DbValue::from(vec![""]).to_f64(),
-            Err(DbError::db(DbErrorType::TypeError,
+            Err(DbError::db(
+                DbErrorType::TypeError,
                 "Cannot convert 'vec<string>' to 'f64'."
             ))
         );
@@ -1400,49 +1427,57 @@ mod tests {
 
         assert_eq!(
             DbValue::from(-1_i64).vec_i64(),
-            Err(DbError::db(DbErrorType::TypeError,
+            Err(DbError::db(
+                DbErrorType::TypeError,
                 "Cannot convert 'i64' to 'vec<i64>'."
             ))
         );
         assert_eq!(
             DbValue::from(1_u64).vec_i64(),
-            Err(DbError::db(DbErrorType::TypeError,
+            Err(DbError::db(
+                DbErrorType::TypeError,
                 "Cannot convert 'u64' to 'vec<i64>'."
             ))
         );
         assert_eq!(
             DbValue::from(vec![1_u64]).vec_i64(),
-            Err(DbError::db(DbErrorType::TypeError,
+            Err(DbError::db(
+                DbErrorType::TypeError,
                 "Cannot convert 'vec<u64>' to 'vec<i64>'."
             ))
         );
         assert_eq!(
             DbValue::from(1.1).vec_i64(),
-            Err(DbError::db(DbErrorType::TypeError,
+            Err(DbError::db(
+                DbErrorType::TypeError,
                 "Cannot convert 'f64' to 'vec<i64>'."
             ))
         );
         assert_eq!(
             DbValue::from(vec![0_u8; 1]).vec_i64(),
-            Err(DbError::db(DbErrorType::TypeError,
+            Err(DbError::db(
+                DbErrorType::TypeError,
                 "Cannot convert 'bytes' to 'vec<i64>'."
             ))
         );
         assert_eq!(
             DbValue::from("").vec_i64(),
-            Err(DbError::db(DbErrorType::TypeError,
+            Err(DbError::db(
+                DbErrorType::TypeError,
                 "Cannot convert 'string' to 'vec<i64>'."
             ))
         );
         assert_eq!(
             DbValue::from(vec![1.1]).vec_i64(),
-            Err(DbError::db(DbErrorType::TypeError,
+            Err(DbError::db(
+                DbErrorType::TypeError,
                 "Cannot convert 'vec<f64>' to 'vec<i64>'."
             ))
         );
         assert_eq!(
             DbValue::from(vec![""]).vec_i64(),
-            Err(DbError::db(DbErrorType::TypeError,
+            Err(DbError::db(
+                DbErrorType::TypeError,
                 "Cannot convert 'vec<string>' to 'vec<i64>'."
             ))
         );
@@ -1462,49 +1497,57 @@ mod tests {
 
         assert_eq!(
             DbValue::from(-1_i64).vec_u64(),
-            Err(DbError::db(DbErrorType::TypeError,
+            Err(DbError::db(
+                DbErrorType::TypeError,
                 "Cannot convert 'i64' to 'vec<u64>'."
             ))
         );
         assert_eq!(
             DbValue::from(1_u64).vec_u64(),
-            Err(DbError::db(DbErrorType::TypeError,
+            Err(DbError::db(
+                DbErrorType::TypeError,
                 "Cannot convert 'u64' to 'vec<u64>'."
             ))
         );
         assert_eq!(
             DbValue::from(vec![-1_i64]).vec_u64(),
-            Err(DbError::db(DbErrorType::TypeError,
+            Err(DbError::db(
+                DbErrorType::TypeError,
                 "Cannot convert 'vec<i64>' to 'vec<u64>'."
             ))
         );
         assert_eq!(
             DbValue::from(1.1).vec_u64(),
-            Err(DbError::db(DbErrorType::TypeError,
+            Err(DbError::db(
+                DbErrorType::TypeError,
                 "Cannot convert 'f64' to 'vec<u64>'."
             ))
         );
         assert_eq!(
             DbValue::from(vec![0_u8; 1]).vec_u64(),
-            Err(DbError::db(DbErrorType::TypeError,
+            Err(DbError::db(
+                DbErrorType::TypeError,
                 "Cannot convert 'bytes' to 'vec<u64>'."
             ))
         );
         assert_eq!(
             DbValue::from("").vec_u64(),
-            Err(DbError::db(DbErrorType::TypeError,
+            Err(DbError::db(
+                DbErrorType::TypeError,
                 "Cannot convert 'string' to 'vec<u64>'."
             ))
         );
         assert_eq!(
             DbValue::from(vec![1.1]).vec_u64(),
-            Err(DbError::db(DbErrorType::TypeError,
+            Err(DbError::db(
+                DbErrorType::TypeError,
                 "Cannot convert 'vec<f64>' to 'vec<u64>'."
             ))
         );
         assert_eq!(
             DbValue::from(vec![""]).vec_u64(),
-            Err(DbError::db(DbErrorType::TypeError,
+            Err(DbError::db(
+                DbErrorType::TypeError,
                 "Cannot convert 'vec<string>' to 'vec<u64>'."
             ))
         );
@@ -1539,49 +1582,57 @@ mod tests {
 
         assert_eq!(
             DbValue::from(-1_i64).vec_f64(),
-            Err(DbError::db(DbErrorType::TypeError,
+            Err(DbError::db(
+                DbErrorType::TypeError,
                 "Cannot convert 'i64' to 'vec<f64>'."
             ))
         );
         assert_eq!(
             DbValue::from(1_u64).vec_f64(),
-            Err(DbError::db(DbErrorType::TypeError,
+            Err(DbError::db(
+                DbErrorType::TypeError,
                 "Cannot convert 'u64' to 'vec<f64>'."
             ))
         );
         assert_eq!(
             DbValue::from(vec![-1_i64]).vec_f64(),
-            Err(DbError::db(DbErrorType::TypeError,
+            Err(DbError::db(
+                DbErrorType::TypeError,
                 "Cannot convert 'vec<i64>' to 'vec<f64>'."
             ))
         );
         assert_eq!(
             DbValue::from(vec![1_u64]).vec_f64(),
-            Err(DbError::db(DbErrorType::TypeError,
+            Err(DbError::db(
+                DbErrorType::TypeError,
                 "Cannot convert 'vec<u64>' to 'vec<f64>'."
             ))
         );
         assert_eq!(
             DbValue::from(1.1).vec_f64(),
-            Err(DbError::db(DbErrorType::TypeError,
+            Err(DbError::db(
+                DbErrorType::TypeError,
                 "Cannot convert 'f64' to 'vec<f64>'."
             ))
         );
         assert_eq!(
             DbValue::from(vec![0_u8; 1]).vec_f64(),
-            Err(DbError::db(DbErrorType::TypeError,
+            Err(DbError::db(
+                DbErrorType::TypeError,
                 "Cannot convert 'bytes' to 'vec<f64>'."
             ))
         );
         assert_eq!(
             DbValue::from("").vec_f64(),
-            Err(DbError::db(DbErrorType::TypeError,
+            Err(DbError::db(
+                DbErrorType::TypeError,
                 "Cannot convert 'string' to 'vec<f64>'."
             ))
         );
         assert_eq!(
             DbValue::from(vec![""]).vec_f64(),
-            Err(DbError::db(DbErrorType::TypeError,
+            Err(DbError::db(
+                DbErrorType::TypeError,
                 "Cannot convert 'vec<string>' to 'vec<f64>'."
             ))
         );
@@ -1608,49 +1659,57 @@ mod tests {
 
         assert_eq!(
             DbValue::from(-1_i64).vec_string(),
-            Err(DbError::db(DbErrorType::TypeError,
+            Err(DbError::db(
+                DbErrorType::TypeError,
                 "Cannot convert 'i64' to 'vec<string>'."
             ))
         );
         assert_eq!(
             DbValue::from(1_u64).vec_string(),
-            Err(DbError::db(DbErrorType::TypeError,
+            Err(DbError::db(
+                DbErrorType::TypeError,
                 "Cannot convert 'u64' to 'vec<string>'."
             ))
         );
         assert_eq!(
             DbValue::from(vec![-1_i64]).vec_string(),
-            Err(DbError::db(DbErrorType::TypeError,
+            Err(DbError::db(
+                DbErrorType::TypeError,
                 "Cannot convert 'vec<i64>' to 'vec<string>'."
             ))
         );
         assert_eq!(
             DbValue::from(vec![1_u64]).vec_string(),
-            Err(DbError::db(DbErrorType::TypeError,
+            Err(DbError::db(
+                DbErrorType::TypeError,
                 "Cannot convert 'vec<u64>' to 'vec<string>'."
             ))
         );
         assert_eq!(
             DbValue::from(1.1).vec_string(),
-            Err(DbError::db(DbErrorType::TypeError,
+            Err(DbError::db(
+                DbErrorType::TypeError,
                 "Cannot convert 'f64' to 'vec<string>'."
             ))
         );
         assert_eq!(
             DbValue::from(vec![1.1]).vec_string(),
-            Err(DbError::db(DbErrorType::TypeError,
+            Err(DbError::db(
+                DbErrorType::TypeError,
                 "Cannot convert 'vec<f64>' to 'vec<string>'."
             ))
         );
         assert_eq!(
             DbValue::from(vec![0_u8; 1]).vec_string(),
-            Err(DbError::db(DbErrorType::TypeError,
+            Err(DbError::db(
+                DbErrorType::TypeError,
                 "Cannot convert 'bytes' to 'vec<string>'."
             ))
         );
         assert_eq!(
             DbValue::from("").vec_string(),
-            Err(DbError::db(DbErrorType::TypeError,
+            Err(DbError::db(
+                DbErrorType::TypeError,
                 "Cannot convert 'string' to 'vec<string>'."
             ))
         );
@@ -1663,49 +1722,57 @@ mod tests {
 
         assert_eq!(
             DbValue::from(-1_i64).bytes(),
-            Err(DbError::db(DbErrorType::TypeError,
+            Err(DbError::db(
+                DbErrorType::TypeError,
                 "Cannot convert 'i64' to 'bytes'."
             ))
         );
         assert_eq!(
             DbValue::from(1_u64).bytes(),
-            Err(DbError::db(DbErrorType::TypeError,
+            Err(DbError::db(
+                DbErrorType::TypeError,
                 "Cannot convert 'u64' to 'bytes'."
             ))
         );
         assert_eq!(
             DbValue::from(vec![-1_i64]).bytes(),
-            Err(DbError::db(DbErrorType::TypeError,
+            Err(DbError::db(
+                DbErrorType::TypeError,
                 "Cannot convert 'vec<i64>' to 'bytes'."
             ))
         );
         assert_eq!(
             DbValue::from(vec![1_u64]).bytes(),
-            Err(DbError::db(DbErrorType::TypeError,
+            Err(DbError::db(
+                DbErrorType::TypeError,
                 "Cannot convert 'vec<u64>' to 'bytes'."
             ))
         );
         assert_eq!(
             DbValue::from(1.1).bytes(),
-            Err(DbError::db(DbErrorType::TypeError,
+            Err(DbError::db(
+                DbErrorType::TypeError,
                 "Cannot convert 'f64' to 'bytes'."
             ))
         );
         assert_eq!(
             DbValue::from(vec![1.1]).bytes(),
-            Err(DbError::db(DbErrorType::TypeError,
+            Err(DbError::db(
+                DbErrorType::TypeError,
                 "Cannot convert 'vec<f64>' to 'bytes'."
             ))
         );
         assert_eq!(
             DbValue::from("").bytes(),
-            Err(DbError::db(DbErrorType::TypeError,
+            Err(DbError::db(
+                DbErrorType::TypeError,
                 "Cannot convert 'string' to 'bytes'."
             ))
         );
         assert_eq!(
             DbValue::from(vec![""]).bytes(),
-            Err(DbError::db(DbErrorType::TypeError,
+            Err(DbError::db(
+                DbErrorType::TypeError,
                 "Cannot convert 'vec<string>' to 'bytes'."
             ))
         );
@@ -1719,49 +1786,57 @@ mod tests {
         );
         assert_eq!(
             DbValue::from(vec![1_u8]).string(),
-            Err(DbError::db(DbErrorType::TypeError,
+            Err(DbError::db(
+                DbErrorType::TypeError,
                 "Cannot convert 'bytes' to 'string'."
             ))
         );
         assert_eq!(
             DbValue::from(-1_i64).string(),
-            Err(DbError::db(DbErrorType::TypeError,
+            Err(DbError::db(
+                DbErrorType::TypeError,
                 "Cannot convert 'i64' to 'string'."
             ))
         );
         assert_eq!(
             DbValue::from(1_u64).string(),
-            Err(DbError::db(DbErrorType::TypeError,
+            Err(DbError::db(
+                DbErrorType::TypeError,
                 "Cannot convert 'u64' to 'string'."
             ))
         );
         assert_eq!(
             DbValue::from(vec![-1_i64]).string(),
-            Err(DbError::db(DbErrorType::TypeError,
+            Err(DbError::db(
+                DbErrorType::TypeError,
                 "Cannot convert 'vec<i64>' to 'string'."
             ))
         );
         assert_eq!(
             DbValue::from(vec![1_u64]).string(),
-            Err(DbError::db(DbErrorType::TypeError,
+            Err(DbError::db(
+                DbErrorType::TypeError,
                 "Cannot convert 'vec<u64>' to 'string'."
             ))
         );
         assert_eq!(
             DbValue::from(1.1).string(),
-            Err(DbError::db(DbErrorType::TypeError,
+            Err(DbError::db(
+                DbErrorType::TypeError,
                 "Cannot convert 'f64' to 'string'."
             ))
         );
         assert_eq!(
             DbValue::from(vec![1.1]).string(),
-            Err(DbError::db(DbErrorType::TypeError,
+            Err(DbError::db(
+                DbErrorType::TypeError,
                 "Cannot convert 'vec<f64>' to 'string'."
             ))
         );
         assert_eq!(
             DbValue::from(vec![""]).string(),
-            Err(DbError::db(DbErrorType::TypeError,
+            Err(DbError::db(
+                DbErrorType::TypeError,
                 "Cannot convert 'vec<string>' to 'string'."
             ))
         );
@@ -1785,37 +1860,43 @@ mod tests {
 
         assert_eq!(
             DbValue::from(vec![0_u8]).to_bool(),
-            Err(DbError::db(DbErrorType::TypeError,
+            Err(DbError::db(
+                DbErrorType::TypeError,
                 "Cannot convert 'bytes' to 'bool'."
             ))
         );
         assert_eq!(
             DbValue::from(vec![1_i64]).to_bool(),
-            Err(DbError::db(DbErrorType::TypeError,
+            Err(DbError::db(
+                DbErrorType::TypeError,
                 "Cannot convert 'Vec<i64>' to 'bool'."
             ))
         );
         assert_eq!(
             DbValue::from(vec![1_u64]).to_bool(),
-            Err(DbError::db(DbErrorType::TypeError,
+            Err(DbError::db(
+                DbErrorType::TypeError,
                 "Cannot convert 'Vec<u64>' to 'bool'."
             ))
         );
         assert_eq!(
             DbValue::from(vec![0.0_f64]).to_bool(),
-            Err(DbError::db(DbErrorType::TypeError,
+            Err(DbError::db(
+                DbErrorType::TypeError,
                 "Cannot convert 'Vec<f64>' to 'bool'."
             ))
         );
         assert_eq!(
             DbValue::from(vec!["a", ""]).to_bool(),
-            Err(DbError::db(DbErrorType::TypeError,
+            Err(DbError::db(
+                DbErrorType::TypeError,
                 "Cannot convert 'Vec<string>' to 'bool'."
             ))
         );
         assert_eq!(
             DbValue::from(vec![true, false]).to_bool(),
-            Err(DbError::db(DbErrorType::TypeError,
+            Err(DbError::db(
+                DbErrorType::TypeError,
                 "Cannot convert 'Vec<u64>' to 'bool'."
             ))
         );
@@ -1856,25 +1937,29 @@ mod tests {
 
         assert_eq!(
             DbValue::from(1_i64).vec_bool(),
-            Err(DbError::db(DbErrorType::TypeError,
+            Err(DbError::db(
+                DbErrorType::TypeError,
                 "Cannot convert 'i64' to 'Vec<bool>'."
             ))
         );
         assert_eq!(
             DbValue::from(1_u64).vec_bool(),
-            Err(DbError::db(DbErrorType::TypeError,
+            Err(DbError::db(
+                DbErrorType::TypeError,
                 "Cannot convert 'u64' to 'Vec<bool>'."
             ))
         );
         assert_eq!(
             DbValue::from(1.1_f64).vec_bool(),
-            Err(DbError::db(DbErrorType::TypeError,
+            Err(DbError::db(
+                DbErrorType::TypeError,
                 "Cannot convert 'f64' to 'Vec<bool>'."
             ))
         );
         assert_eq!(
             DbValue::from("true").vec_bool(),
-            Err(DbError::db(DbErrorType::TypeError,
+            Err(DbError::db(
+                DbErrorType::TypeError,
                 "Cannot convert 'string' to 'Vec<bool>'."
             ))
         );
@@ -1886,7 +1971,8 @@ mod tests {
 
         assert_eq!(
             value,
-            Err(DbError::db(DbErrorType::TypeError,
+            Err(DbError::db(
+                DbErrorType::TypeError,
                 "Cannot convert 'u64' to 'Vec<DbValue>'."
             ))
         );
@@ -1895,7 +1981,8 @@ mod tests {
 
         assert_eq!(
             value,
-            Err(DbError::db(DbErrorType::TypeError,
+            Err(DbError::db(
+                DbErrorType::TypeError,
                 "Cannot convert 'i64' to 'Vec<DbValue>'."
             ))
         );
@@ -1904,7 +1991,8 @@ mod tests {
 
         assert_eq!(
             value,
-            Err(DbError::db(DbErrorType::TypeError,
+            Err(DbError::db(
+                DbErrorType::TypeError,
                 "Cannot convert 'f64' to 'Vec<DbValue>'."
             ))
         );
@@ -1913,7 +2001,8 @@ mod tests {
 
         assert_eq!(
             value,
-            Err(DbError::db(DbErrorType::OutOfBounds,
+            Err(DbError::db(
+                DbErrorType::OutOfBounds,
                 "Cannot convert 'bytes' to 'Vec<DbValue>': u64 deserialization error"
             ))
         );
@@ -1922,7 +2011,8 @@ mod tests {
 
         assert_eq!(
             value,
-            Err(DbError::db(DbErrorType::TypeError,
+            Err(DbError::db(
+                DbErrorType::TypeError,
                 "Cannot convert 'string' to 'Vec<DbValue>'."
             ))
         );

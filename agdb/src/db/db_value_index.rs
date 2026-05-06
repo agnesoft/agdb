@@ -74,7 +74,8 @@ impl Serialize for DbValueIndex {
 
     fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
         if bytes.len() < 16 {
-            return Err(DbError::db(DbErrorType::NotEnoughData,
+            return Err(DbError::db(
+                DbErrorType::NotEnoughData,
                 format!(
                     "DbValueIndex deserialization error: got {} bytes, expected at least 16 bytes",
                     bytes.len()

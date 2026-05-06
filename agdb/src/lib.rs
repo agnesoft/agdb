@@ -123,6 +123,8 @@ pub use db::DbTransaction;
 pub use db::DbTransactionMut;
 pub use db::db_element::DbElement;
 pub use db::db_error::DbError;
+pub use db::db_error::DbErrorCategory;
+pub use db::db_error::DbErrorType;
 pub use db::db_f64::DbF64;
 pub use db::db_id::DbId;
 pub use db::db_key_order::DbKeyOrder;

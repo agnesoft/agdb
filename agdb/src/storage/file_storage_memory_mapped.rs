@@ -75,6 +75,7 @@ impl StorageData for FileStorageMemoryMapped {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::DbErrorType;
     use crate::storage::Storage;
     use crate::storage::StorageIndex;
     use crate::storage::write_ahead_log::WriteAheadLog;
@@ -292,7 +293,10 @@ mod tests {
 
         assert_eq!(
             storage.insert_at(StorageIndex::from(1_u64), 8, &1_i64),
-            Err(DbError::from("Storage error: index (1) not found"))
+            Err(DbError::storage(
+                DbErrorType::NotFound,
+                "Index (1) not found"
+            ))
         );
     }
 
@@ -407,8 +411,9 @@ mod tests {
 
         assert_eq!(
             storage.move_at(index, 8, 16, 1000),
-            Err(DbError::from(
-                "Storage error: value size (1008) out of bounds (32)"
+            Err(DbError::storage(
+                DbErrorType::OutOfBounds,
+                "Value size (1008) out of bounds (32)"
             ))
         )
     }
@@ -462,7 +467,10 @@ mod tests {
 
         assert_eq!(
             storage.value::<i64>(index),
-            Err(DbError::from("Storage error: index (1) not found"))
+            Err(DbError::storage(
+                DbErrorType::NotFound,
+                "Index (1) not found"
+            ))
         );
     }
 
@@ -473,7 +481,10 @@ mod tests {
 
         assert_eq!(
             storage.remove(StorageIndex::from(1_u64)),
-            Err(DbError::from("Storage error: index (1) not found"))
+            Err(DbError::storage(
+                DbErrorType::NotFound,
+                "Index (1) not found"
+            ))
         );
     }
 
@@ -498,7 +509,10 @@ mod tests {
 
         assert_eq!(
             storage.replace(StorageIndex::from(1_u64), &10_i64),
-            Err(DbError::from("Storage error: index (1) not found"))
+            Err(DbError::storage(
+                DbErrorType::NotFound,
+                "Index (1) not found"
+            ))
         );
     }
 
@@ -565,7 +579,10 @@ mod tests {
 
         assert_eq!(
             storage.resize_value(StorageIndex::from(1_u64), 1),
-            Err(DbError::from("Storage error: index (1) not found"))
+            Err(DbError::storage(
+                DbErrorType::NotFound,
+                "Index (1) not found"
+            ))
         );
     }
 
@@ -649,7 +666,10 @@ mod tests {
 
         assert_eq!(
             storage.value::<i64>(index),
-            Err(DbError::from("Storage error: index (1) not found"))
+            Err(DbError::storage(
+                DbErrorType::NotFound,
+                "Index (1) not found"
+            ))
         );
     }
 
@@ -702,14 +722,17 @@ mod tests {
         assert_eq!(storage.value::<Vec<i64>>(index1), Ok(value1));
         assert_eq!(
             storage.value::<u64>(StorageIndex::default()),
-            Err(DbError::from("Storage error: index (0) not found"))
+            Err(DbError::storage(
+                DbErrorType::NotFound,
+                "Index (0) not found"
+            ))
         );
         assert_eq!(
             storage.value::<u64>(index2),
-            Err(DbError::from(format!(
-                "Storage error: index ({}) not found",
-                index2.0
-            )))
+            Err(DbError::storage(
+                DbErrorType::NotFound,
+                format!("Index ({}) not found", index2.0)
+            ))
         );
         assert_eq!(storage.value::<Vec<i64>>(index3), Ok(value3));
     }
@@ -739,28 +762,31 @@ mod tests {
 
         assert_eq!(
             storage.value::<u64>(StorageIndex::default()),
-            Err(DbError::from("Storage error: index (0) not found"))
+            Err(DbError::storage(
+                DbErrorType::NotFound,
+                "Index (0) not found"
+            ))
         );
         assert_eq!(
             storage.value::<Vec<i64>>(index1),
-            Err(DbError::from(format!(
-                "Storage error: index ({}) not found",
-                index1.0
-            )))
+            Err(DbError::storage(
+                DbErrorType::NotFound,
+                format!("Index ({}) not found", index1.0)
+            ))
         );
         assert_eq!(
             storage.value::<u64>(index2),
-            Err(DbError::from(format!(
-                "Storage error: index ({}) not found",
-                index2.0
-            )))
+            Err(DbError::storage(
+                DbErrorType::NotFound,
+                format!("Index ({}) not found", index2.0)
+            ))
         );
         assert_eq!(
             storage.value::<Vec<i64>>(index3),
-            Err(DbError::from(format!(
-                "Storage error: index ({}) not found",
-                index3.0
-            )))
+            Err(DbError::storage(
+                DbErrorType::NotFound,
+                format!("Index ({}) not found", index3.0)
+            ))
         );
     }
 
@@ -865,10 +891,10 @@ mod tests {
         assert_eq!(storage.value(index1), Ok(1_i64));
         assert_eq!(
             storage.value::<i64>(index2),
-            Err(DbError::from(format!(
-                "Storage error: index ({}) not found",
-                index2.0
-            )))
+            Err(DbError::storage(
+                DbErrorType::NotFound,
+                format!("Index ({}) not found", index2.0)
+            ))
         );
         assert_eq!(storage.value(index3), Ok(3_i64));
     }
@@ -914,10 +940,10 @@ mod tests {
         let storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
         assert_eq!(
             storage.value::<i64>(index),
-            Err(DbError::from(format!(
-                "Storage error: index ({}) not found",
-                index.0
-            )))
+            Err(DbError::storage(
+                DbErrorType::NotFound,
+                format!("Index ({}) not found", index.0)
+            ))
         );
     }
 
@@ -939,10 +965,10 @@ mod tests {
         let storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
         assert_eq!(
             storage.value::<i64>(index),
-            Err(DbError::from(format!(
-                "Storage error: index ({}) not found",
-                index.0
-            )))
+            Err(DbError::storage(
+                DbErrorType::NotFound,
+                format!("Index ({}) not found", index.0)
+            ))
         );
     }
 
@@ -957,9 +983,10 @@ mod tests {
 
         assert_eq!(
             storage.commit(id1),
-            Err(DbError::from(format!(
-                "Cannot end transaction '{id1}'. Transaction '{id2}' in progress."
-            )))
+            Err(DbError::storage(
+                DbErrorType::NotAllowed,
+                format!("Cannot end transaction '{id1}'. Transaction '{id2}' in progress.")
+            ))
         );
     }
 
@@ -1008,7 +1035,10 @@ mod tests {
 
         assert_eq!(
             storage.value_at::<i64>(StorageIndex::from(1_u64), 8),
-            Err(DbError::from("Storage error: index (1) not found"))
+            Err(DbError::storage(
+                DbErrorType::NotFound,
+                "Index (1) not found"
+            ))
         );
     }
 
@@ -1023,7 +1053,10 @@ mod tests {
 
         assert_eq!(
             storage.value_at::<i64>(index, offset),
-            Err(DbError::from("i64 deserialization error: out of bounds"))
+            Err(DbError::storage(
+                DbErrorType::OutOfBounds,
+                "i64 deserialization error"
+            ))
         );
     }
 
@@ -1038,8 +1071,9 @@ mod tests {
 
         assert_eq!(
             storage.value_at::<i64>(index, offset),
-            Err(DbError::from(
-                "Storage error: offset (32) out of bounds (24)"
+            Err(DbError::storage(
+                DbErrorType::OutOfBounds,
+                "Offset (32) out of bounds (24)"
             ))
         );
     }
@@ -1051,7 +1085,10 @@ mod tests {
 
         assert_eq!(
             storage.value::<i64>(StorageIndex::from(1_u64)),
-            Err(DbError::from("Storage error: index (1) not found"))
+            Err(DbError::storage(
+                DbErrorType::NotFound,
+                "Index (1) not found"
+            ))
         );
     }
 
@@ -1064,8 +1101,9 @@ mod tests {
 
         assert_eq!(
             storage.value::<Vec<i64>>(index),
-            Err(DbError::from(
-                "Vec<i64> deserialization error: out of bounds"
+            Err(DbError::storage(
+                DbErrorType::OutOfBounds,
+                "Vec<i64> deserialization error"
             ))
         );
     }
@@ -1088,7 +1126,10 @@ mod tests {
 
         assert_eq!(
             storage.value_size(StorageIndex::from(1_u64)),
-            Err(DbError::from("Storage error: index (1) not found"))
+            Err(DbError::storage(
+                DbErrorType::NotFound,
+                "Index (1) not found"
+            ))
         );
     }
 }

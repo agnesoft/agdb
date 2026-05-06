@@ -113,7 +113,7 @@ pub fn derive_impl(item: TokenStream, element_id: bool) -> TokenStream {
                 value
                     .elements
                     .first()
-                    .ok_or(Self::Error::from("No element found"))?
+                    .ok_or(Self::Error::db(::agdb::DbErrorType::NotEnoughData, "No element found"))?
                     .try_into()
             }
         }
@@ -260,7 +260,7 @@ fn impl_from_db_element(f: &syn::Field) -> Option<proc_macro2::TokenStream> {
                             if let ::std::result::Result::Ok(v) = v {
                                 ::std::result::Result::Ok(::std::option::Option::Some(v))
                             } else {
-                                ::std::result::Result::Err(::agdb::DbError::from(format!("Failed to convert value of '{}': {}", #str_name, v.unwrap_err())))
+                                ::std::result::Result::Err(::agdb::DbError::db(::agdb::DbErrorType::TypeError, &format!("Failed to convert value of '{}': {}", #str_name, v.unwrap_err())))
                             }
                         })?
             });
@@ -285,8 +285,8 @@ fn impl_from_db_element(f: &syn::Field) -> Option<proc_macro2::TokenStream> {
                     }
                 } ::std::option::Option::None
             })
-            .ok_or(::agdb::DbError::from(format!("Key '{}' not found", #str_name)))?
-            .map_err(|e| ::agdb::DbError::from(format!("Failed to convert value of '{}': {}", #str_name, e)))?
+            .ok_or(::agdb::DbError::db(::agdb::DbErrorType::NotFound, format!("Key '{}' not found", #str_name)))?
+            .map_err(|e| ::agdb::DbError::db(::agdb::DbErrorType::TypeError, &format!("Failed to convert value of '{}': {}", #str_name, e)))?
         });
     }
 

@@ -1,4 +1,5 @@
 use crate::DbError;
+use crate::DbErrorType;
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 
@@ -120,9 +121,10 @@ impl StorageRecords {
             return Ok(*record);
         }
 
-        Err(DbError::from(format!(
-            "Storage error: index ({index}) not found"
-        )))
+        Err(DbError::storage(
+            DbErrorType::NotFound,
+            format!("Index ({index}) not found"),
+        ))
     }
 
     pub fn remove_index(&mut self, index: u64) {

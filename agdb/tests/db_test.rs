@@ -271,10 +271,13 @@ fn invalid_db_file() {
     std::fs::write(test_file.file_name(), bytes).unwrap();
     let error = Db::new(test_file.file_name()).unwrap_err();
 
-    assert_eq!(error.description, "Failed to create database");
+    assert_eq!(
+        error.description,
+        format!("Failed to create database: {}", test_file.file_name())
+    );
     assert_eq!(
         error.cause.unwrap().description,
-        "Storage error: invalid version record size (0 < 8)"
+        "Invalid version record size (0 < 8)"
     );
 }
 

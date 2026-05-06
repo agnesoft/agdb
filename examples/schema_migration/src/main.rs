@@ -34,7 +34,10 @@ impl TryFrom<DbValue> for UserStatus {
             "active" | "0" => Ok(Self::Active),
             "inactive" | "1" => Ok(Self::Inactive),
             "banned" | "2" => Ok(Self::Banned),
-            _ => Err(DbError::from("Invalid user status")),
+            _ => Err(DbError::db(
+                agdb::DbErrorType::TypeError,
+                "Invalid user status",
+            )),
         }
     }
 }

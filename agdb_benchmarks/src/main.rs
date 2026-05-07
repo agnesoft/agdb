@@ -13,6 +13,7 @@ mod bench_error;
 mod bench_result;
 mod config;
 mod database;
+mod queries;
 mod readers;
 mod users;
 mod utilities;
@@ -78,12 +79,56 @@ async fn benchmark_embedded(config: &Config) -> BenchResult<()> {
     }
 }
 
-async fn benchmark_server(_config: &Config, address: &str) -> BenchResult<()> {
-    let mut db = ServerDatabase::new(_config, address).await?;
-    users::setup_server_users(&mut db, _config).await?;
+async fn benchmark_server(config: &Config, address: &str) -> BenchResult<()> {
+    let mut db = ServerDatabase::new(config, address).await?;
+    users::setup_server_users(&mut db, config).await?;
+    users::setup_server_bench_users(&db, config).await?;
+
+    let mut posters = writers::start_post_writers_server(&db, config).await?;
+    let mut commenters = writers::start_comment_writers_server(&db, config).await?;
+    let mut post_readers = readers::start_post_readers_server(&db, config).await?;
+    let mut comment_readers = readers::start_comment_readers_server(&db, config).await?;
+
+    posters
+        .join_and_report(
+            "Write posts",
+            config.posters.count,
+            config.posters.posts,
+            1,
+            config,
+        )
+        .await?;
+    commenters
+        .join_and_report(
+            "Write comments",
+            config.commenters.count,
+            config.commenters.comments,
+            1,
+            config,
+        )
+        .await?;
+    post_readers
+        .join_and_report(
+            "Read posts",
+            config.post_readers.count,
+            config.post_readers.reads_per_reader,
+            config.post_readers.posts,
+            config,
+        )
+        .await?;
+    comment_readers
+        .join_and_report(
+            "Read comments",
+            config.comment_readers.count,
+            config.comment_readers.reads_per_reader,
+            config.comment_readers.comments,
+            config,
+        )
+        .await?;
+
     println!("Server benchmark database initialized at '{address}'");
     println!("---");
-    db.stat(_config).await
+    db.stat(config).await
 }
 
 #[tokio::main]

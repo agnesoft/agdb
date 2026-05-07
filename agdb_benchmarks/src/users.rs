@@ -4,23 +4,18 @@ use crate::database::BENCHMARK_DATABASE;
 use crate::database::BENCHMARK_USERNAME;
 use crate::database::Database;
 use crate::database::ServerDatabase;
+use crate::queries::insert_user_edges_query;
+use crate::queries::insert_user_query;
 use crate::utilities::format_duration;
 use crate::utilities::measured;
+use crate::utilities::measured_async;
 use crate::utilities::print_flush;
-use agdb::DbType;
-use agdb::QueryBuilder;
+use agdb::QueryType;
 use agdb::StorageData;
 use agdb_api::AgdbApi;
 use agdb_api::DbUserRole;
 use agdb_api::ReqwestClient;
 use num_format::ToFormattedString;
-use std::time::Instant;
-
-#[derive(DbType)]
-struct User {
-    name: String,
-    email: String,
-}
 
 pub(crate) fn setup_users<S: StorageData>(
     db: &mut Database<S>,
@@ -46,27 +41,13 @@ pub(crate) fn setup_users<S: StorageData>(
 
             for i in 0..user_count {
                 user_ids.push(
-                    t.exec_mut(
-                        QueryBuilder::insert()
-                            .nodes()
-                            .values(User {
-                                name: format!("u{i}"),
-                                email: format!("u{i}@a.com"),
-                            })
-                            .query(),
-                    )?
+                    t.exec_mut(insert_user_query(format!("u{i}"), format!("u{i}@a.com")))?
                     .elements[0]
                         .id,
                 );
             }
 
-            t.exec_mut(
-                QueryBuilder::insert()
-                    .edges()
-                    .from("users")
-                    .to(user_ids)
-                    .query(),
-            )
+            t.exec_mut(insert_user_edges_query(user_ids))
         })?;
         Ok(())
     })?;
@@ -86,6 +67,10 @@ pub(crate) async fn setup_server_users(
     db: &mut ServerDatabase,
     config: &Config,
 ) -> BenchResult<()> {
+    let mut admin_api = AgdbApi::new(ReqwestClient::new(), db.address());
+    admin_api.user_login("admin", "admin").await?;
+    ensure_users_exist(&admin_api, config).await?;
+
     let padding = config.padding as usize;
     let cell_padding = config.cell_padding as usize;
     let total_users = config.posters.count
@@ -102,14 +87,42 @@ pub(crate) async fn setup_server_users(
         total_users.to_formatted_string(&config.locale)
     ));
 
-    let started = Instant::now();
-    provision_database_users(db.address(), config).await?;
-    let duration = started.elapsed();
+    let duration = measured_async(ensure_database_users_in_db(&admin_api, config)).await?;
 
     print_flush(format!(
         " {:cell_padding$} | {:cell_padding$} | {:cell_padding$} | {:cell_padding$}\n",
         "-",
         format_duration(duration / (total_users as u32), config.locale),
+        "-",
+        format_duration(duration, config.locale)
+    ));
+
+    Ok(())
+}
+
+pub(crate) async fn setup_server_bench_users(
+    db: &ServerDatabase,
+    config: &Config,
+) -> BenchResult<()> {
+    let padding = config.padding as usize;
+    let cell_padding = config.cell_padding as usize;
+    let user_count = config.user_count();
+
+    print_flush(format!(
+        "{:<padding$} | {:<cell_padding$} | {:<cell_padding$} | {:<cell_padding$} | {:<cell_padding$} |",
+        "Creating benchmark users",
+        1,
+        1,
+        user_count.to_formatted_string(&config.locale),
+        user_count.to_formatted_string(&config.locale)
+    ));
+
+    let duration = measured_async(insert_bench_users(db, config)).await?;
+
+    print_flush(format!(
+        " {:cell_padding$} | {:cell_padding$} | {:cell_padding$} | {:cell_padding$}\n",
+        "-",
+        format_duration(duration / (user_count as u32), config.locale),
         "-",
         format_duration(duration, config.locale)
     ));
@@ -137,17 +150,40 @@ pub(crate) fn benchmark_password(username: &str) -> String {
     username.to_string()
 }
 
-async fn provision_database_users(address: &str, config: &Config) -> BenchResult<()> {
-    let mut admin_api = AgdbApi::new(ReqwestClient::new(), address);
-    admin_api.user_login("admin", "admin").await?;
-
+async fn ensure_users_exist(
+    admin_api: &AgdbApi<ReqwestClient>,
+    config: &Config,
+) -> BenchResult<()> {
     for index in 0..config.posters.count {
-        ensure_user_role(&admin_api, &post_writer_username(index), DbUserRole::Write).await?;
+        ensure_user_exists(admin_api, &post_writer_username(index)).await?;
     }
 
     for index in 0..config.commenters.count {
-        ensure_user_role(
-            &admin_api,
+        ensure_user_exists(admin_api, &comment_writer_username(index)).await?;
+    }
+
+    for index in 0..config.post_readers.count {
+        ensure_user_exists(admin_api, &post_reader_username(index)).await?;
+    }
+
+    for index in 0..config.comment_readers.count {
+        ensure_user_exists(admin_api, &comment_reader_username(index)).await?;
+    }
+
+    Ok(())
+}
+
+async fn ensure_database_users_in_db(
+    admin_api: &AgdbApi<ReqwestClient>,
+    config: &Config,
+) -> BenchResult<()> {
+    for index in 0..config.posters.count {
+        ensure_user_db_role(admin_api, &post_writer_username(index), DbUserRole::Write).await?;
+    }
+
+    for index in 0..config.commenters.count {
+        ensure_user_db_role(
+            admin_api,
             &comment_writer_username(index),
             DbUserRole::Write,
         )
@@ -155,31 +191,69 @@ async fn provision_database_users(address: &str, config: &Config) -> BenchResult
     }
 
     for index in 0..config.post_readers.count {
-        ensure_user_role(&admin_api, &post_reader_username(index), DbUserRole::Read).await?;
+        ensure_user_db_role(admin_api, &post_reader_username(index), DbUserRole::Read).await?;
     }
 
     for index in 0..config.comment_readers.count {
-        ensure_user_role(
-            &admin_api,
-            &comment_reader_username(index),
-            DbUserRole::Read,
-        )
-        .await?;
+        ensure_user_db_role(admin_api, &comment_reader_username(index), DbUserRole::Read).await?;
     }
 
     Ok(())
 }
 
-async fn ensure_user_role(
+async fn ensure_user_exists(admin_api: &AgdbApi<ReqwestClient>, username: &str) -> BenchResult<()> {
+    let password = benchmark_password(username);
+    match admin_api.admin_user_add(username, &password).await {
+        Ok(_) => {}
+        Err(error) if error.status == 463 => {}
+        Err(error) => return Err(error.into()),
+    }
+
+    Ok(())
+}
+
+async fn ensure_user_db_role(
     admin_api: &AgdbApi<ReqwestClient>,
     username: &str,
     role: DbUserRole,
 ) -> BenchResult<()> {
-    let password = benchmark_password(username);
-    admin_api.admin_user_add(username, &password).await?;
     admin_api
         .admin_db_user_add(BENCHMARK_USERNAME, BENCHMARK_DATABASE, username, role)
         .await?;
+
+    Ok(())
+}
+
+async fn insert_bench_users(db: &ServerDatabase, config: &Config) -> BenchResult<()> {
+    let mut queries: Vec<QueryType> = Vec::with_capacity(config.user_count() as usize);
+
+    for index in 0..config.posters.count {
+        queries.push(
+            insert_user_query(
+                post_writer_username(index),
+                format!("postwriter_{index}@a.com"),
+            )
+            .into(),
+        );
+    }
+
+    for index in 0..config.commenters.count {
+        queries.push(
+            insert_user_query(
+                comment_writer_username(index),
+                format!("commentwriter_{index}@a.com"),
+            )
+            .into(),
+        );
+    }
+
+    let inserted = db.exec_mut(&queries).await?;
+    let user_ids = inserted
+        .into_iter()
+        .flat_map(|result| result.ids())
+        .collect::<Vec<_>>();
+
+    db.exec_mut(&[insert_user_edges_query(user_ids).into()]).await?;
 
     Ok(())
 }

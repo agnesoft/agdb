@@ -1,9 +1,13 @@
 use crate::bench_result::BenchResult;
 use crate::config::Config;
 use crate::config::DbType;
+use crate::queries::bootstrap_alias_queries;
+use crate::queries::insert_posts_alias_query;
+use crate::queries::insert_users_alias_query;
 use crate::utilities::format_size;
 use agdb::DbImpl;
-use agdb::QueryBuilder;
+use agdb::QueryResult;
+use agdb::QueryType;
 use agdb::StorageData;
 use agdb_api::AgdbApi;
 use agdb_api::AgdbApiError;
@@ -31,8 +35,8 @@ impl<S: StorageData> Database<S> {
     pub(crate) fn new(config: &Config) -> BenchResult<Self> {
         remove_db_files(&config.db_name);
         let mut db = DbImpl::new(&config.db_name)?;
-        db.exec_mut(QueryBuilder::insert().nodes().aliases("users").query())?;
-        db.exec_mut(QueryBuilder::insert().nodes().aliases("posts").query())?;
+        db.exec_mut(insert_users_alias_query())?;
+        db.exec_mut(insert_posts_alias_query())?;
         Ok(Self(Arc::new(RwLock::new(db))))
     }
 
@@ -92,6 +96,18 @@ impl ServerDatabase {
         );
 
         Ok(())
+    }
+
+    pub(crate) async fn exec_mut(&self, queries: &[QueryType]) -> BenchResult<Vec<QueryResult>> {
+        Ok(self
+            .api
+            .db_exec_mut(&self.owner, &self.db, queries)
+            .await?
+            .1)
+    }
+
+    pub(crate) async fn exec(&self, queries: &[QueryType]) -> BenchResult<Vec<QueryResult>> {
+        Ok(self.api.db_exec(&self.owner, &self.db, queries).await?.1)
     }
 
     async fn database_stat(&self) -> BenchResult<ServerDatabaseStat> {
@@ -158,18 +174,7 @@ async fn reset_benchmark_database(
 }
 
 async fn bootstrap_server_database(api: &AgdbApi<ReqwestClient>) -> BenchResult<()> {
-    let queries = vec![
-        QueryBuilder::insert()
-            .nodes()
-            .aliases("users")
-            .query()
-            .into(),
-        QueryBuilder::insert()
-            .nodes()
-            .aliases("posts")
-            .query()
-            .into(),
-    ];
+    let queries = bootstrap_alias_queries();
 
     api.db_exec_mut(BENCHMARK_USERNAME, BENCHMARK_DATABASE, &queries)
         .await?;

@@ -36,6 +36,15 @@ pub(crate) fn measured(mut predicate: impl FnMut() -> BenchResult<()>) -> BenchR
     Ok(duration)
 }
 
+pub(crate) async fn measured_async<F>(future: F) -> BenchResult<Duration>
+where
+    F: std::future::Future<Output = BenchResult<()>>,
+{
+    let start = Instant::now();
+    future.await?;
+    Ok(start.elapsed())
+}
+
 pub(crate) fn print_flush(message: String) {
     print!("{message}");
     std::io::stdout().flush().unwrap();

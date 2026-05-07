@@ -53,7 +53,11 @@ impl<S: StorageData> Reader<S> {
     fn read_comments(&mut self, limit: u64) -> BenchResult<bool> {
         if let Some(post_id) = self.last_post()? {
             let duration = measured(|| {
-                let _comments = self.db.0.read()?.exec(select_comments_query(post_id, limit))?;
+                let _comments = self
+                    .db
+                    .0
+                    .read()?
+                    .exec(select_comments_query(post_id, limit))?;
                 Ok(())
             })?;
 

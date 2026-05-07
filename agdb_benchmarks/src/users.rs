@@ -42,7 +42,7 @@ pub(crate) fn setup_users<S: StorageData>(
             for i in 0..user_count {
                 user_ids.push(
                     t.exec_mut(insert_user_query(format!("u{i}"), format!("u{i}@a.com")))?
-                    .elements[0]
+                        .elements[0]
                         .id,
                 );
             }
@@ -253,7 +253,8 @@ async fn insert_bench_users(db: &ServerDatabase, config: &Config) -> BenchResult
         .flat_map(|result| result.ids())
         .collect::<Vec<_>>();
 
-    db.exec_mut(&[insert_user_edges_query(user_ids).into()]).await?;
+    db.exec_mut(&[insert_user_edges_query(user_ids).into()])
+        .await?;
 
     Ok(())
 }

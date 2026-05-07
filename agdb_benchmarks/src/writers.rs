@@ -61,10 +61,7 @@ impl<S: StorageData> Writer<S> {
     fn write_post(&mut self, title: &str, body: &str) -> BenchResult<()> {
         let duration = measured(|| {
             self.db.0.write()?.transaction_mut(|t| -> BenchResult<()> {
-                let id = t
-                    .exec_mut(insert_post_query(title, body))?
-                    .elements[0]
-                    .id;
+                let id = t.exec_mut(insert_post_query(title, body))?.elements[0].id;
 
                 t.exec_mut(insert_post_authored_edge_query(self.id, id.into()))?;
 
@@ -83,10 +80,7 @@ impl<S: StorageData> Writer<S> {
         if let Some(post_id) = self.last_post()? {
             let duration = measured(|| {
                 self.db.0.write()?.transaction_mut(|t| -> BenchResult<()> {
-                    let id = t
-                        .exec_mut(insert_comment_query(body))?
-                        .elements[0]
-                        .id;
+                    let id = t.exec_mut(insert_comment_query(body))?.elements[0].id;
 
                     t.exec_mut(insert_comment_edge_query(post_id, self.id, id.into()))?;
 
@@ -409,11 +403,9 @@ pub(crate) async fn start_comment_writers_server(
 ) -> BenchResult<ServerWriters> {
     let start = Instant::now();
     let users = db
-        .exec(&[select_comment_writer_users_query(
-            config.posters.count,
-            config.commenters.count,
-        )
-        .into()])
+        .exec(&[
+            select_comment_writer_users_query(config.posters.count, config.commenters.count).into(),
+        ])
         .await?;
     let address = db.address().to_string();
 

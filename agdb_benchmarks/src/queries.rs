@@ -22,7 +22,10 @@ pub(crate) struct BenchComment {
     pub(crate) body: String,
 }
 
-pub(crate) fn insert_user_query(name: String, email: String) -> impl QueryMut + Into<agdb::QueryType> {
+pub(crate) fn insert_user_query(
+    name: String,
+    email: String,
+) -> impl QueryMut + Into<agdb::QueryType> {
     QueryBuilder::insert()
         .nodes()
         .values(BenchUser { name, email })
@@ -38,7 +41,10 @@ pub(crate) fn insert_posts_alias_query() -> impl QueryMut + Into<agdb::QueryType
 }
 
 pub(crate) fn bootstrap_alias_queries() -> Vec<agdb::QueryType> {
-    vec![insert_users_alias_query().into(), insert_posts_alias_query().into()]
+    vec![
+        insert_users_alias_query().into(),
+        insert_posts_alias_query().into(),
+    ]
 }
 
 pub(crate) fn insert_user_edges_query(
@@ -130,7 +136,10 @@ pub(crate) fn select_posts_query(limit: u64) -> impl Query + Into<agdb::QueryTyp
         .query()
 }
 
-pub(crate) fn select_comments_query(post_id: DbId, limit: u64) -> impl Query + Into<agdb::QueryType> {
+pub(crate) fn select_comments_query(
+    post_id: DbId,
+    limit: u64,
+) -> impl Query + Into<agdb::QueryType> {
     QueryBuilder::select()
         .ids(
             QueryBuilder::search()

@@ -40,6 +40,14 @@ pub(crate) struct CommentReaders {
 }
 
 #[derive(Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum BenchmarkMode {
+    Embedded,
+    Server { address: String },
+}
+
+#[derive(Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum DbType {
     File,
     FileMapped,
@@ -49,6 +57,7 @@ pub enum DbType {
 #[derive(Serialize, Deserialize)]
 pub(crate) struct Config {
     pub(crate) db_name: String,
+    pub(crate) mode: BenchmarkMode,
     pub(crate) db_type: DbType,
     pub(crate) locale: Locale,
     pub(crate) padding: u64,
@@ -85,6 +94,7 @@ impl Default for Config {
     fn default() -> Self {
         Self {
             db_name: "agdb_benchmarks.agdb".to_string(),
+            mode: BenchmarkMode::Embedded,
             db_type: DbType::FileMapped,
             locale: Locale::cs,
             padding: 20,

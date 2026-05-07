@@ -1,13 +1,20 @@
 use crate::bench_result::BenchResult;
 use crate::config::Config;
+use crate::database::BENCHMARK_DATABASE;
+use crate::database::BENCHMARK_USERNAME;
 use crate::database::Database;
+use crate::database::ServerDatabase;
 use crate::utilities::format_duration;
 use crate::utilities::measured;
 use crate::utilities::print_flush;
 use agdb::DbType;
 use agdb::QueryBuilder;
 use agdb::StorageData;
+use agdb_api::AgdbApi;
+use agdb_api::DbUserRole;
+use agdb_api::ReqwestClient;
 use num_format::ToFormattedString;
+use std::time::Instant;
 
 #[derive(DbType)]
 struct User {
@@ -71,6 +78,108 @@ pub(crate) fn setup_users<S: StorageData>(
         "-",
         format_duration(duration, config.locale)
     ));
+
+    Ok(())
+}
+
+pub(crate) async fn setup_server_users(
+    db: &mut ServerDatabase,
+    config: &Config,
+) -> BenchResult<()> {
+    let padding = config.padding as usize;
+    let cell_padding = config.cell_padding as usize;
+    let total_users = config.posters.count
+        + config.commenters.count
+        + config.post_readers.count
+        + config.comment_readers.count;
+
+    print_flush(format!(
+        "{:<padding$} | {:<cell_padding$} | {:<cell_padding$} | {:<cell_padding$} | {:<cell_padding$} |",
+        "Creating users",
+        1,
+        1,
+        total_users.to_formatted_string(&config.locale),
+        total_users.to_formatted_string(&config.locale)
+    ));
+
+    let started = Instant::now();
+    provision_database_users(db.address(), config).await?;
+    let duration = started.elapsed();
+
+    print_flush(format!(
+        " {:cell_padding$} | {:cell_padding$} | {:cell_padding$} | {:cell_padding$}\n",
+        "-",
+        format_duration(duration / (total_users as u32), config.locale),
+        "-",
+        format_duration(duration, config.locale)
+    ));
+
+    Ok(())
+}
+
+pub(crate) fn post_writer_username(index: u64) -> String {
+    format!("postwriter_{index}")
+}
+
+pub(crate) fn comment_writer_username(index: u64) -> String {
+    format!("commentwriter_{index}")
+}
+
+pub(crate) fn post_reader_username(index: u64) -> String {
+    format!("postreader_{index}")
+}
+
+pub(crate) fn comment_reader_username(index: u64) -> String {
+    format!("commentreader_{index}")
+}
+
+pub(crate) fn benchmark_password(username: &str) -> String {
+    username.to_string()
+}
+
+async fn provision_database_users(address: &str, config: &Config) -> BenchResult<()> {
+    let mut admin_api = AgdbApi::new(ReqwestClient::new(), address);
+    admin_api.user_login("admin", "admin").await?;
+
+    for index in 0..config.posters.count {
+        ensure_user_role(&admin_api, &post_writer_username(index), DbUserRole::Write).await?;
+    }
+
+    for index in 0..config.commenters.count {
+        ensure_user_role(
+            &admin_api,
+            &comment_writer_username(index),
+            DbUserRole::Write,
+        )
+        .await?;
+    }
+
+    for index in 0..config.post_readers.count {
+        ensure_user_role(&admin_api, &post_reader_username(index), DbUserRole::Read).await?;
+    }
+
+    for index in 0..config.comment_readers.count {
+        ensure_user_role(
+            &admin_api,
+            &comment_reader_username(index),
+            DbUserRole::Read,
+        )
+        .await?;
+    }
+
+    Ok(())
+}
+
+async fn ensure_user_role(
+    admin_api: &AgdbApi<ReqwestClient>,
+    username: &str,
+    role: DbUserRole,
+) -> BenchResult<()> {
+    let password = benchmark_password(username);
+    admin_api.admin_user_add(username, &password).await?;
+    admin_api
+        .admin_db_user_add(BENCHMARK_USERNAME, BENCHMARK_DATABASE, username, role)
+        .await?;
 
     Ok(())
 }

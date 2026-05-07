@@ -3,9 +3,11 @@ use agdb::FileStorageMemoryMapped;
 use agdb::MemoryStorage;
 use agdb::StorageData;
 use bench_result::BenchResult;
+use config::BenchmarkMode;
 use config::Config;
 use config::DbType;
 use database::Database;
+use database::ServerDatabase;
 
 mod bench_error;
 mod bench_result;
@@ -68,6 +70,22 @@ async fn benchmark<S: StorageData + Send + Sync + 'static>(config: &Config) -> B
     db.stat(config)
 }
 
+async fn benchmark_embedded(config: &Config) -> BenchResult<()> {
+    match config.db_type {
+        DbType::File => benchmark::<FileStorage>(config).await,
+        DbType::FileMapped => benchmark::<FileStorageMemoryMapped>(config).await,
+        DbType::InMemory => benchmark::<MemoryStorage>(config).await,
+    }
+}
+
+async fn benchmark_server(_config: &Config, address: &str) -> BenchResult<()> {
+    let mut db = ServerDatabase::new(_config, address).await?;
+    users::setup_server_users(&mut db, _config).await?;
+    println!("Server benchmark database initialized at '{address}'");
+    println!("---");
+    db.stat(_config).await
+}
+
 #[tokio::main]
 async fn main() -> BenchResult<()> {
     let config = Config::load_config()?;
@@ -75,9 +93,8 @@ async fn main() -> BenchResult<()> {
     println!("Running agdb benchmark\n\n");
     utilities::print_header(&config);
 
-    match config.db_type {
-        DbType::File => benchmark::<FileStorage>(&config).await,
-        DbType::FileMapped => benchmark::<FileStorageMemoryMapped>(&config).await,
-        DbType::InMemory => benchmark::<MemoryStorage>(&config).await,
+    match &config.mode {
+        BenchmarkMode::Embedded => benchmark_embedded(&config).await,
+        BenchmarkMode::Server { address } => benchmark_server(&config, address).await,
     }
 }

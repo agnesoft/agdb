@@ -5,16 +5,16 @@ packages:
   - examples/**
 
 allowBuilds:
-  '@nestjs/core': false
-  '@openapitools/openapi-generator-cli': false
-  '@parcel/watcher': false
-  '@scarf/scarf': false
-  better-sqlite3: false
-  esbuild: false
-  sharp: false
-  unrs-resolver: false
-  vue-demi: false
-  yarn: false
+  '@nestjs/core': true
+  '@openapitools/openapi-generator-cli': true
+  '@parcel/watcher': true
+  '@scarf/scarf': true
+  better-sqlite3: true
+  esbuild: true
+  sharp: true
+  unrs-resolver: true
+  vue-demi: true
+  yarn: true
 
 catalog:
   "@eslint/js": ^9

@@ -21,6 +21,7 @@ const COMMITTED: &str = "committed";
 const CLUSTER_LOG_FILE: &str = "agdb_server.log";
 
 pub(crate) async fn new(config: &Config) -> ServerResult<ClusterLog> {
+    std::fs::create_dir_all(&config.data_dir)?;
     let file = format!("{}/{}", config.data_dir, CLUSTER_LOG_FILE);
     ClusterLog::new(&file).await
 }
@@ -242,7 +243,7 @@ impl ClusterLog {
                     QueryBuilder::search()
                         .depth_first()
                         .from(CLUSTER_LOG)
-                        .limit(log_count - from_index)
+                        .limit(log_count.saturating_sub(from_index))
                         .where_()
                         .neighbor()
                         .query(),

@@ -40,34 +40,38 @@ where
     D: StorageData,
     Data: MapData<K, T, D>,
 {
-    type Item = (K, T);
+    type Item = Result<(K, T), DbError>;
 
     fn next(&mut self) -> Option<Self::Item> {
+        if self.data.capacity() == 0 {
+            return None;
+        }
+
         loop {
             let current_pos = self.pos;
 
-            self.pos = if self.data.capacity() == 0 || self.pos == self.data.capacity() - 1 {
+            self.pos = if self.pos == self.data.capacity() - 1 {
                 0
             } else {
                 self.pos + 1
             };
 
-            match self
-                .data
-                .state(self.storage, current_pos)
-                .unwrap_or_default()
-            {
-                MapValueState::Empty => break,
-                MapValueState::Deleted => {}
-                MapValueState::Valid => {
-                    let key = self.data.key(self.storage, current_pos).unwrap_or_default();
+            match self.data.state(self.storage, current_pos) {
+                Err(error) => return Some(Err(error)),
+                Ok(MapValueState::Empty) => break,
+                Ok(MapValueState::Deleted) => {}
+                Ok(MapValueState::Valid) => {
+                    let key = match self.data.key(self.storage, current_pos) {
+                        Ok(key) => key,
+                        Err(error) => return Some(Err(error)),
+                    };
 
                     if key == *self.key {
-                        let value = self
-                            .data
-                            .value(self.storage, current_pos)
-                            .unwrap_or_default();
-                        return Some((key, value));
+                        let value = match self.data.value(self.storage, current_pos) {
+                            Ok(value) => value,
+                            Err(error) => return Some(Err(error)),
+                        };
+                        return Some(Ok((key, value)));
                     }
                 }
             }
@@ -93,7 +97,10 @@ where
     }
 
     pub fn contains(&self, storage: &Storage<D>, key: &K) -> Result<bool, DbError> {
-        Ok(self.iter_key(storage, key).next().is_some())
+        match self.iter_key(storage, key).next() {
+            Some(result) => result.map(|_| true),
+            None => Ok(false),
+        }
     }
 
     pub fn contains_value(
@@ -102,10 +109,13 @@ where
         key: &K,
         value: &T,
     ) -> Result<bool, DbError> {
-        Ok(self
-            .iter_key(storage, key)
-            .find(|(_, val)| val == value)
-            .is_some())
+        for result in self.iter_key(storage, key) {
+            if result?.1 == *value {
+                return Ok(true);
+            }
+        }
+
+        Ok(false)
     }
 
     pub fn insert(&mut self, storage: &mut Storage<D>, key: &K, value: &T) -> Result<(), DbError> {
@@ -302,16 +312,22 @@ where
     }
 
     pub fn value(&self, storage: &Storage<D>, key: &K) -> Result<Option<T>, DbError> {
-        Ok(self.iter_key(storage, key).next().map(|(_, val)| val))
+        match self.iter_key(storage, key).next() {
+            Some(result) => result.map(|(_, val)| Some(val)),
+            None => Ok(None),
+        }
     }
 
     pub fn values(&self, storage: &Storage<D>, key: &K) -> Result<Vec<T>, DbError> {
-        Ok(self.iter_key(storage, key).map(|(_, v)| v).collect())
+        self.iter_key(storage, key)
+            .map(|result| result.map(|(_, value)| value))
+            .collect()
     }
 
     #[allow(dead_code)]
     pub fn values_count(&self, storage: &Storage<D>, key: &K) -> Result<u64, DbError> {
-        Ok(self.iter_key(storage, key).count() as u64)
+        self.iter_key(storage, key)
+            .try_fold(0_u64, |count, result| result.map(|_| count + 1))
     }
 
     fn do_insert(
@@ -577,12 +593,17 @@ mod tests {
         map.insert(&mut storage, &4, &40).unwrap();
         map.remove_value(&mut storage, &1, &10).unwrap();
 
-        let value = map.iter_key(&storage, &1).find(|v| v.1 == 20).unwrap();
-        assert_eq!(value, (1, 20));
+        let value = map
+            .iter_key(&storage, &1)
+            .map(|result| result.map(|(_, value)| value))
+            .find_map(Result::ok)
+            .unwrap();
+        assert_eq!(value, 20);
 
         let mut values = Vec::<(u64, u64)>::with_capacity(2);
 
-        for (key, value) in map.iter_key(&storage, &1) {
+        for result in map.iter_key(&storage, &1) {
+            let (key, value) = result.unwrap();
             values.push((key, value));
         }
 
@@ -921,7 +942,10 @@ mod tests {
         assert!(!values.contains(&(10, 11)));
         assert!(values.contains(&(10, 12)));
 
-        let keys = map.iter_key(&storage, &10).collect::<Vec<(u64, u64)>>();
+        let keys = map
+            .iter_key(&storage, &10)
+            .collect::<Result<Vec<(u64, u64)>, DbError>>()
+            .unwrap();
         assert_eq!(keys, vec![(10, 12)]);
     }
 

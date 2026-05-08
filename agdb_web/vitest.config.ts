@@ -22,6 +22,7 @@ export default defineConfig({
         "src/tests/*",
         "**/types.ts",
         "**/assets/**",
+        "**/[[]...slug[]].vue",
       ],
       thresholds: {
         lines: 100,

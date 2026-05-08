@@ -18,6 +18,9 @@ export default defineNuxtConfig({
   css: ["~/assets/css/main.css"],
 
   content: {
+    experimental: {
+      nativeSqlite: true,
+    },
     build: {
       markdown: {
         toc: {

@@ -10,7 +10,7 @@
       <img width="50" height="50" src="/images/js.png" alt="js" />
     </NuxtLink>
     <NuxtLink to="/api-docs/php">
-      <img width="90" height="50" src="/images/php.svg" alt="php" />
+      <img width="90" height="50" :src="'/images/php.svg'" alt="php" />
     </NuxtLink>
     <img width="50" height="50" src="/images/python.png" alt="python" />
     <img width="50" height="50" src="/images/java.png" alt="java" />

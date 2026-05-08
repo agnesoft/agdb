@@ -20,7 +20,11 @@ jobs:
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           components: rustfmt,clippy
-      - run: npm i -g pnpm
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          registry-url: "https://registry.npmjs.org"
       - run: cargo fmt -p agdb_ci --check
       - run: cargo clippy -p agdb_ci --all-targets --all-features -- -D warnings
       - run: cargo run -p agdb_ci -r
@@ -28,6 +32,6 @@ jobs:
           if [[ "$(git diff --name-only)" != "" ]]; then
             git diff
             git diff --name-only
-            echo "ERROR: Some packages have not been updated. Plesae run 'cargo run -p agdb_ci -r' and commit the result."
+            echo "ERROR: Some packages have not been updated. Please run 'cargo run -p agdb_ci -r' and commit the result."
             exit 1
           fi

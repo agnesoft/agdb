@@ -39,18 +39,12 @@ mockNuxtImport(
 
 describe("IndexPage (error path)", () => {
   it("throws 404 when no page is found", async () => {
-    let captured: unknown;
-    await mountSuspended(IndexPage, {
-      global: {
-        config: {
-          errorHandler: (err) => {
-            captured = err;
-            return false;
-          },
+    await expect(
+      mountSuspended(IndexPage, {
+        global: {
+          stubs: { ContentRenderer, "content-renderer": ContentRenderer },
         },
-        stubs: { ContentRenderer, "content-renderer": ContentRenderer },
-      },
-    });
-    expect((captured as Error).message).toBe("Page not found");
+      }),
+    ).rejects.toThrow("Page not found");
   });
 });

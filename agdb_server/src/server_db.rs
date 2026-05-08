@@ -15,8 +15,6 @@ use agdb::QueryBuilder;
 use agdb::QueryId;
 use agdb::QueryResult;
 use agdb::SearchQuery;
-use agdb::StorageData;
-use agdb::Transaction;
 use agdb_api::DbKind;
 use agdb_api::DbUser;
 use agdb_api::DbUserRole;
@@ -56,11 +54,8 @@ impl Database {
 pub(crate) struct ServerDb(pub(crate) Arc<RwLock<Db>>);
 
 const ADMIN: &str = "admin";
-const CLUSTER_LOG: &str = "cluster_log";
-const COMMITTED: &str = "committed";
 const DB: &str = "db";
 const DBS: &str = "dbs";
-const EXECUTED: &str = "executed";
 const OWNER: &str = "owner";
 const ROLE: &str = "role";
 const TOKEN: &str = "token";
@@ -114,14 +109,6 @@ impl ServerDb {
                 t.exec_mut(QueryBuilder::insert().index(TOKEN).query())?;
             }
 
-            if !indexes.iter().any(|i| i == EXECUTED) {
-                t.exec_mut(QueryBuilder::insert().index(EXECUTED).query())?;
-            }
-
-            if !indexes.iter().any(|i| i == COMMITTED) {
-                t.exec_mut(QueryBuilder::insert().index(COMMITTED).query())?;
-            }
-
             if t.exec(QueryBuilder::select().ids(USERS).query()).is_err() {
                 t.exec_mut(QueryBuilder::insert().nodes().aliases(USERS).query())?;
             }
@@ -130,83 +117,10 @@ impl ServerDb {
                 t.exec_mut(QueryBuilder::insert().nodes().aliases(DBS).query())?;
             }
 
-            if t.exec(QueryBuilder::select().ids(CLUSTER_LOG).query())
-                .is_err()
-            {
-                t.exec_mut(QueryBuilder::insert().nodes().aliases(CLUSTER_LOG).query())?;
-            }
-
             Ok(())
         })?;
 
         Ok(Self(Arc::new(RwLock::new(db))))
-    }
-
-    pub(crate) async fn cluster_log(&self) -> ServerResult<(u64, u64, u64)> {
-        self.0.write().await.transaction_mut(|t| {
-            if let Some(e) = t
-                .exec(
-                    QueryBuilder::select()
-                        .values(["index", "term"])
-                        .search()
-                        .depth_first()
-                        .from(CLUSTER_LOG)
-                        .limit(1)
-                        .where_()
-                        .neighbor()
-                        .query(),
-                )?
-                .elements
-                .first()
-            {
-                let commit = if let Some(c) = t
-                    .exec(
-                        QueryBuilder::select()
-                            .values("index")
-                            .search()
-                            .depth_first()
-                            .from(CLUSTER_LOG)
-                            .limit(1)
-                            .where_()
-                            .neighbor()
-                            .and()
-                            .not()
-                            .keys(COMMITTED)
-                            .query(),
-                    )?
-                    .elements
-                    .first()
-                {
-                    c.values[0].value.to_u64()?
-                } else {
-                    0
-                };
-
-                return Ok((
-                    e.values[0].value.to_u64()?,
-                    e.values[1].value.to_u64()?,
-                    commit,
-                ));
-            }
-
-            Ok((0, 0, 0))
-        })
-    }
-
-    pub(crate) async fn log_committed(&self, log_id: DbId) -> ServerResult<()> {
-        self.0
-            .write()
-            .await
-            .exec_mut(QueryBuilder::remove().values(COMMITTED).ids(log_id).query())?;
-        Ok(())
-    }
-
-    pub(crate) async fn log_executed(&self, log_id: DbId) -> ServerResult<()> {
-        self.0
-            .write()
-            .await
-            .exec_mut(QueryBuilder::remove().values(EXECUTED).ids(log_id).query())?;
-        Ok(())
     }
 
     pub(crate) async fn db_count(&self) -> ServerResult<u64> {
@@ -400,136 +314,6 @@ impl ServerDb {
             )?
             .result
             == 1)
-    }
-
-    pub(crate) async fn append_log(&self, log: &Log<ClusterAction>) -> ServerResult<DbId> {
-        self.0.write().await.transaction_mut(
-            |t: &mut agdb::TransactionMut<'_, agdb::FileStorageMemoryMapped>| {
-                let log_id = t
-                    .exec_mut(QueryBuilder::insert().element(log).query())?
-                    .elements[0]
-                    .id;
-                t.exec_mut(
-                    QueryBuilder::insert()
-                        .values([[(COMMITTED, false).into(), (EXECUTED, false).into()]])
-                        .ids(log_id)
-                        .query(),
-                )?;
-                t.exec_mut(
-                    QueryBuilder::insert()
-                        .edges()
-                        .from(CLUSTER_LOG)
-                        .to(log_id)
-                        .query(),
-                )?;
-                Ok(log_id)
-            },
-        )
-    }
-
-    pub(crate) async fn logs_unexecuted(
-        &self,
-        index: u64,
-    ) -> ServerResult<Vec<Log<ClusterAction>>> {
-        self.logs_until(index, EXECUTED).await
-    }
-
-    pub(crate) async fn logs_uncommitted(
-        &self,
-        index: u64,
-    ) -> ServerResult<Vec<Log<ClusterAction>>> {
-        self.logs_until(index, COMMITTED).await
-    }
-
-    async fn logs_until(&self, index: u64, label: &str) -> ServerResult<Vec<Log<ClusterAction>>> {
-        self.0.read().await.transaction(|t| {
-            let mut log_ids: Vec<(u64, DbId)> = t
-                .exec(
-                    QueryBuilder::select()
-                        .values("index")
-                        .search()
-                        .index(label)
-                        .value(false)
-                        .query(),
-                )?
-                .elements
-                .into_iter()
-                .filter_map(|e| {
-                    let log_index = e.values[0].value.to_u64().unwrap_or_default();
-
-                    if log_index <= index {
-                        Some((log_index, e.id))
-                    } else {
-                        None
-                    }
-                })
-                .collect();
-            log_ids.sort_by_key(|l| l.0);
-            logs(t, log_ids.into_iter().map(|l| l.1).collect())
-        })
-    }
-
-    pub(crate) async fn remove_uncommitted_logs(&self, from_index: u64) -> ServerResult<()> {
-        self.0.write().await.transaction_mut(|t| {
-            let logs: Vec<DbId> = t
-                .exec(
-                    QueryBuilder::select()
-                        .values("index")
-                        .search()
-                        .index(COMMITTED)
-                        .value(false)
-                        .query(),
-                )?
-                .elements
-                .into_iter()
-                .filter_map(|e| {
-                    let index = e.values[0].value.to_u64().unwrap_or_default();
-
-                    if index >= from_index {
-                        Some(e.id)
-                    } else {
-                        None
-                    }
-                })
-                .collect();
-
-            t.exec_mut(QueryBuilder::remove().ids(logs).query())
-        })?;
-
-        Ok(())
-    }
-
-    pub(crate) async fn logs_since(
-        &self,
-        from_index: u64,
-    ) -> ServerResult<Vec<Log<ClusterAction>>> {
-        self.0.read().await.transaction(|t| {
-            let log_count = t
-                .exec(
-                    QueryBuilder::select()
-                        .edge_count_from()
-                        .ids(CLUSTER_LOG)
-                        .query(),
-                )?
-                .elements[0]
-                .values[0]
-                .value
-                .to_u64()?;
-            let mut log_ids = t
-                .exec(
-                    QueryBuilder::search()
-                        .depth_first()
-                        .from(CLUSTER_LOG)
-                        .limit(log_count - from_index)
-                        .where_()
-                        .neighbor()
-                        .query(),
-                )?
-                .ids();
-
-            log_ids.reverse();
-            logs(t, log_ids)
-        })
     }
 
     pub(crate) async fn remove_db(&self, user: DbId, owner: &str, db: &str) -> ServerResult<()> {
@@ -919,19 +703,6 @@ fn token_not_found(token: &str) -> ServerError {
 
 fn user_not_found(name: &str) -> ServerError {
     ServerError::new(StatusCode::NOT_FOUND, &format!("user not found: {name}"))
-}
-
-fn logs<T: StorageData>(
-    t: &Transaction<T>,
-    log_ids: Vec<DbId>,
-) -> ServerResult<Vec<Log<ClusterAction>>> {
-    Ok(t.exec(
-        QueryBuilder::select()
-            .elements::<Log<ClusterAction>>()
-            .ids(log_ids)
-            .query(),
-    )?
-    .try_into()?)
 }
 
 impl DbType for Log<ClusterAction> {

@@ -1,6 +1,7 @@
 FROM node:alpine AS builder_studio
 WORKDIR /usr/src/agdb_studio
 COPY . .
+RUN apk add --no-cache python3 make g++
 RUN npm i -g pnpm && pnpm i --frozen-lockfile && pnpm run build --filter agdb_studio
 
 FROM rust:alpine AS builder_server

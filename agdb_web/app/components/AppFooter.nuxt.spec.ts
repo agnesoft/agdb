@@ -3,6 +3,18 @@ import { describe, it, expect } from "vitest";
 import { defineComponent, h, nextTick } from "vue";
 import AppFooter from "./AppFooter.vue";
 
+const appConfig = {
+  footer: {
+    credits: "Copyright © 2026 agdb",
+    colorMode: false,
+    links: undefined as
+    | Array<{ href: string; label: string }>
+    | undefined,
+  },
+};
+
+mockNuxtImport("useAppConfig", () => () => appConfig);
+
 // Minimal stubs for UI components
 const UFooter = defineComponent({
   name: "UFooter",
@@ -26,13 +38,11 @@ const UButton = defineComponent({
 
 describe("AppFooter", () => {
   it("renders credits and optional color mode button", async () => {
-    mockNuxtImport("useAppConfig", () => () => ({
-      footer: {
-        credits: "Copyright © 2025 agdb",
-        colorMode: true,
-        links: [],
-      },
-    }));
+    appConfig.footer = {
+      credits: "Copyright © 2026 agdb",
+      colorMode: true,
+      links: [],
+    };
 
     const wrapper = await mountSuspended(AppFooter, {
       global: {
@@ -53,16 +63,14 @@ describe("AppFooter", () => {
   });
 
   it("renders provided links when present", async () => {
-    mockNuxtImport("useAppConfig", () => () => ({
-      footer: {
-        credits: "Copyright © 2025 agdb",
-        colorMode: false,
-        links: [
-          { href: "https://github.com/agnesoft", label: "GitHub" },
-          { href: "https://agnesoft.com", label: "Website" },
-        ],
-      },
-    }));
+    appConfig.footer = {
+      credits: "Copyright © 2026 agdb",
+      colorMode: false,
+      links: [
+        { href: "https://github.com/agnesoft", label: "GitHub" },
+        { href: "https://agnesoft.com", label: "Website" },
+      ],
+    };
 
     const wrapper = await mountSuspended(AppFooter, {
       global: {
@@ -84,5 +92,30 @@ describe("AppFooter", () => {
       "https://github.com/agnesoft",
     );
     expect(links[1]?.attributes("data-link")).toBe("https://agnesoft.com");
+  });
+
+  it("omits optional controls when disabled", async () => {
+    appConfig.footer = {
+      credits: "Copyright © 2026 agdb",
+      colorMode: false,
+      links: undefined,
+    };
+
+    const wrapper = await mountSuspended(AppFooter, {
+      global: {
+        stubs: {
+          UFooter,
+          UColorModeButton,
+          UButton,
+          "u-footer": UFooter,
+          "u-color-mode-button": UColorModeButton,
+          "u-button": UButton,
+        },
+      },
+    });
+
+    await nextTick();
+    expect(wrapper.find("[data-color-mode='btn']").exists()).toBe(false);
+    expect(wrapper.findAll("[data-link]")).toHaveLength(0);
   });
 });

@@ -17,7 +17,11 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - uses: shivammathur/setup-php@v2
-      - run: npm i -g pnpm
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          registry-url: "https://registry.npmjs.org"
       - run: pnpm i --frozen-lockfile
       - run: ./ci.sh format:check
       - run: composer config --global use-parent-dir true

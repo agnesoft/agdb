@@ -18,3 +18,4 @@ openapitools.json
 composer.lock
 .vscode/
 .turbo/
+.nuxtrc

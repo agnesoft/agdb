@@ -844,7 +844,7 @@ mod tests {
     }
 
     #[test]
-    fn delete_saturation_causes_infinite_loop() {
+    fn delete_saturation_does_not_cause_infinite_loop() {
         let mut storage: Storage<MemoryStorage> = Storage::new("test").unwrap();
         let mut map = MultiMapStorage::<u64, u64, MemoryStorage>::new(&mut storage).unwrap();
 
@@ -869,7 +869,6 @@ mod tests {
         assert_eq!(map.len(), 222);
         assert!(map.len() < map.max_len());
         assert_eq!(map.max_len(), 240);
-
         assert_eq!(map.value(&storage, &10_000).unwrap(), None);
     }
 

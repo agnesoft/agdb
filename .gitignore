@@ -4,6 +4,7 @@ Cargo.lock
 **/*.rs.bk
 lcov.info
 *.agdb
+agdb_benchmarks_server.log
 agdb_benchmarks.yaml
 agdb_server.yaml
 agdb_server_data/

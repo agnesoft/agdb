@@ -26,6 +26,7 @@ where
     Data: MapData<K, T, D>,
 {
     pub pos: u64,
+    pub start: u64,
     pub key: &'a K,
     pub data: &'a Data,
     pub storage: &'a Storage<D>,
@@ -44,11 +45,16 @@ where
     fn next(&mut self) -> Option<Self::Item> {
         loop {
             let current_pos = self.pos;
+
             self.pos = if self.data.capacity() == 0 || self.pos == self.data.capacity() - 1 {
                 0
             } else {
                 self.pos + 1
             };
+
+            if self.start == self.pos {
+                break;
+            }
 
             match self
                 .data
@@ -87,20 +93,7 @@ where
     }
 
     pub fn contains(&self, storage: &Storage<D>, key: &K) -> Result<bool, DbError> {
-        if self.capacity() == 0 {
-            return Ok(false);
-        }
-
-        let hash = key.stable_hash();
-        let mut pos = hash % self.capacity();
-
-        loop {
-            match self.data.state(storage, pos)? {
-                MapValueState::Empty => return Ok(false),
-                MapValueState::Valid if self.data.key(storage, pos)? == *key => return Ok(true),
-                MapValueState::Valid | MapValueState::Deleted => pos = self.next_pos(pos),
-            }
-        }
+        Ok(self.iter_key(storage, key).next().is_some())
     }
 
     pub fn contains_value(
@@ -109,25 +102,10 @@ where
         key: &K,
         value: &T,
     ) -> Result<bool, DbError> {
-        if self.capacity() == 0 {
-            return Ok(false);
-        }
-
-        let hash = key.stable_hash();
-        let mut pos = hash % self.capacity();
-
-        loop {
-            match self.data.state(storage, pos)? {
-                MapValueState::Empty => return Ok(false),
-                MapValueState::Valid
-                    if self.data.key(storage, pos)? == *key
-                        && self.data.value(storage, pos)? == *value =>
-                {
-                    return Ok(true);
-                }
-                MapValueState::Valid | MapValueState::Deleted => pos = self.next_pos(pos),
-            }
-        }
+        Ok(self
+            .iter_key(storage, key)
+            .find(|(_, val)| val == value)
+            .is_some())
     }
 
     pub fn insert(&mut self, storage: &mut Storage<D>, key: &K, value: &T) -> Result<(), DbError> {
@@ -202,7 +180,6 @@ where
         }
     }
 
-    #[allow(dead_code)]
     pub fn iter_key<'a>(
         &'a self,
         storage: &'a Storage<D>,
@@ -216,6 +193,7 @@ where
 
         MultiMapIterator {
             pos,
+            start: pos,
             key,
             data: &self.data,
             storage,
@@ -324,73 +302,16 @@ where
     }
 
     pub fn value(&self, storage: &Storage<D>, key: &K) -> Result<Option<T>, DbError> {
-        if self.capacity() == 0 {
-            return Ok(None);
-        }
-
-        let hash = key.stable_hash();
-        let mut pos = hash % self.capacity();
-
-        loop {
-            match self.data.state(storage, pos)? {
-                MapValueState::Empty => {
-                    return Ok(None);
-                }
-                MapValueState::Valid if self.data.key(storage, pos)? == *key => {
-                    return Ok(Some(self.data.value(storage, pos)?));
-                }
-                MapValueState::Valid | MapValueState::Deleted => pos = self.next_pos(pos),
-            }
-        }
+        Ok(self.iter_key(storage, key).next().map(|(_, val)| val))
     }
 
     pub fn values(&self, storage: &Storage<D>, key: &K) -> Result<Vec<T>, DbError> {
-        if self.capacity() == 0 {
-            return Ok(vec![]);
-        }
-
-        let hash = key.stable_hash();
-        let mut pos = hash % self.capacity();
-        let mut values = Vec::<T>::new();
-
-        loop {
-            match self.data.state(storage, pos)? {
-                MapValueState::Empty => break,
-                MapValueState::Valid if self.data.key(storage, pos)? == *key => {
-                    values.push(self.data.value(storage, pos)?)
-                }
-                MapValueState::Valid | MapValueState::Deleted => {}
-            }
-
-            pos = self.next_pos(pos)
-        }
-
-        Ok(values)
+        Ok(self.iter_key(storage, key).map(|(_, v)| v).collect())
     }
 
     #[allow(dead_code)]
     pub fn values_count(&self, storage: &Storage<D>, key: &K) -> Result<u64, DbError> {
-        if self.capacity() == 0 {
-            return Ok(0);
-        }
-
-        let hash = key.stable_hash();
-        let mut pos = hash % self.capacity();
-        let mut result = 0;
-
-        loop {
-            match self.data.state(storage, pos)? {
-                MapValueState::Empty => break,
-                MapValueState::Valid if self.data.key(storage, pos)? == *key => {
-                    result += 1;
-                }
-                MapValueState::Valid | MapValueState::Deleted => {}
-            }
-
-            pos = self.next_pos(pos)
-        }
-
-        Ok(result)
+        Ok(self.iter_key(storage, key).count() as u64)
     }
 
     fn do_insert(
@@ -920,6 +841,62 @@ mod tests {
 
         map.remove_value(&mut storage, &32, &32).unwrap();
         map.remove_value(&mut storage, &32, &0).unwrap();
+    }
+
+    #[test]
+    fn delete_saturation_causes_infinite_loop() {
+        let mut storage: Storage<MemoryStorage> = Storage::new("test").unwrap();
+        let mut map = MultiMapStorage::<u64, u64, MemoryStorage>::new(&mut storage).unwrap();
+
+        // 1) Create capacity 256 and fill up to max_len (240).
+        map.reserve(&mut storage, 256).unwrap();
+        for i in 0..240_u64 {
+            map.insert(&mut storage, &i, &i).unwrap();
+        }
+
+        // 2) Remove 34 values from occupied area to create tombstones.
+        for i in 0..34_u64 {
+            map.remove_value(&mut storage, &i, &i).unwrap();
+        }
+
+        // 3) Insert into previously empty tail slots (240..255), consuming empties
+        // without reusing earlier tombstones. This leaves no Empty slots.
+        for i in 240..256_u64 {
+            map.insert(&mut storage, &i, &i).unwrap();
+        }
+
+        assert_eq!(map.capacity(), 256);
+        assert_eq!(map.len(), 222);
+        assert!(map.len() < map.max_len());
+        assert_eq!(map.max_len(), 240);
+
+        assert_eq!(map.value(&storage, &10_000).unwrap(), None);
+    }
+
+    #[test]
+    fn iteration() {
+        let mut storage: Storage<MemoryStorage> = Storage::new("test").unwrap();
+        let mut map = MultiMapStorage::<u64, u64, MemoryStorage>::new(&mut storage).unwrap();
+
+        for i in 0_u64..100 {
+            map.insert(&mut storage, &i, &i).unwrap();
+            map.insert(&mut storage, &i, &(i + 1)).unwrap();
+            map.insert(&mut storage, &i, &(i + 2)).unwrap();
+        }
+
+        let mut values = Vec::<(u64, u64)>::with_capacity(300);
+
+        for (key, value) in map.iter(&storage) {
+            values.push((key, value));
+        }
+
+        values.sort();
+
+        let expected_values = (0_u64..100)
+            .flat_map(|i| vec![(i, i), (i, i + 1), (i, i + 2)])
+            .collect::<Vec<(u64, u64)>>();
+
+        assert_eq!(values, expected_values);
     }
 
     #[test]

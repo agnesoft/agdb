@@ -4,13 +4,12 @@ use crate::database::BENCHMARK_DATABASE;
 use crate::database::BENCHMARK_USERNAME;
 use crate::database::Database;
 use crate::database::ServerDatabase;
-use crate::queries::insert_user_edges_query;
-use crate::queries::insert_user_query;
+use crate::queries::BenchUser;
 use crate::utilities::format_duration;
 use crate::utilities::measured;
 use crate::utilities::measured_async;
 use crate::utilities::print_flush;
-use agdb::QueryType;
+use agdb::QueryBuilder;
 use agdb::StorageData;
 use agdb_api::AgdbApi;
 use agdb_api::DbUserRole;
@@ -41,13 +40,27 @@ pub(crate) fn setup_users<S: StorageData>(
 
             for i in 0..user_count {
                 user_ids.push(
-                    t.exec_mut(insert_user_query(format!("u{i}"), format!("u{i}@a.com")))?
-                        .elements[0]
+                    t.exec_mut(
+                        QueryBuilder::insert()
+                            .nodes()
+                            .values(BenchUser {
+                                name: format!("u{i}"),
+                                email: format!("u{i}@a.com"),
+                            })
+                            .query(),
+                    )?
+                    .elements[0]
                         .id,
                 );
             }
 
-            t.exec_mut(insert_user_edges_query(user_ids))
+            t.exec_mut(
+                QueryBuilder::insert()
+                    .edges()
+                    .from("users")
+                    .to(user_ids)
+                    .query(),
+            )
         })?;
         Ok(())
     })?;
@@ -110,7 +123,7 @@ pub(crate) async fn setup_server_bench_users(
 
     print_flush(format!(
         "{:<padding$} | {:<cell_padding$} | {:<cell_padding$} | {:<cell_padding$} | {:<cell_padding$} |",
-        "Creating benchmark users",
+        "Adding bench users",
         1,
         1,
         user_count.to_formatted_string(&config.locale),
@@ -225,36 +238,25 @@ async fn ensure_user_db_role(
 }
 
 async fn insert_bench_users(db: &ServerDatabase, config: &Config) -> BenchResult<()> {
-    let mut queries: Vec<QueryType> = Vec::with_capacity(config.user_count() as usize);
+    let mut users = Vec::new();
 
-    for index in 0..config.posters.count {
-        queries.push(
-            insert_user_query(
-                post_writer_username(index),
-                format!("postwriter_{index}@a.com"),
-            )
-            .into(),
-        );
+    for index in 0..(config.posters.count + config.commenters.count) {
+        users.push(BenchUser {
+            name: format!("user_{index}"),
+            email: format!("user_{index}@a.com"),
+        });
     }
 
-    for index in 0..config.commenters.count {
-        queries.push(
-            insert_user_query(
-                comment_writer_username(index),
-                format!("commentwriter_{index}@a.com"),
-            )
+    db.exec_mut(&[
+        QueryBuilder::insert().elements(&users).query().into(),
+        QueryBuilder::insert()
+            .edges()
+            .from("users")
+            .to(":0")
+            .query()
             .into(),
-        );
-    }
-
-    let inserted = db.exec_mut(&queries).await?;
-    let user_ids = inserted
-        .into_iter()
-        .flat_map(|result| result.ids())
-        .collect::<Vec<_>>();
-
-    db.exec_mut(&[insert_user_edges_query(user_ids).into()])
-        .await?;
+    ])
+    .await?;
 
     Ok(())
 }

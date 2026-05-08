@@ -4,9 +4,6 @@ use crate::database::BENCHMARK_DATABASE;
 use crate::database::BENCHMARK_USERNAME;
 use crate::database::Database;
 use crate::database::ServerDatabase;
-use crate::queries::search_last_post_query;
-use crate::queries::select_comments_query;
-use crate::queries::select_posts_query;
 use crate::users::benchmark_password;
 use crate::users::comment_reader_username;
 use crate::users::post_reader_username;
@@ -14,6 +11,7 @@ use crate::utilities;
 use crate::utilities::measured;
 use crate::utilities::measured_async;
 use agdb::DbId;
+use agdb::QueryBuilder;
 use agdb::StorageData;
 use agdb_api::AgdbApi;
 use agdb_api::ReqwestClient;
@@ -53,11 +51,18 @@ impl<S: StorageData> Reader<S> {
     fn read_comments(&mut self, limit: u64) -> BenchResult<bool> {
         if let Some(post_id) = self.last_post()? {
             let duration = measured(|| {
-                let _comments = self
-                    .db
-                    .0
-                    .read()?
-                    .exec(select_comments_query(post_id, limit))?;
+                let _comments = self.db.0.read()?.exec(
+                    QueryBuilder::select()
+                        .ids(
+                            QueryBuilder::search()
+                                .from(post_id)
+                                .limit(limit)
+                                .where_()
+                                .neighbor()
+                                .query(),
+                        )
+                        .query(),
+                )?;
                 Ok(())
             })?;
 
@@ -73,7 +78,18 @@ impl<S: StorageData> Reader<S> {
         let mut result = false;
 
         let duration = measured(|| {
-            let posts = self.db.0.read()?.exec(select_posts_query(limit))?;
+            let posts = self.db.0.read()?.exec(
+                QueryBuilder::select()
+                    .ids(
+                        QueryBuilder::search()
+                            .from("posts")
+                            .limit(limit)
+                            .where_()
+                            .neighbor()
+                            .query(),
+                    )
+                    .query(),
+            )?;
 
             result = posts.result != 0;
 
@@ -92,7 +108,15 @@ impl<S: StorageData> Reader<S> {
             .db
             .0
             .read()?
-            .exec(search_last_post_query())?
+            .exec(
+                QueryBuilder::search()
+                    .depth_first()
+                    .from("posts")
+                    .limit(1)
+                    .where_()
+                    .neighbor()
+                    .query(),
+            )?
             .elements
             .first()
         {
@@ -156,7 +180,17 @@ impl ServerReader {
                     .db_exec(
                         BENCHMARK_USERNAME,
                         BENCHMARK_DATABASE,
-                        &[select_comments_query(post_id, limit).into()],
+                        &[QueryBuilder::select()
+                            .ids(
+                                QueryBuilder::search()
+                                    .from(post_id)
+                                    .limit(limit)
+                                    .where_()
+                                    .neighbor()
+                                    .query(),
+                            )
+                            .query()
+                            .into()],
                     )
                     .await?;
                 Ok(())
@@ -179,7 +213,17 @@ impl ServerReader {
                 .db_exec(
                     BENCHMARK_USERNAME,
                     BENCHMARK_DATABASE,
-                    &[select_posts_query(limit).into()],
+                    &[QueryBuilder::select()
+                        .ids(
+                            QueryBuilder::search()
+                                .from("posts")
+                                .limit(limit)
+                                .where_()
+                                .neighbor()
+                                .query(),
+                        )
+                        .query()
+                        .into()],
                 )
                 .await?
                 .1;
@@ -203,7 +247,14 @@ impl ServerReader {
             .db_exec(
                 BENCHMARK_USERNAME,
                 BENCHMARK_DATABASE,
-                &[search_last_post_query().into()],
+                &[QueryBuilder::search()
+                    .depth_first()
+                    .from("posts")
+                    .limit(1)
+                    .where_()
+                    .neighbor()
+                    .query()
+                    .into()],
             )
             .await?
             .1;
@@ -362,6 +413,9 @@ pub(crate) async fn start_post_readers_server(
 
                 if reader.read_posts(limit).await.unwrap_or(false) {
                     read += 1;
+                } else {
+                    println!("WTF: {read} out post {reads}");
+                    tokio::time::sleep(Duration::from_millis(100)).await;
                 }
             }
 
@@ -407,6 +461,8 @@ pub(crate) async fn start_comment_readers_server(
 
                 if reader.read_comments(limit).await.unwrap_or(false) {
                     read += 1;
+                } else {
+                    tokio::time::sleep(Duration::from_millis(100)).await;
                 }
             }
 

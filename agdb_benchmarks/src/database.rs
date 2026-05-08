@@ -1,11 +1,9 @@
 use crate::bench_result::BenchResult;
 use crate::config::Config;
 use crate::config::DbType;
-use crate::queries::bootstrap_alias_queries;
-use crate::queries::insert_posts_alias_query;
-use crate::queries::insert_users_alias_query;
 use crate::utilities::format_size;
 use agdb::DbImpl;
+use agdb::QueryBuilder;
 use agdb::QueryResult;
 use agdb::QueryType;
 use agdb::StorageData;
@@ -35,8 +33,12 @@ impl<S: StorageData> Database<S> {
     pub(crate) fn new(config: &Config) -> BenchResult<Self> {
         remove_db_files(&config.db_name);
         let mut db = DbImpl::new(&config.db_name)?;
-        db.exec_mut(insert_users_alias_query())?;
-        db.exec_mut(insert_posts_alias_query())?;
+        db.exec_mut(
+            QueryBuilder::insert()
+                .nodes()
+                .aliases(["users", "posts"])
+                .query(),
+        )?;
         Ok(Self(Arc::new(RwLock::new(db))))
     }
 
@@ -174,7 +176,13 @@ async fn reset_benchmark_database(
 }
 
 async fn bootstrap_server_database(api: &AgdbApi<ReqwestClient>) -> BenchResult<()> {
-    let queries = bootstrap_alias_queries();
+    let queries = vec![
+        QueryBuilder::insert()
+            .nodes()
+            .aliases(["users", "posts"])
+            .query()
+            .into(),
+    ];
 
     api.db_exec_mut(BENCHMARK_USERNAME, BENCHMARK_DATABASE, &queries)
         .await?;

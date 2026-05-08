@@ -4,13 +4,8 @@ use crate::database::BENCHMARK_DATABASE;
 use crate::database::BENCHMARK_USERNAME;
 use crate::database::Database;
 use crate::database::ServerDatabase;
-use crate::queries::insert_comment_edge_query;
-use crate::queries::insert_comment_query;
-use crate::queries::insert_post_authored_edge_query;
-use crate::queries::insert_post_query;
-use crate::queries::search_last_post_query;
-use crate::queries::select_comment_writer_users_query;
-use crate::queries::select_post_writer_users_query;
+use crate::queries::BenchComment;
+use crate::queries::BenchPost;
 use crate::users::benchmark_password;
 use crate::users::comment_writer_username;
 use crate::users::post_writer_username;
@@ -18,6 +13,7 @@ use crate::utilities;
 use crate::utilities::measured;
 use crate::utilities::measured_async;
 use agdb::DbId;
+use agdb::QueryBuilder;
 use agdb::QueryId;
 use agdb::StorageData;
 use agdb_api::AgdbApi;
@@ -61,9 +57,27 @@ impl<S: StorageData> Writer<S> {
     fn write_post(&mut self, title: &str, body: &str) -> BenchResult<()> {
         let duration = measured(|| {
             self.db.0.write()?.transaction_mut(|t| -> BenchResult<()> {
-                let id = t.exec_mut(insert_post_query(title, body))?.elements[0].id;
+                let id = t
+                    .exec_mut(
+                        QueryBuilder::insert()
+                            .nodes()
+                            .values(BenchPost {
+                                title: title.to_string(),
+                                body: body.to_string(),
+                            })
+                            .query(),
+                    )?
+                    .elements[0]
+                    .id;
 
-                t.exec_mut(insert_post_authored_edge_query(self.id, id.into()))?;
+                t.exec_mut(
+                    QueryBuilder::insert()
+                        .edges()
+                        .from([QueryId::from("posts"), self.id.into()])
+                        .to(id)
+                        .values([[].as_slice(), &[("authored", 1).into()]])
+                        .query(),
+                )?;
 
                 Ok(())
             })?;
@@ -80,9 +94,26 @@ impl<S: StorageData> Writer<S> {
         if let Some(post_id) = self.last_post()? {
             let duration = measured(|| {
                 self.db.0.write()?.transaction_mut(|t| -> BenchResult<()> {
-                    let id = t.exec_mut(insert_comment_query(body))?.elements[0].id;
+                    let id = t
+                        .exec_mut(
+                            QueryBuilder::insert()
+                                .nodes()
+                                .values(BenchComment {
+                                    body: body.to_string(),
+                                })
+                                .query(),
+                        )?
+                        .elements[0]
+                        .id;
 
-                    t.exec_mut(insert_comment_edge_query(post_id, self.id, id.into()))?;
+                    t.exec_mut(
+                        QueryBuilder::insert()
+                            .edges()
+                            .from([post_id, self.id])
+                            .to(id)
+                            .values([[].as_slice(), &[("commented", 1).into()]])
+                            .query(),
+                    )?;
 
                     Ok(())
                 })?;
@@ -102,7 +133,15 @@ impl<S: StorageData> Writer<S> {
             .db
             .0
             .read()?
-            .exec(search_last_post_query())?
+            .exec(
+                QueryBuilder::search()
+                    .depth_first()
+                    .from("posts")
+                    .limit(1)
+                    .where_()
+                    .neighbor()
+                    .query(),
+            )?
             .elements
             .first()
         {
@@ -166,8 +205,21 @@ impl ServerWriter {
                     BENCHMARK_USERNAME,
                     BENCHMARK_DATABASE,
                     &[
-                        insert_post_query(title, body).into(),
-                        insert_post_authored_edge_query(self.id, QueryId::from(0)).into(),
+                        QueryBuilder::insert()
+                            .nodes()
+                            .values(BenchPost {
+                                title: title.to_string(),
+                                body: body.to_string(),
+                            })
+                            .query()
+                            .into(),
+                        QueryBuilder::insert()
+                            .edges()
+                            .from([QueryId::from("posts"), self.id.into()])
+                            .to(":0")
+                            .values([[].as_slice(), &[("authored", 1).into()]])
+                            .query()
+                            .into(),
                     ],
                 )
                 .await?;
@@ -189,8 +241,20 @@ impl ServerWriter {
                         BENCHMARK_USERNAME,
                         BENCHMARK_DATABASE,
                         &[
-                            insert_comment_query(body).into(),
-                            insert_comment_edge_query(post_id, self.id, QueryId::from(0)).into(),
+                            QueryBuilder::insert()
+                                .nodes()
+                                .values(BenchComment {
+                                    body: body.to_string(),
+                                })
+                                .query()
+                                .into(),
+                            QueryBuilder::insert()
+                                .edges()
+                                .from([post_id, self.id])
+                                .to(":0")
+                                .values([[].as_slice(), &[("commented", 1).into()]])
+                                .query()
+                                .into(),
                         ],
                     )
                     .await?;
@@ -212,7 +276,14 @@ impl ServerWriter {
             .db_exec(
                 BENCHMARK_USERNAME,
                 BENCHMARK_DATABASE,
-                &[search_last_post_query().into()],
+                &[QueryBuilder::search()
+                    .depth_first()
+                    .from("posts")
+                    .limit(1)
+                    .where_()
+                    .neighbor()
+                    .query()
+                    .into()],
             )
             .await?
             .1;
@@ -268,7 +339,14 @@ pub(crate) fn start_post_writers<S: StorageData + Send + Sync + 'static>(
     let start = Instant::now();
     let tasks =
         db.0.read()?
-            .exec(select_post_writer_users_query(config.posters.count))?
+            .exec(
+                QueryBuilder::search()
+                    .from("users")
+                    .limit(config.posters.count)
+                    .where_()
+                    .neighbor()
+                    .query(),
+            )?
             .elements
             .into_iter()
             .map(|e| {
@@ -307,10 +385,15 @@ pub(crate) fn start_comment_writers<S: StorageData + Send + Sync + 'static>(
     let start = Instant::now();
     let tasks =
         db.0.read()?
-            .exec(select_comment_writer_users_query(
-                config.posters.count,
-                config.commenters.count,
-            ))?
+            .exec(
+                QueryBuilder::search()
+                    .from("users")
+                    .offset(config.posters.count)
+                    .limit(config.commenters.count)
+                    .where_()
+                    .neighbor()
+                    .query(),
+            )?
             .elements
             .into_iter()
             .map(|e| {
@@ -354,7 +437,13 @@ pub(crate) async fn start_post_writers_server(
 ) -> BenchResult<ServerWriters> {
     let start = Instant::now();
     let users = db
-        .exec(&[select_post_writer_users_query(config.posters.count).into()])
+        .exec(&[QueryBuilder::search()
+            .from("users")
+            .limit(config.posters.count)
+            .where_()
+            .neighbor()
+            .query()
+            .into()])
         .await?;
     let address = db.address().to_string();
 
@@ -403,9 +492,14 @@ pub(crate) async fn start_comment_writers_server(
 ) -> BenchResult<ServerWriters> {
     let start = Instant::now();
     let users = db
-        .exec(&[
-            select_comment_writer_users_query(config.posters.count, config.commenters.count).into(),
-        ])
+        .exec(&[QueryBuilder::search()
+            .from("users")
+            .offset(config.posters.count)
+            .limit(config.commenters.count)
+            .where_()
+            .neighbor()
+            .query()
+            .into()])
         .await?;
     let address = db.address().to_string();
 

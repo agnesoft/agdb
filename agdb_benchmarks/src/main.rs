@@ -9,6 +9,8 @@ use config::DbType;
 use database::Database;
 use database::ServerDatabase;
 
+use crate::utilities::print_flush;
+
 mod bench_error;
 mod bench_result;
 mod config;
@@ -126,8 +128,6 @@ async fn benchmark_server(config: &Config, address: &str) -> BenchResult<()> {
         )
         .await?;
 
-    println!("Server benchmark database initialized at '{address}'");
-    println!("---");
     db.stat(config).await
 }
 
@@ -135,7 +135,7 @@ async fn benchmark_server(config: &Config, address: &str) -> BenchResult<()> {
 async fn main() -> BenchResult<()> {
     let config = Config::load_config()?;
 
-    println!("Running agdb benchmark\n\n");
+    print_flush("Running agdb benchmark\n---\n\n".to_string());
     utilities::print_header(&config);
 
     match &config.mode {

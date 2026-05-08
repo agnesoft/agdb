@@ -4,6 +4,18 @@ packages:
   - agdb_web/**
   - examples/**
 
+allowBuilds:
+  '@nestjs/core': false
+  '@openapitools/openapi-generator-cli': false
+  '@parcel/watcher': false
+  '@scarf/scarf': false
+  better-sqlite3: false
+  esbuild: false
+  sharp: false
+  unrs-resolver: false
+  vue-demi: false
+  yarn: false
+
 catalog:
   "@eslint/js": ^9
   "@kalimahapps/vue-icons": ^1

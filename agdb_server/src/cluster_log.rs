@@ -363,7 +363,17 @@ mod tests {
     use std::time::SystemTime;
     use std::time::UNIX_EPOCH;
 
-    fn test_config(test_name: &str) -> (Config, PathBuf) {
+    struct TestDir {
+        directory: PathBuf,
+    }
+
+    impl Drop for TestDir {
+        fn drop(&mut self) {
+            let _ = std::fs::remove_dir_all(&self.directory);
+        }
+    }
+
+    fn test_config(test_name: &str) -> (Config, TestDir) {
         password::init(None);
 
         let timestamp = SystemTime::now()
@@ -406,7 +416,7 @@ mod tests {
             pepper: None,
         });
 
-        (config, directory)
+        (config, TestDir { directory })
     }
 
     fn test_log(index: u64, term: u64, suffix: &str) -> Log<ClusterAction> {
@@ -487,13 +497,9 @@ mod tests {
             .is_ok()
     }
 
-    fn cleanup(path: &PathBuf) {
-        let _ = std::fs::remove_dir_all(path);
-    }
-
     #[tokio::test]
     async fn migrate_from_server_db_noop_when_nothing_to_migrate() -> ServerResult<()> {
-        let (config, directory) = test_config("noop");
+        let (config, _directory) = test_config("noop");
         let server_db = crate::server_db::new(&config).await?;
         let cluster_log = crate::cluster_log::new(&config).await?;
 
@@ -502,13 +508,12 @@ mod tests {
         assert!(!legacy_server_log_exists(&server_db).await);
         assert!(cluster_log.logs_since(0).await?.is_empty());
 
-        cleanup(&directory);
         Ok(())
     }
 
     #[tokio::test]
     async fn migrate_from_server_db_moves_logs_in_order() -> ServerResult<()> {
-        let (config, directory) = test_config("moves_logs");
+        let (config, _directory) = test_config("moves_logs");
         let server_db = crate::server_db::new(&config).await?;
         let cluster_log = crate::cluster_log::new(&config).await?;
         let logs = vec![
@@ -532,13 +537,12 @@ mod tests {
         assert_eq!(migrated_indices, vec![1, 2, 3]);
         assert_eq!(migrated_terms, vec![1, 1, 2]);
 
-        cleanup(&directory);
         Ok(())
     }
 
     #[tokio::test]
     async fn migrate_from_server_db_errors_when_both_logs_exist() -> ServerResult<()> {
-        let (config, directory) = test_config("both_have_logs");
+        let (config, _directory) = test_config("both_have_logs");
         let server_db = crate::server_db::new(&config).await?;
         let cluster_log = crate::cluster_log::new(&config).await?;
 
@@ -555,7 +559,6 @@ mod tests {
                 .contains("Cluster log already has logs, cannot migrate from the server db")
         );
 
-        cleanup(&directory);
         Ok(())
     }
 }

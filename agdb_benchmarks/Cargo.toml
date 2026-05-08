@@ -5,6 +5,7 @@ license = "Apache-2.0"
 
 [dependencies]
 agdb = { version = "0.12.10", path = "../agdb" }
+agdb_api = { version = "0.12.10", path = "../agdb_api/rust" }
 num-format = { version = "0.4", features = ["with-serde"] }
 serde = { version = "1", features = ["derive"] }
 serde_yaml = "0.9"

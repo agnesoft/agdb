@@ -1,27 +1,26 @@
 use crate::bench_result::BenchResult;
 use crate::config::Config;
+use crate::database::BENCHMARK_DATABASE;
+use crate::database::BENCHMARK_USERNAME;
 use crate::database::Database;
+use crate::database::ServerDatabase;
+use crate::queries::BenchComment;
+use crate::queries::BenchPost;
+use crate::users::benchmark_password;
+use crate::users::comment_writer_username;
+use crate::users::post_writer_username;
 use crate::utilities;
 use crate::utilities::measured;
+use crate::utilities::measured_async;
 use agdb::DbId;
-use agdb::DbType;
 use agdb::QueryBuilder;
 use agdb::QueryId;
 use agdb::StorageData;
+use agdb_api::AgdbApi;
+use agdb_api::ReqwestClient;
 use std::time::Duration;
 use std::time::Instant;
 use tokio::task::JoinHandle;
-
-#[derive(DbType)]
-struct Post {
-    title: String,
-    body: String,
-}
-
-#[derive(DbType)]
-struct Comment {
-    body: String,
-}
 
 struct Writer<S: StorageData> {
     id: DbId,
@@ -32,6 +31,17 @@ struct Writer<S: StorageData> {
 
 pub(crate) struct Writers<S: StorageData> {
     tasks: Vec<JoinHandle<Writer<S>>>,
+}
+
+struct ServerWriter {
+    id: DbId,
+    api: AgdbApi<ReqwestClient>,
+    end: Duration,
+    pub(crate) times: Vec<Duration>,
+}
+
+pub(crate) struct ServerWriters {
+    tasks: Vec<JoinHandle<BenchResult<ServerWriter>>>,
 }
 
 impl<S: StorageData> Writer<S> {
@@ -51,7 +61,7 @@ impl<S: StorageData> Writer<S> {
                     .exec_mut(
                         QueryBuilder::insert()
                             .nodes()
-                            .values(&Post {
+                            .values(BenchPost {
                                 title: title.to_string(),
                                 body: body.to_string(),
                             })
@@ -88,7 +98,7 @@ impl<S: StorageData> Writer<S> {
                         .exec_mut(
                             QueryBuilder::insert()
                                 .nodes()
-                                .values(&Comment {
+                                .values(BenchComment {
                                     body: body.to_string(),
                                 })
                                 .query(),
@@ -155,6 +165,150 @@ impl<S: StorageData> Writers<S> {
 
         for task in self.tasks.iter_mut() {
             writers.push(task.await?);
+        }
+
+        let end = if let Some(w) = writers.iter().max_by_key(|w| w.end) {
+            w.end
+        } else {
+            Duration::default()
+        };
+        let times: Vec<Duration> = writers.into_iter().flat_map(|w| w.times).collect();
+
+        utilities::report(
+            description,
+            threads,
+            per_thread,
+            per_action,
+            times,
+            end,
+            config,
+        );
+
+        Ok(())
+    }
+}
+
+impl ServerWriter {
+    fn new(id: DbId, api: AgdbApi<ReqwestClient>) -> Self {
+        Self {
+            id,
+            api,
+            end: Duration::default(),
+            times: vec![],
+        }
+    }
+
+    async fn write_post(&mut self, title: &str, body: &str) -> BenchResult<()> {
+        let duration = measured_async(async {
+            self.api
+                .db_exec_mut(
+                    BENCHMARK_USERNAME,
+                    BENCHMARK_DATABASE,
+                    &[
+                        QueryBuilder::insert()
+                            .nodes()
+                            .values(BenchPost {
+                                title: title.to_string(),
+                                body: body.to_string(),
+                            })
+                            .query()
+                            .into(),
+                        QueryBuilder::insert()
+                            .edges()
+                            .from([QueryId::from("posts"), self.id.into()])
+                            .to(":0")
+                            .values([[].as_slice(), &[("authored", 1).into()]])
+                            .query()
+                            .into(),
+                    ],
+                )
+                .await?;
+
+            Ok(())
+        })
+        .await?;
+
+        self.times.push(duration);
+
+        Ok(())
+    }
+
+    async fn write_comment(&mut self, body: &str) -> BenchResult<bool> {
+        if let Some(post_id) = self.last_post().await? {
+            let duration = measured_async(async {
+                self.api
+                    .db_exec_mut(
+                        BENCHMARK_USERNAME,
+                        BENCHMARK_DATABASE,
+                        &[
+                            QueryBuilder::insert()
+                                .nodes()
+                                .values(BenchComment {
+                                    body: body.to_string(),
+                                })
+                                .query()
+                                .into(),
+                            QueryBuilder::insert()
+                                .edges()
+                                .from([post_id, self.id])
+                                .to(":0")
+                                .values([[].as_slice(), &[("commented", 1).into()]])
+                                .query()
+                                .into(),
+                        ],
+                    )
+                    .await?;
+
+                Ok(())
+            })
+            .await?;
+
+            self.times.push(duration);
+            return Ok(true);
+        }
+
+        Ok(false)
+    }
+
+    async fn last_post(&self) -> BenchResult<Option<DbId>> {
+        let result = self
+            .api
+            .db_exec(
+                BENCHMARK_USERNAME,
+                BENCHMARK_DATABASE,
+                &[QueryBuilder::search()
+                    .depth_first()
+                    .from("posts")
+                    .limit(1)
+                    .where_()
+                    .neighbor()
+                    .query()
+                    .into()],
+            )
+            .await?
+            .1;
+
+        if let Some(post) = result.first().and_then(|query| query.elements.first()) {
+            Ok(Some(post.id))
+        } else {
+            Ok(None)
+        }
+    }
+}
+
+impl ServerWriters {
+    pub(crate) async fn join_and_report(
+        &mut self,
+        description: &str,
+        threads: u64,
+        per_thread: u64,
+        per_action: u64,
+        config: &Config,
+    ) -> BenchResult<()> {
+        let mut writers = vec![];
+
+        for task in self.tasks.iter_mut() {
+            writers.push(task.await??);
         }
 
         let end = if let Some(w) = writers.iter().max_by_key(|w| w.end) {
@@ -275,4 +429,120 @@ pub(crate) fn start_comment_writers<S: StorageData + Send + Sync + 'static>(
             .collect::<Vec<JoinHandle<Writer<S>>>>();
 
     Ok(Writers { tasks })
+}
+
+pub(crate) async fn start_post_writers_server(
+    db: &ServerDatabase,
+    config: &Config,
+) -> BenchResult<ServerWriters> {
+    let start = Instant::now();
+    let users = db
+        .exec(&[QueryBuilder::search()
+            .from("users")
+            .limit(config.posters.count)
+            .where_()
+            .neighbor()
+            .query()
+            .into()])
+        .await?;
+    let address = db.address().to_string();
+
+    let tasks = users[0]
+        .elements
+        .iter()
+        .enumerate()
+        .map(|(index, e)| {
+            let id = e.id;
+            let address = address.clone();
+            let write_delay = Duration::from_millis(if config.posters.delay_ms == 0 {
+                0
+            } else {
+                config.posters.delay_ms % id.0 as u64
+            });
+            let posts = config.posters.posts;
+            let title = config.posters.title.to_string();
+            let body = config.posters.body.to_string();
+            let username = post_writer_username(index as u64);
+
+            tokio::task::spawn(async move {
+                let mut api = AgdbApi::new(ReqwestClient::new(), &address);
+                let password = benchmark_password(&username);
+                api.user_login(&username, &password).await?;
+                let mut writer = ServerWriter::new(id, api);
+
+                for i in 0..posts {
+                    let _ = writer
+                        .write_post(&format!("{title} {i}"), &format!("{body} {i}"))
+                        .await;
+                    tokio::time::sleep(write_delay).await;
+                }
+
+                writer.end = start.elapsed();
+                Ok(writer)
+            })
+        })
+        .collect::<Vec<JoinHandle<BenchResult<ServerWriter>>>>();
+
+    Ok(ServerWriters { tasks })
+}
+
+pub(crate) async fn start_comment_writers_server(
+    db: &ServerDatabase,
+    config: &Config,
+) -> BenchResult<ServerWriters> {
+    let start = Instant::now();
+    let users = db
+        .exec(&[QueryBuilder::search()
+            .from("users")
+            .offset(config.posters.count)
+            .limit(config.commenters.count)
+            .where_()
+            .neighbor()
+            .query()
+            .into()])
+        .await?;
+    let address = db.address().to_string();
+
+    let tasks = users[0]
+        .elements
+        .iter()
+        .enumerate()
+        .map(|(index, e)| {
+            let id = e.id;
+            let address = address.clone();
+            let write_delay = Duration::from_millis(if config.commenters.delay_ms == 0 {
+                0
+            } else {
+                config.commenters.delay_ms % id.0 as u64
+            });
+            let comments = config.commenters.comments;
+            let body = config.commenters.body.to_string();
+            let username = comment_writer_username(index as u64);
+
+            tokio::task::spawn(async move {
+                let mut api = AgdbApi::new(ReqwestClient::new(), &address);
+                let password = benchmark_password(&username);
+                api.user_login(&username, &password).await?;
+                let mut writer = ServerWriter::new(id, api);
+                let mut written = 0;
+
+                while written != comments {
+                    if writer
+                        .write_comment(&format!("{body} {written}"))
+                        .await
+                        .unwrap_or(false)
+                    {
+                        written += 1;
+                    }
+
+                    tokio::time::sleep(write_delay).await;
+                }
+
+                writer.end = start.elapsed();
+                Ok(writer)
+            })
+        })
+        .collect::<Vec<JoinHandle<BenchResult<ServerWriter>>>>();
+
+    Ok(ServerWriters { tasks })
 }

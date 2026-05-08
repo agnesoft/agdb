@@ -8,8 +8,8 @@ const appConfig = {
     credits: "Copyright © 2026 agdb",
     colorMode: false,
     links: undefined as
-      | Array<{ href: string; label: string }>
-      | undefined,
+    | Array<{ href: string; label: string }>
+    | undefined,
   },
 };
 

@@ -2,6 +2,7 @@ mod action;
 mod api;
 mod app;
 mod cluster;
+mod cluster_log;
 mod config;
 mod db_pool;
 mod error_code;
@@ -17,7 +18,7 @@ mod user_id;
 mod utilities;
 
 use agdb_api::LogLevelFilter;
-pub(crate) use server_error::ServerResult;
+use server_error::ServerResult;
 use std::str::FromStr;
 use std::sync::Arc;
 use tokio::net::TcpListener;
@@ -49,8 +50,12 @@ async fn main() -> ServerResult {
 
     let (shutdown_sender, shutdown_receiver) = broadcast::channel::<()>(1);
     let server_db = server_db::new(&config).await?;
+    let cluster_log = cluster_log::new(&config).await?;
+
+    cluster_log::migrate_from_server_db(&server_db, &cluster_log).await?;
+
     let db_pool = db_pool::new(config.clone(), &server_db).await?;
-    let cluster = cluster::new(&config, &server_db, &db_pool).await?;
+    let cluster = cluster::new(&config, &server_db, &cluster_log, &db_pool).await?;
     let app = app::app(
         cluster.clone(),
         config.clone(),

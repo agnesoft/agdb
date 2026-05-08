@@ -1,6 +1,7 @@
 use crate::action::Action;
 use crate::action::ClusterAction;
 use crate::action::ClusterActionResult;
+use crate::cluster_log::ClusterLog;
 use crate::config::Config;
 use crate::db_pool::DbPool;
 use crate::raft;
@@ -166,7 +167,12 @@ impl ClusterNodeImpl {
     }
 }
 
-pub(crate) async fn new(config: &Config, db: &ServerDb, db_pool: &DbPool) -> ServerResult<Cluster> {
+pub(crate) async fn new(
+    config: &Config,
+    db: &ServerDb,
+    cluster_log: &ClusterLog,
+    db_pool: &DbPool,
+) -> ServerResult<Cluster> {
     let index = config
         .cluster
         .iter()
@@ -176,7 +182,7 @@ pub(crate) async fn new(config: &Config, db: &ServerDb, db_pool: &DbPool) -> Ser
         config.cluster.iter().map(|url| url.to_string()).collect();
     sorted_cluster.sort();
     let hash = sorted_cluster.stable_hash();
-    let storage = ClusterStorage::new(db.clone(), db_pool.clone()).await?;
+    let storage = ClusterStorage::new(db.clone(), cluster_log.clone(), db_pool.clone()).await?;
     let settings = raft::ClusterSettings {
         index: index as u64,
         hash,
@@ -324,13 +330,14 @@ pub(crate) struct ClusterStorage {
     term: u64,
     commit: u64,
     db: ServerDb,
+    cluster_log: ClusterLog,
     db_pool: DbPool,
 }
 
 impl ClusterStorage {
-    async fn new(db: ServerDb, db_pool: DbPool) -> ServerResult<Self> {
-        let (index, term, commit) = db.cluster_log().await?;
-        let logs = db.logs_unexecuted(commit).await?;
+    async fn new(db: ServerDb, cluster_log: ClusterLog, db_pool: DbPool) -> ServerResult<Self> {
+        let (index, term, commit) = cluster_log.cluster_log().await?;
+        let logs = cluster_log.logs_unexecuted(commit).await?;
 
         let mut storage = Self {
             result_notifiers: HashMap::new(),
@@ -339,6 +346,7 @@ impl ClusterStorage {
             term,
             commit,
             db,
+            cluster_log,
             db_pool,
         };
 
@@ -353,13 +361,14 @@ impl ClusterStorage {
         let log_id = log.db_id.unwrap_or_default();
         let db = self.db.clone();
         let db_pool = self.db_pool.clone();
+        let cluster_log = self.cluster_log.clone();
         let notifier = self.notifier.clone();
         let result_notifier = self.result_notifiers.remove(&log_id);
 
         tokio::spawn(async move {
             let result = log.data.exec(db.clone(), db_pool).await;
             let _ = notifier.send(log.index);
-            let _ = db.log_executed(log_id).await;
+            let _ = cluster_log.log_executed(log_id).await;
 
             if let Some(rs) = result_notifier {
                 let _ = rs.send(result.map(|r| (log.index, r)));
@@ -380,8 +389,8 @@ impl Storage<ClusterAction, ResultNotifier> for ClusterStorage {
         log: Log<ClusterAction>,
         notifier: Option<ResultNotifier>,
     ) -> ServerResult<()> {
-        self.db.remove_uncommitted_logs(log.index).await?;
-        let log_id = self.db.append_log(&log).await?;
+        self.cluster_log.remove_uncommitted_logs(log.index).await?;
+        let log_id = self.cluster_log.append_log(&log).await?;
         self.index = log.index;
         self.term = log.term;
 
@@ -393,9 +402,9 @@ impl Storage<ClusterAction, ResultNotifier> for ClusterStorage {
     }
 
     async fn commit(&mut self, index: u64) -> ServerResult<()> {
-        for log in self.db.logs_uncommitted(index).await? {
+        for log in self.cluster_log.logs_uncommitted(index).await? {
             self.commit = index;
-            self.db
+            self.cluster_log
                 .log_committed(log.db_id.expect("log should have db_id"))
                 .await?;
             self.execute_log(log).await?;
@@ -417,7 +426,7 @@ impl Storage<ClusterAction, ResultNotifier> for ClusterStorage {
     }
 
     async fn logs(&self, from_index: u64) -> ServerResult<Vec<Log<ClusterAction>>> {
-        self.db.logs_since(from_index).await
+        self.cluster_log.logs_since(from_index).await
     }
 }
 

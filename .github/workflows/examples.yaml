@@ -33,7 +33,11 @@ jobs:
         working-directory: examples/server_client_typescript
     steps:
       - uses: actions/checkout@v6
-      - run: npm i -g pnpm
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          registry-url: "https://registry.npmjs.org"
       - run: pnpm i --frozen-lockfile && pnpm run build
         working-directory: agdb_api/typescript
       - run: pnpm i --frozen-lockfile
@@ -47,7 +51,11 @@ jobs:
         working-directory: examples/server_client_php
     steps:
       - uses: actions/checkout@v6
-      - run: npm i -g pnpm
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          registry-url: "https://registry.npmjs.org"
       - run: pnpm i --frozen-lockfile
       - run: pnpm exec prettier --plugin '@prettier/plugin-php' --check src
       - run: composer config --global use-parent-dir true

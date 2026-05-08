@@ -32,4 +32,29 @@ describe("AgdbTable", () => {
     });
     expect(wrapper.findAll(".agdb-table-row").length).toBe(0);
   });
+
+  it("should render row details slot content when expanded", async () => {
+    addTable({
+      name: TABLE_NAME,
+      columns: tableConfig,
+      fetchData: vi.fn(),
+    });
+    setTableData(TABLE_NAME, tableData);
+
+    const wrapper = mount(AgdbTable, {
+      props: {
+        name: TABLE_NAME,
+      },
+      slots: {
+        rowDetails: `<template #rowDetails="{ row }"><div class="row-details">{{ row?.db }}</div></template>`,
+      },
+    });
+
+    expect(wrapper.find(".expand-row").exists()).toBe(true);
+
+    await wrapper.find(".expand-row").trigger("click");
+
+    expect(wrapper.find(".row-details").exists()).toBe(true);
+    expect(wrapper.find(".row-details").text().length).toBeGreaterThan(0);
+  });
 });

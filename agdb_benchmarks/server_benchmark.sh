@@ -1,6 +1,7 @@
 rm -f agdb_server.yaml
 rm -rf agdb_server_data
 
+cargo build -r -p agdb_server
 cargo run -r -p agdb_server > agdb_server.log 2>&1 & 
 cargo run -r -p agdb_benchmarks
 

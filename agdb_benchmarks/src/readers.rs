@@ -414,7 +414,6 @@ pub(crate) async fn start_post_readers_server(
                 if reader.read_posts(limit).await.unwrap_or(false) {
                     read += 1;
                 } else {
-                    println!("WTF: {read} out post {reads}");
                     tokio::time::sleep(Duration::from_millis(100)).await;
                 }
             }

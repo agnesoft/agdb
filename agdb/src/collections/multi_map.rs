@@ -52,10 +52,6 @@ where
                 self.pos + 1
             };
 
-            if self.start == self.pos {
-                break;
-            }
-
             match self
                 .data
                 .state(self.storage, current_pos)
@@ -74,6 +70,10 @@ where
                         return Some((key, value));
                     }
                 }
+            }
+
+            if self.start == self.pos {
+                break;
             }
         }
 

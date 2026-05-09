@@ -1,3 +1,5 @@
+set -e
+
 rm -f agdb_benchmark.yaml
 rm -rf agdb_server_data
 
@@ -9,5 +11,3 @@ token=$(curl -X POST http://localhost:3000/api/v1/user/login -H "Content-Type: a
 curl -H "Authorization: Bearer $token" -X POST http://localhost:3000/api/v1/admin/shutdown
 
 rm -rf agdb_server_data
-
-exit $error_code

@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { computed, inject, nextTick, ref, watch, type Ref } from "vue";
+import { computed, inject, ref, type Ref } from "vue";
 import { vOnClickOutside } from "@vueuse/components";
 import { ClCloseMd } from "@kalimahapps/vue-icons";
 import type { QueryStep, TAB } from "../../composables/types";

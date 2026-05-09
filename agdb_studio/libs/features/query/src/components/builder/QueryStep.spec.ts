@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { mount } from "@vue/test-utils";
 import QueryStep from "./QueryStep.vue";
 import type { QueryStep as QueryStepType } from "../../composables/types";
-import { ref } from "vue";
+import { nextTick, ref } from "vue";
 
 const { deleteQueryStep, updateQueryStep } = vi.hoisted(() => ({
   deleteQueryStep: vi.fn(),
@@ -148,5 +148,23 @@ describe("QueryStep", () => {
       global: globalProvide,
     });
     expect(wrapper.find(".arg-editor-popup").exists()).toBe(true);
+  });
+
+  it("focuses first argument dropdown for a new step with arguments", async () => {
+    const step: QueryStepType = { id: "step-1", type: "from" };
+    const wrapper = mount(QueryStep, {
+      props: { step },
+      global: globalProvide,
+      attachTo: document.body,
+    });
+
+    await nextTick();
+    await nextTick();
+
+    const firstTrigger = wrapper.find(".arg-select-trigger");
+    expect(firstTrigger.exists()).toBe(true);
+    expect(document.activeElement).toBe(firstTrigger.element);
+
+    wrapper.unmount();
   });
 });

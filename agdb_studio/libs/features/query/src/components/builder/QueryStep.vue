@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { computed, inject, ref, type Ref } from "vue";
+import { computed, inject, nextTick, ref, watch, type Ref } from "vue";
 import { vOnClickOutside } from "@vueuse/components";
 import { ClCloseMd } from "@kalimahapps/vue-icons";
 import type { QueryStep, TAB } from "../../composables/types";
@@ -58,7 +58,11 @@ const closeEditing = () => {
           @click="isEditingArgs = true"
         />
         <div v-if="isEditingArgs" class="arg-editor-popup">
-          <QueryArgument :arguments="stepArguments" :step="step" />
+          <QueryArgument
+            :arguments="stepArguments"
+            :step="step"
+            :auto-focus="true"
+          />
         </div>
       </template>
     </div>

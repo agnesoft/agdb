@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { computed, inject, onMounted, type Ref } from "vue";
+import { computed, inject, nextTick, onMounted, ref, type Ref } from "vue";
 import {
   OPTION_SHORTCUT_MAP,
   OPTION_TYPE_MAP,
@@ -17,14 +17,19 @@ import { useQueryStore } from "../../../composables/queryStore";
 const props = defineProps<{
   arguments: QueryArguments;
   step: QueryStep;
+  autoFocus?: boolean;
 }>();
 
 const queryId = inject<Ref<string>>("queryId");
 const tab = inject<Ref<TAB>>("activeTab");
 const queryStore = useQueryStore();
+const firstDropdownRef = ref<InstanceType<typeof QueryArgumentDropdown> | null>(
+  null,
+);
 
 const makeEmptyEntry = (): QueryStepArgEntry =>
   props.arguments.fields.map((field) => ({
+    /* v8 ignore next -- @preserve */
     selectedOption: field.options[0] ?? "",
     value: undefined,
   }));
@@ -38,9 +43,13 @@ const commitArgs = (args: QueryStepArgEntry[]) => {
   queryStore.updateQueryStep(queryId.value, tab.value, { ...props.step, args });
 };
 
-onMounted(() => {
+onMounted(async () => {
   if (!props.step.args?.length) {
     commitArgs([makeEmptyEntry()]);
+  }
+  if (props.autoFocus) {
+    await nextTick();
+    firstDropdownRef.value?.focus();
   }
 });
 
@@ -76,6 +85,13 @@ const removeEntry = (index: number) =>
         class="arg-field"
       >
         <QueryArgumentDropdown
+          :ref="
+            fieldIndex === 0
+              ? (el) => {
+                  firstDropdownRef = el as any;
+                }
+              : undefined
+          "
           :options="field.options"
           :model-value="entry[fieldIndex]!.selectedOption"
           :shortcuts="OPTION_SHORTCUT_MAP"

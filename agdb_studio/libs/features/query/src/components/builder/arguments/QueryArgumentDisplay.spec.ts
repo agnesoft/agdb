@@ -125,4 +125,14 @@ describe("QueryArgumentDisplay", () => {
     });
     expect(wrapper.find(".arg-display").text()).toBe("(↓)");
   });
+
+  it("falls back to selectedOption when it has no shortcut in the map", () => {
+    const step = makeStep({
+      args: [[{ selectedOption: "unknownType", value: undefined }]],
+    });
+    const wrapper = mount(QueryArgumentDisplay, {
+      props: { arguments: VALUE_ARGS, step },
+    });
+    expect(wrapper.find(".arg-display").text()).toBe("(unknownType)");
+  });
 });

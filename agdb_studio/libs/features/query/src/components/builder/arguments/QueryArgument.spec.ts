@@ -280,4 +280,19 @@ describe("QueryArgument", () => {
     });
     expect(updateQueryStep).not.toHaveBeenCalled();
   });
+
+  it("focuses the first dropdown when autoFocus is true", async () => {
+    const step = makeStep({
+      args: [[{ selectedOption: "signed", value: "1" }]],
+    });
+    const wrapper = mount(QueryArgument, {
+      props: { arguments: SINGLE_ARGS, step, autoFocus: true },
+      global: globalProvide,
+      attachTo: document.body,
+    });
+    await wrapper.vm.$nextTick();
+    await wrapper.vm.$nextTick();
+    expect(document.activeElement?.tagName).toBe("BUTTON");
+    wrapper.unmount();
+  });
 });

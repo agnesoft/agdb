@@ -2,7 +2,7 @@
 resolver = "2"
 members = [
     "agdb",
-    "agdb_benchmarks",
+    "agdb_benchmark",
     "agdb_ci",
     "agdb_derive",
     "agdb_server",

@@ -17,8 +17,8 @@ use std::sync::RwLock;
 
 const ADMIN_USERNAME: &str = "admin";
 const ADMIN_PASSWORD: &str = "admin";
-pub(crate) const BENCHMARK_USERNAME: &str = "agdb_benchmarks";
-pub(crate) const BENCHMARK_PASSWORD: &str = "agdb_benchmarks";
+pub(crate) const BENCHMARK_USERNAME: &str = "agdb_benchmark";
+pub(crate) const BENCHMARK_PASSWORD: &str = "agdb_benchmark";
 pub(crate) const BENCHMARK_DATABASE: &str = "benchmark";
 
 pub(crate) struct Database<S: StorageData>(pub(crate) Arc<RwLock<DbImpl<S>>>);

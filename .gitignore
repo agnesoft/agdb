@@ -4,12 +4,13 @@ Cargo.lock
 **/*.rs.bk
 lcov.info
 *.agdb
-agdb_benchmarks_server.log
-agdb_benchmarks.yaml
+agdb_server_benchmark.log
+agdb_benchmark.yaml
 agdb_server.yaml
 agdb_server_data/
-!.github/workflows/agdb_benchmarks.yaml
+!.github/workflows/agdb_benchmark.yaml
 !.github/workflows/agdb_server.yaml
+!agdb_benchmark/agdb_server.yaml
 test.log
 vendor/
 coverage/

@@ -1,0 +1,17 @@
+bind: 0.0.0.0:3000
+address: http://localhost:3000
+basepath: 
+static_roots: 
+admin: admin
+log_level: info
+log_body_limit: 10240
+request_body_limit: 10485760
+data_dir: agdb_server_data
+pepper_path: 
+tls_certificate: 
+tls_key: 
+tls_root: 
+cluster_token: cluster
+cluster_heartbeat_timeout_ms: 1000
+cluster_term_timeout_ms: 3000
+cluster: []

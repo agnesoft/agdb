@@ -1,6 +1,6 @@
 db_name: agdb_server_benchmarks.agdb
 mode: !server
-  address: localhost:3000
+  address: http://localhost:3000
 db_type: file_mapped
 locale: cs
 padding: 20

@@ -10,6 +10,7 @@ agdb_server.yaml
 agdb_server_data/
 !.github/workflows/agdb_benchmark.yaml
 !.github/workflows/agdb_server.yaml
+!agdb_benchmark/agdb_server.yaml
 test.log
 vendor/
 coverage/

@@ -86,9 +86,11 @@ const removeEntry = (index: number) =>
       >
         <QueryArgumentDropdown
           :ref="
-            fieldIndex === 0
+            entryIndex === 0 && fieldIndex === 0
               ? (el) => {
-                  firstDropdownRef = el as any;
+                  firstDropdownRef = el as InstanceType<
+                    typeof QueryArgumentDropdown
+                  > | null;
                 }
               : undefined
           "

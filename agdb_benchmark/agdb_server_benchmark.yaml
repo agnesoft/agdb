@@ -1,0 +1,28 @@
+db_name: agdb_server_benchmarks.agdb
+mode: !server
+  address: localhost:3000
+db_type: file_mapped
+locale: cs
+padding: 20
+cell_padding: 10
+posters:
+  count: 10
+  posts: 100
+  delay_ms: 100
+  title: Title of the testing post
+  body: Body of the testing post should be longer than the title
+commenters:
+  count: 10
+  comments: 100
+  delay_ms: 100
+  body: This is a testing comment of a post.
+post_readers:
+  count: 100
+  posts: 10
+  reads_per_reader: 100
+  delay_ms: 100
+comment_readers:
+  count: 100
+  comments: 10
+  reads_per_reader: 100
+  delay_ms: 100

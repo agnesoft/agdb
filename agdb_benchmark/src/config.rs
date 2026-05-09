@@ -1,10 +1,11 @@
-use crate::BENCH_CONFIG_FILE;
 use crate::bench_result::BenchResult;
 use num_format::Locale;
 use serde::Deserialize;
 use serde::Serialize;
 use std::fs::File;
 use std::path::Path;
+
+pub(crate) const BENCH_CONFIG_FILE: &str = "agdb_benchmark.yaml";
 
 #[derive(Serialize, Deserialize)]
 pub(crate) struct PostWriters {
@@ -69,17 +70,17 @@ pub(crate) struct Config {
 }
 
 impl Config {
-    pub(crate) fn load_config() -> BenchResult<Self> {
-        let path = Path::new(BENCH_CONFIG_FILE);
+    pub(crate) fn new(config_file: &str) -> BenchResult<Self> {
+        let path = Path::new(config_file);
 
         if !path.exists() {
-            println!("Using default config (saved to '{BENCH_CONFIG_FILE}')");
+            println!("Using default config (saved to '{config_file}')");
             let config = Self::default();
             let file = File::create(path)?;
             serde_yaml::to_writer(file, &config)?;
             Ok(config)
         } else {
-            println!("Using existing config from '{BENCH_CONFIG_FILE}'");
+            println!("Using existing config from '{config_file}'");
             let file = File::open(path)?;
             Ok(serde_yaml::from_reader(file)?)
         }
@@ -93,7 +94,7 @@ impl Config {
 impl Default for Config {
     fn default() -> Self {
         Self {
-            db_name: "agdb_benchmarks.agdb".to_string(),
+            db_name: "agdb_benchmark.agdb".to_string(),
             mode: BenchmarkMode::Embedded,
             db_type: DbType::FileMapped,
             locale: Locale::cs,

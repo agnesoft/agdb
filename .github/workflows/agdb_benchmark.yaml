@@ -31,3 +31,9 @@ jobs:
       - uses: actions-rust-lang/setup-rust-toolchain@v1
       - run: ./agdb_server_benchmark.sh
         working-directory: agdb_benchmark
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: server_log
+          path: agdb_benchmark/agdb_server_benchmark.log
+          retention-days: 30

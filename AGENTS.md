@@ -48,7 +48,7 @@ The packages are curated lists of main packages. They contain exact names of pac
 ## Rust
 
 - agdb
-- agdb_benchmarks
+- agdb_benchmark
 - agdb_ci
 - agdb_derive
 - agdb_server

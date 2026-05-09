@@ -200,5 +200,19 @@ describe("QueryArgumentDropdown", () => {
       await wrapper.find(".arg-select-trigger").trigger("click");
       expect(wrapper.find(".arg-options").exists()).toBe(false);
     });
+
+    it("shows option name for options without a shortcut when shortcuts exist for others", async () => {
+      const wrapper = mount(QueryArgumentDropdown, {
+        props: {
+          options: ["string", "custom"],
+          modelValue: "string",
+          shortcuts: { string: "s" },
+        },
+      });
+      await wrapper.find(".arg-select-trigger").trigger("click");
+      const options = wrapper.findAll(".arg-option");
+      // "custom" has no shortcut, falls back to option name
+      expect(options[1]?.find(".arg-option-shortcut").text()).toBe("custom");
+    });
   });
 });

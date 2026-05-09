@@ -2,6 +2,8 @@
 import { computed, ref } from "vue";
 import { vOnClickOutside } from "@vueuse/components";
 
+const buttonRef = ref<HTMLButtonElement | null>(null);
+
 const props = withDefaults(
   defineProps<{
     options: readonly string[];
@@ -41,11 +43,18 @@ const selectOption = (option: string) => {
   emit("update:modelValue", option);
   close();
 };
+
+defineExpose({
+  focus: () => {
+    buttonRef.value?.focus();
+  },
+});
 </script>
 
 <template>
   <div v-on-click-outside="close" class="arg-dropdown" @keydown.esc="close">
     <button
+      ref="buttonRef"
       type="button"
       class="arg-select arg-select-trigger"
       :aria-expanded="isOpen"

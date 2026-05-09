@@ -76,8 +76,14 @@ const emit = defineEmits<{
 
 const confirmStep = (stepType: QueryType) => {
   emit("confirm-step", stepType);
+  const requiresArguments = !!queryApiMock[stepType]?.arguments;
+
   resetInput();
-  contentInput.value?.focus();
+  if (!requiresArguments) {
+    contentInput.value?.focus();
+  } else {
+    onFocus(false);
+  }
 };
 
 const activeHintIndex = ref(0);

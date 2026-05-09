@@ -58,7 +58,11 @@ const closeEditing = () => {
           @click="isEditingArgs = true"
         />
         <div v-if="isEditingArgs" class="arg-editor-popup">
-          <QueryArgument :arguments="stepArguments" :step="step" />
+          <QueryArgument
+            :arguments="stepArguments"
+            :step="step"
+            :auto-focus="true"
+          />
         </div>
       </template>
     </div>

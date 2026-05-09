@@ -6,7 +6,7 @@ export default defineNuxtConfig({
     "@nuxt/ui",
     "@nuxt/content",
     "nuxt-og-image",
-    // "nuxt-llms",
+    "nuxt-llms",
     "@nuxt/test-utils/module",
   ],
   ssr: true,
@@ -75,38 +75,56 @@ export default defineNuxtConfig({
     provider: "iconify",
   },
 
-  // llms: {
-  //   domain: "https://agdb.agnesoft.com",
-  //   title: "agdb - Application Native Database",
-  //   description:
-  //     "Application native database for any use case. No query language, performance independent of data size, 10X cost reduction.",
-  //   full: {
-  //     title: "agdb - Full Documentation",
-  //     description:
-  //       "Complete documentation for agdb - Application native database for any use case.",
-  //   },
-  //   sections: [
-  //     {
-  //       title: "Guides",
-  //       contentCollection: "docs",
-  //       contentFilters: [
-  //         { field: "path", operator: "LIKE", value: "/docs/guides%" },
-  //       ],
-  //     },
-  //     {
-  //       title: "Examples",
-  //       contentCollection: "docs",
-  //       contentFilters: [
-  //         { field: "path", operator: "LIKE", value: "/docs/examples%" },
-  //       ],
-  //     },
-  //     {
-  //       title: "References",
-  //       contentCollection: "docs",
-  //       contentFilters: [
-  //         { field: "path", operator: "LIKE", value: "/docs/references%" },
-  //       ],
-  //     },
-  //   ],
-  // },
+  llms: {
+    domain: "https://agdb.agnesoft.com",
+    title: "agdb Documentation",
+    description: "Guides, API docs, references, and examples for agdb.",
+    full: {
+      title: "agdb Full Documentation",
+      description:
+        "Complete docs for using agdb, running agdb_server, and integrating API clients.",
+    },
+    sections: [
+      {
+        title: "Guides",
+        contentCollection: "docs",
+        contentFilters: [
+          { field: "path", operator: "LIKE", value: "/docs/guides%" },
+        ],
+      },
+      {
+        title: "Examples",
+        contentCollection: "docs",
+        contentFilters: [
+          { field: "path", operator: "LIKE", value: "/docs/examples%" },
+        ],
+      },
+      {
+        title: "References",
+        contentCollection: "docs",
+        contentFilters: [
+          { field: "path", operator: "LIKE", value: "/docs/references%" },
+        ],
+      },
+      {
+        title: "API Clients",
+        contentCollection: "docs",
+        contentFilters: [
+          { field: "path", operator: "LIKE", value: "/api-docs%" },
+        ],
+      },
+      {
+        title: "Blog",
+        contentCollection: "docs",
+        contentFilters: [{ field: "path", operator: "LIKE", value: "/blog%" }],
+      },
+      {
+        title: "Enterprise",
+        contentCollection: "docs",
+        contentFilters: [
+          { field: "path", operator: "LIKE", value: "/enterprise%" },
+        ],
+      },
+    ],
+  },
 });

@@ -9,10 +9,14 @@ const mockClient = vi.hoisted(() => ({
 }));
 
 const mockCheckClient = vi.hoisted(() => vi.fn());
+const mockReconnectClient = vi.hoisted(() => vi.fn());
+const mockApiUrl = vi.hoisted(() => ({ value: "http://server1:8080" }));
 
 vi.mock("@agdb-studio/api/src/api", () => ({
   client: { value: mockClient },
   checkClient: mockCheckClient,
+  reconnectClient: mockReconnectClient,
+  apiUrl: mockApiUrl,
 }));
 
 vi.mock("@agdb-studio/utils/src/logger/logger", () => ({
@@ -33,6 +37,8 @@ describe("useClusterStatus", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.useFakeTimers();
+    mockReconnectClient.mockResolvedValue(undefined);
+    mockApiUrl.value = "http://server1:8080";
   });
 
   afterEach(() => {
@@ -301,5 +307,41 @@ describe("useClusterStatus", () => {
     await nextTick();
 
     expect(mockClient.cluster_status).toHaveBeenCalledTimes(1);
+  });
+
+  it("should switch to another online server using localhost host and target port", async () => {
+    // Current connection is http://server1:8080, cluster reports internal hostnames.
+    // switchToServer must preserve the host (server1 / localhost) and only swap the port.
+    mockApiUrl.value = "http://server1:8080";
+    const mockServers: ClusterStatus[] = [
+      { address: "https://agdb0:8080", status: true, leader: true },
+      { address: "https://agdb1:9090", status: true, leader: false },
+    ];
+
+    mockClient.cluster_status.mockResolvedValue({ data: mockServers });
+
+    const vm = mountComposable();
+
+    await vi.advanceTimersByTimeAsync(0);
+    await flushPromises();
+    await nextTick();
+
+    await vm.switchToServer(mockServers[1]!);
+
+    // Host kept as server1, port taken from agdb1:9090
+    expect(mockReconnectClient).toHaveBeenCalledWith("http://server1:9090");
+  });
+
+  it("should not switch to offline server", async () => {
+    const offlineServer: ClusterStatus = {
+      address: "server2:8080",
+      status: false,
+      leader: false,
+    };
+
+    const vm = mountComposable();
+    await vm.switchToServer(offlineServer);
+
+    expect(mockReconnectClient).not.toHaveBeenCalled();
   });
 });

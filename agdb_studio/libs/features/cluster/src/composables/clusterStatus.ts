@@ -1,5 +1,10 @@
 import { ref, computed, onMounted, onUnmounted, type Ref } from "vue";
-import { client, checkClient } from "@agdb-studio/api/src/api";
+import {
+  apiUrl,
+  client,
+  checkClient,
+  reconnectClient,
+} from "@agdb-studio/api/src/api";
 import { createLogger } from "@agdb-studio/utils/src/logger/logger";
 import type { ClusterStatus } from "@agnesoft/agdb_api/openapi";
 
@@ -12,10 +17,25 @@ const POLL_INTERVAL = 15000; // 15 seconds
 const servers = ref<ClusterStatus[]>([]);
 const isLoading = ref(true);
 const lastUpdated = ref<Date | null>(null);
+const switchingServerAddress = ref<string | null>(null);
 
 let pollInterval: ReturnType<typeof setInterval> | null = null;
 
 export const useClusterStatus = () => {
+  // When the cluster reports internal hostnames (e.g. agdb0:3000) but the UI
+  // connects via localhost, only comparing ports is reliable for active-node
+  // detection. We therefore normalize to just the port.
+  const normalizeAddress = (address: string): string => {
+    try {
+      const parsed = new URL(
+        address.includes("://") ? address : `http://${address}`,
+      );
+      return parsed.port || "80";
+    } catch {
+      return address.toLowerCase();
+    }
+  };
+
   const overallStatus = computed((): OverallStatus => {
     if (isLoading.value) {
       return "unknown";
@@ -58,6 +78,52 @@ export const useClusterStatus = () => {
     }
   };
 
+  const activeAddress = computed(() => {
+    return normalizeAddress(apiUrl.value);
+  });
+
+  const isServerActive = (server: ClusterStatus): boolean => {
+    return normalizeAddress(server.address) === activeAddress.value;
+  };
+
+  const resolveServerUrl = (server: ClusterStatus): string => {
+    try {
+      const current = new URL(apiUrl.value);
+      const target = new URL(
+        server.address.includes("://")
+          ? server.address
+          : `${current.protocol}//${server.address}`,
+      );
+      // Keep the host from the current connection (e.g. localhost)
+      // but take the port from the cluster member's address.
+      current.port = target.port;
+      return current.toString().replace(/\/$/, "");
+    } catch {
+      return server.address;
+    }
+  };
+
+  const switchToServer = async (server: ClusterStatus): Promise<void> => {
+    if (!server.status || isServerActive(server)) {
+      return;
+    }
+
+    switchingServerAddress.value = server.address;
+    try {
+      const resolvedAddress = resolveServerUrl(server);
+      await reconnectClient(resolvedAddress);
+      await fetchStatus();
+      logger.info("Switched active cluster node:", server.address);
+    } catch (error) {
+      logger.error(
+        "Failed to switch cluster node:",
+        error instanceof Error ? error.message : String(error),
+      );
+    } finally {
+      switchingServerAddress.value = null;
+    }
+  };
+
   const startPolling = (): void => {
     if (pollInterval) {
       return;
@@ -88,6 +154,9 @@ export const useClusterStatus = () => {
     overallStatus,
     isLoading: isLoading as Ref<boolean>,
     lastUpdated: lastUpdated as Ref<Date | null>,
+    switchingServerAddress: switchingServerAddress as Ref<string | null>,
+    isServerActive,
+    switchToServer,
     fetchStatus,
     startPolling,
     stopPolling,

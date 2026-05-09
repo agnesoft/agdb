@@ -11,11 +11,16 @@ import type { AgdbApiClient } from "@agnesoft/agdb_api/client";
 import { createLogger } from "@agdb-studio/utils/src/logger/logger";
 
 const _client = ref<AgdbApi.AgdbApiClient | undefined>();
+const _apiUrl = ref(import.meta.env.VITE_API_URL);
 
 const logger = createLogger("ApiClient");
 
 export const client = computed((): AgdbApi.AgdbApiClient | undefined => {
   return _client.value;
+});
+
+export const apiUrl = computed((): string => {
+  return _apiUrl.value;
 });
 
 export const removeToken = (): void => {
@@ -68,32 +73,57 @@ export const checkClient: (
 
 let connectionAttempts = 0;
 
-export const initClient = async (): Promise<void> => {
-  _client.value = await AgdbApi.client(import.meta.env.VITE_API_URL).catch(
-    (error: AxiosError) => {
-      logger.error("Failed to initialize client:", error.message);
-      if (connectionAttempts < MAX_CONNECTION_ATTEMPTS) {
-        connectionAttempts++;
-        const timeout = BASE_CONNECTION_TIMEOUT * connectionAttempts;
-        let message = `Connection attempt ${connectionAttempts} failed. Retrying in ${timeout}ms.`;
-        if (connectionAttempts === MAX_CONNECTION_ATTEMPTS) {
-          message = `Connection attempt ${connectionAttempts} failed. Retrying in ${timeout}ms. This is the final attempt.`;
-          addNotification({
-            type: "error",
-            title: "Connection error",
-          });
-        }
-        logger.warn(message);
-        setTimeout(() => {
-          initClient();
-        }, timeout);
+const attachInterceptors = (apiClient: AgdbApiClient): void => {
+  apiClient.interceptors.response.use(responseInterceptor, errorInterceptor);
+};
+
+const connectToUrl = async (
+  url: string,
+): Promise<AgdbApiClient | undefined> => {
+  return AgdbApi.client(url).catch((error: AxiosError) => {
+    logger.error("Failed to initialize client:", error.message);
+    if (connectionAttempts < MAX_CONNECTION_ATTEMPTS) {
+      connectionAttempts++;
+      const timeout = BASE_CONNECTION_TIMEOUT * connectionAttempts;
+      let message = `Connection attempt ${connectionAttempts} failed. Retrying in ${timeout}ms.`;
+      if (connectionAttempts === MAX_CONNECTION_ATTEMPTS) {
+        message = `Connection attempt ${connectionAttempts} failed. Retrying in ${timeout}ms. This is the final attempt.`;
+        addNotification({
+          type: "error",
+          title: "Connection error",
+        });
       }
-      return undefined;
-    },
-  );
-  client.value?.interceptors.response.use(
-    responseInterceptor,
-    errorInterceptor,
-  );
+      logger.warn(message);
+      setTimeout(() => {
+        void initClient();
+      }, timeout);
+    }
+    return undefined;
+  });
+};
+
+export const initClient = async (): Promise<void> => {
+  const nextClient = await connectToUrl(_apiUrl.value);
+  _client.value = nextClient;
+  if (nextClient) {
+    attachInterceptors(nextClient);
+  }
+};
+
+export const reconnectClient = async (url: string): Promise<void> => {
+  const token =
+    client.value?.get_token() ??
+    localStorage.getItem(ACCESS_TOKEN) ??
+    undefined;
+  const nextClient = await AgdbApi.client(url);
+
+  attachInterceptors(nextClient);
+  if (token) {
+    nextClient.set_token(token);
+  }
+
+  _client.value = nextClient;
+  _apiUrl.value = url;
+  connectionAttempts = 0;
 };
 await initClient();

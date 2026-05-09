@@ -3,8 +3,17 @@ import { computed, ref } from "vue";
 import { useClusterStatus } from "../composables/clusterStatus";
 import { PhFillCrownSimple } from "@kalimahapps/vue-icons";
 import FadeTransition from "@agdb-studio/design/src/components/transitions/FadeTransition.vue";
+import type { ClusterStatus } from "@agnesoft/agdb_api/openapi";
 
-const { servers, overallStatus, isLoading, fetchStatus } = useClusterStatus();
+const {
+  servers,
+  overallStatus,
+  isLoading,
+  fetchStatus,
+  switchingServerAddress,
+  isServerActive,
+  switchToServer,
+} = useClusterStatus();
 
 const showDetails = ref(false);
 
@@ -22,6 +31,23 @@ const handleMouseEnter = () => {
 
 const handleMouseLeave = () => {
   showDetails.value = false;
+};
+
+const handleServerClick = async (server: ClusterStatus) => {
+  await switchToServer(server);
+};
+
+const serverStatusText = (server: ClusterStatus): string => {
+  if (switchingServerAddress.value === server.address) {
+    return "Connecting...";
+  }
+  if (!server.status) {
+    return "Offline";
+  }
+  if (isServerActive(server)) {
+    return "Active";
+  }
+  return "Online";
 };
 
 const leaderPosition = computed(() => {
@@ -75,7 +101,15 @@ const statusText = computed(() => {
               v-for="server in servers"
               :key="server.address"
               class="server-item"
-              :class="{ offline: !server.status }"
+              :class="{
+                offline: !server.status,
+                active: isServerActive(server),
+                connecting: switchingServerAddress === server.address,
+              }"
+              role="button"
+              tabindex="0"
+              @click.stop="handleServerClick(server)"
+              @keydown.enter.stop.prevent="handleServerClick(server)"
             >
               <span class="server-address">{{ server.address }}</span>
               <PhFillCrownSimple
@@ -85,7 +119,7 @@ const statusText = computed(() => {
                 title="Leader server"
               />
               <span class="server-status">
-                {{ server.status ? "Online" : "Offline" }}
+                {{ serverStatusText(server) }}
               </span>
             </div>
           </div>
@@ -167,8 +201,19 @@ const statusText = computed(() => {
   background: var(--color-background-soft);
   border-radius: 4px;
   font-size: 0.9rem;
+  cursor: pointer;
+
+  &.active {
+    outline: 1px solid var(--green);
+  }
+
+  &.connecting {
+    opacity: 0.7;
+  }
 
   &.offline {
+    cursor: not-allowed;
+
     .server-status {
       color: var(--red-2);
     }

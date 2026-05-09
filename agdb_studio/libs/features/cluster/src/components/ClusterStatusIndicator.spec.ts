@@ -8,6 +8,9 @@ const mockServers = ref<ClusterStatus[]>([]);
 const mockOverallStatus = ref<"red" | "amber" | "green" | "unknown">("unknown");
 const mockIsLoading = ref(false);
 const mockFetchStatus = vi.fn();
+const mockSwitchingServerAddress = ref<string | null>(null);
+const mockSwitchToServer = vi.fn();
+const mockIsServerActive = vi.fn(() => false);
 
 vi.mock("../composables/clusterStatus", () => ({
   useClusterStatus: () => ({
@@ -15,6 +18,9 @@ vi.mock("../composables/clusterStatus", () => ({
     overallStatus: mockOverallStatus,
     isLoading: mockIsLoading,
     fetchStatus: mockFetchStatus,
+    switchingServerAddress: mockSwitchingServerAddress,
+    switchToServer: mockSwitchToServer,
+    isServerActive: mockIsServerActive,
   }),
 }));
 
@@ -29,6 +35,8 @@ describe("ClusterStatusIndicator", () => {
     mockServers.value = [];
     mockOverallStatus.value = "unknown";
     mockIsLoading.value = false;
+    mockSwitchingServerAddress.value = null;
+    mockIsServerActive.mockReturnValue(false);
   });
 
   it("should render status indicator with correct color for green status", () => {
@@ -272,5 +280,37 @@ describe("ClusterStatusIndicator", () => {
     expect(servers[0]?.classes()).not.toContain("offline");
     expect(servers[1]?.classes()).toContain("offline");
     expect(servers[1]?.text()).toContain("Offline");
+  });
+
+  it("should switch to another server when server row is clicked", async () => {
+    mockIsLoading.value = false;
+    mockServers.value = [
+      { address: "server1:8080", status: true, leader: true },
+      { address: "server2:8080", status: true, leader: false },
+    ];
+
+    const wrapper = mount(ClusterStatusIndicator, {
+      global: {
+        stubs: {
+          CrownIcon: CrownIconStub,
+          FadeTransition: { template: "<div><slot /></div>" },
+          PhFillCrownSimple: {
+            template: '<div data-testid="crown-icon"></div>',
+          },
+        },
+      },
+    });
+
+    await wrapper.trigger("mouseenter");
+    await nextTick();
+
+    const servers = wrapper.findAll(".server-item");
+    await servers[1]!.trigger("click");
+
+    expect(mockSwitchToServer).toHaveBeenCalledWith({
+      address: "server2:8080",
+      status: true,
+      leader: false,
+    });
   });
 });

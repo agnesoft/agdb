@@ -201,6 +201,7 @@
   > svg {
     height: 2rem;
     width: auto;
+    overflow: visible;
   }
 }
 </style>

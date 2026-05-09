@@ -173,4 +173,28 @@ describe("QueryStepInput", () => {
     });
     expect(wrapper.find(".step-input").exists()).toBe(false);
   });
+
+  it("hides hints after confirming a step that requires arguments", async () => {
+    const prevStep: QueryStep = {
+      id: "prev-select",
+      type: "select",
+    };
+    const wrapper = mount(QueryStepInput, {
+      props: { prevStep },
+    });
+    const input = wrapper.find(".step-input");
+    await input.trigger("focusin");
+    await nextTick();
+    expect(wrapper.find(".query-hinter").exists()).toBe(true);
+
+    // "from" requires arguments
+    const fromHint = wrapper
+      .findAll(".hinter-item")
+      .find((h) => h.text() === "from");
+    expect(fromHint).toBeDefined();
+    await fromHint!.trigger("click");
+    await nextTick();
+
+    expect(wrapper.find(".query-hinter").exists()).toBe(false);
+  });
 });

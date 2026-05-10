@@ -165,7 +165,7 @@ pub(crate) async fn status(
 ) -> ServerResult<(StatusCode, Json<Vec<ClusterStatus>>)> {
     if config.cluster.is_empty() {
         let status = ClusterStatus {
-            address: config.address.clone(),
+            address: config.server_url(),
             status: true,
             leader: true,
         };

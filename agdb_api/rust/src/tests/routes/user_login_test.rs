@@ -28,7 +28,10 @@ pub async fn repeated_login() -> Result<(), TestError> {
     let token = server.api.token.clone().unwrap();
     let status = server.api.user_login(owner, owner).await?;
     assert_eq!(status, 200);
-    assert_eq!(server.api.token.clone().unwrap(), token);
+    assert!(
+        server.api.token.clone().unwrap() != token,
+        "Login did not generate a new token: {token}"
+    );
     Ok(())
 }
 

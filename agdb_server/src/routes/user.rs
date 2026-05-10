@@ -23,7 +23,7 @@ pub(crate) async fn do_login(
     server_db: &ServerDb,
     username: &str,
     password: &str,
-) -> ServerResult<(Option<DbId>, String)> {
+) -> ServerResult<(DbId, String)> {
     let user = server_db
         .user(username)
         .await
@@ -34,14 +34,7 @@ pub(crate) async fn do_login(
         return Err(ServerError::new(StatusCode::UNAUTHORIZED, "unuauthorized"));
     }
 
-    let mut token = server_db.user_token(user.db_id.unwrap_or_default()).await?;
-
-    if token.is_empty() {
-        let token_uuid = Uuid::new_v4();
-        token = token_uuid.to_string();
-    }
-
-    Ok((user.db_id, token))
+    Ok((user.db_id.unwrap_or_default(), Uuid::new_v4().to_string()))
 }
 
 #[utoipa::path(post,
@@ -58,12 +51,8 @@ pub(crate) async fn login(
     State(server_db): State<ServerDb>,
     Json(request): Json<UserLogin>,
 ) -> ServerResponse<(StatusCode, Json<String>)> {
-    let (user_id, mut token) = do_login(&server_db, &request.username, &request.password).await?;
-
-    if let Some(user_id) = user_id {
-        token = server_db.save_or_get_token(user_id, &token).await?;
-    }
-
+    let (user_id, token) = do_login(&server_db, &request.username, &request.password).await?;
+    server_db.save_token(user_id, &token).await?;
     Ok((StatusCode::OK, Json(token)))
 }
 

@@ -2,14 +2,25 @@
 import { ref } from "vue";
 import { useAuth } from "@agdb-studio/auth/src/auth";
 import { getRouter } from "@agdb-studio/router/src/router";
+import { SESSION_LOGIN_SERVER_URL } from "@agdb-studio/api/src/constants";
 import SpinnerIcon from "@agdb-studio/design/src/components/icons/SpinnerIcon.vue";
 import { createLogger } from "@agdb-studio/utils/src/logger/logger";
 
 const { login } = useAuth();
+const router = getRouter();
+
+const routeServer = router.currentRoute.value.query.server;
+const sessionServer = sessionStorage.getItem(SESSION_LOGIN_SERVER_URL);
+const defaultServer =
+  typeof routeServer === "string" && routeServer.length > 0
+    ? routeServer
+    : sessionServer && sessionServer.length > 0
+      ? sessionServer
+      : import.meta.env.VITE_API_URL || "";
 
 const username = ref("");
 const password = ref("");
-const server = ref(import.meta.env.VITE_API_URL || "");
+const server = ref(defaultServer);
 const cluster = ref(false);
 
 const loading = ref(false);
@@ -32,7 +43,7 @@ const onLogin = async () => {
   })
     .then(async () => {
       logger.info("Login successful for user:", username.value);
-      const router = getRouter();
+      sessionStorage.removeItem(SESSION_LOGIN_SERVER_URL);
       const redirect = router.currentRoute.value.query.redirect;
       await router.push(
         typeof redirect === "string" ? redirect : { name: "home" },

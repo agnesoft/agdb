@@ -130,7 +130,7 @@ const accountActions: Action<undefined>[] = [
               type: "checkbox",
               label: "Logout from all nodes in the cluster",
               key: "cluster",
-              value: false,
+              value: true,
             },
           },
         ],

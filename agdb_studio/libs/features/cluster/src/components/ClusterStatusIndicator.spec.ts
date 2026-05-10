@@ -16,7 +16,6 @@ const mockIsUserLoggedInOnServer = vi.fn<
 >(() => null);
 const mockActiveServer = ref<ClusterStatus | undefined>(undefined);
 const mockActiveNodeLabel = ref(":3000");
-
 vi.mock("../composables/clusterStatus", () => ({
   useClusterStatus: () => ({
     servers: mockServers,
@@ -206,7 +205,7 @@ describe("ClusterStatusIndicator", () => {
     await nextTick();
 
     expect(wrapper.find(".no-servers").exists()).toBe(true);
-    expect(wrapper.find(".no-servers").text()).toBe("No servers found");
+    expect(wrapper.find(".no-servers").text()).toBe("No clusters found");
   });
 
   it("should render server list with online servers", async () => {
@@ -231,7 +230,6 @@ describe("ClusterStatusIndicator", () => {
     const servers = wrapper.findAll(".server-item");
     expect(servers).toHaveLength(2);
     expect(servers[0]?.text()).toContain("server1:8080");
-    expect(servers[0]?.text()).toContain("Online");
     expect(servers[1]?.text()).toContain("server2:8080");
   });
 
@@ -290,10 +288,9 @@ describe("ClusterStatusIndicator", () => {
     const servers = wrapper.findAll(".server-item");
     expect(servers[0]?.classes()).not.toContain("offline");
     expect(servers[1]?.classes()).toContain("offline");
-    expect(servers[1]?.text()).toContain("Offline");
   });
 
-  it("should switch to another server when server row is clicked", async () => {
+  it("should call switchToServer when server row is clicked", async () => {
     mockIsLoading.value = false;
     mockServers.value = [
       { address: "server1:8080", status: true, leader: true },
@@ -318,14 +315,10 @@ describe("ClusterStatusIndicator", () => {
     const servers = wrapper.findAll(".server-item");
     await servers[1]!.trigger("click");
 
-    expect(mockSwitchToServer).toHaveBeenCalledWith({
-      address: "server2:8080",
-      status: true,
-      leader: false,
-    });
+    expect(mockSwitchToServer).toHaveBeenCalledWith(mockServers.value[1]);
   });
 
-  it("should display logged in state for server", async () => {
+  it("should apply logged in/out classes for server login icon", async () => {
     mockIsLoading.value = false;
     mockIsUserLoggedInOnServer.mockImplementation(
       (server: ClusterStatus) => server.address === "server1:8080",
@@ -348,7 +341,7 @@ describe("ClusterStatusIndicator", () => {
     await nextTick();
 
     const servers = wrapper.findAll(".server-item");
-    expect(servers[0]?.text()).toContain("Logged in");
-    expect(servers[1]?.text()).toContain("Logged out");
+    expect(servers[0]?.find(".server-login")?.classes()).toContain("loggedIn");
+    expect(servers[1]?.find(".server-login")?.classes()).toContain("loggedOut");
   });
 });

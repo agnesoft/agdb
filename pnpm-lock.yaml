@@ -757,6 +757,9 @@ importers:
       '@agdb-studio/api':
         specifier: workspace:*
         version: link:../../core/api
+      '@agdb-studio/auth':
+        specifier: workspace:*
+        version: link:../../core/auth
       '@agdb-studio/design':
         specifier: workspace:*
         version: link:../../core/design

@@ -66,14 +66,20 @@ const login = async ({
     });
 };
 
-const logout = async (cluster?: boolean): Promise<void> => {
+const logout = async (
+  cluster?: boolean,
+  serverLogout = true,
+): Promise<void> => {
   if (!isLoggedIn.value) {
     return;
   }
-  await client.value?.logout(cluster).catch((error) => {
-    console.error("Logout failed:", error);
-  });
-  accessToken.value = undefined;
+  if (serverLogout) {
+    await client.value?.logout(cluster).catch((error) => {
+      console.error("Logout failed:", error);
+    });
+    accessToken.value = undefined;
+  }
+
   removeToken();
 };
 

@@ -6,7 +6,11 @@ import {
   checkClient,
   reconnectClient,
 } from "@agdb-studio/api/src/api";
-import { ACCESS_TOKEN } from "@agdb-studio/api/src/constants";
+import {
+  ACCESS_TOKEN,
+  SESSION_LOGIN_SERVER_URL,
+} from "@agdb-studio/api/src/constants";
+import { useAuth } from "@agdb-studio/auth/src/auth";
 import { resolveServerUrl } from "@agdb-studio/api/src/serverUrl";
 import { createLogger } from "@agdb-studio/utils/src/logger/logger";
 import type { ClusterStatus } from "@agnesoft/agdb_api/openapi";
@@ -26,6 +30,8 @@ const loggedInByServerAddress = ref<Record<string, boolean | null>>({});
 let pollInterval: ReturnType<typeof setInterval> | null = null;
 
 export const useClusterStatus = () => {
+  const { logout } = useAuth();
+
   // When the cluster reports internal hostnames (e.g. agdb0:3000) but the UI
   // connects via localhost, only comparing ports is reliable for active-node
   // detection. We therefore normalize to just the port.
@@ -144,6 +150,13 @@ export const useClusterStatus = () => {
     switchingServerAddress.value = server.address;
     try {
       const resolvedAddress = resolveServerUrl(apiUrl.value, server.address);
+      const isLoggedInOnTargetServer = isUserLoggedInOnServer(server);
+
+      if (isLoggedInOnTargetServer !== true) {
+        sessionStorage.setItem(SESSION_LOGIN_SERVER_URL, resolvedAddress);
+        await logout(undefined, false);
+      }
+
       await reconnectClient(resolvedAddress);
       await fetchStatus();
       logger.info("Switched active cluster node:", server.address);
@@ -200,4 +213,13 @@ export const useClusterStatus = () => {
     startPolling,
     stopPolling,
   };
+};
+
+// Test helper to reset module-level state
+export const resetClusterStatusState = (): void => {
+  servers.value = [];
+  isLoading.value = true;
+  lastUpdated.value = null;
+  switchingServerAddress.value = null;
+  loggedInByServerAddress.value = {};
 };

@@ -3,15 +3,12 @@ import { computed, ref } from "vue";
 import { useClusterStatus } from "../composables/clusterStatus";
 import {
   PhFillArrowClockwise,
-  PhFillCheckCircle,
   PhFillCrownSimple,
   PhFillQuestion,
   PhFillWifiHigh,
   PhFillWifiSlash,
-  PhFillXCircle,
   FaUserXmark,
   FaUserCheck,
-  FaUser,
 } from "@kalimahapps/vue-icons";
 import FadeTransition from "@agdb-studio/design/src/components/transitions/FadeTransition.vue";
 import type { ClusterStatus } from "@agnesoft/agdb_api/openapi";
@@ -48,9 +45,6 @@ const handleMouseLeave = () => {
 };
 
 const handleServerClick = async (server: ClusterStatus) => {
-  if (!server.status) {
-    return;
-  }
   await switchToServer(server);
 };
 
@@ -81,6 +75,18 @@ const serverLoginClass = (server: ClusterStatus): string => {
     return "unknown";
   }
   return isLoggedIn ? "loggedIn" : "loggedOut";
+};
+
+const isServerClickable = (server: ClusterStatus): boolean => {
+  if (
+    !server.status ||
+    switchingServerAddress.value === server.address ||
+    isServerActive(server)
+  ) {
+    return false;
+  }
+
+  return true;
 };
 
 const leaderPosition = computed(() => {
@@ -152,15 +158,11 @@ const statusText = computed(() => {
                 offline: !server.status,
                 active: isServerActive(server),
                 connecting: switchingServerAddress === server.address,
-                disabled:
-                  !server.status ||
-                  switchingServerAddress === server.address ||
-                  isServerActive(server) ||
-                  serverLoginClass(server) === 'loggedOut',
+                disabled: !isServerClickable(server),
               }"
               :title="`Server: ${server.address} \nNode status: ${serverStatusText(server)} \nLogin status: ${serverLoginText(server)}`"
-              :role="server.status ? 'button' : undefined"
-              :tabindex="server.status ? 0 : -1"
+              :role="isServerClickable(server) ? 'button' : undefined"
+              :tabindex="isServerClickable(server) ? 0 : -1"
               @click.stop="handleServerClick(server)"
               @keydown.enter.stop.prevent="handleServerClick(server)"
             >

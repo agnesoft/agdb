@@ -77,9 +77,9 @@ const logout = async (
     await client.value?.logout(cluster).catch((error) => {
       console.error("Logout failed:", error);
     });
-    accessToken.value = undefined;
   }
 
+  accessToken.value = undefined;
   removeToken();
 };
 

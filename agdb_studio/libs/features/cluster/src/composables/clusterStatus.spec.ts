@@ -257,6 +257,37 @@ describe("useClusterStatus", () => {
     expect(mockClient.cluster_status).toHaveBeenCalledTimes(3);
   });
 
+  it("should poll loginStatusEntries less often than cluster status", async () => {
+    const mockServers: ClusterStatus[] = [
+      { address: "server1:8080", status: true, leader: true },
+    ];
+
+    mockClient.cluster_status.mockResolvedValue({ data: mockServers });
+    mockServerUserStatus
+      .mockResolvedValueOnce({ data: { login: true } })
+      .mockResolvedValueOnce({ data: { login: false } });
+
+    mountComposable();
+
+    await vi.advanceTimersByTimeAsync(0);
+    await flushPromises();
+    await nextTick();
+    expect(mockClient.cluster_status).toHaveBeenCalledTimes(1);
+    expect(mockServerUserStatus).toHaveBeenCalledTimes(1);
+
+    await vi.advanceTimersByTimeAsync(15000);
+    await flushPromises();
+    await nextTick();
+    expect(mockClient.cluster_status).toHaveBeenCalledTimes(2);
+    expect(mockServerUserStatus).toHaveBeenCalledTimes(1);
+
+    await vi.advanceTimersByTimeAsync(45000);
+    await flushPromises();
+    await nextTick();
+    expect(mockClient.cluster_status).toHaveBeenCalledTimes(5);
+    expect(mockServerUserStatus).toHaveBeenCalledTimes(2);
+  });
+
   it("should update lastUpdated on successful fetch", async () => {
     const mockServers: ClusterStatus[] = [
       { address: "server1:8080", status: true, leader: true },
@@ -573,5 +604,60 @@ describe("useClusterStatus", () => {
     await vm.switchToServer(mockServers[1]!);
 
     expect(vm.switchingServerAddress).toBeNull();
+  });
+
+  it("should normalize unknown protocol addresses to default port", async () => {
+    mockApiUrl.value = "custom://node";
+    mockClient.cluster_status.mockResolvedValue({ data: [] });
+
+    const vm = mountComposable();
+    await vi.advanceTimersByTimeAsync(0);
+    await flushPromises();
+    await nextTick();
+
+    const customServer = {
+      address: "custom://peer",
+      status: true,
+      leader: false,
+    } as ClusterStatus;
+
+    expect(vm.isServerActive(customServer)).toBe(true);
+  });
+
+  it("should fallback to lowercase value when address parsing fails", async () => {
+    mockApiUrl.value = "http://server1:8080";
+    mockClient.cluster_status.mockResolvedValue({ data: [] });
+
+    const vm = mountComposable();
+    await vi.advanceTimersByTimeAsync(0);
+    await flushPromises();
+    await nextTick();
+
+    const malformedServer = {
+      address: "HTTP://[:::1",
+      status: true,
+      leader: false,
+    } as ClusterStatus;
+
+    expect(vm.isServerActive(malformedServer)).toBe(false);
+  });
+
+  it("should normalize https addresses without port to 443", async () => {
+    mockApiUrl.value = "https://secure-host";
+    mockClient.cluster_status.mockResolvedValue({ data: [] });
+
+    const vm = mountComposable();
+    await vi.advanceTimersByTimeAsync(0);
+    await flushPromises();
+    await nextTick();
+
+    const httpsServer = {
+      address: "https://peer-node",
+      status: true,
+      leader: false,
+    } as ClusterStatus;
+
+    expect(vm.isServerActive(httpsServer)).toBe(true);
+    expect(vm.activeNodeLabel).toBe(":443");
   });
 });

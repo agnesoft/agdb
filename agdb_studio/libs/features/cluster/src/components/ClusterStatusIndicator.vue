@@ -163,8 +163,15 @@ const statusText = computed(() => {
               :title="`Server: ${server.address} \nNode status: ${serverStatusText(server)} \nLogin status: ${serverLoginText(server)}`"
               :role="isServerClickable(server) ? 'button' : undefined"
               :tabindex="isServerClickable(server) ? 0 : -1"
-              @click.stop="handleServerClick(server)"
-              @keydown.enter.stop.prevent="handleServerClick(server)"
+              @click.stop="
+                isServerClickable(server) && handleServerClick(server)
+              "
+              @keydown.enter.stop.prevent="
+                isServerClickable(server) && handleServerClick(server)
+              "
+              @keydown.space.stop.prevent="
+                isServerClickable(server) && handleServerClick(server)
+              "
             >
               <span class="server-address">{{ server.address }}</span>
               <PhFillCrownSimple
@@ -287,12 +294,6 @@ const statusText = computed(() => {
   }
 }
 
-.active-node-label {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--color-text);
-  font-family: monospace;
-}
 .connected-to {
   font-size: 0.8rem;
   color: var(--color-text-muted);

@@ -345,7 +345,7 @@ describe("ClusterStatusIndicator", () => {
     expect(servers[1]?.find(".server-login")?.classes()).toContain("loggedOut");
   });
 
-  it("should show connecting status text and handle keyboard enter on server row", async () => {
+  it("should show connecting status text on server row", async () => {
     mockIsLoading.value = false;
     mockServers.value = [
       { address: "server1:8080", status: true, leader: true },
@@ -372,9 +372,6 @@ describe("ClusterStatusIndicator", () => {
     expect(servers[1]?.attributes("title")).toContain(
       "Node status: Connecting...",
     );
-
-    await servers[1]!.trigger("keydown.enter");
-    expect(mockSwitchToServer).toHaveBeenCalledWith(mockServers.value[1]);
   });
 
   it("should show active status text for active server", async () => {
@@ -429,5 +426,90 @@ describe("ClusterStatusIndicator", () => {
     expect(
       wrapper.find("[data-testid='active-server-crown-icon']").exists(),
     ).toBe(true);
+  });
+
+  it("should call switchToServer on keyboard space for clickable server", async () => {
+    mockIsLoading.value = false;
+    mockServers.value = [
+      { address: "server1:8080", status: true, leader: true },
+      { address: "server2:8080", status: true, leader: false },
+    ];
+
+    const wrapper = mount(ClusterStatusIndicator, {
+      global: {
+        stubs: {
+          CrownIcon: CrownIconStub,
+          FadeTransition: { template: "<div><slot /></div>" },
+          PhFillCrownSimple: {
+            template: '<div data-testid="crown-icon"></div>',
+          },
+        },
+      },
+    });
+
+    await wrapper.trigger("mouseenter");
+    await nextTick();
+
+    const servers = wrapper.findAll(".server-item");
+    await servers[1]!.trigger("keydown.space");
+
+    expect(mockSwitchToServer).toHaveBeenCalledWith(mockServers.value[1]);
+  });
+
+  it("should not call switchToServer for non-clickable server", async () => {
+    mockIsLoading.value = false;
+    mockServers.value = [
+      { address: "server1:8080", status: true, leader: true },
+      { address: "server2:8080", status: true, leader: false },
+    ];
+    mockSwitchingServerAddress.value = "server2:8080";
+
+    const wrapper = mount(ClusterStatusIndicator, {
+      global: {
+        stubs: {
+          CrownIcon: CrownIconStub,
+          FadeTransition: { template: "<div><slot /></div>" },
+          PhFillCrownSimple: {
+            template: '<div data-testid="crown-icon"></div>',
+          },
+        },
+      },
+    });
+
+    await wrapper.trigger("mouseenter");
+    await nextTick();
+
+    const servers = wrapper.findAll(".server-item");
+    await servers[1]!.trigger("click");
+
+    expect(mockSwitchToServer).not.toHaveBeenCalled();
+  });
+
+  it("should call switchToServer on keyboard enter for clickable server", async () => {
+    mockIsLoading.value = false;
+    mockServers.value = [
+      { address: "server1:8080", status: true, leader: true },
+      { address: "server2:8080", status: true, leader: false },
+    ];
+
+    const wrapper = mount(ClusterStatusIndicator, {
+      global: {
+        stubs: {
+          CrownIcon: CrownIconStub,
+          FadeTransition: { template: "<div><slot /></div>" },
+          PhFillCrownSimple: {
+            template: '<div data-testid="crown-icon"></div>',
+          },
+        },
+      },
+    });
+
+    await wrapper.trigger("mouseenter");
+    await nextTick();
+
+    const servers = wrapper.findAll(".server-item");
+    await servers[1]!.trigger("keydown.enter");
+
+    expect(mockSwitchToServer).toHaveBeenCalledWith(mockServers.value[1]);
   });
 });

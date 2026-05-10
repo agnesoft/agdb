@@ -20,6 +20,7 @@ export type OverallStatus = "red" | "amber" | "green" | "unknown";
 const logger = createLogger("ClusterStatus");
 
 const POLL_INTERVAL = 15000; // 15 seconds
+const LOGIN_STATUS_POLL_INTERVAL = 60000; // 60 seconds
 
 const servers = ref<ClusterStatus[]>([]);
 const isLoading = ref(true);
@@ -28,6 +29,7 @@ const switchingServerAddress = ref<string | null>(null);
 const loggedInByServerAddress = ref<Record<string, boolean | null>>({});
 
 let pollInterval: ReturnType<typeof setInterval> | null = null;
+let lastLoginStatusRefreshAt: number | null = null;
 
 export const useClusterStatus = () => {
   const { logout } = useAuth();
@@ -40,7 +42,17 @@ export const useClusterStatus = () => {
       const parsed = new URL(
         address.includes("://") ? address : `http://${address}`,
       );
-      return parsed.port || "80";
+      if (parsed.port) {
+        return parsed.port;
+      }
+      switch (parsed.protocol) {
+        case "https:":
+          return "443";
+        case "http:":
+          return "80";
+        default:
+          return "80";
+      }
     } catch {
       return address.toLowerCase();
     }
@@ -70,7 +82,9 @@ export const useClusterStatus = () => {
     return "green";
   });
 
-  const fetchStatus = async (): Promise<void> => {
+  const fetchStatus = async (
+    forceLoginStatusRefresh = false,
+  ): Promise<void> => {
     try {
       checkClient(client);
       const response = await client.value.cluster_status();
@@ -79,28 +93,46 @@ export const useClusterStatus = () => {
       const token =
         client.value.get_token() ?? localStorage.getItem(ACCESS_TOKEN) ?? "";
 
-      const loginStatusEntries = await Promise.all(
-        response.data.map(async (server) => {
-          if (!server.status) {
-            return [server.address, null] as const;
-          }
+      const shouldRefreshLoginStatus =
+        forceLoginStatusRefresh ||
+        lastLoginStatusRefreshAt === null ||
+        Date.now() - lastLoginStatusRefreshAt >= LOGIN_STATUS_POLL_INTERVAL;
 
-          try {
-            const serverClient = await AgdbApi.client(
-              resolveServerUrl(apiUrl.value, server.address),
-            );
-            if (token) {
-              serverClient.set_token(token);
-            }
-            const status = await serverClient.user_status();
-            return [server.address, Boolean(status.data.login)] as const;
-          } catch {
-            return [server.address, false] as const;
-          }
-        }),
-      );
+      const loginStatusEntries = shouldRefreshLoginStatus
+        ? await Promise.all(
+            response.data.map(async (server) => {
+              if (!server.status) {
+                return [server.address, null] as const;
+              }
+
+              try {
+                const serverClient = await AgdbApi.client(
+                  resolveServerUrl(apiUrl.value, server.address),
+                );
+                if (token) {
+                  serverClient.set_token(token);
+                }
+                const status = await serverClient.user_status();
+                return [server.address, Boolean(status.data.login)] as const;
+              } catch {
+                return [server.address, false] as const;
+              }
+            }),
+          )
+        : response.data.map(
+            (server) =>
+              [
+                server.address,
+                server.status
+                  ? (loggedInByServerAddress.value[server.address] ?? null)
+                  : null,
+              ] as const,
+          );
 
       loggedInByServerAddress.value = Object.fromEntries(loginStatusEntries);
+      if (shouldRefreshLoginStatus) {
+        lastLoginStatusRefreshAt = Date.now();
+      }
       lastUpdated.value = new Date();
       logger.debug("Cluster status fetched:", servers.value.length, "servers");
     } catch (error) {
@@ -136,14 +168,19 @@ export const useClusterStatus = () => {
       const url = new URL(
         apiUrl.value.includes("://") ? apiUrl.value : `http://${apiUrl.value}`,
       );
-      return `:${url.port || "80"}`;
+      const defaultPort = url.protocol === "https:" ? "443" : "80";
+      return `:${url.port || defaultPort}`;
     } catch {
       return apiUrl.value;
     }
   });
 
   const switchToServer = async (server: ClusterStatus): Promise<void> => {
-    if (!server.status || isServerActive(server)) {
+    if (
+      !server.status ||
+      isServerActive(server) ||
+      switchingServerAddress.value !== null
+    ) {
       return;
     }
 
@@ -158,7 +195,7 @@ export const useClusterStatus = () => {
       }
 
       await reconnectClient(resolvedAddress);
-      await fetchStatus();
+      await fetchStatus(true);
       logger.info("Switched active cluster node:", server.address);
     } catch (error) {
       logger.error(
@@ -222,4 +259,5 @@ export const resetClusterStatusState = (): void => {
   lastUpdated.value = null;
   switchingServerAddress.value = null;
   loggedInByServerAddress.value = {};
+  lastLoginStatusRefreshAt = null;
 };

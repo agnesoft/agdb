@@ -1,10 +1,12 @@
 import { ref, computed, onMounted, onUnmounted, type Ref } from "vue";
+import { AgdbApi } from "@agnesoft/agdb_api";
 import {
   apiUrl,
   client,
   checkClient,
   reconnectClient,
 } from "@agdb-studio/api/src/api";
+import { ACCESS_TOKEN } from "@agdb-studio/api/src/constants";
 import { resolveServerUrl } from "@agdb-studio/api/src/serverUrl";
 import { createLogger } from "@agdb-studio/utils/src/logger/logger";
 import type { ClusterStatus } from "@agnesoft/agdb_api/openapi";
@@ -19,6 +21,7 @@ const servers = ref<ClusterStatus[]>([]);
 const isLoading = ref(true);
 const lastUpdated = ref<Date | null>(null);
 const switchingServerAddress = ref<string | null>(null);
+const loggedInByServerAddress = ref<Record<string, boolean | null>>({});
 
 let pollInterval: ReturnType<typeof setInterval> | null = null;
 
@@ -66,6 +69,32 @@ export const useClusterStatus = () => {
       checkClient(client);
       const response = await client.value.cluster_status();
       servers.value = response.data;
+
+      const token =
+        client.value.get_token() ?? localStorage.getItem(ACCESS_TOKEN) ?? "";
+
+      const loginStatusEntries = await Promise.all(
+        response.data.map(async (server) => {
+          if (!server.status) {
+            return [server.address, null] as const;
+          }
+
+          try {
+            const serverClient = await AgdbApi.client(
+              resolveServerUrl(apiUrl.value, server.address),
+            );
+            if (token) {
+              serverClient.set_token(token);
+            }
+            const status = await serverClient.user_status();
+            return [server.address, Boolean(status.data.login)] as const;
+          } catch {
+            return [server.address, false] as const;
+          }
+        }),
+      );
+
+      loggedInByServerAddress.value = Object.fromEntries(loginStatusEntries);
       lastUpdated.value = new Date();
       logger.debug("Cluster status fetched:", servers.value.length, "servers");
     } catch (error) {
@@ -74,6 +103,7 @@ export const useClusterStatus = () => {
         error instanceof Error ? error.message : String(error),
       );
       servers.value = [];
+      loggedInByServerAddress.value = {};
     } finally {
       isLoading.value = false;
     }
@@ -90,6 +120,10 @@ export const useClusterStatus = () => {
   const activeServer = computed((): ClusterStatus | undefined => {
     return servers.value.find(isServerActive);
   });
+
+  const isUserLoggedInOnServer = (server: ClusterStatus): boolean | null => {
+    return loggedInByServerAddress.value[server.address] ?? null;
+  };
 
   const activeNodeLabel = computed((): string => {
     try {
@@ -154,9 +188,13 @@ export const useClusterStatus = () => {
     isLoading: isLoading as Ref<boolean>,
     lastUpdated: lastUpdated as Ref<Date | null>,
     switchingServerAddress: switchingServerAddress as Ref<string | null>,
+    loggedInByServerAddress: loggedInByServerAddress as Ref<
+      Record<string, boolean | null>
+    >,
     activeServer,
     activeNodeLabel,
     isServerActive,
+    isUserLoggedInOnServer,
     switchToServer,
     fetchStatus,
     startPolling,

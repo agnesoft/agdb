@@ -11,12 +11,25 @@ const mockClient = vi.hoisted(() => ({
 const mockCheckClient = vi.hoisted(() => vi.fn());
 const mockReconnectClient = vi.hoisted(() => vi.fn());
 const mockApiUrl = vi.hoisted(() => ({ value: "http://server1:8080" }));
+const mockServerUserStatus = vi.hoisted(() => vi.fn());
+const mockServerSetToken = vi.hoisted(() => vi.fn());
+const mockAgdbClient = vi.hoisted(() => vi.fn());
 
 vi.mock("@agdb-studio/api/src/api", () => ({
   client: { value: mockClient },
   checkClient: mockCheckClient,
   reconnectClient: mockReconnectClient,
   apiUrl: mockApiUrl,
+}));
+
+vi.mock("@agdb-studio/api/src/constants", () => ({
+  ACCESS_TOKEN: "agdb_token",
+}));
+
+vi.mock("@agnesoft/agdb_api", () => ({
+  AgdbApi: {
+    client: mockAgdbClient,
+  },
 }));
 
 vi.mock("@agdb-studio/utils/src/logger/logger", () => ({
@@ -39,6 +52,11 @@ describe("useClusterStatus", () => {
     vi.useFakeTimers();
     mockReconnectClient.mockResolvedValue(undefined);
     mockApiUrl.value = "http://server1:8080";
+    mockServerUserStatus.mockResolvedValue({ data: { login: true } });
+    mockAgdbClient.mockResolvedValue({
+      user_status: mockServerUserStatus,
+      set_token: mockServerSetToken,
+    });
   });
 
   afterEach(() => {
@@ -330,6 +348,25 @@ describe("useClusterStatus", () => {
 
     // Host kept as server1, port taken from agdb1:9090
     expect(mockReconnectClient).toHaveBeenCalledWith("http://server1:9090");
+  });
+
+  it("should track per-server logged-in status", async () => {
+    const mockServers: ClusterStatus[] = [
+      { address: "server1:8080", status: true, leader: true },
+      { address: "server2:8080", status: true, leader: false },
+    ];
+    mockServerUserStatus
+      .mockResolvedValueOnce({ data: { login: true } })
+      .mockResolvedValueOnce({ data: { login: false } });
+    mockClient.cluster_status.mockResolvedValue({ data: mockServers });
+
+    const vm = mountComposable();
+    await vi.advanceTimersByTimeAsync(0);
+    await flushPromises();
+    await nextTick();
+
+    expect(vm.isUserLoggedInOnServer(mockServers[0]!)).toBe(true);
+    expect(vm.isUserLoggedInOnServer(mockServers[1]!)).toBe(false);
   });
 
   it("should not switch to offline server", async () => {

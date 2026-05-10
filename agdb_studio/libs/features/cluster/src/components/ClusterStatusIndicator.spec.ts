@@ -11,6 +11,9 @@ const mockFetchStatus = vi.fn();
 const mockSwitchingServerAddress = ref<string | null>(null);
 const mockSwitchToServer = vi.fn();
 const mockIsServerActive = vi.fn(() => false);
+const mockIsUserLoggedInOnServer = vi.fn<
+  (server: ClusterStatus) => boolean | null
+>(() => null);
 const mockActiveServer = ref<ClusterStatus | undefined>(undefined);
 const mockActiveNodeLabel = ref(":3000");
 
@@ -23,6 +26,7 @@ vi.mock("../composables/clusterStatus", () => ({
     switchingServerAddress: mockSwitchingServerAddress,
     switchToServer: mockSwitchToServer,
     isServerActive: mockIsServerActive,
+    isUserLoggedInOnServer: mockIsUserLoggedInOnServer,
     activeServer: mockActiveServer,
     activeNodeLabel: mockActiveNodeLabel,
   }),
@@ -41,6 +45,7 @@ describe("ClusterStatusIndicator", () => {
     mockIsLoading.value = false;
     mockSwitchingServerAddress.value = null;
     mockIsServerActive.mockReturnValue(false);
+    mockIsUserLoggedInOnServer.mockReturnValue(null);
     mockActiveServer.value = undefined;
     mockActiveNodeLabel.value = ":3000";
   });
@@ -318,5 +323,32 @@ describe("ClusterStatusIndicator", () => {
       status: true,
       leader: false,
     });
+  });
+
+  it("should display logged in state for server", async () => {
+    mockIsLoading.value = false;
+    mockIsUserLoggedInOnServer.mockImplementation(
+      (server: ClusterStatus) => server.address === "server1:8080",
+    );
+    mockServers.value = [
+      { address: "server1:8080", status: true, leader: false },
+      { address: "server2:8080", status: true, leader: false },
+    ];
+
+    const wrapper = mount(ClusterStatusIndicator, {
+      global: {
+        stubs: {
+          CrownIcon: CrownIconStub,
+          FadeTransition: { template: "<div><slot /></div>" },
+        },
+      },
+    });
+
+    await wrapper.trigger("mouseenter");
+    await nextTick();
+
+    const servers = wrapper.findAll(".server-item");
+    expect(servers[0]?.text()).toContain("Logged in");
+    expect(servers[1]?.text()).toContain("Logged out");
   });
 });

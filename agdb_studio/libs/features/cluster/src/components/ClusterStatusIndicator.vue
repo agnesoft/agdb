@@ -1,7 +1,12 @@
 <script lang="ts" setup>
 import { computed, ref } from "vue";
 import { useClusterStatus } from "../composables/clusterStatus";
-import { PhFillCrownSimple } from "@kalimahapps/vue-icons";
+import {
+  PhFillCheckCircle,
+  PhFillCrownSimple,
+  PhFillQuestion,
+  PhFillXCircle,
+} from "@kalimahapps/vue-icons";
 import FadeTransition from "@agdb-studio/design/src/components/transitions/FadeTransition.vue";
 import type { ClusterStatus } from "@agnesoft/agdb_api/openapi";
 
@@ -14,6 +19,7 @@ const {
   activeServer,
   activeNodeLabel,
   isServerActive,
+  isUserLoggedInOnServer,
   switchToServer,
 } = useClusterStatus();
 
@@ -36,6 +42,9 @@ const handleMouseLeave = () => {
 };
 
 const handleServerClick = async (server: ClusterStatus) => {
+  if (!server.status) {
+    return;
+  }
   await switchToServer(server);
 };
 
@@ -50,6 +59,22 @@ const serverStatusText = (server: ClusterStatus): string => {
     return "Active";
   }
   return "Online";
+};
+
+const serverLoginText = (server: ClusterStatus): string => {
+  const isLoggedIn = isUserLoggedInOnServer(server);
+  if (isLoggedIn === null) {
+    return "Unknown";
+  }
+  return isLoggedIn ? "Logged in" : "Logged out";
+};
+
+const serverLoginClass = (server: ClusterStatus): string => {
+  const isLoggedIn = isUserLoggedInOnServer(server);
+  if (isLoggedIn === null) {
+    return "unknown";
+  }
+  return isLoggedIn ? "loggedIn" : "loggedOut";
 };
 
 const leaderPosition = computed(() => {
@@ -120,9 +145,15 @@ const statusText = computed(() => {
                 offline: !server.status,
                 active: isServerActive(server),
                 connecting: switchingServerAddress === server.address,
+                disabled:
+                  !server.status ||
+                  switchingServerAddress === server.address ||
+                  isServerActive(server) ||
+                  serverLoginClass(server) === 'loggedOut',
               }"
-              role="button"
-              tabindex="0"
+              :title="`Server: ${server.address} | Node status: ${serverStatusText(server)} | Login status: ${serverLoginText(server)}`"
+              :role="server.status ? 'button' : undefined"
+              :tabindex="server.status ? 0 : -1"
               @click.stop="handleServerClick(server)"
               @keydown.enter.stop.prevent="handleServerClick(server)"
             >
@@ -135,6 +166,23 @@ const statusText = computed(() => {
               />
               <span class="server-status">
                 {{ serverStatusText(server) }}
+              </span>
+              <span
+                class="server-login"
+                :class="serverLoginClass(server)"
+                :title="`Login status: ${serverLoginText(server)}`"
+              >
+                <PhFillCheckCircle
+                  v-if="serverLoginClass(server) === 'loggedIn'"
+                  class="login-icon"
+                  aria-hidden="true"
+                />
+                <PhFillXCircle
+                  v-else-if="serverLoginClass(server) === 'loggedOut'"
+                  class="login-icon"
+                  aria-hidden="true"
+                />
+                <PhFillQuestion v-else class="login-icon" aria-hidden="true" />
               </span>
             </div>
           </div>
@@ -248,7 +296,22 @@ const statusText = computed(() => {
   background: var(--color-background-soft);
   border-radius: 4px;
   font-size: 0.9rem;
-  cursor: pointer;
+  transition:
+    background-color 0.2s ease,
+    transform 0.2s ease;
+
+  &:not(.disabled) {
+    cursor: pointer;
+
+    &:hover {
+      background: color-mix(
+        in srgb,
+        var(--color-background-soft) 80%,
+        var(--color-text) 20%
+      );
+      transform: translateY(-1px);
+    }
+  }
 
   &.active {
     outline: 1px solid var(--green);
@@ -275,5 +338,42 @@ const statusText = computed(() => {
 .server-status {
   color: var(--green-1);
   font-size: 0.85rem;
+}
+
+.server-login {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--color-text-muted);
+  font-size: 0.8rem;
+
+  .login-icon {
+    font-size: 0.9rem;
+    color: var(--color-border);
+  }
+
+  &.loggedIn {
+    color: var(--green-1);
+
+    .login-icon {
+      color: var(--green-1);
+    }
+  }
+
+  &.loggedOut {
+    color: var(--red-2);
+
+    .login-icon {
+      color: var(--red-2);
+    }
+  }
+
+  &.unknown {
+    color: var(--color-text-muted);
+
+    .login-icon {
+      color: var(--color-border);
+    }
+  }
 }
 </style>

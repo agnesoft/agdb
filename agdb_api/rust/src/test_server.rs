@@ -96,6 +96,8 @@ pub fn test_defs() -> Vec<agdb::type_def::Type> {
         __next_user_name_type_def(),
         __next_db_name_type_def(),
         __wait_for_ready_type_def(),
+        TestError::type_def(),
+        PathBuf::type_def(),
         TestServer::type_def(),
         TestServerImpl::type_def(),
     ]

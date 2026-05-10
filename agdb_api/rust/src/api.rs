@@ -95,6 +95,7 @@ use agdb::type_def::Type;
 use agdb::type_def::TypeDefinition;
 
 use crate::AdminStatus;
+use crate::AgdbApi;
 use crate::AgdbApiClientDef;
 use crate::AgdbApiError;
 use crate::ChangePassword;
@@ -107,6 +108,7 @@ use crate::DbUserRole;
 use crate::HttpClientDef;
 use crate::LogLevelFilter;
 use crate::QueryAudit;
+use crate::ReqwestClient;
 use crate::ServerDatabase;
 use crate::UserCredentials;
 use crate::UserLogin;
@@ -219,6 +221,7 @@ impl Api {
             AgdbApiClientDef::type_def(),
             // agdb_api types
             AgdbApiError::type_def(),
+            AgdbApi::<ReqwestClient>::type_def(),
             AdminStatus::type_def(),
             ChangePassword::type_def(),
             ClusterStatus::type_def(),
@@ -376,6 +379,15 @@ mod tests {
         roots
     }
 
+    fn type_name(ty: &Type) -> Option<&'static str> {
+        match ty {
+            Type::Struct(s) => Some(s.name),
+            Type::Enum(e) => Some(e.name),
+            Type::Trait(t) => Some(t.name),
+            _ => None,
+        }
+    }
+
     #[test]
     fn all_fn_ptrs_resolvable() {
         let roots = roots();
@@ -426,15 +438,6 @@ mod tests {
         // agdb reflection meta-traits (infrastructure, not public API types)
         "TypeDefinition",
     ];
-
-    fn type_name(ty: &Type) -> Option<&'static str> {
-        match ty {
-            Type::Struct(s) => Some(s.name),
-            Type::Enum(e) => Some(e.name),
-            Type::Trait(t) => Some(t.name),
-            _ => None,
-        }
-    }
 
     #[test]
     fn all_named_types_in_catalog() {

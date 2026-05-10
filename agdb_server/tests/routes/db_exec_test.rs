@@ -1,773 +1,97 @@
-use agdb::DbElement;
-use agdb::DbId;
-use agdb::QueryBuilder;
-use agdb::QueryResult;
-use agdb_api::DbKind;
-use agdb_api::DbUserRole;
-use agdb_api::test_server::ADMIN;
-use agdb_api::test_server::TestServer;
-use agdb_api::test_server::next_db_name;
-use agdb_api::test_server::next_user_name;
+use agdb_api::test_server::test_error::TestError;
 
 #[tokio::test]
-async fn read_write() -> anyhow::Result<()> {
-    let mut server = TestServer::new().await?;
-    let owner = &next_user_name();
-    let db = &next_db_name();
-    server.api.user_login(ADMIN, ADMIN).await?;
-    server.api.admin_user_add(owner, owner).await?;
-    server.api.user_login(owner, owner).await?;
-    server.api.db_add(owner, db, DbKind::Mapped).await?;
-    let queries = &[
-        QueryBuilder::insert()
-            .nodes()
-            .aliases("root")
-            .values([[("key", 1.1).into()]])
-            .query()
-            .into(),
-        QueryBuilder::select().ids("root").query().into(),
-    ];
-    let (status, results) = server.api.db_exec_mut(owner, db, queries).await?;
-    assert_eq!(status, 200);
-    let expected = vec![
-        QueryResult {
-            result: 1,
-            elements: vec![DbElement {
-                id: DbId(1),
-                from: None,
-                to: None,
-                values: vec![],
-            }],
-        },
-        QueryResult {
-            result: 1,
-            elements: vec![DbElement {
-                id: DbId(1),
-                from: None,
-                to: None,
-                values: vec![("key", 1.1).into()],
-            }],
-        },
-    ];
-    assert_eq!(results, expected);
-    Ok(())
+async fn read_write() -> Result<(), TestError> {
+    agdb_api::tests::routes::db_exec_test::read_write().await
 }
 
 #[tokio::test]
-async fn read_only() -> anyhow::Result<()> {
-    let mut server = TestServer::new().await?;
-    let owner = &next_user_name();
-    let db = &next_db_name();
-    server.api.user_login(ADMIN, ADMIN).await?;
-    server.api.admin_user_add(owner, owner).await?;
-    server.api.user_login(owner, owner).await?;
-    server.api.db_add(owner, db, DbKind::Mapped).await?;
-    let queries = &[QueryBuilder::insert()
-        .nodes()
-        .aliases("root")
-        .values([[("key", 1.1).into()]])
-        .query()
-        .into()];
-    let (status, _) = server.api.db_exec_mut(owner, db, queries).await?;
-    assert_eq!(status, 200);
-    let queries = &[QueryBuilder::select().ids("root").query().into()];
-    let (status, results) = server.api.db_exec(owner, db, queries).await?;
-    assert_eq!(status, 200);
-    let expected = vec![QueryResult {
-        result: 1,
-        elements: vec![DbElement {
-            id: DbId(1),
-            from: None,
-            to: None,
-            values: vec![("key", 1.1).into()],
-        }],
-    }];
-    assert_eq!(results, expected);
-    Ok(())
+async fn read_only() -> Result<(), TestError> {
+    agdb_api::tests::routes::db_exec_test::read_only().await
 }
 
 #[tokio::test]
-async fn read_queries() -> anyhow::Result<()> {
-    let mut server = TestServer::new().await?;
-    let owner = &next_user_name();
-    let db = &next_db_name();
-    server.api.user_login(ADMIN, ADMIN).await?;
-    server.api.admin_user_add(owner, owner).await?;
-    server.api.user_login(owner, owner).await?;
-    server.api.db_add(owner, db, DbKind::Mapped).await?;
-    let queries = &[QueryBuilder::insert()
-        .nodes()
-        .aliases("node1")
-        .values([[("key", "value").into()]])
-        .query()
-        .into()];
-    server.api.db_exec_mut(owner, db, queries).await?;
-    let queries = &[
-        QueryBuilder::search().from(1).query().into(),
-        QueryBuilder::select().ids(1).query().into(),
-        QueryBuilder::select().aliases().ids(1).query().into(),
-        QueryBuilder::select().aliases().query().into(),
-        QueryBuilder::select().edge_count().ids(1).query().into(),
-        QueryBuilder::select()
-            .edge_count_from()
-            .ids(1)
-            .query()
-            .into(),
-        QueryBuilder::select().edge_count_to().ids(1).query().into(),
-        QueryBuilder::select().indexes().query().into(),
-        QueryBuilder::select().keys().ids(1).query().into(),
-        QueryBuilder::select().key_count().ids(1).query().into(),
-        QueryBuilder::select().node_count().query().into(),
-        QueryBuilder::select().values("key").ids(1).query().into(),
-    ];
-    let (status, results) = server.api.db_exec(owner, db, queries).await?;
-    assert_eq!(status, 200);
-    assert_eq!(results.len(), 12);
-    Ok(())
+async fn read_queries() -> Result<(), TestError> {
+    agdb_api::tests::routes::db_exec_test::read_queries().await
 }
 
 #[tokio::test]
-async fn write_queries() -> anyhow::Result<()> {
-    let mut server = TestServer::new().await?;
-    let owner = &next_user_name();
-    let db = &next_db_name();
-    server.api.user_login(ADMIN, ADMIN).await?;
-    server.api.admin_user_add(owner, owner).await?;
-    server.api.user_login(owner, owner).await?;
-    server.api.db_add(owner, db, DbKind::Mapped).await?;
-    let queries = &[
-        QueryBuilder::insert().nodes().count(2).query().into(),
-        QueryBuilder::insert()
-            .aliases(["node1", "node2"])
-            .ids([1, 2])
-            .query()
-            .into(),
-        QueryBuilder::insert()
-            .edges()
-            .from("node1")
-            .to("node2")
-            .query()
-            .into(),
-        QueryBuilder::insert()
-            .values([[("key", 1.1).into()]])
-            .ids("node1")
-            .query()
-            .into(),
-        QueryBuilder::insert().index("key").query().into(),
-        QueryBuilder::search().from(1).query().into(),
-        QueryBuilder::select().ids(1).query().into(),
-        QueryBuilder::select().aliases().ids(1).query().into(),
-        QueryBuilder::select().aliases().query().into(),
-        QueryBuilder::select().edge_count().ids(1).query().into(),
-        QueryBuilder::select()
-            .edge_count_from()
-            .ids(1)
-            .query()
-            .into(),
-        QueryBuilder::select().edge_count_to().ids(1).query().into(),
-        QueryBuilder::select().indexes().query().into(),
-        QueryBuilder::select().keys().ids(1).query().into(),
-        QueryBuilder::select().key_count().ids(1).query().into(),
-        QueryBuilder::select().node_count().query().into(),
-        QueryBuilder::select().values("key").ids(1).query().into(),
-        QueryBuilder::remove().aliases("node2").query().into(),
-        QueryBuilder::remove().index("key").query().into(),
-        QueryBuilder::remove().values("key").ids(1).query().into(),
-        QueryBuilder::remove().ids("node1").query().into(),
-    ];
-    let (status, results) = server.api.db_exec_mut(owner, db, queries).await?;
-    assert_eq!(status, 200);
-    assert_eq!(results.len(), 21);
-    Ok(())
+async fn write_queries() -> Result<(), TestError> {
+    agdb_api::tests::routes::db_exec_test::write_queries().await
 }
 
 #[tokio::test]
-async fn use_result_of_previous_query() -> anyhow::Result<()> {
-    let mut server = TestServer::new().await?;
-    let owner = &next_user_name();
-    let db = &next_db_name();
-    server.api.user_login(ADMIN, ADMIN).await?;
-    server.api.admin_user_add(owner, owner).await?;
-    server.api.user_login(owner, owner).await?;
-    server.api.db_add(owner, db, DbKind::Mapped).await?;
-    let queries = &[
-        QueryBuilder::insert()
-            .nodes()
-            .aliases("users")
-            .query()
-            .into(),
-        QueryBuilder::insert()
-            .nodes()
-            .values([[("key", 1.1).into()], [("key", 2.2).into()]])
-            .query()
-            .into(),
-        QueryBuilder::insert()
-            .edges()
-            .from("users")
-            .to(":1")
-            .query()
-            .into(),
-        QueryBuilder::select()
-            .ids(
-                QueryBuilder::search()
-                    .from("users")
-                    .where_()
-                    .keys("key")
-                    .query(),
-            )
-            .query()
-            .into(),
-    ];
-    let (status, results) = server.api.db_exec_mut(owner, db, queries).await?;
-    assert_eq!(status, 200);
-    assert_eq!(
-        results[3],
-        QueryResult {
-            result: 2,
-            elements: vec![
-                DbElement {
-                    id: DbId(3),
-                    from: None,
-                    to: None,
-                    values: vec![("key", 2.2).into()]
-                },
-                DbElement {
-                    id: DbId(2),
-                    from: None,
-                    to: None,
-                    values: vec![("key", 1.1).into()]
-                }
-            ]
-        }
-    );
-
-    Ok(())
+async fn use_result_of_previous_query() -> Result<(), TestError> {
+    agdb_api::tests::routes::db_exec_test::use_result_of_previous_query().await
 }
 
 #[tokio::test]
-async fn use_result_in_subquery() -> anyhow::Result<()> {
-    let mut server = TestServer::new().await?;
-    let owner = &next_user_name();
-    let db = &next_db_name();
-    server.api.user_login(ADMIN, ADMIN).await?;
-    server.api.admin_user_add(owner, owner).await?;
-    server.api.user_login(owner, owner).await?;
-    server.api.db_add(owner, db, DbKind::Mapped).await?;
-    let queries = &[
-        QueryBuilder::insert()
-            .nodes()
-            .aliases("users")
-            .query()
-            .into(),
-        QueryBuilder::insert()
-            .nodes()
-            .values([[("key", 1.1).into()], [("key", 2.2).into()]])
-            .query()
-            .into(),
-        QueryBuilder::insert()
-            .edges()
-            .from("users")
-            .to(":1")
-            .query()
-            .into(),
-        QueryBuilder::select()
-            .ids(
-                QueryBuilder::search()
-                    .from(":0")
-                    .where_()
-                    .keys("key")
-                    .query(),
-            )
-            .query()
-            .into(),
-    ];
-    let (status, results) = server.api.db_exec_mut(owner, db, queries).await?;
-    assert_eq!(status, 200);
-    assert_eq!(
-        results[3],
-        QueryResult {
-            result: 2,
-            elements: vec![
-                DbElement {
-                    id: DbId(3),
-                    from: None,
-                    to: None,
-                    values: vec![("key", 2.2).into()]
-                },
-                DbElement {
-                    id: DbId(2),
-                    from: None,
-                    to: None,
-                    values: vec![("key", 1.1).into()]
-                }
-            ]
-        }
-    );
-
-    Ok(())
+async fn use_result_in_subquery() -> Result<(), TestError> {
+    agdb_api::tests::routes::db_exec_test::use_result_in_subquery().await
 }
 
 #[tokio::test]
-async fn use_result_in_condition() -> anyhow::Result<()> {
-    let mut server = TestServer::new().await?;
-    let owner = &next_user_name();
-    let db = &next_db_name();
-    server.api.user_login(ADMIN, ADMIN).await?;
-    server.api.admin_user_add(owner, owner).await?;
-    server.api.user_login(owner, owner).await?;
-    server.api.db_add(owner, db, DbKind::Mapped).await?;
-    let queries = &[
-        QueryBuilder::insert()
-            .nodes()
-            .aliases("users")
-            .query()
-            .into(),
-        QueryBuilder::search()
-            .from("users")
-            .where_()
-            .ids(":0")
-            .query()
-            .into(),
-    ];
-    let (status, results) = server.api.db_exec_mut(owner, db, queries).await?;
-    assert_eq!(status, 200);
-    assert_eq!(
-        results[1],
-        QueryResult {
-            result: 1,
-            elements: vec![DbElement {
-                id: DbId(1),
-                from: None,
-                to: None,
-                values: vec![]
-            },]
-        }
-    );
-
-    Ok(())
+async fn use_result_in_condition() -> Result<(), TestError> {
+    agdb_api::tests::routes::db_exec_test::use_result_in_condition().await
 }
 
 #[tokio::test]
-async fn use_result_in_search() -> anyhow::Result<()> {
-    let mut server = TestServer::new().await?;
-    let owner = &next_user_name();
-    let db = &next_db_name();
-    server.api.user_login(ADMIN, ADMIN).await?;
-    server.api.admin_user_add(owner, owner).await?;
-    server.api.user_login(owner, owner).await?;
-    server.api.db_add(owner, db, DbKind::Mapped).await?;
-    let queries = &[
-        QueryBuilder::insert().nodes().count(1).query().into(),
-        QueryBuilder::insert().nodes().count(1).query().into(),
-        QueryBuilder::insert()
-            .edges()
-            .from(":0")
-            .to(":1")
-            .query()
-            .into(),
-        QueryBuilder::search().from(":0").to(":1").query().into(),
-    ];
-    let (status, results) = server.api.db_exec_mut(owner, db, queries).await?;
-    assert_eq!(status, 200);
-    assert_eq!(
-        results[3],
-        QueryResult {
-            result: 3,
-            elements: vec![
-                DbElement {
-                    id: DbId(1),
-                    from: None,
-                    to: None,
-                    values: vec![]
-                },
-                DbElement {
-                    id: DbId(-3),
-                    from: Some(DbId(1)),
-                    to: Some(DbId(2)),
-                    values: vec![]
-                },
-                DbElement {
-                    id: DbId(2),
-                    from: None,
-                    to: None,
-                    values: vec![]
-                }
-            ]
-        }
-    );
-    Ok(())
+async fn use_result_in_search() -> Result<(), TestError> {
+    agdb_api::tests::routes::db_exec_test::use_result_in_search().await
 }
 
 #[tokio::test]
-async fn use_result_in_insert_ids() -> anyhow::Result<()> {
-    let mut server = TestServer::new().await?;
-    let owner = &next_user_name();
-    let db = &next_db_name();
-    server.api.user_login(ADMIN, ADMIN).await?;
-    server.api.admin_user_add(owner, owner).await?;
-    server.api.user_login(owner, owner).await?;
-    server.api.db_add(owner, db, DbKind::Mapped).await?;
-    let queries = &[
-        QueryBuilder::insert()
-            .nodes()
-            .aliases("root")
-            .query()
-            .into(),
-        QueryBuilder::insert()
-            .nodes()
-            .ids(
-                QueryBuilder::search()
-                    .from("root")
-                    .where_()
-                    .node()
-                    .and()
-                    .neighbor()
-                    .query(),
-            )
-            .count(3)
-            .query()
-            .into(),
-        QueryBuilder::insert()
-            .edges()
-            .ids(
-                QueryBuilder::search()
-                    .from("root")
-                    .to(":1")
-                    .where_()
-                    .edge()
-                    .query(),
-            )
-            .from(":0")
-            .to(":1")
-            .query()
-            .into(),
-        QueryBuilder::search().from(":0").to(":1").query().into(),
-    ];
-    let (status, results) = server.api.db_exec_mut(owner, db, queries).await?;
-    assert_eq!(status, 200);
-    assert_eq!(
-        results[3],
-        QueryResult {
-            result: 3,
-            elements: vec![
-                DbElement {
-                    id: DbId(1),
-                    from: None,
-                    to: None,
-                    values: vec![]
-                },
-                DbElement {
-                    id: DbId(-5),
-                    from: Some(DbId(1)),
-                    to: Some(DbId(2)),
-                    values: vec![]
-                },
-                DbElement {
-                    id: DbId(2),
-                    from: None,
-                    to: None,
-                    values: vec![]
-                }
-            ]
-        }
-    );
-    Ok(())
+async fn use_result_in_insert_ids() -> Result<(), TestError> {
+    agdb_api::tests::routes::db_exec_test::use_result_in_insert_ids().await
 }
 
 #[tokio::test]
-async fn reentrant_queries() -> anyhow::Result<()> {
-    let mut server = TestServer::new().await?;
-    let owner = &next_user_name();
-    let db = &next_db_name();
-    server.api.user_login(ADMIN, ADMIN).await?;
-    server.api.admin_user_add(owner, owner).await?;
-    server.api.user_login(owner, owner).await?;
-    server.api.db_add(owner, db, DbKind::Mapped).await?;
-    let queries = &[
-        QueryBuilder::insert()
-            .nodes()
-            .aliases("root")
-            .query()
-            .into(),
-        QueryBuilder::insert()
-            .nodes()
-            .ids(
-                QueryBuilder::search()
-                    .from(":0")
-                    .where_()
-                    .node()
-                    .and()
-                    .neighbor()
-                    .query(),
-            )
-            .count(3)
-            .query()
-            .into(),
-        QueryBuilder::search()
-            .from(":0")
-            .to(":1")
-            .where_()
-            .edge()
-            .query()
-            .into(),
-        QueryBuilder::insert()
-            .edges()
-            .ids(":2")
-            .from(":0")
-            .to(":1")
-            .query()
-            .into(),
-        QueryBuilder::search().from(":0").to(":1").query().into(),
-        QueryBuilder::search().from(":0").to(":1").query().into(),
-    ];
-    let (status, results) = server.api.db_exec_mut(owner, db, queries).await?;
-    assert_eq!(status, 200);
-    assert_eq!(
-        results[4],
-        QueryResult {
-            result: 3,
-            elements: vec![
-                DbElement {
-                    id: DbId(1),
-                    from: None,
-                    to: None,
-                    values: vec![]
-                },
-                DbElement {
-                    id: DbId(-5),
-                    from: Some(DbId(1)),
-                    to: Some(DbId(2)),
-                    values: vec![]
-                },
-                DbElement {
-                    id: DbId(2),
-                    from: None,
-                    to: None,
-                    values: vec![]
-                }
-            ]
-        }
-    );
-    let (status, results) = server.api.db_exec_mut(owner, db, queries).await?;
-    assert_eq!(status, 200);
-    assert_eq!(
-        results[4],
-        QueryResult {
-            result: 3,
-            elements: vec![
-                DbElement {
-                    id: DbId(1),
-                    from: None,
-                    to: None,
-                    values: vec![]
-                },
-                DbElement {
-                    id: DbId(-7),
-                    from: Some(DbId(1)),
-                    to: Some(DbId(4)),
-                    values: vec![]
-                },
-                DbElement {
-                    id: DbId(4),
-                    from: None,
-                    to: None,
-                    values: vec![]
-                }
-            ]
-        }
-    );
-    Ok(())
+async fn reentrant_queries() -> Result<(), TestError> {
+    agdb_api::tests::routes::db_exec_test::reentrant_queries().await
 }
 
 #[tokio::test]
-async fn use_result_in_search_bad_query() -> anyhow::Result<()> {
-    let mut server = TestServer::new().await?;
-    let owner = &next_user_name();
-    let db = &next_db_name();
-    server.api.user_login(ADMIN, ADMIN).await?;
-    server.api.admin_user_add(owner, owner).await?;
-    server.api.user_login(owner, owner).await?;
-    server.api.db_add(owner, db, DbKind::Mapped).await?;
-    let queries = &[QueryBuilder::search().from(":bad").query().into()];
-    let error = server.api.db_exec(owner, db, queries).await.unwrap_err();
-    assert_eq!(error.status, 470);
-    assert_eq!(error.description, "Alias ':bad' not found");
-    Ok(())
+async fn use_result_in_search_bad_query() -> Result<(), TestError> {
+    agdb_api::tests::routes::db_exec_test::use_result_in_search_bad_query().await
 }
 
 #[tokio::test]
-async fn use_result_in_search_empty_result() -> anyhow::Result<()> {
-    let mut server = TestServer::new().await?;
-    let owner = &next_user_name();
-    let db = &next_db_name();
-    server.api.user_login(ADMIN, ADMIN).await?;
-    server.api.admin_user_add(owner, owner).await?;
-    server.api.user_login(owner, owner).await?;
-    server.api.db_add(owner, db, DbKind::Mapped).await?;
-    let queries = &[
-        QueryBuilder::remove().ids(0).query().into(),
-        QueryBuilder::search().from(":0").query().into(),
-    ];
-    let error = server
-        .api
-        .db_exec_mut(owner, db, queries)
-        .await
-        .unwrap_err();
-    assert_eq!(error.status, 470);
-    assert_eq!(error.description, "No element found in the result");
-    Ok(())
+async fn use_result_in_search_empty_result() -> Result<(), TestError> {
+    agdb_api::tests::routes::db_exec_test::use_result_in_search_empty_result().await
 }
 
 #[tokio::test]
-async fn use_result_bad_query() -> anyhow::Result<()> {
-    let mut server = TestServer::new().await?;
-    let owner = &next_user_name();
-    let db = &next_db_name();
-    server.api.user_login(ADMIN, ADMIN).await?;
-    server.api.admin_user_add(owner, owner).await?;
-    server.api.user_login(owner, owner).await?;
-    server.api.db_add(owner, db, DbKind::Mapped).await?;
-    let queries = &[QueryBuilder::insert()
-        .aliases("alias")
-        .ids(":bad")
-        .query()
-        .into()];
-    let error = server
-        .api
-        .db_exec_mut(owner, db, queries)
-        .await
-        .unwrap_err();
-    assert_eq!(error.status, 470);
-    assert_eq!(error.description, "Alias ':bad' not found");
-    Ok(())
+async fn use_result_bad_query() -> Result<(), TestError> {
+    agdb_api::tests::routes::db_exec_test::use_result_bad_query().await
 }
 
 #[tokio::test]
-async fn use_result_out_of_bounds() -> anyhow::Result<()> {
-    let mut server = TestServer::new().await?;
-    let owner = &next_user_name();
-    let db = &next_db_name();
-    server.api.user_login(ADMIN, ADMIN).await?;
-    server.api.admin_user_add(owner, owner).await?;
-    server.api.user_login(owner, owner).await?;
-    server.api.db_add(owner, db, DbKind::Mapped).await?;
-    let queries = &[QueryBuilder::insert()
-        .aliases("alias")
-        .ids(":1")
-        .query()
-        .into()];
-    let error = server
-        .api
-        .db_exec_mut(owner, db, queries)
-        .await
-        .unwrap_err();
-    assert_eq!(error.status, 470);
-    assert_eq!(error.description, "Results index out of bounds '1' (> 0)");
-    Ok(())
+async fn use_result_out_of_bounds() -> Result<(), TestError> {
+    agdb_api::tests::routes::db_exec_test::use_result_out_of_bounds().await
 }
 
 #[tokio::test]
-async fn query_error() -> anyhow::Result<()> {
-    let mut server = TestServer::new().await?;
-    let owner = &next_user_name();
-    let db = &next_db_name();
-    server.api.user_login(ADMIN, ADMIN).await?;
-    server.api.admin_user_add(owner, owner).await?;
-    server.api.user_login(owner, owner).await?;
-    server.api.db_add(owner, db, DbKind::Mapped).await?;
-    let queries = &[
-        QueryBuilder::insert()
-            .nodes()
-            .values([[("key", 1.1).into()]])
-            .query()
-            .into(),
-        QueryBuilder::select().ids("root").query().into(),
-    ];
-    let error = server
-        .api
-        .db_exec_mut(owner, db, queries)
-        .await
-        .unwrap_err();
-    assert_eq!(error.status, 470);
-    assert_eq!(error.description, "Alias 'root' not found");
-    Ok(())
+async fn query_error() -> Result<(), TestError> {
+    agdb_api::tests::routes::db_exec_test::query_error().await
 }
 
 #[tokio::test]
-async fn permission_denied() -> anyhow::Result<()> {
-    let mut server = TestServer::new().await?;
-    let owner = &next_user_name();
-    let user = &next_user_name();
-    let db = &next_db_name();
-    server.api.user_login(ADMIN, ADMIN).await?;
-    server.api.admin_user_add(owner, owner).await?;
-    server.api.admin_user_add(user, user).await?;
-    server.api.admin_db_add(owner, db, DbKind::Mapped).await?;
-    server
-        .api
-        .admin_db_user_add(owner, db, user, DbUserRole::Read)
-        .await?;
-    server.api.user_login(user, user).await?;
-    let queries = &[
-        QueryBuilder::insert()
-            .nodes()
-            .aliases("root")
-            .values([[("key", 1.1).into()]])
-            .query()
-            .into(),
-        QueryBuilder::select().ids("root").query().into(),
-    ];
-    let error = server
-        .api
-        .db_exec_mut(owner, db, queries)
-        .await
-        .unwrap_err();
-    assert_eq!(error.status, 403);
-    Ok(())
+async fn permission_denied() -> Result<(), TestError> {
+    agdb_api::tests::routes::db_exec_test::permission_denied().await
 }
 
 #[tokio::test]
-async fn db_not_found() -> anyhow::Result<()> {
-    let mut server = TestServer::new().await?;
-    let owner = &next_user_name();
-    server.api.user_login(ADMIN, ADMIN).await?;
-    server.api.admin_user_add(owner, owner).await?;
-    server.api.user_login(owner, owner).await?;
-    let status = server
-        .api
-        .db_exec(owner, "db", &[])
-        .await
-        .unwrap_err()
-        .status;
-    assert_eq!(status, 404);
-    Ok(())
+async fn db_not_found() -> Result<(), TestError> {
+    agdb_api::tests::routes::db_exec_test::db_not_found().await
 }
 
 #[tokio::test]
-async fn someone_elses_db() -> anyhow::Result<()> {
-    let mut server = TestServer::new().await?;
-    let owner = &next_user_name();
-    let db = &next_db_name();
-    let user = &next_user_name();
-    server.api.user_login(ADMIN, ADMIN).await?;
-    server.api.admin_user_add(owner, owner).await?;
-    server.api.admin_user_add(user, user).await?;
-    server.api.admin_db_add(owner, db, DbKind::Memory).await?;
-    server.api.user_login(user, user).await?;
-    let status = server.api.db_exec(owner, db, &[]).await.unwrap_err().status;
-    assert_eq!(status, 404);
-    Ok(())
+async fn someone_elses_db() -> Result<(), TestError> {
+    agdb_api::tests::routes::db_exec_test::someone_elses_db().await
 }
 
 #[tokio::test]
-async fn no_token() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
-    let status = server
-        .api
-        .db_exec("owner", "db", &[])
-        .await
-        .unwrap_err()
-        .status;
-    assert_eq!(status, 401);
-    Ok(())
+async fn no_token() -> Result<(), TestError> {
+    agdb_api::tests::routes::db_exec_test::no_token().await
 }
+

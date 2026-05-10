@@ -1,103 +1,27 @@
-use agdb::QueryBuilder;
-use agdb_api::DbKind;
-use agdb_api::test_server::ADMIN;
-use agdb_api::test_server::TestServer;
-use agdb_api::test_server::next_db_name;
-use agdb_api::test_server::next_user_name;
+use agdb_api::test_server::test_error::TestError;
 
 #[tokio::test]
-async fn optimize() -> anyhow::Result<()> {
-    let mut server = TestServer::new().await?;
-    let owner = &next_user_name();
-    let db = &next_db_name();
-    server.api.user_login(ADMIN, ADMIN).await?;
-    server.api.admin_user_add(owner, owner).await?;
-    server.api.admin_db_add(owner, db, DbKind::Mapped).await?;
-    let queries = &[QueryBuilder::insert().nodes().count(100).query().into()];
-    server.api.admin_db_exec_mut(owner, db, queries).await?;
-    let original_size = server
-        .api
-        .admin_db_list()
-        .await?
-        .1
-        .iter()
-        .find(|d| d.db == *db && d.owner == *owner)
-        .unwrap()
-        .size;
-    let (status, db) = server.api.admin_db_optimize(owner, db).await?;
-    assert_eq!(status, 200);
-    assert!(db.size < original_size);
-    Ok(())
+async fn optimize() -> Result<(), TestError> {
+    agdb_api::tests::routes::admin_db_optimize_test::optimize().await
 }
 
 #[tokio::test]
-async fn shrink_to_fit() -> anyhow::Result<()> {
-    let mut server = TestServer::new().await?;
-    let owner = &next_user_name();
-    let db = &next_db_name();
-    server.api.user_login(ADMIN, ADMIN).await?;
-    server.api.admin_user_add(owner, owner).await?;
-    server.api.admin_db_add(owner, db, DbKind::Mapped).await?;
-    let queries = &[QueryBuilder::insert().nodes().count(100).query().into()];
-    server.api.admin_db_exec_mut(owner, db, queries).await?;
-    let original_size = server
-        .api
-        .admin_db_list()
-        .await?
-        .1
-        .iter()
-        .find(|d| d.db == *db && d.owner == *owner)
-        .unwrap()
-        .size;
-    let (status, db) = server
-        .api
-        .admin_db_optimize_shrink_to_fit(owner, db)
-        .await?;
-    assert_eq!(status, 200);
-    assert!(db.size < original_size);
-    Ok(())
+async fn shrink_to_fit() -> Result<(), TestError> {
+    agdb_api::tests::routes::admin_db_optimize_test::shrink_to_fit().await
 }
 
 #[tokio::test]
-async fn db_not_found() -> anyhow::Result<()> {
-    let mut server = TestServer::new().await?;
-    server.api.user_login(ADMIN, ADMIN).await?;
-    let status = server
-        .api
-        .admin_db_optimize("owner", "db")
-        .await
-        .unwrap_err()
-        .status;
-    assert_eq!(status, 404);
-    Ok(())
+async fn db_not_found() -> Result<(), TestError> {
+    agdb_api::tests::routes::admin_db_optimize_test::db_not_found().await
 }
 
 #[tokio::test]
-async fn non_admin() -> anyhow::Result<()> {
-    let mut server = TestServer::new().await?;
-    let owner = &next_user_name();
-    server.api.user_login(ADMIN, ADMIN).await?;
-    server.api.admin_user_add(owner, owner).await?;
-    server.api.user_login(owner, owner).await?;
-    let status = server
-        .api
-        .admin_db_optimize(owner, "db")
-        .await
-        .unwrap_err()
-        .status;
-    assert_eq!(status, 401);
-    Ok(())
+async fn non_admin() -> Result<(), TestError> {
+    agdb_api::tests::routes::admin_db_optimize_test::non_admin().await
 }
 
 #[tokio::test]
-async fn no_token() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
-    let status = server
-        .api
-        .admin_db_optimize("owner", "db")
-        .await
-        .unwrap_err()
-        .status;
-    assert_eq!(status, 401);
-    Ok(())
+async fn no_token() -> Result<(), TestError> {
+    agdb_api::tests::routes::admin_db_optimize_test::no_token().await
 }
+

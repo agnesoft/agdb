@@ -235,6 +235,57 @@ impl Api {
             UserStatus::type_def(),
         ]
     }
+
+    /// Returns all test function definitions for API reflection
+    #[cfg(feature = "test_server")]
+    pub fn test_defs() -> Vec<Type> {
+        let mut defs = crate::test_server::test_defs();
+
+        defs.extend(crate::tests::routes::admin_db_add_test::test_defs());
+        defs.extend(crate::tests::routes::admin_db_audit_test::test_defs());
+        defs.extend(crate::tests::routes::admin_db_backup_restore_test::test_defs());
+        defs.extend(crate::tests::routes::admin_db_clear_test::test_defs());
+        defs.extend(crate::tests::routes::admin_db_convert_test::test_defs());
+        defs.extend(crate::tests::routes::admin_db_copy_test::test_defs());
+        defs.extend(crate::tests::routes::admin_db_delete_test::test_defs());
+        defs.extend(crate::tests::routes::admin_db_exec_test::test_defs());
+        defs.extend(crate::tests::routes::admin_db_list_test::test_defs());
+        defs.extend(crate::tests::routes::admin_db_optimize_test::test_defs());
+        defs.extend(crate::tests::routes::admin_db_remove_test::test_defs());
+        defs.extend(crate::tests::routes::admin_db_rename_test::test_defs());
+        defs.extend(crate::tests::routes::admin_db_user_add_test::test_defs());
+        defs.extend(crate::tests::routes::admin_db_user_list_test::test_defs());
+        defs.extend(crate::tests::routes::admin_db_user_remove_test::test_defs());
+        defs.extend(crate::tests::routes::admin_status_test::test_defs());
+        defs.extend(crate::tests::routes::admin_user_add_test::test_defs());
+        defs.extend(crate::tests::routes::admin_user_change_password_test::test_defs());
+        defs.extend(crate::tests::routes::admin_user_delete_test::test_defs());
+        defs.extend(crate::tests::routes::admin_user_list_test::test_defs());
+        defs.extend(crate::tests::routes::admin_user_logout_test::test_defs());
+        defs.extend(crate::tests::routes::db_add_test::test_defs());
+        defs.extend(crate::tests::routes::db_audit_test::test_defs());
+        defs.extend(crate::tests::routes::db_backup_restore_test::test_defs());
+        defs.extend(crate::tests::routes::db_clear_test::test_defs());
+        defs.extend(crate::tests::routes::db_convert_test::test_defs());
+        defs.extend(crate::tests::routes::db_copy_test::test_defs());
+        defs.extend(crate::tests::routes::db_delete_test::test_defs());
+        defs.extend(crate::tests::routes::db_exec_test::test_defs());
+        defs.extend(crate::tests::routes::db_list_test::test_defs());
+        defs.extend(crate::tests::routes::db_optimize_test::test_defs());
+        defs.extend(crate::tests::routes::db_remove_test::test_defs());
+        defs.extend(crate::tests::routes::db_rename_test::test_defs());
+        defs.extend(crate::tests::routes::db_user_add_test::test_defs());
+        defs.extend(crate::tests::routes::db_user_list::test_defs());
+        defs.extend(crate::tests::routes::db_user_remove_test::test_defs());
+        defs.extend(crate::tests::routes::misc_routes::test_defs());
+        defs.extend(crate::tests::routes::cluster_test::test_defs());
+        defs.extend(crate::tests::routes::user_change_password_test::test_defs());
+        defs.extend(crate::tests::routes::user_login_test::test_defs());
+        defs.extend(crate::tests::routes::user_logout_test::test_defs());
+        defs.extend(crate::tests::routes::user_status::test_defs());
+
+        defs
+    }
 }
 
 #[cfg(test)]
@@ -319,9 +370,15 @@ mod tests {
         }
     }
 
+    fn roots() -> Vec<Type> {
+        let mut roots = Api::type_defs();
+        roots.extend(Api::test_defs());
+        roots
+    }
+
     #[test]
     fn all_fn_ptrs_resolvable() {
-        let roots = Api::type_defs();
+        let roots = roots();
         let mut visited: HashSet<usize> = HashSet::new();
         let mut queue: Vec<fn() -> Type> = Vec::new();
 
@@ -381,7 +438,7 @@ mod tests {
 
     #[test]
     fn all_named_types_in_catalog() {
-        let roots = Api::type_defs();
+        let roots = roots();
 
         // Build set of all root type names.
         let root_names: HashSet<&'static str> = roots.iter().map(|ty| ty.name()).collect();

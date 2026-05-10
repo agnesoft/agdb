@@ -9,29 +9,19 @@ use agdb_api::test_server::TestServerImpl;
 use agdb_api::test_server::next_db_name;
 use agdb_api::test_server::reqwest_client;
 use agdb_api::test_server::test_dir::TestDir;
+use agdb_api::test_server::test_error::TestError;
 use agdb_api::test_server::wait_for_ready;
 use reqwest::StatusCode;
 use std::path::Path;
 
 #[tokio::test]
-async fn missing() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
-    let client = reqwest_client();
-    let status = client
-        .get(server.full_url("/missing"))
-        .send()
-        .await?
-        .status();
-    assert_eq!(status, StatusCode::NOT_FOUND);
-    Ok(())
+async fn missing() -> Result<(), TestError> {
+    agdb_api::tests::routes::misc_routes::missing().await
 }
 
 #[tokio::test]
-async fn status() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
-    let status = server.api.status().await?;
-    assert_eq!(status, 200);
-    Ok(())
+async fn status() -> Result<(), TestError> {
+    agdb_api::tests::routes::misc_routes::status().await
 }
 
 #[tokio::test]
@@ -57,16 +47,8 @@ async fn shutdown_bad_token() -> anyhow::Result<()> {
 }
 
 #[tokio::test]
-async fn openapi() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
-    let client = reqwest_client();
-    let status = client
-        .get(server.full_url("/openapi.json"))
-        .send()
-        .await?
-        .status();
-    assert_eq!(status, 200);
-    Ok(())
+async fn openapi() -> Result<(), TestError> {
+    agdb_api::tests::routes::misc_routes::openapi().await
 }
 
 #[tokio::test]

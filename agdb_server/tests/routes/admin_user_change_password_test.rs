@@ -1,74 +1,27 @@
-use agdb_api::test_server::ADMIN;
-use agdb_api::test_server::TestServer;
-use agdb_api::test_server::next_user_name;
+use agdb_api::test_server::test_error::TestError;
 
 #[tokio::test]
-async fn change_password() -> anyhow::Result<()> {
-    let mut server = TestServer::new().await?;
-    let owner = &next_user_name();
-    server.api.user_login(ADMIN, ADMIN).await?;
-    server.api.admin_user_add(owner, owner).await?;
-    let status = server
-        .api
-        .admin_user_change_password(owner, "password123")
-        .await?;
-    assert_eq!(status, 201);
-    let status = server.api.user_login(owner, "password123").await?;
-    assert_eq!(status, 200);
-    Ok(())
+async fn change_password() -> Result<(), TestError> {
+    agdb_api::tests::routes::admin_user_change_password_test::change_password().await
 }
 
 #[tokio::test]
-async fn password_short() -> anyhow::Result<()> {
-    let mut server = TestServer::new().await?;
-    let owner = &next_user_name();
-    server.api.user_login(ADMIN, ADMIN).await?;
-    server.api.admin_user_add(owner, owner).await?;
-    let status = server.api.admin_user_change_password(owner, "pswd").await?;
-    assert_eq!(status, 201);
-    Ok(())
+async fn password_short() -> Result<(), TestError> {
+    agdb_api::tests::routes::admin_user_change_password_test::password_short().await
 }
 
 #[tokio::test]
-async fn user_not_found() -> anyhow::Result<()> {
-    let mut server = TestServer::new().await?;
-    server.api.user_login(ADMIN, ADMIN).await?;
-    let status = server
-        .api
-        .admin_user_change_password("owner", "password123")
-        .await
-        .unwrap_err()
-        .status;
-    assert_eq!(status, 404);
-    Ok(())
+async fn user_not_found() -> Result<(), TestError> {
+    agdb_api::tests::routes::admin_user_change_password_test::user_not_found().await
 }
 
 #[tokio::test]
-async fn non_admin() -> anyhow::Result<()> {
-    let mut server = TestServer::new().await?;
-    let owner = &next_user_name();
-    server.api.user_login(ADMIN, ADMIN).await?;
-    server.api.admin_user_add(owner, owner).await?;
-    server.api.user_login(owner, owner).await?;
-    let status = server
-        .api
-        .admin_user_change_password(owner, "password123")
-        .await
-        .unwrap_err()
-        .status;
-    assert_eq!(status, 401);
-    Ok(())
+async fn non_admin() -> Result<(), TestError> {
+    agdb_api::tests::routes::admin_user_change_password_test::non_admin().await
 }
 
 #[tokio::test]
-async fn no_token() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
-    let status = server
-        .api
-        .admin_user_change_password("owner", "password123")
-        .await
-        .unwrap_err()
-        .status;
-    assert_eq!(status, 401);
-    Ok(())
+async fn no_token() -> Result<(), TestError> {
+    agdb_api::tests::routes::admin_user_change_password_test::no_token().await
 }
+

@@ -1,4 +1,5 @@
 import { useAuth, setLocalStorageToken, refreshToken } from "./auth";
+import * as api from "@agdb-studio/api/src/api";
 import {
   get_token,
   logout as mockLogout,
@@ -58,6 +59,15 @@ describe("auth service", () => {
       login({ username: "test", password: "test" }).then((token) => {
         expect(token).toBe("token");
       });
+    });
+    it("switches api client when server is provided", async () => {
+      const reconnectSpy = vi.spyOn(api, "reconnectClient");
+      await login({
+        username: "test",
+        password: "test",
+        server: "https://localhost:3001",
+      });
+      expect(reconnectSpy).toHaveBeenCalled();
     });
     it("throws error on failure", async () => {
       login({ username: "test", password: "test" }).catch((error) => {

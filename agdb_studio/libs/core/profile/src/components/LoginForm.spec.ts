@@ -45,6 +45,9 @@ describe("LoginForm", () => {
     currentRoute.value.query.redirect = "/home";
     await wrapper.find('input[type="text"]#username').setValue("test");
     await wrapper.find('input[type="password"]#password').setValue("test");
+    await wrapper
+      .find('input[type="url"]#server')
+      .setValue("https://localhost:3000");
     await wrapper.find("input[type='checkbox']").setValue(false);
 
     await wrapper.find(".login-form>form").trigger("submit");
@@ -52,6 +55,7 @@ describe("LoginForm", () => {
     expect(loginMock).toHaveBeenCalledWith({
       username: "test",
       password: "test",
+      server: "https://localhost:3000",
       cluster: false,
     });
     expect(pushMock).toHaveBeenCalledWith("/home");
@@ -63,6 +67,9 @@ describe("LoginForm", () => {
     currentRoute.value.query.redirect = "/home";
     await wrapper.find('input[type="text"]#username').setValue("test");
     await wrapper.find('input[type="password"]#password').setValue("test");
+    await wrapper
+      .find('input[type="url"]#server')
+      .setValue("https://localhost:3000");
     await wrapper.find("input[type='checkbox']").setValue(true);
 
     await wrapper.find(".login-form>form").trigger("submit");
@@ -70,6 +77,7 @@ describe("LoginForm", () => {
     expect(loginMock).toHaveBeenCalledWith({
       username: "test",
       password: "test",
+      server: "https://localhost:3000",
       cluster: true,
     });
     expect(pushMock).toHaveBeenCalledWith("/home");
@@ -81,6 +89,9 @@ describe("LoginForm", () => {
     currentRoute.value.query.redirect = undefined;
     await wrapper.find('input[type="text"]#username').setValue("test");
     await wrapper.find('input[type="password"]#password').setValue("test");
+    await wrapper
+      .find('input[type="url"]#server')
+      .setValue("https://localhost:3000");
 
     await wrapper.find(".login-form>form").trigger("submit");
 
@@ -93,6 +104,9 @@ describe("LoginForm", () => {
     const wrapper = mount(LoginForm);
     await wrapper.find('input[type="text"]#username').setValue("test");
     await wrapper.find('input[type="password"]#password').setValue("test");
+    await wrapper
+      .find('input[type="url"]#server')
+      .setValue("https://localhost:3000");
 
     await wrapper.find(".login-form>form").trigger("submit");
 
@@ -107,6 +121,9 @@ describe("LoginForm", () => {
     const wrapper = mount(LoginForm);
     await wrapper.find('input[type="text"]#username').setValue("test");
     await wrapper.find('input[type="password"]#password').setValue("test");
+    await wrapper
+      .find('input[type="url"]#server')
+      .setValue("https://localhost:3000");
 
     await wrapper.find(".login-form>form").trigger("submit");
 

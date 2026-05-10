@@ -1,7 +1,17 @@
-import { client, removeToken } from "@agdb-studio/api/src/api";
+import {
+  apiUrl,
+  client,
+  reconnectClient,
+  removeToken,
+} from "@agdb-studio/api/src/api";
 import { ACCESS_TOKEN } from "@agdb-studio/api/src/constants";
+import { resolveServerUrl } from "@agdb-studio/api/src/serverUrl";
 import { computed, ref, watch } from "vue";
 import type { LoginProps } from "@agnesoft/agdb_api/client";
+
+type StudioLoginProps = LoginProps & {
+  server?: string;
+};
 
 const accessToken = ref<string>();
 
@@ -39,7 +49,15 @@ const login = async ({
   username,
   password,
   cluster,
-}: LoginProps): Promise<string | undefined> => {
+  server,
+}: StudioLoginProps): Promise<string | undefined> => {
+  if (server) {
+    const resolvedServerUrl = resolveServerUrl(apiUrl.value, server);
+    if (resolvedServerUrl !== apiUrl.value) {
+      await reconnectClient(resolvedServerUrl);
+    }
+  }
+
   return client.value
     ?.login?.({ username, password, cluster })
     .then((token) => {
@@ -48,13 +66,19 @@ const login = async ({
     });
 };
 
-const logout = async (cluster?: boolean): Promise<void> => {
+const logout = async (
+  cluster?: boolean,
+  serverLogout = true,
+): Promise<void> => {
   if (!isLoggedIn.value) {
     return;
   }
-  await client.value?.logout(cluster).catch((error) => {
-    console.error("Logout failed:", error);
-  });
+  if (serverLogout) {
+    await client.value?.logout(cluster).catch((error) => {
+      console.error("Logout failed:", error);
+    });
+  }
+
   accessToken.value = undefined;
   removeToken();
 };

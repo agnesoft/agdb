@@ -1,11 +1,13 @@
 import { MAX_CONNECTION_ATTEMPTS } from "@/constants";
 import {
   client as apiClient,
+  apiUrl,
   initClient,
   responseInterceptor,
   errorInterceptor,
   removeToken,
   checkClient,
+  reconnectClient,
 } from "./api";
 import { client } from "@agdb-studio/testing/mocks/apiMock";
 import type { AxiosError, AxiosResponse } from "axios";
@@ -14,12 +16,12 @@ import type { ComputedRef } from "vue";
 import type { AgdbApiClient } from "@agnesoft/agdb_api/client";
 
 describe("client service", () => {
-  Object.defineProperty(window, "location", {
-    value: { reload: vi.fn() },
-  });
-
   beforeEach(() => {
     vi.clearAllMocks();
+    Object.defineProperty(window, "location", {
+      value: { pathname: "/studio", reload: vi.fn() },
+      configurable: true,
+    });
   });
 
   describe("client.value", () => {
@@ -114,6 +116,7 @@ describe("client service", () => {
     it("does not reload on login page", () => {
       Object.defineProperty(window, "location", {
         value: { pathname: "/studio/login", reload: vi.fn() },
+        configurable: true,
       });
       client.mockResolvedValue({
         interceptors: {
@@ -129,6 +132,129 @@ describe("client service", () => {
       initClient();
       removeToken();
       expect(window.location.reload).not.toHaveBeenCalled();
+    });
+  });
+  describe("reconnectClient", () => {
+    it("reconnects to new url and attaches interceptors", async () => {
+      const mockExistingClient = {
+        interceptors: {
+          response: {
+            use: vi.fn(),
+          },
+          request: {
+            use: vi.fn(),
+          },
+        },
+        get_token: vi.fn().mockReturnValue("test-token"),
+        set_token: vi.fn(),
+      } as unknown as AgdbApiClient;
+
+      const mockNewClient = {
+        interceptors: {
+          response: {
+            use: vi.fn(),
+          },
+          request: {
+            use: vi.fn(),
+          },
+        },
+        set_token: vi.fn(),
+      } as unknown as AgdbApiClient;
+
+      client
+        .mockResolvedValueOnce(mockExistingClient)
+        .mockResolvedValueOnce(mockNewClient);
+
+      await initClient();
+      await reconnectClient("http://localhost:3000");
+
+      expect(client).toHaveBeenCalledWith("http://localhost:3000");
+      expect(mockNewClient.set_token).toHaveBeenCalledWith("test-token");
+      expect(mockNewClient.interceptors.response.use).toHaveBeenCalledWith(
+        responseInterceptor,
+        errorInterceptor,
+      );
+    });
+
+    it("reconnects without token if not present", async () => {
+      const mockExistingClient = {
+        interceptors: {
+          response: {
+            use: vi.fn(),
+          },
+          request: {
+            use: vi.fn(),
+          },
+        },
+        get_token: vi.fn().mockReturnValue(null),
+        set_token: vi.fn(),
+      } as unknown as AgdbApiClient;
+
+      const mockNewClient = {
+        interceptors: {
+          response: {
+            use: vi.fn(),
+          },
+          request: {
+            use: vi.fn(),
+          },
+        },
+        set_token: vi.fn(),
+      } as unknown as AgdbApiClient;
+
+      client
+        .mockResolvedValueOnce(mockExistingClient)
+        .mockResolvedValueOnce(mockNewClient);
+
+      await initClient();
+      localStorage.removeItem("studio_token");
+      await reconnectClient("http://localhost:3000");
+
+      expect(mockNewClient.set_token).not.toHaveBeenCalled();
+    });
+
+    it("reconnects with token from localStorage if client has no token", async () => {
+      const mockExistingClient = {
+        interceptors: {
+          response: {
+            use: vi.fn(),
+          },
+          request: {
+            use: vi.fn(),
+          },
+        },
+        get_token: vi.fn().mockReturnValue(null),
+        set_token: vi.fn(),
+      } as unknown as AgdbApiClient;
+
+      const mockNewClient = {
+        interceptors: {
+          response: {
+            use: vi.fn(),
+          },
+          request: {
+            use: vi.fn(),
+          },
+        },
+        set_token: vi.fn(),
+      } as unknown as AgdbApiClient;
+
+      localStorage.setItem("studio_token", "stored-token");
+      client
+        .mockResolvedValueOnce(mockExistingClient)
+        .mockResolvedValueOnce(mockNewClient);
+
+      await initClient();
+      await reconnectClient("http://localhost:3000");
+
+      expect(mockNewClient.set_token).toHaveBeenCalledWith("stored-token");
+      localStorage.removeItem("studio_token");
+    });
+  });
+  describe("apiUrl", () => {
+    it("returns api url", () => {
+      expect(apiUrl.value).toBeDefined();
+      expect(typeof apiUrl.value).toBe("string");
     });
   });
 });

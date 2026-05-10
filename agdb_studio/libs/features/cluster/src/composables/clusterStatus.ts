@@ -86,6 +86,21 @@ export const useClusterStatus = () => {
     return normalizeAddress(server.address) === activeAddress.value;
   };
 
+  const activeServer = computed((): ClusterStatus | undefined => {
+    return servers.value.find(isServerActive);
+  });
+
+  const activeNodeLabel = computed((): string => {
+    try {
+      const url = new URL(
+        apiUrl.value.includes("://") ? apiUrl.value : `http://${apiUrl.value}`,
+      );
+      return `:${url.port || "80"}`;
+    } catch {
+      return apiUrl.value;
+    }
+  });
+
   const resolveServerUrl = (server: ClusterStatus): string => {
     try {
       const current = new URL(apiUrl.value);
@@ -155,6 +170,8 @@ export const useClusterStatus = () => {
     isLoading: isLoading as Ref<boolean>,
     lastUpdated: lastUpdated as Ref<Date | null>,
     switchingServerAddress: switchingServerAddress as Ref<string | null>,
+    activeServer,
+    activeNodeLabel,
     isServerActive,
     switchToServer,
     fetchStatus,

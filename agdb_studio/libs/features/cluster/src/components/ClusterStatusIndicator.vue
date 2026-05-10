@@ -11,6 +11,8 @@ const {
   isLoading,
   fetchStatus,
   switchingServerAddress,
+  activeServer,
+  activeNodeLabel,
   isServerActive,
   switchToServer,
 } = useClusterStatus();
@@ -81,12 +83,28 @@ const statusText = computed(() => {
     @mouseleave="handleMouseLeave"
   >
     <FadeTransition>
-      <span v-if="leaderPosition !== -1"> Cluster [{{ leaderPosition }}] </span>
+      <div v-if="leaderPosition !== -1">
+        <span>
+          Cluster [
+          <VueIcon name="ph:fill-crown-simple" />
+
+          {{ leaderPosition }}
+          <PhFillCrownSimple
+            data-testid="crown-icon"
+            aria-label="Leader server"
+            title="Leader server"
+          />]
+        </span>
+        <div class="connected-to">
+          Connected to
+          <strong>{{ activeServer?.address ?? activeNodeLabel }}</strong>
+        </div>
+      </div>
     </FadeTransition>
     <div
       class="status-indicator"
       :class="overallStatus"
-      :title="`Cluster status: ${statusText}`"
+      :title="`Cluster status: ${statusText} — connected to ${activeNodeLabel}`"
     />
 
     <FadeTransition>
@@ -94,7 +112,7 @@ const statusText = computed(() => {
         <div class="status-details">
           <div v-if="isLoading" class="loading">Loading...</div>
           <div v-else-if="servers.length === 0" class="no-servers">
-            No servers found
+            No clusters found
           </div>
           <div v-else class="servers-list">
             <div
@@ -180,6 +198,35 @@ const statusText = computed(() => {
   margin: 1rem 0 0 0;
 }
 
+.loading,
+.no-servers {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+  padding-bottom: 0.5rem;
+  margin-bottom: 0.5rem;
+  border-bottom: 1px solid var(--color-border);
+
+  strong {
+    color: var(--color-text);
+    word-break: break-all;
+  }
+}
+
+.active-node-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-text);
+  font-family: monospace;
+}
+.connected-to {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+
+  strong {
+    color: var(--color-text);
+    font-family: monospace;
+  }
+}
 .loading,
 .no-servers {
   color: var(--color-text-muted);

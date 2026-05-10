@@ -11,6 +11,8 @@ const mockFetchStatus = vi.fn();
 const mockSwitchingServerAddress = ref<string | null>(null);
 const mockSwitchToServer = vi.fn();
 const mockIsServerActive = vi.fn(() => false);
+const mockActiveServer = ref<ClusterStatus | undefined>(undefined);
+const mockActiveNodeLabel = ref(":3000");
 
 vi.mock("../composables/clusterStatus", () => ({
   useClusterStatus: () => ({
@@ -21,6 +23,8 @@ vi.mock("../composables/clusterStatus", () => ({
     switchingServerAddress: mockSwitchingServerAddress,
     switchToServer: mockSwitchToServer,
     isServerActive: mockIsServerActive,
+    activeServer: mockActiveServer,
+    activeNodeLabel: mockActiveNodeLabel,
   }),
 }));
 
@@ -37,6 +41,8 @@ describe("ClusterStatusIndicator", () => {
     mockIsLoading.value = false;
     mockSwitchingServerAddress.value = null;
     mockIsServerActive.mockReturnValue(false);
+    mockActiveServer.value = undefined;
+    mockActiveNodeLabel.value = ":3000";
   });
 
   it("should render status indicator with correct color for green status", () => {

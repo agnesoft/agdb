@@ -766,6 +766,9 @@ importers:
       '@agnesoft/agdb_api':
         specifier: workspace:*
         version: link:../../../../agdb_api/typescript
+      '@kalimahapps/vue-icons':
+        specifier: 'catalog:'
+        version: 1.9.5(@nuxt/kit@4.4.4(magicast@0.5.2))(eslint@9.39.4(jiti@2.7.0))(typescript@5.9.3)(vue@3.5.34(typescript@5.9.3))(zod@3.25.76)
       vue:
         specifier: 'catalog:'
         version: 3.5.34(typescript@5.9.3)

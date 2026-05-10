@@ -5,6 +5,7 @@ import {
   checkClient,
   reconnectClient,
 } from "@agdb-studio/api/src/api";
+import { resolveServerUrl } from "@agdb-studio/api/src/serverUrl";
 import { createLogger } from "@agdb-studio/utils/src/logger/logger";
 import type { ClusterStatus } from "@agnesoft/agdb_api/openapi";
 
@@ -101,33 +102,6 @@ export const useClusterStatus = () => {
     }
   });
 
-  const resolveServerUrl = (server: ClusterStatus): string => {
-    try {
-      const current = new URL(apiUrl.value);
-      const target = new URL(
-        server.address.includes("://")
-          ? server.address
-          : `${current.protocol}//${server.address}`,
-      );
-
-      const isLocalhost = ["localhost", "127.0.0.1", "::1"].includes(
-        current.hostname.toLowerCase(),
-      );
-
-      if (isLocalhost) {
-        // When the UI is connected through localhost, cluster members may
-        // advertise internal hostnames that are not reachable from the browser.
-        // Keep the local host but switch to the member's port.
-        current.port = target.port;
-        return current.toString().replace(/\/$/, "");
-      }
-
-      return target.toString().replace(/\/$/, "");
-    } catch {
-      return server.address;
-    }
-  };
-
   const switchToServer = async (server: ClusterStatus): Promise<void> => {
     if (!server.status || isServerActive(server)) {
       return;
@@ -135,7 +109,7 @@ export const useClusterStatus = () => {
 
     switchingServerAddress.value = server.address;
     try {
-      const resolvedAddress = resolveServerUrl(server);
+      const resolvedAddress = resolveServerUrl(apiUrl.value, server.address);
       await reconnectClient(resolvedAddress);
       await fetchStatus();
       logger.info("Switched active cluster node:", server.address);

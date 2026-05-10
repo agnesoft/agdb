@@ -9,6 +9,7 @@ const { login } = useAuth();
 
 const username = ref("");
 const password = ref("");
+const server = ref(import.meta.env.VITE_API_URL || "");
 const cluster = ref(false);
 
 const loading = ref(false);
@@ -26,6 +27,7 @@ const onLogin = async () => {
   login({
     username: username.value,
     password: password.value,
+    server: server.value,
     cluster: cluster.value,
   })
     .then(async () => {
@@ -54,6 +56,17 @@ const onLogin = async () => {
   <div class="base-form login-form" data-testid="login_form">
     <form @submit.prevent="onLogin">
       <div>
+        <div>
+          <label for="server">Server URL:</label>
+          <input
+            id="server"
+            v-model="server"
+            type="url"
+            required
+            data-testid="inputServer"
+            autocomplete="on"
+          />
+        </div>
         <label for="username">Username:</label>
         <input
           id="username"

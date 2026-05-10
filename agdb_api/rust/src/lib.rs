@@ -7,6 +7,8 @@ mod client;
 mod http_client;
 #[cfg(feature = "test_server")]
 pub mod test_server;
+#[cfg(feature = "test_server")]
+pub mod tests;
 
 pub use api_error::AgdbApiError;
 pub use api_result::AgdbApiResult;

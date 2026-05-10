@@ -1,37 +1,16 @@
-use agdb_api::test_server::ADMIN;
-use agdb_api::test_server::TestServer;
-use agdb_api::test_server::next_user_name;
+use agdb_api::test_server::test_error::TestError;
 
 #[tokio::test]
-async fn user() -> anyhow::Result<()> {
-    let mut server = TestServer::new().await?;
-    let user = &next_user_name();
-    server.api.user_login(ADMIN, ADMIN).await?;
-    server.api.admin_user_add(user, user).await?;
-    server.api.user_login(user, user).await?;
-    let user_status = server.api.user_status().await?.1;
-    assert_eq!(user_status.username, *user);
-    assert!(user_status.login);
-    assert!(!user_status.admin);
-    Ok(())
+async fn user() -> Result<(), TestError> {
+    agdb_api::tests::routes::user_status::user().await
 }
 
 #[tokio::test]
-async fn admin() -> anyhow::Result<()> {
-    let mut server = TestServer::new().await?;
-    server.api.user_login(ADMIN, ADMIN).await?;
-    let user_status = server.api.user_status().await?.1;
-    assert_eq!(user_status.username, ADMIN);
-    assert!(user_status.login);
-    assert!(user_status.admin);
-
-    Ok(())
+async fn admin() -> Result<(), TestError> {
+    agdb_api::tests::routes::user_status::admin().await
 }
 
 #[tokio::test]
-async fn no_token() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
-    let status = server.api.user_status().await.unwrap_err().status;
-    assert_eq!(status, 401);
-    Ok(())
+async fn no_token() -> Result<(), TestError> {
+    agdb_api::tests::routes::user_status::no_token().await
 }

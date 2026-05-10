@@ -10,6 +10,8 @@ use crate::config_impl::DEFAULT_REQUEST_BODY_LIMIT;
 use crate::config_impl::config_to_str;
 use crate::test_server::test_error::TestError;
 use crate::test_server::test_error::bail;
+#[cfg(feature = "api")]
+use agdb::type_def::TypeDefinition;
 use std::collections::HashMap;
 use std::path::Path;
 use std::path::PathBuf;
@@ -84,6 +86,21 @@ pub async fn wait_for_ready(api: &AgdbApi<ReqwestClient>) -> Result<(), TestErro
     }
 
     bail!("Server not ready")
+}
+
+#[cfg(feature = "api")]
+pub fn test_defs() -> Vec<agdb::type_def::Type> {
+    vec![
+        TestServerProcess::type_def(),
+        __server_bin_type_def(),
+        __next_user_name_type_def(),
+        __next_db_name_type_def(),
+        __wait_for_ready_type_def(),
+        TestError::type_def(),
+        PathBuf::type_def(),
+        TestServer::type_def(),
+        TestServerImpl::type_def(),
+    ]
 }
 
 #[cfg_attr(feature = "api", derive(agdb::TypeDef))]

@@ -1,0 +1,799 @@
+use crate::DbKind;
+use crate::DbUserRole;
+use crate::test_server::ADMIN;
+use crate::test_server::TestServer;
+use crate::test_server::next_db_name;
+use crate::test_server::next_user_name;
+use crate::test_server::test_error::TestError;
+use agdb::DbElement;
+use agdb::DbId;
+use agdb::QueryBuilder;
+use agdb::QueryResult;
+
+#[cfg_attr(feature = "api", agdb::test_def())]
+pub async fn read_write() -> Result<(), TestError> {
+    let mut server = TestServer::new().await?;
+    let owner = &next_user_name();
+    let db = &next_db_name();
+    server.api.user_login(ADMIN, ADMIN).await?;
+    server.api.admin_user_add(owner, owner).await?;
+    server.api.user_login(owner, owner).await?;
+    server.api.db_add(owner, db, DbKind::Mapped).await?;
+    let queries = &[
+        QueryBuilder::insert()
+            .nodes()
+            .aliases("root")
+            .values([[("key", 1.1).into()]])
+            .query()
+            .into(),
+        QueryBuilder::select().ids("root").query().into(),
+    ];
+    let (status, results) = server.api.db_exec_mut(owner, db, queries).await?;
+    assert_eq!(status, 200);
+    let expected = vec![
+        QueryResult {
+            result: 1,
+            elements: vec![DbElement {
+                id: DbId(1),
+                from: None,
+                to: None,
+                values: vec![],
+            }],
+        },
+        QueryResult {
+            result: 1,
+            elements: vec![DbElement {
+                id: DbId(1),
+                from: None,
+                to: None,
+                values: vec![("key", 1.1).into()],
+            }],
+        },
+    ];
+    assert_eq!(results, expected);
+    Ok(())
+}
+
+#[cfg_attr(feature = "api", agdb::test_def())]
+pub async fn read_only() -> Result<(), TestError> {
+    let mut server = TestServer::new().await?;
+    let owner = &next_user_name();
+    let db = &next_db_name();
+    server.api.user_login(ADMIN, ADMIN).await?;
+    server.api.admin_user_add(owner, owner).await?;
+    server.api.user_login(owner, owner).await?;
+    server.api.db_add(owner, db, DbKind::Mapped).await?;
+    let queries = &[QueryBuilder::insert()
+        .nodes()
+        .aliases("root")
+        .values([[("key", 1.1).into()]])
+        .query()
+        .into()];
+    let (status, _) = server.api.db_exec_mut(owner, db, queries).await?;
+    assert_eq!(status, 200);
+    let queries = &[QueryBuilder::select().ids("root").query().into()];
+    let (status, results) = server.api.db_exec(owner, db, queries).await?;
+    assert_eq!(status, 200);
+    let expected = vec![QueryResult {
+        result: 1,
+        elements: vec![DbElement {
+            id: DbId(1),
+            from: None,
+            to: None,
+            values: vec![("key", 1.1).into()],
+        }],
+    }];
+    assert_eq!(results, expected);
+    Ok(())
+}
+
+#[cfg_attr(feature = "api", agdb::test_def())]
+pub async fn read_queries() -> Result<(), TestError> {
+    let mut server = TestServer::new().await?;
+    let owner = &next_user_name();
+    let db = &next_db_name();
+    server.api.user_login(ADMIN, ADMIN).await?;
+    server.api.admin_user_add(owner, owner).await?;
+    server.api.user_login(owner, owner).await?;
+    server.api.db_add(owner, db, DbKind::Mapped).await?;
+    let queries = &[QueryBuilder::insert()
+        .nodes()
+        .aliases("node1")
+        .values([[("key", "value").into()]])
+        .query()
+        .into()];
+    server.api.db_exec_mut(owner, db, queries).await?;
+    let queries = &[
+        QueryBuilder::search().from(1).query().into(),
+        QueryBuilder::select().ids(1).query().into(),
+        QueryBuilder::select().aliases().ids(1).query().into(),
+        QueryBuilder::select().aliases().query().into(),
+        QueryBuilder::select().edge_count().ids(1).query().into(),
+        QueryBuilder::select()
+            .edge_count_from()
+            .ids(1)
+            .query()
+            .into(),
+        QueryBuilder::select().edge_count_to().ids(1).query().into(),
+        QueryBuilder::select().indexes().query().into(),
+        QueryBuilder::select().keys().ids(1).query().into(),
+        QueryBuilder::select().key_count().ids(1).query().into(),
+        QueryBuilder::select().node_count().query().into(),
+        QueryBuilder::select().values("key").ids(1).query().into(),
+    ];
+    let (status, results) = server.api.db_exec(owner, db, queries).await?;
+    assert_eq!(status, 200);
+    assert_eq!(results.len(), 12);
+    Ok(())
+}
+
+#[cfg_attr(feature = "api", agdb::test_def())]
+pub async fn write_queries() -> Result<(), TestError> {
+    let mut server = TestServer::new().await?;
+    let owner = &next_user_name();
+    let db = &next_db_name();
+    server.api.user_login(ADMIN, ADMIN).await?;
+    server.api.admin_user_add(owner, owner).await?;
+    server.api.user_login(owner, owner).await?;
+    server.api.db_add(owner, db, DbKind::Mapped).await?;
+    let queries = &[
+        QueryBuilder::insert().nodes().count(2).query().into(),
+        QueryBuilder::insert()
+            .aliases(["node1", "node2"])
+            .ids([1, 2])
+            .query()
+            .into(),
+        QueryBuilder::insert()
+            .edges()
+            .from("node1")
+            .to("node2")
+            .query()
+            .into(),
+        QueryBuilder::insert()
+            .values([[("key", 1.1).into()]])
+            .ids("node1")
+            .query()
+            .into(),
+        QueryBuilder::insert().index("key").query().into(),
+        QueryBuilder::search().from(1).query().into(),
+        QueryBuilder::select().ids(1).query().into(),
+        QueryBuilder::select().aliases().ids(1).query().into(),
+        QueryBuilder::select().aliases().query().into(),
+        QueryBuilder::select().edge_count().ids(1).query().into(),
+        QueryBuilder::select()
+            .edge_count_from()
+            .ids(1)
+            .query()
+            .into(),
+        QueryBuilder::select().edge_count_to().ids(1).query().into(),
+        QueryBuilder::select().indexes().query().into(),
+        QueryBuilder::select().keys().ids(1).query().into(),
+        QueryBuilder::select().key_count().ids(1).query().into(),
+        QueryBuilder::select().node_count().query().into(),
+        QueryBuilder::select().values("key").ids(1).query().into(),
+        QueryBuilder::remove().aliases("node2").query().into(),
+        QueryBuilder::remove().index("key").query().into(),
+        QueryBuilder::remove().values("key").ids(1).query().into(),
+        QueryBuilder::remove().ids("node1").query().into(),
+    ];
+    let (status, results) = server.api.db_exec_mut(owner, db, queries).await?;
+    assert_eq!(status, 200);
+    assert_eq!(results.len(), 21);
+    Ok(())
+}
+
+#[cfg_attr(feature = "api", agdb::test_def())]
+pub async fn use_result_of_previous_query() -> Result<(), TestError> {
+    let mut server = TestServer::new().await?;
+    let owner = &next_user_name();
+    let db = &next_db_name();
+    server.api.user_login(ADMIN, ADMIN).await?;
+    server.api.admin_user_add(owner, owner).await?;
+    server.api.user_login(owner, owner).await?;
+    server.api.db_add(owner, db, DbKind::Mapped).await?;
+    let queries = &[
+        QueryBuilder::insert()
+            .nodes()
+            .aliases("users")
+            .query()
+            .into(),
+        QueryBuilder::insert()
+            .nodes()
+            .values([[("key", 1.1).into()], [("key", 2.2).into()]])
+            .query()
+            .into(),
+        QueryBuilder::insert()
+            .edges()
+            .from("users")
+            .to(":1")
+            .query()
+            .into(),
+        QueryBuilder::select()
+            .ids(
+                QueryBuilder::search()
+                    .from("users")
+                    .where_()
+                    .keys("key")
+                    .query(),
+            )
+            .query()
+            .into(),
+    ];
+    let (status, results) = server.api.db_exec_mut(owner, db, queries).await?;
+    assert_eq!(status, 200);
+    assert_eq!(
+        results[3],
+        QueryResult {
+            result: 2,
+            elements: vec![
+                DbElement {
+                    id: DbId(3),
+                    from: None,
+                    to: None,
+                    values: vec![("key", 2.2).into()]
+                },
+                DbElement {
+                    id: DbId(2),
+                    from: None,
+                    to: None,
+                    values: vec![("key", 1.1).into()]
+                }
+            ]
+        }
+    );
+
+    Ok(())
+}
+
+#[cfg_attr(feature = "api", agdb::test_def())]
+pub async fn use_result_in_subquery() -> Result<(), TestError> {
+    let mut server = TestServer::new().await?;
+    let owner = &next_user_name();
+    let db = &next_db_name();
+    server.api.user_login(ADMIN, ADMIN).await?;
+    server.api.admin_user_add(owner, owner).await?;
+    server.api.user_login(owner, owner).await?;
+    server.api.db_add(owner, db, DbKind::Mapped).await?;
+    let queries = &[
+        QueryBuilder::insert()
+            .nodes()
+            .aliases("users")
+            .query()
+            .into(),
+        QueryBuilder::insert()
+            .nodes()
+            .values([[("key", 1.1).into()], [("key", 2.2).into()]])
+            .query()
+            .into(),
+        QueryBuilder::insert()
+            .edges()
+            .from("users")
+            .to(":1")
+            .query()
+            .into(),
+        QueryBuilder::select()
+            .ids(
+                QueryBuilder::search()
+                    .from(":0")
+                    .where_()
+                    .keys("key")
+                    .query(),
+            )
+            .query()
+            .into(),
+    ];
+    let (status, results) = server.api.db_exec_mut(owner, db, queries).await?;
+    assert_eq!(status, 200);
+    assert_eq!(
+        results[3],
+        QueryResult {
+            result: 2,
+            elements: vec![
+                DbElement {
+                    id: DbId(3),
+                    from: None,
+                    to: None,
+                    values: vec![("key", 2.2).into()]
+                },
+                DbElement {
+                    id: DbId(2),
+                    from: None,
+                    to: None,
+                    values: vec![("key", 1.1).into()]
+                }
+            ]
+        }
+    );
+
+    Ok(())
+}
+
+#[cfg_attr(feature = "api", agdb::test_def())]
+pub async fn use_result_in_condition() -> Result<(), TestError> {
+    let mut server = TestServer::new().await?;
+    let owner = &next_user_name();
+    let db = &next_db_name();
+    server.api.user_login(ADMIN, ADMIN).await?;
+    server.api.admin_user_add(owner, owner).await?;
+    server.api.user_login(owner, owner).await?;
+    server.api.db_add(owner, db, DbKind::Mapped).await?;
+    let queries = &[
+        QueryBuilder::insert()
+            .nodes()
+            .aliases("users")
+            .query()
+            .into(),
+        QueryBuilder::search()
+            .from("users")
+            .where_()
+            .ids(":0")
+            .query()
+            .into(),
+    ];
+    let (status, results) = server.api.db_exec_mut(owner, db, queries).await?;
+    assert_eq!(status, 200);
+    assert_eq!(
+        results[1],
+        QueryResult {
+            result: 1,
+            elements: vec![DbElement {
+                id: DbId(1),
+                from: None,
+                to: None,
+                values: vec![]
+            },]
+        }
+    );
+
+    Ok(())
+}
+
+#[cfg_attr(feature = "api", agdb::test_def())]
+pub async fn use_result_in_search() -> Result<(), TestError> {
+    let mut server = TestServer::new().await?;
+    let owner = &next_user_name();
+    let db = &next_db_name();
+    server.api.user_login(ADMIN, ADMIN).await?;
+    server.api.admin_user_add(owner, owner).await?;
+    server.api.user_login(owner, owner).await?;
+    server.api.db_add(owner, db, DbKind::Mapped).await?;
+    let queries = &[
+        QueryBuilder::insert().nodes().count(1).query().into(),
+        QueryBuilder::insert().nodes().count(1).query().into(),
+        QueryBuilder::insert()
+            .edges()
+            .from(":0")
+            .to(":1")
+            .query()
+            .into(),
+        QueryBuilder::search().from(":0").to(":1").query().into(),
+    ];
+    let (status, results) = server.api.db_exec_mut(owner, db, queries).await?;
+    assert_eq!(status, 200);
+    assert_eq!(
+        results[3],
+        QueryResult {
+            result: 3,
+            elements: vec![
+                DbElement {
+                    id: DbId(1),
+                    from: None,
+                    to: None,
+                    values: vec![]
+                },
+                DbElement {
+                    id: DbId(-3),
+                    from: Some(DbId(1)),
+                    to: Some(DbId(2)),
+                    values: vec![]
+                },
+                DbElement {
+                    id: DbId(2),
+                    from: None,
+                    to: None,
+                    values: vec![]
+                }
+            ]
+        }
+    );
+    Ok(())
+}
+
+#[cfg_attr(feature = "api", agdb::test_def())]
+pub async fn use_result_in_insert_ids() -> Result<(), TestError> {
+    let mut server = TestServer::new().await?;
+    let owner = &next_user_name();
+    let db = &next_db_name();
+    server.api.user_login(ADMIN, ADMIN).await?;
+    server.api.admin_user_add(owner, owner).await?;
+    server.api.user_login(owner, owner).await?;
+    server.api.db_add(owner, db, DbKind::Mapped).await?;
+    let queries = &[
+        QueryBuilder::insert()
+            .nodes()
+            .aliases("root")
+            .query()
+            .into(),
+        QueryBuilder::insert()
+            .nodes()
+            .ids(
+                QueryBuilder::search()
+                    .from("root")
+                    .where_()
+                    .node()
+                    .and()
+                    .neighbor()
+                    .query(),
+            )
+            .count(3)
+            .query()
+            .into(),
+        QueryBuilder::insert()
+            .edges()
+            .ids(
+                QueryBuilder::search()
+                    .from("root")
+                    .to(":1")
+                    .where_()
+                    .edge()
+                    .query(),
+            )
+            .from(":0")
+            .to(":1")
+            .query()
+            .into(),
+        QueryBuilder::search().from(":0").to(":1").query().into(),
+    ];
+    let (status, results) = server.api.db_exec_mut(owner, db, queries).await?;
+    assert_eq!(status, 200);
+    assert_eq!(
+        results[3],
+        QueryResult {
+            result: 3,
+            elements: vec![
+                DbElement {
+                    id: DbId(1),
+                    from: None,
+                    to: None,
+                    values: vec![]
+                },
+                DbElement {
+                    id: DbId(-5),
+                    from: Some(DbId(1)),
+                    to: Some(DbId(2)),
+                    values: vec![]
+                },
+                DbElement {
+                    id: DbId(2),
+                    from: None,
+                    to: None,
+                    values: vec![]
+                }
+            ]
+        }
+    );
+    Ok(())
+}
+
+#[cfg_attr(feature = "api", agdb::test_def())]
+pub async fn reentrant_queries() -> Result<(), TestError> {
+    let mut server = TestServer::new().await?;
+    let owner = &next_user_name();
+    let db = &next_db_name();
+    server.api.user_login(ADMIN, ADMIN).await?;
+    server.api.admin_user_add(owner, owner).await?;
+    server.api.user_login(owner, owner).await?;
+    server.api.db_add(owner, db, DbKind::Mapped).await?;
+    let queries = &[
+        QueryBuilder::insert()
+            .nodes()
+            .aliases("root")
+            .query()
+            .into(),
+        QueryBuilder::insert()
+            .nodes()
+            .ids(
+                QueryBuilder::search()
+                    .from(":0")
+                    .where_()
+                    .node()
+                    .and()
+                    .neighbor()
+                    .query(),
+            )
+            .count(3)
+            .query()
+            .into(),
+        QueryBuilder::search()
+            .from(":0")
+            .to(":1")
+            .where_()
+            .edge()
+            .query()
+            .into(),
+        QueryBuilder::insert()
+            .edges()
+            .ids(":2")
+            .from(":0")
+            .to(":1")
+            .query()
+            .into(),
+        QueryBuilder::search().from(":0").to(":1").query().into(),
+        QueryBuilder::search().from(":0").to(":1").query().into(),
+    ];
+    let (status, results) = server.api.db_exec_mut(owner, db, queries).await?;
+    assert_eq!(status, 200);
+    assert_eq!(
+        results[4],
+        QueryResult {
+            result: 3,
+            elements: vec![
+                DbElement {
+                    id: DbId(1),
+                    from: None,
+                    to: None,
+                    values: vec![]
+                },
+                DbElement {
+                    id: DbId(-5),
+                    from: Some(DbId(1)),
+                    to: Some(DbId(2)),
+                    values: vec![]
+                },
+                DbElement {
+                    id: DbId(2),
+                    from: None,
+                    to: None,
+                    values: vec![]
+                }
+            ]
+        }
+    );
+    let (status, results) = server.api.db_exec_mut(owner, db, queries).await?;
+    assert_eq!(status, 200);
+    assert_eq!(
+        results[4],
+        QueryResult {
+            result: 3,
+            elements: vec![
+                DbElement {
+                    id: DbId(1),
+                    from: None,
+                    to: None,
+                    values: vec![]
+                },
+                DbElement {
+                    id: DbId(-7),
+                    from: Some(DbId(1)),
+                    to: Some(DbId(4)),
+                    values: vec![]
+                },
+                DbElement {
+                    id: DbId(4),
+                    from: None,
+                    to: None,
+                    values: vec![]
+                }
+            ]
+        }
+    );
+    Ok(())
+}
+
+#[cfg_attr(feature = "api", agdb::test_def())]
+pub async fn use_result_in_search_bad_query() -> Result<(), TestError> {
+    let mut server = TestServer::new().await?;
+    let owner = &next_user_name();
+    let db = &next_db_name();
+    server.api.user_login(ADMIN, ADMIN).await?;
+    server.api.admin_user_add(owner, owner).await?;
+    server.api.user_login(owner, owner).await?;
+    server.api.db_add(owner, db, DbKind::Mapped).await?;
+    let queries = &[QueryBuilder::search().from(":bad").query().into()];
+    let error = server.api.db_exec(owner, db, queries).await.unwrap_err();
+    assert_eq!(error.status, 470);
+    assert_eq!(error.description, "Alias ':bad' not found");
+    Ok(())
+}
+
+#[cfg_attr(feature = "api", agdb::test_def())]
+pub async fn use_result_in_search_empty_result() -> Result<(), TestError> {
+    let mut server = TestServer::new().await?;
+    let owner = &next_user_name();
+    let db = &next_db_name();
+    server.api.user_login(ADMIN, ADMIN).await?;
+    server.api.admin_user_add(owner, owner).await?;
+    server.api.user_login(owner, owner).await?;
+    server.api.db_add(owner, db, DbKind::Mapped).await?;
+    let queries = &[
+        QueryBuilder::remove().ids(0).query().into(),
+        QueryBuilder::search().from(":0").query().into(),
+    ];
+    let error = server
+        .api
+        .db_exec_mut(owner, db, queries)
+        .await
+        .unwrap_err();
+    assert_eq!(error.status, 470);
+    assert_eq!(error.description, "No element found in the result");
+    Ok(())
+}
+
+#[cfg_attr(feature = "api", agdb::test_def())]
+pub async fn use_result_bad_query() -> Result<(), TestError> {
+    let mut server = TestServer::new().await?;
+    let owner = &next_user_name();
+    let db = &next_db_name();
+    server.api.user_login(ADMIN, ADMIN).await?;
+    server.api.admin_user_add(owner, owner).await?;
+    server.api.user_login(owner, owner).await?;
+    server.api.db_add(owner, db, DbKind::Mapped).await?;
+    let queries = &[QueryBuilder::insert()
+        .aliases("alias")
+        .ids(":bad")
+        .query()
+        .into()];
+    let error = server
+        .api
+        .db_exec_mut(owner, db, queries)
+        .await
+        .unwrap_err();
+    assert_eq!(error.status, 470);
+    assert_eq!(error.description, "Alias ':bad' not found");
+    Ok(())
+}
+
+#[cfg_attr(feature = "api", agdb::test_def())]
+pub async fn use_result_out_of_bounds() -> Result<(), TestError> {
+    let mut server = TestServer::new().await?;
+    let owner = &next_user_name();
+    let db = &next_db_name();
+    server.api.user_login(ADMIN, ADMIN).await?;
+    server.api.admin_user_add(owner, owner).await?;
+    server.api.user_login(owner, owner).await?;
+    server.api.db_add(owner, db, DbKind::Mapped).await?;
+    let queries = &[QueryBuilder::insert()
+        .aliases("alias")
+        .ids(":1")
+        .query()
+        .into()];
+    let error = server
+        .api
+        .db_exec_mut(owner, db, queries)
+        .await
+        .unwrap_err();
+    assert_eq!(error.status, 470);
+    assert_eq!(error.description, "Results index out of bounds '1' (> 0)");
+    Ok(())
+}
+
+#[cfg_attr(feature = "api", agdb::test_def())]
+pub async fn query_error() -> Result<(), TestError> {
+    let mut server = TestServer::new().await?;
+    let owner = &next_user_name();
+    let db = &next_db_name();
+    server.api.user_login(ADMIN, ADMIN).await?;
+    server.api.admin_user_add(owner, owner).await?;
+    server.api.user_login(owner, owner).await?;
+    server.api.db_add(owner, db, DbKind::Mapped).await?;
+    let queries = &[
+        QueryBuilder::insert()
+            .nodes()
+            .values([[("key", 1.1).into()]])
+            .query()
+            .into(),
+        QueryBuilder::select().ids("root").query().into(),
+    ];
+    let error = server
+        .api
+        .db_exec_mut(owner, db, queries)
+        .await
+        .unwrap_err();
+    assert_eq!(error.status, 470);
+    assert_eq!(error.description, "Alias 'root' not found");
+    Ok(())
+}
+
+#[cfg_attr(feature = "api", agdb::test_def())]
+pub async fn permission_denied() -> Result<(), TestError> {
+    let mut server = TestServer::new().await?;
+    let owner = &next_user_name();
+    let user = &next_user_name();
+    let db = &next_db_name();
+    server.api.user_login(ADMIN, ADMIN).await?;
+    server.api.admin_user_add(owner, owner).await?;
+    server.api.admin_user_add(user, user).await?;
+    server.api.admin_db_add(owner, db, DbKind::Mapped).await?;
+    server
+        .api
+        .admin_db_user_add(owner, db, user, DbUserRole::Read)
+        .await?;
+    server.api.user_login(user, user).await?;
+    let queries = &[
+        QueryBuilder::insert()
+            .nodes()
+            .aliases("root")
+            .values([[("key", 1.1).into()]])
+            .query()
+            .into(),
+        QueryBuilder::select().ids("root").query().into(),
+    ];
+    let error = server
+        .api
+        .db_exec_mut(owner, db, queries)
+        .await
+        .unwrap_err();
+    assert_eq!(error.status, 403);
+    Ok(())
+}
+
+#[cfg_attr(feature = "api", agdb::test_def())]
+pub async fn db_not_found() -> Result<(), TestError> {
+    let mut server = TestServer::new().await?;
+    let owner = &next_user_name();
+    server.api.user_login(ADMIN, ADMIN).await?;
+    server.api.admin_user_add(owner, owner).await?;
+    server.api.user_login(owner, owner).await?;
+    let status = server
+        .api
+        .db_exec(owner, "db", &[])
+        .await
+        .unwrap_err()
+        .status;
+    assert_eq!(status, 404);
+    Ok(())
+}
+
+#[cfg_attr(feature = "api", agdb::test_def())]
+pub async fn someone_elses_db() -> Result<(), TestError> {
+    let mut server = TestServer::new().await?;
+    let owner = &next_user_name();
+    let db = &next_db_name();
+    let user = &next_user_name();
+    server.api.user_login(ADMIN, ADMIN).await?;
+    server.api.admin_user_add(owner, owner).await?;
+    server.api.admin_user_add(user, user).await?;
+    server.api.admin_db_add(owner, db, DbKind::Memory).await?;
+    server.api.user_login(user, user).await?;
+    let status = server.api.db_exec(owner, db, &[]).await.unwrap_err().status;
+    assert_eq!(status, 404);
+    Ok(())
+}
+
+#[cfg_attr(feature = "api", agdb::test_def())]
+pub async fn no_token() -> Result<(), TestError> {
+    let server = TestServer::new().await?;
+    let status = server
+        .api
+        .db_exec("owner", "db", &[])
+        .await
+        .unwrap_err()
+        .status;
+    assert_eq!(status, 401);
+    Ok(())
+}
+
+#[cfg(feature = "api")]
+pub fn test_defs() -> Vec<agdb::type_def::Type> {
+    vec![
+        __read_write_type_def(),
+        __read_only_type_def(),
+        __read_queries_type_def(),
+        __write_queries_type_def(),
+        __use_result_of_previous_query_type_def(),
+        __use_result_in_subquery_type_def(),
+        __use_result_in_condition_type_def(),
+        __use_result_in_search_type_def(),
+        __use_result_in_insert_ids_type_def(),
+        __reentrant_queries_type_def(),
+        __use_result_in_search_bad_query_type_def(),
+        __use_result_in_search_empty_result_type_def(),
+        __use_result_bad_query_type_def(),
+        __use_result_out_of_bounds_type_def(),
+        __query_error_type_def(),
+        __permission_denied_type_def(),
+        __db_not_found_type_def(),
+        __someone_elses_db_type_def(),
+        __no_token_type_def(),
+    ]
+}

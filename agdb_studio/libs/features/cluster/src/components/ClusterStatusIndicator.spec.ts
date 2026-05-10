@@ -344,4 +344,90 @@ describe("ClusterStatusIndicator", () => {
     expect(servers[0]?.find(".server-login")?.classes()).toContain("loggedIn");
     expect(servers[1]?.find(".server-login")?.classes()).toContain("loggedOut");
   });
+
+  it("should show connecting status text and handle keyboard enter on server row", async () => {
+    mockIsLoading.value = false;
+    mockServers.value = [
+      { address: "server1:8080", status: true, leader: true },
+      { address: "server2:8080", status: true, leader: false },
+    ];
+    mockSwitchingServerAddress.value = "server2:8080";
+
+    const wrapper = mount(ClusterStatusIndicator, {
+      global: {
+        stubs: {
+          CrownIcon: CrownIconStub,
+          FadeTransition: { template: "<div><slot /></div>" },
+          PhFillCrownSimple: {
+            template: '<div data-testid="crown-icon"></div>',
+          },
+        },
+      },
+    });
+
+    await wrapper.trigger("mouseenter");
+    await nextTick();
+
+    const servers = wrapper.findAll(".server-item");
+    expect(servers[1]?.attributes("title")).toContain(
+      "Node status: Connecting...",
+    );
+
+    await servers[1]!.trigger("keydown.enter");
+    expect(mockSwitchToServer).toHaveBeenCalledWith(mockServers.value[1]);
+  });
+
+  it("should show active status text for active server", async () => {
+    mockIsLoading.value = false;
+    mockServers.value = [
+      { address: "server1:8080", status: true, leader: true },
+    ];
+    mockIsServerActive.mockImplementation(() => true);
+
+    const wrapper = mount(ClusterStatusIndicator, {
+      global: {
+        stubs: {
+          CrownIcon: CrownIconStub,
+          FadeTransition: { template: "<div><slot /></div>" },
+          PhFillCrownSimple: {
+            template: '<div data-testid="crown-icon"></div>',
+          },
+        },
+      },
+    });
+
+    await wrapper.trigger("mouseenter");
+    await nextTick();
+
+    const server = wrapper.find(".server-item");
+    expect(server.attributes("title")).toContain("Node status: Active");
+  });
+
+  it("should render crown icon for connected leader server", () => {
+    mockServers.value = [
+      { address: "server1:8080", status: true, leader: true },
+      { address: "server2:8080", status: true, leader: false },
+    ];
+    mockActiveServer.value = {
+      address: "server1:8080",
+      status: true,
+      leader: true,
+    };
+
+    const wrapper = mount(ClusterStatusIndicator, {
+      global: {
+        stubs: {
+          CrownIcon: CrownIconStub,
+          FadeTransition: { template: "<div><slot /></div>" },
+          PhFillCrownSimple: {
+            template: '<div data-testid="active-server-crown-icon"></div>',
+          },
+        },
+      },
+    });
+
+    expect(
+      wrapper.find("[data-testid='active-server-crown-icon']").exists(),
+    ).toBe(true);
+  });
 });

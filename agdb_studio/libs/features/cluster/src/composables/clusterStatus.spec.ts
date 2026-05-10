@@ -6,6 +6,7 @@ import type { ClusterStatus } from "@agnesoft/agdb_api/openapi";
 
 const mockClient = vi.hoisted(() => ({
   cluster_status: vi.fn(),
+  get_token: vi.fn(),
 }));
 
 const mockCheckClient = vi.hoisted(() => vi.fn());
@@ -72,6 +73,7 @@ describe("useClusterStatus", () => {
     mockReconnectClient.mockResolvedValue(undefined);
     mockLogout.mockResolvedValue(undefined);
     mockApiUrl.value = "http://server1:8080";
+    mockClient.get_token.mockReturnValue(null);
     mockAgdbClient.mockClear();
     mockAgdbClient.mockResolvedValue({
       user_status: mockServerUserStatus,
@@ -442,5 +444,134 @@ describe("useClusterStatus", () => {
 
     expect(mockLogout).not.toHaveBeenCalled();
     expect(mockReconnectClient).not.toHaveBeenCalled();
+  });
+
+  it("should resolve active server by matching normalized port", async () => {
+    mockApiUrl.value = "http://localhost:8080";
+    const mockServers: ClusterStatus[] = [
+      { address: "https://agdb0:8080", status: true, leader: true },
+      { address: "https://agdb1:9090", status: true, leader: false },
+    ];
+
+    mockClient.cluster_status.mockResolvedValue({ data: mockServers });
+    mockServerUserStatus
+      .mockResolvedValueOnce({ data: { login: true } })
+      .mockResolvedValueOnce({ data: { login: true } });
+
+    const vm = mountComposable();
+    await vi.advanceTimersByTimeAsync(0);
+    await flushPromises();
+    await nextTick();
+
+    expect(vm.activeServer?.address).toBe("https://agdb0:8080");
+    expect(vm.activeNodeLabel).toBe(":8080");
+    expect(vm.isServerActive(mockServers[0]!)).toBe(true);
+    expect(vm.isServerActive(mockServers[1]!)).toBe(false);
+  });
+
+  it("should handle malformed addresses and malformed api url", async () => {
+    mockApiUrl.value = "http://server1:8080";
+    mockClient.cluster_status.mockResolvedValue({ data: [] });
+
+    const vm = mountComposable();
+    await vi.advanceTimersByTimeAsync(0);
+    await flushPromises();
+    await nextTick();
+
+    const malformedServer = {
+      address: "http://%zz",
+      status: true,
+      leader: false,
+    } as ClusterStatus;
+    expect(vm.isServerActive(malformedServer)).toBe(false);
+
+    mockApiUrl.value = "http://%zz";
+    await nextTick();
+    expect(vm.activeNodeLabel).toBe("http://%zz");
+  });
+
+  it("should handle switch errors and always clear switching marker", async () => {
+    mockApiUrl.value = "http://server1:8080";
+    const mockServers: ClusterStatus[] = [
+      { address: "https://agdb0:8080", status: true, leader: true },
+      { address: "https://agdb1:9090", status: true, leader: false },
+    ];
+
+    mockClient.cluster_status.mockResolvedValue({ data: mockServers });
+    mockServerUserStatus
+      .mockResolvedValueOnce({ data: { login: true } })
+      .mockResolvedValueOnce({ data: { login: true } });
+    mockReconnectClient.mockRejectedValueOnce(new Error("switch failed"));
+
+    const vm = mountComposable();
+    await vi.advanceTimersByTimeAsync(0);
+    await flushPromises();
+    await nextTick();
+
+    await vm.switchToServer(mockServers[1]!);
+
+    expect(vm.switchingServerAddress).toBeNull();
+  });
+
+  it("should set token on per-server client when token exists", async () => {
+    const mockServers: ClusterStatus[] = [
+      { address: "server1:8080", status: true, leader: true },
+    ];
+
+    mockClient.get_token.mockReturnValue("token-123");
+    mockClient.cluster_status.mockResolvedValue({ data: mockServers });
+    mockServerUserStatus.mockResolvedValueOnce({ data: { login: true } });
+
+    mountComposable();
+    await vi.advanceTimersByTimeAsync(0);
+    await flushPromises();
+    await nextTick();
+
+    expect(mockServerSetToken).toHaveBeenCalledWith("token-123");
+  });
+
+  it("should normalize host-only addresses to default port 80", async () => {
+    mockApiUrl.value = "localhost";
+    const mockServers: ClusterStatus[] = [
+      { address: "agdb0", status: true, leader: true },
+      { address: "agdb1:9090", status: true, leader: false },
+    ];
+
+    mockClient.cluster_status.mockResolvedValue({ data: mockServers });
+    mockServerUserStatus
+      .mockResolvedValueOnce({ data: { login: true } })
+      .mockResolvedValueOnce({ data: { login: false } });
+
+    const vm = mountComposable();
+    await vi.advanceTimersByTimeAsync(0);
+    await flushPromises();
+    await nextTick();
+
+    expect(vm.activeNodeLabel).toBe(":80");
+    expect(vm.isServerActive(mockServers[0]!)).toBe(true);
+    expect(vm.isServerActive(mockServers[1]!)).toBe(false);
+  });
+
+  it("should handle non-Error exceptions during switch", async () => {
+    mockApiUrl.value = "http://server1:8080";
+    const mockServers: ClusterStatus[] = [
+      { address: "https://agdb0:8080", status: true, leader: true },
+      { address: "https://agdb1:9090", status: true, leader: false },
+    ];
+
+    mockClient.cluster_status.mockResolvedValue({ data: mockServers });
+    mockServerUserStatus
+      .mockResolvedValueOnce({ data: { login: true } })
+      .mockResolvedValueOnce({ data: { login: true } });
+    mockReconnectClient.mockRejectedValueOnce("switch failed");
+
+    const vm = mountComposable();
+    await vi.advanceTimersByTimeAsync(0);
+    await flushPromises();
+    await nextTick();
+
+    await vm.switchToServer(mockServers[1]!);
+
+    expect(vm.switchingServerAddress).toBeNull();
   });
 });

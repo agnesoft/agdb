@@ -14,12 +14,34 @@ use axum_extra::headers::authorization::Bearer;
 
 pub(crate) struct UserId(pub(crate) DbId);
 
+#[derive(Default)]
+pub(crate) struct UserIdToken(pub(crate) String);
+
 pub(crate) struct AdminId();
 
 pub(crate) struct ClusterId();
 
 #[derive(Default)]
 pub(crate) struct UserName(pub(crate) String);
+
+impl<S: Sync + Send> FromRequestParts<S> for UserIdToken
+where
+    S: Send + Sync,
+    ServerDb: FromRef<S>,
+{
+    type Rejection = ServerError;
+
+    async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
+        let bearer: TypedHeader<Authorization<Bearer>> =
+            parts.extract().await.map_err(unauthorized)?;
+        let token = utilities::unquote(bearer.token());
+        ServerDb::from_ref(state)
+            .user_token_id(token)
+            .await
+            .map_err(unauthorized)?;
+        Ok(Self(token.to_string()))
+    }
+}
 
 impl<S: Sync + Send> FromRequestParts<S> for UserName
 where

@@ -6,7 +6,6 @@ use crate::raft::Log;
 use crate::server_error::ServerError;
 use crate::server_error::ServerResult;
 use agdb::AgdbSerialize;
-use agdb::Comparison;
 use agdb::CountComparison;
 use agdb::Db;
 use agdb::DbId;
@@ -21,6 +20,7 @@ use agdb_api::DbUserRole;
 use agdb_api::UserStatus;
 use reqwest::StatusCode;
 use std::sync::Arc;
+use std::time::SystemTime;
 use tokio::sync::RwLock;
 
 #[derive(DbType)]
@@ -29,7 +29,13 @@ pub(crate) struct ServerUser {
     pub(crate) username: String,
     pub(crate) password: Vec<u8>,
     pub(crate) salt: Vec<u8>,
+}
+
+#[derive(DbType)]
+pub(crate) struct UserToken {
+    pub(crate) db_id: Option<DbId>,
     pub(crate) token: String,
+    pub(crate) created: SystemTime,
 }
 
 #[derive(Default, DbType)]
@@ -77,7 +83,6 @@ pub(crate) async fn new(config: &Config) -> ServerResult<ServerDb> {
             username: config.admin.clone(),
             password: admin_password.password.to_vec(),
             salt: admin_password.user_salt.to_vec(),
-            token: String::new(),
         };
         db.insert_user(admin).await?
     };
@@ -287,12 +292,20 @@ impl ServerDb {
             .0
             .read()
             .await
-            .exec(QueryBuilder::select().values(TOKEN).ids(ADMIN).query())?
-            .elements[0]
-            .values[0]
-            .value
-            .string()?
-            == token)
+            .exec(
+                QueryBuilder::select()
+                    .search()
+                    .from(ADMIN)
+                    .limit(1)
+                    .where_()
+                    .neighbor()
+                    .and()
+                    .key(TOKEN)
+                    .value(token)
+                    .query(),
+            )?
+            .result
+            == 1)
     }
 
     pub(crate) async fn is_db_admin(&self, user: DbId, db: DbId) -> ServerResult<bool> {
@@ -373,17 +386,15 @@ impl ServerDb {
 
     pub(crate) async fn reset_tokens(&self) -> ServerResult<()> {
         self.0.write().await.exec_mut(
-            QueryBuilder::insert()
-                .values_uniform([(TOKEN, String::new()).into()])
+            QueryBuilder::remove()
                 .search()
                 .from(USERS)
                 .where_()
-                .neighbor()
+                .distance(4)
                 .and()
-                .key(TOKEN)
-                .value(Comparison::NotEqual(String::new().into()))
+                .keys(TOKEN)
                 .and()
-                .not()
+                .not_beyond()
                 .ids(ADMIN)
                 .query(),
         )?;
@@ -399,13 +410,33 @@ impl ServerDb {
     }
 
     pub(crate) async fn save_token(&self, user: DbId, token: &str) -> ServerResult<()> {
-        self.0.write().await.exec_mut(
-            QueryBuilder::insert()
-                .values([[(TOKEN, token).into()]])
-                .ids(user)
-                .query(),
-        )?;
-        Ok(())
+        self.0
+            .write()
+            .await
+            .transaction_mut(|t| -> ServerResult<()> {
+                let token_id = t
+                    .exec_mut(
+                        QueryBuilder::insert()
+                            .element(&UserToken {
+                                db_id: None,
+                                token: token.to_string(),
+                                created: SystemTime::now(),
+                            })
+                            .query(),
+                    )?
+                    .elements[0]
+                    .id;
+
+                t.exec_mut(
+                    QueryBuilder::insert()
+                        .edges()
+                        .from(user)
+                        .to(token_id)
+                        .query(),
+                )?;
+
+                Ok(())
+            })
     }
 
     pub(crate) async fn save_user(&self, user: ServerUser) -> ServerResult<()> {
@@ -534,7 +565,10 @@ impl ServerDb {
                             .where_()
                             .distance(1)
                             .or()
+                            .where_()
                             .neighbor()
+                            .and()
+                            .keys(DB)
                             .query(),
                     )
                     .query(),
@@ -570,18 +604,6 @@ impl ServerDb {
             .ok_or(user_not_found(username))
     }
 
-    pub(crate) async fn user_token(&self, user: DbId) -> ServerResult<String> {
-        Ok(self
-            .0
-            .read()
-            .await
-            .exec(QueryBuilder::select().values(TOKEN).ids(user).query())?
-            .elements[0]
-            .values[0]
-            .value
-            .to_string())
-    }
-
     pub(crate) async fn user_token_count(&self) -> ServerResult<u64> {
         self.0.read().await.transaction(|t| -> ServerResult<u64> {
             let empty_tokens = if t
@@ -601,47 +623,73 @@ impl ServerDb {
     }
 
     pub(crate) async fn user_token_id(&self, token: &str) -> ServerResult<DbId> {
-        Ok(self
-            .0
-            .read()
-            .await
-            .exec(QueryBuilder::search().index(TOKEN).value(token).query())?
-            .elements
-            .first()
-            .ok_or(token_not_found(token))?
-            .id)
-    }
+        self.0.read().await.transaction(|t| {
+            let token_id = t
+                .exec(QueryBuilder::search().index(TOKEN).value(token).query())?
+                .elements
+                .first()
+                .ok_or_else(|| token_not_found(token))?
+                .id;
 
-    pub(crate) async fn user_statuses(&self) -> ServerResult<Vec<UserStatus>> {
-        let admin_id = self
-            .0
-            .read()
-            .await
-            .exec(QueryBuilder::select().aliases().ids(ADMIN).query())?
-            .elements[0]
-            .id;
-
-        Ok(self
-            .0
-            .read()
-            .await
-            .exec(
-                QueryBuilder::select()
-                    .values([USERNAME, TOKEN])
-                    .search()
-                    .from(USERS)
+            Ok(t.exec(
+                QueryBuilder::search()
+                    .to(token_id)
+                    .limit(1)
                     .where_()
                     .neighbor()
                     .query(),
             )?
             .elements
-            .into_iter()
-            .map(|e| UserStatus {
-                username: e.values[0].value.to_string(),
-                login: !e.values[1].value.to_string().is_empty(),
-                admin: e.id == admin_id,
+            .first()
+            .ok_or_else(|| user_not_found(token))?
+            .id)
+        })
+    }
+
+    pub(crate) async fn user_statuses(&self) -> ServerResult<Vec<UserStatus>> {
+        self.0
+            .read()
+            .await
+            .transaction(|t| -> ServerResult<Vec<UserStatus>> {
+                let admin_id = t
+                    .exec(QueryBuilder::select().aliases().ids(ADMIN).query())?
+                    .elements[0]
+                    .id;
+                t.exec(
+                    QueryBuilder::select()
+                        .values([USERNAME])
+                        .search()
+                        .from(USERS)
+                        .where_()
+                        .neighbor()
+                        .query(),
+                )?
+                .elements
+                .into_iter()
+                .map(|e| {
+                    Ok(UserStatus {
+                        username: e.values[0].value.to_string(),
+                        login: t
+                            .exec(QueryBuilder::select().edge_count_from().ids(e.id).query())?
+                            .elements[0]
+                            .values[0]
+                            .value
+                            .to_u64()?
+                            > 0,
+                        admin: e.id == admin_id,
+                    })
+                })
+                .collect::<ServerResult<Vec<UserStatus>>>()
             })
-            .collect())
+    }
+
+    pub(crate) async fn remove_token(&self, token: &str) -> ServerResult<()> {
+        self.0.write().await.exec_mut(
+            QueryBuilder::remove()
+                .ids(self.user_token_id(token).await?)
+                .query(),
+        )?;
+        Ok(())
     }
 }
 

@@ -8,6 +8,7 @@ use crate::server_db::ServerDb;
 use crate::server_error::ServerError;
 use crate::server_error::ServerResponse;
 use crate::user_id::UserId;
+use crate::user_id::UserIdToken;
 use crate::user_id::UserName;
 use agdb::DbId;
 use agdb_api::ChangePassword;
@@ -66,8 +67,8 @@ pub(crate) async fn login(
          (status = 401, description = "invalid credentials")
     )
 )]
-pub(crate) async fn logout(user: UserId, State(server_db): State<ServerDb>) -> ServerResponse {
-    server_db.save_token(user.0, "").await?;
+pub(crate) async fn logout(user: UserIdToken, State(server_db): State<ServerDb>) -> ServerResponse {
+    server_db.remove_token(&user.0).await?;
 
     Ok(StatusCode::CREATED)
 }

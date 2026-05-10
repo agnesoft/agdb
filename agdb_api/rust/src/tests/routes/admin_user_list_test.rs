@@ -14,11 +14,15 @@ pub async fn user_list() -> Result<(), TestError> {
     server.api.admin_user_add(user2, user2).await?;
     let (status, list) = server.api.admin_user_list().await?;
     assert_eq!(status, 200);
-    assert!(list.contains(&UserStatus {
-        username: "admin".to_string(),
-        login: true,
-        admin: true,
-    }));
+    assert!(
+        list.contains(&UserStatus {
+            username: "admin".to_string(),
+            login: true,
+            admin: true,
+        }),
+        "{}",
+        serde_json::to_string(&list).unwrap()
+    );
     assert!(list.contains(&UserStatus {
         username: user1.to_string(),
         login: false,

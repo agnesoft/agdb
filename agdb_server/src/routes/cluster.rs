@@ -1,6 +1,7 @@
 use crate::action::ClusterAction;
 use crate::action::cluster_login::ClusterLogin;
 use crate::action::cluster_logout::ClusterLogout;
+use crate::action::cluster_user_logout::ClusterUserLogout;
 use crate::cluster;
 use crate::cluster::Cluster;
 use crate::config::Config;
@@ -12,7 +13,7 @@ use crate::server_error::ServerResponse;
 use crate::server_error::ServerResult;
 use crate::user_id::AdminId;
 use crate::user_id::ClusterId;
-use crate::user_id::UserId;
+use crate::user_id::UserIdToken;
 use agdb_api::ClusterStatus;
 use agdb_api::UserLogin;
 use axum::Json;
@@ -128,22 +129,14 @@ pub(crate) async fn login(
     )
 )]
 pub(crate) async fn logout(
-    user: UserId,
-    State(server_db): State<ServerDb>,
+    user: UserIdToken,
     State(cluster): State<Cluster>,
 ) -> ServerResponse<impl IntoResponse> {
-    let token = server_db.user_token(user.0).await?;
-    let mut commit_index = 0;
-
-    if !token.is_empty() {
-        let (index, _result) = cluster
-            .exec(ClusterLogin {
-                user: server_db.user_name(user.0).await?,
-                new_token: String::new(),
-            })
-            .await?;
-        commit_index = index;
-    }
+    let (commit_index, _result) = cluster
+        .exec(ClusterUserLogout {
+            token: user.0.clone(),
+        })
+        .await?;
 
     Ok((
         StatusCode::CREATED,

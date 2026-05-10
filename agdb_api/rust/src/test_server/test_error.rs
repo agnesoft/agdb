@@ -79,3 +79,12 @@ impl From<tokio::task::JoinError> for TestError {
         }
     }
 }
+
+impl From<agdb::DbError> for TestError {
+    #[track_caller]
+    fn from(error: agdb::DbError) -> Self {
+        TestError {
+            description: error.to_string(),
+        }
+    }
+}

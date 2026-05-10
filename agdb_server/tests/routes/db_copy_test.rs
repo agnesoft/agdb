@@ -1,183 +1,41 @@
-use agdb::DbElement;
-use agdb::DbId;
-use agdb::QueryBuilder;
-use agdb_api::DbKind;
-use agdb_api::DbUserRole;
-use agdb_api::test_server::ADMIN;
-use agdb_api::test_server::TestServer;
-use agdb_api::test_server::next_db_name;
-use agdb_api::test_server::next_user_name;
-use std::path::Path;
+use agdb_api::test_server::test_error::TestError;
 
 #[tokio::test]
-async fn copy() -> anyhow::Result<()> {
-    let mut server = TestServer::new().await?;
-    let owner = &next_user_name();
-    let db = &next_db_name();
-    let db2 = &next_db_name();
-    server.api.user_login(ADMIN, ADMIN).await?;
-    server.api.admin_user_add(owner, owner).await?;
-    server.api.user_login(owner, owner).await?;
-    server.api.db_add(owner, db, DbKind::Mapped).await?;
-    let queries = &[QueryBuilder::insert()
-        .nodes()
-        .aliases(["root"])
-        .query()
-        .into()];
-    server.api.db_exec_mut(owner, db, queries).await?;
-    let status = server.api.db_copy(owner, db, db2).await?;
-    assert_eq!(status, 201);
-    assert!(Path::new(&server.data_dir).join(owner).join(db2).exists());
-    let queries = &[QueryBuilder::select().ids("root").query().into()];
-    let results = server.api.db_exec(owner, db2, queries).await?.1;
-    assert_eq!(results.len(), 1);
-    assert_eq!(results[0].result, 1);
-    assert_eq!(
-        results[0].elements,
-        vec![DbElement {
-            id: DbId(1),
-            from: None,
-            to: None,
-            values: vec![]
-        }]
-    );
-    Ok(())
+async fn copy() -> Result<(), TestError> {
+    agdb_api::tests::routes::db_copy_test::copy().await
 }
 
 #[tokio::test]
-async fn copy_from_different_user() -> anyhow::Result<()> {
-    let mut server = TestServer::new().await?;
-    let owner = &next_user_name();
-    let owner2 = &next_user_name();
-    let db = &next_db_name();
-    let db2 = &next_db_name();
-    server.api.user_login(ADMIN, ADMIN).await?;
-    server.api.admin_user_add(owner, owner).await?;
-    server.api.admin_user_add(owner2, owner2).await?;
-    server.api.admin_db_add(owner, db, DbKind::Mapped).await?;
-    server
-        .api
-        .admin_db_user_add(owner, db, owner2, DbUserRole::Read)
-        .await?;
-    let queries = &[QueryBuilder::insert()
-        .nodes()
-        .aliases(["root"])
-        .query()
-        .into()];
-    server.api.admin_db_exec_mut(owner, db, queries).await?;
-    server.api.user_login(owner2, owner2).await?;
-    let status = server.api.db_copy(owner, db, db2).await?;
-    assert_eq!(status, 201);
-    assert!(Path::new(&server.data_dir).join(owner2).join(db2).exists());
-    let queries = &[QueryBuilder::select().ids("root").query().into()];
-    let results = server.api.db_exec(owner2, db2, queries).await?.1;
-    assert_eq!(results.len(), 1);
-    assert_eq!(results[0].result, 1);
-    assert_eq!(
-        results[0].elements,
-        vec![DbElement {
-            id: DbId(1),
-            from: None,
-            to: None,
-            values: vec![]
-        }]
-    );
-    Ok(())
+async fn copy_from_different_user() -> Result<(), TestError> {
+    agdb_api::tests::routes::db_copy_test::copy_from_different_user().await
 }
 
 #[tokio::test]
-async fn copy_to_removed() -> anyhow::Result<()> {
-    let mut server = TestServer::new().await?;
-    let owner = &next_user_name();
-    let db = &next_db_name();
-    let db2 = &next_db_name();
-    server.api.user_login(ADMIN, ADMIN).await?;
-    server.api.admin_user_add(owner, owner).await?;
-    server.api.user_login(owner, owner).await?;
-    server.api.db_add(owner, db, DbKind::Mapped).await?;
-    server.api.db_add(owner, db2, DbKind::Mapped).await?;
-    server.api.db_remove(owner, db2).await?;
-    let status = server.api.db_copy(owner, db, db2).await.unwrap_err().status;
-    assert_eq!(status, 465);
-    Ok(())
+async fn copy_to_removed() -> Result<(), TestError> {
+    agdb_api::tests::routes::db_copy_test::copy_to_removed().await
 }
 
 #[tokio::test]
-async fn target_exists() -> anyhow::Result<()> {
-    let mut server = TestServer::new().await?;
-    let owner = &next_user_name();
-    let db = &next_db_name();
-    let db2 = &next_db_name();
-    server.api.user_login(ADMIN, ADMIN).await?;
-    server.api.admin_user_add(owner, owner).await?;
-    server.api.user_login(owner, owner).await?;
-    server.api.db_add(owner, db, DbKind::Memory).await?;
-    server.api.db_add(owner, db2, DbKind::Memory).await?;
-    let status = server.api.db_copy(owner, db, db2).await.unwrap_err().status;
-    assert_eq!(status, 465);
-    Ok(())
+async fn target_exists() -> Result<(), TestError> {
+    agdb_api::tests::routes::db_copy_test::target_exists().await
 }
 
 #[tokio::test]
-async fn target_self() -> anyhow::Result<()> {
-    let mut server = TestServer::new().await?;
-    let owner = &next_user_name();
-    let db = &next_db_name();
-    server.api.user_login(ADMIN, ADMIN).await?;
-    server.api.admin_user_add(owner, owner).await?;
-    server.api.user_login(owner, owner).await?;
-    server.api.db_add(owner, db, DbKind::Memory).await?;
-    let status = server.api.db_copy(owner, db, db).await.unwrap_err().status;
-    assert_eq!(status, 465);
-    Ok(())
+async fn target_self() -> Result<(), TestError> {
+    agdb_api::tests::routes::db_copy_test::target_self().await
 }
 
 #[tokio::test]
-async fn invalid() -> anyhow::Result<()> {
-    let mut server = TestServer::new().await?;
-    let owner = &next_user_name();
-    let db = &next_db_name();
-    server.api.user_login(ADMIN, ADMIN).await?;
-    server.api.admin_user_add(owner, owner).await?;
-    server.api.user_login(owner, owner).await?;
-    server.api.db_add(owner, db, DbKind::File).await?;
-    let status = server
-        .api
-        .db_copy(owner, db, &format!("{owner}/a\0a"))
-        .await
-        .unwrap_err()
-        .status;
-    assert_eq!(status, 467);
-    Ok(())
+async fn invalid() -> Result<(), TestError> {
+    agdb_api::tests::routes::db_copy_test::invalid().await
 }
 
 #[tokio::test]
-async fn db_not_found() -> anyhow::Result<()> {
-    let mut server = TestServer::new().await?;
-    let owner = &next_user_name();
-    server.api.user_login(ADMIN, ADMIN).await?;
-    server.api.admin_user_add(owner, owner).await?;
-    server.api.user_login(owner, owner).await?;
-    let status = server
-        .api
-        .db_copy(owner, "db", "dbx")
-        .await
-        .unwrap_err()
-        .status;
-    assert_eq!(status, 404);
-    Ok(())
+async fn db_not_found() -> Result<(), TestError> {
+    agdb_api::tests::routes::db_copy_test::db_not_found().await
 }
 
 #[tokio::test]
-async fn no_token() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
-    let status = server
-        .api
-        .db_copy("owner", "db", "dbx")
-        .await
-        .unwrap_err()
-        .status;
-    assert_eq!(status, 401);
-
-    Ok(())
+async fn no_token() -> Result<(), TestError> {
+    agdb_api::tests::routes::db_copy_test::no_token().await
 }

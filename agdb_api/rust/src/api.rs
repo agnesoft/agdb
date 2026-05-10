@@ -95,6 +95,7 @@ use agdb::type_def::Type;
 use agdb::type_def::TypeDefinition;
 
 use crate::AdminStatus;
+use crate::AgdbApi;
 use crate::AgdbApiClientDef;
 use crate::AgdbApiError;
 use crate::ChangePassword;
@@ -107,10 +108,12 @@ use crate::DbUserRole;
 use crate::HttpClientDef;
 use crate::LogLevelFilter;
 use crate::QueryAudit;
+use crate::ReqwestClient;
 use crate::ServerDatabase;
 use crate::UserCredentials;
 use crate::UserLogin;
 use crate::UserStatus;
+use crate::http_client::ReqwestClientTypeDef;
 
 pub struct Api;
 
@@ -219,6 +222,9 @@ impl Api {
             AgdbApiClientDef::type_def(),
             // agdb_api types
             AgdbApiError::type_def(),
+            ReqwestClient::type_def(),
+            ReqwestClientTypeDef::type_def(),
+            AgdbApi::<ReqwestClient>::type_def(),
             AdminStatus::type_def(),
             ChangePassword::type_def(),
             ClusterStatus::type_def(),
@@ -235,11 +241,63 @@ impl Api {
             UserStatus::type_def(),
         ]
     }
+
+    /// Returns all test function definitions for API reflection
+    #[cfg(feature = "test_server")]
+    pub fn test_defs() -> Vec<Type> {
+        let mut defs = crate::test_server::test_defs();
+
+        defs.extend(crate::tests::routes::admin_db_add_test::test_defs());
+        defs.extend(crate::tests::routes::admin_db_audit_test::test_defs());
+        defs.extend(crate::tests::routes::admin_db_backup_restore_test::test_defs());
+        defs.extend(crate::tests::routes::admin_db_clear_test::test_defs());
+        defs.extend(crate::tests::routes::admin_db_convert_test::test_defs());
+        defs.extend(crate::tests::routes::admin_db_copy_test::test_defs());
+        defs.extend(crate::tests::routes::admin_db_delete_test::test_defs());
+        defs.extend(crate::tests::routes::admin_db_exec_test::test_defs());
+        defs.extend(crate::tests::routes::admin_db_list_test::test_defs());
+        defs.extend(crate::tests::routes::admin_db_optimize_test::test_defs());
+        defs.extend(crate::tests::routes::admin_db_remove_test::test_defs());
+        defs.extend(crate::tests::routes::admin_db_rename_test::test_defs());
+        defs.extend(crate::tests::routes::admin_db_user_add_test::test_defs());
+        defs.extend(crate::tests::routes::admin_db_user_list_test::test_defs());
+        defs.extend(crate::tests::routes::admin_db_user_remove_test::test_defs());
+        defs.extend(crate::tests::routes::admin_status_test::test_defs());
+        defs.extend(crate::tests::routes::admin_user_add_test::test_defs());
+        defs.extend(crate::tests::routes::admin_user_change_password_test::test_defs());
+        defs.extend(crate::tests::routes::admin_user_delete_test::test_defs());
+        defs.extend(crate::tests::routes::admin_user_list_test::test_defs());
+        defs.extend(crate::tests::routes::admin_user_logout_test::test_defs());
+        defs.extend(crate::tests::routes::db_add_test::test_defs());
+        defs.extend(crate::tests::routes::db_audit_test::test_defs());
+        defs.extend(crate::tests::routes::db_backup_restore_test::test_defs());
+        defs.extend(crate::tests::routes::db_clear_test::test_defs());
+        defs.extend(crate::tests::routes::db_convert_test::test_defs());
+        defs.extend(crate::tests::routes::db_copy_test::test_defs());
+        defs.extend(crate::tests::routes::db_delete_test::test_defs());
+        defs.extend(crate::tests::routes::db_exec_test::test_defs());
+        defs.extend(crate::tests::routes::db_list_test::test_defs());
+        defs.extend(crate::tests::routes::db_optimize_test::test_defs());
+        defs.extend(crate::tests::routes::db_remove_test::test_defs());
+        defs.extend(crate::tests::routes::db_rename_test::test_defs());
+        defs.extend(crate::tests::routes::db_user_add_test::test_defs());
+        defs.extend(crate::tests::routes::db_user_list::test_defs());
+        defs.extend(crate::tests::routes::db_user_remove_test::test_defs());
+        defs.extend(crate::tests::routes::misc_routes::test_defs());
+        defs.extend(crate::tests::routes::cluster_test::test_defs());
+        defs.extend(crate::tests::routes::user_change_password_test::test_defs());
+        defs.extend(crate::tests::routes::user_login_test::test_defs());
+        defs.extend(crate::tests::routes::user_logout_test::test_defs());
+        defs.extend(crate::tests::routes::user_status::test_defs());
+
+        defs
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use agdb::type_def::Expression;
     use agdb::type_def::Function;
     use agdb::type_def::Generic;
     use std::collections::HashSet;
@@ -257,6 +315,148 @@ mod tests {
         }
         for g in f.generics {
             collect_from_generic(g, out);
+        }
+    }
+
+    fn collect_from_expression(expr: &Expression, out: &mut Vec<fn() -> Type>) {
+        match expr {
+            Expression::Array(items) | Expression::Tuple(items) | Expression::Block(items) => {
+                for item in *items {
+                    collect_from_expression(item, out);
+                }
+            }
+            Expression::Assign { target, value } => {
+                collect_from_expression(target, out);
+                collect_from_expression(value, out);
+            }
+            Expression::Await(inner)
+            | Expression::Reference(inner)
+            | Expression::Try(inner)
+            | Expression::Unary { expr: inner, .. } => {
+                collect_from_expression(inner, out);
+            }
+            Expression::Binary { left, right, .. } => {
+                collect_from_expression(left, out);
+                collect_from_expression(right, out);
+            }
+            Expression::Call {
+                recipient,
+                function,
+                args,
+            } => {
+                if let Some(recipient) = recipient {
+                    collect_from_expression(recipient, out);
+                }
+                collect_from_expression(function, out);
+                for arg in *args {
+                    collect_from_expression(arg, out);
+                }
+            }
+            Expression::Closure(function) => {
+                collect_from_function(function, out);
+                for expr in function.body {
+                    collect_from_expression(expr, out);
+                }
+            }
+            Expression::FieldAccess { base, .. } | Expression::TupleAccess { base, .. } => {
+                collect_from_expression(base, out);
+            }
+            Expression::For {
+                pattern,
+                iterable,
+                body,
+            } => {
+                collect_from_expression(pattern, out);
+                collect_from_expression(iterable, out);
+                collect_from_expression(body, out);
+            }
+            Expression::Format { args, .. } => {
+                for arg in *args {
+                    collect_from_expression(arg, out);
+                }
+            }
+            Expression::If {
+                condition,
+                then_branch,
+                else_branch,
+            } => {
+                collect_from_expression(condition, out);
+                collect_from_expression(then_branch, out);
+                if let Some(else_branch) = else_branch {
+                    collect_from_expression(else_branch, out);
+                }
+            }
+            Expression::Index { base, index } => {
+                collect_from_expression(base, out);
+                collect_from_expression(index, out);
+            }
+            Expression::Let { name, ty, value } => {
+                collect_from_expression(name, out);
+                if let Some(ty) = ty {
+                    out.push(*ty);
+                }
+                if let Some(value) = value {
+                    collect_from_expression(value, out);
+                }
+            }
+            Expression::Path {
+                parent, generics, ..
+            } => {
+                if let Some(parent) = parent {
+                    collect_from_expression(parent, out);
+                }
+                out.extend_from_slice(generics);
+            }
+            Expression::Range {
+                start,
+                end,
+                inclusive: _,
+            } => {
+                if let Some(start) = start {
+                    collect_from_expression(start, out);
+                }
+                if let Some(end) = end {
+                    collect_from_expression(end, out);
+                }
+            }
+            Expression::Return(value) => {
+                if let Some(value) = value {
+                    collect_from_expression(value, out);
+                }
+            }
+            Expression::Struct { name, fields } => {
+                collect_from_expression(name, out);
+                for (_, value) in *fields {
+                    collect_from_expression(value, out);
+                }
+            }
+            Expression::StructPattern { name, fields } => {
+                collect_from_expression(name, out);
+                for field in *fields {
+                    collect_from_expression(field, out);
+                }
+            }
+            Expression::TupleStruct { name, expressions } => {
+                collect_from_expression(name, out);
+                for expression in *expressions {
+                    collect_from_expression(expression, out);
+                }
+            }
+            Expression::While { condition, body } => {
+                collect_from_expression(condition, out);
+                collect_from_expression(body, out);
+            }
+            Expression::Break
+            | Expression::Continue
+            | Expression::Ident(_)
+            | Expression::Literal(_)
+            | Expression::Wild => {}
+        }
+    }
+
+    fn collect_from_function_body(function: &Function, out: &mut Vec<fn() -> Type>) {
+        for expr in function.body {
+            collect_from_expression(expr, out);
         }
     }
 
@@ -319,9 +519,28 @@ mod tests {
         }
     }
 
-    #[test]
-    fn all_fn_ptrs_resolvable() {
-        let roots = Api::type_defs();
+    fn roots() -> Vec<Type> {
+        let mut roots = Api::type_defs();
+        #[cfg(feature = "test_server")]
+        roots.extend(Api::test_defs());
+        roots
+    }
+
+    fn type_name(ty: &Type) -> Option<&'static str> {
+        match ty {
+            Type::Struct(s) => Some(s.name),
+            Type::Enum(e) => Some(e.name),
+            Type::Trait(t) => Some(t.name),
+            _ => None,
+        }
+    }
+
+    fn collect_missing_named_types() -> Vec<&'static str> {
+        let roots = roots();
+
+        // Build set of all root type names.
+        let root_names: HashSet<&'static str> = roots.iter().map(|ty| ty.name()).collect();
+
         let mut visited: HashSet<usize> = HashSet::new();
         let mut queue: Vec<fn() -> Type> = Vec::new();
 
@@ -329,14 +548,44 @@ mod tests {
             collect_fn_ptrs(ty, &mut queue);
         }
 
+        let mut missing: Vec<&'static str> = Vec::new();
+
         while let Some(f) = queue.pop() {
             let addr = f as usize;
             if !visited.insert(addr) {
                 continue;
             }
             let ty = f();
+
+            if let Some(name) = type_name(&ty) {
+                let in_catalog = root_names.contains(name);
+                let is_external = EXTERNAL_TRAIT_ALLOWLIST.contains(&name);
+                if !in_catalog && !is_external && !missing.contains(&name) {
+                    missing.push(name);
+                }
+            }
+
+            match &ty {
+                Type::Function(function) | Type::Test(function) => {
+                    collect_from_function_body(function, &mut queue);
+                }
+                Type::Impl(implementation) => {
+                    for function in implementation.functions {
+                        collect_from_function_body(function, &mut queue);
+                    }
+                }
+                Type::Trait(trait_def) => {
+                    for function in trait_def.functions {
+                        collect_from_function_body(function, &mut queue);
+                    }
+                }
+                _ => {}
+            }
+
             collect_fn_ptrs(&ty, &mut queue);
         }
+
+        missing
     }
 
     // Traits from external crates or Rust std that appear as generic bounds
@@ -370,22 +619,9 @@ mod tests {
         "TypeDefinition",
     ];
 
-    fn type_name(ty: &Type) -> Option<&'static str> {
-        match ty {
-            Type::Struct(s) => Some(s.name),
-            Type::Enum(e) => Some(e.name),
-            Type::Trait(t) => Some(t.name),
-            _ => None,
-        }
-    }
-
     #[test]
-    fn all_named_types_in_catalog() {
-        let roots = Api::type_defs();
-
-        // Build set of all root type names.
-        let root_names: HashSet<&'static str> = roots.iter().map(|ty| ty.name()).collect();
-
+    fn all_fn_ptrs_resolvable() {
+        let roots = roots();
         let mut visited: HashSet<usize> = HashSet::new();
         let mut queue: Vec<fn() -> Type> = Vec::new();
 
@@ -393,29 +629,23 @@ mod tests {
             collect_fn_ptrs(ty, &mut queue);
         }
 
-        let mut missing: Vec<&'static str> = Vec::new();
-
         while let Some(f) = queue.pop() {
             let addr = f as usize;
             if !visited.insert(addr) {
                 continue;
             }
             let ty = f();
-
-            if let Some(name) = type_name(&ty) {
-                let in_catalog = root_names.contains(name);
-                let is_external = EXTERNAL_TRAIT_ALLOWLIST.contains(&name);
-                if !in_catalog && !is_external && !missing.contains(&name) {
-                    missing.push(name);
-                }
-            }
-
             collect_fn_ptrs(&ty, &mut queue);
         }
+    }
+
+    #[test]
+    fn all_named_types_in_catalog() {
+        let missing = collect_missing_named_types();
 
         assert!(
             missing.is_empty(),
-            "The following types are referenced in the API type graph \
+            "The following types are referenced in the API type graph and bodies \
              but are not listed in Api::type_defs():\n  {}\n\
              Add them to the catalog or to EXTERNAL_TRAIT_ALLOWLIST if they are external.",
             missing.join(", ")

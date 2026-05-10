@@ -1,164 +1,46 @@
-use agdb_api::DbKind;
-use agdb_api::test_server::ADMIN;
-use agdb_api::test_server::TestServer;
-use agdb_api::test_server::next_db_name;
-use agdb_api::test_server::next_user_name;
-use std::path::Path;
+use agdb_api::test_server::test_error::TestError;
 
 #[tokio::test]
-async fn add() -> anyhow::Result<()> {
-    let mut server = TestServer::new().await?;
-    let owner = &next_user_name();
-    let db = &next_db_name();
-    server.api.user_login(ADMIN, ADMIN).await?;
-    server.api.admin_user_add(owner, owner).await?;
-    server.api.user_login(owner, owner).await?;
-    let status = server.api.db_add(owner, db, DbKind::File).await?;
-    assert_eq!(status, 201);
-    assert!(Path::new(&server.data_dir).join(owner).join(db).exists());
-    Ok(())
+async fn add() -> Result<(), TestError> {
+    agdb_api::tests::routes::db_add_test::add().await
 }
 
 #[tokio::test]
-async fn add_same_name_with_previous_backup_after_delete() -> anyhow::Result<()> {
-    let mut server = TestServer::new().await?;
-    let owner = &next_user_name();
-    let db = &next_db_name();
-    server.api.user_login(ADMIN, ADMIN).await?;
-    server.api.admin_user_add(owner, owner).await?;
-    server.api.user_login(owner, owner).await?;
-    let status = server.api.db_add(owner, db, DbKind::Mapped).await?;
-    assert_eq!(status, 201);
-    server.api.db_backup(owner, db).await?;
-    server.api.db_delete(owner, db).await?;
-    let status = server.api.db_add(owner, db, DbKind::Mapped).await?;
-    assert_eq!(status, 201);
-    let list = server.api.db_list().await?.1;
-    assert_eq!(list[0].backup, 0);
-    Ok(())
+async fn add_same_name_with_previous_backup_after_delete() -> Result<(), TestError> {
+    agdb_api::tests::routes::db_add_test::add_same_name_with_previous_backup_after_delete().await
 }
 
 #[tokio::test]
-async fn add_same_name_with_backup_after_remove() -> anyhow::Result<()> {
-    let mut server = TestServer::new().await?;
-    let owner = &next_user_name();
-    let db = &next_db_name();
-    server.api.user_login(ADMIN, ADMIN).await?;
-    server.api.admin_user_add(owner, owner).await?;
-    server.api.user_login(owner, owner).await?;
-    let status = server.api.db_add(owner, db, DbKind::Mapped).await?;
-    assert_eq!(status, 201);
-    server.api.db_backup(owner, db).await?;
-    server.api.db_remove(owner, db).await?;
-    let status = server.api.db_add(owner, db, DbKind::Mapped).await?;
-    assert_eq!(status, 201);
-    let list = server.api.db_list().await?.1;
-    assert_ne!(list[0].backup, 0);
-    Ok(())
+async fn add_same_name_with_backup_after_remove() -> Result<(), TestError> {
+    agdb_api::tests::routes::db_add_test::add_same_name_with_backup_after_remove().await
 }
 
 #[tokio::test]
-async fn add_same_name_different_user() -> anyhow::Result<()> {
-    let mut server = TestServer::new().await?;
-    let owner = &next_user_name();
-    let owner2 = &next_user_name();
-    let db = &next_db_name();
-    server.api.user_login(ADMIN, ADMIN).await?;
-    server.api.admin_user_add(owner, owner).await?;
-    server.api.admin_user_add(owner2, owner2).await?;
-    server.api.user_login(owner, owner).await?;
-    let status = server.api.db_add(owner, db, DbKind::File).await?;
-    assert_eq!(status, 201);
-    assert!(Path::new(&server.data_dir).join(owner).join(db).exists());
-    server.api.user_login(owner2, owner2).await?;
-    let status = server.api.db_add(owner2, db, DbKind::File).await?;
-    assert_eq!(status, 201);
-    assert!(Path::new(&server.data_dir).join(owner2).join(db).exists());
-    Ok(())
+async fn add_same_name_different_user() -> Result<(), TestError> {
+    agdb_api::tests::routes::db_add_test::add_same_name_different_user().await
 }
 
 #[tokio::test]
-async fn db_already_exists() -> anyhow::Result<()> {
-    let mut server = TestServer::new().await?;
-    let owner = &next_user_name();
-    let db = &next_db_name();
-    server.api.user_login(ADMIN, ADMIN).await?;
-    server.api.admin_user_add(owner, owner).await?;
-    server.api.user_login(owner, owner).await?;
-    let status = server.api.db_add(owner, db, DbKind::File).await?;
-    assert_eq!(status, 201);
-    let status = server
-        .api
-        .db_add(owner, db, DbKind::File)
-        .await
-        .unwrap_err()
-        .status;
-    assert_eq!(status, 465);
-    Ok(())
+async fn db_already_exists() -> Result<(), TestError> {
+    agdb_api::tests::routes::db_add_test::db_already_exists().await
 }
 
 #[tokio::test]
-async fn db_user_mismatch() -> anyhow::Result<()> {
-    let mut server = TestServer::new().await?;
-    let owner = &next_user_name();
-    server.api.user_login(ADMIN, ADMIN).await?;
-    server.api.admin_user_add(owner, owner).await?;
-    server.api.user_login(owner, owner).await?;
-    let status = server
-        .api
-        .db_add("some_user", "db", DbKind::Mapped)
-        .await
-        .unwrap_err()
-        .status;
-    assert_eq!(status, 403);
-    Ok(())
+async fn db_user_mismatch() -> Result<(), TestError> {
+    agdb_api::tests::routes::db_add_test::db_user_mismatch().await
 }
 
 #[tokio::test]
-async fn add_db_other_user() -> anyhow::Result<()> {
-    let mut server = TestServer::new().await?;
-    let owner = &next_user_name();
-    let owner2 = &next_user_name();
-    server.api.user_login(ADMIN, ADMIN).await?;
-    server.api.admin_user_add(owner, owner).await?;
-    server.api.admin_user_add(owner2, owner2).await?;
-    server.api.user_login(owner, owner).await?;
-    let status = server
-        .api
-        .db_add(owner2, "db", DbKind::Mapped)
-        .await
-        .unwrap_err()
-        .status;
-    assert_eq!(status, 403);
-    Ok(())
+async fn add_db_other_user() -> Result<(), TestError> {
+    agdb_api::tests::routes::db_add_test::add_db_other_user().await
 }
 
 #[tokio::test]
-async fn db_type_invalid() -> anyhow::Result<()> {
-    let mut server = TestServer::new().await?;
-    let owner = &next_user_name();
-    server.api.user_login(ADMIN, ADMIN).await?;
-    server.api.admin_user_add(owner, owner).await?;
-    server.api.user_login(owner, owner).await?;
-    let status = server
-        .api
-        .db_add(owner, "a\0a", DbKind::Mapped)
-        .await
-        .unwrap_err()
-        .status;
-    assert_eq!(status, 467);
-    Ok(())
+async fn db_type_invalid() -> Result<(), TestError> {
+    agdb_api::tests::routes::db_add_test::db_type_invalid().await
 }
 
 #[tokio::test]
-async fn no_token() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
-    let status = server
-        .api
-        .db_add("owner", "db", DbKind::Mapped)
-        .await
-        .unwrap_err()
-        .status;
-    assert_eq!(status, 401);
-    Ok(())
+async fn no_token() -> Result<(), TestError> {
+    agdb_api::tests::routes::db_add_test::no_token().await
 }

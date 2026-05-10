@@ -1,62 +1,21 @@
-use agdb_api::test_server::ADMIN;
-use agdb_api::test_server::TestServer;
-use agdb_api::test_server::next_user_name;
+use agdb_api::test_server::test_error::TestError;
 
 #[tokio::test]
-async fn logout() -> anyhow::Result<()> {
-    let mut server = TestServer::new().await?;
-    let user = &next_user_name();
-    server.api.user_login(ADMIN, ADMIN).await?;
-    server.api.admin_user_add(user, user).await?;
-    server.api.user_login(user, user).await?;
-    let token = server.api.token.clone();
-    server.api.user_login(ADMIN, ADMIN).await?;
-    server.api.admin_user_logout(user).await?;
-    server.api.token = token;
-    let status = server.api.db_list().await.unwrap_err().status;
-    assert_eq!(status, 401);
-
-    Ok(())
+async fn logout() -> Result<(), TestError> {
+    agdb_api::tests::routes::admin_user_logout_test::logout().await
 }
 
 #[tokio::test]
-async fn unknown_user() -> anyhow::Result<()> {
-    let mut server = TestServer::new().await?;
-    server.api.user_login(ADMIN, ADMIN).await?;
-    let status = server
-        .api
-        .admin_user_logout("unknown_user")
-        .await
-        .unwrap_err()
-        .status;
-    assert_eq!(status, 404);
-
-    Ok(())
+async fn unknown_user() -> Result<(), TestError> {
+    agdb_api::tests::routes::admin_user_logout_test::unknown_user().await
 }
 
 #[tokio::test]
-async fn non_admin() -> anyhow::Result<()> {
-    let mut server = TestServer::new().await?;
-    let user = &next_user_name();
-    server.api.user_login(ADMIN, ADMIN).await?;
-    server.api.admin_user_add(user, user).await?;
-    server.api.user_login(user, user).await?;
-    let status = server.api.admin_user_logout(user).await.unwrap_err().status;
-    assert_eq!(status, 401);
-
-    Ok(())
+async fn non_admin() -> Result<(), TestError> {
+    agdb_api::tests::routes::admin_user_logout_test::non_admin().await
 }
 
 #[tokio::test]
-async fn no_token() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
-    let status = server
-        .api
-        .admin_user_logout("user")
-        .await
-        .unwrap_err()
-        .status;
-    assert_eq!(status, 401);
-
-    Ok(())
+async fn no_token() -> Result<(), TestError> {
+    agdb_api::tests::routes::admin_user_logout_test::no_token().await
 }

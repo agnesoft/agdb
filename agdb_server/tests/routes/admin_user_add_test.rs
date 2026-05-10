@@ -1,87 +1,31 @@
-use agdb_api::test_server::ADMIN;
-use agdb_api::test_server::TestServer;
-use agdb_api::test_server::next_user_name;
+use agdb_api::test_server::test_error::TestError;
 
 #[tokio::test]
-async fn add() -> anyhow::Result<()> {
-    let mut server = TestServer::new().await?;
-    let user = &next_user_name();
-    server.api.user_login(ADMIN, ADMIN).await?;
-    let status = server.api.admin_user_add(user, user).await?;
-    assert_eq!(status, 201);
-    Ok(())
+async fn add() -> Result<(), TestError> {
+    agdb_api::tests::routes::admin_user_add_test::add().await
 }
 
 #[tokio::test]
-async fn add_existing() -> anyhow::Result<()> {
-    let mut server = TestServer::new().await?;
-    let user = &next_user_name();
-    server.api.user_login(ADMIN, ADMIN).await?;
-    server.api.admin_user_add(user, user).await?;
-    let status = server
-        .api
-        .admin_user_add(user, user)
-        .await
-        .unwrap_err()
-        .status;
-    assert_eq!(status, 463);
-    Ok(())
+async fn add_existing() -> Result<(), TestError> {
+    agdb_api::tests::routes::admin_user_add_test::add_existing().await
 }
 
 #[tokio::test]
-async fn name_too_short() -> anyhow::Result<()> {
-    let mut server = TestServer::new().await?;
-    server.api.user_login(ADMIN, ADMIN).await?;
-    let status = server
-        .api
-        .admin_user_add("a", "password123")
-        .await
-        .unwrap_err()
-        .status;
-    assert_eq!(status, 462);
-    Ok(())
+async fn name_too_short() -> Result<(), TestError> {
+    agdb_api::tests::routes::admin_user_add_test::name_too_short().await
 }
 
 #[tokio::test]
-async fn password_too_short() -> anyhow::Result<()> {
-    let mut server = TestServer::new().await?;
-    server.api.user_login(ADMIN, ADMIN).await?;
-    let status = server
-        .api
-        .admin_user_add("user123", "pswd")
-        .await
-        .unwrap_err()
-        .status;
-    assert_eq!(status, 461);
-    Ok(())
+async fn password_too_short() -> Result<(), TestError> {
+    agdb_api::tests::routes::admin_user_add_test::password_too_short().await
 }
 
 #[tokio::test]
-async fn non_admin() -> anyhow::Result<()> {
-    let mut server = TestServer::new().await?;
-    let user = &next_user_name();
-    server.api.user_login(ADMIN, ADMIN).await?;
-    server.api.admin_user_add(user, user).await?;
-    server.api.user_login(user, user).await?;
-    let status = server
-        .api
-        .admin_user_add(user, user)
-        .await
-        .unwrap_err()
-        .status;
-    assert_eq!(status, 401);
-    Ok(())
+async fn non_admin() -> Result<(), TestError> {
+    agdb_api::tests::routes::admin_user_add_test::non_admin().await
 }
 
 #[tokio::test]
-async fn no_token() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
-    let status = server
-        .api
-        .admin_user_add("user", "password123")
-        .await
-        .unwrap_err()
-        .status;
-    assert_eq!(status, 401);
-    Ok(())
+async fn no_token() -> Result<(), TestError> {
+    agdb_api::tests::routes::admin_user_add_test::no_token().await
 }

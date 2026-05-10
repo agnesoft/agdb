@@ -1,184 +1,51 @@
-use agdb_api::DbKind;
-use agdb_api::test_server::ADMIN;
-use agdb_api::test_server::TestServer;
-use agdb_api::test_server::next_db_name;
-use agdb_api::test_server::next_user_name;
-use std::path::Path;
+use agdb_api::test_server::test_error::TestError;
 
 #[tokio::test]
-async fn rename() -> anyhow::Result<()> {
-    let mut server = TestServer::new().await?;
-    let owner = &next_user_name();
-    let db = &next_db_name();
-    let db2 = &next_db_name();
-    server.api.user_login(ADMIN, ADMIN).await?;
-    server.api.admin_user_add(owner, owner).await?;
-    server.api.admin_db_add(owner, db, DbKind::Mapped).await?;
-    let status = server.api.admin_db_rename(owner, db, owner, db2).await?;
-    assert_eq!(status, 201);
-    assert!(!Path::new(&server.data_dir).join(owner).join(db).exists());
-    assert!(Path::new(&server.data_dir).join(owner).join(db2).exists());
-    Ok(())
+async fn rename() -> Result<(), TestError> {
+    agdb_api::tests::routes::admin_db_rename_test::rename().await
 }
 
 #[tokio::test]
-async fn rename_with_backup() -> anyhow::Result<()> {
-    let mut server = TestServer::new().await?;
-    let owner = &next_user_name();
-    let db = &next_db_name();
-    let db2 = &next_db_name();
-    server.api.user_login(ADMIN, ADMIN).await?;
-    server.api.admin_user_add(owner, owner).await?;
-    server.api.admin_db_add(owner, db, DbKind::Mapped).await?;
-    server.api.admin_db_backup(owner, db).await?;
-    let status = server.api.admin_db_rename(owner, db, owner, db2).await?;
-    assert_eq!(status, 201);
-    assert!(!Path::new(&server.data_dir).join(owner).join(db).exists());
-    assert!(
-        !Path::new(&server.data_dir)
-            .join(owner)
-            .join("backups")
-            .join(format!("{db}.bak"))
-            .exists()
-    );
-    assert!(Path::new(&server.data_dir).join(owner).join(db2).exists());
-    assert!(
-        Path::new(&server.data_dir)
-            .join(owner)
-            .join("backups")
-            .join(format!("{db2}.bak"))
-            .exists()
-    );
-    Ok(())
+async fn rename_with_backup() -> Result<(), TestError> {
+    agdb_api::tests::routes::admin_db_rename_test::rename_with_backup().await
 }
 
 #[tokio::test]
-async fn transfer() -> anyhow::Result<()> {
-    let mut server = TestServer::new().await?;
-    let owner = &next_user_name();
-    let owner2 = &next_user_name();
-    let db = &next_db_name();
-    server.api.user_login(ADMIN, ADMIN).await?;
-    server.api.admin_user_add(owner, owner).await?;
-    server.api.admin_user_add(owner2, owner2).await?;
-    server.api.admin_db_add(owner, db, DbKind::Mapped).await?;
-    let status = server.api.admin_db_rename(owner, db, owner2, db).await?;
-    assert_eq!(status, 201);
-    assert!(!Path::new(&server.data_dir).join(owner).join(db).exists());
-    assert!(Path::new(&server.data_dir).join(owner2).join(db).exists());
-    Ok(())
+async fn transfer() -> Result<(), TestError> {
+    agdb_api::tests::routes::admin_db_rename_test::transfer().await
 }
 
 #[tokio::test]
-async fn user_not_found() -> anyhow::Result<()> {
-    let mut server = TestServer::new().await?;
-    let owner = &next_user_name();
-    let db = &next_db_name();
-    server.api.user_login(ADMIN, ADMIN).await?;
-    server.api.admin_user_add(owner, owner).await?;
-    server.api.admin_db_add(owner, db, DbKind::Mapped).await?;
-    let status = server
-        .api
-        .admin_db_rename(owner, db, "not_found", db)
-        .await
-        .unwrap_err()
-        .status;
-    assert_eq!(status, 404);
-    Ok(())
+async fn user_not_found() -> Result<(), TestError> {
+    agdb_api::tests::routes::admin_db_rename_test::user_not_found().await
 }
 
 #[tokio::test]
-async fn invalid() -> anyhow::Result<()> {
-    let mut server = TestServer::new().await?;
-    let owner = &next_user_name();
-    let db = &next_db_name();
-    server.api.user_login(ADMIN, ADMIN).await?;
-    server.api.admin_user_add(owner, owner).await?;
-    server.api.admin_db_add(owner, db, DbKind::Mapped).await?;
-    let status = server
-        .api
-        .admin_db_rename(owner, db, owner, "a\0a")
-        .await
-        .unwrap_err()
-        .status;
-    assert_eq!(status, 467);
-    Ok(())
+async fn invalid() -> Result<(), TestError> {
+    agdb_api::tests::routes::admin_db_rename_test::invalid().await
 }
 
 #[tokio::test]
-async fn db_not_found() -> anyhow::Result<()> {
-    let mut server = TestServer::new().await?;
-    let owner = &next_user_name();
-    server.api.user_login(ADMIN, ADMIN).await?;
-    let status = server
-        .api
-        .admin_db_rename(owner, "db", owner, "dbx")
-        .await
-        .unwrap_err()
-        .status;
-    assert_eq!(status, 404);
-    Ok(())
+async fn db_not_found() -> Result<(), TestError> {
+    agdb_api::tests::routes::admin_db_rename_test::db_not_found().await
 }
 
 #[tokio::test]
-async fn target_self() -> anyhow::Result<()> {
-    let mut server = TestServer::new().await?;
-    let owner = &next_user_name();
-    let db = &next_db_name();
-    server.api.user_login(ADMIN, ADMIN).await?;
-    server.api.admin_user_add(owner, owner).await?;
-    server.api.admin_db_add(owner, db, DbKind::Mapped).await?;
-    let status = server.api.admin_db_rename(owner, db, owner, db).await?;
-    assert_eq!(status, 201);
-    Ok(())
+async fn target_self() -> Result<(), TestError> {
+    agdb_api::tests::routes::admin_db_rename_test::target_self().await
 }
 
 #[tokio::test]
-async fn target_exists() -> anyhow::Result<()> {
-    let mut server = TestServer::new().await?;
-    let owner = &next_user_name();
-    let db = &next_db_name();
-    let db2 = &next_db_name();
-    server.api.user_login(ADMIN, ADMIN).await?;
-    server.api.admin_user_add(owner, owner).await?;
-    server.api.admin_db_add(owner, db, DbKind::Mapped).await?;
-    server.api.admin_db_add(owner, db2, DbKind::Mapped).await?;
-    let status = server
-        .api
-        .admin_db_rename(owner, db, owner, db2)
-        .await
-        .unwrap_err()
-        .status;
-    assert_eq!(status, 465);
-    Ok(())
+async fn target_exists() -> Result<(), TestError> {
+    agdb_api::tests::routes::admin_db_rename_test::target_exists().await
 }
 
 #[tokio::test]
-async fn non_admin() -> anyhow::Result<()> {
-    let mut server = TestServer::new().await?;
-    let owner = &next_user_name();
-    server.api.user_login(ADMIN, ADMIN).await?;
-    server.api.admin_user_add(owner, owner).await?;
-    server.api.user_login(owner, owner).await?;
-    let status = server
-        .api
-        .admin_db_rename(owner, "db", owner, "dbx")
-        .await
-        .unwrap_err()
-        .status;
-    assert_eq!(status, 401);
-    Ok(())
+async fn non_admin() -> Result<(), TestError> {
+    agdb_api::tests::routes::admin_db_rename_test::non_admin().await
 }
 
 #[tokio::test]
-async fn no_token() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
-    let status = server
-        .api
-        .admin_db_rename("owner", "db", "owner", "dbx")
-        .await
-        .unwrap_err()
-        .status;
-    assert_eq!(status, 401);
-    Ok(())
+async fn no_token() -> Result<(), TestError> {
+    agdb_api::tests::routes::admin_db_rename_test::no_token().await
 }

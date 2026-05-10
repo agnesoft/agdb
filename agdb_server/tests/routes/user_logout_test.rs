@@ -1,25 +1,11 @@
-use agdb_api::test_server::ADMIN;
-use agdb_api::test_server::TestServer;
-use agdb_api::test_server::next_user_name;
+use agdb_api::test_server::test_error::TestError;
 
 #[tokio::test]
-async fn logout() -> anyhow::Result<()> {
-    let mut server = TestServer::new().await?;
-    let owner = &next_user_name();
-    server.api.user_login(ADMIN, ADMIN).await?;
-    server.api.admin_user_add(owner, owner).await?;
-    server.api.user_login(owner, owner).await?;
-    let status = server.api.user_logout().await?;
-    assert_eq!(status, 201);
-    assert_eq!(server.api.token, None);
-    Ok(())
+async fn logout() -> Result<(), TestError> {
+    agdb_api::tests::routes::user_logout_test::logout().await
 }
 
 #[tokio::test]
-async fn no_token() -> anyhow::Result<()> {
-    let mut server = TestServer::new().await?;
-    let status = server.api.user_logout().await.unwrap_err().status;
-    assert_eq!(status, 401);
-
-    Ok(())
+async fn no_token() -> Result<(), TestError> {
+    agdb_api::tests::routes::user_logout_test::no_token().await
 }

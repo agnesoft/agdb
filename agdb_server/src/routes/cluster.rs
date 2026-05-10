@@ -163,6 +163,15 @@ pub(crate) async fn status(
     State(config): State<Config>,
     State(cluster): State<Cluster>,
 ) -> ServerResult<(StatusCode, Json<Vec<ClusterStatus>>)> {
+    if config.cluster.is_empty() {
+        let status = ClusterStatus {
+            address: config.address.clone(),
+            status: true,
+            leader: true,
+        };
+        return Ok((StatusCode::OK, Json(vec![status])));
+    }
+
     let mut statuses = vec![ClusterStatus::default(); config.cluster.len()];
     let mut tasks = Vec::new();
     let leader = cluster.raft.read().await.leader();

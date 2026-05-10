@@ -17,10 +17,13 @@ use agdb::QueryBuilder;
 #[cfg_attr(feature = "api", agdb::test_def())]
 pub async fn status() -> Result<(), TestError> {
     let server = TestServer::new().await?;
-    let (code, status) = server.api.cluster_status().await?;
+    let (code, statuses) = server.api.cluster_status().await?;
 
     assert_eq!(code, 200);
-    assert_eq!(status.len(), 0);
+    assert_eq!(statuses.len(), 1);
+    assert_eq!(statuses[0].address, server.api.address());
+    assert!(statuses[0].status);
+    assert!(statuses[0].leader);
 
     Ok(())
 }

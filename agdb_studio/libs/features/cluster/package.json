@@ -18,8 +18,10 @@
     "vue": "catalog:",
     "@agdb-studio/design": "workspace:*",
     "@agdb-studio/api": "workspace:*",
+    "@agdb-studio/auth": "workspace:*",
     "@agdb-studio/utils": "workspace:*",
-    "@agnesoft/agdb_api": "workspace:*"
+    "@agnesoft/agdb_api": "workspace:*",
+    "@kalimahapps/vue-icons": "catalog:"
   },
   "devDependencies": {
     "@agdb-studio/tsconfig": "workspace:*",

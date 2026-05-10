@@ -1,5 +1,17 @@
 import { ref, computed, onMounted, onUnmounted, type Ref } from "vue";
-import { client, checkClient } from "@agdb-studio/api/src/api";
+import { AgdbApi } from "@agnesoft/agdb_api";
+import {
+  apiUrl,
+  client,
+  checkClient,
+  reconnectClient,
+} from "@agdb-studio/api/src/api";
+import {
+  ACCESS_TOKEN,
+  SESSION_LOGIN_SERVER_URL,
+} from "@agdb-studio/api/src/constants";
+import { useAuth } from "@agdb-studio/auth/src/auth";
+import { resolveServerUrl } from "@agdb-studio/api/src/serverUrl";
 import { createLogger } from "@agdb-studio/utils/src/logger/logger";
 import type { ClusterStatus } from "@agnesoft/agdb_api/openapi";
 
@@ -8,14 +20,44 @@ export type OverallStatus = "red" | "amber" | "green" | "unknown";
 const logger = createLogger("ClusterStatus");
 
 const POLL_INTERVAL = 15000; // 15 seconds
+const LOGIN_STATUS_POLL_INTERVAL = 60000; // 60 seconds
 
 const servers = ref<ClusterStatus[]>([]);
 const isLoading = ref(true);
 const lastUpdated = ref<Date | null>(null);
+const switchingServerAddress = ref<string | null>(null);
+const loggedInByServerAddress = ref<Record<string, boolean | null>>({});
 
 let pollInterval: ReturnType<typeof setInterval> | null = null;
+let lastLoginStatusRefreshAt: number | null = null;
 
 export const useClusterStatus = () => {
+  const { logout } = useAuth();
+
+  // When the cluster reports internal hostnames (e.g. agdb0:3000) but the UI
+  // connects via localhost, only comparing ports is reliable for active-node
+  // detection. We therefore normalize to just the port.
+  const normalizeAddress = (address: string): string => {
+    try {
+      const parsed = new URL(
+        address.includes("://") ? address : `http://${address}`,
+      );
+      if (parsed.port) {
+        return parsed.port;
+      }
+      switch (parsed.protocol) {
+        case "https:":
+          return "443";
+        case "http:":
+          return "80";
+        default:
+          return "80";
+      }
+    } catch {
+      return address.toLowerCase();
+    }
+  };
+
   const overallStatus = computed((): OverallStatus => {
     if (isLoading.value) {
       return "unknown";
@@ -40,11 +82,57 @@ export const useClusterStatus = () => {
     return "green";
   });
 
-  const fetchStatus = async (): Promise<void> => {
+  const fetchStatus = async (
+    forceLoginStatusRefresh = false,
+  ): Promise<void> => {
     try {
       checkClient(client);
       const response = await client.value.cluster_status();
       servers.value = response.data;
+
+      const token =
+        client.value.get_token() ?? localStorage.getItem(ACCESS_TOKEN) ?? "";
+
+      const shouldRefreshLoginStatus =
+        forceLoginStatusRefresh ||
+        lastLoginStatusRefreshAt === null ||
+        Date.now() - lastLoginStatusRefreshAt >= LOGIN_STATUS_POLL_INTERVAL;
+
+      const loginStatusEntries = shouldRefreshLoginStatus
+        ? await Promise.all(
+            response.data.map(async (server) => {
+              if (!server.status) {
+                return [server.address, null] as const;
+              }
+
+              try {
+                const serverClient = await AgdbApi.client(
+                  resolveServerUrl(apiUrl.value, server.address),
+                );
+                if (token) {
+                  serverClient.set_token(token);
+                }
+                const status = await serverClient.user_status();
+                return [server.address, Boolean(status.data.login)] as const;
+              } catch {
+                return [server.address, false] as const;
+              }
+            }),
+          )
+        : response.data.map(
+            (server) =>
+              [
+                server.address,
+                server.status
+                  ? (loggedInByServerAddress.value[server.address] ?? null)
+                  : null,
+              ] as const,
+          );
+
+      loggedInByServerAddress.value = Object.fromEntries(loginStatusEntries);
+      if (shouldRefreshLoginStatus) {
+        lastLoginStatusRefreshAt = Date.now();
+      }
       lastUpdated.value = new Date();
       logger.debug("Cluster status fetched:", servers.value.length, "servers");
     } catch (error) {
@@ -53,8 +141,69 @@ export const useClusterStatus = () => {
         error instanceof Error ? error.message : String(error),
       );
       servers.value = [];
+      loggedInByServerAddress.value = {};
     } finally {
       isLoading.value = false;
+    }
+  };
+
+  const activeAddress = computed(() => {
+    return normalizeAddress(apiUrl.value);
+  });
+
+  const isServerActive = (server: ClusterStatus): boolean => {
+    return normalizeAddress(server.address) === activeAddress.value;
+  };
+
+  const activeServer = computed((): ClusterStatus | undefined => {
+    return servers.value.find(isServerActive);
+  });
+
+  const isUserLoggedInOnServer = (server: ClusterStatus): boolean | null => {
+    return loggedInByServerAddress.value[server.address] ?? null;
+  };
+
+  const activeNodeLabel = computed((): string => {
+    try {
+      const url = new URL(
+        apiUrl.value.includes("://") ? apiUrl.value : `http://${apiUrl.value}`,
+      );
+      const defaultPort = url.protocol === "https:" ? "443" : "80";
+      return `:${url.port || defaultPort}`;
+    } catch {
+      return apiUrl.value;
+    }
+  });
+
+  const switchToServer = async (server: ClusterStatus): Promise<void> => {
+    if (
+      !server.status ||
+      isServerActive(server) ||
+      switchingServerAddress.value !== null
+    ) {
+      return;
+    }
+
+    switchingServerAddress.value = server.address;
+    try {
+      const resolvedAddress = resolveServerUrl(apiUrl.value, server.address);
+      const isLoggedInOnTargetServer = isUserLoggedInOnServer(server);
+
+      if (isLoggedInOnTargetServer !== true) {
+        sessionStorage.setItem(SESSION_LOGIN_SERVER_URL, resolvedAddress);
+        await logout(undefined, false);
+      }
+
+      await reconnectClient(resolvedAddress);
+      await fetchStatus(true);
+      logger.info("Switched active cluster node:", server.address);
+    } catch (error) {
+      logger.error(
+        "Failed to switch cluster node:",
+        error instanceof Error ? error.message : String(error),
+      );
+    } finally {
+      switchingServerAddress.value = null;
     }
   };
 
@@ -88,8 +237,27 @@ export const useClusterStatus = () => {
     overallStatus,
     isLoading: isLoading as Ref<boolean>,
     lastUpdated: lastUpdated as Ref<Date | null>,
+    switchingServerAddress: switchingServerAddress as Ref<string | null>,
+    loggedInByServerAddress: loggedInByServerAddress as Ref<
+      Record<string, boolean | null>
+    >,
+    activeServer,
+    activeNodeLabel,
+    isServerActive,
+    isUserLoggedInOnServer,
+    switchToServer,
     fetchStatus,
     startPolling,
     stopPolling,
   };
+};
+
+// Test helper to reset module-level state
+export const resetClusterStatusState = (): void => {
+  servers.value = [];
+  isLoading.value = true;
+  lastUpdated.value = null;
+  switchingServerAddress.value = null;
+  loggedInByServerAddress.value = {};
+  lastLoginStatusRefreshAt = null;
 };

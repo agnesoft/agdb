@@ -2,10 +2,16 @@
 import { computed, ref } from "vue";
 import { useClusterStatus } from "../composables/clusterStatus";
 import {
+  PhFillArrowClockwise,
   PhFillCheckCircle,
   PhFillCrownSimple,
   PhFillQuestion,
+  PhFillWifiHigh,
+  PhFillWifiSlash,
   PhFillXCircle,
+  FaUserXmark,
+  FaUserCheck,
+  FaUser,
 } from "@kalimahapps/vue-icons";
 import FadeTransition from "@agdb-studio/design/src/components/transitions/FadeTransition.vue";
 import type { ClusterStatus } from "@agnesoft/agdb_api/openapi";
@@ -115,6 +121,7 @@ const statusText = computed(() => {
             {{ activeServer?.address ?? activeNodeLabel }}
             <PhFillCrownSimple
               v-if="activeServer?.leader"
+              class="crown-icon"
               data-testid="active-server-crown-icon"
               aria-label="Connected leader server"
               title="Connected leader server"
@@ -151,7 +158,7 @@ const statusText = computed(() => {
                   isServerActive(server) ||
                   serverLoginClass(server) === 'loggedOut',
               }"
-              :title="`Server: ${server.address} | Node status: ${serverStatusText(server)} | Login status: ${serverLoginText(server)}`"
+              :title="`Server: ${server.address} \nNode status: ${serverStatusText(server)} \nLogin status: ${serverLoginText(server)}`"
               :role="server.status ? 'button' : undefined"
               :tabindex="server.status ? 0 : -1"
               @click.stop="handleServerClick(server)"
@@ -160,24 +167,45 @@ const statusText = computed(() => {
               <span class="server-address">{{ server.address }}</span>
               <PhFillCrownSimple
                 v-if="server.leader"
+                class="crown-icon"
                 data-testid="crown-icon"
                 aria-label="Leader server"
                 title="Leader server"
               />
-              <span class="server-status">
-                {{ serverStatusText(server) }}
+              <span
+                class="server-status"
+                :class="{
+                  online:
+                    server.status && switchingServerAddress !== server.address,
+                  offline: !server.status,
+                  connecting: switchingServerAddress === server.address,
+                }"
+                :title="`Node status: ${serverStatusText(server)}`"
+              >
+                <PhFillArrowClockwise
+                  v-if="switchingServerAddress === server.address"
+                  class="status-icon spinning"
+                  aria-hidden="true"
+                />
+                <PhFillWifiSlash
+                  v-else-if="!server.status"
+                  class="status-icon"
+                  aria-hidden="true"
+                />
+                <PhFillWifiHigh v-else class="status-icon" aria-hidden="true" />
+                <span class="sr-only">{{ serverStatusText(server) }}</span>
               </span>
               <span
                 class="server-login"
                 :class="serverLoginClass(server)"
                 :title="`Login status: ${serverLoginText(server)}`"
               >
-                <PhFillCheckCircle
+                <FaUserCheck
                   v-if="serverLoginClass(server) === 'loggedIn'"
                   class="login-icon"
                   aria-hidden="true"
                 />
-                <PhFillXCircle
+                <FaUserXmark
                   v-else-if="serverLoginClass(server) === 'loggedOut'"
                   class="login-icon"
                   aria-hidden="true"
@@ -335,9 +363,52 @@ const statusText = computed(() => {
   font-weight: 500;
 }
 
+.crown-icon {
+  color: #d4af37;
+}
+
 .server-status {
-  color: var(--green-1);
-  font-size: 0.85rem;
+  display: inline-flex;
+  align-items: center;
+
+  .status-icon {
+    font-size: 0.9rem;
+    color: var(--green);
+  }
+
+  &.offline .status-icon {
+    color: var(--red-2);
+  }
+
+  &.connecting .status-icon {
+    color: var(--orange);
+  }
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.spinning {
+  animation: status-spin 1s linear infinite;
+}
+
+@keyframes status-spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .server-login {
@@ -353,10 +424,10 @@ const statusText = computed(() => {
   }
 
   &.loggedIn {
-    color: var(--green-1);
+    color: var(--green);
 
     .login-icon {
-      color: var(--green-1);
+      color: var(--green);
     }
   }
 

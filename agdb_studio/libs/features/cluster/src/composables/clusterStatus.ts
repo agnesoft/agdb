@@ -109,10 +109,20 @@ export const useClusterStatus = () => {
           ? server.address
           : `${current.protocol}//${server.address}`,
       );
-      // Keep the host from the current connection (e.g. localhost)
-      // but take the port from the cluster member's address.
-      current.port = target.port;
-      return current.toString().replace(/\/$/, "");
+
+      const isLocalhost = ["localhost", "127.0.0.1", "::1"].includes(
+        current.hostname.toLowerCase(),
+      );
+
+      if (isLocalhost) {
+        // When the UI is connected through localhost, cluster members may
+        // advertise internal hostnames that are not reachable from the browser.
+        // Keep the local host but switch to the member's port.
+        current.port = target.port;
+        return current.toString().replace(/\/$/, "");
+      }
+
+      return target.toString().replace(/\/$/, "");
     } catch {
       return server.address;
     }

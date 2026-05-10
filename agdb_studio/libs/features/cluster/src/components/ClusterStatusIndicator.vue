@@ -84,20 +84,17 @@ const statusText = computed(() => {
   >
     <FadeTransition>
       <div v-if="leaderPosition !== -1">
-        <span>
-          Cluster [
-          <VueIcon name="ph:fill-crown-simple" />
-
-          {{ leaderPosition }}
-          <PhFillCrownSimple
-            data-testid="crown-icon"
-            aria-label="Leader server"
-            title="Leader server"
-          />]
-        </span>
         <div class="connected-to">
-          Connected to
-          <strong>{{ activeServer?.address ?? activeNodeLabel }}</strong>
+          Connected to:
+          <strong>
+            {{ activeServer?.address ?? activeNodeLabel }}
+            <PhFillCrownSimple
+              v-if="activeServer?.leader"
+              data-testid="active-server-crown-icon"
+              aria-label="Connected leader server"
+              title="Connected leader server"
+            />
+          </strong>
         </div>
       </div>
     </FadeTransition>
@@ -223,6 +220,9 @@ const statusText = computed(() => {
   color: var(--color-text-muted);
 
   strong {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
     color: var(--color-text);
     font-family: monospace;
   }

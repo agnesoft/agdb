@@ -537,8 +537,6 @@ mod tests {
 
     fn collect_missing_named_types() -> Vec<&'static str> {
         let roots = roots();
-
-        // Build set of all root type names.
         let root_names: HashSet<&'static str> = roots.iter().map(|ty| ty.name()).collect();
 
         let mut visited: HashSet<usize> = HashSet::new();

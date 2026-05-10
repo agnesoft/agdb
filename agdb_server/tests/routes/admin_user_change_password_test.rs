@@ -24,4 +24,3 @@ async fn non_admin() -> Result<(), TestError> {
 async fn no_token() -> Result<(), TestError> {
     agdb_api::tests::routes::admin_user_change_password_test::no_token().await
 }
-

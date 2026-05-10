@@ -9,4 +9,3 @@ async fn logout() -> Result<(), TestError> {
 async fn no_token() -> Result<(), TestError> {
     agdb_api::tests::routes::user_logout_test::no_token().await
 }
-

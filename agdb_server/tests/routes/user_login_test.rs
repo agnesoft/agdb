@@ -24,4 +24,3 @@ async fn user_not_found() -> Result<(), TestError> {
 async fn concurrent_logins() -> Result<(), TestError> {
     agdb_api::tests::routes::user_login_test::concurrent_logins().await
 }
-

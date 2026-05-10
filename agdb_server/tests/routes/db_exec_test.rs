@@ -94,4 +94,3 @@ async fn someone_elses_db() -> Result<(), TestError> {
 async fn no_token() -> Result<(), TestError> {
     agdb_api::tests::routes::db_exec_test::no_token().await
 }
-

@@ -19,4 +19,3 @@ async fn list_empty() -> Result<(), TestError> {
 async fn list_no_token() -> Result<(), TestError> {
     agdb_api::tests::routes::db_list_test::list_no_token().await
 }
-

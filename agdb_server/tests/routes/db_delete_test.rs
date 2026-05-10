@@ -34,4 +34,3 @@ async fn non_owner() -> Result<(), TestError> {
 async fn no_token() -> Result<(), TestError> {
     agdb_api::tests::routes::db_delete_test::no_token().await
 }
-

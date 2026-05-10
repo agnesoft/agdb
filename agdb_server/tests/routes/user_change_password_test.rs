@@ -19,4 +19,3 @@ async fn password_too_short() -> Result<(), TestError> {
 async fn no_token() -> Result<(), TestError> {
     agdb_api::tests::routes::user_change_password_test::no_token().await
 }
-

@@ -24,4 +24,3 @@ async fn db_not_found() -> Result<(), TestError> {
 async fn no_token() -> Result<(), TestError> {
     agdb_api::tests::routes::db_optimize_test::no_token().await
 }
-

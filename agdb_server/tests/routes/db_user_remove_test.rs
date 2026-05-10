@@ -39,4 +39,3 @@ async fn user_not_found() -> Result<(), TestError> {
 async fn no_token() -> Result<(), TestError> {
     agdb_api::tests::routes::db_user_remove_test::no_token().await
 }
-

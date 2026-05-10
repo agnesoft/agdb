@@ -39,4 +39,3 @@ async fn target_exists() -> Result<(), TestError> {
 async fn no_token() -> Result<(), TestError> {
     agdb_api::tests::routes::db_rename_test::no_token().await
 }
-

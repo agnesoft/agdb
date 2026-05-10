@@ -47,8 +47,8 @@ pub mod user_logout_test;
 pub mod user_status;
 
 // Miscellaneous (subset)
-pub mod misc_routes;
 pub mod cluster_test;
+pub mod misc_routes;
 
 // === SKIPPED FILES ===
 // tls/mod.rs - Feature-gated TLS tests

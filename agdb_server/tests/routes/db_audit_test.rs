@@ -24,4 +24,3 @@ async fn audit_no_token() -> Result<(), TestError> {
 async fn repeated_query_with_db_audit() -> Result<(), TestError> {
     agdb_api::tests::routes::db_audit_test::repeated_query_with_db_audit().await
 }
-

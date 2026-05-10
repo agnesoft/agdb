@@ -44,4 +44,3 @@ async fn db_type_invalid() -> Result<(), TestError> {
 async fn no_token() -> Result<(), TestError> {
     agdb_api::tests::routes::db_add_test::no_token().await
 }
-

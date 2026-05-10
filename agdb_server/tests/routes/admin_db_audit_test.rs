@@ -19,4 +19,3 @@ async fn non_admin() -> Result<(), TestError> {
 async fn audit_no_token() -> Result<(), TestError> {
     agdb_api::tests::routes::admin_db_audit_test::audit_no_token().await
 }
-

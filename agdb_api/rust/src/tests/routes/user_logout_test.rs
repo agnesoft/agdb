@@ -27,8 +27,5 @@ pub async fn no_token() -> Result<(), TestError> {
 
 #[cfg(feature = "api")]
 pub fn test_defs() -> Vec<agdb::type_def::Type> {
-    vec![
-        __logout_type_def(),
-        __no_token_type_def(),
-    ]
+    vec![__logout_type_def(), __no_token_type_def()]
 }

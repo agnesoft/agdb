@@ -34,4 +34,3 @@ async fn non_admin() -> Result<(), TestError> {
 async fn no_token() -> Result<(), TestError> {
     agdb_api::tests::routes::db_backup_restore_test::no_token().await
 }
-

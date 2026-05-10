@@ -14,4 +14,3 @@ async fn admin() -> Result<(), TestError> {
 async fn no_token() -> Result<(), TestError> {
     agdb_api::tests::routes::user_status::no_token().await
 }
-

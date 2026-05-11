@@ -29,7 +29,7 @@ where
     S: Send + Sync,
     ServerDb: FromRef<S>,
 {
-    type Rejection = ServerError;
+    type Rejection = StatusCode;
 
     async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
         let bearer: TypedHeader<Authorization<Bearer>> =

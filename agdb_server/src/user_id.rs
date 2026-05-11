@@ -36,7 +36,7 @@ where
             parts.extract().await.map_err(unauthorized)?;
         let token = utilities::unquote(bearer.token());
         ServerDb::from_ref(state)
-            .user_token_id(token)
+            .user_id_from_token(token)
             .await
             .map_err(unauthorized)?;
         Ok(Self(token.to_string()))
@@ -54,7 +54,7 @@ where
         if let Ok(bearer) = parts.extract::<TypedHeader<Authorization<Bearer>>>().await {
             let db_pool = ServerDb::from_ref(state);
             let id = db_pool
-                .user_token_id(utilities::unquote(bearer.token()))
+                .user_id_from_token(utilities::unquote(bearer.token()))
                 .await?;
             return Ok(UserName(db_pool.user_name(id).await?));
         }
@@ -74,7 +74,7 @@ where
         let bearer: TypedHeader<Authorization<Bearer>> =
             parts.extract().await.map_err(unauthorized)?;
         let id = ServerDb::from_ref(state)
-            .user_token_id(utilities::unquote(bearer.token()))
+            .user_id_from_token(utilities::unquote(bearer.token()))
             .await
             .map_err(unauthorized)?;
         Ok(Self(id))

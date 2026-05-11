@@ -139,7 +139,7 @@ pub(crate) async fn logout(
     Path(username): Path<String>,
 ) -> ServerResponse {
     let user_id = server_db.user_id(&username).await?;
-    server_db.save_token(user_id, "").await?;
+    server_db.remove_tokens(user_id).await?;
 
     Ok(StatusCode::CREATED)
 }
@@ -158,7 +158,7 @@ pub(crate) async fn logout_all(
     _admin: AdminId,
     State(server_db): State<ServerDb>,
 ) -> ServerResponse {
-    server_db.reset_tokens().await?;
+    server_db.remove_all_tokens().await?;
 
     Ok(StatusCode::CREATED)
 }

@@ -28,11 +28,11 @@ pub(crate) async fn do_login(
     let user = server_db
         .user(username)
         .await
-        .map_err(|_| ServerError::new(StatusCode::UNAUTHORIZED, "unuauthorized"))?;
+        .map_err(|_| ServerError::new(StatusCode::UNAUTHORIZED, "unauthorized"))?;
     let pswd = Password::new(&user.username, &user.password, &user.salt)?;
 
     if !pswd.verify_password(password) {
-        return Err(ServerError::new(StatusCode::UNAUTHORIZED, "unuauthorized"));
+        return Err(ServerError::new(StatusCode::UNAUTHORIZED, "unauthorized"));
     }
 
     Ok((user.db_id.unwrap_or_default(), Uuid::new_v4().to_string()))

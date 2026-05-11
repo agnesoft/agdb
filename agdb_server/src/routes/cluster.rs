@@ -53,12 +53,7 @@ pub(crate) async fn admin_logout(
 ) -> ServerResponse<impl IntoResponse> {
     let _user_id = server_db.user_id(&username).await?;
 
-    let (commit_index, _result) = cluster
-        .exec(ClusterLogin {
-            user: username,
-            new_token: String::new(),
-        })
-        .await?;
+    let (commit_index, _result) = cluster.exec(ClusterLogout { user: username }).await?;
 
     Ok((
         StatusCode::CREATED,
@@ -80,7 +75,11 @@ pub(crate) async fn admin_logout_all(
     _admin: AdminId,
     State(cluster): State<Cluster>,
 ) -> ServerResponse<impl IntoResponse> {
-    let (commit_index, _result) = cluster.exec(ClusterLogout {}).await?;
+    let (commit_index, _result) = cluster
+        .exec(ClusterLogout {
+            user: String::new(),
+        })
+        .await?;
 
     Ok((
         StatusCode::CREATED,

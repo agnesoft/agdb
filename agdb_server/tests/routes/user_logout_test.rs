@@ -9,3 +9,8 @@ async fn logout() -> Result<(), TestError> {
 async fn no_token() -> Result<(), TestError> {
     agdb_api::tests::routes::user_logout_test::no_token().await
 }
+
+#[tokio::test]
+async fn logout_only_current_user_token() -> Result<(), TestError> {
+    agdb_api::tests::routes::user_logout_test::logout_only_current_user_token().await
+}

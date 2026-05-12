@@ -2,28 +2,21 @@ use super::DbPool;
 use super::ServerDb;
 use crate::action::Action;
 use crate::action::ClusterActionResult;
-use crate::server_db::ServerUser;
 use crate::server_error::ServerResult;
 use agdb::DbSerialize;
 use serde::Deserialize;
 use serde::Serialize;
 
 #[derive(Clone, Serialize, Deserialize, DbSerialize)]
-pub(crate) struct UserAdd {
+pub(crate) struct RemoveUserTokens {
     pub(crate) user: String,
-    pub(crate) password: Vec<u8>,
-    pub(crate) salt: Vec<u8>,
 }
 
-impl Action for UserAdd {
+impl Action for RemoveUserTokens {
     async fn exec(self, db: ServerDb, _db_pool: DbPool) -> ServerResult<ClusterActionResult> {
-        db.insert_user(ServerUser {
-            db_id: None,
-            username: self.user,
-            password: self.password,
-            salt: self.salt,
-        })
-        .await?;
+        let user_id = db.user_id(&self.user).await?;
+        db.remove_tokens(user_id).await?;
+
         Ok(ClusterActionResult::None)
     }
 }

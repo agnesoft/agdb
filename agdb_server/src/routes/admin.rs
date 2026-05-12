@@ -72,7 +72,7 @@ pub(crate) async fn status(
             uptime: SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs() - config.start_time,
             dbs: server_db.db_count().await?,
             users: server_db.user_count().await?,
-            logged_in_users: server_db.user_token_count().await?,
+            logged_in_users: server_db.users_with_token().await?,
             size: get_size(&config.data_dir).await?,
             log_level: handle
                 .with_current(|f| f.to_string().as_str().try_into().unwrap_or_default())

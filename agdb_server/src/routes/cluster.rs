@@ -1,6 +1,8 @@
 use crate::action::ClusterAction;
-use crate::action::cluster_login::ClusterLogin;
-use crate::action::cluster_logout::ClusterLogout;
+use crate::action::remove_all_tokens::RemoveAllTokens;
+use crate::action::remove_user_token::RemoveUserToken;
+use crate::action::remove_user_tokens::RemoveUserTokens;
+use crate::action::save_user_token::SaveUserToken;
 use crate::cluster;
 use crate::cluster::Cluster;
 use crate::config::Config;
@@ -12,7 +14,7 @@ use crate::server_error::ServerResponse;
 use crate::server_error::ServerResult;
 use crate::user_id::AdminId;
 use crate::user_id::ClusterId;
-use crate::user_id::UserId;
+use crate::user_id::UserIdToken;
 use agdb_api::ClusterStatus;
 use agdb_api::UserLogin;
 use axum::Json;
@@ -52,12 +54,7 @@ pub(crate) async fn admin_logout(
 ) -> ServerResponse<impl IntoResponse> {
     let _user_id = server_db.user_id(&username).await?;
 
-    let (commit_index, _result) = cluster
-        .exec(ClusterLogin {
-            user: username,
-            new_token: String::new(),
-        })
-        .await?;
+    let (commit_index, _result) = cluster.exec(RemoveUserTokens { user: username }).await?;
 
     Ok((
         StatusCode::CREATED,
@@ -79,7 +76,7 @@ pub(crate) async fn admin_logout_all(
     _admin: AdminId,
     State(cluster): State<Cluster>,
 ) -> ServerResponse<impl IntoResponse> {
-    let (commit_index, _result) = cluster.exec(ClusterLogout {}).await?;
+    let (commit_index, _result) = cluster.exec(RemoveAllTokens {}).await?;
 
     Ok((
         StatusCode::CREATED,
@@ -104,7 +101,7 @@ pub(crate) async fn login(
 ) -> ServerResponse<impl IntoResponse> {
     let (_user_id, token) = do_login(&server_db, &request.username, &request.password).await?;
     let (commit_index, _result) = cluster
-        .exec(ClusterLogin {
+        .exec(SaveUserToken {
             user: request.username,
             new_token: token.clone(),
         })
@@ -128,22 +125,14 @@ pub(crate) async fn login(
     )
 )]
 pub(crate) async fn logout(
-    user: UserId,
-    State(server_db): State<ServerDb>,
+    user: UserIdToken,
     State(cluster): State<Cluster>,
 ) -> ServerResponse<impl IntoResponse> {
-    let token = server_db.user_token(user.0).await?;
-    let mut commit_index = 0;
-
-    if !token.is_empty() {
-        let (index, _result) = cluster
-            .exec(ClusterLogin {
-                user: server_db.user_name(user.0).await?,
-                new_token: String::new(),
-            })
-            .await?;
-        commit_index = index;
-    }
+    let (commit_index, _result) = cluster
+        .exec(RemoveUserToken {
+            token: user.0.clone(),
+        })
+        .await?;
 
     Ok((
         StatusCode::CREATED,
@@ -165,7 +154,7 @@ pub(crate) async fn status(
 ) -> ServerResult<(StatusCode, Json<Vec<ClusterStatus>>)> {
     if config.cluster.is_empty() {
         let status = ClusterStatus {
-            address: config.address.clone(),
+            address: config.server_url(),
             status: true,
             leader: true,
         };

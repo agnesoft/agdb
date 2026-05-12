@@ -8,11 +8,15 @@ use serde::Deserialize;
 use serde::Serialize;
 
 #[derive(Clone, Serialize, Deserialize, DbSerialize)]
-pub(crate) struct ClusterLogout {}
+pub(crate) struct SaveUserToken {
+    pub(crate) user: String,
+    pub(crate) new_token: String,
+}
 
-impl Action for ClusterLogout {
+impl Action for SaveUserToken {
     async fn exec(self, db: ServerDb, _db_pool: DbPool) -> ServerResult<ClusterActionResult> {
-        db.reset_tokens().await?;
+        let user_id = db.user_id(&self.user).await?;
+        db.save_token(user_id, &self.new_token).await?;
 
         Ok(ClusterActionResult::None)
     }

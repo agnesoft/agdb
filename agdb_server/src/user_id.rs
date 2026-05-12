@@ -14,12 +14,34 @@ use axum_extra::headers::authorization::Bearer;
 
 pub(crate) struct UserId(pub(crate) DbId);
 
+#[derive(Default)]
+pub(crate) struct UserIdToken(pub(crate) String);
+
 pub(crate) struct AdminId();
 
 pub(crate) struct ClusterId();
 
 #[derive(Default)]
 pub(crate) struct UserName(pub(crate) String);
+
+impl<S: Sync + Send> FromRequestParts<S> for UserIdToken
+where
+    S: Send + Sync,
+    ServerDb: FromRef<S>,
+{
+    type Rejection = StatusCode;
+
+    async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
+        let bearer: TypedHeader<Authorization<Bearer>> =
+            parts.extract().await.map_err(unauthorized)?;
+        let token = utilities::unquote(bearer.token());
+        ServerDb::from_ref(state)
+            .user_id_from_token(token)
+            .await
+            .map_err(unauthorized)?;
+        Ok(Self(token.to_string()))
+    }
+}
 
 impl<S: Sync + Send> FromRequestParts<S> for UserName
 where
@@ -32,7 +54,7 @@ where
         if let Ok(bearer) = parts.extract::<TypedHeader<Authorization<Bearer>>>().await {
             let db_pool = ServerDb::from_ref(state);
             let id = db_pool
-                .user_token_id(utilities::unquote(bearer.token()))
+                .user_id_from_token(utilities::unquote(bearer.token()))
                 .await?;
             return Ok(UserName(db_pool.user_name(id).await?));
         }
@@ -52,7 +74,7 @@ where
         let bearer: TypedHeader<Authorization<Bearer>> =
             parts.extract().await.map_err(unauthorized)?;
         let id = ServerDb::from_ref(state)
-            .user_token_id(utilities::unquote(bearer.token()))
+            .user_id_from_token(utilities::unquote(bearer.token()))
             .await
             .map_err(unauthorized)?;
         Ok(Self(id))

@@ -28,7 +28,10 @@ pub async fn repeated_login() -> Result<(), TestError> {
     let token = server.api.token.clone().unwrap();
     let status = server.api.user_login(owner, owner).await?;
     assert_eq!(status, 200);
-    assert_eq!(server.api.token.clone().unwrap(), token);
+    assert!(
+        server.api.token.clone().unwrap() != token,
+        "Login did not generate a new token: {token}"
+    );
     Ok(())
 }
 
@@ -100,9 +103,28 @@ pub async fn concurrent_logins() -> Result<(), TestError> {
     server.api.user_logout().await?;
 
     assert!(
-        tokens.iter().all(|t| t == &token),
-        "Not all tokens are the same: {:?}",
+        tokens.iter().all(|t| !t.is_empty()),
+        "Some concurrent logins returned empty tokens: {:?}",
         tokens
+    );
+
+    let mut unique_tokens = tokens.clone();
+    unique_tokens.sort();
+    unique_tokens.dedup();
+    let unique_count = unique_tokens.len();
+
+    assert_eq!(
+        unique_count,
+        tokens.len(),
+        "Concurrent logins produced duplicate tokens: {:?}",
+        tokens
+    );
+
+    assert!(
+        tokens.iter().all(|t| t != &token),
+        "Follow-up login unexpectedly reused one of concurrent tokens: {:?}; new token: {}",
+        tokens,
+        token
     );
 
     Ok(())

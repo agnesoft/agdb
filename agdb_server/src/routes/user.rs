@@ -8,6 +8,7 @@ use crate::server_db::ServerDb;
 use crate::server_error::ServerError;
 use crate::server_error::ServerResponse;
 use crate::user_id::UserId;
+use crate::user_id::UserIdToken;
 use crate::user_id::UserName;
 use agdb::DbId;
 use agdb_api::ChangePassword;
@@ -23,25 +24,18 @@ pub(crate) async fn do_login(
     server_db: &ServerDb,
     username: &str,
     password: &str,
-) -> ServerResult<(Option<DbId>, String)> {
+) -> ServerResult<(DbId, String)> {
     let user = server_db
         .user(username)
         .await
-        .map_err(|_| ServerError::new(StatusCode::UNAUTHORIZED, "unuauthorized"))?;
+        .map_err(|_| ServerError::new(StatusCode::UNAUTHORIZED, "unauthorized"))?;
     let pswd = Password::new(&user.username, &user.password, &user.salt)?;
 
     if !pswd.verify_password(password) {
-        return Err(ServerError::new(StatusCode::UNAUTHORIZED, "unuauthorized"));
+        return Err(ServerError::new(StatusCode::UNAUTHORIZED, "unauthorized"));
     }
 
-    let mut token = server_db.user_token(user.db_id.unwrap_or_default()).await?;
-
-    if token.is_empty() {
-        let token_uuid = Uuid::new_v4();
-        token = token_uuid.to_string();
-    }
-
-    Ok((user.db_id, token))
+    Ok((user.db_id.unwrap_or_default(), Uuid::new_v4().to_string()))
 }
 
 #[utoipa::path(post,
@@ -58,12 +52,8 @@ pub(crate) async fn login(
     State(server_db): State<ServerDb>,
     Json(request): Json<UserLogin>,
 ) -> ServerResponse<(StatusCode, Json<String>)> {
-    let (user_id, mut token) = do_login(&server_db, &request.username, &request.password).await?;
-
-    if let Some(user_id) = user_id {
-        token = server_db.save_or_get_token(user_id, &token).await?;
-    }
-
+    let (user_id, token) = do_login(&server_db, &request.username, &request.password).await?;
+    server_db.save_token(user_id, &token).await?;
     Ok((StatusCode::OK, Json(token)))
 }
 
@@ -77,8 +67,8 @@ pub(crate) async fn login(
          (status = 401, description = "invalid credentials")
     )
 )]
-pub(crate) async fn logout(user: UserId, State(server_db): State<ServerDb>) -> ServerResponse {
-    server_db.save_token(user.0, "").await?;
+pub(crate) async fn logout(user: UserIdToken, State(server_db): State<ServerDb>) -> ServerResponse {
+    server_db.remove_token(&user.0).await?;
 
     Ok(StatusCode::CREATED)
 }

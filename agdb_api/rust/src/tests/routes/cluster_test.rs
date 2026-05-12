@@ -1,15 +1,11 @@
-use crate::AgdbApi;
 use crate::DbKind;
 use crate::DbResource;
 use crate::DbUserRole;
-use crate::ReqwestClient;
 use crate::test_server::ADMIN;
 use crate::test_server::TestServer;
 use crate::test_server::next_db_name;
 use crate::test_server::next_user_name;
-use crate::test_server::reqwest_client;
 use crate::test_server::test_cluster::TestCluster;
-use crate::test_server::test_cluster::create_cluster;
 use crate::test_server::test_error::TestError;
 use agdb::Comparison;
 use agdb::QueryBuilder;
@@ -30,13 +26,14 @@ pub async fn status() -> Result<(), TestError> {
 
 #[cfg_attr(feature = "api", agdb::test_def())]
 pub async fn admin_db_add() -> Result<(), TestError> {
-    let mut cluster = TestCluster::new().await?;
+    let cluster = TestCluster::new().await?;
     let owner = &next_user_name();
     let db = &next_db_name();
-    let client = cluster.apis.get_mut(1).unwrap();
-    client.user_login(ADMIN, ADMIN).await?;
+    let mut client = cluster.follower();
+    client.cluster_user_login(ADMIN, ADMIN).await?;
     client.admin_user_add(owner, owner).await?;
     client.admin_db_add(owner, db, DbKind::Memory).await?;
+
     let db_list = client.admin_db_list().await?.1;
     let server_db = db_list
         .iter()
@@ -50,11 +47,11 @@ pub async fn admin_db_add() -> Result<(), TestError> {
 
 #[cfg_attr(feature = "api", agdb::test_def())]
 pub async fn admin_db_backup_restore() -> Result<(), TestError> {
-    let mut cluster = TestCluster::new().await?;
+    let cluster = TestCluster::new().await?;
     let owner = &next_user_name();
     let db = &next_db_name();
-    let client = cluster.apis.get_mut(1).unwrap();
-    client.user_login(ADMIN, ADMIN).await?;
+    let mut client = cluster.follower();
+    client.cluster_user_login(ADMIN, ADMIN).await?;
     client.admin_user_add(owner, owner).await?;
     client.admin_db_add(owner, db, DbKind::Memory).await?;
     client.admin_db_backup(owner, db).await?;
@@ -82,11 +79,11 @@ pub async fn admin_db_backup_restore() -> Result<(), TestError> {
 
 #[cfg_attr(feature = "api", agdb::test_def())]
 pub async fn admin_db_clear() -> Result<(), TestError> {
-    let mut cluster = TestCluster::new().await?;
+    let cluster = TestCluster::new().await?;
     let owner = &next_user_name();
     let db = &next_db_name();
-    let client = cluster.apis.get_mut(1).unwrap();
-    client.user_login(ADMIN, ADMIN).await?;
+    let mut client = cluster.follower();
+    client.cluster_user_login(ADMIN, ADMIN).await?;
     client.admin_user_add(owner, owner).await?;
     client.admin_db_add(owner, db, DbKind::Memory).await?;
     client
@@ -103,6 +100,7 @@ pub async fn admin_db_clear() -> Result<(), TestError> {
         .to_u64()?;
     assert_eq!(node_count, 1);
     client.admin_db_clear(owner, db, DbResource::All).await?;
+
     let node_count = client.admin_db_exec(owner, db, node_count_query).await?.1[0].elements[0]
         .values[0]
         .value
@@ -113,11 +111,11 @@ pub async fn admin_db_clear() -> Result<(), TestError> {
 
 #[cfg_attr(feature = "api", agdb::test_def())]
 pub async fn admin_db_convert() -> Result<(), TestError> {
-    let mut cluster = TestCluster::new().await?;
+    let cluster = TestCluster::new().await?;
     let owner = &next_user_name();
     let db = &next_db_name();
-    let client = cluster.apis.get_mut(1).unwrap();
-    client.user_login(ADMIN, ADMIN).await?;
+    let mut client = cluster.follower();
+    client.cluster_user_login(ADMIN, ADMIN).await?;
     client.admin_user_add(owner, owner).await?;
     client.admin_db_add(owner, db, DbKind::Memory).await?;
     client.admin_db_convert(owner, db, DbKind::Mapped).await?;
@@ -132,12 +130,12 @@ pub async fn admin_db_convert() -> Result<(), TestError> {
 
 #[cfg_attr(feature = "api", agdb::test_def())]
 pub async fn admin_db_copy() -> Result<(), TestError> {
-    let mut cluster = TestCluster::new().await?;
+    let cluster = TestCluster::new().await?;
     let owner = &next_user_name();
     let db = &next_db_name();
     let db2 = &next_db_name();
-    let client = cluster.apis.get_mut(1).unwrap();
-    client.user_login(ADMIN, ADMIN).await?;
+    let mut client = cluster.follower();
+    client.cluster_user_login(ADMIN, ADMIN).await?;
     client.admin_user_add(owner, owner).await?;
     client.admin_db_add(owner, db, DbKind::Memory).await?;
     client.admin_db_copy(owner, db, owner, db2).await?;
@@ -149,11 +147,11 @@ pub async fn admin_db_copy() -> Result<(), TestError> {
 
 #[cfg_attr(feature = "api", agdb::test_def())]
 pub async fn admin_db_delete() -> Result<(), TestError> {
-    let mut cluster = TestCluster::new().await?;
+    let cluster = TestCluster::new().await?;
     let owner = &next_user_name();
     let db = &next_db_name();
-    let client = cluster.apis.get_mut(1).unwrap();
-    client.user_login(ADMIN, ADMIN).await?;
+    let mut client = cluster.follower();
+    client.cluster_user_login(ADMIN, ADMIN).await?;
     client.admin_user_add(owner, owner).await?;
     client.admin_db_add(owner, db, DbKind::Memory).await?;
     let admin_token = client.token.clone();
@@ -171,11 +169,11 @@ pub async fn admin_db_delete() -> Result<(), TestError> {
 
 #[cfg_attr(feature = "api", agdb::test_def())]
 pub async fn admin_db_exec() -> Result<(), TestError> {
-    let mut cluster = TestCluster::new().await?;
+    let cluster = TestCluster::new().await?;
     let owner = &next_user_name();
     let db = &next_db_name();
-    let client = cluster.apis.get_mut(1).unwrap();
-    client.user_login(ADMIN, ADMIN).await?;
+    let mut client = cluster.follower();
+    client.cluster_user_login(ADMIN, ADMIN).await?;
     client.admin_user_add(owner, owner).await?;
     client.admin_db_add(owner, db, DbKind::Memory).await?;
     client
@@ -205,11 +203,11 @@ pub async fn admin_db_exec() -> Result<(), TestError> {
 
 #[cfg_attr(feature = "api", agdb::test_def())]
 pub async fn admin_db_optimize() -> Result<(), TestError> {
-    let mut cluster = TestCluster::new().await?;
+    let cluster = TestCluster::new().await?;
     let owner = &next_user_name();
     let db = &next_db_name();
-    let client = cluster.apis.get_mut(1).unwrap();
-    client.user_login(ADMIN, ADMIN).await?;
+    let mut client = cluster.follower();
+    client.cluster_user_login(ADMIN, ADMIN).await?;
     client.admin_user_add(owner, owner).await?;
     client.admin_db_add(owner, db, DbKind::Memory).await?;
     client
@@ -235,11 +233,11 @@ pub async fn admin_db_optimize() -> Result<(), TestError> {
 
 #[cfg_attr(feature = "api", agdb::test_def())]
 pub async fn admin_db_shrink_to_fit() -> Result<(), TestError> {
-    let mut cluster = TestCluster::new().await?;
+    let cluster = TestCluster::new().await?;
     let owner = &next_user_name();
     let db = &next_db_name();
-    let client = cluster.apis.get_mut(1).unwrap();
-    client.user_login(ADMIN, ADMIN).await?;
+    let mut client = cluster.follower();
+    client.cluster_user_login(ADMIN, ADMIN).await?;
     client.admin_user_add(owner, owner).await?;
     client.admin_db_add(owner, db, DbKind::Memory).await?;
     client
@@ -265,11 +263,11 @@ pub async fn admin_db_shrink_to_fit() -> Result<(), TestError> {
 
 #[cfg_attr(feature = "api", agdb::test_def())]
 pub async fn admin_db_remove() -> Result<(), TestError> {
-    let mut cluster = TestCluster::new().await?;
+    let cluster = TestCluster::new().await?;
     let owner = &next_user_name();
     let db = &next_db_name();
-    let client = cluster.apis.get_mut(1).unwrap();
-    client.user_login(ADMIN, ADMIN).await?;
+    let mut client = cluster.follower();
+    client.cluster_user_login(ADMIN, ADMIN).await?;
     client.admin_user_add(owner, owner).await?;
     client.admin_db_add(owner, db, DbKind::Memory).await?;
     let admin_token = client.token.clone();
@@ -287,12 +285,12 @@ pub async fn admin_db_remove() -> Result<(), TestError> {
 
 #[cfg_attr(feature = "api", agdb::test_def())]
 pub async fn admin_db_rename() -> Result<(), TestError> {
-    let mut cluster = TestCluster::new().await?;
+    let cluster = TestCluster::new().await?;
     let owner = &next_user_name();
     let db = &next_db_name();
     let db2 = &next_db_name();
-    let client = cluster.apis.get_mut(1).unwrap();
-    client.user_login(ADMIN, ADMIN).await?;
+    let mut client = cluster.follower();
+    client.cluster_user_login(ADMIN, ADMIN).await?;
     client.admin_user_add(owner, owner).await?;
     client.admin_db_add(owner, db, DbKind::Memory).await?;
     client.admin_db_rename(owner, db, owner, db2).await?;
@@ -306,12 +304,12 @@ pub async fn admin_db_rename() -> Result<(), TestError> {
 
 #[cfg_attr(feature = "api", agdb::test_def())]
 pub async fn admin_db_user_add_remove() -> Result<(), TestError> {
-    let mut cluster = TestCluster::new().await?;
+    let cluster = TestCluster::new().await?;
     let owner = &next_user_name();
     let user = &next_user_name();
     let db = &next_db_name();
-    let client = cluster.apis.get_mut(1).unwrap();
-    client.user_login(ADMIN, ADMIN).await?;
+    let mut client = cluster.follower();
+    client.cluster_user_login(ADMIN, ADMIN).await?;
     client.admin_user_add(owner, owner).await?;
     client.admin_user_add(user, user).await?;
     client.admin_db_add(owner, db, DbKind::Memory).await?;
@@ -328,10 +326,10 @@ pub async fn admin_db_user_add_remove() -> Result<(), TestError> {
 
 #[cfg_attr(feature = "api", agdb::test_def())]
 pub async fn admin_user_add() -> Result<(), TestError> {
-    let mut cluster = TestCluster::new().await?;
-    let client = cluster.apis.get_mut(1).unwrap();
+    let cluster = TestCluster::new().await?;
+    let mut client = cluster.follower();
     let user = &next_user_name();
-    client.user_login(ADMIN, ADMIN).await?;
+    client.cluster_user_login(ADMIN, ADMIN).await?;
     client.admin_user_add(user, user).await?;
     let users = client.admin_user_list().await?.1;
     let added_user = users.iter().find(|u| u.username.as_str() == user);
@@ -341,10 +339,10 @@ pub async fn admin_user_add() -> Result<(), TestError> {
 
 #[cfg_attr(feature = "api", agdb::test_def())]
 pub async fn admin_user_change_password() -> Result<(), TestError> {
-    let mut cluster = TestCluster::new().await?;
-    let client = cluster.apis.get_mut(1).unwrap();
+    let cluster = TestCluster::new().await?;
+    let mut client = cluster.follower();
     let user = &next_user_name();
-    client.user_login(ADMIN, ADMIN).await?;
+    client.cluster_user_login(ADMIN, ADMIN).await?;
     client.admin_user_add(user, user).await?;
     client
         .admin_user_change_password(user, "password123")
@@ -355,74 +353,57 @@ pub async fn admin_user_change_password() -> Result<(), TestError> {
 
 #[cfg_attr(feature = "api", agdb::test_def())]
 pub async fn admin_cluster_logout() -> Result<(), TestError> {
-    let mut cluster = TestCluster::new().await?;
+    let cluster = TestCluster::new().await?;
     let user = &next_user_name();
 
-    let token = {
-        let client = cluster.apis.get_mut(1).unwrap();
-        client.user_login(ADMIN, ADMIN).await?;
-        client.admin_user_add(user, user).await?;
-        client.cluster_user_login(user, user).await?;
-        client.token.clone()
-    };
-
-    {
-        let leader = cluster.apis.get_mut(0).unwrap();
-        leader.token = token;
-        leader.user_status().await?;
-    }
-
-    {
-        let client = cluster.apis.get_mut(1).unwrap();
-        client.user_login(ADMIN, ADMIN).await?;
-        client.cluster_admin_user_logout(user).await?;
-    }
-
-    assert_eq!(cluster.apis[0].user_status().await.unwrap_err().status, 401);
+    let mut follower = cluster.follower();
+    follower.cluster_user_login(ADMIN, ADMIN).await?;
+    follower.admin_user_add(user, user).await?;
+    let admin_token = follower.token.clone();
+    follower.user_login(user, user).await?;
+    let user_token = follower.token.clone();
+    follower.user_status().await?;
+    follower.token = admin_token;
+    follower.cluster_admin_user_logout(user).await?;
+    follower.token = user_token;
+    assert_eq!(follower.user_status().await.unwrap_err().status, 401);
 
     Ok(())
 }
 
 #[cfg_attr(feature = "api", agdb::test_def())]
 pub async fn admin_cluster_logout_all() -> Result<(), TestError> {
-    let servers = create_cluster(3, false).await?;
-    let mut client = AgdbApi::new(
-        ReqwestClient::with_client(reqwest_client()),
-        &servers[1].address,
-    );
-
-    let user = &next_user_name();
+    let cluster = TestCluster::new_private().await?;
+    let user1 = &next_user_name();
     let user2 = &next_user_name();
 
-    client.cluster_user_login(ADMIN, ADMIN).await?;
-    client.admin_user_add(user, user).await?;
-    client.admin_user_add(user2, user2).await?;
-    client.cluster_user_login(user, user).await?;
-    client.cluster_user_login(user2, user2).await?;
+    let mut follower = cluster.follower();
+    follower.cluster_user_login(ADMIN, ADMIN).await?;
+    follower.admin_user_add(user1, user1).await?;
+    follower.admin_user_add(user2, user2).await?;
 
-    client.user_login(ADMIN, ADMIN).await?;
-    client.cluster_admin_user_logout_all().await?;
+    let mut client = cluster.follower();
+    client.user_login(user1, user1).await?;
+    client.user_status().await?;
 
-    let list = client.admin_user_list().await?.1;
-    assert_eq!(list.iter().filter(|u| !u.admin && u.login).count(), 0);
+    let mut leader = cluster.leader();
+    leader.user_login(user2, user2).await?;
+    leader.user_status().await?;
 
-    let mut client = AgdbApi::new(
-        ReqwestClient::with_client(reqwest_client()),
-        &servers[0].address,
-    );
-    client.user_login(ADMIN, ADMIN).await?;
-    let list = client.admin_user_list().await?.1;
-    assert_eq!(list.iter().filter(|u| !u.admin && u.login).count(), 0);
+    follower.cluster_admin_user_logout_all().await?;
+
+    assert_eq!(client.user_status().await.unwrap_err().status, 401);
+    assert_eq!(leader.user_status().await.unwrap_err().status, 401);
 
     Ok(())
 }
 
 #[cfg_attr(feature = "api", agdb::test_def())]
 pub async fn admin_user_delete() -> Result<(), TestError> {
-    let mut cluster = TestCluster::new().await?;
-    let client = cluster.apis.get_mut(1).unwrap();
+    let cluster = TestCluster::new().await?;
+    let mut client = cluster.follower();
     let user = &next_user_name();
-    client.user_login(ADMIN, ADMIN).await?;
+    client.cluster_user_login(ADMIN, ADMIN).await?;
     client.admin_user_add(user, user).await?;
     let users = client.admin_user_list().await?.1;
     let added_user = users.iter().find(|u| u.username.as_str() == user);
@@ -436,11 +417,11 @@ pub async fn admin_user_delete() -> Result<(), TestError> {
 
 #[cfg_attr(feature = "api", agdb::test_def())]
 pub async fn db_add() -> Result<(), TestError> {
-    let mut cluster = TestCluster::new().await?;
+    let cluster = TestCluster::new().await?;
     let owner = &next_user_name();
     let db = &next_db_name();
-    let client = cluster.apis.get_mut(1).unwrap();
-    client.user_login(ADMIN, ADMIN).await?;
+    let mut client = cluster.follower();
+    client.cluster_user_login(ADMIN, ADMIN).await?;
     client.admin_user_add(owner, owner).await?;
     client.cluster_user_login(owner, owner).await?;
     client.db_add(owner, db, DbKind::Memory).await?;
@@ -453,11 +434,11 @@ pub async fn db_add() -> Result<(), TestError> {
 
 #[cfg_attr(feature = "api", agdb::test_def())]
 pub async fn db_backup() -> Result<(), TestError> {
-    let mut cluster = TestCluster::new().await?;
+    let cluster = TestCluster::new().await?;
     let owner = &next_user_name();
     let db = &next_db_name();
-    let client = cluster.apis.get_mut(1).unwrap();
-    client.user_login(ADMIN, ADMIN).await?;
+    let mut client = cluster.follower();
+    client.cluster_user_login(ADMIN, ADMIN).await?;
     client.admin_user_add(owner, owner).await?;
     client.cluster_user_login(owner, owner).await?;
     client.db_add(owner, db, DbKind::Memory).await?;
@@ -484,11 +465,11 @@ pub async fn db_backup() -> Result<(), TestError> {
 
 #[cfg_attr(feature = "api", agdb::test_def())]
 pub async fn db_clear() -> Result<(), TestError> {
-    let mut cluster = TestCluster::new().await?;
+    let cluster = TestCluster::new().await?;
     let owner = &next_user_name();
     let db = &next_db_name();
-    let client = cluster.apis.get_mut(1).unwrap();
-    client.user_login(ADMIN, ADMIN).await?;
+    let mut client = cluster.follower();
+    client.cluster_user_login(ADMIN, ADMIN).await?;
     client.admin_user_add(owner, owner).await?;
     client.cluster_user_login(owner, owner).await?;
     client.db_add(owner, db, DbKind::Memory).await?;
@@ -514,11 +495,11 @@ pub async fn db_clear() -> Result<(), TestError> {
 
 #[cfg_attr(feature = "api", agdb::test_def())]
 pub async fn db_convert() -> Result<(), TestError> {
-    let mut cluster = TestCluster::new().await?;
+    let cluster = TestCluster::new().await?;
     let owner = &next_user_name();
     let db = &next_db_name();
-    let client = cluster.apis.get_mut(1).unwrap();
-    client.user_login(ADMIN, ADMIN).await?;
+    let mut client = cluster.follower();
+    client.cluster_user_login(ADMIN, ADMIN).await?;
     client.admin_user_add(owner, owner).await?;
     client.cluster_user_login(owner, owner).await?;
     client.db_add(owner, db, DbKind::Memory).await?;
@@ -530,12 +511,12 @@ pub async fn db_convert() -> Result<(), TestError> {
 
 #[cfg_attr(feature = "api", agdb::test_def())]
 pub async fn db_copy() -> Result<(), TestError> {
-    let mut cluster = TestCluster::new().await?;
+    let cluster = TestCluster::new().await?;
     let owner = &next_user_name();
     let db = &next_db_name();
     let db2 = &next_db_name();
-    let client = cluster.apis.get_mut(1).unwrap();
-    client.user_login(ADMIN, ADMIN).await?;
+    let mut client = cluster.follower();
+    client.cluster_user_login(ADMIN, ADMIN).await?;
     client.admin_user_add(owner, owner).await?;
     client.cluster_user_login(owner, owner).await?;
     client.db_add(owner, db, DbKind::Memory).await?;
@@ -548,11 +529,11 @@ pub async fn db_copy() -> Result<(), TestError> {
 
 #[cfg_attr(feature = "api", agdb::test_def())]
 pub async fn db_delete() -> Result<(), TestError> {
-    let mut cluster = TestCluster::new().await?;
+    let cluster = TestCluster::new().await?;
     let owner = &next_user_name();
     let db = &next_db_name();
-    let client = cluster.apis.get_mut(1).unwrap();
-    client.user_login(ADMIN, ADMIN).await?;
+    let mut client = cluster.follower();
+    client.cluster_user_login(ADMIN, ADMIN).await?;
     client.admin_user_add(owner, owner).await?;
     client.cluster_user_login(owner, owner).await?;
     client.db_add(owner, db, DbKind::Memory).await?;
@@ -566,11 +547,11 @@ pub async fn db_delete() -> Result<(), TestError> {
 
 #[cfg_attr(feature = "api", agdb::test_def())]
 pub async fn db_exec() -> Result<(), TestError> {
-    let mut cluster = TestCluster::new().await?;
+    let cluster = TestCluster::new().await?;
     let owner = &next_user_name();
     let db = &next_db_name();
-    let client = cluster.apis.get_mut(1).unwrap();
-    client.user_login(ADMIN, ADMIN).await?;
+    let mut client = cluster.follower();
+    client.cluster_user_login(ADMIN, ADMIN).await?;
     client.admin_user_add(owner, owner).await?;
     client.cluster_user_login(owner, owner).await?;
     client.db_add(owner, db, DbKind::Memory).await?;
@@ -627,11 +608,11 @@ pub async fn db_exec() -> Result<(), TestError> {
 
 #[cfg_attr(feature = "api", agdb::test_def())]
 pub async fn db_optimize() -> Result<(), TestError> {
-    let mut cluster = TestCluster::new().await?;
+    let cluster = TestCluster::new().await?;
     let owner = &next_user_name();
     let db = &next_db_name();
-    let client = cluster.apis.get_mut(1).unwrap();
-    client.user_login(ADMIN, ADMIN).await?;
+    let mut client = cluster.follower();
+    client.cluster_user_login(ADMIN, ADMIN).await?;
     client.admin_user_add(owner, owner).await?;
     client.cluster_user_login(owner, owner).await?;
     client.db_add(owner, db, DbKind::Memory).await?;
@@ -651,11 +632,11 @@ pub async fn db_optimize() -> Result<(), TestError> {
 
 #[cfg_attr(feature = "api", agdb::test_def())]
 pub async fn db_shrink_to_fit() -> Result<(), TestError> {
-    let mut cluster = TestCluster::new().await?;
+    let cluster = TestCluster::new().await?;
     let owner = &next_user_name();
     let db = &next_db_name();
-    let client = cluster.apis.get_mut(1).unwrap();
-    client.user_login(ADMIN, ADMIN).await?;
+    let mut client = cluster.follower();
+    client.cluster_user_login(ADMIN, ADMIN).await?;
     client.admin_user_add(owner, owner).await?;
     client.cluster_user_login(owner, owner).await?;
     client.db_add(owner, db, DbKind::Memory).await?;
@@ -675,11 +656,11 @@ pub async fn db_shrink_to_fit() -> Result<(), TestError> {
 
 #[cfg_attr(feature = "api", agdb::test_def())]
 pub async fn db_remove() -> Result<(), TestError> {
-    let mut cluster = TestCluster::new().await?;
+    let cluster = TestCluster::new().await?;
     let owner = &next_user_name();
     let db = &next_db_name();
-    let client = cluster.apis.get_mut(1).unwrap();
-    client.user_login(ADMIN, ADMIN).await?;
+    let mut client = cluster.follower();
+    client.cluster_user_login(ADMIN, ADMIN).await?;
     client.admin_user_add(owner, owner).await?;
     client.cluster_user_login(owner, owner).await?;
     client.db_add(owner, db, DbKind::Memory).await?;
@@ -693,12 +674,12 @@ pub async fn db_remove() -> Result<(), TestError> {
 
 #[cfg_attr(feature = "api", agdb::test_def())]
 pub async fn db_rename() -> Result<(), TestError> {
-    let mut cluster = TestCluster::new().await?;
+    let cluster = TestCluster::new().await?;
     let owner = &next_user_name();
     let db = &next_db_name();
     let db2 = &next_db_name();
-    let client = cluster.apis.get_mut(1).unwrap();
-    client.user_login(ADMIN, ADMIN).await?;
+    let mut client = cluster.follower();
+    client.cluster_user_login(ADMIN, ADMIN).await?;
     client.admin_user_add(owner, owner).await?;
     client.cluster_user_login(owner, owner).await?;
     client.db_add(owner, db, DbKind::Memory).await?;
@@ -712,12 +693,12 @@ pub async fn db_rename() -> Result<(), TestError> {
 
 #[cfg_attr(feature = "api", agdb::test_def())]
 pub async fn db_user_add_remove() -> Result<(), TestError> {
-    let mut cluster = TestCluster::new().await?;
+    let cluster = TestCluster::new().await?;
     let owner = &next_user_name();
     let user = &next_user_name();
     let db = &next_db_name();
-    let client = cluster.apis.get_mut(1).unwrap();
-    client.user_login(ADMIN, ADMIN).await?;
+    let mut client = cluster.follower();
+    client.cluster_user_login(ADMIN, ADMIN).await?;
     client.admin_user_add(owner, owner).await?;
     client.admin_user_add(user, user).await?;
     client.cluster_user_login(owner, owner).await?;
@@ -735,30 +716,31 @@ pub async fn db_user_add_remove() -> Result<(), TestError> {
 
 #[cfg_attr(feature = "api", agdb::test_def())]
 pub async fn user_change_password() -> Result<(), TestError> {
-    let mut cluster = TestCluster::new().await?;
+    let cluster = TestCluster::new().await?;
     let user = &next_user_name();
     {
-        let client = cluster.apis.get_mut(1).unwrap();
-        client.user_login(ADMIN, ADMIN).await?;
+        let mut client = cluster.follower();
+        client.cluster_user_login(ADMIN, ADMIN).await?;
         client.admin_user_add(user, user).await?;
         client.cluster_user_login(user, user).await?;
         client.user_change_password(user, "password123").await?;
     }
-    cluster.apis[0].user_login(user, "password123").await?;
+    let mut leader = cluster.leader();
+    leader.user_login(user, "password123").await?;
     Ok(())
 }
 
 #[cfg_attr(feature = "api", agdb::test_def())]
 pub async fn user_login() -> Result<(), TestError> {
-    let mut cluster = TestCluster::new().await?;
+    let cluster = TestCluster::new().await?;
 
     let token = {
-        let client = cluster.apis.get_mut(1).unwrap();
-        client.user_login(ADMIN, ADMIN).await?;
+        let mut client = cluster.follower();
+        client.cluster_user_login(ADMIN, ADMIN).await?;
         client.token.clone()
     };
 
-    let leader = cluster.apis.get_mut(0).unwrap();
+    let mut leader = cluster.leader();
     leader.token = token;
     leader.user_status().await?;
 
@@ -767,30 +749,37 @@ pub async fn user_login() -> Result<(), TestError> {
 
 #[cfg_attr(feature = "api", agdb::test_def())]
 pub async fn cluster_logout() -> Result<(), TestError> {
-    let mut cluster = TestCluster::new().await?;
+    let cluster = TestCluster::new().await?;
     let user = &next_user_name();
 
     let token = {
-        let client = cluster.apis.get_mut(1).unwrap();
-        client.user_login(ADMIN, ADMIN).await?;
+        let mut client = cluster.follower();
+        client.cluster_user_login(ADMIN, ADMIN).await?;
         client.admin_user_add(user, user).await?;
         client.cluster_user_login(user, user).await?;
         client.token.clone()
     };
 
+    let leader_token = token.clone();
+
     {
-        let leader = cluster.apis.get_mut(0).unwrap();
-        leader.token = token;
+        let mut leader = cluster.leader();
+        leader.token = leader_token;
         leader.user_status().await?;
     }
 
     {
-        let client = cluster.apis.get_mut(1).unwrap();
+        let mut client = cluster.follower();
+        client.token = token.clone();
         client.cluster_user_logout().await?;
     }
 
-    assert_eq!(cluster.apis[0].user_status().await.unwrap_err().status, 401);
-    assert_eq!(cluster.apis[1].user_status().await.unwrap_err().status, 401);
+    let mut leader = cluster.leader();
+    leader.token = token.clone();
+    assert_eq!(leader.user_status().await.unwrap_err().status, 401);
+    let mut follower = cluster.follower();
+    follower.token = token;
+    assert_eq!(follower.user_status().await.unwrap_err().status, 401);
 
     Ok(())
 }

@@ -11,50 +11,75 @@ use crate::test_server::reqwest_client;
 use crate::test_server::test_error::TestError;
 use crate::test_server::test_error::bail;
 use std::sync::Arc;
+use std::sync::OnceLock;
 use std::sync::Weak;
 use std::time::Instant;
 use tokio::sync::RwLock;
 
 type ClusterImpl = Vec<TestServerImpl>;
 
-static CLUSTER: std::sync::OnceLock<RwLock<Weak<ClusterImpl>>> = std::sync::OnceLock::new();
+static CLUSTER: OnceLock<RwLock<Weak<ClusterImpl>>> = OnceLock::new();
 
 #[cfg_attr(feature = "api", derive(agdb::TypeDef))]
 pub struct TestCluster {
-    pub apis: Vec<AgdbApi<ReqwestClient>>,
-    pub cluster: Arc<ClusterImpl>,
+    cluster: Arc<ClusterImpl>,
+    leader: usize,
 }
 
 #[cfg_attr(feature = "api", agdb::impl_def())]
 impl TestCluster {
     pub async fn new() -> Result<Self, TestError> {
-        let global_cluster = CLUSTER.get_or_init(|| RwLock::new(Weak::new()));
-        let mut cluster_guard = global_cluster.write().await;
-
-        let nodes = if let Some(nodes) = cluster_guard.upgrade() {
+        let global = CLUSTER.get_or_init(|| RwLock::new(Weak::new()));
+        let mut guard = global.write().await;
+        let nodes = if let Some(nodes) = guard.upgrade() {
             nodes
         } else {
             let nodes = Arc::new(create_cluster(3, false).await?);
-            *cluster_guard = Arc::downgrade(&nodes);
+            *guard = Arc::downgrade(&nodes);
             nodes
         };
+        drop(guard);
+        Self::from_nodes(nodes).await
+    }
 
-        let mut cluster = Self {
-            apis: nodes
-                .iter()
-                .map(|s| {
-                    Ok(AgdbApi::new(
-                        ReqwestClient::with_client(reqwest_client()),
-                        &s.address,
-                    ))
-                })
-                .collect::<Result<Vec<AgdbApi<ReqwestClient>>, TestError>>()?,
-            cluster: nodes,
+    pub async fn new_private() -> Result<Self, TestError> {
+        let nodes = Arc::new(create_cluster(3, false).await?);
+        Self::from_nodes(nodes).await
+    }
+
+    async fn from_nodes(nodes: Arc<ClusterImpl>) -> Result<Self, TestError> {
+        let cluster_status = AgdbApi::new(
+            ReqwestClient::with_client(reqwest_client()),
+            &nodes[0].address,
+        )
+        .cluster_status()
+        .await?
+        .1;
+        let leader = if let Some(leader) = cluster_status.iter().position(|status| status.leader) {
+            leader
+        } else {
+            bail!("Leader not found")
         };
 
-        cluster.apis[1].cluster_user_login(ADMIN, ADMIN).await?;
+        Ok(Self {
+            cluster: nodes,
+            leader,
+        })
+    }
 
-        Ok(cluster)
+    pub fn leader(&self) -> AgdbApi<ReqwestClient> {
+        AgdbApi::new(
+            ReqwestClient::with_client(reqwest_client()),
+            &self.cluster[self.leader].address,
+        )
+    }
+
+    pub fn follower(&self) -> AgdbApi<ReqwestClient> {
+        let follower = if self.leader == 0 { 1 } else { 0 };
+        AgdbApi::new(
+            ReqwestClient::with_client(reqwest_client()),
+            &self.cluster[follower].address,
+        )
     }
 }
 

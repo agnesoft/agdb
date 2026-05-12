@@ -135,6 +135,12 @@ impl From<RemoveUserToken> for ClusterAction {
     }
 }
 
+impl From<RemoveAllTokens> for ClusterAction {
+    fn from(value: RemoveAllTokens) -> Self {
+        ClusterAction::RemoveAllTokens(value)
+    }
+}
+
 impl From<ChangePassword> for ClusterAction {
     fn from(value: ChangePassword) -> Self {
         ClusterAction::ChangePassword(value)

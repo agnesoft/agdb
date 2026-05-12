@@ -1,4 +1,5 @@
 use crate::action::ClusterAction;
+use crate::action::remove_all_tokens::RemoveAllTokens;
 use crate::action::remove_user_token::RemoveUserToken;
 use crate::action::remove_user_tokens::RemoveUserTokens;
 use crate::action::save_user_token::SaveUserToken;
@@ -75,11 +76,7 @@ pub(crate) async fn admin_logout_all(
     _admin: AdminId,
     State(cluster): State<Cluster>,
 ) -> ServerResponse<impl IntoResponse> {
-    let (commit_index, _result) = cluster
-        .exec(RemoveUserTokens {
-            user: String::new(),
-        })
-        .await?;
+    let (commit_index, _result) = cluster.exec(RemoveAllTokens {}).await?;
 
     Ok((
         StatusCode::CREATED,

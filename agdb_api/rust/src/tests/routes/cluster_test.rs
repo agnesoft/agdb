@@ -381,12 +381,15 @@ pub async fn admin_cluster_logout_all() -> Result<(), TestError> {
     follower.cluster_user_login(ADMIN, ADMIN).await?;
     follower.admin_user_add(user1, user1).await?;
     follower.admin_user_add(user2, user2).await?;
+
     let mut client = cluster.follower();
     client.user_login(user1, user1).await?;
     client.user_status().await?;
+
     let mut leader = cluster.leader();
     leader.user_login(user2, user2).await?;
     leader.user_status().await?;
+
     follower.cluster_admin_user_logout_all().await?;
 
     assert_eq!(client.user_status().await.unwrap_err().status, 401);

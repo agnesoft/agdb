@@ -23,7 +23,6 @@ static CLUSTER: OnceLock<RwLock<Weak<ClusterImpl>>> = OnceLock::new();
 #[cfg_attr(feature = "api", derive(agdb::TypeDef))]
 pub struct TestCluster {
     cluster: Arc<ClusterImpl>,
-    leader: usize,
 }
 
 #[cfg_attr(feature = "api", agdb::impl_def())]
@@ -39,46 +38,26 @@ impl TestCluster {
             nodes
         };
         drop(guard);
-        Self::from_nodes(nodes).await
+
+        Ok(Self { cluster: nodes })
     }
 
     pub async fn new_private() -> Result<Self, TestError> {
         let nodes = Arc::new(create_cluster(3, false).await?);
-        Self::from_nodes(nodes).await
-    }
-
-    async fn from_nodes(nodes: Arc<ClusterImpl>) -> Result<Self, TestError> {
-        let cluster_status = AgdbApi::new(
-            ReqwestClient::with_client(reqwest_client()),
-            &nodes[0].address,
-        )
-        .cluster_status()
-        .await?
-        .1;
-        let leader = if let Some(leader) = cluster_status.iter().position(|status| status.leader) {
-            leader
-        } else {
-            bail!("Leader not found")
-        };
-
-        Ok(Self {
-            cluster: nodes,
-            leader,
-        })
+        Ok(Self { cluster: nodes })
     }
 
     pub fn leader(&self) -> AgdbApi<ReqwestClient> {
         AgdbApi::new(
             ReqwestClient::with_client(reqwest_client()),
-            &self.cluster[self.leader].address,
+            &self.cluster[0].address,
         )
     }
 
     pub fn follower(&self) -> AgdbApi<ReqwestClient> {
-        let follower = if self.leader == 0 { 1 } else { 0 };
         AgdbApi::new(
             ReqwestClient::with_client(reqwest_client()),
-            &self.cluster[follower].address,
+            &self.cluster[1].address,
         )
     }
 }

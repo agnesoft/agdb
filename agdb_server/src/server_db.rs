@@ -122,6 +122,23 @@ impl ServerDb {
                 t.exec_mut(QueryBuilder::insert().nodes().aliases(DBS).query())?;
             }
 
+            // Remove all old user tokens still on users from previous db version
+            if t.exec(QueryBuilder::select().values(TOKEN).ids(ADMIN).query())
+                .is_ok()
+            {
+                t.exec_mut(QueryBuilder::remove().index(TOKEN).query())?;
+                t.exec_mut(
+                    QueryBuilder::remove()
+                        .values(TOKEN)
+                        .search()
+                        .from(USERS)
+                        .where_()
+                        .neighbor()
+                        .query(),
+                )?;
+                t.exec_mut(QueryBuilder::insert().index(TOKEN).query())?;
+            }
+
             Ok(())
         })?;
 
@@ -671,7 +688,7 @@ impl ServerDb {
             )?
             .elements
             .first()
-            .ok_or_else(|| user_not_found(token))?
+            .ok_or_else(|| token_not_found(token))?
             .id)
         })
     }
@@ -783,5 +800,63 @@ impl DbType for Log<ClusterAction> {
             ("term", self.term).into(),
             ("data", self.data.serialize()).into(),
         ]
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use agdb::test_utilities::test_file::TestFile;
+
+    #[test]
+    fn migrate_old_token_format() -> ServerResult<()> {
+        let test_file = TestFile::new();
+
+        {
+            let mut db = Db::new(test_file.file_name())?;
+            db.transaction_mut(|t| {
+                t.exec_mut(QueryBuilder::insert().nodes().aliases(USERS).query())?;
+                t.exec_mut(QueryBuilder::insert().index(TOKEN).query())?;
+                let admin = t
+                    .exec_mut(
+                        QueryBuilder::insert()
+                            .nodes()
+                            .aliases(ADMIN)
+                            .values([[(USERNAME, "admin").into(), (TOKEN, "token0").into()]])
+                            .query(),
+                    )?
+                    .ids();
+                let mut users = t
+                    .exec_mut(
+                        QueryBuilder::insert()
+                            .nodes()
+                            .values([
+                                [(USERNAME, "user1").into(), (TOKEN, "token1").into()],
+                                [(USERNAME, "user2").into(), (TOKEN, "token2").into()],
+                            ])
+                            .query(),
+                    )?
+                    .ids();
+                users.extend(admin);
+                t.exec_mut(QueryBuilder::insert().edges().from(USERS).to(users).query())
+            })?;
+        }
+
+        ServerDb::new(test_file.file_name())?;
+
+        let db = Db::new(test_file.file_name())?;
+        let indexes = db.exec(QueryBuilder::select().indexes().query())?;
+        assert_eq!(indexes.elements[0].values[0], (USERNAME, 3_u64).into());
+        assert_eq!(indexes.elements[0].values[1], (TOKEN, 0_u64).into());
+        let result = db.exec(
+            QueryBuilder::search()
+                .elements()
+                .where_()
+                .keys(TOKEN)
+                .query(),
+        )?;
+        assert_eq!(result.result, 0, "{result:?}");
+
+        Ok(())
     }
 }

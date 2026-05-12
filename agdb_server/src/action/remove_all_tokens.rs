@@ -8,18 +8,11 @@ use serde::Deserialize;
 use serde::Serialize;
 
 #[derive(Clone, Serialize, Deserialize, DbSerialize)]
-pub(crate) struct ClusterLogout {
-    pub(crate) user: String,
-}
+pub(crate) struct RemoveAllTokens {}
 
-impl Action for ClusterLogout {
+impl Action for RemoveAllTokens {
     async fn exec(self, db: ServerDb, _db_pool: DbPool) -> ServerResult<ClusterActionResult> {
-        if self.user.is_empty() {
-            db.remove_all_tokens().await?;
-        } else {
-            let user_id = db.user_id(&self.user).await?;
-            db.remove_tokens(user_id).await?;
-        }
+        db.remove_all_tokens().await?;
 
         Ok(ClusterActionResult::None)
     }

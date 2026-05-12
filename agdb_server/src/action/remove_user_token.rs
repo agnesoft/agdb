@@ -8,11 +8,11 @@ use serde::Deserialize;
 use serde::Serialize;
 
 #[derive(Clone, Serialize, Deserialize, DbSerialize)]
-pub(crate) struct ClusterUserLogout {
+pub(crate) struct RemoveUserToken {
     pub(crate) token: String,
 }
 
-impl Action for ClusterUserLogout {
+impl Action for RemoveUserToken {
     async fn exec(self, db: ServerDb, _db_pool: DbPool) -> ServerResult<ClusterActionResult> {
         db.remove_token(&self.token).await?;
 

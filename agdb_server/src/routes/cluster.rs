@@ -1,7 +1,7 @@
 use crate::action::ClusterAction;
-use crate::action::cluster_login::ClusterLogin;
-use crate::action::cluster_logout::ClusterLogout;
-use crate::action::cluster_user_logout::ClusterUserLogout;
+use crate::action::remove_user_token::RemoveUserToken;
+use crate::action::remove_user_tokens::RemoveUserTokens;
+use crate::action::save_user_token::SaveUserToken;
 use crate::cluster;
 use crate::cluster::Cluster;
 use crate::config::Config;
@@ -53,7 +53,7 @@ pub(crate) async fn admin_logout(
 ) -> ServerResponse<impl IntoResponse> {
     let _user_id = server_db.user_id(&username).await?;
 
-    let (commit_index, _result) = cluster.exec(ClusterLogout { user: username }).await?;
+    let (commit_index, _result) = cluster.exec(RemoveUserTokens { user: username }).await?;
 
     Ok((
         StatusCode::CREATED,
@@ -76,7 +76,7 @@ pub(crate) async fn admin_logout_all(
     State(cluster): State<Cluster>,
 ) -> ServerResponse<impl IntoResponse> {
     let (commit_index, _result) = cluster
-        .exec(ClusterLogout {
+        .exec(RemoveUserTokens {
             user: String::new(),
         })
         .await?;
@@ -104,7 +104,7 @@ pub(crate) async fn login(
 ) -> ServerResponse<impl IntoResponse> {
     let (_user_id, token) = do_login(&server_db, &request.username, &request.password).await?;
     let (commit_index, _result) = cluster
-        .exec(ClusterLogin {
+        .exec(SaveUserToken {
             user: request.username,
             new_token: token.clone(),
         })
@@ -132,7 +132,7 @@ pub(crate) async fn logout(
     State(cluster): State<Cluster>,
 ) -> ServerResponse<impl IntoResponse> {
     let (commit_index, _result) = cluster
-        .exec(ClusterUserLogout {
+        .exec(RemoveUserToken {
             token: user.0.clone(),
         })
         .await?;

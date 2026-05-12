@@ -1,7 +1,4 @@
 pub(crate) mod change_password;
-pub(crate) mod cluster_login;
-pub(crate) mod cluster_logout;
-pub(crate) mod cluster_user_logout;
 pub(crate) mod db_add;
 pub(crate) mod db_backup;
 pub(crate) mod db_clear;
@@ -15,13 +12,14 @@ pub(crate) mod db_rename;
 pub(crate) mod db_restore;
 pub(crate) mod db_user_add;
 pub(crate) mod db_user_remove;
+pub(crate) mod remove_all_tokens;
+pub(crate) mod remove_user_token;
+pub(crate) mod remove_user_tokens;
+pub(crate) mod save_user_token;
 pub(crate) mod user_add;
 pub(crate) mod user_delete;
 
 use crate::action::change_password::ChangePassword;
-use crate::action::cluster_login::ClusterLogin;
-use crate::action::cluster_logout::ClusterLogout;
-use crate::action::cluster_user_logout::ClusterUserLogout;
 use crate::action::db_add::DbAdd;
 use crate::action::db_backup::DbBackup;
 use crate::action::db_clear::DbClear;
@@ -35,6 +33,10 @@ use crate::action::db_rename::DbRename;
 use crate::action::db_restore::DbRestore;
 use crate::action::db_user_add::DbUserAdd;
 use crate::action::db_user_remove::DbUserRemove;
+use crate::action::remove_all_tokens::RemoveAllTokens;
+use crate::action::remove_user_token::RemoveUserToken;
+use crate::action::remove_user_tokens::RemoveUserTokens;
+use crate::action::save_user_token::SaveUserToken;
 use crate::action::user_add::UserAdd;
 use crate::action::user_delete::UserDelete;
 use crate::db_pool::DbPool;
@@ -48,9 +50,10 @@ use serde::Serialize;
 #[derive(Clone, DbSerialize)]
 pub(crate) enum ClusterAction {
     UserAdd(UserAdd),
-    ClusterLogin(ClusterLogin),
-    ClusterLogout(ClusterLogout),
-    ClusterUserLogout(ClusterUserLogout),
+    SaveUserToken(SaveUserToken),
+    RemoveUserToken(RemoveUserToken),
+    RemoveUserTokens(RemoveUserTokens),
+    RemoveAllTokens(RemoveAllTokens),
     ChangePassword(ChangePassword),
     UserDelete(UserDelete),
     DbAdd(DbAdd),
@@ -85,9 +88,10 @@ impl ClusterAction {
     ) -> ServerResult<ClusterActionResult> {
         match self {
             ClusterAction::UserAdd(action) => action.exec(db, db_pool).await,
-            ClusterAction::ClusterLogin(action) => action.exec(db, db_pool).await,
-            ClusterAction::ClusterLogout(action) => action.exec(db, db_pool).await,
-            ClusterAction::ClusterUserLogout(action) => action.exec(db, db_pool).await,
+            ClusterAction::SaveUserToken(action) => action.exec(db, db_pool).await,
+            ClusterAction::RemoveUserTokens(action) => action.exec(db, db_pool).await,
+            ClusterAction::RemoveAllTokens(action) => action.exec(db, db_pool).await,
+            ClusterAction::RemoveUserToken(action) => action.exec(db, db_pool).await,
             ClusterAction::ChangePassword(action) => action.exec(db, db_pool).await,
             ClusterAction::UserDelete(action) => action.exec(db, db_pool).await,
             ClusterAction::DbAdd(action) => action.exec(db, db_pool).await,
@@ -113,21 +117,21 @@ impl From<UserAdd> for ClusterAction {
     }
 }
 
-impl From<ClusterLogin> for ClusterAction {
-    fn from(value: ClusterLogin) -> Self {
-        ClusterAction::ClusterLogin(value)
+impl From<SaveUserToken> for ClusterAction {
+    fn from(value: SaveUserToken) -> Self {
+        ClusterAction::SaveUserToken(value)
     }
 }
 
-impl From<ClusterLogout> for ClusterAction {
-    fn from(value: ClusterLogout) -> Self {
-        ClusterAction::ClusterLogout(value)
+impl From<RemoveUserTokens> for ClusterAction {
+    fn from(value: RemoveUserTokens) -> Self {
+        ClusterAction::RemoveUserTokens(value)
     }
 }
 
-impl From<ClusterUserLogout> for ClusterAction {
-    fn from(value: ClusterUserLogout) -> Self {
-        ClusterAction::ClusterUserLogout(value)
+impl From<RemoveUserToken> for ClusterAction {
+    fn from(value: RemoveUserToken) -> Self {
+        ClusterAction::RemoveUserToken(value)
     }
 }
 

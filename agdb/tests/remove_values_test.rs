@@ -82,14 +82,14 @@ fn remove_values_search() {
         &[
             DbElement {
                 id: DbId(1),
-                from: DbId::default(),
+                from: DbId(-3),
                 to: DbId::default(),
                 values: vec![],
             },
             DbElement {
                 id: DbId(2),
                 from: DbId::default(),
-                to: DbId::default(),
+                to: DbId(-3),
                 values: vec![],
             },
         ],
@@ -120,14 +120,14 @@ fn remove_values_search_alt() {
         &[
             DbElement {
                 id: DbId(1),
-                from: DbId::default(),
+                from: DbId(-3),
                 to: DbId::default(),
                 values: vec![],
             },
             DbElement {
                 id: DbId(2),
                 from: DbId::default(),
-                to: DbId::default(),
+                to: DbId(-3),
                 values: vec![],
             },
         ],

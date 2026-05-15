@@ -82,8 +82,8 @@ fn select_key_count_search() {
         &[
             DbElement {
                 id: DbId(3),
-                from: DbId::default(),
-                to: DbId::default(),
+                from: DbId(-7),
+                to: DbId(-6),
                 values: vec![("key_count", 3_u64).into()],
             },
             DbElement {
@@ -95,7 +95,7 @@ fn select_key_count_search() {
             DbElement {
                 id: DbId(5),
                 from: DbId::default(),
-                to: DbId::default(),
+                to: DbId(-7),
                 values: vec![("key_count", 3_u64).into()],
             },
         ],
@@ -135,8 +135,8 @@ fn select_key_count_search_alt() {
         &[
             DbElement {
                 id: DbId(3),
-                from: DbId::default(),
-                to: DbId::default(),
+                from: DbId(-7),
+                to: DbId(-6),
                 values: vec![("key_count", 3_u64).into()],
             },
             DbElement {
@@ -148,7 +148,7 @@ fn select_key_count_search_alt() {
             DbElement {
                 id: DbId(5),
                 from: DbId::default(),
-                to: DbId::default(),
+                to: DbId(-7),
                 values: vec![("key_count", 3_u64).into()],
             },
         ],

@@ -117,14 +117,14 @@ fn select_aliases_search() {
         &[
             DbElement {
                 id: DbId(3),
-                from: DbId::default(),
-                to: DbId::default(),
+                from: DbId(-7),
+                to: DbId(-6),
                 values: vec![("alias", "alias3").into()],
             },
             DbElement {
                 id: DbId(5),
                 from: DbId::default(),
-                to: DbId::default(),
+                to: DbId(-7),
                 values: vec![("alias", "alias5").into()],
             },
         ],
@@ -161,14 +161,14 @@ fn select_aliases_search_alt() {
         &[
             DbElement {
                 id: DbId(3),
-                from: DbId::default(),
-                to: DbId::default(),
+                from: DbId(-7),
+                to: DbId(-6),
                 values: vec![("alias", "alias3").into()],
             },
             DbElement {
                 id: DbId(5),
                 from: DbId::default(),
-                to: DbId::default(),
+                to: DbId(-7),
                 values: vec![("alias", "alias5").into()],
             },
         ],

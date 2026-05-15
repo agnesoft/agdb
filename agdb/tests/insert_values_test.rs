@@ -165,7 +165,7 @@ fn insert_values_uniform_search() {
         &[
             DbElement {
                 id: DbId(1),
-                from: DbId::default(),
+                from: DbId(-4),
                 to: DbId::default(),
                 values: vec![("key", "value").into()],
             },
@@ -177,8 +177,8 @@ fn insert_values_uniform_search() {
             },
             DbElement {
                 id: DbId(2),
-                from: DbId::default(),
-                to: DbId::default(),
+                from: DbId(-5),
+                to: DbId(-4),
                 values: vec![("key", "value").into()],
             },
             DbElement {
@@ -190,7 +190,7 @@ fn insert_values_uniform_search() {
             DbElement {
                 id: DbId(3),
                 from: DbId::default(),
-                to: DbId::default(),
+                to: DbId(-5),
                 values: vec![("key", "value").into()],
             },
         ],
@@ -220,7 +220,7 @@ fn insert_values_search() {
         &[
             DbElement {
                 id: DbId(1),
-                from: DbId::default(),
+                from: DbId(-4),
                 to: DbId::default(),
                 values: vec![("key1", "value1").into()],
             },
@@ -233,7 +233,7 @@ fn insert_values_search() {
             DbElement {
                 id: DbId(3),
                 from: DbId::default(),
-                to: DbId::default(),
+                to: DbId(-4),
                 values: vec![("key3", "value3").into()],
             },
         ],
@@ -264,7 +264,7 @@ fn insert_values_search_alt() {
         &[
             DbElement {
                 id: DbId(1),
-                from: DbId::default(),
+                from: DbId(-4),
                 to: DbId::default(),
                 values: vec![("key1", "value1").into()],
             },
@@ -277,7 +277,7 @@ fn insert_values_search_alt() {
             DbElement {
                 id: DbId(3),
                 from: DbId::default(),
-                to: DbId::default(),
+                to: DbId(-4),
                 values: vec![("key3", "value3").into()],
             },
         ],

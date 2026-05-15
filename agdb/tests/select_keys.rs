@@ -84,8 +84,8 @@ fn select_keys_search() {
         &[
             DbElement {
                 id: DbId(3),
-                from: DbId::default(),
-                to: DbId::default(),
+                from: DbId(-7),
+                to: DbId(-6),
                 values: vec![
                     ("key1", DbValue::default()).into(),
                     ("key2", DbValue::default()).into(),
@@ -101,7 +101,7 @@ fn select_keys_search() {
             DbElement {
                 id: DbId(5),
                 from: DbId::default(),
-                to: DbId::default(),
+                to: DbId(-7),
                 values: vec![
                     ("key1", DbValue::default()).into(),
                     ("key2", DbValue::default()).into(),
@@ -142,8 +142,8 @@ fn select_keys_search_alt() {
         &[
             DbElement {
                 id: DbId(3),
-                from: DbId::default(),
-                to: DbId::default(),
+                from: DbId(-7),
+                to: DbId(-6),
                 values: vec![
                     ("key1", DbValue::default()).into(),
                     ("key2", DbValue::default()).into(),
@@ -159,7 +159,7 @@ fn select_keys_search_alt() {
             DbElement {
                 id: DbId(5),
                 from: DbId::default(),
-                to: DbId::default(),
+                to: DbId(-7),
                 values: vec![
                     ("key1", DbValue::default()).into(),
                     ("key2", DbValue::default()).into(),

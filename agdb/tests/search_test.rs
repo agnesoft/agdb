@@ -388,19 +388,19 @@ fn search_from_ordered_by_limit_offset() {
             DbElement {
                 id: DbId(8),
                 from: DbId::default(),
-                to: DbId::default(),
+                to: DbId(-18),
                 values: vec![("name", "y").into(), ("age", 28).into(), ("id", 7).into()],
             },
             DbElement {
                 id: DbId(7),
                 from: DbId::default(),
-                to: DbId::default(),
+                to: DbId(-17),
                 values: vec![("name", "s").into(), ("age", 18).into(), ("id", 6).into()],
             },
             DbElement {
                 id: DbId(3),
                 from: DbId::default(),
-                to: DbId::default(),
+                to: DbId(-13),
                 values: vec![("name", "x").into(), ("age", 12).into(), ("id", 2).into()],
             },
         ],
@@ -454,19 +454,19 @@ fn search_to_ordered_by() {
         &[
             DbElement {
                 id: DbId(6),
-                from: DbId::default(),
+                from: DbId(-16),
                 to: DbId::default(),
                 values: vec![("name", "f").into(), ("age", 4).into(), ("id", 5).into()],
             },
             DbElement {
                 id: DbId(11),
-                from: DbId::default(),
+                from: DbId(-21),
                 to: DbId::default(),
                 values: vec![("name", "c").into(), ("age", 5).into(), ("id", 10).into()],
             },
             DbElement {
                 id: DbId(10),
-                from: DbId::default(),
+                from: DbId(-20),
                 to: DbId::default(),
                 values: vec![("name", "w").into(), ("age", 6).into(), ("id", 9).into()],
             },

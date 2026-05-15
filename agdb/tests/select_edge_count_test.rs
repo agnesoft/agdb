@@ -25,7 +25,7 @@ fn select_edge_count_ids() {
         QueryBuilder::select().edge_count().ids("from").query(),
         &[DbElement {
             id: DbId(1),
-            from: DbId::default(),
+            from: DbId(-3),
             to: DbId::default(),
             values: vec![("edge_count", 1_u64).into()],
         }],
@@ -36,7 +36,7 @@ fn select_edge_count_ids() {
         &[DbElement {
             id: DbId(2),
             from: DbId::default(),
-            to: DbId::default(),
+            to: DbId(-3),
             values: vec![("edge_count", 1_u64).into()],
         }],
     );
@@ -61,7 +61,7 @@ fn select_edge_count_from_ids() {
         QueryBuilder::select().edge_count_from().ids("from").query(),
         &[DbElement {
             id: DbId(1),
-            from: DbId::default(),
+            from: DbId(-3),
             to: DbId::default(),
             values: vec![("edge_count", 1_u64).into()],
         }],
@@ -72,7 +72,7 @@ fn select_edge_count_from_ids() {
         &[DbElement {
             id: DbId(2),
             from: DbId::default(),
-            to: DbId::default(),
+            to: DbId(-3),
             values: vec![("edge_count", 0_u64).into()],
         }],
     );
@@ -97,7 +97,7 @@ fn select_edge_count_to_ids() {
         QueryBuilder::select().edge_count_to().ids("from").query(),
         &[DbElement {
             id: DbId(1),
-            from: DbId::default(),
+            from: DbId(-3),
             to: DbId::default(),
             values: vec![("edge_count", 0_u64).into()],
         }],
@@ -108,7 +108,7 @@ fn select_edge_count_to_ids() {
         &[DbElement {
             id: DbId(2),
             from: DbId::default(),
-            to: DbId::default(),
+            to: DbId(-3),
             values: vec![("edge_count", 1_u64).into()],
         }],
     );
@@ -141,20 +141,20 @@ fn select_edge_count_multi() {
         &[
             DbElement {
                 id: DbId(1),
-                from: DbId::default(),
+                from: DbId(-6),
                 to: DbId::default(),
                 values: vec![("edge_count", 2_u64).into()],
             },
             DbElement {
                 id: DbId(2),
-                from: DbId::default(),
-                to: DbId::default(),
+                from: DbId(-5),
+                to: DbId(-4),
                 values: vec![("edge_count", 2_u64).into()],
             },
             DbElement {
                 id: DbId(3),
                 from: DbId::default(),
-                to: DbId::default(),
+                to: DbId(-6),
                 values: vec![("edge_count", 2_u64).into()],
             },
         ],
@@ -193,8 +193,8 @@ fn select_edge_count_search() {
             .query(),
         &[DbElement {
             id: DbId(2),
-            from: DbId::default(),
-            to: DbId::default(),
+            from: DbId(-7),
+            to: DbId(-7),
             values: vec![("edge_count", 4_u64).into()],
         }],
     );
@@ -229,8 +229,8 @@ fn select_edge_count_search_alt() {
             .query(),
         &[DbElement {
             id: DbId(2),
-            from: DbId::default(),
-            to: DbId::default(),
+            from: DbId(-7),
+            to: DbId(-7),
             values: vec![("edge_count", 4_u64).into()],
         }],
     );
@@ -245,8 +245,8 @@ fn select_edge_count_search_alt() {
             .query(),
         &[DbElement {
             id: DbId(2),
-            from: DbId::default(),
-            to: DbId::default(),
+            from: DbId(-7),
+            to: DbId(-7),
             values: vec![("edge_count", 2_u64).into()],
         }],
     );
@@ -261,8 +261,8 @@ fn select_edge_count_search_alt() {
             .query(),
         &[DbElement {
             id: DbId(2),
-            from: DbId::default(),
-            to: DbId::default(),
+            from: DbId(-7),
+            to: DbId(-7),
             values: vec![("edge_count", 2_u64).into()],
         }],
     );
@@ -317,7 +317,7 @@ fn select_edge_count_invalid_query() {
         },
         &[DbElement {
             id: DbId(1),
-            from: DbId::default(),
+            from: DbId(-3),
             to: DbId::default(),
             values: vec![("edge_count", 0_u64).into()],
         }],

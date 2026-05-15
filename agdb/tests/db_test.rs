@@ -130,14 +130,14 @@ fn data_persistence() {
             &[
                 DbElement {
                     id: DbId(1),
-                    from: DbId::default(),
+                    from: DbId(-3),
                     to: DbId::default(),
                     values: values.clone(),
                 },
                 DbElement {
                     id: DbId(2),
                     from: DbId::default(),
-                    to: DbId::default(),
+                    to: DbId(-3),
                     values: values.clone(),
                 },
                 DbElement {
@@ -164,14 +164,14 @@ fn data_persistence() {
         &[
             DbElement {
                 id: DbId(1),
-                from: DbId::default(),
+                from: DbId(-3),
                 to: DbId::default(),
                 values: values.clone(),
             },
             DbElement {
                 id: DbId(2),
                 from: DbId::default(),
-                to: DbId::default(),
+                to: DbId(-3),
                 values,
             },
             DbElement {
@@ -213,14 +213,14 @@ fn data_remove_persistence() {
             &[
                 DbElement {
                     id: DbId(1),
-                    from: DbId::default(),
+                    from: DbId(-3),
                     to: DbId::default(),
                     values: vec![("key", 100).into()],
                 },
                 DbElement {
                     id: DbId(2),
                     from: DbId::default(),
-                    to: DbId::default(),
+                    to: DbId(-3),
                     values: vec![("key", 100).into()],
                 },
                 DbElement {

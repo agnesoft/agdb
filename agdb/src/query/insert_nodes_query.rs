@@ -148,8 +148,8 @@ impl QueryMut for InsertNodesQuery {
             .into_iter()
             .map(|id| DbElement {
                 id,
-                from: None,
-                to: None,
+                from: db.from_id(id),
+                to: db.to_id(id),
                 values: vec![],
             })
             .collect();

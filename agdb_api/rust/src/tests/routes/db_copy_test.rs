@@ -37,8 +37,8 @@ pub async fn copy() -> Result<(), TestError> {
         results[0].elements,
         vec![DbElement {
             id: DbId(1),
-            from: None,
-            to: None,
+            from: DbId::default(),
+            to: DbId::default(),
             values: vec![]
         }]
     );
@@ -78,8 +78,8 @@ pub async fn copy_from_different_user() -> Result<(), TestError> {
         results[0].elements,
         vec![DbElement {
             id: DbId(1),
-            from: None,
-            to: None,
+            from: DbId::default(),
+            to: DbId::default(),
             values: vec![]
         }]
     );

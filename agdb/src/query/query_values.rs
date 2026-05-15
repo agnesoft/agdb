@@ -183,9 +183,9 @@ mod tests {
         assert_eq!(s.to_db_values(), vec![("k", 1).into()]);
         assert_eq!(
             S::from_db_element(&crate::DbElement {
-                id: DbId(0),
-                from: None,
-                to: None,
+                id: DbId::default(),
+                from: DbId::default(),
+                to: DbId::default(),
                 values: vec![("k", 1).into()],
             })
             .unwrap()

@@ -24,8 +24,8 @@ impl Query for SelectNodeCountQuery {
             result: 1,
             elements: vec![DbElement {
                 id: DbId::default(),
-                from: None,
-                to: None,
+                from: DbId::default(),
+                to: DbId::default(),
                 values: vec![("node_count", db.node_count()?).into()],
             }],
         })

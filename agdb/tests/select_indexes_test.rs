@@ -35,8 +35,8 @@ fn select_indexes() {
         result.elements,
         vec![DbElement {
             id: DbId(0),
-            from: None,
-            to: None,
+            from: DbId::default(),
+            to: DbId::default(),
             values: vec![("username", 3_u64).into(), ("age", 2_u64).into()],
         }]
     );

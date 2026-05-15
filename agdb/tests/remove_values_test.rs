@@ -21,14 +21,14 @@ fn remove_values_ids() {
         &[
             DbElement {
                 id: DbId(1),
-                from: None,
-                to: None,
+                from: DbId::default(),
+                to: DbId::default(),
                 values: vec![("key1", "value1").into()],
             },
             DbElement {
                 id: DbId(2),
-                from: None,
-                to: None,
+                from: DbId::default(),
+                to: DbId::default(),
                 values: vec![("key1", "value1").into()],
             },
         ],
@@ -45,14 +45,14 @@ fn remove_values_ids() {
         &[
             DbElement {
                 id: DbId(1),
-                from: None,
-                to: None,
+                from: DbId::default(),
+                to: DbId::default(),
                 values: vec![],
             },
             DbElement {
                 id: DbId(2),
-                from: None,
-                to: None,
+                from: DbId::default(),
+                to: DbId::default(),
                 values: vec![],
             },
         ],
@@ -82,14 +82,14 @@ fn remove_values_search() {
         &[
             DbElement {
                 id: DbId(1),
-                from: None,
-                to: None,
+                from: DbId::default(),
+                to: DbId::default(),
                 values: vec![],
             },
             DbElement {
                 id: DbId(2),
-                from: None,
-                to: None,
+                from: DbId::default(),
+                to: DbId::default(),
                 values: vec![],
             },
         ],
@@ -120,14 +120,14 @@ fn remove_values_search_alt() {
         &[
             DbElement {
                 id: DbId(1),
-                from: None,
-                to: None,
+                from: DbId::default(),
+                to: DbId::default(),
                 values: vec![],
             },
             DbElement {
                 id: DbId(2),
-                from: None,
-                to: None,
+                from: DbId::default(),
+                to: DbId::default(),
                 values: vec![],
             },
         ],
@@ -157,14 +157,14 @@ fn remove_missing_key() {
         &[
             DbElement {
                 id: DbId(1),
-                from: None,
-                to: None,
+                from: DbId::default(),
+                to: DbId::default(),
                 values: vec![("key1", "value1").into(), ("key2", 100).into()],
             },
             DbElement {
                 id: DbId(2),
-                from: None,
-                to: None,
+                from: DbId::default(),
+                to: DbId::default(),
                 values: vec![("key1", "value1").into(), ("key2", 100).into()],
             },
         ],

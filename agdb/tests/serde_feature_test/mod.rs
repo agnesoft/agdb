@@ -35,8 +35,8 @@ fn serialize_deserialize() {
         result_back.elements,
         vec![DbElement {
             id: DbId(1),
-            from: None,
-            to: None,
+            from: DbId::default(),
+            to: DbId::default(),
             values: vec![("key", 10).into()]
         }]
     );

@@ -45,8 +45,8 @@ pub async fn backup() -> Result<(), TestError> {
             result: 1,
             elements: vec![DbElement {
                 id: DbId(1),
-                from: None,
-                to: None,
+                from: DbId::default(),
+                to: DbId::default(),
                 values: vec![]
             }]
         }]

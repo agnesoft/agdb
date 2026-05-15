@@ -11,11 +11,11 @@ pub struct DbElement {
     /// Element id.
     pub id: DbId,
 
-    /// Origin node id.
-    pub from: Option<DbId>,
+    /// Origin node id or first outgoing edge id.
+    pub from: DbId,
 
-    /// Destination node id.
-    pub to: Option<DbId>,
+    /// Destination node id or first incoming edge id.
+    pub to: DbId,
 
     /// List of key-value pairs associated with the element.
     pub values: Vec<DbKeyValue>,
@@ -29,9 +29,9 @@ mod tests {
         let _ = format!(
             "{:?}",
             DbElement {
-                id: DbId(0),
-                from: None,
-                to: None,
+                id: DbId::default(),
+                from: DbId::default(),
+                to: DbId::default(),
                 values: vec![]
             }
         );
@@ -40,15 +40,15 @@ mod tests {
     fn derived_from_partial_eq() {
         assert_eq!(
             DbElement {
-                id: DbId(0),
-                from: None,
-                to: None,
+                id: DbId::default(),
+                from: DbId::default(),
+                to: DbId::default(),
                 values: vec![]
             },
             DbElement {
-                id: DbId(0),
-                from: None,
-                to: None,
+                id: DbId::default(),
+                from: DbId::default(),
+                to: DbId::default(),
                 values: vec![]
             }
         );
@@ -57,9 +57,9 @@ mod tests {
     #[test]
     fn derived_from_clone() {
         let element = DbElement {
-            id: DbId(0),
-            from: None,
-            to: None,
+            id: DbId::default(),
+            from: DbId::default(),
+            to: DbId::default(),
             values: vec![],
         };
         let other = element.clone();
@@ -69,15 +69,15 @@ mod tests {
     #[test]
     fn derived_from_partial_ord() {
         let element = DbElement {
-            id: DbId(0),
-            from: None,
-            to: None,
+            id: DbId::default(),
+            from: DbId::default(),
+            to: DbId::default(),
             values: vec![],
         };
         let other = DbElement {
             id: DbId(1),
-            from: None,
-            to: None,
+            from: DbId::default(),
+            to: DbId::default(),
             values: vec![],
         };
         assert!(element < other);
@@ -86,9 +86,9 @@ mod tests {
     #[test]
     fn derived_from_ord() {
         let element = DbElement {
-            id: DbId(0),
-            from: None,
-            to: None,
+            id: DbId::default(),
+            from: DbId::default(),
+            to: DbId::default(),
             values: vec![],
         };
         assert_eq!(element.cmp(&element), std::cmp::Ordering::Equal);

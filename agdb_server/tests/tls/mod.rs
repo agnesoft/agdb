@@ -32,6 +32,8 @@ async fn https() -> anyhow::Result<()> {
         cluster: Vec::new(),
         cluster_node_id: 0,
         start_time: 0,
+        token_expiry_seconds: agdb_api::config_impl::DEFAULT_TOKEN_EXPIRY_SECONDS,
+
         pepper: None,
     };
 

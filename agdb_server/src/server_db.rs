@@ -20,8 +20,11 @@ use agdb_api::DbUserRole;
 use agdb_api::UserStatus;
 use reqwest::StatusCode;
 use std::sync::Arc;
+use std::time::Duration;
 use std::time::SystemTime;
+use std::time::UNIX_EPOCH;
 use tokio::sync::RwLock;
+use tokio::sync::broadcast;
 
 #[derive(DbType)]
 pub(crate) struct ServerUser {
@@ -35,7 +38,7 @@ pub(crate) struct ServerUser {
 pub(crate) struct UserToken {
     pub(crate) db_id: Option<DbId>,
     pub(crate) token: String,
-    pub(crate) created: SystemTime,
+    pub(crate) created: u64,
 }
 
 #[derive(Default, DbType)]
@@ -69,7 +72,10 @@ const USERS: &str = "users";
 const USERNAME: &str = "username";
 const SERVER_DB_FILE: &str = "agdb_server.agdb";
 
-pub(crate) async fn new(config: &Config) -> ServerResult<ServerDb> {
+pub(crate) async fn new(
+    config: &Config,
+    mut shutdown_receiver: broadcast::Receiver<()>,
+) -> ServerResult<ServerDb> {
     std::fs::create_dir_all(&config.data_dir)?;
     let db_name = format!("{}/{}", config.data_dir, SERVER_DB_FILE);
     let db = ServerDb::new(&db_name)?;
@@ -90,6 +96,40 @@ pub(crate) async fn new(config: &Config) -> ServerResult<ServerDb> {
     db.0.write()
         .await
         .exec_mut(QueryBuilder::insert().aliases(ADMIN).ids(admin).query())?;
+
+    let expiry = config.token_expiry_seconds;
+    let now = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .expect("system time should be after unix epoch")
+        .as_secs();
+    if let Err(e) = db.remove_expired_tokens(now.saturating_sub(expiry)).await {
+        tracing::warn!("Token cleanup on startup failed: {e:?}");
+    }
+
+    let cleanup_db = db.clone();
+    tokio::spawn(async move {
+        let mut timer = tokio::time::interval(Duration::from_secs(expiry));
+        timer.tick().await;
+        loop {
+            tokio::select! {
+                _ = timer.tick() => {
+                    let now = SystemTime::now()
+                        .duration_since(UNIX_EPOCH)
+                        .unwrap()
+                        .as_secs();
+                    if let Err(e) = cleanup_db
+                        .remove_expired_tokens(now.saturating_sub(expiry))
+                        .await
+                    {
+                        tracing::warn!("Token cleanup failed: {e:?}");
+                    }
+                }
+                _ = shutdown_receiver.recv() => {
+                    break;
+                }
+            }
+        }
+    });
 
     Ok(db)
 }
@@ -471,7 +511,10 @@ impl ServerDb {
                             .element(&UserToken {
                                 db_id: None,
                                 token: token.to_string(),
-                                created: SystemTime::now(),
+                                created: SystemTime::now()
+                                    .duration_since(UNIX_EPOCH)
+                                    .unwrap()
+                                    .as_secs(),
                             })
                             .query(),
                     )?
@@ -728,6 +771,39 @@ impl ServerDb {
                 })
                 .collect::<ServerResult<Vec<UserStatus>>>()
             })
+    }
+
+    pub(crate) async fn remove_expired_tokens(&self, created_before: u64) -> ServerResult<()> {
+        self.0.write().await.transaction_mut(|t| {
+            let users = t
+                .exec(
+                    QueryBuilder::search()
+                        .from(USERS)
+                        .where_()
+                        .neighbor()
+                        .query(),
+                )?
+                .ids();
+
+            for user in users {
+                t.exec_mut(
+                    QueryBuilder::remove()
+                        .search()
+                        .to(user)
+                        .where_()
+                        .neighbor()
+                        .and()
+                        .not()
+                        .ids(USERS)
+                        .and()
+                        .key("created")
+                        .value(agdb::Comparison::LessThan(created_before.into()))
+                        .query(),
+                )?;
+            }
+
+            Ok(())
+        })
     }
 
     pub(crate) async fn remove_token(&self, token: &str) -> ServerResult<()> {

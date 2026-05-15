@@ -14,6 +14,7 @@ use crate::server_error::ServerResponse;
 use crate::server_error::ServerResult;
 use crate::user_id::AdminId;
 use crate::user_id::ClusterId;
+use crate::user_id::UserId;
 use crate::user_id::UserIdToken;
 use agdb_api::ClusterStatus;
 use agdb_api::UserLogin;
@@ -133,6 +134,30 @@ pub(crate) async fn logout(
             token: user.0.clone(),
         })
         .await?;
+
+    Ok((
+        StatusCode::CREATED,
+        [("commit-index", commit_index.to_string())],
+    ))
+}
+
+#[utoipa::path(post,
+    path = "/api/v1/cluster/user/logout_all",
+    operation_id = "cluster_user_logout_all",
+    tag = "agdb",
+    security(("Token" = [])),
+    responses(
+         (status = 201, description = "user logged out from all sessions"),
+         (status = 401, description = "invalid credentials")
+    )
+)]
+pub(crate) async fn user_logout_all(
+    user: UserId,
+    State(server_db): State<ServerDb>,
+    State(cluster): State<Cluster>,
+) -> ServerResponse<impl IntoResponse> {
+    let username = server_db.user_name(user.0).await?;
+    let (commit_index, _result) = cluster.exec(RemoveUserTokens { user: username }).await?;
 
     Ok((
         StatusCode::CREATED,

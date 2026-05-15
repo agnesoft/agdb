@@ -40,5 +40,6 @@ mod db_user_remove_test;
 mod misc_routes;
 mod user_change_password_test;
 mod user_login_test;
+mod user_logout_all_test;
 mod user_logout_test;
 mod user_status;

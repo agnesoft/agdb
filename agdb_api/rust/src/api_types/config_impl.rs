@@ -3,6 +3,9 @@ use crate::LogLevelFilter;
 pub const SALT_LEN: usize = 16;
 pub const DEFAULT_LOG_BODY_LIMIT: u64 = 10 * 1024;
 pub const DEFAULT_REQUEST_BODY_LIMIT: u64 = 10 * 1024 * 1024;
+pub const DEFAULT_TOKEN_EXPIRY_SECONDS: u64 = 3600;
+pub const MIN_TOKEN_EXPIRY_SECONDS: u64 = 60;
+pub const MAX_TOKEN_EXPIRY_SECONDS: u64 = 86400;
 
 #[derive(Debug)]
 #[cfg_attr(feature = "api", derive(agdb::TypeDef))]
@@ -26,6 +29,7 @@ pub struct ConfigImpl {
     pub cluster: Vec<String>,
     pub cluster_node_id: usize,
     pub start_time: u64,
+    pub token_expiry_seconds: u64,
     pub pepper: Option<[u8; SALT_LEN]>,
 }
 
@@ -68,5 +72,9 @@ pub fn config_to_str(config: &ConfigImpl) -> String {
         config.cluster_term_timeout_ms
     ));
     buffer.push_str(&format!("cluster: [{}]\n", config.cluster.join(", ")));
+    buffer.push_str(&format!(
+        "token_expiry_seconds: {}\n",
+        config.token_expiry_seconds
+    ));
     buffer
 }

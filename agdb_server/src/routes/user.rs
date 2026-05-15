@@ -73,6 +73,21 @@ pub(crate) async fn logout(user: UserIdToken, State(server_db): State<ServerDb>)
     Ok(StatusCode::CREATED)
 }
 
+#[utoipa::path(post,
+    path = "/api/v1/user/logout_all",
+    operation_id = "user_logout_all",
+    tag = "agdb",
+    security(("Token" = [])),
+    responses(
+         (status = 201, description = "user logged out from all sessions"),
+         (status = 401, description = "invalid credentials")
+    )
+)]
+pub(crate) async fn logout_all(user: UserId, State(server_db): State<ServerDb>) -> ServerResponse {
+    server_db.remove_tokens(user.0).await?;
+    Ok(StatusCode::CREATED)
+}
+
 #[utoipa::path(put,
     path = "/api/v1/user/change_password",
     operation_id = "user_change_password",

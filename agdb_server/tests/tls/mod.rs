@@ -1,7 +1,12 @@
 use agdb_api::AgdbApi;
+use agdb_api::LogLevelFilter;
 use agdb_api::ReqwestClient;
 use agdb_api::config_impl::ConfigImpl;
+use agdb_api::config_impl::DEFAULT_LOG_BODY_LIMIT;
+use agdb_api::config_impl::DEFAULT_REQUEST_BODY_LIMIT;
+use agdb_api::config_impl::DEFAULT_TOKEN_EXPIRY_SECONDS;
 use agdb_api::test_server::ADMIN;
+use agdb_api::test_server::SERVER_DATA_DIR;
 use agdb_api::test_server::TestServerImpl;
 use agdb_api::test_server::reqwest_client;
 use agdb_api::test_server::test_cluster::create_cluster;
@@ -18,10 +23,10 @@ async fn https() -> anyhow::Result<()> {
         basepath: String::new(),
         static_roots: Vec::new(),
         admin: ADMIN.to_string(),
-        log_level: agdb_api::LogLevelFilter::Info,
-        log_body_limit: agdb_api::config_impl::DEFAULT_LOG_BODY_LIMIT,
-        request_body_limit: agdb_api::config_impl::DEFAULT_REQUEST_BODY_LIMIT,
-        data_dir: agdb_api::test_server::SERVER_DATA_DIR.into(),
+        log_level: LogLevelFilter::Info,
+        log_body_limit: DEFAULT_LOG_BODY_LIMIT,
+        request_body_limit: DEFAULT_REQUEST_BODY_LIMIT,
+        data_dir: SERVER_DATA_DIR.into(),
         pepper_path: String::new(),
         tls_certificate: format!("{manifest_dir}/tests/test_cert.pem"),
         tls_key: format!("{manifest_dir}/tests/test_cert.key.pem"),
@@ -32,8 +37,7 @@ async fn https() -> anyhow::Result<()> {
         cluster: Vec::new(),
         cluster_node_id: 0,
         start_time: 0,
-        token_expiry_seconds: agdb_api::config_impl::DEFAULT_TOKEN_EXPIRY_SECONDS,
-
+        token_expiry_seconds: DEFAULT_TOKEN_EXPIRY_SECONDS,
         pepper: None,
     };
 

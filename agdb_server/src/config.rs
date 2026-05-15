@@ -295,7 +295,6 @@ mod tests {
             cluster_node_id: 0,
             start_time: 0,
             token_expiry_seconds: DEFAULT_TOKEN_EXPIRY_SECONDS,
-
             pepper: None,
         };
 
@@ -334,7 +333,6 @@ mod tests {
             cluster_node_id: 0,
             start_time: 0,
             token_expiry_seconds: DEFAULT_TOKEN_EXPIRY_SECONDS,
-
             pepper: None,
         };
         std::fs::write(
@@ -372,7 +370,6 @@ mod tests {
             cluster_node_id: 0,
             start_time: 0,
             token_expiry_seconds: DEFAULT_TOKEN_EXPIRY_SECONDS,
-
             pepper: None,
         };
         std::fs::write(

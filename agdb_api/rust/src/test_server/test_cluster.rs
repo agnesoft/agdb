@@ -1,7 +1,11 @@
 use crate::AgdbApi;
 use crate::ClusterStatus;
+use crate::LogLevelFilter;
 use crate::ReqwestClient;
 use crate::config_impl::ConfigImpl;
+use crate::config_impl::DEFAULT_LOG_BODY_LIMIT;
+use crate::config_impl::DEFAULT_REQUEST_BODY_LIMIT;
+use crate::config_impl::DEFAULT_TOKEN_EXPIRY_SECONDS;
 use crate::test_server::ADMIN;
 use crate::test_server::HOST;
 use crate::test_server::POLL_INTERVAL;
@@ -112,9 +116,9 @@ pub async fn create_cluster(nodes: usize, tls: bool) -> Result<Vec<TestServerImp
             basepath: String::new(),
             static_roots: Vec::new(),
             admin: ADMIN.to_string(),
-            log_level: crate::LogLevelFilter::Info,
-            log_body_limit: crate::config_impl::DEFAULT_LOG_BODY_LIMIT,
-            request_body_limit: crate::config_impl::DEFAULT_REQUEST_BODY_LIMIT,
+            log_level: LogLevelFilter::Info,
+            log_body_limit: DEFAULT_LOG_BODY_LIMIT,
+            request_body_limit: DEFAULT_REQUEST_BODY_LIMIT,
             data_dir: super::SERVER_DATA_DIR.into(),
             pepper_path: String::new(),
             tls_certificate: tls_cert.clone(),
@@ -126,8 +130,7 @@ pub async fn create_cluster(nodes: usize, tls: bool) -> Result<Vec<TestServerImp
             cluster: Vec::new(),
             cluster_node_id: 0,
             start_time: 0,
-            token_expiry_seconds: crate::config_impl::DEFAULT_TOKEN_EXPIRY_SECONDS,
-
+            token_expiry_seconds: DEFAULT_TOKEN_EXPIRY_SECONDS,
             pepper: None,
         };
 

@@ -6,6 +6,7 @@ use crate::raft::Log;
 use crate::server_error::ServerError;
 use crate::server_error::ServerResult;
 use agdb::AgdbSerialize;
+use agdb::Comparison;
 use agdb::CountComparison;
 use agdb::Db;
 use agdb::DbId;
@@ -797,7 +798,7 @@ impl ServerDb {
                         .ids(USERS)
                         .and()
                         .key("created")
-                        .value(agdb::Comparison::LessThan(created_before.into()))
+                        .value(Comparison::LessThan(created_before.into()))
                         .query(),
                 )?;
             }

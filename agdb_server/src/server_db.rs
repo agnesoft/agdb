@@ -61,9 +61,13 @@ impl Database {
 }
 
 #[derive(Clone)]
-pub(crate) struct ServerDb(pub(crate) Arc<RwLock<Db>>);
+pub(crate) struct ServerDb {
+    pub(crate) db: Arc<RwLock<Db>>,
+    pub(crate) token_expiry_seconds: u64,
+}
 
 const ADMIN: &str = "admin";
+const CREATED: &str = "created";
 const DB: &str = "db";
 const DBS: &str = "dbs";
 const OWNER: &str = "owner";
@@ -79,7 +83,7 @@ pub(crate) async fn new(
 ) -> ServerResult<ServerDb> {
     std::fs::create_dir_all(&config.data_dir)?;
     let db_name = format!("{}/{}", config.data_dir, SERVER_DB_FILE);
-    let db = ServerDb::new(&db_name)?;
+    let db = ServerDb::new(&db_name, config.token_expiry_seconds)?;
 
     let admin = if let Some(admin_id) = db.find_user_id(&config.admin).await? {
         admin_id
@@ -94,16 +98,14 @@ pub(crate) async fn new(
         db.insert_user(admin).await?
     };
 
-    db.0.write()
+    db.db
+        .write()
         .await
         .exec_mut(QueryBuilder::insert().aliases(ADMIN).ids(admin).query())?;
 
     let expiry = config.token_expiry_seconds;
-    let now = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .expect("system time should be after unix epoch")
-        .as_secs();
-    if let Err(e) = db.remove_expired_tokens(now.saturating_sub(expiry)).await {
+
+    if let Err(e) = db.remove_expired_tokens(token_expiry_limit(expiry)).await {
         tracing::warn!("Token cleanup on startup failed: {e:?}");
     }
 
@@ -114,12 +116,8 @@ pub(crate) async fn new(
         loop {
             tokio::select! {
                 _ = timer.tick() => {
-                    let now = SystemTime::now()
-                        .duration_since(UNIX_EPOCH)
-                        .unwrap()
-                        .as_secs();
                     if let Err(e) = cleanup_db
-                        .remove_expired_tokens(now.saturating_sub(expiry))
+                        .remove_expired_tokens(token_expiry_limit(expiry))
                         .await
                     {
                         tracing::warn!("Token cleanup failed: {e:?}");
@@ -136,7 +134,7 @@ pub(crate) async fn new(
 }
 
 impl ServerDb {
-    fn new(name: &str) -> ServerResult<Self> {
+    fn new(name: &str, token_expiry_seconds: u64) -> ServerResult<Self> {
         let mut db = Db::new(name)?;
 
         db.transaction_mut(|t| -> ServerResult<()> {
@@ -183,12 +181,15 @@ impl ServerDb {
             Ok(())
         })?;
 
-        Ok(Self(Arc::new(RwLock::new(db))))
+        Ok(Self {
+            db: Arc::new(RwLock::new(db)),
+            token_expiry_seconds,
+        })
     }
 
     pub(crate) async fn db_count(&self) -> ServerResult<u64> {
         Ok(self
-            .0
+            .db
             .read()
             .await
             .exec(QueryBuilder::select().edge_count_from().ids(DBS).query())?
@@ -201,7 +202,7 @@ impl ServerDb {
     pub(crate) async fn db_users(&self, db: DbId) -> ServerResult<Vec<DbUser>> {
         let mut users = vec![];
 
-        self.0
+        self.db
             .read()
             .await
             .exec(
@@ -236,7 +237,7 @@ impl ServerDb {
 
     pub(crate) async fn dbs(&self) -> ServerResult<Vec<Database>> {
         Ok(self
-            .0
+            .db
             .read()
             .await
             .exec(
@@ -258,7 +259,7 @@ impl ServerDb {
         db: &str,
     ) -> ServerResult<Option<DbId>> {
         Ok(self
-            .0
+            .db
             .read()
             .await
             .exec(find_user_db_query(user, owner, db))?
@@ -269,7 +270,7 @@ impl ServerDb {
 
     pub(crate) async fn find_user_id(&self, username: &str) -> ServerResult<Option<DbId>> {
         Ok(self
-            .0
+            .db
             .read()
             .await
             .exec(
@@ -284,7 +285,7 @@ impl ServerDb {
     }
 
     pub(crate) async fn insert_db(&self, owner: DbId, db: Database) -> ServerResult<DbId> {
-        self.0.write().await.transaction_mut(|t| {
+        self.db.write().await.transaction_mut(|t| {
             let id = t
                 .exec_mut(QueryBuilder::insert().element(&db).query())?
                 .elements[0]
@@ -307,7 +308,7 @@ impl ServerDb {
         user: DbId,
         role: DbUserRole,
     ) -> ServerResult<()> {
-        self.0.write().await.transaction_mut(|t| {
+        self.db.write().await.transaction_mut(|t| {
             let existing_role = t.exec(
                 QueryBuilder::search()
                     .from(user)
@@ -340,7 +341,7 @@ impl ServerDb {
     }
 
     pub(crate) async fn insert_user(&self, user: ServerUser) -> ServerResult<DbId> {
-        self.0.write().await.transaction_mut(|t| {
+        self.db.write().await.transaction_mut(|t| {
             let id = t
                 .exec_mut(QueryBuilder::insert().element(&user).query())?
                 .elements[0]
@@ -351,25 +352,34 @@ impl ServerDb {
     }
 
     pub(crate) async fn is_admin(&self, token: &str) -> ServerResult<bool> {
-        self.0.read().await.transaction(|t| {
-            let token_id = t
-                .exec(QueryBuilder::search().index(TOKEN).value(token).query())?
+        self.db.read().await.transaction(|t| {
+            let (id, created) = t
+                .exec(
+                    QueryBuilder::select()
+                        .values(CREATED)
+                        .search()
+                        .index(TOKEN)
+                        .value(token)
+                        .query(),
+                )?
                 .elements
                 .first()
-                .ok_or_else(|| token_not_found(token))?
-                .id;
+                .map(|e| (e.id, e.values[0].value.to_u64().unwrap_or_default()))
+                .ok_or_else(|| token_not_found(token))?;
 
-            Ok(
-                t.exec(QueryBuilder::search().from(token_id).to(ADMIN).query())?
-                    .result
-                    != 0,
-            )
+            if created < token_expiry_limit(self.token_expiry_seconds) {
+                return Ok(false);
+            }
+
+            Ok(t.exec(QueryBuilder::search().from(id).to(ADMIN).query())?
+                .result
+                != 0)
         })
     }
 
     pub(crate) async fn is_db_admin(&self, user: DbId, db: DbId) -> ServerResult<bool> {
         Ok(self
-            .0
+            .db
             .read()
             .await
             .exec(
@@ -389,7 +399,7 @@ impl ServerDb {
     }
 
     pub(crate) async fn remove_db(&self, user: DbId, owner: &str, db: &str) -> ServerResult<()> {
-        self.0.write().await.transaction_mut(|t| {
+        self.db.write().await.transaction_mut(|t| {
             let db_id = t
                 .exec(find_user_db_query(user, owner, db))?
                 .elements
@@ -404,7 +414,7 @@ impl ServerDb {
     }
 
     pub(crate) async fn remove_db_user(&self, db: DbId, user: DbId) -> ServerResult<()> {
-        self.0.write().await.exec_mut(
+        self.db.write().await.exec_mut(
             QueryBuilder::remove()
                 .search()
                 .from(user)
@@ -435,7 +445,7 @@ impl ServerDb {
                 }
             });
 
-        self.0
+        self.db
             .write()
             .await
             .exec_mut(QueryBuilder::remove().ids(ids).query())?;
@@ -444,7 +454,7 @@ impl ServerDb {
     }
 
     pub(crate) async fn remove_all_tokens(&self) -> ServerResult<()> {
-        self.0.write().await.transaction_mut(|t| {
+        self.db.write().await.transaction_mut(|t| {
             let users = t
                 .exec(
                     QueryBuilder::search()
@@ -477,7 +487,7 @@ impl ServerDb {
     }
 
     pub(crate) async fn remove_tokens(&self, user: DbId) -> ServerResult<()> {
-        self.0.write().await.transaction_mut(|t| {
+        self.db.write().await.transaction_mut(|t| {
             t.exec_mut(
                 QueryBuilder::remove()
                     .search()
@@ -494,7 +504,7 @@ impl ServerDb {
     }
 
     pub(crate) async fn save_db(&self, db: &Database) -> ServerResult<()> {
-        self.0
+        self.db
             .write()
             .await
             .exec_mut(QueryBuilder::insert().element(db).query())?;
@@ -502,7 +512,7 @@ impl ServerDb {
     }
 
     pub(crate) async fn save_token(&self, user: DbId, token: &str) -> ServerResult<()> {
-        self.0
+        self.db
             .write()
             .await
             .transaction_mut(|t| -> ServerResult<()> {
@@ -535,7 +545,7 @@ impl ServerDb {
     }
 
     pub(crate) async fn save_user(&self, user: ServerUser) -> ServerResult<()> {
-        self.0
+        self.db
             .write()
             .await
             .exec_mut(QueryBuilder::insert().element(&user).query())?;
@@ -543,7 +553,7 @@ impl ServerDb {
     }
 
     pub(crate) async fn user(&self, username: &str) -> ServerResult<ServerUser> {
-        self.0
+        self.db
             .read()
             .await
             .exec(
@@ -560,7 +570,7 @@ impl ServerDb {
 
     pub(crate) async fn user_name(&self, id: DbId) -> ServerResult<String> {
         Ok(self
-            .0
+            .db
             .read()
             .await
             .exec(QueryBuilder::select().values(USERNAME).ids(id).query())?
@@ -572,7 +582,7 @@ impl ServerDb {
 
     pub(crate) async fn user_by_id(&self, id: DbId) -> ServerResult<ServerUser> {
         Ok(self
-            .0
+            .db
             .read()
             .await
             .exec(
@@ -590,7 +600,7 @@ impl ServerDb {
         owner: &str,
         db: &str,
     ) -> ServerResult<Database> {
-        self.0
+        self.db
             .read()
             .await
             .exec(
@@ -616,7 +626,7 @@ impl ServerDb {
         db: &str,
     ) -> ServerResult<DbUserRole> {
         Ok((&self
-            .0
+            .db
             .read()
             .await
             .transaction(|t| -> Result<QueryResult, ServerError> {
@@ -650,7 +660,7 @@ impl ServerDb {
         let mut dbs = vec![];
 
         let elements = self
-            .0
+            .db
             .read()
             .await
             .exec(
@@ -679,7 +689,7 @@ impl ServerDb {
 
     pub(crate) async fn user_count(&self) -> ServerResult<u64> {
         Ok(self
-            .0
+            .db
             .read()
             .await
             .exec(QueryBuilder::select().edge_count_from().ids(USERS).query())?
@@ -697,7 +707,7 @@ impl ServerDb {
 
     pub(crate) async fn users_with_token(&self) -> ServerResult<u64> {
         Ok(self
-            .0
+            .db
             .read()
             .await
             .exec(
@@ -714,13 +724,24 @@ impl ServerDb {
     }
 
     pub(crate) async fn user_id_from_token(&self, token: &str) -> ServerResult<DbId> {
-        self.0.read().await.transaction(|t| {
-            let token_id = t
-                .exec(QueryBuilder::search().index(TOKEN).value(token).query())?
+        self.db.read().await.transaction(|t| {
+            let (token_id, created) = t
+                .exec(
+                    QueryBuilder::select()
+                        .values(CREATED)
+                        .search()
+                        .index(TOKEN)
+                        .value(token)
+                        .query(),
+                )?
                 .elements
                 .first()
-                .ok_or_else(|| token_not_found(token))?
-                .id;
+                .map(|e| (e.id, e.values[0].value.to_u64().unwrap_or_default()))
+                .ok_or_else(|| token_not_found(token))?;
+
+            if created < token_expiry_limit(self.token_expiry_seconds) {
+                return Err(token_expired(token));
+            }
 
             Ok(t.exec(
                 QueryBuilder::search()
@@ -738,7 +759,7 @@ impl ServerDb {
     }
 
     pub(crate) async fn user_statuses(&self) -> ServerResult<Vec<UserStatus>> {
-        self.0
+        self.db
             .read()
             .await
             .transaction(|t| -> ServerResult<Vec<UserStatus>> {
@@ -775,7 +796,7 @@ impl ServerDb {
     }
 
     pub(crate) async fn remove_expired_tokens(&self, created_before: u64) -> ServerResult<()> {
-        self.0.write().await.transaction_mut(|t| {
+        self.db.write().await.transaction_mut(|t| {
             let users = t
                 .exec(
                     QueryBuilder::search()
@@ -808,7 +829,7 @@ impl ServerDb {
     }
 
     pub(crate) async fn remove_token(&self, token: &str) -> ServerResult<()> {
-        self.0.write().await.exec_mut(
+        self.db.write().await.exec_mut(
             QueryBuilder::remove()
                 .search()
                 .index(TOKEN)
@@ -839,12 +860,24 @@ fn find_user_db_query(user: DbId, owner: &str, db: &str) -> SearchQuery {
         .query()
 }
 
+fn token_expired(token: &str) -> ServerError {
+    ServerError::new(StatusCode::UNAUTHORIZED, &format!("token expired: {token}"))
+}
+
 fn token_not_found(token: &str) -> ServerError {
     ServerError::new(StatusCode::NOT_FOUND, &format!("token not found: {token}"))
 }
 
 fn user_not_found(name: &str) -> ServerError {
     ServerError::new(StatusCode::NOT_FOUND, &format!("user not found: {name}"))
+}
+
+fn token_expiry_limit(token_expiry_seconds: u64) -> u64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .expect("system time should be after unix epoch")
+        .as_secs()
+        .saturating_sub(token_expiry_seconds)
 }
 
 impl DbType for Log<ClusterAction> {
@@ -919,7 +952,7 @@ mod tests {
             })?;
         }
 
-        ServerDb::new(test_file.file_name())?;
+        ServerDb::new(test_file.file_name(), 3600)?;
 
         let db = Db::new(test_file.file_name())?;
         let indexes = db.exec(QueryBuilder::select().indexes().query())?;

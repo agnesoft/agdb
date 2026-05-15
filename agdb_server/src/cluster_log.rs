@@ -274,7 +274,7 @@ pub(crate) async fn migrate_from_server_db(
     cluster_log: &ClusterLog,
 ) -> ServerResult<()> {
     if server_db
-        .0
+        .db
         .read()
         .await
         .exec(QueryBuilder::select().ids(CLUSTER_LOG).query())
@@ -306,7 +306,7 @@ pub(crate) async fn migrate_from_server_db(
 
     let mut log_ids = Vec::new();
     let logs = server_db
-        .0
+        .db
         .read()
         .await
         .exec(
@@ -340,7 +340,7 @@ pub(crate) async fn migrate_from_server_db(
         )
     })?;
 
-    server_db.0.write().await.transaction_mut(|t| {
+    server_db.db.write().await.transaction_mut(|t| {
         t.exec_mut(QueryBuilder::remove().index(COMMITTED).query())?;
         t.exec_mut(QueryBuilder::remove().index(EXECUTED).query())?;
         t.exec_mut(QueryBuilder::remove().ids(log_ids).query())?;
@@ -440,7 +440,7 @@ mod tests {
         logs: &[Log<ClusterAction>],
     ) -> ServerResult<()> {
         server_db
-            .0
+            .db
             .write()
             .await
             .transaction_mut(|t| -> ServerResult<()> {
@@ -493,7 +493,7 @@ mod tests {
 
     async fn legacy_server_log_exists(server_db: &ServerDb) -> bool {
         server_db
-            .0
+            .db
             .read()
             .await
             .exec(QueryBuilder::select().ids(CLUSTER_LOG).query())

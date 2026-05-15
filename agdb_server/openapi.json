@@ -2773,34 +2773,22 @@
         "description": "Database element used in [`QueryResult`]\nthat represents a node or an edge.",
         "required": [
           "id",
+          "from",
+          "to",
           "values"
         ],
         "properties": {
           "from": {
-            "oneOf": [
-              {
-                "type": "null"
-              },
-              {
-                "$ref": "#/components/schemas/DbId",
-                "description": "Origin node id."
-              }
-            ]
+            "$ref": "#/components/schemas/DbId",
+            "description": "Origin node id or first outgoing edge id."
           },
           "id": {
             "$ref": "#/components/schemas/DbId",
             "description": "Element id."
           },
           "to": {
-            "oneOf": [
-              {
-                "type": "null"
-              },
-              {
-                "$ref": "#/components/schemas/DbId",
-                "description": "Destination node id."
-              }
-            ]
+            "$ref": "#/components/schemas/DbId",
+            "description": "Destination node id or first incoming edge id."
           },
           "values": {
             "type": "array",

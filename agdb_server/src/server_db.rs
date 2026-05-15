@@ -105,7 +105,7 @@ pub(crate) async fn new(
 
     let expiry = config.token_expiry_seconds;
 
-    if let Err(e) = db.remove_expired_tokens(token_expiry_limit(expiry)).await {
+    if let Err(e) = db.remove_expired_tokens().await {
         tracing::warn!("Token cleanup on startup failed: {e:?}");
     }
 
@@ -117,7 +117,7 @@ pub(crate) async fn new(
             tokio::select! {
                 _ = timer.tick() => {
                     if let Err(e) = cleanup_db
-                        .remove_expired_tokens(token_expiry_limit(expiry))
+                        .remove_expired_tokens()
                         .await
                     {
                         tracing::warn!("Token cleanup failed: {e:?}");
@@ -228,7 +228,10 @@ impl ServerDb {
                         role: (&e.values[0].value).into(),
                     });
                 } else {
-                    users.last_mut().unwrap().username = e.values[0].value.to_string();
+                    users
+                        .last_mut()
+                        .expect("Expected at least one user")
+                        .username = e.values[0].value.to_string();
                 }
             });
 
@@ -511,11 +514,11 @@ impl ServerDb {
         Ok(())
     }
 
-    pub(crate) async fn save_token(&self, user: DbId, token: &str) -> ServerResult<()> {
+    pub(crate) async fn save_token(&self, user: DbId, token: &str) -> ServerResult<DbId> {
         self.db
             .write()
             .await
-            .transaction_mut(|t| -> ServerResult<()> {
+            .transaction_mut(|t| -> ServerResult<DbId> {
                 let token_id = t
                     .exec_mut(
                         QueryBuilder::insert()
@@ -524,7 +527,7 @@ impl ServerDb {
                                 token: token.to_string(),
                                 created: SystemTime::now()
                                     .duration_since(UNIX_EPOCH)
-                                    .unwrap()
+                                    .unwrap_or_default()
                                     .as_secs(),
                             })
                             .query(),
@@ -540,7 +543,7 @@ impl ServerDb {
                         .query(),
                 )?;
 
-                Ok(())
+                Ok(token_id)
             })
     }
 
@@ -680,7 +683,8 @@ impl ServerDb {
             if e.id.0 < 0 {
                 dbs.push(((&e.values[0].value).into(), Database::default()));
             } else {
-                dbs.last_mut().unwrap().1 = Database::from_db_element(&e)?;
+                dbs.last_mut().expect("Expected at least one database").1 =
+                    Database::from_db_element(&e)?;
             }
         }
 
@@ -795,7 +799,7 @@ impl ServerDb {
             })
     }
 
-    pub(crate) async fn remove_expired_tokens(&self, created_before: u64) -> ServerResult<()> {
+    pub(crate) async fn remove_expired_tokens(&self) -> ServerResult<()> {
         self.db.write().await.transaction_mut(|t| {
             let users = t
                 .exec(
@@ -819,7 +823,9 @@ impl ServerDb {
                         .ids(USERS)
                         .and()
                         .key("created")
-                        .value(Comparison::LessThan(created_before.into()))
+                        .value(Comparison::LessThan(
+                            token_expiry_limit(self.token_expiry_seconds).into(),
+                        ))
                         .query(),
                 )?;
             }
@@ -966,6 +972,48 @@ mod tests {
                 .query(),
         )?;
         assert_eq!(result.result, 0, "{result:?}");
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn remove_expired_tokens() -> ServerResult<()> {
+        let test_file = TestFile::new();
+        let db = ServerDb::new(test_file.file_name(), 3600)?;
+
+        let user1 = db
+            .insert_user(ServerUser {
+                db_id: None,
+                username: "user1".to_string(),
+                password: vec![],
+                salt: vec![],
+            })
+            .await?;
+        let user2 = db
+            .insert_user(ServerUser {
+                db_id: None,
+                username: "user2".to_string(),
+                password: vec![],
+                salt: vec![],
+            })
+            .await?;
+
+        let expired1 = db.save_token(user1, "token1").await?;
+        let expired2 = db.save_token(user1, "token2").await?;
+        db.save_token(user2, "token3").await?;
+        db.save_token(user2, "token4").await?;
+
+        db.db.write().await.exec_mut(
+            QueryBuilder::insert()
+                .values_uniform([(CREATED, 0_u64).into()])
+                .ids([expired1, expired2])
+                .query(),
+        )?;
+
+        assert_eq!(db.users_with_token().await?, 2);
+
+        db.remove_expired_tokens().await?;
+        assert_eq!(db.users_with_token().await?, 1);
 
         Ok(())
     }

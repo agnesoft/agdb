@@ -218,3 +218,8 @@ async fn user_login() -> Result<(), TestError> {
 async fn cluster_logout() -> Result<(), TestError> {
     agdb_api::tests::routes::cluster_test::cluster_logout().await
 }
+
+#[tokio::test]
+async fn cluster_logout_all() -> Result<(), TestError> {
+    agdb_api::tests::routes::cluster_test::cluster_logout_all().await
+}

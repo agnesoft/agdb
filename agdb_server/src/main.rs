@@ -49,7 +49,7 @@ async fn main() -> ServerResult {
     password::init(config.pepper);
 
     let (shutdown_sender, shutdown_receiver) = broadcast::channel::<()>(1);
-    let server_db = server_db::new(&config).await?;
+    let server_db = server_db::new(&config, shutdown_sender.subscribe()).await?;
     let cluster_log = cluster_log::new(&config).await?;
 
     cluster_log::migrate_from_server_db(&server_db, &cluster_log).await?;

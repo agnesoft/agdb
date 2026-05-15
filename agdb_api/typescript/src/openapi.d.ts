@@ -1954,6 +1954,14 @@ declare namespace Paths {
             }
         }
     }
+    namespace ClusterUserLogoutAll {
+        namespace Responses {
+            export interface $201 {
+            }
+            export interface $401 {
+            }
+        }
+    }
     namespace DbAdd {
         namespace Parameters {
             export type Db = string;
@@ -2362,6 +2370,14 @@ declare namespace Paths {
             }
         }
     }
+    namespace UserLogoutAll {
+        namespace Responses {
+            export interface $201 {
+            }
+            export interface $401 {
+            }
+        }
+    }
     namespace UserStatus {
         namespace Responses {
             export type $200 = Components.Schemas.UserStatus;
@@ -2622,6 +2638,14 @@ export interface OperationMethods {
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.ClusterUserLogout.Responses.$201>
   /**
+   * cluster_user_logout_all
+   */
+  'cluster_user_logout_all'(
+    parameters?: Parameters<UnknownParamsObject> | null,
+    data?: any,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.ClusterUserLogoutAll.Responses.$201>
+  /**
    * db_list
    */
   'db_list'(
@@ -2789,6 +2813,14 @@ export interface OperationMethods {
     data?: any,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.UserLogout.Responses.$201>
+  /**
+   * user_logout_all
+   */
+  'user_logout_all'(
+    parameters?: Parameters<UnknownParamsObject> | null,
+    data?: any,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.UserLogoutAll.Responses.$201>
   /**
    * user_status
    */
@@ -3110,6 +3142,16 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.ClusterUserLogout.Responses.$201>
   }
+  ['/api/v1/cluster/user/logout_all']: {
+    /**
+     * cluster_user_logout_all
+     */
+    'post'(
+      parameters?: Parameters<UnknownParamsObject> | null,
+      data?: any,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.ClusterUserLogoutAll.Responses.$201>
+  }
   ['/api/v1/db/list']: {
     /**
      * db_list
@@ -3319,6 +3361,16 @@ export interface PathsDictionary {
       data?: any,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.UserLogout.Responses.$201>
+  }
+  ['/api/v1/user/logout_all']: {
+    /**
+     * user_logout_all
+     */
+    'post'(
+      parameters?: Parameters<UnknownParamsObject> | null,
+      data?: any,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.UserLogoutAll.Responses.$201>
   }
   ['/api/v1/user/status']: {
     /**

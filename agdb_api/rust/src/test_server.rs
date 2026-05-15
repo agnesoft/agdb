@@ -7,6 +7,7 @@ use crate::ReqwestClient;
 use crate::config_impl::ConfigImpl;
 use crate::config_impl::DEFAULT_LOG_BODY_LIMIT;
 use crate::config_impl::DEFAULT_REQUEST_BODY_LIMIT;
+use crate::config_impl::DEFAULT_TOKEN_EXPIRY_SECONDS;
 use crate::config_impl::config_to_str;
 use crate::test_server::test_error::TestError;
 use crate::test_server::test_error::bail;
@@ -232,6 +233,7 @@ impl TestServerImpl {
             cluster: Vec::new(),
             cluster_node_id: 0,
             start_time: 0,
+            token_expiry_seconds: DEFAULT_TOKEN_EXPIRY_SECONDS,
             pepper: None,
         };
 

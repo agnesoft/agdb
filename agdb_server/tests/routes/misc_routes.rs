@@ -1,9 +1,15 @@
 use agdb::QueryBuilder;
 use agdb_api::AgdbApi;
 use agdb_api::DbKind;
+use agdb_api::LogLevelFilter;
 use agdb_api::ReqwestClient;
+use agdb_api::config_impl::ConfigImpl;
+use agdb_api::config_impl::DEFAULT_LOG_BODY_LIMIT;
+use agdb_api::config_impl::DEFAULT_REQUEST_BODY_LIMIT;
+use agdb_api::config_impl::DEFAULT_TOKEN_EXPIRY_SECONDS;
 use agdb_api::test_server::ADMIN;
 use agdb_api::test_server::CONFIG_FILE;
+use agdb_api::test_server::SERVER_DATA_DIR;
 use agdb_api::test_server::TestServer;
 use agdb_api::test_server::TestServerImpl;
 use agdb_api::test_server::next_db_name;
@@ -133,19 +139,20 @@ async fn db_list_after_shutdown_corrupted_data() -> anyhow::Result<()> {
 #[cfg(feature = "studio")]
 #[tokio::test]
 async fn basepath_test() -> anyhow::Result<()> {
+    use agdb_api::config_impl::ConfigImpl;
     use agdb_api::config_impl::DEFAULT_LOG_BODY_LIMIT;
     use agdb_api::config_impl::DEFAULT_REQUEST_BODY_LIMIT;
 
-    let config = agdb_api::config_impl::ConfigImpl {
+    let config = ConfigImpl {
         bind: String::new(),
         address: String::new(),
         basepath: "/public".to_string(),
         static_roots: Vec::new(),
         admin: ADMIN.to_string(),
-        log_level: agdb_api::LogLevelFilter::Info,
+        log_level: LogLevelFilter::Info,
         log_body_limit: DEFAULT_LOG_BODY_LIMIT,
         request_body_limit: DEFAULT_REQUEST_BODY_LIMIT,
-        data_dir: agdb_api::test_server::SERVER_DATA_DIR.into(),
+        data_dir: SERVER_DATA_DIR.into(),
         pepper_path: String::new(),
         tls_certificate: String::new(),
         tls_key: String::new(),
@@ -156,6 +163,7 @@ async fn basepath_test() -> anyhow::Result<()> {
         cluster: Vec::new(),
         cluster_node_id: 0,
         start_time: 0,
+        token_expiry_seconds: DEFAULT_TOKEN_EXPIRY_SECONDS,
         pepper: None,
     };
 
@@ -310,16 +318,16 @@ async fn studio() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn large_payload() -> anyhow::Result<()> {
-    let config = agdb_api::config_impl::ConfigImpl {
+    let config = ConfigImpl {
         bind: String::new(),
         address: String::new(),
         basepath: String::new(),
         static_roots: Vec::new(),
         admin: ADMIN.to_string(),
-        log_level: agdb_api::LogLevelFilter::Info,
-        log_body_limit: agdb_api::config_impl::DEFAULT_LOG_BODY_LIMIT,
+        log_level: LogLevelFilter::Info,
+        log_body_limit: DEFAULT_LOG_BODY_LIMIT,
         request_body_limit: 1024,
-        data_dir: agdb_api::test_server::SERVER_DATA_DIR.into(),
+        data_dir: SERVER_DATA_DIR.into(),
         pepper_path: String::new(),
         tls_certificate: String::new(),
         tls_key: String::new(),
@@ -330,6 +338,7 @@ async fn large_payload() -> anyhow::Result<()> {
         cluster: Vec::new(),
         cluster_node_id: 0,
         start_time: 0,
+        token_expiry_seconds: DEFAULT_TOKEN_EXPIRY_SECONDS,
         pepper: None,
     };
 
@@ -389,7 +398,7 @@ async fn static_files() -> anyhow::Result<()> {
     let test_dir1 = TestDir::new()?;
     let test_dir2 = TestDir::new()?;
 
-    let config = agdb_api::config_impl::ConfigImpl {
+    let config = ConfigImpl {
         bind: String::new(),
         address: String::new(),
         basepath: String::new(),
@@ -404,10 +413,10 @@ async fn static_files() -> anyhow::Result<()> {
             ),
         ],
         admin: ADMIN.to_string(),
-        log_level: agdb_api::LogLevelFilter::Info,
-        log_body_limit: agdb_api::config_impl::DEFAULT_LOG_BODY_LIMIT,
-        request_body_limit: agdb_api::config_impl::DEFAULT_REQUEST_BODY_LIMIT,
-        data_dir: agdb_api::test_server::SERVER_DATA_DIR.into(),
+        log_level: LogLevelFilter::Info,
+        log_body_limit: DEFAULT_LOG_BODY_LIMIT,
+        request_body_limit: DEFAULT_REQUEST_BODY_LIMIT,
+        data_dir: SERVER_DATA_DIR.into(),
         pepper_path: String::new(),
         tls_certificate: String::new(),
         tls_key: String::new(),
@@ -418,6 +427,7 @@ async fn static_files() -> anyhow::Result<()> {
         cluster: Vec::new(),
         cluster_node_id: 0,
         start_time: 0,
+        token_expiry_seconds: DEFAULT_TOKEN_EXPIRY_SECONDS,
         pepper: None,
     };
 
@@ -454,7 +464,7 @@ async fn static_files_with_basepath() -> anyhow::Result<()> {
     let test_dir1 = TestDir::new()?;
     let test_dir2 = TestDir::new()?;
 
-    let config = agdb_api::config_impl::ConfigImpl {
+    let config = ConfigImpl {
         bind: String::new(),
         address: String::new(),
         basepath: "/some_basepath".to_string(),
@@ -469,10 +479,10 @@ async fn static_files_with_basepath() -> anyhow::Result<()> {
             ),
         ],
         admin: ADMIN.to_string(),
-        log_level: agdb_api::LogLevelFilter::Info,
-        log_body_limit: agdb_api::config_impl::DEFAULT_LOG_BODY_LIMIT,
-        request_body_limit: agdb_api::config_impl::DEFAULT_REQUEST_BODY_LIMIT,
-        data_dir: agdb_api::test_server::SERVER_DATA_DIR.into(),
+        log_level: LogLevelFilter::Info,
+        log_body_limit: DEFAULT_LOG_BODY_LIMIT,
+        request_body_limit: DEFAULT_REQUEST_BODY_LIMIT,
+        data_dir: SERVER_DATA_DIR.into(),
         pepper_path: String::new(),
         tls_certificate: String::new(),
         tls_key: String::new(),
@@ -483,6 +493,7 @@ async fn static_files_with_basepath() -> anyhow::Result<()> {
         cluster: Vec::new(),
         cluster_node_id: 0,
         start_time: 0,
+        token_expiry_seconds: DEFAULT_TOKEN_EXPIRY_SECONDS,
         pepper: None,
     };
 

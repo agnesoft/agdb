@@ -1368,6 +1368,27 @@
         ]
       }
     },
+    "/api/v1/cluster/user/logout_all": {
+      "post": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "cluster_user_logout_all",
+        "responses": {
+          "201": {
+            "description": "user logged out from all sessions"
+          },
+          "401": {
+            "description": "invalid credentials"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
     "/api/v1/db/list": {
       "get": {
         "tags": [
@@ -2385,6 +2406,27 @@
         "responses": {
           "201": {
             "description": "user logged out"
+          },
+          "401": {
+            "description": "invalid credentials"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/user/logout_all": {
+      "post": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "user_logout_all",
+        "responses": {
+          "201": {
+            "description": "user logged out from all sessions"
           },
           "401": {
             "description": "invalid credentials"

@@ -459,6 +459,16 @@ impl<T: AgdbApiClient> AgdbApi<T> {
         Ok(status)
     }
 
+    pub async fn cluster_user_logout_all(&mut self) -> AgdbApiResult<u16> {
+        let status = self
+            .client
+            .post::<(), ()>(&self.url("/cluster/user/logout_all"), None, &self.token)
+            .await?
+            .0;
+        self.token = None;
+        Ok(status)
+    }
+
     pub async fn cluster_status(&self) -> AgdbApiResult<(u16, Vec<ClusterStatus>)> {
         self.client.get(&self.url("/cluster/status"), &None).await
     }
@@ -679,6 +689,16 @@ impl<T: AgdbApiClient> AgdbApi<T> {
         let status = self
             .client
             .post::<(), ()>(&self.url("/user/logout"), None, &self.token)
+            .await?
+            .0;
+        self.token = None;
+        Ok(status)
+    }
+
+    pub async fn user_logout_all(&mut self) -> AgdbApiResult<u16> {
+        let status = self
+            .client
+            .post::<(), ()>(&self.url("/user/logout_all"), None, &self.token)
             .await?
             .0;
         self.token = None;

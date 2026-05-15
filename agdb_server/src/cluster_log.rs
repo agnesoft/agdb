@@ -274,7 +274,7 @@ pub(crate) async fn migrate_from_server_db(
     cluster_log: &ClusterLog,
 ) -> ServerResult<()> {
     if server_db
-        .0
+        .db
         .read()
         .await
         .exec(QueryBuilder::select().ids(CLUSTER_LOG).query())
@@ -306,7 +306,7 @@ pub(crate) async fn migrate_from_server_db(
 
     let mut log_ids = Vec::new();
     let logs = server_db
-        .0
+        .db
         .read()
         .await
         .exec(
@@ -340,7 +340,7 @@ pub(crate) async fn migrate_from_server_db(
         )
     })?;
 
-    server_db.0.write().await.transaction_mut(|t| {
+    server_db.db.write().await.transaction_mut(|t| {
         t.exec_mut(QueryBuilder::remove().index(COMMITTED).query())?;
         t.exec_mut(QueryBuilder::remove().index(EXECUTED).query())?;
         t.exec_mut(QueryBuilder::remove().ids(log_ids).query())?;
@@ -359,6 +359,7 @@ mod tests {
     use agdb_api::config_impl::ConfigImpl;
     use agdb_api::config_impl::DEFAULT_LOG_BODY_LIMIT;
     use agdb_api::config_impl::DEFAULT_REQUEST_BODY_LIMIT;
+    use agdb_api::config_impl::DEFAULT_TOKEN_EXPIRY_SECONDS;
     use std::path::PathBuf;
     use std::time::SystemTime;
     use std::time::UNIX_EPOCH;
@@ -413,6 +414,8 @@ mod tests {
                 .duration_since(UNIX_EPOCH)
                 .expect("system time should be after unix epoch")
                 .as_secs(),
+            token_expiry_seconds: DEFAULT_TOKEN_EXPIRY_SECONDS,
+
             pepper: None,
         });
 
@@ -437,7 +440,7 @@ mod tests {
         logs: &[Log<ClusterAction>],
     ) -> ServerResult<()> {
         server_db
-            .0
+            .db
             .write()
             .await
             .transaction_mut(|t| -> ServerResult<()> {
@@ -490,7 +493,7 @@ mod tests {
 
     async fn legacy_server_log_exists(server_db: &ServerDb) -> bool {
         server_db
-            .0
+            .db
             .read()
             .await
             .exec(QueryBuilder::select().ids(CLUSTER_LOG).query())
@@ -500,7 +503,9 @@ mod tests {
     #[tokio::test]
     async fn migrate_from_server_db_noop_when_nothing_to_migrate() -> ServerResult<()> {
         let (config, _directory) = test_config("noop");
-        let server_db = crate::server_db::new(&config).await?;
+        let server_db =
+            crate::server_db::new(&config, tokio::sync::broadcast::channel(1).0.subscribe())
+                .await?;
         let cluster_log = crate::cluster_log::new(&config).await?;
 
         migrate_from_server_db(&server_db, &cluster_log).await?;
@@ -514,7 +519,9 @@ mod tests {
     #[tokio::test]
     async fn migrate_from_server_db_moves_logs_in_order() -> ServerResult<()> {
         let (config, _directory) = test_config("moves_logs");
-        let server_db = crate::server_db::new(&config).await?;
+        let server_db =
+            crate::server_db::new(&config, tokio::sync::broadcast::channel(1).0.subscribe())
+                .await?;
         let cluster_log = crate::cluster_log::new(&config).await?;
         let logs = vec![
             test_log(1, 1, "first"),
@@ -543,7 +550,9 @@ mod tests {
     #[tokio::test]
     async fn migrate_from_server_db_errors_when_both_logs_exist() -> ServerResult<()> {
         let (config, _directory) = test_config("both_have_logs");
-        let server_db = crate::server_db::new(&config).await?;
+        let server_db =
+            crate::server_db::new(&config, tokio::sync::broadcast::channel(1).0.subscribe())
+                .await?;
         let cluster_log = crate::cluster_log::new(&config).await?;
 
         seed_legacy_server_logs(&server_db, &[test_log(1, 1, "server")]).await?;

@@ -43,6 +43,7 @@ pub mod db_user_remove_test;
 // User Authentication
 pub mod user_change_password_test;
 pub mod user_login_test;
+pub mod user_logout_all_test;
 pub mod user_logout_test;
 pub mod user_status;
 

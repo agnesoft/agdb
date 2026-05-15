@@ -52,11 +52,11 @@ where
 
     async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
         if let Ok(bearer) = parts.extract::<TypedHeader<Authorization<Bearer>>>().await {
-            let db_pool = ServerDb::from_ref(state);
-            let id = db_pool
+            let server_db = ServerDb::from_ref(state);
+            let id = server_db
                 .user_id_from_token(utilities::unquote(bearer.token()))
                 .await?;
-            return Ok(UserName(db_pool.user_name(id).await?));
+            return Ok(UserName(server_db.user_name(id).await?));
         }
 
         Ok(Self("".to_string()))

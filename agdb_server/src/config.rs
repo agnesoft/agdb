@@ -2,6 +2,9 @@ use agdb_api::LogLevelFilter;
 use agdb_api::config_impl::ConfigImpl;
 use agdb_api::config_impl::DEFAULT_LOG_BODY_LIMIT;
 use agdb_api::config_impl::DEFAULT_REQUEST_BODY_LIMIT;
+use agdb_api::config_impl::DEFAULT_TOKEN_EXPIRY_SECONDS;
+use agdb_api::config_impl::MAX_TOKEN_EXPIRY_SECONDS;
+use agdb_api::config_impl::MIN_TOKEN_EXPIRY_SECONDS;
 use agdb_api::config_impl::SALT_LEN;
 use std::sync::Arc;
 use std::time::SystemTime;
@@ -84,6 +87,7 @@ pub(crate) fn new(config_file: &str) -> Result<Config, String> {
             .duration_since(UNIX_EPOCH)
             .map_err(|e| format!("Failed to get server start time since UNIX_EPOCH: {e:?}"))?
             .as_secs(),
+        token_expiry_seconds: DEFAULT_TOKEN_EXPIRY_SECONDS,
         pepper: None,
     };
 
@@ -135,6 +139,7 @@ pub(crate) fn from_str(content: &str) -> Result<ConfigImpl, String> {
         cluster: vec![],
         cluster_node_id: 0,
         start_time: 0,
+        token_expiry_seconds: DEFAULT_TOKEN_EXPIRY_SECONDS,
         pepper: None,
     };
 
@@ -194,6 +199,19 @@ pub(crate) fn from_str(content: &str) -> Result<ConfigImpl, String> {
                         .map_err(|e| format!("Invalid cluster_term_timeout_ms: {e:?}"))?
                 }
                 "cluster" => config.cluster = vec_from_str(value),
+                "token_expiry_seconds" => {
+                    config.token_expiry_seconds = value
+                        .parse()
+                        .map_err(|e| format!("Invalid token_expiry_seconds: {e:?}"))?;
+                    if config.token_expiry_seconds < MIN_TOKEN_EXPIRY_SECONDS
+                        || config.token_expiry_seconds > MAX_TOKEN_EXPIRY_SECONDS
+                    {
+                        return Err(format!(
+                            "token_expiry_seconds must be between {MIN_TOKEN_EXPIRY_SECONDS} and {MAX_TOKEN_EXPIRY_SECONDS}, got {}",
+                            config.token_expiry_seconds
+                        ));
+                    }
+                }
                 _ => return Err(format!("Unknown key: {key}")),
             }
         }
@@ -276,6 +294,7 @@ mod tests {
             cluster: vec![],
             cluster_node_id: 0,
             start_time: 0,
+            token_expiry_seconds: DEFAULT_TOKEN_EXPIRY_SECONDS,
             pepper: None,
         };
 
@@ -313,6 +332,7 @@ mod tests {
             cluster: vec![],
             cluster_node_id: 0,
             start_time: 0,
+            token_expiry_seconds: DEFAULT_TOKEN_EXPIRY_SECONDS,
             pepper: None,
         };
         std::fs::write(
@@ -349,6 +369,7 @@ mod tests {
             cluster: vec![],
             cluster_node_id: 0,
             start_time: 0,
+            token_expiry_seconds: DEFAULT_TOKEN_EXPIRY_SECONDS,
             pepper: None,
         };
         std::fs::write(
@@ -433,5 +454,29 @@ mod tests {
             err,
             "Cluster does not contain local node: http://localhost:3000/api ([\"http://localhost:3001\", \"http://localhost:3002\"])"
         );
+    }
+
+    #[test]
+    fn token_expiry_default() {
+        let config = config::from_str("").unwrap();
+        assert_eq!(config.token_expiry_seconds, DEFAULT_TOKEN_EXPIRY_SECONDS);
+    }
+
+    #[test]
+    fn token_expiry_valid() {
+        let config = config::from_str("token_expiry_seconds: 300").unwrap();
+        assert_eq!(config.token_expiry_seconds, 300);
+    }
+
+    #[test]
+    fn token_expiry_too_low() {
+        let err = config::from_str("token_expiry_seconds: 30").unwrap_err();
+        assert!(err.contains("token_expiry_seconds must be between"));
+    }
+
+    #[test]
+    fn token_expiry_too_high() {
+        let err = config::from_str("token_expiry_seconds: 100000").unwrap_err();
+        assert!(err.contains("token_expiry_seconds must be between"));
     }
 }

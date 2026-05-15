@@ -784,6 +784,35 @@ pub async fn cluster_logout() -> Result<(), TestError> {
     Ok(())
 }
 
+#[cfg_attr(feature = "api", agdb::test_def())]
+pub async fn cluster_logout_all() -> Result<(), TestError> {
+    let cluster = TestCluster::new().await?;
+    let user = &next_user_name();
+
+    let mut client = cluster.follower();
+    client.cluster_user_login(ADMIN, ADMIN).await?;
+    client.admin_user_add(user, user).await?;
+
+    client.cluster_user_login(user, user).await?;
+    assert!(client.user_status().await?.1.login);
+    let token1 = client.token.clone();
+
+    client.cluster_user_login(user, user).await?;
+    assert!(client.user_status().await?.1.login);
+    let token2 = client.token.clone();
+
+    client.cluster_user_logout_all().await?;
+
+    let mut client = cluster.leader();
+    client.token = token1;
+    assert_eq!(client.user_status().await.unwrap_err().status, 401);
+
+    client.token = token2;
+    assert_eq!(client.user_status().await.unwrap_err().status, 401);
+
+    Ok(())
+}
+
 #[cfg(feature = "api")]
 pub fn test_defs() -> Vec<agdb::type_def::Type> {
     vec![

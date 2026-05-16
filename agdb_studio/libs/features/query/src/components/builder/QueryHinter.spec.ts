@@ -4,7 +4,11 @@ import QueryHinter from "./QueryHinter.vue";
 import type { QueryType } from "../../composables/types";
 
 describe("QueryHinter", () => {
-  const hints: QueryType[] = ["select", "insert", "search"];
+  const hints: { type: QueryType; label: string }[] = [
+    { type: "select", label: "select" },
+    { type: "insert", label: "insert" },
+    { type: "search", label: "search" },
+  ];
 
   it("renders all hints", () => {
     const wrapper = mount(QueryHinter, {

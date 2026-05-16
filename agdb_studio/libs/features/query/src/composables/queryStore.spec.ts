@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
 import { useQueryStore } from "./queryStore";
 import type { AddQueryParams, Query, QueryStep } from "./types";
+import { queryApiMock } from "../mock/queryApiMock";
 
 describe("queryStore", () => {
   const store = useQueryStore();
@@ -93,6 +94,33 @@ describe("queryStore", () => {
     expect(store.getQuery(queryRef.value.id)?.value?.isRunning).toBe(true);
     // Advance simulated time to complete execution
     vi.advanceTimersByTime(1000);
+
+    const got = store.getQuery(queryRef.value.id);
+    expect(got?.value?.isRunning).toBe(false);
+    expect(got?.value?.lastRun).toBeInstanceOf(Date);
+  });
+
+  it("runs a query with an async runner and records completion", async () => {
+    const q = makeQuery({ id: "runner-query" });
+    const queryRef = store.addQuery(q);
+    const runner = vi.fn().mockResolvedValue(undefined);
+
+    await store.runQuery(queryRef.value.id, runner);
+
+    const got = store.getQuery(queryRef.value.id);
+    expect(runner).toHaveBeenCalledOnce();
+    expect(got?.value?.isRunning).toBe(false);
+    expect(got?.value?.lastRun).toBeInstanceOf(Date);
+  });
+
+  it("records completion even when an async runner fails", async () => {
+    const q = makeQuery({ id: "runner-error-query" });
+    const queryRef = store.addQuery(q);
+    const runner = vi.fn().mockRejectedValue(new Error("runner failed"));
+
+    await expect(store.runQuery(queryRef.value.id, runner)).rejects.toThrow(
+      "runner failed",
+    );
 
     const got = store.getQuery(queryRef.value.id);
     expect(got?.value?.isRunning).toBe(false);
@@ -212,7 +240,7 @@ describe("queryStore", () => {
     const queryRef = store.addQuery(q);
 
     const step1 = makeStep({ id: "s1", type: "insert" });
-    const step2 = makeStep({ id: "s2", type: "values" });
+    const step2 = makeStep({ id: "s2", type: "insert.values" });
     const step3 = makeStep({ id: "s3", type: "select" }); // invalid after values in exec_mut
 
     store.addQueryStep(queryRef.value.id, "exec_mut", step1);
@@ -224,5 +252,32 @@ describe("queryStore", () => {
     expect(got?.value?.steps.exec_mut[0]?.invalid).toBe(false); // insert valid
     expect(got?.value?.steps.exec_mut[1]?.invalid).toBe(false); // values valid
     expect(got?.value?.steps.exec_mut[2]?.invalid).toBe(true); // select invalid
+  });
+
+  it("falls back to empty followers when a followed step is missing from the mock map", () => {
+    const q = makeQuery({ id: "qid-fallback" });
+    const queryRef = store.addQuery(q);
+
+    const originalFollowers = [...(queryApiMock.exec?.followers ?? [])];
+    if (queryApiMock.exec) {
+      queryApiMock.exec.followers = [
+        "mystery.step",
+      ] as typeof queryApiMock.exec.followers;
+    }
+
+    try {
+      store.addQueryStep(queryRef.value.id, "exec", {
+        id: "m1",
+        type: "mystery.step" as QueryStep["type"],
+      });
+      store.validateQuerySteps(queryRef.value.id, "exec");
+
+      const got = store.getQuery(queryRef.value.id);
+      expect(got?.value.steps.exec[0]?.invalid).toBe(false);
+    } finally {
+      if (queryApiMock.exec) {
+        queryApiMock.exec.followers = originalFollowers;
+      }
+    }
   });
 });

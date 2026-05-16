@@ -1243,6 +1243,27 @@
         ]
       }
     },
+    "/api/v1/cluster/admin/user/logout_all": {
+      "post": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "cluster_admin_user_logout_all",
+        "responses": {
+          "201": {
+            "description": "users logged out"
+          },
+          "401": {
+            "description": "admin only"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
     "/api/v1/cluster/admin/user/{username}/logout": {
       "post": {
         "tags": [

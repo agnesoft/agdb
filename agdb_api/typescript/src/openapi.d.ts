@@ -1942,6 +1942,14 @@ declare namespace Paths {
             }
         }
     }
+    namespace ClusterAdminUserLogoutAll {
+        namespace Responses {
+            export interface $201 {
+            }
+            export interface $401 {
+            }
+        }
+    }
     namespace ClusterStatus {
         namespace Responses {
             export type $200 = Components.Schemas.ClusterStatus[];
@@ -2603,6 +2611,14 @@ export interface OperationMethods {
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.AdminUserLogout.Responses.$201>
   /**
+   * cluster_admin_user_logout_all
+   */
+  'cluster_admin_user_logout_all'(
+    parameters?: Parameters<UnknownParamsObject> | null,
+    data?: any,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.ClusterAdminUserLogoutAll.Responses.$201>
+  /**
    * cluster_admin_user_logout
    */
   'cluster_admin_user_logout'(
@@ -3072,6 +3088,16 @@ export interface PathsDictionary {
       data?: any,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AdminUserLogout.Responses.$201>
+  }
+  ['/api/v1/cluster/admin/user/logout_all']: {
+    /**
+     * cluster_admin_user_logout_all
+     */
+    'post'(
+      parameters?: Parameters<UnknownParamsObject> | null,
+      data?: any,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.ClusterAdminUserLogoutAll.Responses.$201>
   }
   ['/api/v1/cluster/admin/user/{username}/logout']: {
     /**

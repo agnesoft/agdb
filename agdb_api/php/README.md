@@ -102,6 +102,7 @@ Class | Method | HTTP request | Description
 *AgdbApi* | [**adminUserLogout**](docs/Api/AgdbApi.md#adminuserlogout) | **POST** /api/v1/admin/user/{username}/logout | 
 *AgdbApi* | [**adminUserLogoutAll**](docs/Api/AgdbApi.md#adminuserlogoutall) | **POST** /api/v1/admin/user/logout_all | 
 *AgdbApi* | [**clusterAdminUserLogout**](docs/Api/AgdbApi.md#clusteradminuserlogout) | **POST** /api/v1/cluster/admin/user/{username}/logout | 
+*AgdbApi* | [**clusterAdminUserLogoutAll**](docs/Api/AgdbApi.md#clusteradminuserlogoutall) | **POST** /api/v1/cluster/admin/user/logout_all | 
 *AgdbApi* | [**clusterStatus**](docs/Api/AgdbApi.md#clusterstatus) | **GET** /api/v1/cluster/status | 
 *AgdbApi* | [**clusterUserLogin**](docs/Api/AgdbApi.md#clusteruserlogin) | **POST** /api/v1/cluster/user/login | 
 *AgdbApi* | [**clusterUserLogout**](docs/Api/AgdbApi.md#clusteruserlogout) | **POST** /api/v1/cluster/user/logout | 

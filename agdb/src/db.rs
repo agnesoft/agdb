@@ -1092,7 +1092,7 @@ impl<Store: StorageData> DbImpl<Store> {
         Ok(())
     }
 
-    pub(crate) fn remove_keys(&mut self, db_id: DbId, keys: &[DbValue]) -> Result<i64, DbError> {
+    pub(crate) fn remove_keys(&mut self, db_id: DbId, keys: &[DbValue]) -> Result<u64, DbError> {
         let mut result = 0;
 
         for key_value in self.values.values(&self.storage, db_id.as_index())? {
@@ -1108,7 +1108,7 @@ impl<Store: StorageData> DbImpl<Store> {
                     id: db_id,
                     key_value,
                 });
-                result -= 1;
+                result += 1;
             }
         }
 

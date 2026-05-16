@@ -16,10 +16,10 @@ pub struct InsertIndexQuery(pub DbValue);
 
 impl QueryMut for InsertIndexQuery {
     fn process<Store: StorageData>(&self, db: &mut DbImpl<Store>) -> Result<QueryResult, DbError> {
-        let value_count = db.insert_index(&self.0)?;
+        let result = db.insert_index(&self.0)?;
 
         Ok(QueryResult {
-            result: value_count as i64,
+            result,
             elements: vec![],
         })
     }

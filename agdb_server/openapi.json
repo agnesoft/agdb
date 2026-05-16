@@ -3503,7 +3503,8 @@
           "result": {
             "type": "integer",
             "format": "int64",
-            "description": "Query result"
+            "description": "Query result",
+            "minimum": 0
           }
         }
       },
@@ -3755,7 +3756,7 @@
         "items": {
           "type": "string"
         },
-        "description": "Query to remove aliases from the database. It\nis not an error if an alias to be removed already\ndoes not exist.\n\nThe result will be a negative number signifying how\nmany aliases have been actually removed."
+        "description": "Query to remove aliases from the database. It\nis not an error if an alias to be removed already\ndoes not exist.\n\nThe result will be a number signifying how\nmany aliases have been actually removed."
       },
       "RemoveIndexQuery": {
         "$ref": "#/components/schemas/DbValue",
@@ -3842,7 +3843,7 @@
       },
       "SelectEdgeCountQuery": {
         "type": "object",
-        "description": "Query to select number of edges of given node ids.\nAll of the ids must exist in the database. If any\nof the ids is not a node the result will be 0 (not\nan error).\n\nThe result will be number of elements returned and the list\nof elements with a single property `String(\"edge_count\")` with\na value `u64`.\n\nNOTE: Self-referential edges are counted twice as if they\nwere coming from another edge. Therefore the edge count\nmight be greater than number of unique db elements.",
+        "description": "Query to select number of edges of given node ids.\nAll of the ids must exist in the database.\n\nThe result is the sum of all selected edge counts.\nThe elements still contain individual\nedge counts in property `String(\"edge_count\")` as `u64`.\nIf any of the element ids are edges their count will be 0.\n\nNOTE: Self-referential edges are counted twice as if they\nwere coming from another edge. Therefore the edge count\nmight be greater than number of unique db elements.",
         "required": [
           "ids",
           "from",
@@ -3869,7 +3870,7 @@
       },
       "SelectKeyCountQuery": {
         "$ref": "#/components/schemas/QueryIds",
-        "description": "Query to select number of properties (key count) of\ngiven ids. All of the ids must exist in the database.\n\nThe result will be number of elements returned and the list\nof elements with a single property `String(\"key_count\")` with\na value `u64`."
+        "description": "Query to select number of properties (key count) of\ngiven ids. All of the ids must exist in the database.\n\nThe result is the sum of all selected key counts.\nThe elements still contain individual\nkey counts in property `String(\"key_count\")` as `u64`."
       },
       "SelectKeysQuery": {
         "$ref": "#/components/schemas/QueryIds",
@@ -3877,7 +3878,7 @@
       },
       "SelectNodeCountQuery": {
         "type": "object",
-        "description": "Query to select number of nodes in the database.\n\nThe result will be 1 and elements with a single element\nof id 0 and a single property `String(\"node_count\")` with\na value `u64` represneting number of nodes in teh database."
+        "description": "Query to select number of nodes in the database.\n\nThe node count is returned in `QueryResult::result`."
       },
       "SelectValuesQuery": {
         "type": "object",

@@ -20,8 +20,9 @@ fn select_key_count_ids() {
             .query(),
         1,
     );
-    db.exec_elements(
+    db.exec_count_elements(
         QueryBuilder::select().key_count().ids("alias").query(),
+        3,
         &[DbElement {
             id: DbId(1),
             from: DbId::default(),
@@ -35,8 +36,9 @@ fn select_key_count_ids() {
 fn select_keys_count_no_keys() {
     let mut db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().nodes().aliases("alias").query(), 1);
-    db.exec_elements(
+    db.exec_count_elements(
         QueryBuilder::select().key_count().ids("alias").query(),
+        0,
         &[DbElement {
             id: DbId(1),
             from: DbId::default(),
@@ -74,11 +76,12 @@ fn select_key_count_search() {
         2,
     );
 
-    db.exec_elements(
+    db.exec_count_elements(
         QueryBuilder::select()
             .key_count()
             .ids(QueryBuilder::search().from(3).query())
             .query(),
+        9,
         &[
             DbElement {
                 id: DbId(3),
@@ -130,8 +133,9 @@ fn select_key_count_search_alt() {
         2,
     );
 
-    db.exec_elements(
+    db.exec_count_elements(
         QueryBuilder::select().key_count().search().from(3).query(),
+        9,
         &[
             DbElement {
                 id: DbId(3),

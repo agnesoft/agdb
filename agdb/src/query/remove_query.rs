@@ -29,14 +29,14 @@ impl QueryMut for RemoveQuery {
             QueryIds::Ids(ids) => {
                 for id in ids {
                     if db.remove(id)? {
-                        result.result -= 1;
+                        result.result += 1;
                     }
                 }
             }
             QueryIds::Search(search_query) => {
                 for db_id in search_query.search(db)? {
                     if db.remove_id(db_id)? {
-                        result.result -= 1;
+                        result.result += 1;
                     }
                 }
             }

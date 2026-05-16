@@ -71,10 +71,7 @@ pub async fn file_to_memory() -> Result<(), TestError> {
         )
         .await?
         .1[0]
-        .elements[0]
-        .values[0]
-        .value
-        .to_u64()?;
+        .result;
     assert_eq!(nodes, 1);
 
     Ok(())

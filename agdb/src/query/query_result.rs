@@ -15,7 +15,7 @@ use crate::db::db_element::DbElement;
 #[cfg_attr(feature = "api", derive(agdb::TypeDef))]
 pub struct QueryResult {
     /// Query result
-    pub result: i64,
+    pub result: u64,
 
     /// List of elements yielded by the query
     /// possibly with a list of properties.

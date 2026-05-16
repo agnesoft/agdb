@@ -23,7 +23,7 @@ impl Query for SelectIndexesQuery {
     fn process<Store: StorageData>(&self, db: &DbImpl<Store>) -> Result<QueryResult, DbError> {
         let mut result = QueryResult::default();
         let indexes = db.indexes();
-        result.result = indexes.len() as i64;
+        result.result = indexes.len() as u64;
 
         result.elements.push(DbElement {
             id: DbId::default(),

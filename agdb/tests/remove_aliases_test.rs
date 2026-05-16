@@ -18,7 +18,7 @@ fn remove_aliases() {
     );
     db.exec_mut(
         QueryBuilder::remove().aliases(["alias", "alias2"]).query(),
-        -2,
+        2,
     );
 }
 

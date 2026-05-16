@@ -1039,7 +1039,7 @@ declare namespace Components {
              * is not an error if an alias to be removed already
              * does not exist.
              *
-             * The result will be a negative number signifying how
+             * The result will be a number signifying how
              * many aliases have been actually removed.
              */
             RemoveAliasesQuery;
@@ -1082,13 +1082,12 @@ declare namespace Components {
         } | {
             SelectEdgeCount: /**
              * Query to select number of edges of given node ids.
-             * All of the ids must exist in the database. If any
-             * of the ids is not a node the result will be 0 (not
-             * an error).
+             * All of the ids must exist in the database.
              *
-             * The result will be number of elements returned and the list
-             * of elements with a single property `String("edge_count")` with
-             * a value `u64`.
+             * The result is the sum of all selected edge counts.
+             * The elements still contain individual
+             * edge counts in property `String("edge_count")` as `u64`.
+             * If any of the element ids are edges their count will be 0.
              *
              * NOTE: Self-referential edges are counted twice as if they
              * were coming from another edge. Therefore the edge count
@@ -1119,18 +1118,16 @@ declare namespace Components {
              * Query to select number of properties (key count) of
              * given ids. All of the ids must exist in the database.
              *
-             * The result will be number of elements returned and the list
-             * of elements with a single property `String("key_count")` with
-             * a value `u64`.
+             * The result is the sum of all selected key counts.
+             * The elements still contain individual
+             * key counts in property `String("key_count")` as `u64`.
              */
             SelectKeyCountQuery;
         } | {
             SelectNodeCount: /**
              * Query to select number of nodes in the database.
              *
-             * The result will be 1 and elements with a single element
-             * of id 0 and a single property `String("node_count")` with
-             * a value `u64` represneting number of nodes in teh database.
+             * The node count is returned in `QueryResult::result`.
              */
             SelectNodeCountQuery;
         } | {
@@ -1182,7 +1179,7 @@ declare namespace Components {
          * is not an error if an alias to be removed already
          * does not exist.
          *
-         * The result will be a negative number signifying how
+         * The result will be a number signifying how
          * many aliases have been actually removed.
          */
         export type RemoveAliasesQuery = string[];
@@ -1321,13 +1318,12 @@ declare namespace Components {
         }
         /**
          * Query to select number of edges of given node ids.
-         * All of the ids must exist in the database. If any
-         * of the ids is not a node the result will be 0 (not
-         * an error).
+         * All of the ids must exist in the database.
          *
-         * The result will be number of elements returned and the list
-         * of elements with a single property `String("edge_count")` with
-         * a value `u64`.
+         * The result is the sum of all selected edge counts.
+         * The elements still contain individual
+         * edge counts in property `String("edge_count")` as `u64`.
+         * If any of the element ids are edges their count will be 0.
          *
          * NOTE: Self-referential edges are counted twice as if they
          * were coming from another edge. Therefore the edge count
@@ -1371,9 +1367,9 @@ declare namespace Components {
          * Query to select number of properties (key count) of
          * given ids. All of the ids must exist in the database.
          *
-         * The result will be number of elements returned and the list
-         * of elements with a single property `String("key_count")` with
-         * a value `u64`.
+         * The result is the sum of all selected key counts.
+         * The elements still contain individual
+         * key counts in property `String("key_count")` as `u64`.
          */
         export type SelectKeyCountQuery = /**
          * List of database ids used in queries. It
@@ -1403,9 +1399,7 @@ declare namespace Components {
         /**
          * Query to select number of nodes in the database.
          *
-         * The result will be 1 and elements with a single element
-         * of id 0 and a single property `String("node_count")` with
-         * a value `u64` represneting number of nodes in teh database.
+         * The node count is returned in `QueryResult::result`.
          */
         export interface SelectNodeCountQuery {
         }

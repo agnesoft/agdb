@@ -288,6 +288,10 @@ class QueryResult implements ModelInterface, ArrayAccess, \JsonSerializable
         if ($this->container['result'] === null) {
             $invalidProperties[] = "'result' can't be null";
         }
+        if (($this->container['result'] < 0)) {
+            $invalidProperties[] = "invalid value for 'result', must be bigger than or equal to 0.";
+        }
+
         return $invalidProperties;
     }
 
@@ -352,6 +356,11 @@ class QueryResult implements ModelInterface, ArrayAccess, \JsonSerializable
         if (is_null($result)) {
             throw new \InvalidArgumentException('non-nullable result cannot be null');
         }
+
+        if (($result < 0)) {
+            throw new \InvalidArgumentException('invalid value for $result when calling QueryResult., must be bigger than or equal to 0.');
+        }
+
         $this->container['result'] = $result;
 
         return $this;

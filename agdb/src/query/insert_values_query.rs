@@ -138,7 +138,7 @@ fn insert_values_new<Store: StorageData>(
         db.insert_key_value(db_id, key_value)?;
     }
 
-    result.result += values.len() as i64;
+    result.result += values.len() as u64;
     result.elements.push(DbElement {
         id: db_id,
         from: db.from_id(db_id)?,

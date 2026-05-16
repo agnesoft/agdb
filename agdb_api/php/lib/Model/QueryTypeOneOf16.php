@@ -305,7 +305,7 @@ class QueryTypeOneOf16 implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets select_node_count
      *
-     * @param object $select_node_count Query to select number of nodes in the database.  The result will be 1 and elements with a single element of id 0 and a single property `String(\"node_count\")` with a value `u64` represneting number of nodes in teh database.
+     * @param object $select_node_count Query to select number of nodes in the database.  The node count is returned in `QueryResult::result`.
      *
      * @return self
      */

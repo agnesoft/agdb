@@ -21,7 +21,7 @@ fn remove_index_with_data() {
             .query(),
         3,
     );
-    db.exec_mut(QueryBuilder::remove().index("username").query(), -3);
+    db.exec_mut(QueryBuilder::remove().index("username").query(), 3);
     db.exec(QueryBuilder::select().indexes().query(), 0);
 }
 
@@ -71,7 +71,7 @@ fn remove_node_with_indexed_values() {
             .query(),
         3,
     );
-    db.exec_mut(QueryBuilder::remove().ids(2).query(), -1);
+    db.exec_mut(QueryBuilder::remove().ids(2).query(), 1);
     let result = db.exec_result(QueryBuilder::select().indexes().query());
     assert_eq!(result.elements[0].values[0].value, DbValue::from(2_u64));
 }
@@ -91,7 +91,7 @@ fn remove_indexed_key() {
             .query(),
         3,
     );
-    db.exec_mut(QueryBuilder::remove().values("username").ids(2).query(), -1);
+    db.exec_mut(QueryBuilder::remove().values("username").ids(2).query(), 1);
     let result = db.exec_result(QueryBuilder::select().indexes().query());
     assert_eq!(result.elements[0].values[0].value, DbValue::from(2_u64));
 }

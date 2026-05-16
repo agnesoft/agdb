@@ -29,7 +29,7 @@ impl Query for SelectAliasesQuery {
         match &self.0 {
             QueryIds::Ids(ids) => {
                 result.elements.reserve(ids.len());
-                result.result += ids.len() as i64;
+                result.result += ids.len() as u64;
 
                 for id in ids {
                     match id {
@@ -66,7 +66,7 @@ impl Query for SelectAliasesQuery {
                     }
                 }
 
-                result.result = result.elements.len() as i64;
+                result.result = result.elements.len() as u64;
             }
         }
 

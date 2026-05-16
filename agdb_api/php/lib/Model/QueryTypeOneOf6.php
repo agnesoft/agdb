@@ -305,7 +305,7 @@ class QueryTypeOneOf6 implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets remove_aliases
      *
-     * @param string[] $remove_aliases Query to remove aliases from the database. It is not an error if an alias to be removed already does not exist.  The result will be a negative number signifying how many aliases have been actually removed.
+     * @param string[] $remove_aliases Query to remove aliases from the database. It is not an error if an alias to be removed already does not exist.  The result will be a number signifying how many aliases have been actually removed.
      *
      * @return self
      */

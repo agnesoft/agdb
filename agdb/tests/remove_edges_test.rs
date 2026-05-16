@@ -38,7 +38,7 @@ fn remove_edges() {
             .query(),
         2,
     );
-    db.exec_mut(QueryBuilder::remove().ids([-3, -4]).query(), -2);
+    db.exec_mut(QueryBuilder::remove().ids([-3, -4]).query(), 2);
 }
 
 #[test]
@@ -70,7 +70,7 @@ fn remove_edges_search() {
         QueryBuilder::remove()
             .ids(QueryBuilder::search().from(1).query())
             .query(),
-        -2,
+        2,
     );
     db.exec_error(QueryBuilder::select().ids(-3).query(), "Id '-3' not found");
 }

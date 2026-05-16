@@ -395,11 +395,7 @@ fn memory_backup() {
     assert_eq!(
         db.exec(QueryBuilder::select().node_count().query())
             .unwrap()
-            .elements[0]
-            .values[0]
-            .value
-            .to_u64()
-            .unwrap(),
+            .result,
         1
     );
 }
@@ -709,11 +705,7 @@ fn with_data() {
     let count = db
         .exec(QueryBuilder::select().node_count().query())
         .unwrap()
-        .elements[0]
-        .values[0]
-        .value
-        .to_u64()
-        .unwrap();
+        .result;
 
     assert_eq!(count, 1);
 }

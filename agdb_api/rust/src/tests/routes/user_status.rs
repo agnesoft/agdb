@@ -7,9 +7,9 @@ use crate::test_server::test_error::TestError;
 pub async fn user() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
     let user = &next_user_name();
-    server.user_login(ADMIN).await?;
+    server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(user, user).await?;
-    server.user_login(user).await?;
+    server.api.user_login(user, user).await?;
     let user_status = server.api.user_status().await?.1;
     assert_eq!(user_status.username, *user);
     assert!(user_status.login);
@@ -45,7 +45,7 @@ pub async fn admin() -> Result<(), TestError> {
 pub async fn custom_agent() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
     let user = &next_user_name();
-    server.user_login(ADMIN).await?;
+    server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(user, user).await?;
 
     let mut api = crate::AgdbApi::new(

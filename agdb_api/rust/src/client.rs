@@ -485,14 +485,7 @@ impl<T: AgdbApiClient> AgdbApi<T> {
         Ok(status)
     }
 
-    pub async fn cluster_user_logout_all(&mut self) -> AgdbApiResult<u16> {
-        self.cluster_user_logout_all_with_self(true).await
-    }
-
-    pub async fn cluster_user_logout_all_with_self(
-        &mut self,
-        include_self: bool,
-    ) -> AgdbApiResult<u16> {
+    pub async fn cluster_user_logout_all(&mut self, include_self: bool) -> AgdbApiResult<u16> {
         let status = self
             .client
             .post::<(), ()>(

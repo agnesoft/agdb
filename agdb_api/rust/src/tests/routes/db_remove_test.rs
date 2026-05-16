@@ -12,9 +12,9 @@ pub async fn remove() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
     let owner = &next_user_name();
     let db = &next_db_name();
-    server.user_login(ADMIN).await?;
+    server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
-    server.user_login(owner).await?;
+    server.api.user_login(owner, owner).await?;
     server.api.db_add(owner, db, DbKind::Mapped).await?;
     assert!(Path::new(&server.data_dir).join(owner).join(db).exists());
     let status = server.api.db_remove(owner, db).await?;
@@ -33,9 +33,9 @@ pub async fn remove_with_backup() -> Result<(), TestError> {
         .join(owner)
         .join("backups")
         .join(format!("{db}.bak"));
-    server.user_login(ADMIN).await?;
+    server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
-    server.user_login(owner).await?;
+    server.api.user_login(owner, owner).await?;
     server.api.db_add(owner, db, DbKind::Mapped).await?;
     server.api.db_backup(owner, db).await?;
     assert!(db_path.exists());
@@ -51,9 +51,9 @@ pub async fn remove_with_backup() -> Result<(), TestError> {
 pub async fn db_not_found() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
     let owner = &next_user_name();
-    server.user_login(ADMIN).await?;
+    server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
-    server.user_login(owner).await?;
+    server.api.user_login(owner, owner).await?;
     let status = server.api.db_remove(owner, "db").await.unwrap_err().status;
     assert_eq!(status, 404);
     Ok(())
@@ -65,7 +65,7 @@ pub async fn non_owner() -> Result<(), TestError> {
     let owner = &next_user_name();
     let user = &next_user_name();
     let db = &next_db_name();
-    server.user_login(ADMIN).await?;
+    server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.admin_user_add(user, user).await?;
     server.api.admin_db_add(owner, db, DbKind::Mapped).await?;
@@ -73,7 +73,7 @@ pub async fn non_owner() -> Result<(), TestError> {
         .api
         .admin_db_user_add(owner, db, user, DbUserRole::Admin)
         .await?;
-    server.user_login(user).await?;
+    server.api.user_login(user, user).await?;
     let status = server.api.db_remove(owner, db).await.unwrap_err().status;
     assert_eq!(status, 403);
     Ok(())

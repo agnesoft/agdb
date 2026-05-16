@@ -4,6 +4,10 @@ use axum::extract::State;
 use axum::middleware::Next;
 use axum::response::Response;
 use reqwest::StatusCode;
+// use std::future::Future;
+// use tokio::sync::broadcast::error::RecvError;
+// use tokio::time::Duration;
+// use tokio::time::timeout;
 
 const REDIRECT_PATHS: [&str; 14] = [
     "/add",
@@ -28,6 +32,30 @@ fn is_redirect_path(request: &Request) -> bool {
     REDIRECT_PATHS.iter().any(|pattern| path.ends_with(pattern))
         || (path.ends_with("/logout") && path.contains("/cluster/admin/user/"))
 }
+
+// async fn wait_for_local_execution<F, Fut>(
+//     notifier: &mut tokio::sync::broadcast::Receiver<u64>,
+//     expected_index: u64,
+//     mut is_executed: F,
+// ) where
+//     F: FnMut() -> Fut,
+//     Fut: Future<Output = bool>,
+// {
+//     loop {
+//         if is_executed().await {
+//             break;
+//         }
+
+//         match timeout(Duration::from_millis(100), notifier.recv()).await {
+//             Ok(Ok(index)) if index == expected_index && is_executed().await => break,
+//             Ok(Ok(index)) if index > expected_index && is_executed().await => break,
+//             Ok(Ok(_)) | Ok(Err(RecvError::Lagged(_))) | Err(_) => {}
+//             Ok(Err(RecvError::Closed)) => {
+//                 break;
+//             }
+//         }
+//     }
+// }
 
 pub(crate) async fn forward_to_leader(
     state: State<ServerState>,
@@ -54,10 +82,24 @@ pub(crate) async fn forward_to_leader(
                     && let Ok(commit_index) = commit_index.parse::<u64>()
                 {
                     while let Ok(value) = notifier.recv().await {
-                        if value == commit_index {
+                        if value >= commit_index {
                             break;
                         }
                     }
+                    // wait_for_local_execution(&mut notifier, commit_index, || async {
+                    //     matches!(
+                    //         state
+                    //             .cluster
+                    //             .raft
+                    //             .read()
+                    //             .await
+                    //             .storage
+                    //             .is_executed(commit_index)
+                    //             .await,
+                    //         Ok(true)
+                    //     )
+                    // })
+                    // .await;
                 }
 
                 return response;

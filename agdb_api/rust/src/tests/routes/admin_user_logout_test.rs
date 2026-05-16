@@ -10,11 +10,11 @@ use crate::test_server::test_error::TestError;
 pub async fn logout() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
     let user = &next_user_name();
-    server.user_login(ADMIN).await?;
+    server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(user, user).await?;
-    server.user_login(user).await?;
+    server.api.user_login(user, user).await?;
     let token = server.api.token.clone();
-    server.user_login(ADMIN).await?;
+    server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_logout(user).await?;
     server.api.token = token;
     let status = server.api.db_list().await.unwrap_err().status;
@@ -26,7 +26,7 @@ pub async fn logout() -> Result<(), TestError> {
 #[cfg_attr(feature = "api", agdb::test_def())]
 pub async fn unknown_user() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
-    server.user_login(ADMIN).await?;
+    server.api.user_login(ADMIN, ADMIN).await?;
     let status = server
         .api
         .admin_user_logout("unknown_user")
@@ -42,9 +42,9 @@ pub async fn unknown_user() -> Result<(), TestError> {
 pub async fn non_admin() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
     let user = &next_user_name();
-    server.user_login(ADMIN).await?;
+    server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(user, user).await?;
-    server.user_login(user).await?;
+    server.api.user_login(user, user).await?;
     let status = server.api.admin_user_logout(user).await.unwrap_err().status;
     assert_eq!(status, 401);
 
@@ -70,7 +70,7 @@ pub async fn logout_selected_session() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
     let user = &next_user_name();
 
-    server.user_login(ADMIN).await?;
+    server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(user, user).await?;
 
     let mut client1 = AgdbApi::new(

@@ -14,7 +14,7 @@ pub async fn list() -> Result<(), TestError> {
     let user = &next_user_name();
     let db1 = &next_db_name();
     let db2 = &next_db_name();
-    server.user_login(ADMIN).await?;
+    server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.admin_user_add(user, user).await?;
     server.api.admin_db_add(owner, db1, DbKind::Memory).await?;
@@ -23,7 +23,7 @@ pub async fn list() -> Result<(), TestError> {
         .api
         .admin_db_user_add(owner, db1, user, DbUserRole::Read)
         .await?;
-    server.user_login(user).await?;
+    server.api.user_login(user, user).await?;
     let (status, mut list) = server.api.db_list().await?;
     assert_eq!(status, 200);
     let mut expected = vec![
@@ -55,9 +55,9 @@ pub async fn with_backup() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
     let owner = &next_user_name();
     let db = &next_db_name();
-    server.user_login(ADMIN).await?;
+    server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
-    server.user_login(owner).await?;
+    server.api.user_login(owner, owner).await?;
     server.api.db_add(owner, db, DbKind::Mapped).await?;
     server.api.db_backup(owner, db).await?;
     let (status, list) = server.api.db_list().await?;
@@ -74,9 +74,9 @@ pub async fn with_backup() -> Result<(), TestError> {
 pub async fn list_empty() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
     let owner = &next_user_name();
-    server.user_login(ADMIN).await?;
+    server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
-    server.user_login(owner).await?;
+    server.api.user_login(owner, owner).await?;
     let (status, list) = server.api.db_list().await?;
     assert_eq!(status, 200);
     assert!(list.is_empty());

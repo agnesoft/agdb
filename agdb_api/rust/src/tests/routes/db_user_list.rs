@@ -13,10 +13,10 @@ pub async fn list() -> Result<(), TestError> {
     let owner = &next_user_name();
     let user = &next_user_name();
     let db = &next_db_name();
-    server.user_login(ADMIN).await?;
+    server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.admin_user_add(user, user).await?;
-    server.user_login(owner).await?;
+    server.api.user_login(owner, owner).await?;
     server.api.db_add(owner, db, DbKind::Mapped).await?;
     server
         .api
@@ -47,11 +47,11 @@ pub async fn non_db_user() -> Result<(), TestError> {
     let owner = &next_user_name();
     let user = &next_user_name();
     let db = &next_db_name();
-    server.user_login(ADMIN).await?;
+    server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.admin_user_add(user, user).await?;
     server.api.admin_db_add(owner, db, DbKind::Memory).await?;
-    server.user_login(user).await?;
+    server.api.user_login(user, user).await?;
     let status = server.api.db_user_list(owner, db).await.unwrap_err().status;
     assert_eq!(status, 404);
     Ok(())

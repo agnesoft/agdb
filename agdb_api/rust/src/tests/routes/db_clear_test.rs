@@ -14,9 +14,9 @@ pub async fn clear_backup() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
     let owner = &next_user_name();
     let db = &next_db_name();
-    server.user_login(ADMIN).await?;
+    server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
-    server.user_login(owner).await?;
+    server.api.user_login(owner, owner).await?;
     server.api.db_add(owner, db, DbKind::Mapped).await?;
     let queries = &[QueryBuilder::insert().nodes().count(1).query().into()];
     server.api.db_exec_mut(owner, db, queries).await?;
@@ -32,9 +32,9 @@ pub async fn clear_audit() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
     let owner = &next_user_name();
     let db = &next_db_name();
-    server.user_login(ADMIN).await?;
+    server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
-    server.user_login(owner).await?;
+    server.api.user_login(owner, owner).await?;
     server.api.db_add(owner, db, DbKind::Mapped).await?;
     let queries = &[QueryBuilder::insert().nodes().count(1).query().into()];
     server.api.db_exec_mut(owner, db, queries).await?;
@@ -53,9 +53,9 @@ pub async fn clear_db() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
     let owner = &next_user_name();
     let db = &next_db_name();
-    server.user_login(ADMIN).await?;
+    server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
-    server.user_login(owner).await?;
+    server.api.user_login(owner, owner).await?;
     server.api.db_add(owner, db, DbKind::Mapped).await?;
     let queries = &[QueryBuilder::insert().nodes().count(100).query().into()];
     server.api.db_exec_mut(owner, db, queries).await?;
@@ -72,9 +72,9 @@ pub async fn clear_db_memory() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
     let owner = &next_user_name();
     let db = &next_db_name();
-    server.user_login(ADMIN).await?;
+    server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
-    server.user_login(owner).await?;
+    server.api.user_login(owner, owner).await?;
     server.api.db_add(owner, db, DbKind::Memory).await?;
     let queries = &[QueryBuilder::insert().nodes().count(100).query().into()];
     server.api.db_exec_mut(owner, db, queries).await?;
@@ -91,9 +91,9 @@ pub async fn clear_db_memory_backup() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
     let owner = &next_user_name();
     let db = &next_db_name();
-    server.user_login(ADMIN).await?;
+    server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
-    server.user_login(owner).await?;
+    server.api.user_login(owner, owner).await?;
     server.api.db_add(owner, db, DbKind::Memory).await?;
     let db_path = Path::new(&server.data_dir).join(owner).join(db);
     assert!(!db_path.exists());
@@ -111,9 +111,9 @@ pub async fn clear_all() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
     let owner = &next_user_name();
     let db = &next_db_name();
-    server.user_login(ADMIN).await?;
+    server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
-    server.user_login(owner).await?;
+    server.api.user_login(owner, owner).await?;
     server.api.db_add(owner, db, DbKind::Mapped).await?;
     let queries = &[QueryBuilder::insert().nodes().count(100).query().into()];
     server.api.db_exec_mut(owner, db, queries).await?;
@@ -138,7 +138,7 @@ pub async fn non_admin() -> Result<(), TestError> {
     let owner = &next_user_name();
     let user = &next_user_name();
     let db = &next_db_name();
-    server.user_login(ADMIN).await?;
+    server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.admin_user_add(user, user).await?;
     server.api.admin_db_add(owner, db, DbKind::Memory).await?;
@@ -146,7 +146,7 @@ pub async fn non_admin() -> Result<(), TestError> {
         .api
         .admin_db_user_add(owner, db, user, DbUserRole::Write)
         .await?;
-    server.user_login(user).await?;
+    server.api.user_login(user, user).await?;
     let status = server
         .api
         .db_clear(owner, db, DbResource::All)

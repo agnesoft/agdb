@@ -12,9 +12,9 @@ pub async fn memory_to_mapped() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
     let owner = &next_user_name();
     let db = &next_db_name();
-    server.user_login(ADMIN).await?;
+    server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
-    server.user_login(owner).await?;
+    server.api.user_login(owner, owner).await?;
     server.api.db_add(owner, db, DbKind::Memory).await?;
     let status = server.api.db_convert(owner, db, DbKind::Mapped).await?;
     assert_eq!(status, 201);
@@ -29,9 +29,9 @@ pub async fn same_type() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
     let owner = &next_user_name();
     let db = &next_db_name();
-    server.user_login(ADMIN).await?;
+    server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
-    server.user_login(owner).await?;
+    server.api.user_login(owner, owner).await?;
     server.api.db_add(owner, db, DbKind::Memory).await?;
     let status = server.api.db_convert(owner, db, DbKind::Memory).await?;
     assert_eq!(status, 201);
@@ -46,9 +46,9 @@ pub async fn file_to_memory() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
     let owner = &next_user_name();
     let db = &next_db_name();
-    server.user_login(ADMIN).await?;
+    server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
-    server.user_login(owner).await?;
+    server.api.user_login(owner, owner).await?;
     server.api.db_add(owner, db, DbKind::File).await?;
     server
         .api
@@ -82,9 +82,9 @@ pub async fn db_not_found() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
     let owner = &next_user_name();
     let db = &next_db_name();
-    server.user_login(ADMIN).await?;
+    server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
-    server.user_login(owner).await?;
+    server.api.user_login(owner, owner).await?;
     let status = server
         .api
         .db_convert(owner, db, DbKind::Mapped)
@@ -102,7 +102,7 @@ pub async fn non_admin() -> Result<(), TestError> {
     let owner = &next_user_name();
     let user = &next_user_name();
     let db = &next_db_name();
-    server.user_login(ADMIN).await?;
+    server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.admin_user_add(user, user).await?;
     server.api.admin_db_add(owner, db, DbKind::Memory).await?;
@@ -110,7 +110,7 @@ pub async fn non_admin() -> Result<(), TestError> {
         .api
         .admin_db_user_add(owner, db, user, DbUserRole::Write)
         .await?;
-    server.user_login(user).await?;
+    server.api.user_login(user, user).await?;
     let status = server
         .api
         .db_convert(owner, db, DbKind::Mapped)

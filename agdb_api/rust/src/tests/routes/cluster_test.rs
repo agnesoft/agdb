@@ -745,33 +745,24 @@ pub async fn cluster_logout() -> Result<(), TestError> {
         client.token.clone()
     };
 
-    let leader_token = token.clone();
+    let mut leader: AgdbApi<ReqwestClient> = cluster.leader();
 
-    {
-        let mut leader = cluster.leader();
-        leader.token = leader_token;
-        leader.user_status().await?;
-    }
-
-    {
-        let mut client = cluster.follower();
-        client.token = token.clone();
-        client.cluster_user_logout().await?;
-    }
-
-    let mut leader = cluster.leader();
     leader.token = token.clone();
+    leader.user_status().await?;
+
+    let mut client = cluster.follower();
+    client.token = token.clone();
+    client.cluster_user_logout().await?;
+
     assert_eq!(leader.user_status().await.unwrap_err().status, 401);
-    let mut follower = cluster.follower();
-    follower.token = token;
-    assert_eq!(follower.user_status().await.unwrap_err().status, 401);
+    assert_eq!(client.user_status().await.unwrap_err().status, 401);
 
     Ok(())
 }
 
 #[cfg_attr(feature = "api", agdb::test_def())]
 pub async fn cluster_logout_all() -> Result<(), TestError> {
-    let cluster = TestCluster::new_private().await?;
+    let cluster = TestCluster::new().await?;
     let user = &next_user_name();
 
     let mut client = cluster.follower();
@@ -786,7 +777,7 @@ pub async fn cluster_logout_all() -> Result<(), TestError> {
     assert!(client.user_status().await?.1.login);
     let token2 = client.token.clone();
 
-    client.cluster_user_logout_all().await?;
+    client.cluster_user_logout_all(true).await?;
 
     let mut client = cluster.leader();
     client.token = token1;
@@ -820,7 +811,7 @@ pub async fn cluster_logout_all_keep_self() -> Result<(), TestError> {
     client1.cluster_user_login(user, user).await?;
     client2.cluster_user_login(user, user).await?;
 
-    client1.cluster_user_logout_all_with_self(false).await?;
+    client1.cluster_user_logout_all(false).await?;
 
     assert!(client1.user_status().await?.1.login);
     assert_eq!(client2.user_status().await.unwrap_err().status, 401);

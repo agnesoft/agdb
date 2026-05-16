@@ -14,7 +14,7 @@ pub async fn read_write() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
     let owner = &next_user_name();
     let db = &next_db_name();
-    server.user_login(ADMIN).await?;
+    server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.admin_db_add(owner, db, DbKind::Mapped).await?;
     let queries = &[
@@ -57,7 +57,7 @@ pub async fn read_only() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
     let owner = &next_user_name();
     let db = &next_db_name();
-    server.user_login(ADMIN).await?;
+    server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.admin_db_add(owner, db, DbKind::Mapped).await?;
     let queries = &[QueryBuilder::insert()
@@ -89,7 +89,7 @@ pub async fn query_error() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
     let owner = &next_user_name();
     let db = &next_db_name();
-    server.user_login(ADMIN).await?;
+    server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.admin_db_add(owner, db, DbKind::Mapped).await?;
     let queries = &[
@@ -113,7 +113,7 @@ pub async fn query_error() -> Result<(), TestError> {
 #[cfg_attr(feature = "api", agdb::test_def())]
 pub async fn db_not_found() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
-    server.user_login(ADMIN).await?;
+    server.api.user_login(ADMIN, ADMIN).await?;
     let status = server
         .api
         .admin_db_exec("owner", "db", &[])
@@ -128,9 +128,9 @@ pub async fn db_not_found() -> Result<(), TestError> {
 pub async fn non_admin() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
     let owner = &next_user_name();
-    server.user_login(ADMIN).await?;
+    server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
-    server.user_login(owner).await?;
+    server.api.user_login(owner, owner).await?;
     let status = server
         .api
         .admin_db_exec(owner, "db", &[])

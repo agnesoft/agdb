@@ -203,19 +203,17 @@ impl TestServerImpl {
             .current_dir(&dir)
             .kill_on_drop(true)
             .spawn()?;
-        let mut api = api_for_test(&api_address);
+        let api = api_for_test(&api_address);
 
         for _ in 0..RETRY_ATTEMPS {
             match api.status().await {
                 Ok(200) => {
-                    api.user_login(ADMIN, ADMIN).await?;
-
                     return Ok(Self {
                         dir,
                         data_dir,
                         address: api_address,
                         process: Some(TestServerProcess(process)),
-                        admin_token: api.token,
+                        admin_token: None,
                     });
                 }
                 Ok(status) => println!("Server at {api_address} is not ready: {status}"),
@@ -367,16 +365,6 @@ impl TestServer {
             data_dir: server.data_dir.clone(),
             server,
         })
-    }
-
-    pub async fn user_login(&mut self, user: &str) -> Result<(), TestError> {
-        if user == ADMIN {
-            self.api.token = self.server.admin_token.clone();
-            return Ok(());
-        }
-
-        self.api.user_login(user, user).await?;
-        Ok(())
     }
 
     pub fn url(&self, uri: &str) -> String {

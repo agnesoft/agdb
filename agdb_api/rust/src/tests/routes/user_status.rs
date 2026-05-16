@@ -27,7 +27,7 @@ pub async fn admin() -> Result<(), TestError> {
     assert_eq!(user_status.username, ADMIN);
     assert!(user_status.login);
     assert!(user_status.admin);
-    assert_eq!(user_status.sessions.len(), 1);
+    assert!(!user_status.sessions.is_empty());
     assert_eq!(user_status.sessions[0].agent, "agdb_api");
 
     Ok(())

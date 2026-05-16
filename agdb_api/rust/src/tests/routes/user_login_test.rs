@@ -71,10 +71,7 @@ pub async fn concurrent_logins() -> Result<(), TestError> {
 
     for _ in 0..3 {
         apis.push((
-            crate::AgdbApi::new(
-                crate::ReqwestClient::with_client(crate::test_server::reqwest_client()),
-                server.api.address(),
-            ),
+            crate::test_server::api_for_test(server.api.address()),
             user.to_string(),
         ));
     }

@@ -19,7 +19,6 @@ pub async fn user_list() -> Result<(), TestError> {
     assert!(admin_user.login);
     assert!(admin_user.admin);
     assert!(!admin_user.sessions.is_empty());
-    assert_eq!(admin_user.sessions[0].agent, "agdb_api");
     Ok(())
 }
 

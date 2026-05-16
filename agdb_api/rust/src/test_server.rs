@@ -76,6 +76,26 @@ pub fn next_db_name() -> String {
     format!("db{}", COUNTER.fetch_add(1, Ordering::SeqCst))
 }
 
+pub fn test_agent_name() -> String {
+    std::env::var("NEXTEST_TEST_NAME")
+        .ok()
+        .filter(|name| !name.is_empty())
+        .or_else(|| {
+            std::thread::current()
+                .name()
+                .map(std::string::ToString::to_string)
+                .filter(|name| !name.is_empty())
+        })
+        .unwrap_or_else(|| "agdb_api_test".to_string())
+}
+
+pub fn api_for_test(address: &str) -> AgdbApi<ReqwestClient> {
+    AgdbApi::new(
+        ReqwestClient::with_user_agent(reqwest_client(), test_agent_name()),
+        address,
+    )
+}
+
 #[cfg_attr(feature = "api", agdb::fn_def())]
 pub async fn wait_for_ready(api: &AgdbApi<ReqwestClient>) -> Result<(), TestError> {
     for _ in 0..RETRY_ATTEMPS {
@@ -183,7 +203,7 @@ impl TestServerImpl {
             .current_dir(&dir)
             .kill_on_drop(true)
             .spawn()?;
-        let mut api = AgdbApi::new(ReqwestClient::with_client(reqwest_client()), &api_address);
+        let mut api = api_for_test(&api_address);
 
         for _ in 0..RETRY_ATTEMPS {
             match api.status().await {
@@ -342,10 +362,7 @@ impl TestServer {
         };
 
         Ok(Self {
-            api: AgdbApi::new(
-                ReqwestClient::with_client(reqwest_client()),
-                &server.address,
-            ),
+            api: api_for_test(&server.address),
             dir: server.dir.clone(),
             data_dir: server.data_dir.clone(),
             server,

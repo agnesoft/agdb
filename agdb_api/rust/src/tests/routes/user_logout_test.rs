@@ -36,14 +36,8 @@ pub async fn logout_only_current_user_token() -> Result<(), TestError> {
     server.user_login(ADMIN).await?;
     server.api.admin_user_add(user, user).await?;
 
-    let mut client1 = AgdbApi::new(
-        ReqwestClient::with_client(reqwest_client()),
-        server.api.address(),
-    );
-    let mut client2 = AgdbApi::new(
-        ReqwestClient::with_client(reqwest_client()),
-        server.api.address(),
-    );
+    let mut client1 = crate::test_server::api_for_test(server.api.address());
+    let mut client2 = crate::test_server::api_for_test(server.api.address());
 
     client1.user_login(user, user).await?;
     client2.user_login(user, user).await?;

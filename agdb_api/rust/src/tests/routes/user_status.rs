@@ -15,20 +15,28 @@ pub async fn user() -> Result<(), TestError> {
     assert!(user_status.login);
     assert!(!user_status.admin);
     assert_eq!(user_status.sessions.len(), 1);
-    assert_eq!(user_status.sessions[0].agent, "agdb_api");
+    assert_eq!(
+        user_status.sessions[0].agent,
+        crate::test_server::test_agent_name()
+    );
     Ok(())
 }
 
 #[cfg_attr(feature = "api", agdb::test_def())]
 pub async fn admin() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
-    server.user_login(ADMIN).await?;
+    server.api.user_login(ADMIN, ADMIN).await?;
     let user_status = server.api.user_status().await?.1;
     assert_eq!(user_status.username, ADMIN);
     assert!(user_status.login);
     assert!(user_status.admin);
     assert!(!user_status.sessions.is_empty());
-    assert_eq!(user_status.sessions[0].agent, "agdb_api");
+    assert!(
+        user_status
+            .sessions
+            .iter()
+            .any(|session| session.agent == crate::test_server::test_agent_name())
+    );
 
     Ok(())
 }

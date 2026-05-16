@@ -3843,7 +3843,7 @@
       },
       "SelectEdgeCountQuery": {
         "type": "object",
-        "description": "Query to select number of edges of given node ids.\nAll of the ids must exist in the database. If any\nof the ids is not a node the result will be 0 (not\nan error).\n\nThe result is the sum of all selected edge counts.\nThe elements still contain individual\nedge counts in property `String(\"edge_count\")` as `u64`.\n\nNOTE: Self-referential edges are counted twice as if they\nwere coming from another edge. Therefore the edge count\nmight be greater than number of unique db elements.",
+        "description": "Query to select number of edges of given node ids.\nAll of the ids must exist in the database.\n\nThe result is the sum of all selected edge counts.\nThe elements still contain individual\nedge counts in property `String(\"edge_count\")` as `u64`.\nIf any of the element ids are edges their count will be 0.\n\nNOTE: Self-referential edges are counted twice as if they\nwere coming from another edge. Therefore the edge count\nmight be greater than number of unique db elements.",
         "required": [
           "ids",
           "from",

@@ -35,7 +35,7 @@ use \Agnesoft\AgdbApi\ObjectSerializer;
  * SelectEdgeCountQuery Class Doc Comment
  *
  * @category Class
- * @description Query to select number of edges of given node ids. All of the ids must exist in the database. If any of the ids is not a node the result will be 0 (not an error).  The result is the sum of all selected edge counts. The elements still contain individual edge counts in property &#x60;String(\&quot;edge_count\&quot;)&#x60; as &#x60;u64&#x60;.  NOTE: Self-referential edges are counted twice as if they were coming from another edge. Therefore the edge count might be greater than number of unique db elements.
+ * @description Query to select number of edges of given node ids. All of the ids must exist in the database.  The result is the sum of all selected edge counts. The elements still contain individual edge counts in property &#x60;String(\&quot;edge_count\&quot;)&#x60; as &#x60;u64&#x60;. If any of the element ids are edges their count will be 0.  NOTE: Self-referential edges are counted twice as if they were coming from another edge. Therefore the edge count might be greater than number of unique db elements.
  * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech

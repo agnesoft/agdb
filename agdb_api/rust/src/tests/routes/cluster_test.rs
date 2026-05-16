@@ -849,6 +849,6 @@ pub fn test_defs() -> Vec<agdb::type_def::Type> {
         __user_change_password_type_def(),
         __user_login_type_def(),
         __cluster_logout_type_def(),
-        __admin_cluster_logout_all_type_def(),
+        __cluster_logout_all_type_def(),
     ]
 }

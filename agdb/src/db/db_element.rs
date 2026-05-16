@@ -11,10 +11,10 @@ pub struct DbElement {
     /// Element id.
     pub id: DbId,
 
-    /// Origin node id or first outgoing edge id.
+    /// If edge: origin node id. If node: first outgoing edge id. Id == 0 if no outgoing edge.
     pub from: DbId,
 
-    /// Destination node id or first incoming edge id.
+    /// If edge: destination node id. If node: first incoming edge id. Id == 0 if no incoming edge.
     pub to: DbId,
 
     /// List of key-value pairs associated with the element.

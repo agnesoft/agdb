@@ -2780,7 +2780,7 @@
         "properties": {
           "from": {
             "$ref": "#/components/schemas/DbId",
-            "description": "Origin node id or first outgoing edge id."
+            "description": "If edge: origin node id. If node: first outgoing edge id. Id == 0 if no outgoing edge."
           },
           "id": {
             "$ref": "#/components/schemas/DbId",
@@ -2788,7 +2788,7 @@
           },
           "to": {
             "$ref": "#/components/schemas/DbId",
-            "description": "Destination node id or first incoming edge id."
+            "description": "If edge: destination node id. If node: first incoming edge id. Id == 0 if no incoming edge."
           },
           "values": {
             "type": "array",

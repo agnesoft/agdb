@@ -44,8 +44,8 @@ impl Query for SelectKeysQuery {
         for id in db_ids {
             result.elements.push(DbElement {
                 id,
-                from: db.from_id(id),
-                to: db.to_id(id),
+                from: db.from_id(id)?,
+                to: db.to_id(id)?,
                 values: db
                     .keys(id)?
                     .into_iter()

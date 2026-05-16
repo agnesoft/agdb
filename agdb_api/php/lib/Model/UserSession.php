@@ -59,7 +59,7 @@ class UserSession implements ModelInterface, ArrayAccess, \JsonSerializable
     protected static $openAPITypes = [
         'agent' => 'string',
         'created' => 'int',
-        'id' => 'int'
+        'id' => 'string'
     ];
 
     /**
@@ -72,7 +72,7 @@ class UserSession implements ModelInterface, ArrayAccess, \JsonSerializable
     protected static $openAPIFormats = [
         'agent' => null,
         'created' => 'int64',
-        'id' => 'int64'
+        'id' => null
     ];
 
     /**
@@ -378,7 +378,7 @@ class UserSession implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Gets id
      *
-     * @return int
+     * @return string
      */
     public function getId()
     {
@@ -388,7 +388,7 @@ class UserSession implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets id
      *
-     * @param int $id id
+     * @param string $id id
      *
      * @return self
      */

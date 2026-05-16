@@ -720,8 +720,8 @@ declare namespace Components {
             Comparison;
         }
         export type LogLevelFilter = "off" | "error" | "warn" | "info" | "debug" | "trace";
-        export interface LogoutAllQuery {
-            self?: boolean;
+        export interface LogoutQuery {
+            session?: string | null;
         }
         export interface OptimizeParam {
             shrink_to_fit?: boolean | null;
@@ -1469,7 +1469,7 @@ declare namespace Components {
         export interface UserSession {
             agent: string;
             created: number; // int64
-            id: number; // int64
+            id: string;
         }
         export interface UserStatus {
             admin: boolean;
@@ -1896,10 +1896,14 @@ declare namespace Paths {
     }
     namespace AdminUserLogout {
         namespace Parameters {
+            export type Session = string;
             export type Username = string;
         }
         export interface PathParameters {
             username: Parameters.Username;
+        }
+        export interface QueryParameters {
+            session?: Parameters.Session;
         }
         namespace Responses {
             export interface $201 {
@@ -1918,56 +1922,16 @@ declare namespace Paths {
             }
         }
     }
-    namespace AdminUserLogoutSession {
-        namespace Parameters {
-            export type Session = number; // int64
-            export type Username = string;
-        }
-        export interface PathParameters {
-            username: Parameters.Username;
-            session: Parameters.Session /* int64 */;
-        }
-        namespace Responses {
-            export interface $201 {
-            }
-            export interface $401 {
-            }
-            export interface $404 {
-            }
-        }
-    }
     namespace ClusterAdminUserLogout {
         namespace Parameters {
+            export type Session = string;
             export type Username = string;
         }
         export interface PathParameters {
             username: Parameters.Username;
         }
-        namespace Responses {
-            export interface $201 {
-            }
-            export interface $401 {
-            }
-            export interface $404 {
-            }
-        }
-    }
-    namespace ClusterAdminUserLogoutAll {
-        namespace Responses {
-            export interface $201 {
-            }
-            export interface $401 {
-            }
-        }
-    }
-    namespace ClusterAdminUserLogoutSession {
-        namespace Parameters {
-            export type Session = number; // int64
-            export type Username = string;
-        }
-        export interface PathParameters {
-            username: Parameters.Username;
-            session: Parameters.Session /* int64 */;
+        export interface QueryParameters {
+            session?: Parameters.Session;
         }
         namespace Responses {
             export interface $201 {
@@ -1992,40 +1956,16 @@ declare namespace Paths {
         }
     }
     namespace ClusterUserLogout {
-        namespace Responses {
-            export interface $201 {
-            }
-            export interface $401 {
-            }
-        }
-    }
-    namespace ClusterUserLogoutAll {
         namespace Parameters {
-            export type Self = boolean;
+            export type Session = string;
         }
         export interface QueryParameters {
-            self?: Parameters.Self;
+            session?: Parameters.Session;
         }
         namespace Responses {
             export interface $201 {
             }
             export interface $401 {
-            }
-        }
-    }
-    namespace ClusterUserLogoutSession {
-        namespace Parameters {
-            export type Session = number; // int64
-        }
-        export interface PathParameters {
-            session: Parameters.Session /* int64 */;
-        }
-        namespace Responses {
-            export interface $201 {
-            }
-            export interface $401 {
-            }
-            export interface $404 {
             }
         }
     }
@@ -2430,40 +2370,16 @@ declare namespace Paths {
         }
     }
     namespace UserLogout {
-        namespace Responses {
-            export interface $201 {
-            }
-            export interface $401 {
-            }
-        }
-    }
-    namespace UserLogoutAll {
         namespace Parameters {
-            export type Self = boolean;
+            export type Session = string;
         }
         export interface QueryParameters {
-            self?: Parameters.Self;
+            session?: Parameters.Session;
         }
         namespace Responses {
             export interface $201 {
             }
             export interface $401 {
-            }
-        }
-    }
-    namespace UserLogoutSession {
-        namespace Parameters {
-            export type Session = number; // int64
-        }
-        export interface PathParameters {
-            session: Parameters.Session /* int64 */;
-        }
-        namespace Responses {
-            export interface $201 {
-            }
-            export interface $401 {
-            }
-            export interface $404 {
             }
         }
     }
@@ -2682,42 +2598,18 @@ export interface OperationMethods {
    * admin_user_logout
    */
   'admin_user_logout'(
-    parameters?: Parameters<Paths.AdminUserLogout.PathParameters> | null,
+    parameters?: Parameters<Paths.AdminUserLogout.QueryParameters & Paths.AdminUserLogout.PathParameters> | null,
     data?: any,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.AdminUserLogout.Responses.$201>
   /**
-   * admin_user_logout_session
-   */
-  'admin_user_logout_session'(
-    parameters?: Parameters<Paths.AdminUserLogoutSession.PathParameters> | null,
-    data?: any,
-    config?: AxiosRequestConfig  
-  ): OperationResponse<Paths.AdminUserLogoutSession.Responses.$201>
-  /**
-   * cluster_admin_user_logout_all
-   */
-  'cluster_admin_user_logout_all'(
-    parameters?: Parameters<UnknownParamsObject> | null,
-    data?: any,
-    config?: AxiosRequestConfig  
-  ): OperationResponse<Paths.ClusterAdminUserLogoutAll.Responses.$201>
-  /**
    * cluster_admin_user_logout
    */
   'cluster_admin_user_logout'(
-    parameters?: Parameters<Paths.ClusterAdminUserLogout.PathParameters> | null,
+    parameters?: Parameters<Paths.ClusterAdminUserLogout.QueryParameters & Paths.ClusterAdminUserLogout.PathParameters> | null,
     data?: any,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.ClusterAdminUserLogout.Responses.$201>
-  /**
-   * cluster_admin_user_logout_session
-   */
-  'cluster_admin_user_logout_session'(
-    parameters?: Parameters<Paths.ClusterAdminUserLogoutSession.PathParameters> | null,
-    data?: any,
-    config?: AxiosRequestConfig  
-  ): OperationResponse<Paths.ClusterAdminUserLogoutSession.Responses.$201>
   /**
    * cluster_status
    */
@@ -2738,26 +2630,10 @@ export interface OperationMethods {
    * cluster_user_logout
    */
   'cluster_user_logout'(
-    parameters?: Parameters<UnknownParamsObject> | null,
+    parameters?: Parameters<Paths.ClusterUserLogout.QueryParameters> | null,
     data?: any,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.ClusterUserLogout.Responses.$201>
-  /**
-   * cluster_user_logout_session
-   */
-  'cluster_user_logout_session'(
-    parameters?: Parameters<Paths.ClusterUserLogoutSession.PathParameters> | null,
-    data?: any,
-    config?: AxiosRequestConfig  
-  ): OperationResponse<Paths.ClusterUserLogoutSession.Responses.$201>
-  /**
-   * cluster_user_logout_all
-   */
-  'cluster_user_logout_all'(
-    parameters?: Parameters<Paths.ClusterUserLogoutAll.QueryParameters> | null,
-    data?: any,
-    config?: AxiosRequestConfig  
-  ): OperationResponse<Paths.ClusterUserLogoutAll.Responses.$201>
   /**
    * db_list
    */
@@ -2922,26 +2798,10 @@ export interface OperationMethods {
    * user_logout
    */
   'user_logout'(
-    parameters?: Parameters<UnknownParamsObject> | null,
+    parameters?: Parameters<Paths.UserLogout.QueryParameters> | null,
     data?: any,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.UserLogout.Responses.$201>
-  /**
-   * user_logout_session
-   */
-  'user_logout_session'(
-    parameters?: Parameters<Paths.UserLogoutSession.PathParameters> | null,
-    data?: any,
-    config?: AxiosRequestConfig  
-  ): OperationResponse<Paths.UserLogoutSession.Responses.$201>
-  /**
-   * user_logout_all
-   */
-  'user_logout_all'(
-    parameters?: Parameters<Paths.UserLogoutAll.QueryParameters> | null,
-    data?: any,
-    config?: AxiosRequestConfig  
-  ): OperationResponse<Paths.UserLogoutAll.Responses.$201>
   /**
    * user_status
    */
@@ -3208,50 +3068,20 @@ export interface PathsDictionary {
      * admin_user_logout
      */
     'post'(
-      parameters?: Parameters<Paths.AdminUserLogout.PathParameters> | null,
+      parameters?: Parameters<Paths.AdminUserLogout.QueryParameters & Paths.AdminUserLogout.PathParameters> | null,
       data?: any,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AdminUserLogout.Responses.$201>
-  }
-  ['/api/v1/admin/user/{username}/logout/{session}']: {
-    /**
-     * admin_user_logout_session
-     */
-    'delete'(
-      parameters?: Parameters<Paths.AdminUserLogoutSession.PathParameters> | null,
-      data?: any,
-      config?: AxiosRequestConfig  
-    ): OperationResponse<Paths.AdminUserLogoutSession.Responses.$201>
-  }
-  ['/api/v1/cluster/admin/user/logout_all']: {
-    /**
-     * cluster_admin_user_logout_all
-     */
-    'post'(
-      parameters?: Parameters<UnknownParamsObject> | null,
-      data?: any,
-      config?: AxiosRequestConfig  
-    ): OperationResponse<Paths.ClusterAdminUserLogoutAll.Responses.$201>
   }
   ['/api/v1/cluster/admin/user/{username}/logout']: {
     /**
      * cluster_admin_user_logout
      */
     'post'(
-      parameters?: Parameters<Paths.ClusterAdminUserLogout.PathParameters> | null,
+      parameters?: Parameters<Paths.ClusterAdminUserLogout.QueryParameters & Paths.ClusterAdminUserLogout.PathParameters> | null,
       data?: any,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.ClusterAdminUserLogout.Responses.$201>
-  }
-  ['/api/v1/cluster/admin/user/{username}/logout/{session}']: {
-    /**
-     * cluster_admin_user_logout_session
-     */
-    'delete'(
-      parameters?: Parameters<Paths.ClusterAdminUserLogoutSession.PathParameters> | null,
-      data?: any,
-      config?: AxiosRequestConfig  
-    ): OperationResponse<Paths.ClusterAdminUserLogoutSession.Responses.$201>
   }
   ['/api/v1/cluster/status']: {
     /**
@@ -3278,30 +3108,10 @@ export interface PathsDictionary {
      * cluster_user_logout
      */
     'post'(
-      parameters?: Parameters<UnknownParamsObject> | null,
+      parameters?: Parameters<Paths.ClusterUserLogout.QueryParameters> | null,
       data?: any,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.ClusterUserLogout.Responses.$201>
-  }
-  ['/api/v1/cluster/user/logout/{session}']: {
-    /**
-     * cluster_user_logout_session
-     */
-    'delete'(
-      parameters?: Parameters<Paths.ClusterUserLogoutSession.PathParameters> | null,
-      data?: any,
-      config?: AxiosRequestConfig  
-    ): OperationResponse<Paths.ClusterUserLogoutSession.Responses.$201>
-  }
-  ['/api/v1/cluster/user/logout_all']: {
-    /**
-     * cluster_user_logout_all
-     */
-    'post'(
-      parameters?: Parameters<Paths.ClusterUserLogoutAll.QueryParameters> | null,
-      data?: any,
-      config?: AxiosRequestConfig  
-    ): OperationResponse<Paths.ClusterUserLogoutAll.Responses.$201>
   }
   ['/api/v1/db/list']: {
     /**
@@ -3508,30 +3318,10 @@ export interface PathsDictionary {
      * user_logout
      */
     'post'(
-      parameters?: Parameters<UnknownParamsObject> | null,
+      parameters?: Parameters<Paths.UserLogout.QueryParameters> | null,
       data?: any,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.UserLogout.Responses.$201>
-  }
-  ['/api/v1/user/logout/{session}']: {
-    /**
-     * user_logout_session
-     */
-    'delete'(
-      parameters?: Parameters<Paths.UserLogoutSession.PathParameters> | null,
-      data?: any,
-      config?: AxiosRequestConfig  
-    ): OperationResponse<Paths.UserLogoutSession.Responses.$201>
-  }
-  ['/api/v1/user/logout_all']: {
-    /**
-     * user_logout_all
-     */
-    'post'(
-      parameters?: Parameters<Paths.UserLogoutAll.QueryParameters> | null,
-      data?: any,
-      config?: AxiosRequestConfig  
-    ): OperationResponse<Paths.UserLogoutAll.Responses.$201>
   }
   ['/api/v1/user/status']: {
     /**
@@ -3573,7 +3363,7 @@ export type InsertNodesQuery = Components.Schemas.InsertNodesQuery;
 export type InsertValuesQuery = Components.Schemas.InsertValuesQuery;
 export type KeyValueComparison = Components.Schemas.KeyValueComparison;
 export type LogLevelFilter = Components.Schemas.LogLevelFilter;
-export type LogoutAllQuery = Components.Schemas.LogoutAllQuery;
+export type LogoutQuery = Components.Schemas.LogoutQuery;
 export type OptimizeParam = Components.Schemas.OptimizeParam;
 export type Queries = Components.Schemas.Queries;
 export type QueriesResults = Components.Schemas.QueriesResults;

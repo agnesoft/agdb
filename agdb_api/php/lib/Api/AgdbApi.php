@@ -149,16 +149,7 @@ class AgdbApi
         'adminUserLogoutAll' => [
             'application/json',
         ],
-        'adminUserLogoutSession' => [
-            'application/json',
-        ],
         'clusterAdminUserLogout' => [
-            'application/json',
-        ],
-        'clusterAdminUserLogoutAll' => [
-            'application/json',
-        ],
-        'clusterAdminUserLogoutSession' => [
             'application/json',
         ],
         'clusterStatus' => [
@@ -168,12 +159,6 @@ class AgdbApi
             'application/json',
         ],
         'clusterUserLogout' => [
-            'application/json',
-        ],
-        'clusterUserLogoutAll' => [
-            'application/json',
-        ],
-        'clusterUserLogoutSession' => [
             'application/json',
         ],
         'dbAdd' => [
@@ -240,12 +225,6 @@ class AgdbApi
             'application/json',
         ],
         'userLogout' => [
-            'application/json',
-        ],
-        'userLogoutAll' => [
-            'application/json',
-        ],
-        'userLogoutSession' => [
             'application/json',
         ],
         'userStatus' => [
@@ -6264,30 +6243,32 @@ class AgdbApi
      * Operation adminUserLogout
      *
      * @param  string $username user name (required)
+     * @param  string|null $session session (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminUserLogout'] to see the possible values for this operation
      *
      * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
      * @return void
      */
-    public function adminUserLogout($username, string $contentType = self::contentTypes['adminUserLogout'][0])
+    public function adminUserLogout($username, $session = null, string $contentType = self::contentTypes['adminUserLogout'][0])
     {
-        $this->adminUserLogoutWithHttpInfo($username, $contentType);
+        $this->adminUserLogoutWithHttpInfo($username, $session, $contentType);
     }
 
     /**
      * Operation adminUserLogoutWithHttpInfo
      *
      * @param  string $username user name (required)
+     * @param  string|null $session (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminUserLogout'] to see the possible values for this operation
      *
      * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
      * @return array of null, HTTP status code, HTTP response headers (array of strings)
      */
-    public function adminUserLogoutWithHttpInfo($username, string $contentType = self::contentTypes['adminUserLogout'][0])
+    public function adminUserLogoutWithHttpInfo($username, $session = null, string $contentType = self::contentTypes['adminUserLogout'][0])
     {
-        $request = $this->adminUserLogoutRequest($username, $contentType);
+        $request = $this->adminUserLogoutRequest($username, $session, $contentType);
 
         try {
             $options = $this->createHttpClientOption();
@@ -6326,14 +6307,15 @@ class AgdbApi
      * Operation adminUserLogoutAsync
      *
      * @param  string $username user name (required)
+     * @param  string|null $session (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminUserLogout'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Promise\PromiseInterface
      */
-    public function adminUserLogoutAsync($username, string $contentType = self::contentTypes['adminUserLogout'][0])
+    public function adminUserLogoutAsync($username, $session = null, string $contentType = self::contentTypes['adminUserLogout'][0])
     {
-        return $this->adminUserLogoutAsyncWithHttpInfo($username, $contentType)
+        return $this->adminUserLogoutAsyncWithHttpInfo($username, $session, $contentType)
             ->then(
                 function ($response) {
                     return $response[0];
@@ -6345,15 +6327,16 @@ class AgdbApi
      * Operation adminUserLogoutAsyncWithHttpInfo
      *
      * @param  string $username user name (required)
+     * @param  string|null $session (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminUserLogout'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Promise\PromiseInterface
      */
-    public function adminUserLogoutAsyncWithHttpInfo($username, string $contentType = self::contentTypes['adminUserLogout'][0])
+    public function adminUserLogoutAsyncWithHttpInfo($username, $session = null, string $contentType = self::contentTypes['adminUserLogout'][0])
     {
         $returnType = '';
-        $request = $this->adminUserLogoutRequest($username, $contentType);
+        $request = $this->adminUserLogoutRequest($username, $session, $contentType);
 
         return $this->client
             ->sendAsync($request, $this->createHttpClientOption())
@@ -6382,12 +6365,13 @@ class AgdbApi
      * Create request for operation 'adminUserLogout'
      *
      * @param  string $username user name (required)
+     * @param  string|null $session (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminUserLogout'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Psr7\Request
      */
-    public function adminUserLogoutRequest($username, string $contentType = self::contentTypes['adminUserLogout'][0])
+    public function adminUserLogoutRequest($username, $session = null, string $contentType = self::contentTypes['adminUserLogout'][0])
     {
 
         // verify the required parameter 'username' is set
@@ -6398,6 +6382,7 @@ class AgdbApi
         }
 
 
+
         $resourcePath = '/api/v1/admin/user/{username}/logout';
         $formParams = [];
         $queryParams = [];
@@ -6405,6 +6390,15 @@ class AgdbApi
         $httpBody = '';
         $multipart = false;
 
+        // query params
+        $queryParams = array_merge($queryParams, ObjectSerializer::toQueryValue(
+            $session,
+            'session', // param base name
+            'string', // openApiType
+            'form', // style
+            true, // explode
+            false // required
+        ) ?? []);
 
 
         // path params
@@ -6669,267 +6663,35 @@ class AgdbApi
     }
 
     /**
-     * Operation adminUserLogoutSession
-     *
-     * @param  string $username user name (required)
-     * @param  int $session session id (required)
-     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminUserLogoutSession'] to see the possible values for this operation
-     *
-     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
-     * @throws \InvalidArgumentException
-     * @return void
-     */
-    public function adminUserLogoutSession($username, $session, string $contentType = self::contentTypes['adminUserLogoutSession'][0])
-    {
-        $this->adminUserLogoutSessionWithHttpInfo($username, $session, $contentType);
-    }
-
-    /**
-     * Operation adminUserLogoutSessionWithHttpInfo
-     *
-     * @param  string $username user name (required)
-     * @param  int $session session id (required)
-     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminUserLogoutSession'] to see the possible values for this operation
-     *
-     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
-     * @throws \InvalidArgumentException
-     * @return array of null, HTTP status code, HTTP response headers (array of strings)
-     */
-    public function adminUserLogoutSessionWithHttpInfo($username, $session, string $contentType = self::contentTypes['adminUserLogoutSession'][0])
-    {
-        $request = $this->adminUserLogoutSessionRequest($username, $session, $contentType);
-
-        try {
-            $options = $this->createHttpClientOption();
-            try {
-                $response = $this->client->send($request, $options);
-            } catch (RequestException $e) {
-                throw new ApiException(
-                    "[{$e->getCode()}] {$e->getMessage()}",
-                    (int) $e->getCode(),
-                    $e->getResponse() ? $e->getResponse()->getHeaders() : null,
-                    $e->getResponse() ? (string) $e->getResponse()->getBody() : null
-                );
-            } catch (ConnectException $e) {
-                throw new ApiException(
-                    "[{$e->getCode()}] {$e->getMessage()}",
-                    (int) $e->getCode(),
-                    null,
-                    null
-                );
-            }
-
-            $statusCode = $response->getStatusCode();
-
-
-            return [null, $statusCode, $response->getHeaders()];
-        } catch (ApiException $e) {
-            switch ($e->getCode()) {
-            }
-        
-
-            throw $e;
-        }
-    }
-
-    /**
-     * Operation adminUserLogoutSessionAsync
-     *
-     * @param  string $username user name (required)
-     * @param  int $session session id (required)
-     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminUserLogoutSession'] to see the possible values for this operation
-     *
-     * @throws \InvalidArgumentException
-     * @return \GuzzleHttp\Promise\PromiseInterface
-     */
-    public function adminUserLogoutSessionAsync($username, $session, string $contentType = self::contentTypes['adminUserLogoutSession'][0])
-    {
-        return $this->adminUserLogoutSessionAsyncWithHttpInfo($username, $session, $contentType)
-            ->then(
-                function ($response) {
-                    return $response[0];
-                }
-            );
-    }
-
-    /**
-     * Operation adminUserLogoutSessionAsyncWithHttpInfo
-     *
-     * @param  string $username user name (required)
-     * @param  int $session session id (required)
-     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminUserLogoutSession'] to see the possible values for this operation
-     *
-     * @throws \InvalidArgumentException
-     * @return \GuzzleHttp\Promise\PromiseInterface
-     */
-    public function adminUserLogoutSessionAsyncWithHttpInfo($username, $session, string $contentType = self::contentTypes['adminUserLogoutSession'][0])
-    {
-        $returnType = '';
-        $request = $this->adminUserLogoutSessionRequest($username, $session, $contentType);
-
-        return $this->client
-            ->sendAsync($request, $this->createHttpClientOption())
-            ->then(
-                function ($response) use ($returnType) {
-                    return [null, $response->getStatusCode(), $response->getHeaders()];
-                },
-                function ($exception) {
-                    $response = $exception->getResponse();
-                    $statusCode = $response->getStatusCode();
-                    throw new ApiException(
-                        sprintf(
-                            '[%d] Error connecting to the API (%s)',
-                            $statusCode,
-                            $exception->getRequest()->getUri()
-                        ),
-                        $statusCode,
-                        $response->getHeaders(),
-                        (string) $response->getBody()
-                    );
-                }
-            );
-    }
-
-    /**
-     * Create request for operation 'adminUserLogoutSession'
-     *
-     * @param  string $username user name (required)
-     * @param  int $session session id (required)
-     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminUserLogoutSession'] to see the possible values for this operation
-     *
-     * @throws \InvalidArgumentException
-     * @return \GuzzleHttp\Psr7\Request
-     */
-    public function adminUserLogoutSessionRequest($username, $session, string $contentType = self::contentTypes['adminUserLogoutSession'][0])
-    {
-
-        // verify the required parameter 'username' is set
-        if ($username === null || (is_array($username) && count($username) === 0)) {
-            throw new \InvalidArgumentException(
-                'Missing the required parameter $username when calling adminUserLogoutSession'
-            );
-        }
-
-        // verify the required parameter 'session' is set
-        if ($session === null || (is_array($session) && count($session) === 0)) {
-            throw new \InvalidArgumentException(
-                'Missing the required parameter $session when calling adminUserLogoutSession'
-            );
-        }
-
-
-        $resourcePath = '/api/v1/admin/user/{username}/logout/{session}';
-        $formParams = [];
-        $queryParams = [];
-        $headerParams = [];
-        $httpBody = '';
-        $multipart = false;
-
-
-
-        // path params
-        if ($username !== null) {
-            $resourcePath = str_replace(
-                '{username}',
-                ObjectSerializer::toPathValue($username),
-                $resourcePath
-            );
-        }
-        // path params
-        if ($session !== null) {
-            $resourcePath = str_replace(
-                '{session}',
-                ObjectSerializer::toPathValue($session),
-                $resourcePath
-            );
-        }
-
-
-        $headers = $this->headerSelector->selectHeaders(
-            [],
-            $contentType,
-            $multipart
-        );
-
-        // for model (json/xml)
-        if (count($formParams) > 0) {
-            if ($multipart) {
-                $multipartContents = [];
-                foreach ($formParams as $formParamName => $formParamValue) {
-                    $formParamValueItems = is_array($formParamValue) ? $formParamValue : [$formParamValue];
-                    foreach ($formParamValueItems as $formParamValueItem) {
-                        $multipartContents[] = [
-                            'name' => $formParamName,
-                            'contents' => $formParamValueItem
-                        ];
-                    }
-                }
-                // for HTTP post (form)
-                $httpBody = new MultipartStream($multipartContents);
-
-            } elseif (stripos($headers['Content-Type'], 'application/json') !== false) {
-                # if Content-Type contains "application/json", json_encode the form parameters
-                $httpBody = \GuzzleHttp\Utils::jsonEncode($formParams);
-            } else {
-                // for HTTP post (form)
-                $httpBody = ObjectSerializer::buildQuery($formParams);
-            }
-        }
-
-        // this endpoint requires Bearer authentication (access token)
-        if (!empty($this->config->getAccessToken())) {
-            $headers['Authorization'] = 'Bearer ' . $this->config->getAccessToken();
-        }
-
-        $defaultHeaders = [];
-        if ($this->config->getUserAgent()) {
-            $defaultHeaders['User-Agent'] = $this->config->getUserAgent();
-        }
-
-        $headers = array_merge(
-            $defaultHeaders,
-            $headerParams,
-            $headers
-        );
-
-        $operationHost = $this->config->getHost();
-        $query = ObjectSerializer::buildQuery($queryParams);
-        return new Request(
-            'DELETE',
-            $operationHost . $resourcePath . ($query ? "?{$query}" : ''),
-            $headers,
-            $httpBody
-        );
-    }
-
-    /**
      * Operation clusterAdminUserLogout
      *
      * @param  string $username user name (required)
+     * @param  string|null $session session (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['clusterAdminUserLogout'] to see the possible values for this operation
      *
      * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
      * @return void
      */
-    public function clusterAdminUserLogout($username, string $contentType = self::contentTypes['clusterAdminUserLogout'][0])
+    public function clusterAdminUserLogout($username, $session = null, string $contentType = self::contentTypes['clusterAdminUserLogout'][0])
     {
-        $this->clusterAdminUserLogoutWithHttpInfo($username, $contentType);
+        $this->clusterAdminUserLogoutWithHttpInfo($username, $session, $contentType);
     }
 
     /**
      * Operation clusterAdminUserLogoutWithHttpInfo
      *
      * @param  string $username user name (required)
+     * @param  string|null $session (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['clusterAdminUserLogout'] to see the possible values for this operation
      *
      * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
      * @return array of null, HTTP status code, HTTP response headers (array of strings)
      */
-    public function clusterAdminUserLogoutWithHttpInfo($username, string $contentType = self::contentTypes['clusterAdminUserLogout'][0])
+    public function clusterAdminUserLogoutWithHttpInfo($username, $session = null, string $contentType = self::contentTypes['clusterAdminUserLogout'][0])
     {
-        $request = $this->clusterAdminUserLogoutRequest($username, $contentType);
+        $request = $this->clusterAdminUserLogoutRequest($username, $session, $contentType);
 
         try {
             $options = $this->createHttpClientOption();
@@ -6968,14 +6730,15 @@ class AgdbApi
      * Operation clusterAdminUserLogoutAsync
      *
      * @param  string $username user name (required)
+     * @param  string|null $session (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['clusterAdminUserLogout'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Promise\PromiseInterface
      */
-    public function clusterAdminUserLogoutAsync($username, string $contentType = self::contentTypes['clusterAdminUserLogout'][0])
+    public function clusterAdminUserLogoutAsync($username, $session = null, string $contentType = self::contentTypes['clusterAdminUserLogout'][0])
     {
-        return $this->clusterAdminUserLogoutAsyncWithHttpInfo($username, $contentType)
+        return $this->clusterAdminUserLogoutAsyncWithHttpInfo($username, $session, $contentType)
             ->then(
                 function ($response) {
                     return $response[0];
@@ -6987,15 +6750,16 @@ class AgdbApi
      * Operation clusterAdminUserLogoutAsyncWithHttpInfo
      *
      * @param  string $username user name (required)
+     * @param  string|null $session (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['clusterAdminUserLogout'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Promise\PromiseInterface
      */
-    public function clusterAdminUserLogoutAsyncWithHttpInfo($username, string $contentType = self::contentTypes['clusterAdminUserLogout'][0])
+    public function clusterAdminUserLogoutAsyncWithHttpInfo($username, $session = null, string $contentType = self::contentTypes['clusterAdminUserLogout'][0])
     {
         $returnType = '';
-        $request = $this->clusterAdminUserLogoutRequest($username, $contentType);
+        $request = $this->clusterAdminUserLogoutRequest($username, $session, $contentType);
 
         return $this->client
             ->sendAsync($request, $this->createHttpClientOption())
@@ -7024,12 +6788,13 @@ class AgdbApi
      * Create request for operation 'clusterAdminUserLogout'
      *
      * @param  string $username user name (required)
+     * @param  string|null $session (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['clusterAdminUserLogout'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Psr7\Request
      */
-    public function clusterAdminUserLogoutRequest($username, string $contentType = self::contentTypes['clusterAdminUserLogout'][0])
+    public function clusterAdminUserLogoutRequest($username, $session = null, string $contentType = self::contentTypes['clusterAdminUserLogout'][0])
     {
 
         // verify the required parameter 'username' is set
@@ -7040,6 +6805,7 @@ class AgdbApi
         }
 
 
+
         $resourcePath = '/api/v1/cluster/admin/user/{username}/logout';
         $formParams = [];
         $queryParams = [];
@@ -7047,6 +6813,15 @@ class AgdbApi
         $httpBody = '';
         $multipart = false;
 
+        // query params
+        $queryParams = array_merge($queryParams, ObjectSerializer::toQueryValue(
+            $session,
+            'session', // param base name
+            'string', // openApiType
+            'form', // style
+            true, // explode
+            false // required
+        ) ?? []);
 
 
         // path params
@@ -7110,434 +6885,6 @@ class AgdbApi
         $query = ObjectSerializer::buildQuery($queryParams);
         return new Request(
             'POST',
-            $operationHost . $resourcePath . ($query ? "?{$query}" : ''),
-            $headers,
-            $httpBody
-        );
-    }
-
-    /**
-     * Operation clusterAdminUserLogoutAll
-     *
-     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['clusterAdminUserLogoutAll'] to see the possible values for this operation
-     *
-     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
-     * @throws \InvalidArgumentException
-     * @return void
-     */
-    public function clusterAdminUserLogoutAll(string $contentType = self::contentTypes['clusterAdminUserLogoutAll'][0])
-    {
-        $this->clusterAdminUserLogoutAllWithHttpInfo($contentType);
-    }
-
-    /**
-     * Operation clusterAdminUserLogoutAllWithHttpInfo
-     *
-     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['clusterAdminUserLogoutAll'] to see the possible values for this operation
-     *
-     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
-     * @throws \InvalidArgumentException
-     * @return array of null, HTTP status code, HTTP response headers (array of strings)
-     */
-    public function clusterAdminUserLogoutAllWithHttpInfo(string $contentType = self::contentTypes['clusterAdminUserLogoutAll'][0])
-    {
-        $request = $this->clusterAdminUserLogoutAllRequest($contentType);
-
-        try {
-            $options = $this->createHttpClientOption();
-            try {
-                $response = $this->client->send($request, $options);
-            } catch (RequestException $e) {
-                throw new ApiException(
-                    "[{$e->getCode()}] {$e->getMessage()}",
-                    (int) $e->getCode(),
-                    $e->getResponse() ? $e->getResponse()->getHeaders() : null,
-                    $e->getResponse() ? (string) $e->getResponse()->getBody() : null
-                );
-            } catch (ConnectException $e) {
-                throw new ApiException(
-                    "[{$e->getCode()}] {$e->getMessage()}",
-                    (int) $e->getCode(),
-                    null,
-                    null
-                );
-            }
-
-            $statusCode = $response->getStatusCode();
-
-
-            return [null, $statusCode, $response->getHeaders()];
-        } catch (ApiException $e) {
-            switch ($e->getCode()) {
-            }
-        
-
-            throw $e;
-        }
-    }
-
-    /**
-     * Operation clusterAdminUserLogoutAllAsync
-     *
-     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['clusterAdminUserLogoutAll'] to see the possible values for this operation
-     *
-     * @throws \InvalidArgumentException
-     * @return \GuzzleHttp\Promise\PromiseInterface
-     */
-    public function clusterAdminUserLogoutAllAsync(string $contentType = self::contentTypes['clusterAdminUserLogoutAll'][0])
-    {
-        return $this->clusterAdminUserLogoutAllAsyncWithHttpInfo($contentType)
-            ->then(
-                function ($response) {
-                    return $response[0];
-                }
-            );
-    }
-
-    /**
-     * Operation clusterAdminUserLogoutAllAsyncWithHttpInfo
-     *
-     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['clusterAdminUserLogoutAll'] to see the possible values for this operation
-     *
-     * @throws \InvalidArgumentException
-     * @return \GuzzleHttp\Promise\PromiseInterface
-     */
-    public function clusterAdminUserLogoutAllAsyncWithHttpInfo(string $contentType = self::contentTypes['clusterAdminUserLogoutAll'][0])
-    {
-        $returnType = '';
-        $request = $this->clusterAdminUserLogoutAllRequest($contentType);
-
-        return $this->client
-            ->sendAsync($request, $this->createHttpClientOption())
-            ->then(
-                function ($response) use ($returnType) {
-                    return [null, $response->getStatusCode(), $response->getHeaders()];
-                },
-                function ($exception) {
-                    $response = $exception->getResponse();
-                    $statusCode = $response->getStatusCode();
-                    throw new ApiException(
-                        sprintf(
-                            '[%d] Error connecting to the API (%s)',
-                            $statusCode,
-                            $exception->getRequest()->getUri()
-                        ),
-                        $statusCode,
-                        $response->getHeaders(),
-                        (string) $response->getBody()
-                    );
-                }
-            );
-    }
-
-    /**
-     * Create request for operation 'clusterAdminUserLogoutAll'
-     *
-     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['clusterAdminUserLogoutAll'] to see the possible values for this operation
-     *
-     * @throws \InvalidArgumentException
-     * @return \GuzzleHttp\Psr7\Request
-     */
-    public function clusterAdminUserLogoutAllRequest(string $contentType = self::contentTypes['clusterAdminUserLogoutAll'][0])
-    {
-
-
-        $resourcePath = '/api/v1/cluster/admin/user/logout_all';
-        $formParams = [];
-        $queryParams = [];
-        $headerParams = [];
-        $httpBody = '';
-        $multipart = false;
-
-
-
-
-
-        $headers = $this->headerSelector->selectHeaders(
-            [],
-            $contentType,
-            $multipart
-        );
-
-        // for model (json/xml)
-        if (count($formParams) > 0) {
-            if ($multipart) {
-                $multipartContents = [];
-                foreach ($formParams as $formParamName => $formParamValue) {
-                    $formParamValueItems = is_array($formParamValue) ? $formParamValue : [$formParamValue];
-                    foreach ($formParamValueItems as $formParamValueItem) {
-                        $multipartContents[] = [
-                            'name' => $formParamName,
-                            'contents' => $formParamValueItem
-                        ];
-                    }
-                }
-                // for HTTP post (form)
-                $httpBody = new MultipartStream($multipartContents);
-
-            } elseif (stripos($headers['Content-Type'], 'application/json') !== false) {
-                # if Content-Type contains "application/json", json_encode the form parameters
-                $httpBody = \GuzzleHttp\Utils::jsonEncode($formParams);
-            } else {
-                // for HTTP post (form)
-                $httpBody = ObjectSerializer::buildQuery($formParams);
-            }
-        }
-
-        // this endpoint requires Bearer authentication (access token)
-        if (!empty($this->config->getAccessToken())) {
-            $headers['Authorization'] = 'Bearer ' . $this->config->getAccessToken();
-        }
-
-        $defaultHeaders = [];
-        if ($this->config->getUserAgent()) {
-            $defaultHeaders['User-Agent'] = $this->config->getUserAgent();
-        }
-
-        $headers = array_merge(
-            $defaultHeaders,
-            $headerParams,
-            $headers
-        );
-
-        $operationHost = $this->config->getHost();
-        $query = ObjectSerializer::buildQuery($queryParams);
-        return new Request(
-            'POST',
-            $operationHost . $resourcePath . ($query ? "?{$query}" : ''),
-            $headers,
-            $httpBody
-        );
-    }
-
-    /**
-     * Operation clusterAdminUserLogoutSession
-     *
-     * @param  string $username user name (required)
-     * @param  int $session session id (required)
-     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['clusterAdminUserLogoutSession'] to see the possible values for this operation
-     *
-     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
-     * @throws \InvalidArgumentException
-     * @return void
-     */
-    public function clusterAdminUserLogoutSession($username, $session, string $contentType = self::contentTypes['clusterAdminUserLogoutSession'][0])
-    {
-        $this->clusterAdminUserLogoutSessionWithHttpInfo($username, $session, $contentType);
-    }
-
-    /**
-     * Operation clusterAdminUserLogoutSessionWithHttpInfo
-     *
-     * @param  string $username user name (required)
-     * @param  int $session session id (required)
-     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['clusterAdminUserLogoutSession'] to see the possible values for this operation
-     *
-     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
-     * @throws \InvalidArgumentException
-     * @return array of null, HTTP status code, HTTP response headers (array of strings)
-     */
-    public function clusterAdminUserLogoutSessionWithHttpInfo($username, $session, string $contentType = self::contentTypes['clusterAdminUserLogoutSession'][0])
-    {
-        $request = $this->clusterAdminUserLogoutSessionRequest($username, $session, $contentType);
-
-        try {
-            $options = $this->createHttpClientOption();
-            try {
-                $response = $this->client->send($request, $options);
-            } catch (RequestException $e) {
-                throw new ApiException(
-                    "[{$e->getCode()}] {$e->getMessage()}",
-                    (int) $e->getCode(),
-                    $e->getResponse() ? $e->getResponse()->getHeaders() : null,
-                    $e->getResponse() ? (string) $e->getResponse()->getBody() : null
-                );
-            } catch (ConnectException $e) {
-                throw new ApiException(
-                    "[{$e->getCode()}] {$e->getMessage()}",
-                    (int) $e->getCode(),
-                    null,
-                    null
-                );
-            }
-
-            $statusCode = $response->getStatusCode();
-
-
-            return [null, $statusCode, $response->getHeaders()];
-        } catch (ApiException $e) {
-            switch ($e->getCode()) {
-            }
-        
-
-            throw $e;
-        }
-    }
-
-    /**
-     * Operation clusterAdminUserLogoutSessionAsync
-     *
-     * @param  string $username user name (required)
-     * @param  int $session session id (required)
-     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['clusterAdminUserLogoutSession'] to see the possible values for this operation
-     *
-     * @throws \InvalidArgumentException
-     * @return \GuzzleHttp\Promise\PromiseInterface
-     */
-    public function clusterAdminUserLogoutSessionAsync($username, $session, string $contentType = self::contentTypes['clusterAdminUserLogoutSession'][0])
-    {
-        return $this->clusterAdminUserLogoutSessionAsyncWithHttpInfo($username, $session, $contentType)
-            ->then(
-                function ($response) {
-                    return $response[0];
-                }
-            );
-    }
-
-    /**
-     * Operation clusterAdminUserLogoutSessionAsyncWithHttpInfo
-     *
-     * @param  string $username user name (required)
-     * @param  int $session session id (required)
-     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['clusterAdminUserLogoutSession'] to see the possible values for this operation
-     *
-     * @throws \InvalidArgumentException
-     * @return \GuzzleHttp\Promise\PromiseInterface
-     */
-    public function clusterAdminUserLogoutSessionAsyncWithHttpInfo($username, $session, string $contentType = self::contentTypes['clusterAdminUserLogoutSession'][0])
-    {
-        $returnType = '';
-        $request = $this->clusterAdminUserLogoutSessionRequest($username, $session, $contentType);
-
-        return $this->client
-            ->sendAsync($request, $this->createHttpClientOption())
-            ->then(
-                function ($response) use ($returnType) {
-                    return [null, $response->getStatusCode(), $response->getHeaders()];
-                },
-                function ($exception) {
-                    $response = $exception->getResponse();
-                    $statusCode = $response->getStatusCode();
-                    throw new ApiException(
-                        sprintf(
-                            '[%d] Error connecting to the API (%s)',
-                            $statusCode,
-                            $exception->getRequest()->getUri()
-                        ),
-                        $statusCode,
-                        $response->getHeaders(),
-                        (string) $response->getBody()
-                    );
-                }
-            );
-    }
-
-    /**
-     * Create request for operation 'clusterAdminUserLogoutSession'
-     *
-     * @param  string $username user name (required)
-     * @param  int $session session id (required)
-     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['clusterAdminUserLogoutSession'] to see the possible values for this operation
-     *
-     * @throws \InvalidArgumentException
-     * @return \GuzzleHttp\Psr7\Request
-     */
-    public function clusterAdminUserLogoutSessionRequest($username, $session, string $contentType = self::contentTypes['clusterAdminUserLogoutSession'][0])
-    {
-
-        // verify the required parameter 'username' is set
-        if ($username === null || (is_array($username) && count($username) === 0)) {
-            throw new \InvalidArgumentException(
-                'Missing the required parameter $username when calling clusterAdminUserLogoutSession'
-            );
-        }
-
-        // verify the required parameter 'session' is set
-        if ($session === null || (is_array($session) && count($session) === 0)) {
-            throw new \InvalidArgumentException(
-                'Missing the required parameter $session when calling clusterAdminUserLogoutSession'
-            );
-        }
-
-
-        $resourcePath = '/api/v1/cluster/admin/user/{username}/logout/{session}';
-        $formParams = [];
-        $queryParams = [];
-        $headerParams = [];
-        $httpBody = '';
-        $multipart = false;
-
-
-
-        // path params
-        if ($username !== null) {
-            $resourcePath = str_replace(
-                '{username}',
-                ObjectSerializer::toPathValue($username),
-                $resourcePath
-            );
-        }
-        // path params
-        if ($session !== null) {
-            $resourcePath = str_replace(
-                '{session}',
-                ObjectSerializer::toPathValue($session),
-                $resourcePath
-            );
-        }
-
-
-        $headers = $this->headerSelector->selectHeaders(
-            [],
-            $contentType,
-            $multipart
-        );
-
-        // for model (json/xml)
-        if (count($formParams) > 0) {
-            if ($multipart) {
-                $multipartContents = [];
-                foreach ($formParams as $formParamName => $formParamValue) {
-                    $formParamValueItems = is_array($formParamValue) ? $formParamValue : [$formParamValue];
-                    foreach ($formParamValueItems as $formParamValueItem) {
-                        $multipartContents[] = [
-                            'name' => $formParamName,
-                            'contents' => $formParamValueItem
-                        ];
-                    }
-                }
-                // for HTTP post (form)
-                $httpBody = new MultipartStream($multipartContents);
-
-            } elseif (stripos($headers['Content-Type'], 'application/json') !== false) {
-                # if Content-Type contains "application/json", json_encode the form parameters
-                $httpBody = \GuzzleHttp\Utils::jsonEncode($formParams);
-            } else {
-                // for HTTP post (form)
-                $httpBody = ObjectSerializer::buildQuery($formParams);
-            }
-        }
-
-        // this endpoint requires Bearer authentication (access token)
-        if (!empty($this->config->getAccessToken())) {
-            $headers['Authorization'] = 'Bearer ' . $this->config->getAccessToken();
-        }
-
-        $defaultHeaders = [];
-        if ($this->config->getUserAgent()) {
-            $defaultHeaders['User-Agent'] = $this->config->getUserAgent();
-        }
-
-        $headers = array_merge(
-            $defaultHeaders,
-            $headerParams,
-            $headers
-        );
-
-        $operationHost = $this->config->getHost();
-        $query = ObjectSerializer::buildQuery($queryParams);
-        return new Request(
-            'DELETE',
             $operationHost . $resourcePath . ($query ? "?{$query}" : ''),
             $headers,
             $httpBody
@@ -8046,29 +7393,31 @@ class AgdbApi
     /**
      * Operation clusterUserLogout
      *
+     * @param  string|null $session session (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['clusterUserLogout'] to see the possible values for this operation
      *
      * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
      * @return void
      */
-    public function clusterUserLogout(string $contentType = self::contentTypes['clusterUserLogout'][0])
+    public function clusterUserLogout($session = null, string $contentType = self::contentTypes['clusterUserLogout'][0])
     {
-        $this->clusterUserLogoutWithHttpInfo($contentType);
+        $this->clusterUserLogoutWithHttpInfo($session, $contentType);
     }
 
     /**
      * Operation clusterUserLogoutWithHttpInfo
      *
+     * @param  string|null $session (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['clusterUserLogout'] to see the possible values for this operation
      *
      * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
      * @return array of null, HTTP status code, HTTP response headers (array of strings)
      */
-    public function clusterUserLogoutWithHttpInfo(string $contentType = self::contentTypes['clusterUserLogout'][0])
+    public function clusterUserLogoutWithHttpInfo($session = null, string $contentType = self::contentTypes['clusterUserLogout'][0])
     {
-        $request = $this->clusterUserLogoutRequest($contentType);
+        $request = $this->clusterUserLogoutRequest($session, $contentType);
 
         try {
             $options = $this->createHttpClientOption();
@@ -8106,14 +7455,15 @@ class AgdbApi
     /**
      * Operation clusterUserLogoutAsync
      *
+     * @param  string|null $session (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['clusterUserLogout'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Promise\PromiseInterface
      */
-    public function clusterUserLogoutAsync(string $contentType = self::contentTypes['clusterUserLogout'][0])
+    public function clusterUserLogoutAsync($session = null, string $contentType = self::contentTypes['clusterUserLogout'][0])
     {
-        return $this->clusterUserLogoutAsyncWithHttpInfo($contentType)
+        return $this->clusterUserLogoutAsyncWithHttpInfo($session, $contentType)
             ->then(
                 function ($response) {
                     return $response[0];
@@ -8124,15 +7474,16 @@ class AgdbApi
     /**
      * Operation clusterUserLogoutAsyncWithHttpInfo
      *
+     * @param  string|null $session (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['clusterUserLogout'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Promise\PromiseInterface
      */
-    public function clusterUserLogoutAsyncWithHttpInfo(string $contentType = self::contentTypes['clusterUserLogout'][0])
+    public function clusterUserLogoutAsyncWithHttpInfo($session = null, string $contentType = self::contentTypes['clusterUserLogout'][0])
     {
         $returnType = '';
-        $request = $this->clusterUserLogoutRequest($contentType);
+        $request = $this->clusterUserLogoutRequest($session, $contentType);
 
         return $this->client
             ->sendAsync($request, $this->createHttpClientOption())
@@ -8160,13 +7511,15 @@ class AgdbApi
     /**
      * Create request for operation 'clusterUserLogout'
      *
+     * @param  string|null $session (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['clusterUserLogout'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Psr7\Request
      */
-    public function clusterUserLogoutRequest(string $contentType = self::contentTypes['clusterUserLogout'][0])
+    public function clusterUserLogoutRequest($session = null, string $contentType = self::contentTypes['clusterUserLogout'][0])
     {
+
 
 
         $resourcePath = '/api/v1/cluster/user/logout';
@@ -8176,211 +7529,11 @@ class AgdbApi
         $httpBody = '';
         $multipart = false;
 
-
-
-
-
-        $headers = $this->headerSelector->selectHeaders(
-            [],
-            $contentType,
-            $multipart
-        );
-
-        // for model (json/xml)
-        if (count($formParams) > 0) {
-            if ($multipart) {
-                $multipartContents = [];
-                foreach ($formParams as $formParamName => $formParamValue) {
-                    $formParamValueItems = is_array($formParamValue) ? $formParamValue : [$formParamValue];
-                    foreach ($formParamValueItems as $formParamValueItem) {
-                        $multipartContents[] = [
-                            'name' => $formParamName,
-                            'contents' => $formParamValueItem
-                        ];
-                    }
-                }
-                // for HTTP post (form)
-                $httpBody = new MultipartStream($multipartContents);
-
-            } elseif (stripos($headers['Content-Type'], 'application/json') !== false) {
-                # if Content-Type contains "application/json", json_encode the form parameters
-                $httpBody = \GuzzleHttp\Utils::jsonEncode($formParams);
-            } else {
-                // for HTTP post (form)
-                $httpBody = ObjectSerializer::buildQuery($formParams);
-            }
-        }
-
-        // this endpoint requires Bearer authentication (access token)
-        if (!empty($this->config->getAccessToken())) {
-            $headers['Authorization'] = 'Bearer ' . $this->config->getAccessToken();
-        }
-
-        $defaultHeaders = [];
-        if ($this->config->getUserAgent()) {
-            $defaultHeaders['User-Agent'] = $this->config->getUserAgent();
-        }
-
-        $headers = array_merge(
-            $defaultHeaders,
-            $headerParams,
-            $headers
-        );
-
-        $operationHost = $this->config->getHost();
-        $query = ObjectSerializer::buildQuery($queryParams);
-        return new Request(
-            'POST',
-            $operationHost . $resourcePath . ($query ? "?{$query}" : ''),
-            $headers,
-            $httpBody
-        );
-    }
-
-    /**
-     * Operation clusterUserLogoutAll
-     *
-     * @param  bool|null $self self (optional)
-     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['clusterUserLogoutAll'] to see the possible values for this operation
-     *
-     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
-     * @throws \InvalidArgumentException
-     * @return void
-     */
-    public function clusterUserLogoutAll($self = null, string $contentType = self::contentTypes['clusterUserLogoutAll'][0])
-    {
-        $this->clusterUserLogoutAllWithHttpInfo($self, $contentType);
-    }
-
-    /**
-     * Operation clusterUserLogoutAllWithHttpInfo
-     *
-     * @param  bool|null $self (optional)
-     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['clusterUserLogoutAll'] to see the possible values for this operation
-     *
-     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
-     * @throws \InvalidArgumentException
-     * @return array of null, HTTP status code, HTTP response headers (array of strings)
-     */
-    public function clusterUserLogoutAllWithHttpInfo($self = null, string $contentType = self::contentTypes['clusterUserLogoutAll'][0])
-    {
-        $request = $this->clusterUserLogoutAllRequest($self, $contentType);
-
-        try {
-            $options = $this->createHttpClientOption();
-            try {
-                $response = $this->client->send($request, $options);
-            } catch (RequestException $e) {
-                throw new ApiException(
-                    "[{$e->getCode()}] {$e->getMessage()}",
-                    (int) $e->getCode(),
-                    $e->getResponse() ? $e->getResponse()->getHeaders() : null,
-                    $e->getResponse() ? (string) $e->getResponse()->getBody() : null
-                );
-            } catch (ConnectException $e) {
-                throw new ApiException(
-                    "[{$e->getCode()}] {$e->getMessage()}",
-                    (int) $e->getCode(),
-                    null,
-                    null
-                );
-            }
-
-            $statusCode = $response->getStatusCode();
-
-
-            return [null, $statusCode, $response->getHeaders()];
-        } catch (ApiException $e) {
-            switch ($e->getCode()) {
-            }
-        
-
-            throw $e;
-        }
-    }
-
-    /**
-     * Operation clusterUserLogoutAllAsync
-     *
-     * @param  bool|null $self (optional)
-     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['clusterUserLogoutAll'] to see the possible values for this operation
-     *
-     * @throws \InvalidArgumentException
-     * @return \GuzzleHttp\Promise\PromiseInterface
-     */
-    public function clusterUserLogoutAllAsync($self = null, string $contentType = self::contentTypes['clusterUserLogoutAll'][0])
-    {
-        return $this->clusterUserLogoutAllAsyncWithHttpInfo($self, $contentType)
-            ->then(
-                function ($response) {
-                    return $response[0];
-                }
-            );
-    }
-
-    /**
-     * Operation clusterUserLogoutAllAsyncWithHttpInfo
-     *
-     * @param  bool|null $self (optional)
-     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['clusterUserLogoutAll'] to see the possible values for this operation
-     *
-     * @throws \InvalidArgumentException
-     * @return \GuzzleHttp\Promise\PromiseInterface
-     */
-    public function clusterUserLogoutAllAsyncWithHttpInfo($self = null, string $contentType = self::contentTypes['clusterUserLogoutAll'][0])
-    {
-        $returnType = '';
-        $request = $this->clusterUserLogoutAllRequest($self, $contentType);
-
-        return $this->client
-            ->sendAsync($request, $this->createHttpClientOption())
-            ->then(
-                function ($response) use ($returnType) {
-                    return [null, $response->getStatusCode(), $response->getHeaders()];
-                },
-                function ($exception) {
-                    $response = $exception->getResponse();
-                    $statusCode = $response->getStatusCode();
-                    throw new ApiException(
-                        sprintf(
-                            '[%d] Error connecting to the API (%s)',
-                            $statusCode,
-                            $exception->getRequest()->getUri()
-                        ),
-                        $statusCode,
-                        $response->getHeaders(),
-                        (string) $response->getBody()
-                    );
-                }
-            );
-    }
-
-    /**
-     * Create request for operation 'clusterUserLogoutAll'
-     *
-     * @param  bool|null $self (optional)
-     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['clusterUserLogoutAll'] to see the possible values for this operation
-     *
-     * @throws \InvalidArgumentException
-     * @return \GuzzleHttp\Psr7\Request
-     */
-    public function clusterUserLogoutAllRequest($self = null, string $contentType = self::contentTypes['clusterUserLogoutAll'][0])
-    {
-
-
-
-        $resourcePath = '/api/v1/cluster/user/logout_all';
-        $formParams = [];
-        $queryParams = [];
-        $headerParams = [];
-        $httpBody = '';
-        $multipart = false;
-
         // query params
         $queryParams = array_merge($queryParams, ObjectSerializer::toQueryValue(
-            $self,
-            'self', // param base name
-            'boolean', // openApiType
+            $session,
+            'session', // param base name
+            'string', // openApiType
             'form', // style
             true, // explode
             false // required
@@ -8440,220 +7593,6 @@ class AgdbApi
         $query = ObjectSerializer::buildQuery($queryParams);
         return new Request(
             'POST',
-            $operationHost . $resourcePath . ($query ? "?{$query}" : ''),
-            $headers,
-            $httpBody
-        );
-    }
-
-    /**
-     * Operation clusterUserLogoutSession
-     *
-     * @param  int $session session id (required)
-     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['clusterUserLogoutSession'] to see the possible values for this operation
-     *
-     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
-     * @throws \InvalidArgumentException
-     * @return void
-     */
-    public function clusterUserLogoutSession($session, string $contentType = self::contentTypes['clusterUserLogoutSession'][0])
-    {
-        $this->clusterUserLogoutSessionWithHttpInfo($session, $contentType);
-    }
-
-    /**
-     * Operation clusterUserLogoutSessionWithHttpInfo
-     *
-     * @param  int $session session id (required)
-     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['clusterUserLogoutSession'] to see the possible values for this operation
-     *
-     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
-     * @throws \InvalidArgumentException
-     * @return array of null, HTTP status code, HTTP response headers (array of strings)
-     */
-    public function clusterUserLogoutSessionWithHttpInfo($session, string $contentType = self::contentTypes['clusterUserLogoutSession'][0])
-    {
-        $request = $this->clusterUserLogoutSessionRequest($session, $contentType);
-
-        try {
-            $options = $this->createHttpClientOption();
-            try {
-                $response = $this->client->send($request, $options);
-            } catch (RequestException $e) {
-                throw new ApiException(
-                    "[{$e->getCode()}] {$e->getMessage()}",
-                    (int) $e->getCode(),
-                    $e->getResponse() ? $e->getResponse()->getHeaders() : null,
-                    $e->getResponse() ? (string) $e->getResponse()->getBody() : null
-                );
-            } catch (ConnectException $e) {
-                throw new ApiException(
-                    "[{$e->getCode()}] {$e->getMessage()}",
-                    (int) $e->getCode(),
-                    null,
-                    null
-                );
-            }
-
-            $statusCode = $response->getStatusCode();
-
-
-            return [null, $statusCode, $response->getHeaders()];
-        } catch (ApiException $e) {
-            switch ($e->getCode()) {
-            }
-        
-
-            throw $e;
-        }
-    }
-
-    /**
-     * Operation clusterUserLogoutSessionAsync
-     *
-     * @param  int $session session id (required)
-     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['clusterUserLogoutSession'] to see the possible values for this operation
-     *
-     * @throws \InvalidArgumentException
-     * @return \GuzzleHttp\Promise\PromiseInterface
-     */
-    public function clusterUserLogoutSessionAsync($session, string $contentType = self::contentTypes['clusterUserLogoutSession'][0])
-    {
-        return $this->clusterUserLogoutSessionAsyncWithHttpInfo($session, $contentType)
-            ->then(
-                function ($response) {
-                    return $response[0];
-                }
-            );
-    }
-
-    /**
-     * Operation clusterUserLogoutSessionAsyncWithHttpInfo
-     *
-     * @param  int $session session id (required)
-     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['clusterUserLogoutSession'] to see the possible values for this operation
-     *
-     * @throws \InvalidArgumentException
-     * @return \GuzzleHttp\Promise\PromiseInterface
-     */
-    public function clusterUserLogoutSessionAsyncWithHttpInfo($session, string $contentType = self::contentTypes['clusterUserLogoutSession'][0])
-    {
-        $returnType = '';
-        $request = $this->clusterUserLogoutSessionRequest($session, $contentType);
-
-        return $this->client
-            ->sendAsync($request, $this->createHttpClientOption())
-            ->then(
-                function ($response) use ($returnType) {
-                    return [null, $response->getStatusCode(), $response->getHeaders()];
-                },
-                function ($exception) {
-                    $response = $exception->getResponse();
-                    $statusCode = $response->getStatusCode();
-                    throw new ApiException(
-                        sprintf(
-                            '[%d] Error connecting to the API (%s)',
-                            $statusCode,
-                            $exception->getRequest()->getUri()
-                        ),
-                        $statusCode,
-                        $response->getHeaders(),
-                        (string) $response->getBody()
-                    );
-                }
-            );
-    }
-
-    /**
-     * Create request for operation 'clusterUserLogoutSession'
-     *
-     * @param  int $session session id (required)
-     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['clusterUserLogoutSession'] to see the possible values for this operation
-     *
-     * @throws \InvalidArgumentException
-     * @return \GuzzleHttp\Psr7\Request
-     */
-    public function clusterUserLogoutSessionRequest($session, string $contentType = self::contentTypes['clusterUserLogoutSession'][0])
-    {
-
-        // verify the required parameter 'session' is set
-        if ($session === null || (is_array($session) && count($session) === 0)) {
-            throw new \InvalidArgumentException(
-                'Missing the required parameter $session when calling clusterUserLogoutSession'
-            );
-        }
-
-
-        $resourcePath = '/api/v1/cluster/user/logout/{session}';
-        $formParams = [];
-        $queryParams = [];
-        $headerParams = [];
-        $httpBody = '';
-        $multipart = false;
-
-
-
-        // path params
-        if ($session !== null) {
-            $resourcePath = str_replace(
-                '{session}',
-                ObjectSerializer::toPathValue($session),
-                $resourcePath
-            );
-        }
-
-
-        $headers = $this->headerSelector->selectHeaders(
-            [],
-            $contentType,
-            $multipart
-        );
-
-        // for model (json/xml)
-        if (count($formParams) > 0) {
-            if ($multipart) {
-                $multipartContents = [];
-                foreach ($formParams as $formParamName => $formParamValue) {
-                    $formParamValueItems = is_array($formParamValue) ? $formParamValue : [$formParamValue];
-                    foreach ($formParamValueItems as $formParamValueItem) {
-                        $multipartContents[] = [
-                            'name' => $formParamName,
-                            'contents' => $formParamValueItem
-                        ];
-                    }
-                }
-                // for HTTP post (form)
-                $httpBody = new MultipartStream($multipartContents);
-
-            } elseif (stripos($headers['Content-Type'], 'application/json') !== false) {
-                # if Content-Type contains "application/json", json_encode the form parameters
-                $httpBody = \GuzzleHttp\Utils::jsonEncode($formParams);
-            } else {
-                // for HTTP post (form)
-                $httpBody = ObjectSerializer::buildQuery($formParams);
-            }
-        }
-
-        // this endpoint requires Bearer authentication (access token)
-        if (!empty($this->config->getAccessToken())) {
-            $headers['Authorization'] = 'Bearer ' . $this->config->getAccessToken();
-        }
-
-        $defaultHeaders = [];
-        if ($this->config->getUserAgent()) {
-            $defaultHeaders['User-Agent'] = $this->config->getUserAgent();
-        }
-
-        $headers = array_merge(
-            $defaultHeaders,
-            $headerParams,
-            $headers
-        );
-
-        $operationHost = $this->config->getHost();
-        $query = ObjectSerializer::buildQuery($queryParams);
-        return new Request(
-            'DELETE',
             $operationHost . $resourcePath . ($query ? "?{$query}" : ''),
             $headers,
             $httpBody
@@ -14047,29 +12986,31 @@ class AgdbApi
     /**
      * Operation userLogout
      *
+     * @param  string|null $session session (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['userLogout'] to see the possible values for this operation
      *
      * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
      * @return void
      */
-    public function userLogout(string $contentType = self::contentTypes['userLogout'][0])
+    public function userLogout($session = null, string $contentType = self::contentTypes['userLogout'][0])
     {
-        $this->userLogoutWithHttpInfo($contentType);
+        $this->userLogoutWithHttpInfo($session, $contentType);
     }
 
     /**
      * Operation userLogoutWithHttpInfo
      *
+     * @param  string|null $session (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['userLogout'] to see the possible values for this operation
      *
      * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
      * @return array of null, HTTP status code, HTTP response headers (array of strings)
      */
-    public function userLogoutWithHttpInfo(string $contentType = self::contentTypes['userLogout'][0])
+    public function userLogoutWithHttpInfo($session = null, string $contentType = self::contentTypes['userLogout'][0])
     {
-        $request = $this->userLogoutRequest($contentType);
+        $request = $this->userLogoutRequest($session, $contentType);
 
         try {
             $options = $this->createHttpClientOption();
@@ -14107,14 +13048,15 @@ class AgdbApi
     /**
      * Operation userLogoutAsync
      *
+     * @param  string|null $session (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['userLogout'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Promise\PromiseInterface
      */
-    public function userLogoutAsync(string $contentType = self::contentTypes['userLogout'][0])
+    public function userLogoutAsync($session = null, string $contentType = self::contentTypes['userLogout'][0])
     {
-        return $this->userLogoutAsyncWithHttpInfo($contentType)
+        return $this->userLogoutAsyncWithHttpInfo($session, $contentType)
             ->then(
                 function ($response) {
                     return $response[0];
@@ -14125,15 +13067,16 @@ class AgdbApi
     /**
      * Operation userLogoutAsyncWithHttpInfo
      *
+     * @param  string|null $session (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['userLogout'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Promise\PromiseInterface
      */
-    public function userLogoutAsyncWithHttpInfo(string $contentType = self::contentTypes['userLogout'][0])
+    public function userLogoutAsyncWithHttpInfo($session = null, string $contentType = self::contentTypes['userLogout'][0])
     {
         $returnType = '';
-        $request = $this->userLogoutRequest($contentType);
+        $request = $this->userLogoutRequest($session, $contentType);
 
         return $this->client
             ->sendAsync($request, $this->createHttpClientOption())
@@ -14161,13 +13104,15 @@ class AgdbApi
     /**
      * Create request for operation 'userLogout'
      *
+     * @param  string|null $session (optional)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['userLogout'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Psr7\Request
      */
-    public function userLogoutRequest(string $contentType = self::contentTypes['userLogout'][0])
+    public function userLogoutRequest($session = null, string $contentType = self::contentTypes['userLogout'][0])
     {
+
 
 
         $resourcePath = '/api/v1/user/logout';
@@ -14177,211 +13122,11 @@ class AgdbApi
         $httpBody = '';
         $multipart = false;
 
-
-
-
-
-        $headers = $this->headerSelector->selectHeaders(
-            [],
-            $contentType,
-            $multipart
-        );
-
-        // for model (json/xml)
-        if (count($formParams) > 0) {
-            if ($multipart) {
-                $multipartContents = [];
-                foreach ($formParams as $formParamName => $formParamValue) {
-                    $formParamValueItems = is_array($formParamValue) ? $formParamValue : [$formParamValue];
-                    foreach ($formParamValueItems as $formParamValueItem) {
-                        $multipartContents[] = [
-                            'name' => $formParamName,
-                            'contents' => $formParamValueItem
-                        ];
-                    }
-                }
-                // for HTTP post (form)
-                $httpBody = new MultipartStream($multipartContents);
-
-            } elseif (stripos($headers['Content-Type'], 'application/json') !== false) {
-                # if Content-Type contains "application/json", json_encode the form parameters
-                $httpBody = \GuzzleHttp\Utils::jsonEncode($formParams);
-            } else {
-                // for HTTP post (form)
-                $httpBody = ObjectSerializer::buildQuery($formParams);
-            }
-        }
-
-        // this endpoint requires Bearer authentication (access token)
-        if (!empty($this->config->getAccessToken())) {
-            $headers['Authorization'] = 'Bearer ' . $this->config->getAccessToken();
-        }
-
-        $defaultHeaders = [];
-        if ($this->config->getUserAgent()) {
-            $defaultHeaders['User-Agent'] = $this->config->getUserAgent();
-        }
-
-        $headers = array_merge(
-            $defaultHeaders,
-            $headerParams,
-            $headers
-        );
-
-        $operationHost = $this->config->getHost();
-        $query = ObjectSerializer::buildQuery($queryParams);
-        return new Request(
-            'POST',
-            $operationHost . $resourcePath . ($query ? "?{$query}" : ''),
-            $headers,
-            $httpBody
-        );
-    }
-
-    /**
-     * Operation userLogoutAll
-     *
-     * @param  bool|null $self self (optional)
-     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['userLogoutAll'] to see the possible values for this operation
-     *
-     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
-     * @throws \InvalidArgumentException
-     * @return void
-     */
-    public function userLogoutAll($self = null, string $contentType = self::contentTypes['userLogoutAll'][0])
-    {
-        $this->userLogoutAllWithHttpInfo($self, $contentType);
-    }
-
-    /**
-     * Operation userLogoutAllWithHttpInfo
-     *
-     * @param  bool|null $self (optional)
-     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['userLogoutAll'] to see the possible values for this operation
-     *
-     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
-     * @throws \InvalidArgumentException
-     * @return array of null, HTTP status code, HTTP response headers (array of strings)
-     */
-    public function userLogoutAllWithHttpInfo($self = null, string $contentType = self::contentTypes['userLogoutAll'][0])
-    {
-        $request = $this->userLogoutAllRequest($self, $contentType);
-
-        try {
-            $options = $this->createHttpClientOption();
-            try {
-                $response = $this->client->send($request, $options);
-            } catch (RequestException $e) {
-                throw new ApiException(
-                    "[{$e->getCode()}] {$e->getMessage()}",
-                    (int) $e->getCode(),
-                    $e->getResponse() ? $e->getResponse()->getHeaders() : null,
-                    $e->getResponse() ? (string) $e->getResponse()->getBody() : null
-                );
-            } catch (ConnectException $e) {
-                throw new ApiException(
-                    "[{$e->getCode()}] {$e->getMessage()}",
-                    (int) $e->getCode(),
-                    null,
-                    null
-                );
-            }
-
-            $statusCode = $response->getStatusCode();
-
-
-            return [null, $statusCode, $response->getHeaders()];
-        } catch (ApiException $e) {
-            switch ($e->getCode()) {
-            }
-        
-
-            throw $e;
-        }
-    }
-
-    /**
-     * Operation userLogoutAllAsync
-     *
-     * @param  bool|null $self (optional)
-     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['userLogoutAll'] to see the possible values for this operation
-     *
-     * @throws \InvalidArgumentException
-     * @return \GuzzleHttp\Promise\PromiseInterface
-     */
-    public function userLogoutAllAsync($self = null, string $contentType = self::contentTypes['userLogoutAll'][0])
-    {
-        return $this->userLogoutAllAsyncWithHttpInfo($self, $contentType)
-            ->then(
-                function ($response) {
-                    return $response[0];
-                }
-            );
-    }
-
-    /**
-     * Operation userLogoutAllAsyncWithHttpInfo
-     *
-     * @param  bool|null $self (optional)
-     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['userLogoutAll'] to see the possible values for this operation
-     *
-     * @throws \InvalidArgumentException
-     * @return \GuzzleHttp\Promise\PromiseInterface
-     */
-    public function userLogoutAllAsyncWithHttpInfo($self = null, string $contentType = self::contentTypes['userLogoutAll'][0])
-    {
-        $returnType = '';
-        $request = $this->userLogoutAllRequest($self, $contentType);
-
-        return $this->client
-            ->sendAsync($request, $this->createHttpClientOption())
-            ->then(
-                function ($response) use ($returnType) {
-                    return [null, $response->getStatusCode(), $response->getHeaders()];
-                },
-                function ($exception) {
-                    $response = $exception->getResponse();
-                    $statusCode = $response->getStatusCode();
-                    throw new ApiException(
-                        sprintf(
-                            '[%d] Error connecting to the API (%s)',
-                            $statusCode,
-                            $exception->getRequest()->getUri()
-                        ),
-                        $statusCode,
-                        $response->getHeaders(),
-                        (string) $response->getBody()
-                    );
-                }
-            );
-    }
-
-    /**
-     * Create request for operation 'userLogoutAll'
-     *
-     * @param  bool|null $self (optional)
-     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['userLogoutAll'] to see the possible values for this operation
-     *
-     * @throws \InvalidArgumentException
-     * @return \GuzzleHttp\Psr7\Request
-     */
-    public function userLogoutAllRequest($self = null, string $contentType = self::contentTypes['userLogoutAll'][0])
-    {
-
-
-
-        $resourcePath = '/api/v1/user/logout_all';
-        $formParams = [];
-        $queryParams = [];
-        $headerParams = [];
-        $httpBody = '';
-        $multipart = false;
-
         // query params
         $queryParams = array_merge($queryParams, ObjectSerializer::toQueryValue(
-            $self,
-            'self', // param base name
-            'boolean', // openApiType
+            $session,
+            'session', // param base name
+            'string', // openApiType
             'form', // style
             true, // explode
             false // required
@@ -14441,220 +13186,6 @@ class AgdbApi
         $query = ObjectSerializer::buildQuery($queryParams);
         return new Request(
             'POST',
-            $operationHost . $resourcePath . ($query ? "?{$query}" : ''),
-            $headers,
-            $httpBody
-        );
-    }
-
-    /**
-     * Operation userLogoutSession
-     *
-     * @param  int $session session id (required)
-     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['userLogoutSession'] to see the possible values for this operation
-     *
-     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
-     * @throws \InvalidArgumentException
-     * @return void
-     */
-    public function userLogoutSession($session, string $contentType = self::contentTypes['userLogoutSession'][0])
-    {
-        $this->userLogoutSessionWithHttpInfo($session, $contentType);
-    }
-
-    /**
-     * Operation userLogoutSessionWithHttpInfo
-     *
-     * @param  int $session session id (required)
-     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['userLogoutSession'] to see the possible values for this operation
-     *
-     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
-     * @throws \InvalidArgumentException
-     * @return array of null, HTTP status code, HTTP response headers (array of strings)
-     */
-    public function userLogoutSessionWithHttpInfo($session, string $contentType = self::contentTypes['userLogoutSession'][0])
-    {
-        $request = $this->userLogoutSessionRequest($session, $contentType);
-
-        try {
-            $options = $this->createHttpClientOption();
-            try {
-                $response = $this->client->send($request, $options);
-            } catch (RequestException $e) {
-                throw new ApiException(
-                    "[{$e->getCode()}] {$e->getMessage()}",
-                    (int) $e->getCode(),
-                    $e->getResponse() ? $e->getResponse()->getHeaders() : null,
-                    $e->getResponse() ? (string) $e->getResponse()->getBody() : null
-                );
-            } catch (ConnectException $e) {
-                throw new ApiException(
-                    "[{$e->getCode()}] {$e->getMessage()}",
-                    (int) $e->getCode(),
-                    null,
-                    null
-                );
-            }
-
-            $statusCode = $response->getStatusCode();
-
-
-            return [null, $statusCode, $response->getHeaders()];
-        } catch (ApiException $e) {
-            switch ($e->getCode()) {
-            }
-        
-
-            throw $e;
-        }
-    }
-
-    /**
-     * Operation userLogoutSessionAsync
-     *
-     * @param  int $session session id (required)
-     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['userLogoutSession'] to see the possible values for this operation
-     *
-     * @throws \InvalidArgumentException
-     * @return \GuzzleHttp\Promise\PromiseInterface
-     */
-    public function userLogoutSessionAsync($session, string $contentType = self::contentTypes['userLogoutSession'][0])
-    {
-        return $this->userLogoutSessionAsyncWithHttpInfo($session, $contentType)
-            ->then(
-                function ($response) {
-                    return $response[0];
-                }
-            );
-    }
-
-    /**
-     * Operation userLogoutSessionAsyncWithHttpInfo
-     *
-     * @param  int $session session id (required)
-     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['userLogoutSession'] to see the possible values for this operation
-     *
-     * @throws \InvalidArgumentException
-     * @return \GuzzleHttp\Promise\PromiseInterface
-     */
-    public function userLogoutSessionAsyncWithHttpInfo($session, string $contentType = self::contentTypes['userLogoutSession'][0])
-    {
-        $returnType = '';
-        $request = $this->userLogoutSessionRequest($session, $contentType);
-
-        return $this->client
-            ->sendAsync($request, $this->createHttpClientOption())
-            ->then(
-                function ($response) use ($returnType) {
-                    return [null, $response->getStatusCode(), $response->getHeaders()];
-                },
-                function ($exception) {
-                    $response = $exception->getResponse();
-                    $statusCode = $response->getStatusCode();
-                    throw new ApiException(
-                        sprintf(
-                            '[%d] Error connecting to the API (%s)',
-                            $statusCode,
-                            $exception->getRequest()->getUri()
-                        ),
-                        $statusCode,
-                        $response->getHeaders(),
-                        (string) $response->getBody()
-                    );
-                }
-            );
-    }
-
-    /**
-     * Create request for operation 'userLogoutSession'
-     *
-     * @param  int $session session id (required)
-     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['userLogoutSession'] to see the possible values for this operation
-     *
-     * @throws \InvalidArgumentException
-     * @return \GuzzleHttp\Psr7\Request
-     */
-    public function userLogoutSessionRequest($session, string $contentType = self::contentTypes['userLogoutSession'][0])
-    {
-
-        // verify the required parameter 'session' is set
-        if ($session === null || (is_array($session) && count($session) === 0)) {
-            throw new \InvalidArgumentException(
-                'Missing the required parameter $session when calling userLogoutSession'
-            );
-        }
-
-
-        $resourcePath = '/api/v1/user/logout/{session}';
-        $formParams = [];
-        $queryParams = [];
-        $headerParams = [];
-        $httpBody = '';
-        $multipart = false;
-
-
-
-        // path params
-        if ($session !== null) {
-            $resourcePath = str_replace(
-                '{session}',
-                ObjectSerializer::toPathValue($session),
-                $resourcePath
-            );
-        }
-
-
-        $headers = $this->headerSelector->selectHeaders(
-            [],
-            $contentType,
-            $multipart
-        );
-
-        // for model (json/xml)
-        if (count($formParams) > 0) {
-            if ($multipart) {
-                $multipartContents = [];
-                foreach ($formParams as $formParamName => $formParamValue) {
-                    $formParamValueItems = is_array($formParamValue) ? $formParamValue : [$formParamValue];
-                    foreach ($formParamValueItems as $formParamValueItem) {
-                        $multipartContents[] = [
-                            'name' => $formParamName,
-                            'contents' => $formParamValueItem
-                        ];
-                    }
-                }
-                // for HTTP post (form)
-                $httpBody = new MultipartStream($multipartContents);
-
-            } elseif (stripos($headers['Content-Type'], 'application/json') !== false) {
-                # if Content-Type contains "application/json", json_encode the form parameters
-                $httpBody = \GuzzleHttp\Utils::jsonEncode($formParams);
-            } else {
-                // for HTTP post (form)
-                $httpBody = ObjectSerializer::buildQuery($formParams);
-            }
-        }
-
-        // this endpoint requires Bearer authentication (access token)
-        if (!empty($this->config->getAccessToken())) {
-            $headers['Authorization'] = 'Bearer ' . $this->config->getAccessToken();
-        }
-
-        $defaultHeaders = [];
-        if ($this->config->getUserAgent()) {
-            $defaultHeaders['User-Agent'] = $this->config->getUserAgent();
-        }
-
-        $headers = array_merge(
-            $defaultHeaders,
-            $headerParams,
-            $headers
-        );
-
-        $operationHost = $this->config->getHost();
-        $query = ObjectSerializer::buildQuery($queryParams);
-        return new Request(
-            'DELETE',
             $operationHost . $resourcePath . ($query ? "?{$query}" : ''),
             $headers,
             $httpBody

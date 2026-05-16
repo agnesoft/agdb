@@ -1,6 +1,6 @@
 <?php
 /**
- * LogoutAllQuery
+ * LogoutQuery
  *
  * PHP version 8.1
  *
@@ -32,7 +32,7 @@ use \ArrayAccess;
 use \Agnesoft\AgdbApi\ObjectSerializer;
 
 /**
- * LogoutAllQuery Class Doc Comment
+ * LogoutQuery Class Doc Comment
  *
  * @category Class
  * @package  Agnesoft\AgdbApi
@@ -40,7 +40,7 @@ use \Agnesoft\AgdbApi\ObjectSerializer;
  * @link     https://openapi-generator.tech
  * @implements \ArrayAccess<string, mixed>
  */
-class LogoutAllQuery implements ModelInterface, ArrayAccess, \JsonSerializable
+class LogoutQuery implements ModelInterface, ArrayAccess, \JsonSerializable
 {
     public const DISCRIMINATOR = null;
 
@@ -49,7 +49,7 @@ class LogoutAllQuery implements ModelInterface, ArrayAccess, \JsonSerializable
      *
      * @var string
      */
-    protected static $openAPIModelName = 'LogoutAllQuery';
+    protected static $openAPIModelName = 'LogoutQuery';
 
     /**
      * Array of property to type mappings. Used for (de)serialization
@@ -57,7 +57,7 @@ class LogoutAllQuery implements ModelInterface, ArrayAccess, \JsonSerializable
      * @var string[]
      */
     protected static $openAPITypes = [
-        'self' => 'bool'
+        'session' => 'string'
     ];
 
     /**
@@ -68,7 +68,7 @@ class LogoutAllQuery implements ModelInterface, ArrayAccess, \JsonSerializable
      * @psalm-var array<string, string|null>
      */
     protected static $openAPIFormats = [
-        'self' => null
+        'session' => null
     ];
 
     /**
@@ -77,7 +77,7 @@ class LogoutAllQuery implements ModelInterface, ArrayAccess, \JsonSerializable
      * @var boolean[]
      */
     protected static array $openAPINullables = [
-        'self' => false
+        'session' => true
     ];
 
     /**
@@ -166,7 +166,7 @@ class LogoutAllQuery implements ModelInterface, ArrayAccess, \JsonSerializable
      * @var string[]
      */
     protected static $attributeMap = [
-        'self' => 'self'
+        'session' => 'session'
     ];
 
     /**
@@ -175,7 +175,7 @@ class LogoutAllQuery implements ModelInterface, ArrayAccess, \JsonSerializable
      * @var string[]
      */
     protected static $setters = [
-        'self' => 'setSelf'
+        'session' => 'setSession'
     ];
 
     /**
@@ -184,7 +184,7 @@ class LogoutAllQuery implements ModelInterface, ArrayAccess, \JsonSerializable
      * @var string[]
      */
     protected static $getters = [
-        'self' => 'getSelf'
+        'session' => 'getSession'
     ];
 
     /**
@@ -244,7 +244,7 @@ class LogoutAllQuery implements ModelInterface, ArrayAccess, \JsonSerializable
      */
     public function __construct(?array $data = null)
     {
-        $this->setIfExists('self', $data ?? [], null);
+        $this->setIfExists('session', $data ?? [], null);
     }
 
     /**
@@ -290,28 +290,35 @@ class LogoutAllQuery implements ModelInterface, ArrayAccess, \JsonSerializable
 
 
     /**
-     * Gets self
+     * Gets session
      *
-     * @return bool|null
+     * @return string|null
      */
-    public function getSelf()
+    public function getSession()
     {
-        return $this->container['self'];
+        return $this->container['session'];
     }
 
     /**
-     * Sets self
+     * Sets session
      *
-     * @param bool|null $self self
+     * @param string|null $session session
      *
      * @return self
      */
-    public function setSelf($self)
+    public function setSession($session)
     {
-        if (is_null($self)) {
-            throw new \InvalidArgumentException('non-nullable self cannot be null');
+        if (is_null($session)) {
+            array_push($this->openAPINullablesSetToNull, 'session');
+        } else {
+            $nullablesSetToNull = $this->getOpenAPINullablesSetToNull();
+            $index = array_search('session', $nullablesSetToNull);
+            if ($index !== FALSE) {
+                unset($nullablesSetToNull[$index]);
+                $this->setOpenAPINullablesSetToNull($nullablesSetToNull);
+            }
         }
-        $this->container['self'] = $self;
+        $this->container['session'] = $session;
 
         return $this;
     }

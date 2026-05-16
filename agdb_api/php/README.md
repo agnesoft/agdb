@@ -101,15 +101,10 @@ Class | Method | HTTP request | Description
 *AgdbApi* | [**adminUserList**](docs/Api/AgdbApi.md#adminuserlist) | **GET** /api/v1/admin/user/list | 
 *AgdbApi* | [**adminUserLogout**](docs/Api/AgdbApi.md#adminuserlogout) | **POST** /api/v1/admin/user/{username}/logout | 
 *AgdbApi* | [**adminUserLogoutAll**](docs/Api/AgdbApi.md#adminuserlogoutall) | **POST** /api/v1/admin/user/logout_all | 
-*AgdbApi* | [**adminUserLogoutSession**](docs/Api/AgdbApi.md#adminuserlogoutsession) | **DELETE** /api/v1/admin/user/{username}/logout/{session} | 
 *AgdbApi* | [**clusterAdminUserLogout**](docs/Api/AgdbApi.md#clusteradminuserlogout) | **POST** /api/v1/cluster/admin/user/{username}/logout | 
-*AgdbApi* | [**clusterAdminUserLogoutAll**](docs/Api/AgdbApi.md#clusteradminuserlogoutall) | **POST** /api/v1/cluster/admin/user/logout_all | 
-*AgdbApi* | [**clusterAdminUserLogoutSession**](docs/Api/AgdbApi.md#clusteradminuserlogoutsession) | **DELETE** /api/v1/cluster/admin/user/{username}/logout/{session} | 
 *AgdbApi* | [**clusterStatus**](docs/Api/AgdbApi.md#clusterstatus) | **GET** /api/v1/cluster/status | 
 *AgdbApi* | [**clusterUserLogin**](docs/Api/AgdbApi.md#clusteruserlogin) | **POST** /api/v1/cluster/user/login | 
 *AgdbApi* | [**clusterUserLogout**](docs/Api/AgdbApi.md#clusteruserlogout) | **POST** /api/v1/cluster/user/logout | 
-*AgdbApi* | [**clusterUserLogoutAll**](docs/Api/AgdbApi.md#clusteruserlogoutall) | **POST** /api/v1/cluster/user/logout_all | 
-*AgdbApi* | [**clusterUserLogoutSession**](docs/Api/AgdbApi.md#clusteruserlogoutsession) | **DELETE** /api/v1/cluster/user/logout/{session} | 
 *AgdbApi* | [**dbAdd**](docs/Api/AgdbApi.md#dbadd) | **POST** /api/v1/db/{owner}/{db}/add | 
 *AgdbApi* | [**dbAudit**](docs/Api/AgdbApi.md#dbaudit) | **GET** /api/v1/db/{owner}/{db}/audit | 
 *AgdbApi* | [**dbBackup**](docs/Api/AgdbApi.md#dbbackup) | **POST** /api/v1/db/{owner}/{db}/backup | 
@@ -132,8 +127,6 @@ Class | Method | HTTP request | Description
 *AgdbApi* | [**userChangePassword**](docs/Api/AgdbApi.md#userchangepassword) | **PUT** /api/v1/user/change_password | 
 *AgdbApi* | [**userLogin**](docs/Api/AgdbApi.md#userlogin) | **POST** /api/v1/user/login | 
 *AgdbApi* | [**userLogout**](docs/Api/AgdbApi.md#userlogout) | **POST** /api/v1/user/logout | 
-*AgdbApi* | [**userLogoutAll**](docs/Api/AgdbApi.md#userlogoutall) | **POST** /api/v1/user/logout_all | 
-*AgdbApi* | [**userLogoutSession**](docs/Api/AgdbApi.md#userlogoutsession) | **DELETE** /api/v1/user/logout/{session} | 
 *AgdbApi* | [**userStatus**](docs/Api/AgdbApi.md#userstatus) | **GET** /api/v1/user/status | 
 
 ## Models
@@ -186,7 +179,7 @@ Class | Method | HTTP request | Description
 - [InsertValuesQuery](docs/Model/InsertValuesQuery.md)
 - [KeyValueComparison](docs/Model/KeyValueComparison.md)
 - [LogLevelFilter](docs/Model/LogLevelFilter.md)
-- [LogoutAllQuery](docs/Model/LogoutAllQuery.md)
+- [LogoutQuery](docs/Model/LogoutQuery.md)
 - [OptimizeParam](docs/Model/OptimizeParam.md)
 - [QueryAudit](docs/Model/QueryAudit.md)
 - [QueryCondition](docs/Model/QueryCondition.md)

@@ -1,5 +1,6 @@
 pub mod config_impl;
 
+use agdb::DbElement;
 use agdb::DbError;
 use agdb::DbSerialize;
 use agdb::DbValue;
@@ -213,6 +214,15 @@ impl From<&str> for DbUserRole {
             "admin" => Self::Admin,
             "write" => Self::Write,
             _ => Self::Read,
+        }
+    }
+}
+
+impl From<DbElement> for UserSession {
+    fn from(element: DbElement) -> Self {
+        UserSession {
+            agent: element.values[0].value.to_string(),
+            created: element.values[1].value.to_u64().unwrap_or_default(),
         }
     }
 }

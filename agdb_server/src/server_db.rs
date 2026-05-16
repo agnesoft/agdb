@@ -15,6 +15,7 @@ use agdb::QueryBuilder;
 use agdb::QueryId;
 use agdb::QueryResult;
 use agdb::SearchQuery;
+use agdb::SelectValuesQuery;
 use agdb_api::DbKind;
 use agdb_api::DbUser;
 use agdb_api::DbUserRole;
@@ -774,25 +775,11 @@ impl ServerDb {
     pub(crate) async fn user_sessions(&self, user_id: DbId) -> ServerResult<Vec<UserSession>> {
         let expiry_limit = token_expiry_limit(self.token_expiry_seconds);
         self.db.read().await.transaction(|t| {
-            Ok(t.exec(
-                QueryBuilder::select()
-                    .values([AGENT, CREATED])
-                    .search()
-                    .to(user_id)
-                    .where_()
-                    .neighbor()
-                    .and()
-                    .key(CREATED)
-                    .value(Comparison::GreaterThanOrEqual(expiry_limit.into()))
-                    .query(),
-            )?
-            .elements
-            .into_iter()
-            .map(|e| UserSession {
-                agent: e.values[0].value.to_string(),
-                created: e.values[1].value.to_u64().unwrap_or_default(),
-            })
-            .collect())
+            Ok(t.exec(user_sessions_query(expiry_limit, user_id))?
+                .elements
+                .into_iter()
+                .map(UserSession::from)
+                .collect())
         })
     }
 
@@ -817,17 +804,21 @@ impl ServerDb {
                 .elements
                 .into_iter()
                 .map(|e| {
+                    let sessions: Vec<UserSession> = t
+                        .exec(user_sessions_query(
+                            token_expiry_limit(self.token_expiry_seconds),
+                            e.id,
+                        ))?
+                        .elements
+                        .into_iter()
+                        .map(UserSession::from)
+                        .collect();
+
                     Ok(UserStatus {
                         username: e.values[0].value.to_string(),
-                        login: t
-                            .exec(QueryBuilder::select().edge_count_to().ids(e.id).query())?
-                            .elements[0]
-                            .values[0]
-                            .value
-                            .to_u64()?
-                            != 1,
+                        login: !sessions.is_empty(),
                         admin: e.id == admin_id,
-                        sessions: vec![],
+                        sessions,
                     })
                 })
                 .collect::<ServerResult<Vec<UserStatus>>>()
@@ -879,6 +870,19 @@ impl ServerDb {
         )?;
         Ok(())
     }
+}
+
+fn user_sessions_query(expiry_limit: u64, user_id: DbId) -> SelectValuesQuery {
+    QueryBuilder::select()
+        .values([AGENT, CREATED])
+        .search()
+        .to(user_id)
+        .where_()
+        .neighbor()
+        .and()
+        .key(CREATED)
+        .value(Comparison::GreaterThanOrEqual(expiry_limit.into()))
+        .query()
 }
 
 fn db_not_found(name: &str) -> ServerError {

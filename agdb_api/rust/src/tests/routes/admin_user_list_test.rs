@@ -12,30 +12,33 @@ pub async fn user_list() -> Result<(), TestError> {
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(user1, user1).await?;
     server.api.admin_user_add(user2, user2).await?;
-    let (status, list) = server.api.admin_user_list().await?;
+    let (status, mut list) = server.api.admin_user_list().await?;
+    list.sort();
     assert_eq!(status, 200);
-    assert!(
-        list.contains(&UserStatus {
-            username: "admin".to_string(),
-            login: true,
-            admin: true,
+    let admin_user = &list[0];
+    assert_eq!(admin_user.username, "admin");
+    assert!(admin_user.login);
+    assert!(admin_user.admin);
+    assert_eq!(admin_user.sessions.len(), 1);
+    assert_eq!(admin_user.sessions[0].agent, "agdb_api");
+    assert_eq!(
+        list[1],
+        UserStatus {
+            username: user1.to_string(),
+            login: false,
+            admin: false,
             sessions: vec![],
-        }),
-        "{}",
-        serde_json::to_string(&list).unwrap()
+        }
     );
-    assert!(list.contains(&UserStatus {
-        username: user1.to_string(),
-        login: false,
-        admin: false,
-        sessions: vec![],
-    }));
-    assert!(list.contains(&UserStatus {
-        username: user2.to_string(),
-        login: false,
-        admin: false,
-        sessions: vec![],
-    }));
+    assert_eq!(
+        list[2],
+        UserStatus {
+            username: user2.to_string(),
+            login: false,
+            admin: false,
+            sessions: vec![],
+        }
+    );
     Ok(())
 }
 

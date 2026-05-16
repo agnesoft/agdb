@@ -73,14 +73,14 @@ fn insert_nodes_aliases_values() {
         &[
             DbElement {
                 id: DbId(1),
-                from: None,
-                to: None,
+                from: DbId::default(),
+                to: DbId::default(),
                 values: vec![("key", "value").into(), ("key2", "value2").into()],
             },
             DbElement {
                 id: DbId(2),
-                from: None,
-                to: None,
+                from: DbId::default(),
+                to: DbId::default(),
                 values: vec![("key", "value3").into()],
             },
         ],
@@ -112,14 +112,14 @@ fn insert_nodes_aliases_values_rollback() {
                 &[
                     DbElement {
                         id: DbId(1),
-                        from: None,
-                        to: None,
+                        from: DbId::default(),
+                        to: DbId::default(),
                         values: vec![("key", "value").into(), ("key2", "value2").into()],
                     },
                     DbElement {
                         id: DbId(2),
-                        from: None,
-                        to: None,
+                        from: DbId::default(),
+                        to: DbId::default(),
                         values: vec![("key", "value3").into()],
                     },
                 ],
@@ -154,14 +154,14 @@ fn insert_nodes_aliases_values_uniform() {
         &[
             DbElement {
                 id: DbId(1),
-                from: None,
-                to: None,
+                from: DbId::default(),
+                to: DbId::default(),
                 values: vec![("key", "value").into(), ("key2", "value2").into()],
             },
             DbElement {
                 id: DbId(2),
-                from: None,
-                to: None,
+                from: DbId::default(),
+                to: DbId::default(),
                 values: vec![("key", "value").into(), ("key2", "value2").into()],
             },
         ],
@@ -184,14 +184,14 @@ fn insert_nodes_count_values_uniform() {
         &[
             DbElement {
                 id: DbId(1),
-                from: None,
-                to: None,
+                from: DbId::default(),
+                to: DbId::default(),
                 values: vec![("key", "value").into(), ("key2", "value2").into()],
             },
             DbElement {
                 id: DbId(2),
-                from: None,
-                to: None,
+                from: DbId::default(),
+                to: DbId::default(),
                 values: vec![("key", "value").into(), ("key2", "value2").into()],
             },
         ],
@@ -216,14 +216,14 @@ fn insert_nodes_values() {
         &[
             DbElement {
                 id: DbId(1),
-                from: None,
-                to: None,
+                from: DbId::default(),
+                to: DbId::default(),
                 values: vec![("key", "value").into(), ("key2", "value2").into()],
             },
             DbElement {
                 id: DbId(2),
-                from: None,
-                to: None,
+                from: DbId::default(),
+                to: DbId::default(),
                 values: vec![("key", "value3").into()],
             },
         ],
@@ -258,14 +258,14 @@ fn insert_nodes_existing_aliases_values() {
         &[
             DbElement {
                 id: DbId(1),
-                from: None,
-                to: None,
+                from: DbId::default(),
+                to: DbId::default(),
                 values: vec![("key", 10).into(), ("new_key", 100).into()],
             },
             DbElement {
                 id: DbId(2),
-                from: None,
-                to: None,
+                from: DbId::default(),
+                to: DbId::default(),
                 values: vec![("some_key", "value").into()],
             },
         ],
@@ -424,14 +424,14 @@ fn insert_nodes_ids_values_uniform() {
         &[
             DbElement {
                 id: DbId(1),
-                from: None,
-                to: None,
+                from: DbId::default(),
+                to: DbId::default(),
                 values: vec![("key", "value").into()],
             },
             DbElement {
                 id: DbId(2),
-                from: None,
-                to: None,
+                from: DbId::default(),
+                to: DbId::default(),
                 values: vec![("key", "value").into()],
             },
         ],

@@ -34,8 +34,8 @@ fn insert_values_ids_rollback() {
                 t.exec(QueryBuilder::select().ids(1).query())?.elements,
                 vec![DbElement {
                     id: DbId(1),
-                    from: None,
-                    to: None,
+                    from: DbId::default(),
+                    to: DbId::default(),
                     values: vec![
                         ("key", vec![1.1, 2.1]).into(),
                         (vec!["a".to_string(), "b".to_string()], vec![1, 2]).into(),
@@ -54,8 +54,8 @@ fn insert_values_ids_rollback() {
         QueryBuilder::select().ids(1).query(),
         &[DbElement {
             id: DbId(1),
-            from: None,
-            to: None,
+            from: DbId::default(),
+            to: DbId::default(),
             values: vec![],
         }],
     );
@@ -77,14 +77,14 @@ fn insert_values_ids() {
         &[
             DbElement {
                 id: DbId(1),
-                from: None,
-                to: None,
+                from: DbId::default(),
+                to: DbId::default(),
                 values: vec![("some really long key", 1000).into()],
             },
             DbElement {
                 id: DbId(2),
-                from: None,
-                to: None,
+                from: DbId::default(),
+                to: DbId::default(),
                 values: vec![(10, 1.1).into()],
             },
         ],
@@ -125,14 +125,14 @@ fn insert_values_uniform_ids() {
         &[
             DbElement {
                 id: DbId(1),
-                from: None,
-                to: None,
+                from: DbId::default(),
+                to: DbId::default(),
                 values: vec![("key", "value").into()],
             },
             DbElement {
                 id: DbId(2),
-                from: None,
-                to: None,
+                from: DbId::default(),
+                to: DbId::default(),
                 values: vec![("key", "value").into()],
             },
         ],
@@ -165,32 +165,32 @@ fn insert_values_uniform_search() {
         &[
             DbElement {
                 id: DbId(1),
-                from: None,
-                to: None,
+                from: DbId(-4),
+                to: DbId::default(),
                 values: vec![("key", "value").into()],
             },
             DbElement {
                 id: DbId(-4),
-                from: Some(DbId(1)),
-                to: Some(DbId(2)),
+                from: DbId(1),
+                to: DbId(2),
                 values: vec![("key", "value").into()],
             },
             DbElement {
                 id: DbId(2),
-                from: None,
-                to: None,
+                from: DbId(-5),
+                to: DbId(-4),
                 values: vec![("key", "value").into()],
             },
             DbElement {
                 id: DbId(-5),
-                from: Some(DbId(2)),
-                to: Some(DbId(3)),
+                from: DbId(2),
+                to: DbId(3),
                 values: vec![("key", "value").into()],
             },
             DbElement {
                 id: DbId(3),
-                from: None,
-                to: None,
+                from: DbId::default(),
+                to: DbId(-5),
                 values: vec![("key", "value").into()],
             },
         ],
@@ -220,20 +220,20 @@ fn insert_values_search() {
         &[
             DbElement {
                 id: DbId(1),
-                from: None,
-                to: None,
+                from: DbId(-4),
+                to: DbId::default(),
                 values: vec![("key1", "value1").into()],
             },
             DbElement {
                 id: DbId(-4),
-                from: Some(DbId(1)),
-                to: Some(DbId(3)),
+                from: DbId(1),
+                to: DbId(3),
                 values: vec![("key2", "value2").into()],
             },
             DbElement {
                 id: DbId(3),
-                from: None,
-                to: None,
+                from: DbId::default(),
+                to: DbId(-4),
                 values: vec![("key3", "value3").into()],
             },
         ],
@@ -264,20 +264,20 @@ fn insert_values_search_alt() {
         &[
             DbElement {
                 id: DbId(1),
-                from: None,
-                to: None,
+                from: DbId(-4),
+                to: DbId::default(),
                 values: vec![("key1", "value1").into()],
             },
             DbElement {
                 id: DbId(-4),
-                from: Some(DbId(1)),
-                to: Some(DbId(3)),
+                from: DbId(1),
+                to: DbId(3),
                 values: vec![("key2", "value2").into()],
             },
             DbElement {
                 id: DbId(3),
-                from: None,
-                to: None,
+                from: DbId::default(),
+                to: DbId(-4),
                 values: vec![("key3", "value3").into()],
             },
         ],
@@ -319,8 +319,8 @@ fn insert_values_overwrite() {
         QueryBuilder::select().ids(1).query(),
         &[DbElement {
             id: DbId(1),
-            from: None,
-            to: None,
+            from: DbId::default(),
+            to: DbId::default(),
             values: vec![("key", 20).into(), ("key2", 30).into()],
         }],
     )
@@ -354,8 +354,8 @@ fn insert_values_overwrite_transaction() {
         QueryBuilder::select().ids(1).query(),
         &[DbElement {
             id: DbId(1),
-            from: None,
-            to: None,
+            from: DbId::default(),
+            to: DbId::default(),
             values: vec![("key", 10).into()],
         }],
     )

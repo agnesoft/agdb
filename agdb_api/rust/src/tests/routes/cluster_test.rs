@@ -786,7 +786,7 @@ pub async fn cluster_logout() -> Result<(), TestError> {
 
 #[cfg_attr(feature = "api", agdb::test_def())]
 pub async fn cluster_logout_all() -> Result<(), TestError> {
-    let cluster = TestCluster::new().await?;
+    let cluster = TestCluster::new_private().await?;
     let user = &next_user_name();
 
     let mut client = cluster.follower();
@@ -849,5 +849,6 @@ pub fn test_defs() -> Vec<agdb::type_def::Type> {
         __user_change_password_type_def(),
         __user_login_type_def(),
         __cluster_logout_type_def(),
+        __cluster_logout_all_type_def(),
     ]
 }

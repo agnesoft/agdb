@@ -141,8 +141,8 @@ fn insert_values_new<Store: StorageData>(
     result.result += values.len() as i64;
     result.elements.push(DbElement {
         id: db_id,
-        from: None,
-        to: None,
+        from: db.from_id(db_id)?,
+        to: db.to_id(db_id)?,
         values: vec![],
     });
 

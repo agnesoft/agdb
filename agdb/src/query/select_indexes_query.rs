@@ -26,9 +26,9 @@ impl Query for SelectIndexesQuery {
         result.result = indexes.len() as i64;
 
         result.elements.push(DbElement {
-            id: DbId(0),
-            from: None,
-            to: None,
+            id: DbId::default(),
+            from: DbId::default(),
+            to: DbId::default(),
             values: indexes,
         });
 

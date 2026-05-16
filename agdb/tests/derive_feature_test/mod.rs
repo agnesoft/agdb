@@ -120,8 +120,8 @@ fn user_db_types() {
 
     let element = DbElement {
         id: DbId(0),
-        from: None,
-        to: None,
+        from: DbId::default(),
+        to: DbId::default(),
         values: vec![
             ("bytes", vec![1_u8]).into(),
             ("u64", 1_u64).into(),
@@ -165,8 +165,8 @@ fn insert_node_values_custom() {
         QueryBuilder::select().ids(1).query(),
         &[DbElement {
             id: DbId(1),
-            from: None,
-            to: None,
+            from: DbId::default(),
+            to: DbId::default(),
             values: vec![("name", "my name").into(), ("age", 20_u64).into()],
         }],
     );
@@ -198,14 +198,14 @@ fn insert_node_values_uniform_custom() {
         &[
             DbElement {
                 id: DbId(1),
-                from: None,
-                to: None,
+                from: DbId::default(),
+                to: DbId::default(),
                 values: vec![("name", "my name").into(), ("age", 20_u64).into()],
             },
             DbElement {
                 id: DbId(2),
-                from: None,
-                to: None,
+                from: DbId::default(),
+                to: DbId::default(),
                 values: vec![("name", "my name").into(), ("age", 20_u64).into()],
             },
         ],
@@ -445,8 +445,8 @@ fn derived_macro_should_not_panic() {
 fn try_from_db_element() {
     let element = DbElement {
         id: DbId(1),
-        from: None,
-        to: None,
+        from: DbId::default(),
+        to: DbId::default(),
         values: vec![
             ("user_id", 100_u64).into(),
             ("password", "pswd").into(),
@@ -478,8 +478,8 @@ fn insert_element_alias_update_values() {
         QueryBuilder::select().ids(1).query(),
         &[DbElement {
             id: DbId(1),
-            from: None,
-            to: None,
+            from: DbId::default(),
+            to: DbId::default(),
             values: vec![("name", "my name").into(), ("age", 20_u64).into()],
         }],
     );
@@ -498,8 +498,8 @@ fn insert_element_alias_new() {
         QueryBuilder::select().ids("my_alias").query(),
         &[DbElement {
             id: DbId(1),
-            from: None,
-            to: None,
+            from: DbId::default(),
+            to: DbId::default(),
             values: vec![("name", "my name").into(), ("age", 20_u64).into()],
         }],
     );
@@ -519,8 +519,8 @@ fn insert_element_no_id_new_element() {
             result: 2,
             elements: vec![DbElement {
                 id: DbId(1),
-                from: None,
-                to: None,
+                from: DbId::default(),
+                to: DbId::default(),
                 values: vec![],
             }]
         }
@@ -529,8 +529,8 @@ fn insert_element_no_id_new_element() {
         QueryBuilder::select().ids(1).query(),
         &[DbElement {
             id: DbId(1),
-            from: None,
-            to: None,
+            from: DbId::default(),
+            to: DbId::default(),
             values: vec![("name", "my name").into(), ("age", 20_u64).into()],
         }],
     );
@@ -750,8 +750,8 @@ fn with_option_missing_value() {
 fn try_from_db_element_bad_conversion() {
     let element = DbElement {
         id: DbId(1),
-        from: None,
-        to: None,
+        from: DbId::default(),
+        to: DbId::default(),
         values: vec![
             ("user_id", 100_u64).into(),
             ("password", 1_i64).into(),

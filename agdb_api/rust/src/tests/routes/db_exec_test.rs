@@ -35,8 +35,8 @@ pub async fn read_write() -> Result<(), TestError> {
             result: 1,
             elements: vec![DbElement {
                 id: DbId(1),
-                from: None,
-                to: None,
+                from: DbId::default(),
+                to: DbId::default(),
                 values: vec![],
             }],
         },
@@ -44,8 +44,8 @@ pub async fn read_write() -> Result<(), TestError> {
             result: 1,
             elements: vec![DbElement {
                 id: DbId(1),
-                from: None,
-                to: None,
+                from: DbId::default(),
+                to: DbId::default(),
                 values: vec![("key", 1.1).into()],
             }],
         },
@@ -78,8 +78,8 @@ pub async fn read_only() -> Result<(), TestError> {
         result: 1,
         elements: vec![DbElement {
             id: DbId(1),
-            from: None,
-            to: None,
+            from: DbId::default(),
+            to: DbId::default(),
             values: vec![("key", 1.1).into()],
         }],
     }];
@@ -228,14 +228,14 @@ pub async fn use_result_of_previous_query() -> Result<(), TestError> {
             elements: vec![
                 DbElement {
                     id: DbId(3),
-                    from: None,
-                    to: None,
+                    from: DbId::default(),
+                    to: DbId(-5),
                     values: vec![("key", 2.2).into()]
                 },
                 DbElement {
                     id: DbId(2),
-                    from: None,
-                    to: None,
+                    from: DbId::default(),
+                    to: DbId(-4),
                     values: vec![("key", 1.1).into()]
                 }
             ]
@@ -291,14 +291,14 @@ pub async fn use_result_in_subquery() -> Result<(), TestError> {
             elements: vec![
                 DbElement {
                     id: DbId(3),
-                    from: None,
-                    to: None,
+                    from: DbId::default(),
+                    to: DbId(-5),
                     values: vec![("key", 2.2).into()]
                 },
                 DbElement {
                     id: DbId(2),
-                    from: None,
-                    to: None,
+                    from: DbId::default(),
+                    to: DbId(-4),
                     values: vec![("key", 1.1).into()]
                 }
             ]
@@ -338,8 +338,8 @@ pub async fn use_result_in_condition() -> Result<(), TestError> {
             result: 1,
             elements: vec![DbElement {
                 id: DbId(1),
-                from: None,
-                to: None,
+                from: DbId::default(),
+                to: DbId::default(),
                 values: vec![]
             },]
         }
@@ -377,20 +377,20 @@ pub async fn use_result_in_search() -> Result<(), TestError> {
             elements: vec![
                 DbElement {
                     id: DbId(1),
-                    from: None,
-                    to: None,
+                    from: DbId(-3),
+                    to: DbId::default(),
                     values: vec![]
                 },
                 DbElement {
                     id: DbId(-3),
-                    from: Some(DbId(1)),
-                    to: Some(DbId(2)),
+                    from: DbId(1),
+                    to: DbId(2),
                     values: vec![]
                 },
                 DbElement {
                     id: DbId(2),
-                    from: None,
-                    to: None,
+                    from: DbId::default(),
+                    to: DbId(-3),
                     values: vec![]
                 }
             ]
@@ -453,20 +453,20 @@ pub async fn use_result_in_insert_ids() -> Result<(), TestError> {
             elements: vec![
                 DbElement {
                     id: DbId(1),
-                    from: None,
-                    to: None,
+                    from: DbId(-7),
+                    to: DbId::default(),
                     values: vec![]
                 },
                 DbElement {
                     id: DbId(-5),
-                    from: Some(DbId(1)),
-                    to: Some(DbId(2)),
+                    from: DbId(1),
+                    to: DbId(2),
                     values: vec![]
                 },
                 DbElement {
                     id: DbId(2),
-                    from: None,
-                    to: None,
+                    from: DbId::default(),
+                    to: DbId(-5),
                     values: vec![]
                 }
             ]
@@ -530,20 +530,20 @@ pub async fn reentrant_queries() -> Result<(), TestError> {
             elements: vec![
                 DbElement {
                     id: DbId(1),
-                    from: None,
-                    to: None,
+                    from: DbId(-7),
+                    to: DbId::default(),
                     values: vec![]
                 },
                 DbElement {
                     id: DbId(-5),
-                    from: Some(DbId(1)),
-                    to: Some(DbId(2)),
+                    from: DbId(1),
+                    to: DbId(2),
                     values: vec![]
                 },
                 DbElement {
                     id: DbId(2),
-                    from: None,
-                    to: None,
+                    from: DbId::default(),
+                    to: DbId(-5),
                     values: vec![]
                 }
             ]
@@ -558,20 +558,20 @@ pub async fn reentrant_queries() -> Result<(), TestError> {
             elements: vec![
                 DbElement {
                     id: DbId(1),
-                    from: None,
-                    to: None,
+                    from: DbId(-7),
+                    to: DbId::default(),
                     values: vec![]
                 },
                 DbElement {
                     id: DbId(-7),
-                    from: Some(DbId(1)),
-                    to: Some(DbId(4)),
+                    from: DbId(1),
+                    to: DbId(4),
                     values: vec![]
                 },
                 DbElement {
                     id: DbId(4),
-                    from: None,
-                    to: None,
+                    from: DbId::default(),
+                    to: DbId(-7),
                     values: vec![]
                 }
             ]

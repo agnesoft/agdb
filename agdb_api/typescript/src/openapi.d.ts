@@ -246,7 +246,10 @@ declare namespace Components {
          * that represents a node or an edge.
          */
         export interface DbElement {
-            from?: null | /**
+            /**
+             * If edge: origin node id. If node: first outgoing edge id. Id == 0 if no outgoing edge.
+             */
+            from: /**
              * Database id is a wrapper around `i64`.
              * The id is an identifier of a database element
              * both nodes and edges. The positive ids represent nodes,
@@ -265,7 +268,10 @@ declare namespace Components {
              * logically invalid (there cannot be element with id 0) and a default.
              */
             DbId /* int64 */;
-            to?: null | /**
+            /**
+             * If edge: destination node id. If node: first incoming edge id. Id == 0 if no incoming edge.
+             */
+            to: /**
              * Database id is a wrapper around `i64`.
              * The id is an identifier of a database element
              * both nodes and edges. The positive ids represent nodes,

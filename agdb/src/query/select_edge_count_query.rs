@@ -61,8 +61,8 @@ impl Query for SelectEdgeCountQuery {
         for id in db_ids {
             result.elements.push(DbElement {
                 id,
-                from: db.from_id(id),
-                to: db.to_id(id),
+                from: db.from_id(id)?,
+                to: db.to_id(id)?,
                 values: vec![("edge_count", db.edge_count(id, self.from, self.to)?).into()],
             });
         }

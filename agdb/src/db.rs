@@ -570,21 +570,27 @@ impl<Store: StorageData> DbImpl<Store> {
     }
 
     #[allow(clippy::wrong_self_convention)]
-    pub(crate) fn from_id(&self, id: DbId) -> Option<DbId> {
+    pub(crate) fn from_id(&self, id: DbId) -> Result<DbId, DbError> {
         if id.0 < 0 {
-            Some(DbId(
+            Ok(DbId(
                 self.graph.edge_from(&self.storage, GraphIndex(id.0)).0,
             ))
         } else {
-            None
+            Ok(DbId(
+                self.graph
+                    .first_edge_from(&self.storage, GraphIndex(id.0))?
+                    .0,
+            ))
         }
     }
 
-    pub(crate) fn to_id(&self, id: DbId) -> Option<DbId> {
+    pub(crate) fn to_id(&self, id: DbId) -> Result<DbId, DbError> {
         if id.0 < 0 {
-            Some(DbId(self.graph.edge_to(&self.storage, GraphIndex(id.0)).0))
+            Ok(DbId(self.graph.edge_to(&self.storage, GraphIndex(id.0)).0))
         } else {
-            None
+            Ok(DbId(
+                self.graph.first_edge_to(&self.storage, GraphIndex(id.0))?.0,
+            ))
         }
     }
 

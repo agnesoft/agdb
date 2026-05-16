@@ -33,8 +33,8 @@ pub async fn read_write() -> Result<(), TestError> {
             result: 1,
             elements: vec![DbElement {
                 id: DbId(1),
-                from: None,
-                to: None,
+                from: DbId::default(),
+                to: DbId::default(),
                 values: vec![],
             }],
         },
@@ -42,8 +42,8 @@ pub async fn read_write() -> Result<(), TestError> {
             result: 1,
             elements: vec![DbElement {
                 id: DbId(1),
-                from: None,
-                to: None,
+                from: DbId::default(),
+                to: DbId::default(),
                 values: vec![("key", 1.1).into()],
             }],
         },
@@ -75,8 +75,8 @@ pub async fn read_only() -> Result<(), TestError> {
         result: 1,
         elements: vec![DbElement {
             id: DbId(1),
-            from: None,
-            to: None,
+            from: DbId::default(),
+            to: DbId::default(),
             values: vec![("key", 1.1).into()],
         }],
     }];

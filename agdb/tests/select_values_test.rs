@@ -35,14 +35,14 @@ fn select_values_ids() {
         &[
             DbElement {
                 id: DbId(1),
-                from: None,
-                to: None,
+                from: DbId::default(),
+                to: DbId::default(),
                 values: vec![("key", "value").into(), ("key2", "value2").into()],
             },
             DbElement {
                 id: DbId(2),
-                from: None,
-                to: None,
+                from: DbId::default(),
+                to: DbId::default(),
                 values: vec![("key", "value4").into(), ("key2", "value5").into()],
             },
         ],
@@ -109,20 +109,20 @@ fn select_values_search() {
         &[
             DbElement {
                 id: DbId(3),
-                from: None,
-                to: None,
+                from: DbId(-7),
+                to: DbId(-6),
                 values: vec![("key2", 10).into()],
             },
             DbElement {
                 id: DbId(-7),
-                from: Some(DbId(3)),
-                to: Some(DbId(5)),
+                from: DbId(3),
+                to: DbId(5),
                 values: vec![],
             },
             DbElement {
                 id: DbId(5),
-                from: None,
-                to: None,
+                from: DbId::default(),
+                to: DbId(-7),
                 values: vec![("key2", 10).into()],
             },
         ],
@@ -163,20 +163,20 @@ fn select_values_search_alt() {
         &[
             DbElement {
                 id: DbId(3),
-                from: None,
-                to: None,
+                from: DbId(-7),
+                to: DbId(-6),
                 values: vec![("key2", 10).into()],
             },
             DbElement {
                 id: DbId(-7),
-                from: Some(DbId(3)),
-                to: Some(DbId(5)),
+                from: DbId(3),
+                to: DbId(5),
                 values: vec![],
             },
             DbElement {
                 id: DbId(5),
-                from: None,
-                to: None,
+                from: DbId::default(),
+                to: DbId(-7),
                 values: vec![("key2", 10).into()],
             },
         ],

@@ -13,8 +13,8 @@ fn select_node_count_empty() {
         QueryBuilder::select().node_count().query(),
         &[DbElement {
             id: DbId(0),
-            from: None,
-            to: None,
+            from: DbId::default(),
+            to: DbId::default(),
             values: vec![("node_count", 0_u64).into()],
         }],
     );
@@ -30,8 +30,8 @@ fn select_node_count() {
         QueryBuilder::select().node_count().query(),
         &[DbElement {
             id: DbId(0),
-            from: None,
-            to: None,
+            from: DbId::default(),
+            to: DbId::default(),
             values: vec![("node_count", 5_u64).into()],
         }],
     );
@@ -48,8 +48,8 @@ fn select_node_count_after_removal() {
         QueryBuilder::select().node_count().query(),
         &[DbElement {
             id: DbId(0),
-            from: None,
-            to: None,
+            from: DbId::default(),
+            to: DbId::default(),
             values: vec![("node_count", 3_u64).into()],
         }],
     );

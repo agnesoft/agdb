@@ -565,6 +565,14 @@ where
         Ok(GraphIndex::from(-self.data.from(storage, index)?))
     }
 
+    pub fn first_edge_to(
+        &self,
+        storage: &Storage<D>,
+        index: GraphIndex,
+    ) -> Result<GraphIndex, DbError> {
+        Ok(GraphIndex::from(-self.data.to(storage, index)?))
+    }
+
     pub fn insert_edge(
         &mut self,
         storage: &mut Storage<D>,
@@ -580,14 +588,6 @@ where
         self.data.commit(storage, id)?;
 
         Ok(index)
-    }
-
-    pub fn first_edge_to(
-        &self,
-        storage: &Storage<D>,
-        index: GraphIndex,
-    ) -> Result<GraphIndex, DbError> {
-        Ok(GraphIndex::from(-self.data.to(storage, index)?))
     }
 
     pub fn insert_node(&mut self, storage: &mut Storage<D>) -> Result<GraphIndex, DbError> {

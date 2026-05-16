@@ -84,9 +84,9 @@ class DbElement implements ModelInterface, ArrayAccess, \JsonSerializable
      * @var boolean[]
      */
     protected static array $openAPINullables = [
-        'from' => true,
+        'from' => false,
         'id' => false,
-        'to' => true,
+        'to' => false,
         'values' => false
     ];
 
@@ -296,8 +296,14 @@ class DbElement implements ModelInterface, ArrayAccess, \JsonSerializable
     {
         $invalidProperties = [];
 
+        if ($this->container['from'] === null) {
+            $invalidProperties[] = "'from' can't be null";
+        }
         if ($this->container['id'] === null) {
             $invalidProperties[] = "'id' can't be null";
+        }
+        if ($this->container['to'] === null) {
+            $invalidProperties[] = "'to' can't be null";
         }
         if ($this->container['values'] === null) {
             $invalidProperties[] = "'values' can't be null";
@@ -320,7 +326,7 @@ class DbElement implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Gets from
      *
-     * @return int|null
+     * @return int
      */
     public function getFrom()
     {
@@ -330,21 +336,14 @@ class DbElement implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets from
      *
-     * @param int|null $from Origin node id.
+     * @param int $from If edge: origin node id. If node: first outgoing edge id. Id == 0 if no outgoing edge.
      *
      * @return self
      */
     public function setFrom($from)
     {
         if (is_null($from)) {
-            array_push($this->openAPINullablesSetToNull, 'from');
-        } else {
-            $nullablesSetToNull = $this->getOpenAPINullablesSetToNull();
-            $index = array_search('from', $nullablesSetToNull);
-            if ($index !== FALSE) {
-                unset($nullablesSetToNull[$index]);
-                $this->setOpenAPINullablesSetToNull($nullablesSetToNull);
-            }
+            throw new \InvalidArgumentException('non-nullable from cannot be null');
         }
         $this->container['from'] = $from;
 
@@ -381,7 +380,7 @@ class DbElement implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Gets to
      *
-     * @return int|null
+     * @return int
      */
     public function getTo()
     {
@@ -391,21 +390,14 @@ class DbElement implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets to
      *
-     * @param int|null $to Destination node id.
+     * @param int $to If edge: destination node id. If node: first incoming edge id. Id == 0 if no incoming edge.
      *
      * @return self
      */
     public function setTo($to)
     {
         if (is_null($to)) {
-            array_push($this->openAPINullablesSetToNull, 'to');
-        } else {
-            $nullablesSetToNull = $this->getOpenAPINullablesSetToNull();
-            $index = array_search('to', $nullablesSetToNull);
-            if ($index !== FALSE) {
-                unset($nullablesSetToNull[$index]);
-                $this->setOpenAPINullablesSetToNull($nullablesSetToNull);
-            }
+            throw new \InvalidArgumentException('non-nullable to cannot be null');
         }
         $this->container['to'] = $to;
 

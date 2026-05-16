@@ -66,8 +66,8 @@ impl Query for SelectValuesQuery {
 
             result.elements.push(DbElement {
                 id,
-                from: db.from_id(id),
-                to: db.to_id(id),
+                from: db.from_id(id)?,
+                to: db.to_id(id)?,
                 values,
             });
         }

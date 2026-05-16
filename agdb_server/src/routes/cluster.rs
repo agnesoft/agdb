@@ -14,6 +14,7 @@ use crate::server_error::ServerResponse;
 use crate::server_error::ServerResult;
 use crate::user_id::AdminId;
 use crate::user_id::ClusterId;
+use crate::user_id::UserAgent;
 use crate::user_id::UserId;
 use crate::user_id::UserIdToken;
 use agdb_api::ClusterStatus;
@@ -96,6 +97,7 @@ pub(crate) async fn admin_logout_all(
     )
 )]
 pub(crate) async fn login(
+    agent: UserAgent,
     State(server_db): State<ServerDb>,
     State(cluster): State<Cluster>,
     Json(request): Json<UserLogin>,
@@ -105,6 +107,7 @@ pub(crate) async fn login(
         .exec(SaveUserToken {
             user: request.username,
             new_token: token.clone(),
+            agent: agent.0,
         })
         .await?;
 

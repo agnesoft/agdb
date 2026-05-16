@@ -242,6 +242,7 @@ Class | Method | HTTP request | Description
 - [SetLogLevelRequest](docs/Model/SetLogLevelRequest.md)
 - [UserCredentials](docs/Model/UserCredentials.md)
 - [UserLogin](docs/Model/UserLogin.md)
+- [UserSession](docs/Model/UserSession.md)
 - [UserStatus](docs/Model/UserStatus.md)
 
 ## Authorization

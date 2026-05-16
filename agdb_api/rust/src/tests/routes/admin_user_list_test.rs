@@ -19,6 +19,7 @@ pub async fn user_list() -> Result<(), TestError> {
             username: "admin".to_string(),
             login: true,
             admin: true,
+            sessions: vec![],
         }),
         "{}",
         serde_json::to_string(&list).unwrap()
@@ -27,11 +28,13 @@ pub async fn user_list() -> Result<(), TestError> {
         username: user1.to_string(),
         login: false,
         admin: false,
+        sessions: vec![],
     }));
     assert!(list.contains(&UserStatus {
         username: user2.to_string(),
         login: false,
         admin: false,
+        sessions: vec![],
     }));
     Ok(())
 }

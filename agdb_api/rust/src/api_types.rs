@@ -170,12 +170,20 @@ pub struct UserLogin {
     pub password: String,
 }
 
+#[derive(Debug, Default, Deserialize, Serialize, ToSchema, PartialEq, Eq, PartialOrd, Ord)]
+#[cfg_attr(feature = "api", derive(agdb::TypeDef))]
+pub struct UserSession {
+    pub agent: String,
+    pub created: u64,
+}
+
 #[derive(Debug, Deserialize, Serialize, ToSchema, PartialEq, Eq, PartialOrd, Ord)]
 #[cfg_attr(feature = "api", derive(agdb::TypeDef))]
 pub struct UserStatus {
     pub username: String,
     pub login: bool,
     pub admin: bool,
+    pub sessions: Vec<UserSession>,
 }
 
 impl From<&str> for DbKind {
@@ -349,7 +357,17 @@ mod tests {
             UserStatus {
                 username: "user".to_string(),
                 login: true,
-                admin: false
+                admin: false,
+                sessions: vec![
+                    UserSession {
+                        agent: "agent".to_string(),
+                        created: 0,
+                    },
+                    UserSession {
+                        agent: "agent2".to_string(),
+                        created: 0,
+                    }
+                ]
             }
         );
         let _ = format!(
@@ -416,11 +434,31 @@ mod tests {
             username: "user".to_string(),
             login: true,
             admin: false,
+            sessions: vec![
+                UserSession {
+                    agent: "agent".to_string(),
+                    created: 0,
+                },
+                UserSession {
+                    agent: "agent2".to_string(),
+                    created: 0,
+                },
+            ],
         };
         let other = UserStatus {
             username: "user2".to_string(),
             login: true,
             admin: false,
+            sessions: vec![
+                UserSession {
+                    agent: "agent".to_string(),
+                    created: 0,
+                },
+                UserSession {
+                    agent: "agent2".to_string(),
+                    created: 0,
+                },
+            ],
         };
         assert!(status < other);
     }
@@ -458,6 +496,7 @@ mod tests {
             username: "user".to_string(),
             login: false,
             admin: false,
+            sessions: vec![],
         };
 
         assert_eq!(status.cmp(&status), std::cmp::Ordering::Equal);

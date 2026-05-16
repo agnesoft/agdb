@@ -18,6 +18,7 @@ use agdb::SearchQuery;
 use agdb_api::DbKind;
 use agdb_api::DbUser;
 use agdb_api::DbUserRole;
+use agdb_api::UserSession;
 use agdb_api::UserStatus;
 use reqwest::StatusCode;
 use std::sync::Arc;
@@ -40,6 +41,7 @@ pub(crate) struct UserToken {
     pub(crate) db_id: Option<DbId>,
     pub(crate) token: String,
     pub(crate) created: u64,
+    pub(crate) agent: String,
 }
 
 #[derive(Default, DbType)]
@@ -67,6 +69,7 @@ pub(crate) struct ServerDb {
 }
 
 const ADMIN: &str = "admin";
+const AGENT: &str = "agent";
 const CREATED: &str = "created";
 const DB: &str = "db";
 const DBS: &str = "dbs";
@@ -514,7 +517,12 @@ impl ServerDb {
         Ok(())
     }
 
-    pub(crate) async fn save_token(&self, user: DbId, token: &str) -> ServerResult<DbId> {
+    pub(crate) async fn save_token(
+        &self,
+        user: DbId,
+        token: &str,
+        agent: &str,
+    ) -> ServerResult<DbId> {
         self.db
             .write()
             .await
@@ -529,6 +537,7 @@ impl ServerDb {
                                     .duration_since(UNIX_EPOCH)
                                     .unwrap_or_default()
                                     .as_secs(),
+                                agent: agent.to_string(),
                             })
                             .query(),
                     )?
@@ -762,6 +771,31 @@ impl ServerDb {
         })
     }
 
+    pub(crate) async fn user_sessions(&self, user_id: DbId) -> ServerResult<Vec<UserSession>> {
+        let expiry_limit = token_expiry_limit(self.token_expiry_seconds);
+        self.db.read().await.transaction(|t| {
+            Ok(t.exec(
+                QueryBuilder::select()
+                    .values([AGENT, CREATED])
+                    .search()
+                    .to(user_id)
+                    .where_()
+                    .neighbor()
+                    .and()
+                    .key(CREATED)
+                    .value(Comparison::GreaterThanOrEqual(expiry_limit.into()))
+                    .query(),
+            )?
+            .elements
+            .into_iter()
+            .map(|e| UserSession {
+                agent: e.values[0].value.to_string(),
+                created: e.values[1].value.to_u64().unwrap_or_default(),
+            })
+            .collect())
+        })
+    }
+
     pub(crate) async fn user_statuses(&self) -> ServerResult<Vec<UserStatus>> {
         self.db
             .read()
@@ -793,6 +827,7 @@ impl ServerDb {
                             .to_u64()?
                             != 1,
                         admin: e.id == admin_id,
+                        sessions: vec![],
                     })
                 })
                 .collect::<ServerResult<Vec<UserStatus>>>()
@@ -998,10 +1033,10 @@ mod tests {
             })
             .await?;
 
-        let expired1 = db.save_token(user1, "token1").await?;
-        let expired2 = db.save_token(user1, "token2").await?;
-        db.save_token(user2, "token3").await?;
-        db.save_token(user2, "token4").await?;
+        let expired1 = db.save_token(user1, "token1", "agent").await?;
+        let expired2 = db.save_token(user1, "token2", "agent").await?;
+        db.save_token(user2, "token3", "agent").await?;
+        db.save_token(user2, "token4", "agent").await?;
 
         db.db.write().await.exec_mut(
             QueryBuilder::insert()

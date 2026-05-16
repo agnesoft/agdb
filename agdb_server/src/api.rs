@@ -89,6 +89,7 @@ use utoipa::openapi::security::SecurityScheme;
         agdb_api::ServerDatabase,
         agdb_api::UserCredentials,
         agdb_api::UserLogin,
+        agdb_api::UserSession,
         agdb_api::UserStatus,
         agdb::QueryResult,
         agdb::DbElement,

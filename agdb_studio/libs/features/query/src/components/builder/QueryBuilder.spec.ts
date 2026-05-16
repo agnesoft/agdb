@@ -98,6 +98,63 @@ describe("QueryBuilder", () => {
     expect(wrapper.find(".query-builder").exists()).toBe(true);
   });
 
+  it("does nothing when clearSteps is called without a queryId", () => {
+    const wrapper = mount(QueryBuilder, {
+      global: {
+        provide: {
+          queryId: ref(undefined),
+        },
+      },
+    });
+
+    expect(() => {
+      (
+        wrapper.vm as unknown as {
+          clearSteps: () => void;
+        }
+      ).clearSteps();
+    }).not.toThrow();
+  });
+
+  it("shows stop label and keeps the run button enabled while running", () => {
+    const queryId = "test-query-running";
+    const query = queryStore.addQuery({ id: queryId });
+    query.value.isRunning = true;
+
+    const wrapper = mount(QueryBuilder, {
+      global: {
+        provide: {
+          queryId: ref(queryId),
+        },
+      },
+    });
+
+    const button = wrapper.find(".run-query-button");
+    expect(button.text()).toBe("Stop query");
+    expect(button.attributes("disabled")).toBeUndefined();
+  });
+
+  it("runs the query when the run button is clicked", async () => {
+    const queryId = "test-query-run-click";
+    const query = queryStore.addQuery({ id: queryId });
+    queryStore.addQueryStep(queryId, "exec", { id: "s1", type: "select" });
+    queryStore.addQueryStep(queryId, "exec", { id: "s2", type: "select.ids" });
+
+    const wrapper = mount(QueryBuilder, {
+      global: {
+        provide: {
+          queryId: ref(queryId),
+          activeTab: ref("exec"),
+        },
+      },
+    });
+
+    await wrapper.find(".run-query-button").trigger("click");
+
+    expect(query.value.lastRun).toBeInstanceOf(Date);
+    expect(query.value.isRunning).toBe(false);
+  });
+
   it("shows QueryStepInput component", () => {
     const wrapper = mount(QueryBuilder, {
       global: {

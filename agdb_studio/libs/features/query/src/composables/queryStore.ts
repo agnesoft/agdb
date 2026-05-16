@@ -62,15 +62,29 @@ const clearQuerySteps = (queryId: string, tab: TAB) => {
   }
 };
 
-const runQuery = (queryId: string) => {
+const runQuery = async (
+  queryId: string,
+  runner?: () => Promise<void>,
+): Promise<void> => {
   const query = getQuery(queryId);
   if (query?.value) {
     query.value.isRunning = true;
-    // Simulate query execution
-    setTimeout(() => {
+
+    if (!runner) {
+      // Simulate query execution when no real runner is provided.
+      setTimeout(() => {
+        query.value.isRunning = false;
+        query.value.lastRun = new Date();
+      }, 1000);
+      return;
+    }
+
+    try {
+      await runner();
+    } finally {
       query.value.isRunning = false;
       query.value.lastRun = new Date();
-    }, 1000);
+    }
   }
 };
 

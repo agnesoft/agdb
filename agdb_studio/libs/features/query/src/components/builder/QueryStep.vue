@@ -4,7 +4,7 @@ import { vOnClickOutside } from "@vueuse/components";
 import { ClCloseMd } from "@kalimahapps/vue-icons";
 import type { QueryStep, TAB } from "../../composables/types";
 import { useQueryStore } from "../../composables/queryStore";
-import { queryApiMock } from "../../mock/queryApiMock";
+import { getQueryStepLabel, queryApiMock } from "../../mock/queryApiMock";
 import QueryArgument from "./arguments/QueryArgument.vue";
 import QueryArgumentDisplay from "./arguments/QueryArgumentDisplay.vue";
 
@@ -19,6 +19,7 @@ const tab = inject<Ref<TAB>>("activeTab");
 
 const stepDef = computed(() => queryApiMock[props.step.type]);
 const stepArguments = computed(() => stepDef.value?.arguments ?? null);
+const stepLabel = computed(() => getQueryStepLabel(props.step.type));
 // Start in edit mode automatically when the step has no args yet (newly added).
 const isEditingArgs = ref(!props.step.args?.length);
 
@@ -49,7 +50,7 @@ const closeEditing = () => {
       class="label"
       :class="{ invalid: step.invalid }"
     >
-      <span>{{ step.type }}</span>
+      <span>{{ stepLabel }}</span>
       <template v-if="stepArguments">
         <QueryArgumentDisplay
           :arguments="stepArguments"

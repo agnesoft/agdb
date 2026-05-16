@@ -2,6 +2,7 @@
 import { computed, inject, type Ref } from "vue";
 import type { QueryType, TAB } from "../../composables/types";
 import { useQueryStore } from "../../composables/queryStore";
+import { useQueryExecution } from "../../composables/queryExecution";
 import QueryStep from "./QueryStep.vue";
 import QueryStepInput from "./QueryStepInput.vue";
 import { ClCloseMd } from "@kalimahapps/vue-icons";
@@ -21,6 +22,20 @@ const steps = computed(() => {
   /* v8 ignore next -- @preserve */
   return query.value.steps[tab?.value ?? "exec"] ?? [];
 });
+
+const isRunning = computed(() => query.value?.isRunning ?? false);
+
+const { runLabel, canRun, runOrStopQuery } = useQueryExecution(
+  queryId,
+  tab,
+  steps,
+  isRunning,
+);
+
+const clearSteps = (): void => {
+  if (!queryId?.value) return;
+  queryStore.clearQuerySteps(queryId.value, tab?.value ?? "exec");
+};
 
 const addStep = (stepType: QueryType) => {
   /* v8 ignore if -- @preserve */
@@ -49,13 +64,7 @@ const addStep = (stepType: QueryType) => {
         type="button"
         class="button button-bordered button-danger remove-button button-circle"
         title="Clear all steps"
-        @click="
-          () => {
-            /* v8 ignore next -- @preserve */
-            if (!queryId) return;
-            queryStore.clearQuerySteps(queryId, tab ?? 'exec');
-          }
-        "
+        @click="clearSteps"
       >
         <ClCloseMd class="remove-query-icon" />
       </button>
@@ -64,8 +73,10 @@ const addStep = (stepType: QueryType) => {
       type="button"
       class="button run-query-button"
       :class="[tab === 'exec_mut' ? 'button-warning' : 'button-primary']"
+      :disabled="!canRun && !isRunning"
+      @click="runOrStopQuery"
     >
-      Run query
+      {{ runLabel }}
     </button>
   </div>
 </template>

@@ -11,12 +11,13 @@ use serde::Serialize;
 pub(crate) struct SaveUserToken {
     pub(crate) user: String,
     pub(crate) new_token: String,
+    pub(crate) agent: String,
 }
 
 impl Action for SaveUserToken {
     async fn exec(self, db: ServerDb, _db_pool: DbPool) -> ServerResult<ClusterActionResult> {
         let user_id = db.user_id(&self.user).await?;
-        db.save_token(user_id, &self.new_token).await?;
+        db.save_token(user_id, &self.new_token, &self.agent).await?;
 
         Ok(ClusterActionResult::None)
     }

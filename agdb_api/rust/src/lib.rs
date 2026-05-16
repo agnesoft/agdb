@@ -27,6 +27,7 @@ pub use api_types::QueryAudit;
 pub use api_types::ServerDatabase;
 pub use api_types::UserCredentials;
 pub use api_types::UserLogin;
+pub use api_types::UserSession;
 pub use api_types::UserStatus;
 pub use api_types::config_impl;
 pub use client::AgdbApi;

@@ -7,6 +7,7 @@ use crate::routes::ServerResult;
 use crate::server_db::ServerDb;
 use crate::server_error::ServerError;
 use crate::server_error::ServerResponse;
+use crate::user_id::UserAgent;
 use crate::user_id::UserId;
 use crate::user_id::UserIdToken;
 use crate::user_id::UserName;
@@ -49,11 +50,12 @@ pub(crate) async fn do_login(
     )
 )]
 pub(crate) async fn login(
+    agent: UserAgent,
     State(server_db): State<ServerDb>,
     Json(request): Json<UserLogin>,
 ) -> ServerResponse<(StatusCode, Json<String>)> {
     let (user_id, token) = do_login(&server_db, &request.username, &request.password).await?;
-    server_db.save_token(user_id, &token).await?;
+    server_db.save_token(user_id, &token, &agent.0).await?;
     Ok((StatusCode::OK, Json(token)))
 }
 
@@ -144,16 +146,19 @@ pub(crate) async fn change_password(
     )
 )]
 pub(crate) async fn status(
-    _user: UserId,
+    user: UserId,
     username: UserName,
+    State(server_db): State<ServerDb>,
     State(config): State<Config>,
 ) -> ServerResponse<(StatusCode, Json<UserStatus>)> {
+    let sessions = server_db.user_sessions(user.0).await?;
     Ok((
         StatusCode::OK,
         Json(UserStatus {
             admin: username.0 == config.admin,
             username: username.0,
             login: true,
+            sessions,
         }),
     ))
 }

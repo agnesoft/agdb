@@ -7,11 +7,9 @@ use crate::test_server::test_error::TestError;
 pub async fn login() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
     let owner = &next_user_name();
-    let status = server.api.user_login(ADMIN, ADMIN).await?;
-    assert_eq!(status, 200);
+    server.user_login(ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
-    let status = server.api.user_login(owner, owner).await?;
-    assert_eq!(status, 200);
+    server.user_login(owner).await?;
     assert!(!server.api.token.clone().unwrap().is_empty());
     Ok(())
 }
@@ -20,14 +18,11 @@ pub async fn login() -> Result<(), TestError> {
 pub async fn repeated_login() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
     let owner = &next_user_name();
-    let status = server.api.user_login(ADMIN, ADMIN).await?;
-    assert_eq!(status, 200);
+    server.user_login(ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
-    let status = server.api.user_login(owner, owner).await?;
-    assert_eq!(status, 200);
+    server.user_login(owner).await?;
     let token = server.api.token.clone().unwrap();
-    let status = server.api.user_login(owner, owner).await?;
-    assert_eq!(status, 200);
+    server.user_login(owner).await?;
     assert!(
         server.api.token.clone().unwrap() != token,
         "Login did not generate a new token: {token}"
@@ -39,8 +34,7 @@ pub async fn repeated_login() -> Result<(), TestError> {
 pub async fn invalid_credentials() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
     let owner = &next_user_name();
-    let status = server.api.user_login(ADMIN, ADMIN).await?;
-    assert_eq!(status, 200);
+    server.user_login(ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     let status = server
         .api
@@ -69,7 +63,7 @@ pub async fn user_not_found() -> Result<(), TestError> {
 pub async fn concurrent_logins() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
     let user = &next_user_name();
-    server.api.user_login(ADMIN, ADMIN).await?;
+    server.user_login(ADMIN).await?;
     server.api.admin_user_add(user, user).await?;
 
     let mut handles = vec![];
@@ -98,7 +92,7 @@ pub async fn concurrent_logins() -> Result<(), TestError> {
         tokens.push(handle.await?);
     }
 
-    server.api.user_login(user, user).await?;
+    server.user_login(user).await?;
     let token = server.api.token.clone().unwrap();
     server.api.user_logout().await?;
 

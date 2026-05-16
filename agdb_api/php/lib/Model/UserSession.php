@@ -1,6 +1,6 @@
 <?php
 /**
- * UserStatus
+ * UserSession
  *
  * PHP version 8.1
  *
@@ -32,7 +32,7 @@ use \ArrayAccess;
 use \Agnesoft\AgdbApi\ObjectSerializer;
 
 /**
- * UserStatus Class Doc Comment
+ * UserSession Class Doc Comment
  *
  * @category Class
  * @package  Agnesoft\AgdbApi
@@ -40,7 +40,7 @@ use \Agnesoft\AgdbApi\ObjectSerializer;
  * @link     https://openapi-generator.tech
  * @implements \ArrayAccess<string, mixed>
  */
-class UserStatus implements ModelInterface, ArrayAccess, \JsonSerializable
+class UserSession implements ModelInterface, ArrayAccess, \JsonSerializable
 {
     public const DISCRIMINATOR = null;
 
@@ -49,7 +49,7 @@ class UserStatus implements ModelInterface, ArrayAccess, \JsonSerializable
      *
      * @var string
      */
-    protected static $openAPIModelName = 'UserStatus';
+    protected static $openAPIModelName = 'UserSession';
 
     /**
      * Array of property to type mappings. Used for (de)serialization
@@ -57,10 +57,8 @@ class UserStatus implements ModelInterface, ArrayAccess, \JsonSerializable
      * @var string[]
      */
     protected static $openAPITypes = [
-        'admin' => 'bool',
-        'login' => 'bool',
-        'sessions' => '\Agnesoft\AgdbApi\Model\UserSession[]',
-        'username' => 'string'
+        'agent' => 'string',
+        'created' => 'int'
     ];
 
     /**
@@ -71,10 +69,8 @@ class UserStatus implements ModelInterface, ArrayAccess, \JsonSerializable
      * @psalm-var array<string, string|null>
      */
     protected static $openAPIFormats = [
-        'admin' => null,
-        'login' => null,
-        'sessions' => null,
-        'username' => null
+        'agent' => null,
+        'created' => 'int64'
     ];
 
     /**
@@ -83,10 +79,8 @@ class UserStatus implements ModelInterface, ArrayAccess, \JsonSerializable
      * @var boolean[]
      */
     protected static array $openAPINullables = [
-        'admin' => false,
-        'login' => false,
-        'sessions' => false,
-        'username' => false
+        'agent' => false,
+        'created' => false
     ];
 
     /**
@@ -175,10 +169,8 @@ class UserStatus implements ModelInterface, ArrayAccess, \JsonSerializable
      * @var string[]
      */
     protected static $attributeMap = [
-        'admin' => 'admin',
-        'login' => 'login',
-        'sessions' => 'sessions',
-        'username' => 'username'
+        'agent' => 'agent',
+        'created' => 'created'
     ];
 
     /**
@@ -187,10 +179,8 @@ class UserStatus implements ModelInterface, ArrayAccess, \JsonSerializable
      * @var string[]
      */
     protected static $setters = [
-        'admin' => 'setAdmin',
-        'login' => 'setLogin',
-        'sessions' => 'setSessions',
-        'username' => 'setUsername'
+        'agent' => 'setAgent',
+        'created' => 'setCreated'
     ];
 
     /**
@@ -199,10 +189,8 @@ class UserStatus implements ModelInterface, ArrayAccess, \JsonSerializable
      * @var string[]
      */
     protected static $getters = [
-        'admin' => 'getAdmin',
-        'login' => 'getLogin',
-        'sessions' => 'getSessions',
-        'username' => 'getUsername'
+        'agent' => 'getAgent',
+        'created' => 'getCreated'
     ];
 
     /**
@@ -262,10 +250,8 @@ class UserStatus implements ModelInterface, ArrayAccess, \JsonSerializable
      */
     public function __construct(?array $data = null)
     {
-        $this->setIfExists('admin', $data ?? [], null);
-        $this->setIfExists('login', $data ?? [], null);
-        $this->setIfExists('sessions', $data ?? [], null);
-        $this->setIfExists('username', $data ?? [], null);
+        $this->setIfExists('agent', $data ?? [], null);
+        $this->setIfExists('created', $data ?? [], null);
     }
 
     /**
@@ -295,18 +281,16 @@ class UserStatus implements ModelInterface, ArrayAccess, \JsonSerializable
     {
         $invalidProperties = [];
 
-        if ($this->container['admin'] === null) {
-            $invalidProperties[] = "'admin' can't be null";
+        if ($this->container['agent'] === null) {
+            $invalidProperties[] = "'agent' can't be null";
         }
-        if ($this->container['login'] === null) {
-            $invalidProperties[] = "'login' can't be null";
+        if ($this->container['created'] === null) {
+            $invalidProperties[] = "'created' can't be null";
         }
-        if ($this->container['sessions'] === null) {
-            $invalidProperties[] = "'sessions' can't be null";
+        if (($this->container['created'] < 0)) {
+            $invalidProperties[] = "invalid value for 'created', must be bigger than or equal to 0.";
         }
-        if ($this->container['username'] === null) {
-            $invalidProperties[] = "'username' can't be null";
-        }
+
         return $invalidProperties;
     }
 
@@ -323,109 +307,60 @@ class UserStatus implements ModelInterface, ArrayAccess, \JsonSerializable
 
 
     /**
-     * Gets admin
-     *
-     * @return bool
-     */
-    public function getAdmin()
-    {
-        return $this->container['admin'];
-    }
-
-    /**
-     * Sets admin
-     *
-     * @param bool $admin admin
-     *
-     * @return self
-     */
-    public function setAdmin($admin)
-    {
-        if (is_null($admin)) {
-            throw new \InvalidArgumentException('non-nullable admin cannot be null');
-        }
-        $this->container['admin'] = $admin;
-
-        return $this;
-    }
-
-    /**
-     * Gets login
-     *
-     * @return bool
-     */
-    public function getLogin()
-    {
-        return $this->container['login'];
-    }
-
-    /**
-     * Sets login
-     *
-     * @param bool $login login
-     *
-     * @return self
-     */
-    public function setLogin($login)
-    {
-        if (is_null($login)) {
-            throw new \InvalidArgumentException('non-nullable login cannot be null');
-        }
-        $this->container['login'] = $login;
-
-        return $this;
-    }
-
-    /**
-     * Gets sessions
-     *
-     * @return \Agnesoft\AgdbApi\Model\UserSession[]
-     */
-    public function getSessions()
-    {
-        return $this->container['sessions'];
-    }
-
-    /**
-     * Sets sessions
-     *
-     * @param \Agnesoft\AgdbApi\Model\UserSession[] $sessions sessions
-     *
-     * @return self
-     */
-    public function setSessions($sessions)
-    {
-        if (is_null($sessions)) {
-            throw new \InvalidArgumentException('non-nullable sessions cannot be null');
-        }
-        $this->container['sessions'] = $sessions;
-
-        return $this;
-    }
-
-    /**
-     * Gets username
+     * Gets agent
      *
      * @return string
      */
-    public function getUsername()
+    public function getAgent()
     {
-        return $this->container['username'];
+        return $this->container['agent'];
     }
 
     /**
-     * Sets username
+     * Sets agent
      *
-     * @param string $username username
+     * @param string $agent agent
      *
      * @return self
      */
-    public function setUsername($username)
+    public function setAgent($agent)
     {
-        if (is_null($username)) {
-            throw new \InvalidArgumentException('non-nullable username cannot be null');
+        if (is_null($agent)) {
+            throw new \InvalidArgumentException('non-nullable agent cannot be null');
         }
-        $this->container['username'] = $username;
+        $this->container['agent'] = $agent;
+
+        return $this;
+    }
+
+    /**
+     * Gets created
+     *
+     * @return int
+     */
+    public function getCreated()
+    {
+        return $this->container['created'];
+    }
+
+    /**
+     * Sets created
+     *
+     * @param int $created created
+     *
+     * @return self
+     */
+    public function setCreated($created)
+    {
+        if (is_null($created)) {
+            throw new \InvalidArgumentException('non-nullable created cannot be null');
+        }
+
+        if (($created < 0)) {
+            throw new \InvalidArgumentException('invalid value for $created when calling UserSession., must be bigger than or equal to 0.');
+        }
+
+        $this->container['created'] = $created;
 
         return $this;
     }

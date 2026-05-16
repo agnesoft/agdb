@@ -15,9 +15,11 @@ use agdb::QueryBuilder;
 use agdb::QueryId;
 use agdb::QueryResult;
 use agdb::SearchQuery;
+use agdb::SelectValuesQuery;
 use agdb_api::DbKind;
 use agdb_api::DbUser;
 use agdb_api::DbUserRole;
+use agdb_api::UserSession;
 use agdb_api::UserStatus;
 use reqwest::StatusCode;
 use std::sync::Arc;
@@ -40,6 +42,7 @@ pub(crate) struct UserToken {
     pub(crate) db_id: Option<DbId>,
     pub(crate) token: String,
     pub(crate) created: u64,
+    pub(crate) agent: String,
 }
 
 #[derive(Default, DbType)]
@@ -67,6 +70,7 @@ pub(crate) struct ServerDb {
 }
 
 const ADMIN: &str = "admin";
+const AGENT: &str = "agent";
 const CREATED: &str = "created";
 const DB: &str = "db";
 const DBS: &str = "dbs";
@@ -514,7 +518,12 @@ impl ServerDb {
         Ok(())
     }
 
-    pub(crate) async fn save_token(&self, user: DbId, token: &str) -> ServerResult<DbId> {
+    pub(crate) async fn save_token(
+        &self,
+        user: DbId,
+        token: &str,
+        agent: &str,
+    ) -> ServerResult<DbId> {
         self.db
             .write()
             .await
@@ -529,6 +538,7 @@ impl ServerDb {
                                     .duration_since(UNIX_EPOCH)
                                     .unwrap_or_default()
                                     .as_secs(),
+                                agent: agent.to_string(),
                             })
                             .query(),
                     )?
@@ -762,6 +772,17 @@ impl ServerDb {
         })
     }
 
+    pub(crate) async fn user_sessions(&self, user_id: DbId) -> ServerResult<Vec<UserSession>> {
+        let expiry_limit = token_expiry_limit(self.token_expiry_seconds);
+        self.db.read().await.transaction(|t| {
+            Ok(t.exec(user_sessions_query(expiry_limit, user_id))?
+                .elements
+                .into_iter()
+                .map(UserSession::from)
+                .collect())
+        })
+    }
+
     pub(crate) async fn user_statuses(&self) -> ServerResult<Vec<UserStatus>> {
         self.db
             .read()
@@ -783,16 +804,21 @@ impl ServerDb {
                 .elements
                 .into_iter()
                 .map(|e| {
+                    let sessions: Vec<UserSession> = t
+                        .exec(user_sessions_query(
+                            token_expiry_limit(self.token_expiry_seconds),
+                            e.id,
+                        ))?
+                        .elements
+                        .into_iter()
+                        .map(UserSession::from)
+                        .collect();
+
                     Ok(UserStatus {
                         username: e.values[0].value.to_string(),
-                        login: t
-                            .exec(QueryBuilder::select().edge_count_to().ids(e.id).query())?
-                            .elements[0]
-                            .values[0]
-                            .value
-                            .to_u64()?
-                            != 1,
+                        login: !sessions.is_empty(),
                         admin: e.id == admin_id,
+                        sessions,
                     })
                 })
                 .collect::<ServerResult<Vec<UserStatus>>>()
@@ -844,6 +870,19 @@ impl ServerDb {
         )?;
         Ok(())
     }
+}
+
+fn user_sessions_query(expiry_limit: u64, user_id: DbId) -> SelectValuesQuery {
+    QueryBuilder::select()
+        .values([AGENT, CREATED])
+        .search()
+        .to(user_id)
+        .where_()
+        .neighbor()
+        .and()
+        .key(CREATED)
+        .value(Comparison::GreaterThanOrEqual(expiry_limit.into()))
+        .query()
 }
 
 fn db_not_found(name: &str) -> ServerError {
@@ -998,10 +1037,10 @@ mod tests {
             })
             .await?;
 
-        let expired1 = db.save_token(user1, "token1").await?;
-        let expired2 = db.save_token(user1, "token2").await?;
-        db.save_token(user2, "token3").await?;
-        db.save_token(user2, "token4").await?;
+        let expired1 = db.save_token(user1, "token1", "agent").await?;
+        let expired2 = db.save_token(user1, "token2", "agent").await?;
+        db.save_token(user2, "token3", "agent").await?;
+        db.save_token(user2, "token4", "agent").await?;
 
         db.db.write().await.exec_mut(
             QueryBuilder::insert()

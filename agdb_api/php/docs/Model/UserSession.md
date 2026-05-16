@@ -1,12 +1,10 @@
-# UserStatus
+# UserSession
 
 ## Properties
 
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
-**admin** | **bool** |  |
-**login** | **bool** |  |
-**sessions** | [**\Agnesoft\AgdbApi\Model\UserSession[]**](UserSession.md) |  |
-**username** | **string** |  |
+**agent** | **string** |  |
+**created** | **int** |  |
 
 [[Back to Model list]](../../README.md#models) [[Back to API list]](../../README.md#endpoints) [[Back to README]](../../README.md)

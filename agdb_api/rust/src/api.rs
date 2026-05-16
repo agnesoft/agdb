@@ -112,6 +112,7 @@ use crate::ReqwestClient;
 use crate::ServerDatabase;
 use crate::UserCredentials;
 use crate::UserLogin;
+use crate::UserSession;
 use crate::UserStatus;
 use crate::http_client::ReqwestClientTypeDef;
 
@@ -239,6 +240,7 @@ impl Api {
             UserCredentials::type_def(),
             UserLogin::type_def(),
             UserStatus::type_def(),
+            UserSession::type_def(),
         ]
     }
 

@@ -13,7 +13,7 @@ pub async fn list() -> Result<(), TestError> {
     let owner = &next_user_name();
     let user = &next_user_name();
     let db = &next_db_name();
-    server.api.user_login(ADMIN, ADMIN).await?;
+    server.user_login(ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.admin_user_add(user, user).await?;
     server.api.admin_db_add(owner, db, DbKind::Mapped).await?;
@@ -43,7 +43,7 @@ pub async fn list() -> Result<(), TestError> {
 #[cfg_attr(feature = "api", agdb::test_def())]
 pub async fn db_not_found() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
-    server.api.user_login(ADMIN, ADMIN).await?;
+    server.user_login(ADMIN).await?;
     let status = server
         .api
         .admin_db_user_list("owner", "db")
@@ -59,9 +59,9 @@ pub async fn db_not_found() -> Result<(), TestError> {
 pub async fn non_admin() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
     let owner = &next_user_name();
-    server.api.user_login(ADMIN, ADMIN).await?;
+    server.user_login(ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
-    server.api.user_login(owner, owner).await?;
+    server.user_login(owner).await?;
     let status = server
         .api
         .admin_db_user_list("owner", "db")

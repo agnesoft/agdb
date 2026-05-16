@@ -1,4 +1,3 @@
-use crate::UserStatus;
 use crate::test_server::ADMIN;
 use crate::test_server::TestServer;
 use crate::test_server::next_user_name;
@@ -9,30 +8,18 @@ pub async fn user_list() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
     let user1 = &next_user_name();
     let user2 = &next_user_name();
-    server.api.user_login(ADMIN, ADMIN).await?;
+    server.user_login(ADMIN).await?;
     server.api.admin_user_add(user1, user1).await?;
     server.api.admin_user_add(user2, user2).await?;
-    let (status, list) = server.api.admin_user_list().await?;
+    let (status, mut list) = server.api.admin_user_list().await?;
+    list.sort();
     assert_eq!(status, 200);
-    assert!(
-        list.contains(&UserStatus {
-            username: "admin".to_string(),
-            login: true,
-            admin: true,
-        }),
-        "{}",
-        serde_json::to_string(&list).unwrap()
-    );
-    assert!(list.contains(&UserStatus {
-        username: user1.to_string(),
-        login: false,
-        admin: false,
-    }));
-    assert!(list.contains(&UserStatus {
-        username: user2.to_string(),
-        login: false,
-        admin: false,
-    }));
+    let admin_user = &list[0];
+    assert_eq!(admin_user.username, "admin");
+    assert!(admin_user.login);
+    assert!(admin_user.admin);
+    assert!(!admin_user.sessions.is_empty());
+    assert_eq!(admin_user.sessions[0].agent, "agdb_api");
     Ok(())
 }
 
@@ -40,9 +27,9 @@ pub async fn user_list() -> Result<(), TestError> {
 pub async fn non_admin() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
     let user = &next_user_name();
-    server.api.user_login(ADMIN, ADMIN).await?;
+    server.user_login(ADMIN).await?;
     server.api.admin_user_add(user, user).await?;
-    server.api.user_login(user, user).await?;
+    server.user_login(user).await?;
     let status = server.api.admin_user_list().await.unwrap_err().status;
     assert_eq!(status, 401);
     Ok(())

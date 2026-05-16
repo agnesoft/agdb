@@ -15,7 +15,7 @@ pub async fn copy() -> Result<(), TestError> {
     let owner = &next_user_name();
     let db = &next_db_name();
     let db2 = &next_db_name();
-    server.api.user_login(ADMIN, ADMIN).await?;
+    server.user_login(ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.admin_db_add(owner, db, DbKind::Mapped).await?;
     let queries = &[QueryBuilder::insert()
@@ -50,7 +50,7 @@ pub async fn copy_to_different_user() -> Result<(), TestError> {
     let owner2 = &next_user_name();
     let db = &next_db_name();
     let db2 = &next_db_name();
-    server.api.user_login(ADMIN, ADMIN).await?;
+    server.user_login(ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.admin_user_add(owner2, owner2).await?;
     server.api.admin_db_add(owner, db, DbKind::Mapped).await?;
@@ -85,7 +85,7 @@ pub async fn copy_target_exists() -> Result<(), TestError> {
     let owner = &next_user_name();
     let db = &next_db_name();
     let db2 = &next_db_name();
-    server.api.user_login(ADMIN, ADMIN).await?;
+    server.user_login(ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.admin_db_add(owner, db, DbKind::Memory).await?;
     server.api.admin_db_add(owner, db2, DbKind::Memory).await?;
@@ -104,7 +104,7 @@ pub async fn target_self() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
     let owner = &next_user_name();
     let db = &next_db_name();
-    server.api.user_login(ADMIN, ADMIN).await?;
+    server.user_login(ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.admin_db_add(owner, db, DbKind::Memory).await?;
     let status = server
@@ -122,7 +122,7 @@ pub async fn invalid() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
     let owner = &next_user_name();
     let db = &next_db_name();
-    server.api.user_login(ADMIN, ADMIN).await?;
+    server.user_login(ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.admin_db_add(owner, db, DbKind::File).await?;
     let status = server
@@ -139,7 +139,7 @@ pub async fn invalid() -> Result<(), TestError> {
 pub async fn db_not_found() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
     let owner = &next_user_name();
-    server.api.user_login(ADMIN, ADMIN).await?;
+    server.user_login(ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     let status = server
         .api
@@ -157,9 +157,9 @@ pub async fn non_admin() -> Result<(), TestError> {
     let owner = &next_user_name();
     let db = &next_db_name();
     let db2 = &next_db_name();
-    server.api.user_login(ADMIN, ADMIN).await?;
+    server.user_login(ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
-    server.api.user_login(owner, owner).await?;
+    server.user_login(owner).await?;
     let status = server
         .api
         .admin_db_copy(owner, db, owner, db2)

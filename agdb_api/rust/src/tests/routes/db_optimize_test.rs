@@ -12,9 +12,9 @@ pub async fn optimize() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
     let owner = &next_user_name();
     let db = &next_db_name();
-    server.api.user_login(ADMIN, ADMIN).await?;
+    server.user_login(ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
-    server.api.user_login(owner, owner).await?;
+    server.user_login(owner).await?;
     server.api.db_add(owner, db, DbKind::Mapped).await?;
     let queries = &[QueryBuilder::insert().nodes().count(100).query().into()];
     server.api.db_exec_mut(owner, db, queries).await?;
@@ -38,9 +38,9 @@ pub async fn shrink_to_fit() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
     let owner = &next_user_name();
     let db = &next_db_name();
-    server.api.user_login(ADMIN, ADMIN).await?;
+    server.user_login(ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
-    server.api.user_login(owner, owner).await?;
+    server.user_login(owner).await?;
     server.api.db_add(owner, db, DbKind::Mapped).await?;
     let queries = &[QueryBuilder::insert().nodes().count(100).query().into()];
     server.api.db_exec_mut(owner, db, queries).await?;
@@ -65,7 +65,7 @@ pub async fn permission_denied() -> Result<(), TestError> {
     let owner = &next_user_name();
     let user = &next_user_name();
     let db = &next_db_name();
-    server.api.user_login(ADMIN, ADMIN).await?;
+    server.user_login(ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.admin_user_add(user, user).await?;
     server.api.admin_db_add(owner, db, DbKind::Mapped).await?;
@@ -73,7 +73,7 @@ pub async fn permission_denied() -> Result<(), TestError> {
         .api
         .admin_db_user_add(owner, db, user, DbUserRole::Read)
         .await?;
-    server.api.user_login(user, user).await?;
+    server.user_login(user).await?;
     let status = server.api.db_optimize(owner, db).await.unwrap_err().status;
     assert_eq!(status, 403);
     Ok(())
@@ -83,9 +83,9 @@ pub async fn permission_denied() -> Result<(), TestError> {
 pub async fn db_not_found() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
     let owner = &next_user_name();
-    server.api.user_login(ADMIN, ADMIN).await?;
+    server.user_login(ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
-    server.api.user_login(owner, owner).await?;
+    server.user_login(owner).await?;
     let status = server
         .api
         .db_optimize(owner, "db")

@@ -4008,12 +4008,30 @@
           }
         }
       },
+      "UserSession": {
+        "type": "object",
+        "required": [
+          "agent",
+          "created"
+        ],
+        "properties": {
+          "agent": {
+            "type": "string"
+          },
+          "created": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          }
+        }
+      },
       "UserStatus": {
         "type": "object",
         "required": [
           "username",
           "login",
-          "admin"
+          "admin",
+          "sessions"
         ],
         "properties": {
           "admin": {
@@ -4021,6 +4039,12 @@
           },
           "login": {
             "type": "boolean"
+          },
+          "sessions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UserSession"
+            }
           },
           "username": {
             "type": "string"

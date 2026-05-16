@@ -1463,9 +1463,14 @@ declare namespace Components {
             password: string;
             username: string;
         }
+        export interface UserSession {
+            agent: string;
+            created: number; // int64
+        }
         export interface UserStatus {
             admin: boolean;
             login: boolean;
+            sessions: UserSession[];
             username: string;
         }
     }
@@ -3446,4 +3451,5 @@ export type ServerDatabaseResource = Components.Schemas.ServerDatabaseResource;
 export type SetLogLevelRequest = Components.Schemas.SetLogLevelRequest;
 export type UserCredentials = Components.Schemas.UserCredentials;
 export type UserLogin = Components.Schemas.UserLogin;
+export type UserSession = Components.Schemas.UserSession;
 export type UserStatus = Components.Schemas.UserStatus;

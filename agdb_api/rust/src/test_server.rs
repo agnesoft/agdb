@@ -118,6 +118,7 @@ pub struct TestServerImpl {
     pub data_dir: String,
     pub address: String,
     pub process: Option<TestServerProcess>,
+    pub admin_token: Option<String>,
 }
 
 #[cfg(feature = "tls")]
@@ -170,7 +171,6 @@ impl TestServerImpl {
 
         Self::remove_dir_if_exists(&dir)?;
         std::fs::create_dir(&dir)?;
-
         std::fs::write(Path::new(&dir).join(CONFIG_FILE), config_to_str(&config))?;
 
         let api_address = if config.basepath.is_empty() {
@@ -183,16 +183,19 @@ impl TestServerImpl {
             .current_dir(&dir)
             .kill_on_drop(true)
             .spawn()?;
-        let api = AgdbApi::new(ReqwestClient::with_client(reqwest_client()), &api_address);
+        let mut api = AgdbApi::new(ReqwestClient::with_client(reqwest_client()), &api_address);
 
         for _ in 0..RETRY_ATTEMPS {
             match api.status().await {
                 Ok(200) => {
+                    api.user_login(ADMIN, ADMIN).await?;
+
                     return Ok(Self {
                         dir,
                         data_dir,
                         address: api_address,
                         process: Some(TestServerProcess(process)),
+                        admin_token: api.token,
                     });
                 }
                 Ok(status) => println!("Server at {api_address} is not ready: {status}"),
@@ -347,6 +350,16 @@ impl TestServer {
             data_dir: server.data_dir.clone(),
             server,
         })
+    }
+
+    pub async fn user_login(&mut self, user: &str) -> Result<(), TestError> {
+        if user == ADMIN {
+            self.api.token = self.server.admin_token.clone();
+            return Ok(());
+        }
+
+        self.api.user_login(user, user).await?;
+        Ok(())
     }
 
     pub fn url(&self, uri: &str) -> String {

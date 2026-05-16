@@ -7,7 +7,7 @@ use crate::test_server::test_error::TestError;
 pub async fn add() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
     let user = &next_user_name();
-    server.api.user_login(ADMIN, ADMIN).await?;
+    server.user_login(ADMIN).await?;
     let status = server.api.admin_user_add(user, user).await?;
     assert_eq!(status, 201);
     Ok(())
@@ -17,7 +17,7 @@ pub async fn add() -> Result<(), TestError> {
 pub async fn add_existing() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
     let user = &next_user_name();
-    server.api.user_login(ADMIN, ADMIN).await?;
+    server.user_login(ADMIN).await?;
     server.api.admin_user_add(user, user).await?;
     let status = server
         .api
@@ -32,7 +32,7 @@ pub async fn add_existing() -> Result<(), TestError> {
 #[cfg_attr(feature = "api", agdb::test_def())]
 pub async fn name_too_short() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
-    server.api.user_login(ADMIN, ADMIN).await?;
+    server.user_login(ADMIN).await?;
     let status = server
         .api
         .admin_user_add("a", "password123")
@@ -46,7 +46,7 @@ pub async fn name_too_short() -> Result<(), TestError> {
 #[cfg_attr(feature = "api", agdb::test_def())]
 pub async fn password_too_short() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
-    server.api.user_login(ADMIN, ADMIN).await?;
+    server.user_login(ADMIN).await?;
     let status = server
         .api
         .admin_user_add("user123", "pswd")
@@ -61,9 +61,9 @@ pub async fn password_too_short() -> Result<(), TestError> {
 pub async fn non_admin() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
     let user = &next_user_name();
-    server.api.user_login(ADMIN, ADMIN).await?;
+    server.user_login(ADMIN).await?;
     server.api.admin_user_add(user, user).await?;
-    server.api.user_login(user, user).await?;
+    server.user_login(user).await?;
     let status = server
         .api
         .admin_user_add(user, user)

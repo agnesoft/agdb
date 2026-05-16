@@ -7,7 +7,7 @@ use crate::test_server::test_error::TestError;
 pub async fn change_password() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
     let owner = &next_user_name();
-    server.api.user_login(ADMIN, ADMIN).await?;
+    server.user_login(ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     let status = server
         .api
@@ -23,7 +23,7 @@ pub async fn change_password() -> Result<(), TestError> {
 pub async fn password_short() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
     let owner = &next_user_name();
-    server.api.user_login(ADMIN, ADMIN).await?;
+    server.user_login(ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     let status = server.api.admin_user_change_password(owner, "pswd").await?;
     assert_eq!(status, 201);
@@ -33,7 +33,7 @@ pub async fn password_short() -> Result<(), TestError> {
 #[cfg_attr(feature = "api", agdb::test_def())]
 pub async fn user_not_found() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
-    server.api.user_login(ADMIN, ADMIN).await?;
+    server.user_login(ADMIN).await?;
     let status = server
         .api
         .admin_user_change_password("owner", "password123")
@@ -48,9 +48,9 @@ pub async fn user_not_found() -> Result<(), TestError> {
 pub async fn non_admin() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
     let owner = &next_user_name();
-    server.api.user_login(ADMIN, ADMIN).await?;
+    server.user_login(ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
-    server.api.user_login(owner, owner).await?;
+    server.user_login(owner).await?;
     let status = server
         .api
         .admin_user_change_password(owner, "password123")

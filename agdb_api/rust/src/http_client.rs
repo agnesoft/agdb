@@ -3,6 +3,7 @@ use crate::api_result::AgdbApiResult;
 use crate::client::AgdbApiClient;
 #[cfg(feature = "api")]
 use agdb::type_def::{Type, TypeDefinition};
+use reqwest::header::USER_AGENT;
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 
@@ -59,6 +60,7 @@ impl TypeDefinition for ReqwestClientTypeDef {
 #[cfg_attr(feature = "api", derive(agdb::TypeDef))]
 pub struct ReqwestClient {
     pub client: ReqwestClientTypeDef,
+    pub user_agent: String,
 }
 
 impl AgdbApiClient for ReqwestClient {}
@@ -66,14 +68,17 @@ impl AgdbApiClient for ReqwestClient {}
 impl ReqwestClient {
     #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
-        Self {
-            client: ReqwestClientTypeDef(reqwest::Client::new()),
-        }
+        Self::with_client(reqwest::Client::new())
     }
 
     pub fn with_client(client: reqwest::Client) -> Self {
+        Self::with_user_agent(client, "agdb_api")
+    }
+
+    pub fn with_user_agent(client: reqwest::Client, user_agent: impl Into<String>) -> Self {
         Self {
             client: ReqwestClientTypeDef(client),
+            user_agent: user_agent.into(),
         }
     }
 }
@@ -81,7 +86,7 @@ impl ReqwestClient {
 #[cfg_attr(feature = "api", agdb::impl_def())]
 impl HttpClient for ReqwestClient {
     async fn delete(&self, uri: &str, token: &Option<String>) -> AgdbApiResult<u16> {
-        let mut request = self.client.delete(uri);
+        let mut request = self.client.delete(uri).header(USER_AGENT, &self.user_agent);
         if let Some(token) = token {
             request = request.bearer_auth(token);
         }
@@ -102,7 +107,7 @@ impl HttpClient for ReqwestClient {
         uri: &str,
         token: &Option<String>,
     ) -> AgdbApiResult<(u16, T)> {
-        let mut request = self.client.get(uri);
+        let mut request = self.client.get(uri).header(USER_AGENT, &self.user_agent);
         if let Some(token) = token {
             request = request.bearer_auth(token);
         }
@@ -129,7 +134,7 @@ impl HttpClient for ReqwestClient {
         json: Option<T>,
         token: &Option<String>,
     ) -> AgdbApiResult<(u16, R)> {
-        let mut request = self.client.post(uri);
+        let mut request = self.client.post(uri).header(USER_AGENT, &self.user_agent);
         if let Some(token) = token {
             request = request.bearer_auth(token);
         }
@@ -159,7 +164,7 @@ impl HttpClient for ReqwestClient {
         json: Option<T>,
         token: &Option<String>,
     ) -> AgdbApiResult<u16> {
-        let mut request = self.client.put(uri);
+        let mut request = self.client.put(uri).header(USER_AGENT, &self.user_agent);
         if let Some(json) = json {
             request = request.json(&json);
         }

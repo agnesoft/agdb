@@ -11,7 +11,7 @@ pub async fn add() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
     let owner = &next_user_name();
     let db = &next_db_name();
-    server.api.user_login(ADMIN, ADMIN).await?;
+    server.user_login(ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     let status = server.api.admin_db_add(owner, db, DbKind::File).await?;
     assert_eq!(status, 201);
@@ -24,7 +24,7 @@ pub async fn add_same_name_with_previous_backup() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
     let owner = &next_user_name();
     let db = &next_db_name();
-    server.api.user_login(ADMIN, ADMIN).await?;
+    server.user_login(ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     let status = server.api.admin_db_add(owner, db, DbKind::Mapped).await?;
     assert_eq!(status, 201);
@@ -32,7 +32,7 @@ pub async fn add_same_name_with_previous_backup() -> Result<(), TestError> {
     server.api.admin_db_delete(owner, db).await?;
     let status = server.api.admin_db_add(owner, db, DbKind::Mapped).await?;
     assert_eq!(status, 201);
-    server.api.user_login(owner, owner).await?;
+    server.user_login(owner).await?;
     let list = server.api.db_list().await?.1;
     assert_eq!(list[0].backup, 0);
     Ok(())
@@ -43,7 +43,7 @@ pub async fn db_already_exists() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
     let owner = &next_user_name();
     let db = &next_db_name();
-    server.api.user_login(ADMIN, ADMIN).await?;
+    server.user_login(ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     let status = server.api.admin_db_add(owner, db, DbKind::File).await?;
     assert_eq!(status, 201);
@@ -60,7 +60,7 @@ pub async fn db_already_exists() -> Result<(), TestError> {
 #[cfg_attr(feature = "api", agdb::test_def())]
 pub async fn user_not_found() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
-    server.api.user_login(ADMIN, ADMIN).await?;
+    server.user_login(ADMIN).await?;
     let status = server
         .api
         .admin_db_add("owner", "db", DbKind::Mapped)
@@ -76,9 +76,9 @@ pub async fn non_admin() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
     let owner = &next_user_name();
     let db = &next_db_name();
-    server.api.user_login(ADMIN, ADMIN).await?;
+    server.user_login(ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
-    server.api.user_login(owner, owner).await?;
+    server.user_login(owner).await?;
     let status = server
         .api
         .admin_db_add(owner, db, DbKind::Mapped)

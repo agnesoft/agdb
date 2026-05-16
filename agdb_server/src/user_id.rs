@@ -24,6 +24,9 @@ pub(crate) struct ClusterId();
 #[derive(Default)]
 pub(crate) struct UserName(pub(crate) String);
 
+#[derive(Default)]
+pub(crate) struct UserAgent(pub(crate) String);
+
 impl<S: Sync + Send> FromRequestParts<S> for UserIdToken
 where
     S: Send + Sync,
@@ -60,6 +63,23 @@ where
         }
 
         Ok(Self("".to_string()))
+    }
+}
+
+impl<S: Sync + Send> FromRequestParts<S> for UserAgent
+where
+    S: Send + Sync,
+{
+    type Rejection = ServerError;
+
+    async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
+        let value = parts
+            .headers
+            .get(axum::http::header::USER_AGENT)
+            .and_then(|header| header.to_str().ok())
+            .unwrap_or("");
+
+        Ok(Self(value.to_string()))
     }
 }
 

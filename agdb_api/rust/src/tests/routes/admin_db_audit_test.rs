@@ -11,9 +11,9 @@ pub async fn admin_audit() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
     let owner = &next_user_name();
     let db = &next_db_name();
-    server.api.user_login(ADMIN, ADMIN).await?;
+    server.user_login(ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
-    server.api.user_login(owner, owner).await?;
+    server.user_login(owner).await?;
     server.api.db_add(owner, db, DbKind::Mapped).await?;
     let mut queries = vec![
         QueryBuilder::insert()
@@ -25,7 +25,7 @@ pub async fn admin_audit() -> Result<(), TestError> {
         QueryBuilder::select().ids(":0").query().into(),
     ];
     server.api.db_exec_mut(owner, db, &queries).await?;
-    server.api.user_login(ADMIN, ADMIN).await?;
+    server.user_login(ADMIN).await?;
     let (status, results) = server.api.admin_db_audit(owner, db).await?;
     assert_eq!(status, 200);
     assert_eq!(results.0[0].username, owner.to_string());
@@ -38,11 +38,11 @@ pub async fn admin_audit_db_empty() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
     let owner = &next_user_name();
     let db = &next_db_name();
-    server.api.user_login(ADMIN, ADMIN).await?;
+    server.user_login(ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
-    server.api.user_login(owner, owner).await?;
+    server.user_login(owner).await?;
     server.api.db_add(owner, db, DbKind::Mapped).await?;
-    server.api.user_login(ADMIN, ADMIN).await?;
+    server.user_login(ADMIN).await?;
     let (status, results) = server.api.admin_db_audit(owner, db).await?;
     assert_eq!(status, 200);
     assert_eq!(results.0, vec![]);
@@ -53,9 +53,9 @@ pub async fn admin_audit_db_empty() -> Result<(), TestError> {
 pub async fn non_admin() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
     let owner = &next_user_name();
-    server.api.user_login(ADMIN, ADMIN).await?;
+    server.user_login(ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
-    server.api.user_login(owner, owner).await?;
+    server.user_login(owner).await?;
     let status = server
         .api
         .admin_db_audit("owner", "db")

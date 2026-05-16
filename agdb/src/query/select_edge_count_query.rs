@@ -9,13 +9,12 @@ use crate::StorageData;
 use crate::query_builder::search::SearchQueryBuilder;
 
 /// Query to select number of edges of given node ids.
-/// All of the ids must exist in the database. If any
-/// of the ids is not a node the result will be 0 (not
-/// an error).
+/// All of the ids must exist in the database.
 ///
 /// The result is the sum of all selected edge counts.
 /// The elements still contain individual
 /// edge counts in property `String("edge_count")` as `u64`.
+/// If any of the element ids are edges their count will be 0.
 ///
 /// NOTE: Self-referential edges are counted twice as if they
 /// were coming from another edge. Therefore the edge count

@@ -16,10 +16,10 @@ pub struct RemoveIndexQuery(pub DbValue);
 
 impl QueryMut for RemoveIndexQuery {
     fn process<Store: StorageData>(&self, db: &mut DbImpl<Store>) -> Result<QueryResult, DbError> {
-        let value_count = db.remove_index(&self.0)?;
+        let result = db.remove_index(&self.0)?;
 
         Ok(QueryResult {
-            result: value_count,
+            result,
             elements: vec![],
         })
     }

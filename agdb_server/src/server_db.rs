@@ -445,6 +445,8 @@ impl ServerDb {
         let mut ids = vec![user];
         let mut dbs = vec![];
 
+        self.remove_tokens(user).await?;
+
         self.user_dbs(user)
             .await?
             .into_iter()

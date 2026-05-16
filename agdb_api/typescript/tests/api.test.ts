@@ -141,8 +141,8 @@ describe("openapi test", () => {
             elements: [
                 {
                     id: 1,
-                    from: null,
-                    to: null,
+                    from: 0,
+                    to: 0,
                     values: [
                         { key: { String: "name" }, value: { String: "John" } },
                         { key: { String: "age" }, value: { I64: 30 } },
@@ -150,8 +150,8 @@ describe("openapi test", () => {
                 },
                 {
                     id: 2,
-                    from: null,
-                    to: null,
+                    from: 0,
+                    to: 0,
                     values: [
                         { key: { String: "name" }, value: { String: "John" } },
                         { key: { String: "age" }, value: { I64: 31 } },
@@ -214,14 +214,14 @@ describe("openapi test", () => {
         expect(res.data[3].elements).toEqual([
             {
                 id: 1,
-                from: null,
-                to: null,
+                from: -3,
+                to: 0,
                 values: [],
             },
             {
                 id: 2,
-                from: null,
-                to: null,
+                from: 0,
+                to: -3,
                 values: [],
             },
             {

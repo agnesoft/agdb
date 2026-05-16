@@ -10,6 +10,8 @@ use crate::cluster::Cluster;
 use crate::config::Config;
 use crate::raft::Request;
 use crate::raft::Response;
+use crate::routes::user::LOGOUT_ALL_SESSIONS;
+use crate::routes::user::LOGOUT_OTHER_SESSIONS;
 use crate::routes::user::LogoutQuery;
 use crate::routes::user::do_login;
 use crate::server_db::ServerDb;
@@ -62,12 +64,17 @@ pub(crate) async fn admin_logout(
 ) -> ServerResponse<impl IntoResponse> {
     let _user_id = server_db.user_id(&username).await?;
 
-    let (commit_index, _result) = match request.session {
-        None => cluster.exec(RemoveUserTokens { user: username }).await?,
-        Some(session) if session.is_empty() => {
+    let (commit_index, _result) = match request.session.as_deref() {
+        None | Some(LOGOUT_ALL_SESSIONS) | Some(LOGOUT_OTHER_SESSIONS) => {
             cluster.exec(RemoveUserTokens { user: username }).await?
         }
-        Some(session) => cluster.exec(RemoveUserSession { session }).await?,
+        Some(session) => {
+            cluster
+                .exec(RemoveUserSession {
+                    session: session.to_string(),
+                })
+                .await?
+        }
     };
 
     Ok((
@@ -151,21 +158,24 @@ pub(crate) async fn logout(
     Query(request): Query<LogoutQuery>,
     State(cluster): State<Cluster>,
 ) -> ServerResponse<impl IntoResponse> {
-    let (commit_index, _result) = match request.session {
+    let (commit_index, _result) = match request.session.as_deref() {
         None => cluster.exec(RemoveUserToken { token: token.0 }).await?,
-        Some(session) if session.is_empty() => {
-            if request.include_self {
-                cluster.exec(RemoveUserTokens { user: username.0 }).await?
-            } else {
-                cluster
-                    .exec(RemoveUserTokensExcept {
-                        user: username.0,
-                        token: token.0,
-                    })
-                    .await?
-            }
+        Some(LOGOUT_ALL_SESSIONS) => cluster.exec(RemoveUserTokens { user: username.0 }).await?,
+        Some(LOGOUT_OTHER_SESSIONS) => {
+            cluster
+                .exec(RemoveUserTokensExcept {
+                    user: username.0,
+                    token: token.0,
+                })
+                .await?
         }
-        Some(session) => cluster.exec(RemoveUserSession { session }).await?,
+        Some(session) => {
+            cluster
+                .exec(RemoveUserSession {
+                    session: session.to_string(),
+                })
+                .await?
+        }
     };
 
     Ok((

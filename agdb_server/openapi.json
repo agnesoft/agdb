@@ -1217,14 +1217,6 @@
             }
           },
           {
-            "name": "self",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "boolean"
-            }
-          },
-          {
             "name": "session",
             "in": "query",
             "required": false,
@@ -1265,14 +1257,6 @@
             "required": true,
             "schema": {
               "type": "string"
-            }
-          },
-          {
-            "name": "self",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "boolean"
             }
           },
           {
@@ -1365,14 +1349,6 @@
         ],
         "operationId": "cluster_user_logout",
         "parameters": [
-          {
-            "name": "self",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "boolean"
-            }
-          },
           {
             "name": "session",
             "in": "query",
@@ -2413,14 +2389,6 @@
         "operationId": "user_logout",
         "parameters": [
           {
-            "name": "self",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "boolean"
-            }
-          },
-          {
             "name": "session",
             "in": "query",
             "required": false,
@@ -3211,9 +3179,6 @@
       "LogoutQuery": {
         "type": "object",
         "properties": {
-          "self": {
-            "type": "boolean"
-          },
           "session": {
             "type": [
               "string",

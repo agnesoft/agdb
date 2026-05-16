@@ -493,21 +493,29 @@ impl<T: AgdbApiClient> AgdbApi<T> {
         Ok(status)
     }
 
-    pub async fn cluster_user_logout_all(&mut self, include_self: bool) -> AgdbApiResult<u16> {
+    pub async fn cluster_user_logout_others(&mut self) -> AgdbApiResult<u16> {
+        Ok(self
+            .client
+            .post::<(), ()>(
+                &self.url("/cluster/user/logout?session=others"),
+                None,
+                &self.token,
+            )
+            .await?
+            .0)
+    }
+
+    pub async fn cluster_user_logout_all(&mut self) -> AgdbApiResult<u16> {
         let status = self
             .client
             .post::<(), ()>(
-                &self.url(&format!(
-                    "/cluster/user/logout?self={include_self}&session="
-                )),
+                &self.url("/cluster/user/logout?session=all"),
                 None,
                 &self.token,
             )
             .await?
             .0;
-        if include_self {
-            self.token = None;
-        }
+        self.token = None;
         Ok(status)
     }
 
@@ -749,19 +757,21 @@ impl<T: AgdbApiClient> AgdbApi<T> {
         Ok(status)
     }
 
-    pub async fn user_logout_all(&mut self, include_self: bool) -> AgdbApiResult<u16> {
+    pub async fn user_logout_others(&mut self) -> AgdbApiResult<u16> {
+        Ok(self
+            .client
+            .post::<(), ()>(&self.url("/user/logout?session=others"), None, &self.token)
+            .await?
+            .0)
+    }
+
+    pub async fn user_logout_all(&mut self) -> AgdbApiResult<u16> {
         let status = self
             .client
-            .post::<(), ()>(
-                &self.url(&format!("/user/logout?self={include_self}&session=")),
-                None,
-                &self.token,
-            )
+            .post::<(), ()>(&self.url("/user/logout?session=all"), None, &self.token)
             .await?
             .0;
-        if include_self {
-            self.token = None;
-        }
+        self.token = None;
         Ok(status)
     }
 

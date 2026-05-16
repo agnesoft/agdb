@@ -23,7 +23,7 @@ pub async fn logout_all() -> Result<(), TestError> {
     client1.user_status().await?;
     client2.user_status().await?;
 
-    let status = client1.user_logout_all(true).await?;
+    let status = client1.user_logout_all().await?;
     assert_eq!(status, 201);
     assert_eq!(client1.token, None);
 
@@ -36,7 +36,7 @@ pub async fn logout_all() -> Result<(), TestError> {
 #[cfg_attr(feature = "api", agdb::test_def())]
 pub async fn no_token() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
-    let status = server.api.user_logout_all(true).await.unwrap_err().status;
+    let status = server.api.user_logout_all().await.unwrap_err().status;
     assert_eq!(status, 401);
 
     Ok(())
@@ -62,7 +62,7 @@ pub async fn logout_all_keep_self() -> Result<(), TestError> {
     client1.user_login(user, user).await?;
     client2.user_login(user, user).await?;
 
-    let status = client1.user_logout_all(false).await?;
+    let status = client1.user_logout_others().await?;
     assert_eq!(status, 201);
     assert!(client1.token.is_some());
 

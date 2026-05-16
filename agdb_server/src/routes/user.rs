@@ -21,33 +21,17 @@ use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use serde::Deserialize;
-use serde::Deserializer;
 use utoipa::IntoParams;
 use utoipa::ToSchema;
 use uuid::Uuid;
 
+pub(crate) const LOGOUT_ALL_SESSIONS: &str = "all";
+pub(crate) const LOGOUT_OTHER_SESSIONS: &str = "others";
+
 #[derive(Deserialize, IntoParams, ToSchema, agdb::TypeDef)]
 #[into_params(parameter_in = Query)]
 pub struct LogoutQuery {
-    #[serde(default, rename = "self", deserialize_with = "deserialize_logout_self")]
-    pub include_self: bool,
     pub session: Option<String>,
-}
-
-fn deserialize_logout_self<'de, D>(deserializer: D) -> Result<bool, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let value = Option::<String>::deserialize(deserializer)?;
-
-    match value.as_deref() {
-        None => Ok(false),
-        Some("") | Some("1") | Some("true") | Some("yes") | Some("on") => Ok(true),
-        Some("0") | Some("false") | Some("no") | Some("off") => Ok(false),
-        Some(other) => Err(serde::de::Error::custom(format!(
-            "invalid self flag '{other}'"
-        ))),
-    }
 }
 
 pub(crate) async fn do_login(
@@ -119,19 +103,18 @@ pub(crate) async fn logout(
     Query(request): Query<LogoutQuery>,
     State(server_db): State<ServerDb>,
 ) -> ServerResponse {
-    match request.session {
+    match request.session.as_deref() {
         None => {
             server_db.remove_token(&token.0).await?;
         }
-        Some(session) if session.is_empty() => {
-            if request.include_self {
-                server_db.remove_tokens(user.0).await?;
-            } else {
-                server_db.remove_tokens_except(user.0, &token.0).await?;
-            }
+        Some(LOGOUT_ALL_SESSIONS) => {
+            server_db.remove_tokens(user.0).await?;
+        }
+        Some(LOGOUT_OTHER_SESSIONS) => {
+            server_db.remove_tokens_except(user.0, &token.0).await?;
         }
         Some(session) => {
-            server_db.remove_session(session).await?;
+            server_db.remove_session(session.to_string()).await?;
         }
     }
 

@@ -5,6 +5,8 @@ use crate::cluster::Cluster;
 use crate::error_code::ErrorCode;
 use crate::password;
 use crate::password::Password;
+use crate::routes::user::LOGOUT_ALL_SESSIONS;
+use crate::routes::user::LOGOUT_OTHER_SESSIONS;
 use crate::routes::user::LogoutQuery;
 use crate::server_db::ServerDb;
 use crate::server_error::ServerResponse;
@@ -144,15 +146,15 @@ pub(crate) async fn logout(
 ) -> ServerResponse {
     let user_id = server_db.user_id(&username).await?;
 
-    match request.session {
+    match request.session.as_deref() {
         None => {
             server_db.remove_tokens(user_id).await?;
         }
-        Some(session) if session.is_empty() => {
+        Some(LOGOUT_ALL_SESSIONS) | Some(LOGOUT_OTHER_SESSIONS) => {
             server_db.remove_tokens(user_id).await?;
         }
         Some(session) => {
-            server_db.remove_session(session).await?;
+            server_db.remove_session(session.to_string()).await?;
         }
     }
 

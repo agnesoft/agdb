@@ -198,7 +198,7 @@ describe("buildQueryFromSteps", () => {
         .count(1)
         .values_uniform([
           ["name", "alice"],
-          ["age", 7],
+          ["age", { U64: 7 }],
         ])
         .query(),
     );
@@ -247,7 +247,12 @@ describe("buildQueryFromSteps", () => {
         step("remove.values", [[field("unsigned")]]),
         step("remove.values.ids", [[field("signed", "2")]]),
       ]),
-    ).toEqual(QueryBuilder.remove().values([0]).ids(2).query());
+    ).toEqual(
+      QueryBuilder.remove()
+        .values([{ U64: 0 }])
+        .ids(2)
+        .query(),
+    );
 
     expect(
       buildQueryFromSteps([
@@ -278,7 +283,7 @@ describe("buildQueryFromSteps", () => {
       ]),
     ).toEqual(
       QueryBuilder.insert()
-        .values([[["name", "alice"]], [["score", 1.5]]])
+        .values([[["name", "alice"]], [["score", { F64: 1.5 }]]])
         .ids(9)
         .query(),
     );
@@ -317,7 +322,7 @@ describe("buildQueryFromSteps", () => {
     ).toEqual(
       QueryBuilder.search()
         .elements()
-        .order_by([DbKeyOrder.Asc("name"), DbKeyOrder.Desc([1, 2])])
+        .order_by([DbKeyOrder.Asc("name"), DbKeyOrder.Desc({ VecU64: [1, 2] })])
         .query(),
     );
   });
@@ -476,7 +481,7 @@ describe("buildQueryFromSteps", () => {
         .elements()
         .where()
         .key("name")
-        .value(Comparison.GreaterThanOrEqual(2))
+        .value(Comparison.GreaterThanOrEqual({ U64: 2 }))
         .query(),
     );
 
@@ -495,7 +500,7 @@ describe("buildQueryFromSteps", () => {
         .elements()
         .where()
         .key("name")
-        .value(Comparison.LessThan(3.5))
+        .value(Comparison.LessThan({ F64: 3.5 }))
         .query(),
     );
 
@@ -609,7 +614,7 @@ describe("buildQueryFromSteps", () => {
         .elements()
         .where()
         .key("name")
-        .value(Comparison.Equal([1.5, 2.5]))
+        .value(Comparison.Equal({ VecF64: [1.5, 2.5] }))
         .query(),
     );
   });
@@ -644,7 +649,13 @@ describe("buildQueryFromSteps", () => {
           [field("unsigned", "2")],
         ]),
       ]),
-    ).toEqual(QueryBuilder.search().elements().where().keys(["a", 2]).query());
+    ).toEqual(
+      QueryBuilder.search()
+        .elements()
+        .where()
+        .keys(["a", { U64: 2 }])
+        .query(),
+    );
 
     expect(
       buildQueryFromSteps([
@@ -671,6 +682,11 @@ describe("buildQueryFromSteps", () => {
         step("search.index", [[field("boolean", "false")]]),
         step("search.index.value", [[field("unsigned[]", "5,6")]]),
       ]),
-    ).toEqual(QueryBuilder.search().index(false).value([5, 6]).query());
+    ).toEqual(
+      QueryBuilder.search()
+        .index(false)
+        .value({ VecU64: [5, 6] })
+        .query(),
+    );
   });
 });

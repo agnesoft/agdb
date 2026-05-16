@@ -48,17 +48,21 @@ const parseDbValue = (
     case "string":
       return field.value ?? "";
     case "signed":
-    case "unsigned":
-    case "float":
       return Number(field.value ?? 0);
+    case "unsigned":
+      return { U64: Number(field.value ?? 0) };
+    case "float":
+      return { F64: Number(field.value ?? 0) };
     case "boolean":
       return parseBoolean(field.value);
     case "string[]":
       return parseArray(field.value);
     case "signed[]":
-    case "unsigned[]":
-    case "float[]":
       return parseNumberArray(field.value);
+    case "unsigned[]":
+      return { VecU64: parseNumberArray(field.value) };
+    case "float[]":
+      return { VecF64: parseNumberArray(field.value) };
     case "boolean[]":
       return parseBooleanArray(field.value).map(String);
     default:

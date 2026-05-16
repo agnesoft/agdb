@@ -109,6 +109,14 @@ describe("useQueryExecution", () => {
     expect(execution.canRun.value).toBe(true);
   });
 
+  it("disables invalid queries", () => {
+    const execution = setup({
+      steps: [{ ...makeStep(), invalid: true }],
+    });
+
+    expect(execution.canRun.value).toBe(false);
+  });
+
   it("shows stop state while running", async () => {
     const execution = setup({ isRunning: true, steps: [] });
     expect(execution.runLabel.value).toBe("Stop query");
@@ -135,6 +143,18 @@ describe("useQueryExecution", () => {
     expect(db_exec).toHaveBeenCalledWith({ owner: "alice", db: "main" }, [
       { built: true },
     ]);
+  });
+
+  it("does not execute invalid queries", async () => {
+    const execution = setup({
+      steps: [{ ...makeStep(), invalid: true }],
+    });
+
+    await execution.runOrStopQuery();
+
+    expect(runQuery).not.toHaveBeenCalled();
+    expect(db_exec).not.toHaveBeenCalled();
+    expect(db_exec_mut).not.toHaveBeenCalled();
   });
 
   it("calls db_exec_mut for mutation queries", async () => {

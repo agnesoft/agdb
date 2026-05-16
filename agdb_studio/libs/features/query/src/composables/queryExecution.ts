@@ -70,7 +70,11 @@ export const useQueryExecution = (
   );
 
   const canRun = computed(() => {
-    return !!queryId?.value && steps.value.length > 0;
+    return (
+      !!queryId?.value &&
+      steps.value.length > 0 &&
+      steps.value.every((step) => !step.invalid)
+    );
   });
 
   const runOrStopQuery = async (): Promise<void> => {
@@ -80,6 +84,8 @@ export const useQueryExecution = (
       queryStore.stopQuery(queryId.value);
       return;
     }
+
+    if (!canRun.value) return;
 
     try {
       await queryStore.runQuery(queryId.value, async () => {

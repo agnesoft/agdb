@@ -57,7 +57,7 @@ const NO_VALUE_ARGS: QueryArguments = {
 
 const makeStep = (overrides: Partial<QueryStep> = {}): QueryStep => ({
   id: "step-1",
-  type: "from",
+  type: "search.from",
   ...overrides,
 });
 
@@ -99,7 +99,7 @@ describe("QueryArgument", () => {
 
   it("renders an input when selected option takes a value", () => {
     const step = makeStep({
-      type: "from",
+      type: "search.from",
       args: [[{ selectedOption: "signed", value: "1" }]],
     });
     const wrapper = mount(QueryArgument, {
@@ -111,7 +111,7 @@ describe("QueryArgument", () => {
 
   it("does not render an input when selected option takes no value", () => {
     const step = makeStep({
-      type: "orderBy",
+      type: "search.order_by",
       args: [[{ selectedOption: "asc", value: undefined }]],
     });
     const wrapper = mount(QueryArgument, {
@@ -140,7 +140,7 @@ describe("QueryArgument", () => {
   describe("repeatable arguments", () => {
     it("shows add-entry button when repeatable", () => {
       const step = makeStep({
-        type: "values",
+        type: "insert.values",
         args: [
           [
             { selectedOption: "string", value: "a" },
@@ -168,7 +168,7 @@ describe("QueryArgument", () => {
 
     it("adds a new empty entry on + click", async () => {
       const step = makeStep({
-        type: "values",
+        type: "insert.values",
         args: [
           [
             { selectedOption: "string", value: "a" },
@@ -187,9 +187,26 @@ describe("QueryArgument", () => {
       expect(committed.args).toHaveLength(2);
     });
 
+    it("adds an entry from the default empty state", async () => {
+      const wrapper = mount(QueryArgument, {
+        props: {
+          arguments: REPEATABLE_ARGS,
+          step: makeStep({ type: "insert.values" }),
+        },
+        global: globalProvide,
+      });
+
+      vi.clearAllMocks();
+      await wrapper.find(".arg-add-entry").trigger("click");
+
+      expect(updateQueryStep).toHaveBeenCalledOnce();
+      const committed = updateQueryStep.mock.calls[0]?.[2];
+      expect(committed.args).toHaveLength(2);
+    });
+
     it("shows remove-entry button only when more than one entry exists", () => {
       const step = makeStep({
-        type: "values",
+        type: "insert.values",
         args: [
           [
             { selectedOption: "string", value: "a" },
@@ -210,7 +227,7 @@ describe("QueryArgument", () => {
 
     it("does not show remove-entry button when only one entry exists", () => {
       const step = makeStep({
-        type: "values",
+        type: "insert.values",
         args: [
           [
             { selectedOption: "string", value: "a" },
@@ -227,7 +244,7 @@ describe("QueryArgument", () => {
 
     it("removes an entry on − click", async () => {
       const step = makeStep({
-        type: "values",
+        type: "insert.values",
         args: [
           [
             { selectedOption: "string", value: "a" },
@@ -248,6 +265,33 @@ describe("QueryArgument", () => {
       expect(updateQueryStep).toHaveBeenCalledOnce();
       const committed = updateQueryStep.mock.calls[0]?.[2];
       expect(committed.args).toHaveLength(1);
+    });
+
+    it("removes the second entry when its remove button is clicked", async () => {
+      const step = makeStep({
+        type: "insert.values",
+        args: [
+          [
+            { selectedOption: "string", value: "a" },
+            { selectedOption: "unsigned", value: "1" },
+          ],
+          [
+            { selectedOption: "string", value: "b" },
+            { selectedOption: "unsigned", value: "2" },
+          ],
+        ],
+      });
+      const wrapper = mount(QueryArgument, {
+        props: { arguments: REPEATABLE_ARGS, step },
+        global: globalProvide,
+      });
+
+      vi.clearAllMocks();
+      await wrapper.findAll(".arg-remove-entry")[1]!.trigger("click");
+
+      expect(updateQueryStep).toHaveBeenCalledOnce();
+      const committed = updateQueryStep.mock.calls[0]?.[2];
+      expect(committed.args).toEqual([step.args?.[0]]);
     });
   });
 
@@ -275,6 +319,19 @@ describe("QueryArgument", () => {
         provide: {
           queryId: ref("q1"),
           activeTab: ref(undefined),
+        },
+      },
+    });
+    expect(updateQueryStep).not.toHaveBeenCalled();
+  });
+
+  it("does not commit when queryId is missing", () => {
+    mount(QueryArgument, {
+      props: { arguments: SINGLE_ARGS, step: makeStep() },
+      global: {
+        provide: {
+          queryId: ref(undefined),
+          activeTab: ref("exec"),
         },
       },
     });

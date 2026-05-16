@@ -166,7 +166,7 @@ describe("QueryStepInput", () => {
   it("should not display input when no followers exist", () => {
     const prevStep: QueryStep = {
       id: "prev-1",
-      type: "limit", // assuming limit has no followers
+      type: "query",
     };
     const wrapper = mount(QueryStepInput, {
       props: { prevStep },
@@ -187,12 +187,12 @@ describe("QueryStepInput", () => {
     await nextTick();
     expect(wrapper.find(".query-hinter").exists()).toBe(true);
 
-    // "from" requires arguments
-    const fromHint = wrapper
+    // "ids" requires arguments
+    const idsHint = wrapper
       .findAll(".hinter-item")
-      .find((h) => h.text() === "from");
-    expect(fromHint).toBeDefined();
-    await fromHint!.trigger("click");
+      .find((h) => h.text() === "ids");
+    expect(idsHint).toBeDefined();
+    await idsHint!.trigger("click");
     await nextTick();
 
     expect(wrapper.find(".query-hinter").exists()).toBe(false);

@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { computed, inject, ref, type Ref } from "vue";
-import { queryApiMock } from "../../mock/queryApiMock";
+import { getQueryStepLabel, queryApiMock } from "../../mock/queryApiMock";
 import type { QueryStep, QueryType, TAB } from "../../composables/types";
 import QueryHinter from "./QueryHinter.vue";
 import FadeTransition from "@agdb-studio/design/src/components/transitions/FadeTransition.vue";
@@ -25,7 +25,7 @@ const onKeyDown = (event: KeyboardEvent) => {
     const activeHint = hints.value[activeHintIndex.value];
     /* v8 ignore if -- @preserve */
     if (!activeHint) return;
-    confirmStep(activeHint);
+    confirmStep(activeHint.type);
   }
   if (event.key === "Escape") {
     event.preventDefault();
@@ -62,12 +62,17 @@ const followers = computed<QueryType[]>(() => {
   );
 });
 
-const hints = computed<QueryType[]>(() => {
-  return followers.value.filter((f) =>
-    content.value.length === 0
-      ? true
-      : f.toLowerCase().startsWith(content.value.toLowerCase()),
-  );
+const hints = computed(() => {
+  return followers.value
+    .map((type) => ({
+      type,
+      label: getQueryStepLabel(type),
+    }))
+    .filter((hint) =>
+      content.value.length === 0
+        ? true
+        : hint.label.toLowerCase().startsWith(content.value.toLowerCase()),
+    );
 });
 
 const emit = defineEmits<{

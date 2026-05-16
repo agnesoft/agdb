@@ -107,7 +107,7 @@ describe("QueryStep", () => {
   it("renders QueryArgumentDisplay for a step type with arguments", () => {
     const step: QueryStepType = {
       id: "step-1",
-      type: "from",
+      type: "search.from",
       args: [[{ selectedOption: "signed", value: "1" }]],
     };
     const wrapper = mount(QueryStep, {
@@ -129,7 +129,7 @@ describe("QueryStep", () => {
   it("opens the arg editor popup when display is clicked", async () => {
     const step: QueryStepType = {
       id: "step-1",
-      type: "from",
+      type: "search.from",
       args: [[{ selectedOption: "signed", value: "1" }]],
     };
     const wrapper = mount(QueryStep, {
@@ -142,7 +142,7 @@ describe("QueryStep", () => {
   });
 
   it("starts in edit mode automatically for a new step with no args", () => {
-    const step: QueryStepType = { id: "step-1", type: "from" };
+    const step: QueryStepType = { id: "step-1", type: "search.from" };
     const wrapper = mount(QueryStep, {
       props: { step },
       global: globalProvide,
@@ -151,7 +151,7 @@ describe("QueryStep", () => {
   });
 
   it("focuses first argument dropdown for a new step with arguments", async () => {
-    const step: QueryStepType = { id: "step-1", type: "from" };
+    const step: QueryStepType = { id: "step-1", type: "search.from" };
     const wrapper = mount(QueryStep, {
       props: { step },
       global: globalProvide,

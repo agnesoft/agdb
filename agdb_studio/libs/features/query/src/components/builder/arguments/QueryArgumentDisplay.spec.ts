@@ -19,7 +19,7 @@ const NO_VALUE_ARGS: QueryArguments = {
 
 const makeStep = (overrides: Partial<QueryStep> = {}): QueryStep => ({
   id: "step-1",
-  type: "values",
+  type: "insert.values",
   ...overrides,
 });
 
@@ -106,7 +106,7 @@ describe("QueryArgumentDisplay", () => {
 
   it("shows shortcut for options that take no value", () => {
     const step = makeStep({
-      type: "orderBy",
+      type: "search.order_by",
       args: [[{ selectedOption: "asc", value: undefined }]],
     });
     const wrapper = mount(QueryArgumentDisplay, {
@@ -117,7 +117,7 @@ describe("QueryArgumentDisplay", () => {
 
   it("shows symbolic shortcut for no-value direction options", () => {
     const step = makeStep({
-      type: "orderBy",
+      type: "search.order_by",
       args: [[{ selectedOption: "desc", value: undefined }]],
     });
     const wrapper = mount(QueryArgumentDisplay, {

@@ -20,7 +20,7 @@ export const DB_USER_LIST_API = "**/api/v1/db/user/list";
 export const DB_USER_ADD_API = "**/api/v1/db/user/add";
 export const DB_USER_REMOVE_API = "**/api/v1/db/user/remove";
 export const DB_EXEC_API = "**/api/v1/db/exec";
-export const DB_EXEC_MUT_API = "**/api/v1/db/exec/mut";
+export const DB_EXEC_MUT_API = "**/api/v1/db/exec_mut";
 export const ADMIN_DB_LIST_API = "**/api/v1/admin/db/list";
 export const ADMIN_DB_ADD_API = "**/api/v1/admin/db/add";
 export const ADMIN_DB_BACKUP_API = "**/api/v1/admin/db/backup";
@@ -37,7 +37,7 @@ export const ADMIN_DB_USER_LIST_API = "**/api/v1/admin/db/user/list";
 export const ADMIN_DB_USER_ADD_API = "**/api/v1/admin/db/user/add";
 export const ADMIN_DB_USER_REMOVE_API = "**/api/v1/admin/db/user/remove";
 export const ADMIN_DB_EXEC_API = "**/api/v1/admin/db/exec";
-export const ADMIN_DB_EXEC_MUT_API = "**/api/v1/admin/db/exec/mut";
+export const ADMIN_DB_EXEC_MUT_API = "**/api/v1/admin/db/exec_mut";
 
 export const ADMIN_USER_LIST_API = "**/api/v1/admin/user/list";
 export const ADMIN_USER_ADD_API = "**/api/v1/admin/user/add";

@@ -1,8 +1,13 @@
 <script lang="ts" setup>
 import type { QueryType } from "../../composables/types";
 
+type Hint = {
+  type: QueryType;
+  label: string;
+};
+
 defineProps<{
-  hints: QueryType[];
+  hints: Hint[];
   activeIndex?: number;
 }>();
 defineEmits<{
@@ -14,14 +19,14 @@ defineEmits<{
   <div class="query-hinter" role="listbox">
     <div
       v-for="(hint, index) in hints"
-      :key="index"
+      :key="hint.type"
       class="hinter-item"
       :class="{ active: index === activeIndex }"
       role="option"
       :aria-selected="index === activeIndex"
-      @click.stop.prevent="$emit('selectHint', hint)"
+      @click.stop.prevent="$emit('selectHint', hint.type)"
     >
-      {{ hint }}
+      {{ hint.label }}
     </div>
   </div>
 </template>

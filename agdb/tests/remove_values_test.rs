@@ -38,7 +38,7 @@ fn remove_values_ids() {
             .values("key1")
             .ids(["alias", "alias2"])
             .query(),
-        -2,
+        2,
     );
     db.exec_elements(
         QueryBuilder::select().ids(["alias", "alias2"]).query(),
@@ -75,7 +75,7 @@ fn remove_values_search() {
             .values("key")
             .ids(QueryBuilder::search().from(1).query())
             .query(),
-        -2,
+        2,
     );
     db.exec_elements(
         QueryBuilder::select().ids([1, 2]).query(),
@@ -113,7 +113,7 @@ fn remove_values_search_alt() {
             .search()
             .from(1)
             .query(),
-        -2,
+        2,
     );
     db.exec_elements(
         QueryBuilder::select().ids([1, 2]).query(),

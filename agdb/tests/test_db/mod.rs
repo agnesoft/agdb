@@ -28,7 +28,7 @@ impl TestDb {
     }
 
     #[track_caller]
-    pub fn exec<T: Query>(&self, query: T, result: i64) {
+    pub fn exec<T: Query>(&self, query: T, result: u64) {
         assert_eq!(self.db.exec(query).unwrap().result, result);
     }
 
@@ -49,7 +49,14 @@ impl TestDb {
     #[track_caller]
     pub fn exec_elements<T: Query>(&self, query: T, elements: &[DbElement]) {
         let res = self.db.exec(query).unwrap();
-        assert_eq!(res.result, elements.len() as i64);
+        assert_eq!(res.result, elements.len() as u64);
+        assert_eq!(res.elements, elements);
+    }
+
+    #[track_caller]
+    pub fn exec_count_elements<T: Query>(&self, query: T, count: u64, elements: &[DbElement]) {
+        let res = self.db.exec(query).unwrap();
+        assert_eq!(res.result, count);
         assert_eq!(res.elements, elements);
     }
 
@@ -64,7 +71,7 @@ impl TestDb {
     }
 
     #[track_caller]
-    pub fn exec_mut<T: QueryMut>(&mut self, query: T, result: i64) {
+    pub fn exec_mut<T: QueryMut>(&mut self, query: T, result: u64) {
         assert_eq!(self.db.exec_mut(query).unwrap().result, result);
     }
 

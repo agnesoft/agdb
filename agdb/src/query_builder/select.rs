@@ -33,9 +33,11 @@ impl Select {
         SelectAliases(SelectAliasesQuery(QueryIds::Ids(vec![])))
     }
 
-    /// Select number of outgoing and incoming edges. Each
-    /// element of the result withll have a proeprty `String("edge_count")`
-    /// with u64 as the value.
+    /// Select number of outgoing and incoming edges.
+    ///
+    /// The aggregated edge count is returned in `QueryResult::result`. Each element of
+    /// the result also has a property `String("edge_count")` with
+    /// `u64` as the value.
     pub fn edge_count(self) -> SelectEdgeCount {
         SelectEdgeCount(SelectEdgeCountQuery {
             ids: QueryIds::Ids(vec![]),
@@ -44,9 +46,11 @@ impl Select {
         })
     }
 
-    /// Select number of outgoing edges. Each
-    /// element of the result withll have a proeprty `String("edge_count")`
-    /// with u64 as the value.
+    /// Select number of outgoing edges.
+    ///
+    /// The aggregated edge count is returned in `QueryResult::result`. Each element of
+    /// the result also has a property `String("edge_count")` with
+    /// `u64` as the value.
     pub fn edge_count_from(self) -> SelectEdgeCount {
         SelectEdgeCount(SelectEdgeCountQuery {
             ids: QueryIds::Ids(vec![]),
@@ -55,9 +59,11 @@ impl Select {
         })
     }
 
-    /// Select number of incoming edges. Each
-    /// element of the result withll have a proeprty `String("edge_count")`
-    /// with u64 as the value.
+    /// Select number of incoming edges.
+    ///
+    /// The aggregated edge count is returned in `QueryResult::result`. Each element of
+    /// the result also has a property `String("edge_count")` with
+    /// `u64` as the value.
     pub fn edge_count_to(self) -> SelectEdgeCount {
         SelectEdgeCount(SelectEdgeCountQuery {
             ids: QueryIds::Ids(vec![]),
@@ -117,15 +123,18 @@ impl Select {
         SelectKeys(SelectKeysQuery(QueryIds::Ids(vec![])))
     }
 
-    /// Select number of keys. Each element of the result will have
-    /// a property `String("key_count")` with `u64` as the value.
+    /// Select number of keys.
+    ///
+    /// The aggregated key count is returned in `QueryResult::result`. Each element of
+    /// the result also has a property `String("key_count")` with
+    /// `u64` as the value.
     pub fn key_count(self) -> SelectKeyCount {
         SelectKeyCount(SelectKeyCountQuery(QueryIds::Ids(vec![])))
     }
 
-    /// Select number of nodes in the database. The result will be a
-    /// single element with a property `String("node_count")` with `u64`
-    /// as the value.
+    /// Select number of nodes in the database.
+    ///
+    /// The node count is returned in `QueryResult::result`.
     pub fn node_count(self) -> SelectNodeCount {
         SelectNodeCount {}
     }

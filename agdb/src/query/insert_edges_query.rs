@@ -101,7 +101,7 @@ impl QueryMut for InsertEdgesQuery {
             }
         };
 
-        result.result = ids.len() as i64;
+        result.result = ids.len() as u64;
         result.elements = ids
             .into_iter()
             .map(|id| {

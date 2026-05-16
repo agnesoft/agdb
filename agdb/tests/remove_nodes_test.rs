@@ -37,7 +37,7 @@ fn remove_nodes() {
         QueryBuilder::remove()
             .ids([String::from("alias"), String::from("alias2")])
             .query(),
-        -2,
+        2,
     );
 }
 
@@ -57,7 +57,7 @@ fn remove_missing_nodes_aliases() {
 fn remove_nodes_with_alias() {
     let mut db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().nodes().aliases("alias").query(), 1);
-    db.exec_mut(QueryBuilder::remove().ids(1).query(), -1);
+    db.exec_mut(QueryBuilder::remove().ids(1).query(), 1);
     db.exec_error(
         QueryBuilder::select().ids("alias").query(),
         "Alias 'alias' not found",
@@ -114,7 +114,7 @@ fn remove_nodes_with_edges() {
             .query(),
         2,
     );
-    db.exec_mut(QueryBuilder::remove().ids(1).query(), -1);
+    db.exec_mut(QueryBuilder::remove().ids(1).query(), 1);
     db.exec_error(QueryBuilder::select().ids(-3).query(), "Id '-3' not found");
 }
 
@@ -152,7 +152,7 @@ fn remove_nodes_with_values() {
             values: vec![("key", "value").into()],
         }],
     );
-    db.exec_mut(QueryBuilder::remove().ids(1).query(), -1);
+    db.exec_mut(QueryBuilder::remove().ids(1).query(), 1);
     db.exec_error(QueryBuilder::select().ids(1).query(), "Id '1' not found");
 }
 
@@ -205,7 +205,7 @@ fn remove_nodes_search() {
         QueryBuilder::remove()
             .ids(QueryBuilder::search().from(1).query())
             .query(),
-        -2,
+        2,
     );
     db.exec_error(QueryBuilder::select().ids(1).query(), "Id '1' not found");
     db.exec_error(QueryBuilder::select().ids(2).query(), "Id '2' not found");
@@ -217,7 +217,7 @@ fn remove_nodes_search_alt() {
     db.exec_mut(QueryBuilder::insert().nodes().count(2).query(), 2);
     db.exec_mut_ids(QueryBuilder::insert().edges().from(1).to(2).query(), &[-3]);
 
-    db.exec_mut(QueryBuilder::remove().search().from(1).query(), -2);
+    db.exec_mut(QueryBuilder::remove().search().from(1).query(), 2);
     db.exec_error(QueryBuilder::select().ids(1).query(), "Id '1' not found");
     db.exec_error(QueryBuilder::select().ids(2).query(), "Id '2' not found");
 }
@@ -235,7 +235,7 @@ fn remove_nodes_removes_edges_with_all_values() {
             .query(),
         1,
     );
-    db.exec_mut(QueryBuilder::remove().ids(2).query(), -1);
+    db.exec_mut(QueryBuilder::remove().ids(2).query(), 1);
     db.exec_mut(
         QueryBuilder::insert()
             .edges()

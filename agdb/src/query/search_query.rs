@@ -88,7 +88,7 @@ impl Query for SearchQuery {
             });
         }
 
-        result.result = result.elements.len() as i64;
+        result.result = result.elements.len() as u64;
 
         Ok(result)
     }

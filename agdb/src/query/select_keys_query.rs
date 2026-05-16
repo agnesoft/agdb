@@ -39,7 +39,7 @@ impl Query for SelectKeysQuery {
         };
 
         result.elements.reserve(db_ids.len());
-        result.result = db_ids.len() as i64;
+        result.result = db_ids.len() as u64;
 
         for id in db_ids {
             result.elements.push(DbElement {

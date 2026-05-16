@@ -8,7 +8,7 @@ use crate::StorageData;
 /// is not an error if an alias to be removed already
 /// does not exist.
 ///
-/// The result will be a negative number signifying how
+/// The result will be a number signifying how
 /// many aliases have been actually removed.
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
@@ -23,7 +23,7 @@ impl QueryMut for RemoveAliasesQuery {
 
         for alias in &self.0 {
             if db.remove_alias(alias)? {
-                result.result -= 1;
+                result.result += 1;
             }
         }
 

@@ -63,16 +63,11 @@ pub async fn admin_db_backup_restore() -> Result<(), TestError> {
         )
         .await?;
     let node_count_query = &[QueryBuilder::select().node_count().query().into()];
-    let node_count = client.admin_db_exec(owner, db, node_count_query).await?.1[0].elements[0]
-        .values[0]
-        .value
-        .to_u64()?;
+    let node_count = client.admin_db_exec(owner, db, node_count_query).await?.1[0].result;
     assert_eq!(node_count, 1);
     client.admin_db_restore(owner, db).await?;
-    let node_count = client.admin_db_exec(owner, db, node_count_query).await?.1[0].elements[0]
-        .values[0]
-        .value
-        .to_u64()?;
+    let node_count = client.admin_db_exec(owner, db, node_count_query).await?.1[0].result;
+
     assert_eq!(node_count, 0);
     Ok(())
 }
@@ -94,17 +89,12 @@ pub async fn admin_db_clear() -> Result<(), TestError> {
         )
         .await?;
     let node_count_query = &[QueryBuilder::select().node_count().query().into()];
-    let node_count = client.admin_db_exec(owner, db, node_count_query).await?.1[0].elements[0]
-        .values[0]
-        .value
-        .to_u64()?;
+    let node_count = client.admin_db_exec(owner, db, node_count_query).await?.1[0].result;
     assert_eq!(node_count, 1);
     client.admin_db_clear(owner, db, DbResource::All).await?;
 
-    let node_count = client.admin_db_exec(owner, db, node_count_query).await?.1[0].elements[0]
-        .values[0]
-        .value
-        .to_u64()?;
+    let node_count = client.admin_db_exec(owner, db, node_count_query).await?.1[0].result;
+
     assert_eq!(node_count, 0);
     Ok(())
 }
@@ -451,14 +441,10 @@ pub async fn db_backup() -> Result<(), TestError> {
         )
         .await?;
     let node_count_query = &[QueryBuilder::select().node_count().query().into()];
-    let node_count = client.db_exec(owner, db, node_count_query).await?.1[0].elements[0].values[0]
-        .value
-        .to_u64()?;
+    let node_count = client.db_exec(owner, db, node_count_query).await?.1[0].result;
     assert_eq!(node_count, 1);
     client.db_restore(owner, db).await?;
-    let node_count = client.db_exec(owner, db, node_count_query).await?.1[0].elements[0].values[0]
-        .value
-        .to_u64()?;
+    let node_count = client.db_exec(owner, db, node_count_query).await?.1[0].result;
     assert_eq!(node_count, 0);
     Ok(())
 }
@@ -481,14 +467,10 @@ pub async fn db_clear() -> Result<(), TestError> {
         )
         .await?;
     let node_count_query = &[QueryBuilder::select().node_count().query().into()];
-    let node_count = client.db_exec(owner, db, node_count_query).await?.1[0].elements[0].values[0]
-        .value
-        .to_u64()?;
+    let node_count = client.db_exec(owner, db, node_count_query).await?.1[0].result;
     assert_eq!(node_count, 1);
     client.db_clear(owner, db, DbResource::All).await?;
-    let node_count = client.db_exec(owner, db, node_count_query).await?.1[0].elements[0].values[0]
-        .value
-        .to_u64()?;
+    let node_count = client.db_exec(owner, db, node_count_query).await?.1[0].result;
     assert_eq!(node_count, 0);
     Ok(())
 }

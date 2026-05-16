@@ -19,7 +19,7 @@ impl QueryMut for RemoveIndexQuery {
         let value_count = db.remove_index(&self.0)?;
 
         Ok(QueryResult {
-            result: -(value_count as i64),
+            result: value_count,
             elements: vec![],
         })
     }

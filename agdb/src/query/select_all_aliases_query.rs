@@ -24,7 +24,7 @@ impl Query for SelectAllAliasesQuery {
         let mut aliases = db.aliases();
         aliases.sort();
         result.elements.reserve(aliases.len());
-        result.result = aliases.len() as i64;
+        result.result = aliases.len() as u64;
 
         for alias in aliases {
             result.elements.push(DbElement {

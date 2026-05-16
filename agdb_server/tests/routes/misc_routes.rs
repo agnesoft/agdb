@@ -298,7 +298,7 @@ async fn memory_db_from_backup() -> anyhow::Result<()> {
         )
         .await?
         .1;
-    assert_eq!(result[0].elements[0].values[0].value.to_u64()?, 1);
+    assert_eq!(result[0].result, 1);
 
     Ok(())
 }

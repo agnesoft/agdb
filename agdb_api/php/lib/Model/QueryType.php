@@ -638,7 +638,7 @@ class QueryType implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets remove_aliases
      *
-     * @param string[] $remove_aliases Query to remove aliases from the database. It is not an error if an alias to be removed already does not exist.  The result will be a negative number signifying how many aliases have been actually removed.
+     * @param string[] $remove_aliases Query to remove aliases from the database. It is not an error if an alias to be removed already does not exist.  The result will be a number signifying how many aliases have been actually removed.
      *
      * @return self
      */
@@ -908,7 +908,7 @@ class QueryType implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets select_node_count
      *
-     * @param object $select_node_count Query to select number of nodes in the database.  The result will be 1 and elements with a single element of id 0 and a single property `String(\"node_count\")` with a value `u64` represneting number of nodes in teh database.
+     * @param object $select_node_count Query to select number of nodes in the database.  The node count is returned in `QueryResult::result`.
      *
      * @return self
      */

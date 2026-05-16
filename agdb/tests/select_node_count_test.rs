@@ -1,23 +1,15 @@
 mod test_db;
 
 use crate::test_db::TestDb;
-use agdb::DbElement;
-use agdb::DbId;
 use agdb::QueryBuilder;
 
 #[test]
 fn select_node_count_empty() {
     let db = TestDb::new();
 
-    db.exec_elements(
-        QueryBuilder::select().node_count().query(),
-        &[DbElement {
-            id: DbId(0),
-            from: DbId::default(),
-            to: DbId::default(),
-            values: vec![("node_count", 0_u64).into()],
-        }],
-    );
+    let result = db.exec_result(QueryBuilder::select().node_count().query());
+    assert_eq!(result.result, 0);
+    assert!(result.elements.is_empty());
 }
 
 #[test]
@@ -26,15 +18,9 @@ fn select_node_count() {
 
     db.exec_mut(QueryBuilder::insert().nodes().count(5).query(), 5);
 
-    db.exec_elements(
-        QueryBuilder::select().node_count().query(),
-        &[DbElement {
-            id: DbId(0),
-            from: DbId::default(),
-            to: DbId::default(),
-            values: vec![("node_count", 5_u64).into()],
-        }],
-    );
+    let result = db.exec_result(QueryBuilder::select().node_count().query());
+    assert_eq!(result.result, 5);
+    assert!(result.elements.is_empty());
 }
 
 #[test]
@@ -42,15 +28,9 @@ fn select_node_count_after_removal() {
     let mut db = TestDb::new();
 
     db.exec_mut(QueryBuilder::insert().nodes().count(5).query(), 5);
-    db.exec_mut(QueryBuilder::remove().ids([2, 4]).query(), -2);
+    db.exec_mut(QueryBuilder::remove().ids([2, 4]).query(), 2);
 
-    db.exec_elements(
-        QueryBuilder::select().node_count().query(),
-        &[DbElement {
-            id: DbId(0),
-            from: DbId::default(),
-            to: DbId::default(),
-            values: vec![("node_count", 3_u64).into()],
-        }],
-    );
+    let result = db.exec_result(QueryBuilder::select().node_count().query());
+    assert_eq!(result.result, 3);
+    assert!(result.elements.is_empty());
 }

@@ -21,8 +21,9 @@ fn select_edge_count_ids() {
         1,
     );
 
-    db.exec_elements(
+    db.exec_count_elements(
         QueryBuilder::select().edge_count().ids("from").query(),
+        1,
         &[DbElement {
             id: DbId(1),
             from: DbId(-3),
@@ -31,8 +32,9 @@ fn select_edge_count_ids() {
         }],
     );
 
-    db.exec_elements(
+    db.exec_count_elements(
         QueryBuilder::select().edge_count().ids("to").query(),
+        1,
         &[DbElement {
             id: DbId(2),
             from: DbId::default(),
@@ -57,8 +59,9 @@ fn select_edge_count_from_ids() {
         1,
     );
 
-    db.exec_elements(
+    db.exec_count_elements(
         QueryBuilder::select().edge_count_from().ids("from").query(),
+        1,
         &[DbElement {
             id: DbId(1),
             from: DbId(-3),
@@ -67,8 +70,9 @@ fn select_edge_count_from_ids() {
         }],
     );
 
-    db.exec_elements(
+    db.exec_count_elements(
         QueryBuilder::select().edge_count_from().ids("to").query(),
+        0,
         &[DbElement {
             id: DbId(2),
             from: DbId::default(),
@@ -93,8 +97,9 @@ fn select_edge_count_to_ids() {
         1,
     );
 
-    db.exec_elements(
+    db.exec_count_elements(
         QueryBuilder::select().edge_count_to().ids("from").query(),
+        0,
         &[DbElement {
             id: DbId(1),
             from: DbId(-3),
@@ -103,8 +108,9 @@ fn select_edge_count_to_ids() {
         }],
     );
 
-    db.exec_elements(
+    db.exec_count_elements(
         QueryBuilder::select().edge_count_to().ids("to").query(),
+        1,
         &[DbElement {
             id: DbId(2),
             from: DbId::default(),
@@ -133,11 +139,12 @@ fn select_edge_count_multi() {
         3,
     );
 
-    db.exec_elements(
+    db.exec_count_elements(
         QueryBuilder::select()
             .edge_count()
             .ids(["node1", "node2", "node3"])
             .query(),
+        6,
         &[
             DbElement {
                 id: DbId(1),
@@ -180,7 +187,7 @@ fn select_edge_count_search() {
         4,
     );
 
-    db.exec_elements(
+    db.exec_count_elements(
         QueryBuilder::select()
             .edge_count()
             .ids(
@@ -191,6 +198,7 @@ fn select_edge_count_search() {
                     .query(),
             )
             .query(),
+        4,
         &[DbElement {
             id: DbId(2),
             from: DbId(-7),
@@ -219,7 +227,7 @@ fn select_edge_count_search_alt() {
         4,
     );
 
-    db.exec_elements(
+    db.exec_count_elements(
         QueryBuilder::select()
             .edge_count()
             .search()
@@ -227,6 +235,7 @@ fn select_edge_count_search_alt() {
             .where_()
             .edge_count(4)
             .query(),
+        4,
         &[DbElement {
             id: DbId(2),
             from: DbId(-7),
@@ -235,7 +244,7 @@ fn select_edge_count_search_alt() {
         }],
     );
 
-    db.exec_elements(
+    db.exec_count_elements(
         QueryBuilder::select()
             .edge_count_from()
             .search()
@@ -243,6 +252,7 @@ fn select_edge_count_search_alt() {
             .where_()
             .edge_count(4)
             .query(),
+        2,
         &[DbElement {
             id: DbId(2),
             from: DbId(-7),
@@ -251,7 +261,7 @@ fn select_edge_count_search_alt() {
         }],
     );
 
-    db.exec_elements(
+    db.exec_count_elements(
         QueryBuilder::select()
             .edge_count_to()
             .search()
@@ -259,6 +269,7 @@ fn select_edge_count_search_alt() {
             .where_()
             .edge_count(4)
             .query(),
+        2,
         &[DbElement {
             id: DbId(2),
             from: DbId(-7),
@@ -283,8 +294,9 @@ fn select_edge_count_non_nodes() {
         1,
     );
 
-    db.exec_elements(
+    db.exec_count_elements(
         QueryBuilder::select().edge_count().ids(-3).query(),
+        0,
         &[DbElement {
             id: DbId(-3),
             from: DbId(1),
@@ -309,12 +321,13 @@ fn select_edge_count_invalid_query() {
         1,
     );
 
-    db.exec_elements(
+    db.exec_count_elements(
         SelectEdgeCountQuery {
             ids: "from".into(),
             from: false,
             to: false,
         },
+        0,
         &[DbElement {
             id: DbId(1),
             from: DbId(-3),

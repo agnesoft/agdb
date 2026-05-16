@@ -35,7 +35,7 @@ use \Agnesoft\AgdbApi\ObjectSerializer;
  * SelectKeyCountQuery Class Doc Comment
  *
  * @category Class
- * @description Query to select number of properties (key count) of given ids. All of the ids must exist in the database.  The result will be number of elements returned and the list of elements with a single property &#x60;String(\&quot;key_count\&quot;)&#x60; with a value &#x60;u64&#x60;.
+ * @description Query to select number of properties (key count) of given ids. All of the ids must exist in the database.  The result is the sum of all selected key counts. The elements still contain individual key counts in property &#x60;String(\&quot;key_count\&quot;)&#x60; as &#x60;u64&#x60;.
  * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech

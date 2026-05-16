@@ -11,7 +11,7 @@ pub async fn delete() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
     let owner = &next_user_name();
     let db = &next_db_name();
-    server.user_login(ADMIN).await?;
+    server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.admin_db_add(owner, db, DbKind::Mapped).await?;
     assert!(Path::new(&server.data_dir).join(owner).join(db).exists());
@@ -31,7 +31,7 @@ pub async fn delete_with_backup() -> Result<(), TestError> {
         .join(owner)
         .join("backups")
         .join(format!("{db}.bak"));
-    server.user_login(ADMIN).await?;
+    server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.admin_db_add(owner, db, DbKind::Mapped).await?;
     server.api.admin_db_backup(owner, db).await?;
@@ -48,7 +48,7 @@ pub async fn delete_with_backup() -> Result<(), TestError> {
 pub async fn db_not_found() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
     let owner = &next_user_name();
-    server.user_login(ADMIN).await?;
+    server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     let status = server
         .api
@@ -65,7 +65,7 @@ pub async fn user_not_found() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
     let owner = &next_user_name();
     let db = &next_db_name();
-    server.user_login(ADMIN).await?;
+    server.api.user_login(ADMIN, ADMIN).await?;
     let status = server
         .api
         .admin_db_delete(owner, db)
@@ -81,9 +81,9 @@ pub async fn non_admin() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
     let owner = &next_user_name();
     let db = &next_db_name();
-    server.user_login(ADMIN).await?;
+    server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
-    server.user_login(owner).await?;
+    server.api.user_login(owner, owner).await?;
     let status = server
         .api
         .admin_db_delete(owner, db)

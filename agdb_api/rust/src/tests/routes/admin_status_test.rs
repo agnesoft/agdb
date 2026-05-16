@@ -7,7 +7,7 @@ use crate::test_server::test_error::TestError;
 #[cfg_attr(feature = "api", agdb::test_def())]
 pub async fn status() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
-    server.user_login(ADMIN).await?;
+    server.api.user_login(ADMIN, ADMIN).await?;
     server
         .api
         .admin_db_add(ADMIN, "status_db", DbKind::Memory)
@@ -28,9 +28,9 @@ pub async fn status() -> Result<(), TestError> {
 pub async fn non_admin() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
     let user = &next_user_name();
-    server.user_login(ADMIN).await?;
+    server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(user, user).await?;
-    server.user_login(user).await?;
+    server.api.user_login(user, user).await?;
     let status = server.api.admin_status().await.unwrap_err().status;
     assert_eq!(status, 401);
     Ok(())

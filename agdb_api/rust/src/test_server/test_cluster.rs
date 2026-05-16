@@ -11,7 +11,7 @@ use crate::test_server::HOST;
 use crate::test_server::POLL_INTERVAL;
 use crate::test_server::TEST_TIMEOUT;
 use crate::test_server::TestServerImpl;
-use crate::test_server::reqwest_client;
+use crate::test_server::api_for_test;
 use crate::test_server::test_error::TestError;
 use crate::test_server::test_error::bail;
 use std::sync::Arc;
@@ -52,17 +52,11 @@ impl TestCluster {
     }
 
     pub fn leader(&self) -> AgdbApi<ReqwestClient> {
-        AgdbApi::new(
-            ReqwestClient::with_client(reqwest_client()),
-            &self.cluster[0].address,
-        )
+        api_for_test(&self.cluster[0].address)
     }
 
     pub fn follower(&self) -> AgdbApi<ReqwestClient> {
-        AgdbApi::new(
-            ReqwestClient::with_client(reqwest_client()),
-            &self.cluster[1].address,
-        )
+        api_for_test(&self.cluster[1].address)
     }
 }
 
@@ -147,10 +141,7 @@ pub async fn create_cluster(nodes: usize, tls: bool) -> Result<Vec<TestServerImp
         .map(|c| tokio::spawn(async move { TestServerImpl::with_config(c).await }))
     {
         let server = server.await??;
-        let api = AgdbApi::new(
-            ReqwestClient::with_client(reqwest_client()),
-            &server.address,
-        );
+        let api = api_for_test(&server.address);
         servers.push((server, api));
     }
 

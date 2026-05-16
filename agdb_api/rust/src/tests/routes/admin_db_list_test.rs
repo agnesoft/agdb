@@ -14,7 +14,7 @@ pub async fn db_list() -> Result<(), TestError> {
     let owner2 = &next_user_name();
     let db1 = &next_db_name();
     let db2 = &next_db_name();
-    server.user_login(ADMIN).await?;
+    server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner1, owner1).await?;
     server.api.admin_user_add(owner2, owner2).await?;
     server.api.admin_db_add(owner1, db1, DbKind::Memory).await?;
@@ -51,7 +51,7 @@ pub async fn with_backup() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
     let owner = &next_user_name();
     let db = &next_db_name();
-    server.user_login(ADMIN).await?;
+    server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.admin_db_add(owner, db, DbKind::Mapped).await?;
     server.api.admin_db_backup(owner, db).await?;
@@ -69,9 +69,9 @@ pub async fn with_backup() -> Result<(), TestError> {
 pub async fn non_admin() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
     let owner = &next_user_name();
-    server.user_login(ADMIN).await?;
+    server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
-    server.user_login(owner).await?;
+    server.api.user_login(owner, owner).await?;
     let status = server.api.admin_db_list().await.unwrap_err().status;
     assert_eq!(status, 401);
     Ok(())

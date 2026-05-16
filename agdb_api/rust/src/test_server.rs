@@ -76,6 +76,26 @@ pub fn next_db_name() -> String {
     format!("db{}", COUNTER.fetch_add(1, Ordering::SeqCst))
 }
 
+pub fn test_agent_name() -> String {
+    std::env::var("NEXTEST_TEST_NAME")
+        .ok()
+        .filter(|name| !name.is_empty())
+        .or_else(|| {
+            std::thread::current()
+                .name()
+                .map(std::string::ToString::to_string)
+                .filter(|name| !name.is_empty())
+        })
+        .unwrap_or_else(|| "agdb_api_test".to_string())
+}
+
+pub fn api_for_test(address: &str) -> AgdbApi<ReqwestClient> {
+    AgdbApi::new(
+        ReqwestClient::with_user_agent(reqwest_client(), test_agent_name()),
+        address,
+    )
+}
+
 #[cfg_attr(feature = "api", agdb::fn_def())]
 pub async fn wait_for_ready(api: &AgdbApi<ReqwestClient>) -> Result<(), TestError> {
     for _ in 0..RETRY_ATTEMPS {
@@ -118,7 +138,6 @@ pub struct TestServerImpl {
     pub data_dir: String,
     pub address: String,
     pub process: Option<TestServerProcess>,
-    pub admin_token: Option<String>,
 }
 
 #[cfg(feature = "tls")]
@@ -183,19 +202,16 @@ impl TestServerImpl {
             .current_dir(&dir)
             .kill_on_drop(true)
             .spawn()?;
-        let mut api = AgdbApi::new(ReqwestClient::with_client(reqwest_client()), &api_address);
+        let api = api_for_test(&api_address);
 
         for _ in 0..RETRY_ATTEMPS {
             match api.status().await {
                 Ok(200) => {
-                    api.user_login(ADMIN, ADMIN).await?;
-
                     return Ok(Self {
                         dir,
                         data_dir,
                         address: api_address,
                         process: Some(TestServerProcess(process)),
-                        admin_token: api.token,
                     });
                 }
                 Ok(status) => println!("Server at {api_address} is not ready: {status}"),
@@ -342,24 +358,11 @@ impl TestServer {
         };
 
         Ok(Self {
-            api: AgdbApi::new(
-                ReqwestClient::with_client(reqwest_client()),
-                &server.address,
-            ),
+            api: api_for_test(&server.address),
             dir: server.dir.clone(),
             data_dir: server.data_dir.clone(),
             server,
         })
-    }
-
-    pub async fn user_login(&mut self, user: &str) -> Result<(), TestError> {
-        if user == ADMIN {
-            self.api.token = self.server.admin_token.clone();
-            return Ok(());
-        }
-
-        self.api.user_login(user, user).await?;
-        Ok(())
     }
 
     pub fn url(&self, uri: &str) -> String {

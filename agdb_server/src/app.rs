@@ -193,10 +193,6 @@ pub(crate) fn app(
             routing::post(routes::cluster::logout),
         )
         .route(
-            "/cluster/user/logout_all",
-            routing::post(routes::cluster::user_logout_all),
-        )
-        .route(
             "/cluster/admin/user/{username}/logout",
             routing::post(routes::cluster::admin_logout),
         )
@@ -207,7 +203,6 @@ pub(crate) fn app(
         .route("/cluster/status", routing::get(routes::cluster::status))
         .route("/user/login", routing::post(routes::user::login))
         .route("/user/logout", routing::post(routes::user::logout))
-        .route("/user/logout_all", routing::post(routes::user::logout_all))
         .route(
             "/user/change_password",
             routing::put(routes::user::change_password),

@@ -10,7 +10,7 @@ pub async fn memory_to_mapped() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
     let owner = &next_user_name();
     let db = &next_db_name();
-    server.user_login(ADMIN).await?;
+    server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.admin_db_add(owner, db, DbKind::Memory).await?;
     let status = server
@@ -18,7 +18,7 @@ pub async fn memory_to_mapped() -> Result<(), TestError> {
         .admin_db_convert(owner, db, DbKind::Mapped)
         .await?;
     assert_eq!(status, 201);
-    server.user_login(owner).await?;
+    server.api.user_login(owner, owner).await?;
     let list = server.api.db_list().await?.1;
     assert_eq!(list[0].db_type, DbKind::Mapped);
 
@@ -30,7 +30,7 @@ pub async fn same_type() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
     let owner = &next_user_name();
     let db = &next_db_name();
-    server.user_login(ADMIN).await?;
+    server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.admin_db_add(owner, db, DbKind::Memory).await?;
     let status = server
@@ -38,7 +38,7 @@ pub async fn same_type() -> Result<(), TestError> {
         .admin_db_convert(owner, db, DbKind::Memory)
         .await?;
     assert_eq!(status, 201);
-    server.user_login(owner).await?;
+    server.api.user_login(owner, owner).await?;
     let list = server.api.db_list().await?.1;
     assert_eq!(list[0].db_type, DbKind::Memory);
 
@@ -49,9 +49,9 @@ pub async fn same_type() -> Result<(), TestError> {
 pub async fn non_admin() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
     let user = &next_user_name();
-    server.user_login(ADMIN).await?;
+    server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(user, user).await?;
-    server.user_login(user).await?;
+    server.api.user_login(user, user).await?;
     let status = server
         .api
         .admin_db_convert(user, "db", DbKind::Mapped)

@@ -12,7 +12,7 @@ pub async fn remove() -> Result<(), TestError> {
     let owner = &next_user_name();
     let user = &next_user_name();
     let db = &next_db_name();
-    server.user_login(ADMIN).await?;
+    server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.admin_user_add(user, user).await?;
     server.api.admin_db_add(owner, db, DbKind::Mapped).await?;
@@ -34,7 +34,7 @@ pub async fn remove_owner() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
     let owner = &next_user_name();
     let db = &next_db_name();
-    server.user_login(ADMIN).await?;
+    server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.admin_db_add(owner, db, DbKind::Mapped).await?;
     let status = server
@@ -51,7 +51,7 @@ pub async fn remove_owner() -> Result<(), TestError> {
 pub async fn db_not_found() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
     let owner = &next_user_name();
-    server.user_login(ADMIN).await?;
+    server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     let status = server
         .api
@@ -66,7 +66,7 @@ pub async fn db_not_found() -> Result<(), TestError> {
 #[cfg_attr(feature = "api", agdb::test_def())]
 pub async fn user_not_found() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
-    server.user_login(ADMIN).await?;
+    server.api.user_login(ADMIN, ADMIN).await?;
     let status = server
         .api
         .admin_db_user_remove("owner", "db", "user")
@@ -81,9 +81,9 @@ pub async fn user_not_found() -> Result<(), TestError> {
 pub async fn non_admin() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
     let owner = &next_user_name();
-    server.user_login(ADMIN).await?;
+    server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
-    server.user_login(owner).await?;
+    server.api.user_login(owner, owner).await?;
     let status = server
         .api
         .admin_db_user_remove(owner, "db", "user")

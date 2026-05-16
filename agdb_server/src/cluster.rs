@@ -381,6 +381,12 @@ impl ClusterStorage {
     pub(crate) async fn subscribe(&self) -> tokio::sync::broadcast::Receiver<u64> {
         self.notifier.subscribe()
     }
+
+    // pub(crate) async fn is_executed(&self, index: u64) -> ServerResult<bool> {
+    //     Ok(self.index >= index
+    //         && self.commit >= index
+    //         && self.cluster_log.logs_unexecuted(index).await?.is_empty())
+    // }
 }
 
 impl Storage<ClusterAction, ResultNotifier> for ClusterStorage {

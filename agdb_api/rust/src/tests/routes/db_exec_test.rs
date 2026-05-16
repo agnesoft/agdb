@@ -15,9 +15,9 @@ pub async fn read_write() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
     let owner = &next_user_name();
     let db = &next_db_name();
-    server.user_login(ADMIN).await?;
+    server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
-    server.user_login(owner).await?;
+    server.api.user_login(owner, owner).await?;
     server.api.db_add(owner, db, DbKind::Mapped).await?;
     let queries = &[
         QueryBuilder::insert()
@@ -59,9 +59,9 @@ pub async fn read_only() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
     let owner = &next_user_name();
     let db = &next_db_name();
-    server.user_login(ADMIN).await?;
+    server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
-    server.user_login(owner).await?;
+    server.api.user_login(owner, owner).await?;
     server.api.db_add(owner, db, DbKind::Mapped).await?;
     let queries = &[QueryBuilder::insert()
         .nodes()
@@ -92,9 +92,9 @@ pub async fn read_queries() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
     let owner = &next_user_name();
     let db = &next_db_name();
-    server.user_login(ADMIN).await?;
+    server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
-    server.user_login(owner).await?;
+    server.api.user_login(owner, owner).await?;
     server.api.db_add(owner, db, DbKind::Mapped).await?;
     let queries = &[QueryBuilder::insert()
         .nodes()
@@ -132,9 +132,9 @@ pub async fn write_queries() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
     let owner = &next_user_name();
     let db = &next_db_name();
-    server.user_login(ADMIN).await?;
+    server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
-    server.user_login(owner).await?;
+    server.api.user_login(owner, owner).await?;
     server.api.db_add(owner, db, DbKind::Mapped).await?;
     let queries = &[
         QueryBuilder::insert().nodes().count(2).query().into(),
@@ -187,9 +187,9 @@ pub async fn use_result_of_previous_query() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
     let owner = &next_user_name();
     let db = &next_db_name();
-    server.user_login(ADMIN).await?;
+    server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
-    server.user_login(owner).await?;
+    server.api.user_login(owner, owner).await?;
     server.api.db_add(owner, db, DbKind::Mapped).await?;
     let queries = &[
         QueryBuilder::insert()
@@ -250,9 +250,9 @@ pub async fn use_result_in_subquery() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
     let owner = &next_user_name();
     let db = &next_db_name();
-    server.user_login(ADMIN).await?;
+    server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
-    server.user_login(owner).await?;
+    server.api.user_login(owner, owner).await?;
     server.api.db_add(owner, db, DbKind::Mapped).await?;
     let queries = &[
         QueryBuilder::insert()
@@ -313,9 +313,9 @@ pub async fn use_result_in_condition() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
     let owner = &next_user_name();
     let db = &next_db_name();
-    server.user_login(ADMIN).await?;
+    server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
-    server.user_login(owner).await?;
+    server.api.user_login(owner, owner).await?;
     server.api.db_add(owner, db, DbKind::Mapped).await?;
     let queries = &[
         QueryBuilder::insert()
@@ -353,9 +353,9 @@ pub async fn use_result_in_search() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
     let owner = &next_user_name();
     let db = &next_db_name();
-    server.user_login(ADMIN).await?;
+    server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
-    server.user_login(owner).await?;
+    server.api.user_login(owner, owner).await?;
     server.api.db_add(owner, db, DbKind::Mapped).await?;
     let queries = &[
         QueryBuilder::insert().nodes().count(1).query().into(),
@@ -404,9 +404,9 @@ pub async fn use_result_in_insert_ids() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
     let owner = &next_user_name();
     let db = &next_db_name();
-    server.user_login(ADMIN).await?;
+    server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
-    server.user_login(owner).await?;
+    server.api.user_login(owner, owner).await?;
     server.api.db_add(owner, db, DbKind::Mapped).await?;
     let queries = &[
         QueryBuilder::insert()
@@ -480,9 +480,9 @@ pub async fn reentrant_queries() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
     let owner = &next_user_name();
     let db = &next_db_name();
-    server.user_login(ADMIN).await?;
+    server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
-    server.user_login(owner).await?;
+    server.api.user_login(owner, owner).await?;
     server.api.db_add(owner, db, DbKind::Mapped).await?;
     let queries = &[
         QueryBuilder::insert()
@@ -585,9 +585,9 @@ pub async fn use_result_in_search_bad_query() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
     let owner = &next_user_name();
     let db = &next_db_name();
-    server.user_login(ADMIN).await?;
+    server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
-    server.user_login(owner).await?;
+    server.api.user_login(owner, owner).await?;
     server.api.db_add(owner, db, DbKind::Mapped).await?;
     let queries = &[QueryBuilder::search().from(":bad").query().into()];
     let error = server.api.db_exec(owner, db, queries).await.unwrap_err();
@@ -601,9 +601,9 @@ pub async fn use_result_in_search_empty_result() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
     let owner = &next_user_name();
     let db = &next_db_name();
-    server.user_login(ADMIN).await?;
+    server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
-    server.user_login(owner).await?;
+    server.api.user_login(owner, owner).await?;
     server.api.db_add(owner, db, DbKind::Mapped).await?;
     let queries = &[
         QueryBuilder::remove().ids(0).query().into(),
@@ -624,9 +624,9 @@ pub async fn use_result_bad_query() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
     let owner = &next_user_name();
     let db = &next_db_name();
-    server.user_login(ADMIN).await?;
+    server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
-    server.user_login(owner).await?;
+    server.api.user_login(owner, owner).await?;
     server.api.db_add(owner, db, DbKind::Mapped).await?;
     let queries = &[QueryBuilder::insert()
         .aliases("alias")
@@ -648,9 +648,9 @@ pub async fn use_result_out_of_bounds() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
     let owner = &next_user_name();
     let db = &next_db_name();
-    server.user_login(ADMIN).await?;
+    server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
-    server.user_login(owner).await?;
+    server.api.user_login(owner, owner).await?;
     server.api.db_add(owner, db, DbKind::Mapped).await?;
     let queries = &[QueryBuilder::insert()
         .aliases("alias")
@@ -672,9 +672,9 @@ pub async fn query_error() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
     let owner = &next_user_name();
     let db = &next_db_name();
-    server.user_login(ADMIN).await?;
+    server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
-    server.user_login(owner).await?;
+    server.api.user_login(owner, owner).await?;
     server.api.db_add(owner, db, DbKind::Mapped).await?;
     let queries = &[
         QueryBuilder::insert()
@@ -700,7 +700,7 @@ pub async fn permission_denied() -> Result<(), TestError> {
     let owner = &next_user_name();
     let user = &next_user_name();
     let db = &next_db_name();
-    server.user_login(ADMIN).await?;
+    server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.admin_user_add(user, user).await?;
     server.api.admin_db_add(owner, db, DbKind::Mapped).await?;
@@ -708,7 +708,7 @@ pub async fn permission_denied() -> Result<(), TestError> {
         .api
         .admin_db_user_add(owner, db, user, DbUserRole::Read)
         .await?;
-    server.user_login(user).await?;
+    server.api.user_login(user, user).await?;
     let queries = &[
         QueryBuilder::insert()
             .nodes()
@@ -731,9 +731,9 @@ pub async fn permission_denied() -> Result<(), TestError> {
 pub async fn db_not_found() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
     let owner = &next_user_name();
-    server.user_login(ADMIN).await?;
+    server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
-    server.user_login(owner).await?;
+    server.api.user_login(owner, owner).await?;
     let status = server
         .api
         .db_exec(owner, "db", &[])
@@ -750,11 +750,11 @@ pub async fn someone_elses_db() -> Result<(), TestError> {
     let owner = &next_user_name();
     let db = &next_db_name();
     let user = &next_user_name();
-    server.user_login(ADMIN).await?;
+    server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.admin_user_add(user, user).await?;
     server.api.admin_db_add(owner, db, DbKind::Memory).await?;
-    server.user_login(user).await?;
+    server.api.user_login(user, user).await?;
     let status = server.api.db_exec(owner, db, &[]).await.unwrap_err().status;
     assert_eq!(status, 404);
     Ok(())

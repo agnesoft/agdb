@@ -8,7 +8,7 @@ pub async fn user_list() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
     let user1 = &next_user_name();
     let user2 = &next_user_name();
-    server.user_login(ADMIN).await?;
+    server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(user1, user1).await?;
     server.api.admin_user_add(user2, user2).await?;
     let (status, mut list) = server.api.admin_user_list().await?;
@@ -19,7 +19,6 @@ pub async fn user_list() -> Result<(), TestError> {
     assert!(admin_user.login);
     assert!(admin_user.admin);
     assert!(!admin_user.sessions.is_empty());
-    assert_eq!(admin_user.sessions[0].agent, "agdb_api");
     Ok(())
 }
 
@@ -27,9 +26,9 @@ pub async fn user_list() -> Result<(), TestError> {
 pub async fn non_admin() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
     let user = &next_user_name();
-    server.user_login(ADMIN).await?;
+    server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(user, user).await?;
-    server.user_login(user).await?;
+    server.api.user_login(user, user).await?;
     let status = server.api.admin_user_list().await.unwrap_err().status;
     assert_eq!(status, 401);
     Ok(())

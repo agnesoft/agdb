@@ -5,6 +5,9 @@ use crate::cluster::Cluster;
 use crate::error_code::ErrorCode;
 use crate::password;
 use crate::password::Password;
+use crate::routes::user::LOGOUT_ALL_SESSIONS;
+use crate::routes::user::LOGOUT_OTHER_SESSIONS;
+use crate::routes::user::LogoutQuery;
 use crate::server_db::ServerDb;
 use crate::server_error::ServerResponse;
 use crate::user_id::AdminId;
@@ -12,6 +15,7 @@ use agdb_api::UserCredentials;
 use agdb_api::UserStatus;
 use axum::Json;
 use axum::extract::Path;
+use axum::extract::Query;
 use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
@@ -126,6 +130,7 @@ pub(crate) async fn list(
     security(("Token" = [])),
     params(
         ("username" = String, Path, description = "user name"),
+        LogoutQuery,
     ),
     responses(
          (status = 201, description = "user logged out"),
@@ -137,9 +142,21 @@ pub(crate) async fn logout(
     _admin: AdminId,
     State(server_db): State<ServerDb>,
     Path(username): Path<String>,
+    Query(request): Query<LogoutQuery>,
 ) -> ServerResponse {
     let user_id = server_db.user_id(&username).await?;
-    server_db.remove_tokens(user_id).await?;
+
+    match request.session.as_deref() {
+        None => {
+            server_db.remove_tokens(user_id).await?;
+        }
+        Some(LOGOUT_ALL_SESSIONS) | Some(LOGOUT_OTHER_SESSIONS) => {
+            server_db.remove_tokens(user_id).await?;
+        }
+        Some(session) => {
+            server_db.remove_session(session.to_string()).await?;
+        }
+    }
 
     Ok(StatusCode::CREATED)
 }

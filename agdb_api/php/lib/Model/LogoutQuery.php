@@ -1,6 +1,6 @@
 <?php
 /**
- * UserSession
+ * LogoutQuery
  *
  * PHP version 8.1
  *
@@ -32,7 +32,7 @@ use \ArrayAccess;
 use \Agnesoft\AgdbApi\ObjectSerializer;
 
 /**
- * UserSession Class Doc Comment
+ * LogoutQuery Class Doc Comment
  *
  * @category Class
  * @package  Agnesoft\AgdbApi
@@ -40,7 +40,7 @@ use \Agnesoft\AgdbApi\ObjectSerializer;
  * @link     https://openapi-generator.tech
  * @implements \ArrayAccess<string, mixed>
  */
-class UserSession implements ModelInterface, ArrayAccess, \JsonSerializable
+class LogoutQuery implements ModelInterface, ArrayAccess, \JsonSerializable
 {
     public const DISCRIMINATOR = null;
 
@@ -49,7 +49,7 @@ class UserSession implements ModelInterface, ArrayAccess, \JsonSerializable
      *
      * @var string
      */
-    protected static $openAPIModelName = 'UserSession';
+    protected static $openAPIModelName = 'LogoutQuery';
 
     /**
      * Array of property to type mappings. Used for (de)serialization
@@ -57,9 +57,7 @@ class UserSession implements ModelInterface, ArrayAccess, \JsonSerializable
      * @var string[]
      */
     protected static $openAPITypes = [
-        'agent' => 'string',
-        'created' => 'int',
-        'id' => 'string'
+        'session' => 'string'
     ];
 
     /**
@@ -70,9 +68,7 @@ class UserSession implements ModelInterface, ArrayAccess, \JsonSerializable
      * @psalm-var array<string, string|null>
      */
     protected static $openAPIFormats = [
-        'agent' => null,
-        'created' => 'int64',
-        'id' => null
+        'session' => null
     ];
 
     /**
@@ -81,9 +77,7 @@ class UserSession implements ModelInterface, ArrayAccess, \JsonSerializable
      * @var boolean[]
      */
     protected static array $openAPINullables = [
-        'agent' => false,
-        'created' => false,
-        'id' => false
+        'session' => true
     ];
 
     /**
@@ -172,9 +166,7 @@ class UserSession implements ModelInterface, ArrayAccess, \JsonSerializable
      * @var string[]
      */
     protected static $attributeMap = [
-        'agent' => 'agent',
-        'created' => 'created',
-        'id' => 'id'
+        'session' => 'session'
     ];
 
     /**
@@ -183,9 +175,7 @@ class UserSession implements ModelInterface, ArrayAccess, \JsonSerializable
      * @var string[]
      */
     protected static $setters = [
-        'agent' => 'setAgent',
-        'created' => 'setCreated',
-        'id' => 'setId'
+        'session' => 'setSession'
     ];
 
     /**
@@ -194,9 +184,7 @@ class UserSession implements ModelInterface, ArrayAccess, \JsonSerializable
      * @var string[]
      */
     protected static $getters = [
-        'agent' => 'getAgent',
-        'created' => 'getCreated',
-        'id' => 'getId'
+        'session' => 'getSession'
     ];
 
     /**
@@ -256,9 +244,7 @@ class UserSession implements ModelInterface, ArrayAccess, \JsonSerializable
      */
     public function __construct(?array $data = null)
     {
-        $this->setIfExists('agent', $data ?? [], null);
-        $this->setIfExists('created', $data ?? [], null);
-        $this->setIfExists('id', $data ?? [], null);
+        $this->setIfExists('session', $data ?? [], null);
     }
 
     /**
@@ -288,19 +274,6 @@ class UserSession implements ModelInterface, ArrayAccess, \JsonSerializable
     {
         $invalidProperties = [];
 
-        if ($this->container['agent'] === null) {
-            $invalidProperties[] = "'agent' can't be null";
-        }
-        if ($this->container['created'] === null) {
-            $invalidProperties[] = "'created' can't be null";
-        }
-        if (($this->container['created'] < 0)) {
-            $invalidProperties[] = "invalid value for 'created', must be bigger than or equal to 0.";
-        }
-
-        if ($this->container['id'] === null) {
-            $invalidProperties[] = "'id' can't be null";
-        }
         return $invalidProperties;
     }
 
@@ -317,87 +290,35 @@ class UserSession implements ModelInterface, ArrayAccess, \JsonSerializable
 
 
     /**
-     * Gets agent
+     * Gets session
      *
-     * @return string
+     * @return string|null
      */
-    public function getAgent()
+    public function getSession()
     {
-        return $this->container['agent'];
+        return $this->container['session'];
     }
 
     /**
-     * Sets agent
+     * Sets session
      *
-     * @param string $agent agent
+     * @param string|null $session session
      *
      * @return self
      */
-    public function setAgent($agent)
+    public function setSession($session)
     {
-        if (is_null($agent)) {
-            throw new \InvalidArgumentException('non-nullable agent cannot be null');
+        if (is_null($session)) {
+            array_push($this->openAPINullablesSetToNull, 'session');
+        } else {
+            $nullablesSetToNull = $this->getOpenAPINullablesSetToNull();
+            $index = array_search('session', $nullablesSetToNull);
+            if ($index !== FALSE) {
+                unset($nullablesSetToNull[$index]);
+                $this->setOpenAPINullablesSetToNull($nullablesSetToNull);
+            }
         }
-        $this->container['agent'] = $agent;
-
-        return $this;
-    }
-
-    /**
-     * Gets created
-     *
-     * @return int
-     */
-    public function getCreated()
-    {
-        return $this->container['created'];
-    }
-
-    /**
-     * Sets created
-     *
-     * @param int $created created
-     *
-     * @return self
-     */
-    public function setCreated($created)
-    {
-        if (is_null($created)) {
-            throw new \InvalidArgumentException('non-nullable created cannot be null');
-        }
-
-        if (($created < 0)) {
-            throw new \InvalidArgumentException('invalid value for $created when calling UserSession., must be bigger than or equal to 0.');
-        }
-
-        $this->container['created'] = $created;
-
-        return $this;
-    }
-
-    /**
-     * Gets id
-     *
-     * @return string
-     */
-    public function getId()
-    {
-        return $this->container['id'];
-    }
-
-    /**
-     * Sets id
-     *
-     * @param string $id id
-     *
-     * @return self
-     */
-    public function setId($id)
-    {
-        if (is_null($id)) {
-            throw new \InvalidArgumentException('non-nullable id cannot be null');
-        }
-        $this->container['id'] = $id;
+        $this->container['session'] = $session;
 
         return $this;
     }

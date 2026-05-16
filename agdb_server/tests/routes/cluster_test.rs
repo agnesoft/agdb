@@ -223,3 +223,18 @@ async fn cluster_logout() -> Result<(), TestError> {
 async fn cluster_logout_all() -> Result<(), TestError> {
     agdb_api::tests::routes::cluster_test::cluster_logout_all().await
 }
+
+#[tokio::test]
+async fn cluster_logout_all_keep_self() -> Result<(), TestError> {
+    agdb_api::tests::routes::cluster_test::cluster_logout_all_keep_self().await
+}
+
+#[tokio::test]
+async fn cluster_logout_selected_session() -> Result<(), TestError> {
+    agdb_api::tests::routes::cluster_test::cluster_logout_selected_session().await
+}
+
+#[tokio::test]
+async fn admin_cluster_logout_selected_session() -> Result<(), TestError> {
+    agdb_api::tests::routes::cluster_test::admin_cluster_logout_selected_session().await
+}

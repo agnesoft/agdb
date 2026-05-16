@@ -5,13 +5,14 @@ use axum::middleware::Next;
 use axum::response::Response;
 use reqwest::StatusCode;
 
-const REDIRECT_PATHS: [&str; 14] = [
+const REDIRECT_PATHS: [&str; 15] = [
     "/add",
     "/backup",
     "/change_password",
     "/clear",
     "/cluster/user/login",
     "/cluster/user/logout",
+    "/cluster/admin/user/logout_all",
     "/convert",
     "/copy",
     "/delete",

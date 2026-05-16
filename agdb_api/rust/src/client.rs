@@ -376,6 +376,22 @@ impl<T: AgdbApiClient> AgdbApi<T> {
             .0)
     }
 
+    pub async fn admin_user_logout_session(
+        &self,
+        username: &str,
+        session: &str,
+    ) -> AgdbApiResult<u16> {
+        Ok(self
+            .client
+            .post::<(), ()>(
+                &self.url(&format!("/admin/user/{username}/logout?session={session}")),
+                None,
+                &self.token,
+            )
+            .await?
+            .0)
+    }
+
     pub async fn admin_user_logout_all(&self) -> AgdbApiResult<u16> {
         Ok(self
             .client
@@ -410,6 +426,24 @@ impl<T: AgdbApiClient> AgdbApi<T> {
             .client
             .post::<(), ()>(
                 &self.url(&format!("/cluster/admin/user/{username}/logout")),
+                None,
+                &self.token,
+            )
+            .await?
+            .0)
+    }
+
+    pub async fn cluster_admin_user_logout_session(
+        &self,
+        username: &str,
+        session: &str,
+    ) -> AgdbApiResult<u16> {
+        Ok(self
+            .client
+            .post::<(), ()>(
+                &self.url(&format!(
+                    "/cluster/admin/user/{username}/logout?session={session}"
+                )),
                 None,
                 &self.token,
             )
@@ -459,14 +493,42 @@ impl<T: AgdbApiClient> AgdbApi<T> {
         Ok(status)
     }
 
+    pub async fn cluster_user_logout_others(&mut self) -> AgdbApiResult<u16> {
+        Ok(self
+            .client
+            .post::<(), ()>(
+                &self.url("/cluster/user/logout?session=others"),
+                None,
+                &self.token,
+            )
+            .await?
+            .0)
+    }
+
     pub async fn cluster_user_logout_all(&mut self) -> AgdbApiResult<u16> {
         let status = self
             .client
-            .post::<(), ()>(&self.url("/cluster/user/logout_all"), None, &self.token)
+            .post::<(), ()>(
+                &self.url("/cluster/user/logout?session=all"),
+                None,
+                &self.token,
+            )
             .await?
             .0;
         self.token = None;
         Ok(status)
+    }
+
+    pub async fn cluster_user_logout_session(&self, session: &str) -> AgdbApiResult<u16> {
+        Ok(self
+            .client
+            .post::<(), ()>(
+                &self.url(&format!("/cluster/user/logout?session={session}")),
+                None,
+                &self.token,
+            )
+            .await?
+            .0)
     }
 
     pub async fn cluster_status(&self) -> AgdbApiResult<(u16, Vec<ClusterStatus>)> {
@@ -695,27 +757,46 @@ impl<T: AgdbApiClient> AgdbApi<T> {
         Ok(status)
     }
 
+    pub async fn user_logout_others(&mut self) -> AgdbApiResult<u16> {
+        Ok(self
+            .client
+            .post::<(), ()>(&self.url("/user/logout?session=others"), None, &self.token)
+            .await?
+            .0)
+    }
+
     pub async fn user_logout_all(&mut self) -> AgdbApiResult<u16> {
         let status = self
             .client
-            .post::<(), ()>(&self.url("/user/logout_all"), None, &self.token)
+            .post::<(), ()>(&self.url("/user/logout?session=all"), None, &self.token)
             .await?
             .0;
         self.token = None;
         Ok(status)
     }
 
+    pub async fn user_logout_session(&self, session: &str) -> AgdbApiResult<u16> {
+        self.client
+            .post::<(), ()>(
+                &self.url(&format!("/user/logout?session={session}")),
+                None,
+                &self.token,
+            )
+            .await
+            .map(|(status, _)| status)
+    }
+
     pub async fn user_change_password(
         &self,
         old_password: &str,
-        new_pasword: &str,
+        new_password: &str,
     ) -> AgdbApiResult<u16> {
         self.client
             .put(
                 &self.url("/user/change_password"),
                 Some(ChangePassword {
                     password: old_password.to_string(),
-                    new_password: new_pasword.to_string(),
+                    new_password: new_password.to_string(),
                 }),
                 &self.token,
             )

@@ -1215,6 +1215,14 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "session",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -1268,6 +1276,14 @@
             "in": "path",
             "description": "user name",
             "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "session",
+            "in": "query",
+            "required": false,
             "schema": {
               "type": "string"
             }
@@ -1353,30 +1369,19 @@
           "agdb"
         ],
         "operationId": "cluster_user_logout",
+        "parameters": [
+          {
+            "name": "session",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "201": {
             "description": "user logged out"
-          },
-          "401": {
-            "description": "invalid credentials"
-          }
-        },
-        "security": [
-          {
-            "Token": []
-          }
-        ]
-      }
-    },
-    "/api/v1/cluster/user/logout_all": {
-      "post": {
-        "tags": [
-          "agdb"
-        ],
-        "operationId": "cluster_user_logout_all",
-        "responses": {
-          "201": {
-            "description": "user logged out from all sessions"
           },
           "401": {
             "description": "invalid credentials"
@@ -2403,30 +2408,19 @@
           "agdb"
         ],
         "operationId": "user_logout",
+        "parameters": [
+          {
+            "name": "session",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "201": {
             "description": "user logged out"
-          },
-          "401": {
-            "description": "invalid credentials"
-          }
-        },
-        "security": [
-          {
-            "Token": []
-          }
-        ]
-      }
-    },
-    "/api/v1/user/logout_all": {
-      "post": {
-        "tags": [
-          "agdb"
-        ],
-        "operationId": "user_logout_all",
-        "responses": {
-          "201": {
-            "description": "user logged out from all sessions"
           },
           "401": {
             "description": "invalid credentials"
@@ -3202,6 +3196,17 @@
           "debug",
           "trace"
         ]
+      },
+      "LogoutQuery": {
+        "type": "object",
+        "properties": {
+          "session": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
       },
       "OptimizeParam": {
         "type": "object",
@@ -4011,6 +4016,7 @@
       "UserSession": {
         "type": "object",
         "required": [
+          "id",
           "agent",
           "created"
         ],
@@ -4022,6 +4028,9 @@
             "type": "integer",
             "format": "int64",
             "minimum": 0
+          },
+          "id": {
+            "type": "string"
           }
         }
       },

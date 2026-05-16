@@ -66,6 +66,10 @@ pub(crate) fn app(
             routing::post(routes::admin::user::logout),
         )
         .route(
+            "/admin/user/{username}/logout/{session}",
+            routing::delete(routes::admin::user::logout_session),
+        )
+        .route(
             "/admin/user/{username}/add",
             routing::post(routes::admin::user::add),
         )
@@ -193,6 +197,10 @@ pub(crate) fn app(
             routing::post(routes::cluster::logout),
         )
         .route(
+            "/cluster/user/logout/{session}",
+            routing::delete(routes::cluster::user_logout_session),
+        )
+        .route(
             "/cluster/user/logout_all",
             routing::post(routes::cluster::user_logout_all),
         )
@@ -201,12 +209,20 @@ pub(crate) fn app(
             routing::post(routes::cluster::admin_logout),
         )
         .route(
+            "/cluster/admin/user/{username}/logout/{session}",
+            routing::delete(routes::cluster::admin_logout_session),
+        )
+        .route(
             "/cluster/admin/user/logout_all",
             routing::post(routes::cluster::admin_logout_all),
         )
         .route("/cluster/status", routing::get(routes::cluster::status))
         .route("/user/login", routing::post(routes::user::login))
         .route("/user/logout", routing::post(routes::user::logout))
+        .route(
+            "/user/logout/{session}",
+            routing::delete(routes::user::logout_session),
+        )
         .route("/user/logout_all", routing::post(routes::user::logout_all))
         .route(
             "/user/change_password",

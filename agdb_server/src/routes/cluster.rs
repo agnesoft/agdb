@@ -1,13 +1,16 @@
 use crate::action::ClusterAction;
 use crate::action::remove_all_tokens::RemoveAllTokens;
+use crate::action::remove_user_session::RemoveUserSession;
 use crate::action::remove_user_token::RemoveUserToken;
 use crate::action::remove_user_tokens::RemoveUserTokens;
+use crate::action::remove_user_tokens_except::RemoveUserTokensExcept;
 use crate::action::save_user_token::SaveUserToken;
 use crate::cluster;
 use crate::cluster::Cluster;
 use crate::config::Config;
 use crate::raft::Request;
 use crate::raft::Response;
+use crate::routes::user::LogoutAllQuery;
 use crate::routes::user::do_login;
 use crate::server_db::ServerDb;
 use crate::server_error::ServerResponse;
@@ -21,6 +24,7 @@ use agdb_api::ClusterStatus;
 use agdb_api::UserLogin;
 use axum::Json;
 use axum::extract::Path;
+use axum::extract::Query;
 use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
@@ -57,6 +61,42 @@ pub(crate) async fn admin_logout(
     let _user_id = server_db.user_id(&username).await?;
 
     let (commit_index, _result) = cluster.exec(RemoveUserTokens { user: username }).await?;
+
+    Ok((
+        StatusCode::CREATED,
+        [("commit-index", commit_index.to_string())],
+    ))
+}
+
+#[utoipa::path(delete,
+    path = "/api/v1/cluster/admin/user/{username}/logout/{session}",
+    operation_id = "cluster_admin_user_logout_session",
+    tag = "agdb",
+    security(("Token" = [])),
+    params(
+        ("username" = String, Path, description = "user name"),
+        ("session" = i64, Path, description = "session id"),
+    ),
+    responses(
+         (status = 201, description = "session revoked"),
+         (status = 401, description = "admin only"),
+         (status = 404, description = "user or session not found"),
+    )
+)]
+pub(crate) async fn admin_logout_session(
+    _admin: AdminId,
+    State(server_db): State<ServerDb>,
+    State(cluster): State<Cluster>,
+    Path((username, session)): Path<(String, i64)>,
+) -> ServerResponse<impl IntoResponse> {
+    let _user_id = server_db.user_id(&username).await?;
+
+    let (commit_index, _result) = cluster
+        .exec(RemoveUserSession {
+            user: username,
+            session,
+        })
+        .await?;
 
     Ok((
         StatusCode::CREATED,
@@ -149,6 +189,9 @@ pub(crate) async fn logout(
     operation_id = "cluster_user_logout_all",
     tag = "agdb",
     security(("Token" = [])),
+    params(
+        LogoutAllQuery,
+    ),
     responses(
          (status = 201, description = "user logged out from all sessions"),
          (status = 401, description = "invalid credentials")
@@ -156,11 +199,56 @@ pub(crate) async fn logout(
 )]
 pub(crate) async fn user_logout_all(
     user: UserId,
+    token: UserIdToken,
+    Query(request): Query<LogoutAllQuery>,
     State(server_db): State<ServerDb>,
     State(cluster): State<Cluster>,
 ) -> ServerResponse<impl IntoResponse> {
     let username = server_db.user_name(user.0).await?;
-    let (commit_index, _result) = cluster.exec(RemoveUserTokens { user: username }).await?;
+    let (commit_index, _result) = if request.include_self {
+        cluster.exec(RemoveUserTokens { user: username }).await?
+    } else {
+        cluster
+            .exec(RemoveUserTokensExcept {
+                user: username,
+                token: token.0,
+            })
+            .await?
+    };
+
+    Ok((
+        StatusCode::CREATED,
+        [("commit-index", commit_index.to_string())],
+    ))
+}
+
+#[utoipa::path(delete,
+    path = "/api/v1/cluster/user/logout/{session}",
+    operation_id = "cluster_user_logout_session",
+    tag = "agdb",
+    security(("Token" = [])),
+    params(
+        ("session" = i64, Path, description = "session id"),
+    ),
+    responses(
+         (status = 201, description = "session revoked"),
+         (status = 401, description = "invalid credentials"),
+         (status = 404, description = "session not found"),
+    )
+)]
+pub(crate) async fn user_logout_session(
+    user: UserId,
+    State(server_db): State<ServerDb>,
+    State(cluster): State<Cluster>,
+    Path(session): Path<i64>,
+) -> ServerResponse<impl IntoResponse> {
+    let username = server_db.user_name(user.0).await?;
+    let (commit_index, _result) = cluster
+        .exec(RemoveUserSession {
+            user: username,
+            session,
+        })
+        .await?;
 
     Ok((
         StatusCode::CREATED,

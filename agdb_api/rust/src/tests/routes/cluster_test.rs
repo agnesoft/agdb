@@ -1,10 +1,13 @@
+use crate::AgdbApi;
 use crate::DbKind;
 use crate::DbResource;
 use crate::DbUserRole;
+use crate::ReqwestClient;
 use crate::test_server::ADMIN;
 use crate::test_server::TestServer;
 use crate::test_server::next_db_name;
 use crate::test_server::next_user_name;
+use crate::test_server::reqwest_client;
 use crate::test_server::test_cluster::TestCluster;
 use crate::test_server::test_error::TestError;
 use agdb::Comparison;
@@ -795,6 +798,121 @@ pub async fn cluster_logout_all() -> Result<(), TestError> {
     Ok(())
 }
 
+#[cfg_attr(feature = "api", agdb::test_def())]
+pub async fn cluster_logout_all_keep_self() -> Result<(), TestError> {
+    let cluster = TestCluster::new().await?;
+    let user = &next_user_name();
+
+    let mut admin = cluster.follower();
+    admin.cluster_user_login(ADMIN, ADMIN).await?;
+    admin.admin_user_add(user, user).await?;
+
+    let address = admin.address().to_string();
+    let mut client1 = AgdbApi::new(
+        ReqwestClient::with_user_agent(reqwest_client(), "cluster-keep-self"),
+        &address,
+    );
+    let mut client2 = AgdbApi::new(
+        ReqwestClient::with_user_agent(reqwest_client(), "cluster-keep-other"),
+        &address,
+    );
+
+    client1.cluster_user_login(user, user).await?;
+    client2.cluster_user_login(user, user).await?;
+
+    client1.cluster_user_logout_all_with_self(false).await?;
+
+    assert!(client1.user_status().await?.1.login);
+    assert_eq!(client2.user_status().await.unwrap_err().status, 401);
+
+    Ok(())
+}
+
+#[cfg_attr(feature = "api", agdb::test_def())]
+pub async fn cluster_logout_selected_session() -> Result<(), TestError> {
+    let cluster = TestCluster::new().await?;
+    let user = &next_user_name();
+
+    let mut admin = cluster.follower();
+    admin.cluster_user_login(ADMIN, ADMIN).await?;
+    admin.admin_user_add(user, user).await?;
+
+    let address = admin.address().to_string();
+    let mut client1 = AgdbApi::new(
+        ReqwestClient::with_user_agent(reqwest_client(), "cluster-session-owner"),
+        &address,
+    );
+    let mut client2 = AgdbApi::new(
+        ReqwestClient::with_user_agent(reqwest_client(), "cluster-session-revoked"),
+        &address,
+    );
+
+    client1.cluster_user_login(user, user).await?;
+    client2.cluster_user_login(user, user).await?;
+
+    let session_id = client1
+        .user_status()
+        .await?
+        .1
+        .sessions
+        .iter()
+        .find(|s| s.agent == "cluster-session-revoked")
+        .map(|s| s.id)
+        .expect("expected session for revoked client");
+
+    client1.cluster_user_logout_session(session_id).await?;
+
+    assert!(client1.user_status().await?.1.login);
+    assert_eq!(client2.user_status().await.unwrap_err().status, 401);
+
+    Ok(())
+}
+
+#[cfg_attr(feature = "api", agdb::test_def())]
+pub async fn admin_cluster_logout_selected_session() -> Result<(), TestError> {
+    let cluster = TestCluster::new().await?;
+    let user = &next_user_name();
+
+    let mut admin = cluster.follower();
+    admin.cluster_user_login(ADMIN, ADMIN).await?;
+    admin.admin_user_add(user, user).await?;
+
+    let address = admin.address().to_string();
+    let mut client1 = AgdbApi::new(
+        ReqwestClient::with_user_agent(reqwest_client(), "cluster-admin-target-1"),
+        &address,
+    );
+    let mut client2 = AgdbApi::new(
+        ReqwestClient::with_user_agent(reqwest_client(), "cluster-admin-target-2"),
+        &address,
+    );
+
+    client1.cluster_user_login(user, user).await?;
+    client2.cluster_user_login(user, user).await?;
+
+    let session_id = admin
+        .admin_user_list()
+        .await?
+        .1
+        .into_iter()
+        .find(|u| u.username == *user)
+        .expect("expected target user in user list")
+        .sessions
+        .into_iter()
+        .find(|s| s.agent == "cluster-admin-target-2")
+        .map(|s| s.id)
+        .expect("expected session for revoked client");
+
+    admin
+        .cluster_admin_user_logout_session(user, session_id)
+        .await?;
+
+    assert!(client1.user_status().await?.1.login);
+    assert_eq!(client2.user_status().await.unwrap_err().status, 401);
+
+    Ok(())
+}
+
 #[cfg(feature = "api")]
 pub fn test_defs() -> Vec<agdb::type_def::Type> {
     vec![
@@ -832,5 +950,8 @@ pub fn test_defs() -> Vec<agdb::type_def::Type> {
         __user_login_type_def(),
         __cluster_logout_type_def(),
         __cluster_logout_all_type_def(),
+        __cluster_logout_all_keep_self_type_def(),
+        __cluster_logout_selected_session_type_def(),
+        __admin_cluster_logout_selected_session_type_def(),
     ]
 }

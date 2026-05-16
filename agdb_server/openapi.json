@@ -1235,6 +1235,51 @@
         ]
       }
     },
+    "/api/v1/admin/user/{username}/logout/{session}": {
+      "delete": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "admin_user_logout_session",
+        "parameters": [
+          {
+            "name": "username",
+            "in": "path",
+            "description": "user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "session",
+            "in": "path",
+            "description": "session id",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "session revoked"
+          },
+          "401": {
+            "description": "admin only"
+          },
+          "404": {
+            "description": "user or session not found"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
     "/api/v1/cluster/admin/user/logout_all": {
       "post": {
         "tags": [
@@ -1282,6 +1327,51 @@
           },
           "404": {
             "description": "user not found"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/cluster/admin/user/{username}/logout/{session}": {
+      "delete": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "cluster_admin_user_logout_session",
+        "parameters": [
+          {
+            "name": "username",
+            "in": "path",
+            "description": "user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "session",
+            "in": "path",
+            "description": "session id",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "session revoked"
+          },
+          "401": {
+            "description": "admin only"
+          },
+          "404": {
+            "description": "user or session not found"
           }
         },
         "security": [
@@ -1368,12 +1458,58 @@
         ]
       }
     },
+    "/api/v1/cluster/user/logout/{session}": {
+      "delete": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "cluster_user_logout_session",
+        "parameters": [
+          {
+            "name": "session",
+            "in": "path",
+            "description": "session id",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "session revoked"
+          },
+          "401": {
+            "description": "invalid credentials"
+          },
+          "404": {
+            "description": "session not found"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
     "/api/v1/cluster/user/logout_all": {
       "post": {
         "tags": [
           "agdb"
         ],
         "operationId": "cluster_user_logout_all",
+        "parameters": [
+          {
+            "name": "self",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
         "responses": {
           "201": {
             "description": "user logged out from all sessions"
@@ -2418,12 +2554,58 @@
         ]
       }
     },
+    "/api/v1/user/logout/{session}": {
+      "delete": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "user_logout_session",
+        "parameters": [
+          {
+            "name": "session",
+            "in": "path",
+            "description": "session id",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "session revoked"
+          },
+          "401": {
+            "description": "invalid credentials"
+          },
+          "404": {
+            "description": "session not found"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
     "/api/v1/user/logout_all": {
       "post": {
         "tags": [
           "agdb"
         ],
         "operationId": "user_logout_all",
+        "parameters": [
+          {
+            "name": "self",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
         "responses": {
           "201": {
             "description": "user logged out from all sessions"
@@ -3202,6 +3384,14 @@
           "debug",
           "trace"
         ]
+      },
+      "LogoutAllQuery": {
+        "type": "object",
+        "properties": {
+          "self": {
+            "type": "boolean"
+          }
+        }
       },
       "OptimizeParam": {
         "type": "object",
@@ -4011,6 +4201,7 @@
       "UserSession": {
         "type": "object",
         "required": [
+          "id",
           "agent",
           "created"
         ],
@@ -4022,6 +4213,10 @@
             "type": "integer",
             "format": "int64",
             "minimum": 0
+          },
+          "id": {
+            "type": "integer",
+            "format": "int64"
           }
         }
       },

@@ -870,6 +870,52 @@ impl ServerDb {
         )?;
         Ok(())
     }
+
+    pub(crate) async fn remove_tokens_except(&self, user: DbId, token: &str) -> ServerResult<()> {
+        self.db.write().await.transaction_mut(|t| {
+            t.exec_mut(
+                QueryBuilder::remove()
+                    .search()
+                    .to(user)
+                    .where_()
+                    .neighbor()
+                    .and()
+                    .not()
+                    .ids(USERS)
+                    .and()
+                    .not()
+                    .key(TOKEN)
+                    .value(token)
+                    .query(),
+            )?;
+
+            Ok(())
+        })
+    }
+
+    pub(crate) async fn remove_session(&self, user: DbId, session: i64) -> ServerResult<()> {
+        self.db.write().await.transaction_mut(|t| {
+            let removed = t.exec_mut(
+                QueryBuilder::remove()
+                    .search()
+                    .to(user)
+                    .limit(1)
+                    .where_()
+                    .neighbor()
+                    .and()
+                    .ids(session)
+                    .and()
+                    .keys(AGENT)
+                    .query(),
+            )?;
+
+            if removed.result == 0 {
+                return Err(session_not_found(session));
+            }
+
+            Ok(())
+        })
+    }
 }
 
 fn user_sessions_query(expiry_limit: u64, user_id: DbId) -> SelectValuesQuery {
@@ -911,6 +957,10 @@ fn token_expired(token: &str) -> ServerError {
 
 fn token_not_found(token: &str) -> ServerError {
     ServerError::new(StatusCode::NOT_FOUND, &format!("token not found: {token}"))
+}
+
+fn session_not_found(id: i64) -> ServerError {
+    ServerError::new(StatusCode::NOT_FOUND, &format!("session not found: {id}"))
 }
 
 fn user_not_found(name: &str) -> ServerError {

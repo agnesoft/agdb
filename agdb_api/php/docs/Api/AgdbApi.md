@@ -31,12 +31,15 @@ All URIs are relative to http://localhost:3000, except if the operation defines 
 | [**adminUserList()**](AgdbApi.md#adminUserList) | **GET** /api/v1/admin/user/list |  |
 | [**adminUserLogout()**](AgdbApi.md#adminUserLogout) | **POST** /api/v1/admin/user/{username}/logout |  |
 | [**adminUserLogoutAll()**](AgdbApi.md#adminUserLogoutAll) | **POST** /api/v1/admin/user/logout_all |  |
+| [**adminUserLogoutSession()**](AgdbApi.md#adminUserLogoutSession) | **DELETE** /api/v1/admin/user/{username}/logout/{session} |  |
 | [**clusterAdminUserLogout()**](AgdbApi.md#clusterAdminUserLogout) | **POST** /api/v1/cluster/admin/user/{username}/logout |  |
 | [**clusterAdminUserLogoutAll()**](AgdbApi.md#clusterAdminUserLogoutAll) | **POST** /api/v1/cluster/admin/user/logout_all |  |
+| [**clusterAdminUserLogoutSession()**](AgdbApi.md#clusterAdminUserLogoutSession) | **DELETE** /api/v1/cluster/admin/user/{username}/logout/{session} |  |
 | [**clusterStatus()**](AgdbApi.md#clusterStatus) | **GET** /api/v1/cluster/status |  |
 | [**clusterUserLogin()**](AgdbApi.md#clusterUserLogin) | **POST** /api/v1/cluster/user/login |  |
 | [**clusterUserLogout()**](AgdbApi.md#clusterUserLogout) | **POST** /api/v1/cluster/user/logout |  |
 | [**clusterUserLogoutAll()**](AgdbApi.md#clusterUserLogoutAll) | **POST** /api/v1/cluster/user/logout_all |  |
+| [**clusterUserLogoutSession()**](AgdbApi.md#clusterUserLogoutSession) | **DELETE** /api/v1/cluster/user/logout/{session} |  |
 | [**dbAdd()**](AgdbApi.md#dbAdd) | **POST** /api/v1/db/{owner}/{db}/add |  |
 | [**dbAudit()**](AgdbApi.md#dbAudit) | **GET** /api/v1/db/{owner}/{db}/audit |  |
 | [**dbBackup()**](AgdbApi.md#dbBackup) | **POST** /api/v1/db/{owner}/{db}/backup |  |
@@ -60,6 +63,7 @@ All URIs are relative to http://localhost:3000, except if the operation defines 
 | [**userLogin()**](AgdbApi.md#userLogin) | **POST** /api/v1/user/login |  |
 | [**userLogout()**](AgdbApi.md#userLogout) | **POST** /api/v1/user/logout |  |
 | [**userLogoutAll()**](AgdbApi.md#userLogoutAll) | **POST** /api/v1/user/logout_all |  |
+| [**userLogoutSession()**](AgdbApi.md#userLogoutSession) | **DELETE** /api/v1/user/logout/{session} |  |
 | [**userStatus()**](AgdbApi.md#userStatus) | **GET** /api/v1/user/status |  |
 
 
@@ -1545,6 +1549,65 @@ void (empty response body)
 [[Back to Model list]](../../README.md#models)
 [[Back to README]](../../README.md)
 
+## `adminUserLogoutSession()`
+
+```php
+adminUserLogoutSession($username, $session)
+```
+
+
+
+### Example
+
+```php
+<?php
+require_once(__DIR__ . '/vendor/autoload.php');
+
+
+// Configure Bearer authorization: Token
+$config = Agnesoft\AgdbApi\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
+
+
+$apiInstance = new Agnesoft\AgdbApi\Api\AgdbApi(
+    // If you want use custom http client, pass your client which implements `GuzzleHttp\ClientInterface`.
+    // This is optional, `GuzzleHttp\Client` will be used as default.
+    new GuzzleHttp\Client(),
+    $config
+);
+$username = 'username_example'; // string | user name
+$session = 56; // int | session id
+
+try {
+    $apiInstance->adminUserLogoutSession($username, $session);
+} catch (Exception $e) {
+    echo 'Exception when calling AgdbApi->adminUserLogoutSession: ', $e->getMessage(), PHP_EOL;
+}
+```
+
+### Parameters
+
+| Name | Type | Description  | Notes |
+| ------------- | ------------- | ------------- | ------------- |
+| **username** | **string**| user name | |
+| **session** | **int**| session id | |
+
+### Return type
+
+void (empty response body)
+
+### Authorization
+
+[Token](../../README.md#Token)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: Not defined
+
+[[Back to top]](#) [[Back to API list]](../../README.md#endpoints)
+[[Back to Model list]](../../README.md#models)
+[[Back to README]](../../README.md)
+
 ## `clusterAdminUserLogout()`
 
 ```php
@@ -1638,6 +1701,65 @@ try {
 ### Parameters
 
 This endpoint does not need any parameter.
+
+### Return type
+
+void (empty response body)
+
+### Authorization
+
+[Token](../../README.md#Token)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: Not defined
+
+[[Back to top]](#) [[Back to API list]](../../README.md#endpoints)
+[[Back to Model list]](../../README.md#models)
+[[Back to README]](../../README.md)
+
+## `clusterAdminUserLogoutSession()`
+
+```php
+clusterAdminUserLogoutSession($username, $session)
+```
+
+
+
+### Example
+
+```php
+<?php
+require_once(__DIR__ . '/vendor/autoload.php');
+
+
+// Configure Bearer authorization: Token
+$config = Agnesoft\AgdbApi\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
+
+
+$apiInstance = new Agnesoft\AgdbApi\Api\AgdbApi(
+    // If you want use custom http client, pass your client which implements `GuzzleHttp\ClientInterface`.
+    // This is optional, `GuzzleHttp\Client` will be used as default.
+    new GuzzleHttp\Client(),
+    $config
+);
+$username = 'username_example'; // string | user name
+$session = 56; // int | session id
+
+try {
+    $apiInstance->clusterAdminUserLogoutSession($username, $session);
+} catch (Exception $e) {
+    echo 'Exception when calling AgdbApi->clusterAdminUserLogoutSession: ', $e->getMessage(), PHP_EOL;
+}
+```
+
+### Parameters
+
+| Name | Type | Description  | Notes |
+| ------------- | ------------- | ------------- | ------------- |
+| **username** | **string**| user name | |
+| **session** | **int**| session id | |
 
 ### Return type
 
@@ -1818,7 +1940,7 @@ void (empty response body)
 ## `clusterUserLogoutAll()`
 
 ```php
-clusterUserLogoutAll()
+clusterUserLogoutAll($self)
 ```
 
 
@@ -1840,9 +1962,10 @@ $apiInstance = new Agnesoft\AgdbApi\Api\AgdbApi(
     new GuzzleHttp\Client(),
     $config
 );
+$self = True; // bool
 
 try {
-    $apiInstance->clusterUserLogoutAll();
+    $apiInstance->clusterUserLogoutAll($self);
 } catch (Exception $e) {
     echo 'Exception when calling AgdbApi->clusterUserLogoutAll: ', $e->getMessage(), PHP_EOL;
 }
@@ -1850,7 +1973,66 @@ try {
 
 ### Parameters
 
-This endpoint does not need any parameter.
+| Name | Type | Description  | Notes |
+| ------------- | ------------- | ------------- | ------------- |
+| **self** | **bool**|  | [optional] |
+
+### Return type
+
+void (empty response body)
+
+### Authorization
+
+[Token](../../README.md#Token)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: Not defined
+
+[[Back to top]](#) [[Back to API list]](../../README.md#endpoints)
+[[Back to Model list]](../../README.md#models)
+[[Back to README]](../../README.md)
+
+## `clusterUserLogoutSession()`
+
+```php
+clusterUserLogoutSession($session)
+```
+
+
+
+### Example
+
+```php
+<?php
+require_once(__DIR__ . '/vendor/autoload.php');
+
+
+// Configure Bearer authorization: Token
+$config = Agnesoft\AgdbApi\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
+
+
+$apiInstance = new Agnesoft\AgdbApi\Api\AgdbApi(
+    // If you want use custom http client, pass your client which implements `GuzzleHttp\ClientInterface`.
+    // This is optional, `GuzzleHttp\Client` will be used as default.
+    new GuzzleHttp\Client(),
+    $config
+);
+$session = 56; // int | session id
+
+try {
+    $apiInstance->clusterUserLogoutSession($session);
+} catch (Exception $e) {
+    echo 'Exception when calling AgdbApi->clusterUserLogoutSession: ', $e->getMessage(), PHP_EOL;
+}
+```
+
+### Parameters
+
+| Name | Type | Description  | Notes |
+| ------------- | ------------- | ------------- | ------------- |
+| **session** | **int**| session id | |
 
 ### Return type
 
@@ -3171,7 +3353,7 @@ void (empty response body)
 ## `userLogoutAll()`
 
 ```php
-userLogoutAll()
+userLogoutAll($self)
 ```
 
 
@@ -3193,9 +3375,10 @@ $apiInstance = new Agnesoft\AgdbApi\Api\AgdbApi(
     new GuzzleHttp\Client(),
     $config
 );
+$self = True; // bool
 
 try {
-    $apiInstance->userLogoutAll();
+    $apiInstance->userLogoutAll($self);
 } catch (Exception $e) {
     echo 'Exception when calling AgdbApi->userLogoutAll: ', $e->getMessage(), PHP_EOL;
 }
@@ -3203,7 +3386,66 @@ try {
 
 ### Parameters
 
-This endpoint does not need any parameter.
+| Name | Type | Description  | Notes |
+| ------------- | ------------- | ------------- | ------------- |
+| **self** | **bool**|  | [optional] |
+
+### Return type
+
+void (empty response body)
+
+### Authorization
+
+[Token](../../README.md#Token)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: Not defined
+
+[[Back to top]](#) [[Back to API list]](../../README.md#endpoints)
+[[Back to Model list]](../../README.md#models)
+[[Back to README]](../../README.md)
+
+## `userLogoutSession()`
+
+```php
+userLogoutSession($session)
+```
+
+
+
+### Example
+
+```php
+<?php
+require_once(__DIR__ . '/vendor/autoload.php');
+
+
+// Configure Bearer authorization: Token
+$config = Agnesoft\AgdbApi\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
+
+
+$apiInstance = new Agnesoft\AgdbApi\Api\AgdbApi(
+    // If you want use custom http client, pass your client which implements `GuzzleHttp\ClientInterface`.
+    // This is optional, `GuzzleHttp\Client` will be used as default.
+    new GuzzleHttp\Client(),
+    $config
+);
+$session = 56; // int | session id
+
+try {
+    $apiInstance->userLogoutSession($session);
+} catch (Exception $e) {
+    echo 'Exception when calling AgdbApi->userLogoutSession: ', $e->getMessage(), PHP_EOL;
+}
+```
+
+### Parameters
+
+| Name | Type | Description  | Notes |
+| ------------- | ------------- | ------------- | ------------- |
+| **session** | **int**| session id | |
 
 ### Return type
 

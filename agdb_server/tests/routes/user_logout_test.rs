@@ -14,3 +14,8 @@ async fn no_token() -> Result<(), TestError> {
 async fn logout_only_current_user_token() -> Result<(), TestError> {
     agdb_api::tests::routes::user_logout_test::logout_only_current_user_token().await
 }
+
+#[tokio::test]
+async fn logout_selected_session() -> Result<(), TestError> {
+    agdb_api::tests::routes::user_logout_test::logout_selected_session().await
+}

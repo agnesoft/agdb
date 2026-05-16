@@ -144,6 +144,32 @@ pub(crate) async fn logout(
     Ok(StatusCode::CREATED)
 }
 
+#[utoipa::path(delete,
+    path = "/api/v1/admin/user/{username}/logout/{session}",
+    operation_id = "admin_user_logout_session",
+    tag = "agdb",
+    security(("Token" = [])),
+    params(
+        ("username" = String, Path, description = "user name"),
+        ("session" = i64, Path, description = "session id"),
+    ),
+    responses(
+         (status = 201, description = "session revoked"),
+         (status = 401, description = "admin only"),
+         (status = 404, description = "user or session not found"),
+    )
+)]
+pub(crate) async fn logout_session(
+    _admin: AdminId,
+    State(server_db): State<ServerDb>,
+    Path((username, session)): Path<(String, i64)>,
+) -> ServerResponse {
+    let user_id = server_db.user_id(&username).await?;
+    server_db.remove_session(user_id, session).await?;
+
+    Ok(StatusCode::CREATED)
+}
+
 #[utoipa::path(post,
     path = "/api/v1/admin/user/logout_all",
     operation_id = "admin_user_logout_all",

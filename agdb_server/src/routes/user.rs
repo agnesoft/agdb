@@ -16,10 +16,26 @@ use agdb_api::ChangePassword;
 use agdb_api::UserLogin;
 use agdb_api::UserStatus;
 use axum::Json;
+use axum::extract::Path;
+use axum::extract::Query;
 use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
+use serde::Deserialize;
+use utoipa::IntoParams;
+use utoipa::ToSchema;
 use uuid::Uuid;
+
+#[derive(Deserialize, IntoParams, ToSchema, agdb::TypeDef)]
+#[into_params(parameter_in = Query)]
+pub struct LogoutAllQuery {
+    #[serde(default = "default_logout_self", rename = "self")]
+    pub include_self: bool,
+}
+
+const fn default_logout_self() -> bool {
+    true
+}
 
 pub(crate) async fn do_login(
     server_db: &ServerDb,
@@ -80,13 +96,49 @@ pub(crate) async fn logout(user: UserIdToken, State(server_db): State<ServerDb>)
     operation_id = "user_logout_all",
     tag = "agdb",
     security(("Token" = [])),
+    params(
+        LogoutAllQuery,
+    ),
     responses(
          (status = 201, description = "user logged out from all sessions"),
          (status = 401, description = "invalid credentials")
     )
 )]
-pub(crate) async fn logout_all(user: UserId, State(server_db): State<ServerDb>) -> ServerResponse {
-    server_db.remove_tokens(user.0).await?;
+pub(crate) async fn logout_all(
+    user: UserId,
+    token: UserIdToken,
+    Query(request): Query<LogoutAllQuery>,
+    State(server_db): State<ServerDb>,
+) -> ServerResponse {
+    if request.include_self {
+        server_db.remove_tokens(user.0).await?;
+    } else {
+        server_db.remove_tokens_except(user.0, &token.0).await?;
+    }
+
+    Ok(StatusCode::CREATED)
+}
+
+#[utoipa::path(delete,
+    path = "/api/v1/user/logout/{session}",
+    operation_id = "user_logout_session",
+    tag = "agdb",
+    security(("Token" = [])),
+    params(
+        ("session" = i64, Path, description = "session id"),
+    ),
+    responses(
+         (status = 201, description = "session revoked"),
+         (status = 401, description = "invalid credentials"),
+         (status = 404, description = "session not found"),
+    )
+)]
+pub(crate) async fn logout_session(
+    user: UserId,
+    State(server_db): State<ServerDb>,
+    Path(session): Path<i64>,
+) -> ServerResponse {
+    server_db.remove_session(user.0, session).await?;
     Ok(StatusCode::CREATED)
 }
 

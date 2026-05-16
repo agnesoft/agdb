@@ -376,6 +376,19 @@ impl<T: AgdbApiClient> AgdbApi<T> {
             .0)
     }
 
+    pub async fn admin_user_logout_session(
+        &self,
+        username: &str,
+        session: i64,
+    ) -> AgdbApiResult<u16> {
+        self.client
+            .delete(
+                &self.url(&format!("/admin/user/{username}/logout/{session}")),
+                &self.token,
+            )
+            .await
+    }
+
     pub async fn admin_user_logout_all(&self) -> AgdbApiResult<u16> {
         Ok(self
             .client
@@ -415,6 +428,19 @@ impl<T: AgdbApiClient> AgdbApi<T> {
             )
             .await?
             .0)
+    }
+
+    pub async fn cluster_admin_user_logout_session(
+        &self,
+        username: &str,
+        session: i64,
+    ) -> AgdbApiResult<u16> {
+        self.client
+            .delete(
+                &self.url(&format!("/cluster/admin/user/{username}/logout/{session}")),
+                &self.token,
+            )
+            .await
     }
 
     pub async fn cluster_admin_user_logout_all(&self) -> AgdbApiResult<u16> {
@@ -460,13 +486,35 @@ impl<T: AgdbApiClient> AgdbApi<T> {
     }
 
     pub async fn cluster_user_logout_all(&mut self) -> AgdbApiResult<u16> {
+        self.cluster_user_logout_all_with_self(true).await
+    }
+
+    pub async fn cluster_user_logout_all_with_self(
+        &mut self,
+        include_self: bool,
+    ) -> AgdbApiResult<u16> {
         let status = self
             .client
-            .post::<(), ()>(&self.url("/cluster/user/logout_all"), None, &self.token)
+            .post::<(), ()>(
+                &self.url(&format!("/cluster/user/logout_all?self={include_self}")),
+                None,
+                &self.token,
+            )
             .await?
             .0;
-        self.token = None;
+        if include_self {
+            self.token = None;
+        }
         Ok(status)
+    }
+
+    pub async fn cluster_user_logout_session(&self, session: i64) -> AgdbApiResult<u16> {
+        self.client
+            .delete(
+                &self.url(&format!("/cluster/user/logout/{session}")),
+                &self.token,
+            )
+            .await
     }
 
     pub async fn cluster_status(&self) -> AgdbApiResult<(u16, Vec<ClusterStatus>)> {
@@ -696,13 +744,30 @@ impl<T: AgdbApiClient> AgdbApi<T> {
     }
 
     pub async fn user_logout_all(&mut self) -> AgdbApiResult<u16> {
+        self.user_logout_all_with_self(true).await
+    }
+
+    pub async fn user_logout_all_with_self(&mut self, include_self: bool) -> AgdbApiResult<u16> {
         let status = self
             .client
-            .post::<(), ()>(&self.url("/user/logout_all"), None, &self.token)
+            .post::<(), ()>(
+                &self.url(&format!("/user/logout_all?self={include_self}")),
+                None,
+                &self.token,
+            )
             .await?
             .0;
-        self.token = None;
+        if include_self {
+            self.token = None;
+        }
+
         Ok(status)
+    }
+
+    pub async fn user_logout_session(&self, session: i64) -> AgdbApiResult<u16> {
+        self.client
+            .delete(&self.url(&format!("/user/logout/{session}")), &self.token)
+            .await
     }
 
     pub async fn user_change_password(

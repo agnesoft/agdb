@@ -13,8 +13,10 @@ pub(crate) mod db_restore;
 pub(crate) mod db_user_add;
 pub(crate) mod db_user_remove;
 pub(crate) mod remove_all_tokens;
+pub(crate) mod remove_user_session;
 pub(crate) mod remove_user_token;
 pub(crate) mod remove_user_tokens;
+pub(crate) mod remove_user_tokens_except;
 pub(crate) mod save_user_token;
 pub(crate) mod user_add;
 pub(crate) mod user_delete;
@@ -34,8 +36,10 @@ use crate::action::db_restore::DbRestore;
 use crate::action::db_user_add::DbUserAdd;
 use crate::action::db_user_remove::DbUserRemove;
 use crate::action::remove_all_tokens::RemoveAllTokens;
+use crate::action::remove_user_session::RemoveUserSession;
 use crate::action::remove_user_token::RemoveUserToken;
 use crate::action::remove_user_tokens::RemoveUserTokens;
+use crate::action::remove_user_tokens_except::RemoveUserTokensExcept;
 use crate::action::save_user_token::SaveUserToken;
 use crate::action::user_add::UserAdd;
 use crate::action::user_delete::UserDelete;
@@ -53,6 +57,8 @@ pub(crate) enum ClusterAction {
     SaveUserToken(SaveUserToken),
     RemoveUserToken(RemoveUserToken),
     RemoveUserTokens(RemoveUserTokens),
+    RemoveUserTokensExcept(RemoveUserTokensExcept),
+    RemoveUserSession(RemoveUserSession),
     RemoveAllTokens(RemoveAllTokens),
     ChangePassword(ChangePassword),
     UserDelete(UserDelete),
@@ -90,6 +96,8 @@ impl ClusterAction {
             ClusterAction::UserAdd(action) => action.exec(db, db_pool).await,
             ClusterAction::SaveUserToken(action) => action.exec(db, db_pool).await,
             ClusterAction::RemoveUserTokens(action) => action.exec(db, db_pool).await,
+            ClusterAction::RemoveUserTokensExcept(action) => action.exec(db, db_pool).await,
+            ClusterAction::RemoveUserSession(action) => action.exec(db, db_pool).await,
             ClusterAction::RemoveAllTokens(action) => action.exec(db, db_pool).await,
             ClusterAction::RemoveUserToken(action) => action.exec(db, db_pool).await,
             ClusterAction::ChangePassword(action) => action.exec(db, db_pool).await,
@@ -132,6 +140,18 @@ impl From<RemoveUserTokens> for ClusterAction {
 impl From<RemoveUserToken> for ClusterAction {
     fn from(value: RemoveUserToken) -> Self {
         ClusterAction::RemoveUserToken(value)
+    }
+}
+
+impl From<RemoveUserTokensExcept> for ClusterAction {
+    fn from(value: RemoveUserTokensExcept) -> Self {
+        ClusterAction::RemoveUserTokensExcept(value)
+    }
+}
+
+impl From<RemoveUserSession> for ClusterAction {
+    fn from(value: RemoveUserSession) -> Self {
+        ClusterAction::RemoveUserSession(value)
     }
 }
 

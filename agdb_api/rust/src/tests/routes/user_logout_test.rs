@@ -64,11 +64,53 @@ pub async fn logout_only_current_user_token() -> Result<(), TestError> {
     Ok(())
 }
 
+#[cfg_attr(feature = "api", agdb::test_def())]
+pub async fn logout_selected_session() -> Result<(), TestError> {
+    let mut server = TestServer::new().await?;
+    let user = &next_user_name();
+
+    server.user_login(ADMIN).await?;
+    server.api.admin_user_add(user, user).await?;
+
+    let mut client1 = AgdbApi::new(
+        ReqwestClient::with_user_agent(reqwest_client(), "session-owner"),
+        server.api.address(),
+    );
+    let mut client2 = AgdbApi::new(
+        ReqwestClient::with_user_agent(reqwest_client(), "session-revoked"),
+        server.api.address(),
+    );
+
+    client1.user_login(user, user).await?;
+    client2.user_login(user, user).await?;
+
+    let status = client1.user_status().await?.1;
+    let session_id = status
+        .sessions
+        .iter()
+        .find(|s| s.agent == "session-revoked")
+        .map(|s| s.id)
+        .expect("expected session for revoked client");
+
+    let code = client1.user_logout_session(session_id).await?;
+    assert_eq!(code, 201);
+
+    let status = client1.user_status().await?.1;
+    assert_eq!(status.username, *user);
+    assert!(status.login);
+    assert!(!status.admin);
+
+    assert_eq!(client2.user_status().await.unwrap_err().status, 401);
+
+    Ok(())
+}
+
 #[cfg(feature = "api")]
 pub fn test_defs() -> Vec<agdb::type_def::Type> {
     vec![
         __logout_type_def(),
         __no_token_type_def(),
         __logout_only_current_user_token_type_def(),
+        __logout_selected_session_type_def(),
     ]
 }

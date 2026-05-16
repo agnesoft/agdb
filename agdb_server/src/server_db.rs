@@ -500,20 +500,18 @@ impl ServerDb {
     }
 
     pub(crate) async fn remove_tokens(&self, user: DbId) -> ServerResult<()> {
-        self.db.write().await.transaction_mut(|t| {
-            t.exec_mut(
-                QueryBuilder::remove()
-                    .search()
-                    .to(user)
-                    .where_()
-                    .neighbor()
-                    .and()
-                    .not()
-                    .ids(USERS)
-                    .query(),
-            )?;
-            Ok(())
-        })
+        self.db.write().await.exec_mut(
+            QueryBuilder::remove()
+                .search()
+                .to(user)
+                .where_()
+                .neighbor()
+                .and()
+                .not()
+                .ids(USERS)
+                .query(),
+        )?;
+        Ok(())
     }
 
     pub(crate) async fn save_db(&self, db: &Database) -> ServerResult<()> {
@@ -928,7 +926,7 @@ fn user_sessions_query(expiry_limit: u64, user_id: DbId) -> SelectValuesQuery {
         .where_()
         .neighbor()
         .and()
-        .key(SESSION)
+        .key(CREATED)
         .value(Comparison::GreaterThanOrEqual(expiry_limit.into()))
         .query()
 }

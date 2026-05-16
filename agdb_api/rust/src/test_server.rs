@@ -138,7 +138,6 @@ pub struct TestServerImpl {
     pub data_dir: String,
     pub address: String,
     pub process: Option<TestServerProcess>,
-    pub admin_token: Option<String>,
 }
 
 #[cfg(feature = "tls")]
@@ -213,7 +212,6 @@ impl TestServerImpl {
                         data_dir,
                         address: api_address,
                         process: Some(TestServerProcess(process)),
-                        admin_token: None,
                     });
                 }
                 Ok(status) => println!("Server at {api_address} is not ready: {status}"),

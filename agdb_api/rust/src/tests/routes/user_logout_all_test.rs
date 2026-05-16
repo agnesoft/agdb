@@ -11,7 +11,7 @@ pub async fn logout_all() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
     let user = &next_user_name();
 
-    server.api.user_login(ADMIN, ADMIN).await?;
+    server.user_login(ADMIN).await?;
     server.api.admin_user_add(user, user).await?;
 
     let mut client1 = AgdbApi::new(

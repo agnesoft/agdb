@@ -7,9 +7,9 @@ use crate::test_server::test_error::TestError;
 pub async fn change_password() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
     let owner = &next_user_name();
-    server.api.user_login(ADMIN, ADMIN).await?;
+    server.user_login(ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
-    server.api.user_login(owner, owner).await?;
+    server.user_login(owner).await?;
     let status = server
         .api
         .user_change_password(owner, "password123")
@@ -24,9 +24,9 @@ pub async fn change_password() -> Result<(), TestError> {
 pub async fn invalid_credentials() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
     let owner = &next_user_name();
-    server.api.user_login(ADMIN, ADMIN).await?;
+    server.user_login(ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
-    server.api.user_login(owner, owner).await?;
+    server.user_login(owner).await?;
     let status = server
         .api
         .user_change_password("bad_password", "password123")
@@ -41,9 +41,9 @@ pub async fn invalid_credentials() -> Result<(), TestError> {
 pub async fn password_too_short() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
     let owner = &next_user_name();
-    server.api.user_login(ADMIN, ADMIN).await?;
+    server.user_login(ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
-    server.api.user_login(owner, owner).await?;
+    server.user_login(owner).await?;
     let status = server
         .api
         .user_change_password(owner, "pswd")

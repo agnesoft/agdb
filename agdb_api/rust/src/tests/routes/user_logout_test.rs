@@ -10,9 +10,9 @@ use crate::test_server::test_error::TestError;
 pub async fn logout() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
     let owner = &next_user_name();
-    server.api.user_login(ADMIN, ADMIN).await?;
+    server.user_login(ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
-    server.api.user_login(owner, owner).await?;
+    server.user_login(owner).await?;
     let status = server.api.user_logout().await?;
     assert_eq!(status, 201);
     assert_eq!(server.api.token, None);
@@ -33,7 +33,7 @@ pub async fn logout_only_current_user_token() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
     let user = &next_user_name();
 
-    server.api.user_login(ADMIN, ADMIN).await?;
+    server.user_login(ADMIN).await?;
     server.api.admin_user_add(user, user).await?;
 
     let mut client1 = AgdbApi::new(

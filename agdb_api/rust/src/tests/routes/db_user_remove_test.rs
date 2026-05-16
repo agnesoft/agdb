@@ -12,10 +12,10 @@ pub async fn remove() -> Result<(), TestError> {
     let owner = &next_user_name();
     let user = &next_user_name();
     let db = &next_db_name();
-    server.api.user_login(ADMIN, ADMIN).await?;
+    server.user_login(ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.admin_user_add(user, user).await?;
-    server.api.user_login(owner, owner).await?;
+    server.user_login(owner).await?;
     server.api.db_add(owner, db, DbKind::Mapped).await?;
     server
         .api
@@ -36,7 +36,7 @@ pub async fn remove_owner() -> Result<(), TestError> {
     let owner = &next_user_name();
     let user = &next_user_name();
     let db = &next_db_name();
-    server.api.user_login(ADMIN, ADMIN).await?;
+    server.user_login(ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.admin_user_add(user, user).await?;
     server.api.admin_db_add(owner, db, DbKind::Mapped).await?;
@@ -44,7 +44,7 @@ pub async fn remove_owner() -> Result<(), TestError> {
         .api
         .admin_db_user_add(owner, db, user, DbUserRole::Admin)
         .await?;
-    server.api.user_login(user, user).await?;
+    server.user_login(user).await?;
     let status = server
         .api
         .db_user_remove(owner, db, owner)
@@ -62,7 +62,7 @@ pub async fn non_admin() -> Result<(), TestError> {
     let user = &next_user_name();
     let other = &next_user_name();
     let db = &next_db_name();
-    server.api.user_login(ADMIN, ADMIN).await?;
+    server.user_login(ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.admin_user_add(user, user).await?;
     server.api.admin_user_add(other, other).await?;
@@ -75,7 +75,7 @@ pub async fn non_admin() -> Result<(), TestError> {
         .api
         .admin_db_user_add(owner, db, other, DbUserRole::Write)
         .await?;
-    server.api.user_login(user, user).await?;
+    server.user_login(user).await?;
     let status = server
         .api
         .db_user_remove(owner, db, other)
@@ -92,7 +92,7 @@ pub async fn remove_self() -> Result<(), TestError> {
     let owner = &next_user_name();
     let user = &next_user_name();
     let db = &next_db_name();
-    server.api.user_login(ADMIN, ADMIN).await?;
+    server.user_login(ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.admin_user_add(user, user).await?;
     server.api.admin_db_add(owner, db, DbKind::Mapped).await?;
@@ -100,7 +100,7 @@ pub async fn remove_self() -> Result<(), TestError> {
         .api
         .admin_db_user_add(owner, db, user, DbUserRole::Read)
         .await?;
-    server.api.user_login(user, user).await?;
+    server.user_login(user).await?;
     let status = server.api.db_user_remove(owner, db, user).await?;
     assert_eq!(status, 204);
     let list = server.api.db_list().await?.1;
@@ -113,11 +113,11 @@ pub async fn remove_self_owner() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
     let owner = &next_user_name();
     let db = &next_db_name();
-    server.api.user_login(ADMIN, ADMIN).await?;
+    server.user_login(ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
-    server.api.user_login(owner, owner).await?;
+    server.user_login(owner).await?;
     server.api.db_add(owner, db, DbKind::Mapped).await?;
-    server.api.user_login(owner, owner).await?;
+    server.user_login(owner).await?;
     let status = server
         .api
         .db_user_remove(owner, db, owner)
@@ -133,10 +133,10 @@ pub async fn db_not_found() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
     let owner = &next_user_name();
     let user = &next_user_name();
-    server.api.user_login(ADMIN, ADMIN).await?;
+    server.user_login(ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.admin_user_add(user, user).await?;
-    server.api.user_login(owner, owner).await?;
+    server.user_login(owner).await?;
     let status = server
         .api
         .db_user_remove(owner, "db", user)
@@ -152,9 +152,9 @@ pub async fn user_not_found() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
     let owner = &next_user_name();
     let db = &next_db_name();
-    server.api.user_login(ADMIN, ADMIN).await?;
+    server.user_login(ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
-    server.api.user_login(owner, owner).await?;
+    server.user_login(owner).await?;
     server.api.db_add(owner, db, DbKind::Mapped).await?;
     let status = server
         .api

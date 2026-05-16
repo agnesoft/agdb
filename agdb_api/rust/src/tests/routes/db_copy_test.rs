@@ -16,9 +16,9 @@ pub async fn copy() -> Result<(), TestError> {
     let owner = &next_user_name();
     let db = &next_db_name();
     let db2 = &next_db_name();
-    server.api.user_login(ADMIN, ADMIN).await?;
+    server.user_login(ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
-    server.api.user_login(owner, owner).await?;
+    server.user_login(owner).await?;
     server.api.db_add(owner, db, DbKind::Mapped).await?;
     let queries = &[QueryBuilder::insert()
         .nodes()
@@ -52,7 +52,7 @@ pub async fn copy_from_different_user() -> Result<(), TestError> {
     let owner2 = &next_user_name();
     let db = &next_db_name();
     let db2 = &next_db_name();
-    server.api.user_login(ADMIN, ADMIN).await?;
+    server.user_login(ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.admin_user_add(owner2, owner2).await?;
     server.api.admin_db_add(owner, db, DbKind::Mapped).await?;
@@ -66,7 +66,7 @@ pub async fn copy_from_different_user() -> Result<(), TestError> {
         .query()
         .into()];
     server.api.admin_db_exec_mut(owner, db, queries).await?;
-    server.api.user_login(owner2, owner2).await?;
+    server.user_login(owner2).await?;
     let status = server.api.db_copy(owner, db, db2).await?;
     assert_eq!(status, 201);
     assert!(Path::new(&server.data_dir).join(owner2).join(db2).exists());
@@ -92,9 +92,9 @@ pub async fn copy_to_removed() -> Result<(), TestError> {
     let owner = &next_user_name();
     let db = &next_db_name();
     let db2 = &next_db_name();
-    server.api.user_login(ADMIN, ADMIN).await?;
+    server.user_login(ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
-    server.api.user_login(owner, owner).await?;
+    server.user_login(owner).await?;
     server.api.db_add(owner, db, DbKind::Mapped).await?;
     server.api.db_add(owner, db2, DbKind::Mapped).await?;
     server.api.db_remove(owner, db2).await?;
@@ -109,9 +109,9 @@ pub async fn target_exists() -> Result<(), TestError> {
     let owner = &next_user_name();
     let db = &next_db_name();
     let db2 = &next_db_name();
-    server.api.user_login(ADMIN, ADMIN).await?;
+    server.user_login(ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
-    server.api.user_login(owner, owner).await?;
+    server.user_login(owner).await?;
     server.api.db_add(owner, db, DbKind::Memory).await?;
     server.api.db_add(owner, db2, DbKind::Memory).await?;
     let status = server.api.db_copy(owner, db, db2).await.unwrap_err().status;
@@ -124,9 +124,9 @@ pub async fn target_self() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
     let owner = &next_user_name();
     let db = &next_db_name();
-    server.api.user_login(ADMIN, ADMIN).await?;
+    server.user_login(ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
-    server.api.user_login(owner, owner).await?;
+    server.user_login(owner).await?;
     server.api.db_add(owner, db, DbKind::Memory).await?;
     let status = server.api.db_copy(owner, db, db).await.unwrap_err().status;
     assert_eq!(status, 465);
@@ -138,9 +138,9 @@ pub async fn invalid() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
     let owner = &next_user_name();
     let db = &next_db_name();
-    server.api.user_login(ADMIN, ADMIN).await?;
+    server.user_login(ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
-    server.api.user_login(owner, owner).await?;
+    server.user_login(owner).await?;
     server.api.db_add(owner, db, DbKind::File).await?;
     let status = server
         .api
@@ -156,9 +156,9 @@ pub async fn invalid() -> Result<(), TestError> {
 pub async fn db_not_found() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
     let owner = &next_user_name();
-    server.api.user_login(ADMIN, ADMIN).await?;
+    server.user_login(ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
-    server.api.user_login(owner, owner).await?;
+    server.user_login(owner).await?;
     let status = server
         .api
         .db_copy(owner, "db", "dbx")

@@ -1,6 +1,5 @@
 import { computed, type ComputedRef, type Ref } from "vue";
 import { useRoute } from "vue-router";
-import type { Components } from "@agnesoft/agdb_api";
 import { checkClient, client } from "@agdb-studio/api/src/api";
 import { buildQueryFromSteps } from "../utils/queryExecutionUtils";
 import type { QueryStep as QueryStepModel, TAB } from "./types";

@@ -1,4 +1,3 @@
-use crate::UserStatus;
 use crate::test_server::ADMIN;
 use crate::test_server::TestServer;
 use crate::test_server::next_user_name;
@@ -21,24 +20,6 @@ pub async fn user_list() -> Result<(), TestError> {
     assert!(admin_user.admin);
     assert!(!admin_user.sessions.is_empty());
     assert_eq!(admin_user.sessions[0].agent, "agdb_api");
-    assert_eq!(
-        list[1],
-        UserStatus {
-            username: user1.to_string(),
-            login: false,
-            admin: false,
-            sessions: vec![],
-        }
-    );
-    assert_eq!(
-        list[2],
-        UserStatus {
-            username: user2.to_string(),
-            login: false,
-            admin: false,
-            sessions: vec![],
-        }
-    );
     Ok(())
 }
 

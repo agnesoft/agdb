@@ -94,12 +94,12 @@ pub async fn logout_selected_session() -> Result<(), TestError> {
         .sessions
         .iter()
         .find(|s| s.agent == "admin-target-2")
-        .map(|s| s.id)
+        .map(|s| s.id.clone())
         .expect("expected session for revoked client");
 
     server
         .api
-        .admin_user_logout_session(user, session_id)
+        .admin_user_logout_session(user, &session_id)
         .await?;
 
     let status = client1.user_status().await?.1;

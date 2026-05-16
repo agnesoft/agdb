@@ -83,10 +83,10 @@ pub async fn logout_selected_session() -> Result<(), TestError> {
         .sessions
         .iter()
         .find(|s| s.agent == "session-revoked")
-        .map(|s| s.id)
+        .map(|s| s.id.clone())
         .expect("expected session for revoked client");
 
-    let code = client1.user_logout_session(session_id).await?;
+    let code = client1.user_logout_session(&session_id).await?;
     assert_eq!(code, 201);
 
     let status = client1.user_status().await?.1;

@@ -9,39 +9,52 @@ use crate::server_error::ServerError;
 use crate::server_error::ServerResponse;
 use crate::user_id::UserAgent;
 use crate::user_id::UserId;
-use crate::user_id::UserIdToken;
 use crate::user_id::UserName;
+use crate::user_id::UserToken;
 use agdb::DbId;
 use agdb_api::ChangePassword;
 use agdb_api::UserLogin;
 use agdb_api::UserStatus;
 use axum::Json;
-use axum::extract::Path;
 use axum::extract::Query;
 use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use serde::Deserialize;
+use serde::Deserializer;
 use utoipa::IntoParams;
 use utoipa::ToSchema;
 use uuid::Uuid;
 
 #[derive(Deserialize, IntoParams, ToSchema, agdb::TypeDef)]
 #[into_params(parameter_in = Query)]
-pub struct LogoutAllQuery {
-    #[serde(default = "default_logout_self", rename = "self")]
+pub struct LogoutQuery {
+    #[serde(default, rename = "self", deserialize_with = "deserialize_logout_self")]
     pub include_self: bool,
+    pub session: Option<String>,
 }
 
-const fn default_logout_self() -> bool {
-    true
+fn deserialize_logout_self<'de, D>(deserializer: D) -> Result<bool, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let value = Option::<String>::deserialize(deserializer)?;
+
+    match value.as_deref() {
+        None => Ok(false),
+        Some("") | Some("1") | Some("true") | Some("yes") | Some("on") => Ok(true),
+        Some("0") | Some("false") | Some("no") | Some("off") => Ok(false),
+        Some(other) => Err(serde::de::Error::custom(format!(
+            "invalid self flag '{other}'"
+        ))),
+    }
 }
 
 pub(crate) async fn do_login(
     server_db: &ServerDb,
     username: &str,
     password: &str,
-) -> ServerResult<(DbId, String)> {
+) -> ServerResult<(DbId, String, String)> {
     let user = server_db
         .user(username)
         .await
@@ -52,7 +65,16 @@ pub(crate) async fn do_login(
         return Err(ServerError::new(StatusCode::UNAUTHORIZED, "unauthorized"));
     }
 
-    Ok((user.db_id.unwrap_or_default(), Uuid::new_v4().to_string()))
+    Ok((
+        user.db_id.unwrap_or_default(),
+        Uuid::new_v4().to_string(),
+        Uuid::new_v4()
+            .to_string()
+            .chars()
+            .filter(|c| *c != '-')
+            .take(15)
+            .collect(),
+    ))
 }
 
 #[utoipa::path(post,
@@ -70,8 +92,11 @@ pub(crate) async fn login(
     State(server_db): State<ServerDb>,
     Json(request): Json<UserLogin>,
 ) -> ServerResponse<(StatusCode, Json<String>)> {
-    let (user_id, token) = do_login(&server_db, &request.username, &request.password).await?;
-    server_db.save_token(user_id, &token, &agent.0).await?;
+    let (user_id, token, session) =
+        do_login(&server_db, &request.username, &request.password).await?;
+    server_db
+        .save_token(user_id, &token, agent.0, session)
+        .await?;
     Ok((StatusCode::OK, Json(token)))
 }
 
@@ -80,65 +105,36 @@ pub(crate) async fn login(
     operation_id = "user_logout",
     tag = "agdb",
     security(("Token" = [])),
+    params(
+        LogoutQuery,
+    ),
     responses(
          (status = 201, description = "user logged out"),
          (status = 401, description = "invalid credentials")
     )
 )]
-pub(crate) async fn logout(user: UserIdToken, State(server_db): State<ServerDb>) -> ServerResponse {
-    server_db.remove_token(&user.0).await?;
-
-    Ok(StatusCode::CREATED)
-}
-
-#[utoipa::path(post,
-    path = "/api/v1/user/logout_all",
-    operation_id = "user_logout_all",
-    tag = "agdb",
-    security(("Token" = [])),
-    params(
-        LogoutAllQuery,
-    ),
-    responses(
-         (status = 201, description = "user logged out from all sessions"),
-         (status = 401, description = "invalid credentials")
-    )
-)]
-pub(crate) async fn logout_all(
+pub(crate) async fn logout(
     user: UserId,
-    token: UserIdToken,
-    Query(request): Query<LogoutAllQuery>,
+    token: UserToken,
+    Query(request): Query<LogoutQuery>,
     State(server_db): State<ServerDb>,
 ) -> ServerResponse {
-    if request.include_self {
-        server_db.remove_tokens(user.0).await?;
-    } else {
-        server_db.remove_tokens_except(user.0, &token.0).await?;
+    match request.session {
+        None => {
+            server_db.remove_token(&token.0).await?;
+        }
+        Some(session) if session.is_empty() => {
+            if request.include_self {
+                server_db.remove_tokens(user.0).await?;
+            } else {
+                server_db.remove_tokens_except(user.0, &token.0).await?;
+            }
+        }
+        Some(session) => {
+            server_db.remove_session(session).await?;
+        }
     }
 
-    Ok(StatusCode::CREATED)
-}
-
-#[utoipa::path(delete,
-    path = "/api/v1/user/logout/{session}",
-    operation_id = "user_logout_session",
-    tag = "agdb",
-    security(("Token" = [])),
-    params(
-        ("session" = i64, Path, description = "session id"),
-    ),
-    responses(
-         (status = 201, description = "session revoked"),
-         (status = 401, description = "invalid credentials"),
-         (status = 404, description = "session not found"),
-    )
-)]
-pub(crate) async fn logout_session(
-    user: UserId,
-    State(server_db): State<ServerDb>,
-    Path(session): Path<i64>,
-) -> ServerResponse {
-    server_db.remove_session(user.0, session).await?;
     Ok(StatusCode::CREATED)
 }
 

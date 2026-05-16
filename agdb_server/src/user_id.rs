@@ -15,7 +15,7 @@ use axum_extra::headers::authorization::Bearer;
 pub(crate) struct UserId(pub(crate) DbId);
 
 #[derive(Default)]
-pub(crate) struct UserIdToken(pub(crate) String);
+pub(crate) struct UserToken(pub(crate) String);
 
 pub(crate) struct AdminId();
 
@@ -27,7 +27,7 @@ pub(crate) struct UserName(pub(crate) String);
 #[derive(Default)]
 pub(crate) struct UserAgent(pub(crate) String);
 
-impl<S: Sync + Send> FromRequestParts<S> for UserIdToken
+impl<S: Sync + Send> FromRequestParts<S> for UserToken
 where
     S: Send + Sync,
     ServerDb: FromRef<S>,

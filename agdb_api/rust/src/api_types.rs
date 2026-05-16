@@ -174,7 +174,7 @@ pub struct UserLogin {
 #[derive(Debug, Default, Deserialize, Serialize, ToSchema, PartialEq, Eq, PartialOrd, Ord)]
 #[cfg_attr(feature = "api", derive(agdb::TypeDef))]
 pub struct UserSession {
-    pub id: i64,
+    pub id: String,
     pub agent: String,
     pub created: u64,
 }
@@ -222,9 +222,9 @@ impl From<&str> for DbUserRole {
 impl From<DbElement> for UserSession {
     fn from(element: DbElement) -> Self {
         UserSession {
-            id: element.id.0,
-            agent: element.values[0].value.to_string(),
-            created: element.values[1].value.to_u64().unwrap_or_default(),
+            id: element.values[0].value.to_string(),
+            agent: element.values[1].value.to_string(),
+            created: element.values[2].value.to_u64().unwrap_or_default(),
         }
     }
 }
@@ -372,12 +372,12 @@ mod tests {
                 admin: false,
                 sessions: vec![
                     UserSession {
-                        id: 0,
+                        id: "0".to_string(),
                         agent: "agent".to_string(),
                         created: 0,
                     },
                     UserSession {
-                        id: 0,
+                        id: "0".to_string(),
                         agent: "agent2".to_string(),
                         created: 0,
                     }
@@ -450,12 +450,12 @@ mod tests {
             admin: false,
             sessions: vec![
                 UserSession {
-                    id: 0,
+                    id: "0".to_string(),
                     agent: "agent".to_string(),
                     created: 0,
                 },
                 UserSession {
-                    id: 0,
+                    id: "0".to_string(),
                     agent: "agent2".to_string(),
                     created: 0,
                 },
@@ -467,12 +467,12 @@ mod tests {
             admin: false,
             sessions: vec![
                 UserSession {
-                    id: 0,
+                    id: "0".to_string(),
                     agent: "agent".to_string(),
                     created: 0,
                 },
                 UserSession {
-                    id: 0,
+                    id: "0".to_string(),
                     agent: "agent2".to_string(),
                     created: 0,
                 },

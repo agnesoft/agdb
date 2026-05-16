@@ -10,7 +10,7 @@ use crate::cluster::Cluster;
 use crate::config::Config;
 use crate::raft::Request;
 use crate::raft::Response;
-use crate::routes::user::LogoutAllQuery;
+use crate::routes::user::LogoutQuery;
 use crate::routes::user::do_login;
 use crate::server_db::ServerDb;
 use crate::server_error::ServerResponse;
@@ -18,8 +18,8 @@ use crate::server_error::ServerResult;
 use crate::user_id::AdminId;
 use crate::user_id::ClusterId;
 use crate::user_id::UserAgent;
-use crate::user_id::UserId;
-use crate::user_id::UserIdToken;
+use crate::user_id::UserName;
+use crate::user_id::UserToken;
 use agdb_api::ClusterStatus;
 use agdb_api::UserLogin;
 use axum::Json;
@@ -45,6 +45,7 @@ pub(crate) async fn cluster(
     security(("Token" = [])),
     params(
         ("username" = String, Path, description = "user name"),
+        LogoutQuery,
     ),
     responses(
          (status = 201, description = "user logged out"),
@@ -54,49 +55,20 @@ pub(crate) async fn cluster(
 )]
 pub(crate) async fn admin_logout(
     _admin: AdminId,
+    Query(request): Query<LogoutQuery>,
     State(server_db): State<ServerDb>,
     State(cluster): State<Cluster>,
     Path(username): Path<String>,
 ) -> ServerResponse<impl IntoResponse> {
     let _user_id = server_db.user_id(&username).await?;
 
-    let (commit_index, _result) = cluster.exec(RemoveUserTokens { user: username }).await?;
-
-    Ok((
-        StatusCode::CREATED,
-        [("commit-index", commit_index.to_string())],
-    ))
-}
-
-#[utoipa::path(delete,
-    path = "/api/v1/cluster/admin/user/{username}/logout/{session}",
-    operation_id = "cluster_admin_user_logout_session",
-    tag = "agdb",
-    security(("Token" = [])),
-    params(
-        ("username" = String, Path, description = "user name"),
-        ("session" = i64, Path, description = "session id"),
-    ),
-    responses(
-         (status = 201, description = "session revoked"),
-         (status = 401, description = "admin only"),
-         (status = 404, description = "user or session not found"),
-    )
-)]
-pub(crate) async fn admin_logout_session(
-    _admin: AdminId,
-    State(server_db): State<ServerDb>,
-    State(cluster): State<Cluster>,
-    Path((username, session)): Path<(String, i64)>,
-) -> ServerResponse<impl IntoResponse> {
-    let _user_id = server_db.user_id(&username).await?;
-
-    let (commit_index, _result) = cluster
-        .exec(RemoveUserSession {
-            user: username,
-            session,
-        })
-        .await?;
+    let (commit_index, _result) = match request.session {
+        None => cluster.exec(RemoveUserTokens { user: username }).await?,
+        Some(session) if session.is_empty() => {
+            cluster.exec(RemoveUserTokens { user: username }).await?
+        }
+        Some(session) => cluster.exec(RemoveUserSession { session }).await?,
+    };
 
     Ok((
         StatusCode::CREATED,
@@ -142,12 +114,14 @@ pub(crate) async fn login(
     State(cluster): State<Cluster>,
     Json(request): Json<UserLogin>,
 ) -> ServerResponse<impl IntoResponse> {
-    let (_user_id, token) = do_login(&server_db, &request.username, &request.password).await?;
+    let (_user_id, token, session) =
+        do_login(&server_db, &request.username, &request.password).await?;
     let (commit_index, _result) = cluster
         .exec(SaveUserToken {
             user: request.username,
             new_token: token.clone(),
             agent: agent.0,
+            session,
         })
         .await?;
 
@@ -163,92 +137,36 @@ pub(crate) async fn login(
     operation_id = "cluster_user_logout",
     tag = "agdb",
     security(("Token" = [])),
+    params(
+        LogoutQuery,
+    ),
     responses(
          (status = 201, description = "user logged out"),
          (status = 401, description = "invalid credentials")
     )
 )]
 pub(crate) async fn logout(
-    user: UserIdToken,
+    username: UserName,
+    token: UserToken,
+    Query(request): Query<LogoutQuery>,
     State(cluster): State<Cluster>,
 ) -> ServerResponse<impl IntoResponse> {
-    let (commit_index, _result) = cluster
-        .exec(RemoveUserToken {
-            token: user.0.clone(),
-        })
-        .await?;
-
-    Ok((
-        StatusCode::CREATED,
-        [("commit-index", commit_index.to_string())],
-    ))
-}
-
-#[utoipa::path(post,
-    path = "/api/v1/cluster/user/logout_all",
-    operation_id = "cluster_user_logout_all",
-    tag = "agdb",
-    security(("Token" = [])),
-    params(
-        LogoutAllQuery,
-    ),
-    responses(
-         (status = 201, description = "user logged out from all sessions"),
-         (status = 401, description = "invalid credentials")
-    )
-)]
-pub(crate) async fn user_logout_all(
-    user: UserId,
-    token: UserIdToken,
-    Query(request): Query<LogoutAllQuery>,
-    State(server_db): State<ServerDb>,
-    State(cluster): State<Cluster>,
-) -> ServerResponse<impl IntoResponse> {
-    let username = server_db.user_name(user.0).await?;
-    let (commit_index, _result) = if request.include_self {
-        cluster.exec(RemoveUserTokens { user: username }).await?
-    } else {
-        cluster
-            .exec(RemoveUserTokensExcept {
-                user: username,
-                token: token.0,
-            })
-            .await?
+    let (commit_index, _result) = match request.session {
+        None => cluster.exec(RemoveUserToken { token: token.0 }).await?,
+        Some(session) if session.is_empty() => {
+            if request.include_self {
+                cluster.exec(RemoveUserTokens { user: username.0 }).await?
+            } else {
+                cluster
+                    .exec(RemoveUserTokensExcept {
+                        user: username.0,
+                        token: token.0,
+                    })
+                    .await?
+            }
+        }
+        Some(session) => cluster.exec(RemoveUserSession { session }).await?,
     };
-
-    Ok((
-        StatusCode::CREATED,
-        [("commit-index", commit_index.to_string())],
-    ))
-}
-
-#[utoipa::path(delete,
-    path = "/api/v1/cluster/user/logout/{session}",
-    operation_id = "cluster_user_logout_session",
-    tag = "agdb",
-    security(("Token" = [])),
-    params(
-        ("session" = i64, Path, description = "session id"),
-    ),
-    responses(
-         (status = 201, description = "session revoked"),
-         (status = 401, description = "invalid credentials"),
-         (status = 404, description = "session not found"),
-    )
-)]
-pub(crate) async fn user_logout_session(
-    user: UserId,
-    State(server_db): State<ServerDb>,
-    State(cluster): State<Cluster>,
-    Path(session): Path<i64>,
-) -> ServerResponse<impl IntoResponse> {
-    let username = server_db.user_name(user.0).await?;
-    let (commit_index, _result) = cluster
-        .exec(RemoveUserSession {
-            user: username,
-            session,
-        })
-        .await?;
 
     Ok((
         StatusCode::CREATED,

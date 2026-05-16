@@ -848,10 +848,10 @@ pub async fn cluster_logout_selected_session() -> Result<(), TestError> {
         .sessions
         .iter()
         .find(|s| s.agent == "cluster-session-revoked")
-        .map(|s| s.id)
+        .map(|s| s.id.clone())
         .expect("expected session for revoked client");
 
-    client1.cluster_user_logout_session(session_id).await?;
+    client1.cluster_user_logout_session(&session_id).await?;
 
     assert!(client1.user_status().await?.1.login);
     assert_eq!(client2.user_status().await.unwrap_err().status, 401);
@@ -881,21 +881,18 @@ pub async fn admin_cluster_logout_selected_session() -> Result<(), TestError> {
     client1.cluster_user_login(user, user).await?;
     client2.cluster_user_login(user, user).await?;
 
-    let session_id = admin
-        .admin_user_list()
+    let session_id = client2
+        .user_status()
         .await?
         .1
-        .into_iter()
-        .find(|u| u.username == *user)
-        .expect("expected target user in user list")
         .sessions
         .into_iter()
         .find(|s| s.agent == "cluster-admin-target-2")
-        .map(|s| s.id)
+        .map(|s| s.id.clone())
         .expect("expected session for revoked client");
 
     admin
-        .cluster_admin_user_logout_session(user, session_id)
+        .cluster_admin_user_logout_session(user, &session_id)
         .await?;
 
     assert!(client1.user_status().await?.1.login);

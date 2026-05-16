@@ -5,6 +5,7 @@ use crate::cluster::Cluster;
 use crate::error_code::ErrorCode;
 use crate::password;
 use crate::password::Password;
+use crate::routes::user::LogoutQuery;
 use crate::server_db::ServerDb;
 use crate::server_error::ServerResponse;
 use crate::user_id::AdminId;
@@ -12,6 +13,7 @@ use agdb_api::UserCredentials;
 use agdb_api::UserStatus;
 use axum::Json;
 use axum::extract::Path;
+use axum::extract::Query;
 use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
@@ -126,6 +128,7 @@ pub(crate) async fn list(
     security(("Token" = [])),
     params(
         ("username" = String, Path, description = "user name"),
+        LogoutQuery,
     ),
     responses(
          (status = 201, description = "user logged out"),
@@ -137,35 +140,21 @@ pub(crate) async fn logout(
     _admin: AdminId,
     State(server_db): State<ServerDb>,
     Path(username): Path<String>,
+    Query(request): Query<LogoutQuery>,
 ) -> ServerResponse {
     let user_id = server_db.user_id(&username).await?;
-    server_db.remove_tokens(user_id).await?;
 
-    Ok(StatusCode::CREATED)
-}
-
-#[utoipa::path(delete,
-    path = "/api/v1/admin/user/{username}/logout/{session}",
-    operation_id = "admin_user_logout_session",
-    tag = "agdb",
-    security(("Token" = [])),
-    params(
-        ("username" = String, Path, description = "user name"),
-        ("session" = i64, Path, description = "session id"),
-    ),
-    responses(
-         (status = 201, description = "session revoked"),
-         (status = 401, description = "admin only"),
-         (status = 404, description = "user or session not found"),
-    )
-)]
-pub(crate) async fn logout_session(
-    _admin: AdminId,
-    State(server_db): State<ServerDb>,
-    Path((username, session)): Path<(String, i64)>,
-) -> ServerResponse {
-    let user_id = server_db.user_id(&username).await?;
-    server_db.remove_session(user_id, session).await?;
+    match request.session {
+        None => {
+            server_db.remove_tokens(user_id).await?;
+        }
+        Some(session) if session.is_empty() => {
+            server_db.remove_tokens(user_id).await?;
+        }
+        Some(session) => {
+            server_db.remove_session(session).await?;
+        }
+    }
 
     Ok(StatusCode::CREATED)
 }

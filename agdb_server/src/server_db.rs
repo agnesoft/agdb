@@ -43,6 +43,7 @@ pub(crate) struct UserToken {
     pub(crate) token: String,
     pub(crate) created: u64,
     pub(crate) agent: String,
+    pub(crate) session: String,
 }
 
 #[derive(Default, DbType)]
@@ -80,6 +81,7 @@ const TOKEN: &str = "token";
 const USERS: &str = "users";
 const USERNAME: &str = "username";
 const SERVER_DB_FILE: &str = "agdb_server.agdb";
+const SESSION: &str = "session";
 
 pub(crate) async fn new(
     config: &Config,
@@ -155,6 +157,10 @@ impl ServerDb {
 
             if !indexes.iter().any(|i| i == TOKEN) {
                 t.exec_mut(QueryBuilder::insert().index(TOKEN).query())?;
+            }
+
+            if !indexes.iter().any(|i| i == SESSION) {
+                t.exec_mut(QueryBuilder::insert().index(SESSION).query())?;
             }
 
             if t.exec(QueryBuilder::select().ids(USERS).query()).is_err() {
@@ -522,7 +528,8 @@ impl ServerDb {
         &self,
         user: DbId,
         token: &str,
-        agent: &str,
+        agent: String,
+        session: String,
     ) -> ServerResult<DbId> {
         self.db
             .write()
@@ -538,7 +545,8 @@ impl ServerDb {
                                     .duration_since(UNIX_EPOCH)
                                     .unwrap_or_default()
                                     .as_secs(),
-                                agent: agent.to_string(),
+                                agent,
+                                session,
                             })
                             .query(),
                     )?
@@ -893,24 +901,18 @@ impl ServerDb {
         })
     }
 
-    pub(crate) async fn remove_session(&self, user: DbId, session: i64) -> ServerResult<()> {
+    pub(crate) async fn remove_session(&self, session: String) -> ServerResult<()> {
         self.db.write().await.transaction_mut(|t| {
             let removed = t.exec_mut(
                 QueryBuilder::remove()
                     .search()
-                    .to(user)
-                    .limit(1)
-                    .where_()
-                    .neighbor()
-                    .and()
-                    .ids(session)
-                    .and()
-                    .keys(AGENT)
+                    .index(SESSION)
+                    .value(&session)
                     .query(),
             )?;
 
             if removed.result == 0 {
-                return Err(session_not_found(session));
+                return Err(session_not_found(&session));
             }
 
             Ok(())
@@ -920,13 +922,13 @@ impl ServerDb {
 
 fn user_sessions_query(expiry_limit: u64, user_id: DbId) -> SelectValuesQuery {
     QueryBuilder::select()
-        .values([AGENT, CREATED])
+        .values([SESSION, AGENT, CREATED])
         .search()
         .to(user_id)
         .where_()
         .neighbor()
         .and()
-        .key(CREATED)
+        .key(SESSION)
         .value(Comparison::GreaterThanOrEqual(expiry_limit.into()))
         .query()
 }
@@ -959,8 +961,11 @@ fn token_not_found(token: &str) -> ServerError {
     ServerError::new(StatusCode::NOT_FOUND, &format!("token not found: {token}"))
 }
 
-fn session_not_found(id: i64) -> ServerError {
-    ServerError::new(StatusCode::NOT_FOUND, &format!("session not found: {id}"))
+fn session_not_found(session: &str) -> ServerError {
+    ServerError::new(
+        StatusCode::NOT_FOUND,
+        &format!("session not found: {session}"),
+    )
 }
 
 fn user_not_found(name: &str) -> ServerError {
@@ -1052,7 +1057,8 @@ mod tests {
         let db = Db::new(test_file.file_name())?;
         let indexes = db.exec(QueryBuilder::select().indexes().query())?;
         assert_eq!(indexes.elements[0].values[0], (USERNAME, 3_u64).into());
-        assert_eq!(indexes.elements[0].values[1], (TOKEN, 0_u64).into());
+        assert_eq!(indexes.elements[0].values[1], (SESSION, 0_u64).into());
+        assert_eq!(indexes.elements[0].values[2], (TOKEN, 0_u64).into());
         let result = db.exec(
             QueryBuilder::search()
                 .elements()
@@ -1087,10 +1093,16 @@ mod tests {
             })
             .await?;
 
-        let expired1 = db.save_token(user1, "token1", "agent").await?;
-        let expired2 = db.save_token(user1, "token2", "agent").await?;
-        db.save_token(user2, "token3", "agent").await?;
-        db.save_token(user2, "token4", "agent").await?;
+        let expired1 = db
+            .save_token(user1, "token1", "agent".to_string(), String::new())
+            .await?;
+        let expired2 = db
+            .save_token(user1, "token2", "agent".to_string(), String::new())
+            .await?;
+        db.save_token(user2, "token3", "agent".to_string(), String::new())
+            .await?;
+        db.save_token(user2, "token4", "agent".to_string(), String::new())
+            .await?;
 
         db.db.write().await.exec_mut(
             QueryBuilder::insert()

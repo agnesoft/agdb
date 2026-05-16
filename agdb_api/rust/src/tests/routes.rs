@@ -50,13 +50,3 @@ pub mod user_status;
 // Miscellaneous (subset)
 pub mod cluster_test;
 pub mod misc_routes;
-
-// === SKIPPED FILES ===
-// tls/mod.rs - Feature-gated TLS tests
-// admin_user_logout_all.rs - Uses TestServerImpl lifecycle
-// admin_set_log_level_test.rs - Uses TestServerImpl lifecycle
-//
-// === SKIPPED TESTS FROM misc_routes.rs ===
-// config_reuse, db_list_after_shutdown*, location_change_after_restart,
-// reset_admin_password, memory_db_from_backup, large_payload,
-// static_files, static_files_with_basepath, basepath_test

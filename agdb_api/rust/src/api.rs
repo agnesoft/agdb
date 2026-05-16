@@ -288,6 +288,7 @@ impl Api {
         defs.extend(crate::tests::routes::user_change_password_test::test_defs());
         defs.extend(crate::tests::routes::user_login_test::test_defs());
         defs.extend(crate::tests::routes::user_logout_test::test_defs());
+        defs.extend(crate::tests::routes::user_logout_all_test::test_defs());
         defs.extend(crate::tests::routes::user_status::test_defs());
 
         defs

@@ -222,6 +222,15 @@ impl DbPool {
         let db_name = DbName::new(owner, db);
         let mut user_db = self.pool.write().await.remove(&db_name).unwrap();
         let current_path = db_file(owner, db, &self.config);
+        let source_backup_path = backup_path(owner, db, db_type, &self.config);
+        let target_backup_path = backup_path(owner, db, target_type, &self.config);
+        let backup_exists = source_backup_path.exists();
+
+        if db_type == DbKind::Memory && target_type != DbKind::Memory && backup_exists {
+            std::fs::create_dir_all(db_backup_dir(owner, &self.config))?;
+            remove_file_if_exists(&target_backup_path)?;
+            std::fs::rename(&source_backup_path, &target_backup_path)?;
+        }
 
         if db_type == DbKind::Memory {
             user_db
@@ -232,6 +241,15 @@ impl DbPool {
         }
 
         user_db = UserDb::new(current_path.to_string_lossy().as_ref(), target_type)?;
+
+        if db_type != DbKind::Memory && target_type == DbKind::Memory {
+            if backup_exists {
+                remove_file_if_exists(&target_backup_path)?;
+                std::fs::rename(&source_backup_path, &target_backup_path)?;
+            } else {
+                remove_file_if_exists(&target_backup_path)?;
+            }
+        }
 
         self.pool.write().await.insert(db_name, user_db);
 
@@ -254,12 +272,19 @@ impl DbPool {
         }
 
         std::fs::create_dir_all(Path::new(&self.config.data_dir).join(new_owner))?;
+        std::fs::create_dir_all(db_audit_dir(new_owner, &self.config))?;
 
         let user_db = self
             .db(owner, db)
             .await?
             .copy(target_file.to_string_lossy().as_ref())
             .await?;
+        let audit_path = db_audit_file(owner, db, &self.config);
+        let target_audit_path = db_audit_file(new_owner, new_db, &self.config);
+        remove_file_if_exists(&target_audit_path)?;
+        if audit_path.exists() {
+            std::fs::copy(audit_path, target_audit_path)?;
+        }
         let target_db = DbName::new(new_owner, new_db);
         self.pool.write().await.insert(target_db, user_db);
 
@@ -536,6 +561,14 @@ fn db_not_found(owner: &str, db: &str) -> ServerError {
         StatusCode::NOT_FOUND,
         &format!("db not found: {owner}/{db}"),
     )
+}
+
+fn backup_path(owner: &str, db: &str, db_type: DbKind, config: &Config) -> PathBuf {
+    if db_type == DbKind::Memory {
+        db_file(owner, db, config)
+    } else {
+        db_backup_file(owner, db, config)
+    }
 }
 
 fn db_backup_file(owner: &str, db: &str, config: &Config) -> PathBuf {

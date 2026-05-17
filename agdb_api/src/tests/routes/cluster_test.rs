@@ -182,6 +182,23 @@ pub async fn admin_db_convert() -> Result<(), TestError> {
     client.cluster_user_login(ADMIN, ADMIN).await?;
     client.admin_user_add(owner, owner).await?;
     client.admin_db_add(owner, db, DbKind::Memory).await?;
+
+    client
+        .admin_db_exec_mut(
+            owner,
+            db,
+            &[QueryBuilder::insert().nodes().aliases(["root"]).query().into()],
+        )
+        .await?;
+    client.admin_db_backup(owner, db).await?;
+    client
+        .admin_db_exec_mut(
+            owner,
+            db,
+            &[QueryBuilder::remove().ids("root").query().into()],
+        )
+        .await?;
+
     client.admin_db_convert(owner, db, DbKind::Mapped).await?;
     let db_list = client.admin_db_list().await?.1;
     let server_db = db_list
@@ -189,6 +206,22 @@ pub async fn admin_db_convert() -> Result<(), TestError> {
         .find(|d| d.db == *db && d.owner == *owner)
         .unwrap();
     assert_eq!(server_db.db_type, DbKind::Mapped);
+
+    client.admin_db_restore(owner, db).await?;
+    let results = client
+        .admin_db_exec(owner, db, &[QueryBuilder::select().ids("root").query().into()])
+        .await?
+        .1;
+    assert_eq!(results[0].result, 1);
+
+    let data_dir = cluster_data_dir(client.address());
+    let audit = audit_file(&data_dir, owner, db);
+    let backup_audit = backup_audit_file(&data_dir, owner, db);
+    assert!(Path::new(&audit).exists());
+    assert!(Path::new(&backup_audit).exists());
+    assert_eq!(audit_entries(&audit)?, 1);
+    assert_eq!(audit_entries(&backup_audit)?, 1);
+
     Ok(())
 }
 
@@ -626,9 +659,42 @@ pub async fn db_convert() -> Result<(), TestError> {
     client.admin_user_add(owner, owner).await?;
     client.cluster_user_login(owner, owner).await?;
     client.db_add(owner, db, DbKind::Memory).await?;
+
+    client
+        .db_exec_mut(
+            owner,
+            db,
+            &[QueryBuilder::insert().nodes().aliases(["root"]).query().into()],
+        )
+        .await?;
+    client.db_backup(owner, db).await?;
+    client
+        .db_exec_mut(
+            owner,
+            db,
+            &[QueryBuilder::remove().ids("root").query().into()],
+        )
+        .await?;
+
     client.db_convert(owner, db, DbKind::Mapped).await?;
     let db_list = client.db_list().await?.1;
     assert_eq!(db_list[0].db_type, DbKind::Mapped);
+
+    client.db_restore(owner, db).await?;
+    let results = client
+        .db_exec(owner, db, &[QueryBuilder::select().ids("root").query().into()])
+        .await?
+        .1;
+    assert_eq!(results[0].result, 1);
+
+    let data_dir = cluster_data_dir(client.address());
+    let audit = audit_file(&data_dir, owner, db);
+    let backup_audit = backup_audit_file(&data_dir, owner, db);
+    assert!(Path::new(&audit).exists());
+    assert!(Path::new(&backup_audit).exists());
+    assert_eq!(audit_entries(&audit)?, 1);
+    assert_eq!(audit_entries(&backup_audit)?, 1);
+
     Ok(())
 }
 

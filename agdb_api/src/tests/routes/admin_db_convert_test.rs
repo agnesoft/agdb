@@ -63,7 +63,11 @@ pub async fn memory_to_mapped_preserves_backup_and_audit() -> Result<(), TestErr
         .admin_db_exec_mut(
             owner,
             db,
-            &[QueryBuilder::insert().nodes().aliases(["root"]).query().into()],
+            &[QueryBuilder::insert()
+                .nodes()
+                .aliases(["root"])
+                .query()
+                .into()],
         )
         .await?;
     server.api.admin_db_backup(owner, db).await?;
@@ -76,12 +80,19 @@ pub async fn memory_to_mapped_preserves_backup_and_audit() -> Result<(), TestErr
         )
         .await?;
 
-    server.api.admin_db_convert(owner, db, DbKind::Mapped).await?;
+    server
+        .api
+        .admin_db_convert(owner, db, DbKind::Mapped)
+        .await?;
     server.api.admin_db_restore(owner, db).await?;
 
     let results = server
         .api
-        .admin_db_exec(owner, db, &[QueryBuilder::select().ids("root").query().into()])
+        .admin_db_exec(
+            owner,
+            db,
+            &[QueryBuilder::select().ids("root").query().into()],
+        )
         .await?
         .1;
     assert_eq!(results[0].result, 1);
@@ -109,7 +120,11 @@ pub async fn file_to_memory_preserves_backup_and_audit() -> Result<(), TestError
         .admin_db_exec_mut(
             owner,
             db,
-            &[QueryBuilder::insert().nodes().aliases(["root"]).query().into()],
+            &[QueryBuilder::insert()
+                .nodes()
+                .aliases(["root"])
+                .query()
+                .into()],
         )
         .await?;
     server.api.admin_db_backup(owner, db).await?;
@@ -122,12 +137,19 @@ pub async fn file_to_memory_preserves_backup_and_audit() -> Result<(), TestError
         )
         .await?;
 
-    server.api.admin_db_convert(owner, db, DbKind::Memory).await?;
+    server
+        .api
+        .admin_db_convert(owner, db, DbKind::Memory)
+        .await?;
     server.api.admin_db_restore(owner, db).await?;
 
     let results = server
         .api
-        .admin_db_exec(owner, db, &[QueryBuilder::select().ids("root").query().into()])
+        .admin_db_exec(
+            owner,
+            db,
+            &[QueryBuilder::select().ids("root").query().into()],
+        )
         .await?
         .1;
     assert_eq!(results[0].result, 1);

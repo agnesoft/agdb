@@ -95,7 +95,11 @@ pub async fn memory_to_mapped_preserves_backup_and_audit() -> Result<(), TestErr
         .db_exec_mut(
             owner,
             db,
-            &[QueryBuilder::insert().nodes().aliases(["root"]).query().into()],
+            &[QueryBuilder::insert()
+                .nodes()
+                .aliases(["root"])
+                .query()
+                .into()],
         )
         .await?;
     server.api.db_backup(owner, db).await?;
@@ -113,7 +117,11 @@ pub async fn memory_to_mapped_preserves_backup_and_audit() -> Result<(), TestErr
 
     let results = server
         .api
-        .db_exec(owner, db, &[QueryBuilder::select().ids("root").query().into()])
+        .db_exec(
+            owner,
+            db,
+            &[QueryBuilder::select().ids("root").query().into()],
+        )
         .await?
         .1;
     assert_eq!(results[0].result, 1);
@@ -142,7 +150,11 @@ pub async fn file_to_memory_preserves_backup_and_audit() -> Result<(), TestError
         .db_exec_mut(
             owner,
             db,
-            &[QueryBuilder::insert().nodes().aliases(["root"]).query().into()],
+            &[QueryBuilder::insert()
+                .nodes()
+                .aliases(["root"])
+                .query()
+                .into()],
         )
         .await?;
     server.api.db_backup(owner, db).await?;
@@ -160,7 +172,11 @@ pub async fn file_to_memory_preserves_backup_and_audit() -> Result<(), TestError
 
     let results = server
         .api
-        .db_exec(owner, db, &[QueryBuilder::select().ids("root").query().into()])
+        .db_exec(
+            owner,
+            db,
+            &[QueryBuilder::select().ids("root").query().into()],
+        )
         .await?
         .1;
     assert_eq!(results[0].result, 1);

@@ -361,9 +361,9 @@ agdb_server/
     routes/                    ← Route handlers by family
       admin/db.rs              ← Admin database routes
       admin/user.rs            ← Admin user routes
-      cluster/                 ← Cluster routes
+      cluster.rs               ← Cluster routes
       db/                      ← User database routes
-      user/                    ← User auth routes
+      user.rs                  ← User auth routes
   openapi.json                 ← OpenAPI specification
   tests/                       ← Integration tests
 ```

@@ -1,3 +1,5 @@
+use std::time::SystemTime;
+
 use super::DbPool;
 use super::ServerDb;
 use crate::action::Action;
@@ -32,6 +34,10 @@ impl Action for DbCopy {
                 owner: self.new_owner,
                 db_type: self.db_type,
                 backup: 0,
+                created: SystemTime::now()
+                    .duration_since(SystemTime::UNIX_EPOCH)
+                    .unwrap_or_default()
+                    .as_secs(),
             },
         )
         .await?;

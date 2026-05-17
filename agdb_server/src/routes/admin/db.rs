@@ -196,6 +196,7 @@ pub(crate) async fn clear(
         role,
         backup: database.backup,
         size,
+        created: database.created,
     };
 
     Ok((
@@ -448,6 +449,7 @@ pub(crate) async fn list(
             db_type: db.db_type,
             role: DbUserRole::Admin,
             backup: db.backup,
+            created: db.created,
         });
     }
 
@@ -500,6 +502,7 @@ pub(crate) async fn optimize(
             role,
             backup: database.backup,
             size,
+            created: database.created,
         }),
     ))
 }

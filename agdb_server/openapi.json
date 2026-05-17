@@ -3912,10 +3912,16 @@
           "db_type",
           "role",
           "size",
-          "backup"
+          "backup",
+          "created"
         ],
         "properties": {
           "backup": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "created": {
             "type": "integer",
             "format": "int64",
             "minimum": 0

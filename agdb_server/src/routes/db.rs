@@ -229,6 +229,7 @@ pub(crate) async fn clear(
         role,
         backup: database.backup,
         size,
+        created: database.created,
     };
 
     Ok((
@@ -510,6 +511,7 @@ pub(crate) async fn list(
                     role,
                     backup: db.backup,
                     size,
+                    created: db.created,
                 });
             }
             None
@@ -570,6 +572,7 @@ pub(crate) async fn optimize(
             role,
             backup: database.backup,
             size,
+            created: database.created,
         }),
     ))
 }

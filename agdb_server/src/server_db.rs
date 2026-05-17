@@ -53,6 +53,7 @@ pub(crate) struct Database {
     pub(crate) owner: String,
     pub(crate) db_type: DbKind,
     pub(crate) backup: u64,
+    pub(crate) created: u64,
 }
 
 impl Database {
@@ -171,7 +172,7 @@ impl ServerDb {
                 t.exec_mut(QueryBuilder::insert().nodes().aliases(DBS).query())?;
             }
 
-            // Remove all old user tokens still on users from previous db version
+            // Remove all old user tokens still on users from previous db version, remove in later versions
             if t.exec(QueryBuilder::select().values(TOKEN).ids(ADMIN).query())
                 .is_ok()
             {
@@ -187,6 +188,20 @@ impl ServerDb {
                 )?;
                 t.exec_mut(QueryBuilder::insert().index(TOKEN).query())?;
             }
+
+            //Populate created field for existing databases, remove in later versions
+            t.exec_mut(
+                QueryBuilder::insert()
+                    .values_uniform([(CREATED, 0_u64).into()])
+                    .search()
+                    .from(DBS)
+                    .where_()
+                    .neighbor()
+                    .and()
+                    .not()
+                    .keys(CREATED)
+                    .query(),
+            )?;
 
             Ok(())
         })?;
@@ -1016,6 +1031,7 @@ impl DbType for Log<ClusterAction> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use agdb::DbKeyOrder;
     use agdb::test_utilities::test_file::TestFile;
 
     #[test]
@@ -1067,6 +1083,63 @@ mod tests {
                 .query(),
         )?;
         assert_eq!(result.result, 0, "{result:?}");
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn migrate_missing_db_created_only() -> ServerResult<()> {
+        let test_file = TestFile::new();
+        let existing_created = 123_u64;
+
+        {
+            let mut db = Db::new(test_file.file_name())?;
+            db.transaction_mut(|t| {
+                t.exec_mut(QueryBuilder::insert().nodes().aliases(DBS).query())?;
+                let dbs = t.exec_mut(
+                    QueryBuilder::insert()
+                        .nodes()
+                        .values(vec![
+                            vec![
+                                (DB, "db_missing").into(),
+                                (OWNER, "owner").into(),
+                                ("db_type", "memory").into(),
+                                ("backup", 0).into(),
+                            ],
+                            vec![
+                                (DB, "db_existing").into(),
+                                (OWNER, "owner").into(),
+                                ("db_type", "memory").into(),
+                                ("backup", 0).into(),
+                                (CREATED, existing_created).into(),
+                            ],
+                        ])
+                        .query(),
+                )?;
+
+                t.exec_mut(QueryBuilder::insert().edges().from(DBS).to(dbs).query())
+            })?;
+        }
+
+        let db = ServerDb::new(test_file.file_name(), 3600)?;
+        let dbs: Vec<Database> = db
+            .db
+            .read()
+            .await
+            .exec(
+                QueryBuilder::select()
+                    .elements::<Database>()
+                    .search()
+                    .from(DBS)
+                    .order_by(DbKeyOrder::Asc(CREATED.into()))
+                    .where_()
+                    .neighbor()
+                    .query(),
+            )?
+            .try_into()?;
+
+        assert_eq!(dbs[0].created, 0_u64);
+        assert_eq!(dbs[1].created, 123_u64);
 
         Ok(())
     }

@@ -58,6 +58,7 @@ class ServerDatabase implements ModelInterface, ArrayAccess, \JsonSerializable
      */
     protected static $openAPITypes = [
         'backup' => 'int',
+        'created' => 'int',
         'db' => 'string',
         'db_type' => '\Agnesoft\AgdbApi\Model\DbKind',
         'owner' => 'string',
@@ -74,6 +75,7 @@ class ServerDatabase implements ModelInterface, ArrayAccess, \JsonSerializable
      */
     protected static $openAPIFormats = [
         'backup' => 'int64',
+        'created' => 'int64',
         'db' => null,
         'db_type' => null,
         'owner' => null,
@@ -88,6 +90,7 @@ class ServerDatabase implements ModelInterface, ArrayAccess, \JsonSerializable
      */
     protected static array $openAPINullables = [
         'backup' => false,
+        'created' => false,
         'db' => false,
         'db_type' => false,
         'owner' => false,
@@ -182,6 +185,7 @@ class ServerDatabase implements ModelInterface, ArrayAccess, \JsonSerializable
      */
     protected static $attributeMap = [
         'backup' => 'backup',
+        'created' => 'created',
         'db' => 'db',
         'db_type' => 'db_type',
         'owner' => 'owner',
@@ -196,6 +200,7 @@ class ServerDatabase implements ModelInterface, ArrayAccess, \JsonSerializable
      */
     protected static $setters = [
         'backup' => 'setBackup',
+        'created' => 'setCreated',
         'db' => 'setDb',
         'db_type' => 'setDbType',
         'owner' => 'setOwner',
@@ -210,6 +215,7 @@ class ServerDatabase implements ModelInterface, ArrayAccess, \JsonSerializable
      */
     protected static $getters = [
         'backup' => 'getBackup',
+        'created' => 'getCreated',
         'db' => 'getDb',
         'db_type' => 'getDbType',
         'owner' => 'getOwner',
@@ -275,6 +281,7 @@ class ServerDatabase implements ModelInterface, ArrayAccess, \JsonSerializable
     public function __construct(?array $data = null)
     {
         $this->setIfExists('backup', $data ?? [], null);
+        $this->setIfExists('created', $data ?? [], null);
         $this->setIfExists('db', $data ?? [], null);
         $this->setIfExists('db_type', $data ?? [], null);
         $this->setIfExists('owner', $data ?? [], null);
@@ -314,6 +321,13 @@ class ServerDatabase implements ModelInterface, ArrayAccess, \JsonSerializable
         }
         if (($this->container['backup'] < 0)) {
             $invalidProperties[] = "invalid value for 'backup', must be bigger than or equal to 0.";
+        }
+
+        if ($this->container['created'] === null) {
+            $invalidProperties[] = "'created' can't be null";
+        }
+        if (($this->container['created'] < 0)) {
+            $invalidProperties[] = "invalid value for 'created', must be bigger than or equal to 0.";
         }
 
         if ($this->container['db'] === null) {
@@ -378,6 +392,38 @@ class ServerDatabase implements ModelInterface, ArrayAccess, \JsonSerializable
         }
 
         $this->container['backup'] = $backup;
+
+        return $this;
+    }
+
+    /**
+     * Gets created
+     *
+     * @return int
+     */
+    public function getCreated()
+    {
+        return $this->container['created'];
+    }
+
+    /**
+     * Sets created
+     *
+     * @param int $created created
+     *
+     * @return self
+     */
+    public function setCreated($created)
+    {
+        if (is_null($created)) {
+            throw new \InvalidArgumentException('non-nullable created cannot be null');
+        }
+
+        if (($created < 0)) {
+            throw new \InvalidArgumentException('invalid value for $created when calling ServerDatabase., must be bigger than or equal to 0.');
+        }
+
+        $this->container['created'] = $created;
 
         return $this;
     }

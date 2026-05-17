@@ -1,6 +1,5 @@
 use crate::DbKind;
 use crate::DbUserRole;
-use crate::ServerDatabase;
 use crate::test_server::ADMIN;
 use crate::test_server::TestServer;
 use crate::test_server::next_db_name;
@@ -24,29 +23,29 @@ pub async fn list() -> Result<(), TestError> {
         .admin_db_user_add(owner, db1, user, DbUserRole::Read)
         .await?;
     server.api.user_login(user, user).await?;
-    let (status, mut list) = server.api.db_list().await?;
+    let (status, list) = server.api.db_list().await?;
     assert_eq!(status, 200);
-    let mut expected = vec![
-        ServerDatabase {
-            db: db1.to_string(),
-            owner: owner.to_string(),
-            db_type: DbKind::Memory,
-            role: DbUserRole::Read,
-            size: 552,
-            backup: 0,
-        },
-        ServerDatabase {
-            db: db2.to_string(),
-            owner: user.to_string(),
-            db_type: DbKind::Memory,
-            role: DbUserRole::Admin,
-            size: 552,
-            backup: 0,
-        },
-    ];
-    list.sort();
-    expected.sort();
-    assert_eq!(list, expected);
+    assert_eq!(list.len(), 2, "{list:?}");
+    assert!(
+        list.iter().any(|db_entry| {
+            matches!(
+                (&db_entry.db, &db_entry.owner, db_entry.db_type, db_entry.role),
+                (listed_db, listed_owner, DbKind::Memory, DbUserRole::Read)
+                    if listed_db == db1 && listed_owner == owner
+            )
+        }),
+        "{list:?}"
+    );
+    assert!(
+        list.iter().any(|db_entry| {
+            matches!(
+                (&db_entry.db, &db_entry.owner, db_entry.db_type, db_entry.role),
+                (listed_db, listed_owner, DbKind::Memory, DbUserRole::Admin)
+                    if listed_db == db2 && listed_owner == user
+            )
+        }),
+        "{list:?}"
+    );
     Ok(())
 }
 

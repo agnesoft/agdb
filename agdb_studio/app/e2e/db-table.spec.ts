@@ -26,6 +26,7 @@ const mockedDatabaseList: ServerDatabase[] = [
     role: "admin",
     size: 2568,
     backup: 0,
+    created: 0,
   },
   {
     db: "orders",
@@ -34,6 +35,7 @@ const mockedDatabaseList: ServerDatabase[] = [
     role: "admin",
     size: 2568,
     backup: 1754213481,
+    created: 0,
   },
   {
     db: "products",
@@ -42,6 +44,7 @@ const mockedDatabaseList: ServerDatabase[] = [
     role: "admin",
     size: 2568,
     backup: 0,
+    created: 0,
   },
 ];
 
@@ -158,6 +161,7 @@ test.describe("Database Table E2E Tests", () => {
         role: "admin",
         size: 2568,
         backup: 0,
+        created: 0,
       },
     ]);
     await fillInput(page, "db-name-input", "new_db");

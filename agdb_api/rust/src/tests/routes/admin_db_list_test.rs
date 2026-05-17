@@ -1,6 +1,5 @@
 use crate::DbKind;
 use crate::DbUserRole;
-use crate::ServerDatabase;
 use crate::test_server::ADMIN;
 use crate::test_server::TestServer;
 use crate::test_server::next_db_name;
@@ -22,24 +21,22 @@ pub async fn db_list() -> Result<(), TestError> {
     let (status, list) = server.api.admin_db_list().await?;
     assert_eq!(status, 200);
     assert!(
-        list.contains(&ServerDatabase {
-            db: db1.to_string(),
-            owner: owner1.to_string(),
-            db_type: DbKind::Memory,
-            role: DbUserRole::Admin,
-            size: 552,
-            backup: 0,
+        list.iter().any(|db| {
+            matches!(
+                (&db.db, &db.owner, db.db_type, db.role),
+                (listed_db, listed_owner, DbKind::Memory, DbUserRole::Admin)
+                    if listed_db == db1 && listed_owner == owner1 && db.created != 0
+            )
         }),
         "{list:?}"
     );
     assert!(
-        list.contains(&ServerDatabase {
-            db: db2.to_string(),
-            owner: owner2.to_string(),
-            db_type: DbKind::Memory,
-            role: DbUserRole::Admin,
-            size: 552,
-            backup: 0,
+        list.iter().any(|db| {
+            matches!(
+                (&db.db, &db.owner, db.db_type, db.role),
+                (listed_db, listed_owner, DbKind::Memory, DbUserRole::Admin)
+                    if listed_db == db2 && listed_owner == owner2 && db.created != 0
+            )
         }),
         "{list:?}"
     );

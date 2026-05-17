@@ -1,6 +1,5 @@
 use crate::DbKind;
 use crate::DbUserRole;
-use crate::ServerDatabase;
 use crate::test_server::ADMIN;
 use crate::test_server::TestServer;
 use crate::test_server::next_db_name;
@@ -25,16 +24,16 @@ pub async fn add_db_user() -> Result<(), TestError> {
     assert_eq!(status, 201);
     server.api.user_login(user, user).await?;
     let list = server.api.db_list().await?.1;
-    assert_eq!(
-        list,
-        vec![ServerDatabase {
-            db: db.to_string(),
-            owner: owner.to_string(),
-            db_type: DbKind::Mapped,
-            role: DbUserRole::Write,
-            size: 552,
-            backup: 0,
-        }]
+    assert_eq!(list.len(), 1, "{list:?}");
+    assert!(
+        list.iter().any(|db_entry| {
+            matches!(
+                (&db_entry.db, &db_entry.owner, db_entry.db_type, db_entry.role),
+                (listed_db, listed_owner, DbKind::Mapped, DbUserRole::Write)
+                    if listed_db == db && listed_owner == owner
+            )
+        }),
+        "{list:?}"
     );
     Ok(())
 }
@@ -63,16 +62,16 @@ pub async fn add_db_user_as_non_owner_admin() -> Result<(), TestError> {
     assert_eq!(status, 201);
     server.api.user_login(other, other).await?;
     let list = server.api.db_list().await?.1;
-    assert_eq!(
-        list,
-        vec![ServerDatabase {
-            db: db.to_string(),
-            owner: owner.to_string(),
-            db_type: DbKind::Mapped,
-            role: DbUserRole::Write,
-            size: 552,
-            backup: 0,
-        }]
+    assert_eq!(list.len(), 1, "{list:?}");
+    assert!(
+        list.iter().any(|db_entry| {
+            matches!(
+                (&db_entry.db, &db_entry.owner, db_entry.db_type, db_entry.role),
+                (listed_db, listed_owner, DbKind::Mapped, DbUserRole::Write)
+                    if listed_db == db && listed_owner == owner
+            )
+        }),
+        "{list:?}"
     );
     Ok(())
 }
@@ -100,16 +99,16 @@ pub async fn change_user_role() -> Result<(), TestError> {
     assert_eq!(status, 201);
     server.api.user_login(user, user).await?;
     let list = server.api.db_list().await?.1;
-    assert_eq!(
-        list,
-        vec![ServerDatabase {
-            db: db.to_string(),
-            owner: owner.to_string(),
-            db_type: DbKind::Mapped,
-            role: DbUserRole::Read,
-            size: 552,
-            backup: 0,
-        }]
+    assert_eq!(list.len(), 1, "{list:?}");
+    assert!(
+        list.iter().any(|db_entry| {
+            matches!(
+                (&db_entry.db, &db_entry.owner, db_entry.db_type, db_entry.role),
+                (listed_db, listed_owner, DbKind::Mapped, DbUserRole::Read)
+                    if listed_db == db && listed_owner == owner
+            )
+        }),
+        "{list:?}"
     );
     Ok(())
 }

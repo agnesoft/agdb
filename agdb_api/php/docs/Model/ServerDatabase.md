@@ -5,6 +5,7 @@
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **backup** | **int** |  |
+**created** | **int** |  |
 **db** | **string** |  |
 **db_type** | [**\Agnesoft\AgdbApi\Model\DbKind**](DbKind.md) |  |
 **owner** | **string** |  |

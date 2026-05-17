@@ -5,13 +5,18 @@ use crate::DbUserRole;
 use crate::ReqwestClient;
 use crate::test_server::ADMIN;
 use crate::test_server::TestServer;
+use crate::test_server::audit_entries;
+use crate::test_server::audit_file;
+use crate::test_server::backup_audit_file;
 use crate::test_server::next_db_name;
 use crate::test_server::next_user_name;
 use crate::test_server::reqwest_client;
 use crate::test_server::test_cluster::TestCluster;
+use crate::test_server::test_cluster::cluster_data_dir;
 use crate::test_server::test_error::TestError;
 use agdb::Comparison;
 use agdb::QueryBuilder;
+use std::path::Path;
 
 #[cfg_attr(feature = "api", agdb::test_def())]
 pub async fn status() -> Result<(), TestError> {
@@ -57,7 +62,15 @@ pub async fn admin_db_backup_restore() -> Result<(), TestError> {
     client.cluster_user_login(ADMIN, ADMIN).await?;
     client.admin_user_add(owner, owner).await?;
     client.admin_db_add(owner, db, DbKind::Memory).await?;
+
+    let data_dir = cluster_data_dir(client.address());
+    let audit = audit_file(&data_dir, owner, db);
+    let backup_audit = backup_audit_file(&data_dir, owner, db);
+
     client.admin_db_backup(owner, db).await?;
+    assert!(!Path::new(&audit).exists());
+    assert!(!Path::new(&backup_audit).exists());
+
     client
         .admin_db_exec_mut(
             owner,
@@ -65,13 +78,71 @@ pub async fn admin_db_backup_restore() -> Result<(), TestError> {
             &[QueryBuilder::insert().nodes().count(1).query().into()],
         )
         .await?;
+    assert!(Path::new(&audit).exists());
+    assert_eq!(audit_entries(&audit)?, 1);
+
     let node_count_query = &[QueryBuilder::select().node_count().query().into()];
     let node_count = client.admin_db_exec(owner, db, node_count_query).await?.1[0].result;
     assert_eq!(node_count, 1);
+
     client.admin_db_restore(owner, db).await?;
+    assert!(!Path::new(&backup_audit).exists());
+    assert!(!Path::new(&audit).exists());
+
     let node_count = client.admin_db_exec(owner, db, node_count_query).await?.1[0].result;
 
     assert_eq!(node_count, 0);
+    Ok(())
+}
+
+#[cfg_attr(feature = "api", agdb::test_def())]
+pub async fn admin_db_rollback() -> Result<(), TestError> {
+    let cluster = TestCluster::new().await?;
+    let owner = &next_user_name();
+    let db = &next_db_name();
+    let mut client = cluster.follower();
+    client.cluster_user_login(ADMIN, ADMIN).await?;
+    client.admin_user_add(owner, owner).await?;
+    client.admin_db_add(owner, db, DbKind::Mapped).await?;
+
+    let data_dir = cluster_data_dir(client.address());
+    let audit = audit_file(&data_dir, owner, db);
+    let backup_audit = backup_audit_file(&data_dir, owner, db);
+
+    client.admin_db_backup(owner, db).await?;
+    assert!(!Path::new(&audit).exists());
+    assert!(!Path::new(&backup_audit).exists());
+
+    client
+        .admin_db_exec_mut(
+            owner,
+            db,
+            &[QueryBuilder::insert().nodes().count(1).query().into()],
+        )
+        .await?;
+    assert!(Path::new(&audit).exists());
+    assert_eq!(audit_entries(&audit)?, 1);
+
+    let node_count_query = &[QueryBuilder::select().node_count().query().into()];
+    let node_count = client.admin_db_exec(owner, db, node_count_query).await?.1[0].result;
+    assert_eq!(node_count, 1);
+
+    client.admin_db_rollback(owner, db).await?;
+    assert!(!Path::new(&audit).exists());
+    assert!(Path::new(&backup_audit).exists());
+    assert_eq!(audit_entries(&backup_audit)?, 1);
+
+    let node_count = client.admin_db_exec(owner, db, node_count_query).await?.1[0].result;
+    assert_eq!(node_count, 0);
+
+    client.admin_db_rollback(owner, db).await?;
+    assert!(Path::new(&audit).exists());
+    assert_eq!(audit_entries(&audit)?, 1);
+    assert!(!Path::new(&backup_audit).exists());
+
+    let node_count = client.admin_db_exec(owner, db, node_count_query).await?.1[0].result;
+    assert_eq!(node_count, 1);
+
     Ok(())
 }
 
@@ -435,7 +506,15 @@ pub async fn db_backup() -> Result<(), TestError> {
     client.admin_user_add(owner, owner).await?;
     client.cluster_user_login(owner, owner).await?;
     client.db_add(owner, db, DbKind::Memory).await?;
+
+    let data_dir = cluster_data_dir(client.address());
+    let audit = audit_file(&data_dir, owner, db);
+    let backup_audit = backup_audit_file(&data_dir, owner, db);
+
     client.db_backup(owner, db).await?;
+    assert!(!Path::new(&audit).exists());
+    assert!(!Path::new(&backup_audit).exists());
+
     client
         .db_exec_mut(
             owner,
@@ -443,12 +522,71 @@ pub async fn db_backup() -> Result<(), TestError> {
             &[QueryBuilder::insert().nodes().count(1).query().into()],
         )
         .await?;
+    assert!(Path::new(&audit).exists());
+    assert_eq!(audit_entries(&audit)?, 1);
+
     let node_count_query = &[QueryBuilder::select().node_count().query().into()];
     let node_count = client.db_exec(owner, db, node_count_query).await?.1[0].result;
     assert_eq!(node_count, 1);
+
     client.db_restore(owner, db).await?;
+    assert!(!Path::new(&backup_audit).exists());
+    assert!(!Path::new(&audit).exists());
+
     let node_count = client.db_exec(owner, db, node_count_query).await?.1[0].result;
     assert_eq!(node_count, 0);
+    Ok(())
+}
+
+#[cfg_attr(feature = "api", agdb::test_def())]
+pub async fn db_rollback() -> Result<(), TestError> {
+    let cluster = TestCluster::new().await?;
+    let owner = &next_user_name();
+    let db = &next_db_name();
+    let mut client = cluster.follower();
+    client.cluster_user_login(ADMIN, ADMIN).await?;
+    client.admin_user_add(owner, owner).await?;
+    client.cluster_user_login(owner, owner).await?;
+    client.db_add(owner, db, DbKind::Mapped).await?;
+
+    let data_dir = cluster_data_dir(client.address());
+    let audit = audit_file(&data_dir, owner, db);
+    let backup_audit = backup_audit_file(&data_dir, owner, db);
+
+    client.db_backup(owner, db).await?;
+    assert!(!Path::new(&audit).exists());
+    assert!(!Path::new(&backup_audit).exists());
+
+    client
+        .db_exec_mut(
+            owner,
+            db,
+            &[QueryBuilder::insert().nodes().count(1).query().into()],
+        )
+        .await?;
+    assert!(Path::new(&audit).exists());
+    assert_eq!(audit_entries(&audit)?, 1);
+
+    let node_count_query = &[QueryBuilder::select().node_count().query().into()];
+    let node_count = client.db_exec(owner, db, node_count_query).await?.1[0].result;
+    assert_eq!(node_count, 1);
+
+    client.db_rollback(owner, db).await?;
+    assert!(!Path::new(&audit).exists());
+    assert!(Path::new(&backup_audit).exists());
+    assert_eq!(audit_entries(&backup_audit)?, 1);
+
+    let node_count = client.db_exec(owner, db, node_count_query).await?.1[0].result;
+    assert_eq!(node_count, 0);
+
+    client.db_rollback(owner, db).await?;
+    assert!(Path::new(&audit).exists());
+    assert_eq!(audit_entries(&audit)?, 1);
+    assert!(!Path::new(&backup_audit).exists());
+
+    let node_count = client.db_exec(owner, db, node_count_query).await?.1[0].result;
+    assert_eq!(node_count, 1);
+
     Ok(())
 }
 
@@ -907,6 +1045,7 @@ pub fn test_defs() -> Vec<agdb::type_def::Type> {
         __status_type_def(),
         __admin_db_add_type_def(),
         __admin_db_backup_restore_type_def(),
+        __admin_db_rollback_type_def(),
         __admin_db_clear_type_def(),
         __admin_db_convert_type_def(),
         __admin_db_copy_type_def(),
@@ -924,6 +1063,7 @@ pub fn test_defs() -> Vec<agdb::type_def::Type> {
         __admin_user_delete_type_def(),
         __db_add_type_def(),
         __db_backup_type_def(),
+        __db_rollback_type_def(),
         __db_clear_type_def(),
         __db_convert_type_def(),
         __db_copy_type_def(),

@@ -131,6 +131,10 @@ pub(crate) fn app(
             routing::post(routes::admin::db::restore),
         )
         .route(
+            "/admin/db/{owner}/{db}/rollback",
+            routing::post(routes::admin::db::rollback),
+        )
+        .route(
             "/admin/db/{owner}/{db}/user/list",
             routing::get(routes::admin::db::user::list),
         )
@@ -173,6 +177,10 @@ pub(crate) fn app(
         .route(
             "/db/{owner}/{db}/restore",
             routing::post(routes::db::restore),
+        )
+        .route(
+            "/db/{owner}/{db}/rollback",
+            routing::post(routes::db::rollback),
         )
         .route(
             "/db/{owner}/{db}/user/list",

@@ -750,6 +750,50 @@
         ]
       }
     },
+    "/api/v1/admin/db/{owner}/{db}/rollback": {
+      "post": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "admin_db_rollback",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db",
+            "in": "path",
+            "description": "db name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "db rolled back"
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "404": {
+            "description": "db or backup not found"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
     "/api/v1/admin/db/{owner}/{db}/user/list": {
       "get": {
         "tags": [
@@ -2130,6 +2174,53 @@
         "responses": {
           "201": {
             "description": "db restored"
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "403": {
+            "description": "must be a db admin"
+          },
+          "404": {
+            "description": "backup not found"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/db/{owner}/{db}/rollback": {
+      "post": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "db_rollback",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db",
+            "in": "path",
+            "description": "db name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "db rolled back"
           },
           "401": {
             "description": "unauthorized"

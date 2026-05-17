@@ -8,19 +8,23 @@ use serde::Deserialize;
 use serde::Serialize;
 
 #[derive(Clone, Serialize, Deserialize, DbSerialize)]
-pub(crate) struct DbRestore {
+pub(crate) struct DbRollback {
     pub(crate) owner: String,
     pub(crate) db: String,
 }
 
-impl Action for DbRestore {
+impl Action for DbRollback {
     async fn exec(self, db: ServerDb, db_pool: DbPool) -> ServerResult<ClusterActionResult> {
         let user = db.user_id(&self.owner).await?;
-        let database = db.user_db(user, &self.owner, &self.db).await?;
+        let mut database = db.user_db(user, &self.owner, &self.db).await?;
 
-        db_pool
-            .restore_db(&self.owner, &self.db, database.db_type)
-            .await?;
+        if let Some(backup) = db_pool
+            .rollback_db(&self.owner, &self.db, database.db_type)
+            .await?
+        {
+            database.backup = backup;
+            db.save_db(&database).await?;
+        }
 
         Ok(ClusterActionResult::None)
     }

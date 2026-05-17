@@ -16,6 +16,16 @@ async fn backup_of_backup() -> Result<(), TestError> {
 }
 
 #[tokio::test]
+async fn rollback_of_backup() -> Result<(), TestError> {
+    agdb_api::tests::routes::db_backup_restore_test::rollback_of_backup().await
+}
+
+#[tokio::test]
+async fn restore_rollback_syncs_audit() -> Result<(), TestError> {
+    agdb_api::tests::routes::db_backup_restore_test::restore_rollback_syncs_audit().await
+}
+
+#[tokio::test]
 async fn restore_no_backup() -> Result<(), TestError> {
     agdb_api::tests::routes::db_backup_restore_test::restore_no_backup().await
 }

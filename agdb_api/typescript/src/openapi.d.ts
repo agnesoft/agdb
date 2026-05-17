@@ -1756,6 +1756,24 @@ declare namespace Paths {
             }
         }
     }
+    namespace AdminDbRollback {
+        namespace Parameters {
+            export type Db = string;
+            export type Owner = string;
+        }
+        export interface PathParameters {
+            owner: Parameters.Owner;
+            db: Parameters.Db;
+        }
+        namespace Responses {
+            export interface $201 {
+            }
+            export interface $401 {
+            }
+            export interface $404 {
+            }
+        }
+    }
     namespace AdminDbUserAdd {
         namespace Parameters {
             export type Db = string;
@@ -2273,6 +2291,26 @@ declare namespace Paths {
             }
         }
     }
+    namespace DbRollback {
+        namespace Parameters {
+            export type Db = string;
+            export type Owner = string;
+        }
+        export interface PathParameters {
+            owner: Parameters.Owner;
+            db: Parameters.Db;
+        }
+        namespace Responses {
+            export interface $201 {
+            }
+            export interface $401 {
+            }
+            export interface $403 {
+            }
+            export interface $404 {
+            }
+        }
+    }
     namespace DbUserAdd {
         namespace Parameters {
             export type Db = string;
@@ -2516,6 +2554,14 @@ export interface OperationMethods {
     data?: any,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.AdminDbRestore.Responses.$201>
+  /**
+   * admin_db_rollback
+   */
+  'admin_db_rollback'(
+    parameters?: Parameters<Paths.AdminDbRollback.PathParameters> | null,
+    data?: any,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.AdminDbRollback.Responses.$201>
   /**
    * admin_db_user_list
    */
@@ -2765,6 +2811,14 @@ export interface OperationMethods {
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.DbRestore.Responses.$201>
   /**
+   * db_rollback
+   */
+  'db_rollback'(
+    parameters?: Parameters<Paths.DbRollback.PathParameters> | null,
+    data?: any,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.DbRollback.Responses.$201>
+  /**
    * db_user_list
    */
   'db_user_list'(
@@ -2970,6 +3024,16 @@ export interface PathsDictionary {
       data?: any,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AdminDbRestore.Responses.$201>
+  }
+  ['/api/v1/admin/db/{owner}/{db}/rollback']: {
+    /**
+     * admin_db_rollback
+     */
+    'post'(
+      parameters?: Parameters<Paths.AdminDbRollback.PathParameters> | null,
+      data?: any,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.AdminDbRollback.Responses.$201>
   }
   ['/api/v1/admin/db/{owner}/{db}/user/list']: {
     /**
@@ -3280,6 +3344,16 @@ export interface PathsDictionary {
       data?: any,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.DbRestore.Responses.$201>
+  }
+  ['/api/v1/db/{owner}/{db}/rollback']: {
+    /**
+     * db_rollback
+     */
+    'post'(
+      parameters?: Parameters<Paths.DbRollback.PathParameters> | null,
+      data?: any,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.DbRollback.Responses.$201>
   }
   ['/api/v1/db/{owner}/{db}/user/list']: {
     /**

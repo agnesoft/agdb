@@ -14,6 +14,11 @@ use crate::test_server::TestServerImpl;
 use crate::test_server::api_for_test;
 use crate::test_server::test_error::TestError;
 use crate::test_server::test_error::bail;
+#[cfg(feature = "api")]
+use agdb::type_def::Type;
+#[cfg(feature = "api")]
+use agdb::type_def::TypeDefinition;
+use std::path::Path;
 use std::sync::Arc;
 use std::sync::OnceLock;
 use std::sync::Weak;
@@ -58,6 +63,15 @@ impl TestCluster {
     pub fn follower(&self) -> AgdbApi<ReqwestClient> {
         api_for_test(&self.cluster[1].address)
     }
+}
+
+#[cfg_attr(feature = "api", agdb::fn_def())]
+pub fn cluster_data_dir(address: &str) -> String {
+    let port = address.split(':').next_back().unwrap();
+    Path::new(&format!("agdb_server.{port}.test"))
+        .join(super::SERVER_DATA_DIR)
+        .to_string_lossy()
+        .to_string()
 }
 
 #[cfg_attr(feature = "api", agdb::fn_def())]
@@ -163,4 +177,14 @@ pub async fn create_cluster(nodes: usize, tls: bool) -> Result<Vec<TestServerImp
     servers.swap(0, leader);
 
     Ok(servers.into_iter().map(|x| x.0).collect())
+}
+
+#[cfg(feature = "api")]
+pub fn test_defs() -> Vec<Type> {
+    vec![
+        TestCluster::type_def(),
+        __wait_for_leader_type_def(),
+        __create_cluster_type_def(),
+        __cluster_data_dir_type_def(),
+    ]
 }

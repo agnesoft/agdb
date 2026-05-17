@@ -10,6 +10,7 @@ pub(crate) mod db_optimize;
 pub(crate) mod db_remove;
 pub(crate) mod db_rename;
 pub(crate) mod db_restore;
+pub(crate) mod db_rollback;
 pub(crate) mod db_user_add;
 pub(crate) mod db_user_remove;
 pub(crate) mod remove_all_tokens;
@@ -33,6 +34,7 @@ use crate::action::db_optimize::DbOptimize;
 use crate::action::db_remove::DbRemove;
 use crate::action::db_rename::DbRename;
 use crate::action::db_restore::DbRestore;
+use crate::action::db_rollback::DbRollback;
 use crate::action::db_user_add::DbUserAdd;
 use crate::action::db_user_remove::DbUserRemove;
 use crate::action::remove_all_tokens::RemoveAllTokens;
@@ -71,6 +73,7 @@ pub(crate) enum ClusterAction {
     DbRemove(DbRemove),
     DbExec(DbExec),
     DbOptimize(DbOptimize),
+    DbRollback(DbRollback),
     DbRestore(DbRestore),
     DbRename(DbRename),
     DbUserAdd(DbUserAdd),
@@ -111,6 +114,7 @@ impl ClusterAction {
             ClusterAction::DbRemove(action) => action.exec(db, db_pool).await,
             ClusterAction::DbExec(action) => action.exec(db, db_pool).await,
             ClusterAction::DbOptimize(action) => action.exec(db, db_pool).await,
+            ClusterAction::DbRollback(action) => action.exec(db, db_pool).await,
             ClusterAction::DbRestore(action) => action.exec(db, db_pool).await,
             ClusterAction::DbRename(action) => action.exec(db, db_pool).await,
             ClusterAction::DbUserAdd(action) => action.exec(db, db_pool).await,
@@ -224,6 +228,12 @@ impl From<DbExec> for ClusterAction {
 impl From<DbOptimize> for ClusterAction {
     fn from(value: DbOptimize) -> Self {
         ClusterAction::DbOptimize(value)
+    }
+}
+
+impl From<DbRollback> for ClusterAction {
+    fn from(value: DbRollback) -> Self {
+        ClusterAction::DbRollback(value)
     }
 }
 

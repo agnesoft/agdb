@@ -70,6 +70,11 @@ async fn admin_db_backup_restore() -> Result<(), TestError> {
 }
 
 #[tokio::test]
+async fn admin_db_rollback() -> Result<(), TestError> {
+    agdb_api::tests::routes::cluster_test::admin_db_rollback().await
+}
+
+#[tokio::test]
 async fn admin_db_clear() -> Result<(), TestError> {
     agdb_api::tests::routes::cluster_test::admin_db_clear().await
 }
@@ -152,6 +157,11 @@ async fn db_add() -> Result<(), TestError> {
 #[tokio::test]
 async fn db_backup() -> Result<(), TestError> {
     agdb_api::tests::routes::cluster_test::db_backup().await
+}
+
+#[tokio::test]
+async fn db_rollback() -> Result<(), TestError> {
+    agdb_api::tests::routes::cluster_test::db_rollback().await
 }
 
 #[tokio::test]

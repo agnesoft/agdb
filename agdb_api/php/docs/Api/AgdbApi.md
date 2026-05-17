@@ -20,6 +20,7 @@ All URIs are relative to http://localhost:3000, except if the operation defines 
 | [**adminDbRemove()**](AgdbApi.md#adminDbRemove) | **DELETE** /api/v1/admin/db/{owner}/{db}/remove |  |
 | [**adminDbRename()**](AgdbApi.md#adminDbRename) | **POST** /api/v1/admin/db/{owner}/{db}/rename |  |
 | [**adminDbRestore()**](AgdbApi.md#adminDbRestore) | **POST** /api/v1/admin/db/{owner}/{db}/restore |  |
+| [**adminDbRollback()**](AgdbApi.md#adminDbRollback) | **POST** /api/v1/admin/db/{owner}/{db}/rollback |  |
 | [**adminDbUserAdd()**](AgdbApi.md#adminDbUserAdd) | **PUT** /api/v1/admin/db/{owner}/{db}/user/{username}/add |  |
 | [**adminDbUserList()**](AgdbApi.md#adminDbUserList) | **GET** /api/v1/admin/db/{owner}/{db}/user/list |  |
 | [**adminDbUserRemove()**](AgdbApi.md#adminDbUserRemove) | **DELETE** /api/v1/admin/db/{owner}/{db}/user/{username}/remove |  |
@@ -50,6 +51,7 @@ All URIs are relative to http://localhost:3000, except if the operation defines 
 | [**dbRemove()**](AgdbApi.md#dbRemove) | **DELETE** /api/v1/db/{owner}/{db}/remove |  |
 | [**dbRename()**](AgdbApi.md#dbRename) | **POST** /api/v1/db/{owner}/{db}/rename |  |
 | [**dbRestore()**](AgdbApi.md#dbRestore) | **POST** /api/v1/db/{owner}/{db}/restore |  |
+| [**dbRollback()**](AgdbApi.md#dbRollback) | **POST** /api/v1/db/{owner}/{db}/rollback |  |
 | [**dbUserAdd()**](AgdbApi.md#dbUserAdd) | **PUT** /api/v1/db/{owner}/{db}/user/{username}/add |  |
 | [**dbUserList()**](AgdbApi.md#dbUserList) | **GET** /api/v1/db/{owner}/{db}/user/list |  |
 | [**dbUserRemove()**](AgdbApi.md#dbUserRemove) | **DELETE** /api/v1/db/{owner}/{db}/user/{username}/remove |  |
@@ -881,6 +883,65 @@ try {
     $apiInstance->adminDbRestore($owner, $db);
 } catch (Exception $e) {
     echo 'Exception when calling AgdbApi->adminDbRestore: ', $e->getMessage(), PHP_EOL;
+}
+```
+
+### Parameters
+
+| Name | Type | Description  | Notes |
+| ------------- | ------------- | ------------- | ------------- |
+| **owner** | **string**| user name | |
+| **db** | **string**| db name | |
+
+### Return type
+
+void (empty response body)
+
+### Authorization
+
+[Token](../../README.md#Token)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: Not defined
+
+[[Back to top]](#) [[Back to API list]](../../README.md#endpoints)
+[[Back to Model list]](../../README.md#models)
+[[Back to README]](../../README.md)
+
+## `adminDbRollback()`
+
+```php
+adminDbRollback($owner, $db)
+```
+
+
+
+### Example
+
+```php
+<?php
+require_once(__DIR__ . '/vendor/autoload.php');
+
+
+// Configure Bearer authorization: Token
+$config = Agnesoft\AgdbApi\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
+
+
+$apiInstance = new Agnesoft\AgdbApi\Api\AgdbApi(
+    // If you want use custom http client, pass your client which implements `GuzzleHttp\ClientInterface`.
+    // This is optional, `GuzzleHttp\Client` will be used as default.
+    new GuzzleHttp\Client(),
+    $config
+);
+$owner = 'owner_example'; // string | user name
+$db = 'db_example'; // string | db name
+
+try {
+    $apiInstance->adminDbRollback($owner, $db);
+} catch (Exception $e) {
+    echo 'Exception when calling AgdbApi->adminDbRollback: ', $e->getMessage(), PHP_EOL;
 }
 ```
 
@@ -2636,6 +2697,65 @@ try {
     $apiInstance->dbRestore($owner, $db);
 } catch (Exception $e) {
     echo 'Exception when calling AgdbApi->dbRestore: ', $e->getMessage(), PHP_EOL;
+}
+```
+
+### Parameters
+
+| Name | Type | Description  | Notes |
+| ------------- | ------------- | ------------- | ------------- |
+| **owner** | **string**| user name | |
+| **db** | **string**| db name | |
+
+### Return type
+
+void (empty response body)
+
+### Authorization
+
+[Token](../../README.md#Token)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: Not defined
+
+[[Back to top]](#) [[Back to API list]](../../README.md#endpoints)
+[[Back to Model list]](../../README.md#models)
+[[Back to README]](../../README.md)
+
+## `dbRollback()`
+
+```php
+dbRollback($owner, $db)
+```
+
+
+
+### Example
+
+```php
+<?php
+require_once(__DIR__ . '/vendor/autoload.php');
+
+
+// Configure Bearer authorization: Token
+$config = Agnesoft\AgdbApi\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
+
+
+$apiInstance = new Agnesoft\AgdbApi\Api\AgdbApi(
+    // If you want use custom http client, pass your client which implements `GuzzleHttp\ClientInterface`.
+    // This is optional, `GuzzleHttp\Client` will be used as default.
+    new GuzzleHttp\Client(),
+    $config
+);
+$owner = 'owner_example'; // string | user name
+$db = 'db_example'; // string | db name
+
+try {
+    $apiInstance->dbRollback($owner, $db);
+} catch (Exception $e) {
+    echo 'Exception when calling AgdbApi->dbRollback: ', $e->getMessage(), PHP_EOL;
 }
 ```
 

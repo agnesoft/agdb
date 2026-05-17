@@ -83,7 +83,7 @@ Require user authentication and appropriate role (Read, Write, Admin).
 Similar structure to admin database routes but scoped to owner/accessible databases:
 
 - `POST /add` — Create database (owner must be self)
-- `GET /audit` — View audit log (admin role required)
+- `GET /audit` — View audit log (requires database access)
 - `POST /backup` — Create backup (admin role required)
 - `POST /clear` — Clear resources (admin role required)
 - `POST /convert` — Convert storage type (admin role required)

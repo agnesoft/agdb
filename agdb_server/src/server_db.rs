@@ -42,6 +42,7 @@ pub(crate) struct UserToken {
     pub(crate) db_id: Option<DbId>,
     pub(crate) token: String,
     pub(crate) created: u64,
+    pub(crate) expires_at: u64,
     pub(crate) agent: String,
     pub(crate) session: String,
 }
@@ -72,10 +73,10 @@ pub(crate) struct ServerDb {
 }
 
 const ADMIN: &str = "admin";
-const AGENT: &str = "agent";
 const CREATED: &str = "created";
 const DB: &str = "db";
 const DBS: &str = "dbs";
+const EXPIRES_AT: &str = "expires_at";
 const OWNER: &str = "owner";
 const ROLE: &str = "role";
 const TOKEN: &str = "token";
@@ -381,10 +382,10 @@ impl ServerDb {
 
     pub(crate) async fn is_admin(&self, token: &str) -> ServerResult<bool> {
         self.db.read().await.transaction(|t| {
-            let (id, created) = t
+            let (id, expires_at) = t
                 .exec(
                     QueryBuilder::select()
-                        .values(CREATED)
+                        .values(EXPIRES_AT)
                         .search()
                         .index(TOKEN)
                         .value(token)
@@ -395,7 +396,7 @@ impl ServerDb {
                 .map(|e| (e.id, e.values[0].value.to_u64().unwrap_or_default()))
                 .ok_or_else(|| token_not_found(token))?;
 
-            if created < token_expiry_limit(self.token_expiry_seconds) {
+            if expires_at < current_timestamp() {
                 return Ok(false);
             }
 
@@ -546,6 +547,8 @@ impl ServerDb {
         agent: String,
         session: String,
     ) -> ServerResult<DbId> {
+        let created = current_timestamp();
+        let expires_at = created + self.token_expiry_seconds;
         self.db
             .write()
             .await
@@ -556,10 +559,8 @@ impl ServerDb {
                             .element(&UserToken {
                                 db_id: None,
                                 token: token.to_string(),
-                                created: SystemTime::now()
-                                    .duration_since(UNIX_EPOCH)
-                                    .unwrap_or_default()
-                                    .as_secs(),
+                                created,
+                                expires_at,
                                 agent,
                                 session,
                             })
@@ -762,10 +763,10 @@ impl ServerDb {
 
     pub(crate) async fn user_id_from_token(&self, token: &str) -> ServerResult<DbId> {
         self.db.read().await.transaction(|t| {
-            let (token_id, created) = t
+            let (token_id, expires_at) = t
                 .exec(
                     QueryBuilder::select()
-                        .values(CREATED)
+                        .values(EXPIRES_AT)
                         .search()
                         .index(TOKEN)
                         .value(token)
@@ -776,7 +777,7 @@ impl ServerDb {
                 .map(|e| (e.id, e.values[0].value.to_u64().unwrap_or_default()))
                 .ok_or_else(|| token_not_found(token))?;
 
-            if created < token_expiry_limit(self.token_expiry_seconds) {
+            if expires_at < current_timestamp() {
                 return Err(token_expired(token));
             }
 
@@ -796,14 +797,12 @@ impl ServerDb {
     }
 
     pub(crate) async fn user_sessions(&self, user_id: DbId) -> ServerResult<Vec<UserSession>> {
-        let expiry_limit = token_expiry_limit(self.token_expiry_seconds);
-        self.db.read().await.transaction(|t| {
-            Ok(t.exec(user_sessions_query(expiry_limit, user_id))?
-                .elements
-                .into_iter()
-                .map(UserSession::from)
-                .collect())
-        })
+        Ok(self
+            .db
+            .read()
+            .await
+            .exec(user_sessions_query(user_id))?
+            .try_into()?)
     }
 
     pub(crate) async fn user_statuses(&self) -> ServerResult<Vec<UserStatus>> {
@@ -827,15 +826,8 @@ impl ServerDb {
                 .elements
                 .into_iter()
                 .map(|e| {
-                    let sessions: Vec<UserSession> = t
-                        .exec(user_sessions_query(
-                            token_expiry_limit(self.token_expiry_seconds),
-                            e.id,
-                        ))?
-                        .elements
-                        .into_iter()
-                        .map(UserSession::from)
-                        .collect();
+                    let sessions: Vec<UserSession> =
+                        t.exec(user_sessions_query(e.id))?.try_into()?;
 
                     Ok(UserStatus {
                         username: e.values[0].value.to_string(),
@@ -871,10 +863,8 @@ impl ServerDb {
                         .not()
                         .ids(USERS)
                         .and()
-                        .key("created")
-                        .value(Comparison::LessThan(
-                            token_expiry_limit(self.token_expiry_seconds).into(),
-                        ))
+                        .key(EXPIRES_AT)
+                        .value(Comparison::LessThan(current_timestamp().into()))
                         .query(),
                 )?;
             }
@@ -935,16 +925,23 @@ impl ServerDb {
     }
 }
 
-fn user_sessions_query(expiry_limit: u64, user_id: DbId) -> SelectValuesQuery {
+fn current_timestamp() -> u64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs()
+}
+
+fn user_sessions_query(user_id: DbId) -> SelectValuesQuery {
     QueryBuilder::select()
-        .values([SESSION, AGENT, CREATED])
+        .elements::<UserSession>()
         .search()
         .to(user_id)
         .where_()
         .neighbor()
         .and()
-        .key(CREATED)
-        .value(Comparison::GreaterThanOrEqual(expiry_limit.into()))
+        .key(EXPIRES_AT)
+        .value(Comparison::GreaterThanOrEqual(current_timestamp().into()))
         .query()
 }
 
@@ -985,14 +982,6 @@ fn session_not_found(session: &str) -> ServerError {
 
 fn user_not_found(name: &str) -> ServerError {
     ServerError::new(StatusCode::NOT_FOUND, &format!("user not found: {name}"))
-}
-
-fn token_expiry_limit(token_expiry_seconds: u64) -> u64 {
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .expect("system time should be after unix epoch")
-        .as_secs()
-        .saturating_sub(token_expiry_seconds)
 }
 
 impl DbType for Log<ClusterAction> {
@@ -1179,7 +1168,7 @@ mod tests {
 
         db.db.write().await.exec_mut(
             QueryBuilder::insert()
-                .values_uniform([(CREATED, 0_u64).into()])
+                .values_uniform([(EXPIRES_AT, 0_u64).into()])
                 .ids([expired1, expired2])
                 .query(),
         )?;

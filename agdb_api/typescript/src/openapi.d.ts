@@ -1470,7 +1470,8 @@ declare namespace Components {
         export interface UserSession {
             agent: string;
             created: number; // int64
-            id: string;
+            expires_at: number; // int64
+            session: string;
         }
         export interface UserStatus {
             admin: boolean;

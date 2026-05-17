@@ -94,7 +94,7 @@ pub async fn logout_selected_session() -> Result<(), TestError> {
         .sessions
         .iter()
         .find(|s| s.agent == "admin-target-2")
-        .map(|s| s.id.clone())
+        .map(|s| s.session.clone())
         .expect("expected session for revoked client");
 
     server

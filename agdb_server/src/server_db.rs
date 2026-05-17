@@ -42,6 +42,7 @@ pub(crate) struct UserToken {
     pub(crate) db_id: Option<DbId>,
     pub(crate) token: String,
     pub(crate) created: u64,
+    pub(crate) expires_at: u64,
     pub(crate) agent: String,
     pub(crate) session: String,
 }
@@ -72,7 +73,6 @@ pub(crate) struct ServerDb {
 }
 
 const ADMIN: &str = "admin";
-const AGENT: &str = "agent";
 const CREATED: &str = "created";
 const DB: &str = "db";
 const DBS: &str = "dbs";
@@ -546,6 +546,11 @@ impl ServerDb {
         agent: String,
         session: String,
     ) -> ServerResult<DbId> {
+        let created = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_secs();
+        let expires_at = created + self.token_expiry_seconds;
         self.db
             .write()
             .await
@@ -556,10 +561,8 @@ impl ServerDb {
                             .element(&UserToken {
                                 db_id: None,
                                 token: token.to_string(),
-                                created: SystemTime::now()
-                                    .duration_since(UNIX_EPOCH)
-                                    .unwrap_or_default()
-                                    .as_secs(),
+                                created,
+                                expires_at,
                                 agent,
                                 session,
                             })
@@ -797,13 +800,12 @@ impl ServerDb {
 
     pub(crate) async fn user_sessions(&self, user_id: DbId) -> ServerResult<Vec<UserSession>> {
         let expiry_limit = token_expiry_limit(self.token_expiry_seconds);
-        self.db.read().await.transaction(|t| {
-            Ok(t.exec(user_sessions_query(expiry_limit, user_id))?
-                .elements
-                .into_iter()
-                .map(UserSession::from)
-                .collect())
-        })
+        Ok(self
+            .db
+            .read()
+            .await
+            .exec(user_sessions_query(expiry_limit, user_id))?
+            .try_into()?)
     }
 
     pub(crate) async fn user_statuses(&self) -> ServerResult<Vec<UserStatus>> {
@@ -832,10 +834,7 @@ impl ServerDb {
                             token_expiry_limit(self.token_expiry_seconds),
                             e.id,
                         ))?
-                        .elements
-                        .into_iter()
-                        .map(UserSession::from)
-                        .collect();
+                        .try_into()?;
 
                     Ok(UserStatus {
                         username: e.values[0].value.to_string(),
@@ -937,7 +936,7 @@ impl ServerDb {
 
 fn user_sessions_query(expiry_limit: u64, user_id: DbId) -> SelectValuesQuery {
     QueryBuilder::select()
-        .values([SESSION, AGENT, CREATED])
+        .elements::<UserSession>()
         .search()
         .to(user_id)
         .where_()

@@ -4022,9 +4022,10 @@
       "UserSession": {
         "type": "object",
         "required": [
-          "id",
+          "session",
           "agent",
-          "created"
+          "created",
+          "expires_at"
         ],
         "properties": {
           "agent": {
@@ -4035,7 +4036,12 @@
             "format": "int64",
             "minimum": 0
           },
-          "id": {
+          "expires_at": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "session": {
             "type": "string"
           }
         }

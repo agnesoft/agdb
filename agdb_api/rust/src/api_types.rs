@@ -1,8 +1,8 @@
 pub mod config_impl;
 
-use agdb::DbElement;
 use agdb::DbError;
 use agdb::DbSerialize;
+use agdb::DbType;
 use agdb::DbValue;
 use agdb::QueryResult;
 use agdb::QueryType;
@@ -172,12 +172,15 @@ pub struct UserLogin {
     pub password: String,
 }
 
-#[derive(Debug, Default, Deserialize, Serialize, ToSchema, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(
+    Debug, Default, Deserialize, Serialize, ToSchema, PartialEq, Eq, PartialOrd, Ord, DbType,
+)]
 #[cfg_attr(feature = "api", derive(agdb::TypeDef))]
 pub struct UserSession {
-    pub id: String,
+    pub session: String,
     pub agent: String,
     pub created: u64,
+    pub expires_at: u64,
 }
 
 #[derive(Debug, Deserialize, Serialize, ToSchema, PartialEq, Eq, PartialOrd, Ord)]
@@ -216,16 +219,6 @@ impl From<&str> for DbUserRole {
             "admin" => Self::Admin,
             "write" => Self::Write,
             _ => Self::Read,
-        }
-    }
-}
-
-impl From<DbElement> for UserSession {
-    fn from(element: DbElement) -> Self {
-        UserSession {
-            id: element.values[0].value.to_string(),
-            agent: element.values[1].value.to_string(),
-            created: element.values[2].value.to_u64().unwrap_or_default(),
         }
     }
 }
@@ -374,14 +367,16 @@ mod tests {
                 admin: false,
                 sessions: vec![
                     UserSession {
-                        id: "0".to_string(),
+                        session: "0".to_string(),
                         agent: "agent".to_string(),
                         created: 0,
+                        expires_at: 0,
                     },
                     UserSession {
-                        id: "0".to_string(),
+                        session: "0".to_string(),
                         agent: "agent2".to_string(),
                         created: 0,
+                        expires_at: 0,
                     }
                 ]
             }
@@ -454,14 +449,16 @@ mod tests {
             admin: false,
             sessions: vec![
                 UserSession {
-                    id: "0".to_string(),
+                    session: "0".to_string(),
                     agent: "agent".to_string(),
                     created: 0,
+                    expires_at: 0,
                 },
                 UserSession {
-                    id: "0".to_string(),
+                    session: "0".to_string(),
                     agent: "agent2".to_string(),
                     created: 0,
+                    expires_at: 0,
                 },
             ],
         };
@@ -471,14 +468,16 @@ mod tests {
             admin: false,
             sessions: vec![
                 UserSession {
-                    id: "0".to_string(),
+                    session: "0".to_string(),
                     agent: "agent".to_string(),
                     created: 0,
+                    expires_at: 0,
                 },
                 UserSession {
-                    id: "0".to_string(),
+                    session: "0".to_string(),
                     agent: "agent2".to_string(),
                     created: 0,
+                    expires_at: 0,
                 },
             ],
         };

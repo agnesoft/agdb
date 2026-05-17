@@ -1,3 +1,5 @@
+use std::time::SystemTime;
+
 use super::DbPool;
 use super::ServerDb;
 use crate::action::Action;
@@ -29,6 +31,10 @@ impl Action for DbAdd {
                 owner: self.owner,
                 db_type: self.db_type,
                 backup,
+                created: SystemTime::now()
+                    .duration_since(SystemTime::UNIX_EPOCH)
+                    .unwrap()
+                    .as_secs(),
             },
         )
         .await?;

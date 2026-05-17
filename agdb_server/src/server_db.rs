@@ -53,6 +53,7 @@ pub(crate) struct Database {
     pub(crate) owner: String,
     pub(crate) db_type: DbKind,
     pub(crate) backup: u64,
+    pub(crate) created: u64,
 }
 
 impl Database {

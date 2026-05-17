@@ -156,6 +156,7 @@ pub struct ServerDatabase {
     pub role: DbUserRole,
     pub size: u64,
     pub backup: u64,
+    pub created: u64,
 }
 
 #[derive(Deserialize, Serialize, ToSchema)]
@@ -361,7 +362,8 @@ mod tests {
                 db_type: DbKind::Memory,
                 role: DbUserRole::Admin,
                 size: 0,
-                backup: 0
+                backup: 0,
+                created: 0,
             }
         );
         let _ = format!(
@@ -434,6 +436,7 @@ mod tests {
             role: DbUserRole::Admin,
             size: 0,
             backup: 0,
+            created: 0,
         };
         let other = ServerDatabase {
             db: "db2".to_string(),
@@ -442,6 +445,7 @@ mod tests {
             role: DbUserRole::Admin,
             size: 0,
             backup: 0,
+            created: 0,
         };
         assert!(db < other);
         let status = UserStatus {
@@ -506,6 +510,7 @@ mod tests {
             role: DbUserRole::Admin,
             size: 0,
             backup: 0,
+            created: 0,
         };
 
         assert_eq!(db.cmp(&db), std::cmp::Ordering::Equal);

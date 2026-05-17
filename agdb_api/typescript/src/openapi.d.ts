@@ -1440,6 +1440,7 @@ declare namespace Components {
         }
         export interface ServerDatabase {
             backup: number; // int64
+            created: number; // int64
             db: string;
             db_type: DbKind;
             owner: string;

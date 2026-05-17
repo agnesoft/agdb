@@ -6,7 +6,7 @@ members = [
     "agdb_ci",
     "agdb_derive",
     "agdb_server",
-    "agdb_api/rust",
+    "agdb_api",
     "examples/app_db",
     "examples/indexes",
     "examples/joins",

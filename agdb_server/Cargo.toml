@@ -18,7 +18,7 @@ studio = ["dep:include_dir"]
 
 [dependencies]
 agdb = { version = "0.12.10", path = "../agdb", features = ["serde", "openapi"] }
-agdb_api = { version = "0.12.10", path = "../agdb_api/rust", features = ["api"] }
+agdb_api = { version = "0.12.10", path = "../agdb_api", features = ["api"] }
 axum = { version = "0.8", features = ["http2"] }
 axum-extra = { version = "0.12", features = ["typed-header", "routing"] }
 axum-server = { version = "0.8", features = ["tls-rustls"], optional = true }
@@ -39,5 +39,5 @@ utoipa-rapidoc = { version = "6", features = ["axum"] }
 uuid = { version = "1", features = ["v4"] }
 
 [dev-dependencies]
-agdb_api = { version = "0.12.10", path = "../agdb_api/rust", features = ["test_server"] }
+agdb_api = { version = "0.12.10", path = "../agdb_api", features = ["test_server"] }
 anyhow = "1"

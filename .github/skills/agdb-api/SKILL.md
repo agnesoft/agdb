@@ -192,7 +192,7 @@ const dbs = await api.db_list();
 Generated from OpenAPI using openapi-generator.
 
 ```php
-$api = new \Agnesoft\AgdbApi\Api\UserApi(
+$api = new \Agnesoft\AgdbApi\Api\AgdbApi(
     new \GuzzleHttp\Client(),
     $config
 );
@@ -202,6 +202,8 @@ $api->userLogin(['userLogin' => new UserLogin(['username' => 'admin', 'password'
 **Location**: `agdb_api/php/lib/`
 
 **Package name**: `agnesoft/agdb-api`
+
+**URL**: https://packagist.org/packages/agnesoft/agdb_api
 
 ## Testing patterns
 

@@ -178,9 +178,9 @@ api.db_exec("owner", "db", &[query]).await?;
 Generated from OpenAPI. Includes models and request types.
 
 ```ts
-const api = new AgdbApi({ basePath: "http://localhost:3000" });
-await api.userLogin({ userLogin: { username: "admin", password: "password" } });
-const { data } = await api.dbList();
+const api = client("http://localhost:3000");
+await api.user_login({ username: "admin", password: "password" });
+const dbs = await api.db_list();
 ```
 
 **Location**: `agdb_api/typescript/src/`

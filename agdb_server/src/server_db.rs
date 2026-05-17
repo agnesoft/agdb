@@ -1168,7 +1168,7 @@ mod tests {
 
         db.db.write().await.exec_mut(
             QueryBuilder::insert()
-                .values_uniform([(CREATED, 0_u64).into()])
+                .values_uniform([(EXPIRES_AT, 0_u64).into()])
                 .ids([expired1, expired2])
                 .query(),
         )?;

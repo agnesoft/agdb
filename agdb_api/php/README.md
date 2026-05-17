@@ -90,6 +90,7 @@ Class | Method | HTTP request | Description
 *AgdbApi* | [**adminDbRemove**](docs/Api/AgdbApi.md#admindbremove) | **DELETE** /api/v1/admin/db/{owner}/{db}/remove | 
 *AgdbApi* | [**adminDbRename**](docs/Api/AgdbApi.md#admindbrename) | **POST** /api/v1/admin/db/{owner}/{db}/rename | 
 *AgdbApi* | [**adminDbRestore**](docs/Api/AgdbApi.md#admindbrestore) | **POST** /api/v1/admin/db/{owner}/{db}/restore | 
+*AgdbApi* | [**adminDbRollback**](docs/Api/AgdbApi.md#admindbrollback) | **POST** /api/v1/admin/db/{owner}/{db}/rollback | 
 *AgdbApi* | [**adminDbUserAdd**](docs/Api/AgdbApi.md#admindbuseradd) | **PUT** /api/v1/admin/db/{owner}/{db}/user/{username}/add | 
 *AgdbApi* | [**adminDbUserList**](docs/Api/AgdbApi.md#admindbuserlist) | **GET** /api/v1/admin/db/{owner}/{db}/user/list | 
 *AgdbApi* | [**adminDbUserRemove**](docs/Api/AgdbApi.md#admindbuserremove) | **DELETE** /api/v1/admin/db/{owner}/{db}/user/{username}/remove | 
@@ -120,6 +121,7 @@ Class | Method | HTTP request | Description
 *AgdbApi* | [**dbRemove**](docs/Api/AgdbApi.md#dbremove) | **DELETE** /api/v1/db/{owner}/{db}/remove | 
 *AgdbApi* | [**dbRename**](docs/Api/AgdbApi.md#dbrename) | **POST** /api/v1/db/{owner}/{db}/rename | 
 *AgdbApi* | [**dbRestore**](docs/Api/AgdbApi.md#dbrestore) | **POST** /api/v1/db/{owner}/{db}/restore | 
+*AgdbApi* | [**dbRollback**](docs/Api/AgdbApi.md#dbrollback) | **POST** /api/v1/db/{owner}/{db}/rollback | 
 *AgdbApi* | [**dbUserAdd**](docs/Api/AgdbApi.md#dbuseradd) | **PUT** /api/v1/db/{owner}/{db}/user/{username}/add | 
 *AgdbApi* | [**dbUserList**](docs/Api/AgdbApi.md#dbuserlist) | **GET** /api/v1/db/{owner}/{db}/user/list | 
 *AgdbApi* | [**dbUserRemove**](docs/Api/AgdbApi.md#dbuserremove) | **DELETE** /api/v1/db/{owner}/{db}/user/{username}/remove | 

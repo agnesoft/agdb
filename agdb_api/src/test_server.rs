@@ -3,6 +3,7 @@ pub mod test_dir;
 pub mod test_error;
 
 use crate::AgdbApi;
+use crate::QueryAudit;
 use crate::ReqwestClient;
 use crate::config_impl::ConfigImpl;
 use crate::config_impl::DEFAULT_LOG_BODY_LIMIT;
@@ -76,6 +77,38 @@ pub fn next_db_name() -> String {
     format!("db{}", COUNTER.fetch_add(1, Ordering::SeqCst))
 }
 
+#[cfg_attr(feature = "api", agdb::fn_def())]
+pub fn audit_file(data_dir: &str, owner: &str, db: &str) -> String {
+    Path::new(data_dir)
+        .join(owner)
+        .join("audit")
+        .join(format!("{db}.log"))
+        .to_string_lossy()
+        .to_string()
+}
+
+#[cfg_attr(feature = "api", agdb::fn_def())]
+pub fn backup_audit_file(data_dir: &str, owner: &str, db: &str) -> String {
+    Path::new(data_dir)
+        .join(owner)
+        .join("backups")
+        .join(format!("{db}.log"))
+        .to_string_lossy()
+        .to_string()
+}
+
+#[cfg_attr(feature = "api", agdb::fn_def())]
+pub fn audit_entries(path: &str) -> Result<usize, TestError> {
+    let data = std::fs::read_to_string(path)?;
+    let entries: Vec<QueryAudit> = serde_json::from_str(&data).map_err(|e| {
+        std::io::Error::new(
+            std::io::ErrorKind::InvalidData,
+            format!("invalid audit json: {e}"),
+        )
+    })?;
+    Ok(entries.len())
+}
+
 pub fn test_agent_name() -> String {
     std::env::var("NEXTEST_TEST_NAME")
         .ok()
@@ -111,17 +144,24 @@ pub async fn wait_for_ready(api: &AgdbApi<ReqwestClient>) -> Result<(), TestErro
 
 #[cfg(feature = "api")]
 pub fn test_defs() -> Vec<agdb::type_def::Type> {
-    vec![
+    let mut defs = vec![
         TestServerProcess::type_def(),
         __server_bin_type_def(),
         __next_user_name_type_def(),
         __next_db_name_type_def(),
+        __audit_file_type_def(),
+        __backup_audit_file_type_def(),
+        __audit_entries_type_def(),
         __wait_for_ready_type_def(),
         TestError::type_def(),
         PathBuf::type_def(),
         TestServer::type_def(),
         TestServerImpl::type_def(),
-    ]
+    ];
+
+    defs.extend(test_cluster::test_defs());
+
+    defs
 }
 
 #[cfg_attr(feature = "api", derive(agdb::TypeDef))]

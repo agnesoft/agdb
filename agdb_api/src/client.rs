@@ -398,7 +398,7 @@ impl<T: AgdbApiClient> AgdbApi<T> {
 
     /// `POST /admin/db/{owner}/{db}/restore`
     ///
-    /// Restores a database from backup. The current database becomes the backup.
+    /// Restores a database from backup while keeping the backup unchanged.
     ///
     /// Returns `201` on success.
     ///
@@ -408,6 +408,25 @@ impl<T: AgdbApiClient> AgdbApi<T> {
             .client
             .post::<(), ()>(
                 &self.url(&format!("/admin/db/{owner}/{db}/restore")),
+                None,
+                &self.token,
+            )
+            .await?
+            .0)
+    }
+
+    /// `POST /admin/db/{owner}/{db}/rollback`
+    ///
+    /// Rolls back a database by swapping the current database with the backup.
+    ///
+    /// Returns `201` on success.
+    ///
+    /// Common error responses: `401` unauthorized, `404` backup not found.
+    pub async fn admin_db_rollback(&self, owner: &str, db: &str) -> AgdbApiResult<u16> {
+        Ok(self
+            .client
+            .post::<(), ()>(
+                &self.url(&format!("/admin/db/{owner}/{db}/rollback")),
                 None,
                 &self.token,
             )
@@ -1159,7 +1178,7 @@ impl<T: AgdbApiClient> AgdbApi<T> {
 
     /// `POST /db/{owner}/{db}/restore`
     ///
-    /// Restores database from backup. The current database becomes the backup.
+    /// Restores database from backup while keeping the backup unchanged.
     ///
     /// Returns `201` on success.
     ///
@@ -1170,6 +1189,26 @@ impl<T: AgdbApiClient> AgdbApi<T> {
             .client
             .post::<(), ()>(
                 &self.url(&format!("/db/{owner}/{db}/restore")),
+                None,
+                &self.token,
+            )
+            .await?
+            .0)
+    }
+
+    /// `POST /db/{owner}/{db}/rollback`
+    ///
+    /// Rolls back a database by swapping the current database with the backup.
+    ///
+    /// Returns `201` on success.
+    ///
+    /// Common error responses: `401` unauthorized, `403` admin role required,
+    /// `404` backup not found.
+    pub async fn db_rollback(&self, owner: &str, db: &str) -> AgdbApiResult<u16> {
+        Ok(self
+            .client
+            .post::<(), ()>(
+                &self.url(&format!("/db/{owner}/{db}/rollback")),
                 None,
                 &self.token,
             )

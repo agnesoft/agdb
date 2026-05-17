@@ -12,6 +12,7 @@ use crate::action::db_optimize::DbOptimize;
 use crate::action::db_remove::DbRemove;
 use crate::action::db_rename::DbRename;
 use crate::action::db_restore::DbRestore;
+use crate::action::db_rollback::DbRollback;
 use crate::cluster::Cluster;
 use crate::config::Config;
 use crate::db_pool::DbPool;
@@ -620,6 +621,38 @@ pub(crate) async fn restore(
     server_db.user_db_id(owner_id, &owner, &db).await?;
 
     let (commit_index, _result) = cluster.exec(DbRestore { owner, db }).await?;
+
+    Ok((
+        StatusCode::CREATED,
+        [("commit-index", commit_index.to_string())],
+    ))
+}
+
+#[utoipa::path(post,
+    path = "/api/v1/admin/db/{owner}/{db}/rollback",
+    operation_id = "admin_db_rollback",
+    tag = "agdb",
+    security(("Token" = [])),
+    params(
+        ("owner" = String, Path, description = "user name"),
+        ("db" = String, Path, description = "db name"),
+    ),
+    responses(
+         (status = 201, description = "db rolled back"),
+         (status = 401, description = "unauthorized"),
+         (status = 404, description = "db or backup not found"),
+    )
+)]
+pub(crate) async fn rollback(
+    _admin: AdminId,
+    State(cluster): State<Cluster>,
+    State(server_db): State<ServerDb>,
+    Path((owner, db)): Path<(String, String)>,
+) -> ServerResponse<impl IntoResponse> {
+    let owner_id = server_db.user_id(&owner).await?;
+    server_db.user_db_id(owner_id, &owner, &db).await?;
+
+    let (commit_index, _result) = cluster.exec(DbRollback { owner, db }).await?;
 
     Ok((
         StatusCode::CREATED,

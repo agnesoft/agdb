@@ -5,7 +5,7 @@ use axum::middleware::Next;
 use axum::response::Response;
 use reqwest::StatusCode;
 
-const REDIRECT_PATHS: [&str; 15] = [
+const REDIRECT_PATHS: [&str; 16] = [
     "/add",
     "/backup",
     "/change_password",
@@ -21,6 +21,7 @@ const REDIRECT_PATHS: [&str; 15] = [
     "/remove",
     "/rename",
     "/restore",
+    "/rollback",
 ];
 
 fn is_redirect_path(request: &Request) -> bool {

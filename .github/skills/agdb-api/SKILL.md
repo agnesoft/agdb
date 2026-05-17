@@ -74,7 +74,7 @@ Require user authentication. User manages own account and databases they own.
 - `POST /logout?session=all` — Logout all sessions
 - `POST /logout?session={session}` — Logout specific session
 - `PUT /change_password` — Change own password
-- `GET /status` — Get own status and sessions
+- `GET /api/v1/user/status` — Get own status and sessions
 
 ### Database routes (`/api/v1/db/{owner}/{db}/...`)
 

@@ -130,8 +130,8 @@ Manage cluster state and login across cluster.
 
 Users can have roles on databases:
 
-- **Admin**: Full control (all operations)
-- **Write**: Read + modify data (exec_mut, backup, restore)
+- **Admin**: Full control (all operations, including backup and restore)
+- **Write**: Read + modify data (exec_mut)
 - **Read**: Query only (exec, audit)
 
 Admin users have server-wide admin access and are required for user and server operations.

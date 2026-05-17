@@ -29,7 +29,7 @@ Primary sources in this repository:
 3. Every query returns `Result<QueryResult, DbError>`.
 4. `QueryResult` contains:
    - `result`: numeric aggregate (count or similar)
-   - `elements`: optional element payloads (ids and/or values depending on query)
+   - `elements`: element payloads (ids and/or values depending on query, always present, can be empty)
 
 ## Execution rules
 
@@ -117,11 +117,14 @@ Important: `beyond()` / `not_beyond()` do not directly select/reject elements by
 
 ## Search semantics
 
-- `from(x)`: forward traversal
-- `to(x)`: reverse traversal
-- `from(x).to(y)`: path search (A*)
+- `from(x)`: forward traversal (starting from x)
+- `to(x)`: reverse traversal following incoming edges (starting from x)
+- `from(x).to(y)`: path search (A*) going from x to y
 - `elements()`: full element scan (can be expensive)
 - `index("key").value(v)`: indexed lookup path
+
+Search supports breadth-first (BFS, default) and depth-first (DPS, `depth_first()`) traversal order, can be selected in the builder query (`QueryBuilder::search().depth_first()...`).
+This changes order in which the elements are visited and therefore the order of results and how `beyond/not_beyond` conditions are applied.
 
 Use `limit` and `offset` for large traversals. For `elements()` queries, always consider `limit` first.
 

@@ -45,7 +45,7 @@ Require admin authentication. Manage all databases, users, and server state.
   - `DELETE /remove` — Disassociate from server (keep data)
   - `POST /rename` — Rename/move database
   - `POST /restore` — Restore from backup
-  - `GET /exec`, `POST /exec_mut` — Execute queries
+  - `POST /exec`, `POST /exec_mut` — Execute queries
   - `GET /user/list` — List database users
   - `PUT /user/{username}/add` — Add database user
   - `DELETE /user/{username}/remove` — Remove database user

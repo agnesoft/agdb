@@ -114,7 +114,7 @@ Manage cluster state and login across cluster.
 
 ### Health check
 
-- `GET /status` — Server health (no auth required)
+- `GET /api/v1/status` — Server health (no auth required)
 
 ## Authentication & authorization
 

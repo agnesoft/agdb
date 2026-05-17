@@ -21,7 +21,7 @@ Primary sources in this repository:
 - `agdb_server/openapi.json` — OpenAPI 3.1.0 specification (complete contract)
 - `agdb_server/src/routes/` — Route implementations (auth, validation, errors)
 - `agdb_server/tests/` — Integration tests
-- `agdb_api/rust/` — Rust client package
+- `agdb_api/src/` — Rust client source package
 - `agdb_api/typescript/` — TypeScript client package
 - `agdb_api/php/` — PHP client package
 

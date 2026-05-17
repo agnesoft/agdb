@@ -169,7 +169,7 @@ let (status, dbs) = api.db_list().await?;
 api.db_exec("owner", "db", &[query]).await?;
 ```
 
-**Location**: `agdb_api/rust/src/client.rs`
+**Location**: `agdb_api/src/client.rs`
 
 **Package name**: `agdb_api`
 

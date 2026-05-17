@@ -125,13 +125,13 @@ impl DbPool {
         remove_file_if_exists(&backup_path)?;
         std::fs::create_dir_all(db_backup_dir(owner, &self.config))?;
 
-        user_db
-            .backup(backup_path.to_string_lossy().as_ref())
-            .await?;
-
         let audit_path = db_audit_file(owner, db, &self.config);
         let backup_audit_path = db_backup_audit_file(owner, db, &self.config);
         remove_file_if_exists(&backup_audit_path)?;
+
+        let db_guard = user_db.0.read().await;
+        db_guard.backup(backup_path.to_string_lossy().as_ref())?;
+
         if audit_path.exists() {
             std::fs::copy(audit_path, backup_audit_path)?;
         }
@@ -220,7 +220,15 @@ impl DbPool {
         target_type: DbKind,
     ) -> ServerResult {
         let db_name = DbName::new(owner, db);
-        let mut user_db = self.pool.write().await.remove(&db_name).unwrap();
+        let mut user_db = self
+            .pool
+            .write()
+            .await
+            .remove(&db_name)
+            .ok_or(ServerError {
+                description: "db not found - cannot convert".to_string(),
+                status: StatusCode::NOT_FOUND,
+            })?;
         let current_path = db_file(owner, db, &self.config);
         let source_backup_path = backup_path(owner, db, db_type, &self.config);
         let target_backup_path = backup_path(owner, db, target_type, &self.config);
@@ -274,19 +282,27 @@ impl DbPool {
         std::fs::create_dir_all(Path::new(&self.config.data_dir).join(new_owner))?;
         std::fs::create_dir_all(db_audit_dir(new_owner, &self.config))?;
 
-        let user_db = self
-            .db(owner, db)
-            .await?
-            .copy(target_file.to_string_lossy().as_ref())
-            .await?;
         let audit_path = db_audit_file(owner, db, &self.config);
         let target_audit_path = db_audit_file(new_owner, new_db, &self.config);
         remove_file_if_exists(&target_audit_path)?;
-        if audit_path.exists() {
-            std::fs::copy(audit_path, target_audit_path)?;
-        }
+
         let target_db = DbName::new(new_owner, new_db);
-        self.pool.write().await.insert(target_db, user_db);
+        let cloned_db;
+
+        {
+            let user_db = self.db(owner, db).await?;
+            let db_guard = user_db.0.read().await;
+            cloned_db = db_guard.copy(target_file.to_string_lossy().as_ref())?;
+
+            if audit_path.exists() {
+                std::fs::copy(audit_path, target_audit_path)?;
+            }
+        }
+
+        self.pool
+            .write()
+            .await
+            .insert(target_db, UserDb(Arc::new(RwLock::new(cloned_db))));
 
         Ok(())
     }
@@ -355,12 +371,14 @@ impl DbPool {
     }
 
     pub(crate) async fn remove_db(&self, owner: &str, db: &str) -> ServerResult<UserDb> {
-        Ok(self
-            .pool
+        self.pool
             .write()
             .await
             .remove(&DbName::new(owner, db))
-            .unwrap())
+            .ok_or(ServerError {
+                description: format!("db not found - cannot remove '{owner}/{db}'"),
+                status: StatusCode::NOT_FOUND,
+            })
     }
 
     pub(crate) async fn remove_user_dbs(&self, username: &str, dbs: &[DbName]) -> ServerResult {
@@ -393,21 +411,33 @@ impl DbPool {
             std::fs::create_dir_all(Path::new(&self.config.data_dir).join(new_owner))?;
         }
 
-        let user_db = self.db(owner, db).await?;
+        let source_db = DbName::new(owner, db);
+        let target_db = DbName::new(new_owner, new_db);
+
+        let user_db = self
+            .pool
+            .write()
+            .await
+            .remove(&source_db)
+            .ok_or(ServerError {
+                description: "db not found - cannot rename".to_string(),
+                status: StatusCode::NOT_FOUND,
+            })?;
 
         user_db
             .rename(target_name.to_string_lossy().as_ref())
-            .await
-            .map_err(|mut e| {
-                e.status = ErrorCode::DbInvalid.into();
-                e
-            })?;
+            .await?;
 
         let backup_path = db_backup_file(owner, db, &self.config);
-
         if backup_path.exists() {
             let new_backup_path = db_backup_file(new_owner, new_db, &self.config);
-            let backups_dir = new_backup_path.parent().unwrap();
+            let backups_dir = new_backup_path.parent().ok_or(ServerError {
+                description: format!(
+                    "new backup path does not have a parent directory '{}' - cannot rename",
+                    new_backup_path.display()
+                ),
+                status: StatusCode::NOT_FOUND,
+            })?;
             std::fs::create_dir_all(backups_dir)?;
             std::fs::rename(backup_path, new_backup_path)?;
         }
@@ -415,7 +445,13 @@ impl DbPool {
         let backup_audit_path = db_backup_audit_file(owner, db, &self.config);
         if backup_audit_path.exists() {
             let new_backup_audit_path = db_backup_audit_file(new_owner, new_db, &self.config);
-            let backups_dir = new_backup_audit_path.parent().unwrap();
+            let backups_dir = new_backup_audit_path.parent().ok_or(ServerError {
+                description: format!(
+                    "new backup audit path does not have a parent directory '{}' - cannot rename",
+                    new_backup_audit_path.display()
+                ),
+                status: StatusCode::NOT_FOUND,
+            })?;
             std::fs::create_dir_all(backups_dir)?;
             std::fs::rename(backup_audit_path, new_backup_audit_path)?;
         }
@@ -423,15 +459,18 @@ impl DbPool {
         let audit_path = db_audit_file(owner, db, &self.config);
         if audit_path.exists() {
             let new_audit_path = db_audit_file(new_owner, new_db, &self.config);
-            let audit_dir = new_audit_path.parent().unwrap();
+            let audit_dir = new_audit_path.parent().ok_or(ServerError {
+                description: format!(
+                    "new audit path does not have a parent directory '{}' - cannot rename",
+                    new_audit_path.display()
+                ),
+                status: StatusCode::NOT_FOUND,
+            })?;
             std::fs::create_dir_all(audit_dir)?;
             std::fs::rename(audit_path, new_audit_path)?;
         }
 
-        let source_db = DbName::new(owner, db);
-        let target_db = DbName::new(new_owner, new_db);
         self.pool.write().await.insert(target_db, user_db);
-        self.pool.write().await.remove(&source_db).unwrap();
 
         Ok(())
     }
@@ -451,7 +490,14 @@ impl DbPool {
         }
 
         let db_name = DbName::new(owner, db);
-        self.pool.write().await.remove(&db_name);
+        self.pool
+            .write()
+            .await
+            .remove(&db_name)
+            .ok_or(ServerError {
+                description: "db not found - cannot restore".to_string(),
+                status: StatusCode::NOT_FOUND,
+            })?;
         let current_path = db_file(owner, db, &self.config);
 
         if db_type != DbKind::Memory {

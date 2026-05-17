@@ -31,15 +31,6 @@ impl UserDb {
         }
     }
 
-    pub(crate) async fn backup(&self, name: &str) -> ServerResult<()> {
-        self.0.read().await.backup(name)?;
-        Ok(())
-    }
-
-    pub(crate) async fn copy(&self, name: &str) -> ServerResult<Self> {
-        Ok(Self(Arc::new(RwLock::new(self.0.read().await.copy(name)?))))
-    }
-
     pub(crate) async fn exec(&self, mut queries: Queries) -> ServerResult<Vec<QueryResult>> {
         self.0.read().await.transaction(|t| {
             let mut results = vec![];

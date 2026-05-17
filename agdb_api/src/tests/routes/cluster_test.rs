@@ -187,7 +187,11 @@ pub async fn admin_db_convert() -> Result<(), TestError> {
         .admin_db_exec_mut(
             owner,
             db,
-            &[QueryBuilder::insert().nodes().aliases(["root"]).query().into()],
+            &[QueryBuilder::insert()
+                .nodes()
+                .aliases(["root"])
+                .query()
+                .into()],
         )
         .await?;
     client.admin_db_backup(owner, db).await?;
@@ -209,7 +213,11 @@ pub async fn admin_db_convert() -> Result<(), TestError> {
 
     client.admin_db_restore(owner, db).await?;
     let results = client
-        .admin_db_exec(owner, db, &[QueryBuilder::select().ids("root").query().into()])
+        .admin_db_exec(
+            owner,
+            db,
+            &[QueryBuilder::select().ids("root").query().into()],
+        )
         .await?
         .1;
     assert_eq!(results[0].result, 1);
@@ -664,7 +672,11 @@ pub async fn db_convert() -> Result<(), TestError> {
         .db_exec_mut(
             owner,
             db,
-            &[QueryBuilder::insert().nodes().aliases(["root"]).query().into()],
+            &[QueryBuilder::insert()
+                .nodes()
+                .aliases(["root"])
+                .query()
+                .into()],
         )
         .await?;
     client.db_backup(owner, db).await?;
@@ -682,7 +694,11 @@ pub async fn db_convert() -> Result<(), TestError> {
 
     client.db_restore(owner, db).await?;
     let results = client
-        .db_exec(owner, db, &[QueryBuilder::select().ids("root").query().into()])
+        .db_exec(
+            owner,
+            db,
+            &[QueryBuilder::select().ids("root").query().into()],
+        )
         .await?
         .1;
     assert_eq!(results[0].result, 1);

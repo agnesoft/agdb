@@ -123,7 +123,7 @@ Important: `beyond()` / `not_beyond()` do not directly select/reject elements by
 - `elements()`: full element scan (can be expensive)
 - `index("key").value(v)`: indexed lookup path
 
-Search supports breadth-first (BFS, default) and depth-first (DPS, `depth_first()`) traversal order, can be selected in the builder query (`QueryBuilder::search().depth_first()...`).
+Search supports breadth-first (BFS, default) and depth-first (DFS, `depth_first()`) traversal order, can be selected in the builder query (`QueryBuilder::search().depth_first()...`).
 This changes order in which the elements are visited and therefore the order of results and how `beyond/not_beyond` conditions are applied.
 
 Use `limit` and `offset` for large traversals. For `elements()` queries, always consider `limit` first.

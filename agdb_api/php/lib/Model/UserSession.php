@@ -59,7 +59,8 @@ class UserSession implements ModelInterface, ArrayAccess, \JsonSerializable
     protected static $openAPITypes = [
         'agent' => 'string',
         'created' => 'int',
-        'id' => 'string'
+        'expires_at' => 'int',
+        'session' => 'string'
     ];
 
     /**
@@ -72,7 +73,8 @@ class UserSession implements ModelInterface, ArrayAccess, \JsonSerializable
     protected static $openAPIFormats = [
         'agent' => null,
         'created' => 'int64',
-        'id' => null
+        'expires_at' => 'int64',
+        'session' => null
     ];
 
     /**
@@ -83,7 +85,8 @@ class UserSession implements ModelInterface, ArrayAccess, \JsonSerializable
     protected static array $openAPINullables = [
         'agent' => false,
         'created' => false,
-        'id' => false
+        'expires_at' => false,
+        'session' => false
     ];
 
     /**
@@ -174,7 +177,8 @@ class UserSession implements ModelInterface, ArrayAccess, \JsonSerializable
     protected static $attributeMap = [
         'agent' => 'agent',
         'created' => 'created',
-        'id' => 'id'
+        'expires_at' => 'expires_at',
+        'session' => 'session'
     ];
 
     /**
@@ -185,7 +189,8 @@ class UserSession implements ModelInterface, ArrayAccess, \JsonSerializable
     protected static $setters = [
         'agent' => 'setAgent',
         'created' => 'setCreated',
-        'id' => 'setId'
+        'expires_at' => 'setExpiresAt',
+        'session' => 'setSession'
     ];
 
     /**
@@ -196,7 +201,8 @@ class UserSession implements ModelInterface, ArrayAccess, \JsonSerializable
     protected static $getters = [
         'agent' => 'getAgent',
         'created' => 'getCreated',
-        'id' => 'getId'
+        'expires_at' => 'getExpiresAt',
+        'session' => 'getSession'
     ];
 
     /**
@@ -258,7 +264,8 @@ class UserSession implements ModelInterface, ArrayAccess, \JsonSerializable
     {
         $this->setIfExists('agent', $data ?? [], null);
         $this->setIfExists('created', $data ?? [], null);
-        $this->setIfExists('id', $data ?? [], null);
+        $this->setIfExists('expires_at', $data ?? [], null);
+        $this->setIfExists('session', $data ?? [], null);
     }
 
     /**
@@ -298,8 +305,15 @@ class UserSession implements ModelInterface, ArrayAccess, \JsonSerializable
             $invalidProperties[] = "invalid value for 'created', must be bigger than or equal to 0.";
         }
 
-        if ($this->container['id'] === null) {
-            $invalidProperties[] = "'id' can't be null";
+        if ($this->container['expires_at'] === null) {
+            $invalidProperties[] = "'expires_at' can't be null";
+        }
+        if (($this->container['expires_at'] < 0)) {
+            $invalidProperties[] = "invalid value for 'expires_at', must be bigger than or equal to 0.";
+        }
+
+        if ($this->container['session'] === null) {
+            $invalidProperties[] = "'session' can't be null";
         }
         return $invalidProperties;
     }
@@ -376,28 +390,60 @@ class UserSession implements ModelInterface, ArrayAccess, \JsonSerializable
     }
 
     /**
-     * Gets id
+     * Gets expires_at
      *
-     * @return string
+     * @return int
      */
-    public function getId()
+    public function getExpiresAt()
     {
-        return $this->container['id'];
+        return $this->container['expires_at'];
     }
 
     /**
-     * Sets id
+     * Sets expires_at
      *
-     * @param string $id id
+     * @param int $expires_at expires_at
      *
      * @return self
      */
-    public function setId($id)
+    public function setExpiresAt($expires_at)
     {
-        if (is_null($id)) {
-            throw new \InvalidArgumentException('non-nullable id cannot be null');
+        if (is_null($expires_at)) {
+            throw new \InvalidArgumentException('non-nullable expires_at cannot be null');
         }
-        $this->container['id'] = $id;
+
+        if (($expires_at < 0)) {
+            throw new \InvalidArgumentException('invalid value for $expires_at when calling UserSession., must be bigger than or equal to 0.');
+        }
+
+        $this->container['expires_at'] = $expires_at;
+
+        return $this;
+    }
+
+    /**
+     * Gets session
+     *
+     * @return string
+     */
+    public function getSession()
+    {
+        return $this->container['session'];
+    }
+
+    /**
+     * Sets session
+     *
+     * @param string $session session
+     *
+     * @return self
+     */
+    public function setSession($session)
+    {
+        if (is_null($session)) {
+            throw new \InvalidArgumentException('non-nullable session cannot be null');
+        }
+        $this->container['session'] = $session;
 
         return $this;
     }

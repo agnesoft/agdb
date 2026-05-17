@@ -140,9 +140,9 @@ Admin users have server-wide admin access and are required for user and server o
 
 | Code | Meaning |
 |------|---------|
-| `200` | Success (GET, exec) |
-| `201` | Created (POST, PUT, mutable operations) |
-| `204` | No content (DELETE) |
+| `200` | Success with a response body (for example GET, `exec`, `exec_mut`) |
+| `201` | Created (create-like POST/PUT operations) |
+| `204` | No content (DELETE and other successful no-body operations) |
 | `400` | Bad request (malformed input) |
 | `401` | Unauthorized (missing/expired token, invalid credentials) |
 | `403` | Forbidden (insufficient permissions) |

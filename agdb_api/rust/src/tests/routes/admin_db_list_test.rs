@@ -25,7 +25,7 @@ pub async fn db_list() -> Result<(), TestError> {
             matches!(
                 (&db.db, &db.owner, db.db_type, db.role),
                 (listed_db, listed_owner, DbKind::Memory, DbUserRole::Admin)
-                    if listed_db == db1 && listed_owner == owner1
+                    if listed_db == db1 && listed_owner == owner1 && db.created != 0
             )
         }),
         "{list:?}"
@@ -35,7 +35,7 @@ pub async fn db_list() -> Result<(), TestError> {
             matches!(
                 (&db.db, &db.owner, db.db_type, db.role),
                 (listed_db, listed_owner, DbKind::Memory, DbUserRole::Admin)
-                    if listed_db == db2 && listed_owner == owner2
+                    if listed_db == db2 && listed_owner == owner2 && db.created != 0
             )
         }),
         "{list:?}"

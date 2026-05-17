@@ -33,7 +33,7 @@ impl Action for DbAdd {
                 backup,
                 created: SystemTime::now()
                     .duration_since(SystemTime::UNIX_EPOCH)
-                    .unwrap()
+                    .unwrap_or_default()
                     .as_secs(),
             },
         )

@@ -13,6 +13,7 @@ use axum::response::IntoResponse;
 use axum::response::Response;
 use http_body_util::BodyExt;
 use std::collections::HashMap;
+use std::io::IsTerminal;
 use std::sync::atomic::AtomicU8;
 use std::sync::atomic::Ordering;
 use std::time::Instant;
@@ -51,13 +52,33 @@ impl From<u8> for Level {
 }
 
 impl Level {
-    fn colored_label(self) -> &'static str {
+    fn colored_label(self) -> String {
         match self {
-            Self::Error => concat!("\x1b[31m", "ERROR", "\x1b[0m"),
-            Self::Warn => concat!("\x1b[33m", " WARN", "\x1b[0m"),
-            Self::Info => concat!("\x1b[32m", " INFO", "\x1b[0m"),
-            Self::Debug => concat!("\x1b[36m", "DEBUG", "\x1b[0m"),
+            Self::Error => colored_label(RED, "ERROR"),
+            Self::Warn => colored_label(YELLOW, " WARN"),
+            Self::Info => colored_label(GREEN, " INFO"),
+            Self::Debug => colored_label(CYAN, "DEBUG"),
         }
+    }
+}
+
+fn colors_enabled() -> bool {
+    std::io::stdin().is_terminal()
+}
+
+fn colorize(color: &str, value: impl AsRef<str>) -> String {
+    if colors_enabled() {
+        format!("{color}{}{RESET}", value.as_ref())
+    } else {
+        value.as_ref().to_owned()
+    }
+}
+
+fn colored_label(color: &str, value: &str) -> String {
+    if colors_enabled() {
+        format!("{color}{value}{RESET}")
+    } else {
+        value.to_owned()
     }
 }
 
@@ -121,21 +142,22 @@ pub(crate) fn error(message: &str) {
 fn print_log(level: Level, message: &str) {
     let ts = utilities::timestamp();
     let label = level.colored_label();
-    println!("{DIM}{ts}{RESET} {label} {message}");
+    let ts = colorize(DIM, ts);
+    println!("{ts} {label} {message}");
 }
 
 fn status_colored(status: u16) -> String {
     match status {
-        ..=399 => format!("{GREEN}{status}{RESET}"),
-        400..=499 => format!("{YELLOW}{status}{RESET}"),
-        500.. => format!("{RED}{status}{RESET}"),
+        ..=399 => colorize(GREEN, status.to_string()),
+        400..=499 => colorize(YELLOW, status.to_string()),
+        500.. => colorize(RED, status.to_string()),
     }
 }
 
 fn method_colored(method: &str) -> String {
     match method {
-        "GET" => format!("{GREEN}{method}{RESET}"),
-        _ => format!("{RED}{method}{RESET}"),
+        "GET" => colorize(GREEN, method),
+        _ => colorize(RED, method),
     }
 }
 
@@ -154,46 +176,37 @@ struct LogRecord {
 
 impl LogRecord {
     fn print(&self, level: Level) {
-        let Self {
-            node,
-            method,
-            uri,
-            user,
-            status,
-            duration,
-            request_headers,
-            request_body,
-            response_headers,
-            response_body,
-        } = self;
         let lvl = level.colored_label();
-        let status = status_colored(*status);
-        let method = method_colored(method);
+        let status = status_colored(self.status);
+        let method = method_colored(&self.method);
         let timestamp = utilities::format_system_time(&SystemTime::now());
-        let user = if user.is_empty() {
+        let user = if self.user.is_empty() {
             String::new()
         } else {
-            format!(" [{user}]")
+            format!(" [{}]", colorize(MAGENTA, &self.user))
         };
+        let timestamp = colorize(DIM, timestamp);
+        let duration = colorize(DIM, format!("{}μs", self.duration));
+        let node = self.node;
+        let uri = &self.uri;
 
-        println!(
-            "{DIM}{timestamp}{RESET} {lvl} [{node}] {status} {method} {uri}{MAGENTA}{user}{RESET} {DIM}{duration}μs{RESET}",
-        );
+        println!("{timestamp} {lvl} [{node}] {status} {method} {uri}{user} {duration}",);
 
         if level != Level::Info {
-            if !request_headers.is_empty() {
-                let headers_json = serde_json::to_string(request_headers).unwrap_or_default();
-                println!("  {DIM}>Headers:{RESET} {headers_json}");
+            if !self.request_headers.is_empty() {
+                let headers_json = serde_json::to_string(&self.request_headers).unwrap_or_default();
+                println!("  {} {headers_json}", colorize(DIM, "> Headers:"));
             }
-            if !request_body.is_empty() {
-                println!("  {DIM}>Body:{RESET} {request_body}");
+            if !self.request_body.is_empty() {
+                println!("  {} {}", colorize(DIM, "> Body:"), self.request_body);
             }
-            if !response_headers.is_empty() {
-                let headers_json = serde_json::to_string(response_headers).unwrap_or_default();
-                println!("  {DIM}<Headers:{RESET} {headers_json}");
+            if !self.response_headers.is_empty() {
+                let headers_json =
+                    serde_json::to_string(&self.response_headers).unwrap_or_default();
+                println!("  {} {headers_json}", colorize(DIM, "< Headers:"));
             }
-            if !response_body.is_empty() {
-                println!("  {DIM}<Body:{RESET} {response_body}");
+            if !self.response_body.is_empty() {
+                println!("  {} {}", colorize(DIM, "< Body:"), self.response_body);
             }
         }
     }

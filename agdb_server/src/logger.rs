@@ -140,7 +140,6 @@ fn method_colored(method: &str) -> String {
 }
 
 struct LogRecord {
-    received: SystemTime,
     node: usize,
     method: String,
     uri: String,
@@ -156,7 +155,6 @@ struct LogRecord {
 impl LogRecord {
     fn print(&self, level: Level) {
         let Self {
-            received,
             node,
             method,
             uri,
@@ -171,7 +169,7 @@ impl LogRecord {
         let lvl = level.colored_label();
         let status = status_colored(*status);
         let method = method_colored(method);
-        let timestamp = utilities::format_system_time(received);
+        let timestamp = utilities::format_system_time(&SystemTime::now());
         let user = if user.is_empty() {
             String::new()
         } else {
@@ -215,7 +213,6 @@ pub(crate) async fn logger(
     let log_level = Level::from(level);
 
     let mut record = LogRecord {
-        received: SystemTime::now(),
         node: state.config.cluster_node_id,
         method: request.method().to_string(),
         uri: request.uri().to_string(),

@@ -742,7 +742,7 @@ mod test {
     impl TestCluster {
         fn new(size: u64) -> Self {
             static LOGGER_INIT: OnceLock<()> = OnceLock::new();
-            LOGGER_INIT.get_or_init(|| tracing_subscriber::fmt().init());
+            LOGGER_INIT.get_or_init(|| crate::logger::init(agdb_api::LogLevelFilter::Info));
 
             let nodes = (0..size)
                 .map(|index| {
@@ -789,7 +789,7 @@ mod test {
                             let response = target.write().await.cluster.request(&request).await;
                             responses_channel.send((request, response)).await?;
                         } else {
-                            tracing::info!("Blocked: {:?}", request);
+                            crate::logger::info(&format!("Blocked: {:?}", request));
                         }
                     }
                 }
@@ -803,7 +803,7 @@ mod test {
             tokio::spawn(async move {
                 while !shutdown.load(Ordering::Relaxed) {
                     if let Some((request, response)) = responses_receiver.recv().await {
-                        tracing::info!("{:?} -> {:?}", request, response);
+                        crate::logger::info(&format!("{:?} -> {:?}", request, response));
                         let origin = nodes.read().await[response.target as usize].clone();
                         let new_requests = origin
                             .write()

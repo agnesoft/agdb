@@ -2,9 +2,14 @@ use crate::server_error::ServerResult;
 use agdb::QueryType;
 use agdb_api::DbUserRole;
 use agdb_api::Queries;
+use std::cell::RefCell;
 use std::path::Path;
 use std::time::SystemTime;
 use std::time::UNIX_EPOCH;
+
+thread_local! {
+    static TIMESTAMP_CACHE: RefCell<(u64, String)> = const { RefCell::new((u64::MAX, String::new())) };
+}
 
 pub(crate) async fn get_size<P>(path: P) -> ServerResult<u64>
 where
@@ -67,7 +72,20 @@ pub(crate) fn unquote(value: &str) -> &str {
 }
 
 pub(crate) fn timestamp() -> String {
-    format_system_time(&SystemTime::now())
+    let secs = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs();
+
+    TIMESTAMP_CACHE.with(|cache| {
+        let mut cache = cache.borrow_mut();
+        if cache.0 != secs {
+            cache.0 = secs;
+            cache.1 = format_unix_timestamp(secs);
+        }
+
+        cache.1.clone()
+    })
 }
 
 pub(crate) fn format_system_time(time: &SystemTime) -> String {
@@ -75,6 +93,10 @@ pub(crate) fn format_system_time(time: &SystemTime) -> String {
         .duration_since(UNIX_EPOCH)
         .unwrap_or_default()
         .as_secs();
+    format_unix_timestamp(secs)
+}
+
+fn format_unix_timestamp(secs: u64) -> String {
     let (year, month, day, hour, min, sec) = secs_to_datetime(secs);
     format!("{year:04}-{month:02}-{day:02}T{hour:02}:{min:02}:{sec:02}Z")
 }
@@ -83,49 +105,30 @@ fn secs_to_datetime(secs: u64) -> (u64, u64, u64, u64, u64, u64) {
     let sec = secs % 60;
     let min = (secs / 60) % 60;
     let hour = (secs / 3600) % 24;
+    let days = secs / 86_400;
+    let (year, month, day) = civil_from_unix_days(days);
 
-    let mut days = secs / 86400;
-    let mut year = 1970u64;
+    (year, month, day, hour, min, sec)
+}
 
-    loop {
-        let days_in_year = if is_leap(year) { 366 } else { 365 };
-        if days < days_in_year {
-            break;
-        }
-        days -= days_in_year;
+// Convert days since Unix epoch (1970-01-01) to a civil date in constant time.
+// Based on Howard Hinnant's civil calendar conversion algorithm.
+fn civil_from_unix_days(days: u64) -> (u64, u64, u64) {
+    let z = days + 719_468;
+    let era = z / 146_097;
+    let doe = z - era * 146_097; // [0, 146096]
+    let yoe = (doe - doe / 1_460 + doe / 36_524 - doe / 146_096) / 365; // [0, 399]
+    let mut year = yoe + era * 400;
+    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100); // [0, 365]
+    let mp = (5 * doy + 2) / 153; // [0, 11]
+    let day = doy - (153 * mp + 2) / 5 + 1; // [1, 31]
+    let month = if mp < 10 { mp + 3 } else { mp - 9 }; // [1, 12]
+
+    if month <= 2 {
         year += 1;
     }
 
-    let leap = is_leap(year);
-    let month_days: [u64; 12] = [
-        31,
-        if leap { 29 } else { 28 },
-        31,
-        30,
-        31,
-        30,
-        31,
-        31,
-        30,
-        31,
-        30,
-        31,
-    ];
-
-    let mut month = 0u64;
-    for md in &month_days {
-        if days < *md {
-            break;
-        }
-        days -= *md;
-        month += 1;
-    }
-
-    (year, month + 1, days + 1, hour, min, sec)
-}
-
-fn is_leap(year: u64) -> bool {
-    (year.is_multiple_of(4) && !year.is_multiple_of(100)) || year.is_multiple_of(400)
+    (year, month, day)
 }
 
 #[cfg(test)]
@@ -154,5 +157,15 @@ mod tests {
     #[test]
     fn secs_to_datetime_known_date() {
         assert_eq!(secs_to_datetime(1704067200), (2024, 1, 1, 0, 0, 0));
+    }
+
+    #[test]
+    fn secs_to_datetime_leap_day() {
+        assert_eq!(secs_to_datetime(1709164800), (2024, 2, 29, 0, 0, 0));
+    }
+
+    #[test]
+    fn format_unix_timestamp_known_date() {
+        assert_eq!(format_unix_timestamp(1704067200), "2024-01-01T00:00:00Z");
     }
 }

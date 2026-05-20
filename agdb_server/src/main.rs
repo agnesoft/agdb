@@ -17,34 +17,16 @@ mod server_state;
 mod user_id;
 mod utilities;
 
-use agdb_api::LogLevelFilter;
 use server_error::ServerResult;
-use std::str::FromStr;
-use std::sync::Arc;
 use tokio::net::TcpListener;
 use tokio::sync::broadcast;
-use tracing_subscriber::EnvFilter;
-use tracing_subscriber::prelude::*;
-use tracing_subscriber::reload;
 
 const CONFIG_FILE: &str = "agdb_server.yaml";
 
 #[tokio::main]
 async fn main() -> ServerResult {
-    let filter = EnvFilter::from_str(LogLevelFilter::Info.to_string().as_str())?;
-    let (filter_layer, tracing_handle) = reload::Layer::new(filter);
-
-    tracing_subscriber::registry()
-        .with(filter_layer)
-        .with(tracing_subscriber::fmt::layer())
-        .init();
-
     let config = config::new(CONFIG_FILE)?;
-
-    if config.log_level != LogLevelFilter::Info {
-        let new_filter = EnvFilter::from_str(&config.log_level.to_string())?;
-        tracing_handle.reload(new_filter)?;
-    }
+    logger::init(config.log_level);
 
     password::init(config.pepper);
 
@@ -62,16 +44,15 @@ async fn main() -> ServerResult {
         db_pool,
         server_db,
         shutdown_sender.clone(),
-        Arc::new(tracing_handle),
     )?;
     let cluster_handle = cluster::start_with_shutdown(cluster, shutdown_receiver);
 
-    tracing::info!("Process id: {}", std::process::id());
-    tracing::info!("Log level: {}", config.log_level);
-    tracing::info!(
+    logger::info(&format!("Process id: {}", std::process::id()));
+    logger::info(&format!("Log level: {}", config.log_level));
+    logger::info(&format!(
         "Data directory: {}",
         std::env::current_dir()?.join(&config.data_dir).display()
-    );
+    ));
 
     #[cfg(feature = "tls")]
     if !config.tls_certificate.is_empty() && !config.tls_key.is_empty() {
@@ -87,17 +68,17 @@ async fn main() -> ServerResult {
         let handle = axum_server::Handle::new();
         let shutdown_handle = handle.clone();
 
-        tracing::info!("TLS enabled");
-        tracing::debug!("TLS certificate: {}", config.tls_certificate);
-        tracing::debug!("TLS key: {}", config.tls_key);
+        logger::info("TLS enabled");
+        logger::debug(&format!("TLS certificate: {}", config.tls_certificate));
+        logger::debug(&format!("TLS key: {}", config.tls_key));
 
         tokio::spawn(async move {
             cluster_handle.await;
             shutdown_handle.graceful_shutdown(Some(std::time::Duration::from_secs(5)));
         });
 
-        tracing::info!("Address: {}", config.server_url());
-        tracing::info!("Listening at {}", config.bind);
+        logger::info(&format!("Address: {}", config.server_url()));
+        logger::info(&format!("Listening at {}", config.bind));
         let address = std::net::ToSocketAddrs::to_socket_addrs(&config.bind)?
             .next()
             .expect("failed to parse the config.bind to SocketAddr");
@@ -107,8 +88,8 @@ async fn main() -> ServerResult {
             .await?);
     }
 
-    tracing::info!("Address: {}", config.server_url());
-    tracing::info!("Listening at {}", config.bind);
+    logger::info(&format!("Address: {}", config.server_url()));
+    logger::info(&format!("Listening at {}", config.bind));
     let listener = TcpListener::bind(&config.bind).await?;
     axum::serve(listener, app)
         .with_graceful_shutdown(cluster_handle)

@@ -2,8 +2,8 @@ pub(crate) mod db;
 pub(crate) mod user;
 
 use crate::config::Config;
+use crate::logger;
 use crate::server_db::ServerDb;
-use crate::server_error::ServerError;
 use crate::server_error::ServerResponse;
 use crate::user_id::AdminId;
 use crate::utilities::get_size;
@@ -14,13 +14,9 @@ use axum::extract::Query;
 use axum::extract::State;
 use axum::http::StatusCode;
 use serde::Deserialize;
-use std::sync::Arc;
 use std::time::SystemTime;
 use std::time::UNIX_EPOCH;
 use tokio::sync::broadcast::Sender;
-use tracing_subscriber::EnvFilter;
-use tracing_subscriber::Registry;
-use tracing_subscriber::reload::Handle;
 use utoipa::IntoParams;
 use utoipa::ToSchema;
 
@@ -64,7 +60,6 @@ pub(crate) async fn status(
     _admin_id: AdminId,
     State(server_db): State<ServerDb>,
     State(config): State<Config>,
-    State(handle): State<Arc<Handle<EnvFilter, Registry>>>,
 ) -> ServerResponse<(StatusCode, Json<AdminStatus>)> {
     Ok((
         StatusCode::OK,
@@ -74,9 +69,7 @@ pub(crate) async fn status(
             users: server_db.user_count().await?,
             logged_in_users: server_db.users_with_token().await?,
             size: get_size(&config.data_dir).await?,
-            log_level: handle
-                .with_current(|f| f.to_string().as_str().try_into().unwrap_or_default())
-                .unwrap_or_default(),
+            log_level: logger::current_level(),
         }),
     ))
 }
@@ -97,16 +90,11 @@ pub(crate) async fn status(
 )]
 pub(crate) async fn set_log_level(
     _admin_id: AdminId,
-    State(handle): State<Arc<Handle<EnvFilter, Registry>>>,
     request: Query<SetLogLevelRequest>,
-) -> Result<(), ServerError> {
-    handle
-        .modify(|filter| {
-            *filter = EnvFilter::new(request.new_level.to_string());
-        })
-        .map_err(|e| ServerError::new(StatusCode::INTERNAL_SERVER_ERROR, &format!("{e:?}")))?;
-    tracing::info!("Log level changed to: {}", request.new_level);
-    Ok(())
+) -> StatusCode {
+    logger::set_level(request.new_level);
+    logger::info(&format!("Log level changed to: {}", request.new_level));
+    StatusCode::OK
 }
 
 #[cfg(test)]

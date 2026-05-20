@@ -1,5 +1,7 @@
 use crate::server_state::ServerState;
 use crate::user_id::UserName;
+use crate::utilities;
+use agdb_api::LogLevelFilter;
 use axum::Error as AxumError;
 use axum::RequestPartsExt;
 use axum::body::Body;
@@ -10,39 +12,191 @@ use axum::middleware::Next;
 use axum::response::IntoResponse;
 use axum::response::Response;
 use http_body_util::BodyExt;
-use serde::Serialize;
 use std::collections::HashMap;
+use std::sync::atomic::AtomicU8;
+use std::sync::atomic::Ordering;
 use std::time::Instant;
+use std::time::SystemTime;
 
-#[derive(Default, Serialize)]
+static LEVEL: AtomicU8 = AtomicU8::new(Level::Info as u8);
+
+const DIM: &str = "\x1b[2m";
+const RED: &str = "\x1b[31m";
+const GREEN: &str = "\x1b[32m";
+const YELLOW: &str = "\x1b[33m";
+#[allow(dead_code)]
+const CYAN: &str = "\x1b[36m";
+const MAGENTA: &str = "\x1b[35m";
+const RESET: &str = "\x1b[0m";
+
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[repr(u8)]
+enum Level {
+    Error = 1,
+    Warn = 2,
+    Info = 3,
+    Debug = 4,
+}
+
+impl From<u8> for Level {
+    fn from(v: u8) -> Self {
+        match v {
+            1 => Self::Error,
+            2 => Self::Warn,
+            3 => Self::Info,
+            4 => Self::Debug,
+            _ => Self::Info,
+        }
+    }
+}
+
+impl Level {
+    fn colored_label(self) -> &'static str {
+        match self {
+            Self::Error => concat!("\x1b[31m", "ERROR", "\x1b[0m"),
+            Self::Warn => concat!("\x1b[33m", " WARN", "\x1b[0m"),
+            Self::Info => concat!("\x1b[32m", " INFO", "\x1b[0m"),
+            Self::Debug => concat!("\x1b[36m", "DEBUG", "\x1b[0m"),
+        }
+    }
+}
+
+pub(crate) fn init(level: LogLevelFilter) {
+    set_level(level);
+}
+
+pub(crate) fn set_level(level: LogLevelFilter) {
+    let v = match level {
+        LogLevelFilter::Off => 0,
+        LogLevelFilter::Error => Level::Error as u8,
+        LogLevelFilter::Warn => Level::Warn as u8,
+        LogLevelFilter::Info => Level::Info as u8,
+        LogLevelFilter::Debug | LogLevelFilter::Trace => Level::Debug as u8,
+    };
+    LEVEL.store(v, Ordering::Relaxed);
+}
+
+pub(crate) fn current_level() -> LogLevelFilter {
+    match LEVEL.load(Ordering::Relaxed) {
+        0 => LogLevelFilter::Off,
+        1 => LogLevelFilter::Error,
+        2 => LogLevelFilter::Warn,
+        3 => LogLevelFilter::Info,
+        4 => LogLevelFilter::Debug,
+        _ => LogLevelFilter::Off,
+    }
+}
+
+fn enabled(level: Level) -> bool {
+    let current = LEVEL.load(Ordering::Relaxed);
+    current >= level as u8
+}
+
+#[allow(dead_code)]
+pub(crate) fn debug(message: &str) {
+    if enabled(Level::Debug) {
+        print_log(Level::Debug, message);
+    }
+}
+
+pub(crate) fn info(message: &str) {
+    if enabled(Level::Info) {
+        print_log(Level::Info, message);
+    }
+}
+
+pub(crate) fn warn(message: &str) {
+    if enabled(Level::Warn) {
+        print_log(Level::Warn, message);
+    }
+}
+
+#[allow(dead_code)]
+pub(crate) fn error(message: &str) {
+    if enabled(Level::Error) {
+        print_log(Level::Error, message);
+    }
+}
+
+fn print_log(level: Level, message: &str) {
+    let ts = utilities::timestamp();
+    let label = level.colored_label();
+    println!("{DIM}{ts}{RESET} {label} {message}");
+}
+
+fn status_colored(status: u16) -> String {
+    match status {
+        ..=399 => format!("{GREEN}{status}{RESET}"),
+        400..=499 => format!("{YELLOW}{status}{RESET}"),
+        500.. => format!("{RED}{status}{RESET}"),
+    }
+}
+
+fn method_colored(method: &str) -> String {
+    match method {
+        "GET" => format!("{GREEN}{method}{RESET}"),
+        _ => format!("{RED}{method}{RESET}"),
+    }
+}
+
 struct LogRecord {
+    received: SystemTime,
     node: usize,
     method: String,
-    version: String,
-    user: String,
     uri: String,
-    request_headers: HashMap<String, String>,
-    request: String,
+    user: String,
     status: u16,
-    time: u128,
+    duration: u128,
+    request_headers: HashMap<String, String>,
+    request_body: String,
     response_headers: HashMap<String, String>,
-    response: String,
+    response_body: String,
 }
 
 impl LogRecord {
-    fn print(&self) {
-        let message = serde_json::to_string(&self).unwrap_or_default();
+    fn print(&self, level: Level) {
+        let Self {
+            received,
+            node,
+            method,
+            uri,
+            user,
+            status,
+            duration,
+            request_headers,
+            request_body,
+            response_headers,
+            response_body,
+        } = self;
+        let lvl = level.colored_label();
+        let status = status_colored(*status);
+        let method = method_colored(method);
+        let timestamp = utilities::format_system_time(received);
+        let user = if user.is_empty() {
+            String::new()
+        } else {
+            format!(" [{user}]")
+        };
 
-        match self.status {
-            ..=399 => {
-                if self.uri.ends_with("/cluster") {
-                    tracing::debug!(message)
-                } else {
-                    tracing::info!(message)
-                }
+        println!(
+            "{DIM}{timestamp}{RESET} {lvl} [{node}] {status} {method} {uri}{MAGENTA}{user}{RESET} {DIM}{duration}μs{RESET}",
+        );
+
+        if level != Level::Info {
+            if !request_headers.is_empty() {
+                let headers_json = serde_json::to_string(request_headers).unwrap_or_default();
+                println!("  {DIM}>Headers:{RESET} {headers_json}");
             }
-            400..=499 => tracing::warn!(message),
-            500.. => tracing::error!(message),
+            if !request_body.is_empty() {
+                println!("  {DIM}>Body:{RESET} {request_body}");
+            }
+            if !response_headers.is_empty() {
+                let headers_json = serde_json::to_string(response_headers).unwrap_or_default();
+                println!("  {DIM}<Headers:{RESET} {headers_json}");
+            }
+            if !response_body.is_empty() {
+                println!("  {DIM}<Body:{RESET} {response_body}");
+            }
         }
     }
 }
@@ -52,79 +206,138 @@ pub(crate) async fn logger(
     request: Request,
     next: Next,
 ) -> Result<impl IntoResponse, Response> {
-    let mut log_record = LogRecord::default();
-    let path = request.uri().path();
-    let skip_body = !path.contains("/api/v1/") || path.ends_with("openapi.json");
-    let request = request_log(&state, request, &mut log_record, skip_body).await?;
+    let level = LEVEL.load(Ordering::Relaxed);
+
+    if level == 0 {
+        return Ok(next.run(request).await);
+    }
+
+    let log_level = Level::from(level);
+
+    let mut record = LogRecord {
+        received: SystemTime::now(),
+        node: state.config.cluster_node_id,
+        method: request.method().to_string(),
+        uri: request.uri().to_string(),
+        user: String::new(),
+        status: 0,
+        duration: 0,
+        request_headers: HashMap::new(),
+        request_body: String::new(),
+        response_headers: HashMap::new(),
+        response_body: String::new(),
+    };
+
+    let request = inspect_request(&mut record, log_level, &state, request).await?;
+
     let now = Instant::now();
     let response = next.run(request).await;
-    log_record.time = now.elapsed().as_micros();
-    let response = response_log(&state, response, &mut log_record, skip_body).await;
+    record.duration = now.elapsed().as_micros();
+    record.status = response.status().as_u16();
 
-    log_record.print();
+    if let Some(status_level) = should_log_status(log_level, &record.uri, record.status) {
+        let show_details = state.config.log_body_limit != 0
+            && (log_level == Level::Debug || status_level == Level::Error);
+        let response = inspect_response(&mut record, response, show_details, &state).await?;
+        record.print(status_level);
+        return Ok(response);
+    }
 
-    response
+    Ok(response)
 }
 
-async fn request_log(
+fn should_log_status(log_level: Level, uri: &str, status: u16) -> Option<Level> {
+    if log_level < Level::Debug
+        && (uri.ends_with("/api/v1/status")
+            || uri.ends_with("/api/v1/cluster")
+            || uri.ends_with("/api/v1/cluster/status"))
+    {
+        return None;
+    }
+
+    match status {
+        500.. => Some(Level::Error),
+        400..=499 if log_level >= Level::Warn => Some(Level::Warn),
+        _ if log_level >= Level::Info => Some(Level::Info),
+        _ => None,
+    }
+}
+
+async fn inspect_request(
+    record: &mut LogRecord,
+    log_level: Level,
     state: &State<ServerState>,
-    request: Request,
-    log_record: &mut LogRecord,
-    skip_body: bool,
-) -> Result<Request, Response> {
-    log_record.node = state.config.cluster_node_id;
-    log_record.method = request.method().to_string();
-    log_record.uri = request.uri().to_string();
-    log_record.version = format!("{:?}", request.version());
-    log_record.request_headers = request
-        .headers()
+    request: axum::http::Request<Body>,
+) -> Result<axum::http::Request<Body>, axum::http::Response<Body>> {
+    let (mut parts, mut body) = request.into_parts();
+
+    record.user = parts
+        .extract_with_state::<UserName, ServerState>(state)
+        .await
+        .unwrap_or_default()
+        .0;
+
+    if log_level >= Level::Debug && state.config.log_body_limit != 0 {
+        let bytes = body.collect().await.map_err(map_error)?.to_bytes();
+        let limit = bytes.len().min(state.config.log_body_limit as usize);
+        record.request_body = String::from_utf8_lossy(&bytes[..limit]).into_owned();
+        mask_password(&record.uri, &mut record.request_body);
+        body = Body::from(bytes);
+
+        record.request_headers = parts
+            .headers
+            .iter()
+            .map(|(k, v)| (k.to_string(), v.to_str().unwrap_or("").to_string()))
+            .collect();
+    }
+
+    Ok(Request::from_parts(parts, body))
+}
+
+async fn inspect_response(
+    record: &mut LogRecord,
+    response: axum::http::Response<Body>,
+    show_details: bool,
+    state: &State<ServerState>,
+) -> Result<axum::http::Response<Body>, axum::http::Response<Body>> {
+    if !show_details {
+        return Ok(response);
+    }
+
+    let (parts, mut body) = response.into_parts();
+
+    let bytes = body.collect().await.map_err(map_error)?.to_bytes();
+    let limit = bytes.len().min(state.config.log_body_limit as usize);
+    record.response_body = String::from_utf8_lossy(&bytes[..limit]).into_owned();
+    body = Body::from(bytes);
+
+    record.response_headers = parts
+        .headers
         .iter()
         .map(|(k, v)| (k.to_string(), v.to_str().unwrap_or("").to_string()))
         .collect();
 
-    if !skip_body {
-        let (mut parts, body) = request.into_parts();
-        let bytes = body.collect().await.map_err(map_error)?.to_bytes();
-        let log_bytes = if bytes.len() > state.config.log_body_limit as usize {
-            &bytes[..state.config.log_body_limit as usize]
-        } else {
-            &bytes
-        };
-        log_record.request = String::from_utf8_lossy(log_bytes).to_string();
-
-        mask_password(log_record);
-
-        log_record.user = parts
-            .extract_with_state::<UserName, ServerState>(state)
-            .await
-            .unwrap_or_default()
-            .0;
-
-        return Ok(Request::from_parts(parts, Body::from(bytes)));
-    }
-
-    Ok(request)
+    Ok(Response::from_parts(parts, body))
 }
 
-fn mask_password(log_record: &mut LogRecord) {
-    if log_record.uri.contains("/login")
-        || log_record.uri.contains("/change_password")
-        || (log_record.uri.contains("/admin/user/") && log_record.uri.contains("/add"))
+fn mask_password(uri: &str, body: &mut String) {
+    if uri.contains("/login")
+        || uri.contains("/change_password")
+        || (uri.contains("/admin/user/") && uri.contains("/add"))
     {
         const PASSWORD_PATTERNS: [&str; 2] = ["\"password\"", "\"new_password\""];
         const QUOTE_PATTERN: &str = "\"";
 
         for pattern in PASSWORD_PATTERNS {
-            if let Some(starting_index) = log_record.request.find(pattern)
-                && let Some(start) =
-                    log_record.request[starting_index + pattern.len()..].find(QUOTE_PATTERN)
+            if let Some(starting_index) = body.find(pattern)
+                && let Some(start) = body[starting_index + pattern.len()..].find(QUOTE_PATTERN)
             {
                 let mut skip = false;
                 let start = starting_index + pattern.len() + start;
                 let mut end = start + 1;
 
-                for c in log_record.request[start + 1..].chars() {
-                    end += 1;
+                for c in body[start + 1..].chars() {
+                    end += c.len_utf8();
 
                     if skip {
                         skip = false;
@@ -135,43 +348,10 @@ fn mask_password(log_record: &mut LogRecord) {
                     }
                 }
 
-                log_record.request = format!(
-                    "{}\"***\"{}",
-                    &log_record.request[..start],
-                    &log_record.request[end..]
-                );
+                *body = format!("{}\"***\"{}", &body[..start], &body[end..]);
             }
         }
     }
-}
-
-async fn response_log(
-    state: &State<ServerState>,
-    response: Response,
-    log_record: &mut LogRecord,
-    skip_body: bool,
-) -> Result<Response, Response> {
-    log_record.status = response.status().as_u16();
-    log_record.response_headers = response
-        .headers()
-        .iter()
-        .map(|(k, v)| (k.to_string(), v.to_str().unwrap_or("").to_string()))
-        .collect();
-
-    if !skip_body {
-        let (parts, body) = response.into_parts();
-        let bytes = body.collect().await.map_err(map_error)?.to_bytes();
-        let log_bytes = if bytes.len() > state.config.log_body_limit as usize {
-            &bytes[..state.config.log_body_limit as usize]
-        } else {
-            &bytes
-        };
-        log_record.response = String::from_utf8_lossy(log_bytes).to_string();
-
-        return Ok(Response::from_parts(parts, Body::from(bytes)));
-    }
-
-    Ok(response)
 }
 
 fn map_error(error: AxumError) -> Response {
@@ -184,20 +364,32 @@ fn map_error(error: AxumError) -> Response {
 mod tests {
     use super::*;
 
-    fn log_record(uri: &str, request_body: &str) -> LogRecord {
-        LogRecord {
-            node: 0,
-            method: "GET".to_string(),
-            uri: uri.to_string(),
-            version: "HTTP/1.1".to_string(),
-            user: String::new(),
-            request_headers: HashMap::new(),
-            request: request_body.to_string(),
-            status: StatusCode::OK.as_u16(),
-            time: 0,
-            response_headers: HashMap::new(),
-            response: String::new(),
-        }
+    #[test]
+    fn level_ordering() {
+        assert!(Level::Error < Level::Warn);
+        assert!(Level::Warn < Level::Info);
+        assert!(Level::Info < Level::Debug);
+    }
+
+    #[test]
+    fn set_and_get_level() {
+        set_level(LogLevelFilter::Warn);
+        assert_eq!(current_level(), LogLevelFilter::Warn);
+        set_level(LogLevelFilter::Info);
+        assert_eq!(current_level(), LogLevelFilter::Info);
+    }
+
+    #[test]
+    fn trace_maps_to_debug() {
+        set_level(LogLevelFilter::Trace);
+        assert_eq!(current_level(), LogLevelFilter::Debug);
+    }
+
+    #[test]
+    fn off_level() {
+        set_level(LogLevelFilter::Off);
+        assert_eq!(current_level(), LogLevelFilter::Off);
+        assert!(!enabled(Level::Error));
     }
 
     #[tokio::test]
@@ -211,90 +403,72 @@ mod tests {
     }
 
     #[test]
-    fn log_error_test() {
-        let log_record = LogRecord {
-            node: 0,
-            method: "GET".to_string(),
-            uri: "/".to_string(),
-            version: "HTTP/1.1".to_string(),
-            user: "user".to_string(),
-            request_headers: HashMap::new(),
-            request: String::new(),
-            status: 500,
-            time: 1,
-            response_headers: HashMap::new(),
-            response: String::new(),
-        };
-        log_record.print();
-    }
-
-    #[test]
     fn mask_password_login() {
-        let mut record = log_record("/login", "\"password\":\"password\"");
-        mask_password(&mut record);
-        assert_eq!(record.request, "\"password\":\"***\"");
+        let mut body = "\"password\":\"password\"".to_string();
+        mask_password("/login", &mut body);
+        assert_eq!(body, "\"password\":\"***\"");
     }
 
     #[test]
     fn mask_password_change_password() {
-        let mut record = log_record("/change_password", "\"password\":\"password\"");
-        mask_password(&mut record);
-        assert_eq!(record.request, "\"password\":\"***\"");
+        let mut body = "\"password\":\"password\"".to_string();
+        mask_password("/change_password", &mut body);
+        assert_eq!(body, "\"password\":\"***\"");
     }
 
     #[test]
     fn mask_password_admin_user_add() {
-        let mut record = log_record("/admin/user/user1/add", "\"password\":\"password\"");
-        mask_password(&mut record);
-        assert_eq!(record.request, "\"password\":\"***\"");
+        let mut body = "\"password\":\"password\"".to_string();
+        mask_password("/admin/user/user1/add", &mut body);
+        assert_eq!(body, "\"password\":\"***\"");
     }
 
     #[test]
     fn mask_password_exec() {
-        let mut record = log_record("/db/exec", "\"password\":\"password\"");
-        mask_password(&mut record);
-        assert_eq!(record.request, "\"password\":\"password\"");
+        let mut body = "\"password\":\"password\"".to_string();
+        mask_password("/db/exec", &mut body);
+        assert_eq!(body, "\"password\":\"password\"");
     }
 
     #[test]
     fn mask_password_spaces() {
-        let mut record = log_record("/login", "\"password\" : \" password \" ");
-        mask_password(&mut record);
-        assert_eq!(record.request, "\"password\" : \"***\" ");
+        let mut body = "\"password\" : \" password \" ".to_string();
+        mask_password("/login", &mut body);
+        assert_eq!(body, "\"password\" : \"***\" ");
     }
 
     #[test]
     fn mask_password_quote_in_password() {
-        let mut record = log_record("/login", "\"password\":\" pass\\\"word \"");
-        mask_password(&mut record);
-        assert_eq!(record.request, "\"password\":\"***\"");
+        let mut body = "\"password\":\" pass\\\"word \"".to_string();
+        mask_password("/login", &mut body);
+        assert_eq!(body, "\"password\":\"***\"");
     }
 
     #[test]
     fn mask_password_no_password() {
-        let mut record = log_record("/login", "\"body\":\"value\"");
-        mask_password(&mut record);
-        assert_eq!(record.request, "\"body\":\"value\"");
+        let mut body = "\"body\":\"value\"".to_string();
+        mask_password("/login", &mut body);
+        assert_eq!(body, "\"body\":\"value\"");
     }
 
     #[test]
     fn mask_password_no_ending() {
-        let mut record = log_record("/login", "\"password\":\"value");
-        mask_password(&mut record);
-        assert_eq!(record.request, "\"password\":\"***\"");
+        let mut body = "\"password\":\"value".to_string();
+        mask_password("/login", &mut body);
+        assert_eq!(body, "\"password\":\"***\"");
     }
 
     #[test]
     fn mask_password_no_value() {
-        let mut record = log_record("/login", "\"password\":\"");
-        mask_password(&mut record);
-        assert_eq!(record.request, "\"password\":\"***\"");
+        let mut body = "\"password\":\"".to_string();
+        mask_password("/login", &mut body);
+        assert_eq!(body, "\"password\":\"***\"");
     }
 
     #[test]
     fn mask_password_no_quote() {
-        let mut record = log_record("/login", "\"password\":");
-        mask_password(&mut record);
-        assert_eq!(record.request, "\"password\":");
+        let mut body = "\"password\":".to_string();
+        mask_password("/login", &mut body);
+        assert_eq!(body, "\"password\":");
     }
 }

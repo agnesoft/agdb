@@ -9,7 +9,6 @@ use agdb_api::config_impl::SALT_LEN;
 use std::sync::Arc;
 use std::time::SystemTime;
 use std::time::UNIX_EPOCH;
-use tracing::warn;
 
 pub(crate) type Config = Arc<ConfigImpl>;
 
@@ -226,8 +225,8 @@ fn normalize_address(config: &mut ConfigImpl) {
     if let Some((protocol, address)) = config.address.split_once("://") {
         if let Some((url, path)) = address.split_once('/') {
             if !path.is_empty() {
-                warn!(
-                    "Path component in address is ignored, use 'basepath' to specify the path component of the address."
+                crate::logger::warn(
+                    "Path component in address is ignored, use 'basepath' to specify the path component of the address.",
                 );
             }
             config.address = format!("{protocol}://{url}");

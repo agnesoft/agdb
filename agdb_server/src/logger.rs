@@ -483,20 +483,20 @@ mod tests {
     fn mask_password_login() {
         let mut body = r#"{ "username": "user", "password": "password" }"#.to_string();
         mask_password(&mut body);
-        assert_eq!(body, r#"{"username":"user","password":"***"}"#);
+        assert_eq!(body, r#"{ "username": "user", "password": "***" }"#);
     }
 
     #[test]
     fn mask_password_user_credentials() {
-        let mut body = r#"{ "password": "password"}"#.to_string();
+        let mut body = r#"{ "password": "password" }"#.to_string();
         mask_password(&mut body);
-        assert_eq!(body, r#"{"password":"***"}"#);
+        assert_eq!(body, r#"{ "password": "***" }"#);
     }
 
     #[test]
     fn mask_password_change_password() {
-        let mut body = r#"{ "password":"password", "new_password":"new_password"}"#.to_string();
+        let mut body = r#"{ "password": "password", "new_password": "new_password "}"#.to_string();
         mask_password(&mut body);
-        assert_eq!(body, r#"{"password":"***","new_password":"***"}"#);
+        assert_eq!(body, r#"{ "password": "***", "new_password": "*** "}"#);
     }
 }

@@ -17,7 +17,6 @@ use std::io::IsTerminal;
 use std::sync::atomic::AtomicU8;
 use std::sync::atomic::Ordering;
 use std::time::Instant;
-use std::time::SystemTime;
 
 static LEVEL: AtomicU8 = AtomicU8::new(Level::Info as u8);
 
@@ -176,39 +175,52 @@ struct LogRecord {
 
 impl LogRecord {
     fn print(&self, level: Level) {
-        let lvl = level.colored_label();
         let status = status_colored(self.status);
         let method = method_colored(&self.method);
-        let timestamp = utilities::format_system_time(&SystemTime::now());
         let user = if self.user.is_empty() {
             String::new()
         } else {
             format!(" [{}]", colorize(MAGENTA, &self.user))
         };
-        let timestamp = colorize(DIM, timestamp);
         let duration = colorize(DIM, format!("{}μs", self.duration));
         let node = self.node;
         let uri = &self.uri;
 
-        println!("{timestamp} {lvl} [{node}] {status} {method} {uri}{user} {duration}",);
+        let mut message = format!("[{node}] {status} {method} {uri}{user} {duration}");
 
         if level != Level::Info {
             if !self.request_headers.is_empty() {
                 let headers_json = serde_json::to_string(&self.request_headers).unwrap_or_default();
-                println!("  {} {headers_json}", colorize(DIM, "> Headers:"));
+                message.push_str(&format!(
+                    "\n  {} {headers_json}",
+                    colorize(DIM, "> Headers:")
+                ));
             }
             if !self.request_body.is_empty() {
-                println!("  {} {}", colorize(DIM, "> Body:"), self.request_body);
+                message.push_str(&format!(
+                    "\n  {} {}",
+                    colorize(DIM, "> Body:"),
+                    self.request_body
+                ));
             }
             if !self.response_headers.is_empty() {
                 let headers_json =
                     serde_json::to_string(&self.response_headers).unwrap_or_default();
-                println!("  {} {headers_json}", colorize(DIM, "< Headers:"));
+                message.push_str(&format!(
+                    "\n  {} {headers_json}",
+                    colorize(DIM, "< Headers:")
+                ));
             }
             if !self.response_body.is_empty() {
-                println!("  {} {}", colorize(DIM, "< Body:"), self.response_body);
+                message.push_str(&format!(
+                    "\n  {} {}",
+                    colorize(DIM, "< Body:"),
+                    self.response_body
+                ));
             }
         }
+
+        print_log(level, &message);
     }
 }
 
@@ -297,7 +309,13 @@ async fn inspect_request(
         record.request_headers = parts
             .headers
             .iter()
-            .map(|(k, v)| (k.to_string(), v.to_str().unwrap_or("").to_string()))
+            .map(|(k, v)| {
+                if k.as_str() == "authorization" {
+                    (k.to_string(), "***".to_string())
+                } else {
+                    (k.to_string(), v.to_str().unwrap_or("").to_string())
+                }
+            })
             .collect();
     }
 
@@ -335,31 +353,29 @@ fn mask_password(uri: &str, body: &mut String) {
         || uri.contains("/change_password")
         || (uri.contains("/admin/user/") && uri.contains("/add"))
     {
-        const PASSWORD_PATTERNS: [&str; 2] = ["\"password\"", "\"new_password\""];
-        const QUOTE_PATTERN: &str = "\"";
+        if let Ok(user_loging) = serde_json::from_str::<agdb_api::UserLogin>(body) {
+            *body = serde_json::to_string(&agdb_api::UserLogin {
+                username: user_loging.username,
+                password: "***".to_string(),
+            })
+            .unwrap_or_default();
+            return;
+        }
 
-        for pattern in PASSWORD_PATTERNS {
-            if let Some(starting_index) = body.find(pattern)
-                && let Some(start) = body[starting_index + pattern.len()..].find(QUOTE_PATTERN)
-            {
-                let mut skip = false;
-                let start = starting_index + pattern.len() + start;
-                let mut end = start + 1;
+        if serde_json::from_str::<agdb_api::UserCredentials>(body).is_ok() {
+            *body = serde_json::to_string(&agdb_api::UserCredentials {
+                password: "***".to_string(),
+            })
+            .unwrap_or_default();
+            return;
+        }
 
-                for c in body[start + 1..].chars() {
-                    end += c.len_utf8();
-
-                    if skip {
-                        skip = false;
-                    } else if c == '\\' {
-                        skip = true;
-                    } else if c == '"' {
-                        break;
-                    }
-                }
-
-                *body = format!("{}\"***\"{}", &body[..start], &body[end..]);
-            }
+        if serde_json::from_str::<agdb_api::ChangePassword>(body).is_ok() {
+            *body = serde_json::to_string(&agdb_api::ChangePassword {
+                password: "***".to_string(),
+                new_password: "***".to_string(),
+            })
+            .unwrap_or_default();
         }
     }
 }

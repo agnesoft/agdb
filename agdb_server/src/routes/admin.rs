@@ -93,7 +93,7 @@ pub(crate) async fn set_log_level(
     request: Query<SetLogLevelRequest>,
 ) -> StatusCode {
     logger::set_level(request.new_level);
-    logger::info(&format!("Log level changed to: {}", request.new_level));
+    crate::info!("Log level changed to: {}", request.new_level);
     StatusCode::OK
 }
 

@@ -114,7 +114,7 @@ pub(crate) async fn new(
     let expiry = config.token_expiry_seconds;
 
     if let Err(e) = db.remove_expired_tokens().await {
-        crate::logger::warn(&format!("Token cleanup on startup failed: {e:?}"));
+        crate::warn!("Token cleanup on startup failed: {e:?}");
     }
 
     let cleanup_db = db.clone();
@@ -128,7 +128,7 @@ pub(crate) async fn new(
                         .remove_expired_tokens()
                         .await
                     {
-                        crate::logger::warn(&format!("Token cleanup failed: {e:?}"));
+                        crate::warn!("Token cleanup failed: {e:?}");
                     }
                 }
                 _ = shutdown_receiver.recv() => {

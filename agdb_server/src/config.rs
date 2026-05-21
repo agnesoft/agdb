@@ -225,7 +225,7 @@ fn normalize_address(config: &mut ConfigImpl) {
     if let Some((protocol, address)) = config.address.split_once("://") {
         if let Some((url, path)) = address.split_once('/') {
             if !path.is_empty() {
-                crate::logger::warn(
+                crate::warn!(
                     "Path component in address is ignored, use 'basepath' to specify the path component of the address.",
                 );
             }

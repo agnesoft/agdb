@@ -88,14 +88,6 @@ pub(crate) fn timestamp() -> String {
     })
 }
 
-pub(crate) fn format_system_time(time: &SystemTime) -> String {
-    let secs = time
-        .duration_since(UNIX_EPOCH)
-        .unwrap_or_default()
-        .as_secs();
-    format_unix_timestamp(secs)
-}
-
 fn format_unix_timestamp(secs: u64) -> String {
     let (year, month, day, hour, min, sec) = secs_to_datetime(secs);
     format!("{year:04}-{month:02}-{day:02}T{hour:02}:{min:02}:{sec:02}Z")

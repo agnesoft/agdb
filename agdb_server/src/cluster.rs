@@ -155,10 +155,12 @@ impl ClusterNodeImpl {
         {
             Ok((_, response)) => Some(response),
             Err(e) => {
-                crate::logger::warn(&format!(
+                crate::warn!(
                     "[{}] Error sending request to cluster node '{}': {:?}",
-                    request.index, request.target, e
-                ));
+                    request.index,
+                    request.target,
+                    e
+                );
                 None
             }
         }
@@ -233,9 +235,9 @@ async fn start_cluster(cluster: Cluster, shutdown_signal: Arc<AtomicBool>) -> Se
                     if let Some(response) = node.send(&request).await {
                         match node.responses.send((request, response)) {
                             Ok(_) => {}
-                            Err(e) => crate::logger::warn(&format!(
+                            Err(e) => crate::warn!(
                                 "[{index}] Error sending response to cluster node '{node_index}': {e:?}"
-                            )),
+                            ),
                         };
                     }
                 } else {
@@ -273,9 +275,9 @@ async fn start_cluster(cluster: Cluster, shutdown_signal: Arc<AtomicBool>) -> Se
                             .requests_sender
                             .send(request)
                             .inspect_err(|e| {
-                                crate::logger::warn(&format!(
+                                crate::warn!(
                                     "[{index}] Error sending follow up request to node '{target}': {e:?}"
-                                ))
+                                )
                             });
                     }
                 }
@@ -294,9 +296,9 @@ async fn start_cluster(cluster: Cluster, shutdown_signal: Arc<AtomicBool>) -> Se
                     .requests_sender
                     .send(request)
                     .inspect_err(|e| {
-                        crate::logger::warn(&format!(
+                        crate::warn!(
                             "[{index}] Error sending new request to node '{target}': {e:?}"
-                        ))
+                        )
                     });
             }
         }

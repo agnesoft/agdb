@@ -789,7 +789,7 @@ mod test {
                             let response = target.write().await.cluster.request(&request).await;
                             responses_channel.send((request, response)).await?;
                         } else {
-                            crate::logger::info(&format!("Blocked: {:?}", request));
+                            crate::info!("Blocked: {:?}", request);
                         }
                     }
                 }
@@ -803,7 +803,7 @@ mod test {
             tokio::spawn(async move {
                 while !shutdown.load(Ordering::Relaxed) {
                     if let Some((request, response)) = responses_receiver.recv().await {
-                        crate::logger::info(&format!("{:?} -> {:?}", request, response));
+                        crate::info!("{:?} -> {:?}", request, response);
                         let origin = nodes.read().await[response.target as usize].clone();
                         let new_requests = origin
                             .write()

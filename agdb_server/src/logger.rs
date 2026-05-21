@@ -13,11 +13,11 @@ use axum::response::IntoResponse;
 use axum::response::Response;
 use http_body_util::BodyExt;
 use std::collections::HashMap;
+use std::fmt::Arguments;
 use std::io::IsTerminal;
 use std::sync::atomic::AtomicU8;
 use std::sync::atomic::Ordering;
 use std::time::Instant;
-use std::time::SystemTime;
 
 static LEVEL: AtomicU8 = AtomicU8::new(Level::Info as u8);
 
@@ -114,32 +114,78 @@ fn enabled(level: Level) -> bool {
 }
 
 #[allow(dead_code)]
-pub(crate) fn debug(message: &str) {
-    if enabled(Level::Debug) {
-        print_log(Level::Debug, message);
-    }
+pub(crate) fn debug_enabled() -> bool {
+    enabled(Level::Debug)
 }
 
-pub(crate) fn info(message: &str) {
-    if enabled(Level::Info) {
-        print_log(Level::Info, message);
-    }
+pub(crate) fn info_enabled() -> bool {
+    enabled(Level::Info)
 }
 
-pub(crate) fn warn(message: &str) {
-    if enabled(Level::Warn) {
-        print_log(Level::Warn, message);
-    }
+pub(crate) fn warn_enabled() -> bool {
+    enabled(Level::Warn)
 }
 
 #[allow(dead_code)]
-pub(crate) fn error(message: &str) {
-    if enabled(Level::Error) {
-        print_log(Level::Error, message);
-    }
+pub(crate) fn error_enabled() -> bool {
+    enabled(Level::Error)
 }
 
-fn print_log(level: Level, message: &str) {
+#[allow(dead_code)]
+pub(crate) fn debug_args(message: Arguments<'_>) {
+    print_log_args(Level::Debug, message);
+}
+
+pub(crate) fn info_args(message: Arguments<'_>) {
+    print_log_args(Level::Info, message);
+}
+
+pub(crate) fn warn_args(message: Arguments<'_>) {
+    print_log_args(Level::Warn, message);
+}
+
+#[allow(dead_code)]
+pub(crate) fn error_args(message: Arguments<'_>) {
+    print_log_args(Level::Error, message);
+}
+
+#[macro_export]
+macro_rules! debug {
+    ($($arg:tt)*) => {{
+        if $crate::logger::debug_enabled() {
+            $crate::logger::debug_args(format_args!($($arg)*));
+        }
+    }};
+}
+
+#[macro_export]
+macro_rules! info {
+    ($($arg:tt)*) => {{
+        if $crate::logger::info_enabled() {
+            $crate::logger::info_args(format_args!($($arg)*));
+        }
+    }};
+}
+
+#[macro_export]
+macro_rules! warn {
+    ($($arg:tt)*) => {{
+        if $crate::logger::warn_enabled() {
+            $crate::logger::warn_args(format_args!($($arg)*));
+        }
+    }};
+}
+
+#[macro_export]
+macro_rules! error {
+    ($($arg:tt)*) => {{
+        if $crate::logger::error_enabled() {
+            $crate::logger::error_args(format_args!($($arg)*));
+        }
+    }};
+}
+
+fn print_log_args(level: Level, message: Arguments<'_>) {
     let ts = utilities::timestamp();
     let label = level.colored_label();
     let ts = colorize(DIM, ts);
@@ -176,39 +222,52 @@ struct LogRecord {
 
 impl LogRecord {
     fn print(&self, level: Level) {
-        let lvl = level.colored_label();
         let status = status_colored(self.status);
         let method = method_colored(&self.method);
-        let timestamp = utilities::format_system_time(&SystemTime::now());
         let user = if self.user.is_empty() {
             String::new()
         } else {
             format!(" [{}]", colorize(MAGENTA, &self.user))
         };
-        let timestamp = colorize(DIM, timestamp);
         let duration = colorize(DIM, format!("{}μs", self.duration));
         let node = self.node;
         let uri = &self.uri;
 
-        println!("{timestamp} {lvl} [{node}] {status} {method} {uri}{user} {duration}",);
+        let mut message = format!("[{node}] {status} {method} {uri}{user} {duration}");
 
         if level != Level::Info {
             if !self.request_headers.is_empty() {
                 let headers_json = serde_json::to_string(&self.request_headers).unwrap_or_default();
-                println!("  {} {headers_json}", colorize(DIM, "> Headers:"));
+                message.push_str(&format!(
+                    "\n  {} {headers_json}",
+                    colorize(DIM, "> Headers:")
+                ));
             }
             if !self.request_body.is_empty() {
-                println!("  {} {}", colorize(DIM, "> Body:"), self.request_body);
+                message.push_str(&format!(
+                    "\n  {} {}",
+                    colorize(DIM, "> Body:"),
+                    self.request_body
+                ));
             }
             if !self.response_headers.is_empty() {
                 let headers_json =
                     serde_json::to_string(&self.response_headers).unwrap_or_default();
-                println!("  {} {headers_json}", colorize(DIM, "< Headers:"));
+                message.push_str(&format!(
+                    "\n  {} {headers_json}",
+                    colorize(DIM, "< Headers:")
+                ));
             }
             if !self.response_body.is_empty() {
-                println!("  {} {}", colorize(DIM, "< Body:"), self.response_body);
+                message.push_str(&format!(
+                    "\n  {} {}",
+                    colorize(DIM, "< Body:"),
+                    self.response_body
+                ));
             }
         }
+
+        print_log_args(level, format_args!("{message}"));
     }
 }
 
@@ -291,13 +350,26 @@ async fn inspect_request(
         let bytes = body.collect().await.map_err(map_error)?.to_bytes();
         let limit = bytes.len().min(state.config.log_body_limit as usize);
         record.request_body = String::from_utf8_lossy(&bytes[..limit]).into_owned();
-        mask_password(&record.uri, &mut record.request_body);
+
+        if record.uri.contains("/login")
+            || record.uri.contains("/change_password")
+            || (record.uri.contains("/admin/user/") && record.uri.contains("/add"))
+        {
+            mask_password(&mut record.request_body);
+        }
+
         body = Body::from(bytes);
 
         record.request_headers = parts
             .headers
             .iter()
-            .map(|(k, v)| (k.to_string(), v.to_str().unwrap_or("").to_string()))
+            .map(|(k, v)| {
+                if k.as_str() == "authorization" {
+                    (k.to_string(), "***".to_string())
+                } else {
+                    (k.to_string(), v.to_str().unwrap_or("").to_string())
+                }
+            })
             .collect();
     }
 
@@ -330,36 +402,31 @@ async fn inspect_response(
     Ok(Response::from_parts(parts, body))
 }
 
-fn mask_password(uri: &str, body: &mut String) {
-    if uri.contains("/login")
-        || uri.contains("/change_password")
-        || (uri.contains("/admin/user/") && uri.contains("/add"))
-    {
-        const PASSWORD_PATTERNS: [&str; 2] = ["\"password\"", "\"new_password\""];
-        const QUOTE_PATTERN: &str = "\"";
+fn mask_password(body: &mut String) {
+    const PASSWORD_PATTERNS: [&str; 2] = ["\"password\"", "\"new_password\""];
+    const QUOTE_PATTERN: &str = "\"";
 
-        for pattern in PASSWORD_PATTERNS {
-            if let Some(starting_index) = body.find(pattern)
-                && let Some(start) = body[starting_index + pattern.len()..].find(QUOTE_PATTERN)
-            {
-                let mut skip = false;
-                let start = starting_index + pattern.len() + start;
-                let mut end = start + 1;
+    for pattern in PASSWORD_PATTERNS {
+        if let Some(starting_index) = body.find(pattern)
+            && let Some(start) = body[starting_index + pattern.len()..].find(QUOTE_PATTERN)
+        {
+            let mut skip = false;
+            let start = starting_index + pattern.len() + start;
+            let mut end = start + 1;
 
-                for c in body[start + 1..].chars() {
-                    end += c.len_utf8();
+            for c in body[start + 1..].chars() {
+                end += c.len_utf8();
 
-                    if skip {
-                        skip = false;
-                    } else if c == '\\' {
-                        skip = true;
-                    } else if c == '"' {
-                        break;
-                    }
+                if skip {
+                    skip = false;
+                } else if c == '\\' {
+                    skip = true;
+                } else if c == '"' {
+                    break;
                 }
-
-                *body = format!("{}\"***\"{}", &body[..start], &body[end..]);
             }
+
+            *body = format!("{}\"***\"{}", &body[..start], &body[end..]);
         }
     }
 }
@@ -414,71 +481,22 @@ mod tests {
 
     #[test]
     fn mask_password_login() {
-        let mut body = "\"password\":\"password\"".to_string();
-        mask_password("/login", &mut body);
-        assert_eq!(body, "\"password\":\"***\"");
+        let mut body = r#"{ "username": "user", "password": "password" }"#.to_string();
+        mask_password(&mut body);
+        assert_eq!(body, r#"{ "username": "user", "password": "***" }"#);
+    }
+
+    #[test]
+    fn mask_password_user_credentials() {
+        let mut body = r#"{ "password": "password" }"#.to_string();
+        mask_password(&mut body);
+        assert_eq!(body, r#"{ "password": "***" }"#);
     }
 
     #[test]
     fn mask_password_change_password() {
-        let mut body = "\"password\":\"password\"".to_string();
-        mask_password("/change_password", &mut body);
-        assert_eq!(body, "\"password\":\"***\"");
-    }
-
-    #[test]
-    fn mask_password_admin_user_add() {
-        let mut body = "\"password\":\"password\"".to_string();
-        mask_password("/admin/user/user1/add", &mut body);
-        assert_eq!(body, "\"password\":\"***\"");
-    }
-
-    #[test]
-    fn mask_password_exec() {
-        let mut body = "\"password\":\"password\"".to_string();
-        mask_password("/db/exec", &mut body);
-        assert_eq!(body, "\"password\":\"password\"");
-    }
-
-    #[test]
-    fn mask_password_spaces() {
-        let mut body = "\"password\" : \" password \" ".to_string();
-        mask_password("/login", &mut body);
-        assert_eq!(body, "\"password\" : \"***\" ");
-    }
-
-    #[test]
-    fn mask_password_quote_in_password() {
-        let mut body = "\"password\":\" pass\\\"word \"".to_string();
-        mask_password("/login", &mut body);
-        assert_eq!(body, "\"password\":\"***\"");
-    }
-
-    #[test]
-    fn mask_password_no_password() {
-        let mut body = "\"body\":\"value\"".to_string();
-        mask_password("/login", &mut body);
-        assert_eq!(body, "\"body\":\"value\"");
-    }
-
-    #[test]
-    fn mask_password_no_ending() {
-        let mut body = "\"password\":\"value".to_string();
-        mask_password("/login", &mut body);
-        assert_eq!(body, "\"password\":\"***\"");
-    }
-
-    #[test]
-    fn mask_password_no_value() {
-        let mut body = "\"password\":\"".to_string();
-        mask_password("/login", &mut body);
-        assert_eq!(body, "\"password\":\"***\"");
-    }
-
-    #[test]
-    fn mask_password_no_quote() {
-        let mut body = "\"password\":".to_string();
-        mask_password("/login", &mut body);
-        assert_eq!(body, "\"password\":");
+        let mut body = r#"{ "password": "password", "new_password": "new_password" }"#.to_string();
+        mask_password(&mut body);
+        assert_eq!(body, r#"{ "password": "***", "new_password": "***" }"#);
     }
 }

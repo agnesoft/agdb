@@ -47,12 +47,12 @@ async fn main() -> ServerResult {
     )?;
     let cluster_handle = cluster::start_with_shutdown(cluster, shutdown_receiver);
 
-    logger::info(&format!("Process id: {}", std::process::id()));
-    logger::info(&format!("Log level: {}", config.log_level));
-    logger::info(&format!(
+    crate::info!("Process id: {}", std::process::id());
+    crate::info!("Log level: {}", config.log_level);
+    crate::info!(
         "Data directory: {}",
         std::env::current_dir()?.join(&config.data_dir).display()
-    ));
+    );
 
     #[cfg(feature = "tls")]
     if !config.tls_certificate.is_empty() && !config.tls_key.is_empty() {
@@ -68,17 +68,17 @@ async fn main() -> ServerResult {
         let handle = axum_server::Handle::new();
         let shutdown_handle = handle.clone();
 
-        logger::info("TLS enabled");
-        logger::debug(&format!("TLS certificate: {}", config.tls_certificate));
-        logger::debug(&format!("TLS key: {}", config.tls_key));
+        crate::info!("TLS enabled");
+        crate::debug!("TLS certificate: {}", config.tls_certificate);
+        crate::debug!("TLS key: {}", config.tls_key);
 
         tokio::spawn(async move {
             cluster_handle.await;
             shutdown_handle.graceful_shutdown(Some(std::time::Duration::from_secs(5)));
         });
 
-        logger::info(&format!("Address: {}", config.server_url()));
-        logger::info(&format!("Listening at {}", config.bind));
+        crate::info!("Address: {}", config.server_url());
+        crate::info!("Listening at {}", config.bind);
         let address = std::net::ToSocketAddrs::to_socket_addrs(&config.bind)?
             .next()
             .expect("failed to parse the config.bind to SocketAddr");
@@ -88,8 +88,8 @@ async fn main() -> ServerResult {
             .await?);
     }
 
-    logger::info(&format!("Address: {}", config.server_url()));
-    logger::info(&format!("Listening at {}", config.bind));
+    crate::info!("Address: {}", config.server_url());
+    crate::info!("Listening at {}", config.bind);
     let listener = TcpListener::bind(&config.bind).await?;
     axum::serve(listener, app)
         .with_graceful_shutdown(cluster_handle)

@@ -113,6 +113,7 @@ fn enabled(level: Level) -> bool {
     current >= level as u8
 }
 
+#[allow(dead_code)]
 pub(crate) fn debug_enabled() -> bool {
     enabled(Level::Debug)
 }
@@ -130,6 +131,7 @@ pub(crate) fn error_enabled() -> bool {
     enabled(Level::Error)
 }
 
+#[allow(dead_code)]
 pub(crate) fn debug_args(message: Arguments<'_>) {
     print_log_args(Level::Debug, message);
 }

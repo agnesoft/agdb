@@ -495,8 +495,8 @@ mod tests {
 
     #[test]
     fn mask_password_change_password() {
-        let mut body = r#"{ "password": "password", "new_password": "new_password "}"#.to_string();
+        let mut body = r#"{ "password": "password", "new_password": "new_password" }"#.to_string();
         mask_password(&mut body);
-        assert_eq!(body, r#"{ "password": "***", "new_password": "*** "}"#);
+        assert_eq!(body, r#"{ "password": "***", "new_password": "***" }"#);
     }
 }

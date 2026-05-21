@@ -177,7 +177,7 @@ macro_rules! warn {
 }
 
 #[macro_export]
-macro_rules! err {
+macro_rules! error {
     ($($arg:tt)*) => {{
         if $crate::logger::error_enabled() {
             $crate::logger::error_args(format_args!($($arg)*));
@@ -349,16 +349,13 @@ async fn inspect_request(
     if log_level >= Level::Debug && state.config.log_body_limit != 0 {
         let bytes = body.collect().await.map_err(map_error)?.to_bytes();
         let limit = bytes.len().min(state.config.log_body_limit as usize);
+        record.request_body = String::from_utf8_lossy(&bytes[..limit]).into_owned();
 
         if record.uri.contains("/login")
             || record.uri.contains("/change_password")
             || (record.uri.contains("/admin/user/") && record.uri.contains("/add"))
         {
-            record.request_body = String::from_utf8_lossy(&bytes).into_owned();
             mask_password(&mut record.request_body);
-            record.request_body.truncate(limit);
-        } else {
-            record.request_body = String::from_utf8_lossy(&bytes[..limit]).into_owned();
         }
 
         body = Body::from(bytes);
@@ -406,20 +403,31 @@ async fn inspect_response(
 }
 
 fn mask_password(body: &mut String) {
-    if let Ok(mut user_login) = serde_json::from_str::<agdb_api::UserLogin>(body) {
-        user_login.password = "***".to_string();
-        *body = serde_json::to_string(&user_login).unwrap_or_default();
-    } else if serde_json::from_str::<agdb_api::ChangePassword>(body).is_ok() {
-        *body = serde_json::to_string(&agdb_api::ChangePassword {
-            password: "***".to_string(),
-            new_password: "***".to_string(),
-        })
-        .unwrap_or_default();
-    } else if serde_json::from_str::<agdb_api::UserCredentials>(body).is_ok() {
-        *body = serde_json::to_string(&agdb_api::UserCredentials {
-            password: "***".to_string(),
-        })
-        .unwrap_or_default();
+    const PASSWORD_PATTERNS: [&str; 2] = ["\"password\"", "\"new_password\""];
+    const QUOTE_PATTERN: &str = "\"";
+
+    for pattern in PASSWORD_PATTERNS {
+        if let Some(starting_index) = body.find(pattern)
+            && let Some(start) = body[starting_index + pattern.len()..].find(QUOTE_PATTERN)
+        {
+            let mut skip = false;
+            let start = starting_index + pattern.len() + start;
+            let mut end = start + 1;
+
+            for c in body[start + 1..].chars() {
+                end += c.len_utf8();
+
+                if skip {
+                    skip = false;
+                } else if c == '\\' {
+                    skip = true;
+                } else if c == '"' {
+                    break;
+                }
+            }
+
+            *body = format!("{}\"***\"{}", &body[..start], &body[end..]);
+        }
     }
 }
 

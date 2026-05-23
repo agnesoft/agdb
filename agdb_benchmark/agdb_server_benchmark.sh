@@ -1,6 +1,5 @@
 set -euo pipefail
 
-rm -f agdb_benchmark.yaml
 rm -rf agdb_server_data
 
 cargo build -r -p agdb_server

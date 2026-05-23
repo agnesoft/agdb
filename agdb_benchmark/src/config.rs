@@ -42,24 +42,41 @@ pub(crate) struct CommentReaders {
 
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-pub enum BenchmarkMode {
-    Embedded,
-    Server { address: String },
-}
-
-#[derive(Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
 pub enum DbType {
     File,
     FileMapped,
     InMemory,
 }
 
+#[derive(Clone, Copy, Serialize, Deserialize)]
+pub(crate) struct RetryConfig {
+    pub(crate) base_delay_ms: u64,
+    pub(crate) max_delay_ms: u64,
+    pub(crate) max_consecutive_failures: u32,
+}
+
+#[derive(Clone, Copy, Serialize, Deserialize)]
+pub(crate) struct ServerConfig {
+    pub(crate) allow_invalid_certs: bool,
+    pub(crate) retry: RetryConfig,
+    pub(crate) memory_poll_interval_ms: u64,
+    pub(crate) memory_end_delay_ms: u64,
+}
+
 #[derive(Serialize, Deserialize)]
+pub(crate) struct TargetsConfig {
+    pub(crate) embedded: bool,
+    pub(crate) local_server: Option<String>,
+    pub(crate) remote_server: Option<String>,
+}
+
+#[derive(Serialize, Deserialize)]
+#[serde(default)]
 pub(crate) struct Config {
     pub(crate) db_name: String,
-    pub(crate) mode: BenchmarkMode,
+    pub(crate) targets: TargetsConfig,
     pub(crate) db_type: DbType,
+    pub(crate) server: ServerConfig,
     pub(crate) locale: Locale,
     pub(crate) padding: u64,
     pub(crate) cell_padding: u64,
@@ -95,8 +112,9 @@ impl Default for Config {
     fn default() -> Self {
         Self {
             db_name: "agdb_benchmark.agdb".to_string(),
-            mode: BenchmarkMode::Embedded,
+            targets: TargetsConfig::default(),
             db_type: DbType::FileMapped,
+            server: ServerConfig::default(),
             locale: Locale::cs,
             padding: 20,
             cell_padding: 10,
@@ -125,6 +143,37 @@ impl Default for Config {
                 delay_ms: 100,
                 reads_per_reader: 100,
             },
+        }
+    }
+}
+
+impl Default for RetryConfig {
+    fn default() -> Self {
+        Self {
+            base_delay_ms: 100,
+            max_delay_ms: 5000,
+            max_consecutive_failures: 10,
+        }
+    }
+}
+
+impl Default for ServerConfig {
+    fn default() -> Self {
+        Self {
+            allow_invalid_certs: false,
+            retry: RetryConfig::default(),
+            memory_poll_interval_ms: 2000,
+            memory_end_delay_ms: 15_000,
+        }
+    }
+}
+
+impl Default for TargetsConfig {
+    fn default() -> Self {
+        Self {
+            embedded: true,
+            local_server: None,
+            remote_server: None,
         }
     }
 }

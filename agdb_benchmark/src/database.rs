@@ -1,7 +1,6 @@
 use crate::bench_result::BenchResult;
 use crate::config::Config;
 use crate::config::DbType;
-use crate::utilities::format_size;
 use agdb::DbImpl;
 use agdb::QueryBuilder;
 use agdb::QueryResult;
@@ -12,6 +11,8 @@ use agdb_api::AgdbApiError;
 use agdb_api::DbKind;
 use agdb_api::ReqwestClient;
 use agdb_api::ServerDatabase as ServerDatabaseStat;
+use reqwest::Client;
+use reqwest::ClientBuilder;
 use std::sync::Arc;
 use std::sync::RwLock;
 
@@ -23,7 +24,13 @@ pub(crate) const BENCHMARK_DATABASE: &str = "benchmark";
 
 pub(crate) struct Database<S: StorageData>(pub(crate) Arc<RwLock<DbImpl<S>>>);
 
+pub(crate) struct DatabaseSize {
+    pub(crate) original: u64,
+    pub(crate) optimized: u64,
+}
+
 pub(crate) struct ServerDatabase {
+    client: Client,
     api: AgdbApi<ReqwestClient>,
     owner: String,
     db: String,
@@ -42,62 +49,49 @@ impl<S: StorageData> Database<S> {
         Ok(Self(Arc::new(RwLock::new(db))))
     }
 
-    pub(crate) fn stat(&mut self, config: &Config) -> BenchResult<()> {
+    pub(crate) fn stat(&mut self, _config: &Config) -> BenchResult<DatabaseSize> {
         let original_size = self.0.read()?.size();
 
         self.0.write()?.optimize_storage()?;
 
         let db_size = self.0.read()?.size();
 
-        let padding = config.padding as usize;
-        let cell_padding = config.cell_padding as usize;
-
-        println!(
-            "{:padding$} | {:cell_padding$} | {} (optimized)",
-            "Database size",
-            format_size(original_size, config.locale),
-            format_size(db_size, config.locale)
-        );
-
-        Ok(())
+        Ok(DatabaseSize {
+            original: original_size,
+            optimized: db_size,
+        })
     }
 }
 
 impl ServerDatabase {
-    pub(crate) async fn new(config: &Config, address: &str) -> BenchResult<Self> {
-        let mut admin_api = AgdbApi::new(ReqwestClient::new(), address);
+    pub(crate) async fn new(config: &Config, address: &str, client: Client) -> BenchResult<Self> {
+        let mut admin_api = admin_api(client.clone(), address);
         admin_api.user_login(ADMIN_USERNAME, ADMIN_PASSWORD).await?;
 
         ensure_benchmark_user(&admin_api).await?;
         reset_benchmark_database(&admin_api, config).await?;
 
-        let mut api = AgdbApi::new(ReqwestClient::new(), address);
+        let mut api = bench_api(client.clone(), address);
         api.user_login(BENCHMARK_USERNAME, BENCHMARK_PASSWORD)
             .await?;
         bootstrap_server_database(&api).await?;
 
         Ok(Self {
+            client,
             api,
             owner: BENCHMARK_USERNAME.to_string(),
             db: BENCHMARK_DATABASE.to_string(),
         })
     }
 
-    pub(crate) async fn stat(&mut self, config: &Config) -> BenchResult<()> {
+    pub(crate) async fn stat(&mut self, _config: &Config) -> BenchResult<DatabaseSize> {
         let original_size = self.database_stat().await?.size;
         let db_size = self.api.db_optimize(&self.owner, &self.db).await?.1.size;
 
-        let padding = config.padding as usize;
-        let cell_padding = config.cell_padding as usize;
-
-        println!(
-            "{:padding$} | {:cell_padding$} | {} (optimized)",
-            "Database size",
-            format_size(original_size, config.locale),
-            format_size(db_size, config.locale)
-        );
-
-        Ok(())
+        Ok(DatabaseSize {
+            original: original_size,
+            optimized: db_size,
+        })
     }
 
     pub(crate) async fn exec_mut(&self, queries: &[QueryType]) -> BenchResult<Vec<QueryResult>> {
@@ -130,6 +124,10 @@ impl ServerDatabase {
 
     pub(crate) fn address(&self) -> &str {
         self.api.address()
+    }
+
+    pub(crate) fn client(&self) -> &Client {
+        &self.client
     }
 }
 
@@ -207,4 +205,19 @@ fn remove_db_files(db_name: &str) {
     if path.exists() {
         let _ = std::fs::remove_file(path);
     }
+}
+
+pub(crate) fn create_server_http_client(config: &Config) -> BenchResult<Client> {
+    Ok(ClientBuilder::new()
+        .danger_accept_invalid_certs(config.server.allow_invalid_certs)
+        .http2_adaptive_window(true)
+        .build()?)
+}
+
+pub(crate) fn admin_api(client: Client, address: &str) -> AgdbApi<ReqwestClient> {
+    AgdbApi::new(ReqwestClient::with_client(client), address)
+}
+
+pub(crate) fn bench_api(client: Client, address: &str) -> AgdbApi<ReqwestClient> {
+    AgdbApi::new(ReqwestClient::with_client(client), address)
 }

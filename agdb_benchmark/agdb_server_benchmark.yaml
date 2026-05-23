@@ -1,7 +1,17 @@
 db_name: agdb_server_benchmarks.agdb
-mode: !server
-  address: http://localhost:3000
+targets:
+  embedded: true
+  local_server: http://localhost:3000
+  remote_server:
 db_type: file_mapped
+server:
+  allow_invalid_certs: false
+  retry:
+    base_delay_ms: 100
+    max_delay_ms: 5000
+    max_consecutive_failures: 10
+  memory_poll_interval_ms: 2000
+  memory_end_delay_ms: 15000
 locale: cs
 padding: 20
 cell_padding: 10

@@ -431,13 +431,17 @@ pub(crate) async fn start_post_writers_server(
                 api.user_login(&username, &password).await?;
                 let mut writer = ServerWriter::new(id, api);
                 let mut retry_state = RetryState::new();
+                let mut written = 0;
 
-                for i in 0..posts {
+                while written != posts {
                     match writer
-                        .write_post(&format!("{title} {i}"), &format!("{body} {i}"))
+                        .write_post(&format!("{title} {written}"), &format!("{body} {written}"))
                         .await
                     {
-                        Ok(_) => retry_state.reset(),
+                        Ok(_) => {
+                            retry_state.reset();
+                            written += 1;
+                        }
                         Err(error) => {
                             retry_state
                                 .on_failure(&retry, "post writer", &error.description)

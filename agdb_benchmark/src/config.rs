@@ -55,12 +55,14 @@ pub(crate) struct RetryConfig {
     pub(crate) max_consecutive_failures: u32,
 }
 
-#[derive(Clone, Copy, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub(crate) struct ServerConfig {
     pub(crate) allow_invalid_certs: bool,
     pub(crate) retry: RetryConfig,
     pub(crate) memory_poll_interval_ms: u64,
     pub(crate) memory_end_delay_ms: u64,
+    pub(crate) admin_username: String,
+    pub(crate) admin_password: String,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -164,6 +166,8 @@ impl Default for ServerConfig {
             retry: RetryConfig::default(),
             memory_poll_interval_ms: 2000,
             memory_end_delay_ms: 15_000,
+            admin_username: "admin".to_string(),
+            admin_password: "admin".to_string(),
         }
     }
 }

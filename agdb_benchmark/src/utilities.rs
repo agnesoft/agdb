@@ -156,7 +156,7 @@ pub(crate) fn print_final_summary(config: &Config, results: &[TargetResult]) {
         ),
         (
             format!(
-                "Mem (start→peak→end→+{}s)",
+                "Memory (start→peak→end→+{}s)",
                 config.server.memory_end_delay_ms / 1000
             ),
             mem_cell(embedded, config.locale),

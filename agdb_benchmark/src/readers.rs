@@ -4,9 +4,9 @@ use crate::database::BENCHMARK_DATABASE;
 use crate::database::BENCHMARK_USERNAME;
 use crate::database::Database;
 use crate::database::ServerDatabase;
-use crate::database::bench_api;
+use crate::database::api_with_client;
 use crate::results::TimingStats;
-use crate::retry::RetryState;
+use crate::retry::with_retry;
 use crate::users::benchmark_password;
 use crate::users::comment_reader_username;
 use crate::users::post_reader_username;
@@ -362,30 +362,25 @@ pub(crate) async fn start_post_readers_server(
         let username = post_reader_username(i);
 
         let handle = tokio::spawn(async move {
-            let mut api = bench_api(client, &address);
+            let mut api = api_with_client(client, &address);
             let password = benchmark_password(&username);
             api.user_login(&username, &password).await?;
 
             let mut reader = ServerReader::new(api);
             let mut read = 0;
-            let mut retry_state = RetryState::new();
 
             while read != reads {
                 tokio::time::sleep(read_delay).await;
 
-                match reader.read_posts(limit).await {
-                    Ok(true) => {
-                        retry_state.reset();
-                        read += 1;
-                    }
-                    Ok(false) => {
-                        tokio::time::sleep(Duration::from_millis(100)).await;
-                    }
-                    Err(error) => {
-                        retry_state
-                            .on_failure(&retry, "post reader", &error.description)
-                            .await?;
-                    }
+                if with_retry(&retry, "post reader", &mut reader, |reader| {
+                    let attempt_limit = limit;
+                    Box::pin(async move { reader.read_posts(attempt_limit).await })
+                })
+                .await?
+                {
+                    read += 1;
+                } else {
+                    tokio::time::sleep(Duration::from_millis(100)).await;
                 }
             }
 
@@ -422,30 +417,25 @@ pub(crate) async fn start_comment_readers_server(
         let username = comment_reader_username(i);
 
         let handle = tokio::spawn(async move {
-            let mut api = bench_api(client, &address);
+            let mut api = api_with_client(client, &address);
             let password = benchmark_password(&username);
             api.user_login(&username, &password).await?;
 
             let mut reader = ServerReader::new(api);
             let mut read = 0;
-            let mut retry_state = RetryState::new();
 
             while read != reads {
                 tokio::time::sleep(read_delay).await;
 
-                match reader.read_comments(limit).await {
-                    Ok(true) => {
-                        retry_state.reset();
-                        read += 1;
-                    }
-                    Ok(false) => {
-                        tokio::time::sleep(Duration::from_millis(100)).await;
-                    }
-                    Err(error) => {
-                        retry_state
-                            .on_failure(&retry, "comment reader", &error.description)
-                            .await?;
-                    }
+                if with_retry(&retry, "comment reader", &mut reader, |reader| {
+                    let attempt_limit = limit;
+                    Box::pin(async move { reader.read_comments(attempt_limit).await })
+                })
+                .await?
+                {
+                    read += 1;
+                } else {
+                    tokio::time::sleep(Duration::from_millis(100)).await;
                 }
             }
 

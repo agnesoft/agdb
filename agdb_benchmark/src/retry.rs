@@ -1,42 +1,39 @@
 use crate::bench_error::BenchError;
 use crate::bench_result::BenchResult;
 use crate::config::RetryConfig;
+use std::future::Future;
+use std::pin::Pin;
 use std::time::Duration;
 
-pub(crate) struct RetryState {
-    consecutive_failures: u32,
-}
+pub(crate) async fn with_retry<O, S, F>(
+    retry: &RetryConfig,
+    context: &str,
+    state: &mut S,
+    mut operation: F,
+) -> BenchResult<O>
+where
+    F: for<'a> FnMut(&'a mut S) -> Pin<Box<dyn Future<Output = BenchResult<O>> + Send + 'a>>,
+{
+    let mut consecutive_failures = 0u32;
 
-impl RetryState {
-    pub(crate) fn new() -> Self {
-        Self {
-            consecutive_failures: 0,
+    loop {
+        match operation(state).await {
+            Ok(value) => return Ok(value),
+            Err(error) => {
+                consecutive_failures += 1;
+
+                if consecutive_failures > retry.max_consecutive_failures {
+                    return Err(BenchError {
+                        description: format!(
+                            "{context}: too many consecutive failures ({consecutive_failures}) - last error: {}",
+                            error.description
+                        ),
+                    });
+                }
+
+                tokio::time::sleep(backoff_delay(retry, consecutive_failures)).await;
+            }
         }
-    }
-
-    pub(crate) fn reset(&mut self) {
-        self.consecutive_failures = 0;
-    }
-
-    pub(crate) async fn on_failure(
-        &mut self,
-        retry: &RetryConfig,
-        context: &str,
-        cause: &str,
-    ) -> BenchResult<()> {
-        self.consecutive_failures += 1;
-
-        if self.consecutive_failures > retry.max_consecutive_failures {
-            return Err(BenchError {
-                description: format!(
-                    "{context}: too many consecutive failures ({}) - last error: {cause}",
-                    self.consecutive_failures
-                ),
-            });
-        }
-
-        tokio::time::sleep(backoff_delay(retry, self.consecutive_failures)).await;
-        Ok(())
     }
 }
 

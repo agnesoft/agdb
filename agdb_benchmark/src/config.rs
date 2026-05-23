@@ -61,6 +61,12 @@ pub(crate) struct ServerConfig {
     pub(crate) retry: RetryConfig,
     pub(crate) memory_poll_interval_ms: u64,
     pub(crate) memory_end_delay_ms: u64,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+#[serde(default)]
+pub(crate) struct ServerTargetConfig {
+    pub(crate) address: String,
     pub(crate) admin_username: String,
     pub(crate) admin_password: String,
 }
@@ -68,8 +74,8 @@ pub(crate) struct ServerConfig {
 #[derive(Serialize, Deserialize)]
 pub(crate) struct TargetsConfig {
     pub(crate) embedded: bool,
-    pub(crate) local_server: Option<String>,
-    pub(crate) remote_server: Option<String>,
+    pub(crate) local_server: Option<ServerTargetConfig>,
+    pub(crate) remote_server: Option<ServerTargetConfig>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -166,6 +172,14 @@ impl Default for ServerConfig {
             retry: RetryConfig::default(),
             memory_poll_interval_ms: 2000,
             memory_end_delay_ms: 15_000,
+        }
+    }
+}
+
+impl Default for ServerTargetConfig {
+    fn default() -> Self {
+        Self {
+            address: "http://localhost:3000".to_string(),
             admin_username: "admin".to_string(),
             admin_password: "admin".to_string(),
         }

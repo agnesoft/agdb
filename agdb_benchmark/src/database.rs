@@ -16,8 +16,6 @@ use reqwest::ClientBuilder;
 use std::sync::Arc;
 use std::sync::RwLock;
 
-const ADMIN_USERNAME: &str = "admin";
-const ADMIN_PASSWORD: &str = "admin";
 pub(crate) const BENCHMARK_USERNAME: &str = "agdb_benchmark";
 pub(crate) const BENCHMARK_PASSWORD: &str = "agdb_benchmark";
 pub(crate) const BENCHMARK_DATABASE: &str = "benchmark";
@@ -64,14 +62,20 @@ impl<S: StorageData> Database<S> {
 }
 
 impl ServerDatabase {
-    pub(crate) async fn new(config: &Config, address: &str, client: Client) -> BenchResult<Self> {
-        let mut admin_api = admin_api(client.clone(), address);
-        admin_api.user_login(ADMIN_USERNAME, ADMIN_PASSWORD).await?;
+    pub(crate) async fn new(
+        config: &Config,
+        address: &str,
+        admin_username: &str,
+        admin_password: &str,
+        client: Client,
+    ) -> BenchResult<Self> {
+        let mut admin_api = api_with_client(client.clone(), address);
+        admin_api.user_login(admin_username, admin_password).await?;
 
         ensure_benchmark_user(&admin_api).await?;
         reset_benchmark_database(&admin_api, config).await?;
 
-        let mut api = bench_api(client.clone(), address);
+        let mut api = api_with_client(client.clone(), address);
         api.user_login(BENCHMARK_USERNAME, BENCHMARK_PASSWORD)
             .await?;
         bootstrap_server_database(&api).await?;
@@ -214,10 +218,6 @@ pub(crate) fn create_server_http_client(config: &Config) -> BenchResult<Client> 
         .build()?)
 }
 
-pub(crate) fn admin_api(client: Client, address: &str) -> AgdbApi<ReqwestClient> {
-    AgdbApi::new(ReqwestClient::with_client(client), address)
-}
-
-pub(crate) fn bench_api(client: Client, address: &str) -> AgdbApi<ReqwestClient> {
+pub(crate) fn api_with_client(client: Client, address: &str) -> AgdbApi<ReqwestClient> {
     AgdbApi::new(ReqwestClient::with_client(client), address)
 }

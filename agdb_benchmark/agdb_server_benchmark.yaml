@@ -1,7 +1,10 @@
 db_name: agdb_server_benchmarks.agdb
 targets:
   embedded: true
-  local_server: http://localhost:3000
+  local_server:
+    address: http://localhost:3000
+    admin_username: admin
+    admin_password: admin
   remote_server:
 db_type: file_mapped
 server:

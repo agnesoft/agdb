@@ -4,7 +4,7 @@ use crate::database::BENCHMARK_DATABASE;
 use crate::database::BENCHMARK_USERNAME;
 use crate::database::Database;
 use crate::database::ServerDatabase;
-use crate::database::admin_api;
+use crate::database::api_with_client;
 use crate::queries::BenchUser;
 use agdb::QueryBuilder;
 use agdb::StorageData;
@@ -53,9 +53,11 @@ pub(crate) fn setup_users<S: StorageData>(
 pub(crate) async fn setup_server_users(
     db: &mut ServerDatabase,
     config: &Config,
+    admin_username: &str,
+    admin_password: &str,
 ) -> BenchResult<()> {
-    let mut admin_api = admin_api(db.client().clone(), db.address());
-    admin_api.user_login("admin", "admin").await?;
+    let mut admin_api = api_with_client(db.client().clone(), db.address());
+    admin_api.user_login(admin_username, admin_password).await?;
     ensure_users_exist(&admin_api, config).await?;
     ensure_database_users_in_db(&admin_api, config).await?;
 

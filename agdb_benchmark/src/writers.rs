@@ -4,11 +4,11 @@ use crate::database::BENCHMARK_DATABASE;
 use crate::database::BENCHMARK_USERNAME;
 use crate::database::Database;
 use crate::database::ServerDatabase;
-use crate::database::bench_api;
+use crate::database::api_with_client;
 use crate::queries::BenchComment;
 use crate::queries::BenchPost;
 use crate::results::TimingStats;
-use crate::retry::RetryState;
+use crate::retry::with_retry;
 use crate::users::benchmark_password;
 use crate::users::comment_writer_username;
 use crate::users::post_writer_username;
@@ -426,28 +426,29 @@ pub(crate) async fn start_post_writers_server(
             let username = post_writer_username(index as u64);
 
             tokio::task::spawn(async move {
-                let mut api = bench_api(client, &address);
+                let mut api = api_with_client(client, &address);
                 let password = benchmark_password(&username);
                 api.user_login(&username, &password).await?;
                 let mut writer = ServerWriter::new(id, api);
-                let mut retry_state = RetryState::new();
                 let mut written = 0;
 
                 while written != posts {
-                    match writer
-                        .write_post(&format!("{title} {written}"), &format!("{body} {written}"))
-                        .await
-                    {
-                        Ok(_) => {
-                            retry_state.reset();
-                            written += 1;
-                        }
-                        Err(error) => {
-                            retry_state
-                                .on_failure(&retry, "post writer", &error.description)
-                                .await?;
-                        }
-                    }
+                    with_retry(&retry, "post writer", &mut writer, |writer| {
+                        let title_value = title.clone();
+                        let body_value = body.clone();
+                        let attempt = written;
+
+                        Box::pin(async move {
+                            writer
+                                .write_post(
+                                    &format!("{title_value} {attempt}"),
+                                    &format!("{body_value} {attempt}"),
+                                )
+                                .await
+                        })
+                    })
+                    .await?;
+                    written += 1;
                     tokio::time::sleep(write_delay).await;
                 }
 
@@ -497,25 +498,26 @@ pub(crate) async fn start_comment_writers_server(
             let username = comment_writer_username(index as u64);
 
             tokio::task::spawn(async move {
-                let mut api = bench_api(client, &address);
+                let mut api = api_with_client(client, &address);
                 let password = benchmark_password(&username);
                 api.user_login(&username, &password).await?;
                 let mut writer = ServerWriter::new(id, api);
                 let mut written = 0;
-                let mut retry_state = RetryState::new();
 
                 while written != comments {
-                    match writer.write_comment(&format!("{body} {written}")).await {
-                        Ok(true) => {
-                            retry_state.reset();
-                            written += 1;
-                        }
-                        Ok(false) => {}
-                        Err(error) => {
-                            retry_state
-                                .on_failure(&retry, "comment writer", &error.description)
-                                .await?;
-                        }
+                    if with_retry(&retry, "comment writer", &mut writer, |writer| {
+                        let body_value = body.clone();
+                        let attempt = written;
+
+                        Box::pin(async move {
+                            writer
+                                .write_comment(&format!("{body_value} {attempt}"))
+                                .await
+                        })
+                    })
+                    .await?
+                    {
+                        written += 1;
                     }
 
                     tokio::time::sleep(write_delay).await;

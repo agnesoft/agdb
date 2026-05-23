@@ -1,4 +1,5 @@
 use crate::config::BENCH_CONFIG_FILE;
+use crate::config::ServerTargetConfig;
 use crate::memory_monitor::ServerMemoryMonitor;
 use crate::results::TargetKind;
 use crate::results::TargetResult;
@@ -66,13 +67,33 @@ async fn benchmark_embedded(config: &Config) -> BenchResult<(DatabaseSize, Workl
 
 async fn benchmark_server(
     config: &Config,
-    address: &str,
+    target: &ServerTargetConfig,
 ) -> BenchResult<(DatabaseSize, WorkloadStats, crate::results::MemoryStats)> {
     let client = create_server_http_client(config)?;
-    let mut db = ServerDatabase::new(config, address, client.clone()).await?;
-    users::setup_server_users(&mut db, config).await?;
+    let mut db = ServerDatabase::new(
+        config,
+        &target.address,
+        &target.admin_username,
+        &target.admin_password,
+        client.clone(),
+    )
+    .await?;
+    users::setup_server_users(
+        &mut db,
+        config,
+        &target.admin_username,
+        &target.admin_password,
+    )
+    .await?;
     users::setup_server_bench_users(&db, config).await?;
-    let monitor = ServerMemoryMonitor::start(config, address, &client).await?;
+    let monitor = ServerMemoryMonitor::start(
+        config,
+        &target.address,
+        &target.admin_username,
+        &target.admin_password,
+        &client,
+    )
+    .await?;
 
     let mut posters = writers::start_post_writers_server(&db, config).await?;
     let mut commenters = writers::start_comment_writers_server(&db, config).await?;
@@ -132,14 +153,19 @@ async fn run_embedded(config: &Config) -> TargetResult {
     result
 }
 
-async fn run_server(config: &Config, address: &str, kind: TargetKind) -> TargetResult {
-    let progress = utilities::ProgressIndicator::start(&format!("{} ({address})", kind.as_str()));
+async fn run_server(
+    config: &Config,
+    target: &ServerTargetConfig,
+    kind: TargetKind,
+) -> TargetResult {
+    let progress =
+        utilities::ProgressIndicator::start(&format!("{} ({})", kind.as_str(), target.address));
     let start = Instant::now();
 
-    let result = match benchmark_server(config, address).await {
+    let result = match benchmark_server(config, target).await {
         Ok((db_size, workload, memory)) => TargetResult::ok(
             kind,
-            Some(address.to_string()),
+            Some(target.address.clone()),
             start.elapsed(),
             workload,
             Some(db_size.original),
@@ -148,7 +174,7 @@ async fn run_server(config: &Config, address: &str, kind: TargetKind) -> TargetR
         ),
         Err(error) => TargetResult::failed(
             kind,
-            Some(address.to_string()),
+            Some(target.address.clone()),
             start.elapsed(),
             error.description,
         ),
@@ -180,12 +206,12 @@ async fn main() -> BenchResult<()> {
         results.push(run_embedded(&config).await);
     }
 
-    if let Some(address) = &config.targets.local_server {
-        results.push(run_server(&config, address, TargetKind::LocalServer).await);
+    if let Some(target) = &config.targets.local_server {
+        results.push(run_server(&config, target, TargetKind::LocalServer).await);
     }
 
-    if let Some(address) = &config.targets.remote_server {
-        results.push(run_server(&config, address, TargetKind::RemoteServer).await);
+    if let Some(target) = &config.targets.remote_server {
+        results.push(run_server(&config, target, TargetKind::RemoteServer).await);
     }
 
     if results.is_empty() {

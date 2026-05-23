@@ -222,7 +222,7 @@ struct LogRecord {
 }
 
 impl LogRecord {
-    fn print(&self, level: Level) {
+    fn print(&self, level: Level, show_details: bool) {
         let status = status_colored(self.status);
         let method = method_colored(&self.method);
         let user = if self.user.is_empty() {
@@ -236,33 +236,36 @@ impl LogRecord {
 
         let mut message = format!("[{node}] {status} {method} {uri}{user} {duration}");
 
-        if !self.request_headers.is_empty() {
-            let headers_json = serde_json::to_string(&self.request_headers).unwrap_or_default();
-            message.push_str(&format!(
-                "\n  {} {headers_json}",
-                colorize(DIM, "> Headers:")
-            ));
-        }
-        if !self.request_body.is_empty() {
-            message.push_str(&format!(
-                "\n  {} {}",
-                colorize(DIM, "> Body:"),
-                self.request_body
-            ));
-        }
-        if !self.response_headers.is_empty() {
-            let headers_json = serde_json::to_string(&self.response_headers).unwrap_or_default();
-            message.push_str(&format!(
-                "\n  {} {headers_json}",
-                colorize(DIM, "< Headers:")
-            ));
-        }
-        if !self.response_body.is_empty() {
-            message.push_str(&format!(
-                "\n  {} {}",
-                colorize(DIM, "<< Body:"),
-                self.response_body
-            ));
+        if show_details {
+            if !self.request_headers.is_empty() {
+                let headers_json = serde_json::to_string(&self.request_headers).unwrap_or_default();
+                message.push_str(&format!(
+                    "\n  {} {headers_json}",
+                    colorize(DIM, "> Request Headers:")
+                ));
+            }
+            if !self.request_body.is_empty() {
+                message.push_str(&format!(
+                    "\n  {} {}",
+                    colorize(DIM, "> Request Body:"),
+                    self.request_body
+                ));
+            }
+            if !self.response_headers.is_empty() {
+                let headers_json =
+                    serde_json::to_string(&self.response_headers).unwrap_or_default();
+                message.push_str(&format!(
+                    "\n  {} {headers_json}",
+                    colorize(DIM, "< Response Headers:")
+                ));
+            }
+            if !self.response_body.is_empty() {
+                message.push_str(&format!(
+                    "\n  {} {}",
+                    colorize(DIM, "< Response Body:"),
+                    self.response_body
+                ));
+            }
         }
 
         print_log_args(level, format_args!("{message}"));
@@ -306,7 +309,7 @@ pub(crate) async fn logger(
         let show_details = state.config.log_body_limit != 0
             && (log_level == Level::Debug || status_level == Level::Error);
         let response = inspect_response(&mut record, response, show_details, &state).await?;
-        record.print(status_level);
+        record.print(status_level, show_details);
         return Ok(response);
     }
 
@@ -317,7 +320,9 @@ fn should_log_status(log_level: Level, uri: &str, status: u16) -> Option<Level> 
     if log_level < Level::Debug
         && (uri.ends_with("/api/v1/status")
             || uri.ends_with("/api/v1/cluster")
-            || uri.ends_with("/api/v1/cluster/status"))
+            || uri.ends_with("/api/v1/cluster/status")
+            || uri.ends_with("/api/v1/admin/status")
+            || uri.ends_with("/api/v1/user/status"))
     {
         return None;
     }

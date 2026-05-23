@@ -102,7 +102,7 @@ pub(crate) async fn set_log_level(
 async fn get_process_memory() -> u64 {
     if let Ok(status_content) = tokio::fs::read_to_string("/proc/self/status").await
         && let Some((_, vmrss)) = status_content.split_once("VmRSS:")
-        && let Some(vmrss_value) = vmrss.trim_start().split_whitespace().next()
+        && let Some(vmrss_value) = vmrss.split_whitespace().next()
     {
         return vmrss_value.trim().parse::<u64>().unwrap_or_default() * 1024;
     }

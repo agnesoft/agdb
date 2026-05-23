@@ -1,4 +1,4 @@
-#[cfg(not(target_env = "msvc"))]
+#[cfg(all(target_os = "linux", target_env = "gnu"))]
 #[global_allocator]
 static GLOBAL: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
 

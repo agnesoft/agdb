@@ -16,7 +16,7 @@ default = []
 tls = ["dep:axum-server", "dep:rustls", "reqwest/rustls", "agdb_api/tls"]
 studio = ["dep:include_dir"]
 
-[target.'cfg(not(target_env = "msvc"))'.dependencies]
+[target.'cfg(all(target_os = "linux", target_env = "gnu"))'.dependencies]
 tikv-jemallocator = "0.6"
 
 [dependencies]

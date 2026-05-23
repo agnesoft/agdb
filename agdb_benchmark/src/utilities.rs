@@ -119,44 +119,44 @@ pub(crate) fn print_final_summary(config: &Config, results: &[TargetResult]) {
             time_cell(remote, config.locale),
         ),
         (
-            "Requests (write/read)".to_string(),
+            "Requests (write:read)".to_string(),
             requests_cell(embedded, config),
             requests_cell(local, config),
             requests_cell(remote, config),
         ),
         (
-            "Post Writers (min/avg/max)".to_string(),
+            "Post Writers (min·avg·max)".to_string(),
             workload_cell(embedded.map(|r| &r.workload.post_writers), config.locale),
             workload_cell(local.map(|r| &r.workload.post_writers), config.locale),
             workload_cell(remote.map(|r| &r.workload.post_writers), config.locale),
         ),
         (
-            "Comment Writers (min/avg/max)".to_string(),
+            "Comment Writers (min·avg·max)".to_string(),
             workload_cell(embedded.map(|r| &r.workload.comment_writers), config.locale),
             workload_cell(local.map(|r| &r.workload.comment_writers), config.locale),
             workload_cell(remote.map(|r| &r.workload.comment_writers), config.locale),
         ),
         (
-            "Post Readers (min/avg/max)".to_string(),
+            "Post Readers (min·avg·max)".to_string(),
             workload_cell(embedded.map(|r| &r.workload.post_readers), config.locale),
             workload_cell(local.map(|r| &r.workload.post_readers), config.locale),
             workload_cell(remote.map(|r| &r.workload.post_readers), config.locale),
         ),
         (
-            "Comment Readers (min/avg/max)".to_string(),
+            "Comment Readers (min·avg·max)".to_string(),
             workload_cell(embedded.map(|r| &r.workload.comment_readers), config.locale),
             workload_cell(local.map(|r| &r.workload.comment_readers), config.locale),
             workload_cell(remote.map(|r| &r.workload.comment_readers), config.locale),
         ),
         (
-            "Db (size/optimized)".to_string(),
+            "Db (size→optimized)".to_string(),
             db_cell(embedded, config.locale),
             db_cell(local, config.locale),
             db_cell(remote, config.locale),
         ),
         (
             format!(
-                "Mem (start/peak/end/+{}s)",
+                "Mem (start→peak→end→+{}s)",
                 config.server.memory_end_delay_ms / 1000
             ),
             mem_cell(embedded, config.locale),
@@ -228,7 +228,7 @@ fn status_cell(result: Option<&TargetResult>) -> String {
     match result {
         None => "-".to_string(),
         Some(result) if result.error.is_some() => "failed".to_string(),
-        Some(_) => "done".to_string(),
+        Some(_) => "ok".to_string(),
     }
 }
 
@@ -249,7 +249,7 @@ fn workload_cell(timing: Option<&crate::results::TimingStats>, locale: Locale) -
         && timing.count != 0
     {
         return format!(
-            "{} / {} / {}",
+            "{} · {} · {}",
             format_duration(timing.min, locale),
             format_duration(timing.average(), locale),
             format_duration(timing.max, locale)
@@ -286,7 +286,7 @@ fn requests_cell(result: Option<&TargetResult>, config: &Config) -> String {
         );
 
     format!(
-        "{} / {}",
+        "{} : {}",
         writes.to_formatted_string(&config.locale),
         reads.to_formatted_string(&config.locale)
     )
@@ -297,7 +297,7 @@ fn db_cell(result: Option<&TargetResult>, locale: Locale) -> String {
         && let (Some(size), Some(optimized)) = (result.database_before, result.database_after)
     {
         return format!(
-            "{} / {}",
+            "{} → {}",
             format_size(size, locale),
             format_size(optimized, locale)
         );
@@ -311,7 +311,7 @@ fn mem_cell(result: Option<&TargetResult>, locale: Locale) -> String {
         && let Some(memory) = &result.memory
     {
         return format!(
-            "{} / {} / {} / {}",
+            "{} → {} → {} → {}",
             format_size(memory.start, locale),
             format_size(memory.peak, locale),
             format_size(memory.end, locale),

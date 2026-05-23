@@ -22,6 +22,7 @@ use std::time::Instant;
 static LEVEL: AtomicU8 = AtomicU8::new(Level::Info as u8);
 
 const DIM: &str = "\x1b[2m";
+const BLUE: &str = "\x1b[34m";
 const RED: &str = "\x1b[31m";
 const GREEN: &str = "\x1b[32m";
 const YELLOW: &str = "\x1b[33m";
@@ -99,7 +100,6 @@ pub(crate) fn set_level(level: LogLevelFilter) {
 
 pub(crate) fn current_level() -> LogLevelFilter {
     match LEVEL.load(Ordering::Relaxed) {
-        0 => LogLevelFilter::Off,
         1 => LogLevelFilter::Error,
         2 => LogLevelFilter::Warn,
         3 => LogLevelFilter::Info,
@@ -203,7 +203,8 @@ fn status_colored(status: u16) -> String {
 fn method_colored(method: &str) -> String {
     match method {
         "GET" => colorize(GREEN, method),
-        _ => colorize(RED, method),
+        "DELETE" => colorize(RED, method),
+        _ => colorize(BLUE, method),
     }
 }
 
@@ -235,36 +236,33 @@ impl LogRecord {
 
         let mut message = format!("[{node}] {status} {method} {uri}{user} {duration}");
 
-        if level != Level::Info {
-            if !self.request_headers.is_empty() {
-                let headers_json = serde_json::to_string(&self.request_headers).unwrap_or_default();
-                message.push_str(&format!(
-                    "\n  {} {headers_json}",
-                    colorize(DIM, "> Headers:")
-                ));
-            }
-            if !self.request_body.is_empty() {
-                message.push_str(&format!(
-                    "\n  {} {}",
-                    colorize(DIM, "> Body:"),
-                    self.request_body
-                ));
-            }
-            if !self.response_headers.is_empty() {
-                let headers_json =
-                    serde_json::to_string(&self.response_headers).unwrap_or_default();
-                message.push_str(&format!(
-                    "\n  {} {headers_json}",
-                    colorize(DIM, "< Headers:")
-                ));
-            }
-            if !self.response_body.is_empty() {
-                message.push_str(&format!(
-                    "\n  {} {}",
-                    colorize(DIM, "< Body:"),
-                    self.response_body
-                ));
-            }
+        if !self.request_headers.is_empty() {
+            let headers_json = serde_json::to_string(&self.request_headers).unwrap_or_default();
+            message.push_str(&format!(
+                "\n  {} {headers_json}",
+                colorize(DIM, "> Headers:")
+            ));
+        }
+        if !self.request_body.is_empty() {
+            message.push_str(&format!(
+                "\n  {} {}",
+                colorize(DIM, "> Body:"),
+                self.request_body
+            ));
+        }
+        if !self.response_headers.is_empty() {
+            let headers_json = serde_json::to_string(&self.response_headers).unwrap_or_default();
+            message.push_str(&format!(
+                "\n  {} {headers_json}",
+                colorize(DIM, "< Headers:")
+            ));
+        }
+        if !self.response_body.is_empty() {
+            message.push_str(&format!(
+                "\n  {} {}",
+                colorize(DIM, "<< Body:"),
+                self.response_body
+            ));
         }
 
         print_log_args(level, format_args!("{message}"));

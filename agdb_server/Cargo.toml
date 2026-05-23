@@ -19,6 +19,9 @@ studio = ["dep:include_dir"]
 [target.'cfg(all(target_os = "linux", target_env = "gnu"))'.dependencies]
 tikv-jemallocator = "0.6"
 
+[target.'cfg(target_os = "windows")'.dependencies]
+windows-sys = { version = "0.61", features = ["Win32_System_ProcessStatus", "Win32_System_Threading"] }
+
 [dependencies]
 agdb = { version = "0.13.0", path = "../agdb", features = ["serde", "openapi"] }
 agdb_api = { version = "0.13.0", path = "../agdb_api", features = ["api"] }

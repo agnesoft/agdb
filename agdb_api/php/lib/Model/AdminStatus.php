@@ -60,6 +60,7 @@ class AdminStatus implements ModelInterface, ArrayAccess, \JsonSerializable
         'dbs' => 'int',
         'log_level' => '\Agnesoft\AgdbApi\Model\LogLevelFilter',
         'logged_in_users' => 'int',
+        'memory' => 'int',
         'size' => 'int',
         'uptime' => 'int',
         'users' => 'int'
@@ -76,6 +77,7 @@ class AdminStatus implements ModelInterface, ArrayAccess, \JsonSerializable
         'dbs' => 'int64',
         'log_level' => null,
         'logged_in_users' => 'int64',
+        'memory' => 'int64',
         'size' => 'int64',
         'uptime' => 'int64',
         'users' => 'int64'
@@ -90,6 +92,7 @@ class AdminStatus implements ModelInterface, ArrayAccess, \JsonSerializable
         'dbs' => false,
         'log_level' => false,
         'logged_in_users' => false,
+        'memory' => false,
         'size' => false,
         'uptime' => false,
         'users' => false
@@ -184,6 +187,7 @@ class AdminStatus implements ModelInterface, ArrayAccess, \JsonSerializable
         'dbs' => 'dbs',
         'log_level' => 'log_level',
         'logged_in_users' => 'logged_in_users',
+        'memory' => 'memory',
         'size' => 'size',
         'uptime' => 'uptime',
         'users' => 'users'
@@ -198,6 +202,7 @@ class AdminStatus implements ModelInterface, ArrayAccess, \JsonSerializable
         'dbs' => 'setDbs',
         'log_level' => 'setLogLevel',
         'logged_in_users' => 'setLoggedInUsers',
+        'memory' => 'setMemory',
         'size' => 'setSize',
         'uptime' => 'setUptime',
         'users' => 'setUsers'
@@ -212,6 +217,7 @@ class AdminStatus implements ModelInterface, ArrayAccess, \JsonSerializable
         'dbs' => 'getDbs',
         'log_level' => 'getLogLevel',
         'logged_in_users' => 'getLoggedInUsers',
+        'memory' => 'getMemory',
         'size' => 'getSize',
         'uptime' => 'getUptime',
         'users' => 'getUsers'
@@ -277,6 +283,7 @@ class AdminStatus implements ModelInterface, ArrayAccess, \JsonSerializable
         $this->setIfExists('dbs', $data ?? [], null);
         $this->setIfExists('log_level', $data ?? [], null);
         $this->setIfExists('logged_in_users', $data ?? [], null);
+        $this->setIfExists('memory', $data ?? [], null);
         $this->setIfExists('size', $data ?? [], null);
         $this->setIfExists('uptime', $data ?? [], null);
         $this->setIfExists('users', $data ?? [], null);
@@ -324,6 +331,13 @@ class AdminStatus implements ModelInterface, ArrayAccess, \JsonSerializable
         }
         if (($this->container['logged_in_users'] < 0)) {
             $invalidProperties[] = "invalid value for 'logged_in_users', must be bigger than or equal to 0.";
+        }
+
+        if ($this->container['memory'] === null) {
+            $invalidProperties[] = "'memory' can't be null";
+        }
+        if (($this->container['memory'] < 0)) {
+            $invalidProperties[] = "invalid value for 'memory', must be bigger than or equal to 0.";
         }
 
         if ($this->container['size'] === null) {
@@ -449,6 +463,38 @@ class AdminStatus implements ModelInterface, ArrayAccess, \JsonSerializable
         }
 
         $this->container['logged_in_users'] = $logged_in_users;
+
+        return $this;
+    }
+
+    /**
+     * Gets memory
+     *
+     * @return int
+     */
+    public function getMemory()
+    {
+        return $this->container['memory'];
+    }
+
+    /**
+     * Sets memory
+     *
+     * @param int $memory memory
+     *
+     * @return self
+     */
+    public function setMemory($memory)
+    {
+        if (is_null($memory)) {
+            throw new \InvalidArgumentException('non-nullable memory cannot be null');
+        }
+
+        if (($memory < 0)) {
+            throw new \InvalidArgumentException('invalid value for $memory when calling AdminStatus., must be bigger than or equal to 0.');
+        }
+
+        $this->container['memory'] = $memory;
 
         return $this;
     }

@@ -12,6 +12,7 @@ declare namespace Components {
             dbs: number; // int64
             log_level: LogLevelFilter;
             logged_in_users: number; // int64
+            memory: number; // int64
             size: number; // int64
             uptime: number; // int64
             users: number; // int64

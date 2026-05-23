@@ -19,6 +19,10 @@ pub async fn status() -> Result<(), TestError> {
     assert_ne!(admin_status.users, 0);
     assert_ne!(admin_status.logged_in_users, 0);
     assert_ne!(admin_status.size, 0);
+    #[cfg(any(target_os = "linux", target_os = "windows"))]
+    assert_ne!(admin_status.memory, 0);
+    #[cfg(not(any(target_os = "linux", target_os = "windows")))]
+    assert_eq!(admin_status.memory, 0);
     assert_eq!(admin_status.log_level, crate::LogLevelFilter::Info);
 
     Ok(())

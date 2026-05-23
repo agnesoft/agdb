@@ -7,6 +7,7 @@ Name | Type | Description | Notes
 **dbs** | **int** |  |
 **log_level** | [**\Agnesoft\AgdbApi\Model\LogLevelFilter**](LogLevelFilter.md) |  |
 **logged_in_users** | **int** |  |
+**memory** | **int** |  |
 **size** | **int** |  |
 **uptime** | **int** |  |
 **users** | **int** |  |

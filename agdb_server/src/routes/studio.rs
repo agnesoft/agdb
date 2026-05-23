@@ -8,12 +8,15 @@ use include_dir::include_dir;
 use reqwest::StatusCode;
 use std::sync::OnceLock;
 
+const DEFAULT_SERVER_ADDRESS: &str = "https://localhost:3000";
 static AGDB_STUDIO: Dir = include_dir!("agdb_studio/app/dist");
 static AGDB_STUDIO_INDEX_HTML: OnceLock<String> = OnceLock::new();
 static AGDB_STUDIO_INDEX_JS: OnceLock<String> = OnceLock::new();
 static AGDB_STUDIO_INDEX_JS_CONTENT: OnceLock<String> = OnceLock::new();
 static AGDB_STUDIO_INDEX_LOGO_JS: OnceLock<String> = OnceLock::new();
 static AGDB_STUDIO_INDEX_LOGO_JS_CONTENT: OnceLock<String> = OnceLock::new();
+static AGDB_STUDIO_LOGIN_VIEW_JS: OnceLock<String> = OnceLock::new();
+static AGDB_STUDIO_LOGIN_VIEW_JS_CONTENT: OnceLock<String> = OnceLock::new();
 
 fn init_error(msg: &str) -> ServerError {
     ServerError::new(StatusCode::INTERNAL_SERVER_ERROR, msg)
@@ -51,7 +54,7 @@ fn init_index_js_content(filename: &str, config: &Config) -> ServerResult {
     if !config.basepath.is_empty() {
         content = content.replace("\"/studio", &format!("\"{}/studio", config.basepath));
     };
-    content = content.replace("https://localhost:3000", &config.server_url());
+    content = content.replace(DEFAULT_SERVER_ADDRESS, &config.server_url());
 
     AGDB_STUDIO_INDEX_JS_CONTENT.set(content)?;
 
@@ -76,6 +79,7 @@ pub(crate) fn init(config: &Config) -> ServerResult {
     init_index_js_content(&index_js_name, config)?;
     init_index_logo_js(config)?;
     init_index_html(config)?;
+    init_index_loginview_js(config)?;
 
     Ok(())
 }
@@ -108,6 +112,36 @@ fn init_index_logo_js(config: &Config) -> ServerResult {
                     AGDB_STUDIO_INDEX_LOGO_JS.set(logo_js_name.to_string())?;
                     AGDB_STUDIO_INDEX_LOGO_JS_CONTENT.set(content)?;
                 }
+            }
+        }
+    }
+
+    Ok(())
+}
+
+fn init_index_loginview_js(config: &Config) -> ServerResult {
+    for file in AGDB_STUDIO
+        .get_dir("assets")
+        .ok_or(init_error("Failed to get assets directory"))?
+        .files()
+    {
+        if file.path().extension().is_some_and(|ext| ext == "js") {
+            let path = file.path();
+            if path
+                .file_name()
+                .ok_or(init_error("Failed to read filename of assets js file"))?
+                .to_string_lossy()
+                .starts_with("LoginView")
+            {
+                let content = file
+                    .contents_utf8()
+                    .ok_or(init_error("Failed to read LoginView.js"))?;
+                let login_view_js_name = path
+                    .to_str()
+                    .ok_or(init_error("Failed to read path of LoginView.js file"))?;
+                let content = content.replace(DEFAULT_SERVER_ADDRESS, &config.server_url());
+                AGDB_STUDIO_LOGIN_VIEW_JS.set(login_view_js_name.to_string())?;
+                AGDB_STUDIO_LOGIN_VIEW_JS_CONTENT.set(content)?;
             }
         }
     }
@@ -160,6 +194,21 @@ pub(crate) async fn studio(Path(file): Path<String>) -> ServerResult<impl IntoRe
             .ok_or(ServerError::new(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "logo js not found",
+            ))?;
+
+        return Ok((
+            StatusCode::OK,
+            [("Content-Type", "application/javascript")],
+            content.as_str().as_bytes(),
+        ));
+    }
+
+    if AGDB_STUDIO_LOGIN_VIEW_JS.get() == Some(&file) {
+        let content = AGDB_STUDIO_LOGIN_VIEW_JS_CONTENT
+            .get()
+            .ok_or(ServerError::new(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "login view js not found",
             ))?;
 
         return Ok((

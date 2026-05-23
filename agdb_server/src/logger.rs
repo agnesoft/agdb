@@ -22,6 +22,7 @@ use std::time::Instant;
 static LEVEL: AtomicU8 = AtomicU8::new(Level::Info as u8);
 
 const DIM: &str = "\x1b[2m";
+const BLUE: &str = "\x1b[34m";
 const RED: &str = "\x1b[31m";
 const GREEN: &str = "\x1b[32m";
 const YELLOW: &str = "\x1b[33m";
@@ -99,7 +100,6 @@ pub(crate) fn set_level(level: LogLevelFilter) {
 
 pub(crate) fn current_level() -> LogLevelFilter {
     match LEVEL.load(Ordering::Relaxed) {
-        0 => LogLevelFilter::Off,
         1 => LogLevelFilter::Error,
         2 => LogLevelFilter::Warn,
         3 => LogLevelFilter::Info,
@@ -203,7 +203,8 @@ fn status_colored(status: u16) -> String {
 fn method_colored(method: &str) -> String {
     match method {
         "GET" => colorize(GREEN, method),
-        _ => colorize(RED, method),
+        "DELETE" => colorize(RED, method),
+        _ => colorize(BLUE, method),
     }
 }
 
@@ -221,7 +222,7 @@ struct LogRecord {
 }
 
 impl LogRecord {
-    fn print(&self, level: Level) {
+    fn print(&self, level: Level, show_details: bool) {
         let status = status_colored(self.status);
         let method = method_colored(&self.method);
         let user = if self.user.is_empty() {
@@ -235,33 +236,27 @@ impl LogRecord {
 
         let mut message = format!("[{node}] {status} {method} {uri}{user} {duration}");
 
-        if level != Level::Info {
+        if show_details {
             if !self.request_headers.is_empty() {
                 let headers_json = serde_json::to_string(&self.request_headers).unwrap_or_default();
-                message.push_str(&format!(
-                    "\n  {} {headers_json}",
-                    colorize(DIM, "> Headers:")
-                ));
+                message.push_str(&format!("\n  {} {headers_json}", colorize(DIM, "> [H]:")));
             }
             if !self.request_body.is_empty() {
                 message.push_str(&format!(
                     "\n  {} {}",
-                    colorize(DIM, "> Body:"),
+                    colorize(DIM, "> [B]:"),
                     self.request_body
                 ));
             }
             if !self.response_headers.is_empty() {
                 let headers_json =
                     serde_json::to_string(&self.response_headers).unwrap_or_default();
-                message.push_str(&format!(
-                    "\n  {} {headers_json}",
-                    colorize(DIM, "< Headers:")
-                ));
+                message.push_str(&format!("\n  {} {headers_json}", colorize(DIM, "< [H]:")));
             }
             if !self.response_body.is_empty() {
                 message.push_str(&format!(
                     "\n  {} {}",
-                    colorize(DIM, "< Body:"),
+                    colorize(DIM, "< [B]:"),
                     self.response_body
                 ));
             }
@@ -308,7 +303,7 @@ pub(crate) async fn logger(
         let show_details = state.config.log_body_limit != 0
             && (log_level == Level::Debug || status_level == Level::Error);
         let response = inspect_response(&mut record, response, show_details, &state).await?;
-        record.print(status_level);
+        record.print(status_level, show_details);
         return Ok(response);
     }
 
@@ -319,7 +314,9 @@ fn should_log_status(log_level: Level, uri: &str, status: u16) -> Option<Level> 
     if log_level < Level::Debug
         && (uri.ends_with("/api/v1/status")
             || uri.ends_with("/api/v1/cluster")
-            || uri.ends_with("/api/v1/cluster/status"))
+            || uri.ends_with("/api/v1/cluster/status")
+            || uri.ends_with("/api/v1/admin/status")
+            || uri.ends_with("/api/v1/user/status"))
     {
         return None;
     }

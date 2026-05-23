@@ -69,6 +69,7 @@ pub(crate) async fn status(
             users: server_db.user_count().await?,
             logged_in_users: server_db.users_with_token().await?,
             size: get_size(&config.data_dir).await?,
+            memory: get_process_memory(),
             log_level: logger::current_level(),
         }),
     ))
@@ -95,6 +96,42 @@ pub(crate) async fn set_log_level(
     logger::set_level(request.new_level);
     crate::info!("Log level changed to: {}", request.new_level);
     StatusCode::OK
+}
+
+#[cfg(target_os = "linux")]
+fn get_process_memory() -> u64 {
+    if let Ok(status_content) = std::fs::read_to_string("/proc/self/status")
+        && let Some((_, vmrss)) = status_content.split_once("VmRSS:")
+        && let Some((vmrss_value, _)) = vmrss.trim().split_once(' ')
+    {
+        vmrss_value.trim().parse::<u64>().unwrap_or_default() * 1024
+    }
+
+    0
+}
+
+#[cfg(target_os = "windows")]
+fn get_process_memory() -> u64 {
+    use windows_sys::Win32::System::ProcessStatus::K32GetProcessMemoryInfo;
+    use windows_sys::Win32::System::ProcessStatus::PROCESS_MEMORY_COUNTERS;
+    use windows_sys::Win32::System::Threading::GetCurrentProcess;
+
+    let mut counters = PROCESS_MEMORY_COUNTERS {
+        cb: std::mem::size_of::<PROCESS_MEMORY_COUNTERS>() as u32,
+        ..Default::default()
+    };
+    let counter_ptr = &mut counters as *mut _ as *mut _;
+
+    // SAFETY: We call Win32 APIs with a valid pseudo-handle for the current process,
+    // a properly initialized struct, and the correct struct size.
+    unsafe { K32GetProcessMemoryInfo(GetCurrentProcess(), counter_ptr, counters.cb) };
+
+    counters.WorkingSetSize as u64
+}
+
+#[cfg(not(any(target_os = "linux", target_os = "windows")))]
+fn get_process_memory() -> u64 {
+    0
 }
 
 #[cfg(test)]

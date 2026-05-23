@@ -2563,6 +2563,7 @@
           "users",
           "logged_in_users",
           "size",
+          "memory",
           "log_level"
         ],
         "properties": {
@@ -2575,6 +2576,11 @@
             "$ref": "#/components/schemas/LogLevelFilter"
           },
           "logged_in_users": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "memory": {
             "type": "integer",
             "format": "int64",
             "minimum": 0

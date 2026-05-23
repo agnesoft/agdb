@@ -126,6 +126,7 @@ pub struct AdminStatus {
     pub users: u64,
     pub logged_in_users: u64,
     pub size: u64,
+    pub memory: u64,
     pub log_level: LogLevelFilter,
 }
 

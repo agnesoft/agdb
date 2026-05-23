@@ -64,13 +64,13 @@ pub(crate) async fn status(
     Ok((
         StatusCode::OK,
         Json(AdminStatus {
-            uptime: SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs() - config.start_time,
             dbs: server_db.db_count().await?,
-            users: server_db.user_count().await?,
-            logged_in_users: server_db.users_with_token().await?,
-            size: get_size(&config.data_dir).await?,
-            memory: get_process_memory(),
             log_level: logger::current_level(),
+            logged_in_users: server_db.users_with_token().await?,
+            memory: get_process_memory().await,
+            size: get_size(&config.data_dir).await?,
+            uptime: SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs() - config.start_time,
+            users: server_db.user_count().await?,
         }),
     ))
 }
@@ -111,7 +111,7 @@ async fn get_process_memory() -> u64 {
 }
 
 #[cfg(target_os = "windows")]
-fn get_process_memory() -> u64 {
+async fn get_process_memory() -> u64 {
     use windows_sys::Win32::System::ProcessStatus::K32GetProcessMemoryInfo;
     use windows_sys::Win32::System::ProcessStatus::PROCESS_MEMORY_COUNTERS;
     use windows_sys::Win32::System::Threading::GetCurrentProcess;
@@ -130,7 +130,7 @@ fn get_process_memory() -> u64 {
 }
 
 #[cfg(not(any(target_os = "linux", target_os = "windows")))]
-fn get_process_memory() -> u64 {
+async fn get_process_memory() -> u64 {
     0
 }
 

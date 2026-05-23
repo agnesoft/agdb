@@ -99,12 +99,12 @@ pub(crate) async fn set_log_level(
 }
 
 #[cfg(target_os = "linux")]
-fn get_process_memory() -> u64 {
-    if let Ok(status_content) = std::fs::read_to_string("/proc/self/status")
+async fn get_process_memory() -> u64 {
+    if let Ok(status_content) = tokio::fs::read_to_string("/proc/self/status").await
         && let Some((_, vmrss)) = status_content.split_once("VmRSS:")
-        && let Some((vmrss_value, _)) = vmrss.trim().split_once(' ')
+        && let Some(vmrss_value) = vmrss.trim_start().split_whitespace().next()
     {
-        vmrss_value.trim().parse::<u64>().unwrap_or_default() * 1024
+        return vmrss_value.trim().parse::<u64>().unwrap_or_default() * 1024;
     }
 
     0
@@ -120,7 +120,7 @@ fn get_process_memory() -> u64 {
         cb: std::mem::size_of::<PROCESS_MEMORY_COUNTERS>() as u32,
         ..Default::default()
     };
-    let counter_ptr = &mut counters as *mut _ as *mut _;
+    let counter_ptr: *mut PROCESS_MEMORY_COUNTERS = &mut counters as *mut _ as *mut _;
 
     // SAFETY: We call Win32 APIs with a valid pseudo-handle for the current process,
     // a properly initialized struct, and the correct struct size.

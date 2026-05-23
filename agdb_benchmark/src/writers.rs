@@ -4,12 +4,14 @@ use crate::database::BENCHMARK_DATABASE;
 use crate::database::BENCHMARK_USERNAME;
 use crate::database::Database;
 use crate::database::ServerDatabase;
+use crate::database::api_with_client;
 use crate::queries::BenchComment;
 use crate::queries::BenchPost;
+use crate::results::TimingStats;
+use crate::retry::with_retry;
 use crate::users::benchmark_password;
 use crate::users::comment_writer_username;
 use crate::users::post_writer_username;
-use crate::utilities;
 use crate::utilities::measured;
 use crate::utilities::measured_async;
 use agdb::DbId;
@@ -153,38 +155,16 @@ impl<S: StorageData> Writer<S> {
 }
 
 impl<S: StorageData> Writers<S> {
-    pub(crate) async fn join_and_report(
-        &mut self,
-        description: &str,
-        threads: u64,
-        per_thread: u64,
-        per_action: u64,
-        config: &Config,
-    ) -> BenchResult<()> {
+    pub(crate) async fn join(&mut self) -> BenchResult<TimingStats> {
         let mut writers = vec![];
 
         for task in self.tasks.iter_mut() {
             writers.push(task.await?);
         }
 
-        let end = if let Some(w) = writers.iter().max_by_key(|w| w.end) {
-            w.end
-        } else {
-            Duration::default()
-        };
         let times: Vec<Duration> = writers.into_iter().flat_map(|w| w.times).collect();
 
-        utilities::report(
-            description,
-            threads,
-            per_thread,
-            per_action,
-            times,
-            end,
-            config,
-        );
-
-        Ok(())
+        Ok(TimingStats::from_times(&times))
     }
 }
 
@@ -297,38 +277,16 @@ impl ServerWriter {
 }
 
 impl ServerWriters {
-    pub(crate) async fn join_and_report(
-        &mut self,
-        description: &str,
-        threads: u64,
-        per_thread: u64,
-        per_action: u64,
-        config: &Config,
-    ) -> BenchResult<()> {
+    pub(crate) async fn join(&mut self) -> BenchResult<TimingStats> {
         let mut writers = vec![];
 
         for task in self.tasks.iter_mut() {
             writers.push(task.await??);
         }
 
-        let end = if let Some(w) = writers.iter().max_by_key(|w| w.end) {
-            w.end
-        } else {
-            Duration::default()
-        };
         let times: Vec<Duration> = writers.into_iter().flat_map(|w| w.times).collect();
 
-        utilities::report(
-            description,
-            threads,
-            per_thread,
-            per_action,
-            times,
-            end,
-            config,
-        );
-
-        Ok(())
+        Ok(TimingStats::from_times(&times))
     }
 }
 
@@ -446,6 +404,8 @@ pub(crate) async fn start_post_writers_server(
             .into()])
         .await?;
     let address = db.address().to_string();
+    let client = db.client().clone();
+    let retry = config.server.retry;
 
     let tasks = users[0]
         .elements
@@ -454,6 +414,7 @@ pub(crate) async fn start_post_writers_server(
         .map(|(index, e)| {
             let id = e.id;
             let address = address.clone();
+            let client = client.clone();
             let write_delay = Duration::from_millis(if config.posters.delay_ms == 0 {
                 0
             } else {
@@ -465,15 +426,29 @@ pub(crate) async fn start_post_writers_server(
             let username = post_writer_username(index as u64);
 
             tokio::task::spawn(async move {
-                let mut api = AgdbApi::new(ReqwestClient::new(), &address);
+                let mut api = api_with_client(client, &address);
                 let password = benchmark_password(&username);
                 api.user_login(&username, &password).await?;
                 let mut writer = ServerWriter::new(id, api);
+                let mut written = 0;
 
-                for i in 0..posts {
-                    let _ = writer
-                        .write_post(&format!("{title} {i}"), &format!("{body} {i}"))
-                        .await;
+                while written != posts {
+                    with_retry(&retry, "post writer", &mut writer, |writer| {
+                        let title_value = title.clone();
+                        let body_value = body.clone();
+                        let attempt = written;
+
+                        Box::pin(async move {
+                            writer
+                                .write_post(
+                                    &format!("{title_value} {attempt}"),
+                                    &format!("{body_value} {attempt}"),
+                                )
+                                .await
+                        })
+                    })
+                    .await?;
+                    written += 1;
                     tokio::time::sleep(write_delay).await;
                 }
 
@@ -502,6 +477,8 @@ pub(crate) async fn start_comment_writers_server(
             .into()])
         .await?;
     let address = db.address().to_string();
+    let client = db.client().clone();
+    let retry = config.server.retry;
 
     let tasks = users[0]
         .elements
@@ -510,6 +487,7 @@ pub(crate) async fn start_comment_writers_server(
         .map(|(index, e)| {
             let id = e.id;
             let address = address.clone();
+            let client = client.clone();
             let write_delay = Duration::from_millis(if config.commenters.delay_ms == 0 {
                 0
             } else {
@@ -520,17 +498,24 @@ pub(crate) async fn start_comment_writers_server(
             let username = comment_writer_username(index as u64);
 
             tokio::task::spawn(async move {
-                let mut api = AgdbApi::new(ReqwestClient::new(), &address);
+                let mut api = api_with_client(client, &address);
                 let password = benchmark_password(&username);
                 api.user_login(&username, &password).await?;
                 let mut writer = ServerWriter::new(id, api);
                 let mut written = 0;
 
                 while written != comments {
-                    if writer
-                        .write_comment(&format!("{body} {written}"))
-                        .await
-                        .unwrap_or(false)
+                    if with_retry(&retry, "comment writer", &mut writer, |writer| {
+                        let body_value = body.clone();
+                        let attempt = written;
+
+                        Box::pin(async move {
+                            writer
+                                .write_comment(&format!("{body_value} {attempt}"))
+                                .await
+                        })
+                    })
+                    .await?
                     {
                         written += 1;
                     }

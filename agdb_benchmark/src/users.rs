@@ -4,74 +4,48 @@ use crate::database::BENCHMARK_DATABASE;
 use crate::database::BENCHMARK_USERNAME;
 use crate::database::Database;
 use crate::database::ServerDatabase;
+use crate::database::api_with_client;
 use crate::queries::BenchUser;
-use crate::utilities::format_duration;
-use crate::utilities::measured;
-use crate::utilities::measured_async;
-use crate::utilities::print_flush;
 use agdb::QueryBuilder;
 use agdb::StorageData;
 use agdb_api::AgdbApi;
 use agdb_api::DbUserRole;
 use agdb_api::ReqwestClient;
-use num_format::ToFormattedString;
 
 pub(crate) fn setup_users<S: StorageData>(
     db: &mut Database<S>,
     config: &Config,
 ) -> BenchResult<()> {
     let mut db = db.0.write()?;
-    let padding = config.padding as usize;
-    let cell_padding = config.cell_padding as usize;
     let user_count = config.user_count();
 
-    print_flush(format!(
-        "{:<padding$} | {:<cell_padding$} | {:<cell_padding$} | {:<cell_padding$} | {:<cell_padding$} |",
-        "Creating users",
-        1,
-        1,
-        user_count.to_formatted_string(&config.locale),
-        user_count.to_formatted_string(&config.locale)
-    ));
+    db.transaction_mut(|t| {
+        let mut user_ids = vec![];
 
-    let duration = measured(|| {
-        db.transaction_mut(|t| {
-            let mut user_ids = vec![];
+        for i in 0..user_count {
+            user_ids.push(
+                t.exec_mut(
+                    QueryBuilder::insert()
+                        .nodes()
+                        .values(BenchUser {
+                            name: format!("u{i}"),
+                            email: format!("u{i}@a.com"),
+                        })
+                        .query(),
+                )?
+                .elements[0]
+                    .id,
+            );
+        }
 
-            for i in 0..user_count {
-                user_ids.push(
-                    t.exec_mut(
-                        QueryBuilder::insert()
-                            .nodes()
-                            .values(BenchUser {
-                                name: format!("u{i}"),
-                                email: format!("u{i}@a.com"),
-                            })
-                            .query(),
-                    )?
-                    .elements[0]
-                        .id,
-                );
-            }
-
-            t.exec_mut(
-                QueryBuilder::insert()
-                    .edges()
-                    .from("users")
-                    .to(user_ids)
-                    .query(),
-            )
-        })?;
-        Ok(())
+        t.exec_mut(
+            QueryBuilder::insert()
+                .edges()
+                .from("users")
+                .to(user_ids)
+                .query(),
+        )
     })?;
-
-    print_flush(format!(
-        " {:cell_padding$} | {:cell_padding$} | {:cell_padding$} | {:cell_padding$}\n",
-        "-",
-        format_duration(duration / (user_count as u32), config.locale),
-        "-",
-        format_duration(duration, config.locale)
-    ));
 
     Ok(())
 }
@@ -79,36 +53,13 @@ pub(crate) fn setup_users<S: StorageData>(
 pub(crate) async fn setup_server_users(
     db: &mut ServerDatabase,
     config: &Config,
+    admin_username: &str,
+    admin_password: &str,
 ) -> BenchResult<()> {
-    let mut admin_api = AgdbApi::new(ReqwestClient::new(), db.address());
-    admin_api.user_login("admin", "admin").await?;
+    let mut admin_api = api_with_client(db.client().clone(), db.address());
+    admin_api.user_login(admin_username, admin_password).await?;
     ensure_users_exist(&admin_api, config).await?;
-
-    let padding = config.padding as usize;
-    let cell_padding = config.cell_padding as usize;
-    let total_users = config.posters.count
-        + config.commenters.count
-        + config.post_readers.count
-        + config.comment_readers.count;
-
-    print_flush(format!(
-        "{:<padding$} | {:<cell_padding$} | {:<cell_padding$} | {:<cell_padding$} | {:<cell_padding$} |",
-        "Creating users",
-        1,
-        1,
-        total_users.to_formatted_string(&config.locale),
-        total_users.to_formatted_string(&config.locale)
-    ));
-
-    let duration = measured_async(ensure_database_users_in_db(&admin_api, config)).await?;
-
-    print_flush(format!(
-        " {:cell_padding$} | {:cell_padding$} | {:cell_padding$} | {:cell_padding$}\n",
-        "-",
-        format_duration(duration / (total_users as u32), config.locale),
-        "-",
-        format_duration(duration, config.locale)
-    ));
+    ensure_database_users_in_db(&admin_api, config).await?;
 
     Ok(())
 }
@@ -117,28 +68,7 @@ pub(crate) async fn setup_server_bench_users(
     db: &ServerDatabase,
     config: &Config,
 ) -> BenchResult<()> {
-    let padding = config.padding as usize;
-    let cell_padding = config.cell_padding as usize;
-    let user_count = config.user_count();
-
-    print_flush(format!(
-        "{:<padding$} | {:<cell_padding$} | {:<cell_padding$} | {:<cell_padding$} | {:<cell_padding$} |",
-        "Adding bench users",
-        1,
-        1,
-        user_count.to_formatted_string(&config.locale),
-        user_count.to_formatted_string(&config.locale)
-    ));
-
-    let duration = measured_async(insert_bench_users(db, config)).await?;
-
-    print_flush(format!(
-        " {:cell_padding$} | {:cell_padding$} | {:cell_padding$} | {:cell_padding$}\n",
-        "-",
-        format_duration(duration / (user_count as u32), config.locale),
-        "-",
-        format_duration(duration, config.locale)
-    ));
+    insert_bench_users(db, config).await?;
 
     Ok(())
 }

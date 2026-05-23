@@ -239,30 +239,24 @@ impl LogRecord {
         if show_details {
             if !self.request_headers.is_empty() {
                 let headers_json = serde_json::to_string(&self.request_headers).unwrap_or_default();
-                message.push_str(&format!(
-                    "\n  {} {headers_json}",
-                    colorize(DIM, "> Request Headers:")
-                ));
+                message.push_str(&format!("\n  {} {headers_json}", colorize(DIM, "> [H]:")));
             }
             if !self.request_body.is_empty() {
                 message.push_str(&format!(
                     "\n  {} {}",
-                    colorize(DIM, "> Request Body:"),
+                    colorize(DIM, "> [B]:"),
                     self.request_body
                 ));
             }
             if !self.response_headers.is_empty() {
                 let headers_json =
                     serde_json::to_string(&self.response_headers).unwrap_or_default();
-                message.push_str(&format!(
-                    "\n  {} {headers_json}",
-                    colorize(DIM, "< Response Headers:")
-                ));
+                message.push_str(&format!("\n  {} {headers_json}", colorize(DIM, "< [H]:")));
             }
             if !self.response_body.is_empty() {
                 message.push_str(&format!(
                     "\n  {} {}",
-                    colorize(DIM, "< Response Body:"),
+                    colorize(DIM, "< [B]:"),
                     self.response_body
                 ));
             }

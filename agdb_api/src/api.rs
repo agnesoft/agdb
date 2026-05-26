@@ -535,6 +535,9 @@ mod tests {
                 for g in e.generics {
                     collect_from_generic(g, out);
                 }
+                for i in &(e.impl_defs)() {
+                    collect_from_impl(i, out);
+                }
             }
             Type::Struct(s) => {
                 for v in s.fields {
@@ -544,6 +547,9 @@ mod tests {
                 }
                 for g in s.generics {
                     collect_from_generic(g, out);
+                }
+                for i in &(s.impl_defs)() {
+                    collect_from_impl(i, out);
                 }
             }
             Type::Function(f) | Type::Test(f) => collect_from_function(f, out),

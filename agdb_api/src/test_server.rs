@@ -159,6 +159,22 @@ pub async fn wait_for_ready(api: &AgdbApi<ReqwestClient>) -> Result<(), TestErro
 #[cfg(feature = "api")]
 pub fn test_defs() -> Vec<agdb::type_def::Type> {
     let mut defs = vec![
+        __ADMIN_type_def(),
+        __CONFIG_FILE_type_def(),
+        __SERVER_DATA_DIR_type_def(),
+        __HOST_type_def(),
+        __BINARY_type_def(),
+        __DEFAULT_PORT_type_def(),
+        __POLL_INTERVAL_type_def(),
+        __RETRY_TIMEOUT_type_def(),
+        __RETRY_ATTEMPS_type_def(),
+        __SHUTDOWN_RETRY_TIMEOUT_type_def(),
+        __SHUTDOWN_RETRY_ATTEMPTS_type_def(),
+        __TEST_TIMEOUT_type_def(),
+        __CLIENT_TIMEOUT_type_def(),
+        __PORT_type_def(),
+        __COUNTER_type_def(),
+        __SERVER_type_def(),
         TestServerProcess::type_def(),
         __server_bin_type_def(),
         __next_user_name_type_def(),

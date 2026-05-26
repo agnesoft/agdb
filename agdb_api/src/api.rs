@@ -1,3 +1,6 @@
+use std::sync::atomic::AtomicU16;
+use std::time::Duration;
+
 use agdb::Comparison;
 use agdb::CountComparison;
 use agdb::DbElement;
@@ -253,12 +256,20 @@ impl Api {
         ]
     }
 
+    pub fn misc_types() -> Vec<Type> {
+        vec![
+            Duration::type_def(),
+            tokio::sync::RwLock::<i32>::type_def(),
+            AtomicU16::type_def(),
+        ]
+    }
+
     pub fn type_defs() -> Vec<Type> {
         let mut defs = Self::db_types();
         defs.extend(Self::query_types());
         defs.extend(Self::query_builder_types());
         defs.extend(Self::api_types());
-
+        defs.extend(Self::misc_types());
         #[cfg(feature = "test_server")]
         {
             defs.extend(Self::test_infra());
@@ -552,16 +563,6 @@ mod tests {
         }
     }
 
-    fn roots() -> Vec<Type> {
-        let mut roots = Api::type_defs();
-        #[cfg(feature = "test_server")]
-        {
-            roots.extend(Api::test_infra());
-            roots.extend(Api::test_defs());
-        }
-        roots
-    }
-
     fn type_name(ty: &Type) -> Option<&'static str> {
         match ty {
             Type::Struct(s) => Some(s.name),
@@ -572,7 +573,7 @@ mod tests {
     }
 
     fn collect_missing_named_types() -> Vec<&'static str> {
-        let roots = roots();
+        let roots = Api::type_defs();
         let root_names: HashSet<&'static str> = roots.iter().map(|ty| ty.name()).collect();
 
         let mut visited: HashSet<usize> = HashSet::new();
@@ -788,7 +789,7 @@ mod tests {
 
     #[test]
     fn all_fn_ptrs_resolvable() {
-        let roots = roots();
+        let roots = Api::type_defs();
         let mut visited: HashSet<usize> = HashSet::new();
         let mut queue: Vec<fn() -> Type> = Vec::new();
 

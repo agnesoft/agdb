@@ -16,7 +16,7 @@ categories = ["database", "api-bindings"]
 [features]
 default = []
 tls = ["reqwest/default-tls"]
-api = ["agdb/api"]
+api = ["agdb/api", "dep:tokio"]
 test_server = ["dep:tokio"]
 
 [dependencies]

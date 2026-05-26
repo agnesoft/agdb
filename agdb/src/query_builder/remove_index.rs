@@ -3,6 +3,7 @@ use crate::RemoveIndexQuery;
 
 /// Final step in the remove index query builder.
 #[cfg_attr(feature = "api", derive(agdb::TypeDef))]
+#[cfg_attr(feature = "api", type_def(inherent))]
 pub struct RemoveIndex(pub DbValue);
 
 #[cfg_attr(feature = "api", agdb::impl_def())]

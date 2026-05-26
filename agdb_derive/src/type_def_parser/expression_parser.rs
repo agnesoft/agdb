@@ -299,9 +299,7 @@ fn parse_method_call(e: &ExprMethodCall, generics: &[Generic]) -> TokenStream2 {
             gt.args
                 .iter()
                 .filter_map(|ga| match ga {
-                    GenericArgument::Type(ty) => {
-                        Some(quote! { <#ty as ::agdb::type_def::TypeDefinition>::type_def })
-                    }
+                    GenericArgument::Type(ty) => Some(generics_parser::parse_type(ty, generics)),
                     _ => None,
                 })
                 .collect::<Vec<_>>()
@@ -384,6 +382,13 @@ fn parse_closure_arg(pat: &Pat, generics: &[Generic]) -> (TokenStream2, TokenStr
         }
         Pat::Ident(p) => {
             let name = p.ident.to_string();
+            (
+                quote! { #name },
+                quote! { <() as ::agdb::type_def::TypeDefinition>::type_def },
+            )
+        }
+        Pat::Tuple(p) => {
+            let name = p.to_token_stream().to_string();
             (
                 quote! { #name },
                 quote! { <() as ::agdb::type_def::TypeDefinition>::type_def },

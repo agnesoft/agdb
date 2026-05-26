@@ -15,6 +15,7 @@ pub const DB_ELEMENT_ID_KEY: &str = "db_element_id";
 
 /// Condition builder
 #[cfg_attr(feature = "api", derive(agdb::TypeDef))]
+#[cfg_attr(feature = "api", type_def(inherent))]
 pub struct Where<T: SearchQueryBuilder> {
     logic: QueryConditionLogic,
     modifier: QueryConditionModifier,
@@ -24,6 +25,7 @@ pub struct Where<T: SearchQueryBuilder> {
 
 /// Condition builder for `key` condition.
 #[cfg_attr(feature = "api", derive(agdb::TypeDef))]
+#[cfg_attr(feature = "api", type_def(inherent))]
 pub struct WhereKey<T: SearchQueryBuilder> {
     key: DbValue,
     where_: Where<T>,
@@ -31,6 +33,7 @@ pub struct WhereKey<T: SearchQueryBuilder> {
 
 /// Condition builder setting the logic operator.
 #[cfg_attr(feature = "api", derive(agdb::TypeDef))]
+#[cfg_attr(feature = "api", type_def(inherent))]
 pub struct WhereLogicOperator<T: SearchQueryBuilder>(pub Where<T>);
 
 #[cfg_attr(feature = "api", agdb::impl_def())]

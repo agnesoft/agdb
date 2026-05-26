@@ -183,4 +183,44 @@ mod tests {
         assert!(defs[0].trait_.is_none());
         assert_eq!(defs[0].functions[0].name, "helper");
     }
+
+    #[test]
+    fn into_bound_captures_inner_type() {
+        #[derive(agdb::TypeDef)]
+        #[type_def(inherent)]
+        struct S;
+
+        #[agdb::impl_def]
+        #[allow(dead_code)]
+        impl S {
+            fn set_ids<T: Into<Vec<String>>>(self, ids: T) -> Self {
+                let _ = ids;
+                self
+            }
+        }
+
+        let defs = S::impl_defs();
+        assert_eq!(defs.len(), 1);
+        let f = &defs[0].functions[0];
+        assert_eq!(f.name, "set_ids");
+        assert_eq!(f.generics.len(), 1);
+        assert_eq!(f.generics[0].name, "T");
+        assert_eq!(f.generics[0].bounds.len(), 1);
+
+        let bound_type = (f.generics[0].bounds[0])();
+        let Type::Trait(t) = bound_type else {
+            panic!("Expected Trait, got: {:?}", bound_type);
+        };
+        assert_eq!(t.name, "Into");
+        assert_eq!(t.generics.len(), 1, "Into should have 1 type argument");
+        assert_eq!(t.generics[0].name, "Vec < String >");
+        assert_eq!(t.generics[0].bounds.len(), 1);
+
+        let inner_type = (t.generics[0].bounds[0])();
+        assert!(
+            matches!(inner_type, Type::Vec(_)),
+            "Expected Vec type, got: {:?}",
+            inner_type
+        );
+    }
 }

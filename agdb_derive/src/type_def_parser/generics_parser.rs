@@ -12,6 +12,29 @@ pub(crate) struct Generic {
 }
 
 pub(crate) fn extract_generics(generics: &Generics) -> Vec<Generic> {
+    let mut names: Vec<Generic> = Vec::new();
+    generics.params.iter().for_each(|param| {
+        if let GenericParam::Type(ty) = param {
+            names.push(Generic {
+                name: ty.ident.to_string(),
+                bounds: Vec::new(),
+            });
+        }
+    });
+    if let Some(where_clause) = &generics.where_clause {
+        where_clause.predicates.iter().for_each(|predicate| {
+            if let syn::WherePredicate::Type(pred) = predicate {
+                let name = pred.bounded_ty.to_token_stream().to_string();
+                if !names.iter().any(|g| g.name == name) {
+                    names.push(Generic {
+                        name,
+                        bounds: Vec::new(),
+                    });
+                }
+            }
+        });
+    }
+
     let mut extracted: Vec<Generic> = Vec::new();
 
     if let Some(where_clause) = &generics.where_clause {
@@ -19,7 +42,11 @@ pub(crate) fn extract_generics(generics: &Generics) -> Vec<Generic> {
             if let syn::WherePredicate::Type(pred) = predicate {
                 extracted.push(Generic {
                     name: pred.bounded_ty.to_token_stream().to_string(),
-                    bounds: pred.bounds.iter().map(parse_type_param_bound).collect(),
+                    bounds: pred
+                        .bounds
+                        .iter()
+                        .map(|b| parse_type_param_bound_with_generics(b, &names))
+                        .collect(),
                 });
             }
         });
@@ -31,7 +58,11 @@ pub(crate) fn extract_generics(generics: &Generics) -> Vec<Generic> {
             if !extracted.iter().any(|g| g.name == name) {
                 extracted.push(Generic {
                     name,
-                    bounds: ty.bounds.iter().map(parse_type_param_bound).collect(),
+                    bounds: ty
+                        .bounds
+                        .iter()
+                        .map(|b| parse_type_param_bound_with_generics(b, &names))
+                        .collect(),
                 });
             }
         }
@@ -88,29 +119,52 @@ pub(crate) fn parse_generics(generics: &Generics) -> Vec<TokenStream2> {
 }
 
 pub(crate) fn parse_type_param_bound(bound: &TypeParamBound) -> TokenStream2 {
-    match extract_type_param_bound(bound) {
-        Ok(name) => quote! {
-            || ::agdb::type_def::Type::Trait(::agdb::type_def::Trait {
-                name: #name,
-                generics: &[],
-                bounds: &[],
-                functions: &[],
-            })
-        },
-        Err(e) => e,
+    parse_type_param_bound_with_generics(bound, &[])
+}
+
+pub(crate) fn parse_type_param_bound_with_generics(
+    bound: &TypeParamBound,
+    generics: &[Generic],
+) -> TokenStream2 {
+    match bound {
+        TypeParamBound::Trait(trait_bound) => {
+            let last_seg = trait_bound.path.segments.last().unwrap();
+            let name = last_seg.ident.to_string();
+            let type_args = extract_trait_type_args(last_seg, generics);
+            quote! {
+                || ::agdb::type_def::Type::Trait(::agdb::type_def::Trait {
+                    name: #name,
+                    generics: &[#(#type_args),*],
+                    bounds: &[],
+                    functions: &[],
+                })
+            }
+        }
+        _ => crate::compile_error(
+            proc_macro2::TokenStream::new(),
+            "Only trait bounds are supported",
+        ),
     }
 }
 
-fn extract_type_param_bound(bound: &TypeParamBound) -> Result<String, TokenStream2> {
-    match bound {
-        TypeParamBound::Trait(trait_bound) => {
-            Ok(trait_bound.path.segments.last().unwrap().ident.to_string())
+fn extract_trait_type_args(segment: &syn::PathSegment, generics: &[Generic]) -> Vec<TokenStream2> {
+    let mut result = Vec::new();
+    if let syn::PathArguments::AngleBracketed(args) = &segment.arguments {
+        for arg in &args.args {
+            if let syn::GenericArgument::Type(ty) = arg {
+                let ty_str = quote! { #ty }.to_string();
+                let resolved = parse_type(ty, generics);
+                result.push(quote! {
+                    ::agdb::type_def::Generic {
+                        kind: ::agdb::type_def::GenericKind::Type,
+                        name: #ty_str,
+                        bounds: &[#resolved],
+                    }
+                });
+            }
         }
-        _ => Err(crate::compile_error(
-            proc_macro2::TokenStream::new(),
-            "Only trait bounds are supported",
-        )),
     }
+    result
 }
 
 pub(crate) fn parse_lifetime_params(generics: &Generics) -> Vec<&syn::LifetimeParam> {

@@ -26,24 +26,37 @@ use tokio::process::Child;
 use tokio::process::Command;
 use tokio::sync::RwLock;
 
+#[cfg_attr(feature = "api", agdb::static_def())]
 pub const ADMIN: &str = "admin";
+#[cfg_attr(feature = "api", agdb::static_def())]
 pub const CONFIG_FILE: &str = "agdb_server.yaml";
+#[cfg_attr(feature = "api", agdb::static_def())]
 pub const SERVER_DATA_DIR: &str = "agdb_server_data";
-
+#[cfg_attr(feature = "api", agdb::static_def())]
 pub(crate) const HOST: &str = "localhost";
-
+#[cfg_attr(feature = "api", agdb::static_def())]
 const BINARY: &str = "agdb_server";
+#[cfg_attr(feature = "api", agdb::static_def())]
 const DEFAULT_PORT: u16 = 3000;
+#[cfg_attr(feature = "api", agdb::static_def())]
 const POLL_INTERVAL: u64 = 100;
+#[cfg_attr(feature = "api", agdb::static_def())]
 const RETRY_TIMEOUT: Duration = Duration::from_secs(1);
+#[cfg_attr(feature = "api", agdb::static_def())]
 const RETRY_ATTEMPS: u16 = 10;
+#[cfg_attr(feature = "api", agdb::static_def())]
 const SHUTDOWN_RETRY_TIMEOUT: Duration = Duration::from_millis(100);
+#[cfg_attr(feature = "api", agdb::static_def())]
 const SHUTDOWN_RETRY_ATTEMPTS: u16 = 100;
+#[cfg_attr(feature = "api", agdb::static_def())]
 const TEST_TIMEOUT: u128 = 30000;
+#[cfg_attr(feature = "api", agdb::static_def())]
 const CLIENT_TIMEOUT: Duration = Duration::from_secs(30);
-
+#[cfg_attr(feature = "api", agdb::static_def())]
 static PORT: AtomicU16 = AtomicU16::new(DEFAULT_PORT);
+#[cfg_attr(feature = "api", agdb::static_def())]
 static COUNTER: AtomicU16 = AtomicU16::new(1);
+#[cfg_attr(feature = "api", agdb::static_def())]
 static SERVER: std::sync::OnceLock<RwLock<Weak<TestServerImpl>>> = std::sync::OnceLock::new();
 
 pub struct TestServerProcess(pub Child);
@@ -55,6 +68,7 @@ impl agdb::type_def::TypeDefinition for TestServerProcess {
             name: "TestServerProcess",
             generics: &[],
             fields: &[],
+            impl_defs: Vec::new,
         })
     }
 }
@@ -145,6 +159,22 @@ pub async fn wait_for_ready(api: &AgdbApi<ReqwestClient>) -> Result<(), TestErro
 #[cfg(feature = "api")]
 pub fn test_defs() -> Vec<agdb::type_def::Type> {
     let mut defs = vec![
+        __ADMIN_type_def(),
+        __CONFIG_FILE_type_def(),
+        __SERVER_DATA_DIR_type_def(),
+        __HOST_type_def(),
+        __BINARY_type_def(),
+        __DEFAULT_PORT_type_def(),
+        __POLL_INTERVAL_type_def(),
+        __RETRY_TIMEOUT_type_def(),
+        __RETRY_ATTEMPS_type_def(),
+        __SHUTDOWN_RETRY_TIMEOUT_type_def(),
+        __SHUTDOWN_RETRY_ATTEMPTS_type_def(),
+        __TEST_TIMEOUT_type_def(),
+        __CLIENT_TIMEOUT_type_def(),
+        __PORT_type_def(),
+        __COUNTER_type_def(),
+        __SERVER_type_def(),
         TestServerProcess::type_def(),
         __server_bin_type_def(),
         __next_user_name_type_def(),

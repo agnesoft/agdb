@@ -25,13 +25,12 @@ use std::sync::Weak;
 use std::time::Instant;
 use tokio::sync::RwLock;
 
-type ClusterImpl = Vec<TestServerImpl>;
-
-static CLUSTER: OnceLock<RwLock<Weak<ClusterImpl>>> = OnceLock::new();
+#[cfg_attr(feature = "api", agdb::static_def())]
+static CLUSTER: OnceLock<RwLock<Weak<Vec<TestServerImpl>>>> = OnceLock::new();
 
 #[cfg_attr(feature = "api", derive(agdb::TypeDef))]
 pub struct TestCluster {
-    cluster: Arc<ClusterImpl>,
+    cluster: Arc<Vec<TestServerImpl>>,
 }
 
 #[cfg_attr(feature = "api", agdb::impl_def())]
@@ -182,6 +181,7 @@ pub async fn create_cluster(nodes: usize, tls: bool) -> Result<Vec<TestServerImp
 #[cfg(feature = "api")]
 pub fn test_defs() -> Vec<Type> {
     vec![
+        __CLUSTER_type_def(),
         TestCluster::type_def(),
         __wait_for_leader_type_def(),
         __create_cluster_type_def(),

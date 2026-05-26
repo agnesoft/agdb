@@ -24,8 +24,7 @@ serde = ["dep:serde"]
 agdb_derive = { version = "0.13.0", path = "../agdb_derive", optional = true }
 utoipa = { version = "5", optional = true }
 serde = { version = "1", features = ["derive"], optional = true }
-tokio = { version = "1", features = ["macros", "rt"], optional = true }
+tokio = { version = "1", features = ["macros", "rt", "sync"], optional = true }
 
 [dev-dependencies]
 serde_json = { version = "1" }
-tokio = { version = "1", features = ["macros", "rt"] }

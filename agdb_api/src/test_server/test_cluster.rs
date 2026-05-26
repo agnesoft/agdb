@@ -181,6 +181,7 @@ pub async fn create_cluster(nodes: usize, tls: bool) -> Result<Vec<TestServerImp
 #[cfg(feature = "api")]
 pub fn test_defs() -> Vec<Type> {
     vec![
+        __CLUSTER_type_def(),
         TestCluster::type_def(),
         __wait_for_leader_type_def(),
         __create_cluster_type_def(),

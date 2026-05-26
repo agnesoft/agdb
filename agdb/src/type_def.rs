@@ -50,10 +50,18 @@ pub enum Type {
     Result { ok: fn() -> Type, err: fn() -> Type },
     SelfType(bool),
     Slice(fn() -> Type),
+    Static(Static),
     Struct(Struct),
     Trait(Trait),
     Tuple(&'static [fn() -> Type]),
     Vec(fn() -> Type),
+}
+
+#[derive(Debug, agdb::TypeDef)]
+pub struct Static {
+    pub name: &'static str,
+    pub ty: fn() -> Type,
+    pub value: &'static [Expression],
 }
 
 impl Type {
@@ -71,6 +79,7 @@ impl Type {
             Type::Result { .. } => "Result",
             Type::SelfType(_) => "Self",
             Type::Slice(_) => "Slice",
+            Type::Static(s) => s.name,
             Type::Struct(s) => s.name,
             Type::Trait(t) => t.name,
             Type::Tuple(_) => "Tuple",
@@ -151,12 +160,15 @@ pub enum Literal {
     I16,
     I32,
     I64,
+    I128,
+    Isize,
     Str,
     String,
     U8,
     U16,
     U32,
     U64,
+    U128,
     Unit,
     Usize,
 }
@@ -171,12 +183,15 @@ impl Literal {
             Literal::I16 => "i16",
             Literal::I32 => "i32",
             Literal::I64 => "i64",
+            Literal::I128 => "i128",
+            Literal::Isize => "isize",
             Literal::Str => "str",
             Literal::String => "String",
             Literal::U8 => "u8",
             Literal::U16 => "u16",
             Literal::U32 => "u32",
             Literal::U64 => "u64",
+            Literal::U128 => "u128",
             Literal::Unit => "()",
             Literal::Usize => "usize",
         }
@@ -201,6 +216,8 @@ impl_type_def_literal! {
     i16    => I16,
     i32    => I32,
     i64    => I64,
+    i128   => I128,
+    isize  => Isize,
     f32    => F32,
     f64    => F64,
     &str   => Str,
@@ -209,6 +226,7 @@ impl_type_def_literal! {
     u16    => U16,
     u32    => U32,
     u64    => U64,
+    u128   => U128,
     usize  => Usize,
     ()     => Unit,
 }
@@ -292,6 +310,68 @@ impl TypeDefinition for std::path::PathBuf {
                 name: "inner",
                 ty: Some(|| Type::Vec(u8::type_def)),
             }],
+            impl_defs: Vec::new,
+        })
+    }
+}
+
+impl TypeDefinition for std::time::Duration {
+    fn type_def() -> Type {
+        Type::Struct(Struct {
+            name: "Duration",
+            generics: &[],
+            fields: &[
+                Variable {
+                    name: "secs",
+                    ty: Some(|| Type::Literal(Literal::U64)),
+                },
+                Variable {
+                    name: "nanos",
+                    ty: Some(|| Type::Literal(Literal::U32)),
+                },
+            ],
+            impl_defs: Vec::new,
+        })
+    }
+}
+
+impl TypeDefinition for std::sync::atomic::AtomicU16 {
+    fn type_def() -> Type {
+        Type::Struct(Struct {
+            name: "AtomicU16",
+            generics: &[],
+            fields: &[Variable {
+                name: "value",
+                ty: Some(|| Type::Literal(Literal::U16)),
+            }],
+            impl_defs: Vec::new,
+        })
+    }
+}
+
+impl<T: TypeDefinition> TypeDefinition for std::sync::OnceLock<T> {
+    fn type_def() -> Type {
+        Type::Pointer(Pointer {
+            kind: PointerKind::OnceLock,
+            ty: T::type_def,
+        })
+    }
+}
+
+impl<T: TypeDefinition> TypeDefinition for std::sync::Weak<T> {
+    fn type_def() -> Type {
+        Type::Pointer(Pointer {
+            kind: PointerKind::ArcWeak,
+            ty: T::type_def,
+        })
+    }
+}
+
+impl<T: TypeDefinition> TypeDefinition for tokio::sync::RwLock<T> {
+    fn type_def() -> Type {
+        Type::Pointer(Pointer {
+            kind: PointerKind::RwLock,
+            ty: T::type_def,
         })
     }
 }
@@ -323,23 +403,11 @@ macro_rules! impl_type_def_fn_ptr {
 }
 
 impl_type_def_fn_ptr! {
+    (),
     (A0),
     (A0, A1),
     (A0, A1, A2),
     (A0, A1, A2, A3),
-}
-
-impl TypeDefinition for fn() -> Type {
-    fn type_def() -> Type {
-        Type::Function(Function {
-            name: "",
-            generics: &[],
-            args: &[],
-            ret: Type::type_def,
-            async_fn: false,
-            body: &[],
-        })
-    }
 }
 
 #[cfg(test)]

@@ -119,9 +119,8 @@ use crate::http_client::ReqwestClientTypeDef;
 pub struct Api;
 
 impl Api {
-    pub fn type_defs() -> Vec<Type> {
+    pub fn db_types() -> Vec<Type> {
         vec![
-            // agdb DB types
             DbElement::type_def(),
             DbF64::type_def(),
             DbId::type_def(),
@@ -130,7 +129,11 @@ impl Api {
             DbKeyValue::type_def(),
             DbValue::type_def(),
             DbValues::type_def(),
-            // agdb query types
+        ]
+    }
+
+    pub fn query_types() -> Vec<Type> {
+        vec![
             QueryType::type_def(),
             QueryAliases::type_def(),
             InsertAliasesQuery::type_def(),
@@ -165,7 +168,11 @@ impl Api {
             SelectKeysQuery::type_def(),
             SelectNodeCountQuery::type_def(),
             SelectValuesQuery::type_def(),
-            // agdb QueryBuilder types
+        ]
+    }
+
+    pub fn query_builder_types() -> Vec<Type> {
+        vec![
             QueryBuilder::type_def(),
             Insert::type_def(),
             InsertAliases::type_def(),
@@ -190,7 +197,6 @@ impl Api {
             RemoveIndex::type_def(),
             RemoveValues::type_def(),
             RemoveValuesIds::type_def(),
-            // Generic search/where builder types (monomorphised with SearchQuery)
             Search::<SearchQuery>::type_def(),
             SearchAlgorithm::<SearchQuery>::type_def(),
             SearchFrom::<SearchQuery>::type_def(),
@@ -217,11 +223,14 @@ impl Api {
             Where::<SearchQuery>::type_def(),
             WhereKey::<SearchQuery>::type_def(),
             WhereLogicOperator::<SearchQuery>::type_def(),
-            // agdb_api traits
-            SearchQueryBuilderDef::type_def(),
-            HttpClientDef::type_def(),
-            AgdbApiClientDef::type_def(),
-            // agdb_api types
+            SearchQueryBuilderDef::type_def(), //trait
+        ]
+    }
+
+    pub fn agbd_api_types() -> Vec<Type> {
+        vec![
+            HttpClientDef::type_def(),    // trait
+            AgdbApiClientDef::type_def(), // trait
             AgdbApiError::type_def(),
             ReqwestClient::type_def(),
             ReqwestClientTypeDef::type_def(),
@@ -244,10 +253,25 @@ impl Api {
         ]
     }
 
+    pub fn type_defs() -> Vec<Type> {
+        let mut defs = Self::db_types();
+        defs.extend(Self::query_types());
+        defs.extend(Self::query_builder_types());
+        defs.extend(Self::agbd_api_types());
+        defs.extend(Self::test_infra());
+        defs.extend(Self::test_defs());
+        defs
+    }
+
+    #[cfg(feature = "test_server")]
+    pub fn test_infra() -> Vec<Type> {
+        crate::test_server::test_defs()
+    }
+
     /// Returns all test function definitions for API reflection
     #[cfg(feature = "test_server")]
     pub fn test_defs() -> Vec<Type> {
-        let mut defs = crate::test_server::test_defs();
+        let mut defs = Vec::new();
 
         defs.extend(crate::tests::routes::admin_db_add_test::test_defs());
         defs.extend(crate::tests::routes::admin_db_audit_test::test_defs());
@@ -519,13 +543,17 @@ mod tests {
             }
             Type::Generic(g) => collect_from_generic(g, out),
             Type::Literal(_) | Type::SelfType(_) => {}
+            Type::Static(s) => out.push(s.ty),
         }
     }
 
     fn roots() -> Vec<Type> {
         let mut roots = Api::type_defs();
         #[cfg(feature = "test_server")]
-        roots.extend(Api::test_defs());
+        {
+            roots.extend(Api::test_infra());
+            roots.extend(Api::test_defs());
+        }
         roots
     }
 
@@ -619,6 +647,139 @@ mod tests {
         // agdb reflection meta-traits (infrastructure, not public API types)
         "TypeDefinition",
     ];
+
+    #[test]
+    fn into_bounds_capture_inner_type() {
+        let impl_defs = Api::type_defs();
+        let insert_aliases_impl = impl_defs
+            .iter()
+            .find_map(|t| {
+                if let Type::Struct(s) = t
+                    && s.name == "InsertAliases"
+                {
+                    Some((s.impl_defs)())
+                } else {
+                    None
+                }
+            })
+            .expect("InsertAliases impl should exist");
+        let ids_fn = insert_aliases_impl[0]
+            .functions
+            .iter()
+            .find(|f| f.name == "ids")
+            .expect("ids method should exist");
+
+        assert_eq!(ids_fn.generics.len(), 1);
+        let generic = &ids_fn.generics[0];
+        assert_eq!(generic.name, "T");
+
+        let bound_type = (generic.bounds[0])();
+        let Type::Trait(t) = &bound_type else {
+            panic!("Expected Trait bound, got: {:?}", bound_type);
+        };
+        assert_eq!(t.name, "Into");
+        assert!(
+            !t.generics.is_empty(),
+            "Into should have type arguments captured"
+        );
+        let inner = (t.generics[0].bounds[0])();
+        assert_eq!(inner.name(), "QueryIds");
+    }
+
+    #[test]
+    fn query_type_enum_variants_discoverable() {
+        let type_defs = Api::type_defs();
+        let query_type = type_defs
+            .iter()
+            .find(|t| t.name() == "QueryType")
+            .expect("QueryType should be in type_defs");
+        let Type::Enum(e) = query_type else {
+            panic!("QueryType should be an enum");
+        };
+
+        // Verify we can derive the variant → payload type mapping programmatically
+        let mut mapping: Vec<(&str, &str)> = Vec::new();
+        for v in e.variants {
+            if let Some(ty_fn) = v.ty {
+                let ty = ty_fn();
+                mapping.push((v.name, ty.name()));
+            }
+        }
+
+        assert!(
+            mapping
+                .iter()
+                .any(|(v, t)| *v == "InsertAlias" && *t == "InsertAliasesQuery")
+        );
+        assert!(
+            mapping
+                .iter()
+                .any(|(v, t)| *v == "InsertEdges" && *t == "InsertEdgesQuery")
+        );
+        assert!(
+            mapping
+                .iter()
+                .any(|(v, t)| *v == "Remove" && *t == "RemoveQuery")
+        );
+        assert!(
+            mapping
+                .iter()
+                .any(|(v, t)| *v == "Search" && *t == "SearchQuery")
+        );
+        assert!(
+            mapping
+                .iter()
+                .any(|(v, t)| *v == "SelectValues" && *t == "SelectValuesQuery")
+        );
+    }
+
+    #[test]
+    fn newtype_pattern_detectable() {
+        let type_defs = Api::type_defs();
+
+        // RemoveAliases is a newtype: struct RemoveAliases(pub RemoveAliasesQuery)
+        let remove_aliases = type_defs
+            .iter()
+            .find(|t| t.name() == "RemoveAliases")
+            .expect("RemoveAliases should be in type_defs");
+        let Type::Struct(s) = remove_aliases else {
+            panic!("RemoveAliases should be a struct");
+        };
+
+        // Newtype pattern: exactly one field with empty name
+        assert_eq!(s.fields.len(), 1);
+        assert_eq!(s.fields[0].name, "");
+        let field_type = (s.fields[0].ty.expect("field should have type"))();
+        assert_eq!(field_type.name(), "RemoveAliasesQuery");
+    }
+
+    #[test]
+    fn builder_method_bodies_available() {
+        let impl_defs = Api::type_defs();
+        let insert_nodes_impl = impl_defs
+            .iter()
+            .find_map(|t| {
+                if let Type::Struct(s) = t
+                    && s.name == "InsertNodes"
+                {
+                    Some((s.impl_defs)())
+                } else {
+                    None
+                }
+            })
+            .expect("InsertNodes impl should exist");
+
+        // Methods should have non-empty bodies (body parsing works)
+        for func in insert_nodes_impl[0].functions {
+            if func.name != "new" && func.name != "default" {
+                assert!(
+                    !func.body.is_empty(),
+                    "Method '{}' should have a non-empty body",
+                    func.name
+                );
+            }
+        }
+    }
 
     #[test]
     fn all_fn_ptrs_resolvable() {

@@ -53,6 +53,7 @@ impl TypeDefinition for ReqwestClientTypeDef {
             name: "reqwest::Client",
             generics: &[],
             fields: &[],
+            impl_defs: Vec::new,
         })
     }
 }

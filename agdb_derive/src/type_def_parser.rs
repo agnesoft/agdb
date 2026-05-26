@@ -58,6 +58,52 @@ pub(crate) fn trait_def_impl(item: TokenStream) -> TokenStream {
     .into()
 }
 
+pub(crate) fn static_def_impl(item: TokenStream) -> TokenStream {
+    let it: TokenStream2 = item.clone().into();
+
+    if let Ok(input) = syn::parse::<syn::ItemConst>(item.clone()) {
+        let name_str = input.ident.to_string();
+        let fn_name = type_def_fn(&name_str);
+        let ty = generics_parser::parse_type(&input.ty, &[]);
+        let value = expression_parser::parse_expression(&input.expr, &[]);
+        let name = &input.ident;
+
+        quote! {
+            #it
+
+            fn #fn_name() -> ::agdb::type_def::Type {
+                ::agdb::type_def::Type::Static(::agdb::type_def::Static {
+                    name: stringify!(#name),
+                    ty: #ty,
+                    value: &[#value],
+                })
+            }
+        }
+        .into()
+    } else if let Ok(input) = syn::parse::<syn::ItemStatic>(item.clone()) {
+        let name_str = input.ident.to_string();
+        let fn_name = type_def_fn(&name_str);
+        let ty = generics_parser::parse_type(&input.ty, &[]);
+        let value = expression_parser::parse_expression(&input.expr, &[]);
+        let name = &input.ident;
+
+        quote! {
+            #it
+
+            fn #fn_name() -> ::agdb::type_def::Type {
+                ::agdb::type_def::Type::Static(::agdb::type_def::Static {
+                    name: stringify!(#name),
+                    ty: #ty,
+                    value: &[#value],
+                })
+            }
+        }
+        .into()
+    } else {
+        crate::compile_error(it, "Only const & static items are supported").into()
+    }
+}
+
 pub(crate) fn fn_def_impl(item: TokenStream) -> TokenStream {
     parse_fn_attr_impl(item, quote! { ::agdb::type_def::Type::Function })
 }

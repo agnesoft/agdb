@@ -26,24 +26,37 @@ use tokio::process::Child;
 use tokio::process::Command;
 use tokio::sync::RwLock;
 
+#[cfg_attr(feature = "api", agdb::static_def())]
 pub const ADMIN: &str = "admin";
+#[cfg_attr(feature = "api", agdb::static_def())]
 pub const CONFIG_FILE: &str = "agdb_server.yaml";
+#[cfg_attr(feature = "api", agdb::static_def())]
 pub const SERVER_DATA_DIR: &str = "agdb_server_data";
-
+#[cfg_attr(feature = "api", agdb::static_def())]
 pub(crate) const HOST: &str = "localhost";
-
+#[cfg_attr(feature = "api", agdb::static_def())]
 const BINARY: &str = "agdb_server";
+#[cfg_attr(feature = "api", agdb::static_def())]
 const DEFAULT_PORT: u16 = 3000;
+#[cfg_attr(feature = "api", agdb::static_def())]
 const POLL_INTERVAL: u64 = 100;
+#[cfg_attr(feature = "api", agdb::static_def())]
 const RETRY_TIMEOUT: Duration = Duration::from_secs(1);
+#[cfg_attr(feature = "api", agdb::static_def())]
 const RETRY_ATTEMPS: u16 = 10;
+#[cfg_attr(feature = "api", agdb::static_def())]
 const SHUTDOWN_RETRY_TIMEOUT: Duration = Duration::from_millis(100);
+#[cfg_attr(feature = "api", agdb::static_def())]
 const SHUTDOWN_RETRY_ATTEMPTS: u16 = 100;
+#[cfg_attr(feature = "api", agdb::static_def())]
 const TEST_TIMEOUT: u128 = 30000;
+#[cfg_attr(feature = "api", agdb::static_def())]
 const CLIENT_TIMEOUT: Duration = Duration::from_secs(30);
-
+#[cfg_attr(feature = "api", agdb::static_def())]
 static PORT: AtomicU16 = AtomicU16::new(DEFAULT_PORT);
+#[cfg_attr(feature = "api", agdb::static_def())]
 static COUNTER: AtomicU16 = AtomicU16::new(1);
+#[cfg_attr(feature = "api", agdb::static_def())]
 static SERVER: std::sync::OnceLock<RwLock<Weak<TestServerImpl>>> = std::sync::OnceLock::new();
 
 pub struct TestServerProcess(pub Child);
@@ -55,6 +68,7 @@ impl agdb::type_def::TypeDefinition for TestServerProcess {
             name: "TestServerProcess",
             generics: &[],
             fields: &[],
+            impl_defs: Vec::new,
         })
     }
 }

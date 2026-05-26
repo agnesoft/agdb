@@ -43,13 +43,18 @@ pub(crate) fn parse_function_internal(input: &ItemFn, wrapper: TokenStream2) -> 
     }
 }
 
-pub(crate) fn parse_signature(sig: &syn::Signature) -> TokenStream2 {
+pub(crate) fn parse_impl_fn(impl_fn: &syn::ImplItemFn) -> TokenStream2 {
+    let sig = &impl_fn.sig;
     let name = &sig.ident;
     let current_generics = generics_parser::extract_generics(&sig.generics);
     let generics = generics_parser::parse_generics(&sig.generics);
     let args = parse_args(&sig.inputs, &current_generics);
     let ret = parse_ret(&sig.output, &current_generics);
     let async_fn = sig.asyncness.is_some();
+    let body = crate::type_def_parser::expression_parser::parse_block_stmts(
+        &impl_fn.block,
+        &current_generics,
+    );
 
     quote! {
         ::agdb::type_def::Function {
@@ -58,7 +63,7 @@ pub(crate) fn parse_signature(sig: &syn::Signature) -> TokenStream2 {
             args: &[#(#args),*],
             ret: #ret,
             async_fn: #async_fn,
-            body: &[],
+            body: &[#(#body),*],
         }
     }
 }

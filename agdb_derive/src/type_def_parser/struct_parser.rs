@@ -25,6 +25,7 @@ pub(crate) fn parse_struct(input: &DeriveInput, s: &DataStruct) -> TokenStream2 
                     name: stringify!(#name),
                     generics: &[#(#generics),*],
                     fields: &[#(#fields),*],
+                    impl_defs: Self::impl_defs,
                 })
             }
             #impl_defs_method

@@ -26,6 +26,7 @@ pub(crate) fn parse_enum(input: &DeriveInput, e: &DataEnum) -> TokenStream2 {
                     name: stringify!(#name),
                     generics: &[#(#generics),*],
                     variants: &[#(#variants),*],
+                    impl_defs: Self::impl_defs,
                 })
             }
             #impl_defs_method
@@ -102,6 +103,7 @@ fn parse_named_fields(fields: &FieldsNamed, generics: &[Generic]) -> TokenStream
             name: "",
             generics: &[],
             fields: &[#(#fields),*],
+            impl_defs: ::std::vec::Vec::new,
         })
     }
 }

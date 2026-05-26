@@ -7,31 +7,37 @@ use crate::query::query_values::SingleValues;
 /// Insert edges builder that lets you add `from`
 /// (origin) nodes.
 #[cfg_attr(feature = "api", derive(agdb::TypeDef))]
+#[cfg_attr(feature = "api", type_def(inherent))]
 pub struct InsertEdges(pub InsertEdgesQuery);
 
 /// Insert edges builder that lets you add values.
 #[cfg_attr(feature = "api", derive(agdb::TypeDef))]
+#[cfg_attr(feature = "api", type_def(inherent))]
 pub struct InsertEdgesEach(pub InsertEdgesQuery);
 
 /// Insert edges builder that lets you add `to`
 /// (destination) nodes.
 #[cfg_attr(feature = "api", derive(agdb::TypeDef))]
+#[cfg_attr(feature = "api", type_def(inherent))]
 pub struct InsertEdgesFrom(pub InsertEdgesQuery);
 
 /// Insert edges builder that lets you add values
 /// or set `each`.
 #[cfg_attr(feature = "api", derive(agdb::TypeDef))]
+#[cfg_attr(feature = "api", type_def(inherent))]
 pub struct InsertEdgesFromTo(pub InsertEdgesQuery);
 
 /// Insert edges builder with ids allowing insert
 /// or update semantics that lets you add `from`
 /// (origin) nodes.
 #[cfg_attr(feature = "api", derive(agdb::TypeDef))]
+#[cfg_attr(feature = "api", type_def(inherent))]
 pub struct InsertEdgesIds(pub InsertEdgesQuery);
 
 /// Final builder that lets you create
 /// an actual query object.
 #[cfg_attr(feature = "api", derive(agdb::TypeDef))]
+#[cfg_attr(feature = "api", type_def(inherent))]
 pub struct InsertEdgesValues(pub InsertEdgesQuery);
 
 #[cfg_attr(feature = "api", agdb::impl_def())]

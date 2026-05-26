@@ -3,6 +3,7 @@ use crate::InsertIndexQuery;
 
 /// Final step in the insert index query builder.
 #[cfg_attr(feature = "api", derive(agdb::TypeDef))]
+#[cfg_attr(feature = "api", type_def(inherent))]
 pub struct InsertIndex(pub DbValue);
 
 #[cfg_attr(feature = "api", agdb::impl_def())]

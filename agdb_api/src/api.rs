@@ -227,7 +227,7 @@ impl Api {
         ]
     }
 
-    pub fn agbd_api_types() -> Vec<Type> {
+    pub fn api_types() -> Vec<Type> {
         vec![
             HttpClientDef::type_def(),    // trait
             AgdbApiClientDef::type_def(), // trait
@@ -257,9 +257,14 @@ impl Api {
         let mut defs = Self::db_types();
         defs.extend(Self::query_types());
         defs.extend(Self::query_builder_types());
-        defs.extend(Self::agbd_api_types());
-        defs.extend(Self::test_infra());
-        defs.extend(Self::test_defs());
+        defs.extend(Self::api_types());
+
+        #[cfg(feature = "test_server")]
+        {
+            defs.extend(Self::test_infra());
+            defs.extend(Self::test_defs());
+        }
+
         defs
     }
 

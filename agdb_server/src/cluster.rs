@@ -17,6 +17,7 @@ use agdb_api::HttpClient;
 use agdb_api::ReqwestClient;
 use axum::body::Body;
 use axum::extract::Request as AxumRequest;
+use axum::http::HeaderMap;
 use axum::response::Response as AxumResponse;
 use reqwest::StatusCode;
 use std::collections::HashMap;
@@ -124,6 +125,21 @@ impl ClusterNodeImpl {
         let path_str = path_query.as_str();
         let stripped_path = path_str.strip_prefix(&self.base_path).unwrap_or(path_str);
         let url = format!("{}{stripped_path}", self.base_url);
+        let mut headers = HeaderMap::new();
+
+        headers.insert("forwarded-by", local_index.into());
+
+        if let Some(auth_header) = parts.headers.get("authorization") {
+            headers.insert("authorization", auth_header.clone());
+        }
+
+        if let Some(content_type) = parts.headers.get("content-type") {
+            headers.insert("content-type", content_type.clone());
+        }
+
+        if let Some(user_agent) = parts.headers.get("user-agent") {
+            headers.insert("user-agent", user_agent.clone());
+        }
 
         let mut response = self
             .client
@@ -133,8 +149,7 @@ impl ClusterNodeImpl {
                     .map_err(|e| Self::bad_request(&e.to_string()))?,
                 url,
             )
-            .headers(parts.headers)
-            .header("forwarded-by", local_index)
+            .headers(headers)
             .body(reqwest::Body::wrap_stream(body.into_data_stream()))
             .send()
             .await

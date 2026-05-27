@@ -262,11 +262,7 @@ impl TestServerImpl {
         std::fs::create_dir(&dir)?;
         std::fs::write(Path::new(&dir).join(CONFIG_FILE), config_to_str(&config))?;
 
-        let api_address = if config.basepath.is_empty() {
-            config.address.clone()
-        } else {
-            format!("{}{}", config.address, config.basepath)
-        };
+        let api_address = config.server_url();
 
         let mut process = Command::new(server_bin()?)
             .current_dir(&dir)

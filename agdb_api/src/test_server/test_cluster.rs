@@ -66,7 +66,9 @@ impl TestCluster {
 
 #[cfg_attr(feature = "api", agdb::fn_def())]
 pub fn cluster_data_dir(address: &str) -> String {
-    let port = address.split(':').next_back().unwrap();
+    let without_scheme = address.split("://").nth(1).unwrap_or(address);
+    let authority = without_scheme.split('/').next().unwrap_or(without_scheme);
+    let port = authority.rsplit(':').next().unwrap_or(authority);
     Path::new(&format!("agdb_server.{port}.test"))
         .join(super::SERVER_DATA_DIR)
         .to_string_lossy()
@@ -120,7 +122,7 @@ pub async fn create_cluster(nodes: usize, tls: bool) -> Result<Vec<TestServerImp
         let config = ConfigImpl {
             bind: format!("{HOST}:{port}"),
             address: format!("{protocol}://{HOST}:{port}"),
-            basepath: String::new(),
+            basepath: "/base".to_string(),
             static_roots: Vec::new(),
             admin: ADMIN.to_string(),
             log_level: LogLevelFilter::Info,
@@ -142,7 +144,7 @@ pub async fn create_cluster(nodes: usize, tls: bool) -> Result<Vec<TestServerImp
         };
 
         configs.push(config);
-        cluster.push(format!("{protocol}://{HOST}:{port}"));
+        cluster.push(format!("{protocol}://{HOST}:{port}/base"));
     }
 
     for config in &mut configs {

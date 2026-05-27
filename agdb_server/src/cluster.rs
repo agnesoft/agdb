@@ -41,6 +41,7 @@ pub(crate) struct ClusterNodeImpl {
     client: ReqwestClient,
     url: String,
     base_url: String,
+    base_path: String,
     token: Option<String>,
     requests_sender: UnboundedSender<Request<ClusterAction>>,
     requests_receiver: RwLock<UnboundedReceiver<Request<ClusterAction>>>,
@@ -98,6 +99,7 @@ impl ClusterNodeImpl {
             client: ReqwestClient::with_client(reqwest_client(config)?),
             url: format!("{base_url}/api/v1/cluster"),
             base_url,
+            base_path: config.basepath.clone(),
             token: Some(token.to_string()),
             requests_sender,
             requests_receiver: RwLock::new(requests_receiver),
@@ -119,7 +121,9 @@ impl ClusterNodeImpl {
     ) -> Result<AxumResponse, AxumResponse> {
         let (parts, body) = axum_request.into_parts();
         let path_query = parts.uri.path_and_query().ok_or(Self::bad_request(""))?;
-        let url = format!("{}{path_query}", self.base_url);
+        let path_str = path_query.as_str();
+        let stripped_path = path_str.strip_prefix(&self.base_path).unwrap_or(path_str);
+        let url = format!("{}{stripped_path}", self.base_url);
 
         let mut response = self
             .client

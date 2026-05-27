@@ -107,7 +107,10 @@ mod tests {
         let output = transpile_type(&Status::type_def(), &config());
         assert!(output.contains("export enum Status {"), "Got:\n{output}");
         assert!(output.contains("Active = \"Active\","), "Got:\n{output}");
-        assert!(output.contains("Inactive = \"Inactive\","), "Got:\n{output}");
+        assert!(
+            output.contains("Inactive = \"Inactive\","),
+            "Got:\n{output}"
+        );
         assert!(output.contains("Pending = \"Pending\","), "Got:\n{output}");
     }
 

@@ -10,9 +10,16 @@ pub enum NormalizedType {
     Tuple(Vec<NormalizedType>),
     Nullable(Box<NormalizedType>),
     Named(String),
-    NamedGeneric { name: String, args: Vec<NormalizedType> },
+    NamedGeneric {
+        name: String,
+        args: Vec<NormalizedType>,
+    },
     Generic(String),
-    Function { args: Vec<NormalizedType>, ret: Box<NormalizedType>, is_async: bool },
+    Function {
+        args: Vec<NormalizedType>,
+        ret: Box<NormalizedType>,
+        is_async: bool,
+    },
     Void,
 }
 
@@ -29,16 +36,15 @@ pub fn normalize_type(ty: &Type) -> NormalizedType {
         Type::Vec(inner) | Type::Slice(inner) => {
             NormalizedType::Array(Box::new(normalize_type(&inner())))
         }
-        Type::Option(inner) => {
-            NormalizedType::Nullable(Box::new(normalize_type(&inner())))
-        }
+        Type::Option(inner) => NormalizedType::Nullable(Box::new(normalize_type(&inner()))),
         Type::Result { ok, .. } => normalize_type(&ok()),
         Type::Reference(reference) => normalize_type(&(reference.ty)()),
         Type::Pointer(pointer) => normalize_pointer(pointer),
         Type::Generic(generic) => NormalizedType::Generic(generic.name.to_string()),
         Type::SelfType(_) => NormalizedType::Named("this".to_string()),
         Type::Tuple(elements) => {
-            let types: Vec<NormalizedType> = elements.iter().map(|f| normalize_type(&f())).collect();
+            let types: Vec<NormalizedType> =
+                elements.iter().map(|f| normalize_type(&f())).collect();
             NormalizedType::Tuple(types)
         }
         Type::Struct(s) => {
@@ -158,19 +164,28 @@ mod tests {
     #[test]
     fn literal_bool() {
         let ty = bool::type_def();
-        assert_eq!(normalize_type(&ty), NormalizedType::Primitive(Primitive::Boolean));
+        assert_eq!(
+            normalize_type(&ty),
+            NormalizedType::Primitive(Primitive::Boolean)
+        );
     }
 
     #[test]
     fn literal_i32() {
         let ty = i32::type_def();
-        assert_eq!(normalize_type(&ty), NormalizedType::Primitive(Primitive::Number));
+        assert_eq!(
+            normalize_type(&ty),
+            NormalizedType::Primitive(Primitive::Number)
+        );
     }
 
     #[test]
     fn literal_string() {
         let ty = String::type_def();
-        assert_eq!(normalize_type(&ty), NormalizedType::Primitive(Primitive::String));
+        assert_eq!(
+            normalize_type(&ty),
+            NormalizedType::Primitive(Primitive::String)
+        );
     }
 
     #[test]
@@ -200,25 +215,37 @@ mod tests {
     #[test]
     fn result_resolves_to_ok_type() {
         let ty = Result::<i32, String>::type_def();
-        assert_eq!(normalize_type(&ty), NormalizedType::Primitive(Primitive::Number));
+        assert_eq!(
+            normalize_type(&ty),
+            NormalizedType::Primitive(Primitive::Number)
+        );
     }
 
     #[test]
     fn reference_stripped() {
         let ty = <&i32>::type_def();
-        assert_eq!(normalize_type(&ty), NormalizedType::Primitive(Primitive::Number));
+        assert_eq!(
+            normalize_type(&ty),
+            NormalizedType::Primitive(Primitive::Number)
+        );
     }
 
     #[test]
     fn box_stripped() {
         let ty = Box::<String>::type_def();
-        assert_eq!(normalize_type(&ty), NormalizedType::Primitive(Primitive::String));
+        assert_eq!(
+            normalize_type(&ty),
+            NormalizedType::Primitive(Primitive::String)
+        );
     }
 
     #[test]
     fn arc_stripped() {
         let ty = std::sync::Arc::<i32>::type_def();
-        assert_eq!(normalize_type(&ty), NormalizedType::Primitive(Primitive::Number));
+        assert_eq!(
+            normalize_type(&ty),
+            NormalizedType::Primitive(Primitive::Number)
+        );
     }
 
     #[test]
@@ -241,7 +268,10 @@ mod tests {
             _y: i32,
         }
         let ty = Point::type_def();
-        assert_eq!(normalize_type(&ty), NormalizedType::Named("Point".to_string()));
+        assert_eq!(
+            normalize_type(&ty),
+            NormalizedType::Named("Point".to_string())
+        );
     }
 
     #[test]

@@ -206,7 +206,7 @@ pub(crate) async fn new(
         index: index as u64,
         hash,
         size: std::cmp::max(config.cluster.len() as u64, 1),
-        election_factor: 1,
+        election_factor_ms: config.cluster_election_factor_ms,
         heartbeat_timeout: Duration::from_millis(config.cluster_heartbeat_timeout_ms),
         term_timeout: Duration::from_millis(config.cluster_term_timeout_ms),
     };

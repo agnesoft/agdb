@@ -63,32 +63,11 @@ pub(crate) fn new(config_file: &str) -> Result<Config, String> {
         return Ok(config);
     }
 
-    let config = ConfigImpl {
-        bind: ":::3000".to_string(),
-        address: "http://localhost:3000".to_string(),
-        basepath: "".to_string(),
-        static_roots: Vec::new(),
-        admin: "admin".to_string(),
-        log_level: LogLevelFilter::Info,
-        log_body_limit: DEFAULT_LOG_BODY_LIMIT,
-        request_body_limit: DEFAULT_REQUEST_BODY_LIMIT,
-        data_dir: "agdb_server_data".to_string(),
-        pepper_path: String::new(),
-        tls_certificate: String::new(),
-        tls_key: String::new(),
-        tls_root: String::new(),
-        cluster_token: "cluster".to_string(),
-        cluster_heartbeat_timeout_ms: 1000,
-        cluster_term_timeout_ms: 3000,
-        cluster: vec![],
-        cluster_node_id: 0,
-        start_time: SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .map_err(|e| format!("Failed to get server start time since UNIX_EPOCH: {e:?}"))?
-            .as_secs(),
-        token_expiry_seconds: DEFAULT_TOKEN_EXPIRY_SECONDS,
-        pepper: None,
-    };
+    let mut config = default_config();
+    config.start_time = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_err(|e| format!("Failed to get server start time since UNIX_EPOCH: {e:?}"))?
+        .as_secs();
 
     std::fs::write(config_file, agdb_api::config_impl::config_to_str(&config))
         .map_err(|e| format!("Failed to write config file '{}': {e:?}", config_file))?;
@@ -118,29 +97,7 @@ pub(crate) fn vec_from_str(value: &str) -> Vec<String> {
 }
 
 pub(crate) fn from_str(content: &str) -> Result<ConfigImpl, String> {
-    let mut config = ConfigImpl {
-        bind: String::new(),
-        address: String::new(),
-        basepath: String::new(),
-        static_roots: Vec::new(),
-        admin: String::new(),
-        log_level: LogLevelFilter::Info,
-        log_body_limit: DEFAULT_LOG_BODY_LIMIT,
-        request_body_limit: DEFAULT_REQUEST_BODY_LIMIT,
-        data_dir: String::new(),
-        pepper_path: String::new(),
-        tls_certificate: String::new(),
-        tls_key: String::new(),
-        tls_root: String::new(),
-        cluster_token: String::new(),
-        cluster_heartbeat_timeout_ms: 0,
-        cluster_term_timeout_ms: 0,
-        cluster: vec![],
-        cluster_node_id: 0,
-        start_time: 0,
-        token_expiry_seconds: DEFAULT_TOKEN_EXPIRY_SECONDS,
-        pepper: None,
-    };
+    let mut config = default_config();
 
     for line in content.lines() {
         let line = line.trim();
@@ -197,6 +154,11 @@ pub(crate) fn from_str(content: &str) -> Result<ConfigImpl, String> {
                         .parse()
                         .map_err(|e| format!("Invalid cluster_term_timeout_ms: {e:?}"))?
                 }
+                "cluster_election_factor_ms" => {
+                    config.cluster_election_factor_ms = value
+                        .parse()
+                        .map_err(|e| format!("Invalid cluster_election_factor_ms: {e:?}"))?
+                }
                 "cluster" => config.cluster = vec_from_str(value),
                 "token_expiry_seconds" => {
                     config.token_expiry_seconds = value
@@ -236,6 +198,33 @@ fn normalize_address(config: &mut ConfigImpl) {
     }
 }
 
+fn default_config() -> ConfigImpl {
+    ConfigImpl {
+        bind: ":::3000".to_string(),
+        address: "http://localhost:3000".to_string(),
+        basepath: "".to_string(),
+        static_roots: Vec::new(),
+        admin: "admin".to_string(),
+        log_level: LogLevelFilter::Info,
+        log_body_limit: DEFAULT_LOG_BODY_LIMIT,
+        request_body_limit: DEFAULT_REQUEST_BODY_LIMIT,
+        data_dir: "agdb_server_data".to_string(),
+        pepper_path: String::new(),
+        tls_certificate: String::new(),
+        tls_key: String::new(),
+        tls_root: String::new(),
+        cluster_token: "cluster".to_string(),
+        cluster_heartbeat_timeout_ms: 1000,
+        cluster_term_timeout_ms: 3000,
+        cluster_election_factor_ms: 1000,
+        cluster: vec![],
+        cluster_node_id: 0,
+        start_time: 0,
+        token_expiry_seconds: DEFAULT_TOKEN_EXPIRY_SECONDS,
+        pepper: None,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -259,7 +248,7 @@ mod tests {
     }
 
     #[test]
-    fn default_values() {
+    fn creates_default_config_file() {
         let test_file = TestFile::new("test_config_default.yaml");
         assert!(!std::fs::exists(test_file.filename).unwrap());
         config::new(test_file.filename).unwrap();
@@ -290,6 +279,7 @@ mod tests {
             cluster_token: "cluster".to_string(),
             cluster_heartbeat_timeout_ms: 1000,
             cluster_term_timeout_ms: 3000,
+            cluster_election_factor_ms: 1000,
             cluster: vec![],
             cluster_node_id: 0,
             start_time: 0,
@@ -328,6 +318,7 @@ mod tests {
             cluster_token: "cluster".to_string(),
             cluster_heartbeat_timeout_ms: 1000,
             cluster_term_timeout_ms: 3000,
+            cluster_election_factor_ms: 1000,
             cluster: vec![],
             cluster_node_id: 0,
             start_time: 0,
@@ -365,6 +356,7 @@ mod tests {
             cluster_token: "cluster".to_string(),
             cluster_heartbeat_timeout_ms: 1000,
             cluster_term_timeout_ms: 3000,
+            cluster_election_factor_ms: 1000,
             cluster: vec![],
             cluster_node_id: 0,
             start_time: 0,
@@ -456,26 +448,84 @@ mod tests {
     }
 
     #[test]
-    fn token_expiry_default() {
+    fn all_default_values() {
         let config = config::from_str("").unwrap();
+
+        assert_eq!(config.bind, ":::3000");
+        assert_eq!(config.address, "http://localhost:3000");
+        assert_eq!(config.basepath, "");
+        assert_eq!(config.static_roots, Vec::<String>::new());
+        assert_eq!(config.admin, "admin");
+        assert_eq!(config.log_level, LogLevelFilter::Info);
+        assert_eq!(config.log_body_limit, DEFAULT_LOG_BODY_LIMIT);
+        assert_eq!(config.request_body_limit, DEFAULT_REQUEST_BODY_LIMIT);
+        assert_eq!(config.data_dir, "agdb_server_data");
+        assert_eq!(config.pepper_path, "");
+        assert_eq!(config.tls_certificate, "");
+        assert_eq!(config.tls_key, "");
+        assert_eq!(config.tls_root, "");
+        assert_eq!(config.cluster_token, "cluster");
+        assert_eq!(config.cluster_heartbeat_timeout_ms, 1000);
+        assert_eq!(config.cluster_term_timeout_ms, 3000);
+        assert_eq!(config.cluster_election_factor_ms, 1000);
+        assert_eq!(config.cluster, Vec::<String>::new());
+        assert_eq!(config.cluster_node_id, 0);
+        assert_eq!(config.start_time, 0);
+        assert_eq!(config.token_expiry_seconds, DEFAULT_TOKEN_EXPIRY_SECONDS);
+        assert!(config.pepper.is_none());
+    }
+
+    #[test]
+    fn omitted_values_are_defaulted() {
+        let config = config::from_str(
+            "admin: root\nrequest_body_limit: 2048\ncluster_term_timeout_ms: 5000",
+        )
+        .unwrap();
+
+        assert_eq!(config.admin, "root");
+        assert_eq!(config.request_body_limit, 2048);
+        assert_eq!(config.cluster_term_timeout_ms, 5000);
+
+        assert_eq!(config.bind, ":::3000");
+        assert_eq!(config.address, "http://localhost:3000");
+        assert_eq!(config.basepath, "");
+        assert_eq!(config.log_level, LogLevelFilter::Info);
+        assert_eq!(config.log_body_limit, DEFAULT_LOG_BODY_LIMIT);
+        assert_eq!(config.data_dir, "agdb_server_data");
         assert_eq!(config.token_expiry_seconds, DEFAULT_TOKEN_EXPIRY_SECONDS);
     }
 
     #[test]
-    fn token_expiry_valid() {
-        let config = config::from_str("token_expiry_seconds: 300").unwrap();
-        assert_eq!(config.token_expiry_seconds, 300);
+    fn invalid_int_values_fail_parsing() {
+        assert!(config::from_str("log_body_limit: -1").is_err());
+        assert!(config::from_str("request_body_limit: -1").is_err());
+        assert!(config::from_str("cluster_heartbeat_timeout_ms: -1").is_err());
+        assert!(config::from_str("cluster_term_timeout_ms: -1").is_err());
+        assert!(config::from_str("cluster_election_factor_ms: -1").is_err());
     }
 
     #[test]
-    fn token_expiry_too_low() {
-        let err = config::from_str("token_expiry_seconds: 30").unwrap_err();
+    fn token_expiry_seconds_range_validation() {
+        let config =
+            config::from_str(&format!("token_expiry_seconds: {MIN_TOKEN_EXPIRY_SECONDS}")).unwrap();
+        assert_eq!(config.token_expiry_seconds, MIN_TOKEN_EXPIRY_SECONDS);
+
+        let config =
+            config::from_str(&format!("token_expiry_seconds: {MAX_TOKEN_EXPIRY_SECONDS}")).unwrap();
+        assert_eq!(config.token_expiry_seconds, MAX_TOKEN_EXPIRY_SECONDS);
+
+        let err = config::from_str(&format!(
+            "token_expiry_seconds: {}",
+            MIN_TOKEN_EXPIRY_SECONDS - 1
+        ))
+        .unwrap_err();
         assert!(err.contains("token_expiry_seconds must be between"));
-    }
 
-    #[test]
-    fn token_expiry_too_high() {
-        let err = config::from_str("token_expiry_seconds: 100000").unwrap_err();
+        let err = config::from_str(&format!(
+            "token_expiry_seconds: {}",
+            MAX_TOKEN_EXPIRY_SECONDS + 1
+        ))
+        .unwrap_err();
         assert!(err.contains("token_expiry_seconds must be between"));
     }
 }

@@ -34,6 +34,7 @@ async fn https() -> anyhow::Result<()> {
         cluster_token: "test".to_string(),
         cluster_heartbeat_timeout_ms: 1000,
         cluster_term_timeout_ms: 3000,
+        cluster_election_factor_ms: 1000,
         cluster: Vec::new(),
         cluster_node_id: 0,
         start_time: 0,

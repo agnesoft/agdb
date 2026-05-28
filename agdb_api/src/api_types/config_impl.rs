@@ -26,6 +26,7 @@ pub struct ConfigImpl {
     pub cluster_token: String,
     pub cluster_heartbeat_timeout_ms: u64,
     pub cluster_term_timeout_ms: u64,
+    pub cluster_election_factor_ms: u64,
     pub cluster: Vec<String>,
     pub cluster_node_id: usize,
     pub start_time: u64,
@@ -70,6 +71,10 @@ pub fn config_to_str(config: &ConfigImpl) -> String {
     buffer.push_str(&format!(
         "cluster_term_timeout_ms: {}\n",
         config.cluster_term_timeout_ms
+    ));
+    buffer.push_str(&format!(
+        "cluster_election_factor_ms: {}\n",
+        config.cluster_election_factor_ms
     ));
     buffer.push_str(&format!("cluster: [{}]\n", config.cluster.join(", ")));
     buffer.push_str(&format!(

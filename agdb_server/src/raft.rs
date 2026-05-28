@@ -148,7 +148,9 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
             size: settings.size,
             index: settings.index,
             term: if settings.size == 1 { 1 } else { 0 },
-            election_timeout: Duration::from_millis(settings.election_factor_ms * settings.index),
+            election_timeout: Duration::from_millis(
+                settings.election_factor_ms.saturating_mul(settings.index),
+            ),
             heartbeat_timeout: settings.heartbeat_timeout,
             term_timeout: settings.term_timeout,
             storage,

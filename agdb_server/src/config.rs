@@ -63,33 +63,11 @@ pub(crate) fn new(config_file: &str) -> Result<Config, String> {
         return Ok(config);
     }
 
-    let config = ConfigImpl {
-        bind: ":::3000".to_string(),
-        address: "http://localhost:3000".to_string(),
-        basepath: "".to_string(),
-        static_roots: Vec::new(),
-        admin: "admin".to_string(),
-        log_level: LogLevelFilter::Info,
-        log_body_limit: DEFAULT_LOG_BODY_LIMIT,
-        request_body_limit: DEFAULT_REQUEST_BODY_LIMIT,
-        data_dir: "agdb_server_data".to_string(),
-        pepper_path: String::new(),
-        tls_certificate: String::new(),
-        tls_key: String::new(),
-        tls_root: String::new(),
-        cluster_token: "cluster".to_string(),
-        cluster_heartbeat_timeout_ms: 1000,
-        cluster_term_timeout_ms: 3000,
-        cluster_election_factor_ms: 1000,
-        cluster: vec![],
-        cluster_node_id: 0,
-        start_time: SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .map_err(|e| format!("Failed to get server start time since UNIX_EPOCH: {e:?}"))?
-            .as_secs(),
-        token_expiry_seconds: DEFAULT_TOKEN_EXPIRY_SECONDS,
-        pepper: None,
-    };
+    let mut config = default_config();
+    config.start_time = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_err(|e| format!("Failed to get server start time since UNIX_EPOCH: {e:?}"))?
+        .as_secs();
 
     std::fs::write(config_file, agdb_api::config_impl::config_to_str(&config))
         .map_err(|e| format!("Failed to write config file '{}': {e:?}", config_file))?;
@@ -119,30 +97,7 @@ pub(crate) fn vec_from_str(value: &str) -> Vec<String> {
 }
 
 pub(crate) fn from_str(content: &str) -> Result<ConfigImpl, String> {
-    let mut config = ConfigImpl {
-        bind: String::new(),
-        address: String::new(),
-        basepath: String::new(),
-        static_roots: Vec::new(),
-        admin: String::new(),
-        log_level: LogLevelFilter::Info,
-        log_body_limit: DEFAULT_LOG_BODY_LIMIT,
-        request_body_limit: DEFAULT_REQUEST_BODY_LIMIT,
-        data_dir: String::new(),
-        pepper_path: String::new(),
-        tls_certificate: String::new(),
-        tls_key: String::new(),
-        tls_root: String::new(),
-        cluster_token: String::new(),
-        cluster_heartbeat_timeout_ms: 0,
-        cluster_term_timeout_ms: 0,
-        cluster_election_factor_ms: 0,
-        cluster: vec![],
-        cluster_node_id: 0,
-        start_time: 0,
-        token_expiry_seconds: DEFAULT_TOKEN_EXPIRY_SECONDS,
-        pepper: None,
-    };
+    let mut config = default_config();
 
     for line in content.lines() {
         let line = line.trim();
@@ -240,6 +195,33 @@ fn normalize_address(config: &mut ConfigImpl) {
         }
     } else if let Some((address, _)) = config.address.split_once('/') {
         config.address = address.to_string();
+    }
+}
+
+fn default_config() -> ConfigImpl {
+    ConfigImpl {
+        bind: ":::3000".to_string(),
+        address: "http://localhost:3000".to_string(),
+        basepath: "".to_string(),
+        static_roots: Vec::new(),
+        admin: "admin".to_string(),
+        log_level: LogLevelFilter::Info,
+        log_body_limit: DEFAULT_LOG_BODY_LIMIT,
+        request_body_limit: DEFAULT_REQUEST_BODY_LIMIT,
+        data_dir: "agdb_server_data".to_string(),
+        pepper_path: String::new(),
+        tls_certificate: String::new(),
+        tls_key: String::new(),
+        tls_root: String::new(),
+        cluster_token: "cluster".to_string(),
+        cluster_heartbeat_timeout_ms: 1000,
+        cluster_term_timeout_ms: 3000,
+        cluster_election_factor_ms: 1000,
+        cluster: vec![],
+        cluster_node_id: 0,
+        start_time: 0,
+        token_expiry_seconds: DEFAULT_TOKEN_EXPIRY_SECONDS,
+        pepper: None,
     }
 }
 

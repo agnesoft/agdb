@@ -81,6 +81,7 @@ configs:
       cluster_token: cluster
       cluster_heartbeat_timeout_ms: 1000
       cluster_term_timeout_ms: 3000
+      cluster_election_factor_ms: 1000
       cluster: [https://agdb0:3000, https://agdb1:3001, https://agdb2:3002]
   agdb1_config:
     content: |
@@ -98,6 +99,7 @@ configs:
       cluster_token: cluster
       cluster_heartbeat_timeout_ms: 1000
       cluster_term_timeout_ms: 3000
+      cluster_election_factor_ms: 1000
       cluster: [https://agdb0:3000, https://agdb1:3001, https://agdb2:3002]
   agdb2_config:
     content: |
@@ -115,6 +117,7 @@ configs:
       cluster_token: cluster
       cluster_heartbeat_timeout_ms: 1000
       cluster_term_timeout_ms: 3000
+      cluster_election_factor_ms: 1000
       cluster: [https://agdb0:3000, https://agdb1:3001, https://agdb2:3002]
   cert:
     file: ./test_certs/test_cert.pem

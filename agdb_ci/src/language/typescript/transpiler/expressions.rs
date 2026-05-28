@@ -1,6 +1,7 @@
 use agdb::type_def::Expression;
 use agdb::type_def::LiteralValue;
 use agdb::type_def::Op;
+use agdb::type_def::Type;
 
 use super::format::IndentWriter;
 use super::types::type_annotation;
@@ -40,21 +41,29 @@ pub fn emit_expression(expr: &Expression, w: &mut IndentWriter) {
             args,
         } => emit_call(recipient, function, args, w),
         Expression::FieldAccess { base, field } => {
+            let needs_parens = expr_contains_await(base);
+            if needs_parens { w.write("("); }
             emit_expression(base, w);
+            if needs_parens { w.write(")"); }
             w.write(".");
             w.write(field);
         }
         Expression::TupleAccess { base, index } => {
-            let is_self_access = matches!(base, Expression::Ident("self"));
+            let needs_parens = expr_contains_await(base);
+            if needs_parens { w.write("("); }
             emit_expression(base, w);
-            if is_self_access && *index == 0 {
+            if needs_parens { w.write(")"); }
+            if *index == 0 && matches!(base, Expression::Ident("self")) {
                 w.write(".value");
             } else {
                 w.write(&format!("[{index}]"));
             }
         }
         Expression::Index { base, index } => {
+            let needs_parens = expr_contains_await(base);
+            if needs_parens { w.write("("); }
             emit_expression(base, w);
+            if needs_parens { w.write(")"); }
             w.write("[");
             emit_expression(index, w);
             w.write("]");
@@ -425,6 +434,15 @@ fn emit_block_as_iife(stmts: &[Expression], w: &mut IndentWriter) {
     w.write(")()");
 }
 
+fn expr_contains_await(expr: &Expression) -> bool {
+    match expr {
+        Expression::Await(_) => true,
+        Expression::Try(inner) => expr_contains_await(inner),
+        Expression::Reference(inner) => expr_contains_await(inner),
+        _ => false,
+    }
+}
+
 fn is_path_skip(expr: &Expression) -> bool {
     match expr {
         Expression::Ident(name) => matches!(*name, "crate" | "super"),
@@ -520,11 +538,19 @@ fn rename_method(name: &str) -> Option<&'static str> {
         "filter" => Some("filter"),
         "for_each" => Some("forEach"),
         "contains" => Some("includes"),
+        "starts_with" => Some("startsWith"),
+        "ends_with" => Some("endsWith"),
+        "remove" => Some("splice"),
         _ => None,
     }
 }
 
-const PROPERTY_METHODS: &[(&str, &str)] = &[("len", "length")];
+const PROPERTY_METHODS: &[(&str, &str)] = &[
+    ("len", "length"),
+    ("is_empty", "length === 0"),
+    ("last", "at(-1)"),
+    ("last_mut", "at(-1)"),
+];
 
 const STRIP_CHAIN_METHODS: &[&str] = &["iter", "collect", "into_iter"];
 
@@ -553,12 +579,22 @@ fn emit_call(
             }
             if *ident == "unwrap_err" {
                 w.write("(await unwrap_err(");
-                emit_expression(recv, w);
+                if let Expression::Await(inner) = recv {
+                    emit_expression(inner, w);
+                } else {
+                    emit_expression(recv, w);
+                }
                 w.write("))");
                 return;
             }
             if STRIP_METHODS.contains(ident) {
-                emit_expression(recv, w);
+                if *ident == "into" {
+                    w.write("(");
+                    emit_expression(recv, w);
+                    w.write(" as any)");
+                } else {
+                    emit_expression(recv, w);
+                }
                 return;
             }
             if STRIP_CHAIN_METHODS.contains(ident) {
@@ -569,6 +605,13 @@ fn emit_call(
                 emit_expression(recv, w);
                 w.write(" ?? ");
                 emit_expression(&args[0], w);
+                return;
+            }
+            if *ident == "extend" && args.len() == 1 {
+                emit_expression(recv, w);
+                w.write(".push(...");
+                emit_expression(&args[0], w);
+                w.write(")");
                 return;
             }
             if let Some((_, prop)) = PROPERTY_METHODS.iter().find(|(m, _)| m == ident) {
@@ -637,12 +680,22 @@ fn emit_call(
                 w.write(")");
             }
             Expression::Path { ident, parent: Some(parent), .. } => {
-                if let Expression::Path { ident: parent_name, parent: None, .. }
-                    | Expression::Ident(parent_name) = *parent
-                {
+                const EMPTY_GENERICS: &[fn() -> Type] = &[];
+                let (parent_name, parent_generics): (Option<&str>, &[fn() -> Type]) = match *parent {
+                    Expression::Path { ident: pn, generics: pg, .. } => (Some(pn), pg),
+                    Expression::Ident(pn) => (Some(pn), EMPTY_GENERICS),
+                    _ => (None, EMPTY_GENERICS),
+                };
+                if let Some(parent_name) = parent_name {
                     if is_pascal_case(parent_name) && STRIP_METHODS.contains(ident) {
                         if !args.is_empty() {
-                            emit_expression(&args[0], w);
+                            if parent_name == "Into" && !parent_generics.is_empty() {
+                                w.write("(");
+                                emit_expression(&args[0], w);
+                                w.write(" as any)");
+                            } else {
+                                emit_expression(&args[0], w);
+                            }
                         }
                         return;
                     }
@@ -655,6 +708,12 @@ fn emit_call(
                             emit_expression(arg, w);
                         }
                         w.write(")");
+                        return;
+                    }
+                    if is_pascal_case(parent_name) && *ident == "default" {
+                        w.write("new ");
+                        w.write(parent_name);
+                        w.write("()");
                         return;
                     }
                 }

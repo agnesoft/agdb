@@ -31,6 +31,7 @@ use std::time::SystemTime;
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 #[cfg_attr(feature = "derive", derive(agdb::DbSerialize))]
 #[cfg_attr(feature = "api", derive(agdb::TypeDef))]
+#[cfg_attr(feature = "api", type_def(from(&str, String, i64, u64, f64, bool)))]
 pub enum DbValue {
     /// Byte array, sometimes referred to as blob
     Bytes(Vec<u8>),

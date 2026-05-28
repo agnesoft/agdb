@@ -13,6 +13,7 @@ use crate::SearchQuery;
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 #[cfg_attr(feature = "derive", derive(agdb::DbSerialize))]
 #[cfg_attr(feature = "api", derive(agdb::TypeDef))]
+#[cfg_attr(feature = "api", type_def(from(QueryId, QueryResult, SearchQuery, &str, String, i64)))]
 pub enum QueryIds {
     /// List of [`QueryId`]s
     Ids(Vec<QueryId>),

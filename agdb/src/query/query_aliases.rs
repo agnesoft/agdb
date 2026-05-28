@@ -2,6 +2,7 @@
 /// several convenient conversions for the
 /// [`QueryBuilder`].
 #[cfg_attr(feature = "api", derive(agdb::TypeDef))]
+#[cfg_attr(feature = "api", type_def(from(&str, String, Vec<String>)))]
 pub struct QueryAliases(pub Vec<String>);
 
 impl<T: Into<String>> From<Vec<T>> for QueryAliases {

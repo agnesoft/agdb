@@ -15,6 +15,7 @@ pub enum DbKeyOrder {
 }
 
 #[cfg_attr(feature = "api", derive(agdb::TypeDef))]
+#[cfg_attr(feature = "api", type_def(from(DbKeyOrder)))]
 pub struct DbKeyOrders(pub Vec<DbKeyOrder>);
 
 impl From<Vec<DbKeyOrder>> for DbKeyOrders {

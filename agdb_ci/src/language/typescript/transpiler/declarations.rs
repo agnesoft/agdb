@@ -102,10 +102,23 @@ fn emit_struct(s: &Struct, config: &TranspileConfig, w: &mut IndentWriter) {
         emit_constructor(s.fields, w);
     }
 
+    let struct_generic_names: Vec<&str> = s
+        .generics
+        .iter()
+        .filter(|g| !matches!(g.kind, GenericKind::Lifetime))
+        .map(|g| g.name)
+        .collect();
+
     for imp in &impls {
+        let mut parent_generic_names = struct_generic_names.clone();
+        for g in imp.generics {
+            if !matches!(g.kind, GenericKind::Lifetime) && !parent_generic_names.contains(&g.name) {
+                parent_generic_names.push(g.name);
+            }
+        }
         for func in imp.functions {
             w.newline();
-            emit_method(func, w);
+            emit_method(func, &parent_generic_names, w);
         }
     }
 
@@ -172,7 +185,7 @@ fn default_for_type(ty: &Type) -> &'static str {
     }
 }
 
-fn emit_method(func: &Function, w: &mut IndentWriter) {
+fn emit_method(func: &Function, parent_generic_names: &[&str], w: &mut IndentWriter) {
     let args_to_emit: Vec<&Variable> = func
         .args
         .iter()
@@ -200,10 +213,20 @@ fn emit_method(func: &Function, w: &mut IndentWriter) {
     let params = format_params(&args_to_emit);
     let ret_annotation = format_return_type(func);
 
+    let into_resolved_names: Vec<&str> = func
+        .generics
+        .iter()
+        .filter(|g| !matches!(g.kind, GenericKind::Lifetime))
+        .filter(|g| generic_has_into_bound(g))
+        .map(|g| g.name)
+        .collect();
+
     let declared_generic_params: Vec<String> = func
         .generics
         .iter()
         .filter(|g| !matches!(g.kind, GenericKind::Lifetime))
+        .filter(|g| !parent_generic_names.contains(&g.name))
+        .filter(|g| !into_resolved_names.contains(&g.name))
         .map(|g| format_generic_param(g))
         .collect();
 
@@ -219,7 +242,10 @@ fn emit_method(func: &Function, w: &mut IndentWriter) {
     let mut all_generics = declared_generic_params;
     for g in &ret_generics {
         let g_name = g.split_whitespace().next().unwrap_or(g);
-        if !declared_names.contains(&g_name) {
+        if !declared_names.contains(&g_name)
+            && !parent_generic_names.contains(&g_name)
+            && !into_resolved_names.contains(&g_name)
+        {
             all_generics.push(g.clone());
         }
     }
@@ -423,17 +449,29 @@ fn emit_function(func: &Function, config: &TranspileConfig, w: &mut IndentWriter
         .map(|g| g.name)
         .collect();
 
+    let into_resolved_names: Vec<&str> = func
+        .generics
+        .iter()
+        .filter(|g| !matches!(g.kind, GenericKind::Lifetime))
+        .filter(|g| generic_has_into_bound(g))
+        .map(|g| g.name)
+        .collect();
+
     let mut all_generics: Vec<String> = func
         .generics
         .iter()
         .filter(|g| !matches!(g.kind, GenericKind::Lifetime))
+        .filter(|g| !into_resolved_names.contains(&g.name))
         .map(|g| format_generic_param(g))
         .collect();
 
     let ret_ty = (func.ret)();
     for g in collect_generic_params_from_return(&ret_ty) {
         let g_name = g.split_whitespace().next().unwrap_or(&g);
-        if !declared_names.contains(&g_name) && !all_generics.iter().any(|x| x.starts_with(g_name)) {
+        if !declared_names.contains(&g_name)
+            && !all_generics.iter().any(|x| x.starts_with(g_name))
+            && !into_resolved_names.contains(&g_name)
+        {
             all_generics.push(g.clone());
         }
     }
@@ -442,7 +480,10 @@ fn emit_function(func: &Function, config: &TranspileConfig, w: &mut IndentWriter
             let ty = ty_fn();
             for g in collect_generic_params_from_return(&ty) {
                 let g_name = g.split_whitespace().next().unwrap_or(&g);
-                if !declared_names.contains(&g_name) && !all_generics.iter().any(|x| x.starts_with(g_name)) {
+                if !declared_names.contains(&g_name)
+                    && !all_generics.iter().any(|x| x.starts_with(g_name))
+                    && !into_resolved_names.contains(&g_name)
+                {
                     all_generics.push(g.clone());
                 }
             }
@@ -667,6 +708,9 @@ fn format_params(args: &[&Variable]) -> String {
                 if matches!(normalized, NormalizedType::Named(ref n) if n == "this") {
                     return None;
                 }
+                if let Some(union_ann) = try_resolve_into_union(&ty) {
+                    return Some(format!("{}: {union_ann}", a.name));
+                }
                 let ann = emit_normalized(&normalized);
                 Some(format!("{}: {ann}", a.name))
             } else {
@@ -675,6 +719,65 @@ fn format_params(args: &[&Variable]) -> String {
         })
         .collect::<Vec<_>>()
         .join(", ")
+}
+
+fn try_resolve_into_union(ty: &Type) -> Option<String> {
+    let generic = match ty {
+        Type::Generic(g) => g,
+        _ => return None,
+    };
+
+    for bound_fn in generic.bounds {
+        let bound_ty = bound_fn();
+        if let Type::Trait(t) = &bound_ty {
+            if t.name == "Into" && !t.generics.is_empty() && !t.generics[0].bounds.is_empty() {
+                let target_type = (t.generics[0].bounds[0])();
+                let base_ann = type_annotation(&target_type);
+
+                let from_types = collect_from_source_types(&target_type);
+                let mut parts = vec![base_ann];
+                for ft in &from_types {
+                    let ann = type_annotation(ft);
+                    if !parts.contains(&ann) {
+                        parts.push(ann);
+                    }
+                }
+                return Some(parts.join(" | "));
+            }
+        }
+    }
+    None
+}
+
+fn collect_from_source_types(ty: &Type) -> Vec<Type> {
+    let impl_defs_fn: fn() -> Vec<Impl> = match ty {
+        Type::Struct(s) => s.impl_defs,
+        Type::Enum(e) => e.impl_defs,
+        _ => return vec![],
+    };
+    impl_defs_fn()
+        .into_iter()
+        .filter_map(|imp| {
+            let trait_fn = imp.trait_?;
+            let trait_ty = trait_fn();
+            if let Type::Trait(t) = trait_ty {
+                if t.name == "From" && !t.generics.is_empty() && !t.generics[0].bounds.is_empty() {
+                    return Some((t.generics[0].bounds[0])());
+                }
+            }
+            None
+        })
+        .collect()
+}
+
+fn generic_has_into_bound(g: &agdb::type_def::Generic) -> bool {
+    g.bounds.iter().any(|bound_fn| {
+        let bound_ty = bound_fn();
+        if let Type::Trait(t) = &bound_ty {
+            return t.name == "Into" && !t.generics.is_empty() && !t.generics[0].bounds.is_empty();
+        }
+        false
+    })
 }
 
 fn format_return_type(func: &Function) -> String {

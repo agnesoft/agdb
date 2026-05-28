@@ -74,30 +74,51 @@ pub(crate) fn parse_impl(input: &syn::ItemImpl) -> TokenStream2 {
     }
 }
 
-/// Parses `#[type_def(inherent, Drop, Display)]` from item attributes.
-/// Returns the list of names. `"inherent"` means the inherent impl block.
-pub(crate) fn parse_type_def_impls(attrs: &[syn::Attribute]) -> Vec<String> {
+/// Result of parsing `#[type_def(...)]` attributes.
+pub(crate) struct TypeDefAttrs {
+    /// Impl block names: `"inherent"`, `"Drop"`, etc.
+    pub impl_names: Vec<String>,
+    /// Types listed in `from(...)`: source types for From impls.
+    pub from_types: Vec<syn::Type>,
+}
+
+/// Parses `#[type_def(inherent, Drop, from(str, String, i64))]` from item attributes.
+pub(crate) fn parse_type_def_attrs(attrs: &[syn::Attribute]) -> TypeDefAttrs {
+    let mut result = TypeDefAttrs {
+        impl_names: vec![],
+        from_types: vec![],
+    };
+
     for attr in attrs {
         if !attr.path().is_ident("type_def") {
             continue;
         }
-        if let Ok(names) = attr.parse_args_with(
-            syn::punctuated::Punctuated::<syn::Ident, syn::Token![,]>::parse_terminated,
-        ) {
-            return names.iter().map(|i| i.to_string()).collect();
-        }
+        let _ = attr.parse_nested_meta(|meta| {
+            if meta.path.is_ident("from") {
+                let content;
+                syn::parenthesized!(content in meta.input);
+                let types = syn::punctuated::Punctuated::<syn::Type, syn::Token![,]>::parse_terminated(&content)?;
+                result.from_types = types.into_iter().collect();
+            } else if let Some(ident) = meta.path.get_ident() {
+                result.impl_names.push(ident.to_string());
+            }
+            Ok(())
+        });
     }
-    vec![]
+
+    result
 }
 
+
 /// Generates the `impl_defs()` override for `impl TypeDefinition`.
-/// `impl_names` comes from `parse_type_def_impls`.
+/// `impl_names` comes from `parse_type_def_attrs`.
 pub(crate) fn generate_impl_defs_method(
     impl_names: &[String],
+    from_types: &[syn::Type],
     type_name: &str,
     generics: &syn::Generics,
 ) -> TokenStream2 {
-    if impl_names.is_empty() {
+    if impl_names.is_empty() && from_types.is_empty() {
         return quote! {};
     }
 
@@ -119,9 +140,50 @@ pub(crate) fn generate_impl_defs_method(
         })
         .collect();
 
-    quote! {
-        fn impl_defs() -> ::std::vec::Vec<::agdb::type_def::Impl> {
-            ::std::vec![#(#calls),*]
+    let from_entries: Vec<TokenStream2> = from_types
+        .iter()
+        .map(|ty| {
+            let ty_str = quote!(#ty).to_string();
+            quote! {
+                ::agdb::type_def::Impl {
+                    name: stringify!(From),
+                    generics: &[],
+                    trait_: Some(|| ::agdb::type_def::Type::Trait(::agdb::type_def::Trait {
+                        name: "From",
+                        generics: &[::agdb::type_def::Generic {
+                            kind: ::agdb::type_def::GenericKind::Type,
+                            name: #ty_str,
+                            bounds: &[<#ty as ::agdb::type_def::TypeDefinition>::type_def],
+                        }],
+                        bounds: &[],
+                        functions: &[],
+                    })),
+                    ty: || ::agdb::type_def::Type::Literal(::agdb::type_def::Literal::Unit),
+                    functions: &[],
+                }
+            }
+        })
+        .collect();
+
+    if from_entries.is_empty() {
+        quote! {
+            fn impl_defs() -> ::std::vec::Vec<::agdb::type_def::Impl> {
+                ::std::vec![#(#calls),*]
+            }
+        }
+    } else if calls.is_empty() {
+        quote! {
+            fn impl_defs() -> ::std::vec::Vec<::agdb::type_def::Impl> {
+                ::std::vec![#(#from_entries),*]
+            }
+        }
+    } else {
+        quote! {
+            fn impl_defs() -> ::std::vec::Vec<::agdb::type_def::Impl> {
+                let mut v = ::std::vec![#(#calls),*];
+                v.extend(::std::vec![#(#from_entries),*]);
+                v
+            }
         }
     }
 }

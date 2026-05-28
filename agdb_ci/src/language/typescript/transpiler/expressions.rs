@@ -851,9 +851,49 @@ fn emit_condition(condition: &Expression, w: &mut IndentWriter) {
         } else {
             emit_expression(name, w);
         }
+    } else if let Expression::Binary { op: Op::And, left, right } = condition {
+        if matches!(left, Expression::Let { .. }) || matches!(right, Expression::Let { .. }) {
+            emit_condition(left, w);
+            w.write(" && ");
+            emit_condition(right, w);
+        } else {
+            emit_expression(condition, w);
+        }
     } else {
         emit_expression(condition, w);
     }
+}
+
+fn is_err_condition(condition: &Expression) -> bool {
+    if let Expression::Binary {
+        op: Op::Eq, right, ..
+    } = condition
+    {
+        if let Expression::TupleStruct { name, .. } = right {
+            return matches!(name, Expression::Ident("Err"));
+        }
+    }
+    false
+}
+
+fn is_catch_all_ok_condition(condition: &Expression) -> Option<&Expression> {
+    if let Expression::Binary {
+        op: Op::Eq,
+        left: _,
+        right,
+    } = condition
+    {
+        if let Expression::TupleStruct { name, expressions } = right {
+            if matches!(name, Expression::Ident("Ok") | Expression::Ident("Some"))
+                && expressions.len() == 1
+            {
+                if matches!(expressions[0], Expression::Ident(_)) {
+                    return Some(&expressions[0]);
+                }
+            }
+        }
+    }
+    None
 }
 
 fn emit_if(
@@ -862,6 +902,14 @@ fn emit_if(
     else_branch: &Option<&'static Expression>,
     w: &mut IndentWriter,
 ) {
+    if is_err_condition(condition) {
+        emit_block_expression(then_branch, w);
+        return;
+    }
+    if let Some(_binding) = is_catch_all_ok_condition(condition) {
+        emit_block_expression(then_branch, w);
+        return;
+    }
     w.write("if (");
     emit_condition(condition, w);
     w.write(") ");

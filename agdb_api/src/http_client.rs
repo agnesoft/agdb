@@ -32,6 +32,12 @@ pub trait HttpClient {
 
 pub struct ReqwestClientTypeDef(pub reqwest::Client);
 
+impl From<reqwest::Client> for ReqwestClientTypeDef {
+    fn from(client: reqwest::Client) -> Self {
+        ReqwestClientTypeDef(client)
+    }
+}
+
 impl std::ops::Deref for ReqwestClientTypeDef {
     type Target = reqwest::Client;
 
@@ -59,7 +65,7 @@ impl TypeDefinition for ReqwestClientTypeDef {
 }
 
 #[cfg_attr(feature = "api", derive(agdb::TypeDef))]
-#[cfg_attr(feature = "api", type_def(HttpClient))]
+#[cfg_attr(feature = "api", type_def(inherent, HttpClient))]
 pub struct ReqwestClient {
     pub client: ReqwestClientTypeDef,
     pub user_agent: String,
@@ -67,19 +73,20 @@ pub struct ReqwestClient {
 
 impl AgdbApiClient for ReqwestClient {}
 
+#[cfg_attr(feature = "api", agdb::impl_def())]
 impl ReqwestClient {
     #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
-        Self::with_client(reqwest::Client::new())
+        Self::with_client(ReqwestClientTypeDef(reqwest::Client::new()))
     }
 
-    pub fn with_client(client: reqwest::Client) -> Self {
-        Self::with_user_agent(client, "agdb_api")
+    pub fn with_client<C: Into<ReqwestClientTypeDef>>(client: C) -> Self {
+        Self::with_user_agent(client, "agdb_api".to_string())
     }
 
-    pub fn with_user_agent(client: reqwest::Client, user_agent: impl Into<String>) -> Self {
+    pub fn with_user_agent<C: Into<ReqwestClientTypeDef>, S: Into<String>>(client: C, user_agent: S) -> Self {
         Self {
-            client: ReqwestClientTypeDef(client),
+            client: client.into(),
             user_agent: user_agent.into(),
         }
     }

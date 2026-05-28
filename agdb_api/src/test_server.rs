@@ -195,6 +195,7 @@ pub fn test_defs() -> Vec<agdb::type_def::Type> {
 }
 
 #[cfg_attr(feature = "api", derive(agdb::TypeDef))]
+#[type_def(inherent)]
 pub struct TestServer {
     pub dir: String,
     pub data_dir: String,
@@ -203,6 +204,7 @@ pub struct TestServer {
 }
 
 #[cfg_attr(feature = "api", derive(agdb::TypeDef))]
+#[type_def(inherent)]
 pub struct TestServerImpl {
     pub dir: String,
     pub data_dir: String,

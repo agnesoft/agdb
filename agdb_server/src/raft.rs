@@ -109,7 +109,7 @@ pub(crate) struct ClusterSettings {
     pub(crate) index: u64,
     pub(crate) size: u64,
     pub(crate) hash: u64,
-    pub(crate) election_factor: u64,
+    pub(crate) election_factor_ms: u64,
     pub(crate) heartbeat_timeout: Duration,
     pub(crate) term_timeout: Duration,
 }
@@ -148,7 +148,9 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
             size: settings.size,
             index: settings.index,
             term: if settings.size == 1 { 1 } else { 0 },
-            election_timeout: Duration::from_secs(settings.election_factor * settings.index),
+            election_timeout: Duration::from_millis(
+                settings.election_factor_ms.saturating_mul(settings.index),
+            ),
             heartbeat_timeout: settings.heartbeat_timeout,
             term_timeout: settings.term_timeout,
             storage,
@@ -754,7 +756,7 @@ mod test {
                         index,
                         size,
                         hash: 123,
-                        election_factor: 1,
+                        election_factor_ms: 1000,
                         heartbeat_timeout: Duration::from_secs(1),
                         term_timeout: Duration::from_secs(3),
                     };

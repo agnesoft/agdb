@@ -408,6 +408,7 @@ mod tests {
             cluster_token: "cluster".to_string(),
             cluster_heartbeat_timeout_ms: 1000,
             cluster_term_timeout_ms: 3000,
+            cluster_election_factor_ms: 1000,
             cluster: vec![],
             cluster_node_id: 0,
             start_time: SystemTime::now()

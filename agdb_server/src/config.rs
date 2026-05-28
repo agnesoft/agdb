@@ -80,6 +80,7 @@ pub(crate) fn new(config_file: &str) -> Result<Config, String> {
         cluster_token: "cluster".to_string(),
         cluster_heartbeat_timeout_ms: 1000,
         cluster_term_timeout_ms: 3000,
+        cluster_election_factor_ms: 1000,
         cluster: vec![],
         cluster_node_id: 0,
         start_time: SystemTime::now()
@@ -135,6 +136,7 @@ pub(crate) fn from_str(content: &str) -> Result<ConfigImpl, String> {
         cluster_token: String::new(),
         cluster_heartbeat_timeout_ms: 0,
         cluster_term_timeout_ms: 0,
+        cluster_election_factor_ms: 0,
         cluster: vec![],
         cluster_node_id: 0,
         start_time: 0,
@@ -196,6 +198,11 @@ pub(crate) fn from_str(content: &str) -> Result<ConfigImpl, String> {
                     config.cluster_term_timeout_ms = value
                         .parse()
                         .map_err(|e| format!("Invalid cluster_term_timeout_ms: {e:?}"))?
+                }
+                "cluster_election_factor_ms" => {
+                    config.cluster_election_factor_ms = value
+                        .parse()
+                        .map_err(|e| format!("Invalid cluster_election_factor_ms: {e:?}"))?
                 }
                 "cluster" => config.cluster = vec_from_str(value),
                 "token_expiry_seconds" => {
@@ -290,6 +297,7 @@ mod tests {
             cluster_token: "cluster".to_string(),
             cluster_heartbeat_timeout_ms: 1000,
             cluster_term_timeout_ms: 3000,
+            cluster_election_factor_ms: 1000,
             cluster: vec![],
             cluster_node_id: 0,
             start_time: 0,
@@ -328,6 +336,7 @@ mod tests {
             cluster_token: "cluster".to_string(),
             cluster_heartbeat_timeout_ms: 1000,
             cluster_term_timeout_ms: 3000,
+            cluster_election_factor_ms: 1000,
             cluster: vec![],
             cluster_node_id: 0,
             start_time: 0,
@@ -365,6 +374,7 @@ mod tests {
             cluster_token: "cluster".to_string(),
             cluster_heartbeat_timeout_ms: 1000,
             cluster_term_timeout_ms: 3000,
+            cluster_election_factor_ms: 1000,
             cluster: vec![],
             cluster_node_id: 0,
             start_time: 0,

@@ -18,6 +18,25 @@ use super::normalize::normalize_type;
 use super::types::emit_normalized;
 use super::types::type_annotation;
 
+const JS_RESERVED: &[&str] = &[
+    "break", "case", "catch", "class", "const", "continue", "debugger", "default", "delete",
+    "do", "else", "enum", "export", "extends", "false", "finally", "for", "function", "if",
+    "import", "in", "instanceof", "new", "null", "return", "super", "switch", "this", "throw",
+    "true", "try", "typeof", "var", "void", "while", "with", "yield",
+];
+
+fn escape_reserved(name: &str) -> String {
+    if JS_RESERVED.contains(&name) {
+        format!("{name}_")
+    } else {
+        name.to_string()
+    }
+}
+
+fn sanitize_name(name: &str) -> String {
+    name.replace("::", "_")
+}
+
 pub fn emit_type(ty: &Type, config: &TranspileConfig, w: &mut IndentWriter) {
     match ty {
         Type::Struct(s) => emit_struct(s, config, w),
@@ -50,18 +69,29 @@ fn emit_struct(s: &Struct, config: &TranspileConfig, w: &mut IndentWriter) {
             .filter_map(|i| {
                 i.trait_.map(|t| {
                     let ty = t();
-                    ty.name().to_string()
+                    let name = ty.name().to_string();
+                    if SKIP_BOUNDS.contains(&name.as_str()) {
+                        None
+                    } else {
+                        Some(name)
+                    }
                 })
             })
+            .flatten()
             .collect();
-        format!(" implements {}", names.join(", "))
+        if names.is_empty() {
+            String::new()
+        } else {
+            format!(" implements {}", names.join(", "))
+        }
     };
 
+    let name = sanitize_name(s.name);
     w.write_line(&format!(
-        "{export}class {}{generics}{implements} {{",
-        s.name
+        "{export}class {name}{generics}{implements} {{"
     ));
     w.indent();
+    w.set_class_name(Some(name.clone()));
 
     for field in s.fields {
         emit_field(field, w);
@@ -80,6 +110,7 @@ fn emit_struct(s: &Struct, config: &TranspileConfig, w: &mut IndentWriter) {
     }
 
     w.dedent();
+    w.set_class_name(None);
     w.write_line("}");
 }
 
@@ -101,8 +132,10 @@ fn emit_constructor(fields: &[Variable], w: &mut IndentWriter) {
         .filter_map(|f| {
             let name = if f.name.is_empty() { "value" } else { f.name };
             f.ty.map(|ty_fn| {
-                let ann = type_annotation(&ty_fn());
-                format!("{name}: {ann}")
+                let ty = ty_fn();
+                let ann = type_annotation(&ty);
+                let default = default_for_type(&ty);
+                format!("{name}: {ann} = {default}")
             })
         })
         .collect();
@@ -121,6 +154,22 @@ fn emit_constructor(fields: &[Variable], w: &mut IndentWriter) {
     }
     w.dedent();
     w.write_line("}");
+}
+
+fn default_for_type(ty: &Type) -> &'static str {
+    use agdb::type_def::Literal;
+    match ty {
+        Type::Literal(lit) => match lit {
+            Literal::Bool => "false",
+            Literal::Str | Literal::String => "\"\"",
+            Literal::Unit => "undefined",
+            _ => "0",
+        },
+        Type::Vec(_) | Type::Slice(_) => "[]",
+        Type::Option(_) => "null",
+        Type::Tuple(_) => "[] as any",
+        _ => "null!",
+    }
 }
 
 fn emit_method(func: &Function, w: &mut IndentWriter) {
@@ -150,13 +199,43 @@ fn emit_method(func: &Function, w: &mut IndentWriter) {
 
     let params = format_params(&args_to_emit);
     let ret_annotation = format_return_type(func);
-    let generics = generic_params_from_slice(func.generics);
+
+    let declared_generic_params: Vec<String> = func
+        .generics
+        .iter()
+        .filter(|g| !matches!(g.kind, GenericKind::Lifetime))
+        .map(|g| format_generic_param(g))
+        .collect();
+
+    let declared_names: Vec<&str> = func
+        .generics
+        .iter()
+        .filter(|g| !matches!(g.kind, GenericKind::Lifetime))
+        .map(|g| g.name)
+        .collect();
+
+    let ret_ty = (func.ret)();
+    let ret_generics = collect_generic_params_from_return(&ret_ty);
+    let mut all_generics = declared_generic_params;
+    for g in &ret_generics {
+        let g_name = g.split_whitespace().next().unwrap_or(g);
+        if !declared_names.contains(&g_name) {
+            all_generics.push(g.clone());
+        }
+    }
+
+    let generics = if all_generics.is_empty() {
+        String::new()
+    } else {
+        format!("<{}>", all_generics.join(", "))
+    };
 
     w.write_line(&format!(
         "{static_prefix}{async_prefix}{}{generics}({params}){ret_annotation} {{",
         func.name
     ));
     w.indent();
+    w.clear_vars();
     emit_body(func.body, w);
     w.dedent();
     w.write_line("}");
@@ -174,8 +253,9 @@ fn emit_enum(e: &Enum, config: &TranspileConfig, w: &mut IndentWriter) {
         v.ty.is_none_or(|ty_fn| matches!(ty_fn(), Type::Literal(Literal::Unit)))
     });
 
+    let name = sanitize_name(e.name);
     if all_unit {
-        w.write_line(&format!("{export}enum {}{generics} {{", e.name));
+        w.write_line(&format!("{export}enum {name}{generics} {{"));
         w.indent();
         for variant in e.variants {
             w.write_line(&format!("{} = \"{}\",", variant.name, variant.name));
@@ -183,7 +263,7 @@ fn emit_enum(e: &Enum, config: &TranspileConfig, w: &mut IndentWriter) {
         w.dedent();
         w.write_line("}");
     } else {
-        w.write(&format!("{export}type {}{generics} =", e.name));
+        w.write(&format!("{export}type {name}{generics} ="));
         w.newline();
         w.indent();
         for (i, variant) in e.variants.iter().enumerate() {
@@ -196,10 +276,19 @@ fn emit_enum(e: &Enum, config: &TranspileConfig, w: &mut IndentWriter) {
                     }
                     Type::Struct(inner) => {
                         w.write(&format!("{prefix}{{ type: \"{}\"", variant.name));
-                        for field in inner.fields {
+                        for (idx, field) in inner.fields.iter().enumerate() {
                             if let Some(fty_fn) = field.ty {
                                 let ann = type_annotation(&fty_fn());
-                                w.write(&format!("; {}: {ann}", field.name));
+                                let name = if field.name.is_empty() {
+                                    if inner.fields.len() == 1 {
+                                        "value".to_string()
+                                    } else {
+                                        format!("_{idx}")
+                                    }
+                                } else {
+                                    field.name.to_string()
+                                };
+                                w.write(&format!("; {name}: {ann}"));
                             }
                         }
                         w.write_line("; }");
@@ -244,17 +333,26 @@ fn emit_trait(t: &Trait, config: &TranspileConfig, w: &mut IndentWriter) {
         let bound_names: Vec<String> = t
             .bounds
             .iter()
-            .map(|b| {
+            .filter_map(|b| {
                 let ty = b();
-                ty.name().to_string()
+                let name = ty.name().to_string();
+                if SKIP_BOUNDS.contains(&name.as_str()) {
+                    None
+                } else {
+                    Some(name)
+                }
             })
             .collect();
-        format!(" extends {}", bound_names.join(", "))
+        if bound_names.is_empty() {
+            String::new()
+        } else {
+            format!(" extends {}", bound_names.join(", "))
+        }
     };
 
+    let name = sanitize_name(t.name);
     w.write_line(&format!(
-        "{export}interface {}{generics}{extends} {{",
-        t.name
+        "{export}interface {name}{generics}{extends} {{"
     ));
     w.indent();
 
@@ -313,17 +411,56 @@ fn emit_function(func: &Function, config: &TranspileConfig, w: &mut IndentWriter
         ""
     };
     let async_prefix = if func.async_fn { "async " } else { "" };
-    let generics = generic_params_from_slice(func.generics);
 
     let args_to_emit: Vec<&Variable> = func.args.iter().collect();
     let params = format_params(&args_to_emit);
     let ret_annotation = format_return_type(func);
 
+    let declared_names: Vec<&str> = func
+        .generics
+        .iter()
+        .filter(|g| !matches!(g.kind, GenericKind::Lifetime))
+        .map(|g| g.name)
+        .collect();
+
+    let mut all_generics: Vec<String> = func
+        .generics
+        .iter()
+        .filter(|g| !matches!(g.kind, GenericKind::Lifetime))
+        .map(|g| format_generic_param(g))
+        .collect();
+
+    let ret_ty = (func.ret)();
+    for g in collect_generic_params_from_return(&ret_ty) {
+        let g_name = g.split_whitespace().next().unwrap_or(&g);
+        if !declared_names.contains(&g_name) && !all_generics.iter().any(|x| x.starts_with(g_name)) {
+            all_generics.push(g.clone());
+        }
+    }
+    for arg in &args_to_emit {
+        if let Some(ty_fn) = arg.ty {
+            let ty = ty_fn();
+            for g in collect_generic_params_from_return(&ty) {
+                let g_name = g.split_whitespace().next().unwrap_or(&g);
+                if !declared_names.contains(&g_name) && !all_generics.iter().any(|x| x.starts_with(g_name)) {
+                    all_generics.push(g.clone());
+                }
+            }
+        }
+    }
+
+    let generics = if all_generics.is_empty() {
+        String::new()
+    } else {
+        format!("<{}>", all_generics.join(", "))
+    };
+
+    let name = escape_reserved(func.name);
     w.write_line(&format!(
-        "{export}{async_prefix}function {}{generics}({params}){ret_annotation} {{",
-        func.name
+        "{export}{async_prefix}function {name}{generics}({params}){ret_annotation} {{",
     ));
     w.indent();
+    w.clear_vars();
     emit_body(func.body, w);
     w.dedent();
     w.write_line("}");
@@ -335,9 +472,12 @@ fn emit_test_function(func: &Function, config: &TranspileConfig, w: &mut IndentW
     } else {
         ""
     };
+    let async_prefix = if func.async_fn { "async " } else { "" };
 
-    w.write_line(&format!("{export}function {}() {{", func.name));
+    let name = w.unique_fn_name(&escape_reserved(func.name));
+    w.write_line(&format!("{export}{async_prefix}function {name}() {{"));
     w.indent();
+    w.clear_vars();
     emit_body(func.body, w);
     w.dedent();
     w.write_line("}");
@@ -374,17 +514,144 @@ fn emit_static(s: &Static, config: &TranspileConfig, w: &mut IndentWriter) {
     w.newline();
 }
 
+fn collect_generic_params_from_return(ty: &Type) -> Vec<String> {
+    let mut params = Vec::new();
+    collect_generics_recursive(ty, &mut params);
+    params
+}
+
+fn collect_generics_recursive(ty: &Type, params: &mut Vec<String>) {
+    match ty {
+        Type::Generic(g) => {
+            let name = g.name.to_string();
+            if name.contains('<') || name.contains('(') || name.contains(' ') {
+                return;
+            }
+            if !params.iter().any(|p| p == &name || p.starts_with(&format!("{name} "))) {
+                params.push(name);
+            }
+        }
+        Type::Vec(inner) | Type::Slice(inner) | Type::Option(inner) => {
+            collect_generics_recursive(&inner(), params);
+        }
+        Type::Result { ok, err } => {
+            collect_generics_recursive(&ok(), params);
+            collect_generics_recursive(&err(), params);
+        }
+        Type::Reference(r) => {
+            collect_generics_recursive(&(r.ty)(), params);
+        }
+        Type::Pointer(p) => {
+            collect_generics_recursive(&(p.ty)(), params);
+        }
+        Type::Tuple(elements) => {
+            for elem in *elements {
+                collect_generics_recursive(&elem(), params);
+            }
+        }
+        Type::Struct(s) => {
+            for g in s.generics {
+                if !matches!(g.kind, GenericKind::Lifetime) {
+                    let formatted = format_generic_param(g);
+                    let name = g.name.to_string();
+                    if !params.iter().any(|p| p == &name || p.starts_with(&format!("{name} "))) {
+                        params.push(formatted);
+                    }
+                }
+            }
+        }
+        Type::Enum(e) => {
+            for g in e.generics {
+                if !matches!(g.kind, GenericKind::Lifetime) {
+                    let formatted = format_generic_param(g);
+                    let name = g.name.to_string();
+                    if !params.iter().any(|p| p == &name || p.starts_with(&format!("{name} "))) {
+                        params.push(formatted);
+                    }
+                }
+            }
+        }
+        _ => {}
+    }
+}
+
+const SKIP_BOUNDS: &[&str] = &[
+    "Send",
+    "Sync",
+    "Sized",
+    "Unpin",
+    "Copy",
+    "Clone",
+    "Default",
+    "TypeDefinition",
+    "Debug",
+    "Display",
+    "Hash",
+    "Eq",
+    "PartialEq",
+    "Ord",
+    "PartialOrd",
+    "Into",
+    "From",
+    "TryInto",
+    "TryFrom",
+    "AsRef",
+    "AsMut",
+    "Borrow",
+    "BorrowMut",
+    "ToOwned",
+    "ToString",
+    "Serialize",
+    "Deserialize",
+    "DeserializeOwned",
+    "serde::Serialize",
+    "serde::Deserialize",
+    "serde::de::DeserializeOwned",
+    "DbType",
+    "StatusCode",
+    "ConfigImpl",
+];
+
 fn generic_params_from_slice(generics: &[agdb::type_def::Generic]) -> String {
-    let type_params: Vec<&str> = generics
+    let type_params: Vec<String> = generics
         .iter()
         .filter(|g| !matches!(g.kind, GenericKind::Lifetime))
-        .map(|g| g.name)
+        .map(|g| format_generic_param(g))
         .collect();
 
     if type_params.is_empty() {
         String::new()
     } else {
         format!("<{}>", type_params.join(", "))
+    }
+}
+
+fn format_generic_param(g: &agdb::type_def::Generic) -> String {
+    if matches!(g.kind, GenericKind::Const) {
+        return g.name.to_string();
+    }
+
+    let bound_names: Vec<String> = g
+        .bounds
+        .iter()
+        .filter_map(|bound_fn| {
+            let ty = bound_fn();
+            let name = match &ty {
+                Type::Trait(t) => t.name.to_string(),
+                Type::Struct(s) => s.name.to_string(),
+                _ => return None,
+            };
+            if SKIP_BOUNDS.contains(&name.as_str()) {
+                return None;
+            }
+            Some(name)
+        })
+        .collect();
+
+    if bound_names.is_empty() {
+        g.name.to_string()
+    } else {
+        format!("{} extends {}", g.name, bound_names.join(" & "))
     }
 }
 
@@ -429,10 +696,7 @@ mod tests {
     use agdb::type_def::TypeDefinition;
 
     fn default_config() -> TranspileConfig {
-        TranspileConfig {
-            indent: "    ",
-            export_declarations: true,
-        }
+        TranspileConfig::default()
     }
 
     fn transpile(ty: &Type) -> String {
@@ -464,7 +728,7 @@ mod tests {
         assert!(output.contains("x: number;"), "Got: {output}");
         assert!(output.contains("y: number;"), "Got: {output}");
         assert!(
-            output.contains("constructor(x: number, y: number)"),
+            output.contains("constructor(x: number = 0, y: number = 0)"),
             "Got: {output}"
         );
         assert!(output.contains("this.x = x;"), "Got: {output}");
@@ -537,14 +801,14 @@ mod tests {
     fn trait_with_supertraits() {
         #[agdb::trait_def]
         #[allow(dead_code)]
-        trait Base {}
+        trait Printable {}
 
         #[agdb::trait_def]
         #[allow(dead_code)]
-        trait Extended: agdb::type_def::TypeDefinition {}
+        trait Extended: Printable {}
 
         let output = transpile(&ExtendedDef::type_def());
-        assert!(output.contains("extends"), "Got: {output}");
+        assert!(output.contains("extends Printable"), "Got: {output}");
     }
 
     #[test]
@@ -601,8 +865,8 @@ mod tests {
         }
 
         let config = TranspileConfig {
-            indent: "    ",
             export_declarations: false,
+            ..TranspileConfig::default()
         };
         let mut w = IndentWriter::new(config.indent);
         emit_type(&Private::type_def(), &config, &mut w);
@@ -638,7 +902,7 @@ mod tests {
         assert!(output.contains("export class Counter {"), "Got:\n{output}");
         assert!(output.contains("value: number;"), "Got:\n{output}");
         assert!(
-            output.contains("constructor(value: number)"),
+            output.contains("constructor(value: number = 0)"),
             "Got:\n{output}"
         );
         assert!(output.contains("get(): number {"), "Got:\n{output}");

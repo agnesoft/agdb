@@ -12,6 +12,8 @@ use format::IndentWriter;
 pub struct TranspileConfig {
     pub indent: &'static str,
     pub export_declarations: bool,
+    pub preamble: &'static str,
+    pub skip_types: &'static [&'static str],
 }
 
 impl Default for TranspileConfig {
@@ -19,6 +21,8 @@ impl Default for TranspileConfig {
         Self {
             indent: "    ",
             export_declarations: true,
+            preamble: "",
+            skip_types: &[],
         }
     }
 }
@@ -31,10 +35,23 @@ pub fn transpile_type(ty: &Type, config: &TranspileConfig) -> String {
 
 pub fn transpile_module(types: &[Type], config: &TranspileConfig) -> String {
     let mut w = IndentWriter::new(config.indent);
-    for (i, ty) in types.iter().enumerate() {
-        if i > 0 {
+    if !config.preamble.is_empty() {
+        w.write(config.preamble);
+        w.newline();
+        w.newline();
+    }
+    let mut first = true;
+    for ty in types {
+        if config.skip_types.contains(&ty.name()) {
+            continue;
+        }
+        if matches!(ty, Type::Pointer(_)) {
+            continue;
+        }
+        if !first {
             w.newline();
         }
+        first = false;
         declarations::emit_type(ty, config, &mut w);
     }
     w.into_string()
@@ -72,7 +89,7 @@ mod tests {
         assert!(output.contains("id: number;"), "Got:\n{output}");
         assert!(output.contains("name: string;"), "Got:\n{output}");
         assert!(
-            output.contains("constructor(id: number, name: string)"),
+            output.contains("constructor(id: number = 0, name: string = \"\")"),
             "Got:\n{output}"
         );
     }

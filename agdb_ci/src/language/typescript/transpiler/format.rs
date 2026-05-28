@@ -1,8 +1,13 @@
+use std::collections::{HashMap, HashSet};
+
 pub struct IndentWriter {
     buffer: String,
     indent_level: usize,
     indent_str: &'static str,
     at_line_start: bool,
+    class_name: Option<String>,
+    fn_name_counts: HashMap<String, usize>,
+    declared_vars: HashSet<String>,
 }
 
 impl IndentWriter {
@@ -12,7 +17,36 @@ impl IndentWriter {
             indent_level: 0,
             indent_str,
             at_line_start: true,
+            class_name: None,
+            fn_name_counts: HashMap::new(),
+            declared_vars: HashSet::new(),
         }
+    }
+
+    pub fn set_class_name(&mut self, name: Option<String>) {
+        self.class_name = name;
+    }
+
+    pub fn class_name(&self) -> Option<&str> {
+        self.class_name.as_deref()
+    }
+
+    pub fn unique_fn_name(&mut self, name: &str) -> String {
+        let count = self.fn_name_counts.entry(name.to_string()).or_insert(0);
+        *count += 1;
+        if *count == 1 {
+            name.to_string()
+        } else {
+            format!("{name}_{count}")
+        }
+    }
+
+    pub fn declare_var(&mut self, name: &str) -> bool {
+        self.declared_vars.insert(name.to_string())
+    }
+
+    pub fn clear_vars(&mut self) {
+        self.declared_vars.clear();
     }
 
     pub fn indent(&mut self) {

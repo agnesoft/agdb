@@ -38,6 +38,7 @@ pub trait AgdbApiClient: HttpClient {}
 /// assert_eq!(api.base_url(), "http://localhost:3000/api/v1");
 /// ```
 #[cfg_attr(feature = "api", derive(agdb::TypeDef))]
+#[cfg_attr(feature = "api", type_def(inherent))]
 pub struct AgdbApi<T: AgdbApiClient> {
     client: T,
     address: String,

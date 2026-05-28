@@ -1,4 +1,3 @@
-use agdb::type_def::GenericKind;
 use agdb::type_def::Type;
 
 use super::normalize::NormalizedType;
@@ -32,12 +31,43 @@ pub fn emit_normalized(normalized: &NormalizedType) -> String {
             let inner_str = emit_normalized(inner);
             format!("{inner_str} | null")
         }
-        NormalizedType::Named(name) => name.clone(),
+        NormalizedType::Named(name) => {
+            if let Some(result_inner) = parse_result_type_name(name) {
+                return result_inner;
+            }
+            name.clone()
+        }
         NormalizedType::NamedGeneric { name, args } => {
+            if name.ends_with("Result") && !args.is_empty() {
+                let inner = emit_normalized(&args[0]);
+                if inner.starts_with('(') && inner.ends_with(')') {
+                    let tuple_content = &inner[1..inner.len() - 1];
+                    return format!(
+                        "[{}]",
+                        tuple_content
+                            .split(", ")
+                            .map(|s| match s.trim() {
+                                "u8" | "u16" | "u32" | "u64" | "i8" | "i16" | "i32" | "i64"
+                                | "f32" | "f64" | "usize" | "isize" => "number".to_string(),
+                                "bool" => "boolean".to_string(),
+                                "String" | "&str" | "str" => "string".to_string(),
+                                other => other.to_string(),
+                            })
+                            .collect::<Vec<_>>()
+                            .join(", ")
+                    );
+                }
+                return inner;
+            }
             let args_str: Vec<String> = args.iter().map(emit_normalized).collect();
             format!("{name}<{}>", args_str.join(", "))
         }
-        NormalizedType::Generic(name) => name.clone(),
+        NormalizedType::Generic(name) => {
+            if let Some(result_inner) = parse_result_type_name(name) {
+                return result_inner;
+            }
+            name.clone()
+        }
         NormalizedType::Function {
             args,
             ret,
@@ -60,7 +90,47 @@ pub fn emit_normalized(normalized: &NormalizedType) -> String {
     }
 }
 
-pub fn generic_params(ty: &Type) -> String {
+fn parse_result_type_name(name: &str) -> Option<String> {
+    let lt_pos = name.find('<')?;
+    let base_name = name[..lt_pos].trim();
+    if !base_name.ends_with("Result") {
+        return None;
+    }
+    let inner = name[lt_pos + 1..].trim();
+    let inner = inner.strip_suffix('>')?;
+    let inner = inner.trim();
+    if inner.starts_with('(') && inner.ends_with(')') {
+        let tuple_content = &inner[1..inner.len() - 1];
+        let parts: Vec<&str> = tuple_content.split(',').map(|s| s.trim()).collect();
+        let ts_parts: Vec<String> = parts
+            .iter()
+            .map(|s| match *s {
+                "u8" | "u16" | "u32" | "u64" | "i8" | "i16" | "i32" | "i64" | "f32" | "f64"
+                | "usize" | "isize" => "number".to_string(),
+                "bool" => "boolean".to_string(),
+                "String" | "&str" | "str" => "string".to_string(),
+                other => other.to_string(),
+            })
+            .collect();
+        Some(format!("[{}]", ts_parts.join(", ")))
+    } else {
+        Some(map_primitive_type(inner).to_string())
+    }
+}
+
+fn map_primitive_type(s: &str) -> &str {
+    match s {
+        "u8" | "u16" | "u32" | "u64" | "i8" | "i16" | "i32" | "i64" | "f32" | "f64"
+        | "usize" | "isize" => "number",
+        "bool" => "boolean",
+        "String" | "&str" | "str" => "string",
+        other => other,
+    }
+}
+
+#[cfg(test)]
+fn generic_params(ty: &Type) -> String {
+    use agdb::type_def::GenericKind;
     let generics = match ty {
         Type::Struct(s) => s.generics,
         Type::Enum(e) => e.generics,

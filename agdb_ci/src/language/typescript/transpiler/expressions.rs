@@ -5,10 +5,26 @@ use agdb::type_def::Op;
 use super::format::IndentWriter;
 use super::types::type_annotation;
 
+fn emit_ident(name: &str, w: &mut IndentWriter) {
+    match name {
+        "self" => w.write("this"),
+        "None" => w.write("null"),
+        "Self" => {
+            let class = w.class_name().map(|s| s.to_string());
+            if let Some(class) = class {
+                w.write(&class);
+            } else {
+                w.write("Self");
+            }
+        }
+        _ => w.write(name),
+    }
+}
+
 pub fn emit_expression(expr: &Expression, w: &mut IndentWriter) {
     match expr {
         Expression::Literal(lit) => emit_literal(lit, w),
-        Expression::Ident(name) => w.write(name),
+        Expression::Ident(name) => emit_ident(name, w),
         Expression::Wild => w.write("_"),
         Expression::Binary { op, left, right } => emit_binary(op, left, right, w),
         Expression::Unary { op, expr } => emit_unary(op, expr, w),
@@ -29,8 +45,13 @@ pub fn emit_expression(expr: &Expression, w: &mut IndentWriter) {
             w.write(field);
         }
         Expression::TupleAccess { base, index } => {
+            let is_self_access = matches!(base, Expression::Ident("self"));
             emit_expression(base, w);
-            w.write(&format!("[{index}]"));
+            if is_self_access && *index == 0 {
+                w.write(".value");
+            } else {
+                w.write(&format!("[{index}]"));
+            }
         }
         Expression::Index { base, index } => {
             emit_expression(base, w);
@@ -82,14 +103,33 @@ pub fn emit_expression(expr: &Expression, w: &mut IndentWriter) {
             w.write(") ");
             emit_block_expression(body, w);
         }
-        Expression::Block(stmts) => emit_block(stmts, w),
+        Expression::Block(stmts) => emit_block_as_iife(stmts, w),
         Expression::Break => w.write("break"),
         Expression::Continue => w.write("continue"),
         Expression::Return(value) => {
-            w.write("return");
             if let Some(expr) = value {
-                w.write(" ");
-                emit_expression(expr, w);
+                let is_err = match expr {
+                    Expression::TupleStruct { name, .. } => {
+                        matches!(name, Expression::Ident("Err"))
+                    }
+                    Expression::Call {
+                        recipient: None,
+                        function,
+                        ..
+                    } => matches!(function, Expression::Ident("Err")),
+                    _ => false,
+                };
+                let is_void = is_void_return(expr);
+                if is_err {
+                    emit_expression(expr, w);
+                } else if is_void {
+                    w.write("return");
+                } else {
+                    w.write("return ");
+                    emit_expression(expr, w);
+                }
+            } else {
+                w.write("return");
             }
         }
         Expression::Await(expr) => {
@@ -109,8 +149,10 @@ pub fn emit_expression(expr: &Expression, w: &mut IndentWriter) {
             generics: _,
         } => {
             if let Some(parent_expr) = parent {
-                emit_expression(parent_expr, w);
-                w.write(".");
+                if !is_path_skip(parent_expr) {
+                    emit_expression(parent_expr, w);
+                    w.write(".");
+                }
             }
             w.write(ident);
         }
@@ -131,15 +173,39 @@ pub fn emit_expression(expr: &Expression, w: &mut IndentWriter) {
             w.write(" }");
         }
         Expression::TupleStruct { name, expressions } => {
-            emit_expression(name, w);
-            w.write("(");
-            for (i, expr) in expressions.iter().enumerate() {
-                if i > 0 {
-                    w.write(", ");
+            let is_ok = matches!(name, Expression::Ident("Ok"));
+            let is_err = matches!(name, Expression::Ident("Err"));
+            let is_some = matches!(name, Expression::Ident("Some"));
+            if is_ok || is_some {
+                if expressions.len() == 1 {
+                    emit_expression(&expressions[0], w);
+                } else {
+                    w.write("[");
+                    for (i, expr) in expressions.iter().enumerate() {
+                        if i > 0 {
+                            w.write(", ");
+                        }
+                        emit_expression(expr, w);
+                    }
+                    w.write("]");
                 }
-                emit_expression(expr, w);
+            } else if is_err {
+                w.write("throw ");
+                if expressions.len() == 1 {
+                    emit_expression(&expressions[0], w);
+                }
+            } else {
+                w.write("new ");
+                emit_expression(name, w);
+                w.write("(");
+                for (i, expr) in expressions.iter().enumerate() {
+                    if i > 0 {
+                        w.write(", ");
+                    }
+                    emit_expression(expr, w);
+                }
+                w.write(")");
             }
-            w.write(")");
         }
     }
 }
@@ -317,17 +383,150 @@ fn emit_let(
     value: &Option<&'static Expression>,
     w: &mut IndentWriter,
 ) {
-    w.write("let ");
+    let is_new = match name {
+        Expression::Ident(n) => w.declare_var(n),
+        Expression::Tuple(elements) => {
+            for elem in *elements {
+                if let Expression::Ident(n) = elem {
+                    w.declare_var(n);
+                }
+            }
+            true
+        }
+        _ => true,
+    };
+    if is_new {
+        w.write("let ");
+    }
     emit_expression(name, w);
-    if let Some(ty_fn) = ty {
-        w.write(": ");
-        w.write(&type_annotation(&ty_fn()));
+    if is_new {
+        if let Some(ty_fn) = ty {
+            w.write(": ");
+            w.write(&type_annotation(&ty_fn()));
+        }
     }
     if let Some(val) = value {
         w.write(" = ");
-        emit_expression(val, w);
+        match val {
+            Expression::If {
+                condition,
+                then_branch,
+                else_branch,
+            } => emit_if_expr(condition, then_branch, else_branch, w),
+            Expression::Block(stmts) => emit_block_as_iife(stmts, w),
+            _ => emit_expression(val, w),
+        }
     }
 }
+
+fn emit_block_as_iife(stmts: &[Expression], w: &mut IndentWriter) {
+    w.write("await (async () => ");
+    emit_block(stmts, w);
+    w.write(")()");
+}
+
+fn is_path_skip(expr: &Expression) -> bool {
+    match expr {
+        Expression::Ident(name) => matches!(*name, "crate" | "super"),
+        Expression::Path { ident, parent, .. } => {
+            matches!(*ident, "crate" | "super")
+                && parent.as_ref().map_or(true, |p| is_path_skip(p))
+        }
+        _ => false,
+    }
+}
+
+fn is_pascal_case(s: &str) -> bool {
+    s.chars().next().is_some_and(|c| c.is_uppercase())
+        && !s.contains('_')
+        && s.chars().any(|c| c.is_lowercase())
+}
+
+fn is_void_return(expr: &Expression) -> bool {
+    match expr {
+        Expression::Tuple(elements) if elements.is_empty() => true,
+        Expression::TupleStruct { name, expressions } => {
+            matches!(name, Expression::Ident("Ok") | Expression::Ident("Some"))
+                && expressions.len() == 1
+                && is_void_return(&expressions[0])
+        }
+        Expression::Call {
+            recipient: None,
+            function,
+            args,
+        } => {
+            let is_ok_some = matches!(
+                function,
+                Expression::Ident("Ok") | Expression::Ident("Some")
+                    | Expression::Path { ident: "Ok", .. }
+                    | Expression::Path { ident: "Some", .. }
+            );
+            is_ok_some && args.len() == 1 && is_void_return(&args[0])
+        }
+        _ => false,
+    }
+}
+
+fn is_result_constructor(name: &str) -> bool {
+    matches!(name, "Ok" | "Err" | "Some")
+}
+
+fn emit_result_call(name: &str, args: &[Expression], w: &mut IndentWriter) {
+    match name {
+        "Ok" | "Some" => {
+            if args.len() == 1 {
+                emit_expression(&args[0], w);
+            } else if args.is_empty() {
+                w.write("undefined");
+            } else {
+                w.write("[");
+                for (i, arg) in args.iter().enumerate() {
+                    if i > 0 { w.write(", "); }
+                    emit_expression(arg, w);
+                }
+                w.write("]");
+            }
+        }
+        "Err" => {
+            w.write("throw ");
+            if args.len() == 1 {
+                emit_expression(&args[0], w);
+            }
+        }
+        _ => unreachable!(),
+    }
+}
+
+const STRIP_METHODS: &[&str] = &[
+    "into",
+    "to_string",
+    "clone",
+    "unwrap",
+    "unwrap_or_default",
+    "as_ref",
+    "as_str",
+    "to_owned",
+    "expect",
+    "reserve",
+];
+
+fn rename_method(name: &str) -> Option<&'static str> {
+    match name {
+        "push" => Some("push"),
+        "any" => Some("some"),
+        "all" => Some("every"),
+        "find" => Some("find"),
+        "map" => Some("map"),
+        "filter" => Some("filter"),
+        "for_each" => Some("forEach"),
+        "contains" => Some("includes"),
+        _ => None,
+    }
+}
+
+const PROPERTY_METHODS: &[(&str, &str)] = &[("len", "length")];
+
+const STRIP_CHAIN_METHODS: &[&str] = &["iter", "collect", "into_iter"];
 
 fn emit_call(
     recipient: &Option<&'static Expression>,
@@ -336,18 +535,181 @@ fn emit_call(
     w: &mut IndentWriter,
 ) {
     if let Some(recv) = recipient {
-        emit_expression(recv, w);
-        w.write(".");
-    }
-    emit_fn_name(function, w);
-    w.write("(");
-    for (i, arg) in args.iter().enumerate() {
-        if i > 0 {
-            w.write(", ");
+        if let Expression::Path { ident, parent: None, .. } | Expression::Ident(ident) = function {
+            if *ident == "new" {
+                if let Expression::Ident(recv_name) | Expression::Path { ident: recv_name, parent: None, .. } = recv {
+                    if is_pascal_case(recv_name) {
+                        w.write("new ");
+                        w.write(recv_name);
+                        w.write("(");
+                        for (i, arg) in args.iter().enumerate() {
+                            if i > 0 { w.write(", "); }
+                            emit_expression(arg, w);
+                        }
+                        w.write(")");
+                        return;
+                    }
+                }
+            }
+            if *ident == "unwrap_err" {
+                w.write("(await unwrap_err(");
+                emit_expression(recv, w);
+                w.write("))");
+                return;
+            }
+            if STRIP_METHODS.contains(ident) {
+                emit_expression(recv, w);
+                return;
+            }
+            if STRIP_CHAIN_METHODS.contains(ident) {
+                emit_expression(recv, w);
+                return;
+            }
+            if *ident == "unwrap_or" && args.len() == 1 {
+                emit_expression(recv, w);
+                w.write(" ?? ");
+                emit_expression(&args[0], w);
+                return;
+            }
+            if let Some((_, prop)) = PROPERTY_METHODS.iter().find(|(m, _)| m == ident) {
+                emit_expression(recv, w);
+                w.write(".");
+                w.write(prop);
+                return;
+            }
         }
-        emit_expression(arg, w);
+        emit_expression(recv, w);
+        if let Expression::Path { ident, parent: None, .. } | Expression::Ident(ident) = function {
+            if let Some(renamed) = rename_method(ident) {
+                if !renamed.contains(' ') {
+                    w.write(".");
+                    w.write(renamed);
+                    w.write("(");
+                    for (i, arg) in args.iter().enumerate() {
+                        if i > 0 { w.write(", "); }
+                        emit_expression(arg, w);
+                    }
+                    w.write(")");
+                } else {
+                    w.write(".");
+                    w.write(renamed);
+                }
+                return;
+            }
+        }
+        w.write(".");
+        emit_fn_name(function, w);
+        w.write("(");
+        for (i, arg) in args.iter().enumerate() {
+            if i > 0 {
+                w.write(", ");
+            }
+            emit_expression(arg, w);
+        }
+        w.write(")");
+    } else {
+        match function {
+            Expression::Path { ident, parent: Some(parent), .. } if is_pascal_case(ident) => {
+                if let Expression::Path { ident: parent_name, parent: None, .. }
+                    | Expression::Ident(parent_name) = *parent
+                {
+                    if is_pascal_case(parent_name) {
+                        w.write("{ type: \"");
+                        w.write(ident);
+                        w.write("\"");
+                        for (i, arg) in args.iter().enumerate() {
+                            w.write(", ");
+                            w.write(&format!("value{}", if args.len() > 1 { format!("{i}") } else { String::new() }));
+                            w.write(": ");
+                            emit_expression(arg, w);
+                        }
+                        w.write(" }");
+                        return;
+                    }
+                }
+                w.write("new ");
+                emit_fn_name(function, w);
+                w.write("(");
+                for (i, arg) in args.iter().enumerate() {
+                    if i > 0 { w.write(", "); }
+                    emit_expression(arg, w);
+                }
+                w.write(")");
+            }
+            Expression::Path { ident, parent: Some(parent), .. } => {
+                if let Expression::Path { ident: parent_name, parent: None, .. }
+                    | Expression::Ident(parent_name) = *parent
+                {
+                    if is_pascal_case(parent_name) && STRIP_METHODS.contains(ident) {
+                        if !args.is_empty() {
+                            emit_expression(&args[0], w);
+                        }
+                        return;
+                    }
+                    if is_pascal_case(parent_name) && *ident == "new" {
+                        w.write("new ");
+                        w.write(parent_name);
+                        w.write("(");
+                        for (i, arg) in args.iter().enumerate() {
+                            if i > 0 { w.write(", "); }
+                            emit_expression(arg, w);
+                        }
+                        w.write(")");
+                        return;
+                    }
+                }
+                emit_fn_name(function, w);
+                w.write("(");
+                for (i, arg) in args.iter().enumerate() {
+                    if i > 0 { w.write(", "); }
+                    emit_expression(arg, w);
+                }
+                w.write(")");
+            }
+            Expression::Path { ident, parent: None, .. } if is_pascal_case(ident) => {
+                if is_result_constructor(ident) {
+                    emit_result_call(ident, args, w);
+                } else {
+                    w.write("new ");
+                    w.write(ident);
+                    w.write("(");
+                    for (i, arg) in args.iter().enumerate() {
+                        if i > 0 { w.write(", "); }
+                        emit_expression(arg, w);
+                    }
+                    w.write(")");
+                }
+            }
+            Expression::Ident(name) if is_pascal_case(name) => {
+                if is_result_constructor(name) {
+                    emit_result_call(name, args, w);
+                } else {
+                    w.write("new ");
+                    w.write(name);
+                    w.write("(");
+                    for (i, arg) in args.iter().enumerate() {
+                        if i > 0 { w.write(", "); }
+                        emit_expression(arg, w);
+                    }
+                    w.write(")");
+                }
+            }
+            Expression::Path { ident: "matches", .. } | Expression::Ident("matches")
+                if args.is_empty() =>
+            {
+                w.write("true");
+            }
+            _ => {
+                emit_fn_name(function, w);
+                w.write("(");
+                for (i, arg) in args.iter().enumerate() {
+                    if i > 0 { w.write(", "); }
+                    emit_expression(arg, w);
+                }
+                w.write(")");
+            }
+        }
     }
-    w.write(")");
 }
 
 fn emit_fn_name(function: &Expression, w: &mut IndentWriter) {
@@ -366,7 +728,7 @@ fn emit_fn_name(function: &Expression, w: &mut IndentWriter) {
             w.write(".");
             w.write(ident);
         }
-        Expression::Ident(name) => w.write(name),
+        Expression::Ident(name) => emit_ident(name, w),
         _ => emit_expression(function, w),
     }
 }
@@ -378,16 +740,61 @@ fn emit_struct_literal(
 ) {
     w.write("new ");
     emit_expression(name, w);
-    w.write("({ ");
-    for (i, (field_name, value)) in fields.iter().enumerate() {
+    w.write("(");
+    for (i, (_field_name, value)) in fields.iter().enumerate() {
         if i > 0 {
             w.write(", ");
         }
-        w.write(field_name);
-        w.write(": ");
         emit_expression(value, w);
     }
-    w.write(" })");
+    w.write(")");
+}
+
+fn branch_single_value(expr: &Expression) -> Option<&Expression> {
+    match expr {
+        Expression::Block(stmts) if stmts.len() == 1 => branch_single_value(&stmts[0]),
+        Expression::Return(Some(val)) => Some(val),
+        Expression::If { .. } | Expression::While { .. } | Expression::For { .. }
+        | Expression::Let { .. } | Expression::Assign { .. } => None,
+        _ => Some(expr),
+    }
+}
+
+fn emit_if_expr(
+    condition: &Expression,
+    then_branch: &Expression,
+    else_branch: &Option<&'static Expression>,
+    w: &mut IndentWriter,
+) {
+    if let Some(else_expr) = else_branch {
+        if let (Some(then_val), Some(else_val)) =
+            (branch_single_value(then_branch), branch_single_value(else_expr))
+        {
+            w.write("(");
+            emit_condition(condition, w);
+            w.write(") ? ");
+            emit_expression(then_val, w);
+            w.write(" : ");
+            emit_expression(else_val, w);
+            return;
+        }
+    }
+    w.write("(() => { ");
+    emit_if(condition, then_branch, else_branch, w);
+    w.write(" })()");
+}
+
+fn emit_condition(condition: &Expression, w: &mut IndentWriter) {
+    if let Expression::Let { name, value, .. } = condition {
+        if let Some(val) = value {
+            emit_expression(val, w);
+            w.write(" != null");
+        } else {
+            emit_expression(name, w);
+        }
+    } else {
+        emit_expression(condition, w);
+    }
 }
 
 fn emit_if(
@@ -397,7 +804,7 @@ fn emit_if(
     w: &mut IndentWriter,
 ) {
     w.write("if (");
-    emit_expression(condition, w);
+    emit_condition(condition, w);
     w.write(") ");
     emit_block_expression(then_branch, w);
     if let Some(else_expr) = else_branch {
@@ -441,16 +848,29 @@ fn emit_block(stmts: &[Expression], w: &mut IndentWriter) {
     w.write("}");
 }
 
+fn emit_closure_param(name: &str, w: &mut IndentWriter) {
+    if name.starts_with('(') && name.ends_with(')') {
+        w.write("[");
+        w.write(&name[1..name.len() - 1]);
+        w.write("]");
+    } else {
+        w.write(name);
+    }
+}
+
 fn emit_closure(func: &agdb::type_def::Function, w: &mut IndentWriter) {
     w.write("(");
     for (i, arg) in func.args.iter().enumerate() {
         if i > 0 {
             w.write(", ");
         }
-        w.write(arg.name);
+        emit_closure_param(arg.name, w);
         if let Some(ty_fn) = arg.ty {
-            w.write(": ");
-            w.write(&type_annotation(&ty_fn()));
+            let ty = ty_fn();
+            if !matches!(ty, agdb::type_def::Type::Literal(agdb::type_def::Literal::Unit)) {
+                w.write(": ");
+                w.write(&type_annotation(&ty));
+            }
         }
     }
     w.write(")");
@@ -466,11 +886,30 @@ fn emit_closure(func: &agdb::type_def::Function, w: &mut IndentWriter) {
 
     w.write(" => ");
 
-    if func.body.len() == 1
-        && let Expression::Return(Some(expr)) = &func.body[0]
-    {
-        emit_expression(expr, w);
-        return;
+    if func.body.len() == 1 {
+        match &func.body[0] {
+            Expression::Return(Some(Expression::If {
+                condition,
+                then_branch,
+                else_branch,
+            })) if else_branch.is_some() => {
+                emit_if_expr(condition, then_branch, else_branch, w);
+                return;
+            }
+            Expression::Return(Some(expr)) => {
+                emit_expression(expr, w);
+                return;
+            }
+            Expression::If {
+                condition,
+                then_branch,
+                else_branch,
+            } if else_branch.is_some() => {
+                emit_if_expr(condition, then_branch, else_branch, w);
+                return;
+            }
+            _ => {}
+        }
     }
     emit_block(func.body, w);
 }
@@ -892,7 +1331,7 @@ mod tests {
     #[test]
     fn test_call_method() {
         let body = get_body("call_method");
-        assert_eq!(stmt_to_string(&body[1]), "let _len = v.len();\n");
+        assert_eq!(stmt_to_string(&body[1]), "let _len = v.length;\n");
     }
 
     // --- Field and index access ---
@@ -981,7 +1420,7 @@ mod tests {
         let body = get_body("struct_literal");
         assert_eq!(
             stmt_to_string(&body[1]),
-            "let _p = new Point({ x: 1, y: 2 });\n"
+            "let _p = new Point(1, 2);\n"
         );
     }
 
@@ -1398,7 +1837,7 @@ mod tests {
         let body = get_body("path_expr");
         let output = stmt_to_string(&body[0]);
         assert!(output.contains("let _v"), "Got: {output}");
-        assert!(output.contains("None"), "Got: {output}");
+        assert!(output.contains("null"), "Got: {output}");
     }
 
     // --- Full body integration ---

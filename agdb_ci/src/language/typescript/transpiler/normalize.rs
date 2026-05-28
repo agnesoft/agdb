@@ -3,6 +3,10 @@ use agdb::type_def::Literal;
 use agdb::type_def::PointerKind;
 use agdb::type_def::Type;
 
+fn sanitize_type_name(name: &str) -> String {
+    name.replace("::", "_")
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum NormalizedType {
     Primitive(Primitive),
@@ -55,10 +59,10 @@ pub fn normalize_type(ty: &Type) -> NormalizedType {
                 .map(|g| NormalizedType::Generic(g.name.to_string()))
                 .collect();
             if generics.is_empty() {
-                NormalizedType::Named(s.name.to_string())
+                NormalizedType::Named(sanitize_type_name(s.name))
             } else {
                 NormalizedType::NamedGeneric {
-                    name: s.name.to_string(),
+                    name: sanitize_type_name(s.name),
                     args: generics,
                 }
             }
@@ -71,15 +75,15 @@ pub fn normalize_type(ty: &Type) -> NormalizedType {
                 .map(|g| NormalizedType::Generic(g.name.to_string()))
                 .collect();
             if generics.is_empty() {
-                NormalizedType::Named(e.name.to_string())
+                NormalizedType::Named(sanitize_type_name(e.name))
             } else {
                 NormalizedType::NamedGeneric {
-                    name: e.name.to_string(),
+                    name: sanitize_type_name(e.name),
                     args: generics,
                 }
             }
         }
-        Type::Trait(t) => NormalizedType::Named(t.name.to_string()),
+        Type::Trait(t) => NormalizedType::Named(sanitize_type_name(t.name)),
         Type::Function(f) => {
             let args: Vec<NormalizedType> = f
                 .args

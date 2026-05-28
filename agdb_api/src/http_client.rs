@@ -59,6 +59,7 @@ impl TypeDefinition for ReqwestClientTypeDef {
 }
 
 #[cfg_attr(feature = "api", derive(agdb::TypeDef))]
+#[cfg_attr(feature = "api", type_def(HttpClient))]
 pub struct ReqwestClient {
     pub client: ReqwestClientTypeDef,
     pub user_agent: String,

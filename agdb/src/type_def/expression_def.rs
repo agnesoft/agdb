@@ -90,6 +90,10 @@ pub enum Expression {
         condition: &'static Expression,
         body: &'static Expression,
     },
+    Match {
+        scrutinee: &'static Expression,
+        arms: &'static [MatchArm],
+    },
     Wild,
 }
 
@@ -145,6 +149,30 @@ pub enum Op {
     Not,
     Neg,
     Deref,
+}
+
+#[derive(Debug, agdb::TypeDef)]
+pub struct MatchArm {
+    pub pattern: Pattern,
+    pub guard: Option<&'static Expression>,
+    pub body: &'static Expression,
+}
+
+#[derive(Debug, agdb::TypeDef)]
+pub enum Pattern {
+    Literal(LiteralValue),
+    Ident(&'static str),
+    Constructor {
+        name: &'static str,
+        fields: &'static [Pattern],
+    },
+    Tuple(&'static [Pattern]),
+    Or(&'static [Pattern]),
+    Struct {
+        name: &'static str,
+        fields: &'static [(&'static str, Pattern)],
+    },
+    Wild,
 }
 
 #[cfg(test)]
@@ -1340,20 +1368,28 @@ mod tests {
         let body = get_body("match_expr");
         assert_eq!(body.len(), 2);
         match &body[1] {
-            Expression::If {
-                condition,
-                then_branch,
-                else_branch: Some(_),
-            } => {
+            Expression::Match { scrutinee, arms } => {
                 assert!(
-                    matches!(condition, Expression::Binary { op: Op::Eq, .. }),
-                    "Got condition: {:?}",
-                    condition
+                    matches!(scrutinee, Expression::Ident("x")),
+                    "Got scrutinee: {:?}",
+                    scrutinee
+                );
+                assert_eq!(arms.len(), 3);
+                assert!(
+                    matches!(arms[0].pattern, Pattern::Literal(LiteralValue::I32(1))),
+                    "Got arm[0] pattern: {:?}",
+                    arms[0].pattern
+                );
+                assert!(arms[0].guard.is_none());
+                assert!(
+                    matches!(arms[1].pattern, Pattern::Literal(LiteralValue::I32(2))),
+                    "Got arm[1] pattern: {:?}",
+                    arms[1].pattern
                 );
                 assert!(
-                    matches!(then_branch, Expression::Block(_)),
-                    "Got then: {:?}",
-                    then_branch
+                    matches!(arms[2].pattern, Pattern::Wild),
+                    "Got arm[2] pattern: {:?}",
+                    arms[2].pattern
                 );
             }
             _ => panic!("Got: {:?}", body[1]),

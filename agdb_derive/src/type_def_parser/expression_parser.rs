@@ -508,53 +508,167 @@ fn parse_if(e: &syn::ExprIf, generics: &[Generic]) -> TokenStream2 {
 }
 
 fn parse_match(e: &syn::ExprMatch, generics: &[Generic]) -> TokenStream2 {
-    let subject = parse_expression(&e.expr, generics);
-    let mut branches = Vec::new();
-    let mut else_branch: Option<TokenStream2> = None;
+    let scrutinee = parse_expression(&e.expr, generics);
 
-    for arm in &e.arms {
-        if matches!(&arm.pat, Pat::Wild(_)) {
-            else_branch = Some(parse_match_arm_body(&arm.body, generics));
-        } else {
-            let condition = parse_match_condition(&subject, &arm.pat, generics);
-            let condition_with_guard = if let Some((_, guard)) = &arm.guard {
-                let guard_expr = parse_expression(guard, generics);
-                quote! {
-                    ::agdb::type_def::Expression::Binary {
-                        op: ::agdb::type_def::Op::And,
-                        left: &#condition,
-                        right: &#guard_expr,
-                    }
-                }
+    let arms: Vec<TokenStream2> = e
+        .arms
+        .iter()
+        .map(|arm| {
+            let pattern = parse_pat_to_pattern(&arm.pat, generics);
+            let guard = if let Some((_, guard_expr)) = &arm.guard {
+                let g = parse_expression(guard_expr, generics);
+                quote! { Some(&#g) }
             } else {
-                condition
+                quote! { None }
             };
             let body = parse_match_arm_body(&arm.body, generics);
-            branches.push((condition_with_guard, body));
+            quote! {
+                ::agdb::type_def::MatchArm {
+                    pattern: #pattern,
+                    guard: #guard,
+                    body: &#body,
+                }
+            }
+        })
+        .collect();
+
+    quote! {
+        ::agdb::type_def::Expression::Match {
+            scrutinee: &#scrutinee,
+            arms: &[#(#arms),*],
         }
     }
+}
 
-    if branches.is_empty() {
-        else_branch.expect("Match expression must have at least one arm")
-    } else {
-        branches
-            .iter()
-            .rev()
-            .fold(else_branch, |else_br, (cond, body)| {
-                let else_part = if let Some(eb) = else_br {
-                    eb
-                } else {
-                    quote! { ::agdb::type_def::Expression::Block(&[]) }
-                };
-                Some(quote! {
-                    ::agdb::type_def::Expression::If {
-                        condition: &#cond,
-                        then_branch: &#body,
-                        else_branch: Some(&#else_part),
-                    }
+fn parse_pat_to_pattern(pat: &Pat, generics: &[Generic]) -> TokenStream2 {
+    match pat {
+        Pat::Wild(_) => quote! { ::agdb::type_def::Pattern::Wild },
+        Pat::Ident(p) => {
+            let name = &p.ident;
+            quote! { ::agdb::type_def::Pattern::Ident(stringify!(#name)) }
+        }
+        Pat::Lit(p) => {
+            let lit_value = parse_literal_value(&p.lit);
+            quote! { ::agdb::type_def::Pattern::Literal(#lit_value) }
+        }
+        Pat::Or(p) => {
+            let cases: Vec<TokenStream2> = p
+                .cases
+                .iter()
+                .map(|subpat| parse_pat_to_pattern(subpat, generics))
+                .collect();
+            quote! { ::agdb::type_def::Pattern::Or(&[#(#cases),*]) }
+        }
+        Pat::TupleStruct(p) => {
+            let name = p
+                .path
+                .segments
+                .last()
+                .map(|s| s.ident.to_string())
+                .unwrap_or_default();
+            let fields: Vec<TokenStream2> = p
+                .elems
+                .iter()
+                .map(|elem| parse_pat_to_pattern(elem, generics))
+                .collect();
+            quote! {
+                ::agdb::type_def::Pattern::Constructor {
+                    name: #name,
+                    fields: &[#(#fields),*],
+                }
+            }
+        }
+        Pat::Tuple(p) => {
+            let elems: Vec<TokenStream2> = p
+                .elems
+                .iter()
+                .map(|elem| parse_pat_to_pattern(elem, generics))
+                .collect();
+            quote! { ::agdb::type_def::Pattern::Tuple(&[#(#elems),*]) }
+        }
+        Pat::Path(p) => {
+            let name = p
+                .path
+                .segments
+                .last()
+                .map(|s| s.ident.to_string())
+                .unwrap_or_default();
+            quote! {
+                ::agdb::type_def::Pattern::Constructor {
+                    name: #name,
+                    fields: &[],
+                }
+            }
+        }
+        Pat::Struct(p) => {
+            let name = p
+                .path
+                .segments
+                .last()
+                .map(|s| s.ident.to_string())
+                .unwrap_or_default();
+            let fields: Vec<TokenStream2> = p
+                .fields
+                .iter()
+                .map(|f| {
+                    let field_name = f
+                        .member
+                        .to_token_stream()
+                        .to_string();
+                    let field_pat = parse_pat_to_pattern(&f.pat, generics);
+                    quote! { (#field_name, #field_pat) }
                 })
-            })
-            .expect("At least one match arm present")
+                .collect();
+            quote! {
+                ::agdb::type_def::Pattern::Struct {
+                    name: #name,
+                    fields: &[#(#fields),*],
+                }
+            }
+        }
+        Pat::Reference(p) => parse_pat_to_pattern(&p.pat, generics),
+        Pat::Paren(p) => parse_pat_to_pattern(&p.pat, generics),
+        Pat::Slice(p) => {
+            let elems: Vec<TokenStream2> = p
+                .elems
+                .iter()
+                .map(|elem| parse_pat_to_pattern(elem, generics))
+                .collect();
+            quote! { ::agdb::type_def::Pattern::Tuple(&[#(#elems),*]) }
+        }
+        Pat::Type(p) => parse_pat_to_pattern(&p.pat, generics),
+        _ => {
+            crate::compile_error(
+                pat,
+                format!("Unsupported pattern in match: {}", pat.to_token_stream()),
+            )
+        }
+    }
+}
+
+fn parse_literal_value(lit: &Lit) -> TokenStream2 {
+    match lit {
+        Lit::Str(s) => {
+            let value = s.value();
+            quote! { ::agdb::type_def::LiteralValue::Str(#value) }
+        }
+        Lit::Int(i) => {
+            let v = i.base10_parse::<i32>().unwrap_or(0);
+            quote! { ::agdb::type_def::LiteralValue::I32(#v) }
+        }
+        Lit::Float(f) => {
+            let v = f.base10_parse::<f64>().unwrap_or(0.0);
+            quote! { ::agdb::type_def::LiteralValue::F64(#v) }
+        }
+        Lit::Bool(b) => {
+            let v = b.value();
+            quote! { ::agdb::type_def::LiteralValue::Bool(#v) }
+        }
+        Lit::Char(c) => {
+            let v = c.value().to_string();
+            quote! { ::agdb::type_def::LiteralValue::Str(#v) }
+        }
+        _ => quote! { ::agdb::type_def::LiteralValue::Unit },
     }
 }
 

@@ -494,6 +494,15 @@ mod tests {
             | Expression::Ident(_)
             | Expression::Literal(_)
             | Expression::Wild => {}
+            Expression::Match { scrutinee, arms } => {
+                collect_from_expression(scrutinee, out);
+                for arm in *arms {
+                    if let Some(guard) = arm.guard {
+                        collect_from_expression(guard, out);
+                    }
+                    collect_from_expression(arm.body, out);
+                }
+            }
         }
     }
 

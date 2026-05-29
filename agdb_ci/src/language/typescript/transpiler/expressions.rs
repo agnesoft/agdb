@@ -1,6 +1,8 @@
 use agdb::type_def::Expression;
 use agdb::type_def::LiteralValue;
+use agdb::type_def::MatchArm;
 use agdb::type_def::Op;
+use agdb::type_def::Pattern;
 use agdb::type_def::Type;
 
 use super::format::IndentWriter;
@@ -100,6 +102,7 @@ pub fn emit_expression(expr: &Expression, w: &mut IndentWriter) {
             w.write(") ");
             emit_block_expression(body, w);
         }
+        Expression::Match { scrutinee, arms } => emit_match_expr(scrutinee, arms, w),
         Expression::For {
             pattern,
             iterable,
@@ -221,7 +224,8 @@ pub fn emit_expression(expr: &Expression, w: &mut IndentWriter) {
 
 pub fn emit_statement(expr: &Expression, w: &mut IndentWriter) {
     match expr {
-        Expression::If { .. } | Expression::While { .. } | Expression::For { .. } => {
+        Expression::If { .. } | Expression::While { .. } | Expression::For { .. }
+        | Expression::Match { .. } => {
             emit_expression(expr, w);
             w.newline();
         }
@@ -814,7 +818,7 @@ fn branch_single_value(expr: &Expression) -> Option<&Expression> {
         Expression::Block(stmts) if stmts.len() == 1 => branch_single_value(&stmts[0]),
         Expression::Return(Some(val)) => Some(val),
         Expression::If { .. } | Expression::While { .. } | Expression::For { .. }
-        | Expression::Let { .. } | Expression::Assign { .. } => None,
+        | Expression::Match { .. } | Expression::Let { .. } | Expression::Assign { .. } => None,
         _ => Some(expr),
     }
 }
@@ -943,6 +947,124 @@ fn emit_block_expression(expr: &Expression, w: &mut IndentWriter) {
             w.dedent();
             w.write("}");
         }
+    }
+}
+
+fn emit_match_expr(scrutinee: &Expression, arms: &[MatchArm], w: &mut IndentWriter) {
+    let mut first = true;
+    let mut wild_arm: Option<&MatchArm> = None;
+
+    for arm in arms {
+        if matches!(arm.pattern, Pattern::Wild) {
+            wild_arm = Some(arm);
+            continue;
+        }
+        if matches!(arm.pattern, Pattern::Ident(_)) && arm.guard.is_none() {
+            // A bare identifier binding is a catch-all (like `x` in `match v { x => ... }`)
+            wild_arm = Some(arm);
+            continue;
+        }
+        if first {
+            w.write("if (");
+        } else {
+            w.write(" else if (");
+        }
+        emit_match_condition(scrutinee, &arm.pattern, arm.guard, w);
+        w.write(") ");
+        emit_block_expression(arm.body, w);
+        first = false;
+    }
+
+    if let Some(wild) = wild_arm {
+        if first {
+            // Only a wild arm — just emit the body
+            emit_block_expression(wild.body, w);
+        } else {
+            w.write(" else ");
+            emit_block_expression(wild.body, w);
+        }
+    }
+}
+
+fn emit_match_condition(
+    scrutinee: &Expression,
+    pattern: &Pattern,
+    guard: Option<&Expression>,
+    w: &mut IndentWriter,
+) {
+    match pattern {
+        Pattern::Literal(lit) => {
+            emit_expression(scrutinee, w);
+            w.write(" === ");
+            emit_literal_value(lit, w);
+        }
+        Pattern::Constructor { name, fields } => {
+            if *name == "Err" {
+                // Err arm is a catch-all in TS
+                w.write("true");
+            } else if *name == "Some" && fields.len() == 1 {
+                emit_expression(scrutinee, w);
+                w.write(" != null");
+            } else if *name == "None" {
+                emit_expression(scrutinee, w);
+                w.write(" == null");
+            } else if *name == "Ok" && fields.len() == 1 {
+                match &fields[0] {
+                    Pattern::Literal(lit) => {
+                        emit_expression(scrutinee, w);
+                        w.write(" === ");
+                        emit_literal_value(lit, w);
+                    }
+                    Pattern::Ident(_) => {
+                        // Ok(variable) is a catch-all for non-error values
+                        w.write("true");
+                    }
+                    _ => {
+                        emit_expression(scrutinee, w);
+                    }
+                }
+            } else {
+                emit_expression(scrutinee, w);
+            }
+        }
+        Pattern::Or(patterns) => {
+            for (i, pat) in patterns.iter().enumerate() {
+                if i > 0 {
+                    w.write(" || ");
+                }
+                emit_match_condition(scrutinee, pat, None, w);
+            }
+        }
+        Pattern::Ident(_) => {
+            w.write("true");
+        }
+        Pattern::Tuple(_) | Pattern::Struct { .. } | Pattern::Wild => {
+            w.write("true");
+        }
+    }
+    if let Some(guard_expr) = guard {
+        w.write(" && ");
+        emit_expression(guard_expr, w);
+    }
+}
+
+fn emit_literal_value(lit: &LiteralValue, w: &mut IndentWriter) {
+    match lit {
+        LiteralValue::Bool(v) => w.write(if *v { "true" } else { "false" }),
+        LiteralValue::I8(v) => w.write(&v.to_string()),
+        LiteralValue::I16(v) => w.write(&v.to_string()),
+        LiteralValue::I32(v) => w.write(&v.to_string()),
+        LiteralValue::I64(v) => w.write(&v.to_string()),
+        LiteralValue::U8(v) => w.write(&v.to_string()),
+        LiteralValue::U16(v) => w.write(&v.to_string()),
+        LiteralValue::U32(v) => w.write(&v.to_string()),
+        LiteralValue::U64(v) => w.write(&v.to_string()),
+        LiteralValue::Usize(v) => w.write(&v.to_string()),
+        LiteralValue::F32(v) => w.write(&v.to_string()),
+        LiteralValue::F64(v) => w.write(&v.to_string()),
+        LiteralValue::Str(s) => w.write(&format!("\"{}\"", s)),
+        LiteralValue::String(s) => w.write(&format!("\"{}\"", s)),
+        LiteralValue::Unit => w.write("undefined"),
     }
 }
 

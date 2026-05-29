@@ -1,4 +1,5 @@
 mod declarations;
+pub mod emit_nexpr;
 mod expressions;
 mod format;
 mod normalize;
@@ -60,6 +61,19 @@ pub fn transpile_module(types: &[Type], config: &TranspileConfig) -> String {
 pub fn transpile_body(body: &[Expression], config: &TranspileConfig) -> String {
     let mut w = IndentWriter::new(config.indent);
     expressions::emit_body(body, &mut w);
+    w.into_string()
+}
+
+/// Transpile a function body through the normalized IR path.
+/// Uses NExpr normalization + emit_nexpr for language-agnostic processing.
+pub fn transpile_body_normalized(
+    body: &[Expression],
+    config: &TranspileConfig,
+    normalize_config: &crate::language::normalize_expr::NormalizeConfig,
+) -> String {
+    let normalized = crate::language::normalize_expr::normalize_body(body, normalize_config);
+    let mut w = IndentWriter::new(config.indent);
+    emit_nexpr::emit_body(&normalized, &mut w);
     w.into_string()
 }
 
@@ -246,5 +260,50 @@ mod tests {
     #[test]
     fn box_types_stripped() {
         assert_eq!(type_annotation(&Box::<String>::type_def()), "string");
+    }
+
+    #[test]
+    fn transpile_body_normalized_basic() {
+        use crate::language::normalize_expr::TYPESCRIPT_NORMALIZE_CONFIG;
+
+        #[agdb::fn_def]
+        #[allow(unused)]
+        fn example_normalized() {
+            let x = 10;
+            let y = 20;
+            let _sum = x + y;
+        }
+
+        let Type::Function(f) = __example_normalized_type_def() else {
+            panic!("Expected function");
+        };
+        let output = transpile_body_normalized(f.body, &config(), &TYPESCRIPT_NORMALIZE_CONFIG);
+        assert!(output.contains("let x = 10;"), "Got:\n{output}");
+        assert!(output.contains("let y = 20;"), "Got:\n{output}");
+        assert!(output.contains("x + y"), "Got:\n{output}");
+    }
+
+    #[test]
+    fn transpile_body_normalized_match() {
+        use crate::language::normalize_expr::TYPESCRIPT_NORMALIZE_CONFIG;
+
+        #[agdb::fn_def]
+        #[allow(unused)]
+        fn match_example() -> i32 {
+            let x = 1;
+            match x {
+                1 => 10,
+                2 => 20,
+                _ => 0,
+            }
+        }
+
+        let Type::Function(f) = __match_example_type_def() else {
+            panic!("Expected function");
+        };
+        let output = transpile_body_normalized(f.body, &config(), &TYPESCRIPT_NORMALIZE_CONFIG);
+        assert!(output.contains("if (x === 1)"), "Got:\n{output}");
+        assert!(output.contains("else if (x === 2)"), "Got:\n{output}");
+        assert!(output.contains("else"), "Got:\n{output}");
     }
 }

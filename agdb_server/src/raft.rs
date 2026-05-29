@@ -147,7 +147,11 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
             hash: settings.hash,
             size: settings.size,
             index: settings.index,
-            term: if settings.size == 1 { 1 } else { 0 },
+            term: if settings.size == 1 {
+                1
+            } else {
+                storage.log_term()
+            },
             election_timeout: Duration::from_millis(
                 settings.election_factor_ms.saturating_mul(settings.index),
             ),
@@ -303,6 +307,7 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
     }
 
     fn election(&mut self) -> Vec<Request<T>> {
+        self.term += 1;
         self.state = ClusterState::Candidate;
         self.nodes
             .iter_mut()
@@ -317,7 +322,7 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
                 hash: self.hash,
                 index: self.index,
                 target: node.index,
-                term: self.term + 1,
+                term: self.term,
                 log_index: self.local().log_index,
                 log_term: self.local().log_term,
                 log_commit: self.local().log_commit,

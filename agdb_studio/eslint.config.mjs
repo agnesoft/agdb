@@ -3,6 +3,7 @@ import eslintConfigPrettier from "eslint-config-prettier";
 import eslintPluginVue from "eslint-plugin-vue";
 import typescriptEslint from "typescript-eslint";
 import importPlugin from "eslint-plugin-import";
+import { boundaryConfig } from "./app/eslint.boundaries.mjs";
 
 export default typescriptEslint.config(
   { ignores: ["*.d.ts", "**/coverage", "**/dist", "**/.gitignore"] },
@@ -63,4 +64,5 @@ export default typescriptEslint.config(
     files: ["**/graph/prototype/**/*.{ts,vue}"],
     rules: { "@typescript-eslint/no-explicit-any": "off" },
   },
+  ...boundaryConfig,
 );

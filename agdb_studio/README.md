@@ -69,3 +69,13 @@ pnpm run test:e2e -- --debug
 ```sh
 pnpm run lint
 ```
+
+### Lint Architectural Boundaries
+
+Boundary rules are always enforced via `app/eslint.boundaries.mjs` and define package dependency-layer constraints.
+
+```sh
+pnpm run lint:boundaries
+```
+
+Use `lint:boundaries` to run ESLint from the Studio root and check app + libs together.

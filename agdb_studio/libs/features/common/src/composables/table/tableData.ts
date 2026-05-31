@@ -21,18 +21,13 @@ const setTableData = <T extends TRow>(
   }
   table.data = new Map<string, T>();
   for (const rowIndex in data) {
-    const rowData: TRow = {};
     const row = data[rowIndex];
     /* v8 ignore if -- @preserve */
     if (!row) {
       continue;
     }
-    table.columns.forEach((column) => {
-      /* v8 ignore next -- @preserve */
-      rowData[column.key] = row[column.key] ?? "";
-    });
 
-    table.data.set(getRowKey(rowData, table.uniqueKey), rowData);
+    table.data.set(getRowKey(row, table.uniqueKey), { ...row });
   }
 };
 

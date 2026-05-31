@@ -13,8 +13,8 @@ admin_user_list.mockResolvedValue({
       login: false,
     },
     {
-      username: "test_user2",
-      admin: false,
+      username: "admin_user",
+      admin: true,
       login: false,
     },
   ],
@@ -32,6 +32,8 @@ describe("userStore.ts", () => {
     await fetchUsers();
     expect(admin_user_list).toHaveBeenCalledOnce();
     expect(users.value.length).toBe(2);
+    expect(users.value[0]?.username).toBe("admin_user");
+    expect(users.value[0]?.admin).toBe(true);
   });
 
   it("adds user", async () => {

@@ -37,7 +37,11 @@ watchEffect(() => {
   overflow: auto;
 }
 .user-table {
-  width: 700px;
+  width: 600px;
   margin: 0 auto;
+}
+
+.user-table :deep(.crown-icon) {
+  color: #d4af37;
 }
 </style>

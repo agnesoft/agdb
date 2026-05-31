@@ -7,7 +7,13 @@ const users = ref<Omit<UserStatus, "sessions">[]>([]);
 
 const fetchUsers = async () => {
   client.value?.admin_user_list().then((response) => {
-    users.value = response.data;
+    users.value = [...response.data].sort((left, right) => {
+      if (left.admin !== right.admin) {
+        return Number(right.admin) - Number(left.admin);
+      }
+
+      return left.username.localeCompare(right.username);
+    });
   });
 };
 

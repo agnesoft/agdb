@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+// @ts-expect-error - lint boundary config is authored in mjs and has no TypeScript declaration.
 import { boundaryConfig } from "../../eslint.boundaries.mjs";
 
 type BoundaryEntry = {

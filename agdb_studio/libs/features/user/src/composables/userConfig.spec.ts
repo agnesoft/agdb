@@ -35,12 +35,39 @@ describe("userConfig.ts", () => {
 
   describe("userColumns", () => {
     it("returns the user columns", () => {
-      expect(userColumns.length).toBe(4);
+      expect(userColumns.length).toBe(3);
       expect(userColumns.some((column) => column.key === "username")).toBe(
         true,
       );
-      expect(userColumns.some((column) => column.key === "admin")).toBe(true);
+      expect(userColumns.some((column) => column.key === "admin")).toBe(false);
       expect(userColumns.some((column) => column.key === "login")).toBe(true);
+    });
+
+    it("shows crown icon only for admin user", () => {
+      const usernameColumn = userColumns.find(
+        (column) => column.key === "username",
+      );
+      expect(usernameColumn).toBeDefined();
+
+      const adminIcon =
+        typeof usernameColumn?.iconResolver === "function"
+          ? usernameColumn.iconResolver({
+              username: "admin",
+              admin: true,
+              login: true,
+            })
+          : undefined;
+      const regularIcon =
+        typeof usernameColumn?.iconResolver === "function"
+          ? usernameColumn.iconResolver({
+              username: "user",
+              admin: false,
+              login: true,
+            })
+          : undefined;
+
+      expect(adminIcon).toBeDefined();
+      expect(regularIcon).toBeUndefined();
     });
   });
 

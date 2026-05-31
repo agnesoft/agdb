@@ -4,7 +4,26 @@ import path from "node:path";
 
 const scriptPath = fileURLToPath(import.meta.url);
 const studioRoot = path.resolve(path.dirname(scriptPath), "../..");
-const eslintTarget = process.argv.length > 2 ? process.argv.slice(2) : ["."];
+const rawArgs = process.argv.slice(2);
+
+const forwardedArgs = [];
+for (let index = 0; index < rawArgs.length; index += 1) {
+  const arg = rawArgs[index];
+
+  if (arg === "--filter") {
+    index += 1;
+    continue;
+  }
+
+  if (arg.startsWith("--filter=")) {
+    continue;
+  }
+
+  forwardedArgs.push(arg);
+}
+
+const eslintTarget =
+  forwardedArgs.length > 0 ? forwardedArgs : ["--max-warnings=0", "."];
 const packageManagerExecPath = process.env.npm_execpath;
 
 const command = packageManagerExecPath

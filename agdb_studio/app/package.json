@@ -12,9 +12,11 @@
     "build-only": "vite build",
     "type-check": "vue-tsc --noEmit -p tsconfig.vitest.json --composite false",
     "lint": "eslint --max-warnings=0 . --fix",
+    "lint:check:local": "eslint --max-warnings=0 .",
+    "lint:check:full": "pnpm run lint:check:local && pnpm run lint:boundaries:check",
     "lint:check": "pnpm run lint:boundaries:check",
-    "lint:boundaries": "node scripts/lint-boundaries.mjs --max-warnings=0",
-    "lint:boundaries:check": "node scripts/lint-boundaries.mjs --max-warnings=0",
+    "lint:boundaries": "node scripts/lint-boundaries.mjs",
+    "lint:boundaries:check": "node scripts/lint-boundaries.mjs",
     "format": "prettier --write src/ e2e/",
     "format:check": "prettier --check src/ e2e/",
     "before-commit": "pnpm run format && pnpm run lint && pnpm run test && pnpm run test:e2e"

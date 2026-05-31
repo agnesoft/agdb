@@ -116,6 +116,7 @@ use crate::UserCredentials;
 use crate::UserLogin;
 use crate::UserSession;
 use crate::UserStatus;
+use crate::config_impl::ConfigImpl;
 use crate::http_client::ReqwestClientTypeDef;
 
 pub struct Api;
@@ -252,15 +253,13 @@ impl Api {
             UserLogin::type_def(),
             UserStatus::type_def(),
             UserSession::type_def(),
+            #[cfg(feature = "test_server")]
+            ConfigImpl::type_def(),
         ]
     }
 
     pub fn misc_types() -> Vec<Type> {
-        vec![
-            Duration::type_def(),
-            tokio::sync::RwLock::<i32>::type_def(),
-            AtomicU16::type_def(),
-        ]
+        vec![Duration::type_def()]
     }
 
     pub fn type_defs() -> Vec<Type> {

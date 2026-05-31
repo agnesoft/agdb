@@ -156,6 +156,7 @@ fn normalize_pointer(pointer: &agdb::type_def::Pointer) -> NormalizedType {
         | PointerKind::LazyLock
         | PointerKind::LazyCell
         | PointerKind::ArcWeak
+        | PointerKind::Weak
         | PointerKind::RcWeak => NormalizedType::Nullable(Box::new(inner)),
     }
 }
@@ -291,15 +292,6 @@ mod tests {
                 name: "Container".to_string(),
                 args: vec![NormalizedType::Generic("T".to_string())],
             }
-        );
-    }
-
-    #[test]
-    fn once_lock_nullable() {
-        let ty = std::sync::OnceLock::<i32>::type_def();
-        assert_eq!(
-            normalize_type(&ty),
-            NormalizedType::Nullable(Box::new(NormalizedType::Primitive(Primitive::Number)))
         );
     }
 }

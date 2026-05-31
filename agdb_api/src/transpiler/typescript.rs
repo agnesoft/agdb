@@ -85,7 +85,8 @@ export class reqwest_Client {
             Type::Trait(t) => self.generate_trait(t),
             Type::Function(f) => self.generate_function(f),
             Type::Static(s) => self.generate_static(s),
-            _ => String::new(),
+            Type::Test(t) => format!("// Test function: {}\n\n", t.name),
+            _ => panic!("Unsupported top level type: {:?}", ty),
         }
     }
 

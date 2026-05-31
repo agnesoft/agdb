@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { ref } from "vue";
+import { onMounted, ref } from "vue";
 import { useAuth } from "@agdb-studio/auth/src/auth";
 import { getRouter } from "@agdb-studio/router/src/router";
 import { SESSION_LOGIN_SERVER_URL } from "@agdb-studio/api/src/constants";
@@ -22,6 +22,7 @@ const username = ref("");
 const password = ref("");
 const server = ref(defaultServer);
 const cluster = ref(false);
+const usernameInput = ref<HTMLInputElement>();
 
 const loading = ref(false);
 const error = ref("");
@@ -31,6 +32,14 @@ const clearError = () => {
 };
 
 const logger = createLogger("LoginForm");
+
+const focusUsernameInput = () => {
+  usernameInput.value?.focus();
+};
+
+onMounted(() => {
+  focusUsernameInput();
+});
 
 const onLogin = async () => {
   loading.value = true;
@@ -80,12 +89,14 @@ const onLogin = async () => {
         </div>
         <label for="username">Username:</label>
         <input
+          ref="usernameInput"
           id="username"
           v-model="username"
           type="text"
           required
           data-testid="inputUsername"
           autocomplete="on"
+          autofocus
         />
       </div>
       <div>
@@ -137,6 +148,7 @@ const onLogin = async () => {
     }
   }
 }
+
 .cluster-login {
   display: flex;
   align-items: center;

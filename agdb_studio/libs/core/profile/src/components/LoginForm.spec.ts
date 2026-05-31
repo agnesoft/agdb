@@ -38,6 +38,15 @@ describe("LoginForm", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
+  it("focuses username input by default", async () => {
+    const wrapper = mount(LoginForm, { attachTo: document.body });
+
+    const usernameInput = wrapper.find('input[type="text"]#username');
+    expect(usernameInput.exists()).toBe(true);
+    expect(document.activeElement).toBe(usernameInput.element);
+
+    wrapper.unmount();
+  });
   it("runs successful login on click and redirects from query", async () => {
     loginMock.mockResolvedValue(true);
 

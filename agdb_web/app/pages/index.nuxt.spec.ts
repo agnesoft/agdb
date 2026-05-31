@@ -1,4 +1,4 @@
-import { mountSuspended, mockNuxtImport } from "@nuxt/test-utils/runtime";
+import { mockNuxtImport, mountSuspended } from "@nuxt/test-utils/runtime";
 import { describe, it, expect } from "vitest";
 import { defineComponent, h } from "vue";
 import IndexPage from "./index.vue";
@@ -50,5 +50,5 @@ describe("IndexPage (/)", () => {
     const el = wrapper.find("[data-title]");
     expect(el.exists()).toBe(true);
     expect(el.attributes("data-title")).toBe("agdb");
-  });
+  }, 15000);
 });

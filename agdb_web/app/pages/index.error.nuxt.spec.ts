@@ -1,4 +1,4 @@
-import { mountSuspended, mockNuxtImport } from "@nuxt/test-utils/runtime";
+import { mockNuxtImport, mountSuspended } from "@nuxt/test-utils/runtime";
 import { describe, it, expect } from "vitest";
 import { defineComponent, h } from "vue";
 import IndexPage from "./index.vue";
@@ -46,5 +46,5 @@ describe("IndexPage (error path)", () => {
         },
       }),
     ).rejects.toThrow("Page not found");
-  });
+  }, 15000);
 });

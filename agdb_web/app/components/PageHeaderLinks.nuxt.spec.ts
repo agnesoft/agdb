@@ -4,6 +4,14 @@ import PageHeaderLinks from "./PageHeaderLinks.vue";
 import { mockNuxtImport, mountSuspended } from "@nuxt/test-utils/runtime";
 import { defineComponent, h } from "vue";
 
+const { useRoute, copy, fetchMock } = vi.hoisted(() => {
+  return {
+    useRoute: vi.fn(() => ({ path: "/docs/examples" })),
+    copy: vi.fn().mockResolvedValue(true),
+    fetchMock: vi.fn().mockResolvedValue("# Example markdown"),
+  };
+});
+
 const UIcon = defineComponent({
   name: "UIcon",
   props: {
@@ -17,30 +25,19 @@ const UIcon = defineComponent({
 mockNuxtImport("useToast", () => () => ({
   show: vi.fn(),
 }));
+mockNuxtImport("useRoute", () => useRoute);
 
 vi.mock("@vueuse/core", async (importOriginal) => {
   const original = await importOriginal();
   return {
     ...(original as object),
     useClipboard: () => ({
-      copy: vi.fn().mockResolvedValue(true),
+      copy,
     }),
   };
 });
 
-const { useRoute } = vi.hoisted(() => {
-  return {
-    useRoute: vi.fn(() => ({ path: "/docs/examples" })),
-  };
-});
-
-vi.mock("vue-router", async (orig) => {
-  const mod = await orig();
-  return {
-    ...(mod as object),
-    useRoute,
-  };
-});
+vi.stubGlobal("$fetch", fetchMock);
 
 vi.stubGlobal("useSiteConfig", () => ({
   url: "https://agdb.io",
@@ -104,6 +101,48 @@ describe("PageHeaderLinks", () => {
         a.attributes("href")?.startsWith("https://claude.ai"),
       ),
     ).toBe(true);
+  });
+
+  it("copies the page markdown link", async () => {
+    const wrapper = await mountSuspended(PageHeaderLinks, {
+      global: {
+        stubs: {
+          UIcon,
+          "u-icon": UIcon,
+          UFieldGroup: { template: "<div><slot /></div>" },
+          UButton: {
+            emits: ["click"],
+            props: [
+              "label",
+              "icon",
+              "color",
+              "variant",
+              "ui",
+              "size",
+              "ariaLabel",
+            ],
+            template:
+              "<button @click=\"$emit('click')\"><slot />{{ label }}</button>",
+          },
+          UDropdownMenu: {
+            props: ["items", "content", "ui"],
+            template: `<div class="dropdown" :data-items-count="items?.length">
+                <slot />
+                <template v-for="it in items">
+                  <a v-if="it.to" :href="it.to" :target="it.target">{{ it.label }}</a>
+                  <a v-else-if="it.href" :href="it.href">{{ it.label }}</a>
+                  <button v-else @click="it.onSelect?.()">{{ it.label }}</button>
+                </template>
+              </div>`,
+          },
+        },
+      },
+    });
+
+    await wrapper.findAll("button")[0]?.trigger("click");
+
+    expect(fetchMock).toHaveBeenCalledWith("/raw/docs/examples.md");
+    expect(copy).toHaveBeenCalledWith("# Example markdown");
   });
 
   it("renders no links when none are provided", async () => {

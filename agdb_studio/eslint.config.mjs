@@ -3,6 +3,16 @@ import eslintConfigPrettier from "eslint-config-prettier";
 import eslintPluginVue from "eslint-plugin-vue";
 import typescriptEslint from "typescript-eslint";
 import importPlugin from "eslint-plugin-import";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { boundaryConfig } from "./eslint.boundaries.mjs";
+
+const workspaceRoot = path.dirname(fileURLToPath(import.meta.url));
+
+const typescriptProjects = [
+  path.join(workspaceRoot, "app/tsconfig.app.json"),
+  path.join(workspaceRoot, "libs/*/*/tsconfig.app.json"),
+];
 
 export default typescriptEslint.config(
   { ignores: ["*.d.ts", "**/coverage", "**/dist", "**/.gitignore"] },
@@ -37,23 +47,14 @@ export default typescriptEslint.config(
       // "import/export": "error",
     },
     settings: {
-      // "import/parsers": {
-      //   "@typescript-eslint/parser": [".ts"],
-      // },
       "import/resolver": {
         node: {
-          extensions: [".ts"],
-          project: "tsconfig.json",
-        },
-        alias: {
-          map: [
-            ["@", "./src"],
-            ["@kalimahapps/vue-icons", "./node_modules/@kalimahapps/vue-icons"],
-          ],
-          extensions: [".ts", ".vue"],
+          extensions: [".js", ".mjs", ".ts", ".d.ts", ".vue", ".json"],
         },
         typescript: {
-          project: "tsconfig.json",
+          alwaysTryTypes: true,
+          noWarnOnMultipleProjects: true,
+          project: typescriptProjects,
         },
       },
     },
@@ -63,4 +64,5 @@ export default typescriptEslint.config(
     files: ["**/graph/prototype/**/*.{ts,vue}"],
     rules: { "@typescript-eslint/no-explicit-any": "off" },
   },
+  ...boundaryConfig,
 );

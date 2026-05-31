@@ -2,7 +2,11 @@
   "name": "agdb_studio_root",
   "version": "0.0.0",
   "private": true,
-  "scripts": {},
+  "scripts": {
+    "lint:check": "pnpm --dir app run lint:check",
+    "lint:boundaries": "pnpm --dir app run lint:boundaries",
+    "lint:boundaries:check": "pnpm --dir app run lint:boundaries:check"
+  },
   "dependencies": {
     "@agdb-studio/design": "workspace:*",
     "@agdb-studio/notification": "workspace:*",

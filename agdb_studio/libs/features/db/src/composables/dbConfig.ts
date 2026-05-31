@@ -19,7 +19,7 @@ import {
   dbRollback,
   dbRestore,
 } from "./dbActions";
-import { useAdmin } from "@agdb-studio/profile/src/composables/admin";
+import { useAdmin } from "@agdb-studio/router/src/admin";
 import type {
   Column,
   TRow,

@@ -8,6 +8,7 @@ export const db_list = vi.fn();
 export const db_add = vi.fn();
 export const db_backup = vi.fn().mockResolvedValue({});
 export const db_restore = vi.fn().mockResolvedValue({});
+export const db_rollback = vi.fn().mockResolvedValue({});
 export const db_clear = vi.fn().mockResolvedValue({});
 export const db_convert = vi.fn().mockResolvedValue({});
 export const db_remove = vi.fn().mockResolvedValue({});
@@ -26,6 +27,7 @@ export const admin_db_list = vi.fn();
 export const admin_db_add = vi.fn();
 export const admin_db_backup = vi.fn().mockResolvedValue({});
 export const admin_db_restore = vi.fn().mockResolvedValue({});
+export const admin_db_rollback = vi.fn().mockResolvedValue({});
 export const admin_db_clear = vi.fn().mockResolvedValue({});
 export const admin_db_convert = vi.fn().mockResolvedValue({});
 export const admin_db_remove = vi.fn().mockResolvedValue({});
@@ -67,6 +69,7 @@ export const client = vi.fn().mockResolvedValue({
   db_add,
   db_backup,
   db_restore,
+  db_rollback,
   db_clear,
   db_convert,
   db_remove,
@@ -85,6 +88,7 @@ export const client = vi.fn().mockResolvedValue({
   admin_db_add,
   admin_db_backup,
   admin_db_restore,
+  admin_db_rollback,
   admin_db_clear,
   admin_db_convert,
   admin_db_remove,

@@ -16,6 +16,7 @@ import {
   dbOptimize,
   dbRemove,
   dbRename,
+  dbRollback,
   dbRestore,
 } from "./dbActions";
 import { useAdmin } from "@agdb-studio/profile/src/composables/admin";
@@ -422,9 +423,29 @@ const dbActions: Action<ServerDatabase>[] = [
     confirmation: convertArrayOfStringsToContent(
       [
         "Are you sure you want to restore backup of this database?",
-        "This will swap the existing db with the backup.",
+        "This will replace the existing db with the backup while keeping the backup.",
       ],
       { emphasizedWords: ["restore"] },
+    ),
+    confirmationHeader: getConfirmationHeaderFn,
+  },
+  {
+    key: "rollback",
+    label: "Rollback",
+    action: ({ params }: DbActionProps) =>
+      dbRollback(params).then(() => {
+        addNotification({
+          type: "success",
+          title: "Database rolled back",
+          message: `Database ${getDbName(params)} has been rolled back successfully.`,
+        });
+      }),
+    confirmation: convertArrayOfStringsToContent(
+      [
+        "Are you sure you want to rollback this database?",
+        "This will swap the existing db with the backup.",
+      ],
+      { emphasizedWords: ["rollback"] },
     ),
     confirmationHeader: getConfirmationHeaderFn,
   },

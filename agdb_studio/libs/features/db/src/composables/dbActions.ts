@@ -178,6 +178,17 @@ export const dbRestore = async (
   return client.value.db_restore(params);
 };
 
+export const dbRollback = async (
+  params: DbIdentification,
+): Promise<AxiosResponse> => {
+  checkClient(client);
+  if (shouldRunAdminAction()) {
+    return client.value.admin_db_rollback(params);
+  }
+
+  return client.value.db_rollback(params);
+};
+
 export const dbUserAdd = async (
   params: {
     username: string;

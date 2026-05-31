@@ -1,4 +1,5 @@
 import type { Action } from "../content/types";
+import type { Component } from "vue";
 
 export type TCellType = string | number | Date | boolean;
 
@@ -11,6 +12,12 @@ export type Column<T extends TRow> = {
   sortable?: boolean;
   filterable?: boolean;
   valueFormatter?: (value: TCellType) => TCellType;
+  icon?: Component;
+  iconResolver?: (row: T) => Component | undefined;
+  iconTitle?: string;
+  iconTitleResolver?: (row: T) => string | undefined;
+  iconClass?: string;
+  iconClassResolver?: (row: T) => string | undefined;
   actions?: Action<T>[];
   type?: "string" | "number" | "boolean";
 

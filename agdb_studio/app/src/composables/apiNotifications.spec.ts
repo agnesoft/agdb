@@ -84,4 +84,28 @@ describe("setupApiNotifications", () => {
     await nextTick();
     expect(addNotification).not.toHaveBeenCalled();
   });
+
+  it("does not notify when api error is cleared", async () => {
+    lastApiError.value = {
+      message: "temporary failure",
+    };
+    await nextTick();
+    expect(addNotification).toHaveBeenCalledTimes(1);
+
+    lastApiError.value = undefined;
+    await nextTick();
+
+    expect(addNotification).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not notify when connection error is cleared", async () => {
+    lastConnectionError.value = "Connection attempt 1 failed.";
+    await nextTick();
+    expect(addNotification).toHaveBeenCalledTimes(1);
+
+    lastConnectionError.value = undefined;
+    await nextTick();
+
+    expect(addNotification).toHaveBeenCalledTimes(1);
+  });
 });

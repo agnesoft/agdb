@@ -78,12 +78,9 @@ const boundaryConfig = [
   createDomainRule("@agdb-studio/db", [
     "libs/features/db/src/**/*.{ts,vue,spec.ts}",
   ]),
-  // Temporary migration exception: query may import db while orchestration moves to app.
-  createDomainRule(
-    "@agdb-studio/query",
-    ["libs/features/query/src/**/*.{ts,vue,spec.ts}"],
-    ["@agdb-studio/db"],
-  ),
+  createDomainRule("@agdb-studio/query", [
+    "libs/features/query/src/**/*.{ts,vue,spec.ts}",
+  ]),
   createDomainRule("@agdb-studio/user", [
     "libs/features/user/src/**/*.{ts,vue,spec.ts}",
   ]),

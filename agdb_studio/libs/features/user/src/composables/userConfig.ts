@@ -9,6 +9,7 @@ import type {
   TRow,
 } from "@agdb-studio/common/src/composables/table/types";
 import type { Action } from "@agdb-studio/common/src/composables/content/types";
+import { PhFillCrownSimple } from "@kalimahapps/vue-icons";
 
 const { getInputValue } = useContentInputs();
 
@@ -118,11 +119,9 @@ const userColumns: Column<TRow>[] = [
   {
     key: "username",
     title: "Username",
-  },
-  {
-    key: "admin",
-    title: "Admin",
-    type: "boolean",
+    iconResolver: (row: TRow) => (row.admin ? PhFillCrownSimple : undefined),
+    iconTitleResolver: (row: TRow) => (row.admin ? "Admin user" : undefined),
+    iconClassResolver: (row: TRow) => (row.admin ? "crown-icon" : ""),
   },
   {
     key: "login",

@@ -5,12 +5,12 @@ import { ref, nextTick } from "vue";
 
 const users = ref([
   {
-    username: "test_user",
-    admin: false,
+    username: "admin_user",
+    admin: true,
     login: false,
   },
   {
-    username: "test_user2",
+    username: "test_user",
     admin: false,
     login: false,
   },
@@ -40,5 +40,34 @@ describe("UserTable", () => {
     return nextTick().then(() => {
       expect(wrapper.text()).toContain("No users found");
     });
+  });
+
+  it("renders admin user first with crown next to username", async () => {
+    users.value = [
+      {
+        username: "admin_user",
+        admin: true,
+        login: true,
+      },
+      {
+        username: "test_user",
+        admin: false,
+        login: false,
+      },
+    ];
+
+    const wrapper = mount(UserTable);
+    await nextTick();
+
+    const usernameCells = wrapper.findAll(
+      '[data-testid="table-cell-username"]',
+    );
+    expect(usernameCells).toHaveLength(2);
+
+    expect(usernameCells[0]?.text()).toContain("admin_user");
+    expect(usernameCells[0]?.find(".crown-icon").exists()).toBe(true);
+
+    expect(usernameCells[1]?.text()).toContain("test_user");
+    expect(usernameCells[1]?.find(".crown-icon").exists()).toBe(false);
   });
 });

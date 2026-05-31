@@ -3,9 +3,11 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "lint:check": "pnpm --dir app run lint:check",
-    "lint:boundaries": "pnpm --dir app run lint:boundaries",
-    "lint:boundaries:check": "pnpm --dir app run lint:boundaries:check"
+    "lint:check:local": "pnpm --dir app run lint:check:local",
+    "lint:check:full": "pnpm --dir app run lint:check:local && node app/scripts/lint-boundaries.mjs",
+    "lint:check": "node app/scripts/lint-boundaries.mjs",
+    "lint:boundaries": "node app/scripts/lint-boundaries.mjs",
+    "lint:boundaries:check": "node app/scripts/lint-boundaries.mjs"
   },
   "dependencies": {
     "@agdb-studio/design": "workspace:*",

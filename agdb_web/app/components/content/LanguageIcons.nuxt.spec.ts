@@ -1,6 +1,6 @@
-import { mountSuspended } from "@nuxt/test-utils/runtime";
 import { describe, it, expect } from "vitest";
 import { defineComponent, h } from "vue";
+import { mount } from "@vue/test-utils";
 import LanguageIcons from "./LanguageIcons.vue";
 
 const NuxtLink = defineComponent({
@@ -13,7 +13,7 @@ const NuxtLink = defineComponent({
 
 describe("LanguageIcons", () => {
   it("renders links to API docs languages", async () => {
-    const wrapper = await mountSuspended(LanguageIcons, {
+    const wrapper = mount(LanguageIcons, {
       global: { stubs: { NuxtLink } },
     });
 

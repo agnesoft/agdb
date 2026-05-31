@@ -6,12 +6,13 @@ import {
   MAX_CONNECTION_ATTEMPTS,
 } from "./constants";
 import { computed, ref, type ComputedRef } from "vue";
-import { addNotification } from "@agdb-studio/notification/src/composables/notificationStore.ts";
 import type { AgdbApiClient } from "@agnesoft/agdb_api/client";
 import { createLogger } from "@agdb-studio/utils/src/logger/logger";
 
 const _client = ref<AgdbApi.AgdbApiClient | undefined>();
 const _apiUrl = ref(import.meta.env.VITE_API_URL);
+const _lastApiError = ref<AxiosError | undefined>(undefined);
+const _lastConnectionError = ref<string | undefined>(undefined);
 
 const logger = createLogger("ApiClient");
 
@@ -21,6 +22,14 @@ export const client = computed((): AgdbApi.AgdbApiClient | undefined => {
 
 export const apiUrl = computed((): string => {
   return _apiUrl.value;
+});
+
+export const lastApiError = computed((): AxiosError | undefined => {
+  return _lastApiError.value;
+});
+
+export const lastConnectionError = computed((): string | undefined => {
+  return _lastConnectionError.value;
 });
 
 export const removeToken = (): void => {
@@ -47,19 +56,8 @@ export const errorInterceptor = (error: AxiosError) => {
     removeToken();
   }
 
-  if (error.response) {
-    addNotification({
-      type: "error",
-      title: `Error: ${error.response.statusText}`,
-      message: `${error.response.data}`,
-    });
-  } else {
-    addNotification({
-      type: "error",
-      title: "Error",
-      message: `${error.message}`,
-    });
-  }
+  _lastApiError.value = error;
+
   return Promise.reject(error);
 };
 
@@ -88,10 +86,7 @@ const connectToUrl = async (
       let message = `Connection attempt ${connectionAttempts} failed. Retrying in ${timeout}ms.`;
       if (connectionAttempts === MAX_CONNECTION_ATTEMPTS) {
         message = `Connection attempt ${connectionAttempts} failed. Retrying in ${timeout}ms. This is the final attempt.`;
-        addNotification({
-          type: "error",
-          title: "Connection error",
-        });
+        _lastConnectionError.value = message;
       }
       logger.warn(message);
       setTimeout(() => {
@@ -106,6 +101,7 @@ export const initClient = async (): Promise<void> => {
   const nextClient = await connectToUrl(_apiUrl.value);
   _client.value = nextClient;
   if (nextClient) {
+    _lastConnectionError.value = undefined;
     attachInterceptors(nextClient);
   }
 };
@@ -125,5 +121,6 @@ export const reconnectClient = async (url: string): Promise<void> => {
   _client.value = nextClient;
   _apiUrl.value = url;
   connectionAttempts = 0;
+  _lastConnectionError.value = undefined;
 };
 await initClient();

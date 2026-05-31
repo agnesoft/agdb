@@ -7,7 +7,7 @@ import { computed, watchEffect } from "vue";
 import { dbColumns } from "../composables/dbConfig";
 import DbDetails from "./DbDetails.vue";
 import { useRouter } from "vue-router";
-import { useAdmin } from "@agdb-studio/profile/src/composables/admin";
+import { useAdmin } from "@agdb-studio/router/src/admin";
 
 const { databases, getDbName, fetchDatabases } = useDbStore();
 

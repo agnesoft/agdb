@@ -13,8 +13,8 @@ admin_user_list.mockResolvedValue({
       login: false,
     },
     {
-      username: "test_user2",
-      admin: false,
+      username: "admin_user",
+      admin: true,
       login: false,
     },
   ],
@@ -32,10 +32,55 @@ describe("userStore.ts", () => {
     await fetchUsers();
     expect(admin_user_list).toHaveBeenCalledOnce();
     expect(users.value.length).toBe(2);
+    expect(users.value[0]?.username).toBe("admin_user");
+    expect(users.value[0]?.admin).toBe(true);
   });
 
   it("adds user", async () => {
     await addUser({ username: "test_user", password: "test_password" });
     expect(admin_user_add).toHaveBeenCalledOnce();
+  });
+
+  it("sorts users alphabetically when admin flags are equal", async () => {
+    admin_user_list.mockResolvedValueOnce({
+      data: [
+        {
+          username: "zeta",
+          admin: false,
+          login: false,
+        },
+        {
+          username: "alpha",
+          admin: false,
+          login: true,
+        },
+      ],
+    });
+
+    await fetchUsers();
+
+    expect(users.value.map((user) => user.username)).toEqual(["alpha", "zeta"]);
+  });
+
+  it("keeps users unchanged when user list response is undefined", async () => {
+    users.value = [
+      {
+        username: "existing",
+        admin: false,
+        login: false,
+      },
+    ];
+
+    admin_user_list.mockResolvedValueOnce(undefined as never);
+
+    await fetchUsers();
+
+    expect(users.value).toEqual([
+      {
+        username: "existing",
+        admin: false,
+        login: false,
+      },
+    ]);
   });
 });

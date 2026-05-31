@@ -7,6 +7,7 @@ import {
   db_add,
   db_backup,
   db_restore,
+  db_rollback,
   db_clear,
   db_convert,
   db_remove,
@@ -24,6 +25,7 @@ import {
   admin_db_add,
   admin_db_backup,
   admin_db_restore,
+  admin_db_rollback,
   admin_db_clear,
   admin_db_convert,
   admin_db_remove,
@@ -56,7 +58,7 @@ vi.mock("@agdb-studio/auth/src/account", () => {
   };
 });
 
-vi.mock("@agdb-studio/profile/src/composables/admin", () => {
+vi.mock("@agdb-studio/router/src/admin", () => {
   return {
     useAdmin: vi.fn().mockReturnValue({
       isAdmin,
@@ -103,6 +105,14 @@ describe("dbActions", () => {
     it("should restore a database", async () => {
       dbActions.dbRestore({ owner: "test_user", db: "test_db" });
       expect(db_restore).toHaveBeenCalledWith({
+        owner: "test_user",
+        db: "test_db",
+      });
+    });
+
+    it("should rollback a database", async () => {
+      dbActions.dbRollback({ owner: "test_user", db: "test_db" });
+      expect(db_rollback).toHaveBeenCalledWith({
         owner: "test_user",
         db: "test_db",
       });
@@ -291,6 +301,14 @@ describe("dbActions", () => {
     it("should restore a database", async () => {
       dbActions.dbRestore({ owner: "test_user", db: "test_db" });
       expect(admin_db_restore).toHaveBeenCalledWith({
+        owner: "test_user",
+        db: "test_db",
+      });
+    });
+
+    it("should rollback a database", async () => {
+      dbActions.dbRollback({ owner: "test_user", db: "test_db" });
+      expect(admin_db_rollback).toHaveBeenCalledWith({
         owner: "test_user",
         db: "test_db",
       });

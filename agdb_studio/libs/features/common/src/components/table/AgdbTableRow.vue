@@ -29,7 +29,7 @@ const props = defineProps({
   },
 });
 const cellKeys = computed(() => {
-  return Object.keys(props.row);
+  return Array.from(props.columns.keys());
 });
 
 const rowData = computed(() => {

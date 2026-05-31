@@ -69,3 +69,33 @@ pnpm run test:e2e -- --debug
 ```sh
 pnpm run lint
 ```
+
+### Lint Architectural Boundaries
+
+Boundary rules are always enforced via `eslint.boundaries.mjs` and define package dependency-layer constraints.
+
+```sh
+pnpm --dir agdb_studio run lint:boundaries
+```
+
+Use `lint:boundaries` from the repository root to check app + libs together.
+Use `pnpm --dir agdb_studio/app run lint` to lint only the app package.
+
+### Architecture Boundary Rules
+
+Boundary rules are defined once in the Studio root at `eslint.boundaries.mjs`.
+The app-level boundary file only re-exports this root config.
+
+Allowed import direction:
+
+- platform (`api`, `auth`, `router`, `design`, `utils`) -> none of shared/domain
+- shared (`common`, `notification`) -> not domain
+- domain (`profile`, `db`, `query`, `user`, `cluster`) -> not other domains
+
+Practical lint commands:
+
+- `pnpm --dir agdb_studio run lint:check` : architecture boundaries only (default CI path)
+- `pnpm --dir agdb_studio/app run lint:check:local` : app package ESLint only
+- `pnpm --dir agdb_studio run lint:check:full` : app local lint + architecture boundaries
+
+Boundary contracts are also tested in `app/src/boundaries.contract.spec.ts`.

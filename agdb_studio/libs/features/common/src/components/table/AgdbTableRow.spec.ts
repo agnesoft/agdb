@@ -1,12 +1,12 @@
 import { mount } from "@vue/test-utils";
 import AgdbTableRow from "./AgdbTableRow.vue";
-import { columnsMap, TABLE_NAME, tableConfig } from "@/tests/tableMocks";
+import { columnsMap, TABLE_NAME, tableConfig } from "../../tests/tableMocks";
 import { describe, it, expect, vi } from "vitest";
 import {
   INJECT_KEY_COLUMNS,
   INJECT_KEY_TABLE_NAME,
-} from "@/composables/table/constants";
-import { addTable } from "@/composables/table/tableConfig";
+} from "../../composables/table/constants";
+import { addTable } from "../../composables/table/tableConfig";
 
 describe("TableRow", () => {
   const fetchDataMock = vi.fn();

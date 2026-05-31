@@ -8,6 +8,7 @@ import {
 import {
   db_backup,
   db_restore,
+  db_rollback,
   db_clear,
   db_convert,
   db_remove,
@@ -34,7 +35,7 @@ const { isAdmin, isAdminView } = vi.hoisted(() => {
     isAdminView: { value: false },
   };
 });
-vi.mock("@agdb-studio/profile/src/composables/admin", () => {
+vi.mock("@agdb-studio/router/src/admin", () => {
   return {
     useAdmin: vi.fn().mockReturnValue({
       isAdmin,
@@ -87,10 +88,12 @@ describe("dbConfig", () => {
       expect(actionKeys).toContain("remove");
       expect(actionKeys).toContain("delete");
       expect(actionKeys).toContain("restore");
+      expect(actionKeys).toContain("rollback");
     });
     it.each([
       ["backup", db_backup],
       ["restore", db_restore],
+      ["rollback", db_rollback],
       ["remove", db_remove],
       ["delete", db_delete],
       ["optimize", db_optimize],

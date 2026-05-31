@@ -4,12 +4,12 @@ import { describe, beforeEach, vi, it, expect } from "vitest";
 import {
   INJECT_KEY_ROW,
   INJECT_KEY_TABLE_NAME,
-} from "@/composables/table/constants";
-import useModal from "@/composables/modal/modal";
-import { convertArrayOfStringsToContent } from "@/composables/content/utils";
+} from "../../composables/table/constants";
+import useModal from "../../composables/modal/modal";
+import { convertArrayOfStringsToContent } from "../../composables/content/utils";
 import DropdownContent from "../dropdown/DropdownContent.vue";
-import type { TRow } from "@/composables/table/types";
-import type { Action } from "@/composables/content/types";
+import type { TRow } from "../../composables/table/types";
+import type { Action } from "../../composables/content/types";
 const { fetchData } = vi.hoisted(() => {
   return {
     fetchData: vi.fn(),
@@ -52,7 +52,7 @@ const dbActions: Action<TRow>[] = [
   },
 ];
 
-vi.mock("@/composables/table/tableConfig", () => {
+vi.mock("../../composables/table/tableConfig", () => {
   return {
     fetchData,
   };

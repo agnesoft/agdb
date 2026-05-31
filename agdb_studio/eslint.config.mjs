@@ -11,10 +11,7 @@ const workspaceRoot = path.dirname(fileURLToPath(import.meta.url));
 
 const typescriptProjects = [
   path.join(workspaceRoot, "app/tsconfig.app.json"),
-  path.join(workspaceRoot, "app/tsconfig.vitest.json"),
   path.join(workspaceRoot, "libs/*/*/tsconfig.app.json"),
-  path.join(workspaceRoot, "libs/*/*/tsconfig.vitest.json"),
-  path.join(workspaceRoot, "libs/*/*/tsconfig.node.json"),
 ];
 
 export default typescriptEslint.config(

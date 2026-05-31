@@ -4,7 +4,7 @@ import AgdbCell from "./AgdbCell.vue";
 import {
   INJECT_KEY_COLUMNS,
   INJECT_KEY_ROW,
-} from "@/composables/table/constants";
+} from "../../composables/table/constants";
 import { columnsMap } from "../../tests/tableMocks";
 
 describe("AgdbCell", () => {

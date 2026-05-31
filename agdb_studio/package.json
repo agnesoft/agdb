@@ -3,9 +3,9 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "lint:check": "npm --prefix app run lint:check",
-    "lint:boundaries": "npm --prefix app run lint:boundaries",
-    "lint:boundaries:check": "npm --prefix app run lint:boundaries:check"
+    "lint:check": "pnpm --dir app run lint:check",
+    "lint:boundaries": "pnpm --dir app run lint:boundaries",
+    "lint:boundaries:check": "pnpm --dir app run lint:boundaries:check"
   },
   "dependencies": {
     "@agdb-studio/design": "workspace:*",

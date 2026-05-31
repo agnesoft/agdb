@@ -2,6 +2,8 @@ import { MAX_CONNECTION_ATTEMPTS } from "./constants";
 import {
   client as apiClient,
   apiUrl,
+  lastApiError,
+  lastConnectionError,
   initClient,
   responseInterceptor,
   errorInterceptor,
@@ -39,6 +41,7 @@ describe("client service", () => {
       expect(client).toHaveBeenCalledTimes(1);
       await vi.runAllTimersAsync();
       expect(client).toHaveBeenCalledTimes(MAX_CONNECTION_ATTEMPTS + 1);
+      expect(lastConnectionError.value).toContain("This is the final attempt.");
 
       vi.useRealTimers();
     });
@@ -64,6 +67,7 @@ describe("client service", () => {
       await expect(
         errorInterceptor(response as unknown as AxiosError<string>),
       ).rejects.toBe(response);
+      expect(lastApiError.value?.message).toBe(response.message);
     });
     it("returns error for unknown response", async () => {
       const response = {
@@ -72,6 +76,7 @@ describe("client service", () => {
       await expect(
         errorInterceptor(response as unknown as AxiosError<string>),
       ).rejects.toBe(response);
+      expect(lastApiError.value?.message).toBe(response.message);
     });
   });
   describe("checkClient", () => {
@@ -255,6 +260,16 @@ describe("client service", () => {
     it("returns api url", () => {
       expect(apiUrl.value).toBeDefined();
       expect(typeof apiUrl.value).toBe("string");
+    });
+
+    it("exposes computed API error state", () => {
+      expect(lastApiError.value === undefined || !!lastApiError.value).toBe(
+        true,
+      );
+      expect(
+        lastConnectionError.value === undefined ||
+          typeof lastConnectionError.value === "string",
+      ).toBe(true);
     });
   });
 });

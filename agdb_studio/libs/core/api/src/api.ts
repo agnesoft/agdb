@@ -6,7 +6,6 @@ import {
   MAX_CONNECTION_ATTEMPTS,
 } from "./constants";
 import { computed, ref, type ComputedRef } from "vue";
-import { addNotification } from "@agdb-studio/notification/src/composables/notificationStore.ts";
 import type { AgdbApiClient } from "@agnesoft/agdb_api/client";
 import { createLogger } from "@agdb-studio/utils/src/logger/logger";
 
@@ -47,19 +46,6 @@ export const errorInterceptor = (error: AxiosError) => {
     removeToken();
   }
 
-  if (error.response) {
-    addNotification({
-      type: "error",
-      title: `Error: ${error.response.statusText}`,
-      message: `${error.response.data}`,
-    });
-  } else {
-    addNotification({
-      type: "error",
-      title: "Error",
-      message: `${error.message}`,
-    });
-  }
   return Promise.reject(error);
 };
 
@@ -88,10 +74,6 @@ const connectToUrl = async (
       let message = `Connection attempt ${connectionAttempts} failed. Retrying in ${timeout}ms.`;
       if (connectionAttempts === MAX_CONNECTION_ATTEMPTS) {
         message = `Connection attempt ${connectionAttempts} failed. Retrying in ${timeout}ms. This is the final attempt.`;
-        addNotification({
-          type: "error",
-          title: "Connection error",
-        });
       }
       logger.warn(message);
       setTimeout(() => {

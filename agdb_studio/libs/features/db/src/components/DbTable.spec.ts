@@ -51,7 +51,7 @@ vi.mock("vue-router", () => {
   };
 });
 
-vi.mock("@agdb-studio/profile/src/composables/admin", () => {
+vi.mock("@agdb-studio/router/src/admin", () => {
   return {
     useAdmin: () => ({ isAdminView }),
   };

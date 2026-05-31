@@ -58,7 +58,7 @@ vi.mock("@agdb-studio/auth/src/account", () => {
   };
 });
 
-vi.mock("@agdb-studio/profile/src/composables/admin", () => {
+vi.mock("@agdb-studio/router/src/admin", () => {
   return {
     useAdmin: vi.fn().mockReturnValue({
       isAdmin,

@@ -1,4 +1,4 @@
-import { useAdmin } from "@agdb-studio/profile/src/composables/admin";
+import { useAdmin } from "@agdb-studio/router/src/admin";
 import { checkClient, client } from "@agdb-studio/api/src/api";
 import type {
   Components,

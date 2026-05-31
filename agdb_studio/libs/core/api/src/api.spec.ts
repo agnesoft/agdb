@@ -1,4 +1,4 @@
-import { MAX_CONNECTION_ATTEMPTS } from "@/constants";
+import { MAX_CONNECTION_ATTEMPTS } from "./constants";
 import {
   client as apiClient,
   apiUrl,

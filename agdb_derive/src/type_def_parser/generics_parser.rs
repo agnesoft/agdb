@@ -206,9 +206,10 @@ pub(crate) fn parse_type(ty: &syn::Type, generics: &[Generic]) -> TokenStream2 {
         if type_path.qself.is_none()
             && let Some(last) = type_path.path.segments.last()
         {
-            let ident = last.ident.to_string();
+            let ident = &last.ident;
+            let ident_str = last.ident.to_string();
 
-            if ident == "Option"
+            if ident_str == "Option"
                 && let syn::PathArguments::AngleBracketed(args) = &last.arguments
                 && let Some(syn::GenericArgument::Type(inner_ty)) = args.args.first()
             {
@@ -218,7 +219,7 @@ pub(crate) fn parse_type(ty: &syn::Type, generics: &[Generic]) -> TokenStream2 {
                 };
             }
 
-            if ident == "Vec"
+            if ident_str == "Vec"
                 && let syn::PathArguments::AngleBracketed(args) = &last.arguments
                 && let Some(syn::GenericArgument::Type(inner_ty)) = args.args.first()
             {
@@ -228,20 +229,7 @@ pub(crate) fn parse_type(ty: &syn::Type, generics: &[Generic]) -> TokenStream2 {
                 };
             }
 
-            if ident == "Box"
-                && let syn::PathArguments::AngleBracketed(args) = &last.arguments
-                && let Some(syn::GenericArgument::Type(inner_ty)) = args.args.first()
-            {
-                let inner = parse_type(inner_ty, generics);
-                return quote! {
-                    || ::agdb::type_def::Type::Pointer(::agdb::type_def::Pointer {
-                        kind: ::agdb::type_def::PointerKind::Box,
-                        ty: #inner,
-                    })
-                };
-            }
-
-            if ident == "Result"
+            if ident_str == "Result"
                 && let syn::PathArguments::AngleBracketed(args) = &last.arguments
             {
                 let mut type_args = args.args.iter().filter_map(|arg| {
@@ -260,6 +248,43 @@ pub(crate) fn parse_type(ty: &syn::Type, generics: &[Generic]) -> TokenStream2 {
                             ok: #ok,
                             err: #err,
                         }
+                    };
+                }
+            }
+
+            if let syn::PathArguments::AngleBracketed(args) = &last.arguments {
+                if is_pointer(&ident_str)
+                    && let Some(syn::GenericArgument::Type(inner_ty)) = args.args.first()
+                {
+                    let inner = parse_type(inner_ty, generics);
+                    return quote! {
+                        || ::agdb::type_def::Type::Pointer(::agdb::type_def::Pointer {
+                            kind: ::agdb::type_def::PointerKind::#ident,
+                            ty: #inner,
+                        })
+                    };
+                }
+
+                let last_ident = &last.ident;
+                let type_args = args
+                    .args
+                    .iter()
+                    .filter_map(|arg| {
+                        if let syn::GenericArgument::Type(arg_ty) = arg {
+                            Some(parse_type(arg_ty, generics))
+                        } else {
+                            None
+                        }
+                    })
+                    .collect::<Vec<_>>();
+
+                if !type_args.is_empty() {
+                    return quote! {
+                        || ::agdb::type_def::Type::Generic(::agdb::type_def::Generic {
+                            kind: ::agdb::type_def::GenericKind::Argument,
+                            name: stringify!(#last_ident),
+                            bounds: &[#(#type_args),*],
+                        })
                     };
                 }
             }
@@ -342,4 +367,26 @@ fn type_contains_generic(ty: &syn::Type, generics: &[Generic]) -> bool {
         syn::Type::Group(tg) => type_contains_generic(&tg.elem, generics),
         _ => false,
     }
+}
+
+fn is_pointer(ident: &str) -> bool {
+    matches!(
+        ident,
+        "Box"
+            | "Arc"
+            | "Weak"
+            | "Rc"
+            | "RcWeak"
+            | "RwLock"
+            | "Mutex"
+            | "RefCell"
+            | "Cell"
+            | "OnceLock"
+            | "OnceCell"
+            | "LazyLock"
+            | "LazyCell"
+            | "Pin"
+            | "Cow"
+            | "UnsafeCell"
+    )
 }

@@ -56,7 +56,7 @@ impl std::ops::DerefMut for ReqwestClientTypeDef {
 impl TypeDefinition for ReqwestClientTypeDef {
     fn type_def() -> Type {
         Type::Struct(agdb::type_def::Struct {
-            name: "reqwest::Client",
+            name: "reqwest_Client",
             generics: &[],
             fields: &[],
             impl_defs: Vec::new,

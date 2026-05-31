@@ -114,6 +114,7 @@ pub struct Generic {
 
 #[derive(Debug, agdb::TypeDef)]
 pub enum GenericKind {
+    Argument,
     Type,
     Lifetime,
     Const,
@@ -151,6 +152,7 @@ pub enum PointerKind {
     RefCell,
     RwLock,
     UnsafeCell,
+    Weak,
 }
 
 #[derive(Debug, agdb::TypeDef)]
@@ -351,14 +353,14 @@ impl TypeDefinition for std::sync::atomic::AtomicU16 {
     }
 }
 
-impl<T: TypeDefinition> TypeDefinition for std::sync::OnceLock<T> {
-    fn type_def() -> Type {
-        Type::Pointer(Pointer {
-            kind: PointerKind::OnceLock,
-            ty: T::type_def,
-        })
-    }
-}
+// impl<T: TypeDefinition> TypeDefinition for std::sync::OnceLock<T> {
+//     fn type_def() -> Type {
+//         Type::Pointer(Pointer {
+//             kind: PointerKind::OnceLock,
+//             ty: T::type_def,
+//         })
+//     }
+// }
 
 impl<T: TypeDefinition> TypeDefinition for std::sync::Weak<T> {
     fn type_def() -> Type {

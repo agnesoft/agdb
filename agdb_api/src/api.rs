@@ -1,6 +1,3 @@
-use std::sync::atomic::AtomicU16;
-use std::time::Duration;
-
 use agdb::Comparison;
 use agdb::CountComparison;
 use agdb::DbElement;
@@ -96,6 +93,8 @@ use agdb::WhereKey;
 use agdb::WhereLogicOperator;
 use agdb::type_def::Type;
 use agdb::type_def::TypeDefinition;
+use std::sync::atomic::AtomicU16;
+use std::time::Duration;
 
 use crate::AdminStatus;
 use crate::AgdbApi;

@@ -40,4 +40,25 @@ describe("userStore.ts", () => {
     await addUser({ username: "test_user", password: "test_password" });
     expect(admin_user_add).toHaveBeenCalledOnce();
   });
+
+  it("sorts users alphabetically when admin flags are equal", async () => {
+    admin_user_list.mockResolvedValueOnce({
+      data: [
+        {
+          username: "zeta",
+          admin: false,
+          login: false,
+        },
+        {
+          username: "alpha",
+          admin: false,
+          login: true,
+        },
+      ],
+    });
+
+    await fetchUsers();
+
+    expect(users.value.map((user) => user.username)).toEqual(["alpha", "zeta"]);
+  });
 });

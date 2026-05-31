@@ -69,6 +69,52 @@ describe("userConfig.ts", () => {
       expect(adminIcon).toBeDefined();
       expect(regularIcon).toBeUndefined();
     });
+
+    it("resolves crown title and class only for admin user", () => {
+      const usernameColumn = userColumns.find(
+        (column) => column.key === "username",
+      );
+      expect(usernameColumn).toBeDefined();
+
+      const adminTitle =
+        typeof usernameColumn?.iconTitleResolver === "function"
+          ? usernameColumn.iconTitleResolver({
+              username: "admin",
+              admin: true,
+              login: true,
+            })
+          : undefined;
+      const regularTitle =
+        typeof usernameColumn?.iconTitleResolver === "function"
+          ? usernameColumn.iconTitleResolver({
+              username: "user",
+              admin: false,
+              login: true,
+            })
+          : undefined;
+
+      const adminClass =
+        typeof usernameColumn?.iconClassResolver === "function"
+          ? usernameColumn.iconClassResolver({
+              username: "admin",
+              admin: true,
+              login: true,
+            })
+          : undefined;
+      const regularClass =
+        typeof usernameColumn?.iconClassResolver === "function"
+          ? usernameColumn.iconClassResolver({
+              username: "user",
+              admin: false,
+              login: true,
+            })
+          : undefined;
+
+      expect(adminTitle).toBe("Admin user");
+      expect(regularTitle).toBeUndefined();
+      expect(adminClass).toBe("crown-icon");
+      expect(regularClass).toBe("");
+    });
   });
 
   describe("userActions", () => {

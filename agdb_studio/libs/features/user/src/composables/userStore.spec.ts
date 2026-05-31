@@ -61,4 +61,26 @@ describe("userStore.ts", () => {
 
     expect(users.value.map((user) => user.username)).toEqual(["alpha", "zeta"]);
   });
+
+  it("keeps users unchanged when user list response is undefined", async () => {
+    users.value = [
+      {
+        username: "existing",
+        admin: false,
+        login: false,
+      },
+    ];
+
+    admin_user_list.mockResolvedValueOnce(undefined as never);
+
+    await fetchUsers();
+
+    expect(users.value).toEqual([
+      {
+        username: "existing",
+        admin: false,
+        login: false,
+      },
+    ]);
+  });
 });

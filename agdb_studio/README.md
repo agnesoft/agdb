@@ -78,7 +78,7 @@ Boundary rules are always enforced via `eslint.boundaries.mjs` and define packag
 pnpm --dir agdb_studio run lint:boundaries
 ```
 
-Use `lint:boundaries` from the Studio root to check app + libs together.
+Use `lint:boundaries` from the repository root to check app + libs together.
 Use `pnpm --dir agdb_studio/app run lint` to lint only the app package.
 
 ### Architecture Boundary Rules

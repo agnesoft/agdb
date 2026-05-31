@@ -24,7 +24,6 @@ use syn::GenericArgument;
 use syn::Lit;
 use syn::Member;
 use syn::Pat;
-use syn::PatOr;
 use syn::Path;
 use syn::PathArguments;
 use syn::PathSegment;
@@ -514,7 +513,7 @@ fn parse_match(e: &syn::ExprMatch, generics: &[Generic]) -> TokenStream2 {
         .arms
         .iter()
         .map(|arm| {
-            let pattern = parse_pat_to_pattern(&arm.pat, generics);
+            let pattern = parse_pat_to_pattern(&arm.pat);
             let guard = if let Some((_, guard_expr)) = &arm.guard {
                 let g = parse_expression(guard_expr, generics);
                 quote! { Some(&#g) }
@@ -540,7 +539,7 @@ fn parse_match(e: &syn::ExprMatch, generics: &[Generic]) -> TokenStream2 {
     }
 }
 
-fn parse_pat_to_pattern(pat: &Pat, generics: &[Generic]) -> TokenStream2 {
+fn parse_pat_to_pattern(pat: &Pat) -> TokenStream2 {
     match pat {
         Pat::Wild(_) => quote! { ::agdb::type_def::Pattern::Wild },
         Pat::Ident(p) => {
@@ -552,11 +551,7 @@ fn parse_pat_to_pattern(pat: &Pat, generics: &[Generic]) -> TokenStream2 {
             quote! { ::agdb::type_def::Pattern::Literal(#lit_value) }
         }
         Pat::Or(p) => {
-            let cases: Vec<TokenStream2> = p
-                .cases
-                .iter()
-                .map(|subpat| parse_pat_to_pattern(subpat, generics))
-                .collect();
+            let cases: Vec<TokenStream2> = p.cases.iter().map(parse_pat_to_pattern).collect();
             quote! { ::agdb::type_def::Pattern::Or(&[#(#cases),*]) }
         }
         Pat::TupleStruct(p) => {
@@ -566,11 +561,7 @@ fn parse_pat_to_pattern(pat: &Pat, generics: &[Generic]) -> TokenStream2 {
                 .last()
                 .map(|s| s.ident.to_string())
                 .unwrap_or_default();
-            let fields: Vec<TokenStream2> = p
-                .elems
-                .iter()
-                .map(|elem| parse_pat_to_pattern(elem, generics))
-                .collect();
+            let fields: Vec<TokenStream2> = p.elems.iter().map(parse_pat_to_pattern).collect();
             quote! {
                 ::agdb::type_def::Pattern::Constructor {
                     name: #name,
@@ -579,11 +570,7 @@ fn parse_pat_to_pattern(pat: &Pat, generics: &[Generic]) -> TokenStream2 {
             }
         }
         Pat::Tuple(p) => {
-            let elems: Vec<TokenStream2> = p
-                .elems
-                .iter()
-                .map(|elem| parse_pat_to_pattern(elem, generics))
-                .collect();
+            let elems: Vec<TokenStream2> = p.elems.iter().map(parse_pat_to_pattern).collect();
             quote! { ::agdb::type_def::Pattern::Tuple(&[#(#elems),*]) }
         }
         Pat::Path(p) => {
@@ -611,11 +598,8 @@ fn parse_pat_to_pattern(pat: &Pat, generics: &[Generic]) -> TokenStream2 {
                 .fields
                 .iter()
                 .map(|f| {
-                    let field_name = f
-                        .member
-                        .to_token_stream()
-                        .to_string();
-                    let field_pat = parse_pat_to_pattern(&f.pat, generics);
+                    let field_name = f.member.to_token_stream().to_string();
+                    let field_pat = parse_pat_to_pattern(&f.pat);
                     quote! { (#field_name, #field_pat) }
                 })
                 .collect();
@@ -626,23 +610,17 @@ fn parse_pat_to_pattern(pat: &Pat, generics: &[Generic]) -> TokenStream2 {
                 }
             }
         }
-        Pat::Reference(p) => parse_pat_to_pattern(&p.pat, generics),
-        Pat::Paren(p) => parse_pat_to_pattern(&p.pat, generics),
+        Pat::Reference(p) => parse_pat_to_pattern(&p.pat),
+        Pat::Paren(p) => parse_pat_to_pattern(&p.pat),
         Pat::Slice(p) => {
-            let elems: Vec<TokenStream2> = p
-                .elems
-                .iter()
-                .map(|elem| parse_pat_to_pattern(elem, generics))
-                .collect();
+            let elems: Vec<TokenStream2> = p.elems.iter().map(parse_pat_to_pattern).collect();
             quote! { ::agdb::type_def::Pattern::Tuple(&[#(#elems),*]) }
         }
-        Pat::Type(p) => parse_pat_to_pattern(&p.pat, generics),
-        _ => {
-            crate::compile_error(
-                pat,
-                format!("Unsupported pattern in match: {}", pat.to_token_stream()),
-            )
-        }
+        Pat::Type(p) => parse_pat_to_pattern(&p.pat),
+        _ => crate::compile_error(
+            pat,
+            format!("Unsupported pattern in match: {}", pat.to_token_stream()),
+        ),
     }
 }
 
@@ -683,40 +661,6 @@ fn parse_match_arm_body(body: &Expr, generics: &[Generic]) -> TokenStream2 {
             quote! { ::agdb::type_def::Expression::Block(&[#inner]) }
         }
     }
-}
-
-fn parse_match_condition(subject: &TokenStream2, pat: &Pat, generics: &[Generic]) -> TokenStream2 {
-    if let Pat::Or(p) = pat {
-        return parse_match_or(subject, p, generics);
-    }
-
-    let (rhs, _) = parse_pattern(pat, generics);
-    quote! {
-        ::agdb::type_def::Expression::Binary {
-            op: ::agdb::type_def::Op::Eq,
-            left: &#subject,
-            right: &#rhs,
-        }
-    }
-}
-
-fn parse_match_or(subject: &TokenStream2, pat_or: &PatOr, generics: &[Generic]) -> TokenStream2 {
-    let conds: Vec<TokenStream2> = pat_or
-        .cases
-        .iter()
-        .map(|subpat| parse_match_condition(subject, subpat, generics))
-        .collect();
-    let mut iter = conds.into_iter();
-    let first = iter.next().expect("Or pattern must have cases");
-    iter.fold(first, |acc, next| {
-        quote! {
-            ::agdb::type_def::Expression::Binary {
-                op: ::agdb::type_def::Op::Or,
-                left: &#acc,
-                right: &#next,
-            }
-        }
-    })
 }
 
 // ---------------------------------------------------------------------------

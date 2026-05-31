@@ -1,6 +1,3 @@
-#[allow(dead_code)]
-pub mod transpiler;
-
 use crate::CIError;
 use crate::utilities;
 use std::path::Path;

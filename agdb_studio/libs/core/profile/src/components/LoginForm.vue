@@ -89,8 +89,8 @@ const onLogin = async () => {
         </div>
         <label for="username">Username:</label>
         <input
-          ref="usernameInput"
           id="username"
+          ref="usernameInput"
           v-model="username"
           type="text"
           required

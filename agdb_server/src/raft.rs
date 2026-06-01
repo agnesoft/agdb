@@ -32,6 +32,7 @@ pub(crate) struct LogMismatch {
 pub(crate) enum RequestType<T> {
     Append(Vec<Log<T>>),
     Heartbeat,
+    PreVote,
     Vote,
 }
 
@@ -52,6 +53,7 @@ enum ClusterState {
     Election,
     Follower(u64),
     Leader,
+    PreElection,
     Voted(u64),
 }
 
@@ -227,6 +229,14 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
 
             return Some(requests);
         } else {
+            if let ClusterState::PreElection = self.state
+                && self.local().timer.elapsed() >= self.election_timeout
+            {
+                let requests = self.pre_election();
+                self.local_mut().timer = Instant::now();
+                return Some(requests);
+            }
+
             if let ClusterState::Election = self.state
                 && self.local().timer.elapsed() >= self.election_timeout
             {
@@ -236,7 +246,7 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
             }
 
             if self.local().timer.elapsed() > self.term_timeout {
-                self.state = ClusterState::Election;
+                self.state = ClusterState::PreElection;
                 self.local_mut().timer = Instant::now();
             }
         }
@@ -248,10 +258,13 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
         let response = match request.data {
             RequestType::Append(ref logs) => self.append_request(request, logs).await,
             RequestType::Heartbeat => self.heartbeat_request(request).await,
+            RequestType::PreVote => self.pre_vote_request(request),
             RequestType::Vote => self.vote_request(request),
         };
 
-        self.node_mut(request.target).timer = Instant::now();
+        if let RequestType::PreVote = request.data {
+            self.local_mut().timer = Instant::now();
+        }
 
         match response {
             Ok(response) => response,
@@ -268,12 +281,24 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
         use RequestType::*;
         use ResponseType::LogMismatch;
         use ResponseType::Ok as OK;
+        use ResponseType::TermMismatch;
 
         match (&self.state, &request.data, &response.result) {
+            (PreElection, PreVote, OK) => Ok(self.pre_vote_received(request)),
             (Candidate, Vote, OK) => Ok(self.vote_received(request)),
             (Leader, Heartbeat | Append(_), OK) => self.commit(request).await,
             (Leader, Heartbeat | Append(_), LogMismatch(mismatch)) => {
                 self.reconcile(request, mismatch).await
+            }
+            (_, _, TermMismatch(mismatch)) => {
+                if let Some(remote_term) = mismatch.local
+                    && remote_term > self.term
+                {
+                    self.term = remote_term;
+                    self.state = ClusterState::Follower(response.target);
+                    self.local_mut().timer = Instant::now();
+                }
+                Ok(None)
             }
             _ => Ok(None),
         }
@@ -304,6 +329,62 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
             log_commit: self.local().log_commit,
             data: RequestType::Append(logs),
         }]))
+    }
+
+    fn pre_election(&mut self) -> Vec<Request<T>> {
+        self.nodes
+            .iter_mut()
+            .filter(|node| self.index != node.index)
+            .for_each(|node| {
+                node.voted = false;
+            });
+        self.nodes
+            .iter()
+            .filter(|node| self.index != node.index)
+            .map(|node| Request {
+                hash: self.hash,
+                index: self.index,
+                target: node.index,
+                term: self.term + 1,
+                log_index: self.local().log_index,
+                log_term: self.local().log_term,
+                log_commit: self.local().log_commit,
+                data: RequestType::PreVote,
+            })
+            .collect()
+    }
+
+    fn pre_vote_request(&self, request: &Request<T>) -> Result<Response, Response> {
+        self.validate_hash(request)?;
+
+        if let ClusterState::Follower(_) | ClusterState::Leader = self.state
+            && self.local().timer.elapsed() <= self.term_timeout
+        {
+            return Err(Response {
+                target: request.index,
+                result: ResponseType::LeaderMismatch(MismatchedValues {
+                    local: Some(self.index),
+                    requested: None,
+                }),
+            });
+        }
+
+        self.validate_log_for_vote(request)?;
+        Self::ok(request)
+    }
+
+    fn pre_vote_received(&mut self, request: &Request<T>) -> Option<Vec<Request<T>>> {
+        self.node_mut(request.target).voted = true;
+
+        let votes = self.nodes.iter().filter(|node| node.voted).count() as u64;
+        let quorum = self.size / 2;
+
+        if votes > quorum {
+            self.state = ClusterState::Election;
+            self.local_mut().timer = Instant::now();
+        }
+
+        None
     }
 
     fn election(&mut self) -> Vec<Request<T>> {
@@ -471,7 +552,7 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
     }
 
     fn become_follower(&mut self, request: &Request<T>) {
-        if self.term < request.term {
+        if self.term <= request.term {
             self.term = request.term;
             self.state = ClusterState::Follower(request.index);
         }
@@ -974,7 +1055,7 @@ mod test {
         }
     }
 
-    const TIMEOUT: Duration = Duration::from_secs(5);
+    const TIMEOUT: Duration = Duration::from_secs(10);
 
     #[tokio::test]
     async fn cluster_of_one() -> anyhow::Result<()> {
@@ -1003,6 +1084,53 @@ mod test {
         cluster.expect_leader(1).await;
         cluster.unblock().await;
         cluster.expect_follower(0).await;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn isolated_leader_steps_down_on_reconnect() -> anyhow::Result<()> {
+        let mut cluster = TestCluster::new(3);
+        cluster.start().await;
+        cluster.expect_leader(0).await;
+
+        cluster.block(0).await;
+        cluster.expect_leader(1).await;
+
+        cluster.unblock().await;
+        cluster.expect_follower(0).await;
+
+        let term_0 = cluster.nodes.read().await[0].read().await.cluster.term;
+        let term_1 = cluster.nodes.read().await[1].read().await.cluster.term;
+        let term_2 = cluster.nodes.read().await[2].read().await.cluster.term;
+        assert_eq!(term_0, term_1, "node 0 term should match leader term");
+        assert_eq!(term_1, term_2, "all nodes should agree on term");
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn isolated_follower_does_not_disrupt_cluster() -> anyhow::Result<()> {
+        let mut cluster = TestCluster::new(3);
+        cluster.start().await;
+        cluster.expect_leader(0).await;
+        let leader_term = cluster.nodes.read().await[0].read().await.cluster.term;
+
+        cluster.block(2).await;
+
+        tokio::time::sleep(Duration::from_secs(4)).await;
+
+        cluster.expect_leader(0).await;
+
+        cluster.unblock().await;
+        cluster.expect_follower(2).await;
+
+        let follower_term = cluster.nodes.read().await[2].read().await.cluster.term;
+
+        assert_eq!(
+            leader_term, follower_term,
+            "Isolated follower should rejoin at the same term, got leader={leader_term} follower={follower_term}"
+        );
+
         Ok(())
     }
 

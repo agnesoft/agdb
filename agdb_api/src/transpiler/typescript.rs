@@ -91,11 +91,27 @@ export class reqwest_Client {
     }
 
     fn generate_enum(&self, e: &Enum) -> String {
-        if self.has_enum_variant_type(e) {
-            self.generate_ts_union(e)
-        } else {
-            self.generate_ts_enum(e)
-        }
+        let mut buffer = String::new();
+
+        buffer.push_str(&format!("export type {} =\n", e.name));
+
+        let variants = e
+            .variants
+            .iter()
+            .map(|v| {
+                format!(
+                    "    | {{ {}: {} }}",
+                    v.name,
+                    self.type_name(&(v.ty.expect("expected a type function"))())
+                )
+            })
+            .collect::<Vec<_>>()
+            .join("\n");
+
+        buffer.push_str(&variants);
+        buffer.push_str(";\n\n");
+
+        buffer
     }
 
     fn generate_struct(&self, s: &Struct) -> String {
@@ -245,44 +261,6 @@ export class reqwest_Client {
         buffer
     }
 
-    fn generate_ts_union(&self, e: &Enum) -> String {
-        let mut buffer = String::new();
-
-        buffer.push_str(&format!("export type {} =\n", e.name));
-
-        let variants = e
-            .variants
-            .iter()
-            .map(|v| {
-                format!(
-                    "    | {{ {}: {} }}",
-                    v.name,
-                    self.type_name(&(v.ty.expect("expected a type function"))())
-                )
-            })
-            .collect::<Vec<_>>()
-            .join("\n");
-
-        buffer.push_str(&variants);
-        buffer.push_str(";\n\n");
-
-        buffer
-    }
-
-    fn generate_ts_enum(&self, e: &Enum) -> String {
-        let mut buffer = String::new();
-
-        buffer.push_str(&format!("export enum {} {{\n", e.name));
-
-        for variant in e.variants {
-            buffer.push_str(&format!("    {},\n", variant.name));
-        }
-
-        buffer.push_str("}\n\n");
-
-        buffer
-    }
-
     fn field_name(&self, field: &str, i: usize) -> String {
         if field.is_empty() {
             format!("{i}")
@@ -332,10 +310,6 @@ export class reqwest_Client {
 
     fn has_field_names(&self, s: &Struct) -> bool {
         s.fields.iter().any(|f| !f.name.is_empty())
-    }
-
-    fn has_enum_variant_type(&self, e: &Enum) -> bool {
-        e.variants.iter().any(|v| v.ty.is_some())
     }
 
     fn literal_value(&self, l: &Literal) -> &str {

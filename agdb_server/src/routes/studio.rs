@@ -92,26 +92,20 @@ fn init_index_logo_js(config: &Config) -> ServerResult {
     {
         if file.path().extension().is_some_and(|ext| ext == "js") {
             let path = file.path();
-            if path
-                .file_name()
-                .ok_or(init_error("Failed to read filename of assets js file"))?
-                .to_string_lossy()
-                .starts_with("index")
-            {
-                let content = file
-                    .contents_utf8()
-                    .ok_or(init_error("Failed to read one of the index.js"))?;
-                if content.contains("/studio/assets/logo") {
-                    let logo_js_name = path
-                        .to_str()
-                        .ok_or(init_error("Failed to read path of logo js file"))?;
-                    let content = content.replace(
-                        "/studio/assets/logo",
-                        &format!("{}/studio/assets/logo", config.basepath),
-                    );
-                    AGDB_STUDIO_INDEX_LOGO_JS.set(logo_js_name.to_string())?;
-                    AGDB_STUDIO_INDEX_LOGO_JS_CONTENT.set(content)?;
-                }
+            let content = file
+                .contents_utf8()
+                .ok_or(init_error("Failed to read one of the assets js files"))?;
+            if content.contains("/studio/assets/logo") {
+                let logo_js_name = path
+                    .to_str()
+                    .ok_or(init_error("Failed to read path of logo js file"))?;
+                let content = content.replace(
+                    "/studio/assets/logo",
+                    &format!("{}/studio/assets/logo", config.basepath),
+                );
+                AGDB_STUDIO_INDEX_LOGO_JS.set(logo_js_name.to_string())?;
+                AGDB_STUDIO_INDEX_LOGO_JS_CONTENT.set(content)?;
+                break;
             }
         }
     }

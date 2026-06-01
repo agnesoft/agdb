@@ -262,7 +262,7 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
             RequestType::Vote => self.vote_request(request),
         };
 
-        if let RequestType::PreVote = request.data {
+        if !matches!(request.data, RequestType::PreVote) {
             self.local_mut().timer = Instant::now();
         }
 
@@ -295,7 +295,7 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
                     && remote_term > self.term
                 {
                     self.term = remote_term;
-                    self.state = ClusterState::Follower(response.target);
+                    self.state = ClusterState::PreElection;
                     self.local_mut().timer = Instant::now();
                 }
                 Ok(None)

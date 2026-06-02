@@ -238,11 +238,7 @@ pub(crate) async fn new(
     }))
 }
 
-async fn start_cluster(
-    cluster: Cluster,
-    shutdown_signal: Arc<AtomicBool>,
-    heartbeat_timeout_ms: u64,
-) -> ServerResult<()> {
+async fn start_cluster(cluster: Cluster, shutdown_signal: Arc<AtomicBool>) -> ServerResult<()> {
     if cluster.nodes.is_empty() {
         return Ok(());
     }
@@ -252,7 +248,6 @@ async fn start_cluster(
     for (node_index, node) in cluster.nodes.iter().enumerate() {
         let node = node.clone();
         let shutdown_signal = shutdown_signal.clone();
-        let heartbeat_timeout = Duration::from_millis(heartbeat_timeout_ms / 10);
         tokio::spawn(async move {
             while !shutdown_signal.load(Ordering::Relaxed) {
                 if let Some(request) = node.requests_receiver.write().await.recv().await {
@@ -263,12 +258,6 @@ async fn start_cluster(
                                 "[{index}] Error sending response to cluster node '{node_index}': {e:?}"
                             ),
                         };
-                    } else {
-                        {
-                            let mut rx = node.requests_receiver.write().await;
-                            while rx.try_recv().is_ok() {}
-                        }
-                        tokio::time::sleep(heartbeat_timeout).await;
                     }
                 } else {
                     break;
@@ -341,14 +330,9 @@ async fn start_cluster(
 pub(crate) async fn start_with_shutdown(
     cluster: Cluster,
     mut shutdown_receiver: broadcast::Receiver<()>,
-    config: Config,
 ) {
     let shutdown_signal = Arc::new(AtomicBool::new(false));
-    let cluster_handle = tokio::spawn(start_cluster(
-        cluster.clone(),
-        shutdown_signal.clone(),
-        config.cluster_heartbeat_timeout_ms,
-    ));
+    let cluster_handle = tokio::spawn(start_cluster(cluster.clone(), shutdown_signal.clone()));
 
     tokio::select! {
         _ = signal::ctrl_c() => {},

@@ -49,7 +49,7 @@ async fn main() -> ServerResult {
         server_db,
         shutdown_sender.clone(),
     )?;
-    let cluster_handle = cluster::start_with_shutdown(cluster, shutdown_receiver);
+    let cluster_handle = cluster::start_with_shutdown(cluster, shutdown_receiver, config.clone());
 
     crate::info!("Process id: {}", std::process::id());
     crate::info!("Log level: {}", config.log_level);

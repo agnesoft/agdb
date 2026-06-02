@@ -238,7 +238,11 @@ pub(crate) async fn new(
     }))
 }
 
-async fn start_cluster(cluster: Cluster, shutdown_signal: Arc<AtomicBool>) -> ServerResult<()> {
+async fn start_cluster(
+    cluster: Cluster,
+    shutdown_signal: Arc<AtomicBool>,
+    heartbeat_timeout_ms: u64,
+) -> ServerResult<()> {
     if cluster.nodes.is_empty() {
         return Ok(());
     }
@@ -248,6 +252,7 @@ async fn start_cluster(cluster: Cluster, shutdown_signal: Arc<AtomicBool>) -> Se
     for (node_index, node) in cluster.nodes.iter().enumerate() {
         let node = node.clone();
         let shutdown_signal = shutdown_signal.clone();
+        let heartbeat_timeout = Duration::from_millis(heartbeat_timeout_ms);
         tokio::spawn(async move {
             while !shutdown_signal.load(Ordering::Relaxed) {
                 if let Some(request) = node.requests_receiver.write().await.recv().await {
@@ -258,6 +263,8 @@ async fn start_cluster(cluster: Cluster, shutdown_signal: Arc<AtomicBool>) -> Se
                                 "[{index}] Error sending response to cluster node '{node_index}': {e:?}"
                             ),
                         };
+                    } else {
+                        tokio::time::sleep(heartbeat_timeout).await;
                     }
                 } else {
                     break;
@@ -321,6 +328,7 @@ async fn start_cluster(cluster: Cluster, shutdown_signal: Arc<AtomicBool>) -> Se
                     });
             }
         }
+        tokio::task::yield_now().await;
     }
 
     Ok(())
@@ -329,9 +337,14 @@ async fn start_cluster(cluster: Cluster, shutdown_signal: Arc<AtomicBool>) -> Se
 pub(crate) async fn start_with_shutdown(
     cluster: Cluster,
     mut shutdown_receiver: broadcast::Receiver<()>,
+    config: Config,
 ) {
     let shutdown_signal = Arc::new(AtomicBool::new(false));
-    let cluster_handle = tokio::spawn(start_cluster(cluster.clone(), shutdown_signal.clone()));
+    let cluster_handle = tokio::spawn(start_cluster(
+        cluster.clone(),
+        shutdown_signal.clone(),
+        config.cluster_heartbeat_timeout_ms,
+    ));
 
     tokio::select! {
         _ = signal::ctrl_c() => {},

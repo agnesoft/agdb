@@ -252,7 +252,7 @@ async fn start_cluster(
     for (node_index, node) in cluster.nodes.iter().enumerate() {
         let node = node.clone();
         let shutdown_signal = shutdown_signal.clone();
-        let heartbeat_timeout = Duration::from_millis(heartbeat_timeout_ms);
+        let heartbeat_timeout = Duration::from_millis(heartbeat_timeout_ms / 10);
         tokio::spawn(async move {
             while !shutdown_signal.load(Ordering::Relaxed) {
                 if let Some(request) = node.requests_receiver.write().await.recv().await {

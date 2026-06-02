@@ -101,6 +101,7 @@ pub(crate) struct Cluster<T, N, S: Storage<T, N>> {
     size: u64,
     index: u64,
     term: u64,
+    first_election_timeout: Duration,
     election_timeout: Duration,
     heartbeat_timeout: Duration,
     term_timeout: Duration,
@@ -154,6 +155,9 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
             } else {
                 storage.log_term()
             },
+            first_election_timeout: Duration::from_millis(
+                settings.election_factor_ms.saturating_mul(settings.index),
+            ),
             election_timeout: Duration::from_millis(
                 settings.election_factor_ms.saturating_mul(settings.index),
             ),
@@ -234,6 +238,7 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
             {
                 let requests = self.pre_election();
                 self.local_mut().timer = Instant::now();
+                self.election_timeout = self.heartbeat_timeout;
                 return Some(requests);
             }
 
@@ -242,12 +247,14 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
             {
                 let requests = self.election();
                 self.local_mut().timer = Instant::now();
+                self.election_timeout = self.heartbeat_timeout;
                 return Some(requests);
             }
 
             if self.local().timer.elapsed() > self.term_timeout {
                 self.state = ClusterState::PreElection;
                 self.local_mut().timer = Instant::now();
+                self.election_timeout = self.first_election_timeout;
             }
         }
 

@@ -264,6 +264,10 @@ async fn start_cluster(
                             ),
                         };
                     } else {
+                        {
+                            let mut rx = node.requests_receiver.write().await;
+                            while rx.try_recv().is_ok() {}
+                        }
                         tokio::time::sleep(heartbeat_timeout).await;
                     }
                 } else {

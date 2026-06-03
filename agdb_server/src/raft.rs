@@ -123,7 +123,7 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
             state: if settings.size == 1 {
                 ClusterState::Leader
             } else {
-                ClusterState::Election
+                ClusterState::PreElection
             },
             nodes: (0..settings.size)
                 .map(|i| Node {
@@ -389,6 +389,7 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
         if votes > quorum {
             self.state = ClusterState::Election;
             self.local_mut().timer = Instant::now();
+            self.election_timeout = self.first_election_timeout;
         }
 
         None

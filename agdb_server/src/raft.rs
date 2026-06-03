@@ -389,7 +389,7 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
         if votes > quorum {
             self.state = ClusterState::Election;
             self.local_mut().timer = Instant::now();
-            self.election_timeout = self.first_election_timeout;
+            self.election_timeout = Duration::ZERO;
         }
 
         None

@@ -53,7 +53,6 @@ enum ClusterState {
     Election,
     Follower(u64),
     Leader,
-    PreElection,
     Voted(u64),
 }
 
@@ -123,7 +122,7 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
             state: if settings.size == 1 {
                 ClusterState::Leader
             } else {
-                ClusterState::PreElection
+                ClusterState::Election
             },
             nodes: (0..settings.size)
                 .map(|i| Node {
@@ -233,7 +232,7 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
 
             return Some(requests);
         } else {
-            if let ClusterState::PreElection = self.state
+            if let ClusterState::Election = self.state
                 && self.local().timer.elapsed() >= self.election_timeout
             {
                 let requests = self.pre_election();
@@ -242,17 +241,8 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
                 return Some(requests);
             }
 
-            if let ClusterState::Election = self.state
-                && self.local().timer.elapsed() >= self.election_timeout
-            {
-                let requests = self.election();
-                self.local_mut().timer = Instant::now();
-                self.election_timeout = self.heartbeat_timeout;
-                return Some(requests);
-            }
-
             if self.local().timer.elapsed() > self.term_timeout {
-                self.state = ClusterState::PreElection;
+                self.state = ClusterState::Election;
                 self.local_mut().timer = Instant::now();
                 self.election_timeout = self.first_election_timeout;
             }
@@ -291,7 +281,7 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
         use ResponseType::TermMismatch;
 
         match (&self.state, &request.data, &response.result) {
-            (PreElection, PreVote, OK) => Ok(self.pre_vote_received(request)),
+            (Election, PreVote, OK) => Ok(self.pre_vote_received(request)),
             (Candidate, Vote, OK) => Ok(self.vote_received(request)),
             (Leader, Heartbeat | Append(_), OK) => self.commit(request).await,
             (Leader, Heartbeat | Append(_), LogMismatch(mismatch)) => {
@@ -302,8 +292,9 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
                     && remote_term > self.term
                 {
                     self.term = remote_term;
-                    self.state = ClusterState::PreElection;
+                    self.state = ClusterState::Election;
                     self.local_mut().timer = Instant::now();
+                    self.election_timeout = self.first_election_timeout;
                 }
                 Ok(None)
             }
@@ -387,9 +378,8 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
         let quorum = self.size / 2;
 
         if votes > quorum {
-            self.state = ClusterState::Election;
             self.local_mut().timer = Instant::now();
-            self.election_timeout = Duration::ZERO;
+            return Some(self.election());
         }
 
         None

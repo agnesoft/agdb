@@ -320,6 +320,8 @@ async fn start_cluster(cluster: Cluster, shutdown_signal: Arc<AtomicBool>) -> Se
                         )
                     });
             }
+        } else {
+            tokio::time::sleep(Duration::from_millis(10)).await;
         }
     }
 

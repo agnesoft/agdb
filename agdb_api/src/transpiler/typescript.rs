@@ -91,9 +91,34 @@ export class reqwest_Client {
     }
 
     fn generate_enum(&self, e: &Enum) -> String {
+        let mut buffer = self.generate_enum_type(e);
+        let name = e.name;
+
+        buffer.push_str(&format!(
+            "export class {name} {{\n    value: {name}Type;\n\n",
+        ));
+
+        buffer.push_str(&format!(
+            "    constructor({name}Type: {name}Type) {{\n        this.value = {name}Type;\n    }}\n\n",
+        ));
+
+        for variant in e.variants {
+            let variant_name = &variant.name;
+            let variant_type = self.type_name(&(variant.ty.expect("expected a type function"))());
+
+            buffer.push_str(&format!(
+                "    static {variant_name}(value: {variant_type}): {name} {{\n        return new {name}({{ {variant_name}: value }});\n    }}\n\n",
+            ));
+        }
+
+        buffer.push_str("}\n\n");
+        buffer
+    }
+
+    fn generate_enum_type(&self, e: &Enum) -> String {
         let mut buffer = String::new();
 
-        buffer.push_str(&format!("export type {} =\n", e.name));
+        buffer.push_str(&format!("type {}Type =\n", e.name));
 
         let variants = e
             .variants

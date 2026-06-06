@@ -1,11 +1,15 @@
 use agdb::Comparison;
 use agdb::CountComparison;
 use agdb::DbElement;
+use agdb::DbError;
+use agdb::DbErrorCategory;
+use agdb::DbErrorType;
 use agdb::DbF64;
 use agdb::DbId;
 use agdb::DbKeyOrder;
 use agdb::DbKeyOrders;
 use agdb::DbKeyValue;
+use agdb::DbTypeDef;
 use agdb::DbValue;
 use agdb::DbValues;
 use agdb::Insert;
@@ -93,6 +97,8 @@ use agdb::WhereKey;
 use agdb::WhereLogicOperator;
 use agdb::type_def::Type;
 use agdb::type_def::TypeDefinition;
+use std::panic::Location;
+use std::sync::atomic::AtomicU16;
 use std::time::Duration;
 
 use crate::AdminStatus;
@@ -147,6 +153,10 @@ impl Api {
             DbKeyValue::type_def(),
             DbValue::type_def(),
             DbValues::type_def(),
+            DbErrorCategory::type_def(),
+            DbErrorType::type_def(),
+            DbError::type_def(),
+            DbTypeDef::type_def(), // trait
         ]
     }
 
@@ -272,7 +282,11 @@ impl Api {
     }
 
     fn misc_types() -> Vec<Type> {
-        vec![Duration::type_def()]
+        vec![
+            Duration::type_def(),
+            AtomicU16::type_def(),
+            Location::type_def(),
+        ]
     }
 
     #[cfg(feature = "test_server")]

@@ -41,8 +41,8 @@ pub trait AgdbApiClient: HttpClient {}
 #[cfg_attr(feature = "api", type_def(inherent))]
 pub struct AgdbApi<T: AgdbApiClient> {
     client: T,
-    address: String,
-    base_url: String,
+    addr: String,
+    base: String,
     pub token: Option<String>,
 }
 
@@ -61,20 +61,20 @@ impl<T: AgdbApiClient> AgdbApi<T> {
 
         Self {
             client,
-            address: address.to_string(),
-            base_url: format!("{base}/api/v1"),
+            addr: address.to_string(),
+            base: format!("{base}/api/v1"),
             token: None,
         }
     }
 
     /// Returns the original address passed to [`Self::new`].
     pub fn address(&self) -> &str {
-        &self.address
+        &self.addr
     }
 
     /// Returns the computed base URL (`{address}/api/v1`).
     pub fn base_url(&self) -> &str {
-        &self.base_url
+        &self.base
     }
 
     /// `POST /admin/db/{owner}/{db}/add?db_type={db_type}`
@@ -1428,7 +1428,7 @@ impl<T: AgdbApiClient> AgdbApi<T> {
     }
 
     fn url(&self, uri: &str) -> String {
-        format!("{}{uri}", self.base_url)
+        format!("{}{uri}", self.base)
     }
 }
 

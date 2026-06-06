@@ -40,6 +40,7 @@ use crate::QueryId;
 /// #[derive(DbType)]
 /// struct MyValue { db_id: Option<DbId>, key: String } // "key": "value"
 /// ```
+#[cfg_attr(feature = "api", agdb::trait_def())]
 pub trait DbType: Sized {
     type ValueType;
 

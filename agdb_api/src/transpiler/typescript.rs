@@ -28,7 +28,7 @@ impl Typescript {
 
     pub fn generate_tests(&self) -> String {
         let mut buffer = String::new();
-        buffer.push_str(self.test_preamble());
+        buffer.push_str(&self.test_preamble(&self.types));
 
         for (namespace, types) in &self.tests {
             if !namespace.is_empty() {
@@ -66,6 +66,14 @@ export interface Into {
     into<T>(): T;
 }
 
+export interface Send {}
+
+export interface Borrow {}
+
+export interface Serialize {}
+
+export interface DeserializeOwned {}
+
 export class Option<T> {
   public value: T | null;
 
@@ -102,21 +110,37 @@ export class reqwest_Client {
     // This is a placeholder for the actual reqwest.Client type
 }
 
+export type AgdbApiResult<T> = Result<T, AgdbApiError>;
+
 // END OF PREAMBLE
 
 "#
     }
 
-    fn test_preamble(&self) -> &str {
-        r#"
+    fn test_preamble(&self, types: &[Type]) -> String {
+        format!(
+            r#"
 // GENERATED TESTS - DO NOT EDIT
 
 // PREAMBLE
-import { Option, Some, None, Result, Ok, Err, reqwest_Client } from "./agdb_api";
+import {{ Result, Ok, Err, Option, Some, None, AgdbApiResult, {} }} from "./agdb_api";
 
 // END OF PREAMBLE
 
-"#
+"#,
+            types
+                .iter()
+                .map(|t| match t {
+                    Type::Enum(e) => e.name,
+                    Type::Struct(s) => s.name,
+                    Type::Function(f) => f.name,
+                    Type::Static(s) => s.name,
+                    Type::Trait(t) => t.name,
+                    _ => panic!("Unsupported type in test preamble: {:?}", t),
+                })
+                .collect::<Vec<_>>()
+                .join(", ")
+        )
     }
 
     fn generate_type(&self, ty: &Type) -> String {
@@ -421,7 +445,7 @@ import { Option, Some, None, Result, Ok, Err, reqwest_Client } from "./agdb_api"
 
         format!(
             "function {}{}({}): {} {{\n    // TODO: implement\n}}\n\n",
-            f.name,
+            self.ts_name(f.name),
             self.generate_generics_decl(f.generics),
             self.generate_args(f.args),
             ret

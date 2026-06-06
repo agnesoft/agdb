@@ -9,7 +9,10 @@ use std::panic::Location;
 use std::string::FromUtf8Error;
 use std::sync::PoisonError;
 
+use crate::type_def::TypeDefinition;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "api", derive(agdb::TypeDef))]
 pub enum DbErrorType {
     DbCreate,
     InvalidIndex,
@@ -21,6 +24,7 @@ pub enum DbErrorType {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "api", derive(agdb::TypeDef))]
 pub enum DbErrorCategory {
     Collections,
     Db,
@@ -34,6 +38,7 @@ pub enum DbErrorCategory {
 /// any error caused by the database processing such as
 /// loading a database, running queries, writing data etc.
 #[derive(Debug)]
+#[cfg_attr(feature = "api", derive(agdb::TypeDef))]
 pub struct DbError {
     /// Error description
     pub description: String,
@@ -49,6 +54,31 @@ pub struct DbError {
 
     /// Location where the error originated in the sources
     pub source_location: Location<'static>,
+}
+
+#[cfg(feature = "api")]
+impl TypeDefinition for Location<'_> {
+    fn type_def() -> agdb::type_def::Type {
+        agdb::type_def::Type::Struct(agdb::type_def::Struct {
+            name: "Location",
+            generics: &[],
+            fields: &[
+                agdb::type_def::Variable {
+                    name: "file",
+                    ty: Some(String::type_def),
+                },
+                agdb::type_def::Variable {
+                    name: "line",
+                    ty: Some(u32::type_def),
+                },
+                agdb::type_def::Variable {
+                    name: "column",
+                    ty: Some(u32::type_def),
+                },
+            ],
+            impl_defs: || vec![],
+        })
+    }
 }
 
 impl DbError {

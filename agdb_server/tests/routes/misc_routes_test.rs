@@ -22,12 +22,12 @@ use std::path::Path;
 
 #[tokio::test]
 async fn missing() -> Result<(), TestError> {
-    agdb_api::tests::routes::misc_routes::missing().await
+    agdb_api::tests::routes::misc_routes_test::missing().await
 }
 
 #[tokio::test]
 async fn status() -> Result<(), TestError> {
-    agdb_api::tests::routes::misc_routes::status().await
+    agdb_api::tests::routes::misc_routes_test::status().await
 }
 
 #[tokio::test]
@@ -54,7 +54,7 @@ async fn shutdown_bad_token() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn openapi() -> Result<(), TestError> {
-    agdb_api::tests::routes::misc_routes::openapi().await
+    agdb_api::tests::routes::misc_routes_test::openapi().await
 }
 
 #[tokio::test]

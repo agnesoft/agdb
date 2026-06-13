@@ -84,7 +84,10 @@ impl ReqwestClient {
         Self::with_user_agent(client, "agdb_api".to_string())
     }
 
-    pub fn with_user_agent<C: Into<ReqwestClientTypeDef>, S: Into<String>>(client: C, user_agent: S) -> Self {
+    pub fn with_user_agent<C: Into<ReqwestClientTypeDef>, S: Into<String>>(
+        client: C,
+        user_agent: S,
+    ) -> Self {
         Self {
             client: client.into(),
             user_agent: user_agent.into(),

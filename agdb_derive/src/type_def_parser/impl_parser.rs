@@ -97,7 +97,10 @@ pub(crate) fn parse_type_def_attrs(attrs: &[syn::Attribute]) -> TypeDefAttrs {
             if meta.path.is_ident("from") {
                 let content;
                 syn::parenthesized!(content in meta.input);
-                let types = syn::punctuated::Punctuated::<syn::Type, syn::Token![,]>::parse_terminated(&content)?;
+                let types =
+                    syn::punctuated::Punctuated::<syn::Type, syn::Token![,]>::parse_terminated(
+                        &content,
+                    )?;
                 result.from_types = types.into_iter().collect();
             } else if let Some(ident) = meta.path.get_ident() {
                 result.impl_names.push(ident.to_string());
@@ -108,7 +111,6 @@ pub(crate) fn parse_type_def_attrs(attrs: &[syn::Attribute]) -> TypeDefAttrs {
 
     result
 }
-
 
 /// Generates the `impl_defs()` override for `impl TypeDefinition`.
 /// `impl_names` comes from `parse_type_def_attrs`.

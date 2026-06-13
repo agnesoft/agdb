@@ -452,6 +452,7 @@ impl Api {
                 "cluster_test".to_owned(),
                 crate::tests::routes::cluster_test::test_defs(),
             ),
+            ("queries_test".to_owned(), crate::tests::queries::test_defs()),
             (
                 "user_change_password_test".to_owned(),
                 crate::tests::routes::user_change_password_test::test_defs(),

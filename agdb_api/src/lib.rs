@@ -10,7 +10,7 @@ pub mod test_server;
 #[cfg(feature = "test_server")]
 pub mod tests;
 #[cfg(feature = "api")]
-mod transpiler;
+pub mod transpiler;
 
 pub use api_error::AgdbApiError;
 pub use api_result::AgdbApiResult;

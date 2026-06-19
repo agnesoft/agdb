@@ -65,9 +65,9 @@ pub struct TestServerProcess(pub Child);
 impl agdb::type_def::TypeDefinition for TestServerProcess {
     fn type_def() -> agdb::type_def::Type {
         agdb::type_def::Type::Struct(agdb::type_def::Struct {
-            name: "TestServerProcess",
-            generics: &[],
-            fields: &[],
+            name: "TestServerProcess".to_owned(),
+            generics: vec![],
+            fields: vec![],
             impl_defs: Vec::new,
         })
     }

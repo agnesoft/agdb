@@ -2,11 +2,11 @@ use crate::type_def::Generic;
 use crate::type_def::Impl;
 use crate::type_def::Variable;
 
-#[derive(Debug, agdb::TypeDef)]
+#[derive(Debug, Clone, agdb::TypeDef)]
 pub struct Enum {
-    pub name: &'static str,
-    pub generics: &'static [Generic],
-    pub variants: &'static [Variable],
+    pub name: String,
+    pub generics: Vec<Generic>,
+    pub variants: Vec<Variable>,
     pub impl_defs: fn() -> Vec<Impl>,
 }
 

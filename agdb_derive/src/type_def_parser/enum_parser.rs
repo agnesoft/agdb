@@ -27,9 +27,9 @@ pub(crate) fn parse_enum(input: &DeriveInput, e: &DataEnum) -> TokenStream2 {
         impl #impl_generics ::agdb::type_def::TypeDefinition for #name #ty_generic #where_clause {
             fn type_def() -> ::agdb::type_def::Type {
                 ::agdb::type_def::Type::Enum(::agdb::type_def::Enum {
-                    name: stringify!(#name),
-                    generics: &[#(#generics),*],
-                    variants: &[#(#variants),*],
+                    name: stringify!(#name).to_owned(),
+                    generics: vec![#(#generics),*],
+                    variants: vec![#(#variants),*],
                     impl_defs: Self::impl_defs,
                 })
             }
@@ -49,7 +49,7 @@ fn parse_variants(
             let ty = parse_variant_fields(&v.fields, generics);
             quote! {
                 ::agdb::type_def::Variable {
-                    name: stringify!(#name),
+                    name: stringify!(#name).to_owned(),
                     ty: Some(#ty),
                 }
             }
@@ -81,7 +81,7 @@ fn parse_unnamed_fields(fields: &syn::FieldsUnnamed, generics: &[Generic]) -> To
             .collect::<Vec<_>>();
 
         quote! {
-            || ::agdb::type_def::Type::Tuple(&[#(#field_types),*])
+            || ::agdb::type_def::Type::Tuple(vec![#(#field_types),*])
         }
     }
 }
@@ -95,7 +95,7 @@ fn parse_named_fields(fields: &FieldsNamed, generics: &[Generic]) -> TokenStream
             let ty_def = generics_parser::parse_type(&f.ty, generics);
             quote! {
                 ::agdb::type_def::Variable {
-                    name: stringify!(#name),
+                    name: stringify!(#name).to_owned(),
                     ty: Some(#ty_def),
                 }
             }
@@ -104,9 +104,9 @@ fn parse_named_fields(fields: &FieldsNamed, generics: &[Generic]) -> TokenStream
 
     quote! {
         || ::agdb::type_def::Type::Struct(::agdb::type_def::Struct {
-            name: "",
-            generics: &[],
-            fields: &[#(#fields),*],
+            name: String::new(),
+            generics: vec![],
+            fields: vec![#(#fields),*],
             impl_defs: ::std::vec::Vec::new,
         })
     }

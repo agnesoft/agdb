@@ -51,7 +51,7 @@ pub(crate) fn parse_block_stmts(block: &Block, generics: &[Generic]) -> Vec<Toke
 pub(crate) fn parse_block(block: &Block, generics: &[Generic]) -> TokenStream2 {
     let expressions = parse_block_stmts(block, generics);
     quote! {
-        ::agdb::type_def::Expression::Block(&[#(#expressions),*])
+        ::agdb::type_def::Expression::Block(vec![#(#expressions),*])
     }
 }
 
@@ -110,12 +110,12 @@ fn parse_statement(stmt: &Stmt, generics: &[Generic], last: bool) -> TokenStream
         Stmt::Expr(expr, semi) => {
             let parsed = parse_expression(expr, generics);
             if last && semi.is_none() && is_returnable(expr) {
-                quote! { ::agdb::type_def::Expression::Return(Some(&#parsed)) }
+                quote! { ::agdb::type_def::Expression::Return(Some(Box::new(#parsed))) }
             } else {
                 parsed
             }
         }
-        Stmt::Item(_) => quote! { ::agdb::type_def::Expression::Block(&[]) },
+        Stmt::Item(_) => quote! { ::agdb::type_def::Expression::Block(vec![]) },
         Stmt::Macro(m) => parse_stmt_macro(m, generics),
     }
 }
@@ -124,14 +124,14 @@ fn parse_local(local: &syn::Local, generics: &[Generic]) -> TokenStream2 {
     let (name, ty) = parse_pattern(&local.pat, generics);
     let value = if let Some(init) = &local.init {
         let expr = parse_expression(&init.expr, generics);
-        quote! { Some(&#expr) }
+        quote! { Some(Box::new(#expr)) }
     } else {
         quote! { None }
     };
 
     quote! {
         ::agdb::type_def::Expression::Let {
-            name: &#name,
+            name: Box::new(#name),
             ty: #ty,
             value: #value,
         }
@@ -164,7 +164,7 @@ fn is_returnable(e: &Expr) -> bool {
 fn parse_array(e: &ExprArray, generics: &[Generic]) -> TokenStream2 {
     let elements = e.elems.iter().map(|elem| parse_expression(elem, generics));
     quote! {
-        ::agdb::type_def::Expression::Array(&[#(#elements),*])
+        ::agdb::type_def::Expression::Array(vec![#(#elements),*])
     }
 }
 
@@ -173,8 +173,8 @@ fn parse_index(e: &ExprIndex, generics: &[Generic]) -> TokenStream2 {
     let index = parse_expression(&e.index, generics);
     quote! {
         ::agdb::type_def::Expression::Index {
-            base: &#base,
-            index: &#index,
+            base: Box::new(#base),
+            index: Box::new(#index),
         }
     }
 }
@@ -188,8 +188,8 @@ fn parse_assign(e: &syn::ExprAssign, generics: &[Generic]) -> TokenStream2 {
     let value = parse_expression(&e.right, generics);
     quote! {
         ::agdb::type_def::Expression::Assign {
-            target: &#target,
-            value: &#value,
+            target: Box::new(#target),
+            value: Box::new(#value),
         }
     }
 }
@@ -201,7 +201,7 @@ fn parse_assign(e: &syn::ExprAssign, generics: &[Generic]) -> TokenStream2 {
 fn parse_await(e: &syn::ExprAwait, generics: &[Generic]) -> TokenStream2 {
     let expr = parse_expression(&e.base, generics);
     quote! {
-        ::agdb::type_def::Expression::Await(&#expr)
+        ::agdb::type_def::Expression::Await(Box::new(#expr))
     }
 }
 
@@ -216,8 +216,8 @@ fn parse_binary(e: &ExprBinary, generics: &[Generic]) -> TokenStream2 {
     quote! {
         ::agdb::type_def::Expression::Binary {
             op: #op,
-            left: &#left,
-            right: &#right,
+            left: Box::new(#left),
+            right: Box::new(#right),
         }
     }
 }
@@ -233,7 +233,7 @@ fn parse_unary(e: &ExprUnary, generics: &[Generic]) -> TokenStream2 {
     quote! {
         ::agdb::type_def::Expression::Unary {
             op: #op,
-            expr: &#expr,
+            expr: Box::new(#expr),
         }
     }
 }
@@ -282,8 +282,8 @@ fn parse_call(e: &ExprCall, generics: &[Generic]) -> TokenStream2 {
     quote! {
         ::agdb::type_def::Expression::Call {
             recipient: None,
-            function: &#function,
-            args: &[#(#args),*],
+            function: Box::new(#function),
+            args: vec![#(#args),*],
         }
     }
 }
@@ -307,13 +307,13 @@ fn parse_method_call(e: &ExprMethodCall, generics: &[Generic]) -> TokenStream2 {
     let args = e.args.iter().map(|arg| parse_expression(arg, generics));
     quote! {
         ::agdb::type_def::Expression::Call {
-            recipient: Some(&#recipient),
-            function: &::agdb::type_def::Expression::Path {
-                ident: stringify!(#method),
+            recipient: Some(Box::new(#recipient)),
+            function: Box::new(::agdb::type_def::Expression::Path {
+                ident: stringify!(#method).to_owned(),
                 parent: None,
-                generics: &[#(#turbofish_generics),*],
-            },
-            args: &[#(#args),*],
+                generics: vec![#(#turbofish_generics),*],
+            }),
+            args: vec![#(#args),*],
         }
     }
 }
@@ -342,18 +342,18 @@ fn parse_closure(e: &ExprClosure, generics: &[Generic]) -> TokenStream2 {
         Expr::Block(body) => parse_block_stmts(&body.block, generics),
         other => {
             let expr = parse_expression(other, generics);
-            vec![quote! { ::agdb::type_def::Expression::Return(Some(&#expr)) }]
+            vec![quote! { ::agdb::type_def::Expression::Return(Some(Box::new(#expr))) }]
         }
     };
 
     quote! {
         ::agdb::type_def::Expression::Closure(::agdb::type_def::Function {
-            name: "",
-            generics: &[],
-            args: &[#(#args),*],
+            name: String::new(),
+            generics: vec![],
+            args: vec![#(#args),*],
             ret: #ret,
             async_fn: #async_fn,
-            body: &[#(#body),*],
+            body: vec![#(#body),*],
         })
     }
 }
@@ -365,7 +365,7 @@ fn parse_closure_arg(pat: &Pat, generics: &[Generic]) -> (TokenStream2, TokenStr
             match p.pat.as_ref() {
                 Pat::Ident(pat_ident) => {
                     let name = pat_ident.ident.to_string();
-                    (quote! { #name }, ty)
+                    (quote! { #name.to_owned() }, ty)
                 }
                 _ => (
                     crate::compile_error(
@@ -382,14 +382,14 @@ fn parse_closure_arg(pat: &Pat, generics: &[Generic]) -> (TokenStream2, TokenStr
         Pat::Ident(p) => {
             let name = p.ident.to_string();
             (
-                quote! { #name },
+                quote! { #name.to_owned() },
                 quote! { <() as ::agdb::type_def::TypeDefinition>::type_def },
             )
         }
         Pat::Tuple(p) => {
             let name = p.to_token_stream().to_string();
             (
-                quote! { #name },
+                quote! { #name.to_owned() },
                 quote! { <() as ::agdb::type_def::TypeDefinition>::type_def },
             )
         }
@@ -423,8 +423,8 @@ fn parse_field_access(e: &ExprField, generics: &[Generic]) -> TokenStream2 {
         Member::Named(ident) => {
             quote! {
                 ::agdb::type_def::Expression::FieldAccess {
-                    base: &#base,
-                    field: stringify!(#ident),
+                    base: Box::new(#base),
+                    field: stringify!(#ident).to_owned(),
                 }
             }
         }
@@ -432,7 +432,7 @@ fn parse_field_access(e: &ExprField, generics: &[Generic]) -> TokenStream2 {
             let idx = index.index;
             quote! {
                 ::agdb::type_def::Expression::TupleAccess {
-                    base: &#base,
+                    base: Box::new(#base),
                     index: #idx,
                 }
             }
@@ -450,9 +450,9 @@ fn parse_for_loop(e: &syn::ExprForLoop, generics: &[Generic]) -> TokenStream2 {
     let body = parse_block(&e.body, generics);
     quote! {
         ::agdb::type_def::Expression::For {
-            pattern: &#pattern,
-            iterable: &#iterable,
-            body: &#body,
+            pattern: Box::new(#pattern),
+            iterable: Box::new(#iterable),
+            body: Box::new(#body),
         }
     }
 }
@@ -461,8 +461,8 @@ fn parse_loop(e: &syn::ExprLoop, generics: &[Generic]) -> TokenStream2 {
     let body = parse_block(&e.body, generics);
     quote! {
         ::agdb::type_def::Expression::While {
-            condition: &::agdb::type_def::Expression::Literal(::agdb::type_def::LiteralValue::Bool(true)),
-            body: &#body,
+            condition: Box::new(::agdb::type_def::Expression::Literal(::agdb::type_def::LiteralValue::Bool(true))),
+            body: Box::new(#body),
         }
     }
 }
@@ -472,8 +472,8 @@ fn parse_while(e: &syn::ExprWhile, generics: &[Generic]) -> TokenStream2 {
     let body = parse_block(&e.body, generics);
     quote! {
         ::agdb::type_def::Expression::While {
-            condition: &#condition,
-            body: &#body,
+            condition: Box::new(#condition),
+            body: Box::new(#body),
         }
     }
 }
@@ -492,15 +492,15 @@ fn parse_if(e: &syn::ExprIf, generics: &[Generic]) -> TokenStream2 {
             Expr::Block(else_block) => parse_block(&else_block.block, generics),
             _ => crate::compile_error(else_expr, "Unsupported else branch"),
         };
-        quote! { Some(&#else_tokens) }
+        quote! { Some(Box::new(#else_tokens)) }
     } else {
         quote! { None }
     };
 
     quote! {
         ::agdb::type_def::Expression::If {
-            condition: &#condition,
-            then_branch: &#then_branch,
+            condition: Box::new(#condition),
+            then_branch: Box::new(#then_branch),
             else_branch: #else_branch,
         }
     }
@@ -516,7 +516,7 @@ fn parse_match(e: &syn::ExprMatch, generics: &[Generic]) -> TokenStream2 {
             let pattern = parse_pat_to_pattern(&arm.pat);
             let guard = if let Some((_, guard_expr)) = &arm.guard {
                 let g = parse_expression(guard_expr, generics);
-                quote! { Some(&#g) }
+                quote! { Some(Box::new(#g)) }
             } else {
                 quote! { None }
             };
@@ -525,7 +525,7 @@ fn parse_match(e: &syn::ExprMatch, generics: &[Generic]) -> TokenStream2 {
                 ::agdb::type_def::MatchArm {
                     pattern: #pattern,
                     guard: #guard,
-                    body: &#body,
+                    body: Box::new(#body),
                 }
             }
         })
@@ -533,8 +533,8 @@ fn parse_match(e: &syn::ExprMatch, generics: &[Generic]) -> TokenStream2 {
 
     quote! {
         ::agdb::type_def::Expression::Match {
-            scrutinee: &#scrutinee,
-            arms: &[#(#arms),*],
+            scrutinee: Box::new(#scrutinee),
+            arms: vec![#(#arms),*],
         }
     }
 }
@@ -544,7 +544,7 @@ fn parse_pat_to_pattern(pat: &Pat) -> TokenStream2 {
         Pat::Wild(_) => quote! { ::agdb::type_def::Pattern::Wild },
         Pat::Ident(p) => {
             let name = &p.ident;
-            quote! { ::agdb::type_def::Pattern::Ident(stringify!(#name)) }
+            quote! { ::agdb::type_def::Pattern::Ident(stringify!(#name).to_owned()) }
         }
         Pat::Lit(p) => {
             let lit_value = parse_literal_value(&p.lit);
@@ -552,7 +552,7 @@ fn parse_pat_to_pattern(pat: &Pat) -> TokenStream2 {
         }
         Pat::Or(p) => {
             let cases: Vec<TokenStream2> = p.cases.iter().map(parse_pat_to_pattern).collect();
-            quote! { ::agdb::type_def::Pattern::Or(&[#(#cases),*]) }
+            quote! { ::agdb::type_def::Pattern::Or(vec![#(#cases),*]) }
         }
         Pat::TupleStruct(p) => {
             let name = p
@@ -565,13 +565,13 @@ fn parse_pat_to_pattern(pat: &Pat) -> TokenStream2 {
             quote! {
                 ::agdb::type_def::Pattern::Constructor {
                     name: #name,
-                    fields: &[#(#fields),*],
+                    fields: vec![#(#fields),*],
                 }
             }
         }
         Pat::Tuple(p) => {
             let elems: Vec<TokenStream2> = p.elems.iter().map(parse_pat_to_pattern).collect();
-            quote! { ::agdb::type_def::Pattern::Tuple(&[#(#elems),*]) }
+            quote! { ::agdb::type_def::Pattern::Tuple(vec![#(#elems),*]) }
         }
         Pat::Path(p) => {
             let name = p
@@ -583,7 +583,7 @@ fn parse_pat_to_pattern(pat: &Pat) -> TokenStream2 {
             quote! {
                 ::agdb::type_def::Pattern::Constructor {
                     name: #name,
-                    fields: &[],
+                    fields: vec![],
                 }
             }
         }
@@ -606,7 +606,7 @@ fn parse_pat_to_pattern(pat: &Pat) -> TokenStream2 {
             quote! {
                 ::agdb::type_def::Pattern::Struct {
                     name: #name,
-                    fields: &[#(#fields),*],
+                    fields: vec![#(#fields),*],
                 }
             }
         }
@@ -614,7 +614,7 @@ fn parse_pat_to_pattern(pat: &Pat) -> TokenStream2 {
         Pat::Paren(p) => parse_pat_to_pattern(&p.pat),
         Pat::Slice(p) => {
             let elems: Vec<TokenStream2> = p.elems.iter().map(parse_pat_to_pattern).collect();
-            quote! { ::agdb::type_def::Pattern::Tuple(&[#(#elems),*]) }
+            quote! { ::agdb::type_def::Pattern::Tuple(vec![#(#elems),*]) }
         }
         Pat::Type(p) => parse_pat_to_pattern(&p.pat),
         _ => crate::compile_error(
@@ -646,7 +646,7 @@ fn parse_literal_value(lit: &Lit) -> TokenStream2 {
             let v = c.value().to_string();
             quote! { ::agdb::type_def::LiteralValue::Str(#v) }
         }
-        _ => quote! { ::agdb::type_def::LiteralValue::Unit },
+        _ => crate::compile_error(lit, format!("Unsupported literal in pattern: {:?}", lit)),
     }
 }
 
@@ -654,15 +654,14 @@ fn parse_match_arm_body(body: &Expr, generics: &[Generic]) -> TokenStream2 {
     match body {
         Expr::Block(b) => parse_block(&b.block, generics),
         Expr::Tuple(t) if t.elems.is_empty() => {
-            quote! { ::agdb::type_def::Expression::Block(&[]) }
+            quote! { ::agdb::type_def::Expression::Block(vec![]) }
         }
         expr => {
             let inner = parse_expression(expr, generics);
-            quote! { ::agdb::type_def::Expression::Block(&[#inner]) }
+            quote! { ::agdb::type_def::Expression::Block(vec![#inner]) }
         }
     }
 }
-
 // ---------------------------------------------------------------------------
 // Let (expression form, e.g. `if let`)
 // ---------------------------------------------------------------------------
@@ -672,9 +671,9 @@ fn parse_let_expr(e: &syn::ExprLet, generics: &[Generic]) -> TokenStream2 {
     let value = parse_expression(&e.expr, generics);
     quote! {
         ::agdb::type_def::Expression::Let {
-            name: &#name,
+            name: Box::new(#name),
             ty: #ty,
-            value: Some(&#value),
+            value: Some(Box::new(#value)),
         }
     }
 }
@@ -688,7 +687,7 @@ fn parse_literal(lit: &Lit) -> TokenStream2 {
         Lit::Str(s) => {
             let value = s.value();
             quote! {
-                ::agdb::type_def::Expression::Literal(::agdb::type_def::LiteralValue::Str(#value))
+                ::agdb::type_def::Expression::Literal(::agdb::type_def::LiteralValue::Str(#value.to_owned()))
             }
         }
         Lit::Int(i) => {
@@ -752,7 +751,7 @@ fn parse_literal(lit: &Lit) -> TokenStream2 {
         Lit::Char(c) => {
             let value = c.value().to_string();
             quote! {
-                ::agdb::type_def::Expression::Literal(::agdb::type_def::LiteralValue::Str(#value))
+                ::agdb::type_def::Expression::Literal(::agdb::type_def::LiteralValue::Str(#value.to_owned()))
             }
         }
         _ => crate::compile_error(lit, format!("Unsupported literal: {:?}", lit)),
@@ -783,7 +782,7 @@ fn parse_macro_by_name(
         "vec" => {
             let elements = args.iter().map(|arg| parse_expression(arg, generics));
             quote! {
-                ::agdb::type_def::Expression::Array(&[#(#elements),*])
+                ::agdb::type_def::Expression::Array(vec![#(#elements),*])
             }
         }
         "format" => {
@@ -799,8 +798,8 @@ fn parse_macro_by_name(
                 extract_format_parts(&format_string, &mut args_iter, generics);
             quote! {
                 ::agdb::type_def::Expression::Format {
-                    format_string: #fmt_str,
-                    args: &[#(#fmt_args),*],
+                    format_string: #fmt_str.to_owned(),
+                    args: vec![#(#fmt_args),*],
                 }
             }
         }
@@ -812,12 +811,12 @@ fn parse_macro_by_name(
             quote! {
                 ::agdb::type_def::Expression::Call {
                     recipient: None,
-                    function: &::agdb::type_def::Expression::Path {
-                        ident: #name,
+                    function: Box::new(::agdb::type_def::Expression::Path {
+                        ident: #name.to_owned(),
                         parent: None,
-                        generics: &[],
-                    },
-                    args: &[#(#macro_args),*],
+                        generics: vec![],
+                    }),
+                    args: vec![#(#macro_args),*],
                 }
             }
         }
@@ -881,7 +880,7 @@ fn extract_format_parts(
                     }
                     ident.push(nc);
                 }
-                args.push(quote! { ::agdb::type_def::Expression::Ident(#ident) });
+                args.push(quote! { ::agdb::type_def::Expression::Ident(#ident.to_owned()) });
             }
         }
     }
@@ -901,13 +900,13 @@ fn parse_path(path: &Path) -> TokenStream2 {
     if path.segments.len() == 1 && matches!(first.arguments, PathArguments::None) {
         let ident = &first.ident;
         return quote! {
-            ::agdb::type_def::Expression::Ident(stringify!(#ident))
+            ::agdb::type_def::Expression::Ident(stringify!(#ident).to_owned())
         };
     }
 
     let first_segment = parse_path_segment(first, quote! { None });
     iter.fold(first_segment, |parent, segment| {
-        parse_path_segment(segment, quote! { Some(&#parent) })
+        parse_path_segment(segment, quote! { Some(Box::new(#parent)) })
     })
 }
 
@@ -934,9 +933,9 @@ fn parse_path_segment(segment: &PathSegment, parent: TokenStream2) -> TokenStrea
 
     quote! {
         ::agdb::type_def::Expression::Path {
-            ident: stringify!(#ident),
+            ident: stringify!(#ident).to_owned(),
             parent: #parent,
-            generics: &[#(#generics),*],
+            generics: vec![#(#generics),*],
         }
     }
 }
@@ -956,13 +955,13 @@ fn path_to_string(path: &Path) -> String {
 fn parse_range(e: &ExprRange, generics: &[Generic]) -> TokenStream2 {
     let start = if let Some(start) = &e.start {
         let s = parse_expression(start, generics);
-        quote! { Some(&#s) }
+        quote! { Some(Box::new(#s)) }
     } else {
         quote! { None }
     };
     let end = if let Some(end) = &e.end {
         let v = parse_expression(end, generics);
-        quote! { Some(&#v) }
+        quote! { Some(Box::new(#v)) }
     } else {
         quote! { None }
     };
@@ -983,7 +982,7 @@ fn parse_range(e: &ExprRange, generics: &[Generic]) -> TokenStream2 {
 fn parse_reference(e: &ExprReference, generics: &[Generic]) -> TokenStream2 {
     let expr = parse_expression(&e.expr, generics);
     quote! {
-        ::agdb::type_def::Expression::Reference(&#expr)
+        ::agdb::type_def::Expression::Reference(Box::new(#expr))
     }
 }
 
@@ -991,7 +990,7 @@ fn parse_return(e: &syn::ExprReturn, generics: &[Generic]) -> TokenStream2 {
     if let Some(expr) = &e.expr {
         let parsed = parse_expression(expr, generics);
         quote! {
-            ::agdb::type_def::Expression::Return(Some(&#parsed))
+            ::agdb::type_def::Expression::Return(Some(Box::new(#parsed)))
         }
     } else {
         quote! {
@@ -1003,7 +1002,7 @@ fn parse_return(e: &syn::ExprReturn, generics: &[Generic]) -> TokenStream2 {
 fn parse_try(e: &ExprTry, generics: &[Generic]) -> TokenStream2 {
     let expr = parse_expression(&e.expr, generics);
     quote! {
-        ::agdb::type_def::Expression::Try(&#expr)
+        ::agdb::type_def::Expression::Try(Box::new(#expr))
     }
 }
 
@@ -1016,8 +1015,8 @@ fn parse_struct(e: &ExprStruct, generics: &[Generic]) -> TokenStream2 {
     let fields = e.fields.iter().map(|f| parse_struct_field(f, generics));
     quote! {
         ::agdb::type_def::Expression::Struct {
-            name: &#path,
-            fields: &[#(#fields),*],
+            name: Box::new(#path),
+            fields: vec![#(#fields),*],
         }
     }
 }
@@ -1034,14 +1033,14 @@ fn parse_struct_field(field: &FieldValue, generics: &[Generic]) -> TokenStream2 
     };
     let field_value = parse_expression(&field.expr, generics);
     quote! {
-        (stringify!(#field_name), #field_value)
+        (stringify!(#field_name).to_owned(), #field_value)
     }
 }
 
 fn parse_tuple(e: &syn::ExprTuple, generics: &[Generic]) -> TokenStream2 {
     let elements = e.elems.iter().map(|elem| parse_expression(elem, generics));
     quote! {
-        ::agdb::type_def::Expression::Tuple(&[#(#elements),*])
+        ::agdb::type_def::Expression::Tuple(vec![#(#elements),*])
     }
 }
 
@@ -1056,7 +1055,7 @@ fn parse_pattern(pat: &Pat, generics: &[Generic]) -> (TokenStream2, TokenStream2
         Pat::Ident(p) => {
             let name = &p.ident;
             (
-                quote! { ::agdb::type_def::Expression::Ident(stringify!(#name)) },
+                quote! { ::agdb::type_def::Expression::Ident(stringify!(#name).to_owned()) },
                 quote! { None },
             )
         }
@@ -1082,8 +1081,8 @@ fn parse_pattern(pat: &Pat, generics: &[Generic]) -> (TokenStream2, TokenStream2
                     quote! {
                         ::agdb::type_def::Expression::Binary {
                             op: ::agdb::type_def::Op::Or,
-                            left: &#acc,
-                            right: &#next,
+                            left: Box::new(#acc),
+                            right: Box::new(#next),
                         }
                     }
                 }),
@@ -1099,7 +1098,7 @@ fn parse_pattern(pat: &Pat, generics: &[Generic]) -> (TokenStream2, TokenStream2
         Pat::Slice(p) => {
             let elems = p.elems.iter().map(|elem| parse_pattern(elem, generics).0);
             (
-                quote! { ::agdb::type_def::Expression::Array(&[#(#elems),*]) },
+                quote! { ::agdb::type_def::Expression::Array(vec![#(#elems),*]) },
                 quote! { None },
             )
         }
@@ -1109,8 +1108,8 @@ fn parse_pattern(pat: &Pat, generics: &[Generic]) -> (TokenStream2, TokenStream2
             (
                 quote! {
                     ::agdb::type_def::Expression::StructPattern {
-                        name: &#path,
-                        fields: &[#(#fields),*],
+                        name: Box::new(#path),
+                        fields: vec![#(#fields),*],
                     }
                 },
                 quote! { None },
@@ -1119,7 +1118,7 @@ fn parse_pattern(pat: &Pat, generics: &[Generic]) -> (TokenStream2, TokenStream2
         Pat::Tuple(p) => {
             let elems = p.elems.iter().map(|elem| parse_pattern(elem, generics).0);
             (
-                quote! { ::agdb::type_def::Expression::Tuple(&[#(#elems),*]) },
+                quote! { ::agdb::type_def::Expression::Tuple(vec![#(#elems),*]) },
                 quote! { None },
             )
         }
@@ -1129,8 +1128,8 @@ fn parse_pattern(pat: &Pat, generics: &[Generic]) -> (TokenStream2, TokenStream2
             (
                 quote! {
                     ::agdb::type_def::Expression::TupleStruct {
-                        name: &#path,
-                        expressions: &[#(#elems),*],
+                        name: Box::new(#path),
+                        expressions: vec![#(#elems),*],
                     }
                 },
                 quote! { None },

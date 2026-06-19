@@ -1,103 +1,104 @@
 use crate::type_def::Function;
 use crate::type_def::Type;
 
-#[derive(Debug, agdb::TypeDef)]
+#[derive(Debug, Clone, Default, agdb::TypeDef)]
 pub enum Expression {
-    Array(&'static [Expression]),
+    Array(Vec<Expression>),
     Assign {
-        target: &'static Expression,
-        value: &'static Expression,
+        target: Box<Expression>,
+        value: Box<Expression>,
     },
-    Await(&'static Expression),
+    Await(Box<Expression>),
     Binary {
         op: Op,
-        left: &'static Expression,
-        right: &'static Expression,
+        left: Box<Expression>,
+        right: Box<Expression>,
     },
-    Block(&'static [Expression]),
+    Block(Vec<Expression>),
     Break,
     Call {
-        recipient: Option<&'static Expression>,
-        function: &'static Expression,
-        args: &'static [Expression],
+        recipient: Option<Box<Expression>>,
+        function: Box<Expression>,
+        args: Vec<Expression>,
     },
     Closure(Function),
     Continue,
     FieldAccess {
-        base: &'static Expression,
-        field: &'static str,
+        base: Box<Expression>,
+        field: String,
     },
     For {
-        pattern: &'static Expression,
-        iterable: &'static Expression,
-        body: &'static Expression,
+        pattern: Box<Expression>,
+        iterable: Box<Expression>,
+        body: Box<Expression>,
     },
     Format {
-        format_string: &'static str,
-        args: &'static [Expression],
+        format_string: String,
+        args: Vec<Expression>,
     },
-    Ident(&'static str),
+    Ident(String),
     If {
-        condition: &'static Expression,
-        then_branch: &'static Expression,
-        else_branch: Option<&'static Expression>,
+        condition: Box<Expression>,
+        then_branch: Box<Expression>,
+        else_branch: Option<Box<Expression>>,
     },
     Index {
-        base: &'static Expression,
-        index: &'static Expression,
+        base: Box<Expression>,
+        index: Box<Expression>,
     },
     Let {
-        name: &'static Expression,
+        name: Box<Expression>,
         ty: Option<fn() -> Type>,
-        value: Option<&'static Expression>,
+        value: Option<Box<Expression>>,
     },
     Literal(LiteralValue),
+    Match {
+        scrutinee: Box<Expression>,
+        arms: Vec<MatchArm>,
+    },
     Path {
-        ident: &'static str,
-        parent: Option<&'static Expression>,
-        generics: &'static [fn() -> Type],
+        ident: String,
+        parent: Option<Box<Expression>>,
+        generics: Vec<fn() -> Type>,
     },
     Range {
-        start: Option<&'static Expression>,
-        end: Option<&'static Expression>,
+        start: Option<Box<Expression>>,
+        end: Option<Box<Expression>>,
         inclusive: bool,
     },
-    Reference(&'static Expression),
-    Return(Option<&'static Expression>),
+    Reference(Box<Expression>),
+    Return(Option<Box<Expression>>),
     Struct {
-        name: &'static Expression,
-        fields: &'static [(&'static str, Expression)],
+        name: Box<Expression>,
+        fields: Vec<(String, Expression)>,
     },
     StructPattern {
-        name: &'static Expression,
-        fields: &'static [Expression],
+        name: Box<Expression>,
+        fields: Vec<Expression>,
     },
-    Try(&'static Expression),
-    Tuple(&'static [Expression]),
+    Try(Box<Expression>),
+    Tuple(Vec<Expression>),
     TupleStruct {
-        name: &'static Expression,
-        expressions: &'static [Expression],
+        name: Box<Expression>,
+        expressions: Vec<Expression>,
     },
     TupleAccess {
-        base: &'static Expression,
+        base: Box<Expression>,
         index: u32,
     },
     Unary {
         op: Op,
-        expr: &'static Expression,
+        expr: Box<Expression>,
     },
     While {
-        condition: &'static Expression,
-        body: &'static Expression,
+        condition: Box<Expression>,
+        body: Box<Expression>,
     },
-    Match {
-        scrutinee: &'static Expression,
-        arms: &'static [MatchArm],
-    },
+    #[default]
     Wild,
 }
 
-#[derive(Debug, agdb::TypeDef)]
+#[derive(Debug, Clone, agdb::TypeDef)]
 pub enum LiteralValue {
     Bool(bool),
     F32(f32),
@@ -106,7 +107,7 @@ pub enum LiteralValue {
     I16(i16),
     I32(i32),
     I64(i64),
-    Str(&'static str),
+    Str(String),
     String(String),
     U8(u8),
     U16(u16),
@@ -151,26 +152,26 @@ pub enum Op {
     Deref,
 }
 
-#[derive(Debug, agdb::TypeDef)]
+#[derive(Debug, Clone, agdb::TypeDef)]
 pub struct MatchArm {
     pub pattern: Pattern,
-    pub guard: Option<&'static Expression>,
-    pub body: &'static Expression,
+    pub guard: Option<Box<Expression>>,
+    pub body: Box<Expression>,
 }
 
-#[derive(Debug, agdb::TypeDef)]
+#[derive(Debug, Clone, agdb::TypeDef)]
 pub enum Pattern {
     Literal(LiteralValue),
-    Ident(&'static str),
+    Ident(String),
     Constructor {
-        name: &'static str,
-        fields: &'static [Pattern],
+        name: String,
+        fields: Vec<Pattern>,
     },
-    Tuple(&'static [Pattern]),
-    Or(&'static [Pattern]),
+    Tuple(Vec<Pattern>),
+    Or(Vec<Pattern>),
     Struct {
-        name: &'static str,
-        fields: &'static [(&'static str, Pattern)],
+        name: String,
+        fields: Vec<(String, Pattern)>,
     },
     Wild,
 }
@@ -181,7 +182,7 @@ mod tests {
     use crate::type_def::Literal;
     use crate::type_def::Type;
 
-    fn get_body(name: &str) -> &'static [Expression] {
+    fn get_body(name: &str) -> Vec<Expression> {
         let func_type = match name {
             "array_expr" => __array_expr_type_def(),
             "assert_macros_expr" => __assert_macros_expr_type_def(),
@@ -254,14 +255,16 @@ mod tests {
     fn test_literal_integer() {
         let body = get_body("literal_integer");
         assert_eq!(body.len(), 1);
-        assert!(
-            matches!(
-                &body[0],
-                Expression::Return(Some(Expression::Literal(LiteralValue::I32(42))))
-            ),
-            "Got: {:?}",
-            body[0]
-        );
+        match &body[0] {
+            Expression::Return(Some(inner)) => {
+                assert!(
+                    matches!(inner.as_ref(), Expression::Literal(LiteralValue::I32(42))),
+                    "Got: {:?}",
+                    body[0]
+                );
+            }
+            _ => panic!("Got: {:?}", body[0]),
+        }
     }
 
     #[agdb::fn_def]
@@ -274,14 +277,19 @@ mod tests {
     fn test_literal_bool() {
         let body = get_body("literal_bool");
         assert_eq!(body.len(), 1);
-        assert!(
-            matches!(
-                &body[0],
-                Expression::Return(Some(Expression::Literal(LiteralValue::Bool(true))))
-            ),
-            "Got: {:?}",
-            body[0]
-        );
+        match &body[0] {
+            Expression::Return(Some(inner)) => {
+                assert!(
+                    matches!(
+                        inner.as_ref(),
+                        Expression::Literal(LiteralValue::Bool(true))
+                    ),
+                    "Got: {:?}",
+                    body[0]
+                );
+            }
+            _ => panic!("Got: {:?}", body[0]),
+        }
     }
 
     #[agdb::fn_def]
@@ -295,9 +303,12 @@ mod tests {
         let body = get_body("literal_string");
         assert_eq!(body.len(), 1);
         match &body[0] {
-            Expression::Return(Some(Expression::Literal(LiteralValue::Str(s)))) => {
-                assert_eq!(*s, "hello");
-            }
+            Expression::Return(Some(inner)) => match inner.as_ref() {
+                Expression::Literal(LiteralValue::Str(s)) => {
+                    assert_eq!(s, "hello");
+                }
+                _ => panic!("Got: {:?}", body[0]),
+            },
             _ => panic!("Got: {:?}", body[0]),
         }
     }
@@ -313,9 +324,12 @@ mod tests {
         let body = get_body("literal_float");
         assert_eq!(body.len(), 1);
         match &body[0] {
-            Expression::Return(Some(Expression::Literal(LiteralValue::F64(v)))) => {
-                assert!((*v - 3.3).abs() < f64::EPSILON);
-            }
+            Expression::Return(Some(inner)) => match inner.as_ref() {
+                Expression::Literal(LiteralValue::F64(v)) => {
+                    assert!((*v - 3.3).abs() < f64::EPSILON);
+                }
+                _ => panic!("Got: {:?}", body[0]),
+            },
             _ => panic!("Got: {:?}", body[0]),
         }
     }
@@ -340,66 +354,84 @@ mod tests {
         assert_eq!(body.len(), 9);
 
         match &body[0] {
-            Expression::Let {
-                value: Some(Expression::Literal(LiteralValue::U8(1))),
-                ..
-            } => {}
+            Expression::Let { value: Some(v), .. } => {
+                assert!(matches!(
+                    v.as_ref(),
+                    Expression::Literal(LiteralValue::U8(1))
+                ));
+            }
             _ => panic!("Got: {:?}", body[0]),
         }
         match &body[1] {
-            Expression::Let {
-                value: Some(Expression::Literal(LiteralValue::U16(2))),
-                ..
-            } => {}
+            Expression::Let { value: Some(v), .. } => {
+                assert!(matches!(
+                    v.as_ref(),
+                    Expression::Literal(LiteralValue::U16(2))
+                ));
+            }
             _ => panic!("Got: {:?}", body[1]),
         }
         match &body[2] {
-            Expression::Let {
-                value: Some(Expression::Literal(LiteralValue::U32(3))),
-                ..
-            } => {}
+            Expression::Let { value: Some(v), .. } => {
+                assert!(matches!(
+                    v.as_ref(),
+                    Expression::Literal(LiteralValue::U32(3))
+                ));
+            }
             _ => panic!("Got: {:?}", body[2]),
         }
         match &body[3] {
-            Expression::Let {
-                value: Some(Expression::Literal(LiteralValue::U64(4))),
-                ..
-            } => {}
+            Expression::Let { value: Some(v), .. } => {
+                assert!(matches!(
+                    v.as_ref(),
+                    Expression::Literal(LiteralValue::U64(4))
+                ));
+            }
             _ => panic!("Got: {:?}", body[3]),
         }
         match &body[4] {
-            Expression::Let {
-                value: Some(Expression::Literal(LiteralValue::I8(5))),
-                ..
-            } => {}
+            Expression::Let { value: Some(v), .. } => {
+                assert!(matches!(
+                    v.as_ref(),
+                    Expression::Literal(LiteralValue::I8(5))
+                ));
+            }
             _ => panic!("Got: {:?}", body[4]),
         }
         match &body[5] {
-            Expression::Let {
-                value: Some(Expression::Literal(LiteralValue::I16(6))),
-                ..
-            } => {}
+            Expression::Let { value: Some(v), .. } => {
+                assert!(matches!(
+                    v.as_ref(),
+                    Expression::Literal(LiteralValue::I16(6))
+                ));
+            }
             _ => panic!("Got: {:?}", body[5]),
         }
         match &body[6] {
-            Expression::Let {
-                value: Some(Expression::Literal(LiteralValue::I32(7))),
-                ..
-            } => {}
+            Expression::Let { value: Some(v), .. } => {
+                assert!(matches!(
+                    v.as_ref(),
+                    Expression::Literal(LiteralValue::I32(7))
+                ));
+            }
             _ => panic!("Got: {:?}", body[6]),
         }
         match &body[7] {
-            Expression::Let {
-                value: Some(Expression::Literal(LiteralValue::Usize(8))),
-                ..
-            } => {}
+            Expression::Let { value: Some(v), .. } => {
+                assert!(matches!(
+                    v.as_ref(),
+                    Expression::Literal(LiteralValue::Usize(8))
+                ));
+            }
             _ => panic!("Got: {:?}", body[7]),
         }
         match &body[8] {
-            Expression::Let {
-                value: Some(Expression::Literal(LiteralValue::F32(_))),
-                ..
-            } => {}
+            Expression::Let { value: Some(v), .. } => {
+                assert!(matches!(
+                    v.as_ref(),
+                    Expression::Literal(LiteralValue::F32(_))
+                ));
+            }
             _ => panic!("Got: {:?}", body[8]),
         }
     }
@@ -415,24 +447,24 @@ mod tests {
         let body = get_body("array_expr");
         assert_eq!(body.len(), 1);
         match &body[0] {
-            Expression::Let {
-                value: Some(Expression::Array(elems)),
-                ..
-            } => {
-                assert_eq!(elems.len(), 3);
-                assert!(matches!(
-                    elems[0],
-                    Expression::Literal(LiteralValue::I32(1))
-                ));
-                assert!(matches!(
-                    elems[1],
-                    Expression::Literal(LiteralValue::I32(2))
-                ));
-                assert!(matches!(
-                    elems[2],
-                    Expression::Literal(LiteralValue::I32(3))
-                ));
-            }
+            Expression::Let { value: Some(v), .. } => match v.as_ref() {
+                Expression::Array(elems) => {
+                    assert_eq!(elems.len(), 3);
+                    assert!(matches!(
+                        elems[0],
+                        Expression::Literal(LiteralValue::I32(1))
+                    ));
+                    assert!(matches!(
+                        elems[1],
+                        Expression::Literal(LiteralValue::I32(2))
+                    ));
+                    assert!(matches!(
+                        elems[2],
+                        Expression::Literal(LiteralValue::I32(3))
+                    ));
+                }
+                _ => panic!("Got: {:?}", body[0]),
+            },
             _ => panic!("Got: {:?}", body[0]),
         }
     }
@@ -450,8 +482,16 @@ mod tests {
         assert_eq!(body.len(), 2);
         match &body[1] {
             Expression::Assign { target, value } => {
-                assert!(matches!(target, Expression::Ident("x")));
-                assert!(matches!(value, Expression::Literal(LiteralValue::I32(2))));
+                assert!(
+                    matches!(target.as_ref(), Expression::Ident(s) if s == "x"),
+                    "Got target: {:?}",
+                    target
+                );
+                assert!(
+                    matches!(value.as_ref(), Expression::Literal(LiteralValue::I32(2))),
+                    "Got value: {:?}",
+                    value
+                );
             }
             _ => panic!("Got: {:?}", body[1]),
         }
@@ -473,38 +513,33 @@ mod tests {
         assert_eq!(body.len(), 5);
 
         match &body[0] {
-            Expression::Let {
-                value: Some(Expression::Binary { op: Op::Add, .. }),
-                ..
-            } => {}
+            Expression::Let { value: Some(v), .. } => {
+                assert!(matches!(v.as_ref(), Expression::Binary { op: Op::Add, .. }));
+            }
             _ => panic!("Got: {:?}", body[0]),
         }
         match &body[1] {
-            Expression::Let {
-                value: Some(Expression::Binary { op: Op::Sub, .. }),
-                ..
-            } => {}
+            Expression::Let { value: Some(v), .. } => {
+                assert!(matches!(v.as_ref(), Expression::Binary { op: Op::Sub, .. }));
+            }
             _ => panic!("Got: {:?}", body[1]),
         }
         match &body[2] {
-            Expression::Let {
-                value: Some(Expression::Binary { op: Op::Mul, .. }),
-                ..
-            } => {}
+            Expression::Let { value: Some(v), .. } => {
+                assert!(matches!(v.as_ref(), Expression::Binary { op: Op::Mul, .. }));
+            }
             _ => panic!("Got: {:?}", body[2]),
         }
         match &body[3] {
-            Expression::Let {
-                value: Some(Expression::Binary { op: Op::Div, .. }),
-                ..
-            } => {}
+            Expression::Let { value: Some(v), .. } => {
+                assert!(matches!(v.as_ref(), Expression::Binary { op: Op::Div, .. }));
+            }
             _ => panic!("Got: {:?}", body[3]),
         }
         match &body[4] {
-            Expression::Let {
-                value: Some(Expression::Binary { op: Op::Rem, .. }),
-                ..
-            } => {}
+            Expression::Let { value: Some(v), .. } => {
+                assert!(matches!(v.as_ref(), Expression::Binary { op: Op::Rem, .. }));
+            }
             _ => panic!("Got: {:?}", body[4]),
         }
     }
@@ -528,15 +563,15 @@ mod tests {
         let ops = [Op::Eq, Op::Ne, Op::Lt, Op::Le, Op::Gt, Op::Ge];
         for (i, expected_op) in ops.iter().enumerate() {
             match &body[i] {
-                Expression::Let {
-                    value: Some(Expression::Binary { op, .. }),
-                    ..
-                } => assert!(
-                    std::mem::discriminant(op) == std::mem::discriminant(expected_op),
-                    "body[{i}] expected {:?}, got {:?}",
-                    expected_op,
-                    op
-                ),
+                Expression::Let { value: Some(v), .. } => match v.as_ref() {
+                    Expression::Binary { op, .. } => assert!(
+                        std::mem::discriminant(op) == std::mem::discriminant(expected_op),
+                        "body[{i}] expected {:?}, got {:?}",
+                        expected_op,
+                        op
+                    ),
+                    _ => panic!("body[{i}]: {:?}", body[i]),
+                },
                 _ => panic!("body[{i}]: {:?}", body[i]),
             }
         }
@@ -555,17 +590,15 @@ mod tests {
         assert_eq!(body.len(), 2);
 
         match &body[0] {
-            Expression::Let {
-                value: Some(Expression::Binary { op: Op::And, .. }),
-                ..
-            } => {}
+            Expression::Let { value: Some(v), .. } => {
+                assert!(matches!(v.as_ref(), Expression::Binary { op: Op::And, .. }));
+            }
             _ => panic!("Got: {:?}", body[0]),
         }
         match &body[1] {
-            Expression::Let {
-                value: Some(Expression::Binary { op: Op::Or, .. }),
-                ..
-            } => {}
+            Expression::Let { value: Some(v), .. } => {
+                assert!(matches!(v.as_ref(), Expression::Binary { op: Op::Or, .. }));
+            }
             _ => panic!("Got: {:?}", body[1]),
         }
     }
@@ -618,7 +651,13 @@ mod tests {
         let body = get_body("unary_neg");
         assert_eq!(body.len(), 1);
         match &body[0] {
-            Expression::Return(Some(Expression::Unary { op: Op::Neg, .. })) => {}
+            Expression::Return(Some(inner)) => {
+                assert!(
+                    matches!(inner.as_ref(), Expression::Unary { op: Op::Neg, .. }),
+                    "Got: {:?}",
+                    body[0]
+                );
+            }
             _ => panic!("Got: {:?}", body[0]),
         }
     }
@@ -634,7 +673,13 @@ mod tests {
         let body = get_body("unary_not");
         assert_eq!(body.len(), 1);
         match &body[0] {
-            Expression::Return(Some(Expression::Unary { op: Op::Not, .. })) => {}
+            Expression::Return(Some(inner)) => {
+                assert!(
+                    matches!(inner.as_ref(), Expression::Unary { op: Op::Not, .. }),
+                    "Got: {:?}",
+                    body[0]
+                );
+            }
             _ => panic!("Got: {:?}", body[0]),
         }
     }
@@ -676,7 +721,7 @@ mod tests {
         let body = get_body("break_continue");
         assert_eq!(body.len(), 2);
         match &body[0] {
-            Expression::While { body, .. } => match body {
+            Expression::While { body, .. } => match body.as_ref() {
                 Expression::Block(stmts) => {
                     assert!(matches!(stmts[0], Expression::Break));
                 }
@@ -685,7 +730,7 @@ mod tests {
             _ => panic!("Got: {:?}", body[0]),
         }
         match &body[1] {
-            Expression::While { body, .. } => match body {
+            Expression::While { body, .. } => match body.as_ref() {
                 Expression::Block(stmts) => {
                     assert!(matches!(stmts[0], Expression::Continue));
                 }
@@ -709,22 +754,21 @@ mod tests {
         let body = get_body("call_function");
         assert_eq!(body.len(), 2);
         match &body[1] {
-            Expression::Let {
-                value:
-                    Some(Expression::Call {
-                        recipient: None,
-                        function,
-                        args,
-                    }),
-                ..
-            } => {
-                assert!(
-                    matches!(function, Expression::Ident("helper")),
-                    "Got function: {:?}",
-                    function
-                );
-                assert_eq!(args.len(), 1);
-            }
+            Expression::Let { value: Some(v), .. } => match v.as_ref() {
+                Expression::Call {
+                    recipient: None,
+                    function,
+                    args,
+                } => {
+                    assert!(
+                        matches!(function.as_ref(), Expression::Ident(s) if s == "helper"),
+                        "Got function: {:?}",
+                        function
+                    );
+                    assert_eq!(args.len(), 1);
+                }
+                _ => panic!("Got: {:?}", body[1]),
+            },
             _ => panic!("Got: {:?}", body[1]),
         }
     }
@@ -741,22 +785,21 @@ mod tests {
         let body = get_body("call_method");
         assert_eq!(body.len(), 2);
         match &body[1] {
-            Expression::Let {
-                value:
-                    Some(Expression::Call {
-                        recipient: Some(_),
-                        function,
-                        args,
-                    }),
-                ..
-            } => {
-                assert!(
-                    matches!(function, Expression::Path { ident: "len", .. }),
-                    "Got function: {:?}",
-                    function
-                );
-                assert_eq!(args.len(), 0);
-            }
+            Expression::Let { value: Some(v), .. } => match v.as_ref() {
+                Expression::Call {
+                    recipient: Some(_),
+                    function,
+                    args,
+                } => {
+                    assert!(
+                        matches!(function.as_ref(), Expression::Path { ident, .. } if ident == "len"),
+                        "Got function: {:?}",
+                        function
+                    );
+                    assert_eq!(args.len(), 0);
+                }
+                _ => panic!("Got: {:?}", body[1]),
+            },
             _ => panic!("Got: {:?}", body[1]),
         }
     }
@@ -772,14 +815,14 @@ mod tests {
         let body = get_body("closure_simple");
         assert_eq!(body.len(), 1);
         match &body[0] {
-            Expression::Let {
-                value: Some(Expression::Closure(func)),
-                ..
-            } => {
-                assert_eq!(func.name, "");
-                assert_eq!(func.args.len(), 1);
-                assert_eq!(func.args[0].name, "x");
-            }
+            Expression::Let { value: Some(v), .. } => match v.as_ref() {
+                Expression::Closure(func) => {
+                    assert_eq!(func.name, "");
+                    assert_eq!(func.args.len(), 1);
+                    assert_eq!(func.args[0].name, "x");
+                }
+                _ => panic!("Got: {:?}", body[0]),
+            },
             _ => panic!("Got: {:?}", body[0]),
         }
     }
@@ -795,14 +838,14 @@ mod tests {
         let body = get_body("closure_typed");
         assert_eq!(body.len(), 1);
         match &body[0] {
-            Expression::Let {
-                value: Some(Expression::Closure(func)),
-                ..
-            } => {
-                assert_eq!(func.args.len(), 1);
-                assert_eq!(func.args[0].name, "x");
-                assert!(!func.body.is_empty());
-            }
+            Expression::Let { value: Some(v), .. } => match v.as_ref() {
+                Expression::Closure(func) => {
+                    assert_eq!(func.args.len(), 1);
+                    assert_eq!(func.args[0].name, "x");
+                    assert!(!func.body.is_empty());
+                }
+                _ => panic!("Got: {:?}", body[0]),
+            },
             _ => panic!("Got: {:?}", body[0]),
         }
     }
@@ -822,20 +865,16 @@ mod tests {
         let body = get_body("field_access_expr");
         assert_eq!(body.len(), 3);
         match &body[2] {
-            Expression::Let {
-                value:
-                    Some(Expression::FieldAccess {
-                        base,
-                        field: "field",
-                    }),
-                ..
-            } => {
-                assert!(
-                    matches!(base, Expression::Ident("s")),
-                    "Got base: {:?}",
-                    base
-                );
-            }
+            Expression::Let { value: Some(v), .. } => match v.as_ref() {
+                Expression::FieldAccess { base, field } if field == "field" => {
+                    assert!(
+                        matches!(base.as_ref(), Expression::Ident(s) if s == "s"),
+                        "Got base: {:?}",
+                        base
+                    );
+                }
+                _ => panic!("Got: {:?}", body[2]),
+            },
             _ => panic!("Got: {:?}", body[2]),
         }
     }
@@ -852,16 +891,16 @@ mod tests {
         let body = get_body("tuple_access_expr");
         assert_eq!(body.len(), 2);
         match &body[1] {
-            Expression::Let {
-                value: Some(Expression::TupleAccess { base, index: 0 }),
-                ..
-            } => {
-                assert!(
-                    matches!(base, Expression::Ident("t")),
-                    "Got base: {:?}",
-                    base
-                );
-            }
+            Expression::Let { value: Some(v), .. } => match v.as_ref() {
+                Expression::TupleAccess { base, index: 0 } => {
+                    assert!(
+                        matches!(base.as_ref(), Expression::Ident(s) if s == "t"),
+                        "Got base: {:?}",
+                        base
+                    );
+                }
+                _ => panic!("Got: {:?}", body[1]),
+            },
             _ => panic!("Got: {:?}", body[1]),
         }
     }
@@ -886,16 +925,16 @@ mod tests {
                 body,
             } => {
                 assert!(
-                    matches!(pattern, Expression::Ident("_item")),
+                    matches!(pattern.as_ref(), Expression::Ident(s) if s == "_item"),
                     "Got pattern: {:?}",
                     pattern
                 );
                 assert!(
-                    matches!(iterable, Expression::Ident("items")),
+                    matches!(iterable.as_ref(), Expression::Ident(s) if s == "items"),
                     "Got iterable: {:?}",
                     iterable
                 );
-                assert!(matches!(body, Expression::Block(_)));
+                assert!(matches!(body.as_ref(), Expression::Block(_)));
             }
             _ => panic!("Got: {:?}", body[1]),
         }
@@ -917,11 +956,11 @@ mod tests {
         match &body[1] {
             Expression::While { condition, body } => {
                 assert!(
-                    matches!(condition, Expression::Binary { op: Op::Lt, .. }),
+                    matches!(condition.as_ref(), Expression::Binary { op: Op::Lt, .. }),
                     "Got condition: {:?}",
                     condition
                 );
-                assert!(matches!(body, Expression::Block(_)));
+                assert!(matches!(body.as_ref(), Expression::Block(_)));
             }
             _ => panic!("Got: {:?}", body[1]),
         }
@@ -942,7 +981,10 @@ mod tests {
         match &body[0] {
             Expression::While { condition, .. } => {
                 assert!(
-                    matches!(condition, Expression::Literal(LiteralValue::Bool(true))),
+                    matches!(
+                        condition.as_ref(),
+                        Expression::Literal(LiteralValue::Bool(true))
+                    ),
                     "Got condition: {:?}",
                     condition
                 );
@@ -970,10 +1012,10 @@ mod tests {
                 else_branch: None,
             } => {
                 assert!(matches!(
-                    condition,
+                    condition.as_ref(),
                     Expression::Literal(LiteralValue::Bool(true))
                 ));
-                assert!(matches!(then_branch, Expression::Block(_)));
+                assert!(matches!(then_branch.as_ref(), Expression::Block(_)));
             }
             _ => panic!("Got: {:?}", body[0]),
         }
@@ -998,7 +1040,7 @@ mod tests {
                 else_branch: Some(eb),
                 ..
             } => {
-                assert!(matches!(eb, Expression::Block(_)));
+                assert!(matches!(eb.as_ref(), Expression::Block(_)));
             }
             _ => panic!("Got: {:?}", body[0]),
         }
@@ -1022,13 +1064,15 @@ mod tests {
         assert_eq!(body.len(), 1);
         match &body[0] {
             Expression::If {
-                else_branch:
-                    Some(Expression::If {
-                        else_branch: Some(_),
-                        ..
-                    }),
+                else_branch: Some(eb),
                 ..
-            } => {}
+            } => match eb.as_ref() {
+                Expression::If {
+                    else_branch: Some(_),
+                    ..
+                } => {}
+                _ => panic!("Got: {:?}", body[0]),
+            },
             _ => panic!("Got: {:?}", body[0]),
         }
     }
@@ -1045,21 +1089,21 @@ mod tests {
         let body = get_body("index_expr");
         assert_eq!(body.len(), 2);
         match &body[1] {
-            Expression::Let {
-                value: Some(Expression::Index { base, index }),
-                ..
-            } => {
-                assert!(
-                    matches!(base, Expression::Ident("arr")),
-                    "Got base: {:?}",
-                    base
-                );
-                assert!(
-                    matches!(index, Expression::Literal(LiteralValue::I32(0))),
-                    "Got index: {:?}",
-                    index
-                );
-            }
+            Expression::Let { value: Some(v), .. } => match v.as_ref() {
+                Expression::Index { base, index } => {
+                    assert!(
+                        matches!(base.as_ref(), Expression::Ident(s) if s == "arr"),
+                        "Got base: {:?}",
+                        base
+                    );
+                    assert!(
+                        matches!(index.as_ref(), Expression::Literal(LiteralValue::I32(0))),
+                        "Got index: {:?}",
+                        index
+                    );
+                }
+                _ => panic!("Got: {:?}", body[1]),
+            },
             _ => panic!("Got: {:?}", body[1]),
         }
     }
@@ -1078,12 +1122,17 @@ mod tests {
             Expression::Let {
                 name,
                 ty: None,
-                value: Some(Expression::Literal(LiteralValue::I32(42))),
+                value: Some(v),
             } => {
                 assert!(
-                    matches!(name, Expression::Ident("_x")),
+                    matches!(name.as_ref(), Expression::Ident(s) if s == "_x"),
                     "Got name: {:?}",
                     name
+                );
+                assert!(
+                    matches!(v.as_ref(), Expression::Literal(LiteralValue::I32(42))),
+                    "Got value: {:?}",
+                    v
                 );
             }
             _ => panic!("Got: {:?}", body[0]),
@@ -1106,7 +1155,11 @@ mod tests {
                 ty: Some(ty_fn),
                 value: Some(_),
             } => {
-                assert!(matches!(name, Expression::Ident("_x")));
+                assert!(
+                    matches!(name.as_ref(), Expression::Ident(s) if s == "_x"),
+                    "Got name: {:?}",
+                    name
+                );
                 let ty = ty_fn();
                 assert!(
                     matches!(ty, Type::Literal(Literal::I32)),
@@ -1150,12 +1203,16 @@ mod tests {
         let body = get_body("reference_expr");
         assert_eq!(body.len(), 2);
         match &body[1] {
-            Expression::Let {
-                value: Some(Expression::Reference(inner)),
-                ..
-            } => {
-                assert!(matches!(inner, Expression::Ident("x")), "Got: {:?}", inner);
-            }
+            Expression::Let { value: Some(v), .. } => match v.as_ref() {
+                Expression::Reference(inner) => {
+                    assert!(
+                        matches!(inner.as_ref(), Expression::Ident(s) if s == "x"),
+                        "Got: {:?}",
+                        inner
+                    );
+                }
+                _ => panic!("Got: {:?}", body[1]),
+            },
             _ => panic!("Got: {:?}", body[1]),
         }
     }
@@ -1171,7 +1228,13 @@ mod tests {
         let body = get_body("return_value");
         assert_eq!(body.len(), 1);
         match &body[0] {
-            Expression::Return(Some(Expression::Literal(LiteralValue::I32(42)))) => {}
+            Expression::Return(Some(inner)) => {
+                assert!(
+                    matches!(inner.as_ref(), Expression::Literal(LiteralValue::I32(42))),
+                    "Got: {:?}",
+                    body[0]
+                );
+            }
             _ => panic!("Got: {:?}", body[0]),
         }
     }
@@ -1207,7 +1270,11 @@ mod tests {
         assert_eq!(body.len(), 3);
         match &body[1] {
             Expression::Try(inner) => {
-                assert!(matches!(inner, Expression::Ident("r")), "Got: {:?}", inner);
+                assert!(
+                    matches!(inner.as_ref(), Expression::Ident(s) if s == "r"),
+                    "Got: {:?}",
+                    inner
+                );
             }
             _ => panic!("Got: {:?}", body[1]),
         }
@@ -1224,12 +1291,12 @@ mod tests {
         let body = get_body("tuple_expr");
         assert_eq!(body.len(), 1);
         match &body[0] {
-            Expression::Let {
-                value: Some(Expression::Tuple(elems)),
-                ..
-            } => {
-                assert_eq!(elems.len(), 3);
-            }
+            Expression::Let { value: Some(v), .. } => match v.as_ref() {
+                Expression::Tuple(elems) => {
+                    assert_eq!(elems.len(), 3);
+                }
+                _ => panic!("Got: {:?}", body[0]),
+            },
             _ => panic!("Got: {:?}", body[0]),
         }
     }
@@ -1246,22 +1313,21 @@ mod tests {
         let body = get_body("format_expr");
         assert_eq!(body.len(), 2);
         match &body[1] {
-            Expression::Let {
-                value:
-                    Some(Expression::Format {
-                        format_string,
-                        args,
-                    }),
-                ..
-            } => {
-                assert_eq!(*format_string, "{}");
-                assert_eq!(args.len(), 1);
-                assert!(
-                    matches!(args[0], Expression::Ident("x")),
-                    "Got arg: {:?}",
-                    args[0]
-                );
-            }
+            Expression::Let { value: Some(v), .. } => match v.as_ref() {
+                Expression::Format {
+                    format_string,
+                    args,
+                } => {
+                    assert_eq!(format_string, "{}");
+                    assert_eq!(args.len(), 1);
+                    assert!(
+                        matches!(&args[0], Expression::Ident(s) if s == "x"),
+                        "Got arg: {:?}",
+                        args[0]
+                    );
+                }
+                _ => panic!("Got: {:?}", body[1]),
+            },
             _ => panic!("Got: {:?}", body[1]),
         }
     }
@@ -1277,12 +1343,12 @@ mod tests {
         let body = get_body("vec_macro_expr");
         assert_eq!(body.len(), 1);
         match &body[0] {
-            Expression::Let {
-                value: Some(Expression::Array(elems)),
-                ..
-            } => {
-                assert_eq!(elems.len(), 3);
-            }
+            Expression::Let { value: Some(v), .. } => match v.as_ref() {
+                Expression::Array(elems) => {
+                    assert_eq!(elems.len(), 3);
+                }
+                _ => panic!("Got: {:?}", body[0]),
+            },
             _ => panic!("Got: {:?}", body[0]),
         }
     }
@@ -1301,53 +1367,39 @@ mod tests {
         let body = get_body("assert_macros_expr");
         assert_eq!(body.len(), 4);
 
-        assert!(
-            matches!(
-                &body[1],
-                Expression::Call {
-                    function: Expression::Path {
-                        ident: "assert",
-                        ..
-                    },
-                    ..
-                }
-            ),
-            "Got: {:?}",
-            body[1]
-        );
-
-        assert!(
-            matches!(
-                &body[2],
-                Expression::Call {
-                    function: Expression::Path {
-                        ident: "assert_eq",
-                        ..
-                    },
-                    ..
-                }
-            ),
-            "Got: {:?}",
-            body[2]
-        );
-
-        match &body[3] {
-            Expression::Let {
-                value: Some(Expression::Call { function, .. }),
-                ..
-            } => {
+        match &body[1] {
+            Expression::Call { function, .. } => {
                 assert!(
-                    matches!(
-                        function,
-                        Expression::Path {
-                            ident: "matches",
-                            ..
-                        }
-                    ),
+                    matches!(function.as_ref(), Expression::Path { ident, .. } if ident == "assert"),
                     "Got: {:?}",
-                    function
+                    body[1]
                 );
             }
+            _ => panic!("Got: {:?}", body[1]),
+        }
+
+        match &body[2] {
+            Expression::Call { function, .. } => {
+                assert!(
+                    matches!(function.as_ref(), Expression::Path { ident, .. } if ident == "assert_eq"),
+                    "Got: {:?}",
+                    body[2]
+                );
+            }
+            _ => panic!("Got: {:?}", body[2]),
+        }
+
+        match &body[3] {
+            Expression::Let { value: Some(v), .. } => match v.as_ref() {
+                Expression::Call { function, .. } => {
+                    assert!(
+                        matches!(function.as_ref(), Expression::Path { ident, .. } if ident == "matches"),
+                        "Got: {:?}",
+                        function
+                    );
+                }
+                _ => panic!("Got: {:?}", body[3]),
+            },
             _ => panic!("Got: {:?}", body[3]),
         }
     }
@@ -1370,26 +1422,14 @@ mod tests {
         match &body[1] {
             Expression::Match { scrutinee, arms } => {
                 assert!(
-                    matches!(scrutinee, Expression::Ident("x")),
-                    "Got scrutinee: {:?}",
-                    scrutinee
-                );
-                assert_eq!(arms.len(), 3);
-                assert!(
-                    matches!(arms[0].pattern, Pattern::Literal(LiteralValue::I32(1))),
-                    "Got arm[0] pattern: {:?}",
-                    arms[0].pattern
-                );
-                assert!(arms[0].guard.is_none());
-                assert!(
-                    matches!(arms[1].pattern, Pattern::Literal(LiteralValue::I32(2))),
-                    "Got arm[1] pattern: {:?}",
-                    arms[1].pattern
+                    matches!(condition.as_ref(), Expression::Binary { op: Op::Eq, .. }),
+                    "Got condition: {:?}",
+                    condition
                 );
                 assert!(
-                    matches!(arms[2].pattern, Pattern::Wild),
-                    "Got arm[2] pattern: {:?}",
-                    arms[2].pattern
+                    matches!(then_branch.as_ref(), Expression::Block(_)),
+                    "Got then: {:?}",
+                    then_branch
                 );
             }
             _ => panic!("Got: {:?}", body[1]),
@@ -1411,19 +1451,19 @@ mod tests {
         let body = get_body("struct_expr");
         assert_eq!(body.len(), 2);
         match &body[1] {
-            Expression::Let {
-                value: Some(Expression::Struct { name, fields }),
-                ..
-            } => {
-                assert!(
-                    matches!(name, Expression::Ident("Point")),
-                    "Got name: {:?}",
-                    name
-                );
-                assert_eq!(fields.len(), 2);
-                assert_eq!(fields[0].0, "x");
-                assert_eq!(fields[1].0, "y");
-            }
+            Expression::Let { value: Some(v), .. } => match v.as_ref() {
+                Expression::Struct { name, fields } => {
+                    assert!(
+                        matches!(name.as_ref(), Expression::Ident(s) if s == "Point"),
+                        "Got name: {:?}",
+                        name
+                    );
+                    assert_eq!(fields.len(), 2);
+                    assert_eq!(fields[0].0, "x");
+                    assert_eq!(fields[1].0, "y");
+                }
+                _ => panic!("Got: {:?}", body[1]),
+            },
             _ => panic!("Got: {:?}", body[1]),
         }
     }
@@ -1440,7 +1480,13 @@ mod tests {
         let body = get_body("implicit_return");
         assert_eq!(body.len(), 2);
         match &body[1] {
-            Expression::Return(Some(Expression::Ident("x"))) => {}
+            Expression::Return(Some(inner)) => {
+                assert!(
+                    matches!(inner.as_ref(), Expression::Ident(s) if s == "x"),
+                    "Got: {:?}",
+                    body[1]
+                );
+            }
             _ => panic!("Got: {:?}", body[1]),
         }
     }
@@ -1457,10 +1503,13 @@ mod tests {
         let body = get_body("ident_expr");
         assert_eq!(body.len(), 2);
         match &body[1] {
-            Expression::Let {
-                value: Some(Expression::Ident("x")),
-                ..
-            } => {}
+            Expression::Let { value: Some(v), .. } => {
+                assert!(
+                    matches!(v.as_ref(), Expression::Ident(s) if s == "x"),
+                    "Got: {:?}",
+                    body[1]
+                );
+            }
             _ => panic!("Got: {:?}", body[1]),
         }
     }
@@ -1476,10 +1525,13 @@ mod tests {
         let body = get_body("wild_expr");
         assert_eq!(body.len(), 1);
         match &body[0] {
-            Expression::Let {
-                name: Expression::Wild,
-                ..
-            } => {}
+            Expression::Let { name, .. } => {
+                assert!(
+                    matches!(name.as_ref(), Expression::Wild),
+                    "Got: {:?}",
+                    body[0]
+                );
+            }
             _ => panic!("Got: {:?}", body[0]),
         }
     }
@@ -1495,10 +1547,13 @@ mod tests {
         let body = get_body("path_expr");
         assert_eq!(body.len(), 1);
         match &body[0] {
-            Expression::Let {
-                value: Some(Expression::Ident("None")),
-                ..
-            } => {}
+            Expression::Let { value: Some(v), .. } => {
+                assert!(
+                    matches!(v.as_ref(), Expression::Ident(s) if s == "None"),
+                    "Got: {:?}",
+                    body[0]
+                );
+            }
             _ => panic!("Got: {:?}", body[0]),
         }
     }
@@ -1515,14 +1570,14 @@ mod tests {
         let body = get_body("let_pattern_tuple");
         assert_eq!(body.len(), 2);
         match &body[0] {
-            Expression::Let {
-                name: Expression::Tuple(elems),
-                ..
-            } => {
-                assert_eq!(elems.len(), 2);
-                assert!(matches!(elems[0], Expression::Ident("a")));
-                assert!(matches!(elems[1], Expression::Ident("b")));
-            }
+            Expression::Let { name, .. } => match name.as_ref() {
+                Expression::Tuple(elems) => {
+                    assert_eq!(elems.len(), 2);
+                    assert!(matches!(&elems[0], Expression::Ident(s) if s == "a"));
+                    assert!(matches!(&elems[1], Expression::Ident(s) if s == "b"));
+                }
+                _ => panic!("Got: {:?}", body[0]),
+            },
             _ => panic!("Got: {:?}", body[0]),
         }
     }
@@ -1543,7 +1598,7 @@ mod tests {
         match &body[1] {
             Expression::For { pattern, .. } => {
                 assert!(
-                    matches!(pattern, Expression::Tuple(_)),
+                    matches!(pattern.as_ref(), Expression::Tuple(_)),
                     "Got pattern: {:?}",
                     pattern
                 );
@@ -1563,26 +1618,25 @@ mod tests {
         let body = get_body("range_half_open");
         assert_eq!(body.len(), 1);
         match &body[0] {
-            Expression::Let {
-                value:
-                    Some(Expression::Range {
-                        start: Some(start),
-                        end: Some(end),
-                        inclusive: false,
-                    }),
-                ..
-            } => {
-                assert!(
-                    matches!(start, Expression::Literal(LiteralValue::I32(0))),
-                    "Got start: {:?}",
-                    start
-                );
-                assert!(
-                    matches!(end, Expression::Literal(LiteralValue::I32(10))),
-                    "Got end: {:?}",
-                    end
-                );
-            }
+            Expression::Let { value: Some(v), .. } => match v.as_ref() {
+                Expression::Range {
+                    start: Some(start),
+                    end: Some(end),
+                    inclusive: false,
+                } => {
+                    assert!(
+                        matches!(start.as_ref(), Expression::Literal(LiteralValue::I32(0))),
+                        "Got start: {:?}",
+                        start
+                    );
+                    assert!(
+                        matches!(end.as_ref(), Expression::Literal(LiteralValue::I32(10))),
+                        "Got end: {:?}",
+                        end
+                    );
+                }
+                _ => panic!("Got: {:?}", body[0]),
+            },
             _ => panic!("Got: {:?}", body[0]),
         }
     }
@@ -1598,26 +1652,25 @@ mod tests {
         let body = get_body("range_inclusive");
         assert_eq!(body.len(), 1);
         match &body[0] {
-            Expression::Let {
-                value:
-                    Some(Expression::Range {
-                        start: Some(start),
-                        end: Some(end),
-                        inclusive: true,
-                    }),
-                ..
-            } => {
-                assert!(
-                    matches!(start, Expression::Literal(LiteralValue::I32(1))),
-                    "Got start: {:?}",
-                    start
-                );
-                assert!(
-                    matches!(end, Expression::Literal(LiteralValue::I32(5))),
-                    "Got end: {:?}",
-                    end
-                );
-            }
+            Expression::Let { value: Some(v), .. } => match v.as_ref() {
+                Expression::Range {
+                    start: Some(start),
+                    end: Some(end),
+                    inclusive: true,
+                } => {
+                    assert!(
+                        matches!(start.as_ref(), Expression::Literal(LiteralValue::I32(1))),
+                        "Got start: {:?}",
+                        start
+                    );
+                    assert!(
+                        matches!(end.as_ref(), Expression::Literal(LiteralValue::I32(5))),
+                        "Got end: {:?}",
+                        end
+                    );
+                }
+                _ => panic!("Got: {:?}", body[0]),
+            },
             _ => panic!("Got: {:?}", body[0]),
         }
     }
@@ -1634,21 +1687,20 @@ mod tests {
         let body = get_body("range_from");
         assert_eq!(body.len(), 2);
         match &body[1] {
-            Expression::Let {
-                value:
-                    Some(Expression::Range {
-                        start: Some(start),
-                        end: None,
-                        inclusive: false,
-                    }),
-                ..
-            } => {
-                assert!(
-                    matches!(start, Expression::Ident("start")),
-                    "Got start: {:?}",
-                    start
-                );
-            }
+            Expression::Let { value: Some(v), .. } => match v.as_ref() {
+                Expression::Range {
+                    start: Some(start),
+                    end: None,
+                    inclusive: false,
+                } => {
+                    assert!(
+                        matches!(start.as_ref(), Expression::Ident(s) if s == "start"),
+                        "Got start: {:?}",
+                        start
+                    );
+                }
+                _ => panic!("Got: {:?}", body[1]),
+            },
             _ => panic!("Got: {:?}", body[1]),
         }
     }
@@ -1664,21 +1716,20 @@ mod tests {
         let body = get_body("range_to");
         assert_eq!(body.len(), 1);
         match &body[0] {
-            Expression::Let {
-                value:
-                    Some(Expression::Range {
-                        start: None,
-                        end: Some(end),
-                        inclusive: false,
-                    }),
-                ..
-            } => {
-                assert!(
-                    matches!(end, Expression::Literal(LiteralValue::I32(10))),
-                    "Got end: {:?}",
-                    end
-                );
-            }
+            Expression::Let { value: Some(v), .. } => match v.as_ref() {
+                Expression::Range {
+                    start: None,
+                    end: Some(end),
+                    inclusive: false,
+                } => {
+                    assert!(
+                        matches!(end.as_ref(), Expression::Literal(LiteralValue::I32(10))),
+                        "Got end: {:?}",
+                        end
+                    );
+                }
+                _ => panic!("Got: {:?}", body[0]),
+            },
             _ => panic!("Got: {:?}", body[0]),
         }
     }
@@ -1694,21 +1745,20 @@ mod tests {
         let body = get_body("range_to_inclusive");
         assert_eq!(body.len(), 1);
         match &body[0] {
-            Expression::Let {
-                value:
-                    Some(Expression::Range {
-                        start: None,
-                        end: Some(end),
-                        inclusive: true,
-                    }),
-                ..
-            } => {
-                assert!(
-                    matches!(end, Expression::Literal(LiteralValue::I32(10))),
-                    "Got end: {:?}",
-                    end
-                );
-            }
+            Expression::Let { value: Some(v), .. } => match v.as_ref() {
+                Expression::Range {
+                    start: None,
+                    end: Some(end),
+                    inclusive: true,
+                } => {
+                    assert!(
+                        matches!(end.as_ref(), Expression::Literal(LiteralValue::I32(10))),
+                        "Got end: {:?}",
+                        end
+                    );
+                }
+                _ => panic!("Got: {:?}", body[0]),
+            },
             _ => panic!("Got: {:?}", body[0]),
         }
     }
@@ -1724,15 +1774,14 @@ mod tests {
         let body = get_body("range_full");
         assert_eq!(body.len(), 1);
         match &body[0] {
-            Expression::Let {
-                value:
-                    Some(Expression::Range {
-                        start: None,
-                        end: None,
-                        inclusive: false,
-                    }),
-                ..
-            } => {}
+            Expression::Let { value: Some(v), .. } => match v.as_ref() {
+                Expression::Range {
+                    start: None,
+                    end: None,
+                    inclusive: false,
+                } => {}
+                _ => panic!("Got: {:?}", body[0]),
+            },
             _ => panic!("Got: {:?}", body[0]),
         }
     }

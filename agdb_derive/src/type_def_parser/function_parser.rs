@@ -32,12 +32,12 @@ pub(crate) fn parse_function_internal(input: &ItemFn, wrapper: TokenStream2) -> 
     quote! {
         fn #fn_name #lt_generics () -> ::agdb::type_def::Type {
             #wrapper(::agdb::type_def::Function {
-                name: stringify!(#name),
-                generics: &[#(#generics),*],
-                args: &[#(#args),*],
+                name: stringify!(#name).to_owned(),
+                generics: vec![#(#generics),*],
+                args: vec![#(#args),*],
                 ret: #ret,
                 async_fn: #async_fn,
-                body: &[#(#body),*],
+                body: vec![#(#body),*],
             })
         }
     }
@@ -58,12 +58,12 @@ pub(crate) fn parse_impl_fn(impl_fn: &syn::ImplItemFn) -> TokenStream2 {
 
     quote! {
         ::agdb::type_def::Function {
-            name: stringify!(#name),
-            generics: &[#(#generics),*],
-            args: &[#(#args),*],
+            name: stringify!(#name).to_owned(),
+            generics: vec![#(#generics),*],
+            args: vec![#(#args),*],
             ret: #ret,
             async_fn: #async_fn,
-            body: &[#(#body),*],
+            body: vec![#(#body),*],
         }
     }
 }
@@ -86,12 +86,12 @@ pub(crate) fn parse_trait_fn(
 
     quote! {
         ::agdb::type_def::Function {
-            name: stringify!(#name),
-            generics: &[#(#generics),*],
-            args: &[#(#args),*],
+            name: stringify!(#name).to_owned(),
+            generics: vec![#(#generics),*],
+            args: vec![#(#args),*],
             ret: #ret,
             async_fn: #async_fn,
-            body: &[#(#body),*],
+            body: vec![#(#body),*],
         }
     }
 }
@@ -103,9 +103,9 @@ fn parse_args(args: &Punctuated<FnArg, Comma>, generics: &[Generic]) -> Vec<Toke
                 let name = match pat_ty.pat.as_ref() {
                     Pat::Ident(pat_ident) => {
                         let ident = &pat_ident.ident;
-                        quote! { stringify!(#ident) }
+                        quote! { stringify!(#ident).to_owned() }
                     }
-                    _ => quote! { "" },
+                    _ => quote! { String::new() },
                 };
                 let ty_def = generics_parser::parse_type(&pat_ty.ty, generics);
 
@@ -122,7 +122,7 @@ fn parse_args(args: &Punctuated<FnArg, Comma>, generics: &[Generic]) -> Vec<Toke
                     let ty_def = generics_parser::parse_type(ty, generics);
                     quote! {
                         ::agdb::type_def::Variable {
-                            name: "self",
+                            name: "self".to_owned(),
                             ty: Some(#ty_def),
                         }
                     }
@@ -132,7 +132,7 @@ fn parse_args(args: &Punctuated<FnArg, Comma>, generics: &[Generic]) -> Vec<Toke
                     let ty = if let Some((_, lt_opt)) = &rec.reference {
                         let lifetime = if let Some(lt) = lt_opt {
                             let lt_str = lt.ident.to_string();
-                            quote! { Some(#lt_str) }
+                            quote! { Some(#lt_str.to_owned()) }
                         } else {
                             quote! { None }
                         };
@@ -148,7 +148,7 @@ fn parse_args(args: &Punctuated<FnArg, Comma>, generics: &[Generic]) -> Vec<Toke
                     };
                     quote! {
                         ::agdb::type_def::Variable {
-                            name: "self",
+                            name: "self".to_owned(),
                             ty: Some(#ty),
                         }
                     }

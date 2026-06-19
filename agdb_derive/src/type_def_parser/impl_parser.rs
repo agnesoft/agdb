@@ -36,10 +36,10 @@ pub(crate) fn parse_impl(input: &syn::ItemImpl) -> TokenStream2 {
 
         let trait_part = quote! {
             Some(|| ::agdb::type_def::Type::Trait(::agdb::type_def::Trait {
-                name: #trait_name,
-                generics: &[],
-                bounds: &[],
-                functions: &[],
+                name: #trait_name.to_owned(),
+                generics: vec![],
+                bounds: vec![],
+                functions: vec![],
             }))
         };
 
@@ -47,11 +47,11 @@ pub(crate) fn parse_impl(input: &syn::ItemImpl) -> TokenStream2 {
             #[allow(non_snake_case)]
             fn #helper_fn_name #impl_generics () -> ::agdb::type_def::Impl #where_clause {
                 ::agdb::type_def::Impl {
-                    name: stringify!(#ty),
-                    generics: &[#(#generics),*],
+                    name: stringify!(#ty).to_owned(),
+                    generics: vec![#(#generics),*],
                     trait_: #trait_part,
                     ty: <#ty as ::agdb::type_def::TypeDefinition>::type_def,
-                    functions: &[#(#methods),*],
+                    functions: vec![#(#methods),*],
                 }
             }
         }
@@ -63,11 +63,11 @@ pub(crate) fn parse_impl(input: &syn::ItemImpl) -> TokenStream2 {
             #[allow(non_snake_case)]
             fn #helper_fn_name #impl_generics () -> ::agdb::type_def::Impl #where_clause {
                 ::agdb::type_def::Impl {
-                    name: stringify!(#ty),
-                    generics: &[#(#generics),*],
+                    name: stringify!(#ty).to_owned(),
+                    generics: vec![#(#generics),*],
                     trait_: None,
                     ty: <#ty as ::agdb::type_def::TypeDefinition>::type_def,
-                    functions: &[#(#methods),*],
+                    functions: vec![#(#methods),*],
                 }
             }
         }

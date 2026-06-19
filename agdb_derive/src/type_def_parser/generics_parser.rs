@@ -83,8 +83,8 @@ pub(crate) fn parse_generics(generics: &Generics) -> Vec<TokenStream2> {
                 quote! {
                     ::agdb::type_def::Generic {
                         kind: ::agdb::type_def::GenericKind::Lifetime,
-                        name: #name,
-                        bounds: &[],
+                        name: #name.to_owned(),
+                        bounds: vec![],
                     }
                 }
             }
@@ -98,8 +98,8 @@ pub(crate) fn parse_generics(generics: &Generics) -> Vec<TokenStream2> {
                 quote! {
                     ::agdb::type_def::Generic {
                         kind: ::agdb::type_def::GenericKind::Type,
-                        name: #name,
-                        bounds: &[#(#bounds),*],
+                        name: #name.to_owned(),
+                        bounds: vec![#(#bounds),*],
                     }
                 }
             }
@@ -109,8 +109,8 @@ pub(crate) fn parse_generics(generics: &Generics) -> Vec<TokenStream2> {
                 quote! {
                     ::agdb::type_def::Generic {
                         kind: ::agdb::type_def::GenericKind::Const,
-                        name: #name,
-                        bounds: &[<#ty as ::agdb::type_def::TypeDefinition>::type_def],
+                        name: #name.to_owned(),
+                        bounds: vec![<#ty as ::agdb::type_def::TypeDefinition>::type_def],
                     }
                 }
             }
@@ -133,10 +133,10 @@ pub(crate) fn parse_type_param_bound_with_generics(
             let type_args = extract_trait_type_args(last_seg, generics);
             quote! {
                 || ::agdb::type_def::Type::Trait(::agdb::type_def::Trait {
-                    name: #name,
-                    generics: &[#(#type_args),*],
-                    bounds: &[],
-                    functions: &[],
+                    name: #name.to_owned(),
+                    generics: vec![#(#type_args),*],
+                    bounds: vec![],
+                    functions: vec![],
                 })
             }
         }
@@ -157,8 +157,8 @@ fn extract_trait_type_args(segment: &syn::PathSegment, generics: &[Generic]) -> 
                 result.push(quote! {
                     ::agdb::type_def::Generic {
                         kind: ::agdb::type_def::GenericKind::Type,
-                        name: #ty_str,
-                        bounds: &[#resolved],
+                        name: #ty_str.to_owned(),
+                        bounds: vec![#resolved],
                     }
                 });
             }
@@ -189,8 +189,8 @@ pub(crate) fn parse_type(ty: &syn::Type, generics: &[Generic]) -> TokenStream2 {
         quote! {
             || ::agdb::type_def::Type::Generic(::agdb::type_def::Generic {
                 kind: ::agdb::type_def::GenericKind::Type,
-                name: stringify!(#ty),
-                bounds: &[#(#bounds),*],
+                name: stringify!(#ty).to_owned(),
+                bounds: vec![#(#bounds),*],
             })
         }
     } else if let syn::Type::Tuple(tuple) = ty {
@@ -200,7 +200,7 @@ pub(crate) fn parse_type(ty: &syn::Type, generics: &[Generic]) -> TokenStream2 {
             .map(|elem| parse_type(elem, generics))
             .collect::<Vec<_>>();
         quote! {
-            || ::agdb::type_def::Type::Tuple(&[#(#fields),*])
+            || ::agdb::type_def::Type::Tuple(vec![#(#fields),*])
         }
     } else if let syn::Type::Path(type_path) = ty {
         if type_path.qself.is_none()
@@ -328,8 +328,8 @@ pub(crate) fn parse_type(ty: &syn::Type, generics: &[Generic]) -> TokenStream2 {
             quote! {
                 || ::agdb::type_def::Type::Generic(::agdb::type_def::Generic {
                     kind: ::agdb::type_def::GenericKind::Type,
-                    name: stringify!(#ty),
-                    bounds: &[],
+                    name: stringify!(#ty).to_owned(),
+                    bounds: vec![],
                 })
             }
         } else if let syn::Type::Path(type_path) = ty
@@ -344,7 +344,7 @@ pub(crate) fn parse_type(ty: &syn::Type, generics: &[Generic]) -> TokenStream2 {
         let mutable = type_ref.mutability.is_some();
         let lifetime = if let Some(lt) = &type_ref.lifetime {
             let lt_str = lt.ident.to_string();
-            quote! { Some(#lt_str) }
+            quote! { Some(#lt_str.to_owned()) }
         } else {
             quote! { None }
         };

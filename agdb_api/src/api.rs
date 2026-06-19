@@ -489,17 +489,17 @@ mod tests {
     use std::collections::HashSet;
 
     fn collect_from_generic(g: &Generic, out: &mut Vec<fn() -> Type>) {
-        out.extend_from_slice(g.bounds);
+        out.extend_from_slice(&g.bounds);
     }
 
     fn collect_from_function(f: &Function, out: &mut Vec<fn() -> Type>) {
         out.push(f.ret);
-        for arg in f.args {
+        for arg in &f.args {
             if let Some(ty) = arg.ty {
                 out.push(ty);
             }
         }
-        for g in f.generics {
+        for g in &f.generics {
             collect_from_generic(g, out);
         }
     }
@@ -507,7 +507,7 @@ mod tests {
     fn collect_from_expression(expr: &Expression, out: &mut Vec<fn() -> Type>) {
         match expr {
             Expression::Array(items) | Expression::Tuple(items) | Expression::Block(items) => {
-                for item in *items {
+                for item in items {
                     collect_from_expression(item, out);
                 }
             }
@@ -534,13 +534,13 @@ mod tests {
                     collect_from_expression(recipient, out);
                 }
                 collect_from_expression(function, out);
-                for arg in *args {
+                for arg in args {
                     collect_from_expression(arg, out);
                 }
             }
             Expression::Closure(function) => {
                 collect_from_function(function, out);
-                for expr in function.body {
+                for expr in &function.body {
                     collect_from_expression(expr, out);
                 }
             }
@@ -557,7 +557,7 @@ mod tests {
                 collect_from_expression(body, out);
             }
             Expression::Format { args, .. } => {
-                for arg in *args {
+                for arg in args {
                     collect_from_expression(arg, out);
                 }
             }
@@ -612,20 +612,29 @@ mod tests {
             }
             Expression::Struct { name, fields } => {
                 collect_from_expression(name, out);
-                for (_, value) in *fields {
+                for (_, value) in fields {
                     collect_from_expression(value, out);
                 }
             }
             Expression::StructPattern { name, fields } => {
                 collect_from_expression(name, out);
-                for field in *fields {
+                for field in fields {
                     collect_from_expression(field, out);
                 }
             }
             Expression::TupleStruct { name, expressions } => {
                 collect_from_expression(name, out);
-                for expression in *expressions {
+                for expression in expressions {
                     collect_from_expression(expression, out);
+                }
+            }
+            Expression::Match { scrutinee, arms } => {
+                collect_from_expression(scrutinee, out);
+                for arm in arms {
+                    if let Some(guard) = &arm.guard {
+                        collect_from_expression(guard, out);
+                    }
+                    collect_from_expression(&arm.body, out);
                 }
             }
             Expression::While { condition, body } => {
@@ -650,7 +659,7 @@ mod tests {
     }
 
     fn collect_from_function_body(function: &Function, out: &mut Vec<fn() -> Type>) {
-        for expr in function.body {
+        for expr in &function.body {
             collect_from_expression(expr, out);
         }
     }
@@ -660,10 +669,10 @@ mod tests {
         if let Some(t) = i.trait_ {
             out.push(t);
         }
-        for g in i.generics {
+        for g in &i.generics {
             collect_from_generic(g, out);
         }
-        for f in i.functions {
+        for f in &i.functions {
             collect_from_function(f, out);
         }
     }
@@ -679,12 +688,12 @@ mod tests {
             Type::Pointer(p) => out.push(p.ty),
             Type::Tuple(fns) => out.extend_from_slice(fns),
             Type::Enum(e) => {
-                for v in e.variants {
+                for v in &e.variants {
                     if let Some(f) = v.ty {
                         out.push(f);
                     }
                 }
-                for g in e.generics {
+                for g in &e.generics {
                     collect_from_generic(g, out);
                 }
                 for i in &(e.impl_defs)() {
@@ -692,12 +701,12 @@ mod tests {
                 }
             }
             Type::Struct(s) => {
-                for v in s.fields {
+                for v in &s.fields {
                     if let Some(f) = v.ty {
                         out.push(f);
                     }
                 }
-                for g in s.generics {
+                for g in &s.generics {
                     collect_from_generic(g, out);
                 }
                 for i in &(s.impl_defs)() {
@@ -707,11 +716,11 @@ mod tests {
             Type::Function(f) | Type::Test(f) => collect_from_function(f, out),
             Type::Impl(i) => collect_from_impl(i, out),
             Type::Trait(t) => {
-                out.extend_from_slice(t.bounds);
-                for g in t.generics {
+                out.extend_from_slice(&t.bounds);
+                for g in &t.generics {
                     collect_from_generic(g, out);
                 }
-                for f in t.functions {
+                for f in &t.functions {
                     collect_from_function(f, out);
                 }
             }
@@ -721,18 +730,18 @@ mod tests {
         }
     }
 
-    fn type_name(ty: &Type) -> Option<&'static str> {
+    fn type_name(ty: &Type) -> Option<&str> {
         match ty {
-            Type::Struct(s) => Some(s.name),
-            Type::Enum(e) => Some(e.name),
-            Type::Trait(t) => Some(t.name),
+            Type::Struct(s) => Some(&s.name),
+            Type::Enum(e) => Some(&e.name),
+            Type::Trait(t) => Some(&t.name),
             _ => None,
         }
     }
 
-    fn collect_missing_named_types() -> Vec<&'static str> {
-        let roots = Api::types();
-        let root_names: HashSet<&'static str> = roots.iter().map(|ty| ty.name()).collect();
+    fn collect_missing_named_types() -> Vec<String> {
+        let roots = Api::type_defs();
+        let root_names: HashSet<&str> = roots.iter().map(|ty| ty.name()).collect();
 
         let mut visited: HashSet<usize> = HashSet::new();
         let mut queue: Vec<fn() -> Type> = Vec::new();
@@ -741,7 +750,7 @@ mod tests {
             collect_fn_ptrs(ty, &mut queue);
         }
 
-        let mut missing: Vec<&'static str> = Vec::new();
+        let mut missing: Vec<String> = Vec::new();
 
         while let Some(f) = queue.pop() {
             let addr = f as usize;
@@ -753,8 +762,8 @@ mod tests {
             if let Some(name) = type_name(&ty) {
                 let in_catalog = root_names.contains(name);
                 let is_external = EXTERNAL_TRAIT_ALLOWLIST.contains(&name);
-                if !in_catalog && !is_external && !missing.contains(&name) {
-                    missing.push(name);
+                if !in_catalog && !is_external && !missing.iter().any(|m| m == name) {
+                    missing.push(name.to_string());
                 }
             }
 
@@ -763,12 +772,12 @@ mod tests {
                     collect_from_function_body(function, &mut queue);
                 }
                 Type::Impl(implementation) => {
-                    for function in implementation.functions {
+                    for function in &implementation.functions {
                         collect_from_function_body(function, &mut queue);
                     }
                 }
                 Type::Trait(trait_def) => {
-                    for function in trait_def.functions {
+                    for function in &trait_def.functions {
                         collect_from_function_body(function, &mut queue);
                     }
                 }
@@ -862,38 +871,38 @@ mod tests {
         };
 
         // Verify we can derive the variant → payload type mapping programmatically
-        let mut mapping: Vec<(&str, &str)> = Vec::new();
-        for v in e.variants {
+        let mut mapping: Vec<(String, String)> = Vec::new();
+        for v in &e.variants {
             if let Some(ty_fn) = v.ty {
                 let ty = ty_fn();
-                mapping.push((v.name, ty.name()));
+                mapping.push((v.name.clone(), ty.name().to_string()));
             }
         }
 
         assert!(
             mapping
                 .iter()
-                .any(|(v, t)| *v == "InsertAlias" && *t == "InsertAliasesQuery")
+                .any(|(v, t)| v == "InsertAlias" && t == "InsertAliasesQuery")
         );
         assert!(
             mapping
                 .iter()
-                .any(|(v, t)| *v == "InsertEdges" && *t == "InsertEdgesQuery")
+                .any(|(v, t)| v == "InsertEdges" && t == "InsertEdgesQuery")
         );
         assert!(
             mapping
                 .iter()
-                .any(|(v, t)| *v == "Remove" && *t == "RemoveQuery")
+                .any(|(v, t)| v == "Remove" && t == "RemoveQuery")
         );
         assert!(
             mapping
                 .iter()
-                .any(|(v, t)| *v == "Search" && *t == "SearchQuery")
+                .any(|(v, t)| v == "Search" && t == "SearchQuery")
         );
         assert!(
             mapping
                 .iter()
-                .any(|(v, t)| *v == "SelectValues" && *t == "SelectValuesQuery")
+                .any(|(v, t)| v == "SelectValues" && t == "SelectValuesQuery")
         );
     }
 
@@ -934,7 +943,7 @@ mod tests {
             .expect("InsertNodes impl should exist");
 
         // Methods should have non-empty bodies (body parsing works)
-        for func in insert_nodes_impl[0].functions {
+        for func in &insert_nodes_impl[0].functions {
             if func.name != "new" && func.name != "default" {
                 assert!(
                     !func.body.is_empty(),

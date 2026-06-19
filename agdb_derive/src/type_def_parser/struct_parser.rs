@@ -26,9 +26,9 @@ pub(crate) fn parse_struct(input: &DeriveInput, s: &DataStruct) -> TokenStream2 
         impl #impl_generics ::agdb::type_def::TypeDefinition for #name #ty_generic #where_clause {
             fn type_def() -> ::agdb::type_def::Type {
                 ::agdb::type_def::Type::Struct(::agdb::type_def::Struct {
-                    name: stringify!(#name),
-                    generics: &[#(#generics),*],
-                    fields: &[#(#fields),*],
+                    name: stringify!(#name).to_owned(),
+                    generics: vec![#(#generics),*],
+                    fields: vec![#(#fields),*],
                     impl_defs: Self::impl_defs,
                 })
             }
@@ -44,8 +44,8 @@ fn parse_fields(fields: &Fields, generics: &[Generic]) -> Vec<TokenStream2> {
             let name = f
                 .ident
                 .as_ref()
-                .map(|ident| quote! { stringify!(#ident) })
-                .unwrap_or_else(|| quote! { "" });
+                .map(|ident| quote! { stringify!(#ident).to_owned() })
+                .unwrap_or_else(|| quote! { String::new() });
             let ty_def = generics_parser::parse_type(&f.ty, generics);
             quote! {
                 ::agdb::type_def::Variable {

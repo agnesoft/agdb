@@ -1,2 +1,2 @@
-#[allow(dead_code)]
-mod typescript;
+pub mod rewrite;
+pub mod typescript;

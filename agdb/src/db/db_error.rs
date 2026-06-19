@@ -60,19 +60,19 @@ pub struct DbError {
 impl TypeDefinition for Location<'_> {
     fn type_def() -> agdb::type_def::Type {
         agdb::type_def::Type::Struct(agdb::type_def::Struct {
-            name: "Location",
-            generics: &[],
-            fields: &[
+            name: "Location".to_string(),
+            generics: vec![],
+            fields: vec![
                 agdb::type_def::Variable {
-                    name: "file",
+                    name: "file".to_string(),
                     ty: Some(String::type_def),
                 },
                 agdb::type_def::Variable {
-                    name: "line",
+                    name: "line".to_string(),
                     ty: Some(u32::type_def),
                 },
                 agdb::type_def::Variable {
-                    name: "column",
+                    name: "column".to_string(),
                     ty: Some(u32::type_def),
                 },
             ],

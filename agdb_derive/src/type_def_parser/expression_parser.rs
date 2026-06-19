@@ -564,7 +564,7 @@ fn parse_pat_to_pattern(pat: &Pat) -> TokenStream2 {
             let fields: Vec<TokenStream2> = p.elems.iter().map(parse_pat_to_pattern).collect();
             quote! {
                 ::agdb::type_def::Pattern::Constructor {
-                    name: #name,
+                    name: #name.to_owned(),
                     fields: vec![#(#fields),*],
                 }
             }
@@ -582,7 +582,7 @@ fn parse_pat_to_pattern(pat: &Pat) -> TokenStream2 {
                 .unwrap_or_default();
             quote! {
                 ::agdb::type_def::Pattern::Constructor {
-                    name: #name,
+                    name: #name.to_owned(),
                     fields: vec![],
                 }
             }
@@ -600,12 +600,12 @@ fn parse_pat_to_pattern(pat: &Pat) -> TokenStream2 {
                 .map(|f| {
                     let field_name = f.member.to_token_stream().to_string();
                     let field_pat = parse_pat_to_pattern(&f.pat);
-                    quote! { (#field_name, #field_pat) }
+                    quote! { (#field_name.to_owned(), #field_pat) }
                 })
                 .collect();
             quote! {
                 ::agdb::type_def::Pattern::Struct {
-                    name: #name,
+                    name: #name.to_owned(),
                     fields: vec![#(#fields),*],
                 }
             }

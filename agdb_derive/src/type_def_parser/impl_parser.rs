@@ -148,20 +148,20 @@ pub(crate) fn generate_impl_defs_method(
             let ty_str = quote!(#ty).to_string();
             quote! {
                 ::agdb::type_def::Impl {
-                    name: stringify!(From),
-                    generics: &[],
+                    name: stringify!(From).to_owned(),
+                    generics: vec![],
                     trait_: Some(|| ::agdb::type_def::Type::Trait(::agdb::type_def::Trait {
-                        name: "From",
-                        generics: &[::agdb::type_def::Generic {
+                        name: "From".to_owned(),
+                        generics: vec![::agdb::type_def::Generic {
                             kind: ::agdb::type_def::GenericKind::Type,
-                            name: #ty_str,
-                            bounds: &[<#ty as ::agdb::type_def::TypeDefinition>::type_def],
+                            name: #ty_str.to_owned(),
+                            bounds: vec![<#ty as ::agdb::type_def::TypeDefinition>::type_def],
                         }],
-                        bounds: &[],
-                        functions: &[],
+                        bounds: vec![],
+                        functions: vec![],
                     })),
                     ty: || ::agdb::type_def::Type::Literal(::agdb::type_def::Literal::Unit),
-                    functions: &[],
+                    functions: vec![],
                 }
             }
         })

@@ -1422,14 +1422,14 @@ mod tests {
         match &body[1] {
             Expression::Match { scrutinee, arms } => {
                 assert!(
-                    matches!(condition.as_ref(), Expression::Binary { op: Op::Eq, .. }),
+                    matches!(scrutinee.as_ref(), Expression::Binary { op: Op::Eq, .. }),
                     "Got condition: {:?}",
-                    condition
+                    scrutinee
                 );
                 assert!(
-                    matches!(then_branch.as_ref(), Expression::Block(_)),
+                    matches!(arms[0].body.as_ref(), Expression::Block(_)),
                     "Got then: {:?}",
-                    then_branch
+                    arms[0].body
                 );
             }
             _ => panic!("Got: {:?}", body[1]),

@@ -227,11 +227,13 @@ function reqwest_client(): reqwest_Client {{
             types
                 .iter()
                 .filter_map(|t| match t {
-                    Type::Enum(e) => Some(e.name),
-                    Type::Struct(s) if !SKIP_LIST.contains(&s.name) => Some(s.name),
-                    Type::Function(f) => Some(f.name),
-                    Type::Static(s) => Some(s.name),
-                    Type::Trait(t) => Some(t.name),
+                    Type::Enum(e) => Some(e.name.as_str()),
+                    Type::Struct(s) if !SKIP_LIST.contains(&s.name.as_str()) => {
+                        Some(s.name.as_str())
+                    }
+                    Type::Function(f) => Some(f.name.as_str()),
+                    Type::Static(s) => Some(s.name.as_str()),
+                    Type::Trait(t) => Some(t.name.as_str()),
                     _ => None,
                 })
                 .collect::<Vec<_>>()
@@ -241,8 +243,8 @@ function reqwest_client(): reqwest_Client {{
 
     fn generate_type(&self, ty: &Type) -> String {
         match ty {
-            Type::Enum(e) => self.generate_enum(e, &self.type_name(ty, e.name)),
-            Type::Struct(s) => self.generate_struct(s, &self.type_name(ty, s.name)),
+            Type::Enum(e) => self.generate_enum(e, &self.type_name(ty, &e.name)),
+            Type::Struct(s) => self.generate_struct(s, &self.type_name(ty, &s.name)),
             Type::Trait(t) => self.generate_trait(t),
             Type::Function(f) => self.generate_function(f),
             Type::Static(s) => self.generate_static(s),
@@ -253,8 +255,8 @@ function reqwest_client(): reqwest_Client {{
 
     fn generate_enum(&self, e: &Enum, e_name: &str) -> String {
         let mut buffer = self.generate_enum_type(e);
-        let name = e.name;
-        let full_name = format!("{}{}", e.name, self.generate_generics_decl(e.generics));
+        let name = &e.name;
+        let full_name = format!("{}{}", e.name, self.generate_generics_decl(&e.generics));
 
         buffer.push_str(&format!(
             "export class {full_name} {{\n    value: {name}Type;\n\n",
@@ -264,7 +266,7 @@ function reqwest_client(): reqwest_Client {{
             "    constructor({name}Type: {name}Type) {{\n        this.value = {name}Type;\n    }}\n\n",
         ));
 
-        for variant in e.variants {
+        for variant in &e.variants {
             let variant_name = &variant.name;
             let variant_type =
                 self.type_name(&(variant.ty.expect("expected a type function"))(), e_name);
@@ -275,7 +277,7 @@ function reqwest_client(): reqwest_Client {{
         }
 
         for i in &(e.impl_defs)() {
-            for f in i.functions {
+            for f in &i.functions {
                 buffer.push_str(&self.generate_member_function(f, i, e_name));
             }
         }
@@ -296,7 +298,7 @@ function reqwest_client(): reqwest_Client {{
                 format!(
                     "    | {{ {}: {} }}",
                     v.name,
-                    self.type_name(&(v.ty.expect("expected a type function"))(), e.name)
+                    self.type_name(&(v.ty.expect("expected a type function"))(), &e.name)
                 )
             })
             .collect::<Vec<_>>()
@@ -309,12 +311,12 @@ function reqwest_client(): reqwest_Client {{
     }
 
     fn generate_struct(&self, s: &Struct, s_name: &str) -> String {
-        if SKIP_LIST.contains(&s.name) {
+        if SKIP_LIST.contains(&s.name.as_str()) {
             return String::new();
         }
 
         let mut buffer = String::new();
-        let full_name = format!("{}{}", s.name, self.generate_generics_decl(s.generics));
+        let full_name = format!("{}{}", s.name, self.generate_generics_decl(&s.generics));
 
         buffer.push_str(&format!("export class {full_name} {{\n",));
 
@@ -322,8 +324,8 @@ function reqwest_client(): reqwest_Client {{
             if let Some(ty) = &field.ty {
                 buffer.push_str(&format!(
                     "    public {}: {};\n",
-                    self.field_name(field.name, i),
-                    self.type_name(&(ty)(), s.name)
+                    self.field_name(&field.name, i),
+                    self.type_name(&(ty)(), &s.name)
                 ));
             }
         }
@@ -331,7 +333,7 @@ function reqwest_client(): reqwest_Client {{
         buffer.push_str(&self.generate_constructor(s));
 
         for i in &(s.impl_defs)() {
-            for f in i.functions {
+            for f in &i.functions {
                 buffer.push_str(&self.generate_member_function(f, i, s_name));
             }
         }
@@ -363,7 +365,7 @@ function reqwest_client(): reqwest_Client {{
         let bounds = g
             .bounds
             .iter()
-            .map(|b| self.type_name(&(b)(), g.name))
+            .map(|b| self.type_name(&(b)(), &g.name))
             .collect::<Vec<_>>()
             .join(" & ");
         if bounds.is_empty() {
@@ -413,8 +415,8 @@ function reqwest_client(): reqwest_Client {{
             .map(|(i, field)| {
                 format!(
                     "{}: {}",
-                    self.field_name(field.name, i),
-                    self.type_name(&(field.ty.expect("expected type function"))(), s.name)
+                    self.field_name(&field.name, i),
+                    self.type_name(&(field.ty.expect("expected type function"))(), &s.name)
                 )
             })
             .collect::<Vec<_>>()
@@ -426,8 +428,8 @@ function reqwest_client(): reqwest_Client {{
             if field.ty.is_some() {
                 buffer.push_str(&format!(
                     "        this.{} = {};\n",
-                    self.field_name(field.name, i),
-                    self.field_name(field.name, i)
+                    self.field_name(&field.name, i),
+                    self.field_name(&field.name, i)
                 ));
             }
         }
@@ -450,12 +452,12 @@ function reqwest_client(): reqwest_Client {{
             Type::Enum(e) => format!(
                 "{}{}",
                 e.name.to_owned(),
-                self.generate_generic_args_from_generics(e.generics)
+                self.generate_generic_args_from_generics(&e.generics)
             ),
             Type::Struct(s) => format!(
                 "{}{}",
                 s.name.to_owned(),
-                self.generate_generic_args_from_generics(s.generics)
+                self.generate_generic_args_from_generics(&s.generics)
             ),
             Type::Literal(l) => self.literal(l).to_string(),
             Type::Vec(inner) => format!("{}[]", self.type_name(&(inner)(), class_name)),
@@ -491,7 +493,7 @@ function reqwest_client(): reqwest_Client {{
             format!(
                 "{}{}",
                 g.name,
-                self.generate_generic_args_from_types(g.bounds)
+                self.generate_generic_args_from_types(&g.bounds)
             )
         } else {
             g.name.to_owned()
@@ -548,7 +550,7 @@ function reqwest_client(): reqwest_Client {{
         format!(
             "export interface {}{} {{\n}}\n\n",
             t.name,
-            self.generate_generics_decl(t.generics)
+            self.generate_generics_decl(&t.generics)
         )
     }
 
@@ -569,10 +571,10 @@ function reqwest_client(): reqwest_Client {{
         format!(
             "{}function {}{}({}): {} {{\n{}}}\n\n",
             async_keyword,
-            self.ts_name(f.name),
-            self.generate_generics_decl(f.generics),
+            self.ts_name(&f.name),
+            self.generate_generics_decl(&f.generics),
             self.generate_args(
-                f.args,
+                &f.args,
                 &Context {
                     ret: Some(ret.clone()),
                     error_type: error_type.clone(),
@@ -581,7 +583,7 @@ function reqwest_client(): reqwest_Client {{
             ),
             ret,
             self.generate_semicoloned_expressions(
-                f.body,
+                &f.body,
                 "    ",
                 &Context {
                     ret: Some(ret.clone()),
@@ -622,10 +624,10 @@ function reqwest_client(): reqwest_Client {{
             "    {}{}{}{}({}){} {{\n{}    }}\n\n",
             static_keyword,
             async_keyword,
-            self.ts_name(f.name),
-            self.generate_generics_decl(f.generics),
+            self.ts_name(&f.name),
+            self.generate_generics_decl(&f.generics),
             self.generate_args(
-                f.args,
+                &f.args,
                 &Context {
                     ret: Some(ret.clone()),
                     error_type: error_type.clone(),
@@ -634,7 +636,7 @@ function reqwest_client(): reqwest_Client {{
             ),
             ret,
             self.generate_semicoloned_expressions(
-                f.body,
+                &f.body,
                 "        ",
                 &Context {
                     ret: Some(ret.clone()),
@@ -701,11 +703,11 @@ function reqwest_client(): reqwest_Client {{
                 recipient,
                 function,
                 args,
-            } => self.call(*recipient, function, args, context),
+            } => self.call(recipient.as_deref(), function, args, context),
             Expression::Closure(function) => format!(
                 "({}) => {{{}}}",
-                self.generate_args(function.args, context),
-                self.generate_expressions(function.body, context)
+                self.generate_args(&function.args, context),
+                self.generate_expressions(&function.body, context)
             ),
             Expression::Continue => "continue".to_owned(),
             Expression::FieldAccess { base, field } => {
@@ -749,18 +751,20 @@ function reqwest_client(): reqwest_Client {{
                 self.generate_expression(base, context),
                 self.generate_expression(index, context)
             ),
-            Expression::Let { name, ty, value } => self.let_expression(name, *ty, *value, context),
+            Expression::Let { name, ty, value } => {
+                self.let_expression(name, *ty, value.as_deref(), context)
+            }
             Expression::Literal(literal_value) => self.literal_value(literal_value).to_owned(),
             Expression::Path {
                 ident,
                 parent,
                 generics,
-            } => self.path(ident, *parent, generics, context),
+            } => self.path(ident, parent.as_deref(), generics, context),
             Expression::Range {
                 start,
                 end,
                 inclusive,
-            } => self.range(*start, *end, *inclusive, context),
+            } => self.range(start.as_deref(), end.as_deref(), *inclusive, context),
             Expression::Reference(expression) => self.generate_expression(expression, context),
             Expression::Return(expression) => {
                 if let Some(expression) = expression {
@@ -836,10 +840,10 @@ function reqwest_client(): reqwest_Client {{
                                 format!(
                                     "if ({}) {{\n{}\n}}",
                                     self.generate_expression(guard, context),
-                                    self.generate_expression(arm.body, context)
+                                    self.generate_expression(&arm.body, context)
                                 )
                             } else {
-                                self.generate_expression(arm.body, context)
+                                self.generate_expression(&arm.body, context)
                             }
                         )
                     })
@@ -887,8 +891,8 @@ function reqwest_client(): reqwest_Client {{
 
     fn generate_format_string(
         &self,
-        format_string: &&'static str,
-        args: &&'static [Expression],
+        format_string: &str,
+        args: &[Expression],
         context: &Context,
     ) -> String {
         format!(
@@ -960,8 +964,8 @@ function reqwest_client(): reqwest_Client {{
 
     fn generate_static(&self, s: &Static) -> String {
         let ty_name = self.type_name(&(s.ty)(), "this");
-        let ts_name = self.ts_name(s.name);
-        let expr = self.generate_expressions(s.value, &Context::default());
+        let ts_name = self.ts_name(&s.name);
+        let expr = self.generate_expressions(&s.value, &Context::default());
         let declarator = if expr.contains("OnceLock") || ty_name == "AtomicU16" {
             "let"
         } else {
@@ -988,13 +992,7 @@ function reqwest_client(): reqwest_Client {{
         }
     }
 
-    fn binary(
-        &self,
-        op: Op,
-        left: &'static Expression,
-        right: &'static Expression,
-        context: &Context,
-    ) -> String {
+    fn binary(&self, op: Op, left: &Expression, right: &Expression, context: &Context) -> String {
         format!(
             "{} {} {}",
             self.generate_expression(left, context),
@@ -1005,9 +1003,9 @@ function reqwest_client(): reqwest_Client {{
 
     fn call(
         &self,
-        recipient: Option<&'static Expression>,
-        function: &'static Expression,
-        args: &'static [Expression],
+        recipient: Option<&Expression>,
+        function: &Expression,
+        args: &[Expression],
         context: &Context,
     ) -> String {
         let f = self.generate_expression(function, context);
@@ -1086,9 +1084,9 @@ function reqwest_client(): reqwest_Client {{
 
     fn path(
         &self,
-        ident: &'static str,
-        parent: Option<&'static Expression>,
-        generics: &'static [fn() -> Type],
+        ident: &str,
+        parent: Option<&Expression>,
+        generics: &[fn() -> Type],
         context: &Context,
     ) -> String {
         let parent = if let Some(parent) = parent {
@@ -1105,7 +1103,7 @@ function reqwest_client(): reqwest_Client {{
         format!("{parent}{ident}{generics}")
     }
 
-    fn constructor(&self, name: &str, fields: &'static [Pattern]) -> String {
+    fn constructor(&self, name: &str, fields: &[Pattern]) -> String {
         if name == "AtomicU16" {
             return self.generate_pattern(&fields[0]);
         }
@@ -1123,9 +1121,9 @@ function reqwest_client(): reqwest_Client {{
 
     fn for_loop(
         &self,
-        pattern: &'static Expression,
-        iterable: &'static Expression,
-        body: &'static Expression,
+        pattern: &Expression,
+        iterable: &Expression,
+        body: &Expression,
         context: &Context,
     ) -> String {
         if let Expression::Range {
@@ -1136,7 +1134,7 @@ function reqwest_client(): reqwest_Client {{
         {
             return format!(
                 "{} {}",
-                self.range(*start, *end, *inclusive, context),
+                self.range(start.as_deref(), end.as_deref(), *inclusive, context),
                 self.generate_expression(body, context)
             );
         }
@@ -1151,8 +1149,8 @@ function reqwest_client(): reqwest_Client {{
 
     fn range(
         &self,
-        start: Option<&'static Expression>,
-        end: Option<&'static Expression>,
+        start: Option<&Expression>,
+        end: Option<&Expression>,
         inclusive: bool,
         context: &Context,
     ) -> String {
@@ -1174,9 +1172,9 @@ function reqwest_client(): reqwest_Client {{
 
     fn let_expression(
         &self,
-        name: &'static Expression,
+        name: &Expression,
         ty: Option<fn() -> Type>,
-        value: Option<&'static Expression>,
+        value: Option<&Expression>,
         context: &Context,
     ) -> String {
         if let Some(value) = value

@@ -282,8 +282,8 @@ pub(crate) fn parse_type(ty: &syn::Type, generics: &[Generic]) -> TokenStream2 {
                     return quote! {
                         || ::agdb::type_def::Type::Generic(::agdb::type_def::Generic {
                             kind: ::agdb::type_def::GenericKind::Argument,
-                            name: stringify!(#last_ident),
-                            bounds: &[#(#type_args),*],
+                            name: stringify!(#last_ident).to_owned(),
+                            bounds: vec![#(#type_args),*],
                         })
                     };
                 }
@@ -318,8 +318,8 @@ pub(crate) fn parse_type(ty: &syn::Type, generics: &[Generic]) -> TokenStream2 {
             return quote! {
                 || ::agdb::type_def::Type::Generic(::agdb::type_def::Generic {
                     kind: ::agdb::type_def::GenericKind::Type,
-                    name: stringify!(#ty),
-                    bounds: &[#(#type_args),*],
+                    name: stringify!(#ty).to_owned(),
+                    bounds: vec![#(#type_args),*],
                 })
             };
         }

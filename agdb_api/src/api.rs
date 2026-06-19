@@ -646,15 +646,6 @@ mod tests {
             | Expression::Ident(_)
             | Expression::Literal(_)
             | Expression::Wild => {}
-            Expression::Match { scrutinee, arms } => {
-                collect_from_expression(scrutinee, out);
-                for arm in *arms {
-                    if let Some(guard) = arm.guard {
-                        collect_from_expression(guard, out);
-                    }
-                    collect_from_expression(arm.body, out);
-                }
-            }
         }
     }
 
@@ -740,7 +731,7 @@ mod tests {
     }
 
     fn collect_missing_named_types() -> Vec<String> {
-        let roots = Api::type_defs();
+        let roots = Api::types();
         let root_names: HashSet<&str> = roots.iter().map(|ty| ty.name()).collect();
 
         let mut visited: HashSet<usize> = HashSet::new();

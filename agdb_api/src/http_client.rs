@@ -50,9 +50,9 @@ impl std::ops::DerefMut for ReqwestClientTypeDef {
 impl TypeDefinition for ReqwestClientTypeDef {
     fn type_def() -> Type {
         Type::Struct(agdb::type_def::Struct {
-            name: "reqwest::Client",
-            generics: &[],
-            fields: &[],
+            name: "reqwest::Client".to_owned(),
+            generics: vec![],
+            fields: vec![],
             impl_defs: Vec::new,
         })
     }

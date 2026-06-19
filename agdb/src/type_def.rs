@@ -8,25 +8,27 @@ pub mod trait_def;
 pub use enum_def::Enum;
 pub use expression_def::Expression;
 pub use expression_def::LiteralValue;
+pub use expression_def::MatchArm;
 pub use expression_def::Op;
+pub use expression_def::Pattern;
 pub use function_def::Function;
 pub use impl_def::Impl;
 pub use struct_def::Struct;
 pub use trait_def::Trait;
 
-pub type Tuple = &'static [fn() -> Type];
+pub type Tuple = Vec<fn() -> Type>;
 
 pub trait TypeDefinition {
     fn type_def() -> Type;
 
-    fn generic_type_names() -> Vec<&'static str> {
+    fn generic_type_names() -> Vec<String> {
         match Self::type_def() {
-            Type::Enum(e) => e.generics.iter().map(|g| g.name).collect(),
-            Type::Function(f) => f.generics.iter().map(|g| g.name).collect(),
-            Type::Test(f) => f.generics.iter().map(|g| g.name).collect(),
-            Type::Struct(s) => s.generics.iter().map(|g| g.name).collect(),
-            Type::Trait(t) => t.generics.iter().map(|g| g.name).collect(),
-            Type::Impl(i) => i.generics.iter().map(|g| g.name).collect(),
+            Type::Enum(e) => e.generics.into_iter().map(|g| g.name).collect(),
+            Type::Function(f) => f.generics.into_iter().map(|g| g.name).collect(),
+            Type::Test(f) => f.generics.into_iter().map(|g| g.name).collect(),
+            Type::Struct(s) => s.generics.into_iter().map(|g| g.name).collect(),
+            Type::Trait(t) => t.generics.into_iter().map(|g| g.name).collect(),
+            Type::Impl(i) => i.generics.into_iter().map(|g| g.name).collect(),
             _ => vec![],
         }
     }
@@ -53,25 +55,25 @@ pub enum Type {
     Static(Static),
     Struct(Struct),
     Trait(Trait),
-    Tuple(&'static [fn() -> Type]),
+    Tuple(Vec<fn() -> Type>),
     Vec(fn() -> Type),
 }
 
-#[derive(Debug, agdb::TypeDef)]
+#[derive(Debug, Clone, agdb::TypeDef)]
 pub struct Static {
-    pub name: &'static str,
+    pub name: String,
     pub ty: fn() -> Type,
-    pub value: &'static [Expression],
+    pub value: Vec<Expression>,
 }
 
 impl Type {
-    pub fn name(&self) -> &'static str {
+    pub fn name(&self) -> &str {
         match self {
-            Type::Enum(e) => e.name,
+            Type::Enum(e) => &e.name,
             Type::Function(_) => "fn",
             Type::Test(_) => "test",
-            Type::Generic(g) => g.name,
-            Type::Impl(i) => i.name,
+            Type::Generic(g) => &g.name,
+            Type::Impl(i) => &i.name,
             Type::Literal(l) => l.name(),
             Type::Option(_) => "Option",
             Type::Pointer(_) => "Pointer",
@@ -79,58 +81,59 @@ impl Type {
             Type::Result { .. } => "Result",
             Type::SelfType(_) => "Self",
             Type::Slice(_) => "Slice",
-            Type::Static(s) => s.name,
-            Type::Struct(s) => s.name,
-            Type::Trait(t) => t.name,
+            Type::Static(s) => &s.name,
+            Type::Struct(s) => &s.name,
+            Type::Trait(t) => &t.name,
             Type::Tuple(_) => "Tuple",
             Type::Vec(_) => "Vec",
         }
     }
 
     #[allow(dead_code)]
-    pub fn functions(&self) -> &'static [Function] {
+    pub fn functions(&self) -> &[Function] {
         match self {
-            Type::Impl(i) => i.functions,
-            Type::Trait(t) => t.functions,
+            Type::Impl(i) => &i.functions,
+            Type::Trait(t) => &t.functions,
             _ => &[],
         }
     }
 }
 
-#[derive(Debug, agdb::TypeDef)]
+#[derive(Debug, Clone, agdb::TypeDef)]
 pub struct Variable {
-    pub name: &'static str,
+    pub name: String,
     pub ty: Option<fn() -> Type>,
 }
 
-#[derive(Debug, agdb::TypeDef)]
+#[derive(Debug, Clone, agdb::TypeDef)]
 pub struct Generic {
     pub kind: GenericKind,
-    pub name: &'static str,
-    pub bounds: &'static [fn() -> Type],
+    pub name: String,
+    pub bounds: Vec<fn() -> Type>,
 }
 
-#[derive(Debug, agdb::TypeDef)]
+#[derive(Debug, Clone, Copy, agdb::TypeDef)]
 pub enum GenericKind {
+    Argument,
     Type,
     Lifetime,
     Const,
 }
 
-#[derive(Debug, agdb::TypeDef)]
+#[derive(Debug, Clone, agdb::TypeDef)]
 pub struct Reference {
     pub mutable: bool,
-    pub lifetime: Option<&'static str>,
+    pub lifetime: Option<String>,
     pub ty: fn() -> Type,
 }
 
-#[derive(Debug, agdb::TypeDef)]
+#[derive(Debug, Clone, agdb::TypeDef)]
 pub struct Pointer {
     pub kind: PointerKind,
     pub ty: fn() -> Type,
 }
 
-#[derive(Debug, agdb::TypeDef)]
+#[derive(Debug, Clone, Copy, agdb::TypeDef)]
 pub enum PointerKind {
     Arc,
     ArcWeak,
@@ -149,9 +152,10 @@ pub enum PointerKind {
     RefCell,
     RwLock,
     UnsafeCell,
+    Weak,
 }
 
-#[derive(Debug, agdb::TypeDef)]
+#[derive(Debug, Clone, Copy, agdb::TypeDef)]
 pub enum Literal {
     Bool,
     F32,
@@ -282,7 +286,7 @@ where
 
 impl<T: TypeDefinition, V: TypeDefinition> TypeDefinition for (T, V) {
     fn type_def() -> Type {
-        Type::Tuple(&[T::type_def, V::type_def])
+        Type::Tuple(vec![T::type_def, V::type_def])
     }
 }
 
@@ -304,10 +308,10 @@ impl<const N: usize, T: TypeDefinition> TypeDefinition for [T; N] {
 impl TypeDefinition for std::path::PathBuf {
     fn type_def() -> Type {
         Type::Struct(Struct {
-            name: "PathBuf",
-            generics: &[],
-            fields: &[Variable {
-                name: "inner",
+            name: "PathBuf".to_owned(),
+            generics: vec![],
+            fields: vec![Variable {
+                name: "inner".to_owned(),
                 ty: Some(|| Type::Vec(u8::type_def)),
             }],
             impl_defs: Vec::new,
@@ -318,15 +322,15 @@ impl TypeDefinition for std::path::PathBuf {
 impl TypeDefinition for std::time::Duration {
     fn type_def() -> Type {
         Type::Struct(Struct {
-            name: "Duration",
-            generics: &[],
-            fields: &[
+            name: "Duration".to_owned(),
+            generics: vec![],
+            fields: vec![
                 Variable {
-                    name: "secs",
+                    name: "secs".to_owned(),
                     ty: Some(|| Type::Literal(Literal::U64)),
                 },
                 Variable {
-                    name: "nanos",
+                    name: "nanos".to_owned(),
                     ty: Some(|| Type::Literal(Literal::U32)),
                 },
             ],
@@ -338,10 +342,10 @@ impl TypeDefinition for std::time::Duration {
 impl TypeDefinition for std::sync::atomic::AtomicU16 {
     fn type_def() -> Type {
         Type::Struct(Struct {
-            name: "AtomicU16",
-            generics: &[],
-            fields: &[Variable {
-                name: "value",
+            name: "AtomicU16".to_owned(),
+            generics: vec![],
+            fields: vec![Variable {
+                name: "value".to_owned(),
                 ty: Some(|| Type::Literal(Literal::U16)),
             }],
             impl_defs: Vec::new,
@@ -382,19 +386,19 @@ macro_rules! impl_type_def_fn_ptr {
             impl<R: TypeDefinition, $($arg: TypeDefinition),*> TypeDefinition for fn($($arg),*) -> R {
                 fn type_def() -> Type {
                     Type::Function(Function {
-                        name: "",
-                        generics: &[],
-                        args: &[
+                        name: String::new(),
+                        generics: vec![],
+                        args: vec![
                             $(
                                 Variable {
-                                    name: "",
+                                    name: String::new(),
                                     ty: Some(<$arg as TypeDefinition>::type_def),
                                 }
                             ),*
                         ],
                         ret: <R as TypeDefinition>::type_def,
                         async_fn: false,
-                        body: &[],
+                        body: vec![],
                     })
                 }
             }

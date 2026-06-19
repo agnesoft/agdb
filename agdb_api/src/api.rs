@@ -578,7 +578,7 @@ mod tests {
         }
     }
 
-    fn type_name<'a>(ty: &'a Type) -> Option<&'a str> {
+    fn type_name(ty: &Type) -> Option<&str> {
         match ty {
             Type::Struct(s) => Some(&s.name),
             Type::Enum(e) => Some(&e.name),

@@ -319,7 +319,7 @@ mod tests {
     }
 
     #[test]
-    fn pipeline_order_matters() {
+    fn pipeline_order_does_not_change_result_for_commuting_rewrites() {
         let mut expr = Expression::Reference(Box::new(Expression::Literal(LiteralValue::I32(3))));
         let pipeline = RewritePipeline::new(vec![Box::new(DoubleLiterals), Box::new(StripRef)]);
         pipeline.rewrite_expr(&mut expr, &RewriteContext::default());

@@ -38,7 +38,11 @@ fn is_atomic_constructor(function: &Expression) -> bool {
         function,
         Expression::Path { ident, parent: Some(parent), .. }
             if ident == "new"
-            && matches!(parent.as_ref(), Expression::Ident(name) if name.starts_with("Atomic"))
+                && matches!(
+                    parent.as_ref(),
+                    Expression::Ident(name) | Expression::Path { ident: name, .. }
+                        if name.starts_with("Atomic")
+                )
     )
 }
 
@@ -64,7 +68,11 @@ mod tests {
             recipient: None,
             function: Box::new(Expression::Path {
                 ident: "new".to_owned(),
-                parent: Some(Box::new(Expression::Ident("AtomicU16".to_owned()))),
+                parent: Some(Box::new(Expression::Path {
+                    ident: "AtomicU16".to_owned(),
+                    parent: None,
+                    generics: vec![],
+                })),
                 generics: vec![],
             }),
             args: vec![Expression::Literal(LiteralValue::I32(0))],

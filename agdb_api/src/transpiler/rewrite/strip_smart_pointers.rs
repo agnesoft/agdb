@@ -48,7 +48,11 @@ mod tests {
             recipient: None,
             function: Box::new(Expression::Path {
                 ident: method.to_owned(),
-                parent: Some(Box::new(Expression::Ident(ty.to_owned()))),
+                parent: Some(Box::new(Expression::Path {
+                    ident: ty.to_owned(),
+                    parent: None,
+                    generics: vec![],
+                })),
                 generics: vec![],
             }),
             args: vec![arg],

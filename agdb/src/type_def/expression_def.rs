@@ -1,7 +1,7 @@
 use crate::type_def::Function;
 use crate::type_def::Type;
 
-#[derive(Debug, Clone, agdb::TypeDef)]
+#[derive(Debug, Clone, Default, agdb::TypeDef)]
 pub enum Expression {
     Array(Vec<Expression>),
     Assign {
@@ -94,6 +94,7 @@ pub enum Expression {
         condition: Box<Expression>,
         body: Box<Expression>,
     },
+    #[default]
     Wild,
 }
 

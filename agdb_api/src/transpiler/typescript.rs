@@ -1,3 +1,7 @@
+mod rewrite_ts_api;
+mod rewrite_ts_identifiers;
+mod rewrite_ts_methods;
+
 use agdb::type_def::Enum;
 use agdb::type_def::Expression;
 use agdb::type_def::Function;
@@ -14,6 +18,17 @@ use agdb::type_def::Trait;
 use agdb::type_def::Type;
 use agdb::type_def::Variable;
 
+use super::rewrite::RewriteContext;
+use super::rewrite::RewritePipeline;
+use super::rewrite::StripAtomics;
+use super::rewrite::StripMemoryManagement;
+use super::rewrite::StripPointerTypes;
+use super::rewrite::StripReferences;
+use super::rewrite::StripSmartPointers;
+use rewrite_ts_api::RewriteTsApi;
+use rewrite_ts_identifiers::RewriteTsIdentifiers;
+use rewrite_ts_methods::RewriteTsMethods;
+
 const SKIP_LIST: &[&str] = &["reqwest_Client", "PathBuf", "Duration", "AtomicU16"];
 
 #[derive(Default)]
@@ -23,14 +38,43 @@ struct Context {
     ty: Option<String>,
 }
 
-struct Typescript {
+fn pipeline() -> RewritePipeline {
+    RewritePipeline::new(vec![
+        Box::new(StripSmartPointers),
+        Box::new(StripAtomics),
+        Box::new(StripReferences),
+        Box::new(StripMemoryManagement),
+        Box::new(RewriteTsMethods),
+        Box::new(RewriteTsApi),
+        Box::new(RewriteTsIdentifiers),
+        Box::new(StripPointerTypes),
+    ])
+}
+
+pub struct Typescript {
     types: Vec<Type>,
     tests: Vec<(String, Vec<Type>)>,
+    pipeline: RewritePipeline,
 }
 
 impl Typescript {
     pub fn new(types: Vec<Type>, tests: Vec<(String, Vec<Type>)>) -> Self {
-        Self { types, tests }
+        Self {
+            types,
+            tests,
+            pipeline: pipeline(),
+        }
+    }
+
+    fn rewrite_body(&self, body: &[Expression], context: &Context) -> Vec<Expression> {
+        let mut rewritten = body.to_vec();
+        let ctx = RewriteContext {
+            current_type: context.ty.clone(),
+            current_function: None,
+            error_type: context.error_type.clone(),
+        };
+        self.pipeline.rewrite_exprs(&mut rewritten, &ctx);
+        rewritten
     }
 
     pub fn generate(&self) -> String {
@@ -243,8 +287,8 @@ function reqwest_client(): reqwest_Client {{
 
     fn generate_type(&self, ty: &Type) -> String {
         match ty {
-            Type::Enum(e) => self.generate_enum(e, &self.type_name(ty, &e.name)),
-            Type::Struct(s) => self.generate_struct(s, &self.type_name(ty, &s.name)),
+            Type::Enum(e) => self.generate_enum(e, &self.emit_type(ty, &e.name)),
+            Type::Struct(s) => self.generate_struct(s, &self.emit_type(ty, &s.name)),
             Type::Trait(t) => self.generate_trait(t),
             Type::Function(f) => self.generate_function(f),
             Type::Static(s) => self.generate_static(s),
@@ -269,7 +313,7 @@ function reqwest_client(): reqwest_Client {{
         for variant in &e.variants {
             let variant_name = &variant.name;
             let variant_type =
-                self.type_name(&(variant.ty.expect("expected a type function"))(), e_name);
+                self.type_name(variant.ty.expect("expected a type function"), e_name);
 
             buffer.push_str(&format!(
                 "    static {variant_name}(value: {variant_type}): {name} {{\n        return new {name}({{ {variant_name}: value }});\n    }}\n\n",
@@ -298,7 +342,7 @@ function reqwest_client(): reqwest_Client {{
                 format!(
                     "    | {{ {}: {} }}",
                     v.name,
-                    self.type_name(&(v.ty.expect("expected a type function"))(), &e.name)
+                    self.type_name(v.ty.expect("expected a type function"), &e.name)
                 )
             })
             .collect::<Vec<_>>()
@@ -325,7 +369,7 @@ function reqwest_client(): reqwest_Client {{
                 buffer.push_str(&format!(
                     "    public {}: {};\n",
                     self.field_name(&field.name, i),
-                    self.type_name(&(ty)(), &s.name)
+                    self.type_name(*ty, &s.name)
                 ));
             }
         }
@@ -365,7 +409,7 @@ function reqwest_client(): reqwest_Client {{
         let bounds = g
             .bounds
             .iter()
-            .map(|b| self.type_name(&(b)(), &g.name))
+            .map(|b| self.type_name(*b, &g.name))
             .collect::<Vec<_>>()
             .join(" & ");
         if bounds.is_empty() {
@@ -384,7 +428,7 @@ function reqwest_client(): reqwest_Client {{
             "<{}>",
             types
                 .iter()
-                .map(|t| self.type_name(&t(), "this"))
+                .map(|t| self.type_name(*t, "this"))
                 .collect::<Vec<_>>()
                 .join(", ")
         )
@@ -416,7 +460,7 @@ function reqwest_client(): reqwest_Client {{
                 format!(
                     "{}: {}",
                     self.field_name(&field.name, i),
-                    self.type_name(&(field.ty.expect("expected type function"))(), &s.name)
+                    self.type_name(field.ty.expect("expected type function"), &s.name)
                 )
             })
             .collect::<Vec<_>>()
@@ -447,7 +491,17 @@ function reqwest_client(): reqwest_Client {{
         }
     }
 
-    fn type_name(&self, ty: &Type, class_name: &str) -> String {
+    fn type_name(&self, ty: fn() -> Type, class_name: &str) -> String {
+        let mut rewritten = ty();
+        let ctx = RewriteContext {
+            current_type: Some(class_name.to_owned()),
+            ..Default::default()
+        };
+        self.pipeline.rewrite_type(&mut rewritten, &ctx);
+        self.emit_type(&rewritten, class_name)
+    }
+
+    fn emit_type(&self, ty: &Type, class_name: &str) -> String {
         match ty {
             Type::Enum(e) => format!(
                 "{}{}",
@@ -460,27 +514,29 @@ function reqwest_client(): reqwest_Client {{
                 self.generate_generic_args_from_generics(&s.generics)
             ),
             Type::Literal(l) => self.literal(l).to_string(),
-            Type::Vec(inner) => format!("{}[]", self.type_name(&(inner)(), class_name)),
+            Type::Vec(inner) => format!("{}[]", self.type_name(*inner, class_name)),
             Type::Function(f) => f.name.to_owned(),
             Type::Test(f) => f.name.to_owned(),
             Type::Generic(g) => self.type_name_generic(g),
             Type::Impl(_) => panic!("impl block does not have a name"),
-            Type::Option(inner) => format!("Option<{}>", self.type_name(&(inner)(), class_name)),
-            Type::Pointer(p) => self.type_name(&(p.ty)(), class_name),
-            Type::Reference(r) => self.type_name(&(r.ty)(), class_name),
+            Type::Option(inner) => {
+                format!("Option<{}>", self.type_name(*inner, class_name))
+            }
+            Type::Pointer(p) => self.type_name(p.ty, class_name),
+            Type::Reference(r) => self.type_name(r.ty, class_name),
             Type::Result { ok, err } => format!(
                 "Result<{}, {}>",
-                self.type_name(&(ok)(), class_name),
-                self.type_name(&(err)(), class_name)
+                self.type_name(*ok, class_name),
+                self.type_name(*err, class_name)
             ),
             Type::SelfType(_) => class_name.to_owned(),
-            Type::Slice(s) => format!("{}[]", self.type_name(&(s)(), class_name)),
-            Type::Static(s) => self.type_name(&(s.ty)(), class_name),
+            Type::Slice(s) => format!("{}[]", self.type_name(*s, class_name)),
+            Type::Static(s) => self.type_name(s.ty, class_name),
             Type::Trait(t) => t.name.to_owned(),
             Type::Tuple(items) => {
                 let types = items
                     .iter()
-                    .map(|item| self.type_name(&(item)(), class_name))
+                    .map(|item| self.type_name(*item, class_name))
                     .collect::<Vec<_>>()
                     .join(", ");
                 format!("[{}]", types)
@@ -555,47 +611,38 @@ function reqwest_client(): reqwest_Client {{
     }
 
     fn generate_function(&self, f: &Function) -> String {
-        let ret = self.type_name(&(f.ret)(), "this");
+        let ret = self.type_name(f.ret, "this");
         let ret = if f.async_fn {
             format!("Promise<{}>", ret)
         } else {
             ret
         };
-        let error_type = if let Type::Result { ok: _, err } = &(f.ret)() {
-            Some(self.type_name(&(err)(), "this"))
+        let error_type = if let Type::Result { ok: _, err } = (f.ret)() {
+            Some(self.type_name(err, "this"))
         } else {
             None
         };
         let async_keyword = if f.async_fn { "async " } else { "" };
+        let context = Context {
+            ret: Some(ret.clone()),
+            error_type,
+            ty: None,
+        };
+        let body = self.rewrite_body(&f.body, &context);
 
         format!(
             "{}function {}{}({}): {} {{\n{}}}\n\n",
             async_keyword,
             self.ts_name(&f.name),
             self.generate_generics_decl(&f.generics),
-            self.generate_args(
-                &f.args,
-                &Context {
-                    ret: Some(ret.clone()),
-                    error_type: error_type.clone(),
-                    ty: None,
-                }
-            ),
+            self.generate_args(&f.args, &context),
             ret,
-            self.generate_semicoloned_expressions(
-                &f.body,
-                "    ",
-                &Context {
-                    ret: Some(ret.clone()),
-                    error_type,
-                    ty: None,
-                }
-            ),
+            self.generate_semicoloned_expressions(&body, "    ", &context),
         )
     }
 
     fn generate_member_function(&self, f: &Function, _i: &Impl, class_name: &str) -> String {
-        let ret = self.type_name(&(f.ret)(), class_name);
+        let ret = self.type_name(f.ret, class_name);
         let ret = if ret == "this" {
             class_name.to_owned()
         } else {
@@ -606,8 +653,8 @@ function reqwest_client(): reqwest_Client {{
         } else {
             format!(": {ret}")
         };
-        let error_type = if let Type::Result { ok: _, err } = &(f.ret)() {
-            Some(self.type_name(&(err)(), class_name))
+        let error_type = if let Type::Result { ok: _, err } = (f.ret)() {
+            Some(self.type_name(err, class_name))
         } else {
             None
         };
@@ -619,6 +666,12 @@ function reqwest_client(): reqwest_Client {{
         } else {
             "static "
         };
+        let context = Context {
+            ret: Some(ret.clone()),
+            error_type,
+            ty: Some(class_name.to_string()),
+        };
+        let body = self.rewrite_body(&f.body, &context);
 
         format!(
             "    {}{}{}{}({}){} {{\n{}    }}\n\n",
@@ -626,24 +679,9 @@ function reqwest_client(): reqwest_Client {{
             async_keyword,
             self.ts_name(&f.name),
             self.generate_generics_decl(&f.generics),
-            self.generate_args(
-                &f.args,
-                &Context {
-                    ret: Some(ret.clone()),
-                    error_type: error_type.clone(),
-                    ty: Some(class_name.to_string()),
-                }
-            ),
+            self.generate_args(&f.args, &context),
             ret,
-            self.generate_semicoloned_expressions(
-                &f.body,
-                "        ",
-                &Context {
-                    ret: Some(ret.clone()),
-                    error_type,
-                    ty: Some(class_name.to_string()),
-                }
-            ),
+            self.generate_semicoloned_expressions(&body, "        ", &context),
         )
     }
 
@@ -706,7 +744,7 @@ function reqwest_client(): reqwest_Client {{
             } => self.call(recipient.as_deref(), function, args, context),
             Expression::Closure(function) => format!(
                 "({}) => {{{}}}",
-                self.generate_args(&function.args, context),
+                self.generate_closure_args(&function.args, context),
                 self.generate_expressions(&function.body, context)
             ),
             Expression::Continue => "continue".to_owned(),
@@ -722,13 +760,7 @@ function reqwest_client(): reqwest_Client {{
                 format_string,
                 args,
             } => self.generate_format_string(format_string, args, context),
-            Expression::Ident(i) => {
-                if *i == "self" {
-                    "this".to_owned()
-                } else {
-                    (*i).to_owned()
-                }
-            }
+            Expression::Ident(i) => (*i).to_owned(),
             Expression::If {
                 condition,
                 then_branch,
@@ -818,11 +850,15 @@ function reqwest_client(): reqwest_Client {{
             Expression::TupleAccess { base, index } => {
                 format!("{}[{}]", self.generate_expression(base, context), index)
             }
-            Expression::Unary { op, expr } => format!(
-                "{}{}",
-                self.generate_op(*op),
-                self.generate_expression(expr, context)
-            ),
+            Expression::Unary { op, expr } => {
+                let inner = self.generate_expression(expr, context);
+                let needs_parens = matches!(expr.as_ref(), Expression::Binary { .. });
+                if needs_parens {
+                    format!("{}({})", self.generate_op(*op), inner)
+                } else {
+                    format!("{}{}", self.generate_op(*op), inner)
+                }
+            }
             Expression::While { condition, body } => format!(
                 "while ({}) {{\n{}\n}}",
                 self.generate_expression(condition, context),
@@ -953,7 +989,7 @@ function reqwest_client(): reqwest_Client {{
                 }
 
                 let ty = self.type_name(
-                    &(arg.ty.expect("expected type function"))(),
+                    arg.ty.expect("expected type function"),
                     context.ty.as_deref().unwrap_or_default(),
                 );
                 Some(format!("{}: {ty}", arg.name))
@@ -962,27 +998,47 @@ function reqwest_client(): reqwest_Client {{
             .join(", ")
     }
 
+    fn generate_closure_args(&self, args: &[Variable], context: &Context) -> String {
+        args.iter()
+            .filter_map(|arg| {
+                if arg.name == "self" {
+                    return None;
+                }
+
+                if let Some(ty_fn) = arg.ty {
+                    let ty = (ty_fn)();
+                    if matches!(ty, Type::Literal(agdb::type_def::Literal::Unit)) {
+                        return Some(format!("{}: any", arg.name));
+                    }
+                    let ty = self.type_name(ty_fn, context.ty.as_deref().unwrap_or_default());
+                    Some(format!("{}: {ty}", arg.name))
+                } else {
+                    Some(format!("{}: any", arg.name))
+                }
+            })
+            .collect::<Vec<_>>()
+            .join(", ")
+    }
+
     fn generate_static(&self, s: &Static) -> String {
-        let ty_name = self.type_name(&(s.ty)(), "this");
+        let raw_ty = (s.ty)();
+        let is_once_lock = matches!(&raw_ty, Type::Pointer(p) if matches!(p.kind, agdb::type_def::PointerKind::OnceLock));
+        let is_atomic = matches!(&raw_ty, Type::Struct(st) if st.name.starts_with("Atomic"));
+        let mutable = is_once_lock || is_atomic;
+
         let ts_name = self.ts_name(&s.name);
-        let expr = self.generate_expressions(&s.value, &Context::default());
-        let declarator = if expr.contains("OnceLock") || ty_name == "AtomicU16" {
-            "let"
-        } else {
-            "const"
-        };
-        let ty = if ty_name == "AtomicU16" {
-            "number".to_owned()
-        } else {
-            ty_name
-        };
-        let e = if expr.contains("OnceLock") {
+        let context = Context::default();
+        let body = self.rewrite_body(&s.value, &context);
+
+        let declarator = if mutable { "let" } else { "const" };
+        let ty = self.type_name(s.ty, "this");
+        let initializer = if is_once_lock {
             String::new()
         } else {
-            format!(" = {expr}")
+            format!(" = {}", self.generate_expressions(&body, &context))
         };
 
-        format!("export {declarator} {ts_name}: {ty}{e};\n\n")
+        format!("export {declarator} {ts_name}: {ty}{initializer};\n\n")
     }
 
     fn ts_name<'a>(&self, name: &'a str) -> &'a str {
@@ -1013,64 +1069,6 @@ function reqwest_client(): reqwest_Client {{
             .map(|r| self.generate_expression(r, context))
             .unwrap_or_default();
 
-        match f.as_str() {
-            "AtomicU16.new" => {
-                return self.generate_expression(&args[0], context);
-            }
-            "Arc.downgrade" => {
-                return self.generate_expression(&args[0], context);
-            }
-            "Arc.new" => {
-                return self.generate_expression(&args[0], context);
-            }
-            "bail" if let Some(error_type) = &context.error_type => {
-                return format!(
-                    "Err(new {}({}))",
-                    error_type,
-                    self.generate_expression(&args[0], context)
-                );
-            }
-            "fetch_add" => {
-                return self.binary(
-                    Op::AddAssign,
-                    recipient.expect("fetch_add must have a recipient"),
-                    &args[0],
-                    context,
-                );
-            }
-            "get_or_init" => {
-                return rec;
-            }
-            "is_empty" => {
-                return format!("{rec}.length === 0");
-            }
-            "len" => {
-                return format!("{rec}.length");
-            }
-            "map_err" => {
-                return rec;
-            }
-            "serde_json.from_str" => {
-                return format!(
-                    "JSON.parse({})",
-                    self.generate_expression(&args[0], context)
-                );
-            }
-            "std.thread.sleep" => {
-                return format!(
-                    "await std.thread.sleep({})",
-                    self.generate_expression(&args[0], context)
-                );
-            }
-            "upgrade" => {
-                return rec;
-            }
-            "write" => {
-                return rec;
-            }
-            _ => {}
-        }
-
         let rec = if !rec.is_empty() {
             format!("{}.", rec)
         } else {
@@ -1095,19 +1093,10 @@ function reqwest_client(): reqwest_Client {{
             String::new()
         };
         let generics = self.generate_generic_args_from_types(generics);
-        let ident = if ident == "Self" {
-            context.ty.as_deref().unwrap_or(ident)
-        } else {
-            ident
-        };
         format!("{parent}{ident}{generics}")
     }
 
     fn constructor(&self, name: &str, fields: &[Pattern]) -> String {
-        if name == "AtomicU16" {
-            return self.generate_pattern(&fields[0]);
-        }
-
         format!(
             "{}({})",
             name,
@@ -1194,7 +1183,7 @@ function reqwest_client(): reqwest_Client {{
             if let Some(ty) = ty {
                 format!(
                     ": {}",
-                    self.type_name(&ty(), context.ty.as_deref().unwrap_or_default())
+                    self.type_name(ty, context.ty.as_deref().unwrap_or_default())
                 )
             } else {
                 String::new()

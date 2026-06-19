@@ -803,10 +803,11 @@ fn parse_macro_by_name(
                 }
             }
         }
+        "matches" => parse_matches_macro(tokens, generics),
         // Common macros treated as function calls
         "panic" | "todo" | "unimplemented" | "println" | "eprintln" | "dbg" | "assert"
         | "assert_eq" | "assert_ne" | "debug_assert" | "debug_assert_eq" | "debug_assert_ne"
-        | "matches" | "unreachable" | "write" | "writeln" | "bail" => {
+        | "unreachable" | "write" | "writeln" | "bail" => {
             let macro_args = args.iter().map(|arg| parse_expression(arg, generics));
             quote! {
                 ::agdb::type_def::Expression::Call {
@@ -821,6 +822,84 @@ fn parse_macro_by_name(
             }
         }
         _ => crate::compile_error(tokens, format!("Unsupported macro: {name}")),
+    }
+}
+
+fn parse_matches_macro(tokens: &proc_macro2::TokenStream, generics: &[Generic]) -> TokenStream2 {
+    use proc_macro2::TokenTree;
+
+    let mut token_iter = tokens.clone().into_iter().peekable();
+    let mut scrutinee_tokens = proc_macro2::TokenStream::new();
+    let mut depth = 0u32;
+
+    loop {
+        match token_iter.peek() {
+            None => break,
+            Some(TokenTree::Punct(p)) if p.as_char() == ',' && depth == 0 => {
+                token_iter.next();
+                break;
+            }
+            Some(TokenTree::Group(g))
+                if matches!(
+                    g.delimiter(),
+                    proc_macro2::Delimiter::Parenthesis
+                        | proc_macro2::Delimiter::Bracket
+                        | proc_macro2::Delimiter::Brace
+                ) =>
+            {
+                depth += 1;
+                let t = token_iter.next().unwrap();
+                scrutinee_tokens.extend(std::iter::once(t));
+                depth -= 1;
+            }
+            _ => {
+                let t = token_iter.next().unwrap();
+                scrutinee_tokens.extend(std::iter::once(t));
+            }
+        }
+    }
+
+    let remaining: proc_macro2::TokenStream = token_iter.collect();
+
+    let scrutinee_expr: Expr = syn::parse2(scrutinee_tokens.clone())
+        .unwrap_or_else(|_| syn::parse_quote! { () });
+    let scrutinee = parse_expression(&scrutinee_expr, generics);
+
+    let arm_result = syn::parse2::<syn::Arm>(quote! { #remaining => true });
+
+    let (pattern, guard) = match arm_result {
+        Ok(arm) => {
+            let pattern = parse_pat_to_pattern(&arm.pat);
+            let guard = if let Some((_, guard_expr)) = &arm.guard {
+                let g = parse_expression(guard_expr, generics);
+                quote! { Some(Box::new(#g)) }
+            } else {
+                quote! { None }
+            };
+            (pattern, guard)
+        }
+        Err(_) => (
+            quote! { ::agdb::type_def::Pattern::Wild },
+            quote! { None },
+        ),
+    };
+
+    quote! {
+        ::agdb::type_def::Expression::Match {
+            scrutinee: Box::new(#scrutinee),
+            arms: vec![
+                ::agdb::type_def::MatchArm {
+                    pattern: #pattern,
+                    guard: #guard,
+                    body: Box::new(::agdb::type_def::Expression::Literal(::agdb::type_def::LiteralValue::Bool(true))),
+                },
+                ::agdb::type_def::MatchArm {
+                    pattern: ::agdb::type_def::Pattern::Wild,
+                    guard: None,
+                    body: Box::new(::agdb::type_def::Expression::Literal(::agdb::type_def::LiteralValue::Bool(false))),
+                },
+            ],
+        }
     }
 }
 

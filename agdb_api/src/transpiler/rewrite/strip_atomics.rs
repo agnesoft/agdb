@@ -1,13 +1,22 @@
 use super::Rewrite;
 use super::RewriteContext;
 use agdb::type_def::Expression;
+use agdb::type_def::Literal;
 use agdb::type_def::Op;
+use agdb::type_def::Type;
 
 pub struct StripAtomics;
 
 impl Rewrite for StripAtomics {
     fn name(&self) -> &str {
         "strip_atomics"
+    }
+
+    fn rewrite_type(&self, ty: Type, _ctx: &RewriteContext) -> Type {
+        match ty {
+            Type::Struct(ref s) if s.name.starts_with("Atomic") => Type::Literal(Literal::U64),
+            other => other,
+        }
     }
 
     fn rewrite_expr(&self, expr: Expression, _ctx: &RewriteContext) -> Expression {
@@ -110,5 +119,39 @@ mod tests {
             }
             _ => panic!("Expected Binary, got {:?}", expr),
         }
+    }
+
+    #[test]
+    fn atomic_type_becomes_number() {
+        use agdb::type_def::Struct;
+
+        let mut ty = Type::Struct(Struct {
+            name: "AtomicU16".to_owned(),
+            generics: vec![],
+            fields: vec![],
+            impl_defs: || vec![],
+        });
+
+        let pipeline = RewritePipeline::new(vec![Box::new(StripAtomics)]);
+        pipeline.rewrite_type(&mut ty, &RewriteContext::default());
+
+        assert!(matches!(ty, Type::Literal(Literal::U64)));
+    }
+
+    #[test]
+    fn non_atomic_struct_unchanged() {
+        use agdb::type_def::Struct;
+
+        let mut ty = Type::Struct(Struct {
+            name: "MyStruct".to_owned(),
+            generics: vec![],
+            fields: vec![],
+            impl_defs: || vec![],
+        });
+
+        let pipeline = RewritePipeline::new(vec![Box::new(StripAtomics)]);
+        pipeline.rewrite_type(&mut ty, &RewriteContext::default());
+
+        assert!(matches!(ty, Type::Struct(ref s) if s.name == "MyStruct"));
     }
 }

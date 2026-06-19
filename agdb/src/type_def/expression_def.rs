@@ -159,7 +159,7 @@ pub struct MatchArm {
     pub body: Box<Expression>,
 }
 
-#[derive(Debug, Clone, agdb::TypeDef)]
+#[derive(Debug, Clone, Default, agdb::TypeDef)]
 pub enum Pattern {
     Literal(LiteralValue),
     Ident(String),
@@ -173,6 +173,7 @@ pub enum Pattern {
         name: String,
         fields: Vec<(String, Pattern)>,
     },
+    #[default]
     Wild,
 }
 

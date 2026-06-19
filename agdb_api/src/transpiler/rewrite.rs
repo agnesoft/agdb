@@ -1,12 +1,15 @@
 mod strip_atomics;
 mod strip_memory_management;
+mod strip_pointer_types;
 mod strip_references;
 mod strip_smart_pointers;
 
 use agdb::type_def::Expression;
+use agdb::type_def::Pattern;
 use agdb::type_def::Type;
 pub use strip_atomics::StripAtomics;
 pub use strip_memory_management::StripMemoryManagement;
+pub use strip_pointer_types::StripPointerTypes;
 pub use strip_references::StripReferences;
 pub use strip_smart_pointers::StripSmartPointers;
 
@@ -28,6 +31,11 @@ pub trait Rewrite {
     fn rewrite_type(&self, ty: Type, ctx: &RewriteContext) -> Type {
         let _ = ctx;
         ty
+    }
+
+    fn rewrite_pattern(&self, pattern: Pattern, ctx: &RewriteContext) -> Pattern {
+        let _ = ctx;
+        pattern
     }
 }
 
@@ -57,6 +65,19 @@ impl RewritePipeline {
         for rewrite in &self.rewrites {
             let taken = std::mem::take(ty);
             *ty = rewrite.rewrite_type(taken, ctx);
+        }
+    }
+
+    pub fn rewrite_pattern(&self, pattern: &mut Pattern, ctx: &RewriteContext) {
+        for rewrite in &self.rewrites {
+            let taken = std::mem::take(pattern);
+            *pattern = walk_pattern(taken, rewrite.as_ref(), ctx);
+        }
+    }
+
+    pub fn rewrite_patterns(&self, patterns: &mut [Pattern], ctx: &RewriteContext) {
+        for pattern in patterns.iter_mut() {
+            self.rewrite_pattern(pattern, ctx);
         }
     }
 }
@@ -151,6 +172,7 @@ fn walk_expr(expr: Expression, rewrite: &dyn Rewrite, ctx: &RewriteContext) -> E
             arms: arms
                 .into_iter()
                 .map(|mut arm| {
+                    arm.pattern = walk_pattern(arm.pattern, rewrite, ctx);
                     arm.guard = arm.guard.map(|g| Box::new(walk_expr(*g, rewrite, ctx)));
                     arm.body = Box::new(walk_expr(*arm.body, rewrite, ctx));
                     arm
@@ -229,6 +251,40 @@ fn walk_expr(expr: Expression, rewrite: &dyn Rewrite, ctx: &RewriteContext) -> E
     };
 
     rewrite.rewrite_expr(walked, ctx)
+}
+
+fn walk_pattern(pattern: Pattern, rewrite: &dyn Rewrite, ctx: &RewriteContext) -> Pattern {
+    let walked = match pattern {
+        Pattern::Constructor { name, fields } => Pattern::Constructor {
+            name,
+            fields: fields
+                .into_iter()
+                .map(|p| walk_pattern(p, rewrite, ctx))
+                .collect(),
+        },
+        Pattern::Tuple(patterns) => Pattern::Tuple(
+            patterns
+                .into_iter()
+                .map(|p| walk_pattern(p, rewrite, ctx))
+                .collect(),
+        ),
+        Pattern::Or(patterns) => Pattern::Or(
+            patterns
+                .into_iter()
+                .map(|p| walk_pattern(p, rewrite, ctx))
+                .collect(),
+        ),
+        Pattern::Struct { name, fields } => Pattern::Struct {
+            name,
+            fields: fields
+                .into_iter()
+                .map(|(k, v)| (k, walk_pattern(v, rewrite, ctx)))
+                .collect(),
+        },
+        leaf @ (Pattern::Literal(_) | Pattern::Ident(_) | Pattern::Wild) => leaf,
+    };
+
+    rewrite.rewrite_pattern(walked, ctx)
 }
 
 #[cfg(test)]

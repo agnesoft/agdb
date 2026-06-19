@@ -24,9 +24,16 @@ impl Rewrite for StripSmartPointers {
 fn is_smart_pointer_constructor(function: &Expression) -> bool {
     matches!(
         function,
-        Expression::Path { ident, parent: Some(parent), .. }
-            if (ident == "new" || ident == "downgrade")
-            && matches!(parent.as_ref(), Expression::Ident(name) if name == "Arc" || name == "Box")
+        Expression::Path {
+            ident,
+            parent: Some(parent),
+            ..
+        } if (ident == "new" || ident == "downgrade")
+            && matches!(
+                parent.as_ref(),
+                Expression::Ident(name) | Expression::Path { ident: name, .. }
+                    if name == "Arc" || name == "Box"
+            )
     )
 }
 

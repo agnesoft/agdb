@@ -66,6 +66,12 @@ pub struct Static {
     pub value: Vec<Expression>,
 }
 
+impl Default for Type {
+    fn default() -> Self {
+        Type::Literal(Literal::Unit)
+    }
+}
+
 impl Type {
     pub fn name(&self) -> &str {
         match self {

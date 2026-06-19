@@ -2,13 +2,13 @@ use crate::type_def::Function;
 use crate::type_def::Generic;
 use crate::type_def::Type;
 
-#[derive(Debug, agdb::TypeDef)]
+#[derive(Debug, Clone, agdb::TypeDef)]
 pub struct Impl {
-    pub name: &'static str,
-    pub generics: &'static [Generic],
+    pub name: String,
+    pub generics: Vec<Generic>,
     pub trait_: Option<fn() -> Type>,
     pub ty: fn() -> Type,
-    pub functions: &'static [Function],
+    pub functions: Vec<Function>,
 }
 
 #[cfg(test)]

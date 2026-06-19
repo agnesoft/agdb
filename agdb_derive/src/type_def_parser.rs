@@ -73,9 +73,9 @@ pub(crate) fn static_def_impl(item: TokenStream) -> TokenStream {
 
             fn #fn_name() -> ::agdb::type_def::Type {
                 ::agdb::type_def::Type::Static(::agdb::type_def::Static {
-                    name: stringify!(#name),
+                    name: stringify!(#name).to_owned(),
                     ty: #ty,
-                    value: &[#value],
+                    value: vec![#value],
                 })
             }
         }
@@ -92,9 +92,9 @@ pub(crate) fn static_def_impl(item: TokenStream) -> TokenStream {
 
             fn #fn_name() -> ::agdb::type_def::Type {
                 ::agdb::type_def::Type::Static(::agdb::type_def::Static {
-                    name: stringify!(#name),
+                    name: stringify!(#name).to_owned(),
                     ty: #ty,
-                    value: &[#value],
+                    value: vec![#value],
                 })
             }
         }

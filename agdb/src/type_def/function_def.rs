@@ -3,14 +3,14 @@ use crate::type_def::Type;
 use crate::type_def::Variable;
 use crate::type_def::expression_def::Expression;
 
-#[derive(Debug, agdb::TypeDef)]
+#[derive(Debug, Clone, agdb::TypeDef)]
 pub struct Function {
-    pub name: &'static str,
-    pub generics: &'static [Generic],
-    pub args: &'static [Variable],
+    pub name: String,
+    pub generics: Vec<Generic>,
+    pub args: Vec<Variable>,
     pub ret: fn() -> Type,
     pub async_fn: bool,
-    pub body: &'static [Expression],
+    pub body: Vec<Expression>,
 }
 
 #[cfg(test)]
@@ -48,12 +48,9 @@ mod tests {
             matches!(
                 &def.body[1],
                 Expression::Call {
-                    function: Expression::Path {
-                        ident: "assert",
-                        ..
-                    },
+                    function,
                     ..
-                }
+                } if matches!(function.as_ref(), Expression::Path { ident, .. } if ident == "assert")
             ),
             "Got: {:?}",
             def.body[1]
@@ -74,12 +71,9 @@ mod tests {
             matches!(
                 &def.body[1],
                 Expression::Call {
-                    function: Expression::Path {
-                        ident: "assert_eq",
-                        ..
-                    },
+                    function,
                     ..
-                }
+                } if matches!(function.as_ref(), Expression::Path { ident, .. } if ident == "assert_eq")
             ),
             "Got: {:?}",
             def.body[1]
@@ -92,12 +86,9 @@ mod tests {
             matches!(
                 &args[0],
                 Expression::Call {
-                    function: Expression::Path {
-                        ident: "matches",
-                        ..
-                    },
+                    function,
                     ..
-                }
+                } if matches!(function.as_ref(), Expression::Path { ident, .. } if ident == "matches")
             ),
             "Got: {:?}",
             args[0]
@@ -217,9 +208,9 @@ mod tests {
                 (def.args[0].ty.expect("expected type function"))(),
                 Type::Reference(crate::type_def::Reference {
                     mutable: false,
-                    lifetime: Some("a"),
+                    lifetime: Some(lt),
                     ty: _
-                }),
+                }) if lt == "a",
             ),
             "Got: {:?}",
             (def.args[0].ty.expect("expected type function"))()
@@ -250,9 +241,9 @@ mod tests {
                 (def.args[0].ty.expect("expected type function"))(),
                 Type::Reference(crate::type_def::Reference {
                     mutable: true,
-                    lifetime: Some("a"),
+                    lifetime: Some(lt),
                     ty: _
-                }),
+                }) if lt == "a",
             ),
             "Got: {:?}",
             (def.args[0].ty.expect("expected type function"))()

@@ -40,10 +40,10 @@ pub(crate) fn parse_trait(input: &ItemTrait) -> TokenStream2 {
         impl ::agdb::type_def::TypeDefinition for #def_struct {
             fn type_def() -> ::agdb::type_def::Type {
                 ::agdb::type_def::Type::Trait(::agdb::type_def::Trait {
-                    name: #name_str,
-                    generics: &[#(#generics),*],
-                    bounds: &[#(#bounds),*],
-                    functions: &[#(#functions),*],
+                    name: #name_str.to_owned(),
+                    generics: vec![#(#generics),*],
+                    bounds: vec![#(#bounds),*],
+                    functions: vec![#(#functions),*],
                 })
             }
         }

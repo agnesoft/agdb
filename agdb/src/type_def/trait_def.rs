@@ -2,12 +2,12 @@ use crate::type_def::Function;
 use crate::type_def::Generic;
 use crate::type_def::Type;
 
-#[derive(Debug, agdb::TypeDef)]
+#[derive(Debug, Clone, agdb::TypeDef)]
 pub struct Trait {
-    pub name: &'static str,
-    pub generics: &'static [Generic],
-    pub bounds: &'static [fn() -> Type],
-    pub functions: &'static [Function],
+    pub name: String,
+    pub generics: Vec<Generic>,
+    pub bounds: Vec<fn() -> Type>,
+    pub functions: Vec<Function>,
 }
 
 #[cfg(test)]
@@ -196,9 +196,9 @@ mod tests {
                 (def.functions[0].args[0].ty.expect("expected type function"))(),
                 Type::Reference(crate::type_def::Reference {
                     mutable: false,
-                    lifetime: Some("a"),
+                    lifetime: Some(ref lt),
                     ty: _
-                }),
+                }) if lt == "a",
             ),
             "Got: {:?}",
             (def.functions[0].args[0].ty.expect("expected type function"))()

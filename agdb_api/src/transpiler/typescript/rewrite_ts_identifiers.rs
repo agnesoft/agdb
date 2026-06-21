@@ -15,6 +15,11 @@ impl Rewrite for RewriteTsIdentifiers {
             Expression::Ident(ref name) if name == "self" => {
                 Expression::Ident("this".to_owned())
             }
+            Expression::Ident(ref name) if name == "Self" => Expression::Ident(
+                ctx.current_type
+                    .clone()
+                    .unwrap_or_else(|| "Self".to_owned()),
+            ),
             Expression::Path {
                 ref ident,
                 parent,

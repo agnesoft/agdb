@@ -18,11 +18,14 @@ pub(crate) fn parse_impl(input: &syn::ItemImpl) -> TokenStream2 {
     let generics = generics_parser::parse_generics(&input.generics);
     let (impl_generics, _, where_clause) = input.generics.split_for_impl();
 
+    let impl_generics_list = generics_parser::extract_generics(&input.generics);
     let methods = input
         .items
         .iter()
         .map(|item| match item {
-            ImplItem::Fn(impl_fn) => function_parser::parse_impl_fn(impl_fn),
+            ImplItem::Fn(impl_fn) => {
+                function_parser::parse_impl_fn(impl_fn, &impl_generics_list)
+            }
             _ => crate::compile_error(item, "Only function items are supported in impl blocks"),
         })
         .collect::<Vec<_>>();

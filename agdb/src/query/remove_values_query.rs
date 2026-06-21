@@ -17,6 +17,7 @@ use crate::query_builder::search::SearchQueryBuilder;
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 #[cfg_attr(feature = "derive", derive(agdb::DbSerialize))]
 #[cfg_attr(feature = "api", derive(agdb::TypeDef))]
+#[cfg_attr(feature = "api", type_def(SearchQueryBuilder))]
 #[derive(Clone, Debug, PartialEq)]
 pub struct RemoveValuesQuery(pub SelectValuesQuery);
 
@@ -48,6 +49,7 @@ impl QueryMut for &RemoveValuesQuery {
     }
 }
 
+#[cfg_attr(feature = "api", agdb::impl_def())]
 impl SearchQueryBuilder for RemoveValuesQuery {
     fn search_mut(&mut self) -> &mut SearchQuery {
         if let QueryIds::Search(search) = &mut self.0.ids {

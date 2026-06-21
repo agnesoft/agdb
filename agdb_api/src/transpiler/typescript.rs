@@ -1,6 +1,12 @@
 mod rewrite_ts_api;
 mod rewrite_ts_identifiers;
+mod rewrite_ts_if_let;
+mod rewrite_ts_into;
 mod rewrite_ts_methods;
+mod rewrite_ts_path_strip;
+mod rewrite_ts_tuple_access;
+
+use std::collections::HashMap;
 
 use agdb::type_def::Enum;
 use agdb::type_def::Expression;
@@ -24,18 +30,56 @@ use super::rewrite::StripAtomics;
 use super::rewrite::StripMemoryManagement;
 use super::rewrite::StripPointerTypes;
 use super::rewrite::StripReferences;
+use super::rewrite::StripRustCalls;
 use super::rewrite::StripSmartPointers;
 use rewrite_ts_api::RewriteTsApi;
 use rewrite_ts_identifiers::RewriteTsIdentifiers;
+use rewrite_ts_if_let::RewriteTsIfLet;
+use rewrite_ts_into::RewriteTsInto;
 use rewrite_ts_methods::RewriteTsMethods;
+use rewrite_ts_path_strip::RewriteTsPathStrip;
+use rewrite_ts_tuple_access::RewriteTsTupleAccess;
 
-const SKIP_LIST: &[&str] = &["reqwest_Client", "PathBuf", "Duration", "AtomicU16"];
+const SKIP_LIST: &[&str] = &[
+    "reqwest_Client",
+    "reqwest::Client",
+    "PathBuf",
+    "Duration",
+    "AtomicU16",
+];
+const MANUAL_IMPL: &[&str] = &["collapse_conditions", "search_mut"];
+const MANUAL_IMPL_QUALIFIED: &[(&str, &str)] = &[
+    ("ReqwestClient", "delete"),
+    ("ReqwestClient", "get"),
+    ("ReqwestClient", "post"),
+    ("ReqwestClient", "put"),
+    ("ReqwestClient", "new"),
+];
+const ASSOCIATED_TYPE_TRAITS: &[&str] = &["DbType"];
+const STRIP_BOUNDS: &[&str] = &["Send", "Sync", "Clone", "Copy", "Sized", "From"];
+const SUBSTITUTE_BOUNDS: &[(&str, &str)] = &[];
+
+const INTO_TYPE_MAP: &[(&str, &str)] = &[
+    ("QueryAliases", "string[]"),
+    ("MultiValues", "DbKeyValue[][]"),
+    ("SingleValues", "DbKeyValue[]"),
+    ("DbValues", "DbValue[]"),
+    ("DbKeyOrders", "DbKeyOrder[]"),
+    ("QueryIds", "QueryId[]"),
+    ("QueryId", "QueryId"),
+    ("Comparison", "Comparison"),
+    ("CountComparison", "CountComparison"),
+    ("DbValue", "DbValue"),
+    ("String", "string"),
+    ("ReqwestClientTypeDef", "ReqwestClientTypeDef"),
+];
 
 #[derive(Default)]
 struct Context {
     ret: Option<String>,
     error_type: Option<String>,
     ty: Option<String>,
+    into_targets: HashMap<String, String>,
 }
 
 fn pipeline() -> RewritePipeline {
@@ -44,9 +88,14 @@ fn pipeline() -> RewritePipeline {
         Box::new(StripAtomics),
         Box::new(StripReferences),
         Box::new(StripMemoryManagement),
+        Box::new(RewriteTsInto),
+        Box::new(StripRustCalls),
+        Box::new(RewriteTsTupleAccess),
         Box::new(RewriteTsMethods),
         Box::new(RewriteTsApi),
         Box::new(RewriteTsIdentifiers),
+        Box::new(RewriteTsIfLet),
+        Box::new(RewriteTsPathStrip),
         Box::new(StripPointerTypes),
     ])
 }
@@ -72,6 +121,7 @@ impl Typescript {
             current_type: context.ty.clone(),
             current_function: None,
             error_type: context.error_type.clone(),
+            into_targets: context.into_targets.clone(),
         };
         self.pipeline.rewrite_exprs(&mut rewritten, &ctx);
         rewritten
@@ -129,21 +179,13 @@ export interface Serialize {}
 
 export interface DeserializeOwned {}
 
-export class Option<T> {
-  public value: T | null;
-
-  constructor(value: T | null) {
-    this.value = value;
-  }
-}
+export type Option<T> = { value: T } | null;
 
 export function Some<T>(value: T): Option<T> {
-  return new Option(value);
+  return { value };
 }
 
-export function None<T>(): Option<T> {
-  return new Option<T>(null);
-}
+export const None: Option<never> = null;
 
 export class Result<T, E> {
   public value: T | E;
@@ -157,6 +199,13 @@ export class Result<T, E> {
   is_ok(): boolean {
     return this.has_value;
   }
+
+  map<U>(f: (value: T) => U): Result<U, E> {
+    if (this.has_value) {
+      return Ok(f(this.value as T));
+    }
+    return Err(this.value as E);
+  }
 }
 
 export function Ok<T, E>(value: T): Result<T, E> {
@@ -167,11 +216,27 @@ export function Err<T, E>(error: E): Result<T, E> {
   return new Result<T, E>(error, false);
 }
 
+function unwrapResult<T, E>(r: Result<T, E>): T {
+  if (!r.is_ok()) throw r.value;
+  return r.value as T;
+}
+
 export class reqwest_Client {
-    // This is a placeholder for the actual reqwest.Client type
+    delete_(uri: string): any { throw new Error("not implemented"); }
+    get<T>(uri: string): any { throw new Error("not implemented"); }
+    post<T, R>(uri: string): any { throw new Error("not implemented"); }
+    put<T>(uri: string): any { throw new Error("not implemented"); }
+    header(key: string, value: string): any { return this; }
+    bearer_auth(token: string): any { return this; }
+    json<T>(body: T): any { return this; }
+    send(): Promise<any> { throw new Error("not implemented"); }
 }
 
 export type AgdbApiResult<T> = Result<T, AgdbApiError>;
+export type ReqwestClientTypeDef = reqwest_Client;
+
+const DB_ELEMENT_ID_KEY: string = "db_element_id";
+const USER_AGENT: string = "User-Agent";
 
 // END OF PREAMBLE
 
@@ -289,7 +354,8 @@ function reqwest_client(): reqwest_Client {{
         match ty {
             Type::Enum(e) => self.generate_enum(e, &self.emit_type(ty, &e.name)),
             Type::Struct(s) => self.generate_struct(s, &self.emit_type(ty, &s.name)),
-            Type::Trait(t) => self.generate_trait(t),
+            Type::Trait(t) if !SKIP_LIST.contains(&t.name.as_str()) => self.generate_trait(t),
+            Type::Trait(_) => String::new(),
             Type::Function(f) => self.generate_function(f),
             Type::Static(s) => self.generate_static(s),
             Type::Test(t) => self.generate_function(t),
@@ -315,14 +381,21 @@ function reqwest_client(): reqwest_Client {{
             let variant_type =
                 self.type_name(variant.ty.expect("expected a type function"), e_name);
 
-            buffer.push_str(&format!(
-                "    static {variant_name}(value: {variant_type}): {name} {{\n        return new {name}({{ {variant_name}: value }});\n    }}\n\n",
-            ));
+            if variant_type == "void" {
+                buffer.push_str(&format!(
+                    "    static {variant_name}(): {name} {{\n        return new {name}({{ {variant_name}: undefined }});\n    }}\n\n",
+                ));
+            } else {
+                buffer.push_str(&format!(
+                    "    static {variant_name}(value: {variant_type}): {name} {{\n        return new {name}({{ {variant_name}: value }});\n    }}\n\n",
+                ));
+            }
         }
 
+        let e_generics_decl = self.generate_generics_decl(&e.generics);
         for i in &(e.impl_defs)() {
             for f in &i.functions {
-                buffer.push_str(&self.generate_member_function(f, i, e_name));
+                buffer.push_str(&self.generate_member_function(f, i, e_name, &e_generics_decl));
             }
         }
 
@@ -362,7 +435,28 @@ function reqwest_client(): reqwest_Client {{
         let mut buffer = String::new();
         let full_name = format!("{}{}", s.name, self.generate_generics_decl(&s.generics));
 
-        buffer.push_str(&format!("export class {full_name} {{\n",));
+        let impl_defs = (s.impl_defs)();
+        let implements: Vec<String> = impl_defs
+            .iter()
+            .filter_map(|i| {
+                i.trait_.map(|t| {
+                    let ty = t();
+                    match ty {
+                        Type::Trait(t) => t.name,
+                        _ => String::new(),
+                    }
+                })
+            })
+            .filter(|name| !name.is_empty() && !STRIP_BOUNDS.contains(&name.as_str()))
+            .collect();
+
+        let implements_clause = if implements.is_empty() {
+            String::new()
+        } else {
+            format!(" implements {}", implements.join(", "))
+        };
+
+        buffer.push_str(&format!("export class {full_name}{implements_clause} {{\n"));
 
         for (i, field) in s.fields.iter().enumerate() {
             if let Some(ty) = &field.ty {
@@ -376,9 +470,10 @@ function reqwest_client(): reqwest_Client {{
 
         buffer.push_str(&self.generate_constructor(s));
 
-        for i in &(s.impl_defs)() {
+        let class_generics_decl = self.generate_generics_decl(&s.generics);
+        for i in &impl_defs {
             for f in &i.functions {
-                buffer.push_str(&self.generate_member_function(f, i, s_name));
+                buffer.push_str(&self.generate_member_function(f, i, s_name, &class_generics_decl));
             }
         }
 
@@ -409,7 +504,18 @@ function reqwest_client(): reqwest_Client {{
         let bounds = g
             .bounds
             .iter()
-            .map(|b| self.type_name(*b, &g.name))
+            .filter_map(|b| {
+                let name = self.type_name(*b, &g.name);
+                if STRIP_BOUNDS.contains(&name.as_str()) {
+                    None
+                } else if let Some((_, sub)) =
+                    SUBSTITUTE_BOUNDS.iter().find(|(from, _)| *from == name)
+                {
+                    Some(sub.to_string())
+                } else {
+                    Some(name)
+                }
+            })
             .collect::<Vec<_>>()
             .join(" & ");
         if bounds.is_empty() {
@@ -457,10 +563,14 @@ function reqwest_client(): reqwest_Client {{
             .iter()
             .enumerate()
             .map(|(i, field)| {
+                let ty_fn = field.ty.expect("expected type function");
+                let type_name = self.type_name(ty_fn, &s.name);
+                let default = Self::type_default(&ty_fn());
                 format!(
-                    "{}: {}",
+                    "{}: {} = {}",
                     self.field_name(&field.name, i),
-                    self.type_name(field.ty.expect("expected type function"), &s.name)
+                    type_name,
+                    default
                 )
             })
             .collect::<Vec<_>>()
@@ -481,6 +591,33 @@ function reqwest_client(): reqwest_Client {{
         buffer.push_str("    }\n");
 
         buffer
+    }
+
+    fn type_default(ty: &Type) -> &'static str {
+        match ty {
+            Type::Literal(lit) => match lit {
+                Literal::Bool => "false",
+                Literal::F32
+                | Literal::F64
+                | Literal::I8
+                | Literal::I16
+                | Literal::I32
+                | Literal::I64
+                | Literal::I128
+                | Literal::U8
+                | Literal::U16
+                | Literal::U32
+                | Literal::U64
+                | Literal::U128
+                | Literal::Usize
+                | Literal::Isize => "0",
+                Literal::Str | Literal::String => "\"\"",
+                Literal::Unit => "undefined",
+            },
+            Type::Vec(_) | Type::Slice(_) | Type::Tuple(_) => "[]",
+            Type::Option(_) => "null",
+            _ => "null as any",
+        }
     }
 
     fn field_name(&self, field: &str, i: usize) -> String {
@@ -508,11 +645,21 @@ function reqwest_client(): reqwest_Client {{
                 e.name.to_owned(),
                 self.generate_generic_args_from_generics(&e.generics)
             ),
-            Type::Struct(s) => format!(
-                "{}{}",
-                s.name.to_owned(),
-                self.generate_generic_args_from_generics(&s.generics)
-            ),
+            Type::Struct(s) => {
+                let generics = if s.generics.is_empty() {
+                    String::new()
+                } else {
+                    format!(
+                        "<{}>",
+                        s.generics
+                            .iter()
+                            .map(|g| g.name.as_str())
+                            .collect::<Vec<_>>()
+                            .join(", ")
+                    )
+                };
+                format!("{}{}", s.name.replace("::", "_"), generics)
+            }
             Type::Literal(l) => self.literal(l).to_string(),
             Type::Vec(inner) => format!("{}[]", self.type_name(*inner, class_name)),
             Type::Function(f) => f.name.to_owned(),
@@ -532,7 +679,18 @@ function reqwest_client(): reqwest_Client {{
             Type::SelfType(_) => class_name.to_owned(),
             Type::Slice(s) => format!("{}[]", self.type_name(*s, class_name)),
             Type::Static(s) => self.type_name(s.ty, class_name),
-            Type::Trait(t) => t.name.to_owned(),
+            Type::Trait(t) => {
+                let mut associated = Vec::new();
+                Self::collect_associated_types(&t.functions, &mut associated);
+                if associated.is_empty() && ASSOCIATED_TYPE_TRAITS.contains(&t.name.as_str()) {
+                    format!("{}<{}>", t.name, class_name)
+                } else if associated.is_empty() {
+                    t.name.to_owned()
+                } else {
+                    let args = vec![class_name; associated.len()].join(", ");
+                    format!("{}<{}>", t.name, args)
+                }
+            }
             Type::Tuple(items) => {
                 let types = items
                     .iter()
@@ -545,14 +703,19 @@ function reqwest_client(): reqwest_Client {{
     }
 
     fn type_name_generic(&self, g: &Generic) -> String {
+        let name = g
+            .name
+            .strip_prefix("Self :: ")
+            .unwrap_or(&g.name)
+            .to_owned();
         if let GenericKind::Argument = g.kind {
             format!(
                 "{}{}",
-                g.name,
+                name,
                 self.generate_generic_args_from_types(&g.bounds)
             )
         } else {
-            g.name.to_owned()
+            name
         }
     }
 
@@ -603,11 +766,122 @@ function reqwest_client(): reqwest_Client {{
     }
 
     fn generate_trait(&self, t: &Trait) -> String {
+        let mut associated_types: Vec<String> = Vec::new();
+        Self::collect_associated_types(&t.functions, &mut associated_types);
+
+        let mut generics_decl = self.generate_generics_decl(&t.generics);
+        if !associated_types.is_empty() {
+            let extra = associated_types.join(", ");
+            if generics_decl.is_empty() {
+                generics_decl = format!("<{extra}>");
+            } else {
+                generics_decl.pop();
+                generics_decl.push_str(&format!(", {extra}>"));
+            }
+        }
+
+        let extends: Vec<String> = t
+            .bounds
+            .iter()
+            .filter_map(|b| {
+                let name = self.type_name(*b, &t.name);
+                if STRIP_BOUNDS.contains(&name.as_str()) || name == "TypeDefinition" {
+                    None
+                } else {
+                    Some(name)
+                }
+            })
+            .collect();
+        let extends_clause = if extends.is_empty() {
+            String::new()
+        } else {
+            format!(" extends {}", extends.join(", "))
+        };
+
+        let has_self = |f: &&Function| f.args.first().is_some_and(|a| a.name == "self");
+
+        let instance_methods: Vec<_> = t.functions.iter().filter(has_self).collect();
+        let static_methods: Vec<_> = t.functions.iter().filter(|f| !has_self(f)).collect();
+
+        let mut buffer = format!(
+            "export interface {}{}{} {{\n",
+            t.name, generics_decl, extends_clause
+        );
+        for f in &instance_methods {
+            buffer.push_str(&self.generate_trait_method(f, &t.name));
+        }
+        buffer.push_str("}\n\n");
+
+        if !static_methods.is_empty() {
+            buffer.push_str(&format!(
+                "export interface {}Static{} {{\n",
+                t.name, generics_decl
+            ));
+            for f in &static_methods {
+                buffer.push_str(&self.generate_trait_method(f, &t.name));
+            }
+            buffer.push_str("}\n\n");
+        }
+
+        buffer
+    }
+
+    fn generate_trait_method(&self, f: &Function, trait_name: &str) -> String {
+        let ret = self.type_name(f.ret, trait_name);
+        let ret = if f.async_fn {
+            format!("Promise<{ret}>")
+        } else {
+            ret
+        };
+        let context = Context {
+            ret: Some(ret.clone()),
+            error_type: None,
+            ty: Some(trait_name.to_owned()),
+            ..Default::default()
+        };
+        let args = self.generate_args(&f.args, &context);
         format!(
-            "export interface {}{} {{\n}}\n\n",
-            t.name,
-            self.generate_generics_decl(&t.generics)
+            "    {}{}({}): {};\n",
+            self.ts_name(&f.name),
+            self.generate_generics_decl(&f.generics),
+            args,
+            ret,
         )
+    }
+
+    fn collect_associated_types(functions: &[Function], out: &mut Vec<String>) {
+        for f in functions {
+            Self::collect_associated_from_type((f.ret)(), out);
+            for arg in &f.args {
+                if let Some(ty_fn) = arg.ty {
+                    Self::collect_associated_from_type(ty_fn(), out);
+                }
+            }
+        }
+    }
+
+    fn collect_associated_from_type(ty: Type, out: &mut Vec<String>) {
+        match ty {
+            Type::Generic(g) if g.name.contains("Self :: ") => {
+                let name = g.name.strip_prefix("Self :: ").unwrap().to_owned();
+                if !out.contains(&name) {
+                    out.push(name);
+                }
+            }
+            Type::Result { ok, err } => {
+                Self::collect_associated_from_type(ok(), out);
+                Self::collect_associated_from_type(err(), out);
+            }
+            Type::Option(inner) | Type::Vec(inner) | Type::Slice(inner) => {
+                Self::collect_associated_from_type(inner(), out);
+            }
+            Type::Tuple(fields) => {
+                for field in fields {
+                    Self::collect_associated_from_type(field(), out);
+                }
+            }
+            _ => {}
+        }
     }
 
     fn generate_function(&self, f: &Function) -> String {
@@ -627,6 +901,7 @@ function reqwest_client(): reqwest_Client {{
             ret: Some(ret.clone()),
             error_type,
             ty: None,
+            ..Default::default()
         };
         let body = self.rewrite_body(&f.body, &context);
 
@@ -641,7 +916,7 @@ function reqwest_client(): reqwest_Client {{
         )
     }
 
-    fn generate_member_function(&self, f: &Function, _i: &Impl, class_name: &str) -> String {
+    fn generate_member_function(&self, f: &Function, _i: &Impl, class_name: &str, class_generics_decl: &str) -> String {
         let ret = self.type_name(f.ret, class_name);
         let ret = if ret == "this" {
             class_name.to_owned()
@@ -666,23 +941,299 @@ function reqwest_client(): reqwest_Client {{
         } else {
             "static "
         };
+
+        let into_map = Self::resolve_into_generics(f);
+        let dbtype_generics = Self::resolve_dbtype_generics(f);
+
         let context = Context {
             ret: Some(ret.clone()),
             error_type,
             ty: Some(class_name.to_string()),
+            into_targets: into_map
+                .iter()
+                .map(|(param, (target, _))| (param.clone(), target.clone()))
+                .collect(),
         };
-        let body = self.rewrite_body(&f.body, &context);
+
+        let is_manual = MANUAL_IMPL.contains(&f.name.as_str())
+            || MANUAL_IMPL_QUALIFIED
+                .iter()
+                .any(|(cls, method)| class_name.starts_with(cls) && *method == f.name);
+        let body_str = if is_manual {
+            "        throw new Error(\"not implemented\");\n".to_owned()
+        } else {
+            let mut body = self.rewrite_body(&f.body, &context);
+            Self::rewrite_static_type_calls(&mut body, &dbtype_generics);
+            self.generate_semicoloned_expressions(&body, "        ", &context)
+        };
+
+        let non_into_generics: Vec<_> = f
+            .generics
+            .iter()
+            .filter(|g| {
+                !into_map
+                    .values()
+                    .any(|(_, _)| Self::generic_is_into_only(g))
+            })
+            .cloned()
+            .collect();
+
+        let generics_decl = if static_keyword == "static " && !class_generics_decl.is_empty() {
+            if non_into_generics.is_empty() {
+                class_generics_decl.to_owned()
+            } else {
+                let fn_generics = self.generate_generics_decl(&non_into_generics);
+                let inner = &fn_generics[1..fn_generics.len() - 1];
+                let class_inner = &class_generics_decl[1..class_generics_decl.len() - 1];
+                format!("<{class_inner}, {inner}>")
+            }
+        } else {
+            self.generate_generics_decl(&non_into_generics)
+        };
+
+        let companion_params = dbtype_generics
+            .iter()
+            .map(|(name, _)| format!("{}_type: DbTypeStatic<{name}>", name.to_lowercase()))
+            .collect::<Vec<_>>()
+            .join(", ");
+
+        let mut args_str = self.generate_args_with_into(&f.args, &context, &into_map);
+        if !companion_params.is_empty() {
+            if !args_str.is_empty() {
+                args_str.push_str(", ");
+            }
+            args_str.push_str(&companion_params);
+        }
 
         format!(
             "    {}{}{}{}({}){} {{\n{}    }}\n\n",
             static_keyword,
             async_keyword,
             self.ts_name(&f.name),
-            self.generate_generics_decl(&f.generics),
-            self.generate_args(&f.args, &context),
+            generics_decl,
+            args_str,
             ret,
-            self.generate_semicoloned_expressions(&body, "        ", &context),
+            body_str,
         )
+    }
+
+    fn resolve_dbtype_generics(f: &Function) -> Vec<(String, String)> {
+        let mut result = Vec::new();
+        for g in &f.generics {
+            for bound_fn in &g.bounds {
+                let bound_type = bound_fn();
+                if let Type::Trait(t) = &bound_type {
+                    if t.name == "DbType" {
+                        result.push((g.name.clone(), "DbType".to_owned()));
+                    }
+                }
+            }
+        }
+        result
+    }
+
+    fn rewrite_static_type_calls(body: &mut [Expression], dbtype_generics: &[(String, String)]) {
+        if dbtype_generics.is_empty() {
+            return;
+        }
+        for expr in body.iter_mut() {
+            Self::rewrite_static_type_call_expr(expr, dbtype_generics);
+        }
+    }
+
+    fn rewrite_static_type_call_expr(expr: &mut Expression, dbtype_generics: &[(String, String)]) {
+        let taken = std::mem::take(expr);
+        *expr = Self::transform_static_calls(taken, dbtype_generics);
+    }
+
+    fn transform_static_calls(
+        expr: Expression,
+        dbtype_generics: &[(String, String)],
+    ) -> Expression {
+        match expr {
+            Expression::Call {
+                recipient: None,
+                function,
+                args,
+            } if Self::is_type_param_static_call(&function, dbtype_generics).is_some() => {
+                let (param_name, method) =
+                    Self::is_type_param_static_call(&function, dbtype_generics).unwrap();
+                Expression::Call {
+                    recipient: Some(Box::new(Expression::Ident(format!(
+                        "{}_type",
+                        param_name.to_lowercase()
+                    )))),
+                    function: Box::new(Expression::Ident(method)),
+                    args,
+                }
+            }
+            Expression::Block(stmts) => Expression::Block(
+                stmts
+                    .into_iter()
+                    .map(|s| Self::transform_static_calls(s, dbtype_generics))
+                    .collect(),
+            ),
+            Expression::Return(inner) => Expression::Return(
+                inner.map(|e| Box::new(Self::transform_static_calls(*e, dbtype_generics))),
+            ),
+            Expression::Let { name, ty, value } => Expression::Let {
+                name,
+                ty,
+                value: value.map(|v| Box::new(Self::transform_static_calls(*v, dbtype_generics))),
+            },
+            Expression::Call {
+                recipient,
+                function,
+                args,
+            } => Expression::Call {
+                recipient: recipient
+                    .map(|r| Box::new(Self::transform_static_calls(*r, dbtype_generics))),
+                function: Box::new(Self::transform_static_calls(*function, dbtype_generics)),
+                args: args
+                    .into_iter()
+                    .map(|a| Self::transform_static_calls(a, dbtype_generics))
+                    .collect(),
+            },
+            Expression::If {
+                condition,
+                then_branch,
+                else_branch,
+            } => Expression::If {
+                condition: Box::new(Self::transform_static_calls(*condition, dbtype_generics)),
+                then_branch: Box::new(Self::transform_static_calls(*then_branch, dbtype_generics)),
+                else_branch: else_branch
+                    .map(|e| Box::new(Self::transform_static_calls(*e, dbtype_generics))),
+            },
+            Expression::FieldAccess { base, field } => Expression::FieldAccess {
+                base: Box::new(Self::transform_static_calls(*base, dbtype_generics)),
+                field,
+            },
+            Expression::Struct { name, fields } => Expression::Struct {
+                name,
+                fields: fields
+                    .into_iter()
+                    .map(|(k, v)| (k, Self::transform_static_calls(v, dbtype_generics)))
+                    .collect(),
+            },
+            Expression::TupleStruct { name, expressions } => Expression::TupleStruct {
+                name,
+                expressions: expressions
+                    .into_iter()
+                    .map(|e| Self::transform_static_calls(e, dbtype_generics))
+                    .collect(),
+            },
+            other => other,
+        }
+    }
+
+    fn is_type_param_static_call(
+        function: &Expression,
+        dbtype_generics: &[(String, String)],
+    ) -> Option<(String, String)> {
+        if let Expression::Path {
+            ident,
+            parent: Some(parent),
+            ..
+        } = function
+        {
+            let parent_name = match parent.as_ref() {
+                Expression::Ident(name) => Some(name.as_str()),
+                Expression::Path {
+                    ident,
+                    parent: None,
+                    ..
+                } => Some(ident.as_str()),
+                _ => None,
+            };
+            if let Some(name) = parent_name {
+                if dbtype_generics.iter().any(|(g, _)| g == name) {
+                    return Some((name.to_owned(), ident.clone()));
+                }
+            }
+        }
+        None
+    }
+
+    fn resolve_into_generics(f: &Function) -> HashMap<String, (String, String)> {
+        let mut generic_to_target: HashMap<String, (String, String)> = HashMap::new();
+
+        for g in &f.generics {
+            for bound_fn in &g.bounds {
+                let bound_type = bound_fn();
+                if let Type::Trait(t) = &bound_type {
+                    if t.name == "Into" && !t.generics.is_empty() {
+                        let target_name = &t.generics[0].name;
+                        if let Some((_, ts_type)) =
+                            INTO_TYPE_MAP.iter().find(|(name, _)| *name == target_name)
+                        {
+                            generic_to_target.insert(
+                                g.name.clone(),
+                                (target_name.to_string(), ts_type.to_string()),
+                            );
+                        }
+                    }
+                }
+            }
+        }
+
+        let mut param_map: HashMap<String, (String, String)> = HashMap::new();
+        for arg in &f.args {
+            if let Some(ty_fn) = arg.ty {
+                let ty = ty_fn();
+                if let Type::Generic(ref g) = ty {
+                    if let Some(entry) = generic_to_target.get(&g.name) {
+                        param_map.insert(arg.name.clone(), entry.clone());
+                    }
+                }
+            }
+        }
+
+        param_map
+    }
+
+    fn generic_is_into_only(g: &Generic) -> bool {
+        if g.bounds.is_empty() {
+            return false;
+        }
+        g.bounds.iter().all(|bound_fn| {
+            let ty = bound_fn();
+            match ty {
+                Type::Trait(t) => {
+                    t.name == "Into"
+                        || t.name == "Send"
+                        || t.name == "Sync"
+                        || t.name == "Clone"
+                        || t.name == "Copy"
+                }
+                _ => false,
+            }
+        })
+    }
+
+    fn generate_args_with_into(
+        &self,
+        args: &[Variable],
+        context: &Context,
+        into_map: &HashMap<String, (String, String)>,
+    ) -> String {
+        args.iter()
+            .filter_map(|arg| {
+                if arg.name == "self" {
+                    return None;
+                }
+
+                if let Some((_target, ts_type)) = into_map.get(&arg.name) {
+                    Some(format!("{}: {ts_type}", arg.name))
+                } else {
+                    let ty = self.type_name(
+                        arg.ty.expect("expected type function"),
+                        context.ty.as_deref().unwrap_or_default(),
+                    );
+                    Some(format!("{}: {ty}", arg.name))
+                }
+            })
+            .collect::<Vec<_>>()
+            .join(", ")
     }
 
     fn generate_semicoloned_expressions(
@@ -693,6 +1244,9 @@ function reqwest_client(): reqwest_Client {{
     ) -> String {
         let mut buffer = String::new();
         exprs.iter().for_each(|expr| {
+            if matches!(expr, Expression::Block(stmts) if stmts.is_empty()) {
+                return;
+            }
             buffer.push_str(padding);
             buffer.push_str(&self.generate_expression(expr, context));
             buffer.push_str(";\n");
@@ -743,9 +1297,9 @@ function reqwest_client(): reqwest_Client {{
                 args,
             } => self.call(recipient.as_deref(), function, args, context),
             Expression::Closure(function) => format!(
-                "({}) => {{{}}}",
+                "({}) => {{\n{}}}",
                 self.generate_closure_args(&function.args, context),
-                self.generate_expressions(&function.body, context)
+                self.generate_semicoloned_expressions(&function.body, "    ", context)
             ),
             Expression::Continue => "continue".to_owned(),
             Expression::FieldAccess { base, field } => {
@@ -805,20 +1359,15 @@ function reqwest_client(): reqwest_Client {{
                     "return".to_owned()
                 }
             }
-            Expression::Struct { name: _, fields } => format!(
-                "{{ {} }}",
-                fields
+            Expression::Struct { name, fields } => {
+                let struct_name = self.generate_expression(name, context);
+                let args = fields
                     .iter()
-                    .map(|(field_name, expr)| {
-                        format!(
-                            "{}: {}",
-                            field_name,
-                            self.generate_expression(expr, context)
-                        )
-                    })
+                    .map(|(_field_name, expr)| self.generate_expression(expr, context))
                     .collect::<Vec<_>>()
-                    .join(", ")
-            ),
+                    .join(", ");
+                format!("new {struct_name}({args})")
+            }
             Expression::StructPattern { name: _, fields } => format!(
                 "{{ {} }}",
                 fields
@@ -827,7 +1376,12 @@ function reqwest_client(): reqwest_Client {{
                     .collect::<Vec<_>>()
                     .join(", ")
             ),
-            Expression::Try(expression) => self.generate_expression(expression, context),
+            Expression::Try(expression) => {
+                format!(
+                    "unwrapResult({})",
+                    self.generate_expression(expression, context)
+                )
+            }
             Expression::Tuple(expressions) => format!(
                 "[{}]",
                 expressions
@@ -836,17 +1390,15 @@ function reqwest_client(): reqwest_Client {{
                     .collect::<Vec<_>>()
                     .join(", ")
             ),
-            Expression::TupleStruct {
-                name: _,
-                expressions,
-            } => format!(
-                "[{}]",
-                expressions
+            Expression::TupleStruct { name, expressions } => {
+                let struct_name = self.generate_expression(name, context);
+                let args = expressions
                     .iter()
                     .map(|expr| self.generate_expression(expr, context))
                     .collect::<Vec<_>>()
-                    .join(", ")
-            ),
+                    .join(", ");
+                format!("new {struct_name}({args})")
+            }
             Expression::TupleAccess { base, index } => {
                 format!("{}[{}]", self.generate_expression(base, context), index)
             }
@@ -1005,15 +1557,21 @@ function reqwest_client(): reqwest_Client {{
                     return None;
                 }
 
+                let name = if arg.name.starts_with('(') {
+                    format!("[{}]", &arg.name[1..arg.name.len() - 1])
+                } else {
+                    arg.name.clone()
+                };
+
                 if let Some(ty_fn) = arg.ty {
                     let ty = (ty_fn)();
                     if matches!(ty, Type::Literal(agdb::type_def::Literal::Unit)) {
-                        return Some(format!("{}: any", arg.name));
+                        return Some(format!("{name}: any"));
                     }
                     let ty = self.type_name(ty_fn, context.ty.as_deref().unwrap_or_default());
-                    Some(format!("{}: {ty}", arg.name))
+                    Some(format!("{name}: {ty}"))
                 } else {
-                    Some(format!("{}: any", arg.name))
+                    Some(format!("{name}: any"))
                 }
             })
             .collect::<Vec<_>>()
@@ -1069,15 +1627,69 @@ function reqwest_client(): reqwest_Client {{
             .map(|r| self.generate_expression(r, context))
             .unwrap_or_default();
 
+        let args = self.call_args(args, context);
+
+        if rec.is_empty() {
+            if let Some(ctor_name) = Self::constructor_name(function) {
+                return format!("new {ctor_name}({args})");
+            }
+            if args.is_empty() {
+                if let Some(ctor_name) = Self::new_constructor_name(function) {
+                    return format!("new {ctor_name}()");
+                }
+            }
+        }
+
         let rec = if !rec.is_empty() {
-            format!("{}.", rec)
+            format!("{rec}.")
         } else {
             String::new()
         };
-
-        let args = self.call_args(args, context);
-
         format!("{rec}{f}({args})")
+    }
+
+    fn new_constructor_name(function: &Expression) -> Option<String> {
+        if let Expression::Path {
+            ident,
+            parent: Some(parent),
+            ..
+        } = function
+        {
+            if ident == "new" {
+                return match parent.as_ref() {
+                    Expression::Ident(name) => Some(name.clone()),
+                    Expression::Path {
+                        ident,
+                        parent: None,
+                        ..
+                    } => Some(ident.clone()),
+                    _ => None,
+                };
+            }
+        }
+        None
+    }
+
+    fn constructor_name(function: &Expression) -> Option<String> {
+        const NOT_CONSTRUCTORS: &[&str] = &["Ok", "Err", "Some", "None"];
+        match function {
+            Expression::Ident(name)
+                if name.chars().next().is_some_and(|c| c.is_uppercase())
+                    && !NOT_CONSTRUCTORS.contains(&name.as_str()) =>
+            {
+                Some(name.clone())
+            }
+            Expression::Path {
+                ident,
+                parent: None,
+                ..
+            } if ident.chars().next().is_some_and(|c| c.is_uppercase())
+                && !NOT_CONSTRUCTORS.contains(&ident.as_str()) =>
+            {
+                Some(ident.clone())
+            }
+            _ => None,
+        }
     }
 
     fn path(
@@ -1087,13 +1699,44 @@ function reqwest_client(): reqwest_Client {{
         generics: &[fn() -> Type],
         context: &Context,
     ) -> String {
-        let parent = if let Some(parent) = parent {
+        let parent_str = if let Some(parent) = parent {
             format!("{}.", self.generate_expression(parent, context))
         } else {
             String::new()
         };
         let generics = self.generate_generic_args_from_types(generics);
-        format!("{parent}{ident}{generics}")
+        let suffix = if parent.is_some() && self.is_void_enum_variant(ident, parent) {
+            "()"
+        } else {
+            ""
+        };
+        format!("{parent_str}{ident}{generics}{suffix}")
+    }
+
+    fn is_void_enum_variant(&self, variant: &str, parent: Option<&Expression>) -> bool {
+        let parent_name = match parent {
+            Some(Expression::Ident(name)) => name.as_str(),
+            Some(Expression::Path {
+                ident,
+                parent: None,
+                ..
+            }) => ident.as_str(),
+            _ => return false,
+        };
+
+        self.types.iter().any(|ty| {
+            if let Type::Enum(e) = ty {
+                if e.name == parent_name {
+                    return e.variants.iter().any(|v| {
+                        v.name == variant
+                            && v.ty.is_some_and(|ty_fn| {
+                                matches!(ty_fn(), Type::Literal(Literal::Unit))
+                            })
+                    });
+                }
+            }
+            false
+        })
     }
 
     fn constructor(&self, name: &str, fields: &[Pattern]) -> String {
@@ -1166,34 +1809,64 @@ function reqwest_client(): reqwest_Client {{
         value: Option<&Expression>,
         context: &Context,
     ) -> String {
-        if let Some(value) = value
-            && matches!(
-                value,
-                Expression::If {
-                    condition: _,
-                    then_branch: _,
-                    else_branch: _
-                }
+        if let Some(Expression::If {
+            condition,
+            then_branch,
+            else_branch: Some(else_branch),
+        }) = value
+        {
+            if let (Some(then_expr), Some(else_expr)) = (
+                extract_single_return(then_branch),
+                extract_single_return(else_branch),
+            ) {
+                let ty_str = if let Some(ty) = ty {
+                    format!(
+                        ": {}",
+                        self.type_name(ty, context.ty.as_deref().unwrap_or_default())
+                    )
+                } else {
+                    String::new()
+                };
+                return format!(
+                    "let {}{} = {} ? {} : {}",
+                    self.generate_expression(name, context),
+                    ty_str,
+                    self.generate_expression(condition, context),
+                    self.generate_expression(then_expr, context),
+                    self.generate_expression(else_expr, context),
+                );
+            }
+        }
+
+        let ty_annotation = if let Some(ty) = ty {
+            format!(
+                ": {}",
+                self.type_name(ty, context.ty.as_deref().unwrap_or_default())
             )
-        {}
+        } else if matches!(value, Some(Expression::Array(elems)) if elems.is_empty()) {
+            ": any[]".to_owned()
+        } else {
+            String::new()
+        };
 
         format!(
             "let {}{}{}",
             self.generate_expression(name, context),
-            if let Some(ty) = ty {
-                format!(
-                    ": {}",
-                    self.type_name(ty, context.ty.as_deref().unwrap_or_default())
-                )
-            } else {
-                String::new()
-            },
+            ty_annotation,
             if let Some(value) = value {
                 format!(" = {}", self.generate_expression(value, context))
             } else {
                 String::new()
             }
         )
+    }
+}
+
+fn extract_single_return(expr: &Expression) -> Option<&Expression> {
+    match expr {
+        Expression::Block(stmts) if stmts.len() == 1 => extract_single_return(&stmts[0]),
+        Expression::Return(Some(inner)) => Some(inner),
+        _ => None,
     }
 }
 

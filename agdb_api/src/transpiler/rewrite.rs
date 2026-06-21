@@ -2,7 +2,10 @@ mod strip_atomics;
 mod strip_memory_management;
 mod strip_pointer_types;
 mod strip_references;
+mod strip_rust_calls;
 mod strip_smart_pointers;
+
+use std::collections::HashMap;
 
 use agdb::type_def::Expression;
 use agdb::type_def::Pattern;
@@ -11,6 +14,7 @@ pub use strip_atomics::StripAtomics;
 pub use strip_memory_management::StripMemoryManagement;
 pub use strip_pointer_types::StripPointerTypes;
 pub use strip_references::StripReferences;
+pub use strip_rust_calls::StripRustCalls;
 pub use strip_smart_pointers::StripSmartPointers;
 
 #[derive(Debug, Default, Clone)]
@@ -18,6 +22,7 @@ pub struct RewriteContext {
     pub current_type: Option<String>,
     pub current_function: Option<String>,
     pub error_type: Option<String>,
+    pub into_targets: HashMap<String, String>,
 }
 
 pub trait Rewrite {

@@ -47,6 +47,78 @@ impl Rewrite for RewriteTsMethods {
                 ..
             } if is_method(function, "get_or_init") => *recipient,
 
+            Expression::Call {
+                recipient: Some(recipient),
+                ref function,
+                args,
+            } if args.is_empty() && is_method(function, "last_mut") => Expression::Index {
+                base: recipient.clone(),
+                index: Box::new(Expression::Binary {
+                    op: Op::Sub,
+                    left: Box::new(Expression::FieldAccess {
+                        base: recipient,
+                        field: "length".to_owned(),
+                    }),
+                    right: Box::new(Expression::Literal(LiteralValue::I32(1))),
+                }),
+            },
+
+            Expression::Call {
+                recipient: Some(recipient),
+                ref function,
+                args,
+            } if args.is_empty() && is_method(function, "search_mut") => Expression::Call {
+                recipient: Some(recipient),
+                function: Box::new(Expression::Ident("search_mut".to_owned())),
+                args,
+            },
+
+            Expression::Call {
+                recipient,
+                ref function,
+                args,
+            } if is_method(function, "starts_with") => Expression::Call {
+                recipient,
+                function: Box::new(Expression::Ident("startsWith".to_owned())),
+                args,
+            },
+
+            Expression::Call {
+                recipient,
+                ref function,
+                args,
+            } if is_method(function, "for_each") => Expression::Call {
+                recipient,
+                function: Box::new(Expression::Ident("forEach".to_owned())),
+                args,
+            },
+
+            Expression::Call {
+                recipient,
+                ref function,
+                args,
+            } if is_method(function, "delete") => Expression::Call {
+                recipient,
+                function: Box::new(Expression::Ident("delete_".to_owned())),
+                args,
+            },
+
+            Expression::Call {
+                recipient: Some(recipient),
+                ref function,
+                mut args,
+            } if args.len() == 1 && is_method(function, "extend") => {
+                let items = args.remove(0);
+                Expression::Call {
+                    recipient: Some(Box::new(Expression::FieldAccess {
+                        base: recipient.clone(),
+                        field: "push".to_owned(),
+                    })),
+                    function: Box::new(Expression::Ident("apply".to_owned())),
+                    args: vec![*recipient, items],
+                }
+            }
+
             other => other,
         }
     }

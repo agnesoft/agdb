@@ -47,13 +47,20 @@ const SKIP_LIST: &[&str] = &[
     "Duration",
     "AtomicU16",
 ];
-const MANUAL_IMPL: &[&str] = &["collapse_conditions", "search_mut"];
+const MANUAL_IMPL: &[&str] = &[
+    "collapse_conditions",
+    "search_mut",
+    "create_cluster",
+    "wait_for_leader",
+    "concurrent_logins",
+];
 const MANUAL_IMPL_QUALIFIED: &[(&str, &str)] = &[
     ("ReqwestClient", "delete"),
     ("ReqwestClient", "get"),
     ("ReqwestClient", "post"),
     ("ReqwestClient", "put"),
     ("ReqwestClient", "new"),
+    ("TestServerImpl", "with_config"),
 ];
 const ASSOCIATED_TYPE_TRAITS: &[&str] = &["DbType"];
 const STRIP_BOUNDS: &[&str] = &["Send", "Sync", "Clone", "Copy", "Sized", "From"];
@@ -63,13 +70,8 @@ const INTO_TYPE_MAP: &[(&str, &str)] = &[
     ("QueryAliases", "string[]"),
     ("MultiValues", "DbKeyValue[][]"),
     ("SingleValues", "DbKeyValue[]"),
-    ("DbValues", "DbValue[]"),
+    ("DbValues", "DbValueInput[]"),
     ("DbKeyOrders", "DbKeyOrder[]"),
-    ("QueryIds", "QueryId[]"),
-    ("QueryId", "QueryId"),
-    ("Comparison", "Comparison"),
-    ("CountComparison", "CountComparison"),
-    ("DbValue", "DbValue"),
     ("String", "string"),
     ("ReqwestClientTypeDef", "ReqwestClientTypeDef"),
 ];
@@ -249,7 +251,11 @@ const USER_AGENT: string = "User-Agent";
 // GENERATED TESTS - DO NOT EDIT
 
 // PREAMBLE
-import {{ readFileSync }} from "fs";
+declare function readFileSync(path: string, encoding: string): string;
+declare function setTimeout(cb: () => void, ms: number): any;
+declare const process: {{ env: Record<string, string | undefined> }};
+declare const console: {{ log(...args: any[]): void }};
+
 import {{ Result, Ok, Err, Option, Some, None, AgdbApiResult, reqwest_Client, {} }} from "./agdb_api";
 
 class Path {{
@@ -305,8 +311,11 @@ class Duration {{
 type PathBuf = Path;
 
 namespace std.env {{
-    export function current_exe(): Path {{
-        return new Path("target/release/agdb_server");
+    export function current_exe(): Result<Path, any> {{
+        return Ok(new Path("target/release/agdb_server"));
+    }}
+    export function var_(name: string): Result<string, any> {{
+        return Ok(process.env[name] || "");
     }}
 }}
 
@@ -329,6 +338,41 @@ namespace std.thread {{
 function reqwest_client(): reqwest_Client {{
     return new reqwest_Client();
 }}
+
+function unwrapResult<T, E>(r: Result<T, E>): T {{
+    if (!r.is_ok()) throw r.value;
+    return r.value as T;
+}}
+
+function assert_eq(a: any, b: any): void {{
+    if (JSON.stringify(a) !== JSON.stringify(b)) throw new Error(`assert_eq failed: ${{JSON.stringify(a)}} !== ${{JSON.stringify(b)}}`);
+}}
+
+function assert_ne(a: any, b: any): void {{
+    if (JSON.stringify(a) === JSON.stringify(b)) throw new Error(`assert_ne failed: values are equal`);
+}}
+
+function assert(condition: any, msg?: string): void {{
+    if (!condition) throw new Error(msg || "assertion failed");
+}}
+
+function case_(name: string, query: any): [string, any] {{
+    return [name, query];
+}}
+
+function println(...args: any[]): void {{
+    console.log(...args);
+}}
+
+function drop(_x: any): void {{}}
+
+class Vec<T> extends Array<T> {{
+    static with_capacity<T>(_n: number): Vec<T> {{ return new Vec<T>(); }}
+}}
+
+class HashMap<K, V> extends Map<K, V> {{}}
+
+const StatusCode = {{ OK: 200, UNAUTHORIZED: 401, NOT_FOUND: 404, FORBIDDEN: 403, CONFLICT: 409 }};
 
 // END OF PREAMBLE
 
@@ -400,6 +444,10 @@ function reqwest_client(): reqwest_Client {{
         }
 
         buffer.push_str("}\n\n");
+
+        let enum_impl_defs = (e.impl_defs)();
+        buffer.push_str(&self.generate_input_type_alias(&e.name, &enum_impl_defs));
+
         buffer
     }
 
@@ -478,8 +526,77 @@ function reqwest_client(): reqwest_Client {{
         }
 
         buffer.push_str("}\n\n");
+        buffer.push_str(&self.generate_input_type_alias(&s.name, &impl_defs));
 
         buffer
+    }
+
+    fn generate_input_type_alias(&self, name: &str, impl_defs: &[Impl]) -> String {
+        let from_types: Vec<String> = impl_defs
+            .iter()
+            .filter_map(|i| {
+                let trait_fn = i.trait_?;
+                let ty = trait_fn();
+                if let Type::Trait(t) = ty {
+                    if t.name == "From" && !t.generics.is_empty() {
+                        let source_type = if !t.generics[0].bounds.is_empty() {
+                            let source_ty = (t.generics[0].bounds[0])();
+                            self.emit_type(&source_ty, name)
+                        } else {
+                            t.generics[0].name.clone()
+                        };
+                        if source_type != name
+                            && source_type != "void"
+                            && !source_type.contains("::")
+                        {
+                            return Some(source_type);
+                        }
+                    }
+                }
+                None
+            })
+            .collect();
+
+        if from_types.is_empty() {
+            return String::new();
+        }
+
+        let mut unique_types: Vec<String> = Vec::new();
+        for t in from_types {
+            if !unique_types.contains(&t) {
+                unique_types.push(t);
+            }
+        }
+
+        let union = unique_types.join(" | ");
+        format!("export type {name}Input = {name} | {union};\n\n")
+    }
+
+    fn widen_type_if_input(&self, type_name: &str) -> String {
+        let base = type_name.trim_end_matches("[]");
+        let has_input = self.types.iter().any(|ty| {
+            let (name, impl_defs_fn) = match ty {
+                Type::Struct(s) => (s.name.as_str(), Some(s.impl_defs)),
+                Type::Enum(e) => (e.name.as_str(), Some(e.impl_defs)),
+                _ => ("", None),
+            };
+            if name == base {
+                if let Some(impl_defs_fn) = impl_defs_fn {
+                    return (impl_defs_fn)().iter().any(|i| {
+                        i.trait_
+                            .map(|t| matches!(t(), Type::Trait(ref tr) if tr.name == "From"))
+                            .unwrap_or(false)
+                    });
+                }
+            }
+            false
+        });
+
+        if has_input {
+            format!("{base}Input{}", if type_name.ends_with("[]") { "[]" } else { "" })
+        } else {
+            type_name.to_owned()
+        }
     }
 
     fn generate_generics_decl(&self, g: &[Generic]) -> String {
@@ -903,7 +1020,13 @@ function reqwest_client(): reqwest_Client {{
             ty: None,
             ..Default::default()
         };
-        let body = self.rewrite_body(&f.body, &context);
+
+        let body_str = if MANUAL_IMPL.contains(&f.name.as_str()) {
+            "    throw new Error(\"not implemented\");\n".to_owned()
+        } else {
+            let body = self.rewrite_body(&f.body, &context);
+            self.generate_semicoloned_expressions(&body, "    ", &context)
+        };
 
         format!(
             "{}function {}{}({}): {} {{\n{}}}\n\n",
@@ -912,7 +1035,7 @@ function reqwest_client(): reqwest_Client {{
             self.generate_generics_decl(&f.generics),
             self.generate_args(&f.args, &context),
             ret,
-            self.generate_semicoloned_expressions(&body, "    ", &context),
+            body_str,
         )
     }
 
@@ -1163,14 +1286,17 @@ function reqwest_client(): reqwest_Client {{
                 if let Type::Trait(t) = &bound_type {
                     if t.name == "Into" && !t.generics.is_empty() {
                         let target_name = &t.generics[0].name;
-                        if let Some((_, ts_type)) =
+                        let ts_type = if let Some((_, mapped)) =
                             INTO_TYPE_MAP.iter().find(|(name, _)| *name == target_name)
                         {
-                            generic_to_target.insert(
-                                g.name.clone(),
-                                (target_name.to_string(), ts_type.to_string()),
-                            );
-                        }
+                            mapped.to_string()
+                        } else {
+                            format!("{target_name}Input")
+                        };
+                        generic_to_target.insert(
+                            g.name.clone(),
+                            (target_name.to_string(), ts_type),
+                        );
                     }
                 }
             }
@@ -1243,16 +1369,43 @@ function reqwest_client(): reqwest_Client {{
         context: &Context,
     ) -> String {
         let mut buffer = String::new();
+        let mut declared: Vec<String> = Vec::new();
         exprs.iter().for_each(|expr| {
             if matches!(expr, Expression::Block(stmts) if stmts.is_empty()) {
                 return;
             }
             buffer.push_str(padding);
-            buffer.push_str(&self.generate_expression(expr, context));
+            if let Expression::Let { name, ty, value } = expr {
+                if let Some(var_name) = Self::extract_let_name(name) {
+                    if declared.contains(&var_name) {
+                        if let Some(value) = value {
+                            buffer.push_str(&format!(
+                                "{} = {}",
+                                var_name,
+                                self.generate_expression(value, context)
+                            ));
+                        }
+                    } else {
+                        declared.push(var_name);
+                        buffer.push_str(&self.generate_expression(expr, context));
+                    }
+                } else {
+                    buffer.push_str(&self.generate_expression(expr, context));
+                }
+            } else {
+                buffer.push_str(&self.generate_expression(expr, context));
+            }
             buffer.push_str(";\n");
         });
 
         buffer
+    }
+
+    fn extract_let_name(name: &Expression) -> Option<String> {
+        match name {
+            Expression::Ident(n) => Some(n.clone()),
+            _ => None,
+        }
     }
 
     fn call_args(&self, exprs: &[Expression], context: &Context) -> String {
@@ -1274,7 +1427,13 @@ function reqwest_client(): reqwest_Client {{
 
     fn generate_expression(&self, expr: &Expression, context: &Context) -> String {
         match expr {
-            Expression::Array(e) => format!("[{}]", self.generate_expressions(e, context)),
+            Expression::Array(e) => format!(
+                "[{}]",
+                e.iter()
+                    .map(|expr| self.generate_expression(expr, context))
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            ),
             Expression::Assign { target, value } => format!(
                 "{} = {}",
                 self.generate_expression(target, context),
@@ -1416,29 +1575,120 @@ function reqwest_client(): reqwest_Client {{
                 self.generate_expression(condition, context),
                 self.generate_expression(body, context)
             ),
-            Expression::Match { scrutinee, arms } => format!(
-                "switch ({}) {{\n{}\n}}",
-                self.generate_expression(scrutinee, context),
-                arms.iter()
-                    .map(|arm| {
-                        format!(
-                            "case {}:\n{}\nbreak;",
-                            self.generate_pattern(&arm.pattern),
-                            if let Some(guard) = &arm.guard {
-                                format!(
-                                    "if ({}) {{\n{}\n}}",
-                                    self.generate_expression(guard, context),
-                                    self.generate_expression(&arm.body, context)
-                                )
-                            } else {
-                                self.generate_expression(&arm.body, context)
-                            }
-                        )
-                    })
-                    .collect::<Vec<_>>()
-                    .join("\n")
-            ),
+            Expression::Match { scrutinee, arms } => {
+                self.generate_match(scrutinee, arms, context)
+            }
             Expression::Wild => "_".to_owned(),
+        }
+    }
+
+    fn generate_match(
+        &self,
+        scrutinee: &Expression,
+        arms: &[agdb::type_def::MatchArm],
+        context: &Context,
+    ) -> String {
+        let scrutinee_str = self.generate_expression(scrutinee, context);
+        let mut parts = Vec::new();
+
+        for (i, arm) in arms.iter().enumerate() {
+            let is_wild = matches!(arm.pattern, Pattern::Wild);
+            let condition = if is_wild {
+                None
+            } else {
+                Some(self.generate_match_condition(
+                    &scrutinee_str,
+                    &arm.pattern,
+                    arm.guard.as_deref(),
+                    context,
+                ))
+            };
+
+            let body_str = match arm.body.as_ref() {
+                Expression::Block(stmts) => {
+                    self.generate_semicoloned_expressions(stmts, "    ", context)
+                }
+                other => format!("    return {};\n", self.generate_expression(other, context)),
+            };
+            let keyword = if i == 0 { "if" } else { "} else if" };
+
+            if let Some(cond) = condition {
+                parts.push(format!("{keyword} ({cond}) {{\n{body_str}"));
+            } else {
+                if i == 0 {
+                    parts.push(body_str);
+                } else {
+                    parts.push(format!("}} else {{\n{body_str}"));
+                }
+            }
+        }
+
+        if !parts.is_empty()
+            && !matches!(arms.last(), Some(arm) if matches!(arm.pattern, Pattern::Wild))
+        {
+            parts.push("}".to_owned());
+        } else if arms.len() > 1 {
+            parts.push("}".to_owned());
+        }
+
+        let body = parts.join("");
+        format!("(() => {{\n{body}}})()")
+    }
+
+    fn generate_match_condition(
+        &self,
+        scrutinee: &str,
+        pattern: &Pattern,
+        guard: Option<&Expression>,
+        context: &Context,
+    ) -> String {
+        let pattern_cond = match pattern {
+            Pattern::Literal(lit) => {
+                format!("{scrutinee} === {}", self.literal_value(lit))
+            }
+            Pattern::Ident(_) => "true".to_owned(),
+            Pattern::Constructor { name, fields } => {
+                if fields.is_empty() {
+                    format!("{scrutinee}.value.{name} !== undefined")
+                } else {
+                    format!("{scrutinee}.value.{name} !== undefined")
+                }
+            }
+            Pattern::Tuple(patterns) => {
+                let conditions: Vec<String> = patterns
+                    .iter()
+                    .enumerate()
+                    .filter_map(|(i, p)| match p {
+                        Pattern::Wild | Pattern::Ident(_) => None,
+                        Pattern::Constructor { name, .. } => {
+                            Some(format!("{scrutinee}[{i}].value.{name} !== undefined"))
+                        }
+                        Pattern::Literal(lit) => {
+                            Some(format!("{scrutinee}[{i}] === {}", self.literal_value(lit)))
+                        }
+                        _ => None,
+                    })
+                    .collect();
+                if conditions.is_empty() {
+                    "true".to_owned()
+                } else {
+                    conditions.join(" && ")
+                }
+            }
+            Pattern::Or(patterns) => patterns
+                .iter()
+                .map(|p| self.generate_match_condition(scrutinee, p, None, context))
+                .collect::<Vec<_>>()
+                .join(" || "),
+            Pattern::Struct { .. } => "true".to_owned(),
+            Pattern::Wild => "true".to_owned(),
+        };
+
+        if let Some(guard) = guard {
+            let guard_str = self.generate_expression(guard, context);
+            format!("{pattern_cond} && {guard_str}")
+        } else {
+            pattern_cond
         }
     }
 
@@ -1602,6 +1852,8 @@ function reqwest_client(): reqwest_Client {{
     fn ts_name<'a>(&self, name: &'a str) -> &'a str {
         match name {
             "delete" => "delete_",
+            "case" => "case_",
+            "var" => "var_",
             _ => name,
         }
     }
@@ -1633,9 +1885,11 @@ function reqwest_client(): reqwest_Client {{
             if let Some(ctor_name) = Self::constructor_name(function) {
                 return format!("new {ctor_name}({args})");
             }
-            if args.is_empty() {
-                if let Some(ctor_name) = Self::new_constructor_name(function) {
-                    return format!("new {ctor_name}()");
+            if let Some(name) = Self::new_constructor_name(function) {
+                if args.is_empty() {
+                    return format!("new {name}()");
+                } else {
+                    return format!("{name}.new({args})");
                 }
             }
         }
@@ -1649,6 +1903,7 @@ function reqwest_client(): reqwest_Client {{
     }
 
     fn new_constructor_name(function: &Expression) -> Option<String> {
+        const FACTORY_TYPES: &[&str] = &["TestServer", "TestServerImpl"];
         if let Expression::Path {
             ident,
             parent: Some(parent),
@@ -1656,7 +1911,7 @@ function reqwest_client(): reqwest_Client {{
         } = function
         {
             if ident == "new" {
-                return match parent.as_ref() {
+                let name = match parent.as_ref() {
                     Expression::Ident(name) => Some(name.clone()),
                     Expression::Path {
                         ident,
@@ -1665,6 +1920,12 @@ function reqwest_client(): reqwest_Client {{
                     } => Some(ident.clone()),
                     _ => None,
                 };
+                if let Some(ref n) = name {
+                    if FACTORY_TYPES.contains(&n.as_str()) {
+                        return None;
+                    }
+                }
+                return name;
             }
         }
         None
@@ -1849,15 +2110,22 @@ function reqwest_client(): reqwest_Client {{
             String::new()
         };
 
+        let value_str = match value {
+            Some(Expression::Block(stmts)) if stmts.len() > 1 => {
+                let body = self.generate_semicoloned_expressions(stmts, "    ", context);
+                format!(" = (() => {{\n{}}})()", body)
+            }
+            Some(value) => {
+                format!(" = {}", self.generate_expression(value, context))
+            }
+            None => String::new(),
+        };
+
         format!(
             "let {}{}{}",
             self.generate_expression(name, context),
             ty_annotation,
-            if let Some(value) = value {
-                format!(" = {}", self.generate_expression(value, context))
-            } else {
-                String::new()
-            }
+            value_str,
         )
     }
 }

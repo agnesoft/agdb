@@ -20,6 +20,9 @@ impl Rewrite for RewriteTsIdentifiers {
                     .clone()
                     .unwrap_or_else(|| "Self".to_owned()),
             ),
+            Expression::Ident(ref name) if is_reserved_word(name) => {
+                Expression::Ident(format!("{name}_"))
+            }
             Expression::Path {
                 ref ident,
                 parent,
@@ -51,6 +54,14 @@ impl Rewrite for RewriteTsIdentifiers {
             other => other,
         }
     }
+}
+
+fn is_reserved_word(name: &str) -> bool {
+    matches!(
+        name,
+        "case" | "switch" | "default" | "yield" | "typeof" | "instanceof" | "in" | "void"
+            | "var" | "let" | "const"
+    )
 }
 
 #[cfg(test)]

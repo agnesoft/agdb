@@ -37,7 +37,7 @@ pub mod db_optimize_test;
 pub mod db_remove_test;
 pub mod db_rename_test;
 pub mod db_user_add_test;
-pub mod db_user_list;
+pub mod db_user_list_test;
 pub mod db_user_remove_test;
 
 // User Authentication
@@ -45,8 +45,8 @@ pub mod user_change_password_test;
 pub mod user_login_test;
 pub mod user_logout_all_test;
 pub mod user_logout_test;
-pub mod user_status;
+pub mod user_status_test;
 
 // Miscellaneous (subset)
 pub mod cluster_test;
-pub mod misc_routes;
+pub mod misc_routes_test;

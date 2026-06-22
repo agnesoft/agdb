@@ -595,12 +595,12 @@ impl<T: SearchQueryBuilder> SearchIndex<T> {
     pub fn value<V: Into<DbValue>>(mut self, value: V) -> SearchIndexValue<T> {
         self.query.search_mut().algorithm = SearchQueryAlgorithm::Index;
         self.query.search_mut().conditions.push(QueryCondition {
+            logic: QueryConditionLogic::And,
+            modifier: QueryConditionModifier::None,
             data: QueryConditionData::KeyValue(KeyValueComparison {
                 key: self.index,
                 value: Comparison::Equal(value.into()),
             }),
-            logic: QueryConditionLogic::And,
-            modifier: QueryConditionModifier::None,
         });
         SearchIndexValue(self.query)
     }

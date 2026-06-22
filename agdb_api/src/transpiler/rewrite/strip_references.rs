@@ -12,7 +12,6 @@ impl Rewrite for StripReferences {
     fn rewrite_expr(&self, expr: Expression, _ctx: &RewriteContext) -> Expression {
         match expr {
             Expression::Reference(inner) => *inner,
-            Expression::Try(inner) => *inner,
             other => other,
         }
     }
@@ -35,13 +34,13 @@ mod tests {
     }
 
     #[test]
-    fn try_stripped() {
+    fn try_not_stripped() {
         let mut expr = Expression::Try(Box::new(Expression::Ident("result".to_owned())));
 
         let pipeline = RewritePipeline::new(vec![Box::new(StripReferences)]);
         pipeline.rewrite_expr(&mut expr, &RewriteContext::default());
 
-        assert!(matches!(expr, Expression::Ident(ref s) if s == "result"));
+        assert!(matches!(expr, Expression::Try(_)));
     }
 
     #[test]

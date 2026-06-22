@@ -1,14 +1,15 @@
-use std::sync::atomic::AtomicU16;
-use std::time::Duration;
-
 use agdb::Comparison;
 use agdb::CountComparison;
 use agdb::DbElement;
+use agdb::DbError;
+use agdb::DbErrorCategory;
+use agdb::DbErrorType;
 use agdb::DbF64;
 use agdb::DbId;
 use agdb::DbKeyOrder;
 use agdb::DbKeyOrders;
 use agdb::DbKeyValue;
+use agdb::DbTypeDef;
 use agdb::DbValue;
 use agdb::DbValues;
 use agdb::Insert;
@@ -96,6 +97,9 @@ use agdb::WhereKey;
 use agdb::WhereLogicOperator;
 use agdb::type_def::Type;
 use agdb::type_def::TypeDefinition;
+use std::panic::Location;
+use std::sync::atomic::AtomicU16;
+use std::time::Duration;
 
 use crate::AdminStatus;
 use crate::AgdbApi;
@@ -117,12 +121,29 @@ use crate::UserCredentials;
 use crate::UserLogin;
 use crate::UserSession;
 use crate::UserStatus;
+use crate::config_impl::ConfigImpl;
 use crate::http_client::ReqwestClientTypeDef;
 
 pub struct Api;
 
 impl Api {
-    pub fn db_types() -> Vec<Type> {
+    pub fn types() -> Vec<Type> {
+        let mut defs = Self::db_types();
+        defs.extend(Self::query_types());
+        defs.extend(Self::query_builder_types());
+        defs.extend(Self::api_types());
+        defs.extend(Self::misc_types());
+        defs
+    }
+
+    #[cfg(feature = "test_server")]
+    pub fn tests() -> Vec<(String, Vec<Type>)> {
+        let mut defs = vec![(String::new(), Self::test_infra())];
+        defs.extend(Self::test_defs());
+        defs
+    }
+
+    fn db_types() -> Vec<Type> {
         vec![
             DbElement::type_def(),
             DbF64::type_def(),
@@ -132,10 +153,14 @@ impl Api {
             DbKeyValue::type_def(),
             DbValue::type_def(),
             DbValues::type_def(),
+            DbErrorCategory::type_def(),
+            DbErrorType::type_def(),
+            DbError::type_def(),
+            DbTypeDef::type_def(), // trait
         ]
     }
 
-    pub fn query_types() -> Vec<Type> {
+    fn query_types() -> Vec<Type> {
         vec![
             QueryType::type_def(),
             QueryAliases::type_def(),
@@ -174,7 +199,7 @@ impl Api {
         ]
     }
 
-    pub fn query_builder_types() -> Vec<Type> {
+    fn query_builder_types() -> Vec<Type> {
         vec![
             QueryBuilder::type_def(),
             Insert::type_def(),
@@ -230,7 +255,7 @@ impl Api {
         ]
     }
 
-    pub fn api_types() -> Vec<Type> {
+    fn api_types() -> Vec<Type> {
         vec![
             HttpClientDef::type_def(),    // trait
             AgdbApiClientDef::type_def(), // trait
@@ -256,84 +281,202 @@ impl Api {
         ]
     }
 
-    pub fn misc_types() -> Vec<Type> {
+    fn misc_types() -> Vec<Type> {
         vec![
             Duration::type_def(),
-            tokio::sync::RwLock::<i32>::type_def(),
             AtomicU16::type_def(),
+            Location::type_def(),
         ]
     }
 
-    pub fn type_defs() -> Vec<Type> {
-        let mut defs = Self::db_types();
-        defs.extend(Self::query_types());
-        defs.extend(Self::query_builder_types());
-        defs.extend(Self::api_types());
-        defs.extend(Self::misc_types());
-        #[cfg(feature = "test_server")]
-        {
-            defs.extend(Self::test_infra());
-            defs.extend(Self::test_defs());
-        }
-
-        defs
-    }
-
     #[cfg(feature = "test_server")]
-    pub fn test_infra() -> Vec<Type> {
-        crate::test_server::test_defs()
+    fn test_infra() -> Vec<Type> {
+        let mut defs = crate::test_server::test_defs();
+        defs.push(ConfigImpl::type_def());
+        defs
     }
 
     /// Returns all test function definitions for API reflection
     #[cfg(feature = "test_server")]
-    pub fn test_defs() -> Vec<Type> {
-        let mut defs = Vec::new();
-
-        defs.extend(crate::tests::routes::admin_db_add_test::test_defs());
-        defs.extend(crate::tests::routes::admin_db_audit_test::test_defs());
-        defs.extend(crate::tests::routes::admin_db_backup_restore_test::test_defs());
-        defs.extend(crate::tests::routes::admin_db_clear_test::test_defs());
-        defs.extend(crate::tests::routes::admin_db_convert_test::test_defs());
-        defs.extend(crate::tests::routes::admin_db_copy_test::test_defs());
-        defs.extend(crate::tests::routes::admin_db_delete_test::test_defs());
-        defs.extend(crate::tests::routes::admin_db_exec_test::test_defs());
-        defs.extend(crate::tests::routes::admin_db_list_test::test_defs());
-        defs.extend(crate::tests::routes::admin_db_optimize_test::test_defs());
-        defs.extend(crate::tests::routes::admin_db_remove_test::test_defs());
-        defs.extend(crate::tests::routes::admin_db_rename_test::test_defs());
-        defs.extend(crate::tests::routes::admin_db_user_add_test::test_defs());
-        defs.extend(crate::tests::routes::admin_db_user_list_test::test_defs());
-        defs.extend(crate::tests::routes::admin_db_user_remove_test::test_defs());
-        defs.extend(crate::tests::routes::admin_status_test::test_defs());
-        defs.extend(crate::tests::routes::admin_user_add_test::test_defs());
-        defs.extend(crate::tests::routes::admin_user_change_password_test::test_defs());
-        defs.extend(crate::tests::routes::admin_user_delete_test::test_defs());
-        defs.extend(crate::tests::routes::admin_user_list_test::test_defs());
-        defs.extend(crate::tests::routes::admin_user_logout_test::test_defs());
-        defs.extend(crate::tests::routes::db_add_test::test_defs());
-        defs.extend(crate::tests::routes::db_audit_test::test_defs());
-        defs.extend(crate::tests::routes::db_backup_restore_test::test_defs());
-        defs.extend(crate::tests::routes::db_clear_test::test_defs());
-        defs.extend(crate::tests::routes::db_convert_test::test_defs());
-        defs.extend(crate::tests::routes::db_copy_test::test_defs());
-        defs.extend(crate::tests::routes::db_delete_test::test_defs());
-        defs.extend(crate::tests::routes::db_exec_test::test_defs());
-        defs.extend(crate::tests::routes::db_list_test::test_defs());
-        defs.extend(crate::tests::routes::db_optimize_test::test_defs());
-        defs.extend(crate::tests::routes::db_remove_test::test_defs());
-        defs.extend(crate::tests::routes::db_rename_test::test_defs());
-        defs.extend(crate::tests::routes::db_user_add_test::test_defs());
-        defs.extend(crate::tests::routes::db_user_list::test_defs());
-        defs.extend(crate::tests::routes::db_user_remove_test::test_defs());
-        defs.extend(crate::tests::routes::misc_routes::test_defs());
-        defs.extend(crate::tests::routes::cluster_test::test_defs());
-        defs.extend(crate::tests::routes::user_change_password_test::test_defs());
-        defs.extend(crate::tests::routes::user_login_test::test_defs());
-        defs.extend(crate::tests::routes::user_logout_test::test_defs());
-        defs.extend(crate::tests::routes::user_logout_all_test::test_defs());
-        defs.extend(crate::tests::routes::user_status::test_defs());
-
-        defs
+    fn test_defs() -> Vec<(String, Vec<Type>)> {
+        vec![
+            (
+                "admin_db_add_test".to_owned(),
+                crate::tests::routes::admin_db_add_test::test_defs(),
+            ),
+            (
+                "admin_db_audit_test".to_owned(),
+                crate::tests::routes::admin_db_audit_test::test_defs(),
+            ),
+            (
+                "admin_db_backup_restore_test".to_owned(),
+                crate::tests::routes::admin_db_backup_restore_test::test_defs(),
+            ),
+            (
+                "admin_db_clear_test".to_owned(),
+                crate::tests::routes::admin_db_clear_test::test_defs(),
+            ),
+            (
+                "admin_db_convert_test".to_owned(),
+                crate::tests::routes::admin_db_convert_test::test_defs(),
+            ),
+            (
+                "admin_db_copy_test".to_owned(),
+                crate::tests::routes::admin_db_copy_test::test_defs(),
+            ),
+            (
+                "admin_db_delete_test".to_owned(),
+                crate::tests::routes::admin_db_delete_test::test_defs(),
+            ),
+            (
+                "admin_db_exec_test".to_owned(),
+                crate::tests::routes::admin_db_exec_test::test_defs(),
+            ),
+            (
+                "admin_db_list_test".to_owned(),
+                crate::tests::routes::admin_db_list_test::test_defs(),
+            ),
+            (
+                "admin_db_optimize_test".to_owned(),
+                crate::tests::routes::admin_db_optimize_test::test_defs(),
+            ),
+            (
+                "admin_db_remove_test".to_owned(),
+                crate::tests::routes::admin_db_remove_test::test_defs(),
+            ),
+            (
+                "admin_db_rename_test".to_owned(),
+                crate::tests::routes::admin_db_rename_test::test_defs(),
+            ),
+            (
+                "admin_db_user_add_test".to_owned(),
+                crate::tests::routes::admin_db_user_add_test::test_defs(),
+            ),
+            (
+                "admin_db_user_list_test".to_owned(),
+                crate::tests::routes::admin_db_user_list_test::test_defs(),
+            ),
+            (
+                "admin_db_user_remove_test".to_owned(),
+                crate::tests::routes::admin_db_user_remove_test::test_defs(),
+            ),
+            (
+                "admin_status_test".to_owned(),
+                crate::tests::routes::admin_status_test::test_defs(),
+            ),
+            (
+                "admin_user_add_test".to_owned(),
+                crate::tests::routes::admin_user_add_test::test_defs(),
+            ),
+            (
+                "admin_user_change_password_test".to_owned(),
+                crate::tests::routes::admin_user_change_password_test::test_defs(),
+            ),
+            (
+                "admin_user_delete_test".to_owned(),
+                crate::tests::routes::admin_user_delete_test::test_defs(),
+            ),
+            (
+                "admin_user_list_test".to_owned(),
+                crate::tests::routes::admin_user_list_test::test_defs(),
+            ),
+            (
+                "admin_user_logout_test".to_owned(),
+                crate::tests::routes::admin_user_logout_test::test_defs(),
+            ),
+            (
+                "db_add_test".to_owned(),
+                crate::tests::routes::db_add_test::test_defs(),
+            ),
+            (
+                "db_audit_test".to_owned(),
+                crate::tests::routes::db_audit_test::test_defs(),
+            ),
+            (
+                "db_backup_restore_test".to_owned(),
+                crate::tests::routes::db_backup_restore_test::test_defs(),
+            ),
+            (
+                "db_clear_test".to_owned(),
+                crate::tests::routes::db_clear_test::test_defs(),
+            ),
+            (
+                "db_convert_test".to_owned(),
+                crate::tests::routes::db_convert_test::test_defs(),
+            ),
+            (
+                "db_copy_test".to_owned(),
+                crate::tests::routes::db_copy_test::test_defs(),
+            ),
+            (
+                "db_delete_test".to_owned(),
+                crate::tests::routes::db_delete_test::test_defs(),
+            ),
+            (
+                "db_exec_test".to_owned(),
+                crate::tests::routes::db_exec_test::test_defs(),
+            ),
+            (
+                "db_list_test".to_owned(),
+                crate::tests::routes::db_list_test::test_defs(),
+            ),
+            (
+                "db_optimize_test".to_owned(),
+                crate::tests::routes::db_optimize_test::test_defs(),
+            ),
+            (
+                "db_remove_test".to_owned(),
+                crate::tests::routes::db_remove_test::test_defs(),
+            ),
+            (
+                "db_rename_test".to_owned(),
+                crate::tests::routes::db_rename_test::test_defs(),
+            ),
+            (
+                "db_user_add_test".to_owned(),
+                crate::tests::routes::db_user_add_test::test_defs(),
+            ),
+            (
+                "db_user_list_test".to_owned(),
+                crate::tests::routes::db_user_list_test::test_defs(),
+            ),
+            (
+                "db_user_remove_test".to_owned(),
+                crate::tests::routes::db_user_remove_test::test_defs(),
+            ),
+            (
+                "misc_routes_test".to_owned(),
+                crate::tests::routes::misc_routes_test::test_defs(),
+            ),
+            (
+                "cluster_test".to_owned(),
+                crate::tests::routes::cluster_test::test_defs(),
+            ),
+            (
+                "queries_test".to_owned(),
+                crate::tests::queries::test_defs(),
+            ),
+            (
+                "user_change_password_test".to_owned(),
+                crate::tests::routes::user_change_password_test::test_defs(),
+            ),
+            (
+                "user_login_test".to_owned(),
+                crate::tests::routes::user_login_test::test_defs(),
+            ),
+            (
+                "user_logout_test".to_owned(),
+                crate::tests::routes::user_logout_test::test_defs(),
+            ),
+            (
+                "user_logout_all_test".to_owned(),
+                crate::tests::routes::user_logout_all_test::test_defs(),
+            ),
+            (
+                "user_status_test".to_owned(),
+                crate::tests::routes::user_status_test::test_defs(),
+            ),
+        ]
     }
 }
 
@@ -588,7 +731,7 @@ mod tests {
     }
 
     fn collect_missing_named_types() -> Vec<String> {
-        let roots = Api::type_defs();
+        let roots = Api::types();
         let root_names: HashSet<&str> = roots.iter().map(|ty| ty.name()).collect();
 
         let mut visited: HashSet<usize> = HashSet::new();
@@ -671,7 +814,7 @@ mod tests {
 
     #[test]
     fn into_bounds_capture_inner_type() {
-        let impl_defs = Api::type_defs();
+        let impl_defs = Api::types();
         let insert_aliases_impl = impl_defs
             .iter()
             .find_map(|t| {
@@ -709,7 +852,7 @@ mod tests {
 
     #[test]
     fn query_type_enum_variants_discoverable() {
-        let type_defs = Api::type_defs();
+        let type_defs = Api::types();
         let query_type = type_defs
             .iter()
             .find(|t| t.name() == "QueryType")
@@ -756,7 +899,7 @@ mod tests {
 
     #[test]
     fn newtype_pattern_detectable() {
-        let type_defs = Api::type_defs();
+        let type_defs = Api::types();
 
         // RemoveAliases is a newtype: struct RemoveAliases(pub RemoveAliasesQuery)
         let remove_aliases = type_defs
@@ -776,7 +919,7 @@ mod tests {
 
     #[test]
     fn builder_method_bodies_available() {
-        let impl_defs = Api::type_defs();
+        let impl_defs = Api::types();
         let insert_nodes_impl = impl_defs
             .iter()
             .find_map(|t| {
@@ -804,7 +947,7 @@ mod tests {
 
     #[test]
     fn all_fn_ptrs_resolvable() {
-        let roots = Api::type_defs();
+        let roots = Api::types();
         let mut visited: HashSet<usize> = HashSet::new();
         let mut queue: Vec<fn() -> Type> = Vec::new();
 

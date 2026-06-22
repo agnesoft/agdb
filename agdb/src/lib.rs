@@ -52,6 +52,7 @@ pub use agdb_derive::{TypeDef, fn_def, impl_def, static_def, test_def, trait_def
 #[rustfmt::skip]
 pub use {
     db::db_value::DbValues,
+    db::db_type::DbTypeDef,
     query::query_aliases::QueryAliases,
     query::query_values::MultiValues,
     query::query_values::SingleValues,

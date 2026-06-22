@@ -43,17 +43,23 @@ pub(crate) fn parse_function_internal(input: &ItemFn, wrapper: TokenStream2) -> 
     }
 }
 
-pub(crate) fn parse_impl_fn(impl_fn: &syn::ImplItemFn) -> TokenStream2 {
+pub(crate) fn parse_impl_fn(
+    impl_fn: &syn::ImplItemFn,
+    impl_generics: &[generics_parser::Generic],
+) -> TokenStream2 {
     let sig = &impl_fn.sig;
     let name = &sig.ident;
-    let current_generics = generics_parser::extract_generics(&sig.generics);
+    let fn_generics = generics_parser::extract_generics(&sig.generics);
+    let mut combined_generics = Vec::new();
+    combined_generics.extend_from_slice(impl_generics);
+    combined_generics.extend_from_slice(&fn_generics);
     let generics = generics_parser::parse_generics(&sig.generics);
-    let args = parse_args(&sig.inputs, &current_generics);
-    let ret = parse_ret(&sig.output, &current_generics);
+    let args = parse_args(&sig.inputs, &combined_generics);
+    let ret = parse_ret(&sig.output, &combined_generics);
     let async_fn = sig.asyncness.is_some();
     let body = crate::type_def_parser::expression_parser::parse_block_stmts(
         &impl_fn.block,
-        &current_generics,
+        &combined_generics,
     );
 
     quote! {

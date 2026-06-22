@@ -115,6 +115,7 @@ pub struct QueryCondition {
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 #[cfg_attr(feature = "derive", derive(agdb::DbSerialize))]
 #[cfg_attr(feature = "api", derive(agdb::TypeDef))]
+#[cfg_attr(feature = "api", type_def(from(u64)))]
 pub enum CountComparison {
     /// property == this
     Equal(u64),

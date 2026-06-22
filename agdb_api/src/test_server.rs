@@ -123,6 +123,7 @@ pub fn audit_entries(path: &str) -> Result<usize, TestError> {
     Ok(entries.len())
 }
 
+#[cfg_attr(feature = "api", agdb::fn_def())]
 pub fn test_agent_name() -> String {
     std::env::var("NEXTEST_TEST_NAME")
         .ok()
@@ -136,6 +137,7 @@ pub fn test_agent_name() -> String {
         .unwrap_or_else(|| "agdb_api_test".to_string())
 }
 
+#[cfg_attr(feature = "api", agdb::fn_def())]
 pub fn api_for_test(address: &str) -> AgdbApi<ReqwestClient> {
     AgdbApi::new(
         ReqwestClient::with_user_agent(reqwest_client(), test_agent_name()),
@@ -183,6 +185,8 @@ pub fn test_defs() -> Vec<agdb::type_def::Type> {
         __backup_audit_file_type_def(),
         __audit_entries_type_def(),
         __wait_for_ready_type_def(),
+        __api_for_test_type_def(),
+        __test_agent_name_type_def(),
         TestError::type_def(),
         PathBuf::type_def(),
         TestServer::type_def(),
@@ -195,6 +199,7 @@ pub fn test_defs() -> Vec<agdb::type_def::Type> {
 }
 
 #[cfg_attr(feature = "api", derive(agdb::TypeDef))]
+#[type_def(inherent)]
 pub struct TestServer {
     pub dir: String,
     pub data_dir: String,
@@ -203,6 +208,7 @@ pub struct TestServer {
 }
 
 #[cfg_attr(feature = "api", derive(agdb::TypeDef))]
+#[type_def(inherent)]
 pub struct TestServerImpl {
     pub dir: String,
     pub data_dir: String,

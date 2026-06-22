@@ -29,6 +29,7 @@ use tokio::sync::RwLock;
 static CLUSTER: OnceLock<RwLock<Weak<Vec<TestServerImpl>>>> = OnceLock::new();
 
 #[cfg_attr(feature = "api", derive(agdb::TypeDef))]
+#[type_def(inherent)]
 pub struct TestCluster {
     cluster: Arc<Vec<TestServerImpl>>,
 }

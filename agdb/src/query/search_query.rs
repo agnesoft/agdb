@@ -47,6 +47,7 @@ pub enum SearchQueryAlgorithm {
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 #[cfg_attr(feature = "derive", derive(agdb::DbSerialize))]
 #[cfg_attr(feature = "api", derive(agdb::TypeDef))]
+#[cfg_attr(feature = "api", type_def(SearchQueryBuilder))]
 pub struct SearchQuery {
     /// Search algorithm to be used. Will be bypassed for path
     /// searches that unconditionally use A*.
@@ -246,6 +247,7 @@ impl Query for &SearchQuery {
     }
 }
 
+#[cfg_attr(feature = "api", agdb::impl_def())]
 impl SearchQueryBuilder for SearchQuery {
     fn search_mut(&mut self) -> &mut SearchQuery {
         self

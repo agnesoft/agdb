@@ -159,7 +159,7 @@ pub struct MatchArm {
     pub body: Box<Expression>,
 }
 
-#[derive(Debug, Clone, agdb::TypeDef)]
+#[derive(Debug, Clone, Default, agdb::TypeDef)]
 pub enum Pattern {
     Literal(LiteralValue),
     Ident(String),
@@ -173,6 +173,7 @@ pub enum Pattern {
         name: String,
         fields: Vec<(String, Pattern)>,
     },
+    #[default]
     Wild,
 }
 
@@ -184,19 +185,13 @@ mod tests {
 
     fn get_body(name: &str) -> Vec<Expression> {
         let func_type = match name {
-            "literal_integer" => __literal_integer_type_def(),
-            "literal_bool" => __literal_bool_type_def(),
-            "literal_string" => __literal_string_type_def(),
-            "literal_float" => __literal_float_type_def(),
-            "literal_suffixed" => __literal_suffixed_type_def(),
             "array_expr" => __array_expr_type_def(),
+            "assert_macros_expr" => __assert_macros_expr_type_def(),
             "assign_expr" => __assign_expr_type_def(),
             "binary_arithmetic" => __binary_arithmetic_type_def(),
+            "binary_assign_ops" => __binary_assign_ops_type_def(),
             "binary_comparison" => __binary_comparison_type_def(),
             "binary_logical" => __binary_logical_type_def(),
-            "binary_assign_ops" => __binary_assign_ops_type_def(),
-            "unary_neg" => __unary_neg_type_def(),
-            "unary_not" => __unary_not_type_def(),
             "block_expr" => __block_expr_type_def(),
             "break_continue" => __break_continue_type_def(),
             "call_function" => __call_function_type_def(),
@@ -204,39 +199,45 @@ mod tests {
             "closure_simple" => __closure_simple_type_def(),
             "closure_typed" => __closure_typed_type_def(),
             "field_access_expr" => __field_access_expr_type_def(),
-            "tuple_access_expr" => __tuple_access_expr_type_def(),
             "for_loop_expr" => __for_loop_expr_type_def(),
-            "while_loop_expr" => __while_loop_expr_type_def(),
-            "loop_expr" => __loop_expr_type_def(),
-            "if_expr" => __if_expr_type_def(),
+            "for_pattern" => __for_pattern_type_def(),
+            "format_expr" => __format_expr_type_def(),
+            "ident_expr" => __ident_expr_type_def(),
             "if_else_expr" => __if_else_expr_type_def(),
             "if_else_if_expr" => __if_else_if_expr_type_def(),
+            "if_expr" => __if_expr_type_def(),
+            "implicit_return" => __implicit_return_type_def(),
             "index_expr" => __index_expr_type_def(),
+            "let_no_init" => __let_no_init_type_def(),
+            "let_pattern_tuple" => __let_pattern_tuple_type_def(),
             "let_simple" => __let_simple_type_def(),
             "let_typed" => __let_typed_type_def(),
-            "let_no_init" => __let_no_init_type_def(),
-            "reference_expr" => __reference_expr_type_def(),
-            "return_value" => __return_value_type_def(),
-            "return_none" => __return_none_type_def(),
-            "try_expr" => __try_expr_type_def(),
-            "tuple_expr" => __tuple_expr_type_def(),
-            "format_expr" => __format_expr_type_def(),
-            "vec_macro_expr" => __vec_macro_expr_type_def(),
-            "assert_macros_expr" => __assert_macros_expr_type_def(),
+            "literal_bool" => __literal_bool_type_def(),
+            "literal_float" => __literal_float_type_def(),
+            "literal_integer" => __literal_integer_type_def(),
+            "literal_string" => __literal_string_type_def(),
+            "literal_suffixed" => __literal_suffixed_type_def(),
+            "loop_expr" => __loop_expr_type_def(),
             "match_expr" => __match_expr_type_def(),
-            "struct_expr" => __struct_expr_type_def(),
-            "implicit_return" => __implicit_return_type_def(),
-            "ident_expr" => __ident_expr_type_def(),
-            "wild_expr" => __wild_expr_type_def(),
             "path_expr" => __path_expr_type_def(),
-            "let_pattern_tuple" => __let_pattern_tuple_type_def(),
-            "for_pattern" => __for_pattern_type_def(),
+            "range_from" => __range_from_type_def(),
+            "range_full" => __range_full_type_def(),
             "range_half_open" => __range_half_open_type_def(),
             "range_inclusive" => __range_inclusive_type_def(),
-            "range_from" => __range_from_type_def(),
-            "range_to" => __range_to_type_def(),
             "range_to_inclusive" => __range_to_inclusive_type_def(),
-            "range_full" => __range_full_type_def(),
+            "range_to" => __range_to_type_def(),
+            "reference_expr" => __reference_expr_type_def(),
+            "return_none" => __return_none_type_def(),
+            "return_value" => __return_value_type_def(),
+            "struct_expr" => __struct_expr_type_def(),
+            "try_expr" => __try_expr_type_def(),
+            "tuple_access_expr" => __tuple_access_expr_type_def(),
+            "tuple_expr" => __tuple_expr_type_def(),
+            "unary_neg" => __unary_neg_type_def(),
+            "unary_not" => __unary_not_type_def(),
+            "vec_macro_expr" => __vec_macro_expr_type_def(),
+            "while_loop_expr" => __while_loop_expr_type_def(),
+            "wild_expr" => __wild_expr_type_def(),
             _ => panic!("Unknown test function: {name}"),
         };
         let Type::Function(def) = func_type else {
@@ -1420,20 +1421,16 @@ mod tests {
         let body = get_body("match_expr");
         assert_eq!(body.len(), 2);
         match &body[1] {
-            Expression::If {
-                condition,
-                then_branch,
-                else_branch: Some(_),
-            } => {
+            Expression::Match { scrutinee, arms } => {
                 assert!(
-                    matches!(condition.as_ref(), Expression::Binary { op: Op::Eq, .. }),
+                    matches!(scrutinee.as_ref(), Expression::Binary { op: Op::Eq, .. }),
                     "Got condition: {:?}",
-                    condition
+                    scrutinee
                 );
                 assert!(
-                    matches!(then_branch.as_ref(), Expression::Block(_)),
+                    matches!(arms[0].body.as_ref(), Expression::Block(_)),
                     "Got then: {:?}",
-                    then_branch
+                    arms[0].body
                 );
             }
             _ => panic!("Got: {:?}", body[1]),

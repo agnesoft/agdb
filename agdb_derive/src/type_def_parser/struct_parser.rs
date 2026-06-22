@@ -14,9 +14,13 @@ pub(crate) fn parse_struct(input: &DeriveInput, s: &DataStruct) -> TokenStream2 
     let fields = parse_fields(&s.fields, &current_generics);
     let (impl_generics, ty_generic, where_clause) = input.generics.split_for_impl();
 
-    let impl_names = impl_parser::parse_type_def_impls(&input.attrs);
-    let impl_defs_method =
-        impl_parser::generate_impl_defs_method(&impl_names, &name.to_string(), &input.generics);
+    let type_def_attrs = impl_parser::parse_type_def_attrs(&input.attrs);
+    let impl_defs_method = impl_parser::generate_impl_defs_method(
+        &type_def_attrs.impl_names,
+        &type_def_attrs.from_types,
+        &name.to_string(),
+        &input.generics,
+    );
 
     quote! {
         impl #impl_generics ::agdb::type_def::TypeDefinition for #name #ty_generic #where_clause {

@@ -359,33 +359,6 @@ impl TypeDefinition for std::sync::atomic::AtomicU16 {
     }
 }
 
-impl<T: TypeDefinition> TypeDefinition for std::sync::OnceLock<T> {
-    fn type_def() -> Type {
-        Type::Pointer(Pointer {
-            kind: PointerKind::OnceLock,
-            ty: T::type_def,
-        })
-    }
-}
-
-impl<T: TypeDefinition> TypeDefinition for std::sync::Weak<T> {
-    fn type_def() -> Type {
-        Type::Pointer(Pointer {
-            kind: PointerKind::ArcWeak,
-            ty: T::type_def,
-        })
-    }
-}
-
-impl<T: TypeDefinition> TypeDefinition for tokio::sync::RwLock<T> {
-    fn type_def() -> Type {
-        Type::Pointer(Pointer {
-            kind: PointerKind::RwLock,
-            ty: T::type_def,
-        })
-    }
-}
-
 macro_rules! impl_type_def_fn_ptr {
     ($(($($arg:ident),*)),* $(,)?) => {
         $(

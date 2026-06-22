@@ -27,6 +27,7 @@ use crate::query_builder::search::SearchQueryBuilder;
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 #[cfg_attr(feature = "derive", derive(agdb::DbSerialize))]
 #[cfg_attr(feature = "api", derive(agdb::TypeDef))]
+#[cfg_attr(feature = "api", type_def(SearchQueryBuilder))]
 #[derive(Clone, Debug, PartialEq)]
 pub struct InsertValuesQuery {
     /// Ids whose properties should be updated
@@ -164,6 +165,7 @@ fn insert_values_id<Store: StorageData>(
     Ok(())
 }
 
+#[cfg_attr(feature = "api", agdb::impl_def())]
 impl SearchQueryBuilder for InsertValuesQuery {
     fn search_mut(&mut self) -> &mut SearchQuery {
         if let QueryIds::Search(search) = &mut self.ids {

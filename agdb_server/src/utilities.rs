@@ -53,10 +53,12 @@ pub(crate) fn required_role(queries: &Queries) -> DbUserRole {
         match q {
             QueryType::InsertAlias(_)
             | QueryType::InsertEdges(_)
+            | QueryType::InsertIndex(_)
             | QueryType::InsertNodes(_)
             | QueryType::InsertValues(_)
             | QueryType::Remove(_)
             | QueryType::RemoveAliases(_)
+            | QueryType::RemoveIndex(_)
             | QueryType::RemoveValues(_) => {
                 return DbUserRole::Write;
             }

@@ -355,8 +355,8 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
     fn pre_vote_request(&self, request: &Request<T>) -> Result<Response, Response> {
         self.validate_hash(request)?;
 
-        if let ClusterState::Follower(_) | ClusterState::Leader = self.state
-            && self.local().timer.elapsed() <= self.term_timeout
+        if matches!(self.state, ClusterState::Leader)
+            || matches!(self.state, ClusterState::Follower(_) if self.local().timer.elapsed() <= self.term_timeout)
         {
             return Err(Response {
                 target: request.index,

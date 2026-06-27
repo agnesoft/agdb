@@ -355,20 +355,28 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
     fn pre_vote_request(&self, request: &Request<T>) -> Result<Response, Response> {
         self.validate_hash(request)?;
 
-        if matches!(self.state, ClusterState::Leader)
-            || matches!(self.state, ClusterState::Follower(_) if self.local().timer.elapsed() <= self.term_timeout)
-        {
-            return Err(Response {
+        match self.state {
+            ClusterState::Leader => Err(Response {
                 target: request.index,
                 result: ResponseType::LeaderMismatch(MismatchedValues {
                     local: Some(self.index),
                     requested: None,
                 }),
-            });
+            }),
+            ClusterState::Follower(leader) if self.local().timer.elapsed() <= self.term_timeout => {
+                Err(Response {
+                    target: request.index,
+                    result: ResponseType::LeaderMismatch(MismatchedValues {
+                        local: Some(leader),
+                        requested: None,
+                    }),
+                })
+            }
+            _ => {
+                self.validate_log_for_vote(request)?;
+                Self::ok(request)
+            }
         }
-
-        self.validate_log_for_vote(request)?;
-        Self::ok(request)
     }
 
     fn pre_vote_received(&mut self, request: &Request<T>) -> Option<Vec<Request<T>>> {

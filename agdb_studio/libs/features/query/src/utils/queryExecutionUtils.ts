@@ -13,12 +13,7 @@ import type {
 } from "../composables/types";
 
 export type BuilderDbValueInput =
-  | string
-  | boolean
-  | number
-  | number[]
-  | string[]
-  | Components.Schemas.DbValue;
+  string | boolean | number | number[] | string[] | Components.Schemas.DbValue;
 
 const parseBoolean = (value: string | undefined): boolean => {
   return String(value ?? "").toLowerCase() === "true";

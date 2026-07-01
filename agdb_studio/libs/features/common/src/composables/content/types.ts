@@ -12,12 +12,7 @@ export type Paragraph = {
   className?: string;
 };
 export type InputType =
-  | "text"
-  | "number"
-  | "password"
-  | "email"
-  | "checkbox"
-  | "select";
+  "text" | "number" | "password" | "email" | "checkbox" | "select";
 export type OptionType = {
   value: string;
   label: string;

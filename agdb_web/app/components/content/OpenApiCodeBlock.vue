@@ -38,11 +38,19 @@ const copyCode = () => {
     navigator.clipboard.writeText(code.value);
   }
 };
+
+const expandCode = () => {
+  isExpanded.value = true;
+};
+
+const collapseCode = () => {
+  isExpanded.value = false;
+};
 </script>
 
 <template>
   <div v-if="code" class="openapi-wrapper">
-    <UButton v-if="!isExpanded" size="xl" @click="isExpanded = true">
+    <UButton v-if="!isExpanded" size="xl" @click="expandCode">
       Show openapi.json
     </UButton>
     <div v-else class="code-block">
@@ -60,7 +68,7 @@ const copyCode = () => {
             data-testid="hide-button"
             size="sm"
             variant="outline"
-            @click="isExpanded = false"
+            @click="collapseCode"
           >
             Hide
           </UButton>

@@ -1,6 +1,6 @@
 [package]
 name = "agdb_server"
-version = "0.13.0"
+version = "0.13.1"
 edition = "2024"
 license = "Apache-2.0"
 homepage = "https://github.com/agnesoft/agdb"
@@ -23,8 +23,8 @@ tikv-jemallocator = "0.6"
 windows-sys = { version = "0.61", features = ["Win32_System_ProcessStatus", "Win32_System_Threading"] }
 
 [dependencies]
-agdb = { version = "0.13.0", path = "../agdb", features = ["serde", "openapi"] }
-agdb_api = { version = "0.13.0", path = "../agdb_api", features = ["api"] }
+agdb = { version = "0.13.1", path = "../agdb", features = ["serde", "openapi"] }
+agdb_api = { version = "0.13.1", path = "../agdb_api", features = ["api"] }
 axum = { version = "0.8", features = ["http2"] }
 axum-extra = { version = "0.12", features = ["typed-header", "routing"] }
 axum-server = { version = "0.8", features = ["tls-rustls"], optional = true }
@@ -43,5 +43,5 @@ utoipa-rapidoc = { version = "6", features = ["axum"] }
 uuid = { version = "1", features = ["v4"] }
 
 [dev-dependencies]
-agdb_api = { version = "0.13.0", path = "../agdb_api", features = ["test_server"] }
+agdb_api = { version = "0.13.1", path = "../agdb_api", features = ["test_server"] }
 anyhow = "1"

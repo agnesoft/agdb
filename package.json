@@ -1,6 +1,6 @@
 {
     "name": "agdb",
-    "packageManager": "pnpm@11.0.8",
+    "packageManager": "pnpm@11.9.0",
     "scripts": {
         "dev": "turbo run dev",
         "build": "turbo run build",

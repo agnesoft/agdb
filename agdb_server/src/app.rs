@@ -202,6 +202,7 @@ pub(crate) fn app(
             "/cluster/admin/user/logout_all",
             routing::post(routes::cluster::admin_logout_all),
         )
+        .route("/cluster/snapshot", routing::get(routes::cluster::snapshot))
         .route("/cluster/status", routing::get(routes::cluster::status))
         .route("/user/login", routing::post(routes::user::login))
         .route("/user/logout", routing::post(routes::user::logout))

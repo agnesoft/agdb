@@ -4,8 +4,10 @@ use crate::config::Config;
 use crate::raft::Log;
 use crate::server_db::ServerDb;
 use crate::server_error::ServerError;
+use agdb::Comparison;
 use agdb::Db;
 use agdb::DbId;
+use agdb::DbKeyOrder;
 use agdb::QueryBuilder;
 use agdb::StorageData;
 use agdb::Transaction;
@@ -18,7 +20,7 @@ pub(crate) struct ClusterLog(pub(crate) Arc<RwLock<Db>>);
 const CLUSTER_LOG: &str = "cluster_log";
 const EXECUTED: &str = "executed";
 const COMMITTED: &str = "committed";
-const CLUSTER_LOG_FILE: &str = "agdb_server.log";
+pub(crate) const CLUSTER_LOG_FILE: &str = "agdb_server.log";
 
 pub(crate) async fn new(config: &Config) -> ServerResult<ClusterLog> {
     std::fs::create_dir_all(&config.data_dir)?;
@@ -192,6 +194,24 @@ impl ClusterLog {
         })
     }
 
+    pub(crate) async fn prune(&self, up_to_index: u64) -> ServerResult<()> {
+        self.0.write().await.transaction_mut(|t| {
+            t.exec_mut(
+                QueryBuilder::remove()
+                    .search()
+                    .depth_first()
+                    .from(CLUSTER_LOG)
+                    .where_()
+                    .neighbor()
+                    .and()
+                    .key("index")
+                    .value(Comparison::LessThanOrEqual(up_to_index.into()))
+                    .query(),
+            )?;
+            Ok(())
+        })
+    }
+
     pub(crate) async fn remove_uncommitted_logs(&self, from_index: u64) -> ServerResult<()> {
         self.0.write().await.transaction_mut(|t| {
             let logs: Vec<DbId> = t
@@ -227,30 +247,23 @@ impl ClusterLog {
         from_index: u64,
     ) -> ServerResult<Vec<Log<ClusterAction>>> {
         self.0.read().await.transaction(|t| {
-            let log_count = t
+            let log_ids = t
                 .exec(
                     QueryBuilder::select()
-                        .edge_count_from()
-                        .ids(CLUSTER_LOG)
-                        .query(),
-                )?
-                .elements[0]
-                .values[0]
-                .value
-                .to_u64()?;
-            let mut log_ids = t
-                .exec(
-                    QueryBuilder::search()
+                        .values("index")
+                        .search()
                         .depth_first()
                         .from(CLUSTER_LOG)
-                        .limit(log_count.saturating_sub(from_index))
+                        .order_by(DbKeyOrder::Asc("index".into()))
                         .where_()
                         .neighbor()
+                        .and()
+                        .key("index")
+                        .value(Comparison::GreaterThan(from_index.into()))
                         .query(),
                 )?
                 .ids();
 
-            log_ids.reverse();
             logs(t, log_ids)
         })
     }
@@ -357,6 +370,7 @@ mod tests {
     use crate::password;
     use agdb_api::LogLevelFilter;
     use agdb_api::config_impl::ConfigImpl;
+    use agdb_api::config_impl::DEFAULT_CLUSTER_MAX_LOG_ENTRIES;
     use agdb_api::config_impl::DEFAULT_LOG_BODY_LIMIT;
     use agdb_api::config_impl::DEFAULT_REQUEST_BODY_LIMIT;
     use agdb_api::config_impl::DEFAULT_TOKEN_EXPIRY_SECONDS;
@@ -410,6 +424,7 @@ mod tests {
             cluster_term_timeout_ms: 3000,
             cluster_election_factor_ms: 1000,
             cluster: vec![],
+            cluster_max_log_entries: DEFAULT_CLUSTER_MAX_LOG_ENTRIES,
             cluster_node_id: 0,
             start_time: SystemTime::now()
                 .duration_since(UNIX_EPOCH)
@@ -568,6 +583,130 @@ mod tests {
                 .description
                 .contains("Cluster log already has logs, cannot migrate from the server db")
         );
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn prune_removes_entries_up_to_index() -> ServerResult<()> {
+        let (config, _directory) = test_config("prune_basic");
+        let cluster_log = crate::cluster_log::new(&config).await?;
+
+        for i in 1..=10 {
+            cluster_log
+                .append_log(&test_log(i, 1, &format!("entry_{i}")))
+                .await?;
+        }
+
+        cluster_log.prune(5).await?;
+
+        let remaining = cluster_log.logs_since(0).await?;
+        let indices: Vec<u64> = remaining.iter().map(|l| l.index).collect();
+        assert_eq!(indices, vec![6, 7, 8, 9, 10]);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn prune_is_idempotent() -> ServerResult<()> {
+        let (config, _directory) = test_config("prune_idempotent");
+        let cluster_log = crate::cluster_log::new(&config).await?;
+
+        for i in 1..=5 {
+            cluster_log
+                .append_log(&test_log(i, 1, &format!("entry_{i}")))
+                .await?;
+        }
+
+        cluster_log.prune(3).await?;
+        cluster_log.prune(3).await?; // second call is no-op
+
+        let remaining = cluster_log.logs_since(0).await?;
+        assert_eq!(remaining.len(), 2);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn logs_since_after_prune() -> ServerResult<()> {
+        let (config, _directory) = test_config("logs_since_pruned");
+        let cluster_log = crate::cluster_log::new(&config).await?;
+
+        for i in 1..=10 {
+            cluster_log
+                .append_log(&test_log(i, 1, &format!("entry_{i}")))
+                .await?;
+        }
+
+        cluster_log.prune(5).await?;
+
+        // Ask for logs since index 3 — entries 4,5 are pruned, should return 6-10
+        let logs = cluster_log.logs_since(3).await?;
+        let indices: Vec<u64> = logs.iter().map(|l| l.index).collect();
+        assert_eq!(indices, vec![6, 7, 8, 9, 10]);
+
+        // Ask for logs since index 7 — should return 8,9,10
+        let logs = cluster_log.logs_since(7).await?;
+        let indices: Vec<u64> = logs.iter().map(|l| l.index).collect();
+        assert_eq!(indices, vec![8, 9, 10]);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn logs_since_sorted_ascending() -> ServerResult<()> {
+        let (config, _directory) = test_config("logs_since_sorted");
+        let cluster_log = crate::cluster_log::new(&config).await?;
+
+        for i in 1..=5 {
+            cluster_log
+                .append_log(&test_log(i, 1, &format!("entry_{i}")))
+                .await?;
+        }
+
+        let logs = cluster_log.logs_since(0).await?;
+        let indices: Vec<u64> = logs.iter().map(|l| l.index).collect();
+        assert_eq!(indices, vec![1, 2, 3, 4, 5]);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn cluster_log_state_after_prune() -> ServerResult<()> {
+        let (config, _directory) = test_config("state_after_prune");
+        let cluster_log = crate::cluster_log::new(&config).await?;
+
+        for i in 1..=10 {
+            cluster_log
+                .append_log(&test_log(i, 2, &format!("entry_{i}")))
+                .await?;
+        }
+
+        cluster_log.prune(7).await?;
+
+        // cluster_log() returns the state of the most recent entry
+        let (index, term, _commit) = cluster_log.cluster_log().await?;
+        assert_eq!(index, 10);
+        assert_eq!(term, 2);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn prune_all_entries() -> ServerResult<()> {
+        let (config, _directory) = test_config("prune_all");
+        let cluster_log = crate::cluster_log::new(&config).await?;
+
+        for i in 1..=5 {
+            cluster_log
+                .append_log(&test_log(i, 1, &format!("entry_{i}")))
+                .await?;
+        }
+
+        cluster_log.prune(5).await?;
+
+        let logs = cluster_log.logs_since(0).await?;
+        assert!(logs.is_empty());
 
         Ok(())
     }

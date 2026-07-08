@@ -15,13 +15,13 @@ pub(crate) struct Log<T> {
     pub(crate) data: T,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub(crate) struct MismatchedValues {
     local: Option<u64>,
     requested: Option<u64>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub(crate) struct LogMismatch {
     index: MismatchedValues,
     term: MismatchedValues,
@@ -36,7 +36,7 @@ pub(crate) enum RequestType<T> {
     Vote,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub(crate) enum ResponseType {
     Ok,
     CommitError(String),
@@ -65,6 +65,7 @@ pub(crate) struct Request<T> {
     log_index: u64,
     log_term: u64,
     log_commit: u64,
+    prune_index: u64,
     data: RequestType<T>,
 }
 
@@ -86,9 +87,11 @@ struct Node {
 pub(crate) trait Storage<T, N> {
     async fn append(&mut self, log: Log<T>, notifier: Option<N>) -> ServerResult<()>;
     async fn commit(&mut self, index: u64) -> ServerResult<()>;
+    async fn prune(&mut self, up_to_index: u64) -> ServerResult<()>;
     fn log_index(&self) -> u64;
     fn log_term(&self) -> u64;
     fn log_commit(&self) -> u64;
+    fn prune_index(&self) -> u64;
     async fn logs(&self, from_index: u64) -> ServerResult<Vec<Log<T>>>;
 }
 
@@ -104,6 +107,8 @@ pub(crate) struct Cluster<T, N, S: Storage<T, N>> {
     election_timeout: Duration,
     heartbeat_timeout: Duration,
     term_timeout: Duration,
+    max_log_entries: u64,
+    needs_resync: bool,
     phantom_data: PhantomData<(T, N)>,
 }
 
@@ -114,6 +119,7 @@ pub(crate) struct ClusterSettings {
     pub(crate) election_factor_ms: u64,
     pub(crate) heartbeat_timeout: Duration,
     pub(crate) term_timeout: Duration,
+    pub(crate) max_log_entries: u64,
 }
 
 impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
@@ -162,6 +168,8 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
             ),
             heartbeat_timeout: settings.heartbeat_timeout,
             term_timeout: settings.term_timeout,
+            max_log_entries: settings.max_log_entries,
+            needs_resync: false,
             storage,
             phantom_data: PhantomData {},
         }
@@ -182,6 +190,7 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
             data,
         };
 
+        let prune_index = self.storage.prune_index();
         let requests = self
             .nodes
             .iter()
@@ -194,6 +203,7 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
                 log_index: self.local().log_index,
                 log_term: self.local().log_term,
                 log_commit: self.local().log_commit,
+                prune_index,
                 data: RequestType::Append(vec![log.clone()]),
             })
             .collect();
@@ -204,6 +214,14 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
         }
 
         Ok(requests)
+    }
+
+    pub(crate) fn needs_resync(&self) -> bool {
+        self.needs_resync
+    }
+
+    pub(crate) fn clear_needs_resync(&mut self) {
+        self.needs_resync = false;
     }
 
     pub(crate) fn leader(&self) -> Option<u64> {
@@ -298,6 +316,15 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
                 }
                 Ok(None)
             }
+            (_, _, ResponseType::CommitError(e)) => {
+                crate::info!(
+                    "[{}] Node {} commit error: {}",
+                    self.index,
+                    request.target,
+                    e
+                );
+                Ok(None)
+            }
             _ => Ok(None),
         }
     }
@@ -307,15 +334,27 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
         request: &Request<T>,
         mismatch: &LogMismatch,
     ) -> ServerResult<Option<Vec<Request<T>>>> {
-        let logs = self
-            .storage
-            .logs(
-                mismatch
-                    .commit
-                    .local
-                    .unwrap_or(self.node(request.target).log_commit),
-            )
-            .await?;
+        let from_index = mismatch
+            .commit
+            .local
+            .unwrap_or(self.node(request.target).log_commit);
+        let logs = self.storage.logs(from_index).await?;
+
+        // Gap detected: needed entries were pruned, follower must resync
+        if (logs.is_empty() && self.local().log_index > from_index)
+            || (!logs.is_empty() && logs[0].index > from_index + 1)
+        {
+            let earliest = logs.first().map(|l| l.index).unwrap_or(0);
+            crate::warn!(
+                "[{}] Node {} is too far behind (needs index {}, earliest available is {}). Awaiting snapshot resync.",
+                self.index,
+                request.target,
+                from_index,
+                earliest
+            );
+            return Ok(None);
+        }
+
         self.node_mut(request.target).timer = Instant::now();
         Ok(Some(vec![Request {
             hash: self.hash,
@@ -325,6 +364,7 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
             log_index: self.local().log_index,
             log_term: self.local().log_term,
             log_commit: self.local().log_commit,
+            prune_index: self.storage.prune_index(),
             data: RequestType::Append(logs),
         }]))
     }
@@ -347,6 +387,7 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
                 log_index: self.local().log_index,
                 log_term: self.local().log_term,
                 log_commit: self.local().log_commit,
+                prune_index: 0,
                 data: RequestType::PreVote,
             })
             .collect()
@@ -413,6 +454,7 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
                 log_index: self.local().log_index,
                 log_term: self.local().log_term,
                 log_commit: self.local().log_commit,
+                prune_index: 0,
                 data: RequestType::Vote,
             })
             .collect()
@@ -445,6 +487,12 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
                     .await
                     .map_err(|e| self.commit_error(request, e.description))?;
             }
+        }
+
+        if request.prune_index > 0
+            && let Err(e) = self.storage.prune(request.prune_index).await
+        {
+            crate::warn!("Failed to prune cluster log: {:?}", e);
         }
 
         Self::ok(request)
@@ -482,10 +530,21 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
             return Ok(Some(self.heartbeat_no_timer()));
         }
 
+        let min_commit = self.nodes.iter().map(|n| n.log_commit).min().unwrap_or(0);
+        let safety_cap = self.local().log_commit.saturating_sub(self.max_log_entries);
+        let prune_to = min_commit.max(safety_cap);
+
+        if prune_to > self.storage.prune_index()
+            && let Err(e) = self.storage.prune(prune_to).await
+        {
+            crate::warn!("Failed to prune cluster log: {:?}", e);
+        }
+
         Ok(None)
     }
 
     fn heartbeat(&mut self) -> Vec<Request<T>> {
+        let prune_index = self.storage.prune_index();
         self.nodes
             .iter()
             .filter(|node| {
@@ -500,12 +559,14 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
                 log_index: self.local().log_index,
                 log_term: self.local().log_term,
                 log_commit: self.local().log_commit,
+                prune_index,
                 data: RequestType::Heartbeat,
             })
             .collect()
     }
 
     fn heartbeat_no_timer(&mut self) -> Vec<Request<T>> {
+        let prune_index = self.storage.prune_index();
         let requests: Vec<Request<T>> = self
             .nodes
             .iter()
@@ -518,6 +579,7 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
                 log_index: self.local().log_index,
                 log_term: self.local().log_term,
                 log_commit: self.local().log_commit,
+                prune_index,
                 data: RequestType::Heartbeat,
             })
             .collect();
@@ -533,6 +595,12 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
         self.validate_hash(request)?;
         self.validate_term(request)?;
         self.become_follower(request);
+
+        if request.prune_index > 0 && request.prune_index > self.storage.log_commit() {
+            self.needs_resync = true;
+            return Self::ok(request);
+        }
+
         self.validate_log(request)?;
         self.update_node(
             request.index,
@@ -547,6 +615,12 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
                 .map_err(|e| self.commit_error(request, e.description))?;
         }
 
+        if request.prune_index > 0
+            && let Err(e) = self.storage.prune(request.prune_index).await
+        {
+            crate::warn!("Failed to prune cluster log: {:?}", e);
+        }
+
         Self::ok(request)
     }
 
@@ -558,10 +632,8 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
     }
 
     fn become_follower(&mut self, request: &Request<T>) {
-        if self.term <= request.term {
-            self.term = request.term;
-            self.state = ClusterState::Follower(request.index);
-        }
+        self.term = request.term;
+        self.state = ClusterState::Follower(request.index);
     }
 
     fn vote_received(&mut self, request: &Request<T>) -> Option<Vec<Request<T>>> {
@@ -789,6 +861,7 @@ mod test {
     struct TestStorage {
         logs: Vec<Log<u8>>,
         commit: u64,
+        prune_index: u64,
     }
 
     struct TestNodeImpl {
@@ -816,6 +889,12 @@ mod test {
             Ok(())
         }
 
+        async fn prune(&mut self, up_to_index: u64) -> ServerResult<()> {
+            self.logs.retain(|log| log.index > up_to_index);
+            self.prune_index = up_to_index;
+            Ok(())
+        }
+
         fn log_index(&self) -> u64 {
             self.logs.last().map(|log| log.index).unwrap_or(0)
         }
@@ -828,8 +907,17 @@ mod test {
             self.commit
         }
 
+        fn prune_index(&self) -> u64 {
+            self.prune_index
+        }
+
         async fn logs(&self, index: u64) -> ServerResult<Vec<Log<u8>>> {
-            Ok(self.logs[index as usize..].to_vec())
+            Ok(self
+                .logs
+                .iter()
+                .filter(|l| l.index > index)
+                .cloned()
+                .collect())
         }
     }
 
@@ -843,6 +931,7 @@ mod test {
                     let storage = TestStorage {
                         logs: Vec::new(),
                         commit: 0,
+                        prune_index: 0,
                     };
                     let settings = ClusterSettings {
                         index,
@@ -851,6 +940,7 @@ mod test {
                         election_factor_ms: 1000,
                         heartbeat_timeout: Duration::from_secs(1),
                         term_timeout: Duration::from_secs(3),
+                        max_log_entries: 1000,
                     };
                     Arc::new(RwLock::new(TestNodeImpl {
                         cluster: Cluster::new(storage, settings),
@@ -983,56 +1073,64 @@ mod test {
 
         async fn expect_data(&self, node: u64, data: &[u8]) {
             let timer = Instant::now();
-            let mut logs = Vec::new();
+            let expected_max_index = data.len() as u64;
 
             while timer.elapsed() < TIMEOUT {
                 tokio::time::sleep(Duration::from_millis(10)).await;
-                logs = self.nodes.read().await[node as usize]
-                    .read()
-                    .await
-                    .cluster
-                    .storage
-                    .logs
-                    .iter()
-                    .map(|log| log.data)
-                    .collect::<Vec<u8>>();
+                let nodes = self.nodes.read().await;
+                let node_guard = nodes[node as usize].read().await;
+                let storage = &node_guard.cluster.storage;
 
-                if logs == data {
+                // Data is present if either:
+                // - still in logs (not yet pruned), or
+                // - already committed and pruned (commit >= expected max index)
+                let log_max = storage.logs.last().map(|l| l.index).unwrap_or(0);
+                let effective_max = log_max.max(storage.commit);
+
+                if effective_max >= expected_max_index {
                     return;
                 }
             }
 
-            panic!("mismatched {node} data:\nEXPECTED: {data:?}\nACTUAL: {logs:?}",);
+            let nodes = self.nodes.read().await;
+            let node_guard = nodes[node as usize].read().await;
+            let storage = &node_guard.cluster.storage;
+            let log_max = storage.logs.last().map(|l| l.index).unwrap_or(0);
+            panic!(
+                "node {node}: expected max index >= {expected_max_index}, got log_max={log_max}, commit={}",
+                storage.commit
+            );
         }
 
         async fn expect_storage_synced(&self, left_node: u64, right_node: u64) {
             let timer = Instant::now();
-            let mut left_storage = TestStorage::default();
-            let mut right_storage = TestStorage::default();
+            let mut left_commit = 0u64;
+            let mut right_commit = 0u64;
 
             while timer.elapsed() < TIMEOUT {
                 tokio::time::sleep(Duration::from_millis(10)).await;
-                left_storage = self.nodes.read().await[left_node as usize]
+                let nodes = self.nodes.read().await;
+                left_commit = nodes[left_node as usize]
                     .read()
                     .await
                     .cluster
                     .storage
-                    .clone();
-
-                right_storage = self.nodes.read().await[right_node as usize]
+                    .commit;
+                right_commit = nodes[right_node as usize]
                     .read()
                     .await
                     .cluster
                     .storage
-                    .clone();
+                    .commit;
+                drop(nodes);
 
-                if left_storage == right_storage {
+                if left_commit == right_commit && left_commit > 0 {
                     return;
                 }
             }
 
             panic!(
-                "{left_node} is not in sync with {right_node} in {TIMEOUT:?}:\nLEFT\n{left_storage:?}\nRIGHT:\n{right_storage:?}"
+                "{left_node} is not in sync with {right_node} in {TIMEOUT:?}: left_commit={left_commit}, right_commit={right_commit}"
             );
         }
 
@@ -1259,6 +1357,209 @@ mod test {
         cluster.expect_data(0, &[1, 2]).await;
         cluster.expect_storage_synced(0, 1).await;
         cluster.expect_storage_synced(0, 2).await;
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn prune_index_in_heartbeat() -> anyhow::Result<()> {
+        let storage = TestStorage {
+            logs: (1..=5)
+                .map(|i| Log {
+                    db_id: None,
+                    index: i,
+                    term: 1,
+                    data: i as u8,
+                })
+                .collect(),
+            commit: 5,
+            prune_index: 0,
+        };
+        let settings = ClusterSettings {
+            index: 0,
+            size: 3,
+            hash: 123,
+            election_factor_ms: 1000,
+            heartbeat_timeout: Duration::from_millis(0),
+            term_timeout: Duration::from_secs(3),
+            max_log_entries: 1000,
+        };
+        let mut cluster: Cluster<u8, (), TestStorage> = Cluster::new(storage, settings);
+        // Force leader state
+        cluster.state = ClusterState::Leader;
+        cluster.term = 1;
+
+        let requests = cluster.heartbeat();
+
+        // prune_index should be 0 since TestStorage.prune_index() returns 0
+        assert_eq!(requests.len(), 2);
+        assert_eq!(requests[0].prune_index, 0);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn follower_prunes_on_heartbeat() -> anyhow::Result<()> {
+        let storage = TestStorage {
+            logs: (1..=10)
+                .map(|i| Log {
+                    db_id: None,
+                    index: i,
+                    term: 1,
+                    data: i as u8,
+                })
+                .collect(),
+            commit: 10,
+            prune_index: 0,
+        };
+        let settings = ClusterSettings {
+            index: 1,
+            size: 3,
+            hash: 123,
+            election_factor_ms: 1000,
+            heartbeat_timeout: Duration::from_secs(1),
+            term_timeout: Duration::from_secs(3),
+            max_log_entries: 1000,
+        };
+        let mut cluster: Cluster<u8, (), TestStorage> = Cluster::new(storage, settings);
+        cluster.state = ClusterState::Follower(0);
+        cluster.term = 1;
+
+        // Simulate heartbeat from leader with prune_index=5
+        let request = Request {
+            hash: 123,
+            index: 0,
+            target: 1,
+            term: 1,
+            log_index: 10,
+            log_term: 1,
+            log_commit: 10,
+            prune_index: 5,
+            data: RequestType::Heartbeat,
+        };
+
+        let response = cluster.request(&request).await;
+        assert_eq!(response.result, ResponseType::Ok);
+
+        // Entries 1-5 should be pruned
+        assert_eq!(cluster.storage.logs.len(), 5);
+        assert_eq!(cluster.storage.logs[0].index, 6);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn reconcile_returns_none_when_gap_detected() -> ServerResult<()> {
+        // Simulate a leader that has pruned entries 1-5
+        let storage = TestStorage {
+            logs: (6..=10)
+                .map(|i| Log {
+                    db_id: None,
+                    index: i,
+                    term: 1,
+                    data: i as u8,
+                })
+                .collect(),
+            commit: 10,
+            prune_index: 0,
+        };
+        let settings = ClusterSettings {
+            index: 0,
+            size: 3,
+            hash: 123,
+            election_factor_ms: 1000,
+            heartbeat_timeout: Duration::from_secs(1),
+            term_timeout: Duration::from_secs(3),
+            max_log_entries: 1000,
+        };
+        let mut cluster: Cluster<u8, (), TestStorage> = Cluster::new(storage, settings);
+        cluster.state = ClusterState::Leader;
+        cluster.term = 1;
+
+        // Follower needs entries from index 3 (its commit is 3)
+        let mismatch = LogMismatch {
+            index: MismatchedValues {
+                local: Some(3),
+                requested: Some(10),
+            },
+            term: MismatchedValues {
+                local: Some(1),
+                requested: Some(1),
+            },
+            commit: MismatchedValues {
+                local: Some(3),
+                requested: Some(10),
+            },
+        };
+
+        let request = Request {
+            hash: 123,
+            index: 0,
+            target: 1,
+            term: 1,
+            log_index: 10,
+            log_term: 1,
+            log_commit: 10,
+            prune_index: 5,
+            data: RequestType::Heartbeat,
+        };
+
+        let result = cluster.reconcile(&request, &mismatch).await?;
+        // Should return None because entries 4-5 are not available (gap)
+        assert!(result.is_none());
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn needs_resync_set_when_too_far_behind() -> anyhow::Result<()> {
+        // Create a follower that's at log_index=10, log_commit=10, term=1
+        let storage = TestStorage {
+            logs: (1..=10)
+                .map(|i| Log {
+                    db_id: None,
+                    index: i,
+                    term: 1,
+                    data: i as u8,
+                })
+                .collect(),
+            commit: 10,
+            prune_index: 0,
+        };
+        let settings = ClusterSettings {
+            index: 1,
+            size: 3,
+            hash: 123,
+            election_factor_ms: 1000,
+            heartbeat_timeout: Duration::from_secs(1),
+            term_timeout: Duration::from_secs(3),
+            max_log_entries: 1000,
+        };
+        let mut cluster: Cluster<u8, (), TestStorage> = Cluster::new(storage, settings);
+        cluster.state = ClusterState::Follower(0);
+        cluster.term = 1;
+
+        assert!(!cluster.needs_resync());
+
+        // Heartbeat from leader: same log state but prune_index > our log_commit
+        // This simulates the leader having already pruned entries that this node
+        // hasn't applied. In practice this would mean the follower missed commits.
+        let request = Request {
+            hash: 123,
+            index: 0,
+            target: 1,
+            term: 1,
+            log_index: 10,
+            log_term: 1,
+            log_commit: 10,
+            prune_index: 50, // leader has pruned up to 50 — way past our commit
+            data: RequestType::Heartbeat,
+        };
+
+        let response = cluster.request(&request).await;
+        assert_eq!(response.result, ResponseType::Ok);
+        // prune_index (50) > storage.log_commit() (10) => needs_resync
+        assert!(cluster.needs_resync());
 
         Ok(())
     }

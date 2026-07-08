@@ -10,6 +10,7 @@ use crate::raft::Request;
 use crate::raft::Response;
 use crate::raft::Storage;
 use crate::server_db::ServerDb;
+use crate::server_error::ServerError;
 use crate::server_error::ServerResult;
 use agdb::DbId;
 use agdb::StableHash;
@@ -21,6 +22,7 @@ use axum::http::HeaderMap;
 use axum::response::Response as AxumResponse;
 use reqwest::StatusCode;
 use std::collections::HashMap;
+use std::path::Path;
 use std::str::FromStr;
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
@@ -54,6 +56,8 @@ pub(crate) struct ClusterImpl {
     pub(crate) nodes: Vec<ClusterNode>,
     pub(crate) raft: Arc<RwLock<raft::Cluster<ClusterAction, ResultNotifier, ClusterStorage>>>,
     pub(crate) responses: Option<RwLock<ClusterResponseReceiver>>,
+    pub(crate) resync: Arc<AtomicBool>,
+    pub(crate) snapshot_in_flight: Arc<AtomicBool>,
 }
 
 impl ClusterImpl {
@@ -200,8 +204,18 @@ pub(crate) async fn new(
     let mut sorted_cluster: Vec<String> =
         config.cluster.iter().map(|url| url.to_string()).collect();
     sorted_cluster.sort();
+    sorted_cluster.push(config.cluster_max_log_entries.to_string());
     let hash = sorted_cluster.stable_hash();
-    let storage = ClusterStorage::new(db.clone(), cluster_log.clone(), db_pool.clone()).await?;
+    let resync = Arc::new(AtomicBool::new(false));
+    let snapshot_in_flight = Arc::new(AtomicBool::new(false));
+    let storage = ClusterStorage::new(
+        db.clone(),
+        cluster_log.clone(),
+        db_pool.clone(),
+        config.cluster_max_log_entries,
+        snapshot_in_flight.clone(),
+    )
+    .await?;
     let settings = raft::ClusterSettings {
         index: index as u64,
         hash,
@@ -209,6 +223,7 @@ pub(crate) async fn new(
         election_factor_ms: config.cluster_election_factor_ms,
         heartbeat_timeout: Duration::from_millis(config.cluster_heartbeat_timeout_ms),
         term_timeout: Duration::from_millis(config.cluster_term_timeout_ms),
+        max_log_entries: config.cluster_max_log_entries,
     };
     let raft = Arc::new(RwLock::new(raft::Cluster::new(storage, settings)));
     let mut nodes = vec![];
@@ -235,10 +250,16 @@ pub(crate) async fn new(
         nodes,
         raft,
         responses,
+        resync,
+        snapshot_in_flight,
     }))
 }
 
-async fn start_cluster(cluster: Cluster, shutdown_signal: Arc<AtomicBool>) -> ServerResult<()> {
+async fn start_cluster(
+    cluster: Cluster,
+    shutdown_signal: Arc<AtomicBool>,
+    config: Config,
+) -> ServerResult<()> {
     if cluster.nodes.is_empty() {
         return Ok(());
     }
@@ -307,7 +328,28 @@ async fn start_cluster(cluster: Cluster, shutdown_signal: Arc<AtomicBool>) -> Se
         ServerResult::Ok(())
     });
 
+    let mut resync_retry_at: Option<tokio::time::Instant> = None;
+
     while !shutdown_signal.load(Ordering::Relaxed) {
+        if cluster.raft.read().await.needs_resync()
+            && !cluster.resync.load(Ordering::Relaxed)
+            && resync_retry_at
+                .map(|t| tokio::time::Instant::now() >= t)
+                .unwrap_or(true)
+        {
+            crate::warn!("[{index}] Node is too far behind, initiating resync from leader");
+
+            match resync_from_leader(&cluster, &config).await {
+                Ok(_) => {
+                    cluster.raft.write().await.clear_needs_resync();
+                }
+                Err(e) => {
+                    crate::error!("[{index}] Resync attempt failed: {e:?}");
+                    resync_retry_at = Some(tokio::time::Instant::now() + Duration::from_secs(5));
+                }
+            }
+        }
+
         if let Some(requests) = cluster.raft.write().await.process() {
             for request in requests {
                 let target = request.target;
@@ -328,12 +370,197 @@ async fn start_cluster(cluster: Cluster, shutdown_signal: Arc<AtomicBool>) -> Se
     Ok(())
 }
 
+async fn resync_from_leader(cluster: &Cluster, config: &Config) -> ServerResult<()> {
+    let leader = cluster.raft.read().await.leader();
+    let leader_index = match leader {
+        Some(l) if l as usize != cluster.index => l as usize,
+        _ => {
+            return Err(ServerError::from(
+                "Cannot resync: no leader available or this node is the leader",
+            ));
+        }
+    };
+
+    crate::info!(
+        "[{}] Starting resync from leader (node {})",
+        cluster.index,
+        leader_index
+    );
+
+    cluster.resync.store(true, Ordering::Relaxed);
+
+    let result = do_resync(cluster, config, leader_index).await;
+
+    cluster.resync.store(false, Ordering::Relaxed);
+
+    match &result {
+        Ok(()) => crate::info!("[{}] Resync completed successfully", cluster.index),
+        Err(e) => crate::error!("[{}] Resync failed: {:?}", cluster.index, e),
+    }
+
+    result
+}
+
+async fn do_resync(cluster: &Cluster, config: &Config, leader_index: usize) -> ServerResult<()> {
+    let data = download_snapshot(cluster, config, leader_index).await?;
+    let snapshot = parse_snapshot(&data)?;
+
+    let data_dir = Path::new(&config.data_dir);
+    let backup_dir = data_dir.with_file_name(format!(
+        "{}_bak",
+        data_dir.file_name().unwrap_or_default().to_string_lossy()
+    ));
+
+    replace_data_dir(data_dir, &backup_dir, &snapshot.files)?;
+    cluster.raft.write().await.storage.reinit(config).await?;
+
+    if backup_dir.exists() {
+        let _ = std::fs::remove_dir_all(&backup_dir);
+    }
+
+    Ok(())
+}
+
+struct Snapshot {
+    files: Vec<(String, Vec<u8>)>,
+}
+
+async fn download_snapshot(
+    cluster: &Cluster,
+    config: &Config,
+    leader_index: usize,
+) -> ServerResult<Vec<u8>> {
+    let snapshot_url = format!(
+        "{}/api/v1/cluster/snapshot",
+        cluster.nodes[leader_index].base_url
+    );
+
+    let response = cluster.nodes[leader_index]
+        .client
+        .client
+        .get(&snapshot_url)
+        .bearer_auth(&config.cluster_token)
+        .timeout(std::time::Duration::from_secs(600))
+        .send()
+        .await
+        .map_err(|e| ServerError::from(format!("Snapshot download failed: {e:?}")))?;
+
+    if !response.status().is_success() {
+        return Err(ServerError::from(format!(
+            "Snapshot endpoint returned {}",
+            response.status()
+        )));
+    }
+
+    Ok(response
+        .bytes()
+        .await
+        .map_err(|e| ServerError::from(format!("Failed to read snapshot body: {e:?}")))?
+        .to_vec())
+}
+
+fn parse_snapshot(data: &[u8]) -> ServerResult<Snapshot> {
+    if data.len() < 32 {
+        return Err(ServerError::from("Snapshot too small (missing header)"));
+    }
+
+    // Header: [log_index(8), log_term(8), log_commit(8), file_count(8)]
+    // log_index/term/commit are informational — actual state is read from the files on reinit
+    let file_count = u64::from_le_bytes(data[24..32].try_into().unwrap());
+
+    let mut offset = 32;
+    let mut files: Vec<(String, Vec<u8>)> = Vec::new();
+
+    for _ in 0..file_count {
+        if offset + 4 > data.len() {
+            return Err(ServerError::from("Snapshot truncated (path_len)"));
+        }
+        let path_len = u32::from_le_bytes(data[offset..offset + 4].try_into().unwrap()) as usize;
+        offset += 4;
+
+        if offset + path_len > data.len() {
+            return Err(ServerError::from("Snapshot truncated (path)"));
+        }
+        let path = String::from_utf8_lossy(&data[offset..offset + path_len]).to_string();
+        offset += path_len;
+
+        if offset + 8 > data.len() {
+            return Err(ServerError::from("Snapshot truncated (file_len)"));
+        }
+        let file_len = u64::from_le_bytes(data[offset..offset + 8].try_into().unwrap()) as usize;
+        offset += 8;
+
+        if offset + file_len > data.len() {
+            return Err(ServerError::from("Snapshot truncated (file_data)"));
+        }
+        let file_data = data[offset..offset + file_len].to_vec();
+        offset += file_len;
+
+        files.push((path, file_data));
+    }
+
+    Ok(Snapshot { files })
+}
+
+fn replace_data_dir(
+    data_dir: &Path,
+    backup_dir: &Path,
+    files: &[(String, Vec<u8>)],
+) -> ServerResult<()> {
+    if backup_dir.exists() {
+        std::fs::remove_dir_all(backup_dir)?;
+    }
+
+    if data_dir.exists() {
+        std::fs::rename(data_dir, backup_dir)?;
+    }
+
+    std::fs::create_dir_all(data_dir)?;
+
+    let canonical_data_dir = data_dir.canonicalize()?;
+
+    for (path, file_data) in files {
+        let file_path = canonical_data_dir.join(path);
+        let canonical_file_path =
+            file_path
+                .components()
+                .fold(std::path::PathBuf::new(), |mut acc, c| {
+                    match c {
+                        std::path::Component::ParentDir => {
+                            acc.pop();
+                        }
+                        _ => acc.push(c),
+                    }
+                    acc
+                });
+
+        if !canonical_file_path.starts_with(&canonical_data_dir) {
+            return Err(ServerError::from(format!(
+                "Invalid path in snapshot: {path}"
+            )));
+        }
+
+        if let Some(parent) = file_path.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+
+        std::fs::write(&file_path, file_data)?;
+    }
+
+    Ok(())
+}
+
 pub(crate) async fn start_with_shutdown(
     cluster: Cluster,
+    config: Config,
     mut shutdown_receiver: broadcast::Receiver<()>,
 ) {
     let shutdown_signal = Arc::new(AtomicBool::new(false));
-    let cluster_handle = tokio::spawn(start_cluster(cluster.clone(), shutdown_signal.clone()));
+    let cluster_handle = tokio::spawn(start_cluster(
+        cluster.clone(),
+        shutdown_signal.clone(),
+        config,
+    ));
 
     tokio::select! {
         _ = signal::ctrl_c() => {},
@@ -346,17 +573,26 @@ pub(crate) async fn start_with_shutdown(
 
 pub(crate) struct ClusterStorage {
     result_notifiers: HashMap<DbId, ResultNotifier>,
-    notifier: tokio::sync::broadcast::Sender<u64>,
-    index: u64,
-    term: u64,
-    commit: u64,
-    db: ServerDb,
-    cluster_log: ClusterLog,
-    db_pool: DbPool,
+    pub(crate) notifier: tokio::sync::broadcast::Sender<u64>,
+    pub(crate) index: u64,
+    pub(crate) term: u64,
+    pub(crate) commit: u64,
+    pub(crate) prune_index: u64,
+    pub(crate) max_log_entries: u64,
+    pub(crate) snapshot_in_flight: Arc<AtomicBool>,
+    pub(crate) db: ServerDb,
+    pub(crate) cluster_log: ClusterLog,
+    pub(crate) db_pool: DbPool,
 }
 
 impl ClusterStorage {
-    async fn new(db: ServerDb, cluster_log: ClusterLog, db_pool: DbPool) -> ServerResult<Self> {
+    async fn new(
+        db: ServerDb,
+        cluster_log: ClusterLog,
+        db_pool: DbPool,
+        max_log_entries: u64,
+        snapshot_in_flight: Arc<AtomicBool>,
+    ) -> ServerResult<Self> {
         let (index, term, commit) = cluster_log.cluster_log().await?;
         let logs = cluster_log.logs_unexecuted(commit).await?;
 
@@ -366,6 +602,9 @@ impl ClusterStorage {
             index,
             term,
             commit,
+            prune_index: commit.saturating_sub(max_log_entries),
+            max_log_entries,
+            snapshot_in_flight,
             db,
             cluster_log,
             db_pool,
@@ -376,6 +615,33 @@ impl ClusterStorage {
         }
 
         Ok(storage)
+    }
+
+    pub(crate) async fn reinit(&mut self, config: &Config) -> ServerResult<()> {
+        let db_path = format!("{}/{}", config.data_dir, "agdb_server.agdb");
+        let new_db = agdb::Db::new(&db_path)?;
+        *self.db.db.write().await = new_db;
+
+        let log_path = format!("{}/{}", config.data_dir, "agdb_server.log");
+        let new_log_db = agdb::Db::new(&log_path)?;
+        *self.cluster_log.0.write().await = new_log_db;
+
+        let (index, term, commit) = self.cluster_log.cluster_log().await?;
+        let logs = self.cluster_log.logs_unexecuted(commit).await?;
+
+        self.index = index;
+        self.term = term;
+        self.commit = commit;
+        self.prune_index = commit.saturating_sub(self.max_log_entries);
+        self.result_notifiers.clear();
+
+        self.db_pool.reload(&self.db).await?;
+
+        for log in logs {
+            self.execute_log(log).await?;
+        }
+
+        Ok(())
     }
 
     async fn execute_log(&mut self, log: Log<ClusterAction>) -> ServerResult<()> {
@@ -402,12 +668,6 @@ impl ClusterStorage {
     pub(crate) async fn subscribe(&self) -> tokio::sync::broadcast::Receiver<u64> {
         self.notifier.subscribe()
     }
-
-    // pub(crate) async fn is_executed(&self, index: u64) -> ServerResult<bool> {
-    //     Ok(self.index >= index
-    //         && self.commit >= index
-    //         && self.cluster_log.logs_unexecuted(index).await?.is_empty())
-    // }
 }
 
 impl Storage<ClusterAction, ResultNotifier> for ClusterStorage {
@@ -440,6 +700,14 @@ impl Storage<ClusterAction, ResultNotifier> for ClusterStorage {
         Ok(())
     }
 
+    async fn prune(&mut self, up_to_index: u64) -> ServerResult<()> {
+        if up_to_index > self.prune_index && !self.snapshot_in_flight.load(Ordering::Relaxed) {
+            self.cluster_log.prune(up_to_index).await?;
+            self.prune_index = up_to_index;
+        }
+        Ok(())
+    }
+
     fn log_commit(&self) -> u64 {
         self.commit
     }
@@ -450,6 +718,10 @@ impl Storage<ClusterAction, ResultNotifier> for ClusterStorage {
 
     fn log_term(&self) -> u64 {
         self.term
+    }
+
+    fn prune_index(&self) -> u64 {
+        self.prune_index
     }
 
     async fn logs(&self, from_index: u64) -> ServerResult<Vec<Log<ClusterAction>>> {
@@ -467,7 +739,7 @@ pub(crate) fn root_ca(config: &Config) -> ServerResult<Option<reqwest::Certifica
                 return None;
             }
 
-            let cert_data = std::fs::read(std::path::Path::new(&config.tls_root))
+            let cert_data = std::fs::read(Path::new(&config.tls_root))
                 .expect("root certificate could not be read");
             let cert = reqwest::Certificate::from_pem(&cert_data)
                 .expect("root certificate data is invalid");

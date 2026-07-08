@@ -82,7 +82,7 @@ const ROLE: &str = "role";
 const TOKEN: &str = "token";
 const USERS: &str = "users";
 const USERNAME: &str = "username";
-const SERVER_DB_FILE: &str = "agdb_server.agdb";
+pub(crate) const SERVER_DB_FILE: &str = "agdb_server.agdb";
 const SESSION: &str = "session";
 
 pub(crate) async fn new(

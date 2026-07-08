@@ -274,11 +274,18 @@ pub(crate) async fn snapshot(
     State(cluster): State<Cluster>,
     State(config): State<Config>,
 ) -> ServerResult<axum::response::Response> {
-    cluster.snapshot_in_flight.store(true, Ordering::Relaxed);
+    if cluster.resync.load(Ordering::Acquire) {
+        return axum::response::Response::builder()
+            .status(StatusCode::SERVICE_UNAVAILABLE)
+            .body(Body::from("resyncing"))
+            .map_err(|e| crate::server_error::ServerError::from(e.to_string()));
+    }
+
+    cluster.snapshot_in_flight.store(true, Ordering::Release);
 
     let result = build_snapshot(&cluster, &config).await;
 
-    cluster.snapshot_in_flight.store(false, Ordering::Relaxed);
+    cluster.snapshot_in_flight.store(false, Ordering::Release);
 
     result
 }

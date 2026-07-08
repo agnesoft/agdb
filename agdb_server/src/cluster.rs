@@ -443,7 +443,10 @@ async fn do_resync(cluster: &Cluster, config: &Config, node_index: usize) -> Ser
     ));
 
     replace_data_dir(data_dir, &backup_dir, &snapshot.files)?;
-    cluster.raft.write().await.storage.reinit(config).await?;
+    let mut raft = cluster.raft.write().await;
+    raft.storage.reinit(config).await?;
+    raft.refresh_local_from_storage();
+    drop(raft);
 
     if backup_dir.exists() {
         let _ = std::fs::remove_dir_all(&backup_dir);
@@ -737,7 +740,7 @@ impl Storage<ClusterAction, ResultNotifier> for ClusterStorage {
 
     async fn prune(&mut self, up_to_index: u64) -> ServerResult<()> {
         let up_to_index = std::cmp::min(up_to_index, self.index.saturating_sub(1));
-        if up_to_index > self.prune_index && !self.snapshot_in_flight.load(Ordering::Relaxed) {
+        if up_to_index > self.prune_index && !self.snapshot_in_flight.load(Ordering::Acquire) {
             self.cluster_log.prune(up_to_index).await?;
             self.prune_index = up_to_index;
         }

@@ -102,10 +102,8 @@ async fn log_compaction_bounds_log_size() -> Result<(), TestError> {
             .await?;
     }
 
-    // Allow heartbeat cycle to propagate the prune_index to followers
     tokio::time::sleep(std::time::Duration::from_secs(1)).await;
 
-    // Shutdown all to inspect files
     leader.admin_shutdown().await?;
     servers[0].wait().await?;
     let mut api1 = AgdbApi::new(
@@ -127,7 +125,7 @@ async fn log_compaction_bounds_log_size() -> Result<(), TestError> {
         let count = cluster_log_entry_count(&server.data_dir);
         assert_eq!(
             count, 1,
-            "Log should be empty in a healthy cluster: {}",
+            "Log should have one (last) entry in a healthy cluster: {}",
             server.address
         );
     }
@@ -203,10 +201,8 @@ async fn lagging_node_catches_up_after_restart() -> Result<(), TestError> {
 
     assert_eq!(result.1[0].result, 8);
 
-    // After catching up, cluster is healthy — logs should be pruned
     tokio::time::sleep(std::time::Duration::from_secs(1)).await;
 
-    // Shutdown all to inspect files
     leader.admin_shutdown().await?;
     servers[0].wait().await?;
     let mut api1 = AgdbApi::new(
@@ -223,7 +219,7 @@ async fn lagging_node_catches_up_after_restart() -> Result<(), TestError> {
         let count = cluster_log_entry_count(&server.data_dir);
         assert_eq!(
             count, 1,
-            "Log should be empty after full sync: {}",
+            "Log should have one (last) entry after catching up: {}",
             server.address
         );
     }
@@ -309,12 +305,8 @@ async fn too_far_behind_triggers_resync() -> Result<(), TestError> {
 
     assert_eq!(node_count, 20);
 
-    // After resync, cluster is healthy — wait for logs to empty then verify
-    // We need to wait for the leader to observe the resynced node's commit
-    // and compute min_commit = leader_commit (all equal) → prune everything.
     tokio::time::sleep(std::time::Duration::from_secs(1)).await;
 
-    // Shutdown all to inspect files
     leader.admin_shutdown().await?;
     servers[0].wait().await?;
     let mut api1 = AgdbApi::new(
@@ -332,7 +324,7 @@ async fn too_far_behind_triggers_resync() -> Result<(), TestError> {
         let count = cluster_log_entry_count(&server.data_dir);
         assert_eq!(
             count, 1,
-            "Log should be at most max_log_entries after resync: {} has {count}",
+            "Log should have one (last) entry after full resync: {} has {count}",
             server.address
         );
     }

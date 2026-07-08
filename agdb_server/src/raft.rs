@@ -224,6 +224,12 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
         self.needs_resync = false;
     }
 
+    pub(crate) fn refresh_local_from_storage(&mut self) {
+        self.local_mut().log_index = self.storage.log_index();
+        self.local_mut().log_term = self.storage.log_term();
+        self.local_mut().log_commit = self.storage.log_commit();
+    }
+
     pub(crate) fn leader(&self) -> Option<u64> {
         if let ClusterState::Leader = self.state {
             return Some(self.index);

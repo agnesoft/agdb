@@ -126,7 +126,7 @@ async fn log_compaction_bounds_log_size() -> Result<(), TestError> {
     for server in &servers {
         let count = cluster_log_entry_count(&server.data_dir);
         assert_eq!(
-            count, 0,
+            count, 1,
             "Log should be empty in a healthy cluster: {}",
             server.address
         );
@@ -222,7 +222,7 @@ async fn lagging_node_catches_up_after_restart() -> Result<(), TestError> {
     for server in &servers {
         let count = cluster_log_entry_count(&server.data_dir);
         assert_eq!(
-            count, 0,
+            count, 1,
             "Log should be empty after full sync: {}",
             server.address
         );
@@ -330,8 +330,8 @@ async fn too_far_behind_triggers_resync() -> Result<(), TestError> {
 
     for server in &servers {
         let count = cluster_log_entry_count(&server.data_dir);
-        assert!(
-            count <= 5,
+        assert_eq!(
+            count, 1,
             "Log should be at most max_log_entries after resync: {} has {count}",
             server.address
         );

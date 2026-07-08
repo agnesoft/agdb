@@ -291,20 +291,30 @@ async fn build_snapshot(
     let mut files: Vec<(String, Vec<u8>)> = Vec::new();
 
     let (log_index, log_term, log_commit) = {
-        let raft = cluster.raft.write().await;
-
-        let data = std::fs::read(data_dir.join(SERVER_DB_FILE))?;
-        files.push((SERVER_DB_FILE.to_string(), data));
-
-        let data = std::fs::read(data_dir.join(CLUSTER_LOG_FILE))?;
-        files.push((CLUSTER_LOG_FILE.to_string(), data));
+        let raft = cluster.raft.read().await;
+        let _snapshot_lock = raft.storage.snapshot_lock.clone().write_owned().await;
 
         let dbs = raft.storage.db.dbs().await?;
+
+        let server_db_guard = raft.storage.db.db.read().await;
+        let server_db_data = std::fs::read(data_dir.join(SERVER_DB_FILE))?;
+        drop(server_db_guard);
+
+        files.push((SERVER_DB_FILE.to_string(), server_db_data));
+
+        let cluster_log_data = std::fs::read(data_dir.join(CLUSTER_LOG_FILE))?;
+        let log_index = raft.storage.index;
+        let log_term = raft.storage.term;
+        let log_commit = raft.storage.commit;
+        drop(raft);
+
+        files.push((CLUSTER_LOG_FILE.to_string(), cluster_log_data));
+
         for db in dbs {
             collect_db_files(data_dir, &db.owner, &db.db, config, &mut files)?;
         }
 
-        (raft.storage.index, raft.storage.term, raft.storage.commit)
+        (log_index, log_term, log_commit)
     };
 
     let file_count = files.len() as u64;

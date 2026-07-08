@@ -1,6 +1,7 @@
 use crate::action::Action;
 use crate::action::ClusterAction;
 use crate::action::ClusterActionResult;
+use crate::cluster_log::CLUSTER_LOG_FILE;
 use crate::cluster_log::ClusterLog;
 use crate::config::Config;
 use crate::db_pool::DbPool;
@@ -9,6 +10,7 @@ use crate::raft::Log;
 use crate::raft::Request;
 use crate::raft::Response;
 use crate::raft::Storage;
+use crate::server_db::SERVER_DB_FILE;
 use crate::server_db::ServerDb;
 use crate::server_error::ServerError;
 use crate::server_error::ServerResult;
@@ -381,15 +383,44 @@ async fn resync_from_leader(cluster: &Cluster, config: &Config) -> ServerResult<
         }
     };
 
+    let mut snapshot_sources: Vec<usize> = (0..cluster.nodes.len())
+        .filter(|index| *index != cluster.index && *index != leader_index)
+        .collect();
+    snapshot_sources.push(leader_index);
+
     crate::info!(
-        "[{}] Starting resync from leader (node {})",
+        "[{}] Starting resync, snapshot candidates: {:?}",
         cluster.index,
-        leader_index
+        snapshot_sources
     );
 
     cluster.resync.store(true, Ordering::Relaxed);
 
-    let result = do_resync(cluster, config, leader_index).await;
+    let mut result = Err(ServerError::from("no snapshot source available"));
+
+    for source_index in snapshot_sources {
+        crate::info!(
+            "[{}] Attempting snapshot download from node {}",
+            cluster.index,
+            source_index
+        );
+
+        match do_resync(cluster, config, source_index).await {
+            Ok(()) => {
+                result = Ok(());
+                break;
+            }
+            Err(error) => {
+                crate::warn!(
+                    "[{}] Snapshot download from node {} failed: {:?}",
+                    cluster.index,
+                    source_index,
+                    error
+                );
+                result = Err(error);
+            }
+        }
+    }
 
     cluster.resync.store(false, Ordering::Relaxed);
 
@@ -401,8 +432,8 @@ async fn resync_from_leader(cluster: &Cluster, config: &Config) -> ServerResult<
     result
 }
 
-async fn do_resync(cluster: &Cluster, config: &Config, leader_index: usize) -> ServerResult<()> {
-    let data = download_snapshot(cluster, config, leader_index).await?;
+async fn do_resync(cluster: &Cluster, config: &Config, node_index: usize) -> ServerResult<()> {
+    let data = download_snapshot(cluster, config, node_index).await?;
     let snapshot = parse_snapshot(&data)?;
 
     let data_dir = Path::new(&config.data_dir);
@@ -428,14 +459,14 @@ struct Snapshot {
 async fn download_snapshot(
     cluster: &Cluster,
     config: &Config,
-    leader_index: usize,
+    node_index: usize,
 ) -> ServerResult<Vec<u8>> {
     let snapshot_url = format!(
         "{}/api/v1/cluster/snapshot",
-        cluster.nodes[leader_index].base_url
+        cluster.nodes[node_index].base_url
     );
 
-    let response = cluster.nodes[leader_index]
+    let response = cluster.nodes[node_index]
         .client
         .client
         .get(&snapshot_url)
@@ -540,11 +571,11 @@ fn replace_data_dir(
             )));
         }
 
-        if let Some(parent) = file_path.parent() {
+        if let Some(parent) = canonical_file_path.parent() {
             std::fs::create_dir_all(parent)?;
         }
 
-        std::fs::write(&file_path, file_data)?;
+        std::fs::write(&canonical_file_path, file_data)?;
     }
 
     Ok(())
@@ -580,6 +611,7 @@ pub(crate) struct ClusterStorage {
     pub(crate) prune_index: u64,
     pub(crate) max_log_entries: u64,
     pub(crate) snapshot_in_flight: Arc<AtomicBool>,
+    pub(crate) snapshot_lock: Arc<RwLock<()>>,
     pub(crate) db: ServerDb,
     pub(crate) cluster_log: ClusterLog,
     pub(crate) db_pool: DbPool,
@@ -605,6 +637,7 @@ impl ClusterStorage {
             prune_index: commit.saturating_sub(max_log_entries),
             max_log_entries,
             snapshot_in_flight,
+            snapshot_lock: Arc::new(RwLock::new(())),
             db,
             cluster_log,
             db_pool,
@@ -618,11 +651,11 @@ impl ClusterStorage {
     }
 
     pub(crate) async fn reinit(&mut self, config: &Config) -> ServerResult<()> {
-        let db_path = format!("{}/{}", config.data_dir, "agdb_server.agdb");
+        let db_path = format!("{}/{}", config.data_dir, SERVER_DB_FILE);
         let new_db = agdb::Db::new(&db_path)?;
         *self.db.db.write().await = new_db;
 
-        let log_path = format!("{}/{}", config.data_dir, "agdb_server.log");
+        let log_path = format!("{}/{}", config.data_dir, CLUSTER_LOG_FILE);
         let new_log_db = agdb::Db::new(&log_path)?;
         *self.cluster_log.0.write().await = new_log_db;
 
@@ -651,8 +684,10 @@ impl ClusterStorage {
         let cluster_log = self.cluster_log.clone();
         let notifier = self.notifier.clone();
         let result_notifier = self.result_notifiers.remove(&log_id);
+        let snapshot_lock = self.snapshot_lock.clone();
 
         tokio::spawn(async move {
+            let _snapshot_guard = snapshot_lock.read().await;
             let result = log.data.exec(db.clone(), db_pool).await;
             let _ = notifier.send(log.index);
             let _ = cluster_log.log_executed(log_id).await;

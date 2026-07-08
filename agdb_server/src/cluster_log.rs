@@ -206,7 +206,6 @@ impl ClusterLog {
                     .and()
                     .key("index")
                     .value(Comparison::LessThanOrEqual(up_to_index.into()))
-                    // Only prune entries that are fully committed and executed.
                     .and()
                     .not()
                     .keys(COMMITTED)
@@ -600,9 +599,11 @@ mod tests {
         let cluster_log = crate::cluster_log::new(&config).await?;
 
         for i in 1..=10 {
-            cluster_log
+            let db_id = cluster_log
                 .append_log(&test_log(i, 1, &format!("entry_{i}")))
                 .await?;
+            cluster_log.log_committed(db_id).await?;
+            cluster_log.log_executed(db_id).await?;
         }
 
         cluster_log.prune(5).await?;
@@ -620,13 +621,15 @@ mod tests {
         let cluster_log = crate::cluster_log::new(&config).await?;
 
         for i in 1..=5 {
-            cluster_log
+            let db_id = cluster_log
                 .append_log(&test_log(i, 1, &format!("entry_{i}")))
                 .await?;
+            cluster_log.log_committed(db_id).await?;
+            cluster_log.log_executed(db_id).await?;
         }
 
         cluster_log.prune(3).await?;
-        cluster_log.prune(3).await?; // second call is no-op
+        cluster_log.prune(3).await?;
 
         let remaining = cluster_log.logs_since(0).await?;
         assert_eq!(remaining.len(), 2);
@@ -640,9 +643,11 @@ mod tests {
         let cluster_log = crate::cluster_log::new(&config).await?;
 
         for i in 1..=10 {
-            cluster_log
+            let db_id = cluster_log
                 .append_log(&test_log(i, 1, &format!("entry_{i}")))
                 .await?;
+            cluster_log.log_committed(db_id).await?;
+            cluster_log.log_executed(db_id).await?;
         }
 
         cluster_log.prune(5).await?;
@@ -700,20 +705,22 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn prune_all_entries() -> ServerResult<()> {
+    async fn prune_all_entries_but_one() -> ServerResult<()> {
         let (config, _directory) = test_config("prune_all");
         let cluster_log = crate::cluster_log::new(&config).await?;
 
         for i in 1..=5 {
-            cluster_log
+            let db_id = cluster_log
                 .append_log(&test_log(i, 1, &format!("entry_{i}")))
                 .await?;
+            cluster_log.log_committed(db_id).await?;
+            cluster_log.log_executed(db_id).await?;
         }
 
-        cluster_log.prune(5).await?;
+        cluster_log.prune(4).await?;
 
         let logs = cluster_log.logs_since(0).await?;
-        assert!(logs.is_empty());
+        assert_eq!(logs.len(), 1);
 
         Ok(())
     }

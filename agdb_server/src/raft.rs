@@ -532,7 +532,7 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
 
         let min_commit = self.nodes.iter().map(|n| n.log_commit).min().unwrap_or(0);
         let safety_cap = self.local().log_commit.saturating_sub(self.max_log_entries);
-        let prune_to = min_commit.max(safety_cap);
+        let prune_to = min_commit.max(safety_cap).saturating_sub(1);
 
         if prune_to > self.storage.prune_index()
             && let Err(e) = self.storage.prune(prune_to).await

@@ -6,6 +6,7 @@ use crate::AgdbApi;
 use crate::QueryAudit;
 use crate::ReqwestClient;
 use crate::config_impl::ConfigImpl;
+use crate::config_impl::DEFAULT_CLUSTER_MAX_LOG_ENTRIES;
 use crate::config_impl::DEFAULT_LOG_BODY_LIMIT;
 use crate::config_impl::DEFAULT_REQUEST_BODY_LIMIT;
 use crate::config_impl::DEFAULT_TOKEN_EXPIRY_SECONDS;
@@ -317,6 +318,7 @@ impl TestServerImpl {
             cluster_term_timeout_ms: 3000,
             cluster_election_factor_ms: 1000,
             cluster: Vec::new(),
+            cluster_max_log_entries: DEFAULT_CLUSTER_MAX_LOG_ENTRIES,
             cluster_node_id: 0,
             start_time: 0,
             token_expiry_seconds: DEFAULT_TOKEN_EXPIRY_SECONDS,

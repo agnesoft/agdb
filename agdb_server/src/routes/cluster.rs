@@ -7,13 +7,16 @@ use crate::action::remove_user_tokens_except::RemoveUserTokensExcept;
 use crate::action::save_user_token::SaveUserToken;
 use crate::cluster;
 use crate::cluster::Cluster;
+use crate::cluster_log::CLUSTER_LOG_FILE;
 use crate::config::Config;
+use crate::db_pool;
 use crate::raft::Request;
 use crate::raft::Response;
 use crate::routes::user::LOGOUT_ALL_SESSIONS;
 use crate::routes::user::LOGOUT_OTHER_SESSIONS;
 use crate::routes::user::LogoutQuery;
 use crate::routes::user::do_login;
+use crate::server_db::SERVER_DB_FILE;
 use crate::server_db::ServerDb;
 use crate::server_error::ServerResponse;
 use crate::server_error::ServerResult;
@@ -25,17 +28,27 @@ use crate::user_id::UserToken;
 use agdb_api::ClusterStatus;
 use agdb_api::UserLogin;
 use axum::Json;
+use axum::body::Body;
 use axum::extract::Path;
 use axum::extract::Query;
 use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
+use std::sync::atomic::Ordering;
 
 pub(crate) async fn cluster(
     _cluster_id: ClusterId,
     State(cluster): State<Cluster>,
     request: Json<Request<ClusterAction>>,
 ) -> ServerResult<(StatusCode, Json<Response>)> {
+    if cluster.resync.load(Ordering::Relaxed) {
+        let response = Response {
+            target: request.index,
+            result: crate::raft::ResponseType::CommitError("resyncing".into()),
+        };
+        return Ok((StatusCode::OK, Json(response)));
+    }
+
     let response = cluster.raft.write().await.request(&request).await;
     Ok((StatusCode::OK, Json(response)))
 }
@@ -254,4 +267,113 @@ pub(crate) async fn status(
     statuses.sort_by(|a, b| a.address.cmp(&b.address));
 
     Ok((StatusCode::OK, Json(statuses)))
+}
+
+pub(crate) async fn snapshot(
+    _cluster_id: ClusterId,
+    State(cluster): State<Cluster>,
+    State(config): State<Config>,
+) -> ServerResult<axum::response::Response> {
+    if cluster.resync.load(Ordering::Acquire) {
+        return axum::response::Response::builder()
+            .status(StatusCode::SERVICE_UNAVAILABLE)
+            .body(Body::from("resyncing"))
+            .map_err(|e| crate::server_error::ServerError::from(e.to_string()));
+    }
+
+    cluster.snapshot_in_flight.store(true, Ordering::Release);
+
+    let result = build_snapshot(&cluster, &config).await;
+
+    cluster.snapshot_in_flight.store(false, Ordering::Release);
+
+    result
+}
+
+async fn build_snapshot(
+    cluster: &Cluster,
+    config: &Config,
+) -> ServerResult<axum::response::Response> {
+    let data_dir = std::path::Path::new(&config.data_dir);
+    let mut files: Vec<(String, Vec<u8>)> = Vec::new();
+
+    let (log_index, log_term, log_commit) = {
+        let raft = cluster.raft.read().await;
+        let _snapshot_lock = raft.storage.snapshot_lock.clone().write_owned().await;
+
+        let dbs = raft.storage.db.dbs().await?;
+
+        let server_db_guard = raft.storage.db.db.read().await;
+        let server_db_data = std::fs::read(data_dir.join(SERVER_DB_FILE))?;
+        drop(server_db_guard);
+
+        files.push((SERVER_DB_FILE.to_string(), server_db_data));
+
+        let cluster_log_data = std::fs::read(data_dir.join(CLUSTER_LOG_FILE))?;
+        let log_index = raft.storage.index;
+        let log_term = raft.storage.term;
+        let log_commit = raft.storage.commit;
+        drop(raft);
+
+        files.push((CLUSTER_LOG_FILE.to_string(), cluster_log_data));
+
+        for db in dbs {
+            collect_db_files(data_dir, &db.owner, &db.db, config, &mut files)?;
+        }
+
+        (log_index, log_term, log_commit)
+    };
+
+    let file_count = files.len() as u64;
+    let mut buf: Vec<u8> = Vec::new();
+
+    buf.extend_from_slice(&log_index.to_le_bytes());
+    buf.extend_from_slice(&log_term.to_le_bytes());
+    buf.extend_from_slice(&log_commit.to_le_bytes());
+    buf.extend_from_slice(&file_count.to_le_bytes());
+
+    for (path, data) in &files {
+        let path_bytes = path.as_bytes();
+        buf.extend_from_slice(&(path_bytes.len() as u32).to_le_bytes());
+        buf.extend_from_slice(path_bytes);
+        buf.extend_from_slice(&(data.len() as u64).to_le_bytes());
+        buf.extend_from_slice(data);
+    }
+
+    axum::response::Response::builder()
+        .status(StatusCode::OK)
+        .header("content-type", "application/octet-stream")
+        .body(Body::from(buf))
+        .map_err(|e| crate::server_error::ServerError::from(e.to_string()))
+}
+
+fn collect_db_files(
+    data_dir: &std::path::Path,
+    owner: &str,
+    db: &str,
+    config: &Config,
+    files: &mut Vec<(String, Vec<u8>)>,
+) -> ServerResult<()> {
+    let candidates = [
+        db_pool::db_file(owner, db, config),
+        db_pool::db_audit_file(owner, db, config),
+        db_pool::db_backup_file(owner, db, config),
+        db_pool::db_backup_audit_file(owner, db, config),
+    ];
+
+    for path in &candidates {
+        if path.exists() {
+            let relative = path.strip_prefix(data_dir).map_err(|_| {
+                crate::server_error::ServerError::from(format!(
+                    "Snapshot file is outside data_dir: {}",
+                    path.to_string_lossy()
+                ))
+            })?;
+            let relative = relative.to_string_lossy().to_string();
+            let data = std::fs::read(path)?;
+            files.push((relative, data));
+        }
+    }
+
+    Ok(())
 }

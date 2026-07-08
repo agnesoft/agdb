@@ -1,4 +1,4 @@
-mod user_db;
+pub(crate) mod user_db;
 
 use crate::config::Config;
 use crate::error_code::ErrorCode;
@@ -42,25 +42,38 @@ impl DbName {
 
 #[derive(Clone)]
 pub(crate) struct DbPool {
-    pool: Arc<RwLock<HashMap<DbName, UserDb>>>,
+    pub(crate) pool: Arc<RwLock<HashMap<DbName, UserDb>>>,
     config: Config,
 }
 
 pub(crate) async fn new(config: Config, server_db: &ServerDb) -> ServerResult<DbPool> {
     std::fs::create_dir_all(&config.data_dir)?;
-    let pool = Arc::new(RwLock::new(HashMap::new()));
 
-    for db in server_db.dbs().await? {
-        let db_path = db_file(&db.owner, &db.db, &config);
-        std::fs::create_dir_all(db_audit_dir(&db.owner, &config))?;
-        let server_db = UserDb::new(db_path.to_string_lossy().as_ref(), db.db_type)?;
-        pool.write().await.insert(db.name(), server_db);
-    }
+    let db_pool = DbPool {
+        pool: Arc::new(RwLock::new(HashMap::new())),
+        config,
+    };
 
-    Ok(DbPool { pool, config })
+    db_pool.reload(server_db).await?;
+
+    Ok(db_pool)
 }
 
 impl DbPool {
+    pub(crate) async fn reload(&self, server_db: &ServerDb) -> ServerResult<()> {
+        let mut pool = self.pool.write().await;
+        pool.clear();
+
+        for db in server_db.dbs().await? {
+            let db_path = db_file(&db.owner, &db.db, &self.config);
+            std::fs::create_dir_all(db_audit_dir(&db.owner, &self.config))?;
+            let user_db = UserDb::new(db_path.to_string_lossy().as_ref(), db.db_type)?;
+            pool.insert(db.name(), user_db);
+        }
+
+        Ok(())
+    }
+
     async fn db(&self, owner: &str, db: &str) -> ServerResult<UserDb> {
         self.pool
             .read()
@@ -655,7 +668,7 @@ fn backup_path(owner: &str, db: &str, db_type: DbKind, config: &Config) -> PathB
     }
 }
 
-fn db_backup_file(owner: &str, db: &str, config: &Config) -> PathBuf {
+pub(crate) fn db_backup_file(owner: &str, db: &str, config: &Config) -> PathBuf {
     db_backup_dir(owner, config).join(format!("{db}.bak"))
 }
 
@@ -663,7 +676,7 @@ fn db_backup_dir(owner: &str, config: &Config) -> PathBuf {
     Path::new(&config.data_dir).join(owner).join("backups")
 }
 
-fn db_backup_audit_file(owner: &str, db: &str, config: &Config) -> PathBuf {
+pub(crate) fn db_backup_audit_file(owner: &str, db: &str, config: &Config) -> PathBuf {
     db_backup_dir(owner, config).join(format!("{db}.log"))
 }
 
@@ -671,10 +684,10 @@ fn db_audit_dir(owner: &str, config: &Config) -> PathBuf {
     Path::new(&config.data_dir).join(owner).join("audit")
 }
 
-fn db_audit_file(owner: &str, db: &str, config: &Config) -> PathBuf {
+pub(crate) fn db_audit_file(owner: &str, db: &str, config: &Config) -> PathBuf {
     db_audit_dir(owner, config).join(format!("{db}.log"))
 }
 
-fn db_file(owner: &str, db: &str, config: &Config) -> PathBuf {
+pub(crate) fn db_file(owner: &str, db: &str, config: &Config) -> PathBuf {
     Path::new(&config.data_dir).join(owner).join(db)
 }

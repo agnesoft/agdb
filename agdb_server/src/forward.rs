@@ -4,6 +4,7 @@ use axum::extract::State;
 use axum::middleware::Next;
 use axum::response::Response;
 use reqwest::StatusCode;
+use std::sync::atomic::Ordering;
 
 const REDIRECT_PATHS: [&str; 16] = [
     "/add",
@@ -36,6 +37,20 @@ pub(crate) async fn forward_to_leader(
     request: Request,
     next: Next,
 ) -> Response {
+    if state.cluster.resync.load(Ordering::Relaxed)
+        && let Some(leader) = state.cluster.raft.read().await.leader()
+        && state.cluster.index != leader as usize
+    {
+        let path = request.uri().path();
+
+        if !path.ends_with("/cluster") && !path.ends_with("/cluster/snapshot") {
+            return state.cluster.nodes[leader as usize]
+                .forward(request, state.cluster.index)
+                .await
+                .unwrap_or_else(|r| r);
+        }
+    }
+
     if is_redirect_path(&request) {
         let leader = state.cluster.raft.read().await.leader();
         if let Some(leader) = leader {

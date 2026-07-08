@@ -1,5 +1,6 @@
 use agdb_api::LogLevelFilter;
 use agdb_api::config_impl::ConfigImpl;
+use agdb_api::config_impl::DEFAULT_CLUSTER_MAX_LOG_ENTRIES;
 use agdb_api::config_impl::DEFAULT_LOG_BODY_LIMIT;
 use agdb_api::config_impl::DEFAULT_REQUEST_BODY_LIMIT;
 use agdb_api::config_impl::DEFAULT_TOKEN_EXPIRY_SECONDS;
@@ -160,6 +161,11 @@ pub(crate) fn from_str(content: &str) -> Result<ConfigImpl, String> {
                         .map_err(|e| format!("Invalid cluster_election_factor_ms: {e:?}"))?
                 }
                 "cluster" => config.cluster = vec_from_str(value),
+                "cluster_max_log_entries" => {
+                    config.cluster_max_log_entries = value
+                        .parse()
+                        .map_err(|e| format!("Invalid cluster_max_log_entries: {e:?}"))?
+                }
                 "token_expiry_seconds" => {
                     config.token_expiry_seconds = value
                         .parse()
@@ -218,6 +224,7 @@ fn default_config() -> ConfigImpl {
         cluster_term_timeout_ms: 3000,
         cluster_election_factor_ms: 1000,
         cluster: vec![],
+        cluster_max_log_entries: DEFAULT_CLUSTER_MAX_LOG_ENTRIES,
         cluster_node_id: 0,
         start_time: 0,
         token_expiry_seconds: DEFAULT_TOKEN_EXPIRY_SECONDS,
@@ -281,6 +288,7 @@ mod tests {
             cluster_term_timeout_ms: 3000,
             cluster_election_factor_ms: 1000,
             cluster: vec![],
+            cluster_max_log_entries: DEFAULT_CLUSTER_MAX_LOG_ENTRIES,
             cluster_node_id: 0,
             start_time: 0,
             token_expiry_seconds: DEFAULT_TOKEN_EXPIRY_SECONDS,
@@ -320,6 +328,7 @@ mod tests {
             cluster_term_timeout_ms: 3000,
             cluster_election_factor_ms: 1000,
             cluster: vec![],
+            cluster_max_log_entries: DEFAULT_CLUSTER_MAX_LOG_ENTRIES,
             cluster_node_id: 0,
             start_time: 0,
             token_expiry_seconds: DEFAULT_TOKEN_EXPIRY_SECONDS,
@@ -358,6 +367,7 @@ mod tests {
             cluster_term_timeout_ms: 3000,
             cluster_election_factor_ms: 1000,
             cluster: vec![],
+            cluster_max_log_entries: DEFAULT_CLUSTER_MAX_LOG_ENTRIES,
             cluster_node_id: 0,
             start_time: 0,
             token_expiry_seconds: DEFAULT_TOKEN_EXPIRY_SECONDS,

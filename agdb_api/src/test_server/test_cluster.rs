@@ -3,6 +3,7 @@ use crate::ClusterStatus;
 use crate::LogLevelFilter;
 use crate::ReqwestClient;
 use crate::config_impl::ConfigImpl;
+use crate::config_impl::DEFAULT_CLUSTER_MAX_LOG_ENTRIES;
 use crate::config_impl::DEFAULT_LOG_BODY_LIMIT;
 use crate::config_impl::DEFAULT_REQUEST_BODY_LIMIT;
 use crate::config_impl::DEFAULT_TOKEN_EXPIRY_SECONDS;
@@ -55,6 +56,11 @@ impl TestCluster {
         Ok(Self { cluster: nodes })
     }
 
+    pub async fn new_with_max_log_entries(max_log_entries: u64) -> Result<Self, TestError> {
+        let nodes = Arc::new(create_cluster_with_max_log_entries(3, max_log_entries).await?);
+        Ok(Self { cluster: nodes })
+    }
+
     pub fn leader(&self) -> AgdbApi<ReqwestClient> {
         api_for_test(&self.cluster[0].address)
     }
@@ -94,8 +100,23 @@ pub async fn wait_for_leader(
     bail!("Leader not found within {TEST_TIMEOUT}seconds")
 }
 
+pub async fn create_cluster_with_max_log_entries(
+    nodes: usize,
+    max_log_entries: u64,
+) -> Result<Vec<TestServerImpl>, TestError> {
+    create_cluster_impl(nodes, false, max_log_entries).await
+}
+
 #[cfg_attr(feature = "api", agdb::fn_def())]
 pub async fn create_cluster(nodes: usize, tls: bool) -> Result<Vec<TestServerImpl>, TestError> {
+    create_cluster_impl(nodes, tls, DEFAULT_CLUSTER_MAX_LOG_ENTRIES).await
+}
+
+async fn create_cluster_impl(
+    nodes: usize,
+    tls: bool,
+    max_log_entries: u64,
+) -> Result<Vec<TestServerImpl>, TestError> {
     let mut configs = Vec::with_capacity(nodes);
     let mut cluster = Vec::with_capacity(nodes);
     let mut servers = Vec::with_capacity(nodes);
@@ -134,10 +155,11 @@ pub async fn create_cluster(nodes: usize, tls: bool) -> Result<Vec<TestServerImp
             tls_key: tls_key.clone(),
             tls_root: tls_root.clone(),
             cluster_token: "test".to_string(),
-            cluster_heartbeat_timeout_ms: 1000,
-            cluster_term_timeout_ms: 3000,
-            cluster_election_factor_ms: 1000,
+            cluster_heartbeat_timeout_ms: 250,
+            cluster_term_timeout_ms: 1000,
+            cluster_election_factor_ms: 250,
             cluster: Vec::new(),
+            cluster_max_log_entries: max_log_entries,
             cluster_node_id: 0,
             start_time: 0,
             token_expiry_seconds: DEFAULT_TOKEN_EXPIRY_SECONDS,

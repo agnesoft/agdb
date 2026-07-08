@@ -736,6 +736,7 @@ impl Storage<ClusterAction, ResultNotifier> for ClusterStorage {
     }
 
     async fn prune(&mut self, up_to_index: u64) -> ServerResult<()> {
+        let up_to_index = std::cmp::min(up_to_index, self.index.saturating_sub(1));
         if up_to_index > self.prune_index && !self.snapshot_in_flight.load(Ordering::Relaxed) {
             self.cluster_log.prune(up_to_index).await?;
             self.prune_index = up_to_index;

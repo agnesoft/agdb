@@ -103,7 +103,7 @@ async fn log_compaction_bounds_log_size() -> Result<(), TestError> {
     }
 
     // Allow heartbeat cycle to propagate the prune_index to followers
-    tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+    tokio::time::sleep(std::time::Duration::from_secs(1)).await;
 
     // Shutdown all to inspect files
     leader.admin_shutdown().await?;
@@ -204,7 +204,7 @@ async fn lagging_node_catches_up_after_restart() -> Result<(), TestError> {
     assert_eq!(result.1[0].result, 8);
 
     // After catching up, cluster is healthy — logs should be pruned
-    tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+    tokio::time::sleep(std::time::Duration::from_secs(1)).await;
 
     // Shutdown all to inspect files
     leader.admin_shutdown().await?;
@@ -312,7 +312,7 @@ async fn too_far_behind_triggers_resync() -> Result<(), TestError> {
     // After resync, cluster is healthy — wait for logs to empty then verify
     // We need to wait for the leader to observe the resynced node's commit
     // and compute min_commit = leader_commit (all equal) → prune everything.
-    tokio::time::sleep(std::time::Duration::from_secs(3)).await;
+    tokio::time::sleep(std::time::Duration::from_secs(1)).await;
 
     // Shutdown all to inspect files
     leader.admin_shutdown().await?;

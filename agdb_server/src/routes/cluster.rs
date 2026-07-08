@@ -346,11 +346,13 @@ fn collect_db_files(
 
     for path in &candidates {
         if path.exists() {
-            let relative = path
-                .strip_prefix(data_dir)
-                .unwrap_or(path)
-                .to_string_lossy()
-                .to_string();
+            let relative = path.strip_prefix(data_dir).map_err(|_| {
+                crate::server_error::ServerError::from(format!(
+                    "Snapshot file is outside data_dir: {}",
+                    path.to_string_lossy()
+                ))
+            })?;
+            let relative = relative.to_string_lossy().to_string();
             let data = std::fs::read(path)?;
             files.push((relative, data));
         }

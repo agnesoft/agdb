@@ -206,6 +206,13 @@ impl ClusterLog {
                     .and()
                     .key("index")
                     .value(Comparison::LessThanOrEqual(up_to_index.into()))
+                    // Only prune entries that are fully committed and executed.
+                    .and()
+                    .not()
+                    .keys(COMMITTED)
+                    .and()
+                    .not()
+                    .keys(EXECUTED)
                     .query(),
             )?;
             Ok(())

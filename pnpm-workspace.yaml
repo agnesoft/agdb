@@ -20,8 +20,8 @@ catalog:
   "@eslint/js": ^9
   "@kalimahapps/vue-icons": ^1
   "@openapitools/openapi-generator-cli": ^2
-  "@playwright/test": ^1.60.0
-  playwright: ^1.60.0
+  "@playwright/test": ^1
+  playwright: ^1
   "@prettier/plugin-php": ^0.22
   "@rushstack/eslint-patch": ^1
   "@theguild/remark-mermaid": ^0.2

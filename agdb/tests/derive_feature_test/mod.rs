@@ -1,5 +1,6 @@
 use crate::test_db::TestDb;
 use agdb::AgdbSerialize;
+use agdb::Comparison;
 use agdb::DbElement;
 use agdb::DbError;
 use agdb::DbId;
@@ -1199,4 +1200,162 @@ fn implicit_and_explicit_condition_with_db_element_derive() {
         .unwrap()
         .try_into()
         .unwrap();
+}
+
+#[test]
+fn flatten_should_respect_parent_element_id() {
+    let mut db = DbMemory::new("").unwrap();
+
+    #[derive(Clone, Debug, PartialEq, DbElement)]
+    struct Name {
+        #[agdb(rename = "first_name")]
+        first: String,
+        #[agdb(rename = "last_name")]
+        last: String,
+    }
+
+    #[derive(Clone, Debug, PartialEq)]
+    struct Name2 {
+        first: String,
+        last: String,
+    }
+
+    #[derive(Clone, Debug, PartialEq, DbValue, DbSerialize)]
+    struct Name3 {
+        first: String,
+        last: String,
+    }
+
+    #[derive(Clone, Debug, PartialEq, DbElement)]
+    struct Person {
+        name2: Name2,
+        name3: Name3,
+        #[agdb(flatten)]
+        name: Name,
+        age: u64,
+    }
+
+    impl From<Name2> for DbValue {
+        fn from(name2: Name2) -> Self {
+            format!("{} {}", name2.first, name2.last).into()
+        }
+    }
+
+    impl TryFrom<DbValue> for Name2 {
+        type Error = DbError;
+
+        fn try_from(value: DbValue) -> Result<Self, Self::Error> {
+            let value_str = value.string()?;
+            let parts: Vec<&str> = value_str.split_whitespace().collect();
+            if parts.len() != 2 {
+                return Err(DbError::serialization(
+                    agdb::DbErrorType::NotEnoughData,
+                    "Invalid format for Name2. Expected 'first last'.",
+                ));
+            }
+            Ok(Name2 {
+                first: parts[0].to_string(),
+                last: parts[1].to_string(),
+            })
+        }
+    }
+
+    let expected = Person {
+        name: Name {
+            first: "John".to_owned(),
+            last: "Doe".to_owned(),
+        },
+        name2: Name2 {
+            first: "John".to_owned(),
+            last: "Doe".to_owned(),
+        },
+        name3: Name3 {
+            first: "John".to_owned(),
+            last: "Doe".to_owned(),
+        },
+        age: 30,
+    };
+
+    db.exec_mut(QueryBuilder::insert().nodes().aliases("root").query())
+        .unwrap();
+
+    let person_id = db
+        .exec_mut(QueryBuilder::insert().element(&expected).query())
+        .unwrap()
+        .elements[0]
+        .id;
+
+    db.exec_mut(
+        QueryBuilder::insert()
+            .edges()
+            .from("root")
+            .to(person_id)
+            .query(),
+    )
+    .unwrap();
+
+    let raw = db
+        .exec(QueryBuilder::select().ids(person_id).query())
+        .unwrap();
+    let db_element_ids = raw.elements[0]
+        .values
+        .iter()
+        .filter_map(|kv| {
+            if let Ok(key) = kv.key.string()
+                && key == "db_element_id"
+            {
+                return kv.value.string().ok().map(ToOwned::to_owned);
+            }
+            None
+        })
+        .collect::<Vec<String>>();
+    assert_eq!(db_element_ids, vec!["Person".to_string()]);
+
+    let by_last_name: Person = db
+        .exec(
+            QueryBuilder::select()
+                .element::<Person>()
+                .search()
+                .from("root")
+                .where_()
+                .key("last_name")
+                .value(Comparison::StartsWith("Doe".into()))
+                .query(),
+        )
+        .unwrap()
+        .try_into()
+        .unwrap();
+    assert_eq!(by_last_name, expected);
+
+    let by_name2_contains: Person = db
+        .exec(
+            QueryBuilder::select()
+                .element::<Person>()
+                .search()
+                .from("root")
+                .where_()
+                .key("name2")
+                .value(Comparison::Contains("Doe".into()))
+                .query(),
+        )
+        .unwrap()
+        .try_into()
+        .unwrap();
+    assert_eq!(by_name2_contains, expected);
+
+    let by_name3_contains: Person = db
+        .exec(
+            QueryBuilder::select()
+                .element::<Person>()
+                .search()
+                .from("root")
+                .where_()
+                .key("name3")
+                .value(&expected.name3)
+                .query(),
+        )
+        .unwrap()
+        .try_into()
+        .unwrap();
+    assert_eq!(by_name3_contains, expected);
 }

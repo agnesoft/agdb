@@ -189,7 +189,12 @@ fn impl_to_db_value(f: &syn::Field) -> Option<proc_macro2::TokenStream> {
             if is_flatten_type(f) {
                 return Some(quote! {
                     if let ::std::option::Option::Some(value) = &self.#name {
-                        values.extend(value.to_db_values());
+                        let db_element_id: ::agdb::DbValue = #DB_ELEMENT_ID.into();
+                        for kv in value.to_db_values() {
+                            if kv.key != db_element_id {
+                                values.push(kv);
+                            }
+                        }
                     }
                 });
             }
@@ -203,7 +208,12 @@ fn impl_to_db_value(f: &syn::Field) -> Option<proc_macro2::TokenStream> {
 
         if is_flatten_type(f) {
             return Some(quote! {
-                values.extend(self.#name.to_db_values());
+                let db_element_id: ::agdb::DbValue = #DB_ELEMENT_ID.into();
+                for kv in self.#name.to_db_values() {
+                    if kv.key != db_element_id {
+                        values.push(kv);
+                    }
+                }
             });
         }
 

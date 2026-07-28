@@ -790,17 +790,25 @@ fn rollback_after_replace() -> Result<(), agdb::DbError> {
             .query(),
     )?;
 
-    let _ = db.transaction_mut(|t| -> Result<(), agdb::DbError> {
-        t.exec_mut(QueryBuilder::insert().nodes().aliases("b").query())?;
-        t.exec_mut(
-            QueryBuilder::insert()
-                .values(vec![vec![("k", "v2").into()]])
-                .ids("a")
-                .query(),
-        )?;
-        Err(agdb::DbError::db(agdb::DbErrorType::NotAllowed, "fail"))
-    });
+    let err = db
+        .transaction_mut(|t| -> Result<(), agdb::DbError> {
+            t.exec_mut(QueryBuilder::insert().nodes().aliases("b").query())?;
+            t.exec_mut(
+                QueryBuilder::insert()
+                    .values(vec![vec![("k", "v2").into()]])
+                    .ids("a")
+                    .query(),
+            )?;
+            Err(agdb::DbError::db(agdb::DbErrorType::NotAllowed, "fail"))
+        })
+        .unwrap_err();
 
+    assert_eq!(err.ty, agdb::DbErrorType::NotAllowed);
+    assert_eq!(err.description, "fail");
+
+    let result = db.exec(QueryBuilder::select().ids("a").query())?;
+
+    assert_eq!(result.elements[0].values, vec![("k", "v1").into()]);
     assert!(db.exec(QueryBuilder::select().ids("b").query()).is_err());
 
     Ok(())

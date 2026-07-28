@@ -519,8 +519,6 @@ impl<Store: StorageData> DbImpl<Store> {
                             .ids_mut()
                             .insert(&mut self.storage, &key_value.value, id)?;
                     }
-
-                    return Ok(());
                 }
             }
         }

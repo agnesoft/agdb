@@ -23,6 +23,7 @@
     "@nuxt/content": "^3.8.2",
     "@nuxt/image": "^2.0.0",
     "@nuxt/ui": "^4.2.1",
+    "@unhead/vue": "^2.0.5",
     "better-sqlite3": "^12.4.6",
     "@vueuse/core": "^14",
     "minimark": "^0.2.0",

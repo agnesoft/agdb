@@ -9,6 +9,7 @@
     "@rushstack/eslint-patch": "catalog:",
     "@tsconfig/node18": "catalog:",
     "@types/node": "catalog:",
+    "@vue/tsconfig": "catalog:",
     "eslint": "catalog:",
     "eslint-plugin-vue": "catalog:",
     "prettier": "catalog:",

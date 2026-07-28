@@ -778,3 +778,30 @@ fn shrink_to_fit() {
         "{shrunk_size} (shrunk) < {optimized_size} (optimized)"
     );
 }
+
+#[test]
+fn rollback_after_replace() -> Result<(), agdb::DbError> {
+    let mut db = DbMemory::new("test")?;
+    db.exec_mut(
+        QueryBuilder::insert()
+            .nodes()
+            .aliases("a")
+            .values(vec![vec![("k", "v1").into()]])
+            .query(),
+    )?;
+
+    let _ = db.transaction_mut(|t| -> Result<(), agdb::DbError> {
+        t.exec_mut(QueryBuilder::insert().nodes().aliases("b").query())?;
+        t.exec_mut(
+            QueryBuilder::insert()
+                .values(vec![vec![("k", "v2").into()]])
+                .ids("a")
+                .query(),
+        )?;
+        Err(agdb::DbError::db(agdb::DbErrorType::NotAllowed, "fail"))
+    });
+
+    assert!(db.exec(QueryBuilder::select().ids("b").query()).is_err());
+
+    Ok(())
+}

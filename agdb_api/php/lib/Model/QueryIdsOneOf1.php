@@ -1,6 +1,6 @@
 <?php
 /**
- * ServerDatabaseResource
+ * QueryIdsOneOf1
  *
  * PHP version 8.1
  *
@@ -32,15 +32,16 @@ use \ArrayAccess;
 use \Agnesoft\AgdbApi\ObjectSerializer;
 
 /**
- * ServerDatabaseResource Class Doc Comment
+ * QueryIdsOneOf1 Class Doc Comment
  *
  * @category Class
+ * @description Search query
  * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
  * @implements \ArrayAccess<string, mixed>
  */
-class ServerDatabaseResource implements ModelInterface, ArrayAccess, \JsonSerializable
+class QueryIdsOneOf1 implements ModelInterface, ArrayAccess, \JsonSerializable
 {
     public const DISCRIMINATOR = null;
 
@@ -49,7 +50,7 @@ class ServerDatabaseResource implements ModelInterface, ArrayAccess, \JsonSerial
      *
      * @var string
      */
-    protected static $openAPIModelName = 'ServerDatabaseResource';
+    protected static $openAPIModelName = 'QueryIds_oneOf_1';
 
     /**
      * Array of property to type mappings. Used for (de)serialization
@@ -57,7 +58,7 @@ class ServerDatabaseResource implements ModelInterface, ArrayAccess, \JsonSerial
      * @var string[]
      */
     protected static $openAPITypes = [
-        'resource' => '\Agnesoft\AgdbApi\Model\DbResource'
+        'search' => '\Agnesoft\AgdbApi\Model\SearchQuery'
     ];
 
     /**
@@ -68,7 +69,7 @@ class ServerDatabaseResource implements ModelInterface, ArrayAccess, \JsonSerial
      * @psalm-var array<string, string|null>
      */
     protected static $openAPIFormats = [
-        'resource' => null
+        'search' => null
     ];
 
     /**
@@ -77,7 +78,7 @@ class ServerDatabaseResource implements ModelInterface, ArrayAccess, \JsonSerial
      * @var boolean[]
      */
     protected static array $openAPINullables = [
-        'resource' => false
+        'search' => false
     ];
 
     /**
@@ -166,7 +167,7 @@ class ServerDatabaseResource implements ModelInterface, ArrayAccess, \JsonSerial
      * @var string[]
      */
     protected static $attributeMap = [
-        'resource' => 'resource'
+        'search' => 'Search'
     ];
 
     /**
@@ -175,7 +176,7 @@ class ServerDatabaseResource implements ModelInterface, ArrayAccess, \JsonSerial
      * @var string[]
      */
     protected static $setters = [
-        'resource' => 'setResource'
+        'search' => 'setSearch'
     ];
 
     /**
@@ -184,7 +185,7 @@ class ServerDatabaseResource implements ModelInterface, ArrayAccess, \JsonSerial
      * @var string[]
      */
     protected static $getters = [
-        'resource' => 'getResource'
+        'search' => 'getSearch'
     ];
 
     /**
@@ -244,7 +245,7 @@ class ServerDatabaseResource implements ModelInterface, ArrayAccess, \JsonSerial
      */
     public function __construct(?array $data = null)
     {
-        $this->setIfExists('resource', $data ?? [], null);
+        $this->setIfExists('search', $data ?? [], null);
     }
 
     /**
@@ -274,8 +275,8 @@ class ServerDatabaseResource implements ModelInterface, ArrayAccess, \JsonSerial
     {
         $invalidProperties = [];
 
-        if ($this->container['resource'] === null) {
-            $invalidProperties[] = "'resource' can't be null";
+        if ($this->container['search'] === null) {
+            $invalidProperties[] = "'search' can't be null";
         }
         return $invalidProperties;
     }
@@ -293,28 +294,28 @@ class ServerDatabaseResource implements ModelInterface, ArrayAccess, \JsonSerial
 
 
     /**
-     * Gets resource
+     * Gets search
      *
-     * @return \Agnesoft\AgdbApi\Model\DbResource
+     * @return \Agnesoft\AgdbApi\Model\SearchQuery
      */
-    public function getResource()
+    public function getSearch()
     {
-        return $this->container['resource'];
+        return $this->container['search'];
     }
 
     /**
-     * Sets resource
+     * Sets search
      *
-     * @param \Agnesoft\AgdbApi\Model\DbResource $resource resource
+     * @param \Agnesoft\AgdbApi\Model\SearchQuery $search Search query
      *
      * @return self
      */
-    public function setResource($resource)
+    public function setSearch($search)
     {
-        if (is_null($resource)) {
-            throw new \InvalidArgumentException('non-nullable resource cannot be null');
+        if (is_null($search)) {
+            throw new \InvalidArgumentException('non-nullable search cannot be null');
         }
-        $this->container['resource'] = $resource;
+        $this->container['search'] = $search;
 
         return $this;
     }

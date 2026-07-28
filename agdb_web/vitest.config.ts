@@ -5,10 +5,16 @@ import {
 } from "vitest/config";
 import path from "path";
 import { defineVitestProject } from "@nuxt/test-utils/config";
-import vue from "@vitejs/plugin-vue";
 
 export default defineConfig({
-  plugins: [vue()],
+  environments: {
+    ssr: {
+      keepProcessEnv: true,
+      dev: {
+        moduleRunnerTransform: false,
+      },
+    },
+  },
   test: {
     exclude: [...configDefaults.exclude, "e2e/*"],
     coverage: {

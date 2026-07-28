@@ -3,6 +3,18 @@ import { describe, it, expect, vi } from "vitest";
 import { defineComponent, h, ref } from "vue";
 import DocsLayout from "./docs.vue";
 
+const { useRouteMock } = vi.hoisted(() => ({
+  useRouteMock: vi.fn(() => ({ path: "/docs/guides/how-to-run-server" })),
+}));
+
+vi.mock("vue-router", async (orig) => {
+  const mod = await orig();
+  return {
+    ...(mod as object),
+    useRoute: useRouteMock,
+  };
+});
+
 // Stub UContentNavigation to capture navigation prop length
 const UContentNavigation = defineComponent({
   name: "UContentNavigation",
@@ -35,14 +47,7 @@ const UPageAside = defineComponent({
 
 describe("DocsLayout scoped nav", () => {
   it("shows children of the current top-level section (/docs)", async () => {
-    // Mock the route
-    vi.mock("vue-router", async (orig) => {
-      const mod = await orig();
-      return {
-        ...(mod as object),
-        useRoute: () => ({ path: "/docs/guides/how-to-run-server" }),
-      };
-    });
+    useRouteMock.mockReturnValue({ path: "/docs/guides/how-to-run-server" });
 
     const navigation = [
       {

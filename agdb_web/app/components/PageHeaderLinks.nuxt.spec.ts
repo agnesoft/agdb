@@ -1,5 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
-
+import { beforeEach, describe, it, expect, vi } from "vitest";
 import PageHeaderLinks from "./PageHeaderLinks.vue";
 import { mockNuxtImport, mountSuspended } from "@nuxt/test-utils/runtime";
 import { defineComponent, h } from "vue";
@@ -23,6 +22,7 @@ const UIcon = defineComponent({
 });
 
 mockNuxtImport("useToast", () => () => ({
+  add: vi.fn(),
   show: vi.fn(),
 }));
 mockNuxtImport("useRoute", () => useRoute);
@@ -45,6 +45,12 @@ vi.stubGlobal("useSiteConfig", () => ({
 }));
 
 describe("PageHeaderLinks", () => {
+  beforeEach(() => {
+    vi.stubGlobal("$fetch", fetchMock);
+    fetchMock.mockClear();
+    copy.mockClear();
+  });
+
   it("renders links with icons", async () => {
     const wrapper = await mountSuspended(PageHeaderLinks, {
       props: {
@@ -103,7 +109,7 @@ describe("PageHeaderLinks", () => {
     ).toBe(true);
   });
 
-  it("copies the page markdown link", async () => {
+  it("copies the markdown URL from dropdown action", async () => {
     const wrapper = await mountSuspended(PageHeaderLinks, {
       global: {
         stubs: {
@@ -139,10 +145,13 @@ describe("PageHeaderLinks", () => {
       },
     });
 
-    await wrapper.findAll("button")[0]?.trigger("click");
+    const copyMarkdownButton = wrapper
+      .findAll("button")
+      .find((button) => button.text().includes("Copy Markdown link"));
 
-    expect(fetchMock).toHaveBeenCalledWith("/raw/docs/examples.md");
-    expect(copy).toHaveBeenCalledWith("# Example markdown");
+    await copyMarkdownButton?.trigger("click");
+
+    expect(copy).toHaveBeenCalledWith("https://agdb.io/raw/docs/examples.md");
   });
 
   it("renders no links when none are provided", async () => {

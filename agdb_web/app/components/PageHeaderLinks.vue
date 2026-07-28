@@ -41,9 +41,11 @@ const items = [
   },
 ];
 
+/* v8 ignore start -- @preserve */
 async function copyPage() {
   copy(await $fetch<string>(`/raw${route.path}.md`));
 }
+/* v8 ignore stop -- @preserve */
 </script>
 
 <template>

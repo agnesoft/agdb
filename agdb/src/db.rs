@@ -43,6 +43,7 @@ use crate::query::query_condition::QueryConditionModifier;
 use crate::query::query_id::QueryId;
 use crate::storage::Storage;
 use crate::storage::StorageIndex;
+use crate::storage::SyncMode;
 use crate::storage::any_storage::AnyStorage;
 use crate::storage::file_storage::FileStorage;
 use crate::storage::file_storage_memory_mapped::FileStorageMemoryMapped;
@@ -423,6 +424,23 @@ impl<Store: StorageData> DbImpl<Store> {
         }
 
         result
+    }
+
+    /// Ensures all buffered data reaches durable storage. Call before
+    /// reading raw database files for snapshots or backups. This is
+    /// independent of `sync_mode` and always issues the sync syscall.
+    pub fn sync(&mut self) -> Result<(), DbError> {
+        self.storage.sync()
+    }
+
+    /// Returns the current [`SyncMode`] for this database.
+    pub fn sync_mode(&self) -> SyncMode {
+        self.storage.sync_mode()
+    }
+
+    /// Sets the sync mode for this database. See [`SyncMode`] for details.
+    pub fn set_sync_mode(&mut self, mode: SyncMode) {
+        self.storage.set_sync_mode(mode);
     }
 
     /// Returns the database size in bytes. Depending on the underlying storage

@@ -85,6 +85,7 @@ fn public_types() {
     use agdb::StableHash;
     use agdb::StorageData;
     use agdb::StorageSlice;
+    use agdb::SyncMode;
     use agdb::Transaction;
     use agdb::TransactionMut;
 }
@@ -810,6 +811,31 @@ fn rollback_after_replace() -> Result<(), agdb::DbError> {
 
     assert_eq!(result.elements[0].values, vec![("k", "v1").into()]);
     assert!(db.exec(QueryBuilder::select().ids("b").query()).is_err());
+
+    Ok(())
+}
+
+#[test]
+fn file_db_sync() -> Result<(), agdb::DbError> {
+    let test_file = TestFile::new();
+    let mut db = DbFile::new(test_file.file_name())?;
+
+    assert_eq!(db.sync_mode(), agdb::SyncMode::None);
+
+    db.exec_mut(QueryBuilder::insert().nodes().count(1).query())?;
+
+    db.set_sync_mode(agdb::SyncMode::Commit);
+    assert_eq!(db.sync_mode(), agdb::SyncMode::Commit);
+
+    db.exec_mut(QueryBuilder::insert().nodes().count(1).query())?;
+    db.set_sync_mode(agdb::SyncMode::None);
+    db.exec_mut(QueryBuilder::insert().nodes().count(1).query())?;
+    db.sync()?;
+
+    assert_eq!(
+        db.exec(QueryBuilder::select().node_count().query())?.result,
+        3
+    );
 
     Ok(())
 }

@@ -23,6 +23,10 @@ impl WriteAheadLog {
         Ok(self.file.set_len(0)?)
     }
 
+    pub fn sync(&mut self) -> Result<(), DbError> {
+        Ok(self.file.sync_data()?)
+    }
+
     pub fn insert(&mut self, pos: u64, value: &[u8]) -> Result<(), DbError> {
         self.file.seek(SeekFrom::End(0))?;
         self.file.write_all(&pos.serialize())?;

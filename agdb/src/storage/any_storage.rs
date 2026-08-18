@@ -40,6 +40,30 @@ impl StorageData for AnyStorage {
         }
     }
 
+    fn set_sync_mode(&mut self, mode: super::SyncMode) {
+        match self {
+            AnyStorage::MemoryMapped(s) => s.set_sync_mode(mode),
+            AnyStorage::Memory(s) => s.set_sync_mode(mode),
+            AnyStorage::File(s) => s.set_sync_mode(mode),
+        }
+    }
+
+    fn sync_mode(&self) -> super::SyncMode {
+        match self {
+            AnyStorage::MemoryMapped(s) => s.sync_mode(),
+            AnyStorage::Memory(s) => s.sync_mode(),
+            AnyStorage::File(s) => s.sync_mode(),
+        }
+    }
+
+    fn sync(&mut self) -> Result<(), DbError> {
+        match self {
+            AnyStorage::MemoryMapped(s) => s.sync(),
+            AnyStorage::Memory(s) => s.sync(),
+            AnyStorage::File(s) => s.sync(),
+        }
+    }
+
     fn len(&self) -> u64 {
         match self {
             AnyStorage::MemoryMapped(s) => s.len(),

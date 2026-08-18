@@ -19,6 +19,22 @@ use std::borrow::Cow;
 const CURRENT_VERSION: u64 = 1;
 const CHUNK_SIZE: u64 = 1024 * 1024;
 
+/// Controls whether the underlying storage layer synchronization
+/// on every storage commit. For example issuing `fsync`/`fdatasync`
+/// for physical filesystems.
+///
+/// - `None` — no explicit sync; relies on the OS to flush dirty pages.
+///   Suitable for local filesystems or when running in a replicated cluster.
+/// - `Commit` — calls `sync_data()` on the main file before clearing the WAL
+///   at each transaction commit. Required for correctness on network
+///   filesystems with client-side write caching (e.g. WekaFS with `writecache`).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum SyncMode {
+    #[default]
+    None,
+    Commit,
+}
+
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq, PartialOrd, Ord)]
 pub struct StorageIndex(pub u64);
 
@@ -108,6 +124,22 @@ pub trait StorageData: Sized {
     /// Resizes the underlying storage to `new_len`. If the storage is enlarged as
     /// a result the new bytes should be initialized to `0_u8`.
     fn resize(&mut self, new_len: u64) -> Result<(), DbError>;
+
+    /// Sets the sync mode for this storage. The default implementation
+    /// does nothing which is appropriate for in-memory storages.
+    fn set_sync_mode(&mut self, _mode: SyncMode) {}
+
+    /// Returns the current sync mode. The default is [`SyncMode::None`].
+    fn sync_mode(&self) -> SyncMode {
+        SyncMode::None
+    }
+
+    /// Ensures all previously written data reaches durable storage (e.g.
+    /// calls `fdatasync`). The default implementation does nothing which
+    /// is appropriate for in-memory storages.
+    fn sync(&mut self) -> Result<(), DbError> {
+        Ok(())
+    }
 
     /// Writes the `bytes` to the underlying storage at `pos`. The implementation
     /// must handle the case where the `pos + bytes.len()` exceeds the current
@@ -240,6 +272,19 @@ impl<D: StorageData> Storage<D> {
         self.data.name()
     }
 
+    pub fn optimize_storage(&mut self) -> Result<(), DbError> {
+        let id = self.transaction();
+        let mut current_pos = Self::current_version_record().end();
+
+        for record in self.records.records() {
+            current_pos = self.shrink_index(record, current_pos)?;
+        }
+
+        self.truncate(current_pos)?;
+        self.records.clear_free();
+        self.commit(id)
+    }
+
     pub fn remove(&mut self, index: StorageIndex) -> Result<(), DbError> {
         let record = self.record(index.0)?;
 
@@ -284,37 +329,20 @@ impl<D: StorageData> Storage<D> {
         self.commit(id)
     }
 
-    fn shrink_index(
-        &mut self,
-        mut record: StorageRecord,
-        current_pos: u64,
-    ) -> Result<u64, DbError> {
-        if record.pos != current_pos {
-            let bytes = self.read_value(&record)?.to_vec();
-            record.pos = current_pos;
-            self.records.set_pos(record.index, current_pos);
-            self.write_record(&record)?;
-            self.data.write(current_pos + STORAGE_RECORD_SIZE, &bytes)?;
-        }
-
-        Ok(current_pos + STORAGE_RECORD_SIZE + record.size)
-    }
-
-    pub fn optimize_storage(&mut self) -> Result<(), DbError> {
-        let id = self.transaction();
-        let mut current_pos = Self::current_version_record().end();
-
-        for record in self.records.records() {
-            current_pos = self.shrink_index(record, current_pos)?;
-        }
-
-        self.truncate(current_pos)?;
-        self.records.clear_free();
-        self.commit(id)
-    }
-
     pub fn transaction(&mut self) -> u64 {
         self.begin_transaction()
+    }
+
+    pub fn set_sync_mode(&mut self, mode: SyncMode) {
+        self.data.set_sync_mode(mode);
+    }
+
+    pub fn sync_mode(&self) -> SyncMode {
+        self.data.sync_mode()
+    }
+
+    pub fn sync(&mut self) -> Result<(), DbError> {
+        self.data.sync()
     }
 
     pub fn value<T: Serialize>(&self, index: StorageIndex) -> Result<T, DbError> {
@@ -601,6 +629,22 @@ impl<D: StorageData> Storage<D> {
 
     fn remove_index(&mut self, index: u64) {
         self.records.remove_index(index);
+    }
+
+    fn shrink_index(
+        &mut self,
+        mut record: StorageRecord,
+        current_pos: u64,
+    ) -> Result<u64, DbError> {
+        if record.pos != current_pos {
+            let bytes = self.read_value(&record)?.to_vec();
+            record.pos = current_pos;
+            self.records.set_pos(record.index, current_pos);
+            self.write_record(&record)?;
+            self.data.write(current_pos + STORAGE_RECORD_SIZE, &bytes)?;
+        }
+
+        Ok(current_pos + STORAGE_RECORD_SIZE + record.size)
     }
 
     fn shrink_value(&mut self, record: &mut StorageRecord, new_size: u64) -> Result<(), DbError> {

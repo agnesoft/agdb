@@ -168,6 +168,7 @@ pub use query::select_values_query::SelectValuesQuery;
 pub use query_builder::QueryBuilder;
 pub use storage::StorageData;
 pub use storage::StorageSlice;
+pub use storage::SyncMode;
 pub use storage::any_storage::AnyStorage;
 pub use storage::file_storage::FileStorage;
 pub use storage::file_storage_memory_mapped::FileStorageMemoryMapped;

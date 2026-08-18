@@ -1,5 +1,6 @@
 use super::StorageData;
 use super::StorageSlice;
+use super::SyncMode;
 use super::write_ahead_log::WriteAheadLog;
 use super::write_ahead_log::WriteAheadLogRecord;
 use crate::DbError;
@@ -18,19 +19,21 @@ use std::sync::Mutex;
 /// handle is being used (read). The [`StorageData::read()`] always returns
 /// owning buffer.
 ///
-/// The [`StorageData::backup()`] is implemented so that it copes the file
+/// The [`StorageData::backup()`] is implemented so that it copies the file
 /// to the new name.
 ///
-/// The [`StorageData::flush()`] merely clears the WAL. This implementation
-/// relies on the OS to flush the content to the disk. It is specifically not
-/// using manual calls to `File::sync_data()` / `File::sync_all()` because they
-/// result in extreme slowdown.
+/// The [`StorageData::flush()`] clears the WAL. When `sync_mode` is
+/// [`SyncMode::Commit`], flush also issues `fdatasync` on the main file
+/// before clearing the WAL (ensuring committed data is durable) and on
+/// the WAL file after clearing (ensuring the clear is durable). This
+/// prevents a crash from rolling back an already-committed transaction.
 #[derive(Debug)]
 pub struct FileStorage {
     file: File,
     filename: String,
     len: u64,
     lock: Mutex<()>,
+    sync_mode: SyncMode,
     wal: WriteAheadLog,
 }
 
@@ -46,11 +49,18 @@ impl FileStorage {
         Ok(())
     }
 
-    fn apply_wal(file: &mut File, wal: &mut WriteAheadLog) -> Result<(), DbError> {
+    fn apply_wal(
+        file: &mut File,
+        wal: &mut WriteAheadLog,
+        sync_mode: SyncMode,
+    ) -> Result<(), DbError> {
         for record in wal.records()? {
             Self::apply_wal_record(file, record)?;
         }
 
+        if matches!(sync_mode, SyncMode::Commit) {
+            file.sync_data()?;
+        }
         wal.clear()
     }
 
@@ -77,7 +87,29 @@ impl StorageData for FileStorage {
     }
 
     fn flush(&mut self) -> Result<(), DbError> {
-        self.wal.clear()
+        if matches!(self.sync_mode, SyncMode::Commit) {
+            self.file.sync_data()?;
+        }
+
+        self.wal.clear()?;
+
+        if matches!(self.sync_mode, SyncMode::Commit) {
+            self.wal.sync()?;
+        }
+
+        Ok(())
+    }
+
+    fn set_sync_mode(&mut self, mode: SyncMode) {
+        self.sync_mode = mode;
+    }
+
+    fn sync_mode(&self) -> SyncMode {
+        self.sync_mode
+    }
+
+    fn sync(&mut self) -> Result<(), DbError> {
+        Ok(self.file.sync_data()?)
     }
 
     fn len(&self) -> u64 {
@@ -96,8 +128,9 @@ impl StorageData for FileStorage {
             .create(true)
             .open(name)?;
         let mut wal: WriteAheadLog = WriteAheadLog::new(name)?;
+        let sync_mode = SyncMode::None;
 
-        Self::apply_wal(&mut file, &mut wal)?;
+        Self::apply_wal(&mut file, &mut wal, sync_mode)?;
 
         let len = file.seek(SeekFrom::End(0))?;
 
@@ -106,6 +139,7 @@ impl StorageData for FileStorage {
             filename: name.to_string(),
             len,
             lock: Mutex::new(()),
+            sync_mode,
             wal,
         })
     }
@@ -162,9 +196,7 @@ impl StorageData for FileStorage {
 
 impl Drop for FileStorage {
     fn drop(&mut self) {
-        if Self::apply_wal(&mut self.file, &mut self.wal).is_ok() {
-            let _ = self.flush();
-        }
+        let _ = Self::apply_wal(&mut self.file, &mut self.wal, self.sync_mode);
     }
 }
 

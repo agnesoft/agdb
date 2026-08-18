@@ -34,6 +34,18 @@ impl StorageData for FileStorageMemoryMapped {
         self.file.flush()
     }
 
+    fn set_sync_mode(&mut self, mode: super::SyncMode) {
+        self.file.set_sync_mode(mode);
+    }
+
+    fn sync_mode(&self) -> super::SyncMode {
+        self.file.sync_mode()
+    }
+
+    fn sync(&mut self) -> Result<(), DbError> {
+        self.file.sync()
+    }
+
     fn len(&self) -> u64 {
         self.file.len()
     }

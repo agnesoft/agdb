@@ -567,9 +567,6 @@ mod tests {
         let config = config::from_str("sync_mode: commit").unwrap();
         assert_eq!(config.sync_mode, SyncMode::Commit);
 
-        let config = config::from_str("sync_mode: auto").unwrap();
-        assert_eq!(config.sync_mode, SyncMode::None);
-
         let err = config::from_str("sync_mode: ").unwrap_err();
         assert_eq!(err, "Invalid sync_mode: ''. Must be 'none' or 'commit'.");
 

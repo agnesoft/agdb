@@ -55,9 +55,8 @@ impl FileStorage {
         }
 
         if sync {
-            file.sync_all()?;
+            file.sync_data()?;
         }
-
         wal.clear()
     }
 

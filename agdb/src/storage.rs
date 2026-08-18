@@ -19,7 +19,7 @@ use std::borrow::Cow;
 const CURRENT_VERSION: u64 = 1;
 const CHUNK_SIZE: u64 = 1024 * 1024;
 
-/// Controls whether the underlying storage layer synchronization
+/// Controls whether the underlying storage layer performs synchronization
 /// on every storage commit. For example issuing `fsync`/`fdatasync`
 /// for physical filesystems.
 ///

@@ -59,9 +59,8 @@ impl FileStorage {
         }
 
         if matches!(sync_mode, SyncMode::Commit) {
-            file.sync_all()?;
+            file.sync_data()?;
         }
-
         wal.clear()
     }
 

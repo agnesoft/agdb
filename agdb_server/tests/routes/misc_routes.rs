@@ -168,7 +168,7 @@ async fn basepath_test() -> anyhow::Result<()> {
         cluster_node_id: 0,
         start_time: 0,
         token_expiry_seconds: DEFAULT_TOKEN_EXPIRY_SECONDS,
-        sync_mode: DEFAULT_SYNC_MODE.to_string(),
+        sync_mode: SyncMode::None,
         pepper: None,
     };
 

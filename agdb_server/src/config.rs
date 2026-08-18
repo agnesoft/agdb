@@ -188,10 +188,10 @@ pub(crate) fn from_str(content: &str) -> Result<ConfigImpl, String> {
                     }
                 }
                 "sync_mode" => match value {
-                    "auto" | "none" | "commit" => config.sync_mode = sync_mode_from_str(value),
+                    "none" | "commit" => config.sync_mode = sync_mode_from_str(value),
                     _ => {
                         return Err(format!(
-                            "Invalid sync_mode: '{value}'. Must be 'auto', 'none', or 'commit'."
+                            "Invalid sync_mode: '{value}'. Must be 'none' or 'commit'."
                         ));
                     }
                 },
@@ -570,16 +570,13 @@ mod tests {
         let config = config::from_str("sync_mode: auto").unwrap();
         assert_eq!(config.sync_mode, SyncMode::None);
 
-        let err = config::from_str("").unwrap_err();
-        assert_eq!(
-            err,
-            "Invalid sync_mode: ''. Must be 'auto', 'none', or 'commit'."
-        );
+        let err = config::from_str("sync_mode: ").unwrap_err();
+        assert_eq!(err, "Invalid sync_mode: ''. Must be 'none' or 'commit'.");
 
         let err = config::from_str("sync_mode: invalid").unwrap_err();
         assert_eq!(
             err,
-            "Invalid sync_mode: 'invalid'. Must be 'auto', 'none', or 'commit'."
+            "Invalid sync_mode: 'invalid'. Must be 'none' or 'commit'."
         );
 
         let config = default_config();

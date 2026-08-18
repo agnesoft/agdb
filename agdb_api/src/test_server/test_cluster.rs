@@ -163,6 +163,7 @@ async fn create_cluster_impl(
             cluster_node_id: 0,
             start_time: 0,
             token_expiry_seconds: DEFAULT_TOKEN_EXPIRY_SECONDS,
+            sync_mode: agdb::SyncMode::None,
             pepper: None,
         };
 

@@ -1,3 +1,4 @@
+use agdb::SyncMode;
 use agdb_api::LogLevelFilter;
 use agdb_api::config_impl::ConfigImpl;
 use agdb_api::config_impl::DEFAULT_CLUSTER_MAX_LOG_ENTRIES;
@@ -97,6 +98,13 @@ pub(crate) fn vec_from_str(value: &str) -> Vec<String> {
     cluster
 }
 
+pub(crate) fn sync_mode_from_str(value: &str) -> SyncMode {
+    match value {
+        "commit" => SyncMode::Commit,
+        _ => SyncMode::None,
+    }
+}
+
 pub(crate) fn from_str(content: &str) -> Result<ConfigImpl, String> {
     let mut config = default_config();
 
@@ -179,6 +187,14 @@ pub(crate) fn from_str(content: &str) -> Result<ConfigImpl, String> {
                         ));
                     }
                 }
+                "sync_mode" => match value {
+                    "auto" | "none" | "commit" => config.sync_mode = sync_mode_from_str(value),
+                    _ => {
+                        return Err(format!(
+                            "Invalid sync_mode: '{value}'. Must be 'auto', 'none', or 'commit'."
+                        ));
+                    }
+                },
                 _ => return Err(format!("Unknown key: {key}")),
             }
         }
@@ -228,6 +244,7 @@ fn default_config() -> ConfigImpl {
         cluster_node_id: 0,
         start_time: 0,
         token_expiry_seconds: DEFAULT_TOKEN_EXPIRY_SECONDS,
+        sync_mode: SyncMode::None,
         pepper: None,
     }
 }
@@ -292,6 +309,7 @@ mod tests {
             cluster_node_id: 0,
             start_time: 0,
             token_expiry_seconds: DEFAULT_TOKEN_EXPIRY_SECONDS,
+            sync_mode: SyncMode::None,
             pepper: None,
         };
 
@@ -332,6 +350,7 @@ mod tests {
             cluster_node_id: 0,
             start_time: 0,
             token_expiry_seconds: DEFAULT_TOKEN_EXPIRY_SECONDS,
+            sync_mode: SyncMode::None,
             pepper: None,
         };
         std::fs::write(
@@ -371,6 +390,7 @@ mod tests {
             cluster_node_id: 0,
             start_time: 0,
             token_expiry_seconds: DEFAULT_TOKEN_EXPIRY_SECONDS,
+            sync_mode: SyncMode::None,
             pepper: None,
         };
         std::fs::write(
@@ -537,5 +557,40 @@ mod tests {
         ))
         .unwrap_err();
         assert!(err.contains("token_expiry_seconds must be between"));
+    }
+
+    #[test]
+    fn sync_mode_values() {
+        let config = config::from_str("sync_mode: none").unwrap();
+        assert_eq!(config.sync_mode, SyncMode::None);
+
+        let config = config::from_str("sync_mode: commit").unwrap();
+        assert_eq!(config.sync_mode, SyncMode::Commit);
+
+        let config = config::from_str("sync_mode: auto").unwrap();
+        assert_eq!(config.sync_mode, SyncMode::None);
+
+        let err = config::from_str("").unwrap_err();
+        assert_eq!(
+            err,
+            "Invalid sync_mode: ''. Must be 'auto', 'none', or 'commit'."
+        );
+
+        let err = config::from_str("sync_mode: invalid").unwrap_err();
+        assert_eq!(
+            err,
+            "Invalid sync_mode: 'invalid'. Must be 'auto', 'none', or 'commit'."
+        );
+
+        let config = default_config();
+        assert_eq!(config.sync_mode, agdb::SyncMode::None);
+
+        let config = config::from_str(r#"cluster: ["http://localhost:3000"]"#).unwrap();
+        assert_eq!(config.sync_mode, agdb::SyncMode::None);
+
+        let config =
+            config::from_str(r#"cluster: ["http://localhost:3000", "http://localhost:3001"]"#)
+                .unwrap();
+        assert_eq!(config.sync_mode, agdb::SyncMode::None);
     }
 }

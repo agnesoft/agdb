@@ -303,6 +303,25 @@ async fn build_snapshot(
 
         let dbs = raft.storage.db.dbs().await?;
 
+        raft.storage.db.db.write().await.sync()?;
+        raft.storage.cluster_log.0.write().await.sync()?;
+
+        let mut handles;
+
+        {
+            let pool = raft.storage.db_pool.pool.read().await;
+            handles = Vec::with_capacity(pool.len());
+
+            for user_db in pool.values() {
+                let db = user_db.0.clone();
+                handles.push(tokio::spawn(async move { db.write().await.sync() }));
+            }
+        }
+
+        for handle in handles {
+            handle.await??;
+        }
+
         let server_db_guard = raft.storage.db.db.read().await;
         let server_db_data = std::fs::read(data_dir.join(SERVER_DB_FILE))?;
         drop(server_db_guard);

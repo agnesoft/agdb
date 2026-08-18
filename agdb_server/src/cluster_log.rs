@@ -25,7 +25,10 @@ pub(crate) const CLUSTER_LOG_FILE: &str = "agdb_server.log";
 pub(crate) async fn new(config: &Config) -> ServerResult<ClusterLog> {
     std::fs::create_dir_all(&config.data_dir)?;
     let file = format!("{}/{}", config.data_dir, CLUSTER_LOG_FILE);
-    ClusterLog::new(&file).await
+    let log = ClusterLog::new(&file).await?;
+    log.0.write().await.set_sync_mode(config.sync_mode);
+
+    Ok(log)
 }
 
 impl ClusterLog {
@@ -374,6 +377,7 @@ mod tests {
     use super::*;
     use crate::action::user_add::UserAdd;
     use crate::password;
+    use agdb::SyncMode;
     use agdb_api::LogLevelFilter;
     use agdb_api::config_impl::ConfigImpl;
     use agdb_api::config_impl::DEFAULT_CLUSTER_MAX_LOG_ENTRIES;
@@ -437,7 +441,7 @@ mod tests {
                 .expect("system time should be after unix epoch")
                 .as_secs(),
             token_expiry_seconds: DEFAULT_TOKEN_EXPIRY_SECONDS,
-
+            sync_mode: SyncMode::None,
             pepper: None,
         });
 

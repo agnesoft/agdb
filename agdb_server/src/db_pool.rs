@@ -68,6 +68,7 @@ impl DbPool {
             let db_path = db_file(&db.owner, &db.db, &self.config);
             std::fs::create_dir_all(db_audit_dir(&db.owner, &self.config))?;
             let user_db = UserDb::new(db_path.to_string_lossy().as_ref(), db.db_type)?;
+            user_db.set_sync_mode(self.config.sync_mode).await;
             pool.insert(db.name(), user_db);
         }
 
@@ -94,6 +95,8 @@ impl DbPool {
             e.description = format!("{}: {}", ErrorCode::DbInvalid.as_str(), e.description);
             e
         })?;
+
+        user_db.set_sync_mode(self.config.sync_mode).await;
 
         let backup = if std::fs::exists(db_backup_file(owner, db, &self.config))? {
             SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs()

@@ -13,6 +13,7 @@ use crate::config_impl::DEFAULT_TOKEN_EXPIRY_SECONDS;
 use crate::config_impl::config_to_str;
 use crate::test_server::test_error::TestError;
 use crate::test_server::test_error::bail;
+use agdb::SyncMode;
 #[cfg(feature = "api")]
 use agdb::type_def::TypeDefinition;
 use std::collections::HashMap;
@@ -322,6 +323,7 @@ impl TestServerImpl {
             cluster_node_id: 0,
             start_time: 0,
             token_expiry_seconds: DEFAULT_TOKEN_EXPIRY_SECONDS,
+            sync_mode: SyncMode::None,
             pepper: None,
         };
 

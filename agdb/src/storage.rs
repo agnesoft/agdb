@@ -29,10 +29,20 @@ const CHUNK_SIZE: u64 = 1024 * 1024;
 ///   at each transaction commit. Required for correctness on network
 ///   filesystems with client-side write caching (e.g. WekaFS with `writecache`).
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[cfg_attr(feature = "api", derive(agdb::TypeDef))]
 pub enum SyncMode {
     #[default]
     None,
     Commit,
+}
+
+impl std::fmt::Display for SyncMode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            SyncMode::None => f.write_str("none"),
+            SyncMode::Commit => f.write_str("commit"),
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq, PartialOrd, Ord)]

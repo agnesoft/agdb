@@ -31,6 +31,10 @@ impl UserDb {
         }
     }
 
+    pub(crate) async fn set_sync_mode(&self, mode: agdb::SyncMode) {
+        self.0.write().await.set_sync_mode(mode);
+    }
+
     pub(crate) async fn exec(&self, mut queries: Queries) -> ServerResult<Vec<QueryResult>> {
         self.0.read().await.transaction(|t| {
             let mut results = vec![];

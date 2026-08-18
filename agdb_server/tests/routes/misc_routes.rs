@@ -1,4 +1,5 @@
 use agdb::QueryBuilder;
+use agdb::SyncMode;
 use agdb_api::AgdbApi;
 use agdb_api::DbKind;
 use agdb_api::LogLevelFilter;
@@ -167,6 +168,7 @@ async fn basepath_test() -> anyhow::Result<()> {
         cluster_node_id: 0,
         start_time: 0,
         token_expiry_seconds: DEFAULT_TOKEN_EXPIRY_SECONDS,
+        sync_mode: SyncMode::None,
         pepper: None,
     };
 
@@ -344,6 +346,7 @@ async fn large_payload() -> anyhow::Result<()> {
         cluster_node_id: 0,
         start_time: 0,
         token_expiry_seconds: DEFAULT_TOKEN_EXPIRY_SECONDS,
+        sync_mode: SyncMode::None,
         pepper: None,
     };
 
@@ -435,6 +438,7 @@ async fn static_files() -> anyhow::Result<()> {
         cluster_node_id: 0,
         start_time: 0,
         token_expiry_seconds: DEFAULT_TOKEN_EXPIRY_SECONDS,
+        sync_mode: SyncMode::None,
         pepper: None,
     };
 
@@ -503,6 +507,7 @@ async fn static_files_with_basepath() -> anyhow::Result<()> {
         cluster_node_id: 0,
         start_time: 0,
         token_expiry_seconds: DEFAULT_TOKEN_EXPIRY_SECONDS,
+        sync_mode: SyncMode::None,
         pepper: None,
     };
 

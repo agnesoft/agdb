@@ -1,3 +1,4 @@
+use agdb::SyncMode;
 use agdb_api::AgdbApi;
 use agdb_api::LogLevelFilter;
 use agdb_api::ReqwestClient;
@@ -41,6 +42,7 @@ async fn https() -> anyhow::Result<()> {
         cluster_node_id: 0,
         start_time: 0,
         token_expiry_seconds: DEFAULT_TOKEN_EXPIRY_SECONDS,
+        sync_mode: SyncMode::None,
         pepper: None,
     };
 

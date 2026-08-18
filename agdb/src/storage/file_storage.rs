@@ -49,12 +49,16 @@ impl FileStorage {
         Ok(())
     }
 
-    fn apply_wal(file: &mut File, wal: &mut WriteAheadLog, sync: bool) -> Result<(), DbError> {
+    fn apply_wal(
+        file: &mut File,
+        wal: &mut WriteAheadLog,
+        sync_mode: SyncMode,
+    ) -> Result<(), DbError> {
         for record in wal.records()? {
             Self::apply_wal_record(file, record)?;
         }
 
-        if sync {
+        if matches!(sync_mode, SyncMode::Commit) {
             file.sync_all()?;
         }
 
@@ -125,8 +129,9 @@ impl StorageData for FileStorage {
             .create(true)
             .open(name)?;
         let mut wal: WriteAheadLog = WriteAheadLog::new(name)?;
+        let sync_mode = SyncMode::None;
 
-        Self::apply_wal(&mut file, &mut wal, false)?;
+        Self::apply_wal(&mut file, &mut wal, sync_mode)?;
 
         let len = file.seek(SeekFrom::End(0))?;
 
@@ -135,7 +140,7 @@ impl StorageData for FileStorage {
             filename: name.to_string(),
             len,
             lock: Mutex::new(()),
-            sync_mode: SyncMode::None,
+            sync_mode,
             wal,
         })
     }
@@ -192,7 +197,7 @@ impl StorageData for FileStorage {
 
 impl Drop for FileStorage {
     fn drop(&mut self) {
-        let _ = Self::apply_wal(&mut self.file, &mut self.wal, true);
+        let _ = Self::apply_wal(&mut self.file, &mut self.wal, self.sync_mode);
     }
 }
 

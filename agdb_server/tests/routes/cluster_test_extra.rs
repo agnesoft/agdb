@@ -57,6 +57,8 @@ async fn snapshot_transfer() -> Result<(), TestError> {
             .await?;
     }
 
+    servers[0].restart()?;
+    wait_for_ready(&leader).await?;
     servers[2].restart()?;
     wait_for_ready(&follower).await?;
 

@@ -15,11 +15,11 @@ async fn snapshot_transfer() -> Result<(), TestError> {
     let mut servers = create_cluster_with_max_log_entries(3, 1).await?;
     let mut follower = AgdbApi::new(
         ReqwestClient::with_client(reqwest_client()),
-        &servers[1].address,
+        &servers[2].address,
     );
-    follower.user_login(ADMIN, ADMIN).await?;
+    follower.cluster_user_login(ADMIN, ADMIN).await?;
     follower.admin_shutdown().await?;
-    servers[1].wait().await?;
+    servers[2].wait().await?;
 
     let mut leader = AgdbApi::new(
         ReqwestClient::with_client(reqwest_client()),
@@ -35,25 +35,29 @@ async fn snapshot_transfer() -> Result<(), TestError> {
             "snapshot_test",
             &[QueryBuilder::insert()
                 .nodes()
+                .aliases("root")
                 .values(vec![vec![("key", 1).into()]])
                 .query()
                 .into()],
         )
         .await?;
     leader.db_backup(ADMIN, "snapshot_test").await?;
-    leader
-        .db_exec_mut(
-            ADMIN,
-            "snapshot_test",
-            &[QueryBuilder::insert()
-                .values(vec![vec![("key", 2).into()]])
-                .ids(0)
-                .query()
-                .into()],
-        )
-        .await?;
 
-    servers[1].restart()?;
+    for i in 0..10 {
+        leader
+            .db_exec_mut(
+                ADMIN,
+                "snapshot_test",
+                &[QueryBuilder::insert()
+                    .values(vec![vec![("key", i).into()]])
+                    .ids("root")
+                    .query()
+                    .into()],
+            )
+            .await?;
+    }
+
+    servers[2].restart()?;
     wait_for_ready(&follower).await?;
 
     assert_eq!(follower.db_list().await?.1.len(), 1);
@@ -62,7 +66,11 @@ async fn snapshot_transfer() -> Result<(), TestError> {
             .db_exec(
                 ADMIN,
                 "snapshot_test",
-                &[QueryBuilder::select().values("key").ids(0).query().into()]
+                &[QueryBuilder::select()
+                    .values("key")
+                    .ids("root")
+                    .query()
+                    .into()]
             )
             .await?
             .1[0]
@@ -70,8 +78,8 @@ async fn snapshot_transfer() -> Result<(), TestError> {
             .values[0]
             .value
             .to_u64()
-            .unwrap(),
-        2
+            .expect("failed to read value"),
+        9
     );
     follower.db_restore(ADMIN, "snapshot_test").await?;
     assert_eq!(
@@ -79,7 +87,11 @@ async fn snapshot_transfer() -> Result<(), TestError> {
             .db_exec(
                 ADMIN,
                 "snapshot_test",
-                &[QueryBuilder::select().values("key").ids(0).query().into()]
+                &[QueryBuilder::select()
+                    .values("key")
+                    .ids("root")
+                    .query()
+                    .into()]
             )
             .await?
             .1[0]
@@ -87,7 +99,7 @@ async fn snapshot_transfer() -> Result<(), TestError> {
             .values[0]
             .value
             .to_u64()
-            .unwrap(),
+            .expect("failed to read value"),
         1
     );
 

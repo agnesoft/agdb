@@ -19,6 +19,7 @@ use crate::routes::user::LogoutQuery;
 use crate::routes::user::do_login;
 use crate::server_db::SERVER_DB_FILE;
 use crate::server_db::ServerDb;
+use crate::server_error::ServerError;
 use crate::server_error::ServerResponse;
 use crate::server_error::ServerResult;
 use crate::user_id::AdminId;
@@ -287,7 +288,7 @@ pub(crate) async fn snapshot(
         return axum::response::Response::builder()
             .status(StatusCode::SERVICE_UNAVAILABLE)
             .body(Body::from("resyncing"))
-            .map_err(|e| crate::server_error::ServerError::from(e.to_string()));
+            .map_err(|e| ServerError::from(e.to_string()));
     }
 
     let data_dir = std::path::Path::new(&config.data_dir);
@@ -371,14 +372,14 @@ pub(crate) async fn snapshot(
 
     builder
         .body(body)
-        .map_err(|e| crate::server_error::ServerError::from(e.to_string()))
+        .map_err(|e| ServerError::from(e.to_string()))
 }
 
 fn parse_snapshot_meta(meta: &str) -> ServerResult<(u64, u64, u64)> {
     let parts: Vec<u64> = meta.split('_').filter_map(|s| s.parse().ok()).collect();
     match parts.as_slice() {
         [log_index, log_term, log_commit] => Ok((*log_index, *log_term, *log_commit)),
-        _ => Err(crate::server_error::ServerError::from(format!(
+        _ => Err(ServerError::from(format!(
             "malformed snapshot .id: {meta:?}"
         ))),
     }
@@ -472,7 +473,7 @@ async fn stage_snapshot_files(
         let db_src = db_pool::db_file(owner, db_name, config);
         let db_rel = db_src
             .strip_prefix(data_dir)
-            .map_err(|e| crate::server_error::ServerError::from(e.to_string()))?;
+            .map_err(|e| ServerError::from(e.to_string()))?;
         let db_staging = staging_dir.join(db_rel);
 
         if let Some(parent) = db_staging.parent() {
@@ -483,7 +484,7 @@ async fn stage_snapshot_files(
             let db_arc = user_db.0.clone();
             let staging_path = db_staging
                 .to_str()
-                .ok_or_else(|| crate::server_error::ServerError::from("invalid staging path"))?
+                .ok_or_else(|| ServerError::from("invalid staging path"))?
                 .to_string();
             tokio::task::spawn_blocking(move || db_arc.blocking_read().backup(&staging_path))
                 .await??;
@@ -491,7 +492,7 @@ async fn stage_snapshot_files(
             let db_arc = user_db.0.clone();
             let staging_path = db_staging
                 .to_str()
-                .ok_or_else(|| crate::server_error::ServerError::from("invalid staging path"))?
+                .ok_or_else(|| ServerError::from("invalid staging path"))?
                 .to_string();
             tokio::task::spawn_blocking(move || {
                 let mut guard = db_arc.blocking_write();
@@ -509,7 +510,7 @@ async fn stage_snapshot_files(
             if src.exists() {
                 let rel = src
                     .strip_prefix(data_dir)
-                    .map_err(|e| crate::server_error::ServerError::from(e.to_string()))?;
+                    .map_err(|e| ServerError::from(e.to_string()))?;
                 let dst = staging_dir.join(rel);
                 if let Some(parent) = dst.parent() {
                     std::fs::create_dir_all(parent)?;
@@ -522,7 +523,7 @@ async fn stage_snapshot_files(
     let cluster_log_staging_str = staging_dir
         .join(CLUSTER_LOG_FILE)
         .to_str()
-        .ok_or_else(|| crate::server_error::ServerError::from("invalid staging path"))?
+        .ok_or_else(|| ServerError::from("invalid staging path"))?
         .to_string();
     let log_inner = cluster_log_ref.0.clone();
     tokio::task::spawn_blocking(move || log_inner.blocking_read().backup(&cluster_log_staging_str))
@@ -531,7 +532,7 @@ async fn stage_snapshot_files(
     let server_db_tmp = staging_dir.join(".server_db_tmp");
     let server_db_tmp_str = server_db_tmp
         .to_str()
-        .ok_or_else(|| crate::server_error::ServerError::from("invalid staging path"))?
+        .ok_or_else(|| ServerError::from("invalid staging path"))?
         .to_string();
     let db_inner = server_db.db.clone();
     tokio::task::spawn_blocking(move || db_inner.blocking_read().backup(&server_db_tmp_str))
@@ -664,7 +665,7 @@ fn collect_staging_files(
         } else if path.is_file() {
             let rel = path
                 .strip_prefix(base)
-                .map_err(|e| crate::server_error::ServerError::from(e.to_string()))?
+                .map_err(|e| ServerError::from(e.to_string()))?
                 .to_string_lossy()
                 .replace('\\', "/");
             files.push((rel, path));

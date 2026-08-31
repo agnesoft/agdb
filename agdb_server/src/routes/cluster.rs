@@ -42,6 +42,14 @@ use std::sync::Arc;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;
 
+struct SnapshotInFlightGuard(Arc<AtomicUsize>);
+
+impl Drop for SnapshotInFlightGuard {
+    fn drop(&mut self) {
+        self.0.fetch_sub(1, Ordering::Release);
+    }
+}
+
 pub(crate) async fn cluster(
     _cluster_id: ClusterId,
     State(cluster): State<Cluster>,
@@ -361,16 +369,10 @@ pub(crate) async fn snapshot(
         }
     };
 
-    let mut builder = axum::response::Response::builder()
+    axum::response::Response::builder()
         .status(status)
         .header("content-type", "application/octet-stream")
-        .header("x-snapshot-id", &snapshot_meta);
-
-    if is_resume {
-        builder = builder.header("content-range", format!("bytes {start_offset}-*/*"));
-    }
-
-    builder
+        .header("x-snapshot-id", &snapshot_meta)
         .body(body)
         .map_err(|e| ServerError::from(e.to_string()))
 }
@@ -575,15 +577,10 @@ fn snapshot_file_stream(
     in_flight: Arc<AtomicUsize>,
 ) -> impl futures::Stream<Item = Result<bytes::Bytes, std::io::Error>> + Send + 'static {
     let file_count = files.len() as u64;
+    let guard = SnapshotInFlightGuard(in_flight.clone());
 
     async_stream::try_stream! {
-        struct Guard(Arc<AtomicUsize>);
-        impl Drop for Guard {
-            fn drop(&mut self) {
-                self.0.fetch_sub(1, Ordering::Release);
-            }
-        }
-        let _guard = Guard(in_flight);
+        let _guard = guard;
 
         let mut pos = 0u64;
 

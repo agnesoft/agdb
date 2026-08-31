@@ -71,7 +71,9 @@ async fn snapshot_transfer() -> Result<(), TestError> {
     servers[2].restart()?;
     wait_for_ready(&follower).await?;
 
-    for _ in 0..10 {
+    let mut synced = false;
+
+    for _ in 0..3 {
         if let Ok(result) = follower
             .db_exec(
                 ADMIN,
@@ -85,12 +87,15 @@ async fn snapshot_transfer() -> Result<(), TestError> {
             .await
             && let Ok(value) = result.1[0].elements[0].values[0].value.to_u64()
         {
+            synced = true;
             assert_eq!(value, 9, "snapshot must transfer the post backup key value");
             break;
         } else {
             tokio::time::sleep(std::time::Duration::from_secs(1)).await;
         }
     }
+
+    assert!(synced, "follower did not sync post backup changes");
 
     follower.db_restore(ADMIN, "snapshot_test").await?;
 

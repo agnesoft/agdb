@@ -60,6 +60,10 @@ pub(crate) async fn new(config: Config, server_db: &ServerDb) -> ServerResult<Db
 }
 
 impl DbPool {
+    pub(crate) async fn clear(&self) {
+        self.pool.write().await.clear();
+    }
+
     pub(crate) async fn reload(&self, server_db: &ServerDb) -> ServerResult<()> {
         let mut pool = self.pool.write().await;
         pool.clear();
@@ -67,7 +71,16 @@ impl DbPool {
         for db in server_db.dbs().await? {
             let db_path = db_file(&db.owner, &db.db, &self.config);
             std::fs::create_dir_all(db_audit_dir(&db.owner, &self.config))?;
+            if db.db_type == DbKind::Memory && !db_path.exists() {
+                let backup = db_backup_file(&db.owner, &db.db, &self.config);
+                if backup.exists() {
+                    std::fs::copy(&backup, &db_path)?;
+                }
+            }
             let user_db = UserDb::new(db_path.to_string_lossy().as_ref(), db.db_type)?;
+            if db.db_type == DbKind::Memory {
+                remove_file_if_exists(&db_path)?;
+            }
             user_db.set_sync_mode(self.config.sync_mode).await;
             pool.insert(db.name(), user_db);
         }
@@ -124,19 +137,10 @@ impl DbPool {
         Ok(DbAudit(vec![]))
     }
 
-    pub(crate) async fn backup_db(
-        &self,
-        owner: &str,
-        db: &str,
-        db_type: DbKind,
-    ) -> ServerResult<u64> {
+    pub(crate) async fn backup_db(&self, owner: &str, db: &str) -> ServerResult<u64> {
         let user_db = self.db(owner, db).await?;
 
-        let backup_path = if db_type == DbKind::Memory {
-            db_file(owner, db, &self.config)
-        } else {
-            db_backup_file(owner, db, &self.config)
-        };
+        let backup_path = db_backup_file(owner, db, &self.config);
 
         remove_file_if_exists(&backup_path)?;
         std::fs::create_dir_all(db_backup_dir(owner, &self.config))?;
@@ -192,11 +196,7 @@ impl DbPool {
         db: &str,
         database: &mut Database,
     ) -> Result<(), ServerError> {
-        let backup_file = if database.db_type == DbKind::Memory {
-            db_file(owner, db, &self.config)
-        } else {
-            db_backup_file(owner, db, &self.config)
-        };
+        let backup_file = db_backup_file(owner, db, &self.config);
         remove_file_if_exists(&backup_file)?;
         remove_file_if_exists(db_backup_audit_file(owner, db, &self.config))?;
         database.backup = 0;
@@ -262,14 +262,6 @@ impl DbPool {
         target_type: DbKind,
     ) -> Result<(), ServerError> {
         let current_path = db_file(owner, db, &self.config);
-        let source_backup_path = backup_path(owner, db, db_type, &self.config);
-        let target_backup_path = backup_path(owner, db, target_type, &self.config);
-        let backup_exists = source_backup_path.exists();
-        if db_type == DbKind::Memory && target_type != DbKind::Memory && backup_exists {
-            std::fs::create_dir_all(db_backup_dir(owner, &self.config))?;
-            remove_file_if_exists(&target_backup_path)?;
-            std::fs::rename(&source_backup_path, &target_backup_path)?;
-        }
         if db_type == DbKind::Memory {
             user_db
                 .0
@@ -278,15 +270,10 @@ impl DbPool {
                 .backup(current_path.to_string_lossy().as_ref())?;
         }
         *user_db = UserDb::new(current_path.to_string_lossy().as_ref(), target_type)?;
-
-        if db_type != DbKind::Memory && target_type == DbKind::Memory {
-            if backup_exists {
-                remove_file_if_exists(&target_backup_path)?;
-                std::fs::rename(&source_backup_path, &target_backup_path)?;
-            } else {
-                remove_file_if_exists(&target_backup_path)?;
-            }
+        if target_type == DbKind::Memory {
+            remove_file_if_exists(&current_path)?;
         }
+
         Ok(())
     }
 
@@ -516,11 +503,7 @@ impl DbPool {
     }
 
     pub(crate) async fn restore_db(&self, owner: &str, db: &str, db_type: DbKind) -> ServerResult {
-        let backup_path = if db_type == DbKind::Memory {
-            db_file(owner, db, &self.config)
-        } else {
-            db_backup_file(owner, db, &self.config)
-        };
+        let backup_path = db_backup_file(owner, db, &self.config);
 
         if !backup_path.exists() {
             return Err(ServerError {
@@ -533,23 +516,12 @@ impl DbPool {
 
         let db_name = DbName::new(owner, db);
         let current_path = db_file(owner, db, &self.config);
-        let result = self.do_restore(backup_path, &current_path, owner, db, db_type);
+        std::fs::copy(&backup_path, &current_path)?;
         let user_db = UserDb::new(current_path.to_string_lossy().as_ref(), db_type)?;
-        self.pool.write().await.insert(db_name, user_db);
-        result
-    }
-
-    fn do_restore(
-        &self,
-        backup_path: PathBuf,
-        current_path: &PathBuf,
-        owner: &str,
-        db: &str,
-        db_type: DbKind,
-    ) -> Result<(), ServerError> {
-        if db_type != DbKind::Memory {
-            std::fs::copy(&backup_path, current_path)?;
+        if db_type == DbKind::Memory {
+            remove_file_if_exists(&current_path)?;
         }
+        self.pool.write().await.insert(db_name, user_db);
         self.restore_audit_from_backup(owner, db)
     }
 
@@ -559,11 +531,7 @@ impl DbPool {
         db: &str,
         db_type: DbKind,
     ) -> ServerResult<Option<u64>> {
-        let backup_path = if db_type == DbKind::Memory {
-            db_file(owner, db, &self.config)
-        } else {
-            db_backup_file(owner, db, &self.config)
-        };
+        let backup_path = db_backup_file(owner, db, &self.config);
 
         if !backup_path.exists() {
             return Err(ServerError {
@@ -576,37 +544,28 @@ impl DbPool {
         self.remove_db(owner, db).await?;
 
         let current_path = db_file(owner, db, &self.config);
-        let result = self.do_rollback(backup_path, &current_path, owner, db, db_type);
-        let user_db = UserDb::new(current_path.to_string_lossy().as_ref(), db_type)?;
-        self.pool.write().await.insert(db_name, user_db);
 
-        match result {
-            Ok(_) => Ok(if db_type == DbKind::Memory {
-                None
-            } else {
-                Some(SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs())
-            }),
-            Err(e) => Err(e),
-        }
-    }
-
-    fn do_rollback(
-        &self,
-        backup_path: PathBuf,
-        current_path: &PathBuf,
-        owner: &str,
-        db: &str,
-        db_type: DbKind,
-    ) -> Result<(), ServerError> {
-        if db_type != DbKind::Memory {
-            let backup_temp = db_backup_dir(owner, &self.config).join(db);
-            std::fs::rename(current_path, &backup_temp)?;
-            std::fs::rename(&backup_path, current_path)?;
-            std::fs::rename(backup_temp, backup_path)?;
-            self.swap_audit_with_backup(owner, db)
+        if db_type == DbKind::Memory {
+            // For memory DBs: copy backup to main file, load it, then consume the main file.
+            // The backup (.bak) is preserved so the DB can be rolled back again.
+            std::fs::copy(&backup_path, &current_path)?;
+            let user_db = UserDb::new(current_path.to_string_lossy().as_ref(), db_type)?;
+            remove_file_if_exists(&current_path)?;
+            self.pool.write().await.insert(db_name, user_db);
+            self.restore_audit_from_backup(owner, db)?;
         } else {
-            self.restore_audit_from_backup(owner, db)
+            let backup_temp = db_backup_dir(owner, &self.config).join(db);
+            std::fs::rename(&current_path, &backup_temp)?;
+            std::fs::rename(&backup_path, &current_path)?;
+            std::fs::rename(backup_temp, &backup_path)?;
+            let user_db = UserDb::new(current_path.to_string_lossy().as_ref(), db_type)?;
+            self.pool.write().await.insert(db_name, user_db);
+            self.swap_audit_with_backup(owner, db)?;
         }
+
+        Ok(Some(
+            SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs(),
+        ))
     }
 
     fn restore_audit_from_backup(&self, owner: &str, db: &str) -> ServerResult {
@@ -661,14 +620,6 @@ fn db_not_found(owner: &str, db: &str) -> ServerError {
         StatusCode::NOT_FOUND,
         &format!("db not found: {owner}/{db}"),
     )
-}
-
-fn backup_path(owner: &str, db: &str, db_type: DbKind, config: &Config) -> PathBuf {
-    if db_type == DbKind::Memory {
-        db_file(owner, db, config)
-    } else {
-        db_backup_file(owner, db, config)
-    }
 }
 
 pub(crate) fn db_backup_file(owner: &str, db: &str, config: &Config) -> PathBuf {

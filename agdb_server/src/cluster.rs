@@ -22,14 +22,18 @@ use axum::body::Body;
 use axum::extract::Request as AxumRequest;
 use axum::http::HeaderMap;
 use axum::response::Response as AxumResponse;
+use futures::StreamExt;
 use reqwest::StatusCode;
 use std::collections::HashMap;
 use std::path::Path;
 use std::str::FromStr;
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
+use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;
 use std::time::Duration;
+use tokio::io::AsyncReadExt;
+use tokio::io::AsyncWriteExt;
 use tokio::signal;
 use tokio::sync::RwLock;
 use tokio::sync::broadcast;
@@ -59,7 +63,7 @@ pub(crate) struct ClusterImpl {
     pub(crate) raft: Arc<RwLock<raft::Cluster<ClusterAction, ResultNotifier, ClusterStorage>>>,
     pub(crate) responses: Option<RwLock<ClusterResponseReceiver>>,
     pub(crate) resync: Arc<AtomicBool>,
-    pub(crate) snapshot_in_flight: Arc<AtomicBool>,
+    pub(crate) snapshot_in_flight: Arc<AtomicUsize>,
 }
 
 impl ClusterImpl {
@@ -121,6 +125,7 @@ impl ClusterNodeImpl {
             .expect("bad request")
     }
 
+    #[allow(clippy::result_large_err)]
     pub(crate) async fn forward(
         &self,
         axum_request: AxumRequest,
@@ -209,7 +214,7 @@ pub(crate) async fn new(
     sorted_cluster.push(config.cluster_max_log_entries.to_string());
     let hash = sorted_cluster.stable_hash();
     let resync = Arc::new(AtomicBool::new(false));
-    let snapshot_in_flight = Arc::new(AtomicBool::new(false));
+    let snapshot_in_flight = Arc::new(AtomicUsize::new(0));
     let storage = ClusterStorage::new(
         db.clone(),
         cluster_log.clone(),
@@ -346,8 +351,8 @@ async fn start_cluster(
                     cluster.raft.write().await.clear_needs_resync();
                 }
                 Err(e) => {
-                    crate::error!("[{index}] Resync attempt failed: {e:?}");
                     resync_retry_at = Some(tokio::time::Instant::now() + Duration::from_secs(5));
+                    crate::error!("[{index}] Resync attempt failed: {e:?}");
                 }
             }
         }
@@ -432,156 +437,264 @@ async fn resync_from_leader(cluster: &Cluster, config: &Config) -> ServerResult<
     result
 }
 
+const SNAPSHOT_PARTIAL_TTL_SECS: u64 = 3600;
+const SNAPSHOT_EXTRACT_CHUNK: usize = 65536;
+
+async fn validate_snapshot_header(partial_file: &Path, current_commit: u64) -> ServerResult<()> {
+    let mut file = tokio::fs::File::open(partial_file).await?;
+    let mut header = [0u8; 32];
+    file.read_exact(&mut header)
+        .await
+        .map_err(|_| ServerError::from("snapshot header missing or truncated"))?;
+    let header_commit = u64::from_le_bytes(header[16..24].try_into().unwrap());
+    if header_commit < current_commit {
+        return Err(ServerError::from(format!(
+            "snapshot commit {header_commit} is behind current commit {current_commit}"
+        )));
+    }
+    Ok(())
+}
+
 async fn do_resync(cluster: &Cluster, config: &Config, node_index: usize) -> ServerResult<()> {
-    let data = download_snapshot(cluster, config, node_index).await?;
-    let snapshot = parse_snapshot(&data)?;
-
     let data_dir = Path::new(&config.data_dir);
-    let backup_dir = data_dir.with_file_name(format!(
-        "{}_bak",
-        data_dir.file_name().unwrap_or_default().to_string_lossy()
-    ));
+    let dir_name = data_dir
+        .file_name()
+        .unwrap_or_default()
+        .to_string_lossy()
+        .to_string();
+    let partial_dir = data_dir.with_file_name(format!("{dir_name}.snapshot_partial"));
+    let install_dir = data_dir.with_file_name(format!("{dir_name}.snapshot_install"));
+    let backup_dir = data_dir.with_file_name(format!("{dir_name}.snapshot_bak"));
 
-    replace_data_dir(data_dir, &backup_dir, &snapshot.files)?;
-    let mut raft = cluster.raft.write().await;
-    raft.storage.reinit(config).await?;
-    raft.refresh_local_from_storage();
-    drop(raft);
+    if install_dir.exists() {
+        let _ = std::fs::remove_dir_all(&install_dir);
+    }
+
+    cleanup_stale_partial(&partial_dir);
+    download_snapshot_to_partial(cluster, config, node_index, &partial_dir).await?;
+
+    let partial_file = partial_dir.join("data.bin");
+    let current_commit = cluster.raft.read().await.storage.commit;
+    validate_snapshot_header(&partial_file, current_commit).await?;
+
+    if let Err(e) = extract_snapshot_binary(&partial_file, &install_dir).await {
+        let _ = std::fs::remove_dir_all(&install_dir);
+        return Err(e);
+    }
 
     if backup_dir.exists() {
         let _ = std::fs::remove_dir_all(&backup_dir);
     }
 
+    let mut raft = cluster.raft.write().await;
+    raft.storage.close_handles(&partial_dir).await?;
+
+    if data_dir.exists() {
+        std::fs::rename(data_dir, &backup_dir)?;
+    }
+
+    if let Err(e) = std::fs::rename(&install_dir, data_dir) {
+        let _ = std::fs::rename(&backup_dir, data_dir);
+        return Err(ServerError::from(format!(
+            "failed to install snapshot: {e}"
+        )));
+    }
+
+    if let Err(e) = raft.storage.reinit(config).await {
+        let _ = std::fs::remove_dir_all(data_dir);
+        let _ = std::fs::rename(&backup_dir, data_dir);
+        let _ = std::fs::remove_dir_all(&partial_dir);
+        drop(raft);
+        return Err(e);
+    }
+
+    raft.refresh_local_from_storage();
+    drop(raft);
+
+    let _ = std::fs::remove_dir_all(&backup_dir);
+    let _ = std::fs::remove_dir_all(&partial_dir);
+
     Ok(())
 }
 
-struct Snapshot {
-    files: Vec<(String, Vec<u8>)>,
-}
-
-async fn download_snapshot(
+async fn download_snapshot_to_partial(
     cluster: &Cluster,
     config: &Config,
     node_index: usize,
-) -> ServerResult<Vec<u8>> {
+    partial_dir: &Path,
+) -> ServerResult<()> {
+    std::fs::create_dir_all(partial_dir)?;
+    let partial_file = partial_dir.join("data.bin");
+    let id_file = partial_dir.join(".id");
+
+    let (resume_offset, resume_id) = if partial_file.exists() && id_file.exists() {
+        let offset = partial_file.metadata()?.len();
+        let id = std::fs::read_to_string(&id_file).unwrap_or_default();
+        (offset, id.trim().to_string())
+    } else {
+        (0u64, String::new())
+    };
+
     let snapshot_url = format!(
         "{}/api/v1/cluster/snapshot",
         cluster.nodes[node_index].base_url
     );
 
-    let response = cluster.nodes[node_index]
+    let mut request = cluster.nodes[node_index]
         .client
         .client
         .get(&snapshot_url)
         .bearer_auth(&config.cluster_token)
-        .timeout(std::time::Duration::from_secs(600))
+        .timeout(Duration::from_secs(600));
+
+    if resume_offset > 0 && !resume_id.is_empty() {
+        request = request
+            .header("range", format!("bytes={resume_offset}-"))
+            .header("x-snapshot-resume-id", &resume_id);
+    }
+
+    let response = request
         .send()
         .await
-        .map_err(|e| ServerError::from(format!("Snapshot download failed: {e:?}")))?;
+        .map_err(|e| ServerError::from(format!("snapshot request failed: {e:?}")))?;
 
-    if !response.status().is_success() {
+    let http_status = response.status().as_u16();
+    if http_status != 200 && http_status != 206 {
         return Err(ServerError::from(format!(
-            "Snapshot endpoint returned {}",
-            response.status()
+            "snapshot endpoint returned {http_status}"
         )));
     }
 
-    Ok(response
-        .bytes()
-        .await
-        .map_err(|e| ServerError::from(format!("Failed to read snapshot body: {e:?}")))?
-        .to_vec())
-}
+    let server_id = response
+        .headers()
+        .get("x-snapshot-id")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("")
+        .to_string();
 
-fn parse_snapshot(data: &[u8]) -> ServerResult<Snapshot> {
-    if data.len() < 32 {
-        return Err(ServerError::from("Snapshot too small (missing header)"));
+    let is_resume = http_status == 206 && !server_id.is_empty() && server_id == resume_id;
+
+    if !is_resume {
+        let _ = std::fs::remove_file(&partial_file);
     }
 
-    // Header: [log_index(8), log_term(8), log_commit(8), file_count(8)]
-    // log_index/term/commit are informational — actual state is read from the files on reinit
-    let file_count = u64::from_le_bytes(data[24..32].try_into().unwrap());
+    std::fs::write(&id_file, &server_id)?;
 
-    let mut offset = 32;
-    let mut files: Vec<(String, Vec<u8>)> = Vec::new();
+    let append = is_resume && partial_file.exists();
+    let mut file = tokio::fs::OpenOptions::new()
+        .create(true)
+        .write(true)
+        .append(append)
+        .open(&partial_file)
+        .await?;
+
+    let mut stream = response.bytes_stream();
+    while let Some(chunk) = stream.next().await {
+        let chunk = chunk.map_err(|e| ServerError::from(format!("stream read error: {e:?}")))?;
+        file.write_all(&chunk).await?;
+    }
+    file.flush().await?;
+
+    Ok(())
+}
+
+async fn extract_snapshot_binary(partial_file: &Path, install_dir: &Path) -> ServerResult<()> {
+    std::fs::create_dir_all(install_dir)?;
+
+    let mut file = tokio::fs::File::open(partial_file).await?;
+
+    let mut header = [0u8; 32];
+    file.read_exact(&mut header)
+        .await
+        .map_err(|_| ServerError::from("snapshot too small (missing header)"))?;
+
+    let file_count = u64::from_le_bytes(header[24..32].try_into().unwrap());
+
+    const MAX_SNAPSHOT_FILES: u64 = 100_000;
+
+    if file_count > MAX_SNAPSHOT_FILES {
+        return Err(ServerError::from(format!(
+            "snapshot file_count {file_count} exceeds sanity limit {MAX_SNAPSHOT_FILES}"
+        )));
+    }
+
+    let canonical_install = install_dir.canonicalize()?;
+    let mut buf = vec![0u8; SNAPSHOT_EXTRACT_CHUNK];
 
     for _ in 0..file_count {
-        if offset + 4 > data.len() {
-            return Err(ServerError::from("Snapshot truncated (path_len)"));
-        }
-        let path_len = u32::from_le_bytes(data[offset..offset + 4].try_into().unwrap()) as usize;
-        offset += 4;
+        let mut len_buf = [0u8; 4];
+        file.read_exact(&mut len_buf)
+            .await
+            .map_err(|_| ServerError::from("snapshot truncated (path_len)"))?;
+        let path_len = u32::from_le_bytes(len_buf) as usize;
 
-        if offset + path_len > data.len() {
-            return Err(ServerError::from("Snapshot truncated (path)"));
-        }
-        let path = String::from_utf8_lossy(&data[offset..offset + path_len]).to_string();
-        offset += path_len;
-
-        if offset + 8 > data.len() {
-            return Err(ServerError::from("Snapshot truncated (file_len)"));
-        }
-        let file_len = u64::from_le_bytes(data[offset..offset + 8].try_into().unwrap()) as usize;
-        offset += 8;
-
-        if offset + file_len > data.len() {
-            return Err(ServerError::from("Snapshot truncated (file_data)"));
-        }
-        let file_data = data[offset..offset + file_len].to_vec();
-        offset += file_len;
-
-        files.push((path, file_data));
-    }
-
-    Ok(Snapshot { files })
-}
-
-fn replace_data_dir(
-    data_dir: &Path,
-    backup_dir: &Path,
-    files: &[(String, Vec<u8>)],
-) -> ServerResult<()> {
-    if backup_dir.exists() {
-        std::fs::remove_dir_all(backup_dir)?;
-    }
-
-    if data_dir.exists() {
-        std::fs::rename(data_dir, backup_dir)?;
-    }
-
-    std::fs::create_dir_all(data_dir)?;
-
-    let canonical_data_dir = data_dir.canonicalize()?;
-
-    for (path, file_data) in files {
-        let file_path = canonical_data_dir.join(path);
-        let canonical_file_path =
-            file_path
-                .components()
-                .fold(std::path::PathBuf::new(), |mut acc, c| {
-                    match c {
-                        std::path::Component::ParentDir => {
-                            acc.pop();
-                        }
-                        _ => acc.push(c),
-                    }
-                    acc
-                });
-
-        if !canonical_file_path.starts_with(&canonical_data_dir) {
+        if path_len == 0 || path_len > 4096 {
             return Err(ServerError::from(format!(
-                "Invalid path in snapshot: {path}"
+                "invalid path length in snapshot: {path_len}"
             )));
         }
 
-        if let Some(parent) = canonical_file_path.parent() {
+        let mut path_buf = vec![0u8; path_len];
+        file.read_exact(&mut path_buf)
+            .await
+            .map_err(|_| ServerError::from("snapshot truncated (path)"))?;
+        let rel_path = String::from_utf8(path_buf)
+            .map_err(|e| ServerError::from(format!("invalid path encoding: {e}")))?;
+
+        let mut file_len_buf = [0u8; 8];
+        file.read_exact(&mut file_len_buf)
+            .await
+            .map_err(|_| ServerError::from("snapshot truncated (file_len)"))?;
+        let file_len = u64::from_le_bytes(file_len_buf);
+
+        let abs = canonical_install.join(&rel_path);
+        if abs
+            .components()
+            .any(|c| c == std::path::Component::ParentDir)
+            || !abs.starts_with(&canonical_install)
+        {
+            return Err(ServerError::from(format!(
+                "invalid path in snapshot: {rel_path}"
+            )));
+        }
+
+        if let Some(parent) = abs.parent() {
             std::fs::create_dir_all(parent)?;
         }
 
-        std::fs::write(&canonical_file_path, file_data)?;
+        let mut out = tokio::fs::File::create(&abs).await?;
+        let mut remaining = file_len;
+
+        while remaining > 0 {
+            let to_read = std::cmp::min(remaining, buf.len() as u64) as usize;
+            file.read_exact(&mut buf[..to_read])
+                .await
+                .map_err(|_| ServerError::from("snapshot truncated (file_data)"))?;
+            out.write_all(&buf[..to_read]).await?;
+            remaining -= to_read as u64;
+        }
+        out.sync_data().await?;
     }
 
     Ok(())
+}
+
+fn cleanup_stale_partial(partial_dir: &Path) {
+    if !partial_dir.exists() {
+        return;
+    }
+    let Ok(metadata) = partial_dir.metadata() else {
+        return;
+    };
+    let Ok(modified) = metadata.modified() else {
+        return;
+    };
+    let Ok(age) = std::time::SystemTime::now().duration_since(modified) else {
+        return;
+    };
+    if age.as_secs() >= SNAPSHOT_PARTIAL_TTL_SECS {
+        let _ = std::fs::remove_dir_all(partial_dir);
+    }
 }
 
 pub(crate) async fn start_with_shutdown(
@@ -613,7 +726,7 @@ pub(crate) struct ClusterStorage {
     pub(crate) commit: u64,
     pub(crate) prune_index: u64,
     pub(crate) max_log_entries: u64,
-    pub(crate) snapshot_in_flight: Arc<AtomicBool>,
+    pub(crate) snapshot_in_flight: Arc<AtomicUsize>,
     pub(crate) snapshot_lock: Arc<RwLock<()>>,
     pub(crate) db: ServerDb,
     pub(crate) cluster_log: ClusterLog,
@@ -626,7 +739,7 @@ impl ClusterStorage {
         cluster_log: ClusterLog,
         db_pool: DbPool,
         max_log_entries: u64,
-        snapshot_in_flight: Arc<AtomicBool>,
+        snapshot_in_flight: Arc<AtomicUsize>,
     ) -> ServerResult<Self> {
         let (index, term, commit) = cluster_log.cluster_log().await?;
         let logs = cluster_log.logs_unexecuted(commit).await?;
@@ -680,6 +793,15 @@ impl ClusterStorage {
         Ok(())
     }
 
+    pub(crate) async fn close_handles(&mut self, temp_dir: &Path) -> ServerResult<()> {
+        let _snapshot_guard = self.snapshot_lock.write().await;
+        self.db_pool.clear().await;
+        swap_db(&self.db.db, temp_dir, "server").await?;
+        swap_db(&self.cluster_log.0, temp_dir, "log").await?;
+
+        Ok(())
+    }
+
     async fn execute_log(&mut self, log: Log<ClusterAction>) -> ServerResult<()> {
         let log_id = log.db_id.unwrap_or_default();
         let db = self.db.clone();
@@ -706,6 +828,13 @@ impl ClusterStorage {
     pub(crate) async fn subscribe(&self) -> tokio::sync::broadcast::Receiver<u64> {
         self.notifier.subscribe()
     }
+}
+
+async fn swap_db(db: &Arc<RwLock<agdb::Db>>, temp_dir: &Path, name: &str) -> ServerResult<()> {
+    let placeholder_path = temp_dir.join(format!("_placeholder_{name}.agdb"));
+    let placeholder = agdb::Db::new(&placeholder_path.to_string_lossy())?;
+    *db.write().await = placeholder;
+    Ok(())
 }
 
 impl Storage<ClusterAction, ResultNotifier> for ClusterStorage {
@@ -740,9 +869,13 @@ impl Storage<ClusterAction, ResultNotifier> for ClusterStorage {
 
     async fn prune(&mut self, up_to_index: u64) -> ServerResult<()> {
         let up_to_index = std::cmp::min(up_to_index, self.index.saturating_sub(1));
-        if up_to_index > self.prune_index && !self.snapshot_in_flight.load(Ordering::Acquire) {
-            self.cluster_log.prune(up_to_index).await?;
-            self.prune_index = up_to_index;
+        // Use the higher of the incoming index and the existing ceiling so that entries
+        // skipped on a prior call (because their async execute_log task had not yet removed
+        // the EXECUTED key) are retried on every subsequent heartbeat
+        let ceiling = up_to_index.max(self.prune_index);
+        if ceiling > 0 && self.snapshot_in_flight.load(Ordering::Acquire) == 0 {
+            self.cluster_log.prune(ceiling).await?;
+            self.prune_index = ceiling;
         }
         Ok(())
     }

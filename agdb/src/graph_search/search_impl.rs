@@ -86,26 +86,18 @@ where
         index: SearchIndex,
         handler: &mut Handler,
     ) -> Result<bool, DbError> {
-        let add_index;
-        let result;
-
-        match handler.process(index.index, index.distance)? {
+        let (add_index, result) = match handler.process(index.index, index.distance)? {
             SearchControl::Continue(add) => {
                 self.algorithm.expand(index, self.graph, self.storage, true);
-                add_index = add;
-                result = true;
+                (add, true)
             }
-            SearchControl::Finish(add) => {
-                add_index = add;
-                result = false;
-            }
+            SearchControl::Finish(add) => (add, false),
             SearchControl::Stop(add) => {
                 self.algorithm
                     .expand(index, self.graph, self.storage, false);
-                add_index = add;
-                result = true;
+                (add, true)
             }
-        }
+        };
 
         if add_index {
             self.result.push(index.index);

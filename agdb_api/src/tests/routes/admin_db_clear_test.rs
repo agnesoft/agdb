@@ -106,15 +106,19 @@ pub async fn clear_db_memory_backup() -> Result<(), TestError> {
     server.api.user_login(owner, owner).await?;
     server.api.db_add(owner, db, DbKind::Memory).await?;
     let db_path = Path::new(&server.data_dir).join(owner).join(db);
+    let backup_path = Path::new(&server.data_dir)
+        .join(owner)
+        .join("backups")
+        .join(format!("{db}.bak"));
     assert!(!db_path.exists());
     server.api.db_backup(owner, db).await?;
-    assert!(db_path.exists());
+    assert!(backup_path.exists());
     server.api.user_login(ADMIN, ADMIN).await?;
     let (status, db) = server
         .api
         .admin_db_clear(owner, db, DbResource::Backup)
         .await?;
-    assert!(!db_path.exists());
+    assert!(!backup_path.exists());
     assert_eq!(status, 200);
     assert_eq!(db.backup, 0);
     Ok(())

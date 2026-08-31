@@ -11,6 +11,119 @@ use agdb_api::test_server::test_error::TestError;
 use agdb_api::test_server::wait_for_ready;
 
 #[tokio::test]
+async fn snapshot_transfer() -> Result<(), TestError> {
+    let mut servers = create_cluster_with_max_log_entries(3, 1).await?;
+    let mut follower = AgdbApi::new(
+        ReqwestClient::with_client(reqwest_client()),
+        &servers[2].address,
+    );
+    follower.cluster_user_login(ADMIN, ADMIN).await?;
+    follower.admin_shutdown().await?;
+    servers[2].wait().await?;
+
+    let mut leader = AgdbApi::new(
+        ReqwestClient::with_client(reqwest_client()),
+        &servers[0].address,
+    );
+    leader.user_login(ADMIN, ADMIN).await?;
+    leader
+        .db_add(ADMIN, "snapshot_test", DbKind::Mapped)
+        .await?;
+    leader
+        .db_exec_mut(
+            ADMIN,
+            "snapshot_test",
+            &[QueryBuilder::insert()
+                .nodes()
+                .aliases("root")
+                .values(vec![vec![("key", 1).into()]])
+                .query()
+                .into()],
+        )
+        .await?;
+    leader.db_backup(ADMIN, "snapshot_test").await?;
+
+    for i in 0..10 {
+        leader
+            .db_exec_mut(
+                ADMIN,
+                "snapshot_test",
+                &[QueryBuilder::insert()
+                    .values(vec![vec![("key", i).into()]])
+                    .ids("root")
+                    .query()
+                    .into()],
+            )
+            .await?;
+    }
+
+    // Restart the leader to flush queued messages for downed follower (required on Win)
+    leader.admin_shutdown().await?;
+    servers[0].wait().await?;
+    servers[0].restart()?;
+    wait_for_ready(&leader).await?;
+    let node1 = AgdbApi::new(
+        ReqwestClient::with_client(reqwest_client()),
+        &servers[1].address,
+    );
+    wait_for_leader(&node1).await?;
+
+    servers[2].restart()?;
+    wait_for_ready(&follower).await?;
+
+    let mut synced = false;
+
+    for _ in 0..3 {
+        if let Ok(result) = follower
+            .db_exec(
+                ADMIN,
+                "snapshot_test",
+                &[QueryBuilder::select()
+                    .values("key")
+                    .ids("root")
+                    .query()
+                    .into()],
+            )
+            .await
+            && let Ok(value) = result.1[0].elements[0].values[0].value.to_u64()
+        {
+            synced = true;
+            assert_eq!(value, 9, "snapshot must transfer the post backup key value");
+            break;
+        } else {
+            tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+        }
+    }
+
+    assert!(synced, "follower did not sync post backup changes");
+
+    follower.db_restore(ADMIN, "snapshot_test").await?;
+
+    assert_eq!(
+        follower
+            .db_exec(
+                ADMIN,
+                "snapshot_test",
+                &[QueryBuilder::select()
+                    .values("key")
+                    .ids("root")
+                    .query()
+                    .into()]
+            )
+            .await?
+            .1[0]
+            .elements[0]
+            .values[0]
+            .value
+            .to_u64()
+            .expect("failed to read value"),
+        1
+    );
+
+    Ok(())
+}
+
+#[tokio::test]
 async fn rebalance() -> Result<(), TestError> {
     let mut servers = create_cluster(3, false).await?;
     let mut leader = AgdbApi::new(

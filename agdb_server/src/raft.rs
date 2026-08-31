@@ -523,6 +523,7 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
         self.node_mut(request.target).log_commit = request.log_commit;
 
         let quorum = self.size / 2 + 1;
+        let mut heartbeats = None;
 
         if self.local().log_commit < request.log_index
             && self
@@ -533,7 +534,7 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
                 >= quorum
         {
             self.commit_storage(request.log_index).await?;
-            return Ok(Some(self.heartbeat_no_timer()));
+            heartbeats = Some(self.heartbeat_no_timer());
         }
 
         let min_commit = self.nodes.iter().map(|n| n.log_commit).min().unwrap_or(0);
@@ -546,7 +547,7 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
             crate::warn!("Failed to prune cluster log: {:?}", e);
         }
 
-        Ok(None)
+        Ok(heartbeats)
     }
 
     fn heartbeat(&mut self) -> Vec<Request<T>> {

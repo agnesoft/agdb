@@ -125,6 +125,7 @@ impl ClusterNodeImpl {
             .expect("bad request")
     }
 
+    #[allow(clippy::result_large_err)]
     pub(crate) async fn forward(
         &self,
         axum_request: AxumRequest,

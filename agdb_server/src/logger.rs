@@ -266,6 +266,7 @@ impl LogRecord {
     }
 }
 
+#[allow(clippy::result_large_err)]
 pub(crate) async fn logger(
     state: State<ServerState>,
     request: Request,
@@ -329,6 +330,7 @@ fn should_log_status(log_level: Level, uri: &str, status: u16) -> Option<Level> 
     }
 }
 
+#[allow(clippy::result_large_err)]
 async fn inspect_request(
     record: &mut LogRecord,
     log_level: Level,
@@ -373,6 +375,7 @@ async fn inspect_request(
     Ok(Request::from_parts(parts, body))
 }
 
+#[allow(clippy::result_large_err)]
 async fn inspect_response(
     record: &mut LogRecord,
     response: axum::http::Response<Body>,

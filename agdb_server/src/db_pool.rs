@@ -60,6 +60,10 @@ pub(crate) async fn new(config: Config, server_db: &ServerDb) -> ServerResult<Db
 }
 
 impl DbPool {
+    pub(crate) async fn clear(&self) {
+        self.pool.write().await.clear();
+    }
+
     pub(crate) async fn reload(&self, server_db: &ServerDb) -> ServerResult<()> {
         let mut pool = self.pool.write().await;
         pool.clear();

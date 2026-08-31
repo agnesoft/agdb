@@ -27,7 +27,7 @@ async fn snapshot_transfer() -> Result<(), TestError> {
     );
     leader.user_login(ADMIN, ADMIN).await?;
     leader
-        .db_add(ADMIN, "snapshot_test", DbKind::Memory)
+        .db_add(ADMIN, "snapshot_test", DbKind::Mapped)
         .await?;
     leader
         .db_exec_mut(
@@ -56,6 +56,17 @@ async fn snapshot_transfer() -> Result<(), TestError> {
             )
             .await?;
     }
+
+    // Restart the leader to flush queued messages for downed follower (required on Win)
+    leader.admin_shutdown().await?;
+    servers[0].wait().await?;
+    servers[0].restart()?;
+    wait_for_ready(&leader).await?;
+    let node1 = AgdbApi::new(
+        ReqwestClient::with_client(reqwest_client()),
+        &servers[1].address,
+    );
+    wait_for_leader(&node1).await?;
 
     servers[2].restart()?;
     wait_for_ready(&follower).await?;

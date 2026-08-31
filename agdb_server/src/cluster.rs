@@ -485,6 +485,9 @@ async fn do_resync(cluster: &Cluster, config: &Config, node_index: usize) -> Ser
         let _ = std::fs::remove_dir_all(&backup_dir);
     }
 
+    let mut raft = cluster.raft.write().await;
+    raft.storage.close_handles(&partial_dir).await?;
+
     if data_dir.exists() {
         std::fs::rename(data_dir, &backup_dir)?;
     }
@@ -496,13 +499,11 @@ async fn do_resync(cluster: &Cluster, config: &Config, node_index: usize) -> Ser
         )));
     }
 
-    let mut raft = cluster.raft.write().await;
-
     if let Err(e) = raft.storage.reinit(config).await {
-        drop(raft);
         let _ = std::fs::remove_dir_all(data_dir);
         let _ = std::fs::rename(&backup_dir, data_dir);
         let _ = std::fs::remove_dir_all(&partial_dir);
+        drop(raft);
         return Err(e);
     }
 
@@ -791,6 +792,15 @@ impl ClusterStorage {
         Ok(())
     }
 
+    pub(crate) async fn close_handles(&mut self, temp_dir: &Path) -> ServerResult<()> {
+        let _snapshot_guard = self.snapshot_lock.write().await;
+        self.db_pool.clear().await;
+        swap_db(&self.db.db, temp_dir, "server").await?;
+        swap_db(&self.cluster_log.0, temp_dir, "log").await?;
+
+        Ok(())
+    }
+
     async fn execute_log(&mut self, log: Log<ClusterAction>) -> ServerResult<()> {
         let log_id = log.db_id.unwrap_or_default();
         let db = self.db.clone();
@@ -817,6 +827,13 @@ impl ClusterStorage {
     pub(crate) async fn subscribe(&self) -> tokio::sync::broadcast::Receiver<u64> {
         self.notifier.subscribe()
     }
+}
+
+async fn swap_db(db: &Arc<RwLock<agdb::Db>>, temp_dir: &Path, name: &str) -> ServerResult<()> {
+    let placeholder_path = temp_dir.join(format!("_placeholder_{name}.agdb"));
+    let placeholder = agdb::Db::new(&placeholder_path.to_string_lossy())?;
+    *db.write().await = placeholder;
+    Ok(())
 }
 
 impl Storage<ClusterAction, ResultNotifier> for ClusterStorage {

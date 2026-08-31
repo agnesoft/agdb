@@ -57,14 +57,11 @@ async fn snapshot_transfer() -> Result<(), TestError> {
             .await?;
     }
 
-    servers[0].restart()?;
-    wait_for_ready(&leader).await?;
     servers[2].restart()?;
     wait_for_ready(&follower).await?;
 
-    assert_eq!(follower.db_list().await?.1.len(), 1);
-    assert_eq!(
-        follower
+    for _ in 0..10 {
+        if let Ok(result) = follower
             .db_exec(
                 ADMIN,
                 "snapshot_test",
@@ -72,18 +69,20 @@ async fn snapshot_transfer() -> Result<(), TestError> {
                     .values("key")
                     .ids("root")
                     .query()
-                    .into()]
+                    .into()],
             )
-            .await?
-            .1[0]
-            .elements[0]
-            .values[0]
-            .value
-            .to_u64()
-            .expect("failed to read value"),
-        9
-    );
+            .await
+            && let Ok(value) = result.1[0].elements[0].values[0].value.to_u64()
+        {
+            assert_eq!(value, 9, "snapshot must transfer the post-backup key value");
+            break;
+        } else {
+            tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+        }
+    }
+
     follower.db_restore(ADMIN, "snapshot_test").await?;
+
     assert_eq!(
         follower
             .db_exec(

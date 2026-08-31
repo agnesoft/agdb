@@ -851,9 +851,13 @@ impl Storage<ClusterAction, ResultNotifier> for ClusterStorage {
 
     async fn prune(&mut self, up_to_index: u64) -> ServerResult<()> {
         let up_to_index = std::cmp::min(up_to_index, self.index.saturating_sub(1));
-        if up_to_index > self.prune_index && self.snapshot_in_flight.load(Ordering::Acquire) == 0 {
-            self.cluster_log.prune(up_to_index).await?;
-            self.prune_index = up_to_index;
+        // Use the higher of the incoming index and the existing ceiling so that entries
+        // skipped on a prior call (because their async execute_log task had not yet removed
+        // the EXECUTED key) are retried on every subsequent heartbeat
+        let ceiling = up_to_index.max(self.prune_index);
+        if ceiling > 0 && self.snapshot_in_flight.load(Ordering::Acquire) == 0 {
+            self.cluster_log.prune(ceiling).await?;
+            self.prune_index = ceiling;
         }
         Ok(())
     }

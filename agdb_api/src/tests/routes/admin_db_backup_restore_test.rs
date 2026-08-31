@@ -301,7 +301,13 @@ pub async fn in_memory() -> Result<(), TestError> {
     server.api.admin_db_add(owner, db, DbKind::Memory).await?;
     let status = server.api.admin_db_backup(owner, db).await?;
     assert_eq!(status, 201);
-    assert!(Path::new(&server.data_dir).join(owner).join(db).exists());
+    assert!(
+        Path::new(&server.data_dir)
+            .join(owner)
+            .join("backups")
+            .join(format!("{db}.bak"))
+            .exists()
+    );
     let status = server.api.admin_db_restore(owner, db).await?;
     assert_eq!(status, 201);
     let status = server.api.admin_db_rollback(owner, db).await?;

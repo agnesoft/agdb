@@ -74,7 +74,7 @@ async fn snapshot_transfer() -> Result<(), TestError> {
             .await
             && let Ok(value) = result.1[0].elements[0].values[0].value.to_u64()
         {
-            assert_eq!(value, 9, "snapshot must transfer the post-backup key value");
+            assert_eq!(value, 9, "snapshot must transfer the post backup key value");
             break;
         } else {
             tokio::time::sleep(std::time::Duration::from_secs(1)).await;

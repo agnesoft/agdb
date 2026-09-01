@@ -58,9 +58,9 @@ class InsertValuesQuery implements ModelInterface, ArrayAccess, \JsonSerializabl
      * @var string[]
      */
     protected static $openAPITypes = [
+        'amend' => '\Agnesoft\AgdbApi\Model\Amend',
         'ids' => '\Agnesoft\AgdbApi\Model\QueryIds',
-        'values' => '\Agnesoft\AgdbApi\Model\QueryValues',
-        'amend' => 'string'
+        'values' => '\Agnesoft\AgdbApi\Model\QueryValues'
     ];
 
     /**
@@ -71,9 +71,9 @@ class InsertValuesQuery implements ModelInterface, ArrayAccess, \JsonSerializabl
      * @psalm-var array<string, string|null>
      */
     protected static $openAPIFormats = [
+        'amend' => null,
         'ids' => null,
-        'values' => null,
-        'amend' => null
+        'values' => null
     ];
 
     /**
@@ -82,9 +82,9 @@ class InsertValuesQuery implements ModelInterface, ArrayAccess, \JsonSerializabl
      * @var boolean[]
      */
     protected static array $openAPINullables = [
+        'amend' => false,
         'ids' => false,
-        'values' => false,
-        'amend' => true
+        'values' => false
     ];
 
     /**
@@ -173,9 +173,9 @@ class InsertValuesQuery implements ModelInterface, ArrayAccess, \JsonSerializabl
      * @var string[]
      */
     protected static $attributeMap = [
+        'amend' => 'amend',
         'ids' => 'ids',
-        'values' => 'values',
-        'amend' => 'amend'
+        'values' => 'values'
     ];
 
     /**
@@ -184,9 +184,9 @@ class InsertValuesQuery implements ModelInterface, ArrayAccess, \JsonSerializabl
      * @var string[]
      */
     protected static $setters = [
+        'amend' => 'setAmend',
         'ids' => 'setIds',
-        'values' => 'setValues',
-        'amend' => 'setAmend'
+        'values' => 'setValues'
     ];
 
     /**
@@ -195,9 +195,9 @@ class InsertValuesQuery implements ModelInterface, ArrayAccess, \JsonSerializabl
      * @var string[]
      */
     protected static $getters = [
+        'amend' => 'getAmend',
         'ids' => 'getIds',
-        'values' => 'getValues',
-        'amend' => 'getAmend'
+        'values' => 'getValues'
     ];
 
     /**
@@ -257,9 +257,9 @@ class InsertValuesQuery implements ModelInterface, ArrayAccess, \JsonSerializabl
      */
     public function __construct(?array $data = null)
     {
+        $this->setIfExists('amend', $data ?? [], null);
         $this->setIfExists('ids', $data ?? [], null);
         $this->setIfExists('values', $data ?? [], null);
-        $this->setIfExists('amend', $data ?? [], null);
     }
 
     /**
@@ -311,6 +311,33 @@ class InsertValuesQuery implements ModelInterface, ArrayAccess, \JsonSerializabl
 
 
     /**
+     * Gets amend
+     *
+     * @return \Agnesoft\AgdbApi\Model\Amend|null
+     */
+    public function getAmend()
+    {
+        return $this->container['amend'];
+    }
+
+    /**
+     * Sets amend
+     *
+     * @param \Agnesoft\AgdbApi\Model\Amend|null $amend Amend operation. `None` (default) overwrites existing values, `Add` increments/appends, `Remove` decrements/removes-from.
+     *
+     * @return self
+     */
+    public function setAmend($amend)
+    {
+        if (is_null($amend)) {
+            throw new \InvalidArgumentException('non-nullable amend cannot be null');
+        }
+        $this->container['amend'] = $amend;
+
+        return $this;
+    }
+
+    /**
      * Gets ids
      *
      * @return \Agnesoft\AgdbApi\Model\QueryIds
@@ -360,40 +387,6 @@ class InsertValuesQuery implements ModelInterface, ArrayAccess, \JsonSerializabl
             throw new \InvalidArgumentException('non-nullable values cannot be null');
         }
         $this->container['values'] = $values;
-
-        return $this;
-    }
-
-    /**
-     * Gets amend
-     *
-     * @return string|null
-     */
-    public function getAmend()
-    {
-        return $this->container['amend'];
-    }
-
-    /**
-     * Sets amend
-     *
-     * @param string|null $amend Amend operation (None, Add, Remove, Replace)
-     *
-     * @return self
-     */
-    public function setAmend($amend)
-    {
-        if (is_null($amend)) {
-            array_push($this->openAPINullablesSetToNull, 'amend');
-        } else {
-            $nullablesSetToNull = $this->getOpenAPINullablesSetToNull();
-            $index = array_search('amend', $nullablesSetToNull);
-            if ($index !== FALSE) {
-                unset($nullablesSetToNull[$index]);
-                $this->setOpenAPINullablesSetToNull($nullablesSetToNull);
-            }
-        }
-        $this->container['amend'] = $amend;
 
         return $this;
     }

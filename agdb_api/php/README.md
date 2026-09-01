@@ -135,6 +135,7 @@ Class | Method | HTTP request | Description
 ## Models
 
 - [AdminStatus](docs/Model/AdminStatus.md)
+- [Amend](docs/Model/Amend.md)
 - [ChangePassword](docs/Model/ChangePassword.md)
 - [ClusterStatus](docs/Model/ClusterStatus.md)
 - [Comparison](docs/Model/Comparison.md)

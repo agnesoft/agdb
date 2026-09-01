@@ -1,6 +1,6 @@
 <?php
 /**
- * LogLevelFilter
+ * Amend
  *
  * PHP version 8.1
  *
@@ -30,29 +30,24 @@ namespace Agnesoft\AgdbApi\Model;
 use \Agnesoft\AgdbApi\ObjectSerializer;
 
 /**
- * LogLevelFilter Class Doc Comment
+ * Amend Class Doc Comment
  *
  * @category Class
+ * @description Amend operation for insert/remove value queries. Controls how values are applied to existing properties.
  * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
  */
-class LogLevelFilter
+class Amend
 {
     /**
      * Possible values of this enum
      */
-    public const OFF = 'off';
+    public const NONE = 'None';
 
-    public const ERROR = 'error';
+    public const ADD = 'Add';
 
-    public const WARN = 'warn';
-
-    public const INFO = 'info';
-
-    public const DEBUG = 'debug';
-
-    public const TRACE = 'trace';
+    public const REMOVE = 'Remove';
 
     /**
      * Gets allowable values of the enum
@@ -61,12 +56,9 @@ class LogLevelFilter
     public static function getAllowableEnumValues()
     {
         return [
-            self::OFF,
-            self::ERROR,
-            self::WARN,
-            self::INFO,
-            self::DEBUG,
-            self::TRACE
+            self::NONE,
+            self::ADD,
+            self::REMOVE
         ];
     }
 }

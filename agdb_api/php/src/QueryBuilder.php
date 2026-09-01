@@ -684,31 +684,39 @@ class InsertIndexBuilder
 class InsertValuesBuilder
 {
     private QueryValues $data;
+    private ?string $amend;
 
-    public function __construct(QueryValues $data)
+    public function __construct(QueryValues $data, ?string $amend = null)
     {
         $this->data = $data;
+        $this->amend = $amend;
     }
 
     public function ids(
         string|int|array|QueryId|SearchQuery|QueryType|QueryIds $ids
     ): InsertValuesIdsBuilder {
-        return new InsertValuesIdsBuilder(
-            new InsertValuesQuery([
-                "values" => $this->data,
-                "ids" => to_query_ids($ids),
-            ])
-        );
+        $params = [
+            "values" => $this->data,
+            "ids" => to_query_ids($ids),
+        ];
+        if ($this->amend !== null) {
+            $params["amend"] = $this->amend;
+        }
+        return new InsertValuesIdsBuilder(new InsertValuesQuery($params));
     }
 
     public function search(): SearchBuilder
     {
+        $params = [
+            "values" => $this->data,
+            "ids" => new QueryIds(),
+        ];
+        if ($this->amend !== null) {
+            $params["amend"] = $this->amend;
+        }
         return new SearchBuilder(
             new QueryType([
-                "insert_values" => new InsertValuesQuery([
-                    "values" => $this->data,
-                    "ids" => new QueryIds(),
-                ]),
+                "insert_values" => new InsertValuesQuery($params),
             ])
         );
     }
@@ -787,6 +795,16 @@ class InsertBuilder
     public function values_uniform(array $data): InsertValuesBuilder
     {
         return new InsertValuesBuilder(to_single_values($data));
+    }
+
+    public function amend(array $data): InsertValuesBuilder
+    {
+        return new InsertValuesBuilder(to_multi_values($data), "Add");
+    }
+
+    public function amend_uniform(array $data): InsertValuesBuilder
+    {
+        return new InsertValuesBuilder(to_single_values($data), "Add");
     }
 }
 
@@ -892,6 +910,16 @@ class RemoveBuilder
         return new RemoveValuesBuilder(
             new SelectValuesQuery(["keys" => to_db_keys($data)])
         );
+    }
+
+    public function amend(array $data): InsertValuesBuilder
+    {
+        return new InsertValuesBuilder(to_multi_values($data), "Remove");
+    }
+
+    public function amend_uniform(array $data): InsertValuesBuilder
+    {
+        return new InsertValuesBuilder(to_single_values($data), "Remove");
     }
 }
 

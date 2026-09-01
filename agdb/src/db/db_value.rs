@@ -364,6 +364,159 @@ impl DbValue {
         Ok(index)
     }
 
+    pub fn amend_add(&self, other: &DbValue) -> Result<DbValue, DbError> {
+        match (self, other) {
+            (DbValue::I64(a), DbValue::I64(b)) => Ok(DbValue::I64(a.saturating_add(*b))),
+            (DbValue::U64(a), DbValue::U64(b)) => Ok(DbValue::U64(a.saturating_add(*b))),
+            (DbValue::F64(a), DbValue::F64(b)) => {
+                Ok(DbValue::F64(DbF64::from(a.to_f64() + b.to_f64())))
+            }
+            (DbValue::F64(a), DbValue::I64(b)) => {
+                Ok(DbValue::F64(DbF64::from(a.to_f64() + (*b as f64))))
+            }
+            (DbValue::F64(a), DbValue::U64(b)) => {
+                Ok(DbValue::F64(DbF64::from(a.to_f64() + (*b as f64))))
+            }
+            (DbValue::String(a), DbValue::String(b)) => {
+                let mut s = a.clone();
+                s.push_str(b);
+                Ok(DbValue::String(s))
+            }
+            (DbValue::Bytes(a), DbValue::Bytes(b)) => {
+                let mut v = a.clone();
+                v.extend_from_slice(b);
+                Ok(DbValue::Bytes(v))
+            }
+            (DbValue::VecI64(a), DbValue::VecI64(b)) => {
+                let mut v = a.clone();
+                v.extend_from_slice(b);
+                Ok(DbValue::VecI64(v))
+            }
+            (DbValue::VecU64(a), DbValue::VecU64(b)) => {
+                let mut v = a.clone();
+                v.extend_from_slice(b);
+                Ok(DbValue::VecU64(v))
+            }
+            (DbValue::VecF64(a), DbValue::VecF64(b)) => {
+                let mut v = a.clone();
+                v.extend_from_slice(b);
+                Ok(DbValue::VecF64(v))
+            }
+            (DbValue::VecString(a), DbValue::VecString(b)) => {
+                let mut v = a.clone();
+                v.extend(b.iter().cloned());
+                Ok(DbValue::VecString(v))
+            }
+            (DbValue::VecI64(a), DbValue::I64(b)) => {
+                let mut v = a.clone();
+                v.push(*b);
+                Ok(DbValue::VecI64(v))
+            }
+            (DbValue::VecU64(a), DbValue::U64(b)) => {
+                let mut v = a.clone();
+                v.push(*b);
+                Ok(DbValue::VecU64(v))
+            }
+            (DbValue::VecF64(a), DbValue::F64(b)) => {
+                let mut v = a.clone();
+                v.push(*b);
+                Ok(DbValue::VecF64(v))
+            }
+            (DbValue::VecString(a), DbValue::String(b)) => {
+                let mut v = a.clone();
+                v.push(b.clone());
+                Ok(DbValue::VecString(v))
+            }
+            _ => Self::amend_type_error(self, other),
+        }
+    }
+
+    pub fn amend_remove(&self, other: &DbValue) -> Result<DbValue, DbError> {
+        match (self, other) {
+            (DbValue::I64(a), DbValue::I64(b)) => Ok(DbValue::I64(a.saturating_sub(*b))),
+            (DbValue::U64(a), DbValue::U64(b)) => Ok(DbValue::U64(a.saturating_sub(*b))),
+            (DbValue::F64(a), DbValue::F64(b)) => {
+                Ok(DbValue::F64(DbF64::from(a.to_f64() - b.to_f64())))
+            }
+            (DbValue::F64(a), DbValue::I64(b)) => {
+                Ok(DbValue::F64(DbF64::from(a.to_f64() - (*b as f64))))
+            }
+            (DbValue::F64(a), DbValue::U64(b)) => {
+                Ok(DbValue::F64(DbF64::from(a.to_f64() - (*b as f64))))
+            }
+            (DbValue::String(a), DbValue::String(b)) => {
+                Ok(DbValue::String(a.replace(b.as_str(), "")))
+            }
+            (DbValue::Bytes(_), DbValue::Bytes(_)) => Err(DbError::db(
+                DbErrorType::TypeError,
+                "Amend remove is not supported for bytes.".to_string(),
+            )),
+            (DbValue::VecI64(a), DbValue::VecI64(b)) => {
+                Ok(DbValue::VecI64(Self::vec_remove_first(a, b)))
+            }
+            (DbValue::VecU64(a), DbValue::VecU64(b)) => {
+                Ok(DbValue::VecU64(Self::vec_remove_first(a, b)))
+            }
+            (DbValue::VecF64(a), DbValue::VecF64(b)) => {
+                Ok(DbValue::VecF64(Self::vec_remove_first(a, b)))
+            }
+            (DbValue::VecString(a), DbValue::VecString(b)) => {
+                Ok(DbValue::VecString(Self::vec_remove_first(a, b)))
+            }
+            (DbValue::VecI64(a), DbValue::I64(b)) => Ok(DbValue::VecI64(Self::vec_remove_first(
+                a,
+                std::slice::from_ref(b),
+            ))),
+            (DbValue::VecU64(a), DbValue::U64(b)) => Ok(DbValue::VecU64(Self::vec_remove_first(
+                a,
+                std::slice::from_ref(b),
+            ))),
+            (DbValue::VecF64(a), DbValue::F64(b)) => Ok(DbValue::VecF64(Self::vec_remove_first(
+                a,
+                std::slice::from_ref(b),
+            ))),
+            (DbValue::VecString(a), DbValue::String(b)) => Ok(DbValue::VecString(
+                Self::vec_remove_first(a, std::slice::from_ref(b)),
+            )),
+            _ => Self::amend_type_error(self, other),
+        }
+    }
+
+    fn vec_remove_first<T: PartialEq + Clone>(source: &[T], to_remove: &[T]) -> Vec<T> {
+        let mut result = source.to_vec();
+        for item in to_remove {
+            if let Some(pos) = result.iter().position(|x| x == item) {
+                result.remove(pos);
+            }
+        }
+        result
+    }
+
+    fn amend_type_error<T>(existing: &DbValue, other: &DbValue) -> Result<T, DbError> {
+        Err(DbError::db(
+            DbErrorType::TypeError,
+            format!(
+                "Cannot amend '{}' with '{}'.",
+                existing.type_name(),
+                other.type_name()
+            ),
+        ))
+    }
+
+    fn type_name(&self) -> &'static str {
+        match self {
+            DbValue::Bytes(_) => "bytes",
+            DbValue::I64(_) => "i64",
+            DbValue::U64(_) => "u64",
+            DbValue::F64(_) => "f64",
+            DbValue::String(_) => "string",
+            DbValue::VecI64(_) => "vec<i64>",
+            DbValue::VecU64(_) => "vec<u64>",
+            DbValue::VecF64(_) => "vec<f64>",
+            DbValue::VecString(_) => "vec<string>",
+        }
+    }
+
     #[track_caller]
     fn type_error<T>(from: &str, to: &str) -> Result<T, DbError> {
         Err(DbError::db(

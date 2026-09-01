@@ -135,6 +135,7 @@ pub use db::db_type::DbTypeMarker;
 pub use db::db_value::DbValue;
 pub use query::Query;
 pub use query::QueryMut;
+pub use query::amend::Amend;
 pub use query::insert_aliases_query::InsertAliasesQuery;
 pub use query::insert_edges_query::InsertEdgesQuery;
 pub use query::insert_index_query::InsertIndexQuery;

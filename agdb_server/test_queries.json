@@ -1501,6 +1501,78 @@
     }
   ],
   [
+    "QueryBuilder::insert().amend([[(\"k\",1).into()],[(\"k\",2).into()]]).ids([1,2]).query()",
+    {
+      "InsertValues": {
+        "ids": {
+          "Ids": [
+            {
+              "Id": 1
+            },
+            {
+              "Id": 2
+            }
+          ]
+        },
+        "values": {
+          "Multi": [
+            [
+              {
+                "key": {
+                  "String": "k"
+                },
+                "value": {
+                  "I64": 1
+                }
+              }
+            ],
+            [
+              {
+                "key": {
+                  "String": "k"
+                },
+                "value": {
+                  "I64": 2
+                }
+              }
+            ]
+          ]
+        },
+        "amend": "Add"
+      }
+    }
+  ],
+  [
+    "QueryBuilder::insert().amend_uniform([(\"k\",1).into()]).ids([1,2]).query()",
+    {
+      "InsertValues": {
+        "ids": {
+          "Ids": [
+            {
+              "Id": 1
+            },
+            {
+              "Id": 2
+            }
+          ]
+        },
+        "values": {
+          "Single": [
+            {
+              "key": {
+                "String": "k"
+              },
+              "value": {
+                "I64": 1
+              }
+            }
+          ]
+        },
+        "amend": "Add"
+      }
+    }
+  ],
+  [
     "QueryBuilder::remove().aliases(\"a\").query()",
     {
       "RemoveAliases": [
@@ -1701,6 +1773,113 @@
             "conditions": []
           }
         }
+      }
+    }
+  ],
+  [
+    "QueryBuilder::remove().amend([[(\"k\",1).into()],[(\"k\",2).into()]]).ids([1,2]).query()",
+    {
+      "InsertValues": {
+        "ids": {
+          "Ids": [
+            {
+              "Id": 1
+            },
+            {
+              "Id": 2
+            }
+          ]
+        },
+        "values": {
+          "Multi": [
+            [
+              {
+                "key": {
+                  "String": "k"
+                },
+                "value": {
+                  "I64": 1
+                }
+              }
+            ],
+            [
+              {
+                "key": {
+                  "String": "k"
+                },
+                "value": {
+                  "I64": 2
+                }
+              }
+            ]
+          ]
+        },
+        "amend": "Remove"
+      }
+    }
+  ],
+  [
+    "QueryBuilder::remove().amend_uniform([(\"k\",1).into()]).ids([1,2]).query()",
+    {
+      "InsertValues": {
+        "ids": {
+          "Ids": [
+            {
+              "Id": 1
+            },
+            {
+              "Id": 2
+            }
+          ]
+        },
+        "values": {
+          "Single": [
+            {
+              "key": {
+                "String": "k"
+              },
+              "value": {
+                "I64": 1
+              }
+            }
+          ]
+        },
+        "amend": "Remove"
+      }
+    }
+  ],
+  [
+    "QueryBuilder::remove().amend_uniform([(\"k\",1).into()]).search().from(\"a\").query()",
+    {
+      "InsertValues": {
+        "ids": {
+          "Search": {
+            "algorithm": "BreadthFirst",
+            "origin": {
+              "Alias": "a"
+            },
+            "destination": {
+              "Id": 0
+            },
+            "limit": 0,
+            "offset": 0,
+            "order_by": [],
+            "conditions": []
+          }
+        },
+        "values": {
+          "Single": [
+            {
+              "key": {
+                "String": "k"
+              },
+              "value": {
+                "I64": 1
+              }
+            }
+          ]
+        },
+        "amend": "Remove"
       }
     }
   ],

@@ -1,4 +1,6 @@
+use crate::Amend;
 use crate::DbValue;
+use crate::InsertValuesQuery;
 use crate::QueryIds;
 use crate::RemoveAliasesQuery;
 use crate::RemoveQuery;
@@ -7,6 +9,10 @@ use crate::SearchQuery;
 use crate::SelectValuesQuery;
 use crate::db::db_value::DbValues;
 use crate::query::query_aliases::QueryAliases;
+use crate::query::query_values::MultiValues;
+use crate::query::query_values::QueryValues;
+use crate::query::query_values::SingleValues;
+use crate::query_builder::insert_values::InsertValues;
 use crate::query_builder::remove_aliases::RemoveAliases;
 use crate::query_builder::remove_ids::RemoveIds;
 use crate::query_builder::remove_index::RemoveIndex;
@@ -66,5 +72,45 @@ impl Remove {
             keys: Into::<DbValues>::into(keys).0,
             ids: QueryIds::Ids(vec![]),
         }))
+    }
+
+    /// Amend-remove (decrement / remove-from) list of lists `key_values`
+    /// on existing elements. For numerics this subtracts, for strings removes
+    /// all occurrences, for vec types removes first occurrence of each element.
+    /// If a key does not exist on the element, it is silently skipped.
+    ///
+    /// Options:
+    ///
+    /// ```
+    /// use agdb::QueryBuilder;
+    ///
+    /// QueryBuilder::remove().amend([[("counter", 5).into()]]).ids(1);
+    /// QueryBuilder::remove().amend([[("tags", vec!["old"]).into()]]).ids(1);
+    /// ```
+    pub fn amend<T: Into<MultiValues>>(self, key_values: T) -> InsertValues {
+        InsertValues(InsertValuesQuery {
+            ids: QueryIds::Ids(vec![]),
+            values: QueryValues::Multi(Into::<MultiValues>::into(key_values).0),
+            amend: Amend::Remove,
+        })
+    }
+
+    /// Amend-remove uniformly: applies the same remove operation
+    /// to all target elements.
+    ///
+    /// Options:
+    ///
+    /// ```
+    /// use agdb::QueryBuilder;
+    ///
+    /// QueryBuilder::remove().amend_uniform([("counter", 5).into()]).ids(1);
+    /// QueryBuilder::remove().amend_uniform([("counter", 5).into()]).ids([1, 2]);
+    /// ```
+    pub fn amend_uniform<T: Into<SingleValues>>(self, key_values: T) -> InsertValues {
+        InsertValues(InsertValuesQuery {
+            ids: QueryIds::Ids(vec![]),
+            values: QueryValues::Single(Into::<SingleValues>::into(key_values).0),
+            amend: Amend::Remove,
+        })
     }
 }

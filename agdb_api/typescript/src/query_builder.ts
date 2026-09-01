@@ -674,6 +674,24 @@ class InsertBuilder {
             values: { Single: vals.map(convertToDbKeyValue) },
         });
     }
+
+    amend(values: BuilderDbKeyValue[][]): InsertValuesBuilder {
+        return new InsertValuesBuilder({
+            ids: { Ids: [] },
+            values: {
+                Multi: values.map((item) => item.map(convertToDbKeyValue)),
+            },
+            amend: "Add",
+        });
+    }
+
+    amend_uniform(vals: BuilderDbKeyValue[]): InsertValuesBuilder {
+        return new InsertValuesBuilder({
+            ids: { Ids: [] },
+            values: { Single: vals.map(convertToDbKeyValue) },
+            amend: "Add",
+        });
+    }
 }
 
 class RemoveIdsBuilder {
@@ -766,6 +784,24 @@ class RemoveBuilder {
         return new RemoveValuesBuilder({
             ids: { Ids: [] },
             keys: values.map(convertToDbValue),
+        });
+    }
+
+    amend(values: BuilderDbKeyValue[][]): InsertValuesBuilder {
+        return new InsertValuesBuilder({
+            ids: { Ids: [] },
+            values: {
+                Multi: values.map((item) => item.map(convertToDbKeyValue)),
+            },
+            amend: "Remove",
+        });
+    }
+
+    amend_uniform(vals: BuilderDbKeyValue[]): InsertValuesBuilder {
+        return new InsertValuesBuilder({
+            ids: { Ids: [] },
+            values: { Single: vals.map(convertToDbKeyValue) },
+            amend: "Remove",
         });
     }
 }

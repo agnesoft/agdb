@@ -1,3 +1,4 @@
+use crate::Amend;
 use crate::DbElement;
 use crate::DbError;
 use crate::DbErrorType;
@@ -34,6 +35,14 @@ pub struct InsertValuesQuery {
 
     /// Key value pairs to be inserted to the existing elements.
     pub values: QueryValues,
+
+    /// Amend operation. `None` (default) overwrites existing values,
+    /// `Add` increments/appends, `Remove` decrements/removes-from.
+    #[cfg_attr(
+        feature = "serde",
+        serde(default, skip_serializing_if = "Amend::is_none")
+    )]
+    pub amend: Amend,
 }
 
 impl QueryMut for InsertValuesQuery {
@@ -44,7 +53,7 @@ impl QueryMut for InsertValuesQuery {
             QueryIds::Ids(ids) => match &self.values {
                 QueryValues::Single(values) => {
                     for id in ids {
-                        insert_values(db, id, values, &mut result)?;
+                        insert_values(db, id, values, &self.amend, &mut result)?;
                     }
                 }
                 QueryValues::Multi(values) => {
@@ -56,7 +65,7 @@ impl QueryMut for InsertValuesQuery {
                     }
 
                     for (id, values) in ids.iter().zip(values) {
-                        insert_values(db, id, values, &mut result)?;
+                        insert_values(db, id, values, &self.amend, &mut result)?;
                     }
                 }
             },
@@ -66,7 +75,7 @@ impl QueryMut for InsertValuesQuery {
                 match &self.values {
                     QueryValues::Single(values) => {
                         for db_id in db_ids {
-                            insert_values_id(db, db_id, values, &mut result)?;
+                            insert_values_id(db, db_id, values, &self.amend, &mut result)?;
                         }
                     }
                     QueryValues::Multi(values) => {
@@ -82,7 +91,7 @@ impl QueryMut for InsertValuesQuery {
                         }
 
                         for (db_id, values) in db_ids.iter().zip(values) {
-                            insert_values_id(db, *db_id, values, &mut result)?;
+                            insert_values_id(db, *db_id, values, &self.amend, &mut result)?;
                         }
                     }
                 }
@@ -103,19 +112,20 @@ fn insert_values<Store: StorageData>(
     db: &mut DbImpl<Store>,
     id: &QueryId,
     values: &[DbKeyValue],
+    amend: &Amend,
     result: &mut QueryResult,
 ) -> Result<(), DbError> {
     match db.db_id(id) {
-        Ok(db_id) => insert_values_id(db, db_id, values, result),
+        Ok(db_id) => insert_values_id(db, db_id, values, amend, result),
         Err(e) => match id {
             QueryId::Id(id) => {
                 if id.0 == 0 {
-                    insert_values_new(db, None, values, result)
+                    insert_values_new(db, None, values, amend, result)
                 } else {
                     Err(e)
                 }
             }
-            QueryId::Alias(alias) => insert_values_new(db, Some(alias), values, result),
+            QueryId::Alias(alias) => insert_values_new(db, Some(alias), values, amend, result),
         },
     }
 }
@@ -124,8 +134,16 @@ fn insert_values_new<Store: StorageData>(
     db: &mut DbImpl<Store>,
     alias: Option<&String>,
     values: &[DbKeyValue],
+    amend: &Amend,
     result: &mut QueryResult,
 ) -> Result<(), DbError> {
+    if matches!(amend, Amend::Remove) {
+        return Err(DbError::query(
+            DbErrorType::NotAllowed,
+            "Cannot amend-remove on a new element.".to_string(),
+        ));
+    }
+
     let db_id = db.insert_node()?;
 
     if let Some(alias) = alias {
@@ -153,14 +171,29 @@ fn insert_values_id<Store: StorageData>(
     db: &mut DbImpl<Store>,
     db_id: DbId,
     values: &[DbKeyValue],
+    amend: &Amend,
     result: &mut QueryResult,
 ) -> Result<(), DbError> {
-    db.reserve_key_value_capacity(db_id, values.len() as u64)?;
-
-    for key_value in values {
-        db.insert_or_replace_key_value(db_id, key_value)?;
-        result.result += 1;
+    if !matches!(amend, Amend::Remove) {
+        db.reserve_key_value_capacity(db_id, values.len() as u64)?;
     }
+
+    match amend {
+        Amend::None => {
+            for key_value in values {
+                db.insert_or_replace_key_value(db_id, key_value)?;
+                result.result += 1;
+            }
+        }
+        _ => {
+            for key_value in values {
+                if db.amend_key_value(db_id, key_value, amend)? {
+                    result.result += 1;
+                }
+            }
+        }
+    }
+
     Ok(())
 }
 
@@ -184,6 +217,7 @@ mod tests {
         InsertValuesQuery {
             values: QueryValues::Single(vec![]),
             ids: QueryIds::Ids(vec![]),
+            amend: Amend::None,
         }
         .search_mut();
     }

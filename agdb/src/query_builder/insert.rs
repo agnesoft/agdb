@@ -1,3 +1,4 @@
+use crate::Amend;
 use crate::DbType;
 use crate::DbValue;
 use crate::InsertAliasesQuery;
@@ -76,6 +77,7 @@ impl Insert {
         InsertValuesIds(InsertValuesQuery {
             ids: QueryIds::Ids(vec![elem.db_id().unwrap_or_default()]),
             values: QueryValues::Multi(vec![elem.to_db_values()]),
+            amend: Amend::None,
         })
     }
 
@@ -100,6 +102,7 @@ impl Insert {
         InsertValuesIds(InsertValuesQuery {
             ids: QueryIds::Ids(ids),
             values: QueryValues::Multi(values),
+            amend: Amend::None,
         })
     }
 
@@ -151,6 +154,7 @@ impl Insert {
         InsertValues(InsertValuesQuery {
             ids: QueryIds::Ids(vec![]),
             values: QueryValues::Multi(Into::<MultiValues>::into(key_values).0),
+            amend: Amend::None,
         })
     }
 
@@ -171,6 +175,48 @@ impl Insert {
         InsertValues(InsertValuesQuery {
             ids: QueryIds::Ids(vec![]),
             values: QueryValues::Single(Into::<SingleValues>::into(key_values).0),
+            amend: Amend::None,
+        })
+    }
+
+    /// Amends (adds to / increments / appends) list of lists `key_values`
+    /// on existing elements. Each item in the list represents a list of
+    /// key-value pairs whose values will be added to existing values.
+    /// For numerics this is addition, for strings concatenation,
+    /// for vec types extension. If a key does not exist, it is inserted.
+    ///
+    /// Options:
+    ///
+    /// ```
+    /// use agdb::QueryBuilder;
+    ///
+    /// QueryBuilder::insert().amend([[("counter", 5).into()]]).ids(1);
+    /// QueryBuilder::insert().amend([[("counter", 5).into()], [("counter", 10).into()]]).ids([1, 2]);
+    /// ```
+    pub fn amend<T: Into<MultiValues>>(self, key_values: T) -> InsertValues {
+        InsertValues(InsertValuesQuery {
+            ids: QueryIds::Ids(vec![]),
+            values: QueryValues::Multi(Into::<MultiValues>::into(key_values).0),
+            amend: Amend::Add,
+        })
+    }
+
+    /// Amends (adds to / increments / appends) a single list of `key_values`
+    /// uniformly on all target elements.
+    ///
+    /// Options:
+    ///
+    /// ```
+    /// use agdb::QueryBuilder;
+    ///
+    /// QueryBuilder::insert().amend_uniform([("counter", 5).into()]).ids(1);
+    /// QueryBuilder::insert().amend_uniform([("counter", 5).into()]).ids([1, 2]);
+    /// ```
+    pub fn amend_uniform<T: Into<SingleValues>>(self, key_values: T) -> InsertValues {
+        InsertValues(InsertValuesQuery {
+            ids: QueryIds::Ids(vec![]),
+            values: QueryValues::Single(Into::<SingleValues>::into(key_values).0),
+            amend: Amend::Add,
         })
     }
 }

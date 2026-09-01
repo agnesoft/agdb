@@ -17,6 +17,11 @@ declare namespace Components {
             uptime: number; // int64
             users: number; // int64
         }
+        /**
+         * Amend operation for insert/remove value queries.
+         * Controls how values are applied to existing properties.
+         */
+        export type Amend = "None" | "Add" | "Remove";
         export interface ChangePassword {
             new_password: string;
             password: string;
@@ -663,6 +668,15 @@ declare namespace Components {
          * NOTE: The result is NOT number of affected elements but individual properties.
          */
         export interface InsertValuesQuery {
+            /**
+             * Amend operation. `None` (default) overwrites existing values,
+             * `Add` increments/appends, `Remove` decrements/removes-from.
+             */
+            amend?: /**
+             * Amend operation for insert/remove value queries.
+             * Controls how values are applied to existing properties.
+             */
+            Amend;
             /**
              * Ids whose properties should be updated
              */
@@ -3442,6 +3456,7 @@ export type Client = OpenAPIClient<OperationMethods, PathsDictionary>
 
 
 export type AdminStatus = Components.Schemas.AdminStatus;
+export type Amend = Components.Schemas.Amend;
 export type ChangePassword = Components.Schemas.ChangePassword;
 export type ClusterStatus = Components.Schemas.ClusterStatus;
 export type Comparison = Components.Schemas.Comparison;

@@ -2602,6 +2602,15 @@
           }
         }
       },
+      "Amend": {
+        "type": "string",
+        "description": "Amend operation for insert/remove value queries.\nControls how values are applied to existing properties.",
+        "enum": [
+          "None",
+          "Add",
+          "Remove"
+        ]
+      },
       "ChangePassword": {
         "type": "object",
         "required": [
@@ -3255,6 +3264,10 @@
           "values"
         ],
         "properties": {
+          "amend": {
+            "$ref": "#/components/schemas/Amend",
+            "description": "Amend operation. `None` (default) overwrites existing values,\n`Add` increments/appends, `Remove` decrements/removes-from."
+          },
           "ids": {
             "$ref": "#/components/schemas/QueryIds",
             "description": "Ids whose properties should be updated"

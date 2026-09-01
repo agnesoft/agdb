@@ -18,6 +18,7 @@ use self::db_search_handlers::LimitHandler;
 use self::db_search_handlers::LimitOffsetHandler;
 use self::db_search_handlers::OffsetHandler;
 use self::db_search_handlers::PathHandler;
+use crate::Amend;
 use crate::DbId;
 use crate::DbKeyValue;
 use crate::DbValue;
@@ -755,6 +756,42 @@ impl<Store: StorageData> DbImpl<Store> {
         }
 
         Ok(())
+    }
+
+    pub(crate) fn amend_key_value(
+        &mut self,
+        db_id: DbId,
+        key_value: &DbKeyValue,
+        amend: &Amend,
+    ) -> Result<bool, DbError> {
+        let existing = self
+            .values
+            .value(&self.storage, db_id.as_index(), &key_value.key)?;
+
+        match existing {
+            Some(existing_value) => {
+                let merged_value = match amend {
+                    Amend::Add => existing_value.amend_add(&key_value.value)?,
+                    Amend::Remove => existing_value.amend_remove(&key_value.value)?,
+                    Amend::None => unreachable!(),
+                };
+
+                let merged_kv = DbKeyValue {
+                    key: key_value.key.clone(),
+                    value: merged_value,
+                };
+                self.insert_or_replace_key_value(db_id, &merged_kv)?;
+                Ok(true)
+            }
+            None => match amend {
+                Amend::Add => {
+                    self.insert_or_replace_key_value(db_id, key_value)?;
+                    Ok(true)
+                }
+                Amend::Remove => Ok(false),
+                Amend::None => unreachable!(),
+            },
+        }
     }
 
     pub(crate) fn keys(&self, db_id: DbId) -> Result<Vec<DbValue>, DbError> {

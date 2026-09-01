@@ -1,3 +1,4 @@
+pub mod amend;
 pub mod insert_aliases_query;
 pub mod insert_edges_query;
 pub mod insert_index_query;

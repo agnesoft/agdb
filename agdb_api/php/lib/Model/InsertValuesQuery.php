@@ -59,7 +59,8 @@ class InsertValuesQuery implements ModelInterface, ArrayAccess, \JsonSerializabl
      */
     protected static $openAPITypes = [
         'ids' => '\Agnesoft\AgdbApi\Model\QueryIds',
-        'values' => '\Agnesoft\AgdbApi\Model\QueryValues'
+        'values' => '\Agnesoft\AgdbApi\Model\QueryValues',
+        'amend' => 'string'
     ];
 
     /**
@@ -71,7 +72,8 @@ class InsertValuesQuery implements ModelInterface, ArrayAccess, \JsonSerializabl
      */
     protected static $openAPIFormats = [
         'ids' => null,
-        'values' => null
+        'values' => null,
+        'amend' => null
     ];
 
     /**
@@ -81,7 +83,8 @@ class InsertValuesQuery implements ModelInterface, ArrayAccess, \JsonSerializabl
      */
     protected static array $openAPINullables = [
         'ids' => false,
-        'values' => false
+        'values' => false,
+        'amend' => true
     ];
 
     /**
@@ -171,7 +174,8 @@ class InsertValuesQuery implements ModelInterface, ArrayAccess, \JsonSerializabl
      */
     protected static $attributeMap = [
         'ids' => 'ids',
-        'values' => 'values'
+        'values' => 'values',
+        'amend' => 'amend'
     ];
 
     /**
@@ -181,7 +185,8 @@ class InsertValuesQuery implements ModelInterface, ArrayAccess, \JsonSerializabl
      */
     protected static $setters = [
         'ids' => 'setIds',
-        'values' => 'setValues'
+        'values' => 'setValues',
+        'amend' => 'setAmend'
     ];
 
     /**
@@ -191,7 +196,8 @@ class InsertValuesQuery implements ModelInterface, ArrayAccess, \JsonSerializabl
      */
     protected static $getters = [
         'ids' => 'getIds',
-        'values' => 'getValues'
+        'values' => 'getValues',
+        'amend' => 'getAmend'
     ];
 
     /**
@@ -253,6 +259,7 @@ class InsertValuesQuery implements ModelInterface, ArrayAccess, \JsonSerializabl
     {
         $this->setIfExists('ids', $data ?? [], null);
         $this->setIfExists('values', $data ?? [], null);
+        $this->setIfExists('amend', $data ?? [], null);
     }
 
     /**
@@ -353,6 +360,40 @@ class InsertValuesQuery implements ModelInterface, ArrayAccess, \JsonSerializabl
             throw new \InvalidArgumentException('non-nullable values cannot be null');
         }
         $this->container['values'] = $values;
+
+        return $this;
+    }
+
+    /**
+     * Gets amend
+     *
+     * @return string|null
+     */
+    public function getAmend()
+    {
+        return $this->container['amend'];
+    }
+
+    /**
+     * Sets amend
+     *
+     * @param string|null $amend Amend operation (None, Add, Remove, Replace)
+     *
+     * @return self
+     */
+    public function setAmend($amend)
+    {
+        if (is_null($amend)) {
+            array_push($this->openAPINullablesSetToNull, 'amend');
+        } else {
+            $nullablesSetToNull = $this->getOpenAPINullablesSetToNull();
+            $index = array_search('amend', $nullablesSetToNull);
+            if ($index !== FALSE) {
+                unset($nullablesSetToNull[$index]);
+                $this->setOpenAPINullablesSetToNull($nullablesSetToNull);
+            }
+        }
+        $this->container['amend'] = $amend;
 
         return $this;
     }

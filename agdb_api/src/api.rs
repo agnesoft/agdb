@@ -1,6 +1,7 @@
 use std::sync::atomic::AtomicU16;
 use std::time::Duration;
 
+use agdb::Amend;
 use agdb::Comparison;
 use agdb::CountComparison;
 use agdb::DbElement;
@@ -138,6 +139,7 @@ impl Api {
     pub fn query_types() -> Vec<Type> {
         vec![
             QueryType::type_def(),
+            Amend::type_def(),
             QueryAliases::type_def(),
             InsertAliasesQuery::type_def(),
             InsertEdgesQuery::type_def(),

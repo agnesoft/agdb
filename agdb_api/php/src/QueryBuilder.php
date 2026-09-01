@@ -702,9 +702,7 @@ class InsertValuesBuilder
         if ($this->amend !== null) {
             $params["amend"] = $this->amend;
         }
-        return new InsertValuesIdsBuilder(
-            new InsertValuesQuery($params)
-        );
+        return new InsertValuesIdsBuilder(new InsertValuesQuery($params));
     }
 
     public function search(): SearchBuilder
@@ -808,7 +806,6 @@ class InsertBuilder
     {
         return new InsertValuesBuilder(to_single_values($data), "Add");
     }
-
 }
 
 class RemoveAliasesBuilder

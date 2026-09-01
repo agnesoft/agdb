@@ -692,7 +692,6 @@ class InsertBuilder {
             amend: "Add",
         });
     }
-
 }
 
 class RemoveIdsBuilder {

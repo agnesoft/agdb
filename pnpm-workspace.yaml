@@ -26,11 +26,10 @@ catalog:
   "@rushstack/eslint-patch": ^1
   "@theguild/remark-mermaid": ^0.3
   "@tsconfig/node18": ^18
-  "@types/jsdom": ^30
+  "@types/jsdom": ^27
   "@types/node": ^24
   "@typescript-eslint/eslint-plugin": ^8
   "@typescript-eslint/parser": ^8
-  "@vitejs/plugin-react": ^6
   "@vitejs/plugin-vue": ^6
   "@vitest/coverage-istanbul": ^4
   "@vitest/coverage-v8": ^4
@@ -52,7 +51,7 @@ catalog:
   highlight.js: ^11
   jsdom: ^27
   less: ^4
-  npm-run-all2: ^9
+  npm-run-all2: ^8
   openapi-client-axios: ^7
   openapicmd: ^2
   prettier: ^3

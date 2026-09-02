@@ -8,6 +8,7 @@ export default defineNuxtConfig({
     // "nuxt-og-image",
     "nuxt-llms",
     "@nuxt/test-utils/module",
+    "nuxt-site-config",
   ],
   ssr: true,
 

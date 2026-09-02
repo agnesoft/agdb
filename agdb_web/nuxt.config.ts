@@ -5,7 +5,7 @@ export default defineNuxtConfig({
     "@nuxt/image",
     "@nuxt/ui",
     "@nuxt/content",
-    "nuxt-og-image",
+    // "nuxt-og-image",
     "nuxt-llms",
     "@nuxt/test-utils/module",
   ],

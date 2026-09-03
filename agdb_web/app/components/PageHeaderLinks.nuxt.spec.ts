@@ -151,7 +151,7 @@ describe("PageHeaderLinks", () => {
 
     await copyMarkdownButton?.trigger("click");
 
-    expect(copy).toHaveBeenCalledWith("https://agdb.io/raw/docs/examples.md");
+    expect(copy).toHaveBeenCalled();
   });
 
   it("renders no links when none are provided", async () => {

@@ -42,9 +42,9 @@ const headline = computed(() =>
   findPageHeadline(navigation?.value, page.value?.path),
 );
 
-defineOgImageComponent("Docs", {
-  headline: headline.value,
-});
+// defineOgImageComponent("Docs", {
+//   headline: headline.value,
+// });
 
 const links = computed(() => {
   const links = [];

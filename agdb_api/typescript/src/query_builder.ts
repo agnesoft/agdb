@@ -614,6 +614,7 @@ class InsertBuilder {
             values: { Multi: [] },
         };
 
+        // eslint-disable-next-line no-useless-assignment
         let multiItem: Components.Schemas.DbKeyValue[] = [];
         for (const elem of elems) {
             multiItem = [];

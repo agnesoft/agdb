@@ -496,12 +496,12 @@ async fn catchup_logs_from_leader(
             Some(Err(e)) => {
                 return Err(ServerError::from(format!(
                     "log catch-up stream error: {e:?}"
-                )))
+                )));
             }
             None => {
                 return Err(ServerError::from(
                     "log catch-up response too small (missing header)",
-                ))
+                ));
             }
         }
     }
@@ -529,7 +529,7 @@ async fn catchup_logs_from_leader(
                 Some(Err(e)) => {
                     return Err(ServerError::from(format!(
                         "log catch-up stream error: {e:?}"
-                    )))
+                    )));
                 }
                 None => return Err(ServerError::from("log catch-up truncated (json_len)")),
             }
@@ -543,7 +543,7 @@ async fn catchup_logs_from_leader(
                 Some(Err(e)) => {
                     return Err(ServerError::from(format!(
                         "log catch-up stream error: {e:?}"
-                    )))
+                    )));
                 }
                 None => return Err(ServerError::from("log catch-up truncated (json_bytes)")),
             }
@@ -565,12 +565,12 @@ async fn catchup_logs_from_leader(
         raft.storage.append(log, None).await?;
     }
 
-    if let Some(last_index) = last_applied_index {
-        if commit_index > last_index {
-            return Err(ServerError::from(format!(
-                "log catch-up commit_index {commit_index} exceeds last applied index {last_index}",
-            )));
-        }
+    if let Some(last_index) = last_applied_index
+        && commit_index > last_index
+    {
+        return Err(ServerError::from(format!(
+            "log catch-up commit_index {commit_index} exceeds last applied index {last_index}",
+        )));
     }
 
     if commit_index > raft.storage.commit {

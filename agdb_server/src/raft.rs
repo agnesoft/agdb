@@ -68,7 +68,13 @@ pub(crate) struct Request<T> {
     prune_index: u64,
     #[serde(default)]
     force_resync: bool,
-    pub(crate) data: RequestType<T>,
+    data: RequestType<T>,
+}
+
+impl<T> Request<T> {
+    pub(crate) fn is_append(&self) -> bool {
+        matches!(self.data, RequestType::Append(_))
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]

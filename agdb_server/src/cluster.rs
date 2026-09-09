@@ -286,7 +286,7 @@ async fn start_cluster(
                                 "[{index}] Error sending response to cluster node '{node_index}': {e:?}"
                             ),
                         }
-                    } else if matches!(request.data, raft::RequestType::Append(_)) {
+                    } else if request.is_append() {
                         let fail_response = raft::Response {
                             target: request.index,
                             result: raft::ResponseType::CommitError("send failed".into()),
@@ -487,19 +487,27 @@ async fn catchup_logs_from_leader(
         )));
     }
 
-    let body = response
-        .bytes()
-        .await
-        .map_err(|e| ServerError::from(format!("log catch-up stream error: {e:?}")))?;
+    let mut stream = response.bytes_stream();
+    let mut buf: Vec<u8> = Vec::new();
 
-    if body.len() < 16 {
-        return Err(ServerError::from(
-            "log catch-up response too small (missing header)",
-        ));
+    while buf.len() < 16 {
+        match stream.next().await {
+            Some(Ok(chunk)) => buf.extend_from_slice(&chunk),
+            Some(Err(e)) => {
+                return Err(ServerError::from(format!(
+                    "log catch-up stream error: {e:?}"
+                )))
+            }
+            None => {
+                return Err(ServerError::from(
+                    "log catch-up response too small (missing header)",
+                ))
+            }
+        }
     }
 
-    let entry_count = u64::from_le_bytes(body[0..8].try_into().unwrap());
-    let commit_index = u64::from_le_bytes(body[8..16].try_into().unwrap());
+    let entry_count = u64::from_le_bytes(buf[0..8].try_into().unwrap());
+    let commit_index = u64::from_le_bytes(buf[8..16].try_into().unwrap());
 
     const MAX_CATCHUP_ENTRIES: u64 = 100_000;
     if entry_count > MAX_CATCHUP_ENTRIES {
@@ -508,39 +516,63 @@ async fn catchup_logs_from_leader(
         )));
     }
 
-    let mut offset = 16usize;
-    let mut entries = Vec::with_capacity(entry_count as usize);
-
-    for _ in 0..entry_count {
-        if offset + 8 > body.len() {
-            return Err(ServerError::from("log catch-up truncated (json_len)"));
-        }
-        let json_len = u64::from_le_bytes(body[offset..offset + 8].try_into().unwrap()) as usize;
-        offset += 8;
-
-        if offset + json_len > body.len() {
-            return Err(ServerError::from("log catch-up truncated (json_bytes)"));
-        }
-        let log: Log<ClusterAction> = serde_json::from_slice(&body[offset..offset + json_len])
-            .map_err(|e| ServerError::from(format!("log catch-up deserialization error: {e}")))?;
-        entries.push(log);
-        offset += json_len;
-    }
-
-    if let Some(first) = entries.first()
-        && first.index > from_index + 1
-    {
-        return Err(ServerError::from(format!(
-            "log catch-up gap: need index {}, first available is {}",
-            from_index + 1,
-            first.index
-        )));
-    }
+    buf.drain(0..16);
 
     let mut raft = cluster.raft.write().await;
-    for log in &entries {
-        raft.storage.append(log.clone(), None).await?;
+    let mut prev_index = from_index;
+    let mut last_applied_index: Option<u64> = None;
+
+    for _ in 0..entry_count {
+        while buf.len() < 8 {
+            match stream.next().await {
+                Some(Ok(chunk)) => buf.extend_from_slice(&chunk),
+                Some(Err(e)) => {
+                    return Err(ServerError::from(format!(
+                        "log catch-up stream error: {e:?}"
+                    )))
+                }
+                None => return Err(ServerError::from("log catch-up truncated (json_len)")),
+            }
+        }
+        let json_len = u64::from_le_bytes(buf[0..8].try_into().unwrap()) as usize;
+        buf.drain(0..8);
+
+        while buf.len() < json_len {
+            match stream.next().await {
+                Some(Ok(chunk)) => buf.extend_from_slice(&chunk),
+                Some(Err(e)) => {
+                    return Err(ServerError::from(format!(
+                        "log catch-up stream error: {e:?}"
+                    )))
+                }
+                None => return Err(ServerError::from("log catch-up truncated (json_bytes)")),
+            }
+        }
+        let log: Log<ClusterAction> = serde_json::from_slice(&buf[..json_len])
+            .map_err(|e| ServerError::from(format!("log catch-up deserialization error: {e}")))?;
+        buf.drain(0..json_len);
+
+        if log.index != prev_index + 1 {
+            return Err(ServerError::from(format!(
+                "log catch-up non-contiguous: expected index {}, got {}",
+                prev_index + 1,
+                log.index
+            )));
+        }
+
+        prev_index = log.index;
+        last_applied_index = Some(log.index);
+        raft.storage.append(log, None).await?;
     }
+
+    if let Some(last_index) = last_applied_index {
+        if commit_index > last_index {
+            return Err(ServerError::from(format!(
+                "log catch-up commit_index {commit_index} exceeds last applied index {last_index}",
+            )));
+        }
+    }
+
     if commit_index > raft.storage.commit {
         raft.storage.commit(commit_index).await?;
     }
@@ -549,7 +581,7 @@ async fn catchup_logs_from_leader(
     crate::info!(
         "[{}] Log catch-up complete: {} entries applied, commit_index={}",
         cluster.index,
-        entries.len(),
+        entry_count,
         commit_index
     );
 

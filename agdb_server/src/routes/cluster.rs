@@ -692,14 +692,11 @@ pub(crate) async fn logs(
             .map_err(|e| ServerError::from(e.to_string()));
     }
 
-    let raft = cluster.raft.read().await;
-    let entries = raft
-        .storage
-        .cluster_log
-        .logs_since(params.from_index)
-        .await?;
-    let commit_index = raft.storage.commit;
-    drop(raft);
+    let (cluster_log, commit_index) = {
+        let raft = cluster.raft.read().await;
+        (raft.storage.cluster_log.clone(), raft.storage.commit)
+    };
+    let entries = cluster_log.logs_since(params.from_index).await?;
 
     if entries.is_empty() {
         return axum::response::Response::builder()

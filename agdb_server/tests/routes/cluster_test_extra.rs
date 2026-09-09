@@ -251,11 +251,10 @@ async fn log_catchup_after_append_failures() -> Result<(), TestError> {
                 )
                 .await
             && let Ok(value) = result.1[0].elements[0].values[0].value.to_u64()
+            && value == 9
         {
-            if value == 9 {
-                synced = true;
-                break;
-            }
+            synced = true;
+            break;
         }
 
         tokio::time::sleep(std::time::Duration::from_secs(1)).await;

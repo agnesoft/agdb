@@ -518,9 +518,8 @@ async fn catchup_logs_from_leader(
 
     buf.drain(0..16);
 
-    let mut raft = cluster.raft.write().await;
+    let mut entries = Vec::with_capacity(entry_count as usize);
     let mut prev_index = from_index;
-    let mut last_applied_index: Option<u64> = None;
 
     for _ in 0..entry_count {
         while buf.len() < 8 {
@@ -561,21 +560,28 @@ async fn catchup_logs_from_leader(
         }
 
         prev_index = log.index;
-        last_applied_index = Some(log.index);
+        entries.push(log);
+    }
+
+    let mut raft = cluster.raft.write().await;
+    let last_index = entries.last().map(|log| log.index);
+
+    for log in entries {
         raft.storage.append(log, None).await?;
     }
 
-    if let Some(last_index) = last_applied_index
-        && commit_index > last_index
-    {
-        return Err(ServerError::from(format!(
-            "log catch-up commit_index {commit_index} exceeds last applied index {last_index}",
-        )));
+    if let Some(last_index) = last_index {
+        if commit_index > last_index {
+            return Err(ServerError::from(format!(
+                "log catch-up commit_index {commit_index} exceeds last applied index {last_index}",
+            )));
+        }
+
+        if commit_index > raft.storage.commit {
+            raft.storage.commit(commit_index).await?;
+        }
     }
 
-    if commit_index > raft.storage.commit {
-        raft.storage.commit(commit_index).await?;
-    }
     raft.refresh_local_from_storage();
 
     crate::info!(

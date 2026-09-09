@@ -1,6 +1,7 @@
 use agdb::SyncMode;
 use agdb_api::LogLevelFilter;
 use agdb_api::config_impl::ConfigImpl;
+use agdb_api::config_impl::DEFAULT_CLUSTER_MAX_CHUNK_SIZE;
 use agdb_api::config_impl::DEFAULT_CLUSTER_MAX_LOG_ENTRIES;
 use agdb_api::config_impl::DEFAULT_LOG_BODY_LIMIT;
 use agdb_api::config_impl::DEFAULT_REQUEST_BODY_LIMIT;
@@ -174,6 +175,14 @@ pub(crate) fn from_str(content: &str) -> Result<ConfigImpl, String> {
                         .parse()
                         .map_err(|e| format!("Invalid cluster_max_log_entries: {e:?}"))?
                 }
+                "cluster_max_chunk_size" => {
+                    config.cluster_max_chunk_size = value
+                        .parse()
+                        .map_err(|e| format!("Invalid cluster_max_chunk_size: {e:?}"))?;
+                    if config.cluster_max_chunk_size == 0 {
+                        config.cluster_max_chunk_size = DEFAULT_CLUSTER_MAX_CHUNK_SIZE;
+                    }
+                }
                 "token_expiry_seconds" => {
                     config.token_expiry_seconds = value
                         .parse()
@@ -241,6 +250,7 @@ fn default_config() -> ConfigImpl {
         cluster_election_factor_ms: 1000,
         cluster: vec![],
         cluster_max_log_entries: DEFAULT_CLUSTER_MAX_LOG_ENTRIES,
+        cluster_max_chunk_size: DEFAULT_CLUSTER_MAX_CHUNK_SIZE,
         cluster_node_id: 0,
         start_time: 0,
         token_expiry_seconds: DEFAULT_TOKEN_EXPIRY_SECONDS,
@@ -306,6 +316,7 @@ mod tests {
             cluster_election_factor_ms: 1000,
             cluster: vec![],
             cluster_max_log_entries: DEFAULT_CLUSTER_MAX_LOG_ENTRIES,
+            cluster_max_chunk_size: DEFAULT_CLUSTER_MAX_CHUNK_SIZE,
             cluster_node_id: 0,
             start_time: 0,
             token_expiry_seconds: DEFAULT_TOKEN_EXPIRY_SECONDS,
@@ -347,6 +358,7 @@ mod tests {
             cluster_election_factor_ms: 1000,
             cluster: vec![],
             cluster_max_log_entries: DEFAULT_CLUSTER_MAX_LOG_ENTRIES,
+            cluster_max_chunk_size: DEFAULT_CLUSTER_MAX_CHUNK_SIZE,
             cluster_node_id: 0,
             start_time: 0,
             token_expiry_seconds: DEFAULT_TOKEN_EXPIRY_SECONDS,
@@ -387,6 +399,7 @@ mod tests {
             cluster_election_factor_ms: 1000,
             cluster: vec![],
             cluster_max_log_entries: DEFAULT_CLUSTER_MAX_LOG_ENTRIES,
+            cluster_max_chunk_size: DEFAULT_CLUSTER_MAX_CHUNK_SIZE,
             cluster_node_id: 0,
             start_time: 0,
             token_expiry_seconds: DEFAULT_TOKEN_EXPIRY_SECONDS,

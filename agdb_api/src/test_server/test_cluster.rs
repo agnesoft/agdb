@@ -3,6 +3,7 @@ use crate::ClusterStatus;
 use crate::LogLevelFilter;
 use crate::ReqwestClient;
 use crate::config_impl::ConfigImpl;
+use crate::config_impl::DEFAULT_CLUSTER_MAX_CHUNK_SIZE;
 use crate::config_impl::DEFAULT_CLUSTER_MAX_LOG_ENTRIES;
 use crate::config_impl::DEFAULT_LOG_BODY_LIMIT;
 use crate::config_impl::DEFAULT_REQUEST_BODY_LIMIT;
@@ -160,6 +161,7 @@ async fn create_cluster_impl(
             cluster_election_factor_ms: 250,
             cluster: Vec::new(),
             cluster_max_log_entries: max_log_entries,
+            cluster_max_chunk_size: DEFAULT_CLUSTER_MAX_CHUNK_SIZE,
             cluster_node_id: 0,
             start_time: 0,
             token_expiry_seconds: DEFAULT_TOKEN_EXPIRY_SECONDS,

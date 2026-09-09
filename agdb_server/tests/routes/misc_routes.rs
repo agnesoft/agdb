@@ -5,6 +5,7 @@ use agdb_api::DbKind;
 use agdb_api::LogLevelFilter;
 use agdb_api::ReqwestClient;
 use agdb_api::config_impl::ConfigImpl;
+use agdb_api::config_impl::DEFAULT_CLUSTER_MAX_CHUNK_SIZE;
 use agdb_api::config_impl::DEFAULT_CLUSTER_MAX_LOG_ENTRIES;
 use agdb_api::config_impl::DEFAULT_LOG_BODY_LIMIT;
 use agdb_api::config_impl::DEFAULT_REQUEST_BODY_LIMIT;
@@ -165,6 +166,7 @@ async fn basepath_test() -> anyhow::Result<()> {
         cluster_election_factor_ms: 1000,
         cluster: Vec::new(),
         cluster_max_log_entries: DEFAULT_CLUSTER_MAX_LOG_ENTRIES,
+        cluster_max_chunk_size: DEFAULT_CLUSTER_MAX_CHUNK_SIZE,
         cluster_node_id: 0,
         start_time: 0,
         token_expiry_seconds: DEFAULT_TOKEN_EXPIRY_SECONDS,
@@ -343,6 +345,7 @@ async fn large_payload() -> anyhow::Result<()> {
         cluster_election_factor_ms: 1000,
         cluster: Vec::new(),
         cluster_max_log_entries: DEFAULT_CLUSTER_MAX_LOG_ENTRIES,
+        cluster_max_chunk_size: DEFAULT_CLUSTER_MAX_CHUNK_SIZE,
         cluster_node_id: 0,
         start_time: 0,
         token_expiry_seconds: DEFAULT_TOKEN_EXPIRY_SECONDS,
@@ -435,6 +438,7 @@ async fn static_files() -> anyhow::Result<()> {
         cluster_election_factor_ms: 1000,
         cluster: Vec::new(),
         cluster_max_log_entries: DEFAULT_CLUSTER_MAX_LOG_ENTRIES,
+        cluster_max_chunk_size: DEFAULT_CLUSTER_MAX_CHUNK_SIZE,
         cluster_node_id: 0,
         start_time: 0,
         token_expiry_seconds: DEFAULT_TOKEN_EXPIRY_SECONDS,
@@ -504,6 +508,7 @@ async fn static_files_with_basepath() -> anyhow::Result<()> {
         cluster_election_factor_ms: 1000,
         cluster: Vec::new(),
         cluster_max_log_entries: DEFAULT_CLUSTER_MAX_LOG_ENTRIES,
+        cluster_max_chunk_size: DEFAULT_CLUSTER_MAX_CHUNK_SIZE,
         cluster_node_id: 0,
         start_time: 0,
         token_expiry_seconds: DEFAULT_TOKEN_EXPIRY_SECONDS,

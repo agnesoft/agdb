@@ -285,7 +285,13 @@ async fn start_cluster(
                             Err(e) => crate::warn!(
                                 "[{index}] Error sending response to cluster node '{node_index}': {e:?}"
                             ),
+                        }
+                    } else if request.is_append() {
+                        let fail_response = raft::Response {
+                            target: request.index,
+                            result: raft::ResponseType::CommitError("send failed".into()),
                         };
+                        let _ = node.responses.send((request, fail_response));
                     }
                 } else {
                     break;
@@ -388,18 +394,33 @@ async fn resync_from_leader(cluster: &Cluster, config: &Config) -> ServerResult<
         }
     };
 
+    cluster.resync.store(true, Ordering::Relaxed);
+
+    let from_index = cluster.raft.read().await.storage.log_commit();
+    match catchup_logs_from_leader(cluster, config, leader_index, from_index).await {
+        Ok(()) => {
+            cluster.resync.store(false, Ordering::Relaxed);
+            crate::info!("[{}] Resync completed via log catch-up", cluster.index);
+            return Ok(());
+        }
+        Err(e) => {
+            crate::info!(
+                "[{}] Log catch-up failed ({e:?}), falling back to full snapshot",
+                cluster.index
+            );
+        }
+    }
+
     let mut snapshot_sources: Vec<usize> = (0..cluster.nodes.len())
         .filter(|index| *index != cluster.index && *index != leader_index)
         .collect();
     snapshot_sources.push(leader_index);
 
     crate::info!(
-        "[{}] Starting resync, snapshot candidates: {:?}",
+        "[{}] Starting snapshot resync, candidates: {:?}",
         cluster.index,
         snapshot_sources
     );
-
-    cluster.resync.store(true, Ordering::Relaxed);
 
     let mut result = Err(ServerError::from("no snapshot source available"));
 
@@ -430,15 +451,150 @@ async fn resync_from_leader(cluster: &Cluster, config: &Config) -> ServerResult<
     cluster.resync.store(false, Ordering::Relaxed);
 
     match &result {
-        Ok(()) => crate::info!("[{}] Resync completed successfully", cluster.index),
+        Ok(()) => crate::info!("[{}] Resync completed via snapshot", cluster.index),
         Err(e) => crate::error!("[{}] Resync failed: {:?}", cluster.index, e),
     }
 
     result
 }
 
+async fn catchup_logs_from_leader(
+    cluster: &Cluster,
+    config: &Config,
+    leader_index: usize,
+    from_index: u64,
+) -> ServerResult<()> {
+    let logs_url = format!(
+        "{}/api/v1/cluster/logs?from_index={from_index}",
+        cluster.nodes[leader_index].base_url
+    );
+
+    let response = cluster.nodes[leader_index]
+        .client
+        .client
+        .get(&logs_url)
+        .bearer_auth(&config.cluster_token)
+        .timeout(Duration::from_secs(600))
+        .send()
+        .await
+        .map_err(|e| ServerError::from(format!("log catch-up request failed: {e:?}")))?;
+
+    let status = response.status().as_u16();
+    if status != 200 {
+        let body = response.text().await.unwrap_or_default();
+        return Err(ServerError::from(format!(
+            "log catch-up endpoint returned {status}: {body}",
+        )));
+    }
+
+    let mut stream = response.bytes_stream();
+    let mut buf: Vec<u8> = Vec::new();
+
+    while buf.len() < 16 {
+        match stream.next().await {
+            Some(Ok(chunk)) => buf.extend_from_slice(&chunk),
+            Some(Err(e)) => {
+                return Err(ServerError::from(format!(
+                    "log catch-up stream error: {e:?}"
+                )));
+            }
+            None => {
+                return Err(ServerError::from(
+                    "log catch-up response too small (missing header)",
+                ));
+            }
+        }
+    }
+
+    let entry_count = u64::from_le_bytes(buf[0..8].try_into().unwrap());
+    let commit_index = u64::from_le_bytes(buf[8..16].try_into().unwrap());
+
+    const MAX_CATCHUP_ENTRIES: u64 = 100_000;
+    if entry_count > MAX_CATCHUP_ENTRIES {
+        return Err(ServerError::from(format!(
+            "log catch-up entry count {entry_count} exceeds limit {MAX_CATCHUP_ENTRIES}",
+        )));
+    }
+
+    buf.drain(0..16);
+
+    let mut entries = Vec::with_capacity(entry_count as usize);
+    let mut prev_index = from_index;
+
+    for _ in 0..entry_count {
+        while buf.len() < 8 {
+            match stream.next().await {
+                Some(Ok(chunk)) => buf.extend_from_slice(&chunk),
+                Some(Err(e)) => {
+                    return Err(ServerError::from(format!(
+                        "log catch-up stream error: {e:?}"
+                    )));
+                }
+                None => return Err(ServerError::from("log catch-up truncated (json_len)")),
+            }
+        }
+        let json_len = u64::from_le_bytes(buf[0..8].try_into().unwrap()) as usize;
+        buf.drain(0..8);
+
+        while buf.len() < json_len {
+            match stream.next().await {
+                Some(Ok(chunk)) => buf.extend_from_slice(&chunk),
+                Some(Err(e)) => {
+                    return Err(ServerError::from(format!(
+                        "log catch-up stream error: {e:?}"
+                    )));
+                }
+                None => return Err(ServerError::from("log catch-up truncated (json_bytes)")),
+            }
+        }
+        let log: Log<ClusterAction> = serde_json::from_slice(&buf[..json_len])
+            .map_err(|e| ServerError::from(format!("log catch-up deserialization error: {e}")))?;
+        buf.drain(0..json_len);
+
+        if log.index != prev_index + 1 {
+            return Err(ServerError::from(format!(
+                "log catch-up non-contiguous: expected index {}, got {}",
+                prev_index + 1,
+                log.index
+            )));
+        }
+
+        prev_index = log.index;
+        entries.push(log);
+    }
+
+    let mut raft = cluster.raft.write().await;
+    let last_index = entries.last().map(|log| log.index);
+
+    for log in entries {
+        raft.storage.append(log, None).await?;
+    }
+
+    if let Some(last_index) = last_index {
+        if commit_index > last_index {
+            return Err(ServerError::from(format!(
+                "log catch-up commit_index {commit_index} exceeds last applied index {last_index}",
+            )));
+        }
+
+        if commit_index > raft.storage.commit {
+            raft.storage.commit(commit_index).await?;
+        }
+    }
+
+    raft.refresh_local_from_storage();
+
+    crate::info!(
+        "[{}] Log catch-up complete: {} entries applied, commit_index={}",
+        cluster.index,
+        entry_count,
+        commit_index
+    );
+
+    Ok(())
+}
+
 const SNAPSHOT_PARTIAL_TTL_SECS: u64 = 3600;
-const SNAPSHOT_EXTRACT_CHUNK: usize = 65536;
 
 async fn validate_snapshot_header(partial_file: &Path, current_commit: u64) -> ServerResult<()> {
     let mut file = tokio::fs::File::open(partial_file).await?;
@@ -477,7 +633,13 @@ async fn do_resync(cluster: &Cluster, config: &Config, node_index: usize) -> Ser
     let current_commit = cluster.raft.read().await.storage.commit;
     validate_snapshot_header(&partial_file, current_commit).await?;
 
-    if let Err(e) = extract_snapshot_binary(&partial_file, &install_dir).await {
+    if let Err(e) = extract_snapshot_binary(
+        &partial_file,
+        &install_dir,
+        config.cluster_max_chunk_size as usize,
+    )
+    .await
+    {
         let _ = std::fs::remove_dir_all(&install_dir);
         return Err(e);
     }
@@ -598,7 +760,11 @@ async fn download_snapshot_to_partial(
     Ok(())
 }
 
-async fn extract_snapshot_binary(partial_file: &Path, install_dir: &Path) -> ServerResult<()> {
+async fn extract_snapshot_binary(
+    partial_file: &Path,
+    install_dir: &Path,
+    chunk_size: usize,
+) -> ServerResult<()> {
     std::fs::create_dir_all(install_dir)?;
 
     let mut file = tokio::fs::File::open(partial_file).await?;
@@ -619,7 +785,7 @@ async fn extract_snapshot_binary(partial_file: &Path, install_dir: &Path) -> Ser
     }
 
     let canonical_install = install_dir.canonicalize()?;
-    let mut buf = vec![0u8; SNAPSHOT_EXTRACT_CHUNK];
+    let mut buf = vec![0u8; chunk_size];
 
     for _ in 0..file_count {
         let mut len_buf = [0u8; 4];

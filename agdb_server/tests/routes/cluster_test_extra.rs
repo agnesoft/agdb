@@ -170,6 +170,102 @@ async fn rebalance() -> Result<(), TestError> {
     Ok(())
 }
 
+#[tokio::test]
+async fn log_catchup_after_append_failures() -> Result<(), TestError> {
+    // Default max_log_entries (1000): logs are NOT pruned.
+    // When the follower is down, Append delivery fails repeatedly.
+    // After APPEND_FAILURE_THRESHOLD consecutive failures the leader sets
+    // force_resync, causing the next heartbeat to carry an elevated
+    // prune_index (= leader's log_commit).  The follower sees
+    // prune_index > its own log_commit → needs_resync →
+    // resync_from_leader tries log catch-up first, which succeeds
+    // because the entries are still available (no pruning).
+    let mut servers = create_cluster(3, false).await?;
+    let mut follower = AgdbApi::new(
+        ReqwestClient::with_client(reqwest_client()),
+        &servers[2].address,
+    );
+    follower.cluster_user_login(ADMIN, ADMIN).await?;
+    follower.admin_shutdown().await?;
+    servers[2].wait().await?;
+
+    let mut leader = AgdbApi::new(
+        ReqwestClient::with_client(reqwest_client()),
+        &servers[0].address,
+    );
+    leader.user_login(ADMIN, ADMIN).await?;
+    leader
+        .db_add(ADMIN, "log_catchup_test", DbKind::Mapped)
+        .await?;
+    leader
+        .db_exec_mut(
+            ADMIN,
+            "log_catchup_test",
+            &[QueryBuilder::insert()
+                .nodes()
+                .aliases("root")
+                .values(vec![vec![("key", 1).into()]])
+                .query()
+                .into()],
+        )
+        .await?;
+
+    // Each mutation triggers an Append to the downed follower which fails,
+    // incrementing append_failures.  After 3 failures force_resync is set.
+    for i in 0..10 {
+        leader
+            .db_exec_mut(
+                ADMIN,
+                "log_catchup_test",
+                &[QueryBuilder::insert()
+                    .values(vec![vec![("key", i).into()]])
+                    .ids("root")
+                    .query()
+                    .into()],
+            )
+            .await?;
+    }
+
+    servers[2].restart()?;
+    wait_for_ready(&follower).await?;
+
+    let node1 = AgdbApi::new(
+        ReqwestClient::with_client(reqwest_client()),
+        &servers[1].address,
+    );
+    wait_for_leader(&node1).await?;
+
+    let mut synced = false;
+
+    for _ in 0..10 {
+        if follower.user_login(ADMIN, ADMIN).await.is_ok()
+            && let Ok(result) = follower
+                .db_exec(
+                    ADMIN,
+                    "log_catchup_test",
+                    &[QueryBuilder::select()
+                        .values("key")
+                        .ids("root")
+                        .query()
+                        .into()],
+                )
+                .await
+            && let Ok(value) = result.1[0].elements[0].values[0].value.to_u64()
+        {
+            if value == 9 {
+                synced = true;
+                break;
+            }
+        }
+
+        tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+    }
+
+    assert!(synced, "follower did not sync after append failures");
+
+    Ok(())
+}
+
 fn cluster_log_entry_count(data_dir: &str) -> u64 {
     let log_path = format!("{data_dir}/agdb_server.log");
     let db = agdb::Db::new(&log_path).expect("failed to open cluster log");

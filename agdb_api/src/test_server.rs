@@ -6,6 +6,7 @@ use crate::AgdbApi;
 use crate::QueryAudit;
 use crate::ReqwestClient;
 use crate::config_impl::ConfigImpl;
+use crate::config_impl::DEFAULT_CLUSTER_MAX_CHUNK_SIZE;
 use crate::config_impl::DEFAULT_CLUSTER_MAX_LOG_ENTRIES;
 use crate::config_impl::DEFAULT_LOG_BODY_LIMIT;
 use crate::config_impl::DEFAULT_REQUEST_BODY_LIMIT;
@@ -320,6 +321,7 @@ impl TestServerImpl {
             cluster_election_factor_ms: 1000,
             cluster: Vec::new(),
             cluster_max_log_entries: DEFAULT_CLUSTER_MAX_LOG_ENTRIES,
+            cluster_max_chunk_size: DEFAULT_CLUSTER_MAX_CHUNK_SIZE,
             cluster_node_id: 0,
             start_time: 0,
             token_expiry_seconds: DEFAULT_TOKEN_EXPIRY_SECONDS,
@@ -331,7 +333,8 @@ impl TestServerImpl {
     }
 
     pub fn next_port() -> u16 {
-        PORT.fetch_add(1, Ordering::Relaxed) + std::process::id() as u16
+        PORT.fetch_add(1, Ordering::Relaxed)
+            .wrapping_add(std::process::id() as u16)
     }
 
     pub fn restart(&mut self) -> Result<(), TestError> {

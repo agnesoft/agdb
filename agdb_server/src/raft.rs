@@ -66,7 +66,9 @@ pub(crate) struct Request<T> {
     log_term: u64,
     log_commit: u64,
     prune_index: u64,
-    data: RequestType<T>,
+    #[serde(default)]
+    force_resync: bool,
+    pub(crate) data: RequestType<T>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -75,6 +77,8 @@ pub(crate) struct Response {
     pub(crate) result: ResponseType,
 }
 
+const APPEND_FAILURE_THRESHOLD: u32 = 3;
+
 struct Node {
     index: u64,
     log_index: u64,
@@ -82,6 +86,8 @@ struct Node {
     log_commit: u64,
     timer: Instant,
     voted: bool,
+    append_failures: u32,
+    force_resync: bool,
 }
 
 pub(crate) trait Storage<T, N> {
@@ -150,6 +156,8 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
                     },
                     timer: Instant::now(),
                     voted: i == settings.index,
+                    append_failures: 0,
+                    force_resync: false,
                 })
                 .collect(),
             hash: settings.hash,
@@ -204,6 +212,7 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
                 log_term: self.local().log_term,
                 log_commit: self.local().log_commit,
                 prune_index,
+                force_resync: false,
                 data: RequestType::Append(vec![log.clone()]),
             })
             .collect();
@@ -307,7 +316,14 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
         match (&self.state, &request.data, &response.result) {
             (Election, PreVote, OK) => Ok(self.pre_vote_received(request)),
             (Candidate, Vote, OK) => Ok(self.vote_received(request)),
-            (Leader, Heartbeat | Append(_), OK) => self.commit(request).await,
+            (Leader, Heartbeat | Append(_), OK) => {
+                self.node_mut(request.target).append_failures = 0;
+                if request.force_resync {
+                    Ok(None)
+                } else {
+                    self.commit(request).await
+                }
+            }
             (Leader, Heartbeat | Append(_), LogMismatch(mismatch)) => {
                 self.reconcile(request, mismatch).await
             }
@@ -319,6 +335,28 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
                     self.state = ClusterState::Election;
                     self.local_mut().timer = Instant::now();
                     self.election_timeout = self.first_election_timeout;
+                }
+                Ok(None)
+            }
+            (Leader, Append(_), ResponseType::CommitError(e)) => {
+                self.node_mut(request.target).append_failures += 1;
+                let failures = self.node(request.target).append_failures;
+                crate::info!(
+                    "[{}] Node {} append failed ({}/{}): {}",
+                    self.index,
+                    request.target,
+                    failures,
+                    APPEND_FAILURE_THRESHOLD,
+                    e
+                );
+                if failures >= APPEND_FAILURE_THRESHOLD {
+                    self.node_mut(request.target).force_resync = true;
+                    self.node_mut(request.target).append_failures = 0;
+                    crate::warn!(
+                        "[{}] Node {} exceeded append failure threshold, forcing resync",
+                        self.index,
+                        request.target,
+                    );
                 }
                 Ok(None)
             }
@@ -371,6 +409,7 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
             log_term: self.local().log_term,
             log_commit: self.local().log_commit,
             prune_index: self.storage.prune_index(),
+            force_resync: false,
             data: RequestType::Append(logs),
         }]))
     }
@@ -394,6 +433,7 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
                 log_term: self.local().log_term,
                 log_commit: self.local().log_commit,
                 prune_index: 0,
+                force_resync: false,
                 data: RequestType::PreVote,
             })
             .collect()
@@ -461,6 +501,7 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
                 log_term: self.local().log_term,
                 log_commit: self.local().log_commit,
                 prune_index: 0,
+                force_resync: false,
                 data: RequestType::Vote,
             })
             .collect()
@@ -552,7 +593,9 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
 
     fn heartbeat(&mut self) -> Vec<Request<T>> {
         let prune_index = self.storage.prune_index();
-        self.nodes
+        let log_commit = self.local().log_commit;
+        let requests: Vec<Request<T>> = self
+            .nodes
             .iter()
             .filter(|node| {
                 self.index != node.index
@@ -565,11 +608,18 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
                 term: self.term,
                 log_index: self.local().log_index,
                 log_term: self.local().log_term,
-                log_commit: self.local().log_commit,
+                log_commit,
                 prune_index,
+                force_resync: node.force_resync,
                 data: RequestType::Heartbeat,
             })
-            .collect()
+            .collect();
+
+        for req in &requests {
+            self.node_mut(req.target).force_resync = false;
+        }
+
+        requests
     }
 
     fn heartbeat_no_timer(&mut self) -> Vec<Request<T>> {
@@ -587,6 +637,7 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
                 log_term: self.local().log_term,
                 log_commit: self.local().log_commit,
                 prune_index,
+                force_resync: false,
                 data: RequestType::Heartbeat,
             })
             .collect();
@@ -602,6 +653,14 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
         self.validate_hash(request)?;
         self.validate_term(request)?;
         self.become_follower(request);
+
+        if request.force_resync
+            && (self.local().log_index != request.log_index
+                || self.local().log_term != request.log_term)
+        {
+            self.needs_resync = true;
+            return Self::ok(request);
+        }
 
         if request.prune_index > 0 && request.prune_index > self.storage.log_commit() {
             self.needs_resync = true;
@@ -1442,6 +1501,7 @@ mod test {
             log_term: 1,
             log_commit: 10,
             prune_index: 5,
+            force_resync: false,
             data: RequestType::Heartbeat,
         };
 
@@ -1508,6 +1568,7 @@ mod test {
             log_term: 1,
             log_commit: 10,
             prune_index: 5,
+            force_resync: false,
             data: RequestType::Heartbeat,
         };
 
@@ -1560,6 +1621,7 @@ mod test {
             log_term: 1,
             log_commit: 10,
             prune_index: 50, // leader has pruned up to 50 — way past our commit
+            force_resync: false,
             data: RequestType::Heartbeat,
         };
 
@@ -1567,6 +1629,112 @@ mod test {
         assert_eq!(response.result, ResponseType::Ok);
         // prune_index (50) > storage.log_commit() (10) => needs_resync
         assert!(cluster.needs_resync());
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn force_resync_flag_triggers_resync() -> anyhow::Result<()> {
+        // Follower at log_index=10, log_commit=10
+        let storage = TestStorage {
+            logs: (1..=10)
+                .map(|i| Log {
+                    db_id: None,
+                    index: i,
+                    term: 1,
+                    data: i as u8,
+                })
+                .collect(),
+            commit: 10,
+            prune_index: 0,
+        };
+        let settings = ClusterSettings {
+            index: 1,
+            size: 3,
+            hash: 123,
+            election_factor_ms: 1000,
+            heartbeat_timeout: Duration::from_secs(1),
+            term_timeout: Duration::from_secs(3),
+            max_log_entries: 1000,
+        };
+        let mut cluster: Cluster<u8, (), TestStorage> = Cluster::new(storage, settings);
+        cluster.state = ClusterState::Follower(0);
+        cluster.term = 1;
+
+        assert!(!cluster.needs_resync());
+
+        // Heartbeat with force_resync=true — follower's log_index (10) differs
+        // from leader's (20), so the flag triggers needs_resync.
+        let request = Request {
+            hash: 123,
+            index: 0,
+            target: 1,
+            term: 1,
+            log_index: 20,
+            log_term: 1,
+            log_commit: 20,
+            prune_index: 0,
+            force_resync: true,
+            data: RequestType::Heartbeat,
+        };
+
+        let response = cluster.request(&request).await;
+        assert_eq!(response.result, ResponseType::Ok);
+        assert!(cluster.needs_resync());
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn force_resync_skipped_when_already_caught_up() -> anyhow::Result<()> {
+        // Follower already at log_index=10, log_commit=10
+        let storage = TestStorage {
+            logs: (1..=10)
+                .map(|i| Log {
+                    db_id: None,
+                    index: i,
+                    term: 1,
+                    data: i as u8,
+                })
+                .collect(),
+            commit: 10,
+            prune_index: 0,
+        };
+        let settings = ClusterSettings {
+            index: 1,
+            size: 3,
+            hash: 123,
+            election_factor_ms: 1000,
+            heartbeat_timeout: Duration::from_secs(1),
+            term_timeout: Duration::from_secs(3),
+            max_log_entries: 1000,
+        };
+        let mut cluster: Cluster<u8, (), TestStorage> = Cluster::new(storage, settings);
+        cluster.state = ClusterState::Follower(0);
+        cluster.term = 1;
+
+        assert!(!cluster.needs_resync());
+
+        // Heartbeat with force_resync=true, but follower's log state matches the
+        // leader's (same log_index and log_term) — the follower caught up through
+        // normal reconciliation before the force_resync heartbeat arrived.
+        // Resync should NOT trigger.
+        let request = Request {
+            hash: 123,
+            index: 0,
+            target: 1,
+            term: 1,
+            log_index: 10,
+            log_term: 1,
+            log_commit: 10,
+            prune_index: 0,
+            force_resync: true,
+            data: RequestType::Heartbeat,
+        };
+
+        let response = cluster.request(&request).await;
+        assert_eq!(response.result, ResponseType::Ok);
+        assert!(!cluster.needs_resync());
 
         Ok(())
     }

@@ -284,7 +284,11 @@ pub(crate) async fn status(
 }
 
 const SNAPSHOT_STAGING_TTL_SECS: u64 = 600;
-const SNAPSHOT_STREAM_CHUNK: usize = 65536;
+
+#[derive(serde::Deserialize)]
+pub(crate) struct LogsQuery {
+    from_index: u64,
+}
 
 pub(crate) async fn snapshot(
     _cluster_id: ClusterId,
@@ -361,6 +365,7 @@ pub(crate) async fn snapshot(
         log_term,
         log_commit,
         cluster.snapshot_in_flight.clone(),
+        config.cluster_max_chunk_size as usize,
     ) {
         Ok(b) => b,
         Err(e) => {
@@ -556,6 +561,7 @@ fn snapshot_body_stream(
     log_term: u64,
     log_commit: u64,
     in_flight: Arc<AtomicUsize>,
+    chunk_size: usize,
 ) -> ServerResult<Body> {
     let files = list_snapshot_files(&staging_dir)?;
     Ok(Body::from_stream(snapshot_file_stream(
@@ -565,6 +571,7 @@ fn snapshot_body_stream(
         log_term,
         log_commit,
         in_flight,
+        chunk_size,
     )))
 }
 
@@ -575,6 +582,7 @@ fn snapshot_file_stream(
     log_term: u64,
     log_commit: u64,
     in_flight: Arc<AtomicUsize>,
+    chunk_size: usize,
 ) -> impl futures::Stream<Item = Result<bytes::Bytes, std::io::Error>> + Send + 'static {
     let file_count = files.len() as u64;
     let guard = SnapshotInFlightGuard(in_flight.clone());
@@ -596,7 +604,7 @@ fn snapshot_file_stream(
         }
         pos = 32;
 
-        let mut buf = vec![0u8; SNAPSHOT_STREAM_CHUNK];
+        let mut buf = vec![0u8; chunk_size];
 
         for (rel_path, abs_path) in files {
             use tokio::io::AsyncReadExt;
@@ -669,6 +677,82 @@ fn collect_staging_files(
         }
     }
     Ok(())
+}
+
+pub(crate) async fn logs(
+    _cluster_id: ClusterId,
+    State(cluster): State<Cluster>,
+    State(config): State<Config>,
+    Query(params): Query<LogsQuery>,
+) -> ServerResult<axum::response::Response> {
+    if cluster.resync.load(Ordering::Acquire) {
+        return axum::response::Response::builder()
+            .status(StatusCode::SERVICE_UNAVAILABLE)
+            .body(Body::from("resyncing"))
+            .map_err(|e| ServerError::from(e.to_string()));
+    }
+
+    let raft = cluster.raft.read().await;
+    let entries = raft
+        .storage
+        .cluster_log
+        .logs_since(params.from_index)
+        .await?;
+    let commit_index = raft.storage.commit;
+    drop(raft);
+
+    if entries.is_empty() {
+        return axum::response::Response::builder()
+            .status(StatusCode::NOT_FOUND)
+            .body(Body::from("no entries available"))
+            .map_err(|e| ServerError::from(e.to_string()));
+    }
+
+    let chunk_size = config.cluster_max_chunk_size as usize;
+    let body = Body::from_stream(log_entries_byte_stream(entries, commit_index, chunk_size));
+
+    axum::response::Response::builder()
+        .status(StatusCode::OK)
+        .header("content-type", "application/octet-stream")
+        .body(body)
+        .map_err(|e| ServerError::from(e.to_string()))
+}
+
+fn log_entries_byte_stream(
+    logs: Vec<crate::raft::Log<crate::action::ClusterAction>>,
+    commit_index: u64,
+    chunk_size: usize,
+) -> impl futures::Stream<Item = Result<bytes::Bytes, std::io::Error>> + Send + 'static {
+    async_stream::try_stream! {
+        let entry_count = logs.len() as u64;
+
+        let mut header = [0u8; 16];
+        header[0..8].copy_from_slice(&entry_count.to_le_bytes());
+        header[8..16].copy_from_slice(&commit_index.to_le_bytes());
+        yield bytes::Bytes::copy_from_slice(&header);
+
+        let mut buf = Vec::with_capacity(chunk_size);
+
+        for log in &logs {
+            let json = serde_json::to_vec(log)
+                .map_err(std::io::Error::other)?;
+            let len_bytes = (json.len() as u64).to_le_bytes();
+
+            if !buf.is_empty() && buf.len() + 8 + json.len() > chunk_size {
+                yield bytes::Bytes::from(std::mem::take(&mut buf));
+            }
+
+            buf.extend_from_slice(&len_bytes);
+            buf.extend_from_slice(&json);
+
+            if buf.len() >= chunk_size {
+                yield bytes::Bytes::from(std::mem::take(&mut buf));
+            }
+        }
+        if !buf.is_empty() {
+            yield bytes::Bytes::from(buf);
+        }
+    }
 }
 
 fn cleanup_stale_snapshot_stagings(

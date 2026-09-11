@@ -185,6 +185,100 @@ async fn basepath_test() -> anyhow::Result<()> {
     Ok(())
 }
 
+#[cfg(feature = "studio")]
+#[tokio::test]
+async fn studio_basepath_rewrite_test() -> anyhow::Result<()> {
+    use agdb_api::config_impl::ConfigImpl;
+    use agdb_api::config_impl::DEFAULT_LOG_BODY_LIMIT;
+    use agdb_api::config_impl::DEFAULT_REQUEST_BODY_LIMIT;
+
+    let config = ConfigImpl {
+        bind: String::new(),
+        address: String::new(),
+        basepath: "/public".to_string(),
+        static_roots: Vec::new(),
+        admin: ADMIN.to_string(),
+        log_level: LogLevelFilter::Info,
+        log_body_limit: DEFAULT_LOG_BODY_LIMIT,
+        request_body_limit: DEFAULT_REQUEST_BODY_LIMIT,
+        data_dir: SERVER_DATA_DIR.into(),
+        pepper_path: String::new(),
+        tls_certificate: String::new(),
+        tls_key: String::new(),
+        tls_root: String::new(),
+        cluster_token: "test".to_string(),
+        cluster_heartbeat_timeout_ms: 1000,
+        cluster_term_timeout_ms: 3000,
+        cluster_election_factor_ms: 1000,
+        cluster: Vec::new(),
+        cluster_max_log_entries: DEFAULT_CLUSTER_MAX_LOG_ENTRIES,
+        cluster_max_chunk_size: agdb_api::config_impl::DEFAULT_CLUSTER_MAX_CHUNK_SIZE,
+        cluster_node_id: 0,
+        start_time: 0,
+        token_expiry_seconds: DEFAULT_TOKEN_EXPIRY_SECONDS,
+        sync_mode: SyncMode::None,
+        pepper: None,
+    };
+
+    let server = TestServerImpl::with_config(config).await?;
+
+    let index = reqwest_client()
+        .get(format!("{}/studio", server.address))
+        .send()
+        .await?
+        .error_for_status()?
+        .text()
+        .await?;
+
+    let js_path = index
+        .split("src=\"")
+        .skip(1)
+        .find_map(|s| {
+            let end = s.find('"')?;
+            let path = &s[..end];
+            path.contains("/studio/assets/index").then_some(path)
+        })
+        .ok_or_else(|| anyhow::anyhow!("studio index bundle path not found in served HTML"))?;
+
+    assert!(
+        js_path.starts_with("/public/studio/assets/index"),
+        "{js_path}"
+    );
+
+    let js_url = format!(
+        "{}{}",
+        server.address,
+        js_path.strip_prefix("/public").unwrap_or(js_path)
+    );
+
+    let js = reqwest_client()
+        .get(js_url)
+        .send()
+        .await?
+        .error_for_status()?
+        .text()
+        .await?;
+
+    assert!(
+        js.contains("/public/studio/"),
+        "served index JS should contain a basepath-prefixed studio URL"
+    );
+
+    let bad_studio_prefix = ["\"/studio", "'/studio", "`/studio"]
+        .iter()
+        .filter_map(|needle| js.match_indices(needle).next())
+        .next()
+        .map(|(idx, _)| &js[idx..idx + 80.min(js.len().saturating_sub(idx))]);
+
+    assert!(
+        bad_studio_prefix.is_none(),
+        "served index JS still contains an unreplaced /studio literal prefix: {:?}",
+        bad_studio_prefix
+    );
+
+    Ok(())
+}
+
 #[tokio::test]
 async fn location_change_after_restart() -> anyhow::Result<()> {
     let mut server = TestServerImpl::new().await?;

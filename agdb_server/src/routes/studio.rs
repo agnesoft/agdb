@@ -53,6 +53,8 @@ fn init_index_js_content(filename: &str, config: &Config) -> ServerResult {
         .to_string();
     if !config.basepath.is_empty() {
         content = content.replace("\"/studio", &format!("\"{}/studio", config.basepath));
+        content = content.replace("`/studio", &format!("`{}/studio", config.basepath));
+        content = content.replace("'/studio", &format!("'{}/studio", config.basepath));
     };
     content = content.replace(DEFAULT_SERVER_ADDRESS, &config.server_url());
 

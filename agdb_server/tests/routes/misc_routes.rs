@@ -261,9 +261,20 @@ async fn studio_basepath_rewrite_test() -> anyhow::Result<()> {
 
     assert!(
         js.contains("/public/studio/"),
-        "served index JS still contains a non-basepath studio URL:\n{js}"
+        "served index JS should contain a basepath-prefixed studio URL"
     );
-    assert!(!js.contains("`/studio/"));
+
+    let bad_studio_prefix = ["\"/studio", "'/studio", "`/studio"]
+        .iter()
+        .filter_map(|needle| js.match_indices(needle).next())
+        .next()
+        .map(|(idx, _)| &js[idx..idx + 80.min(js.len().saturating_sub(idx))]);
+
+    assert!(
+        bad_studio_prefix.is_none(),
+        "served index JS still contains an unreplaced /studio literal prefix: {:?}",
+        bad_studio_prefix
+    );
 
     Ok(())
 }

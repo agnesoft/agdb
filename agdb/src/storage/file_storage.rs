@@ -54,7 +54,7 @@ impl FileStorage {
         wal: &mut WriteAheadLog,
         sync_mode: SyncMode,
     ) -> Result<(), DbError> {
-        for record in wal.records()? {
+        for record in wal.records()?.into_iter().rev() {
             Self::apply_wal_record(file, record)?;
         }
 

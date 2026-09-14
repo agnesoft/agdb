@@ -396,12 +396,13 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
         {
             let earliest = logs.first().map(|l| l.index).unwrap_or(0);
             crate::warn!(
-                "[{}] Node {} is too far behind (needs index {}, earliest available is {}). Awaiting snapshot resync.",
+                "[{}] Node {} is too far behind (needs index {}, earliest available is {}). Forcing resync.",
                 self.index,
                 request.target,
                 from_index,
                 earliest
             );
+            self.node_mut(request.target).force_resync = true;
             return Ok(None);
         }
 
@@ -995,6 +996,10 @@ mod test {
 
     impl TestCluster {
         fn new(size: u64) -> Self {
+            Self::with_max_log_entries(size, 1000)
+        }
+
+        fn with_max_log_entries(size: u64, max_log_entries: u64) -> Self {
             static LOGGER_INIT: OnceLock<()> = OnceLock::new();
             LOGGER_INIT.get_or_init(|| crate::logger::init(agdb_api::LogLevelFilter::Info));
 
@@ -1012,7 +1017,7 @@ mod test {
                         election_factor_ms: 1000,
                         heartbeat_timeout: Duration::from_secs(1),
                         term_timeout: Duration::from_secs(3),
-                        max_log_entries: 1000,
+                        max_log_entries,
                     };
                     Arc::new(RwLock::new(TestNodeImpl {
                         cluster: Cluster::new(storage, settings),
@@ -1222,6 +1227,22 @@ mod test {
             }
 
             Ok(())
+        }
+
+        async fn expect_needs_resync(&self, node: u64) {
+            let timer = Instant::now();
+            while timer.elapsed() < TIMEOUT {
+                tokio::time::sleep(Duration::from_millis(10)).await;
+                if self.nodes.read().await[node as usize]
+                    .read()
+                    .await
+                    .cluster
+                    .needs_resync()
+                {
+                    return;
+                }
+            }
+            panic!("node {node} did not set needs_resync within {TIMEOUT:?}");
         }
     }
 
@@ -1581,6 +1602,51 @@ mod test {
         let result = cluster.reconcile(&request, &mismatch).await?;
         // Should return None because entries 4-5 are not available (gap)
         assert!(result.is_none());
+        // The leader must signal the follower to resync
+        assert!(cluster.node(1).force_resync);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn reconcile_gap_sets_force_resync() -> anyhow::Result<()> {
+        // After a leader restart, reinit() resets prune_index to
+        // commit - max_log_entries (stale) while actual logs reflect
+        // heavier pruning from a previous session. The follower's
+        // prune safety-net doesn't fire, so reconcile() must detect
+        // the gap and set force_resync.
+        let mut cluster = TestCluster::with_max_log_entries(3, 3);
+        cluster.start().await;
+        cluster.expect_leader(0).await;
+
+        for i in 1..=7u8 {
+            cluster.append(0, i).await?;
+        }
+        cluster.expect_storage_synced(0, 1).await;
+        cluster.expect_storage_synced(0, 2).await;
+
+        cluster.block(1).await;
+        for i in 8..=10u8 {
+            cluster.append(0, i).await?;
+        }
+        cluster
+            .expect_data(0, &[1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
+            .await;
+        cluster.expect_storage_synced(0, 2).await;
+
+        // Simulate reinit: stale prune_index + logs from previous pruning.
+        // prune_index=7 <= follower commit=7 (safety-net won't fire),
+        // but earliest log=9 > 7+1 (gap exists).
+        {
+            let nodes = cluster.nodes.read().await;
+            let mut leader = nodes[0].write().await;
+            let commit = leader.cluster.storage.commit;
+            leader.cluster.storage.prune_index = commit.saturating_sub(3);
+            leader.cluster.storage.logs.retain(|l| l.index > 8);
+        }
+
+        cluster.unblock().await;
+        cluster.expect_needs_resync(1).await;
 
         Ok(())
     }

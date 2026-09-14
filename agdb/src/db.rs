@@ -415,6 +415,7 @@ impl<Store: StorageData> DbImpl<Store> {
         &mut self,
         f: impl FnOnce(&mut TransactionMut<Store>) -> Result<T, E>,
     ) -> Result<T, E> {
+        let storage_transaction = self.storage.transaction();
         let mut transaction = TransactionMut::new(&mut *self);
         let result = f(&mut transaction);
 
@@ -424,6 +425,7 @@ impl<Store: StorageData> DbImpl<Store> {
             transaction.rollback()?;
         }
 
+        self.storage.commit(storage_transaction)?;
         result
     }
 

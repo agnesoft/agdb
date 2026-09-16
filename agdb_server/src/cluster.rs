@@ -1098,6 +1098,7 @@ impl ClusterStorage {
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 async fn run_log_action(
     snapshot_lock: &Arc<RwLock<()>>,
     db: &ServerDb,

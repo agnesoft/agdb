@@ -384,7 +384,6 @@ async fn start_cluster(
                     cluster.raft.write().await.clear_needs_resync();
                     if is_poisoned {
                         panic_resync_done = true;
-                        cluster.poisoned.store(false, Ordering::Relaxed);
                     }
                 }
                 Err(e) => {

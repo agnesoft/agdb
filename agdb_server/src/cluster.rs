@@ -974,11 +974,12 @@ impl ClusterStorage {
             db_pool,
         };
 
+        storage.start_exec_worker(exec_rx);
+
         for log in logs {
-            storage.execute_log_sync(log).await?;
+            storage.execute_log(log);
         }
 
-        storage.start_exec_worker(exec_rx);
         Ok(storage)
     }
 
@@ -1051,12 +1052,12 @@ impl ClusterStorage {
         self.result_notifiers.clear();
 
         self.db_pool.reload(&self.db).await?;
+        self.poisoned.store(false, Ordering::Relaxed);
+        self.start_exec_worker(exec_rx);
 
         for log in logs {
-            self.execute_log_sync(log).await?;
+            self.execute_log(log);
         }
-
-        self.start_exec_worker(exec_rx);
 
         Ok(())
     }
@@ -1080,23 +1081,6 @@ impl ClusterStorage {
                 e
             );
         }
-    }
-
-    async fn execute_log_sync(&mut self, log: Log<ClusterAction>) -> ServerResult<()> {
-        let log_id = log.db_id.expect("log should have db_id");
-        let result_notifier = self.result_notifiers.remove(&log_id);
-        run_log_action(
-            &self.snapshot_lock,
-            &self.db,
-            &self.db_pool,
-            &self.cluster_log,
-            &self.notifier,
-            log,
-            log_id,
-            result_notifier,
-        )
-        .await;
-        Ok(())
     }
 
     pub(crate) async fn subscribe(&self) -> tokio::sync::broadcast::Receiver<u64> {

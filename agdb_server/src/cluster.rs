@@ -890,6 +890,7 @@ pub(crate) struct ClusterStorage {
     result_notifiers: HashMap<DbId, ResultNotifier>,
     pub(crate) notifier: tokio::sync::broadcast::Sender<u64>,
     exec_sender: tokio::sync::mpsc::UnboundedSender<ExecTask>,
+    exec_worker: Option<tokio::task::JoinHandle<()>>,
     pub(crate) index: u64,
     pub(crate) term: u64,
     pub(crate) commit: u64,
@@ -913,18 +914,30 @@ impl ClusterStorage {
         let (index, term, commit) = cluster_log.cluster_log().await?;
         let logs = cluster_log.logs_unexecuted(commit).await?;
         let (exec_sender, exec_rx) = tokio::sync::mpsc::unbounded_channel();
+        let snapshot_lock = Arc::new(RwLock::new(()));
+        let notifier = tokio::sync::broadcast::channel(100).0;
+
+        let exec_worker = Some(Self::spawn_exec_worker(
+            exec_rx,
+            db.clone(),
+            db_pool.clone(),
+            cluster_log.clone(),
+            notifier.clone(),
+            snapshot_lock.clone(),
+        ));
 
         let mut storage = Self {
             result_notifiers: HashMap::new(),
-            notifier: tokio::sync::broadcast::channel(100).0,
+            notifier,
             exec_sender,
+            exec_worker,
             index,
             term,
             commit,
             prune_index: commit.saturating_sub(max_log_entries),
             max_log_entries,
             snapshot_in_flight,
-            snapshot_lock: Arc::new(RwLock::new(())),
+            snapshot_lock,
             db,
             cluster_log,
             db_pool,
@@ -933,15 +946,6 @@ impl ClusterStorage {
         for log in logs {
             storage.execute_log_sync(log).await?;
         }
-
-        Self::spawn_exec_worker(
-            exec_rx,
-            storage.db.clone(),
-            storage.db_pool.clone(),
-            storage.cluster_log.clone(),
-            storage.notifier.clone(),
-            storage.snapshot_lock.clone(),
-        );
 
         Ok(storage)
     }
@@ -953,22 +957,31 @@ impl ClusterStorage {
         cluster_log: ClusterLog,
         notifier: tokio::sync::broadcast::Sender<u64>,
         snapshot_lock: Arc<RwLock<()>>,
-    ) {
+    ) -> tokio::task::JoinHandle<()> {
         tokio::spawn(async move {
             while let Some((log, log_id, result_notifier)) = exec_rx.recv().await {
-                let _snapshot_guard = snapshot_lock.read().await;
-                let result = log.data.exec(db.clone(), db_pool.clone()).await;
-                let _ = notifier.send(log.index);
-                let _ = cluster_log.log_executed(log_id).await;
-
-                if let Some(rs) = result_notifier {
-                    let _ = rs.send(result.map(|r| (log.index, r)));
-                }
+                run_log_action(
+                    &snapshot_lock,
+                    &db,
+                    &db_pool,
+                    &cluster_log,
+                    &notifier,
+                    log,
+                    log_id,
+                    result_notifier,
+                )
+                .await;
             }
-        });
+        })
     }
 
     pub(crate) async fn reinit(&mut self, config: &Config) -> ServerResult<()> {
+        let (exec_sender, exec_rx) = tokio::sync::mpsc::unbounded_channel();
+        self.exec_sender = exec_sender;
+        if let Some(handle) = self.exec_worker.take() {
+            let _ = handle.await;
+        }
+
         let db_path = format!("{}/{}", config.data_dir, SERVER_DB_FILE);
         let new_db = agdb::Db::new(&db_path)?;
         *self.db.db.write().await = new_db;
@@ -992,6 +1005,15 @@ impl ClusterStorage {
             self.execute_log_sync(log).await?;
         }
 
+        self.exec_worker = Some(Self::spawn_exec_worker(
+            exec_rx,
+            self.db.clone(),
+            self.db_pool.clone(),
+            self.cluster_log.clone(),
+            self.notifier.clone(),
+            self.snapshot_lock.clone(),
+        ));
+
         Ok(())
     }
 
@@ -1013,20 +1035,42 @@ impl ClusterStorage {
     async fn execute_log_sync(&mut self, log: Log<ClusterAction>) -> ServerResult<()> {
         let log_id = log.db_id.expect("log should have db_id");
         let result_notifier = self.result_notifiers.remove(&log_id);
-        let _snapshot_guard = self.snapshot_lock.read().await;
-        let result = log.data.exec(self.db.clone(), self.db_pool.clone()).await;
-        let _ = self.notifier.send(log.index);
-        let _ = self.cluster_log.log_executed(log_id).await;
-
-        if let Some(rs) = result_notifier {
-            let _ = rs.send(result.map(|r| (log.index, r)));
-        }
-
+        run_log_action(
+            &self.snapshot_lock,
+            &self.db,
+            &self.db_pool,
+            &self.cluster_log,
+            &self.notifier,
+            log,
+            log_id,
+            result_notifier,
+        )
+        .await;
         Ok(())
     }
 
     pub(crate) async fn subscribe(&self) -> tokio::sync::broadcast::Receiver<u64> {
         self.notifier.subscribe()
+    }
+}
+
+async fn run_log_action(
+    snapshot_lock: &Arc<RwLock<()>>,
+    db: &ServerDb,
+    db_pool: &DbPool,
+    cluster_log: &ClusterLog,
+    notifier: &tokio::sync::broadcast::Sender<u64>,
+    log: Log<ClusterAction>,
+    log_id: DbId,
+    result_notifier: Option<ResultNotifier>,
+) {
+    let _snapshot_guard = snapshot_lock.read().await;
+    let result = log.data.exec(db.clone(), db_pool.clone()).await;
+    let _ = notifier.send(log.index);
+    let _ = cluster_log.log_executed(log_id).await;
+
+    if let Some(rs) = result_notifier {
+        let _ = rs.send(result.map(|r| (log.index, r)));
     }
 }
 

@@ -22,6 +22,7 @@ use axum::body::Body;
 use axum::extract::Request as AxumRequest;
 use axum::http::HeaderMap;
 use axum::response::Response as AxumResponse;
+use futures::FutureExt;
 use futures::StreamExt;
 use reqwest::StatusCode;
 use std::collections::HashMap;
@@ -64,6 +65,7 @@ pub(crate) struct ClusterImpl {
     pub(crate) responses: Option<RwLock<ClusterResponseReceiver>>,
     pub(crate) resync: Arc<AtomicBool>,
     pub(crate) snapshot_in_flight: Arc<AtomicUsize>,
+    pub(crate) poisoned: Arc<AtomicBool>,
 }
 
 impl ClusterImpl {
@@ -215,12 +217,14 @@ pub(crate) async fn new(
     let hash = sorted_cluster.stable_hash();
     let resync = Arc::new(AtomicBool::new(false));
     let snapshot_in_flight = Arc::new(AtomicUsize::new(0));
+    let poisoned = Arc::new(AtomicBool::new(false));
     let storage = ClusterStorage::new(
         db.clone(),
         cluster_log.clone(),
         db_pool.clone(),
         config.cluster_max_log_entries,
         snapshot_in_flight.clone(),
+        poisoned.clone(),
     )
     .await?;
     let settings = raft::ClusterSettings {
@@ -259,6 +263,7 @@ pub(crate) async fn new(
         responses,
         resync,
         snapshot_in_flight,
+        poisoned,
     }))
 }
 
@@ -342,19 +347,44 @@ async fn start_cluster(
     });
 
     let mut resync_retry_at: Option<tokio::time::Instant> = None;
+    let mut panic_resync_done = false;
 
     while !shutdown_signal.load(Ordering::Relaxed) {
-        if cluster.raft.read().await.needs_resync()
+        let is_poisoned = cluster.poisoned.load(Ordering::Relaxed);
+
+        if (cluster.raft.read().await.needs_resync() || is_poisoned)
             && !cluster.resync.load(Ordering::Relaxed)
             && resync_retry_at
                 .map(|t| tokio::time::Instant::now() >= t)
                 .unwrap_or(true)
         {
-            crate::warn!("[{index}] Node is too far behind, initiating resync from leader");
+            if is_poisoned {
+                if panic_resync_done {
+                    crate::error!(
+                        "[{index}] Repeated worker panic after resync, shutting down for restart"
+                    );
+                    shutdown_signal.store(true, Ordering::Relaxed);
+                    break;
+                }
 
-            match resync_from_leader(&cluster, &config).await {
+                let leader = cluster.raft.read().await.leader();
+                if leader == Some(index as u64) {
+                    crate::error!(
+                        "[{index}] Worker panic on leader node, shutting down for restart"
+                    );
+                    shutdown_signal.store(true, Ordering::Relaxed);
+                    break;
+                }
+            }
+
+            crate::warn!("[{index}] Node needs resync, initiating resync from leader");
+
+            match resync_from_leader(&cluster, &config, is_poisoned).await {
                 Ok(_) => {
                     cluster.raft.write().await.clear_needs_resync();
+                    if is_poisoned {
+                        panic_resync_done = true;
+                    }
                 }
                 Err(e) => {
                     resync_retry_at = Some(tokio::time::Instant::now() + Duration::from_secs(5));
@@ -383,7 +413,11 @@ async fn start_cluster(
     Ok(())
 }
 
-async fn resync_from_leader(cluster: &Cluster, config: &Config) -> ServerResult<()> {
+async fn resync_from_leader(
+    cluster: &Cluster,
+    config: &Config,
+    force_snapshot: bool,
+) -> ServerResult<()> {
     let leader = cluster.raft.read().await.leader();
     let leader_index = match leader {
         Some(l) if l as usize != cluster.index => l as usize,
@@ -396,18 +430,20 @@ async fn resync_from_leader(cluster: &Cluster, config: &Config) -> ServerResult<
 
     cluster.resync.store(true, Ordering::Relaxed);
 
-    let from_index = cluster.raft.read().await.storage.log_commit();
-    match catchup_logs_from_leader(cluster, config, leader_index, from_index).await {
-        Ok(()) => {
-            cluster.resync.store(false, Ordering::Relaxed);
-            crate::info!("[{}] Resync completed via log catch-up", cluster.index);
-            return Ok(());
-        }
-        Err(e) => {
-            crate::info!(
-                "[{}] Log catch-up failed ({e:?}), falling back to full snapshot",
-                cluster.index
-            );
+    if !force_snapshot {
+        let from_index = cluster.raft.read().await.storage.log_commit();
+        match catchup_logs_from_leader(cluster, config, leader_index, from_index).await {
+            Ok(()) => {
+                cluster.resync.store(false, Ordering::Relaxed);
+                crate::info!("[{}] Resync completed via log catch-up", cluster.index);
+                return Ok(());
+            }
+            Err(e) => {
+                crate::info!(
+                    "[{}] Log catch-up failed ({e:?}), falling back to full snapshot",
+                    cluster.index
+                );
+            }
         }
     }
 
@@ -884,9 +920,13 @@ pub(crate) async fn start_with_shutdown(
     let _ = cluster_handle.await;
 }
 
+type ExecTask = (Log<ClusterAction>, DbId, Option<ResultNotifier>);
+
 pub(crate) struct ClusterStorage {
     result_notifiers: HashMap<DbId, ResultNotifier>,
     pub(crate) notifier: tokio::sync::broadcast::Sender<u64>,
+    exec_sender: tokio::sync::mpsc::UnboundedSender<ExecTask>,
+    exec_worker: Option<tokio::task::JoinHandle<()>>,
     pub(crate) index: u64,
     pub(crate) term: u64,
     pub(crate) commit: u64,
@@ -894,6 +934,7 @@ pub(crate) struct ClusterStorage {
     pub(crate) max_log_entries: u64,
     pub(crate) snapshot_in_flight: Arc<AtomicUsize>,
     pub(crate) snapshot_lock: Arc<RwLock<()>>,
+    pub(crate) poisoned: Arc<AtomicBool>,
     pub(crate) db: ServerDb,
     pub(crate) cluster_log: ClusterLog,
     pub(crate) db_pool: DbPool,
@@ -906,33 +947,92 @@ impl ClusterStorage {
         db_pool: DbPool,
         max_log_entries: u64,
         snapshot_in_flight: Arc<AtomicUsize>,
+        poisoned: Arc<AtomicBool>,
     ) -> ServerResult<Self> {
         let (index, term, commit) = cluster_log.cluster_log().await?;
         let logs = cluster_log.logs_unexecuted(commit).await?;
+        let (exec_sender, exec_rx) = tokio::sync::mpsc::unbounded_channel();
+        let snapshot_lock = Arc::new(RwLock::new(()));
+        let notifier = tokio::sync::broadcast::channel(100).0;
 
         let mut storage = Self {
             result_notifiers: HashMap::new(),
-            notifier: tokio::sync::broadcast::channel(100).0,
+            notifier,
+            exec_sender,
+            exec_worker: None,
             index,
             term,
             commit,
             prune_index: commit.saturating_sub(max_log_entries),
             max_log_entries,
             snapshot_in_flight,
-            snapshot_lock: Arc::new(RwLock::new(())),
+            snapshot_lock,
+            poisoned,
             db,
             cluster_log,
             db_pool,
         };
 
+        storage.start_exec_worker(exec_rx);
+
         for log in logs {
-            storage.execute_log(log).await?;
+            storage.execute_log(log);
         }
 
         Ok(storage)
     }
 
+    fn spawn_exec_worker(
+        mut exec_rx: tokio::sync::mpsc::UnboundedReceiver<ExecTask>,
+        db: ServerDb,
+        db_pool: DbPool,
+        cluster_log: ClusterLog,
+        notifier: tokio::sync::broadcast::Sender<u64>,
+        snapshot_lock: Arc<RwLock<()>>,
+        poisoned: Arc<AtomicBool>,
+    ) -> tokio::task::JoinHandle<()> {
+        tokio::spawn(async move {
+            while let Some((log, log_id, result_notifier)) = exec_rx.recv().await {
+                if let Err(e) = std::panic::AssertUnwindSafe(run_log_action(
+                    &snapshot_lock,
+                    &db,
+                    &db_pool,
+                    &cluster_log,
+                    &notifier,
+                    log,
+                    log_id,
+                    result_notifier,
+                ))
+                .catch_unwind()
+                .await
+                {
+                    crate::error!("Log execution panicked, stopping worker: {e:?}");
+                    poisoned.store(true, Ordering::Relaxed);
+                    break;
+                }
+            }
+        })
+    }
+
+    fn start_exec_worker(&mut self, exec_rx: tokio::sync::mpsc::UnboundedReceiver<ExecTask>) {
+        self.exec_worker = Some(Self::spawn_exec_worker(
+            exec_rx,
+            self.db.clone(),
+            self.db_pool.clone(),
+            self.cluster_log.clone(),
+            self.notifier.clone(),
+            self.snapshot_lock.clone(),
+            self.poisoned.clone(),
+        ));
+    }
+
     pub(crate) async fn reinit(&mut self, config: &Config) -> ServerResult<()> {
+        let (exec_sender, exec_rx) = tokio::sync::mpsc::unbounded_channel();
+        self.exec_sender = exec_sender;
+        if let Some(handle) = self.exec_worker.take() {
+            let _ = handle.await;
+        }
+
         let db_path = format!("{}/{}", config.data_dir, SERVER_DB_FILE);
         let new_db = agdb::Db::new(&db_path)?;
         *self.db.db.write().await = new_db;
@@ -951,9 +1051,11 @@ impl ClusterStorage {
         self.result_notifiers.clear();
 
         self.db_pool.reload(&self.db).await?;
+        self.poisoned.store(false, Ordering::Relaxed);
+        self.start_exec_worker(exec_rx);
 
         for log in logs {
-            self.execute_log(log).await?;
+            self.execute_log(log);
         }
 
         Ok(())
@@ -968,31 +1070,41 @@ impl ClusterStorage {
         Ok(())
     }
 
-    async fn execute_log(&mut self, log: Log<ClusterAction>) -> ServerResult<()> {
-        let log_id = log.db_id.unwrap_or_default();
-        let db = self.db.clone();
-        let db_pool = self.db_pool.clone();
-        let cluster_log = self.cluster_log.clone();
-        let notifier = self.notifier.clone();
+    fn execute_log(&mut self, log: Log<ClusterAction>) {
+        let log_id = log.db_id.expect("log should have db_id");
         let result_notifier = self.result_notifiers.remove(&log_id);
-        let snapshot_lock = self.snapshot_lock.clone();
-
-        tokio::spawn(async move {
-            let _snapshot_guard = snapshot_lock.read().await;
-            let result = log.data.exec(db.clone(), db_pool).await;
-            let _ = notifier.send(log.index);
-            let _ = cluster_log.log_executed(log_id).await;
-
-            if let Some(rs) = result_notifier {
-                let _ = rs.send(result.map(|r| (log.index, r)));
-            }
-        });
-
-        Ok(())
+        if let Err(e) = self.exec_sender.send((log, log_id, result_notifier)) {
+            crate::error!(
+                "Exec worker is dead, log entry {} skipped: {}",
+                e.0.0.index,
+                e
+            );
+        }
     }
 
     pub(crate) async fn subscribe(&self) -> tokio::sync::broadcast::Receiver<u64> {
         self.notifier.subscribe()
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+async fn run_log_action(
+    snapshot_lock: &Arc<RwLock<()>>,
+    db: &ServerDb,
+    db_pool: &DbPool,
+    cluster_log: &ClusterLog,
+    notifier: &tokio::sync::broadcast::Sender<u64>,
+    log: Log<ClusterAction>,
+    log_id: DbId,
+    result_notifier: Option<ResultNotifier>,
+) {
+    let _snapshot_guard = snapshot_lock.read().await;
+    let result = log.data.exec(db.clone(), db_pool.clone()).await;
+    let _ = notifier.send(log.index);
+    let _ = cluster_log.log_executed(log_id).await;
+
+    if let Some(rs) = result_notifier {
+        let _ = rs.send(result.map(|r| (log.index, r)));
     }
 }
 
@@ -1024,10 +1136,9 @@ impl Storage<ClusterAction, ResultNotifier> for ClusterStorage {
     async fn commit(&mut self, index: u64) -> ServerResult<()> {
         for log in self.cluster_log.logs_uncommitted(index).await? {
             self.commit = index;
-            self.cluster_log
-                .log_committed(log.db_id.expect("log should have db_id"))
-                .await?;
-            self.execute_log(log).await?;
+            let log_id = log.db_id.expect("log should have db_id");
+            self.cluster_log.log_committed(log_id).await?;
+            self.execute_log(log);
         }
 
         Ok(())
@@ -1035,9 +1146,6 @@ impl Storage<ClusterAction, ResultNotifier> for ClusterStorage {
 
     async fn prune(&mut self, up_to_index: u64) -> ServerResult<()> {
         let up_to_index = std::cmp::min(up_to_index, self.index.saturating_sub(1));
-        // Use the higher of the incoming index and the existing ceiling so that entries
-        // skipped on a prior call (because their async execute_log task had not yet removed
-        // the EXECUTED key) are retried on every subsequent heartbeat
         let ceiling = up_to_index.max(self.prune_index);
         if ceiling > 0 && self.snapshot_in_flight.load(Ordering::Acquire) == 0 {
             self.cluster_log.prune(ceiling).await?;

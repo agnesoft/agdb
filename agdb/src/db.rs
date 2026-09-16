@@ -206,6 +206,7 @@ pub struct DbImpl<Store: StorageData> {
     indexes: DbIndexes<Store>,
     values: DbKeyValues<Store>,
     undo_stack: Vec<Command>,
+    poisoned: bool,
 }
 
 /// The default implementation of the database using memory mapped file (full ACID) with
@@ -304,13 +305,7 @@ impl<Store: StorageData> DbImpl<Store> {
     /// size of the storage file to be copied.
     pub fn copy(&self, filename: &str) -> Result<Self, DbError> {
         let storage = self.storage.copy(filename)?;
-        let index = storage.value::<DbStorageIndex>(StorageIndex(1))?;
-
-        let graph = DbGraph::from_storage(&storage, index.graph)?;
-        let aliases = DbIndexedMap::from_storage(&storage, index.aliases)?;
-        let indexes = DbIndexes::from_storage(&storage, index.indexes)?;
-        //let values = MultiMapStorage::from_storage(&storage, index.values)?;
-        let values = DbKeyValues::from_storage(&storage, index.values)?;
+        let (graph, aliases, indexes, values) = Self::load_data_structures(&storage)?;
 
         Ok(Self {
             storage,
@@ -319,6 +314,7 @@ impl<Store: StorageData> DbImpl<Store> {
             indexes,
             values,
             undo_stack: vec![],
+            poisoned: false,
         })
     }
 
@@ -337,6 +333,7 @@ impl<Store: StorageData> DbImpl<Store> {
     /// error etc.).
     pub fn exec<T: Query>(&self, query: T) -> Result<QueryResult, DbError> {
         self.transaction(|transaction| transaction.exec(query))
+            .map_err(self.poisoned())
     }
 
     /// Executes mutable query:
@@ -354,6 +351,7 @@ impl<Store: StorageData> DbImpl<Store> {
     /// error etc.).
     pub fn exec_mut<T: QueryMut>(&mut self, query: T) -> Result<QueryResult, DbError> {
         self.transaction_mut(|transaction| transaction.exec_mut(query))
+            .map_err(self.poisoned())
     }
 
     /// Returns the filename that was used to
@@ -391,7 +389,6 @@ impl<Store: StorageData> DbImpl<Store> {
         f: impl FnOnce(&Transaction<Store>) -> Result<T, E>,
     ) -> Result<T, E> {
         let transaction = Transaction::new(self);
-
         f(&transaction)
     }
 
@@ -415,13 +412,31 @@ impl<Store: StorageData> DbImpl<Store> {
         &mut self,
         f: impl FnOnce(&mut TransactionMut<Store>) -> Result<T, E>,
     ) -> Result<T, E> {
+        let storage_transaction = self.storage.transaction();
         let mut transaction = TransactionMut::new(&mut *self);
         let result = f(&mut transaction);
 
-        if result.is_ok() {
-            transaction.commit()?;
+        let commit_result = if result.is_ok() {
+            transaction.commit()
         } else {
-            transaction.rollback()?;
+            transaction.rollback()
+        };
+
+        match commit_result {
+            Ok(()) => self.storage.commit(storage_transaction)?,
+            Err(rollback_err) => {
+                if let Err(recover_err) = self
+                    .storage
+                    .recover()
+                    .and_then(|_| self.reload_from_storage())
+                {
+                    self.poison();
+                    return Err(E::from((self.poisoned())(
+                        recover_err.caused_by(rollback_err),
+                    )));
+                }
+                return result;
+            }
         }
 
         result
@@ -466,6 +481,57 @@ impl<Store: StorageData> DbImpl<Store> {
         self.indexes.shrink_to_fit(&mut self.storage)?;
         self.values.shrink_to_fit(&mut self.storage)?;
         self.optimize_storage()
+    }
+
+    fn poisoned(&self) -> impl FnOnce(DbError) -> DbError + '_ {
+        |e| {
+            if self.poisoned {
+                DbError::db(
+                    DbErrorType::Poisoned,
+                    "database poisoned & reload failed - drop and reopen required",
+                )
+                .caused_by(e)
+            } else {
+                e
+            }
+        }
+    }
+
+    #[allow(clippy::type_complexity)]
+    fn load_data_structures(
+        storage: &Storage<Store>,
+    ) -> Result<
+        (
+            DbGraph<Store>,
+            DbIndexedMap<String, DbId, Store>,
+            DbIndexes<Store>,
+            DbKeyValues<Store>,
+        ),
+        DbError,
+    > {
+        let index = storage.value::<DbStorageIndex>(StorageIndex(1))?;
+        Ok((
+            DbGraph::from_storage(storage, index.graph)?,
+            DbIndexedMap::from_storage(storage, index.aliases)?,
+            DbIndexes::from_storage(storage, index.indexes)?,
+            DbKeyValues::from_storage(storage, index.values)?,
+        ))
+    }
+
+    fn reload_from_storage(&mut self) -> Result<(), DbError> {
+        let (graph, aliases, indexes, values) = Self::load_data_structures(&self.storage)?;
+        self.graph = graph;
+        self.aliases = aliases;
+        self.indexes = indexes;
+        self.values = values;
+        self.undo_stack.clear();
+        Ok(())
+    }
+
+    fn poison(&mut self) {
+        self.poisoned = true;
+        self.storage.wipe_records();
+        self.undo_stack.clear();
     }
 
     pub(crate) fn commit(&mut self) -> Result<(), DbError> {
@@ -1188,46 +1254,40 @@ impl<Store: StorageData> DbImpl<Store> {
     }
 
     fn try_new_with_storage(mut storage: Storage<Store>) -> Result<Self, DbError> {
-        let graph_storage;
-        let aliases_storage;
-        let indexes_storage;
-        let values_storage;
+        let graph;
+        let aliases;
+        let indexes;
+        let values;
 
         if storage.value_size(StorageIndex(1)).is_err() {
             storage.insert(&DbStorageIndex::default())?;
-            graph_storage = DbGraph::new(&mut storage)?;
-            aliases_storage = DbIndexedMap::new(&mut storage)?;
-            indexes_storage = DbIndexes::new(&mut storage)?;
-            values_storage = DbKeyValues::new(&mut storage)?;
+            graph = DbGraph::new(&mut storage)?;
+            aliases = DbIndexedMap::new(&mut storage)?;
+            indexes = DbIndexes::new(&mut storage)?;
+            values = DbKeyValues::new(&mut storage)?;
             let db_storage_index = DbStorageIndex {
                 version: CURRENT_VERSION,
-                graph: graph_storage.storage_index(),
-                aliases: aliases_storage.storage_index(),
-                indexes: indexes_storage.storage_index(),
-                values: values_storage.storage_index(),
+                graph: graph.storage_index(),
+                aliases: aliases.storage_index(),
+                indexes: indexes.storage_index(),
+                values: values.storage_index(),
             };
             storage.insert_at(StorageIndex(1), 0, &db_storage_index)?;
         } else {
-            let index = if let Ok(index) = storage.value::<DbStorageIndex>(StorageIndex(1)) {
-                index
-            } else {
+            if storage.value::<DbStorageIndex>(StorageIndex(1)).is_err() {
                 legacy::convert_to_current_version(&mut storage)?;
-                storage.value::<DbStorageIndex>(StorageIndex(1))?
-            };
-
-            graph_storage = DbGraph::from_storage(&storage, index.graph)?;
-            aliases_storage = DbIndexedMap::from_storage(&storage, index.aliases)?;
-            indexes_storage = DbIndexes::from_storage(&storage, index.indexes)?;
-            values_storage = DbKeyValues::from_storage(&storage, index.values)?;
+            }
+            (graph, aliases, indexes, values) = Self::load_data_structures(&storage)?;
         }
 
         Ok(Self {
             storage,
-            graph: graph_storage,
-            aliases: aliases_storage,
-            indexes: indexes_storage,
-            values: values_storage,
+            graph,
+            aliases,
+            indexes,
+            values,
             undo_stack: vec![],
+            poisoned: false,
         })
     }
 
@@ -1342,7 +1402,9 @@ impl<Store: StorageData> DbImpl<Store> {
 
 impl<Store: StorageData> Drop for DbImpl<Store> {
     fn drop(&mut self) {
-        let _ = self.storage.optimize_storage();
+        if !self.poisoned {
+            let _ = self.storage.optimize_storage();
+        }
     }
 }
 
@@ -1502,7 +1564,11 @@ mod legacy {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::QueryBuilder;
     use crate::test_utilities::test_file::TestFile;
+    use std::borrow::Cow;
+    use std::sync::Arc;
+    use std::sync::atomic::{AtomicBool, Ordering};
 
     #[test]
     fn db_storage_index_serialized_size() {
@@ -1532,5 +1598,289 @@ mod tests {
         assert_eq!(index.indexes, deserialized.indexes);
         assert_eq!(index.values, deserialized.values);
         assert_eq!(index.serialized_size(), deserialized.serialized_size());
+    }
+
+    #[derive(Debug)]
+    struct FailableFileStorage {
+        inner: FileStorage,
+        fail_writes: Arc<AtomicBool>,
+        fail_reads: Arc<AtomicBool>,
+    }
+
+    impl StorageData for FailableFileStorage {
+        fn backup(&self, name: &str) -> Result<(), DbError> {
+            self.inner.backup(name)
+        }
+        fn copy(&self, name: &str) -> Result<Self, DbError> {
+            Ok(Self {
+                inner: self.inner.copy(name)?,
+                fail_writes: Arc::new(AtomicBool::new(false)),
+                fail_reads: Arc::new(AtomicBool::new(false)),
+            })
+        }
+        fn flush(&mut self) -> Result<(), DbError> {
+            self.inner.flush()
+        }
+        fn len(&self) -> u64 {
+            self.inner.len()
+        }
+        fn name(&self) -> &str {
+            self.inner.name()
+        }
+        fn new(name: &str) -> Result<Self, DbError> {
+            Ok(Self {
+                inner: FileStorage::new(name)?,
+                fail_writes: Arc::new(AtomicBool::new(false)),
+                fail_reads: Arc::new(AtomicBool::new(false)),
+            })
+        }
+        fn read(&self, pos: u64, value_len: u64) -> Result<Cow<'_, [u8]>, DbError> {
+            if self.fail_reads.load(Ordering::Relaxed) {
+                return Err(DbError::storage(
+                    DbErrorType::NotAllowed,
+                    "injected read failure",
+                ));
+            }
+            self.inner.read(pos, value_len)
+        }
+        fn rename(&mut self, new_name: &str) -> Result<(), DbError> {
+            self.inner.rename(new_name)
+        }
+        fn resize(&mut self, new_len: u64) -> Result<(), DbError> {
+            if self.fail_writes.load(Ordering::Relaxed) {
+                return Err(DbError::storage(
+                    DbErrorType::NotAllowed,
+                    "injected write failure",
+                ));
+            }
+            self.inner.resize(new_len)
+        }
+        fn write(&mut self, pos: u64, bytes: &[u8]) -> Result<(), DbError> {
+            if self.fail_writes.load(Ordering::Relaxed) {
+                return Err(DbError::storage(
+                    DbErrorType::NotAllowed,
+                    "injected write failure",
+                ));
+            }
+            self.inner.write(pos, bytes)
+        }
+        fn recover_from_wal(&mut self) -> Result<(), DbError> {
+            self.inner.recover_from_wal()
+        }
+        fn set_sync_mode(&mut self, mode: SyncMode) {
+            self.inner.set_sync_mode(mode);
+        }
+        fn sync_mode(&self) -> SyncMode {
+            self.inner.sync_mode()
+        }
+        fn sync(&mut self) -> Result<(), DbError> {
+            self.inner.sync()
+        }
+    }
+
+    struct FailFlags {
+        writes: Arc<AtomicBool>,
+        reads: Arc<AtomicBool>,
+    }
+
+    fn failable_db(name: &str) -> (DbImpl<FailableFileStorage>, FailFlags) {
+        let fail_writes = Arc::new(AtomicBool::new(false));
+        let fail_reads = Arc::new(AtomicBool::new(false));
+        let inner = FileStorage::new(name).unwrap();
+        let data = FailableFileStorage {
+            inner,
+            fail_writes: fail_writes.clone(),
+            fail_reads: fail_reads.clone(),
+        };
+        let storage = Storage::with_data(data).unwrap();
+        let db = DbImpl::try_new_with_storage(storage).unwrap();
+        (
+            db,
+            FailFlags {
+                writes: fail_writes,
+                reads: fail_reads,
+            },
+        )
+    }
+
+    #[test]
+    fn rollback_failure_with_successful_recovery() {
+        let test_file = TestFile::new();
+        let (mut db, flags) = failable_db(test_file.file_name());
+
+        db.exec_mut(
+            QueryBuilder::insert()
+                .nodes()
+                .aliases("n")
+                .values(vec![vec![("k", "original").into()]])
+                .query(),
+        )
+        .unwrap();
+
+        let fail = flags.writes.clone();
+        let err = db
+            .transaction_mut(|t| -> Result<(), DbError> {
+                t.exec_mut(
+                    QueryBuilder::insert()
+                        .values(vec![vec![("k", "modified").into()]])
+                        .ids("n")
+                        .query(),
+                )?;
+                fail.store(true, Ordering::Relaxed);
+                Err(DbError::db(DbErrorType::NotAllowed, "user error"))
+            })
+            .unwrap_err();
+
+        assert_eq!(err.ty, DbErrorType::NotAllowed);
+        assert_eq!(err.description, "user error");
+        assert!(!db.poisoned);
+
+        flags.writes.store(false, Ordering::Relaxed);
+        let r = db.exec(QueryBuilder::select().ids("n").query()).unwrap();
+        assert_eq!(r.elements[0].values, vec![("k", "original").into()]);
+    }
+
+    #[test]
+    fn rollback_failure_with_failed_recovery_poisons() {
+        let test_file = TestFile::new();
+        let (mut db, flags) = failable_db(test_file.file_name());
+
+        db.exec_mut(
+            QueryBuilder::insert()
+                .nodes()
+                .aliases("n")
+                .values(vec![vec![("k", "original").into()]])
+                .query(),
+        )
+        .unwrap();
+
+        let fail_w = flags.writes.clone();
+        let fail_r = flags.reads.clone();
+        let err = db
+            .transaction_mut(|t| -> Result<(), DbError> {
+                t.exec_mut(
+                    QueryBuilder::insert()
+                        .values(vec![vec![("k", "modified").into()]])
+                        .ids("n")
+                        .query(),
+                )?;
+
+                fail_w.store(true, Ordering::Relaxed);
+                fail_r.store(true, Ordering::Relaxed);
+                Err(DbError::db(DbErrorType::NotAllowed, "user error"))
+            })
+            .unwrap_err();
+
+        assert_eq!(err.ty, DbErrorType::Poisoned);
+        assert!(err.cause.is_some(), "poison error must chain the cause");
+        assert!(db.poisoned);
+    }
+
+    #[test]
+    fn poison_blocks_subsequent_operations() {
+        let test_file = TestFile::new();
+        let (mut db, _flags) = failable_db(test_file.file_name());
+
+        db.exec_mut(
+            QueryBuilder::insert()
+                .nodes()
+                .aliases("n")
+                .values(vec![vec![("k", "original").into()]])
+                .query(),
+        )
+        .unwrap();
+
+        db.poison();
+
+        let err = db
+            .exec(QueryBuilder::select().ids("n").query())
+            .unwrap_err();
+        assert_eq!(err.ty, DbErrorType::Poisoned);
+
+        let err = db
+            .exec_mut(
+                QueryBuilder::insert()
+                    .values(vec![vec![("k", "v").into()]])
+                    .ids("n")
+                    .query(),
+            )
+            .unwrap_err();
+        assert_eq!(err.ty, DbErrorType::Poisoned);
+    }
+
+    #[test]
+    fn reopening_after_recovered_transaction_restores_data() {
+        let test_file = TestFile::new();
+        let db_path = test_file.file_name().clone();
+
+        {
+            let (mut db, flags) = failable_db(&db_path);
+            db.exec_mut(
+                QueryBuilder::insert()
+                    .nodes()
+                    .aliases("n")
+                    .values(vec![vec![("k", "original").into()]])
+                    .query(),
+            )
+            .unwrap();
+
+            let fail_w = flags.writes.clone();
+
+            let _ = db.transaction_mut(|t| -> Result<(), DbError> {
+                t.exec_mut(
+                    QueryBuilder::insert()
+                        .values(vec![vec![("k", "modified").into()]])
+                        .ids("n")
+                        .query(),
+                )?;
+                fail_w.store(true, Ordering::Relaxed);
+                Err(DbError::db(DbErrorType::NotAllowed, "user error"))
+            });
+
+            flags.writes.store(false, Ordering::Relaxed);
+        }
+
+        let (db, _) = failable_db(&db_path);
+        let r = db.exec(QueryBuilder::select().ids("n").query()).unwrap();
+        assert_eq!(r.elements[0].values, vec![("k", "original").into()]);
+    }
+
+    #[test]
+    fn reopening_after_poisoned_transaction_restores_data() {
+        let test_file = TestFile::new();
+        let db_path = test_file.file_name().clone();
+
+        {
+            let (mut db, flags) = failable_db(&db_path);
+            db.exec_mut(
+                QueryBuilder::insert()
+                    .nodes()
+                    .aliases("n")
+                    .values(vec![vec![("k", "original").into()]])
+                    .query(),
+            )
+            .unwrap();
+
+            let fail_w = flags.writes.clone();
+            let fail_r = flags.reads.clone();
+            let _ = db.transaction_mut(|t| -> Result<(), DbError> {
+                t.exec_mut(
+                    QueryBuilder::insert()
+                        .values(vec![vec![("k", "modified").into()]])
+                        .ids("n")
+                        .query(),
+                )?;
+                fail_w.store(true, Ordering::Relaxed);
+                fail_r.store(true, Ordering::Relaxed);
+                Err(DbError::db(DbErrorType::NotAllowed, "user error"))
+            });
+
+            flags.writes.store(false, Ordering::Relaxed);
+            flags.reads.store(false, Ordering::Relaxed);
+        }
+
+        let (db, _) = failable_db(&db_path);
+        let r = db.exec(QueryBuilder::select().ids("n").query()).unwrap();
+        assert_eq!(r.elements[0].values, vec![("k", "original").into()]);
     }
 }

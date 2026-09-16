@@ -82,6 +82,13 @@ impl StorageData for FileStorageMemoryMapped {
         self.memory.write(pos, bytes)?;
         self.file.write(pos, bytes)
     }
+
+    fn recover_from_wal(&mut self) -> Result<(), DbError> {
+        self.file.recover_from_wal()?;
+        let buffer = self.file.read(0, self.file.len())?.to_vec();
+        self.memory = MemoryStorage::from_buffer(self.file.name(), buffer);
+        Ok(())
+    }
 }
 
 #[cfg(test)]

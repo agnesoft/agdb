@@ -379,7 +379,7 @@ async fn start_cluster(
 
             crate::warn!("[{index}] Node needs resync, initiating resync from leader");
 
-            match resync_from_leader(&cluster, &config).await {
+            match resync_from_leader(&cluster, &config, is_poisoned).await {
                 Ok(_) => {
                     cluster.raft.write().await.clear_needs_resync();
                     if is_poisoned {
@@ -414,7 +414,11 @@ async fn start_cluster(
     Ok(())
 }
 
-async fn resync_from_leader(cluster: &Cluster, config: &Config) -> ServerResult<()> {
+async fn resync_from_leader(
+    cluster: &Cluster,
+    config: &Config,
+    force_snapshot: bool,
+) -> ServerResult<()> {
     let leader = cluster.raft.read().await.leader();
     let leader_index = match leader {
         Some(l) if l as usize != cluster.index => l as usize,
@@ -427,18 +431,20 @@ async fn resync_from_leader(cluster: &Cluster, config: &Config) -> ServerResult<
 
     cluster.resync.store(true, Ordering::Relaxed);
 
-    let from_index = cluster.raft.read().await.storage.log_commit();
-    match catchup_logs_from_leader(cluster, config, leader_index, from_index).await {
-        Ok(()) => {
-            cluster.resync.store(false, Ordering::Relaxed);
-            crate::info!("[{}] Resync completed via log catch-up", cluster.index);
-            return Ok(());
-        }
-        Err(e) => {
-            crate::info!(
-                "[{}] Log catch-up failed ({e:?}), falling back to full snapshot",
-                cluster.index
-            );
+    if !force_snapshot {
+        let from_index = cluster.raft.read().await.storage.log_commit();
+        match catchup_logs_from_leader(cluster, config, leader_index, from_index).await {
+            Ok(()) => {
+                cluster.resync.store(false, Ordering::Relaxed);
+                crate::info!("[{}] Resync completed via log catch-up", cluster.index);
+                return Ok(());
+            }
+            Err(e) => {
+                crate::info!(
+                    "[{}] Log catch-up failed ({e:?}), falling back to full snapshot",
+                    cluster.index
+                );
+            }
         }
     }
 

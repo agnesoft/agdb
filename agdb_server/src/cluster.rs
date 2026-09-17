@@ -219,6 +219,8 @@ pub(crate) async fn new(
     let snapshot_in_flight = Arc::new(AtomicUsize::new(0));
     let poisoned = Arc::new(AtomicBool::new(false));
     let storage = ClusterStorage::new(
+        index,
+        config.log_body_limit,
         db.clone(),
         cluster_log.clone(),
         db_pool.clone(),
@@ -920,13 +922,15 @@ pub(crate) async fn start_with_shutdown(
     let _ = cluster_handle.await;
 }
 
-type ExecTask = (Log<ClusterAction>, DbId, Option<ResultNotifier>);
+type ExecTask = (Log<ClusterAction>, Option<ResultNotifier>);
 
 pub(crate) struct ClusterStorage {
     result_notifiers: HashMap<DbId, ResultNotifier>,
     pub(crate) notifier: tokio::sync::broadcast::Sender<u64>,
     exec_sender: tokio::sync::mpsc::UnboundedSender<ExecTask>,
     exec_worker: Option<tokio::task::JoinHandle<()>>,
+    node: usize,
+    log_body_limit: usize,
     pub(crate) index: u64,
     pub(crate) term: u64,
     pub(crate) commit: u64,
@@ -941,7 +945,10 @@ pub(crate) struct ClusterStorage {
 }
 
 impl ClusterStorage {
+    #[allow(clippy::too_many_arguments)]
     async fn new(
+        node: usize,
+        log_body_limit: u64,
         db: ServerDb,
         cluster_log: ClusterLog,
         db_pool: DbPool,
@@ -960,6 +967,8 @@ impl ClusterStorage {
             notifier,
             exec_sender,
             exec_worker: None,
+            node,
+            log_body_limit: log_body_limit as usize,
             index,
             term,
             commit,
@@ -984,27 +993,14 @@ impl ClusterStorage {
 
     fn spawn_exec_worker(
         mut exec_rx: tokio::sync::mpsc::UnboundedReceiver<ExecTask>,
-        db: ServerDb,
-        db_pool: DbPool,
-        cluster_log: ClusterLog,
-        notifier: tokio::sync::broadcast::Sender<u64>,
-        snapshot_lock: Arc<RwLock<()>>,
+        ctx: ExecContext,
         poisoned: Arc<AtomicBool>,
     ) -> tokio::task::JoinHandle<()> {
         tokio::spawn(async move {
-            while let Some((log, log_id, result_notifier)) = exec_rx.recv().await {
-                if let Err(e) = std::panic::AssertUnwindSafe(run_log_action(
-                    &snapshot_lock,
-                    &db,
-                    &db_pool,
-                    &cluster_log,
-                    &notifier,
-                    log,
-                    log_id,
-                    result_notifier,
-                ))
-                .catch_unwind()
-                .await
+            while let Some((log, result_notifier)) = exec_rx.recv().await {
+                if let Err(e) = std::panic::AssertUnwindSafe(ctx.run(log, result_notifier))
+                    .catch_unwind()
+                    .await
                 {
                     crate::error!("Log execution panicked, stopping worker: {e:?}");
                     poisoned.store(true, Ordering::Relaxed);
@@ -1015,15 +1011,16 @@ impl ClusterStorage {
     }
 
     fn start_exec_worker(&mut self, exec_rx: tokio::sync::mpsc::UnboundedReceiver<ExecTask>) {
-        self.exec_worker = Some(Self::spawn_exec_worker(
-            exec_rx,
-            self.db.clone(),
-            self.db_pool.clone(),
-            self.cluster_log.clone(),
-            self.notifier.clone(),
-            self.snapshot_lock.clone(),
-            self.poisoned.clone(),
-        ));
+        let ctx = ExecContext {
+            node: self.node,
+            log_body_limit: self.log_body_limit,
+            snapshot_lock: self.snapshot_lock.clone(),
+            db: self.db.clone(),
+            db_pool: self.db_pool.clone(),
+            cluster_log: self.cluster_log.clone(),
+            notifier: self.notifier.clone(),
+        };
+        self.exec_worker = Some(Self::spawn_exec_worker(exec_rx, ctx, self.poisoned.clone()));
     }
 
     pub(crate) async fn reinit(&mut self, config: &Config) -> ServerResult<()> {
@@ -1071,9 +1068,8 @@ impl ClusterStorage {
     }
 
     fn execute_log(&mut self, log: Log<ClusterAction>) {
-        let log_id = log.db_id.expect("log should have db_id");
-        let result_notifier = self.result_notifiers.remove(&log_id);
-        if let Err(e) = self.exec_sender.send((log, log_id, result_notifier)) {
+        let result_notifier = log.db_id.and_then(|id| self.result_notifiers.remove(&id));
+        if let Err(e) = self.exec_sender.send((log, result_notifier)) {
             crate::error!(
                 "Exec worker is dead, log entry {} skipped: {}",
                 e.0.0.index,
@@ -1087,24 +1083,88 @@ impl ClusterStorage {
     }
 }
 
-#[allow(clippy::too_many_arguments)]
-async fn run_log_action(
-    snapshot_lock: &Arc<RwLock<()>>,
-    db: &ServerDb,
-    db_pool: &DbPool,
-    cluster_log: &ClusterLog,
-    notifier: &tokio::sync::broadcast::Sender<u64>,
-    log: Log<ClusterAction>,
-    log_id: DbId,
-    result_notifier: Option<ResultNotifier>,
-) {
-    let _snapshot_guard = snapshot_lock.read().await;
-    let result = log.data.exec(db.clone(), db_pool.clone()).await;
-    let _ = notifier.send(log.index);
-    let _ = cluster_log.log_executed(log_id).await;
+fn truncate(s: String, limit: usize) -> String {
+    if s.len() <= limit {
+        s
+    } else {
+        let end = (0..=limit)
+            .rev()
+            .find(|&i| s.is_char_boundary(i))
+            .unwrap_or(0);
+        let mut t = s;
+        t.truncate(end);
+        t.push_str("...");
+        t
+    }
+}
 
-    if let Some(rs) = result_notifier {
-        let _ = rs.send(result.map(|r| (log.index, r)));
+struct ExecContext {
+    node: usize,
+    log_body_limit: usize,
+    snapshot_lock: Arc<RwLock<()>>,
+    db: ServerDb,
+    db_pool: DbPool,
+    cluster_log: ClusterLog,
+    notifier: tokio::sync::broadcast::Sender<u64>,
+}
+
+impl ExecContext {
+    async fn run(&self, log: Log<ClusterAction>, result_notifier: Option<ResultNotifier>) {
+        let _snapshot_guard = self.snapshot_lock.read().await;
+        let action_name = log.data.name();
+        let log_index = log.index;
+        let log_id = log.db_id.expect("log should have db_id");
+        let now = std::time::Instant::now();
+        let result = log.data.exec(self.db.clone(), self.db_pool.clone()).await;
+        let duration_us = now.elapsed().as_micros();
+
+        let success = result.is_ok();
+
+        let show_details = self.log_body_limit > 0
+            && (crate::logger::debug_enabled() || (!success && crate::logger::warn_enabled()));
+        let limit = self.log_body_limit;
+        let result_detail = if show_details {
+            result
+                .as_ref()
+                .ok()
+                .filter(|r| !matches!(r, ClusterActionResult::None))
+                .map(|r| truncate(r.summary(), limit))
+        } else {
+            None
+        };
+        let error_detail = if show_details {
+            result
+                .as_ref()
+                .err()
+                .map(|e| truncate(e.description.clone(), limit))
+        } else {
+            None
+        };
+
+        let _ = self.notifier.send(log_index);
+
+        let mut notes: Vec<String> = Vec::new();
+
+        if let Err(e) = self.cluster_log.log_executed(log_id).await {
+            notes.push(format!("log_executed failed: {e:?}"));
+        }
+
+        if let Some(rs) = result_notifier
+            && rs.send(result.map(|r| (log_index, r))).is_err()
+        {
+            notes.push("result receiver dropped".to_string());
+        }
+
+        crate::logger::log_exec(
+            self.node,
+            success,
+            action_name,
+            log_index,
+            duration_us,
+            result_detail,
+            error_detail,
+            &notes,
+        );
     }
 }
 

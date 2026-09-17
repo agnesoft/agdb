@@ -64,7 +64,8 @@ impl Level {
 }
 
 fn colors_enabled() -> bool {
-    std::io::stdin().is_terminal()
+    static IS_TTY: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *IS_TTY.get_or_init(|| std::io::stdin().is_terminal())
 }
 
 fn colorize(color: &str, value: impl AsRef<str>) -> String {
@@ -190,6 +191,44 @@ fn print_log_args(level: Level, message: Arguments<'_>) {
     let label = level.colored_label();
     let ts = colorize(DIM, ts);
     println!("{ts} {label} {message}");
+}
+
+pub(crate) fn log_exec(
+    node: usize,
+    success: bool,
+    action: &str,
+    log_index: u64,
+    duration_us: u128,
+    result_detail: Option<String>,
+    error_detail: Option<String>,
+    notes: &[String],
+) {
+    let level = if !success || !notes.is_empty() {
+        Level::Warn
+    } else {
+        Level::Debug
+    };
+
+    if !enabled(level) {
+        return;
+    }
+
+    let duration = colorize(DIM, format!("{}μs", duration_us));
+    let exec = colorize(BLUE, "EXEC");
+    let mut message = format!("[{node}] {exec} {action} [{log_index}] {duration}");
+
+    if let Some(detail) = result_detail {
+        message.push_str(&format!("\n  {} {detail}", colorize(DIM, "< R:")));
+    }
+    if let Some(detail) = error_detail {
+        message.push_str(&format!("\n  {} {detail}", colorize(DIM, "< E:")));
+    }
+
+    for note in notes {
+        message.push_str(&format!("\n  {} {note}", colorize(RED, "< !:")));
+    }
+
+    print_log_args(level, format_args!("{message}"));
 }
 
 fn status_colored(status: u16) -> String {

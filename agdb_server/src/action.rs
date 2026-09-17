@@ -85,11 +85,48 @@ pub(crate) enum ClusterActionResult {
     QueryResults(Vec<QueryResult>),
 }
 
+impl ClusterActionResult {
+    pub(crate) fn summary(&self) -> String {
+        match self {
+            Self::None => String::new(),
+            Self::QueryResults(r) => format!("{} result(s)", r.len()),
+        }
+    }
+}
+
 pub(crate) trait Action: Sized {
     async fn exec(self, db: ServerDb, db_pool: DbPool) -> ServerResult<ClusterActionResult>;
 }
 
 impl ClusterAction {
+    pub(crate) fn name(&self) -> &'static str {
+        match self {
+            Self::UserAdd(_) => "UserAdd",
+            Self::SaveUserToken(_) => "SaveUserToken",
+            Self::RemoveUserToken(_) => "RemoveUserToken",
+            Self::RemoveUserTokens(_) => "RemoveUserTokens",
+            Self::RemoveUserTokensExcept(_) => "RemoveUserTokensExcept",
+            Self::RemoveUserSession(_) => "RemoveUserSession",
+            Self::RemoveAllTokens(_) => "RemoveAllTokens",
+            Self::ChangePassword(_) => "ChangePassword",
+            Self::UserDelete(_) => "UserDelete",
+            Self::DbAdd(_) => "DbAdd",
+            Self::DbBackup(_) => "DbBackup",
+            Self::DbClear(_) => "DbClear",
+            Self::DbConvert(_) => "DbConvert",
+            Self::DbCopy(_) => "DbCopy",
+            Self::DbDelete(_) => "DbDelete",
+            Self::DbRemove(_) => "DbRemove",
+            Self::DbExec(_) => "DbExec",
+            Self::DbOptimize(_) => "DbOptimize",
+            Self::DbRollback(_) => "DbRollback",
+            Self::DbRestore(_) => "DbRestore",
+            Self::DbRename(_) => "DbRename",
+            Self::DbUserAdd(_) => "DbUserAdd",
+            Self::DbUserRemove(_) => "DbUserRemove",
+        }
+    }
+
     pub(crate) async fn exec(
         self,
         db: ServerDb,

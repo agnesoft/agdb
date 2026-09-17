@@ -54,7 +54,7 @@ impl FileStorage {
         wal: &mut WriteAheadLog,
         sync_mode: SyncMode,
     ) -> Result<(), DbError> {
-        for record in wal.records()? {
+        for record in wal.records()?.into_iter().rev() {
             Self::apply_wal_record(file, record)?;
         }
 
@@ -190,6 +190,12 @@ impl StorageData for FileStorage {
         self.file.seek(SeekFrom::Start(pos))?;
         self.file.write_all(bytes)?;
         self.len = std::cmp::max(current_len, end);
+        Ok(())
+    }
+
+    fn recover_from_wal(&mut self) -> Result<(), DbError> {
+        Self::apply_wal(&mut self.file, &mut self.wal, SyncMode::None)?;
+        self.len = self.file.seek(SeekFrom::End(0))?;
         Ok(())
     }
 }

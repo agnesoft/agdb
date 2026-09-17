@@ -155,6 +155,12 @@ pub trait StorageData: Sized {
     /// must handle the case where the `pos + bytes.len()` exceeds the current
     /// [`len()`](#method.len).
     fn write(&mut self, pos: u64, bytes: &[u8]) -> Result<(), DbError>;
+
+    /// Replays the WAL in reverse to restore the pre-transaction file state,
+    /// then clears the WAL and restores len.  Default is a no-op (no WAL).
+    fn recover_from_wal(&mut self) -> Result<(), DbError> {
+        Ok(())
+    }
 }
 
 #[derive(Debug)]
@@ -189,6 +195,18 @@ impl<D: StorageData> Storage<D> {
 
     pub fn commit(&mut self, id: u64) -> Result<(), DbError> {
         self.end_transaction(id)
+    }
+
+    pub fn recover(&mut self) -> Result<(), DbError> {
+        self.data.recover_from_wal()?;
+        self.transactions = 0;
+        self.records = StorageRecords::new();
+        self.read_records()
+    }
+
+    pub fn wipe_records(&mut self) {
+        self.records = StorageRecords::new();
+        self.transactions = 0;
     }
 
     pub fn copy(&self, name: &str) -> Result<Self, DbError> {

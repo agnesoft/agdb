@@ -17,6 +17,7 @@ pub enum DbErrorType {
     NotEnoughData,
     NotFound,
     OutOfBounds,
+    Poisoned,
     TypeError,
 }
 
@@ -110,6 +111,7 @@ impl Display for DbErrorType {
             DbErrorType::NotEnoughData => write!(f, "NotEnoughData"),
             DbErrorType::NotFound => write!(f, "NotFound"),
             DbErrorType::OutOfBounds => write!(f, "OutOfBounds"),
+            DbErrorType::Poisoned => write!(f, "Poisoned"),
             DbErrorType::NotAllowed => write!(f, "NotAllowed"),
             DbErrorType::TypeError => write!(f, "TypeError"),
         }

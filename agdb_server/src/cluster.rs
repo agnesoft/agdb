@@ -945,6 +945,7 @@ pub(crate) struct ClusterStorage {
 }
 
 impl ClusterStorage {
+    #[allow(clippy::too_many_arguments)]
     async fn new(
         node: usize,
         log_body_limit: u64,
@@ -1086,7 +1087,10 @@ fn truncate(s: String, limit: usize) -> String {
     if s.len() <= limit {
         s
     } else {
-        let end = (0..=limit).rev().find(|&i| s.is_char_boundary(i)).unwrap_or(0);
+        let end = (0..=limit)
+            .rev()
+            .find(|&i| s.is_char_boundary(i))
+            .unwrap_or(0);
         let mut t = s;
         t.truncate(end);
         t.push_str("...");
@@ -1117,8 +1121,7 @@ impl ExecContext {
         let success = result.is_ok();
 
         let show_details = self.log_body_limit > 0
-            && (crate::logger::debug_enabled()
-                || (!success && crate::logger::warn_enabled()));
+            && (crate::logger::debug_enabled() || (!success && crate::logger::warn_enabled()));
         let limit = self.log_body_limit;
         let result_detail = if show_details {
             result
@@ -1146,10 +1149,10 @@ impl ExecContext {
             notes.push(format!("log_executed failed: {e:?}"));
         }
 
-        if let Some(rs) = result_notifier {
-            if rs.send(result.map(|r| (log_index, r))).is_err() {
-                notes.push("result receiver dropped".to_string());
-            }
+        if let Some(rs) = result_notifier
+            && rs.send(result.map(|r| (log_index, r))).is_err()
+        {
+            notes.push("result receiver dropped".to_string());
         }
 
         crate::logger::log_exec(

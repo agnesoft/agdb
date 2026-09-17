@@ -193,6 +193,7 @@ fn print_log_args(level: Level, message: Arguments<'_>) {
     println!("{ts} {label} {message}");
 }
 
+#[allow(clippy::too_many_arguments)]
 pub(crate) fn log_exec(
     node: usize,
     success: bool,

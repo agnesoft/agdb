@@ -230,51 +230,73 @@ async fn studio_basepath_rewrite_test() -> anyhow::Result<()> {
         .text()
         .await?;
 
-    let js_path = index
-        .split("src=\"")
-        .skip(1)
-        .find_map(|s| {
-            let end = s.find('"')?;
-            let path = &s[..end];
-            path.contains("/studio/assets/index").then_some(path)
-        })
-        .ok_or_else(|| anyhow::anyhow!("studio index bundle path not found in served HTML"))?;
+    let mut js_paths: Vec<String> = Vec::new();
+
+    for fragment in index.split("src=\"").skip(1) {
+        if let Some(end) = fragment.find('"') {
+            let path = &fragment[..end];
+            if path.contains("/studio/assets/") && path.ends_with(".js") {
+                js_paths.push(path.to_string());
+            }
+        }
+    }
+
+    for fragment in index.split("href=\"").skip(1) {
+        if let Some(end) = fragment.find('"') {
+            let path = &fragment[..end];
+            if path.contains("/studio/assets/") && path.ends_with(".js") {
+                js_paths.push(path.to_string());
+            }
+        }
+    }
 
     assert!(
-        js_path.starts_with("/public/studio/assets/index"),
-        "{js_path}"
+        !js_paths.is_empty(),
+        "no JS asset paths found in served HTML"
     );
 
-    let js_url = format!(
-        "{}{}",
-        server.address,
-        js_path.strip_prefix("/public").unwrap_or(js_path)
-    );
+    for js_path in &js_paths {
+        assert!(
+            js_path.starts_with("/public/studio/assets/"),
+            "JS path should have basepath prefix: {js_path}"
+        );
 
-    let js = reqwest_client()
-        .get(js_url)
-        .send()
-        .await?
-        .error_for_status()?
-        .text()
-        .await?;
+        let js_url = format!(
+            "{}{}",
+            server.address,
+            js_path.strip_prefix("/public").unwrap_or(js_path)
+        );
 
-    assert!(
-        js.contains("/public/studio/"),
-        "served index JS should contain a basepath-prefixed studio URL"
-    );
+        let js = reqwest_client()
+            .get(js_url)
+            .send()
+            .await?
+            .error_for_status()?
+            .text()
+            .await?;
 
-    let bad_studio_prefix = ["\"/studio", "'/studio", "`/studio"]
-        .iter()
-        .filter_map(|needle| js.match_indices(needle).next())
-        .next()
-        .map(|(idx, _)| &js[idx..idx + 80.min(js.len().saturating_sub(idx))]);
+        assert!(
+            !js.contains("https://localhost:3000"),
+            "{js_path} still contains https://localhost:3000"
+        );
 
-    assert!(
-        bad_studio_prefix.is_none(),
-        "served index JS still contains an unreplaced /studio literal prefix: {:?}",
-        bad_studio_prefix
-    );
+        assert!(
+            !js.contains("http://localhost:3000"),
+            "{js_path} still contains http://localhost:3000"
+        );
+
+        let bad_studio_prefix = ["\"/studio", "'/studio", "`/studio"]
+            .iter()
+            .filter_map(|needle| js.match_indices(needle).next())
+            .next()
+            .map(|(idx, _)| &js[idx..idx + 80.min(js.len().saturating_sub(idx))]);
+
+        assert!(
+            bad_studio_prefix.is_none(),
+            "{js_path} still contains an unreplaced /studio literal prefix: {:?}",
+            bad_studio_prefix
+        );
+    }
 
     Ok(())
 }

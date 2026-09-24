@@ -77,10 +77,6 @@ pub struct SearchQuery {
     /// When true and both origin and destination are set,
     /// the path search follows edges in reverse (incoming edges).
     /// Set by the `to().from()` builder order.
-    #[cfg_attr(
-        feature = "serde",
-        serde(default, skip_serializing_if = "std::ops::Not::not")
-    )]
     pub reverse: bool,
 }
 

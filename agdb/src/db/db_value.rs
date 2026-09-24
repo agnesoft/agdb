@@ -2664,6 +2664,7 @@ mod tests {
         let val = DbValue::VecDbValue(vec![
             DbValue::from(1_u64),
             DbValue::from("hello"),
+            #[allow(clippy::approx_constant)]
             DbValue::from(3.14_f64),
         ]);
         assert_eq!(format!("{val}"), "[1, hello, 3.14]");
@@ -2804,6 +2805,7 @@ mod tests {
         let original = DbValue::VecDbValue(vec![
             DbValue::from(42_u64),
             DbValue::from("hello"),
+            #[allow(clippy::approx_constant)]
             DbValue::from(3.14_f64),
             DbValue::from(-7_i64),
             DbValue::Bytes(vec![0xDE, 0xAD]),

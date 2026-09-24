@@ -1391,6 +1391,12 @@ class SearchToBuilder {
         return new SearchOrderByBuilder(this.data);
     }
 
+    from(id: BuilderQueryId): SearchFromBuilder {
+        this.data.search.origin = intoQueryId(id);
+        this.data.search.reverse = true;
+        return new SearchFromBuilder(this.data);
+    }
+
     where(): SearchWhereBuilder {
         return new SearchWhereBuilder(this.data);
     }
@@ -1467,6 +1473,7 @@ class SearchBuilder {
             limit: 0,
             offset: 0,
             order_by: [],
+            reverse: false,
         };
 
         if (query !== undefined) {

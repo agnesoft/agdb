@@ -117,6 +117,20 @@ where
         }
     }
 
+    pub fn path_reverse<Handler: PathSearchHandler>(
+        &self,
+        from: GraphIndex,
+        to: GraphIndex,
+        handler: Handler,
+    ) -> Result<Vec<GraphIndex>, DbError> {
+        if from != to && self.is_valid_node(from) && self.is_valid_node(to) {
+            PathSearch::<D, Data, Handler>::new_reverse(self.graph, self.storage, from, to, handler)
+                .search()
+        } else {
+            Ok(vec![])
+        }
+    }
+
     pub fn elements<Handler: SearchHandler>(
         &self,
         handler: Handler,

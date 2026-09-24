@@ -84,6 +84,7 @@ class SearchQueryBuilder
         $query->setLimit(0);
         $query->setOrderBy([]);
         $query->setConditions([]);
+        $query->setReverse(false);
         return $query;
     }
 }
@@ -1375,6 +1376,13 @@ class SearchToBuilder
     {
         $this->data->search->setOrderBy(is_array($data) ? $data : [$data]);
         return new SearchOrderByBuilder($this->data);
+    }
+
+    public function from(string|int|QueryId $id): SearchFromBuilder
+    {
+        $this->data->search->setOrigin(to_query_id($id));
+        $this->data->search->setReverse(true);
+        return new SearchFromBuilder($this->data);
     }
 
     public function where(): SearchWhereBuilder

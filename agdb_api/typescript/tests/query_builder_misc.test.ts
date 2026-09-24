@@ -164,6 +164,26 @@ describe("QueryBuilder misc tests", () => {
         expect(query).toEqual(expected);
     });
 
+    it("reverse path search", () => {
+        const query = QueryBuilder.search().to(1).from(2).query();
+        expect(query).toEqual({
+            Search: {
+                algorithm: "BreadthFirst",
+                origin: {
+                    Id: 2,
+                },
+                destination: {
+                    Id: 1,
+                },
+                limit: 0,
+                offset: 0,
+                order_by: [],
+                conditions: [],
+                reverse: true,
+            },
+        });
+    });
+
     it("shorthand equal comparisons", () => {
         const distance = QueryBuilder.search()
             .from(1)

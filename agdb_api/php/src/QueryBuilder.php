@@ -1377,6 +1377,13 @@ class SearchToBuilder
         return new SearchOrderByBuilder($this->data);
     }
 
+    public function from(string|int|QueryId $id): SearchFromBuilder
+    {
+        $this->data->search->setOrigin(to_query_id($id));
+        $this->data->search->setReverse(true);
+        return new SearchFromBuilder($this->data);
+    }
+
     public function where(): SearchWhereBuilder
     {
         return new SearchWhereBuilder($this->data);

@@ -63,6 +63,27 @@ final class QueryBuilderTest extends TestCase
         $this->assertEquals($json2, $json1);
     }
 
+    public function testReversePathSearch(): void
+    {
+        $query = QueryBuilder::search()->to(1)->from(2)->query();
+        $json = $query->jsonSerialize();
+        $this->assertEquals(
+            [
+                "search" => [
+                    "algorithm" => "BreadthFirst",
+                    "conditions" => [],
+                    "destination" => ["id" => 1],
+                    "limit" => 0,
+                    "offset" => 0,
+                    "order_by" => [],
+                    "origin" => ["id" => 2],
+                    "reverse" => true,
+                ],
+            ],
+            $json
+        );
+    }
+
     public function testToDbValue_float(): void
     {
         $query1 = QueryBuilder::search()

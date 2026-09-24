@@ -437,7 +437,8 @@
                 "modifier": "None",
                 "data": "Node"
               }
-            ]
+            ],
+            "reverse": false
           }
         },
         "to": {
@@ -458,7 +459,8 @@
                 "modifier": "None",
                 "data": "Node"
               }
-            ]
+            ],
+            "reverse": false
           }
         },
         "ids": {
@@ -493,7 +495,8 @@
                 "modifier": "None",
                 "data": "Node"
               }
-            ]
+            ],
+            "reverse": false
           }
         },
         "to": {
@@ -514,7 +517,8 @@
                 "modifier": "None",
                 "data": "Node"
               }
-            ]
+            ],
+            "reverse": false
           }
         },
         "ids": {
@@ -570,7 +574,8 @@
                 "modifier": "None",
                 "data": "Node"
               }
-            ]
+            ],
+            "reverse": false
           }
         },
         "to": {
@@ -591,7 +596,8 @@
                 "modifier": "None",
                 "data": "Node"
               }
-            ]
+            ],
+            "reverse": false
           }
         },
         "ids": {
@@ -724,7 +730,8 @@
                 "modifier": "None",
                 "data": "Edge"
               }
-            ]
+            ],
+            "reverse": false
           }
         },
         "values": {
@@ -1123,7 +1130,8 @@
             "limit": 0,
             "offset": 0,
             "order_by": [],
-            "conditions": []
+            "conditions": [],
+            "reverse": false
           }
         }
       }
@@ -1287,7 +1295,8 @@
             "limit": 0,
             "offset": 0,
             "order_by": [],
-            "conditions": []
+            "conditions": [],
+            "reverse": false
           }
         },
         "values": {
@@ -1341,7 +1350,8 @@
             "limit": 0,
             "offset": 0,
             "order_by": [],
-            "conditions": []
+            "conditions": [],
+            "reverse": false
           }
         },
         "values": {
@@ -1432,7 +1442,8 @@
             "limit": 0,
             "offset": 0,
             "order_by": [],
-            "conditions": []
+            "conditions": [],
+            "reverse": false
           }
         },
         "values": {
@@ -1474,7 +1485,8 @@
             "limit": 0,
             "offset": 0,
             "order_by": [],
-            "conditions": []
+            "conditions": [],
+            "reverse": false
           }
         },
         "values": {
@@ -1658,7 +1670,8 @@
           "limit": 0,
           "offset": 0,
           "order_by": [],
-          "conditions": []
+          "conditions": [],
+          "reverse": false
         }
       }
     }
@@ -1678,7 +1691,8 @@
           "limit": 0,
           "offset": 0,
           "order_by": [],
-          "conditions": []
+          "conditions": [],
+          "reverse": false
         }
       }
     }
@@ -1740,7 +1754,8 @@
             "limit": 0,
             "offset": 0,
             "order_by": [],
-            "conditions": []
+            "conditions": [],
+            "reverse": false
           }
         }
       }
@@ -1770,7 +1785,8 @@
             "limit": 0,
             "offset": 0,
             "order_by": [],
-            "conditions": []
+            "conditions": [],
+            "reverse": false
           }
         }
       }
@@ -1864,7 +1880,8 @@
             "limit": 0,
             "offset": 0,
             "order_by": [],
-            "conditions": []
+            "conditions": [],
+            "reverse": false
           }
         },
         "values": {
@@ -1913,7 +1930,8 @@
           "limit": 0,
           "offset": 0,
           "order_by": [],
-          "conditions": []
+          "conditions": [],
+          "reverse": false
         }
       }
     }
@@ -1933,7 +1951,8 @@
           "limit": 0,
           "offset": 0,
           "order_by": [],
-          "conditions": []
+          "conditions": [],
+          "reverse": false
         }
       }
     }
@@ -2017,7 +2036,8 @@
             "limit": 0,
             "offset": 0,
             "order_by": [],
-            "conditions": []
+            "conditions": [],
+            "reverse": false
           }
         },
         "from": true,
@@ -2075,7 +2095,8 @@
             "limit": 0,
             "offset": 0,
             "order_by": [],
-            "conditions": []
+            "conditions": [],
+            "reverse": false
           }
         }
       }
@@ -2098,7 +2119,8 @@
             "limit": 0,
             "offset": 0,
             "order_by": [],
-            "conditions": []
+            "conditions": [],
+            "reverse": false
           }
         }
       }
@@ -2121,7 +2143,8 @@
             "limit": 0,
             "offset": 0,
             "order_by": [],
-            "conditions": []
+            "conditions": [],
+            "reverse": false
           }
         }
       }
@@ -2161,7 +2184,8 @@
                   }
                 }
               }
-            ]
+            ],
+            "reverse": false
           }
         }
       }
@@ -2184,7 +2208,8 @@
             "limit": 10,
             "offset": 0,
             "order_by": [],
-            "conditions": []
+            "conditions": [],
+            "reverse": false
           }
         }
       }
@@ -2207,7 +2232,8 @@
             "limit": 0,
             "offset": 10,
             "order_by": [],
-            "conditions": []
+            "conditions": [],
+            "reverse": false
           }
         }
       }
@@ -2236,7 +2262,8 @@
                 }
               }
             ],
-            "conditions": []
+            "conditions": [],
+            "reverse": false
           }
         }
       }
@@ -2265,7 +2292,8 @@
                 "modifier": "None",
                 "data": "Node"
               }
-            ]
+            ],
+            "reverse": false
           }
         }
       }
@@ -2319,7 +2347,8 @@
           "limit": 0,
           "offset": 0,
           "order_by": [],
-          "conditions": []
+          "conditions": [],
+          "reverse": false
         }
       }
     }
@@ -2339,7 +2368,8 @@
           "limit": 0,
           "offset": 0,
           "order_by": [],
-          "conditions": []
+          "conditions": [],
+          "reverse": false
         }
       }
     }
@@ -2386,7 +2416,8 @@
           "limit": 0,
           "offset": 0,
           "order_by": [],
-          "conditions": []
+          "conditions": [],
+          "reverse": false
         }
       }
     }
@@ -2406,7 +2437,8 @@
           "limit": 0,
           "offset": 0,
           "order_by": [],
-          "conditions": []
+          "conditions": [],
+          "reverse": false
         }
       }
     }
@@ -2488,7 +2520,8 @@
             "limit": 0,
             "offset": 0,
             "order_by": [],
-            "conditions": []
+            "conditions": [],
+            "reverse": false
           }
         }
       }
@@ -2518,7 +2551,8 @@
             "limit": 0,
             "offset": 0,
             "order_by": [],
-            "conditions": []
+            "conditions": [],
+            "reverse": false
           }
         }
       }
@@ -2538,7 +2572,8 @@
         "limit": 0,
         "offset": 0,
         "order_by": [],
-        "conditions": []
+        "conditions": [],
+        "reverse": false
       }
     }
   ],
@@ -2556,7 +2591,8 @@
         "limit": 0,
         "offset": 0,
         "order_by": [],
-        "conditions": []
+        "conditions": [],
+        "reverse": false
       }
     }
   ],
@@ -2574,7 +2610,27 @@
         "limit": 0,
         "offset": 0,
         "order_by": [],
-        "conditions": []
+        "conditions": [],
+        "reverse": false
+      }
+    }
+  ],
+  [
+    "QueryBuilder::search().to(\"a\").from(\"b\").query()",
+    {
+      "Search": {
+        "algorithm": "BreadthFirst",
+        "origin": {
+          "Alias": "b"
+        },
+        "destination": {
+          "Alias": "a"
+        },
+        "limit": 0,
+        "offset": 0,
+        "order_by": [],
+        "conditions": [],
+        "reverse": true
       }
     }
   ],
@@ -2592,7 +2648,8 @@
         "limit": 0,
         "offset": 0,
         "order_by": [],
-        "conditions": []
+        "conditions": [],
+        "reverse": false
       }
     }
   ],
@@ -2610,7 +2667,8 @@
         "limit": 0,
         "offset": 0,
         "order_by": [],
-        "conditions": []
+        "conditions": [],
+        "reverse": false
       }
     }
   ],
@@ -2628,7 +2686,8 @@
         "limit": 0,
         "offset": 0,
         "order_by": [],
-        "conditions": []
+        "conditions": [],
+        "reverse": false
       }
     }
   ],
@@ -2646,7 +2705,8 @@
         "limit": 0,
         "offset": 0,
         "order_by": [],
-        "conditions": []
+        "conditions": [],
+        "reverse": false
       }
     }
   ],
@@ -2681,7 +2741,8 @@
               }
             }
           }
-        ]
+        ],
+        "reverse": false
       }
     }
   ],
@@ -2710,7 +2771,8 @@
             }
           }
         ],
-        "conditions": []
+        "conditions": [],
+        "reverse": false
       }
     }
   ],
@@ -2728,7 +2790,8 @@
         "limit": 0,
         "offset": 10,
         "order_by": [],
-        "conditions": []
+        "conditions": [],
+        "reverse": false
       }
     }
   ],
@@ -2746,7 +2809,8 @@
         "limit": 5,
         "offset": 0,
         "order_by": [],
-        "conditions": []
+        "conditions": [],
+        "reverse": false
       }
     }
   ],
@@ -2770,7 +2834,8 @@
             }
           }
         ],
-        "conditions": []
+        "conditions": [],
+        "reverse": false
       }
     }
   ],
@@ -2794,7 +2859,8 @@
             }
           }
         ],
-        "conditions": []
+        "conditions": [],
+        "reverse": false
       }
     }
   ],
@@ -2818,7 +2884,8 @@
             }
           }
         ],
-        "conditions": []
+        "conditions": [],
+        "reverse": false
       }
     }
   ],
@@ -2836,7 +2903,8 @@
         "limit": 5,
         "offset": 10,
         "order_by": [],
-        "conditions": []
+        "conditions": [],
+        "reverse": false
       }
     }
   ],
@@ -2864,7 +2932,8 @@
               }
             }
           }
-        ]
+        ],
+        "reverse": false
       }
     }
   ],
@@ -2892,7 +2961,8 @@
               }
             }
           }
-        ]
+        ],
+        "reverse": false
       }
     }
   ],
@@ -2916,7 +2986,8 @@
             "modifier": "None",
             "data": "Edge"
           }
-        ]
+        ],
+        "reverse": false
       }
     }
   ],
@@ -2944,7 +3015,8 @@
               }
             }
           }
-        ]
+        ],
+        "reverse": false
       }
     }
   ],
@@ -2972,7 +3044,8 @@
               }
             }
           }
-        ]
+        ],
+        "reverse": false
       }
     }
   ],
@@ -3000,7 +3073,8 @@
               }
             }
           }
-        ]
+        ],
+        "reverse": false
       }
     }
   ],
@@ -3024,7 +3098,8 @@
             "modifier": "None",
             "data": "Node"
           }
-        ]
+        ],
+        "reverse": false
       }
     }
   ],
@@ -3059,7 +3134,8 @@
               }
             }
           }
-        ]
+        ],
+        "reverse": false
       }
     }
   ],
@@ -3092,7 +3168,8 @@
               ]
             }
           }
-        ]
+        ],
+        "reverse": false
       }
     }
   ],
@@ -3125,7 +3202,8 @@
               ]
             }
           }
-        ]
+        ],
+        "reverse": false
       }
     }
   ],
@@ -3158,7 +3236,8 @@
               ]
             }
           }
-        ]
+        ],
+        "reverse": false
       }
     }
   ],
@@ -3188,7 +3267,8 @@
               ]
             }
           }
-        ]
+        ],
+        "reverse": false
       }
     }
   ],
@@ -3221,7 +3301,8 @@
               ]
             }
           }
-        ]
+        ],
+        "reverse": false
       }
     }
   ],
@@ -3251,7 +3332,8 @@
               ]
             }
           }
-        ]
+        ],
+        "reverse": false
       }
     }
   ],
@@ -3280,7 +3362,8 @@
             "modifier": "None",
             "data": "Edge"
           }
-        ]
+        ],
+        "reverse": false
       }
     }
   ],
@@ -3313,7 +3396,8 @@
               }
             }
           }
-        ]
+        ],
+        "reverse": false
       }
     }
   ],
@@ -3366,7 +3450,8 @@
               ]
             }
           }
-        ]
+        ],
+        "reverse": false
       }
     }
   ],
@@ -3419,7 +3504,8 @@
               ]
             }
           }
-        ]
+        ],
+        "reverse": false
       }
     }
   ],
@@ -3475,7 +3561,8 @@
               ]
             }
           }
-        ]
+        ],
+        "reverse": false
       }
     }
   ],
@@ -3528,7 +3615,8 @@
               ]
             }
           }
-        ]
+        ],
+        "reverse": false
       }
     }
   ],
@@ -3584,7 +3672,8 @@
               ]
             }
           }
-        ]
+        ],
+        "reverse": false
       }
     }
   ],
@@ -3614,7 +3703,8 @@
             "modifier": "None",
             "data": "Node"
           }
-        ]
+        ],
+        "reverse": false
       }
     }
   ],
@@ -3638,7 +3728,8 @@
             "modifier": "None",
             "data": "Node"
           }
-        ]
+        ],
+        "reverse": false
       }
     }
   ],
@@ -3662,7 +3753,8 @@
             "modifier": "None",
             "data": "Node"
           }
-        ]
+        ],
+        "reverse": false
       }
     }
   ],
@@ -3680,7 +3772,8 @@
         "limit": 0,
         "offset": 1,
         "order_by": [],
-        "conditions": []
+        "conditions": [],
+        "reverse": false
       }
     }
   ],
@@ -3698,7 +3791,8 @@
         "limit": 1,
         "offset": 0,
         "order_by": [],
-        "conditions": []
+        "conditions": [],
+        "reverse": false
       }
     }
   ],
@@ -3722,7 +3816,8 @@
             "modifier": "None",
             "data": "Node"
           }
-        ]
+        ],
+        "reverse": false
       }
     }
   ],
@@ -3752,7 +3847,8 @@
             "modifier": "None",
             "data": "Node"
           }
-        ]
+        ],
+        "reverse": false
       }
     }
   ]

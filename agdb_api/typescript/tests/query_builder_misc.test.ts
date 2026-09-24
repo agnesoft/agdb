@@ -159,6 +159,7 @@ describe("QueryBuilder misc tests", () => {
                 offset: 0,
                 order_by: [{ Asc: { String: "key" } }],
                 conditions: [],
+                reverse: false,
             },
         };
         expect(query).toEqual(expected);

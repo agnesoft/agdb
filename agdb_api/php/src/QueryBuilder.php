@@ -84,6 +84,7 @@ class SearchQueryBuilder
         $query->setLimit(0);
         $query->setOrderBy([]);
         $query->setConditions([]);
+        $query->setReverse(false);
         return $query;
     }
 }

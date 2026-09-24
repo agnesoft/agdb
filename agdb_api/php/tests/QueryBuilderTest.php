@@ -68,15 +68,15 @@ final class QueryBuilderTest extends TestCase
         $query = QueryBuilder::search()->to(1)->from(2)->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(
-            [
-                "search" => [
+            (object) [
+                "Search" => (object) [
                     "algorithm" => "BreadthFirst",
                     "conditions" => [],
-                    "destination" => ["id" => 1],
+                    "destination" => (object) ["Id" => 1],
                     "limit" => 0,
                     "offset" => 0,
                     "order_by" => [],
-                    "origin" => ["id" => 2],
+                    "origin" => (object) ["Id" => 2],
                     "reverse" => true,
                 ],
             ],

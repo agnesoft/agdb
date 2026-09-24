@@ -3947,7 +3947,8 @@
           "limit",
           "offset",
           "order_by",
-          "conditions"
+          "conditions",
+          "reverse"
         ],
         "properties": {
           "algorithm": {
@@ -3987,6 +3988,10 @@
           "origin": {
             "$ref": "#/components/schemas/QueryId",
             "description": "Starting element of the search."
+          },
+          "reverse": {
+            "type": "boolean",
+            "description": "When true and both origin and destination are set,\nthe path search follows edges in reverse (incoming edges).\nSet by the `to().from()` builder order."
           }
         }
       },

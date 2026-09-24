@@ -1,4 +1,5 @@
 use crate::Amend;
+use crate::BitwiseOp;
 use crate::DbType;
 use crate::DbValue;
 use crate::InsertAliasesQuery;
@@ -217,6 +218,109 @@ impl Insert {
             ids: QueryIds::Ids(vec![]),
             values: QueryValues::Single(Into::<SingleValues>::into(key_values).0),
             amend: Amend::Add,
+        })
+    }
+
+    /// Amends (bitwise AND) list of lists `key_values` on existing elements.
+    /// For integers (`i64`, `u64`) and bytes the bitwise op is applied directly.
+    /// Other types fall back to add semantics. If a key does not exist, it is inserted.
+    ///
+    /// ```
+    /// use agdb::QueryBuilder;
+    ///
+    /// QueryBuilder::insert().amend_and([[("flags", 0b1010_u64).into()]]).ids(1);
+    /// ```
+    pub fn amend_and<T: Into<MultiValues>>(self, key_values: T) -> InsertValues {
+        InsertValues(InsertValuesQuery {
+            ids: QueryIds::Ids(vec![]),
+            values: QueryValues::Multi(Into::<MultiValues>::into(key_values).0),
+            amend: Amend::AddBitwise(BitwiseOp::And),
+        })
+    }
+
+    /// Amends (bitwise AND) a single list of `key_values` uniformly
+    /// on all target elements. For integers (`i64`, `u64`) and bytes the bitwise op is
+    /// applied directly. Other types fall back to add semantics. If a key does not exist,
+    /// it is inserted.
+    ///
+    /// ```
+    /// use agdb::QueryBuilder;
+    ///
+    /// QueryBuilder::insert().amend_and_uniform([("flags", 0b1010_u64).into()]).ids(1);
+    /// ```
+    pub fn amend_and_uniform<T: Into<SingleValues>>(self, key_values: T) -> InsertValues {
+        InsertValues(InsertValuesQuery {
+            ids: QueryIds::Ids(vec![]),
+            values: QueryValues::Single(Into::<SingleValues>::into(key_values).0),
+            amend: Amend::AddBitwise(BitwiseOp::And),
+        })
+    }
+
+    /// Amends (bitwise OR) list of lists `key_values` on existing elements.
+    /// For integers (`i64`, `u64`) and bytes the bitwise op is applied directly.
+    /// Other types fall back to add semantics. If a key does not exist, it is inserted.
+    ///
+    /// ```
+    /// use agdb::QueryBuilder;
+    ///
+    /// QueryBuilder::insert().amend_or([[("flags", 0b1010_u64).into()]]).ids(1);
+    /// ```
+    pub fn amend_or<T: Into<MultiValues>>(self, key_values: T) -> InsertValues {
+        InsertValues(InsertValuesQuery {
+            ids: QueryIds::Ids(vec![]),
+            values: QueryValues::Multi(Into::<MultiValues>::into(key_values).0),
+            amend: Amend::AddBitwise(BitwiseOp::Or),
+        })
+    }
+
+    /// Amends (bitwise OR) a single list of `key_values` uniformly
+    /// on all target elements. For integers (`i64`, `u64`) and bytes the bitwise op is applied directly.
+    /// Other types fall back to add semantics. If a key does not exist, it is inserted.
+    ///
+    /// ```
+    /// use agdb::QueryBuilder;
+    ///
+    /// QueryBuilder::insert().amend_or_uniform([("flags", 0b1010_u64).into()]).ids(1);
+    /// ```
+    pub fn amend_or_uniform<T: Into<SingleValues>>(self, key_values: T) -> InsertValues {
+        InsertValues(InsertValuesQuery {
+            ids: QueryIds::Ids(vec![]),
+            values: QueryValues::Single(Into::<SingleValues>::into(key_values).0),
+            amend: Amend::AddBitwise(BitwiseOp::Or),
+        })
+    }
+
+    /// Amends (bitwise XOR) list of lists `key_values` on existing elements.
+    /// For integers (`i64`, `u64`) and bytes the bitwise op is applied directly.
+    /// Other types fall back to add semantics. If a key does not exist, it is inserted.
+    ///
+    /// ```
+    /// use agdb::QueryBuilder;
+    ///
+    /// QueryBuilder::insert().amend_xor([[("flags", 0b1010_u64).into()]]).ids(1);
+    /// ```
+    pub fn amend_xor<T: Into<MultiValues>>(self, key_values: T) -> InsertValues {
+        InsertValues(InsertValuesQuery {
+            ids: QueryIds::Ids(vec![]),
+            values: QueryValues::Multi(Into::<MultiValues>::into(key_values).0),
+            amend: Amend::AddBitwise(BitwiseOp::Xor),
+        })
+    }
+
+    /// Amends (bitwise XOR) a single list of `key_values` uniformly
+    /// on all target elements. For integers (`i64`, `u64`) and bytes the bitwise op is applied directly.
+    /// Other types fall back to add semantics. If a key does not exist, it is inserted.
+    ///
+    /// ```
+    /// use agdb::QueryBuilder;
+    ///
+    /// QueryBuilder::insert().amend_xor_uniform([("flags", 0b1010_u64).into()]).ids(1);
+    /// ```
+    pub fn amend_xor_uniform<T: Into<SingleValues>>(self, key_values: T) -> InsertValues {
+        InsertValues(InsertValuesQuery {
+            ids: QueryIds::Ids(vec![]),
+            values: QueryValues::Single(Into::<SingleValues>::into(key_values).0),
+            amend: Amend::AddBitwise(BitwiseOp::Xor),
         })
     }
 }

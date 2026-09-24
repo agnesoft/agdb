@@ -1,4 +1,5 @@
 use crate::AgdbSerialize;
+use crate::BitwiseOp;
 use crate::DbError;
 use crate::DbErrorType;
 use crate::DbTypeMarker;
@@ -488,6 +489,65 @@ impl DbValue {
             if let Some(pos) = result.iter().position(|x| x == item) {
                 result.remove(pos);
             }
+        }
+        result
+    }
+
+    pub fn amend_bitwise(
+        &self,
+        other: &DbValue,
+        op: &BitwiseOp,
+        add_fallback: bool,
+    ) -> Result<DbValue, DbError> {
+        match (self, other) {
+            (DbValue::I64(a), DbValue::I64(b)) => Ok(DbValue::I64(Self::bitwise_i64(*a, *b, op))),
+            (DbValue::I64(a), DbValue::U64(b)) => {
+                Ok(DbValue::I64(Self::bitwise_i64(*a, *b as i64, op)))
+            }
+            (DbValue::U64(a), DbValue::U64(b)) => Ok(DbValue::U64(Self::bitwise_u64(*a, *b, op))),
+            (DbValue::U64(a), DbValue::I64(b)) => {
+                Ok(DbValue::U64(Self::bitwise_u64(*a, *b as u64, op)))
+            }
+            (DbValue::Bytes(a), DbValue::Bytes(b)) => {
+                Ok(DbValue::Bytes(Self::bitwise_bytes(a, b, op)))
+            }
+            _ => {
+                if add_fallback {
+                    self.amend_add(other)
+                } else {
+                    self.amend_remove(other)
+                }
+            }
+        }
+    }
+
+    fn bitwise_i64(a: i64, b: i64, op: &BitwiseOp) -> i64 {
+        match op {
+            BitwiseOp::And => a & b,
+            BitwiseOp::Or => a | b,
+            BitwiseOp::Xor => a ^ b,
+        }
+    }
+
+    fn bitwise_u64(a: u64, b: u64, op: &BitwiseOp) -> u64 {
+        match op {
+            BitwiseOp::And => a & b,
+            BitwiseOp::Or => a | b,
+            BitwiseOp::Xor => a ^ b,
+        }
+    }
+
+    fn bitwise_bytes(a: &[u8], b: &[u8], op: &BitwiseOp) -> Vec<u8> {
+        let len = a.len().max(b.len());
+        let mut result = Vec::with_capacity(len);
+        for i in 0..len {
+            let x = if i < a.len() { a[i] } else { 0 };
+            let y = if i < b.len() { b[i] } else { 0 };
+            result.push(match op {
+                BitwiseOp::And => x & y,
+                BitwiseOp::Or => x | y,
+                BitwiseOp::Xor => x ^ y,
+            });
         }
         result
     }

@@ -1767,3 +1767,238 @@ fn amend_or_bytes_different_lengths() {
         }],
     );
 }
+
+#[test]
+fn amend_and_bytes_different_lengths() {
+    let mut db = TestDb::new();
+    db.exec_mut(
+        QueryBuilder::insert()
+            .nodes()
+            .values([[("mask", vec![0xFF_u8, 0xAB, 0xCD]).into()]])
+            .query(),
+        1,
+    );
+    // shorter operand zero-padded: AND with 0 zeroes the tail
+    db.exec_mut(
+        QueryBuilder::insert()
+            .amend_and([[("mask", vec![0x0F_u8]).into()]])
+            .ids(1)
+            .query(),
+        1,
+    );
+    db.exec_elements(
+        QueryBuilder::select().ids(1).query(),
+        &[DbElement {
+            id: DbId(1),
+            from: DbId::default(),
+            to: DbId::default(),
+            values: vec![("mask", vec![0x0F_u8, 0x00, 0x00]).into()],
+        }],
+    );
+}
+
+#[test]
+fn amend_xor_bytes_different_lengths() {
+    let mut db = TestDb::new();
+    db.exec_mut(
+        QueryBuilder::insert()
+            .nodes()
+            .values([[("mask", vec![0xFF_u8, 0xAA]).into()]])
+            .query(),
+        1,
+    );
+    // shorter operand zero-padded: XOR with 0 passes through
+    db.exec_mut(
+        QueryBuilder::insert()
+            .amend_xor([[("mask", vec![0x0F_u8]).into()]])
+            .ids(1)
+            .query(),
+        1,
+    );
+    db.exec_elements(
+        QueryBuilder::select().ids(1).query(),
+        &[DbElement {
+            id: DbId(1),
+            from: DbId::default(),
+            to: DbId::default(),
+            values: vec![("mask", vec![0xF0_u8, 0xAA]).into()],
+        }],
+    );
+}
+
+// --- RemoveBitwise tests (remove().amend_or/and/xor) ---
+
+#[test]
+fn remove_amend_or_u64() {
+    let mut db = TestDb::new();
+    db.exec_mut(
+        QueryBuilder::insert()
+            .nodes()
+            .values([[("flags", 0b1010_u64).into()]])
+            .query(),
+        1,
+    );
+    db.exec_mut(
+        QueryBuilder::remove()
+            .amend_or([[("flags", 0b0110_u64).into()]])
+            .ids(1)
+            .query(),
+        1,
+    );
+    db.exec_elements(
+        QueryBuilder::select().ids(1).query(),
+        &[DbElement {
+            id: DbId(1),
+            from: DbId::default(),
+            to: DbId::default(),
+            values: vec![("flags", 0b1110_u64).into()],
+        }],
+    );
+}
+
+#[test]
+fn remove_amend_and_u64() {
+    let mut db = TestDb::new();
+    db.exec_mut(
+        QueryBuilder::insert()
+            .nodes()
+            .values([[("flags", 0b1111_u64).into()]])
+            .query(),
+        1,
+    );
+    db.exec_mut(
+        QueryBuilder::remove()
+            .amend_and([[("flags", 0b1010_u64).into()]])
+            .ids(1)
+            .query(),
+        1,
+    );
+    db.exec_elements(
+        QueryBuilder::select().ids(1).query(),
+        &[DbElement {
+            id: DbId(1),
+            from: DbId::default(),
+            to: DbId::default(),
+            values: vec![("flags", 0b1010_u64).into()],
+        }],
+    );
+}
+
+#[test]
+fn remove_amend_xor_u64() {
+    let mut db = TestDb::new();
+    db.exec_mut(
+        QueryBuilder::insert()
+            .nodes()
+            .values([[("flags", 0b1010_u64).into()]])
+            .query(),
+        1,
+    );
+    db.exec_mut(
+        QueryBuilder::remove()
+            .amend_xor([[("flags", 0b0110_u64).into()]])
+            .ids(1)
+            .query(),
+        1,
+    );
+    db.exec_elements(
+        QueryBuilder::select().ids(1).query(),
+        &[DbElement {
+            id: DbId(1),
+            from: DbId::default(),
+            to: DbId::default(),
+            values: vec![("flags", 0b1100_u64).into()],
+        }],
+    );
+}
+
+#[test]
+fn remove_amend_or_missing_key_is_noop() {
+    let mut db = TestDb::new();
+    db.exec_mut_ids(QueryBuilder::insert().nodes().count(1).query(), &[1]);
+    db.exec_mut(
+        QueryBuilder::remove()
+            .amend_or([[("flags", 0b1010_u64).into()]])
+            .ids(1)
+            .query(),
+        0,
+    );
+    // Node has no values — the key was not inserted
+    db.exec_elements(
+        QueryBuilder::select().ids(1).query(),
+        &[DbElement {
+            id: DbId(1),
+            from: DbId::default(),
+            to: DbId::default(),
+            values: vec![],
+        }],
+    );
+}
+
+#[test]
+fn remove_amend_or_non_integer_falls_back_to_remove() {
+    let mut db = TestDb::new();
+    db.exec_mut(
+        QueryBuilder::insert()
+            .nodes()
+            .values([[("name", "hello world").into()]])
+            .query(),
+        1,
+    );
+    // Non-integer falls back to amend_remove: removes occurrences of substring
+    db.exec_mut(
+        QueryBuilder::remove()
+            .amend_or([[("name", " world").into()]])
+            .ids(1)
+            .query(),
+        1,
+    );
+    db.exec_elements(
+        QueryBuilder::select().ids(1).query(),
+        &[DbElement {
+            id: DbId(1),
+            from: DbId::default(),
+            to: DbId::default(),
+            values: vec![("name", "hello").into()],
+        }],
+    );
+}
+
+#[test]
+fn remove_amend_or_uniform() {
+    let mut db = TestDb::new();
+    db.exec_mut(
+        QueryBuilder::insert()
+            .nodes()
+            .values([
+                [("flags", 0b1000_u64).into()],
+                [("flags", 0b0100_u64).into()],
+            ])
+            .query(),
+        2,
+    );
+    db.exec_mut(
+        QueryBuilder::remove()
+            .amend_or_uniform([("flags", 0b0011_u64).into()])
+            .ids([1, 2])
+            .query(),
+        2,
+    );
+    db.exec_elements(
+        QueryBuilder::select().ids([1, 2]).query(),
+        &[
+            DbElement {
+                id: DbId(1),
+                from: DbId::default(),
+                to: DbId::default(),
+                values: vec![("flags", 0b1011_u64).into()],
+            },
+            DbElement {
+                id: DbId(2),
+                from: DbId::default(),
+                to: DbId::default(),
+                values: vec![("flags", 0b0111_u64).into()],
+            },
+        ],
+    );
+}

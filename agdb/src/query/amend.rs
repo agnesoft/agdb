@@ -1,3 +1,20 @@
+/// Bitwise operation for [`Amend::AddBitwise`] and [`Amend::RemoveBitwise`].
+/// For integers (`i64`, `u64`) and bytes the bitwise op is applied directly.
+/// Other types fall back to `Add` or `Remove` semantics respectively.
+#[derive(Clone, Copy, Debug, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
+#[cfg_attr(feature = "derive", derive(agdb::DbSerialize))]
+#[cfg_attr(feature = "api", derive(agdb::TypeDef))]
+pub enum BitwiseOp {
+    /// Bitwise AND (`existing & value`).
+    And,
+    /// Bitwise OR (`existing | value`).
+    Or,
+    /// Bitwise XOR (`existing ^ value`).
+    Xor,
+}
+
 /// Amend operation for insert/remove value queries.
 /// Controls how values are applied to existing properties.
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -27,6 +44,24 @@ pub enum Amend {
     /// A scalar value can also be removed from the matching vec type.
     /// If the key does not exist, this is a no-op.
     Remove,
+
+    /// Apply a bitwise operation in an "add" context.
+    /// For integer types (`i64`, `u64`) the bitwise op is applied directly,
+    /// with cross-type `i64`↔`u64` interop.
+    /// For bytes the op is applied element-wise (shorter operand zero-padded).
+    /// For all other types falls back to `Add` semantics
+    /// (concatenate, extend, etc.).
+    /// If the key does not exist, falls back to a regular insert.
+    AddBitwise(BitwiseOp),
+
+    /// Apply a bitwise operation in a "remove" context.
+    /// For integer types (`i64`, `u64`) the bitwise op is applied directly,
+    /// with cross-type `i64`↔`u64` interop.
+    /// For bytes the op is applied element-wise (shorter operand zero-padded).
+    /// For all other types falls back to `Remove` semantics
+    /// (subtract, remove occurrences, etc.).
+    /// If the key does not exist, this is a no-op (same as `Remove`).
+    RemoveBitwise(BitwiseOp),
 }
 
 impl Amend {

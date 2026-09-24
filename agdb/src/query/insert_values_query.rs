@@ -137,7 +137,7 @@ fn insert_values_new<Store: StorageData>(
     amend: &Amend,
     result: &mut QueryResult,
 ) -> Result<(), DbError> {
-    if matches!(amend, Amend::Remove) {
+    if matches!(amend, Amend::Remove | Amend::RemoveBitwise(_)) {
         return Err(DbError::query(
             DbErrorType::NotAllowed,
             "Cannot amend-remove on a new element.".to_string(),
@@ -174,7 +174,7 @@ fn insert_values_id<Store: StorageData>(
     amend: &Amend,
     result: &mut QueryResult,
 ) -> Result<(), DbError> {
-    if !matches!(amend, Amend::Remove) {
+    if !matches!(amend, Amend::Remove | Amend::RemoveBitwise(_)) {
         db.reserve_key_value_capacity(db_id, values.len() as u64)?;
     }
 

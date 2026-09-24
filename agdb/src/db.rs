@@ -839,6 +839,12 @@ impl<Store: StorageData> DbImpl<Store> {
                 let merged_value = match amend {
                     Amend::Add => existing_value.amend_add(&key_value.value)?,
                     Amend::Remove => existing_value.amend_remove(&key_value.value)?,
+                    Amend::AddBitwise(op) => {
+                        existing_value.amend_bitwise(&key_value.value, op, true)?
+                    }
+                    Amend::RemoveBitwise(op) => {
+                        existing_value.amend_bitwise(&key_value.value, op, false)?
+                    }
                     Amend::None => unreachable!(),
                 };
 
@@ -850,11 +856,11 @@ impl<Store: StorageData> DbImpl<Store> {
                 Ok(true)
             }
             None => match amend {
-                Amend::Add => {
+                Amend::Add | Amend::AddBitwise(_) => {
                     self.insert_or_replace_key_value(db_id, key_value)?;
                     Ok(true)
                 }
-                Amend::Remove => Ok(false),
+                Amend::Remove | Amend::RemoveBitwise(_) => Ok(false),
                 Amend::None => unreachable!(),
             },
         }

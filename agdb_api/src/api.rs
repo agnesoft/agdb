@@ -2,6 +2,7 @@ use std::sync::atomic::AtomicU16;
 use std::time::Duration;
 
 use agdb::Amend;
+use agdb::BitwiseOp;
 use agdb::Comparison;
 use agdb::CountComparison;
 use agdb::DbElement;
@@ -140,6 +141,7 @@ impl Api {
         vec![
             QueryType::type_def(),
             Amend::type_def(),
+            BitwiseOp::type_def(),
             QueryAliases::type_def(),
             InsertAliasesQuery::type_def(),
             InsertEdgesQuery::type_def(),

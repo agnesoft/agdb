@@ -15,6 +15,7 @@ export default defineConfig({
         ...coverageConfigDefaults.exclude,
         "e2e/*",
         "e2e-utils/*",
+        "functional/*",
         "playwright-report/*",
         "*.config.*",
         "./src/main.ts",

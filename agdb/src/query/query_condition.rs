@@ -276,6 +276,10 @@ impl Comparison {
                 (DbValue::VecString(left), DbValue::VecString(right)) => {
                     right.iter().all(|x| left.contains(x))
                 }
+                (DbValue::VecDbValue(left), DbValue::VecDbValue(right)) => {
+                    right.iter().all(|x| left.contains(x))
+                }
+                (DbValue::VecDbValue(left), right) => left.contains(right),
                 _ => false,
             },
 
@@ -292,6 +296,10 @@ impl Comparison {
                 (DbValue::VecF64(left), DbValue::VecF64(right)) => left.starts_with(right),
                 (DbValue::VecString(left), DbValue::String(right)) => left.first() == Some(right),
                 (DbValue::VecString(left), DbValue::VecString(right)) => left.starts_with(right),
+                (DbValue::VecDbValue(left), DbValue::VecDbValue(right)) => {
+                    left.starts_with(right)
+                }
+                (DbValue::VecDbValue(left), right) => left.first() == Some(right),
                 _ => false,
             },
 
@@ -308,6 +316,8 @@ impl Comparison {
                 (DbValue::VecF64(left), DbValue::VecF64(right)) => left.ends_with(right),
                 (DbValue::VecString(left), DbValue::String(right)) => left.last() == Some(right),
                 (DbValue::VecString(left), DbValue::VecString(right)) => left.ends_with(right),
+                (DbValue::VecDbValue(left), DbValue::VecDbValue(right)) => left.ends_with(right),
+                (DbValue::VecDbValue(left), right) => left.last() == Some(right),
                 _ => false,
             },
         }

@@ -59,6 +59,9 @@ pub enum DbValue {
 
     /// List of UTF-8 strings
     VecString(Vec<String>),
+
+    /// List of database values (heterogeneous)
+    VecDbValue(Vec<DbValue>),
 }
 
 #[cfg_attr(feature = "api", derive(agdb::TypeDef))]
@@ -73,6 +76,7 @@ const VEC_I64_META_VALUE: u8 = 6_u8;
 const VEC_U64_META_VALUE: u8 = 7_u8;
 const VEC_F64_META_VALUE: u8 = 8_u8;
 const VEC_STRING_META_VALUE: u8 = 9_u8;
+const VEC_DBVALUE_META_VALUE: u8 = 10_u8;
 
 impl DbValue {
     /// Returns `&Vec<u8>` or an error if the value is
@@ -88,6 +92,7 @@ impl DbValue {
             DbValue::VecU64(_) => Self::type_error("vec<u64>", "bytes"),
             DbValue::VecF64(_) => Self::type_error("vec<f64>", "bytes"),
             DbValue::VecString(_) => Self::type_error("vec<string>", "bytes"),
+            DbValue::VecDbValue(_) => Self::type_error("vec<db_value>", "bytes"),
         }
     }
 
@@ -104,6 +109,7 @@ impl DbValue {
             DbValue::VecU64(_) => Self::type_error("vec<u64>", "string"),
             DbValue::VecF64(_) => Self::type_error("vec<f64>", "string"),
             DbValue::VecString(_) => Self::type_error("vec<string>", "string"),
+            DbValue::VecDbValue(_) => Self::type_error("vec<db_value>", "string"),
         }
     }
 
@@ -122,6 +128,7 @@ impl DbValue {
             DbValue::VecU64(_) => Self::type_error("Vec<u64>", "bool"),
             DbValue::VecF64(_) => Self::type_error("Vec<f64>", "bool"),
             DbValue::VecString(_) => Self::type_error("Vec<string>", "bool"),
+            DbValue::VecDbValue(_) => Self::type_error("Vec<db_value>", "bool"),
         }
     }
 
@@ -139,6 +146,7 @@ impl DbValue {
             DbValue::VecU64(_) => Self::type_error("vec<u64>", "f64"),
             DbValue::VecF64(_) => Self::type_error("vec<f64>", "f64"),
             DbValue::VecString(_) => Self::type_error("vec<string>", "f64"),
+            DbValue::VecDbValue(_) => Self::type_error("vec<db_value>", "f64"),
         }
     }
 
@@ -156,6 +164,7 @@ impl DbValue {
             DbValue::VecU64(_) => Self::type_error("vec<u64>", "i64"),
             DbValue::VecF64(_) => Self::type_error("vec<f64>", "i64"),
             DbValue::VecString(_) => Self::type_error("vec<string>", "i64"),
+            DbValue::VecDbValue(_) => Self::type_error("vec<db_value>", "i64"),
         }
     }
 
@@ -173,6 +182,7 @@ impl DbValue {
             DbValue::VecU64(_) => Self::type_error("vec<u64>", "u64"),
             DbValue::VecF64(_) => Self::type_error("vec<f64>", "u64"),
             DbValue::VecString(_) => Self::type_error("vec<string>", "u64"),
+            DbValue::VecDbValue(_) => Self::type_error("vec<db_value>", "u64"),
         }
     }
 
@@ -189,6 +199,7 @@ impl DbValue {
             DbValue::VecU64(_) => Self::type_error("vec<u64>", "vec<f64>"),
             DbValue::VecF64(v) => Ok(v),
             DbValue::VecString(_) => Self::type_error("vec<string>", "vec<f64>"),
+            DbValue::VecDbValue(_) => Self::type_error("vec<db_value>", "vec<f64>"),
         }
     }
 
@@ -205,6 +216,7 @@ impl DbValue {
             DbValue::VecU64(_) => Self::type_error("vec<u64>", "vec<i64>"),
             DbValue::VecF64(_) => Self::type_error("vec<f64>", "vec<i64>"),
             DbValue::VecString(_) => Self::type_error("vec<string>", "vec<i64>"),
+            DbValue::VecDbValue(_) => Self::type_error("vec<db_value>", "vec<i64>"),
         }
     }
 
@@ -221,6 +233,7 @@ impl DbValue {
             DbValue::VecU64(v) => Ok(v),
             DbValue::VecF64(_) => Self::type_error("vec<f64>", "vec<u64>"),
             DbValue::VecString(_) => Self::type_error("vec<string>", "vec<u64>"),
+            DbValue::VecDbValue(_) => Self::type_error("vec<db_value>", "vec<u64>"),
         }
     }
 
@@ -237,6 +250,16 @@ impl DbValue {
             DbValue::VecU64(_) => Self::type_error("vec<u64>", "vec<string>"),
             DbValue::VecF64(_) => Self::type_error("vec<f64>", "vec<string>"),
             DbValue::VecString(v) => Ok(v),
+            DbValue::VecDbValue(_) => Self::type_error("vec<db_value>", "vec<string>"),
+        }
+    }
+
+    /// Returns `&Vec<DbValue>` or an error if the value is
+    /// of a different type.
+    pub fn vec_db_value(&self) -> Result<&Vec<DbValue>, DbError> {
+        match self {
+            DbValue::VecDbValue(v) => Ok(v),
+            _ => Self::type_error(self.type_name(), "vec<db_value>"),
         }
     }
 
@@ -255,6 +278,7 @@ impl DbValue {
             DbValue::VecU64(v) => Ok(v.iter().map(|i| *i != 0).collect()),
             DbValue::VecF64(v) => Ok(v.iter().map(|i| *i != 0.0.into()).collect()),
             DbValue::VecString(v) => Ok(v.iter().map(|s| s == "true" || s == "1").collect()),
+            DbValue::VecDbValue(_) => Self::type_error("Vec<db_value>", "Vec<bool>"),
         }
     }
 
@@ -308,6 +332,11 @@ impl DbValue {
             VEC_STRING_META_VALUE => {
                 DbValue::VecString(storage.value::<Vec<String>>(StorageIndex(value_index.index()))?)
             }
+            VEC_DBVALUE_META_VALUE => {
+                DbValue::VecDbValue(
+                    storage.value::<Vec<DbValue>>(StorageIndex(value_index.index()))?,
+                )
+            }
             _ => panic!(),
         })
     }
@@ -358,6 +387,10 @@ impl DbValue {
             }
             DbValue::VecString(v) => {
                 index.set_type(VEC_STRING_META_VALUE);
+                index.set_index(storage.insert(v)?.0);
+            }
+            DbValue::VecDbValue(v) => {
+                index.set_type(VEC_DBVALUE_META_VALUE);
                 index.set_index(storage.insert(v)?.0);
             }
         }
@@ -428,6 +461,16 @@ impl DbValue {
                 v.push(b.clone());
                 Ok(DbValue::VecString(v))
             }
+            (DbValue::VecDbValue(a), DbValue::VecDbValue(b)) => {
+                let mut v = a.clone();
+                v.extend(b.iter().cloned());
+                Ok(DbValue::VecDbValue(v))
+            }
+            (DbValue::VecDbValue(a), other) => {
+                let mut v = a.clone();
+                v.push(other.clone());
+                Ok(DbValue::VecDbValue(v))
+            }
             _ => Self::amend_type_error(self, other),
         }
     }
@@ -478,6 +521,12 @@ impl DbValue {
             ))),
             (DbValue::VecString(a), DbValue::String(b)) => Ok(DbValue::VecString(
                 Self::vec_remove_first(a, std::slice::from_ref(b)),
+            )),
+            (DbValue::VecDbValue(a), DbValue::VecDbValue(b)) => {
+                Ok(DbValue::VecDbValue(Self::vec_remove_first(a, b)))
+            }
+            (DbValue::VecDbValue(a), other) => Ok(DbValue::VecDbValue(
+                Self::vec_remove_first(a, std::slice::from_ref(other)),
             )),
             _ => Self::amend_type_error(self, other),
         }
@@ -574,6 +623,7 @@ impl DbValue {
             DbValue::VecU64(_) => "vec<u64>",
             DbValue::VecF64(_) => "vec<f64>",
             DbValue::VecString(_) => "vec<string>",
+            DbValue::VecDbValue(_) => "vec<db_value>",
         }
     }
 
@@ -932,8 +982,8 @@ impl<T: Into<DbValue> + DbTypeMarker> From<Vec<T>> for DbValue {
                     .map(|v| v.string().unwrap().to_owned())
                     .collect(),
             ),
-            Some(DbValue::Bytes(_)) => DbValue::Bytes(crate::AgdbSerialize::serialize(&db_values)),
-            _ => DbValue::Bytes(Vec::new()),
+            Some(_) => DbValue::VecDbValue(db_values),
+            None => DbValue::VecDbValue(Vec::new()),
         }
     }
 }
@@ -1170,6 +1220,7 @@ impl<T: TryFrom<DbValue, Error = DbError>> TryFrom<DbValue> for Vec<T> {
             DbValue::VecU64(v) => Ok(v.into_iter().map(DbValue::from).collect()),
             DbValue::VecF64(v) => Ok(v.into_iter().map(DbValue::from).collect()),
             DbValue::VecString(v) => Ok(v.into_iter().map(DbValue::from).collect()),
+            DbValue::VecDbValue(v) => Ok(v),
             DbValue::Bytes(v) => {
                 if v.is_empty() {
                     Ok(vec![])
@@ -1228,6 +1279,14 @@ impl Display for DbValue {
                     .join(", ")
             ),
             DbValue::VecString(v) => write!(f, "[{}]", v.join(", ")),
+            DbValue::VecDbValue(v) => write!(
+                f,
+                "[{}]",
+                v.iter()
+                    .map(|x| x.to_string())
+                    .collect::<Vec<String>>()
+                    .join(", ")
+            ),
         }
     }
 }
@@ -1244,6 +1303,7 @@ impl StableHash for DbValue {
             DbValue::VecU64(value) => value.stable_hash(),
             DbValue::VecF64(value) => value.stable_hash(),
             DbValue::VecString(value) => value.stable_hash(),
+            DbValue::VecDbValue(value) => value.stable_hash(),
         }
     }
 }
@@ -2315,16 +2375,16 @@ mod tests {
     fn vec_of_user_values_empty() {
         let vec = Vec::<TestEnumString>::new();
         let db_value: DbValue = vec.into();
-        let vec = db_value.bytes().unwrap();
-        assert_eq!(*vec, Vec::<u8>::new());
+        let vec = db_value.vec_db_value().unwrap();
+        assert!(vec.is_empty());
     }
 
     #[test]
     fn vec_of_user_values_slice() {
         let vec = Vec::<TestEnumString>::new();
         let db_value: DbValue = vec.as_slice().into();
-        let vec = db_value.bytes().unwrap();
-        assert_eq!(*vec, Vec::<u8>::new());
+        let vec = db_value.vec_db_value().unwrap();
+        assert!(vec.is_empty());
     }
 
     #[test]
@@ -2501,6 +2561,304 @@ mod tests {
         assert_eq!(addrs, addrs_back);
         let strings: Vec<String> = db_value.vec_string().unwrap().clone();
         assert_eq!(strings, vec!["127.0.0.1".to_string(), "::".to_string()]);
+    }
+
+    #[test]
+    fn vec_db_value_from_custom_types() {
+        #[derive(Clone, PartialEq, Debug)]
+        struct Entry {
+            id: u64,
+            name: String,
+        }
+
+        impl DbTypeMarker for Entry {}
+
+        impl From<Entry> for DbValue {
+            fn from(value: Entry) -> Self {
+                // Converts to Bytes (not a native scalar), so Vec<Entry> → VecDbValue
+                let mut bytes = value.id.to_le_bytes().to_vec();
+                bytes.extend(value.name.as_bytes());
+                DbValue::Bytes(bytes)
+            }
+        }
+
+        let entries = vec![
+            Entry {
+                id: 1,
+                name: "Alice".to_string(),
+            },
+            Entry {
+                id: 2,
+                name: "Bob".to_string(),
+            },
+        ];
+        let db_value: DbValue = entries.into();
+
+        // Must be VecDbValue, not Bytes
+        assert!(matches!(db_value, DbValue::VecDbValue(_)));
+        let inner = db_value.vec_db_value().unwrap();
+        assert_eq!(inner.len(), 2);
+        assert!(matches!(&inner[0], DbValue::Bytes(_)));
+        assert!(matches!(&inner[1], DbValue::Bytes(_)));
+    }
+
+    #[test]
+    fn vec_db_value_accessor_success() {
+        let val = DbValue::VecDbValue(vec![DbValue::from(1_u64), DbValue::from("hello")]);
+        let inner = val.vec_db_value().unwrap();
+        assert_eq!(inner.len(), 2);
+        assert_eq!(inner[0], DbValue::from(1_u64));
+        assert_eq!(inner[1], DbValue::from("hello"));
+    }
+
+    #[test]
+    fn vec_db_value_accessor_error() {
+        assert_eq!(
+            DbValue::from(1_u64).vec_db_value(),
+            Err(DbError::db(
+                DbErrorType::TypeError,
+                "Cannot convert 'u64' to 'vec<db_value>'."
+            ))
+        );
+        assert_eq!(
+            DbValue::from(vec![1_u64]).vec_db_value(),
+            Err(DbError::db(
+                DbErrorType::TypeError,
+                "Cannot convert 'vec<u64>' to 'vec<db_value>'."
+            ))
+        );
+        assert_eq!(
+            DbValue::from("hello").vec_db_value(),
+            Err(DbError::db(
+                DbErrorType::TypeError,
+                "Cannot convert 'string' to 'vec<db_value>'."
+            ))
+        );
+        assert_eq!(
+            DbValue::from(vec![1_u8]).vec_db_value(),
+            Err(DbError::db(
+                DbErrorType::TypeError,
+                "Cannot convert 'bytes' to 'vec<db_value>'."
+            ))
+        );
+    }
+
+    #[test]
+    fn vec_db_value_type_errors_for_other_accessors() {
+        let val = DbValue::VecDbValue(vec![DbValue::from(1_u64)]);
+
+        assert!(val.bytes().is_err());
+        assert!(val.string().is_err());
+        assert!(val.to_bool().is_err());
+        assert!(val.to_f64().is_err());
+        assert!(val.to_i64().is_err());
+        assert!(val.to_u64().is_err());
+        assert!(val.vec_f64().is_err());
+        assert!(val.vec_i64().is_err());
+        assert!(val.vec_u64().is_err());
+        assert!(val.vec_string().is_err());
+        assert!(val.vec_bool().is_err());
+    }
+
+    #[test]
+    fn vec_db_value_display() {
+        let val = DbValue::VecDbValue(vec![
+            DbValue::from(1_u64),
+            DbValue::from("hello"),
+            DbValue::from(3.14_f64),
+        ]);
+        assert_eq!(format!("{val}"), "[1, hello, 3.14]");
+    }
+
+    #[test]
+    fn vec_db_value_display_empty() {
+        let val = DbValue::VecDbValue(vec![]);
+        assert_eq!(format!("{val}"), "[]");
+    }
+
+    #[test]
+    fn vec_db_value_stable_hash() {
+        let val = DbValue::VecDbValue(vec![DbValue::from(1_u64), DbValue::from("hello")]);
+        assert_ne!(val.stable_hash(), 0);
+    }
+
+    #[test]
+    fn vec_db_value_amend_add_extend() {
+        let a = DbValue::VecDbValue(vec![DbValue::from(1_u64), DbValue::from(2_u64)]);
+        let b = DbValue::VecDbValue(vec![DbValue::from(3_u64)]);
+        let result = a.amend_add(&b).unwrap();
+        assert_eq!(
+            result,
+            DbValue::VecDbValue(vec![
+                DbValue::from(1_u64),
+                DbValue::from(2_u64),
+                DbValue::from(3_u64),
+            ])
+        );
+    }
+
+    #[test]
+    fn vec_db_value_amend_add_push_single() {
+        let a = DbValue::VecDbValue(vec![DbValue::from(1_u64)]);
+        let b = DbValue::from("hello");
+        let result = a.amend_add(&b).unwrap();
+        assert_eq!(
+            result,
+            DbValue::VecDbValue(vec![DbValue::from(1_u64), DbValue::from("hello"),])
+        );
+    }
+
+    #[test]
+    fn vec_db_value_amend_add_push_bytes() {
+        let a = DbValue::VecDbValue(vec![DbValue::Bytes(vec![1, 2, 3])]);
+        let b = DbValue::Bytes(vec![4, 5, 6]);
+        let result = a.amend_add(&b).unwrap();
+        assert_eq!(
+            result,
+            DbValue::VecDbValue(vec![
+                DbValue::Bytes(vec![1, 2, 3]),
+                DbValue::Bytes(vec![4, 5, 6]),
+            ])
+        );
+    }
+
+    #[test]
+    fn vec_db_value_amend_remove() {
+        let a = DbValue::VecDbValue(vec![
+            DbValue::from(1_u64),
+            DbValue::from(2_u64),
+            DbValue::from(3_u64),
+        ]);
+        let b = DbValue::VecDbValue(vec![DbValue::from(2_u64)]);
+        let result = a.amend_remove(&b).unwrap();
+        assert_eq!(
+            result,
+            DbValue::VecDbValue(vec![DbValue::from(1_u64), DbValue::from(3_u64),])
+        );
+    }
+
+    #[test]
+    fn vec_db_value_amend_remove_single() {
+        let a = DbValue::VecDbValue(vec![
+            DbValue::from("a"),
+            DbValue::from("b"),
+            DbValue::from("c"),
+        ]);
+        let b = DbValue::from("b");
+        let result = a.amend_remove(&b).unwrap();
+        assert_eq!(
+            result,
+            DbValue::VecDbValue(vec![DbValue::from("a"), DbValue::from("c"),])
+        );
+    }
+
+    #[test]
+    fn vec_db_value_amend_remove_not_found() {
+        let a = DbValue::VecDbValue(vec![DbValue::from(1_u64)]);
+        let b = DbValue::from(99_u64);
+        let result = a.amend_remove(&b).unwrap();
+        assert_eq!(result, DbValue::VecDbValue(vec![DbValue::from(1_u64)]));
+    }
+
+    #[test]
+    fn vec_db_value_amend_bitwise_falls_through_to_add() {
+        // This is the core fix: bitwise OR on VecDbValue falls through
+        // to amend_add (extend), NOT byte-level XOR.
+        let a = DbValue::VecDbValue(vec![DbValue::from(1_u64)]);
+        let b = DbValue::VecDbValue(vec![DbValue::from(2_u64)]);
+        let result = a.amend_bitwise(&b, &BitwiseOp::Or, true).unwrap();
+        assert_eq!(
+            result,
+            DbValue::VecDbValue(vec![DbValue::from(1_u64), DbValue::from(2_u64),])
+        );
+    }
+
+    #[test]
+    fn vec_db_value_amend_bitwise_falls_through_to_remove() {
+        let a = DbValue::VecDbValue(vec![DbValue::from(1_u64), DbValue::from(2_u64)]);
+        let b = DbValue::VecDbValue(vec![DbValue::from(1_u64)]);
+        let result = a.amend_bitwise(&b, &BitwiseOp::Xor, false).unwrap();
+        assert_eq!(result, DbValue::VecDbValue(vec![DbValue::from(2_u64)]));
+    }
+
+    #[test]
+    fn vec_db_value_storage_roundtrip() {
+        let test_file = TestFile::new();
+        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+
+        let original = DbValue::VecDbValue(vec![
+            DbValue::Bytes(vec![1, 2, 3]),
+            DbValue::Bytes(vec![4, 5, 6]),
+        ]);
+
+        let index = original.store_db_value(&mut storage).unwrap();
+        let loaded = DbValue::load_db_value(index, &storage).unwrap();
+
+        assert_eq!(original, loaded);
+    }
+
+    #[test]
+    fn vec_db_value_storage_roundtrip_heterogeneous() {
+        let test_file = TestFile::new();
+        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+
+        let original = DbValue::VecDbValue(vec![
+            DbValue::from(42_u64),
+            DbValue::from("hello"),
+            DbValue::from(3.14_f64),
+            DbValue::from(-7_i64),
+            DbValue::Bytes(vec![0xDE, 0xAD]),
+        ]);
+
+        let index = original.store_db_value(&mut storage).unwrap();
+        let loaded = DbValue::load_db_value(index, &storage).unwrap();
+
+        assert_eq!(original, loaded);
+    }
+
+    #[test]
+    fn vec_db_value_storage_roundtrip_empty() {
+        let test_file = TestFile::new();
+        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+
+        let original = DbValue::VecDbValue(vec![]);
+
+        let index = original.store_db_value(&mut storage).unwrap();
+        let loaded = DbValue::load_db_value(index, &storage).unwrap();
+
+        assert_eq!(original, loaded);
+    }
+
+    #[test]
+    fn vec_db_value_try_from_roundtrip() {
+        // Vec<SystemTime> now goes through VecDbValue, verify the round-trip
+        let times = vec![
+            SystemTime::now(),
+            SystemTime::now() + Duration::from_secs(100),
+        ];
+        let db_value: DbValue = times.clone().into();
+        assert!(matches!(db_value, DbValue::VecDbValue(_)));
+        let times_back: Vec<SystemTime> = db_value.try_into().unwrap();
+        assert_eq!(times, times_back);
+    }
+
+    #[test]
+    fn vec_db_value_eq_and_ord() {
+        let a = DbValue::VecDbValue(vec![DbValue::from(1_u64)]);
+        let b = DbValue::VecDbValue(vec![DbValue::from(1_u64)]);
+        let c = DbValue::VecDbValue(vec![DbValue::from(2_u64)]);
+        assert_eq!(a, b);
+        assert_ne!(a, c);
+        assert!(a < c);
+    }
+
+    #[test]
+    fn vec_db_value_clone_and_debug() {
+        let val = DbValue::VecDbValue(vec![DbValue::from(1_u64)]);
+        let cloned = val.clone();
+        assert_eq!(val, cloned);
+        let debug = format!("{:?}", val);
+        assert!(debug.contains("VecDbValue"));
     }
 
     #[test]

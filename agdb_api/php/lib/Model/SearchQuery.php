@@ -64,7 +64,8 @@ class SearchQuery implements ModelInterface, ArrayAccess, \JsonSerializable
         'limit' => 'int',
         'offset' => 'int',
         'order_by' => '\Agnesoft\AgdbApi\Model\DbKeyOrder[]',
-        'origin' => '\Agnesoft\AgdbApi\Model\QueryId'
+        'origin' => '\Agnesoft\AgdbApi\Model\QueryId',
+        'reverse' => 'bool'
     ];
 
     /**
@@ -81,7 +82,8 @@ class SearchQuery implements ModelInterface, ArrayAccess, \JsonSerializable
         'limit' => 'int64',
         'offset' => 'int64',
         'order_by' => null,
-        'origin' => null
+        'origin' => null,
+        'reverse' => null
     ];
 
     /**
@@ -96,7 +98,8 @@ class SearchQuery implements ModelInterface, ArrayAccess, \JsonSerializable
         'limit' => false,
         'offset' => false,
         'order_by' => false,
-        'origin' => false
+        'origin' => false,
+        'reverse' => false
     ];
 
     /**
@@ -191,7 +194,8 @@ class SearchQuery implements ModelInterface, ArrayAccess, \JsonSerializable
         'limit' => 'limit',
         'offset' => 'offset',
         'order_by' => 'order_by',
-        'origin' => 'origin'
+        'origin' => 'origin',
+        'reverse' => 'reverse'
     ];
 
     /**
@@ -206,7 +210,8 @@ class SearchQuery implements ModelInterface, ArrayAccess, \JsonSerializable
         'limit' => 'setLimit',
         'offset' => 'setOffset',
         'order_by' => 'setOrderBy',
-        'origin' => 'setOrigin'
+        'origin' => 'setOrigin',
+        'reverse' => 'setReverse'
     ];
 
     /**
@@ -221,7 +226,8 @@ class SearchQuery implements ModelInterface, ArrayAccess, \JsonSerializable
         'limit' => 'getLimit',
         'offset' => 'getOffset',
         'order_by' => 'getOrderBy',
-        'origin' => 'getOrigin'
+        'origin' => 'getOrigin',
+        'reverse' => 'getReverse'
     ];
 
     /**
@@ -288,6 +294,7 @@ class SearchQuery implements ModelInterface, ArrayAccess, \JsonSerializable
         $this->setIfExists('offset', $data ?? [], null);
         $this->setIfExists('order_by', $data ?? [], null);
         $this->setIfExists('origin', $data ?? [], null);
+        $this->setIfExists('reverse', $data ?? [], null);
     }
 
     /**
@@ -345,6 +352,9 @@ class SearchQuery implements ModelInterface, ArrayAccess, \JsonSerializable
         }
         if ($this->container['origin'] === null) {
             $invalidProperties[] = "'origin' can't be null";
+        }
+        if ($this->container['reverse'] === null) {
+            $invalidProperties[] = "'reverse' can't be null";
         }
         return $invalidProperties;
     }
@@ -554,6 +564,33 @@ class SearchQuery implements ModelInterface, ArrayAccess, \JsonSerializable
             throw new \InvalidArgumentException('non-nullable origin cannot be null');
         }
         $this->container['origin'] = $origin;
+
+        return $this;
+    }
+
+    /**
+     * Gets reverse
+     *
+     * @return bool
+     */
+    public function getReverse()
+    {
+        return $this->container['reverse'];
+    }
+
+    /**
+     * Sets reverse
+     *
+     * @param bool $reverse When true and both origin and destination are set, the path search follows edges in reverse (incoming edges). Set by the `to().from()` builder order.
+     *
+     * @return self
+     */
+    public function setReverse($reverse)
+    {
+        if (is_null($reverse)) {
+            throw new \InvalidArgumentException('non-nullable reverse cannot be null');
+        }
+        $this->container['reverse'] = $reverse;
 
         return $this;
     }

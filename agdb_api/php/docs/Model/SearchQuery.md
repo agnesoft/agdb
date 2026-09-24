@@ -11,5 +11,6 @@ Name | Type | Description | Notes
 **offset** | **int** | How many elements that would be returned should be skipped in the result. |
 **order_by** | [**\Agnesoft\AgdbApi\Model\DbKeyOrder[]**](DbKeyOrder.md) | Order of the elements in the result. The sorting happens before &#x60;offset&#x60; and &#x60;limit&#x60; are applied. |
 **origin** | [**\Agnesoft\AgdbApi\Model\QueryId**](QueryId.md) | Starting element of the search. |
+**reverse** | **bool** | When true and both origin and destination are set, the path search follows edges in reverse (incoming edges). Set by the &#x60;to().from()&#x60; builder order. |
 
 [[Back to Model list]](../../README.md#models) [[Back to API list]](../../README.md#endpoints) [[Back to README]](../../README.md)

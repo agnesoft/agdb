@@ -1,6 +1,6 @@
 <?php
 /**
- * DbValueOneOf
+ * AmendOneOf
  *
  * PHP version 8.1
  *
@@ -32,16 +32,16 @@ use \ArrayAccess;
 use \Agnesoft\AgdbApi\ObjectSerializer;
 
 /**
- * DbValueOneOf Class Doc Comment
+ * AmendOneOf Class Doc Comment
  *
  * @category Class
- * @description Byte array, sometimes referred to as blob
+ * @description Apply a bitwise operation in an \&quot;add\&quot; context. For integer types (&#x60;i64&#x60;, &#x60;u64&#x60;) the bitwise op is applied directly, with cross-type &#x60;i64&#x60;↔&#x60;u64&#x60; interop. For bytes the op is applied element-wise (shorter operand zero-padded). For all other types falls back to &#x60;Add&#x60; semantics (concatenate, extend, etc.). If the key does not exist, falls back to a regular insert.
  * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
  * @implements \ArrayAccess<string, mixed>
  */
-class DbValueOneOf implements ModelInterface, ArrayAccess, \JsonSerializable
+class AmendOneOf implements ModelInterface, ArrayAccess, \JsonSerializable
 {
     public const DISCRIMINATOR = null;
 
@@ -50,7 +50,7 @@ class DbValueOneOf implements ModelInterface, ArrayAccess, \JsonSerializable
      *
      * @var string
      */
-    protected static $openAPIModelName = 'DbValue_oneOf';
+    protected static $openAPIModelName = 'Amend_oneOf';
 
     /**
      * Array of property to type mappings. Used for (de)serialization
@@ -58,7 +58,7 @@ class DbValueOneOf implements ModelInterface, ArrayAccess, \JsonSerializable
      * @var string[]
      */
     protected static $openAPITypes = [
-        'bytes' => 'int[]'
+        'add_bitwise' => '\Agnesoft\AgdbApi\Model\BitwiseOp'
     ];
 
     /**
@@ -69,7 +69,7 @@ class DbValueOneOf implements ModelInterface, ArrayAccess, \JsonSerializable
      * @psalm-var array<string, string|null>
      */
     protected static $openAPIFormats = [
-        'bytes' => 'int32'
+        'add_bitwise' => null
     ];
 
     /**
@@ -78,7 +78,7 @@ class DbValueOneOf implements ModelInterface, ArrayAccess, \JsonSerializable
      * @var boolean[]
      */
     protected static array $openAPINullables = [
-        'bytes' => false
+        'add_bitwise' => false
     ];
 
     /**
@@ -167,7 +167,7 @@ class DbValueOneOf implements ModelInterface, ArrayAccess, \JsonSerializable
      * @var string[]
      */
     protected static $attributeMap = [
-        'bytes' => 'Bytes'
+        'add_bitwise' => 'AddBitwise'
     ];
 
     /**
@@ -176,7 +176,7 @@ class DbValueOneOf implements ModelInterface, ArrayAccess, \JsonSerializable
      * @var string[]
      */
     protected static $setters = [
-        'bytes' => 'setBytes'
+        'add_bitwise' => 'setAddBitwise'
     ];
 
     /**
@@ -185,7 +185,7 @@ class DbValueOneOf implements ModelInterface, ArrayAccess, \JsonSerializable
      * @var string[]
      */
     protected static $getters = [
-        'bytes' => 'getBytes'
+        'add_bitwise' => 'getAddBitwise'
     ];
 
     /**
@@ -245,7 +245,7 @@ class DbValueOneOf implements ModelInterface, ArrayAccess, \JsonSerializable
      */
     public function __construct(?array $data = null)
     {
-        $this->setIfExists('bytes', $data ?? [], null);
+        $this->setIfExists('add_bitwise', $data ?? [], null);
     }
 
     /**
@@ -275,8 +275,8 @@ class DbValueOneOf implements ModelInterface, ArrayAccess, \JsonSerializable
     {
         $invalidProperties = [];
 
-        if ($this->container['bytes'] === null) {
-            $invalidProperties[] = "'bytes' can't be null";
+        if ($this->container['add_bitwise'] === null) {
+            $invalidProperties[] = "'add_bitwise' can't be null";
         }
         return $invalidProperties;
     }
@@ -294,28 +294,28 @@ class DbValueOneOf implements ModelInterface, ArrayAccess, \JsonSerializable
 
 
     /**
-     * Gets bytes
+     * Gets add_bitwise
      *
-     * @return int[]
+     * @return \Agnesoft\AgdbApi\Model\BitwiseOp
      */
-    public function getBytes()
+    public function getAddBitwise()
     {
-        return $this->container['bytes'];
+        return $this->container['add_bitwise'];
     }
 
     /**
-     * Sets bytes
+     * Sets add_bitwise
      *
-     * @param int[] $bytes Byte array, sometimes referred to as blob
+     * @param \Agnesoft\AgdbApi\Model\BitwiseOp $add_bitwise Apply a bitwise operation in an \"add\" context. For integer types (`i64`, `u64`) the bitwise op is applied directly, with cross-type `i64`↔`u64` interop. For bytes the op is applied element-wise (shorter operand zero-padded). For all other types falls back to `Add` semantics (concatenate, extend, etc.). If the key does not exist, falls back to a regular insert.
      *
      * @return self
      */
-    public function setBytes($bytes)
+    public function setAddBitwise($add_bitwise)
     {
-        if (is_null($bytes)) {
-            throw new \InvalidArgumentException('non-nullable bytes cannot be null');
+        if (is_null($add_bitwise)) {
+            throw new \InvalidArgumentException('non-nullable add_bitwise cannot be null');
         }
-        $this->container['bytes'] = $bytes;
+        $this->container['add_bitwise'] = $add_bitwise;
 
         return $this;
     }

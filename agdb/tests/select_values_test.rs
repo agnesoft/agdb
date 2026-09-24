@@ -2,6 +2,7 @@ mod test_db;
 
 use agdb::DbElement;
 use agdb::DbId;
+use agdb::DbValue;
 use agdb::QueryBuilder;
 use test_db::TestDb;
 
@@ -180,5 +181,35 @@ fn select_values_search_alt() {
                 values: vec![("key2", 10).into()],
             },
         ],
+    );
+}
+
+#[test]
+fn select_values_with_vec_db_value() {
+    let mut db = TestDb::new();
+    let items = DbValue::VecDbValue(vec![
+        DbValue::I64(1),
+        DbValue::String("hello".to_string()),
+        DbValue::U64(42),
+    ]);
+    db.exec_mut(
+        QueryBuilder::insert()
+            .nodes()
+            .aliases(["alias1"])
+            .values([[("name", "test").into(), ("items", items.clone()).into()]])
+            .query(),
+        1,
+    );
+    db.exec_elements(
+        QueryBuilder::select()
+            .values(["items"])
+            .ids(["alias1"])
+            .query(),
+        &[DbElement {
+            id: DbId(1),
+            from: DbId::default(),
+            to: DbId::default(),
+            values: vec![("items", items).into()],
+        }],
     );
 }

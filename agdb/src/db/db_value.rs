@@ -61,6 +61,7 @@ pub enum DbValue {
     VecString(Vec<String>),
 
     /// List of database values (heterogeneous)
+    #[cfg_attr(feature = "openapi", schema(no_recursion))]
     VecDbValue(Vec<DbValue>),
 }
 

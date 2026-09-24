@@ -4,6 +4,7 @@ use agdb::DbElement;
 use agdb::DbError;
 use agdb::DbErrorType;
 use agdb::DbId;
+use agdb::DbValue;
 use agdb::QueryBuilder;
 use test_db::TestDb;
 
@@ -2000,5 +2001,277 @@ fn remove_amend_or_uniform() {
                 values: vec![("flags", 0b0111_u64).into()],
             },
         ],
+    );
+}
+
+#[test]
+fn amend_add_vec_db_value() {
+    let mut db = TestDb::new();
+    db.exec_mut(
+        QueryBuilder::insert()
+            .nodes()
+            .values([[(
+                "items",
+                DbValue::VecDbValue(vec![DbValue::I64(1), DbValue::String("a".to_string())]),
+            )
+                .into()]])
+            .query(),
+        1,
+    );
+    db.exec_mut(
+        QueryBuilder::insert()
+            .amend([[(
+                "items",
+                DbValue::VecDbValue(vec![DbValue::U64(2), DbValue::String("b".to_string())]),
+            )
+                .into()]])
+            .ids(1)
+            .query(),
+        1,
+    );
+    db.exec_elements(
+        QueryBuilder::select().ids(1).query(),
+        &[DbElement {
+            id: DbId(1),
+            from: DbId::default(),
+            to: DbId::default(),
+            values: vec![
+                (
+                    "items",
+                    DbValue::VecDbValue(vec![
+                        DbValue::I64(1),
+                        DbValue::String("a".to_string()),
+                        DbValue::U64(2),
+                        DbValue::String("b".to_string()),
+                    ]),
+                )
+                    .into(),
+            ],
+        }],
+    );
+}
+
+#[test]
+fn amend_add_scalar_to_vec_db_value() {
+    let mut db = TestDb::new();
+    db.exec_mut(
+        QueryBuilder::insert()
+            .nodes()
+            .values([[(
+                "items",
+                DbValue::VecDbValue(vec![DbValue::I64(1), DbValue::I64(2)]),
+            )
+                .into()]])
+            .query(),
+        1,
+    );
+    db.exec_mut(
+        QueryBuilder::insert()
+            .amend([[("items", DbValue::I64(3)).into()]])
+            .ids(1)
+            .query(),
+        1,
+    );
+    db.exec_elements(
+        QueryBuilder::select().ids(1).query(),
+        &[DbElement {
+            id: DbId(1),
+            from: DbId::default(),
+            to: DbId::default(),
+            values: vec![
+                (
+                    "items",
+                    DbValue::VecDbValue(vec![DbValue::I64(1), DbValue::I64(2), DbValue::I64(3)]),
+                )
+                    .into(),
+            ],
+        }],
+    );
+}
+
+#[test]
+fn amend_remove_vec_db_value() {
+    let mut db = TestDb::new();
+    db.exec_mut(
+        QueryBuilder::insert()
+            .nodes()
+            .values([[(
+                "items",
+                DbValue::VecDbValue(vec![
+                    DbValue::I64(1),
+                    DbValue::String("a".to_string()),
+                    DbValue::I64(2),
+                ]),
+            )
+                .into()]])
+            .query(),
+        1,
+    );
+    db.exec_mut(
+        QueryBuilder::remove()
+            .amend([[(
+                "items",
+                DbValue::VecDbValue(vec![DbValue::I64(1), DbValue::I64(2)]),
+            )
+                .into()]])
+            .ids(1)
+            .query(),
+        1,
+    );
+    db.exec_elements(
+        QueryBuilder::select().ids(1).query(),
+        &[DbElement {
+            id: DbId(1),
+            from: DbId::default(),
+            to: DbId::default(),
+            values: vec![
+                (
+                    "items",
+                    DbValue::VecDbValue(vec![DbValue::String("a".to_string())]),
+                )
+                    .into(),
+            ],
+        }],
+    );
+}
+
+#[test]
+fn amend_remove_scalar_from_vec_db_value() {
+    let mut db = TestDb::new();
+    db.exec_mut(
+        QueryBuilder::insert()
+            .nodes()
+            .values([[(
+                "items",
+                DbValue::VecDbValue(vec![
+                    DbValue::I64(1),
+                    DbValue::String("a".to_string()),
+                    DbValue::I64(2),
+                ]),
+            )
+                .into()]])
+            .query(),
+        1,
+    );
+    db.exec_mut(
+        QueryBuilder::remove()
+            .amend([[("items", DbValue::String("a".to_string())).into()]])
+            .ids(1)
+            .query(),
+        1,
+    );
+    db.exec_elements(
+        QueryBuilder::select().ids(1).query(),
+        &[DbElement {
+            id: DbId(1),
+            from: DbId::default(),
+            to: DbId::default(),
+            values: vec![
+                (
+                    "items",
+                    DbValue::VecDbValue(vec![DbValue::I64(1), DbValue::I64(2)]),
+                )
+                    .into(),
+            ],
+        }],
+    );
+}
+
+#[test]
+fn amend_or_vec_db_value_falls_back_to_add() {
+    let mut db = TestDb::new();
+    db.exec_mut(
+        QueryBuilder::insert()
+            .nodes()
+            .values([[("items", DbValue::VecDbValue(vec![DbValue::I64(1)])).into()]])
+            .query(),
+        1,
+    );
+    db.exec_mut(
+        QueryBuilder::insert()
+            .amend_or([[("items", DbValue::VecDbValue(vec![DbValue::I64(2)])).into()]])
+            .ids(1)
+            .query(),
+        1,
+    );
+    db.exec_elements(
+        QueryBuilder::select().ids(1).query(),
+        &[DbElement {
+            id: DbId(1),
+            from: DbId::default(),
+            to: DbId::default(),
+            values: vec![
+                (
+                    "items",
+                    DbValue::VecDbValue(vec![DbValue::I64(1), DbValue::I64(2)]),
+                )
+                    .into(),
+            ],
+        }],
+    );
+}
+
+#[test]
+fn remove_amend_or_vec_db_value_falls_back_to_remove() {
+    let mut db = TestDb::new();
+    db.exec_mut(
+        QueryBuilder::insert()
+            .nodes()
+            .values([[(
+                "items",
+                DbValue::VecDbValue(vec![DbValue::I64(1), DbValue::I64(2), DbValue::I64(3)]),
+            )
+                .into()]])
+            .query(),
+        1,
+    );
+    db.exec_mut(
+        QueryBuilder::remove()
+            .amend_or([[("items", DbValue::VecDbValue(vec![DbValue::I64(2)])).into()]])
+            .ids(1)
+            .query(),
+        1,
+    );
+    db.exec_elements(
+        QueryBuilder::select().ids(1).query(),
+        &[DbElement {
+            id: DbId(1),
+            from: DbId::default(),
+            to: DbId::default(),
+            values: vec![
+                (
+                    "items",
+                    DbValue::VecDbValue(vec![DbValue::I64(1), DbValue::I64(3)]),
+                )
+                    .into(),
+            ],
+        }],
+    );
+}
+
+#[test]
+fn insert_select_vec_db_value_roundtrip() {
+    let mut db = TestDb::new();
+    let items = DbValue::VecDbValue(vec![
+        DbValue::I64(42),
+        DbValue::String("hello".to_string()),
+        DbValue::Bytes(vec![1, 2, 3]),
+        DbValue::U64(99),
+    ]);
+    db.exec_mut(
+        QueryBuilder::insert()
+            .nodes()
+            .values([[("items", items.clone()).into()]])
+            .query(),
+        1,
+    );
+    db.exec_elements(
+        QueryBuilder::select().ids(1).query(),
+        &[DbElement {
+            id: DbId(1),
+            from: DbId::default(),
+            to: DbId::default(),
+            values: vec![("items", items).into()],
+        }],
     );
 }

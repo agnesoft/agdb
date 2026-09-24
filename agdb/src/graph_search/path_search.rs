@@ -31,6 +31,7 @@ where
     paths: Vec<Path>,
     result: Vec<(GraphIndex, bool)>,
     visited: BitSet,
+    reverse: bool,
 }
 
 impl<'a, D, Data, Handler> PathSearch<'a, D, Data, Handler>
@@ -63,6 +64,35 @@ where
             }],
             result: vec![],
             visited: BitSet::new(),
+            reverse: false,
+        }
+    }
+
+    pub fn new_reverse(
+        graph: &'a GraphImpl<D, Data>,
+        storage: &'a Storage<D>,
+        from: GraphIndex,
+        to: GraphIndex,
+        handler: Handler,
+    ) -> Self {
+        let add = handler.process(to, 0).unwrap_or_default();
+
+        Self {
+            current_path: Path {
+                elements: vec![],
+                cost: 0,
+            },
+            destination: from,
+            graph,
+            storage,
+            handler,
+            paths: vec![Path {
+                elements: vec![(to, add.1)],
+                cost: 0,
+            }],
+            result: vec![],
+            visited: BitSet::new(),
+            reverse: true,
         }
     }
 
@@ -72,7 +102,11 @@ where
             self.process_last_path()?;
         }
 
-        Ok(self.result.iter().filter(|e| e.1).map(|e| e.0).collect())
+        let mut result: Vec<GraphIndex> = self.result.iter().filter(|e| e.1).map(|e| e.0).collect();
+        if self.reverse {
+            result.reverse();
+        }
+        Ok(result)
     }
 
     fn expand_edge(
@@ -113,8 +147,14 @@ where
             .graph
             .node(self.storage, index)
             .expect("unexpected invalid node index");
-        for edge in node.edge_iter_from() {
-            self.expand_edge(self.current_path.clone(), edge.index(), edge.index_to())?;
+        if self.reverse {
+            for edge in node.edge_iter_to() {
+                self.expand_edge(self.current_path.clone(), edge.index(), edge.index_from())?;
+            }
+        } else {
+            for edge in node.edge_iter_from() {
+                self.expand_edge(self.current_path.clone(), edge.index(), edge.index_to())?;
+            }
         }
 
         Ok(())

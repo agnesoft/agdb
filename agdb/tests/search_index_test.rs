@@ -120,6 +120,7 @@ fn missing_condition() {
         offset: 0,
         order_by: vec![],
         conditions: vec![],
+        reverse: false,
     };
 
     db.exec_error(query, "Index condition is required for index search");
@@ -140,6 +141,7 @@ fn wrong_condition() {
             modifier: agdb::QueryConditionModifier::None,
             data: agdb::QueryConditionData::Node,
         }],
+        reverse: false,
     };
 
     db.exec_error(query, "Index condition must be key value");

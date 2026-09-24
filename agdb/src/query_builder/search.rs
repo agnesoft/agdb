@@ -413,6 +413,28 @@ impl<T: SearchQueryBuilder> SearchOrderBy<T> {
 
 #[cfg_attr(feature = "api", agdb::impl_def())]
 impl<T: SearchQueryBuilder> SearchTo<T> {
+    /// Sets the origin for a reverse path search. The search starts at the
+    /// destination and follows edges in reverse (incoming edges) toward the
+    /// origin, which can be significantly faster when the destination has
+    /// fewer incoming edges than the origin has outgoing edges.
+    ///
+    /// Options:
+    ///
+    /// ```
+    /// use agdb::{QueryBuilder, DbKeyOrder};
+    ///
+    /// QueryBuilder::search().to(2).from(1).query();
+    /// QueryBuilder::search().to(2).from(1).order_by([DbKeyOrder::Asc("k".into())]);
+    /// QueryBuilder::search().to(2).from(1).offset(10);
+    /// QueryBuilder::search().to(2).from(1).limit(5);
+    /// QueryBuilder::search().to(2).from(1).where_();
+    /// ```
+    pub fn from<I: Into<QueryId>>(mut self, id: I) -> SearchFrom<T> {
+        self.0.search_mut().origin = id.into();
+        self.0.search_mut().reverse = true;
+        SearchFrom(self.0)
+    }
+
     /// Sets the limit to number of ids returned. If during the search
     /// the `limit + offset` is hit the search ends and the result is returned.
     /// However when doing a path search or requesting ordering of the result

@@ -73,6 +73,15 @@ pub struct SearchQuery {
     /// Set of conditions every element must satisfy to be included in the
     /// result. Some conditions also influence the search path as well.
     pub conditions: Vec<QueryCondition>,
+
+    /// When true and both origin and destination are set,
+    /// the path search follows edges in reverse (incoming edges).
+    /// Set by the `to().from()` builder order.
+    #[cfg_attr(
+        feature = "serde",
+        serde(default, skip_serializing_if = "std::ops::Not::not")
+    )]
+    pub reverse: bool,
 }
 
 impl Query for SearchQuery {
@@ -167,7 +176,11 @@ impl SearchQuery {
         } else {
             let origin = db.db_id(&self.origin)?;
             let destination = db.db_id(&self.destination)?;
-            let mut ids = db.search_from_to(origin, destination, &self.conditions)?;
+            let mut ids = if self.reverse {
+                db.search_to_from(origin, destination, &self.conditions)?
+            } else {
+                db.search_from_to(origin, destination, &self.conditions)?
+            };
             self.sort(&mut ids, db)?;
             self.slice(ids)
         }
@@ -236,6 +249,7 @@ impl SearchQuery {
             offset: 0,
             order_by: vec![],
             conditions: vec![],
+            reverse: false,
         }
     }
 }
@@ -267,7 +281,8 @@ mod tests {
                 limit: 0,
                 offset: 0,
                 order_by: vec![],
-                conditions: vec![]
+                conditions: vec![],
+                reverse: false,
             }
         );
     }
@@ -283,6 +298,7 @@ mod tests {
             offset: 0,
             order_by: vec![],
             conditions: vec![],
+            reverse: false,
         };
         let right = left.clone();
         assert_eq!(left, right);
@@ -298,7 +314,8 @@ mod tests {
                 limit: 0,
                 offset: 0,
                 order_by: vec![],
-                conditions: vec![]
+                conditions: vec![],
+                reverse: false,
             },
             SearchQuery {
                 algorithm: SearchQueryAlgorithm::BreadthFirst,
@@ -307,7 +324,8 @@ mod tests {
                 limit: 0,
                 offset: 0,
                 order_by: vec![],
-                conditions: vec![]
+                conditions: vec![],
+                reverse: false,
             }
         );
     }

@@ -20,10 +20,7 @@ test.describe("Database Table", () => {
     await ui.element(testIds.DB_TABLE).isVisible();
   });
 
-  test("should display database table with correct data", async ({
-    ui,
-    page,
-  }) => {
+  test("should display database table with correct data", async ({ ui }) => {
     const rows = ui.locator(testIds.TABLE_ROW);
     await expect(rows).toHaveCount(3);
 

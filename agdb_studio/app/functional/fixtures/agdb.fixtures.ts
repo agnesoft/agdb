@@ -1,4 +1,3 @@
-/* eslint-disable react-hooks/rules-of-hooks */
 import { test as base } from "./base.fixtures";
 import { enableConsoleLogging, mockAllApis } from "../mocks/api-helpers";
 

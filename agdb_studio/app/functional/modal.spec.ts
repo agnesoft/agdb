@@ -1,6 +1,6 @@
 import { expect } from "@playwright/test";
 import { test } from "./fixtures/agdb.fixtures";
-import { testIds, dynamicIds } from "./test-ids";
+import { testIds } from "./test-ids";
 import {
   mockDatabaseListApi,
   mockLogin,

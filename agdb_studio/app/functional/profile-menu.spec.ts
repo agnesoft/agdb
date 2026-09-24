@@ -1,6 +1,6 @@
 import { expect } from "@playwright/test";
 import { test } from "./fixtures/agdb.fixtures";
-import { testIds, dynamicIds } from "./test-ids";
+import { testIds } from "./test-ids";
 import {
   mockDatabaseListApi,
   mockLogin,
@@ -9,7 +9,6 @@ import {
   gotoDbPage,
   gotoAdminDbPage,
 } from "./mocks/api-helpers";
-import { USER_CHANGE_PASSWORD_API } from "./api-paths";
 
 test.describe("Profile Menu", () => {
   test("opens profile dropdown on click", async ({ ui, page }) => {

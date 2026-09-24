@@ -7,7 +7,7 @@ import {
   mockAdminDatabaseListApi,
   gotoAdminDbPage,
 } from "./mocks/api-helpers";
-import { ADMIN_DB_COPY_API, ADMIN_DB_RENAME_API } from "./api-paths";
+import { ADMIN_DB_COPY_API } from "./api-paths";
 
 test.describe("Admin Database View", () => {
   test.beforeEach(async ({ ui, page }) => {

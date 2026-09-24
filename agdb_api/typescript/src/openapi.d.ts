@@ -21,7 +21,49 @@ declare namespace Components {
          * Amend operation for insert/remove value queries.
          * Controls how values are applied to existing properties.
          */
-        export type Amend = "None" | "Add" | "Remove";
+        export type Amend = /**
+         * Amend operation for insert/remove value queries.
+         * Controls how values are applied to existing properties.
+         */
+        ("None") | ("Add") | ("Remove") | {
+            /**
+             * Apply a bitwise operation in an "add" context.
+             * For integer types (`i64`, `u64`) the bitwise op is applied directly,
+             * with cross-type `i64`↔`u64` interop.
+             * For bytes the op is applied element-wise (shorter operand zero-padded).
+             * For all other types falls back to `Add` semantics
+             * (concatenate, extend, etc.).
+             * If the key does not exist, falls back to a regular insert.
+             */
+            AddBitwise: /**
+             * Bitwise operation for [`Amend::AddBitwise`] and [`Amend::RemoveBitwise`].
+             * For integers (`i64`, `u64`) and bytes the bitwise op is applied directly.
+             * Other types fall back to `Add` or `Remove` semantics respectively.
+             */
+            BitwiseOp;
+        } | {
+            /**
+             * Apply a bitwise operation in a "remove" context.
+             * For integer types (`i64`, `u64`) the bitwise op is applied directly,
+             * with cross-type `i64`↔`u64` interop.
+             * For bytes the op is applied element-wise (shorter operand zero-padded).
+             * For all other types falls back to `Remove` semantics
+             * (subtract, remove occurrences, etc.).
+             * If the key does not exist, this is a no-op (same as `Remove`).
+             */
+            RemoveBitwise: /**
+             * Bitwise operation for [`Amend::AddBitwise`] and [`Amend::RemoveBitwise`].
+             * For integers (`i64`, `u64`) and bytes the bitwise op is applied directly.
+             * Other types fall back to `Add` or `Remove` semantics respectively.
+             */
+            BitwiseOp;
+        };
+        /**
+         * Bitwise operation for [`Amend::AddBitwise`] and [`Amend::RemoveBitwise`].
+         * For integers (`i64`, `u64`) and bytes the bitwise op is applied directly.
+         * Other types fall back to `Add` or `Remove` semantics respectively.
+         */
+        export type BitwiseOp = "And" | "Or" | "Xor";
         export interface ChangePassword {
             new_password: string;
             password: string;
@@ -3457,6 +3499,7 @@ export type Client = OpenAPIClient<OperationMethods, PathsDictionary>
 
 export type AdminStatus = Components.Schemas.AdminStatus;
 export type Amend = Components.Schemas.Amend;
+export type BitwiseOp = Components.Schemas.BitwiseOp;
 export type ChangePassword = Components.Schemas.ChangePassword;
 export type ClusterStatus = Components.Schemas.ClusterStatus;
 export type Comparison = Components.Schemas.Comparison;

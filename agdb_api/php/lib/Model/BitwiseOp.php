@@ -1,6 +1,6 @@
 <?php
 /**
- * QueryConditionModifier
+ * BitwiseOp
  *
  * PHP version 8.1
  *
@@ -30,26 +30,24 @@ namespace Agnesoft\AgdbApi\Model;
 use \Agnesoft\AgdbApi\ObjectSerializer;
 
 /**
- * QueryConditionModifier Class Doc Comment
+ * BitwiseOp Class Doc Comment
  *
  * @category Class
- * @description Query condition modifier
+ * @description Bitwise operation for [&#x60;Amend::AddBitwise&#x60;] and [&#x60;Amend::RemoveBitwise&#x60;]. For integers (&#x60;i64&#x60;, &#x60;u64&#x60;) and bytes the bitwise op is applied directly. Other types fall back to &#x60;Add&#x60; or &#x60;Remove&#x60; semantics respectively.
  * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
  */
-class QueryConditionModifier
+class BitwiseOp
 {
     /**
      * Possible values of this enum
      */
-    public const NONE = 'None';
+    public const _AND = 'And';
 
-    public const BEYOND = 'Beyond';
+    public const _OR = 'Or';
 
-    public const NOT = 'Not';
-
-    public const NOT_BEYOND = 'NotBeyond';
+    public const _XOR = 'Xor';
 
     /**
      * Gets allowable values of the enum
@@ -58,10 +56,9 @@ class QueryConditionModifier
     public static function getAllowableEnumValues()
     {
         return [
-            self::NONE,
-            self::BEYOND,
-            self::NOT,
-            self::NOT_BEYOND
+            self::_AND,
+            self::_OR,
+            self::_XOR
         ];
     }
 }

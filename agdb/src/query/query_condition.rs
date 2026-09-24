@@ -276,6 +276,10 @@ impl Comparison {
                 (DbValue::VecString(left), DbValue::VecString(right)) => {
                     right.iter().all(|x| left.contains(x))
                 }
+                (DbValue::VecDbValue(left), DbValue::VecDbValue(right)) => {
+                    right.iter().all(|x| left.contains(x))
+                }
+                (DbValue::VecDbValue(left), right) => left.contains(right),
                 _ => false,
             },
 
@@ -292,6 +296,8 @@ impl Comparison {
                 (DbValue::VecF64(left), DbValue::VecF64(right)) => left.starts_with(right),
                 (DbValue::VecString(left), DbValue::String(right)) => left.first() == Some(right),
                 (DbValue::VecString(left), DbValue::VecString(right)) => left.starts_with(right),
+                (DbValue::VecDbValue(left), DbValue::VecDbValue(right)) => left.starts_with(right),
+                (DbValue::VecDbValue(left), right) => left.first() == Some(right),
                 _ => false,
             },
 
@@ -308,6 +314,8 @@ impl Comparison {
                 (DbValue::VecF64(left), DbValue::VecF64(right)) => left.ends_with(right),
                 (DbValue::VecString(left), DbValue::String(right)) => left.last() == Some(right),
                 (DbValue::VecString(left), DbValue::VecString(right)) => left.ends_with(right),
+                (DbValue::VecDbValue(left), DbValue::VecDbValue(right)) => left.ends_with(right),
+                (DbValue::VecDbValue(left), right) => left.last() == Some(right),
                 _ => false,
             },
         }
@@ -475,6 +483,23 @@ mod tests {
         assert!(condition.compare(&vec!["abc".to_string(), "123".to_string()].into()));
         assert!(!condition.compare(&vec!["123".to_string()].into()));
 
+        let haystack = DbValue::VecDbValue(vec![
+            DbValue::I64(1),
+            DbValue::String("hello".to_string()),
+            DbValue::U64(42),
+        ]);
+        assert!(Comparison::Contains(DbValue::I64(1)).compare(&haystack));
+        assert!(Comparison::Contains(DbValue::String("hello".to_string())).compare(&haystack));
+        assert!(!Comparison::Contains(DbValue::I64(99)).compare(&haystack));
+
+        let subset = DbValue::VecDbValue(vec![DbValue::I64(1), DbValue::U64(42)]);
+        assert!(Comparison::Contains(subset.clone()).compare(&haystack));
+        let missing = DbValue::VecDbValue(vec![DbValue::I64(1), DbValue::I64(99)]);
+        assert!(!Comparison::Contains(missing).compare(&haystack));
+
+        let empty = DbValue::VecDbValue(vec![]);
+        assert!(Comparison::Contains(empty).compare(&haystack));
+
         assert!(!Comparison::Contains("abc".into()).compare(&1.into()));
     }
 
@@ -548,6 +573,24 @@ mod tests {
         assert!(condition.compare(&vec!["abc".to_string(), "123".to_string()].into()));
         assert!(!condition.compare(&vec!["123".to_string(), "abc".to_string()].into()));
 
+        let haystack = DbValue::VecDbValue(vec![
+            DbValue::I64(10),
+            DbValue::String("mid".to_string()),
+            DbValue::U64(20),
+        ]);
+        assert!(Comparison::StartsWith(DbValue::I64(10)).compare(&haystack));
+        assert!(!Comparison::StartsWith(DbValue::String("mid".to_string())).compare(&haystack));
+
+        let prefix =
+            DbValue::VecDbValue(vec![DbValue::I64(10), DbValue::String("mid".to_string())]);
+        assert!(Comparison::StartsWith(prefix).compare(&haystack));
+        let wrong_prefix =
+            DbValue::VecDbValue(vec![DbValue::String("mid".to_string()), DbValue::U64(20)]);
+        assert!(!Comparison::StartsWith(wrong_prefix).compare(&haystack));
+
+        let empty = DbValue::VecDbValue(vec![]);
+        assert!(Comparison::StartsWith(empty).compare(&haystack));
+
         assert!(!Comparison::StartsWith("abc".into()).compare(&1.into()));
     }
 
@@ -591,6 +634,24 @@ mod tests {
         let condition = Comparison::EndsWith(vec!["abc".to_string(), "123".to_string()].into());
         assert!(condition.compare(&vec!["abc".to_string(), "123".to_string()].into()));
         assert!(!condition.compare(&vec!["123".to_string(), "abc".to_string()].into()));
+
+        let haystack = DbValue::VecDbValue(vec![
+            DbValue::I64(10),
+            DbValue::String("mid".to_string()),
+            DbValue::U64(20),
+        ]);
+        assert!(Comparison::EndsWith(DbValue::U64(20)).compare(&haystack));
+        assert!(!Comparison::EndsWith(DbValue::I64(10)).compare(&haystack));
+
+        let suffix =
+            DbValue::VecDbValue(vec![DbValue::String("mid".to_string()), DbValue::U64(20)]);
+        assert!(Comparison::EndsWith(suffix).compare(&haystack));
+        let wrong_suffix =
+            DbValue::VecDbValue(vec![DbValue::I64(10), DbValue::String("mid".to_string())]);
+        assert!(!Comparison::EndsWith(wrong_suffix).compare(&haystack));
+
+        let empty = DbValue::VecDbValue(vec![]);
+        assert!(Comparison::EndsWith(empty).compare(&haystack));
 
         assert!(!Comparison::EndsWith("abc".into()).compare(&1.into()));
     }

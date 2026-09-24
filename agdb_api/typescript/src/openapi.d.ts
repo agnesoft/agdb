@@ -1345,6 +1345,12 @@ declare namespace Components {
              * id or a string alias.
              */
             QueryId;
+            /**
+             * When true and both origin and destination are set,
+             * the path search follows edges in reverse (incoming edges).
+             * Set by the `to().from()` builder order.
+             */
+            reverse: boolean;
         }
         /**
          * Search algorithm to be used

@@ -9,26 +9,22 @@ export const createActions = (locator: (id: TestId) => Locator) => {
 
     fill: (testId: TestId, value: string) => {
       return test.step(`fill ${testId} with "${value}"`, () =>
-        locator(testId).fill(value),
-      );
+        locator(testId).fill(value));
     },
 
     type: (testId: TestId, value: string, options?: { delay?: number }) => {
       return test.step(`type "${value}" into ${testId}`, () =>
-        locator(testId).pressSequentially(value, options),
-      );
+        locator(testId).pressSequentially(value, options));
     },
 
     press: (testId: TestId, key: string) => {
       return test.step(`press ${key} on ${testId}`, () =>
-        locator(testId).press(key),
-      );
+        locator(testId).press(key));
     },
 
     select: (testId: TestId, value: string) => {
       return test.step(`select "${value}" on ${testId}`, () =>
-        locator(testId).selectOption(value),
-      );
+        locator(testId).selectOption(value));
     },
 
     check: (testId: TestId) => {

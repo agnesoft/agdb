@@ -19,9 +19,7 @@ test.describe("Profile Menu", () => {
     await ui.element(testIds.DB_TABLE).isVisible();
 
     await ui.click(testIds.PROFILE_DROPDOWN);
-    await expect(
-      page.getByTestId("menu-item-change-password"),
-    ).toBeVisible();
+    await expect(page.getByTestId("menu-item-change-password")).toBeVisible();
     await expect(page.getByTestId("menu-item-logout")).toBeVisible();
   });
 
@@ -35,9 +33,7 @@ test.describe("Profile Menu", () => {
     await ui.element(testIds.DB_TABLE).isVisible();
 
     await ui.click(testIds.PROFILE_DROPDOWN);
-    await expect(
-      page.getByTestId("menu-item-change-password"),
-    ).toBeVisible();
+    await expect(page.getByTestId("menu-item-change-password")).toBeVisible();
     await expect(page.getByTestId("menu-item-logout")).toBeVisible();
     // Admin View should NOT be visible for non-admin
     await expect(page.getByTestId("menu-item-admin")).not.toBeVisible();
@@ -165,9 +161,7 @@ test.describe("Profile Menu", () => {
     await page.getByTestId("modal-button-confirm").click();
 
     await expect(modal).toBeVisible();
-    await expect(modal.locator(".error-message")).toContainText(
-      "do not match",
-    );
+    await expect(modal.locator(".error-message")).toContainText("do not match");
   });
 
   test("logout: opens confirmation modal with cluster checkbox", async ({
@@ -190,8 +184,6 @@ test.describe("Profile Menu", () => {
     // Cluster checkbox should be present
     const checkbox = modal.locator('input[type="checkbox"]');
     await expect(checkbox).toBeVisible();
-    await expect(modal).toContainText(
-      "Logout from all nodes in the cluster",
-    );
+    await expect(modal).toContainText("Logout from all nodes in the cluster");
   });
 });

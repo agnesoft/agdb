@@ -32,22 +32,22 @@ test.describe("Admin User Management", () => {
 
     // First user: admin
     const firstRow = rows.nth(0);
-    await expect(
-      firstRow.getByTestId("table-cell-username"),
-    ).toContainText("admin");
+    await expect(firstRow.getByTestId("table-cell-username")).toContainText(
+      "admin",
+    );
     await expect(firstRow.getByTestId("table-cell-login")).toBeVisible();
 
     // Second user: inactive (sorted alphabetically)
     const secondRow = rows.nth(1);
-    await expect(
-      secondRow.getByTestId("table-cell-username"),
-    ).toContainText("inactive");
+    await expect(secondRow.getByTestId("table-cell-username")).toContainText(
+      "inactive",
+    );
 
     // Third user: testuser
     const thirdRow = rows.nth(2);
-    await expect(
-      thirdRow.getByTestId("table-cell-username"),
-    ).toContainText("testuser");
+    await expect(thirdRow.getByTestId("table-cell-username")).toContainText(
+      "testuser",
+    );
   });
 
   test("shows crown icon next to admin users", async ({ page }) => {
@@ -73,9 +73,7 @@ test.describe("Admin User Management", () => {
     await page.locator('button[type="submit"]').click();
   });
 
-  test("delete user: opens confirmation and confirms", async ({
-    page,
-  }) => {
+  test("delete user: opens confirmation and confirms", async ({ page }) => {
     await mockDbActionApi(page, ADMIN_USER_DELETE_API);
     await mockAdminUserListApi(page);
 
@@ -91,9 +89,7 @@ test.describe("Admin User Management", () => {
     await expect(modal).not.toBeVisible();
   });
 
-  test("change password: opens modal with password input", async ({
-    page,
-  }) => {
+  test("change password: opens modal with password input", async ({ page }) => {
     await mockDbActionApi(page, ADMIN_USER_CHANGE_PASSWORD_API);
 
     const row = page.getByTestId("table-row").nth(1);

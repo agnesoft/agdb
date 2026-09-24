@@ -20,9 +20,7 @@ test.describe("Database Details — User Management", () => {
     await ui.element(testIds.DB_TABLE).isVisible();
   });
 
-  const expandFirstRow = async (
-    page: import("@playwright/test").Page,
-  ) => {
+  const expandFirstRow = async (page: import("@playwright/test").Page) => {
     const row = page.getByTestId("table-row").first();
     const expandButton = row.locator("button.expand-row");
     await expandButton.click();
@@ -99,7 +97,9 @@ test.describe("Database Details — User Management", () => {
 
     const modal = page.locator(".modal");
     await expect(modal).toBeVisible();
-    await expect(modal.locator(".modal-header h3")).toContainText("Remove user");
+    await expect(modal.locator(".modal-header h3")).toContainText(
+      "Remove user",
+    );
     await expect(modal).toContainText("reader");
   });
 

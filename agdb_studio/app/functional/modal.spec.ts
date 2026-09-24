@@ -7,11 +7,7 @@ import {
   mockDbActionApi,
   gotoDbPage,
 } from "./mocks/api-helpers";
-import {
-  DB_BACKUP_API,
-  DB_COPY_API,
-  DB_DELETE_API,
-} from "./api-paths";
+import { DB_BACKUP_API, DB_COPY_API, DB_DELETE_API } from "./api-paths";
 
 test.describe("Modal System", () => {
   test.beforeEach(async ({ ui, page }) => {

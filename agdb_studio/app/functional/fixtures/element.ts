@@ -50,9 +50,7 @@ export const createElementAPI = (
       step(`Element "${id}" is enabled`, () => expect(locator).toBeEnabled()),
 
     isDisabled: () =>
-      step(`Element "${id}" is disabled`, () =>
-        expect(locator).toBeDisabled(),
-      ),
+      step(`Element "${id}" is disabled`, () => expect(locator).toBeDisabled()),
 
     hasText: (text: string) =>
       step(`Element "${id}" has text "${text}"`, () =>

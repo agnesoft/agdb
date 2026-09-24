@@ -2,7 +2,11 @@ import { expect } from "@playwright/test";
 import { test } from "./fixtures/agdb.fixtures";
 import { testIds, dynamicIds } from "./test-ids";
 import { DB_ADD_API, DB_LIST_API } from "./api-paths";
-import { mockDatabaseListApi, mockLogin, gotoDbPage } from "./mocks/api-helpers";
+import {
+  mockDatabaseListApi,
+  mockLogin,
+  gotoDbPage,
+} from "./mocks/api-helpers";
 import { MOCK_DATABASE_LIST } from "./mocks/db.mock";
 import type { ServerDatabase } from "@agnesoft/agdb_api/openapi" with {
   "resolution-mode": "import",
@@ -54,9 +58,7 @@ test.describe("Database Table", () => {
     await ui.click(testIds.REFRESH_BUTTON);
     const rows = ui.locator(testIds.TABLE_ROW);
     await expect(rows).toHaveCount(0);
-    await ui
-      .element(testIds.EMPTY_TABLE_MESSAGE)
-      .hasText("No databases found");
+    await ui.element(testIds.EMPTY_TABLE_MESSAGE).hasText("No databases found");
   });
 
   test("should handle API errors gracefully", async ({ ui, page }) => {

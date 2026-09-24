@@ -13,5 +13,6 @@ Name | Type | Description | Notes
 **vec_u64** | **int[]** | List of 64-bit wide unsigned integers |
 **vec_f64** | **float[]** | List of 64-bit floating point numbers |
 **vec_string** | **string[]** | List of UTF-8 strings |
+**vec_db_value** | [**\Agnesoft\AgdbApi\Model\DbValue[]**](DbValue.md) | List of database values (heterogeneous) |
 
 [[Back to Model list]](../../README.md#models) [[Back to API list]](../../README.md#endpoints) [[Back to README]](../../README.md)

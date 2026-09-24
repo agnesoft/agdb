@@ -7,7 +7,7 @@
       "name": "Apache-2.0",
       "identifier": "Apache-2.0"
     },
-    "version": "0.14.1"
+    "version": "0.14.2"
   },
   "servers": [
     {
@@ -3211,6 +3211,22 @@
                   "type": "string"
                 },
                 "description": "List of UTF-8 strings"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "List of database values (heterogeneous)",
+            "required": [
+              "VecDbValue"
+            ],
+            "properties": {
+              "VecDbValue": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/DbValue"
+                },
+                "description": "List of database values (heterogeneous)"
               }
             }
           }

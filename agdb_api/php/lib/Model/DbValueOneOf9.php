@@ -1,6 +1,6 @@
 <?php
 /**
- * SetLogLevelRequest
+ * DbValueOneOf9
  *
  * PHP version 8.1
  *
@@ -32,15 +32,16 @@ use \ArrayAccess;
 use \Agnesoft\AgdbApi\ObjectSerializer;
 
 /**
- * SetLogLevelRequest Class Doc Comment
+ * DbValueOneOf9 Class Doc Comment
  *
  * @category Class
+ * @description List of database values (heterogeneous)
  * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
  * @implements \ArrayAccess<string, mixed>
  */
-class SetLogLevelRequest implements ModelInterface, ArrayAccess, \JsonSerializable
+class DbValueOneOf9 implements ModelInterface, ArrayAccess, \JsonSerializable
 {
     public const DISCRIMINATOR = null;
 
@@ -49,7 +50,7 @@ class SetLogLevelRequest implements ModelInterface, ArrayAccess, \JsonSerializab
      *
      * @var string
      */
-    protected static $openAPIModelName = 'SetLogLevelRequest';
+    protected static $openAPIModelName = 'DbValue_oneOf_9';
 
     /**
      * Array of property to type mappings. Used for (de)serialization
@@ -57,7 +58,7 @@ class SetLogLevelRequest implements ModelInterface, ArrayAccess, \JsonSerializab
      * @var string[]
      */
     protected static $openAPITypes = [
-        'new_level' => '\Agnesoft\AgdbApi\Model\LogLevelFilter'
+        'vec_db_value' => '\Agnesoft\AgdbApi\Model\DbValue[]'
     ];
 
     /**
@@ -68,7 +69,7 @@ class SetLogLevelRequest implements ModelInterface, ArrayAccess, \JsonSerializab
      * @psalm-var array<string, string|null>
      */
     protected static $openAPIFormats = [
-        'new_level' => null
+        'vec_db_value' => null
     ];
 
     /**
@@ -77,7 +78,7 @@ class SetLogLevelRequest implements ModelInterface, ArrayAccess, \JsonSerializab
      * @var boolean[]
      */
     protected static array $openAPINullables = [
-        'new_level' => false
+        'vec_db_value' => false
     ];
 
     /**
@@ -166,7 +167,7 @@ class SetLogLevelRequest implements ModelInterface, ArrayAccess, \JsonSerializab
      * @var string[]
      */
     protected static $attributeMap = [
-        'new_level' => 'new_level'
+        'vec_db_value' => 'VecDbValue'
     ];
 
     /**
@@ -175,7 +176,7 @@ class SetLogLevelRequest implements ModelInterface, ArrayAccess, \JsonSerializab
      * @var string[]
      */
     protected static $setters = [
-        'new_level' => 'setNewLevel'
+        'vec_db_value' => 'setVecDbValue'
     ];
 
     /**
@@ -184,7 +185,7 @@ class SetLogLevelRequest implements ModelInterface, ArrayAccess, \JsonSerializab
      * @var string[]
      */
     protected static $getters = [
-        'new_level' => 'getNewLevel'
+        'vec_db_value' => 'getVecDbValue'
     ];
 
     /**
@@ -244,7 +245,7 @@ class SetLogLevelRequest implements ModelInterface, ArrayAccess, \JsonSerializab
      */
     public function __construct(?array $data = null)
     {
-        $this->setIfExists('new_level', $data ?? [], null);
+        $this->setIfExists('vec_db_value', $data ?? [], null);
     }
 
     /**
@@ -274,8 +275,8 @@ class SetLogLevelRequest implements ModelInterface, ArrayAccess, \JsonSerializab
     {
         $invalidProperties = [];
 
-        if ($this->container['new_level'] === null) {
-            $invalidProperties[] = "'new_level' can't be null";
+        if ($this->container['vec_db_value'] === null) {
+            $invalidProperties[] = "'vec_db_value' can't be null";
         }
         return $invalidProperties;
     }
@@ -293,28 +294,28 @@ class SetLogLevelRequest implements ModelInterface, ArrayAccess, \JsonSerializab
 
 
     /**
-     * Gets new_level
+     * Gets vec_db_value
      *
-     * @return \Agnesoft\AgdbApi\Model\LogLevelFilter
+     * @return \Agnesoft\AgdbApi\Model\DbValue[]
      */
-    public function getNewLevel()
+    public function getVecDbValue()
     {
-        return $this->container['new_level'];
+        return $this->container['vec_db_value'];
     }
 
     /**
-     * Sets new_level
+     * Sets vec_db_value
      *
-     * @param \Agnesoft\AgdbApi\Model\LogLevelFilter $new_level new_level
+     * @param \Agnesoft\AgdbApi\Model\DbValue[] $vec_db_value List of database values (heterogeneous)
      *
      * @return self
      */
-    public function setNewLevel($new_level)
+    public function setVecDbValue($vec_db_value)
     {
-        if (is_null($new_level)) {
-            throw new \InvalidArgumentException('non-nullable new_level cannot be null');
+        if (is_null($vec_db_value)) {
+            throw new \InvalidArgumentException('non-nullable vec_db_value cannot be null');
         }
-        $this->container['new_level'] = $new_level;
+        $this->container['vec_db_value'] = $vec_db_value;
 
         return $this;
     }

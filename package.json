@@ -6,7 +6,7 @@
         "build": "turbo run build",
         "type-check": "turbo run type-check",
         "test": "turbo run test",
-        "test:e2e": "turbo run test:e2e",
+        "test:functional": "turbo run test:functional",
         "lint": "turbo run lint",
         "lint:check": "turbo run lint:check",
         "format": "turbo run format",

@@ -20,7 +20,7 @@
         "lint:check": {},
         "test": {},
         "type-check": {},
-        "test:e2e": {},
+        "test:functional": {},
         "before-commit": {}
     }
 }

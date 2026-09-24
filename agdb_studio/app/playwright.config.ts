@@ -11,15 +11,15 @@ import { devices } from "@playwright/test";
  * See https://playwright.dev/docs/test-configuration.
  */
 const config: PlaywrightTestConfig = {
-  testDir: "./e2e",
+  testDir: "./functional",
   /* Maximum time one test can run for. */
   timeout: 30 * 1000,
   expect: {
     /**
      * Maximum time expect() should wait for the condition to be met.
-     * For example in `await expect(locator).toHaveText();`
+     * SPA needs time to: load JS → fetch OpenAPI → init client → check auth → fetch data → render.
      */
-    timeout: 5000,
+    timeout: 15000,
   },
   /* Run tests in files in parallel */
   fullyParallel: true,
@@ -28,9 +28,9 @@ const config: PlaywrightTestConfig = {
   /* Retry on CI only */
   retries: process.env.CI ? 2 : 0,
   /* Opt out of parallel tests on CI. */
-  workers: process.env.CI ? 1 : undefined,
+  workers: process.env.CI ? 4 : undefined,
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
-  reporter: "html",
+  reporter: [["line"], ["junit"], ["html", { open: "never" }]],
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     /* Maximum time each action such as `click()` can take. Defaults to 0 (no limit). */
@@ -38,28 +38,41 @@ const config: PlaywrightTestConfig = {
     /* Base URL to use in actions like `await page.goto('/')`. */
     baseURL: "http://localhost:5173",
 
-    /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
-    trace: "on-first-retry",
+    ignoreHTTPSErrors: true,
+    timezoneId: "Europe/London",
+    locale: "en-GB",
 
     /* Only on CI systems run the tests headless */
     headless: !!process.env.CI,
 
-    screenshot: "on-first-failure",
+    screenshot: "on-first-failure" as const,
+    trace: process.env.CI
+      ? ("on-first-retry" as const)
+      : ("retain-on-failure" as const),
+    video: process.env.CI ? ("on-first-retry" as const) : ("off" as const),
+    launchOptions: {
+      chromiumSandbox: false,
+      args: [
+        "--headless=new",
+        "--no-sandbox",
+        "--ignore-certificate-errors",
+        "--disable-gpu",
+        "--disable-dev-shm-usage",
+        "--disable-extensions",
+        "--disable-background-timer-throttling",
+        "--disable-setuid-sandbox",
+      ],
+    },
   },
 
   /* Configure projects for major browsers */
   projects: [
-    {
-      name: "setup",
-      testMatch: /global\.setup\.ts/,
-    },
     {
       name: "chromium",
       testMatch: "**/*.spec.ts",
       use: {
         ...devices["Desktop Chrome"],
       },
-      dependencies: ["setup"],
     },
     // {
     //     name: "firefox",

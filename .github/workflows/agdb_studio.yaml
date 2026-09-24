@@ -34,10 +34,10 @@ jobs:
           path: agdb_studio/coverage/
           retention-days: 30
       - run: pnpm exec playwright install
-      - run: pnpm run test:e2e --filter=agdb_studio
+      - run: pnpm run test:functional --filter=agdb_studio
       - uses: actions/upload-artifact@v7
         if: always()
         with:
-          name: e2e
+          name: functional-tests
           path: agdb_studio/playwright-report/
           retention-days: 30

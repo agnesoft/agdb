@@ -296,9 +296,7 @@ impl Comparison {
                 (DbValue::VecF64(left), DbValue::VecF64(right)) => left.starts_with(right),
                 (DbValue::VecString(left), DbValue::String(right)) => left.first() == Some(right),
                 (DbValue::VecString(left), DbValue::VecString(right)) => left.starts_with(right),
-                (DbValue::VecDbValue(left), DbValue::VecDbValue(right)) => {
-                    left.starts_with(right)
-                }
+                (DbValue::VecDbValue(left), DbValue::VecDbValue(right)) => left.starts_with(right),
                 (DbValue::VecDbValue(left), right) => left.first() == Some(right),
                 _ => false,
             },

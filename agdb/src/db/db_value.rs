@@ -332,11 +332,9 @@ impl DbValue {
             VEC_STRING_META_VALUE => {
                 DbValue::VecString(storage.value::<Vec<String>>(StorageIndex(value_index.index()))?)
             }
-            VEC_DBVALUE_META_VALUE => {
-                DbValue::VecDbValue(
-                    storage.value::<Vec<DbValue>>(StorageIndex(value_index.index()))?,
-                )
-            }
+            VEC_DBVALUE_META_VALUE => DbValue::VecDbValue(
+                storage.value::<Vec<DbValue>>(StorageIndex(value_index.index()))?,
+            ),
             _ => panic!(),
         })
     }
@@ -525,9 +523,10 @@ impl DbValue {
             (DbValue::VecDbValue(a), DbValue::VecDbValue(b)) => {
                 Ok(DbValue::VecDbValue(Self::vec_remove_first(a, b)))
             }
-            (DbValue::VecDbValue(a), other) => Ok(DbValue::VecDbValue(
-                Self::vec_remove_first(a, std::slice::from_ref(other)),
-            )),
+            (DbValue::VecDbValue(a), other) => Ok(DbValue::VecDbValue(Self::vec_remove_first(
+                a,
+                std::slice::from_ref(other),
+            ))),
             _ => Self::amend_type_error(self, other),
         }
     }

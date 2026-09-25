@@ -351,6 +351,7 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
                         self.index,
                         request.target,
                     );
+                    self.node_mut(request.target).append_failures = 0;
                 } else {
                     self.node_mut(request.target).append_failures += 1;
                     let failures = self.node(request.target).append_failures;
@@ -677,11 +678,6 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
             return Self::ok(request);
         }
 
-        if request.prune_index > 0 && request.prune_index > self.storage.log_commit() {
-            self.needs_resync = true;
-            return Self::ok(request);
-        }
-
         self.validate_log(request)?;
         self.update_node(
             request.index,
@@ -938,6 +934,8 @@ mod test {
     use tokio::sync::RwLock;
     use tokio::sync::mpsc::Sender;
 
+    const TIMEOUT: Duration = Duration::from_secs(3);
+
     #[derive(Debug, Default, Clone, PartialEq)]
     struct TestStorage {
         logs: Vec<Log<u8>>,
@@ -1022,9 +1020,9 @@ mod test {
                         index,
                         size,
                         hash: 123,
-                        election_factor_ms: 1000,
-                        heartbeat_timeout: Duration::from_secs(1),
-                        term_timeout: Duration::from_secs(3),
+                        election_factor_ms: 100,
+                        heartbeat_timeout: Duration::from_millis(100),
+                        term_timeout: Duration::from_millis(300),
                         max_log_entries,
                     };
                     Arc::new(RwLock::new(TestNodeImpl {
@@ -1260,8 +1258,6 @@ mod test {
         }
     }
 
-    const TIMEOUT: Duration = Duration::from_secs(10);
-
     #[tokio::test]
     async fn cluster_of_one() -> anyhow::Result<()> {
         let mut cluster = TestCluster::new(1);
@@ -1322,7 +1318,7 @@ mod test {
 
         cluster.block(2).await;
 
-        tokio::time::sleep(Duration::from_secs(4)).await;
+        tokio::time::sleep(Duration::from_millis(400)).await;
 
         cluster.expect_leader(0).await;
 
@@ -1480,7 +1476,7 @@ mod test {
             index: 0,
             size: 3,
             hash: 123,
-            election_factor_ms: 1000,
+            election_factor_ms: 100,
             heartbeat_timeout: Duration::from_millis(0),
             term_timeout: Duration::from_secs(3),
             max_log_entries: 1000,
@@ -1517,9 +1513,9 @@ mod test {
             index: 1,
             size: 3,
             hash: 123,
-            election_factor_ms: 1000,
-            heartbeat_timeout: Duration::from_secs(1),
-            term_timeout: Duration::from_secs(3),
+            election_factor_ms: 100,
+            heartbeat_timeout: Duration::from_millis(100),
+            term_timeout: Duration::from_millis(300),
             max_log_entries: 1000,
         };
         let mut cluster: Cluster<u8, (), TestStorage> = Cluster::new(storage, settings);
@@ -1569,9 +1565,9 @@ mod test {
             index: 0,
             size: 3,
             hash: 123,
-            election_factor_ms: 1000,
-            heartbeat_timeout: Duration::from_secs(1),
-            term_timeout: Duration::from_secs(3),
+            election_factor_ms: 100,
+            heartbeat_timeout: Duration::from_millis(100),
+            term_timeout: Duration::from_millis(300),
             max_log_entries: 1000,
         };
         let mut cluster: Cluster<u8, (), TestStorage> = Cluster::new(storage, settings);
@@ -1661,9 +1657,14 @@ mod test {
 
     #[tokio::test]
     async fn needs_resync_set_when_too_far_behind() -> anyhow::Result<()> {
-        // Create a follower that's at log_index=10, log_commit=10, term=1
-        let storage = TestStorage {
-            logs: (1..=10)
+        // Leader-driven resync: follower is behind, leader's entries are pruned,
+        // leader detects the gap via reconcile and tells the follower to resync.
+        //
+        // Leader: log_index=20, log_commit=20, entries 11-20 (1-10 pruned)
+        // Follower: log_index=5, log_commit=5
+
+        let leader_storage = TestStorage {
+            logs: (11..=20)
                 .map(|i| Log {
                     db_id: None,
                     index: i,
@@ -1671,44 +1672,97 @@ mod test {
                     data: i as u8,
                 })
                 .collect(),
-            commit: 10,
+            commit: 20,
+            prune_index: 10,
+        };
+        let leader_settings = ClusterSettings {
+            index: 0,
+            size: 3,
+            hash: 123,
+            election_factor_ms: 100,
+            heartbeat_timeout: Duration::from_millis(100),
+            term_timeout: Duration::from_millis(300),
+            max_log_entries: 1000,
+        };
+        let mut leader: Cluster<u8, (), TestStorage> =
+            Cluster::new(leader_storage, leader_settings);
+        leader.state = ClusterState::Leader;
+        leader.term = 1;
+
+        let follower_storage = TestStorage {
+            logs: (1..=5)
+                .map(|i| Log {
+                    db_id: None,
+                    index: i,
+                    term: 1,
+                    data: i as u8,
+                })
+                .collect(),
+            commit: 5,
             prune_index: 0,
         };
-        let settings = ClusterSettings {
+        let follower_settings = ClusterSettings {
             index: 1,
             size: 3,
             hash: 123,
-            election_factor_ms: 1000,
-            heartbeat_timeout: Duration::from_secs(1),
-            term_timeout: Duration::from_secs(3),
+            election_factor_ms: 100,
+            heartbeat_timeout: Duration::from_millis(100),
+            term_timeout: Duration::from_millis(300),
             max_log_entries: 1000,
         };
-        let mut cluster: Cluster<u8, (), TestStorage> = Cluster::new(storage, settings);
-        cluster.state = ClusterState::Follower(0);
-        cluster.term = 1;
+        let mut follower: Cluster<u8, (), TestStorage> =
+            Cluster::new(follower_storage, follower_settings);
+        follower.state = ClusterState::Follower(0);
+        follower.term = 1;
 
-        assert!(!cluster.needs_resync());
+        assert!(!follower.needs_resync());
 
-        // Heartbeat from leader: same log state but prune_index > our log_commit
-        // This simulates the leader having already pruned entries that this node
-        // hasn't applied. In practice this would mean the follower missed commits.
-        let request = Request {
+        // Step 1: Leader sends heartbeat to follower
+        let heartbeat = Request {
             hash: 123,
             index: 0,
             target: 1,
             term: 1,
-            log_index: 10,
+            log_index: 20,
             log_term: 1,
-            log_commit: 10,
-            prune_index: 50, // leader has pruned up to 50 — way past our commit
+            log_commit: 20,
+            prune_index: 10,
             force_resync: false,
             data: RequestType::Heartbeat,
         };
 
-        let response = cluster.request(&request).await;
+        let response = follower.request(&heartbeat).await;
+        // Follower's log_index=5 != leader's 20 → LogMismatch
+        assert!(matches!(response.result, ResponseType::LogMismatch(_)));
+
+        // Step 2: Leader processes the LogMismatch via reconcile
+        let requests = leader
+            .response(&heartbeat, &response)
+            .await
+            .map_err(|e| anyhow!(e.description))?;
+        // Reconcile detects gap (follower needs index 5, earliest is 11)
+        // → sets force_resync, returns no requests (can't send entries)
+        assert!(requests.is_none());
+        assert!(leader.node(1).force_resync);
+
+        // Step 3: Leader sends next heartbeat — carries force_resync=true
+        let force_heartbeat = Request {
+            hash: 123,
+            index: 0,
+            target: 1,
+            term: 1,
+            log_index: 20,
+            log_term: 1,
+            log_commit: 20,
+            prune_index: 10,
+            force_resync: true,
+            data: RequestType::Heartbeat,
+        };
+
+        let response = follower.request(&force_heartbeat).await;
         assert_eq!(response.result, ResponseType::Ok);
-        // prune_index (50) > storage.log_commit() (10) => needs_resync
-        assert!(cluster.needs_resync());
+        // NOW the follower sets needs_resync — because the leader told it to
+        assert!(follower.needs_resync());
 
         Ok(())
     }
@@ -1732,9 +1786,9 @@ mod test {
             index: 1,
             size: 3,
             hash: 123,
-            election_factor_ms: 1000,
-            heartbeat_timeout: Duration::from_secs(1),
-            term_timeout: Duration::from_secs(3),
+            election_factor_ms: 100,
+            heartbeat_timeout: Duration::from_millis(100),
+            term_timeout: Duration::from_millis(300),
             max_log_entries: 1000,
         };
         let mut cluster: Cluster<u8, (), TestStorage> = Cluster::new(storage, settings);
@@ -1784,9 +1838,9 @@ mod test {
             index: 1,
             size: 3,
             hash: 123,
-            election_factor_ms: 1000,
-            heartbeat_timeout: Duration::from_secs(1),
-            term_timeout: Duration::from_secs(3),
+            election_factor_ms: 100,
+            heartbeat_timeout: Duration::from_millis(100),
+            term_timeout: Duration::from_millis(300),
             max_log_entries: 1000,
         };
         let mut cluster: Cluster<u8, (), TestStorage> = Cluster::new(storage, settings);
@@ -1820,6 +1874,62 @@ mod test {
     }
 
     #[tokio::test]
+    async fn follower_does_not_lie_about_commit_when_prune_index_ahead() -> anyhow::Result<()> {
+        // Reproduces the production incident: a follower that is a few entries
+        // behind receives a heartbeat whose prune_index > its log_commit.
+        // The old code returned Ok without committing, which caused the leader
+        // to inflate the follower's tracked log_commit → premature pruning →
+        // unrecoverable gap.  After the fix the follower returns LogMismatch
+        // (its log_index doesn't match), letting reconcile catch up normally.
+
+        let mut cluster = TestCluster::with_max_log_entries(3, 5);
+        cluster.start().await;
+        cluster.expect_leader(0).await;
+
+        // All nodes in sync at commit=7
+        for i in 1..=7u8 {
+            cluster.append(0, i).await?;
+        }
+        cluster.expect_storage_synced(0, 1).await;
+        cluster.expect_storage_synced(0, 2).await;
+
+        // Block node 1, append more entries so the leader + node 2 advance
+        cluster.block(1).await;
+        for i in 8..=10u8 {
+            cluster.append(0, i).await?;
+        }
+        cluster.expect_storage_synced(0, 2).await;
+
+        // At this point:
+        //   leader: commit=10, prune_index >= 7 (min_commit of synced nodes)
+        //   node 1: commit=7 (blocked, missed entries 8-10)
+        //   node 2: commit=10
+
+        // Unblock and let the cluster reconcile naturally.
+        // If the old bug existed, node 1 would return Ok to a heartbeat
+        // with prune_index > 7, the leader would inflate node 1's tracked
+        // commit to 10, prune up to 9, and node 1 (needing index 8, earliest 10)
+        // would be forced into a full resync.
+        // With the fix, node 1 returns LogMismatch, the leader sends the
+        // missing entries via reconcile, and node 1 catches up normally.
+        cluster.unblock().await;
+        cluster.expect_storage_synced(0, 1).await;
+
+        // Verify node 1 caught up via normal log replication, NOT resync
+        let needs_resync = cluster.nodes.read().await[1]
+            .read()
+            .await
+            .cluster
+            .needs_resync();
+        assert!(
+            !needs_resync,
+            "node 1 should catch up via log replication, not require a full resync"
+        );
+
+        Ok(())
+    }
+
+    #[tokio::test]
     async fn resyncing_commit_errors_do_not_retrigger_force_resync() -> anyhow::Result<()> {
         let storage = TestStorage {
             logs: (1..=20)
@@ -1837,9 +1947,9 @@ mod test {
             index: 0,
             size: 3,
             hash: 123,
-            election_factor_ms: 1000,
-            heartbeat_timeout: Duration::from_secs(1),
-            term_timeout: Duration::from_secs(3),
+            election_factor_ms: 100,
+            heartbeat_timeout: Duration::from_millis(100),
+            term_timeout: Duration::from_millis(300),
             max_log_entries: 1000,
         };
         let mut leader: Cluster<u8, (), TestStorage> = Cluster::new(storage, settings);
@@ -1905,6 +2015,35 @@ mod test {
             "force_resync must be set from real failures"
         );
 
+        // Reset force_resync and verify that stale append_failures are
+        // cleared by a "resyncing" response so they don't carry over.
+        leader.node_mut(1).force_resync = false;
+        leader.node_mut(1).append_failures = 0;
+
+        // Accumulate some real failures (but below threshold)
+        for _ in 0..APPEND_FAILURE_THRESHOLD - 1 {
+            leader
+                .response(&append_request, &real_failure)
+                .await
+                .map_err(|e| anyhow!(e.description))?;
+        }
+        assert_eq!(leader.node(1).append_failures, APPEND_FAILURE_THRESHOLD - 1);
+
+        // Resyncing response must reset the stale count
+        leader
+            .response(&append_request, &resyncing_response)
+            .await
+            .map_err(|e| anyhow!(e.description))?;
+        assert_eq!(
+            leader.node(1).append_failures,
+            0,
+            "resyncing must reset stale append_failures"
+        );
+        assert!(
+            !leader.node(1).force_resync,
+            "resyncing must not trigger force_resync"
+        );
+
         Ok(())
     }
 
@@ -1950,7 +2089,10 @@ mod test {
             follower.cluster.clear_needs_resync();
         }
 
-        tokio::time::sleep(Duration::from_millis(200)).await;
+        // Wait for at least 2 heartbeat intervals (heartbeat_timeout = 100ms)
+        // to ensure the follower survives multiple heartbeat/append cycles
+        // without re-entering needs_resync.
+        tokio::time::sleep(Duration::from_millis(250)).await;
 
         let still_needs_resync = cluster.nodes.read().await[1]
             .read()

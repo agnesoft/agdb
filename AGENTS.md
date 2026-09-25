@@ -7,7 +7,7 @@ The Agnesoft Graph Database (aka agdb) is a graph database. The main components 
 - Install Rust: `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh`
 - Install pnpm: `npm i -g pnpm`. This assumes `npm` is installed & available.
 - Install PHP and Composer. Only needed for PHP API client. Use the `php-composer-setup` skill in `.github/skills/php-composer-setup/SKILL.md`.
-- Install playwright: `pnpm exec playwright install`. Only for TypeScript e2e tests.
+- Install playwright: `pnpm exec playwright install`. Only for TypeScript functional tests.
 
 # Available commands
 
@@ -32,7 +32,7 @@ The Agnesoft Graph Database (aka agdb) is a graph database. The main components 
 - Build: `pnpm run build --filter <package>`
 - Format: `pnpm run format --filter <package>`
 - Test: `pnpm run test --filter <package>`
-- Run e2e tests: `pnpm run test:e2e --filter <package>`
+- Run functional tests: `pnpm run test:functional --filter <package>`
 - Lint: `pnpm run lint --filter <package>`
 
 ## PHP

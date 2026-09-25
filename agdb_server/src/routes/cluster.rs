@@ -58,7 +58,7 @@ pub(crate) async fn cluster(
     if cluster.resync.load(Ordering::Relaxed) {
         let response = Response {
             target: request.index,
-            result: crate::raft::ResponseType::CommitError("resyncing".into()),
+            result: crate::raft::ResponseType::Resyncing,
         };
         return Ok((StatusCode::OK, Json(response)));
     }

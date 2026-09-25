@@ -529,6 +529,23 @@ declare namespace Components {
              * List of UTF-8 strings
              */
             VecString: string[];
+        } | {
+            /**
+             * List of database values (heterogeneous)
+             */
+            VecDbValue: /**
+             * Database value is a strongly types value.
+             *
+             * It is an enum of limited number supported types
+             * that are universal across all platforms
+             * and programming languages.
+             *
+             * The value is constructible from large number of
+             * raw types or associated types (e.g. i32, &str, etc.).
+             * Getting the raw value back as string can be done
+             * with `to_string()` but otherwise requires a `match`.
+             */
+            DbValue[];
         };
         /**
          * Query to insert or update aliases of existing nodes.
@@ -1345,6 +1362,12 @@ declare namespace Components {
              * id or a string alias.
              */
             QueryId;
+            /**
+             * When true and both origin and destination are set,
+             * the path search follows edges in reverse (incoming edges).
+             * Set by the `to().from()` builder order.
+             */
+            reverse: boolean;
         }
         /**
          * Search algorithm to be used

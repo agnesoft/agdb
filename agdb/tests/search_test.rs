@@ -653,3 +653,103 @@ fn search_depth_first_to_offset_limit() {
         &[-17, 5, -16],
     );
 }
+
+// --- Reverse path search tests ---
+
+#[test]
+fn search_to_from() {
+    let mut db = TestDb::new();
+    // Linear chain: 1 -> 2 -> 3 -> 4
+    db.exec_mut(QueryBuilder::insert().nodes().count(4).query(), 4);
+    db.exec_mut(
+        QueryBuilder::insert()
+            .edges()
+            .from([1, 2, 3])
+            .to([2, 3, 4])
+            .query(),
+        3,
+    );
+    // Reverse path search should find the same path as forward
+    db.exec_ids(
+        QueryBuilder::search().to(4).from(1).query(),
+        &[1, -5, 2, -6, 3, -7, 4],
+    );
+}
+
+#[test]
+fn search_to_from_same_as_forward() {
+    let mut db = TestDb::new();
+    // Same graph as search_from_to test
+    db.exec_mut(QueryBuilder::insert().nodes().count(5).query(), 5);
+    db.exec_mut(
+        QueryBuilder::insert()
+            .edges()
+            .from([1, 2, 3, 4, 1, 2, 3, 4])
+            .to([2, 3, 4, 5, 2, 3, 4, 5])
+            .query(),
+        8,
+    );
+    // Forward path
+    db.exec_ids(
+        QueryBuilder::search().from(1).to(4).query(),
+        &[1, -6, 2, -7, 3, -8, 4],
+    );
+    // Reverse path should yield the same result
+    db.exec_ids(
+        QueryBuilder::search().to(4).from(1).query(),
+        &[1, -6, 2, -7, 3, -8, 4],
+    );
+}
+
+#[test]
+fn search_to_from_no_path() {
+    let mut db = TestDb::new();
+    // 1 -> 2, 3 is disconnected
+    db.exec_mut(QueryBuilder::insert().nodes().count(3).query(), 3);
+    db.exec_mut(QueryBuilder::insert().edges().from(1).to(2).query(), 1);
+    db.exec_ids(QueryBuilder::search().to(3).from(1).query(), &[]);
+}
+
+#[test]
+fn search_to_from_same_origin_destination() {
+    let mut db = TestDb::new();
+    db.exec_mut(QueryBuilder::insert().nodes().count(1).query(), 1);
+    db.exec_ids(QueryBuilder::search().to(1).from(1).query(), &[]);
+}
+
+#[test]
+fn search_to_from_shortcut() {
+    let mut db = TestDb::new();
+    // 1 -> 2 -> 3 -> 4 -> 5, and 1 -> 5 (shortcut)
+    db.exec_mut(QueryBuilder::insert().nodes().count(5).query(), 5);
+    db.exec_mut(
+        QueryBuilder::insert()
+            .edges()
+            .from([1, 2, 3, 4, 1])
+            .to([2, 3, 4, 5, 5])
+            .query(),
+        5,
+    );
+    // Should find the shortcut 1 -> 5
+    db.exec_ids(QueryBuilder::search().to(5).from(1).query(), &[1, -10, 5]);
+}
+
+#[test]
+fn search_to_from_with_conditions() {
+    let mut db = TestDb::new();
+    // 1 -> 2 -> 3
+    db.exec_mut(QueryBuilder::insert().nodes().count(3).query(), 3);
+    db.exec_mut(
+        QueryBuilder::insert()
+            .edges()
+            .from([1, 2])
+            .to([2, 3])
+            .query(),
+        2,
+    );
+    // Only return nodes (filter out edges)
+    db.exec_ids(
+        QueryBuilder::search().to(3).from(1).where_().node().query(),
+        &[1, 2, 3],
+    );
+}

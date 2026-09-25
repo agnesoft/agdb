@@ -1,6 +1,7 @@
 use agdb::DbElement;
 use agdb::DbId;
 use agdb::DbKeyOrder;
+use agdb::DbValue;
 use agdb::InsertNodesQuery;
 use agdb::QueryBuilder;
 use agdb::QueryResult;
@@ -129,4 +130,38 @@ fn conditions() {
 
     let as_str = serde_json::to_string(&query).unwrap();
     let _back: QueryType = serde_json::from_str(&as_str).unwrap();
+}
+
+#[test]
+fn serialize_deserialize_vec_db_value() {
+    let items = DbValue::VecDbValue(vec![
+        DbValue::I64(42),
+        DbValue::String("hello".to_string()),
+        DbValue::Bytes(vec![1, 2, 3]),
+        DbValue::U64(99),
+    ]);
+
+    let mut db = TestDb::new();
+    db.exec_mut(
+        QueryBuilder::insert()
+            .nodes()
+            .values([[("items", items.clone()).into()]])
+            .query(),
+        1,
+    );
+
+    let result = db.exec_result(QueryBuilder::select().ids(1).query());
+    let result_json = serde_json::to_string(&result).unwrap();
+    let result_back: QueryResult = serde_json::from_str(&result_json).unwrap();
+
+    assert_eq!(result_back.result, 1);
+    assert_eq!(
+        result_back.elements,
+        vec![DbElement {
+            id: DbId(1),
+            from: DbId::default(),
+            to: DbId::default(),
+            values: vec![("items", items).into()]
+        }]
+    );
 }

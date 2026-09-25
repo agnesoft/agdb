@@ -98,6 +98,7 @@ mod tests {
                 offset: 0,
                 order_by: vec![],
                 conditions: vec![],
+                reverse: false,
             }),
             aliases: vec![],
         };

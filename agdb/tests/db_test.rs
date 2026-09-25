@@ -16,6 +16,7 @@ use agdb::DbElement;
 use agdb::DbFile;
 use agdb::DbId;
 use agdb::DbMemory;
+use agdb::DbValue;
 use agdb::MemoryStorage;
 use agdb::QueryBuilder;
 use agdb::QueryId;
@@ -104,6 +105,15 @@ fn data_persistence() {
         )
             .into(),
         (vec![3_u8; 5], vec![15_u8; 20]).into(),
+        (
+            "vec_db",
+            DbValue::VecDbValue(vec![
+                DbValue::I64(42),
+                DbValue::String("hello".to_string()),
+                DbValue::Bytes(vec![1, 2, 3]),
+            ]),
+        )
+            .into(),
     ];
 
     {

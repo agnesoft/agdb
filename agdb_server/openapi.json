@@ -7,7 +7,7 @@
       "name": "Apache-2.0",
       "identifier": "Apache-2.0"
     },
-    "version": "0.14.1"
+    "version": "0.14.2"
   },
   "servers": [
     {
@@ -3213,6 +3213,22 @@
                 "description": "List of UTF-8 strings"
               }
             }
+          },
+          {
+            "type": "object",
+            "description": "List of database values (heterogeneous)",
+            "required": [
+              "VecDbValue"
+            ],
+            "properties": {
+              "VecDbValue": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/DbValue"
+                },
+                "description": "List of database values (heterogeneous)"
+              }
+            }
           }
         ],
         "description": "Database value is a strongly types value.\n\nIt is an enum of limited number supported types\nthat are universal across all platforms\nand programming languages.\n\nThe value is constructible from large number of\nraw types or associated types (e.g. i32, &str, etc.).\nGetting the raw value back as string can be done\nwith `to_string()` but otherwise requires a `match`."
@@ -3947,7 +3963,8 @@
           "limit",
           "offset",
           "order_by",
-          "conditions"
+          "conditions",
+          "reverse"
         ],
         "properties": {
           "algorithm": {
@@ -3987,6 +4004,10 @@
           "origin": {
             "$ref": "#/components/schemas/QueryId",
             "description": "Starting element of the search."
+          },
+          "reverse": {
+            "type": "boolean",
+            "description": "When true and both origin and destination are set,\nthe path search follows edges in reverse (incoming edges).\nSet by the `to().from()` builder order."
           }
         }
       },

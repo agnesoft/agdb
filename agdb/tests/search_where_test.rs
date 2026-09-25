@@ -4,6 +4,7 @@ use agdb::Comparison;
 use agdb::CountComparison;
 use agdb::DbKeyOrder;
 use agdb::DbType;
+use agdb::DbValue;
 use agdb::KeyValueComparison;
 use agdb::QueryBuilder;
 use agdb::QueryConditionData;
@@ -739,5 +740,242 @@ fn not_beyond_or() {
             .ids("root")
             .query(),
         &[3],
+    );
+}
+
+#[test]
+fn search_where_vec_db_value_contains() {
+    let mut db = TestDb::new();
+    db.exec_mut(QueryBuilder::insert().nodes().aliases(["root"]).query(), 1);
+
+    let nodes = db.exec_mut_result(QueryBuilder::insert().nodes().count(3).query());
+
+    db.exec_mut(
+        QueryBuilder::insert()
+            .edges()
+            .from("root")
+            .to(&nodes)
+            .query(),
+        3,
+    );
+
+    db.exec_mut(
+        QueryBuilder::insert()
+            .values([
+                [(
+                    "items",
+                    DbValue::VecDbValue(vec![
+                        DbValue::I64(1),
+                        DbValue::String("hello".to_string()),
+                        DbValue::I64(3),
+                    ]),
+                )
+                    .into()],
+                [(
+                    "items",
+                    DbValue::VecDbValue(vec![
+                        DbValue::String("world".to_string()),
+                        DbValue::I64(2),
+                    ]),
+                )
+                    .into()],
+                [(
+                    "items",
+                    DbValue::VecDbValue(vec![DbValue::I64(1), DbValue::I64(2), DbValue::I64(3)]),
+                )
+                    .into()],
+            ])
+            .ids(&nodes)
+            .query(),
+        3,
+    );
+
+    db.exec_ids(
+        QueryBuilder::search()
+            .from("root")
+            .where_()
+            .key("items")
+            .value(Comparison::Contains(DbValue::I64(1)))
+            .query(),
+        &[4, 2],
+    );
+
+    db.exec_ids(
+        QueryBuilder::search()
+            .from("root")
+            .where_()
+            .key("items")
+            .value(Comparison::Contains(DbValue::I64(99)))
+            .query(),
+        &[],
+    );
+
+    db.exec_ids(
+        QueryBuilder::search()
+            .from("root")
+            .where_()
+            .key("items")
+            .value(Comparison::Contains(DbValue::VecDbValue(vec![
+                DbValue::I64(1),
+                DbValue::I64(3),
+            ])))
+            .query(),
+        &[4, 2],
+    );
+}
+
+#[test]
+fn search_where_vec_db_value_starts_with() {
+    let mut db = TestDb::new();
+    db.exec_mut(QueryBuilder::insert().nodes().aliases(["root"]).query(), 1);
+
+    let nodes = db.exec_mut_result(QueryBuilder::insert().nodes().count(2).query());
+
+    db.exec_mut(
+        QueryBuilder::insert()
+            .edges()
+            .from("root")
+            .to(&nodes)
+            .query(),
+        2,
+    );
+
+    db.exec_mut(
+        QueryBuilder::insert()
+            .values([
+                [(
+                    "items",
+                    DbValue::VecDbValue(vec![
+                        DbValue::I64(10),
+                        DbValue::String("abc".to_string()),
+                        DbValue::I64(20),
+                    ]),
+                )
+                    .into()],
+                [(
+                    "items",
+                    DbValue::VecDbValue(vec![DbValue::String("xyz".to_string()), DbValue::I64(10)]),
+                )
+                    .into()],
+            ])
+            .ids(&nodes)
+            .query(),
+        2,
+    );
+
+    db.exec_ids(
+        QueryBuilder::search()
+            .from("root")
+            .where_()
+            .key("items")
+            .value(Comparison::StartsWith(DbValue::I64(10)))
+            .query(),
+        &[2],
+    );
+
+    db.exec_ids(
+        QueryBuilder::search()
+            .from("root")
+            .where_()
+            .key("items")
+            .value(Comparison::StartsWith(DbValue::VecDbValue(vec![
+                DbValue::I64(10),
+                DbValue::String("abc".to_string()),
+            ])))
+            .query(),
+        &[2],
+    );
+
+    db.exec_ids(
+        QueryBuilder::search()
+            .from("root")
+            .where_()
+            .key("items")
+            .value(Comparison::StartsWith(DbValue::I64(20)))
+            .query(),
+        &[],
+    );
+}
+
+#[test]
+fn search_where_vec_db_value_ends_with() {
+    let mut db = TestDb::new();
+    db.exec_mut(QueryBuilder::insert().nodes().aliases(["root"]).query(), 1);
+
+    let nodes = db.exec_mut_result(QueryBuilder::insert().nodes().count(2).query());
+
+    db.exec_mut(
+        QueryBuilder::insert()
+            .edges()
+            .from("root")
+            .to(&nodes)
+            .query(),
+        2,
+    );
+
+    db.exec_mut(
+        QueryBuilder::insert()
+            .values([
+                [(
+                    "items",
+                    DbValue::VecDbValue(vec![
+                        DbValue::I64(10),
+                        DbValue::String("abc".to_string()),
+                        DbValue::I64(20),
+                    ]),
+                )
+                    .into()],
+                [(
+                    "items",
+                    DbValue::VecDbValue(vec![DbValue::String("xyz".to_string()), DbValue::I64(10)]),
+                )
+                    .into()],
+            ])
+            .ids(&nodes)
+            .query(),
+        2,
+    );
+
+    db.exec_ids(
+        QueryBuilder::search()
+            .from("root")
+            .where_()
+            .key("items")
+            .value(Comparison::EndsWith(DbValue::I64(20)))
+            .query(),
+        &[2],
+    );
+
+    db.exec_ids(
+        QueryBuilder::search()
+            .from("root")
+            .where_()
+            .key("items")
+            .value(Comparison::EndsWith(DbValue::VecDbValue(vec![
+                DbValue::String("abc".to_string()),
+                DbValue::I64(20),
+            ])))
+            .query(),
+        &[2],
+    );
+
+    db.exec_ids(
+        QueryBuilder::search()
+            .from("root")
+            .where_()
+            .key("items")
+            .value(Comparison::EndsWith(DbValue::I64(10)))
+            .query(),
+        &[3],
+    );
+
+    db.exec_ids(
+        QueryBuilder::search()
+            .from("root")
+            .where_()
+            .key("items")
+            .value(Comparison::EndsWith(DbValue::String("nothere".to_string())))
+            .query(),
+        &[],
     );
 }

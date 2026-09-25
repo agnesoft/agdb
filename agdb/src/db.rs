@@ -1110,6 +1110,23 @@ impl<Store: StorageData> DbImpl<Store> {
             .collect())
     }
 
+    pub(crate) fn search_to_from(
+        &self,
+        from: DbId,
+        to: DbId,
+        conditions: &Vec<QueryCondition>,
+    ) -> Result<Vec<DbId>, DbError> {
+        Ok(GraphSearch::from((&self.graph, &self.storage))
+            .path_reverse(
+                GraphIndex(from.0),
+                GraphIndex(to.0),
+                PathHandler::new(self, conditions),
+            )?
+            .iter()
+            .map(|index| DbId(index.0))
+            .collect())
+    }
+
     pub(crate) fn values(&self, db_id: DbId) -> Result<Vec<DbKeyValue>, DbError> {
         self.values.values(&self.storage, db_id.as_index())
     }

@@ -1359,3 +1359,346 @@ fn flatten_should_respect_parent_element_id() {
         .unwrap();
     assert_eq!(by_name3_contains, expected);
 }
+
+#[test]
+fn vec_custom_type_search_contains() {
+    let mut db = TestDb::new();
+    db.exec_mut(QueryBuilder::insert().nodes().aliases(["root"]).query(), 1);
+
+    let attrs1 = vec![
+        Attribute {
+            name: "color".to_string(),
+            value: "red".to_string(),
+        },
+        Attribute {
+            name: "size".to_string(),
+            value: "large".to_string(),
+        },
+    ];
+    let attrs2 = vec![Attribute {
+        name: "shape".to_string(),
+        value: "circle".to_string(),
+    }];
+
+    let nodes = db.exec_mut_result(QueryBuilder::insert().nodes().count(2).query());
+    db.exec_mut(
+        QueryBuilder::insert()
+            .edges()
+            .from("root")
+            .to(&nodes)
+            .query(),
+        2,
+    );
+    db.exec_mut(
+        QueryBuilder::insert()
+            .values([
+                [("attributes", attrs1.clone()).into()],
+                [("attributes", attrs2.clone()).into()],
+            ])
+            .ids(&nodes)
+            .query(),
+        2,
+    );
+
+    let result = db.exec_result(QueryBuilder::select().ids(nodes.elements[0].id).query());
+    let attrs_back: Vec<Attribute> = result.elements[0]
+        .values
+        .iter()
+        .find(|kv| kv.key == DbValue::String("attributes".to_string()))
+        .unwrap()
+        .value
+        .clone()
+        .try_into()
+        .unwrap();
+    assert_eq!(attrs_back, attrs1);
+
+    let target: DbValue = Attribute {
+        name: "size".to_string(),
+        value: "large".to_string(),
+    }
+    .into();
+    let found = db.exec_result(
+        QueryBuilder::search()
+            .from("root")
+            .where_()
+            .key("attributes")
+            .value(Comparison::Contains(target))
+            .query(),
+    );
+    assert!(found.elements.iter().any(|e| e.id == nodes.elements[0].id));
+    assert!(!found.elements.iter().any(|e| e.id == nodes.elements[1].id));
+}
+
+#[test]
+fn vec_custom_type_search_starts_with() {
+    let mut db = TestDb::new();
+    db.exec_mut(QueryBuilder::insert().nodes().aliases(["root"]).query(), 1);
+
+    let statuses = vec![Status::Active, Status::Inactive, Status::Active];
+    let nodes = db.exec_mut_result(QueryBuilder::insert().nodes().count(1).query());
+    db.exec_mut(
+        QueryBuilder::insert()
+            .edges()
+            .from("root")
+            .to(&nodes)
+            .query(),
+        1,
+    );
+    db.exec_mut(
+        QueryBuilder::insert()
+            .values([[("statuses", statuses.clone()).into()]])
+            .ids(&nodes)
+            .query(),
+        1,
+    );
+
+    let first: DbValue = Status::Active.into();
+    let found = db.exec_result(
+        QueryBuilder::search()
+            .from("root")
+            .where_()
+            .key("statuses")
+            .value(Comparison::StartsWith(first))
+            .query(),
+    );
+    assert!(found.elements.iter().any(|e| e.id == nodes.elements[0].id));
+
+    let wrong: DbValue = Status::Inactive.into();
+    let found = db.exec_result(
+        QueryBuilder::search()
+            .from("root")
+            .where_()
+            .key("statuses")
+            .value(Comparison::StartsWith(wrong))
+            .query(),
+    );
+    assert!(!found.elements.iter().any(|e| e.id == nodes.elements[0].id));
+}
+
+#[test]
+fn vec_custom_type_search_ends_with() {
+    let mut db = TestDb::new();
+    db.exec_mut(QueryBuilder::insert().nodes().aliases(["root"]).query(), 1);
+
+    let statuses = vec![Status::Inactive, Status::Active];
+    let nodes = db.exec_mut_result(QueryBuilder::insert().nodes().count(1).query());
+    db.exec_mut(
+        QueryBuilder::insert()
+            .edges()
+            .from("root")
+            .to(&nodes)
+            .query(),
+        1,
+    );
+    db.exec_mut(
+        QueryBuilder::insert()
+            .values([[("statuses", statuses.clone()).into()]])
+            .ids(&nodes)
+            .query(),
+        1,
+    );
+
+    let last: DbValue = Status::Active.into();
+    let found = db.exec_result(
+        QueryBuilder::search()
+            .from("root")
+            .where_()
+            .key("statuses")
+            .value(Comparison::EndsWith(last))
+            .query(),
+    );
+    assert!(found.elements.iter().any(|e| e.id == nodes.elements[0].id));
+
+    let wrong: DbValue = Status::Inactive.into();
+    let found = db.exec_result(
+        QueryBuilder::search()
+            .from("root")
+            .where_()
+            .key("statuses")
+            .value(Comparison::EndsWith(wrong))
+            .query(),
+    );
+    assert!(!found.elements.iter().any(|e| e.id == nodes.elements[0].id));
+}
+
+#[test]
+fn vec_custom_type_amend_add() {
+    let mut db = TestDb::new();
+
+    let initial = vec![Attribute {
+        name: "color".to_string(),
+        value: "red".to_string(),
+    }];
+    let extra = vec![Attribute {
+        name: "size".to_string(),
+        value: "large".to_string(),
+    }];
+
+    db.exec_mut(
+        QueryBuilder::insert()
+            .nodes()
+            .values([[("attributes", initial.clone()).into()]])
+            .query(),
+        1,
+    );
+
+    db.exec_mut(
+        QueryBuilder::insert()
+            .amend([[("attributes", extra.clone()).into()]])
+            .ids(1)
+            .query(),
+        1,
+    );
+
+    let result = db.exec_result(QueryBuilder::select().ids(1).query());
+    let attrs_back: Vec<Attribute> = result.elements[0]
+        .values
+        .iter()
+        .find(|kv| kv.key == DbValue::String("attributes".to_string()))
+        .unwrap()
+        .value
+        .clone()
+        .try_into()
+        .unwrap();
+    assert_eq!(attrs_back.len(), 2);
+    assert_eq!(attrs_back[0], initial[0]);
+    assert_eq!(attrs_back[1], extra[0]);
+}
+
+#[test]
+fn vec_custom_type_amend_remove() {
+    let mut db = TestDb::new();
+
+    let initial = vec![
+        Attribute {
+            name: "color".to_string(),
+            value: "red".to_string(),
+        },
+        Attribute {
+            name: "size".to_string(),
+            value: "large".to_string(),
+        },
+        Attribute {
+            name: "weight".to_string(),
+            value: "heavy".to_string(),
+        },
+    ];
+    let to_remove = vec![Attribute {
+        name: "size".to_string(),
+        value: "large".to_string(),
+    }];
+
+    db.exec_mut(
+        QueryBuilder::insert()
+            .nodes()
+            .values([[("attributes", initial.clone()).into()]])
+            .query(),
+        1,
+    );
+
+    db.exec_mut(
+        QueryBuilder::remove()
+            .amend([[("attributes", to_remove.clone()).into()]])
+            .ids(1)
+            .query(),
+        1,
+    );
+
+    let result = db.exec_result(QueryBuilder::select().ids(1).query());
+    let attrs_back: Vec<Attribute> = result.elements[0]
+        .values
+        .iter()
+        .find(|kv| kv.key == DbValue::String("attributes".to_string()))
+        .unwrap()
+        .value
+        .clone()
+        .try_into()
+        .unwrap();
+    assert_eq!(attrs_back.len(), 2);
+    assert_eq!(attrs_back[0], initial[0]);
+    assert_eq!(attrs_back[1], initial[2]);
+}
+
+#[test]
+fn vec_custom_type_amend_or_falls_back_to_add() {
+    let mut db = TestDb::new();
+
+    let initial = vec![Status::Active];
+    let extra = vec![Status::Inactive];
+
+    db.exec_mut(
+        QueryBuilder::insert()
+            .nodes()
+            .values([[("statuses", initial.clone()).into()]])
+            .query(),
+        1,
+    );
+
+    db.exec_mut(
+        QueryBuilder::insert()
+            .amend_or([[("statuses", extra.clone()).into()]])
+            .ids(1)
+            .query(),
+        1,
+    );
+
+    let result = db.exec_result(QueryBuilder::select().ids(1).query());
+    let statuses_back: Vec<Status> = result.elements[0]
+        .values
+        .iter()
+        .find(|kv| kv.key == DbValue::String("statuses".to_string()))
+        .unwrap()
+        .value
+        .clone()
+        .try_into()
+        .unwrap();
+    assert_eq!(statuses_back, vec![Status::Active, Status::Inactive]);
+}
+
+#[test]
+fn insert_vectorized_custom_types_with_search() {
+    let mut db = TestDb::new();
+    db.exec_mut(QueryBuilder::insert().nodes().aliases(["root"]).query(), 1);
+
+    let my_type = MyCustomVec {
+        vec: vec![Status::Active, Status::Inactive],
+        attributes: vec![
+            Attribute {
+                name: "name".to_string(),
+                value: "value".to_string(),
+            },
+            Attribute {
+                name: "name2".to_string(),
+                value: "value2".to_string(),
+            },
+        ],
+    };
+    db.exec_mut(QueryBuilder::insert().element(&my_type).query(), 2);
+    db.exec_mut(QueryBuilder::insert().edges().from("root").to(2).query(), 1);
+
+    let target: DbValue = Attribute {
+        name: "name".to_string(),
+        value: "value".to_string(),
+    }
+    .into();
+    let found = db.exec_result(
+        QueryBuilder::search()
+            .from("root")
+            .where_()
+            .key("attributes")
+            .value(Comparison::Contains(target))
+            .query(),
+    );
+    assert!(found.elements.iter().any(|e| e.id.0 == 2));
+
+    let target: DbValue = Status::Inactive.into();
+    let found = db.exec_result(
+        QueryBuilder::search()
+            .from("root")
+            .where_()
+            .key("vec")
+            .value(Comparison::Contains(target))
+            .query(),
+    );
+    assert!(found.elements.iter().any(|e| e.id.0 == 2));
+}

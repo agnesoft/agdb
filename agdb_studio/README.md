@@ -55,13 +55,13 @@ pnpm exec playwright install
 pnpm run build
 
 # Runs the end-to-end tests
-pnpm run test:e2e
+pnpm run test:functional
 # Runs the tests only on Chromium
-pnpm run test:e2e -- --project=chromium
+pnpm run test:functional -- --project=chromium
 # Runs the tests of a specific file
-pnpm run test:e2e -- tests/example.spec.ts
+pnpm run test:functional -- tests/example.spec.ts
 # Runs the tests in debug mode
-pnpm run test:e2e -- --debug
+pnpm run test:functional -- --debug
 ```
 
 ### Lint with [ESLint](https://eslint.org/)

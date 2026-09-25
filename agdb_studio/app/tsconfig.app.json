@@ -5,8 +5,7 @@
     "src/**/*",
     "src/**/*.vue",
     "src/**/*.ts",
-    "e2e/**/*.ts",
-    "e2e-utils/**/*.ts"
+    "functional/**/*.ts"
   ],
   "compilerOptions": {
     "typeRoots": ["node_modules", "types"],

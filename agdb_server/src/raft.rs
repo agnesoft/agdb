@@ -40,6 +40,7 @@ pub(crate) enum RequestType<T> {
 pub(crate) enum ResponseType {
     Ok,
     CommitError(String),
+    Resyncing,
     ClusterMismatch(MismatchedValues),
     LeaderMismatch(MismatchedValues),
     TermMismatch(MismatchedValues),
@@ -344,34 +345,34 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
                 }
                 Ok(None)
             }
+            (Leader, Heartbeat | Append(_), ResponseType::Resyncing) => {
+                crate::info!(
+                    "[{}] Node {} is resyncing, skipping append failure count",
+                    self.index,
+                    request.target,
+                );
+                self.node_mut(request.target).append_failures = 0;
+                Ok(None)
+            }
             (Leader, Append(_), ResponseType::CommitError(e)) => {
-                if e == "resyncing" {
-                    crate::info!(
-                        "[{}] Node {} is resyncing, skipping append failure count",
-                        self.index,
-                        request.target,
-                    );
+                self.node_mut(request.target).append_failures += 1;
+                let failures = self.node(request.target).append_failures;
+                crate::info!(
+                    "[{}] Node {} append failed ({}/{}): {}",
+                    self.index,
+                    request.target,
+                    failures,
+                    APPEND_FAILURE_THRESHOLD,
+                    e
+                );
+                if failures >= APPEND_FAILURE_THRESHOLD {
+                    self.node_mut(request.target).force_resync = true;
                     self.node_mut(request.target).append_failures = 0;
-                } else {
-                    self.node_mut(request.target).append_failures += 1;
-                    let failures = self.node(request.target).append_failures;
-                    crate::info!(
-                        "[{}] Node {} append failed ({}/{}): {}",
+                    crate::warn!(
+                        "[{}] Node {} exceeded append failure threshold, forcing resync",
                         self.index,
                         request.target,
-                        failures,
-                        APPEND_FAILURE_THRESHOLD,
-                        e
                     );
-                    if failures >= APPEND_FAILURE_THRESHOLD {
-                        self.node_mut(request.target).force_resync = true;
-                        self.node_mut(request.target).append_failures = 0;
-                        crate::warn!(
-                            "[{}] Node {} exceeded append failure threshold, forcing resync",
-                            self.index,
-                            request.target,
-                        );
-                    }
                 }
                 Ok(None)
             }
@@ -1976,7 +1977,7 @@ mod test {
 
         let resyncing_response = Response {
             target: 0,
-            result: ResponseType::CommitError("resyncing".into()),
+            result: ResponseType::Resyncing,
         };
 
         for _ in 0..APPEND_FAILURE_THRESHOLD + 1 {

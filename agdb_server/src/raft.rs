@@ -345,24 +345,32 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
                 Ok(None)
             }
             (Leader, Append(_), ResponseType::CommitError(e)) => {
-                self.node_mut(request.target).append_failures += 1;
-                let failures = self.node(request.target).append_failures;
-                crate::info!(
-                    "[{}] Node {} append failed ({}/{}): {}",
-                    self.index,
-                    request.target,
-                    failures,
-                    APPEND_FAILURE_THRESHOLD,
-                    e
-                );
-                if failures >= APPEND_FAILURE_THRESHOLD {
-                    self.node_mut(request.target).force_resync = true;
-                    self.node_mut(request.target).append_failures = 0;
-                    crate::warn!(
-                        "[{}] Node {} exceeded append failure threshold, forcing resync",
+                if e == "resyncing" {
+                    crate::info!(
+                        "[{}] Node {} is resyncing, skipping append failure count",
                         self.index,
                         request.target,
                     );
+                } else {
+                    self.node_mut(request.target).append_failures += 1;
+                    let failures = self.node(request.target).append_failures;
+                    crate::info!(
+                        "[{}] Node {} append failed ({}/{}): {}",
+                        self.index,
+                        request.target,
+                        failures,
+                        APPEND_FAILURE_THRESHOLD,
+                        e
+                    );
+                    if failures >= APPEND_FAILURE_THRESHOLD {
+                        self.node_mut(request.target).force_resync = true;
+                        self.node_mut(request.target).append_failures = 0;
+                        crate::warn!(
+                            "[{}] Node {} exceeded append failure threshold, forcing resync",
+                            self.index,
+                            request.target,
+                        );
+                    }
                 }
                 Ok(None)
             }
@@ -1807,6 +1815,153 @@ mod test {
         let response = cluster.request(&request).await;
         assert_eq!(response.result, ResponseType::Ok);
         assert!(!cluster.needs_resync());
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn resyncing_commit_errors_do_not_retrigger_force_resync() -> anyhow::Result<()> {
+        let storage = TestStorage {
+            logs: (1..=20)
+                .map(|i| Log {
+                    db_id: None,
+                    index: i,
+                    term: 1,
+                    data: i as u8,
+                })
+                .collect(),
+            commit: 20,
+            prune_index: 0,
+        };
+        let settings = ClusterSettings {
+            index: 0,
+            size: 3,
+            hash: 123,
+            election_factor_ms: 1000,
+            heartbeat_timeout: Duration::from_secs(1),
+            term_timeout: Duration::from_secs(3),
+            max_log_entries: 1000,
+        };
+        let mut leader: Cluster<u8, (), TestStorage> = Cluster::new(storage, settings);
+        leader.state = ClusterState::Leader;
+        leader.term = 1;
+
+        let append_request = Request {
+            hash: 123,
+            index: 0,
+            target: 1,
+            term: 1,
+            log_index: 20,
+            log_term: 1,
+            log_commit: 20,
+            prune_index: 0,
+            force_resync: false,
+            data: RequestType::Append(vec![Log {
+                db_id: None,
+                index: 21,
+                term: 1,
+                data: 21,
+            }]),
+        };
+
+        let resyncing_response = Response {
+            target: 0,
+            result: ResponseType::CommitError("resyncing".into()),
+        };
+
+        for _ in 0..APPEND_FAILURE_THRESHOLD + 1 {
+            leader
+                .response(&append_request, &resyncing_response)
+                .await
+                .map_err(|e| anyhow!(e.description))?;
+        }
+
+        assert!(
+            !leader.node(1).force_resync,
+            "force_resync must not be set from 'resyncing' commit errors"
+        );
+        assert_eq!(leader.node(1).append_failures, 0);
+
+        let real_failure = Response {
+            target: 0,
+            result: ResponseType::CommitError("send failed".into()),
+        };
+
+        for i in 1..APPEND_FAILURE_THRESHOLD {
+            leader
+                .response(&append_request, &real_failure)
+                .await
+                .map_err(|e| anyhow!(e.description))?;
+            assert_eq!(leader.node(1).append_failures, i);
+            assert!(!leader.node(1).force_resync);
+        }
+
+        leader
+            .response(&append_request, &real_failure)
+            .await
+            .map_err(|e| anyhow!(e.description))?;
+        assert!(
+            leader.node(1).force_resync,
+            "force_resync must be set from real failures"
+        );
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn resync_loop_does_not_occur_after_snapshot_install() -> anyhow::Result<()> {
+        let mut cluster = TestCluster::with_max_log_entries(3, 3);
+        cluster.start().await;
+        cluster.expect_leader(0).await;
+
+        for i in 1..=6u8 {
+            cluster.append(0, i).await?;
+        }
+        cluster.expect_storage_synced(0, 1).await;
+        cluster.expect_storage_synced(0, 2).await;
+
+        cluster.block(1).await;
+
+        for i in 7..=12u8 {
+            cluster.append(0, i).await?;
+        }
+        cluster.expect_storage_synced(0, 2).await;
+
+        cluster.unblock().await;
+        cluster.expect_needs_resync(1).await;
+
+        {
+            let nodes = cluster.nodes.read().await;
+            let mut follower = nodes[1].write().await;
+            let leader_commit = nodes[0].read().await.cluster.storage.commit;
+            let leader_index = nodes[0].read().await.cluster.storage.log_index();
+            let leader_term = nodes[0].read().await.cluster.storage.log_term();
+
+            follower.cluster.storage.commit = leader_commit;
+            follower.cluster.storage.logs = (leader_commit..=leader_index)
+                .map(|i| Log {
+                    db_id: None,
+                    index: i,
+                    term: leader_term,
+                    data: i as u8,
+                })
+                .collect();
+            follower.cluster.refresh_local_from_storage();
+            follower.cluster.clear_needs_resync();
+        }
+
+        tokio::time::sleep(Duration::from_millis(200)).await;
+
+        let still_needs_resync = cluster.nodes.read().await[1]
+            .read()
+            .await
+            .cluster
+            .needs_resync();
+
+        assert!(
+            !still_needs_resync,
+            "follower must not re-enter needs_resync after simulated snapshot install"
+        );
 
         Ok(())
     }

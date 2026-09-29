@@ -140,6 +140,7 @@ where
 
         let hash = key.stable_hash();
         let mut pos = hash % self.capacity();
+        let start_pos = pos;
         let mut free_pos = None;
         let mut ret = None;
 
@@ -166,7 +167,11 @@ where
                 MapValueState::Valid => {}
             }
 
-            pos = self.next_pos(pos)
+            pos = self.next_pos(pos);
+
+            if pos == start_pos {
+                break;
+            }
         }
 
         if let Some(pos) = free_pos {
@@ -968,5 +973,33 @@ mod tests {
         let values = map.values(&storage, &1).unwrap();
 
         assert_eq!(values, vec![10, 30]);
+    }
+
+    #[test]
+    fn insert_or_replace_without_empty_slots() {
+        let mut storage: Storage<MemoryStorage> = Storage::new("test").unwrap();
+        let mut map = MultiMapStorage::<u64, u64, MemoryStorage>::new(&mut storage).unwrap();
+
+        map.reserve(&mut storage, 256).unwrap();
+        for i in 0..240_u64 {
+            map.insert(&mut storage, &i, &i).unwrap();
+        }
+
+        for i in 0..34_u64 {
+            map.remove_key(&mut storage, &i).unwrap();
+        }
+
+        for i in 240..256_u64 {
+            map.insert(&mut storage, &i, &i).unwrap();
+        }
+
+        assert_eq!(map.capacity(), 256);
+        assert_eq!(map.len(), 222);
+
+        map.insert_or_replace(&mut storage, &10_000, |_| false, &10_000)
+            .unwrap();
+
+        assert!(map.contains_value(&storage, &10_000, &10_000).unwrap());
+        assert_eq!(map.len(), 223);
     }
 }

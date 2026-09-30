@@ -38,7 +38,10 @@ const style = computed<StyleObject>(() => {
   width: 30px;
   height: 30px;
   background-color: var(--graph-node-color);
-  background-image: radial-gradient(var(--graph-node-color), var(--graph-node-color-accent));
+  background-image: radial-gradient(
+    var(--graph-node-color),
+    var(--graph-node-color-accent)
+  );
   border: 2px solid var(--graph-node-color-accent);
   border-radius: 50%;
   transform: translate(-50%, -50%);

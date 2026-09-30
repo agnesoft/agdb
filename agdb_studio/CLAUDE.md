@@ -24,4 +24,4 @@ Boundary rules enforced by ESLint (`eslint.boundaries.mjs`) and contract tests (
 - Test: `pnpm run test --filter agdb_studio`
 - Lint: `pnpm run lint --filter agdb_studio`
 - Build: `pnpm run build --filter agdb_studio`
-- E2E: `pnpm run test:e2e --filter agdb_studio`
+- Functional: `pnpm run test:functional --filter agdb_studio`

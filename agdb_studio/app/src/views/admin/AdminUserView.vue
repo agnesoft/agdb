@@ -2,22 +2,40 @@
 import UserAddForm from "@agdb-studio/user/src/components/UserAddForm.vue";
 import UserTable from "@agdb-studio/user/src/components/UserTable.vue";
 import { useUserStore } from "@agdb-studio/user/src/composables/userStore";
+import SpinnerIcon from "@agdb-studio/design/src/components/icons/SpinnerIcon.vue";
 import { MdRefresh } from "@kalimahapps/vue-icons";
-import { onMounted } from "vue";
+import { onMounted, ref } from "vue";
 
 const { fetchUsers } = useUserStore();
+
+const loading = ref(true);
+
 onMounted(async () => {
   await fetchUsers();
+  loading.value = false;
 });
+
+const refresh = async () => {
+  loading.value = true;
+  await fetchUsers();
+  loading.value = false;
+};
 </script>
 
 <template>
   <div class="admin-user-view">
     <UserAddForm />
-    <button class="button refresh" title="refresh" @click="fetchUsers">
+    <button
+      class="button refresh"
+      title="refresh"
+      aria-label="Refresh users"
+      data-testid="refresh-button"
+      @click="refresh"
+    >
       <MdRefresh />
     </button>
-    <UserTable class="table" />
+    <SpinnerIcon v-if="loading" />
+    <UserTable v-else class="table" />
   </div>
 </template>
 
@@ -36,6 +54,7 @@ onMounted(async () => {
   align-items: start;
   margin: 0 auto;
   .button {
+    grid-area: refresh;
     width: 2rem;
     height: 2rem;
     font-size: 1rem;
@@ -46,9 +65,6 @@ onMounted(async () => {
   }
   .user-add-form {
     grid-area: form;
-  }
-  .button {
-    grid-area: refresh;
   }
   .table {
     grid-area: table;

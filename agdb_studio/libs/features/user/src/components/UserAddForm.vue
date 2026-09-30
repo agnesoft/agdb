@@ -9,9 +9,9 @@ const loading = ref(false);
 
 const { addUser, fetchUsers } = useUserStore();
 
-const add = (event: Event) => {
+const add = () => {
+  if (!username.value || !password.value) return;
   loading.value = true;
-  event.preventDefault();
 
   addUser({
     username: username.value,
@@ -32,16 +32,30 @@ const add = (event: Event) => {
 <template>
   <div class="user-add-form">
     <h2>Add User</h2>
-    <form id="user-add-form" @submit="add">
+    <form id="user-add-form" @submit.prevent="add">
       <div class="form-group">
         <label for="username">Username</label>
-        <input id="username" v-model="username" type="text" />
+        <input
+          id="username"
+          v-model="username"
+          type="text"
+          required
+          data-testid="username-input"
+        />
       </div>
       <div class="form-group">
         <label for="password">Password</label>
-        <input id="password" v-model="password" type="password" />
+        <input
+          id="password"
+          v-model="password"
+          type="password"
+          required
+          data-testid="password-input"
+        />
       </div>
-      <button type="submit" class="button" @click="add">Add User</button>
+      <button type="submit" class="button" data-testid="add-user-button">
+        Add User
+      </button>
     </form>
   </div>
 </template>

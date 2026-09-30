@@ -48,6 +48,8 @@
 
   --orange-background: #d8862122;
 
+  --link-color: var(--orange-2);
+
   --graph-node-color: var(--orange-light);
   --graph-node-color-accent: var(--orange-dark);
   --graph-edge-color: var(--color-border);

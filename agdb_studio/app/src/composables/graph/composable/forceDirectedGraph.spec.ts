@@ -45,6 +45,18 @@ describe("useForceDirectedGraph 2D", () => {
     expect(node3?.getCoordinates().z).toBe(results.z);
   });
 
+  it("should simulate the graph asynchronously with same results", async () => {
+    graph.loadGraph(graphData);
+    await graph.simulateAsync();
+
+    expect(graph.getIterations()).toBe(results.iterations);
+
+    const node3 = graph.getNodes()[2];
+    expect(node3?.getCoordinates().x).toBeCloseTo(results.x, 6);
+    expect(node3?.getCoordinates().y).toBeCloseTo(results.y, 6);
+    expect(node3?.getCoordinates().z).toBe(results.z);
+  });
+
   it("should calculate the performance", () => {
     graph.loadGraph(graphData);
     graph.simulate();

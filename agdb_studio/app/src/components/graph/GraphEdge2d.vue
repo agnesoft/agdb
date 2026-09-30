@@ -57,7 +57,6 @@ const style = computed<StyleObject>(() => {
   position: absolute;
   height: 0px;
   transform-origin: top left;
-  border: 1px solid grey;
-  height: 0px;
+  border: 1px solid var(--graph-edge-color);
 }
 </style>

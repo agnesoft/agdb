@@ -79,3 +79,22 @@ fn insert_aliases_ids_mismatched_length() {
         "Ids (2) must match aliases (1)",
     );
 }
+
+#[test]
+fn insert_aliases_after_alias_churn() {
+    let mut db = TestDb::new();
+    let stable: Vec<String> = (0..40).map(|i| format!("stable-{i}")).collect();
+    db.exec_mut(QueryBuilder::insert().nodes().aliases(stable).query(), 40);
+
+    for i in 0..100 {
+        let alias = format!("session-{i}");
+        db.exec_mut(
+            QueryBuilder::insert()
+                .nodes()
+                .aliases(alias.clone())
+                .query(),
+            1,
+        );
+        db.exec_mut(QueryBuilder::remove().ids(alias).query(), 1);
+    }
+}

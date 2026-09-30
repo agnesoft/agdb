@@ -13,7 +13,7 @@
 Three-tier monorepo under `libs/`:
 
 - `config/` — build and test configuration (`tsconfig`, `testing`)
-- `core/` — platform packages (`api`, `auth`, `router`, `design`, `utils`)
+- `core/` — platform packages (`api`, `auth`, `router`, `design`, `utils`, `profile`)
 - `features/` — shared (`common`, `notification`) and domain (`db`, `query`, `user`, `cluster`) packages
 
 Boundary rules enforced by ESLint (`eslint.boundaries.mjs`) and contract tests (`app/src/boundaries.contract.spec.ts`).

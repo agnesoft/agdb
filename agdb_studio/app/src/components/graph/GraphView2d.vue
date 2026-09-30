@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { type PropType, computed, ref } from "vue";
+import { type PropType, computed, onMounted, ref } from "vue";
 import GraphEdge2d from "@/components/graph/GraphEdge2d.vue";
 import GraphNode2d from "@/components/graph/GraphNode2d.vue";
 import useForceDirectedGraph from "@/composables/graph/composable/forceDirectedGraph";
@@ -13,8 +13,11 @@ const props = defineProps({
 });
 
 const graph = useForceDirectedGraph({ is2d: true });
-graph.loadGraph(props.graphData);
-graph.simulate();
+
+onMounted(async () => {
+  graph.loadGraph(props.graphData);
+  await graph.simulateAsync();
+});
 
 const graphNodes = computed(() => {
   return graph.getNodes();

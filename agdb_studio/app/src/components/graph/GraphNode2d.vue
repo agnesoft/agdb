@@ -37,9 +37,9 @@ const style = computed<StyleObject>(() => {
   position: absolute;
   width: 30px;
   height: 30px;
-  background-color: #ffcf82;
-  background-image: radial-gradient(#ffcf82, #ff8b07);
-  border: 2px solid #ff8b07;
+  background-color: var(--graph-node-color);
+  background-image: radial-gradient(var(--graph-node-color), var(--graph-node-color-accent));
+  border: 2px solid var(--graph-node-color-accent);
   border-radius: 50%;
   transform: translate(-50%, -50%);
   cursor: pointer;

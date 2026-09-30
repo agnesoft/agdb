@@ -1,3 +1,4 @@
+import { shallowRef, triggerRef } from "vue";
 import useNode, { type Coordinates, type Node } from "./node";
 import useEdge, { type Edge } from "./edge";
 
@@ -15,25 +16,19 @@ const DAMPER = 0.5;
 export type ForceDirectedGraph = {
   loadGraph: (graph: Graph) => void;
   simulate: () => void;
+  simulateAsync: () => Promise<void>;
   getPerformance: () => number;
   getIterations: () => number;
   getNodes: () => Node[];
   getEdges: () => Edge[];
   findNode: (id: number) => Node | undefined;
-  nextPos: () => Coordinates;
-  step: () => boolean;
-  applyForces: () => void;
-  moveNodes: () => boolean;
-  applyAttractionForces: () => void;
-  applyRepulsionForces: () => void;
-  applyGravity: () => void;
 };
 
 const useForceDirectedGraph = function (
   options: ForceDirectedGraphOptions,
 ): ForceDirectedGraph {
-  let nodes: Node[] = [];
-  let edges: Edge[] = [];
+  const nodes = shallowRef<Node[]>([]);
+  const edges = shallowRef<Edge[]>([]);
   const is2d: boolean = options.is2d;
 
   let angle1 = 0.1;
@@ -45,8 +40,8 @@ const useForceDirectedGraph = function (
   let iterations = 0;
 
   const loadGraph = (graph: Graph): void => {
-    nodes = [];
-    edges = [];
+    nodes.value = [];
+    edges.value = [];
     angle1 = 0.1;
     angle2 = 0.1;
     for (const element of graph.elements) {
@@ -56,7 +51,7 @@ const useForceDirectedGraph = function (
         const from = findNode(edge.from);
         const to = findNode(edge.to);
 
-        edges.push(
+        edges.value.push(
           useEdge({
             id: edge.id,
             from: from,
@@ -67,7 +62,7 @@ const useForceDirectedGraph = function (
       } else {
         // element is a node
         const node = element as GraphNode;
-        nodes.push(
+        nodes.value.push(
           useNode({
             id: node.id,
             values: node.values,
@@ -76,6 +71,8 @@ const useForceDirectedGraph = function (
         );
       }
     }
+    triggerRef(nodes);
+    triggerRef(edges);
   };
 
   const normalizeNodes = (): void => {
@@ -86,7 +83,7 @@ const useForceDirectedGraph = function (
     let maxY = -Infinity;
     let maxZ = -Infinity;
 
-    for (const node of nodes) {
+    for (const node of nodes.value) {
       const coordinates = node.getCoordinates();
       minX = Math.min(minX, coordinates.x);
       minY = Math.min(minY, coordinates.y);
@@ -104,7 +101,7 @@ const useForceDirectedGraph = function (
     const scaleY = 1.0 / (maxY - minY);
     const scaleZ = maxZ !== minZ ? 1.0 / (maxZ - minZ) : 0.0;
 
-    for (const node of nodes) {
+    for (const node of nodes.value) {
       const coordinates = node.getCoordinates();
       node.setCoordinates(
         (coordinates.x - centerX) * scaleX,
@@ -122,6 +119,23 @@ const useForceDirectedGraph = function (
     }
     normalizeNodes();
     endTimestamp = Date.now();
+    triggerRef(nodes);
+    triggerRef(edges);
+  };
+
+  const simulateAsync = async (): Promise<void> => {
+    startTimestamp = Date.now();
+    iterations = 0;
+    while (step() && iterations < ITERATION_COUNT) {
+      iterations++;
+      if (iterations % 50 === 0) {
+        await new Promise((resolve) => setTimeout(resolve, 0));
+      }
+    }
+    normalizeNodes();
+    endTimestamp = Date.now();
+    triggerRef(nodes);
+    triggerRef(edges);
   };
 
   const getPerformance = (): number => {
@@ -133,15 +147,15 @@ const useForceDirectedGraph = function (
   };
 
   const getNodes = (): Node[] => {
-    return nodes;
+    return nodes.value;
   };
 
   const getEdges = (): Edge[] => {
-    return edges;
+    return edges.value;
   };
 
   const findNode = (id: number): Node | undefined => {
-    return nodes.find((node) => node.getId() === id);
+    return nodes.value.find((node) => node.getId() === id);
   };
 
   const nextPos = (): Coordinates => {
@@ -176,7 +190,7 @@ const useForceDirectedGraph = function (
 
   const moveNodes = (): boolean => {
     let totalMovement = 0.0;
-    for (const node of nodes) {
+    for (const node of nodes.value) {
       totalMovement += node.getVelocityLength();
       node.move(DAMPER);
     }
@@ -184,7 +198,7 @@ const useForceDirectedGraph = function (
   };
 
   const applyAttractionForces = (): void => {
-    for (const edge of edges) {
+    for (const edge of edges.value) {
       const from = edge.getFrom();
       const to = edge.getTo();
       if (from === undefined || to === undefined) {
@@ -212,10 +226,10 @@ const useForceDirectedGraph = function (
   };
 
   const applyRepulsionForces = (): void => {
-    for (let i = 0; i < nodes.length; i++) {
-      const nodeA = nodes[i];
-      for (let j = i + 1; j < nodes.length; j++) {
-        const nodeB = nodes[j];
+    for (let i = 0; i < nodes.value.length; i++) {
+      const nodeA = nodes.value[i];
+      for (let j = i + 1; j < nodes.value.length; j++) {
+        const nodeB = nodes.value[j];
         /* v8 ignore next -- @preserve */
         if (!nodeA || !nodeB) continue;
         const dx = nodeB.getX() - nodeA.getX();
@@ -240,7 +254,7 @@ const useForceDirectedGraph = function (
   };
 
   const applyGravity = (): void => {
-    for (const node of nodes) {
+    for (const node of nodes.value) {
       node.addVelocity(
         -node.getX() * GRAVITY,
         -node.getY() * GRAVITY,
@@ -252,18 +266,12 @@ const useForceDirectedGraph = function (
   return {
     loadGraph,
     simulate,
+    simulateAsync,
     getPerformance,
     getIterations,
     getNodes,
     getEdges,
     findNode,
-    nextPos,
-    step,
-    applyForces,
-    moveNodes,
-    applyAttractionForces,
-    applyRepulsionForces,
-    applyGravity,
   };
 };
 

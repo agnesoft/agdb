@@ -402,7 +402,7 @@ where
     ) -> Result<Self, DbError> {
         let len = storage.value::<u64>(storage_index)?;
         let data_len = storage.value_size(storage_index)?;
-        let capacity = data_len / T::storage_len();
+        let capacity = data_len.saturating_sub(u64::serialized_size_static()) / T::storage_len();
 
         Ok(DbVec {
             phantom_data: PhantomData,

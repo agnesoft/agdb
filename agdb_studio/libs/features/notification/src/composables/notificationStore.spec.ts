@@ -11,6 +11,7 @@ import {
   hasUnreadNotifications,
   type AddNotificationProps,
   closeViewer,
+  useNotificationStore,
 } from "./notificationStore";
 import { nextTick } from "vue";
 
@@ -156,5 +157,16 @@ describe("notificationStore", () => {
     vi.advanceTimersByTime(101);
     expect(notifications.value.length).toEqual(0);
     expect(newNotifications.value.length).toEqual(0);
+  });
+
+  it("exposes the same API via useNotificationStore composable", () => {
+    const store = useNotificationStore();
+    expect(store.notifications).toBe(notifications);
+    expect(store.addNotification).toBe(addNotification);
+    expect(store.removeNotification).toBe(removeNotification);
+    expect(store.clearNotifications).toBe(clearNotifications);
+    expect(store.toggleViewerOpened).toBe(toggleViewerOpened);
+    expect(store.hasUnreadNotifications).toBe(hasUnreadNotifications);
+    expect(store.closeViewer).toBe(closeViewer);
   });
 });

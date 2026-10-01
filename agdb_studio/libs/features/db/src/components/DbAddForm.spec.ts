@@ -38,7 +38,7 @@ describe("DbAddForm", () => {
     const wrapper = mount(DbAddForm);
     await wrapper.find("input").setValue("test_db");
     await wrapper.find("select").setValue("memory");
-    await wrapper.find("button[type=submit]").trigger("click");
+    await wrapper.find("form").trigger("submit");
     await wrapper.vm.$nextTick();
     expect(addDatabase).toHaveBeenCalledOnce();
   });
@@ -48,7 +48,7 @@ describe("DbAddForm", () => {
     const wrapper = mount(DbAddForm);
     await wrapper.find("input").setValue("");
     await wrapper.find("select").setValue("memory");
-    await wrapper.find("button[type=submit]").trigger("click");
+    await wrapper.find("form").trigger("submit");
     await wrapper.vm.$nextTick();
     expect(addDatabase).not.toHaveBeenCalled();
   });

@@ -26,6 +26,7 @@ const links = computed(() => {
 
 <template>
   <div class="main-layout">
+    <a href="#main-content" class="skip-nav">Skip to content</a>
     <header>
       <RouterLink :to="homeLink" class="logo-wrapper">
         <LogoIcon />
@@ -33,7 +34,7 @@ const links = computed(() => {
       </RouterLink>
 
       <div class="wrapper">
-        <nav>
+        <nav aria-label="Main navigation">
           <RouterLink v-for="link of links" :key="link.to" :to="link.to">{{
             link.text
           }}</RouterLink>
@@ -44,7 +45,7 @@ const links = computed(() => {
         </div>
       </div>
     </header>
-    <main>
+    <main id="main-content">
       <RouterView />
     </main>
     <footer></footer>
@@ -55,7 +56,25 @@ const links = computed(() => {
   </div>
 </template>
 
-<style lang="css" scoped>
+<style lang="less" scoped>
+.skip-nav {
+  position: absolute;
+  left: -9999px;
+  top: auto;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  &:focus {
+    position: static;
+    width: auto;
+    height: auto;
+    padding: 0.5rem 1rem;
+    background: var(--color-background);
+    color: var(--color-text);
+    z-index: 1000;
+  }
+}
+
 .main-layout {
   min-height: 100dvh;
   display: grid;

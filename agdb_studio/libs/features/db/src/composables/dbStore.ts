@@ -2,16 +2,14 @@ import { ref } from "vue";
 import type { DbKind, ServerDatabase } from "@agnesoft/agdb_api/openapi";
 import { useAccount } from "@agdb-studio/auth/src/account";
 import { addNotification } from "@agdb-studio/notification/src/composables/notificationStore";
-import type { AxiosResponse } from "axios";
 import type { DbIdentification } from "./types";
 import { dbAdd, dbList } from "./dbActions";
 
 const databases = ref<ServerDatabase[]>([]);
 
 const fetchDatabases = async () => {
-  dbList().then((dbs: AxiosResponse<ServerDatabase[]>) => {
-    databases.value = dbs.data;
-  });
+  const dbs = await dbList();
+  databases.value = dbs.data;
 };
 
 export type AddDatabaseProps = {

@@ -9,6 +9,16 @@ import { computed, ref, type ComputedRef } from "vue";
 import type { AgdbApiClient } from "@agnesoft/agdb_api/client";
 import { createLogger } from "@agdb-studio/utils/src/logger/logger";
 
+let _onUnauthorized: (() => void) | undefined;
+
+export const setOnUnauthorized = (callback: () => void): void => {
+  _onUnauthorized = callback;
+};
+
+export const notifyUnauthorized = (): void => {
+  _onUnauthorized?.();
+};
+
 const _client = ref<AgdbApi.AgdbApiClient | undefined>();
 const _apiUrl = ref(import.meta.env.VITE_API_URL);
 const _lastApiError = ref<AxiosError | undefined>(undefined);
@@ -35,9 +45,7 @@ export const lastConnectionError = computed((): string | undefined => {
 export const removeToken = (): void => {
   client.value?.reset_token();
   localStorage.removeItem(ACCESS_TOKEN);
-  if (window.location.pathname !== "/studio/login") {
-    window.location.reload();
-  }
+  notifyUnauthorized();
 };
 
 export const responseInterceptor = (response: AxiosResponse) => {

@@ -2,9 +2,10 @@ import { vi, describe, it, beforeEach, expect } from "vitest";
 import UserAddForm from "./UserAddForm.vue";
 import { mount } from "@vue/test-utils";
 
-const { addUser } = vi.hoisted(() => {
+const { addUser, fetchUsers } = vi.hoisted(() => {
   return {
     addUser: vi.fn(),
+    fetchUsers: vi.fn(),
   };
 });
 
@@ -13,6 +14,7 @@ vi.mock("../composables/userStore", () => {
     useUserStore: () => {
       return {
         addUser,
+        fetchUsers,
       };
     },
   };
@@ -40,7 +42,24 @@ describe("UserAddForm", () => {
     const wrapper = mount(UserAddForm);
     await wrapper.find("input#username").setValue("test_user");
     await wrapper.find("input#password").setValue("test_password");
-    await wrapper.find("button[type=submit]").trigger("click");
+    await wrapper.find("form").trigger("submit");
+    await wrapper.vm.$nextTick();
+    expect(addUser).toHaveBeenCalledOnce();
+  });
+
+  it("should not add user when fields are empty", async () => {
+    const wrapper = mount(UserAddForm);
+    await wrapper.find("form").trigger("submit");
+    await wrapper.vm.$nextTick();
+    expect(addUser).not.toHaveBeenCalled();
+  });
+
+  it("should handle addUser failure", async () => {
+    addUser.mockRejectedValueOnce(new Error("fail"));
+    const wrapper = mount(UserAddForm);
+    await wrapper.find("input#username").setValue("test_user");
+    await wrapper.find("input#password").setValue("test_password");
+    await wrapper.find("form").trigger("submit");
     await wrapper.vm.$nextTick();
     expect(addUser).toHaveBeenCalledOnce();
   });

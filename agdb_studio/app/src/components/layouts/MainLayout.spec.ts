@@ -131,4 +131,31 @@ describe("MainLayout", () => {
 
     expect(wrapper.find(".admin-label").exists()).toBe(true);
   });
+
+  it("renders skip navigation link", async () => {
+    const wrapper = mount(MainLayout, {
+      global: {
+        plugins: [router],
+      },
+    });
+    await router.push("/");
+
+    const skipLink = wrapper.find(".skip-nav");
+    expect(skipLink.exists()).toBe(true);
+    expect(skipLink.attributes("href")).toBe("#main-content");
+    expect(skipLink.text()).toBe("Skip to content");
+    expect(wrapper.find("main#main-content").exists()).toBe(true);
+  });
+
+  it("renders nav with aria-label", async () => {
+    const wrapper = mount(MainLayout, {
+      global: {
+        plugins: [router],
+      },
+    });
+    await router.push("/");
+
+    const nav = wrapper.find("nav");
+    expect(nav.attributes("aria-label")).toBe("Main navigation");
+  });
 });

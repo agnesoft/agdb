@@ -15,7 +15,6 @@
   justify-content: center;
   height: calc(100vh - 10rem);
   min-height: 10rem;
-  font-family: "Arial", sans-serif;
   h1 {
     font-size: 6rem;
     margin: 0;

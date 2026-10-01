@@ -1,14 +1,7 @@
-<script setup lang="ts">
-import GraphView2d from "@/components/graph/GraphView2d.vue";
-import data from "@/tests/data/complexData.json";
-
-const graphData = JSON.parse(JSON.stringify(data));
-</script>
+<script setup lang="ts"></script>
 
 <template>
-  <div class="main-wrapper">
-    <GraphView2d :graph-data="graphData" />
-  </div>
+  <div class="main-wrapper"></div>
 </template>
 
 <style lang="less" scoped>

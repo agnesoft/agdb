@@ -10,12 +10,16 @@ import {
   removeToken,
   checkClient,
   reconnectClient,
+  setOnUnauthorized,
 } from "./api";
 import { client } from "@agdb-studio/testing/mocks/apiMock";
 import type { AxiosError, AxiosResponse } from "axios";
 import { vi, describe, it, beforeEach, expect } from "vitest";
 import type { ComputedRef } from "vue";
 import type { AgdbApiClient } from "@agnesoft/agdb_api/client";
+
+const onUnauthorizedMock = vi.fn();
+setOnUnauthorized(onUnauthorizedMock);
 
 describe("client service", () => {
   beforeEach(() => {
@@ -96,7 +100,7 @@ describe("client service", () => {
     });
   });
   describe("removeToken", () => {
-    it("reloads the page", () => {
+    it("calls onUnauthorized callback", () => {
       client.mockResolvedValue({
         interceptors: {
           response: {
@@ -110,33 +114,13 @@ describe("client service", () => {
       } as unknown as AgdbApiClient);
       initClient();
       removeToken();
-      expect(window.location.reload).toHaveBeenCalled();
+      expect(onUnauthorizedMock).toHaveBeenCalled();
     });
     it("handles undefined client", () => {
       client.mockResolvedValue(undefined);
       initClient();
       expect(() => removeToken()).not.toThrow();
-      expect(window.location.reload).toHaveBeenCalled();
-    });
-    it("does not reload on login page", () => {
-      Object.defineProperty(window, "location", {
-        value: { pathname: "/studio/login", reload: vi.fn() },
-        configurable: true,
-      });
-      client.mockResolvedValue({
-        interceptors: {
-          response: {
-            use: vi.fn(),
-          },
-          request: {
-            use: vi.fn(),
-          },
-        },
-        reset_token: vi.fn(),
-      } as unknown as AgdbApiClient);
-      initClient();
-      removeToken();
-      expect(window.location.reload).not.toHaveBeenCalled();
+      expect(onUnauthorizedMock).toHaveBeenCalled();
     });
   });
   describe("reconnectClient", () => {

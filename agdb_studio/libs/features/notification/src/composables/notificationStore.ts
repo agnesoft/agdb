@@ -89,6 +89,19 @@ const hasUnreadNotifications = computed(() => {
   return notifications.value.some((item) => !item.read);
 });
 
+export const useNotificationStore = () => ({
+  notifications,
+  addNotification,
+  removeNotification,
+  clearNotifications,
+  notificationsReversed,
+  newNotifications,
+  viewerOpened,
+  toggleViewerOpened,
+  hasUnreadNotifications,
+  closeViewer,
+});
+
 export {
   notifications,
   addNotification,

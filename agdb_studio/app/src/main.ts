@@ -3,7 +3,8 @@ import "./assets/main.css";
 import { createApp } from "vue";
 
 import App from "./App.vue";
-import { createRouter } from "@agdb-studio/router/src/router";
+import { setOnUnauthorized } from "@agdb-studio/api/src/api";
+import { createRouter, getRouter } from "@agdb-studio/router/src/router";
 import { createWebHistory } from "vue-router";
 import { createRoutes } from "./router/routes";
 import { setupApiNotifications } from "./composables/apiNotifications";
@@ -14,6 +15,19 @@ const router = createRouter({
 });
 
 const app = createApp(App);
+
+setOnUnauthorized(() => {
+  try {
+    const r = getRouter();
+    if (r.currentRoute.value.name !== "login") {
+      r.push({ name: "login" }).catch(() => {
+        // Navigation cancelled or duplicated — acceptable
+      });
+    }
+  } catch {
+    // Router not initialized yet (during initial client connection)
+  }
+});
 
 setupApiNotifications();
 

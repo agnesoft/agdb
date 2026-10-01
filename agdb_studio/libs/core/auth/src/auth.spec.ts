@@ -7,6 +7,9 @@ import {
 import { ACCESS_TOKEN } from "@agdb-studio/api/src/constants";
 import { vi, describe, it, beforeEach, expect } from "vitest";
 
+const onUnauthorizedMock = vi.fn();
+api.setOnUnauthorized(onUnauthorizedMock);
+
 describe("auth service", () => {
   Object.defineProperty(window, "location", {
     value: { reload: vi.fn() },
@@ -89,10 +92,10 @@ describe("auth service", () => {
       setLocalStorageToken("test");
       expect(isLoggedIn.value).toBe(true);
     });
-    it("refresh page if no token", () => {
+    it("calls notifyUnauthorized when transitioning to logged out", () => {
       refreshToken();
       expect(isLoggedIn.value).toBe(false);
-      expect(window.location.reload).toHaveBeenCalled();
+      expect(onUnauthorizedMock).toHaveBeenCalled();
     });
   });
 });

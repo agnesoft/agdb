@@ -1,6 +1,7 @@
 import {
   apiUrl,
   client,
+  notifyUnauthorized,
   reconnectClient,
   removeToken,
 } from "@agdb-studio/api/src/api";
@@ -31,7 +32,7 @@ export const refreshToken = (): void => {
   }
 
   if (!isLoggedIn.value && prevLogin) {
-    window.location.reload();
+    notifyUnauthorized();
   }
 };
 refreshToken();

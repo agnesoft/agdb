@@ -1,5 +1,5 @@
 import DbView from "./DbView.vue";
-import { mount, shallowMount } from "@vue/test-utils";
+import { mount, shallowMount, flushPromises } from "@vue/test-utils";
 import { describe, beforeEach, vi, it, expect } from "vitest";
 
 const { databases, fetchDatabases } = vi.hoisted(() => {
@@ -21,7 +21,7 @@ const { databases, fetchDatabases } = vi.hoisted(() => {
       },
     ],
 
-    fetchDatabases: vi.fn(),
+    fetchDatabases: vi.fn().mockResolvedValue(undefined),
   };
 });
 
@@ -40,30 +40,46 @@ vi.mock("@agdb-studio/db/src/composables/dbStore", () => {
 describe("DbView", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    fetchDatabases.mockResolvedValue(undefined);
   });
-  it("should render databases when the page view loads", () => {
+  it("should render databases when the page view loads", async () => {
     const wrapper = shallowMount(DbView);
+    await flushPromises();
     expect(wrapper.html()).toContain("db-add-form-stub");
     expect(wrapper.html()).toContain("db-table-stub");
+  });
+  it("should show spinner while loading", () => {
+    fetchDatabases.mockReturnValue(new Promise(() => {}));
+    const wrapper = shallowMount(DbView);
+    expect(wrapper.html()).toContain("spinner-icon-stub");
+    expect(wrapper.html()).not.toContain("db-table-stub");
   });
   it("should fetch databases when the page view loads", () => {
     expect(fetchDatabases).not.toHaveBeenCalled();
     mount(DbView);
     expect(fetchDatabases).toHaveBeenCalledOnce();
   });
-  it("should render a message when there are no databases", () => {
+  it("should render a message when there are no databases", async () => {
     databases.length = 0;
     const wrapper = mount(DbView);
+    await flushPromises();
     expect(wrapper.text()).toContain("No databases found");
   });
   it("should refresh databases when user clicks refresh button", async () => {
     expect(fetchDatabases).not.toHaveBeenCalled();
     const wrapper = mount(DbView);
+    await flushPromises();
     expect(fetchDatabases).toHaveBeenCalledTimes(1);
     const button = wrapper.find("button.refresh");
     expect(button.html()).toContain("refresh");
     await button.trigger("click");
-    await wrapper.vm.$nextTick();
+    await flushPromises();
     expect(fetchDatabases).toHaveBeenCalledTimes(2);
+  });
+  it("should clear loading state when fetch fails", async () => {
+    fetchDatabases.mockRejectedValueOnce(new Error("network error"));
+    const wrapper = shallowMount(DbView);
+    await flushPromises();
+    expect(wrapper.html()).not.toContain("spinner-icon-stub");
   });
 });

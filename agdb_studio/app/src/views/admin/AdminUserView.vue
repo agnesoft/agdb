@@ -11,14 +11,24 @@ const { fetchUsers } = useUserStore();
 const loading = ref(true);
 
 onMounted(async () => {
-  await fetchUsers();
-  loading.value = false;
+  try {
+    await fetchUsers();
+  } catch {
+    // API error interceptor handles notification
+  } finally {
+    loading.value = false;
+  }
 });
 
 const refresh = async () => {
   loading.value = true;
-  await fetchUsers();
-  loading.value = false;
+  try {
+    await fetchUsers();
+  } catch {
+    // API error interceptor handles notification
+  } finally {
+    loading.value = false;
+  }
 };
 </script>
 

@@ -9,23 +9,22 @@ const loading = ref(false);
 
 const { addUser, fetchUsers } = useUserStore();
 
-const add = () => {
+const add = async () => {
   if (!username.value || !password.value) return;
   loading.value = true;
-
-  addUser({
-    username: username.value,
-    password: password.value,
-  })
-    .then(() => {
-      loading.value = false;
-      username.value = "";
-      password.value = "";
-      fetchUsers();
-    })
-    .catch(() => {
-      loading.value = false;
+  try {
+    await addUser({
+      username: username.value,
+      password: password.value,
     });
+    username.value = "";
+    password.value = "";
+    await fetchUsers();
+  } catch {
+    // API error interceptor handles notification
+  } finally {
+    loading.value = false;
+  }
 };
 </script>
 

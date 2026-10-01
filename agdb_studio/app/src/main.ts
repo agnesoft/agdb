@@ -18,7 +18,12 @@ const app = createApp(App);
 
 setOnUnauthorized(() => {
   try {
-    getRouter().push({ name: "login" });
+    const r = getRouter();
+    if (r.currentRoute.value.name !== "login") {
+      r.push({ name: "login" }).catch(() => {
+        // Navigation cancelled or duplicated — acceptable
+      });
+    }
   } catch {
     // Router not initialized yet (during initial client connection)
   }

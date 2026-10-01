@@ -72,4 +72,10 @@ describe("AdminUserView", () => {
     await flushPromises();
     expect(wrapper.text()).toContain("No users found");
   });
+  it("should clear loading state when fetch fails", async () => {
+    fetchUsers.mockRejectedValueOnce(new Error("network error"));
+    const wrapper = shallowMount(AdminUserView);
+    await flushPromises();
+    expect(wrapper.html()).not.toContain("spinner-icon-stub");
+  });
 });

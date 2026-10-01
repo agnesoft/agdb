@@ -76,4 +76,10 @@ describe("DbView", () => {
     await flushPromises();
     expect(fetchDatabases).toHaveBeenCalledTimes(2);
   });
+  it("should clear loading state when fetch fails", async () => {
+    fetchDatabases.mockRejectedValueOnce(new Error("network error"));
+    const wrapper = shallowMount(DbView);
+    await flushPromises();
+    expect(wrapper.html()).not.toContain("spinner-icon-stub");
+  });
 });

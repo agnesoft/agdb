@@ -11,14 +11,24 @@ const { fetchDatabases } = useDbStore();
 const loading = ref(true);
 
 onMounted(async () => {
-  await fetchDatabases();
-  loading.value = false;
+  try {
+    await fetchDatabases();
+  } catch {
+    // API error interceptor handles notification
+  } finally {
+    loading.value = false;
+  }
 });
 
 const refresh = async () => {
   loading.value = true;
-  await fetchDatabases();
-  loading.value = false;
+  try {
+    await fetchDatabases();
+  } catch {
+    // API error interceptor handles notification
+  } finally {
+    loading.value = false;
+  }
 };
 </script>
 

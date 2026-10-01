@@ -1499,7 +1499,7 @@ mod tests {
             DbValue::from(-1_i64).to_u64(),
             Err(DbError::db(
                 DbErrorType::TypeError,
-                "out of range integral type conversion attempted"
+                "number too small to fit in target type"
             ))
         );
         assert_eq!(
@@ -1561,7 +1561,7 @@ mod tests {
             DbValue::from(u64::MAX).to_i64(),
             Err(DbError::db(
                 DbErrorType::TypeError,
-                "out of range integral type conversion attempted"
+                "number too large to fit in target type"
             ))
         );
         assert_eq!(
@@ -1631,14 +1631,14 @@ mod tests {
             DbValue::from(i64::MAX).to_f64(),
             Err(DbError::db(
                 DbErrorType::TypeError,
-                "out of range integral type conversion attempted"
+                "number too large to fit in target type"
             ))
         );
         assert_eq!(
             DbValue::from(u64::MAX).to_f64(),
             Err(DbError::db(
                 DbErrorType::TypeError,
-                "out of range integral type conversion attempted"
+                "number too large to fit in target type"
             ))
         );
         assert_eq!(

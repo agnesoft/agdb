@@ -402,7 +402,7 @@ where
     ) -> Result<Self, DbError> {
         let len = storage.value::<u64>(storage_index)?;
         let data_len = storage.value_size(storage_index)?;
-        let capacity = data_len / T::storage_len();
+        let capacity = data_len.saturating_sub(u64::serialized_size_static()) / T::storage_len();
 
         Ok(DbVec {
             phantom_data: PhantomData,
@@ -454,6 +454,32 @@ mod tests {
                 "World".to_string(),
                 "!".to_string()
             ]
+        );
+    }
+
+    #[test]
+    fn from_storage_capacity_i64_regression() {
+        let test_file = TestFile::new();
+        let mut storage = Storage::new(test_file.file_name()).unwrap();
+
+        let index;
+
+        {
+            let mut vec = DbVec::<i64, FileStorageMemoryMapped>::new(&mut storage).unwrap();
+            vec.push(&mut storage, &10).unwrap();
+            vec.push(&mut storage, &20).unwrap();
+            vec.push(&mut storage, &30).unwrap();
+            vec.push(&mut storage, &40).unwrap();
+            index = vec.storage_index();
+        }
+
+        let vec = DbVec::<i64, FileStorageMemoryMapped>::from_storage(&storage, index).unwrap();
+
+        assert_eq!(vec.len(), 4);
+        assert_eq!(vec.capacity(), 4);
+        assert_eq!(
+            vec.iter(&storage).collect::<Vec<i64>>(),
+            vec![10, 20, 30, 40]
         );
     }
 

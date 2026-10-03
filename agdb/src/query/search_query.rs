@@ -118,11 +118,18 @@ impl SearchQuery {
 
                 if self.conditions.len() > 1 {
                     let remaining = &self.conditions[1..];
-                    ids.retain(|id| {
-                        db.evaluate_conditions(GraphIndex(id.0), 0, remaining)
-                            .map(|c| c.is_true())
-                            .unwrap_or(false)
-                    });
+                    let mut filtered = Vec::new();
+
+                    for id in ids {
+                        if db
+                            .evaluate_conditions(GraphIndex(id.0), 0, remaining)?
+                            .is_true()
+                        {
+                            filtered.push(id);
+                        }
+                    }
+
+                    ids = filtered;
                 }
 
                 if !self.order_by.is_empty() {

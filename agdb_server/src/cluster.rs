@@ -580,7 +580,7 @@ impl ClusterStorage {
         *self
             .failed_indices
             .write()
-            .expect("failed_indices lock poisoned") = self.cluster_log.failed_indices().await?;
+            .unwrap_or_else(|e| e.into_inner()) = self.cluster_log.failed_indices().await?;
 
         self.db_pool.reload(&self.db).await?;
         self.poisoned.store(false, Ordering::Relaxed);
@@ -686,7 +686,7 @@ impl ExecContext {
                 Ok(()) => {
                     self.failed_indices
                         .write()
-                        .expect("failed_indices lock poisoned")
+                        .unwrap_or_else(|e| e.into_inner())
                         .push(log_index);
                 }
                 Err(e) => {
@@ -762,7 +762,7 @@ impl Storage<ClusterAction, ResultNotifier> for ClusterStorage {
             self.prune_index = ceiling;
             self.failed_indices
                 .write()
-                .expect("failed_indices lock poisoned")
+                .unwrap_or_else(|e| e.into_inner())
                 .retain(|&idx| idx > ceiling);
         }
         Ok(())
@@ -791,7 +791,7 @@ impl Storage<ClusterAction, ResultNotifier> for ClusterStorage {
     fn local_failed_indices(&self) -> Vec<u64> {
         self.failed_indices
             .read()
-            .expect("failed_indices lock poisoned")
+            .unwrap_or_else(|e| e.into_inner())
             .clone()
     }
 
@@ -799,7 +799,7 @@ impl Storage<ClusterAction, ResultNotifier> for ClusterStorage {
         let to_clear: Vec<u64> = self
             .failed_indices
             .read()
-            .expect("failed_indices lock poisoned")
+            .unwrap_or_else(|e| e.into_inner())
             .iter()
             .filter(|&&idx| idx <= up_to)
             .copied()
@@ -810,7 +810,7 @@ impl Storage<ClusterAction, ResultNotifier> for ClusterStorage {
             }
             self.failed_indices
                 .write()
-                .expect("failed_indices lock poisoned")
+                .unwrap_or_else(|e| e.into_inner())
                 .retain(|&idx| idx > up_to);
         }
     }
@@ -844,7 +844,7 @@ impl ClusterStorage {
         let indices: Vec<u64> = self
             .failed_indices
             .read()
-            .expect("failed_indices lock poisoned")
+            .unwrap_or_else(|e| e.into_inner())
             .clone();
         let mut to_remove = Vec::new();
 
@@ -876,7 +876,7 @@ impl ClusterStorage {
             let mut guard = self
                 .failed_indices
                 .write()
-                .expect("failed_indices lock poisoned");
+                .unwrap_or_else(|e| e.into_inner());
             guard.retain(|idx| !to_remove.contains(idx));
         }
     }

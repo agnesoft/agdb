@@ -1043,7 +1043,7 @@ class SearchWhereFilterLogicBuilder
     {
         while ($this->data->__collapse_conditions()) {
         }
-        $existing = $this->data->__data->search->getConditions() ?? [];
+        $existing = $this->data->__data->search->getConditions();
         $this->data->__data->search->setConditions(
             array_merge($existing, $this->data->__conditions[0])
         );

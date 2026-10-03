@@ -396,9 +396,49 @@ impl Comparison {
 
 #[cfg(feature = "regex")]
 fn regex_is_match(pattern: &str, text: &str) -> bool {
+    const MAX_ENTRIES: usize = 64;
+
+    struct RegexCache {
+        entries: [Option<(String, regex::Regex)>; MAX_ENTRIES],
+        len: usize,
+    }
+
+    impl RegexCache {
+        fn new() -> Self {
+            Self {
+                entries: [const { None }; MAX_ENTRIES],
+                len: 0,
+            }
+        }
+
+        fn get(&mut self, pattern: &str) -> Option<&regex::Regex> {
+            let idx = self.entries[..self.len]
+                .iter()
+                .rposition(|e| e.as_ref().is_some_and(|(p, _)| p == pattern))?;
+
+            // Move to the tail if not already there.
+            if idx < self.len - 1 {
+                self.entries[idx..self.len].rotate_left(1);
+            }
+
+            self.entries[self.len - 1].as_ref().map(|(_, re)| re)
+        }
+
+        fn insert(&mut self, pattern: String, re: regex::Regex) {
+            if self.len >= MAX_ENTRIES {
+                // Shift left — oldest at [0] is overwritten.
+                self.entries.rotate_left(1);
+                self.entries[MAX_ENTRIES - 1] = Some((pattern, re));
+            } else {
+                self.entries[self.len] = Some((pattern, re));
+                self.len += 1;
+            }
+        }
+    }
+
     thread_local! {
-        static CACHE: std::cell::RefCell<std::collections::HashMap<String, regex::Regex>> =
-            std::cell::RefCell::new(std::collections::HashMap::new());
+        static CACHE: std::cell::RefCell<RegexCache> =
+            std::cell::RefCell::new(RegexCache::new());
     }
 
     CACHE.with(|cell| {

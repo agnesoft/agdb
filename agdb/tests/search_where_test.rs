@@ -1323,4 +1323,26 @@ fn search_where_regex() {
             .query(),
         &[8],
     );
+
+    // Invalid regex pattern yields false (no matches, no panic)
+    db.exec_ids(
+        QueryBuilder::search()
+            .from("users")
+            .where_()
+            .key("username")
+            .regex("(unclosed")
+            .query(),
+        &[],
+    );
+
+    // Regex on a non-string property (integer) yields false
+    db.exec_ids(
+        QueryBuilder::search()
+            .from("users")
+            .where_()
+            .key("id")
+            .regex("1")
+            .query(),
+        &[],
+    );
 }

@@ -366,12 +366,10 @@ impl Comparison {
 
             #[cfg(feature = "regex")]
             Comparison::Regex(right) => match (left, right) {
-                (DbValue::String(left), DbValue::String(pattern)) => regex::Regex::new(pattern)
-                    .map(|re| re.is_match(left))
-                    .unwrap_or(false),
-                (DbValue::VecString(left), DbValue::String(pattern)) => regex::Regex::new(pattern)
-                    .map(|re| left.iter().any(|s| re.is_match(s)))
-                    .unwrap_or(false),
+                (DbValue::String(left), DbValue::String(pattern)) => regex_is_match(pattern, left),
+                (DbValue::VecString(left), DbValue::String(pattern)) => {
+                    left.iter().any(|s| regex_is_match(pattern, s))
+                }
                 _ => false,
             },
             #[cfg(not(feature = "regex"))]
@@ -394,6 +392,31 @@ impl Comparison {
             | Comparison::Regex(value) => value,
         }
     }
+}
+
+#[cfg(feature = "regex")]
+fn regex_is_match(pattern: &str, text: &str) -> bool {
+    thread_local! {
+        static CACHE: std::cell::RefCell<std::collections::HashMap<String, regex::Regex>> =
+            std::cell::RefCell::new(std::collections::HashMap::new());
+    }
+
+    CACHE.with(|cell| {
+        let mut cache = cell.borrow_mut();
+
+        if let Some(re) = cache.get(pattern) {
+            return re.is_match(text);
+        }
+
+        match regex::Regex::new(pattern) {
+            Ok(re) => {
+                let result = re.is_match(text);
+                cache.insert(pattern.to_owned(), re);
+                result
+            }
+            Err(_) => false,
+        }
+    })
 }
 
 impl From<u64> for CountComparison {

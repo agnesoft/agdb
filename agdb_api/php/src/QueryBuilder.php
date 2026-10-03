@@ -993,12 +993,9 @@ class SearchIndexValueBuilder
         return new SearchOffsetBuilder($this->data);
     }
 
-    public function order_by(
-        DbKeyOrder|array $keys
-    ): SearchOrderByBuilder {
-        $this->data->search->setOrderBy(
-            is_array($keys) ? $keys : [$keys]
-        );
+    public function order_by(DbKeyOrder|array $keys): SearchOrderByBuilder
+    {
+        $this->data->search->setOrderBy(is_array($keys) ? $keys : [$keys]);
         return new SearchOrderByBuilder($this->data);
     }
 
@@ -1244,8 +1241,9 @@ class SearchWhereFilterBuilder
         return $this;
     }
 
-    public function edge_count_greater_than(int $v): SearchWhereFilterLogicBuilder
-    {
+    public function edge_count_greater_than(
+        int $v
+    ): SearchWhereFilterLogicBuilder {
         return $this->edge_count(CountComparisonBuilder::GreaterThan($v));
     }
 
@@ -1265,9 +1263,7 @@ class SearchWhereFilterBuilder
     public function edge_count_less_than_or_equal(
         int $v
     ): SearchWhereFilterLogicBuilder {
-        return $this->edge_count(
-            CountComparisonBuilder::LessThanOrEqual($v)
-        );
+        return $this->edge_count(CountComparisonBuilder::LessThanOrEqual($v));
     }
 
     public function edge_count_not_equal(int $v): SearchWhereFilterLogicBuilder

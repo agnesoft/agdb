@@ -1639,7 +1639,10 @@ class SearchWhereFilterKeyBuilder {
     private data: SearchWhereFilterBuilder;
     private key: Components.Schemas.DbValue;
 
-    constructor(key: Components.Schemas.DbValue, data: SearchWhereFilterBuilder) {
+    constructor(
+        key: Components.Schemas.DbValue,
+        data: SearchWhereFilterBuilder,
+    ) {
         this.key = key;
         this.data = data;
     }
@@ -1662,7 +1665,9 @@ class SearchWhereFilterKeyBuilder {
         return this.value(Comparison.GreaterThan(value));
     }
 
-    greater_than_or_equal(value: BuilderDbValue): SearchWhereFilterLogicBuilder {
+    greater_than_or_equal(
+        value: BuilderDbValue,
+    ): SearchWhereFilterLogicBuilder {
         return this.value(Comparison.GreaterThanOrEqual(value));
     }
 
@@ -1814,7 +1819,9 @@ class SearchWhereFilterBuilder {
         return this.edge_count(CountComparison.GreaterThan(count));
     }
 
-    edge_count_greater_than_or_equal(count: number): SearchWhereFilterLogicBuilder {
+    edge_count_greater_than_or_equal(
+        count: number,
+    ): SearchWhereFilterLogicBuilder {
         return this.edge_count(CountComparison.GreaterThanOrEqual(count));
     }
 
@@ -1822,7 +1829,9 @@ class SearchWhereFilterBuilder {
         return this.edge_count(CountComparison.LessThan(count));
     }
 
-    edge_count_less_than_or_equal(count: number): SearchWhereFilterLogicBuilder {
+    edge_count_less_than_or_equal(
+        count: number,
+    ): SearchWhereFilterLogicBuilder {
         return this.edge_count(CountComparison.LessThanOrEqual(count));
     }
 
@@ -1844,7 +1853,9 @@ class SearchWhereFilterBuilder {
         return this.edge_count_from(CountComparison.LessThan(count));
     }
 
-    edge_count_from_less_than_or_equal(count: number): SearchWhereFilterLogicBuilder {
+    edge_count_from_less_than_or_equal(
+        count: number,
+    ): SearchWhereFilterLogicBuilder {
         return this.edge_count_from(CountComparison.LessThanOrEqual(count));
     }
 
@@ -1866,7 +1877,9 @@ class SearchWhereFilterBuilder {
         return this.edge_count_to(CountComparison.LessThan(count));
     }
 
-    edge_count_to_less_than_or_equal(count: number): SearchWhereFilterLogicBuilder {
+    edge_count_to_less_than_or_equal(
+        count: number,
+    ): SearchWhereFilterLogicBuilder {
         return this.edge_count_to(CountComparison.LessThanOrEqual(count));
     }
 

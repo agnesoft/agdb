@@ -789,22 +789,414 @@ describe("query tests", () => {
         expect(query).toEqual(test_queries[100][1]);
     });
 
+    it(`QueryBuilder::search().index("age").value(20).offset(5).limit(1).where_().node().query()`, () => {
+        const query = QueryBuilder.search()
+            .index("age")
+            .value(20)
+            .offset(5)
+            .limit(1)
+            .where()
+            .node()
+            .query();
+        expect(query).toEqual(test_queries[101][1]);
+    });
+
+    it(`QueryBuilder::search().index("age").value(20).limit(1).where_().edge().query()`, () => {
+        const query = QueryBuilder.search()
+            .index("age")
+            .value(20)
+            .limit(1)
+            .where()
+            .edge()
+            .query();
+        expect(query).toEqual(test_queries[102][1]);
+    });
+
+    it(`QueryBuilder::search().index("age").value(20).offset(5).where_().keys(["name"]).query()`, () => {
+        const query = QueryBuilder.search()
+            .index("age")
+            .value(20)
+            .offset(5)
+            .where()
+            .keys(["name"])
+            .query();
+        expect(query).toEqual(test_queries[103][1]);
+    });
+
+    it(`QueryBuilder::search().index("age").value(20).where_().ids([1,2]).query()`, () => {
+        const query = QueryBuilder.search()
+            .index("age")
+            .value(20)
+            .where()
+            .ids([1, 2])
+            .query();
+        expect(query).toEqual(test_queries[104][1]);
+    });
+
+    it(`QueryBuilder::search().index("age").value(20).where_().not().keys("name").query()`, () => {
+        const query = QueryBuilder.search()
+            .index("age")
+            .value(20)
+            .where()
+            .not()
+            .keys("name")
+            .query();
+        expect(query).toEqual(test_queries[105][1]);
+    });
+
+    it(`QueryBuilder::search().index("age").value(20).where_().key("k").greater_than(1).query()`, () => {
+        const query = QueryBuilder.search()
+            .index("age")
+            .value(20)
+            .where()
+            .key("k")
+            .greater_than(1)
+            .query();
+        expect(query).toEqual(test_queries[106][1]);
+    });
+
+    it(`QueryBuilder::search().index("age").value(20).where_().key("k").greater_than_or_equal(1).query()`, () => {
+        const query = QueryBuilder.search()
+            .index("age")
+            .value(20)
+            .where()
+            .key("k")
+            .greater_than_or_equal(1)
+            .query();
+        expect(query).toEqual(test_queries[107][1]);
+    });
+
+    it(`QueryBuilder::search().index("age").value(20).where_().key("k").less_than(1).query()`, () => {
+        const query = QueryBuilder.search()
+            .index("age")
+            .value(20)
+            .where()
+            .key("k")
+            .less_than(1)
+            .query();
+        expect(query).toEqual(test_queries[108][1]);
+    });
+
+    it(`QueryBuilder::search().index("age").value(20).where_().key("k").less_than_or_equal(1).query()`, () => {
+        const query = QueryBuilder.search()
+            .index("age")
+            .value(20)
+            .where()
+            .key("k")
+            .less_than_or_equal(1)
+            .query();
+        expect(query).toEqual(test_queries[109][1]);
+    });
+
+    it(`QueryBuilder::search().index("age").value(20).where_().key("k").not_equal(1).query()`, () => {
+        const query = QueryBuilder.search()
+            .index("age")
+            .value(20)
+            .where()
+            .key("k")
+            .not_equal(1)
+            .query();
+        expect(query).toEqual(test_queries[110][1]);
+    });
+
+    it(`QueryBuilder::search().index("age").value(20).where_().key("k").contains(1).query()`, () => {
+        const query = QueryBuilder.search()
+            .index("age")
+            .value(20)
+            .where()
+            .key("k")
+            .contains(1)
+            .query();
+        expect(query).toEqual(test_queries[111][1]);
+    });
+
+    it(`QueryBuilder::search().index("age").value(20).where_().key("k").starts_with(1).query()`, () => {
+        const query = QueryBuilder.search()
+            .index("age")
+            .value(20)
+            .where()
+            .key("k")
+            .starts_with(1)
+            .query();
+        expect(query).toEqual(test_queries[112][1]);
+    });
+
+    it(`QueryBuilder::search().index("age").value(20).where_().key("k").ends_with(1).query()`, () => {
+        const query = QueryBuilder.search()
+            .index("age")
+            .value(20)
+            .where()
+            .key("k")
+            .ends_with(1)
+            .query();
+        expect(query).toEqual(test_queries[113][1]);
+    });
+
+    it(`QueryBuilder::search().index("age").value(20).where_().key("k").any(1).query()`, () => {
+        const query = QueryBuilder.search()
+            .index("age")
+            .value(20)
+            .where()
+            .key("k")
+            .any(1)
+            .query();
+        expect(query).toEqual(test_queries[114][1]);
+    });
+
+    it(`QueryBuilder::search().index("age").value(20).where_().edge_count(2).query()`, () => {
+        const query = QueryBuilder.search()
+            .index("age")
+            .value(20)
+            .where()
+            .edge_count(2)
+            .query();
+        expect(query).toEqual(test_queries[115][1]);
+    });
+
+    it(`QueryBuilder::search().index("age").value(20).where_().edge_count_from(1).query()`, () => {
+        const query = QueryBuilder.search()
+            .index("age")
+            .value(20)
+            .where()
+            .edge_count_from(1)
+            .query();
+        expect(query).toEqual(test_queries[116][1]);
+    });
+
+    it(`QueryBuilder::search().index("age").value(20).where_().edge_count_to(1).query()`, () => {
+        const query = QueryBuilder.search()
+            .index("age")
+            .value(20)
+            .where()
+            .edge_count_to(1)
+            .query();
+        expect(query).toEqual(test_queries[117][1]);
+    });
+
+    it(`QueryBuilder::search().index("age").value(20).where_().edge_count_greater_than(2).query()`, () => {
+        const query = QueryBuilder.search()
+            .index("age")
+            .value(20)
+            .where()
+            .edge_count_greater_than(2)
+            .query();
+        expect(query).toEqual(test_queries[118][1]);
+    });
+
+    it(`QueryBuilder::search().index("age").value(20).where_().edge_count_greater_than_or_equal(2).query()`, () => {
+        const query = QueryBuilder.search()
+            .index("age")
+            .value(20)
+            .where()
+            .edge_count_greater_than_or_equal(2)
+            .query();
+        expect(query).toEqual(test_queries[119][1]);
+    });
+
+    it(`QueryBuilder::search().index("age").value(20).where_().edge_count_less_than(2).query()`, () => {
+        const query = QueryBuilder.search()
+            .index("age")
+            .value(20)
+            .where()
+            .edge_count_less_than(2)
+            .query();
+        expect(query).toEqual(test_queries[120][1]);
+    });
+
+    it(`QueryBuilder::search().index("age").value(20).where_().edge_count_less_than_or_equal(2).query()`, () => {
+        const query = QueryBuilder.search()
+            .index("age")
+            .value(20)
+            .where()
+            .edge_count_less_than_or_equal(2)
+            .query();
+        expect(query).toEqual(test_queries[121][1]);
+    });
+
+    it(`QueryBuilder::search().index("age").value(20).where_().edge_count_not_equal(2).query()`, () => {
+        const query = QueryBuilder.search()
+            .index("age")
+            .value(20)
+            .where()
+            .edge_count_not_equal(2)
+            .query();
+        expect(query).toEqual(test_queries[122][1]);
+    });
+
+    it(`QueryBuilder::search().index("age").value(20).where_().edge_count_from_greater_than(1).query()`, () => {
+        const query = QueryBuilder.search()
+            .index("age")
+            .value(20)
+            .where()
+            .edge_count_from_greater_than(1)
+            .query();
+        expect(query).toEqual(test_queries[123][1]);
+    });
+
+    it(`QueryBuilder::search().index("age").value(20).where_().edge_count_from_greater_than_or_equal(1).query()`, () => {
+        const query = QueryBuilder.search()
+            .index("age")
+            .value(20)
+            .where()
+            .edge_count_from_greater_than_or_equal(1)
+            .query();
+        expect(query).toEqual(test_queries[124][1]);
+    });
+
+    it(`QueryBuilder::search().index("age").value(20).where_().edge_count_from_less_than(1).query()`, () => {
+        const query = QueryBuilder.search()
+            .index("age")
+            .value(20)
+            .where()
+            .edge_count_from_less_than(1)
+            .query();
+        expect(query).toEqual(test_queries[125][1]);
+    });
+
+    it(`QueryBuilder::search().index("age").value(20).where_().edge_count_from_less_than_or_equal(1).query()`, () => {
+        const query = QueryBuilder.search()
+            .index("age")
+            .value(20)
+            .where()
+            .edge_count_from_less_than_or_equal(1)
+            .query();
+        expect(query).toEqual(test_queries[126][1]);
+    });
+
+    it(`QueryBuilder::search().index("age").value(20).where_().edge_count_from_not_equal(1).query()`, () => {
+        const query = QueryBuilder.search()
+            .index("age")
+            .value(20)
+            .where()
+            .edge_count_from_not_equal(1)
+            .query();
+        expect(query).toEqual(test_queries[127][1]);
+    });
+
+    it(`QueryBuilder::search().index("age").value(20).where_().edge_count_to_greater_than(1).query()`, () => {
+        const query = QueryBuilder.search()
+            .index("age")
+            .value(20)
+            .where()
+            .edge_count_to_greater_than(1)
+            .query();
+        expect(query).toEqual(test_queries[128][1]);
+    });
+
+    it(`QueryBuilder::search().index("age").value(20).where_().edge_count_to_greater_than_or_equal(1).query()`, () => {
+        const query = QueryBuilder.search()
+            .index("age")
+            .value(20)
+            .where()
+            .edge_count_to_greater_than_or_equal(1)
+            .query();
+        expect(query).toEqual(test_queries[129][1]);
+    });
+
+    it(`QueryBuilder::search().index("age").value(20).where_().edge_count_to_less_than(1).query()`, () => {
+        const query = QueryBuilder.search()
+            .index("age")
+            .value(20)
+            .where()
+            .edge_count_to_less_than(1)
+            .query();
+        expect(query).toEqual(test_queries[130][1]);
+    });
+
+    it(`QueryBuilder::search().index("age").value(20).where_().edge_count_to_less_than_or_equal(1).query()`, () => {
+        const query = QueryBuilder.search()
+            .index("age")
+            .value(20)
+            .where()
+            .edge_count_to_less_than_or_equal(1)
+            .query();
+        expect(query).toEqual(test_queries[131][1]);
+    });
+
+    it(`QueryBuilder::search().index("age").value(20).where_().edge_count_to_not_equal(1).query()`, () => {
+        const query = QueryBuilder.search()
+            .index("age")
+            .value(20)
+            .where()
+            .edge_count_to_not_equal(1)
+            .query();
+        expect(query).toEqual(test_queries[132][1]);
+    });
+
+    it(`QueryBuilder::search().index("age").value(20).where_().node().query()`, () => {
+        const query = QueryBuilder.search()
+            .index("age")
+            .value(20)
+            .where()
+            .node()
+            .query();
+        expect(query).toEqual(test_queries[133][1]);
+    });
+
+    it(`QueryBuilder::search().index("age").value(20).where_().edge().query()`, () => {
+        const query = QueryBuilder.search()
+            .index("age")
+            .value(20)
+            .where()
+            .edge()
+            .query();
+        expect(query).toEqual(test_queries[134][1]);
+    });
+
+    it(`QueryBuilder::search().index("age").value(20).where_().node().and().where_().key("k").value(1).or().key("k").value(2).end_where().query()`, () => {
+        const query = QueryBuilder.search()
+            .index("age")
+            .value(20)
+            .where()
+            .node()
+            .and()
+            .where()
+            .key("k")
+            .value(1)
+            .or()
+            .key("k")
+            .value(2)
+            .end_where()
+            .query();
+        expect(query).toEqual(test_queries[135][1]);
+    });
+
+    it(`QueryBuilder::search().index("age").value(20).where_().key("k").regex("pattern").query()`, () => {
+        const query = QueryBuilder.search()
+            .index("age")
+            .value(20)
+            .where()
+            .key("k")
+            .regex("pattern")
+            .query();
+        expect(query).toEqual(test_queries[136][1]);
+    });
+
+    it(`QueryBuilder::search().index("age").value(20).order_by([DbKeyOrder::Asc("k".into())]).query()`, () => {
+        const query = QueryBuilder.search()
+            .index("age")
+            .value(20)
+            .order_by([DbKeyOrder.Asc("k")])
+            .query();
+        expect(query).toEqual(test_queries[137][1]);
+    });
+
     it(`QueryBuilder::search().from(1).order_by([DbKeyOrder::Desc("age".into()),DbKeyOrder::Asc("name".into())]).query()`, () => {
         const query = QueryBuilder.search()
             .from(1)
             .order_by([DbKeyOrder.Desc("age"), DbKeyOrder.Asc("name")])
             .query();
-        expect(query).toEqual(test_queries[101][1]);
+        expect(query).toEqual(test_queries[138][1]);
     });
 
     it(`QueryBuilder::search().from(1).offset(10).query()`, () => {
         const query = QueryBuilder.search().from(1).offset(10).query();
-        expect(query).toEqual(test_queries[102][1]);
+        expect(query).toEqual(test_queries[139][1]);
     });
 
     it(`QueryBuilder::search().from(1).limit(5).query()`, () => {
         const query = QueryBuilder.search().from(1).limit(5).query();
-        expect(query).toEqual(test_queries[103][1]);
+        expect(query).toEqual(test_queries[140][1]);
     });
 
     it(`QueryBuilder::search().from(1).order_by([DbKeyOrder::Desc("k".into())]).offset(10).query()`, () => {
@@ -813,7 +1205,7 @@ describe("query tests", () => {
             .order_by([DbKeyOrder.Desc("k")])
             .offset(10)
             .query();
-        expect(query).toEqual(test_queries[104][1]);
+        expect(query).toEqual(test_queries[141][1]);
     });
 
     it(`QueryBuilder::search().from(1).order_by([DbKeyOrder::Desc("k".into())]).limit(5).query()`, () => {
@@ -822,7 +1214,7 @@ describe("query tests", () => {
             .order_by([DbKeyOrder.Desc("k")])
             .limit(5)
             .query();
-        expect(query).toEqual(test_queries[105][1]);
+        expect(query).toEqual(test_queries[142][1]);
     });
 
     it(`QueryBuilder::search().from(1).order_by([DbKeyOrder::Desc("k".into())]).offset(10).limit(5).query()`, () => {
@@ -832,12 +1224,12 @@ describe("query tests", () => {
             .offset(10)
             .limit(5)
             .query();
-        expect(query).toEqual(test_queries[106][1]);
+        expect(query).toEqual(test_queries[143][1]);
     });
 
     it(`QueryBuilder::search().from(1).offset(10).limit(5).query()`, () => {
         const query = QueryBuilder.search().from(1).offset(10).limit(5).query();
-        expect(query).toEqual(test_queries[107][1]);
+        expect(query).toEqual(test_queries[144][1]);
     });
 
     it(`QueryBuilder::search().from(1).where_().distance(CountComparison::LessThan(3)).query()`, () => {
@@ -846,17 +1238,17 @@ describe("query tests", () => {
             .where()
             .distance(CountComparison.LessThan(3))
             .query();
-        expect(query).toEqual(test_queries[108][1]);
+        expect(query).toEqual(test_queries[145][1]);
     });
 
     it(`QueryBuilder::search().from(1).where_().neighbor().query()`, () => {
         const query = QueryBuilder.search().from(1).where().neighbor().query();
-        expect(query).toEqual(test_queries[109][1]);
+        expect(query).toEqual(test_queries[146][1]);
     });
 
     it(`QueryBuilder::search().from(1).where_().edge().query()`, () => {
         const query = QueryBuilder.search().from(1).where().edge().query();
-        expect(query).toEqual(test_queries[110][1]);
+        expect(query).toEqual(test_queries[147][1]);
     });
 
     it(`QueryBuilder::search().from(1).where_().edge_count(CountComparison::GreaterThan(2)).query()`, () => {
@@ -865,7 +1257,7 @@ describe("query tests", () => {
             .where()
             .edge_count(CountComparison.GreaterThan(2))
             .query();
-        expect(query).toEqual(test_queries[111][1]);
+        expect(query).toEqual(test_queries[148][1]);
     });
 
     it(`QueryBuilder::search().from(1).where_().edge_count_from(1).query()`, () => {
@@ -874,7 +1266,7 @@ describe("query tests", () => {
             .where()
             .edge_count_from(1)
             .query();
-        expect(query).toEqual(test_queries[112][1]);
+        expect(query).toEqual(test_queries[149][1]);
     });
 
     it(`QueryBuilder::search().from(1).where_().edge_count_to(CountComparison::NotEqual(1)).query()`, () => {
@@ -883,12 +1275,12 @@ describe("query tests", () => {
             .where()
             .edge_count_to(CountComparison.NotEqual(1))
             .query();
-        expect(query).toEqual(test_queries[113][1]);
+        expect(query).toEqual(test_queries[150][1]);
     });
 
     it(`QueryBuilder::search().from(1).where_().node().query()`, () => {
         const query = QueryBuilder.search().from(1).where().node().query();
-        expect(query).toEqual(test_queries[114][1]);
+        expect(query).toEqual(test_queries[151][1]);
     });
 
     it(`QueryBuilder::search().from(1).where_().key("k").value(1).query()`, () => {
@@ -898,7 +1290,7 @@ describe("query tests", () => {
             .key("k")
             .value(1)
             .query();
-        expect(query).toEqual(test_queries[115][1]);
+        expect(query).toEqual(test_queries[152][1]);
     });
 
     it(`QueryBuilder::search().from(1).where_().keys(["k1","k2"]).query()`, () => {
@@ -907,7 +1299,7 @@ describe("query tests", () => {
             .where()
             .keys(["k1", "k2"])
             .query();
-        expect(query).toEqual(test_queries[116][1]);
+        expect(query).toEqual(test_queries[153][1]);
     });
 
     it(`QueryBuilder::search().from(1).where_().not().keys(["k1","k2"]).query()`, () => {
@@ -917,12 +1309,12 @@ describe("query tests", () => {
             .not()
             .keys(["k1", "k2"])
             .query();
-        expect(query).toEqual(test_queries[117][1]);
+        expect(query).toEqual(test_queries[154][1]);
     });
 
     it(`QueryBuilder::search().from(1).where_().ids([1,2]).query()`, () => {
         const query = QueryBuilder.search().from(1).where().ids([1, 2]).query();
-        expect(query).toEqual(test_queries[118][1]);
+        expect(query).toEqual(test_queries[155][1]);
     });
 
     it(`QueryBuilder::search().from(1).where_().beyond().keys(["k"]).query()`, () => {
@@ -932,7 +1324,7 @@ describe("query tests", () => {
             .beyond()
             .keys(["k"])
             .query();
-        expect(query).toEqual(test_queries[119][1]);
+        expect(query).toEqual(test_queries[156][1]);
     });
 
     it(`QueryBuilder::search().from(1).where_().not().ids([1,2]).query()`, () => {
@@ -942,7 +1334,7 @@ describe("query tests", () => {
             .not()
             .ids([1, 2])
             .query();
-        expect(query).toEqual(test_queries[120][1]);
+        expect(query).toEqual(test_queries[157][1]);
     });
 
     it(`QueryBuilder::search().from(1).where_().not_beyond().ids("a").query()`, () => {
@@ -952,7 +1344,7 @@ describe("query tests", () => {
             .not_beyond()
             .ids("a")
             .query();
-        expect(query).toEqual(test_queries[121][1]);
+        expect(query).toEqual(test_queries[158][1]);
     });
 
     it(`QueryBuilder::search().from(1).where_().node().or().edge().query()`, () => {
@@ -963,7 +1355,7 @@ describe("query tests", () => {
             .or()
             .edge()
             .query();
-        expect(query).toEqual(test_queries[122][1]);
+        expect(query).toEqual(test_queries[159][1]);
     });
 
     it(`QueryBuilder::search().from(1).where_().node().and().distance(CountComparison::GreaterThanOrEqual(3)).query()`, () => {
@@ -974,7 +1366,7 @@ describe("query tests", () => {
             .and()
             .distance(CountComparison.GreaterThanOrEqual(3))
             .query();
-        expect(query).toEqual(test_queries[123][1]);
+        expect(query).toEqual(test_queries[160][1]);
     });
 
     it(`QueryBuilder::search().from(1).where_().node().or().where_().edge().and().key("k").value(1).end_where().query()`, () => {
@@ -990,7 +1382,7 @@ describe("query tests", () => {
             .value(1)
             .end_where()
             .query();
-        expect(query).toEqual(test_queries[124][1]);
+        expect(query).toEqual(test_queries[161][1]);
     });
 
     it(`QueryBuilder::search().from(1).where_().node().or().where_().edge().and().key("k").value(Comparison::Contains(1.into())).end_where().query()`, () => {
@@ -1006,7 +1398,7 @@ describe("query tests", () => {
             .value(Comparison.Contains(1))
             .end_where()
             .query();
-        expect(query).toEqual(test_queries[125][1]);
+        expect(query).toEqual(test_queries[162][1]);
     });
 
     it(`QueryBuilder::search().from(1).where_().node().or().where_().edge().and().key("k").value(Comparison::Contains(([1,2]).into())).end_where().query()`, () => {
@@ -1022,7 +1414,7 @@ describe("query tests", () => {
             .value(Comparison.Contains([1, 2]))
             .end_where()
             .query();
-        expect(query).toEqual(test_queries[126][1]);
+        expect(query).toEqual(test_queries[163][1]);
     });
 
     it(`QueryBuilder::search().from(1).where_().node().or().where_().edge().and().key("k").value(Comparison::StartsWith(1.into())).end_where().query()`, () => {
@@ -1038,7 +1430,7 @@ describe("query tests", () => {
             .value(Comparison.StartsWith(1))
             .end_where()
             .query();
-        expect(query).toEqual(test_queries[127][1]);
+        expect(query).toEqual(test_queries[164][1]);
     });
 
     it(`QueryBuilder::search().from(1).where_().node().or().where_().edge().and().key("k").value(Comparison::EndsWith(([1,2]).into())).end_where().query()`, () => {
@@ -1054,7 +1446,7 @@ describe("query tests", () => {
             .value(Comparison.EndsWith([1, 2]))
             .end_where()
             .query();
-        expect(query).toEqual(test_queries[128][1]);
+        expect(query).toEqual(test_queries[165][1]);
     });
 
     it(`QueryBuilder::search().from(1).where_().node().or().where_().edge().and().key("k").value(Comparison::Any(([1,2]).into())).end_where().query()`, () => {
@@ -1070,7 +1462,7 @@ describe("query tests", () => {
             .value(Comparison.Any([1, 2]))
             .end_where()
             .query();
-        expect(query).toEqual(test_queries[129][1]);
+        expect(query).toEqual(test_queries[166][1]);
     });
 
     it(`QueryBuilder::search().from(1).order_by([DbKeyOrder::Asc("k".into())]).where_().node().query()`, () => {
@@ -1080,7 +1472,7 @@ describe("query tests", () => {
             .where()
             .node()
             .query();
-        expect(query).toEqual(test_queries[130][1]);
+        expect(query).toEqual(test_queries[167][1]);
     });
 
     it(`QueryBuilder::search().from(1).limit(1).where_().node().query()`, () => {
@@ -1090,7 +1482,7 @@ describe("query tests", () => {
             .where()
             .node()
             .query();
-        expect(query).toEqual(test_queries[131][1]);
+        expect(query).toEqual(test_queries[168][1]);
     });
 
     it(`QueryBuilder::search().from(1).offset(1).where_().node().query()`, () => {
@@ -1100,22 +1492,22 @@ describe("query tests", () => {
             .where()
             .node()
             .query();
-        expect(query).toEqual(test_queries[132][1]);
+        expect(query).toEqual(test_queries[169][1]);
     });
 
     it(`QueryBuilder::search().to(1).offset(1).query()`, () => {
         const query = QueryBuilder.search().to(1).offset(1).query();
-        expect(query).toEqual(test_queries[133][1]);
+        expect(query).toEqual(test_queries[170][1]);
     });
 
     it(`QueryBuilder::search().to(1).limit(1).query()`, () => {
         const query = QueryBuilder.search().to(1).limit(1).query();
-        expect(query).toEqual(test_queries[134][1]);
+        expect(query).toEqual(test_queries[171][1]);
     });
 
     it(`QueryBuilder::search().to(1).where_().node().query()`, () => {
         const query = QueryBuilder.search().to(1).where().node().query();
-        expect(query).toEqual(test_queries[135][1]);
+        expect(query).toEqual(test_queries[172][1]);
     });
 
     it(`QueryBuilder::search().to(1).order_by([DbKeyOrder::Asc("k".into())]).where_().node().query()`, () => {
@@ -1125,7 +1517,7 @@ describe("query tests", () => {
             .where()
             .node()
             .query();
-        expect(query).toEqual(test_queries[136][1]);
+        expect(query).toEqual(test_queries[173][1]);
     });
 
     it(`QueryBuilder::search().from(1).where_().key("k").greater_than(1).query()`, () => {
@@ -1135,7 +1527,7 @@ describe("query tests", () => {
             .key("k")
             .greater_than(1)
             .query();
-        expect(query).toEqual(test_queries[137][1]);
+        expect(query).toEqual(test_queries[174][1]);
     });
 
     it(`QueryBuilder::search().from(1).where_().key("k").greater_than_or_equal(1).query()`, () => {
@@ -1145,7 +1537,7 @@ describe("query tests", () => {
             .key("k")
             .greater_than_or_equal(1)
             .query();
-        expect(query).toEqual(test_queries[138][1]);
+        expect(query).toEqual(test_queries[175][1]);
     });
 
     it(`QueryBuilder::search().from(1).where_().key("k").less_than(1).query()`, () => {
@@ -1155,7 +1547,7 @@ describe("query tests", () => {
             .key("k")
             .less_than(1)
             .query();
-        expect(query).toEqual(test_queries[139][1]);
+        expect(query).toEqual(test_queries[176][1]);
     });
 
     it(`QueryBuilder::search().from(1).where_().key("k").less_than_or_equal(1).query()`, () => {
@@ -1165,7 +1557,7 @@ describe("query tests", () => {
             .key("k")
             .less_than_or_equal(1)
             .query();
-        expect(query).toEqual(test_queries[140][1]);
+        expect(query).toEqual(test_queries[177][1]);
     });
 
     it(`QueryBuilder::search().from(1).where_().key("k").not_equal(1).query()`, () => {
@@ -1175,7 +1567,7 @@ describe("query tests", () => {
             .key("k")
             .not_equal(1)
             .query();
-        expect(query).toEqual(test_queries[141][1]);
+        expect(query).toEqual(test_queries[178][1]);
     });
 
     it(`QueryBuilder::search().from(1).where_().key("k").contains(1).query()`, () => {
@@ -1185,7 +1577,7 @@ describe("query tests", () => {
             .key("k")
             .contains(1)
             .query();
-        expect(query).toEqual(test_queries[142][1]);
+        expect(query).toEqual(test_queries[179][1]);
     });
 
     it(`QueryBuilder::search().from(1).where_().key("k").starts_with(1).query()`, () => {
@@ -1195,7 +1587,7 @@ describe("query tests", () => {
             .key("k")
             .starts_with(1)
             .query();
-        expect(query).toEqual(test_queries[143][1]);
+        expect(query).toEqual(test_queries[180][1]);
     });
 
     it(`QueryBuilder::search().from(1).where_().key("k").ends_with(1).query()`, () => {
@@ -1205,7 +1597,7 @@ describe("query tests", () => {
             .key("k")
             .ends_with(1)
             .query();
-        expect(query).toEqual(test_queries[144][1]);
+        expect(query).toEqual(test_queries[181][1]);
     });
 
     it(`QueryBuilder::search().from(1).where_().key("k").any(1).query()`, () => {
@@ -1215,7 +1607,7 @@ describe("query tests", () => {
             .key("k")
             .any(1)
             .query();
-        expect(query).toEqual(test_queries[145][1]);
+        expect(query).toEqual(test_queries[182][1]);
     });
 
     it(`QueryBuilder::search().from(1).where_().distance_greater_than(3).query()`, () => {
@@ -1224,7 +1616,7 @@ describe("query tests", () => {
             .where()
             .distance_greater_than(3)
             .query();
-        expect(query).toEqual(test_queries[146][1]);
+        expect(query).toEqual(test_queries[183][1]);
     });
 
     it(`QueryBuilder::search().from(1).where_().distance_greater_than_or_equal(3).query()`, () => {
@@ -1233,7 +1625,7 @@ describe("query tests", () => {
             .where()
             .distance_greater_than_or_equal(3)
             .query();
-        expect(query).toEqual(test_queries[147][1]);
+        expect(query).toEqual(test_queries[184][1]);
     });
 
     it(`QueryBuilder::search().from(1).where_().distance_less_than(3).query()`, () => {
@@ -1242,7 +1634,7 @@ describe("query tests", () => {
             .where()
             .distance_less_than(3)
             .query();
-        expect(query).toEqual(test_queries[148][1]);
+        expect(query).toEqual(test_queries[185][1]);
     });
 
     it(`QueryBuilder::search().from(1).where_().distance_less_than_or_equal(3).query()`, () => {
@@ -1251,7 +1643,7 @@ describe("query tests", () => {
             .where()
             .distance_less_than_or_equal(3)
             .query();
-        expect(query).toEqual(test_queries[149][1]);
+        expect(query).toEqual(test_queries[186][1]);
     });
 
     it(`QueryBuilder::search().from(1).where_().distance_not_equal(3).query()`, () => {
@@ -1260,7 +1652,7 @@ describe("query tests", () => {
             .where()
             .distance_not_equal(3)
             .query();
-        expect(query).toEqual(test_queries[150][1]);
+        expect(query).toEqual(test_queries[187][1]);
     });
 
     it(`QueryBuilder::search().from(1).where_().edge_count_greater_than(2).query()`, () => {
@@ -1269,7 +1661,7 @@ describe("query tests", () => {
             .where()
             .edge_count_greater_than(2)
             .query();
-        expect(query).toEqual(test_queries[151][1]);
+        expect(query).toEqual(test_queries[188][1]);
     });
 
     it(`QueryBuilder::search().from(1).where_().edge_count_greater_than_or_equal(2).query()`, () => {
@@ -1278,7 +1670,7 @@ describe("query tests", () => {
             .where()
             .edge_count_greater_than_or_equal(2)
             .query();
-        expect(query).toEqual(test_queries[152][1]);
+        expect(query).toEqual(test_queries[189][1]);
     });
 
     it(`QueryBuilder::search().from(1).where_().edge_count_less_than(2).query()`, () => {
@@ -1287,7 +1679,7 @@ describe("query tests", () => {
             .where()
             .edge_count_less_than(2)
             .query();
-        expect(query).toEqual(test_queries[153][1]);
+        expect(query).toEqual(test_queries[190][1]);
     });
 
     it(`QueryBuilder::search().from(1).where_().edge_count_less_than_or_equal(2).query()`, () => {
@@ -1296,7 +1688,7 @@ describe("query tests", () => {
             .where()
             .edge_count_less_than_or_equal(2)
             .query();
-        expect(query).toEqual(test_queries[154][1]);
+        expect(query).toEqual(test_queries[191][1]);
     });
 
     it(`QueryBuilder::search().from(1).where_().edge_count_not_equal(2).query()`, () => {
@@ -1305,7 +1697,7 @@ describe("query tests", () => {
             .where()
             .edge_count_not_equal(2)
             .query();
-        expect(query).toEqual(test_queries[155][1]);
+        expect(query).toEqual(test_queries[192][1]);
     });
 
     it(`QueryBuilder::search().from(1).where_().edge_count_from_greater_than(1).query()`, () => {
@@ -1314,7 +1706,7 @@ describe("query tests", () => {
             .where()
             .edge_count_from_greater_than(1)
             .query();
-        expect(query).toEqual(test_queries[156][1]);
+        expect(query).toEqual(test_queries[193][1]);
     });
 
     it(`QueryBuilder::search().from(1).where_().edge_count_from_greater_than_or_equal(1).query()`, () => {
@@ -1323,7 +1715,7 @@ describe("query tests", () => {
             .where()
             .edge_count_from_greater_than_or_equal(1)
             .query();
-        expect(query).toEqual(test_queries[157][1]);
+        expect(query).toEqual(test_queries[194][1]);
     });
 
     it(`QueryBuilder::search().from(1).where_().edge_count_from_less_than(1).query()`, () => {
@@ -1332,7 +1724,7 @@ describe("query tests", () => {
             .where()
             .edge_count_from_less_than(1)
             .query();
-        expect(query).toEqual(test_queries[158][1]);
+        expect(query).toEqual(test_queries[195][1]);
     });
 
     it(`QueryBuilder::search().from(1).where_().edge_count_from_less_than_or_equal(1).query()`, () => {
@@ -1341,7 +1733,7 @@ describe("query tests", () => {
             .where()
             .edge_count_from_less_than_or_equal(1)
             .query();
-        expect(query).toEqual(test_queries[159][1]);
+        expect(query).toEqual(test_queries[196][1]);
     });
 
     it(`QueryBuilder::search().from(1).where_().edge_count_from_not_equal(1).query()`, () => {
@@ -1350,7 +1742,7 @@ describe("query tests", () => {
             .where()
             .edge_count_from_not_equal(1)
             .query();
-        expect(query).toEqual(test_queries[160][1]);
+        expect(query).toEqual(test_queries[197][1]);
     });
 
     it(`QueryBuilder::search().from(1).where_().edge_count_to_greater_than(1).query()`, () => {
@@ -1359,7 +1751,7 @@ describe("query tests", () => {
             .where()
             .edge_count_to_greater_than(1)
             .query();
-        expect(query).toEqual(test_queries[161][1]);
+        expect(query).toEqual(test_queries[198][1]);
     });
 
     it(`QueryBuilder::search().from(1).where_().edge_count_to_greater_than_or_equal(1).query()`, () => {
@@ -1368,7 +1760,7 @@ describe("query tests", () => {
             .where()
             .edge_count_to_greater_than_or_equal(1)
             .query();
-        expect(query).toEqual(test_queries[162][1]);
+        expect(query).toEqual(test_queries[199][1]);
     });
 
     it(`QueryBuilder::search().from(1).where_().edge_count_to_less_than(1).query()`, () => {
@@ -1377,7 +1769,7 @@ describe("query tests", () => {
             .where()
             .edge_count_to_less_than(1)
             .query();
-        expect(query).toEqual(test_queries[163][1]);
+        expect(query).toEqual(test_queries[200][1]);
     });
 
     it(`QueryBuilder::search().from(1).where_().edge_count_to_less_than_or_equal(1).query()`, () => {
@@ -1386,7 +1778,7 @@ describe("query tests", () => {
             .where()
             .edge_count_to_less_than_or_equal(1)
             .query();
-        expect(query).toEqual(test_queries[164][1]);
+        expect(query).toEqual(test_queries[201][1]);
     });
 
     it(`QueryBuilder::search().from(1).where_().edge_count_to_not_equal(1).query()`, () => {
@@ -1395,7 +1787,7 @@ describe("query tests", () => {
             .where()
             .edge_count_to_not_equal(1)
             .query();
-        expect(query).toEqual(test_queries[165][1]);
+        expect(query).toEqual(test_queries[202][1]);
     });
 
     it(`QueryBuilder::search().from(1).where_().key("k").regex("pattern").query()`, () => {
@@ -1405,6 +1797,6 @@ describe("query tests", () => {
             .key("k")
             .regex("pattern")
             .query();
-        expect(query).toEqual(test_queries[166][1]);
+        expect(query).toEqual(test_queries[203][1]);
     });
 });

@@ -2,6 +2,7 @@ use crate::Comparison;
 use crate::DbType;
 use crate::DbValue;
 use crate::QueryIds;
+use crate::SearchQueryAlgorithm;
 use crate::db::db_value::DbValues;
 use crate::query::query_condition::CountComparison;
 use crate::query::query_condition::KeyValueComparison;
@@ -632,15 +633,25 @@ impl<T: SearchQueryBuilder> WhereLogicOperator<T> {
     pub fn query(mut self) -> T {
         while self.0.collapse_conditions() {}
 
-        if !self.0.query.search_mut().conditions.is_empty() {
-            let existing_conditions = std::mem::take(&mut self.0.query.search_mut().conditions);
-            self.0.conditions[0].extend(existing_conditions);
-        }
+        if self.0.query.search_mut().algorithm == SearchQueryAlgorithm::Index {
+            // For index searches, append the where conditions after the
+            // index condition which must remain at position 0.
+            self.0
+                .query
+                .search_mut()
+                .conditions
+                .append(&mut self.0.conditions[0]);
+        } else {
+            if !self.0.query.search_mut().conditions.is_empty() {
+                let existing_conditions = std::mem::take(&mut self.0.query.search_mut().conditions);
+                self.0.conditions[0].extend(existing_conditions);
+            }
 
-        std::mem::swap(
-            &mut self.0.query.search_mut().conditions,
-            &mut self.0.conditions[0],
-        );
+            std::mem::swap(
+                &mut self.0.query.search_mut().conditions,
+                &mut self.0.conditions[0],
+            );
+        }
 
         self.0.query
     }

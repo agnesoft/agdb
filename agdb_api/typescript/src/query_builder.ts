@@ -1111,7 +1111,14 @@ class SearchWhereLogicBuilder {
     query(): Components.Schemas.QueryType {
         // prettier-ignore
         do { /**/ } while (collapse_conditions(this.data.conditions));
-        this.data.data.search.conditions = this.data.conditions[0];
+        if (this.data.data.search.algorithm === "Index") {
+            this.data.data.search.conditions.push(...this.data.conditions[0]);
+        } else {
+            this.data.data.search.conditions = [
+                ...this.data.conditions[0],
+                ...this.data.data.search.conditions,
+            ];
+        }
         return this.data.data.query ?? { Search: this.data.data.search };
     }
 }
@@ -1782,7 +1789,12 @@ class SearchWhereFilterBuilder {
         return new SearchWhereFilterKeyBuilder(convertToDbValue(key), this);
     }
 
-    keys(keys: BuilderDbValue[]): SearchWhereFilterLogicBuilder {
+    keys(
+        keys: BuilderDbValue | BuilderDbValue[],
+    ): SearchWhereFilterLogicBuilder {
+        if (!Array.isArray(keys)) {
+            keys = [keys];
+        }
         return push_filter_condition(this, {
             data: { Keys: keys.map(convertToDbValue) },
             logic: this.logic,

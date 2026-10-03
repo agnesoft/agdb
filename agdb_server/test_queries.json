@@ -2830,11 +2830,6 @@
           {
             "logic": "And",
             "modifier": "None",
-            "data": "Node"
-          },
-          {
-            "logic": "And",
-            "modifier": "None",
             "data": {
               "KeyValue": {
                 "key": {
@@ -2847,6 +2842,11 @@
                 }
               }
             }
+          },
+          {
+            "logic": "And",
+            "modifier": "None",
+            "data": "Node"
           }
         ],
         "reverse": false
@@ -2871,11 +2871,6 @@
           {
             "logic": "And",
             "modifier": "None",
-            "data": "Edge"
-          },
-          {
-            "logic": "And",
-            "modifier": "None",
             "data": {
               "KeyValue": {
                 "key": {
@@ -2888,6 +2883,11 @@
                 }
               }
             }
+          },
+          {
+            "logic": "And",
+            "modifier": "None",
+            "data": "Edge"
           }
         ],
         "reverse": false
@@ -2895,7 +2895,7 @@
     }
   ],
   [
-    "QueryBuilder::search().index(\"age\").value(20).offset(5).where_().keys([\"name\"]).query()",
+    "QueryBuilder::search().index(\"age\").value(20).offset(5).where_().keys([\"name\",\"age\"]).query()",
     {
       "Search": {
         "algorithm": "Index",
@@ -2913,17 +2913,6 @@
             "logic": "And",
             "modifier": "None",
             "data": {
-              "Keys": [
-                {
-                  "String": "name"
-                }
-              ]
-            }
-          },
-          {
-            "logic": "And",
-            "modifier": "None",
-            "data": {
               "KeyValue": {
                 "key": {
                   "String": "age"
@@ -2934,6 +2923,20 @@
                   }
                 }
               }
+            }
+          },
+          {
+            "logic": "And",
+            "modifier": "None",
+            "data": {
+              "Keys": [
+                {
+                  "String": "name"
+                },
+                {
+                  "String": "age"
+                }
+              ]
             }
           }
         ],
@@ -3498,6 +3501,141 @@
                     "I64": 1
                   }
                 }
+              }
+            }
+          }
+        ],
+        "reverse": false
+      }
+    }
+  ],
+  [
+    "QueryBuilder::search().index(\"age\").value(20).where_().edge_count(2).query()",
+    {
+      "Search": {
+        "algorithm": "Index",
+        "origin": {
+          "Id": 0
+        },
+        "destination": {
+          "Id": 0
+        },
+        "limit": 0,
+        "offset": 0,
+        "order_by": [],
+        "conditions": [
+          {
+            "logic": "And",
+            "modifier": "None",
+            "data": {
+              "KeyValue": {
+                "key": {
+                  "String": "age"
+                },
+                "value": {
+                  "Equal": {
+                    "I64": 20
+                  }
+                }
+              }
+            }
+          },
+          {
+            "logic": "And",
+            "modifier": "None",
+            "data": {
+              "EdgeCount": {
+                "Equal": 2
+              }
+            }
+          }
+        ],
+        "reverse": false
+      }
+    }
+  ],
+  [
+    "QueryBuilder::search().index(\"age\").value(20).where_().edge_count_from(1).query()",
+    {
+      "Search": {
+        "algorithm": "Index",
+        "origin": {
+          "Id": 0
+        },
+        "destination": {
+          "Id": 0
+        },
+        "limit": 0,
+        "offset": 0,
+        "order_by": [],
+        "conditions": [
+          {
+            "logic": "And",
+            "modifier": "None",
+            "data": {
+              "KeyValue": {
+                "key": {
+                  "String": "age"
+                },
+                "value": {
+                  "Equal": {
+                    "I64": 20
+                  }
+                }
+              }
+            }
+          },
+          {
+            "logic": "And",
+            "modifier": "None",
+            "data": {
+              "EdgeCountFrom": {
+                "Equal": 1
+              }
+            }
+          }
+        ],
+        "reverse": false
+      }
+    }
+  ],
+  [
+    "QueryBuilder::search().index(\"age\").value(20).where_().edge_count_to(1).query()",
+    {
+      "Search": {
+        "algorithm": "Index",
+        "origin": {
+          "Id": 0
+        },
+        "destination": {
+          "Id": 0
+        },
+        "limit": 0,
+        "offset": 0,
+        "order_by": [],
+        "conditions": [
+          {
+            "logic": "And",
+            "modifier": "None",
+            "data": {
+              "KeyValue": {
+                "key": {
+                  "String": "age"
+                },
+                "value": {
+                  "Equal": {
+                    "I64": 20
+                  }
+                }
+              }
+            }
+          },
+          {
+            "logic": "And",
+            "modifier": "None",
+            "data": {
+              "EdgeCountTo": {
+                "Equal": 1
               }
             }
           }
@@ -4173,6 +4311,263 @@
             "data": {
               "EdgeCountTo": {
                 "NotEqual": 1
+              }
+            }
+          }
+        ],
+        "reverse": false
+      }
+    }
+  ],
+  [
+    "QueryBuilder::search().index(\"age\").value(20).where_().node().query()",
+    {
+      "Search": {
+        "algorithm": "Index",
+        "origin": {
+          "Id": 0
+        },
+        "destination": {
+          "Id": 0
+        },
+        "limit": 0,
+        "offset": 0,
+        "order_by": [],
+        "conditions": [
+          {
+            "logic": "And",
+            "modifier": "None",
+            "data": {
+              "KeyValue": {
+                "key": {
+                  "String": "age"
+                },
+                "value": {
+                  "Equal": {
+                    "I64": 20
+                  }
+                }
+              }
+            }
+          },
+          {
+            "logic": "And",
+            "modifier": "None",
+            "data": "Node"
+          }
+        ],
+        "reverse": false
+      }
+    }
+  ],
+  [
+    "QueryBuilder::search().index(\"age\").value(20).where_().edge().query()",
+    {
+      "Search": {
+        "algorithm": "Index",
+        "origin": {
+          "Id": 0
+        },
+        "destination": {
+          "Id": 0
+        },
+        "limit": 0,
+        "offset": 0,
+        "order_by": [],
+        "conditions": [
+          {
+            "logic": "And",
+            "modifier": "None",
+            "data": {
+              "KeyValue": {
+                "key": {
+                  "String": "age"
+                },
+                "value": {
+                  "Equal": {
+                    "I64": 20
+                  }
+                }
+              }
+            }
+          },
+          {
+            "logic": "And",
+            "modifier": "None",
+            "data": "Edge"
+          }
+        ],
+        "reverse": false
+      }
+    }
+  ],
+  [
+    "QueryBuilder::search().index(\"age\").value(20).where_().node().and().where_().key(\"k\").value(1).or().key(\"k\").value(2).end_where().query()",
+    {
+      "Search": {
+        "algorithm": "Index",
+        "origin": {
+          "Id": 0
+        },
+        "destination": {
+          "Id": 0
+        },
+        "limit": 0,
+        "offset": 0,
+        "order_by": [],
+        "conditions": [
+          {
+            "logic": "And",
+            "modifier": "None",
+            "data": {
+              "KeyValue": {
+                "key": {
+                  "String": "age"
+                },
+                "value": {
+                  "Equal": {
+                    "I64": 20
+                  }
+                }
+              }
+            }
+          },
+          {
+            "logic": "And",
+            "modifier": "None",
+            "data": "Node"
+          },
+          {
+            "logic": "And",
+            "modifier": "None",
+            "data": {
+              "Where": [
+                {
+                  "logic": "And",
+                  "modifier": "None",
+                  "data": {
+                    "KeyValue": {
+                      "key": {
+                        "String": "k"
+                      },
+                      "value": {
+                        "Equal": {
+                          "I64": 1
+                        }
+                      }
+                    }
+                  }
+                },
+                {
+                  "logic": "Or",
+                  "modifier": "None",
+                  "data": {
+                    "KeyValue": {
+                      "key": {
+                        "String": "k"
+                      },
+                      "value": {
+                        "Equal": {
+                          "I64": 2
+                        }
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        ],
+        "reverse": false
+      }
+    }
+  ],
+  [
+    "QueryBuilder::search().index(\"age\").value(20).where_().key(\"k\").regex(\"pattern\").query()",
+    {
+      "Search": {
+        "algorithm": "Index",
+        "origin": {
+          "Id": 0
+        },
+        "destination": {
+          "Id": 0
+        },
+        "limit": 0,
+        "offset": 0,
+        "order_by": [],
+        "conditions": [
+          {
+            "logic": "And",
+            "modifier": "None",
+            "data": {
+              "KeyValue": {
+                "key": {
+                  "String": "age"
+                },
+                "value": {
+                  "Equal": {
+                    "I64": 20
+                  }
+                }
+              }
+            }
+          },
+          {
+            "logic": "And",
+            "modifier": "None",
+            "data": {
+              "KeyValue": {
+                "key": {
+                  "String": "k"
+                },
+                "value": {
+                  "Regex": {
+                    "String": "pattern"
+                  }
+                }
+              }
+            }
+          }
+        ],
+        "reverse": false
+      }
+    }
+  ],
+  [
+    "QueryBuilder::search().index(\"age\").value(20).order_by([DbKeyOrder::Asc(\"k\".into())]).query()",
+    {
+      "Search": {
+        "algorithm": "Index",
+        "origin": {
+          "Id": 0
+        },
+        "destination": {
+          "Id": 0
+        },
+        "limit": 0,
+        "offset": 0,
+        "order_by": [
+          {
+            "Asc": {
+              "String": "k"
+            }
+          }
+        ],
+        "conditions": [
+          {
+            "logic": "And",
+            "modifier": "None",
+            "data": {
+              "KeyValue": {
+                "key": {
+                  "String": "age"
+                },
+                "value": {
+                  "Equal": {
+                    "I64": 20
+                  }
+                }
               }
             }
           }

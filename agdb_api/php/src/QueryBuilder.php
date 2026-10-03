@@ -1553,9 +1553,20 @@ class SearchWhereLogicBuilder
     {
         while ($this->data->__collapse_conditions()) {
         }
-        $this->data->__data->search->setConditions(
-            $this->data->__conditions[0]
-        );
+        if (
+            $this->data->__data->search->getAlgorithm() ===
+            SearchQueryAlgorithm::INDEX
+        ) {
+            $existing = $this->data->__data->search->getConditions();
+            $this->data->__data->search->setConditions(
+                array_merge($existing, $this->data->__conditions[0])
+            );
+        } else {
+            $existing = $this->data->__data->search->getConditions();
+            $this->data->__data->search->setConditions(
+                array_merge($this->data->__conditions[0], $existing)
+            );
+        }
         return $this->data->__data->query ?:
             new QueryType(["search" => $this->data->__data->search]);
     }

@@ -151,6 +151,7 @@ Class | Method | HTTP request | Description
 - [ComparisonOneOf6](docs/Model/ComparisonOneOf6.md)
 - [ComparisonOneOf7](docs/Model/ComparisonOneOf7.md)
 - [ComparisonOneOf8](docs/Model/ComparisonOneOf8.md)
+- [ComparisonOneOf9](docs/Model/ComparisonOneOf9.md)
 - [CountComparison](docs/Model/CountComparison.md)
 - [CountComparisonOneOf](docs/Model/CountComparisonOneOf.md)
 - [CountComparisonOneOf1](docs/Model/CountComparisonOneOf1.md)

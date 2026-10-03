@@ -29,7 +29,8 @@ function isComparison(
             "NotEqual" in value ||
             "Contains" in value ||
             "StartsWith" in value ||
-            "EndsWith" in value)
+            "EndsWith" in value ||
+            "Any" in value)
     );
 }
 
@@ -281,6 +282,10 @@ export class Comparison {
 
     static EndsWith(value: BuilderDbValue): Components.Schemas.Comparison {
         return { EndsWith: convertToDbValue(value) };
+    }
+
+    static Any(value: BuilderDbValue): Components.Schemas.Comparison {
+        return { Any: convertToDbValue(value) };
     }
 }
 

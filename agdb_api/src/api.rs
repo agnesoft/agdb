@@ -62,6 +62,7 @@ use agdb::Search;
 use agdb::SearchAlgorithm;
 use agdb::SearchFrom;
 use agdb::SearchIndexBuilder;
+use agdb::SearchIndexOrderBy;
 use agdb::SearchIndexValue;
 use agdb::SearchOrderBy;
 use agdb::SearchQuery;
@@ -77,6 +78,8 @@ use agdb::SelectEdgeCount;
 use agdb::SelectEdgeCountIds;
 use agdb::SelectEdgeCountQuery;
 use agdb::SelectIds;
+use agdb::SelectIndexLimit;
+use agdb::SelectIndexOffset;
 use agdb::SelectIndexes;
 use agdb::SelectIndexesQuery;
 use agdb::SelectKeyCount;
@@ -94,6 +97,9 @@ use agdb::SelectValuesIds;
 use agdb::SelectValuesQuery;
 use agdb::SingleValues;
 use agdb::Where;
+use agdb::WhereFilter;
+use agdb::WhereFilterKey;
+use agdb::WhereFilterLogicOperator;
 use agdb::WhereKey;
 use agdb::WhereLogicOperator;
 use agdb::type_def::Type;
@@ -209,8 +215,11 @@ impl Api {
             SearchFrom::<SearchQuery>::type_def(),
             SearchTo::<SearchQuery>::type_def(),
             SearchIndexBuilder::<SearchQuery>::type_def(),
+            SearchIndexOrderBy::<SearchQuery>::type_def(),
             SearchIndexValue::<SearchQuery>::type_def(),
             SearchOrderBy::<SearchQuery>::type_def(),
+            SelectIndexLimit::<SearchQuery>::type_def(),
+            SelectIndexOffset::<SearchQuery>::type_def(),
             SelectLimit::<SearchQuery>::type_def(),
             SelectOffset::<SearchQuery>::type_def(),
             Select::type_def(),
@@ -228,6 +237,9 @@ impl Api {
             SelectValues::type_def(),
             SelectValuesIds::type_def(),
             Where::<SearchQuery>::type_def(),
+            WhereFilter::<SearchQuery>::type_def(),
+            WhereFilterKey::<SearchQuery>::type_def(),
+            WhereFilterLogicOperator::<SearchQuery>::type_def(),
             WhereKey::<SearchQuery>::type_def(),
             WhereLogicOperator::<SearchQuery>::type_def(),
             SearchQueryBuilderDef::type_def(), //trait

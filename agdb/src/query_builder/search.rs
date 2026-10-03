@@ -1,4 +1,5 @@
 use super::where_::Where;
+use super::where_filter::WhereFilter;
 use crate::Comparison;
 use crate::DbValue;
 use crate::QueryCondition;
@@ -68,6 +69,21 @@ pub struct SelectLimit<T: SearchQueryBuilder>(pub T);
 #[cfg_attr(feature = "api", derive(agdb::TypeDef))]
 #[cfg_attr(feature = "api", type_def(inherent))]
 pub struct SelectOffset<T: SearchQueryBuilder>(pub T);
+
+/// Search builder query that lets you choose limit and where (index searches).
+#[cfg_attr(feature = "api", derive(agdb::TypeDef))]
+#[cfg_attr(feature = "api", type_def(inherent))]
+pub struct SelectIndexLimit<T: SearchQueryBuilder>(pub T);
+
+/// Search builder query that lets you choose limit and where (index searches).
+#[cfg_attr(feature = "api", derive(agdb::TypeDef))]
+#[cfg_attr(feature = "api", type_def(inherent))]
+pub struct SelectIndexOffset<T: SearchQueryBuilder>(pub T);
+
+/// Search builder query that lets you choose limit, offset and where (index searches).
+#[cfg_attr(feature = "api", derive(agdb::TypeDef))]
+#[cfg_attr(feature = "api", type_def(inherent))]
+pub struct SearchIndexOrderBy<T: SearchQueryBuilder>(pub T);
 
 /// Search builder query that lets you choose search origin
 /// and other parameters.
@@ -630,8 +646,192 @@ impl<T: SearchQueryBuilder> SearchIndex<T> {
 
 #[cfg_attr(feature = "api", agdb::impl_def())]
 impl<T: SearchQueryBuilder> SearchIndexValue<T> {
-    /// Returns the built q object.
+    /// Sets the limit to number of ids returned.
+    ///
+    /// Options:
+    ///
+    /// ```
+    /// use agdb::QueryBuilder;
+    ///
+    /// QueryBuilder::search().index("k").value(1).limit(10).query();
+    /// QueryBuilder::search().index("k").value(1).limit(10).where_();
+    /// ```
+    pub fn limit(mut self, value: u64) -> SelectIndexLimit<T> {
+        self.0.search_mut().limit = value;
+        SelectIndexLimit(self.0)
+    }
+
+    /// Sets the offset to the ids returned.
+    ///
+    /// Options:
+    ///
+    /// ```
+    /// use agdb::QueryBuilder;
+    ///
+    /// QueryBuilder::search().index("k").value(1).offset(10).query();
+    /// QueryBuilder::search().index("k").value(1).offset(10).limit(5);
+    /// QueryBuilder::search().index("k").value(1).offset(10).where_();
+    /// ```
+    pub fn offset(mut self, value: u64) -> SelectIndexOffset<T> {
+        self.0.search_mut().offset = value;
+        SelectIndexOffset(self.0)
+    }
+
+    /// Orders the result by `keys`.
+    ///
+    /// Options:
+    ///
+    /// ```
+    /// use agdb::{QueryBuilder, DbKeyOrder};
+    ///
+    /// QueryBuilder::search().index("k").value(1).order_by([DbKeyOrder::Asc("k".into())]).query();
+    /// QueryBuilder::search().index("k").value(1).order_by([DbKeyOrder::Asc("k".into())]).offset(10);
+    /// QueryBuilder::search().index("k").value(1).order_by([DbKeyOrder::Asc("k".into())]).limit(5);
+    /// QueryBuilder::search().index("k").value(1).order_by([DbKeyOrder::Asc("k".into())]).where_();
+    /// ```
+    pub fn order_by<K: Into<DbKeyOrders>>(mut self, keys: K) -> SearchIndexOrderBy<T> {
+        self.0.search_mut().order_by = Into::<DbKeyOrders>::into(keys).0;
+        SearchIndexOrderBy(self.0)
+    }
+
+    /// Returns the built query object.
     pub fn query(self) -> T {
         self.0
+    }
+
+    /// Starts the condition builder. This uses a restricted set of conditions
+    /// that excludes traversal-specific conditions (`distance`, `beyond`,
+    /// `not_beyond`, `neighbor`) which have no meaning for index searches.
+    ///
+    /// Options:
+    ///
+    /// ```
+    /// use agdb::{QueryBuilder, CountComparison};
+    ///
+    /// QueryBuilder::search().index("k").value(1).where_().node();
+    /// QueryBuilder::search().index("k").value(1).where_().edge();
+    /// QueryBuilder::search().index("k").value(1).where_().ids(1);
+    /// QueryBuilder::search().index("k").value(1).where_().keys("k");
+    /// QueryBuilder::search().index("k").value(1).where_().key("k");
+    /// QueryBuilder::search().index("k").value(1).where_().edge_count(1);
+    /// QueryBuilder::search().index("k").value(1).where_().edge_count_from(CountComparison::LessThan(1));
+    /// QueryBuilder::search().index("k").value(1).where_().edge_count_to(CountComparison::GreaterThan(1));
+    /// QueryBuilder::search().index("k").value(1).where_().where_();
+    /// QueryBuilder::search().index("k").value(1).where_().not();
+    /// ```
+    pub fn where_(self) -> WhereFilter<T> {
+        WhereFilter::new(self.0)
+    }
+}
+
+#[cfg_attr(feature = "api", agdb::impl_def())]
+impl<T: SearchQueryBuilder> SelectIndexLimit<T> {
+    /// Returns the built query object.
+    pub fn query(self) -> T {
+        self.0
+    }
+
+    /// Starts the condition builder using the restricted set of conditions
+    /// for index searches (excludes `distance`, `beyond`, `not_beyond`, `neighbor`).
+    ///
+    /// Options:
+    ///
+    /// ```
+    /// use agdb::QueryBuilder;
+    ///
+    /// QueryBuilder::search().index("k").value(1).limit(10).where_().node();
+    /// ```
+    pub fn where_(self) -> WhereFilter<T> {
+        WhereFilter::new(self.0)
+    }
+}
+
+#[cfg_attr(feature = "api", agdb::impl_def())]
+impl<T: SearchQueryBuilder> SelectIndexOffset<T> {
+    /// Sets the limit to number of ids returned.
+    ///
+    /// Options:
+    ///
+    /// ```
+    /// use agdb::QueryBuilder;
+    ///
+    /// QueryBuilder::search().index("k").value(1).offset(10).limit(10).query();
+    /// QueryBuilder::search().index("k").value(1).offset(10).limit(10).where_();
+    /// ```
+    pub fn limit(mut self, value: u64) -> SelectIndexLimit<T> {
+        self.0.search_mut().limit = value;
+        SelectIndexLimit(self.0)
+    }
+
+    /// Returns the built query object.
+    pub fn query(self) -> T {
+        self.0
+    }
+
+    /// Starts the condition builder using the restricted set of conditions
+    /// for index searches (excludes `distance`, `beyond`, `not_beyond`, `neighbor`).
+    ///
+    /// Options:
+    ///
+    /// ```
+    /// use agdb::QueryBuilder;
+    ///
+    /// QueryBuilder::search().index("k").value(1).offset(10).where_().node();
+    /// ```
+    pub fn where_(self) -> WhereFilter<T> {
+        WhereFilter::new(self.0)
+    }
+}
+
+#[cfg_attr(feature = "api", agdb::impl_def())]
+impl<T: SearchQueryBuilder> SearchIndexOrderBy<T> {
+    /// Sets the limit to number of ids returned.
+    ///
+    /// Options:
+    ///
+    /// ```
+    /// use agdb::{QueryBuilder, DbKeyOrder};
+    ///
+    /// QueryBuilder::search().index("k").value(1).order_by([DbKeyOrder::Asc("k".into())]).limit(10).query();
+    /// QueryBuilder::search().index("k").value(1).order_by([DbKeyOrder::Asc("k".into())]).limit(10).where_();
+    /// ```
+    pub fn limit(mut self, value: u64) -> SelectIndexLimit<T> {
+        self.0.search_mut().limit = value;
+        SelectIndexLimit(self.0)
+    }
+
+    /// Sets the offset to the ids returned.
+    ///
+    /// Options:
+    ///
+    /// ```
+    /// use agdb::{QueryBuilder, DbKeyOrder};
+    ///
+    /// QueryBuilder::search().index("k").value(1).order_by([DbKeyOrder::Asc("k".into())]).offset(10).query();
+    /// QueryBuilder::search().index("k").value(1).order_by([DbKeyOrder::Asc("k".into())]).offset(10).limit(5);
+    /// QueryBuilder::search().index("k").value(1).order_by([DbKeyOrder::Asc("k".into())]).offset(10).where_();
+    /// ```
+    pub fn offset(mut self, value: u64) -> SelectIndexOffset<T> {
+        self.0.search_mut().offset = value;
+        SelectIndexOffset(self.0)
+    }
+
+    /// Returns the built query object.
+    pub fn query(self) -> T {
+        self.0
+    }
+
+    /// Starts the condition builder using the restricted set of conditions
+    /// for index searches (excludes `distance`, `beyond`, `not_beyond`, `neighbor`).
+    ///
+    /// Options:
+    ///
+    /// ```
+    /// use agdb::{QueryBuilder, DbKeyOrder};
+    ///
+    /// QueryBuilder::search().index("k").value(1).order_by([DbKeyOrder::Asc("k".into())]).where_().node();
+    /// ```
+    pub fn where_(self) -> WhereFilter<T> {
+        WhereFilter::new(self.0)
     }
 }

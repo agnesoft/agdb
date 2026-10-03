@@ -1111,7 +1111,10 @@ class SearchWhereLogicBuilder {
     query(): Components.Schemas.QueryType {
         // prettier-ignore
         do { /**/ } while (collapse_conditions(this.data.conditions));
-        this.data.data.search.conditions = this.data.conditions[0];
+        this.data.data.search.conditions = [
+            ...this.data.conditions[0],
+            ...this.data.data.search.conditions,
+        ];
         return this.data.data.query ?? { Search: this.data.data.search };
     }
 }
@@ -1569,8 +1572,390 @@ class SearchIndexValueBuilder {
         this.data = data;
     }
 
+    limit(limit: number): SearchIndexLimitBuilder {
+        this.data.search.limit = limit;
+        return new SearchIndexLimitBuilder(this.data);
+    }
+
+    offset(offset: number): SearchIndexOffsetBuilder {
+        this.data.search.offset = offset;
+        return new SearchIndexOffsetBuilder(this.data);
+    }
+
+    order_by(
+        keys: Components.Schemas.DbKeyOrder | Components.Schemas.DbKeyOrder[],
+    ): SearchIndexOrderByBuilder {
+        this.data.search.order_by = intoDbKeyOrder(keys);
+        return new SearchIndexOrderByBuilder(this.data);
+    }
+
     query(): Components.Schemas.QueryType {
         return this.data.query ?? { Search: this.data.search };
+    }
+
+    where(): SearchWhereFilterBuilder {
+        return new SearchWhereFilterBuilder(this.data);
+    }
+}
+
+class SearchIndexLimitBuilder {
+    private data: SearchBuilderData;
+
+    constructor(data: SearchBuilderData) {
+        this.data = data;
+    }
+
+    where(): SearchWhereFilterBuilder {
+        return new SearchWhereFilterBuilder(this.data);
+    }
+
+    query(): Components.Schemas.QueryType {
+        return this.data.query ?? { Search: this.data.search };
+    }
+}
+
+class SearchIndexOffsetBuilder {
+    private data: SearchBuilderData;
+
+    constructor(data: SearchBuilderData) {
+        this.data = data;
+    }
+
+    limit(limit: number): SearchIndexLimitBuilder {
+        this.data.search.limit = limit;
+        return new SearchIndexLimitBuilder(this.data);
+    }
+
+    where(): SearchWhereFilterBuilder {
+        return new SearchWhereFilterBuilder(this.data);
+    }
+
+    query(): Components.Schemas.QueryType {
+        return this.data.query ?? { Search: this.data.search };
+    }
+}
+
+class SearchIndexOrderByBuilder {
+    private data: SearchBuilderData;
+
+    constructor(data: SearchBuilderData) {
+        this.data = data;
+    }
+
+    limit(limit: number): SearchIndexLimitBuilder {
+        this.data.search.limit = limit;
+        return new SearchIndexLimitBuilder(this.data);
+    }
+
+    offset(offset: number): SearchIndexOffsetBuilder {
+        this.data.search.offset = offset;
+        return new SearchIndexOffsetBuilder(this.data);
+    }
+
+    where(): SearchWhereFilterBuilder {
+        return new SearchWhereFilterBuilder(this.data);
+    }
+
+    query(): Components.Schemas.QueryType {
+        return this.data.query ?? { Search: this.data.search };
+    }
+}
+
+function push_filter_condition(
+    builder: SearchWhereFilterBuilder,
+    condition: Components.Schemas.QueryCondition,
+): SearchWhereFilterLogicBuilder {
+    builder.conditions[builder.conditions.length - 1].push(condition);
+    builder.modifier = "None";
+    builder.logic = "And";
+    return new SearchWhereFilterLogicBuilder(builder);
+}
+
+class SearchWhereFilterLogicBuilder {
+    private data: SearchWhereFilterBuilder;
+
+    constructor(data: SearchWhereFilterBuilder) {
+        this.data = data;
+    }
+
+    end_where(): SearchWhereFilterLogicBuilder {
+        collapse_conditions(this.data.conditions);
+        return this;
+    }
+
+    and(): SearchWhereFilterBuilder {
+        this.data.logic = "And";
+        return this.data;
+    }
+
+    or(): SearchWhereFilterBuilder {
+        this.data.logic = "Or";
+        return this.data;
+    }
+
+    query(): Components.Schemas.QueryType {
+        // prettier-ignore
+        do { /**/ } while (collapse_conditions(this.data.conditions));
+        this.data.data.search.conditions.push(...this.data.conditions[0]);
+        return this.data.data.query ?? { Search: this.data.data.search };
+    }
+}
+
+class SearchWhereFilterKeyBuilder {
+    private data: SearchWhereFilterBuilder;
+    private key: Components.Schemas.DbValue;
+
+    constructor(
+        key: Components.Schemas.DbValue,
+        data: SearchWhereFilterBuilder,
+    ) {
+        this.key = key;
+        this.data = data;
+    }
+
+    value(
+        value: Components.Schemas.Comparison | BuilderDbValue,
+    ): SearchWhereFilterLogicBuilder {
+        if (!isComparison(value)) {
+            value = Comparison.Equal(convertToDbValue(value));
+        }
+
+        return push_filter_condition(this.data, {
+            data: { KeyValue: { key: this.key, value: value } },
+            logic: this.data.logic,
+            modifier: this.data.modifier,
+        });
+    }
+
+    greater_than(value: BuilderDbValue): SearchWhereFilterLogicBuilder {
+        return this.value(Comparison.GreaterThan(value));
+    }
+
+    greater_than_or_equal(
+        value: BuilderDbValue,
+    ): SearchWhereFilterLogicBuilder {
+        return this.value(Comparison.GreaterThanOrEqual(value));
+    }
+
+    less_than(value: BuilderDbValue): SearchWhereFilterLogicBuilder {
+        return this.value(Comparison.LessThan(value));
+    }
+
+    less_than_or_equal(value: BuilderDbValue): SearchWhereFilterLogicBuilder {
+        return this.value(Comparison.LessThanOrEqual(value));
+    }
+
+    not_equal(value: BuilderDbValue): SearchWhereFilterLogicBuilder {
+        return this.value(Comparison.NotEqual(value));
+    }
+
+    contains(value: BuilderDbValue): SearchWhereFilterLogicBuilder {
+        return this.value(Comparison.Contains(value));
+    }
+
+    starts_with(value: BuilderDbValue): SearchWhereFilterLogicBuilder {
+        return this.value(Comparison.StartsWith(value));
+    }
+
+    ends_with(value: BuilderDbValue): SearchWhereFilterLogicBuilder {
+        return this.value(Comparison.EndsWith(value));
+    }
+
+    any(value: BuilderDbValue): SearchWhereFilterLogicBuilder {
+        return this.value(Comparison.Any(value));
+    }
+
+    regex(value: BuilderDbValue): SearchWhereFilterLogicBuilder {
+        return this.value(Comparison.Regex(value));
+    }
+}
+
+class SearchWhereFilterBuilder {
+    data: SearchBuilderData;
+    modifier: Components.Schemas.QueryConditionModifier;
+    logic: Components.Schemas.QueryConditionLogic;
+    conditions: Components.Schemas.QueryCondition[][];
+
+    constructor(data: SearchBuilderData) {
+        this.data = data;
+        this.logic = "And";
+        this.modifier = "None";
+        this.conditions = [[]];
+    }
+
+    edge(): SearchWhereFilterLogicBuilder {
+        return push_filter_condition(this, {
+            data: "Edge",
+            logic: this.logic,
+            modifier: this.modifier,
+        });
+    }
+
+    edge_count(
+        count: Components.Schemas.CountComparison | number,
+    ): SearchWhereFilterLogicBuilder {
+        if (typeof count === "number") {
+            count = CountComparison.Equal(count);
+        }
+
+        return push_filter_condition(this, {
+            data: { EdgeCount: count },
+            logic: this.logic,
+            modifier: this.modifier,
+        });
+    }
+
+    edge_count_from(
+        count: Components.Schemas.CountComparison | number,
+    ): SearchWhereFilterLogicBuilder {
+        if (typeof count === "number") {
+            count = CountComparison.Equal(count);
+        }
+
+        return push_filter_condition(this, {
+            data: { EdgeCountFrom: count },
+            logic: this.logic,
+            modifier: this.modifier,
+        });
+    }
+
+    edge_count_to(
+        count: Components.Schemas.CountComparison | number,
+    ): SearchWhereFilterLogicBuilder {
+        if (typeof count === "number") {
+            count = CountComparison.Equal(count);
+        }
+
+        return push_filter_condition(this, {
+            data: { EdgeCountTo: count },
+            logic: this.logic,
+            modifier: this.modifier,
+        });
+    }
+
+    ids(ids: BuilderQueryId | BuilderQueryId[]): SearchWhereFilterLogicBuilder {
+        const inner_ids = Array.isArray(ids)
+            ? ids.map((id) => intoQueryId(id))
+            : [intoQueryId(ids)];
+        return push_filter_condition(this, {
+            data: { Ids: inner_ids },
+            logic: this.logic,
+            modifier: this.modifier,
+        });
+    }
+
+    key(key: BuilderDbValue): SearchWhereFilterKeyBuilder {
+        return new SearchWhereFilterKeyBuilder(convertToDbValue(key), this);
+    }
+
+    keys(
+        keys: BuilderDbValue | BuilderDbValue[],
+    ): SearchWhereFilterLogicBuilder {
+        if (!Array.isArray(keys)) {
+            keys = [keys];
+        }
+        return push_filter_condition(this, {
+            data: { Keys: keys.map(convertToDbValue) },
+            logic: this.logic,
+            modifier: this.modifier,
+        });
+    }
+
+    node(): SearchWhereFilterLogicBuilder {
+        return push_filter_condition(this, {
+            data: "Node",
+            logic: this.logic,
+            modifier: this.modifier,
+        });
+    }
+
+    not(): SearchWhereFilterBuilder {
+        this.modifier = "Not";
+        return this;
+    }
+
+    where(): SearchWhereFilterBuilder {
+        this.conditions[this.conditions.length - 1].push({
+            data: { Where: [] },
+            logic: this.logic,
+            modifier: this.modifier,
+        });
+        this.logic = "And";
+        this.modifier = "None";
+        this.conditions.push([]);
+        return this;
+    }
+
+    edge_count_greater_than(count: number): SearchWhereFilterLogicBuilder {
+        return this.edge_count(CountComparison.GreaterThan(count));
+    }
+
+    edge_count_greater_than_or_equal(
+        count: number,
+    ): SearchWhereFilterLogicBuilder {
+        return this.edge_count(CountComparison.GreaterThanOrEqual(count));
+    }
+
+    edge_count_less_than(count: number): SearchWhereFilterLogicBuilder {
+        return this.edge_count(CountComparison.LessThan(count));
+    }
+
+    edge_count_less_than_or_equal(
+        count: number,
+    ): SearchWhereFilterLogicBuilder {
+        return this.edge_count(CountComparison.LessThanOrEqual(count));
+    }
+
+    edge_count_not_equal(count: number): SearchWhereFilterLogicBuilder {
+        return this.edge_count(CountComparison.NotEqual(count));
+    }
+
+    edge_count_from_greater_than(count: number): SearchWhereFilterLogicBuilder {
+        return this.edge_count_from(CountComparison.GreaterThan(count));
+    }
+
+    edge_count_from_greater_than_or_equal(
+        count: number,
+    ): SearchWhereFilterLogicBuilder {
+        return this.edge_count_from(CountComparison.GreaterThanOrEqual(count));
+    }
+
+    edge_count_from_less_than(count: number): SearchWhereFilterLogicBuilder {
+        return this.edge_count_from(CountComparison.LessThan(count));
+    }
+
+    edge_count_from_less_than_or_equal(
+        count: number,
+    ): SearchWhereFilterLogicBuilder {
+        return this.edge_count_from(CountComparison.LessThanOrEqual(count));
+    }
+
+    edge_count_from_not_equal(count: number): SearchWhereFilterLogicBuilder {
+        return this.edge_count_from(CountComparison.NotEqual(count));
+    }
+
+    edge_count_to_greater_than(count: number): SearchWhereFilterLogicBuilder {
+        return this.edge_count_to(CountComparison.GreaterThan(count));
+    }
+
+    edge_count_to_greater_than_or_equal(
+        count: number,
+    ): SearchWhereFilterLogicBuilder {
+        return this.edge_count_to(CountComparison.GreaterThanOrEqual(count));
+    }
+
+    edge_count_to_less_than(count: number): SearchWhereFilterLogicBuilder {
+        return this.edge_count_to(CountComparison.LessThan(count));
+    }
+
+    edge_count_to_less_than_or_equal(
+        count: number,
+    ): SearchWhereFilterLogicBuilder {
+        return this.edge_count_to(CountComparison.LessThanOrEqual(count));
+    }
+
+    edge_count_to_not_equal(count: number): SearchWhereFilterLogicBuilder {
+        return this.edge_count_to(CountComparison.NotEqual(count));
     }
 }
 

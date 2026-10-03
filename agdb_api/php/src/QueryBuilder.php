@@ -981,11 +981,472 @@ class SearchIndexValueBuilder
         $this->data = $data;
     }
 
+    public function limit(int $limit): SearchIndexLimitBuilder
+    {
+        $this->data->search->setLimit($limit);
+        return new SearchIndexLimitBuilder($this->data);
+    }
+
+    public function offset(int $offset): SearchIndexOffsetBuilder
+    {
+        $this->data->search->setOffset($offset);
+        return new SearchIndexOffsetBuilder($this->data);
+    }
+
+    public function order_by(DbKeyOrder|array $keys): SearchIndexOrderByBuilder
+    {
+        $this->data->search->setOrderBy(is_array($keys) ? $keys : [$keys]);
+        return new SearchIndexOrderByBuilder($this->data);
+    }
+
+    public function where(): SearchWhereFilterBuilder
+    {
+        return new SearchWhereFilterBuilder($this->data);
+    }
+
     public function query(): QueryType
     {
         return $this->data->query != null
             ? $this->data->query
             : new QueryType(["search" => $this->data->search]);
+    }
+}
+
+class SearchIndexLimitBuilder
+{
+    private SearchQueryBuilder $data;
+
+    public function __construct(SearchQueryBuilder $data)
+    {
+        $this->data = $data;
+    }
+
+    public function where(): SearchWhereFilterBuilder
+    {
+        return new SearchWhereFilterBuilder($this->data);
+    }
+
+    public function query(): QueryType
+    {
+        return new QueryType(["search" => $this->data->search]);
+    }
+}
+
+class SearchIndexOffsetBuilder
+{
+    private SearchQueryBuilder $data;
+
+    public function __construct(SearchQueryBuilder $data)
+    {
+        $this->data = $data;
+    }
+
+    public function limit(int $limit): SearchIndexLimitBuilder
+    {
+        $this->data->search->setLimit($limit);
+        return new SearchIndexLimitBuilder($this->data);
+    }
+
+    public function where(): SearchWhereFilterBuilder
+    {
+        return new SearchWhereFilterBuilder($this->data);
+    }
+
+    public function query(): QueryType
+    {
+        return new QueryType(["search" => $this->data->search]);
+    }
+}
+
+class SearchIndexOrderByBuilder
+{
+    private SearchQueryBuilder $data;
+
+    public function __construct(SearchQueryBuilder $data)
+    {
+        $this->data = $data;
+    }
+
+    public function limit(int $limit): SearchIndexLimitBuilder
+    {
+        $this->data->search->setLimit($limit);
+        return new SearchIndexLimitBuilder($this->data);
+    }
+
+    public function offset(int $offset): SearchIndexOffsetBuilder
+    {
+        $this->data->search->setOffset($offset);
+        return new SearchIndexOffsetBuilder($this->data);
+    }
+
+    public function where(): SearchWhereFilterBuilder
+    {
+        return new SearchWhereFilterBuilder($this->data);
+    }
+
+    public function query(): QueryType
+    {
+        return new QueryType(["search" => $this->data->search]);
+    }
+}
+
+class SearchWhereFilterLogicBuilder
+{
+    private SearchWhereFilterBuilder $data;
+
+    public function __construct(SearchWhereFilterBuilder $data)
+    {
+        $this->data = $data;
+    }
+
+    public function and(): SearchWhereFilterBuilder
+    {
+        $this->data->__logic = QueryConditionLogic::_AND;
+        return $this->data;
+    }
+
+    public function end_where(): SearchWhereFilterLogicBuilder
+    {
+        $this->data->__collapse_conditions();
+        return $this;
+    }
+
+    public function or(): SearchWhereFilterBuilder
+    {
+        $this->data->__logic = QueryConditionLogic::_OR;
+        return $this->data;
+    }
+
+    public function query(): QueryType
+    {
+        while ($this->data->__collapse_conditions()) {
+        }
+        $existing = $this->data->__data->search->getConditions();
+        $this->data->__data->search->setConditions(
+            array_merge($existing, $this->data->__conditions[0])
+        );
+        return $this->data->__data->query ?:
+            new QueryType(["search" => $this->data->__data->search]);
+    }
+}
+
+class SearchWhereFilterKeyBuilder
+{
+    private SearchWhereFilterBuilder $data;
+    private DbValue $key;
+
+    public function __construct(SearchWhereFilterBuilder $data, DbValue $key)
+    {
+        $this->data = $data;
+        $this->key = $key;
+    }
+
+    public function value(
+        Comparison|bool|int|float|string|array|DbValue $comparison
+    ): SearchWhereFilterLogicBuilder {
+        if (!($comparison instanceof Comparison)) {
+            $comparison = ComparisonBuilder::Equal(to_db_value($comparison));
+        }
+
+        $condition_data = new QueryConditionData();
+        $kvc = new KeyValueComparison();
+        $kvc->setKey($this->key);
+        $kvc->setValue($comparison);
+        $condition_data->setKeyValue($kvc);
+        $this->data->__push_condition($condition_data);
+        return new SearchWhereFilterLogicBuilder($this->data);
+    }
+
+    public function greater_than(
+        bool|int|float|string|array|DbValue $value
+    ): SearchWhereFilterLogicBuilder {
+        return $this->value(ComparisonBuilder::GreaterThan($value));
+    }
+
+    public function greater_than_or_equal(
+        bool|int|float|string|array|DbValue $value
+    ): SearchWhereFilterLogicBuilder {
+        return $this->value(ComparisonBuilder::GreaterThanOrEqual($value));
+    }
+
+    public function less_than(
+        bool|int|float|string|array|DbValue $value
+    ): SearchWhereFilterLogicBuilder {
+        return $this->value(ComparisonBuilder::LessThan($value));
+    }
+
+    public function less_than_or_equal(
+        bool|int|float|string|array|DbValue $value
+    ): SearchWhereFilterLogicBuilder {
+        return $this->value(ComparisonBuilder::LessThanOrEqual($value));
+    }
+
+    public function not_equal(
+        bool|int|float|string|array|DbValue $value
+    ): SearchWhereFilterLogicBuilder {
+        return $this->value(ComparisonBuilder::NotEqual($value));
+    }
+
+    public function contains(
+        bool|int|float|string|array|DbValue $value
+    ): SearchWhereFilterLogicBuilder {
+        return $this->value(ComparisonBuilder::Contains($value));
+    }
+
+    public function starts_with(
+        bool|int|float|string|array|DbValue $value
+    ): SearchWhereFilterLogicBuilder {
+        return $this->value(ComparisonBuilder::StartsWith($value));
+    }
+
+    public function ends_with(
+        bool|int|float|string|array|DbValue $value
+    ): SearchWhereFilterLogicBuilder {
+        return $this->value(ComparisonBuilder::EndsWith($value));
+    }
+
+    public function any(
+        bool|int|float|string|array|DbValue $value
+    ): SearchWhereFilterLogicBuilder {
+        return $this->value(ComparisonBuilder::Any($value));
+    }
+
+    public function regex(
+        bool|int|float|string|array|DbValue $value
+    ): SearchWhereFilterLogicBuilder {
+        return $this->value(ComparisonBuilder::Regex($value));
+    }
+}
+
+class SearchWhereFilterBuilder
+{
+    public SearchQueryBuilder $__data;
+    public string $__modifier = QueryConditionModifier::NONE;
+    public string $__logic = QueryConditionLogic::_AND;
+    public array $__conditions = [[]];
+
+    public function __construct(SearchQueryBuilder $data)
+    {
+        $this->__data = $data;
+    }
+
+    public function edge(): SearchWhereFilterLogicBuilder
+    {
+        $this->__push_condition("Edge");
+        return new SearchWhereFilterLogicBuilder($this);
+    }
+
+    public function edge_count(
+        CountComparison|int $comparison
+    ): SearchWhereFilterLogicBuilder {
+        if (is_int($comparison)) {
+            $comparison = CountComparisonBuilder::Equal($comparison);
+        }
+        $this->__push_condition(
+            new QueryConditionData(["edge_count" => $comparison])
+        );
+        return new SearchWhereFilterLogicBuilder($this);
+    }
+
+    public function edge_count_from(
+        CountComparison|int $comparison
+    ): SearchWhereFilterLogicBuilder {
+        if (is_int($comparison)) {
+            $comparison = CountComparisonBuilder::Equal($comparison);
+        }
+        $this->__push_condition(
+            new QueryConditionData(["edge_count_from" => $comparison])
+        );
+        return new SearchWhereFilterLogicBuilder($this);
+    }
+
+    public function edge_count_to(
+        CountComparison|int $comparison
+    ): SearchWhereFilterLogicBuilder {
+        if (is_int($comparison)) {
+            $comparison = CountComparisonBuilder::Equal($comparison);
+        }
+        $this->__push_condition(
+            new QueryConditionData(["edge_count_to" => $comparison])
+        );
+        return new SearchWhereFilterLogicBuilder($this);
+    }
+
+    public function ids(
+        string|int|array|QueryId|QueryIds $ids
+    ): SearchWhereFilterLogicBuilder {
+        $this->__push_condition(
+            new QueryConditionData(["ids" => to_query_ids($ids)->getIds()])
+        );
+        return new SearchWhereFilterLogicBuilder($this);
+    }
+
+    public function key(
+        int|float|string|array|DbValue $key
+    ): SearchWhereFilterKeyBuilder {
+        return new SearchWhereFilterKeyBuilder($this, to_db_value($key));
+    }
+
+    public function keys(
+        int|float|string|array|DbValue $keys
+    ): SearchWhereFilterLogicBuilder {
+        $this->__push_condition(
+            new QueryConditionData([
+                "keys" => is_array($keys)
+                    ? to_db_keys($keys)
+                    : [to_db_value($keys)],
+            ])
+        );
+        return new SearchWhereFilterLogicBuilder($this);
+    }
+
+    public function node(): SearchWhereFilterLogicBuilder
+    {
+        $this->__push_condition("Node");
+        return new SearchWhereFilterLogicBuilder($this);
+    }
+
+    public function not(): SearchWhereFilterBuilder
+    {
+        $this->__modifier = QueryConditionModifier::NOT;
+        return $this;
+    }
+
+    public function where(): SearchWhereFilterBuilder
+    {
+        $this->__push_condition(new QueryConditionData(["where" => []]));
+        $this->__conditions[] = [];
+        return $this;
+    }
+
+    public function edge_count_greater_than(
+        int $v
+    ): SearchWhereFilterLogicBuilder {
+        return $this->edge_count(CountComparisonBuilder::GreaterThan($v));
+    }
+
+    public function edge_count_greater_than_or_equal(
+        int $v
+    ): SearchWhereFilterLogicBuilder {
+        return $this->edge_count(
+            CountComparisonBuilder::GreaterThanOrEqual($v)
+        );
+    }
+
+    public function edge_count_less_than(int $v): SearchWhereFilterLogicBuilder
+    {
+        return $this->edge_count(CountComparisonBuilder::LessThan($v));
+    }
+
+    public function edge_count_less_than_or_equal(
+        int $v
+    ): SearchWhereFilterLogicBuilder {
+        return $this->edge_count(CountComparisonBuilder::LessThanOrEqual($v));
+    }
+
+    public function edge_count_not_equal(int $v): SearchWhereFilterLogicBuilder
+    {
+        return $this->edge_count(CountComparisonBuilder::NotEqual($v));
+    }
+
+    public function edge_count_from_greater_than(
+        int $v
+    ): SearchWhereFilterLogicBuilder {
+        return $this->edge_count_from(CountComparisonBuilder::GreaterThan($v));
+    }
+
+    public function edge_count_from_greater_than_or_equal(
+        int $v
+    ): SearchWhereFilterLogicBuilder {
+        return $this->edge_count_from(
+            CountComparisonBuilder::GreaterThanOrEqual($v)
+        );
+    }
+
+    public function edge_count_from_less_than(
+        int $v
+    ): SearchWhereFilterLogicBuilder {
+        return $this->edge_count_from(CountComparisonBuilder::LessThan($v));
+    }
+
+    public function edge_count_from_less_than_or_equal(
+        int $v
+    ): SearchWhereFilterLogicBuilder {
+        return $this->edge_count_from(
+            CountComparisonBuilder::LessThanOrEqual($v)
+        );
+    }
+
+    public function edge_count_from_not_equal(
+        int $v
+    ): SearchWhereFilterLogicBuilder {
+        return $this->edge_count_from(CountComparisonBuilder::NotEqual($v));
+    }
+
+    public function edge_count_to_greater_than(
+        int $v
+    ): SearchWhereFilterLogicBuilder {
+        return $this->edge_count_to(CountComparisonBuilder::GreaterThan($v));
+    }
+
+    public function edge_count_to_greater_than_or_equal(
+        int $v
+    ): SearchWhereFilterLogicBuilder {
+        return $this->edge_count_to(
+            CountComparisonBuilder::GreaterThanOrEqual($v)
+        );
+    }
+
+    public function edge_count_to_less_than(
+        int $v
+    ): SearchWhereFilterLogicBuilder {
+        return $this->edge_count_to(CountComparisonBuilder::LessThan($v));
+    }
+
+    public function edge_count_to_less_than_or_equal(
+        int $v
+    ): SearchWhereFilterLogicBuilder {
+        return $this->edge_count_to(
+            CountComparisonBuilder::LessThanOrEqual($v)
+        );
+    }
+
+    public function edge_count_to_not_equal(
+        int $v
+    ): SearchWhereFilterLogicBuilder {
+        return $this->edge_count_to(CountComparisonBuilder::NotEqual($v));
+    }
+
+    public function __push_condition(string|QueryConditionData $data): void
+    {
+        $count = count($this->__conditions);
+        array_push(
+            $this->__conditions[$count - 1],
+            new QueryCondition([
+                "data" => $data,
+                "modifier" => $this->__modifier,
+                "logic" => $this->__logic,
+            ])
+        );
+        $this->__modifier = QueryConditionModifier::NONE;
+        $this->__logic = QueryConditionLogic::_AND;
+    }
+
+    public function __collapse_conditions(): bool
+    {
+        $len = count($this->__conditions);
+
+        if ($len > 1) {
+            $last = array_pop($this->__conditions);
+            $current = end($this->__conditions);
+            $last_condition = end($current);
+            $last_condition->setData(
+                new QueryConditionData(["where" => $last])
+            );
+            return true;
+        }
+
+        return false;
     }
 }
 
@@ -1170,8 +1631,9 @@ class SearchWhereLogicBuilder
     {
         while ($this->data->__collapse_conditions()) {
         }
+        $existing = $this->data->__data->search->getConditions();
         $this->data->__data->search->setConditions(
-            $this->data->__conditions[0]
+            array_merge($this->data->__conditions[0], $existing)
         );
         return $this->data->__data->query ?:
             new QueryType(["search" => $this->data->__data->search]);

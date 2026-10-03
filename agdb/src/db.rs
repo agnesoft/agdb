@@ -914,7 +914,6 @@ impl<Store: StorageData> DbImpl<Store> {
                 alias: alias.clone(),
             });
             self.aliases.remove_key(&mut self.storage, alias)?;
-            self.aliases.remove_key(&mut self.storage, alias)?;
 
             return Ok(true);
         }

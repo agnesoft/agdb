@@ -177,6 +177,12 @@ class ComparisonBuilder
     ): Comparison {
         return new Comparison(["ends_with" => to_db_value($value)]);
     }
+
+    public static function Any(
+        bool|int|float|string|array|DbValue $value
+    ): Comparison {
+        return new Comparison(["any" => to_db_value($value)]);
+    }
 }
 
 class DbKeyOrderBuilder

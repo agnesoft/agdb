@@ -62,6 +62,7 @@ use agdb::Search;
 use agdb::SearchAlgorithm;
 use agdb::SearchFrom;
 use agdb::SearchIndexBuilder;
+use agdb::SearchIndexOrderBy;
 use agdb::SearchIndexValue;
 use agdb::SearchOrderBy;
 use agdb::SearchQuery;
@@ -77,6 +78,8 @@ use agdb::SelectEdgeCount;
 use agdb::SelectEdgeCountIds;
 use agdb::SelectEdgeCountQuery;
 use agdb::SelectIds;
+use agdb::SelectIndexLimit;
+use agdb::SelectIndexOffset;
 use agdb::SelectIndexes;
 use agdb::SelectIndexesQuery;
 use agdb::SelectKeyCount;
@@ -212,8 +215,11 @@ impl Api {
             SearchFrom::<SearchQuery>::type_def(),
             SearchTo::<SearchQuery>::type_def(),
             SearchIndexBuilder::<SearchQuery>::type_def(),
+            SearchIndexOrderBy::<SearchQuery>::type_def(),
             SearchIndexValue::<SearchQuery>::type_def(),
             SearchOrderBy::<SearchQuery>::type_def(),
+            SelectIndexLimit::<SearchQuery>::type_def(),
+            SelectIndexOffset::<SearchQuery>::type_def(),
             SelectLimit::<SearchQuery>::type_def(),
             SelectOffset::<SearchQuery>::type_def(),
             Select::type_def(),

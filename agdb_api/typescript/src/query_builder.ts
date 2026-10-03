@@ -1111,14 +1111,10 @@ class SearchWhereLogicBuilder {
     query(): Components.Schemas.QueryType {
         // prettier-ignore
         do { /**/ } while (collapse_conditions(this.data.conditions));
-        if (this.data.data.search.algorithm === "Index") {
-            this.data.data.search.conditions.push(...this.data.conditions[0]);
-        } else {
-            this.data.data.search.conditions = [
-                ...this.data.conditions[0],
-                ...this.data.data.search.conditions,
-            ];
-        }
+        this.data.data.search.conditions = [
+            ...this.data.conditions[0],
+            ...this.data.data.search.conditions,
+        ];
         return this.data.data.query ?? { Search: this.data.data.search };
     }
 }
@@ -1576,21 +1572,21 @@ class SearchIndexValueBuilder {
         this.data = data;
     }
 
-    limit(limit: number): SearchLimitBuilder {
+    limit(limit: number): SearchIndexLimitBuilder {
         this.data.search.limit = limit;
-        return new SearchLimitBuilder(this.data);
+        return new SearchIndexLimitBuilder(this.data);
     }
 
-    offset(offset: number): SearchOffsetBuilder {
+    offset(offset: number): SearchIndexOffsetBuilder {
         this.data.search.offset = offset;
-        return new SearchOffsetBuilder(this.data);
+        return new SearchIndexOffsetBuilder(this.data);
     }
 
     order_by(
         keys: Components.Schemas.DbKeyOrder | Components.Schemas.DbKeyOrder[],
-    ): SearchOrderByBuilder {
+    ): SearchIndexOrderByBuilder {
         this.data.search.order_by = intoDbKeyOrder(keys);
-        return new SearchOrderByBuilder(this.data);
+        return new SearchIndexOrderByBuilder(this.data);
     }
 
     query(): Components.Schemas.QueryType {
@@ -1599,6 +1595,69 @@ class SearchIndexValueBuilder {
 
     where(): SearchWhereFilterBuilder {
         return new SearchWhereFilterBuilder(this.data);
+    }
+}
+
+class SearchIndexLimitBuilder {
+    private data: SearchBuilderData;
+
+    constructor(data: SearchBuilderData) {
+        this.data = data;
+    }
+
+    where(): SearchWhereFilterBuilder {
+        return new SearchWhereFilterBuilder(this.data);
+    }
+
+    query(): Components.Schemas.QueryType {
+        return this.data.query ?? { Search: this.data.search };
+    }
+}
+
+class SearchIndexOffsetBuilder {
+    private data: SearchBuilderData;
+
+    constructor(data: SearchBuilderData) {
+        this.data = data;
+    }
+
+    limit(limit: number): SearchIndexLimitBuilder {
+        this.data.search.limit = limit;
+        return new SearchIndexLimitBuilder(this.data);
+    }
+
+    where(): SearchWhereFilterBuilder {
+        return new SearchWhereFilterBuilder(this.data);
+    }
+
+    query(): Components.Schemas.QueryType {
+        return this.data.query ?? { Search: this.data.search };
+    }
+}
+
+class SearchIndexOrderByBuilder {
+    private data: SearchBuilderData;
+
+    constructor(data: SearchBuilderData) {
+        this.data = data;
+    }
+
+    limit(limit: number): SearchIndexLimitBuilder {
+        this.data.search.limit = limit;
+        return new SearchIndexLimitBuilder(this.data);
+    }
+
+    offset(offset: number): SearchIndexOffsetBuilder {
+        this.data.search.offset = offset;
+        return new SearchIndexOffsetBuilder(this.data);
+    }
+
+    where(): SearchWhereFilterBuilder {
+        return new SearchWhereFilterBuilder(this.data);
+    }
+
+    query(): Components.Schemas.QueryType {
+        return this.data.query ?? { Search: this.data.search };
     }
 }
 

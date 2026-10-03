@@ -2813,6 +2813,114 @@
     }
   ],
   [
+    "QueryBuilder::search().index(\"age\").value(20).limit(5).query()",
+    {
+      "Search": {
+        "algorithm": "Index",
+        "origin": {
+          "Id": 0
+        },
+        "destination": {
+          "Id": 0
+        },
+        "limit": 5,
+        "offset": 0,
+        "order_by": [],
+        "conditions": [
+          {
+            "logic": "And",
+            "modifier": "None",
+            "data": {
+              "KeyValue": {
+                "key": {
+                  "String": "age"
+                },
+                "value": {
+                  "Equal": {
+                    "I64": 20
+                  }
+                }
+              }
+            }
+          }
+        ],
+        "reverse": false
+      }
+    }
+  ],
+  [
+    "QueryBuilder::search().index(\"age\").value(20).offset(5).query()",
+    {
+      "Search": {
+        "algorithm": "Index",
+        "origin": {
+          "Id": 0
+        },
+        "destination": {
+          "Id": 0
+        },
+        "limit": 0,
+        "offset": 5,
+        "order_by": [],
+        "conditions": [
+          {
+            "logic": "And",
+            "modifier": "None",
+            "data": {
+              "KeyValue": {
+                "key": {
+                  "String": "age"
+                },
+                "value": {
+                  "Equal": {
+                    "I64": 20
+                  }
+                }
+              }
+            }
+          }
+        ],
+        "reverse": false
+      }
+    }
+  ],
+  [
+    "QueryBuilder::search().index(\"age\").value(20).offset(5).limit(1).query()",
+    {
+      "Search": {
+        "algorithm": "Index",
+        "origin": {
+          "Id": 0
+        },
+        "destination": {
+          "Id": 0
+        },
+        "limit": 1,
+        "offset": 5,
+        "order_by": [],
+        "conditions": [
+          {
+            "logic": "And",
+            "modifier": "None",
+            "data": {
+              "KeyValue": {
+                "key": {
+                  "String": "age"
+                },
+                "value": {
+                  "Equal": {
+                    "I64": 20
+                  }
+                }
+              }
+            }
+          }
+        ],
+        "reverse": false
+      }
+    }
+  ],
+  [
     "QueryBuilder::search().index(\"age\").value(20).offset(5).limit(1).where_().node().query()",
     {
       "Search": {
@@ -4570,6 +4678,194 @@
                 }
               }
             }
+          }
+        ],
+        "reverse": false
+      }
+    }
+  ],
+  [
+    "QueryBuilder::search().index(\"age\").value(20).order_by([DbKeyOrder::Asc(\"k\".into())]).where_().node().query()",
+    {
+      "Search": {
+        "algorithm": "Index",
+        "origin": {
+          "Id": 0
+        },
+        "destination": {
+          "Id": 0
+        },
+        "limit": 0,
+        "offset": 0,
+        "order_by": [
+          {
+            "Asc": {
+              "String": "k"
+            }
+          }
+        ],
+        "conditions": [
+          {
+            "logic": "And",
+            "modifier": "None",
+            "data": {
+              "KeyValue": {
+                "key": {
+                  "String": "age"
+                },
+                "value": {
+                  "Equal": {
+                    "I64": 20
+                  }
+                }
+              }
+            }
+          },
+          {
+            "logic": "And",
+            "modifier": "None",
+            "data": "Node"
+          }
+        ],
+        "reverse": false
+      }
+    }
+  ],
+  [
+    "QueryBuilder::search().index(\"age\").value(20).order_by([DbKeyOrder::Asc(\"k\".into())]).offset(5).where_().node().query()",
+    {
+      "Search": {
+        "algorithm": "Index",
+        "origin": {
+          "Id": 0
+        },
+        "destination": {
+          "Id": 0
+        },
+        "limit": 0,
+        "offset": 5,
+        "order_by": [
+          {
+            "Asc": {
+              "String": "k"
+            }
+          }
+        ],
+        "conditions": [
+          {
+            "logic": "And",
+            "modifier": "None",
+            "data": {
+              "KeyValue": {
+                "key": {
+                  "String": "age"
+                },
+                "value": {
+                  "Equal": {
+                    "I64": 20
+                  }
+                }
+              }
+            }
+          },
+          {
+            "logic": "And",
+            "modifier": "None",
+            "data": "Node"
+          }
+        ],
+        "reverse": false
+      }
+    }
+  ],
+  [
+    "QueryBuilder::search().index(\"age\").value(20).order_by([DbKeyOrder::Asc(\"k\".into())]).limit(5).where_().node().query()",
+    {
+      "Search": {
+        "algorithm": "Index",
+        "origin": {
+          "Id": 0
+        },
+        "destination": {
+          "Id": 0
+        },
+        "limit": 5,
+        "offset": 0,
+        "order_by": [
+          {
+            "Asc": {
+              "String": "k"
+            }
+          }
+        ],
+        "conditions": [
+          {
+            "logic": "And",
+            "modifier": "None",
+            "data": {
+              "KeyValue": {
+                "key": {
+                  "String": "age"
+                },
+                "value": {
+                  "Equal": {
+                    "I64": 20
+                  }
+                }
+              }
+            }
+          },
+          {
+            "logic": "And",
+            "modifier": "None",
+            "data": "Node"
+          }
+        ],
+        "reverse": false
+      }
+    }
+  ],
+  [
+    "QueryBuilder::search().index(\"age\").value(20).order_by([DbKeyOrder::Asc(\"k\".into())]).offset(5).limit(5).where_().node().query()",
+    {
+      "Search": {
+        "algorithm": "Index",
+        "origin": {
+          "Id": 0
+        },
+        "destination": {
+          "Id": 0
+        },
+        "limit": 5,
+        "offset": 5,
+        "order_by": [
+          {
+            "Asc": {
+              "String": "k"
+            }
+          }
+        ],
+        "conditions": [
+          {
+            "logic": "And",
+            "modifier": "None",
+            "data": {
+              "KeyValue": {
+                "key": {
+                  "String": "age"
+                },
+                "value": {
+                  "Equal": {
+                    "I64": 20
+                  }
+                }
+              }
+            }
+          },
+          {
+            "logic": "And",
+            "modifier": "None",
+            "data": "Node"
           }
         ],
         "reverse": false

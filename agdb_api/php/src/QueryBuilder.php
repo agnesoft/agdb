@@ -981,22 +981,22 @@ class SearchIndexValueBuilder
         $this->data = $data;
     }
 
-    public function limit(int $limit): SearchLimitBuilder
+    public function limit(int $limit): SearchIndexLimitBuilder
     {
         $this->data->search->setLimit($limit);
-        return new SearchLimitBuilder($this->data);
+        return new SearchIndexLimitBuilder($this->data);
     }
 
-    public function offset(int $offset): SearchOffsetBuilder
+    public function offset(int $offset): SearchIndexOffsetBuilder
     {
         $this->data->search->setOffset($offset);
-        return new SearchOffsetBuilder($this->data);
+        return new SearchIndexOffsetBuilder($this->data);
     }
 
-    public function order_by(DbKeyOrder|array $keys): SearchOrderByBuilder
+    public function order_by(DbKeyOrder|array $keys): SearchIndexOrderByBuilder
     {
         $this->data->search->setOrderBy(is_array($keys) ? $keys : [$keys]);
-        return new SearchOrderByBuilder($this->data);
+        return new SearchIndexOrderByBuilder($this->data);
     }
 
     public function where(): SearchWhereFilterBuilder
@@ -1009,6 +1009,84 @@ class SearchIndexValueBuilder
         return $this->data->query != null
             ? $this->data->query
             : new QueryType(["search" => $this->data->search]);
+    }
+}
+
+class SearchIndexLimitBuilder
+{
+    private SearchQueryBuilder $data;
+
+    public function __construct(SearchQueryBuilder $data)
+    {
+        $this->data = $data;
+    }
+
+    public function where(): SearchWhereFilterBuilder
+    {
+        return new SearchWhereFilterBuilder($this->data);
+    }
+
+    public function query(): QueryType
+    {
+        return new QueryType(["search" => $this->data->search]);
+    }
+}
+
+class SearchIndexOffsetBuilder
+{
+    private SearchQueryBuilder $data;
+
+    public function __construct(SearchQueryBuilder $data)
+    {
+        $this->data = $data;
+    }
+
+    public function limit(int $limit): SearchIndexLimitBuilder
+    {
+        $this->data->search->setLimit($limit);
+        return new SearchIndexLimitBuilder($this->data);
+    }
+
+    public function where(): SearchWhereFilterBuilder
+    {
+        return new SearchWhereFilterBuilder($this->data);
+    }
+
+    public function query(): QueryType
+    {
+        return new QueryType(["search" => $this->data->search]);
+    }
+}
+
+class SearchIndexOrderByBuilder
+{
+    private SearchQueryBuilder $data;
+
+    public function __construct(SearchQueryBuilder $data)
+    {
+        $this->data = $data;
+    }
+
+    public function limit(int $limit): SearchIndexLimitBuilder
+    {
+        $this->data->search->setLimit($limit);
+        return new SearchIndexLimitBuilder($this->data);
+    }
+
+    public function offset(int $offset): SearchIndexOffsetBuilder
+    {
+        $this->data->search->setOffset($offset);
+        return new SearchIndexOffsetBuilder($this->data);
+    }
+
+    public function where(): SearchWhereFilterBuilder
+    {
+        return new SearchWhereFilterBuilder($this->data);
+    }
+
+    public function query(): QueryType
+    {
+        return new QueryType(["search" => $this->data->search]);
     }
 }
 
@@ -1553,20 +1631,10 @@ class SearchWhereLogicBuilder
     {
         while ($this->data->__collapse_conditions()) {
         }
-        if (
-            $this->data->__data->search->getAlgorithm() ===
-            SearchQueryAlgorithm::INDEX
-        ) {
-            $existing = $this->data->__data->search->getConditions();
-            $this->data->__data->search->setConditions(
-                array_merge($existing, $this->data->__conditions[0])
-            );
-        } else {
-            $existing = $this->data->__data->search->getConditions();
-            $this->data->__data->search->setConditions(
-                array_merge($this->data->__conditions[0], $existing)
-            );
-        }
+        $existing = $this->data->__data->search->getConditions();
+        $this->data->__data->search->setConditions(
+            array_merge($this->data->__conditions[0], $existing)
+        );
         return $this->data->__data->query ?:
             new QueryType(["search" => $this->data->__data->search]);
     }

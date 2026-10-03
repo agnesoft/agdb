@@ -526,3 +526,139 @@ fn search_index_where_nested() {
         &[1, 2],
     );
 }
+
+#[test]
+fn search_index_offset_where() {
+    let mut db = TestDb::new();
+    db.exec_mut(QueryBuilder::insert().index("role").query(), 0);
+
+    db.exec_mut(
+        QueryBuilder::insert()
+            .nodes()
+            .values([
+                vec![("role", "admin").into(), ("active", 1).into()],
+                vec![("role", "admin").into(), ("active", 0).into()],
+                vec![("role", "admin").into(), ("active", 1).into()],
+                vec![("role", "admin").into(), ("active", 1).into()],
+            ])
+            .query(),
+        4,
+    );
+
+    db.exec_ids(
+        QueryBuilder::search()
+            .index("role")
+            .value("admin")
+            .offset(1)
+            .where_()
+            .key("active")
+            .value(1)
+            .query(),
+        &[3, 4],
+    );
+}
+
+#[test]
+fn search_index_limit_where() {
+    let mut db = TestDb::new();
+    db.exec_mut(QueryBuilder::insert().index("role").query(), 0);
+
+    db.exec_mut(
+        QueryBuilder::insert()
+            .nodes()
+            .values([
+                vec![("role", "admin").into(), ("active", 1).into()],
+                vec![("role", "admin").into(), ("active", 0).into()],
+                vec![("role", "admin").into(), ("active", 1).into()],
+                vec![("role", "admin").into(), ("active", 1).into()],
+            ])
+            .query(),
+        4,
+    );
+
+    db.exec_ids(
+        QueryBuilder::search()
+            .index("role")
+            .value("admin")
+            .limit(2)
+            .where_()
+            .key("active")
+            .value(1)
+            .query(),
+        &[1, 3],
+    );
+}
+
+#[test]
+fn search_index_offset_limit_where() {
+    let mut db = TestDb::new();
+    db.exec_mut(QueryBuilder::insert().index("role").query(), 0);
+
+    db.exec_mut(
+        QueryBuilder::insert()
+            .nodes()
+            .values([
+                vec![("role", "admin").into(), ("active", 1).into()],
+                vec![("role", "admin").into(), ("active", 0).into()],
+                vec![("role", "admin").into(), ("active", 1).into()],
+                vec![("role", "admin").into(), ("active", 1).into()],
+            ])
+            .query(),
+        4,
+    );
+
+    db.exec_ids(
+        QueryBuilder::search()
+            .index("role")
+            .value("admin")
+            .offset(1)
+            .limit(1)
+            .where_()
+            .key("active")
+            .value(1)
+            .query(),
+        &[3],
+    );
+}
+
+#[test]
+fn search_index_order_by_where() {
+    let mut db = TestDb::new();
+    db.exec_mut(QueryBuilder::insert().index("role").query(), 0);
+
+    db.exec_mut(
+        QueryBuilder::insert()
+            .nodes()
+            .values([
+                vec![
+                    ("role", "admin").into(),
+                    ("name", "carol").into(),
+                    ("active", 1).into(),
+                ],
+                vec![
+                    ("role", "admin").into(),
+                    ("name", "alice").into(),
+                    ("active", 0).into(),
+                ],
+                vec![
+                    ("role", "admin").into(),
+                    ("name", "bob").into(),
+                    ("active", 1).into(),
+                ],
+            ])
+            .query(),
+        3,
+    );
+
+    db.exec_ids(
+        QueryBuilder::search()
+            .index("role")
+            .value("admin")
+            .order_by([DbKeyOrder::Asc("name".into())])
+            .where_()
+            .key("active")
+            .value(1)
+            .query(),
+        &[3, 1],
+    );
+}

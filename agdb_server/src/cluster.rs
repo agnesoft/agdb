@@ -1,6 +1,7 @@
 use crate::action::Action;
 use crate::action::ClusterAction;
 use crate::action::ClusterActionResult;
+use crate::action::ResyncTarget;
 use crate::cluster_log::CLUSTER_LOG_FILE;
 use crate::cluster_log::ClusterLog;
 use crate::config::Config;
@@ -10,9 +11,10 @@ use crate::raft::Log;
 use crate::raft::Request;
 use crate::raft::Response;
 use crate::raft::Storage;
+use crate::resync::RESYNC_SERVER_DB_NAME;
+use crate::resync::RESYNC_SERVER_DB_OWNER;
 use crate::server_db::SERVER_DB_FILE;
 use crate::server_db::ServerDb;
-use crate::server_error::ServerError;
 use crate::server_error::ServerResult;
 use agdb::DbId;
 use agdb::StableHash;
@@ -23,28 +25,29 @@ use axum::extract::Request as AxumRequest;
 use axum::http::HeaderMap;
 use axum::response::Response as AxumResponse;
 use futures::FutureExt;
-use futures::StreamExt;
 use reqwest::StatusCode;
 use std::collections::HashMap;
 use std::path::Path;
 use std::str::FromStr;
 use std::sync::Arc;
+use std::sync::Mutex;
+use std::sync::RwLock as StdRwLock;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;
 use std::time::Duration;
-use tokio::io::AsyncReadExt;
-use tokio::io::AsyncWriteExt;
 use tokio::signal;
 use tokio::sync::RwLock;
 use tokio::sync::broadcast;
 use tokio::sync::mpsc::UnboundedReceiver;
 use tokio::sync::mpsc::UnboundedSender;
+use tokio::sync::oneshot::Sender;
+use tokio::time::Instant;
 
 pub(crate) type Cluster = Arc<ClusterImpl>;
 
 type ClusterNode = Arc<ClusterNodeImpl>;
-type ResultNotifier = tokio::sync::oneshot::Sender<ServerResult<(u64, ClusterActionResult)>>;
+type ResultNotifier = Sender<ServerResult<(u64, ClusterActionResult)>>;
 type ClusterResponseReceiver = UnboundedReceiver<(Request<ClusterAction>, Response)>;
 
 pub(crate) struct ClusterNodeImpl {
@@ -66,6 +69,7 @@ pub(crate) struct ClusterImpl {
     pub(crate) resync: Arc<AtomicBool>,
     pub(crate) snapshot_in_flight: Arc<AtomicUsize>,
     pub(crate) poisoned: Arc<AtomicBool>,
+    pub(crate) resync_in_progress: Arc<Mutex<std::collections::HashSet<(String, String)>>>,
 }
 
 impl ClusterImpl {
@@ -118,6 +122,16 @@ impl ClusterNodeImpl {
             requests_receiver: RwLock::new(requests_receiver),
             responses,
         })
+    }
+
+    pub(crate) fn base_url(&self) -> &str {
+        &self.base_url
+    }
+
+    /// Returns a reference to the node's shared reqwest client,
+    /// avoiding per-call TLS/connection-pool setup costs.
+    pub(crate) fn http_client(&self) -> &reqwest::Client {
+        &self.client.client
     }
 
     fn bad_request(message: &str) -> AxumResponse {
@@ -266,6 +280,7 @@ pub(crate) async fn new(
         resync,
         snapshot_in_flight,
         poisoned,
+        resync_in_progress: Arc::new(Mutex::new(std::collections::HashSet::new())),
     }))
 }
 
@@ -294,10 +309,10 @@ async fn start_cluster(
                             ),
                         }
                     } else if request.is_append() {
-                        let fail_response = raft::Response {
-                            target: request.index,
-                            result: raft::ResponseType::CommitError("send failed".into()),
-                        };
+                        let fail_response = raft::Response::new(
+                            request.index,
+                            raft::ResponseType::CommitError("send failed".into()),
+                        );
                         let _ = node.responses.send((request, fail_response));
                     }
                 } else {
@@ -348,7 +363,7 @@ async fn start_cluster(
         ServerResult::Ok(())
     });
 
-    let mut resync_retry_at: Option<tokio::time::Instant> = None;
+    let mut resync_retry_at: Option<Instant> = None;
     let mut panic_resync_done = false;
 
     while !shutdown_signal.load(Ordering::Relaxed) {
@@ -356,9 +371,7 @@ async fn start_cluster(
 
         if (cluster.raft.read().await.needs_resync() || is_poisoned)
             && !cluster.resync.load(Ordering::Relaxed)
-            && resync_retry_at
-                .map(|t| tokio::time::Instant::now() >= t)
-                .unwrap_or(true)
+            && resync_retry_at.map(|t| Instant::now() >= t).unwrap_or(true)
         {
             if is_poisoned {
                 if panic_resync_done {
@@ -381,7 +394,7 @@ async fn start_cluster(
 
             crate::warn!("[{index}] Node needs resync, initiating resync from leader");
 
-            match resync_from_leader(&cluster, &config, is_poisoned).await {
+            match crate::resync::resync_from_leader(&cluster, &config, is_poisoned).await {
                 Ok(_) => {
                     cluster.raft.write().await.clear_needs_resync();
                     if is_poisoned {
@@ -389,7 +402,7 @@ async fn start_cluster(
                     }
                 }
                 Err(e) => {
-                    resync_retry_at = Some(tokio::time::Instant::now() + Duration::from_secs(5));
+                    resync_retry_at = Some(Instant::now() + Duration::from_secs(5));
                     crate::error!("[{index}] Resync attempt failed: {e:?}");
                 }
             }
@@ -413,492 +426,6 @@ async fn start_cluster(
     }
 
     Ok(())
-}
-
-async fn resync_from_leader(
-    cluster: &Cluster,
-    config: &Config,
-    force_snapshot: bool,
-) -> ServerResult<()> {
-    let leader = cluster.raft.read().await.leader();
-    let leader_index = match leader {
-        Some(l) if l as usize != cluster.index => l as usize,
-        _ => {
-            return Err(ServerError::from(
-                "Cannot resync: no leader available or this node is the leader",
-            ));
-        }
-    };
-
-    cluster.resync.store(true, Ordering::Relaxed);
-
-    if !force_snapshot {
-        let from_index = cluster.raft.read().await.storage.log_commit();
-        match catchup_logs_from_leader(cluster, config, leader_index, from_index).await {
-            Ok(()) => {
-                cluster.resync.store(false, Ordering::Relaxed);
-                crate::info!("[{}] Resync completed via log catch-up", cluster.index);
-                return Ok(());
-            }
-            Err(e) => {
-                crate::info!(
-                    "[{}] Log catch-up failed ({e:?}), falling back to full snapshot",
-                    cluster.index
-                );
-            }
-        }
-    }
-
-    let mut snapshot_sources: Vec<usize> = (0..cluster.nodes.len())
-        .filter(|index| *index != cluster.index && *index != leader_index)
-        .collect();
-    snapshot_sources.push(leader_index);
-
-    crate::info!(
-        "[{}] Starting snapshot resync, candidates: {:?}",
-        cluster.index,
-        snapshot_sources
-    );
-
-    let mut result = Err(ServerError::from("no snapshot source available"));
-
-    for source_index in snapshot_sources {
-        crate::info!(
-            "[{}] Attempting snapshot download from node {}",
-            cluster.index,
-            source_index
-        );
-
-        match do_resync(cluster, config, source_index).await {
-            Ok(()) => {
-                result = Ok(());
-                break;
-            }
-            Err(error) => {
-                crate::warn!(
-                    "[{}] Snapshot download from node {} failed: {:?}",
-                    cluster.index,
-                    source_index,
-                    error
-                );
-                result = Err(error);
-            }
-        }
-    }
-
-    cluster.resync.store(false, Ordering::Relaxed);
-
-    match &result {
-        Ok(()) => crate::info!("[{}] Resync completed via snapshot", cluster.index),
-        Err(e) => crate::error!("[{}] Resync failed: {:?}", cluster.index, e),
-    }
-
-    result
-}
-
-async fn catchup_logs_from_leader(
-    cluster: &Cluster,
-    config: &Config,
-    leader_index: usize,
-    from_index: u64,
-) -> ServerResult<()> {
-    let logs_url = format!(
-        "{}/api/v1/cluster/logs?from_index={from_index}",
-        cluster.nodes[leader_index].base_url
-    );
-
-    let response = cluster.nodes[leader_index]
-        .client
-        .client
-        .get(&logs_url)
-        .bearer_auth(&config.cluster_token)
-        .timeout(Duration::from_secs(600))
-        .send()
-        .await
-        .map_err(|e| ServerError::from(format!("log catch-up request failed: {e:?}")))?;
-
-    let status = response.status().as_u16();
-    if status != 200 {
-        let body = response.text().await.unwrap_or_default();
-        return Err(ServerError::from(format!(
-            "log catch-up endpoint returned {status}: {body}",
-        )));
-    }
-
-    let mut stream = response.bytes_stream();
-    let mut buf: Vec<u8> = Vec::new();
-
-    while buf.len() < 16 {
-        match stream.next().await {
-            Some(Ok(chunk)) => buf.extend_from_slice(&chunk),
-            Some(Err(e)) => {
-                return Err(ServerError::from(format!(
-                    "log catch-up stream error: {e:?}"
-                )));
-            }
-            None => {
-                return Err(ServerError::from(
-                    "log catch-up response too small (missing header)",
-                ));
-            }
-        }
-    }
-
-    let entry_count = u64::from_le_bytes(buf[0..8].try_into().unwrap());
-    let commit_index = u64::from_le_bytes(buf[8..16].try_into().unwrap());
-
-    const MAX_CATCHUP_ENTRIES: u64 = 100_000;
-    if entry_count > MAX_CATCHUP_ENTRIES {
-        return Err(ServerError::from(format!(
-            "log catch-up entry count {entry_count} exceeds limit {MAX_CATCHUP_ENTRIES}",
-        )));
-    }
-
-    buf.drain(0..16);
-
-    let mut entries = Vec::with_capacity(entry_count as usize);
-    let mut prev_index = from_index;
-
-    for _ in 0..entry_count {
-        while buf.len() < 8 {
-            match stream.next().await {
-                Some(Ok(chunk)) => buf.extend_from_slice(&chunk),
-                Some(Err(e)) => {
-                    return Err(ServerError::from(format!(
-                        "log catch-up stream error: {e:?}"
-                    )));
-                }
-                None => return Err(ServerError::from("log catch-up truncated (json_len)")),
-            }
-        }
-        let json_len = u64::from_le_bytes(buf[0..8].try_into().unwrap()) as usize;
-        buf.drain(0..8);
-
-        while buf.len() < json_len {
-            match stream.next().await {
-                Some(Ok(chunk)) => buf.extend_from_slice(&chunk),
-                Some(Err(e)) => {
-                    return Err(ServerError::from(format!(
-                        "log catch-up stream error: {e:?}"
-                    )));
-                }
-                None => return Err(ServerError::from("log catch-up truncated (json_bytes)")),
-            }
-        }
-        let log: Log<ClusterAction> = serde_json::from_slice(&buf[..json_len])
-            .map_err(|e| ServerError::from(format!("log catch-up deserialization error: {e}")))?;
-        buf.drain(0..json_len);
-
-        if log.index != prev_index + 1 {
-            return Err(ServerError::from(format!(
-                "log catch-up non-contiguous: expected index {}, got {}",
-                prev_index + 1,
-                log.index
-            )));
-        }
-
-        prev_index = log.index;
-        entries.push(log);
-    }
-
-    let mut raft = cluster.raft.write().await;
-    let last_index = entries.last().map(|log| log.index);
-
-    for log in entries {
-        raft.storage.append(log, None).await?;
-    }
-
-    if let Some(last_index) = last_index {
-        if commit_index > last_index {
-            return Err(ServerError::from(format!(
-                "log catch-up commit_index {commit_index} exceeds last applied index {last_index}",
-            )));
-        }
-
-        if commit_index > raft.storage.commit {
-            raft.storage.commit(commit_index).await?;
-        }
-    }
-
-    raft.refresh_local_from_storage();
-
-    crate::info!(
-        "[{}] Log catch-up complete: {} entries applied, commit_index={}",
-        cluster.index,
-        entry_count,
-        commit_index
-    );
-
-    Ok(())
-}
-
-const SNAPSHOT_PARTIAL_TTL_SECS: u64 = 3600;
-
-async fn validate_snapshot_header(partial_file: &Path, current_commit: u64) -> ServerResult<()> {
-    let mut file = tokio::fs::File::open(partial_file).await?;
-    let mut header = [0u8; 32];
-    file.read_exact(&mut header)
-        .await
-        .map_err(|_| ServerError::from("snapshot header missing or truncated"))?;
-    let header_commit = u64::from_le_bytes(header[16..24].try_into().unwrap());
-    if header_commit < current_commit {
-        return Err(ServerError::from(format!(
-            "snapshot commit {header_commit} is behind current commit {current_commit}"
-        )));
-    }
-    Ok(())
-}
-
-async fn do_resync(cluster: &Cluster, config: &Config, node_index: usize) -> ServerResult<()> {
-    let data_dir = Path::new(&config.data_dir);
-    let dir_name = data_dir
-        .file_name()
-        .unwrap_or_default()
-        .to_string_lossy()
-        .to_string();
-    let partial_dir = data_dir.with_file_name(format!("{dir_name}.snapshot_partial"));
-    let install_dir = data_dir.with_file_name(format!("{dir_name}.snapshot_install"));
-    let backup_dir = data_dir.with_file_name(format!("{dir_name}.snapshot_bak"));
-
-    if install_dir.exists() {
-        let _ = std::fs::remove_dir_all(&install_dir);
-    }
-
-    cleanup_stale_partial(&partial_dir);
-    download_snapshot_to_partial(cluster, config, node_index, &partial_dir).await?;
-
-    let partial_file = partial_dir.join("data.bin");
-    let current_commit = cluster.raft.read().await.storage.commit;
-    validate_snapshot_header(&partial_file, current_commit).await?;
-
-    if let Err(e) = extract_snapshot_binary(
-        &partial_file,
-        &install_dir,
-        config.cluster_max_chunk_size as usize,
-    )
-    .await
-    {
-        let _ = std::fs::remove_dir_all(&install_dir);
-        return Err(e);
-    }
-
-    if backup_dir.exists() {
-        let _ = std::fs::remove_dir_all(&backup_dir);
-    }
-
-    let mut raft = cluster.raft.write().await;
-    raft.storage.close_handles(&partial_dir).await?;
-
-    if data_dir.exists() {
-        std::fs::rename(data_dir, &backup_dir)?;
-    }
-
-    if let Err(e) = std::fs::rename(&install_dir, data_dir) {
-        let _ = std::fs::rename(&backup_dir, data_dir);
-        return Err(ServerError::from(format!(
-            "failed to install snapshot: {e}"
-        )));
-    }
-
-    if let Err(e) = raft.storage.reinit(config).await {
-        let _ = std::fs::remove_dir_all(data_dir);
-        let _ = std::fs::rename(&backup_dir, data_dir);
-        let _ = std::fs::remove_dir_all(&partial_dir);
-        drop(raft);
-        return Err(e);
-    }
-
-    raft.refresh_local_from_storage();
-    drop(raft);
-
-    let _ = std::fs::remove_dir_all(&backup_dir);
-    let _ = std::fs::remove_dir_all(&partial_dir);
-
-    Ok(())
-}
-
-async fn download_snapshot_to_partial(
-    cluster: &Cluster,
-    config: &Config,
-    node_index: usize,
-    partial_dir: &Path,
-) -> ServerResult<()> {
-    std::fs::create_dir_all(partial_dir)?;
-    let partial_file = partial_dir.join("data.bin");
-    let id_file = partial_dir.join(".id");
-
-    let (resume_offset, resume_id) = if partial_file.exists() && id_file.exists() {
-        let offset = partial_file.metadata()?.len();
-        let id = std::fs::read_to_string(&id_file).unwrap_or_default();
-        (offset, id.trim().to_string())
-    } else {
-        (0u64, String::new())
-    };
-
-    let snapshot_url = format!(
-        "{}/api/v1/cluster/snapshot",
-        cluster.nodes[node_index].base_url
-    );
-
-    let mut request = cluster.nodes[node_index]
-        .client
-        .client
-        .get(&snapshot_url)
-        .bearer_auth(&config.cluster_token)
-        .timeout(Duration::from_secs(600));
-
-    if resume_offset > 0 && !resume_id.is_empty() {
-        request = request
-            .header("range", format!("bytes={resume_offset}-"))
-            .header("x-snapshot-resume-id", &resume_id);
-    }
-
-    let response = request
-        .send()
-        .await
-        .map_err(|e| ServerError::from(format!("snapshot request failed: {e:?}")))?;
-
-    let http_status = response.status().as_u16();
-    if http_status != 200 && http_status != 206 {
-        return Err(ServerError::from(format!(
-            "snapshot endpoint returned {http_status}"
-        )));
-    }
-
-    let server_id = response
-        .headers()
-        .get("x-snapshot-id")
-        .and_then(|v| v.to_str().ok())
-        .unwrap_or("")
-        .to_string();
-
-    let is_resume = http_status == 206 && !server_id.is_empty() && server_id == resume_id;
-
-    if !is_resume {
-        let _ = std::fs::remove_file(&partial_file);
-    }
-
-    std::fs::write(&id_file, &server_id)?;
-
-    let append = is_resume && partial_file.exists();
-    let mut file = tokio::fs::OpenOptions::new()
-        .create(true)
-        .write(true)
-        .append(append)
-        .open(&partial_file)
-        .await?;
-
-    let mut stream = response.bytes_stream();
-    while let Some(chunk) = stream.next().await {
-        let chunk = chunk.map_err(|e| ServerError::from(format!("stream read error: {e:?}")))?;
-        file.write_all(&chunk).await?;
-    }
-    file.flush().await?;
-
-    Ok(())
-}
-
-async fn extract_snapshot_binary(
-    partial_file: &Path,
-    install_dir: &Path,
-    chunk_size: usize,
-) -> ServerResult<()> {
-    std::fs::create_dir_all(install_dir)?;
-
-    let mut file = tokio::fs::File::open(partial_file).await?;
-
-    let mut header = [0u8; 32];
-    file.read_exact(&mut header)
-        .await
-        .map_err(|_| ServerError::from("snapshot too small (missing header)"))?;
-
-    let file_count = u64::from_le_bytes(header[24..32].try_into().unwrap());
-
-    const MAX_SNAPSHOT_FILES: u64 = 100_000;
-
-    if file_count > MAX_SNAPSHOT_FILES {
-        return Err(ServerError::from(format!(
-            "snapshot file_count {file_count} exceeds sanity limit {MAX_SNAPSHOT_FILES}"
-        )));
-    }
-
-    let canonical_install = install_dir.canonicalize()?;
-    let mut buf = vec![0u8; chunk_size];
-
-    for _ in 0..file_count {
-        let mut len_buf = [0u8; 4];
-        file.read_exact(&mut len_buf)
-            .await
-            .map_err(|_| ServerError::from("snapshot truncated (path_len)"))?;
-        let path_len = u32::from_le_bytes(len_buf) as usize;
-
-        if path_len == 0 || path_len > 4096 {
-            return Err(ServerError::from(format!(
-                "invalid path length in snapshot: {path_len}"
-            )));
-        }
-
-        let mut path_buf = vec![0u8; path_len];
-        file.read_exact(&mut path_buf)
-            .await
-            .map_err(|_| ServerError::from("snapshot truncated (path)"))?;
-        let rel_path = String::from_utf8(path_buf)
-            .map_err(|e| ServerError::from(format!("invalid path encoding: {e}")))?;
-
-        let mut file_len_buf = [0u8; 8];
-        file.read_exact(&mut file_len_buf)
-            .await
-            .map_err(|_| ServerError::from("snapshot truncated (file_len)"))?;
-        let file_len = u64::from_le_bytes(file_len_buf);
-
-        let abs = canonical_install.join(&rel_path);
-        if abs
-            .components()
-            .any(|c| c == std::path::Component::ParentDir)
-            || !abs.starts_with(&canonical_install)
-        {
-            return Err(ServerError::from(format!(
-                "invalid path in snapshot: {rel_path}"
-            )));
-        }
-
-        if let Some(parent) = abs.parent() {
-            std::fs::create_dir_all(parent)?;
-        }
-
-        let mut out = tokio::fs::File::create(&abs).await?;
-        let mut remaining = file_len;
-
-        while remaining > 0 {
-            let to_read = std::cmp::min(remaining, buf.len() as u64) as usize;
-            file.read_exact(&mut buf[..to_read])
-                .await
-                .map_err(|_| ServerError::from("snapshot truncated (file_data)"))?;
-            out.write_all(&buf[..to_read]).await?;
-            remaining -= to_read as u64;
-        }
-        out.sync_data().await?;
-    }
-
-    Ok(())
-}
-
-fn cleanup_stale_partial(partial_dir: &Path) {
-    if !partial_dir.exists() {
-        return;
-    }
-    let Ok(metadata) = partial_dir.metadata() else {
-        return;
-    };
-    let Ok(modified) = metadata.modified() else {
-        return;
-    };
-    let Ok(age) = std::time::SystemTime::now().duration_since(modified) else {
-        return;
-    };
-    if age.as_secs() >= SNAPSHOT_PARTIAL_TTL_SECS {
-        let _ = std::fs::remove_dir_all(partial_dir);
-    }
 }
 
 pub(crate) async fn start_with_shutdown(
@@ -942,6 +469,7 @@ pub(crate) struct ClusterStorage {
     pub(crate) db: ServerDb,
     pub(crate) cluster_log: ClusterLog,
     pub(crate) db_pool: DbPool,
+    pub(crate) failed_indices: Arc<StdRwLock<Vec<u64>>>,
 }
 
 impl ClusterStorage {
@@ -961,6 +489,7 @@ impl ClusterStorage {
         let (exec_sender, exec_rx) = tokio::sync::mpsc::unbounded_channel();
         let snapshot_lock = Arc::new(RwLock::new(()));
         let notifier = tokio::sync::broadcast::channel(100).0;
+        let failed = cluster_log.failed_indices().await?;
 
         let mut storage = Self {
             result_notifiers: HashMap::new(),
@@ -980,6 +509,7 @@ impl ClusterStorage {
             db,
             cluster_log,
             db_pool,
+            failed_indices: Arc::new(StdRwLock::new(failed)),
         };
 
         storage.start_exec_worker(exec_rx);
@@ -992,7 +522,7 @@ impl ClusterStorage {
     }
 
     fn spawn_exec_worker(
-        mut exec_rx: tokio::sync::mpsc::UnboundedReceiver<ExecTask>,
+        mut exec_rx: UnboundedReceiver<ExecTask>,
         ctx: ExecContext,
         poisoned: Arc<AtomicBool>,
     ) -> tokio::task::JoinHandle<()> {
@@ -1010,7 +540,7 @@ impl ClusterStorage {
         })
     }
 
-    fn start_exec_worker(&mut self, exec_rx: tokio::sync::mpsc::UnboundedReceiver<ExecTask>) {
+    fn start_exec_worker(&mut self, exec_rx: UnboundedReceiver<ExecTask>) {
         let ctx = ExecContext {
             node: self.node,
             log_body_limit: self.log_body_limit,
@@ -1019,6 +549,7 @@ impl ClusterStorage {
             db_pool: self.db_pool.clone(),
             cluster_log: self.cluster_log.clone(),
             notifier: self.notifier.clone(),
+            failed_indices: self.failed_indices.clone(),
         };
         self.exec_worker = Some(Self::spawn_exec_worker(exec_rx, ctx, self.poisoned.clone()));
     }
@@ -1046,6 +577,10 @@ impl ClusterStorage {
         self.commit = commit;
         self.prune_index = commit.saturating_sub(self.max_log_entries);
         self.result_notifiers.clear();
+        *self
+            .failed_indices
+            .write()
+            .unwrap_or_else(|e| e.into_inner()) = self.cluster_log.failed_indices().await?;
 
         self.db_pool.reload(&self.db).await?;
         self.poisoned.store(false, Ordering::Relaxed);
@@ -1106,6 +641,7 @@ struct ExecContext {
     db_pool: DbPool,
     cluster_log: ClusterLog,
     notifier: tokio::sync::broadcast::Sender<u64>,
+    failed_indices: Arc<StdRwLock<Vec<u64>>>,
 }
 
 impl ExecContext {
@@ -1144,6 +680,20 @@ impl ExecContext {
         let _ = self.notifier.send(log_index);
 
         let mut notes: Vec<String> = Vec::new();
+
+        if !success {
+            match self.cluster_log.set_log_failed(log_id).await {
+                Ok(()) => {
+                    self.failed_indices
+                        .write()
+                        .unwrap_or_else(|e| e.into_inner())
+                        .push(log_index);
+                }
+                Err(e) => {
+                    notes.push(format!("set_log_failed: {e:?} — flag lost"));
+                }
+            }
+        }
 
         if let Err(e) = self.cluster_log.log_executed(log_id).await {
             notes.push(format!("log_executed failed: {e:?}"));
@@ -1210,6 +760,10 @@ impl Storage<ClusterAction, ResultNotifier> for ClusterStorage {
         if ceiling > 0 && self.snapshot_in_flight.load(Ordering::Acquire) == 0 {
             self.cluster_log.prune(ceiling).await?;
             self.prune_index = ceiling;
+            self.failed_indices
+                .write()
+                .unwrap_or_else(|e| e.into_inner())
+                .retain(|&idx| idx > ceiling);
         }
         Ok(())
     }
@@ -1232,6 +786,99 @@ impl Storage<ClusterAction, ResultNotifier> for ClusterStorage {
 
     async fn logs(&self, from_index: u64) -> ServerResult<Vec<Log<ClusterAction>>> {
         self.cluster_log.logs_since(from_index).await
+    }
+
+    fn local_failed_indices(&self) -> Vec<u64> {
+        self.failed_indices
+            .read()
+            .unwrap_or_else(|e| e.into_inner())
+            .clone()
+    }
+
+    async fn clear_failed_up_to(&mut self, up_to: u64) {
+        let to_clear: Vec<u64> = self
+            .failed_indices
+            .read()
+            .unwrap_or_else(|e| e.into_inner())
+            .iter()
+            .filter(|&&idx| idx <= up_to)
+            .copied()
+            .collect();
+        if !to_clear.is_empty() {
+            if let Err(e) = self.cluster_log.clear_log_failed(&to_clear).await {
+                crate::error!("Failed to clear LOG_FAILED up to {}: {:?}", up_to, e);
+            }
+            self.failed_indices
+                .write()
+                .unwrap_or_else(|e| e.into_inner())
+                .retain(|&idx| idx > up_to);
+        }
+    }
+
+    async fn resolve_resync_targets(&self, indices: &[u64]) -> Vec<(String, String)> {
+        let mut dbs = Vec::new();
+        for &idx in indices {
+            if let Ok(Some(action)) = self.cluster_log.action_at_index(idx).await {
+                for target in action.resync_targets() {
+                    let pair = match target {
+                        ResyncTarget::UserDb(o, d) => (o.to_string(), d.to_string()),
+                        ResyncTarget::ServerDb => (
+                            RESYNC_SERVER_DB_OWNER.to_string(),
+                            RESYNC_SERVER_DB_NAME.to_string(),
+                        ),
+                    };
+                    if !dbs.contains(&pair) {
+                        dbs.push(pair);
+                    }
+                }
+            }
+        }
+        dbs
+    }
+}
+
+impl ClusterStorage {
+    /// Remove failed indices that map to the given resync target (owner, db).
+    /// Called after a successful per-DB resync to prevent re-detection.
+    pub(crate) async fn clear_resolved_indices(&self, owner: &str, db: &str) {
+        let indices: Vec<u64> = self
+            .failed_indices
+            .read()
+            .unwrap_or_else(|e| e.into_inner())
+            .clone();
+        let mut to_remove = Vec::new();
+
+        for idx in &indices {
+            if let Ok(Some(action)) = self.cluster_log.action_at_index(*idx).await {
+                let matches = action.resync_targets().iter().any(|target| match target {
+                    ResyncTarget::UserDb(o, d) => *o == owner && *d == db,
+                    ResyncTarget::ServerDb => {
+                        owner == RESYNC_SERVER_DB_OWNER && db == RESYNC_SERVER_DB_NAME
+                    }
+                });
+                if matches {
+                    to_remove.push(*idx);
+                }
+            }
+        }
+
+        if !to_remove.is_empty() {
+            // Clear persistent LOG_FAILED markers so a restart does not
+            // re-populate these indices into failed_indices.
+            if let Err(e) = self.cluster_log.clear_log_failed(&to_remove).await {
+                crate::error!(
+                    "Failed to clear persistent LOG_FAILED for indices {:?}: {:?}",
+                    to_remove,
+                    e
+                );
+            }
+
+            let mut guard = self
+                .failed_indices
+                .write()
+                .unwrap_or_else(|e| e.into_inner());
+            guard.retain(|idx| !to_remove.contains(idx));
+        }
     }
 }
 

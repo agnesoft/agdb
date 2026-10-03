@@ -14,6 +14,7 @@ mod forward;
 mod logger;
 mod password;
 mod raft;
+mod resync;
 mod routes;
 mod server_db;
 mod server_error;

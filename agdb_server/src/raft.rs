@@ -32,6 +32,8 @@ pub(crate) struct LogMismatch {
 pub(crate) enum RequestType<T> {
     Append(Vec<Log<T>>),
     Heartbeat,
+    Resync,
+    ResyncDbs(Vec<(String, String)>),
     PreVote,
     Vote,
 }
@@ -39,6 +41,7 @@ pub(crate) enum RequestType<T> {
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub(crate) enum ResponseType {
     Ok,
+    OkReport(Vec<u64>),
     CommitError(String),
     Resyncing,
     ClusterMismatch(MismatchedValues),
@@ -68,7 +71,7 @@ pub(crate) struct Request<T> {
     log_commit: u64,
     prune_index: u64,
     #[serde(default)]
-    force_resync: bool,
+    pub(crate) exec_reconciled: u64,
     data: RequestType<T>,
 }
 
@@ -76,12 +79,25 @@ impl<T> Request<T> {
     pub(crate) fn is_append(&self) -> bool {
         matches!(self.data, RequestType::Append(_))
     }
+
+    pub(crate) fn resync_dbs(&self) -> Option<&Vec<(String, String)>> {
+        match &self.data {
+            RequestType::ResyncDbs(dbs) => Some(dbs),
+            _ => None,
+        }
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub(crate) struct Response {
     pub(crate) target: u64,
     pub(crate) result: ResponseType,
+}
+
+impl Response {
+    pub(crate) fn new(target: u64, result: ResponseType) -> Self {
+        Self { target, result }
+    }
 }
 
 const APPEND_FAILURE_THRESHOLD: u32 = 3;
@@ -95,6 +111,8 @@ struct Node {
     voted: bool,
     append_failures: u32,
     force_resync: bool,
+    pending_resync_dbs: Vec<(String, String)>,
+    exec_reconciled: u64,
 }
 
 pub(crate) trait Storage<T, N> {
@@ -106,6 +124,9 @@ pub(crate) trait Storage<T, N> {
     fn log_commit(&self) -> u64;
     fn prune_index(&self) -> u64;
     async fn logs(&self, from_index: u64) -> ServerResult<Vec<Log<T>>>;
+    fn local_failed_indices(&self) -> Vec<u64>;
+    async fn resolve_resync_targets(&self, _indices: &[u64]) -> Vec<(String, String)>;
+    async fn clear_failed_up_to(&mut self, _up_to: u64);
 }
 
 pub(crate) struct Cluster<T, N, S: Storage<T, N>> {
@@ -165,6 +186,8 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
                     voted: i == settings.index,
                     append_failures: 0,
                     force_resync: false,
+                    pending_resync_dbs: vec![],
+                    exec_reconciled: 0,
                 })
                 .collect(),
             hash: settings.hash,
@@ -206,7 +229,7 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
         };
 
         let prune_index = self.storage.prune_index();
-        let requests = self
+        let requests: Vec<Request<T>> = self
             .nodes
             .iter()
             .filter(|node| self.index != node.index)
@@ -219,7 +242,7 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
                 log_term: self.local().log_term,
                 log_commit: self.local().log_commit,
                 prune_index,
-                force_resync: false,
+                exec_reconciled: node.exec_reconciled,
                 data: RequestType::Append(vec![log.clone()]),
             })
             .collect();
@@ -295,6 +318,8 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
         let response = match request.data {
             RequestType::Append(ref logs) => self.append_request(request, logs).await,
             RequestType::Heartbeat => self.heartbeat_request(request).await,
+            RequestType::Resync => self.resync_request(request),
+            RequestType::ResyncDbs(_) => self.resync_dbs_request(request),
             RequestType::PreVote => self.pre_vote_request(request),
             RequestType::Vote => self.vote_request(request),
         };
@@ -303,10 +328,36 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
             self.local_mut().timer = Instant::now();
         }
 
-        match response {
+        let mut response = match response {
             Ok(response) => response,
             Err(response) => response,
+        };
+
+        // Process watermark from leader (heartbeat/append only).
+        // clear_failed_up_to is idempotent — no need to track the
+        // last watermark; the storage is the source of truth.
+        if matches!(
+            request.data,
+            RequestType::Heartbeat | RequestType::Append(_)
+        ) && request.exec_reconciled > 0
+        {
+            self.storage
+                .clear_failed_up_to(request.exec_reconciled)
+                .await;
         }
+
+        // Promote Ok → OkReport for heartbeat/append so the leader
+        // gets the follower's failed indices in a dedicated variant.
+        if response.result == ResponseType::Ok
+            && matches!(
+                request.data,
+                RequestType::Heartbeat | RequestType::Append(_)
+            )
+        {
+            response.result = ResponseType::OkReport(self.storage.local_failed_indices());
+        }
+
+        response
     }
 
     pub(crate) async fn response(
@@ -318,18 +369,83 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
         use RequestType::*;
         use ResponseType::LogMismatch;
         use ResponseType::Ok as OK;
+        use ResponseType::OkReport;
         use ResponseType::TermMismatch;
 
         match (&self.state, &request.data, &response.result) {
             (Election, PreVote, OK) => Ok(self.pre_vote_received(request)),
             (Candidate, Vote, OK) => Ok(self.vote_received(request)),
+            (Leader, Heartbeat | Append(_), OkReport(follower_failed)) => {
+                self.node_mut(request.target).append_failures = 0;
+
+                // Compare follower's reported failures against our own
+                let leader_failed = self.storage.local_failed_indices();
+                let node_reconciled = self.node(request.target).exec_reconciled;
+                let follower_commit = self.node(request.target).log_commit;
+
+                // Follower-failed, leader-succeeded → per-DB resync
+                let need_resync: Vec<u64> = follower_failed
+                    .iter()
+                    .filter(|idx| !leader_failed.contains(idx))
+                    .copied()
+                    .collect();
+
+                if !need_resync.is_empty() {
+                    for &idx in &need_resync {
+                        crate::warn!(
+                            "[{}] Node {} follower-failed at log {}",
+                            self.index,
+                            request.target,
+                            idx,
+                        );
+                    }
+                    let dbs = self.storage.resolve_resync_targets(&need_resync).await;
+                    let pending = &mut self.node_mut(request.target).pending_resync_dbs;
+                    for db in dbs {
+                        if !pending.contains(&db) {
+                            pending.push(db);
+                        }
+                    }
+                }
+
+                // Leader-failed, follower-succeeded → force_resync
+                // Only check indices above the reconciled watermark and up to
+                // what the follower had committed in the previous cycle (giving
+                // the exec worker time to process).
+                let follower_set: std::collections::HashSet<u64> =
+                    follower_failed.iter().copied().collect();
+                let need_force = leader_failed.iter().any(|&idx| {
+                    idx > node_reconciled && idx <= follower_commit && !follower_set.contains(&idx)
+                });
+
+                if need_force {
+                    crate::warn!(
+                        "[{}] Node {} leader-failed divergence detected, forcing resync",
+                        self.index,
+                        request.target,
+                    );
+                    self.node_mut(request.target).force_resync = true;
+                }
+
+                // Advance watermark when no pending work for this node
+                {
+                    let node = self.node(request.target);
+                    if node.pending_resync_dbs.is_empty() && !node.force_resync {
+                        self.node_mut(request.target).exec_reconciled = follower_commit;
+                    }
+                }
+
+                self.commit(request).await
+            }
+            // Backward compat: if a follower sends plain Ok (e.g. during
+            // rolling upgrade), treat it as OkReport with no failures.
             (Leader, Heartbeat | Append(_), OK) => {
                 self.node_mut(request.target).append_failures = 0;
-                if request.force_resync {
-                    Ok(None)
-                } else {
-                    self.commit(request).await
-                }
+                self.commit(request).await
+            }
+            (Leader, Resync | ResyncDbs(_), OK) => {
+                // Resync acknowledged — nothing to commit
+                Ok(None)
             }
             (Leader, Heartbeat | Append(_), LogMismatch(mismatch)) => {
                 self.reconcile(request, mismatch).await
@@ -416,19 +532,36 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
             return Ok(None);
         }
 
-        self.node_mut(request.target).timer = Instant::now();
-        Ok(Some(vec![Request {
+        let node = self.node_mut(request.target);
+        node.timer = Instant::now();
+        let resync_dbs = std::mem::take(&mut node.pending_resync_dbs);
+        let force_resync = node.force_resync;
+        let exec_reconciled = node.exec_reconciled;
+        node.force_resync = false;
+
+        let target = request.target;
+        let mut requests = vec![Request {
             hash: self.hash,
             index: self.index,
-            target: request.target,
+            target,
             term: self.term,
             log_index: self.local().log_index,
             log_term: self.local().log_term,
             log_commit: self.local().log_commit,
             prune_index: self.storage.prune_index(),
-            force_resync: false,
+            exec_reconciled,
             data: RequestType::Append(logs),
-        }]))
+        }];
+
+        self.push_resync_requests(
+            &mut requests,
+            target,
+            exec_reconciled,
+            force_resync,
+            resync_dbs,
+        );
+
+        Ok(Some(requests))
     }
 
     fn pre_election(&mut self) -> Vec<Request<T>> {
@@ -450,7 +583,7 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
                 log_term: self.local().log_term,
                 log_commit: self.local().log_commit,
                 prune_index: 0,
-                force_resync: false,
+                exec_reconciled: 0,
                 data: RequestType::PreVote,
             })
             .collect()
@@ -460,21 +593,21 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
         self.validate_hash(request)?;
 
         match self.state {
-            ClusterState::Leader => Err(Response {
-                target: request.index,
-                result: ResponseType::LeaderMismatch(MismatchedValues {
+            ClusterState::Leader => Err(Response::new(
+                request.index,
+                ResponseType::LeaderMismatch(MismatchedValues {
                     local: Some(self.index),
                     requested: None,
                 }),
-            }),
+            )),
             ClusterState::Follower(leader) if self.local().timer.elapsed() <= self.term_timeout => {
-                Err(Response {
-                    target: request.index,
-                    result: ResponseType::LeaderMismatch(MismatchedValues {
+                Err(Response::new(
+                    request.index,
+                    ResponseType::LeaderMismatch(MismatchedValues {
                         local: Some(leader),
                         requested: None,
                     }),
-                })
+                ))
             }
             _ => {
                 self.validate_log_for_vote(request)?;
@@ -518,7 +651,7 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
                 log_term: self.local().log_term,
                 log_commit: self.local().log_commit,
                 prune_index: 0,
-                force_resync: false,
+                exec_reconciled: 0,
                 data: RequestType::Vote,
             })
             .collect()
@@ -611,29 +744,43 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
     fn heartbeat(&mut self) -> Vec<Request<T>> {
         let prune_index = self.storage.prune_index();
         let log_commit = self.local().log_commit;
-        let requests: Vec<Request<T>> = self
+        let targets: Vec<u64> = self
             .nodes
             .iter()
             .filter(|node| {
-                self.index != node.index
-                    && self.node(node.index).timer.elapsed() > self.heartbeat_timeout
+                self.index != node.index && node.timer.elapsed() > self.heartbeat_timeout
             })
-            .map(|node| Request {
+            .map(|node| node.index)
+            .collect();
+
+        let mut requests = Vec::with_capacity(targets.len());
+        for target in targets {
+            let node = &mut self.nodes[target as usize];
+            let resync_dbs = std::mem::take(&mut node.pending_resync_dbs);
+            let force_resync = node.force_resync;
+            let exec_reconciled = node.exec_reconciled;
+            node.force_resync = false;
+
+            requests.push(Request {
                 hash: self.hash,
                 index: self.index,
-                target: node.index,
+                target,
                 term: self.term,
                 log_index: self.local().log_index,
                 log_term: self.local().log_term,
                 log_commit,
                 prune_index,
-                force_resync: node.force_resync,
+                exec_reconciled,
                 data: RequestType::Heartbeat,
-            })
-            .collect();
+            });
 
-        for req in &requests {
-            self.node_mut(req.target).force_resync = false;
+            self.push_resync_requests(
+                &mut requests,
+                target,
+                exec_reconciled,
+                force_resync,
+                resync_dbs,
+            );
         }
 
         requests
@@ -641,44 +788,90 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
 
     fn heartbeat_no_timer(&mut self) -> Vec<Request<T>> {
         let prune_index = self.storage.prune_index();
-        let requests: Vec<Request<T>> = self
+        let targets: Vec<u64> = self
             .nodes
             .iter()
             .filter(|node| self.index != node.index)
-            .map(|node| Request {
+            .map(|node| node.index)
+            .collect();
+
+        let mut requests = Vec::with_capacity(targets.len());
+        for target in targets {
+            let node = &mut self.nodes[target as usize];
+            let resync_dbs = std::mem::take(&mut node.pending_resync_dbs);
+            let force_resync = node.force_resync;
+            let exec_reconciled = node.exec_reconciled;
+            node.force_resync = false;
+            node.timer = Instant::now();
+
+            requests.push(Request {
                 hash: self.hash,
                 index: self.index,
-                target: node.index,
+                target,
                 term: self.term,
                 log_index: self.local().log_index,
                 log_term: self.local().log_term,
                 log_commit: self.local().log_commit,
                 prune_index,
-                force_resync: false,
+                exec_reconciled,
                 data: RequestType::Heartbeat,
-            })
-            .collect();
+            });
 
-        requests.iter().for_each(|request| {
-            self.node_mut(request.target).timer = Instant::now();
-        });
+            self.push_resync_requests(
+                &mut requests,
+                target,
+                exec_reconciled,
+                force_resync,
+                resync_dbs,
+            );
+        }
 
         requests
+    }
+
+    fn push_resync_requests(
+        &self,
+        requests: &mut Vec<Request<T>>,
+        target: u64,
+        exec_reconciled: u64,
+        force_resync: bool,
+        resync_dbs: Vec<(String, String)>,
+    ) {
+        if force_resync {
+            requests.push(Request {
+                hash: self.hash,
+                index: self.index,
+                target,
+                term: self.term,
+                log_index: self.local().log_index,
+                log_term: self.local().log_term,
+                log_commit: self.local().log_commit,
+                prune_index: 0,
+                exec_reconciled,
+                data: RequestType::Resync,
+            });
+        }
+
+        if !resync_dbs.is_empty() {
+            requests.push(Request {
+                hash: self.hash,
+                index: self.index,
+                target,
+                term: self.term,
+                log_index: self.local().log_index,
+                log_term: self.local().log_term,
+                log_commit: self.local().log_commit,
+                prune_index: 0,
+                exec_reconciled,
+                data: RequestType::ResyncDbs(resync_dbs),
+            });
+        }
     }
 
     async fn heartbeat_request(&mut self, request: &Request<T>) -> Result<Response, Response> {
         self.validate_hash(request)?;
         self.validate_term(request)?;
         self.become_follower(request);
-
-        if request.force_resync
-            && (self.local().log_index != request.log_index
-                || self.local().log_term != request.log_term)
-        {
-            self.needs_resync = true;
-            return Self::ok(request);
-        }
-
         self.validate_log(request)?;
         self.update_node(
             request.index,
@@ -702,11 +895,28 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
         Self::ok(request)
     }
 
-    fn commit_error(&mut self, request: &Request<T>, error: String) -> Response {
-        Response {
-            target: request.index,
-            result: ResponseType::CommitError(error),
+    fn resync_request(&mut self, request: &Request<T>) -> Result<Response, Response> {
+        self.validate_hash(request)?;
+        self.validate_term(request)?;
+        self.become_follower(request);
+
+        if self.local().log_index != request.log_index || self.local().log_term != request.log_term
+        {
+            self.needs_resync = true;
         }
+
+        Self::ok(request)
+    }
+
+    fn resync_dbs_request(&mut self, request: &Request<T>) -> Result<Response, Response> {
+        self.validate_hash(request)?;
+        self.validate_term(request)?;
+        self.become_follower(request);
+        Self::ok(request)
+    }
+
+    fn commit_error(&mut self, request: &Request<T>, error: String) -> Response {
+        Response::new(request.index, ResponseType::CommitError(error))
     }
 
     fn become_follower(&mut self, request: &Request<T>) {
@@ -740,13 +950,13 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
 
     fn validate_hash(&self, request: &Request<T>) -> Result<(), Response> {
         if self.hash != request.hash {
-            return Err(Response {
-                target: request.index,
-                result: ResponseType::ClusterMismatch(MismatchedValues {
+            return Err(Response::new(
+                request.index,
+                ResponseType::ClusterMismatch(MismatchedValues {
                     local: Some(self.hash),
                     requested: Some(request.hash),
                 }),
-            });
+            ));
         }
 
         Ok(())
@@ -754,27 +964,27 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
 
     fn validate_vote_state(&self, request: &Request<T>) -> Result<(), Response> {
         match self.state {
-            ClusterState::Leader | ClusterState::Candidate => Err(Response {
-                target: request.index,
-                result: ResponseType::LeaderMismatch(MismatchedValues {
+            ClusterState::Leader | ClusterState::Candidate => Err(Response::new(
+                request.index,
+                ResponseType::LeaderMismatch(MismatchedValues {
                     local: Some(self.index),
                     requested: None,
                 }),
-            }),
-            ClusterState::Follower(leader) => Err(Response {
-                target: request.index,
-                result: ResponseType::LeaderMismatch(MismatchedValues {
+            )),
+            ClusterState::Follower(leader) => Err(Response::new(
+                request.index,
+                ResponseType::LeaderMismatch(MismatchedValues {
                     local: Some(leader),
                     requested: None,
                 }),
-            }),
-            ClusterState::Voted(term) if request.term <= term => Err(Response {
-                target: request.index,
-                result: ResponseType::AlreadyVoted(MismatchedValues {
+            )),
+            ClusterState::Voted(term) if request.term <= term => Err(Response::new(
+                request.index,
+                ResponseType::AlreadyVoted(MismatchedValues {
                     local: Some(term),
                     requested: Some(request.term),
                 }),
-            }),
+            )),
             _ => Ok(()),
         }
     }
@@ -782,9 +992,9 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
     fn validate_log(&self, request: &Request<T>) -> Result<(), Response> {
         if self.local().log_index != request.log_index || self.local().log_term != request.log_term
         {
-            return Err(Response {
-                target: request.index,
-                result: ResponseType::LogMismatch(LogMismatch {
+            return Err(Response::new(
+                request.index,
+                ResponseType::LogMismatch(LogMismatch {
                     index: MismatchedValues {
                         local: Some(self.local().log_index),
                         requested: Some(request.log_index),
@@ -798,7 +1008,7 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
                         requested: Some(request.log_commit),
                     },
                 }),
-            });
+            ));
         }
 
         Ok(())
@@ -819,9 +1029,9 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
             return Ok(true);
         }
 
-        Err(Response {
-            target: request.index,
-            result: ResponseType::LogMismatch(LogMismatch {
+        Err(Response::new(
+            request.index,
+            ResponseType::LogMismatch(LogMismatch {
                 index: MismatchedValues {
                     local: Some(self.local().log_index),
                     requested: Some(log.index),
@@ -835,7 +1045,7 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
                     requested: Some(log.index),
                 },
             }),
-        })
+        ))
     }
 
     fn validate_log_for_vote(&self, request: &Request<T>) -> Result<(), Response> {
@@ -843,9 +1053,9 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
             || self.local().log_term > request.log_term
             || self.local().log_commit > request.log_commit
         {
-            return Err(Response {
-                target: request.index,
-                result: ResponseType::LogMismatch(LogMismatch {
+            return Err(Response::new(
+                request.index,
+                ResponseType::LogMismatch(LogMismatch {
                     index: MismatchedValues {
                         local: Some(self.local().log_index),
                         requested: Some(request.log_index),
@@ -859,7 +1069,7 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
                         requested: Some(request.log_commit),
                     },
                 }),
-            });
+            ));
         }
 
         Ok(())
@@ -867,13 +1077,13 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
 
     fn validate_term_for_vote(&self, request: &Request<T>) -> Result<(), Response> {
         if self.term >= request.term {
-            return Err(Response {
-                target: request.index,
-                result: ResponseType::TermMismatch(MismatchedValues {
+            return Err(Response::new(
+                request.index,
+                ResponseType::TermMismatch(MismatchedValues {
                     local: Some(self.term),
                     requested: Some(request.term),
                 }),
-            });
+            ));
         }
 
         Ok(())
@@ -881,23 +1091,20 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
 
     fn validate_term(&self, request: &Request<T>) -> Result<(), Response> {
         if self.term > request.term {
-            return Err(Response {
-                target: request.index,
-                result: ResponseType::TermMismatch(MismatchedValues {
+            return Err(Response::new(
+                request.index,
+                ResponseType::TermMismatch(MismatchedValues {
                     local: Some(self.term),
                     requested: Some(request.term),
                 }),
-            });
+            ));
         }
 
         Ok(())
     }
 
     fn ok(request: &Request<T>) -> Result<Response, Response> {
-        Ok(Response {
-            target: request.index,
-            result: ResponseType::Ok,
-        })
+        Ok(Response::new(request.index, ResponseType::Ok))
     }
 
     fn update_node(&mut self, index: u64, log_index: u64, log_term: u64, log_commit: u64) {
@@ -942,6 +1149,9 @@ mod test {
         logs: Vec<Log<u8>>,
         commit: u64,
         prune_index: u64,
+        failed: Vec<u64>,
+        resolve_result: Vec<(String, String)>,
+        cleared_up_to: u64,
     }
 
     struct TestNodeImpl {
@@ -999,6 +1209,19 @@ mod test {
                 .cloned()
                 .collect())
         }
+
+        fn local_failed_indices(&self) -> Vec<u64> {
+            self.failed.clone()
+        }
+
+        async fn resolve_resync_targets(&self, _indices: &[u64]) -> Vec<(String, String)> {
+            self.resolve_result.clone()
+        }
+
+        async fn clear_failed_up_to(&mut self, up_to: u64) {
+            self.cleared_up_to = up_to;
+            self.failed.retain(|&idx| idx > up_to);
+        }
     }
 
     impl TestCluster {
@@ -1012,11 +1235,7 @@ mod test {
 
             let nodes = (0..size)
                 .map(|index| {
-                    let storage = TestStorage {
-                        logs: Vec::new(),
-                        commit: 0,
-                        prune_index: 0,
-                    };
+                    let storage = TestStorage::default();
                     let settings = ClusterSettings {
                         index,
                         size,
@@ -1472,6 +1691,7 @@ mod test {
                 .collect(),
             commit: 5,
             prune_index: 0,
+            ..Default::default()
         };
         let settings = ClusterSettings {
             index: 0,
@@ -1509,6 +1729,7 @@ mod test {
                 .collect(),
             commit: 10,
             prune_index: 0,
+            ..Default::default()
         };
         let settings = ClusterSettings {
             index: 1,
@@ -1533,12 +1754,12 @@ mod test {
             log_term: 1,
             log_commit: 10,
             prune_index: 5,
-            force_resync: false,
+            exec_reconciled: 0,
             data: RequestType::Heartbeat,
         };
 
         let response = cluster.request(&request).await;
-        assert_eq!(response.result, ResponseType::Ok);
+        assert_eq!(response.result, ResponseType::OkReport(vec![]));
 
         // Entries 1-5 should be pruned
         assert_eq!(cluster.storage.logs.len(), 5);
@@ -1561,6 +1782,7 @@ mod test {
                 .collect(),
             commit: 10,
             prune_index: 0,
+            ..Default::default()
         };
         let settings = ClusterSettings {
             index: 0,
@@ -1600,7 +1822,7 @@ mod test {
             log_term: 1,
             log_commit: 10,
             prune_index: 5,
-            force_resync: false,
+            exec_reconciled: 0,
             data: RequestType::Heartbeat,
         };
 
@@ -1675,6 +1897,7 @@ mod test {
                 .collect(),
             commit: 20,
             prune_index: 10,
+            ..Default::default()
         };
         let leader_settings = ClusterSettings {
             index: 0,
@@ -1701,6 +1924,7 @@ mod test {
                 .collect(),
             commit: 5,
             prune_index: 0,
+            ..Default::default()
         };
         let follower_settings = ClusterSettings {
             index: 1,
@@ -1728,7 +1952,7 @@ mod test {
             log_term: 1,
             log_commit: 20,
             prune_index: 10,
-            force_resync: false,
+            exec_reconciled: 0,
             data: RequestType::Heartbeat,
         };
 
@@ -1746,8 +1970,8 @@ mod test {
         assert!(requests.is_none());
         assert!(leader.node(1).force_resync);
 
-        // Step 3: Leader sends next heartbeat — carries force_resync=true
-        let force_heartbeat = Request {
+        // Step 3: Leader sends a Resync request (separate from heartbeat)
+        let resync_request = Request {
             hash: 123,
             index: 0,
             target: 1,
@@ -1755,12 +1979,13 @@ mod test {
             log_index: 20,
             log_term: 1,
             log_commit: 20,
-            prune_index: 10,
-            force_resync: true,
-            data: RequestType::Heartbeat,
+            prune_index: 0,
+            exec_reconciled: 0,
+            data: RequestType::Resync,
         };
 
-        let response = follower.request(&force_heartbeat).await;
+        let response = follower.request(&resync_request).await;
+        // Resync returns plain Ok, not OkReport
         assert_eq!(response.result, ResponseType::Ok);
         // NOW the follower sets needs_resync — because the leader told it to
         assert!(follower.needs_resync());
@@ -1782,6 +2007,7 @@ mod test {
                 .collect(),
             commit: 10,
             prune_index: 0,
+            ..Default::default()
         };
         let settings = ClusterSettings {
             index: 1,
@@ -1798,8 +2024,8 @@ mod test {
 
         assert!(!cluster.needs_resync());
 
-        // Heartbeat with force_resync=true — follower's log_index (10) differs
-        // from leader's (20), so the flag triggers needs_resync.
+        // Resync request — follower's log_index (10) differs from leader's (20),
+        // so the Resync triggers needs_resync.
         let request = Request {
             hash: 123,
             index: 0,
@@ -1809,11 +2035,12 @@ mod test {
             log_term: 1,
             log_commit: 20,
             prune_index: 0,
-            force_resync: true,
-            data: RequestType::Heartbeat,
+            exec_reconciled: 0,
+            data: RequestType::Resync,
         };
 
         let response = cluster.request(&request).await;
+        // Resync returns plain Ok, not OkReport
         assert_eq!(response.result, ResponseType::Ok);
         assert!(cluster.needs_resync());
 
@@ -1834,6 +2061,7 @@ mod test {
                 .collect(),
             commit: 10,
             prune_index: 0,
+            ..Default::default()
         };
         let settings = ClusterSettings {
             index: 1,
@@ -1850,9 +2078,9 @@ mod test {
 
         assert!(!cluster.needs_resync());
 
-        // Heartbeat with force_resync=true, but follower's log state matches the
-        // leader's (same log_index and log_term) — the follower caught up through
-        // normal reconciliation before the force_resync heartbeat arrived.
+        // Resync request, but follower's log state matches the leader's
+        // (same log_index and log_term) — the follower caught up through
+        // normal reconciliation before the Resync arrived.
         // Resync should NOT trigger.
         let request = Request {
             hash: 123,
@@ -1863,11 +2091,12 @@ mod test {
             log_term: 1,
             log_commit: 10,
             prune_index: 0,
-            force_resync: true,
-            data: RequestType::Heartbeat,
+            exec_reconciled: 0,
+            data: RequestType::Resync,
         };
 
         let response = cluster.request(&request).await;
+        // Resync returns plain Ok, not OkReport
         assert_eq!(response.result, ResponseType::Ok);
         assert!(!cluster.needs_resync());
 
@@ -1943,6 +2172,7 @@ mod test {
                 .collect(),
             commit: 20,
             prune_index: 0,
+            ..Default::default()
         };
         let settings = ClusterSettings {
             index: 0,
@@ -1966,7 +2196,7 @@ mod test {
             log_term: 1,
             log_commit: 20,
             prune_index: 0,
-            force_resync: false,
+            exec_reconciled: 0,
             data: RequestType::Append(vec![Log {
                 db_id: None,
                 index: 21,
@@ -1975,10 +2205,7 @@ mod test {
             }]),
         };
 
-        let resyncing_response = Response {
-            target: 0,
-            result: ResponseType::Resyncing,
-        };
+        let resyncing_response = Response::new(0, ResponseType::Resyncing);
 
         for _ in 0..APPEND_FAILURE_THRESHOLD + 1 {
             leader
@@ -1993,10 +2220,7 @@ mod test {
         );
         assert_eq!(leader.node(1).append_failures, 0);
 
-        let real_failure = Response {
-            target: 0,
-            result: ResponseType::CommitError("send failed".into()),
-        };
+        let real_failure = Response::new(0, ResponseType::CommitError("send failed".into()));
 
         for i in 1..APPEND_FAILURE_THRESHOLD {
             leader
@@ -2106,6 +2330,765 @@ mod test {
             "follower must not re-enter needs_resync after simulated snapshot install"
         );
 
+        Ok(())
+    }
+
+    // ── Divergence detection tests ──────────────────────────────────────
+
+    fn leader_settings() -> ClusterSettings {
+        ClusterSettings {
+            index: 0,
+            size: 3,
+            hash: 123,
+            election_factor_ms: 100,
+            heartbeat_timeout: Duration::from_millis(0),
+            term_timeout: Duration::from_secs(3),
+            max_log_entries: 1000,
+        }
+    }
+
+    fn heartbeat_request(exec_reconciled: u64) -> Request<u8> {
+        Request {
+            hash: 123,
+            index: 0,
+            target: 1,
+            term: 1,
+            log_index: 10,
+            log_term: 1,
+            log_commit: 10,
+            prune_index: 0,
+            exec_reconciled,
+            data: RequestType::Heartbeat,
+        }
+    }
+
+    fn ok_response_with_failed(failed: Vec<u64>) -> Response {
+        Response::new(0, ResponseType::OkReport(failed))
+    }
+
+    fn test_leader(storage: TestStorage) -> Cluster<u8, (), TestStorage> {
+        let mut cluster = Cluster::new(storage, leader_settings());
+        cluster.state = ClusterState::Leader;
+        cluster.term = 1;
+        cluster
+    }
+
+    #[tokio::test]
+    async fn leader_detects_follower_failed_and_resyncs() -> anyhow::Result<()> {
+        let storage = TestStorage {
+            logs: (1..=10)
+                .map(|i| Log {
+                    db_id: None,
+                    index: i,
+                    term: 1,
+                    data: i as u8,
+                })
+                .collect(),
+            commit: 10,
+            resolve_result: vec![("alice".into(), "mydb".into())],
+            ..Default::default()
+        };
+        let mut leader = test_leader(storage);
+        // Set follower's tracked commit so divergence check window covers idx 5
+        leader.node_mut(1).log_commit = 10;
+
+        let request = heartbeat_request(0);
+        // Follower reports failed=[5], leader has no failures → follower-failed
+        let response = ok_response_with_failed(vec![5]);
+
+        leader
+            .response(&request, &response)
+            .await
+            .map_err(|e| anyhow!(e.description))?;
+
+        assert_eq!(
+            leader.node(1).pending_resync_dbs,
+            vec![("alice".into(), "mydb".into())]
+        );
+        assert!(
+            !leader.node(1).force_resync,
+            "follower-failed should not trigger force_resync"
+        );
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn ok_response_no_divergence() -> anyhow::Result<()> {
+        let storage = TestStorage {
+            logs: (1..=10)
+                .map(|i| Log {
+                    db_id: None,
+                    index: i,
+                    term: 1,
+                    data: i as u8,
+                })
+                .collect(),
+            commit: 10,
+            resolve_result: vec![("should_not_appear".into(), "x".into())],
+            ..Default::default()
+        };
+        let mut leader = test_leader(storage);
+
+        let request = heartbeat_request(0);
+        let response = ok_response_with_failed(vec![]);
+
+        leader
+            .response(&request, &response)
+            .await
+            .map_err(|e| anyhow!(e.description))?;
+
+        assert!(
+            leader.node(1).pending_resync_dbs.is_empty(),
+            "OkReport with empty failures must not trigger resync"
+        );
+        assert!(!leader.node(1).force_resync);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn plain_ok_response_backward_compat() -> anyhow::Result<()> {
+        // A follower running an older binary might send plain Ok
+        // instead of OkReport. The leader must still advance commits.
+        let storage = TestStorage {
+            logs: (1..=10)
+                .map(|i| Log {
+                    db_id: None,
+                    index: i,
+                    term: 1,
+                    data: i as u8,
+                })
+                .collect(),
+            commit: 10,
+            ..Default::default()
+        };
+        let mut leader = test_leader(storage);
+
+        let request = heartbeat_request(0);
+        let response = Response::new(0, ResponseType::Ok);
+
+        leader
+            .response(&request, &response)
+            .await
+            .map_err(|e| anyhow!(e.description))?;
+
+        // Must reset append failures (same as OkReport path)
+        assert_eq!(leader.node(1).append_failures, 0);
+        // Must not trigger any resync
+        assert!(leader.node(1).pending_resync_dbs.is_empty());
+        assert!(!leader.node(1).force_resync);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn pending_resync_dbs_dedup() -> anyhow::Result<()> {
+        let storage = TestStorage {
+            logs: (1..=10)
+                .map(|i| Log {
+                    db_id: None,
+                    index: i,
+                    term: 1,
+                    data: i as u8,
+                })
+                .collect(),
+            commit: 10,
+            resolve_result: vec![("alice".into(), "db1".into())],
+            ..Default::default()
+        };
+        let mut leader = test_leader(storage);
+        leader.node_mut(1).log_commit = 10;
+
+        let request = heartbeat_request(0);
+        let response = ok_response_with_failed(vec![2]);
+
+        // Process twice — same resolve result
+        leader
+            .response(&request, &response)
+            .await
+            .map_err(|e| anyhow!(e.description))?;
+        leader
+            .response(&request, &response)
+            .await
+            .map_err(|e| anyhow!(e.description))?;
+
+        assert_eq!(
+            leader.node(1).pending_resync_dbs.len(),
+            1,
+            "duplicates must not accumulate"
+        );
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn ok_with_failures_resets_append_failures() -> anyhow::Result<()> {
+        let storage = TestStorage {
+            logs: (1..=10)
+                .map(|i| Log {
+                    db_id: None,
+                    index: i,
+                    term: 1,
+                    data: i as u8,
+                })
+                .collect(),
+            commit: 10,
+            ..Default::default()
+        };
+        let mut leader = test_leader(storage);
+        leader.node_mut(1).append_failures = 2;
+        leader.node_mut(1).log_commit = 10;
+
+        let request = heartbeat_request(0);
+        let response = ok_response_with_failed(vec![3]);
+
+        leader
+            .response(&request, &response)
+            .await
+            .map_err(|e| anyhow!(e.description))?;
+
+        assert_eq!(
+            leader.node(1).append_failures,
+            0,
+            "Ok response must reset append_failures"
+        );
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn leader_failed_triggers_force_resync() -> anyhow::Result<()> {
+        let storage = TestStorage {
+            logs: (1..=10)
+                .map(|i| Log {
+                    db_id: None,
+                    index: i,
+                    term: 1,
+                    data: i as u8,
+                })
+                .collect(),
+            commit: 10,
+            failed: vec![5],
+            ..Default::default()
+        };
+        let mut leader = test_leader(storage);
+        // Follower committed past index 5
+        leader.node_mut(1).log_commit = 10;
+
+        // Leader has failed=[5], follower reports [] → leader-failed
+        let request = heartbeat_request(0);
+        let response = ok_response_with_failed(vec![]);
+
+        leader
+            .response(&request, &response)
+            .await
+            .map_err(|e| anyhow!(e.description))?;
+
+        assert!(
+            leader.node(1).force_resync,
+            "leader-failed must trigger force_resync"
+        );
+        assert!(
+            leader.node(1).pending_resync_dbs.is_empty(),
+            "leader-failed should NOT queue per-DB resync"
+        );
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn mixed_divergence_both_directions() -> anyhow::Result<()> {
+        let storage = TestStorage {
+            logs: (1..=10)
+                .map(|i| Log {
+                    db_id: None,
+                    index: i,
+                    term: 1,
+                    data: i as u8,
+                })
+                .collect(),
+            commit: 10,
+            failed: vec![5],
+            resolve_result: vec![("alice".into(), "mydb".into())],
+            ..Default::default()
+        };
+        let mut leader = test_leader(storage);
+        leader.node_mut(1).log_commit = 10;
+
+        // Leader failed on 5, follower failed on 3
+        let request = heartbeat_request(0);
+        let response = ok_response_with_failed(vec![3]);
+
+        leader
+            .response(&request, &response)
+            .await
+            .map_err(|e| anyhow!(e.description))?;
+
+        assert!(
+            leader.node(1).force_resync,
+            "leader-failed must trigger force_resync"
+        );
+        assert_eq!(
+            leader.node(1).pending_resync_dbs,
+            vec![("alice".into(), "mydb".into())],
+            "follower-failed must queue per-DB resync"
+        );
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn heartbeat_carries_exec_reconciled() -> anyhow::Result<()> {
+        let storage = TestStorage {
+            logs: (1..=5)
+                .map(|i| Log {
+                    db_id: None,
+                    index: i,
+                    term: 1,
+                    data: i as u8,
+                })
+                .collect(),
+            commit: 5,
+            ..Default::default()
+        };
+        let mut leader = test_leader(storage);
+        leader.node_mut(1).exec_reconciled = 7;
+        leader.node_mut(2).exec_reconciled = 12;
+
+        let requests = leader.heartbeat();
+        assert!(!requests.is_empty());
+        let req_for_1 = requests
+            .iter()
+            .find(|r| r.target == 1)
+            .expect("request for node 1");
+        assert_eq!(req_for_1.exec_reconciled, 7);
+        let req_for_2 = requests
+            .iter()
+            .find(|r| r.target == 2)
+            .expect("request for node 2");
+        assert_eq!(req_for_2.exec_reconciled, 12);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn heartbeat_drains_pending_resync_dbs() -> anyhow::Result<()> {
+        let storage = TestStorage {
+            logs: (1..=5)
+                .map(|i| Log {
+                    db_id: None,
+                    index: i,
+                    term: 1,
+                    data: i as u8,
+                })
+                .collect(),
+            commit: 5,
+            ..Default::default()
+        };
+        let mut leader = test_leader(storage);
+
+        // Manually queue resync_dbs for node 1
+        leader.node_mut(1).pending_resync_dbs = vec![("alice".into(), "db1".into())];
+
+        let requests = leader.heartbeat();
+        // Should generate a Heartbeat + a ResyncDbs for node 1
+        let resync_req = requests
+            .iter()
+            .find(|r| r.target == 1 && matches!(r.data, RequestType::ResyncDbs(_)))
+            .expect("ResyncDbs request for node 1");
+        assert_eq!(
+            resync_req.resync_dbs(),
+            Some(&vec![("alice".into(), "db1".into())])
+        );
+
+        // Pending should be drained
+        assert!(leader.node(1).pending_resync_dbs.is_empty());
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn heartbeat_no_timer_drains_pending_resync_dbs() -> anyhow::Result<()> {
+        let storage = TestStorage {
+            logs: (1..=5)
+                .map(|i| Log {
+                    db_id: None,
+                    index: i,
+                    term: 1,
+                    data: i as u8,
+                })
+                .collect(),
+            commit: 5,
+            ..Default::default()
+        };
+        let mut leader = test_leader(storage);
+
+        leader.node_mut(2).pending_resync_dbs = vec![("bob".into(), "db2".into())];
+
+        let requests = leader.heartbeat_no_timer();
+        let resync_req = requests
+            .iter()
+            .find(|r| r.target == 2 && matches!(r.data, RequestType::ResyncDbs(_)))
+            .expect("ResyncDbs request for node 2");
+        assert_eq!(
+            resync_req.resync_dbs(),
+            Some(&vec![("bob".into(), "db2".into())])
+        );
+
+        assert!(leader.node(2).pending_resync_dbs.is_empty());
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn heartbeat_no_timer_propagates_force_resync() -> anyhow::Result<()> {
+        let storage = TestStorage {
+            logs: (1..=5)
+                .map(|i| Log {
+                    db_id: None,
+                    index: i,
+                    term: 1,
+                    data: i as u8,
+                })
+                .collect(),
+            commit: 5,
+            ..Default::default()
+        };
+        let mut leader = test_leader(storage);
+
+        leader.node_mut(2).force_resync = true;
+
+        let requests = leader.heartbeat_no_timer();
+        let resync_req = requests
+            .iter()
+            .find(|r| r.target == 2 && matches!(r.data, RequestType::Resync));
+        assert!(
+            resync_req.is_some(),
+            "heartbeat_no_timer must generate a Resync request"
+        );
+        assert!(
+            !leader.node(2).force_resync,
+            "force_resync must be cleared after draining"
+        );
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn follower_attaches_failed_to_response() -> anyhow::Result<()> {
+        let storage = TestStorage {
+            logs: (1..=10)
+                .map(|i| Log {
+                    db_id: None,
+                    index: i,
+                    term: 1,
+                    data: i as u8,
+                })
+                .collect(),
+            commit: 10,
+            failed: vec![7, 9],
+            ..Default::default()
+        };
+        let settings = ClusterSettings {
+            index: 1,
+            size: 3,
+            hash: 123,
+            election_factor_ms: 100,
+            heartbeat_timeout: Duration::from_millis(100),
+            term_timeout: Duration::from_millis(300),
+            max_log_entries: 1000,
+        };
+        let mut follower: Cluster<u8, (), TestStorage> = Cluster::new(storage, settings);
+        follower.state = ClusterState::Follower(0);
+        follower.term = 1;
+
+        let request = heartbeat_request(0);
+        let response = follower.request(&request).await;
+
+        assert_eq!(response.result, ResponseType::OkReport(vec![7, 9]));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn follower_attaches_empty_failed_to_response() -> anyhow::Result<()> {
+        let storage = TestStorage {
+            logs: (1..=10)
+                .map(|i| Log {
+                    db_id: None,
+                    index: i,
+                    term: 1,
+                    data: i as u8,
+                })
+                .collect(),
+            commit: 10,
+            ..Default::default()
+        };
+        let settings = ClusterSettings {
+            index: 1,
+            size: 3,
+            hash: 123,
+            election_factor_ms: 100,
+            heartbeat_timeout: Duration::from_millis(100),
+            term_timeout: Duration::from_millis(300),
+            max_log_entries: 1000,
+        };
+        let mut follower: Cluster<u8, (), TestStorage> = Cluster::new(storage, settings);
+        follower.state = ClusterState::Follower(0);
+        follower.term = 1;
+
+        let request = heartbeat_request(0);
+        let response = follower.request(&request).await;
+
+        assert_eq!(response.result, ResponseType::OkReport(vec![]));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn log_mismatch_does_not_queue_resync_dbs() -> anyhow::Result<()> {
+        let storage = TestStorage {
+            logs: (1..=10)
+                .map(|i| Log {
+                    db_id: None,
+                    index: i,
+                    term: 1,
+                    data: i as u8,
+                })
+                .collect(),
+            commit: 10,
+            resolve_result: vec![("should_not_appear".into(), "x".into())],
+            ..Default::default()
+        };
+        let mut leader = test_leader(storage);
+
+        let request = heartbeat_request(0);
+        let response = Response::new(
+            0,
+            ResponseType::LogMismatch(LogMismatch {
+                index: MismatchedValues {
+                    local: Some(5),
+                    requested: Some(10),
+                },
+                term: MismatchedValues {
+                    local: Some(1),
+                    requested: Some(1),
+                },
+                commit: MismatchedValues {
+                    local: Some(5),
+                    requested: Some(10),
+                },
+            }),
+        );
+
+        leader
+            .response(&request, &response)
+            .await
+            .map_err(|e| anyhow!(e.description))?;
+
+        assert!(
+            leader.node(1).pending_resync_dbs.is_empty(),
+            "LogMismatch should not queue per-DB resyncs"
+        );
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn reconcile_carries_exec_reconciled() -> anyhow::Result<()> {
+        let storage = TestStorage {
+            logs: (1..=10)
+                .map(|i| Log {
+                    db_id: None,
+                    index: i,
+                    term: 1,
+                    data: i as u8,
+                })
+                .collect(),
+            commit: 10,
+            ..Default::default()
+        };
+        let mut leader = test_leader(storage);
+        leader.node_mut(1).exec_reconciled = 5;
+
+        let request = heartbeat_request(5);
+        let mismatch_response = Response::new(
+            0,
+            ResponseType::LogMismatch(LogMismatch {
+                index: MismatchedValues {
+                    local: Some(5),
+                    requested: Some(10),
+                },
+                term: MismatchedValues {
+                    local: Some(1),
+                    requested: Some(1),
+                },
+                commit: MismatchedValues {
+                    local: Some(5),
+                    requested: Some(10),
+                },
+            }),
+        );
+
+        let reconcile_requests = leader
+            .response(&request, &mismatch_response)
+            .await
+            .map_err(|e| anyhow!(e.description))?;
+
+        if let Some(requests) = reconcile_requests {
+            for req in &requests {
+                assert_eq!(
+                    req.exec_reconciled, 5,
+                    "reconcile must carry the node's exec_reconciled"
+                );
+            }
+        }
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn watermark_advances_when_no_pending_work() -> anyhow::Result<()> {
+        let storage = TestStorage {
+            logs: (1..=10)
+                .map(|i| Log {
+                    db_id: None,
+                    index: i,
+                    term: 1,
+                    data: i as u8,
+                })
+                .collect(),
+            commit: 10,
+            ..Default::default()
+        };
+        let mut leader = test_leader(storage);
+        leader.node_mut(1).log_commit = 10;
+
+        let request = heartbeat_request(0);
+        let response = ok_response_with_failed(vec![]);
+
+        leader
+            .response(&request, &response)
+            .await
+            .map_err(|e| anyhow!(e.description))?;
+
+        assert_eq!(
+            leader.node(1).exec_reconciled,
+            10,
+            "watermark must advance to follower_commit when no pending work"
+        );
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn watermark_held_when_pending_resync() -> anyhow::Result<()> {
+        let storage = TestStorage {
+            logs: (1..=10)
+                .map(|i| Log {
+                    db_id: None,
+                    index: i,
+                    term: 1,
+                    data: i as u8,
+                })
+                .collect(),
+            commit: 10,
+            resolve_result: vec![("alice".into(), "db1".into())],
+            ..Default::default()
+        };
+        let mut leader = test_leader(storage);
+        leader.node_mut(1).log_commit = 10;
+
+        // Follower reports a failure → queues pending resync
+        let request = heartbeat_request(0);
+        let response = ok_response_with_failed(vec![5]);
+
+        leader
+            .response(&request, &response)
+            .await
+            .map_err(|e| anyhow!(e.description))?;
+
+        assert!(
+            !leader.node(1).pending_resync_dbs.is_empty(),
+            "should have pending resync"
+        );
+        assert_eq!(
+            leader.node(1).exec_reconciled,
+            0,
+            "watermark must NOT advance when pending work exists"
+        );
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn watermark_prevents_leader_failed_retrigger() -> anyhow::Result<()> {
+        let storage = TestStorage {
+            logs: (1..=10)
+                .map(|i| Log {
+                    db_id: None,
+                    index: i,
+                    term: 1,
+                    data: i as u8,
+                })
+                .collect(),
+            commit: 10,
+            failed: vec![5],
+            ..Default::default()
+        };
+        let mut leader = test_leader(storage);
+        leader.node_mut(1).log_commit = 10;
+        // Watermark already past index 5
+        leader.node_mut(1).exec_reconciled = 7;
+
+        let request = heartbeat_request(7);
+        let response = ok_response_with_failed(vec![]);
+
+        leader
+            .response(&request, &response)
+            .await
+            .map_err(|e| anyhow!(e.description))?;
+
+        assert!(
+            !leader.node(1).force_resync,
+            "leader-failed at idx <= exec_reconciled must NOT re-trigger force_resync"
+        );
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn follower_prunes_on_watermark() -> anyhow::Result<()> {
+        let storage = TestStorage {
+            logs: (1..=10)
+                .map(|i| Log {
+                    db_id: None,
+                    index: i,
+                    term: 1,
+                    data: i as u8,
+                })
+                .collect(),
+            commit: 10,
+            failed: vec![3, 5, 8],
+            ..Default::default()
+        };
+        let settings = ClusterSettings {
+            index: 1,
+            size: 3,
+            hash: 123,
+            election_factor_ms: 100,
+            heartbeat_timeout: Duration::from_millis(100),
+            term_timeout: Duration::from_millis(300),
+            max_log_entries: 1000,
+        };
+        let mut follower: Cluster<u8, (), TestStorage> = Cluster::new(storage, settings);
+        follower.state = ClusterState::Follower(0);
+        follower.term = 1;
+
+        // Heartbeat with exec_reconciled=6
+        let request = Request {
+            hash: 123,
+            index: 0,
+            target: 1,
+            term: 1,
+            log_index: 10,
+            log_term: 1,
+            log_commit: 10,
+            prune_index: 0,
+            exec_reconciled: 6,
+            data: RequestType::Heartbeat,
+        };
+
+        let response = follower.request(&request).await;
+        // cleared_up_to should be set to 6
+        assert_eq!(follower.storage.cleared_up_to, 6);
+        // failed should only contain indices > 6
+        assert_eq!(follower.storage.failed, vec![8]);
+        // Response should only report remaining failures via OkReport
+        assert_eq!(response.result, ResponseType::OkReport(vec![8]));
         Ok(())
     }
 }

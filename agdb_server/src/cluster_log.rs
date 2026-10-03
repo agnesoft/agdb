@@ -20,6 +20,10 @@ pub(crate) struct ClusterLog(pub(crate) Arc<RwLock<Db>>);
 const CLUSTER_LOG: &str = "cluster_log";
 const EXECUTED: &str = "executed";
 const COMMITTED: &str = "committed";
+const INDEX: &str = "index";
+const LOG_FAILED: &str = "log_failed";
+const TERM: &str = "term";
+
 pub(crate) const CLUSTER_LOG_FILE: &str = "agdb_server.log";
 
 pub(crate) async fn new(config: &Config) -> ServerResult<ClusterLog> {
@@ -93,7 +97,7 @@ impl ClusterLog {
             if let Some(e) = t
                 .exec(
                     QueryBuilder::select()
-                        .values(["index", "term"])
+                        .values([INDEX, TERM])
                         .search()
                         .depth_first()
                         .from(CLUSTER_LOG)
@@ -108,7 +112,7 @@ impl ClusterLog {
                 let commit = if let Some(c) = t
                     .exec(
                         QueryBuilder::select()
-                            .values("index")
+                            .values(INDEX)
                             .search()
                             .depth_first()
                             .from(CLUSTER_LOG)
@@ -174,7 +178,7 @@ impl ClusterLog {
             let mut log_ids: Vec<(u64, DbId)> = t
                 .exec(
                     QueryBuilder::select()
-                        .values("index")
+                        .values(INDEX)
                         .search()
                         .index(label)
                         .value(false)
@@ -207,7 +211,7 @@ impl ClusterLog {
                     .where_()
                     .neighbor()
                     .and()
-                    .key("index")
+                    .key(INDEX)
                     .value(Comparison::LessThanOrEqual(up_to_index.into()))
                     .and()
                     .not()
@@ -226,7 +230,7 @@ impl ClusterLog {
             let logs: Vec<DbId> = t
                 .exec(
                     QueryBuilder::select()
-                        .values("index")
+                        .values(INDEX)
                         .search()
                         .index(COMMITTED)
                         .value(false)
@@ -251,6 +255,88 @@ impl ClusterLog {
         Ok(())
     }
 
+    pub(crate) async fn set_log_failed(&self, log_id: DbId) -> ServerResult<()> {
+        self.0.write().await.exec_mut(
+            QueryBuilder::insert()
+                .values([[(LOG_FAILED, true).into()]])
+                .ids(log_id)
+                .query(),
+        )?;
+        Ok(())
+    }
+
+    pub(crate) async fn clear_log_failed(&self, indices: &[u64]) -> ServerResult<()> {
+        if indices.is_empty() {
+            return Ok(());
+        }
+
+        self.0.write().await.exec_mut(
+            QueryBuilder::remove()
+                .values(LOG_FAILED)
+                .search()
+                .depth_first()
+                .from(CLUSTER_LOG)
+                .where_()
+                .neighbor()
+                .and()
+                .keys(LOG_FAILED)
+                .and()
+                .key(INDEX)
+                .value(Comparison::Any((*indices).into()))
+                .query(),
+        )?;
+
+        Ok(())
+    }
+
+    pub(crate) async fn failed_indices(&self) -> ServerResult<Vec<u64>> {
+        Ok(self
+            .0
+            .read()
+            .await
+            .exec(
+                QueryBuilder::select()
+                    .values(INDEX)
+                    .search()
+                    .depth_first()
+                    .from(CLUSTER_LOG)
+                    .where_()
+                    .neighbor()
+                    .and()
+                    .keys(LOG_FAILED)
+                    .query(),
+            )?
+            .elements
+            .iter()
+            .filter_map(|e| e.values[0].value.to_u64().ok())
+            .collect())
+    }
+
+    pub(crate) async fn action_at_index(&self, index: u64) -> ServerResult<Option<ClusterAction>> {
+        Ok(self
+            .0
+            .read()
+            .await
+            .exec(
+                QueryBuilder::select()
+                    .element::<Log<ClusterAction>>()
+                    .search()
+                    .depth_first()
+                    .from(CLUSTER_LOG)
+                    .where_()
+                    .neighbor()
+                    .and()
+                    .key(INDEX)
+                    .value(index)
+                    .query(),
+            )?
+            .try_into()
+            .ok()
+            .and_then(|elements: Vec<Log<ClusterAction>>| {
+                elements.into_iter().next().map(|e| e.data)
+            }))
+    }
+
     pub(crate) async fn logs_since(
         &self,
         from_index: u64,
@@ -259,15 +345,15 @@ impl ClusterLog {
             let log_ids = t
                 .exec(
                     QueryBuilder::select()
-                        .values("index")
+                        .values(INDEX)
                         .search()
                         .depth_first()
                         .from(CLUSTER_LOG)
-                        .order_by(DbKeyOrder::Asc("index".into()))
+                        .order_by(DbKeyOrder::Asc(INDEX.into()))
                         .where_()
                         .neighbor()
                         .and()
-                        .key("index")
+                        .key(INDEX)
                         .value(Comparison::GreaterThan(from_index.into()))
                         .query(),
                 )?
@@ -727,6 +813,131 @@ mod tests {
 
         let logs = cluster_log.logs_since(0).await?;
         assert_eq!(logs.len(), 1);
+
+        Ok(())
+    }
+
+    // ── Failed-index tracking tests ─────────────────────────────────────
+
+    #[tokio::test]
+    async fn set_and_query_failed_indices() -> ServerResult<()> {
+        let (config, _directory) = test_config("failed_roundtrip");
+        let cluster_log = crate::cluster_log::new(&config).await?;
+
+        let db_id1 = cluster_log.append_log(&test_log(1, 1, "a")).await?;
+        let db_id2 = cluster_log.append_log(&test_log(2, 1, "b")).await?;
+        let _db_id3 = cluster_log.append_log(&test_log(3, 1, "c")).await?;
+
+        cluster_log.set_log_failed(db_id1).await?;
+        cluster_log.set_log_failed(db_id2).await?;
+
+        let mut failed = cluster_log.failed_indices().await?;
+        failed.sort();
+        assert_eq!(failed, vec![1, 2]);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn failed_indices_empty_when_none_failed() -> ServerResult<()> {
+        let (config, _directory) = test_config("failed_empty");
+        let cluster_log = crate::cluster_log::new(&config).await?;
+
+        cluster_log.append_log(&test_log(1, 1, "a")).await?;
+        cluster_log.append_log(&test_log(2, 1, "b")).await?;
+
+        let failed = cluster_log.failed_indices().await?;
+        assert!(failed.is_empty());
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn clear_log_failed_removes_subset() -> ServerResult<()> {
+        let (config, _directory) = test_config("clear_failed_subset");
+        let cluster_log = crate::cluster_log::new(&config).await?;
+
+        let db_id1 = cluster_log.append_log(&test_log(1, 1, "a")).await?;
+        let db_id2 = cluster_log.append_log(&test_log(2, 1, "b")).await?;
+        let db_id3 = cluster_log.append_log(&test_log(3, 1, "c")).await?;
+
+        cluster_log.set_log_failed(db_id1).await?;
+        cluster_log.set_log_failed(db_id2).await?;
+        cluster_log.set_log_failed(db_id3).await?;
+
+        // Clear only indices 1 and 3
+        cluster_log.clear_log_failed(&[1, 3]).await?;
+
+        let failed = cluster_log.failed_indices().await?;
+        assert_eq!(failed, vec![2]);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn clear_log_failed_empty_slice_is_noop() -> ServerResult<()> {
+        let (config, _directory) = test_config("clear_failed_empty");
+        let cluster_log = crate::cluster_log::new(&config).await?;
+
+        let db_id1 = cluster_log.append_log(&test_log(1, 1, "a")).await?;
+        cluster_log.set_log_failed(db_id1).await?;
+
+        cluster_log.clear_log_failed(&[]).await?;
+
+        let failed = cluster_log.failed_indices().await?;
+        assert_eq!(failed, vec![1]);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn action_at_index_returns_correct_action() -> ServerResult<()> {
+        let (config, _directory) = test_config("action_at_index");
+        let cluster_log = crate::cluster_log::new(&config).await?;
+
+        cluster_log.append_log(&test_log(1, 1, "first")).await?;
+        cluster_log.append_log(&test_log(2, 1, "second")).await?;
+        cluster_log.append_log(&test_log(3, 1, "third")).await?;
+
+        let action = cluster_log
+            .action_at_index(2)
+            .await?
+            .expect("should find action at index 2");
+
+        match action {
+            ClusterAction::UserAdd(user_add) => {
+                assert_eq!(user_add.user, "user_second");
+            }
+            _ => panic!("expected UserAdd"),
+        }
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn action_at_index_returns_none_for_missing() -> ServerResult<()> {
+        let (config, _directory) = test_config("action_at_missing");
+        let cluster_log = crate::cluster_log::new(&config).await?;
+
+        cluster_log.append_log(&test_log(1, 1, "only")).await?;
+
+        let action = cluster_log.action_at_index(99).await?;
+        assert!(action.is_none());
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn set_log_failed_idempotent() -> ServerResult<()> {
+        let (config, _directory) = test_config("failed_idempotent");
+        let cluster_log = crate::cluster_log::new(&config).await?;
+
+        let db_id1 = cluster_log.append_log(&test_log(1, 1, "a")).await?;
+        cluster_log.set_log_failed(db_id1).await?;
+        cluster_log.set_log_failed(db_id1).await?;
+
+        let failed = cluster_log.failed_indices().await?;
+        assert_eq!(failed, vec![1]);
 
         Ok(())
     }

@@ -525,6 +525,79 @@ impl DbPool {
         self.restore_audit_from_backup(owner, db)
     }
 
+    pub(crate) async fn resync_db(
+        &self,
+        owner: &str,
+        db: &str,
+        db_type: DbKind,
+        install_dir: &Path,
+        config: &Config,
+    ) -> ServerResult {
+        match self.delete_db(owner, db).await {
+            Ok(_) => {}
+            Err(e) if e.status == StatusCode::NOT_FOUND => {}
+            Err(e) => return Err(e),
+        }
+
+        let data_dir = Path::new(&config.data_dir);
+        let db_src = install_dir.join(owner).join(db);
+        let db_dst = db_file(owner, db, config);
+
+        if let Some(parent) = db_dst.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+
+        if db_src.exists() {
+            std::fs::copy(&db_src, &db_dst)?;
+        } else if db_type != DbKind::Memory {
+            return Err(ServerError::from(format!(
+                "resync_db: snapshot missing main DB file for {owner}/{db}"
+            )));
+        }
+
+        for (src_path, dst_path) in [
+            (
+                install_dir.join(
+                    db_audit_file(owner, db, config)
+                        .strip_prefix(data_dir)
+                        .unwrap_or(Path::new("")),
+                ),
+                db_audit_file(owner, db, config),
+            ),
+            (
+                install_dir.join(
+                    db_backup_file(owner, db, config)
+                        .strip_prefix(data_dir)
+                        .unwrap_or(Path::new("")),
+                ),
+                db_backup_file(owner, db, config),
+            ),
+            (
+                install_dir.join(
+                    db_backup_audit_file(owner, db, config)
+                        .strip_prefix(data_dir)
+                        .unwrap_or(Path::new("")),
+                ),
+                db_backup_audit_file(owner, db, config),
+            ),
+        ] {
+            if src_path.exists() {
+                if let Some(parent) = dst_path.parent() {
+                    std::fs::create_dir_all(parent)?;
+                }
+                std::fs::copy(&src_path, &dst_path)?;
+            }
+        }
+
+        let db_name = DbName::new(owner, db);
+        let user_db = UserDb::new(db_dst.to_string_lossy().as_ref(), db_type)?;
+        if db_type == DbKind::Memory {
+            remove_file_if_exists(&db_dst)?;
+        }
+        self.pool.write().await.insert(db_name, user_db);
+        Ok(())
+    }
+
     pub(crate) async fn rollback_db(
         &self,
         owner: &str,

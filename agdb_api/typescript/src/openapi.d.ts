@@ -267,6 +267,27 @@ declare namespace Components {
              * with `to_string()` but otherwise requires a `match`.
              */
             DbValue;
+        } | {
+            /**
+             * property matches regex pattern. The inner value must be
+             * `DbValue::String` holding a valid regex pattern. Non-string
+             * values or invalid patterns yield `false`. Requires `regex`
+             * feature to be enabled; without it the comparison always
+             * yields `false`.
+             */
+            Regex: /**
+             * Database value is a strongly types value.
+             *
+             * It is an enum of limited number supported types
+             * that are universal across all platforms
+             * and programming languages.
+             *
+             * The value is constructible from large number of
+             * raw types or associated types (e.g. i32, &str, etc.).
+             * Getting the raw value back as string can be done
+             * with `to_string()` but otherwise requires a `match`.
+             */
+            DbValue;
         };
         /**
          * Comparison of unsigned integers (`u64`) used

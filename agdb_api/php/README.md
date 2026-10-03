@@ -144,6 +144,7 @@ Class | Method | HTTP request | Description
 - [Comparison](docs/Model/Comparison.md)
 - [ComparisonOneOf](docs/Model/ComparisonOneOf.md)
 - [ComparisonOneOf1](docs/Model/ComparisonOneOf1.md)
+- [ComparisonOneOf10](docs/Model/ComparisonOneOf10.md)
 - [ComparisonOneOf2](docs/Model/ComparisonOneOf2.md)
 - [ComparisonOneOf3](docs/Model/ComparisonOneOf3.md)
 - [ComparisonOneOf4](docs/Model/ComparisonOneOf4.md)

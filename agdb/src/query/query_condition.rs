@@ -182,6 +182,13 @@ pub enum Comparison {
     /// side, uses existential (OR) semantics rather than universal
     /// (AND) semantics. Empty right-hand vector yields `false`.
     Any(DbValue),
+
+    /// property matches regex pattern. The inner value must be
+    /// `DbValue::String` holding a valid regex pattern. Non-string
+    /// values or invalid patterns yield `false`. Requires `regex`
+    /// feature to be enabled; without it the comparison always
+    /// yields `false`.
+    Regex(DbValue),
 }
 
 /// Comparison of a value stored under specific `key` to
@@ -356,6 +363,19 @@ impl Comparison {
                 (DbValue::VecDbValue(left), right) => left.contains(right),
                 _ => false,
             },
+
+            #[cfg(feature = "regex")]
+            Comparison::Regex(right) => match (left, right) {
+                (DbValue::String(left), DbValue::String(pattern)) => regex::Regex::new(pattern)
+                    .map(|re| re.is_match(left))
+                    .unwrap_or(false),
+                (DbValue::VecString(left), DbValue::String(pattern)) => regex::Regex::new(pattern)
+                    .map(|re| left.iter().any(|s| re.is_match(s)))
+                    .unwrap_or(false),
+                _ => false,
+            },
+            #[cfg(not(feature = "regex"))]
+            Comparison::Regex(_) => false,
         }
     }
 
@@ -370,7 +390,8 @@ impl Comparison {
             | Comparison::Contains(value)
             | Comparison::StartsWith(value)
             | Comparison::EndsWith(value)
-            | Comparison::Any(value) => value,
+            | Comparison::Any(value)
+            | Comparison::Regex(value) => value,
         }
     }
 }

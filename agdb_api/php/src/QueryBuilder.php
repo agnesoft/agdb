@@ -183,6 +183,12 @@ class ComparisonBuilder
     ): Comparison {
         return new Comparison(["any" => to_db_value($value)]);
     }
+
+    public static function Regex(
+        bool|int|float|string|array|DbValue $value
+    ): Comparison {
+        return new Comparison(["regex" => to_db_value($value)]);
+    }
 }
 
 class DbKeyOrderBuilder
@@ -1110,6 +1116,12 @@ class SearchWhereKeyBuilder
         bool|int|float|string|array|DbValue $value
     ): SearchWhereLogicBuilder {
         return $this->value(ComparisonBuilder::Any($value));
+    }
+
+    public function regex(
+        bool|int|float|string|array|DbValue $value
+    ): SearchWhereLogicBuilder {
+        return $this->value(ComparisonBuilder::Regex($value));
     }
 }
 

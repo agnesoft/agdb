@@ -323,6 +323,7 @@ QueryBuilder::search().from(1).where_().node().or().where_().edge().and().key("k
 QueryBuilder::search().from(1).where_().node().or().where_().edge().and().key("k").value(Comparison::Contains(([1, 2]).into())).end_where().query(),
 QueryBuilder::search().from(1).where_().node().or().where_().edge().and().key("k").value(Comparison::StartsWith(1.into())).end_where().query(),
 QueryBuilder::search().from(1).where_().node().or().where_().edge().and().key("k").value(Comparison::EndsWith(([1, 2]).into())).end_where().query(),
+QueryBuilder::search().from(1).where_().node().or().where_().edge().and().key("k").value(Comparison::Any(([1, 2]).into())).end_where().query(),
 QueryBuilder::search().from(1).order_by([DbKeyOrder::Asc("k".into())]).where_().node().query(),
 QueryBuilder::search().from(1).limit(1).where_().node().query(),
 QueryBuilder::search().from(1).offset(1).where_().node().query(),

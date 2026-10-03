@@ -1,5 +1,7 @@
 use crate::InsertAliasesQuery;
 use crate::QueryIds;
+use crate::SearchQuery;
+use crate::query_builder::search::Search;
 
 /// Insert aliases builder to select `ids`
 /// of the aliases.
@@ -15,13 +17,18 @@ pub struct InsertAliasesIds(pub InsertAliasesQuery);
 
 #[cfg_attr(feature = "api", agdb::impl_def())]
 impl InsertAliases {
-    /// Ids of the db elements to be aliased. Only nodes can be aliased
-    /// (positive ids) and the ids must exist in the database. NOTE: Search
-    /// query in place of ids is not allowed and will be ignored if used.
+    /// An id or list of ids or search query to which to assign the aliases.
     pub fn ids<T: Into<QueryIds>>(mut self, ids: T) -> InsertAliasesIds {
         self.0.ids = ids.into();
 
         InsertAliasesIds(self.0)
+    }
+
+    /// Assigns aliases to elements found using the search query.
+    /// Equivalent to `ids(QueryIds::Search(search)/*...*/)`.
+    pub fn search(mut self) -> Search<InsertAliasesQuery> {
+        self.0.ids = QueryIds::Search(SearchQuery::new());
+        Search(self.0)
     }
 }
 

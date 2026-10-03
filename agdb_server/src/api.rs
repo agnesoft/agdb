@@ -199,6 +199,8 @@ mod tests {
 QueryBuilder::insert().aliases("a").ids(1).query(),
 QueryBuilder::insert().aliases("a").ids("b").query(),
 QueryBuilder::insert().aliases(["a", "b"]).ids([1, 2]).query(),
+QueryBuilder::insert().aliases(["a", "b"]).ids(QueryBuilder::search().from(1).where_().node().query()).query(),
+QueryBuilder::insert().aliases(["a", "b"]).search().from(1).where_().node().query(),
 QueryBuilder::insert().edges().from(1).to(2).query(),
 QueryBuilder::insert().edges().from("a").to("b").query(),
 QueryBuilder::insert().edges().from("a").to([1, 2]).query(),

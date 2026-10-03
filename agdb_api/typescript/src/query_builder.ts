@@ -562,6 +562,10 @@ class InsertAliasesBuilder {
         this.data.ids = intoQueryIds(ids);
         return new InsertAliasesIdsBuilder(this.data);
     }
+
+    search(): SearchBuilder {
+        return new SearchBuilder({ InsertAlias: this.data });
+    }
 }
 
 class InsertValuesIdsBuilder {
@@ -1912,7 +1916,11 @@ class SearchBuilder {
         };
 
         if (query !== undefined) {
-            if ("InsertValues" in query) {
+            if ("InsertAlias" in query) {
+                query.InsertAlias.ids = {
+                    Search: search,
+                };
+            } else if ("InsertValues" in query) {
                 query.InsertValues.ids = {
                     Search: search,
                 };

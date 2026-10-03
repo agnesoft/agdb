@@ -654,6 +654,7 @@ mod tests {
             &DbValue::I64(0)
         );
         assert_eq!(Comparison::Any(DbValue::I64(0)).value(), &DbValue::I64(0));
+        assert_eq!(Comparison::Regex(DbValue::U64(0)).value(), &DbValue::U64(0));
     }
 
     #[test]

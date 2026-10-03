@@ -55,6 +55,72 @@
     }
   ],
   [
+    "QueryBuilder::insert().aliases([\"a\",\"b\"]).ids(QueryBuilder::search().from(1).where_().node().query()).query()",
+    {
+      "InsertAlias": {
+        "ids": {
+          "Search": {
+            "algorithm": "BreadthFirst",
+            "origin": {
+              "Id": 1
+            },
+            "destination": {
+              "Id": 0
+            },
+            "limit": 0,
+            "offset": 0,
+            "order_by": [],
+            "conditions": [
+              {
+                "logic": "And",
+                "modifier": "None",
+                "data": "Node"
+              }
+            ],
+            "reverse": false
+          }
+        },
+        "aliases": [
+          "a",
+          "b"
+        ]
+      }
+    }
+  ],
+  [
+    "QueryBuilder::insert().aliases([\"a\",\"b\"]).search().from(1).where_().node().query()",
+    {
+      "InsertAlias": {
+        "ids": {
+          "Search": {
+            "algorithm": "BreadthFirst",
+            "origin": {
+              "Id": 1
+            },
+            "destination": {
+              "Id": 0
+            },
+            "limit": 0,
+            "offset": 0,
+            "order_by": [],
+            "conditions": [
+              {
+                "logic": "And",
+                "modifier": "None",
+                "data": "Node"
+              }
+            ],
+            "reverse": false
+          }
+        },
+        "aliases": [
+          "a",
+          "b"
+        ]
+      }
+    }
+  ],
+  [
     "QueryBuilder::insert().edges().from(1).to(2).query()",
     {
       "InsertEdges": {

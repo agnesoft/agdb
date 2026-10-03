@@ -23,7 +23,7 @@ tikv-jemallocator = "0.6"
 windows-sys = { version = "0.61", features = ["Win32_System_ProcessStatus", "Win32_System_Threading"] }
 
 [dependencies]
-agdb = { version = "0.14.3", path = "../agdb", features = ["serde", "openapi"] }
+agdb = { version = "0.14.3", path = "../agdb", features = ["serde", "openapi", "regex"] }
 agdb_api = { version = "0.14.3", path = "../agdb_api", features = ["api"] }
 axum = { version = "0.8", features = ["http2"] }
 axum-extra = { version = "0.12", features = ["typed-header", "routing"] }

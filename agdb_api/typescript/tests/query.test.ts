@@ -1378,4 +1378,14 @@ describe("query tests", () => {
             .query();
         expect(query).toEqual(test_queries[163][1]);
     });
+
+    it(`QueryBuilder::search().from(1).where_().key("k").regex("pattern").query()`, () => {
+        const query = QueryBuilder.search()
+            .from(1)
+            .where()
+            .key("k")
+            .regex("pattern")
+            .query();
+        expect(query).toEqual(test_queries[164][1]);
+    });
 });

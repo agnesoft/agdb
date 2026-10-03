@@ -30,7 +30,8 @@ function isComparison(
             "Contains" in value ||
             "StartsWith" in value ||
             "EndsWith" in value ||
-            "Any" in value)
+            "Any" in value ||
+            "Regex" in value)
     );
 }
 
@@ -286,6 +287,10 @@ export class Comparison {
 
     static Any(value: BuilderDbValue): Components.Schemas.Comparison {
         return { Any: convertToDbValue(value) };
+    }
+
+    static Regex(value: BuilderDbValue): Components.Schemas.Comparison {
+        return { Regex: convertToDbValue(value) };
     }
 }
 
@@ -1164,6 +1169,10 @@ class SearchWhereKeyBuilder {
 
     any(value: BuilderDbValue): SearchWhereLogicBuilder {
         return this.value(Comparison.Any(value));
+    }
+
+    regex(value: BuilderDbValue): SearchWhereLogicBuilder {
+        return this.value(Comparison.Regex(value));
     }
 }
 

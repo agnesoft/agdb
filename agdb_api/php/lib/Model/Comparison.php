@@ -67,7 +67,8 @@ class Comparison implements ModelInterface, ArrayAccess, \JsonSerializable
         'contains' => '\Agnesoft\AgdbApi\Model\DbValue',
         'starts_with' => '\Agnesoft\AgdbApi\Model\DbValue',
         'ends_with' => '\Agnesoft\AgdbApi\Model\DbValue',
-        'any' => '\Agnesoft\AgdbApi\Model\DbValue'
+        'any' => '\Agnesoft\AgdbApi\Model\DbValue',
+        'regex' => '\Agnesoft\AgdbApi\Model\DbValue'
     ];
 
     /**
@@ -87,7 +88,8 @@ class Comparison implements ModelInterface, ArrayAccess, \JsonSerializable
         'contains' => null,
         'starts_with' => null,
         'ends_with' => null,
-        'any' => null
+        'any' => null,
+        'regex' => null
     ];
 
     /**
@@ -105,7 +107,8 @@ class Comparison implements ModelInterface, ArrayAccess, \JsonSerializable
         'contains' => false,
         'starts_with' => false,
         'ends_with' => false,
-        'any' => false
+        'any' => false,
+        'regex' => false
     ];
 
     /**
@@ -203,7 +206,8 @@ class Comparison implements ModelInterface, ArrayAccess, \JsonSerializable
         'contains' => 'Contains',
         'starts_with' => 'StartsWith',
         'ends_with' => 'EndsWith',
-        'any' => 'Any'
+        'any' => 'Any',
+        'regex' => 'Regex'
     ];
 
     /**
@@ -221,7 +225,8 @@ class Comparison implements ModelInterface, ArrayAccess, \JsonSerializable
         'contains' => 'setContains',
         'starts_with' => 'setStartsWith',
         'ends_with' => 'setEndsWith',
-        'any' => 'setAny'
+        'any' => 'setAny',
+        'regex' => 'setRegex'
     ];
 
     /**
@@ -239,7 +244,8 @@ class Comparison implements ModelInterface, ArrayAccess, \JsonSerializable
         'contains' => 'getContains',
         'starts_with' => 'getStartsWith',
         'ends_with' => 'getEndsWith',
-        'any' => 'getAny'
+        'any' => 'getAny',
+        'regex' => 'getRegex'
     ];
 
     /**
@@ -309,6 +315,7 @@ class Comparison implements ModelInterface, ArrayAccess, \JsonSerializable
         $this->setIfExists('starts_with', $data ?? [], null);
         $this->setIfExists('ends_with', $data ?? [], null);
         $this->setIfExists('any', $data ?? [], null);
+        $this->setIfExists('regex', $data ?? [], null);
     }
 
     /**
@@ -367,6 +374,9 @@ class Comparison implements ModelInterface, ArrayAccess, \JsonSerializable
         }
         if ($this->container['any'] === null) {
             $invalidProperties[] = "'any' can't be null";
+        }
+        if ($this->container['regex'] === null) {
+            $invalidProperties[] = "'regex' can't be null";
         }
         return $invalidProperties;
     }
@@ -649,6 +659,33 @@ class Comparison implements ModelInterface, ArrayAccess, \JsonSerializable
             throw new \InvalidArgumentException('non-nullable any cannot be null');
         }
         $this->container['any'] = $any;
+
+        return $this;
+    }
+
+    /**
+     * Gets regex
+     *
+     * @return \Agnesoft\AgdbApi\Model\DbValue
+     */
+    public function getRegex()
+    {
+        return $this->container['regex'];
+    }
+
+    /**
+     * Sets regex
+     *
+     * @param \Agnesoft\AgdbApi\Model\DbValue $regex property matches regex pattern. The inner value must be `DbValue::String` holding a valid regex pattern. Non-string values or invalid patterns yield `false`. Requires `regex` feature to be enabled; without it the comparison always yields `false`.
+     *
+     * @return self
+     */
+    public function setRegex($regex)
+    {
+        if (is_null($regex)) {
+            throw new \InvalidArgumentException('non-nullable regex cannot be null');
+        }
+        $this->container['regex'] = $regex;
 
         return $this;
     }

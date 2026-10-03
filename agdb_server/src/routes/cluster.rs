@@ -31,7 +31,22 @@ use axum::extract::Query;
 use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
+use std::collections::HashSet;
+use std::sync::Arc;
 use std::sync::atomic::Ordering;
+
+struct ResyncInProgressGuard {
+    set: Arc<tokio::sync::Mutex<HashSet<(String, String)>>>,
+    key: (String, String),
+}
+
+impl Drop for ResyncInProgressGuard {
+    fn drop(&mut self) {
+        let set = self.set.clone();
+        let key = self.key.clone();
+        set.blocking_lock().remove(&key);
+    }
+}
 
 pub(crate) async fn cluster(
     _cluster_id: ClusterId,
@@ -71,6 +86,12 @@ pub(crate) async fn cluster(
                     }
                 }
 
+                // RAII guard: removes the key on drop (normal exit or panic).
+                let _guard = ResyncInProgressGuard {
+                    set: resync_cluster.resync_in_progress.clone(),
+                    key: key.clone(),
+                };
+
                 crate::info!(
                     "[{}] Leader-instructed per-DB resync: {}/{}",
                     resync_cluster.index,
@@ -97,8 +118,6 @@ pub(crate) async fn cluster(
                         .clear_resolved_indices(&owner, &db)
                         .await;
                 }
-
-                resync_cluster.resync_in_progress.lock().await.remove(&key);
             }
         });
     }

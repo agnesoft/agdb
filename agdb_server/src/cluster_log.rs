@@ -819,4 +819,129 @@ mod tests {
 
         Ok(())
     }
+
+    // ── Failed-index tracking tests ─────────────────────────────────────
+
+    #[tokio::test]
+    async fn set_and_query_failed_indices() -> ServerResult<()> {
+        let (config, _directory) = test_config("failed_roundtrip");
+        let cluster_log = crate::cluster_log::new(&config).await?;
+
+        let db_id1 = cluster_log.append_log(&test_log(1, 1, "a")).await?;
+        let db_id2 = cluster_log.append_log(&test_log(2, 1, "b")).await?;
+        let _db_id3 = cluster_log.append_log(&test_log(3, 1, "c")).await?;
+
+        cluster_log.set_log_failed(db_id1).await?;
+        cluster_log.set_log_failed(db_id2).await?;
+
+        let mut failed = cluster_log.failed_indices().await?;
+        failed.sort();
+        assert_eq!(failed, vec![1, 2]);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn failed_indices_empty_when_none_failed() -> ServerResult<()> {
+        let (config, _directory) = test_config("failed_empty");
+        let cluster_log = crate::cluster_log::new(&config).await?;
+
+        cluster_log.append_log(&test_log(1, 1, "a")).await?;
+        cluster_log.append_log(&test_log(2, 1, "b")).await?;
+
+        let failed = cluster_log.failed_indices().await?;
+        assert!(failed.is_empty());
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn clear_log_failed_removes_subset() -> ServerResult<()> {
+        let (config, _directory) = test_config("clear_failed_subset");
+        let cluster_log = crate::cluster_log::new(&config).await?;
+
+        let db_id1 = cluster_log.append_log(&test_log(1, 1, "a")).await?;
+        let db_id2 = cluster_log.append_log(&test_log(2, 1, "b")).await?;
+        let db_id3 = cluster_log.append_log(&test_log(3, 1, "c")).await?;
+
+        cluster_log.set_log_failed(db_id1).await?;
+        cluster_log.set_log_failed(db_id2).await?;
+        cluster_log.set_log_failed(db_id3).await?;
+
+        // Clear only indices 1 and 3
+        cluster_log.clear_log_failed(&[1, 3]).await?;
+
+        let failed = cluster_log.failed_indices().await?;
+        assert_eq!(failed, vec![2]);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn clear_log_failed_empty_slice_is_noop() -> ServerResult<()> {
+        let (config, _directory) = test_config("clear_failed_empty");
+        let cluster_log = crate::cluster_log::new(&config).await?;
+
+        let db_id1 = cluster_log.append_log(&test_log(1, 1, "a")).await?;
+        cluster_log.set_log_failed(db_id1).await?;
+
+        cluster_log.clear_log_failed(&[]).await?;
+
+        let failed = cluster_log.failed_indices().await?;
+        assert_eq!(failed, vec![1]);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn action_at_index_returns_correct_action() -> ServerResult<()> {
+        let (config, _directory) = test_config("action_at_index");
+        let cluster_log = crate::cluster_log::new(&config).await?;
+
+        cluster_log.append_log(&test_log(1, 1, "first")).await?;
+        cluster_log.append_log(&test_log(2, 1, "second")).await?;
+        cluster_log.append_log(&test_log(3, 1, "third")).await?;
+
+        let action = cluster_log
+            .action_at_index(2)
+            .await?
+            .expect("should find action at index 2");
+
+        match action {
+            ClusterAction::UserAdd(user_add) => {
+                assert_eq!(user_add.user, "user_second");
+            }
+            _ => panic!("expected UserAdd"),
+        }
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn action_at_index_returns_none_for_missing() -> ServerResult<()> {
+        let (config, _directory) = test_config("action_at_missing");
+        let cluster_log = crate::cluster_log::new(&config).await?;
+
+        cluster_log.append_log(&test_log(1, 1, "only")).await?;
+
+        let action = cluster_log.action_at_index(99).await?;
+        assert!(action.is_none());
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn set_log_failed_idempotent() -> ServerResult<()> {
+        let (config, _directory) = test_config("failed_idempotent");
+        let cluster_log = crate::cluster_log::new(&config).await?;
+
+        let db_id1 = cluster_log.append_log(&test_log(1, 1, "a")).await?;
+        cluster_log.set_log_failed(db_id1).await?;
+        cluster_log.set_log_failed(db_id1).await?;
+
+        let failed = cluster_log.failed_indices().await?;
+        assert_eq!(failed, vec![1]);
+
+        Ok(())
+    }
 }

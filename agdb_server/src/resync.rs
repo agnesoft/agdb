@@ -718,23 +718,23 @@ pub(crate) async fn resync_single_db(
         let tmp_str = server_db_tmp
             .to_str()
             .ok_or_else(|| ServerError::from("invalid server_db path"))?;
-        match agdb::Db::new(tmp_str) {
-            Ok(_validated) => {
-                let mut db_guard = server_db.db.write().await;
-                std::fs::rename(&server_db_tmp, &server_db_dst)?;
-                *db_guard = agdb::Db::new(
-                    server_db_dst
-                        .to_str()
-                        .ok_or_else(|| ServerError::from("invalid server_db path"))?,
-                )?;
-            }
-            Err(e) => {
-                let _ = std::fs::remove_file(&server_db_tmp);
-                return Err(ServerError::from(format!(
-                    "per-DB resync: downloaded server_db is invalid: {e}"
-                )));
-            }
+
+        // Validate by opening the copy; drop the handle before renaming
+        // to avoid two live Db instances on the same underlying file.
+        if let Err(e) = agdb::Db::new(tmp_str) {
+            let _ = std::fs::remove_file(&server_db_tmp);
+            return Err(ServerError::from(format!(
+                "per-DB resync: downloaded server_db is invalid: {e}"
+            )));
         }
+
+        let mut db_guard = server_db.db.write().await;
+        std::fs::rename(&server_db_tmp, &server_db_dst)?;
+        *db_guard = agdb::Db::new(
+            server_db_dst
+                .to_str()
+                .ok_or_else(|| ServerError::from("invalid server_db path"))?,
+        )?;
     } else {
         db_pool
             .resync_db(owner, db, db_type, &install_dir, config)

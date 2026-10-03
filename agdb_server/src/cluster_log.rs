@@ -270,25 +270,23 @@ impl ClusterLog {
             return Ok(());
         }
 
-        let mut query = QueryBuilder::remove()
-            .values(LOG_FAILED)
-            .search()
-            .depth_first()
-            .from(CLUSTER_LOG)
-            .where_()
-            .neighbor()
-            .and()
-            .keys(LOG_FAILED)
-            .and()
-            .where_()
-            .key(INDEX)
-            .value(indices[0]);
+        self.0.write().await.exec_mut(
+            QueryBuilder::remove()
+                .values(LOG_FAILED)
+                .search()
+                .depth_first()
+                .from(CLUSTER_LOG)
+                .where_()
+                .neighbor()
+                .and()
+                .keys(LOG_FAILED)
+                .and()
+                .where_()
+                .key(INDEX)
+                .value(Comparison::Any((*indices).into()))
+                .query(),
+        )?;
 
-        for index in &indices[1..] {
-            query = query.or().key(INDEX).value(*index);
-        }
-
-        self.0.write().await.exec_mut(query.query())?;
         Ok(())
     }
 

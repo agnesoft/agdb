@@ -35,7 +35,7 @@ use \Agnesoft\AgdbApi\ObjectSerializer;
  * Comparison Class Doc Comment
  *
  * @category Class
- * @description Comparison of database values ([&#x60;DbValue&#x60;]) used by &#x60;key()&#x60; condition. Supports the usual set of named comparisons: &#x60;&#x3D;&#x3D;, !&#x3D;, &lt;, &lt;&#x3D;, &gt;, &#x3D;&gt;&#x60; plus &#x60;contains()&#x60;. The comparisons are type strict except for the &#x60;contains&#x60; comparison which allows vectorized version of the base type. Notably however it does not support the &#x60;bytes&#x60; and integral types where the \&quot;contains\&quot; makes little sense (i.e. does 3 contain 1?).
+ * @description Comparison of database values ([&#x60;DbValue&#x60;]) used by &#x60;key()&#x60; condition. Supports the usual set of named comparisons: &#x60;&#x3D;&#x3D;, !&#x3D;, &lt;, &lt;&#x3D;, &gt;, &#x3D;&gt;&#x60; plus &#x60;contains()&#x60;, &#x60;any()&#x60;, &#x60;starts_with()&#x60; and &#x60;ends_with()&#x60;. The comparisons are type strict except for the &#x60;contains&#x60; and &#x60;any&#x60; comparisons which allow vectorized version of the base type. &#x60;contains&#x60; uses universal (AND) semantics while &#x60;any&#x60; uses existential (OR) semantics.
  * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
@@ -66,7 +66,8 @@ class Comparison implements ModelInterface, ArrayAccess, \JsonSerializable
         'not_equal' => '\Agnesoft\AgdbApi\Model\DbValue',
         'contains' => '\Agnesoft\AgdbApi\Model\DbValue',
         'starts_with' => '\Agnesoft\AgdbApi\Model\DbValue',
-        'ends_with' => '\Agnesoft\AgdbApi\Model\DbValue'
+        'ends_with' => '\Agnesoft\AgdbApi\Model\DbValue',
+        'any' => '\Agnesoft\AgdbApi\Model\DbValue'
     ];
 
     /**
@@ -85,7 +86,8 @@ class Comparison implements ModelInterface, ArrayAccess, \JsonSerializable
         'not_equal' => null,
         'contains' => null,
         'starts_with' => null,
-        'ends_with' => null
+        'ends_with' => null,
+        'any' => null
     ];
 
     /**
@@ -102,7 +104,8 @@ class Comparison implements ModelInterface, ArrayAccess, \JsonSerializable
         'not_equal' => false,
         'contains' => false,
         'starts_with' => false,
-        'ends_with' => false
+        'ends_with' => false,
+        'any' => false
     ];
 
     /**
@@ -199,7 +202,8 @@ class Comparison implements ModelInterface, ArrayAccess, \JsonSerializable
         'not_equal' => 'NotEqual',
         'contains' => 'Contains',
         'starts_with' => 'StartsWith',
-        'ends_with' => 'EndsWith'
+        'ends_with' => 'EndsWith',
+        'any' => 'Any'
     ];
 
     /**
@@ -216,7 +220,8 @@ class Comparison implements ModelInterface, ArrayAccess, \JsonSerializable
         'not_equal' => 'setNotEqual',
         'contains' => 'setContains',
         'starts_with' => 'setStartsWith',
-        'ends_with' => 'setEndsWith'
+        'ends_with' => 'setEndsWith',
+        'any' => 'setAny'
     ];
 
     /**
@@ -233,7 +238,8 @@ class Comparison implements ModelInterface, ArrayAccess, \JsonSerializable
         'not_equal' => 'getNotEqual',
         'contains' => 'getContains',
         'starts_with' => 'getStartsWith',
-        'ends_with' => 'getEndsWith'
+        'ends_with' => 'getEndsWith',
+        'any' => 'getAny'
     ];
 
     /**
@@ -302,6 +308,7 @@ class Comparison implements ModelInterface, ArrayAccess, \JsonSerializable
         $this->setIfExists('contains', $data ?? [], null);
         $this->setIfExists('starts_with', $data ?? [], null);
         $this->setIfExists('ends_with', $data ?? [], null);
+        $this->setIfExists('any', $data ?? [], null);
     }
 
     /**
@@ -357,6 +364,9 @@ class Comparison implements ModelInterface, ArrayAccess, \JsonSerializable
         }
         if ($this->container['ends_with'] === null) {
             $invalidProperties[] = "'ends_with' can't be null";
+        }
+        if ($this->container['any'] === null) {
+            $invalidProperties[] = "'any' can't be null";
         }
         return $invalidProperties;
     }
@@ -612,6 +622,33 @@ class Comparison implements ModelInterface, ArrayAccess, \JsonSerializable
             throw new \InvalidArgumentException('non-nullable ends_with cannot be null');
         }
         $this->container['ends_with'] = $ends_with;
+
+        return $this;
+    }
+
+    /**
+     * Gets any
+     *
+     * @return \Agnesoft\AgdbApi\Model\DbValue
+     */
+    public function getAny()
+    {
+        return $this->container['any'];
+    }
+
+    /**
+     * Sets any
+     *
+     * @param \Agnesoft\AgdbApi\Model\DbValue $any property.any(this) - true if at least one element of `this` is present in the property. For scalar right-hand side, behaves identically to `Contains`. For vector right-hand side, uses existential (OR) semantics rather than universal (AND) semantics. Empty right-hand vector yields `false`.
+     *
+     * @return self
+     */
+    public function setAny($any)
+    {
+        if (is_null($any)) {
+            throw new \InvalidArgumentException('non-nullable any cannot be null');
+        }
+        $this->container['any'] = $any;
 
         return $this;
     }

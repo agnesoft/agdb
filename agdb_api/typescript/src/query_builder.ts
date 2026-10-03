@@ -1129,6 +1129,42 @@ class SearchWhereKeyBuilder {
             modifier: this.data.modifier,
         });
     }
+
+    greater_than(value: BuilderDbValue): SearchWhereLogicBuilder {
+        return this.value(Comparison.GreaterThan(value));
+    }
+
+    greater_than_or_equal(value: BuilderDbValue): SearchWhereLogicBuilder {
+        return this.value(Comparison.GreaterThanOrEqual(value));
+    }
+
+    less_than(value: BuilderDbValue): SearchWhereLogicBuilder {
+        return this.value(Comparison.LessThan(value));
+    }
+
+    less_than_or_equal(value: BuilderDbValue): SearchWhereLogicBuilder {
+        return this.value(Comparison.LessThanOrEqual(value));
+    }
+
+    not_equal(value: BuilderDbValue): SearchWhereLogicBuilder {
+        return this.value(Comparison.NotEqual(value));
+    }
+
+    contains(value: BuilderDbValue): SearchWhereLogicBuilder {
+        return this.value(Comparison.Contains(value));
+    }
+
+    starts_with(value: BuilderDbValue): SearchWhereLogicBuilder {
+        return this.value(Comparison.StartsWith(value));
+    }
+
+    ends_with(value: BuilderDbValue): SearchWhereLogicBuilder {
+        return this.value(Comparison.EndsWith(value));
+    }
+
+    any(value: BuilderDbValue): SearchWhereLogicBuilder {
+        return this.value(Comparison.Any(value));
+    }
 }
 
 class SearchWhereBuilder {
@@ -1268,6 +1304,90 @@ class SearchWhereBuilder {
         this.modifier = "None";
         this.conditions.push([]);
         return this;
+    }
+
+    distance_greater_than(distance: number): SearchWhereLogicBuilder {
+        return this.distance(CountComparison.GreaterThan(distance));
+    }
+
+    distance_greater_than_or_equal(distance: number): SearchWhereLogicBuilder {
+        return this.distance(CountComparison.GreaterThanOrEqual(distance));
+    }
+
+    distance_less_than(distance: number): SearchWhereLogicBuilder {
+        return this.distance(CountComparison.LessThan(distance));
+    }
+
+    distance_less_than_or_equal(distance: number): SearchWhereLogicBuilder {
+        return this.distance(CountComparison.LessThanOrEqual(distance));
+    }
+
+    distance_not_equal(distance: number): SearchWhereLogicBuilder {
+        return this.distance(CountComparison.NotEqual(distance));
+    }
+
+    edge_count_greater_than(count: number): SearchWhereLogicBuilder {
+        return this.edge_count(CountComparison.GreaterThan(count));
+    }
+
+    edge_count_greater_than_or_equal(count: number): SearchWhereLogicBuilder {
+        return this.edge_count(CountComparison.GreaterThanOrEqual(count));
+    }
+
+    edge_count_less_than(count: number): SearchWhereLogicBuilder {
+        return this.edge_count(CountComparison.LessThan(count));
+    }
+
+    edge_count_less_than_or_equal(count: number): SearchWhereLogicBuilder {
+        return this.edge_count(CountComparison.LessThanOrEqual(count));
+    }
+
+    edge_count_not_equal(count: number): SearchWhereLogicBuilder {
+        return this.edge_count(CountComparison.NotEqual(count));
+    }
+
+    edge_count_from_greater_than(count: number): SearchWhereLogicBuilder {
+        return this.edge_count_from(CountComparison.GreaterThan(count));
+    }
+
+    edge_count_from_greater_than_or_equal(
+        count: number,
+    ): SearchWhereLogicBuilder {
+        return this.edge_count_from(CountComparison.GreaterThanOrEqual(count));
+    }
+
+    edge_count_from_less_than(count: number): SearchWhereLogicBuilder {
+        return this.edge_count_from(CountComparison.LessThan(count));
+    }
+
+    edge_count_from_less_than_or_equal(count: number): SearchWhereLogicBuilder {
+        return this.edge_count_from(CountComparison.LessThanOrEqual(count));
+    }
+
+    edge_count_from_not_equal(count: number): SearchWhereLogicBuilder {
+        return this.edge_count_from(CountComparison.NotEqual(count));
+    }
+
+    edge_count_to_greater_than(count: number): SearchWhereLogicBuilder {
+        return this.edge_count_to(CountComparison.GreaterThan(count));
+    }
+
+    edge_count_to_greater_than_or_equal(
+        count: number,
+    ): SearchWhereLogicBuilder {
+        return this.edge_count_to(CountComparison.GreaterThanOrEqual(count));
+    }
+
+    edge_count_to_less_than(count: number): SearchWhereLogicBuilder {
+        return this.edge_count_to(CountComparison.LessThan(count));
+    }
+
+    edge_count_to_less_than_or_equal(count: number): SearchWhereLogicBuilder {
+        return this.edge_count_to(CountComparison.LessThanOrEqual(count));
+    }
+
+    edge_count_to_not_equal(count: number): SearchWhereLogicBuilder {
+        return this.edge_count_to(CountComparison.NotEqual(count));
     }
 }
 

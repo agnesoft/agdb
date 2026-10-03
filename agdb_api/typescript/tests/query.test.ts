@@ -1108,4 +1108,274 @@ describe("query tests", () => {
             .query();
         expect(query).toEqual(test_queries[134][1]);
     });
+
+    it(`QueryBuilder::search().from(1).where_().key("k").greater_than(1).query()`, () => {
+        const query = QueryBuilder.search()
+            .from(1)
+            .where()
+            .key("k")
+            .greater_than(1)
+            .query();
+        expect(query).toEqual(test_queries[135][1]);
+    });
+
+    it(`QueryBuilder::search().from(1).where_().key("k").greater_than_or_equal(1).query()`, () => {
+        const query = QueryBuilder.search()
+            .from(1)
+            .where()
+            .key("k")
+            .greater_than_or_equal(1)
+            .query();
+        expect(query).toEqual(test_queries[136][1]);
+    });
+
+    it(`QueryBuilder::search().from(1).where_().key("k").less_than(1).query()`, () => {
+        const query = QueryBuilder.search()
+            .from(1)
+            .where()
+            .key("k")
+            .less_than(1)
+            .query();
+        expect(query).toEqual(test_queries[137][1]);
+    });
+
+    it(`QueryBuilder::search().from(1).where_().key("k").less_than_or_equal(1).query()`, () => {
+        const query = QueryBuilder.search()
+            .from(1)
+            .where()
+            .key("k")
+            .less_than_or_equal(1)
+            .query();
+        expect(query).toEqual(test_queries[138][1]);
+    });
+
+    it(`QueryBuilder::search().from(1).where_().key("k").not_equal(1).query()`, () => {
+        const query = QueryBuilder.search()
+            .from(1)
+            .where()
+            .key("k")
+            .not_equal(1)
+            .query();
+        expect(query).toEqual(test_queries[139][1]);
+    });
+
+    it(`QueryBuilder::search().from(1).where_().key("k").contains(1).query()`, () => {
+        const query = QueryBuilder.search()
+            .from(1)
+            .where()
+            .key("k")
+            .contains(1)
+            .query();
+        expect(query).toEqual(test_queries[140][1]);
+    });
+
+    it(`QueryBuilder::search().from(1).where_().key("k").starts_with(1).query()`, () => {
+        const query = QueryBuilder.search()
+            .from(1)
+            .where()
+            .key("k")
+            .starts_with(1)
+            .query();
+        expect(query).toEqual(test_queries[141][1]);
+    });
+
+    it(`QueryBuilder::search().from(1).where_().key("k").ends_with(1).query()`, () => {
+        const query = QueryBuilder.search()
+            .from(1)
+            .where()
+            .key("k")
+            .ends_with(1)
+            .query();
+        expect(query).toEqual(test_queries[142][1]);
+    });
+
+    it(`QueryBuilder::search().from(1).where_().key("k").any(1).query()`, () => {
+        const query = QueryBuilder.search()
+            .from(1)
+            .where()
+            .key("k")
+            .any(1)
+            .query();
+        expect(query).toEqual(test_queries[143][1]);
+    });
+
+    it(`QueryBuilder::search().from(1).where_().distance_greater_than(3).query()`, () => {
+        const query = QueryBuilder.search()
+            .from(1)
+            .where()
+            .distance_greater_than(3)
+            .query();
+        expect(query).toEqual(test_queries[144][1]);
+    });
+
+    it(`QueryBuilder::search().from(1).where_().distance_greater_than_or_equal(3).query()`, () => {
+        const query = QueryBuilder.search()
+            .from(1)
+            .where()
+            .distance_greater_than_or_equal(3)
+            .query();
+        expect(query).toEqual(test_queries[145][1]);
+    });
+
+    it(`QueryBuilder::search().from(1).where_().distance_less_than(3).query()`, () => {
+        const query = QueryBuilder.search()
+            .from(1)
+            .where()
+            .distance_less_than(3)
+            .query();
+        expect(query).toEqual(test_queries[146][1]);
+    });
+
+    it(`QueryBuilder::search().from(1).where_().distance_less_than_or_equal(3).query()`, () => {
+        const query = QueryBuilder.search()
+            .from(1)
+            .where()
+            .distance_less_than_or_equal(3)
+            .query();
+        expect(query).toEqual(test_queries[147][1]);
+    });
+
+    it(`QueryBuilder::search().from(1).where_().distance_not_equal(3).query()`, () => {
+        const query = QueryBuilder.search()
+            .from(1)
+            .where()
+            .distance_not_equal(3)
+            .query();
+        expect(query).toEqual(test_queries[148][1]);
+    });
+
+    it(`QueryBuilder::search().from(1).where_().edge_count_greater_than(2).query()`, () => {
+        const query = QueryBuilder.search()
+            .from(1)
+            .where()
+            .edge_count_greater_than(2)
+            .query();
+        expect(query).toEqual(test_queries[149][1]);
+    });
+
+    it(`QueryBuilder::search().from(1).where_().edge_count_greater_than_or_equal(2).query()`, () => {
+        const query = QueryBuilder.search()
+            .from(1)
+            .where()
+            .edge_count_greater_than_or_equal(2)
+            .query();
+        expect(query).toEqual(test_queries[150][1]);
+    });
+
+    it(`QueryBuilder::search().from(1).where_().edge_count_less_than(2).query()`, () => {
+        const query = QueryBuilder.search()
+            .from(1)
+            .where()
+            .edge_count_less_than(2)
+            .query();
+        expect(query).toEqual(test_queries[151][1]);
+    });
+
+    it(`QueryBuilder::search().from(1).where_().edge_count_less_than_or_equal(2).query()`, () => {
+        const query = QueryBuilder.search()
+            .from(1)
+            .where()
+            .edge_count_less_than_or_equal(2)
+            .query();
+        expect(query).toEqual(test_queries[152][1]);
+    });
+
+    it(`QueryBuilder::search().from(1).where_().edge_count_not_equal(2).query()`, () => {
+        const query = QueryBuilder.search()
+            .from(1)
+            .where()
+            .edge_count_not_equal(2)
+            .query();
+        expect(query).toEqual(test_queries[153][1]);
+    });
+
+    it(`QueryBuilder::search().from(1).where_().edge_count_from_greater_than(1).query()`, () => {
+        const query = QueryBuilder.search()
+            .from(1)
+            .where()
+            .edge_count_from_greater_than(1)
+            .query();
+        expect(query).toEqual(test_queries[154][1]);
+    });
+
+    it(`QueryBuilder::search().from(1).where_().edge_count_from_greater_than_or_equal(1).query()`, () => {
+        const query = QueryBuilder.search()
+            .from(1)
+            .where()
+            .edge_count_from_greater_than_or_equal(1)
+            .query();
+        expect(query).toEqual(test_queries[155][1]);
+    });
+
+    it(`QueryBuilder::search().from(1).where_().edge_count_from_less_than(1).query()`, () => {
+        const query = QueryBuilder.search()
+            .from(1)
+            .where()
+            .edge_count_from_less_than(1)
+            .query();
+        expect(query).toEqual(test_queries[156][1]);
+    });
+
+    it(`QueryBuilder::search().from(1).where_().edge_count_from_less_than_or_equal(1).query()`, () => {
+        const query = QueryBuilder.search()
+            .from(1)
+            .where()
+            .edge_count_from_less_than_or_equal(1)
+            .query();
+        expect(query).toEqual(test_queries[157][1]);
+    });
+
+    it(`QueryBuilder::search().from(1).where_().edge_count_from_not_equal(1).query()`, () => {
+        const query = QueryBuilder.search()
+            .from(1)
+            .where()
+            .edge_count_from_not_equal(1)
+            .query();
+        expect(query).toEqual(test_queries[158][1]);
+    });
+
+    it(`QueryBuilder::search().from(1).where_().edge_count_to_greater_than(1).query()`, () => {
+        const query = QueryBuilder.search()
+            .from(1)
+            .where()
+            .edge_count_to_greater_than(1)
+            .query();
+        expect(query).toEqual(test_queries[159][1]);
+    });
+
+    it(`QueryBuilder::search().from(1).where_().edge_count_to_greater_than_or_equal(1).query()`, () => {
+        const query = QueryBuilder.search()
+            .from(1)
+            .where()
+            .edge_count_to_greater_than_or_equal(1)
+            .query();
+        expect(query).toEqual(test_queries[160][1]);
+    });
+
+    it(`QueryBuilder::search().from(1).where_().edge_count_to_less_than(1).query()`, () => {
+        const query = QueryBuilder.search()
+            .from(1)
+            .where()
+            .edge_count_to_less_than(1)
+            .query();
+        expect(query).toEqual(test_queries[161][1]);
+    });
+
+    it(`QueryBuilder::search().from(1).where_().edge_count_to_less_than_or_equal(1).query()`, () => {
+        const query = QueryBuilder.search()
+            .from(1)
+            .where()
+            .edge_count_to_less_than_or_equal(1)
+            .query();
+        expect(query).toEqual(test_queries[162][1]);
+    });
+
+    it(`QueryBuilder::search().from(1).where_().edge_count_to_not_equal(1).query()`, () => {
+        const query = QueryBuilder.search()
+            .from(1)
+            .where()
+            .edge_count_to_not_equal(1)
+            .query();
+        expect(query).toEqual(test_queries[163][1]);
+    });
 });

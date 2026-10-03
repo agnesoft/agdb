@@ -106,6 +106,9 @@ pub use {
     query_builder::where_::Where,
     query_builder::where_::WhereKey,
     query_builder::where_::WhereLogicOperator,
+    query_builder::where_filter::WhereFilter,
+    query_builder::where_filter::WhereFilterKey,
+    query_builder::where_filter::WhereFilterLogicOperator,
 };
 
 pub use db::Db;

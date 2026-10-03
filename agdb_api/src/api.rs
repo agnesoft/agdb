@@ -94,6 +94,9 @@ use agdb::SelectValuesIds;
 use agdb::SelectValuesQuery;
 use agdb::SingleValues;
 use agdb::Where;
+use agdb::WhereFilter;
+use agdb::WhereFilterKey;
+use agdb::WhereFilterLogicOperator;
 use agdb::WhereKey;
 use agdb::WhereLogicOperator;
 use agdb::type_def::Type;
@@ -228,6 +231,9 @@ impl Api {
             SelectValues::type_def(),
             SelectValuesIds::type_def(),
             Where::<SearchQuery>::type_def(),
+            WhereFilter::<SearchQuery>::type_def(),
+            WhereFilterKey::<SearchQuery>::type_def(),
+            WhereFilterLogicOperator::<SearchQuery>::type_def(),
             WhereKey::<SearchQuery>::type_def(),
             WhereLogicOperator::<SearchQuery>::type_def(),
             SearchQueryBuilderDef::type_def(), //trait

@@ -11,6 +11,7 @@ use crate::QueryId;
 use crate::QueryResult;
 use crate::StorageData;
 use crate::db::db_key_order::DbKeyOrder;
+use crate::graph::GraphIndex;
 use crate::query_builder::search::SearchQueryBuilder;
 use std::cmp::Ordering;
 
@@ -113,8 +114,22 @@ impl SearchQuery {
             })?;
 
             if let QueryConditionData::KeyValue(kvc) = &condition.data {
-                let ids = db.search_index(&kvc.key, kvc.value.value())?;
-                return Ok(ids);
+                let mut ids = db.search_index(&kvc.key, kvc.value.value())?;
+
+                if self.conditions.len() > 1 {
+                    let remaining = &self.conditions[1..];
+                    ids.retain(|id| {
+                        db.evaluate_conditions(GraphIndex(id.0), 0, remaining)
+                            .map(|c| c.is_true())
+                            .unwrap_or(false)
+                    });
+                }
+
+                if !self.order_by.is_empty() {
+                    self.sort(&mut ids, db)?;
+                }
+
+                return self.slice(ids);
             } else {
                 return Err(DbError::query(
                     DbErrorType::NotAllowed,

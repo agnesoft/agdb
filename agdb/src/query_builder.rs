@@ -20,6 +20,7 @@ pub mod select_keys;
 pub mod select_node_count;
 pub mod select_values;
 pub mod where_;
+pub mod where_filter;
 
 use self::insert::Insert;
 use self::remove::Remove;

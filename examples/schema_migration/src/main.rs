@@ -1,3 +1,6 @@
+//! Example: migrate older graph data to a new schema while updating stored
+//! property types and preserving the working database state in a transaction.
+
 use agdb::DbError;
 use agdb::DbId;
 use agdb::DbMemory;

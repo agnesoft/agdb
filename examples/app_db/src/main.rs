@@ -1,3 +1,6 @@
+//! Example: create an in-memory database, insert typed values, and query them
+//! back with a simple graph traversal.
+
 use agdb::DbError;
 use agdb::DbMemory;
 use agdb::QueryBuilder;

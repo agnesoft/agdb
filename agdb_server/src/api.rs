@@ -1,3 +1,8 @@
+//! OpenAPI contract for the agdb HTTP server.
+//!
+//! This module derives the server schema used by the public `/api/v1` routes,
+//! including auth, database management, and query execution endpoints.
+
 use crate::routes;
 use utoipa::Modify;
 use utoipa::OpenApi;

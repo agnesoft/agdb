@@ -78,6 +78,7 @@ Technical features:
 - [ACID](https://en.wikipedia.org/wiki/ACID) compliant
 - [Object queries](https://agdb.agnesoft.com/docs/references/queries) with builder pattern (no text, no query language)
 - Memory mapped for fast querying
+- Optional regex matching for textual comparisons via `where_().key(...).regex(...)`
 - [Server mode](https://agdb.agnesoft.com/docs/references/server)
 - [Cluster mode](https://agdb.agnesoft.com/docs/references/server#cluster)
 - In-built TLS support
@@ -157,32 +158,51 @@ println!("{:?}", user);
 // User { db_id: Some(DbId(3)), username: "Bob" }
 ```
 
+String comparisons can also use regex matching when the `regex` feature is enabled:
+
+```rs
+let users: Vec<User> = db
+    .exec(
+        QueryBuilder::select()
+            .elements::<User>()
+            .search()
+            .from("users")
+            .where_()
+            .key("name")
+            .regex("^A")
+            .query(),
+    )?
+    .try_into()?;
+```
+
 For database concepts and primitive data types see [concepts](https://agdb.agnesoft.com/docs/guides/concepts). For comprehensive overview of all queries see the [queries](https://agdb.agnesoft.com/docs/references/queries) reference or continue with more in-depth [efficient agdb](https://agdb.agnesoft.com/docs/references/efficient-agdb).
 
 ## <img width="25" src="https://agdb.agnesoft.com/images/logo.svg" alt="agdb logo">&nbsp;&nbsp;Crate Features
 
 ### agdb
 
-| Feature  | Default | Description                                                                                                         |
-| -------- | ------- | ------------------------------------------------------------------------------------------------------------------- |
-| derive   | yes     | Enables derive macro to enable custom user types to be directly used with the database.                             |
-| opeanapi | no      | Enables `ToSchema` macro on query structs so they can be exported to json OpeanAPI/Swagger schema.                  |
-| serde    | no      | Enables serialiation/deserialization of queries and QueryResult using [`serde`](https://github.com/serde-rs/serde). |
-| api      | no      | Enables annotations on all structs to facilitate API generation for different languages.                            |
+| Feature | Default | Description                                                                                                            |
+| ------- | ------- | ---------------------------------------------------------------------------------------------------------------------- |
+| derive  | yes     | Enables the `DbType`, `DbElement`, `DbValue`, and related derive macros for user-defined graph data.                   |
+| openapi | no      | Enables `utoipa` `ToSchema` support so query structs can be exported to OpenAPI/Swagger schema JSON.                   |
+| serde   | no      | Enables serialization/deserialization of queries and `QueryResult` using [`serde`](https://github.com/serde-rs/serde). |
+| api     | no      | Enables type-definition annotations used by generated clients and transpilers for other languages.                     |
+| regex   | no      | Enables regex comparisons for string matching in `where_().key(...).regex(...)` conditions and `Comparison::Regex`.    |
 
 ### agdb_api
 
-| Feature | Default | Description                                                                              |
-| ------- | ------- | ---------------------------------------------------------------------------------------- |
-| tls     | no      | Enables rust-tls for [`reqwest`](https://github.com/seanmonstar/reqwest).                |
-| api     | no      | Enables annotations on all structs to facilitate API generation for different languages. |
+| Feature     | Default | Description                                                                                             |
+| ----------- | ------- | ------------------------------------------------------------------------------------------------------- |
+| tls         | no      | Enables Rust TLS support for the underlying [`reqwest`](https://github.com/seanmonstar/reqwest) client. |
+| api         | no      | Enables API type-definition annotations used when generating bindings.                                  |
+| test_server | no      | Enables test helpers for local server-based integration tests.                                          |
 
 ### agdb_server
 
 | Feature | Default | Description                                                                    |
 | ------- | ------- | ------------------------------------------------------------------------------ |
 | tls     | no      | Enables TLS support via `rustls`. On Windows requires MSVC and CMake to build. |
-| studio  | no      | Embedd the `agdb_studio` into the server at `/studio` route.                   |
+| studio  | no      | Embeds the `agdb_studio` UI into the server at the `/studio` route.            |
 
 ## <img width="25" src="https://agdb.agnesoft.com/images/logo.svg" alt="agdb logo">&nbsp;&nbsp;Decision Tree
 

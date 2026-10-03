@@ -1,3 +1,6 @@
+//! Example: derive `DbType` and `DbElement` for application models, store
+//! nested and custom values, and query overlapping typed records back out.
+
 use agdb::DbElement;
 use agdb::DbError;
 use agdb::DbMemory;

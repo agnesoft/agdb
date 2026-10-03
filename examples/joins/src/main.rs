@@ -1,3 +1,6 @@
+//! Example: emulate relational joins by traversing graph edges and combining
+//! data from connected nodes and relationships in a single application pass.
+
 use agdb::DbError;
 use agdb::DbMemory;
 use agdb::QueryBuilder;

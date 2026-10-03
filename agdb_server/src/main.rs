@@ -1,3 +1,9 @@
+//! agdb HTTP server binary.
+//!
+//! This binary starts the embedded database server, exposes the `/api/v1` HTTP
+//! surface, supports optional TLS, and can embed the Studio UI when the
+//! `studio` feature is enabled.
+
 #[cfg(all(target_os = "linux", target_env = "gnu"))]
 #[global_allocator]
 static GLOBAL: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;

@@ -1,3 +1,10 @@
+//! Derive macros for converting Rust structs and enums into agdb-compatible
+//! database values.
+//!
+//! The macros in this crate power the `DbType`, `DbElement`, `DbValue`, and
+//! `DbTypeMarker` derives used throughout the project, allowing application
+//! models to be written directly as typed graph data without boilerplate.
+
 mod db_serialize;
 mod db_type;
 mod db_value;

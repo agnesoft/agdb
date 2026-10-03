@@ -1,3 +1,6 @@
+//! Example: connect to an agdb server with `agdb_api`, authenticate, create a
+//! database, and run a batch of typed queries against it.
+
 use agdb::DbType;
 use agdb::QueryBuilder;
 use agdb_api::DbKind as ApiDbType;

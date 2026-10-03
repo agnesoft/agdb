@@ -1,3 +1,6 @@
+//! Example: add index-backed lookups for application data to accelerate
+//! attribute-based queries without scanning the whole graph.
+
 use agdb::DbError;
 use agdb::DbMemory;
 use agdb::DbType;

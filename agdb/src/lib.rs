@@ -5,6 +5,20 @@
 //! [Queries](https://github.com/agnesoft/agdb/blob/main/docs/queries.md) |
 //! [Efficient agdb](https://github.com/agnesoft/agdb/blob/main/docs/efficient_agdb.md)
 //!
+//! # Features
+//!
+//! `agdb` ships with a small core and a set of optional features that unlock
+//! additional ergonomics and integrations:
+//!
+//! - `derive` (default): enables `DbType`, `DbElement`, `DbValue`, and the
+//!   related derive macros for model definitions.
+//! - `openapi`: adds `utoipa` schema support for query builders and generated API
+//!   documentation.
+//! - `serde`: serializes/deserializes queries and `QueryResult` via `serde`.
+//! - `api`: emits type-definition metadata used by generated clients/transpilers.
+//! - `regex`: enables regex-based string comparisons such as
+//!   `where_().key("name").regex("^user_")`.
+//!
 //! # Example
 //!
 //! ```

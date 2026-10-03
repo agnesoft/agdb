@@ -1,3 +1,17 @@
+//! Typed API client for the agdb server.
+//!
+//! Use [`AgdbApi`] to connect to a running agdb server, authenticate users,
+//! create and manage databases, and execute query batches over the `/api/v1`
+//! HTTP surface. The crate also exposes the generated request/response models for
+//! server-side integration and generated client tooling.
+//!
+//! # Features
+//!
+//! - `api`: enables generated type-definition metadata used by transpilers and
+//!   language bindings.
+//! - `tls`: enables Rust TLS support for the client transport.
+//! - `test_server`: adds helpers used by agdb server integration tests.
+
 #[cfg(feature = "api")]
 pub mod api;
 mod api_error;

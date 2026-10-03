@@ -33,18 +33,19 @@ use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use std::collections::HashSet;
 use std::sync::Arc;
+use std::sync::Mutex;
 use std::sync::atomic::Ordering;
 
 struct ResyncInProgressGuard {
-    set: Arc<tokio::sync::Mutex<HashSet<(String, String)>>>,
+    set: Arc<Mutex<HashSet<(String, String)>>>,
     key: (String, String),
 }
 
 impl Drop for ResyncInProgressGuard {
     fn drop(&mut self) {
-        let set = self.set.clone();
-        let key = self.key.clone();
-        set.blocking_lock().remove(&key);
+        if let Ok(mut guard) = self.set.lock() {
+            guard.remove(&self.key);
+        }
     }
 }
 
@@ -74,7 +75,11 @@ pub(crate) async fn cluster(
 
                 // Skip if a resync is already in flight for this (owner, db).
                 {
-                    let mut in_progress = resync_cluster.resync_in_progress.lock().await;
+                    let mut in_progress = resync_cluster
+                        .resync_in_progress
+                        .lock()
+                        .unwrap_or_else(|e| e.into_inner());
+
                     if !in_progress.insert(key.clone()) {
                         crate::info!(
                             "[{}] Skipping per-DB resync for {}/{}: already in progress",

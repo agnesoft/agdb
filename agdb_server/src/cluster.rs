@@ -30,6 +30,7 @@ use std::collections::HashMap;
 use std::path::Path;
 use std::str::FromStr;
 use std::sync::Arc;
+use std::sync::Mutex;
 use std::sync::RwLock as StdRwLock;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::AtomicUsize;
@@ -68,10 +69,7 @@ pub(crate) struct ClusterImpl {
     pub(crate) resync: Arc<AtomicBool>,
     pub(crate) snapshot_in_flight: Arc<AtomicUsize>,
     pub(crate) poisoned: Arc<AtomicBool>,
-    /// Tracks which (owner, db) pairs have a per-DB resync in flight,
-    /// preventing overlapping resyncs for the same database.
-    pub(crate) resync_in_progress:
-        Arc<tokio::sync::Mutex<std::collections::HashSet<(String, String)>>>,
+    pub(crate) resync_in_progress: Arc<Mutex<std::collections::HashSet<(String, String)>>>,
 }
 
 impl ClusterImpl {
@@ -282,7 +280,7 @@ pub(crate) async fn new(
         resync,
         snapshot_in_flight,
         poisoned,
-        resync_in_progress: Arc::new(tokio::sync::Mutex::new(std::collections::HashSet::new())),
+        resync_in_progress: Arc::new(Mutex::new(std::collections::HashSet::new())),
     }))
 }
 

@@ -138,11 +138,11 @@ pub enum CountComparison {
 /// Comparison of database values ([`DbValue`]) used
 /// by `key()` condition. Supports
 /// the usual set of named comparisons: `==, !=, <, <=, >, =>`
-/// plus `contains()`. The comparisons are type
-/// strict except for the `contains` comparison
-/// which allows vectorized version of the base type. Notably
-/// however it does not support the `bytes` and integral types
-/// where the "contains" makes little sense (i.e. does 3 contain 1?).
+/// plus `contains()`, `any()`, `starts_with()` and `ends_with()`.
+/// The comparisons are type strict except for the `contains`
+/// and `any` comparisons which allow vectorized version of the
+/// base type. `contains` uses universal (AND) semantics while
+/// `any` uses existential (OR) semantics.
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
@@ -175,6 +175,13 @@ pub enum Comparison {
 
     /// property.ends_with(this)
     EndsWith(DbValue),
+
+    /// property.any(this) - true if at least one element of `this`
+    /// is present in the property. For scalar right-hand side,
+    /// behaves identically to `Contains`. For vector right-hand
+    /// side, uses existential (OR) semantics rather than universal
+    /// (AND) semantics. Empty right-hand vector yields `false`.
+    Any(DbValue),
 }
 
 /// Comparison of a value stored under specific `key` to
@@ -318,6 +325,34 @@ impl Comparison {
                 (DbValue::VecDbValue(left), right) => left.last() == Some(right),
                 _ => false,
             },
+
+            Comparison::Any(right) => match (left, right) {
+                (DbValue::String(left), DbValue::String(right)) => left.contains(right),
+                (DbValue::String(left), DbValue::VecString(right)) => {
+                    right.iter().any(|x| left.contains(x))
+                }
+                (DbValue::VecI64(left), DbValue::I64(right)) => left.contains(right),
+                (DbValue::VecI64(left), DbValue::VecI64(right)) => {
+                    right.iter().any(|x| left.contains(x))
+                }
+                (DbValue::VecU64(left), DbValue::U64(right)) => left.contains(right),
+                (DbValue::VecU64(left), DbValue::VecU64(right)) => {
+                    right.iter().any(|x| left.contains(x))
+                }
+                (DbValue::VecF64(left), DbValue::F64(right)) => left.contains(right),
+                (DbValue::VecF64(left), DbValue::VecF64(right)) => {
+                    right.iter().any(|x| left.contains(x))
+                }
+                (DbValue::VecString(left), DbValue::String(right)) => left.contains(right),
+                (DbValue::VecString(left), DbValue::VecString(right)) => {
+                    right.iter().any(|x| left.contains(x))
+                }
+                (DbValue::VecDbValue(left), DbValue::VecDbValue(right)) => {
+                    right.iter().any(|x| left.contains(x))
+                }
+                (DbValue::VecDbValue(left), right) => left.contains(right),
+                _ => false,
+            },
         }
     }
 
@@ -331,7 +366,8 @@ impl Comparison {
             | Comparison::NotEqual(value)
             | Comparison::Contains(value)
             | Comparison::StartsWith(value)
-            | Comparison::EndsWith(value) => value,
+            | Comparison::EndsWith(value)
+            | Comparison::Any(value) => value,
         }
     }
 }
@@ -530,6 +566,7 @@ mod tests {
             Comparison::Contains(DbValue::I64(0)).value(),
             &DbValue::I64(0)
         );
+        assert_eq!(Comparison::Any(DbValue::I64(0)).value(), &DbValue::I64(0));
     }
 
     #[test]
@@ -654,5 +691,81 @@ mod tests {
         assert!(Comparison::EndsWith(empty).compare(&haystack));
 
         assert!(!Comparison::EndsWith("abc".into()).compare(&1.into()));
+    }
+
+    #[test]
+    fn any() {
+        // String contains string -- same as Contains for single element
+        let condition = Comparison::Any("abc".into());
+        assert!(condition.compare(&"0abc123".into()));
+        assert!(!condition.compare(&"0bc123".into()));
+
+        // String, VecString -- any substring matches
+        let condition = Comparison::Any(vec!["ab".to_string(), "99".to_string()].into());
+        assert!(condition.compare(&"0abc123".into())); // "ab" found
+        assert!(!condition.compare(&"xyz".into())); // neither found
+
+        // VecI64, I64 -- single element, same as Contains
+        assert!(Comparison::Any(1.into()).compare(&vec![2, 1, 3].into()));
+        assert!(!Comparison::Any(4.into()).compare(&vec![2, 1, 3].into()));
+
+        // VecI64, VecI64 -- any element in right found in left
+        let condition = Comparison::Any(vec![99, 3].into());
+        assert!(condition.compare(&vec![2, 3].into())); // 3 found
+        assert!(!condition.compare(&vec![4, 5].into())); // neither found
+
+        // VecU64, U64
+        let condition = Comparison::Any(1_u64.into());
+        assert!(condition.compare(&vec![2_u64, 1_u64, 3_u64].into()));
+        assert!(!condition.compare(&vec![2_u64, 3_u64].into()));
+
+        // VecU64, VecU64
+        let condition = Comparison::Any(vec![99_u64, 3_u64].into());
+        assert!(condition.compare(&vec![2_u64, 1_u64, 3_u64].into()));
+        assert!(!condition.compare(&vec![4_u64, 5_u64].into()));
+
+        // VecF64, F64
+        let condition = Comparison::Any(1.1.into());
+        assert!(condition.compare(&vec![2.1, 1.1, 3.3].into()));
+        assert!(!condition.compare(&vec![2.1, 3.3].into()));
+
+        // VecF64, VecF64
+        let condition = Comparison::Any(vec![99.9, 3.3].into());
+        assert!(condition.compare(&vec![2.2, 1.1, 3.3].into()));
+        assert!(!condition.compare(&vec![4.4, 5.5].into()));
+
+        // VecString, String
+        let condition = Comparison::Any("abc".into());
+        assert!(condition.compare(&vec!["abc".to_string(), "123".to_string()].into()));
+        assert!(!condition.compare(&vec!["0".to_string(), "123".to_string()].into()));
+
+        // VecString, VecString
+        let condition = Comparison::Any(vec!["abc".to_string(), "999".to_string()].into());
+        assert!(condition.compare(&vec!["abc".to_string(), "123".to_string()].into()));
+        assert!(!condition.compare(&vec!["xyz".to_string()].into()));
+
+        // VecDbValue, single DbValue
+        let haystack = DbValue::VecDbValue(vec![
+            DbValue::I64(1),
+            DbValue::String("hello".to_string()),
+            DbValue::U64(42),
+        ]);
+        assert!(Comparison::Any(DbValue::I64(1)).compare(&haystack));
+        assert!(Comparison::Any(DbValue::String("hello".to_string())).compare(&haystack));
+        assert!(!Comparison::Any(DbValue::I64(99)).compare(&haystack));
+
+        // VecDbValue, VecDbValue -- any element matches
+        let subset = DbValue::VecDbValue(vec![DbValue::I64(99), DbValue::U64(42)]);
+        assert!(Comparison::Any(subset).compare(&haystack)); // U64(42) found
+
+        let missing = DbValue::VecDbValue(vec![DbValue::I64(99), DbValue::I64(100)]);
+        assert!(!Comparison::Any(missing).compare(&haystack)); // none found
+
+        // Empty right side -> false (existential over empty set)
+        let empty = DbValue::VecDbValue(vec![]);
+        assert!(!Comparison::Any(empty).compare(&haystack));
+
+        // Unsupported type combination -> false
+        assert!(!Comparison::Any("abc".into()).compare(&1.into()));
     }
 }

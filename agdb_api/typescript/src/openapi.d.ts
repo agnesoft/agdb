@@ -77,21 +77,21 @@ declare namespace Components {
          * Comparison of database values ([`DbValue`]) used
          * by `key()` condition. Supports
          * the usual set of named comparisons: `==, !=, <, <=, >, =>`
-         * plus `contains()`. The comparisons are type
-         * strict except for the `contains` comparison
-         * which allows vectorized version of the base type. Notably
-         * however it does not support the `bytes` and integral types
-         * where the "contains" makes little sense (i.e. does 3 contain 1?).
+         * plus `contains()`, `any()`, `starts_with()` and `ends_with()`.
+         * The comparisons are type strict except for the `contains`
+         * and `any` comparisons which allow vectorized version of the
+         * base type. `contains` uses universal (AND) semantics while
+         * `any` uses existential (OR) semantics.
          */
         export type Comparison = /**
          * Comparison of database values ([`DbValue`]) used
          * by `key()` condition. Supports
          * the usual set of named comparisons: `==, !=, <, <=, >, =>`
-         * plus `contains()`. The comparisons are type
-         * strict except for the `contains` comparison
-         * which allows vectorized version of the base type. Notably
-         * however it does not support the `bytes` and integral types
-         * where the "contains" makes little sense (i.e. does 3 contain 1?).
+         * plus `contains()`, `any()`, `starts_with()` and `ends_with()`.
+         * The comparisons are type strict except for the `contains`
+         * and `any` comparisons which allow vectorized version of the
+         * base type. `contains` uses universal (AND) semantics while
+         * `any` uses existential (OR) semantics.
          */
         {
             /**
@@ -234,6 +234,27 @@ declare namespace Components {
              * property.ends_with(this)
              */
             EndsWith: /**
+             * Database value is a strongly types value.
+             *
+             * It is an enum of limited number supported types
+             * that are universal across all platforms
+             * and programming languages.
+             *
+             * The value is constructible from large number of
+             * raw types or associated types (e.g. i32, &str, etc.).
+             * Getting the raw value back as string can be done
+             * with `to_string()` but otherwise requires a `match`.
+             */
+            DbValue;
+        } | {
+            /**
+             * property.any(this) - true if at least one element of `this`
+             * is present in the property. For scalar right-hand side,
+             * behaves identically to `Contains`. For vector right-hand
+             * side, uses existential (OR) semantics rather than universal
+             * (AND) semantics. Empty right-hand vector yields `false`.
+             */
+            Any: /**
              * Database value is a strongly types value.
              *
              * It is an enum of limited number supported types
@@ -785,11 +806,11 @@ declare namespace Components {
              * Comparison of database values ([`DbValue`]) used
              * by `key()` condition. Supports
              * the usual set of named comparisons: `==, !=, <, <=, >, =>`
-             * plus `contains()`. The comparisons are type
-             * strict except for the `contains` comparison
-             * which allows vectorized version of the base type. Notably
-             * however it does not support the `bytes` and integral types
-             * where the "contains" makes little sense (i.e. does 3 contain 1?).
+             * plus `contains()`, `any()`, `starts_with()` and `ends_with()`.
+             * The comparisons are type strict except for the `contains`
+             * and `any` comparisons which allow vectorized version of the
+             * base type. `contains` uses universal (AND) semantics while
+             * `any` uses existential (OR) semantics.
              */
             Comparison;
         }

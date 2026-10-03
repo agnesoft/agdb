@@ -2815,9 +2815,22 @@
                 "description": "property.ends_with(this)"
               }
             }
+          },
+          {
+            "type": "object",
+            "description": "property.any(this) - true if at least one element of `this`\nis present in the property. For scalar right-hand side,\nbehaves identically to `Contains`. For vector right-hand\nside, uses existential (OR) semantics rather than universal\n(AND) semantics. Empty right-hand vector yields `false`.",
+            "required": [
+              "Any"
+            ],
+            "properties": {
+              "Any": {
+                "$ref": "#/components/schemas/DbValue",
+                "description": "property.any(this) - true if at least one element of `this`\nis present in the property. For scalar right-hand side,\nbehaves identically to `Contains`. For vector right-hand\nside, uses existential (OR) semantics rather than universal\n(AND) semantics. Empty right-hand vector yields `false`."
+              }
+            }
           }
         ],
-        "description": "Comparison of database values ([`DbValue`]) used\nby `key()` condition. Supports\nthe usual set of named comparisons: `==, !=, <, <=, >, =>`\nplus `contains()`. The comparisons are type\nstrict except for the `contains` comparison\nwhich allows vectorized version of the base type. Notably\nhowever it does not support the `bytes` and integral types\nwhere the \"contains\" makes little sense (i.e. does 3 contain 1?)."
+        "description": "Comparison of database values ([`DbValue`]) used\nby `key()` condition. Supports\nthe usual set of named comparisons: `==, !=, <, <=, >, =>`\nplus `contains()`, `any()`, `starts_with()` and `ends_with()`.\nThe comparisons are type strict except for the `contains`\nand `any` comparisons which allow vectorized version of the\nbase type. `contains` uses universal (AND) semantics while\n`any` uses existential (OR) semantics."
       },
       "CountComparison": {
         "oneOf": [

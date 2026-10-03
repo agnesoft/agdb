@@ -281,7 +281,6 @@ impl ClusterLog {
                 .and()
                 .keys(LOG_FAILED)
                 .and()
-                .where_()
                 .key(INDEX)
                 .value(Comparison::Any((*indices).into()))
                 .query(),

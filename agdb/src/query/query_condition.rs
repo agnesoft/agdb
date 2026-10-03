@@ -331,14 +331,17 @@ impl Comparison {
                 (DbValue::String(left), DbValue::VecString(right)) => {
                     right.iter().any(|x| left.contains(x))
                 }
+                (DbValue::I64(left), DbValue::VecI64(right)) => right.contains(left),
                 (DbValue::VecI64(left), DbValue::I64(right)) => left.contains(right),
                 (DbValue::VecI64(left), DbValue::VecI64(right)) => {
                     right.iter().any(|x| left.contains(x))
                 }
+                (DbValue::U64(left), DbValue::VecU64(right)) => right.contains(left),
                 (DbValue::VecU64(left), DbValue::U64(right)) => left.contains(right),
                 (DbValue::VecU64(left), DbValue::VecU64(right)) => {
                     right.iter().any(|x| left.contains(x))
                 }
+                (DbValue::F64(left), DbValue::VecF64(right)) => right.contains(left),
                 (DbValue::VecF64(left), DbValue::F64(right)) => left.contains(right),
                 (DbValue::VecF64(left), DbValue::VecF64(right)) => {
                     right.iter().any(|x| left.contains(x))
@@ -764,6 +767,26 @@ mod tests {
         // Empty right side -> false (existential over empty set)
         let empty = DbValue::VecDbValue(vec![]);
         assert!(!Comparison::Any(empty).compare(&haystack));
+
+        // I64 in VecI64 -- scalar left, vec right ("IN" semantics)
+        let condition = Comparison::Any(vec![2, 5, 7].into());
+        assert!(condition.compare(&5_i64.into()));
+        assert!(!condition.compare(&3_i64.into()));
+
+        // U64 in VecU64
+        let condition = Comparison::Any(vec![2_u64, 5_u64, 7_u64].into());
+        assert!(condition.compare(&5_u64.into()));
+        assert!(!condition.compare(&3_u64.into()));
+
+        // F64 in VecF64
+        let condition = Comparison::Any(vec![2.0, 5.5, 7.7].into());
+        assert!(condition.compare(&5.5_f64.into()));
+        assert!(!condition.compare(&3.3_f64.into()));
+
+        // String, VecString -- any substring found in left
+        let condition = Comparison::Any(vec!["Hello".to_string(), "Something".to_string()].into());
+        assert!(condition.compare(&"Hello World".into())); // "Hello" is a substring
+        assert!(!condition.compare(&"Goodbye World".into())); // neither found
 
         // Unsupported type combination -> false
         assert!(!Comparison::Any("abc".into()).compare(&1.into()));

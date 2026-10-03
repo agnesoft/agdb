@@ -38,7 +38,12 @@ class SearchQueryBuilder
 
         if ($query) {
             // @phpstan-ignore-next-line if.alwaysTrue
-            if ($query->getInsertValues()) {
+            if ($query->getInsertAlias()) {
+                $query
+                    ->getInsertAlias()
+                    ->setIds(new QueryIds(["search" => $search]));
+                // @phpstan-ignore-next-line if.alwaysTrue
+            } elseif ($query->getInsertValues()) {
                 $query
                     ->getInsertValues()
                     ->setIds(new QueryIds(["search" => $search]));
@@ -369,6 +374,15 @@ class InsertAliasesBuilder
     ): InsertAliasesIdsBuilder {
         $this->data->setIds(to_query_ids($ids));
         return new InsertAliasesIdsBuilder($this->data);
+    }
+
+    function search(): SearchBuilder
+    {
+        return new SearchBuilder(
+            new QueryType([
+                "insert_alias" => $this->data,
+            ])
+        );
     }
 }
 

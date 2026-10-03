@@ -4,14 +4,14 @@ use crate::DbImpl;
 use crate::QueryIds;
 use crate::QueryMut;
 use crate::QueryResult;
+use crate::SearchQuery;
 use crate::StorageData;
+use crate::query_builder::search::SearchQueryBuilder;
 
 /// Query to insert or update aliases of existing nodes.
 /// All `ids` must exist. None of the `aliases` can be empty.
 /// If there is an existing alias for any of the elements it
 /// will be overwritten with a new one.
-///
-/// NOTE: Setting `ids` to a search query will result in an error.
 ///
 /// The result will contain number of aliases inserted/updated but no elements.
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -57,11 +57,31 @@ impl QueryMut for InsertAliasesQuery {
                     result.result += 1;
                 }
             }
-            QueryIds::Search(_) => {
-                return Err(DbError::query(
-                    DbErrorType::NotAllowed,
-                    "Insert aliases query does not allow search queries",
-                ));
+            QueryIds::Search(search_query) => {
+                let db_ids = search_query.search(db)?;
+
+                if db_ids.len() != self.aliases.len() {
+                    return Err(DbError::query(
+                        DbErrorType::NotEnoughData,
+                        format!(
+                            "Search results ({}) must match aliases ({})",
+                            db_ids.len(),
+                            self.aliases.len()
+                        ),
+                    ));
+                }
+
+                for (db_id, alias) in db_ids.iter().zip(&self.aliases) {
+                    if alias.is_empty() {
+                        return Err(DbError::query(
+                            DbErrorType::NotAllowed,
+                            "Empty alias is not allowed",
+                        ));
+                    }
+
+                    db.insert_alias(*db_id, alias)?;
+                    result.result += 1;
+                }
             }
         }
 
@@ -72,6 +92,16 @@ impl QueryMut for InsertAliasesQuery {
 impl QueryMut for &InsertAliasesQuery {
     fn process<Store: StorageData>(&self, db: &mut DbImpl<Store>) -> Result<QueryResult, DbError> {
         (*self).process(db)
+    }
+}
+
+impl SearchQueryBuilder for InsertAliasesQuery {
+    fn search_mut(&mut self) -> &mut SearchQuery {
+        if let QueryIds::Search(search) = &mut self.ids {
+            search
+        } else {
+            panic!("Expected search query");
+        }
     }
 }
 
@@ -86,12 +116,21 @@ mod tests {
     use crate::test_utilities::test_file::TestFile;
 
     #[test]
-    fn invalid_query() {
+    fn search_query_aliases() {
         let test_file = TestFile::new();
         let mut db = Db::new(test_file.file_name()).unwrap();
+
+        db.exec_mut(&crate::InsertNodesQuery {
+            count: 2,
+            values: crate::QueryValues::Single(vec![]),
+            aliases: vec![],
+            ids: QueryIds::Ids(vec![]),
+        })
+        .unwrap();
+
         let query = InsertAliasesQuery {
             ids: QueryIds::Search(SearchQuery {
-                algorithm: SearchQueryAlgorithm::BreadthFirst,
+                algorithm: SearchQueryAlgorithm::Elements,
                 origin: QueryId::Id(DbId(0)),
                 destination: QueryId::Id(DbId(0)),
                 limit: 0,
@@ -100,14 +139,48 @@ mod tests {
                 conditions: vec![],
                 reverse: false,
             }),
-            aliases: vec![],
+            aliases: vec!["alias1".to_string(), "alias2".to_string()],
         };
-        assert_eq!(
-            query.process(&mut db).unwrap_err(),
-            DbError::query(
-                DbErrorType::NotAllowed,
-                "Insert aliases query does not allow search queries",
-            )
-        );
+        let result = query.process(&mut db).unwrap();
+        assert_eq!(result.result, 2);
+    }
+
+    #[test]
+    fn search_query_aliases_length_mismatch() {
+        let test_file = TestFile::new();
+        let mut db = Db::new(test_file.file_name()).unwrap();
+
+        db.exec_mut(&crate::InsertNodesQuery {
+            count: 2,
+            values: crate::QueryValues::Single(vec![]),
+            aliases: vec![],
+            ids: QueryIds::Ids(vec![]),
+        })
+        .unwrap();
+
+        let query = InsertAliasesQuery {
+            ids: QueryIds::Search(SearchQuery {
+                algorithm: SearchQueryAlgorithm::Elements,
+                origin: QueryId::Id(DbId(0)),
+                destination: QueryId::Id(DbId(0)),
+                limit: 0,
+                offset: 0,
+                order_by: vec![],
+                conditions: vec![],
+                reverse: false,
+            }),
+            aliases: vec!["only_one".to_string()],
+        };
+        assert!(query.process(&mut db).is_err());
+    }
+
+    #[test]
+    #[should_panic]
+    fn missing_search() {
+        InsertAliasesQuery {
+            ids: QueryIds::Ids(vec![]),
+            aliases: vec![],
+        }
+        .search_mut();
     }
 }

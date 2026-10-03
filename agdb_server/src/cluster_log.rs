@@ -20,6 +20,10 @@ pub(crate) struct ClusterLog(pub(crate) Arc<RwLock<Db>>);
 const CLUSTER_LOG: &str = "cluster_log";
 const EXECUTED: &str = "executed";
 const COMMITTED: &str = "committed";
+const INDEX: &str = "index";
+const LOG_FAILED: &str = "log_failed";
+const TERM: &str = "term";
+
 pub(crate) const CLUSTER_LOG_FILE: &str = "agdb_server.log";
 
 pub(crate) async fn new(config: &Config) -> ServerResult<ClusterLog> {
@@ -93,7 +97,7 @@ impl ClusterLog {
             if let Some(e) = t
                 .exec(
                     QueryBuilder::select()
-                        .values(["index", "term"])
+                        .values([INDEX, TERM])
                         .search()
                         .depth_first()
                         .from(CLUSTER_LOG)
@@ -108,7 +112,7 @@ impl ClusterLog {
                 let commit = if let Some(c) = t
                     .exec(
                         QueryBuilder::select()
-                            .values("index")
+                            .values(INDEX)
                             .search()
                             .depth_first()
                             .from(CLUSTER_LOG)
@@ -174,7 +178,7 @@ impl ClusterLog {
             let mut log_ids: Vec<(u64, DbId)> = t
                 .exec(
                     QueryBuilder::select()
-                        .values("index")
+                        .values(INDEX)
                         .search()
                         .index(label)
                         .value(false)
@@ -207,7 +211,7 @@ impl ClusterLog {
                     .where_()
                     .neighbor()
                     .and()
-                    .key("index")
+                    .key(INDEX)
                     .value(Comparison::LessThanOrEqual(up_to_index.into()))
                     .and()
                     .not()
@@ -226,7 +230,7 @@ impl ClusterLog {
             let logs: Vec<DbId> = t
                 .exec(
                     QueryBuilder::select()
-                        .values("index")
+                        .values(INDEX)
                         .search()
                         .index(COMMITTED)
                         .value(false)
@@ -251,6 +255,91 @@ impl ClusterLog {
         Ok(())
     }
 
+    pub(crate) async fn set_log_failed(&self, log_id: DbId) -> ServerResult<()> {
+        self.0.write().await.exec_mut(
+            QueryBuilder::insert()
+                .values([[(LOG_FAILED, true).into()]])
+                .ids(log_id)
+                .query(),
+        )?;
+        Ok(())
+    }
+
+    pub(crate) async fn clear_log_failed(&self, indices: &[u64]) -> ServerResult<()> {
+        if indices.is_empty() {
+            return Ok(());
+        }
+
+        let mut query = QueryBuilder::remove()
+            .values(LOG_FAILED)
+            .search()
+            .depth_first()
+            .from(CLUSTER_LOG)
+            .where_()
+            .neighbor()
+            .and()
+            .keys(LOG_FAILED)
+            .and()
+            .where_()
+            .key(INDEX)
+            .value(indices[0]);
+
+        for index in &indices[1..] {
+            query = query.or().key(INDEX).value(*index);
+        }
+
+        self.0.write().await.exec_mut(query.query())?;
+        Ok(())
+    }
+
+    pub(crate) async fn failed_indices(&self) -> ServerResult<Vec<u64>> {
+        Ok(self
+            .0
+            .read()
+            .await
+            .exec(
+                QueryBuilder::select()
+                    .values(INDEX)
+                    .search()
+                    .depth_first()
+                    .from(CLUSTER_LOG)
+                    .where_()
+                    .neighbor()
+                    .and()
+                    .keys(LOG_FAILED)
+                    .query(),
+            )?
+            .elements
+            .iter()
+            .filter_map(|e| e.values[0].value.to_u64().ok())
+            .collect())
+    }
+
+    pub(crate) async fn action_at_index(&self, index: u64) -> ServerResult<Option<ClusterAction>> {
+        Ok(self
+            .0
+            .read()
+            .await
+            .exec(
+                QueryBuilder::select()
+                    .element::<Log<ClusterAction>>()
+                    .search()
+                    .depth_first()
+                    .from(CLUSTER_LOG)
+                    .where_()
+                    .neighbor()
+                    .and()
+                    .key(INDEX)
+                    .value(index)
+                    .query(),
+            )?
+            .try_into()
+            .ok()
+            .and_then(|elements: Vec<Log<ClusterAction>>| {
+                elements.into_iter().next().map(|e| e.data)
+            }))
+    }
+
     pub(crate) async fn logs_since(
         &self,
         from_index: u64,
@@ -259,15 +348,15 @@ impl ClusterLog {
             let log_ids = t
                 .exec(
                     QueryBuilder::select()
-                        .values("index")
+                        .values(INDEX)
                         .search()
                         .depth_first()
                         .from(CLUSTER_LOG)
-                        .order_by(DbKeyOrder::Asc("index".into()))
+                        .order_by(DbKeyOrder::Asc(INDEX.into()))
                         .where_()
                         .neighbor()
                         .and()
-                        .key("index")
+                        .key(INDEX)
                         .value(Comparison::GreaterThan(from_index.into()))
                         .query(),
                 )?

@@ -53,6 +53,11 @@ use agdb::QueryResult;
 use serde::Deserialize;
 use serde::Serialize;
 
+pub(crate) enum ResyncTarget<'a> {
+    UserDb(&'a str, &'a str),
+    ServerDb,
+}
+
 #[derive(Clone, DbSerialize)]
 pub(crate) enum ClusterAction {
     UserAdd(UserAdd),
@@ -124,6 +129,40 @@ impl ClusterAction {
             Self::DbRename(_) => "DbRename",
             Self::DbUserAdd(_) => "DbUserAdd",
             Self::DbUserRemove(_) => "DbUserRemove",
+        }
+    }
+
+    pub(crate) fn resync_targets(&self) -> Vec<ResyncTarget<'_>> {
+        match self {
+            Self::DbAdd(a) => vec![ResyncTarget::UserDb(&a.owner, &a.db)],
+            Self::DbBackup(a) => vec![ResyncTarget::UserDb(&a.owner, &a.db)],
+            Self::DbClear(a) => vec![ResyncTarget::UserDb(&a.owner, &a.db)],
+            Self::DbConvert(a) => vec![ResyncTarget::UserDb(&a.owner, &a.db)],
+            Self::DbCopy(a) => vec![
+                ResyncTarget::UserDb(&a.owner, &a.db),
+                ResyncTarget::UserDb(&a.new_owner, &a.new_db),
+            ],
+            Self::DbDelete(a) => vec![ResyncTarget::UserDb(&a.owner, &a.db)],
+            Self::DbRemove(a) => vec![ResyncTarget::UserDb(&a.owner, &a.db)],
+            Self::DbExec(a) => vec![ResyncTarget::UserDb(&a.owner, &a.db)],
+            Self::DbOptimize(a) => vec![ResyncTarget::UserDb(&a.owner, &a.db)],
+            Self::DbRollback(a) => vec![ResyncTarget::UserDb(&a.owner, &a.db)],
+            Self::DbRestore(a) => vec![ResyncTarget::UserDb(&a.owner, &a.db)],
+            Self::DbRename(a) => vec![
+                ResyncTarget::UserDb(&a.owner, &a.db),
+                ResyncTarget::UserDb(&a.new_owner, &a.new_db),
+            ],
+            Self::DbUserAdd(a) => vec![ResyncTarget::UserDb(&a.owner, &a.db)],
+            Self::DbUserRemove(a) => vec![ResyncTarget::UserDb(&a.owner, &a.db)],
+            Self::UserAdd(_)
+            | Self::SaveUserToken(_)
+            | Self::RemoveUserToken(_)
+            | Self::RemoveUserTokens(_)
+            | Self::RemoveUserTokensExcept(_)
+            | Self::RemoveUserSession(_)
+            | Self::RemoveAllTokens(_)
+            | Self::ChangePassword(_)
+            | Self::UserDelete(_) => vec![ResyncTarget::ServerDb],
         }
     }
 
@@ -314,5 +353,99 @@ impl<'de> Deserialize<'de> for ClusterAction {
     {
         let bytes = Vec::<u8>::deserialize(deserializer)?;
         agdb::AgdbSerialize::deserialize(&bytes).map_err(serde::de::Error::custom)
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn resync_targets_user_db() {
+        let action = ClusterAction::DbAdd(DbAdd {
+            owner: "alice".into(),
+            db: "mydb".into(),
+            db_type: agdb_api::DbKind::Memory,
+        });
+        let targets = action.resync_targets();
+        assert_eq!(targets.len(), 1);
+        assert!(matches!(targets[0], ResyncTarget::UserDb("alice", "mydb")));
+    }
+
+    #[test]
+    fn resync_targets_server_db() {
+        let action = ClusterAction::UserAdd(UserAdd {
+            user: "bob".into(),
+            password: vec![1, 2, 3],
+            salt: vec![4, 5, 6],
+        });
+        let targets = action.resync_targets();
+        assert_eq!(targets.len(), 1);
+        assert!(matches!(targets[0], ResyncTarget::ServerDb));
+    }
+
+    #[test]
+    fn resync_targets_rename_both_names() {
+        let action = ClusterAction::DbRename(DbRename {
+            owner: "alice".into(),
+            db: "old_name".into(),
+            new_owner: "bob".into(),
+            new_db: "new_name".into(),
+        });
+        let targets = action.resync_targets();
+        assert_eq!(targets.len(), 2);
+        assert!(matches!(
+            targets[0],
+            ResyncTarget::UserDb("alice", "old_name")
+        ));
+        assert!(matches!(
+            targets[1],
+            ResyncTarget::UserDb("bob", "new_name")
+        ));
+    }
+
+    #[test]
+    fn resync_targets_copy_both_names() {
+        let action = ClusterAction::DbCopy(DbCopy {
+            owner: "alice".into(),
+            db: "source".into(),
+            new_owner: "bob".into(),
+            new_db: "destination".into(),
+            db_type: agdb_api::DbKind::Memory,
+        });
+        let targets = action.resync_targets();
+        assert_eq!(targets.len(), 2);
+        assert!(matches!(
+            targets[0],
+            ResyncTarget::UserDb("alice", "source")
+        ));
+        assert!(matches!(
+            targets[1],
+            ResyncTarget::UserDb("bob", "destination")
+        ));
+    }
+
+    #[test]
+    fn resync_targets_all_server_db_variants() {
+        let cases: Vec<ClusterAction> = vec![
+            ClusterAction::ChangePassword(ChangePassword {
+                user: "u".into(),
+                new_password: vec![],
+                new_salt: vec![],
+            }),
+            ClusterAction::RemoveUserToken(RemoveUserToken {
+                token: "tok".into(),
+            }),
+            ClusterAction::RemoveAllTokens(RemoveAllTokens {}),
+            ClusterAction::UserDelete(UserDelete { user: "u".into() }),
+        ];
+        for (i, action) in cases.into_iter().enumerate() {
+            let targets = action.resync_targets();
+            assert_eq!(targets.len(), 1, "case {i}: expected exactly one target");
+            assert!(
+                matches!(targets[0], ResyncTarget::ServerDb),
+                "case {i}: expected ServerDb"
+            );
+        }
     }
 }

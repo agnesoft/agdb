@@ -1537,5 +1537,16 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[163][1], $json);
     }
+    public function testQueryBuilder164(): void
+    {
+        $query = QueryBuilder::search()
+            ->from(1)
+            ->where()
+            ->key("k")
+            ->regex("pattern")
+            ->query();
+        $json = $query->jsonSerialize();
+        $this->assertEquals(self::$test_queries[164][1], $json);
+    }
 }
 

@@ -1224,3 +1224,125 @@ fn search_where_edge_count_shortcuts() {
         &[8, 7, 6],
     );
 }
+
+#[cfg(feature = "regex")]
+#[test]
+fn search_where_regex() {
+    let db = create_db();
+
+    // Match usernames matching pattern "user_[1-3]"
+    db.exec_ids(
+        QueryBuilder::search()
+            .from("users")
+            .order_by([DbKeyOrder::Asc("username".into())])
+            .where_()
+            .key("username")
+            .regex("^user_[1-3]$")
+            .query(),
+        &[12, 13, 14],
+    );
+
+    // Match usernames ending with digits > 3 using regex
+    db.exec_ids(
+        QueryBuilder::search()
+            .from("users")
+            .order_by([DbKeyOrder::Asc("username".into())])
+            .where_()
+            .key("username")
+            .regex("_[4-5]$")
+            .query(),
+        &[15, 16],
+    );
+
+    // Case-insensitive regex via (?i) flag
+    db.exec_ids(
+        QueryBuilder::search()
+            .from("docs")
+            .order_by([DbKeyOrder::Asc("name".into())])
+            .where_()
+            .key("name")
+            .regex("(?i)^BOOK$")
+            .query(),
+        &[7],
+    );
+
+    // Regex that matches no elements
+    db.exec_ids(
+        QueryBuilder::search()
+            .from("users")
+            .where_()
+            .key("username")
+            .regex("^admin")
+            .query(),
+        &[],
+    );
+
+    // Regex with alternation
+    db.exec_ids(
+        QueryBuilder::search()
+            .from("docs")
+            .order_by([DbKeyOrder::Asc("name".into())])
+            .where_()
+            .key("name")
+            .regex("^(notes|book)$")
+            .query(),
+        &[7, 6],
+    );
+
+    // Regex via explicit Comparison::Regex (not shortcut)
+    db.exec_ids(
+        QueryBuilder::search()
+            .from("users")
+            .where_()
+            .key("username")
+            .value(Comparison::Regex("user_1".into()))
+            .query(),
+        &[12],
+    );
+
+    // Regex on VecString — any element matches
+    // Node 6 content: ["abc", "def", "ghi"], Node 8 content: ["apples", "oranges"]
+    db.exec_ids(
+        QueryBuilder::search()
+            .from("docs")
+            .order_by([DbKeyOrder::Asc("name".into())])
+            .where_()
+            .key("content")
+            .regex("^a")
+            .query(),
+        &[6, 8],
+    );
+
+    // Regex on VecString — only "oranges" matches, so only node 8
+    db.exec_ids(
+        QueryBuilder::search()
+            .from("docs")
+            .where_()
+            .key("content")
+            .regex("^or")
+            .query(),
+        &[8],
+    );
+
+    // Invalid regex pattern yields false (no matches, no panic)
+    db.exec_ids(
+        QueryBuilder::search()
+            .from("users")
+            .where_()
+            .key("username")
+            .regex("(unclosed")
+            .query(),
+        &[],
+    );
+
+    // Regex on a non-string property (integer) yields false
+    db.exec_ids(
+        QueryBuilder::search()
+            .from("users")
+            .where_()
+            .key("id")
+            .regex("1")
+            .query(),
+        &[],
+    );
+}

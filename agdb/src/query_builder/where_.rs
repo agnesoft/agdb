@@ -586,6 +586,11 @@ impl<T: SearchQueryBuilder> WhereKey<T> {
     pub fn any<V: Into<DbValue>>(self, v: V) -> WhereLogicOperator<T> {
         self.value(Comparison::Any(v.into()))
     }
+
+    /// Shortcut for `.value(Comparison::Regex(v.into()))`.
+    pub fn regex<V: Into<DbValue>>(self, v: V) -> WhereLogicOperator<T> {
+        self.value(Comparison::Regex(v.into()))
+    }
 }
 
 #[cfg_attr(feature = "api", agdb::impl_def())]

@@ -35,7 +35,7 @@ use \Agnesoft\AgdbApi\ObjectSerializer;
  * InsertAliasesQuery Class Doc Comment
  *
  * @category Class
- * @description Query to insert or update aliases of existing nodes. All &#x60;ids&#x60; must exist. None of the &#x60;aliases&#x60; can be empty. If there is an existing alias for any of the elements it will be overwritten with a new one.  NOTE: Setting &#x60;ids&#x60; to a search query will result in an error.  The result will contain number of aliases inserted/updated but no elements.
+ * @description Query to insert or update aliases of existing nodes. All &#x60;ids&#x60; must exist. None of the &#x60;aliases&#x60; can be empty. If there is an existing alias for any of the elements it will be overwritten with a new one.  The result will contain number of aliases inserted/updated but no elements.
  * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech

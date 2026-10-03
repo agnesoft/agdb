@@ -574,8 +574,6 @@ declare namespace Components {
          * If there is an existing alias for any of the elements it
          * will be overwritten with a new one.
          *
-         * NOTE: Setting `ids` to a search query will result in an error.
-         *
          * The result will contain number of aliases inserted/updated but no elements.
          */
         export interface InsertAliasesQuery {
@@ -1053,8 +1051,6 @@ declare namespace Components {
              * All `ids` must exist. None of the `aliases` can be empty.
              * If there is an existing alias for any of the elements it
              * will be overwritten with a new one.
-             *
-             * NOTE: Setting `ids` to a search query will result in an error.
              *
              * The result will contain number of aliases inserted/updated but no elements.
              */

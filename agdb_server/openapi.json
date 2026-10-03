@@ -3248,7 +3248,7 @@
       },
       "InsertAliasesQuery": {
         "type": "object",
-        "description": "Query to insert or update aliases of existing nodes.\nAll `ids` must exist. None of the `aliases` can be empty.\nIf there is an existing alias for any of the elements it\nwill be overwritten with a new one.\n\nNOTE: Setting `ids` to a search query will result in an error.\n\nThe result will contain number of aliases inserted/updated but no elements.",
+        "description": "Query to insert or update aliases of existing nodes.\nAll `ids` must exist. None of the `aliases` can be empty.\nIf there is an existing alias for any of the elements it\nwill be overwritten with a new one.\n\nThe result will contain number of aliases inserted/updated but no elements.",
         "required": [
           "ids",
           "aliases"

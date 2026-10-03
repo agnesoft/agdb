@@ -182,6 +182,13 @@ pub enum Comparison {
     /// side, uses existential (OR) semantics rather than universal
     /// (AND) semantics. Empty right-hand vector yields `false`.
     Any(DbValue),
+
+    /// property matches regex pattern. The inner value must be
+    /// `DbValue::String` holding a valid regex pattern. Non-string
+    /// values or invalid patterns yield `false`. Requires `regex`
+    /// feature to be enabled; without it the comparison always
+    /// yields `false`.
+    Regex(DbValue),
 }
 
 /// Comparison of a value stored under specific `key` to
@@ -356,6 +363,17 @@ impl Comparison {
                 (DbValue::VecDbValue(left), right) => left.contains(right),
                 _ => false,
             },
+
+            #[cfg(feature = "regex")]
+            Comparison::Regex(right) => match (left, right) {
+                (DbValue::String(left), DbValue::String(pattern)) => regex_is_match(pattern, left),
+                (DbValue::VecString(left), DbValue::String(pattern)) => {
+                    left.iter().any(|s| regex_is_match(pattern, s))
+                }
+                _ => false,
+            },
+            #[cfg(not(feature = "regex"))]
+            Comparison::Regex(_) => false,
         }
     }
 
@@ -370,9 +388,75 @@ impl Comparison {
             | Comparison::Contains(value)
             | Comparison::StartsWith(value)
             | Comparison::EndsWith(value)
-            | Comparison::Any(value) => value,
+            | Comparison::Any(value)
+            | Comparison::Regex(value) => value,
         }
     }
+}
+
+#[cfg(feature = "regex")]
+fn regex_is_match(pattern: &str, text: &str) -> bool {
+    const MAX_ENTRIES: usize = 64;
+
+    struct RegexCache {
+        entries: [Option<(String, regex::Regex)>; MAX_ENTRIES],
+        len: usize,
+    }
+
+    impl RegexCache {
+        fn new() -> Self {
+            Self {
+                entries: [const { None }; MAX_ENTRIES],
+                len: 0,
+            }
+        }
+
+        fn get(&mut self, pattern: &str) -> Option<&regex::Regex> {
+            let idx = self.entries[..self.len]
+                .iter()
+                .rposition(|e| e.as_ref().is_some_and(|(p, _)| p == pattern))?;
+
+            // Move to the tail if not already there.
+            if idx < self.len - 1 {
+                self.entries[idx..self.len].rotate_left(1);
+            }
+
+            self.entries[self.len - 1].as_ref().map(|(_, re)| re)
+        }
+
+        fn insert(&mut self, pattern: String, re: regex::Regex) {
+            if self.len >= MAX_ENTRIES {
+                // Shift left — oldest at [0] is overwritten.
+                self.entries.rotate_left(1);
+                self.entries[MAX_ENTRIES - 1] = Some((pattern, re));
+            } else {
+                self.entries[self.len] = Some((pattern, re));
+                self.len += 1;
+            }
+        }
+    }
+
+    thread_local! {
+        static CACHE: std::cell::RefCell<RegexCache> =
+            std::cell::RefCell::new(RegexCache::new());
+    }
+
+    CACHE.with(|cell| {
+        let mut cache = cell.borrow_mut();
+
+        if let Some(re) = cache.get(pattern) {
+            return re.is_match(text);
+        }
+
+        match regex::Regex::new(pattern) {
+            Ok(re) => {
+                let result = re.is_match(text);
+                cache.insert(pattern.to_owned(), re);
+                result
+            }
+            Err(_) => false,
+        }
+    })
 }
 
 impl From<u64> for CountComparison {

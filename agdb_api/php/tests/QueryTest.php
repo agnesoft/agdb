@@ -1,4 +1,3 @@
-
 // GENERATED. DO NOT MODIFY AS ANY CHANGES WILL BE LOST.
 // query_test_generator.js
 <?php

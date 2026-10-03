@@ -4878,5 +4878,41 @@
         "reverse": false
       }
     }
+  ],
+  [
+    "QueryBuilder::search().from(1).where_().key(\"k\").regex(\"pattern\").query()",
+    {
+      "Search": {
+        "algorithm": "BreadthFirst",
+        "origin": {
+          "Id": 1
+        },
+        "destination": {
+          "Id": 0
+        },
+        "limit": 0,
+        "offset": 0,
+        "order_by": [],
+        "conditions": [
+          {
+            "logic": "And",
+            "modifier": "None",
+            "data": {
+              "KeyValue": {
+                "key": {
+                  "String": "k"
+                },
+                "value": {
+                  "Regex": {
+                    "String": "pattern"
+                  }
+                }
+              }
+            }
+          }
+        ],
+        "reverse": false
+      }
+    }
   ]
 ]

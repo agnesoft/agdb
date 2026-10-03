@@ -361,7 +361,8 @@ QueryBuilder::search().from(1).where_().edge_count_to_greater_than(1).query(),
 QueryBuilder::search().from(1).where_().edge_count_to_greater_than_or_equal(1).query(),
 QueryBuilder::search().from(1).where_().edge_count_to_less_than(1).query(),
 QueryBuilder::search().from(1).where_().edge_count_to_less_than_or_equal(1).query(),
-QueryBuilder::search().from(1).where_().edge_count_to_not_equal(1).query()
+QueryBuilder::search().from(1).where_().edge_count_to_not_equal(1).query(),
+QueryBuilder::search().from(1).where_().key("k").regex("pattern").query()
         ];
 
         serde_json::to_writer_pretty(File::create("test_queries.json").unwrap(), &queries).unwrap();

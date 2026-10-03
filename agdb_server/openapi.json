@@ -2828,6 +2828,19 @@
                 "description": "property.any(this) - true if at least one element of `this`\nis present in the property. For scalar right-hand side,\nbehaves identically to `Contains`. For vector right-hand\nside, uses existential (OR) semantics rather than universal\n(AND) semantics. Empty right-hand vector yields `false`."
               }
             }
+          },
+          {
+            "type": "object",
+            "description": "property matches regex pattern. The inner value must be\n`DbValue::String` holding a valid regex pattern. Non-string\nvalues or invalid patterns yield `false`. Requires `regex`\nfeature to be enabled; without it the comparison always\nyields `false`.",
+            "required": [
+              "Regex"
+            ],
+            "properties": {
+              "Regex": {
+                "$ref": "#/components/schemas/DbValue",
+                "description": "property matches regex pattern. The inner value must be\n`DbValue::String` holding a valid regex pattern. Non-string\nvalues or invalid patterns yield `false`. Requires `regex`\nfeature to be enabled; without it the comparison always\nyields `false`."
+              }
+            }
           }
         ],
         "description": "Comparison of database values ([`DbValue`]) used\nby `key()` condition. Supports\nthe usual set of named comparisons: `==, !=, <, <=, >, =>`\nplus `contains()`, `any()`, `starts_with()` and `ends_with()`.\nThe comparisons are type strict except for the `contains`\nand `any` comparisons which allow vectorized version of the\nbase type. `contains` uses universal (AND) semantics while\n`any` uses existential (OR) semantics."

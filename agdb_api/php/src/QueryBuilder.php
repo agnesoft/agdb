@@ -1287,8 +1287,9 @@ class SearchWhereBuilder
         return $this->distance(CountComparisonBuilder::GreaterThan($v));
     }
 
-    public function distance_greater_than_or_equal(int $v): SearchWhereLogicBuilder
-    {
+    public function distance_greater_than_or_equal(
+        int $v
+    ): SearchWhereLogicBuilder {
         return $this->distance(CountComparisonBuilder::GreaterThanOrEqual($v));
     }
 
@@ -1312,9 +1313,12 @@ class SearchWhereBuilder
         return $this->edge_count(CountComparisonBuilder::GreaterThan($v));
     }
 
-    public function edge_count_greater_than_or_equal(int $v): SearchWhereLogicBuilder
-    {
-        return $this->edge_count(CountComparisonBuilder::GreaterThanOrEqual($v));
+    public function edge_count_greater_than_or_equal(
+        int $v
+    ): SearchWhereLogicBuilder {
+        return $this->edge_count(
+            CountComparisonBuilder::GreaterThanOrEqual($v)
+        );
     }
 
     public function edge_count_less_than(int $v): SearchWhereLogicBuilder
@@ -1322,8 +1326,9 @@ class SearchWhereBuilder
         return $this->edge_count(CountComparisonBuilder::LessThan($v));
     }
 
-    public function edge_count_less_than_or_equal(int $v): SearchWhereLogicBuilder
-    {
+    public function edge_count_less_than_or_equal(
+        int $v
+    ): SearchWhereLogicBuilder {
         return $this->edge_count(CountComparisonBuilder::LessThanOrEqual($v));
     }
 
@@ -1332,14 +1337,18 @@ class SearchWhereBuilder
         return $this->edge_count(CountComparisonBuilder::NotEqual($v));
     }
 
-    public function edge_count_from_greater_than(int $v): SearchWhereLogicBuilder
-    {
+    public function edge_count_from_greater_than(
+        int $v
+    ): SearchWhereLogicBuilder {
         return $this->edge_count_from(CountComparisonBuilder::GreaterThan($v));
     }
 
-    public function edge_count_from_greater_than_or_equal(int $v): SearchWhereLogicBuilder
-    {
-        return $this->edge_count_from(CountComparisonBuilder::GreaterThanOrEqual($v));
+    public function edge_count_from_greater_than_or_equal(
+        int $v
+    ): SearchWhereLogicBuilder {
+        return $this->edge_count_from(
+            CountComparisonBuilder::GreaterThanOrEqual($v)
+        );
     }
 
     public function edge_count_from_less_than(int $v): SearchWhereLogicBuilder
@@ -1347,9 +1356,12 @@ class SearchWhereBuilder
         return $this->edge_count_from(CountComparisonBuilder::LessThan($v));
     }
 
-    public function edge_count_from_less_than_or_equal(int $v): SearchWhereLogicBuilder
-    {
-        return $this->edge_count_from(CountComparisonBuilder::LessThanOrEqual($v));
+    public function edge_count_from_less_than_or_equal(
+        int $v
+    ): SearchWhereLogicBuilder {
+        return $this->edge_count_from(
+            CountComparisonBuilder::LessThanOrEqual($v)
+        );
     }
 
     public function edge_count_from_not_equal(int $v): SearchWhereLogicBuilder
@@ -1362,9 +1374,12 @@ class SearchWhereBuilder
         return $this->edge_count_to(CountComparisonBuilder::GreaterThan($v));
     }
 
-    public function edge_count_to_greater_than_or_equal(int $v): SearchWhereLogicBuilder
-    {
-        return $this->edge_count_to(CountComparisonBuilder::GreaterThanOrEqual($v));
+    public function edge_count_to_greater_than_or_equal(
+        int $v
+    ): SearchWhereLogicBuilder {
+        return $this->edge_count_to(
+            CountComparisonBuilder::GreaterThanOrEqual($v)
+        );
     }
 
     public function edge_count_to_less_than(int $v): SearchWhereLogicBuilder
@@ -1372,9 +1387,12 @@ class SearchWhereBuilder
         return $this->edge_count_to(CountComparisonBuilder::LessThan($v));
     }
 
-    public function edge_count_to_less_than_or_equal(int $v): SearchWhereLogicBuilder
-    {
-        return $this->edge_count_to(CountComparisonBuilder::LessThanOrEqual($v));
+    public function edge_count_to_less_than_or_equal(
+        int $v
+    ): SearchWhereLogicBuilder {
+        return $this->edge_count_to(
+            CountComparisonBuilder::LessThanOrEqual($v)
+        );
     }
 
     public function edge_count_to_not_equal(int $v): SearchWhereLogicBuilder

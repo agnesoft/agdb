@@ -1360,9 +1360,7 @@ class SearchWhereBuilder {
         return this.edge_count_from(CountComparison.LessThan(count));
     }
 
-    edge_count_from_less_than_or_equal(
-        count: number,
-    ): SearchWhereLogicBuilder {
+    edge_count_from_less_than_or_equal(count: number): SearchWhereLogicBuilder {
         return this.edge_count_from(CountComparison.LessThanOrEqual(count));
     }
 

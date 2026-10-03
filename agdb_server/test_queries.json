@@ -3908,5 +3908,909 @@
         "reverse": false
       }
     }
+  ],
+  [
+    "QueryBuilder::search().from(1).where_().key(\"k\").greater_than(1).query()",
+    {
+      "Search": {
+        "algorithm": "BreadthFirst",
+        "origin": {
+          "Id": 1
+        },
+        "destination": {
+          "Id": 0
+        },
+        "limit": 0,
+        "offset": 0,
+        "order_by": [],
+        "conditions": [
+          {
+            "logic": "And",
+            "modifier": "None",
+            "data": {
+              "KeyValue": {
+                "key": {
+                  "String": "k"
+                },
+                "value": {
+                  "GreaterThan": {
+                    "I64": 1
+                  }
+                }
+              }
+            }
+          }
+        ],
+        "reverse": false
+      }
+    }
+  ],
+  [
+    "QueryBuilder::search().from(1).where_().key(\"k\").greater_than_or_equal(1).query()",
+    {
+      "Search": {
+        "algorithm": "BreadthFirst",
+        "origin": {
+          "Id": 1
+        },
+        "destination": {
+          "Id": 0
+        },
+        "limit": 0,
+        "offset": 0,
+        "order_by": [],
+        "conditions": [
+          {
+            "logic": "And",
+            "modifier": "None",
+            "data": {
+              "KeyValue": {
+                "key": {
+                  "String": "k"
+                },
+                "value": {
+                  "GreaterThanOrEqual": {
+                    "I64": 1
+                  }
+                }
+              }
+            }
+          }
+        ],
+        "reverse": false
+      }
+    }
+  ],
+  [
+    "QueryBuilder::search().from(1).where_().key(\"k\").less_than(1).query()",
+    {
+      "Search": {
+        "algorithm": "BreadthFirst",
+        "origin": {
+          "Id": 1
+        },
+        "destination": {
+          "Id": 0
+        },
+        "limit": 0,
+        "offset": 0,
+        "order_by": [],
+        "conditions": [
+          {
+            "logic": "And",
+            "modifier": "None",
+            "data": {
+              "KeyValue": {
+                "key": {
+                  "String": "k"
+                },
+                "value": {
+                  "LessThan": {
+                    "I64": 1
+                  }
+                }
+              }
+            }
+          }
+        ],
+        "reverse": false
+      }
+    }
+  ],
+  [
+    "QueryBuilder::search().from(1).where_().key(\"k\").less_than_or_equal(1).query()",
+    {
+      "Search": {
+        "algorithm": "BreadthFirst",
+        "origin": {
+          "Id": 1
+        },
+        "destination": {
+          "Id": 0
+        },
+        "limit": 0,
+        "offset": 0,
+        "order_by": [],
+        "conditions": [
+          {
+            "logic": "And",
+            "modifier": "None",
+            "data": {
+              "KeyValue": {
+                "key": {
+                  "String": "k"
+                },
+                "value": {
+                  "LessThanOrEqual": {
+                    "I64": 1
+                  }
+                }
+              }
+            }
+          }
+        ],
+        "reverse": false
+      }
+    }
+  ],
+  [
+    "QueryBuilder::search().from(1).where_().key(\"k\").not_equal(1).query()",
+    {
+      "Search": {
+        "algorithm": "BreadthFirst",
+        "origin": {
+          "Id": 1
+        },
+        "destination": {
+          "Id": 0
+        },
+        "limit": 0,
+        "offset": 0,
+        "order_by": [],
+        "conditions": [
+          {
+            "logic": "And",
+            "modifier": "None",
+            "data": {
+              "KeyValue": {
+                "key": {
+                  "String": "k"
+                },
+                "value": {
+                  "NotEqual": {
+                    "I64": 1
+                  }
+                }
+              }
+            }
+          }
+        ],
+        "reverse": false
+      }
+    }
+  ],
+  [
+    "QueryBuilder::search().from(1).where_().key(\"k\").contains(1).query()",
+    {
+      "Search": {
+        "algorithm": "BreadthFirst",
+        "origin": {
+          "Id": 1
+        },
+        "destination": {
+          "Id": 0
+        },
+        "limit": 0,
+        "offset": 0,
+        "order_by": [],
+        "conditions": [
+          {
+            "logic": "And",
+            "modifier": "None",
+            "data": {
+              "KeyValue": {
+                "key": {
+                  "String": "k"
+                },
+                "value": {
+                  "Contains": {
+                    "I64": 1
+                  }
+                }
+              }
+            }
+          }
+        ],
+        "reverse": false
+      }
+    }
+  ],
+  [
+    "QueryBuilder::search().from(1).where_().key(\"k\").starts_with(1).query()",
+    {
+      "Search": {
+        "algorithm": "BreadthFirst",
+        "origin": {
+          "Id": 1
+        },
+        "destination": {
+          "Id": 0
+        },
+        "limit": 0,
+        "offset": 0,
+        "order_by": [],
+        "conditions": [
+          {
+            "logic": "And",
+            "modifier": "None",
+            "data": {
+              "KeyValue": {
+                "key": {
+                  "String": "k"
+                },
+                "value": {
+                  "StartsWith": {
+                    "I64": 1
+                  }
+                }
+              }
+            }
+          }
+        ],
+        "reverse": false
+      }
+    }
+  ],
+  [
+    "QueryBuilder::search().from(1).where_().key(\"k\").ends_with(1).query()",
+    {
+      "Search": {
+        "algorithm": "BreadthFirst",
+        "origin": {
+          "Id": 1
+        },
+        "destination": {
+          "Id": 0
+        },
+        "limit": 0,
+        "offset": 0,
+        "order_by": [],
+        "conditions": [
+          {
+            "logic": "And",
+            "modifier": "None",
+            "data": {
+              "KeyValue": {
+                "key": {
+                  "String": "k"
+                },
+                "value": {
+                  "EndsWith": {
+                    "I64": 1
+                  }
+                }
+              }
+            }
+          }
+        ],
+        "reverse": false
+      }
+    }
+  ],
+  [
+    "QueryBuilder::search().from(1).where_().key(\"k\").any(1).query()",
+    {
+      "Search": {
+        "algorithm": "BreadthFirst",
+        "origin": {
+          "Id": 1
+        },
+        "destination": {
+          "Id": 0
+        },
+        "limit": 0,
+        "offset": 0,
+        "order_by": [],
+        "conditions": [
+          {
+            "logic": "And",
+            "modifier": "None",
+            "data": {
+              "KeyValue": {
+                "key": {
+                  "String": "k"
+                },
+                "value": {
+                  "Any": {
+                    "I64": 1
+                  }
+                }
+              }
+            }
+          }
+        ],
+        "reverse": false
+      }
+    }
+  ],
+  [
+    "QueryBuilder::search().from(1).where_().distance_greater_than(3).query()",
+    {
+      "Search": {
+        "algorithm": "BreadthFirst",
+        "origin": {
+          "Id": 1
+        },
+        "destination": {
+          "Id": 0
+        },
+        "limit": 0,
+        "offset": 0,
+        "order_by": [],
+        "conditions": [
+          {
+            "logic": "And",
+            "modifier": "None",
+            "data": {
+              "Distance": {
+                "GreaterThan": 3
+              }
+            }
+          }
+        ],
+        "reverse": false
+      }
+    }
+  ],
+  [
+    "QueryBuilder::search().from(1).where_().distance_greater_than_or_equal(3).query()",
+    {
+      "Search": {
+        "algorithm": "BreadthFirst",
+        "origin": {
+          "Id": 1
+        },
+        "destination": {
+          "Id": 0
+        },
+        "limit": 0,
+        "offset": 0,
+        "order_by": [],
+        "conditions": [
+          {
+            "logic": "And",
+            "modifier": "None",
+            "data": {
+              "Distance": {
+                "GreaterThanOrEqual": 3
+              }
+            }
+          }
+        ],
+        "reverse": false
+      }
+    }
+  ],
+  [
+    "QueryBuilder::search().from(1).where_().distance_less_than(3).query()",
+    {
+      "Search": {
+        "algorithm": "BreadthFirst",
+        "origin": {
+          "Id": 1
+        },
+        "destination": {
+          "Id": 0
+        },
+        "limit": 0,
+        "offset": 0,
+        "order_by": [],
+        "conditions": [
+          {
+            "logic": "And",
+            "modifier": "None",
+            "data": {
+              "Distance": {
+                "LessThan": 3
+              }
+            }
+          }
+        ],
+        "reverse": false
+      }
+    }
+  ],
+  [
+    "QueryBuilder::search().from(1).where_().distance_less_than_or_equal(3).query()",
+    {
+      "Search": {
+        "algorithm": "BreadthFirst",
+        "origin": {
+          "Id": 1
+        },
+        "destination": {
+          "Id": 0
+        },
+        "limit": 0,
+        "offset": 0,
+        "order_by": [],
+        "conditions": [
+          {
+            "logic": "And",
+            "modifier": "None",
+            "data": {
+              "Distance": {
+                "LessThanOrEqual": 3
+              }
+            }
+          }
+        ],
+        "reverse": false
+      }
+    }
+  ],
+  [
+    "QueryBuilder::search().from(1).where_().distance_not_equal(3).query()",
+    {
+      "Search": {
+        "algorithm": "BreadthFirst",
+        "origin": {
+          "Id": 1
+        },
+        "destination": {
+          "Id": 0
+        },
+        "limit": 0,
+        "offset": 0,
+        "order_by": [],
+        "conditions": [
+          {
+            "logic": "And",
+            "modifier": "None",
+            "data": {
+              "Distance": {
+                "NotEqual": 3
+              }
+            }
+          }
+        ],
+        "reverse": false
+      }
+    }
+  ],
+  [
+    "QueryBuilder::search().from(1).where_().edge_count_greater_than(2).query()",
+    {
+      "Search": {
+        "algorithm": "BreadthFirst",
+        "origin": {
+          "Id": 1
+        },
+        "destination": {
+          "Id": 0
+        },
+        "limit": 0,
+        "offset": 0,
+        "order_by": [],
+        "conditions": [
+          {
+            "logic": "And",
+            "modifier": "None",
+            "data": {
+              "EdgeCount": {
+                "GreaterThan": 2
+              }
+            }
+          }
+        ],
+        "reverse": false
+      }
+    }
+  ],
+  [
+    "QueryBuilder::search().from(1).where_().edge_count_greater_than_or_equal(2).query()",
+    {
+      "Search": {
+        "algorithm": "BreadthFirst",
+        "origin": {
+          "Id": 1
+        },
+        "destination": {
+          "Id": 0
+        },
+        "limit": 0,
+        "offset": 0,
+        "order_by": [],
+        "conditions": [
+          {
+            "logic": "And",
+            "modifier": "None",
+            "data": {
+              "EdgeCount": {
+                "GreaterThanOrEqual": 2
+              }
+            }
+          }
+        ],
+        "reverse": false
+      }
+    }
+  ],
+  [
+    "QueryBuilder::search().from(1).where_().edge_count_less_than(2).query()",
+    {
+      "Search": {
+        "algorithm": "BreadthFirst",
+        "origin": {
+          "Id": 1
+        },
+        "destination": {
+          "Id": 0
+        },
+        "limit": 0,
+        "offset": 0,
+        "order_by": [],
+        "conditions": [
+          {
+            "logic": "And",
+            "modifier": "None",
+            "data": {
+              "EdgeCount": {
+                "LessThan": 2
+              }
+            }
+          }
+        ],
+        "reverse": false
+      }
+    }
+  ],
+  [
+    "QueryBuilder::search().from(1).where_().edge_count_less_than_or_equal(2).query()",
+    {
+      "Search": {
+        "algorithm": "BreadthFirst",
+        "origin": {
+          "Id": 1
+        },
+        "destination": {
+          "Id": 0
+        },
+        "limit": 0,
+        "offset": 0,
+        "order_by": [],
+        "conditions": [
+          {
+            "logic": "And",
+            "modifier": "None",
+            "data": {
+              "EdgeCount": {
+                "LessThanOrEqual": 2
+              }
+            }
+          }
+        ],
+        "reverse": false
+      }
+    }
+  ],
+  [
+    "QueryBuilder::search().from(1).where_().edge_count_not_equal(2).query()",
+    {
+      "Search": {
+        "algorithm": "BreadthFirst",
+        "origin": {
+          "Id": 1
+        },
+        "destination": {
+          "Id": 0
+        },
+        "limit": 0,
+        "offset": 0,
+        "order_by": [],
+        "conditions": [
+          {
+            "logic": "And",
+            "modifier": "None",
+            "data": {
+              "EdgeCount": {
+                "NotEqual": 2
+              }
+            }
+          }
+        ],
+        "reverse": false
+      }
+    }
+  ],
+  [
+    "QueryBuilder::search().from(1).where_().edge_count_from_greater_than(1).query()",
+    {
+      "Search": {
+        "algorithm": "BreadthFirst",
+        "origin": {
+          "Id": 1
+        },
+        "destination": {
+          "Id": 0
+        },
+        "limit": 0,
+        "offset": 0,
+        "order_by": [],
+        "conditions": [
+          {
+            "logic": "And",
+            "modifier": "None",
+            "data": {
+              "EdgeCountFrom": {
+                "GreaterThan": 1
+              }
+            }
+          }
+        ],
+        "reverse": false
+      }
+    }
+  ],
+  [
+    "QueryBuilder::search().from(1).where_().edge_count_from_greater_than_or_equal(1).query()",
+    {
+      "Search": {
+        "algorithm": "BreadthFirst",
+        "origin": {
+          "Id": 1
+        },
+        "destination": {
+          "Id": 0
+        },
+        "limit": 0,
+        "offset": 0,
+        "order_by": [],
+        "conditions": [
+          {
+            "logic": "And",
+            "modifier": "None",
+            "data": {
+              "EdgeCountFrom": {
+                "GreaterThanOrEqual": 1
+              }
+            }
+          }
+        ],
+        "reverse": false
+      }
+    }
+  ],
+  [
+    "QueryBuilder::search().from(1).where_().edge_count_from_less_than(1).query()",
+    {
+      "Search": {
+        "algorithm": "BreadthFirst",
+        "origin": {
+          "Id": 1
+        },
+        "destination": {
+          "Id": 0
+        },
+        "limit": 0,
+        "offset": 0,
+        "order_by": [],
+        "conditions": [
+          {
+            "logic": "And",
+            "modifier": "None",
+            "data": {
+              "EdgeCountFrom": {
+                "LessThan": 1
+              }
+            }
+          }
+        ],
+        "reverse": false
+      }
+    }
+  ],
+  [
+    "QueryBuilder::search().from(1).where_().edge_count_from_less_than_or_equal(1).query()",
+    {
+      "Search": {
+        "algorithm": "BreadthFirst",
+        "origin": {
+          "Id": 1
+        },
+        "destination": {
+          "Id": 0
+        },
+        "limit": 0,
+        "offset": 0,
+        "order_by": [],
+        "conditions": [
+          {
+            "logic": "And",
+            "modifier": "None",
+            "data": {
+              "EdgeCountFrom": {
+                "LessThanOrEqual": 1
+              }
+            }
+          }
+        ],
+        "reverse": false
+      }
+    }
+  ],
+  [
+    "QueryBuilder::search().from(1).where_().edge_count_from_not_equal(1).query()",
+    {
+      "Search": {
+        "algorithm": "BreadthFirst",
+        "origin": {
+          "Id": 1
+        },
+        "destination": {
+          "Id": 0
+        },
+        "limit": 0,
+        "offset": 0,
+        "order_by": [],
+        "conditions": [
+          {
+            "logic": "And",
+            "modifier": "None",
+            "data": {
+              "EdgeCountFrom": {
+                "NotEqual": 1
+              }
+            }
+          }
+        ],
+        "reverse": false
+      }
+    }
+  ],
+  [
+    "QueryBuilder::search().from(1).where_().edge_count_to_greater_than(1).query()",
+    {
+      "Search": {
+        "algorithm": "BreadthFirst",
+        "origin": {
+          "Id": 1
+        },
+        "destination": {
+          "Id": 0
+        },
+        "limit": 0,
+        "offset": 0,
+        "order_by": [],
+        "conditions": [
+          {
+            "logic": "And",
+            "modifier": "None",
+            "data": {
+              "EdgeCountTo": {
+                "GreaterThan": 1
+              }
+            }
+          }
+        ],
+        "reverse": false
+      }
+    }
+  ],
+  [
+    "QueryBuilder::search().from(1).where_().edge_count_to_greater_than_or_equal(1).query()",
+    {
+      "Search": {
+        "algorithm": "BreadthFirst",
+        "origin": {
+          "Id": 1
+        },
+        "destination": {
+          "Id": 0
+        },
+        "limit": 0,
+        "offset": 0,
+        "order_by": [],
+        "conditions": [
+          {
+            "logic": "And",
+            "modifier": "None",
+            "data": {
+              "EdgeCountTo": {
+                "GreaterThanOrEqual": 1
+              }
+            }
+          }
+        ],
+        "reverse": false
+      }
+    }
+  ],
+  [
+    "QueryBuilder::search().from(1).where_().edge_count_to_less_than(1).query()",
+    {
+      "Search": {
+        "algorithm": "BreadthFirst",
+        "origin": {
+          "Id": 1
+        },
+        "destination": {
+          "Id": 0
+        },
+        "limit": 0,
+        "offset": 0,
+        "order_by": [],
+        "conditions": [
+          {
+            "logic": "And",
+            "modifier": "None",
+            "data": {
+              "EdgeCountTo": {
+                "LessThan": 1
+              }
+            }
+          }
+        ],
+        "reverse": false
+      }
+    }
+  ],
+  [
+    "QueryBuilder::search().from(1).where_().edge_count_to_less_than_or_equal(1).query()",
+    {
+      "Search": {
+        "algorithm": "BreadthFirst",
+        "origin": {
+          "Id": 1
+        },
+        "destination": {
+          "Id": 0
+        },
+        "limit": 0,
+        "offset": 0,
+        "order_by": [],
+        "conditions": [
+          {
+            "logic": "And",
+            "modifier": "None",
+            "data": {
+              "EdgeCountTo": {
+                "LessThanOrEqual": 1
+              }
+            }
+          }
+        ],
+        "reverse": false
+      }
+    }
+  ],
+  [
+    "QueryBuilder::search().from(1).where_().edge_count_to_not_equal(1).query()",
+    {
+      "Search": {
+        "algorithm": "BreadthFirst",
+        "origin": {
+          "Id": 1
+        },
+        "destination": {
+          "Id": 0
+        },
+        "limit": 0,
+        "offset": 0,
+        "order_by": [],
+        "conditions": [
+          {
+            "logic": "And",
+            "modifier": "None",
+            "data": {
+              "EdgeCountTo": {
+                "NotEqual": 1
+              }
+            }
+          }
+        ],
+        "reverse": false
+      }
+    }
   ]
 ]

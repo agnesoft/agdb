@@ -1057,6 +1057,60 @@ class SearchWhereKeyBuilder
         $this->data->__push_condition($condition_data);
         return new SearchWhereLogicBuilder($this->data);
     }
+
+    public function greater_than(
+        bool|int|float|string|array|DbValue $value
+    ): SearchWhereLogicBuilder {
+        return $this->value(ComparisonBuilder::GreaterThan($value));
+    }
+
+    public function greater_than_or_equal(
+        bool|int|float|string|array|DbValue $value
+    ): SearchWhereLogicBuilder {
+        return $this->value(ComparisonBuilder::GreaterThanOrEqual($value));
+    }
+
+    public function less_than(
+        bool|int|float|string|array|DbValue $value
+    ): SearchWhereLogicBuilder {
+        return $this->value(ComparisonBuilder::LessThan($value));
+    }
+
+    public function less_than_or_equal(
+        bool|int|float|string|array|DbValue $value
+    ): SearchWhereLogicBuilder {
+        return $this->value(ComparisonBuilder::LessThanOrEqual($value));
+    }
+
+    public function not_equal(
+        bool|int|float|string|array|DbValue $value
+    ): SearchWhereLogicBuilder {
+        return $this->value(ComparisonBuilder::NotEqual($value));
+    }
+
+    public function contains(
+        bool|int|float|string|array|DbValue $value
+    ): SearchWhereLogicBuilder {
+        return $this->value(ComparisonBuilder::Contains($value));
+    }
+
+    public function starts_with(
+        bool|int|float|string|array|DbValue $value
+    ): SearchWhereLogicBuilder {
+        return $this->value(ComparisonBuilder::StartsWith($value));
+    }
+
+    public function ends_with(
+        bool|int|float|string|array|DbValue $value
+    ): SearchWhereLogicBuilder {
+        return $this->value(ComparisonBuilder::EndsWith($value));
+    }
+
+    public function any(
+        bool|int|float|string|array|DbValue $value
+    ): SearchWhereLogicBuilder {
+        return $this->value(ComparisonBuilder::Any($value));
+    }
 }
 
 class SearchWhereLogicBuilder
@@ -1226,6 +1280,106 @@ class SearchWhereBuilder
         $this->__push_condition(new QueryConditionData(["where" => []]));
         $this->__conditions[] = [];
         return $this;
+    }
+
+    public function distance_greater_than(int $v): SearchWhereLogicBuilder
+    {
+        return $this->distance(CountComparisonBuilder::GreaterThan($v));
+    }
+
+    public function distance_greater_than_or_equal(int $v): SearchWhereLogicBuilder
+    {
+        return $this->distance(CountComparisonBuilder::GreaterThanOrEqual($v));
+    }
+
+    public function distance_less_than(int $v): SearchWhereLogicBuilder
+    {
+        return $this->distance(CountComparisonBuilder::LessThan($v));
+    }
+
+    public function distance_less_than_or_equal(int $v): SearchWhereLogicBuilder
+    {
+        return $this->distance(CountComparisonBuilder::LessThanOrEqual($v));
+    }
+
+    public function distance_not_equal(int $v): SearchWhereLogicBuilder
+    {
+        return $this->distance(CountComparisonBuilder::NotEqual($v));
+    }
+
+    public function edge_count_greater_than(int $v): SearchWhereLogicBuilder
+    {
+        return $this->edge_count(CountComparisonBuilder::GreaterThan($v));
+    }
+
+    public function edge_count_greater_than_or_equal(int $v): SearchWhereLogicBuilder
+    {
+        return $this->edge_count(CountComparisonBuilder::GreaterThanOrEqual($v));
+    }
+
+    public function edge_count_less_than(int $v): SearchWhereLogicBuilder
+    {
+        return $this->edge_count(CountComparisonBuilder::LessThan($v));
+    }
+
+    public function edge_count_less_than_or_equal(int $v): SearchWhereLogicBuilder
+    {
+        return $this->edge_count(CountComparisonBuilder::LessThanOrEqual($v));
+    }
+
+    public function edge_count_not_equal(int $v): SearchWhereLogicBuilder
+    {
+        return $this->edge_count(CountComparisonBuilder::NotEqual($v));
+    }
+
+    public function edge_count_from_greater_than(int $v): SearchWhereLogicBuilder
+    {
+        return $this->edge_count_from(CountComparisonBuilder::GreaterThan($v));
+    }
+
+    public function edge_count_from_greater_than_or_equal(int $v): SearchWhereLogicBuilder
+    {
+        return $this->edge_count_from(CountComparisonBuilder::GreaterThanOrEqual($v));
+    }
+
+    public function edge_count_from_less_than(int $v): SearchWhereLogicBuilder
+    {
+        return $this->edge_count_from(CountComparisonBuilder::LessThan($v));
+    }
+
+    public function edge_count_from_less_than_or_equal(int $v): SearchWhereLogicBuilder
+    {
+        return $this->edge_count_from(CountComparisonBuilder::LessThanOrEqual($v));
+    }
+
+    public function edge_count_from_not_equal(int $v): SearchWhereLogicBuilder
+    {
+        return $this->edge_count_from(CountComparisonBuilder::NotEqual($v));
+    }
+
+    public function edge_count_to_greater_than(int $v): SearchWhereLogicBuilder
+    {
+        return $this->edge_count_to(CountComparisonBuilder::GreaterThan($v));
+    }
+
+    public function edge_count_to_greater_than_or_equal(int $v): SearchWhereLogicBuilder
+    {
+        return $this->edge_count_to(CountComparisonBuilder::GreaterThanOrEqual($v));
+    }
+
+    public function edge_count_to_less_than(int $v): SearchWhereLogicBuilder
+    {
+        return $this->edge_count_to(CountComparisonBuilder::LessThan($v));
+    }
+
+    public function edge_count_to_less_than_or_equal(int $v): SearchWhereLogicBuilder
+    {
+        return $this->edge_count_to(CountComparisonBuilder::LessThanOrEqual($v));
+    }
+
+    public function edge_count_to_not_equal(int $v): SearchWhereLogicBuilder
+    {
+        return $this->edge_count_to(CountComparisonBuilder::NotEqual($v));
     }
 
     public function __push_condition(string|QueryConditionData $data): void

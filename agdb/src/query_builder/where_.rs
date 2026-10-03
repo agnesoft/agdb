@@ -283,6 +283,106 @@ impl<T: SearchQueryBuilder> Where<T> {
         self.distance(CountComparison::Equal(2))
     }
 
+    /// Shortcut for `.distance(CountComparison::GreaterThan(v))`.
+    pub fn distance_greater_than(self, v: u64) -> WhereLogicOperator<T> {
+        self.distance(CountComparison::GreaterThan(v))
+    }
+
+    /// Shortcut for `.distance(CountComparison::GreaterThanOrEqual(v))`.
+    pub fn distance_greater_than_or_equal(self, v: u64) -> WhereLogicOperator<T> {
+        self.distance(CountComparison::GreaterThanOrEqual(v))
+    }
+
+    /// Shortcut for `.distance(CountComparison::LessThan(v))`.
+    pub fn distance_less_than(self, v: u64) -> WhereLogicOperator<T> {
+        self.distance(CountComparison::LessThan(v))
+    }
+
+    /// Shortcut for `.distance(CountComparison::LessThanOrEqual(v))`.
+    pub fn distance_less_than_or_equal(self, v: u64) -> WhereLogicOperator<T> {
+        self.distance(CountComparison::LessThanOrEqual(v))
+    }
+
+    /// Shortcut for `.distance(CountComparison::NotEqual(v))`.
+    pub fn distance_not_equal(self, v: u64) -> WhereLogicOperator<T> {
+        self.distance(CountComparison::NotEqual(v))
+    }
+
+    /// Shortcut for `.edge_count(CountComparison::GreaterThan(v))`.
+    pub fn edge_count_greater_than(self, v: u64) -> WhereLogicOperator<T> {
+        self.edge_count(CountComparison::GreaterThan(v))
+    }
+
+    /// Shortcut for `.edge_count(CountComparison::GreaterThanOrEqual(v))`.
+    pub fn edge_count_greater_than_or_equal(self, v: u64) -> WhereLogicOperator<T> {
+        self.edge_count(CountComparison::GreaterThanOrEqual(v))
+    }
+
+    /// Shortcut for `.edge_count(CountComparison::LessThan(v))`.
+    pub fn edge_count_less_than(self, v: u64) -> WhereLogicOperator<T> {
+        self.edge_count(CountComparison::LessThan(v))
+    }
+
+    /// Shortcut for `.edge_count(CountComparison::LessThanOrEqual(v))`.
+    pub fn edge_count_less_than_or_equal(self, v: u64) -> WhereLogicOperator<T> {
+        self.edge_count(CountComparison::LessThanOrEqual(v))
+    }
+
+    /// Shortcut for `.edge_count(CountComparison::NotEqual(v))`.
+    pub fn edge_count_not_equal(self, v: u64) -> WhereLogicOperator<T> {
+        self.edge_count(CountComparison::NotEqual(v))
+    }
+
+    /// Shortcut for `.edge_count_from(CountComparison::GreaterThan(v))`.
+    pub fn edge_count_from_greater_than(self, v: u64) -> WhereLogicOperator<T> {
+        self.edge_count_from(CountComparison::GreaterThan(v))
+    }
+
+    /// Shortcut for `.edge_count_from(CountComparison::GreaterThanOrEqual(v))`.
+    pub fn edge_count_from_greater_than_or_equal(self, v: u64) -> WhereLogicOperator<T> {
+        self.edge_count_from(CountComparison::GreaterThanOrEqual(v))
+    }
+
+    /// Shortcut for `.edge_count_from(CountComparison::LessThan(v))`.
+    pub fn edge_count_from_less_than(self, v: u64) -> WhereLogicOperator<T> {
+        self.edge_count_from(CountComparison::LessThan(v))
+    }
+
+    /// Shortcut for `.edge_count_from(CountComparison::LessThanOrEqual(v))`.
+    pub fn edge_count_from_less_than_or_equal(self, v: u64) -> WhereLogicOperator<T> {
+        self.edge_count_from(CountComparison::LessThanOrEqual(v))
+    }
+
+    /// Shortcut for `.edge_count_from(CountComparison::NotEqual(v))`.
+    pub fn edge_count_from_not_equal(self, v: u64) -> WhereLogicOperator<T> {
+        self.edge_count_from(CountComparison::NotEqual(v))
+    }
+
+    /// Shortcut for `.edge_count_to(CountComparison::GreaterThan(v))`.
+    pub fn edge_count_to_greater_than(self, v: u64) -> WhereLogicOperator<T> {
+        self.edge_count_to(CountComparison::GreaterThan(v))
+    }
+
+    /// Shortcut for `.edge_count_to(CountComparison::GreaterThanOrEqual(v))`.
+    pub fn edge_count_to_greater_than_or_equal(self, v: u64) -> WhereLogicOperator<T> {
+        self.edge_count_to(CountComparison::GreaterThanOrEqual(v))
+    }
+
+    /// Shortcut for `.edge_count_to(CountComparison::LessThan(v))`.
+    pub fn edge_count_to_less_than(self, v: u64) -> WhereLogicOperator<T> {
+        self.edge_count_to(CountComparison::LessThan(v))
+    }
+
+    /// Shortcut for `.edge_count_to(CountComparison::LessThanOrEqual(v))`.
+    pub fn edge_count_to_less_than_or_equal(self, v: u64) -> WhereLogicOperator<T> {
+        self.edge_count_to(CountComparison::LessThanOrEqual(v))
+    }
+
+    /// Shortcut for `.edge_count_to(CountComparison::NotEqual(v))`.
+    pub fn edge_count_to_not_equal(self, v: u64) -> WhereLogicOperator<T> {
+        self.edge_count_to(CountComparison::NotEqual(v))
+    }
+
     /// Only elements that are nodes will pass this condition.
     ///    
     /// # Examples
@@ -440,6 +540,51 @@ impl<T: SearchQueryBuilder> WhereKey<T> {
         };
         self.where_.add_condition(condition);
         WhereLogicOperator(self.where_)
+    }
+
+    /// Shortcut for `.value(Comparison::GreaterThan(v.into()))`.
+    pub fn greater_than<V: Into<DbValue>>(self, v: V) -> WhereLogicOperator<T> {
+        self.value(Comparison::GreaterThan(v.into()))
+    }
+
+    /// Shortcut for `.value(Comparison::GreaterThanOrEqual(v.into()))`.
+    pub fn greater_than_or_equal<V: Into<DbValue>>(self, v: V) -> WhereLogicOperator<T> {
+        self.value(Comparison::GreaterThanOrEqual(v.into()))
+    }
+
+    /// Shortcut for `.value(Comparison::LessThan(v.into()))`.
+    pub fn less_than<V: Into<DbValue>>(self, v: V) -> WhereLogicOperator<T> {
+        self.value(Comparison::LessThan(v.into()))
+    }
+
+    /// Shortcut for `.value(Comparison::LessThanOrEqual(v.into()))`.
+    pub fn less_than_or_equal<V: Into<DbValue>>(self, v: V) -> WhereLogicOperator<T> {
+        self.value(Comparison::LessThanOrEqual(v.into()))
+    }
+
+    /// Shortcut for `.value(Comparison::NotEqual(v.into()))`.
+    pub fn not_equal<V: Into<DbValue>>(self, v: V) -> WhereLogicOperator<T> {
+        self.value(Comparison::NotEqual(v.into()))
+    }
+
+    /// Shortcut for `.value(Comparison::Contains(v.into()))`.
+    pub fn contains<V: Into<DbValue>>(self, v: V) -> WhereLogicOperator<T> {
+        self.value(Comparison::Contains(v.into()))
+    }
+
+    /// Shortcut for `.value(Comparison::StartsWith(v.into()))`.
+    pub fn starts_with<V: Into<DbValue>>(self, v: V) -> WhereLogicOperator<T> {
+        self.value(Comparison::StartsWith(v.into()))
+    }
+
+    /// Shortcut for `.value(Comparison::EndsWith(v.into()))`.
+    pub fn ends_with<V: Into<DbValue>>(self, v: V) -> WhereLogicOperator<T> {
+        self.value(Comparison::EndsWith(v.into()))
+    }
+
+    /// Shortcut for `.value(Comparison::Any(v.into()))`.
+    pub fn any<V: Into<DbValue>>(self, v: V) -> WhereLogicOperator<T> {
+        self.value(Comparison::Any(v.into()))
     }
 }
 

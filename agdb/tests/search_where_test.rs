@@ -979,3 +979,248 @@ fn search_where_vec_db_value_ends_with() {
         &[],
     );
 }
+
+#[test]
+fn search_where_key_value_shortcuts() {
+    let db = create_db();
+
+    // greater_than
+    db.exec_ids(
+        QueryBuilder::search()
+            .from("users")
+            .order_by([DbKeyOrder::Desc("id".into())])
+            .where_()
+            .key("active")
+            .greater_than(0)
+            .query(),
+        &[15, 14, 12],
+    );
+
+    // greater_than_or_equal
+    db.exec_ids(
+        QueryBuilder::search()
+            .from("users")
+            .order_by([DbKeyOrder::Desc("id".into())])
+            .where_()
+            .key("active")
+            .greater_than_or_equal(0)
+            .query(),
+        &[16, 15, 14, 13, 12],
+    );
+
+    // less_than
+    db.exec_ids(
+        QueryBuilder::search()
+            .from("users")
+            .order_by([DbKeyOrder::Asc("id".into())])
+            .where_()
+            .key("active")
+            .less_than(1)
+            .query(),
+        &[13, 16],
+    );
+
+    // less_than_or_equal
+    db.exec_ids(
+        QueryBuilder::search()
+            .from("users")
+            .order_by([DbKeyOrder::Asc("id".into())])
+            .where_()
+            .key("active")
+            .less_than_or_equal(1)
+            .query(),
+        &[12, 13, 14, 15, 16],
+    );
+
+    // not_equal
+    db.exec_ids(
+        QueryBuilder::search()
+            .from("users")
+            .order_by([DbKeyOrder::Asc("id".into())])
+            .where_()
+            .key("active")
+            .not_equal(1)
+            .query(),
+        &[13, 16],
+    );
+
+    // contains
+    db.exec_ids(
+        QueryBuilder::search()
+            .from("docs")
+            .where_()
+            .key("content")
+            .contains("apples")
+            .query(),
+        &[8],
+    );
+
+    // starts_with
+    db.exec_ids(
+        QueryBuilder::search()
+            .from("docs")
+            .where_()
+            .key("content")
+            .starts_with("Lorem")
+            .query(),
+        &[7],
+    );
+
+    // ends_with
+    db.exec_ids(
+        QueryBuilder::search()
+            .from("docs")
+            .where_()
+            .key("content")
+            .ends_with(vec!["adipiscing ", "elit"])
+            .query(),
+        &[7],
+    );
+
+    // any
+    db.exec_ids(
+        QueryBuilder::search()
+            .from("docs")
+            .where_()
+            .key("content")
+            .any(vec!["nothere", "apples"])
+            .query(),
+        &[8],
+    );
+}
+
+#[test]
+fn search_where_distance_shortcuts() {
+    let db = create_db();
+
+    // distance_less_than
+    db.exec_ids(
+        QueryBuilder::search()
+            .from("root")
+            .where_()
+            .distance_less_than(3)
+            .query(),
+        &[1, -5, -4, 3, 2],
+    );
+
+    // distance_less_than_or_equal
+    db.exec_ids(
+        QueryBuilder::search()
+            .from("root")
+            .where_()
+            .distance_less_than_or_equal(2)
+            .query(),
+        &[1, -5, -4, 3, 2],
+    );
+
+    // distance_greater_than combined with distance_less_than
+    db.exec_ids(
+        QueryBuilder::search()
+            .from("root")
+            .where_()
+            .distance_greater_than(1)
+            .and()
+            .distance_less_than(3)
+            .query(),
+        &[3, 2],
+    );
+
+    // distance_greater_than_or_equal
+    db.exec_ids(
+        QueryBuilder::search()
+            .from("root")
+            .where_()
+            .distance_greater_than_or_equal(2)
+            .and()
+            .distance_less_than(3)
+            .query(),
+        &[3, 2],
+    );
+
+    // distance_not_equal
+    db.exec_ids(
+        QueryBuilder::search()
+            .from("root")
+            .where_()
+            .distance_not_equal(1)
+            .and()
+            .distance_less_than(3)
+            .query(),
+        &[1, 3, 2],
+    );
+}
+
+#[test]
+fn search_where_edge_count_shortcuts() {
+    let db = create_db();
+
+    // edge_count_greater_than
+    db.exec_ids(
+        QueryBuilder::search()
+            .from("root")
+            .where_()
+            .edge_count_greater_than(2)
+            .query(),
+        &[3, 2],
+    );
+
+    // edge_count_greater_than_or_equal
+    db.exec_ids(
+        QueryBuilder::search()
+            .from("root")
+            .where_()
+            .edge_count_greater_than_or_equal(2)
+            .query(),
+        &[1, 3, 2, 8, 7, 6, 15, 14, 12],
+    );
+
+    // edge_count_less_than
+    db.exec_ids(
+        QueryBuilder::search()
+            .from("root")
+            .where_()
+            .edge_count_less_than(2)
+            .query(),
+        &[16, 13],
+    );
+
+    // edge_count_less_than_or_equal
+    db.exec_ids(
+        QueryBuilder::search()
+            .from("root")
+            .where_()
+            .edge_count_less_than_or_equal(2)
+            .query(),
+        &[1, 8, 7, 6, 16, 15, 14, 13, 12],
+    );
+
+    // edge_count_not_equal
+    db.exec_ids(
+        QueryBuilder::search()
+            .from("root")
+            .where_()
+            .edge_count_not_equal(2)
+            .query(),
+        &[3, 2, 16, 13],
+    );
+
+    // edge_count_from_greater_than
+    db.exec_ids(
+        QueryBuilder::search()
+            .from("root")
+            .where_()
+            .edge_count_from_greater_than(1)
+            .query(),
+        &[1, 3, 2],
+    );
+
+    // edge_count_to_greater_than
+    db.exec_ids(
+        QueryBuilder::search()
+            .from("root")
+            .where_()
+            .edge_count_to_greater_than(1)
+            .query(),
+        &[8, 7, 6],
+    );
+}

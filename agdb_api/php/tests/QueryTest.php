@@ -1,3 +1,4 @@
+
 // GENERATED. DO NOT MODIFY AS ANY CHANGES WILL BE LOST.
 // query_test_generator.js
 <?php
@@ -1556,6 +1557,17 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[165][1], $json);
+    }
+    public function testQueryBuilder166(): void
+    {
+        $query = QueryBuilder::search()
+            ->from(1)
+            ->where()
+            ->key("k")
+            ->regex("pattern")
+            ->query();
+        $json = $query->jsonSerialize();
+        $this->assertEquals(self::$test_queries[166][1], $json);
     }
 }
 

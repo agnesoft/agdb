@@ -1405,6 +1405,6 @@ describe("query tests", () => {
             .key("k")
             .regex("pattern")
             .query();
-        expect(query).toEqual(test_queries[164][1]);
+        expect(query).toEqual(test_queries[166][1]);
     });
 });

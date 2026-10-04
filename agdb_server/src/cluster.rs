@@ -308,7 +308,7 @@ async fn start_cluster(
                                 "[{index}] Error sending response to cluster node '{node_index}': {e:?}"
                             ),
                         }
-                    } else if request.is_append() {
+                    } else if request.is_append() || request.resync_dbs().is_some() {
                         let fail_response = raft::Response::new(
                             request.index,
                             raft::ResponseType::CommitError("send failed".into()),

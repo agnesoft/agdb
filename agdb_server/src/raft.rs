@@ -112,6 +112,7 @@ struct Node {
     append_failures: u32,
     force_resync: bool,
     pending_resync_dbs: Vec<(String, String)>,
+    sent_resync_dbs: Vec<(String, String)>,
     exec_reconciled: u64,
 }
 
@@ -187,6 +188,7 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
                     append_failures: 0,
                     force_resync: false,
                     pending_resync_dbs: vec![],
+                    sent_resync_dbs: vec![],
                     exec_reconciled: 0,
                 })
                 .collect(),
@@ -367,6 +369,7 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
     ) -> ServerResult<Option<Vec<Request<T>>>> {
         use ClusterState::*;
         use RequestType::*;
+        use ResponseType::CommitError;
         use ResponseType::LogMismatch;
         use ResponseType::Ok as OK;
         use ResponseType::OkReport;
@@ -391,19 +394,25 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
                     .collect();
 
                 if !need_resync.is_empty() {
-                    for &idx in &need_resync {
-                        crate::warn!(
-                            "[{}] Node {} follower-failed at log {}",
-                            self.index,
-                            request.target,
-                            idx,
-                        );
-                    }
                     let dbs = self.storage.resolve_resync_targets(&need_resync).await;
-                    let pending = &mut self.node_mut(request.target).pending_resync_dbs;
+                    let node = self.node_mut(request.target);
+                    let mut new_dbs = false;
                     for db in dbs {
-                        if !pending.contains(&db) {
-                            pending.push(db);
+                        if !node.pending_resync_dbs.contains(&db)
+                            && !node.sent_resync_dbs.contains(&db)
+                        {
+                            node.pending_resync_dbs.push(db);
+                            new_dbs = true;
+                        }
+                    }
+                    if new_dbs {
+                        for &idx in &need_resync {
+                            crate::warn!(
+                                "[{}] Node {} follower-failed at log {}",
+                                self.index,
+                                request.target,
+                                idx,
+                            );
                         }
                     }
                 }
@@ -443,8 +452,12 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
                 self.node_mut(request.target).append_failures = 0;
                 self.commit(request).await
             }
-            (Leader, Resync | ResyncDbs(_), OK) => {
-                // Resync acknowledged — nothing to commit
+            (Leader, Resync | ResyncDbs(_), OK | CommitError(_)) => {
+                if let RequestType::ResyncDbs(dbs) = &request.data {
+                    self.node_mut(request.target)
+                        .sent_resync_dbs
+                        .retain(|db| !dbs.contains(db));
+                }
                 Ok(None)
             }
             (Leader, Heartbeat | Append(_), LogMismatch(mismatch)) => {
@@ -830,7 +843,7 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
     }
 
     fn push_resync_requests(
-        &self,
+        &mut self,
         requests: &mut Vec<Request<T>>,
         target: u64,
         exec_reconciled: u64,
@@ -853,6 +866,12 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
         }
 
         if !resync_dbs.is_empty() {
+            let sent = &mut self.node_mut(target).sent_resync_dbs;
+            for db in &resync_dbs {
+                if !sent.contains(db) {
+                    sent.push(db.clone());
+                }
+            }
             requests.push(Request {
                 hash: self.hash,
                 index: self.index,

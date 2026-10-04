@@ -548,7 +548,7 @@ async fn per_db_resync_after_file_corruption() -> Result<(), TestError> {
         ReqwestClient::with_client(reqwest_client()),
         &servers[0].address,
     );
-    leader.user_login(ADMIN, ADMIN).await?;
+    leader.cluster_user_login(ADMIN, ADMIN).await?;
 
     // Use DbKind::File — FileStorage uses seek()+read_exact() on a raw
     // file descriptor (no mmap).  Truncating the file on disk from
@@ -653,7 +653,7 @@ async fn server_db_resync_after_corruption() -> Result<(), TestError> {
         ReqwestClient::with_client(reqwest_client()),
         &servers[0].address,
     );
-    leader.user_login(ADMIN, ADMIN).await?;
+    leader.cluster_user_login(ADMIN, ADMIN).await?;
 
     // Create a user via the leader (replicates through Raft to all nodes).
     leader.admin_user_add("test_user", "password123").await?;
@@ -685,7 +685,7 @@ async fn server_db_resync_after_corruption() -> Result<(), TestError> {
     // the same Raft commit but is missing all user data.  The NEXT
     // server_db action will fail on the live node → per-DB resync
     // restores it automatically, no second restart required.
-    follower.user_login(ADMIN, ADMIN).await?;
+    follower.cluster_user_login(ADMIN, ADMIN).await?;
     follower.admin_shutdown().await?;
     servers[1].wait().await?;
 

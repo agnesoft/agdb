@@ -23,6 +23,7 @@ pub struct QueryResult {
 }
 
 impl QueryResult {
+    /// Extracts the [`DbId`] of every element in the result.
     pub fn ids(&self) -> Vec<DbId> {
         self.elements.iter().map(|e| e.id).collect()
     }

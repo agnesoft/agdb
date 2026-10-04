@@ -16,7 +16,7 @@ use crate::query::query_values::QueryValues;
 /// parameters. If `values` is set to `Single` either `count`
 /// or `aliases` must be provided however. If `values` are not
 /// set to `Single` there must be enough value for `count/aliases`
-/// unless they are not se and the count is derived from `values.
+/// unless they are not set, and the count is derived from `values`.
 ///
 /// If the `ids` member is empty the query will insert new nodes
 /// otherwise it will update the existing nodes. The rules for length

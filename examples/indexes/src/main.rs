@@ -1,3 +1,6 @@
+//! Example: add index-backed lookups for application data to accelerate
+//! attribute-based queries without scanning the whole graph.
+
 use agdb::DbError;
 use agdb::DbMemory;
 use agdb::DbType;
@@ -13,7 +16,6 @@ struct User {
 }
 
 fn main() -> Result<(), DbError> {
-    // Creates in memory database.
     let mut db = DbMemory::new("agdb_example")?;
 
     // Create two indexes, one for username and one for token. They can just as well
@@ -27,7 +29,7 @@ fn main() -> Result<(), DbError> {
 
     // Create many users tied to the users node with keys "username" and "token"
     // so they get registered into the indexes. Note that indexes can be created
-    // ex post as well and all existing elements with the relevant value(s) wiil
+    // ex post as well and all existing elements with the relevant value(s) will
     // be automatically indexed.
     let mut users = vec![];
     for i in 0..100 {

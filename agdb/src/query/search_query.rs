@@ -29,7 +29,7 @@ pub enum SearchQueryAlgorithm {
     BreadthFirst,
 
     /// Examines maximum distance it can reach following every element.
-    /// E.g. when starting at anode it will go `edge -> node -> edge -> node`
+    /// E.g. when starting at a node it will go `edge -> node -> edge -> node`
     /// until it reaches dead end or encounters already visited element.
     DepthFirst,
 

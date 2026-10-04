@@ -17,7 +17,7 @@ pub struct InsertValuesIds(pub InsertValuesQuery);
 
 #[cfg_attr(feature = "api", agdb::impl_def())]
 impl InsertValues {
-    /// An id or list of ids or search query from to which to insert the values.
+    /// An id or list of ids or search query to which to insert the values.
     pub fn ids<T: Into<QueryIds>>(mut self, ids: T) -> InsertValuesIds {
         self.0.ids = ids.into();
 

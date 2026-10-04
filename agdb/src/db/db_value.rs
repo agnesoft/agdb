@@ -17,7 +17,7 @@ use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::time::SystemTime;
 
-/// Database value is a strongly types value.
+/// Database value is a strongly typed value.
 ///
 /// It is an enum of limited number supported types
 /// that are universal across all platforms
@@ -65,6 +65,7 @@ pub enum DbValue {
     VecDbValue(Vec<DbValue>),
 }
 
+/// Newtype wrapper around `Vec<DbValue>` used for blanket `From` conversions.
 #[cfg_attr(feature = "api", derive(agdb::TypeDef))]
 pub struct DbValues(pub Vec<DbValue>);
 
@@ -134,7 +135,7 @@ impl DbValue {
     }
 
     /// Returns `DbF64` possibly converted from `i64` or `u64`
-    /// or na error if the conversion failed or the value is of
+    /// or an error if the conversion failed or the value is of
     /// a different type.
     pub fn to_f64(&self) -> Result<DbF64, DbError> {
         match self {
@@ -152,7 +153,7 @@ impl DbValue {
     }
 
     /// Returns `i64` possibly converted from `u64`
-    /// or na error if the conversion failed or the value is of
+    /// or an error if the conversion failed or the value is of
     /// a different type.
     pub fn to_i64(&self) -> Result<i64, DbError> {
         match self {
@@ -397,6 +398,11 @@ impl DbValue {
         Ok(index)
     }
 
+    /// Produces a new value by *adding* `other` to `self`.
+    ///
+    /// Numeric types saturate; strings and byte vectors are concatenated;
+    /// vector types are extended (or a scalar is pushed).
+    /// Returns an error when the types are incompatible.
     pub fn amend_add(&self, other: &DbValue) -> Result<DbValue, DbError> {
         match (self, other) {
             (DbValue::I64(a), DbValue::I64(b)) => Ok(DbValue::I64(a.saturating_add(*b))),
@@ -474,6 +480,11 @@ impl DbValue {
         }
     }
 
+    /// Produces a new value by *removing* `other` from `self`.
+    ///
+    /// Numeric types saturate; strings have all occurrences removed;
+    /// vector types drop the first matching element for each item in `other`.
+    /// Bytes do not support removal and will return an error.
     pub fn amend_remove(&self, other: &DbValue) -> Result<DbValue, DbError> {
         match (self, other) {
             (DbValue::I64(a), DbValue::I64(b)) => Ok(DbValue::I64(a.saturating_sub(*b))),
@@ -542,6 +553,11 @@ impl DbValue {
         result
     }
 
+    /// Applies bitwise `op` (AND / OR / XOR) between `self` and `other`.
+    ///
+    /// Supported for integer and byte-array values. When the types are not
+    /// bitwise-compatible it falls back to [`amend_add`](Self::amend_add) if
+    /// `add_fallback` is `true`, otherwise to [`amend_remove`](Self::amend_remove).
     pub fn amend_bitwise(
         &self,
         other: &DbValue,

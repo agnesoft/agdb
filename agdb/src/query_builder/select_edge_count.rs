@@ -23,7 +23,7 @@ impl SelectEdgeCount {
         SelectEdgeCountIds(self.0)
     }
 
-    /// Select keys of elements returned from the search query.
+    /// Select edge count of elements returned from the search query.
     /// Equivalent to `ids(QueryBuilder::search()/* ... */)`.
     pub fn search(mut self) -> Search<SelectEdgeCountQuery> {
         self.0.ids = QueryIds::Search(crate::SearchQuery::new());

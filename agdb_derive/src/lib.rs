@@ -1,3 +1,16 @@
+//! Derive macros for converting Rust structs and enums into agdb-compatible
+//! database values.
+//!
+//! The macros in this crate power the `DbType`, `DbElement`, `DbValue`,
+//! `DbTypeMarker`, and `DbSerialize` derives used throughout the project,
+//! allowing application models to be written directly as typed graph data
+//! without boilerplate.
+//!
+//! When the `api` feature is enabled on the parent `agdb` crate, the
+//! `TypeDef` derive and the `impl_def`, `fn_def`, `trait_def`, `test_def`,
+//! and `static_def` attribute macros are also available for generating
+//! language-agnostic type definitions used by client transpilers.
+
 mod db_serialize;
 mod db_type;
 mod db_value;
@@ -12,7 +25,7 @@ pub(crate) fn compile_error(span: impl ToTokens, message: impl AsRef<str>) -> To
 }
 
 /// The derive macro to add `agdb` compatibility
-/// to user defined types. It implements [`agdb::UserDbType`]
+/// to user defined types. It implements [`agdb::DbType`]
 /// for the type automatically to allow your type to be read and
 /// stored from/to the database.
 ///
@@ -23,7 +36,7 @@ pub(crate) fn compile_error(span: impl ToTokens, message: impl AsRef<str>) -> To
 /// All database types are supported. User (custom) types must either
 /// `impl From<T> for agdb::DbValue` and `impl TryFrom<agdb::DbValue> for T { type Error = agdb::DbError }`
 /// or you must use `#[agdb(flatten)]` attribute to merge the fields in a flat list (transitively). Flattened
-/// types must themselves be derived from `agdb::DbType` (or implement `agdb::UserDbType`)
+/// types must themselves be derived from `agdb::DbType` (or implement `agdb::DbType`)
 ///
 /// NOTE: if the nested struct(s) have keys of the same name the value will
 /// be overwritten by the last encountered field of the same name (transitively).
@@ -131,37 +144,46 @@ pub fn agdb_de_serialize(item: TokenStream) -> TokenStream {
 /// It does additionally support enums and vectorized types (`Vec<T>`).
 ///
 /// NOTE: It requires both `DbTypeMarker` and `AgdbSerialize` traits
-/// to be implemented. You can derive them with `#[derive(DbTypeMarker, AgdbSerialize)]`.
+/// to be implemented. You can derive them with `#[derive(DbTypeMarker, DbSerialize)]`.
 #[proc_macro_derive(DbValue)]
 pub fn user_db_value_derive(item: TokenStream) -> TokenStream {
     db_value::user_db_value_derive(item)
 }
 
+/// Derive macro that emits a language-agnostic type definition for the
+/// annotated struct or enum, used by the client transpiler to generate
+/// bindings in other languages. Requires the `api` feature on the `agdb` crate.
 #[proc_macro_derive(TypeDef, attributes(type_def))]
 pub fn type_def(item: TokenStream) -> TokenStream {
     type_def_parser::type_def_impl(item)
 }
 
+/// Attribute macro that captures the public interface of an `impl` block
+/// for type-definition generation.
 #[proc_macro_attribute]
 pub fn impl_def(attr: TokenStream, item: TokenStream) -> TokenStream {
     type_def_parser::impl_def_impl(attr, item)
 }
 
+/// Attribute macro that captures a trait definition for type-definition generation.
 #[proc_macro_attribute]
 pub fn trait_def(_attr: TokenStream, item: TokenStream) -> TokenStream {
     type_def_parser::trait_def_impl(item)
 }
 
+/// Attribute macro that captures a free function signature for type-definition generation.
 #[proc_macro_attribute]
 pub fn fn_def(_attr: TokenStream, item: TokenStream) -> TokenStream {
     type_def_parser::fn_def_impl(item)
 }
 
+/// Attribute macro that marks a test function for type-definition generation.
 #[proc_macro_attribute]
 pub fn test_def(_attr: TokenStream, item: TokenStream) -> TokenStream {
     type_def_parser::test_def_impl(item)
 }
 
+/// Attribute macro that captures a static item for type-definition generation.
 #[proc_macro_attribute]
 pub fn static_def(_attr: TokenStream, item: TokenStream) -> TokenStream {
     type_def_parser::static_def_impl(item)

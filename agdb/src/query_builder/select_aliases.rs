@@ -40,7 +40,7 @@ impl SelectAliases {
 
 #[cfg_attr(feature = "api", agdb::impl_def())]
 impl SelectAliasesIds {
-    /// Returns the built `SelectAllAliases` object.
+    /// Returns the built `SelectAliasesQuery` object.
     pub fn query(self) -> SelectAliasesQuery {
         self.0
     }

@@ -109,7 +109,7 @@ impl Serialize for DbStorageIndex {
 /// let mut db = Db::new("db1.agdb").unwrap();
 /// ```
 ///
-/// This will try to create or load the database file path `db.agdb`.
+/// This will try to create or load the database at the given file path.
 /// If the file does not exist a new database will be initialized creating
 /// the given file. If the file does exist the database will try to load
 /// it and memory map the data.
@@ -221,34 +221,34 @@ pub type DbTransaction<'a> = Transaction<'a, FileStorageMemoryMapped>;
 /// A convenience alias for the [`TransactionMut`] type for the default [`Db`].
 pub type DbTransactionMut<'a> = TransactionMut<'a, FileStorageMemoryMapped>;
 
-/// The file based implementation of the database (full ACID) with write ahead logging and
-/// but minimum memory footprint but slower than the default [`Db`]. You can load the file
+/// The file based implementation of the database (full ACID) with write ahead logging,
+/// minimum memory footprint, but slower than the default [`Db`]. You can load the file
 /// created with [`Db`] and vice versa.
 pub type DbFile = DbImpl<FileStorage>;
 
-/// A convenience alias for the [`Transaction`] type for the default [`DbFile`].
+/// A convenience alias for the [`Transaction`] type for [`DbFile`].
 pub type DbFileTransaction<'a> = Transaction<'a, FileStorage>;
 
-/// A convenience alias for the [`TransactionMut`] type for the default [`DbFile`].
+/// A convenience alias for the [`TransactionMut`] type for [`DbFile`].
 pub type DbFileTransactionMut<'a> = TransactionMut<'a, FileStorage>;
 
 /// The purely in-memory implementation of the database. It has no persistence but offers
 /// unmatched performance.
 pub type DbMemory = DbImpl<MemoryStorage>;
 
-/// A convenience alias for the [`Transaction`] type for the default [`DbMemory`].
+/// A convenience alias for the [`Transaction`] type for [`DbMemory`].
 pub type DbMemoryTransaction<'a> = Transaction<'a, MemoryStorage>;
 
-/// A convenience alias for the [`TransactionMut`] type for the default [`DbMemory`].
+/// A convenience alias for the [`TransactionMut`] type for [`DbMemory`].
 pub type DbMemoryTransactionMut<'a> = TransactionMut<'a, MemoryStorage>;
 
-/// A convenience alias for a Db type that can use any implemented storage (mapper, memory or file).
+/// A convenience alias for a Db type that can use any implemented storage (mapped, memory or file).
 pub type DbAny = DbImpl<AnyStorage>;
 
-/// A convenience alias for the [`Transaction`] type for the default [`DbAny`].
+/// A convenience alias for the [`Transaction`] type for [`DbAny`].
 pub type DbAnyTransaction<'a> = Transaction<'a, AnyStorage>;
 
-/// A convenience alias for the [`TransactionMut`] type for the default [`DbAny`].
+/// A convenience alias for the [`TransactionMut`] type for [`DbAny`].
 pub type DbAnyTransactionMut<'a> = TransactionMut<'a, AnyStorage>;
 
 impl<Store: StorageData> std::fmt::Debug for DbImpl<Store> {
@@ -324,8 +324,11 @@ impl<Store: StorageData> DbImpl<Store> {
     /// - Select values
     /// - Select keys
     /// - Select key count
+    /// - Select edge count
     /// - Select aliases
     /// - Select all aliases
+    /// - Select indexes
+    /// - Select node count
     /// - Search
     ///
     /// It runs the query as a transaction and returns either the result or
@@ -342,9 +345,11 @@ impl<Store: StorageData> DbImpl<Store> {
     /// - Insert edges
     /// - Insert aliases
     /// - Insert values
+    /// - Insert index
     /// - Remove elements
     /// - Remove aliases
     /// - Remove values
+    /// - Remove index
     ///
     /// It runs the query as a transaction and returns either the result or
     /// error describing what went wrong (e.g. query error, logic error, data

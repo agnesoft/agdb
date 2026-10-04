@@ -90,7 +90,6 @@ spec:
           securityContext:
             runAsUser: 1000
             runAsGroup: 1000
-          securityContext:
             allowPrivilegeEscalation: false
           env:
             - name: AGDB_REPLICA_INDEX

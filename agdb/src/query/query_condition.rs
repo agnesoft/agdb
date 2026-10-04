@@ -109,7 +109,7 @@ pub struct QueryCondition {
 
 /// Comparison of unsigned integers (`u64`) used
 /// by `distance()` and `edge_count*()` conditions. Supports
-/// the usual set of named comparisons: `==, !=, <, <=, >, =>`.
+/// the usual set of named comparisons: `==, !=, <, <=, >, >=`.
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
@@ -137,7 +137,7 @@ pub enum CountComparison {
 
 /// Comparison of database values ([`DbValue`]) used
 /// by `key()` condition. Supports
-/// the usual set of named comparisons: `==, !=, <, <=, >, =>`
+/// the usual set of named comparisons: `==, !=, <, <=, >, >=`
 /// plus `contains()`, `any()`, `starts_with()` and `ends_with()`.
 /// The comparisons are type strict except for the `contains`
 /// and `any` comparisons which allow vectorized version of the

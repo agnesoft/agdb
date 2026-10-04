@@ -9,25 +9,41 @@ use std::panic::Location;
 use std::string::FromUtf8Error;
 use std::sync::PoisonError;
 
+/// Classification of what went wrong in the database operation.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DbErrorType {
+    /// Failed to create a new database file or structure.
     DbCreate,
+    /// An internal index was invalid or corrupted.
     InvalidIndex,
+    /// The requested operation is not permitted.
     NotAllowed,
+    /// Not enough data was available to complete deserialization.
     NotEnoughData,
+    /// The requested element, alias, or key was not found.
     NotFound,
+    /// An index was outside the valid range.
     OutOfBounds,
+    /// A lock was poisoned by a panicked thread.
     Poisoned,
+    /// A type conversion or mismatch error.
     TypeError,
 }
 
+/// Subsystem that produced the error.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DbErrorCategory {
+    /// Internal collection layer (vectors, maps).
     Collections,
+    /// Core database engine.
     Db,
+    /// Graph structure layer (nodes, edges).
     Graph,
+    /// Query execution layer.
     Query,
+    /// Serialization / deserialization layer.
     Serialization,
+    /// Persistent storage layer (files, WAL).
     Storage,
 }
 
@@ -53,7 +69,7 @@ pub struct DbError {
 }
 
 impl DbError {
-    /// Creates an error with an explicit kind.
+    /// Creates an error with an explicit category and type.
     #[track_caller]
     pub fn new(category: DbErrorCategory, ty: DbErrorType, description: impl Into<String>) -> Self {
         DbError {
@@ -65,31 +81,37 @@ impl DbError {
         }
     }
 
+    /// Shorthand for [`DbErrorCategory::Collections`].
     #[track_caller]
     pub fn collections(ty: DbErrorType, description: impl Into<String>) -> Self {
         Self::new(DbErrorCategory::Collections, ty, description)
     }
 
+    /// Shorthand for [`DbErrorCategory::Db`].
     #[track_caller]
     pub fn db(ty: DbErrorType, description: impl Into<String>) -> Self {
         Self::new(DbErrorCategory::Db, ty, description)
     }
 
+    /// Shorthand for [`DbErrorCategory::Graph`].
     #[track_caller]
     pub fn graph(ty: DbErrorType, description: impl Into<String>) -> Self {
         Self::new(DbErrorCategory::Graph, ty, description)
     }
 
+    /// Shorthand for [`DbErrorCategory::Query`].
     #[track_caller]
     pub fn query(ty: DbErrorType, description: impl Into<String>) -> Self {
         Self::new(DbErrorCategory::Query, ty, description)
     }
 
+    /// Shorthand for [`DbErrorCategory::Serialization`].
     #[track_caller]
     pub fn serialization(ty: DbErrorType, description: impl Into<String>) -> Self {
         Self::new(DbErrorCategory::Serialization, ty, description)
     }
 
+    /// Shorthand for [`DbErrorCategory::Storage`].
     #[track_caller]
     pub fn storage(ty: DbErrorType, description: impl Into<String>) -> Self {
         Self::new(DbErrorCategory::Storage, ty, description)

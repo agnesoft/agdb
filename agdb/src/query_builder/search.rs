@@ -49,7 +49,7 @@ pub struct SearchIndex<T: SearchQueryBuilder> {
     pub query: T,
 }
 
-/// Search builder query that lets you choose a a value to find
+/// Search builder query that lets you choose a value to find
 /// in the index.
 #[cfg_attr(feature = "api", derive(agdb::TypeDef))]
 #[cfg_attr(feature = "api", type_def(inherent))]
@@ -135,7 +135,7 @@ impl<T: SearchQueryBuilder> Search<T> {
     /// through the entire database which may be prohibitively expensive. Consider
     /// using `limit()`.
     ///
-    /// Note: While the full range of conitions can be used some conditions do not
+    /// Note: While the full range of conditions can be used some conditions do not
     /// make logical sense (e.g. distance, beyond, edge_count etc.).
     ///
     /// Options:
@@ -489,11 +489,8 @@ impl<T: SearchQueryBuilder> SearchTo<T> {
         SelectOffset(self.0)
     }
 
-    /// Sets the offset to the ids returned. If during the search
-    /// the `limit + offset` is hit the search ends and the result is
-    /// returned. The `offset` ids will be skipped in the result.
-    /// However when doing a path search or requesting ordering of the
-    /// result the search is first completed before the limit is applied.
+    /// Orders the results by the given key(s) before applying offset
+    /// and limit. The search is completed first, then sorted.
     ///
     /// Options:
     ///

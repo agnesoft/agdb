@@ -41,7 +41,7 @@ impl InsertNodesAliases {
     }
 
     /// List of lists of `key_values` to be inserted into the aliased nodes.
-    /// The number of lists mut be the same as number of aliases.
+    /// The number of lists must be the same as number of aliases.
     pub fn values<T: Into<MultiValues>>(mut self, key_values: T) -> InsertNodesValues {
         self.0.values = QueryValues::Multi(Into::<MultiValues>::into(key_values).0);
 
@@ -137,7 +137,7 @@ impl InsertNodes {
     }
 
     /// List of lists of `key_values` to be inserted into the nodes. The number of lists
-    /// will be number created nodes.
+    /// will be the number of created nodes.
     pub fn values<T: Into<MultiValues>>(mut self, key_values: T) -> InsertNodesValues {
         self.0.values = QueryValues::Multi(Into::<MultiValues>::into(key_values).0);
 
@@ -182,7 +182,7 @@ impl InsertNodesIds {
     }
 
     /// List of lists of `key_values` to be inserted into the nodes. The number of lists
-    /// will be number created nodes.
+    /// will be the number of created nodes.
     pub fn values<T: Into<MultiValues>>(mut self, key_values: T) -> InsertNodesValues {
         self.0.values = QueryValues::Multi(Into::<MultiValues>::into(key_values).0);
 

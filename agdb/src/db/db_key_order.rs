@@ -14,6 +14,8 @@ pub enum DbKeyOrder {
     Desc(DbValue),
 }
 
+/// Newtype wrapper around `Vec<DbKeyOrder>` used for blanket `From` conversions
+/// in order-by clauses.
 #[cfg_attr(feature = "api", derive(agdb::TypeDef))]
 pub struct DbKeyOrders(pub Vec<DbKeyOrder>);
 

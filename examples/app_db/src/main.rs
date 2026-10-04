@@ -1,3 +1,6 @@
+//! Example: create an in-memory database, insert raw key-value properties, and
+//! query them back with a graph search.
+
 use agdb::DbError;
 use agdb::DbMemory;
 use agdb::QueryBuilder;

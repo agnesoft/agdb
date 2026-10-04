@@ -11,6 +11,7 @@ use serde::Serialize;
 use std::fmt::Display;
 use utoipa::ToSchema;
 
+/// Server-side log level filter.
 #[derive(
     Debug, Default, Clone, Copy, Serialize, Deserialize, ToSchema, PartialEq, Eq, PartialOrd, Ord,
 )]
@@ -40,6 +41,7 @@ pub enum LogLevelFilter {
     Ord,
     DbSerialize,
 )]
+/// Database storage backend kind.
 #[cfg_attr(feature = "api", derive(agdb::TypeDef))]
 #[serde(rename_all = "snake_case")]
 pub enum DbKind {
@@ -63,6 +65,7 @@ pub enum DbKind {
     Ord,
     DbSerialize,
 )]
+/// Selects which database resource to operate on (e.g. clear or restore).
 #[cfg_attr(feature = "api", derive(agdb::TypeDef))]
 #[serde(rename_all = "snake_case")]
 pub enum DbResource {
@@ -73,6 +76,7 @@ pub enum DbResource {
     Backup,
 }
 
+/// A user's access entry for a database.
 #[derive(Debug, Deserialize, Serialize, ToSchema, PartialEq, Eq, PartialOrd, Ord)]
 #[cfg_attr(feature = "api", derive(agdb::TypeDef))]
 pub struct DbUser {
@@ -94,6 +98,7 @@ pub struct DbUser {
     Ord,
     DbSerialize,
 )]
+/// Role a user may hold on a database.
 #[cfg_attr(feature = "api", derive(agdb::TypeDef))]
 #[serde(rename_all = "snake_case")]
 pub enum DbUserRole {
@@ -103,6 +108,7 @@ pub enum DbUserRole {
     Read,
 }
 
+/// Request body for changing a user's password.
 #[derive(Deserialize, Serialize, ToSchema)]
 #[cfg_attr(feature = "api", derive(agdb::TypeDef))]
 pub struct ChangePassword {
@@ -110,6 +116,7 @@ pub struct ChangePassword {
     pub new_password: String,
 }
 
+/// Status of a single node in the server cluster.
 #[derive(Debug, Default, Clone, Deserialize, Serialize, ToSchema, PartialEq)]
 #[cfg_attr(feature = "api", derive(agdb::TypeDef))]
 pub struct ClusterStatus {
@@ -118,6 +125,7 @@ pub struct ClusterStatus {
     pub leader: bool,
 }
 
+/// Server-wide status information returned by the admin status endpoint.
 #[derive(Debug, Default, Clone, Deserialize, Serialize, ToSchema, PartialEq)]
 #[cfg_attr(feature = "api", derive(agdb::TypeDef))]
 pub struct AdminStatus {
@@ -130,12 +138,15 @@ pub struct AdminStatus {
     pub log_level: LogLevelFilter,
 }
 
+/// Batch of queries to execute against a database.
 #[derive(Clone, Deserialize, Serialize, ToSchema, DbSerialize)]
 pub struct Queries(pub Vec<QueryType>);
 
+/// Results of a batch query execution, one per input query.
 #[derive(Serialize, ToSchema)]
 pub struct QueriesResults(pub Vec<QueryResult>);
 
+/// A single entry in the database audit log.
 #[derive(Debug, Deserialize, Serialize, ToSchema, PartialEq)]
 #[cfg_attr(feature = "api", derive(agdb::TypeDef))]
 pub struct QueryAudit {
@@ -144,10 +155,12 @@ pub struct QueryAudit {
     pub query: QueryType,
 }
 
+/// Complete audit log for a database.
 #[derive(Debug, Deserialize, Serialize, ToSchema, PartialEq)]
 #[cfg_attr(feature = "api", derive(agdb::TypeDef))]
 pub struct DbAudit(pub Vec<QueryAudit>);
 
+/// Metadata for a database as seen by the current user.
 #[derive(Debug, Default, Deserialize, Serialize, ToSchema, PartialEq, Eq, PartialOrd, Ord)]
 #[cfg_attr(feature = "api", derive(agdb::TypeDef))]
 pub struct ServerDatabase {
@@ -160,12 +173,14 @@ pub struct ServerDatabase {
     pub created: u64,
 }
 
+/// Payload carrying only a password (e.g. for user creation).
 #[derive(Deserialize, Serialize, ToSchema)]
 #[cfg_attr(feature = "api", derive(agdb::TypeDef))]
 pub struct UserCredentials {
     pub password: String,
 }
 
+/// Credentials for logging in a user.
 #[derive(Deserialize, Serialize, ToSchema)]
 #[cfg_attr(feature = "api", derive(agdb::TypeDef))]
 pub struct UserLogin {
@@ -173,6 +188,7 @@ pub struct UserLogin {
     pub password: String,
 }
 
+/// An active login session for a user.
 #[derive(
     Debug, Default, Deserialize, Serialize, ToSchema, PartialEq, Eq, PartialOrd, Ord, DbType,
 )]
@@ -184,6 +200,7 @@ pub struct UserSession {
     pub expires_at: u64,
 }
 
+/// Current status of a user account including active sessions.
 #[derive(Debug, Deserialize, Serialize, ToSchema, PartialEq, Eq, PartialOrd, Ord)]
 #[cfg_attr(feature = "api", derive(agdb::TypeDef))]
 pub struct UserStatus {

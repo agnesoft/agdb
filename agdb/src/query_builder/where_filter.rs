@@ -490,8 +490,8 @@ impl<T: SearchQueryBuilder> WhereFilterLogicOperator<T> {
     }
 
     /// Sets the logic operator for the following condition
-    /// to logical OR (||). The condition passes only if
-    /// both sides evaluates to `false`.
+    /// to logical OR (||). The condition passes if
+    /// either side evaluates to `true`.
     pub fn or(self) -> WhereFilter<T> {
         WhereFilter {
             logic: QueryConditionLogic::Or,

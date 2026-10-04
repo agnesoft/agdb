@@ -1,7 +1,11 @@
+/// Error returned by API operations, carrying an HTTP status code and a
+/// human-readable description.
 #[derive(Debug)]
 #[cfg_attr(feature = "api", derive(agdb::TypeDef))]
 pub struct AgdbApiError {
+    /// HTTP status code (0 when the error did not originate from an HTTP response).
     pub status: u16,
+    /// Human-readable error description.
     pub description: String,
 }
 

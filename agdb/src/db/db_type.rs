@@ -61,7 +61,7 @@ pub trait DbType: Sized {
 
     /// Returns an optional element id. Typically this
     /// would be a name of the type for which this
-    /// trait is being imeplemented. By default returns `None`.
+    /// trait is being implemented. By default returns `None`.
     fn db_element_id() -> Option<DbValue> {
         None
     }

@@ -1,3 +1,6 @@
+//! Example: migrate older graph data to a new schema while updating stored
+//! property types and preserving the working database state in a transaction.
+
 use agdb::DbError;
 use agdb::DbId;
 use agdb::DbMemory;
@@ -52,7 +55,6 @@ impl From<UserStatus> for DbValue {
 }
 
 fn main() -> Result<(), DbError> {
-    // Creates in memory database.
     let mut db = DbMemory::new("agdb_example")?;
 
     // Inserts root nodes for users.
@@ -120,7 +122,7 @@ fn main() -> Result<(), DbError> {
             .try_into()?;
 
         // And finally since we have defined the `From<UserStatus> for DbValue` to represent the
-        // enum as numbers, we can simply re-instert the users back.
+        // enum as numbers, we can simply re-insert the users back.
         t.exec_mut(QueryBuilder::insert().elements(&users).query())
 
         // NOTE: When migrating huge amount of data it would be better to do it in batches using

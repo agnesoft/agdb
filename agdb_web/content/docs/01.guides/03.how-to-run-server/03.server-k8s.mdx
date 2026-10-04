@@ -96,7 +96,7 @@ metadata:
 data:
   agdb_server.yaml: |
     bind: :::3000
-    address: http://agdb.default.svc.cluster.local:3000
+    address: https://agdb.default.svc.cluster.local:3000
     basepath: ""
     static_roots: []
     admin: admin
@@ -148,7 +148,6 @@ spec:
           securityContext:
             runAsUser: 1000
             runAsGroup: 1000
-          securityContext:
             allowPrivilegeEscalation: false
           volumeMounts:
             - name: agdb-data

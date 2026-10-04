@@ -1,4 +1,5 @@
 use crate::action::ClusterAction;
+use crate::action::ResyncTarget;
 use crate::action::remove_all_tokens::RemoveAllTokens;
 use crate::action::remove_user_session::RemoveUserSession;
 use crate::action::remove_user_token::RemoveUserToken;
@@ -11,6 +12,8 @@ use crate::config::Config;
 use crate::raft::Request;
 use crate::raft::Response;
 use crate::raft::ResponseType;
+use crate::resync::RESYNC_SERVER_DB_NAME;
+use crate::resync::RESYNC_SERVER_DB_OWNER;
 use crate::routes::user::LOGOUT_ALL_SESSIONS;
 use crate::routes::user::LOGOUT_OTHER_SESSIONS;
 use crate::routes::user::LogoutQuery;
@@ -65,6 +68,40 @@ pub(crate) async fn cluster(
     if let Some(dbs) = request.resync_dbs()
         && response.result == ResponseType::Ok
     {
+        // Drain matching failed indices from memory synchronously so
+        // the very next OkReport won't re-trigger ResyncDbs.
+        {
+            let raft = cluster.raft.read().await;
+            let all: Vec<u64> = raft
+                .storage
+                .failed_indices
+                .read()
+                .unwrap_or_else(|e| e.into_inner())
+                .clone();
+            let mut matched = Vec::new();
+            for &idx in &all {
+                if let Ok(Some(action)) = raft.storage.cluster_log.action_at_index(idx).await
+                    && action.resync_targets().iter().any(|t| match t {
+                        ResyncTarget::UserDb(o, d) => {
+                            dbs.iter().any(|(ow, db)| *o == *ow && *d == *db)
+                        }
+                        ResyncTarget::ServerDb => dbs.iter().any(|(ow, db)| {
+                            ow == RESYNC_SERVER_DB_OWNER && db == RESYNC_SERVER_DB_NAME
+                        }),
+                    })
+                {
+                    matched.push(idx);
+                }
+            }
+            if !matched.is_empty() {
+                raft.storage
+                    .failed_indices
+                    .write()
+                    .unwrap_or_else(|e| e.into_inner())
+                    .retain(|idx| !matched.contains(idx));
+            }
+        }
+
         let resync_dbs = dbs.clone();
         let resync_cluster = cluster.clone();
         let resync_config = config.clone();
@@ -114,6 +151,16 @@ pub(crate) async fn cluster(
                         db,
                         e
                     );
+                    // Rebuild failed indices from persistent log so the
+                    // leader retries on the next heartbeat.
+                    let raft = resync_cluster.raft.read().await;
+                    if let Ok(indices) = raft.storage.cluster_log.failed_indices().await {
+                        *raft
+                            .storage
+                            .failed_indices
+                            .write()
+                            .unwrap_or_else(|e| e.into_inner()) = indices;
+                    }
                 } else {
                     resync_cluster
                         .raft

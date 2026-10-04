@@ -189,7 +189,7 @@ Condition chains filter elements during search:
 .where_().edge()                              // only edges
 .where_().key("k").value(1)                   // key equals value
 .where_().keys(["k1".into(), "k2".into()])    // element has all listed keys
-.where_().distance(CountComparison::Equal(2)) // graph distance from origin
+.where_().distance(2)                         // graph distance from origin (exact match)
 .where_().neighbor()                          // shorthand for distance == 2
 
 // Value comparison shorthands (avoid manual Comparison:: construction)
@@ -218,7 +218,7 @@ Condition chains filter elements during search:
 
 // Traversal control (does NOT select, only controls which branches to explore)
 .where_().beyond().key("role").value("admin")
-.where_().not_beyond().distance(CountComparison::GreaterThan(3))
+.where_().not_beyond().distance_greater_than(3)
 ```
 
 ## Server configuration

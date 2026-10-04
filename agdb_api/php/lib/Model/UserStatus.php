@@ -35,6 +35,7 @@ use \Agnesoft\AgdbApi\ObjectSerializer;
  * UserStatus Class Doc Comment
  *
  * @category Class
+ * @description Current status of a user account including active sessions.
  * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech

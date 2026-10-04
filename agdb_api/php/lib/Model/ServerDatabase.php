@@ -35,6 +35,7 @@ use \Agnesoft\AgdbApi\ObjectSerializer;
  * ServerDatabase Class Doc Comment
  *
  * @category Class
+ * @description Metadata for a database as seen by the current user.
  * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech

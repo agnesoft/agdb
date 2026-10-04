@@ -2557,6 +2557,7 @@
     "schemas": {
       "AdminStatus": {
         "type": "object",
+        "description": "Server-wide status information returned by the admin status endpoint.",
         "required": [
           "uptime",
           "dbs",
@@ -2665,6 +2666,7 @@
       },
       "ChangePassword": {
         "type": "object",
+        "description": "Request body for changing a user's password.",
         "required": [
           "password",
           "new_password"
@@ -2680,6 +2682,7 @@
       },
       "ClusterStatus": {
         "type": "object",
+        "description": "Status of a single node in the server cluster.",
         "required": [
           "address",
           "status",
@@ -2843,7 +2846,7 @@
             }
           }
         ],
-        "description": "Comparison of database values ([`DbValue`]) used\nby `key()` condition. Supports\nthe usual set of named comparisons: `==, !=, <, <=, >, =>`\nplus `contains()`, `any()`, `starts_with()` and `ends_with()`.\nThe comparisons are type strict except for the `contains`\nand `any` comparisons which allow vectorized version of the\nbase type. `contains` uses universal (AND) semantics while\n`any` uses existential (OR) semantics."
+        "description": "Comparison of database values ([`DbValue`]) used\nby `key()` condition. Supports\nthe usual set of named comparisons: `==, !=, <, <=, >, >=`\nplus `contains()`, `any()`, `starts_with()` and `ends_with()`.\nThe comparisons are type strict except for the `contains`\nand `any` comparisons which allow vectorized version of the\nbase type. `contains` uses universal (AND) semantics while\n`any` uses existential (OR) semantics."
       },
       "CountComparison": {
         "oneOf": [
@@ -2938,13 +2941,14 @@
             }
           }
         ],
-        "description": "Comparison of unsigned integers (`u64`) used\nby `distance()` and `edge_count*()` conditions. Supports\nthe usual set of named comparisons: `==, !=, <, <=, >, =>`."
+        "description": "Comparison of unsigned integers (`u64`) used\nby `distance()` and `edge_count*()` conditions. Supports\nthe usual set of named comparisons: `==, !=, <, <=, >, >=`."
       },
       "DbAudit": {
         "type": "array",
         "items": {
           "$ref": "#/components/schemas/QueryAudit"
-        }
+        },
+        "description": "Complete audit log for a database."
       },
       "DbElement": {
         "type": "object",
@@ -3038,6 +3042,7 @@
       },
       "DbKind": {
         "type": "string",
+        "description": "Database storage backend kind.",
         "enum": [
           "memory",
           "mapped",
@@ -3046,6 +3051,7 @@
       },
       "DbResource": {
         "type": "string",
+        "description": "Selects which database resource to operate on (e.g. clear or restore).",
         "enum": [
           "all",
           "db",
@@ -3066,6 +3072,7 @@
       },
       "DbUser": {
         "type": "object",
+        "description": "A user's access entry for a database.",
         "required": [
           "username",
           "role"
@@ -3081,6 +3088,7 @@
       },
       "DbUserRole": {
         "type": "string",
+        "description": "Role a user may hold on a database.",
         "enum": [
           "admin",
           "write",
@@ -3257,7 +3265,7 @@
             }
           }
         ],
-        "description": "Database value is a strongly types value.\n\nIt is an enum of limited number supported types\nthat are universal across all platforms\nand programming languages.\n\nThe value is constructible from large number of\nraw types or associated types (e.g. i32, &str, etc.).\nGetting the raw value back as string can be done\nwith `to_string()` but otherwise requires a `match`."
+        "description": "Database value is a strongly typed value.\n\nIt is an enum of limited number supported types\nthat are universal across all platforms\nand programming languages.\n\nThe value is constructible from large number of\nraw types or associated types (e.g. i32, &str, etc.).\nGetting the raw value back as string can be done\nwith `to_string()` but otherwise requires a `match`."
       },
       "InsertAliasesQuery": {
         "type": "object",
@@ -3282,7 +3290,7 @@
       },
       "InsertEdgesQuery": {
         "type": "object",
-        "description": "Query to inserts edges to the database. The `from`\nand `to` ids must exist in the database. There must be\nenough `values` for all new edges unless set to `Single`\nin which case they will be uniformly applied to all new\nedges. The `each` flag is only useful if `from and `to` are\nsymmetric (same length) but you still want to connect every\norigin to every destination. By default it would connect only\nthe pairs. For asymmetric inserts `each` is assumed.\n\nIf the `ids` member is empty the query will insert new edges\notherwise it will update the existing edges. The rules for length\nof `values` still apply and the search yield or static list must\nhave equal length to the `values` (or the `Single` variant must\nbe used).\n\nThe result will contain number of edges inserted or udpated and elements\nwith their ids, origin and destination, but no properties.",
+        "description": "Query to inserts edges to the database. The `from`\nand `to` ids must exist in the database. There must be\nenough `values` for all new edges unless set to `Single`\nin which case they will be uniformly applied to all new\nedges. The `each` flag is only useful if `from` and `to` are\nsymmetric (same length) but you still want to connect every\norigin to every destination. By default it would connect only\nthe pairs. For asymmetric inserts `each` is assumed.\n\nIf the `ids` member is empty the query will insert new edges\notherwise it will update the existing edges. The rules for length\nof `values` still apply and the search yield or static list must\nhave equal length to the `values` (or the `Single` variant must\nbe used).\n\nThe result will contain number of edges inserted or updated and elements\nwith their ids, origin and destination, but no properties.",
         "required": [
           "from",
           "to",
@@ -3319,7 +3327,7 @@
       },
       "InsertNodesQuery": {
         "type": "object",
-        "description": "Query to insert nodes to the database. Only one of\n`count`, `values` or `aliases` need to be given as the\nimplementation will derive the count from the other\nparameters. If `values` is set to `Single` either `count`\nor `aliases` must be provided however. If `values` are not\nset to `Single` there must be enough value for `count/aliases`\nunless they are not se and the count is derived from `values.\n\nIf the `ids` member is empty the query will insert new nodes\notherwise it will update the existing nodes. The rules for length\nof `values` still apply and the search yield or static list must\nhave equal length to the `values` (or the `Single` variant must\nbe used).\n\nThe result will contain number of nodes inserted or updated and elements\nwith their ids but no properties.",
+        "description": "Query to insert nodes to the database. Only one of\n`count`, `values` or `aliases` need to be given as the\nimplementation will derive the count from the other\nparameters. If `values` is set to `Single` either `count`\nor `aliases` must be provided however. If `values` are not\nset to `Single` there must be enough value for `count/aliases`\nunless they are not set, and the count is derived from `values`.\n\nIf the `ids` member is empty the query will insert new nodes\notherwise it will update the existing nodes. The rules for length\nof `values` still apply and the search yield or static list must\nhave equal length to the `values` (or the `Single` variant must\nbe used).\n\nThe result will contain number of nodes inserted or updated and elements\nwith their ids but no properties.",
         "required": [
           "count",
           "values",
@@ -3392,6 +3400,7 @@
       },
       "LogLevelFilter": {
         "type": "string",
+        "description": "Server-side log level filter.",
         "enum": [
           "off",
           "error",
@@ -3427,16 +3436,19 @@
         "type": "array",
         "items": {
           "$ref": "#/components/schemas/QueryType"
-        }
+        },
+        "description": "Batch of queries to execute against a database."
       },
       "QueriesResults": {
         "type": "array",
         "items": {
           "$ref": "#/components/schemas/QueryResult"
-        }
+        },
+        "description": "Results of a batch query execution, one per input query."
       },
       "QueryAudit": {
         "type": "object",
+        "description": "A single entry in the database audit log.",
         "required": [
           "timestamp",
           "username",
@@ -3969,7 +3981,7 @@
       },
       "RemoveIndexQuery": {
         "$ref": "#/components/schemas/DbValue",
-        "description": "Query to create a new index on\na given key."
+        "description": "Query to remove an existing index on\na given key."
       },
       "RemoveQuery": {
         "$ref": "#/components/schemas/QueryIds",
@@ -4057,7 +4069,7 @@
       },
       "SelectEdgeCountQuery": {
         "type": "object",
-        "description": "Query to select number of edges of given node ids.\nAll of the ids must exist in the database.\n\nThe result is the sum of all selected edge counts.\nThe elements still contain individual\nedge counts in property `String(\"edge_count\")` as `u64`.\nIf any of the element ids are edges their count will be 0.\n\nNOTE: Self-referential edges are counted twice as if they\nwere coming from another edge. Therefore the edge count\nmight be greater than number of unique db elements.",
+        "description": "Query to select number of edges of given node ids.\nAll of the ids must exist in the database.\n\nThe result is the sum of all selected edge counts.\nThe elements still contain individual\nedge counts in property `String(\"edge_count\")` as `u64`.\nIf any of the element ids are edges their count will be 0.\n\nNOTE: Self-referential edges are counted twice (once as\noutgoing and once as incoming). Therefore the edge count\nmight be greater than number of unique db elements.",
         "required": [
           "ids",
           "from",
@@ -4115,6 +4127,7 @@
       },
       "ServerDatabase": {
         "type": "object",
+        "description": "Metadata for a database as seen by the current user.",
         "required": [
           "db",
           "owner",
@@ -4204,6 +4217,7 @@
       },
       "UserCredentials": {
         "type": "object",
+        "description": "Payload carrying only a password (e.g. for user creation).",
         "required": [
           "password"
         ],
@@ -4215,6 +4229,7 @@
       },
       "UserLogin": {
         "type": "object",
+        "description": "Credentials for logging in a user.",
         "required": [
           "username",
           "password"
@@ -4230,6 +4245,7 @@
       },
       "UserSession": {
         "type": "object",
+        "description": "An active login session for a user.",
         "required": [
           "session",
           "agent",
@@ -4257,6 +4273,7 @@
       },
       "UserStatus": {
         "type": "object",
+        "description": "Current status of a user account including active sessions.",
         "required": [
           "username",
           "login",

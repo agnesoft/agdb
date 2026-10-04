@@ -35,7 +35,7 @@ use \Agnesoft\AgdbApi\ObjectSerializer;
  * DbValue Class Doc Comment
  *
  * @category Class
- * @description Database value is a strongly types value.  It is an enum of limited number supported types that are universal across all platforms and programming languages.  The value is constructible from large number of raw types or associated types (e.g. i32, &amp;str, etc.). Getting the raw value back as string can be done with &#x60;to_string()&#x60; but otherwise requires a &#x60;match&#x60;.
+ * @description Database value is a strongly typed value.  It is an enum of limited number supported types that are universal across all platforms and programming languages.  The value is constructible from large number of raw types or associated types (e.g. i32, &amp;str, etc.). Getting the raw value back as string can be done with &#x60;to_string()&#x60; but otherwise requires a &#x60;match&#x60;.
  * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech

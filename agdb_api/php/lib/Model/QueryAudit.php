@@ -35,6 +35,7 @@ use \Agnesoft\AgdbApi\ObjectSerializer;
  * QueryAudit Class Doc Comment
  *
  * @category Class
+ * @description A single entry in the database audit log.
  * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech

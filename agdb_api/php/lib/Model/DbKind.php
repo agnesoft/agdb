@@ -33,6 +33,7 @@ use \Agnesoft\AgdbApi\ObjectSerializer;
  * DbKind Class Doc Comment
  *
  * @category Class
+ * @description Database storage backend kind.
  * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech

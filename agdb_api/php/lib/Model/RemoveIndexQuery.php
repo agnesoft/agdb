@@ -35,7 +35,7 @@ use \Agnesoft\AgdbApi\ObjectSerializer;
  * RemoveIndexQuery Class Doc Comment
  *
  * @category Class
- * @description Query to create a new index on a given key.
+ * @description Query to remove an existing index on a given key.
  * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech

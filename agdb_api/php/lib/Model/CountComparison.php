@@ -35,7 +35,7 @@ use \Agnesoft\AgdbApi\ObjectSerializer;
  * CountComparison Class Doc Comment
  *
  * @category Class
- * @description Comparison of unsigned integers (&#x60;u64&#x60;) used by &#x60;distance()&#x60; and &#x60;edge_count*()&#x60; conditions. Supports the usual set of named comparisons: &#x60;&#x3D;&#x3D;, !&#x3D;, &lt;, &lt;&#x3D;, &gt;, &#x3D;&gt;&#x60;.
+ * @description Comparison of unsigned integers (&#x60;u64&#x60;) used by &#x60;distance()&#x60; and &#x60;edge_count*()&#x60; conditions. Supports the usual set of named comparisons: &#x60;&#x3D;&#x3D;, !&#x3D;, &lt;, &lt;&#x3D;, &gt;, &gt;&#x3D;&#x60;.
  * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech

@@ -8,9 +8,12 @@ import type {
 
 declare namespace Components {
     namespace Schemas {
+        /**
+         * Server-wide status information returned by the admin status endpoint.
+         */
         export interface AdminStatus {
             dbs: number; // int64
-            log_level: LogLevelFilter;
+            log_level: /* Server-side log level filter. */ LogLevelFilter;
             logged_in_users: number; // int64
             memory: number; // int64
             size: number; // int64
@@ -64,10 +67,16 @@ declare namespace Components {
          * Other types fall back to `Add` or `Remove` semantics respectively.
          */
         export type BitwiseOp = "And" | "Or" | "Xor";
+        /**
+         * Request body for changing a user's password.
+         */
         export interface ChangePassword {
             new_password: string;
             password: string;
         }
+        /**
+         * Status of a single node in the server cluster.
+         */
         export interface ClusterStatus {
             address: string;
             leader: boolean;
@@ -76,7 +85,7 @@ declare namespace Components {
         /**
          * Comparison of database values ([`DbValue`]) used
          * by `key()` condition. Supports
-         * the usual set of named comparisons: `==, !=, <, <=, >, =>`
+         * the usual set of named comparisons: `==, !=, <, <=, >, >=`
          * plus `contains()`, `any()`, `starts_with()` and `ends_with()`.
          * The comparisons are type strict except for the `contains`
          * and `any` comparisons which allow vectorized version of the
@@ -86,7 +95,7 @@ declare namespace Components {
         export type Comparison = /**
          * Comparison of database values ([`DbValue`]) used
          * by `key()` condition. Supports
-         * the usual set of named comparisons: `==, !=, <, <=, >, =>`
+         * the usual set of named comparisons: `==, !=, <, <=, >, >=`
          * plus `contains()`, `any()`, `starts_with()` and `ends_with()`.
          * The comparisons are type strict except for the `contains`
          * and `any` comparisons which allow vectorized version of the
@@ -98,7 +107,7 @@ declare namespace Components {
              * property == this
              */
             Equal: /**
-             * Database value is a strongly types value.
+             * Database value is a strongly typed value.
              *
              * It is an enum of limited number supported types
              * that are universal across all platforms
@@ -115,7 +124,7 @@ declare namespace Components {
              * property > this
              */
             GreaterThan: /**
-             * Database value is a strongly types value.
+             * Database value is a strongly typed value.
              *
              * It is an enum of limited number supported types
              * that are universal across all platforms
@@ -132,7 +141,7 @@ declare namespace Components {
              * property >= this
              */
             GreaterThanOrEqual: /**
-             * Database value is a strongly types value.
+             * Database value is a strongly typed value.
              *
              * It is an enum of limited number supported types
              * that are universal across all platforms
@@ -149,7 +158,7 @@ declare namespace Components {
              * property < this
              */
             LessThan: /**
-             * Database value is a strongly types value.
+             * Database value is a strongly typed value.
              *
              * It is an enum of limited number supported types
              * that are universal across all platforms
@@ -166,7 +175,7 @@ declare namespace Components {
              * property <= this
              */
             LessThanOrEqual: /**
-             * Database value is a strongly types value.
+             * Database value is a strongly typed value.
              *
              * It is an enum of limited number supported types
              * that are universal across all platforms
@@ -183,7 +192,7 @@ declare namespace Components {
              * property != this
              */
             NotEqual: /**
-             * Database value is a strongly types value.
+             * Database value is a strongly typed value.
              *
              * It is an enum of limited number supported types
              * that are universal across all platforms
@@ -200,7 +209,7 @@ declare namespace Components {
              * property.contains(this)
              */
             Contains: /**
-             * Database value is a strongly types value.
+             * Database value is a strongly typed value.
              *
              * It is an enum of limited number supported types
              * that are universal across all platforms
@@ -217,7 +226,7 @@ declare namespace Components {
              * property.starts_with(this)
              */
             StartsWith: /**
-             * Database value is a strongly types value.
+             * Database value is a strongly typed value.
              *
              * It is an enum of limited number supported types
              * that are universal across all platforms
@@ -234,7 +243,7 @@ declare namespace Components {
              * property.ends_with(this)
              */
             EndsWith: /**
-             * Database value is a strongly types value.
+             * Database value is a strongly typed value.
              *
              * It is an enum of limited number supported types
              * that are universal across all platforms
@@ -255,7 +264,7 @@ declare namespace Components {
              * (AND) semantics. Empty right-hand vector yields `false`.
              */
             Any: /**
-             * Database value is a strongly types value.
+             * Database value is a strongly typed value.
              *
              * It is an enum of limited number supported types
              * that are universal across all platforms
@@ -276,7 +285,7 @@ declare namespace Components {
              * yields `false`.
              */
             Regex: /**
-             * Database value is a strongly types value.
+             * Database value is a strongly typed value.
              *
              * It is an enum of limited number supported types
              * that are universal across all platforms
@@ -292,12 +301,12 @@ declare namespace Components {
         /**
          * Comparison of unsigned integers (`u64`) used
          * by `distance()` and `edge_count*()` conditions. Supports
-         * the usual set of named comparisons: `==, !=, <, <=, >, =>`.
+         * the usual set of named comparisons: `==, !=, <, <=, >, >=`.
          */
         export type CountComparison = /**
          * Comparison of unsigned integers (`u64`) used
          * by `distance()` and `edge_count*()` conditions. Supports
-         * the usual set of named comparisons: `==, !=, <, <=, >, =>`.
+         * the usual set of named comparisons: `==, !=, <, <=, >, >=`.
          */
         {
             /**
@@ -330,7 +339,10 @@ declare namespace Components {
              */
             NotEqual: number; // int64
         };
-        export type DbAudit = QueryAudit[];
+        /**
+         * Complete audit log for a database.
+         */
+        export type DbAudit = /* A single entry in the database audit log. */ QueryAudit[];
         /**
          * Database element used in [`QueryResult`]
          * that represents a node or an edge.
@@ -404,7 +416,7 @@ declare namespace Components {
              * Ascending order (from smallest)
              */
             Asc: /**
-             * Database value is a strongly types value.
+             * Database value is a strongly typed value.
              *
              * It is an enum of limited number supported types
              * that are universal across all platforms
@@ -421,7 +433,7 @@ declare namespace Components {
              * Descending order (from largest)
              */
             Desc: /**
-             * Database value is a strongly types value.
+             * Database value is a strongly typed value.
              *
              * It is an enum of limited number supported types
              * that are universal across all platforms
@@ -444,7 +456,7 @@ declare namespace Components {
              * Key of the property
              */
             key: /**
-             * Database value is a strongly types value.
+             * Database value is a strongly typed value.
              *
              * It is an enum of limited number supported types
              * that are universal across all platforms
@@ -460,7 +472,7 @@ declare namespace Components {
              * Value of the property
              */
             value: /**
-             * Database value is a strongly types value.
+             * Database value is a strongly typed value.
              *
              * It is an enum of limited number supported types
              * that are universal across all platforms
@@ -473,21 +485,33 @@ declare namespace Components {
              */
             DbValue;
         }
+        /**
+         * Database storage backend kind.
+         */
         export type DbKind = "memory" | "mapped" | "file";
+        /**
+         * Selects which database resource to operate on (e.g. clear or restore).
+         */
         export type DbResource = "all" | "db" | "audit" | "backup";
         export interface DbTypeParam {
-            db_type: DbKind;
-        }
-        export interface DbUser {
-            role: DbUserRole;
-            username: string;
-        }
-        export type DbUserRole = "admin" | "write" | "read";
-        export interface DbUserRoleParam {
-            db_role: DbUserRole;
+            db_type: /* Database storage backend kind. */ DbKind;
         }
         /**
-         * Database value is a strongly types value.
+         * A user's access entry for a database.
+         */
+        export interface DbUser {
+            role: /* Role a user may hold on a database. */ DbUserRole;
+            username: string;
+        }
+        /**
+         * Role a user may hold on a database.
+         */
+        export type DbUserRole = "admin" | "write" | "read";
+        export interface DbUserRoleParam {
+            db_role: /* Role a user may hold on a database. */ DbUserRole;
+        }
+        /**
+         * Database value is a strongly typed value.
          *
          * It is an enum of limited number supported types
          * that are universal across all platforms
@@ -499,7 +523,7 @@ declare namespace Components {
          * with `to_string()` but otherwise requires a `match`.
          */
         export type DbValue = /**
-         * Database value is a strongly types value.
+         * Database value is a strongly typed value.
          *
          * It is an enum of limited number supported types
          * that are universal across all platforms
@@ -576,7 +600,7 @@ declare namespace Components {
              * List of database values (heterogeneous)
              */
             VecDbValue: /**
-             * Database value is a strongly types value.
+             * Database value is a strongly typed value.
              *
              * It is an enum of limited number supported types
              * that are universal across all platforms
@@ -620,7 +644,7 @@ declare namespace Components {
          * and `to` ids must exist in the database. There must be
          * enough `values` for all new edges unless set to `Single`
          * in which case they will be uniformly applied to all new
-         * edges. The `each` flag is only useful if `from and `to` are
+         * edges. The `each` flag is only useful if `from` and `to` are
          * symmetric (same length) but you still want to connect every
          * origin to every destination. By default it would connect only
          * the pairs. For asymmetric inserts `each` is assumed.
@@ -631,7 +655,7 @@ declare namespace Components {
          * have equal length to the `values` (or the `Single` variant must
          * be used).
          *
-         * The result will contain number of edges inserted or udpated and elements
+         * The result will contain number of edges inserted or updated and elements
          * with their ids, origin and destination, but no properties.
          */
         export interface InsertEdgesQuery {
@@ -692,7 +716,7 @@ declare namespace Components {
          * a given key.
          */
         export type InsertIndexQuery = /**
-         * Database value is a strongly types value.
+         * Database value is a strongly typed value.
          *
          * It is an enum of limited number supported types
          * that are universal across all platforms
@@ -711,7 +735,7 @@ declare namespace Components {
          * parameters. If `values` is set to `Single` either `count`
          * or `aliases` must be provided however. If `values` are not
          * set to `Single` there must be enough value for `count/aliases`
-         * unless they are not se and the count is derived from `values.
+         * unless they are not set, and the count is derived from `values`.
          *
          * If the `ids` member is empty the query will insert new nodes
          * otherwise it will update the existing nodes. The rules for length
@@ -806,7 +830,7 @@ declare namespace Components {
              * Property key
              */
             key: /**
-             * Database value is a strongly types value.
+             * Database value is a strongly typed value.
              *
              * It is an enum of limited number supported types
              * that are universal across all platforms
@@ -824,7 +848,7 @@ declare namespace Components {
             value: /**
              * Comparison of database values ([`DbValue`]) used
              * by `key()` condition. Supports
-             * the usual set of named comparisons: `==, !=, <, <=, >, =>`
+             * the usual set of named comparisons: `==, !=, <, <=, >, >=`
              * plus `contains()`, `any()`, `starts_with()` and `ends_with()`.
              * The comparisons are type strict except for the `contains`
              * and `any` comparisons which allow vectorized version of the
@@ -833,6 +857,9 @@ declare namespace Components {
              */
             Comparison;
         }
+        /**
+         * Server-side log level filter.
+         */
         export type LogLevelFilter = "off" | "error" | "warn" | "info" | "debug" | "trace";
         export interface LogoutQuery {
             session?: string | null;
@@ -840,7 +867,13 @@ declare namespace Components {
         export interface OptimizeParam {
             shrink_to_fit?: boolean | null;
         }
+        /**
+         * Batch of queries to execute against a database.
+         */
         export type Queries = /* Convenience enum for serializing/deserializing queries. */ QueryType[];
+        /**
+         * Results of a batch query execution, one per input query.
+         */
         export type QueriesResults = /**
          * Universal database result. Successful
          * execution of a query will always yield
@@ -850,6 +883,9 @@ declare namespace Components {
          * with database ids and properties (key-value pairs).
          */
         QueryResult[];
+        /**
+         * A single entry in the database audit log.
+         */
         export interface QueryAudit {
             query: /* Convenience enum for serializing/deserializing queries. */ QueryType;
             timestamp: number; // int64
@@ -885,7 +921,7 @@ declare namespace Components {
             Distance: /**
              * Comparison of unsigned integers (`u64`) used
              * by `distance()` and `edge_count*()` conditions. Supports
-             * the usual set of named comparisons: `==, !=, <, <=, >, =>`.
+             * the usual set of named comparisons: `==, !=, <, <=, >, >=`.
              */
             CountComparison;
         } | ("Edge") | {
@@ -898,7 +934,7 @@ declare namespace Components {
             EdgeCount: /**
              * Comparison of unsigned integers (`u64`) used
              * by `distance()` and `edge_count*()` conditions. Supports
-             * the usual set of named comparisons: `==, !=, <, <=, >, =>`.
+             * the usual set of named comparisons: `==, !=, <, <=, >, >=`.
              */
             CountComparison;
         } | {
@@ -910,7 +946,7 @@ declare namespace Components {
             EdgeCountFrom: /**
              * Comparison of unsigned integers (`u64`) used
              * by `distance()` and `edge_count*()` conditions. Supports
-             * the usual set of named comparisons: `==, !=, <, <=, >, =>`.
+             * the usual set of named comparisons: `==, !=, <, <=, >, >=`.
              */
             CountComparison;
         } | {
@@ -922,7 +958,7 @@ declare namespace Components {
             EdgeCountTo: /**
              * Comparison of unsigned integers (`u64`) used
              * by `distance()` and `edge_count*()` conditions. Supports
-             * the usual set of named comparisons: `==, !=, <, <=, >, =>`.
+             * the usual set of named comparisons: `==, !=, <, <=, >, >=`.
              */
             CountComparison;
         } | {
@@ -950,7 +986,7 @@ declare namespace Components {
              * Test if the current element has **all** of the keys listed.
              */
             Keys: /**
-             * Database value is a strongly types value.
+             * Database value is a strongly typed value.
              *
              * It is an enum of limited number supported types
              * that are universal across all platforms
@@ -1082,7 +1118,7 @@ declare namespace Components {
              * and `to` ids must exist in the database. There must be
              * enough `values` for all new edges unless set to `Single`
              * in which case they will be uniformly applied to all new
-             * edges. The `each` flag is only useful if `from and `to` are
+             * edges. The `each` flag is only useful if `from` and `to` are
              * symmetric (same length) but you still want to connect every
              * origin to every destination. By default it would connect only
              * the pairs. For asymmetric inserts `each` is assumed.
@@ -1093,7 +1129,7 @@ declare namespace Components {
              * have equal length to the `values` (or the `Single` variant must
              * be used).
              *
-             * The result will contain number of edges inserted or udpated and elements
+             * The result will contain number of edges inserted or updated and elements
              * with their ids, origin and destination, but no properties.
              */
             InsertEdgesQuery;
@@ -1111,7 +1147,7 @@ declare namespace Components {
              * parameters. If `values` is set to `Single` either `count`
              * or `aliases` must be provided however. If `values` are not
              * set to `Single` there must be enough value for `count/aliases`
-             * unless they are not se and the count is derived from `values.
+             * unless they are not set, and the count is derived from `values`.
              *
              * If the `ids` member is empty the query will insert new nodes
              * otherwise it will update the existing nodes. The rules for length
@@ -1160,7 +1196,7 @@ declare namespace Components {
             RemoveAliasesQuery;
         } | {
             RemoveIndex: /**
-             * Query to create a new index on
+             * Query to remove an existing index on
              * a given key.
              */
             RemoveIndexQuery;
@@ -1204,8 +1240,8 @@ declare namespace Components {
              * edge counts in property `String("edge_count")` as `u64`.
              * If any of the element ids are edges their count will be 0.
              *
-             * NOTE: Self-referential edges are counted twice as if they
-             * were coming from another edge. Therefore the edge count
+             * NOTE: Self-referential edges are counted twice (once as
+             * outgoing and once as incoming). Therefore the edge count
              * might be greater than number of unique db elements.
              */
             SelectEdgeCountQuery;
@@ -1299,11 +1335,11 @@ declare namespace Components {
          */
         export type RemoveAliasesQuery = string[];
         /**
-         * Query to create a new index on
+         * Query to remove an existing index on
          * a given key.
          */
         export type RemoveIndexQuery = /**
-         * Database value is a strongly types value.
+         * Database value is a strongly typed value.
          *
          * It is an enum of limited number supported types
          * that are universal across all platforms
@@ -1446,8 +1482,8 @@ declare namespace Components {
          * edge counts in property `String("edge_count")` as `u64`.
          * If any of the element ids are edges their count will be 0.
          *
-         * NOTE: Self-referential edges are counted twice as if they
-         * were coming from another edge. Therefore the edge count
+         * NOTE: Self-referential edges are counted twice (once as
+         * outgoing and once as incoming). Therefore the edge count
          * might be greater than number of unique db elements.
          */
         export interface SelectEdgeCountQuery {
@@ -1543,7 +1579,7 @@ declare namespace Components {
              */
             QueryIds;
             keys: /**
-             * Database value is a strongly types value.
+             * Database value is a strongly typed value.
              *
              * It is an enum of limited number supported types
              * that are universal across all platforms
@@ -1556,13 +1592,16 @@ declare namespace Components {
              */
             DbValue[];
         }
+        /**
+         * Metadata for a database as seen by the current user.
+         */
         export interface ServerDatabase {
             backup: number; // int64
             created: number; // int64
             db: string;
-            db_type: DbKind;
+            db_type: /* Database storage backend kind. */ DbKind;
             owner: string;
-            role: DbUserRole;
+            role: /* Role a user may hold on a database. */ DbUserRole;
             size: number; // int64
         }
         export interface ServerDatabaseAdminRename {
@@ -1573,28 +1612,40 @@ declare namespace Components {
             new_db: string;
         }
         export interface ServerDatabaseResource {
-            resource: DbResource;
+            resource: /* Selects which database resource to operate on (e.g. clear or restore). */ DbResource;
         }
         export interface SetLogLevelRequest {
-            new_level: LogLevelFilter;
+            new_level: /* Server-side log level filter. */ LogLevelFilter;
         }
+        /**
+         * Payload carrying only a password (e.g. for user creation).
+         */
         export interface UserCredentials {
             password: string;
         }
+        /**
+         * Credentials for logging in a user.
+         */
         export interface UserLogin {
             password: string;
             username: string;
         }
+        /**
+         * An active login session for a user.
+         */
         export interface UserSession {
             agent: string;
             created: number; // int64
             expires_at: number; // int64
             session: string;
         }
+        /**
+         * Current status of a user account including active sessions.
+         */
         export interface UserStatus {
             admin: boolean;
             login: boolean;
-            sessions: UserSession[];
+            sessions: /* An active login session for a user. */ UserSession[];
             username: string;
         }
     }
@@ -1603,7 +1654,7 @@ declare namespace Paths {
     namespace AdminDbAdd {
         namespace Parameters {
             export type Db = string;
-            export type DbType = Components.Schemas.DbKind;
+            export type DbType = /* Database storage backend kind. */ Components.Schemas.DbKind;
             export type Owner = string;
         }
         export interface PathParameters {
@@ -1634,7 +1685,7 @@ declare namespace Paths {
             db: Parameters.Db;
         }
         namespace Responses {
-            export type $200 = Components.Schemas.DbAudit;
+            export type $200 = /* Complete audit log for a database. */ Components.Schemas.DbAudit;
             export interface $401 {
             }
         }
@@ -1661,7 +1712,7 @@ declare namespace Paths {
         namespace Parameters {
             export type Db = string;
             export type Owner = string;
-            export type Resource = Components.Schemas.DbResource;
+            export type Resource = /* Selects which database resource to operate on (e.g. clear or restore). */ Components.Schemas.DbResource;
         }
         export interface PathParameters {
             owner: Parameters.Owner;
@@ -1671,7 +1722,7 @@ declare namespace Paths {
             resource: Parameters.Resource;
         }
         namespace Responses {
-            export type $201 = Components.Schemas.ServerDatabase;
+            export type $201 = /* Metadata for a database as seen by the current user. */ Components.Schemas.ServerDatabase;
             export interface $401 {
             }
             export interface $404 {
@@ -1681,7 +1732,7 @@ declare namespace Paths {
     namespace AdminDbConvert {
         namespace Parameters {
             export type Db = string;
-            export type DbType = Components.Schemas.DbKind;
+            export type DbType = /* Database storage backend kind. */ Components.Schemas.DbKind;
             export type Owner = string;
         }
         export interface PathParameters {
@@ -1755,9 +1806,9 @@ declare namespace Paths {
             owner: Parameters.Owner;
             db: Parameters.Db;
         }
-        export type RequestBody = Components.Schemas.Queries;
+        export type RequestBody = /* Batch of queries to execute against a database. */ Components.Schemas.Queries;
         namespace Responses {
-            export type $200 = Components.Schemas.QueriesResults;
+            export type $200 = /* Results of a batch query execution, one per input query. */ Components.Schemas.QueriesResults;
             export interface $401 {
             }
             export interface $403 {
@@ -1775,9 +1826,9 @@ declare namespace Paths {
             owner: Parameters.Owner;
             db: Parameters.Db;
         }
-        export type RequestBody = Components.Schemas.Queries;
+        export type RequestBody = /* Batch of queries to execute against a database. */ Components.Schemas.Queries;
         namespace Responses {
-            export type $200 = Components.Schemas.QueriesResults;
+            export type $200 = /* Results of a batch query execution, one per input query. */ Components.Schemas.QueriesResults;
             export interface $401 {
             }
             export interface $404 {
@@ -1786,7 +1837,7 @@ declare namespace Paths {
     }
     namespace AdminDbList {
         namespace Responses {
-            export type $200 = Components.Schemas.ServerDatabase[];
+            export type $200 = /* Metadata for a database as seen by the current user. */ Components.Schemas.ServerDatabase[];
             export interface $401 {
             }
         }
@@ -1805,7 +1856,7 @@ declare namespace Paths {
             shrink_to_fit?: Parameters.ShrinkToFit;
         }
         namespace Responses {
-            export type $200 = Components.Schemas.ServerDatabase;
+            export type $200 = /* Metadata for a database as seen by the current user. */ Components.Schemas.ServerDatabase;
             export interface $401 {
             }
         }
@@ -1895,7 +1946,7 @@ declare namespace Paths {
     namespace AdminDbUserAdd {
         namespace Parameters {
             export type Db = string;
-            export type DbRole = Components.Schemas.DbUserRole;
+            export type DbRole = /* Role a user may hold on a database. */ Components.Schemas.DbUserRole;
             export type Owner = string;
             export type Username = string;
         }
@@ -1928,7 +1979,7 @@ declare namespace Paths {
             db: Parameters.Db;
         }
         namespace Responses {
-            export type $200 = Components.Schemas.DbUser[];
+            export type $200 = /* A user's access entry for a database. */ Components.Schemas.DbUser[];
             export interface $401 {
             }
             export interface $404 {
@@ -1967,7 +2018,7 @@ declare namespace Paths {
     }
     namespace AdminStatus {
         namespace Responses {
-            export type $200 = Components.Schemas.AdminStatus;
+            export type $200 = /* Server-wide status information returned by the admin status endpoint. */ Components.Schemas.AdminStatus;
             export interface $401 {
             }
         }
@@ -1979,7 +2030,7 @@ declare namespace Paths {
         export interface PathParameters {
             username: Parameters.Username;
         }
-        export type RequestBody = Components.Schemas.UserCredentials;
+        export type RequestBody = /* Payload carrying only a password (e.g. for user creation). */ Components.Schemas.UserCredentials;
         namespace Responses {
             export interface $201 {
             }
@@ -2000,7 +2051,7 @@ declare namespace Paths {
         export interface PathParameters {
             username: Parameters.Username;
         }
-        export type RequestBody = Components.Schemas.UserCredentials;
+        export type RequestBody = /* Payload carrying only a password (e.g. for user creation). */ Components.Schemas.UserCredentials;
         namespace Responses {
             export interface $201 {
             }
@@ -2018,7 +2069,7 @@ declare namespace Paths {
             username: Parameters.Username;
         }
         namespace Responses {
-            export type $204 = Components.Schemas.UserStatus[];
+            export type $204 = /* Current status of a user account including active sessions. */ Components.Schemas.UserStatus[];
             export interface $401 {
             }
             export interface $404 {
@@ -2027,7 +2078,7 @@ declare namespace Paths {
     }
     namespace AdminUserList {
         namespace Responses {
-            export type $200 = Components.Schemas.UserStatus[];
+            export type $200 = /* Current status of a user account including active sessions. */ Components.Schemas.UserStatus[];
             export interface $401 {
             }
         }
@@ -2090,11 +2141,11 @@ declare namespace Paths {
     }
     namespace ClusterStatus {
         namespace Responses {
-            export type $200 = Components.Schemas.ClusterStatus[];
+            export type $200 = /* Status of a single node in the server cluster. */ Components.Schemas.ClusterStatus[];
         }
     }
     namespace ClusterUserLogin {
-        export type RequestBody = Components.Schemas.UserLogin;
+        export type RequestBody = /* Credentials for logging in a user. */ Components.Schemas.UserLogin;
         namespace Responses {
             export type $200 = string;
             export interface $401 {
@@ -2118,7 +2169,7 @@ declare namespace Paths {
     namespace DbAdd {
         namespace Parameters {
             export type Db = string;
-            export type DbType = Components.Schemas.DbKind;
+            export type DbType = /* Database storage backend kind. */ Components.Schemas.DbKind;
             export type Owner = string;
         }
         export interface PathParameters {
@@ -2151,7 +2202,7 @@ declare namespace Paths {
             db: Parameters.Db;
         }
         namespace Responses {
-            export type $200 = Components.Schemas.DbAudit;
+            export type $200 = /* Complete audit log for a database. */ Components.Schemas.DbAudit;
             export interface $401 {
             }
             export interface $404 {
@@ -2182,7 +2233,7 @@ declare namespace Paths {
         namespace Parameters {
             export type Db = string;
             export type Owner = string;
-            export type Resource = Components.Schemas.DbResource;
+            export type Resource = /* Selects which database resource to operate on (e.g. clear or restore). */ Components.Schemas.DbResource;
         }
         export interface PathParameters {
             owner: Parameters.Owner;
@@ -2192,7 +2243,7 @@ declare namespace Paths {
             resource: Parameters.Resource;
         }
         namespace Responses {
-            export type $201 = Components.Schemas.ServerDatabase;
+            export type $201 = /* Metadata for a database as seen by the current user. */ Components.Schemas.ServerDatabase;
             export interface $401 {
             }
             export interface $403 {
@@ -2204,7 +2255,7 @@ declare namespace Paths {
     namespace DbConvert {
         namespace Parameters {
             export type Db = string;
-            export type DbType = Components.Schemas.DbKind;
+            export type DbType = /* Database storage backend kind. */ Components.Schemas.DbKind;
             export type Owner = string;
         }
         export interface PathParameters {
@@ -2280,9 +2331,9 @@ declare namespace Paths {
             owner: Parameters.Owner;
             db: Parameters.Db;
         }
-        export type RequestBody = Components.Schemas.Queries;
+        export type RequestBody = /* Batch of queries to execute against a database. */ Components.Schemas.Queries;
         namespace Responses {
-            export type $200 = Components.Schemas.QueriesResults;
+            export type $200 = /* Results of a batch query execution, one per input query. */ Components.Schemas.QueriesResults;
             export interface $401 {
             }
             export interface $403 {
@@ -2300,9 +2351,9 @@ declare namespace Paths {
             owner: Parameters.Owner;
             db: Parameters.Db;
         }
-        export type RequestBody = Components.Schemas.Queries;
+        export type RequestBody = /* Batch of queries to execute against a database. */ Components.Schemas.Queries;
         namespace Responses {
-            export type $200 = Components.Schemas.QueriesResults;
+            export type $200 = /* Results of a batch query execution, one per input query. */ Components.Schemas.QueriesResults;
             export interface $401 {
             }
             export interface $403 {
@@ -2313,7 +2364,7 @@ declare namespace Paths {
     }
     namespace DbList {
         namespace Responses {
-            export type $200 = Components.Schemas.ServerDatabase[];
+            export type $200 = /* Metadata for a database as seen by the current user. */ Components.Schemas.ServerDatabase[];
             export interface $401 {
             }
         }
@@ -2332,7 +2383,7 @@ declare namespace Paths {
             shrink_to_fit?: Parameters.ShrinkToFit;
         }
         namespace Responses {
-            export type $200 = Components.Schemas.ServerDatabase;
+            export type $200 = /* Metadata for a database as seen by the current user. */ Components.Schemas.ServerDatabase;
             export interface $401 {
             }
             export interface $403 {
@@ -2432,7 +2483,7 @@ declare namespace Paths {
     namespace DbUserAdd {
         namespace Parameters {
             export type Db = string;
-            export type DbRole = Components.Schemas.DbUserRole;
+            export type DbRole = /* Role a user may hold on a database. */ Components.Schemas.DbUserRole;
             export type Owner = string;
             export type Username = string;
         }
@@ -2465,7 +2516,7 @@ declare namespace Paths {
             db: Parameters.Db;
         }
         namespace Responses {
-            export type $200 = Components.Schemas.DbUser[];
+            export type $200 = /* A user's access entry for a database. */ Components.Schemas.DbUser[];
             export interface $401 {
             }
             export interface $404 {
@@ -2496,7 +2547,7 @@ declare namespace Paths {
     }
     namespace SetLogLevel {
         namespace Parameters {
-            export type NewLevel = Components.Schemas.LogLevelFilter;
+            export type NewLevel = /* Server-side log level filter. */ Components.Schemas.LogLevelFilter;
         }
         export interface QueryParameters {
             new_level: Parameters.NewLevel;
@@ -2517,7 +2568,7 @@ declare namespace Paths {
         }
     }
     namespace UserChangePassword {
-        export type RequestBody = Components.Schemas.ChangePassword;
+        export type RequestBody = /* Request body for changing a user's password. */ Components.Schemas.ChangePassword;
         namespace Responses {
             export interface $201 {
             }
@@ -2528,7 +2579,7 @@ declare namespace Paths {
         }
     }
     namespace UserLogin {
-        export type RequestBody = Components.Schemas.UserLogin;
+        export type RequestBody = /* Credentials for logging in a user. */ Components.Schemas.UserLogin;
         namespace Responses {
             export type $200 = string;
             export interface $401 {
@@ -2551,7 +2602,7 @@ declare namespace Paths {
     }
     namespace UserStatus {
         namespace Responses {
-            export type $200 = Components.Schemas.UserStatus;
+            export type $200 = /* Current status of a user account including active sessions. */ Components.Schemas.UserStatus;
             export interface $401 {
             }
         }

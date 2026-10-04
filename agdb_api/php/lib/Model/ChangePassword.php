@@ -35,6 +35,7 @@ use \Agnesoft\AgdbApi\ObjectSerializer;
  * ChangePassword Class Doc Comment
  *
  * @category Class
+ * @description Request body for changing a user&#39;s password.
  * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech

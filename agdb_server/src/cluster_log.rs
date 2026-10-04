@@ -4,7 +4,6 @@ use crate::config::Config;
 use crate::raft::Log;
 use crate::server_db::ServerDb;
 use crate::server_error::ServerError;
-use agdb::Comparison;
 use agdb::Db;
 use agdb::DbId;
 use agdb::DbKeyOrder;
@@ -212,7 +211,7 @@ impl ClusterLog {
                     .neighbor()
                     .and()
                     .key(INDEX)
-                    .value(Comparison::LessThanOrEqual(up_to_index.into()))
+                    .less_than_or_equal(up_to_index)
                     .and()
                     .not()
                     .keys(COMMITTED)
@@ -282,7 +281,7 @@ impl ClusterLog {
                 .keys(LOG_FAILED)
                 .and()
                 .key(INDEX)
-                .value(Comparison::Any((*indices).into()))
+                .any(indices.to_vec())
                 .query(),
         )?;
 
@@ -354,7 +353,7 @@ impl ClusterLog {
                         .neighbor()
                         .and()
                         .key(INDEX)
-                        .value(Comparison::GreaterThan(from_index.into()))
+                        .greater_than(from_index)
                         .query(),
                 )?
                 .ids();

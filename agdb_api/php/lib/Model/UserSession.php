@@ -35,6 +35,7 @@ use \Agnesoft\AgdbApi\ObjectSerializer;
  * UserSession Class Doc Comment
  *
  * @category Class
+ * @description An active login session for a user.
  * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech

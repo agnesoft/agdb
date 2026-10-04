@@ -33,6 +33,7 @@ use \Agnesoft\AgdbApi\ObjectSerializer;
  * DbUserRole Class Doc Comment
  *
  * @category Class
+ * @description Role a user may hold on a database.
  * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech

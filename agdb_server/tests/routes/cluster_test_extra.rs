@@ -539,3 +539,199 @@ async fn too_far_behind_triggers_resync() -> Result<(), TestError> {
 
     Ok(())
 }
+
+#[tokio::test]
+async fn per_db_resync_after_file_corruption() -> Result<(), TestError> {
+    let servers = create_cluster(3, false).await?;
+
+    let mut leader = AgdbApi::new(
+        ReqwestClient::with_client(reqwest_client()),
+        &servers[0].address,
+    );
+    leader.user_login(ADMIN, ADMIN).await?;
+
+    // Use DbKind::File — FileStorage uses seek()+read_exact() on a raw
+    // file descriptor (no mmap).  Truncating the file on disk from
+    // outside the process is therefore immediately visible: the next
+    // read_exact() returns UnexpectedEof → DbError → exec failure.
+    leader.db_add(ADMIN, "per_db_resync", DbKind::File).await?;
+
+    // Write via the follower — leader-forwarding means the call only
+    // returns once Raft has committed, so the follower already has the
+    // data when it completes (no poll loop needed).
+    let mut follower = AgdbApi::new(
+        ReqwestClient::with_client(reqwest_client()),
+        &servers[1].address,
+    );
+    follower.cluster_user_login(ADMIN, ADMIN).await?;
+    follower
+        .db_exec_mut(
+            ADMIN,
+            "per_db_resync",
+            &[QueryBuilder::insert()
+                .nodes()
+                .aliases("root")
+                .values(vec![vec![("key", 1).into()]])
+                .query()
+                .into()],
+        )
+        .await?;
+
+    // Truncate the follower's DB file and WAL to 0 bytes while the
+    // server is still running.  FileStorage's read() does
+    // seek(pos) + read_exact(buf) → the next storage access returns
+    // UnexpectedEof → the Raft exec fails on this node.
+    let db_path = format!("{}/admin/per_db_resync", servers[1].data_dir);
+    let wal_path = format!("{}/admin/.per_db_resync", servers[1].data_dir);
+    std::fs::OpenOptions::new()
+        .write(true)
+        .truncate(true)
+        .open(&db_path)
+        .expect("truncate db file");
+    // WAL may already be empty/cleared; ignore missing file.
+    let _ = std::fs::OpenOptions::new()
+        .write(true)
+        .truncate(true)
+        .open(&wal_path);
+
+    // Trigger a new mutation that touches the truncated DB.
+    // On the follower the storage read fails → LOG_FAILED →
+    // OkReport → leader sends ResyncDbs → per-DB resync downloads
+    // the correct DB from the leader — all on the live running node,
+    // no restart needed.
+    leader
+        .db_exec_mut(
+            ADMIN,
+            "per_db_resync",
+            &[QueryBuilder::insert()
+                .values(vec![vec![("key", 2).into()]])
+                .ids("root")
+                .query()
+                .into()],
+        )
+        .await?;
+
+    // Wait for per-DB resync to restore the database on the follower.
+    let mut final_value = 0u64;
+    for _ in 0..30 {
+        if let Ok(result) = follower
+            .db_exec(
+                ADMIN,
+                "per_db_resync",
+                &[QueryBuilder::select()
+                    .values("key")
+                    .ids("root")
+                    .query()
+                    .into()],
+            )
+            .await
+            && let Ok(v) = result.1[0].elements[0].values[0].value.to_u64()
+        {
+            final_value = v;
+
+            if v == 2 {
+                break;
+            }
+        }
+
+        tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+    }
+
+    assert_eq!(
+        final_value, 2,
+        "per-DB resync did not restore data to follower"
+    );
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn server_db_resync_after_corruption() -> Result<(), TestError> {
+    let mut servers = create_cluster(3, false).await?;
+
+    let mut leader = AgdbApi::new(
+        ReqwestClient::with_client(reqwest_client()),
+        &servers[0].address,
+    );
+    leader.user_login(ADMIN, ADMIN).await?;
+
+    // Create a user via the leader (replicates through Raft to all nodes).
+    leader.admin_user_add("test_user", "password123").await?;
+
+    // Ensure follower has the user (can log in as test_user).
+    let mut follower = AgdbApi::new(
+        ReqwestClient::with_client(reqwest_client()),
+        &servers[1].address,
+    );
+
+    let mut user_exists = false;
+    for _ in 0..10 {
+        if follower
+            .user_login("test_user", "password123")
+            .await
+            .is_ok()
+        {
+            user_exists = true;
+            break;
+        }
+        tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+    }
+    assert!(user_exists, "follower did not replicate test_user");
+
+    // The server_db uses mmap (FileStorageMemoryMapped) so we cannot
+    // corrupt it from outside the running process without risking
+    // SIGBUS.  Instead: shut down the follower, delete its server_db,
+    // restart it.  The fresh empty server_db means the follower is at
+    // the same Raft commit but is missing all user data.  The NEXT
+    // server_db action will fail on the live node → per-DB resync
+    // restores it automatically, no second restart required.
+    follower.user_login(ADMIN, ADMIN).await?;
+    follower.admin_shutdown().await?;
+    servers[1].wait().await?;
+
+    let server_db_path = format!("{}/agdb_server.agdb", servers[1].data_dir);
+    let server_db_wal = format!("{}/.agdb_server.agdb", servers[1].data_dir);
+    std::fs::remove_file(&server_db_path).expect("remove server_db");
+    let _ = std::fs::remove_file(&server_db_wal); // WAL may not exist
+
+    servers[1].restart()?;
+    follower = AgdbApi::new(
+        ReqwestClient::with_client(reqwest_client()),
+        &servers[1].address,
+    );
+    wait_for_ready(&follower).await?;
+    wait_for_leader(&follower).await?;
+
+    // Trigger a server_db–targeted action from the leader.
+    // cluster_user_login replicates SaveUserToken via Raft.
+    // The follower's empty server_db has no "test_user" → exec fails →
+    // LOG_FAILED → OkReport → leader sends ResyncDbs for server_db
+    // → per-DB resync downloads the correct server_db from the leader.
+    leader
+        .cluster_user_login("test_user", "password123")
+        .await?;
+
+    // Wait for server_db resync to complete — verify by logging in
+    // as test_user on the follower (which requires the user to exist
+    // in the follower's server_db).
+    let mut user_synced = false;
+    for _ in 0..30 {
+        if follower
+            .user_login("test_user", "password123")
+            .await
+            .is_ok()
+        {
+            user_synced = true;
+            break;
+        }
+
+        tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+    }
+
+    assert!(
+        user_synced,
+        "server_db resync did not restore test_user to follower"
+    );
+
+    Ok(())
+}

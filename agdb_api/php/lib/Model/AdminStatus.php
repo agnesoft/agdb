@@ -35,6 +35,7 @@ use \Agnesoft\AgdbApi\ObjectSerializer;
  * AdminStatus Class Doc Comment
  *
  * @category Class
+ * @description Server-wide status information returned by the admin status endpoint.
  * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech

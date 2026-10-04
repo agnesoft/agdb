@@ -33,6 +33,7 @@ use \Agnesoft\AgdbApi\ObjectSerializer;
  * LogLevelFilter Class Doc Comment
  *
  * @category Class
+ * @description Server-side log level filter.
  * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech

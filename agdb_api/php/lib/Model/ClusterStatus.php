@@ -35,6 +35,7 @@ use \Agnesoft\AgdbApi\ObjectSerializer;
  * ClusterStatus Class Doc Comment
  *
  * @category Class
+ * @description Status of a single node in the server cluster.
  * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech

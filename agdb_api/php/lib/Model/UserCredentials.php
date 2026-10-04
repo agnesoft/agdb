@@ -35,6 +35,7 @@ use \Agnesoft\AgdbApi\ObjectSerializer;
  * UserCredentials Class Doc Comment
  *
  * @category Class
+ * @description Payload carrying only a password (e.g. for user creation).
  * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech

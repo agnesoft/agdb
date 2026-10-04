@@ -33,6 +33,7 @@ use \Agnesoft\AgdbApi\ObjectSerializer;
  * DbResource Class Doc Comment
  *
  * @category Class
+ * @description Selects which database resource to operate on (e.g. clear or restore).
  * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech

@@ -183,7 +183,7 @@ Condition chains compile into `QueryCondition` items with:
 .where_().edge()
 .where_().key("k").value(1)
 .where_().keys(["k1".into(), "k2".into()])
-.where_().distance(CountComparison::LessThanOrEqual(2))
+.where_().distance_less_than_or_equal(2)
 .where_().ids([1, 2, 3])
 ```
 

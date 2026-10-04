@@ -6,8 +6,6 @@ use crate::raft::Log;
 use crate::server_error::ServerError;
 use crate::server_error::ServerResult;
 use agdb::AgdbSerialize;
-use agdb::Comparison;
-use agdb::CountComparison;
 use agdb::Db;
 use agdb::DbId;
 use agdb::DbType;
@@ -240,7 +238,7 @@ impl ServerDb {
                     .depth_first()
                     .to(db)
                     .where_()
-                    .distance(CountComparison::LessThanOrEqual(2))
+                    .distance_less_than_or_equal(2)
                     .and()
                     .where_()
                     .keys("role")
@@ -420,7 +418,7 @@ impl ServerDb {
                     .to(db)
                     .limit(1)
                     .where_()
-                    .distance(CountComparison::LessThanOrEqual(2))
+                    .distance_less_than_or_equal(2)
                     .and()
                     .key(ROLE)
                     .value(DbUserRole::Admin)
@@ -684,7 +682,7 @@ impl ServerDb {
                         .to(db_id)
                         .limit(1)
                         .where_()
-                        .distance(CountComparison::LessThanOrEqual(2))
+                        .distance_less_than_or_equal(2)
                         .and()
                         .keys("role")
                         .query(),
@@ -867,7 +865,7 @@ impl ServerDb {
                         .ids(USERS)
                         .and()
                         .key(EXPIRES_AT)
-                        .value(Comparison::LessThan(current_timestamp().into()))
+                        .less_than(current_timestamp())
                         .query(),
                 )?;
             }
@@ -944,7 +942,7 @@ fn user_sessions_query(user_id: DbId) -> SelectValuesQuery {
         .neighbor()
         .and()
         .key(EXPIRES_AT)
-        .value(Comparison::GreaterThanOrEqual(current_timestamp().into()))
+        .greater_than_or_equal(current_timestamp())
         .query()
 }
 

@@ -35,7 +35,7 @@ use \Agnesoft\AgdbApi\ObjectSerializer;
  * Comparison Class Doc Comment
  *
  * @category Class
- * @description Comparison of database values ([&#x60;DbValue&#x60;]) used by &#x60;key()&#x60; condition. Supports the usual set of named comparisons: &#x60;&#x3D;&#x3D;, !&#x3D;, &lt;, &lt;&#x3D;, &gt;, &#x3D;&gt;&#x60; plus &#x60;contains()&#x60;, &#x60;any()&#x60;, &#x60;starts_with()&#x60; and &#x60;ends_with()&#x60;. The comparisons are type strict except for the &#x60;contains&#x60; and &#x60;any&#x60; comparisons which allow vectorized version of the base type. &#x60;contains&#x60; uses universal (AND) semantics while &#x60;any&#x60; uses existential (OR) semantics.
+ * @description Comparison of database values ([&#x60;DbValue&#x60;]) used by &#x60;key()&#x60; condition. Supports the usual set of named comparisons: &#x60;&#x3D;&#x3D;, !&#x3D;, &lt;, &lt;&#x3D;, &gt;, &gt;&#x3D;&#x60; plus &#x60;contains()&#x60;, &#x60;any()&#x60;, &#x60;starts_with()&#x60; and &#x60;ends_with()&#x60;. The comparisons are type strict except for the &#x60;contains&#x60; and &#x60;any&#x60; comparisons which allow vectorized version of the base type. &#x60;contains&#x60; uses universal (AND) semantics while &#x60;any&#x60; uses existential (OR) semantics.
  * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech

@@ -482,7 +482,7 @@ impl DbValue {
 
     /// Produces a new value by *removing* `other` from `self`.
     ///
-    /// Numeric types saturate; strings have the first occurrence removed;
+    /// Numeric types saturate; strings have all occurrences removed;
     /// vector types drop the first matching element for each item in `other`.
     /// Bytes do not support removal and will return an error.
     pub fn amend_remove(&self, other: &DbValue) -> Result<DbValue, DbError> {
@@ -555,9 +555,9 @@ impl DbValue {
 
     /// Applies bitwise `op` (AND / OR / XOR) between `self` and `other`.
     ///
-    /// Supported for integer and byte-array values. When `add_fallback` is
-    /// `true` and the types are not bitwise-compatible, falls back to
-    /// [`amend_add`](Self::amend_add) instead of returning an error.
+    /// Supported for integer and byte-array values. When the types are not
+    /// bitwise-compatible it falls back to [`amend_add`](Self::amend_add) if
+    /// `add_fallback` is `true`, otherwise to [`amend_remove`](Self::amend_remove).
     pub fn amend_bitwise(
         &self,
         other: &DbValue,

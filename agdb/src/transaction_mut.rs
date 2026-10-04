@@ -20,8 +20,11 @@ impl<'a, Store: StorageData> TransactionMut<'a, Store> {
     /// - Select values
     /// - Select keys
     /// - Select key count
+    /// - Select edge count
     /// - Select aliases
     /// - Select all aliases
+    /// - Select indexes
+    /// - Select node count
     /// - Search
     pub fn exec<T: Query>(&self, query: T) -> Result<QueryResult, DbError> {
         Transaction::new(self.db).exec(query)
@@ -33,9 +36,11 @@ impl<'a, Store: StorageData> TransactionMut<'a, Store> {
     /// - Insert edges
     /// - Insert aliases
     /// - Insert values
+    /// - Insert index
     /// - Remove elements
     /// - Remove aliases
     /// - Remove values
+    /// - Remove index
     pub fn exec_mut<T: QueryMut>(&mut self, query: T) -> Result<QueryResult, DbError> {
         query.process(self.db)
     }

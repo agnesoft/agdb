@@ -1,5 +1,6 @@
-//! Example: emulate relational joins by traversing graph edges and combining
-//! data from connected nodes and relationships in a single application pass.
+//! Example: emulate relational joins two ways — a single-pass depth-first
+//! traversal combining edges and nodes, and a transaction-based multi-query
+//! approach.
 
 use agdb::DbError;
 use agdb::DbMemory;
@@ -13,7 +14,6 @@ struct UserDb {
 }
 
 fn main() -> Result<(), DbError> {
-    // Creates in memory database.
     let mut db = DbMemory::new("agdb_example")?;
 
     // Inserts root node for databases and the user.
@@ -45,7 +45,7 @@ fn main() -> Result<(), DbError> {
     // Since there are no native joins in agdb we emulate it by selecting all the data
     // we need and then join them when iterating over the returned elements. It is important
     // that the elements follow expected order = in this case an edge is always followed by a node.
-    // We have achived that by specifying the depth first search in the query. On each edge we
+    // We have achieved that by specifying the depth first search in the query. On each edge we
     // create the joined element and on each node we fill in the remaining data.
     let mut user_dbs: Vec<UserDb> = vec![];
     db.exec(
@@ -78,11 +78,11 @@ fn main() -> Result<(), DbError> {
 
     // If the data is sparse, we need other processing or require better control over the joining
     // you should use a transaction and split the steps into subqueries. The transaction makes
-    // sure your data is not modified under your hands. Using the trnsaction and multiple queries
+    // sure your data is not modified under your hands. Using the transaction and multiple queries
     // lets you do additional processing, filtering or mapping of the data. It is worth noting that
     // your specialized "join" will always be faster than a generic one the database could offer, particularly
     // when using Rust. Joins on the database side makes sense when you are using an interpreted language
-    // which is significnatly slower.
+    // which is significantly slower.
     let user_dbs = db.transaction(|t| -> Result<Vec<UserDb>, DbError> {
         let db_names = t.exec(
             QueryBuilder::select()

@@ -18,8 +18,11 @@ impl<'a, Store: StorageData> Transaction<'a, Store> {
     /// - Select values
     /// - Select keys
     /// - Select key count
+    /// - Select edge count
     /// - Select aliases
     /// - Select all aliases
+    /// - Select indexes
+    /// - Select node count
     /// - Search
     pub fn exec<T: Query>(&self, query: T) -> Result<QueryResult, DbError> {
         query.process(self.db)

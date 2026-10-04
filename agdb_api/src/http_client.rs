@@ -7,6 +7,8 @@ use reqwest::header::USER_AGENT;
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 
+/// Abstraction over HTTP verbs used by [`AgdbApi`](crate::AgdbApi).
+/// Implement this trait to swap the transport layer.
 #[cfg_attr(feature = "api", agdb::trait_def())]
 #[allow(async_fn_in_trait)]
 pub trait HttpClient {
@@ -58,6 +60,7 @@ impl TypeDefinition for ReqwestClientTypeDef {
     }
 }
 
+/// Default [`HttpClient`] implementation backed by [`reqwest`].
 #[cfg_attr(feature = "api", derive(agdb::TypeDef))]
 pub struct ReqwestClient {
     pub client: ReqwestClientTypeDef,
@@ -67,15 +70,18 @@ pub struct ReqwestClient {
 impl AgdbApiClient for ReqwestClient {}
 
 impl ReqwestClient {
+    /// Creates a new client with default settings and the `"agdb_api"` user-agent.
     #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         Self::with_client(reqwest::Client::new())
     }
 
+    /// Creates a client from an existing [`reqwest::Client`] with the default `"agdb_api"` user-agent.
     pub fn with_client(client: reqwest::Client) -> Self {
         Self::with_user_agent(client, "agdb_api")
     }
 
+    /// Creates a client from an existing [`reqwest::Client`] with a custom user-agent string.
     pub fn with_user_agent(client: reqwest::Client, user_agent: impl Into<String>) -> Self {
         Self {
             client: ReqwestClientTypeDef(client),

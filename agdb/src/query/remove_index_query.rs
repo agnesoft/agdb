@@ -5,7 +5,7 @@ use crate::QueryMut;
 use crate::QueryResult;
 use crate::StorageData;
 
-/// Query to create a new index on
+/// Query to remove an existing index on
 /// a given key.
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]

@@ -2,14 +2,15 @@
 //!
 //! Use [`AgdbApi`] to connect to a running agdb server, authenticate users,
 //! create and manage databases, and execute query batches over the `/api/v1`
-//! HTTP surface. The crate also exposes the generated request/response models for
-//! server-side integration and generated client tooling.
+//! HTTP surface. The crate also exposes the request/response model types
+//! shared between the server and client tooling.
 //!
 //! # Features
 //!
-//! - `api`: enables generated type-definition metadata used by transpilers and
-//!   language bindings.
-//! - `tls`: enables Rust TLS support for the client transport.
+//! - `api`: enables type-definition metadata used by transpilers and language
+//!   bindings.
+//! - `tls`: enables native TLS for the HTTP client transport (via
+//!   `reqwest/default-tls`).
 //! - `test_server`: adds helpers used by agdb server integration tests.
 
 #[cfg(feature = "api")]

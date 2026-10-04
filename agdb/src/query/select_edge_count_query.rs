@@ -16,8 +16,8 @@ use crate::query_builder::search::SearchQueryBuilder;
 /// edge counts in property `String("edge_count")` as `u64`.
 /// If any of the element ids are edges their count will be 0.
 ///
-/// NOTE: Self-referential edges are counted twice as if they
-/// were coming from another edge. Therefore the edge count
+/// NOTE: Self-referential edges are counted twice (once as
+/// outgoing and once as incoming). Therefore the edge count
 /// might be greater than number of unique db elements.
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]

@@ -43,6 +43,8 @@ impl<D: StorageData> VecValue<D> for DbId {
 }
 
 impl DbId {
+    /// Returns the absolute value of the id as a `u64` index
+    /// (negates edge ids so they can be used as array offsets).
     pub fn as_index(&self) -> u64 {
         if self.0 < 0 {
             (-self.0) as u64

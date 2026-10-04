@@ -278,7 +278,7 @@ impl<T: SearchQueryBuilder> Where<T> {
     }
 
     /// Convenience shorthand to select neighboring elements
-    /// equivalient to `distance(CountComparison::Equal(2))`.
+    /// equivalent to `distance(CountComparison::Equal(2))`.
     pub fn neighbor(self) -> WhereLogicOperator<T> {
         self.distance(CountComparison::Equal(2))
     }
@@ -617,8 +617,8 @@ impl<T: SearchQueryBuilder> WhereLogicOperator<T> {
     }
 
     /// Sets the logic operator for the following condition
-    /// to logical OR (||). The condition passes only if
-    /// both sides evaluates to `false`.
+    /// to logical OR (||). The condition passes if
+    /// either side evaluates to `true`.
     pub fn or(self) -> Where<T> {
         Where {
             logic: QueryConditionLogic::Or,

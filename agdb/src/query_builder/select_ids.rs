@@ -8,7 +8,7 @@ pub struct SelectIds(pub SelectValuesQuery);
 
 #[cfg_attr(feature = "api", agdb::impl_def())]
 impl SelectIds {
-    /// Returns the built `SelectQuery` object.
+    /// Returns the built `SelectValuesQuery` object.
     pub fn query(self) -> SelectValuesQuery {
         self.0
     }

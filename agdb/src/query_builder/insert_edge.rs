@@ -60,7 +60,7 @@ impl InsertEdges {
     }
 
     /// Optional ids of edges (can be search sub-query) to be
-    /// inserted or updated. If the list is empty the nodes will be
+    /// inserted or updated. If the list is empty the edges will be
     /// inserted. If the list is not empty all ids must exist in the
     /// database and will be updated instead:
     ///

@@ -43,7 +43,7 @@ struct SubProperty {
 
 // Deriving from agdb::DbType to make it possible
 // to use directly in the database queries. Here we
-// demonstrate usiage of custom values, vectorized
+// demonstrate usage of custom values, vectorized
 // custom values and optional values.
 #[derive(Debug, DbType)]
 struct User {
@@ -60,7 +60,6 @@ struct User {
 }
 
 fn main() -> Result<(), DbError> {
-    // Creates in memory database.
     let mut db = DbMemory::new("agdb_example")?;
 
     // Inserts root node for users with an alias. You can loosely
@@ -134,7 +133,7 @@ fn users(db: &mut DbMemory) -> Result<(), DbError> {
     // ```
     //
     // Internally it uses the `agdb::DbType::db_keys()` to select required keys as the `User` is
-    // required to implement the `DbType` trait. It also changes the sarch algorithm to depth-first
+    // required to implement the `DbType` trait. It also changes the search algorithm to depth-first
     // (default is breadth-first) which is more efficient when searching for a single item only. We could
     // additionally limit the search by adding `limit(1)` to ensure we get only one result back
     // and/or additional condition on `distance(Equal(2))` to stop search beyond users. But since

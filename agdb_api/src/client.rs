@@ -27,7 +27,7 @@ pub trait AgdbApiClient: HttpClient {}
 ///
 /// The methods on this type map to `/api/v1` routes from the server OpenAPI
 /// specification and return either an HTTP status code or `(status, body)`.
-/// It maintains a public field `token` for the logged-in user's token internally.
+/// It exposes a public `token` field that is set on login and cleared on logout.
 ///
 /// # Example
 ///
@@ -1091,7 +1091,7 @@ impl<T: AgdbApiClient> AgdbApi<T> {
     /// let (status, dbs) = api.db_list().await?;
     /// assert_eq!(status, 200);
     /// assert!(!dbs.is_empty());
-    /// # Ok::<(), agdb_api::ApiError>(())
+    /// # Ok::<(), agdb_api::AgdbApiError>(())
     /// ```
     pub async fn db_list(&self) -> AgdbApiResult<(u16, Vec<ServerDatabase>)> {
         self.client.get(&self.url("/db/list"), &self.token).await
@@ -1304,7 +1304,7 @@ impl<T: AgdbApiClient> AgdbApi<T> {
     /// let status = api.user_login("user", "password").await?;
     /// assert_eq!(status, 200);
     /// assert!(api.token.is_some());
-    /// # Ok::<(), agdb_api::ApiError>(())
+    /// # Ok::<(), agdb_api::AgdbApiError>(())
     /// ```
     pub async fn user_login(&mut self, username: &str, password: &str) -> AgdbApiResult<u16> {
         let (status, token) = self

@@ -94,9 +94,9 @@ pub type StorageSlice<'a> = Cow<'a, [u8]>;
 /// Minimum set of data operations required by the database
 /// to store & retrieve data.
 pub trait StorageData: Sized {
-    /// Copy the underlying data storage to a new `name`. The
-    /// default implementation does nothing. File implementations
-    /// might need to copy the underlying file(s).
+    /// Writes the current database state to `name` as a backup.
+    /// File implementations copy the underlying file(s); the
+    /// memory implementation dumps the buffer to disk.
     fn backup(&self, _name: &str) -> Result<(), DbError>;
 
     /// Copies the storage to a new `name`.

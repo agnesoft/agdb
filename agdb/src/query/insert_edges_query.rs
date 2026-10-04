@@ -14,7 +14,7 @@ use crate::query::query_values::QueryValues;
 /// and `to` ids must exist in the database. There must be
 /// enough `values` for all new edges unless set to `Single`
 /// in which case they will be uniformly applied to all new
-/// edges. The `each` flag is only useful if `from and `to` are
+/// edges. The `each` flag is only useful if `from` and `to` are
 /// symmetric (same length) but you still want to connect every
 /// origin to every destination. By default it would connect only
 /// the pairs. For asymmetric inserts `each` is assumed.
@@ -25,7 +25,7 @@ use crate::query::query_values::QueryValues;
 /// have equal length to the `values` (or the `Single` variant must
 /// be used).
 ///
-/// The result will contain number of edges inserted or udpated and elements
+/// The result will contain number of edges inserted or updated and elements
 /// with their ids, origin and destination, but no properties.
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]

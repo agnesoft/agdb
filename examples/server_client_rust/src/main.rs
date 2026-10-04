@@ -17,18 +17,16 @@ async fn main() -> Result<(), anyhow::Error> {
     // Requires the server to be running. Run it with `cargo run -p agdb_server`
     // from the root.
 
-    // Creates a client connecting to the remote server.
     let mut client = agdb_api::AgdbApi::new(ReqwestClient::new(), "localhost:3000");
 
-    // Creates a user using default admin credentials.
+    // Log in as admin and create a new user.
     client.user_login("admin", "admin").await?;
     client.admin_user_add("client", "password111").await?;
 
-    // Creates a database using the newly created user.
-    client.user_login("client", "password111").await?; //overwrites the internal authorization token of the admin to client
+    // Switch to the new user and create a database.
+    client.user_login("client", "password111").await?;
     client.db_add("client", "db", ApiDbType::Memory).await?;
 
-    // Prepare some data to be inserted into the remote database
     let users = vec![
         User {
             username: "user1".to_string(),
@@ -40,7 +38,7 @@ async fn main() -> Result<(), anyhow::Error> {
         },
     ];
 
-    // Prepare the queries to be executed on the remote database.
+    // Insert a root "users" alias and the user nodes.
     let queries = vec![
         QueryBuilder::insert()
             .nodes()
@@ -49,11 +47,9 @@ async fn main() -> Result<(), anyhow::Error> {
             .into(),
         QueryBuilder::insert().nodes().values(&users).query().into(),
     ];
-
-    // Execute the first batch of queries.
     let results = client.db_exec_mut("client", "db", &queries).await?.1;
 
-    // Prepare the second batch using the result of the previous batch.
+    // Link users to root and search for one by username.
     let queries = vec![
         QueryBuilder::insert()
             .edges()
@@ -72,10 +68,8 @@ async fn main() -> Result<(), anyhow::Error> {
             .into(),
     ];
 
-    // Execute the second batch of queries.
     let results = client.db_exec_mut("client", "db", &queries).await?.1;
 
-    // Print the result of the second query.
     println!("User: {:?}", results[1].elements[0].id);
     for key_value in results[1].elements[0].values.iter() {
         println!("  {}: {}", key_value.key, key_value.value);

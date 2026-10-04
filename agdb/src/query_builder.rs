@@ -98,8 +98,8 @@ impl QueryBuilder {
     /// ```
     /// use agdb::QueryBuilder;
     ///
-    /// QueryBuilder::search().from(1); // BDS
-    /// QueryBuilder::search().to(1); // BDS
+    /// QueryBuilder::search().from(1); // BFS
+    /// QueryBuilder::search().to(1); // BFS
     /// QueryBuilder::search().breadth_first();
     /// QueryBuilder::search().depth_first();
     /// QueryBuilder::search().elements();

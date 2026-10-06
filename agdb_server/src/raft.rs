@@ -389,7 +389,7 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
                 // Follower-failed, leader-succeeded → per-DB resync
                 let need_resync: Vec<u64> = follower_failed
                     .iter()
-                    .filter(|idx| !leader_failed.contains(idx))
+                    .filter(|idx| **idx > node_reconciled && !leader_failed.contains(idx))
                     .copied()
                     .collect();
 
@@ -2428,6 +2428,43 @@ mod test {
             !leader.node(1).force_resync,
             "follower-failed should not trigger force_resync"
         );
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn follower_failed_at_or_below_watermark_does_not_resync() -> anyhow::Result<()> {
+        let storage = TestStorage {
+            logs: (1..=10)
+                .map(|i| Log {
+                    db_id: None,
+                    index: i,
+                    term: 1,
+                    data: i as u8,
+                })
+                .collect(),
+            commit: 10,
+            resolve_result: vec![("should_not_appear".into(), "x".into())],
+            ..Default::default()
+        };
+        let mut leader = test_leader(storage);
+        leader.node_mut(1).log_commit = 10;
+        // Watermark already reconciled through 7.
+        leader.node_mut(1).exec_reconciled = 7;
+
+        let request = heartbeat_request(7);
+        // Only stale follower failures at/below watermark.
+        let response = ok_response_with_failed(vec![5, 7]);
+
+        leader
+            .response(&request, &response)
+            .await
+            .map_err(|e| anyhow!(e.description))?;
+
+        assert!(
+            leader.node(1).pending_resync_dbs.is_empty(),
+            "follower-failed at idx <= exec_reconciled must not queue per-DB resync"
+        );
+        assert!(!leader.node(1).force_resync);
         Ok(())
     }
 

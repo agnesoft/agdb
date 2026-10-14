@@ -104,9 +104,8 @@ describe("QueryGraph", () => {
     const instance = vi.mocked(ForceGraph3D).mock.results[0]?.value;
     const initialCallCount = instance?.graphData.mock.calls.length ?? 0;
 
-    const { convertElementsToGraphData } = await import(
-      "../../utils/graphDataUtils"
-    );
+    const { convertElementsToGraphData } =
+      await import("../../utils/graphDataUtils");
     vi.mocked(convertElementsToGraphData).mockReturnValue({
       nodes: [{ id: 1, values: [], source: "query" }],
       links: [],
@@ -115,7 +114,9 @@ describe("QueryGraph", () => {
     mockQueryRef.value = {
       ...mockQueryRef.value,
       results: {
-        exec: [{ result: 1, elements: [{ id: 1, from: 0, to: 0, values: [] }] }],
+        exec: [
+          { result: 1, elements: [{ id: 1, from: 0, to: 0, values: [] }] },
+        ],
       },
       lastExecutedTab: "exec",
     };
@@ -137,8 +138,12 @@ describe("QueryGraph", () => {
     mockQueryRef.value = {
       ...mockQueryRef.value,
       results: {
-        exec: [{ result: 1, elements: [{ id: 1, from: 0, to: 0, values: [] }] }],
-        context: [{ result: 2, elements: [{ id: 2, from: 0, to: 0, values: [] }] }],
+        exec: [
+          { result: 1, elements: [{ id: 1, from: 0, to: 0, values: [] }] },
+        ],
+        context: [
+          { result: 2, elements: [{ id: 2, from: 0, to: 0, values: [] }] },
+        ],
       },
       lastExecutedTab: "exec",
     };
@@ -158,9 +163,8 @@ describe("QueryGraph", () => {
     await nextTick();
 
     const instance = vi.mocked(ForceGraph3D).mock.results[0]?.value;
-    const { convertElementsToGraphData } = await import(
-      "../../utils/graphDataUtils"
-    );
+    const { convertElementsToGraphData } =
+      await import("../../utils/graphDataUtils");
     vi.mocked(convertElementsToGraphData).mockReturnValue({
       nodes: [{ id: 1, values: [], source: "query" }],
       links: [],
@@ -170,7 +174,9 @@ describe("QueryGraph", () => {
     mockQueryRef.value = {
       ...mockQueryRef.value,
       results: {
-        exec: [{ result: 1, elements: [{ id: 1, from: 0, to: 0, values: [] }] }],
+        exec: [
+          { result: 1, elements: [{ id: 1, from: 0, to: 0, values: [] }] },
+        ],
       },
       lastExecutedTab: "exec",
     };
@@ -180,7 +186,9 @@ describe("QueryGraph", () => {
     mockQueryRef.value = {
       ...mockQueryRef.value,
       results: {
-        exec: [{ result: 2, elements: [{ id: 2, from: 0, to: 0, values: [] }] }],
+        exec: [
+          { result: 2, elements: [{ id: 2, from: 0, to: 0, values: [] }] },
+        ],
       },
       lastExecutedTab: "exec",
     };
@@ -200,9 +208,8 @@ describe("QueryGraph", () => {
     await nextTick();
 
     const instance = vi.mocked(ForceGraph3D).mock.results[0]?.value;
-    const { convertElementsToGraphData } = await import(
-      "../../utils/graphDataUtils"
-    );
+    const { convertElementsToGraphData } =
+      await import("../../utils/graphDataUtils");
     vi.mocked(convertElementsToGraphData).mockReturnValue({
       nodes: [{ id: 1, values: [], source: "query" }],
       links: [],
@@ -212,7 +219,9 @@ describe("QueryGraph", () => {
     mockQueryRef.value = {
       ...mockQueryRef.value,
       results: {
-        exec: [{ result: 1, elements: [{ id: 1, from: 0, to: 0, values: [] }] }],
+        exec: [
+          { result: 1, elements: [{ id: 1, from: 0, to: 0, values: [] }] },
+        ],
       },
       lastExecutedTab: "exec",
     };

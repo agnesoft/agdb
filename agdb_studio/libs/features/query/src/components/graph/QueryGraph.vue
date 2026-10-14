@@ -1,6 +1,14 @@
 <script lang="ts" setup>
 import ForceGraph3D, { type ForceGraph3DInstance } from "3d-force-graph";
-import { computed, inject, onMounted, onUnmounted, ref, watch, type Ref } from "vue";
+import {
+  computed,
+  inject,
+  onMounted,
+  onUnmounted,
+  ref,
+  watch,
+  type Ref,
+} from "vue";
 import { useQueryStore } from "../../composables/queryStore";
 import type { GraphNode, GraphLink, GraphData } from "../../composables/types";
 import {
@@ -44,7 +52,10 @@ const graphData = computed<GraphData>(() => {
     return queryGraphData;
   }
 
-  const contextGraphData = convertElementsToGraphData(contextElements, "context");
+  const contextGraphData = convertElementsToGraphData(
+    contextElements,
+    "context",
+  );
   return mergeGraphData(queryGraphData, contextGraphData);
 });
 
@@ -68,8 +79,14 @@ onMounted(() => {
   if (graphContainer.value) {
     const queryNodeColor = getComputedColor("--graph-node-color", "#ffc835");
     const queryEdgeColor = getComputedColor("--graph-edge-color", "#555555");
-    const contextNodeColor = getComputedColor("--graph-context-node-color", "#888888");
-    const contextEdgeColor = getComputedColor("--graph-context-edge-color", "#555555");
+    const contextNodeColor = getComputedColor(
+      "--graph-context-node-color",
+      "#888888",
+    );
+    const contextEdgeColor = getComputedColor(
+      "--graph-context-edge-color",
+      "#555555",
+    );
 
     graphInstance = new ForceGraph3D(graphContainer.value)
       .graphData(graphData.value)

@@ -23,6 +23,9 @@ vi.mock("../../utils/graphDataUtils", () => ({
   mergeGraphData: vi.fn(
     (query: { nodes: unknown[]; links: unknown[] }) => query,
   ),
+  filterDanglingLinks: vi.fn(
+    (data: { nodes: unknown[]; links: unknown[] }) => data,
+  ),
 }));
 
 vi.mock("3d-force-graph", () => {
@@ -153,6 +156,26 @@ describe("QueryGraph", () => {
 
     const { mergeGraphData } = await import("../../utils/graphDataUtils");
     expect(mergeGraphData).toHaveBeenCalled();
+
+    wrapper.unmount();
+  });
+
+  it("filters dangling links from graph data", async () => {
+    mockQueryRef.value = {
+      ...mockQueryRef.value,
+      results: {
+        exec: [
+          { result: 1, elements: [{ id: 1, from: 0, to: 0, values: [] }] },
+        ],
+      },
+      lastExecutedTab: "exec",
+    };
+
+    const wrapper = mountWithQueryId();
+    await nextTick();
+
+    const { filterDanglingLinks } = await import("../../utils/graphDataUtils");
+    expect(filterDanglingLinks).toHaveBeenCalled();
 
     wrapper.unmount();
   });

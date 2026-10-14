@@ -11,6 +11,7 @@ vi.mock(import("@agnesoft/agdb_api"), async (importOriginal) => {
 import {
   convertElementsToGraphData,
   dbValueToString,
+  filterDanglingLinks,
   mergeGraphData,
 } from "./graphDataUtils";
 
@@ -254,5 +255,105 @@ describe("mergeGraphData", () => {
     );
 
     expect(result).toEqual({ nodes: [], links: [] });
+  });
+});
+
+describe("filterDanglingLinks", () => {
+  it("keeps links whose source and target exist in nodes", () => {
+    const data = {
+      nodes: [
+        { id: 1, values: [], source: "query" as const },
+        { id: 2, values: [], source: "query" as const },
+      ],
+      links: [
+        {
+          id: -1,
+          values: [],
+          source: 1,
+          target: 2,
+          elementSource: "query" as const,
+        },
+      ],
+    };
+
+    const result = filterDanglingLinks(data);
+
+    expect(result.links).toHaveLength(1);
+    expect(result.nodes).toHaveLength(2);
+  });
+
+  it("drops links whose source node is missing", () => {
+    const data = {
+      nodes: [{ id: 2, values: [], source: "query" as const }],
+      links: [
+        {
+          id: -1,
+          values: [],
+          source: 1,
+          target: 2,
+          elementSource: "query" as const,
+        },
+      ],
+    };
+
+    const result = filterDanglingLinks(data);
+
+    expect(result.links).toHaveLength(0);
+    expect(result.nodes).toHaveLength(1);
+  });
+
+  it("drops links whose target node is missing", () => {
+    const data = {
+      nodes: [{ id: 1, values: [], source: "query" as const }],
+      links: [
+        {
+          id: -1,
+          values: [],
+          source: 1,
+          target: 2,
+          elementSource: "query" as const,
+        },
+      ],
+    };
+
+    const result = filterDanglingLinks(data);
+
+    expect(result.links).toHaveLength(0);
+  });
+
+  it("returns empty data for empty input", () => {
+    const result = filterDanglingLinks({ nodes: [], links: [] });
+
+    expect(result).toEqual({ nodes: [], links: [] });
+  });
+
+  it("keeps valid links and drops dangling in mixed set", () => {
+    const data = {
+      nodes: [
+        { id: 1, values: [], source: "query" as const },
+        { id: 2, values: [], source: "query" as const },
+      ],
+      links: [
+        {
+          id: -1,
+          values: [],
+          source: 1,
+          target: 2,
+          elementSource: "query" as const,
+        },
+        {
+          id: -2,
+          values: [],
+          source: 1,
+          target: 99,
+          elementSource: "query" as const,
+        },
+      ],
+    };
+
+    const result = filterDanglingLinks(data);
+
+    expect(result.links).toHaveLength(1);
+    expect(result.links[0]?.id).toBe(-1);
   });
 });

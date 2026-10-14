@@ -13,6 +13,7 @@ import { useQueryStore } from "../../composables/queryStore";
 import type { GraphNode, GraphLink, GraphData } from "../../composables/types";
 import {
   convertElementsToGraphData,
+  filterDanglingLinks,
   mergeGraphData,
 } from "../../utils/graphDataUtils";
 
@@ -49,14 +50,14 @@ const graphData = computed<GraphData>(() => {
   const contextElements = contextResults.flatMap((r) => r.elements);
 
   if (contextElements.length === 0) {
-    return queryGraphData;
+    return filterDanglingLinks(queryGraphData);
   }
 
   const contextGraphData = convertElementsToGraphData(
     contextElements,
     "context",
   );
-  return mergeGraphData(queryGraphData, contextGraphData);
+  return filterDanglingLinks(mergeGraphData(queryGraphData, contextGraphData));
 });
 
 // TODO: Colors are resolved once at mount. If the user switches themes after

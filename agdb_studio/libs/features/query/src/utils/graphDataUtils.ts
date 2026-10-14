@@ -87,3 +87,14 @@ export const mergeGraphData = (
     links: Array.from(linkMap.values()),
   };
 };
+
+/** Drops links whose source or target node is not in the node set. */
+export const filterDanglingLinks = (data: GraphData): GraphData => {
+  const nodeIds = new Set(data.nodes.map((n) => n.id));
+  return {
+    nodes: data.nodes,
+    links: data.links.filter(
+      (link) => nodeIds.has(link.source) && nodeIds.has(link.target),
+    ),
+  };
+};

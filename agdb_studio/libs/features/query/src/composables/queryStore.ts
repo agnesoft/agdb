@@ -1,3 +1,4 @@
+import type { Components } from "@agnesoft/agdb_api";
 import { ref, type Ref } from "vue";
 import type { AddQueryParams, Query, QueryStep, TAB } from "./types";
 import { queryApiMock } from "../mock/queryApiMock";
@@ -17,6 +18,7 @@ const addQuery = (query: AddQueryParams): Ref<Query> => {
       exec_mut: [],
       context: [],
     },
+    results: {},
   });
   queries.value.set(query.id, newQuery);
   return newQuery;
@@ -95,6 +97,37 @@ const stopQuery = (queryId: string) => {
   }
 };
 
+const setQueryResults = (
+  queryId: string,
+  tab: TAB,
+  results: Components.Schemas.QueryResult[],
+) => {
+  const query = getQuery(queryId);
+  if (query?.value) {
+    query.value.results = {
+      ...query.value.results,
+      [tab]: results,
+    };
+    if (tab === "exec" || tab === "exec_mut") {
+      query.value.lastExecutedTab = tab;
+    }
+  }
+};
+
+/** Clears stored results. Intended for use when query steps are modified or the view is reset. */
+const clearQueryResults = (queryId: string, tab?: TAB) => {
+  const query = getQuery(queryId);
+  if (!query?.value) return;
+  if (tab) {
+    const updated = { ...query.value.results };
+    delete updated[tab];
+    query.value.results = updated;
+  } else {
+    query.value.results = {};
+    query.value.lastExecutedTab = undefined;
+  }
+};
+
 const clearQueries = () => {
   queries.value.clear();
 };
@@ -132,5 +165,7 @@ export const useQueryStore = () => {
     getQuery,
     clearQuerySteps,
     validateQuerySteps,
+    setQueryResults,
+    clearQueryResults,
   };
 };

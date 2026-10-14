@@ -2,11 +2,14 @@ import { computed, ref } from "vue";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { QueryStep, TAB } from "./types";
 
+const mockResults = [{ result: 1, elements: [] }];
+
 const {
   routeState,
   routeControl,
   runQuery,
   stopQuery,
+  setQueryResults,
   buildQueryFromSteps,
   checkClient,
   db_exec,
@@ -23,12 +26,19 @@ const {
     await runner?.();
   }),
   stopQuery: vi.fn(),
+  setQueryResults: vi.fn(),
   buildQueryFromSteps: vi.fn(() => ({ built: true })),
   checkClient: vi.fn(),
-  db_exec: vi.fn().mockResolvedValue({}),
-  db_exec_mut: vi.fn().mockResolvedValue({}),
-  admin_db_exec: vi.fn().mockResolvedValue({}),
-  admin_db_exec_mut: vi.fn().mockResolvedValue({}),
+  db_exec: vi.fn().mockResolvedValue({ data: [{ result: 1, elements: [] }] }),
+  db_exec_mut: vi
+    .fn()
+    .mockResolvedValue({ data: [{ result: 1, elements: [] }] }),
+  admin_db_exec: vi
+    .fn()
+    .mockResolvedValue({ data: [{ result: 1, elements: [] }] }),
+  admin_db_exec_mut: vi
+    .fn()
+    .mockResolvedValue({ data: [{ result: 1, elements: [] }] }),
 }));
 
 vi.mock("vue-router", () => ({
@@ -44,6 +54,7 @@ vi.mock("./queryStore", () => ({
   useQueryStore: () => ({
     runQuery,
     stopQuery,
+    setQueryResults,
   }),
 }));
 
@@ -101,6 +112,10 @@ describe("useQueryExecution", () => {
         await runner?.();
       },
     );
+    db_exec.mockResolvedValue({ data: mockResults });
+    db_exec_mut.mockResolvedValue({ data: mockResults });
+    admin_db_exec.mockResolvedValue({ data: mockResults });
+    admin_db_exec_mut.mockResolvedValue({ data: mockResults });
   });
 
   it("exposes run label and canRun for a runnable query", () => {
@@ -201,9 +216,53 @@ describe("useQueryExecution", () => {
     expect(db_exec).not.toHaveBeenCalled();
   });
 
-  it("swallows execution failures", async () => {
+  it("swallows execution failures but logs them", async () => {
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     runQuery.mockRejectedValueOnce(new Error("boom"));
 
     await expect(setup().runOrStopQuery()).resolves.toBeUndefined();
+    expect(consoleSpy).toHaveBeenCalledWith(
+      "[query] execution failed:",
+      expect.any(Error),
+    );
+
+    consoleSpy.mockRestore();
+  });
+
+  it("stores query results after successful exec execution", async () => {
+    const execution = setup({ tab: "exec" });
+    await execution.runOrStopQuery();
+
+    expect(setQueryResults).toHaveBeenCalledWith("q1", "exec", mockResults);
+  });
+
+  it("stores query results after successful exec_mut execution", async () => {
+    const execution = setup({ tab: "exec_mut" });
+    await execution.runOrStopQuery();
+
+    expect(setQueryResults).toHaveBeenCalledWith("q1", "exec_mut", mockResults);
+  });
+
+  it("stores query results for context tab", async () => {
+    const execution = setup({ tab: "context" });
+    await execution.runOrStopQuery();
+
+    expect(setQueryResults).toHaveBeenCalledWith("q1", "context", mockResults);
+  });
+
+  it("does not store results when route params are missing", async () => {
+    routeState.params = { owner: "alice" };
+
+    await setup().runOrStopQuery();
+
+    expect(setQueryResults).not.toHaveBeenCalled();
+  });
+
+  it("stores results after admin exec execution", async () => {
+    routeState.name = "admin-db-view";
+
+    await setup({ tab: "exec" }).runOrStopQuery();
+
+    expect(setQueryResults).toHaveBeenCalledWith("q1", "exec", mockResults);
   });
 });

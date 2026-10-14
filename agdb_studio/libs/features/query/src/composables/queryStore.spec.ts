@@ -254,6 +254,88 @@ describe("queryStore", () => {
     expect(got?.value?.steps.exec_mut[2]?.invalid).toBe(true); // select invalid
   });
 
+  it("initializes a new query with empty results", () => {
+    const q = makeQuery();
+    const queryRef = store.addQuery(q);
+    expect(queryRef.value.results).toEqual({});
+    expect(queryRef.value.lastExecutedTab).toBeUndefined();
+  });
+
+  it("stores query results for exec tab and sets lastExecutedTab", () => {
+    const q = makeQuery();
+    store.addQuery(q);
+
+    const results = [{ result: 2, elements: [] }];
+    store.setQueryResults("q1", "exec", results);
+
+    const got = store.getQuery("q1");
+    expect(got?.value?.results.exec).toEqual(results);
+    expect(got?.value?.lastExecutedTab).toBe("exec");
+  });
+
+  it("stores query results for exec_mut tab and sets lastExecutedTab", () => {
+    const q = makeQuery();
+    store.addQuery(q);
+
+    const results = [{ result: 1, elements: [] }];
+    store.setQueryResults("q1", "exec_mut", results);
+
+    const got = store.getQuery("q1");
+    expect(got?.value?.results.exec_mut).toEqual(results);
+    expect(got?.value?.lastExecutedTab).toBe("exec_mut");
+  });
+
+  it("stores query results for context tab without changing lastExecutedTab", () => {
+    const q = makeQuery();
+    store.addQuery(q);
+
+    const results = [{ result: 5, elements: [] }];
+    store.setQueryResults("q1", "context", results);
+
+    const got = store.getQuery("q1");
+    expect(got?.value?.results.context).toEqual(results);
+    expect(got?.value?.lastExecutedTab).toBeUndefined();
+  });
+
+  it("is a no-op when setting results for missing query", () => {
+    store.setQueryResults("missing", "exec", [{ result: 0, elements: [] }]);
+    expect(store.getQuery("missing")).toBeUndefined();
+  });
+
+  it("clears results for a specific tab", () => {
+    const q = makeQuery();
+    store.addQuery(q);
+
+    store.setQueryResults("q1", "exec", [{ result: 1, elements: [] }]);
+    store.setQueryResults("q1", "context", [{ result: 2, elements: [] }]);
+
+    store.clearQueryResults("q1", "exec");
+
+    const got = store.getQuery("q1");
+    expect(got?.value?.results.exec).toBeUndefined();
+    expect(got?.value?.results.context).toBeDefined();
+  });
+
+  it("clears all results and resets lastExecutedTab", () => {
+    const q = makeQuery();
+    store.addQuery(q);
+
+    store.setQueryResults("q1", "exec", [{ result: 1, elements: [] }]);
+    store.setQueryResults("q1", "context", [{ result: 2, elements: [] }]);
+
+    store.clearQueryResults("q1");
+
+    const got = store.getQuery("q1");
+    expect(got?.value?.results).toEqual({});
+    expect(got?.value?.lastExecutedTab).toBeUndefined();
+  });
+
+  it("is a no-op when clearing results for missing query", () => {
+    store.clearQueryResults("missing", "exec");
+    store.clearQueryResults("missing");
+    expect(store.getQuery("missing")).toBeUndefined();
+  });
+
   it("falls back to empty followers when a followed step is missing from the mock map", () => {
     const q = makeQuery({ id: "qid-fallback" });
     const queryRef = store.addQuery(q);

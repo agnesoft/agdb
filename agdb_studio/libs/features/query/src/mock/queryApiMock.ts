@@ -291,12 +291,12 @@ export const queryApiMock: Record<string, QueryApiMockType> = {
   ),
   "insert.values": node(
     "values",
-    ["insert.values.ids", "search", "query"],
+    ["insert.values.ids", "search"],
     KV_ARGUMENTS,
   ),
   "insert.values_uniform": node(
     "values_uniform",
-    ["insert.values.ids", "search", "query"],
+    ["insert.values.ids", "search"],
     KV_ARGUMENTS,
   ),
   "insert.values.ids": node("ids", ["query"], ID_ARGUMENTS),

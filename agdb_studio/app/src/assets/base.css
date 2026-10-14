@@ -53,6 +53,8 @@
   --graph-node-color: var(--orange-light);
   --graph-node-color-accent: var(--orange-dark);
   --graph-edge-color: var(--color-border);
+  --graph-context-node-color: var(--color-text-muted);
+  --graph-context-edge-color: var(--color-border);
 }
 
 :root {

@@ -1,3 +1,4 @@
+import type { Components } from "@agnesoft/agdb_api";
 import { computed, type ComputedRef, type Ref } from "vue";
 import { useRoute } from "vue-router";
 import { checkClient, client } from "@agdb-studio/api/src/api";
@@ -15,7 +16,7 @@ const executeQuery = async (
   activeTab: TAB | undefined,
   route: MinimalRoute,
   isAdminRoute: boolean,
-): Promise<void> => {
+): Promise<Components.Schemas.QueryResult[] | undefined> => {
   checkClient(client);
 
   const ownerParam = route.params["owner"];
@@ -23,27 +24,28 @@ const executeQuery = async (
   const owner = typeof ownerParam === "string" ? ownerParam : "";
   const db = typeof dbParam === "string" ? dbParam : "";
   if (!owner || !db) {
-    return;
+    return undefined;
   }
 
   const payload = [buildQueryFromSteps(steps)];
   const isMutation = activeTab === "exec_mut";
   const useAdminEndpoints = isAdminRoute;
 
+  let response: { data: Components.Schemas.QueryResult[] };
+
   if (useAdminEndpoints) {
     if (isMutation) {
-      await client.value.admin_db_exec_mut({ owner, db }, payload);
+      response = await client.value.admin_db_exec_mut({ owner, db }, payload);
     } else {
-      await client.value.admin_db_exec({ owner, db }, payload);
+      response = await client.value.admin_db_exec({ owner, db }, payload);
     }
-    return;
+  } else if (isMutation) {
+    response = await client.value.db_exec_mut({ owner, db }, payload);
+  } else {
+    response = await client.value.db_exec({ owner, db }, payload);
   }
 
-  if (isMutation) {
-    await client.value.db_exec_mut({ owner, db }, payload);
-  } else {
-    await client.value.db_exec({ owner, db }, payload);
-  }
+  return response.data;
 };
 
 export const useQueryExecution = (
@@ -89,10 +91,20 @@ export const useQueryExecution = (
 
     try {
       await queryStore.runQuery(queryId.value, async () => {
-        await executeQuery(steps.value, tab?.value, route, isAdminRoute.value);
+        const results = await executeQuery(
+          steps.value,
+          tab?.value,
+          route,
+          isAdminRoute.value,
+        );
+        if (results && queryId?.value && tab?.value) {
+          queryStore.setQueryResults(queryId.value, tab.value, results);
+        }
       });
-    } catch {
-      // Request failures are handled by API interceptors/notifications.
+    } catch (error) {
+      // Auth errors (401) are handled by API interceptors.
+      // Log other failures so they are visible during development.
+      console.error("[query] execution failed:", error);
     }
   };
 

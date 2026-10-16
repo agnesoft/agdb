@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import type { TRow } from "@agdb-studio/common/src/composables/table/types";
-import { computed, onMounted, type PropType } from "vue";
+import type { DbUser, DbUserRole } from "@agnesoft/agdb_api/openapi";
+import { computed, onMounted, ref, type PropType } from "vue";
 import { useDbUsersStore } from "../composables/dbUsersStore";
 import { ClCloseMd, ChPlus } from "@kalimahapps/vue-icons";
 import { useDbDetails, type DbDetailsParams } from "../composables/dbDetails";
@@ -39,6 +40,68 @@ const {
 onMounted(() => {
   fetchDbUsers(dbParams.value);
 });
+
+const searchQuery = ref("");
+
+const VISIBLE_COUNT = 10;
+const expandedGroups = ref(new Set<DbUserRole>());
+
+type RoleEntry = { key: DbUserRole; label: string };
+const ROLE_ORDER: RoleEntry[] = [
+  { key: "admin", label: "Admin" },
+  { key: "write", label: "Read/Write" },
+  { key: "read", label: "Read Only" },
+];
+
+const filteredUsers = computed(() => {
+  const q = searchQuery.value.toLowerCase().trim();
+  if (!q) return users.value ?? [];
+  return (users.value ?? []).filter((u) =>
+    u.username.toLowerCase().includes(q),
+  );
+});
+
+type UserGroup = { role: DbUserRole; label: string; users: DbUser[] };
+
+// Groups filtered users — hides empty groups as the search narrows results
+const groupedUsers = computed<UserGroup[]>(() => {
+  return ROLE_ORDER.map(({ key, label }) => ({
+    role: key,
+    label,
+    users: filteredUsers.value.filter((u) => u.role === key),
+  })).filter((g) => g.users.length > 0);
+});
+
+// Uses unfiltered users so the summary always shows the full picture
+const roleCounts = computed(() => {
+  const all = users.value ?? [];
+  return ROLE_ORDER.map(({ key, label }) => ({
+    label,
+    count: all.filter((u) => u.role === key).length,
+  })).filter((r) => r.count > 0);
+});
+
+const toggleGroup = (role: DbUserRole) => {
+  if (expandedGroups.value.has(role)) {
+    expandedGroups.value.delete(role);
+  } else {
+    expandedGroups.value.add(role);
+  }
+};
+
+const visibleUsers = (group: UserGroup) => {
+  if (expandedGroups.value.has(group.role)) return group.users;
+  return group.users.slice(0, VISIBLE_COUNT);
+};
+
+const hiddenCount = (group: UserGroup) => {
+  if (expandedGroups.value.has(group.role)) return 0;
+  return Math.max(0, group.users.length - VISIBLE_COUNT);
+};
+
+const isCollapsible = (group: UserGroup) => {
+  return group.users.length > VISIBLE_COUNT;
+};
 </script>
 
 <template>
@@ -56,30 +119,64 @@ onMounted(() => {
       </button>
     </header>
 
-    <ul class="db-users">
-      <li v-for="user in users" :key="user.username" class="user-item">
-        <span
-          class="username"
-          :class="{
-            clickable: !isOwner(user.username) && canEditUsers,
-          }"
-          @click="() => handleUsernameClick(user.username, user.role)"
-          >{{ user.username }}</span
-        >
-        <span class="role">
-          ({{ user.role.charAt(0).toLocaleUpperCase() }})
+    <div class="db-users-toolbar">
+      <input
+        v-model="searchQuery"
+        type="text"
+        class="search-input"
+        placeholder="Filter users..."
+        aria-label="Filter users"
+      />
+      <span class="role-summary">
+        <span v-for="r in roleCounts" :key="r.label" class="role-count">
+          {{ r.count }} {{ r.label }}
         </span>
-        <button
-          v-if="user.username !== dbParams.owner && canEditUsers"
-          class="button button-bordered button-danger remove-button button-circle"
-          title="Remove user"
-          type="button"
-          @click="handleRemoveUser(user.username)"
+      </span>
+    </div>
+
+    <div v-for="group in groupedUsers" :key="group.role" class="role-group">
+      <h3 class="role-group-header">
+        {{ group.label }} ({{ group.users.length }})
+      </h3>
+      <ul class="db-users">
+        <li
+          v-for="user in visibleUsers(group)"
+          :key="user.username"
+          class="user-item"
         >
-          <ClCloseMd class="remove-icon" />
-        </button>
-      </li>
-    </ul>
+          <span
+            class="username"
+            :class="{
+              clickable: !isOwner(user.username) && canEditUsers,
+            }"
+            @click="() => handleUsernameClick(user.username, user.role)"
+            >{{ user.username }}</span
+          >
+          <button
+            v-if="user.username !== dbParams.owner && canEditUsers"
+            class="button button-bordered button-danger remove-button button-circle"
+            title="Remove user"
+            type="button"
+            @click="handleRemoveUser(user.username)"
+          >
+            <ClCloseMd class="remove-icon" />
+          </button>
+        </li>
+        <li v-if="isCollapsible(group)" class="show-more-item">
+          <button
+            class="button button-transparent show-more-button"
+            type="button"
+            @click="toggleGroup(group.role)"
+          >
+            {{
+              hiddenCount(group) > 0
+                ? `+${hiddenCount(group)} more`
+                : "Show less"
+            }}
+          </button>
+        </li>
+      </ul>
+    </div>
   </section>
 </template>
 
@@ -96,12 +193,54 @@ onMounted(() => {
     align-items: center;
   }
 }
+.db-users-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+.search-input {
+  padding: 0.3rem 0.5rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.25rem;
+  background: var(--color-background);
+  color: var(--color-text);
+  font-size: 0.9rem;
+  width: 200px;
+  &:focus {
+    outline: none;
+    border-color: var(--color-border-hover);
+  }
+}
+.role-summary {
+  display: flex;
+  gap: 0.25rem;
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+}
+.role-count {
+  &:not(:last-child)::after {
+    content: "·";
+    margin-left: 0.25rem;
+  }
+}
+.role-group {
+  margin-bottom: 0.5rem;
+}
+.role-group-header {
+  font-size: 0.9rem;
+  font-weight: bold;
+  color: var(--color-text-muted);
+  padding: 0.25rem 0;
+}
 .db-users {
   list-style: none;
   padding: 0;
-  margin-top: 0.5rem;
+  margin-top: 0.25rem;
   display: flex;
-  gap: 1rem;
+  flex-wrap: wrap;
+  gap: 0.75rem;
   align-items: center;
   li {
     display: flex;
@@ -111,10 +250,6 @@ onMounted(() => {
   button {
     margin: 0 0.5rem;
   }
-}
-.role {
-  color: var(--color-text-muted);
-  margin-left: 0.2rem;
 }
 .remove-icon {
   color: var(--error-color);
@@ -133,6 +268,13 @@ onMounted(() => {
     &:hover {
       opacity: 0.8;
     }
+  }
+}
+.show-more-button {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  &:hover {
+    color: var(--color-text);
   }
 }
 </style>

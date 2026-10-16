@@ -45,13 +45,23 @@ test.describe("Database Details — User Management", () => {
     const userItems = details.locator(".user-item");
     await expect(userItems).toHaveCount(MOCK_DB_USERS.length);
 
-    // Verify first user (admin)
-    await expect(userItems.first().locator(".username")).toHaveText("admin");
-    await expect(userItems.first().locator(".role")).toContainText("(A)");
+    // Users are grouped by role: Admin group first, then Read Only
+    const roleGroups = details.locator(".role-group");
+    await expect(roleGroups).toHaveCount(2);
 
-    // Verify second user (reader)
-    await expect(userItems.nth(1).locator(".username")).toHaveText("reader");
-    await expect(userItems.nth(1).locator(".role")).toContainText("(R)");
+    // Verify admin group
+    const adminGroup = roleGroups.first();
+    await expect(adminGroup.locator(".role-group-header")).toContainText(
+      "Admin",
+    );
+    await expect(adminGroup.locator(".username")).toHaveText("admin");
+
+    // Verify read group
+    const readGroup = roleGroups.nth(1);
+    await expect(readGroup.locator(".role-group-header")).toContainText(
+      "Read Only",
+    );
+    await expect(readGroup.locator(".username")).toHaveText("reader");
   });
 
   test("shows add user button for admin role", async ({ page }) => {

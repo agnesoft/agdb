@@ -162,9 +162,9 @@ describe("DbDetails", () => {
     const wrapper = mount(DbDetails);
     await wrapper.vm.$nextTick();
     const usernames = wrapper.findAll(".username");
-    const readUser = usernames.find((u) => u.text().includes("testUser2"));
-    expect(readUser).toBeDefined();
-    await readUser!.trigger("click");
+    const writeUser = usernames.find((u) => u.text().includes("testUser2"));
+    expect(writeUser).toBeDefined();
+    await writeUser!.trigger("click");
     await wrapper.vm.$nextTick();
     expect(handleUsernameClick).toHaveBeenCalledWith("testUser2", "write");
   });
@@ -244,7 +244,14 @@ describe("DbDetails", () => {
     readItems = wrapper.findAll(".role-group")[1]?.findAll(".user-item") ?? [];
     expect(readItems.length).toBe(15);
 
-    const showMoreButton = wrapper.find(".show-more-button");
-    expect(showMoreButton.text()).toBe("Show less");
+    const showLessButton = wrapper.find(".show-more-button");
+    expect(showLessButton.text()).toBe("Show less");
+
+    await showLessButton.trigger("click");
+    await wrapper.vm.$nextTick();
+
+    readItems = wrapper.findAll(".role-group")[1]?.findAll(".user-item") ?? [];
+    expect(readItems.length).toBe(10);
+    expect(wrapper.find(".show-more-button").text()).toBe("+5 more");
   });
 });

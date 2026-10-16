@@ -79,7 +79,9 @@ declare namespace Components {
          */
         export interface ClusterStatus {
             address: string;
+            executed_index: number; // int64
             leader: boolean;
+            resync: boolean;
             status: boolean;
         }
         /**

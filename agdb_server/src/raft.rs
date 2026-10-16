@@ -92,11 +92,16 @@ impl<T> Request<T> {
 pub(crate) struct Response {
     pub(crate) target: u64,
     pub(crate) result: ResponseType,
+    pub(crate) executed_index: u64,
 }
 
 impl Response {
     pub(crate) fn new(target: u64, result: ResponseType) -> Self {
-        Self { target, result }
+        Self {
+            target,
+            result,
+            executed_index: 0,
+        }
     }
 }
 

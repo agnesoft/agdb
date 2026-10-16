@@ -5,6 +5,9 @@ use axum::middleware::Next;
 use axum::response::Response;
 use reqwest::StatusCode;
 use std::sync::atomic::Ordering;
+use std::time::Duration;
+
+const EXECUTED_WAIT_TIMEOUT: Duration = Duration::from_secs(30);
 
 const REDIRECT_PATHS: [&str; 16] = [
     "/add",
@@ -37,28 +40,28 @@ pub(crate) async fn forward_to_leader(
     request: Request,
     next: Next,
 ) -> Response {
-    if state.cluster.resync.load(Ordering::Relaxed)
+    let body_limit = state.config.request_body_limit as usize;
+
+    let path = request.uri().path();
+    let served_locally = path.ends_with("/cluster") || path.ends_with("/cluster/snapshot");
+
+    if !served_locally
+        && state.cluster.resync.load(Ordering::Relaxed)
         && let Some(leader) = state.cluster.raft.read().await.leader()
         && state.cluster.index != leader as usize
     {
-        let path = request.uri().path();
-
-        if !path.ends_with("/cluster") && !path.ends_with("/cluster/snapshot") {
-            return state.cluster.nodes[leader as usize]
-                .forward(request, state.cluster.index)
-                .await
-                .unwrap_or_else(|r| r);
-        }
+        return state.cluster.nodes[leader as usize]
+            .forward(request, state.cluster.index, body_limit)
+            .await
+            .unwrap_or_else(|r| r);
     }
 
     if is_redirect_path(&request) {
         let leader = state.cluster.raft.read().await.leader();
         if let Some(leader) = leader {
             if state.cluster.index != leader as usize {
-                let mut notifier = state.cluster.raft.read().await.storage.subscribe().await;
-
                 let mut response = match state.cluster.nodes[leader as usize]
-                    .forward(request, state.cluster.index)
+                    .forward(request, state.cluster.index, body_limit)
                     .await
                 {
                     Ok(r) => r,
@@ -70,10 +73,25 @@ pub(crate) async fn forward_to_leader(
                     && let Ok(commit_index) = commit_index.to_str()
                     && let Ok(commit_index) = commit_index.parse::<u64>()
                 {
-                    while let Ok(value) = notifier.recv().await {
-                        if value == commit_index {
-                            break;
-                        }
+                    let mut executed = state.cluster.executed.clone();
+
+                    // The write is committed either way; on timeout only read-your-writes on this node is lost.
+                    match tokio::time::timeout(
+                        EXECUTED_WAIT_TIMEOUT,
+                        executed.wait_for(|index| *index >= commit_index),
+                    )
+                    .await
+                    {
+                        Ok(Ok(_)) => {}
+                        Ok(Err(_)) => crate::warn!(
+                            "[{}] Executed index channel closed while waiting for {commit_index}",
+                            state.cluster.index
+                        ),
+                        Err(_) => crate::warn!(
+                            "[{}] Timed out waiting for local execution of {commit_index} (executed: {})",
+                            state.cluster.index,
+                            *state.cluster.executed.borrow()
+                        ),
                     }
                 }
 

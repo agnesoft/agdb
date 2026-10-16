@@ -32,12 +32,14 @@ use axum::Json;
 use axum::extract::Path;
 use axum::extract::Query;
 use axum::extract::State;
+use axum::http::HeaderMap;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use std::collections::HashSet;
 use std::sync::Arc;
 use std::sync::Mutex;
 use std::sync::atomic::Ordering;
+use std::time::Duration;
 
 struct ResyncInProgressGuard {
     set: Arc<Mutex<HashSet<(String, String)>>>,
@@ -60,10 +62,10 @@ pub(crate) async fn cluster(
 ) -> ServerResult<(StatusCode, Json<Response>)> {
     if cluster.resync.load(Ordering::Relaxed) {
         let response = Response::new(request.index, ResponseType::Resyncing);
-        return Ok((StatusCode::OK, Json(response)));
+        return Ok((StatusCode::OK, Json(with_node_state(response, &cluster))));
     }
 
-    let response = cluster.raft.write().await.request(&request).await;
+    let response = with_node_state(cluster.raft.write().await.request(&request).await, &cluster);
 
     if let Some(dbs) = request.resync_dbs()
         && response.result == ResponseType::Ok
@@ -321,6 +323,11 @@ pub(crate) async fn logout(
     ))
 }
 
+fn with_node_state(mut response: Response, cluster: &Cluster) -> Response {
+    response.executed_index = *cluster.executed.borrow();
+    response
+}
+
 #[utoipa::path(get,
     path = "/api/v1/cluster/status",
     operation_id = "cluster_status",
@@ -332,38 +339,109 @@ pub(crate) async fn logout(
 pub(crate) async fn status(
     State(config): State<Config>,
     State(cluster): State<Cluster>,
+    headers: HeaderMap,
 ) -> ServerResult<(StatusCode, Json<Vec<ClusterStatus>>)> {
     if config.cluster.is_empty() {
         let status = ClusterStatus {
             address: config.server_url(),
             status: true,
             leader: true,
+            executed_index: *cluster.executed.borrow(),
+            resync: false,
         };
         return Ok((StatusCode::OK, Json(vec![status])));
     }
 
+    let leader = cluster.raft.read().await.leader();
+
+    let mut statuses = match leader {
+        Some(leader) if leader as usize == cluster.index => leader_view(&config, &cluster),
+        // A forwarded request is answered locally even if leadership moved, to avoid ping-pong.
+        Some(leader) if !headers.contains_key("forwarded-by") => {
+            match leader_status(&cluster, leader as usize).await {
+                Some(statuses) => statuses,
+                None => probe_view(&config, &cluster, Some(leader)).await?,
+            }
+        }
+        _ => probe_view(&config, &cluster, leader).await?,
+    };
+
+    statuses.sort_by(|a, b| a.address.cmp(&b.address));
+
+    Ok((StatusCode::OK, Json(statuses)))
+}
+
+fn leader_view(config: &Config, cluster: &Cluster) -> Vec<ClusterStatus> {
+    // Wider than the term timeout so a peer busy with a slow append is not reported down.
+    let alive = Duration::from_millis(config.cluster_term_timeout_ms * 2);
+
+    config
+        .cluster
+        .iter()
+        .zip(&cluster.nodes)
+        .enumerate()
+        .map(|(index, (address, node))| {
+            if index == cluster.index {
+                ClusterStatus {
+                    address: address.as_str().to_string(),
+                    status: true,
+                    leader: true,
+                    executed_index: *cluster.executed.borrow(),
+                    resync: false,
+                }
+            } else {
+                let peer = node.peer_state();
+                ClusterStatus {
+                    address: address.as_str().to_string(),
+                    status: peer.last_response.is_some_and(|t| t.elapsed() < alive),
+                    leader: false,
+                    executed_index: peer.executed_index,
+                    resync: peer.resync,
+                }
+            }
+        })
+        .collect()
+}
+
+async fn leader_status(cluster: &Cluster, leader: usize) -> Option<Vec<ClusterStatus>> {
+    let node = &cluster.nodes[leader];
+    let response = node
+        .http_client()
+        .get(format!("{}/api/v1/cluster/status", node.base_url()))
+        .header("forwarded-by", cluster.index)
+        .timeout(Duration::from_secs(5))
+        .send()
+        .await
+        .ok()?;
+
+    if !response.status().is_success() {
+        return None;
+    }
+
+    response.json().await.ok()
+}
+
+async fn probe_view(
+    config: &Config,
+    cluster: &Cluster,
+    leader: Option<u64>,
+) -> ServerResult<Vec<ClusterStatus>> {
     let mut statuses = vec![ClusterStatus::default(); config.cluster.len()];
     let mut tasks = Vec::new();
-    let leader = cluster.raft.read().await.leader();
 
     for (index, node) in config.cluster.iter().enumerate() {
         if index != cluster.index {
             let address = node.as_str().to_string();
             let url = format!("{}/api/v1/status", node.trim_end_matches("/"));
-            let client = cluster::reqwest_client(&config)?;
+            let client = cluster::reqwest_client(config)?;
 
             tasks.push(tokio::spawn(async move {
                 let response = client
                     .get(&url)
-                    .timeout(std::time::Duration::from_secs(5))
+                    .timeout(Duration::from_secs(5))
                     .send()
                     .await;
-
-                let status = if let Ok(response) = response {
-                    response.status().is_success()
-                } else {
-                    false
-                };
+                let status = response.is_ok_and(|r| r.status().is_success());
 
                 (
                     index,
@@ -371,15 +449,19 @@ pub(crate) async fn status(
                         address,
                         status,
                         leader: status && Some(index as u64) == leader,
+                        ..Default::default()
                     },
                 )
             }));
         } else {
-            let status = &mut statuses[index];
-            status.address = node.as_str().to_string();
-            status.status = true;
-            status.leader = Some(index as u64) == leader;
-        };
+            statuses[index] = ClusterStatus {
+                address: node.as_str().to_string(),
+                status: true,
+                leader: Some(index as u64) == leader,
+                executed_index: *cluster.executed.borrow(),
+                resync: cluster.resync.load(Ordering::Relaxed),
+            };
+        }
     }
 
     for task in tasks {
@@ -388,7 +470,5 @@ pub(crate) async fn status(
         }
     }
 
-    statuses.sort_by(|a, b| a.address.cmp(&b.address));
-
-    Ok((StatusCode::OK, Json(statuses)))
+    Ok(statuses)
 }

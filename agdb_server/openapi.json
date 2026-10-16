@@ -2686,13 +2686,23 @@
         "required": [
           "address",
           "status",
-          "leader"
+          "leader",
+          "executed_index",
+          "resync"
         ],
         "properties": {
           "address": {
             "type": "string"
           },
+          "executed_index": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
           "leader": {
+            "type": "boolean"
+          },
+          "resync": {
             "type": "boolean"
           },
           "status": {

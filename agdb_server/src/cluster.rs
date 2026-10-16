@@ -42,6 +42,7 @@ use tokio::sync::broadcast;
 use tokio::sync::mpsc::UnboundedReceiver;
 use tokio::sync::mpsc::UnboundedSender;
 use tokio::sync::oneshot::Sender;
+use tokio::sync::watch;
 use tokio::time::Instant;
 
 pub(crate) type Cluster = Arc<ClusterImpl>;
@@ -49,6 +50,9 @@ pub(crate) type Cluster = Arc<ClusterImpl>;
 type ClusterNode = Arc<ClusterNodeImpl>;
 type ResultNotifier = Sender<ServerResult<(u64, ClusterActionResult)>>;
 type ClusterResponseReceiver = UnboundedReceiver<(Request<ClusterAction>, Response)>;
+
+const FORWARD_CONNECT_ATTEMPTS: u32 = 3;
+const FORWARD_CONNECT_BACKOFF: Duration = Duration::from_millis(200);
 
 pub(crate) struct ClusterNodeImpl {
     client: ReqwestClient,
@@ -59,6 +63,14 @@ pub(crate) struct ClusterNodeImpl {
     requests_sender: UnboundedSender<Request<ClusterAction>>,
     requests_receiver: RwLock<UnboundedReceiver<Request<ClusterAction>>>,
     responses: UnboundedSender<(Request<ClusterAction>, Response)>,
+    peer: Mutex<PeerState>,
+}
+
+#[derive(Clone, Copy, Default)]
+pub(crate) struct PeerState {
+    pub(crate) last_response: Option<Instant>,
+    pub(crate) executed_index: u64,
+    pub(crate) resync: bool,
 }
 
 pub(crate) struct ClusterImpl {
@@ -70,6 +82,7 @@ pub(crate) struct ClusterImpl {
     pub(crate) snapshot_in_flight: Arc<AtomicUsize>,
     pub(crate) poisoned: Arc<AtomicBool>,
     pub(crate) resync_in_progress: Arc<Mutex<std::collections::HashSet<(String, String)>>>,
+    pub(crate) executed: watch::Receiver<u64>,
 }
 
 impl ClusterImpl {
@@ -121,7 +134,20 @@ impl ClusterNodeImpl {
             requests_sender,
             requests_receiver: RwLock::new(requests_receiver),
             responses,
+            peer: Mutex::new(PeerState::default()),
         })
+    }
+
+    pub(crate) fn peer_state(&self) -> PeerState {
+        *self.peer.lock().unwrap_or_else(|e| e.into_inner())
+    }
+
+    fn record_peer_state(&self, response: &Response) {
+        *self.peer.lock().unwrap_or_else(|e| e.into_inner()) = PeerState {
+            last_response: Some(Instant::now()),
+            executed_index: response.executed_index,
+            resync: response.result == raft::ResponseType::Resyncing,
+        };
     }
 
     pub(crate) fn base_url(&self) -> &str {
@@ -134,18 +160,25 @@ impl ClusterNodeImpl {
         &self.client.client
     }
 
-    fn bad_request(message: &str) -> AxumResponse {
+    fn error_response(status: StatusCode, message: &str) -> AxumResponse {
         AxumResponse::builder()
-            .status(StatusCode::BAD_REQUEST)
+            .status(status)
             .body(message.to_owned().into())
-            .expect("bad request")
+            .expect("error response")
     }
 
+    fn bad_request(message: &str) -> AxumResponse {
+        Self::error_response(StatusCode::BAD_REQUEST, message)
+    }
+
+    /// Failures to reach the leader are reported as `503` when the request was never sent
+    /// (safe to retry) and `502` when it may have been (outcome unknown).
     #[allow(clippy::result_large_err)]
     pub(crate) async fn forward(
         &self,
         axum_request: AxumRequest,
         local_index: usize,
+        body_limit: usize,
     ) -> Result<AxumResponse, AxumResponse> {
         let (parts, body) = axum_request.into_parts();
         let path_query = parts.uri.path_and_query().ok_or(Self::bad_request(""))?;
@@ -168,19 +201,54 @@ impl ClusterNodeImpl {
             headers.insert("user-agent", user_agent.clone());
         }
 
-        let mut response = self
-            .client
-            .client
-            .request(
-                reqwest::Method::from_str(parts.method.as_str())
-                    .map_err(|e| Self::bad_request(&e.to_string()))?,
-                url,
-            )
-            .headers(headers)
-            .body(reqwest::Body::wrap_stream(body.into_data_stream()))
-            .send()
-            .await
+        let method = reqwest::Method::from_str(parts.method.as_str())
             .map_err(|e| Self::bad_request(&e.to_string()))?;
+        let body = axum::body::to_bytes(body, body_limit).await.map_err(|e| {
+            let too_large =
+                std::iter::successors(Some(&e as &dyn std::error::Error), |e| e.source())
+                    .any(|e| e.is::<http_body_util::LengthLimitError>());
+            let status = if too_large {
+                StatusCode::PAYLOAD_TOO_LARGE
+            } else {
+                StatusCode::BAD_REQUEST
+            };
+            Self::error_response(status, &format!("failed to read request body: {e}"))
+        })?;
+        let mut attempt = 1;
+
+        let mut response = loop {
+            match self
+                .client
+                .client
+                .request(method.clone(), &url)
+                .headers(headers.clone())
+                .body(body.clone())
+                .send()
+                .await
+            {
+                Ok(response) => break response,
+                Err(e) if e.is_connect() && attempt < FORWARD_CONNECT_ATTEMPTS => {
+                    crate::warn!(
+                        "[{local_index}] Forward to leader failed to connect (attempt {attempt}/{FORWARD_CONNECT_ATTEMPTS}): {}",
+                        error_chain(&e)
+                    );
+                    tokio::time::sleep(FORWARD_CONNECT_BACKOFF * attempt).await;
+                    attempt += 1;
+                }
+                Err(e) if e.is_connect() => {
+                    return Err(Self::error_response(
+                        StatusCode::SERVICE_UNAVAILABLE,
+                        &format!("forward to leader failed to connect: {}", error_chain(&e)),
+                    ));
+                }
+                Err(e) => {
+                    return Err(Self::error_response(
+                        StatusCode::BAD_GATEWAY,
+                        &format!("forward to leader failed: {}", error_chain(&e)),
+                    ));
+                }
+            }
+        };
 
         let mut axum_response = AxumResponse::builder().status(response.status());
 
@@ -190,7 +258,7 @@ impl ClusterNodeImpl {
 
         axum_response
             .body(Body::from_stream(response.bytes_stream()))
-            .map_err(|e| Self::bad_request(&e.to_string()))
+            .map_err(|e| Self::error_response(StatusCode::BAD_GATEWAY, &e.to_string()))
     }
 
     async fn send(&self, request: &raft::Request<ClusterAction>) -> Option<raft::Response> {
@@ -252,6 +320,7 @@ pub(crate) async fn new(
         term_timeout: Duration::from_millis(config.cluster_term_timeout_ms),
         max_log_entries: config.cluster_max_log_entries,
     };
+    let executed = storage.executed.subscribe();
     let raft = Arc::new(RwLock::new(raft::Cluster::new(storage, settings)));
     let mut nodes = vec![];
 
@@ -281,6 +350,7 @@ pub(crate) async fn new(
         snapshot_in_flight,
         poisoned,
         resync_in_progress: Arc::new(Mutex::new(std::collections::HashSet::new())),
+        executed,
     }))
 }
 
@@ -302,6 +372,7 @@ async fn start_cluster(
             while !shutdown_signal.load(Ordering::Relaxed) {
                 if let Some(request) = node.requests_receiver.write().await.recv().await {
                     if let Some(response) = node.send(&request).await {
+                        node.record_peer_state(&response);
                         match node.responses.send((request, response)) {
                             Ok(_) => {}
                             Err(e) => crate::warn!(
@@ -453,11 +524,12 @@ type ExecTask = (Log<ClusterAction>, Option<ResultNotifier>);
 
 pub(crate) struct ClusterStorage {
     result_notifiers: HashMap<DbId, ResultNotifier>,
-    pub(crate) notifier: tokio::sync::broadcast::Sender<u64>,
+
     exec_sender: tokio::sync::mpsc::UnboundedSender<ExecTask>,
     exec_worker: Option<tokio::task::JoinHandle<()>>,
     node: usize,
     log_body_limit: usize,
+    pub(crate) executed: watch::Sender<u64>,
     pub(crate) index: u64,
     pub(crate) term: u64,
     pub(crate) commit: u64,
@@ -488,12 +560,12 @@ impl ClusterStorage {
         let logs = cluster_log.logs_unexecuted(commit).await?;
         let (exec_sender, exec_rx) = tokio::sync::mpsc::unbounded_channel();
         let snapshot_lock = Arc::new(RwLock::new(()));
-        let notifier = tokio::sync::broadcast::channel(100).0;
+        let executed = watch::Sender::new(executed_before(&logs, commit));
         let failed = cluster_log.failed_indices().await?;
 
         let mut storage = Self {
             result_notifiers: HashMap::new(),
-            notifier,
+            executed,
             exec_sender,
             exec_worker: None,
             node,
@@ -548,7 +620,7 @@ impl ClusterStorage {
             db: self.db.clone(),
             db_pool: self.db_pool.clone(),
             cluster_log: self.cluster_log.clone(),
-            notifier: self.notifier.clone(),
+            executed: self.executed.clone(),
             failed_indices: self.failed_indices.clone(),
         };
         self.exec_worker = Some(Self::spawn_exec_worker(exec_rx, ctx, self.poisoned.clone()));
@@ -576,6 +648,8 @@ impl ClusterStorage {
         self.term = term;
         self.commit = commit;
         self.prune_index = commit.saturating_sub(self.max_log_entries);
+        // Indices covered by the snapshot are never executed locally, so waiters must be released here.
+        advance_executed(&self.executed, executed_before(&logs, commit));
         self.result_notifiers.clear();
         *self
             .failed_indices
@@ -612,10 +686,36 @@ impl ClusterStorage {
             );
         }
     }
+}
 
-    pub(crate) async fn subscribe(&self) -> tokio::sync::broadcast::Receiver<u64> {
-        self.notifier.subscribe()
+fn error_chain(error: &dyn std::error::Error) -> String {
+    let mut message = error.to_string();
+    let mut source = error.source();
+
+    while let Some(e) = source {
+        message.push_str(": ");
+        message.push_str(&e.to_string());
+        source = e.source();
     }
+
+    message
+}
+
+fn executed_before(unexecuted: &[Log<ClusterAction>], commit: u64) -> u64 {
+    unexecuted
+        .first()
+        .map_or(commit, |log| log.index.saturating_sub(1))
+}
+
+fn advance_executed(executed: &watch::Sender<u64>, index: u64) {
+    executed.send_if_modified(|current| {
+        if index > *current {
+            *current = index;
+            true
+        } else {
+            false
+        }
+    });
 }
 
 fn truncate(s: String, limit: usize) -> String {
@@ -640,7 +740,7 @@ struct ExecContext {
     db: ServerDb,
     db_pool: DbPool,
     cluster_log: ClusterLog,
-    notifier: tokio::sync::broadcast::Sender<u64>,
+    executed: watch::Sender<u64>,
     failed_indices: Arc<StdRwLock<Vec<u64>>>,
 }
 
@@ -677,7 +777,7 @@ impl ExecContext {
             None
         };
 
-        let _ = self.notifier.send(log_index);
+        advance_executed(&self.executed, log_index);
 
         let mut notes: Vec<String> = Vec::new();
 
@@ -917,4 +1017,141 @@ pub(crate) fn reqwest_client(_config: &Config) -> ServerResult<reqwest::Client> 
     Ok(reqwest::Client::builder()
         .timeout(Duration::from_secs(60))
         .build()?)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tokio::io::AsyncReadExt;
+
+    fn node(address: &str) -> ClusterNodeImpl {
+        let config = Config::new(crate::config::default_config());
+        let (responses, _) = tokio::sync::mpsc::unbounded_channel();
+        ClusterNodeImpl::new(address, "token", responses, &config).unwrap()
+    }
+
+    fn request() -> AxumRequest {
+        AxumRequest::builder()
+            .method("POST")
+            .uri("/api/v1/db/admin/db/exec_mut")
+            .body(Body::from("[]"))
+            .unwrap()
+    }
+
+    async fn body_text(response: AxumResponse) -> String {
+        let bytes = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap();
+        String::from_utf8_lossy(&bytes).to_string()
+    }
+
+    #[tokio::test]
+    async fn forward_connect_failure_is_service_unavailable() {
+        // GIVEN
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let address = format!("http://{}", listener.local_addr().unwrap());
+        drop(listener);
+        let start = std::time::Instant::now();
+
+        // WHEN
+        let response = node(&address)
+            .forward(request(), 1, usize::MAX)
+            .await
+            .unwrap_err();
+
+        // THEN
+        assert_eq!(response.status(), StatusCode::SERVICE_UNAVAILABLE);
+        assert!(
+            start.elapsed() >= FORWARD_CONNECT_BACKOFF * 3,
+            "retries with backoff before giving up"
+        );
+        assert!(body_text(response).await.contains("failed to connect"));
+    }
+
+    #[tokio::test]
+    async fn forward_failure_after_send_is_bad_gateway() {
+        // GIVEN
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let address = format!("http://{}", listener.local_addr().unwrap());
+        let accepts = tokio::spawn(async move {
+            let mut count = 0;
+            while let Ok(Ok((mut stream, _))) =
+                tokio::time::timeout(Duration::from_millis(500), listener.accept()).await
+            {
+                count += 1;
+                let mut buf = [0u8; 1024];
+                let _ = stream.read(&mut buf).await;
+            }
+            count
+        });
+
+        // WHEN
+        let response = node(&address)
+            .forward(request(), 1, usize::MAX)
+            .await
+            .unwrap_err();
+
+        // THEN
+        assert_eq!(response.status(), StatusCode::BAD_GATEWAY);
+        assert!(
+            body_text(response)
+                .await
+                .contains("forward to leader failed")
+        );
+        assert_eq!(
+            accepts.await.unwrap(),
+            1,
+            "request that may have been executed is not resent"
+        );
+    }
+
+    #[tokio::test]
+    async fn forward_oversized_body_is_payload_too_large() {
+        // GIVEN
+        let body_limit = 1;
+
+        // WHEN
+        let response = node("http://127.0.0.1:1")
+            .forward(request(), 1, body_limit)
+            .await
+            .unwrap_err();
+
+        // THEN
+        assert_eq!(response.status(), StatusCode::PAYLOAD_TOO_LARGE);
+    }
+
+    #[test]
+    fn executed_index_only_advances() {
+        // GIVEN
+        let executed = watch::Sender::new(5);
+        let receiver = executed.subscribe();
+
+        // WHEN
+        advance_executed(&executed, 3);
+        let after_lower = *receiver.borrow();
+        advance_executed(&executed, 9);
+
+        // THEN
+        assert_eq!(after_lower, 5, "lower index is ignored");
+        assert_eq!(*receiver.borrow(), 9, "higher index is applied");
+    }
+
+    #[test]
+    fn executed_before_first_unexecuted_log() {
+        let log = |index| Log {
+            db_id: None,
+            index,
+            term: 1,
+            data: ClusterAction::RemoveAllTokens(
+                crate::action::remove_all_tokens::RemoveAllTokens {},
+            ),
+        };
+
+        assert_eq!(executed_before(&[], 10), 10, "all committed logs executed");
+        assert_eq!(
+            executed_before(&[log(7), log(8)], 10),
+            6,
+            "first unexecuted is pending"
+        );
+    }
 }

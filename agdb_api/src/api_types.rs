@@ -123,6 +123,8 @@ pub struct ClusterStatus {
     pub address: String,
     pub status: bool,
     pub leader: bool,
+    pub executed_index: u64,
+    pub resync: bool,
 }
 
 /// Server-wide status information returned by the admin status endpoint.
@@ -414,6 +416,8 @@ mod tests {
                 address: "localhost".to_string(),
                 status: true,
                 leader: false,
+                executed_index: 0,
+                resync: false,
             }
         );
     }
@@ -548,6 +552,8 @@ mod tests {
             address: "localhost".to_string(),
             status: true,
             leader: false,
+            executed_index: 7,
+            resync: true,
         };
         let data = serde_json::to_string(&cs1).unwrap();
         let cs2: ClusterStatus = serde_json::from_str(&data).unwrap();

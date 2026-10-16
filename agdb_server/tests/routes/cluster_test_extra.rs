@@ -735,3 +735,228 @@ async fn server_db_resync_after_corruption() -> Result<(), TestError> {
 
     Ok(())
 }
+
+async fn wait_for_converged_executed_index(
+    api: &AgdbApi<ReqwestClient>,
+) -> Result<Vec<agdb_api::ClusterStatus>, TestError> {
+    let mut statuses = Vec::new();
+
+    for _ in 0..50 {
+        statuses = api.cluster_status().await?.1;
+        let first = statuses[0].executed_index;
+
+        if statuses
+            .iter()
+            .all(|s| s.status && !s.resync && s.executed_index == first)
+        {
+            break;
+        }
+
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+    }
+
+    Ok(statuses)
+}
+
+#[tokio::test]
+async fn cluster_status_reports_replication_state() -> Result<(), TestError> {
+    // GIVEN
+    let servers = create_cluster(3, false).await?;
+    let mut follower = AgdbApi::new(
+        ReqwestClient::with_client(reqwest_client()),
+        &servers[1].address,
+    );
+    follower.cluster_user_login(ADMIN, ADMIN).await?;
+    follower
+        .admin_db_add(ADMIN, "status_test", DbKind::Memory)
+        .await?;
+
+    // WHEN
+    for i in 0..5 {
+        follower
+            .admin_db_exec_mut(
+                ADMIN,
+                "status_test",
+                &[QueryBuilder::insert()
+                    .nodes()
+                    .values(vec![vec![("key", i).into()]])
+                    .query()
+                    .into()],
+            )
+            .await?;
+        let count = follower
+            .admin_db_exec(
+                ADMIN,
+                "status_test",
+                &[QueryBuilder::select().node_count().query().into()],
+            )
+            .await?
+            .1[0]
+            .result;
+        assert_eq!(count, i + 1, "forwarded write is visible on the follower");
+    }
+
+    let statuses = wait_for_converged_executed_index(&follower).await?;
+
+    // THEN
+    assert_eq!(statuses.iter().filter(|s| s.leader).count(), 1);
+    assert!(
+        statuses.iter().all(|s| s.status && !s.resync),
+        "{statuses:?}"
+    );
+    assert!(
+        statuses
+            .iter()
+            .all(|s| s.executed_index == statuses[0].executed_index && s.executed_index > 0),
+        "peers' executed indices come from the leader: {statuses:?}"
+    );
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn executed_index_advances_after_snapshot_resync() -> Result<(), TestError> {
+    // GIVEN
+    let mut servers = create_cluster_with_max_log_entries(3, 5).await?;
+    let mut leader = AgdbApi::new(
+        ReqwestClient::with_client(reqwest_client()),
+        &servers[0].address,
+    );
+    leader.user_login(ADMIN, ADMIN).await?;
+    leader
+        .db_add(ADMIN, "executed_test", DbKind::Mapped)
+        .await?;
+    let mut follower = AgdbApi::new(
+        ReqwestClient::with_client(reqwest_client()),
+        &servers[2].address,
+    );
+    follower.user_login(ADMIN, ADMIN).await?;
+    follower.admin_shutdown().await?;
+    servers[2].wait().await?;
+
+    for i in 0..20 {
+        leader
+            .db_exec_mut(
+                ADMIN,
+                "executed_test",
+                &[QueryBuilder::insert()
+                    .nodes()
+                    .values(vec![vec![("key", i).into()]])
+                    .query()
+                    .into()],
+            )
+            .await?;
+    }
+
+    // WHEN
+    servers[2].restart()?;
+    follower = AgdbApi::new(
+        ReqwestClient::with_client(reqwest_client()),
+        &servers[2].address,
+    );
+    wait_for_ready(&follower).await?;
+    let mut leader_executed = 0;
+    let mut follower_executed = 0;
+
+    for _ in 0..20 {
+        let statuses = leader.cluster_status().await?.1;
+        leader_executed = statuses
+            .iter()
+            .find(|s| s.leader)
+            .map_or(0, |s| s.executed_index);
+        follower_executed = statuses
+            .iter()
+            .find(|s| s.address == servers[2].address)
+            .map_or(0, |s| s.executed_index);
+
+        if follower_executed >= leader_executed {
+            break;
+        }
+
+        tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+    }
+
+    while follower.cluster_user_login(ADMIN, ADMIN).await.is_err() {
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+    }
+
+    let start = std::time::Instant::now();
+    follower
+        .db_exec_mut(
+            ADMIN,
+            "executed_test",
+            &[QueryBuilder::insert()
+                .nodes()
+                .values(vec![vec![("key", 20).into()]])
+                .query()
+                .into()],
+        )
+        .await?;
+    let count = follower
+        .db_exec(
+            ADMIN,
+            "executed_test",
+            &[QueryBuilder::select().node_count().query().into()],
+        )
+        .await?
+        .1[0]
+        .result;
+
+    // THEN
+    assert!(
+        follower_executed >= leader_executed,
+        "resynced node executed index {follower_executed} reaches leader's {leader_executed}"
+    );
+    assert!(
+        start.elapsed() < std::time::Duration::from_secs(10),
+        "forwarded write on resynced node does not wait for the timeout"
+    );
+    assert_eq!(count, 21, "forwarded write is visible on the resynced node");
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn cluster_status_reports_stopped_follower_as_down() -> Result<(), TestError> {
+    // GIVEN
+    let mut servers = create_cluster(3, false).await?;
+    let leader = AgdbApi::new(
+        ReqwestClient::with_client(reqwest_client()),
+        &servers[0].address,
+    );
+    let mut stopped = AgdbApi::new(
+        ReqwestClient::with_client(reqwest_client()),
+        &servers[2].address,
+    );
+    wait_for_converged_executed_index(&leader).await?;
+
+    // WHEN
+    stopped.user_login(ADMIN, ADMIN).await?;
+    stopped.admin_shutdown().await?;
+    servers[2].wait().await?;
+    let mut statuses = Vec::new();
+
+    for _ in 0..30 {
+        statuses = leader.cluster_status().await?.1;
+
+        if statuses
+            .iter()
+            .any(|s| s.address == servers[2].address && !s.status)
+        {
+            break;
+        }
+
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+    }
+
+    // THEN
+    for status in &statuses {
+        assert_eq!(
+            status.status,
+            status.address != servers[2].address,
+            "only the stopped node is down: {statuses:?}"
+        );
+    }
+
+    Ok(())
+}

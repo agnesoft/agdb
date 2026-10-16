@@ -229,7 +229,7 @@ fn normalize_address(config: &mut ConfigImpl) {
     }
 }
 
-fn default_config() -> ConfigImpl {
+pub(crate) fn default_config() -> ConfigImpl {
     ConfigImpl {
         bind: ":::3000".to_string(),
         address: "http://localhost:3000".to_string(),

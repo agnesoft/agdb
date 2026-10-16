@@ -398,8 +398,20 @@ describe("useClusterStatus", () => {
   it("should switch without logout when already logged in on target server", async () => {
     mockApiUrl.value = "http://server1:8080";
     const mockServers: ClusterStatus[] = [
-      { address: "https://agdb0:8080", status: true, leader: true },
-      { address: "https://agdb1:9090", status: true, leader: false },
+      {
+        address: "https://agdb0:8080",
+        status: true,
+        leader: true,
+        executed_index: 7,
+        resync: false,
+      },
+      {
+        address: "https://agdb1:9090",
+        status: true,
+        leader: false,
+        executed_index: 7,
+        resync: false,
+      },
     ];
 
     mockClient.cluster_status.mockResolvedValue({ data: mockServers });
@@ -422,8 +434,20 @@ describe("useClusterStatus", () => {
   it("should logout before switching when target server is not logged in", async () => {
     mockApiUrl.value = "http://server1:8080";
     const mockServers: ClusterStatus[] = [
-      { address: "https://agdb0:8080", status: true, leader: true },
-      { address: "https://agdb1:9090", status: true, leader: false },
+      {
+        address: "https://agdb0:8080",
+        status: true,
+        leader: true,
+        executed_index: 7,
+        resync: false,
+      },
+      {
+        address: "https://agdb1:9090",
+        status: true,
+        leader: false,
+        executed_index: 7,
+        resync: false,
+      },
     ];
 
     mockClient.cluster_status.mockResolvedValue({ data: mockServers });
@@ -444,8 +468,20 @@ describe("useClusterStatus", () => {
   });
   it("should track per-server logged-in status", async () => {
     const mockServers: ClusterStatus[] = [
-      { address: "server1:8080", status: true, leader: true },
-      { address: "server2:8080", status: true, leader: false },
+      {
+        address: "server1:8080",
+        status: true,
+        leader: true,
+        executed_index: 7,
+        resync: false,
+      },
+      {
+        address: "server2:8080",
+        status: true,
+        leader: false,
+        executed_index: 7,
+        resync: false,
+      },
     ];
     mockClient.cluster_status.mockResolvedValue({ data: mockServers });
     mockServerUserStatus
@@ -468,6 +504,8 @@ describe("useClusterStatus", () => {
       address: "server2:8080",
       status: false,
       leader: false,
+      executed_index: 7,
+      resync: false,
     };
 
     const vm = mountComposable();
@@ -480,8 +518,20 @@ describe("useClusterStatus", () => {
   it("should resolve active server by matching normalized port", async () => {
     mockApiUrl.value = "http://localhost:8080";
     const mockServers: ClusterStatus[] = [
-      { address: "https://agdb0:8080", status: true, leader: true },
-      { address: "https://agdb1:9090", status: true, leader: false },
+      {
+        address: "https://agdb0:8080",
+        status: true,
+        leader: true,
+        executed_index: 7,
+        resync: false,
+      },
+      {
+        address: "https://agdb1:9090",
+        status: true,
+        leader: false,
+        executed_index: 7,
+        resync: false,
+      },
     ];
 
     mockClient.cluster_status.mockResolvedValue({ data: mockServers });
@@ -524,8 +574,20 @@ describe("useClusterStatus", () => {
   it("should handle switch errors and always clear switching marker", async () => {
     mockApiUrl.value = "http://server1:8080";
     const mockServers: ClusterStatus[] = [
-      { address: "https://agdb0:8080", status: true, leader: true },
-      { address: "https://agdb1:9090", status: true, leader: false },
+      {
+        address: "https://agdb0:8080",
+        status: true,
+        leader: true,
+        executed_index: 7,
+        resync: false,
+      },
+      {
+        address: "https://agdb1:9090",
+        status: true,
+        leader: false,
+        executed_index: 7,
+        resync: false,
+      },
     ];
 
     mockClient.cluster_status.mockResolvedValue({ data: mockServers });
@@ -586,8 +648,20 @@ describe("useClusterStatus", () => {
   it("should handle non-Error exceptions during switch", async () => {
     mockApiUrl.value = "http://server1:8080";
     const mockServers: ClusterStatus[] = [
-      { address: "https://agdb0:8080", status: true, leader: true },
-      { address: "https://agdb1:9090", status: true, leader: false },
+      {
+        address: "https://agdb0:8080",
+        status: true,
+        leader: true,
+        executed_index: 7,
+        resync: false,
+      },
+      {
+        address: "https://agdb1:9090",
+        status: true,
+        leader: false,
+        executed_index: 7,
+        resync: false,
+      },
     ];
 
     mockClient.cluster_status.mockResolvedValue({ data: mockServers });

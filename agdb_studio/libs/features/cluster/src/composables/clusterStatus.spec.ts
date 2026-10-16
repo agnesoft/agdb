@@ -4,6 +4,18 @@ import { mount, flushPromises, type VueWrapper } from "@vue/test-utils";
 import { useClusterStatus, resetClusterStatusState } from "./clusterStatus";
 import type { ClusterStatus } from "@agnesoft/agdb_api/openapi";
 
+const clusterStatus = (
+  address: string,
+  status: boolean,
+  leader: boolean,
+): ClusterStatus => ({
+  address,
+  status,
+  leader,
+  executed_index: 0,
+  resync: false,
+});
+
 const mockClient = vi.hoisted(() => ({
   cluster_status: vi.fn(),
   get_token: vi.fn(),
@@ -132,8 +144,8 @@ describe("useClusterStatus", () => {
 
   it("should fetch cluster status and calculate GREEN status", async () => {
     const mockServers: ClusterStatus[] = [
-      { address: "server1:8080", status: true, leader: true },
-      { address: "server2:8080", status: true, leader: false },
+      clusterStatus("server1:8080", true, true),
+      clusterStatus("server2:8080", true, false),
     ];
 
     mockClient.cluster_status.mockResolvedValue({ data: mockServers });
@@ -155,8 +167,8 @@ describe("useClusterStatus", () => {
 
   it("should calculate RED status when all servers are down", async () => {
     const mockServers: ClusterStatus[] = [
-      { address: "server1:8080", status: false, leader: false },
-      { address: "server2:8080", status: false, leader: false },
+      clusterStatus("server1:8080", false, false),
+      clusterStatus("server2:8080", false, false),
     ];
 
     mockClient.cluster_status.mockResolvedValue({ data: mockServers });
@@ -172,8 +184,8 @@ describe("useClusterStatus", () => {
 
   it("should calculate AMBER status when no leader exists", async () => {
     const mockServers: ClusterStatus[] = [
-      { address: "server1:8080", status: true, leader: false },
-      { address: "server2:8080", status: true, leader: false },
+      clusterStatus("server1:8080", true, false),
+      clusterStatus("server2:8080", true, false),
     ];
 
     mockClient.cluster_status.mockResolvedValue({ data: mockServers });
@@ -192,8 +204,8 @@ describe("useClusterStatus", () => {
 
   it("should calculate AMBER status when any server is down", async () => {
     const mockServers: ClusterStatus[] = [
-      { address: "server1:8080", status: true, leader: true },
-      { address: "server2:8080", status: false, leader: false },
+      clusterStatus("server1:8080", true, true),
+      clusterStatus("server2:8080", false, false),
     ];
 
     mockClient.cluster_status.mockResolvedValue({ data: mockServers });
@@ -234,7 +246,7 @@ describe("useClusterStatus", () => {
 
   it("should poll cluster status every 15 seconds", async () => {
     const mockServers: ClusterStatus[] = [
-      { address: "server1:8080", status: true, leader: true },
+      clusterStatus("server1:8080", true, true),
     ];
 
     mockClient.cluster_status.mockResolvedValue({ data: mockServers });
@@ -259,7 +271,7 @@ describe("useClusterStatus", () => {
 
   it("should poll loginStatusEntries less often than cluster status", async () => {
     const mockServers: ClusterStatus[] = [
-      { address: "server1:8080", status: true, leader: true },
+      clusterStatus("server1:8080", true, true),
     ];
 
     mockClient.cluster_status.mockResolvedValue({ data: mockServers });
@@ -290,7 +302,7 @@ describe("useClusterStatus", () => {
 
   it("should update lastUpdated on successful fetch", async () => {
     const mockServers: ClusterStatus[] = [
-      { address: "server1:8080", status: true, leader: true },
+      clusterStatus("server1:8080", true, true),
     ];
 
     mockClient.cluster_status.mockResolvedValue({ data: mockServers });
@@ -310,7 +322,7 @@ describe("useClusterStatus", () => {
 
   it("should allow manual refresh via fetchStatus", async () => {
     const mockServers: ClusterStatus[] = [
-      { address: "server1:8080", status: true, leader: true },
+      clusterStatus("server1:8080", true, true),
     ];
 
     mockClient.cluster_status.mockResolvedValue({ data: mockServers });
@@ -608,7 +620,7 @@ describe("useClusterStatus", () => {
 
   it("should set token on per-server client when token exists", async () => {
     const mockServers: ClusterStatus[] = [
-      { address: "server1:8080", status: true, leader: true },
+      clusterStatus("server1:8080", true, true),
     ];
 
     mockClient.get_token.mockReturnValue("token-123");
@@ -626,8 +638,8 @@ describe("useClusterStatus", () => {
   it("should normalize host-only addresses to default port 80", async () => {
     mockApiUrl.value = "localhost";
     const mockServers: ClusterStatus[] = [
-      { address: "agdb0", status: true, leader: true },
-      { address: "agdb1:9090", status: true, leader: false },
+      clusterStatus("agdb0", true, true),
+      clusterStatus("agdb1:9090", true, false),
     ];
 
     mockClient.cluster_status.mockResolvedValue({ data: mockServers });

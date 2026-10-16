@@ -4,6 +4,18 @@ import { nextTick, ref } from "vue";
 import ClusterStatusIndicator from "./ClusterStatusIndicator.vue";
 import type { ClusterStatus } from "@agnesoft/agdb_api/openapi";
 
+const clusterStatus = (
+  address: string,
+  status: boolean,
+  leader: boolean,
+): ClusterStatus => ({
+  address,
+  status,
+  leader,
+  executed_index: 0,
+  resync: false,
+});
+
 const mockServers = ref<ClusterStatus[]>([]);
 const mockOverallStatus = ref<"red" | "amber" | "green" | "unknown">("unknown");
 const mockIsLoading = ref(false);
@@ -99,9 +111,7 @@ describe("ClusterStatusIndicator", () => {
   });
 
   it("should show details on mouse enter and fetch status", async () => {
-    mockServers.value = [
-      { address: "server1:8080", status: true, leader: true },
-    ];
+    mockServers.value = [clusterStatus("server1:8080", true, true)];
 
     const wrapper = mount(ClusterStatusIndicator, {
       global: {
@@ -122,9 +132,7 @@ describe("ClusterStatusIndicator", () => {
   });
 
   it("should hide details on mouse leave", async () => {
-    mockServers.value = [
-      { address: "server1:8080", status: true, leader: true },
-    ];
+    mockServers.value = [clusterStatus("server1:8080", true, true)];
 
     const wrapper = mount(ClusterStatusIndicator, {
       global: {
@@ -145,9 +153,7 @@ describe("ClusterStatusIndicator", () => {
   });
 
   it("should toggle details on click", async () => {
-    mockServers.value = [
-      { address: "server1:8080", status: true, leader: true },
-    ];
+    mockServers.value = [clusterStatus("server1:8080", true, true)];
 
     const wrapper = mount(ClusterStatusIndicator, {
       global: {
@@ -211,8 +217,8 @@ describe("ClusterStatusIndicator", () => {
   it("should render server list with online servers", async () => {
     mockIsLoading.value = false;
     mockServers.value = [
-      { address: "server1:8080", status: true, leader: false },
-      { address: "server2:8080", status: true, leader: false },
+      clusterStatus("server1:8080", true, false),
+      clusterStatus("server2:8080", true, false),
     ];
 
     const wrapper = mount(ClusterStatusIndicator, {
@@ -236,8 +242,8 @@ describe("ClusterStatusIndicator", () => {
   it("should show crown icon for leader server", async () => {
     mockIsLoading.value = false;
     mockServers.value = [
-      { address: "server1:8080", status: true, leader: true },
-      { address: "server2:8080", status: true, leader: false },
+      clusterStatus("server1:8080", true, true),
+      clusterStatus("server2:8080", true, false),
     ];
 
     const wrapper = mount(ClusterStatusIndicator, {
@@ -266,8 +272,8 @@ describe("ClusterStatusIndicator", () => {
   it("should mark offline servers with offline class", async () => {
     mockIsLoading.value = false;
     mockServers.value = [
-      { address: "server1:8080", status: true, leader: true },
-      { address: "server2:8080", status: false, leader: false },
+      clusterStatus("server1:8080", true, true),
+      clusterStatus("server2:8080", false, false),
     ];
 
     const wrapper = mount(ClusterStatusIndicator, {
@@ -293,8 +299,8 @@ describe("ClusterStatusIndicator", () => {
   it("should call switchToServer when server row is clicked", async () => {
     mockIsLoading.value = false;
     mockServers.value = [
-      { address: "server1:8080", status: true, leader: true },
-      { address: "server2:8080", status: true, leader: false },
+      clusterStatus("server1:8080", true, true),
+      clusterStatus("server2:8080", true, false),
     ];
 
     const wrapper = mount(ClusterStatusIndicator, {
@@ -324,8 +330,8 @@ describe("ClusterStatusIndicator", () => {
       (server: ClusterStatus) => server.address === "server1:8080",
     );
     mockServers.value = [
-      { address: "server1:8080", status: true, leader: false },
-      { address: "server2:8080", status: true, leader: false },
+      clusterStatus("server1:8080", true, false),
+      clusterStatus("server2:8080", true, false),
     ];
 
     const wrapper = mount(ClusterStatusIndicator, {
@@ -348,8 +354,8 @@ describe("ClusterStatusIndicator", () => {
   it("should show connecting status text on server row", async () => {
     mockIsLoading.value = false;
     mockServers.value = [
-      { address: "server1:8080", status: true, leader: true },
-      { address: "server2:8080", status: true, leader: false },
+      clusterStatus("server1:8080", true, true),
+      clusterStatus("server2:8080", true, false),
     ];
     mockSwitchingServerAddress.value = "server2:8080";
 
@@ -376,9 +382,7 @@ describe("ClusterStatusIndicator", () => {
 
   it("should show active status text for active server", async () => {
     mockIsLoading.value = false;
-    mockServers.value = [
-      { address: "server1:8080", status: true, leader: true },
-    ];
+    mockServers.value = [clusterStatus("server1:8080", true, true)];
     mockIsServerActive.mockImplementation(() => true);
 
     const wrapper = mount(ClusterStatusIndicator, {
@@ -402,14 +406,10 @@ describe("ClusterStatusIndicator", () => {
 
   it("should render crown icon for connected leader server", () => {
     mockServers.value = [
-      { address: "server1:8080", status: true, leader: true },
-      { address: "server2:8080", status: true, leader: false },
+      clusterStatus("server1:8080", true, true),
+      clusterStatus("server2:8080", true, false),
     ];
-    mockActiveServer.value = {
-      address: "server1:8080",
-      status: true,
-      leader: true,
-    };
+    mockActiveServer.value = clusterStatus("server1:8080", true, true);
 
     const wrapper = mount(ClusterStatusIndicator, {
       global: {
@@ -431,8 +431,8 @@ describe("ClusterStatusIndicator", () => {
   it("should call switchToServer on keyboard space for clickable server", async () => {
     mockIsLoading.value = false;
     mockServers.value = [
-      { address: "server1:8080", status: true, leader: true },
-      { address: "server2:8080", status: true, leader: false },
+      clusterStatus("server1:8080", true, true),
+      clusterStatus("server2:8080", true, false),
     ];
 
     const wrapper = mount(ClusterStatusIndicator, {
@@ -459,8 +459,8 @@ describe("ClusterStatusIndicator", () => {
   it("should not call switchToServer for non-clickable server", async () => {
     mockIsLoading.value = false;
     mockServers.value = [
-      { address: "server1:8080", status: true, leader: true },
-      { address: "server2:8080", status: true, leader: false },
+      clusterStatus("server1:8080", true, true),
+      clusterStatus("server2:8080", true, false),
     ];
     mockSwitchingServerAddress.value = "server2:8080";
 
@@ -488,8 +488,8 @@ describe("ClusterStatusIndicator", () => {
   it("should call switchToServer on keyboard enter for clickable server", async () => {
     mockIsLoading.value = false;
     mockServers.value = [
-      { address: "server1:8080", status: true, leader: true },
-      { address: "server2:8080", status: true, leader: false },
+      clusterStatus("server1:8080", true, true),
+      clusterStatus("server2:8080", true, false),
     ];
 
     const wrapper = mount(ClusterStatusIndicator, {

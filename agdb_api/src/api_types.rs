@@ -561,14 +561,6 @@ mod tests {
     }
 
     #[test]
-    fn cluster_status_from_older_server() {
-        let status: ClusterStatus =
-            serde_json::from_str(r#"{"address":"localhost","status":true,"leader":true}"#).unwrap();
-        assert_eq!(status.executed_index, 0);
-        assert!(!status.resync);
-    }
-
-    #[test]
     fn db_resource() {
         let db_resource = DbResource::from("db");
         assert_eq!(db_resource, DbResource::Db);

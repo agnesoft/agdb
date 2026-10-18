@@ -83,7 +83,7 @@ export const dbCopy = async (
   if (shouldRunAdminAction()) {
     return client.value.admin_db_copy(params);
   }
-  const { new_owner, ...rest } = params; // eslint-disable-line @typescript-eslint/no-unused-vars
+  const { new_owner: _, ...rest } = params;
 
   return client.value.db_copy(rest);
 };
@@ -131,7 +131,7 @@ export const dbList = async (): Promise<AxiosResponse<ServerDatabase[]>> => {
 };
 
 export const dbOptimize = async (
-  params: DbIdentification,
+  params: DbIdentification & { shrink_to_fit: boolean },
 ): Promise<AxiosResponse> => {
   checkClient(client);
   if (shouldRunAdminAction()) {
@@ -162,7 +162,7 @@ export const dbRename = async (
   if (shouldRunAdminAction()) {
     return client.value.admin_db_rename(params);
   }
-  const { new_owner, ...rest } = params; // eslint-disable-line @typescript-eslint/no-unused-vars
+  const { new_owner: _, ...rest } = params;
 
   return client.value.db_rename(rest);
 };

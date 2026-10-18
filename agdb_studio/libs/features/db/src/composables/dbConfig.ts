@@ -316,18 +316,34 @@ const dbActions: Action<ServerDatabase>[] = [
   {
     key: "optimize",
     label: "Optimize",
-    action: ({ params }: DbActionProps) =>
-      dbOptimize(params).then(() => {
+    action: ({ params }: DbActionProps) => {
+      const shrink_to_fit =
+        getInputValue<boolean>(KEY_MODAL, "shrink_to_fit") ?? false;
+      return dbOptimize({ ...params, shrink_to_fit }).then(() => {
         addNotification({
           type: "success",
           title: "Database optimized",
-          message: `Database ${getDbName(params)} has been optimized successfully.`,
+          message: `Database ${getDbName(params)} has been optimized successfully${shrink_to_fit ? " and shrunk to fit" : ""}.`,
         });
-      }),
-    confirmation: convertArrayOfStringsToContent(
-      ["Are you sure you want to optimize this database?"],
-      { emphasizedWords: ["optimize"] },
-    ),
+      });
+    },
+    confirmation: () => {
+      const shrink_to_fit: Content = {
+        input: {
+          key: "shrink_to_fit",
+          label: "Shrink to fit",
+          type: "checkbox",
+          value: getInputValue<boolean>(KEY_MODAL, "shrink_to_fit") ?? false,
+        },
+      };
+      return [
+        ...convertArrayOfStringsToContent(
+          ["Are you sure you want to optimize this database?"],
+          { emphasizedWords: ["optimize"] },
+        ),
+        shrink_to_fit,
+      ];
+    },
     confirmationHeader: getConfirmationHeaderFn,
   },
 

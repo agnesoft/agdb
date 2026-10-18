@@ -17,6 +17,11 @@ import { PhDuotoneSpinnerBall } from "@kalimahapps/vue-icons";
     transform: rotate(360deg);
   }
 }
+.spinner-icon {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+}
 .spinner-icon > svg {
   animation: spin 1.2s linear infinite;
 }

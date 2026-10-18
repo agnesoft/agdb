@@ -94,6 +94,28 @@ describe("Modal", () => {
     expect(onConfirm).toHaveBeenCalled();
     expect(useModal().modalIsVisible.value).toBe(true);
   });
+  it("exposes confirmLoading", () => {
+    expect(useModal().confirmLoading.value).toBe(false);
+  });
+  it("sets confirmLoading to true while async onConfirm is pending", async () => {
+    let resolveConfirm: (value: boolean) => void = () => {};
+    const onConfirm = vi.fn().mockImplementation(
+      () =>
+        new Promise<boolean>((resolve) => {
+          resolveConfirm = resolve;
+        }),
+    );
+    openModal({
+      header: "Test Header",
+      content: convertArrayOfStringsToContent(["Test Body"]),
+      onConfirm,
+    });
+    const confirmPromise = useModal().buttons.value[1]?.action();
+    expect(useModal().confirmLoading.value).toBe(true);
+    resolveConfirm(true);
+    await confirmPromise;
+    expect(useModal().confirmLoading.value).toBe(false);
+  });
   it("does not call onConfirm and does not hide the modal if check input rules is false", () => {
     const onConfirm = vi.fn().mockReturnValue(true);
     openModal({

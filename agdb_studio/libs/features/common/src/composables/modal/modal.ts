@@ -18,6 +18,7 @@ const closeModal = (): void => {
   modal.header = "";
   modal.content = [];
   modalIsVisible.value = false;
+  confirmLoading.value = false;
   clearInputs(KEY_MODAL);
 };
 
@@ -26,7 +27,11 @@ const customButtons = ref<Button[]>([]);
 const confirmLoading = ref(false);
 
 const handleConfirm = async (): Promise<void> => {
-  if (!checkInputsRules(KEY_MODAL) || !onConfirm.value) {
+  if (
+    confirmLoading.value ||
+    !checkInputsRules(KEY_MODAL) ||
+    !onConfirm.value
+  ) {
     return;
   }
   confirmLoading.value = true;
@@ -45,6 +50,8 @@ const handleConfirm = async (): Promise<void> => {
   } else if (result) {
     confirmLoading.value = false;
     closeModal();
+  } else {
+    confirmLoading.value = false;
   }
 };
 
@@ -99,6 +106,7 @@ export default function useModal() {
     modal,
     buttons,
     modalIsVisible,
+    confirmLoading,
     closeModal,
     openModal,
     onConfirm,

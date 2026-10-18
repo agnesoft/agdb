@@ -5,6 +5,7 @@ import { useQueryStore } from "../../composables/queryStore";
 import { useQueryExecution } from "../../composables/queryExecution";
 import QueryStep from "./QueryStep.vue";
 import QueryStepInput from "./QueryStepInput.vue";
+import SpinnerIcon from "@agdb-studio/design/src/components/icons/SpinnerIcon.vue";
 import { ClCloseMd } from "@kalimahapps/vue-icons";
 
 const queryStore = useQueryStore();
@@ -59,8 +60,9 @@ const addStep = (stepType: QueryType) => {
         :prev-step="steps.length > 0 ? steps[steps.length - 1] : undefined"
         @confirm-step="addStep"
       />
+      <SpinnerIcon v-if="isRunning" />
       <button
-        v-if="steps.length"
+        v-else-if="steps.length"
         type="button"
         class="button button-bordered button-danger remove-button button-circle"
         title="Clear all steps"
@@ -89,6 +91,7 @@ const addStep = (stepType: QueryType) => {
 .run-query-button {
   border-top-left-radius: 0;
   border-bottom-left-radius: 0;
+  min-width: 7rem;
 }
 .query-input {
   flex: 1;

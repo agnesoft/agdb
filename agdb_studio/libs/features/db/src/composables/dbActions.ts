@@ -131,7 +131,7 @@ export const dbList = async (): Promise<AxiosResponse<ServerDatabase[]>> => {
 };
 
 export const dbOptimize = async (
-  params: DbIdentification & { shrink_to_fit: boolean },
+  params: DbIdentification & { shrink_to_fit?: boolean },
 ): Promise<AxiosResponse> => {
   checkClient(client);
   if (shouldRunAdminAction()) {

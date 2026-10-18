@@ -30,6 +30,9 @@ export default typescriptEslint.config(
       // globals: globals.browser,
       parserOptions: {
         parser: typescriptEslint.parser,
+        projectService: true,
+        tsconfigRootDir: import.meta.dirname,
+        extraFileExtensions: [".vue"],
       },
     },
 

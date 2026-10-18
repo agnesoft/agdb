@@ -1,3 +1,4 @@
 {
-  "extends": "@agdb-studio/tsconfig/tsconfig.json"
+  "extends": "@agdb-studio/tsconfig/tsconfig.json",
+  "include": ["vitest.setup.ts", "mocks/**/*"]
 }

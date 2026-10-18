@@ -1,6 +1,7 @@
 {
   "extends": "./tsconfig.app.json",
   "exclude": [],
+  "include": ["vitest.setup.ts", "mocks/**/*"],
   "compilerOptions": {
     "lib": [],
     "types": ["node", "jsdom", "vitest/globals"]

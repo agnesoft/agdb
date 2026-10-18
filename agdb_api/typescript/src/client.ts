@@ -1,4 +1,4 @@
-import { AxiosRequestConfig, OpenAPIClientAxios } from "openapi-client-axios";
+import { OpenAPIClientAxios } from "openapi-client-axios";
 import type { Client } from "./openapi.d.ts";
 
 export type LoginProps = {
@@ -17,11 +17,10 @@ export type AgdbApi = {
     reset_token: () => void;
 };
 
-async function login({
-    username,
-    password,
-    cluster,
-}: LoginProps): Promise<string> {
+async function login(
+    this: AgdbApiClient,
+    { username, password, cluster }: LoginProps,
+): Promise<string> {
     const action = !cluster ? this.user_login : this.cluster_user_login;
     const token = await action(null, {
         username: username,
@@ -32,11 +31,11 @@ async function login({
     return token.data;
 }
 
-function get_token(): string | undefined {
+function get_token(this: AgdbApiClient): string | undefined {
     return this.token;
 }
 
-async function logout(cluster?: boolean): Promise<void> {
+async function logout(this: AgdbApiClient, cluster?: boolean): Promise<void> {
     if (cluster) {
         await this.cluster_user_logout();
     } else {
@@ -45,20 +44,18 @@ async function logout(cluster?: boolean): Promise<void> {
     this.reset_token();
 }
 
-function set_token(token: string): void {
+function set_token(this: AgdbApiClient, token: string): void {
     this.token = token;
     if (this.interceptorId !== undefined) {
         this.interceptors.request.eject(this.interceptorId);
     }
-    this.interceptorId = this.interceptors.request.use(
-        (config: AxiosRequestConfig) => {
-            config.headers.Authorization = `Bearer ${token}`;
-            return config;
-        },
-    );
+    this.interceptorId = this.interceptors.request.use((config) => {
+        config.headers.Authorization = `Bearer ${token}`;
+        return config;
+    });
 }
 
-function reset_token(): void {
+function reset_token(this: AgdbApiClient): void {
     this.token = undefined;
     if (this.interceptorId !== undefined) {
         this.interceptors.request.eject(this.interceptorId);

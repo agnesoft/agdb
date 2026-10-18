@@ -1,14 +1,11 @@
 <script lang="ts" setup>
-import FadeTransition from "@agdb-studio/design/src/components/transitions/FadeTransition.vue";
 import { PhDuotoneSpinnerBall } from "@kalimahapps/vue-icons";
 </script>
 
 <template>
-  <FadeTransition>
     <span class="spinner-icon">
       <PhDuotoneSpinnerBall />
     </span>
-  </FadeTransition>
 </template>
 
 <style lang="less" scoped>

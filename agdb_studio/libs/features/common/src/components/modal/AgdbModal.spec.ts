@@ -114,7 +114,7 @@ describe("AgdbModal", () => {
     ).toBeDefined();
     expect(wrapper.find(".spinner-icon").exists()).toBe(true);
 
-    resolveConfirm(true);
+    resolveConfirm(false);
     await flushPromises();
 
     for (const btn of wrapper.findAll(".modal-footer .button")) {

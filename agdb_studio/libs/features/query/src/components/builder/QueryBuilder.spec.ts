@@ -116,7 +116,7 @@ describe("QueryBuilder", () => {
     }).not.toThrow();
   });
 
-  it("shows stop label and keeps the run button enabled while running", () => {
+  it("shows stop label, spinner and keeps the run button enabled while running", () => {
     const queryId = "test-query-running";
     const query = queryStore.addQuery({ id: queryId });
     query.value.isRunning = true;
@@ -130,8 +130,9 @@ describe("QueryBuilder", () => {
     });
 
     const button = wrapper.find(".run-query-button");
-    expect(button.text()).toBe("Stop query");
+    expect(button.text()).toContain("Stop query");
     expect(button.attributes("disabled")).toBeUndefined();
+    expect(wrapper.find(".spinner-icon").exists()).toBe(true);
   });
 
   it("runs the query when the run button is clicked", async () => {
@@ -165,6 +166,25 @@ describe("QueryBuilder", () => {
     });
     const stepInput = wrapper.findComponent({ name: "QueryStepInput" });
     expect(stepInput.exists()).toBe(true);
+  });
+
+  it("hides clear button while query is running", async () => {
+    const queryId = "test-query-clear-disabled";
+    const query = queryStore.addQuery({ id: queryId });
+    queryStore.addQueryStep(queryId, "exec", { id: "s1", type: "select" });
+    query.value.isRunning = true;
+
+    const wrapper = mount(QueryBuilder, {
+      global: {
+        provide: {
+          queryId: ref(queryId),
+          activeTab: ref("exec"),
+        },
+      },
+    });
+
+    const removeButton = wrapper.find(".remove-button");
+    expect(removeButton.exists()).toBe(false);
   });
 
   it("can remove all steps", async () => {

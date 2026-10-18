@@ -1,7 +1,7 @@
 import { describe, beforeEach, it, expect } from "vitest";
 import useModal from "../../composables/modal/modal";
 import AgdbModal from "./AgdbModal.vue";
-import { mount } from "@vue/test-utils";
+import { mount, flushPromises } from "@vue/test-utils";
 import { convertArrayOfStringsToContent } from "../../composables/content/utils";
 
 describe("AgdbModal", () => {
@@ -83,6 +83,44 @@ describe("AgdbModal", () => {
     expect(wrapper.find(".button[type=submit]").element.matches(":focus")).toBe(
       true,
     );
+  });
+  it("disables buttons and shows spinner while confirm is loading", async () => {
+    let resolveConfirm: (value: boolean) => void = () => {};
+    const wrapper = mount(AgdbModal, {
+      attachTo: document.body,
+    });
+    openModal({
+      header: "Test Header",
+      content: convertArrayOfStringsToContent(["Test Body"]),
+      onConfirm: () =>
+        new Promise<boolean>((resolve) => {
+          resolveConfirm = resolve;
+        }),
+    });
+    await wrapper.vm.$nextTick();
+
+    const confirmButton = wrapper.find(".modal-footer .button[type=submit]");
+    await confirmButton.trigger("click");
+    await wrapper.vm.$nextTick();
+
+    const submitButtons = wrapper.findAll(".modal-footer .button[type=submit]");
+    for (const btn of submitButtons) {
+      expect(btn.attributes("disabled")).toBeDefined();
+    }
+    expect(
+      wrapper
+        .find(".modal-header .button[data-testid=close-modal]")
+        .attributes("disabled"),
+    ).toBeDefined();
+    expect(wrapper.find(".spinner-icon").exists()).toBe(true);
+
+    resolveConfirm(true);
+    await flushPromises();
+
+    for (const btn of wrapper.findAll(".modal-footer .button")) {
+      expect(btn.attributes("disabled")).toBeUndefined();
+    }
+    expect(wrapper.find(".spinner-icon").exists()).toBe(false);
   });
   it("won't set focus on the submit button if content has input with autofocus", async () => {
     const wrapper = mount(AgdbModal, {

@@ -1,11 +1,14 @@
 <script lang="ts" setup>
+import FadeTransition from "@agdb-studio/design/src/components/transitions/FadeTransition.vue";
 import { PhDuotoneSpinnerBall } from "@kalimahapps/vue-icons";
 </script>
 
 <template>
-  <span class="spinner-icon">
-    <PhDuotoneSpinnerBall />
-  </span>
+  <FadeTransition>
+    <span class="spinner-icon">
+      <PhDuotoneSpinnerBall />
+    </span>
+  </FadeTransition>
 </template>
 
 <style lang="less" scoped>
@@ -16,6 +19,11 @@ import { PhDuotoneSpinnerBall } from "@kalimahapps/vue-icons";
   100% {
     transform: rotate(360deg);
   }
+}
+.spinner-icon {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
 }
 .spinner-icon > svg {
   animation: spin 1.2s linear infinite;

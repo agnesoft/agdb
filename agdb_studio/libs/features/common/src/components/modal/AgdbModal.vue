@@ -1,11 +1,13 @@
 <script lang="ts" setup>
 import useModal from "../../composables/modal/modal";
 import { ClCloseMd } from "@kalimahapps/vue-icons";
+import SpinnerIcon from "@agdb-studio/design/src/components/icons/SpinnerIcon.vue";
 import AgdbContent from "../content/AgdbContent.vue";
 import { KEY_MODAL } from "../../composables/modal/constants";
 import { nextTick, ref, watch } from "vue";
 
-const { modal, buttons, closeModal, modalIsVisible } = useModal();
+const { modal, buttons, closeModal, modalIsVisible, confirmLoading } =
+  useModal();
 
 const autofocusElement = ref();
 
@@ -30,6 +32,7 @@ watch(modalIsVisible, async () => {
           class="button button-transparent"
           data-testid="close-modal"
           type="button"
+          :disabled="confirmLoading"
           @click="closeModal"
         >
           <ClCloseMd />
@@ -43,6 +46,7 @@ watch(modalIsVisible, async () => {
         />
       </form>
       <footer class="modal-footer">
+        <SpinnerIcon v-if="confirmLoading" />
         <button
           v-for="button in buttons"
           :key="button.text"
@@ -54,6 +58,7 @@ watch(modalIsVisible, async () => {
           :class="button.className"
           :type="button.type ?? 'button'"
           :form="button.type === 'submit' ? 'modal-form' : undefined"
+          :disabled="confirmLoading && button.type === 'submit'"
           :data-testid="`modal-button-${button.text.replace(/\s+/g, '-').toLowerCase()}`"
           @click.prevent="button.action"
         >
@@ -104,5 +109,6 @@ watch(modalIsVisible, async () => {
   padding: 1rem;
   border-top: 1px solid var(--color-border);
   gap: 1rem;
+  align-items: center;
 }
 </style>

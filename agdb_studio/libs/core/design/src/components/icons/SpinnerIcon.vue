@@ -3,9 +3,9 @@ import { PhDuotoneSpinnerBall } from "@kalimahapps/vue-icons";
 </script>
 
 <template>
-    <span class="spinner-icon">
-      <PhDuotoneSpinnerBall />
-    </span>
+  <span class="spinner-icon">
+    <PhDuotoneSpinnerBall />
+  </span>
 </template>
 
 <style lang="less" scoped>

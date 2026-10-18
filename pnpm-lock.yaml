@@ -189,6 +189,9 @@ importers:
       '@rushstack/eslint-patch':
         specifier: 'catalog:'
         version: 1.16.1
+      '@tsconfig/node18':
+        specifier: 'catalog:'
+        version: 18.2.6
       '@types/node':
         specifier: 'catalog:'
         version: 26.1.1

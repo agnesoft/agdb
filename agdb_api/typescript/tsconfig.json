@@ -1,14 +1,16 @@
 {
-  "compilerOptions": {
-    "module": "NodeNext",
-    "lib": ["es2015"],
-    "target": "ES5",
-    "declaration": true,
-    "moduleResolution": "nodenext",
-    "outDir": "./dist",
-    "rootDir": "./src"
-  },
-  "include": [
-    "src/**/*"
-  ]
+    "extends": "@tsconfig/node18/tsconfig.json",
+    "compilerOptions": {
+        "module": "NodeNext",
+        "lib": ["es2015"],
+        "target": "ESNext",
+        "declaration": true,
+        "moduleResolution": "nodenext",
+        "outDir": "./dist",
+        "rootDir": "./src",
+        "typeRoots": ["node_modules"],
+        "composite": true
+    },
+    "include": ["src/**/*"],
+    "exclude": ["node_modules", "dist"]
 }

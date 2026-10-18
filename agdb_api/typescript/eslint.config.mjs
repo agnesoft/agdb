@@ -6,5 +6,15 @@ export default tseslint.config(
     tseslint.configs.recommended,
     {
         ignores: ["**/src/openapi.d.ts", "**/.gitignore", "**/dist/"],
+        languageOptions: {
+            ecmaVersion: "latest",
+            sourceType: "module",
+            // globals: globals.browser,
+            parserOptions: {
+                parser: typescriptEslint.parser,
+                projectService: true,
+                tsconfigRootDir: import.meta.dirname,
+            },
+        },
     },
 );

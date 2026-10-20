@@ -35,9 +35,7 @@ function isComparison(
     );
 }
 
-function intoQueryIds(
-    ids: BuilderQueryIds,
-): Components.Schemas.QueryIds {
+function intoQueryIds(ids: BuilderQueryIds): Components.Schemas.QueryIds {
     if (Array.isArray(ids)) {
         return { Ids: ids.map((id) => intoQueryId(id)) };
     }

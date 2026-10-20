@@ -119,7 +119,14 @@ describe("QueryBuilder misc tests", () => {
             InsertValues: {
                 ids: { Ids: [{ Id: 42 }] },
                 values: {
-                    Multi: [[{ key: { String: "name" }, value: { String: "test" } }]],
+                    Multi: [
+                        [
+                            {
+                                key: { String: "name" },
+                                value: { String: "test" },
+                            },
+                        ],
+                    ],
                 },
             },
         });
@@ -133,7 +140,14 @@ describe("QueryBuilder misc tests", () => {
             InsertValues: {
                 ids: { Ids: [{ Alias: "users" }] },
                 values: {
-                    Multi: [[{ key: { String: "name" }, value: { String: "test" } }]],
+                    Multi: [
+                        [
+                            {
+                                key: { String: "name" },
+                                value: { String: "test" },
+                            },
+                        ],
+                    ],
                 },
             },
         });

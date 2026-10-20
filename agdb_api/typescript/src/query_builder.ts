@@ -663,9 +663,7 @@ class InsertBuilder {
                     multiItem.push({
                         key: convertToDbValue(key),
                         value: convertToDbValue(
-                            elem[key] as Parameters<
-                                typeof convertToDbValue
-                            >[0],
+                            elem[key] as Parameters<typeof convertToDbValue>[0],
                         ),
                     });
                 }

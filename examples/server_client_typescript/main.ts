@@ -1,4 +1,4 @@
-import { QueryBuilder, AgdbApi } from "agdb_api";
+import { QueryBuilder, AgdbApi, convertToNativeValue } from "agdb_api";
 
 async function main() {
   // Requires the server to be running. Run it with `cargo run -p agdb_server`
@@ -61,7 +61,7 @@ async function main() {
   // Print the result of the second query.
   console.log(`User (id: ${results[1].elements[0].id})`);
   for (const { key, value } of results[1].elements[0].values) {
-    console.log(`${key["String"]}: ${value["String"]}`);
+    console.log(`${convertToNativeValue(key)}: ${convertToNativeValue(value)}`);
   }
 }
 

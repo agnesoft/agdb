@@ -1,20 +1,11 @@
 import eslint from "@eslint/js";
+import { defineConfig, globalIgnores } from "eslint/config";
 import tseslint from "typescript-eslint";
 
-export default tseslint.config(
-    eslint.configs.recommended,
-    tseslint.configs.recommended,
+export default defineConfig(
+    globalIgnores(["**/src/openapi.d.ts", "**/dist/"]),
     {
-        ignores: ["**/src/openapi.d.ts", "**/.gitignore", "**/dist/"],
-        languageOptions: {
-            ecmaVersion: "latest",
-            sourceType: "module",
-            // globals: globals.browser,
-            parserOptions: {
-                parser: typescriptEslint.parser,
-                projectService: true,
-                tsconfigRootDir: import.meta.dirname,
-            },
-        },
+        files: ["**/*.{js,ts}"],
+        extends: [eslint.configs.recommended, tseslint.configs.recommended],
     },
 );

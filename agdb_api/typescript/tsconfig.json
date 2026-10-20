@@ -2,14 +2,10 @@
     "extends": "@tsconfig/node18/tsconfig.json",
     "compilerOptions": {
         "module": "NodeNext",
-        "lib": ["es2015"],
-        "target": "ESNext",
-        "declaration": true,
         "moduleResolution": "nodenext",
+        "declaration": true,
         "outDir": "./dist",
-        "rootDir": "./src",
-        "typeRoots": ["node_modules"],
-        "composite": true
+        "rootDir": "./src"
     },
     "include": ["src/**/*"],
     "exclude": ["node_modules", "dist"]

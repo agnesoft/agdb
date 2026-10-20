@@ -1,18 +1,8 @@
 import eslint from "@eslint/js";
-import typescriptEslint from "typescript-eslint";
+import { defineConfig } from "eslint/config";
+import tseslint from "typescript-eslint";
 
-export default typescriptEslint.config({
-  extends: [
-    eslint.configs.recommended,
-    ...typescriptEslint.configs.recommended,
-  ],
-  languageOptions: {
-    ecmaVersion: "latest",
-    sourceType: "module",
-    // globals: globals.browser,
-    parserOptions: {
-      parser: typescriptEslint.parser,
-    },
-  },
+export default defineConfig({
+  extends: [eslint.configs.recommended, tseslint.configs.recommended],
   files: ["**/*.ts"],
 });

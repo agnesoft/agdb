@@ -1,4 +1,5 @@
 import eslint from "@eslint/js";
+import { defineConfig, globalIgnores } from "eslint/config";
 import eslintConfigPrettier from "eslint-config-prettier";
 import eslintPluginVue from "eslint-plugin-vue";
 import typescriptEslint from "typescript-eslint";
@@ -14,8 +15,8 @@ const typescriptProjects = [
   path.join(workspaceRoot, "libs/*/*/tsconfig.app.json"),
 ];
 
-export default typescriptEslint.config(
-  { ignores: ["*.d.ts", "**/coverage", "**/dist", "**/.gitignore"] },
+export default defineConfig(
+  globalIgnores(["*.d.ts", "**/coverage", "**/dist"]),
   {
     extends: [
       eslint.configs.recommended,
@@ -27,7 +28,6 @@ export default typescriptEslint.config(
     languageOptions: {
       ecmaVersion: "latest",
       sourceType: "module",
-      // globals: globals.browser,
       parserOptions: {
         parser: typescriptEslint.parser,
         projectService: true,
@@ -42,12 +42,6 @@ export default typescriptEslint.config(
         { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
       ],
       "import/named": "off",
-      // "import/extensions": "off",
-      // "import/no-unresolved": ["error", { commonjs: true, amd: true }],
-      // "import/named": "error",
-      // "import/namespace": "error",
-      // "import/default": "error",
-      // "import/export": "error",
     },
     settings: {
       "import/resolver": {
@@ -61,6 +55,13 @@ export default typescriptEslint.config(
         },
       },
     },
+  },
+  // Disable no-undef for Vue SFCs — TypeScript handles undefined-variable
+  // checking, and defineConfig's files intersection means .vue files don't
+  // inherit the tseslint override that disables it for .ts files.
+  {
+    files: ["**/*.vue"],
+    rules: { "no-undef": "off" },
   },
   eslintConfigPrettier,
   {

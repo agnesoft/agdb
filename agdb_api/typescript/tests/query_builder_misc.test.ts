@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
     Comparison,
     Components,
+    convertTo,
     convertToDbKeyValue,
     convertToDbValue,
     convertToNativeValue,
@@ -55,6 +56,86 @@ describe("QueryBuilder misc tests", () => {
         expect(kv).toStrictEqual({
             key: { String: "key" },
             value: { String: "value" },
+        });
+    });
+
+    it(`convertTo single element`, () => {
+        type User = { db_id: number; name: string };
+        const result: Components.Schemas.QueryResult = {
+            result: 1,
+            elements: [
+                {
+                    id: 1,
+                    values: [
+                        {
+                            key: { String: "name" },
+                            value: { String: "alice" },
+                        },
+                    ],
+                },
+            ],
+        };
+        const user = convertTo<User>(result);
+        expect(user).toEqual({ db_id: 1, name: "alice" });
+    });
+
+    it(`convertTo multiple elements`, () => {
+        type User = { db_id: number; name: string };
+        const result: Components.Schemas.QueryResult = {
+            result: 2,
+            elements: [
+                {
+                    id: 1,
+                    values: [
+                        {
+                            key: { String: "name" },
+                            value: { String: "alice" },
+                        },
+                    ],
+                },
+                {
+                    id: 2,
+                    values: [
+                        {
+                            key: { String: "name" },
+                            value: { String: "bob" },
+                        },
+                    ],
+                },
+            ],
+        };
+        const users = convertTo<User>(result);
+        expect(users).toEqual([
+            { db_id: 1, name: "alice" },
+            { db_id: 2, name: "bob" },
+        ]);
+    });
+
+    it(`elements with numeric db_id`, () => {
+        const query = QueryBuilder.insert()
+            .elements([{ db_id: 42, name: "test" }])
+            .query();
+        expect(query).toEqual({
+            InsertValues: {
+                ids: { Ids: [{ Id: 42 }] },
+                values: {
+                    Multi: [[{ key: { String: "name" }, value: { String: "test" } }]],
+                },
+            },
+        });
+    });
+
+    it(`elements with string db_id`, () => {
+        const query = QueryBuilder.insert()
+            .elements([{ db_id: "users", name: "test" }])
+            .query();
+        expect(query).toEqual({
+            InsertValues: {
+                ids: { Ids: [{ Alias: "users" }] },
+                values: {
+                    Multi: [[{ key: { String: "name" }, value: { String: "test" } }]],
+                },
+            },
         });
     });
 
@@ -139,6 +220,19 @@ describe("QueryBuilder misc tests", () => {
         expect(() => QueryBuilder.insert().element(new T()).query()).toThrow(
             "Invalid db_id type",
         );
+    });
+
+    it(`QueryIds passthrough`, () => {
+        const ids: Components.Schemas.QueryIds = {
+            Ids: [{ Id: 1 }, { Alias: "a" }],
+        };
+        const query = QueryBuilder.select().ids(ids).query();
+        expect(query).toEqual({
+            SelectValues: {
+                keys: [],
+                ids: { Ids: [{ Id: 1 }, { Alias: "a" }] },
+            },
+        });
     });
 
     it("single order_by", () => {

@@ -49,10 +49,6 @@ function intoQueryIds(ids: BuilderQueryIds): Components.Schemas.QueryIds {
         return { Ids: [intoQueryId(ids)] };
     }
 
-    if ("Search" in ids) {
-        return ids;
-    }
-
     if ("result" in ids) {
         return {
             Ids: ids.elements.map((elem) => {
@@ -61,7 +57,7 @@ function intoQueryIds(ids: BuilderQueryIds): Components.Schemas.QueryIds {
         };
     }
 
-    throw new Error("Invalid query ids");
+    return ids as Components.Schemas.QueryIds;
 }
 
 function intoQueryId(id: BuilderQueryId): Components.Schemas.QueryId {
@@ -205,10 +201,6 @@ export function convertToDbValue(
         }
 
         return { VecString: value as string[] };
-    }
-
-    if (typeof value === "object" && value !== null) {
-        return value as Components.Schemas.DbValue;
     }
 
     return value as Components.Schemas.DbValue;
@@ -667,32 +659,15 @@ class InsertBuilder {
                     } else {
                         throw "Invalid db_id type";
                     }
-                } else {
-                    const keyValue = convertToDbValue(key);
-                    const rawValue = elem[key];
-                    let valueValue: Components.Schemas.DbValue | undefined;
-
-                    if (
-                        typeof rawValue === "string" ||
-                        typeof rawValue === "number" ||
-                        typeof rawValue === "boolean" ||
-                        (Array.isArray(rawValue) &&
-                            rawValue.every(
-                                (item) =>
-                                    typeof item === "string" ||
-                                    typeof item === "number",
-                            )) ||
-                        (typeof rawValue === "object" && rawValue !== null)
-                    ) {
-                        valueValue = convertToDbValue(rawValue);
-                    }
-
-                    if (keyValue !== undefined && valueValue !== undefined) {
-                        multiItem.push({
-                            key: keyValue,
-                            value: valueValue,
-                        });
-                    }
+                } else if (elem[key] != null) {
+                    multiItem.push({
+                        key: convertToDbValue(key),
+                        value: convertToDbValue(
+                            elem[key] as Parameters<
+                                typeof convertToDbValue
+                            >[0],
+                        ),
+                    });
                 }
             }
             multiValues.push(multiItem);
@@ -960,7 +935,7 @@ class SelectKeysBuilder {
     }
 
     ids(ids: BuilderQueryIds): SelectKeysIdsBuilder {
-        this.data = intoQueryIds(ids) ?? { Ids: [] };
+        this.data = intoQueryIds(ids);
         return new SelectKeysIdsBuilder(this.data);
     }
 
@@ -1001,7 +976,7 @@ class SelectEdgeCountBuilder {
     }
 
     ids(ids: BuilderQueryIds): SelectEdgeCountIdsBuilder {
-        this.data.ids = intoQueryIds(ids) ?? { Ids: [] };
+        this.data.ids = intoQueryIds(ids);
         return new SelectEdgeCountIdsBuilder(this.data);
     }
 
@@ -1018,7 +993,7 @@ class SelectKeyCountBuilder {
     }
 
     ids(ids: BuilderQueryIds): SelectKeyCountIdsBuilder {
-        this.data = intoQueryIds(ids) ?? { Ids: [] };
+        this.data = intoQueryIds(ids);
         return new SelectKeyCountIdsBuilder(this.data);
     }
 
@@ -1106,10 +1081,7 @@ function collapse_conditions(
     conditions: Components.Schemas.QueryCondition[][],
 ): boolean {
     if (conditions.length > 1) {
-        const last = conditions.pop();
-        if (!last) {
-            return false;
-        }
+        const last = conditions.pop()!;
         const current = conditions[conditions.length - 1];
         const last_condition = current[current.length - 1];
         last_condition.data = { Where: last };

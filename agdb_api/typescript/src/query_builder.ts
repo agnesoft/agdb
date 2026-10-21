@@ -64,6 +64,7 @@ function intoQueryIds(ids: BuilderQueryIds): Components.Schemas.QueryIds {
     // Remaining QueryType variants — structurally incompatible with QueryIds
     // but included in BuilderQueryIds for builder ergonomics. Unreachable in
     // practice since the builder only passes Search-shaped QueryType here.
+    /* v8 ignore next -- @preserve */
     return ids as unknown as Components.Schemas.QueryIds;
 }
 

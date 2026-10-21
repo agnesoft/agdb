@@ -57,7 +57,14 @@ function intoQueryIds(ids: BuilderQueryIds): Components.Schemas.QueryIds {
         };
     }
 
-    return ids as Components.Schemas.QueryIds;
+    if ("Search" in ids || "Ids" in ids) {
+        return ids;
+    }
+
+    // Remaining QueryType variants — structurally incompatible with QueryIds
+    // but included in BuilderQueryIds for builder ergonomics. Unreachable in
+    // practice since the builder only passes Search-shaped QueryType here.
+    return ids as unknown as Components.Schemas.QueryIds;
 }
 
 function intoQueryId(id: BuilderQueryId): Components.Schemas.QueryId {
@@ -190,14 +197,12 @@ export function convertToDbValue(
     }
 
     if (Array.isArray(value)) {
-        const numbers = value as number[];
-
-        if (numbers.every((item) => typeof item === "number")) {
-            if (numbers.every(Number.isInteger)) {
-                return { VecI64: numbers.map(Number) };
+        if (value.every((item): item is number => typeof item === "number")) {
+            if (value.every(Number.isInteger)) {
+                return { VecI64: value.map(Number) };
             }
 
-            return { VecF64: numbers.map(Number) };
+            return { VecF64: value.map(Number) };
         }
 
         return { VecString: value as string[] };

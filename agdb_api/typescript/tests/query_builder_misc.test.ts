@@ -249,6 +249,28 @@ describe("QueryBuilder misc tests", () => {
         });
     });
 
+    it(`Search QueryIds passthrough`, () => {
+        const ids: Components.Schemas.QueryIds = {
+            Search: {
+                algorithm: "BreadthFirst",
+                origin: { Id: 1 },
+                destination: { Id: 0 },
+                limit: 0,
+                offset: 0,
+                order_by: [],
+                conditions: [],
+                reverse: false,
+            },
+        };
+        const query = QueryBuilder.select().ids(ids).query();
+        expect(query).toEqual({
+            SelectValues: {
+                keys: [],
+                ids,
+            },
+        });
+    });
+
     it("single order_by", () => {
         const query = QueryBuilder.search()
             .from(1)

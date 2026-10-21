@@ -19,7 +19,7 @@ function isComparison(
     value: Components.Schemas.Comparison | BuilderDbValue,
 ): value is Components.Schemas.Comparison {
     return (
-        value &&
+        !!value &&
         typeof value === "object" &&
         ("Equal" in value ||
             "GreaterThan" in value ||
@@ -49,10 +49,6 @@ function intoQueryIds(ids: BuilderQueryIds): Components.Schemas.QueryIds {
         return { Ids: [intoQueryId(ids)] };
     }
 
-    if ("Search" in ids) {
-        return ids;
-    }
-
     if ("result" in ids) {
         return {
             Ids: ids.elements.map((elem) => {
@@ -60,6 +56,16 @@ function intoQueryIds(ids: BuilderQueryIds): Components.Schemas.QueryIds {
             }),
         };
     }
+
+    if ("Search" in ids || "Ids" in ids) {
+        return ids;
+    }
+
+    // Remaining QueryType variants — structurally incompatible with QueryIds
+    // but included in BuilderQueryIds for builder ergonomics. Unreachable in
+    // practice since the builder only passes Search-shaped QueryType here.
+    /* v8 ignore next -- @preserve */
+    return ids as unknown as Components.Schemas.QueryIds;
 }
 
 function intoQueryId(id: BuilderQueryId): Components.Schemas.QueryId {
@@ -94,7 +100,7 @@ function intoDbKeyOrder(
 
 export function convertToNativeValue(
     value: Components.Schemas.DbValue,
-): NativeValue {
+): NativeValue | undefined {
     if ("Bytes" in value) {
         return value.Bytes;
     }
@@ -140,17 +146,19 @@ export function convertToNativeValue(
     }
 }
 
-export function convertTo<T>(result: Components.Schemas.QueryResult): T | T[] {
+export function convertTo<T extends Record<string, unknown>>(
+    result: Components.Schemas.QueryResult,
+): T | T[] {
     const res: T[] = [];
 
     for (const e of result.elements) {
         const obj: T = {} as T;
+        const record = obj as Record<string, unknown>;
 
         for (const kv of e.values) {
-            obj["db_id"] = e.id;
-            obj[convertToNativeValue(kv.key) as string] = convertToNativeValue(
-                kv.value,
-            );
+            record["db_id"] = e.id;
+            record[convertToNativeValue(kv.key) as string] =
+                convertToNativeValue(kv.value);
         }
 
         res.push(obj);
@@ -170,7 +178,8 @@ export function convertToDbValue(
         | number
         | number[]
         | string[]
-        | Components.Schemas.DbValue,
+        | Components.Schemas.DbValue
+        | object,
 ): Components.Schemas.DbValue {
     if (typeof value === "string") {
         return { String: value };
@@ -189,18 +198,18 @@ export function convertToDbValue(
     }
 
     if (Array.isArray(value)) {
-        if (value.every((item) => typeof item === "number")) {
+        if (value.every((item): item is number => typeof item === "number")) {
             if (value.every(Number.isInteger)) {
                 return { VecI64: value.map(Number) };
             }
 
-            return { VecF64: value };
+            return { VecF64: value.map(Number) };
         }
 
-        return { VecString: value };
+        return { VecString: value as string[] };
     }
 
-    return value;
+    return value as Components.Schemas.DbValue;
 }
 
 export function convertToDbKeyValue(
@@ -618,12 +627,18 @@ class InsertBuilder {
         return new InsertAliasesBuilder(names);
     }
 
-    element<V extends object>(elem: V): InsertValuesIdsBuilder {
+    element<V extends Record<string, unknown>>(
+        elem: V,
+    ): InsertValuesIdsBuilder {
         return this.elements([elem]);
     }
 
-    elements<V extends object>(elems: V[]): InsertValuesIdsBuilder {
-        const data = {
+    elements<V extends Record<string, unknown>>(
+        elems: V[],
+    ): InsertValuesIdsBuilder {
+        const ids: Components.Schemas.QueryId[] = [];
+        const multiValues: Components.Schemas.DbKeyValue[][] = [];
+        const data: Components.Schemas.InsertValuesQuery = {
             ids: { Ids: [] },
             values: { Multi: [] },
         };
@@ -636,29 +651,33 @@ class InsertBuilder {
                 if (key === "db_id") {
                     const id = elem[key];
                     if (typeof id === "number") {
-                        data.ids.Ids.push({ Id: id });
+                        ids.push({ Id: id });
                     } else if (typeof id === "string") {
-                        data.ids.Ids.push({ Alias: id });
+                        ids.push({ Alias: id });
                     } else if (id === null || id === undefined) {
-                        data.ids.Ids.push({ Id: 0 });
-                    } else if ("Id" in id || "Alias" in id) {
-                        data.ids.Ids.push(id);
+                        ids.push({ Id: 0 });
+                    } else if (
+                        typeof id === "object" &&
+                        id !== null &&
+                        ("Id" in id || "Alias" in id)
+                    ) {
+                        ids.push(id as Components.Schemas.QueryId);
                     } else {
                         throw "Invalid db_id type";
                     }
-                } else {
-                    const keyValue = convertToDbValue(key);
-                    const valueValue = convertToDbValue(elem[key]);
-                    if (keyValue !== undefined && valueValue !== undefined) {
-                        multiItem.push({
-                            key: keyValue,
-                            value: valueValue,
-                        });
-                    }
+                } else if (elem[key] != null) {
+                    multiItem.push({
+                        key: convertToDbValue(key),
+                        value: convertToDbValue(
+                            elem[key] as Parameters<typeof convertToDbValue>[0],
+                        ),
+                    });
                 }
             }
-            data.values.Multi.push(multiItem);
+            multiValues.push(multiItem);
         }
+        data.values = { Multi: multiValues };
+        data.ids = { Ids: ids };
         return new InsertValuesIdsBuilder(data);
     }
 
@@ -1066,7 +1085,7 @@ function collapse_conditions(
     conditions: Components.Schemas.QueryCondition[][],
 ): boolean {
     if (conditions.length > 1) {
-        const last = conditions.pop();
+        const last = conditions.pop()!;
         const current = conditions[conditions.length - 1];
         const last_condition = current[current.length - 1];
         last_condition.data = { Where: last };

@@ -53,7 +53,8 @@
         "typescript": "catalog:",
         "typescript-eslint": "catalog:",
         "vite": "catalog:",
-        "vitest": "catalog:"
+        "vitest": "catalog:",
+        "@tsconfig/node18": "catalog:"
     },
     "exports": {
         ".": {

@@ -21,3 +21,4 @@ composer.lock
 .vscode/
 .turbo/
 .nuxtrc
+*.tsbuildinfo

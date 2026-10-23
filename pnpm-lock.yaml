@@ -388,6 +388,9 @@ importers:
       '@agdb-studio/user':
         specifier: workspace:*
         version: link:../libs/features/user
+      '@agdb-studio/utils':
+        specifier: workspace:*
+        version: link:../libs/core/utils
       '@agnesoft/agdb_api':
         specifier: workspace:*
         version: link:../../agdb_api/typescript

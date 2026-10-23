@@ -42,6 +42,6 @@ watchEffect(() => {
 }
 
 .user-table :deep(.crown-icon) {
-  color: #d4af37;
+  color: var(--crown-color);
 }
 </style>

@@ -119,6 +119,13 @@ describe("MainLayout", () => {
     const links = wrapper.findAllComponents({ name: "RouterLink" });
     expect(links.length).toBeGreaterThan(1);
 
+    // admin status page link exists
+    expect(
+      links.find(
+        (link) => link.props("to") === "/admin" && link.text() === "Status",
+      ),
+    ).toBeDefined();
+
     // admin users page link exists
     expect(
       links.find((link) => link.props("to") === "/admin/users")?.text(),

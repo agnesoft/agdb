@@ -30,6 +30,7 @@ const loggedInByServerAddress = ref<Record<string, boolean | null>>({});
 
 let pollInterval: ReturnType<typeof setInterval> | null = null;
 let lastLoginStatusRefreshAt: number | null = null;
+let consumerCount: number = 0;
 
 export const useClusterStatus = () => {
   const { logout } = useAuth();
@@ -225,11 +226,15 @@ export const useClusterStatus = () => {
   };
 
   onMounted(() => {
+    consumerCount++;
     startPolling();
   });
 
   onUnmounted(() => {
-    stopPolling();
+    consumerCount--;
+    if (consumerCount === 0) {
+      stopPolling();
+    }
   });
 
   return {

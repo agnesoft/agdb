@@ -367,7 +367,7 @@ const statusText = computed(() => {
 }
 
 .crown-icon {
-  color: #d4af37;
+  color: var(--crown-color);
 }
 
 .server-status {

@@ -95,8 +95,9 @@ test.describe("Routing & Navigation", () => {
     await gotoAdminDbPage(page);
 
     const navLinks = page.locator("nav a");
-    await expect(navLinks).toHaveCount(2);
-    await expect(navLinks.nth(0)).toHaveText("Databases");
-    await expect(navLinks.nth(1)).toHaveText("Users");
+    await expect(navLinks).toHaveCount(3);
+    await expect(navLinks.nth(0)).toHaveText("Status");
+    await expect(navLinks.nth(1)).toHaveText("Databases");
+    await expect(navLinks.nth(2)).toHaveText("Users");
   });
 });

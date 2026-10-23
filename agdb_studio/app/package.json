@@ -33,6 +33,7 @@
     "@agdb-studio/query": "workspace:*",
     "@agdb-studio/user": "workspace:*",
     "@agdb-studio/cluster": "workspace:*",
+    "@agdb-studio/utils": "workspace:*",
     "@agnesoft/agdb_api": "workspace:*",
     "@kalimahapps/vue-icons": "catalog:",
     "@vueuse/components": "catalog:",

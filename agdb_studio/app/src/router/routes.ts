@@ -34,8 +34,7 @@ export const createRoutes = (): RouteRecordRaw[] => {
             {
               path: "",
               name: "admin",
-              // component: () => import("@/views/admin/AdminView.vue"),
-              redirect: { name: "admin-db" },
+              component: () => import("@/views/admin/AdminView.vue"),
             },
             {
               path: "users",

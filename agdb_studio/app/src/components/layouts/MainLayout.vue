@@ -16,6 +16,7 @@ const homeLink = computed(() => (isAdminView.value ? "/admin" : "/"));
 const links = computed(() => {
   if (isAdminView.value) {
     return [
+      { to: "/admin", text: "Status" },
       { to: "/admin/db", text: "Databases" },
       { to: "/admin/users", text: "Users" },
     ];

@@ -121,7 +121,9 @@ describe("MainLayout", () => {
 
     // admin status page link exists
     expect(
-      links.find((link) => link.props("to") === "/admin" && link.text() === "Status"),
+      links.find(
+        (link) => link.props("to") === "/admin" && link.text() === "Status",
+      ),
     ).toBeDefined();
 
     // admin users page link exists

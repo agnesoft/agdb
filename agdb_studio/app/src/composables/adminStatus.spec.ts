@@ -141,9 +141,7 @@ describe("useAdminStatus", () => {
     await flushPromises();
     await nextTick();
 
-    expect(mockClient.admin_status).toHaveBeenCalledTimes(
-      initialCallCount + 1,
-    );
+    expect(mockClient.admin_status).toHaveBeenCalledTimes(initialCallCount + 1);
   });
 
   it("should not start polling again if already polling", async () => {

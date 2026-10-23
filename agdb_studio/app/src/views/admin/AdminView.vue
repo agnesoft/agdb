@@ -1,7 +1,10 @@
 <script lang="ts" setup>
 import { useAdminStatus } from "@/composables/adminStatus";
 import { useClusterStatus } from "@agdb-studio/cluster/src/composables/clusterStatus";
-import { formatBytes, formatUptime } from "@agdb-studio/utils/src/format/format";
+import {
+  formatBytes,
+  formatUptime,
+} from "@agdb-studio/utils/src/format/format";
 import SpinnerIcon from "@agdb-studio/design/src/components/icons/SpinnerIcon.vue";
 import {
   MdRefresh,
@@ -54,19 +57,29 @@ const statusText = (server: ClusterStatus): string => {
     </div>
 
     <SpinnerIcon v-if="adminLoading" />
-    <section v-else-if="adminStatus" class="server-status" data-testid="server-status">
+    <section
+      v-else-if="adminStatus"
+      class="server-status"
+      data-testid="server-status"
+    >
       <div class="status-grid">
         <div class="status-card">
           <span class="label">Databases</span>
-          <span class="value" data-testid="stat-dbs">{{ adminStatus.dbs }}</span>
+          <span class="value" data-testid="stat-dbs">{{
+            adminStatus.dbs
+          }}</span>
         </div>
         <div class="status-card">
           <span class="label">Users</span>
-          <span class="value" data-testid="stat-users">{{ adminStatus.users }}</span>
+          <span class="value" data-testid="stat-users">{{
+            adminStatus.users
+          }}</span>
         </div>
         <div class="status-card">
           <span class="label">Logged In</span>
-          <span class="value" data-testid="stat-logged-in">{{ adminStatus.logged_in_users }}</span>
+          <span class="value" data-testid="stat-logged-in">{{
+            adminStatus.logged_in_users
+          }}</span>
         </div>
         <div class="status-card">
           <span class="label">Log Level</span>
@@ -76,15 +89,21 @@ const statusText = (server: ClusterStatus): string => {
         </div>
         <div class="status-card">
           <span class="label">Memory</span>
-          <span class="value" data-testid="stat-memory">{{ formatBytes(adminStatus.memory) }}</span>
+          <span class="value" data-testid="stat-memory">{{
+            formatBytes(adminStatus.memory)
+          }}</span>
         </div>
         <div class="status-card">
           <span class="label">Data Size</span>
-          <span class="value" data-testid="stat-size">{{ formatBytes(adminStatus.size) }}</span>
+          <span class="value" data-testid="stat-size">{{
+            formatBytes(adminStatus.size)
+          }}</span>
         </div>
         <div class="status-card">
           <span class="label">Uptime</span>
-          <span class="value" data-testid="stat-uptime">{{ formatUptime(adminStatus.uptime) }}</span>
+          <span class="value" data-testid="stat-uptime">{{
+            formatUptime(adminStatus.uptime)
+          }}</span>
         </div>
       </div>
     </section>
@@ -97,7 +116,11 @@ const statusText = (server: ClusterStatus): string => {
     </div>
 
     <SpinnerIcon v-if="clusterLoading" />
-    <section v-else-if="servers.length > 0" class="cluster-status" data-testid="cluster-status">
+    <section
+      v-else-if="servers.length > 0"
+      class="cluster-status"
+      data-testid="cluster-status"
+    >
       <table class="cluster-table">
         <thead>
           <tr>
@@ -116,9 +139,20 @@ const statusText = (server: ClusterStatus): string => {
           >
             <td class="address-cell">{{ server.address }}</td>
             <td>
-              <span class="status-indicator" :class="server.status ? 'online' : 'offline'">
-                <PhFillWifiHigh v-if="server.status" class="status-icon" aria-hidden="true" />
-                <PhFillWifiSlash v-else class="status-icon" aria-hidden="true" />
+              <span
+                class="status-indicator"
+                :class="server.status ? 'online' : 'offline'"
+              >
+                <PhFillWifiHigh
+                  v-if="server.status"
+                  class="status-icon"
+                  aria-hidden="true"
+                />
+                <PhFillWifiSlash
+                  v-else
+                  class="status-icon"
+                  aria-hidden="true"
+                />
                 {{ statusText(server) }}
               </span>
             </td>

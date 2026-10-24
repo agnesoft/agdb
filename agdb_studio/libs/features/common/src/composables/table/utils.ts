@@ -7,5 +7,5 @@ export const dateFormatter = (value: TCellType): string => {
 };
 
 export const numberFormatter = (value: TCellType): string => {
-  return value && typeof value === "number" ? value.toLocaleString() : "N/A";
+  return typeof value === "number" ? value.toLocaleString("en-US") : "N/A";
 };

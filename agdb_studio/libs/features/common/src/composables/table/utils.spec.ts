@@ -25,9 +25,9 @@ describe("utils", () => {
       const formattedNumber = numberFormatter("not a number");
       expect(formattedNumber).toBe("N/A");
     });
-    it("should return N/A when value is 0", () => {
+    it("should return 0 when value is 0", () => {
       const formattedNumber = numberFormatter(0);
-      expect(formattedNumber).toBe("N/A");
+      expect(formattedNumber).toBe("0");
     });
   });
 });

@@ -5,3 +5,7 @@ export const dateFormatter = (value: TCellType): string => {
     ? new Date(value * 1000).toUTCString()
     : "N/A";
 };
+
+export const numberFormatter = (value: TCellType): string => {
+  return value && typeof value === "number" ? value.toLocaleString() : "N/A";
+};

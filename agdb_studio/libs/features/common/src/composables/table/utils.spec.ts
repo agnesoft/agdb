@@ -1,4 +1,4 @@
-import { dateFormatter } from "./utils";
+import { dateFormatter, numberFormatter } from "./utils";
 import { describe, it, expect } from "vitest";
 
 describe("utils", () => {
@@ -14,6 +14,20 @@ describe("utils", () => {
     it("should return N/A when value is 0", () => {
       const formattedDate = dateFormatter(0);
       expect(formattedDate).toBe("N/A");
+    });
+  });
+  describe("numberFormatter", () => {
+    it("should return a formatted number when value is number", () => {
+      const formattedNumber = numberFormatter(1234567.12);
+      expect(formattedNumber).toBe("1,234,567.12");
+    });
+    it("should return N/A when value is not a number", () => {
+      const formattedNumber = numberFormatter("not a number");
+      expect(formattedNumber).toBe("N/A");
+    });
+    it("should return N/A when value is 0", () => {
+      const formattedNumber = numberFormatter(0);
+      expect(formattedNumber).toBe("N/A");
     });
   });
 });

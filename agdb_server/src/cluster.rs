@@ -53,6 +53,7 @@ type ClusterResponseReceiver = UnboundedReceiver<(Request<ClusterAction>, Respon
 
 const FORWARD_CONNECT_ATTEMPTS: u32 = 3;
 const FORWARD_CONNECT_BACKOFF: Duration = Duration::from_millis(200);
+const CLUSTER_REQUEST_TIMEOUT: Duration = Duration::from_secs(60);
 
 pub(crate) struct ClusterNodeImpl {
     client: ReqwestClient,
@@ -319,6 +320,7 @@ pub(crate) async fn new(
         heartbeat_timeout: Duration::from_millis(config.cluster_heartbeat_timeout_ms),
         term_timeout: Duration::from_millis(config.cluster_term_timeout_ms),
         max_log_entries: config.cluster_max_log_entries,
+        in_flight_timeout: CLUSTER_REQUEST_TIMEOUT * 2,
     };
     let executed = storage.executed.subscribe();
     let raft = Arc::new(RwLock::new(raft::Cluster::new(storage, settings)));
@@ -379,7 +381,10 @@ async fn start_cluster(
                                 "[{index}] Error sending response to cluster node '{node_index}': {e:?}"
                             ),
                         }
-                    } else if request.is_append() || request.resync_dbs().is_some() {
+                    } else if request.is_append()
+                        || request.is_heartbeat()
+                        || request.resync_dbs().is_some()
+                    {
                         let fail_response = raft::Response::new(
                             request.index,
                             raft::ResponseType::CommitError("send failed".into()),
@@ -1003,7 +1008,7 @@ pub(crate) fn root_ca(config: &Config) -> ServerResult<Option<reqwest::Certifica
 
 #[cfg(feature = "tls")]
 pub(crate) fn reqwest_client(config: &Config) -> ServerResult<reqwest::Client> {
-    let mut builder = reqwest::Client::builder().timeout(Duration::from_secs(60));
+    let mut builder = reqwest::Client::builder().timeout(CLUSTER_REQUEST_TIMEOUT);
 
     if let Some(root_ca) = root_ca(config)? {
         builder = builder.add_root_certificate(root_ca).use_rustls_tls();
@@ -1015,7 +1020,7 @@ pub(crate) fn reqwest_client(config: &Config) -> ServerResult<reqwest::Client> {
 #[cfg(not(feature = "tls"))]
 pub(crate) fn reqwest_client(_config: &Config) -> ServerResult<reqwest::Client> {
     Ok(reqwest::Client::builder()
-        .timeout(Duration::from_secs(60))
+        .timeout(CLUSTER_REQUEST_TIMEOUT)
         .build()?)
 }
 

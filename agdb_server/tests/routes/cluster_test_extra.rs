@@ -955,3 +955,67 @@ async fn cluster_status_reports_stopped_follower_as_down() -> Result<(), TestErr
 
     Ok(())
 }
+
+#[tokio::test]
+async fn cluster_endpoint_negotiates_encoding() -> Result<(), TestError> {
+    const WIRE: &str = "application/vnd.agdb.cluster.v1";
+    let server = agdb_api::test_server::TestServer::new().await?;
+    let url = format!("{}/api/v1/cluster", server.server.address);
+    let client = reqwest_client();
+
+    // Older leaders send JSON and must get JSON back. The hash does not
+    // match, so the node answers without changing any state.
+    let json = client
+        .post(&url)
+        .bearer_auth("test")
+        .json(&serde_json::json!({
+            "hash": 0, "index": 0, "target": 0, "term": 0, "log_index": 0,
+            "log_term": 0, "log_commit": 0, "prune_index": 0,
+            "exec_reconciled": 0, "data": "Heartbeat"
+        }))
+        .send()
+        .await?;
+    assert_eq!(json.status(), 200);
+    assert!(
+        json.headers()["content-type"]
+            .to_str()
+            .unwrap_or_default()
+            .starts_with("application/json")
+    );
+    let body: serde_json::Value = json.json().await?;
+    assert!(body["result"].is_object() || body["result"].is_string());
+
+    // agdb serialization of a Request: nine u64 header fields, then the
+    // RequestType::Heartbeat variant index.
+    let mut binary_request = vec![0u8; 9 * 8];
+    binary_request.push(1);
+    let binary = client
+        .post(&url)
+        .bearer_auth("test")
+        .header("content-type", WIRE)
+        .body(binary_request.clone())
+        .send()
+        .await?;
+    assert_eq!(binary.status(), 200);
+    assert_eq!(binary.headers()["content-type"], WIRE);
+    assert!(!binary.bytes().await?.is_empty());
+
+    let truncated = client
+        .post(&url)
+        .bearer_auth("test")
+        .header("content-type", WIRE)
+        .body(binary_request[..10].to_vec())
+        .send()
+        .await?;
+    assert_eq!(truncated.status(), 400);
+
+    let unknown = client
+        .post(&url)
+        .bearer_auth("test")
+        .body(binary_request)
+        .send()
+        .await?;
+    assert_eq!(unknown.status(), 415);
+
+    Ok(())
+}

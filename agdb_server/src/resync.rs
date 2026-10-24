@@ -6,6 +6,7 @@ use crate::raft::Storage;
 use crate::server_db::SERVER_DB_FILE;
 use crate::server_error::ServerError;
 use crate::server_error::ServerResult;
+use crate::wire;
 use agdb_api::DbKind;
 use axum::http::StatusCode;
 use crc::CRC_64_XZ;
@@ -123,6 +124,7 @@ async fn catchup_logs_from_leader(
     let response = client
         .get(&logs_url)
         .bearer_auth(&config.cluster_token)
+        .header(reqwest::header::ACCEPT, wire::CONTENT_TYPE)
         .timeout(Duration::from_secs(600))
         .send()
         .await
@@ -136,6 +138,11 @@ async fn catchup_logs_from_leader(
         )));
     }
 
+    // Older leaders ignore the Accept header and send JSON entries.
+    let binary = response
+        .headers()
+        .get(reqwest::header::CONTENT_TYPE)
+        .is_some_and(|value| value == wire::CONTENT_TYPE);
     let mut stream = response.bytes_stream();
     let mut buf: Vec<u8> = Vec::new();
 
@@ -179,13 +186,13 @@ async fn catchup_logs_from_leader(
                         "log catch-up stream error: {e:?}"
                     )));
                 }
-                None => return Err(ServerError::from("log catch-up truncated (json_len)")),
+                None => return Err(ServerError::from("log catch-up truncated (entry_len)")),
             }
         }
-        let json_len = u64::from_le_bytes(buf[0..8].try_into().unwrap()) as usize;
+        let entry_len = u64::from_le_bytes(buf[0..8].try_into().unwrap()) as usize;
         buf.drain(0..8);
 
-        while buf.len() < json_len {
+        while buf.len() < entry_len {
             match stream.next().await {
                 Some(Ok(chunk)) => buf.extend_from_slice(&chunk),
                 Some(Err(e)) => {
@@ -193,12 +200,22 @@ async fn catchup_logs_from_leader(
                         "log catch-up stream error: {e:?}"
                     )));
                 }
-                None => return Err(ServerError::from("log catch-up truncated (json_bytes)")),
+                None => return Err(ServerError::from("log catch-up truncated (entry_bytes)")),
             }
         }
-        let log: Log<ClusterAction> = serde_json::from_slice(&buf[..json_len])
-            .map_err(|e| ServerError::from(format!("log catch-up deserialization error: {e}")))?;
-        buf.drain(0..json_len);
+        let log: Log<ClusterAction> = if binary {
+            wire::decode(&buf[..entry_len]).map_err(|e| {
+                ServerError::from(format!(
+                    "log catch-up deserialization error: {}",
+                    e.description
+                ))
+            })?
+        } else {
+            serde_json::from_slice(&buf[..entry_len]).map_err(|e| {
+                ServerError::from(format!("log catch-up deserialization error: {e}"))
+            })?
+        };
+        buf.drain(0..entry_len);
 
         if log.index != prev_index + 1 {
             return Err(ServerError::from(format!(

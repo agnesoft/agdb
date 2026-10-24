@@ -9,6 +9,7 @@ pub const MIN_TOKEN_EXPIRY_SECONDS: u64 = 60;
 pub const MAX_TOKEN_EXPIRY_SECONDS: u64 = 86400;
 pub const DEFAULT_CLUSTER_MAX_LOG_ENTRIES: u64 = 1000;
 pub const DEFAULT_CLUSTER_MAX_CHUNK_SIZE: u64 = 65_536;
+pub const DEFAULT_CLUSTER_MAX_APPEND_SIZE: u64 = 4 * 1024 * 1024;
 
 #[derive(Debug)]
 #[cfg_attr(feature = "api", derive(agdb::TypeDef))]
@@ -33,6 +34,7 @@ pub struct ConfigImpl {
     pub cluster: Vec<String>,
     pub cluster_max_log_entries: u64,
     pub cluster_max_chunk_size: u64,
+    pub cluster_max_append_size: u64,
     pub cluster_node_id: usize,
     pub start_time: u64,
     pub token_expiry_seconds: u64,
@@ -90,6 +92,10 @@ pub fn config_to_str(config: &ConfigImpl) -> String {
     buffer.push_str(&format!(
         "cluster_max_chunk_size: {}\n",
         config.cluster_max_chunk_size
+    ));
+    buffer.push_str(&format!(
+        "cluster_max_append_size: {}\n",
+        config.cluster_max_append_size
     ));
     buffer.push_str(&format!(
         "token_expiry_seconds: {}\n",

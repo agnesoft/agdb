@@ -465,6 +465,7 @@ mod tests {
     use agdb::SyncMode;
     use agdb_api::LogLevelFilter;
     use agdb_api::config_impl::ConfigImpl;
+    use agdb_api::config_impl::DEFAULT_CLUSTER_MAX_APPEND_SIZE;
     use agdb_api::config_impl::DEFAULT_CLUSTER_MAX_CHUNK_SIZE;
     use agdb_api::config_impl::DEFAULT_CLUSTER_MAX_LOG_ENTRIES;
     use agdb_api::config_impl::DEFAULT_LOG_BODY_LIMIT;
@@ -522,6 +523,7 @@ mod tests {
             cluster: vec![],
             cluster_max_log_entries: DEFAULT_CLUSTER_MAX_LOG_ENTRIES,
             cluster_max_chunk_size: DEFAULT_CLUSTER_MAX_CHUNK_SIZE,
+            cluster_max_append_size: DEFAULT_CLUSTER_MAX_APPEND_SIZE,
             cluster_node_id: 0,
             start_time: SystemTime::now()
                 .duration_since(UNIX_EPOCH)

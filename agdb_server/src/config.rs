@@ -1,6 +1,7 @@
 use agdb::SyncMode;
 use agdb_api::LogLevelFilter;
 use agdb_api::config_impl::ConfigImpl;
+use agdb_api::config_impl::DEFAULT_CLUSTER_MAX_APPEND_SIZE;
 use agdb_api::config_impl::DEFAULT_CLUSTER_MAX_CHUNK_SIZE;
 use agdb_api::config_impl::DEFAULT_CLUSTER_MAX_LOG_ENTRIES;
 use agdb_api::config_impl::DEFAULT_LOG_BODY_LIMIT;
@@ -183,6 +184,14 @@ pub(crate) fn from_str(content: &str) -> Result<ConfigImpl, String> {
                         config.cluster_max_chunk_size = DEFAULT_CLUSTER_MAX_CHUNK_SIZE;
                     }
                 }
+                "cluster_max_append_size" => {
+                    config.cluster_max_append_size = value
+                        .parse()
+                        .map_err(|e| format!("Invalid cluster_max_append_size: {e:?}"))?;
+                    if config.cluster_max_append_size == 0 {
+                        config.cluster_max_append_size = DEFAULT_CLUSTER_MAX_APPEND_SIZE;
+                    }
+                }
                 "token_expiry_seconds" => {
                     config.token_expiry_seconds = value
                         .parse()
@@ -207,6 +216,18 @@ pub(crate) fn from_str(content: &str) -> Result<ConfigImpl, String> {
                 _ => return Err(format!("Unknown key: {key}")),
             }
         }
+    }
+
+    // Followers reject Append bodies over their own request_body_limit. The
+    // generated config file spells out the default, so a later lower limit
+    // must not stop the server from starting.
+    if config.cluster_max_append_size > config.request_body_limit {
+        crate::warn!(
+            "cluster_max_append_size ({}) exceeds request_body_limit ({}), using request_body_limit",
+            config.cluster_max_append_size,
+            config.request_body_limit
+        );
+        config.cluster_max_append_size = config.request_body_limit;
     }
 
     normalize_address(&mut config);
@@ -251,6 +272,7 @@ pub(crate) fn default_config() -> ConfigImpl {
         cluster: vec![],
         cluster_max_log_entries: DEFAULT_CLUSTER_MAX_LOG_ENTRIES,
         cluster_max_chunk_size: DEFAULT_CLUSTER_MAX_CHUNK_SIZE,
+        cluster_max_append_size: DEFAULT_CLUSTER_MAX_APPEND_SIZE,
         cluster_node_id: 0,
         start_time: 0,
         token_expiry_seconds: DEFAULT_TOKEN_EXPIRY_SECONDS,
@@ -317,6 +339,7 @@ mod tests {
             cluster: vec![],
             cluster_max_log_entries: DEFAULT_CLUSTER_MAX_LOG_ENTRIES,
             cluster_max_chunk_size: DEFAULT_CLUSTER_MAX_CHUNK_SIZE,
+            cluster_max_append_size: DEFAULT_CLUSTER_MAX_APPEND_SIZE,
             cluster_node_id: 0,
             start_time: 0,
             token_expiry_seconds: DEFAULT_TOKEN_EXPIRY_SECONDS,
@@ -359,6 +382,7 @@ mod tests {
             cluster: vec![],
             cluster_max_log_entries: DEFAULT_CLUSTER_MAX_LOG_ENTRIES,
             cluster_max_chunk_size: DEFAULT_CLUSTER_MAX_CHUNK_SIZE,
+            cluster_max_append_size: DEFAULT_CLUSTER_MAX_APPEND_SIZE,
             cluster_node_id: 0,
             start_time: 0,
             token_expiry_seconds: DEFAULT_TOKEN_EXPIRY_SECONDS,
@@ -400,6 +424,7 @@ mod tests {
             cluster: vec![],
             cluster_max_log_entries: DEFAULT_CLUSTER_MAX_LOG_ENTRIES,
             cluster_max_chunk_size: DEFAULT_CLUSTER_MAX_CHUNK_SIZE,
+            cluster_max_append_size: DEFAULT_CLUSTER_MAX_APPEND_SIZE,
             cluster_node_id: 0,
             start_time: 0,
             token_expiry_seconds: DEFAULT_TOKEN_EXPIRY_SECONDS,
@@ -413,6 +438,35 @@ mod tests {
         .unwrap();
 
         config::new(test_file.filename).unwrap_err();
+    }
+
+    #[test]
+    fn cluster_max_append_size() {
+        assert_eq!(
+            from_str("cluster_max_append_size: 0")
+                .unwrap()
+                .cluster_max_append_size,
+            DEFAULT_CLUSTER_MAX_APPEND_SIZE
+        );
+        assert_eq!(
+            from_str("cluster_max_append_size: 1024")
+                .unwrap()
+                .cluster_max_append_size,
+            1024
+        );
+        assert_eq!(
+            from_str("cluster_max_append_size: 20971520")
+                .unwrap()
+                .cluster_max_append_size,
+            DEFAULT_REQUEST_BODY_LIMIT
+        );
+        from_str("request_body_limit: 31457280\ncluster_max_append_size: 20971520").unwrap();
+        assert_eq!(
+            from_str("request_body_limit: 2048")
+                .unwrap()
+                .cluster_max_append_size,
+            2048
+        );
     }
 
     #[test]

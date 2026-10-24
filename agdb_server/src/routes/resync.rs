@@ -10,12 +10,15 @@ use crate::server_db::ServerDb;
 use crate::server_error::ServerError;
 use crate::server_error::ServerResult;
 use crate::user_id::ClusterId;
+use crate::wire;
 use agdb_api::DbKind;
 use axum::body::Body;
 use axum::extract::Path;
 use axum::extract::Query;
 use axum::extract::State;
+use axum::http::HeaderMap;
 use axum::http::StatusCode;
+use axum::http::header;
 use crc::CRC_64_XZ;
 use crc::Crc;
 use std::path::PathBuf;
@@ -502,7 +505,14 @@ pub(crate) async fn logs(
     State(cluster): State<Cluster>,
     State(config): State<Config>,
     Query(params): Query<LogsQuery>,
+    headers: HeaderMap,
 ) -> ServerResult<axum::response::Response> {
+    // Older followers do not ask for the binary protocol and get JSON entries.
+    let binary = headers
+        .get(header::ACCEPT)
+        .and_then(|value| value.to_str().ok())
+        .is_some_and(|accept| accept.contains(wire::CONTENT_TYPE));
+
     if cluster.resync.load(Ordering::Acquire) {
         return axum::response::Response::builder()
             .status(StatusCode::SERVICE_UNAVAILABLE)
@@ -524,11 +534,23 @@ pub(crate) async fn logs(
     }
 
     let chunk_size = config.cluster_max_chunk_size as usize;
-    let body = Body::from_stream(log_entries_byte_stream(entries, commit_index, chunk_size));
+    let body = Body::from_stream(log_entries_byte_stream(
+        entries,
+        commit_index,
+        chunk_size,
+        binary,
+    ));
 
     axum::response::Response::builder()
         .status(StatusCode::OK)
-        .header("content-type", "application/octet-stream")
+        .header(
+            header::CONTENT_TYPE,
+            if binary {
+                wire::CONTENT_TYPE
+            } else {
+                "application/octet-stream"
+            },
+        )
         .body(body)
         .map_err(|e| ServerError::from(e.to_string()))
 }
@@ -537,6 +559,7 @@ fn log_entries_byte_stream(
     logs: Vec<Log<ClusterAction>>,
     commit_index: u64,
     chunk_size: usize,
+    binary: bool,
 ) -> impl futures::Stream<Item = Result<bytes::Bytes, std::io::Error>> + Send + 'static {
     async_stream::try_stream! {
         let entry_count = logs.len() as u64;
@@ -549,16 +572,19 @@ fn log_entries_byte_stream(
         let mut buf = Vec::with_capacity(chunk_size);
 
         for log in &logs {
-            let json = serde_json::to_vec(log)
-                .map_err(std::io::Error::other)?;
-            let len_bytes = (json.len() as u64).to_le_bytes();
+            let entry = if binary {
+                wire::encode(log)
+            } else {
+                serde_json::to_vec(log).map_err(std::io::Error::other)?
+            };
+            let len_bytes = (entry.len() as u64).to_le_bytes();
 
-            if !buf.is_empty() && buf.len() + 8 + json.len() > chunk_size {
+            if !buf.is_empty() && buf.len() + 8 + entry.len() > chunk_size {
                 yield bytes::Bytes::from(std::mem::take(&mut buf));
             }
 
             buf.extend_from_slice(&len_bytes);
-            buf.extend_from_slice(&json);
+            buf.extend_from_slice(&entry);
 
             if buf.len() >= chunk_size {
                 yield bytes::Bytes::from(std::mem::take(&mut buf));

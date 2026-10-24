@@ -247,6 +247,7 @@ The server reads a YAML-like config file (default: `agdb_server.yaml`). On first
 | `cluster_election_factor_ms`   | `1000`                  | Per-node election delay multiplier (node_id × factor)                        |
 | `cluster_max_log_entries`      | `1000`                  | Max Raft log entries before pruning                                          |
 | `cluster_max_chunk_size`       | `65536`                 | Max bytes per resync chunk                                                   |
+| `cluster_max_append_size`      | `4194304`               | Max bytes of log entries per catch-up append (≤ request_body_limit)          |
 | `token_expiry_seconds`         | `3600`                  | Auth token TTL (range: 60–86400)                                             |
 | `sync_mode`                    | `none`                  | Disk sync strategy: `none` (OS-managed) or `commit` (fsync on every commit)  |
 
@@ -257,6 +258,8 @@ The server supports a Raft-based cluster for high availability. Key characterist
 - **Leader election**: Uses PreVote → Vote protocol. Election timeout is staggered per node (`cluster_election_factor_ms × node_id`) to reduce split votes.
 - **Log replication**: The leader replicates `ClusterAction` log entries to followers. Actions include all mutating API operations (insert, remove, user/db management).
 - **Commit rule**: A log entry is committed once a majority of nodes (⌊N/2⌋ + 1) acknowledge it.
+- **Transport**: Nodes talk over `POST /api/v1/cluster` using agdb's own binary serialization (`AgdbSerialize`/`DbSerialize`, content type `application/vnd.agdb.cluster.v1`); the streamed log catch-up uses the same encoding per entry. Older nodes that only speak JSON answer 415, and the leader then talks JSON to that node until it was unreachable (restarted).
+- **Catch-up**: A lagging follower gets the backlog in append requests of at most `cluster_max_append_size` bytes, one at a time. The value is capped at the local `request_body_limit`, but it must also fit every follower's `request_body_limit` and any proxy limit in between. If an append is still rejected as too large (HTTP 413), the leader falls back to a resync, which the follower streams from the leader.
 - **Resync**: Nodes that fall behind can fully resync databases from the leader. The leader sends databases in chunks (`cluster_max_chunk_size`).
 - **Single-node cluster**: Setting `cluster: ["http://localhost:3000"]` with a single URL runs a "cluster of one" — Raft runs but auto-commits immediately.
 - **Cluster routes**: `/api/v1/cluster/*` endpoints propagate login/logout across all nodes. Regular `/api/v1/db/*` writes are automatically replicated by the Raft layer.

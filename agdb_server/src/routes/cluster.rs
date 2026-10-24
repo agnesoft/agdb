@@ -19,6 +19,7 @@ use crate::routes::user::LOGOUT_OTHER_SESSIONS;
 use crate::routes::user::LogoutQuery;
 use crate::routes::user::do_login;
 use crate::server_db::ServerDb;
+use crate::server_error::ServerError;
 use crate::server_error::ServerResponse;
 use crate::server_error::ServerResult;
 use crate::user_id::AdminId;
@@ -26,14 +27,17 @@ use crate::user_id::ClusterId;
 use crate::user_id::UserAgent;
 use crate::user_id::UserName;
 use crate::user_id::UserToken;
+use crate::wire;
 use agdb_api::ClusterStatus;
 use agdb_api::UserLogin;
 use axum::Json;
+use axum::body::Bytes;
 use axum::extract::Path;
 use axum::extract::Query;
 use axum::extract::State;
 use axum::http::HeaderMap;
 use axum::http::StatusCode;
+use axum::http::header;
 use axum::response::IntoResponse;
 use std::collections::HashSet;
 use std::sync::Arc;
@@ -54,15 +58,33 @@ impl Drop for ResyncInProgressGuard {
     }
 }
 
+// Accepts the binary protocol and JSON (older leaders) and answers in kind.
 pub(crate) async fn cluster(
     _cluster_id: ClusterId,
     State(cluster): State<Cluster>,
     State(config): State<Config>,
-    request: Json<Request<ClusterAction>>,
-) -> ServerResult<(StatusCode, Json<Response>)> {
+    headers: HeaderMap,
+    body: Bytes,
+) -> ServerResult<axum::response::Response> {
+    let content_type = headers
+        .get(header::CONTENT_TYPE)
+        .and_then(|value| value.to_str().ok())
+        .unwrap_or_default();
+    let binary = content_type == wire::CONTENT_TYPE;
+
+    let request: Request<ClusterAction> = if binary {
+        wire::decode(&body)
+            .map_err(|e| ServerError::new(StatusCode::BAD_REQUEST, &e.description))?
+    } else if content_type.starts_with("application/json") {
+        serde_json::from_slice(&body)
+            .map_err(|e| ServerError::new(StatusCode::BAD_REQUEST, &e.to_string()))?
+    } else {
+        return Ok(StatusCode::UNSUPPORTED_MEDIA_TYPE.into_response());
+    };
+
     if cluster.resync.load(Ordering::Relaxed) {
         let response = Response::new(request.index, ResponseType::Resyncing);
-        return Ok((StatusCode::OK, Json(with_node_state(response, &cluster))));
+        return Ok(reply(with_node_state(response, &cluster), binary));
     }
 
     let response = with_node_state(cluster.raft.write().await.request(&request).await, &cluster);
@@ -176,7 +198,7 @@ pub(crate) async fn cluster(
         });
     }
 
-    Ok((StatusCode::OK, Json(response)))
+    Ok(reply(response, binary))
 }
 
 #[utoipa::path(post,
@@ -321,6 +343,18 @@ pub(crate) async fn logout(
         StatusCode::CREATED,
         [("commit-index", commit_index.to_string())],
     ))
+}
+
+fn reply(response: Response, binary: bool) -> axum::response::Response {
+    if binary {
+        (
+            [(header::CONTENT_TYPE, wire::CONTENT_TYPE)],
+            wire::encode(&response),
+        )
+            .into_response()
+    } else {
+        Json(response).into_response()
+    }
 }
 
 fn with_node_state(mut response: Response, cluster: &Cluster) -> Response {

@@ -266,6 +266,7 @@ The server reads a YAML-like config file (default: `agdb_server.yaml`). First ru
 | `cluster_election_factor_ms`   | `1000`                  | Per-node election delay (node_id × factor)                     |
 | `cluster_max_log_entries`      | `1000`                  | Max Raft log entries before pruning                            |
 | `cluster_max_chunk_size`       | `65536`                 | Max bytes per resync chunk                                     |
+| `cluster_max_append_size`      | `4194304`               | Max bytes of log entries per catch-up append (≤ request limit) |
 | `token_expiry_seconds`         | `3600`                  | Auth token TTL (range: 60–86400)                               |
 | `sync_mode`                    | `none`                  | `none` (OS-managed flush) or `commit` (fsync every commit)     |
 

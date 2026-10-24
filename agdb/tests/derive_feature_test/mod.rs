@@ -802,6 +802,40 @@ fn derived_serialization_tuple() {
     assert_eq!(s, deserialized);
 }
 
+#[test]
+fn derived_serialization_generic() {
+    #[derive(DbSerialize, Debug, PartialEq)]
+    struct Wrapper<T> {
+        id: u64,
+        value: T,
+    }
+
+    #[derive(DbSerialize, Debug, PartialEq)]
+    enum Message<T> {
+        Empty,
+        Values(Vec<T>),
+        Named { label: Option<String>, value: T },
+    }
+
+    for message in [
+        Message::Empty,
+        Message::Values(vec![(1_u64, "a".to_string())]),
+        Message::Named {
+            label: None,
+            value: (2_u64, "b".to_string()),
+        },
+    ] {
+        let wrapper = Wrapper {
+            id: 1,
+            value: message,
+        };
+        let serialized = wrapper.serialize();
+
+        assert_eq!(serialized.len() as u64, wrapper.serialized_size());
+        assert_eq!(Wrapper::deserialize(&serialized).unwrap(), wrapper);
+    }
+}
+
 #[derive(DbSerialize, Debug, PartialEq)]
 struct S1 {
     f1: u64,

@@ -80,6 +80,10 @@ impl<T> Request<T> {
         matches!(self.data, RequestType::Append(_))
     }
 
+    pub(crate) fn is_heartbeat(&self) -> bool {
+        matches!(self.data, RequestType::Heartbeat)
+    }
+
     pub(crate) fn resync_dbs(&self) -> Option<&Vec<(String, String)>> {
         match &self.data {
             RequestType::ResyncDbs(dbs) => Some(dbs),
@@ -116,6 +120,7 @@ struct Node {
     voted: bool,
     append_failures: u32,
     force_resync: bool,
+    in_flight: Option<Instant>,
     pending_resync_dbs: Vec<(String, String)>,
     sent_resync_dbs: Vec<(String, String)>,
     exec_reconciled: u64,
@@ -148,6 +153,7 @@ pub(crate) struct Cluster<T, N, S: Storage<T, N>> {
     heartbeat_timeout: Duration,
     term_timeout: Duration,
     max_log_entries: u64,
+    in_flight_timeout: Duration,
     needs_resync: bool,
     phantom_data: PhantomData<(T, N)>,
 }
@@ -160,6 +166,7 @@ pub(crate) struct ClusterSettings {
     pub(crate) heartbeat_timeout: Duration,
     pub(crate) term_timeout: Duration,
     pub(crate) max_log_entries: u64,
+    pub(crate) in_flight_timeout: Duration,
 }
 
 impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
@@ -192,6 +199,7 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
                     voted: i == settings.index,
                     append_failures: 0,
                     force_resync: false,
+                    in_flight: None,
                     pending_resync_dbs: vec![],
                     sent_resync_dbs: vec![],
                     exec_reconciled: 0,
@@ -214,6 +222,7 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
             heartbeat_timeout: settings.heartbeat_timeout,
             term_timeout: settings.term_timeout,
             max_log_entries: settings.max_log_entries,
+            in_flight_timeout: settings.in_flight_timeout,
             needs_resync: false,
             storage,
             phantom_data: PhantomData {},
@@ -239,7 +248,7 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
         let requests: Vec<Request<T>> = self
             .nodes
             .iter()
-            .filter(|node| self.index != node.index)
+            .filter(|node| self.index != node.index && !self.is_in_flight(node))
             .map(|node| Request {
                 hash: self.hash,
                 index: self.index,
@@ -253,6 +262,9 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
                 data: RequestType::Append(vec![log.clone()]),
             })
             .collect();
+        requests.iter().for_each(|request| {
+            self.node_mut(request.target).in_flight = Some(Instant::now());
+        });
         self.storage.append(log, notifier).await?;
 
         if self.size == 1 {
@@ -295,10 +307,6 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
             if requests.is_empty() {
                 return None;
             }
-
-            requests.iter().for_each(|request| {
-                self.node_mut(request.target).timer = Instant::now();
-            });
 
             return Some(requests);
         } else {
@@ -380,6 +388,13 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
         use ResponseType::OkReport;
         use ResponseType::TermMismatch;
 
+        if let Leader = self.state
+            && request.term == self.term
+            && matches!(request.data, Heartbeat | Append(_))
+        {
+            self.node_mut(request.target).in_flight = None;
+        }
+
         match (&self.state, &request.data, &response.result) {
             (Election, PreVote, OK) => Ok(self.pre_vote_received(request)),
             (Candidate, Vote, OK) => Ok(self.vote_received(request)),
@@ -449,13 +464,13 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
                     }
                 }
 
-                self.commit(request).await
+                self.commit_and_catch_up(request).await
             }
             // Backward compat: if a follower sends plain Ok (e.g. during
             // rolling upgrade), treat it as OkReport with no failures.
             (Leader, Heartbeat | Append(_), OK) => {
                 self.node_mut(request.target).append_failures = 0;
-                self.commit(request).await
+                self.commit_and_catch_up(request).await
             }
             (Leader, Resync | ResyncDbs(_), OK | CommitError(_)) => {
                 if let RequestType::ResyncDbs(dbs) = &request.data {
@@ -510,6 +525,9 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
                 }
                 Ok(None)
             }
+            // Unreachable node: already logged by the transport, retried on
+            // the next heartbeat.
+            (Leader, Heartbeat, ResponseType::CommitError(_)) => Ok(None),
             (_, _, ResponseType::CommitError(e)) => {
                 crate::info!(
                     "[{}] Node {} commit error: {}",
@@ -532,6 +550,34 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
             .commit
             .local
             .unwrap_or(self.node(request.target).log_commit);
+        self.append_from(request.target, from_index).await
+    }
+
+    async fn commit_and_catch_up(
+        &mut self,
+        request: &Request<T>,
+    ) -> ServerResult<Option<Vec<Request<T>>>> {
+        let target = request.target;
+        let mut requests = self.commit(request).await?.unwrap_or_default();
+
+        let node = self.node(target);
+        if node.log_index < self.local().log_index {
+            let from_index = node.log_index;
+            if let Some(append) = self.append_from(target, from_index).await? {
+                requests.extend(append);
+            }
+        } else if node.log_commit < self.local().log_commit {
+            requests.extend(self.heartbeat_to(target));
+        }
+
+        Ok((!requests.is_empty()).then_some(requests))
+    }
+
+    async fn append_from(
+        &mut self,
+        target: u64,
+        from_index: u64,
+    ) -> ServerResult<Option<Vec<Request<T>>>> {
         let logs = self.storage.logs(from_index).await?;
 
         // Gap detected: needed entries were pruned, follower must resync
@@ -542,22 +588,22 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
             crate::warn!(
                 "[{}] Node {} is too far behind (needs index {}, earliest available is {}). Forcing resync.",
                 self.index,
-                request.target,
+                target,
                 from_index,
                 earliest
             );
-            self.node_mut(request.target).force_resync = true;
+            self.node_mut(target).force_resync = true;
             return Ok(None);
         }
 
-        let node = self.node_mut(request.target);
+        let node = self.node_mut(target);
         node.timer = Instant::now();
+        node.in_flight = Some(node.timer);
         let resync_dbs = std::mem::take(&mut node.pending_resync_dbs);
         let force_resync = node.force_resync;
         let exec_reconciled = node.exec_reconciled;
         node.force_resync = false;
 
-        let target = request.target;
         let mut requests = vec![Request {
             hash: self.hash,
             index: self.index,
@@ -743,7 +789,8 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
                 >= quorum
         {
             self.commit_storage(request.log_index).await?;
-            heartbeats = Some(self.heartbeat_no_timer());
+            // The responding node gets a tailored follow-up from the caller.
+            heartbeats = Some(self.heartbeat_no_timer(Some(request.target)));
         }
 
         let min_commit = self.nodes.iter().map(|n| n.log_commit).min().unwrap_or(0);
@@ -760,89 +807,79 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
     }
 
     fn heartbeat(&mut self) -> Vec<Request<T>> {
-        let prune_index = self.storage.prune_index();
-        let log_commit = self.local().log_commit;
         let targets: Vec<u64> = self
             .nodes
             .iter()
             .filter(|node| {
-                self.index != node.index && node.timer.elapsed() > self.heartbeat_timeout
+                self.index != node.index
+                    && !self.is_in_flight(node)
+                    && node.timer.elapsed() > self.heartbeat_timeout
             })
             .map(|node| node.index)
             .collect();
 
-        let mut requests = Vec::with_capacity(targets.len());
-        for target in targets {
-            let node = &mut self.nodes[target as usize];
-            let resync_dbs = std::mem::take(&mut node.pending_resync_dbs);
-            let force_resync = node.force_resync;
-            let exec_reconciled = node.exec_reconciled;
-            node.force_resync = false;
-
-            requests.push(Request {
-                hash: self.hash,
-                index: self.index,
-                target,
-                term: self.term,
-                log_index: self.local().log_index,
-                log_term: self.local().log_term,
-                log_commit,
-                prune_index,
-                exec_reconciled,
-                data: RequestType::Heartbeat,
-            });
-
-            self.push_resync_requests(
-                &mut requests,
-                target,
-                exec_reconciled,
-                force_resync,
-                resync_dbs,
-            );
+        for &target in &targets {
+            if self.node(target).in_flight.is_some() {
+                crate::warn!(
+                    "[{}] Node {} request got no response within {:?}, resending",
+                    self.index,
+                    target,
+                    self.in_flight_timeout,
+                );
+            }
         }
 
-        requests
+        targets
+            .into_iter()
+            .flat_map(|target| self.heartbeat_to(target))
+            .collect()
     }
 
-    fn heartbeat_no_timer(&mut self) -> Vec<Request<T>> {
-        let prune_index = self.storage.prune_index();
+    fn heartbeat_no_timer(&mut self, skip: Option<u64>) -> Vec<Request<T>> {
         let targets: Vec<u64> = self
             .nodes
             .iter()
-            .filter(|node| self.index != node.index)
+            .filter(|node| {
+                self.index != node.index && Some(node.index) != skip && !self.is_in_flight(node)
+            })
             .map(|node| node.index)
             .collect();
 
-        let mut requests = Vec::with_capacity(targets.len());
-        for target in targets {
-            let node = &mut self.nodes[target as usize];
-            let resync_dbs = std::mem::take(&mut node.pending_resync_dbs);
-            let force_resync = node.force_resync;
-            let exec_reconciled = node.exec_reconciled;
-            node.force_resync = false;
-            node.timer = Instant::now();
+        targets
+            .into_iter()
+            .flat_map(|target| self.heartbeat_to(target))
+            .collect()
+    }
 
-            requests.push(Request {
-                hash: self.hash,
-                index: self.index,
-                target,
-                term: self.term,
-                log_index: self.local().log_index,
-                log_term: self.local().log_term,
-                log_commit: self.local().log_commit,
-                prune_index,
-                exec_reconciled,
-                data: RequestType::Heartbeat,
-            });
+    fn heartbeat_to(&mut self, target: u64) -> Vec<Request<T>> {
+        let node = &mut self.nodes[target as usize];
+        let resync_dbs = std::mem::take(&mut node.pending_resync_dbs);
+        let force_resync = node.force_resync;
+        let exec_reconciled = node.exec_reconciled;
+        node.force_resync = false;
+        node.timer = Instant::now();
+        node.in_flight = Some(node.timer);
 
-            self.push_resync_requests(
-                &mut requests,
-                target,
-                exec_reconciled,
-                force_resync,
-                resync_dbs,
-            );
-        }
+        let mut requests = vec![Request {
+            hash: self.hash,
+            index: self.index,
+            target,
+            term: self.term,
+            log_index: self.local().log_index,
+            log_term: self.local().log_term,
+            log_commit: self.local().log_commit,
+            prune_index: self.storage.prune_index(),
+            exec_reconciled,
+            data: RequestType::Heartbeat,
+        }];
+
+        self.push_resync_requests(
+            &mut requests,
+            target,
+            exec_reconciled,
+            force_resync,
+            resync_dbs,
+        );
 
         requests
     }
@@ -957,7 +994,8 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
         if votes > quorum {
             self.state = ClusterState::Leader;
             self.term = request.term;
-            return Some(self.heartbeat_no_timer());
+            self.nodes.iter_mut().for_each(|node| node.in_flight = None);
+            return Some(self.heartbeat_no_timer(None));
         }
 
         None
@@ -1137,6 +1175,11 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
         self.node_mut(index).log_commit = log_commit;
     }
 
+    fn is_in_flight(&self, node: &Node) -> bool {
+        node.in_flight
+            .is_some_and(|sent| sent.elapsed() < self.in_flight_timeout)
+    }
+
     fn node(&self, index: u64) -> &Node {
         &self.nodes[index as usize]
     }
@@ -1268,6 +1311,7 @@ mod test {
                         heartbeat_timeout: Duration::from_millis(100),
                         term_timeout: Duration::from_millis(300),
                         max_log_entries,
+                        in_flight_timeout: Duration::from_secs(120),
                     };
                     Arc::new(RwLock::new(TestNodeImpl {
                         cluster: Cluster::new(storage, settings),
@@ -1301,6 +1345,13 @@ mod test {
                             responses_channel.send((request, response)).await?;
                         } else {
                             crate::info!("Blocked: {:?}", request);
+                            if request.is_append() || request.is_heartbeat() {
+                                let response = Response::new(
+                                    request.index,
+                                    ResponseType::CommitError("send failed".into()),
+                                );
+                                responses_channel.send((request, response)).await?;
+                            }
                         }
                     }
                 }
@@ -1725,6 +1776,7 @@ mod test {
             heartbeat_timeout: Duration::from_millis(0),
             term_timeout: Duration::from_secs(3),
             max_log_entries: 1000,
+            in_flight_timeout: Duration::from_secs(120),
         };
         let mut cluster: Cluster<u8, (), TestStorage> = Cluster::new(storage, settings);
         // Force leader state
@@ -1763,6 +1815,7 @@ mod test {
             heartbeat_timeout: Duration::from_millis(100),
             term_timeout: Duration::from_millis(300),
             max_log_entries: 1000,
+            in_flight_timeout: Duration::from_secs(120),
         };
         let mut cluster: Cluster<u8, (), TestStorage> = Cluster::new(storage, settings);
         cluster.state = ClusterState::Follower(0);
@@ -1816,6 +1869,7 @@ mod test {
             heartbeat_timeout: Duration::from_millis(100),
             term_timeout: Duration::from_millis(300),
             max_log_entries: 1000,
+            in_flight_timeout: Duration::from_secs(120),
         };
         let mut cluster: Cluster<u8, (), TestStorage> = Cluster::new(storage, settings);
         cluster.state = ClusterState::Leader;
@@ -1931,6 +1985,7 @@ mod test {
             heartbeat_timeout: Duration::from_millis(100),
             term_timeout: Duration::from_millis(300),
             max_log_entries: 1000,
+            in_flight_timeout: Duration::from_secs(120),
         };
         let mut leader: Cluster<u8, (), TestStorage> =
             Cluster::new(leader_storage, leader_settings);
@@ -1958,6 +2013,7 @@ mod test {
             heartbeat_timeout: Duration::from_millis(100),
             term_timeout: Duration::from_millis(300),
             max_log_entries: 1000,
+            in_flight_timeout: Duration::from_secs(120),
         };
         let mut follower: Cluster<u8, (), TestStorage> =
             Cluster::new(follower_storage, follower_settings);
@@ -2041,6 +2097,7 @@ mod test {
             heartbeat_timeout: Duration::from_millis(100),
             term_timeout: Duration::from_millis(300),
             max_log_entries: 1000,
+            in_flight_timeout: Duration::from_secs(120),
         };
         let mut cluster: Cluster<u8, (), TestStorage> = Cluster::new(storage, settings);
         cluster.state = ClusterState::Follower(0);
@@ -2095,6 +2152,7 @@ mod test {
             heartbeat_timeout: Duration::from_millis(100),
             term_timeout: Duration::from_millis(300),
             max_log_entries: 1000,
+            in_flight_timeout: Duration::from_secs(120),
         };
         let mut cluster: Cluster<u8, (), TestStorage> = Cluster::new(storage, settings);
         cluster.state = ClusterState::Follower(0);
@@ -2206,6 +2264,7 @@ mod test {
             heartbeat_timeout: Duration::from_millis(100),
             term_timeout: Duration::from_millis(300),
             max_log_entries: 1000,
+            in_flight_timeout: Duration::from_secs(120),
         };
         let mut leader: Cluster<u8, (), TestStorage> = Cluster::new(storage, settings);
         leader.state = ClusterState::Leader;
@@ -2368,6 +2427,7 @@ mod test {
             heartbeat_timeout: Duration::from_millis(0),
             term_timeout: Duration::from_secs(3),
             max_log_entries: 1000,
+            in_flight_timeout: Duration::from_secs(120),
         }
     }
 
@@ -2778,7 +2838,7 @@ mod test {
 
         leader.node_mut(2).pending_resync_dbs = vec![("bob".into(), "db2".into())];
 
-        let requests = leader.heartbeat_no_timer();
+        let requests = leader.heartbeat_no_timer(None);
         let resync_req = requests
             .iter()
             .find(|r| r.target == 2 && matches!(r.data, RequestType::ResyncDbs(_)))
@@ -2810,7 +2870,7 @@ mod test {
 
         leader.node_mut(2).force_resync = true;
 
-        let requests = leader.heartbeat_no_timer();
+        let requests = leader.heartbeat_no_timer(None);
         let resync_req = requests
             .iter()
             .find(|r| r.target == 2 && matches!(r.data, RequestType::Resync));
@@ -2848,6 +2908,7 @@ mod test {
             heartbeat_timeout: Duration::from_millis(100),
             term_timeout: Duration::from_millis(300),
             max_log_entries: 1000,
+            in_flight_timeout: Duration::from_secs(120),
         };
         let mut follower: Cluster<u8, (), TestStorage> = Cluster::new(storage, settings);
         follower.state = ClusterState::Follower(0);
@@ -2882,6 +2943,7 @@ mod test {
             heartbeat_timeout: Duration::from_millis(100),
             term_timeout: Duration::from_millis(300),
             max_log_entries: 1000,
+            in_flight_timeout: Duration::from_secs(120),
         };
         let mut follower: Cluster<u8, (), TestStorage> = Cluster::new(storage, settings);
         follower.state = ClusterState::Follower(0);
@@ -3101,6 +3163,238 @@ mod test {
         Ok(())
     }
 
+    fn mismatch_response(follower_index: u64, follower_commit: u64) -> Response {
+        Response::new(
+            0,
+            ResponseType::LogMismatch(LogMismatch {
+                index: MismatchedValues {
+                    local: Some(follower_index),
+                    requested: None,
+                },
+                term: MismatchedValues {
+                    local: Some(1),
+                    requested: None,
+                },
+                commit: MismatchedValues {
+                    local: Some(follower_commit),
+                    requested: None,
+                },
+            }),
+        )
+    }
+
+    #[tokio::test]
+    async fn lagging_follower_has_single_request_in_flight() -> anyhow::Result<()> {
+        let mut leader = test_leader(TestStorage::default());
+
+        let mut first = leader
+            .append(1, None)
+            .await
+            .map_err(|e| anyhow!(e.description))?;
+        assert_eq!(first.len(), 2);
+        let first_to_1 = first.remove(0);
+        assert_eq!(first_to_1.target, 1);
+
+        for i in 2..=10 {
+            let requests = leader
+                .append(i, None)
+                .await
+                .map_err(|e| anyhow!(e.description))?;
+            assert!(requests.is_empty(), "append {i} sent while in flight");
+        }
+        assert!(leader.heartbeat().is_empty());
+        assert!(leader.heartbeat_no_timer(None).is_empty());
+
+        // Follower 1 had desynced and missed log 1.
+        let reconcile = leader
+            .response(&first_to_1, &mismatch_response(0, 0))
+            .await
+            .map_err(|e| anyhow!(e.description))?
+            .expect("reconcile append");
+        assert_eq!(reconcile.len(), 1);
+        let RequestType::Append(logs) = &reconcile[0].data else {
+            panic!("expected append, got {:?}", reconcile[0].data);
+        };
+        assert_eq!(logs.len(), 10);
+
+        for i in 11..=20 {
+            let requests = leader
+                .append(i, None)
+                .await
+                .map_err(|e| anyhow!(e.description))?;
+            assert!(
+                requests.iter().all(|r| r.target != 1),
+                "append {i} sent to node 1 while reconcile in flight"
+            );
+        }
+
+        // Catch-up continues from what the follower acknowledged.
+        let catch_up = leader
+            .response(&reconcile[0], &ok_response_with_failed(vec![]))
+            .await
+            .map_err(|e| anyhow!(e.description))?
+            .expect("catch-up append");
+        let catch_up: Vec<_> = catch_up.into_iter().filter(|r| r.target == 1).collect();
+        assert_eq!(catch_up.len(), 1);
+        let RequestType::Append(logs) = &catch_up[0].data else {
+            panic!("expected append, got {:?}", catch_up[0].data);
+        };
+        assert_eq!(
+            logs.iter().map(|l| l.index).collect::<Vec<_>>(),
+            (11..=20).collect::<Vec<_>>()
+        );
+
+        // Acknowledging log 20 commits it; the follower is told via a heartbeat.
+        let commit = leader
+            .response(&catch_up[0], &ok_response_with_failed(vec![]))
+            .await
+            .map_err(|e| anyhow!(e.description))?
+            .expect("commit heartbeat");
+        let commit: Vec<_> = commit.into_iter().filter(|r| r.target == 1).collect();
+        assert_eq!(commit.len(), 1);
+        assert!(commit[0].is_heartbeat());
+        assert_eq!(commit[0].log_commit, 20);
+
+        let done = leader
+            .response(&commit[0], &ok_response_with_failed(vec![]))
+            .await
+            .map_err(|e| anyhow!(e.description))?;
+        assert!(done.is_none());
+        assert!(leader.node(1).in_flight.is_none());
+        Ok(())
+    }
+
+    const SHORT_IN_FLIGHT_TIMEOUT: Duration = Duration::from_millis(50);
+
+    fn short_in_flight_leader() -> Cluster<u8, (), TestStorage> {
+        let mut leader = Cluster::new(
+            TestStorage::default(),
+            ClusterSettings {
+                in_flight_timeout: SHORT_IN_FLIGHT_TIMEOUT,
+                ..leader_settings()
+            },
+        );
+        leader.state = ClusterState::Leader;
+        leader.term = 1;
+        leader
+    }
+
+    #[tokio::test]
+    async fn lost_response_expires_in_flight() -> anyhow::Result<()> {
+        let mut leader = short_in_flight_leader();
+
+        assert_eq!(leader.heartbeat().len(), 2);
+        assert!(leader.heartbeat().is_empty());
+
+        // No response ever arrives.
+        tokio::time::sleep(SHORT_IN_FLIGHT_TIMEOUT + Duration::from_millis(10)).await;
+
+        assert_eq!(leader.heartbeat().len(), 2);
+        assert!(leader.node(1).in_flight.is_some());
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn late_response_after_expiry_frees_slot() -> anyhow::Result<()> {
+        let mut leader = short_in_flight_leader();
+        let stale = leader.heartbeat();
+        let stale_to_1 = stale.iter().find(|r| r.target == 1).expect("stale");
+
+        tokio::time::sleep(SHORT_IN_FLIGHT_TIMEOUT + Duration::from_millis(10)).await;
+        let fresh = leader.heartbeat();
+        let fresh_to_1 = fresh.iter().find(|r| r.target == 1).expect("fresh");
+        assert!(leader.node(1).in_flight.is_some());
+
+        // Requests carry no id, so the stale reply frees the fresh request's
+        // slot early. Accepted: it needs a reply later than the expiry and
+        // costs at most one extra outstanding request.
+        let follow_up = leader
+            .response(stale_to_1, &ok_response_with_failed(vec![]))
+            .await
+            .map_err(|e| anyhow!(e.description))?;
+        assert!(follow_up.is_none());
+        assert!(leader.node(1).in_flight.is_none());
+
+        let follow_up = leader
+            .response(fresh_to_1, &ok_response_with_failed(vec![]))
+            .await
+            .map_err(|e| anyhow!(e.description))?;
+        assert!(follow_up.is_none());
+        assert!(leader.node(1).in_flight.is_none());
+        assert!(leader.heartbeat().iter().any(|r| r.target == 1));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn failed_append_releases_in_flight_and_recovers() -> anyhow::Result<()> {
+        let mut leader = test_leader(TestStorage::default());
+        let append = leader
+            .append(1, None)
+            .await
+            .map_err(|e| anyhow!(e.description))?;
+        let append_to_1 = append.iter().find(|r| r.target == 1).expect("append");
+
+        let follow_up = leader
+            .response(
+                append_to_1,
+                &Response::new(0, ResponseType::CommitError("send failed".into())),
+            )
+            .await
+            .map_err(|e| anyhow!(e.description))?;
+        assert!(follow_up.is_none());
+        assert!(leader.node(1).in_flight.is_none());
+        assert_eq!(leader.node(1).append_failures, 1);
+
+        // Node 2 is still waiting on its append, so only node 1 is probed.
+        let heartbeat = leader.heartbeat();
+        assert_eq!(heartbeat.len(), 1);
+        assert_eq!(heartbeat[0].target, 1);
+        assert!(heartbeat[0].is_heartbeat());
+
+        let reconcile = leader
+            .response(&heartbeat[0], &mismatch_response(0, 0))
+            .await
+            .map_err(|e| anyhow!(e.description))?
+            .expect("reconcile append");
+        assert_eq!(reconcile.len(), 1);
+        let RequestType::Append(logs) = &reconcile[0].data else {
+            panic!("expected append, got {:?}", reconcile[0].data);
+        };
+        assert_eq!(logs.iter().map(|l| l.index).collect::<Vec<_>>(), vec![1]);
+        assert!(leader.node(1).in_flight.is_some());
+
+        leader
+            .response(&reconcile[0], &ok_response_with_failed(vec![]))
+            .await
+            .map_err(|e| anyhow!(e.description))?;
+        assert_eq!(leader.node(1).append_failures, 0);
+        assert_eq!(leader.storage.commit, 1);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn failed_send_releases_in_flight() -> anyhow::Result<()> {
+        let mut leader = test_leader(TestStorage::default());
+        let requests = leader.heartbeat();
+        let to_1 = requests
+            .iter()
+            .find(|r| r.target == 1)
+            .expect("heartbeat for node 1");
+        assert!(leader.node(1).in_flight.is_some());
+
+        leader
+            .response(
+                to_1,
+                &Response::new(0, ResponseType::CommitError("send failed".into())),
+            )
+            .await
+            .map_err(|e| anyhow!(e.description))?;
+
+        assert!(leader.node(1).in_flight.is_none());
+        assert_eq!(leader.node(1).append_failures, 0);
+        Ok(())
+    }
+
     #[tokio::test]
     async fn follower_prunes_on_watermark() -> anyhow::Result<()> {
         let storage = TestStorage {
@@ -3124,6 +3418,7 @@ mod test {
             heartbeat_timeout: Duration::from_millis(100),
             term_timeout: Duration::from_millis(300),
             max_log_entries: 1000,
+            in_flight_timeout: Duration::from_secs(120),
         };
         let mut follower: Cluster<u8, (), TestStorage> = Cluster::new(storage, settings);
         follower.state = ClusterState::Follower(0);

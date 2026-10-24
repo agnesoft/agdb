@@ -29,7 +29,7 @@ pub(crate) fn parse_impl(input: &syn::ItemImpl) -> TokenStream2 {
 
     let type_base_name = extract_type_base_name(ty);
 
-    if let Some((_, path, _)) = &input.trait_ {
+    if let Some((path, _)) = &input.trait_ {
         // TRAIT IMPL → __TypeName_TraitName_impl_def()
         let trait_name = path.segments.last().unwrap().ident.to_string();
         let helper_fn_name = format_ident!("__{}_{}_impl_def", type_base_name, trait_name);

@@ -24,7 +24,7 @@ serde = ["dep:serde"]
 [dependencies]
 agdb_derive = { version = "0.15.0", path = "../agdb_derive", optional = true }
 regex = { version = "1", optional = true }
-utoipa = { version = "5", optional = true }
+utoipa = { version = "6", optional = true }
 serde = { version = "1", features = ["derive"], optional = true }
 tokio = { version = "1", features = ["macros", "rt", "sync"], optional = true }
 

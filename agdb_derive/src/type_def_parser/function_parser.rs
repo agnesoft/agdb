@@ -117,19 +117,10 @@ fn parse_args(args: &Punctuated<FnArg, Comma>, generics: &[Generic]) -> Vec<Toke
                 }
             }
             FnArg::Receiver(rec) => {
-                if let Some(_token) = rec.colon_token {
-                    let ty = &rec.ty;
-                    let ty_def = generics_parser::parse_type(ty, generics);
-                    quote! {
-                        ::agdb::type_def::Variable {
-                            name: "self".to_owned(),
-                            ty: Some(#ty_def),
-                        }
-                    }
-                } else {
-                    let mutable = rec.mutability.is_some();
-
-                    let ty = if let Some((_, lt_opt)) = &rec.reference {
+                let ty = match &rec.kind {
+                    syn::ReceiverKind::Typed(_, ty) => generics_parser::parse_type(ty, generics),
+                    syn::ReceiverKind::Reference(_, lt_opt, mutability) => {
+                        let mutable = mutability.is_some();
                         let lifetime = if let Some(lt) = lt_opt {
                             let lt_str = lt.ident.to_string();
                             quote! { Some(#lt_str.to_owned()) }
@@ -143,14 +134,20 @@ fn parse_args(args: &Punctuated<FnArg, Comma>, generics: &[Generic]) -> Vec<Toke
                                 ty: || ::agdb::type_def::Type::SelfType(#mutable),
                             })
                         }
-                    } else {
+                    }
+                    syn::ReceiverKind::Value => {
+                        let mutable = rec.mutability.is_some();
                         quote! { || ::agdb::type_def::Type::SelfType(#mutable) }
-                    };
-                    quote! {
-                        ::agdb::type_def::Variable {
-                            name: "self".to_owned(),
-                            ty: Some(#ty),
-                        }
+                    }
+                    _ => {
+                        let mutable = rec.mutability.is_some();
+                        quote! { || ::agdb::type_def::Type::SelfType(#mutable) }
+                    }
+                };
+                quote! {
+                    ::agdb::type_def::Variable {
+                        name: "self".to_owned(),
+                        ty: Some(#ty),
                     }
                 }
             }

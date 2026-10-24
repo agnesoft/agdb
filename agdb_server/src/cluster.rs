@@ -385,10 +385,8 @@ async fn start_cluster(
                         || request.is_heartbeat()
                         || request.resync_dbs().is_some()
                     {
-                        let fail_response = raft::Response::new(
-                            request.index,
-                            raft::ResponseType::CommitError("send failed".into()),
-                        );
+                        let fail_response =
+                            raft::Response::new(request.index, raft::ResponseType::Unreachable);
                         let _ = node.responses.send((request, fail_response));
                     }
                 } else {

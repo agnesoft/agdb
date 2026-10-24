@@ -320,6 +320,10 @@ pub(crate) async fn logger(
 
     let log_level = Level::from(level);
 
+    if log_level < Level::Debug && is_polled_path(request.uri().path()) {
+        return Ok(next.run(request).await);
+    }
+
     let mut record = LogRecord {
         node: state.config.cluster_node_id,
         method: request.method().to_string(),
@@ -340,7 +344,7 @@ pub(crate) async fn logger(
     record.duration = now.elapsed().as_micros();
     record.status = response.status().as_u16();
 
-    if let Some(status_level) = should_log_status(log_level, &record.uri, record.status) {
+    if let Some(status_level) = should_log_status(log_level, record.status) {
         let show_details = state.config.log_body_limit != 0
             && (log_level == Level::Debug || status_level == Level::Error);
         let response = inspect_response(&mut record, response, show_details, &state).await?;
@@ -351,17 +355,15 @@ pub(crate) async fn logger(
     Ok(response)
 }
 
-fn should_log_status(log_level: Level, uri: &str, status: u16) -> Option<Level> {
-    if log_level < Level::Debug
-        && (uri.ends_with("/api/v1/status")
-            || uri.ends_with("/api/v1/cluster")
-            || uri.ends_with("/api/v1/cluster/status")
-            || uri.ends_with("/api/v1/admin/status")
-            || uri.ends_with("/api/v1/user/status"))
-    {
-        return None;
-    }
+fn is_polled_path(path: &str) -> bool {
+    path.ends_with("/api/v1/status")
+        || path.ends_with("/api/v1/cluster")
+        || path.ends_with("/api/v1/cluster/status")
+        || path.ends_with("/api/v1/admin/status")
+        || path.ends_with("/api/v1/user/status")
+}
 
+fn should_log_status(log_level: Level, status: u16) -> Option<Level> {
     match status {
         500.. => Some(Level::Error),
         400..=499 if log_level >= Level::Warn => Some(Level::Warn),

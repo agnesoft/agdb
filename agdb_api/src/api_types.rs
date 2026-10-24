@@ -145,7 +145,7 @@ pub struct AdminStatus {
 pub struct Queries(pub Vec<QueryType>);
 
 /// Results of a batch query execution, one per input query.
-#[derive(Serialize, ToSchema)]
+#[derive(Serialize, ToSchema, DbSerialize)]
 pub struct QueriesResults(pub Vec<QueryResult>);
 
 /// A single entry in the database audit log.

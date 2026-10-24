@@ -38,6 +38,15 @@ impl From<serde_json::Error> for AgdbApiError {
     }
 }
 
+impl From<agdb::DbError> for AgdbApiError {
+    fn from(value: agdb::DbError) -> Self {
+        Self {
+            status: 0,
+            description: value.to_string(),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

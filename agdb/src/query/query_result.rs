@@ -13,6 +13,7 @@ use crate::db::db_element::DbElement;
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 #[cfg_attr(feature = "api", derive(agdb::TypeDef))]
+#[cfg_attr(feature = "derive", derive(agdb::DbSerialize))]
 pub struct QueryResult {
     /// Query result
     pub result: u64,
@@ -51,6 +52,26 @@ mod test {
     #[test]
     fn derived_from_debug() {
         let _ = format!("{:?}", QueryResult::default());
+    }
+
+    #[cfg(feature = "derive")]
+    #[test]
+    fn serialize() {
+        use crate::utilities::serialize::Serialize;
+
+        let result = QueryResult {
+            result: 2,
+            elements: vec![DbElement {
+                id: DbId(1),
+                from: DbId(2),
+                to: DbId(3),
+                values: vec![("key", vec![1_u8, 2]).into()],
+            }],
+        };
+        let bytes = result.serialize();
+
+        assert_eq!(bytes.len() as u64, result.serialized_size());
+        assert_eq!(QueryResult::deserialize(&bytes).unwrap(), result);
     }
 
     #[test]

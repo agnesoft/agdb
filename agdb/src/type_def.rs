@@ -359,6 +359,20 @@ impl TypeDefinition for std::sync::atomic::AtomicU16 {
     }
 }
 
+impl TypeDefinition for std::sync::atomic::AtomicBool {
+    fn type_def() -> Type {
+        Type::Struct(Struct {
+            name: "AtomicBool".to_owned(),
+            generics: vec![],
+            fields: vec![Variable {
+                name: "value".to_owned(),
+                ty: Some(|| Type::Literal(Literal::Bool)),
+            }],
+            impl_defs: Vec::new,
+        })
+    }
+}
+
 impl<T: TypeDefinition> TypeDefinition for std::sync::OnceLock<T> {
     fn type_def() -> Type {
         Type::Pointer(Pointer {

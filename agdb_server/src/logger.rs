@@ -375,9 +375,11 @@ fn should_log_status(log_level: Level, status: u16) -> Option<Level> {
 fn body_text(headers: &axum::http::HeaderMap, bytes: &[u8], limit: u64) -> String {
     if headers
         .get(axum::http::header::CONTENT_TYPE)
-        .is_some_and(|value| value == crate::wire::CONTENT_TYPE)
+        .is_some_and(|value| {
+            value == crate::wire::CONTENT_TYPE || value == agdb_api::BINARY_CONTENT_TYPE
+        })
     {
-        return format!("<{} bytes binary cluster message>", bytes.len());
+        return format!("<{} bytes binary message>", bytes.len());
     }
 
     let limit = bytes.len().min(limit as usize);

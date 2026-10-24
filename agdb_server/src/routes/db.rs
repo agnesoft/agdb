@@ -22,6 +22,8 @@ use crate::server_error::ServerResponse;
 use crate::server_error::permission_denied;
 use crate::user_id::UserId;
 use crate::utilities::required_role;
+use crate::wire;
+use crate::wire::Negotiated;
 use agdb_api::DbAudit;
 use agdb_api::DbKind;
 use agdb_api::DbResource;
@@ -403,7 +405,10 @@ pub(crate) async fn exec(
     State(db_pool): State<DbPool>,
     State(server_db): State<ServerDb>,
     Path((owner, db)): Path<(String, String)>,
-    Json(queries): Json<Queries>,
+    Negotiated {
+        value: queries,
+        binary,
+    }: Negotiated<Queries>,
 ) -> ServerResponse<impl IntoResponse> {
     let _ = server_db.user_db_id(user.0, &owner, &db).await?;
     let required_role = required_role(&queries);
@@ -413,7 +418,7 @@ pub(crate) async fn exec(
         ));
     }
     let results = db_pool.exec(&owner, &db, queries).await?;
-    Ok((StatusCode::OK, Json(QueriesResults(results))))
+    Ok((StatusCode::OK, wire::reply(QueriesResults(results), binary)))
 }
 
 #[utoipa::path(post,
@@ -439,7 +444,10 @@ pub(crate) async fn exec_mut(
     State(cluster): State<Cluster>,
     State(server_db): State<ServerDb>,
     Path((owner, db)): Path<(String, String)>,
-    Json(queries): Json<Queries>,
+    Negotiated {
+        value: queries,
+        binary,
+    }: Negotiated<Queries>,
 ) -> ServerResponse<impl IntoResponse> {
     let role = server_db.user_db_role(user.0, &owner, &db).await?;
     let required_role = required_role(&queries);
@@ -474,7 +482,7 @@ pub(crate) async fn exec_mut(
     Ok((
         StatusCode::OK,
         [("commit-index", commit_index.to_string())],
-        Json(QueriesResults(results)),
+        wire::reply(QueriesResults(results), binary),
     ))
 }
 

@@ -173,13 +173,10 @@ async fn rebalance() -> Result<(), TestError> {
 #[tokio::test]
 async fn log_catchup_after_append_failures() -> Result<(), TestError> {
     // Default max_log_entries (1000): logs are NOT pruned.
-    // When the follower is down, Append delivery fails repeatedly.
-    // After APPEND_FAILURE_THRESHOLD consecutive failures the leader sets
-    // force_resync, causing the next heartbeat to carry an elevated
-    // prune_index (= leader's log_commit).  The follower sees
-    // prune_index > its own log_commit → needs_resync →
-    // resync_from_leader tries log catch-up first, which succeeds
-    // because the entries are still available (no pruning).
+    // While the follower is down, Append delivery fails. Unreachable nodes
+    // are not counted toward APPEND_FAILURE_THRESHOLD, so no resync is
+    // forced; after restart the follower reports a LogMismatch and the
+    // leader catches it up from the still-available log entries.
     let mut servers = create_cluster(3, false).await?;
     let mut follower = AgdbApi::new(
         ReqwestClient::with_client(reqwest_client()),
@@ -210,8 +207,6 @@ async fn log_catchup_after_append_failures() -> Result<(), TestError> {
         )
         .await?;
 
-    // Each mutation triggers an Append to the downed follower which fails,
-    // incrementing append_failures.  After 3 failures force_resync is set.
     for i in 0..10 {
         leader
             .db_exec_mut(

@@ -49,6 +49,9 @@ pub(crate) enum ResponseType {
     TermMismatch(MismatchedValues),
     LogMismatch(LogMismatch),
     AlreadyVoted(MismatchedValues),
+    // Produced locally by the leader's transport when a request never got a
+    // reply (connection refused, proxy error, timeout). Never sent over the wire.
+    Unreachable,
 }
 
 #[derive(Debug)]
@@ -387,6 +390,7 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
         use ResponseType::Ok as OK;
         use ResponseType::OkReport;
         use ResponseType::TermMismatch;
+        use ResponseType::Unreachable;
 
         if let Leader = self.state
             && request.term == self.term
@@ -472,7 +476,7 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
                 self.node_mut(request.target).append_failures = 0;
                 self.commit_and_catch_up(request).await
             }
-            (Leader, Resync | ResyncDbs(_), OK | CommitError(_)) => {
+            (Leader, Resync | ResyncDbs(_), OK | CommitError(_) | Unreachable) => {
                 if let RequestType::ResyncDbs(dbs) = &request.data {
                     self.node_mut(request.target)
                         .sent_resync_dbs
@@ -503,6 +507,9 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
                 self.node_mut(request.target).append_failures = 0;
                 Ok(None)
             }
+            // A node that is down or not started yet is not diverged: it is
+            // retried on the next heartbeat and catches up via LogMismatch.
+            (Leader, Heartbeat | Append(_), Unreachable) => Ok(None),
             (Leader, Append(_), ResponseType::CommitError(e)) => {
                 self.node_mut(request.target).append_failures += 1;
                 let failures = self.node(request.target).append_failures;
@@ -525,9 +532,6 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
                 }
                 Ok(None)
             }
-            // Unreachable node: already logged by the transport, retried on
-            // the next heartbeat.
-            (Leader, Heartbeat, ResponseType::CommitError(_)) => Ok(None),
             (_, _, ResponseType::CommitError(e)) => {
                 crate::info!(
                     "[{}] Node {} commit error: {}",
@@ -1346,10 +1350,8 @@ mod test {
                         } else {
                             crate::info!("Blocked: {:?}", request);
                             if request.is_append() || request.is_heartbeat() {
-                                let response = Response::new(
-                                    request.index,
-                                    ResponseType::CommitError("send failed".into()),
-                                );
+                                let response =
+                                    Response::new(request.index, ResponseType::Unreachable);
                                 responses_channel.send((request, response)).await?;
                             }
                         }
@@ -2303,7 +2305,7 @@ mod test {
         );
         assert_eq!(leader.node(1).append_failures, 0);
 
-        let real_failure = Response::new(0, ResponseType::CommitError("send failed".into()));
+        let real_failure = Response::new(0, ResponseType::CommitError("commit failed".into()));
 
         for i in 1..APPEND_FAILURE_THRESHOLD {
             leader
@@ -3337,7 +3339,7 @@ mod test {
         let follow_up = leader
             .response(
                 append_to_1,
-                &Response::new(0, ResponseType::CommitError("send failed".into())),
+                &Response::new(0, ResponseType::CommitError("commit failed".into())),
             )
             .await
             .map_err(|e| anyhow!(e.description))?;
@@ -3383,15 +3385,41 @@ mod test {
         assert!(leader.node(1).in_flight.is_some());
 
         leader
-            .response(
-                to_1,
-                &Response::new(0, ResponseType::CommitError("send failed".into())),
-            )
+            .response(to_1, &Response::new(0, ResponseType::Unreachable))
             .await
             .map_err(|e| anyhow!(e.description))?;
 
         assert!(leader.node(1).in_flight.is_none());
         assert_eq!(leader.node(1).append_failures, 0);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn unreachable_follower_is_not_forced_to_resync() -> anyhow::Result<()> {
+        let mut leader = test_leader(TestStorage::default());
+
+        for i in 1..=APPEND_FAILURE_THRESHOLD as u8 + 2 {
+            let requests = leader
+                .append(i, None)
+                .await
+                .map_err(|e| anyhow!(e.description))?;
+            let to_1 = requests.iter().find(|r| r.target == 1).expect("append");
+            let follow_up = leader
+                .response(to_1, &Response::new(0, ResponseType::Unreachable))
+                .await
+                .map_err(|e| anyhow!(e.description))?;
+            assert!(follow_up.is_none());
+            assert!(leader.node(1).in_flight.is_none());
+        }
+
+        assert_eq!(leader.node(1).append_failures, 0);
+        assert!(!leader.node(1).force_resync);
+        assert!(
+            leader
+                .heartbeat()
+                .iter()
+                .all(|r| !matches!(r.data, RequestType::Resync))
+        );
         Ok(())
     }
 

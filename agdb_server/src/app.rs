@@ -43,7 +43,6 @@ pub(crate) fn app(
     };
 
     let api_v1 = Router::new()
-        .route("/status", routing::get(routes::status))
         .route("/admin/shutdown", routing::post(routes::admin::shutdown))
         .route("/admin/status", routing::get(routes::admin::status))
         .route(
@@ -273,6 +272,12 @@ pub(crate) fn app(
     .merge(
         RapiDoc::with_openapi(format!("{basepath}/api/v1/openapi.json"), openapi)
             .path(format!("{basepath}/api/v1")),
+    )
+    // Node health check: outside the forward layer so it is always answered
+    // locally without touching any lock or database.
+    .route(
+        &format!("{basepath}/api/v1/status"),
+        routing::get(routes::status),
     )
     .layer(middleware::from_fn_with_state(
         state.clone(),

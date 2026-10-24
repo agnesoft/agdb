@@ -45,15 +45,19 @@ pub(crate) async fn forward_to_leader(
     let path = request.uri().path();
     let served_locally = path.ends_with("/cluster") || path.ends_with("/cluster/snapshot");
 
-    if !served_locally
-        && state.cluster.resync.load(Ordering::Relaxed)
-        && let Some(leader) = state.cluster.raft.read().await.leader()
-        && state.cluster.index != leader as usize
-    {
-        return state.cluster.nodes[leader as usize]
-            .forward(request, state.cluster.index, body_limit)
-            .await
-            .unwrap_or_else(|r| r);
+    if !served_locally && state.cluster.resync.load(Ordering::Relaxed) {
+        // Not inlined into the condition: an `if let` temporary would keep the
+        // raft guard alive across the forward and stall every other request.
+        let leader = state.cluster.raft.read().await.leader();
+
+        if let Some(leader) = leader
+            && state.cluster.index != leader as usize
+        {
+            return state.cluster.nodes[leader as usize]
+                .forward(request, state.cluster.index, body_limit)
+                .await
+                .unwrap_or_else(|r| r);
+        }
     }
 
     if is_redirect_path(&request) {

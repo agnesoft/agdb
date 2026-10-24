@@ -372,6 +372,18 @@ fn should_log_status(log_level: Level, status: u16) -> Option<Level> {
     }
 }
 
+fn body_text(headers: &axum::http::HeaderMap, bytes: &[u8], limit: u64) -> String {
+    if headers
+        .get(axum::http::header::CONTENT_TYPE)
+        .is_some_and(|value| value == crate::wire::CONTENT_TYPE)
+    {
+        return format!("<{} bytes binary cluster message>", bytes.len());
+    }
+
+    let limit = bytes.len().min(limit as usize);
+    String::from_utf8_lossy(&bytes[..limit]).into_owned()
+}
+
 #[allow(clippy::result_large_err)]
 async fn inspect_request(
     record: &mut LogRecord,
@@ -389,8 +401,7 @@ async fn inspect_request(
 
     if log_level >= Level::Debug && state.config.log_body_limit != 0 {
         let bytes = body.collect().await.map_err(map_error)?.to_bytes();
-        let limit = bytes.len().min(state.config.log_body_limit as usize);
-        record.request_body = String::from_utf8_lossy(&bytes[..limit]).into_owned();
+        record.request_body = body_text(&parts.headers, &bytes, state.config.log_body_limit);
 
         if record.uri.contains("/login")
             || record.uri.contains("/change_password")
@@ -431,8 +442,7 @@ async fn inspect_response(
     let (parts, mut body) = response.into_parts();
 
     let bytes = body.collect().await.map_err(map_error)?.to_bytes();
-    let limit = bytes.len().min(state.config.log_body_limit as usize);
-    record.response_body = String::from_utf8_lossy(&bytes[..limit]).into_owned();
+    record.response_body = body_text(&parts.headers, &bytes, state.config.log_body_limit);
     body = Body::from(bytes);
 
     record.response_headers = parts

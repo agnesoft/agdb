@@ -1,5 +1,7 @@
 use crate::server_error::ServerResult;
+use agdb::AgdbSerialize;
 use agdb::DbId;
+use agdb::DbSerialize;
 use serde::Deserialize;
 use serde::Serialize;
 use std::marker::PhantomData;
@@ -15,20 +17,20 @@ pub(crate) struct Log<T> {
     pub(crate) data: T,
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Serialize, Deserialize, DbSerialize)]
 pub(crate) struct MismatchedValues {
     local: Option<u64>,
     requested: Option<u64>,
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Serialize, Deserialize, DbSerialize)]
 pub(crate) struct LogMismatch {
     index: MismatchedValues,
     term: MismatchedValues,
     commit: MismatchedValues,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, DbSerialize)]
 pub(crate) enum RequestType<T> {
     Append(Vec<Log<T>>),
     Heartbeat,
@@ -38,7 +40,7 @@ pub(crate) enum RequestType<T> {
     Vote,
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Serialize, Deserialize, DbSerialize)]
 pub(crate) enum ResponseType {
     Ok,
     OkReport(Vec<u64>),
@@ -52,6 +54,9 @@ pub(crate) enum ResponseType {
     // Produced locally by the leader's transport when a request never got a
     // reply (connection refused, proxy error, timeout). Never sent over the wire.
     Unreachable,
+    // Produced locally when the follower (or a proxy in front of it) rejected
+    // the request body as too large (HTTP 413). Never sent over the wire.
+    PayloadTooLarge,
 }
 
 #[derive(Debug)]
@@ -63,7 +68,7 @@ enum ClusterState {
     Voted(u64),
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, DbSerialize)]
 pub(crate) struct Request<T> {
     hash: u64,
     pub(crate) index: u64,
@@ -95,7 +100,7 @@ impl<T> Request<T> {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, DbSerialize)]
 pub(crate) struct Response {
     pub(crate) target: u64,
     pub(crate) result: ResponseType,
@@ -109,6 +114,34 @@ impl Response {
             result,
             executed_index: 0,
         }
+    }
+}
+
+// Hand-written to leave out `db_id`: it is local to each node's log storage.
+impl<T: AgdbSerialize> AgdbSerialize for Log<T> {
+    fn serialize(&self) -> Vec<u8> {
+        let mut bytes = Vec::with_capacity(AgdbSerialize::serialized_size(self) as usize);
+        bytes.extend(AgdbSerialize::serialize(&self.index));
+        bytes.extend(AgdbSerialize::serialize(&self.term));
+        bytes.extend(AgdbSerialize::serialize(&self.data));
+        bytes
+    }
+
+    fn deserialize(bytes: &[u8]) -> Result<Self, agdb::DbError> {
+        let index = <u64 as AgdbSerialize>::deserialize(bytes)?;
+        let term = <u64 as AgdbSerialize>::deserialize(&bytes[8..])?;
+        let data = <T as AgdbSerialize>::deserialize(&bytes[16..])?;
+
+        Ok(Self {
+            db_id: None,
+            index,
+            term,
+            data,
+        })
+    }
+
+    fn serialized_size(&self) -> u64 {
+        16 + AgdbSerialize::serialized_size(&self.data)
     }
 }
 
@@ -156,6 +189,7 @@ pub(crate) struct Cluster<T, N, S: Storage<T, N>> {
     heartbeat_timeout: Duration,
     term_timeout: Duration,
     max_log_entries: u64,
+    max_append_size: u64,
     in_flight_timeout: Duration,
     needs_resync: bool,
     phantom_data: PhantomData<(T, N)>,
@@ -169,10 +203,11 @@ pub(crate) struct ClusterSettings {
     pub(crate) heartbeat_timeout: Duration,
     pub(crate) term_timeout: Duration,
     pub(crate) max_log_entries: u64,
+    pub(crate) max_append_size: u64,
     pub(crate) in_flight_timeout: Duration,
 }
 
-impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
+impl<T: Clone + AgdbSerialize, N, S: Storage<T, N>> Cluster<T, N, S> {
     pub(crate) fn new(storage: S, settings: ClusterSettings) -> Self {
         Self {
             state: if settings.size == 1 {
@@ -225,6 +260,7 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
             heartbeat_timeout: settings.heartbeat_timeout,
             term_timeout: settings.term_timeout,
             max_log_entries: settings.max_log_entries,
+            max_append_size: settings.max_append_size,
             in_flight_timeout: settings.in_flight_timeout,
             needs_resync: false,
             storage,
@@ -389,6 +425,7 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
         use ResponseType::LogMismatch;
         use ResponseType::Ok as OK;
         use ResponseType::OkReport;
+        use ResponseType::PayloadTooLarge;
         use ResponseType::TermMismatch;
         use ResponseType::Unreachable;
 
@@ -476,7 +513,11 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
                 self.node_mut(request.target).append_failures = 0;
                 self.commit_and_catch_up(request).await
             }
-            (Leader, Resync | ResyncDbs(_), OK | CommitError(_) | Unreachable) => {
+            (
+                Leader,
+                Resync | ResyncDbs(_),
+                OK | CommitError(_) | Unreachable | PayloadTooLarge,
+            ) => {
                 if let RequestType::ResyncDbs(dbs) = &request.data {
                     self.node_mut(request.target)
                         .sent_resync_dbs
@@ -510,6 +551,29 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
             // A node that is down or not started yet is not diverged: it is
             // retried on the next heartbeat and catches up via LogMismatch.
             (Leader, Heartbeat | Append(_), Unreachable) => Ok(None),
+            // The path to the follower cannot carry this Append, so retrying
+            // it would loop forever. The follower pulls the backlog itself
+            // through the streamed resync instead. The Resync goes out alone:
+            // a Heartbeat would be answered with a mismatch and trigger the
+            // same oversized Append again before the resync starts.
+            (Leader, Append(_), PayloadTooLarge) => {
+                crate::warn!(
+                    "[{}] Node {} rejected append as too large, forcing resync",
+                    self.index,
+                    request.target,
+                );
+                let exec_reconciled = self.node(request.target).exec_reconciled;
+                let mut requests = vec![];
+                self.push_resync_requests(
+                    &mut requests,
+                    request.target,
+                    exec_reconciled,
+                    true,
+                    vec![],
+                );
+                Ok(Some(requests))
+            }
+            (Leader, Heartbeat, PayloadTooLarge) => Ok(None),
             (Leader, Append(_), ResponseType::CommitError(e)) => {
                 self.node_mut(request.target).append_failures += 1;
                 let failures = self.node(request.target).append_failures;
@@ -550,11 +614,27 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
         request: &Request<T>,
         mismatch: &LogMismatch,
     ) -> ServerResult<Option<Vec<Request<T>>>> {
-        let from_index = mismatch
+        let target = request.target;
+        let commit = mismatch
             .commit
             .local
-            .unwrap_or(self.node(request.target).log_commit);
-        self.append_from(request.target, from_index).await
+            .unwrap_or(self.node(target).log_commit);
+        let mut logs = self.storage.logs(commit).await?;
+
+        // Resume after the follower's last entry when we hold the same entry
+        // (index and term): it would skip that prefix anyway, and an entry it
+        // only got through resync (e.g. one too large to append) is not resent.
+        if let (Some(index), Some(term)) = (mismatch.index.local, mismatch.term.local)
+            && index > commit
+            && logs
+                .iter()
+                .any(|log| log.index == index && log.term == term)
+        {
+            logs.retain(|log| log.index > index);
+            return self.send_logs(target, index, logs).await;
+        }
+
+        self.send_logs(target, commit, logs).await
     }
 
     async fn commit_and_catch_up(
@@ -583,7 +663,15 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
         from_index: u64,
     ) -> ServerResult<Option<Vec<Request<T>>>> {
         let logs = self.storage.logs(from_index).await?;
+        self.send_logs(target, from_index, logs).await
+    }
 
+    async fn send_logs(
+        &mut self,
+        target: u64,
+        from_index: u64,
+        logs: Vec<Log<T>>,
+    ) -> ServerResult<Option<Vec<Request<T>>>> {
         // Gap detected: needed entries were pruned, follower must resync
         if (logs.is_empty() && self.local().log_index > from_index)
             || (!logs.is_empty() && logs[0].index > from_index + 1)
@@ -600,15 +688,8 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
             return Ok(None);
         }
 
-        let node = self.node_mut(target);
-        node.timer = Instant::now();
-        node.in_flight = Some(node.timer);
-        let resync_dbs = std::mem::take(&mut node.pending_resync_dbs);
-        let force_resync = node.force_resync;
-        let exec_reconciled = node.exec_reconciled;
-        node.force_resync = false;
-
-        let mut requests = vec![Request {
+        let exec_reconciled = self.node(target).exec_reconciled;
+        let mut request = Request {
             hash: self.hash,
             index: self.index,
             target,
@@ -618,8 +699,28 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
             log_commit: self.local().log_commit,
             prune_index: self.storage.prune_index(),
             exec_reconciled,
-            data: RequestType::Append(logs),
-        }];
+            data: RequestType::Append(vec![]),
+        };
+        let overhead = request.serialized_size();
+        let logs = self.within_append_budget(target, logs, overhead);
+
+        // The header must describe what is actually sent: the leader records
+        // it as the follower's state on success (quorum, pruning, catch-up).
+        if let Some(last) = logs.last() {
+            request.log_index = last.index;
+            request.log_term = last.term;
+            request.log_commit = request.log_commit.min(last.index);
+        }
+        request.data = RequestType::Append(logs);
+
+        let node = self.node_mut(target);
+        node.timer = Instant::now();
+        node.in_flight = Some(node.timer);
+        let resync_dbs = std::mem::take(&mut node.pending_resync_dbs);
+        let force_resync = node.force_resync;
+        node.force_resync = false;
+
+        let mut requests = vec![request];
 
         self.push_resync_requests(
             &mut requests,
@@ -630,6 +731,44 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
         );
 
         Ok(Some(requests))
+    }
+
+    // Longest prefix for which the whole request body (`overhead` plus the
+    // entries) fits `max_append_size`, but always at least one entry so an
+    // oversized entry still gets a chance (and a 413 falls back to resync).
+    fn within_append_budget(
+        &self,
+        target: u64,
+        mut logs: Vec<Log<T>>,
+        overhead: u64,
+    ) -> Vec<Log<T>> {
+        let mut size = overhead;
+        let mut count = 0;
+
+        for log in &logs {
+            let log_size = log.serialized_size();
+
+            if size + log_size > self.max_append_size {
+                if count > 0 {
+                    break;
+                }
+
+                crate::warn!(
+                    "[{}] Log {} for node {} needs a {} byte append, over cluster_max_append_size ({})",
+                    self.index,
+                    log.index,
+                    target,
+                    size + log_size,
+                    self.max_append_size,
+                );
+            }
+
+            size += log_size;
+            count += 1;
+        }
+
+        logs.truncate(count);
+        logs
     }
 
     fn pre_election(&mut self) -> Vec<Request<T>> {
@@ -1217,7 +1356,7 @@ mod test {
 
     #[derive(Debug, Default, Clone, PartialEq)]
     struct TestStorage {
-        logs: Vec<Log<u8>>,
+        logs: Vec<Log<u64>>,
         commit: u64,
         prune_index: u64,
         failed: Vec<u64>,
@@ -1226,7 +1365,7 @@ mod test {
     }
 
     struct TestNodeImpl {
-        cluster: Cluster<u8, (), TestStorage>,
+        cluster: Cluster<u64, (), TestStorage>,
     }
 
     type TestNode = Arc<RwLock<TestNodeImpl>>;
@@ -1235,11 +1374,11 @@ mod test {
         nodes: Arc<RwLock<Vec<TestNode>>>,
         shutdown: Arc<AtomicBool>,
         blocked: Arc<AtomicU64>,
-        requests_channel: Option<Sender<Request<u8>>>,
+        requests_channel: Option<Sender<Request<u64>>>,
     }
 
-    impl Storage<u8, ()> for TestStorage {
-        async fn append(&mut self, log: Log<u8>, _notifier: Option<()>) -> ServerResult<()> {
+    impl Storage<u64, ()> for TestStorage {
+        async fn append(&mut self, log: Log<u64>, _notifier: Option<()>) -> ServerResult<()> {
             self.logs.truncate((log.index - 1) as usize);
             self.logs.push(log);
             Ok(())
@@ -1272,7 +1411,7 @@ mod test {
             self.prune_index
         }
 
-        async fn logs(&self, index: u64) -> ServerResult<Vec<Log<u8>>> {
+        async fn logs(&self, index: u64) -> ServerResult<Vec<Log<u64>>> {
             Ok(self
                 .logs
                 .iter()
@@ -1316,6 +1455,7 @@ mod test {
                         term_timeout: Duration::from_millis(300),
                         max_log_entries,
                         in_flight_timeout: Duration::from_secs(120),
+                        max_append_size: u64::MAX,
                     };
                     Arc::new(RwLock::new(TestNodeImpl {
                         cluster: Cluster::new(storage, settings),
@@ -1333,7 +1473,7 @@ mod test {
 
         async fn start(&mut self) {
             let (requests_channel, mut requests_receiver) =
-                tokio::sync::mpsc::channel::<Request<u8>>(100);
+                tokio::sync::mpsc::channel::<Request<u64>>(100);
             self.requests_channel = Some(requests_channel.clone());
             let (responses_channel, mut responses_receiver) = tokio::sync::mpsc::channel(100);
             let shutdown = self.shutdown.clone();
@@ -1451,7 +1591,7 @@ mod test {
             panic!("{node} has not become a followerwithin {TIMEOUT:?}");
         }
 
-        async fn expect_data(&self, node: u64, data: &[u8]) {
+        async fn expect_data(&self, node: u64, data: &[u64]) {
             let timer = Instant::now();
             let expected_max_index = data.len() as u64;
 
@@ -1514,7 +1654,7 @@ mod test {
             );
         }
 
-        async fn append(&self, node: u64, log: u8) -> anyhow::Result<()> {
+        async fn append(&self, node: u64, log: u64) -> anyhow::Result<()> {
             let requests = self.nodes.read().await[node as usize]
                 .write()
                 .await
@@ -1763,7 +1903,7 @@ mod test {
                     db_id: None,
                     index: i,
                     term: 1,
-                    data: i as u8,
+                    data: i,
                 })
                 .collect(),
             commit: 5,
@@ -1779,8 +1919,9 @@ mod test {
             term_timeout: Duration::from_secs(3),
             max_log_entries: 1000,
             in_flight_timeout: Duration::from_secs(120),
+            max_append_size: u64::MAX,
         };
-        let mut cluster: Cluster<u8, (), TestStorage> = Cluster::new(storage, settings);
+        let mut cluster: Cluster<u64, (), TestStorage> = Cluster::new(storage, settings);
         // Force leader state
         cluster.state = ClusterState::Leader;
         cluster.term = 1;
@@ -1802,7 +1943,7 @@ mod test {
                     db_id: None,
                     index: i,
                     term: 1,
-                    data: i as u8,
+                    data: i,
                 })
                 .collect(),
             commit: 10,
@@ -1818,8 +1959,9 @@ mod test {
             term_timeout: Duration::from_millis(300),
             max_log_entries: 1000,
             in_flight_timeout: Duration::from_secs(120),
+            max_append_size: u64::MAX,
         };
-        let mut cluster: Cluster<u8, (), TestStorage> = Cluster::new(storage, settings);
+        let mut cluster: Cluster<u64, (), TestStorage> = Cluster::new(storage, settings);
         cluster.state = ClusterState::Follower(0);
         cluster.term = 1;
 
@@ -1856,7 +1998,7 @@ mod test {
                     db_id: None,
                     index: i,
                     term: 1,
-                    data: i as u8,
+                    data: i,
                 })
                 .collect(),
             commit: 10,
@@ -1872,8 +2014,9 @@ mod test {
             term_timeout: Duration::from_millis(300),
             max_log_entries: 1000,
             in_flight_timeout: Duration::from_secs(120),
+            max_append_size: u64::MAX,
         };
-        let mut cluster: Cluster<u8, (), TestStorage> = Cluster::new(storage, settings);
+        let mut cluster: Cluster<u64, (), TestStorage> = Cluster::new(storage, settings);
         cluster.state = ClusterState::Leader;
         cluster.term = 1;
 
@@ -1926,14 +2069,14 @@ mod test {
         cluster.start().await;
         cluster.expect_leader(0).await;
 
-        for i in 1..=7u8 {
+        for i in 1..=7u64 {
             cluster.append(0, i).await?;
         }
         cluster.expect_storage_synced(0, 1).await;
         cluster.expect_storage_synced(0, 2).await;
 
         cluster.block(1).await;
-        for i in 8..=10u8 {
+        for i in 8..=10u64 {
             cluster.append(0, i).await?;
         }
         cluster
@@ -1972,7 +2115,7 @@ mod test {
                     db_id: None,
                     index: i,
                     term: 1,
-                    data: i as u8,
+                    data: i,
                 })
                 .collect(),
             commit: 20,
@@ -1988,8 +2131,9 @@ mod test {
             term_timeout: Duration::from_millis(300),
             max_log_entries: 1000,
             in_flight_timeout: Duration::from_secs(120),
+            max_append_size: u64::MAX,
         };
-        let mut leader: Cluster<u8, (), TestStorage> =
+        let mut leader: Cluster<u64, (), TestStorage> =
             Cluster::new(leader_storage, leader_settings);
         leader.state = ClusterState::Leader;
         leader.term = 1;
@@ -2000,7 +2144,7 @@ mod test {
                     db_id: None,
                     index: i,
                     term: 1,
-                    data: i as u8,
+                    data: i,
                 })
                 .collect(),
             commit: 5,
@@ -2016,8 +2160,9 @@ mod test {
             term_timeout: Duration::from_millis(300),
             max_log_entries: 1000,
             in_flight_timeout: Duration::from_secs(120),
+            max_append_size: u64::MAX,
         };
-        let mut follower: Cluster<u8, (), TestStorage> =
+        let mut follower: Cluster<u64, (), TestStorage> =
             Cluster::new(follower_storage, follower_settings);
         follower.state = ClusterState::Follower(0);
         follower.term = 1;
@@ -2084,7 +2229,7 @@ mod test {
                     db_id: None,
                     index: i,
                     term: 1,
-                    data: i as u8,
+                    data: i,
                 })
                 .collect(),
             commit: 10,
@@ -2100,8 +2245,9 @@ mod test {
             term_timeout: Duration::from_millis(300),
             max_log_entries: 1000,
             in_flight_timeout: Duration::from_secs(120),
+            max_append_size: u64::MAX,
         };
-        let mut cluster: Cluster<u8, (), TestStorage> = Cluster::new(storage, settings);
+        let mut cluster: Cluster<u64, (), TestStorage> = Cluster::new(storage, settings);
         cluster.state = ClusterState::Follower(0);
         cluster.term = 1;
 
@@ -2139,7 +2285,7 @@ mod test {
                     db_id: None,
                     index: i,
                     term: 1,
-                    data: i as u8,
+                    data: i,
                 })
                 .collect(),
             commit: 10,
@@ -2155,8 +2301,9 @@ mod test {
             term_timeout: Duration::from_millis(300),
             max_log_entries: 1000,
             in_flight_timeout: Duration::from_secs(120),
+            max_append_size: u64::MAX,
         };
-        let mut cluster: Cluster<u8, (), TestStorage> = Cluster::new(storage, settings);
+        let mut cluster: Cluster<u64, (), TestStorage> = Cluster::new(storage, settings);
         cluster.state = ClusterState::Follower(0);
         cluster.term = 1;
 
@@ -2201,7 +2348,7 @@ mod test {
         cluster.expect_leader(0).await;
 
         // All nodes in sync at commit=7
-        for i in 1..=7u8 {
+        for i in 1..=7u64 {
             cluster.append(0, i).await?;
         }
         cluster.expect_storage_synced(0, 1).await;
@@ -2209,7 +2356,7 @@ mod test {
 
         // Block node 1, append more entries so the leader + node 2 advance
         cluster.block(1).await;
-        for i in 8..=10u8 {
+        for i in 8..=10u64 {
             cluster.append(0, i).await?;
         }
         cluster.expect_storage_synced(0, 2).await;
@@ -2251,7 +2398,7 @@ mod test {
                     db_id: None,
                     index: i,
                     term: 1,
-                    data: i as u8,
+                    data: i,
                 })
                 .collect(),
             commit: 20,
@@ -2267,8 +2414,9 @@ mod test {
             term_timeout: Duration::from_millis(300),
             max_log_entries: 1000,
             in_flight_timeout: Duration::from_secs(120),
+            max_append_size: u64::MAX,
         };
-        let mut leader: Cluster<u8, (), TestStorage> = Cluster::new(storage, settings);
+        let mut leader: Cluster<u64, (), TestStorage> = Cluster::new(storage, settings);
         leader.state = ClusterState::Leader;
         leader.term = 1;
 
@@ -2363,7 +2511,7 @@ mod test {
         cluster.start().await;
         cluster.expect_leader(0).await;
 
-        for i in 1..=6u8 {
+        for i in 1..=6u64 {
             cluster.append(0, i).await?;
         }
         cluster.expect_storage_synced(0, 1).await;
@@ -2371,7 +2519,7 @@ mod test {
 
         cluster.block(1).await;
 
-        for i in 7..=12u8 {
+        for i in 7..=12u64 {
             cluster.append(0, i).await?;
         }
         cluster.expect_storage_synced(0, 2).await;
@@ -2392,7 +2540,7 @@ mod test {
                     db_id: None,
                     index: i,
                     term: leader_term,
-                    data: i as u8,
+                    data: i,
                 })
                 .collect();
             follower.cluster.refresh_local_from_storage();
@@ -2430,10 +2578,11 @@ mod test {
             term_timeout: Duration::from_secs(3),
             max_log_entries: 1000,
             in_flight_timeout: Duration::from_secs(120),
+            max_append_size: u64::MAX,
         }
     }
 
-    fn heartbeat_request(exec_reconciled: u64) -> Request<u8> {
+    fn heartbeat_request(exec_reconciled: u64) -> Request<u64> {
         Request {
             hash: 123,
             index: 0,
@@ -2452,7 +2601,7 @@ mod test {
         Response::new(0, ResponseType::OkReport(failed))
     }
 
-    fn test_leader(storage: TestStorage) -> Cluster<u8, (), TestStorage> {
+    fn test_leader(storage: TestStorage) -> Cluster<u64, (), TestStorage> {
         let mut cluster = Cluster::new(storage, leader_settings());
         cluster.state = ClusterState::Leader;
         cluster.term = 1;
@@ -2467,7 +2616,7 @@ mod test {
                     db_id: None,
                     index: i,
                     term: 1,
-                    data: i as u8,
+                    data: i,
                 })
                 .collect(),
             commit: 10,
@@ -2506,7 +2655,7 @@ mod test {
                     db_id: None,
                     index: i,
                     term: 1,
-                    data: i as u8,
+                    data: i,
                 })
                 .collect(),
             commit: 10,
@@ -2543,7 +2692,7 @@ mod test {
                     db_id: None,
                     index: i,
                     term: 1,
-                    data: i as u8,
+                    data: i,
                 })
                 .collect(),
             commit: 10,
@@ -2578,7 +2727,7 @@ mod test {
                     db_id: None,
                     index: i,
                     term: 1,
-                    data: i as u8,
+                    data: i,
                 })
                 .collect(),
             commit: 10,
@@ -2610,7 +2759,7 @@ mod test {
                     db_id: None,
                     index: i,
                     term: 1,
-                    data: i as u8,
+                    data: i,
                 })
                 .collect(),
             commit: 10,
@@ -2649,7 +2798,7 @@ mod test {
                     db_id: None,
                     index: i,
                     term: 1,
-                    data: i as u8,
+                    data: i,
                 })
                 .collect(),
             commit: 10,
@@ -2683,7 +2832,7 @@ mod test {
                     db_id: None,
                     index: i,
                     term: 1,
-                    data: i as u8,
+                    data: i,
                 })
                 .collect(),
             commit: 10,
@@ -2722,7 +2871,7 @@ mod test {
                     db_id: None,
                     index: i,
                     term: 1,
-                    data: i as u8,
+                    data: i,
                 })
                 .collect(),
             commit: 10,
@@ -2762,7 +2911,7 @@ mod test {
                     db_id: None,
                     index: i,
                     term: 1,
-                    data: i as u8,
+                    data: i,
                 })
                 .collect(),
             commit: 5,
@@ -2795,7 +2944,7 @@ mod test {
                     db_id: None,
                     index: i,
                     term: 1,
-                    data: i as u8,
+                    data: i,
                 })
                 .collect(),
             commit: 5,
@@ -2830,7 +2979,7 @@ mod test {
                     db_id: None,
                     index: i,
                     term: 1,
-                    data: i as u8,
+                    data: i,
                 })
                 .collect(),
             commit: 5,
@@ -2862,7 +3011,7 @@ mod test {
                     db_id: None,
                     index: i,
                     term: 1,
-                    data: i as u8,
+                    data: i,
                 })
                 .collect(),
             commit: 5,
@@ -2895,7 +3044,7 @@ mod test {
                     db_id: None,
                     index: i,
                     term: 1,
-                    data: i as u8,
+                    data: i,
                 })
                 .collect(),
             commit: 10,
@@ -2911,8 +3060,9 @@ mod test {
             term_timeout: Duration::from_millis(300),
             max_log_entries: 1000,
             in_flight_timeout: Duration::from_secs(120),
+            max_append_size: u64::MAX,
         };
-        let mut follower: Cluster<u8, (), TestStorage> = Cluster::new(storage, settings);
+        let mut follower: Cluster<u64, (), TestStorage> = Cluster::new(storage, settings);
         follower.state = ClusterState::Follower(0);
         follower.term = 1;
 
@@ -2931,7 +3081,7 @@ mod test {
                     db_id: None,
                     index: i,
                     term: 1,
-                    data: i as u8,
+                    data: i,
                 })
                 .collect(),
             commit: 10,
@@ -2946,8 +3096,9 @@ mod test {
             term_timeout: Duration::from_millis(300),
             max_log_entries: 1000,
             in_flight_timeout: Duration::from_secs(120),
+            max_append_size: u64::MAX,
         };
-        let mut follower: Cluster<u8, (), TestStorage> = Cluster::new(storage, settings);
+        let mut follower: Cluster<u64, (), TestStorage> = Cluster::new(storage, settings);
         follower.state = ClusterState::Follower(0);
         follower.term = 1;
 
@@ -2966,7 +3117,7 @@ mod test {
                     db_id: None,
                     index: i,
                     term: 1,
-                    data: i as u8,
+                    data: i,
                 })
                 .collect(),
             commit: 10,
@@ -3014,7 +3165,7 @@ mod test {
                     db_id: None,
                     index: i,
                     term: 1,
-                    data: i as u8,
+                    data: i,
                 })
                 .collect(),
             commit: 10,
@@ -3066,7 +3217,7 @@ mod test {
                     db_id: None,
                     index: i,
                     term: 1,
-                    data: i as u8,
+                    data: i,
                 })
                 .collect(),
             commit: 10,
@@ -3099,7 +3250,7 @@ mod test {
                     db_id: None,
                     index: i,
                     term: 1,
-                    data: i as u8,
+                    data: i,
                 })
                 .collect(),
             commit: 10,
@@ -3138,7 +3289,7 @@ mod test {
                     db_id: None,
                     index: i,
                     term: 1,
-                    data: i as u8,
+                    data: i,
                 })
                 .collect(),
             commit: 10,
@@ -3268,7 +3419,7 @@ mod test {
 
     const SHORT_IN_FLIGHT_TIMEOUT: Duration = Duration::from_millis(50);
 
-    fn short_in_flight_leader() -> Cluster<u8, (), TestStorage> {
+    fn short_in_flight_leader() -> Cluster<u64, (), TestStorage> {
         let mut leader = Cluster::new(
             TestStorage::default(),
             ClusterSettings {
@@ -3394,11 +3545,378 @@ mod test {
         Ok(())
     }
 
+    fn lagging_leader(entries: u64, max_append_size: u64) -> Cluster<u64, (), TestStorage> {
+        let storage = TestStorage {
+            logs: (1..=entries)
+                .map(|i| Log {
+                    db_id: None,
+                    index: i,
+                    term: 1,
+                    data: i,
+                })
+                .collect(),
+            commit: entries,
+            ..Default::default()
+        };
+        let mut leader = Cluster::new(
+            storage,
+            ClusterSettings {
+                max_append_size,
+                ..leader_settings()
+            },
+        );
+        leader.state = ClusterState::Leader;
+        leader.term = 1;
+        leader
+    }
+
+    fn sent_indices(request: &Request<u64>) -> Vec<u64> {
+        let RequestType::Append(logs) = &request.data else {
+            panic!("expected append, got {:?}", request.data);
+        };
+        logs.iter().map(|l| l.index).collect()
+    }
+
+    #[tokio::test]
+    async fn catch_up_requests_fit_append_size() -> anyhow::Result<()> {
+        const MAX_APPEND_SIZE: u64 = 400;
+        let mut leader = lagging_leader(50, MAX_APPEND_SIZE);
+        let heartbeat = leader
+            .heartbeat()
+            .into_iter()
+            .find(|r| r.target == 1)
+            .expect("heartbeat");
+
+        let mut request = leader
+            .response(&heartbeat, &mismatch_response(0, 0))
+            .await
+            .map_err(|e| anyhow!(e.description))?
+            .expect("reconcile append")
+            .remove(0);
+        let mut sent = vec![];
+
+        loop {
+            let indices = sent_indices(&request);
+            let last = *indices.last().expect("non-empty chunk");
+            // The header describes the chunk, not the leader's log.
+            assert_eq!(request.log_index, last);
+            assert_eq!(request.log_commit, last);
+
+            let body = crate::wire::encode(&request).len() as u64;
+            assert!(body <= MAX_APPEND_SIZE, "append body {body} over budget");
+            if last < 50 {
+                let next = Log {
+                    db_id: None,
+                    index: last + 1,
+                    term: 1,
+                    data: (last + 1) as u64,
+                }
+                .serialized_size();
+                assert!(body + next > MAX_APPEND_SIZE, "chunk not full");
+            }
+            sent.extend(indices);
+
+            let follow_up = leader
+                .response(&request, &ok_response_with_failed(vec![]))
+                .await
+                .map_err(|e| anyhow!(e.description))?;
+            assert_eq!(leader.node(1).log_index, last);
+
+            match follow_up.and_then(|r| r.into_iter().find(|r| r.target == 1 && r.is_append())) {
+                Some(next) => request = next,
+                None => break,
+            }
+        }
+
+        assert_eq!(sent, (1..=50).collect::<Vec<_>>());
+        assert_eq!(leader.node(1).log_commit, 50);
+        Ok(())
+    }
+
+    fn le(values: &[u64]) -> Vec<u8> {
+        values
+            .iter()
+            .flat_map(|value| value.to_le_bytes())
+            .collect()
+    }
+
+    // Golden bytes built by hand: variant indices and field order are the
+    // cluster wire format. Reordering them breaks mixed-version clusters, so
+    // new variants go last, and any other change needs a new
+    // wire::CONTENT_TYPE version. Unreachable and PayloadTooLarge are never
+    // sent but still hold their indices.
+    #[test]
+    fn wire_format_is_stable() {
+        let header = le(&[1, 2, 3, 4, 5, 6, 7, 8, 9]);
+        let requests: Vec<(RequestType<u64>, Vec<u8>)> = vec![
+            (
+                RequestType::Append(vec![Log {
+                    db_id: Some(DbId(99)),
+                    index: 10,
+                    term: 11,
+                    data: 12,
+                }]),
+                [vec![0], le(&[1, 10, 11, 12])].concat(),
+            ),
+            (RequestType::Heartbeat, vec![1]),
+            (RequestType::Resync, vec![2]),
+            (
+                RequestType::ResyncDbs(vec![("o".into(), "d".into())]),
+                [vec![3], le(&[1, 1]), b"o".to_vec(), le(&[1]), b"d".to_vec()].concat(),
+            ),
+            (RequestType::PreVote, vec![4]),
+            (RequestType::Vote, vec![5]),
+        ];
+
+        for (data, payload) in requests {
+            let request = Request {
+                hash: 1,
+                index: 2,
+                target: 3,
+                term: 4,
+                log_index: 5,
+                log_term: 6,
+                log_commit: 7,
+                prune_index: 8,
+                exec_reconciled: 9,
+                data,
+            };
+            assert_eq!(
+                crate::wire::encode(&request),
+                [header.clone(), payload].concat(),
+                "{request:?}"
+            );
+        }
+
+        let values = |local: Option<u64>| MismatchedValues {
+            local,
+            requested: None,
+        };
+        let values_bytes = [vec![1], le(&[3]), vec![0]].concat();
+        let responses = vec![
+            (ResponseType::Ok, vec![0]),
+            (
+                ResponseType::OkReport(vec![5]),
+                [vec![1], le(&[1, 5])].concat(),
+            ),
+            (
+                ResponseType::CommitError("e".into()),
+                [vec![2], le(&[1]), b"e".to_vec()].concat(),
+            ),
+            (ResponseType::Resyncing, vec![3]),
+            (
+                ResponseType::ClusterMismatch(values(Some(3))),
+                [vec![4], values_bytes.clone()].concat(),
+            ),
+            (
+                ResponseType::LeaderMismatch(values(Some(3))),
+                [vec![5], values_bytes.clone()].concat(),
+            ),
+            (
+                ResponseType::TermMismatch(values(Some(3))),
+                [vec![6], values_bytes.clone()].concat(),
+            ),
+            (
+                ResponseType::LogMismatch(LogMismatch {
+                    index: values(Some(3)),
+                    term: values(Some(3)),
+                    commit: values(None),
+                }),
+                [
+                    vec![7],
+                    values_bytes.clone(),
+                    values_bytes.clone(),
+                    vec![0, 0],
+                ]
+                .concat(),
+            ),
+            (
+                ResponseType::AlreadyVoted(values(Some(3))),
+                [vec![8], values_bytes.clone()].concat(),
+            ),
+            (ResponseType::Unreachable, vec![9]),
+            (ResponseType::PayloadTooLarge, vec![10]),
+        ];
+
+        for (result, payload) in responses {
+            let response = Response {
+                target: 1,
+                result,
+                executed_index: 2,
+            };
+            assert_eq!(
+                crate::wire::encode(&response),
+                [le(&[1]), payload, le(&[2])].concat(),
+                "{:?}",
+                response.result
+            );
+        }
+    }
+
+    #[test]
+    fn wire_roundtrip_request_and_response() -> anyhow::Result<()> {
+        let requests = [
+            RequestType::Append(
+                (1..=3)
+                    .map(|i| Log {
+                        db_id: None,
+                        index: i,
+                        term: 2,
+                        data: i,
+                    })
+                    .collect(),
+            ),
+            RequestType::ResyncDbs(vec![("owner".into(), "db".into())]),
+            RequestType::Heartbeat,
+            RequestType::Resync,
+            RequestType::PreVote,
+            RequestType::Vote,
+        ];
+
+        for data in requests {
+            let request = Request {
+                hash: 1,
+                index: 2,
+                target: 3,
+                term: 4,
+                log_index: 5,
+                log_term: 6,
+                log_commit: 7,
+                prune_index: 8,
+                exec_reconciled: 9,
+                data,
+            };
+            let bytes = crate::wire::encode(&request);
+            assert_eq!(bytes.len() as u64, request.serialized_size());
+            let decoded: Request<u64> =
+                crate::wire::decode(&bytes).map_err(|e| anyhow!(e.description))?;
+            assert_eq!(format!("{decoded:?}"), format!("{request:?}"));
+        }
+
+        let results = [
+            ResponseType::Ok,
+            ResponseType::OkReport(vec![3, 5]),
+            ResponseType::CommitError("failed".into()),
+            ResponseType::Resyncing,
+            ResponseType::TermMismatch(MismatchedValues {
+                local: Some(2),
+                requested: None,
+            }),
+            mismatch_response(7, 3).result,
+        ];
+
+        for result in results {
+            let response = Response {
+                target: 1,
+                result,
+                executed_index: 42,
+            };
+            let bytes = crate::wire::encode(&response);
+            assert_eq!(bytes.len() as u64, response.serialized_size());
+            let decoded: Response =
+                crate::wire::decode(&bytes).map_err(|e| anyhow!(e.description))?;
+            assert_eq!(decoded.result, response.result);
+            assert_eq!(decoded.executed_index, 42);
+        }
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn oversized_entry_is_sent_alone() -> anyhow::Result<()> {
+        let mut leader = lagging_leader(3, 1);
+        let heartbeat = leader
+            .heartbeat()
+            .into_iter()
+            .find(|r| r.target == 1)
+            .expect("heartbeat");
+
+        let append = leader
+            .response(&heartbeat, &mismatch_response(0, 0))
+            .await
+            .map_err(|e| anyhow!(e.description))?
+            .expect("reconcile append");
+        assert_eq!(sent_indices(&append[0]), vec![1]);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn reconcile_resumes_after_matching_entry() -> anyhow::Result<()> {
+        let mut leader = lagging_leader(10, u64::MAX);
+        let heartbeat = leader
+            .heartbeat()
+            .into_iter()
+            .find(|r| r.target == 1)
+            .expect("heartbeat");
+
+        // Follower holds 1..=7 (term 1) but has only committed 3, e.g. after
+        // pulling entry 7 through a resync.
+        let append = leader
+            .response(&heartbeat, &mismatch_response(7, 3))
+            .await
+            .map_err(|e| anyhow!(e.description))?
+            .expect("append");
+        assert_eq!(sent_indices(&append[0]), vec![8, 9, 10]);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn reconcile_restarts_from_commit_on_diverged_entry() -> anyhow::Result<()> {
+        let mut leader = lagging_leader(10, u64::MAX);
+        let heartbeat = leader
+            .heartbeat()
+            .into_iter()
+            .find(|r| r.target == 1)
+            .expect("heartbeat");
+
+        let mut mismatch = mismatch_response(7, 3);
+        if let ResponseType::LogMismatch(m) = &mut mismatch.result {
+            m.term.local = Some(2);
+        }
+        let append = leader
+            .response(&heartbeat, &mismatch)
+            .await
+            .map_err(|e| anyhow!(e.description))?
+            .expect("append");
+        assert_eq!(sent_indices(&append[0]), (4..=10).collect::<Vec<_>>());
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn too_large_append_falls_back_to_resync() -> anyhow::Result<()> {
+        let mut leader = lagging_leader(3, u64::MAX);
+        let heartbeat = leader
+            .heartbeat()
+            .into_iter()
+            .find(|r| r.target == 1)
+            .expect("heartbeat");
+        let append = leader
+            .response(&heartbeat, &mismatch_response(0, 0))
+            .await
+            .map_err(|e| anyhow!(e.description))?
+            .expect("reconcile append")
+            .remove(0);
+
+        let follow_up = leader
+            .response(&append, &Response::new(0, ResponseType::PayloadTooLarge))
+            .await
+            .map_err(|e| anyhow!(e.description))?
+            .expect("resync signal");
+
+        assert_eq!(follow_up.len(), 1);
+        assert_eq!(follow_up[0].target, 1);
+        assert!(matches!(follow_up[0].data, RequestType::Resync));
+        assert!(!leader.node(1).force_resync);
+        assert!(leader.node(1).in_flight.is_none());
+        assert_eq!(leader.node(1).append_failures, 0);
+        Ok(())
+    }
+
     #[tokio::test]
     async fn unreachable_follower_is_not_forced_to_resync() -> anyhow::Result<()> {
         let mut leader = test_leader(TestStorage::default());
 
-        for i in 1..=APPEND_FAILURE_THRESHOLD as u8 + 2 {
+        for i in 1..=APPEND_FAILURE_THRESHOLD as u64 + 2 {
             let requests = leader
                 .append(i, None)
                 .await
@@ -3431,7 +3949,7 @@ mod test {
                     db_id: None,
                     index: i,
                     term: 1,
-                    data: i as u8,
+                    data: i,
                 })
                 .collect(),
             commit: 10,
@@ -3447,8 +3965,9 @@ mod test {
             term_timeout: Duration::from_millis(300),
             max_log_entries: 1000,
             in_flight_timeout: Duration::from_secs(120),
+            max_append_size: u64::MAX,
         };
-        let mut follower: Cluster<u8, (), TestStorage> = Cluster::new(storage, settings);
+        let mut follower: Cluster<u64, (), TestStorage> = Cluster::new(storage, settings);
         follower.state = ClusterState::Follower(0);
         follower.term = 1;
 

@@ -15,11 +15,11 @@ use crate::resync::RESYNC_SERVER_DB_NAME;
 use crate::resync::RESYNC_SERVER_DB_OWNER;
 use crate::server_db::SERVER_DB_FILE;
 use crate::server_db::ServerDb;
+use crate::server_error::ServerError;
 use crate::server_error::ServerResult;
+use crate::wire;
 use agdb::DbId;
 use agdb::StableHash;
-use agdb_api::HttpClient;
-use agdb_api::ReqwestClient;
 use axum::body::Body;
 use axum::extract::Request as AxumRequest;
 use axum::http::HeaderMap;
@@ -56,7 +56,7 @@ const FORWARD_CONNECT_BACKOFF: Duration = Duration::from_millis(200);
 const CLUSTER_REQUEST_TIMEOUT: Duration = Duration::from_secs(60);
 
 pub(crate) struct ClusterNodeImpl {
-    client: ReqwestClient,
+    client: reqwest::Client,
     url: String,
     base_url: String,
     base_path: String,
@@ -65,6 +65,15 @@ pub(crate) struct ClusterNodeImpl {
     requests_receiver: RwLock<UnboundedReceiver<Request<ClusterAction>>>,
     responses: UnboundedSender<(Request<ClusterAction>, Response)>,
     peer: Mutex<PeerState>,
+    // Set when the node rejected the binary protocol (an older version) and
+    // cleared once it was unreachable, i.e. probably restarted or upgraded.
+    json_only: AtomicBool,
+}
+
+enum SendError {
+    Status(u16, String),
+    Transport(reqwest::Error),
+    Decode(ServerError),
 }
 
 #[derive(Clone, Copy, Default)]
@@ -127,7 +136,7 @@ impl ClusterNodeImpl {
         let base_url = base.trim_end_matches("/").to_string();
 
         Ok(Self {
-            client: ReqwestClient::with_client(reqwest_client(config)?),
+            client: reqwest_client(config)?,
             url: format!("{base_url}/api/v1/cluster"),
             base_url,
             base_path: config.basepath.clone(),
@@ -136,6 +145,7 @@ impl ClusterNodeImpl {
             requests_receiver: RwLock::new(requests_receiver),
             responses,
             peer: Mutex::new(PeerState::default()),
+            json_only: AtomicBool::new(false),
         })
     }
 
@@ -158,7 +168,7 @@ impl ClusterNodeImpl {
     /// Returns a reference to the node's shared reqwest client,
     /// avoiding per-call TLS/connection-pool setup costs.
     pub(crate) fn http_client(&self) -> &reqwest::Client {
-        &self.client.client
+        &self.client
     }
 
     fn error_response(status: StatusCode, message: &str) -> AxumResponse {
@@ -220,7 +230,6 @@ impl ClusterNodeImpl {
         let mut response = loop {
             match self
                 .client
-                .client
                 .request(method.clone(), &url)
                 .headers(headers.clone())
                 .body(body.clone())
@@ -262,22 +271,96 @@ impl ClusterNodeImpl {
             .map_err(|e| Self::error_response(StatusCode::BAD_GATEWAY, &e.to_string()))
     }
 
-    async fn send(&self, request: &raft::Request<ClusterAction>) -> Option<raft::Response> {
-        match self
-            .client
-            .post(&self.url, Some(request), &self.token)
-            .await
-        {
-            Ok((_, response)) => Some(response),
-            Err(e) => {
-                crate::warn!(
-                    "[{}] Error sending request to cluster node '{}': {:?}",
-                    request.index,
-                    request.target,
-                    e
-                );
-                None
+    async fn send(&self, request: &raft::Request<ClusterAction>) -> Result<raft::Response, u16> {
+        let mut result = self
+            .post(request, !self.json_only.load(Ordering::Relaxed))
+            .await;
+
+        if let Err(SendError::Status(415, _)) = result {
+            crate::info!(
+                "[{}] Cluster node '{}' does not support the binary protocol, falling back to JSON",
+                request.index,
+                request.target,
+            );
+            self.json_only.store(true, Ordering::Relaxed);
+            result = self.post(request, false).await;
+        }
+
+        result.map_err(|error| {
+            let status = match &error {
+                SendError::Status(status, body) => {
+                    crate::warn!(
+                        "[{}] Cluster node '{}' answered {status}: {body}",
+                        request.index,
+                        request.target,
+                    );
+                    *status
+                }
+                SendError::Transport(e) => {
+                    crate::warn!(
+                        "[{}] Error sending request to cluster node '{}': {e:?}",
+                        request.index,
+                        request.target,
+                    );
+                    0
+                }
+                SendError::Decode(e) => {
+                    crate::warn!(
+                        "[{}] Invalid response from cluster node '{}': {}",
+                        request.index,
+                        request.target,
+                        e.description,
+                    );
+                    0
+                }
+            };
+
+            if matches!(error, SendError::Transport(_)) || matches!(status, 502..=504) {
+                self.json_only.store(false, Ordering::Relaxed);
             }
+
+            status
+        })
+    }
+
+    async fn post(
+        &self,
+        request: &raft::Request<ClusterAction>,
+        binary: bool,
+    ) -> Result<raft::Response, SendError> {
+        let mut builder = self.client.post(&self.url);
+
+        if let Some(token) = &self.token {
+            builder = builder.bearer_auth(token);
+        }
+
+        builder = if binary {
+            builder
+                .header(reqwest::header::CONTENT_TYPE, wire::CONTENT_TYPE)
+                .body(wire::encode(request))
+        } else {
+            builder.json(request)
+        };
+
+        let response = builder.send().await.map_err(SendError::Transport)?;
+        let status = response.status().as_u16();
+
+        if !response.status().is_success() {
+            let body = response.text().await.unwrap_or_default();
+            return Err(SendError::Status(status, body));
+        }
+
+        let is_wire = response
+            .headers()
+            .get(reqwest::header::CONTENT_TYPE)
+            .is_some_and(|value| value == wire::CONTENT_TYPE);
+        let bytes = response.bytes().await.map_err(SendError::Transport)?;
+
+        if is_wire {
+            wire::decode(&bytes).map_err(SendError::Decode)
+        } else {
+            serde_json::from_slice(&bytes)
+                .map_err(|e| SendError::Decode(ServerError::from(e.to_string())))
         }
     }
 }
@@ -320,6 +403,7 @@ pub(crate) async fn new(
         heartbeat_timeout: Duration::from_millis(config.cluster_heartbeat_timeout_ms),
         term_timeout: Duration::from_millis(config.cluster_term_timeout_ms),
         max_log_entries: config.cluster_max_log_entries,
+        max_append_size: config.cluster_max_append_size,
         in_flight_timeout: CLUSTER_REQUEST_TIMEOUT * 2,
     };
     let executed = storage.executed.subscribe();
@@ -373,21 +457,30 @@ async fn start_cluster(
         tokio::spawn(async move {
             while !shutdown_signal.load(Ordering::Relaxed) {
                 if let Some(request) = node.requests_receiver.write().await.recv().await {
-                    if let Some(response) = node.send(&request).await {
-                        node.record_peer_state(&response);
-                        match node.responses.send((request, response)) {
-                            Ok(_) => {}
-                            Err(e) => crate::warn!(
-                                "[{index}] Error sending response to cluster node '{node_index}': {e:?}"
-                            ),
+                    match node.send(&request).await {
+                        Ok(response) => {
+                            node.record_peer_state(&response);
+                            match node.responses.send((request, response)) {
+                                Ok(_) => {}
+                                Err(e) => crate::warn!(
+                                    "[{index}] Error sending response to cluster node '{node_index}': {e:?}"
+                                ),
+                            }
                         }
-                    } else if request.is_append()
-                        || request.is_heartbeat()
-                        || request.resync_dbs().is_some()
-                    {
-                        let fail_response =
-                            raft::Response::new(request.index, raft::ResponseType::Unreachable);
-                        let _ = node.responses.send((request, fail_response));
+                        Err(status)
+                            if request.is_append()
+                                || request.is_heartbeat()
+                                || request.resync_dbs().is_some() =>
+                        {
+                            let result = if status == 413 {
+                                raft::ResponseType::PayloadTooLarge
+                            } else {
+                                raft::ResponseType::Unreachable
+                            };
+                            let fail_response = raft::Response::new(request.index, result);
+                            let _ = node.responses.send((request, fail_response));
+                        }
+                        Err(_) => {}
                     }
                 } else {
                     break;
@@ -1025,12 +1118,76 @@ pub(crate) fn reqwest_client(_config: &Config) -> ServerResult<reqwest::Client> 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use axum::response::IntoResponse;
     use tokio::io::AsyncReadExt;
 
     fn node(address: &str) -> ClusterNodeImpl {
         let config = Config::new(crate::config::default_config());
         let (responses, _) = tokio::sync::mpsc::unbounded_channel();
         ClusterNodeImpl::new(address, "token", responses, &config).unwrap()
+    }
+
+    // An older node: rejects the binary protocol, speaks JSON, and can be
+    // switched to answer 503 like an ingress in front of a restarting pod.
+    async fn old_node(binary_hits: Arc<AtomicUsize>, down: Arc<AtomicBool>) -> String {
+        let app = axum::Router::new().route(
+            "/api/v1/cluster",
+            axum::routing::post(move |headers: HeaderMap| {
+                let binary_hits = binary_hits.clone();
+                let down = down.clone();
+                async move {
+                    if down.load(Ordering::Relaxed) {
+                        return StatusCode::SERVICE_UNAVAILABLE.into_response();
+                    }
+                    if headers[axum::http::header::CONTENT_TYPE] == wire::CONTENT_TYPE {
+                        binary_hits.fetch_add(1, Ordering::Relaxed);
+                        return StatusCode::UNSUPPORTED_MEDIA_TYPE.into_response();
+                    }
+                    axum::Json(serde_json::json!({
+                        "target": 1, "result": "Ok", "executed_index": 7
+                    }))
+                    .into_response()
+                }
+            }),
+        );
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let address = format!("http://{}", listener.local_addr().unwrap());
+        tokio::spawn(async move { axum::serve(listener, app).await });
+        address
+    }
+
+    fn heartbeat() -> raft::Request<ClusterAction> {
+        serde_json::from_value(serde_json::json!({
+            "hash": 0, "index": 0, "target": 1, "term": 0, "log_index": 0,
+            "log_term": 0, "log_commit": 0, "prune_index": 0,
+            "exec_reconciled": 0, "data": "Heartbeat"
+        }))
+        .unwrap()
+    }
+
+    #[tokio::test]
+    async fn falls_back_to_json_for_older_nodes() {
+        let binary_hits = Arc::new(AtomicUsize::new(0));
+        let down = Arc::new(AtomicBool::new(false));
+        let node = node(&old_node(binary_hits.clone(), down.clone()).await);
+
+        let response = node.send(&heartbeat()).await.ok().unwrap();
+        assert_eq!(response.result, raft::ResponseType::Ok);
+        assert_eq!(response.executed_index, 7);
+        assert!(node.json_only.load(Ordering::Relaxed));
+
+        node.send(&heartbeat()).await.ok().unwrap();
+        assert_eq!(binary_hits.load(Ordering::Relaxed), 1, "JSON is sticky");
+
+        // An unreachable node may come back upgraded, so binary is retried.
+        down.store(true, Ordering::Relaxed);
+        assert_eq!(node.send(&heartbeat()).await.err(), Some(503));
+        assert!(!node.json_only.load(Ordering::Relaxed));
+
+        down.store(false, Ordering::Relaxed);
+        node.send(&heartbeat()).await.ok().unwrap();
+        assert_eq!(binary_hits.load(Ordering::Relaxed), 2);
+        assert!(node.json_only.load(Ordering::Relaxed));
     }
 
     fn request() -> AxumRequest {

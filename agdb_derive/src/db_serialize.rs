@@ -12,7 +12,7 @@ use syn::parse_macro_input;
 pub fn db_serialize(item: TokenStream) -> TokenStream {
     let input = parse_macro_input!(item as DeriveInput);
     let name = input.ident;
-    let generics = input.generics;
+    let generics = with_serialize_bounds(input.generics);
 
     let tokens = if let syn::Data::Struct(data) = input.data {
         let fields_types = data
@@ -27,7 +27,7 @@ pub fn db_serialize(item: TokenStream) -> TokenStream {
             serialize_tuple(name, &generics, fields_types)
         }
     } else if let syn::Data::Enum(data) = input.data {
-        serialize_enum(name, data)
+        serialize_enum(name, &generics, data)
     } else {
         crate::compile_error(&name, "Only structs and enums are supported")
     };
@@ -35,7 +35,29 @@ pub fn db_serialize(item: TokenStream) -> TokenStream {
     tokens.into()
 }
 
-fn serialize_enum(name: Ident, enum_data: DataEnum) -> proc_macro2::TokenStream {
+// Every type parameter must itself be serializable, like serde's derive.
+fn with_serialize_bounds(mut generics: Generics) -> Generics {
+    let params = generics
+        .type_params()
+        .map(|param| param.ident.clone())
+        .collect::<Vec<_>>();
+    let where_clause = generics.make_where_clause();
+
+    for param in params {
+        where_clause
+            .predicates
+            .push(syn::parse_quote! { #param: ::agdb::AgdbSerialize });
+    }
+
+    generics
+}
+
+fn serialize_enum(
+    name: Ident,
+    generics: &Generics,
+    enum_data: DataEnum,
+) -> proc_macro2::TokenStream {
+    let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
     let sizes = enum_data.variants.iter().map(|variant| {
         let variant_name = &variant.ident;
 
@@ -124,7 +146,7 @@ fn serialize_enum(name: Ident, enum_data: DataEnum) -> proc_macro2::TokenStream 
     });
 
     quote! {
-        impl ::agdb::AgdbSerialize for #name {
+        impl #impl_generics ::agdb::AgdbSerialize for #name #ty_generics #where_clause {
             fn serialized_size(&self) -> u64 {
                 let mut size = 1_u64;
                 match self {

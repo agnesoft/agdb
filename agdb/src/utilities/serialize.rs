@@ -165,7 +165,9 @@ impl<T: Serialize> Serialize for Vec<T> {
     fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
         let len = usize::deserialize(bytes)?;
         let mut begin = len.serialized_size() as usize;
-        let mut vec = Self::with_capacity(len);
+        // A corrupted length must not reserve more memory than the input
+        // itself occupies. Valid vectors still grow past this as they decode.
+        let mut vec = Self::with_capacity(len.min(bytes.len() / size_of::<T>().max(1)));
 
         for _ in 0..len {
             let value = T::deserialize(&bytes[begin..]).map_err(|_| {
@@ -216,6 +218,58 @@ impl Serialize for Vec<u8> {
 
     fn serialized_size(&self) -> u64 {
         self.len().serialized_size() + self.len() as u64
+    }
+}
+
+impl<T: Serialize> Serialize for Option<T> {
+    fn serialize(&self) -> Vec<u8> {
+        let mut bytes = Vec::with_capacity(self.serialized_size() as usize);
+
+        match self {
+            Some(value) => {
+                bytes.push(1);
+                bytes.extend(value.serialize());
+            }
+            None => bytes.push(0),
+        }
+
+        bytes
+    }
+
+    fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
+        match bytes.first() {
+            Some(0) => Ok(None),
+            Some(1) => Ok(Some(T::deserialize(&bytes[1..])?)),
+            _ => Err(DbError::serialization(
+                DbErrorType::OutOfBounds,
+                "Option deserialization error",
+            )),
+        }
+    }
+
+    fn serialized_size(&self) -> u64 {
+        1 + self.as_ref().map_or(0, Serialize::serialized_size)
+    }
+}
+
+impl<A: Serialize, B: Serialize> Serialize for (A, B) {
+    fn serialize(&self) -> Vec<u8> {
+        let mut bytes = Vec::with_capacity(self.serialized_size() as usize);
+        bytes.extend(self.0.serialize());
+        bytes.extend(self.1.serialize());
+
+        bytes
+    }
+
+    fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
+        let a = A::deserialize(bytes)?;
+        let b = B::deserialize(&bytes[a.serialized_size() as usize..])?;
+
+        Ok((a, b))
+    }
+
+    fn serialized_size(&self) -> u64 {
+        self.0.serialized_size() + self.1.serialized_size()
     }
 }
 
@@ -561,6 +615,57 @@ mod tests {
                 )
             ))
         );
+    }
+
+    #[test]
+    fn vec_huge_len_does_not_preallocate() {
+        let bytes = usize::MAX.serialize();
+
+        assert!(Vec::<u64>::deserialize(&bytes).is_err());
+    }
+
+    #[test]
+    fn option() {
+        for original in [Some(7_u64), None] {
+            let serialized_size = original.serialized_size();
+            let mut bytes = original.serialize();
+
+            assert_eq!(bytes.len() as u64, serialized_size);
+
+            bytes.push(0);
+            let deserialized = Option::<u64>::deserialize(&bytes).unwrap();
+
+            assert_eq!(original, deserialized);
+        }
+    }
+
+    #[test]
+    fn option_invalid() {
+        assert!(Option::<u64>::deserialize(&[]).is_err());
+        assert!(Option::<u64>::deserialize(&[2]).is_err());
+        assert!(Option::<u64>::deserialize(&[1, 0]).is_err());
+    }
+
+    #[test]
+    fn tuple() {
+        let original = ("owner".to_string(), 5_u64);
+        let serialized_size = original.serialized_size();
+        let mut bytes = original.serialize();
+
+        assert_eq!(bytes.len() as u64, serialized_size);
+
+        bytes.push(0);
+        let deserialized = <(String, u64)>::deserialize(&bytes).unwrap();
+
+        assert_eq!(original, deserialized);
+    }
+
+    #[test]
+    fn tuple_out_of_bounds() {
+        let mut bytes = ("owner".to_string(), 5_u64).serialize();
+        bytes.pop();
+
+        assert!(<(String, u64)>::deserialize(&bytes).is_err());
     }
 
     #[test]

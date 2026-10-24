@@ -27,6 +27,7 @@ mod server_error;
 mod server_state;
 mod user_id;
 mod utilities;
+mod wire;
 
 use server_error::ServerResult;
 use tokio::net::TcpListener;

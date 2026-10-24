@@ -41,7 +41,7 @@ test.describe("Database Table", () => {
       ).toHaveText("admin");
       await expect(
         row.getByTestId(dynamicIds.tableCell("size") as string),
-      ).toHaveText("2568");
+      ).toHaveText("2,568");
       await expect(
         row.getByTestId(dynamicIds.tableCell("backup") as string),
       ).toHaveText(

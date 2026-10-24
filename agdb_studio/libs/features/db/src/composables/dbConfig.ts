@@ -1,5 +1,8 @@
 import type { ServerDatabase } from "@agnesoft/agdb_api/openapi";
-import { dateFormatter } from "@agdb-studio/common/src/composables/table/utils";
+import {
+  dateFormatter,
+  numberFormatter,
+} from "@agdb-studio/common/src/composables/table/utils";
 import { convertArrayOfStringsToContent } from "@agdb-studio/common/src/composables/content/utils";
 import { useContentInputs } from "@agdb-studio/common/src/composables/content/inputs";
 import { KEY_MODAL } from "@agdb-studio/common/src/composables/modal/constants";
@@ -472,7 +475,7 @@ const dbColumns: Column<TRow>[] = [
   { key: "owner", title: "Owner" },
   { key: "db", title: "Name" },
   { key: "db_type", title: "Type" },
-  { key: "size", title: "Size" },
+  { key: "size", title: "Size", valueFormatter: numberFormatter },
   {
     key: "backup",
     title: "Backup",

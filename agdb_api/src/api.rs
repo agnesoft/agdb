@@ -1,3 +1,4 @@
+use std::sync::atomic::AtomicBool;
 use std::sync::atomic::AtomicU16;
 use std::time::Duration;
 
@@ -276,6 +277,7 @@ impl Api {
         vec![
             Duration::type_def(),
             tokio::sync::RwLock::<i32>::type_def(),
+            AtomicBool::type_def(),
             AtomicU16::type_def(),
         ]
     }

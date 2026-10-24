@@ -204,7 +204,9 @@ let (status, results) = client.db_exec("owner", "my_db", &[
 - `cluster_user_login`, `cluster_status`
 - `user_login`, `user_logout`, `user_status`
 
-**Custom HTTP client**: Implement the `HttpClient` trait to replace `ReqwestClient` with any HTTP library. The trait defines `delete`, `get`, `post`, `put` methods.
+**Custom HTTP client**: Implement the `HttpClient` trait to replace `ReqwestClient` with any HTTP library. The trait defines `delete`, `get`, `post`, `put` methods and `exec` for query batches, which defaults to JSON via `post`.
+
+**Query encoding**: `ReqwestClient` sends `exec`/`exec_mut` batches and receives their results in agdb's binary serialization (`BINARY_CONTENT_TYPE`, `application/vnd.agdb.api.v1`) instead of JSON. Servers that predate it answer 415; the client then uses JSON until the server is unreachable or answers 502–504 (e.g. restarted with a newer version).
 
 ### TypeScript client
 

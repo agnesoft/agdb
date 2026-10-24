@@ -48,6 +48,7 @@ pub use api_types::UserSession;
 pub use api_types::UserStatus;
 pub use api_types::config_impl;
 pub use client::AgdbApi;
+pub use http_client::BINARY_CONTENT_TYPE;
 pub use http_client::HttpClient;
 pub use http_client::ReqwestClient;
 #[cfg(feature = "api")]

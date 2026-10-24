@@ -247,9 +247,9 @@ impl<T: AgdbApiClient> AgdbApi<T> {
         queries: &[QueryType],
     ) -> AgdbApiResult<(u16, Vec<QueryResult>)> {
         self.client
-            .post(
+            .exec(
                 &self.url(&format!("/admin/db/{owner}/{db}/exec")),
-                Some(queries),
+                queries,
                 &self.token,
             )
             .await
@@ -280,9 +280,9 @@ impl<T: AgdbApiClient> AgdbApi<T> {
         queries: &[QueryType],
     ) -> AgdbApiResult<(u16, Vec<QueryResult>)> {
         self.client
-            .post(
+            .exec(
                 &self.url(&format!("/admin/db/{owner}/{db}/exec_mut")),
-                Some(queries),
+                queries,
                 &self.token,
             )
             .await
@@ -1032,9 +1032,9 @@ impl<T: AgdbApiClient> AgdbApi<T> {
         queries: &[QueryType],
     ) -> AgdbApiResult<(u16, Vec<QueryResult>)> {
         self.client
-            .post(
+            .exec(
                 &self.url(&format!("/db/{owner}/{db}/exec")),
-                Some(queries),
+                queries,
                 &self.token,
             )
             .await
@@ -1066,9 +1066,9 @@ impl<T: AgdbApiClient> AgdbApi<T> {
         queries: &[QueryType],
     ) -> AgdbApiResult<(u16, Vec<QueryResult>)> {
         self.client
-            .post(
+            .exec(
                 &self.url(&format!("/db/{owner}/{db}/exec_mut")),
-                Some(queries),
+                queries,
                 &self.token,
             )
             .await

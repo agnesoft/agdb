@@ -383,6 +383,8 @@ let (status, results) = client.db_exec_mut("owner", "my_db", &queries).await?;
 let (status, dbs) = client.db_list().await?;
 ```
 
+`exec`/`exec_mut` batches and their results travel in agdb's binary serialization (`agdb_api::BINARY_CONTENT_TYPE`, `application/vnd.agdb.api.v1`); the server answers in the encoding of the request and still accepts JSON. Against an older server (415) `ReqwestClient` falls back to JSON until the server is unreachable or answers 502–504.
+
 ### Method naming convention
 
 Methods follow the pattern `{family}_{resource}_{action}`:

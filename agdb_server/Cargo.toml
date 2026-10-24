@@ -1,6 +1,6 @@
 [package]
 name = "agdb_server"
-version = "0.15.0"
+version = "0.16.0"
 edition = "2024"
 license = "Apache-2.0"
 homepage = "https://github.com/agnesoft/agdb"
@@ -17,14 +17,14 @@ tls = ["dep:axum-server", "dep:rustls", "reqwest/rustls", "agdb_api/tls"]
 studio = ["dep:include_dir"]
 
 [target.'cfg(all(target_os = "linux", target_env = "gnu"))'.dependencies]
-tikv-jemallocator = "0.6"
+tikv-jemallocator = "0.7"
 
 [target.'cfg(target_os = "windows")'.dependencies]
 windows-sys = { version = "0.61", features = ["Win32_System_ProcessStatus", "Win32_System_Threading"] }
 
 [dependencies]
-agdb = { version = "0.15.0", path = "../agdb", features = ["serde", "openapi", "regex"] }
-agdb_api = { version = "0.15.0", path = "../agdb_api", features = ["api"] }
+agdb = { version = "0.16.0", path = "../agdb", features = ["serde", "openapi", "regex"] }
+agdb_api = { version = "0.16.0", path = "../agdb_api", features = ["api"] }
 axum = { version = "0.8", features = ["http2"] }
 axum-extra = { version = "0.12", features = ["typed-header", "routing"] }
 axum-server = { version = "0.8", features = ["tls-rustls"], optional = true }
@@ -41,11 +41,11 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tokio = { version = "1", features = ["full"] }
 tower = "0.5"
-tower-http = { version = "0.6", features = ["cors", "fs"] }
-utoipa = "5"
-utoipa-rapidoc = { version = "6", features = ["axum"] }
+tower-http = { version = "0.7", features = ["cors", "fs"] }
+utoipa = "6"
+utoipa-rapidoc = { version = "7", features = ["axum"] }
 uuid = { version = "1", features = ["v4"] }
 
 [dev-dependencies]
-agdb_api = { version = "0.15.0", path = "../agdb_api", features = ["test_server"] }
+agdb_api = { version = "0.16.0", path = "../agdb_api", features = ["test_server"] }
 anyhow = "1"

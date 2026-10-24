@@ -513,11 +513,20 @@ fn parse_match(e: &syn::ExprMatch, generics: &[Generic]) -> TokenStream2 {
     let mut else_branch: Option<TokenStream2> = None;
 
     for arm in &e.arms {
-        if matches!(&arm.pat, Pat::Wild(_)) {
+        let (pat, guard) = match &arm.pat {
+            Pat::Guard(pat_guard) => (pat_guard.pat.as_ref(), Some(pat_guard.guard.as_ref())),
+            pat => (pat, None),
+        };
+
+        if guard.is_none() && matches!(pat, Pat::Wild(_)) {
             else_branch = Some(parse_match_arm_body(&arm.body, generics));
         } else {
-            let condition = parse_match_condition(&subject, &arm.pat, generics);
-            let condition_with_guard = if let Some((_, guard)) = &arm.guard {
+            let condition = if matches!(pat, Pat::Wild(_)) {
+                quote! { ::agdb::type_def::Expression::Literal(::agdb::DbValue::Bool(true)) }
+            } else {
+                parse_match_condition(&subject, pat, generics)
+            };
+            let condition_with_guard = if let Some(guard) = guard {
                 let guard_expr = parse_expression(guard, generics);
                 quote! {
                     ::agdb::type_def::Expression::Binary {

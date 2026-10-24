@@ -1,6 +1,6 @@
 [package]
 name = "agdb_derive"
-version = "0.15.0"
+version = "0.16.0"
 edition = "2024"
 license = "Apache-2.0"
 homepage = "https://github.com/agnesoft/agdb"
@@ -17,4 +17,4 @@ proc-macro = true
 [dependencies]
 proc-macro2 = "1"
 quote = "1"
-syn = { version = "2", features = ["full", "extra-traits"] }
+syn = { version = "3", features = ["full", "extra-traits"] }

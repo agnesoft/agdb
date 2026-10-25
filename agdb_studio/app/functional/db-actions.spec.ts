@@ -225,7 +225,9 @@ test.describe("Database Row Actions", () => {
     const modal = page.locator(".modal");
     await expect(modal).toBeVisible();
     await expect(modal.locator(".modal-header h3")).toContainText("Audit log");
-    await expect(modal).toContainText("SELECT *");
+    await expect(modal).toContainText("SelectValues");
+    await expect(modal).toContainText("2024");
+    await expect(modal.locator("table")).toBeVisible();
     // Audit modal has only a Close button (no Confirm)
     await expect(page.getByTestId("modal-button-close")).toBeVisible();
   });

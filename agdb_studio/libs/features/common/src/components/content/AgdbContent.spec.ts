@@ -192,6 +192,36 @@ describe("AgdbContent", () => {
     );
   });
 
+  it("renders a table", () => {
+    const wrapper = mount(AgdbContent, {
+      props: {
+        content: [
+          {
+            table: {
+              headers: ["Timestamp", "User", "Query"],
+              rows: [
+                ["2024-01-01", "admin", '{"SelectValues":{}}'],
+                ["2024-01-02", "user1", '{"InsertNodes":{}}'],
+              ],
+            },
+          },
+        ],
+        contentKey: testContentKey,
+      },
+    });
+    const table = wrapper.find("table");
+    expect(table.exists()).toBe(true);
+    const headers = table.findAll("th");
+    expect(headers).toHaveLength(3);
+    expect(headers[0]?.text()).toBe("Timestamp");
+    expect(headers[1]?.text()).toBe("User");
+    expect(headers[2]?.text()).toBe("Query");
+    const rows = table.findAll("tbody tr");
+    expect(rows).toHaveLength(2);
+    expect(rows[0]?.text()).toContain("admin");
+    expect(rows[1]?.text()).toContain("user1");
+  });
+
   it("updates value when checkbox is toggled", async () => {
     addInput(testContentKey, { ...checkboxInput, value: false });
     const wrapper = mount(AgdbContent, {

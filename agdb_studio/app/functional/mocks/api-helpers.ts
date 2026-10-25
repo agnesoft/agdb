@@ -144,9 +144,9 @@ export async function mockDbAuditApi(page: Page) {
       contentType: "application/json",
       body: JSON.stringify([
         {
-          timestamp: "2024-01-01T00:00:00Z",
+          timestamp: 1704067200,
           username: "admin",
-          query: "SELECT *",
+          query: { SelectValues: { keys: [], ids: { Ids: [1] } } },
         },
       ]),
     });

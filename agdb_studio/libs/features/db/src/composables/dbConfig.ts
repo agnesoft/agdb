@@ -51,18 +51,26 @@ const dbActions: Action<ServerDatabase>[] = [
     label: "Audit",
     action: ({ params }: DbActionProps) =>
       dbAudit(params).then((res) => {
-        const content = res.data.length
-          ? convertArrayOfStringsToContent(
-              res.data.map(
-                (item) =>
-                  `${item.timestamp} | ${item.username} | ${item.query}`,
-              ),
-            )
+        const content: Content[] = res.data.length
+          ? [
+              {
+                table: {
+                  headers: ["Timestamp", "User", "Query"],
+                  rows: res.data.map((item) => [
+                    dateFormatter(item.timestamp),
+                    item.username,
+                    JSON.stringify(item.query),
+                  ]),
+                  columnClasses: [undefined, undefined, "cell-break-all"],
+                },
+              },
+            ]
           : convertArrayOfStringsToContent(["No audit logs found."]);
 
         openModal({
           header: `Audit log of ${params.owner}/${params.db}`,
           content,
+          wide: true,
         });
       }),
   },

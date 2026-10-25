@@ -36,6 +36,28 @@ const getInputKey = (key: string) => {
           {{ text.text }}
         </span>
       </p>
+      <div v-if="part.table" class="table-wrapper">
+        <table class="content-table">
+          <thead>
+            <tr>
+              <th v-for="header in part.table.headers" :key="header">
+                {{ header }}
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="(row, rowIndex) in part.table.rows" :key="rowIndex">
+              <td
+                v-for="(cell, cellIndex) in row"
+                :key="cellIndex"
+                :class="part.table.columnClasses?.[cellIndex]"
+              >
+                {{ cell }}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
       <div v-if="part.input && part.input.type === 'checkbox'">
         <input
           :id="getInputKey(part.input.key)"
@@ -117,6 +139,30 @@ const getInputKey = (key: string) => {
 .agdb-content {
   p {
     margin-bottom: 1rem;
+  }
+}
+.table-wrapper {
+  overflow-x: auto;
+}
+.content-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+
+  th,
+  td {
+    border: 1px solid var(--color-border);
+    padding: 0.4rem 0.6rem;
+    text-align: left;
+    vertical-align: top;
+  }
+  th {
+    background-color: var(--color-background-soft);
+    white-space: nowrap;
+  }
+  .cell-break-all {
+    word-break: break-all;
+    max-width: 400px;
   }
 }
 .input-row {

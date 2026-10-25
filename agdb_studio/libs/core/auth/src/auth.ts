@@ -79,6 +79,7 @@ const logout = async (
   // Clear ref first so watchers stop firing, but keep HTTP token for the server call
   accessToken.value = undefined;
   if (serverLogout) {
+    notifyUnauthorized();
     await client.value?.logout(cluster).catch((error) => {
       console.error("Logout failed:", error);
     });

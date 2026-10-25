@@ -4,6 +4,7 @@ import {
   notifyUnauthorized,
   reconnectClient,
   removeToken,
+  resetUnauthorized,
 } from "@agdb-studio/api/src/api";
 import { ACCESS_TOKEN } from "@agdb-studio/api/src/constants";
 import { resolveServerUrl } from "@agdb-studio/api/src/serverUrl";
@@ -62,6 +63,7 @@ const login = async ({
   return client.value
     ?.login?.({ username, password, cluster })
     .then((token) => {
+      resetUnauthorized();
       setLocalStorageToken(token);
       return token;
     });
@@ -74,14 +76,14 @@ const logout = async (
   if (!isLoggedIn.value) {
     return;
   }
+  // Clear ref first so watchers stop firing, but keep HTTP token for the server call
+  accessToken.value = undefined;
   if (serverLogout) {
     await client.value?.logout(cluster).catch((error) => {
       console.error("Logout failed:", error);
     });
+    removeToken();
   }
-
-  accessToken.value = undefined;
-  removeToken();
 };
 
 const token = computed(() => {

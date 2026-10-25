@@ -10,9 +10,17 @@ const mockClient = vi.hoisted(() => ({
 
 const mockCheckClient = vi.hoisted(() => vi.fn());
 
+const mockIsLoggedIn = vi.hoisted(() => ({ value: true }));
+
 vi.mock("@agdb-studio/api/src/api", () => ({
   client: { value: mockClient },
   checkClient: mockCheckClient,
+}));
+
+vi.mock("@agdb-studio/auth/src/auth", () => ({
+  useAuth: () => ({
+    isLoggedIn: mockIsLoggedIn,
+  }),
 }));
 
 vi.mock("@agdb-studio/utils/src/logger/logger", () => ({
@@ -177,6 +185,17 @@ describe("useAdminStatus", () => {
     await nextTick();
 
     expect(mockClient.admin_status).toHaveBeenCalledTimes(1);
+  });
+
+  it("should skip fetch when not logged in", async () => {
+    mockIsLoggedIn.value = false;
+    mountComposable();
+    await vi.advanceTimersByTimeAsync(0);
+    await flushPromises();
+    await nextTick();
+
+    expect(mockClient.admin_status).not.toHaveBeenCalled();
+    mockIsLoggedIn.value = true;
   });
 
   it("should update lastUpdated on successful fetch", async () => {

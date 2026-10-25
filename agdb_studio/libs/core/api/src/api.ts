@@ -10,13 +10,20 @@ import type { AgdbApiClient } from "@agnesoft/agdb_api/client";
 import { createLogger } from "@agdb-studio/utils/src/logger/logger";
 
 let _onUnauthorized: (() => void) | undefined;
+let _isUnauthorized = false;
 
 export const setOnUnauthorized = (callback: () => void): void => {
   _onUnauthorized = callback;
 };
 
 export const notifyUnauthorized = (): void => {
+  if (_isUnauthorized) return;
+  _isUnauthorized = true;
   _onUnauthorized?.();
+};
+
+export const resetUnauthorized = (): void => {
+  _isUnauthorized = false;
 };
 
 const _client = ref<AgdbApi.AgdbApiClient | undefined>();
@@ -62,6 +69,7 @@ export const errorInterceptor = (error: AxiosError) => {
   );
   if (error.response?.status === 401) {
     removeToken();
+    return Promise.reject(error);
   }
 
   _lastApiError.value = error;

@@ -21,7 +21,9 @@ export const beforeEach = async (
   from: RouteLocationNormalizedGeneric,
   next: NavigationGuardNext,
 ): Promise<void> => {
-  await fetchUserStatus();
+  if (to.name !== "login") {
+    await fetchUserStatus();
+  }
 
   if (!isLoggedIn.value) {
     if (to.name !== "login") {

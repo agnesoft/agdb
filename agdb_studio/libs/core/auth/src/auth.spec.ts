@@ -1,5 +1,6 @@
 import { useAuth, setLocalStorageToken, refreshToken } from "./auth";
 import * as api from "@agdb-studio/api/src/api";
+import { resetUnauthorized } from "@agdb-studio/api/src/api";
 import {
   get_token,
   logout as mockLogout,
@@ -18,6 +19,7 @@ describe("auth service", () => {
   const { isLoggedIn, logout, login, token } = useAuth();
   beforeEach(() => {
     localStorage.removeItem(ACCESS_TOKEN);
+    resetUnauthorized();
   });
   describe("isLoggedIn", () => {
     beforeEach(() => {

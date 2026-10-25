@@ -33,7 +33,7 @@ let lastLoginStatusRefreshAt: number | null = null;
 let consumerCount: number = 0;
 
 export const useClusterStatus = () => {
-  const { logout } = useAuth();
+  const { logout, isLoggedIn } = useAuth();
 
   // When the cluster reports internal hostnames (e.g. agdb0:3000) but the UI
   // connects via localhost, only comparing ports is reliable for active-node
@@ -86,6 +86,7 @@ export const useClusterStatus = () => {
   const fetchStatus = async (
     forceLoginStatusRefresh = false,
   ): Promise<void> => {
+    if (!isLoggedIn.value) return;
     try {
       checkClient(client);
       const response = await client.value.cluster_status();

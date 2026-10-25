@@ -24,7 +24,12 @@ const fetchUserStatus = async () => {
     admin.value = status.data.admin;
   });
 };
-watch(() => token.value, fetchUserStatus);
+watch(
+  () => token.value,
+  () => {
+    fetchUserStatus().catch(() => {});
+  },
+);
 
 let tokenCheckInterval: ReturnType<typeof setInterval> | null = null;
 

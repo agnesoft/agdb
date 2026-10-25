@@ -83,8 +83,8 @@ const logout = async (
     await client.value?.logout(cluster).catch((error) => {
       console.error("Logout failed:", error);
     });
-    removeToken();
   }
+  removeToken();
 };
 
 const token = computed(() => {

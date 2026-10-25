@@ -50,6 +50,15 @@ describe("useAccount", () => {
     expect(admin.value).toBe(true);
   });
 
+  it("handles token watcher errors gracefully", async () => {
+    user_status.mockRejectedValueOnce(new Error("401"));
+    token.value = "expired-token";
+    await nextTick();
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(user_status).toHaveBeenCalled();
+  });
+
   it("does nothing if not logged in", async () => {
     isLoggedIn.value = false;
     const { username, admin, fetchUserStatus } = useAccount();
@@ -94,6 +103,13 @@ describe("useAccount", () => {
       user_status.mockClear();
       await vi.advanceTimersByTimeAsync(60000);
       expect(user_status).not.toHaveBeenCalled();
+    });
+
+    it("handles interval errors gracefully", async () => {
+      user_status.mockRejectedValue(new Error("500"));
+      await vi.advanceTimersByTimeAsync(60000);
+
+      expect(user_status).toHaveBeenCalled();
     });
 
     it("does not create duplicate intervals", async () => {

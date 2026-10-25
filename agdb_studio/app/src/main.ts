@@ -35,6 +35,10 @@ setOnUnauthorized(() => {
 
 setupApiNotifications();
 
+router.onError((error) => {
+  console.error("Navigation error:", error);
+});
+
 app.use(router);
 
 app.mount("#app");

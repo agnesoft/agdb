@@ -224,14 +224,16 @@ describe("dbConfig", () => {
       db_audit.mockResolvedValueOnce({
         data: [
           {
-            timestamp: "123",
+            timestamp: 1704067200,
             username: "test_user",
-            query: "test_query",
+            query: { SelectValues: { keys: [], ids: { Ids: [1] } } },
           },
           {
-            timestamp: "456",
+            timestamp: 1704153600,
             username: "test_user2",
-            query: "test_query2",
+            query: {
+              InsertNodes: { count: 5, values: {}, aliases: {}, ids: {} },
+            },
           },
         ],
       });
@@ -240,13 +242,17 @@ describe("dbConfig", () => {
 
       expect(modalIsVisible.value).toBe(true);
       expect(modal.header).toBe("Audit log of test_owner/test_db");
-      expect(modal.content).toHaveLength(2);
-      expect(modal.content[0]?.paragraph?.[0]?.text).toBe(
-        "123 | test_user | test_query",
-      );
-      expect(modal.content[1]?.paragraph?.[0]?.text).toBe(
-        "456 | test_user2 | test_query2",
-      );
+      expect(modal.content).toHaveLength(1);
+      const table = modal.content[0]?.table;
+      expect(table).toBeDefined();
+      expect(table?.headers).toEqual(["Timestamp", "User", "Query"]);
+      expect(table?.rows).toHaveLength(2);
+      expect(table?.rows[0]?.[0]).toBe("Mon, 01 Jan 2024 00:00:00 GMT");
+      expect(table?.rows[0]?.[1]).toBe("test_user");
+      expect(table?.rows[0]?.[2]).toContain("SelectValues");
+      expect(table?.rows[1]?.[0]).toBe("Tue, 02 Jan 2024 00:00:00 GMT");
+      expect(table?.rows[1]?.[1]).toBe("test_user2");
+      expect(table?.rows[1]?.[2]).toContain("InsertNodes");
     });
 
     it("should create correct inputs for copy action for user", () => {

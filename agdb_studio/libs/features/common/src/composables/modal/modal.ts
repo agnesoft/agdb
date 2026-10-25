@@ -17,6 +17,7 @@ const onConfirm = ref<() => Promise<void | boolean> | boolean>();
 const closeModal = (): void => {
   modal.header = "";
   modal.content = [];
+  modal.wide = undefined;
   modalIsVisible.value = false;
   confirmLoading.value = false;
   clearInputs(KEY_MODAL);
@@ -77,6 +78,7 @@ const buttons = computed<Button[]>(() => {
 type ShowModalProps = {
   header?: string;
   content?: Content[];
+  wide?: boolean;
   onConfirm?: () => Promise<void | boolean> | boolean;
   buttons?: Button[];
 };
@@ -84,11 +86,13 @@ type ShowModalProps = {
 const openModal = ({
   header,
   content,
+  wide,
   onConfirm: onConfirmFn,
   buttons: extraButtons,
 }: ShowModalProps): void => {
   modal.header = header ?? "";
   modal.content = content ?? [];
+  modal.wide = wide;
   clearInputs(KEY_MODAL);
   content?.forEach((c) => {
     if (c.input) {

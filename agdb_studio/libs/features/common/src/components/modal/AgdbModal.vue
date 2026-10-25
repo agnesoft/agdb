@@ -25,7 +25,7 @@ watch(modalIsVisible, async () => {
 
 <template>
   <div v-if="modalIsVisible" class="modal-background">
-    <section class="modal">
+    <section :class="['modal', { 'modal-wide': modal.wide }]">
       <header class="modal-header">
         <h3>{{ modal.header }}</h3>
         <button
@@ -90,6 +90,9 @@ watch(modalIsVisible, async () => {
   max-width: 90%;
   width: 30rem;
 }
+.modal-wide {
+  width: 60rem;
+}
 .modal-header {
   display: flex;
   justify-content: space-between;
@@ -99,6 +102,8 @@ watch(modalIsVisible, async () => {
 }
 .modal-body {
   padding: 1rem;
+  max-height: 60vh;
+  overflow-y: auto;
   p {
     margin-bottom: 1rem;
   }

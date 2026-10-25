@@ -31,9 +31,16 @@ export type Input = {
   rules?: ((value: string) => string | undefined)[];
 };
 
+export type ContentTable = {
+  headers: string[];
+  rows: string[][];
+  columnClasses?: (string | undefined)[];
+};
+
 export type Content = {
   paragraph?: Paragraph[];
   input?: Input;
+  table?: ContentTable;
 };
 
 export type ActionReturn = Promise<boolean | void> | boolean;

@@ -84,6 +84,23 @@ describe("client service", () => {
       ).rejects.toBe(response);
       expect(lastApiError.value?.message).toBe(response.message);
     });
+    it("suppresses lastApi error when unauthorized", async () => {
+      const trigger401 = {
+        message: "unauthorized",
+        response: { status: 401 },
+      };
+      await errorInterceptor(trigger401 as unknown as AxiosError<string>).catch(
+        () => {},
+      );
+      const response = {
+        message: "not found",
+        response: { status: 404 },
+      };
+      await expect(
+        errorInterceptor(response as unknown as AxiosError<string>),
+      ).rejects.toBe(response);
+      expect(lastApiError.value?.message).not.toBe(response.message);
+    });
   });
   describe("checkClient", () => {
     it("throws error if client is not initialized", () => {

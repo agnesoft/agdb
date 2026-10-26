@@ -72,7 +72,9 @@ export const errorInterceptor = (error: AxiosError) => {
     return Promise.reject(error);
   }
 
-  _lastApiError.value = error;
+  if (!_isUnauthorized) {
+    _lastApiError.value = error;
+  }
 
   return Promise.reject(error);
 };

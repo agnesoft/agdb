@@ -15,9 +15,7 @@ let router: Router | undefined = undefined;
 
 const logger = createLogger("Router");
 
-export const beforeEach = async (
-  to: RouteLocationNormalizedGeneric,
-) => {
+export const beforeEach = async (to: RouteLocationNormalizedGeneric) => {
   if (to.name !== "login") {
     try {
       await fetchUserStatus();

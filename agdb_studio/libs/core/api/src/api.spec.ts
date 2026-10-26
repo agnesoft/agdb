@@ -11,6 +11,7 @@ import {
   checkClient,
   reconnectClient,
   setOnUnauthorized,
+  resetUnauthorized,
 } from "./api";
 import { client } from "@agdb-studio/testing/mocks/apiMock";
 import type { AxiosError, AxiosResponse } from "axios";
@@ -24,6 +25,7 @@ setOnUnauthorized(onUnauthorizedMock);
 describe("client service", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    resetUnauthorized();
     Object.defineProperty(window, "location", {
       value: { pathname: "/studio", reload: vi.fn() },
       configurable: true,
@@ -63,7 +65,7 @@ describe("client service", () => {
     });
   });
   describe("errorInterceptor", () => {
-    it("returns error for 401 response", async () => {
+    it("returns error for 401 response without setting lastApiError", async () => {
       const response = {
         message: "error",
         response: { status: 401 },
@@ -71,7 +73,7 @@ describe("client service", () => {
       await expect(
         errorInterceptor(response as unknown as AxiosError<string>),
       ).rejects.toBe(response);
-      expect(lastApiError.value?.message).toBe(response.message);
+      expect(lastApiError.value?.message).not.toBe(response.message);
     });
     it("returns error for unknown response", async () => {
       const response = {
@@ -81,6 +83,23 @@ describe("client service", () => {
         errorInterceptor(response as unknown as AxiosError<string>),
       ).rejects.toBe(response);
       expect(lastApiError.value?.message).toBe(response.message);
+    });
+    it("suppresses lastApi error when unauthorized", async () => {
+      const trigger401 = {
+        message: "unauthorized",
+        response: { status: 401 },
+      };
+      await errorInterceptor(trigger401 as unknown as AxiosError<string>).catch(
+        () => {},
+      );
+      const response = {
+        message: "not found",
+        response: { status: 404 },
+      };
+      await expect(
+        errorInterceptor(response as unknown as AxiosError<string>),
+      ).rejects.toBe(response);
+      expect(lastApiError.value?.message).not.toBe(response.message);
     });
   });
   describe("checkClient", () => {
@@ -121,6 +140,37 @@ describe("client service", () => {
       initClient();
       expect(() => removeToken()).not.toThrow();
       expect(onUnauthorizedMock).toHaveBeenCalled();
+    });
+  });
+  describe("notifyUnauthorized deduplication", () => {
+    it("fires callback only once until reset", () => {
+      client.mockResolvedValue({
+        interceptors: { response: { use: vi.fn() }, request: { use: vi.fn() } },
+        reset_token: vi.fn(),
+      } as unknown as AgdbApiClient);
+      initClient();
+
+      removeToken();
+      expect(onUnauthorizedMock).toHaveBeenCalledTimes(1);
+
+      removeToken();
+      expect(onUnauthorizedMock).toHaveBeenCalledTimes(1);
+    });
+
+    it("fires callback again after resetUnauthorized", () => {
+      client.mockResolvedValue({
+        interceptors: { response: { use: vi.fn() }, request: { use: vi.fn() } },
+        reset_token: vi.fn(),
+      } as unknown as AgdbApiClient);
+      initClient();
+
+      removeToken();
+      expect(onUnauthorizedMock).toHaveBeenCalledTimes(1);
+
+      resetUnauthorized();
+
+      removeToken();
+      expect(onUnauthorizedMock).toHaveBeenCalledTimes(2);
     });
   });
   describe("reconnectClient", () => {

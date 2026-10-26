@@ -1,5 +1,6 @@
 import { ref, onMounted, onUnmounted, type Ref } from "vue";
 import { client, checkClient } from "@agdb-studio/api/src/api";
+import { useAuth } from "@agdb-studio/auth/src/auth";
 import { createLogger } from "@agdb-studio/utils/src/logger/logger";
 import type { AdminStatus } from "@agnesoft/agdb_api/openapi";
 
@@ -14,7 +15,10 @@ const lastUpdated = ref<Date | null>(null);
 let pollInterval: ReturnType<typeof setInterval> | null = null;
 
 export const useAdminStatus = () => {
+  const { isLoggedIn } = useAuth();
+
   const fetchStatus = async (): Promise<void> => {
+    if (!isLoggedIn.value) return;
     try {
       checkClient(client);
       const response = await client.value.admin_status();

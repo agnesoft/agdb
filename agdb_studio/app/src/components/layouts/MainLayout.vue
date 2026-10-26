@@ -8,8 +8,10 @@ import ProfileDropdown from "@agdb-studio/profile/src/components/ProfileDropdown
 import ClusterStatusIndicator from "@agdb-studio/cluster/src/components/ClusterStatusIndicator.vue";
 import { computed } from "vue";
 import { useAdmin } from "@agdb-studio/profile/src/composables/admin";
+import { useAuth } from "@agdb-studio/auth/src/auth";
 
 const { isAdminView } = useAdmin();
+const { isLoggedIn } = useAuth();
 
 const homeLink = computed(() => (isAdminView.value ? "/admin" : "/"));
 
@@ -50,8 +52,8 @@ const links = computed(() => {
       <RouterView />
     </main>
     <footer></footer>
-    <NotificationViewer />
-    <FadeTransition>
+    <NotificationViewer v-if="isLoggedIn" />
+    <FadeTransition v-if="isLoggedIn">
       <AgdbModal />
     </FadeTransition>
   </div>

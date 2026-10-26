@@ -98,6 +98,13 @@ describe("router", () => {
 
     expect(router.currentRoute.value.name).toBe("home");
   });
+  it("skips fetchUserStatus when navigating to login", async () => {
+    isLoggedInMock.value = false;
+
+    await router.push("/login");
+
+    expect(fetchUserStatus).not.toHaveBeenCalled();
+  });
   it("loads the databases page", async () => {
     isLoggedInMock.value = true;
 

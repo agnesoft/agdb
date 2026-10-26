@@ -1,13 +1,12 @@
+import { useAccount } from "@agdb-studio/auth/src/account";
+import { useAuth } from "@agdb-studio/auth/src/auth";
+import { createLogger } from "@agdb-studio/utils/src/logger/logger";
 import {
   createRouter as createRouterVue,
-  type NavigationGuardNext,
   type RouteLocationNormalizedGeneric,
   type Router,
   type RouterOptions,
 } from "vue-router";
-import { useAuth } from "@agdb-studio/auth/src/auth";
-import { useAccount } from "@agdb-studio/auth/src/account";
-import { createLogger } from "@agdb-studio/utils/src/logger/logger";
 
 const { isLoggedIn } = useAuth();
 const { admin, fetchUserStatus } = useAccount();
@@ -16,37 +15,37 @@ let router: Router | undefined = undefined;
 
 const logger = createLogger("Router");
 
-export const beforeEach = async (
-  to: RouteLocationNormalizedGeneric,
-  from: RouteLocationNormalizedGeneric,
-  next: NavigationGuardNext,
-): Promise<void> => {
-  await fetchUserStatus();
+export const beforeEach = async (to: RouteLocationNormalizedGeneric) => {
+  if (to.name !== "login") {
+    try {
+      await fetchUserStatus();
+    } catch {
+      // 401s handled by the error interceptor
+    }
+  }
 
   if (!isLoggedIn.value) {
     if (to.name !== "login") {
-      next({ name: "login", query: { redirect: to.fullPath } });
-    } else {
-      next();
+      return { name: "login", query: { redirect: to.fullPath } };
     }
-  } else if (to.meta.requiresAdmin) {
+    return;
+  }
+
+  if (to.meta.requiresAdmin) {
     logger.debug(
       "Checking admin status for route:",
       to.fullPath,
       "Admin status:",
       admin.value,
     );
-    if (admin.value) {
-      next();
-    } else {
-      next({ name: "home" });
+    if (!admin.value) {
+      return { name: "home" };
     }
-  } else {
-    if (to.name === "login") {
-      next({ name: "home" });
-    } else {
-      next();
-    }
+    return;
+  }
+
+  if (to.name === "login") {
+    return { name: "home" };
   }
 };
 

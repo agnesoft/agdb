@@ -5,6 +5,7 @@ import { createApp } from "vue";
 import App from "./App.vue";
 import { setOnUnauthorized } from "@agdb-studio/api/src/api";
 import { createRouter, getRouter } from "@agdb-studio/router/src/router";
+import { useAuth } from "@agdb-studio/auth/src/auth";
 import { createWebHistory } from "vue-router";
 import { createRoutes } from "./router/routes";
 import { setupApiNotifications } from "./composables/apiNotifications";
@@ -16,8 +17,11 @@ const router = createRouter({
 
 const app = createApp(App);
 
+const { logout } = useAuth();
+
 setOnUnauthorized(() => {
   try {
+    logout(false, false);
     const r = getRouter();
     if (r.currentRoute.value.name !== "login") {
       r.push({ name: "login" }).catch(() => {
@@ -30,6 +34,10 @@ setOnUnauthorized(() => {
 });
 
 setupApiNotifications();
+
+router.onError((error) => {
+  console.error("Navigation error:", error);
+});
 
 app.use(router);
 

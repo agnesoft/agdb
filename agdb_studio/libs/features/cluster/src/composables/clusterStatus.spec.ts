@@ -47,9 +47,12 @@ vi.mock("@agdb-studio/api/src/constants", () => ({
   SESSION_LOGIN_SERVER_URL: "studio_login_server_url",
 }));
 
+const mockIsLoggedIn = vi.hoisted(() => ({ value: true }));
+
 vi.mock("@agdb-studio/auth/src/auth", () => ({
   useAuth: () => ({
     logout: mockLogout,
+    isLoggedIn: mockIsLoggedIn,
   }),
 }));
 
@@ -745,5 +748,18 @@ describe("useClusterStatus", () => {
 
     expect(vm.isServerActive(httpsServer)).toBe(true);
     expect(vm.activeNodeLabel).toBe(":443");
+  });
+
+  it("should skip fetch when not logged in", async () => {
+    mockIsLoggedIn.value = false;
+    mockClient.cluster_status.mockResolvedValue({ data: [] });
+
+    mountComposable();
+    await vi.advanceTimersByTimeAsync(0);
+    await flushPromises();
+    await nextTick();
+
+    expect(mockClient.cluster_status).not.toHaveBeenCalled();
+    mockIsLoggedIn.value = true;
   });
 });

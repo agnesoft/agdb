@@ -1,32 +1,62 @@
 import { vi, describe, it, beforeEach, expect } from "vitest";
-import type { ActionProps } from "@agdb-studio/common/src/composables/content/types";
+import type {
+  ActionProps,
+  Input,
+} from "@agdb-studio/common/src/composables/content/types";
+import { useContentInputs } from "@agdb-studio/common/src/composables/content/inputs";
+import { KEY_MODAL } from "@agdb-studio/common/src/composables/modal/constants";
 
-const { isAdmin, isAdminView, pushMock, openModal, sessions, fetchUserStatus } =
-  vi.hoisted(() => {
-    return {
-      isAdmin: { value: true },
-      isAdminView: { value: false },
-      pushMock: vi.fn(),
-      openModal: vi.fn(),
-      fetchUserStatus: vi.fn().mockResolvedValue(undefined),
-      sessions: {
-        value: [
-          {
-            agent: "browser",
-            created: 1000,
-            expires_at: 2000,
-            session: "s1",
-          },
-        ],
-      },
-    };
-  });
+const {
+  isAdmin,
+  isAdminView,
+  pushMock,
+  openModal,
+  sessions,
+  fetchUserStatus,
+  logoutSession,
+  logoutMock,
+} = vi.hoisted(() => {
+  return {
+    isAdmin: { value: true },
+    isAdminView: { value: false },
+    pushMock: vi.fn(),
+    openModal: vi.fn(),
+    fetchUserStatus: vi.fn().mockResolvedValue(undefined),
+    logoutSession: vi.fn().mockResolvedValue(undefined),
+    logoutMock: vi.fn().mockResolvedValue(undefined),
+    sessions: {
+      value: [
+        {
+          agent: "browser",
+          created: 1000,
+          expires_at: 2000,
+          session: "s1",
+        },
+        {
+          agent: "cli",
+          created: 1100,
+          expires_at: 2100,
+          session: "s2",
+        },
+      ],
+    },
+  };
+});
 
 vi.mock("./admin", () => {
   return {
     useAdmin: vi.fn().mockReturnValue({
       isAdmin,
       isAdminView,
+    }),
+  };
+});
+
+vi.mock("@agdb-studio/auth/src/auth", () => {
+  return {
+    useAuth: vi.fn().mockReturnValue({
+      logout: logoutMock,
+      logoutSession,
     }),
   };
 });
@@ -166,7 +196,7 @@ describe("profileActions.ts", () => {
     const content = openModal.mock.calls[0]?.[0]?.content;
     expect(content).toHaveLength(1);
     expect(content[0]?.table?.headers).toEqual(["Agent", "Created", "Expires"]);
-    expect(content[0]?.table?.rows).toHaveLength(1);
+    expect(content[0]?.table?.rows).toHaveLength(2);
   });
 
   it("shows no sessions message when empty", async () => {
@@ -180,6 +210,145 @@ describe("profileActions.ts", () => {
     expect(content[0]?.paragraph?.[0]?.text).toBe("No active sessions.");
     sessions.value = [
       { agent: "browser", created: 1000, expires_at: 2000, session: "s1" },
+      { agent: "cli", created: 1100, expires_at: 2100, session: "s2" },
     ];
+  });
+
+  describe("logout with session management", () => {
+    const { addInput, setInputValue, clearAllInputs } = useContentInputs();
+
+    const clusterInput: Input = {
+      type: "checkbox",
+      label: "Cluster",
+      key: "cluster",
+    };
+
+    const sessionInput: Input = {
+      type: "select",
+      label: "Session",
+      key: "session",
+    };
+
+    beforeEach(() => {
+      clearAllInputs();
+      sessions.value = [
+        { agent: "browser", created: 1000, expires_at: 2000, session: "s1" },
+        { agent: "cli", created: 1100, expires_at: 2100, session: "s2" },
+      ];
+    });
+
+    it("fetches user status and shows session selector when multiple sessions", async () => {
+      const { actions } = useUserActions();
+      await actions.value
+        .find((action) => action.key === LOGOUT_KEY)
+        ?.action?.({} as ActionProps<undefined>);
+      expect(fetchUserStatus).toHaveBeenCalled();
+      const content = openModal.mock.calls[0]?.[0]?.content;
+      const selectContent = content?.find(
+        (c: { input?: { key: string } }) => c.input?.key === "session",
+      );
+      expect(selectContent).toBeDefined();
+      expect(selectContent?.input?.options).toHaveLength(5);
+      expect(selectContent?.input?.options[0]?.label).toBe("Current session");
+      expect(selectContent?.input?.options[1]?.label).toBe("All sessions");
+      expect(selectContent?.input?.options[2]?.label).toBe("Other sessions");
+    });
+
+    it("omits session selector when single session", async () => {
+      sessions.value = [
+        { agent: "browser", created: 1000, expires_at: 2000, session: "s1" },
+      ];
+      const { actions } = useUserActions();
+      await actions.value
+        .find((action) => action.key === LOGOUT_KEY)
+        ?.action?.({} as ActionProps<undefined>);
+      const content = openModal.mock.calls[0]?.[0]?.content;
+      const selectContent = content?.find(
+        (c: { input?: { key: string } }) => c.input?.key === "session",
+      );
+      expect(selectContent).toBeUndefined();
+    });
+
+    it("logs out current session by default", async () => {
+      addInput(KEY_MODAL, clusterInput);
+      setInputValue(KEY_MODAL, clusterInput.key, false);
+      addInput(KEY_MODAL, sessionInput);
+      setInputValue(KEY_MODAL, sessionInput.key, "");
+
+      const { actions } = useUserActions();
+      await actions.value
+        .find((action) => action.key === LOGOUT_KEY)
+        ?.action?.({} as ActionProps<undefined>);
+
+      const onConfirm = openModal.mock.calls[0]?.[0]?.onConfirm;
+      await onConfirm?.();
+      expect(logoutSession).toHaveBeenCalledWith(false, undefined);
+    });
+
+    it("logs out all sessions", async () => {
+      addInput(KEY_MODAL, clusterInput);
+      setInputValue(KEY_MODAL, clusterInput.key, true);
+      addInput(KEY_MODAL, sessionInput);
+      setInputValue(KEY_MODAL, sessionInput.key, "all");
+
+      const { actions } = useUserActions();
+      await actions.value
+        .find((action) => action.key === LOGOUT_KEY)
+        ?.action?.({} as ActionProps<undefined>);
+
+      const onConfirm = openModal.mock.calls[0]?.[0]?.onConfirm;
+      await onConfirm?.();
+      expect(logoutSession).toHaveBeenCalledWith(true, "all");
+    });
+
+    it("logs out other sessions without ending current session", async () => {
+      addInput(KEY_MODAL, clusterInput);
+      setInputValue(KEY_MODAL, clusterInput.key, false);
+      addInput(KEY_MODAL, sessionInput);
+      setInputValue(KEY_MODAL, sessionInput.key, "others");
+
+      const { actions } = useUserActions();
+      await actions.value
+        .find((action) => action.key === LOGOUT_KEY)
+        ?.action?.({} as ActionProps<undefined>);
+
+      const onConfirm = openModal.mock.calls[0]?.[0]?.onConfirm;
+      await onConfirm?.();
+      expect(logoutSession).toHaveBeenCalledWith(false, "others");
+      expect(fetchUserStatus).toHaveBeenCalledTimes(2);
+    });
+
+    it("logs out a specific session", async () => {
+      addInput(KEY_MODAL, clusterInput);
+      setInputValue(KEY_MODAL, clusterInput.key, false);
+      addInput(KEY_MODAL, sessionInput);
+      setInputValue(KEY_MODAL, sessionInput.key, "s2");
+
+      const { actions } = useUserActions();
+      await actions.value
+        .find((action) => action.key === LOGOUT_KEY)
+        ?.action?.({} as ActionProps<undefined>);
+
+      const onConfirm = openModal.mock.calls[0]?.[0]?.onConfirm;
+      await onConfirm?.();
+      expect(logoutSession).toHaveBeenCalledWith(false, "s2");
+      expect(fetchUserStatus).toHaveBeenCalledTimes(2);
+    });
+
+    it("logs out a specific session with cluster", async () => {
+      addInput(KEY_MODAL, clusterInput);
+      setInputValue(KEY_MODAL, clusterInput.key, true);
+      addInput(KEY_MODAL, sessionInput);
+      setInputValue(KEY_MODAL, sessionInput.key, "s1");
+
+      const { actions } = useUserActions();
+      await actions.value
+        .find((action) => action.key === LOGOUT_KEY)
+        ?.action?.({} as ActionProps<undefined>);
+
+      const onConfirm = openModal.mock.calls[0]?.[0]?.onConfirm;
+      await onConfirm?.();
+      expect(logoutSession).toHaveBeenCalledWith(true, "s1");
+    });
   });
 });

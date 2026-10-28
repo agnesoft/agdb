@@ -1,17 +1,21 @@
-import { useAuth } from "@agdb-studio/auth/src/auth";
-import { useAccount } from "@agdb-studio/auth/src/account";
-import useModal from "@agdb-studio/common/src/composables/modal/modal";
-import { useContentInputs } from "@agdb-studio/common/src/composables/content/inputs";
-import { convertArrayOfStringsToContent } from "@agdb-studio/common/src/composables/content/utils";
-import { buildSessionContent } from "@agdb-studio/common/src/composables/content/sessionContent";
 import { client } from "@agdb-studio/api/src/api";
+import { useAccount } from "@agdb-studio/auth/src/account";
+import { useAuth } from "@agdb-studio/auth/src/auth";
+import { useContentInputs } from "@agdb-studio/common/src/composables/content/inputs";
+import { buildSessionContent } from "@agdb-studio/common/src/composables/content/sessionContent";
+import type {
+  Action,
+  Content,
+} from "@agdb-studio/common/src/composables/content/types";
+import { convertArrayOfStringsToContent } from "@agdb-studio/common/src/composables/content/utils";
 import { KEY_MODAL } from "@agdb-studio/common/src/composables/modal/constants";
+import useModal from "@agdb-studio/common/src/composables/modal/modal";
+import { getRouter } from "@agdb-studio/router/src/router";
+import { formatTimestamp } from "@agdb-studio/utils/src/format/format";
 import { computed } from "vue";
 import { useAdmin } from "./admin";
-import { getRouter } from "@agdb-studio/router/src/router";
-import type { Action } from "@agdb-studio/common/src/composables/content/types";
 
-const { logout } = useAuth();
+const { logoutSession } = useAuth();
 const { sessions, fetchUserStatus } = useAccount();
 const { openModal } = useModal();
 const { getInputValue } = useContentInputs();
@@ -135,26 +139,57 @@ const accountActions: Action<undefined>[] = [
   {
     key: LOGOUT_KEY,
     label: "Logout",
-    action: () => {
+    action: async () => {
+      await fetchUserStatus();
+      const sessionList = sessions.value;
+      const content: Content[] = [
+        ...convertArrayOfStringsToContent(["Are you sure you want to logout?"]),
+      ];
+
+      if (sessionList.length > 1) {
+        content.push({
+          input: {
+            type: "select",
+            label: "Session",
+            key: "session",
+            options: [
+              { value: "", label: "Current session" },
+              { value: "all", label: "All sessions" },
+              { value: "others", label: "Other sessions" },
+              ...sessionList.map((s) => ({
+                value: s.session,
+                label: `${s.agent || "(none)"} — ${formatTimestamp(s.created)}`,
+              })),
+            ],
+            value: "",
+          },
+        });
+      }
+
+      content.push({
+        input: {
+          type: "checkbox",
+          label: "Logout from all nodes in the cluster",
+          key: "cluster",
+          value: true,
+        },
+      });
+
       openModal({
         header: "Logout",
-        content: [
-          ...convertArrayOfStringsToContent([
-            "Are you sure you want to logout?",
-          ]),
-          {
-            input: {
-              type: "checkbox",
-              label: "Logout from all nodes in the cluster",
-              key: "cluster",
-              value: true,
-            },
-          },
-        ],
-        onConfirm: () => {
+        content,
+        onConfirm: async () => {
           const cluster = !!getInputValue<string>(KEY_MODAL, "cluster");
+          const sessionId =
+            getInputValue<string>(KEY_MODAL, "session")?.toString() || "";
 
-          logout(cluster);
+          if (!sessionId || sessionId === "all") {
+            await logoutSession(cluster, sessionId || undefined);
+            return true;
+          }
+
+          await logoutSession(cluster, sessionId);
+          await fetchUserStatus();
           return true;
         },
       });

@@ -4,6 +4,8 @@ import { resetUnauthorized } from "@agdb-studio/api/src/api";
 import {
   get_token,
   logout as mockLogout,
+  user_logout,
+  cluster_user_logout,
 } from "@agdb-studio/testing/mocks/apiMock";
 import { ACCESS_TOKEN } from "@agdb-studio/api/src/constants";
 import { vi, describe, it, beforeEach, expect } from "vitest";
@@ -16,7 +18,7 @@ describe("auth service", () => {
     value: { reload: vi.fn() },
   });
 
-  const { isLoggedIn, logout, login, token } = useAuth();
+  const { isLoggedIn, logout, logoutSession, login, token } = useAuth();
   beforeEach(() => {
     localStorage.removeItem(ACCESS_TOKEN);
     resetUnauthorized();
@@ -98,6 +100,53 @@ describe("auth service", () => {
       refreshToken();
       expect(isLoggedIn.value).toBe(false);
       expect(onUnauthorizedMock).toHaveBeenCalled();
+    });
+  });
+  describe("logoutSession", () => {
+    beforeEach(() => {
+      vi.clearAllMocks();
+      localStorage.removeItem(ACCESS_TOKEN);
+      refreshToken();
+    });
+    it("does nothing if not logged in", async () => {
+      await logoutSession();
+      expect(user_logout).not.toHaveBeenCalled();
+    });
+    it("clears token when no session specified (current session)", async () => {
+      setLocalStorageToken("test");
+      await logoutSession();
+      expect(isLoggedIn.value).toBe(false);
+      expect(user_logout).toHaveBeenCalledWith(undefined);
+    });
+    it("clears token when session is 'all'", async () => {
+      setLocalStorageToken("test");
+      await logoutSession(false, "all");
+      expect(isLoggedIn.value).toBe(false);
+      expect(user_logout).toHaveBeenCalledWith({ session: "all" });
+    });
+    it("keeps token when session is 'others'", async () => {
+      setLocalStorageToken("test");
+      await logoutSession(false, "others");
+      expect(isLoggedIn.value).toBe(true);
+      expect(user_logout).toHaveBeenCalledWith({ session: "others" });
+    });
+    it("keeps token when logging out a specific session", async () => {
+      setLocalStorageToken("test");
+      await logoutSession(false, "session-123");
+      expect(isLoggedIn.value).toBe(true);
+      expect(user_logout).toHaveBeenCalledWith({ session: "session-123" });
+    });
+    it("uses cluster endpoint when cluster is true", async () => {
+      setLocalStorageToken("test");
+      await logoutSession(true, "others");
+      expect(cluster_user_logout).toHaveBeenCalledWith({ session: "others" });
+      expect(user_logout).not.toHaveBeenCalled();
+    });
+    it("handles logout failure gracefully", async () => {
+      user_logout.mockRejectedValueOnce(new Error("Network error"));
+      setLocalStorageToken("test");
+      await logoutSession(false, "others");
+      expect(isLoggedIn.value).toBe(true);
     });
   });
 });

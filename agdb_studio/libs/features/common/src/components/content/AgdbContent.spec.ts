@@ -222,6 +222,35 @@ describe("AgdbContent", () => {
     expect(rows[1]?.text()).toContain("user1");
   });
 
+  it("renders row action buttons when rowActions provided", async () => {
+    const onClickMock = vi.fn();
+    const wrapper = mount(AgdbContent, {
+      props: {
+        content: [
+          {
+            table: {
+              headers: ["Name", "Value"],
+              rows: [
+                ["row1", "val1"],
+                ["row2", "val2"],
+              ],
+              rowActions: [{ label: "Delete", onClick: onClickMock }],
+            },
+          },
+        ],
+        contentKey: testContentKey,
+      },
+    });
+    const headers = wrapper.findAll("th");
+    expect(headers).toHaveLength(3);
+    expect(headers[2]?.text()).toBe("");
+    const buttons = wrapper.findAll(".row-actions button");
+    expect(buttons).toHaveLength(2);
+    expect(buttons[0]?.text()).toBe("Delete");
+    await buttons[1]?.trigger("click");
+    expect(onClickMock).toHaveBeenCalledWith(1);
+  });
+
   it("updates value when checkbox is toggled", async () => {
     addInput(testContentKey, { ...checkboxInput, value: false });
     const wrapper = mount(AgdbContent, {

@@ -1,6 +1,10 @@
+import { CiLogout } from "@kalimahapps/vue-icons";
 import type { Content } from "./types";
 import { convertArrayOfStringsToContent } from "./utils";
-import { formatTimestamp } from "@agdb-studio/utils/src/format/format";
+import {
+  formatAgent,
+  formatTimestamp,
+} from "@agdb-studio/utils/src/format/format";
 
 type SessionData = {
   agent: string;
@@ -8,7 +12,10 @@ type SessionData = {
   expires_at: number;
 };
 
-export const buildSessionContent = (sessions: SessionData[]): Content[] => {
+export const buildSessionContent = (
+  sessions: SessionData[],
+  onLogout?: (rowIndex: number) => void,
+): Content[] => {
   if (sessions.length === 0) {
     return convertArrayOfStringsToContent(["No active sessions."]);
   }
@@ -18,10 +25,17 @@ export const buildSessionContent = (sessions: SessionData[]): Content[] => {
       table: {
         headers: ["Agent", "Created", "Expires"],
         rows: sessions.map((s) => [
-          s.agent || "(none)",
+          formatAgent(s.agent),
           formatTimestamp(s.created),
           formatTimestamp(s.expires_at),
         ]),
+        ...(onLogout
+          ? {
+              rowActions: [
+                { label: "Logout", icon: CiLogout, onClick: onLogout },
+              ],
+            }
+          : {}),
       },
     },
   ];

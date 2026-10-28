@@ -14,6 +14,17 @@ export const formatTimestamp = (epochSeconds: number): string => {
   return new Date(epochSeconds * 1000).toLocaleString();
 };
 
+export const formatAgent = (agent: string): string => {
+  if (!agent) return "(unknown)";
+  if (agent.length < 30) return agent;
+  if (agent.includes("Edg/")) return "Edge";
+  if (agent.includes("OPR/") || agent.includes("Opera/")) return "Opera";
+  if (agent.includes("Firefox/")) return "Firefox";
+  if (agent.includes("Chrome/")) return "Chrome";
+  if (agent.includes("Safari/")) return "Safari";
+  return agent.split(/[\s/]/)[0] || "(unknown)";
+};
+
 export const formatUptime = (totalSeconds: number): string => {
   totalSeconds = Math.floor(totalSeconds);
   const days = Math.floor(totalSeconds / 86400);

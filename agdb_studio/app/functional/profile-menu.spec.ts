@@ -11,7 +11,7 @@ import {
   gotoDbPage,
   gotoAdminDbPage,
 } from "./mocks/api-helpers";
-import { LOGOUT_API } from "./api-paths";
+import { CLUSTER_USER_LOGOUT_API, LOGOUT_API } from "./api-paths";
 
 test.describe("Profile Menu", () => {
   test("opens profile dropdown on click", async ({ ui, page }) => {
@@ -239,6 +239,7 @@ test.describe("Profile Menu", () => {
     await mockUserStatusWithSessions(page);
     await mockDatabaseListApi(page);
     await mockDbActionApi(page, LOGOUT_API);
+    await mockDbActionApi(page, CLUSTER_USER_LOGOUT_API);
     await gotoDbPage(page);
     await ui.element(testIds.DB_TABLE).isVisible();
 
@@ -272,6 +273,7 @@ test.describe("Profile Menu", () => {
     await mockUserStatusWithSessions(page);
     await mockDatabaseListApi(page);
     await mockDbActionApi(page, LOGOUT_API);
+    await mockDbActionApi(page, CLUSTER_USER_LOGOUT_API);
     await gotoDbPage(page);
     await ui.element(testIds.DB_TABLE).isVisible();
 

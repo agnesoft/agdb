@@ -11,7 +11,10 @@ import { convertArrayOfStringsToContent } from "@agdb-studio/common/src/composab
 import { KEY_MODAL } from "@agdb-studio/common/src/composables/modal/constants";
 import useModal from "@agdb-studio/common/src/composables/modal/modal";
 import { getRouter } from "@agdb-studio/router/src/router";
-import { formatTimestamp } from "@agdb-studio/utils/src/format/format";
+import {
+  formatAgent,
+  formatTimestamp,
+} from "@agdb-studio/utils/src/format/format";
 import { computed } from "vue";
 import { useAdmin } from "./admin";
 
@@ -54,11 +57,25 @@ const accountActions: Action<undefined>[] = [
     label: "Sessions",
     action: async () => {
       await fetchUserStatus();
-      openModal({
-        header: "Active Sessions",
-        content: buildSessionContent(sessions.value),
-        wide: true,
-      });
+      const openSessions = (): void => {
+        const sessionList = sessions.value;
+        const onLogout =
+          sessionList.length > 0
+            ? async (rowIndex: number): Promise<void> => {
+                const session = sessionList[rowIndex];
+                if (!session) return;
+                await logoutSession(true, session.session);
+                await fetchUserStatus().catch(() => {});
+                openSessions();
+              }
+            : undefined;
+        openModal({
+          header: "Active Sessions",
+          content: buildSessionContent(sessionList, onLogout),
+          wide: true,
+        });
+      };
+      openSessions();
       return true;
     },
   },
@@ -158,7 +175,7 @@ const accountActions: Action<undefined>[] = [
               { value: "others", label: "Other sessions" },
               ...sessionList.map((s) => ({
                 value: s.session,
-                label: `${s.agent || "(none)"} — ${formatTimestamp(s.created)}`,
+                label: `${formatAgent(s.agent)} — ${formatTimestamp(s.created)}`,
               })),
             ],
             value: "",

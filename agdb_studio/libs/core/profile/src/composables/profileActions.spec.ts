@@ -14,7 +14,6 @@ const {
   sessions,
   fetchUserStatus,
   logoutSession,
-  logoutMock,
 } = vi.hoisted(() => {
   return {
     isAdmin: { value: true },
@@ -23,7 +22,6 @@ const {
     openModal: vi.fn(),
     fetchUserStatus: vi.fn().mockResolvedValue(undefined),
     logoutSession: vi.fn().mockResolvedValue(undefined),
-    logoutMock: vi.fn().mockResolvedValue(undefined),
     sessions: {
       value: [
         {
@@ -55,7 +53,6 @@ vi.mock("./admin", () => {
 vi.mock("@agdb-studio/auth/src/auth", () => {
   return {
     useAuth: vi.fn().mockReturnValue({
-      logout: logoutMock,
       logoutSession,
     }),
   };

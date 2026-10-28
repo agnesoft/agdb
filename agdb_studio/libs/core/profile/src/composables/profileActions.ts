@@ -189,7 +189,7 @@ const accountActions: Action<undefined>[] = [
           }
 
           await logoutSession(cluster, sessionId);
-          await fetchUserStatus();
+          await fetchUserStatus().catch(() => {});
           return true;
         },
       });

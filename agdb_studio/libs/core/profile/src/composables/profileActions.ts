@@ -1,7 +1,9 @@
 import { useAuth } from "@agdb-studio/auth/src/auth";
+import { useAccount } from "@agdb-studio/auth/src/account";
 import useModal from "@agdb-studio/common/src/composables/modal/modal";
 import { useContentInputs } from "@agdb-studio/common/src/composables/content/inputs";
 import { convertArrayOfStringsToContent } from "@agdb-studio/common/src/composables/content/utils";
+import { buildSessionContent } from "@agdb-studio/common/src/composables/content/sessionContent";
 import { client } from "@agdb-studio/api/src/api";
 import { KEY_MODAL } from "@agdb-studio/common/src/composables/modal/constants";
 import { computed } from "vue";
@@ -10,11 +12,13 @@ import { getRouter } from "@agdb-studio/router/src/router";
 import type { Action } from "@agdb-studio/common/src/composables/content/types";
 
 const { logout } = useAuth();
+const { sessions, fetchUserStatus } = useAccount();
 const { openModal } = useModal();
 const { getInputValue } = useContentInputs();
 
 export const USER_VIEW_KEY = "user-view";
 export const ADMIN_VIEW_KEY = "admin";
+export const SESSIONS_KEY = "sessions";
 export const CHANGE_PASSWORD_KEY = "change-password";
 export const LOGOUT_KEY = "logout";
 
@@ -41,6 +45,19 @@ const toAdminView: Action<undefined>[] = [
 ];
 
 const accountActions: Action<undefined>[] = [
+  {
+    key: SESSIONS_KEY,
+    label: "Sessions",
+    action: async () => {
+      await fetchUserStatus();
+      openModal({
+        header: "Active Sessions",
+        content: buildSessionContent(sessions.value),
+        wide: true,
+      });
+      return true;
+    },
+  },
   {
     key: CHANGE_PASSWORD_KEY,
     label: "Change password",

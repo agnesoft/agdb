@@ -812,6 +812,9 @@ importers:
       '@agdb-studio/design':
         specifier: workspace:*
         version: link:../../core/design
+      '@agdb-studio/utils':
+        specifier: workspace:*
+        version: link:../../core/utils
       vue:
         specifier: 'catalog:'
         version: 3.5.40(typescript@6.0.3)
@@ -972,6 +975,9 @@ importers:
       '@agdb-studio/design':
         specifier: workspace:*
         version: link:../../core/design
+      '@agdb-studio/utils':
+        specifier: workspace:*
+        version: link:../../core/utils
       vue:
         specifier: 'catalog:'
         version: 3.5.40(typescript@6.0.3)

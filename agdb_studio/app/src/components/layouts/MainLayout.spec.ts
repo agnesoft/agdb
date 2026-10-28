@@ -4,26 +4,6 @@ import MainLayout from "./MainLayout.vue";
 import { createRouter, createWebHistory } from "vue-router";
 import { ref } from "vue";
 
-const { loginMock, isLoggedInMock, logoutMock } = vi.hoisted(() => {
-  return {
-    loginMock: vi.fn(),
-    isLoggedInMock: { value: true },
-    logoutMock: vi.fn(),
-    isAdminView: { value: false },
-  };
-});
-
-vi.mock("@agdb-studio/auth/src/auth", () => {
-  return {
-    useAuth: () => ({
-      login: loginMock,
-      isLoggedIn: isLoggedInMock,
-      logout: logoutMock,
-      token: { value: "test" },
-    }),
-  };
-});
-
 const isAdminView = ref(false);
 
 vi.mock("@agdb-studio/profile/src/composables/admin", () => {

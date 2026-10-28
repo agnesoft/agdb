@@ -29,7 +29,7 @@ const buttonRef = ref<HTMLElement>();
     >
       <slot name="trigger"></slot>
     </button>
-    <Teleport to="#app">
+    <Teleport to="body">
       <SlideUpTransition>
         <DropdownContent
           v-on-click-outside="close"

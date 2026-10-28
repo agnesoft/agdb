@@ -4,4 +4,5 @@ export const MOCK_USER_STATUS = {
   username: "testuser",
   admin: false,
   login: true,
+  sessions: [],
 };

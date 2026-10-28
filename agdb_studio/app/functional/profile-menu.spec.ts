@@ -163,6 +163,28 @@ test.describe("Profile Menu", () => {
     await expect(modal.locator(".error-message")).toContainText("do not match");
   });
 
+  test("sessions: opens modal showing active sessions", async ({
+    ui,
+    page,
+  }) => {
+    await mockLogin(page);
+    await mockDatabaseListApi(page);
+    await gotoDbPage(page);
+    await ui.element(testIds.DB_TABLE).isVisible();
+
+    await ui.click(testIds.PROFILE_DROPDOWN);
+    await expect(page.getByTestId("menu-item-sessions")).toBeVisible();
+    await page.getByTestId("menu-item-sessions").click();
+
+    const modal = page.locator(".modal");
+    await expect(modal).toBeVisible();
+    await expect(modal.locator(".modal-header h3")).toContainText(
+      "Active Sessions",
+    );
+    // Default mock user has no sessions
+    await expect(modal).toContainText("No active sessions");
+  });
+
   test("logout: opens confirmation modal with cluster checkbox", async ({
     ui,
     page,

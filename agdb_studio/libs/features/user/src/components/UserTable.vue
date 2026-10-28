@@ -18,7 +18,14 @@ addTable({
 });
 
 watchEffect(() => {
-  setTableData(TABLE_KEY, users.value);
+  setTableData(
+    TABLE_KEY,
+    users.value.map((user) => ({
+      username: user.username,
+      admin: user.admin,
+      sessionCount: user.sessions?.length ?? 0,
+    })),
+  );
 });
 </script>
 

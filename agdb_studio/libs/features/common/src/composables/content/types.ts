@@ -1,3 +1,4 @@
+import type { Component } from "vue";
 import type { StyleObject } from "@agdb-studio/design/src/types/base";
 
 export type ActionProps<T> = {
@@ -31,10 +32,17 @@ export type Input = {
   rules?: ((value: string) => string | undefined)[];
 };
 
+export type RowAction = {
+  label: string;
+  icon?: Component;
+  onClick: (rowIndex: number) => void | Promise<void>;
+};
+
 export type ContentTable = {
   headers: string[];
   rows: string[][];
   columnClasses?: (string | undefined)[];
+  rowActions?: RowAction[];
 };
 
 export type Content = {

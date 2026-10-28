@@ -199,6 +199,55 @@ describe("userConfig.ts", () => {
       expect(content[0]?.table?.rows).toHaveLength(2);
     });
 
+    it("logs out a session from sessions modal and refreshes", async () => {
+      const action = userActions.find(
+        (action) => action.key === "view_sessions",
+      );
+      await action?.action?.({
+        params: { username: "test_user" },
+      } as ActionProps<UserStatus>);
+      const content = openModal.mock.calls[0]?.[0]?.content;
+      const onLogout = content[0]?.table?.rowActions[0]?.onClick;
+      await onLogout?.(1);
+      expect(admin_user_logout).toHaveBeenCalledWith({
+        username: "test_user",
+        session: "s2",
+      });
+      expect(fetchUsers).toHaveBeenCalledTimes(2);
+      expect(openModal).toHaveBeenCalledTimes(2);
+    });
+
+    it("ignores out-of-range index in sessions modal row logout", async () => {
+      const action = userActions.find(
+        (action) => action.key === "view_sessions",
+      );
+      await action?.action?.({
+        params: { username: "test_user" },
+      } as ActionProps<UserStatus>);
+      const content = openModal.mock.calls[0]?.[0]?.content;
+      const onLogout = content[0]?.table?.rowActions[0]?.onClick;
+      await onLogout?.(99);
+      expect(admin_user_logout).not.toHaveBeenCalled();
+    });
+
+    it("handles fetchUsers failure in sessions modal row logout", async () => {
+      const action = userActions.find(
+        (action) => action.key === "view_sessions",
+      );
+      await action?.action?.({
+        params: { username: "test_user" },
+      } as ActionProps<UserStatus>);
+      fetchUsers.mockRejectedValueOnce(new Error("fail"));
+      const content = openModal.mock.calls[0]?.[0]?.content;
+      const onLogout = content[0]?.table?.rowActions[0]?.onClick;
+      await onLogout?.(0);
+      expect(admin_user_logout).toHaveBeenCalledWith({
+        username: "test_user",
+        session: "s1",
+      });
+      expect(openModal).toHaveBeenCalledTimes(2);
+    });
+
     it("shows no sessions message for user without sessions", async () => {
       mockUsers.value = [
         {
@@ -245,18 +294,18 @@ describe("userConfig.ts", () => {
       setInputValue(KEY_MODAL, checkboxInput.key, false);
 
       const action = userActions.find((action) => action.key === "logout");
-      const header =
-        typeof action?.confirmationHeader === "function"
-          ? action?.confirmationHeader({
-              params: { username: "test_user" },
-            } as unknown as ActionProps<UserStatus>)
-          : "";
-
-      expect(header).toBe("Logout test_user");
-
       await action?.action?.({
         params: { username: "test_user" },
       } as ActionProps<UserStatus>);
+
+      expect(openModal).toHaveBeenCalledWith(
+        expect.objectContaining({
+          header: "Logout test_user",
+        }),
+      );
+
+      const onConfirm = openModal.mock.calls[0]?.[0]?.onConfirm;
+      await onConfirm?.();
       expect(admin_user_logout).toHaveBeenCalledWith({
         username: "test_user",
       });
@@ -265,49 +314,34 @@ describe("userConfig.ts", () => {
     it("executes the logout cluster action", async () => {
       addInput(KEY_MODAL, checkboxInput);
       setInputValue(KEY_MODAL, checkboxInput.key, true);
-      await userActions
-        .find((action) => action.key === "logout")
-        ?.action?.({
-          params: { username: "test_user" },
-        } as ActionProps<UserStatus>);
+
+      const action = userActions.find((action) => action.key === "logout");
+      await action?.action?.({
+        params: { username: "test_user" },
+      } as ActionProps<UserStatus>);
+
+      const onConfirm = openModal.mock.calls[0]?.[0]?.onConfirm;
+      await onConfirm?.();
       expect(cluster_admin_user_logout).toHaveBeenCalledWith({
         username: "test_user",
       });
     });
 
-    it("builds logout confirmation with session select when multiple sessions", () => {
-      mockUsers.value = [
-        {
-          username: "test_user",
-          admin: false,
-          login: true,
-          sessions: [
-            {
-              agent: "browser",
-              created: 1000,
-              expires_at: 2000,
-              session: "s1",
-            },
-            { agent: "cli", created: 1100, expires_at: 2100, session: "s2" },
-          ],
-        },
-      ];
+    it("builds logout modal with session select when multiple sessions", async () => {
       const action = userActions.find((action) => action.key === "logout");
-      const confirmation =
-        typeof action?.confirmation === "function"
-          ? action.confirmation({
-              params: { username: "test_user" },
-            } as ActionProps<UserStatus>)
-          : action?.confirmation;
-      expect(confirmation).toBeDefined();
-      const selectContent = confirmation?.find(
-        (c) => c.input?.key === "session",
+      await action?.action?.({
+        params: { username: "test_user" },
+      } as ActionProps<UserStatus>);
+
+      const content = openModal.mock.calls[0]?.[0]?.content;
+      const selectContent = content?.find(
+        (c: { input?: { key: string } }) => c.input?.key === "session",
       );
       expect(selectContent).toBeDefined();
       expect(selectContent?.input?.options).toHaveLength(3);
     });
 
-    it("builds logout confirmation without session select when single session", () => {
+    it("builds logout modal without session select when single session", async () => {
       mockUsers.value = [
         {
           username: "test_user",
@@ -324,14 +358,13 @@ describe("userConfig.ts", () => {
         },
       ];
       const action = userActions.find((action) => action.key === "logout");
-      const confirmation =
-        typeof action?.confirmation === "function"
-          ? action.confirmation({
-              params: { username: "test_user" },
-            } as ActionProps<UserStatus>)
-          : action?.confirmation;
-      const selectContent = confirmation?.find(
-        (c) => c.input?.key === "session",
+      await action?.action?.({
+        params: { username: "test_user" },
+      } as ActionProps<UserStatus>);
+
+      const content = openModal.mock.calls[0]?.[0]?.content;
+      const selectContent = content?.find(
+        (c: { input?: { key: string } }) => c.input?.key === "session",
       );
       expect(selectContent).toBeUndefined();
     });
@@ -342,15 +375,35 @@ describe("userConfig.ts", () => {
       addInput(KEY_MODAL, sessionInput);
       setInputValue(KEY_MODAL, sessionInput.key, "s1");
 
-      await userActions
-        .find((action) => action.key === "logout")
-        ?.action?.({
-          params: { username: "test_user" },
-        } as ActionProps<UserStatus>);
+      const action = userActions.find((action) => action.key === "logout");
+      await action?.action?.({
+        params: { username: "test_user" },
+      } as ActionProps<UserStatus>);
+
+      const onConfirm = openModal.mock.calls[0]?.[0]?.onConfirm;
+      await onConfirm?.();
       expect(admin_user_logout).toHaveBeenCalledWith({
         username: "test_user",
         session: "s1",
       });
+    });
+
+    it("handles fetchUsers failure after logout confirm", async () => {
+      addInput(KEY_MODAL, checkboxInput);
+      setInputValue(KEY_MODAL, checkboxInput.key, false);
+
+      const action = userActions.find((action) => action.key === "logout");
+      await action?.action?.({
+        params: { username: "test_user" },
+      } as ActionProps<UserStatus>);
+
+      fetchUsers.mockRejectedValueOnce(new Error("fail"));
+      const onConfirm = openModal.mock.calls[0]?.[0]?.onConfirm;
+      const result = await onConfirm?.();
+      expect(admin_user_logout).toHaveBeenCalledWith({
+        username: "test_user",
+      });
+      expect(result).toBe(true);
     });
 
     it("executes the delete action", async () => {

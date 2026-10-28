@@ -6,9 +6,12 @@ import { user_change_password } from "@agdb-studio/testing/mocks/apiMock";
 import { useContentInputs } from "@agdb-studio/common/src/composables/content/inputs";
 import { KEY_MODAL } from "@agdb-studio/common/src/composables/modal/constants";
 
-const { logout } = vi.hoisted(() => {
+const { logout, logoutSession, fetchUserStatus, sessions } = vi.hoisted(() => {
   return {
     logout: vi.fn(),
+    logoutSession: vi.fn().mockResolvedValue(undefined),
+    fetchUserStatus: vi.fn().mockResolvedValue(undefined),
+    sessions: { value: [] },
   };
 });
 
@@ -16,6 +19,7 @@ vi.mock("@agdb-studio/auth/src/auth", () => {
   return {
     useAuth: () => ({
       logout,
+      logoutSession,
     }),
   };
 });
@@ -25,6 +29,8 @@ vi.mock("@agdb-studio/auth/src/account", () => {
     useAccount: () => ({
       username: "testUser",
       admin: { value: false },
+      sessions,
+      fetchUserStatus,
     }),
   };
 });
@@ -46,12 +52,12 @@ describe("ProfileDropdown", () => {
   it("should logout on click", async () => {
     const wrapper = mount(ProfileMenu);
     const logoutElement = wrapper.find(".menu-item[data-key=logout]");
-    logoutElement.trigger("click");
+    await logoutElement.trigger("click");
     await wrapper.vm.$nextTick();
     expect(modalIsVisible.value).toBe(true);
     handleConfirm();
     await wrapper.vm.$nextTick();
-    expect(logout).toHaveBeenCalled();
+    expect(logoutSession).toHaveBeenCalled();
   });
 
   it("should open the change password modal on click", async () => {

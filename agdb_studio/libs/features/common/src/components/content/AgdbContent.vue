@@ -43,6 +43,7 @@ const getInputKey = (key: string) => {
               <th v-for="header in part.table.headers" :key="header">
                 {{ header }}
               </th>
+              <th v-if="part.table.rowActions?.length"></th>
             </tr>
           </thead>
           <tbody>
@@ -53,6 +54,18 @@ const getInputKey = (key: string) => {
                 :class="part.table.columnClasses?.[cellIndex]"
               >
                 {{ cell }}
+              </td>
+              <td v-if="part.table.rowActions?.length" class="row-actions">
+                <button
+                  v-for="action in part.table.rowActions"
+                  :key="action.label"
+                  class="button button-small"
+                  :title="action.label"
+                  @click="action.onClick(rowIndex)"
+                >
+                  <component :is="action.icon" v-if="action.icon" />
+                  <template v-else>{{ action.label }}</template>
+                </button>
               </td>
             </tr>
           </tbody>
@@ -163,6 +176,13 @@ const getInputKey = (key: string) => {
   .cell-break-all {
     word-break: break-all;
     max-width: 400px;
+  }
+  .row-actions {
+    white-space: nowrap;
+    .button-small {
+      padding: 0.2rem 0.5rem;
+      font-size: 0.75rem;
+    }
   }
 }
 .input-row {

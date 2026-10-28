@@ -13,7 +13,7 @@ import {
 } from "../api-paths";
 import { MOCK_TOKEN_RESPONSE, MOCK_USER_STATUS } from "./auth.mock";
 import { MOCK_DATABASE_LIST } from "./db.mock";
-import { MOCK_USER_LIST, MOCK_DB_USERS } from "./user.mock";
+import { MOCK_USER_LIST, MOCK_DB_USERS, MOCK_SESSIONS } from "./user.mock";
 import type {
   ServerDatabase,
   UserStatus,
@@ -94,6 +94,21 @@ export async function mockAdminUserStatus(page: Page) {
         admin: true,
         login: true,
         sessions: [],
+      }),
+    });
+  });
+}
+
+export async function mockUserStatusWithSessions(page: Page) {
+  await page.route(USER_STATUS_API, async (route) => {
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        username: "testuser",
+        admin: false,
+        login: true,
+        sessions: MOCK_SESSIONS.admin,
       }),
     });
   });

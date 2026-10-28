@@ -23,6 +23,8 @@ export const db_user_remove = vi.fn().mockResolvedValue({});
 export const db_exec = vi.fn().mockResolvedValue({});
 export const db_exec_mut = vi.fn().mockResolvedValue({});
 export const user_change_password = vi.fn().mockResolvedValue(true);
+export const user_logout = vi.fn().mockResolvedValue({});
+export const cluster_user_logout = vi.fn().mockResolvedValue({});
 export const admin_db_list = vi.fn();
 export const admin_db_add = vi.fn();
 export const admin_db_backup = vi.fn().mockResolvedValue({});
@@ -64,6 +66,8 @@ export const client = vi.fn().mockResolvedValue({
   },
   user_status,
   user_change_password,
+  user_logout,
+  cluster_user_logout,
 
   db_list,
   db_add,

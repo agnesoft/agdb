@@ -69,6 +69,35 @@ const login = async ({
     });
 };
 
+const logoutSession = async (
+  cluster?: boolean,
+  session?: string,
+): Promise<void> => {
+  if (!isLoggedIn.value) {
+    return;
+  }
+
+  const endsCurrentSession = !session || session === "all";
+
+  if (endsCurrentSession) {
+    accessToken.value = undefined;
+    notifyUnauthorized();
+  }
+
+  const params = session ? { session } : undefined;
+  const call = cluster
+    ? client.value?.cluster_user_logout(params)
+    : client.value?.user_logout(params);
+
+  await call?.catch((error) => {
+    console.error("Logout failed:", error);
+  });
+
+  if (endsCurrentSession) {
+    removeToken();
+  }
+};
+
 const logout = async (
   cluster?: boolean,
   serverLogout = true,
@@ -76,7 +105,6 @@ const logout = async (
   if (!isLoggedIn.value) {
     return;
   }
-  // Clear ref first so watchers stop firing, but keep HTTP token for the server call
   accessToken.value = undefined;
   if (serverLogout) {
     notifyUnauthorized();
@@ -95,6 +123,7 @@ export const useAuth = () => {
     isLoggedIn,
     login,
     logout,
+    logoutSession,
     token,
   };
 };

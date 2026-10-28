@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { buildSessionContent } from "./sessionContent";
 
 describe("buildSessionContent", () => {
@@ -20,9 +20,25 @@ describe("buildSessionContent", () => {
     expect(content[0]?.table?.rows[0]?.[0]).toBe("browser");
   });
 
-  it("uses (none) for empty agent", () => {
+  it("uses (unknown) for empty agent", () => {
     const sessions = [{ agent: "", created: 1000, expires_at: 2000 }];
     const content = buildSessionContent(sessions);
-    expect(content[0]?.table?.rows[0]?.[0]).toBe("(none)");
+    expect(content[0]?.table?.rows[0]?.[0]).toBe("(unknown)");
+  });
+
+  it("does not include rowActions when no onLogout provided", () => {
+    const sessions = [{ agent: "browser", created: 1000, expires_at: 2000 }];
+    const content = buildSessionContent(sessions);
+    expect(content[0]?.table?.rowActions).toBeUndefined();
+  });
+
+  it("includes rowActions when onLogout provided", () => {
+    const onLogout = vi.fn();
+    const sessions = [{ agent: "browser", created: 1000, expires_at: 2000 }];
+    const content = buildSessionContent(sessions, onLogout);
+    expect(content[0]?.table?.rowActions).toHaveLength(1);
+    expect(content[0]?.table?.rowActions?.[0]?.label).toBe("Logout");
+    content[0]?.table?.rowActions?.[0]?.onClick(0);
+    expect(onLogout).toHaveBeenCalledWith(0);
   });
 });

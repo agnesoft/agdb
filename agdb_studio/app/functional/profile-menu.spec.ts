@@ -6,9 +6,12 @@ import {
   mockLogin,
   mockAdminUserStatus,
   mockAdminDatabaseListApi,
+  mockUserStatusWithSessions,
+  mockDbActionApi,
   gotoDbPage,
   gotoAdminDbPage,
 } from "./mocks/api-helpers";
+import { CLUSTER_USER_LOGOUT_API, LOGOUT_API } from "./api-paths";
 
 test.describe("Profile Menu", () => {
   test("opens profile dropdown on click", async ({ ui, page }) => {
@@ -206,5 +209,87 @@ test.describe("Profile Menu", () => {
     const checkbox = modal.locator('input[type="checkbox"]');
     await expect(checkbox).toBeVisible();
     await expect(modal).toContainText("Logout from all nodes in the cluster");
+  });
+
+  test("logout: no session selector when single session", async ({
+    ui,
+    page,
+  }) => {
+    await mockLogin(page);
+    await mockDatabaseListApi(page);
+    await gotoDbPage(page);
+    await ui.element(testIds.DB_TABLE).isVisible();
+
+    await ui.click(testIds.PROFILE_DROPDOWN);
+    await page.getByTestId("menu-item-logout").click();
+
+    const modal = page.locator(".modal");
+    await expect(modal).toBeVisible();
+
+    // No session select for user with 0 or 1 sessions
+    const select = modal.locator("select");
+    await expect(select).toHaveCount(0);
+  });
+
+  test("logout: shows session selector when multiple sessions", async ({
+    ui,
+    page,
+  }) => {
+    await mockLogin(page);
+    await mockUserStatusWithSessions(page);
+    await mockDatabaseListApi(page);
+    await mockDbActionApi(page, LOGOUT_API);
+    await mockDbActionApi(page, CLUSTER_USER_LOGOUT_API);
+    await gotoDbPage(page);
+    await ui.element(testIds.DB_TABLE).isVisible();
+
+    await ui.click(testIds.PROFILE_DROPDOWN);
+    await page.getByTestId("menu-item-logout").click();
+
+    const modal = page.locator(".modal");
+    await expect(modal).toBeVisible();
+
+    // Session select should be visible
+    const select = modal.locator("select");
+    await expect(select).toBeVisible();
+
+    // Should have options: Current, All, Others, + 2 individual sessions
+    const options = select.locator("option");
+    await expect(options).toHaveCount(5);
+    await expect(options.nth(0)).toHaveText("Current session");
+    await expect(options.nth(1)).toHaveText("All sessions");
+    await expect(options.nth(2)).toHaveText("Other sessions");
+
+    // Cluster checkbox should still be present
+    const checkbox = modal.locator('input[type="checkbox"]');
+    await expect(checkbox).toBeVisible();
+  });
+
+  test("logout: can select 'Other sessions' and confirm", async ({
+    ui,
+    page,
+  }) => {
+    await mockLogin(page);
+    await mockUserStatusWithSessions(page);
+    await mockDatabaseListApi(page);
+    await mockDbActionApi(page, LOGOUT_API);
+    await mockDbActionApi(page, CLUSTER_USER_LOGOUT_API);
+    await gotoDbPage(page);
+    await ui.element(testIds.DB_TABLE).isVisible();
+
+    await ui.click(testIds.PROFILE_DROPDOWN);
+    await page.getByTestId("menu-item-logout").click();
+
+    const modal = page.locator(".modal");
+    await expect(modal).toBeVisible();
+
+    // Select "Other sessions"
+    const select = modal.locator("select");
+    await select.selectOption("others");
+
+    // Confirm — should stay logged in (not redirect to login)
+    await page.getByTestId("modal-button-confirm").click();
+    await expect(modal).not.toBeVisible();
+    await expect(page).not.toHaveURL(/.*\/studio\/login/);
   });
 });

@@ -1,13 +1,14 @@
 import { vi, describe, it, beforeEach, expect } from "vitest";
 import type { ActionProps } from "@agdb-studio/common/src/composables/content/types";
 
-const { isAdmin, isAdminView, pushMock, openModal, sessions } = vi.hoisted(
-  () => {
+const { isAdmin, isAdminView, pushMock, openModal, sessions, fetchUserStatus } =
+  vi.hoisted(() => {
     return {
       isAdmin: { value: true },
       isAdminView: { value: false },
       pushMock: vi.fn(),
       openModal: vi.fn(),
+      fetchUserStatus: vi.fn().mockResolvedValue(undefined),
       sessions: {
         value: [
           {
@@ -19,8 +20,7 @@ const { isAdmin, isAdminView, pushMock, openModal, sessions } = vi.hoisted(
         ],
       },
     };
-  },
-);
+  });
 
 vi.mock("./admin", () => {
   return {
@@ -35,6 +35,7 @@ vi.mock("@agdb-studio/auth/src/account", () => {
   return {
     useAccount: vi.fn().mockReturnValue({
       sessions,
+      fetchUserStatus,
     }),
   };
 });
@@ -150,11 +151,12 @@ describe("profileActions.ts", () => {
     expect(pushMock).toHaveBeenCalledWith({ name: "admin" });
   });
 
-  it("opens sessions modal with session table", () => {
+  it("opens sessions modal with session table", async () => {
     const { actions } = useUserActions();
-    actions.value
+    await actions.value
       .find((action) => action.key === SESSIONS_KEY)
       ?.action?.({} as ActionProps<undefined>);
+    expect(fetchUserStatus).toHaveBeenCalled();
     expect(openModal).toHaveBeenCalledWith(
       expect.objectContaining({
         header: "Active Sessions",
@@ -167,10 +169,10 @@ describe("profileActions.ts", () => {
     expect(content[0]?.table?.rows).toHaveLength(1);
   });
 
-  it("shows no sessions message when empty", () => {
+  it("shows no sessions message when empty", async () => {
     sessions.value = [];
     const { actions } = useUserActions();
-    actions.value
+    await actions.value
       .find((action) => action.key === SESSIONS_KEY)
       ?.action?.({} as ActionProps<undefined>);
     const content = openModal.mock.calls[0]?.[0]?.content;

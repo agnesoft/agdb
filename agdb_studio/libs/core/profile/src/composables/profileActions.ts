@@ -12,7 +12,7 @@ import { getRouter } from "@agdb-studio/router/src/router";
 import type { Action } from "@agdb-studio/common/src/composables/content/types";
 
 const { logout } = useAuth();
-const { sessions } = useAccount();
+const { sessions, fetchUserStatus } = useAccount();
 const { openModal } = useModal();
 const { getInputValue } = useContentInputs();
 
@@ -48,7 +48,8 @@ const accountActions: Action<undefined>[] = [
   {
     key: SESSIONS_KEY,
     label: "Sessions",
-    action: () => {
+    action: async () => {
+      await fetchUserStatus();
       openModal({
         header: "Active Sessions",
         content: buildSessionContent(sessions.value),

@@ -25,8 +25,9 @@ const userActions: Action<UserStatus>[] = [
   {
     key: "view_sessions",
     label: "Sessions",
-    action: ({ params }) => {
-      const { users } = useUserStore();
+    action: async ({ params }) => {
+      const { users, fetchUsers } = useUserStore();
+      await fetchUsers();
       const user = users.value.find((u) => u.username === params.username);
       openModal({
         header: `Sessions for ${params.username}`,

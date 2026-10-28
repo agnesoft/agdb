@@ -27,9 +27,10 @@ const mockUsers = ref<UserStatus[]>([
 ]);
 
 const openModal = vi.fn();
+const fetchUsers = vi.fn().mockResolvedValue(undefined);
 
 vi.mock("./userStore", () => ({
-  useUserStore: () => ({ users: mockUsers }),
+  useUserStore: () => ({ users: mockUsers, fetchUsers }),
 }));
 
 vi.mock("@agdb-studio/common/src/composables/modal/modal", () => ({
@@ -174,13 +175,14 @@ describe("userConfig.ts", () => {
       expect(userActions.some((action) => action.key === "delete")).toBe(true);
     });
 
-    it("opens modal with session details for view_sessions action", () => {
+    it("opens modal with session details for view_sessions action", async () => {
       const action = userActions.find(
         (action) => action.key === "view_sessions",
       );
-      action?.action?.({
+      await action?.action?.({
         params: { username: "test_user" },
       } as ActionProps<UserStatus>);
+      expect(fetchUsers).toHaveBeenCalled();
       expect(openModal).toHaveBeenCalledWith(
         expect.objectContaining({
           header: "Sessions for test_user",
@@ -197,7 +199,7 @@ describe("userConfig.ts", () => {
       expect(content[0]?.table?.rows).toHaveLength(2);
     });
 
-    it("shows no sessions message for user without sessions", () => {
+    it("shows no sessions message for user without sessions", async () => {
       mockUsers.value = [
         {
           username: "empty_user",
@@ -209,7 +211,7 @@ describe("userConfig.ts", () => {
       const action = userActions.find(
         (action) => action.key === "view_sessions",
       );
-      action?.action?.({
+      await action?.action?.({
         params: { username: "empty_user" },
       } as ActionProps<UserStatus>);
       const content = openModal.mock.calls[0]?.[0]?.content;

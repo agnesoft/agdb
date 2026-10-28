@@ -34,7 +34,7 @@ test.describe("Admin User Management", () => {
     await expect(firstRow.getByTestId("table-cell-username")).toContainText(
       "admin",
     );
-    await expect(firstRow.getByTestId("table-cell-login")).toBeVisible();
+    await expect(firstRow.getByTestId("table-cell-sessionCount")).toBeVisible();
 
     // Second user: inactive (sorted alphabetically)
     const secondRow = rows.nth(1);
@@ -120,6 +120,75 @@ test.describe("Admin User Management", () => {
     const modal = page.locator(".modal");
     await expect(modal).toBeVisible();
     await expect(modal).toContainText("log out the user");
+    const checkbox = modal.locator('input[type="checkbox"]');
+    await expect(checkbox).toBeVisible();
+  });
+
+  test("displays session count per user", async ({ page }) => {
+    const rows = page.getByTestId("table-row");
+
+    // admin: 2 sessions
+    await expect(
+      rows.nth(0).getByTestId("table-cell-sessionCount"),
+    ).toContainText("2");
+
+    // inactive: 0 sessions
+    await expect(
+      rows.nth(1).getByTestId("table-cell-sessionCount"),
+    ).toContainText("0");
+
+    // testuser: 1 session
+    await expect(
+      rows.nth(2).getByTestId("table-cell-sessionCount"),
+    ).toContainText("1");
+  });
+
+  test("view sessions: opens modal with session table", async ({ page }) => {
+    const row = page.getByTestId("table-row").nth(2); // testuser
+    await row.locator('button[title="Display menu"]').click();
+    await page.getByTestId("menu-item-view_sessions").click();
+
+    const modal = page.locator(".modal");
+    await expect(modal).toBeVisible();
+    await expect(modal.locator(".modal-header h3")).toContainText(
+      "Sessions for testuser",
+    );
+    // Table with session data
+    await expect(modal.locator("table")).toBeVisible();
+    await expect(modal.locator("th")).toContainText(["Agent", "Created", "Expires"]);
+    await expect(modal.locator("td").first()).toContainText("Safari");
+  });
+
+  test("view sessions: shows empty message for user with no sessions", async ({
+    page,
+  }) => {
+    const row = page.getByTestId("table-row").nth(1); // inactive
+    await row.locator('button[title="Display menu"]').click();
+    await page.getByTestId("menu-item-view_sessions").click();
+
+    const modal = page.locator(".modal");
+    await expect(modal).toBeVisible();
+    await expect(modal).toContainText("No active sessions");
+  });
+
+  test("logout user with multiple sessions: shows session select", async ({
+    page,
+  }) => {
+    await mockDbActionApi(page, ADMIN_USER_LOGOUT_API);
+
+    const row = page.getByTestId("table-row").nth(0); // admin (2 sessions)
+    await row.locator('button[title="Display menu"]').click();
+    await page.getByTestId("menu-item-logout").click();
+
+    const modal = page.locator(".modal");
+    await expect(modal).toBeVisible();
+    await expect(modal).toContainText("log out the user");
+
+    // Session select should be visible for multi-session user
+    const select = modal.locator("select");
+    await expect(select).toBeVisible();
+
+    // Cluster checkbox should still be present
     const checkbox = modal.locator('input[type="checkbox"]');
     await expect(checkbox).toBeVisible();
   });

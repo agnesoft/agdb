@@ -89,7 +89,7 @@ export async function mockAdminUserStatus(page: Page) {
     route.fulfill({
       status: 200,
       contentType: "application/json",
-      body: JSON.stringify({ username: "admin", admin: true, login: true }),
+      body: JSON.stringify({ username: "admin", admin: true, login: true, sessions: [] }),
     });
   });
 }

@@ -155,7 +155,11 @@ test.describe("Admin User Management", () => {
     );
     // Table with session data
     await expect(modal.locator("table")).toBeVisible();
-    await expect(modal.locator("th")).toContainText(["Agent", "Created", "Expires"]);
+    await expect(modal.locator("th")).toContainText([
+      "Agent",
+      "Created",
+      "Expires",
+    ]);
     await expect(modal.locator("td").first()).toContainText("Safari");
   });
 

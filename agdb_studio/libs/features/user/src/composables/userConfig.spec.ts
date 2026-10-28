@@ -1,5 +1,5 @@
 import { vi, describe, it, beforeEach, expect } from "vitest";
-import { userActions, userColumns } from "./userConfig";
+import { ref } from "vue";
 import {
   admin_user_change_password,
   admin_user_logout,
@@ -13,6 +13,31 @@ import type {
   ActionProps,
   Input,
 } from "@agdb-studio/common/src/composables/content/types";
+
+const mockUsers = ref<UserStatus[]>([
+  {
+    username: "test_user",
+    admin: false,
+    login: true,
+    sessions: [
+      { agent: "browser", created: 1000, expires_at: 2000, session: "s1" },
+      { agent: "cli", created: 1100, expires_at: 2100, session: "s2" },
+    ],
+  },
+]);
+
+const openModal = vi.fn();
+
+vi.mock("./userStore", () => ({
+  useUserStore: () => ({ users: mockUsers }),
+}));
+
+vi.mock("@agdb-studio/common/src/composables/modal/modal", () => ({
+  default: () => ({ openModal }),
+}));
+
+const { userActions, userColumns } = await import("./userConfig");
+
 const { addInput, setInputValue, clearAllInputs } = useContentInputs();
 
 const passwordInput: Input = {
@@ -27,10 +52,27 @@ const checkboxInput: Input = {
   key: "cluster",
 };
 
+const sessionInput: Input = {
+  type: "select",
+  label: "Session",
+  key: "session",
+};
+
 describe("userConfig.ts", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     clearAllInputs();
+    mockUsers.value = [
+      {
+        username: "test_user",
+        admin: false,
+        login: true,
+        sessions: [
+          { agent: "browser", created: 1000, expires_at: 2000, session: "s1" },
+          { agent: "cli", created: 1100, expires_at: 2100, session: "s2" },
+        ],
+      },
+    ];
   });
 
   describe("userColumns", () => {
@@ -40,7 +82,9 @@ describe("userConfig.ts", () => {
         true,
       );
       expect(userColumns.some((column) => column.key === "admin")).toBe(false);
-      expect(userColumns.some((column) => column.key === "login")).toBe(true);
+      expect(userColumns.some((column) => column.key === "sessionCount")).toBe(
+        true,
+      );
     });
 
     it("shows crown icon only for admin user", () => {
@@ -119,12 +163,57 @@ describe("userConfig.ts", () => {
 
   describe("userActions", () => {
     it("returns the user actions", () => {
-      expect(userActions.length).toBe(3);
+      expect(userActions.length).toBe(4);
+      expect(userActions.some((action) => action.key === "view_sessions")).toBe(
+        true,
+      );
       expect(
         userActions.some((action) => action.key === "change_password"),
       ).toBe(true);
       expect(userActions.some((action) => action.key === "logout")).toBe(true);
       expect(userActions.some((action) => action.key === "delete")).toBe(true);
+    });
+
+    it("opens modal with session details for view_sessions action", () => {
+      const action = userActions.find(
+        (action) => action.key === "view_sessions",
+      );
+      action?.action?.({
+        params: { username: "test_user" },
+      } as ActionProps<UserStatus>);
+      expect(openModal).toHaveBeenCalledWith(
+        expect.objectContaining({
+          header: "Sessions for test_user",
+          wide: true,
+        }),
+      );
+      const content = openModal.mock.calls[0]?.[0]?.content;
+      expect(content).toHaveLength(1);
+      expect(content[0]?.table?.headers).toEqual([
+        "Agent",
+        "Created",
+        "Expires",
+      ]);
+      expect(content[0]?.table?.rows).toHaveLength(2);
+    });
+
+    it("shows no sessions message for user without sessions", () => {
+      mockUsers.value = [
+        {
+          username: "empty_user",
+          admin: false,
+          login: false,
+          sessions: [],
+        },
+      ];
+      const action = userActions.find(
+        (action) => action.key === "view_sessions",
+      );
+      action?.action?.({
+        params: { username: "empty_user" },
+      } as ActionProps<UserStatus>);
+      const content = openModal.mock.calls[0]?.[0]?.content;
+      expect(content[0]?.paragraph?.[0]?.text).toBe("No active sessions.");
     });
 
     it("executes the change password action", async () => {
@@ -181,6 +270,84 @@ describe("userConfig.ts", () => {
         } as ActionProps<UserStatus>);
       expect(cluster_admin_user_logout).toHaveBeenCalledWith({
         username: "test_user",
+      });
+    });
+
+    it("builds logout confirmation with session select when multiple sessions", () => {
+      mockUsers.value = [
+        {
+          username: "test_user",
+          admin: false,
+          login: true,
+          sessions: [
+            {
+              agent: "browser",
+              created: 1000,
+              expires_at: 2000,
+              session: "s1",
+            },
+            { agent: "cli", created: 1100, expires_at: 2100, session: "s2" },
+          ],
+        },
+      ];
+      const action = userActions.find((action) => action.key === "logout");
+      const confirmation =
+        typeof action?.confirmation === "function"
+          ? action.confirmation({
+              params: { username: "test_user" },
+            } as ActionProps<UserStatus>)
+          : action?.confirmation;
+      expect(confirmation).toBeDefined();
+      const selectContent = confirmation?.find(
+        (c) => c.input?.key === "session",
+      );
+      expect(selectContent).toBeDefined();
+      expect(selectContent?.input?.options).toHaveLength(3);
+    });
+
+    it("builds logout confirmation without session select when single session", () => {
+      mockUsers.value = [
+        {
+          username: "test_user",
+          admin: false,
+          login: true,
+          sessions: [
+            {
+              agent: "browser",
+              created: 1000,
+              expires_at: 2000,
+              session: "s1",
+            },
+          ],
+        },
+      ];
+      const action = userActions.find((action) => action.key === "logout");
+      const confirmation =
+        typeof action?.confirmation === "function"
+          ? action.confirmation({
+              params: { username: "test_user" },
+            } as ActionProps<UserStatus>)
+          : action?.confirmation;
+      const selectContent = confirmation?.find(
+        (c) => c.input?.key === "session",
+      );
+      expect(selectContent).toBeUndefined();
+    });
+
+    it("executes logout for a specific session", async () => {
+      addInput(KEY_MODAL, checkboxInput);
+      setInputValue(KEY_MODAL, checkboxInput.key, false);
+      addInput(KEY_MODAL, sessionInput);
+      setInputValue(KEY_MODAL, sessionInput.key, "s1");
+
+      await userActions
+        .find((action) => action.key === "logout")
+        ?.action?.({
+          params: { username: "test_user" },
+        } as ActionProps<UserStatus>);
+      expect(admin_user_logout).toHaveBeenCalledWith({
+        username: "test_user",
+        session: "s1",
       });
     });
 

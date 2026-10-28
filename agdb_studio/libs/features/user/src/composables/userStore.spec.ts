@@ -11,11 +11,15 @@ admin_user_list.mockResolvedValue({
       username: "test_user",
       admin: false,
       login: false,
+      sessions: [],
     },
     {
       username: "admin_user",
       admin: true,
       login: false,
+      sessions: [
+        { agent: "browser", created: 1000, expires_at: 2000, session: "s1" },
+      ],
     },
   ],
 });
@@ -48,11 +52,13 @@ describe("userStore.ts", () => {
           username: "zeta",
           admin: false,
           login: false,
+          sessions: [],
         },
         {
           username: "alpha",
           admin: false,
           login: true,
+          sessions: [],
         },
       ],
     });
@@ -68,6 +74,7 @@ describe("userStore.ts", () => {
         username: "existing",
         admin: false,
         login: false,
+        sessions: [],
       },
     ];
 
@@ -80,6 +87,7 @@ describe("userStore.ts", () => {
         username: "existing",
         admin: false,
         login: false,
+        sessions: [],
       },
     ]);
   });

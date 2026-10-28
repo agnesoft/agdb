@@ -10,6 +10,10 @@ export const formatBytes = (bytes: number): string => {
   return `${value.toFixed(i === 0 ? 0 : 1)} ${units[i]}`;
 };
 
+export const formatTimestamp = (epochSeconds: number): string => {
+  return new Date(epochSeconds * 1000).toLocaleString();
+};
+
 export const formatUptime = (totalSeconds: number): string => {
   totalSeconds = Math.floor(totalSeconds);
   const days = Math.floor(totalSeconds / 86400);

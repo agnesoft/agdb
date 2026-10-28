@@ -4,16 +4,38 @@ import { client } from "@agdb-studio/api/src/api";
 import { KEY_MODAL } from "@agdb-studio/common/src/composables/modal/constants";
 import { addNotification } from "@agdb-studio/notification/src/composables/notificationStore";
 import { convertArrayOfStringsToContent } from "@agdb-studio/common/src/composables/content/utils";
+import useModal from "@agdb-studio/common/src/composables/modal/modal";
 import type {
   Column,
   TRow,
 } from "@agdb-studio/common/src/composables/table/types";
-import type { Action } from "@agdb-studio/common/src/composables/content/types";
+import type {
+  Action,
+  Content,
+} from "@agdb-studio/common/src/composables/content/types";
+import { buildSessionContent } from "@agdb-studio/common/src/composables/content/sessionContent";
 import { PhFillCrownSimple } from "@kalimahapps/vue-icons";
+import { useUserStore } from "./userStore";
+import { formatTimestamp } from "@agdb-studio/utils/src/format/format";
 
 const { getInputValue } = useContentInputs();
+const { openModal } = useModal();
 
 const userActions: Action<UserStatus>[] = [
+  {
+    key: "view_sessions",
+    label: "Sessions",
+    action: ({ params }) => {
+      const { users } = useUserStore();
+      const user = users.value.find((u) => u.username === params.username);
+      openModal({
+        header: `Sessions for ${params.username}`,
+        content: buildSessionContent(user?.sessions ?? []),
+        wide: true,
+      });
+      return true;
+    },
+  },
   {
     key: "change_password",
     label: "Change Password",
@@ -56,42 +78,77 @@ const userActions: Action<UserStatus>[] = [
     label: "Logout",
     action: async ({ params }) => {
       const cluster = !!getInputValue<string>(KEY_MODAL, "cluster");
+      const sessionId = getInputValue<string>(KEY_MODAL, "session")?.toString();
       if (cluster) {
         return client.value
           ?.cluster_admin_user_logout({
             username: params.username,
+            ...(sessionId ? { session: sessionId } : {}),
           })
           .then(() => {
             addNotification({
               type: "success",
               title: "User Logged Out",
-              message: `User ${params.username} logged out successfully from all nodes in the cluster.`,
+              message: sessionId
+                ? `Session for ${params.username} logged out successfully from all nodes in the cluster.`
+                : `User ${params.username} logged out successfully from all nodes in the cluster.`,
             });
           });
       }
       return client.value
         ?.admin_user_logout({
           username: params.username,
+          ...(sessionId ? { session: sessionId } : {}),
         })
         .then(() => {
           addNotification({
             type: "success",
             title: "User Logged Out",
-            message: `User ${params.username} logged out successfully.`,
+            message: sessionId
+              ? `Session for ${params.username} logged out successfully.`
+              : `User ${params.username} logged out successfully.`,
           });
         });
     },
-    confirmation: [
-      ...convertArrayOfStringsToContent(["Do you want to log out the user?"]),
-      {
+    confirmation: ({ params }): Content[] => {
+      const { users } = useUserStore();
+      const user = users.value.find((u) => u.username === params.username);
+      const sessions = user?.sessions ?? [];
+      const sessionOptions = [
+        { value: "", label: "All sessions" },
+        ...sessions.map((s) => ({
+          value: s.session,
+          label: `${s.agent || "(none)"} — ${formatTimestamp(s.created)}`,
+        })),
+      ];
+
+      const content: Content[] = [
+        ...convertArrayOfStringsToContent(["Do you want to log out the user?"]),
+      ];
+
+      if (sessions.length > 1) {
+        content.push({
+          input: {
+            type: "select",
+            label: "Session",
+            key: "session",
+            options: sessionOptions,
+            value: "",
+          },
+        });
+      }
+
+      content.push({
         input: {
           type: "checkbox",
           label: "Logout from all nodes in the cluster",
           key: "cluster",
           value: true,
         },
-      },
-    ],
+      });
+
+      return content;
+    },
     confirmationHeader: ({ params }) => `Logout ${params.username}`,
   },
   {
@@ -124,9 +181,8 @@ const userColumns: Column<TRow>[] = [
     iconClassResolver: (row: TRow) => (row.admin ? "crown-icon" : ""),
   },
   {
-    key: "login",
-    title: "Logged In",
-    type: "boolean",
+    key: "sessionCount",
+    title: "Sessions",
   },
   {
     key: "actions",

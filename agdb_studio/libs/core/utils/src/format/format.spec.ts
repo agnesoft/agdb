@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { formatBytes, formatUptime } from "./format";
+import { formatBytes, formatTimestamp, formatUptime } from "./format";
 
 describe("formatBytes", () => {
   it("formats 0 bytes", () => {
@@ -34,6 +34,18 @@ describe("formatBytes", () => {
 
   it("returns 0 B for negative input", () => {
     expect(formatBytes(-100)).toBe("0 B");
+  });
+});
+
+describe("formatTimestamp", () => {
+  it("converts epoch seconds to locale string", () => {
+    const result = formatTimestamp(0);
+    expect(result).toBe(new Date(0).toLocaleString());
+  });
+
+  it("handles a specific timestamp", () => {
+    const result = formatTimestamp(1700000000);
+    expect(result).toBe(new Date(1700000000000).toLocaleString());
   });
 });
 

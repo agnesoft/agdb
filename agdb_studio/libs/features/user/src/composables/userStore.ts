@@ -3,7 +3,7 @@ import type { UserStatus } from "@agnesoft/agdb_api/openapi";
 import { ref } from "vue";
 import { addNotification } from "@agdb-studio/notification/src/composables/notificationStore";
 
-const users = ref<Omit<UserStatus, "sessions">[]>([]);
+const users = ref<UserStatus[]>([]);
 
 const fetchUsers = async () => {
   const response = await client.value?.admin_user_list();

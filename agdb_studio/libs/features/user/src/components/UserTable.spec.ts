@@ -2,17 +2,20 @@ import { vi, describe, it, beforeEach, expect } from "vitest";
 import UserTable from "./UserTable.vue";
 import { mount, shallowMount } from "@vue/test-utils";
 import { ref, nextTick } from "vue";
+import type { UserStatus } from "@agnesoft/agdb_api/openapi";
 
-const users = ref([
+const users = ref<UserStatus[]>([
   {
     username: "admin_user",
     admin: true,
     login: false,
+    sessions: [],
   },
   {
     username: "test_user",
     admin: false,
     login: false,
+    sessions: [],
   },
 ]);
 
@@ -48,11 +51,15 @@ describe("UserTable", () => {
         username: "admin_user",
         admin: true,
         login: true,
+        sessions: [
+          { agent: "browser", created: 1000, expires_at: 2000, session: "s1" },
+        ],
       },
       {
         username: "test_user",
         admin: false,
         login: false,
+        sessions: [],
       },
     ];
 

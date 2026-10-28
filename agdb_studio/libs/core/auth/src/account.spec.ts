@@ -41,13 +41,21 @@ describe("useAccount", () => {
 
   it("fetches user status", async () => {
     user_status.mockResolvedValueOnce({
-      data: { username: "test", admin: true },
+      data: {
+        username: "test",
+        admin: true,
+        sessions: [
+          { agent: "browser", created: 1000, expires_at: 2000, session: "s1" },
+        ],
+      },
     });
-    const { username, admin, fetchUserStatus } = useAccount();
+    const { username, admin, sessions, fetchUserStatus } = useAccount();
     await fetchUserStatus();
 
     expect(username.value).toBe("test");
     expect(admin.value).toBe(true);
+    expect(sessions.value).toHaveLength(1);
+    expect(sessions.value[0]?.agent).toBe("browser");
   });
 
   it("handles token watcher errors gracefully", async () => {
@@ -61,11 +69,12 @@ describe("useAccount", () => {
 
   it("does nothing if not logged in", async () => {
     isLoggedIn.value = false;
-    const { username, admin, fetchUserStatus } = useAccount();
+    const { username, admin, sessions, fetchUserStatus } = useAccount();
     await fetchUserStatus();
 
     expect(username.value).toBe(undefined);
     expect(admin.value).toBe(false);
+    expect(sessions.value).toHaveLength(0);
   });
 
   describe("token health check", () => {

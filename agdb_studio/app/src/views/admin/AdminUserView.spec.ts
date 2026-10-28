@@ -10,11 +10,13 @@ const { users, fetchUsers } = vi.hoisted(() => {
           username: "test_user",
           admin: false,
           login: false,
+          sessions: [],
         },
         {
           username: "test_user2",
           admin: false,
           login: false,
+          sessions: [],
         },
       ],
     },

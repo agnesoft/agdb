@@ -79,10 +79,6 @@ impl StorageData for FileStorageMemoryMapped {
     }
 
     fn write(&mut self, pos: u64, bytes: &[u8]) -> Result<(), DbError> {
-        if bytes.is_empty() {
-            return Ok(());
-        }
-
         self.memory.write(pos, bytes)?;
         self.file.write(pos, bytes)
     }

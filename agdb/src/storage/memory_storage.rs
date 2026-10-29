@@ -71,6 +71,10 @@ impl StorageData for MemoryStorage {
     }
 
     fn write(&mut self, pos: u64, bytes: &[u8]) -> Result<(), DbError> {
+        if bytes.is_empty() {
+            return Ok(());
+        }
+
         let current_len = self.len();
         let end = pos + bytes.len() as u64;
 

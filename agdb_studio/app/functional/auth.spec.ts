@@ -1,9 +1,11 @@
 import { test, expect } from "./fixtures/agdb.fixtures";
 import { testIds, dynamicIds } from "./test-ids";
-import { LOGIN_API } from "./api-paths";
+import { LOGIN_API, LOGOUT_API } from "./api-paths";
+import { mockDatabaseListApi, mockDbActionApi } from "./mocks/api-helpers";
 
 test.describe("Authentication", () => {
   test.beforeEach(async ({ page }) => {
+    await mockDatabaseListApi(page);
     await page.goto("/studio/login");
   });
 
@@ -21,6 +23,8 @@ test.describe("Authentication", () => {
   });
 
   test("logout user successfully", async ({ ui, page }) => {
+    await mockDbActionApi(page, LOGOUT_API);
+
     // Ensure the user is logged in first
     await ui.fill(testIds.INPUT_USERNAME, "testuser");
     await ui.fill(testIds.INPUT_PASSWORD, "testpassword");

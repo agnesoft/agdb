@@ -27,6 +27,10 @@ use std::sync::Mutex;
 /// before clearing the WAL (ensuring committed data is durable) and on
 /// the WAL file after clearing (ensuring the clear is durable). This
 /// prevents a crash from rolling back an already-committed transaction.
+/// Every write and resize also issues `fdatasync` on the WAL before
+/// changing the main file so that a change never reaches the disk ahead of
+/// its undo record. Recovering from the WAL always syncs the restored file
+/// before clearing the WAL.
 #[derive(Debug)]
 pub struct FileStorage {
     file: File,
@@ -49,19 +53,28 @@ impl FileStorage {
         Ok(())
     }
 
-    fn apply_wal(
-        file: &mut File,
-        wal: &mut WriteAheadLog,
-        sync_mode: SyncMode,
-    ) -> Result<(), DbError> {
-        for record in wal.records()?.into_iter().rev() {
+    fn apply_wal(file: &mut File, wal: &mut WriteAheadLog) -> Result<(), DbError> {
+        let records = wal.records()?;
+
+        if records.is_empty() {
+            return Ok(());
+        }
+
+        for record in records.into_iter().rev() {
             Self::apply_wal_record(file, record)?;
         }
 
-        if matches!(sync_mode, SyncMode::Commit) {
-            file.sync_data()?;
+        file.sync_data()?;
+        wal.clear()?;
+        wal.sync()
+    }
+
+    fn sync_wal(&mut self) -> Result<(), DbError> {
+        if matches!(self.sync_mode, SyncMode::Commit) {
+            self.wal.sync()?;
         }
-        wal.clear()
+
+        Ok(())
     }
 
     fn open_file(&self) -> Result<File, DbError> {
@@ -130,7 +143,7 @@ impl StorageData for FileStorage {
         let mut wal: WriteAheadLog = WriteAheadLog::new(name)?;
         let sync_mode = SyncMode::None;
 
-        Self::apply_wal(&mut file, &mut wal, sync_mode)?;
+        Self::apply_wal(&mut file, &mut wal)?;
 
         let len = file.seek(SeekFrom::End(0))?;
 
@@ -172,21 +185,37 @@ impl StorageData for FileStorage {
             let mut buffer = vec![0_u8; (current_len - new_len) as usize];
             Self::read_impl(&self.file, new_len, &mut buffer)?;
             self.wal.insert(new_len, &buffer)?;
+        } else if current_len < new_len {
+            self.wal.insert(current_len, &[])?;
         } else {
-            self.wal.insert(new_len, &[])?;
+            return Ok(());
         }
 
+        self.sync_wal()?;
         self.file.set_len(new_len)?;
         self.len = new_len;
         Ok(())
     }
 
     fn write(&mut self, pos: u64, bytes: &[u8]) -> Result<(), DbError> {
+        if bytes.is_empty() {
+            return Ok(());
+        }
+
         let current_len = self.len();
         let end = pos + bytes.len() as u64;
-        let mut buffer = vec![0_u8; (std::cmp::min(current_len, end) - pos) as usize];
-        Self::read_impl(&self.file, pos, &mut buffer)?;
-        self.wal.insert(pos, &buffer)?;
+
+        if pos < current_len {
+            let mut buffer = vec![0_u8; (std::cmp::min(current_len, end) - pos) as usize];
+            Self::read_impl(&self.file, pos, &mut buffer)?;
+            self.wal.insert(pos, &buffer)?;
+        }
+
+        if current_len < end {
+            self.wal.insert(current_len, &[])?;
+        }
+
+        self.sync_wal()?;
         self.file.seek(SeekFrom::Start(pos))?;
         self.file.write_all(bytes)?;
         self.len = std::cmp::max(current_len, end);
@@ -194,7 +223,7 @@ impl StorageData for FileStorage {
     }
 
     fn recover_from_wal(&mut self) -> Result<(), DbError> {
-        Self::apply_wal(&mut self.file, &mut self.wal, SyncMode::None)?;
+        Self::apply_wal(&mut self.file, &mut self.wal)?;
         self.len = self.file.seek(SeekFrom::End(0))?;
         Ok(())
     }
@@ -202,7 +231,7 @@ impl StorageData for FileStorage {
 
 impl Drop for FileStorage {
     fn drop(&mut self) {
-        let _ = Self::apply_wal(&mut self.file, &mut self.wal, self.sync_mode);
+        let _ = Self::apply_wal(&mut self.file, &mut self.wal);
     }
 }
 
@@ -1943,5 +1972,142 @@ mod tests {
         assert_eq!(storage.records.free_size(), 0);
         assert_eq!(storage.value::<i64>(index2), Ok(999_i64));
         assert_eq!(storage.value_size(index1).unwrap(), 4);
+    }
+
+    #[test]
+    fn recover_from_wal_overwrite() {
+        let test_file = TestFile::new();
+        let mut file = FileStorage::new(test_file.file_name()).unwrap();
+        file.write(0, &[1, 2, 3]).unwrap();
+        file.flush().unwrap();
+        file.write(0, &[4, 5]).unwrap();
+
+        file.recover_from_wal().unwrap();
+
+        assert_eq!(file.len(), 3);
+        assert_eq!(file.read(0, 3).unwrap().to_vec(), vec![1, 2, 3]);
+    }
+
+    #[test]
+    fn recover_from_wal_append() {
+        let test_file = TestFile::new();
+        let mut file = FileStorage::new(test_file.file_name()).unwrap();
+        file.write(0, &[1, 2, 3]).unwrap();
+        file.flush().unwrap();
+        file.write(3, &[4, 5]).unwrap();
+
+        file.recover_from_wal().unwrap();
+
+        assert_eq!(file.len(), 3);
+        assert_eq!(file.read(0, 3).unwrap().to_vec(), vec![1, 2, 3]);
+    }
+
+    #[test]
+    fn recover_from_wal_overwrite_past_end() {
+        let test_file = TestFile::new();
+        let mut file = FileStorage::new(test_file.file_name()).unwrap();
+        file.write(0, &[1, 2, 3]).unwrap();
+        file.flush().unwrap();
+        file.write(1, &[4, 5, 6, 7]).unwrap();
+
+        file.recover_from_wal().unwrap();
+
+        assert_eq!(file.len(), 3);
+        assert_eq!(file.read(0, 3).unwrap().to_vec(), vec![1, 2, 3]);
+        assert_eq!(std::fs::metadata(test_file.file_name()).unwrap().len(), 3);
+    }
+
+    #[test]
+    fn recover_from_wal_empty_write() {
+        let test_file = TestFile::new();
+        let mut file = FileStorage::new(test_file.file_name()).unwrap();
+        file.write(0, &[1, 2, 3]).unwrap();
+        file.flush().unwrap();
+        file.write(1, &[]).unwrap();
+
+        file.recover_from_wal().unwrap();
+
+        assert_eq!(file.len(), 3);
+        assert_eq!(file.read(0, 3).unwrap().to_vec(), vec![1, 2, 3]);
+    }
+
+    #[test]
+    fn recover_from_wal_write_after_end() {
+        let test_file = TestFile::new();
+        let mut file = FileStorage::new(test_file.file_name()).unwrap();
+        file.write(0, &[1, 2, 3]).unwrap();
+        file.flush().unwrap();
+        file.write(5, &[4, 5]).unwrap();
+
+        assert_eq!(file.read(0, 7).unwrap().to_vec(), vec![1, 2, 3, 0, 0, 4, 5]);
+
+        file.recover_from_wal().unwrap();
+
+        assert_eq!(file.len(), 3);
+        assert_eq!(file.read(0, 3).unwrap().to_vec(), vec![1, 2, 3]);
+    }
+
+    #[test]
+    fn recover_from_wal_resize_larger() {
+        let test_file = TestFile::new();
+        let mut file = FileStorage::new(test_file.file_name()).unwrap();
+        file.write(0, &[1, 2, 3]).unwrap();
+        file.flush().unwrap();
+        file.resize(10).unwrap();
+
+        file.recover_from_wal().unwrap();
+
+        assert_eq!(file.len(), 3);
+        assert_eq!(file.read(0, 3).unwrap().to_vec(), vec![1, 2, 3]);
+    }
+
+    #[test]
+    fn recover_from_wal_resize_same_len() {
+        let test_file = TestFile::new();
+        let mut file = FileStorage::new(test_file.file_name()).unwrap();
+        file.write(0, &[1, 2, 3]).unwrap();
+        file.flush().unwrap();
+        file.resize(3).unwrap();
+
+        file.recover_from_wal().unwrap();
+
+        assert_eq!(file.len(), 3);
+        assert_eq!(file.read(0, 3).unwrap().to_vec(), vec![1, 2, 3]);
+    }
+
+    #[test]
+    fn recover_from_wal_sync_mode_commit() {
+        let test_file = TestFile::new();
+        let mut file = FileStorage::new(test_file.file_name()).unwrap();
+        file.set_sync_mode(SyncMode::Commit);
+        file.write(0, &[1, 2, 3]).unwrap();
+        file.flush().unwrap();
+        file.write(1, &[4, 5, 6]).unwrap();
+        file.resize(10).unwrap();
+        file.resize(2).unwrap();
+
+        file.recover_from_wal().unwrap();
+
+        assert_eq!(file.len(), 3);
+        assert_eq!(file.read(0, 3).unwrap().to_vec(), vec![1, 2, 3]);
+    }
+
+    #[test]
+    fn overwrite_past_end_is_rolled_back_on_reopen() {
+        let test_file = TestFile::new();
+
+        {
+            let mut file = FileStorage::new(test_file.file_name()).unwrap();
+            file.write(0, &[1, 2, 3]).unwrap();
+            file.flush().unwrap();
+            file.write(1, &[4, 5, 6, 7]).unwrap();
+            file.write(5, &[8, 9]).unwrap();
+            std::mem::forget(file);
+        }
+
+        let file = FileStorage::new(test_file.file_name()).unwrap();
+
+        assert_eq!(file.len(), 3);
+        assert_eq!(file.read(0, 3).unwrap().to_vec(), vec![1, 2, 3]);
     }
 }

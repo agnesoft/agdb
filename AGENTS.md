@@ -249,7 +249,7 @@ The server reads a YAML-like config file (default: `agdb_server.yaml`). On first
 | `cluster_max_chunk_size`       | `65536`                 | Max bytes per resync chunk                                                   |
 | `cluster_max_append_size`      | `4194304`               | Max bytes of log entries per catch-up append (≤ request_body_limit)          |
 | `token_expiry_seconds`         | `3600`                  | Auth token TTL (range: 60–86400)                                             |
-| `sync_mode`                    | `none`                  | Disk sync strategy: `none` (OS-managed) or `commit` (fsync on every commit)  |
+| `sync_mode`                    | `none`                  | Disk sync strategy: `none` (OS-managed) or `commit` (fsync on every commit and of the WAL before every write) |
 
 ## Cluster / Raft
 

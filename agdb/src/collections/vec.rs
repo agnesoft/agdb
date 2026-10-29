@@ -429,6 +429,27 @@ mod tests {
     use crate::test_utilities::test_file::TestFile;
 
     #[test]
+    fn remove_last_rolled_back_keeps_committed_data() {
+        let test_file = TestFile::new();
+        let mut storage =
+            Storage::<crate::storage::file_storage::FileStorage>::new(test_file.file_name())
+                .unwrap();
+        let mut vec = DbVec::<i64, _>::new(&mut storage).unwrap();
+        vec.push(&mut storage, &1).unwrap();
+        vec.push(&mut storage, &2).unwrap();
+        let other = storage.insert(&10_i64).unwrap();
+
+        let _id = storage.transaction();
+        vec.remove(&mut storage, 1).unwrap();
+        storage.recover().unwrap();
+
+        let vec = DbVec::<i64, _>::from_storage(&storage, vec.storage_index()).unwrap();
+        assert_eq!(vec.len(), 2);
+        assert_eq!(vec.value(&storage, 1).unwrap(), 2);
+        assert_eq!(storage.value::<i64>(other).unwrap(), 10);
+    }
+
+    #[test]
     fn from_storage_index() {
         let test_file = TestFile::new();
         let mut storage = Storage::new(test_file.file_name()).unwrap();

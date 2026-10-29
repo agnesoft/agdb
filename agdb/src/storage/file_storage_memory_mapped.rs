@@ -1151,4 +1151,47 @@ mod tests {
             ))
         );
     }
+
+    #[test]
+    fn recover_from_wal_overwrite() {
+        let test_file = TestFile::new();
+        let mut storage = FileStorageMemoryMapped::new(test_file.file_name()).unwrap();
+        storage.write(0, &[1, 2, 3]).unwrap();
+        storage.flush().unwrap();
+        storage.write(0, &[4, 5]).unwrap();
+
+        storage.recover_from_wal().unwrap();
+
+        assert_eq!(storage.len(), 3);
+        assert_eq!(storage.read(0, 3).unwrap().to_vec(), vec![1, 2, 3]);
+    }
+
+    #[test]
+    fn recover_from_wal_append() {
+        let test_file = TestFile::new();
+        let mut storage = FileStorageMemoryMapped::new(test_file.file_name()).unwrap();
+        storage.write(0, &[1, 2, 3]).unwrap();
+        storage.flush().unwrap();
+        storage.write(3, &[4, 5]).unwrap();
+
+        storage.recover_from_wal().unwrap();
+
+        assert_eq!(storage.len(), 3);
+        assert_eq!(storage.read(0, 3).unwrap().to_vec(), vec![1, 2, 3]);
+    }
+
+    #[test]
+    fn recover_from_wal_overwrite_past_end() {
+        let test_file = TestFile::new();
+        let mut storage = FileStorageMemoryMapped::new(test_file.file_name()).unwrap();
+        storage.write(0, &[1, 2, 3]).unwrap();
+        storage.flush().unwrap();
+        storage.write(1, &[4, 5, 6, 7]).unwrap();
+
+        storage.recover_from_wal().unwrap();
+
+        assert_eq!(storage.len(), 3);
+        assert_eq!(storage.memory.len(), 3);
+        assert_eq!(storage.read(0, 3).unwrap().to_vec(), vec![1, 2, 3]);
+    }
 }

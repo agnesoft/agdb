@@ -123,6 +123,14 @@ impl StorageData for AnyStorage {
             AnyStorage::File(s) => s.is_empty(),
         }
     }
+
+    fn recover_from_wal(&mut self) -> Result<(), DbError> {
+        match self {
+            AnyStorage::MemoryMapped(s) => s.recover_from_wal(),
+            AnyStorage::Memory(s) => s.recover_from_wal(),
+            AnyStorage::File(s) => s.recover_from_wal(),
+        }
+    }
 }
 
 #[cfg(test)]
@@ -208,6 +216,47 @@ mod tests {
         storage.rename(&test_file_rename.0).unwrap();
         storage.write(0, &[]).unwrap();
         storage.resize(0).unwrap();
+    }
+
+    #[test]
+    fn file_storage_recover_from_wal() {
+        let test_file = TestFile::new("file_storage_recover_from_wal.agdb");
+        let _test_file_dot = TestFile::new(".file_storage_recover_from_wal.agdb");
+
+        let mut storage = AnyStorage::File(FileStorage::new(&test_file.0).unwrap());
+        storage.write(0, &[1, 2, 3]).unwrap();
+        storage.flush().unwrap();
+        storage.write(0, &[4, 5, 6]).unwrap();
+        storage.write(3, &[7]).unwrap();
+        storage.recover_from_wal().unwrap();
+
+        assert_eq!(storage.len(), 3);
+        assert_eq!(storage.read(0, 3).unwrap().to_vec(), vec![1, 2, 3]);
+    }
+
+    #[test]
+    fn mapped_storage_recover_from_wal() {
+        let test_file = TestFile::new("mapped_storage_recover_from_wal.agdb");
+        let _test_file_dot = TestFile::new(".mapped_storage_recover_from_wal.agdb");
+
+        let mut storage = AnyStorage::new(&test_file.0).unwrap();
+        storage.write(0, &[1, 2, 3]).unwrap();
+        storage.flush().unwrap();
+        storage.write(0, &[4, 5, 6]).unwrap();
+        storage.write(3, &[7]).unwrap();
+        storage.recover_from_wal().unwrap();
+
+        assert_eq!(storage.len(), 3);
+        assert_eq!(storage.read(0, 3).unwrap().to_vec(), vec![1, 2, 3]);
+    }
+
+    #[test]
+    fn memory_storage_recover_from_wal() {
+        let mut storage = AnyStorage::Memory(MemoryStorage::new("db_test.agdb").unwrap());
+        storage.write(0, &[1, 2, 3]).unwrap();
+        storage.recover_from_wal().unwrap();
+
+        assert_eq!(storage.read(0, 3).unwrap().to_vec(), vec![1, 2, 3]);
     }
 
     #[test]

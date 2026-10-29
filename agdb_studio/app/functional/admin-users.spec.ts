@@ -13,6 +13,7 @@ import {
   ADMIN_USER_DELETE_API,
   ADMIN_USER_CHANGE_PASSWORD_API,
   ADMIN_USER_LOGOUT_API,
+  ADMIN_USER_LOGOUT_ALL_API,
   ADMIN_USER_LIST_API,
 } from "./api-paths";
 
@@ -193,6 +194,22 @@ test.describe("Admin User Management", () => {
     await expect(select).toBeVisible();
 
     // Cluster checkbox should still be present
+    const checkbox = modal.locator('input[type="checkbox"]');
+    await expect(checkbox).toBeVisible();
+  });
+
+  test("logout all users: opens confirmation with cluster checkbox", async ({
+    page,
+  }) => {
+    await mockDbActionApi(page, ADMIN_USER_LOGOUT_ALL_API);
+
+    const logoutAllButton = page.getByTestId("logout-all-button");
+    await expect(logoutAllButton).toBeVisible();
+    await logoutAllButton.click();
+
+    const modal = page.locator(".modal");
+    await expect(modal).toBeVisible();
+    await expect(modal).toContainText("log out all users");
     const checkbox = modal.locator('input[type="checkbox"]');
     await expect(checkbox).toBeVisible();
   });

@@ -201,4 +201,36 @@ const userColumns: Column<TRow>[] = [
   },
 ];
 
-export { userActions, userColumns };
+const logoutAllUsers = (): void => {
+  const { fetchUsers } = useUserStore();
+  openModal({
+    header: "Logout All Users",
+    content: [
+      ...convertArrayOfStringsToContent(["Do you want to log out all users?"]),
+      {
+        input: {
+          type: "checkbox",
+          label: "Logout from all nodes in the cluster",
+          key: "cluster",
+          value: true,
+        },
+      },
+    ],
+    onConfirm: async () => {
+      const cluster = !!getInputValue<string>(KEY_MODAL, "cluster");
+      const call = cluster
+        ? client.value?.cluster_admin_user_logout_all()
+        : client.value?.admin_user_logout_all();
+      await call;
+      addNotification({
+        type: "success",
+        title: "All Users Logged Out",
+        message: `All users have been logged out successfully${cluster ? " from all nodes in the cluster" : ""}.`,
+      });
+      await fetchUsers().catch(() => {});
+      return true;
+    },
+  });
+};
+
+export { userActions, userColumns, logoutAllUsers };

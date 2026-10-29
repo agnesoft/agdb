@@ -3,8 +3,10 @@ import { ref } from "vue";
 import {
   admin_user_change_password,
   admin_user_logout,
+  admin_user_logout_all,
   admin_user_delete,
   cluster_admin_user_logout,
+  cluster_admin_user_logout_all,
 } from "@agdb-studio/testing/mocks/apiMock";
 import { useContentInputs } from "@agdb-studio/common/src/composables/content/inputs";
 import { KEY_MODAL } from "@agdb-studio/common/src/composables/modal/constants";
@@ -37,7 +39,8 @@ vi.mock("@agdb-studio/common/src/composables/modal/modal", () => ({
   default: () => ({ openModal }),
 }));
 
-const { userActions, userColumns } = await import("./userConfig");
+const { userActions, userColumns, logoutAllUsers } =
+  await import("./userConfig");
 
 const { addInput, setInputValue, clearAllInputs } = useContentInputs();
 
@@ -422,6 +425,68 @@ describe("userConfig.ts", () => {
       expect(admin_user_delete).toHaveBeenCalledWith({
         username: "test_user",
       });
+    });
+  });
+
+  describe("logoutAllUsers", () => {
+    it("opens modal with cluster checkbox", () => {
+      logoutAllUsers();
+      expect(openModal).toHaveBeenCalledWith(
+        expect.objectContaining({
+          header: "Logout All Users",
+        }),
+      );
+      const content = openModal.mock.calls[0]?.[0]?.content;
+      const checkboxContent = content?.find(
+        (c: { input?: { key: string } }) => c.input?.key === "cluster",
+      );
+      expect(checkboxContent).toBeDefined();
+    });
+
+    it("calls admin_user_logout_all on confirm without cluster", async () => {
+      addInput(KEY_MODAL, checkboxInput);
+      setInputValue(KEY_MODAL, checkboxInput.key, false);
+
+      logoutAllUsers();
+      const onConfirm = openModal.mock.calls[0]?.[0]?.onConfirm;
+      const result = await onConfirm?.();
+      expect(admin_user_logout_all).toHaveBeenCalled();
+      expect(cluster_admin_user_logout_all).not.toHaveBeenCalled();
+      expect(result).toBe(true);
+    });
+
+    it("calls cluster_admin_user_logout_all on confirm with cluster", async () => {
+      addInput(KEY_MODAL, checkboxInput);
+      setInputValue(KEY_MODAL, checkboxInput.key, true);
+
+      logoutAllUsers();
+      const onConfirm = openModal.mock.calls[0]?.[0]?.onConfirm;
+      await onConfirm?.();
+      expect(cluster_admin_user_logout_all).toHaveBeenCalled();
+      expect(admin_user_logout_all).not.toHaveBeenCalled();
+    });
+
+    it("handles fetchUsers failure after confirm", async () => {
+      addInput(KEY_MODAL, checkboxInput);
+      setInputValue(KEY_MODAL, checkboxInput.key, false);
+
+      logoutAllUsers();
+      fetchUsers.mockRejectedValueOnce(new Error("fail"));
+      const onConfirm = openModal.mock.calls[0]?.[0]?.onConfirm;
+      const result = await onConfirm?.();
+      expect(admin_user_logout_all).toHaveBeenCalled();
+      expect(result).toBe(true);
+    });
+
+    it("propagates API rejection without showing success notification", async () => {
+      addInput(KEY_MODAL, checkboxInput);
+      setInputValue(KEY_MODAL, checkboxInput.key, false);
+      admin_user_logout_all.mockRejectedValueOnce(new Error("server error"));
+
+      logoutAllUsers();
+      const onConfirm = openModal.mock.calls[0]?.[0]?.onConfirm;
+      await expect(onConfirm?.()).rejects.toThrow("server error");
+      expect(fetchUsers).not.toHaveBeenCalled();
     });
   });
 });

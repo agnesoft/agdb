@@ -2,7 +2,7 @@ import { vi, describe, it, beforeEach, expect } from "vitest";
 import AdminUserView from "./AdminUserView.vue";
 import { mount, shallowMount, flushPromises } from "@vue/test-utils";
 
-const { users, fetchUsers } = vi.hoisted(() => {
+const { users, fetchUsers, logoutAllUsers } = vi.hoisted(() => {
   return {
     users: {
       value: [
@@ -21,6 +21,7 @@ const { users, fetchUsers } = vi.hoisted(() => {
       ],
     },
     fetchUsers: vi.fn().mockResolvedValue(undefined),
+    logoutAllUsers: vi.fn(),
   };
 });
 
@@ -31,6 +32,17 @@ vi.mock("@agdb-studio/user/src/composables/userStore", () => {
     },
   };
 });
+
+vi.mock(
+  "@agdb-studio/user/src/composables/userConfig",
+  async (importOriginal) => {
+    const original =
+      await importOriginal<
+        typeof import("@agdb-studio/user/src/composables/userConfig")
+      >();
+    return { ...original, logoutAllUsers };
+  },
+);
 
 describe("AdminUserView", () => {
   beforeEach(() => {
@@ -79,5 +91,15 @@ describe("AdminUserView", () => {
     const wrapper = shallowMount(AdminUserView);
     await flushPromises();
     expect(wrapper.html()).not.toContain("spinner-icon-stub");
+  });
+
+  it("renders logout all button and calls logoutAllUsers on click", async () => {
+    const wrapper = shallowMount(AdminUserView);
+    await flushPromises();
+    const button = wrapper.find('[data-testid="logout-all-button"]');
+    expect(button.exists()).toBe(true);
+    expect(button.text()).toContain("Logout All");
+    await button.trigger("click");
+    expect(logoutAllUsers).toHaveBeenCalledOnce();
   });
 });

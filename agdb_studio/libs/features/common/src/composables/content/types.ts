@@ -35,6 +35,7 @@ export type Input = {
 export type RowAction = {
   label: string;
   icon?: Component;
+  className?: string;
   onClick: (rowIndex: number) => void | Promise<void>;
 };
 

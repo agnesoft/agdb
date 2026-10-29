@@ -32,7 +32,12 @@ export const buildSessionContent = (
         ...(onLogout
           ? {
               rowActions: [
-                { label: "Logout", icon: CiLogout, onClick: onLogout },
+                {
+                  label: "Logout",
+                  icon: CiLogout,
+                  className: "session-logout",
+                  onClick: onLogout,
+                },
               ],
             }
           : {}),

@@ -60,6 +60,7 @@ const getInputKey = (key: string) => {
                   v-for="action in part.table.rowActions"
                   :key="action.label"
                   class="button button-small"
+                  :class="action.className"
                   :title="action.label"
                   @click="action.onClick(rowIndex)"
                 >
@@ -182,6 +183,11 @@ const getInputKey = (key: string) => {
     .button-small {
       padding: 0.2rem 0.5rem;
       font-size: 0.75rem;
+    }
+    .session-logout {
+      --backgroundColor: var(--red-2);
+      --color: var(--white);
+      --borderColor: transparent;
     }
   }
 }

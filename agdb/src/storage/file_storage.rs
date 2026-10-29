@@ -27,10 +27,8 @@ use std::sync::Mutex;
 /// before clearing the WAL (ensuring committed data is durable) and on
 /// the WAL file after clearing (ensuring the clear is durable). This
 /// prevents a crash from rolling back an already-committed transaction.
-/// Every write and resize also issues `fdatasync` on the WAL before
-/// changing the main file so that a change never reaches the disk ahead of
-/// its undo record. Recovering from the WAL always syncs the restored file
-/// before clearing the WAL.
+/// Recovering from the WAL always syncs the restored file before clearing
+/// the WAL.
 #[derive(Debug)]
 pub struct FileStorage {
     file: File,
@@ -67,14 +65,6 @@ impl FileStorage {
         file.sync_data()?;
         wal.clear()?;
         wal.sync()
-    }
-
-    fn sync_wal(&mut self) -> Result<(), DbError> {
-        if matches!(self.sync_mode, SyncMode::Commit) {
-            self.wal.sync()?;
-        }
-
-        Ok(())
     }
 
     fn open_file(&self) -> Result<File, DbError> {
@@ -191,7 +181,6 @@ impl StorageData for FileStorage {
             return Ok(());
         }
 
-        self.sync_wal()?;
         self.file.set_len(new_len)?;
         self.len = new_len;
         Ok(())
@@ -215,7 +204,6 @@ impl StorageData for FileStorage {
             self.wal.insert(current_len, &[])?;
         }
 
-        self.sync_wal()?;
         self.file.seek(SeekFrom::Start(pos))?;
         self.file.write_all(bytes)?;
         self.len = std::cmp::max(current_len, end);

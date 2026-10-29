@@ -8,9 +8,15 @@ use std::io::Seek;
 use std::io::SeekFrom;
 use std::io::Write;
 
+/// The `len` covers only fully written records. Bytes past it are the
+/// remains of a failed insert (`torn`) and are cut off before the next
+/// insert so that the log never contains a partial record followed by
+/// valid ones.
 #[derive(Debug)]
 pub struct WriteAheadLog {
     file: File,
+    len: u64,
+    torn: bool,
 }
 
 pub struct WriteAheadLogRecord {
@@ -20,7 +26,10 @@ pub struct WriteAheadLogRecord {
 
 impl WriteAheadLog {
     pub fn clear(&mut self) -> Result<(), DbError> {
-        Ok(self.file.set_len(0)?)
+        self.file.set_len(0)?;
+        self.len = 0;
+        self.torn = false;
+        Ok(())
     }
 
     pub fn sync(&mut self) -> Result<(), DbError> {
@@ -28,11 +37,21 @@ impl WriteAheadLog {
     }
 
     pub fn insert(&mut self, pos: u64, value: &[u8]) -> Result<(), DbError> {
-        self.file.seek(SeekFrom::End(0))?;
-        self.file.write_all(&pos.serialize())?;
-        self.file.write_all(&(value.len() as u64).serialize())?;
-        self.file.write_all(value)?;
+        self.truncate_torn()?;
 
+        let mut record = pos.serialize();
+        record.extend((value.len() as u64).serialize());
+        record.extend_from_slice(value);
+
+        self.file.seek(SeekFrom::Start(self.len))?;
+
+        if let Err(error) = self.file.write_all(&record) {
+            self.torn = true;
+            let _ = self.truncate_torn();
+            return Err(error.into());
+        }
+
+        self.len += record.len() as u64;
         Ok(())
     }
 
@@ -44,6 +63,8 @@ impl WriteAheadLog {
                 .truncate(false)
                 .create(true)
                 .open(WriteAheadLog::wal_filename(filename))?,
+            len: 0,
+            torn: false,
         };
 
         wal.repair()?;
@@ -53,7 +74,7 @@ impl WriteAheadLog {
 
     pub fn records(&mut self) -> Result<Vec<WriteAheadLogRecord>, DbError> {
         let mut records = Vec::<WriteAheadLogRecord>::new();
-        let size = self.file.seek(SeekFrom::End(0))?;
+        let size = self.len;
         self.file.rewind()?;
 
         while self.file.stream_position()? < size {
@@ -111,18 +132,30 @@ impl WriteAheadLog {
 
         while pos < size {
             if Self::skip_record(&mut self.file).is_err() {
-                self.file.set_len(pos)?;
-                return Ok(());
-            } else {
-                let new_pos = self.file.stream_position()?;
-
-                if new_pos > size {
-                    self.file.set_len(pos)?;
-                    return Ok(());
-                } else {
-                    pos = new_pos;
-                }
+                break;
             }
+
+            let new_pos = self.file.stream_position()?;
+
+            if new_pos > size {
+                break;
+            }
+
+            pos = new_pos;
+        }
+
+        if pos < size {
+            self.file.set_len(pos)?;
+        }
+
+        self.len = pos;
+        Ok(())
+    }
+
+    fn truncate_torn(&mut self) -> Result<(), DbError> {
+        if self.torn {
+            self.file.set_len(self.len)?;
+            self.torn = false;
         }
 
         Ok(())
@@ -132,6 +165,52 @@ impl WriteAheadLog {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::test_utilities::test_file::TestFile;
+
+    #[test]
+    fn records_ignore_bytes_past_len() {
+        let test_file = TestFile::new();
+        let mut wal = WriteAheadLog::new(test_file.file_name()).unwrap();
+        wal.insert(1, &[1, 2]).unwrap();
+        OpenOptions::new()
+            .append(true)
+            .open(WriteAheadLog::wal_filename(test_file.file_name()))
+            .unwrap()
+            .write_all(&[0; 16])
+            .unwrap();
+
+        let records = wal.records().unwrap();
+
+        assert_eq!(records.len(), 1);
+        assert_eq!(records[0].pos, 1);
+        assert_eq!(records[0].value, vec![1, 2]);
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn failed_insert_is_cut_off_before_next_insert() {
+        let test_file = TestFile::new();
+        let mut wal = WriteAheadLog::new(test_file.file_name()).unwrap();
+        wal.insert(1, &[1, 2]).unwrap();
+        let file = std::mem::replace(
+            &mut wal.file,
+            OpenOptions::new().write(true).open("/dev/full").unwrap(),
+        );
+
+        assert!(wal.insert(2, &[3, 4]).is_err());
+        assert!(wal.insert(3, &[5, 6]).is_err());
+
+        wal.file = file;
+        wal.file.seek(SeekFrom::End(0)).unwrap();
+        wal.file.write_all(&[2, 0, 0, 0, 0, 0, 0, 0, 2]).unwrap();
+        wal.insert(4, &[7, 8]).unwrap();
+        let records = wal.records().unwrap();
+
+        assert_eq!(records.len(), 2);
+        assert_eq!(records[1].pos, 4);
+        assert_eq!(records[1].value, vec![7, 8]);
+        assert_eq!(wal.file.seek(SeekFrom::End(0)).unwrap(), wal.len);
+    }
 
     #[test]
     fn wal_filename() {

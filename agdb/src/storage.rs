@@ -26,9 +26,8 @@ const CHUNK_SIZE: u64 = 1024 * 1024;
 /// - `None` — no explicit sync; relies on the OS to flush dirty pages.
 ///   Suitable for local filesystems or when running in a replicated cluster.
 /// - `Commit` — calls `sync_data()` on the main file before clearing the WAL
-///   at each transaction commit and on the WAL before every write to the
-///   main file. Required for correctness on network filesystems with
-///   client-side write caching (e.g. WekaFS with `writecache`).
+///   at each transaction commit. Required for correctness on network
+///   filesystems with client-side write caching (e.g. WekaFS with `writecache`).
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 #[cfg_attr(feature = "api", derive(agdb::TypeDef))]
 pub enum SyncMode {

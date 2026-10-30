@@ -102,6 +102,7 @@ const statusText = (server: ClusterStatus): string => {
           <span class="value" data-testid="stat-log-level">
             <select
               class="log-level-select"
+              aria-label="Log Level"
               :value="adminStatus.log_level"
               :disabled="isSettingLogLevel"
               data-testid="log-level-select"

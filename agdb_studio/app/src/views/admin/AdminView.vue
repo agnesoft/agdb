@@ -12,14 +12,30 @@ import {
   PhFillWifiHigh,
   PhFillWifiSlash,
 } from "@kalimahapps/vue-icons";
-import type { ClusterStatus } from "@agnesoft/agdb_api/openapi";
+import type { ClusterStatus, LogLevelFilter } from "@agnesoft/agdb_api/openapi";
 import { ref } from "vue";
+
+const LOG_LEVELS: LogLevelFilter[] = [
+  "off",
+  "error",
+  "warn",
+  "info",
+  "debug",
+  "trace",
+];
 
 const {
   status: adminStatus,
   isLoading: adminLoading,
+  isSettingLogLevel,
   fetchStatus: fetchAdminStatus,
+  setLogLevel,
 } = useAdminStatus();
+
+const handleLogLevelChange = (event: Event) => {
+  const target = event.target as HTMLSelectElement;
+  setLogLevel(target.value as LogLevelFilter);
+};
 
 const {
   servers,
@@ -84,7 +100,17 @@ const statusText = (server: ClusterStatus): string => {
         <div class="status-card">
           <span class="label">Log Level</span>
           <span class="value" data-testid="stat-log-level">
-            <span class="log-level-badge">{{ adminStatus.log_level }}</span>
+            <select
+              class="log-level-select"
+              :value="adminStatus.log_level"
+              :disabled="isSettingLogLevel"
+              data-testid="log-level-select"
+              @change="handleLogLevelChange"
+            >
+              <option v-for="level in LOG_LEVELS" :key="level" :value="level">
+                {{ level }}
+              </option>
+            </select>
           </span>
         </div>
         <div class="status-card">
@@ -241,14 +267,20 @@ const statusText = (server: ClusterStatus): string => {
   }
 }
 
-.log-level-badge {
-  display: inline-block;
+.log-level-select {
   background: var(--color-background-mute);
   border: 1px solid var(--color-border);
   border-radius: 4px;
-  padding: 0.1rem 0.5rem;
+  padding: 0.1rem 0.35rem;
   font-size: 0.9rem;
   font-weight: 500;
+  color: var(--color-text);
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
 }
 
 .cluster-table {

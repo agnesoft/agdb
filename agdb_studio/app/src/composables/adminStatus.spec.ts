@@ -6,6 +6,7 @@ import type { AdminStatus } from "@agnesoft/agdb_api/openapi";
 
 const mockClient = vi.hoisted(() => ({
   admin_status: vi.fn(),
+  set_log_level: vi.fn(),
 }));
 
 const mockCheckClient = vi.hoisted(() => vi.fn());
@@ -21,6 +22,12 @@ vi.mock("@agdb-studio/auth/src/auth", () => ({
   useAuth: () => ({
     isLoggedIn: mockIsLoggedIn,
   }),
+}));
+
+const mockAddNotification = vi.hoisted(() => vi.fn());
+
+vi.mock("@agdb-studio/notification/src/composables/notificationStore", () => ({
+  addNotification: mockAddNotification,
 }));
 
 vi.mock("@agdb-studio/utils/src/logger/logger", () => ({
@@ -209,5 +216,92 @@ describe("useAdminStatus", () => {
 
     expect(vm.lastUpdated).toBeInstanceOf(Date);
     expect(vm.lastUpdated).not.toBe(lastUpdatedBefore);
+  });
+
+  describe("setLogLevel", () => {
+    it("should call set_log_level and re-fetch status", async () => {
+      mockClient.set_log_level.mockResolvedValue({});
+
+      const vm = mountComposable();
+      await vi.advanceTimersByTimeAsync(0);
+      await flushPromises();
+      await nextTick();
+
+      const callsBefore = mockClient.admin_status.mock.calls.length;
+
+      await vm.setLogLevel("debug");
+      await flushPromises();
+      await nextTick();
+
+      expect(mockClient.set_log_level).toHaveBeenCalledWith({
+        new_level: "debug",
+      });
+      expect(mockClient.admin_status).toHaveBeenCalledTimes(callsBefore + 1);
+    });
+
+    it("should show success notification after setting log level", async () => {
+      mockClient.set_log_level.mockResolvedValue({});
+
+      const vm = mountComposable();
+      await vi.advanceTimersByTimeAsync(0);
+      await flushPromises();
+      await nextTick();
+
+      await vm.setLogLevel("warn");
+      await flushPromises();
+      await nextTick();
+
+      expect(mockAddNotification).toHaveBeenCalledWith({
+        type: "success",
+        title: "Log level updated",
+        message: 'Log level set to "warn".',
+      });
+    });
+
+    it("should set isSettingLogLevel while request is in-flight", async () => {
+      let resolveSetLogLevel!: () => void;
+      mockClient.set_log_level.mockReturnValue(
+        new Promise<void>((r) => {
+          resolveSetLogLevel = r;
+        }),
+      );
+
+      const vm = mountComposable();
+      await vi.advanceTimersByTimeAsync(0);
+      await flushPromises();
+      await nextTick();
+
+      expect(vm.isSettingLogLevel).toBe(false);
+
+      const promise = vm.setLogLevel("trace");
+      await nextTick();
+      expect(vm.isSettingLogLevel).toBe(true);
+
+      resolveSetLogLevel();
+      await promise;
+      await flushPromises();
+      await nextTick();
+
+      expect(vm.isSettingLogLevel).toBe(false);
+    });
+
+    it("should handle set_log_level errors gracefully and re-fetch status", async () => {
+      mockClient.set_log_level.mockRejectedValue(new Error("Forbidden"));
+
+      const vm = mountComposable();
+      await vi.advanceTimersByTimeAsync(0);
+      await flushPromises();
+      await nextTick();
+
+      const callsBefore = mockClient.admin_status.mock.calls.length;
+
+      await vm.setLogLevel("error");
+      await flushPromises();
+      await nextTick();
+
+      expect(vm.isSettingLogLevel).toBe(false);
+      expect(mockAddNotification).not.toHaveBeenCalled();
+      expect(mockClient.admin_status).toHaveBeenCalledTimes(callsBefore + 1);
+    });
   });
 });

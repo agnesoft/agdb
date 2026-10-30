@@ -6,6 +6,7 @@ import {
   mockDatabaseListApi,
   mockLogin,
   gotoDbPage,
+  withResponse,
 } from "./mocks/api-helpers";
 import { MOCK_DATABASE_LIST } from "./mocks/db.mock";
 import type { ServerDatabase } from "@agnesoft/agdb_api/openapi" with {
@@ -52,7 +53,9 @@ test.describe("Database Table", () => {
 
   test("should handle empty database list", async ({ ui, page }) => {
     await mockDatabaseListApi(page, []);
-    await ui.click(testIds.REFRESH_BUTTON);
+    await withResponse(page, DB_LIST_API, () =>
+      ui.click(testIds.REFRESH_BUTTON),
+    );
     const rows = ui.locator(testIds.TABLE_ROW);
     await expect(rows).toHaveCount(0);
     await ui.element(testIds.EMPTY_TABLE_MESSAGE).hasText("No databases found");
@@ -66,7 +69,9 @@ test.describe("Database Table", () => {
         body: JSON.stringify({ error: "Internal Server Error" }),
       });
     });
-    await ui.click(testIds.REFRESH_BUTTON);
+    await withResponse(page, DB_LIST_API, () =>
+      ui.click(testIds.REFRESH_BUTTON),
+    );
     await ui
       .element(testIds.NOTIFICATION_ITEM)
       .containsText("Internal Server Error");
@@ -104,7 +109,9 @@ test.describe("Database Table", () => {
     await ui.click(testIds.ADD_DB_BUTTON);
     // Verify the add API was called with the right db name
     expect(addApiUrl).toContain("new_db");
-    await ui.click(testIds.REFRESH_BUTTON);
+    await withResponse(page, DB_LIST_API, () =>
+      ui.click(testIds.REFRESH_BUTTON),
+    );
     await expect(rows).toHaveCount(4);
     const row = rows.nth(3);
     await expect(row).toBeVisible();

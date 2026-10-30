@@ -6,6 +6,7 @@ import {
   mockLogin,
   mockDbActionApi,
   gotoDbPage,
+  withResponse,
 } from "./mocks/api-helpers";
 import { DB_BACKUP_API, DB_LIST_API } from "./api-paths";
 
@@ -25,7 +26,9 @@ test.describe("Notification System", () => {
         body: JSON.stringify({ error: "Internal Server Error" }),
       });
     });
-    await ui.click(testIds.REFRESH_BUTTON);
+    await withResponse(page, DB_LIST_API, () =>
+      ui.click(testIds.REFRESH_BUTTON),
+    );
     await ui
       .element(testIds.NOTIFICATION_ITEM)
       .containsText("Internal Server Error");
@@ -39,7 +42,9 @@ test.describe("Notification System", () => {
         body: JSON.stringify({ error: "Server Error" }),
       });
     });
-    await ui.click(testIds.REFRESH_BUTTON);
+    await withResponse(page, DB_LIST_API, () =>
+      ui.click(testIds.REFRESH_BUTTON),
+    );
     // After an error, the notification wrapper should be visible
     await expect(page.locator(".notification-wrapper")).toBeVisible();
   });
@@ -53,7 +58,9 @@ test.describe("Notification System", () => {
         body: JSON.stringify({ error: "Test Error" }),
       });
     });
-    await ui.click(testIds.REFRESH_BUTTON);
+    await withResponse(page, DB_LIST_API, () =>
+      ui.click(testIds.REFRESH_BUTTON),
+    );
     await expect(page.locator(".notification-wrapper")).toBeVisible();
 
     // Click notification button to open the viewer
@@ -72,7 +79,9 @@ test.describe("Notification System", () => {
         body: JSON.stringify({ error: "Internal Server Error" }),
       });
     });
-    await ui.click(testIds.REFRESH_BUTTON);
+    await withResponse(page, DB_LIST_API, () =>
+      ui.click(testIds.REFRESH_BUTTON),
+    );
     await page.locator(".notification-button").click();
     await expect(page.locator(".notification-viewer")).toBeVisible();
     const items = page.getByTestId("notification-item");
@@ -106,11 +115,15 @@ test.describe("Notification System", () => {
         body: JSON.stringify({ error: "First Error" }),
       });
     });
-    await ui.click(testIds.REFRESH_BUTTON);
+    await withResponse(page, DB_LIST_API, () =>
+      ui.click(testIds.REFRESH_BUTTON),
+    );
     await ui.element(testIds.NOTIFICATION_ITEM).isVisible();
 
     // Trigger second error
-    await ui.click(testIds.REFRESH_BUTTON);
+    await withResponse(page, DB_LIST_API, () =>
+      ui.click(testIds.REFRESH_BUTTON),
+    );
 
     // Open viewer to see all notifications
     await page.locator(".notification-button").click();

@@ -203,24 +203,38 @@ export function enableConsoleLogging(page: Page) {
 // Navigation helpers — wait for the API response that triggers rendering
 
 export async function gotoDbPage(page: Page) {
-  const response = page.waitForResponse(DB_LIST_API);
-  await page.goto("/studio/db");
-  await response;
+  await withResponse(page, DB_LIST_API, () => page.goto("/studio/db"));
 }
 
 export async function gotoAdminDbPage(page: Page) {
-  const response = page.waitForResponse(ADMIN_DB_LIST_API);
-  await page.goto("/studio/admin/db");
-  await response;
+  await withResponse(page, ADMIN_DB_LIST_API, () =>
+    page.goto("/studio/admin/db"),
+  );
 }
 
 export async function gotoAdminUsersPage(page: Page) {
-  const response = page.waitForResponse(ADMIN_USER_LIST_API);
-  await page.goto("/studio/admin/users");
-  await response;
+  await withResponse(page, ADMIN_USER_LIST_API, () =>
+    page.goto("/studio/admin/users"),
+  );
 }
 
 export async function gotoLoginPage(page: Page) {
   await page.goto("/studio/login");
   // Login page doesn't fetch data — just wait for the form
+}
+
+export async function gotoAndWaitForLoad(page: Page, path: string) {
+  await page.goto(path);
+  await page.waitForLoadState("load");
+  await page.locator("#app > *").first().waitFor({ state: "attached" });
+}
+
+export async function withResponse(
+  page: Page,
+  apiPattern: string,
+  action: () => Promise<unknown>,
+) {
+  const response = page.waitForResponse(apiPattern);
+  await action();
+  await response;
 }

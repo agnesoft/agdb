@@ -8,18 +8,20 @@ import {
   mockAdminDatabaseListApi,
   gotoDbPage,
   gotoAdminDbPage,
+  gotoAndWaitForLoad,
+  withResponse,
 } from "./mocks/api-helpers";
 
 test.describe("Routing & Navigation", () => {
   test("redirects unauthenticated user to /studio/login", async ({ page }) => {
-    await page.goto("/studio/db");
+    await gotoAndWaitForLoad(page, "/studio/db");
     // Router guard redirects to login — check for login form visibility
     // (URL may not update due to deprecated next() callback pattern)
     await expect(page.getByTestId("login_form")).toBeVisible();
   });
 
   test("preserves redirect query param", async ({ page }) => {
-    await page.goto("/studio/db");
+    await gotoAndWaitForLoad(page, "/studio/db");
     await expect(page.getByTestId("login_form")).toBeVisible();
     // Check URL contains redirect param (may be /studio/login?redirect=...)
     await expect(page).toHaveURL(/.*\/studio\/login.*redirect/);
@@ -32,9 +34,9 @@ test.describe("Routing & Navigation", () => {
     await mockLogin(page);
     await mockDatabaseListApi(page);
     // Navigate to login page — should redirect to /studio/db
-    const response = page.waitForResponse("**/api/v1/db/list");
-    await page.goto("/studio/login");
-    await response;
+    await withResponse(page, "**/api/v1/db/list", () =>
+      page.goto("/studio/login"),
+    );
     await ui.element(testIds.DB_TABLE).isVisible();
   });
 
@@ -52,7 +54,7 @@ test.describe("Routing & Navigation", () => {
   test("shows 404 for unknown route", async ({ page }) => {
     await mockLogin(page);
     await mockDatabaseListApi(page);
-    await page.goto("/studio/nonexistent");
+    await gotoAndWaitForLoad(page, "/studio/nonexistent");
     await expect(page.locator("h1")).toHaveText("404");
     await expect(page.locator("p")).toContainText("Page not found");
   });
@@ -62,7 +64,7 @@ test.describe("Routing & Navigation", () => {
     await mockDatabaseListApi(page);
     // Non-admin user navigates to admin route — should be redirected to /studio/db
     await gotoDbPage(page);
-    await page.goto("/studio/admin/db");
+    await gotoAndWaitForLoad(page, "/studio/admin/db");
     // Should end up at the db page (redirected by admin guard)
     await ui.element(testIds.DB_TABLE).isVisible();
   });

@@ -7,6 +7,7 @@ import {
   mockAdminUserListApi,
   mockDbActionApi,
   gotoAdminUsersPage,
+  withResponse,
 } from "./mocks/api-helpers";
 import {
   ADMIN_USER_ADD_API,
@@ -216,7 +217,7 @@ test.describe("Admin User Management", () => {
 
   test("handles empty user list", async ({ page }) => {
     await mockAdminUserListApi(page, []);
-    await page.reload();
+    await withResponse(page, ADMIN_USER_LIST_API, () => page.reload());
     await expect(page.getByTestId("table-row")).toHaveCount(0);
   });
 
@@ -228,9 +229,7 @@ test.describe("Admin User Management", () => {
         body: JSON.stringify({ error: "Internal Server Error" }),
       });
     });
-    const response = page.waitForResponse(ADMIN_USER_LIST_API);
-    await page.reload();
-    await response;
+    await withResponse(page, ADMIN_USER_LIST_API, () => page.reload());
     // Open the notification viewer to see the error
     await page.locator(".notification-button").click();
     await expect(page.locator(".notification-viewer")).toBeVisible();

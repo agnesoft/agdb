@@ -1,0 +1,228 @@
+name: agplatform
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+    branches: [main]
+  push:
+    branches: [main]
+
+env:
+  CARGO_TERM_COLOR: always
+  CHECKOUT_ACTION: &CHECKOUT_ACTION actions/checkout@v7
+  CODECOV_ACTION: &CODECOV_ACTION codecov/codecov-action@v7
+  DOWNLOAD_ARTIFACT_ACTION: &DOWNLOAD_ARTIFACT_ACTION actions/download-artifact@v8
+  DEPLOY_PAGE_ACTION: &DEPLOY_PAGE_ACTION actions/deploy-pages@v5
+  SCRIPT_ACTION: &SCRIPT_ACTION actions/github-script@v9
+  RUST_SETUP_ACTION: &RUST_SETUP_ACTION actions-rust-lang/setup-rust-toolchain@v2
+  UPLOAD_ARTIFACT_ACTION: &UPLOAD_ARTIFACT_ACTION actions/upload-artifact@v7
+  UPLOAD_PAGES_ARTIFACT_ACTION: &UPLOAD_PAGES_ARTIFACT_ACTION actions/upload-pages-artifact@v5
+  IS_PR: &IS_PR ${{ github.event_name == 'pull_request' }}
+  IS_PR_OR_MAIN: &IS_PR_OR_MAIN ${{ github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main') }}
+  IS_MAIN: &IS_MAIN ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+  PACKAGES: "-p agplatform -p agtestcheck -p agbench"
+
+jobs:
+  title_check:
+    runs-on: ubuntu-latest
+    if: *IS_PR
+    steps:
+      - name: Checkout sources
+        uses: *CHECKOUT_ACTION
+      - name: Validate PR title
+        uses: *SCRIPT_ACTION
+        with:
+          script: |
+            const script = require('./.github/workflows/title_check.js')
+            await script({github, context, core})
+
+  build:
+    if: *IS_PR_OR_MAIN
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: linux
+          - os: windows-latest
+            platform: windows
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout sources
+        uses: *CHECKOUT_ACTION
+      - name: Setup Rust
+        uses: *RUST_SETUP_ACTION
+        with:
+          components: rustfmt,clippy,llvm-tools-preview
+      - name: Check formatting
+        run: cargo fmt --check ${{ env.PACKAGES }}
+      - name: Linting
+        run: cargo clippy --all-targets --all-features ${{ env.PACKAGES }} -- -D warnings
+      - name: Test rules
+        run: cargo run -r ${{ env.PACKAGES }} -p agtestcheck
+      - name: Testing (docs)
+        run: cargo test --all-features ${{ env.PACKAGES }} --doc
+      - name: Benchmarks
+        run: cargo bench --all-features ${{ env.PACKAGES }} -- --samples 1 --iters 1
+      - name: Install cargo-llvm-cov
+        uses: taiki-e/install-action@cargo-llvm-cov
+      - name: Testing (unit+integration) and coverage reports (per crate)
+        shell: bash
+        run: |
+          PLATFORM="${{ matrix.platform }}"
+          CRATES=$(for MANIFEST in */Cargo.toml; do dirname "$MANIFEST"; done)
+          COVERAGE=target/coverage
+          mkdir -p "$COVERAGE/pages"
+          : > "$COVERAGE/failed"
+          echo "<h1>Coverage</h1><ul>" > "$COVERAGE/pages/index.html"
+
+          for CRATE in $CRATES; do
+            OTHERS=$(echo "$CRATES" | grep -vx "$CRATE" | paste -sd '|' || true)
+            IGNORE=()
+
+            if [ -n "$OTHERS" ]; then
+              IGNORE=(--ignore-filename-regex "/($OTHERS)/")
+            fi
+
+            cargo llvm-cov clean --workspace
+            cargo llvm-cov -p "$CRATE" --all-features --no-report
+            cargo llvm-cov report -p "$CRATE" "${IGNORE[@]}" --codecov --output-path "$COVERAGE/codecov-$CRATE-$PLATFORM.json"
+            cargo llvm-cov report -p "$CRATE" "${IGNORE[@]}" --html --show-instantiations --output-dir "$COVERAGE/$CRATE"
+            rm -rf "$COVERAGE/pages/$CRATE"
+            mv "$COVERAGE/$CRATE/html" "$COVERAGE/pages/$CRATE"
+            echo "<li><a href=\"$CRATE/index.html\">$CRATE</a></li>" >> "$COVERAGE/pages/index.html"
+            cargo llvm-cov report -p "$CRATE" "${IGNORE[@]}" --show-missing-lines \
+              --fail-uncovered-lines 0 --fail-uncovered-regions 0 --fail-uncovered-functions 0 \
+              > "$COVERAGE/missing-$CRATE.txt" 2>&1 || echo "$CRATE" >> "$COVERAGE/failed"
+          done
+
+          echo "</ul>" >> "$COVERAGE/pages/index.html"
+      - name: Upload coverage report (codecov files)
+        uses: *UPLOAD_ARTIFACT_ACTION
+        with:
+          name: codecov-${{ matrix.platform }}
+          path: target/coverage/codecov-*.json
+          if-no-files-found: error
+      - name: Upload coverage report (html files)
+        uses: *UPLOAD_ARTIFACT_ACTION
+        with:
+          name: coverage-pages-${{ matrix.platform }}
+          path: target/coverage/pages
+          if-no-files-found: error
+      - name: Upload coverage diagnostics
+        uses: *UPLOAD_ARTIFACT_ACTION
+        with:
+          name: coverage-diagnostics-${{ matrix.platform }}
+          path: |
+            target/coverage/missing-*.txt
+            target/coverage/failed
+          if-no-files-found: error
+
+  coverage:
+    if: *IS_PR_OR_MAIN
+    needs: [build]
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: coverage-report-html
+      url: ${{ steps.coverage-report-pages.outputs.page_url }}
+    steps:
+      - name: Checkout sources
+        uses: *CHECKOUT_ACTION
+      - name: Download coverage report (codecov files)
+        uses: *DOWNLOAD_ARTIFACT_ACTION
+        with:
+          pattern: codecov-*
+          path: target/coverage/codecov
+      - name: Download coverage report (html files)
+        uses: *DOWNLOAD_ARTIFACT_ACTION
+        with:
+          pattern: coverage-pages-*
+          path: target/coverage/pages-input
+      - name: Download coverage diagnostics
+        uses: *DOWNLOAD_ARTIFACT_ACTION
+        with:
+          pattern: coverage-diagnostics-*
+          path: target/coverage/diagnostics-input
+      - name: Build unified html coverage report
+        shell: bash
+        run: |
+          mkdir -p target/coverage/pages
+          {
+            echo "<h1>Coverage</h1>"
+            echo "<ul>"
+            for DIR in target/coverage/pages-input/coverage-pages-*/; do
+              PLATFORM=$(basename "$DIR")
+              PLATFORM="${PLATFORM#coverage-pages-}"
+              mkdir -p "target/coverage/pages/$PLATFORM"
+              cp -r "$DIR." "target/coverage/pages/$PLATFORM"
+              echo "  <li><a href=\"$PLATFORM/index.html\">${PLATFORM^}</a></li>"
+            done
+            echo "</ul>"
+          } > target/coverage/pages/index.html
+      - name: Collect codecov files
+        id: coverage
+        shell: bash
+        run: |
+          FILES=$(find target/coverage/codecov -name 'codecov-*.json' -type f | paste -sd ',')
+          if [ -z "$FILES" ]; then
+            echo "No Codecov reports were found in target/coverage/codecov" >&2
+            exit 1
+          fi
+          echo "Found Codecov files:"
+          find target/coverage/codecov -name 'codecov-*.json' -type f | sort
+          echo "files=$FILES" >> "$GITHUB_OUTPUT"
+      - name: Upload coverage report (codecov) to Codecov
+        uses: *CODECOV_ACTION
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ${{ steps.coverage.outputs.files }}
+      - name: Upload coverage report (html) to artifacts
+        id: coverage-report-html
+        uses: *UPLOAD_PAGES_ARTIFACT_ACTION
+        with:
+          name: coverage-report-html
+          path: target/coverage/pages
+      - name: Coverage report (missing lines/functions/regions)
+        shell: bash
+        run: |
+          for REPORT in $(find target/coverage/diagnostics-input -name 'missing-*.txt' -type f | sort); do
+            echo "===== $REPORT ====="
+            cat "$REPORT"
+          done
+
+          FAILED_FILES=$(find target/coverage/diagnostics-input -name failed -type f -size +0c)
+          if [ -n "$FAILED_FILES" ]; then
+            echo "Coverage threshold failed in:"
+            echo "$FAILED_FILES"
+            exit 1
+          fi
+
+  # release:
+  #   if: *IS_MAIN
+  #   needs: [build, coverage]
+  #   runs-on: ubuntu-latest
+  #   permissions:
+  #     contents: write
+  #   steps:
+  #     - name: Checkout sources
+  #       uses: *CHECKOUT_ACTION
+  #     - name: Setup Rust
+  #       uses: *RUST_SETUP_ACTION
+  #     - name: Detect new version
+  #       id: version
+  #       run: |
+  #         VERSION=$(cargo metadata --no-deps --format-version 1 | jq -r '.packages[0].version')
+  #         if [ -z "$(git ls-remote --tags origin "v$VERSION")" ]; then echo "new_version=$VERSION" >> "$GITHUB_OUTPUT"; fi
+  #         echo "Version: $VERSION"
+  #     - name: Create GitHub release
+  #       if: steps.version.outputs.new_version != ''
+  #       run: gh release create "v${{ steps.version.outputs.new_version }}" --target "$GITHUB_SHA" --generate-notes
+  #       env:
+  #         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  #     - name: Publish to crates.io
+  #       if: steps.version.outputs.new_version != ''
+  #       run: cargo publish --workspace
+  #       env:
+  #         CARGO_REGISTRY_TOKEN: ${{ secrets.CRATES_IO_TOKEN }}

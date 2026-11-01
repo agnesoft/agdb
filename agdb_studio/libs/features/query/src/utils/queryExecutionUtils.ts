@@ -161,6 +161,32 @@ const getStepArgs = (step: QueryStepModel): unknown[] => {
     return [parseNumberValue(entries[0]?.[0])];
   }
 
+  if (
+    type.endsWith(".amend_uniform") ||
+    type.endsWith(".amend_or_uniform") ||
+    type.endsWith(".amend_and_uniform") ||
+    type.endsWith(".amend_xor_uniform")
+  ) {
+    const pairs = entries.map((entry) => [
+      parseDbValue(entry[0]),
+      parseDbValue(entry[1]),
+    ]);
+    return [pairs];
+  }
+
+  if (
+    type.endsWith(".amend") ||
+    type.endsWith(".amend_or") ||
+    type.endsWith(".amend_and") ||
+    type.endsWith(".amend_xor")
+  ) {
+    const pairs = entries.map((entry) => [
+      parseDbValue(entry[0]),
+      parseDbValue(entry[1]),
+    ]);
+    return [pairs.map((pair) => [pair])];
+  }
+
   if (type.endsWith(".values_uniform")) {
     const pairs = entries.map((entry) => [
       parseDbValue(entry[0]),

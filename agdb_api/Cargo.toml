@@ -1,17 +1,16 @@
 [package]
 name = "agdb_api"
 version = "0.16.0"
-edition = "2024"
-license = "Apache-2.0"
-homepage = "https://github.com/agnesoft/agdb"
-repository = "https://github.com/agnesoft/agdb"
-documentation = "https://github.com/agnesoft/agdb"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
 readme = "../README.md"
 description = "Agnesoft Graph Database API (Client)"
 keywords = ["graph", "database", "api"]
 categories = ["database", "api-bindings"]
 
 [lib]
+bench = false
 
 [features]
 default = []
@@ -20,10 +19,9 @@ api = ["agdb/api", "dep:tokio"]
 test_server = ["dep:tokio"]
 
 [dependencies]
-agdb = { version = "0.16.0", path = "../agdb", features = ["serde", "openapi"] }
-reqwest = { version = "0.13", default-features = false, features = ["charset", "http2", "json"] }
-serde = { version = "1", features = ["derive"] }
-serde_json = "1"
-utoipa = "6"
-tokio = { version = "1", features = ["full"], optional = true }
-
+agdb = { workspace = true, features = ["serde", "openapi"] }
+reqwest = { workspace = true, default-features = false, features = ["charset", "http2", "json"] }
+serde = { workspace = true, features = ["derive"] }
+serde_json.workspace = true
+tokio = { workspace = true, features = ["full"], optional = true }
+utoipa.workspace = true

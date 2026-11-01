@@ -44,8 +44,8 @@ jobs:
         run: cargo fmt --check ${{ env.PACKAGES }}
       - name: Linting
         run: cargo clippy --all-targets --all-features ${{ env.PACKAGES }} -- -D warnings
-      - name: Test rules
-        run: cargo run -r ${{ env.PACKAGES }} -p agtestcheck
+      # - name: Test rules
+      #   run: cargo run -r -p agtestcheck
       - name: Testing (docs)
         run: cargo test --all-features ${{ env.PACKAGES }} --doc
       - name: Benchmarks

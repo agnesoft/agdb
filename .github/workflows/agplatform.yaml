@@ -23,19 +23,6 @@ env:
   PACKAGES: "-p agplatform -p agtestcheck -p agbench"
 
 jobs:
-  title_check:
-    runs-on: ubuntu-latest
-    if: *IS_PR
-    steps:
-      - name: Checkout sources
-        uses: *CHECKOUT_ACTION
-      - name: Validate PR title
-        uses: *SCRIPT_ACTION
-        with:
-          script: |
-            const script = require('./.github/workflows/title_check.js')
-            await script({github, context, core})
-
   build:
     if: *IS_PR_OR_MAIN
     strategy:

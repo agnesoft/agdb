@@ -442,33 +442,44 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
     }
     public function testQueryBuilder45(): void
     {
-        $query = QueryBuilder::remove()->aliases("a")->query();
+        $query = QueryBuilder::insert()
+            ->amend_or([["k" => 1], ["k" => 2]])
+            ->ids([1, 2])
+            ->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[45][1], $json);
     }
     public function testQueryBuilder46(): void
     {
-        $query = QueryBuilder::remove()
-            ->aliases(["a", "b"])
+        $query = QueryBuilder::insert()
+            ->amend_or_uniform(["k" => 1])
+            ->ids([1, 2])
             ->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[46][1], $json);
     }
     public function testQueryBuilder47(): void
     {
-        $query = QueryBuilder::remove()->ids(1)->query();
+        $query = QueryBuilder::insert()
+            ->amend_and([["k" => 1], ["k" => 2]])
+            ->ids([1, 2])
+            ->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[47][1], $json);
     }
     public function testQueryBuilder48(): void
     {
-        $query = QueryBuilder::remove()->ids("a")->query();
+        $query = QueryBuilder::insert()
+            ->amend_and_uniform(["k" => 1])
+            ->ids([1, 2])
+            ->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[48][1], $json);
     }
     public function testQueryBuilder49(): void
     {
-        $query = QueryBuilder::remove()
+        $query = QueryBuilder::insert()
+            ->amend_xor([["k" => 1], ["k" => 2]])
             ->ids([1, 2])
             ->query();
         $json = $query->jsonSerialize();
@@ -476,46 +487,43 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
     }
     public function testQueryBuilder50(): void
     {
-        $query = QueryBuilder::remove()
-            ->ids(["a", "b"])
+        $query = QueryBuilder::insert()
+            ->amend_xor_uniform(["k" => 1])
+            ->ids([1, 2])
             ->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[50][1], $json);
     }
     public function testQueryBuilder51(): void
     {
-        $query = QueryBuilder::remove()
-            ->ids(QueryBuilder::search()->from("a")->query())
-            ->query();
+        $query = QueryBuilder::remove()->aliases("a")->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[51][1], $json);
     }
     public function testQueryBuilder52(): void
     {
-        $query = QueryBuilder::remove()->search()->from("a")->query();
+        $query = QueryBuilder::remove()
+            ->aliases(["a", "b"])
+            ->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[52][1], $json);
     }
     public function testQueryBuilder53(): void
     {
-        $query = QueryBuilder::remove()->index("key")->query();
+        $query = QueryBuilder::remove()->ids(1)->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[53][1], $json);
     }
     public function testQueryBuilder54(): void
     {
-        $query = QueryBuilder::remove()
-            ->values(["k1", "k2"])
-            ->ids([1, 2])
-            ->query();
+        $query = QueryBuilder::remove()->ids("a")->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[54][1], $json);
     }
     public function testQueryBuilder55(): void
     {
         $query = QueryBuilder::remove()
-            ->values(["k1", "k2"])
-            ->ids(QueryBuilder::search()->from("a")->query())
+            ->ids([1, 2])
             ->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[55][1], $json);
@@ -523,9 +531,7 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
     public function testQueryBuilder56(): void
     {
         $query = QueryBuilder::remove()
-            ->values(["k1", "k2"])
-            ->search()
-            ->from("a")
+            ->ids(["a", "b"])
             ->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[56][1], $json);
@@ -533,35 +539,27 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
     public function testQueryBuilder57(): void
     {
         $query = QueryBuilder::remove()
-            ->amend([["k" => 1], ["k" => 2]])
-            ->ids([1, 2])
+            ->ids(QueryBuilder::search()->from("a")->query())
             ->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[57][1], $json);
     }
     public function testQueryBuilder58(): void
     {
-        $query = QueryBuilder::remove()
-            ->amend_uniform(["k" => 1])
-            ->ids([1, 2])
-            ->query();
+        $query = QueryBuilder::remove()->search()->from("a")->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[58][1], $json);
     }
     public function testQueryBuilder59(): void
     {
-        $query = QueryBuilder::remove()
-            ->amend_uniform(["k" => 1])
-            ->search()
-            ->from("a")
-            ->query();
+        $query = QueryBuilder::remove()->index("key")->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[59][1], $json);
     }
     public function testQueryBuilder60(): void
     {
-        $query = QueryBuilder::select()
-            ->aliases()
+        $query = QueryBuilder::remove()
+            ->values(["k1", "k2"])
             ->ids([1, 2])
             ->query();
         $json = $query->jsonSerialize();
@@ -569,29 +567,36 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
     }
     public function testQueryBuilder61(): void
     {
-        $query = QueryBuilder::select()
-            ->aliases()
-            ->ids(QueryBuilder::search()->from(1)->query())
+        $query = QueryBuilder::remove()
+            ->values(["k1", "k2"])
+            ->ids(QueryBuilder::search()->from("a")->query())
             ->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[61][1], $json);
     }
     public function testQueryBuilder62(): void
     {
-        $query = QueryBuilder::select()->aliases()->search()->from(1)->query();
+        $query = QueryBuilder::remove()
+            ->values(["k1", "k2"])
+            ->search()
+            ->from("a")
+            ->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[62][1], $json);
     }
     public function testQueryBuilder63(): void
     {
-        $query = QueryBuilder::select()->aliases()->query();
+        $query = QueryBuilder::remove()
+            ->amend([["k" => 1], ["k" => 2]])
+            ->ids([1, 2])
+            ->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[63][1], $json);
     }
     public function testQueryBuilder64(): void
     {
-        $query = QueryBuilder::select()
-            ->edge_count()
+        $query = QueryBuilder::remove()
+            ->amend_uniform(["k" => 1])
             ->ids([1, 2])
             ->query();
         $json = $query->jsonSerialize();
@@ -599,17 +604,18 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
     }
     public function testQueryBuilder65(): void
     {
-        $query = QueryBuilder::select()
-            ->edge_count_from()
-            ->ids([1, 2])
+        $query = QueryBuilder::remove()
+            ->amend_uniform(["k" => 1])
+            ->search()
+            ->from("a")
             ->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[65][1], $json);
     }
     public function testQueryBuilder66(): void
     {
-        $query = QueryBuilder::select()
-            ->edge_count_to()
+        $query = QueryBuilder::remove()
+            ->amend_or([["k" => 1], ["k" => 2]])
             ->ids([1, 2])
             ->query();
         $json = $query->jsonSerialize();
@@ -617,23 +623,26 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
     }
     public function testQueryBuilder67(): void
     {
-        $query = QueryBuilder::select()
-            ->edge_count()
-            ->search()
-            ->from(1)
+        $query = QueryBuilder::remove()
+            ->amend_or_uniform(["k" => 1])
+            ->ids([1, 2])
             ->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[67][1], $json);
     }
     public function testQueryBuilder68(): void
     {
-        $query = QueryBuilder::select()->ids("a")->query();
+        $query = QueryBuilder::remove()
+            ->amend_and([["k" => 1], ["k" => 2]])
+            ->ids([1, 2])
+            ->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[68][1], $json);
     }
     public function testQueryBuilder69(): void
     {
-        $query = QueryBuilder::select()
+        $query = QueryBuilder::remove()
+            ->amend_and_uniform(["k" => 1])
             ->ids([1, 2])
             ->query();
         $json = $query->jsonSerialize();
@@ -641,60 +650,57 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
     }
     public function testQueryBuilder70(): void
     {
-        $query = QueryBuilder::select()
-            ->ids(QueryBuilder::search()->from(1)->query())
+        $query = QueryBuilder::remove()
+            ->amend_xor([["k" => 1], ["k" => 2]])
+            ->ids([1, 2])
             ->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[70][1], $json);
     }
     public function testQueryBuilder71(): void
     {
-        $query = QueryBuilder::select()->search()->from(1)->query();
+        $query = QueryBuilder::remove()
+            ->amend_xor_uniform(["k" => 1])
+            ->ids([1, 2])
+            ->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[71][1], $json);
     }
     public function testQueryBuilder72(): void
     {
-        $query = QueryBuilder::select()->search()->to(1)->query();
+        $query = QueryBuilder::select()
+            ->aliases()
+            ->ids([1, 2])
+            ->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[72][1], $json);
     }
     public function testQueryBuilder73(): void
     {
         $query = QueryBuilder::select()
-            ->search()
-            ->index("age")
-            ->value(20)
+            ->aliases()
+            ->ids(QueryBuilder::search()->from(1)->query())
             ->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[73][1], $json);
     }
     public function testQueryBuilder74(): void
     {
-        $query = QueryBuilder::select()
-            ->search()
-            ->from("a")
-            ->limit(10)
-            ->query();
+        $query = QueryBuilder::select()->aliases()->search()->from(1)->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[74][1], $json);
     }
     public function testQueryBuilder75(): void
     {
-        $query = QueryBuilder::select()
-            ->search()
-            ->from("a")
-            ->offset(10)
-            ->query();
+        $query = QueryBuilder::select()->aliases()->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[75][1], $json);
     }
     public function testQueryBuilder76(): void
     {
         $query = QueryBuilder::select()
-            ->search()
-            ->from("a")
-            ->order_by(DbKeyOrderBuilder::Desc("age"))
+            ->edge_count()
+            ->ids([1, 2])
             ->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[76][1], $json);
@@ -702,70 +708,71 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
     public function testQueryBuilder77(): void
     {
         $query = QueryBuilder::select()
-            ->search()
-            ->from("a")
-            ->where()
-            ->node()
+            ->edge_count_from()
+            ->ids([1, 2])
             ->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[77][1], $json);
     }
     public function testQueryBuilder78(): void
     {
-        $query = QueryBuilder::select()->indexes()->query();
+        $query = QueryBuilder::select()
+            ->edge_count_to()
+            ->ids([1, 2])
+            ->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[78][1], $json);
     }
     public function testQueryBuilder79(): void
     {
-        $query = QueryBuilder::select()->keys()->ids("a")->query();
+        $query = QueryBuilder::select()
+            ->edge_count()
+            ->search()
+            ->from(1)
+            ->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[79][1], $json);
     }
     public function testQueryBuilder80(): void
     {
-        $query = QueryBuilder::select()
-            ->keys()
-            ->ids([1, 2])
-            ->query();
+        $query = QueryBuilder::select()->ids("a")->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[80][1], $json);
     }
     public function testQueryBuilder81(): void
     {
         $query = QueryBuilder::select()
-            ->keys()
-            ->ids(QueryBuilder::search()->from(1)->query())
+            ->ids([1, 2])
             ->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[81][1], $json);
     }
     public function testQueryBuilder82(): void
     {
-        $query = QueryBuilder::select()->keys()->search()->from(1)->query();
+        $query = QueryBuilder::select()
+            ->ids(QueryBuilder::search()->from(1)->query())
+            ->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[82][1], $json);
     }
     public function testQueryBuilder83(): void
     {
-        $query = QueryBuilder::select()->key_count()->ids("a")->query();
+        $query = QueryBuilder::select()->search()->from(1)->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[83][1], $json);
     }
     public function testQueryBuilder84(): void
     {
-        $query = QueryBuilder::select()
-            ->key_count()
-            ->ids([1, 2])
-            ->query();
+        $query = QueryBuilder::select()->search()->to(1)->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[84][1], $json);
     }
     public function testQueryBuilder85(): void
     {
         $query = QueryBuilder::select()
-            ->key_count()
-            ->ids(QueryBuilder::search()->from(1)->query())
+            ->search()
+            ->index("age")
+            ->value(20)
             ->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[85][1], $json);
@@ -773,24 +780,29 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
     public function testQueryBuilder86(): void
     {
         $query = QueryBuilder::select()
-            ->key_count()
             ->search()
-            ->from(1)
+            ->from("a")
+            ->limit(10)
             ->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[86][1], $json);
     }
     public function testQueryBuilder87(): void
     {
-        $query = QueryBuilder::select()->node_count()->query();
+        $query = QueryBuilder::select()
+            ->search()
+            ->from("a")
+            ->offset(10)
+            ->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[87][1], $json);
     }
     public function testQueryBuilder88(): void
     {
         $query = QueryBuilder::select()
-            ->values(["k", "k2"])
-            ->ids("a")
+            ->search()
+            ->from("a")
+            ->order_by(DbKeyOrderBuilder::Desc("age"))
             ->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[88][1], $json);
@@ -798,22 +810,118 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
     public function testQueryBuilder89(): void
     {
         $query = QueryBuilder::select()
-            ->values(["k", "k2"])
-            ->ids([1, 2])
+            ->search()
+            ->from("a")
+            ->where()
+            ->node()
             ->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[89][1], $json);
     }
     public function testQueryBuilder90(): void
     {
+        $query = QueryBuilder::select()->indexes()->query();
+        $json = $query->jsonSerialize();
+        $this->assertEquals(self::$test_queries[90][1], $json);
+    }
+    public function testQueryBuilder91(): void
+    {
+        $query = QueryBuilder::select()->keys()->ids("a")->query();
+        $json = $query->jsonSerialize();
+        $this->assertEquals(self::$test_queries[91][1], $json);
+    }
+    public function testQueryBuilder92(): void
+    {
+        $query = QueryBuilder::select()
+            ->keys()
+            ->ids([1, 2])
+            ->query();
+        $json = $query->jsonSerialize();
+        $this->assertEquals(self::$test_queries[92][1], $json);
+    }
+    public function testQueryBuilder93(): void
+    {
+        $query = QueryBuilder::select()
+            ->keys()
+            ->ids(QueryBuilder::search()->from(1)->query())
+            ->query();
+        $json = $query->jsonSerialize();
+        $this->assertEquals(self::$test_queries[93][1], $json);
+    }
+    public function testQueryBuilder94(): void
+    {
+        $query = QueryBuilder::select()->keys()->search()->from(1)->query();
+        $json = $query->jsonSerialize();
+        $this->assertEquals(self::$test_queries[94][1], $json);
+    }
+    public function testQueryBuilder95(): void
+    {
+        $query = QueryBuilder::select()->key_count()->ids("a")->query();
+        $json = $query->jsonSerialize();
+        $this->assertEquals(self::$test_queries[95][1], $json);
+    }
+    public function testQueryBuilder96(): void
+    {
+        $query = QueryBuilder::select()
+            ->key_count()
+            ->ids([1, 2])
+            ->query();
+        $json = $query->jsonSerialize();
+        $this->assertEquals(self::$test_queries[96][1], $json);
+    }
+    public function testQueryBuilder97(): void
+    {
+        $query = QueryBuilder::select()
+            ->key_count()
+            ->ids(QueryBuilder::search()->from(1)->query())
+            ->query();
+        $json = $query->jsonSerialize();
+        $this->assertEquals(self::$test_queries[97][1], $json);
+    }
+    public function testQueryBuilder98(): void
+    {
+        $query = QueryBuilder::select()
+            ->key_count()
+            ->search()
+            ->from(1)
+            ->query();
+        $json = $query->jsonSerialize();
+        $this->assertEquals(self::$test_queries[98][1], $json);
+    }
+    public function testQueryBuilder99(): void
+    {
+        $query = QueryBuilder::select()->node_count()->query();
+        $json = $query->jsonSerialize();
+        $this->assertEquals(self::$test_queries[99][1], $json);
+    }
+    public function testQueryBuilder100(): void
+    {
+        $query = QueryBuilder::select()
+            ->values(["k", "k2"])
+            ->ids("a")
+            ->query();
+        $json = $query->jsonSerialize();
+        $this->assertEquals(self::$test_queries[100][1], $json);
+    }
+    public function testQueryBuilder101(): void
+    {
+        $query = QueryBuilder::select()
+            ->values(["k", "k2"])
+            ->ids([1, 2])
+            ->query();
+        $json = $query->jsonSerialize();
+        $this->assertEquals(self::$test_queries[101][1], $json);
+    }
+    public function testQueryBuilder102(): void
+    {
         $query = QueryBuilder::select()
             ->values(["k", "k2"])
             ->ids(QueryBuilder::search()->from(1)->query())
             ->query();
         $json = $query->jsonSerialize();
-        $this->assertEquals(self::$test_queries[90][1], $json);
+        $this->assertEquals(self::$test_queries[102][1], $json);
     }
-    public function testQueryBuilder91(): void
+    public function testQueryBuilder103(): void
     {
         $query = QueryBuilder::select()
             ->values(["k", "k2"])
@@ -821,198 +929,59 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->from(1)
             ->query();
         $json = $query->jsonSerialize();
-        $this->assertEquals(self::$test_queries[91][1], $json);
-    }
-    public function testQueryBuilder92(): void
-    {
-        $query = QueryBuilder::search()->from("a")->query();
-        $json = $query->jsonSerialize();
-        $this->assertEquals(self::$test_queries[92][1], $json);
-    }
-    public function testQueryBuilder93(): void
-    {
-        $query = QueryBuilder::search()->to(1)->query();
-        $json = $query->jsonSerialize();
-        $this->assertEquals(self::$test_queries[93][1], $json);
-    }
-    public function testQueryBuilder94(): void
-    {
-        $query = QueryBuilder::search()->from("a")->to("b")->query();
-        $json = $query->jsonSerialize();
-        $this->assertEquals(self::$test_queries[94][1], $json);
-    }
-    public function testQueryBuilder95(): void
-    {
-        $query = QueryBuilder::search()->to("a")->from("b")->query();
-        $json = $query->jsonSerialize();
-        $this->assertEquals(self::$test_queries[95][1], $json);
-    }
-    public function testQueryBuilder96(): void
-    {
-        $query = QueryBuilder::search()->breadth_first()->from("a")->query();
-        $json = $query->jsonSerialize();
-        $this->assertEquals(self::$test_queries[96][1], $json);
-    }
-    public function testQueryBuilder97(): void
-    {
-        $query = QueryBuilder::search()->depth_first()->to(1)->query();
-        $json = $query->jsonSerialize();
-        $this->assertEquals(self::$test_queries[97][1], $json);
-    }
-    public function testQueryBuilder98(): void
-    {
-        $query = QueryBuilder::search()->depth_first()->from("a")->query();
-        $json = $query->jsonSerialize();
-        $this->assertEquals(self::$test_queries[98][1], $json);
-    }
-    public function testQueryBuilder99(): void
-    {
-        $query = QueryBuilder::search()->elements()->query();
-        $json = $query->jsonSerialize();
-        $this->assertEquals(self::$test_queries[99][1], $json);
-    }
-    public function testQueryBuilder100(): void
-    {
-        $query = QueryBuilder::search()->index("age")->value(20)->query();
-        $json = $query->jsonSerialize();
-        $this->assertEquals(self::$test_queries[100][1], $json);
-    }
-    public function testQueryBuilder101(): void
-    {
-        $query = QueryBuilder::search()
-            ->index("age")
-            ->value(20)
-            ->limit(5)
-            ->query();
-        $json = $query->jsonSerialize();
-        $this->assertEquals(self::$test_queries[101][1], $json);
-    }
-    public function testQueryBuilder102(): void
-    {
-        $query = QueryBuilder::search()
-            ->index("age")
-            ->value(20)
-            ->offset(5)
-            ->query();
-        $json = $query->jsonSerialize();
-        $this->assertEquals(self::$test_queries[102][1], $json);
-    }
-    public function testQueryBuilder103(): void
-    {
-        $query = QueryBuilder::search()
-            ->index("age")
-            ->value(20)
-            ->offset(5)
-            ->limit(1)
-            ->query();
-        $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[103][1], $json);
     }
     public function testQueryBuilder104(): void
     {
-        $query = QueryBuilder::search()
-            ->index("age")
-            ->value(20)
-            ->offset(5)
-            ->limit(1)
-            ->where()
-            ->node()
-            ->query();
+        $query = QueryBuilder::search()->from("a")->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[104][1], $json);
     }
     public function testQueryBuilder105(): void
     {
-        $query = QueryBuilder::search()
-            ->index("age")
-            ->value(20)
-            ->limit(1)
-            ->where()
-            ->edge()
-            ->query();
+        $query = QueryBuilder::search()->to(1)->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[105][1], $json);
     }
     public function testQueryBuilder106(): void
     {
-        $query = QueryBuilder::search()
-            ->index("age")
-            ->value(20)
-            ->offset(5)
-            ->where()
-            ->keys(["name", "age"])
-            ->query();
+        $query = QueryBuilder::search()->from("a")->to("b")->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[106][1], $json);
     }
     public function testQueryBuilder107(): void
     {
-        $query = QueryBuilder::search()
-            ->index("age")
-            ->value(20)
-            ->where()
-            ->ids([1, 2])
-            ->query();
+        $query = QueryBuilder::search()->to("a")->from("b")->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[107][1], $json);
     }
     public function testQueryBuilder108(): void
     {
-        $query = QueryBuilder::search()
-            ->index("age")
-            ->value(20)
-            ->where()
-            ->not()
-            ->keys("name")
-            ->query();
+        $query = QueryBuilder::search()->breadth_first()->from("a")->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[108][1], $json);
     }
     public function testQueryBuilder109(): void
     {
-        $query = QueryBuilder::search()
-            ->index("age")
-            ->value(20)
-            ->where()
-            ->key("k")
-            ->greater_than(1)
-            ->query();
+        $query = QueryBuilder::search()->depth_first()->to(1)->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[109][1], $json);
     }
     public function testQueryBuilder110(): void
     {
-        $query = QueryBuilder::search()
-            ->index("age")
-            ->value(20)
-            ->where()
-            ->key("k")
-            ->greater_than_or_equal(1)
-            ->query();
+        $query = QueryBuilder::search()->depth_first()->from("a")->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[110][1], $json);
     }
     public function testQueryBuilder111(): void
     {
-        $query = QueryBuilder::search()
-            ->index("age")
-            ->value(20)
-            ->where()
-            ->key("k")
-            ->less_than(1)
-            ->query();
+        $query = QueryBuilder::search()->elements()->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[111][1], $json);
     }
     public function testQueryBuilder112(): void
     {
-        $query = QueryBuilder::search()
-            ->index("age")
-            ->value(20)
-            ->where()
-            ->key("k")
-            ->less_than_or_equal(1)
-            ->query();
+        $query = QueryBuilder::search()->index("age")->value(20)->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[112][1], $json);
     }
@@ -1021,9 +990,7 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
         $query = QueryBuilder::search()
             ->index("age")
             ->value(20)
-            ->where()
-            ->key("k")
-            ->not_equal(1)
+            ->limit(5)
             ->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[113][1], $json);
@@ -1033,9 +1000,7 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
         $query = QueryBuilder::search()
             ->index("age")
             ->value(20)
-            ->where()
-            ->key("k")
-            ->contains(1)
+            ->offset(5)
             ->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[114][1], $json);
@@ -1045,9 +1010,8 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
         $query = QueryBuilder::search()
             ->index("age")
             ->value(20)
-            ->where()
-            ->key("k")
-            ->starts_with(1)
+            ->offset(5)
+            ->limit(1)
             ->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[115][1], $json);
@@ -1057,9 +1021,10 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
         $query = QueryBuilder::search()
             ->index("age")
             ->value(20)
+            ->offset(5)
+            ->limit(1)
             ->where()
-            ->key("k")
-            ->ends_with(1)
+            ->node()
             ->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[116][1], $json);
@@ -1069,9 +1034,9 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
         $query = QueryBuilder::search()
             ->index("age")
             ->value(20)
+            ->limit(1)
             ->where()
-            ->key("k")
-            ->any(1)
+            ->edge()
             ->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[117][1], $json);
@@ -1081,8 +1046,9 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
         $query = QueryBuilder::search()
             ->index("age")
             ->value(20)
+            ->offset(5)
             ->where()
-            ->edge_count(2)
+            ->keys(["name", "age"])
             ->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[118][1], $json);
@@ -1093,7 +1059,7 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->index("age")
             ->value(20)
             ->where()
-            ->edge_count_from(1)
+            ->ids([1, 2])
             ->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[119][1], $json);
@@ -1104,7 +1070,8 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->index("age")
             ->value(20)
             ->where()
-            ->edge_count_to(1)
+            ->not()
+            ->keys("name")
             ->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[120][1], $json);
@@ -1115,7 +1082,8 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->index("age")
             ->value(20)
             ->where()
-            ->edge_count_greater_than(2)
+            ->key("k")
+            ->greater_than(1)
             ->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[121][1], $json);
@@ -1126,7 +1094,8 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->index("age")
             ->value(20)
             ->where()
-            ->edge_count_greater_than_or_equal(2)
+            ->key("k")
+            ->greater_than_or_equal(1)
             ->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[122][1], $json);
@@ -1137,7 +1106,8 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->index("age")
             ->value(20)
             ->where()
-            ->edge_count_less_than(2)
+            ->key("k")
+            ->less_than(1)
             ->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[123][1], $json);
@@ -1148,7 +1118,8 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->index("age")
             ->value(20)
             ->where()
-            ->edge_count_less_than_or_equal(2)
+            ->key("k")
+            ->less_than_or_equal(1)
             ->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[124][1], $json);
@@ -1159,7 +1130,8 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->index("age")
             ->value(20)
             ->where()
-            ->edge_count_not_equal(2)
+            ->key("k")
+            ->not_equal(1)
             ->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[125][1], $json);
@@ -1170,7 +1142,8 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->index("age")
             ->value(20)
             ->where()
-            ->edge_count_from_greater_than(1)
+            ->key("k")
+            ->contains(1)
             ->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[126][1], $json);
@@ -1181,7 +1154,8 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->index("age")
             ->value(20)
             ->where()
-            ->edge_count_from_greater_than_or_equal(1)
+            ->key("k")
+            ->starts_with(1)
             ->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[127][1], $json);
@@ -1192,7 +1166,8 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->index("age")
             ->value(20)
             ->where()
-            ->edge_count_from_less_than(1)
+            ->key("k")
+            ->ends_with(1)
             ->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[128][1], $json);
@@ -1203,7 +1178,8 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->index("age")
             ->value(20)
             ->where()
-            ->edge_count_from_less_than_or_equal(1)
+            ->key("k")
+            ->any(1)
             ->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[129][1], $json);
@@ -1214,7 +1190,7 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->index("age")
             ->value(20)
             ->where()
-            ->edge_count_from_not_equal(1)
+            ->edge_count(2)
             ->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[130][1], $json);
@@ -1225,7 +1201,7 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->index("age")
             ->value(20)
             ->where()
-            ->edge_count_to_greater_than(1)
+            ->edge_count_from(1)
             ->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[131][1], $json);
@@ -1236,7 +1212,7 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->index("age")
             ->value(20)
             ->where()
-            ->edge_count_to_greater_than_or_equal(1)
+            ->edge_count_to(1)
             ->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[132][1], $json);
@@ -1247,7 +1223,7 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->index("age")
             ->value(20)
             ->where()
-            ->edge_count_to_less_than(1)
+            ->edge_count_greater_than(2)
             ->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[133][1], $json);
@@ -1258,7 +1234,7 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->index("age")
             ->value(20)
             ->where()
-            ->edge_count_to_less_than_or_equal(1)
+            ->edge_count_greater_than_or_equal(2)
             ->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[134][1], $json);
@@ -1269,7 +1245,7 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->index("age")
             ->value(20)
             ->where()
-            ->edge_count_to_not_equal(1)
+            ->edge_count_less_than(2)
             ->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[135][1], $json);
@@ -1280,7 +1256,7 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->index("age")
             ->value(20)
             ->where()
-            ->node()
+            ->edge_count_less_than_or_equal(2)
             ->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[136][1], $json);
@@ -1291,12 +1267,144 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->index("age")
             ->value(20)
             ->where()
-            ->edge()
+            ->edge_count_not_equal(2)
             ->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[137][1], $json);
     }
     public function testQueryBuilder138(): void
+    {
+        $query = QueryBuilder::search()
+            ->index("age")
+            ->value(20)
+            ->where()
+            ->edge_count_from_greater_than(1)
+            ->query();
+        $json = $query->jsonSerialize();
+        $this->assertEquals(self::$test_queries[138][1], $json);
+    }
+    public function testQueryBuilder139(): void
+    {
+        $query = QueryBuilder::search()
+            ->index("age")
+            ->value(20)
+            ->where()
+            ->edge_count_from_greater_than_or_equal(1)
+            ->query();
+        $json = $query->jsonSerialize();
+        $this->assertEquals(self::$test_queries[139][1], $json);
+    }
+    public function testQueryBuilder140(): void
+    {
+        $query = QueryBuilder::search()
+            ->index("age")
+            ->value(20)
+            ->where()
+            ->edge_count_from_less_than(1)
+            ->query();
+        $json = $query->jsonSerialize();
+        $this->assertEquals(self::$test_queries[140][1], $json);
+    }
+    public function testQueryBuilder141(): void
+    {
+        $query = QueryBuilder::search()
+            ->index("age")
+            ->value(20)
+            ->where()
+            ->edge_count_from_less_than_or_equal(1)
+            ->query();
+        $json = $query->jsonSerialize();
+        $this->assertEquals(self::$test_queries[141][1], $json);
+    }
+    public function testQueryBuilder142(): void
+    {
+        $query = QueryBuilder::search()
+            ->index("age")
+            ->value(20)
+            ->where()
+            ->edge_count_from_not_equal(1)
+            ->query();
+        $json = $query->jsonSerialize();
+        $this->assertEquals(self::$test_queries[142][1], $json);
+    }
+    public function testQueryBuilder143(): void
+    {
+        $query = QueryBuilder::search()
+            ->index("age")
+            ->value(20)
+            ->where()
+            ->edge_count_to_greater_than(1)
+            ->query();
+        $json = $query->jsonSerialize();
+        $this->assertEquals(self::$test_queries[143][1], $json);
+    }
+    public function testQueryBuilder144(): void
+    {
+        $query = QueryBuilder::search()
+            ->index("age")
+            ->value(20)
+            ->where()
+            ->edge_count_to_greater_than_or_equal(1)
+            ->query();
+        $json = $query->jsonSerialize();
+        $this->assertEquals(self::$test_queries[144][1], $json);
+    }
+    public function testQueryBuilder145(): void
+    {
+        $query = QueryBuilder::search()
+            ->index("age")
+            ->value(20)
+            ->where()
+            ->edge_count_to_less_than(1)
+            ->query();
+        $json = $query->jsonSerialize();
+        $this->assertEquals(self::$test_queries[145][1], $json);
+    }
+    public function testQueryBuilder146(): void
+    {
+        $query = QueryBuilder::search()
+            ->index("age")
+            ->value(20)
+            ->where()
+            ->edge_count_to_less_than_or_equal(1)
+            ->query();
+        $json = $query->jsonSerialize();
+        $this->assertEquals(self::$test_queries[146][1], $json);
+    }
+    public function testQueryBuilder147(): void
+    {
+        $query = QueryBuilder::search()
+            ->index("age")
+            ->value(20)
+            ->where()
+            ->edge_count_to_not_equal(1)
+            ->query();
+        $json = $query->jsonSerialize();
+        $this->assertEquals(self::$test_queries[147][1], $json);
+    }
+    public function testQueryBuilder148(): void
+    {
+        $query = QueryBuilder::search()
+            ->index("age")
+            ->value(20)
+            ->where()
+            ->node()
+            ->query();
+        $json = $query->jsonSerialize();
+        $this->assertEquals(self::$test_queries[148][1], $json);
+    }
+    public function testQueryBuilder149(): void
+    {
+        $query = QueryBuilder::search()
+            ->index("age")
+            ->value(20)
+            ->where()
+            ->edge()
+            ->query();
+        $json = $query->jsonSerialize();
+        $this->assertEquals(self::$test_queries[149][1], $json);
+    }
+    public function testQueryBuilder150(): void
     {
         $query = QueryBuilder::search()
             ->index("age")
@@ -1313,9 +1421,9 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->end_where()
             ->query();
         $json = $query->jsonSerialize();
-        $this->assertEquals(self::$test_queries[138][1], $json);
+        $this->assertEquals(self::$test_queries[150][1], $json);
     }
-    public function testQueryBuilder139(): void
+    public function testQueryBuilder151(): void
     {
         $query = QueryBuilder::search()
             ->index("age")
@@ -1325,9 +1433,9 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->regex("pattern")
             ->query();
         $json = $query->jsonSerialize();
-        $this->assertEquals(self::$test_queries[139][1], $json);
+        $this->assertEquals(self::$test_queries[151][1], $json);
     }
-    public function testQueryBuilder140(): void
+    public function testQueryBuilder152(): void
     {
         $query = QueryBuilder::search()
             ->index("age")
@@ -1335,9 +1443,9 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->order_by([DbKeyOrderBuilder::Asc("k")])
             ->query();
         $json = $query->jsonSerialize();
-        $this->assertEquals(self::$test_queries[140][1], $json);
+        $this->assertEquals(self::$test_queries[152][1], $json);
     }
-    public function testQueryBuilder141(): void
+    public function testQueryBuilder153(): void
     {
         $query = QueryBuilder::search()
             ->index("age")
@@ -1347,9 +1455,9 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->node()
             ->query();
         $json = $query->jsonSerialize();
-        $this->assertEquals(self::$test_queries[141][1], $json);
+        $this->assertEquals(self::$test_queries[153][1], $json);
     }
-    public function testQueryBuilder142(): void
+    public function testQueryBuilder154(): void
     {
         $query = QueryBuilder::search()
             ->index("age")
@@ -1360,9 +1468,9 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->node()
             ->query();
         $json = $query->jsonSerialize();
-        $this->assertEquals(self::$test_queries[142][1], $json);
+        $this->assertEquals(self::$test_queries[154][1], $json);
     }
-    public function testQueryBuilder143(): void
+    public function testQueryBuilder155(): void
     {
         $query = QueryBuilder::search()
             ->index("age")
@@ -1373,9 +1481,9 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->node()
             ->query();
         $json = $query->jsonSerialize();
-        $this->assertEquals(self::$test_queries[143][1], $json);
+        $this->assertEquals(self::$test_queries[155][1], $json);
     }
-    public function testQueryBuilder144(): void
+    public function testQueryBuilder156(): void
     {
         $query = QueryBuilder::search()
             ->index("age")
@@ -1387,9 +1495,9 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->node()
             ->query();
         $json = $query->jsonSerialize();
-        $this->assertEquals(self::$test_queries[144][1], $json);
+        $this->assertEquals(self::$test_queries[156][1], $json);
     }
-    public function testQueryBuilder145(): void
+    public function testQueryBuilder157(): void
     {
         $query = QueryBuilder::search()
             ->from(1)
@@ -1399,123 +1507,17 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ])
             ->query();
         $json = $query->jsonSerialize();
-        $this->assertEquals(self::$test_queries[145][1], $json);
-    }
-    public function testQueryBuilder146(): void
-    {
-        $query = QueryBuilder::search()->from(1)->offset(10)->query();
-        $json = $query->jsonSerialize();
-        $this->assertEquals(self::$test_queries[146][1], $json);
-    }
-    public function testQueryBuilder147(): void
-    {
-        $query = QueryBuilder::search()->from(1)->limit(5)->query();
-        $json = $query->jsonSerialize();
-        $this->assertEquals(self::$test_queries[147][1], $json);
-    }
-    public function testQueryBuilder148(): void
-    {
-        $query = QueryBuilder::search()
-            ->from(1)
-            ->order_by([DbKeyOrderBuilder::Desc("k")])
-            ->offset(10)
-            ->query();
-        $json = $query->jsonSerialize();
-        $this->assertEquals(self::$test_queries[148][1], $json);
-    }
-    public function testQueryBuilder149(): void
-    {
-        $query = QueryBuilder::search()
-            ->from(1)
-            ->order_by([DbKeyOrderBuilder::Desc("k")])
-            ->limit(5)
-            ->query();
-        $json = $query->jsonSerialize();
-        $this->assertEquals(self::$test_queries[149][1], $json);
-    }
-    public function testQueryBuilder150(): void
-    {
-        $query = QueryBuilder::search()
-            ->from(1)
-            ->order_by([DbKeyOrderBuilder::Desc("k")])
-            ->offset(10)
-            ->limit(5)
-            ->query();
-        $json = $query->jsonSerialize();
-        $this->assertEquals(self::$test_queries[150][1], $json);
-    }
-    public function testQueryBuilder151(): void
-    {
-        $query = QueryBuilder::search()->from(1)->offset(10)->limit(5)->query();
-        $json = $query->jsonSerialize();
-        $this->assertEquals(self::$test_queries[151][1], $json);
-    }
-    public function testQueryBuilder152(): void
-    {
-        $query = QueryBuilder::search()
-            ->from(1)
-            ->where()
-            ->distance(CountComparisonBuilder::LessThan(3))
-            ->query();
-        $json = $query->jsonSerialize();
-        $this->assertEquals(self::$test_queries[152][1], $json);
-    }
-    public function testQueryBuilder153(): void
-    {
-        $query = QueryBuilder::search()->from(1)->where()->neighbor()->query();
-        $json = $query->jsonSerialize();
-        $this->assertEquals(self::$test_queries[153][1], $json);
-    }
-    public function testQueryBuilder154(): void
-    {
-        $query = QueryBuilder::search()->from(1)->where()->edge()->query();
-        $json = $query->jsonSerialize();
-        $this->assertEquals(self::$test_queries[154][1], $json);
-    }
-    public function testQueryBuilder155(): void
-    {
-        $query = QueryBuilder::search()
-            ->from(1)
-            ->where()
-            ->edge_count(CountComparisonBuilder::GreaterThan(2))
-            ->query();
-        $json = $query->jsonSerialize();
-        $this->assertEquals(self::$test_queries[155][1], $json);
-    }
-    public function testQueryBuilder156(): void
-    {
-        $query = QueryBuilder::search()
-            ->from(1)
-            ->where()
-            ->edge_count_from(1)
-            ->query();
-        $json = $query->jsonSerialize();
-        $this->assertEquals(self::$test_queries[156][1], $json);
-    }
-    public function testQueryBuilder157(): void
-    {
-        $query = QueryBuilder::search()
-            ->from(1)
-            ->where()
-            ->edge_count_to(CountComparisonBuilder::NotEqual(1))
-            ->query();
-        $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[157][1], $json);
     }
     public function testQueryBuilder158(): void
     {
-        $query = QueryBuilder::search()->from(1)->where()->node()->query();
+        $query = QueryBuilder::search()->from(1)->offset(10)->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[158][1], $json);
     }
     public function testQueryBuilder159(): void
     {
-        $query = QueryBuilder::search()
-            ->from(1)
-            ->where()
-            ->key("k")
-            ->value(1)
-            ->query();
+        $query = QueryBuilder::search()->from(1)->limit(5)->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[159][1], $json);
     }
@@ -1523,8 +1525,8 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
     {
         $query = QueryBuilder::search()
             ->from(1)
-            ->where()
-            ->keys(["k1", "k2"])
+            ->order_by([DbKeyOrderBuilder::Desc("k")])
+            ->offset(10)
             ->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[160][1], $json);
@@ -1533,9 +1535,8 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
     {
         $query = QueryBuilder::search()
             ->from(1)
-            ->where()
-            ->not()
-            ->keys(["k1", "k2"])
+            ->order_by([DbKeyOrderBuilder::Desc("k")])
+            ->limit(5)
             ->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[161][1], $json);
@@ -1544,20 +1545,16 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
     {
         $query = QueryBuilder::search()
             ->from(1)
-            ->where()
-            ->ids([1, 2])
+            ->order_by([DbKeyOrderBuilder::Desc("k")])
+            ->offset(10)
+            ->limit(5)
             ->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[162][1], $json);
     }
     public function testQueryBuilder163(): void
     {
-        $query = QueryBuilder::search()
-            ->from(1)
-            ->where()
-            ->beyond()
-            ->keys(["k"])
-            ->query();
+        $query = QueryBuilder::search()->from(1)->offset(10)->limit(5)->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[163][1], $json);
     }
@@ -1566,13 +1563,124 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
         $query = QueryBuilder::search()
             ->from(1)
             ->where()
-            ->not()
-            ->ids([1, 2])
+            ->distance(CountComparisonBuilder::LessThan(3))
             ->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[164][1], $json);
     }
     public function testQueryBuilder165(): void
+    {
+        $query = QueryBuilder::search()->from(1)->where()->neighbor()->query();
+        $json = $query->jsonSerialize();
+        $this->assertEquals(self::$test_queries[165][1], $json);
+    }
+    public function testQueryBuilder166(): void
+    {
+        $query = QueryBuilder::search()->from(1)->where()->edge()->query();
+        $json = $query->jsonSerialize();
+        $this->assertEquals(self::$test_queries[166][1], $json);
+    }
+    public function testQueryBuilder167(): void
+    {
+        $query = QueryBuilder::search()
+            ->from(1)
+            ->where()
+            ->edge_count(CountComparisonBuilder::GreaterThan(2))
+            ->query();
+        $json = $query->jsonSerialize();
+        $this->assertEquals(self::$test_queries[167][1], $json);
+    }
+    public function testQueryBuilder168(): void
+    {
+        $query = QueryBuilder::search()
+            ->from(1)
+            ->where()
+            ->edge_count_from(1)
+            ->query();
+        $json = $query->jsonSerialize();
+        $this->assertEquals(self::$test_queries[168][1], $json);
+    }
+    public function testQueryBuilder169(): void
+    {
+        $query = QueryBuilder::search()
+            ->from(1)
+            ->where()
+            ->edge_count_to(CountComparisonBuilder::NotEqual(1))
+            ->query();
+        $json = $query->jsonSerialize();
+        $this->assertEquals(self::$test_queries[169][1], $json);
+    }
+    public function testQueryBuilder170(): void
+    {
+        $query = QueryBuilder::search()->from(1)->where()->node()->query();
+        $json = $query->jsonSerialize();
+        $this->assertEquals(self::$test_queries[170][1], $json);
+    }
+    public function testQueryBuilder171(): void
+    {
+        $query = QueryBuilder::search()
+            ->from(1)
+            ->where()
+            ->key("k")
+            ->value(1)
+            ->query();
+        $json = $query->jsonSerialize();
+        $this->assertEquals(self::$test_queries[171][1], $json);
+    }
+    public function testQueryBuilder172(): void
+    {
+        $query = QueryBuilder::search()
+            ->from(1)
+            ->where()
+            ->keys(["k1", "k2"])
+            ->query();
+        $json = $query->jsonSerialize();
+        $this->assertEquals(self::$test_queries[172][1], $json);
+    }
+    public function testQueryBuilder173(): void
+    {
+        $query = QueryBuilder::search()
+            ->from(1)
+            ->where()
+            ->not()
+            ->keys(["k1", "k2"])
+            ->query();
+        $json = $query->jsonSerialize();
+        $this->assertEquals(self::$test_queries[173][1], $json);
+    }
+    public function testQueryBuilder174(): void
+    {
+        $query = QueryBuilder::search()
+            ->from(1)
+            ->where()
+            ->ids([1, 2])
+            ->query();
+        $json = $query->jsonSerialize();
+        $this->assertEquals(self::$test_queries[174][1], $json);
+    }
+    public function testQueryBuilder175(): void
+    {
+        $query = QueryBuilder::search()
+            ->from(1)
+            ->where()
+            ->beyond()
+            ->keys(["k"])
+            ->query();
+        $json = $query->jsonSerialize();
+        $this->assertEquals(self::$test_queries[175][1], $json);
+    }
+    public function testQueryBuilder176(): void
+    {
+        $query = QueryBuilder::search()
+            ->from(1)
+            ->where()
+            ->not()
+            ->ids([1, 2])
+            ->query();
+        $json = $query->jsonSerialize();
+        $this->assertEquals(self::$test_queries[176][1], $json);
+    }
+    public function testQueryBuilder177(): void
     {
         $query = QueryBuilder::search()
             ->from(1)
@@ -1581,9 +1689,9 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->ids("a")
             ->query();
         $json = $query->jsonSerialize();
-        $this->assertEquals(self::$test_queries[165][1], $json);
+        $this->assertEquals(self::$test_queries[177][1], $json);
     }
-    public function testQueryBuilder166(): void
+    public function testQueryBuilder178(): void
     {
         $query = QueryBuilder::search()
             ->from(1)
@@ -1593,9 +1701,9 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->edge()
             ->query();
         $json = $query->jsonSerialize();
-        $this->assertEquals(self::$test_queries[166][1], $json);
+        $this->assertEquals(self::$test_queries[178][1], $json);
     }
-    public function testQueryBuilder167(): void
+    public function testQueryBuilder179(): void
     {
         $query = QueryBuilder::search()
             ->from(1)
@@ -1605,9 +1713,9 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->distance(CountComparisonBuilder::GreaterThanOrEqual(3))
             ->query();
         $json = $query->jsonSerialize();
-        $this->assertEquals(self::$test_queries[167][1], $json);
+        $this->assertEquals(self::$test_queries[179][1], $json);
     }
-    public function testQueryBuilder168(): void
+    public function testQueryBuilder180(): void
     {
         $query = QueryBuilder::search()
             ->from(1)
@@ -1622,9 +1730,9 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->end_where()
             ->query();
         $json = $query->jsonSerialize();
-        $this->assertEquals(self::$test_queries[168][1], $json);
+        $this->assertEquals(self::$test_queries[180][1], $json);
     }
-    public function testQueryBuilder169(): void
+    public function testQueryBuilder181(): void
     {
         $query = QueryBuilder::search()
             ->from(1)
@@ -1639,9 +1747,9 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->end_where()
             ->query();
         $json = $query->jsonSerialize();
-        $this->assertEquals(self::$test_queries[169][1], $json);
+        $this->assertEquals(self::$test_queries[181][1], $json);
     }
-    public function testQueryBuilder170(): void
+    public function testQueryBuilder182(): void
     {
         $query = QueryBuilder::search()
             ->from(1)
@@ -1656,9 +1764,9 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->end_where()
             ->query();
         $json = $query->jsonSerialize();
-        $this->assertEquals(self::$test_queries[170][1], $json);
+        $this->assertEquals(self::$test_queries[182][1], $json);
     }
-    public function testQueryBuilder171(): void
+    public function testQueryBuilder183(): void
     {
         $query = QueryBuilder::search()
             ->from(1)
@@ -1673,9 +1781,9 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->end_where()
             ->query();
         $json = $query->jsonSerialize();
-        $this->assertEquals(self::$test_queries[171][1], $json);
+        $this->assertEquals(self::$test_queries[183][1], $json);
     }
-    public function testQueryBuilder172(): void
+    public function testQueryBuilder184(): void
     {
         $query = QueryBuilder::search()
             ->from(1)
@@ -1690,9 +1798,9 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->end_where()
             ->query();
         $json = $query->jsonSerialize();
-        $this->assertEquals(self::$test_queries[172][1], $json);
+        $this->assertEquals(self::$test_queries[184][1], $json);
     }
-    public function testQueryBuilder173(): void
+    public function testQueryBuilder185(): void
     {
         $query = QueryBuilder::search()
             ->from(1)
@@ -1707,132 +1815,15 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->end_where()
             ->query();
         $json = $query->jsonSerialize();
-        $this->assertEquals(self::$test_queries[173][1], $json);
-    }
-    public function testQueryBuilder174(): void
-    {
-        $query = QueryBuilder::search()
-            ->from(1)
-            ->order_by([DbKeyOrderBuilder::Asc("k")])
-            ->where()
-            ->node()
-            ->query();
-        $json = $query->jsonSerialize();
-        $this->assertEquals(self::$test_queries[174][1], $json);
-    }
-    public function testQueryBuilder175(): void
-    {
-        $query = QueryBuilder::search()
-            ->from(1)
-            ->limit(1)
-            ->where()
-            ->node()
-            ->query();
-        $json = $query->jsonSerialize();
-        $this->assertEquals(self::$test_queries[175][1], $json);
-    }
-    public function testQueryBuilder176(): void
-    {
-        $query = QueryBuilder::search()
-            ->from(1)
-            ->offset(1)
-            ->where()
-            ->node()
-            ->query();
-        $json = $query->jsonSerialize();
-        $this->assertEquals(self::$test_queries[176][1], $json);
-    }
-    public function testQueryBuilder177(): void
-    {
-        $query = QueryBuilder::search()->to(1)->offset(1)->query();
-        $json = $query->jsonSerialize();
-        $this->assertEquals(self::$test_queries[177][1], $json);
-    }
-    public function testQueryBuilder178(): void
-    {
-        $query = QueryBuilder::search()->to(1)->limit(1)->query();
-        $json = $query->jsonSerialize();
-        $this->assertEquals(self::$test_queries[178][1], $json);
-    }
-    public function testQueryBuilder179(): void
-    {
-        $query = QueryBuilder::search()->to(1)->where()->node()->query();
-        $json = $query->jsonSerialize();
-        $this->assertEquals(self::$test_queries[179][1], $json);
-    }
-    public function testQueryBuilder180(): void
-    {
-        $query = QueryBuilder::search()
-            ->to(1)
-            ->order_by([DbKeyOrderBuilder::Asc("k")])
-            ->where()
-            ->node()
-            ->query();
-        $json = $query->jsonSerialize();
-        $this->assertEquals(self::$test_queries[180][1], $json);
-    }
-    public function testQueryBuilder181(): void
-    {
-        $query = QueryBuilder::search()
-            ->from(1)
-            ->where()
-            ->key("k")
-            ->greater_than(1)
-            ->query();
-        $json = $query->jsonSerialize();
-        $this->assertEquals(self::$test_queries[181][1], $json);
-    }
-    public function testQueryBuilder182(): void
-    {
-        $query = QueryBuilder::search()
-            ->from(1)
-            ->where()
-            ->key("k")
-            ->greater_than_or_equal(1)
-            ->query();
-        $json = $query->jsonSerialize();
-        $this->assertEquals(self::$test_queries[182][1], $json);
-    }
-    public function testQueryBuilder183(): void
-    {
-        $query = QueryBuilder::search()
-            ->from(1)
-            ->where()
-            ->key("k")
-            ->less_than(1)
-            ->query();
-        $json = $query->jsonSerialize();
-        $this->assertEquals(self::$test_queries[183][1], $json);
-    }
-    public function testQueryBuilder184(): void
-    {
-        $query = QueryBuilder::search()
-            ->from(1)
-            ->where()
-            ->key("k")
-            ->less_than_or_equal(1)
-            ->query();
-        $json = $query->jsonSerialize();
-        $this->assertEquals(self::$test_queries[184][1], $json);
-    }
-    public function testQueryBuilder185(): void
-    {
-        $query = QueryBuilder::search()
-            ->from(1)
-            ->where()
-            ->key("k")
-            ->not_equal(1)
-            ->query();
-        $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[185][1], $json);
     }
     public function testQueryBuilder186(): void
     {
         $query = QueryBuilder::search()
             ->from(1)
+            ->order_by([DbKeyOrderBuilder::Asc("k")])
             ->where()
-            ->key("k")
-            ->contains(1)
+            ->node()
             ->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[186][1], $json);
@@ -1841,9 +1832,9 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
     {
         $query = QueryBuilder::search()
             ->from(1)
+            ->limit(1)
             ->where()
-            ->key("k")
-            ->starts_with(1)
+            ->node()
             ->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[187][1], $json);
@@ -1852,50 +1843,38 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
     {
         $query = QueryBuilder::search()
             ->from(1)
+            ->offset(1)
             ->where()
-            ->key("k")
-            ->ends_with(1)
+            ->node()
             ->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[188][1], $json);
     }
     public function testQueryBuilder189(): void
     {
-        $query = QueryBuilder::search()
-            ->from(1)
-            ->where()
-            ->key("k")
-            ->any(1)
-            ->query();
+        $query = QueryBuilder::search()->to(1)->offset(1)->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[189][1], $json);
     }
     public function testQueryBuilder190(): void
     {
-        $query = QueryBuilder::search()
-            ->from(1)
-            ->where()
-            ->distance_greater_than(3)
-            ->query();
+        $query = QueryBuilder::search()->to(1)->limit(1)->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[190][1], $json);
     }
     public function testQueryBuilder191(): void
     {
-        $query = QueryBuilder::search()
-            ->from(1)
-            ->where()
-            ->distance_greater_than_or_equal(3)
-            ->query();
+        $query = QueryBuilder::search()->to(1)->where()->node()->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[191][1], $json);
     }
     public function testQueryBuilder192(): void
     {
         $query = QueryBuilder::search()
-            ->from(1)
+            ->to(1)
+            ->order_by([DbKeyOrderBuilder::Asc("k")])
             ->where()
-            ->distance_less_than(3)
+            ->node()
             ->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[192][1], $json);
@@ -1905,7 +1884,8 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
         $query = QueryBuilder::search()
             ->from(1)
             ->where()
-            ->distance_less_than_or_equal(3)
+            ->key("k")
+            ->greater_than(1)
             ->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[193][1], $json);
@@ -1915,7 +1895,8 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
         $query = QueryBuilder::search()
             ->from(1)
             ->where()
-            ->distance_not_equal(3)
+            ->key("k")
+            ->greater_than_or_equal(1)
             ->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[194][1], $json);
@@ -1925,7 +1906,8 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
         $query = QueryBuilder::search()
             ->from(1)
             ->where()
-            ->edge_count_greater_than(2)
+            ->key("k")
+            ->less_than(1)
             ->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[195][1], $json);
@@ -1935,7 +1917,8 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
         $query = QueryBuilder::search()
             ->from(1)
             ->where()
-            ->edge_count_greater_than_or_equal(2)
+            ->key("k")
+            ->less_than_or_equal(1)
             ->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[196][1], $json);
@@ -1945,7 +1928,8 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
         $query = QueryBuilder::search()
             ->from(1)
             ->where()
-            ->edge_count_less_than(2)
+            ->key("k")
+            ->not_equal(1)
             ->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[197][1], $json);
@@ -1955,7 +1939,8 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
         $query = QueryBuilder::search()
             ->from(1)
             ->where()
-            ->edge_count_less_than_or_equal(2)
+            ->key("k")
+            ->contains(1)
             ->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[198][1], $json);
@@ -1965,7 +1950,8 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
         $query = QueryBuilder::search()
             ->from(1)
             ->where()
-            ->edge_count_not_equal(2)
+            ->key("k")
+            ->starts_with(1)
             ->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[199][1], $json);
@@ -1975,7 +1961,8 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
         $query = QueryBuilder::search()
             ->from(1)
             ->where()
-            ->edge_count_from_greater_than(1)
+            ->key("k")
+            ->ends_with(1)
             ->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[200][1], $json);
@@ -1985,7 +1972,8 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
         $query = QueryBuilder::search()
             ->from(1)
             ->where()
-            ->edge_count_from_greater_than_or_equal(1)
+            ->key("k")
+            ->any(1)
             ->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[201][1], $json);
@@ -1995,7 +1983,7 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
         $query = QueryBuilder::search()
             ->from(1)
             ->where()
-            ->edge_count_from_less_than(1)
+            ->distance_greater_than(3)
             ->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[202][1], $json);
@@ -2005,7 +1993,7 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
         $query = QueryBuilder::search()
             ->from(1)
             ->where()
-            ->edge_count_from_less_than_or_equal(1)
+            ->distance_greater_than_or_equal(3)
             ->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[203][1], $json);
@@ -2015,7 +2003,7 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
         $query = QueryBuilder::search()
             ->from(1)
             ->where()
-            ->edge_count_from_not_equal(1)
+            ->distance_less_than(3)
             ->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[204][1], $json);
@@ -2025,7 +2013,7 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
         $query = QueryBuilder::search()
             ->from(1)
             ->where()
-            ->edge_count_to_greater_than(1)
+            ->distance_less_than_or_equal(3)
             ->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[205][1], $json);
@@ -2035,7 +2023,7 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
         $query = QueryBuilder::search()
             ->from(1)
             ->where()
-            ->edge_count_to_greater_than_or_equal(1)
+            ->distance_not_equal(3)
             ->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[206][1], $json);
@@ -2045,7 +2033,7 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
         $query = QueryBuilder::search()
             ->from(1)
             ->where()
-            ->edge_count_to_less_than(1)
+            ->edge_count_greater_than(2)
             ->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[207][1], $json);
@@ -2055,7 +2043,7 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
         $query = QueryBuilder::search()
             ->from(1)
             ->where()
-            ->edge_count_to_less_than_or_equal(1)
+            ->edge_count_greater_than_or_equal(2)
             ->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[208][1], $json);
@@ -2065,7 +2053,7 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
         $query = QueryBuilder::search()
             ->from(1)
             ->where()
-            ->edge_count_to_not_equal(1)
+            ->edge_count_less_than(2)
             ->query();
         $json = $query->jsonSerialize();
         $this->assertEquals(self::$test_queries[209][1], $json);
@@ -2075,11 +2063,131 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
         $query = QueryBuilder::search()
             ->from(1)
             ->where()
+            ->edge_count_less_than_or_equal(2)
+            ->query();
+        $json = $query->jsonSerialize();
+        $this->assertEquals(self::$test_queries[210][1], $json);
+    }
+    public function testQueryBuilder211(): void
+    {
+        $query = QueryBuilder::search()
+            ->from(1)
+            ->where()
+            ->edge_count_not_equal(2)
+            ->query();
+        $json = $query->jsonSerialize();
+        $this->assertEquals(self::$test_queries[211][1], $json);
+    }
+    public function testQueryBuilder212(): void
+    {
+        $query = QueryBuilder::search()
+            ->from(1)
+            ->where()
+            ->edge_count_from_greater_than(1)
+            ->query();
+        $json = $query->jsonSerialize();
+        $this->assertEquals(self::$test_queries[212][1], $json);
+    }
+    public function testQueryBuilder213(): void
+    {
+        $query = QueryBuilder::search()
+            ->from(1)
+            ->where()
+            ->edge_count_from_greater_than_or_equal(1)
+            ->query();
+        $json = $query->jsonSerialize();
+        $this->assertEquals(self::$test_queries[213][1], $json);
+    }
+    public function testQueryBuilder214(): void
+    {
+        $query = QueryBuilder::search()
+            ->from(1)
+            ->where()
+            ->edge_count_from_less_than(1)
+            ->query();
+        $json = $query->jsonSerialize();
+        $this->assertEquals(self::$test_queries[214][1], $json);
+    }
+    public function testQueryBuilder215(): void
+    {
+        $query = QueryBuilder::search()
+            ->from(1)
+            ->where()
+            ->edge_count_from_less_than_or_equal(1)
+            ->query();
+        $json = $query->jsonSerialize();
+        $this->assertEquals(self::$test_queries[215][1], $json);
+    }
+    public function testQueryBuilder216(): void
+    {
+        $query = QueryBuilder::search()
+            ->from(1)
+            ->where()
+            ->edge_count_from_not_equal(1)
+            ->query();
+        $json = $query->jsonSerialize();
+        $this->assertEquals(self::$test_queries[216][1], $json);
+    }
+    public function testQueryBuilder217(): void
+    {
+        $query = QueryBuilder::search()
+            ->from(1)
+            ->where()
+            ->edge_count_to_greater_than(1)
+            ->query();
+        $json = $query->jsonSerialize();
+        $this->assertEquals(self::$test_queries[217][1], $json);
+    }
+    public function testQueryBuilder218(): void
+    {
+        $query = QueryBuilder::search()
+            ->from(1)
+            ->where()
+            ->edge_count_to_greater_than_or_equal(1)
+            ->query();
+        $json = $query->jsonSerialize();
+        $this->assertEquals(self::$test_queries[218][1], $json);
+    }
+    public function testQueryBuilder219(): void
+    {
+        $query = QueryBuilder::search()
+            ->from(1)
+            ->where()
+            ->edge_count_to_less_than(1)
+            ->query();
+        $json = $query->jsonSerialize();
+        $this->assertEquals(self::$test_queries[219][1], $json);
+    }
+    public function testQueryBuilder220(): void
+    {
+        $query = QueryBuilder::search()
+            ->from(1)
+            ->where()
+            ->edge_count_to_less_than_or_equal(1)
+            ->query();
+        $json = $query->jsonSerialize();
+        $this->assertEquals(self::$test_queries[220][1], $json);
+    }
+    public function testQueryBuilder221(): void
+    {
+        $query = QueryBuilder::search()
+            ->from(1)
+            ->where()
+            ->edge_count_to_not_equal(1)
+            ->query();
+        $json = $query->jsonSerialize();
+        $this->assertEquals(self::$test_queries[221][1], $json);
+    }
+    public function testQueryBuilder222(): void
+    {
+        $query = QueryBuilder::search()
+            ->from(1)
+            ->where()
             ->key("k")
             ->regex("pattern")
             ->query();
         $json = $query->jsonSerialize();
-        $this->assertEquals(self::$test_queries[210][1], $json);
+        $this->assertEquals(self::$test_queries[222][1], $json);
     }
 }
 

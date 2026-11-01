@@ -1,8 +1,5 @@
 # agplatform
 
-[![build](https://github.com/agnesoft/agnesoft/actions/workflows/agnesoft.yaml/badge.svg)](https://github.com/agnesoft/agnesoft/actions/workflows/agnesoft.yaml)
-[![codecov](https://codecov.io/gh/agnesoft/agnesoft/graph/badge.svg?token=lzOPcH5K2d)](https://codecov.io/gh/agnesoft/agnesoft)
-
 ## Crates
 
 ### agbench

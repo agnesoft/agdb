@@ -33,7 +33,7 @@ agplatform = { version = "0.5.0", path = "agplatform" }
 
 # EXTERNAL
 anyhow = "1"
-async_stream = "0.3"
+async-stream = "0.3"
 axum = "0.8"
 axum-extra = "0.12"
 axum-server = "0.8"

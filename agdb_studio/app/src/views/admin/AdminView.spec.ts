@@ -40,9 +40,11 @@ const mockServers: ClusterStatus[] = [
 
 const mockFetchAdminStatus = vi.fn();
 const mockFetchClusterStatus = vi.fn();
+const mockSetLogLevel = vi.fn();
 
 const mockAdminStatusRef = ref<AdminStatus | null>(mockAdminStatus);
 const mockAdminLoadingRef = ref(false);
+const mockSettingLogLevelRef = ref(false);
 const mockServersRef = ref<ClusterStatus[]>(mockServers);
 const mockClusterLoadingRef = ref(false);
 
@@ -50,8 +52,10 @@ vi.mock("@/composables/adminStatus", () => ({
   useAdminStatus: () => ({
     status: mockAdminStatusRef,
     isLoading: mockAdminLoadingRef,
+    isSettingLogLevel: mockSettingLogLevelRef,
     lastUpdated: ref(new Date()),
     fetchStatus: mockFetchAdminStatus,
+    setLogLevel: mockSetLogLevel,
     startPolling: vi.fn(),
     stopPolling: vi.fn(),
   }),
@@ -86,6 +90,7 @@ describe("AdminView", () => {
     vi.clearAllMocks();
     mockAdminStatusRef.value = mockAdminStatus;
     mockAdminLoadingRef.value = false;
+    mockSettingLogLevelRef.value = false;
     mockServersRef.value = mockServers;
     mockClusterLoadingRef.value = false;
   });
@@ -96,7 +101,10 @@ describe("AdminView", () => {
     expect(wrapper.find("[data-testid='stat-dbs']").text()).toBe("5");
     expect(wrapper.find("[data-testid='stat-users']").text()).toBe("10");
     expect(wrapper.find("[data-testid='stat-logged-in']").text()).toBe("3");
-    expect(wrapper.find("[data-testid='stat-log-level']").text()).toBe("info");
+    const select = wrapper.find<HTMLSelectElement>(
+      "[data-testid='log-level-select']",
+    );
+    expect(select.element.value).toBe("info");
     expect(wrapper.find("[data-testid='stat-memory']").text()).toBe(
       "268435456 bytes",
     );
@@ -189,5 +197,41 @@ describe("AdminView", () => {
 
     expect(mockFetchClusterStatus).toHaveBeenCalled();
     expect((btn.element as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it("renders log level select with all options", () => {
+    const wrapper = shallowMount(AdminView);
+    const options = wrapper.findAll("[data-testid='log-level-select'] option");
+    expect(options.map((o) => o.text())).toEqual([
+      "off",
+      "error",
+      "warn",
+      "info",
+      "debug",
+      "trace",
+    ]);
+  });
+
+  it("calls setLogLevel when log level select changes", async () => {
+    const wrapper = shallowMount(AdminView);
+    const select = wrapper.find<HTMLSelectElement>(
+      "[data-testid='log-level-select']",
+    );
+
+    select.element.value = "debug";
+    await select.trigger("change");
+
+    expect(mockSetLogLevel).toHaveBeenCalledWith("debug");
+  });
+
+  it("disables log level select while setting log level", () => {
+    mockSettingLogLevelRef.value = true;
+
+    const wrapper = shallowMount(AdminView);
+    const select = wrapper.find<HTMLSelectElement>(
+      "[data-testid='log-level-select']",
+    );
+
+    expect(select.element.disabled).toBe(true);
   });
 });

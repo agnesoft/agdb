@@ -7,6 +7,7 @@ import {
   mockDbUserListApi,
   mockDbExecApi,
   gotoDbPage,
+  gotoAndWaitForLoad,
 } from "./mocks/api-helpers";
 
 test.describe("Query View", () => {
@@ -33,13 +34,13 @@ test.describe("Query View", () => {
   });
 
   test("displays database name in heading", async ({ page }) => {
-    await page.goto("/studio/query/admin/users");
+    await gotoAndWaitForLoad(page, "/studio/query/admin/users");
     await expect(page.locator("h1")).toContainText("admin/users");
     await expect(page.locator("h1")).toContainText("query");
   });
 
   test("renders query builder tabs", async ({ page }) => {
-    await page.goto("/studio/query/admin/users");
+    await gotoAndWaitForLoad(page, "/studio/query/admin/users");
     const tabs = page.locator('[role="tab"]');
     await expect(tabs).toHaveCount(3);
     await expect(tabs.nth(0)).toHaveText("exec");
@@ -48,13 +49,13 @@ test.describe("Query View", () => {
   });
 
   test("exec tab is active by default", async ({ page }) => {
-    await page.goto("/studio/query/admin/users");
+    await gotoAndWaitForLoad(page, "/studio/query/admin/users");
     const execTab = page.locator('[role="tab"]').nth(0);
     await expect(execTab).toHaveAttribute("aria-selected", "true");
   });
 
   test("switching tabs changes active tab", async ({ page }) => {
-    await page.goto("/studio/query/admin/users");
+    await gotoAndWaitForLoad(page, "/studio/query/admin/users");
     const tabs = page.locator('[role="tab"]');
 
     // Click on exec_mut tab

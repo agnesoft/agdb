@@ -1,12 +1,18 @@
 import { test, expect } from "./fixtures/agdb.fixtures";
 import { testIds, dynamicIds } from "./test-ids";
 import { LOGIN_API, LOGOUT_API } from "./api-paths";
-import { mockDatabaseListApi, mockDbActionApi } from "./mocks/api-helpers";
+import {
+  mockDatabaseListApi,
+  mockDbActionApi,
+  mockLogin,
+  gotoAndWaitForLoad,
+  gotoDbPage,
+} from "./mocks/api-helpers";
 
 test.describe("Authentication", () => {
   test.beforeEach(async ({ page }) => {
     await mockDatabaseListApi(page);
-    await page.goto("/studio/login");
+    await gotoAndWaitForLoad(page, "/studio/login");
   });
 
   test("login user successfully", async ({ ui, page }) => {
@@ -17,7 +23,8 @@ test.describe("Authentication", () => {
     await ui.click(testIds.BUTTON_LOGIN);
 
     // Assert navigation or UI changes after login
-    await page.goto("/studio/db");
+    await mockLogin(page);
+    await gotoDbPage(page);
     await expect(page).toHaveURL(/.*\/studio\/db/);
     await ui.element(testIds.LOGIN_FORM).isHidden();
   });

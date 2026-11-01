@@ -1981,9 +1981,7 @@ describe("query tests", () => {
             InsertValues: {
                 ids: { Ids: [{ Id: 1 }] },
                 values: {
-                    Multi: [
-                        [{ key: { String: "k" }, value: { I64: 1 } }],
-                    ],
+                    Multi: [[{ key: { String: "k" }, value: { I64: 1 } }]],
                 },
                 amend: { AddBitwise: "Or" },
             },
@@ -2015,9 +2013,7 @@ describe("query tests", () => {
             InsertValues: {
                 ids: { Ids: [{ Id: 1 }] },
                 values: {
-                    Multi: [
-                        [{ key: { String: "k" }, value: { I64: 1 } }],
-                    ],
+                    Multi: [[{ key: { String: "k" }, value: { I64: 1 } }]],
                 },
                 amend: { AddBitwise: "And" },
             },
@@ -2049,9 +2045,7 @@ describe("query tests", () => {
             InsertValues: {
                 ids: { Ids: [{ Id: 1 }] },
                 values: {
-                    Multi: [
-                        [{ key: { String: "k" }, value: { I64: 1 } }],
-                    ],
+                    Multi: [[{ key: { String: "k" }, value: { I64: 1 } }]],
                 },
                 amend: { AddBitwise: "Xor" },
             },
@@ -2083,9 +2077,7 @@ describe("query tests", () => {
             InsertValues: {
                 ids: { Ids: [{ Id: 1 }] },
                 values: {
-                    Multi: [
-                        [{ key: { String: "k" }, value: { I64: 1 } }],
-                    ],
+                    Multi: [[{ key: { String: "k" }, value: { I64: 1 } }]],
                 },
                 amend: { RemoveBitwise: "Or" },
             },
@@ -2117,9 +2109,7 @@ describe("query tests", () => {
             InsertValues: {
                 ids: { Ids: [{ Id: 1 }] },
                 values: {
-                    Multi: [
-                        [{ key: { String: "k" }, value: { I64: 1 } }],
-                    ],
+                    Multi: [[{ key: { String: "k" }, value: { I64: 1 } }]],
                 },
                 amend: { RemoveBitwise: "And" },
             },

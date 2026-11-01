@@ -726,6 +726,60 @@ class InsertBuilder {
             amend: "Add",
         });
     }
+
+    amend_or(values: BuilderDbKeyValue[][]): InsertValuesBuilder {
+        return new InsertValuesBuilder({
+            ids: { Ids: [] },
+            values: {
+                Multi: values.map((item) => item.map(convertToDbKeyValue)),
+            },
+            amend: { AddBitwise: "Or" },
+        });
+    }
+
+    amend_or_uniform(vals: BuilderDbKeyValue[]): InsertValuesBuilder {
+        return new InsertValuesBuilder({
+            ids: { Ids: [] },
+            values: { Single: vals.map(convertToDbKeyValue) },
+            amend: { AddBitwise: "Or" },
+        });
+    }
+
+    amend_and(values: BuilderDbKeyValue[][]): InsertValuesBuilder {
+        return new InsertValuesBuilder({
+            ids: { Ids: [] },
+            values: {
+                Multi: values.map((item) => item.map(convertToDbKeyValue)),
+            },
+            amend: { AddBitwise: "And" },
+        });
+    }
+
+    amend_and_uniform(vals: BuilderDbKeyValue[]): InsertValuesBuilder {
+        return new InsertValuesBuilder({
+            ids: { Ids: [] },
+            values: { Single: vals.map(convertToDbKeyValue) },
+            amend: { AddBitwise: "And" },
+        });
+    }
+
+    amend_xor(values: BuilderDbKeyValue[][]): InsertValuesBuilder {
+        return new InsertValuesBuilder({
+            ids: { Ids: [] },
+            values: {
+                Multi: values.map((item) => item.map(convertToDbKeyValue)),
+            },
+            amend: { AddBitwise: "Xor" },
+        });
+    }
+
+    amend_xor_uniform(vals: BuilderDbKeyValue[]): InsertValuesBuilder {
+        return new InsertValuesBuilder({
+            ids: { Ids: [] },
+            values: { Single: vals.map(convertToDbKeyValue) },
+            amend: { AddBitwise: "Xor" },
+        });
+    }
 }
 
 class RemoveIdsBuilder {
@@ -836,6 +890,60 @@ class RemoveBuilder {
             ids: { Ids: [] },
             values: { Single: vals.map(convertToDbKeyValue) },
             amend: "Remove",
+        });
+    }
+
+    amend_or(values: BuilderDbKeyValue[][]): InsertValuesBuilder {
+        return new InsertValuesBuilder({
+            ids: { Ids: [] },
+            values: {
+                Multi: values.map((item) => item.map(convertToDbKeyValue)),
+            },
+            amend: { RemoveBitwise: "Or" },
+        });
+    }
+
+    amend_or_uniform(vals: BuilderDbKeyValue[]): InsertValuesBuilder {
+        return new InsertValuesBuilder({
+            ids: { Ids: [] },
+            values: { Single: vals.map(convertToDbKeyValue) },
+            amend: { RemoveBitwise: "Or" },
+        });
+    }
+
+    amend_and(values: BuilderDbKeyValue[][]): InsertValuesBuilder {
+        return new InsertValuesBuilder({
+            ids: { Ids: [] },
+            values: {
+                Multi: values.map((item) => item.map(convertToDbKeyValue)),
+            },
+            amend: { RemoveBitwise: "And" },
+        });
+    }
+
+    amend_and_uniform(vals: BuilderDbKeyValue[]): InsertValuesBuilder {
+        return new InsertValuesBuilder({
+            ids: { Ids: [] },
+            values: { Single: vals.map(convertToDbKeyValue) },
+            amend: { RemoveBitwise: "And" },
+        });
+    }
+
+    amend_xor(values: BuilderDbKeyValue[][]): InsertValuesBuilder {
+        return new InsertValuesBuilder({
+            ids: { Ids: [] },
+            values: {
+                Multi: values.map((item) => item.map(convertToDbKeyValue)),
+            },
+            amend: { RemoveBitwise: "Xor" },
+        });
+    }
+
+    amend_xor_uniform(vals: BuilderDbKeyValue[]): InsertValuesBuilder {
+        return new InsertValuesBuilder({
+            ids: { Ids: [] },
+            values: { Single: vals.map(convertToDbKeyValue) },
+            amend: { RemoveBitwise: "Xor" },
         });
     }
 }

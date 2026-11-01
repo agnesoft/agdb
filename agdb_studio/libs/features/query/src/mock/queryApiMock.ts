@@ -224,6 +224,14 @@ export const queryApiMock: Record<string, QueryApiMockType> = {
     "insert.nodes",
     "insert.values",
     "insert.values_uniform",
+    "insert.amend",
+    "insert.amend_uniform",
+    "insert.amend_or",
+    "insert.amend_or_uniform",
+    "insert.amend_and",
+    "insert.amend_and_uniform",
+    "insert.amend_xor",
+    "insert.amend_xor_uniform",
   ]),
   "insert.aliases": node(
     "aliases",
@@ -300,6 +308,42 @@ export const queryApiMock: Record<string, QueryApiMockType> = {
     KV_ARGUMENTS,
   ),
   "insert.values.ids": node("ids", ["query"], ID_ARGUMENTS),
+  "insert.amend": node("amend", ["insert.values.ids", "search"], KV_ARGUMENTS),
+  "insert.amend_uniform": node(
+    "amend_uniform",
+    ["insert.values.ids", "search"],
+    KV_ARGUMENTS,
+  ),
+  "insert.amend_or": node(
+    "amend_or",
+    ["insert.values.ids", "search"],
+    KV_ARGUMENTS,
+  ),
+  "insert.amend_or_uniform": node(
+    "amend_or_uniform",
+    ["insert.values.ids", "search"],
+    KV_ARGUMENTS,
+  ),
+  "insert.amend_and": node(
+    "amend_and",
+    ["insert.values.ids", "search"],
+    KV_ARGUMENTS,
+  ),
+  "insert.amend_and_uniform": node(
+    "amend_and_uniform",
+    ["insert.values.ids", "search"],
+    KV_ARGUMENTS,
+  ),
+  "insert.amend_xor": node(
+    "amend_xor",
+    ["insert.values.ids", "search"],
+    KV_ARGUMENTS,
+  ),
+  "insert.amend_xor_uniform": node(
+    "amend_xor_uniform",
+    ["insert.values.ids", "search"],
+    KV_ARGUMENTS,
+  ),
 
   remove: node("remove", [
     "remove.aliases",
@@ -307,6 +351,14 @@ export const queryApiMock: Record<string, QueryApiMockType> = {
     "search",
     "remove.index",
     "remove.values",
+    "remove.amend",
+    "remove.amend_uniform",
+    "remove.amend_or",
+    "remove.amend_or_uniform",
+    "remove.amend_and",
+    "remove.amend_and_uniform",
+    "remove.amend_xor",
+    "remove.amend_xor_uniform",
   ]),
   "remove.aliases": node("aliases", ["query"], STRING_LIST_ARGUMENTS),
   "remove.ids": node("ids", ["query"], ID_ARGUMENTS),
@@ -317,6 +369,43 @@ export const queryApiMock: Record<string, QueryApiMockType> = {
     LIST_VALUE_ARGUMENTS,
   ),
   "remove.values.ids": node("ids", ["query"], ID_ARGUMENTS),
+  "remove.amend": node("amend", ["remove.amend.ids", "search"], KV_ARGUMENTS),
+  "remove.amend_uniform": node(
+    "amend_uniform",
+    ["remove.amend.ids", "search"],
+    KV_ARGUMENTS,
+  ),
+  "remove.amend_or": node(
+    "amend_or",
+    ["remove.amend.ids", "search"],
+    KV_ARGUMENTS,
+  ),
+  "remove.amend_or_uniform": node(
+    "amend_or_uniform",
+    ["remove.amend.ids", "search"],
+    KV_ARGUMENTS,
+  ),
+  "remove.amend_and": node(
+    "amend_and",
+    ["remove.amend.ids", "search"],
+    KV_ARGUMENTS,
+  ),
+  "remove.amend_and_uniform": node(
+    "amend_and_uniform",
+    ["remove.amend.ids", "search"],
+    KV_ARGUMENTS,
+  ),
+  "remove.amend_xor": node(
+    "amend_xor",
+    ["remove.amend.ids", "search"],
+    KV_ARGUMENTS,
+  ),
+  "remove.amend_xor_uniform": node(
+    "amend_xor_uniform",
+    ["remove.amend.ids", "search"],
+    KV_ARGUMENTS,
+  ),
+  "remove.amend.ids": node("ids", ["query"], ID_ARGUMENTS),
 
   select: node("select", [
     "select.aliases",

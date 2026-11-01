@@ -711,10 +711,12 @@ class InsertIndexBuilder
 class InsertValuesBuilder
 {
     private QueryValues $data;
-    private ?string $amend;
+    private string|object|null $amend;
 
-    public function __construct(QueryValues $data, ?string $amend = null)
-    {
+    public function __construct(
+        QueryValues $data,
+        string|object|null $amend = null
+    ) {
         $this->data = $data;
         $this->amend = $amend;
     }
@@ -833,6 +835,66 @@ class InsertBuilder
     {
         return new InsertValuesBuilder(to_single_values($data), "Add");
     }
+
+    public function amend_or(array $data): InsertValuesBuilder
+    {
+        return new InsertValuesBuilder(
+            to_multi_values($data),
+            (object) [
+                "AddBitwise" => "Or",
+            ]
+        );
+    }
+
+    public function amend_or_uniform(array $data): InsertValuesBuilder
+    {
+        return new InsertValuesBuilder(
+            to_single_values($data),
+            (object) [
+                "AddBitwise" => "Or",
+            ]
+        );
+    }
+
+    public function amend_and(array $data): InsertValuesBuilder
+    {
+        return new InsertValuesBuilder(
+            to_multi_values($data),
+            (object) [
+                "AddBitwise" => "And",
+            ]
+        );
+    }
+
+    public function amend_and_uniform(array $data): InsertValuesBuilder
+    {
+        return new InsertValuesBuilder(
+            to_single_values($data),
+            (object) [
+                "AddBitwise" => "And",
+            ]
+        );
+    }
+
+    public function amend_xor(array $data): InsertValuesBuilder
+    {
+        return new InsertValuesBuilder(
+            to_multi_values($data),
+            (object) [
+                "AddBitwise" => "Xor",
+            ]
+        );
+    }
+
+    public function amend_xor_uniform(array $data): InsertValuesBuilder
+    {
+        return new InsertValuesBuilder(
+            to_single_values($data),
+            (object) [
+                "AddBitwise" => "Xor",
+            ]
+        );
+    }
 }
 
 class RemoveAliasesBuilder
@@ -947,6 +1009,66 @@ class RemoveBuilder
     public function amend_uniform(array $data): InsertValuesBuilder
     {
         return new InsertValuesBuilder(to_single_values($data), "Remove");
+    }
+
+    public function amend_or(array $data): InsertValuesBuilder
+    {
+        return new InsertValuesBuilder(
+            to_multi_values($data),
+            (object) [
+                "RemoveBitwise" => "Or",
+            ]
+        );
+    }
+
+    public function amend_or_uniform(array $data): InsertValuesBuilder
+    {
+        return new InsertValuesBuilder(
+            to_single_values($data),
+            (object) [
+                "RemoveBitwise" => "Or",
+            ]
+        );
+    }
+
+    public function amend_and(array $data): InsertValuesBuilder
+    {
+        return new InsertValuesBuilder(
+            to_multi_values($data),
+            (object) [
+                "RemoveBitwise" => "And",
+            ]
+        );
+    }
+
+    public function amend_and_uniform(array $data): InsertValuesBuilder
+    {
+        return new InsertValuesBuilder(
+            to_single_values($data),
+            (object) [
+                "RemoveBitwise" => "And",
+            ]
+        );
+    }
+
+    public function amend_xor(array $data): InsertValuesBuilder
+    {
+        return new InsertValuesBuilder(
+            to_multi_values($data),
+            (object) [
+                "RemoveBitwise" => "Xor",
+            ]
+        );
+    }
+
+    public function amend_xor_uniform(array $data): InsertValuesBuilder
+    {
+        return new InsertValuesBuilder(
+            to_single_values($data),
+            (object) [
+                "RemoveBitwise" => "Xor",
+            ]
+        );
     }
 }
 

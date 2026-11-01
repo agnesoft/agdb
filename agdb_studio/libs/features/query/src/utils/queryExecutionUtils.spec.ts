@@ -289,6 +289,96 @@ describe("buildQueryFromSteps", () => {
     );
   });
 
+  it("maps insert amend into nested key-value pairs", () => {
+    expect(
+      buildQueryFromSteps([
+        step("insert"),
+        step("insert.amend", [
+          [field("string", "counter"), field("signed", "5")],
+        ]),
+        step("insert.values.ids", [[field("signed", "1")]]),
+      ]),
+    ).toEqual(
+      QueryBuilder.insert()
+        .amend([[["counter", 5]]])
+        .ids(1)
+        .query(),
+    );
+  });
+
+  it("maps insert amend_uniform into flat key-value pairs", () => {
+    expect(
+      buildQueryFromSteps([
+        step("insert"),
+        step("insert.amend_uniform", [
+          [field("string", "score"), field("unsigned", "10")],
+        ]),
+        step("insert.values.ids", [
+          [field("signed", "1")],
+          [field("signed", "2")],
+        ]),
+      ]),
+    ).toEqual(
+      QueryBuilder.insert()
+        .amend_uniform([["score", { U64: 10 }]])
+        .ids([1, 2])
+        .query(),
+    );
+  });
+
+  it("maps insert amend_or into nested key-value pairs with bitwise Or", () => {
+    expect(
+      buildQueryFromSteps([
+        step("insert"),
+        step("insert.amend_or", [
+          [field("string", "flags"), field("unsigned", "4")],
+        ]),
+        step("insert.values.ids", [[field("signed", "1")]]),
+      ]),
+    ).toEqual(
+      QueryBuilder.insert()
+        .amend_or([[["flags", { U64: 4 }]]])
+        .ids(1)
+        .query(),
+    );
+  });
+
+  it("maps remove amend into nested key-value pairs", () => {
+    expect(
+      buildQueryFromSteps([
+        step("remove"),
+        step("remove.amend", [
+          [field("string", "tags"), field("string", "old")],
+        ]),
+        step("remove.amend.ids", [[field("signed", "1")]]),
+      ]),
+    ).toEqual(
+      QueryBuilder.remove()
+        .amend([[["tags", "old"]]])
+        .ids(1)
+        .query(),
+    );
+  });
+
+  it("maps remove amend_uniform with search", () => {
+    expect(
+      buildQueryFromSteps([
+        step("remove"),
+        step("remove.amend_uniform", [
+          [field("string", "counter"), field("signed", "1")],
+        ]),
+        step("search"),
+        step("search.from", [[field("string", "a")]]),
+      ]),
+    ).toEqual(
+      QueryBuilder.remove()
+        .amend_uniform([["counter", 1]])
+        .search()
+        .from("a")
+        .query(),
+    );
+  });
+
   it("maps search from and to ids", () => {
     expect(
       buildQueryFromSteps([

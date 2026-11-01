@@ -713,8 +713,10 @@ class InsertValuesBuilder
     private QueryValues $data;
     private string|array|null $amend;
 
-    public function __construct(QueryValues $data, string|array|null $amend = null)
-    {
+    public function __construct(
+        QueryValues $data,
+        string|array|null $amend = null
+    ) {
         $this->data = $data;
         $this->amend = $amend;
     }

@@ -389,7 +389,7 @@ where
         key: &K,
         value: &T,
     ) -> Result<bool, DbError> {
-        self.multi_map.contains_value(storage, key, value)
+        Ok(self.multi_map.value(storage, key)?.as_ref() == Some(value))
     }
 
     pub fn insert(
@@ -417,7 +417,7 @@ where
     }
 
     pub fn remove(&mut self, storage: &mut Storage<D>, key: &K) -> Result<(), DbError> {
-        self.multi_map.remove_key(storage, key)
+        self.multi_map.remove_key_impl(storage, key, true)
     }
 
     #[allow(dead_code)]

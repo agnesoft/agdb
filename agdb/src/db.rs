@@ -700,7 +700,6 @@ impl<Store: StorageData> DbImpl<Store> {
                 alias: old_alias.clone(),
             });
             self.aliases.remove_key(&mut self.storage, &old_alias)?;
-            self.aliases.remove_key(&mut self.storage, &old_alias)?;
         }
 
         self.undo_stack.push(Command::RemoveAlias {
@@ -1220,7 +1219,6 @@ impl<Store: StorageData> DbImpl<Store> {
                 alias: alias.clone(),
                 id: db_id,
             });
-            self.aliases.remove_key(&mut self.storage, &alias)?;
             self.aliases.remove_key(&mut self.storage, &alias)?;
         }
 

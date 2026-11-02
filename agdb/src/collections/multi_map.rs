@@ -103,6 +103,7 @@ where
         }
     }
 
+    #[allow(dead_code)]
     pub fn contains_value(
         &self,
         storage: &Storage<D>,
@@ -143,6 +144,7 @@ where
         let start_pos = pos;
         let mut free_pos = None;
         let mut ret = None;
+        let mut wrapped = false;
 
         loop {
             match self.data.state(storage, pos)? {
@@ -170,12 +172,17 @@ where
             pos = self.next_pos(pos);
 
             if pos == start_pos {
+                wrapped = true;
                 break;
             }
         }
 
         if let Some(pos) = free_pos {
             self.do_insert(storage, pos, key, new_value)?;
+        }
+
+        if wrapped {
+            self.purge_deleted(storage)?;
         }
 
         self.data.commit(storage, id)?;
@@ -220,47 +227,9 @@ where
         self.data.len()
     }
 
+    #[allow(dead_code)]
     pub fn remove_key(&mut self, storage: &mut Storage<D>, key: &K) -> Result<(), DbError> {
-        if self.capacity() == 0 {
-            return Ok(());
-        }
-
-        let hash = key.stable_hash();
-        let mut pos = hash % self.capacity();
-        let start_pos = pos;
-        let mut len = self.len();
-
-        let id = self.data.transaction(storage);
-
-        loop {
-            match self.data.state(storage, pos)? {
-                MapValueState::Empty => break,
-                MapValueState::Valid if self.data.key(storage, pos)? == *key => {
-                    self.drop_value(storage, pos)?;
-                    len -= 1;
-                }
-                MapValueState::Valid | MapValueState::Deleted => {}
-            }
-
-            pos = self.next_pos(pos);
-
-            if pos == start_pos {
-                if len == self.len() {
-                    self.rehash(storage, self.capacity())?;
-                }
-                break;
-            }
-        }
-
-        if len != self.len() {
-            self.data.set_len(storage, len)?;
-
-            if self.len() <= self.min_len() {
-                self.rehash(storage, self.capacity() / 2)?;
-            }
-        }
-
-        self.data.commit(storage, id)
+        self.remove_key_impl(storage, key, false)
     }
 
     pub fn remove_value(
@@ -292,7 +261,7 @@ where
             }
 
             if pos == start_pos {
-                self.rehash(storage, self.capacity())?;
+                self.purge_deleted(storage)?;
                 break;
             }
         }
@@ -396,6 +365,11 @@ where
         } else {
             pos + 1
         }
+    }
+
+    fn purge_deleted(&mut self, storage: &mut Storage<D>) -> Result<(), DbError> {
+        let capacity = self.capacity();
+        self.rehash_values(storage, capacity, capacity)
     }
 
     fn rehash(&mut self, storage: &mut Storage<D>, capacity: u64) -> Result<(), DbError> {
@@ -507,6 +481,56 @@ where
         }
 
         Ok(())
+    }
+
+    pub(super) fn remove_key_impl(
+        &mut self,
+        storage: &mut Storage<D>,
+        key: &K,
+        unique: bool,
+    ) -> Result<(), DbError> {
+        if self.capacity() == 0 {
+            return Ok(());
+        }
+
+        let hash = key.stable_hash();
+        let mut pos = hash % self.capacity();
+        let start_pos = pos;
+        let mut len = self.len();
+
+        let id = self.data.transaction(storage);
+
+        loop {
+            match self.data.state(storage, pos)? {
+                MapValueState::Empty => break,
+                MapValueState::Valid if self.data.key(storage, pos)? == *key => {
+                    self.drop_value(storage, pos)?;
+                    len -= 1;
+
+                    if unique {
+                        break;
+                    }
+                }
+                MapValueState::Valid | MapValueState::Deleted => {}
+            }
+
+            pos = self.next_pos(pos);
+
+            if pos == start_pos {
+                self.purge_deleted(storage)?;
+                break;
+            }
+        }
+
+        if len != self.len() {
+            self.data.set_len(storage, len)?;
+
+            if self.len() <= self.min_len() {
+                self.rehash(storage, self.capacity() / 2)?;
+            }
+        }
+
+        self.data.commit(storage, id)
     }
 
     fn shrink(
@@ -847,6 +871,20 @@ mod tests {
     }
 
     #[test]
+    fn remove_key_impl_unique_stops_after_first_match() {
+        let mut storage: Storage<MemoryStorage> = Storage::new("test").unwrap();
+        let mut map = MultiMapStorage::<u64, u64, MemoryStorage>::new(&mut storage).unwrap();
+
+        map.insert(&mut storage, &1, &10).unwrap();
+        map.insert(&mut storage, &1, &20).unwrap();
+
+        map.remove_key_impl(&mut storage, &1, true).unwrap();
+
+        assert_eq!(map.values(&storage, &1).unwrap(), vec![20]);
+        assert_eq!(map.len(), 1);
+    }
+
+    #[test]
     fn deadlock_test_value() {
         let mut storage: Storage<MemoryStorage> = Storage::new("test").unwrap();
         let mut map = MultiMapStorage::<u64, u64, MemoryStorage>::new(&mut storage).unwrap();
@@ -896,6 +934,86 @@ mod tests {
         assert!(map.len() < map.max_len());
         assert_eq!(map.max_len(), 240);
         assert_eq!(map.value(&storage, &10_000).unwrap(), None);
+    }
+
+    fn saturated_map(
+        storage: &mut Storage<MemoryStorage>,
+    ) -> MultiMapStorage<u64, u64, MemoryStorage> {
+        let mut map = MultiMapStorage::<u64, u64, MemoryStorage>::new(storage).unwrap();
+        map.reserve(storage, 256).unwrap();
+
+        for i in 0..240_u64 {
+            map.insert(storage, &i, &i).unwrap();
+        }
+
+        for i in 0..34_u64 {
+            map.remove_value(storage, &i, &i).unwrap();
+        }
+
+        for i in 240..256_u64 {
+            map.insert(storage, &i, &i).unwrap();
+        }
+
+        assert_eq!(state_count(&map, storage, MapValueState::Empty), 0);
+        map
+    }
+
+    fn state_count(
+        map: &MultiMapStorage<u64, u64, MemoryStorage>,
+        storage: &Storage<MemoryStorage>,
+        state: MapValueState,
+    ) -> u64 {
+        (0..map.capacity())
+            .filter(|i| map.data.state(storage, *i).unwrap() == state)
+            .count() as u64
+    }
+
+    fn assert_purged(
+        map: &MultiMapStorage<u64, u64, MemoryStorage>,
+        storage: &Storage<MemoryStorage>,
+    ) {
+        assert_eq!(map.capacity(), 256);
+        assert_eq!(state_count(map, storage, MapValueState::Deleted), 0);
+        assert_eq!(state_count(map, storage, MapValueState::Valid), map.len());
+
+        for i in 34..256_u64 {
+            assert_eq!(map.value(storage, &i).unwrap(), Some(i));
+        }
+    }
+
+    #[test]
+    fn remove_value_missing_purges_deleted() {
+        let mut storage: Storage<MemoryStorage> = Storage::new("test").unwrap();
+        let mut map = saturated_map(&mut storage);
+
+        map.remove_value(&mut storage, &10_000, &10_000).unwrap();
+
+        assert_eq!(map.len(), 222);
+        assert_purged(&map, &storage);
+    }
+
+    #[test]
+    fn remove_key_missing_purges_deleted() {
+        let mut storage: Storage<MemoryStorage> = Storage::new("test").unwrap();
+        let mut map = saturated_map(&mut storage);
+
+        map.remove_key(&mut storage, &10_000).unwrap();
+
+        assert_eq!(map.len(), 222);
+        assert_purged(&map, &storage);
+    }
+
+    #[test]
+    fn insert_or_replace_wrapped_purges_deleted() {
+        let mut storage: Storage<MemoryStorage> = Storage::new("test").unwrap();
+        let mut map = saturated_map(&mut storage);
+
+        map.insert_or_replace(&mut storage, &10_000, |_| false, &10_000)
+            .unwrap();
+
+        assert_eq!(map.len(), 223);
+        assert_eq!(map.value(&storage, &10_000).unwrap(), Some(10_000));
+        assert_purged(&map, &storage);
     }
 
     #[test]

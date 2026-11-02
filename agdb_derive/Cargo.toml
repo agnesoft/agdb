@@ -1,20 +1,19 @@
 [package]
 name = "agdb_derive"
 version = "0.16.0"
-edition = "2024"
-license = "Apache-2.0"
-homepage = "https://github.com/agnesoft/agdb"
-repository = "https://github.com/agnesoft/agdb"
-documentation = "https://github.com/agnesoft/agdb"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
 readme = "../README.md"
 description = "Agnesoft Graph Database - derive macros"
 keywords = ["graph", "database"]
 categories = ["database", "database-implementations"]
 
 [lib]
+bench = false
 proc-macro = true
 
 [dependencies]
-proc-macro2 = "1"
-quote = "1"
-syn = { version = "3", features = ["full", "extra-traits"] }
+proc-macro2.workspace = true
+quote.workspace = true
+syn = { workspace = true, features = ["full", "extra-traits"] }

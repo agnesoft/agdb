@@ -1,12 +1,15 @@
 [workspace]
 resolver = "2"
 members = [
+    "agbench",
     "agdb",
     "agdb_benchmark",
     "agdb_ci",
     "agdb_derive",
     "agdb_server",
     "agdb_api",
+    "agplatform",
+    "agtestcheck",
     "examples/app_db",
     "examples/indexes",
     "examples/joins",
@@ -14,3 +17,49 @@ members = [
     "examples/server_client_rust",
     "examples/user_types",
 ]
+
+[workspace.package]
+edition = "2024"
+license = "Apache-2.0"
+repository = "https://github.com/agnesoft/agdb"
+
+[workspace.dependencies]
+# LOCAL
+agbench = { version = "0.5.0", path = "agbench" }
+agdb = {version = "0.16.0", path = "agdb" }
+agdb_derive = {version = "0.16.0", path = "agdb_derive" }
+agdb_api = { version = "0.16.0", path = "agdb_api" }
+agplatform = { version = "0.5.0", path = "agplatform" }
+
+# EXTERNAL
+anyhow = "1"
+async-stream = "0.3"
+axum = "0.8"
+axum-extra = "0.12"
+axum-server = "0.8"
+bytes = "1"
+crc = "3"
+futures = "0.3"
+http = "1"
+http-body = "1"
+http-body-util = "0.1"
+include_dir = "0.7"
+num-format = "0.4" # ? used in agdb_benchmark
+proc-macro2 = "1"
+quote = "1"
+regex = "1"
+reqwest = "0.13"
+ring = "0.17"
+rustls = "0.23"
+serde = "1"
+serde_json = "1"
+serde_yaml = "0.9" # deprecated
+syn = "3"
+tikv-jemallocator = "0.7"
+tokio = "1"
+tower = "0.5"
+tower-http = "0.7"
+uuid = "1"
+utoipa = "6"
+utoipa-rapidoc = "7"
+windows-sys = "0.61"

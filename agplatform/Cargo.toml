@@ -1,0 +1,121 @@
+[package]
+name = "agplatform"
+version = "0.5.0"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+readme = "README.md"
+description = "Platform providing env, fs, request and process infrastructure for production and testing"
+keywords = ["build", "test"]
+categories = ["development-tools"]
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
+
+[lib]
+bench = false
+
+[[bench]]
+name = "env"
+harness = false
+required-features = ["env"]
+
+[[bench]]
+name = "fs"
+harness = false
+required-features = ["fs"]
+
+[[bench]]
+name = "process"
+harness = false
+required-features = ["process", "tokio"]
+
+[[bench]]
+name = "request"
+harness = false
+required-features = ["request", "tokio"]
+
+[[example]]
+name = "env"
+required-features = ["env"]
+doc-scrape-examples = true
+test = true
+
+[[example]]
+name = "fs"
+required-features = ["fs"]
+doc-scrape-examples = true
+test = true
+
+[[example]]
+name = "process"
+required-features = ["process"]
+doc-scrape-examples = true
+test = true
+
+[[example]]
+name = "process_async"
+required-features = ["process", "tokio"]
+doc-scrape-examples = true
+test = true
+
+[[example]]
+name = "request"
+required-features = ["request"]
+doc-scrape-examples = true
+test = true
+
+[[example]]
+name = "request_async"
+required-features = ["request", "tokio"]
+doc-scrape-examples = true
+test = true
+
+[[example]]
+name = "download"
+required-features = ["fs", "request"]
+doc-scrape-examples = true
+test = true
+
+[[example]]
+name = "threads"
+required-features = ["fs", "process"]
+doc-scrape-examples = true
+test = true
+
+[[example]]
+name = "async_mirror"
+required-features = ["fs", "process", "request", "tokio"]
+doc-scrape-examples = true
+test = true
+
+[[test]]
+name = "platform_test"
+required-features = ["fs", "process", "request"]
+
+[features]
+default = []
+env = []
+fs = ["env"]
+interceptor = []
+native-tls = ["request", "reqwest/native-tls"]
+process = ["env", "interceptor", "tokio?/io-util", "tokio?/process"]
+request = ["env", "interceptor", "dep:bytes", "dep:http", "dep:http-body-util", "dep:reqwest", "reqwest/blocking"]
+testing = ["tokio?/sync"]
+tls = ["request", "reqwest/rustls"]
+tokio = ["dep:tokio", "tokio/time"]
+
+[dependencies]
+bytes = { workspace = true, default-features = false, optional = true }
+http = { workspace = true, default-features = false, optional = true }
+http-body-util = { workspace = true, optional = true }
+reqwest = { workspace = true, default-features = false, optional = true }
+tokio = { workspace = true, default-features = false, optional = true }
+
+[dev-dependencies]
+agbench.workspace = true
+# Path only (no version) so that publishing strips them, required for tests to enable the "testing" feature when developing in the repo.
+agplatform = { path = ".", features = ["testing"] }
+http-body.workspace = true
+tokio = { workspace = true, default-features = false, features = ["rt"] }

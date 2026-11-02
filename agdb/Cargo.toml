@@ -1,17 +1,16 @@
 [package]
 name = "agdb"
 version = "0.16.0"
-edition = "2024"
-license = "Apache-2.0"
-homepage = "https://github.com/agnesoft/agdb"
-repository = "https://github.com/agnesoft/agdb"
-documentation = "https://github.com/agnesoft/agdb"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
 readme = "../README.md"
 description = "Agnesoft Graph Database"
 keywords = ["graph", "database"]
 categories = ["database", "database-implementations"]
 
 [lib]
+bench = false
 
 [features]
 default = ["derive"]
@@ -22,11 +21,11 @@ regex = ["dep:regex"]
 serde = ["dep:serde"]
 
 [dependencies]
-agdb_derive = { version = "0.16.0", path = "../agdb_derive", optional = true }
-regex = { version = "1", optional = true }
-utoipa = { version = "6", optional = true }
-serde = { version = "1", features = ["derive"], optional = true }
-tokio = { version = "1", features = ["macros", "rt", "sync"], optional = true }
+agdb_derive = { workspace = true, optional = true }
+regex = { workspace = true, optional = true }
+utoipa = { workspace = true, optional = true }
+serde = { workspace = true, features = ["derive"], optional = true }
+tokio = { workspace = true, features = ["macros", "rt", "sync"], optional = true }
 
 [dev-dependencies]
-serde_json = { version = "1" }
+serde_json.workspace = true

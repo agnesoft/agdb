@@ -69,7 +69,7 @@ const filteredNavigation = computed<ContentNavigationItem[]>(() => {
         </UPageAside>
       </template>
 
-      <slot></slot>
+      <slot />
     </UPage>
   </UContainer>
 </template>

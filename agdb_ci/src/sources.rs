@@ -15,7 +15,9 @@ pub(crate) fn current_version() -> Result<String, CIError> {
 }
 
 pub(crate) fn new_version() -> Result<String, CIError> {
-    Ok(std::fs::read_to_string(Path::new("Version"))?
-        .trim()
-        .to_string())
+    Ok(std::fs::read_to_string(Path::new("Cargo.toml"))?
+        .lines()
+        .find(|line| line.trim_start().starts_with("version"))
+        .and_then(|line| line.trim_start().split('"').nth(1).map(|v| v.to_string()))
+        .ok_or("version not found")?)
 }

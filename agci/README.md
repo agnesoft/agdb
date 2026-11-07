@@ -1,6 +1,6 @@
 # description
 
-The `agci` utility helps automate the release process. It determines the current version by reading the version of the `agdb` crate. It then reads the new version from the `Version` file in the root of the repository. Finally, it updates all current versions of to the new one in all packages - Rust, Typescript etc. It bumps both versions of the packages (if present) and of the following dependencies (if declared). For typescript projects it additionally runs `pnpm install` to update the dependencies (also updates `package-lock.json`):
+The `agci` utility helps automate the release process. It determines the current version from the latest `v*` git tag and reads the new version from the root `Cargo.toml` (`[workspace.package].version`). It then updates version strings in workspace packages (e.g. TypeScript `package.json` files) and regenerates OpenAPI/client artifacts and test queries. For TypeScript projects it also runs `pnpm install`, which updates `pnpm-lock.yaml`.
 
 - agdb
 - agdb_derive
@@ -23,9 +23,9 @@ In order to release a new version of the packages in the repository:
 
 2. Create a branch for the issue, e.g. `999-ci-release-1-2-3`.
 
-3. Update the `Version` file to the new version, e.g. `1.2.3`.
+3. Update the version in the root `Cargo.toml` (the `[workspace.package].version` value).
 
-4. Run the `agci` (NOTE: the pull request pipelines contain a validation that will fail if the `Version` file changed but the packages do not match it, i.e. the `agci` was not run.)
+4. Run `agci` (NOTE: the pull request pipeline contains a validation that will fail if `Cargo.toml` changed but generated packages/artifacts do not match it, i.e. `agci` was not run.)
 
 ```
 cargo run --release -p agci

@@ -49,21 +49,27 @@ pub(crate) struct Dependency {
 #[derive(serde::Deserialize)]
 pub(crate) struct Package {
     pub path: String,
-    pub private: bool,
     #[serde(default)]
     pub name: String,
     #[serde(default)]
     pub version: String,
     #[serde(default)]
     pub dependencies: BTreeMap<String, Dependency>,
-    #[serde(default)]
+    #[serde(default, rename = "devDependencies")]
     pub dev_dependencies: BTreeMap<String, Dependency>,
 }
 
 pub(crate) fn packages() -> Result<Vec<Package>, CIError> {
-    let output = Command::new("bash")
-        .arg("-c")
+    #[cfg(windows)]
+    let output = Command::new("cmd")
+        .arg("/C")
         .arg("pnpm list --only-projects --json")
+        .output()?;
+    #[cfg(not(windows))]
+    let output = Command::new("pnpm")
+        .arg("list")
+        .arg("--only-projects")
+        .arg("--json")
         .output()?;
     Ok(serde_json::from_slice(&output.stdout)?)
 }

@@ -34,15 +34,6 @@ fn ci() -> Result<(), CIError> {
 }
 
 fn main() -> Result<(), CIError> {
-    for p in typescript::packages()? {
-        println!(
-            "Package: {} ({} / {}) {}",
-            p.name,
-            p.version,
-            if p.private { "private" } else { "public" },
-            p.path
-        );
-    }
     Ok(())
     //ci().inspect_err(|e| println!("Error: {}", e.description))
 }

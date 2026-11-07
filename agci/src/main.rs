@@ -1,6 +1,6 @@
 mod ci_error;
+mod git;
 mod language;
-mod sources;
 mod utilities;
 
 use crate::ci_error::CIError;
@@ -11,8 +11,8 @@ use std::path::Path;
 use std::process::Command;
 
 fn ci() -> Result<(), CIError> {
-    let current_version = sources::current_version()?;
-    let new_version = sources::new_version()?;
+    let current_version = git::current_version()?;
+    let new_version = git::new_version()?;
     println!("Current version: {current_version}");
     println!("New version: {new_version}");
     language::update_versions(Path::new("./"), &current_version, &new_version)?;

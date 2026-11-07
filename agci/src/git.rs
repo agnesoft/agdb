@@ -21,3 +21,21 @@ pub(crate) fn new_version() -> Result<String, CIError> {
         .and_then(|line| line.trim_start().split('"').nth(1).map(|v| v.to_string()))
         .ok_or("version not found")?)
 }
+
+pub(crate) fn changed_dirs() -> Result<Vec<String>, CIError> {
+    let output = run_command(
+        Command::new("git")
+            .arg("diff")
+            .arg("--name-only")
+            .arg("origin/main"),
+    )?;
+    let dirs = output
+        .lines()
+        .filter_map(|line| {
+            Path::new(line)
+                .parent()
+                .map(|p| p.to_string_lossy().to_string())
+        })
+        .collect();
+    Ok(dirs)
+}

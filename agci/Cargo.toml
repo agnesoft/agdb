@@ -1,5 +1,5 @@
 [package]
-name = "agdb_ci"
+name = "agci"
 edition.workspace = true
 license.workspace = true
 publish = false

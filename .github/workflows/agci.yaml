@@ -1,17 +1,17 @@
-name: agdb_ci
+name: agci
 
 on:
   pull_request:
     branches: ["main"]
     paths:
-      - agdb_ci/**
+      - agci/**
       - Version
       - agdb_server/openapi.json
       - agdb_server/test_queries.json
-      - .github/workflows/agdb_ci.yaml
+      - .github/workflows/agci.yaml
 
 jobs:
-  agdb_ci:
+  agci:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -25,13 +25,13 @@ jobs:
         with:
           node-version: "24"
           registry-url: "https://registry.npmjs.org"
-      - run: cargo fmt -p agdb_ci --check
-      - run: cargo clippy -p agdb_ci --all-targets --all-features -- -D warnings
-      - run: cargo run -p agdb_ci -r
+      - run: cargo fmt -p agci --check
+      - run: cargo clippy -p agci --all-targets --all-features -- -D warnings
+      - run: cargo run -p agci -r
       - run: |
           if [[ "$(git diff --name-only)" != "" ]]; then
             git diff
             git diff --name-only
-            echo "ERROR: Some packages have not been updated. Please run 'cargo run -p agdb_ci -r' and commit the result."
+            echo "ERROR: Some packages have not been updated. Please run 'cargo run -p agci -r' and commit the result."
             exit 1
           fi

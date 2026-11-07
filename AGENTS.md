@@ -20,7 +20,7 @@ API client packages are available for Rust, TypeScript, and PHP. The OpenAPI spe
 
 # Available commands
 
-- OpenAPI, API refresh and version bump: `cargo run -r -p agdb_ci`. Run when agdb_server/src/api.rs, agdb_server/openapi.json or Version file changes.
+- OpenAPI, API refresh and version bump: `cargo run -r -p agci`. Run when agdb_server/src/api.rs, agdb_server/openapi.json or Version file changes.
 
 ## Rust
 
@@ -56,9 +56,9 @@ The packages are curated lists of main packages. They contain exact names of pac
 
 ## Rust
 
+- agci
 - agdb
 - agdb_benchmark
-- agdb_ci
 - agdb_derive
 - agdb_server
 - agdb_api

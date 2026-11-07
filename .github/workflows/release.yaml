@@ -106,10 +106,7 @@ jobs:
           node-version: "24"
           registry-url: "https://registry.npmjs.org"
       - run: |
-          cargo publish -p agdb_derive --token ${CRATES_IO_TOKEN}
-          cargo publish -p agdb --token ${CRATES_IO_TOKEN}
-          cargo publish -p agdb_api --token ${CRATES_IO_TOKEN}
-          cargo publish -p agdb_server --token ${CRATES_IO_TOKEN}
+          cargo publish --token ${CRATES_IO_TOKEN}
         env:
           CRATES_IO_TOKEN: ${{ secrets.CRATES_IO_TOKEN }}
 

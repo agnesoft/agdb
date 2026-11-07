@@ -4,6 +4,7 @@ edition.workspace = true
 license.workspace = true
 publish = false
 
+
 [dependencies]
 anyhow.workspace = true
 agdb = { workspace = true, features = ["serde", "openapi"] }

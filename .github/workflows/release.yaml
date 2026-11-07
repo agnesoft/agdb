@@ -71,8 +71,11 @@ jobs:
           fetch-depth: 0
       - id: new_version
         run: |
-          if [[ "$(git diff HEAD^ --name-only -- Version)" != "" ]]; then echo "new_version=$(cat Version | xargs)" >> $GITHUB_OUTPUT; fi
-          echo "New version: $(cat Version)"
+          if [[ "$(git diff HEAD^ --name-only -- Cargo.toml)" != "" ]]; then
+            version=$(cat Cargo.toml | grep version | head -n 1 | cut -d '"' -f 2)
+            echo "new_version=$version" >> $GITHUB_OUTPUT
+            echo "New version: $version"
+          fi
 
   release:
     runs-on: ubuntu-latest

@@ -38,9 +38,6 @@ pub fn update_versions(
 
         if path.is_dir() {
             update_versions(path.as_path(), current_version, new_version)?;
-        } else if filename.ends_with(".toml") {
-            println!("Updating '{}'", path.to_string_lossy().replace('\\', "/"));
-            rust::update_version(path.as_path(), current_version, new_version)?;
         } else if filename == "package.json" {
             println!("Updating '{}'", path.to_string_lossy().replace('\\', "/"));
             typescript::update_version(path.as_path(), current_version, new_version)?;

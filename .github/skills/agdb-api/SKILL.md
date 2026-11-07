@@ -493,13 +493,13 @@ The `agdb_server/openapi.json` is the single source of truth for the API contrac
 
 The spec is regenerated when API routes, response types, or error codes change.
 
-**Command**: `cargo run -r -p agdb_ci`
+**Command**: `cargo run -r -p agci`
 
 ## API transpilation workflow
 
 When adding support for new languages:
 
-1. **Ensure openapi.json is current** — Run `cargo run -r -p agdb_ci`
+1. **Ensure openapi.json is current** — Run `cargo run -r -p agci`
 2. **Generate client** — Use openapi-generator:
    ```bash
    openapi-generator-cli generate \
@@ -571,5 +571,5 @@ Before adding new endpoints:
 - [ ] Security requirement (`Token` auth) is specified
 - [ ] Operation id is unique and matches handler name
 - [ ] Description explains intent and side effects
-- [ ] OpenAPI spec is regenerated with `cargo run -r -p agdb_ci`
+- [ ] OpenAPI spec is regenerated with `cargo run -r -p agci`
 - [ ] Rust client method added in `agdb_api/src/client.rs`

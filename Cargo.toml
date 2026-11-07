@@ -1,9 +1,9 @@
 [workspace]
 resolver = "2"
 members = [
+    "agci",
     "agdb_api",
     "agdb_benchmark",
-    "agdb_ci",
     "agdb_derive",
     "agdb_server",
     "agdb",

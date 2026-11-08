@@ -34,6 +34,5 @@ fn ci() -> Result<(), CIError> {
 }
 
 fn main() -> Result<(), CIError> {
-    Ok(())
-    //ci().inspect_err(|e| println!("Error: {}", e.description))
+    ci().inspect_err(|e| println!("Error: {}", e.description))
 }

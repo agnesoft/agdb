@@ -17,25 +17,33 @@ export const ORDER_DIRECTIONS = ["asc", "desc"] as const;
 
 export type OrderDirection = (typeof ORDER_DIRECTIONS)[number];
 
+/** Convenience method suffixes for count conditions (e.g. `distance_greater_than`). Equality is the base method. */
 export const COUNT_COMPARISONS = [
-  "equal",
-  "greaterThan",
-  "greaterThanOrEqual",
-  "lessThan",
-  "lessThanOrEqual",
-  "notEqual",
+  "greater_than",
+  "greater_than_or_equal",
+  "less_than",
+  "less_than_or_equal",
+  "not_equal",
 ] as const;
 
-export type CountComparison = (typeof COUNT_COMPARISONS)[number];
-
-export const COMPARISON = [
+/** Convenience methods following `key(KEY)`. Equality is `value()`. */
+export const COMPARISONS = [
+  "value",
   ...COUNT_COMPARISONS,
   "contains",
-  "startsWith",
-  "endsWith",
+  "starts_with",
+  "ends_with",
+  "any",
+  "regex",
 ] as const;
 
-export type Comparison = (typeof COMPARISON)[number];
+/** Conditions that take a count and have count comparison convenience methods. */
+const COUNT_CONDITIONS = [
+  "distance",
+  "edge_count",
+  "edge_count_from",
+  "edge_count_to",
+] as const;
 
 export const IDS = ["signed", "string"] as const;
 
@@ -71,16 +79,6 @@ export const OPTION_TYPE_MAP: Record<string, OptionValueType> = {
   // ORDER_DIRECTIONS
   asc: null,
   desc: null,
-  // COUNT_COMPARISONS / COMPARISON
-  equal: null,
-  greaterThan: null,
-  greaterThanOrEqual: null,
-  lessThan: null,
-  lessThanOrEqual: null,
-  notEqual: null,
-  contains: null,
-  startsWith: null,
-  endsWith: null,
 };
 
 /** Maps option names to compact labels used in query argument dropdowns. */
@@ -99,16 +97,6 @@ export const OPTION_SHORTCUT_MAP: Record<string, string> = {
   // ORDER_DIRECTIONS
   asc: "↑",
   desc: "↓",
-  // COUNT_COMPARISONS / COMPARISON
-  equal: "=",
-  greaterThan: ">",
-  greaterThanOrEqual: "≥",
-  lessThan: "<",
-  lessThanOrEqual: "≤",
-  notEqual: "≠",
-  contains: "∋",
-  startsWith: "⊢",
-  endsWith: "⊣",
 };
 
 export type ArgumentField = {
@@ -162,13 +150,9 @@ const ORDER_BY_ARGUMENTS: QueryArguments = {
   repeatable: true,
 };
 
-const COUNT_COMPARISON_ARGUMENTS: QueryArguments = {
-  fields: [{ options: COUNT_COMPARISONS }, { options: NUMBER }],
-  repeatable: false,
-};
-
-const COMPARISON_ARGUMENTS: QueryArguments = {
-  fields: [{ options: COMPARISON }, { options: VALUE_TYPES }],
+/** Regex patterns are only matched when given as a string. */
+const STRING_VALUE_ARGUMENTS: QueryArguments = {
+  fields: [{ options: ["string"] }],
   repeatable: false,
 };
 
@@ -199,12 +183,31 @@ const WHERE_LOGIC = [
   "query",
 ] as const;
 
+type CountConditionMethod =
+  | (typeof COUNT_CONDITIONS)[number]
+  | `${(typeof COUNT_CONDITIONS)[number]}_${(typeof COUNT_COMPARISONS)[number]}`;
+
+const COUNT_CONDITION_METHODS: readonly CountConditionMethod[] =
+  COUNT_CONDITIONS.flatMap((condition) => [
+    condition,
+    ...COUNT_COMPARISONS.map(
+      (comparison) => `${condition}_${comparison}` as const,
+    ),
+  ]);
+
+/** Step types taking a single count, e.g. `search.where.distance_greater_than`. */
+export const WHERE_COUNT_CONDITION_STEPS = COUNT_CONDITION_METHODS.map(
+  (method) => `search.where.${method}` as const,
+);
+
+/** Step types following `key(KEY)` taking a single value, e.g. `search.where.key.contains`. */
+export const WHERE_KEY_COMPARISON_STEPS = COMPARISONS.map(
+  (comparison) => `search.where.key.${comparison}` as const,
+);
+
 const WHERE_CONDITIONS = [
-  "search.where.distance",
+  ...WHERE_COUNT_CONDITION_STEPS,
   "search.where.edge",
-  "search.where.edge_count",
-  "search.where.edge_count_from",
-  "search.where.edge_count_to",
   "search.where.ids",
   "search.where.key",
   "search.where.keys",
@@ -532,33 +535,28 @@ export const queryApiMock: Record<string, QueryApiMockType> = {
   "search.where.and": node("and", [...WHERE_BUILDERS, ...WHERE_CONDITIONS]),
   "search.where.or": node("or", [...WHERE_BUILDERS, ...WHERE_CONDITIONS]),
   "search.where.end_where": node("end_where", [...WHERE_LOGIC]),
-  "search.where.distance": node(
-    "distance",
-    [...WHERE_LOGIC],
-    COUNT_COMPARISON_ARGUMENTS,
+  ...Object.fromEntries(
+    COUNT_CONDITION_METHODS.map((method, i) => [
+      WHERE_COUNT_CONDITION_STEPS[i],
+      node(method, [...WHERE_LOGIC], COUNT_ARGUMENTS),
+    ]),
   ),
   "search.where.edge": node("edge", [...WHERE_LOGIC]),
-  "search.where.edge_count": node(
-    "edge_count",
-    [...WHERE_LOGIC],
-    COUNT_COMPARISON_ARGUMENTS,
-  ),
-  "search.where.edge_count_from": node(
-    "edge_count_from",
-    [...WHERE_LOGIC],
-    COUNT_COMPARISON_ARGUMENTS,
-  ),
-  "search.where.edge_count_to": node(
-    "edge_count_to",
-    [...WHERE_LOGIC],
-    COUNT_COMPARISON_ARGUMENTS,
-  ),
   "search.where.ids": node("ids", [...WHERE_LOGIC], ID_ARGUMENTS),
-  "search.where.key": node("key", ["search.where.key.value"], VALUE_ARGUMENTS),
-  "search.where.key.value": node(
-    "value",
-    [...WHERE_LOGIC],
-    COMPARISON_ARGUMENTS,
+  "search.where.key": node(
+    "key",
+    [...WHERE_KEY_COMPARISON_STEPS],
+    VALUE_ARGUMENTS,
+  ),
+  ...Object.fromEntries(
+    COMPARISONS.map((comparison, i) => [
+      WHERE_KEY_COMPARISON_STEPS[i],
+      node(
+        comparison,
+        [...WHERE_LOGIC],
+        comparison === "regex" ? STRING_VALUE_ARGUMENTS : VALUE_ARGUMENTS,
+      ),
+    ]),
   ),
   "search.where.keys": node("keys", [...WHERE_LOGIC], LIST_VALUE_ARGUMENTS),
   "search.where.neighbor": node("neighbor", [...WHERE_LOGIC]),

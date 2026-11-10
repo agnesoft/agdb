@@ -1,11 +1,13 @@
 import {
-  Comparison,
-  CountComparison,
   DbKeyOrder,
   QueryBuilder as ApiQueryBuilder,
   type Components,
 } from "@agnesoft/agdb_api";
-import { getQueryStepLabel } from "../mock/queryApiMock";
+import {
+  getQueryStepLabel,
+  WHERE_COUNT_CONDITION_STEPS,
+  WHERE_KEY_COMPARISON_STEPS,
+} from "../mock/queryApiMock";
 import type {
   QueryStep as QueryStepModel,
   QueryStepArgEntry,
@@ -92,53 +94,8 @@ const parseEntriesToValues = (
   return entries.map((entry) => parseDbValue(entry[0]));
 };
 
-const toCountComparison = (
-  kind: string,
-  value: number,
-): Components.Schemas.CountComparison => {
-  switch (kind) {
-    case "greaterThan":
-      return CountComparison.GreaterThan(value);
-    case "greaterThanOrEqual":
-      return CountComparison.GreaterThanOrEqual(value);
-    case "lessThan":
-      return CountComparison.LessThan(value);
-    case "lessThanOrEqual":
-      return CountComparison.LessThanOrEqual(value);
-    case "notEqual":
-      return CountComparison.NotEqual(value);
-    case "equal":
-    default:
-      return CountComparison.Equal(value);
-  }
-};
-
-const toComparison = (
-  kind: string,
-  value: BuilderDbValueInput,
-): Components.Schemas.Comparison => {
-  switch (kind) {
-    case "greaterThan":
-      return Comparison.GreaterThan(value);
-    case "greaterThanOrEqual":
-      return Comparison.GreaterThanOrEqual(value);
-    case "lessThan":
-      return Comparison.LessThan(value);
-    case "lessThanOrEqual":
-      return Comparison.LessThanOrEqual(value);
-    case "notEqual":
-      return Comparison.NotEqual(value);
-    case "contains":
-      return Comparison.Contains(value);
-    case "startsWith":
-      return Comparison.StartsWith(value);
-    case "endsWith":
-      return Comparison.EndsWith(value);
-    case "equal":
-    default:
-      return Comparison.Equal(value);
-  }
-};
+const COUNT_CONDITION_STEPS = new Set<string>(WHERE_COUNT_CONDITION_STEPS);
+const KEY_COMPARISON_STEPS = new Set<string>(WHERE_KEY_COMPARISON_STEPS);
 
 const getStepArgs = (step: QueryStepModel): unknown[] => {
   const entries = step.args ?? [];
@@ -223,21 +180,14 @@ const getStepArgs = (step: QueryStepModel): unknown[] => {
     return [orders.length === 1 ? orders[0] : orders];
   }
 
-  if (
-    type === "search.where.distance" ||
-    type === "search.where.edge_count" ||
-    type === "search.where.edge_count_from" ||
-    type === "search.where.edge_count_to"
-  ) {
-    const comparisonType = entries[0]?.[0]?.selectedOption ?? "equal";
-    const value = parseNumberValue(entries[0]?.[1]);
-    return [toCountComparison(comparisonType, value)];
+  // distance(), edge_count*() and their convenience comparisons, e.g. distance_greater_than()
+  if (COUNT_CONDITION_STEPS.has(type)) {
+    return [parseNumberValue(entries[0]?.[0])];
   }
 
-  if (type === "search.where.key.value") {
-    const comparisonType = entries[0]?.[0]?.selectedOption ?? "equal";
-    const value = parseDbValue(entries[0]?.[1]);
-    return [toComparison(comparisonType, value)];
+  // key(KEY).value() and its convenience comparisons, e.g. key(KEY).contains()
+  if (KEY_COMPARISON_STEPS.has(type)) {
+    return [parseDbValue(entries[0]?.[0])];
   }
 
   if (type.endsWith(".keys")) {

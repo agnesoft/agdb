@@ -417,299 +417,113 @@ describe("buildQueryFromSteps", () => {
     );
   });
 
-  it("maps all count comparison variants", () => {
-    expect(
-      buildQueryFromSteps([
-        step("search"),
-        step("search.elements"),
-        step("search.where"),
-        step("search.where.distance", [
-          [field("greaterThan"), field("signed", "1")],
-        ]),
-      ]),
-    ).toEqual(
-      QueryBuilder.search()
-        .elements()
-        .where()
-        .distance(CountComparison.GreaterThan(1))
-        .query(),
-    );
+  const countConditions = [
+    "distance",
+    "edge_count",
+    "edge_count_from",
+    "edge_count_to",
+  ] as const;
+  const countComparisons = [
+    ["", CountComparison.Equal],
+    ["_greater_than", CountComparison.GreaterThan],
+    ["_greater_than_or_equal", CountComparison.GreaterThanOrEqual],
+    ["_less_than", CountComparison.LessThan],
+    ["_less_than_or_equal", CountComparison.LessThanOrEqual],
+    ["_not_equal", CountComparison.NotEqual],
+  ] as const;
 
-    expect(
-      buildQueryFromSteps([
-        step("search"),
-        step("search.elements"),
-        step("search.where"),
-        step("search.where.edge_count", [
-          [field("greaterThanOrEqual"), field("signed", "2")],
+  it.each(
+    countConditions.flatMap((condition) =>
+      countComparisons.map(
+        ([suffix, comparison]) =>
+          [`${condition}${suffix}`, condition, comparison] as const,
+      ),
+    ),
+  )(
+    "maps %s to %s with explicit CountComparison",
+    (method, condition, comparison) => {
+      expect(
+        buildQueryFromSteps([
+          step("search"),
+          step("search.elements"),
+          step("search.where"),
+          step(`search.where.${method}`, [[field("unsigned", "3")]]),
         ]),
-      ]),
-    ).toEqual(
-      QueryBuilder.search()
-        .elements()
-        .where()
-        .edge_count(CountComparison.GreaterThanOrEqual(2))
-        .query(),
-    );
+      ).toEqual(
+        QueryBuilder.search()
+          .elements()
+          .where()
+          [condition](comparison(3))
+          .query(),
+      );
+    },
+  );
 
+  it("defaults missing count condition data to 0", () => {
     expect(
       buildQueryFromSteps([
         step("search"),
         step("search.elements"),
         step("search.where"),
-        step("search.where.edge_count_from", [
-          [field("lessThan"), field("signed", "3")],
-        ]),
+        step("search.where.distance_less_than", [[]]),
       ]),
     ).toEqual(
       QueryBuilder.search()
         .elements()
         .where()
-        .edge_count_from(CountComparison.LessThan(3))
-        .query(),
-    );
-
-    expect(
-      buildQueryFromSteps([
-        step("search"),
-        step("search.elements"),
-        step("search.where"),
-        step("search.where.edge_count_to", [
-          [field("lessThanOrEqual"), field("signed", "4")],
-        ]),
-      ]),
-    ).toEqual(
-      QueryBuilder.search()
-        .elements()
-        .where()
-        .edge_count_to(CountComparison.LessThanOrEqual(4))
-        .query(),
-    );
-
-    expect(
-      buildQueryFromSteps([
-        step("search"),
-        step("search.elements"),
-        step("search.where"),
-        step("search.where.distance", [
-          [field("notEqual"), field("signed", "5")],
-        ]),
-      ]),
-    ).toEqual(
-      QueryBuilder.search()
-        .elements()
-        .where()
-        .distance(CountComparison.NotEqual(5))
-        .query(),
-    );
-
-    expect(
-      buildQueryFromSteps([
-        step("search"),
-        step("search.elements"),
-        step("search.where"),
-        step("search.where.distance", [[field("equal"), field("signed", "6")]]),
-      ]),
-    ).toEqual(
-      QueryBuilder.search()
-        .elements()
-        .where()
-        .distance(CountComparison.Equal(6))
+        .distance(CountComparison.LessThan(0))
         .query(),
     );
   });
 
-  it("defaults missing count comparison data to Equal(0)", () => {
-    expect(
-      buildQueryFromSteps([
-        step("search"),
-        step("search.elements"),
-        step("search.where"),
-        step("search.where.distance", [[]]),
-      ]),
-    ).toEqual(
-      QueryBuilder.search()
-        .elements()
-        .where()
-        .distance(CountComparison.Equal(0))
-        .query(),
-    );
+  it("maps key value comparison convenience methods", () => {
+    const cases = [
+      [
+        "value",
+        Comparison.Equal({ VecF64: [1.5, 2.5] }),
+        field("float[]", "1.5,2.5"),
+      ],
+      ["greater_than", Comparison.GreaterThan(1), field("signed", "1")],
+      [
+        "greater_than_or_equal",
+        Comparison.GreaterThanOrEqual({ U64: 2 }),
+        field("unsigned", "2"),
+      ],
+      ["less_than", Comparison.LessThan({ F64: 3.5 }), field("float", "3.5")],
+      [
+        "less_than_or_equal",
+        Comparison.LessThanOrEqual(true),
+        field("boolean", "true"),
+      ],
+      ["not_equal", Comparison.NotEqual([1, 2]), field("signed[]", "1,2")],
+      ["contains", Comparison.Contains("ab"), field("string", "ab")],
+      ["starts_with", Comparison.StartsWith("ab"), field("string", "ab")],
+      ["ends_with", Comparison.EndsWith("ab"), field("string", "ab")],
+      ["any", Comparison.Any(["a", "b"]), field("string[]", "a,b")],
+      ["regex", Comparison.Regex("^a.*"), field("string", "^a.*")],
+    ] as const;
+
+    for (const [method, comparison, input] of cases) {
+      expect(
+        buildQueryFromSteps([
+          step("search"),
+          step("search.elements"),
+          step("search.where"),
+          step("search.where.key", [[field("string", "name")]]),
+          step(`search.where.key.${method}`, [[input]]),
+        ]),
+      ).toEqual(
+        QueryBuilder.search()
+          .elements()
+          .where()
+          .key("name")
+          .value(comparison)
+          .query(),
+      );
+    }
   });
 
-  it("maps all value comparison variants", () => {
-    expect(
-      buildQueryFromSteps([
-        step("search"),
-        step("search.elements"),
-        step("search.where"),
-        step("search.where.key", [[field("string", "name")]]),
-        step("search.where.key.value", [
-          [field("greaterThan"), field("signed", "1")],
-        ]),
-      ]),
-    ).toEqual(
-      QueryBuilder.search()
-        .elements()
-        .where()
-        .key("name")
-        .value(Comparison.GreaterThan(1))
-        .query(),
-    );
-
-    expect(
-      buildQueryFromSteps([
-        step("search"),
-        step("search.elements"),
-        step("search.where"),
-        step("search.where.key", [[field("string", "name")]]),
-        step("search.where.key.value", [
-          [field("greaterThanOrEqual"), field("unsigned", "2")],
-        ]),
-      ]),
-    ).toEqual(
-      QueryBuilder.search()
-        .elements()
-        .where()
-        .key("name")
-        .value(Comparison.GreaterThanOrEqual({ U64: 2 }))
-        .query(),
-    );
-
-    expect(
-      buildQueryFromSteps([
-        step("search"),
-        step("search.elements"),
-        step("search.where"),
-        step("search.where.key", [[field("string", "name")]]),
-        step("search.where.key.value", [
-          [field("lessThan"), field("float", "3.5")],
-        ]),
-      ]),
-    ).toEqual(
-      QueryBuilder.search()
-        .elements()
-        .where()
-        .key("name")
-        .value(Comparison.LessThan({ F64: 3.5 }))
-        .query(),
-    );
-
-    expect(
-      buildQueryFromSteps([
-        step("search"),
-        step("search.elements"),
-        step("search.where"),
-        step("search.where.key", [[field("string", "name")]]),
-        step("search.where.key.value", [
-          [field("lessThanOrEqual"), field("boolean", "true")],
-        ]),
-      ]),
-    ).toEqual(
-      QueryBuilder.search()
-        .elements()
-        .where()
-        .key("name")
-        .value(Comparison.LessThanOrEqual(true))
-        .query(),
-    );
-
-    expect(
-      buildQueryFromSteps([
-        step("search"),
-        step("search.elements"),
-        step("search.where"),
-        step("search.where.key", [[field("string", "name")]]),
-        step("search.where.key.value", [
-          [field("notEqual"), field("signed[]", "1,2")],
-        ]),
-      ]),
-    ).toEqual(
-      QueryBuilder.search()
-        .elements()
-        .where()
-        .key("name")
-        .value(Comparison.NotEqual([1, 2]))
-        .query(),
-    );
-
-    expect(
-      buildQueryFromSteps([
-        step("search"),
-        step("search.elements"),
-        step("search.where"),
-        step("search.where.key", [[field("string", "name")]]),
-        step("search.where.key.value", [
-          [field("contains"), field("string", "ab")],
-        ]),
-      ]),
-    ).toEqual(
-      QueryBuilder.search()
-        .elements()
-        .where()
-        .key("name")
-        .value(Comparison.Contains("ab"))
-        .query(),
-    );
-
-    expect(
-      buildQueryFromSteps([
-        step("search"),
-        step("search.elements"),
-        step("search.where"),
-        step("search.where.key", [[field("string", "name")]]),
-        step("search.where.key.value", [
-          [field("startsWith"), field("string", "ab")],
-        ]),
-      ]),
-    ).toEqual(
-      QueryBuilder.search()
-        .elements()
-        .where()
-        .key("name")
-        .value(Comparison.StartsWith("ab"))
-        .query(),
-    );
-
-    expect(
-      buildQueryFromSteps([
-        step("search"),
-        step("search.elements"),
-        step("search.where"),
-        step("search.where.key", [[field("string", "name")]]),
-        step("search.where.key.value", [
-          [field("endsWith"), field("string", "ab")],
-        ]),
-      ]),
-    ).toEqual(
-      QueryBuilder.search()
-        .elements()
-        .where()
-        .key("name")
-        .value(Comparison.EndsWith("ab"))
-        .query(),
-    );
-
-    expect(
-      buildQueryFromSteps([
-        step("search"),
-        step("search.elements"),
-        step("search.where"),
-        step("search.where.key", [[field("string", "name")]]),
-        step("search.where.key.value", [
-          [field("equal"), field("float[]", "1.5,2.5")],
-        ]),
-      ]),
-    ).toEqual(
-      QueryBuilder.search()
-        .elements()
-        .where()
-        .key("name")
-        .value(Comparison.Equal({ VecF64: [1.5, 2.5] }))
-        .query(),
-    );
-  });
-
-  it("defaults missing value comparison data to Equal('')", () => {
+  it("defaults missing key value data to Equal('')", () => {
     expect(
       buildQueryFromSteps([
         step("search"),
@@ -753,9 +567,7 @@ describe("buildQueryFromSteps", () => {
         step("search.elements"),
         step("search.where"),
         step("search.where.key", [[field("custom")]]),
-        step("search.where.key.value", [
-          [field("equal"), field("string", "v")],
-        ]),
+        step("search.where.key.value", [[field("string", "v")]]),
       ]),
     ).toEqual(
       QueryBuilder.search()

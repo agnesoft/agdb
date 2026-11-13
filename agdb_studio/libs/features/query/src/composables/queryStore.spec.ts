@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
 import { useQueryStore } from "./queryStore";
-import type { AddQueryParams, Query, QueryStep } from "./types";
+import type { AddQueryParams, Query, QueryStep, TAB } from "./types";
 import { queryApiMock } from "../mock/queryApiMock";
 
 describe("queryStore", () => {
@@ -15,6 +15,9 @@ describe("queryStore", () => {
     id: overrides?.id ?? "s1",
     type: overrides?.type ?? "select",
   });
+
+  const firstRowId = (queryId: string, tab: TAB = "exec"): string =>
+    store.getQuery(queryId)?.value.rows[tab][0]?.id ?? "missing-row";
 
   beforeEach(() => {
     store.clearQueries();
@@ -31,7 +34,8 @@ describe("queryStore", () => {
     expect(got).toBeDefined();
     expect(got?.value?.id).toBe(queryRef.value.id);
     expect(got?.value?.name).toBe("Query 1");
-    expect(got?.value?.steps.exec).toEqual([]);
+    expect(got?.value?.rows.exec).toHaveLength(1);
+    expect(got?.value?.rows.exec[0]?.steps).toEqual([]);
   });
 
   it("deletes a query", () => {
@@ -47,11 +51,16 @@ describe("queryStore", () => {
     const queryRef = store.addQuery(q);
 
     const step = makeStep();
-    store.addQueryStep(queryRef.value.id, "exec", step);
+    store.addQueryStep(
+      queryRef.value.id,
+      "exec",
+      firstRowId(queryRef.value.id, "exec"),
+      step,
+    );
 
     const got = store.getQuery(queryRef.value.id);
-    expect(got?.value?.steps.exec.length).toBe(1);
-    expect(got?.value?.steps.exec[0]).toEqual(step);
+    expect(got?.value?.rows.exec[0]?.steps.length).toBe(1);
+    expect(got?.value?.rows.exec[0]?.steps[0]).toEqual(step);
   });
 
   it("updates a query step", () => {
@@ -59,13 +68,18 @@ describe("queryStore", () => {
     const queryRef = store.addQuery(q);
 
     const step = makeStep();
-    store.addQueryStep(queryRef.value.id, "exec", step);
+    store.addQueryStep(
+      queryRef.value.id,
+      "exec",
+      firstRowId(queryRef.value.id, "exec"),
+      step,
+    );
 
     const updatedStep = { ...step, name: "Updated Step" };
     store.updateQueryStep(queryRef.value.id, "exec", updatedStep);
     const got = store.getQuery(queryRef.value.id);
-    expect(got?.value?.steps.exec.length).toBe(1);
-    expect(got?.value?.steps.exec[0]).toEqual(updatedStep);
+    expect(got?.value?.rows.exec[0]?.steps.length).toBe(1);
+    expect(got?.value?.rows.exec[0]?.steps[0]).toEqual(updatedStep);
   });
 
   it("deletes a query step", () => {
@@ -74,13 +88,23 @@ describe("queryStore", () => {
 
     const s1 = makeStep({ id: "s1" });
     const s2 = makeStep({ id: "s2" });
-    store.addQueryStep(queryRef.value.id, "exec", s1);
-    store.addQueryStep(queryRef.value.id, "exec", s2);
+    store.addQueryStep(
+      queryRef.value.id,
+      "exec",
+      firstRowId(queryRef.value.id, "exec"),
+      s1,
+    );
+    store.addQueryStep(
+      queryRef.value.id,
+      "exec",
+      firstRowId(queryRef.value.id, "exec"),
+      s2,
+    );
 
     store.deleteQueryStep(queryRef.value.id, "exec", "s1");
     const got = store.getQuery(queryRef.value.id);
-    expect(got?.value?.steps.exec.length).toBe(1);
-    expect(got?.value?.steps.exec[0]?.id).toBe("s2");
+    expect(got?.value?.rows.exec[0]?.steps.length).toBe(1);
+    expect(got?.value?.rows.exec[0]?.steps[0]?.id).toBe("s2");
   });
 
   it("runs a query and sets lastRun after completion", () => {
@@ -160,7 +184,7 @@ describe("queryStore", () => {
     expect(store.getQuery(missingId)).toBeUndefined();
 
     // step operations with missing
-    store.addQueryStep(missingId, "exec", step);
+    store.addQueryStep(missingId, "exec", firstRowId(missingId, "exec"), step);
     store.updateQueryStep(missingId, "exec", step);
     store.deleteQueryStep(missingId, "exec", step.id);
     expect(store.getQuery(missingId)).toBeUndefined();
@@ -179,14 +203,19 @@ describe("queryStore", () => {
     const queryRef = store.addQuery(q);
 
     const existing = makeStep({ id: "s1" });
-    store.addQueryStep(queryRef.value.id, "exec", existing);
+    store.addQueryStep(
+      queryRef.value.id,
+      "exec",
+      firstRowId(queryRef.value.id, "exec"),
+      existing,
+    );
 
     const nonExisting = makeStep({ id: "s2" });
     store.updateQueryStep(queryRef.value.id, "exec", nonExisting);
 
     const got = store.getQuery(queryRef.value.id);
-    expect(got?.value?.steps.exec.length).toBe(1);
-    expect(got?.value?.steps.exec[0]?.id).toBe("s1");
+    expect(got?.value?.rows.exec[0]?.steps.length).toBe(1);
+    expect(got?.value?.rows.exec[0]?.steps[0]?.id).toBe("s1");
   });
 
   it("clears query steps for a given tab", () => {
@@ -195,17 +224,31 @@ describe("queryStore", () => {
 
     const s1 = makeStep({ id: "s1" });
     const s2 = makeStep({ id: "s2" });
-    store.addQueryStep(queryRef.value.id, "exec", s1);
-    store.addQueryStep(queryRef.value.id, "exec", s2);
+    store.addQueryStep(
+      queryRef.value.id,
+      "exec",
+      firstRowId(queryRef.value.id, "exec"),
+      s1,
+    );
+    store.addQueryStep(
+      queryRef.value.id,
+      "exec",
+      firstRowId(queryRef.value.id, "exec"),
+      s2,
+    );
 
-    store.clearQuerySteps(queryRef.value.id, "exec");
+    store.clearQuerySteps(
+      queryRef.value.id,
+      "exec",
+      firstRowId(queryRef.value.id, "exec"),
+    );
     const got = store.getQuery(queryRef.value.id);
-    expect(got?.value?.steps.exec.length).toBe(0);
+    expect(got?.value?.rows.exec[0]?.steps.length).toBe(0);
   });
 
   it("should handle clearing steps for missing query gracefully", () => {
     const missingId = "missing";
-    store.clearQuerySteps(missingId, "exec");
+    store.clearQuerySteps(missingId, "exec", firstRowId(missingId, "exec"));
     expect(store.getQuery(missingId)).toBeUndefined();
   });
 
@@ -217,16 +260,31 @@ describe("queryStore", () => {
     const step2 = makeStep({ id: "s2", type: "search" });
     const step3 = makeStep({ id: "s3", type: "insert" }); // invalid after search
 
-    store.addQueryStep(queryRef.value.id, "exec", step1);
-    store.addQueryStep(queryRef.value.id, "exec", step2);
-    store.addQueryStep(queryRef.value.id, "exec", step3);
+    store.addQueryStep(
+      queryRef.value.id,
+      "exec",
+      firstRowId(queryRef.value.id, "exec"),
+      step1,
+    );
+    store.addQueryStep(
+      queryRef.value.id,
+      "exec",
+      firstRowId(queryRef.value.id, "exec"),
+      step2,
+    );
+    store.addQueryStep(
+      queryRef.value.id,
+      "exec",
+      firstRowId(queryRef.value.id, "exec"),
+      step3,
+    );
     store.validateQuerySteps(queryRef.value.id, "exec");
 
     const got = store.getQuery(queryRef.value.id);
-    expect(got?.value?.steps.exec.length).toBe(3);
-    expect(got?.value?.steps.exec[0]?.invalid).toBe(false); // select valid
-    expect(got?.value?.steps.exec[1]?.invalid).toBe(false); // search valid
-    expect(got?.value?.steps.exec[2]?.invalid).toBe(true); // insert invalid
+    expect(got?.value?.rows.exec[0]?.steps.length).toBe(3);
+    expect(got?.value?.rows.exec[0]?.steps[0]?.invalid).toBe(false); // select valid
+    expect(got?.value?.rows.exec[0]?.steps[1]?.invalid).toBe(false); // search valid
+    expect(got?.value?.rows.exec[0]?.steps[2]?.invalid).toBe(true); // insert invalid
   });
 
   it("should handle validation for missing query gracefully", () => {
@@ -243,15 +301,30 @@ describe("queryStore", () => {
     const step2 = makeStep({ id: "s2", type: "insert.values" });
     const step3 = makeStep({ id: "s3", type: "select" }); // invalid after values in exec_mut
 
-    store.addQueryStep(queryRef.value.id, "exec_mut", step1);
-    store.addQueryStep(queryRef.value.id, "exec_mut", step2);
-    store.addQueryStep(queryRef.value.id, "exec_mut", step3);
+    store.addQueryStep(
+      queryRef.value.id,
+      "exec_mut",
+      firstRowId(queryRef.value.id, "exec_mut"),
+      step1,
+    );
+    store.addQueryStep(
+      queryRef.value.id,
+      "exec_mut",
+      firstRowId(queryRef.value.id, "exec_mut"),
+      step2,
+    );
+    store.addQueryStep(
+      queryRef.value.id,
+      "exec_mut",
+      firstRowId(queryRef.value.id, "exec_mut"),
+      step3,
+    );
     store.validateQuerySteps(queryRef.value.id, "exec_mut");
 
     const got = store.getQuery(queryRef.value.id);
-    expect(got?.value?.steps.exec_mut[0]?.invalid).toBe(false); // insert valid
-    expect(got?.value?.steps.exec_mut[1]?.invalid).toBe(false); // values valid
-    expect(got?.value?.steps.exec_mut[2]?.invalid).toBe(true); // select invalid
+    expect(got?.value?.rows.exec_mut[0]?.steps[0]?.invalid).toBe(false); // insert valid
+    expect(got?.value?.rows.exec_mut[0]?.steps[1]?.invalid).toBe(false); // values valid
+    expect(got?.value?.rows.exec_mut[0]?.steps[2]?.invalid).toBe(true); // select invalid
   });
 
   it("initializes a new query with empty results", () => {
@@ -348,18 +421,167 @@ describe("queryStore", () => {
     }
 
     try {
-      store.addQueryStep(queryRef.value.id, "exec", {
-        id: "m1",
-        type: "mystery.step" as QueryStep["type"],
-      });
+      store.addQueryStep(
+        queryRef.value.id,
+        "exec",
+        firstRowId(queryRef.value.id, "exec"),
+        {
+          id: "m1",
+          type: "mystery.step" as QueryStep["type"],
+        },
+      );
       store.validateQuerySteps(queryRef.value.id, "exec");
 
       const got = store.getQuery(queryRef.value.id);
-      expect(got?.value.steps.exec[0]?.invalid).toBe(false);
+      expect(got?.value.rows.exec[0]?.steps[0]?.invalid).toBe(false);
     } finally {
       if (queryApiMock.exec) {
         queryApiMock.exec.followers = originalFollowers;
       }
     }
+  });
+  it("adds a new empty row to a tab", () => {
+    store.addQuery(makeQuery());
+    const row = store.addQueryRow("q1", "exec");
+
+    const rows = store.getQuery("q1")?.value.rows.exec;
+    expect(rows).toHaveLength(2);
+    expect(rows?.[1]).toEqual(row);
+    expect(row?.steps).toEqual([]);
+  });
+
+  it("returns undefined when adding a row to a missing query", () => {
+    expect(store.addQueryRow("missing", "exec")).toBeUndefined();
+  });
+
+  it("adds steps to a specific row only", () => {
+    store.addQuery(makeQuery());
+    const second = store.addQueryRow("q1", "exec");
+    store.addQueryStep("q1", "exec", second?.id ?? "", makeStep());
+
+    const rows = store.getQuery("q1")?.value.rows.exec;
+    expect(rows?.[0]?.steps).toHaveLength(0);
+    expect(rows?.[1]?.steps).toHaveLength(1);
+  });
+
+  it("ignores adding or clearing steps on an unknown row", () => {
+    store.addQuery(makeQuery());
+    store.addQueryStep("q1", "exec", "nope", makeStep());
+    store.clearQuerySteps("q1", "exec", "nope");
+    expect(store.getQuery("q1")?.value.rows.exec[0]?.steps).toHaveLength(0);
+  });
+
+  it("updates and deletes steps in whichever row contains them", () => {
+    store.addQuery(makeQuery());
+    const second = store.addQueryRow("q1", "exec");
+    const secondId = second?.id ?? "";
+    store.addQueryStep("q1", "exec", secondId, makeStep({ id: "a" }));
+    store.addQueryStep("q1", "exec", secondId, makeStep({ id: "b" }));
+
+    store.updateQueryStep("q1", "exec", { id: "a", type: "search" });
+    let rows = store.getQuery("q1")?.value.rows.exec;
+    expect(rows?.[1]?.steps[0]?.type).toBe("search");
+
+    store.deleteQueryStep("q1", "exec", "a");
+    rows = store.getQuery("q1")?.value.rows.exec;
+    expect(rows?.[1]?.steps.map((s) => s.id)).toEqual(["b"]);
+  });
+
+  it("ignores updating or deleting an unknown step id", () => {
+    store.addQuery(makeQuery());
+    store.addQueryStep("q1", "exec", firstRowId("q1"), makeStep({ id: "a" }));
+
+    store.updateQueryStep("q1", "exec", makeStep({ id: "nope" }));
+    store.deleteQueryStep("q1", "exec", "nope");
+    expect(store.getQuery("q1")?.value.rows.exec[0]?.steps).toEqual([
+      expect.objectContaining({ id: "a", type: "select" }),
+    ]);
+  });
+
+  it("deletes a row", () => {
+    store.addQuery(makeQuery());
+    const second = store.addQueryRow("q1", "exec");
+    const first = firstRowId("q1");
+
+    store.deleteQueryRow("q1", "exec", first);
+    const rows = store.getQuery("q1")?.value.rows.exec;
+    expect(rows).toHaveLength(1);
+    expect(rows?.[0]?.id).toBe(second?.id);
+  });
+
+  it("keeps one empty row when the last row is deleted", () => {
+    store.addQuery(makeQuery());
+    const first = firstRowId("q1");
+    store.addQueryStep("q1", "exec", first, makeStep());
+
+    store.deleteQueryRow("q1", "exec", first);
+    const rows = store.getQuery("q1")?.value.rows.exec;
+    expect(rows).toHaveLength(1);
+    expect(rows?.[0]?.id).not.toBe(first);
+    expect(rows?.[0]?.steps).toEqual([]);
+  });
+
+  it("is a no-op when deleting a row of a missing query", () => {
+    store.deleteQueryRow("missing", "exec", "r1");
+    expect(store.getQuery("missing")).toBeUndefined();
+  });
+
+  it("moves a row to a new position", () => {
+    store.addQuery(makeQuery());
+    const ids = [
+      firstRowId("q1"),
+      store.addQueryRow("q1", "exec")!.id,
+      store.addQueryRow("q1", "exec")!.id,
+    ];
+    const rowIds = () => store.getQuery("q1")?.value.rows.exec.map((r) => r.id);
+
+    store.moveQueryRow("q1", "exec", 0, 2);
+    expect(rowIds()).toEqual([ids[1], ids[2], ids[0]]);
+
+    store.moveQueryRow("q1", "exec", 2, 0);
+    expect(rowIds()).toEqual(ids);
+  });
+
+  it("ignores moving to the same or an out-of-range index, or in a missing query", () => {
+    store.addQuery(makeQuery());
+    const ids = [firstRowId("q1"), store.addQueryRow("q1", "exec")!.id];
+    const rowIds = () => store.getQuery("q1")?.value.rows.exec.map((r) => r.id);
+
+    store.moveQueryRow("q1", "exec", 1, 1);
+    store.moveQueryRow("q1", "exec", -1, 0);
+    store.moveQueryRow("q1", "exec", 0, -1);
+    store.moveQueryRow("q1", "exec", 2, 0);
+    store.moveQueryRow("q1", "exec", 0, 2);
+    store.moveQueryRow("missing", "exec", 0, 1);
+    expect(rowIds()).toEqual(ids);
+  });
+
+  it("validates each row independently", () => {
+    store.addQuery(makeQuery());
+    const second = store.addQueryRow("q1", "exec");
+    // Row 0: "insert" cannot follow "search", so its second step is invalid.
+    store.addQueryStep(
+      "q1",
+      "exec",
+      firstRowId("q1"),
+      makeStep({ id: "s1", type: "search" }),
+    );
+    store.addQueryStep(
+      "q1",
+      "exec",
+      firstRowId("q1"),
+      makeStep({ id: "s2", type: "insert" }),
+    );
+    // Row 1 starts fresh, so "select" is valid at its start.
+    store.addQueryStep(
+      "q1",
+      "exec",
+      second?.id ?? "",
+      makeStep({ id: "s3", type: "select" }),
+    );
+
+    const rows = store.getQuery("q1")?.value.rows.exec;
+    expect(rows?.[0]?.steps[1]?.invalid).toBe(true);
+    expect(rows?.[1]?.steps[0]?.invalid).toBe(false);
   });
 });

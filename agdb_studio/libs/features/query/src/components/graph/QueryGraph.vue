@@ -74,6 +74,8 @@ const getComputedColor = (varName: string, fallback: string): string => {
 
 let graphInstance: ForceGraph3DInstance;
 let zoomTimer: ReturnType<typeof setTimeout> | undefined;
+// Keeps the canvas matched to the container, which shrinks or grows with the query builder.
+let resizeObserver: ResizeObserver | undefined;
 
 onMounted(() => {
   /* v8 ignore else -- @preserve */
@@ -130,6 +132,15 @@ onMounted(() => {
       )
       .height(graphContainer.value.clientHeight)
       .width(graphContainer.value.clientWidth);
+
+    resizeObserver = new ResizeObserver(([entry]) => {
+      /* v8 ignore if -- @preserve */
+      if (!entry) return;
+      graphInstance
+        .height(entry.contentRect.height)
+        .width(entry.contentRect.width);
+    });
+    resizeObserver.observe(graphContainer.value);
   }
 });
 
@@ -148,6 +159,7 @@ watch(graphData, (newData) => {
 
 onUnmounted(() => {
   clearTimeout(zoomTimer);
+  resizeObserver?.disconnect();
   /* v8 ignore else -- @preserve */
   if (graphInstance) {
     graphInstance._destructor();
@@ -156,15 +168,16 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div ref="graphContainer" class="query-graph"></div>
+  <div ref="graphContainer" class="query-graph" data-testid="query-graph"></div>
 </template>
 
 <style lang="less" scoped>
 .query-graph {
   width: 100%;
   height: 100%;
-  max-height: calc(100vh - 14rem);
   min-height: 20rem;
+  // Ignore the canvas' own size so the container (and the canvas with it) can shrink.
+  contain: size;
   overflow: hidden;
   border: 1px solid var(--color-border);
   border-radius: 4px;

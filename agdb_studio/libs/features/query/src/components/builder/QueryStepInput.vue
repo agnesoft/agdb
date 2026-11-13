@@ -110,6 +110,10 @@ const displayHints = computed(() => {
 const onFocus = (focus: boolean) => {
   hasFocus.value = focus;
 };
+
+defineExpose({
+  focus: () => contentInput.value?.focus(),
+});
 </script>
 
 <template>
@@ -149,7 +153,12 @@ const onFocus = (focus: boolean) => {
 .query-step-input {
   position: relative;
   display: inline-block;
-  flex: 1;
-  min-width: 10rem;
+  // Only as wide as the typed text, so whatever follows it (e.g. the clear button) stays next to it.
+  min-width: 0.5rem;
+  transition: min-width 0.15s ease;
+  // Room to type while focused; collapses again when idle so there is no gap after the steps.
+  &:focus-within {
+    min-width: 8rem;
+  }
 }
 </style>

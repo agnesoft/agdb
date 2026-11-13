@@ -24,7 +24,8 @@ export const DB_AUDIT_API = "**/api/v1/db/*/*/audit*";
 export const DB_COPY_API = "**/api/v1/db/*/*/copy*";
 export const DB_RENAME_API = "**/api/v1/db/*/*/rename*";
 export const DB_ROLLBACK_API = "**/api/v1/db/*/*/rollback*";
-export const DB_EXEC_API = "**/api/v1/db/*/*/exec?*";
+// Exact match: in Playwright globs "?" is a single character, and the exec URL has no query string.
+export const DB_EXEC_API = "**/api/v1/db/*/*/exec";
 export const DB_EXEC_MUT_API = "**/api/v1/db/*/*/exec_mut*";
 
 // Database user management: /api/v1/db/{owner}/{db}/user/...
@@ -45,7 +46,7 @@ export const ADMIN_DB_AUDIT_API = "**/api/v1/admin/db/*/*/audit*";
 export const ADMIN_DB_COPY_API = "**/api/v1/admin/db/*/*/copy*";
 export const ADMIN_DB_RENAME_API = "**/api/v1/admin/db/*/*/rename*";
 export const ADMIN_DB_ROLLBACK_API = "**/api/v1/admin/db/*/*/rollback*";
-export const ADMIN_DB_EXEC_API = "**/api/v1/admin/db/*/*/exec?*";
+export const ADMIN_DB_EXEC_API = "**/api/v1/admin/db/*/*/exec";
 export const ADMIN_DB_EXEC_MUT_API = "**/api/v1/admin/db/*/*/exec_mut*";
 
 // Admin database user management

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterAll } from "vitest";
 import { mount } from "@vue/test-utils";
 import QueryGraph from "./QueryGraph.vue";
 import ForceGraph3D from "3d-force-graph";
@@ -7,7 +7,7 @@ import { nextTick, ref } from "vue";
 const mockQueryRef = ref({
   id: "q1",
   isRunning: false,
-  steps: { exec: [], exec_mut: [], context: [] },
+  rows: { exec: [], exec_mut: [], context: [] },
   results: {},
   lastExecutedTab: undefined as "exec" | "exec_mut" | undefined,
 });
@@ -52,13 +52,32 @@ vi.mock("3d-force-graph", () => {
   };
 });
 
+// jsdom has no ResizeObserver; capture the callback so tests can trigger resizes.
+let resizeCallback: ResizeObserverCallback | undefined;
+const resizeObserverDisconnect = vi.fn();
+vi.stubGlobal(
+  "ResizeObserver",
+  class {
+    constructor(callback: ResizeObserverCallback) {
+      resizeCallback = callback;
+    }
+    observe = vi.fn();
+    disconnect = resizeObserverDisconnect;
+  },
+);
+
 describe("QueryGraph", () => {
+  afterAll(() => {
+    vi.unstubAllGlobals();
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
+    resizeCallback = undefined;
     mockQueryRef.value = {
       id: "q1",
       isRunning: false,
-      steps: { exec: [], exec_mut: [], context: [] },
+      rows: { exec: [], exec_mut: [], context: [] },
       results: {},
       lastExecutedTab: undefined,
     };
@@ -97,6 +116,23 @@ describe("QueryGraph", () => {
     expect(instance?.width).toHaveBeenCalled();
 
     wrapper.unmount();
+  });
+
+  it("resizes the graph with its container and stops observing on unmount", async () => {
+    const wrapper = mountWithQueryId();
+    await nextTick();
+    const instance = vi.mocked(ForceGraph3D).mock.results[0]?.value;
+
+    resizeCallback?.(
+      [{ contentRect: { width: 640, height: 320 } } as ResizeObserverEntry],
+      {} as ResizeObserver,
+    );
+
+    expect(instance?.height).toHaveBeenLastCalledWith(320);
+    expect(instance?.width).toHaveBeenLastCalledWith(640);
+
+    wrapper.unmount();
+    expect(resizeObserverDisconnect).toHaveBeenCalled();
   });
 
   it("updates graph when query results change", async () => {

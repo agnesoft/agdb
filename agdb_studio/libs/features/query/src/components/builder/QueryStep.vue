@@ -34,7 +34,7 @@ const closeEditing = () => {
 </script>
 
 <template>
-  <div class="query-step">
+  <div class="query-step" data-testid="query-step">
     <div class="controls">
       <button
         type="button"

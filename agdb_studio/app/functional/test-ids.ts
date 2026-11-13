@@ -30,6 +30,13 @@ export const testIds = createTestIds({
   // Modal
   CLOSE_MODAL: "close-modal",
 
+  // Query builder
+  QUERY_ROW: "query-row",
+  QUERY_ROW_INDEX: "query-row-index",
+  QUERY_STEP: "query-step",
+  QUERY_HIDDEN_SUMMARY: "query-hidden-summary",
+  QUERY_GRAPH: "query-graph",
+
   // Cluster
   CROWN_ICON: "crown-icon",
   ACTIVE_SERVER_CROWN_ICON: "active-server-crown-icon",

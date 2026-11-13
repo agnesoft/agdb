@@ -3,7 +3,7 @@ import { computed, type ComputedRef, type Ref } from "vue";
 import { useRoute } from "vue-router";
 import { checkClient, client } from "@agdb-studio/api/src/api";
 import { buildQueryFromSteps } from "../utils/queryExecutionUtils";
-import type { QueryStep as QueryStepModel, TAB } from "./types";
+import type { QueryRow, TAB } from "./types";
 import { useQueryStore } from "./queryStore";
 
 type MinimalRoute = {
@@ -12,7 +12,7 @@ type MinimalRoute = {
 };
 
 const executeQuery = async (
-  steps: QueryStepModel[],
+  rows: QueryRow[],
   activeTab: TAB | undefined,
   route: MinimalRoute,
   isAdminRoute: boolean,
@@ -27,7 +27,8 @@ const executeQuery = async (
     return undefined;
   }
 
-  const payload = [buildQueryFromSteps(steps)];
+  // All rows are sent in one request, so the server runs them as a single transaction.
+  const payload = rows.map((row) => buildQueryFromSteps(row.steps));
   const isMutation = activeTab === "exec_mut";
   const useAdminEndpoints = isAdminRoute;
 
@@ -51,7 +52,7 @@ const executeQuery = async (
 export const useQueryExecution = (
   queryId: Ref<string> | undefined,
   tab: Ref<TAB> | undefined,
-  steps: ComputedRef<QueryStepModel[]>,
+  rows: ComputedRef<QueryRow[]>,
   isRunning: ComputedRef<boolean>,
 ) => {
   const queryStore = useQueryStore();
@@ -71,11 +72,16 @@ export const useQueryExecution = (
     isRunning.value ? "Stop query" : "Run query",
   );
 
+  // Empty rows are ignored so a freshly added row doesn't block running.
+  const activeRows = computed(() =>
+    rows.value.filter((row) => row.steps.length > 0),
+  );
+
   const canRun = computed(() => {
     return (
       !!queryId?.value &&
-      steps.value.length > 0 &&
-      steps.value.every((step) => !step.invalid)
+      activeRows.value.length > 0 &&
+      activeRows.value.every((row) => row.steps.every((step) => !step.invalid))
     );
   });
 
@@ -92,7 +98,7 @@ export const useQueryExecution = (
     try {
       await queryStore.runQuery(queryId.value, async () => {
         const results = await executeQuery(
-          steps.value,
+          activeRows.value,
           tab?.value,
           route,
           isAdminRoute.value,

@@ -1,6 +1,6 @@
 import { computed, ref } from "vue";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { QueryStep, TAB } from "./types";
+import type { QueryRow, QueryStep, TAB } from "./types";
 
 const mockResults = [{ result: 1, elements: [] }];
 
@@ -86,17 +86,20 @@ const setup = ({
   queryId = "q1",
   tab = "exec" as TAB,
   steps = [makeStep()],
+  rows,
   isRunning = false,
 }: {
   queryId?: string | undefined;
   tab?: TAB;
   steps?: QueryStep[];
+  rows?: QueryRow[];
   isRunning?: boolean;
 } = {}) => {
+  const queryRows = rows ?? [{ id: "r1", steps }];
   return useQueryExecution(
     ref(queryId),
     ref(tab),
-    computed(() => steps),
+    computed(() => queryRows),
     computed(() => isRunning),
   );
 };
@@ -158,6 +161,52 @@ describe("useQueryExecution", () => {
     expect(db_exec).toHaveBeenCalledWith({ owner: "alice", db: "main" }, [
       { built: true },
     ]);
+  });
+
+  it("sends every non-empty row as one transaction payload", async () => {
+    const execution = setup({
+      rows: [
+        { id: "r1", steps: [makeStep("select")] },
+        { id: "r2", steps: [] },
+        { id: "r3", steps: [makeStep("search")] },
+      ],
+    });
+
+    expect(execution.canRun.value).toBe(true);
+    await execution.runOrStopQuery();
+
+    expect(buildQueryFromSteps).toHaveBeenCalledTimes(2);
+    expect(buildQueryFromSteps).toHaveBeenNthCalledWith(1, [
+      makeStep("select"),
+    ]);
+    expect(buildQueryFromSteps).toHaveBeenNthCalledWith(2, [
+      makeStep("search"),
+    ]);
+    expect(db_exec).toHaveBeenCalledOnce();
+    expect(db_exec).toHaveBeenCalledWith({ owner: "alice", db: "main" }, [
+      { built: true },
+      { built: true },
+    ]);
+  });
+
+  it("cannot run when all rows are empty", () => {
+    const execution = setup({
+      rows: [
+        { id: "r1", steps: [] },
+        { id: "r2", steps: [] },
+      ],
+    });
+    expect(execution.canRun.value).toBe(false);
+  });
+
+  it("cannot run when any row has an invalid step", () => {
+    const execution = setup({
+      rows: [
+        { id: "r1", steps: [makeStep()] },
+        { id: "r2", steps: [{ ...makeStep(), invalid: true }] },
+      ],
+    });
+    expect(execution.canRun.value).toBe(false);
   });
 
   it("does not execute invalid queries", async () => {

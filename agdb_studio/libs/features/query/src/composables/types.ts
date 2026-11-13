@@ -19,6 +19,12 @@ export type QueryStep = {
   invalid?: boolean;
 };
 
+/** One independent query (a chain of steps). A tab holds several rows that run as one transaction. */
+export type QueryRow = {
+  id: string;
+  steps: QueryStep[];
+};
+
 export type AddQueryParams = {
   id: string;
   name?: string;
@@ -67,10 +73,10 @@ export type Query = {
   isRunning: boolean;
   lastRun?: Date;
   lastExecutedTab?: "exec" | "exec_mut";
-  steps: {
-    exec: QueryStep[];
-    exec_mut: QueryStep[];
-    context: QueryStep[];
+  rows: {
+    exec: QueryRow[];
+    exec_mut: QueryRow[];
+    context: QueryRow[];
   };
   results: QueryResults;
 } & AddQueryParams;

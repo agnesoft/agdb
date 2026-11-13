@@ -24,11 +24,12 @@ provide("queryId", queryId);
 
 <style lang="less" scoped>
 .query-view {
+  // Fill what is left of the page below the heading; the graph takes whatever the builder doesn't.
+  flex: 1;
   display: grid;
   grid-template-columns: 1fr;
-  grid-template-rows: max-content 1fr;
+  grid-template-rows: max-content minmax(20rem, 1fr);
   grid-gap: 1rem;
   width: 100%;
-  height: 100%;
 }
 </style>

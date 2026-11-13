@@ -186,12 +186,13 @@ export async function mockDbUserListApi(
   });
 }
 
-export async function mockDbExecApi(page: Page) {
+/** Responds to `exec` with the given query results (one per query sent). */
+export async function mockDbExecApi(page: Page, results: unknown[] = []) {
   await page.route(DB_EXEC_API, async (route) => {
     route.fulfill({
       status: 200,
       contentType: "application/json",
-      body: JSON.stringify({ result: [] }),
+      body: JSON.stringify(results),
     });
   });
 }

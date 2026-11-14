@@ -8,6 +8,7 @@
     "lint:check": "node app/scripts/lint-boundaries.mjs",
     "lint:boundaries": "node app/scripts/lint-boundaries.mjs",
     "lint:boundaries:check": "node app/scripts/lint-boundaries.mjs",
+    "lint:server": "cargo clippy -p agdb_server --all-targets --all-features -- -D warnings",
     "test:server": "cargo test -p agdb_server --features studio -- studio basepath",
     "test:image": "bash ../agdb_server/test_image.sh",
     "release:image": "bash ../agdb_server/release_image.sh"
@@ -59,8 +60,9 @@
   "agci": {
     "checks": [
       "format:check",
-      "lint:check",
       "build",
+      "lint:check",
+      "lint:server",
       "type-check",
       "test",
       "test:server",

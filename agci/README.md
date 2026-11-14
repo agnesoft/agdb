@@ -54,7 +54,7 @@ A push to main checks nothing (that happened in the pull request), it only relea
 
 `--plan` prints the steps without running them.
 
-The first job (`bootstrap`) provides the binary to the others as an artifact. It is cached under a hash of its sources (agci, its path dependencies and the root `Cargo.toml`), so it is only rebuilt when those change. Windows jobs build it themselves. Only the `config` job clones the full history (diffs against the base and the tags), the others are shallow and look up tags on `origin`.
+The first job (`bootstrap`, Linux and Windows) provides the binary of each OS to the others as the `agci-<os>` artifact. It is cached under a hash of its sources (agci, its path dependencies and the root `Cargo.toml`), so it is only rebuilt when those change. Only the `config` job clones the full history (diffs against the base and the tags), the others are shallow and look up tags on `origin`.
 
 ## projects
 

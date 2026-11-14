@@ -28,6 +28,9 @@
         "test_queries": {
             "cache": false
         },
+        "lint:server": {
+            "cache": false
+        },
         "test:server": {
             "cache": false
         },

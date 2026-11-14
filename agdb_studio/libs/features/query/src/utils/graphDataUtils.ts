@@ -16,6 +16,15 @@ export const dbValueToString = (value: Components.Schemas.DbValue): string => {
   return String(native ?? "");
 };
 
+/** Key-values as display strings. */
+export const toDisplayValues = (
+  values: Components.Schemas.DbKeyValue[],
+): { key: string; value: string }[] =>
+  values.map((kv) => ({
+    key: dbValueToString(kv.key),
+    value: dbValueToString(kv.value),
+  }));
+
 /**
  * Transforms `DbElement[]` into the `GraphData` format consumed by 3d-force-graph.
  *
@@ -31,17 +40,15 @@ export const convertElementsToGraphData = (
   const links: GraphLink[] = [];
 
   for (const el of elements) {
-    const values = el.values.map((kv) => ({
-      key: dbValueToString(kv.key),
-      value: dbValueToString(kv.value),
-    }));
+    const values = toDisplayValues(el.values);
 
     if (el.id > 0) {
-      nodes.push({ id: el.id, values, source });
+      nodes.push({ id: el.id, values, rawValues: el.values, source });
     } else if (el.id < 0) {
       links.push({
         id: el.id,
         values,
+        rawValues: el.values,
         source: el.from,
         target: el.to,
         elementSource: source,

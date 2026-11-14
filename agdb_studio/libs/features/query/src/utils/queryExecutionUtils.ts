@@ -36,7 +36,7 @@ const parseBooleanArray = (value: string | undefined): boolean[] => {
   return parseArray(value).map((item) => parseBoolean(item));
 };
 
-const parseDbValue = (
+export const parseDbValue = (
   field: QueryStepFieldValue | undefined,
 ): BuilderDbValueInput => {
   if (!field) return "";

@@ -1,53 +1,8 @@
-import type { Components } from "@agnesoft/agdb_api";
 import { computed, type ComputedRef, type Ref } from "vue";
-import { useRoute } from "vue-router";
-import { checkClient, client } from "@agdb-studio/api/src/api";
 import { buildQueryFromSteps } from "../utils/queryExecutionUtils";
 import type { QueryRow, TAB } from "./types";
 import { useQueryStore } from "./queryStore";
-
-type MinimalRoute = {
-  params: Record<string, unknown>;
-  name?: unknown;
-};
-
-const executeQuery = async (
-  rows: QueryRow[],
-  activeTab: TAB | undefined,
-  route: MinimalRoute,
-  isAdminRoute: boolean,
-): Promise<Components.Schemas.QueryResult[] | undefined> => {
-  checkClient(client);
-
-  const ownerParam = route.params["owner"];
-  const dbParam = route.params["db"];
-  const owner = typeof ownerParam === "string" ? ownerParam : "";
-  const db = typeof dbParam === "string" ? dbParam : "";
-  if (!owner || !db) {
-    return undefined;
-  }
-
-  // All rows are sent in one request, so the server runs them as a single transaction.
-  const payload = rows.map((row) => buildQueryFromSteps(row.steps));
-  const isMutation = activeTab === "exec_mut";
-  const useAdminEndpoints = isAdminRoute;
-
-  let response: { data: Components.Schemas.QueryResult[] };
-
-  if (useAdminEndpoints) {
-    if (isMutation) {
-      response = await client.value.admin_db_exec_mut({ owner, db }, payload);
-    } else {
-      response = await client.value.admin_db_exec({ owner, db }, payload);
-    }
-  } else if (isMutation) {
-    response = await client.value.db_exec_mut({ owner, db }, payload);
-  } else {
-    response = await client.value.db_exec({ owner, db }, payload);
-  }
-
-  return response.data;
-};
+import { executeDbQueries, useMinimalRoute } from "./dbExec";
 
 export const useQueryExecution = (
   queryId: Ref<string> | undefined,
@@ -56,17 +11,7 @@ export const useQueryExecution = (
   isRunning: ComputedRef<boolean>,
 ) => {
   const queryStore = useQueryStore();
-  const route: MinimalRoute = (() => {
-    try {
-      return useRoute() as unknown as MinimalRoute;
-    } catch {
-      return { params: {}, name: undefined };
-    }
-  })();
-
-  const isAdminRoute = computed(() => {
-    return String(route.name ?? "").startsWith("admin-");
-  });
+  const route = useMinimalRoute();
 
   const runLabel = computed(() =>
     isRunning.value ? "Stop query" : "Run query",
@@ -97,14 +42,24 @@ export const useQueryExecution = (
 
     try {
       await queryStore.runQuery(queryId.value, async () => {
-        const results = await executeQuery(
-          activeRows.value,
-          tab?.value,
+        // All rows are sent in one request, so the server runs them as a single transaction.
+        const queries = activeRows.value.map((row) =>
+          buildQueryFromSteps(row.steps),
+        );
+        // Snapshot now: the builder may change while the request runs.
+        const stepTypes = activeRows.value.flatMap((row) =>
+          row.steps.map((step) => step.type),
+        );
+        const results = await executeDbQueries(
+          queries,
+          tab?.value === "exec_mut",
           route,
-          isAdminRoute.value,
         );
         if (results && queryId?.value && tab?.value) {
-          queryStore.setQueryResults(queryId.value, tab.value, results);
+          queryStore.setQueryResults(queryId.value, tab.value, results, {
+            queries,
+            stepTypes,
+          });
         }
       });
     } catch (error) {

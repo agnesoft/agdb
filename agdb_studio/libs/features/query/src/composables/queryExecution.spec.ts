@@ -282,21 +282,35 @@ describe("useQueryExecution", () => {
     const execution = setup({ tab: "exec" });
     await execution.runOrStopQuery();
 
-    expect(setQueryResults).toHaveBeenCalledWith("q1", "exec", mockResults);
+    expect(setQueryResults).toHaveBeenCalledWith("q1", "exec", mockResults, {
+      queries: [{ built: true }],
+      stepTypes: ["select"],
+    });
   });
 
   it("stores query results after successful exec_mut execution", async () => {
     const execution = setup({ tab: "exec_mut" });
     await execution.runOrStopQuery();
 
-    expect(setQueryResults).toHaveBeenCalledWith("q1", "exec_mut", mockResults);
+    expect(setQueryResults).toHaveBeenCalledWith(
+      "q1",
+      "exec_mut",
+      mockResults,
+      {
+        queries: [{ built: true }],
+        stepTypes: ["select"],
+      },
+    );
   });
 
   it("stores query results for context tab", async () => {
     const execution = setup({ tab: "context" });
     await execution.runOrStopQuery();
 
-    expect(setQueryResults).toHaveBeenCalledWith("q1", "context", mockResults);
+    expect(setQueryResults).toHaveBeenCalledWith("q1", "context", mockResults, {
+      queries: [{ built: true }],
+      stepTypes: ["select"],
+    });
   });
 
   it("does not store results when route params are missing", async () => {
@@ -312,6 +326,9 @@ describe("useQueryExecution", () => {
 
     await setup({ tab: "exec" }).runOrStopQuery();
 
-    expect(setQueryResults).toHaveBeenCalledWith("q1", "exec", mockResults);
+    expect(setQueryResults).toHaveBeenCalledWith("q1", "exec", mockResults, {
+      queries: [{ built: true }],
+      stepTypes: ["select"],
+    });
   });
 });

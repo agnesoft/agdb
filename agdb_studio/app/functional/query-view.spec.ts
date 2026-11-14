@@ -1,6 +1,6 @@
 import { expect, type Page } from "@playwright/test";
 import { test } from "./fixtures/agdb.fixtures";
-import { testIds } from "./test-ids";
+import { dynamicIds, testIds } from "./test-ids";
 import {
   mockDatabaseListApi,
   mockLogin,
@@ -9,7 +9,7 @@ import {
   gotoDbPage,
   gotoAndWaitForLoad,
 } from "./mocks/api-helpers";
-import { DB_EXEC_API } from "./api-paths";
+import { DB_EXEC_API, DB_EXEC_MUT_API } from "./api-paths";
 
 test.describe("Query View", () => {
   test.beforeEach(async ({ page }) => {
@@ -197,10 +197,14 @@ test.describe("Query builder", () => {
     const firstRow = await rows(page).nth(0).boundingBox();
     expect(wrappedRow!.height).toBeGreaterThan(firstRow!.height * 1.5);
 
-    // Drop onto the last step, on the wrapped row's second line: it lands after the row.
-    await handle(page, 0).dragTo(
-      rows(page).nth(1).getByTestId(testIds.QUERY_STEP).last(),
-    );
+    // Drop onto the last step, on the wrapped row's last line of steps: it
+    // lands after the row. Aim at the step's bottom edge, as the row's
+    // buttons may wrap onto a line of their own below it.
+    const lastStep = rows(page).nth(1).getByTestId(testIds.QUERY_STEP).last();
+    const stepBox = (await lastStep.boundingBox())!;
+    await handle(page, 0).dragTo(lastStep, {
+      targetPosition: { x: stepBox.width / 2, y: stepBox.height - 2 },
+    });
 
     const queries = await rowQueries(page);
     expect(queries[1]).toBe("select.node_count");
@@ -269,5 +273,222 @@ test.describe("Query builder", () => {
     expect(
       (await graph.boundingBox())!.y + (await graph.boundingBox())!.height,
     ).toBeLessThanOrEqual(viewport.height);
+  });
+});
+
+const kv = (key: string, value: string) => ({
+  key: { String: key },
+  value: { String: value },
+});
+
+const ALICE = { id: 1, from: null, to: null, values: [kv("name", "alice")] };
+const BOB = { id: 2, from: null, to: null, values: [kv("name", "bob")] };
+const KNOWS = { id: -3, from: 1, to: 2, values: [kv("since", "2020")] };
+
+/**
+ * Answers the run query with `results`, and the panel's lookup of stored
+ * values (a select by ids) with the matching elements.
+ */
+const mockQueries = async (page: Page, results: unknown[]) => {
+  await page.route(DB_EXEC_API, (route) => {
+    const [query] = route.request().postDataJSON() ?? [];
+    const ids: { Id: number }[] | undefined = query?.SelectValues?.ids?.Ids;
+    const body = ids
+      ? [
+          {
+            result: ids.length,
+            elements: [ALICE, BOB, KNOWS].filter((element) =>
+              ids.some((id) => id.Id === element.id),
+            ),
+          },
+        ]
+      : results;
+    return route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(body),
+    });
+  });
+};
+
+const mockMutations = async (page: Page) => {
+  await page.route(DB_EXEC_MUT_API, (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify([{ result: 1, elements: [] }]),
+    }),
+  );
+};
+
+const runQuery = (page: Page) =>
+  page.getByRole("button", { name: "Run query" }).click();
+
+test.describe("Query results", () => {
+  test.beforeEach(async ({ page }) => {
+    await mockLogin(page);
+    await mockDatabaseListApi(page);
+    await mockDbUserListApi(page);
+  });
+
+  test("shows a count as a single number", async ({ page }) => {
+    await mockQueries(page, [{ result: 1234, elements: [] }]);
+    await gotoAndWaitForLoad(page, QUERY_PAGE);
+    await addSteps(page, 0, ["select", "node_count"]);
+    await runQuery(page);
+
+    const scalar = page.getByTestId(testIds.RESULT_SCALAR);
+    await expect(scalar).toContainText("Node count");
+    await expect(scalar).toContainText("1,234");
+    await expect(page.getByTestId(testIds.RESULTS_CHIP)).toHaveCount(1);
+  });
+
+  test("shows elements in a table and as JSON", async ({ page }) => {
+    await mockQueries(page, [{ result: 3, elements: [ALICE, BOB, KNOWS] }]);
+    await gotoAndWaitForLoad(page, QUERY_PAGE);
+    await addSteps(page, 0, ["search", "elements"]);
+    await runQuery(page);
+
+    // Graph elements open in the graph view.
+    await expect(page.getByTestId(testIds.VIEW_GRAPH)).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+
+    await page.getByTestId(testIds.VIEW_TABLE).click();
+    const table = page.getByTestId(testIds.RESULTS_TABLE);
+    await expect(table.locator("th")).toHaveText([
+      "",
+      "id",
+      "from",
+      "to",
+      "name",
+      "since",
+    ]);
+    const tableRows = page.getByTestId(testIds.RESULTS_TABLE_ROW);
+    await expect(tableRows).toHaveCount(3);
+    await expect(tableRows.nth(2)).toContainText("-3");
+    await expect(tableRows.nth(2)).toContainText("2020");
+
+    await page.getByTestId(testIds.VIEW_JSON).click();
+    await expect(page.getByTestId(testIds.RESULTS_JSON)).toContainText(
+      '"alice"',
+    );
+  });
+
+  test("views and edits an element's values from the table", async ({
+    page,
+  }) => {
+    await mockQueries(page, [{ result: 1, elements: [ALICE] }]);
+    await mockMutations(page);
+    await gotoAndWaitForLoad(page, QUERY_PAGE);
+    await addSteps(page, 0, ["search", "elements"]);
+    await runQuery(page);
+    await page.getByTestId(testIds.VIEW_TABLE).click();
+
+    await page.getByTestId(testIds.RESULTS_ROW_MENU).click();
+    await page.getByTestId(dynamicIds.menuItem("view")).click();
+    const panel = page.getByTestId(testIds.ELEMENT_DETAILS_PANEL);
+    await expect(panel.getByTestId(testIds.PANEL_VALUE_ROW)).toHaveText(
+      /name.*alice/,
+    );
+
+    await panel.getByRole("button", { name: "Edit values" }).click();
+    await panel.getByTestId(testIds.PANEL_VALUE_INPUT).fill("carol");
+    const request = page.waitForRequest(DB_EXEC_MUT_API);
+    await panel.getByTestId(testIds.PANEL_SAVE).click();
+    expect((await request).postDataJSON()).toEqual([
+      {
+        InsertValues: {
+          ids: { Ids: [{ Id: 1 }] },
+          values: { Multi: [[kv("name", "carol")]] },
+        },
+      },
+    ]);
+    await expect(page.getByText("Values saved")).toBeVisible();
+  });
+
+  test("deletes an element after confirmation", async ({ page }) => {
+    await mockQueries(page, [{ result: 1, elements: [ALICE] }]);
+    await mockMutations(page);
+    await gotoAndWaitForLoad(page, QUERY_PAGE);
+    await addSteps(page, 0, ["search", "elements"]);
+    await runQuery(page);
+    await page.getByTestId(testIds.VIEW_TABLE).click();
+
+    await page.getByTestId(testIds.RESULTS_ROW_MENU).click();
+    await page.getByTestId(dynamicIds.menuItem("delete")).click();
+    const request = page.waitForRequest(DB_EXEC_MUT_API);
+    await page.getByTestId(dynamicIds.modalButton("confirm")).click();
+    expect((await request).postDataJSON()).toEqual([
+      { Remove: { Ids: [{ Id: 1 }] } },
+    ]);
+    await expect(page.getByText("Element deleted")).toBeVisible();
+  });
+});
+
+test.describe("Query copy and paste", () => {
+  test.beforeEach(async ({ page, context }) => {
+    await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+    await mockLogin(page);
+    await mockDatabaseListApi(page);
+    await mockDbUserListApi(page);
+    await mockDbExecApi(page);
+    await gotoAndWaitForLoad(page, QUERY_PAGE);
+    await expect(rows(page)).toHaveCount(1);
+  });
+
+  const clipboard = (page: Page) =>
+    page.evaluate(() => navigator.clipboard.readText());
+
+  const setClipboard = (page: Page, text: string) =>
+    page.evaluate((value) => navigator.clipboard.writeText(value), text);
+
+  test("copies a query as Rust code and pastes it into another row", async ({
+    page,
+  }) => {
+    await addSteps(page, 0, ["select", "node_count"]);
+    await rows(page)
+      .nth(0)
+      .getByRole("button", { name: "Copy this query as Rust code" })
+      .click();
+    await expect(page.getByText("Query copied")).toBeVisible();
+    expect(await clipboard(page)).toBe(
+      "QueryBuilder::select().node_count().query()",
+    );
+
+    await addQueryButton(page).click();
+    await rows(page)
+      .nth(1)
+      .getByRole("button", { name: "Paste a copied query here" })
+      .click();
+    expect(await rowQueries(page)).toEqual([
+      "select.node_count",
+      "select.node_count",
+    ]);
+  });
+
+  test("pastes Rust code into the step input", async ({ page }) => {
+    await setClipboard(
+      page,
+      'let r = db.exec(&QueryBuilder::search().from("root").query())?;',
+    );
+    await stepInput(page, 0).click();
+    await page.keyboard.press("ControlOrMeta+V");
+    // The step shows its argument, e.g. "search.from.(s, root)".
+    await expect
+      .poll(() => rowQueries(page))
+      .toEqual([expect.stringMatching(/^search\.from\.\(.*root\)$/)]);
+  });
+
+  test("explains why a paste failed", async ({ page }) => {
+    await setClipboard(page, "QueryBuilder::select().fly().query()");
+    await rows(page)
+      .nth(0)
+      .getByRole("button", { name: "Paste a copied query here" })
+      .click();
+    await expect(page.getByText("Could not paste the query")).toBeVisible();
+    await expect(page.getByText("fly() cannot follow select()")).toBeVisible();
+    expect(await rowQueries(page)).toEqual([""]);
   });
 });

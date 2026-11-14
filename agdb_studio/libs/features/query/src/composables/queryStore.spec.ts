@@ -151,6 +151,24 @@ describe("queryStore", () => {
     expect(got?.value?.lastRun).toBeInstanceOf(Date);
   });
 
+  it("sets lastRun together with fresh results, once per run", async () => {
+    store.addQuery(makeQuery());
+    const query = store.getQuery("q1");
+    let storedAt: Date | undefined;
+    await store.runQuery("q1", async () => {
+      store.setQueryResults("q1", "exec", []);
+      storedAt = query?.value.lastRun;
+    });
+    expect(storedAt).toBeInstanceOf(Date);
+    // Not changed again when the run finishes.
+    expect(query?.value.lastRun).toBe(storedAt);
+
+    // Refreshes (keepExpanded) and context results do not count as a run.
+    store.setQueryResults("q1", "exec", [], { keepExpanded: true });
+    store.setQueryResults("q1", "context", []);
+    expect(query?.value.lastRun).toBe(storedAt);
+  });
+
   it("stops a running query", () => {
     vi.useFakeTimers();
 
@@ -583,5 +601,149 @@ describe("queryStore", () => {
     const rows = store.getQuery("q1")?.value.rows.exec;
     expect(rows?.[0]?.steps[1]?.invalid).toBe(true);
     expect(rows?.[1]?.steps[0]?.invalid).toBe(false);
+  });
+
+  describe("graph result patching", () => {
+    const node = (id: number) => ({ id, from: 0, to: 0, values: [] });
+    const edge = (id: number, from: number, to: number) => ({
+      id,
+      from,
+      to,
+      values: [],
+    });
+
+    it("remembers the executed queries per tab and clears them with results", () => {
+      store.addQuery(makeQuery());
+      const execQueries = [{ Remove: { Ids: [{ Id: 1 }] } }];
+      const contextQueries = [{ Remove: { Ids: [{ Id: 2 }] } }];
+      store.setQueryResults("q1", "exec", [], {
+        queries: execQueries,
+        stepTypes: ["remove"],
+      });
+      store.setQueryResults("q1", "context", [], {
+        queries: contextQueries,
+        stepTypes: ["select"],
+      });
+      // Results stored without queries (e.g. a refresh) keep the snapshot.
+      store.setQueryResults("q1", "exec", [], { keepExpanded: true });
+      const query = store.getQuery("q1");
+      expect(query?.value.executedQueries).toEqual({
+        exec: execQueries,
+        context: contextQueries,
+      });
+
+      expect(query?.value.executedStepTypes).toEqual({
+        exec: ["remove"],
+        context: ["select"],
+      });
+
+      store.clearQueryResults("q1", "context");
+      expect(query?.value.executedQueries).toEqual({ exec: execQueries });
+      expect(query?.value.executedStepTypes).toEqual({ exec: ["remove"] });
+
+      store.clearQueryResults("q1");
+      expect(query?.value.executedQueries).toBeUndefined();
+      expect(query?.value.executedStepTypes).toBeUndefined();
+    });
+
+    it("appends expanded results and resets them on a new run", () => {
+      store.addQuery(makeQuery());
+      store.setQueryResults("q1", "exec", [{ result: 1, elements: [node(1)] }]);
+      store.appendExpandedResults("q1", [{ result: 1, elements: [node(2)] }]);
+      store.appendExpandedResults("q1", [{ result: 1, elements: [node(3)] }]);
+      expect(store.getQuery("q1")?.value.results.expanded).toHaveLength(2);
+
+      store.setQueryResults("q1", "exec", [], { keepExpanded: true });
+      expect(store.getQuery("q1")?.value.results.expanded).toHaveLength(2);
+
+      store.setQueryResults("q1", "exec", []);
+      expect(store.getQuery("q1")?.value.results.expanded).toBeUndefined();
+    });
+
+    it("keeps expanded results when context results are set", () => {
+      store.addQuery(makeQuery());
+      store.appendExpandedResults("q1", [{ result: 1, elements: [node(2)] }]);
+      store.setQueryResults("q1", "context", []);
+      expect(store.getQuery("q1")?.value.results.expanded).toHaveLength(1);
+    });
+
+    it("removes elements and edges of removed nodes from all results", () => {
+      store.addQuery(makeQuery());
+      store.setQueryResults("q1", "exec", [
+        {
+          result: 4,
+          elements: [node(1), node(2), node(3), edge(-4, 1, 2)],
+        },
+      ]);
+      store.setQueryResults("q1", "context", [
+        { result: 1, elements: [edge(-5, 3, 2), node(2)] },
+      ]);
+      store.removeElementsFromResults("q1", [2]);
+      const results = store.getQuery("q1")?.value.results;
+      expect(results?.exec?.[0]?.elements.map((e) => e.id)).toEqual([1, 3]);
+      expect(results?.context?.[0]?.elements).toEqual([]);
+    });
+
+    it("ignores patching for unknown queries", () => {
+      expect(() => {
+        store.appendExpandedResults("missing", []);
+        store.removeElementsFromResults("missing", [1]);
+      }).not.toThrow();
+    });
+  });
+
+  describe("pasteQuerySteps", () => {
+    const args = [[{ selectedOption: "signed", value: "1" }]];
+
+    it("fills an empty row with new step ids and validates them", () => {
+      const query = store.addQuery(makeQuery());
+      const row = store.pasteQuerySteps("q1", "exec", firstRowId("q1"), [
+        { type: "select" },
+        { type: "insert" },
+      ]);
+      expect(query.value.rows.exec).toHaveLength(1);
+      expect(row).toBe(query.value.rows.exec[0]);
+      expect(row?.steps.map((s) => s.type)).toEqual(["select", "insert"]);
+      expect(row?.steps[0]?.id).toMatch(/^step-/);
+      expect(row?.steps.map((s) => s.invalid)).toEqual([false, true]);
+    });
+
+    it("inserts a new row after a row that has steps", () => {
+      const query = store.addQuery(makeQuery());
+      const first = firstRowId("q1");
+      store.addQueryStep("q1", "exec", first, makeStep());
+      const last = store.addQueryRow("q1", "exec");
+      const pasted = store.pasteQuerySteps("q1", "exec", first, [
+        { type: "select", args },
+      ]);
+      const rows = query.value.rows.exec;
+      expect(pasted).toBe(rows[1]);
+      expect(rows.map((r) => r.id)).toEqual([first, rows[1]?.id, last?.id]);
+      expect(rows[1]?.steps[0]?.args).toEqual(args);
+      expect(rows[1]?.steps[0]?.args).not.toBe(args);
+      // Pasting twice gives independent copies.
+      store.pasteQuerySteps("q1", "exec", first, [{ type: "select", args }]);
+      expect(rows[1]?.steps[0]?.args).not.toBe(rows[2]?.steps[0]?.args);
+    });
+
+    it("copies reactive args from the store", () => {
+      const query = store.addQuery(makeQuery());
+      const first = firstRowId("q1");
+      store.addQueryStep("q1", "exec", first, makeStep({ type: "select" }));
+      const step = query.value.rows.exec[0]!.steps[0]!;
+      step.args = args;
+      store.pasteQuerySteps("q1", "exec", first, [step]);
+      expect(query.value.rows.exec[1]?.steps[0]?.args).toEqual(args);
+    });
+
+    it("ignores missing queries and rows", () => {
+      store.addQuery(makeQuery());
+      expect(
+        store.pasteQuerySteps("missing", "exec", "r", [{ type: "select" }]),
+      ).toBeUndefined();
+      expect(
+        store.pasteQuerySteps("q1", "exec", "nope", [{ type: "select" }]),
+      ).toBeUndefined();
+    });
   });
 });

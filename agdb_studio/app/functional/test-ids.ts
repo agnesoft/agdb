@@ -37,6 +37,21 @@ export const testIds = createTestIds({
   QUERY_HIDDEN_SUMMARY: "query-hidden-summary",
   QUERY_GRAPH: "query-graph",
 
+  // Query results
+  RESULTS_CHIP: "results-chip",
+  RESULT_SCALAR: "result-scalar",
+  RESULTS_TABLE: "results-table",
+  RESULTS_TABLE_ROW: "results-table-row",
+  RESULTS_ROW_MENU: "results-row-menu",
+  RESULTS_JSON: "results-json",
+  VIEW_GRAPH: "view-graph",
+  VIEW_TABLE: "view-table",
+  VIEW_JSON: "view-json",
+  ELEMENT_DETAILS_PANEL: "element-details-panel",
+  PANEL_VALUE_ROW: "panel-value-row",
+  PANEL_VALUE_INPUT: "panel-value-input",
+  PANEL_SAVE: "panel-save",
+
   // Cluster
   CROWN_ICON: "crown-icon",
   ACTIVE_SERVER_CROWN_ICON: "active-server-crown-icon",

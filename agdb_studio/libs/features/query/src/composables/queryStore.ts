@@ -1,7 +1,26 @@
 import type { Components } from "@agnesoft/agdb_api";
 import { ref, type Ref } from "vue";
-import type { AddQueryParams, Query, QueryRow, QueryStep, TAB } from "./types";
+import type {
+  AddQueryParams,
+  CopiedStep,
+  Query,
+  QueryResults,
+  QueryRow,
+  QueryStep,
+  QueryType,
+  TAB,
+} from "./types";
 import { queryApiMock } from "../mock/queryApiMock";
+
+type DbElement = Components.Schemas.DbElement;
+
+/** Every results bucket that can hold graph elements. */
+const RESULT_KEYS = [
+  "exec",
+  "exec_mut",
+  "context",
+  "expanded",
+] as const satisfies readonly (keyof QueryResults)[];
 
 const queries = ref(new Map<string, Ref<Query>>());
 
@@ -137,6 +156,41 @@ const clearQuerySteps = (queryId: string, tab: TAB, rowId: string) => {
   }
 };
 
+/**
+ * Pastes copied steps (with new ids) into an empty row, or into a new row
+ * right after it. Returns the row that received the steps.
+ */
+const pasteQuerySteps = (
+  queryId: string,
+  tab: TAB,
+  rowId: string,
+  steps: CopiedStep[],
+): QueryRow | undefined => {
+  const query = getQuery(queryId);
+  if (!query?.value) return undefined;
+  const rows = query.value.rows[tab];
+  const index = rows.findIndex((r) => r.id === rowId);
+  const current = rows[index];
+  if (!current) return undefined;
+  const pasted = steps.map(({ type, args }) => ({
+    id: `step-${crypto.randomUUID()}`,
+    type,
+    // Each paste gets its own copy; plain copies also work for reactive args.
+    ...(args
+      ? { args: args.map((entry) => entry.map((field) => ({ ...field }))) }
+      : {}),
+  }));
+  const targetIndex = current.steps.length ? index + 1 : index;
+  if (targetIndex === index) {
+    current.steps = pasted;
+  } else {
+    rows.splice(targetIndex, 0, { ...createRow(), steps: pasted });
+  }
+  validateQuerySteps(queryId, tab);
+  // The row from the reactive array, so callers can change it reactively.
+  return rows[targetIndex];
+};
+
 const runQuery = async (
   queryId: string,
   runner?: () => Promise<void>,
@@ -154,11 +208,13 @@ const runQuery = async (
       return;
     }
 
+    const before = query.value.lastRun;
     try {
       await runner();
     } finally {
       query.value.isRunning = false;
-      query.value.lastRun = new Date();
+      // Runs that stored results already set it (see setQueryResults).
+      if (query.value.lastRun === before) query.value.lastRun = new Date();
     }
   }
 };
@@ -174,17 +230,88 @@ const setQueryResults = (
   queryId: string,
   tab: TAB,
   results: Components.Schemas.QueryResult[],
+  options: {
+    keepExpanded?: boolean;
+    /** The queries that produced `results`; kept so they can be re-run. */
+    queries?: Components.Schemas.QueryType[];
+    /** The step types of those queries, so later builder edits don't change the view. */
+    stepTypes?: QueryType[];
+  } = {},
 ) => {
   const query = getQuery(queryId);
   if (query?.value) {
-    query.value.results = {
+    if (options.queries) {
+      query.value.executedQueries = {
+        ...query.value.executedQueries,
+        [tab]: options.queries,
+      };
+    }
+    if (options.stepTypes) {
+      query.value.executedStepTypes = {
+        ...query.value.executedStepTypes,
+        [tab]: options.stepTypes,
+      };
+    }
+    const updated: QueryResults = {
       ...query.value.results,
       [tab]: results,
     };
     if (tab === "exec" || tab === "exec_mut") {
       query.value.lastExecutedTab = tab;
+      if (!options.keepExpanded) {
+        // A freshly executed query starts with a clean graph. Its run time is
+        // set together with the results, so watchers see both in one update.
+        delete updated.expanded;
+        query.value.lastRun = new Date();
+      }
+    }
+    query.value.results = updated;
+  }
+};
+
+/** Appends on-demand loaded elements (e.g. neighbours) to the graph. */
+const appendExpandedResults = (
+  queryId: string,
+  results: Components.Schemas.QueryResult[],
+) => {
+  const query = getQuery(queryId);
+  if (query?.value) {
+    query.value.results = {
+      ...query.value.results,
+      expanded: [...(query.value.results.expanded ?? []), ...results],
+    };
+  }
+};
+
+const mapAllResults = (
+  queryId: string,
+  fn: (elements: DbElement[]) => DbElement[],
+) => {
+  const query = getQuery(queryId);
+  if (!query?.value) return;
+  const updated: QueryResults = {};
+  for (const key of RESULT_KEYS) {
+    const results = query.value.results[key];
+    if (results) {
+      updated[key] = results.map((r) => ({ ...r, elements: fn(r.elements) }));
     }
   }
+  query.value.results = updated;
+};
+
+/**
+ * Removes elements from all stored results. Edges connected to a removed
+ * node are removed as well, mirroring the database behaviour.
+ */
+const removeElementsFromResults = (queryId: string, ids: number[]) => {
+  const removed = new Set(ids);
+  mapAllResults(queryId, (elements) =>
+    elements.filter(
+      (el) =>
+        !removed.has(el.id) &&
+        !(el.id < 0 && (removed.has(el.from) || removed.has(el.to))),
+    ),
+  );
 };
 
 /** Clears stored results. Intended for use when query steps are modified or the view is reset. */
@@ -195,9 +322,17 @@ const clearQueryResults = (queryId: string, tab?: TAB) => {
     const updated = { ...query.value.results };
     delete updated[tab];
     query.value.results = updated;
+    const executed = { ...query.value.executedQueries };
+    delete executed[tab];
+    query.value.executedQueries = executed;
+    const stepTypes = { ...query.value.executedStepTypes };
+    delete stepTypes[tab];
+    query.value.executedStepTypes = stepTypes;
   } else {
     query.value.results = {};
     query.value.lastExecutedTab = undefined;
+    query.value.executedQueries = undefined;
+    query.value.executedStepTypes = undefined;
   }
 };
 
@@ -241,8 +376,11 @@ export const useQueryStore = () => {
     clearQueries,
     getQuery,
     clearQuerySteps,
+    pasteQuerySteps,
     validateQuerySteps,
     setQueryResults,
     clearQueryResults,
+    appendExpandedResults,
+    removeElementsFromResults,
   };
 };

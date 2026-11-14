@@ -1,16 +1,29 @@
 <script lang="ts" setup>
 import { computed, inject, nextTick, ref, type Ref } from "vue";
-import type { QueryRow, QueryType, TAB } from "../../composables/types";
+import type {
+  CopiedStep,
+  QueryRow,
+  QueryType,
+  TAB,
+} from "../../composables/types";
 import { useQueryStore } from "../../composables/queryStore";
 import QueryStep from "./QueryStep.vue";
 import QueryStepInput from "./QueryStepInput.vue";
 import SpinnerIcon from "@agdb-studio/design/src/components/icons/SpinnerIcon.vue";
+import { addNotification } from "@agdb-studio/notification/src/composables/notificationStore";
 import {
   ClAddRow,
   ClTrashFull,
+  LuClipboardPaste,
+  LuCopy,
   LuEraser,
   LuGripVertical,
 } from "@kalimahapps/vue-icons";
+import {
+  copySteps,
+  pastedQuery,
+  readCopiedSteps,
+} from "../../utils/queryRowClipboard";
 
 const props = defineProps<{
   row: QueryRow;
@@ -77,6 +90,78 @@ const removeRow = (): void => {
   queryStore.deleteQueryRow(queryId.value, tab?.value ?? "exec", props.row.id);
 };
 
+const pasteLabel = computed(() =>
+  steps.value.length
+    ? "Paste a copied query below this one"
+    : "Paste a copied query here",
+);
+
+const copyRow = async (): Promise<void> => {
+  const result = await copySteps(steps.value);
+  if (result === "copied") {
+    addNotification({ type: "success", title: "Query copied" });
+  } else if (result === "local") {
+    addNotification({
+      type: "info",
+      title: "Query copied in Studio only",
+      message:
+        "The system clipboard is not available here; paste it with the paste button.",
+    });
+  } else {
+    addNotification({ type: "error", title: "Copy to clipboard failed" });
+  }
+};
+
+const insertSteps = (copied: CopiedStep[]): void => {
+  /* v8 ignore if -- @preserve */
+  if (!queryId?.value) return;
+  queryStore.pasteQuerySteps(
+    queryId.value,
+    tab?.value ?? "exec",
+    props.row.id,
+    copied,
+  );
+};
+
+const pasteRow = async (): Promise<void> => {
+  const read = await readCopiedSteps();
+  if ("steps" in read) {
+    insertSteps(read.steps);
+  } else if ("denied" in read) {
+    addNotification({
+      type: "warning",
+      title: "Clipboard access denied",
+      message: "Click into the query and press Ctrl+V (Cmd+V on Mac) instead.",
+    });
+  } else {
+    addNotification({
+      type: "warning",
+      title: "Could not paste the query",
+      message: read.error,
+    });
+  }
+};
+
+/**
+ * Ctrl/Cmd+V in the row (outside argument fields) pastes query code, e.g.
+ * from Rust; other text pastes as usual.
+ */
+const onPaste = (event: ClipboardEvent): void => {
+  // Argument fields take any text, e.g. a key such as "user.name".
+  const target = event.target;
+  if (
+    target instanceof HTMLInputElement ||
+    target instanceof HTMLTextAreaElement
+  ) {
+    return;
+  }
+  if (props.isRunning) return;
+  const copied = pastedQuery(event.clipboardData?.getData("text/plain") ?? "");
+  if (!copied) return;
+  event.preventDefault();
+  insertSteps(copied);
+};
+
 const addStep = (stepType: QueryType) => {
   /* v8 ignore if -- @preserve */
   if (!queryId?.value) return;
@@ -88,7 +173,12 @@ const addStep = (stepType: QueryType) => {
 </script>
 
 <template>
-  <div ref="rowElement" class="query-input" data-testid="query-row">
+  <div
+    ref="rowElement"
+    class="query-input"
+    data-testid="query-row"
+    @paste="onPaste"
+  >
     <button
       v-if="canMove"
       ref="handleElement"
@@ -136,6 +226,26 @@ const addStep = (stepType: QueryType) => {
     </div>
     <!-- Remove stays right-most so the trash icons line up across rows. -->
     <div class="row-actions">
+      <button
+        v-if="steps.length"
+        type="button"
+        class="button button-transparent row-action copy-row-button"
+        title="Copy this query as Rust code"
+        aria-label="Copy this query as Rust code"
+        @click="copyRow"
+      >
+        <LuCopy />
+      </button>
+      <button
+        type="button"
+        class="button button-transparent row-action paste-row-button"
+        :title="pasteLabel"
+        :aria-label="pasteLabel"
+        :disabled="isRunning"
+        @click="pasteRow"
+      >
+        <LuClipboardPaste />
+      </button>
       <button
         v-if="canAdd"
         type="button"

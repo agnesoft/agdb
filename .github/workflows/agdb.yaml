@@ -45,6 +45,7 @@ jobs:
       - id: check
         if: steps.cache.outputs.cache-matched-key != ''
         run: agci-bin/agci bootstrap --check agci-bin
+        continue-on-error: true
       - if: steps.check.outputs.rebuild != 'false'
         uses: actions-rust-lang/setup-rust-toolchain@v1
         with:

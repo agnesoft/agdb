@@ -4,9 +4,13 @@ edition.workspace = true
 license.workspace = true
 publish = false
 
+[package.metadata.agci]
+checks = ["format", "lint", "test"]
+toolchains = ["node", "php"]
+depends = ["agdb_server/openapi.json", "agdb_server/test_queries.json"]
+run = ["cargo run -r -p agci"]
+
 [dependencies]
-anyhow.workspace = true
-agdb = { workspace = true, features = ["serde", "openapi"] }
+agdb.workspace = true
 serde = { workspace = true, features = ["derive"] }
 serde_json.workspace = true
-utoipa.workspace = true

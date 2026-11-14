@@ -1,31 +1,143 @@
 name: agdb
 
+# Pull requests: agci maps the changed files to projects, adds everything depending on them (manifest
+# dependencies + `depends` in the agci metadata) and checks each. Only the `ci` job should be
+# required, the matrix differs per pull request.
+# Pushes to main build nothing but what agci publishes: `publish_dev` of the affected projects and,
+# when the root Cargo.toml version has no tag yet, the release.
+
 on:
   pull_request:
-    branches: ["main"]
-    paths:
-      - agdb/**
-      - agdb_derive/**
-      - .github/workflows/agdb.yaml
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
 
 jobs:
-  agdb:
+  detect:
     runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.detect.outputs.matrix }}
+      publish: ${{ steps.detect.outputs.publish }}
     steps:
       - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+      - id: detect
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref }}
+          BEFORE: ${{ github.event.before }}
+        run: |
+          case "$EVENT" in
+            pull_request)
+              MATRIX=$(cargo run -q -p agci -- affected --base "origin/$BASE_REF")
+              ;;
+            push)
+              MATRIX='[]'
+              if [[ "$BEFORE" =~ ^0+$ ]]; then ARGS=(--all); else ARGS=(--base "$BEFORE"); fi
+              PLAN=$(cargo run -q -p agci -- publish "${ARGS[@]}" --plan)
+              echo "$PLAN"
+              if [[ -n "$PLAN" ]]; then echo "publish=true" >> "$GITHUB_OUTPUT"; fi
+              ;;
+            *)
+              MATRIX=$(cargo run -q -p agci -- affected --all)
+              ;;
+          esac
+          echo "$MATRIX" | jq .
+          echo "matrix=$MATRIX" >> "$GITHUB_OUTPUT"
+
+  check:
+    needs: detect
+    if: needs.detect.outputs.matrix != '[]'
+    name: ${{ matrix.project }} (${{ matrix.os }})
+    runs-on: ${{ matrix.runs-on }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.detect.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
-          components: rustfmt,clippy
-      - run: cargo fmt -p agdb --check
-      - run: cargo clippy -p agdb --all-targets --all-features -- -D warnings
-      - uses: taiki-e/install-action@cargo-llvm-cov
-      - run: rustup component add llvm-tools-preview
-      - run: cargo llvm-cov -p agdb --all-features --show-missing-lines
+          components: rustfmt,clippy${{ matrix.coverage && ',llvm-tools-preview' || '' }}
+      - if: matrix.coverage
+        uses: taiki-e/install-action@cargo-llvm-cov
+      - if: matrix.node
+        uses: pnpm/action-setup@v6
+      - if: matrix.node
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+      - if: matrix.php
+        uses: shivammathur/setup-php@v2
+        with:
+          coverage: xdebug
+          tools: composer
+      - env:
+          PROJECT: ${{ matrix.project }}
+        run: cargo run -q -p agci -- check "$PROJECT"
+      - if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ matrix.artifact }}
+          path: |
+            ${{ matrix.project }}/coverage/
+            ${{ matrix.project }}/**/playwright-report/
+            ${{ matrix.project }}/*.log
+          if-no-files-found: ignore
+          retention-days: 30
 
-  # merge with the main job once --doctests is stabilized: https://github.com/taiki-e/cargo-llvm-cov/issues/2
-  agdb_doctests:
+  ci:
+    needs: [detect, check]
+    if: always()
     runs-on: ubuntu-latest
     steps:
+      - env:
+          DETECT: ${{ needs.detect.result }}
+          CHECK: ${{ needs.check.result }}
+        run: |
+          echo "detect: $DETECT, check: $CHECK"
+          [[ "$DETECT" == "success" && ( "$CHECK" == "success" || "$CHECK" == "skipped" ) ]]
+
+  publish:
+    needs: detect
+    if: needs.detect.outputs.publish == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # GitHub releases and tags
+      packages: write # GHCR
+      id-token: write # npm provenance (OIDC)
+    steps:
       - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
       - uses: actions-rust-lang/setup-rust-toolchain@v1
-      - run: cargo test -p agdb --all-features --doc
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          registry-url: "https://registry.npmjs.org"
+      - env:
+          DOCKER_HUB_TOKEN: ${{ secrets.DOCKER_HUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "$DOCKER_HUB_TOKEN" | docker login -u agnesoft --password-stdin
+          echo "$GITHUB_TOKEN" | docker login ghcr.io -u agnesoft --password-stdin
+      - env:
+          BEFORE: ${{ github.event.before }}
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CRATES_IO_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [[ "$BEFORE" =~ ^0+$ ]]; then ARGS=(--all); else ARGS=(--base "$BEFORE"); fi
+          cargo run -q -p agci -- publish "${ARGS[@]}"

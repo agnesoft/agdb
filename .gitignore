@@ -8,8 +8,6 @@ agdb_server_benchmark.log
 agdb_benchmark.yaml
 agdb_server.yaml
 agdb_server_data/
-!.github/workflows/agdb_benchmark.yaml
-!.github/workflows/agdb_server.yaml
 !agdb_benchmark/agdb_server.yaml
 test.log
 vendor/

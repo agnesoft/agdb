@@ -1,7 +1,7 @@
 {
     "name": "@agnesoft/agdb_api",
     "version": "0.16.2",
-    "license": "Apache-2.0",
+    "license": "Apache-2.",
     "description": "Agnesoft Graph Database API client for typescript/javascript",
     "author": "Agnesoft",
     "type": "module",
@@ -27,14 +27,15 @@
     ],
     "scripts": {
         "build": "tsc && copyfiles -f src/openapi.d.ts dist/",
-        "test": "bash test.sh",
+        "test": "node ../../agdb_server/test_server.mjs vitest run --coverage",
         "lint": "eslint --max-warnings=0 \"**/*.ts\" \"**/*.js\" --fix",
         "lint:check": "eslint --max-warnings=0 \"**/*.ts\" \"**/*.js\"",
         "format": "prettier --write src/ tests/",
         "format:check": "prettier --check src/ tests/",
         "before-commit": "pnpm run openapi && pnpm run format && pnpm run lint && pnpm run test",
         "openapi": "pnpm exec openapi typegen ../../agdb_server/openapi.json > src/openapi.d.ts",
-        "test_queries": "node query_test_generator.js && prettier --write tests/query.test.ts"
+        "test_queries": "node query_test_generator.js && prettier --write tests/query.test.ts",
+        "release": "npm view \"$npm_package_name@$npm_package_version\" version >/dev/null 2>&1 || pnpm publish --provenance --access public --no-git-checks"
     },
     "dependencies": {
         "openapi-client-axios": "^7.6.0"
@@ -70,5 +71,24 @@
             "types": "./dist/query_builder.d.ts",
             "default": "./dist/query_builder.js"
         }
+    },
+    "agci": {
+        "checks": [
+            "openapi",
+            "test_queries",
+            "format:check",
+            "lint:check",
+            "build",
+            "test"
+        ],
+        "toolchains": [
+            "rust"
+        ],
+        "depends": [
+            "agdb_server"
+        ],
+        "publish": [
+            "release"
+        ]
     }
 }

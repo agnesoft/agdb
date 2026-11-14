@@ -7,7 +7,10 @@
     "lint:check:full": "pnpm --dir app run lint:check:local && node app/scripts/lint-boundaries.mjs",
     "lint:check": "node app/scripts/lint-boundaries.mjs",
     "lint:boundaries": "node app/scripts/lint-boundaries.mjs",
-    "lint:boundaries:check": "node app/scripts/lint-boundaries.mjs"
+    "lint:boundaries:check": "node app/scripts/lint-boundaries.mjs",
+    "test:server": "cargo test -p agdb_server --features studio -- studio basepath",
+    "test:image": "bash ../agdb_server/test_image.sh",
+    "release:image": "bash ../agdb_server/publish_image.sh"
   },
   "dependencies": {
     "@agdb-studio/design": "workspace:*",
@@ -52,5 +55,27 @@
     "vite": "catalog:",
     "vitest": "catalog:",
     "vue-tsc": "catalog:"
+  },
+  "agci": {
+    "checks": [
+      "format:check",
+      "lint:check",
+      "build",
+      "type-check",
+      "test",
+      "test:server",
+      "test:functional",
+      "test:image"
+    ],
+    "toolchains": [
+      "rust"
+    ],
+    "publish": [
+      "release:image"
+    ],
+    "publish_dev": [
+      "release:package",
+      "release:image"
+    ]
   }
 }

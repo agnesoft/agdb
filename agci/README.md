@@ -1,6 +1,6 @@
 # description
 
-The `agci` utility helps automate the release process. It determines the current version from the latest `v*` git tag and reads the new version from the root `Cargo.toml` (`[workspace.package].version`). It then updates version strings in workspace packages (e.g. TypeScript `package.json` files) and regenerates OpenAPI/client artifacts and test queries. For TypeScript projects it also runs `pnpm install`, which updates `pnpm-lock.yaml`.
+The `agci` utility drives the CI (see [ci](#ci)) and helps automate the release process. It determines the current version from the latest `v*` git tag and reads the new version from the root `Cargo.toml` (`[workspace.package].version`). It then updates version strings in workspace packages (e.g. TypeScript `package.json` files) and regenerates OpenAPI/client artifacts and test queries. For TypeScript projects it also runs `pnpm install`, which updates `pnpm-lock.yaml`.
 
 - agdb
 - agdb_derive
@@ -36,3 +36,47 @@ cargo run --release -p agci
 6. Open a pull request from the release branch to `main`.
 
 7. After merge the release will happen automatically.
+
+# ci
+
+The `agdb` workflow checks only the projects affected by a pull request:
+
+1. `agci affected --base origin/main` maps the changed files to projects (the longest matching project directory owns a file), adds the projects that declare a changed path in `depends` and then, transitively, every project depending on any of those. The result is the job matrix.
+2. Each job runs `agci check <project>` which runs the checks the project declares. The checks fail if they modify tracked files (e.g. outdated `openapi.json` or generated clients).
+3. The `ci` job aggregates the results, it is the only one to require in the branch protection.
+
+The same commands work locally: `cargo run -p agci -- check` runs the checks of the projects affected by the uncommitted changes.
+
+A push to main checks nothing (that happened in the pull request), it only publishes via `agci publish --base <before>`:
+
+1. The `publish_dev` scripts of the projects affected by the push, with `AGCI_VERSION=dev` (the studio package on the `dev` GitHub release and the `agnesoft/agdb:dev` image).
+2. A release when there is no `v<version>` tag for the root `Cargo.toml` version: the `publish` targets of all projects in dependency order (`AGCI_VERSION=<version>`), then the GitHub release with the tag. The tag comes last, so re-running a failed release retries it; crates already on crates.io are skipped, scripts should tolerate re-runs.
+
+`--plan` prints the steps without running them.
+
+## projects
+
+A project is a `Cargo.toml` with `[package.metadata.agci]` or a `package.json` with an `"agci"` object. A manifest without it is folded into the nearest enclosing project of the same language (e.g. all `agdb_studio/**` packages form the `agdb_studio` project). A manifest that cannot be attributed to a project is an error. Projects are identified by their directory.
+
+Dependencies come from the manifests (Cargo path dependencies, `workspace:`/`file:` package.json dependencies). Changes to the root `Cargo.toml`/`Cargo.lock` affect all Rust projects, changes to the root `package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml` or `turbo.json` affect all Node projects and changes to `.github/workflows/agdb.yaml` affect everything.
+
+| field                  | applies to | description                                                                                                                                                                                   |
+| ---------------------- | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `checks`               | all        | Rust: any of `format`, `lint`, `testcheck`, `doc`, `bench`, `test` (always run in this order). Node: package.json scripts, run in the given order via turbo over all packages of the project. |
+| `depends`              | all        | Additional dependencies: project directories (transitive) or repository paths.                                                                                                                |
+| `os`                   | all        | `linux` (default) and/or `windows`.                                                                                                                                                           |
+| `toolchains`           | all        | Extra toolchains: `rust`, `node`, `php`.                                                                                                                                                      |
+| `features`             | Rust       | Features to use instead of `--all-features`.                                                                                                                                                  |
+| `coverage`             | Rust       | Run `test` under `cargo llvm-cov` counting only the project's own sources. `100` requires all lines, regions and functions covered, `0` only reports.                                         |
+| `feature_combinations` | Rust       | Also lint the library and all targets with `--no-default-features --features <combination>` for each entry.                                                                                   |
+| `run`                  | Rust       | Extra shell commands run in the project directory after the checks.                                                                                                                           |
+| `publish`              | all        | Run on a release. Rust: `crates` (`cargo publish`). Node: package.json scripts.                                                                                                               |
+| `publish_dev`          | Node       | package.json scripts run on every push to main that affects the project.                                                                                                                      |
+
+```toml
+[package.metadata.agci]
+os = ["linux", "windows"]
+checks = ["format", "lint", "testcheck", "doc", "bench", "test"]
+coverage = 100
+feature_combinations = ["", "fs", "fs,process"]
+```

@@ -19,6 +19,13 @@
     "typescript-eslint": "catalog:"
   },
   "dependencies": {
-    "agdb_api": "file:../../agdb_api/typescript"
+    "@agnesoft/agdb_api": "workspace:*"
+  },
+  "agci": {
+    "checks": [
+      "format:check",
+      "lint:check",
+      "build"
+    ]
   }
 }

@@ -9,3 +9,6 @@ agdb_api.workspace = true
 agdb.workspace = true
 anyhow.workspace = true
 tokio = { workspace = true, features = ["full"] }
+
+[package.metadata.agci]
+checks = ["format", "lint", "test"]

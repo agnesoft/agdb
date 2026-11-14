@@ -46,9 +46,17 @@ API client packages are available for Rust, TypeScript, and PHP. The OpenAPI spe
 
 ## PHP
 
-- Test with coverage: `cd agdb_api/php/ && ./ci.sh coverage`
-- Lint: `cd agdb_api/php/ && ./ci.sh analyse`
-- Format: `cd agdb_api/php/ && ./ci.sh format`
+- Test with coverage: `pnpm run test --filter agdb_api_php`
+- Lint: `pnpm run lint:check --filter agdb_api_php`
+- Format: `pnpm run format --filter agdb_api_php`
+
+## CI
+
+- Run the checks of the projects affected by the uncommitted changes: `cargo run -p agci -- check`
+- Run the checks of a project: `cargo run -p agci -- check <project dir>`, e.g. `agdb_server`
+- List the projects and their dependencies: `cargo run -p agci -- projects`
+- Each project declares its checks in `[package.metadata.agci]` (Cargo.toml) or `"agci"` (package.json), see `agci/README.md`.
+- Preview what a push to main would publish: `cargo run -p agci -- publish --base <ref> --plan`
 
 # Available packages
 

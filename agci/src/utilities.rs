@@ -25,3 +25,14 @@ pub(crate) fn run_command(command: &mut Command) -> Result<String, CIError> {
         .into())
     }
 }
+
+/// Runs the command without echoing its output, returning stdout.
+pub(crate) fn run_quiet(command: &mut Command) -> Result<String, CIError> {
+    let out = command.output()?;
+    if out.status.success() {
+        Ok(String::from_utf8(out.stdout)?)
+    } else {
+        std::io::stderr().write_all(&out.stderr)?;
+        Err(format!("Command failed: {command:?}").into())
+    }
+}

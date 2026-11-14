@@ -16,3 +16,7 @@ proc-macro = true
 proc-macro2.workspace = true
 quote.workspace = true
 syn = { workspace = true, features = ["full", "extra-traits"] }
+
+[package.metadata.agci]
+publish = ["crates"]
+checks = ["format", "lint", "test"]

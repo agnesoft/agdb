@@ -21,6 +21,33 @@
         "test": {},
         "type-check": {},
         "test:functional": {},
-        "before-commit": {}
+        "before-commit": {},
+        "openapi": {
+            "cache": false
+        },
+        "test_queries": {
+            "cache": false
+        },
+        "test:server": {
+            "cache": false
+        },
+        "test:image": {
+            "cache": false
+        },
+        "release": {
+            "cache": false,
+            "dependsOn": [
+                "build"
+            ]
+        },
+        "release:package": {
+            "cache": false,
+            "dependsOn": [
+                "build"
+            ]
+        },
+        "release:image": {
+            "cache": false
+        }
     }
 }

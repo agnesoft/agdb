@@ -52,5 +52,12 @@
     "vite": "catalog:",
     "vitest": "catalog:",
     "vue-tsc": "catalog:"
+  },
+  "agci": {
+    "checks": [
+      "lint:check",
+      "build",
+      "test"
+    ]
   }
 }

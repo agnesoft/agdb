@@ -1,5 +1,9 @@
 {
     "name": "agnesoft/examples_server_client",
+    "_comment": [
+        "The path repository uses the agdb_api client from this repository (root composer.json, sources in agdb_api/php).",
+        "In your own project depend on the published package instead: drop \"repositories\" and require \"agnesoft/agdb_api\": \"dev-main\"."
+    ],
     "autoload": {
         "psr-4": {
             "agnesoft\\examples_server_client\\": "src/"
@@ -12,8 +16,14 @@
         }
     ],
     "minimum-stability": "dev",
+    "repositories": [
+        {
+            "type": "path",
+            "url": "../.."
+        }
+    ],
     "require": {
-        "agnesoft/agdb_api": "dev-main"
+        "agnesoft/agdb_api": "*"
     },
     "require-dev": {
         "phpstan/phpstan": "^1.11"

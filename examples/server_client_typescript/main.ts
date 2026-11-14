@@ -1,4 +1,8 @@
-import { QueryBuilder, AgdbApi, convertToNativeValue } from "agdb_api";
+import {
+  QueryBuilder,
+  AgdbApi,
+  convertToNativeValue,
+} from "@agnesoft/agdb_api";
 
 async function main() {
   // Requires the server to be running. Run it with `cargo run -p agdb_server`

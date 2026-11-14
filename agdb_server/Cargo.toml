@@ -47,3 +47,10 @@ uuid = { workspace = true, features = ["v4"] }
 [dev-dependencies]
 agdb_api = { workspace = true, features = ["test_server"] }
 anyhow.workspace = true
+
+[package.metadata.agci]
+# The `studio` feature only embeds the built studio, the agdb_studio project checks it.
+checks = ["format", "lint", "test"]
+features = "tls"
+coverage = 0
+publish = ["crates"]

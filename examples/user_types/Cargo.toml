@@ -6,3 +6,6 @@ publish = false
 
 [dependencies]
 agdb.workspace = true
+
+[package.metadata.agci]
+checks = ["format", "lint", "test"]

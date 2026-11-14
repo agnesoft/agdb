@@ -162,7 +162,7 @@ mod tests {
             vec![
                 format!("{PNPM} install --frozen-lockfile"),
                 format!(
-                    "AGCI_VERSION=dev {PNPM} exec turbo run test --force --env-mode=loose --filter=ui"
+                    "AGCI_VERSION=dev {PNPM} exec turbo run test --force --env-mode=loose --log-order=stream --filter=ui"
                 ),
             ]
         );
@@ -176,10 +176,10 @@ mod tests {
                 format!("{PNPM} install --frozen-lockfile"),
                 "cargo publish -p server".to_string(),
                 format!(
-                    "AGCI_VERSION=1.2.3 {PNPM} exec turbo run build --force --env-mode=loose --filter=client"
+                    "AGCI_VERSION=1.2.3 {PNPM} exec turbo run build --force --env-mode=loose --log-order=stream --filter=client"
                 ),
                 format!(
-                    "AGCI_VERSION=1.2.3 {PNPM} exec turbo run build --force --env-mode=loose --filter=ui"
+                    "AGCI_VERSION=1.2.3 {PNPM} exec turbo run build --force --env-mode=loose --log-order=stream --filter=ui"
                 ),
                 "gh release create v1.2.3 --target abc --title v1.2.3 --generate-notes".to_string(),
             ]

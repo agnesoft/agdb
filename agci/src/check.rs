@@ -44,7 +44,7 @@ pub(crate) fn step(program: &str, args: &[&str], dir: &str) -> Step {
 pub(crate) fn run_steps(label: &str, steps: &[Step], root: &str) -> Result<(), CIError> {
     for step in steps {
         println!("[{label}] {step}");
-        utilities::run_command(
+        utilities::stream_command(
             Command::new(&step.program)
                 .args(&step.args)
                 .envs(step.env.iter().map(|(k, v)| (k, v)))
@@ -193,6 +193,8 @@ pub(crate) fn node_scripts(project: &Project, scripts: &[String]) -> Vec<Step> {
             script,
             "--force",
             "--env-mode=loose",
+            // the default (`grouped` on CI) opens its own GitHub log groups, which do not nest in agci's
+            "--log-order=stream",
         ];
         args.extend(filters.iter().map(String::as_str));
         steps.push(step(PNPM, &args, ""));
@@ -415,10 +417,10 @@ mod tests {
             vec![
                 format!("> {PNPM} install --frozen-lockfile"),
                 format!(
-                    "> {PNPM} exec turbo run test --force --env-mode=loose --filter=ui --filter=ui_lib"
+                    "> {PNPM} exec turbo run test --force --env-mode=loose --log-order=stream --filter=ui --filter=ui_lib"
                 ),
                 format!(
-                    "> {PNPM} exec turbo run build --force --env-mode=loose --filter=ui --filter=ui_lib"
+                    "> {PNPM} exec turbo run build --force --env-mode=loose --log-order=stream --filter=ui --filter=ui_lib"
                 ),
             ]
         );

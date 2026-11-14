@@ -20,7 +20,7 @@
     "format": "prettier --write src/ functional/",
     "format:check": "prettier --check src/ functional/",
     "before-commit": "pnpm run format && pnpm run lint && pnpm run test && pnpm run test:functional",
-    "release:package": "tar -czf ../agdb_studio.tar.gz -C dist . && gh release upload dev ../agdb_studio.tar.gz --clobber"
+    "release:dev": "tar -czf ../agdb_studio.tar.gz -C dist . && gh release upload dev ../agdb_studio.tar.gz --clobber"
   },
   "dependencies": {
     "@agdb-studio/design": "workspace:*",

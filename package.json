@@ -11,6 +11,7 @@
     "lint:check": "turbo run lint:check",
     "format": "turbo run format",
     "format:check": "turbo run format:check",
+    "check": "turbo run openapi test_queries format:check build lint:check type-check test test:functional",
     "before-commit": "turbo run before-commit",
     "build-studio": "turbo run agdb_studio#build"
   },

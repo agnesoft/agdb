@@ -13,22 +13,5 @@
     "openapi": "node -e \"for (const d of ['lib', 'docs', '.openapi-generator']) require('fs').rmSync(d, { recursive: true, force: true })\" && pnpm exec openapi-generator-cli generate -i ../../agdb_server/openapi.json -g php -o ./ -c openapi_generator.json && composer -d ../.. dump-autoload -o",
     "test_queries": "node query_test_generator.js && prettier --plugin @prettier/plugin-php --write tests/QueryTest.php",
     "test": "composer -d ../.. install && node ../../agdb_server/test_server.mjs php -d xdebug.mode=coverage ../../vendor/bin/phpunit tests --coverage-filter src/ --coverage-text=coverage/coverage.txt --coverage-html coverage/ --coverage-cobertura coverage/coverage-final.xml && node coverage.js"
-  },
-  "agci": {
-    "checks": [
-      "openapi",
-      "test_queries",
-      "format:check",
-      "lint:check",
-      "test"
-    ],
-    "toolchains": [
-      "php",
-      "rust"
-    ],
-    "depends": [
-      "agdb_server",
-      "composer.json"
-    ]
   }
 }

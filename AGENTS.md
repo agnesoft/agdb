@@ -55,7 +55,7 @@ API client packages are available for Rust, TypeScript, and PHP. The OpenAPI spe
 - Run the checks of the projects affected by the uncommitted changes: `cargo run -p agci -- check`
 - Run the checks of a project: `cargo run -p agci -- check <project dir>`, e.g. `agdb_server`
 - List the projects and their dependencies: `cargo run -p agci -- projects`
-- Each project declares its checks in `[package.metadata.agci]` (Cargo.toml) or `"agci"` (package.json), see `agci/README.md`.
+- Cargo workspace members and package.json packages are detected as projects, the root `agci.toml` holds the defaults and per-project overrides, see `agci/README.md`.
 - Preview what a push to main would release: `cargo run -p agci -- release --base <ref> --plan`
 
 # Available packages

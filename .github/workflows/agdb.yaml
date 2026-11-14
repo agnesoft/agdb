@@ -1,10 +1,11 @@
 name: agdb
 
-# Pull requests: agci maps the changed files to projects, adds everything depending on them (manifest
-# dependencies + `depends` in the agci metadata) and checks each. Only the `ci` job should be
-# required, the matrix differs per pull request.
-# Pushes to main build nothing but what agci releases: `release_dev` of the affected projects and,
-# when the root Cargo.toml version has no tag yet, the release.
+# Pull requests: agci checks the projects (agci.toml) whose fingerprint (their files, agci.toml entry
+# and dependencies) differs from the base, except the jobs that already passed with the same
+# fingerprints in the pull request. Only the `ci` job should be required, the matrix differs per
+# pull request.
+# Pushes to main build nothing but what agci releases: the `release:dev` hooks of the affected
+# projects and, when the root Cargo.toml version has no tag yet, the release.
 
 on:
   pull_request:
@@ -42,10 +43,11 @@ jobs:
           path: agci-bin
           key: agci-${{ matrix.os }}-${{ github.sha }}
           restore-keys: agci-${{ matrix.os }}-
+      # a failure (e.g. a binary older than `bootstrap --check`) sets no output, i.e. rebuilds
       - id: check
         if: steps.cache.outputs.cache-matched-key != ''
-        run: agci-bin/agci bootstrap --check agci-bin
         continue-on-error: true
+        run: agci-bin/agci bootstrap --check agci-bin
       - if: steps.check.outputs.rebuild != 'false'
         uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
@@ -64,10 +66,13 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
-  # The only job with the full history (diffs against the base, tags), the others are shallow.
+  # The only job with the full history (the base, tags), the others are shallow.
   config:
     needs: bootstrap
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read # the evidence of passed jobs in the actions cache
     outputs:
       matrix: ${{ steps.config.outputs.matrix }}
       release: ${{ steps.config.outputs.release }}
@@ -84,6 +89,8 @@ jobs:
           chmod +x "$RUNNER_TEMP/agci/agci"
           echo "$RUNNER_TEMP/agci" >> "$GITHUB_PATH"
       - id: config
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: agci config
 
   check:
@@ -127,6 +134,15 @@ jobs:
         env:
           PROJECTS: ${{ join(matrix.projects, ' ') }}
         run: agci check $PROJECTS
+      # evidence that the job passed with these fingerprints, `agci config` skips it until they change
+      - shell: bash
+        env:
+          EVIDENCE: ${{ matrix.evidence }}
+        run: echo "$EVIDENCE" > "$RUNNER_TEMP/evidence"
+      - uses: actions/cache/save@v6
+        with:
+          path: ${{ runner.temp }}/evidence
+          key: ${{ matrix.evidence }}
       - if: always()
         uses: actions/upload-artifact@v7
         with:

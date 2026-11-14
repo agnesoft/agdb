@@ -47,11 +47,3 @@ uuid = { workspace = true, features = ["v4"] }
 [dev-dependencies]
 agdb_api = { workspace = true, features = ["test_server"] }
 anyhow.workspace = true
-
-[package.metadata.agci]
-# node: with the `studio` feature build.rs builds the studio (it does not depend on it, the studio
-# checks itself and agdb_server/image tests them together)
-checks = ["format", "lint", "test"]
-toolchains = ["node"]
-coverage = 0
-release = ["crates"]

@@ -1,6 +1,6 @@
 use crate::CIError;
-use crate::config::RUST_CHECKS;
-use crate::manifest::Lang;
+use crate::config::CARGO_CHECKS;
+use crate::manifest::Kind;
 use crate::project::Project;
 use crate::report::Report;
 use crate::utilities;
@@ -153,31 +153,53 @@ fn modified_files(before: &str, after: &str) -> Vec<String> {
 }
 
 pub(crate) fn checks(project: &Project, projects: &[Project], root: &str) -> Vec<Check> {
-    match project.lang {
-        Lang::Rust => rust_checks(project, projects, root),
-        Lang::Node => node_checks(project),
+    match project.kind {
+        Kind::Cargo => cargo_checks(project, projects, root),
+        Kind::Pnpm => pnpm_checks(project),
+        Kind::Shell => project
+            .config
+            .checks
+            .iter()
+            .zip(shell_scripts(project, &project.config.checks))
+            .map(|(name, step)| named(name, vec![step]))
+            .collect(),
     }
+}
+
+/// The Shell scripts of the project run in its directory, `.sh` by bash and `.ps1` by PowerShell.
+pub(crate) fn shell_scripts(project: &Project, names: &[String]) -> Vec<Step> {
+    names
+        .iter()
+        .filter_map(|name| project.shell_script(name))
+        .map(|file| {
+            if file.ends_with(".ps1") {
+                step("pwsh", &["-NoProfile", "-File", file], &project.dir)
+            } else {
+                step(utilities::BASH, &[file], &project.dir)
+            }
+        })
+        .collect()
 }
 
 pub(crate) fn pnpm_install() -> Step {
     step(PNPM, &["install", "--frozen-lockfile"], "")
 }
 
-fn node_checks(project: &Project) -> Vec<Check> {
+fn pnpm_checks(project: &Project) -> Vec<Check> {
     let mut checks = vec![named("install", vec![pnpm_install()])];
     checks.extend(
         project
             .config
             .checks
             .iter()
-            .zip(node_scripts(project, &project.config.checks))
+            .zip(pnpm_scripts(project, &project.config.checks))
             .map(|(script, step)| named(script, vec![step])),
     );
     checks
 }
 
 /// The scripts run via turbo over all packages of the project (in the packages that define them).
-pub(crate) fn node_scripts(project: &Project, scripts: &[String]) -> Vec<Step> {
+pub(crate) fn pnpm_scripts(project: &Project, scripts: &[String]) -> Vec<Step> {
     let filters: Vec<String> = project
         .packages
         .iter()
@@ -203,15 +225,11 @@ pub(crate) fn node_scripts(project: &Project, scripts: &[String]) -> Vec<Step> {
     steps
 }
 
-fn rust_checks(project: &Project, projects: &[Project], root: &str) -> Vec<Check> {
+fn cargo_checks(project: &Project, projects: &[Project], root: &str) -> Vec<Check> {
     let config = &project.config;
     let name = project.packages[0].as_str();
     let dir = project.dir.as_str();
-    let features: Vec<&str> = match &config.features {
-        None => vec!["--all-features"],
-        Some(f) if f.is_empty() => vec![],
-        Some(f) => vec!["--features", f],
-    };
+    let features = ["--all-features"];
     let cargo = |args: &[&str], extra: &[&str]| {
         let mut all = args.to_vec();
         all.extend(extra);
@@ -219,7 +237,7 @@ fn rust_checks(project: &Project, projects: &[Project], root: &str) -> Vec<Check
     };
     let mut checks = Vec::new();
 
-    for check in RUST_CHECKS
+    for check in CARGO_CHECKS
         .iter()
         .filter(|c| config.checks.iter().any(|d| d == *c))
     {
@@ -254,62 +272,55 @@ fn rust_checks(project: &Project, projects: &[Project], root: &str) -> Vec<Check
                 &[&["bench", "-p", name], &features[..]].concat(),
                 &["--", "--samples", "1", "--iters", "1"],
             )),
-            "test" => match config.coverage {
-                None => steps.push(cargo(&[&["test", "-p", name], &features[..]].concat(), &[])),
-                Some(coverage) => {
-                    let ignore = coverage_ignore(project, projects, root);
-                    let threshold = coverage.to_string();
-                    let thresholds: Vec<&str> = match coverage {
-                        100 => vec![
-                            "--fail-uncovered-lines",
-                            "0",
-                            "--fail-uncovered-regions",
-                            "0",
-                            "--fail-uncovered-functions",
-                            "0",
-                        ],
-                        0 => vec![],
-                        _ => vec!["--fail-under-lines", &threshold],
-                    };
-                    steps.push(cargo(&["llvm-cov", "clean", "--workspace"], &[]));
-                    steps.push(cargo(
-                        &[&["llvm-cov", "-p", name], &features[..]].concat(),
-                        &[
-                            &["--show-missing-lines", "--ignore-filename-regex", &ignore],
-                            &thresholds[..],
-                        ]
-                        .concat(),
-                    ));
-                }
-            },
+            "coverage" if !config.coverage() => {
+                steps.push(cargo(&[&["test", "-p", name], &features[..]].concat(), &[]));
+            }
+            "coverage" => {
+                let ignore = coverage_ignore(project, projects, root);
+                steps.push(cargo(&["llvm-cov", "clean", "--workspace"], &[]));
+                steps.push(cargo(
+                    &[&["llvm-cov", "-p", name], &features[..]].concat(),
+                    &[
+                        "--show-missing-lines",
+                        "--ignore-filename-regex",
+                        &ignore,
+                        "--fail-uncovered-lines",
+                        "0",
+                        "--fail-uncovered-regions",
+                        "0",
+                        "--fail-uncovered-functions",
+                        "0",
+                    ],
+                ));
+            }
             _ => unreachable!("validated by project"),
         }
 
-        checks.push(named(check, steps));
+        checks.push(named(project.check_name(check), steps));
     }
 
-    if !config.run.is_empty() {
+    for check in config
+        .checks
+        .iter()
+        .filter(|c| !CARGO_CHECKS.contains(&c.as_str()))
+    {
         checks.push(named(
-            "run",
-            config
-                .run
-                .iter()
-                .map(|command| step(utilities::BASH, &["-c", command], dir))
-                .collect(),
+            check,
+            shell_scripts(project, std::slice::from_ref(check)),
         ));
     }
 
     checks
 }
 
-/// Coverage counts only the project's own sources: other Rust projects and its examples are ignored.
+/// Coverage counts only the project's own sources: other Cargo projects and its examples are ignored.
 fn coverage_ignore(project: &Project, projects: &[Project], root: &str) -> String {
     let sep = r"[/\\]";
     let path = |p: &str| p.split('/').map(regex_escape).collect::<Vec<_>>().join(sep);
     let mut ignored: Vec<String> = projects
         .iter()
         .filter(|p| {
-            p.lang == Lang::Rust
+            p.kind == Kind::Cargo
                 && p.dir != project.dir
                 && !project.owns(&p.dir)
                 && !p.owns(&project.dir)
@@ -341,29 +352,50 @@ fn regex_escape(text: &str) -> String {
 mod tests {
     use super::*;
     use crate::manifest::Dep;
-    use crate::project::projects;
+    use crate::project::tests::build;
     use crate::project::tests::config;
     use crate::project::tests::manifest;
 
     fn command_lines(project: &str, edit: impl FnOnce(&mut crate::config::Config)) -> Vec<String> {
-        let mut projects = projects(
+        let mut projects = build(
             vec![
-                manifest("agdb", Lang::Rust, vec![], Some(config(&["test"], &[]))),
+                manifest(
+                    "agdb",
+                    Kind::Cargo,
+                    vec![],
+                    Some(config(&["coverage"], &[])),
+                ),
                 manifest(
                     "agdb_server",
-                    Lang::Rust,
+                    Kind::Cargo,
                     vec![Dep::Dir("agdb".to_string())],
-                    Some(config(&["test"], &[])),
+                    Some(config(&["coverage", "smoke"], &[])),
                 ),
                 manifest(
                     "ui",
-                    Lang::Node,
+                    Kind::Pnpm,
                     vec![],
                     Some(config(&["build", "test"], &[])),
                 ),
-                manifest("ui/lib", Lang::Node, vec![], None),
+                manifest("ui/lib", Kind::Pnpm, vec![], None),
+                manifest(
+                    "agdb_server/image",
+                    Kind::Shell,
+                    vec![],
+                    Some(config(&["test", "test:functional", "smoke"], &[])),
+                ),
             ],
-            |_| false,
+            |p| {
+                [
+                    "agdb_server/smoke.sh",
+                    "agdb_server/image",
+                    "agdb_server/image/test.sh",
+                    "agdb_server/image/test_functional.ps1",
+                    "agdb_server/image/smoke.sh",
+                    "agdb_server/image/smoke.ps1",
+                ]
+                .contains(&p)
+            },
         )
         .unwrap_or_else(|_| unreachable!());
         let index = projects.iter().position(|p| p.dir == project).unwrap();
@@ -377,12 +409,17 @@ mod tests {
     }
 
     fn check_names(project: &str, edit: impl FnOnce(&mut crate::config::Config)) -> Vec<String> {
-        let projects = projects(
+        let projects = build(
             vec![
-                manifest("agdb", Lang::Rust, vec![], Some(config(&["test"], &[]))),
-                manifest("ui", Lang::Node, vec![], Some(config(&["test"], &[]))),
+                manifest(
+                    "agdb",
+                    Kind::Cargo,
+                    vec![],
+                    Some(config(&["coverage", "regenerate"], &[])),
+                ),
+                manifest("ui", Kind::Pnpm, vec![], Some(config(&["test"], &[]))),
             ],
-            |_| false,
+            |p| p == "agdb/regenerate.ps1",
         )
         .unwrap_or_else(|_| unreachable!());
         let mut project = projects.into_iter().find(|p| p.dir == project).unwrap();
@@ -397,10 +434,18 @@ mod tests {
     fn checks_are_named_after_the_metadata() {
         assert_eq!(
             check_names("agdb", |c| {
-                c.checks = vec!["test".to_string(), "lint".to_string()];
-                c.run = vec!["true".to_string(), "false".to_string()];
+                c.checks = ["regenerate", "coverage", "lint"]
+                    .map(str::to_string)
+                    .to_vec();
             }),
-            vec!["lint", "test", "run"]
+            vec!["lint", "coverage", "regenerate"]
+        );
+        assert_eq!(
+            check_names("agdb", |c| {
+                c.checks = vec!["coverage".to_string()];
+                c.coverage = Some(false);
+            }),
+            vec!["test"]
         );
         assert_eq!(
             check_names("ui", |c| c.checks =
@@ -427,22 +472,39 @@ mod tests {
     }
 
     #[test]
+    fn shell_runs_script_files_in_the_project_directory() {
+        let smoke = if cfg!(windows) {
+            "agdb_server/image> pwsh -NoProfile -File smoke.ps1".to_string()
+        } else {
+            format!("agdb_server/image> {} smoke.sh", utilities::BASH)
+        };
+
+        assert_eq!(
+            command_lines("agdb_server/image", |_| {}),
+            vec![
+                format!("agdb_server/image> {} test.sh", utilities::BASH),
+                "agdb_server/image> pwsh -NoProfile -File test_functional.ps1".to_string(),
+                smoke,
+            ]
+        );
+    }
+
+    #[test]
     fn rust_runs_checks_in_canonical_order() {
         assert_eq!(
             command_lines("agdb_server", |c| {
-                c.checks = ["test", "doc", "lint", "format"]
+                c.checks = ["smoke", "coverage", "doc", "lint", "format"]
                     .iter()
                     .map(|s| s.to_string())
                     .collect();
-                c.features = Some("tls".to_string());
-                c.run = vec!["./bench.sh".to_string()];
+                c.coverage = Some(false);
             }),
             vec![
                 "> cargo fmt -p agdb_server --check",
-                "> cargo clippy -p agdb_server --all-targets --features tls -- -D warnings",
-                "> cargo test -p agdb_server --features tls --doc",
-                "> cargo test -p agdb_server --features tls",
-                &format!("agdb_server> {} -c ./bench.sh", utilities::BASH),
+                "> cargo clippy -p agdb_server --all-targets --all-features -- -D warnings",
+                "> cargo test -p agdb_server --all-features --doc",
+                "> cargo test -p agdb_server --all-features",
+                &format!("agdb_server> {} smoke.sh", utilities::BASH),
             ]
         );
     }
@@ -452,11 +514,10 @@ mod tests {
         assert_eq!(
             command_lines("agdb", |c| {
                 c.checks = vec!["lint".to_string()];
-                c.features = Some(String::new());
                 c.feature_combinations = vec![String::new(), "fs,env".to_string()];
             }),
             vec![
-                "> cargo clippy -p agdb --all-targets -- -D warnings",
+                "> cargo clippy -p agdb --all-targets --all-features -- -D warnings",
                 "> cargo clippy -p agdb --lib --no-default-features -- -D warnings",
                 "> cargo clippy -p agdb --all-targets --no-default-features -- -D warnings",
                 "> cargo clippy -p agdb --lib --no-default-features --features fs,env -- -D warnings",
@@ -470,7 +531,7 @@ mod tests {
         let sep = r"[/\\]";
 
         assert_eq!(
-            command_lines("agdb", |c| c.coverage = Some(100)),
+            command_lines("agdb", |c| c.checks = vec!["coverage".to_string()]),
             vec![
                 "> cargo llvm-cov clean --workspace".to_string(),
                 format!(
@@ -478,14 +539,6 @@ mod tests {
                 ),
             ]
         );
-    }
-
-    #[test]
-    fn rust_partial_coverage_threshold() {
-        let lines = command_lines("agdb", |c| c.coverage = Some(90));
-
-        assert!(lines[1].ends_with(" --fail-under-lines 90"), "{}", lines[1]);
-        assert!(!command_lines("agdb", |c| c.coverage = Some(0))[1].contains("--fail"));
     }
 
     #[test]

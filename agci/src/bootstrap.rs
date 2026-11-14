@@ -1,5 +1,5 @@
 use crate::CIError;
-use crate::affected::RUST_INPUTS;
+use crate::affected::CARGO_INPUTS;
 use crate::affected::graph;
 use crate::project::Project;
 use crate::utilities;
@@ -14,7 +14,7 @@ const EXE: &str = if cfg!(windows) { "agci.exe" } else { "agci" };
 const FINGERPRINT: &str = "agci.fingerprint";
 
 /// Repository paths the agci binary is built from: its project, the projects it transitively depends
-/// on and the files affecting all Rust projects. Extra inputs (`depends` paths) are not compiled in.
+/// on and the files affecting all Cargo projects. Extra inputs (`dependencies` paths) are not compiled in.
 pub(crate) fn inputs(projects: &[Project]) -> Result<BTreeSet<String>, CIError> {
     let agci = projects
         .iter()
@@ -29,7 +29,7 @@ pub(crate) fn inputs(projects: &[Project]) -> Result<BTreeSet<String>, CIError> 
             .node()
             .query(),
     )?;
-    let mut paths: BTreeSet<String> = RUST_INPUTS
+    let mut paths: BTreeSet<String> = CARGO_INPUTS
         .iter()
         .map(|input| input.trim_end_matches('/').to_string())
         .collect();
@@ -107,17 +107,20 @@ fn target_dir() -> Result<PathBuf, CIError> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::manifest::Lang;
+    use crate::manifest::Kind;
     use crate::project::tests::config;
 
     fn project(dir: &str, package: &str, depends: &[&str], inputs: &[&str]) -> Project {
         Project {
             dir: dir.to_string(),
-            lang: Lang::Rust,
+            kind: Kind::Cargo,
             packages: vec![package.to_string()],
             config: config(&[], &[]),
             depends: depends.iter().map(|d| d.to_string()).collect(),
             inputs: inputs.iter().map(|i| i.to_string()).collect(),
+            scripts: Default::default(),
+            published: Vec::new(),
+            library: true,
         }
     }
 

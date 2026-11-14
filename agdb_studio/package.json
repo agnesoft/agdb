@@ -52,18 +52,5 @@
     "vite": "catalog:",
     "vitest": "catalog:",
     "vue-tsc": "catalog:"
-  },
-  "agci": {
-    "checks": [
-      "format:check",
-      "build",
-      "lint:check",
-      "type-check",
-      "test",
-      "test:functional"
-    ],
-    "release_dev": [
-      "release:package"
-    ]
   }
 }

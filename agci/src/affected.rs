@@ -1,24 +1,32 @@
 use crate::CIError;
+use crate::config::FILE;
+use crate::config::File;
 use crate::config::Os;
 use crate::config::Toolchain;
-use crate::manifest::Lang;
+use crate::git;
+use crate::manifest::Kind;
 use crate::project::Project;
 use crate::project::is_within;
+use crate::utilities;
 use agdb::DbError;
 use agdb::DbMemory;
 use agdb::QueryBuilder;
 use serde::Serialize;
+use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 
+/// Prefix of the evidence (actions cache keys) of passed check jobs.
+pub(crate) const EVIDENCE: &str = "agci-done-";
+
 /// Changes to these affect every project of the language. Entries ending with `/` are directories.
-pub(crate) const RUST_INPUTS: [&str; 5] = [
+pub(crate) const CARGO_INPUTS: [&str; 5] = [
     "Cargo.toml",
     "Cargo.lock",
     "rust-toolchain",
     "rust-toolchain.toml",
     ".cargo/",
 ];
-const NODE_INPUTS: [&str; 6] = [
+const PNPM_INPUTS: [&str; 6] = [
     "package.json",
     "pnpm-lock.yaml",
     "pnpm-workspace.yaml",
@@ -44,6 +52,9 @@ pub(crate) struct Job {
     pub(crate) artifact: String,
     /// Paths of the uploaded artifacts (coverage, test reports, logs), one per line.
     pub(crate) paths: String,
+    /// The actions cache key recording that the job passed: its OS, name and the fingerprints of its
+    /// projects.
+    pub(crate) evidence: String,
 }
 
 fn matches(path: &str, input: &str) -> bool {
@@ -83,69 +94,129 @@ pub(crate) fn graph(projects: &[Project]) -> Result<DbMemory, CIError> {
     Ok(db)
 }
 
-/// Projects affected by the changed files: the owners of the files, the projects declaring them as
-/// inputs and everything that transitively depends on those (reverse search along the dependency edges).
-pub(crate) fn affected<'a>(
-    projects: &'a [Project],
-    changed: &[String],
-) -> Result<BTreeSet<&'a str>, CIError> {
-    let mut seeds: BTreeSet<&str> = BTreeSet::new();
+/// The files (path -> git object id) and `agci.toml` of a commit or the working tree.
+#[derive(Debug, Default)]
+pub(crate) struct Snapshot {
+    pub(crate) files: BTreeMap<String, String>,
+    pub(crate) config: File,
+}
 
-    for file in changed {
-        let file = file.as_str();
-        let all = ALL_INPUTS.iter().any(|i| matches(file, i));
-        let rust = all || RUST_INPUTS.iter().any(|i| matches(file, i));
-        let node = all || NODE_INPUTS.iter().any(|i| matches(file, i));
+impl Snapshot {
+    /// The commit or, without one, the working tree.
+    pub(crate) fn of(rev: Option<&str>) -> Result<Self, CIError> {
+        let files = match rev {
+            Some(rev) => git::files_at(rev)?,
+            None => git::worktree_files()?,
+        };
+        let config = match rev {
+            _ if !files.contains_key(FILE) => File::default(),
+            Some(rev) => File::parse(&git::file_at(rev, FILE)?)?,
+            None => File::parse(&std::fs::read_to_string(FILE)?)?,
+        };
+        Ok(Self { files, config })
+    }
+}
+
+/// What a project consists of in the snapshot: its effective `agci.toml` entry (with the defaults),
+/// its files (not those of projects nested in it), its `dependencies` paths and the files
+/// affecting every project of its language.
+fn contents<'a>(
+    projects: &'a [Project],
+    snapshot: &Snapshot,
+) -> Result<BTreeMap<&'a str, String>, CIError> {
+    let mut contents = BTreeMap::new();
+
+    for project in projects {
+        let entry = serde_json::to_string(&snapshot.config.effective(&project.dir, project.kind))?;
+        contents.insert(project.dir.as_str(), format!("{entry}\n"));
+    }
+
+    for (path, id) in &snapshot.files {
+        let all = ALL_INPUTS.iter().any(|i| matches(path, i));
+        let rust = all || CARGO_INPUTS.iter().any(|i| matches(path, i));
+        let node = all || PNPM_INPUTS.iter().any(|i| matches(path, i));
+        let owner = projects
+            .iter()
+            .filter(|p| p.owns(path))
+            .max_by_key(|p| p.dir.len())
+            .map(|p| p.dir.as_str());
 
         for project in projects {
-            let global = match project.lang {
-                Lang::Rust => rust,
-                Lang::Node => node,
+            let global = match project.kind {
+                Kind::Cargo => rust,
+                Kind::Pnpm => node,
+                Kind::Shell => all,
             };
 
-            if global || project.inputs.iter().any(|i| is_within(file, i)) {
-                seeds.insert(&project.dir);
+            if global
+                || owner == Some(project.dir.as_str())
+                || project.inputs.iter().any(|i| is_within(path, i))
+            {
+                contents
+                    .entry(project.dir.as_str())
+                    .or_default()
+                    .push_str(&format!("{id} {path}\n"));
             }
-        }
-
-        if let Some(owner) = projects
-            .iter()
-            .filter(|p| p.owns(file))
-            .max_by_key(|p| p.dir.len())
-        {
-            seeds.insert(&owner.dir);
         }
     }
 
+    Ok(contents)
+}
+
+/// A hash per project of its contents and those of every project it transitively depends on, so it
+/// changes with any of them. Stable across commits (git object ids) and runs.
+pub(crate) fn fingerprints(
+    projects: &[Project],
+    snapshot: &Snapshot,
+) -> Result<BTreeMap<String, String>, CIError> {
+    let contents = contents(projects, snapshot)?;
     let db = graph(projects)?;
-    let mut affected = BTreeSet::new();
+    let mut fingerprints = BTreeMap::new();
 
-    for seed in seeds {
-        if affected.contains(seed) {
-            continue;
-        }
-
-        let dependents = db.exec(
+    for project in projects {
+        let closure = db.exec(
             QueryBuilder::select()
                 .aliases()
                 .search()
-                .to(seed)
+                .from(project.dir.as_str())
                 .where_()
                 .node()
                 .query(),
         )?;
+        let mut members = Vec::new();
 
-        for element in &dependents.elements {
-            let alias = element.values[0].value.string()?;
-            let project = projects
-                .iter()
-                .find(|p| p.dir == *alias)
-                .ok_or(format!("unknown project '{alias}' in the graph"))?;
-            affected.insert(project.dir.as_str());
+        for element in &closure.elements {
+            members.push(element.values[0].value.string()?.as_str());
         }
+
+        members.sort();
+        let mut text = String::new();
+
+        for member in members {
+            text.push_str(&format!("{member}\n"));
+            text.push_str(contents.get(member).map_or("", String::as_str));
+        }
+
+        fingerprints.insert(project.dir.clone(), utilities::hash(text.as_bytes()));
     }
 
-    Ok(affected)
+    Ok(fingerprints)
+}
+
+/// Projects whose fingerprint differs between the snapshots: their own contents or those of a
+/// (transitive) dependency changed. A new project or one without an entry in `base` is affected.
+pub(crate) fn affected<'a>(
+    projects: &'a [Project],
+    base: &Snapshot,
+    head: &Snapshot,
+) -> Result<BTreeSet<&'a str>, CIError> {
+    let base = fingerprints(projects, base)?;
+    let head = fingerprints(projects, head)?;
+    Ok(projects
+        .iter()
+        .filter(|p| base.get(&p.dir) != head.get(&p.dir))
+        .map(|p| p.dir.as_str())
+        .collect())
 }
 
 /// Projects ordered so that every project comes after all of its (transitive) dependencies: in an
@@ -172,7 +243,11 @@ pub(crate) fn dependency_order(projects: &[Project]) -> Result<Vec<&Project>, CI
 }
 
 /// A job per project and OS, projects of the same group share it.
-pub(crate) fn jobs(projects: &[Project], affected: &BTreeSet<&str>) -> Vec<Job> {
+pub(crate) fn jobs(
+    projects: &[Project],
+    affected: &BTreeSet<&str>,
+    fingerprints: &BTreeMap<String, String>,
+) -> Vec<Job> {
     let mut jobs: Vec<Job> = Vec::new();
 
     for project in projects
@@ -190,7 +265,7 @@ pub(crate) fn jobs(projects: &[Project], affected: &BTreeSet<&str>) -> Vec<Job> 
                 job.rust |= project.needs(Toolchain::Rust);
                 job.node |= project.needs(Toolchain::Node);
                 job.php |= project.needs(Toolchain::Php);
-                job.coverage |= project.config.coverage.is_some();
+                job.coverage |= project.measures_coverage();
                 job.paths = format!("{}\n{paths}", job.paths);
                 continue;
             }
@@ -206,15 +281,29 @@ pub(crate) fn jobs(projects: &[Project], affected: &BTreeSet<&str>) -> Vec<Job> 
                 rust: project.needs(Toolchain::Rust),
                 node: project.needs(Toolchain::Node),
                 php: project.needs(Toolchain::Php),
-                coverage: project.config.coverage.is_some(),
+                coverage: project.measures_coverage(),
                 artifact: format!(
                     "{}-{}",
                     name.replace('/', "_"),
                     format!("{os:?}").to_lowercase()
                 ),
                 paths: paths.clone(),
+                evidence: String::new(),
             });
         }
+    }
+
+    for job in &mut jobs {
+        let projects: String = job
+            .projects
+            .iter()
+            .map(|p| format!("{p} {}\n", fingerprints.get(p).map_or("", String::as_str)))
+            .collect();
+        job.evidence = format!(
+            "{EVIDENCE}{}-{}",
+            job.artifact,
+            utilities::hash(projects.as_bytes())
+        );
     }
 
     jobs
@@ -224,54 +313,87 @@ pub(crate) fn jobs(projects: &[Project], affected: &BTreeSet<&str>) -> Vec<Job> 
 mod tests {
     use super::*;
     use crate::manifest::Dep;
-    use crate::project::projects;
+    use crate::project::tests::build;
     use crate::project::tests::config;
     use crate::project::tests::manifest;
 
-    // db <- server <- client <- ui, server <- bench, ui has its own input file
+    // db <- server <- client <- ui, server <- bench, ui has its own input file, server/image is a
+    // Shell project nested in server
     fn sample() -> Vec<Project> {
-        projects(
+        build(
             vec![
-                manifest("db", Lang::Rust, vec![], Some(config(&["test"], &[]))),
+                manifest("db", Kind::Cargo, vec![], Some(config(&["coverage"], &[]))),
                 manifest(
                     "server",
-                    Lang::Rust,
+                    Kind::Cargo,
                     vec![Dep::Dir("db".to_string())],
-                    Some(config(&["test"], &[])),
+                    Some(config(&["coverage"], &[])),
                 ),
                 manifest(
                     "bench",
-                    Lang::Rust,
+                    Kind::Cargo,
                     vec![],
-                    Some(config(&["test"], &["server"])),
+                    Some(config(&["coverage"], &["server"])),
                 ),
                 manifest(
                     "client",
-                    Lang::Node,
+                    Kind::Pnpm,
                     vec![],
                     Some(config(&["test"], &["server"])),
                 ),
                 manifest(
                     "ui",
-                    Lang::Node,
+                    Kind::Pnpm,
                     vec![Dep::Name("client".to_string())],
                     Some(config(&["test"], &["ui.lock"])),
                 ),
-                manifest("ui/lib", Lang::Node, vec![], None),
+                manifest("ui/lib", Kind::Pnpm, vec![], None),
+                manifest(
+                    "server/image",
+                    Kind::Shell,
+                    vec![],
+                    Some(config(&["test"], &["server"])),
+                ),
             ],
-            |p| p == "ui.lock",
+            |p| ["ui.lock", "server/image", "server/image/test.sh"].contains(&p),
         )
         .unwrap()
     }
 
-    fn run(changed: &[&str]) -> Vec<String> {
-        let projects = sample();
-        let changed: Vec<String> = changed.iter().map(|c| c.to_string()).collect();
-        affected(&projects, &changed)
+    fn snapshot(files: &[(&str, &str)], config: &str) -> Snapshot {
+        Snapshot {
+            files: files
+                .iter()
+                .map(|(k, v)| (k.to_string(), v.to_string()))
+                .collect(),
+            config: File::parse(config).unwrap(),
+        }
+    }
+
+    const FILES: [(&str, &str); 4] = [
+        ("db/src/lib.rs", "1"),
+        ("server/src/main.rs", "1"),
+        ("server/image/test.sh", "1"),
+        ("ui/lib/src/a.ts", "1"),
+    ];
+
+    fn between(projects: &[Project], base: &Snapshot, head: &Snapshot) -> Vec<String> {
+        affected(projects, base, head)
             .unwrap()
             .into_iter()
             .map(|p| p.to_string())
             .collect()
+    }
+
+    /// The projects affected by changing (or adding) the files.
+    fn run(changed: &[&str]) -> Vec<String> {
+        let mut head = snapshot(&FILES, "");
+
+        for file in changed {
+            head.files.insert(file.to_string(), "2".to_string());
+        }
+
+        between(&sample(), &snapshot(&FILES, ""), &head)
     }
 
     #[test]
@@ -280,14 +402,71 @@ mod tests {
     }
 
     #[test]
+    fn nothing_changed_affects_nothing() {
+        assert!(run(&[]).is_empty());
+    }
+
+    #[test]
     fn change_propagates_to_dependents_across_languages() {
         assert_eq!(
             run(&["server/src/main.rs"]),
-            vec!["bench", "client", "server", "ui"]
+            vec!["bench", "client", "server", "server/image", "ui"]
         );
         assert_eq!(
             run(&["db/src/lib.rs"]),
-            vec!["bench", "client", "db", "server", "ui"]
+            vec!["bench", "client", "db", "server", "server/image", "ui"]
+        );
+    }
+
+    #[test]
+    fn nested_project_files_do_not_affect_the_enclosing_one() {
+        assert_eq!(run(&["server/image/test.sh"]), vec!["server/image"]);
+    }
+
+    #[test]
+    fn deleted_file_affects_its_project() {
+        let mut head = snapshot(&FILES, "");
+        head.files.remove("ui/lib/src/a.ts");
+
+        assert_eq!(between(&sample(), &snapshot(&FILES, ""), &head), vec!["ui"]);
+    }
+
+    #[test]
+    fn config_entry_change_affects_the_project_and_its_dependents_only() {
+        let base = snapshot(
+            &FILES,
+            "[projects.client]\ngroup = \"a\"\n[projects.db]\ncoverage = false",
+        );
+        let head = snapshot(
+            &FILES,
+            "[projects.client]\ngroup = \"b\"\n[projects.db]\ncoverage = false",
+        );
+
+        assert_eq!(between(&sample(), &base, &head), vec!["client", "ui"]);
+    }
+
+    #[test]
+    fn new_entry_affects_the_project() {
+        let head = snapshot(&FILES, "[projects.client]\ngroup = \"a\"");
+
+        assert_eq!(
+            between(&sample(), &snapshot(&FILES, ""), &head),
+            vec!["client", "ui"]
+        );
+    }
+
+    #[test]
+    fn defaults_affect_the_projects_of_the_language_not_setting_the_field() {
+        let base = snapshot(&FILES, "[projects.db]\ncoverage = true");
+        let head = snapshot(
+            &FILES,
+            "[defaults.cargo]\ncoverage = false\n[projects.db]\ncoverage = true",
+        );
+
+        // bench and server use the default, client and ui depend on server
+        assert_eq!(
+            between(&sample(), &base, &head),
+            vec!["bench", "client", "server", "server/image", "ui"]
         );
     }
 
@@ -301,13 +480,13 @@ mod tests {
         assert_eq!(run(&["pnpm-lock.yaml"]), vec!["client", "ui"]);
         assert_eq!(
             run(&["Cargo.toml"]),
-            vec!["bench", "client", "db", "server", "ui"]
+            vec!["bench", "client", "db", "server", "server/image", "ui"]
         );
     }
 
     #[test]
     fn workflow_affects_everything() {
-        assert_eq!(run(&[".github/workflows/agdb.yaml"]).len(), 5);
+        assert_eq!(run(&[".github/workflows/agdb.yaml"]).len(), 6);
     }
 
     #[test]
@@ -317,16 +496,27 @@ mod tests {
 
     #[test]
     fn cycles_terminate() {
-        let projects = projects(
+        let projects = build(
             vec![
-                manifest("a", Lang::Rust, vec![], Some(config(&["test"], &["b"]))),
-                manifest("b", Lang::Rust, vec![], Some(config(&["test"], &["a"]))),
+                manifest(
+                    "a",
+                    Kind::Cargo,
+                    vec![],
+                    Some(config(&["coverage"], &["b"])),
+                ),
+                manifest(
+                    "b",
+                    Kind::Cargo,
+                    vec![],
+                    Some(config(&["coverage"], &["a"])),
+                ),
             ],
             |_| false,
         )
         .unwrap();
+        let head = snapshot(&[("a/x", "1")], "");
 
-        assert_eq!(affected(&projects, &["a/x".to_string()]).unwrap().len(), 2);
+        assert_eq!(between(&projects, &Snapshot::default(), &head).len(), 2);
     }
 
     #[test]
@@ -350,14 +540,26 @@ mod tests {
         let mut projects = sample();
         let (bench, client) = (0, 1);
         projects[bench].config.os = vec![Os::Linux, Os::Windows];
-        projects[bench].config.coverage = Some(100);
-        projects[client].config.toolchains = vec![Toolchain::Rust, Toolchain::Php];
+        projects[bench].config.checks.push("coverage".to_string());
+        projects[client].config.add_toolchains = vec![Toolchain::Rust, Toolchain::Php];
 
-        let jobs = jobs(&projects, &BTreeSet::from(["bench", "client"]));
+        let mut jobs = jobs(
+            &projects,
+            &BTreeSet::from(["bench", "client"]),
+            &BTreeMap::new(),
+        );
+
+        for job in &mut jobs {
+            assert!(
+                job.evidence
+                    .starts_with(&format!("agci-done-{}-", job.artifact))
+            );
+            job.evidence.clear();
+        }
 
         assert_eq!(
             serde_json::to_string(&jobs).unwrap(),
-            r#"[{"name":"bench","projects":["bench"],"os":"linux","runs-on":"ubuntu-latest","rust":true,"node":false,"php":false,"coverage":true,"artifact":"bench-linux","paths":"bench/coverage/\nbench/**/playwright-report/\nbench/*.log"},{"name":"bench","projects":["bench"],"os":"windows","runs-on":"windows-latest","rust":true,"node":false,"php":false,"coverage":true,"artifact":"bench-windows","paths":"bench/coverage/\nbench/**/playwright-report/\nbench/*.log"},{"name":"client","projects":["client"],"os":"linux","runs-on":"ubuntu-latest","rust":true,"node":true,"php":true,"coverage":false,"artifact":"client-linux","paths":"client/coverage/\nclient/**/playwright-report/\nclient/*.log"}]"#
+            r#"[{"name":"bench","projects":["bench"],"os":"linux","runs-on":"ubuntu-latest","rust":true,"node":false,"php":false,"coverage":true,"artifact":"bench-linux","paths":"bench/coverage/\nbench/**/playwright-report/\nbench/*.log","evidence":""},{"name":"bench","projects":["bench"],"os":"windows","runs-on":"windows-latest","rust":true,"node":false,"php":false,"coverage":true,"artifact":"bench-windows","paths":"bench/coverage/\nbench/**/playwright-report/\nbench/*.log","evidence":""},{"name":"client","projects":["client"],"os":"linux","runs-on":"ubuntu-latest","rust":true,"node":true,"php":true,"coverage":false,"artifact":"client-linux","paths":"client/coverage/\nclient/**/playwright-report/\nclient/*.log","evidence":""}]"#
         );
     }
 
@@ -371,7 +573,11 @@ mod tests {
             projects[i].config.group = Some("small".to_string());
         }
 
-        let jobs = jobs(&projects, &BTreeSet::from(["bench", "client", "db", "ui"]));
+        let jobs = jobs(
+            &projects,
+            &BTreeSet::from(["bench", "client", "db", "ui"]),
+            &BTreeMap::new(),
+        );
         let summary: Vec<(&str, Os, Vec<&str>, bool, bool)> = jobs
             .iter()
             .map(|j| {
@@ -401,5 +607,44 @@ mod tests {
         );
         assert_eq!(jobs[0].artifact, "small-linux");
         assert!(jobs[0].paths.ends_with("\ndb/*.log"));
+    }
+
+    #[test]
+    fn evidence_changes_with_the_fingerprint_of_any_project_of_the_job() {
+        let mut projects = sample();
+        let (bench, db) = (0, 2);
+        projects[bench].config.group = Some("small".to_string());
+        projects[db].config.group = Some("small".to_string());
+        let affected = BTreeSet::from(["bench", "db"]);
+        let evidence = |fingerprints: &[(&str, &str)]| {
+            let fingerprints = fingerprints
+                .iter()
+                .map(|(p, f)| (p.to_string(), f.to_string()))
+                .collect();
+            jobs(&projects, &affected, &fingerprints)[0]
+                .evidence
+                .clone()
+        };
+        let base = evidence(&[("bench", "1"), ("db", "1"), ("ui", "1")]);
+
+        assert_eq!(base, evidence(&[("bench", "1"), ("db", "1"), ("ui", "2")]));
+        assert_ne!(base, evidence(&[("bench", "1"), ("db", "2"), ("ui", "1")]));
+    }
+
+    #[test]
+    fn fingerprints_are_stable_and_include_dependencies() {
+        let projects = sample();
+        let head = snapshot(&FILES, "[projects.db]\ncoverage = false");
+        let a = fingerprints(&projects, &head).unwrap();
+        let b = fingerprints(&projects, &head).unwrap();
+        let mut changed = snapshot(&FILES, "[projects.db]\ncoverage = false");
+        changed
+            .files
+            .insert("db/src/lib.rs".to_string(), "2".to_string());
+        let c = fingerprints(&projects, &changed).unwrap();
+
+        assert_eq!(a, b);
+        assert_ne!(a["server"], c["server"]);
+        assert_eq!(a["ui"].len(), 16);
     }
 }

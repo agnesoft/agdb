@@ -1,5 +1,6 @@
 {
   "name": "@agdb-studio/design",
+  "private": true,
   "version": "1.0.0",
   "description": "Design library for AGDB Studio",
   "type": "module",

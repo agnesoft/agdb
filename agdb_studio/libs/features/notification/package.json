@@ -1,5 +1,6 @@
 {
   "name": "@agdb-studio/notification",
+  "private": true,
   "version": "1.0.0",
   "description": "Notification library for AGDB Studio",
   "type": "module",

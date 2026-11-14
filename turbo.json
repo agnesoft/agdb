@@ -28,23 +28,11 @@
         "test_queries": {
             "cache": false
         },
-        "test:image": {
-            "cache": false
-        },
-        "release": {
+        "release:dev": {
             "cache": false,
             "dependsOn": [
                 "build"
             ]
-        },
-        "release:package": {
-            "cache": false,
-            "dependsOn": [
-                "build"
-            ]
-        },
-        "release:image": {
-            "cache": false
         }
     }
 }

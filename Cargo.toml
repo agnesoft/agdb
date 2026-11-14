@@ -52,6 +52,7 @@ serde_yaml = "0.9" # deprecated
 syn = "3"
 tikv-jemallocator = "0.7"
 tokio = "1"
+toml = { version = "1", default-features = false, features = ["std", "serde", "parse"] }
 tower = "0.5"
 tower-http = "0.7"
 utoipa = "6"

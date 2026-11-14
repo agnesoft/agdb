@@ -1,5 +1,6 @@
 {
   "name": "examples_server_client",
+  "private": true,
   "main": "index.js",
   "type": "module",
   "scripts": {
@@ -20,12 +21,5 @@
   },
   "dependencies": {
     "@agnesoft/agdb_api": "workspace:*"
-  },
-  "agci": {
-    "checks": [
-      "format:check",
-      "lint:check",
-      "build"
-    ]
   }
 }

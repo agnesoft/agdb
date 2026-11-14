@@ -1,0 +1,82 @@
+# agci configuration (see agci/README.md), only the deviations from the conventions.
+#
+# Conventions:
+# - Projects by kind: every Cargo workspace member (cargo) and package.json (pnpm) that is not
+#   nested in a project of the same kind, nested ones fold into it. A directory with an entry but
+#   without a manifest is a shell project.
+# - Default checks, those the project cannot run are skipped:
+#   - cargo: format, lint, doc (crates with a library), coverage.
+#   - pnpm: the tasks of the root package.json `check` script, run in the packages that have them.
+#   - shell: format, lint, build, test.
+# - A check that is not built in (cargo) or any check (shell) is the `<check>.sh`/`<check>.ps1`
+#   file in the project directory (`:` is `_`), `run.sh`/`run.ps1` is the last check (cargo,
+#   shell) unless `checks` place it.
+# - Releases: crates unless `publish = false`, npm packages unless `"private": true`, then the
+#   `release` hook; every push to main runs the `release:dev` hook of the affected projects. Hooks
+#   are package.json scripts (pnpm) or `release.sh`/`release_dev.sh` (cargo, shell).
+#
+# Sections, an entry overrides the defaults of its kind field by field:
+#   [defaults.cargo], [defaults.pnpm], [defaults.shell]  any of the fields below
+#   [projects."<dir>"]                                   the project in the directory
+#
+# Fields:
+#   checks = [...]                Replace the default checks. cargo built-ins (always in this
+#                                 order): format, lint, testcheck, doc, bench, coverage, then
+#                                 scripts. pnpm: package.json scripts. shell: scripts. pnpm and
+#                                 scripts run in the given order.
+#   dependencies = [...]          Project directories or repository paths affecting the project
+#                                 besides its manifest dependencies.
+#   os = [...]                    linux (default), windows.
+#   add_toolchains = [...]        Installed besides the kind's own (cargo: rust, pnpm: node): rust,
+#                                 node, php.
+#   group = "<name>"              Check with the other projects of the group in one job per OS.
+#   coverage = false              cargo: the coverage check only runs the tests (named test),
+#                                 otherwise they must cover all lines, regions and functions.
+#   feature_combinations = [...]  cargo: also lint each one with --no-default-features (the
+#                                 checks use --all-features).
+
+[defaults.cargo]
+coverage = false
+
+[projects.agci]
+add_toolchains = ["node", "php"]
+dependencies = ["agdb_server/openapi.json", "agdb_server/test_queries.json"]
+
+[projects."agdb_api/php"]
+add_toolchains = ["php", "rust"]
+dependencies = ["agdb_server", "composer.json"]
+
+[projects."agdb_api/typescript"]
+add_toolchains = ["rust"]
+dependencies = ["agdb_server"]
+
+[projects.agdb_benchmark]
+dependencies = ["agdb_server"]
+
+[projects.agdb_server]
+add_toolchains = ["node"]
+
+[projects."agdb_server/image"]
+dependencies = ["agdb_server", "agdb_studio"]
+
+[projects."examples/app_db"]
+group = "examples"
+
+[projects."examples/indexes"]
+group = "examples"
+
+[projects."examples/joins"]
+group = "examples"
+
+[projects."examples/schema_migration"]
+group = "examples"
+
+[projects."examples/server_client_php"]
+add_toolchains = ["php"]
+dependencies = ["agdb_api/php"]
+
+[projects."examples/server_client_rust"]
+group = "examples"
+
+[projects."examples/user_types"]
+group = "examples"

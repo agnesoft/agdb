@@ -68,3 +68,23 @@ pub(crate) fn set_output(name: &str, value: &str) -> Result<(), CIError> {
 
     Ok(())
 }
+
+/// FNV-1a: stable across Rust versions and platforms (unlike `DefaultHasher`), so the hashes can
+/// be compared across runs.
+pub(crate) fn hash(data: &[u8]) -> String {
+    let hash = data.iter().fold(0xcbf2_9ce4_8422_2325_u64, |hash, byte| {
+        (hash ^ u64::from(*byte)).wrapping_mul(0x0000_0100_0000_01b3)
+    });
+    format!("{hash:016x}")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn hash_is_fnv1a() {
+        assert_eq!(hash(b""), "cbf29ce484222325");
+        assert_eq!(hash(b"a"), "af63dc4c8601ec8c");
+    }
+}

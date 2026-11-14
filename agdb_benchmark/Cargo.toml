@@ -12,8 +12,3 @@ reqwest = { workspace = true, default-features = false, features = ["http2", "ru
 serde = { workspace = true, features = ["derive"] }
 serde_yaml.workspace = true
 tokio = { workspace = true, features = ["full"] }
-
-[package.metadata.agci]
-checks = ["format", "lint"]
-depends = ["agdb_server"]
-run = ["./agdb_server_benchmark.sh"]

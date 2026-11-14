@@ -1,5 +1,6 @@
 {
   "name": "@agdb-studio/router",
+  "private": true,
   "version": "1.0.0",
   "description": "Router library for AGDB Studio",
   "type": "module",

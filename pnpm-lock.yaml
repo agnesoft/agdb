@@ -229,8 +229,6 @@ importers:
         specifier: 'catalog:'
         version: 4.1.12(@types/node@26.6.6)(@vitest/coverage-istanbul@4.1.12)(@vitest/coverage-v8@4.1.12)(happy-dom@20.14.6)(jsdom@30.1.3(@noble/hashes@2.4.0))(vite@8.3.5(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(less@4.9.1(supports-color@10.2.2))(terser@5.51.2)(yaml@2.9.1))
 
-  agdb_server/image: {}
-
   agdb_studio:
     dependencies:
       '@agdb-studio/design':

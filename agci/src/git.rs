@@ -1,5 +1,6 @@
 use crate::CIError;
 use crate::utilities::run_command;
+use std::collections::BTreeMap;
 use std::path::Path;
 use std::process::Command;
 
@@ -40,17 +41,62 @@ pub(crate) fn new_version() -> Result<String, CIError> {
         .ok_or("version not found")?)
 }
 
-/// Files changed on HEAD since its merge base with `base`, both sides of renames.
-pub(crate) fn changed_since(base: &str) -> Result<Vec<String>, CIError> {
-    Ok(crate::utilities::run_quiet(Command::new("git").args([
-        "diff",
-        "--name-only",
-        "--no-renames",
-        &format!("{base}...HEAD"),
-    ]))?
-    .lines()
-    .map(str::to_string)
-    .collect())
+pub(crate) fn merge_base(base: &str) -> Result<String, CIError> {
+    Ok(
+        crate::utilities::run_quiet(Command::new("git").args(["merge-base", base, "HEAD"]))?
+            .trim()
+            .to_string(),
+    )
+}
+
+/// The files of the commit: path -> git object id.
+pub(crate) fn files_at(rev: &str) -> Result<BTreeMap<String, String>, CIError> {
+    let listing = crate::utilities::run_quiet(Command::new("git").args([
+        "ls-tree",
+        "-r",
+        "-z",
+        "--full-tree",
+        rev,
+    ]))?;
+    parse_tree(&listing)
+}
+
+/// `<mode> <type> <id>\t<path>` entries separated by NUL.
+fn parse_tree(listing: &str) -> Result<BTreeMap<String, String>, CIError> {
+    listing
+        .split('\0')
+        .filter(|entry| !entry.is_empty())
+        .map(|entry| {
+            let (meta, path) = entry
+                .split_once('\t')
+                .ok_or(format!("unexpected git ls-tree entry '{entry}'"))?;
+            let id = meta.rsplit(' ').next().unwrap_or_default();
+            Ok((path.to_string(), id.to_string()))
+        })
+        .collect()
+}
+
+pub(crate) fn file_at(rev: &str, path: &str) -> Result<String, CIError> {
+    crate::utilities::run_quiet(Command::new("git").args(["show", &format!("{rev}:{path}")]))
+}
+
+/// The files of HEAD with the uncommitted changes: a changed or new file gets the hash of its
+/// content as its id, a deleted one is left out.
+pub(crate) fn worktree_files() -> Result<BTreeMap<String, String>, CIError> {
+    let mut files = files_at("HEAD")?;
+
+    for path in uncommitted()? {
+        match std::fs::read(&path) {
+            Ok(content) => {
+                files.insert(path, crate::utilities::hash(&content));
+            }
+            Err(_) => {
+                files.remove(&path);
+            }
+        }
+    }
+
+    Ok(files)
 }
 
 /// Uncommitted (staged, unstaged and untracked) files.
@@ -90,4 +136,29 @@ pub(crate) fn head() -> Result<String, CIError> {
             .trim()
             .to_string(),
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn tree_entries_by_path() {
+        let files = parse_tree(
+            "100644 blob 1a2b\tCargo.toml\x00100755 blob 3c4d\tagdb server/run.sh\x00160000 commit 5e6f\tsub\x00",
+        )
+        .unwrap();
+
+        assert_eq!(
+            files,
+            BTreeMap::from(
+                [
+                    ("Cargo.toml", "1a2b"),
+                    ("agdb server/run.sh", "3c4d"),
+                    ("sub", "5e6f")
+                ]
+                .map(|(p, i)| (p.to_string(), i.to_string()))
+            )
+        );
+    }
 }

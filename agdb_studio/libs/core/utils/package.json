@@ -1,5 +1,6 @@
 {
   "name": "@agdb-studio/utils",
+  "private": true,
   "version": "1.0.0",
   "description": "Utility library for AGDB Studio",
   "type": "module",

@@ -1,5 +1,6 @@
 {
   "name": "@agdb-studio/tsconfig",
+  "private": true,
   "version": "1.0.0",
   "description": "Configuration library for AGDB Studio",
   "type": "module",

@@ -926,12 +926,18 @@ importers:
       '@agdb-studio/api':
         specifier: workspace:*
         version: link:../../core/api
+      '@agdb-studio/common':
+        specifier: workspace:*
+        version: link:../common
       '@agdb-studio/db':
         specifier: workspace:*
         version: link:../db
       '@agdb-studio/design':
         specifier: workspace:*
         version: link:../../core/design
+      '@agdb-studio/notification':
+        specifier: workspace:*
+        version: link:../notification
       '@agdb-studio/utils':
         specifier: workspace:*
         version: link:../../core/utils

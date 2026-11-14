@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import { onMounted, provide, ref } from "vue";
 import QueryBuilderTabs from "../builder/QueryBuilderTabs.vue";
-import QueryGraph from "../graph/QueryGraph.vue";
+import QueryResults from "../results/QueryResults.vue";
 import { useQueryStore } from "../../composables/queryStore";
 
 const queryId = ref<string>();
@@ -16,18 +16,20 @@ provide("queryId", queryId);
 </script>
 
 <template>
-  <div class="query-view">
+  <div class="query-workspace">
     <QueryBuilderTabs />
-    <QueryGraph />
+    <QueryResults />
   </div>
 </template>
 
 <style lang="less" scoped>
-.query-view {
+// Not ".query-view": the app page root uses that class, and its scoped styles
+// also reach this component's root element (and turned the grid into a flex box).
+.query-workspace {
   // Fill what is left of the page below the heading; the graph takes whatever the builder doesn't.
   flex: 1;
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr);
   grid-template-rows: max-content minmax(20rem, 1fr);
   grid-gap: 1rem;
   width: 100%;

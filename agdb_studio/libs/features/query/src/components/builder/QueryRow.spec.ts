@@ -1,9 +1,16 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
-import { mount } from "@vue/test-utils";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { flushPromises, mount } from "@vue/test-utils";
+
+const { addNotification } = vi.hoisted(() => ({ addNotification: vi.fn() }));
+vi.mock("@agdb-studio/notification/src/composables/notificationStore", () => ({
+  addNotification,
+}));
+
 import { ref } from "vue";
 import QueryRow from "./QueryRow.vue";
 import { useQueryStore } from "../../composables/queryStore";
 import type { QueryRow as QueryRowModel } from "../../composables/types";
+import { formatSteps, resetCopiedSteps } from "../../utils/queryRowClipboard";
 
 describe("QueryRow", () => {
   const queryStore = useQueryStore();
@@ -215,5 +222,237 @@ describe("QueryRow", () => {
       vm.clearSteps();
       vm.removeRow();
     }).not.toThrow();
+  });
+
+  describe("copy and paste", () => {
+    let clipboard = "";
+    const stubClipboard = (mode: "ok" | "none" | "denied" = "ok") =>
+      vi.stubGlobal("navigator", {
+        clipboard: {
+          ok: {
+            writeText: vi.fn(async (text: string) => {
+              clipboard = text;
+            }),
+            readText: vi.fn(async () => clipboard),
+          },
+          none: undefined,
+          denied: {
+            writeText: vi.fn().mockRejectedValue(new Error("denied")),
+            readText: vi.fn().mockRejectedValue(new Error("denied")),
+          },
+        }[mode],
+      });
+
+    const pasteEvent = (text: string) => {
+      const event = new Event("paste", { bubbles: true, cancelable: true });
+      Object.defineProperty(event, "clipboardData", {
+        value: { getData: () => text },
+      });
+      return event;
+    };
+
+    beforeEach(() => {
+      clipboard = "";
+      resetCopiedSteps();
+      addNotification.mockClear();
+      stubClipboard();
+    });
+    afterEach(() => vi.unstubAllGlobals());
+
+    const setup = () => {
+      const query = queryStore.addQuery({ id: "q1" });
+      const first = query.value.rows.exec[0]!;
+      queryStore.addQueryStep("q1", "exec", first.id, {
+        id: "s1",
+        type: "select",
+      });
+      queryStore.addQueryStep("q1", "exec", first.id, {
+        id: "s2",
+        type: "select.ids",
+        args: [[{ selectedOption: "signed", value: "1" }]],
+      });
+      return { query, first };
+    };
+
+    it("copies a row and pastes it below a row with steps", async () => {
+      const { query, first } = setup();
+      const wrapper = mountRow(first);
+      await wrapper.find(".copy-row-button").trigger("click");
+      await flushPromises();
+      expect(clipboard).toBe("QueryBuilder::select().ids(1).query()");
+      expect(addNotification).toHaveBeenCalledWith(
+        expect.objectContaining({ type: "success" }),
+      );
+
+      expect(wrapper.find(".paste-row-button").attributes("title")).toContain(
+        "below",
+      );
+      await wrapper.find(".paste-row-button").trigger("click");
+      await flushPromises();
+      const rows = query.value.rows.exec;
+      expect(rows).toHaveLength(2);
+      expect(rows[1]?.steps.map((s) => s.type)).toEqual([
+        "select",
+        "select.ids",
+      ]);
+      expect(rows[1]?.steps[0]?.id).not.toBe("s1");
+    });
+
+    it("pastes into an empty row, with no copy button there", async () => {
+      const { query, first } = setup();
+      const second = queryStore.addQueryRow("q1", "exec")!;
+      clipboard = formatSteps(first.steps);
+      const wrapper = mountRow(second);
+      expect(wrapper.find(".copy-row-button").exists()).toBe(false);
+      expect(wrapper.find(".paste-row-button").attributes("title")).toContain(
+        "here",
+      );
+      await wrapper.find(".paste-row-button").trigger("click");
+      await flushPromises();
+      expect(query.value.rows.exec).toHaveLength(2);
+      expect(query.value.rows.exec[1]?.steps).toHaveLength(2);
+    });
+
+    it("explains why the clipboard text cannot be pasted", async () => {
+      const { query, first } = setup();
+      clipboard = "select().nope()";
+      const wrapper = mountRow(first);
+      await wrapper.find(".paste-row-button").trigger("click");
+      await flushPromises();
+      expect(query.value.rows.exec).toHaveLength(1);
+      expect(addNotification).toHaveBeenCalledWith({
+        type: "warning",
+        title: "Could not paste the query",
+        message: "nope() cannot follow select()",
+      });
+    });
+
+    it("pastes Rust code copied from elsewhere", async () => {
+      const { query, first } = setup();
+      clipboard =
+        'let r = db.exec(&QueryBuilder::search().from("users").where_().node().query())?;';
+      const wrapper = mountRow(first);
+      await wrapper.find(".paste-row-button").trigger("click");
+      await flushPromises();
+      expect(query.value.rows.exec[1]?.steps.map((s) => s.type)).toEqual([
+        "search",
+        "search.from",
+        "search.where",
+        "search.where.node",
+      ]);
+    });
+
+    it("keeps a local copy when the browser has no clipboard API", async () => {
+      stubClipboard("none");
+      const { query, first } = setup();
+      const wrapper = mountRow(first);
+      await wrapper.find(".copy-row-button").trigger("click");
+      await flushPromises();
+      expect(addNotification).toHaveBeenCalledWith(
+        expect.objectContaining({ type: "info" }),
+      );
+      await wrapper.find(".paste-row-button").trigger("click");
+      await flushPromises();
+      expect(query.value.rows.exec).toHaveLength(2);
+    });
+
+    it("reports denied clipboard access and pastes nothing", async () => {
+      stubClipboard("denied");
+      const { query, first } = setup();
+      const wrapper = mountRow(first);
+      await wrapper.find(".copy-row-button").trigger("click");
+      await flushPromises();
+      expect(addNotification).toHaveBeenCalledWith(
+        expect.objectContaining({ type: "error" }),
+      );
+      await wrapper.find(".paste-row-button").trigger("click");
+      await flushPromises();
+      expect(addNotification).toHaveBeenCalledWith(
+        expect.objectContaining({ title: "Clipboard access denied" }),
+      );
+      expect(query.value.rows.exec).toHaveLength(1);
+    });
+
+    it("validates pasted steps for the active tab", async () => {
+      const query = queryStore.addQuery({ id: "q1" });
+      const row = query.value.rows.exec_mut[0]!;
+      // A read query pasted into the mutation tab.
+      clipboard = "select().node_count()";
+      const wrapper = mount(QueryRow, {
+        props: {
+          row,
+          index: 0,
+          showIndex: false,
+          canMove: false,
+          canRemove: false,
+          canAdd: false,
+          isRunning: false,
+        },
+        global: { provide: { queryId: ref("q1"), activeTab: ref("exec_mut") } },
+      });
+      await wrapper.find(".paste-row-button").trigger("click");
+      await flushPromises();
+      expect(query.value.rows.exec_mut[0]?.steps.map((s) => s.invalid)).toEqual(
+        [true, true],
+      );
+      expect(query.value.rows.exec[0]?.steps).toHaveLength(0);
+    });
+
+    it("pastes query code with Ctrl+V", () => {
+      const { query, first } = setup();
+      const wrapper = mountRow(first);
+      const row = pasteEvent(formatSteps(first.steps));
+      wrapper.find("[contenteditable]").element.dispatchEvent(row);
+      expect(row.defaultPrevented).toBe(true);
+      expect(query.value.rows.exec).toHaveLength(2);
+    });
+
+    it.each([
+      ["a value list", "1, 2"],
+      ["a single word", "select"],
+      ["text that is not a query", "not.a.query"],
+    ])("leaves %s to the step input", (_, text) => {
+      const { query, first } = setup();
+      const wrapper = mountRow(first);
+      const event = pasteEvent(text);
+      wrapper.find("[contenteditable]").element.dispatchEvent(event);
+      expect(event.defaultPrevented).toBe(false);
+      expect(query.value.rows.exec).toHaveLength(1);
+    });
+
+    it.each(["input", "textarea"])(
+      "leaves query code pasted into an argument %s alone",
+      (tag) => {
+        const { query, first } = setup();
+        const wrapper = mountRow(first);
+        const field = document.createElement(tag);
+        wrapper.find("[data-testid=query-row]").element.appendChild(field);
+        const event = pasteEvent("search.elements");
+        field.dispatchEvent(event);
+        expect(event.defaultPrevented).toBe(false);
+        expect(query.value.rows.exec).toHaveLength(1);
+      },
+    );
+
+    it("ignores paste events without clipboard data", () => {
+      const { query, first } = setup();
+      const wrapper = mountRow(first);
+      wrapper
+        .find("[contenteditable]")
+        .element.dispatchEvent(new Event("paste", { bubbles: true }));
+      expect(query.value.rows.exec).toHaveLength(1);
+    });
+
+    it("does not paste while running", async () => {
+      const { query, first } = setup();
+      const wrapper = mountRow(first, { isRunning: true });
+      expect(
+        wrapper.find<HTMLButtonElement>(".paste-row-button").element.disabled,
+      ).toBe(true);
+      const event = pasteEvent(formatSteps(first.steps));
+      wrapper.find("[data-testid=query-row]").element.dispatchEvent(event);
+      expect(event.defaultPrevented).toBe(false);
+      expect(query.value.rows.exec).toHaveLength(1);
+    });
   });
 });

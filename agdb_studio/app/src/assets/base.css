@@ -11,6 +11,14 @@
 
   --indigo: #2c3e50;
 
+  /* Neutral grays, from darkest (1) to lightest (6). */
+  --gray-1: #4f4f4f;
+  --gray-2: #6a6a6a;
+  --gray-3: #8a8a8a;
+  --gray-4: #9a9a9a;
+  --gray-5: #b5b5b5;
+  --gray-6: #c8c8c8;
+
   --divider-light-1: rgba(60, 60, 60, 0.29);
   --divider-light-2: rgba(60, 60, 60, 0.12);
   --divider-dark-1: rgba(84, 84, 84, 0.65);
@@ -54,9 +62,8 @@
 
   --graph-node-color: var(--orange-light);
   --graph-node-color-accent: var(--orange-dark);
-  --graph-edge-color: var(--color-border);
-  --graph-context-node-color: var(--color-text-muted);
-  --graph-context-edge-color: var(--color-border);
+  --graph-hover-color: var(--orange-2);
+  --graph-selected-color: var(--blue-2);
 }
 
 :root {
@@ -91,6 +98,12 @@
   --scrollbar-thumb-hover: var(--color-text);
   --scrollbar-thumb-active: var(--color-text);
   --scrollbar-border-color: var(--divider-light-2);
+
+  --graph-background: var(--color-background-soft);
+  --graph-edge-color: var(--gray-3);
+  --graph-edge-color-accent: var(--orange-dark);
+  --graph-context-node-color: var(--gray-5);
+  --graph-context-edge-color: var(--gray-6);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -118,6 +131,11 @@
     --scrollbar-border-color: var(--divider-dark-2);
 
     --error-color: var(--red-light);
+
+    --graph-edge-color: var(--gray-4);
+    --graph-edge-color-accent: var(--orange-light);
+    --graph-context-node-color: var(--gray-2);
+    --graph-context-edge-color: var(--gray-1);
   }
 }
 

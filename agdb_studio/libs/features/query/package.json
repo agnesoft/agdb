@@ -21,7 +21,9 @@
     "@agdb-studio/utils": "workspace:*",
     "@agdb-studio/db": "workspace:*",
     "@agnesoft/agdb_api": "workspace:*",
-    "3d-force-graph": "^1.79.0"
+    "3d-force-graph": "^1.79.0",
+    "@agdb-studio/common": "workspace:*",
+    "@agdb-studio/notification": "workspace:*"
   },
   "devDependencies": {
     "@agdb-studio/tsconfig": "workspace:*",

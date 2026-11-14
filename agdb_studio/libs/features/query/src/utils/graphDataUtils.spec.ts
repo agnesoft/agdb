@@ -88,11 +88,13 @@ describe("convertElementsToGraphData", () => {
     expect(result.nodes[0]).toEqual({
       id: 1,
       values: [{ key: "name", value: "Alice" }],
+      rawValues: [{ key: strVal("name"), value: strVal("Alice") }],
       source: "query",
     });
     expect(result.nodes[1]).toEqual({
       id: 2,
       values: [{ key: "name", value: "Bob" }],
+      rawValues: [{ key: strVal("name"), value: strVal("Bob") }],
       source: "query",
     });
   });
@@ -114,6 +116,7 @@ describe("convertElementsToGraphData", () => {
     expect(result.links[0]).toEqual({
       id: -10,
       values: [{ key: "role", value: "owns" }],
+      rawValues: [{ key: strVal("role"), value: strVal("owns") }],
       source: 1,
       target: 2,
       elementSource: "context",
@@ -157,25 +160,27 @@ describe("convertElementsToGraphData", () => {
 describe("mergeGraphData", () => {
   it("merges disjoint sets", () => {
     const query = {
-      nodes: [{ id: 1, values: [], source: "query" as const }],
+      nodes: [{ id: 1, values: [], rawValues: [], source: "query" as const }],
       links: [
         {
           id: -1,
           values: [],
           source: 1,
           target: 2,
+          rawValues: [],
           elementSource: "query" as const,
         },
       ],
     };
     const context = {
-      nodes: [{ id: 2, values: [], source: "context" as const }],
+      nodes: [{ id: 2, values: [], rawValues: [], source: "context" as const }],
       links: [
         {
           id: -2,
           values: [],
           source: 2,
           target: 3,
+          rawValues: [],
           elementSource: "context" as const,
         },
       ],
@@ -193,6 +198,7 @@ describe("mergeGraphData", () => {
         {
           id: 1,
           values: [{ key: "name", value: "from-query" }],
+          rawValues: [],
           source: "query" as const,
         },
       ],
@@ -203,6 +209,7 @@ describe("mergeGraphData", () => {
         {
           id: 1,
           values: [{ key: "name", value: "from-context" }],
+          rawValues: [],
           source: "context" as const,
         },
       ],
@@ -225,6 +232,7 @@ describe("mergeGraphData", () => {
           values: [{ key: "type", value: "query-edge" }],
           source: 1,
           target: 2,
+          rawValues: [],
           elementSource: "query" as const,
         },
       ],
@@ -237,6 +245,7 @@ describe("mergeGraphData", () => {
           values: [{ key: "type", value: "context-edge" }],
           source: 1,
           target: 2,
+          rawValues: [],
           elementSource: "context" as const,
         },
       ],
@@ -262,8 +271,8 @@ describe("filterDanglingLinks", () => {
   it("keeps links whose source and target exist in nodes", () => {
     const data = {
       nodes: [
-        { id: 1, values: [], source: "query" as const },
-        { id: 2, values: [], source: "query" as const },
+        { id: 1, values: [], rawValues: [], source: "query" as const },
+        { id: 2, values: [], rawValues: [], source: "query" as const },
       ],
       links: [
         {
@@ -271,6 +280,7 @@ describe("filterDanglingLinks", () => {
           values: [],
           source: 1,
           target: 2,
+          rawValues: [],
           elementSource: "query" as const,
         },
       ],
@@ -284,13 +294,14 @@ describe("filterDanglingLinks", () => {
 
   it("drops links whose source node is missing", () => {
     const data = {
-      nodes: [{ id: 2, values: [], source: "query" as const }],
+      nodes: [{ id: 2, values: [], rawValues: [], source: "query" as const }],
       links: [
         {
           id: -1,
           values: [],
           source: 1,
           target: 2,
+          rawValues: [],
           elementSource: "query" as const,
         },
       ],
@@ -304,13 +315,14 @@ describe("filterDanglingLinks", () => {
 
   it("drops links whose target node is missing", () => {
     const data = {
-      nodes: [{ id: 1, values: [], source: "query" as const }],
+      nodes: [{ id: 1, values: [], rawValues: [], source: "query" as const }],
       links: [
         {
           id: -1,
           values: [],
           source: 1,
           target: 2,
+          rawValues: [],
           elementSource: "query" as const,
         },
       ],
@@ -330,8 +342,8 @@ describe("filterDanglingLinks", () => {
   it("keeps valid links and drops dangling in mixed set", () => {
     const data = {
       nodes: [
-        { id: 1, values: [], source: "query" as const },
-        { id: 2, values: [], source: "query" as const },
+        { id: 1, values: [], rawValues: [], source: "query" as const },
+        { id: 2, values: [], rawValues: [], source: "query" as const },
       ],
       links: [
         {
@@ -339,6 +351,7 @@ describe("filterDanglingLinks", () => {
           values: [],
           source: 1,
           target: 2,
+          rawValues: [],
           elementSource: "query" as const,
         },
         {
@@ -346,6 +359,7 @@ describe("filterDanglingLinks", () => {
           values: [],
           source: 1,
           target: 99,
+          rawValues: [],
           elementSource: "query" as const,
         },
       ],

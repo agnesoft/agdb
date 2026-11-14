@@ -39,7 +39,7 @@ describe("QueryView", () => {
         },
       },
     });
-    expect(wrapper.find(".query-view").exists()).toBe(true);
+    expect(wrapper.find(".query-workspace").exists()).toBe(true);
     expect(wrapper.find(".mock-query-builder-tabs").exists()).toBe(true);
     expect(wrapper.find(".mock-query-graph").exists()).toBe(true);
   });
@@ -58,7 +58,7 @@ describe("QueryView", () => {
 
     // Check that a query was added to the store
     // We can't easily access the queryId, but we can verify the component mounted
-    expect(wrapper.find(".query-view").exists()).toBe(true);
+    expect(wrapper.find(".query-workspace").exists()).toBe(true);
   });
 
   it("has correct grid layout structure", () => {
@@ -71,9 +71,9 @@ describe("QueryView", () => {
       },
     });
 
-    const view = wrapper.find(".query-view");
+    const view = wrapper.find(".query-workspace");
     expect(view.exists()).toBe(true);
-    // The component should have the query-view class which applies grid styling
+    // The component should have the query-workspace class which applies grid styling
   });
 
   it("renders both QueryBuilderTabs and QueryGraph components", () => {

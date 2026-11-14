@@ -1,7 +1,8 @@
 // Runs the given command against a freshly built agdb_server listening on http://localhost:3000.
 // Usage: node test_server.mjs <command> [args...]
 import { spawn, spawnSync } from "node:child_process";
-import { rmSync } from "node:fs";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -12,11 +13,6 @@ const root = fileURLToPath(new URL("..", import.meta.url));
 const target = process.env.CARGO_TARGET_DIR ?? join(root, "target");
 const binary = join(target, "release", `agdb_server${process.platform === "win32" ? ".exe" : ""}`);
 const [command, ...args] = process.argv.slice(2);
-
-function clean() {
-    rmSync("agdb_server.yaml", { force: true });
-    rmSync("agdb_server_data", { recursive: true, force: true });
-}
 
 function sleep(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
@@ -73,15 +69,15 @@ if (!command) {
     process.exit(2);
 }
 
-clean();
-
 const build = spawnSync("cargo", ["build", "-r", "-p", "agdb_server"], { stdio: "inherit", shell: process.platform === "win32" });
 
 if (build.status !== 0) {
     process.exit(build.status ?? 1);
 }
 
-const server = spawn(binary, { stdio: "inherit" });
+// the server writes its config and data to its working directory
+const serverDir = mkdtempSync(join(tmpdir(), "agdb_server-"));
+const server = spawn(binary, { cwd: serverDir, stdio: "inherit" });
 let status = 1;
 
 try {
@@ -91,7 +87,7 @@ try {
     console.error(error.message);
 } finally {
     await shutdown(server);
-    clean();
+    rmSync(serverDir, { recursive: true, force: true });
 }
 
 process.exit(status);

@@ -1,7 +1,14 @@
 {
+  "name": "examples_server_client_php",
+  "private": true,
   "type": "module",
   "devDependencies": {
     "@prettier/plugin-php": "catalog:",
     "prettier": "catalog:"
+  },
+  "scripts": {
+    "format": "prettier --plugin @prettier/plugin-php --write src",
+    "format:check": "prettier --plugin @prettier/plugin-php --check src",
+    "lint:check": "composer install && php vendor/bin/phpstan analyse --level=9 -v src"
   }
 }

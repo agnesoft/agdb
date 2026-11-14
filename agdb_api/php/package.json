@@ -1,8 +1,17 @@
 {
+  "name": "agdb_api_php",
+  "private": true,
   "type": "module",
   "devDependencies": {
     "@prettier/plugin-php": "catalog:",
     "prettier": "catalog:"
   },
-  "scripts": {}
+  "scripts": {
+    "format": "prettier --plugin @prettier/plugin-php --write src tests",
+    "format:check": "prettier --plugin @prettier/plugin-php --check src tests",
+    "lint:check": "composer -d ../.. install && php ../../vendor/bin/phpstan analyse --memory-limit=1G --level=9 -v src tests",
+    "openapi": "node -e \"for (const d of ['lib', 'docs', '.openapi-generator']) require('fs').rmSync(d, { recursive: true, force: true })\" && pnpm exec openapi-generator-cli generate -i ../../agdb_server/openapi.json -g php -o ./ -c openapi_generator.json && composer -d ../.. dump-autoload -o",
+    "test_queries": "node query_test_generator.js && prettier --plugin @prettier/plugin-php --write tests/QueryTest.php",
+    "test": "composer -d ../.. install && node ../../agdb_server/test_server.mjs php -d xdebug.mode=coverage ../../vendor/bin/phpunit tests --coverage-filter src/ --coverage-text=coverage/coverage.txt --coverage-html coverage/ --coverage-cobertura coverage/coverage-final.xml && node coverage.js"
+  }
 }

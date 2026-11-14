@@ -1,5 +1,6 @@
 {
   "name": "@agdb-studio/cluster",
+  "private": true,
   "version": "1.0.0",
   "description": "Cluster status library for AGDB Studio",
   "type": "module",

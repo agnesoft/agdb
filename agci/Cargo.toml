@@ -5,8 +5,7 @@ license.workspace = true
 publish = false
 
 [dependencies]
-anyhow.workspace = true
-agdb = { workspace = true, features = ["serde", "openapi"] }
+agdb.workspace = true
 serde = { workspace = true, features = ["derive"] }
 serde_json.workspace = true
-utoipa.workspace = true
+toml.workspace = true

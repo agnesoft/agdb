@@ -1,0 +1,33 @@
+use crate::CIError;
+use crate::git;
+use crate::language;
+use crate::language::php;
+use crate::language::rust;
+use crate::language::typescript;
+use crate::utilities;
+use std::path::Path;
+use std::process::Command;
+
+/// Updates the package versions to the root `Cargo.toml` one and regenerates the API clients and test queries.
+pub(crate) fn regenerate() -> Result<(), CIError> {
+    let current_version = git::current_version()?;
+    let new_version = git::new_version()?;
+    println!("Current version: {current_version}");
+    println!("New version: {new_version}");
+    language::update_versions(Path::new("./"), &current_version, &new_version)?;
+
+    println!("Installing global dependencies");
+    utilities::run_command(Command::new(utilities::BASH).arg("-c").arg("pnpm i"))?;
+
+    rust::generate_api()?;
+    typescript::generate_api()?;
+    php::generate_api()?;
+
+    rust::generate_test_queries()?;
+    typescript::generate_test_queries()?;
+    php::generate_test_queries()?;
+
+    println!("DONE");
+
+    Ok(())
+}

@@ -7,7 +7,7 @@
     "build": "run-p type-check \"build-only {@}\" --",
     "preview": "vite preview",
     "test": "vitest run --coverage",
-    "test:functional": "playwright test",
+    "test:functional": "playwright install && playwright test",
     "test:functional:trace": "playwright test --trace on",
     "build-only": "vite build",
     "type-check": "vue-tsc --noEmit -p tsconfig.vitest.json --composite false",
@@ -19,7 +19,8 @@
     "lint:boundaries:check": "node scripts/lint-boundaries.mjs",
     "format": "prettier --write src/ functional/",
     "format:check": "prettier --check src/ functional/",
-    "before-commit": "pnpm run format && pnpm run lint && pnpm run test && pnpm run test:functional"
+    "before-commit": "pnpm run format && pnpm run lint && pnpm run test && pnpm run test:functional",
+    "release:dev": "tar -czf ../agdb_studio.tar.gz -C dist . && gh release upload dev ../agdb_studio.tar.gz --clobber"
   },
   "dependencies": {
     "@agdb-studio/design": "workspace:*",

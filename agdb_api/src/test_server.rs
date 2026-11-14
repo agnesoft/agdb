@@ -79,10 +79,14 @@ impl agdb::type_def::TypeDefinition for TestServerProcess {
 
 #[cfg_attr(feature = "api", agdb::fn_def())]
 fn server_bin() -> Result<PathBuf, TestError> {
-    let mut path = std::env::current_exe()?;
-    path.pop();
-    path.pop();
-    Ok(path.join(format!("{BINARY}{}", std::env::consts::EXE_SUFFIX)))
+    // test executables are in `<profile>/deps` or, since Rust 1.100, `<profile>/build/<package>/<hash>/out`
+    let exe = std::env::current_exe()?;
+    let name = format!("{BINARY}{}", std::env::consts::EXE_SUFFIX);
+    exe.ancestors()
+        .skip(1)
+        .map(|dir| dir.join(&name))
+        .find(|path| path.is_file())
+        .ok_or_else(|| TestError::new(format!("{name} not found above {}", exe.display())))
 }
 
 #[cfg_attr(feature = "api", agdb::fn_def())]

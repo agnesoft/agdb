@@ -1,5 +1,6 @@
 {
   "name": "@agdb-studio/profile",
+  "private": true,
   "version": "1.0.0",
   "description": "Profile library for AGDB Studio",
   "type": "module",

@@ -1,5 +1,6 @@
 {
   "name": "@agdb-studio/db",
+  "private": true,
   "version": "1.0.0",
   "description": "Database library for AGDB Studio",
   "type": "module",

@@ -1,5 +1,6 @@
 {
   "name": "examples_server_client",
+  "private": true,
   "main": "index.js",
   "type": "module",
   "scripts": {
@@ -19,6 +20,6 @@
     "typescript-eslint": "catalog:"
   },
   "dependencies": {
-    "agdb_api": "file:../../agdb_api/typescript"
+    "@agnesoft/agdb_api": "workspace:*"
   }
 }

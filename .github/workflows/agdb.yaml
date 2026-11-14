@@ -1,31 +1,199 @@
 name: agdb
 
+# Pull requests: agci checks the projects (agci.toml) whose fingerprint (their files, agci.toml entry
+# and dependencies) differs from the base, except the jobs that already passed with the same
+# fingerprints in the pull request. Only the `ci` job should be required, the matrix differs per
+# pull request.
+# Pushes to main build nothing but what agci releases: the `release:dev` hooks of the affected
+# projects and, when the root Cargo.toml version has no tag yet, the release.
+
 on:
   pull_request:
-    branches: ["main"]
-    paths:
-      - agdb/**
-      - agdb_derive/**
-      - .github/workflows/agdb.yaml
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
 
 jobs:
-  agdb:
-    runs-on: ubuntu-latest
+  # Provides the agci binary of each OS to the other jobs as the `agci-<os>` artifact. The latest
+  # cached one decides whether it is outdated (its fingerprint, the git objects of its sources,
+  # differs). If it is, or there is none, agci is built from the sources and cached.
+  bootstrap:
+    strategy:
+      matrix:
+        include:
+          - { os: linux, runs-on: ubuntu-latest, exe: "" }
+          - { os: windows, runs-on: windows-latest, exe: .exe }
+    runs-on: ${{ matrix.runs-on }}
+    defaults:
+      run:
+        shell: bash
     steps:
       - uses: actions/checkout@v6
-      - uses: actions-rust-lang/setup-rust-toolchain@v1
+      - id: cache
+        uses: actions/cache/restore@v6
         with:
-          components: rustfmt,clippy
-      - run: cargo fmt -p agdb --check
-      - run: cargo clippy -p agdb --all-targets --all-features -- -D warnings
-      - uses: taiki-e/install-action@cargo-llvm-cov
-      - run: rustup component add llvm-tools-preview
-      - run: cargo llvm-cov -p agdb --all-features --show-missing-lines
+          path: agci-bin
+          key: agci-${{ matrix.os }}-${{ github.sha }}
+          restore-keys: agci-${{ matrix.os }}-
+      # a failure (e.g. a binary older than `bootstrap --check`) sets no output, i.e. rebuilds
+      - id: check
+        if: steps.cache.outputs.cache-matched-key != ''
+        continue-on-error: true
+        run: agci-bin/agci bootstrap --check agci-bin
+      - if: steps.check.outputs.rebuild != 'false'
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          cache: false
+      - if: steps.check.outputs.rebuild != 'false'
+        run: cargo run -r -p agci -- bootstrap agci-bin
+      - if: steps.check.outputs.rebuild != 'false'
+        uses: actions/cache/save@v6
+        with:
+          path: agci-bin
+          key: agci-${{ matrix.os }}-${{ github.sha }}
+      - uses: actions/upload-artifact@v7
+        with:
+          name: agci-${{ matrix.os }}
+          path: agci-bin/agci${{ matrix.exe }}
+          if-no-files-found: error
+          retention-days: 1
 
-  # merge with the main job once --doctests is stabilized: https://github.com/taiki-e/cargo-llvm-cov/issues/2
-  agdb_doctests:
+  # The only job with the full history (the base, tags), the others are shallow.
+  config:
+    needs: bootstrap
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read # the evidence of passed jobs in the actions cache
+    outputs:
+      matrix: ${{ steps.config.outputs.matrix }}
+      release: ${{ steps.config.outputs.release }}
+      projects: ${{ steps.config.outputs.projects }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: actions/download-artifact@v8
+        with:
+          name: agci-linux
+          path: ${{ runner.temp }}/agci
+      - run: |
+          chmod +x "$RUNNER_TEMP/agci/agci"
+          echo "$RUNNER_TEMP/agci" >> "$GITHUB_PATH"
+      - id: config
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: agci config
+
+  check:
+    needs: config
+    if: needs.config.outputs.matrix != '[]'
+    name: ${{ matrix.name }} (${{ matrix.os }})
+    runs-on: ${{ matrix.runs-on }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.config.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v6
+      - if: matrix.rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          components: rustfmt,clippy${{ matrix.coverage && ',llvm-tools-preview' || '' }}
+      - if: matrix.coverage
+        uses: taiki-e/install-action@cargo-llvm-cov
+      - if: matrix.node
+        uses: pnpm/action-setup@v6
+      - if: matrix.node
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+      - if: matrix.php
+        uses: shivammathur/setup-php@v2
+        with:
+          coverage: xdebug
+          tools: composer
+      - uses: actions/download-artifact@v8
+        with:
+          name: agci-${{ matrix.os }}
+          path: ${{ runner.temp }}/agci
+      # artifacts lose the executable bit
+      - shell: bash
+        run: |
+          chmod +x "$RUNNER_TEMP"/agci/agci*
+          echo "$RUNNER_TEMP/agci" >> "$GITHUB_PATH"
+      - shell: bash
+        env:
+          PROJECTS: ${{ join(matrix.projects, ' ') }}
+        run: agci check $PROJECTS
+      # evidence that the job passed with these fingerprints, `agci config` skips it until they change
+      - shell: bash
+        env:
+          EVIDENCE: ${{ matrix.evidence }}
+        run: echo "$EVIDENCE" > "$RUNNER_TEMP/evidence"
+      - uses: actions/cache/save@v6
+        with:
+          path: ${{ runner.temp }}/evidence
+          key: ${{ matrix.evidence }}
+      - if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ matrix.artifact }}
+          path: ${{ matrix.paths }}
+          if-no-files-found: ignore
+          retention-days: 30
+
+  ci:
+    needs: [config, check]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - env:
+          CONFIG: ${{ needs.config.result }}
+          CHECK: ${{ needs.check.result }}
+        run: |
+          echo "config: $CONFIG, check: $CHECK"
+          [[ "$CONFIG" == "success" && ( "$CHECK" == "success" || "$CHECK" == "skipped" ) ]]
+
+  release:
+    needs: config
+    if: needs.config.outputs.release == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # GitHub releases and tags
+      packages: write # GHCR
+      id-token: write # npm provenance (OIDC)
     steps:
       - uses: actions/checkout@v6
       - uses: actions-rust-lang/setup-rust-toolchain@v1
-      - run: cargo test -p agdb --all-features --doc
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          registry-url: "https://registry.npmjs.org"
+      - uses: actions/download-artifact@v8
+        with:
+          name: agci-linux
+          path: ${{ runner.temp }}/agci
+      - run: |
+          chmod +x "$RUNNER_TEMP/agci/agci"
+          echo "$RUNNER_TEMP/agci" >> "$GITHUB_PATH"
+      - env:
+          DOCKER_HUB_TOKEN: ${{ secrets.DOCKER_HUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "$DOCKER_HUB_TOKEN" | docker login -u agnesoft --password-stdin
+          echo "$GITHUB_TOKEN" | docker login ghcr.io -u agnesoft --password-stdin
+      - env:
+          PROJECTS: ${{ needs.config.outputs.projects }}
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CRATES_IO_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: agci release --projects $PROJECTS

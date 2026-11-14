@@ -4,7 +4,7 @@
 # release in the same run) only retag it. Expects docker to be logged in to both registries.
 set -euo pipefail
 
-cd "$(dirname "$0")/.."
+cd "$(dirname "$0")/../.."
 BUILD="agnesoft/agdb:build-$(git rev-parse HEAD)"
 TAGS=("$AGCI_VERSION")
 

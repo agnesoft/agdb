@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Builds the agdb_server container image (with the studio) and smoke tests a 3 node cluster of it.
 set -euo pipefail
-cd "$(dirname "$0")/.."
+cd "$(dirname "$0")/../.."
 
 docker build --pull -t agnesoft/agdb:dev -f agdb_server/containerfile .
 trap 'docker compose -f agdb_server/compose.yaml down --volumes' EXIT

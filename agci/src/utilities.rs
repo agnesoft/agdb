@@ -56,3 +56,15 @@ pub(crate) fn run_quiet(command: &mut Command) -> Result<String, CIError> {
         Err(format!("Command failed: {command:?}").into())
     }
 }
+
+/// Appends `name=value` to the GitHub step outputs, a no-op outside of GitHub Actions.
+pub(crate) fn set_output(name: &str, value: &str) -> Result<(), CIError> {
+    if let Ok(path) = std::env::var("GITHUB_OUTPUT") {
+        writeln!(
+            std::fs::OpenOptions::new().append(true).open(path)?,
+            "{name}={value}"
+        )?;
+    }
+
+    Ok(())
+}

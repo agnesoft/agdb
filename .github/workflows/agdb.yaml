@@ -21,9 +21,9 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  # Provides the agci binary of each OS to the other jobs as the `agci-<os>` artifact. It is cached
-  # under a hash of its sources (agci, its path dependencies and the root Cargo.toml), rebuilt only
-  # when they change.
+  # Provides the agci binary of each OS to the other jobs as the `agci-<os>` artifact. The latest
+  # cached one decides whether it is outdated (its fingerprint, the git objects of its sources,
+  # differs). If it is, or there is none, agci is built from the sources and cached.
   bootstrap:
     strategy:
       matrix:
@@ -36,35 +36,26 @@ jobs:
         shell: bash
     steps:
       - uses: actions/checkout@v6
-      # the preinstalled cargo suffices for the metadata, the toolchain is set up only to build
-      - id: hash
-        run: |
-          DIRS=$(cargo metadata --no-deps --format-version 1 | jq -r '
-            def slashes: gsub("\\\\"; "/");
-            (.workspace_root | slashes) as $root
-            | .packages as $packages
-            | def dir: .manifest_path | slashes | sub("/Cargo.toml$"; "");
-            def closure($dirs):
-              ($dirs + [$packages[] | select(dir as $d | $dirs | index($d)) | .dependencies[]
-                | select(.path and .kind != "dev") | .path | slashes] | unique) as $next
-              | if $next == $dirs then $dirs else closure($next) end;
-            closure([$packages[] | select(.name == "agci") | dir])[] | ltrimstr($root + "/")')
-          echo "agci sources: Cargo.toml" $DIRS
-          echo "hash=$(git rev-parse HEAD:Cargo.toml $(printf 'HEAD:%s ' $DIRS) | sha256sum | cut -c1-16)" >> "$GITHUB_OUTPUT"
       - id: cache
-        uses: actions/cache@v6
+        uses: actions/cache/restore@v6
         with:
           path: agci-bin
-          key: agci-${{ matrix.os }}-${{ steps.hash.outputs.hash }}
-      - if: steps.cache.outputs.cache-hit != 'true'
+          key: agci-${{ matrix.os }}-${{ github.sha }}
+          restore-keys: agci-${{ matrix.os }}-
+      - id: check
+        if: steps.cache.outputs.cache-matched-key != ''
+        run: agci-bin/agci bootstrap --check agci-bin
+      - if: steps.check.outputs.rebuild != 'false'
         uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           cache: false
-      - if: steps.cache.outputs.cache-hit != 'true'
-        run: |
-          cargo build -r -p agci
-          mkdir -p agci-bin
-          cp target/release/agci${{ matrix.exe }} agci-bin/
+      - if: steps.check.outputs.rebuild != 'false'
+        run: cargo run -r -p agci -- bootstrap agci-bin
+      - if: steps.check.outputs.rebuild != 'false'
+        uses: actions/cache/save@v6
+        with:
+          path: agci-bin
+          key: agci-${{ matrix.os }}-${{ github.sha }}
       - uses: actions/upload-artifact@v7
         with:
           name: agci-${{ matrix.os }}
@@ -92,30 +83,7 @@ jobs:
           chmod +x "$RUNNER_TEMP/agci/agci"
           echo "$RUNNER_TEMP/agci" >> "$GITHUB_PATH"
       - id: config
-        env:
-          EVENT: ${{ github.event_name }}
-          BASE_REF: ${{ github.base_ref }}
-          BEFORE: ${{ github.event.before }}
-        run: |
-          case "$EVENT" in
-            pull_request)
-              MATRIX=$(agci affected --base "origin/$BASE_REF")
-              ;;
-            push)
-              MATRIX='[]'
-              if [[ "$BEFORE" =~ ^0+$ ]]; then ARGS=(--all); else ARGS=(--base "$BEFORE"); fi
-              PROJECTS=$(agci affected "${ARGS[@]}" | jq -r '[.[].projects[]] | unique | join(" ")')
-              PLAN=$(agci release --projects $PROJECTS --plan)
-              echo "$PLAN"
-              echo "projects=$PROJECTS" >> "$GITHUB_OUTPUT"
-              if [[ -n "$PLAN" ]]; then echo "release=true" >> "$GITHUB_OUTPUT"; fi
-              ;;
-            *)
-              MATRIX=$(agci affected --all)
-              ;;
-          esac
-          echo "$MATRIX" | jq .
-          echo "matrix=$MATRIX" >> "$GITHUB_OUTPUT"
+        run: agci config
 
   check:
     needs: config

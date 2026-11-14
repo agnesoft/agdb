@@ -54,7 +54,7 @@ A push to main checks nothing (that happened in the pull request), it only relea
 
 `--plan` prints the steps without running them.
 
-The first job (`bootstrap`, Linux and Windows) provides the binary of each OS to the others as the `agci-<os>` artifact. It is cached under a hash of its sources (agci, its path dependencies and the root `Cargo.toml`), so it is only rebuilt when those change. Only the `config` job clones the full history (diffs against the base and the tags), the others are shallow and look up tags on `origin`.
+The first job (`bootstrap`, Linux and Windows) provides the binary of each OS to the others as the `agci-<os>` artifact. The latest cached binary decides whether it is outdated (`agci bootstrap --check`): its fingerprint, the git objects of its sources (agci, the projects it depends on and the root Rust files), differs from the current one, or it fails to load the projects (e.g. metadata it does not know yet). Only then, or without any cached binary, agci is built from the sources (`cargo run -r -p agci -- bootstrap <dir>`) and cached. The `config` job is then `agci config`: it writes the job outputs for the GitHub event. Only the `config` job clones the full history (diffs against the base and the tags), the others are shallow and look up tags on `origin`.
 
 ## projects
 

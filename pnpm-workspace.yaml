@@ -1,4 +1,5 @@
 packages:
+  - agdb_server/image
   - agdb_studio/**
   - agdb_api/**
   - agdb_web/**

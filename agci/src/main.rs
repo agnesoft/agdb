@@ -1,4 +1,5 @@
 mod affected;
+mod bootstrap;
 mod check;
 mod ci_error;
 mod config;
@@ -13,6 +14,7 @@ mod utilities;
 
 use crate::ci_error::CIError;
 use crate::project::Project;
+use std::collections::BTreeSet;
 use std::path::Path;
 use std::process::Command;
 
@@ -24,6 +26,12 @@ const USAGE: &str = "usage:
   agci affected --all          JSON job matrix of all projects
   agci check [<project>...]    run the checks of the projects, default: the affected ones; all of
                                them run, failing ones are listed at the end
+  agci config                  on GitHub Actions: the outputs of the config job for the event, the
+                               check matrix of a pull request or the release of a push to main
+  agci bootstrap [--check] <dir>
+                               builds agci into <dir> (with the fingerprint of its sources); --check
+                               only writes rebuild=<bool> (whether the agci in <dir> is outdated) to
+                               the GitHub step outputs
   agci release (--base <ref>|--all|--projects [<project>...]) [--plan]
                                after a push to main: release_dev of the projects affected since <ref>
                                (or of the given ones) and, if there is no v<version> tag for the root
@@ -90,13 +98,7 @@ fn release(args: &[String]) -> Result<(), CIError> {
             .collect(),
         _ => affected(args)?.into_iter().map(|p| p.dir).collect(),
     };
-    let version = git::new_version()?;
-    let release = release::Release {
-        affected: affected_dirs.iter().map(String::as_str).collect(),
-        version: (!git::tag_exists(&format!("v{version}"))?).then_some(version),
-        sha: git::head()?,
-    };
-    let steps = release::plan(&projects, &release, published_crate)?;
+    let steps = release_steps(&projects, &affected_dirs)?;
 
     if plan_only {
         for step in &steps {
@@ -106,6 +108,62 @@ fn release(args: &[String]) -> Result<(), CIError> {
     } else {
         check::run_steps("release", &steps, &root()?)
     }
+}
+
+fn release_steps(projects: &[Project], affected: &[String]) -> Result<Vec<check::Step>, CIError> {
+    let version = git::new_version()?;
+    let release = release::Release {
+        affected: affected.iter().map(String::as_str).collect(),
+        version: (!git::tag_exists(&format!("v{version}"))?).then_some(version),
+        sha: git::head()?,
+    };
+    release::plan(projects, &release, published_crate)
+}
+
+/// The outputs of the `config` job from the GitHub event: the `matrix` of the projects affected by a
+/// pull request (all of them for other events) and, for a push to main, no matrix but the affected
+/// `projects` and `release=true` if there is something to release.
+fn config() -> Result<(), CIError> {
+    let projects = load()?;
+    let env =
+        |name: &str| std::env::var(name).map_err(|_| CIError::from(format!("{name} not set")));
+    let dirs: BTreeSet<&str> = match env("GITHUB_EVENT_NAME")?.as_str() {
+        "pull_request" => affected::affected(
+            &projects,
+            &changed(Some(&format!("origin/{}", env("GITHUB_BASE_REF")?)))?,
+        )?,
+        "push" => {
+            let event: serde_json::Value =
+                serde_json::from_str(&std::fs::read_to_string(env("GITHUB_EVENT_PATH")?)?)?;
+            let before = event["before"].as_str().unwrap_or_default();
+            let dirs: Vec<String> = if before.is_empty() || before.chars().all(|c| c == '0') {
+                projects.iter().map(|p| p.dir.clone()).collect()
+            } else {
+                affected::affected(&projects, &changed(Some(before))?)?
+                    .into_iter()
+                    .map(str::to_string)
+                    .collect()
+            };
+            let steps = release_steps(&projects, &dirs)?;
+
+            for step in &steps {
+                println!("{step}");
+            }
+
+            utilities::set_output("matrix", "[]")?;
+            utilities::set_output("projects", &dirs.join(" "))?;
+            utilities::set_output("release", &(!steps.is_empty()).to_string())?;
+            return Ok(());
+        }
+        _ => projects.iter().map(|p| p.dir.as_str()).collect(),
+    };
+    let selected: Vec<Project> = load()?
+        .into_iter()
+        .filter(|p| dirs.contains(p.dir.as_str()))
+        .collect();
+    let jobs = affected::jobs(&selected, &dirs);
+    println!("{}", serde_json::to_string_pretty(&jobs)?);
+    utilities::set_output("matrix", &serde_json::to_string(&jobs)?)
 }
 
 fn select<'a>(projects: &'a [Project], dirs: &[String]) -> Result<Vec<&'a Project>, CIError> {
@@ -189,6 +247,12 @@ fn run(args: &[String]) -> Result<(), CIError> {
 
             report.finish()
         }
+        Some("config") if args.len() == 1 => config(),
+        Some("bootstrap") => match &args[1..] {
+            [flag, dir] if flag == "--check" => bootstrap::check(Path::new(dir), load()),
+            [dir] => bootstrap::build(Path::new(dir), &load()?),
+            _ => Err(USAGE.into()),
+        },
         Some("release") => release(&args[1..]),
         Some(_) => Err(USAGE.into()),
     }

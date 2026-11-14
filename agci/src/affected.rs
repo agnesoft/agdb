@@ -11,7 +11,7 @@ use serde::Serialize;
 use std::collections::BTreeSet;
 
 /// Changes to these affect every project of the language. Entries ending with `/` are directories.
-const RUST_INPUTS: [&str; 5] = [
+pub(crate) const RUST_INPUTS: [&str; 5] = [
     "Cargo.toml",
     "Cargo.lock",
     "rust-toolchain",

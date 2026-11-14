@@ -3,10 +3,11 @@ import QueryView from "./QueryView.vue";
 import { mount, flushPromises } from "@vue/test-utils";
 import { useQueryStore } from "../../composables/queryStore";
 
-vi.mock("../graph/QueryGraph.vue", () => ({
+// The results (graph, table, actions) are tested on their own.
+vi.mock("../results/QueryResults.vue", () => ({
   default: {
-    name: "QueryGraph",
-    template: "<div class='mock-query-graph'>Mock Query Graph</div>",
+    name: "QueryResults",
+    template: "<div class='mock-query-results'>Mock Query Results</div>",
   },
 }));
 
@@ -33,15 +34,16 @@ describe("QueryView", () => {
             template:
               '<div class="mock-query-builder-tabs">Mock Query Builder Tabs</div>',
           },
-          QueryGraph: {
-            template: '<div class="mock-query-graph">Mock Query Graph</div>',
+          QueryResults: {
+            template:
+              '<div class="mock-query-results">Mock Query Results</div>',
           },
         },
       },
     });
     expect(wrapper.find(".query-workspace").exists()).toBe(true);
     expect(wrapper.find(".mock-query-builder-tabs").exists()).toBe(true);
-    expect(wrapper.find(".mock-query-graph").exists()).toBe(true);
+    expect(wrapper.find(".mock-query-results").exists()).toBe(true);
   });
 
   it("initializes a query on mount", async () => {
@@ -49,7 +51,7 @@ describe("QueryView", () => {
       global: {
         stubs: {
           QueryBuilderTabs: true,
-          QueryGraph: true,
+          QueryResults: true,
         },
       },
     });
@@ -66,7 +68,7 @@ describe("QueryView", () => {
       global: {
         stubs: {
           QueryBuilderTabs: true,
-          QueryGraph: true,
+          QueryResults: true,
         },
       },
     });
@@ -76,13 +78,13 @@ describe("QueryView", () => {
     // The component should have the query-workspace class which applies grid styling
   });
 
-  it("renders both QueryBuilderTabs and QueryGraph components", () => {
+  it("renders both QueryBuilderTabs and QueryResults components", () => {
     const wrapper = mount(QueryView);
 
     const builderTabs = wrapper.findComponent({ name: "QueryBuilderTabs" });
-    const queryGraph = wrapper.findComponent({ name: "QueryGraph" });
+    const queryResults = wrapper.findComponent({ name: "QueryResults" });
 
     expect(builderTabs.exists()).toBe(true);
-    expect(queryGraph.exists()).toBe(true);
+    expect(queryResults.exists()).toBe(true);
   });
 });

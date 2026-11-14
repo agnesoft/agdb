@@ -28,7 +28,7 @@ import {
   type ResultView,
 } from "../../utils/resultShape";
 
-const queryId = inject<Ref<string>>("queryId");
+const queryId = inject<Ref<string | undefined>>("queryId");
 const queryStore = useQueryStore();
 const actions = provideGraphActions(queryId);
 

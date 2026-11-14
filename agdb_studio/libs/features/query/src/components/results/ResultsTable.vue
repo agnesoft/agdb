@@ -24,16 +24,23 @@ const keys = computed(() => {
   return [...seen];
 });
 
+/** Keyed by result and id, as a batch can return an element more than once. */
 const rows = computed(() =>
-  elements.value.map((el) => {
-    const values = new Map(
-      el.values.map((kv) => [
-        dbValueToString(kv.key),
-        dbValueToString(kv.value),
-      ]),
-    );
-    return { element: el, cells: keys.value.map((k) => values.get(k) ?? "") };
-  }),
+  props.results.flatMap((result, resultIndex) =>
+    result.elements.map((el) => {
+      const values = new Map(
+        el.values.map((kv) => [
+          dbValueToString(kv.key),
+          dbValueToString(kv.value),
+        ]),
+      );
+      return {
+        key: `${resultIndex}:${el.id}`,
+        element: el,
+        cells: keys.value.map((k) => values.get(k) ?? ""),
+      };
+    }),
+  ),
 );
 
 const openMenu = (element: Components.Schemas.DbElement, event: MouseEvent) => {
@@ -57,8 +64,8 @@ const openMenu = (element: Components.Schemas.DbElement, event: MouseEvent) => {
       </thead>
       <tbody>
         <tr
-          v-for="(row, index) in rows"
-          :key="index"
+          v-for="row in rows"
+          :key="row.key"
           data-testid="results-table-row"
           @contextmenu.prevent="
             (event: MouseEvent) =>
@@ -71,6 +78,7 @@ const openMenu = (element: Components.Schemas.DbElement, event: MouseEvent) => {
               type="button"
               class="button row-menu"
               title="Element actions"
+              aria-label="Element actions"
               data-testid="results-row-menu"
               @click.stop="(event: MouseEvent) => openMenu(row.element, event)"
             >

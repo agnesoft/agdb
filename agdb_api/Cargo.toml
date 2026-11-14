@@ -26,6 +26,6 @@ tokio = { workspace = true, features = ["full"], optional = true }
 utoipa.workspace = true
 
 [package.metadata.agci]
-publish = ["crates"]
+release = ["crates"]
 checks = ["format", "lint", "test"]
 coverage = 0

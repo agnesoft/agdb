@@ -3,7 +3,7 @@ name: agdb
 # Pull requests: agci maps the changed files to projects, adds everything depending on them (manifest
 # dependencies + `depends` in the agci metadata) and checks each. Only the `ci` job should be
 # required, the matrix differs per pull request.
-# Pushes to main build nothing but what agci publishes: `publish_dev` of the affected projects and,
+# Pushes to main build nothing but what agci releases: `release_dev` of the affected projects and,
 # when the root Cargo.toml version has no tag yet, the release.
 
 on:
@@ -21,17 +21,65 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  detect:
+  # Provides the agci (Linux) binary to the other jobs as an artifact. It is cached under a hash of
+  # its sources (agci, its path dependencies and the root Cargo.toml), rebuilt only when they change.
+  bootstrap:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          cache: false
+      - id: hash
+        run: |
+          DIRS=$(cargo metadata --no-deps --format-version 1 | jq -r '
+            .workspace_root as $root
+            | .packages as $packages
+            | def dir: .manifest_path | sub("/Cargo.toml$"; "");
+            def closure($dirs):
+              ($dirs + [$packages[] | select(dir as $d | $dirs | index($d)) | .dependencies[]
+                | select(.path and .kind != "dev") | .path] | unique) as $next
+              | if $next == $dirs then $dirs else closure($next) end;
+            closure([$packages[] | select(.name == "agci") | dir])[] | ltrimstr($root + "/")')
+          echo "agci sources: Cargo.toml" $DIRS
+          echo "hash=$(git rev-parse HEAD:Cargo.toml $(printf 'HEAD:%s ' $DIRS) | sha256sum | cut -c1-16)" >> "$GITHUB_OUTPUT"
+      - id: cache
+        uses: actions/cache@v6
+        with:
+          path: agci-bin
+          key: agci-${{ runner.os }}-${{ steps.hash.outputs.hash }}
+      - if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          cargo build -r -p agci
+          mkdir -p agci-bin
+          cp target/release/agci agci-bin/
+      - uses: actions/upload-artifact@v7
+        with:
+          name: agci
+          path: agci-bin/agci
+          if-no-files-found: error
+          retention-days: 1
+
+  # The only job with the full history (diffs against the base, tags), the others are shallow.
+  config:
+    needs: bootstrap
     runs-on: ubuntu-latest
     outputs:
-      matrix: ${{ steps.detect.outputs.matrix }}
-      publish: ${{ steps.detect.outputs.publish }}
+      matrix: ${{ steps.config.outputs.matrix }}
+      release: ${{ steps.config.outputs.release }}
+      projects: ${{ steps.config.outputs.projects }}
     steps:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
-      - uses: actions-rust-lang/setup-rust-toolchain@v1
-      - id: detect
+      - uses: actions/download-artifact@v8
+        with:
+          name: agci
+          path: ${{ runner.temp }}/agci
+      - run: |
+          chmod +x "$RUNNER_TEMP/agci/agci"
+          echo "$RUNNER_TEMP/agci" >> "$GITHUB_PATH"
+      - id: config
         env:
           EVENT: ${{ github.event_name }}
           BASE_REF: ${{ github.base_ref }}
@@ -39,36 +87,37 @@ jobs:
         run: |
           case "$EVENT" in
             pull_request)
-              MATRIX=$(cargo run -q -p agci -- affected --base "origin/$BASE_REF")
+              MATRIX=$(agci affected --base "origin/$BASE_REF")
               ;;
             push)
               MATRIX='[]'
               if [[ "$BEFORE" =~ ^0+$ ]]; then ARGS=(--all); else ARGS=(--base "$BEFORE"); fi
-              PLAN=$(cargo run -q -p agci -- publish "${ARGS[@]}" --plan)
+              PROJECTS=$(agci affected "${ARGS[@]}" | jq -r '[.[].projects[]] | unique | join(" ")')
+              PLAN=$(agci release --projects $PROJECTS --plan)
               echo "$PLAN"
-              if [[ -n "$PLAN" ]]; then echo "publish=true" >> "$GITHUB_OUTPUT"; fi
+              echo "projects=$PROJECTS" >> "$GITHUB_OUTPUT"
+              if [[ -n "$PLAN" ]]; then echo "release=true" >> "$GITHUB_OUTPUT"; fi
               ;;
             *)
-              MATRIX=$(cargo run -q -p agci -- affected --all)
+              MATRIX=$(agci affected --all)
               ;;
           esac
           echo "$MATRIX" | jq .
           echo "matrix=$MATRIX" >> "$GITHUB_OUTPUT"
 
   check:
-    needs: detect
-    if: needs.detect.outputs.matrix != '[]'
-    name: ${{ matrix.project }} (${{ matrix.os }})
+    needs: config
+    if: needs.config.outputs.matrix != '[]'
+    name: ${{ matrix.name }} (${{ matrix.os }})
     runs-on: ${{ matrix.runs-on }}
     strategy:
       fail-fast: false
       matrix:
-        include: ${{ fromJSON(needs.detect.outputs.matrix) }}
+        include: ${{ fromJSON(needs.config.outputs.matrix) }}
     steps:
       - uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-      - uses: actions-rust-lang/setup-rust-toolchain@v1
+      - if: matrix.rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           components: rustfmt,clippy${{ matrix.coverage && ',llvm-tools-preview' || '' }}
       - if: matrix.coverage
@@ -84,35 +133,48 @@ jobs:
         with:
           coverage: xdebug
           tools: composer
-      - env:
-          PROJECT: ${{ matrix.project }}
-        run: cargo run -q -p agci -- check "$PROJECT"
+      - if: runner.os == 'Linux'
+        uses: actions/download-artifact@v8
+        with:
+          name: agci
+          path: ${{ runner.temp }}/agci
+      - if: runner.os == 'Linux'
+        run: |
+          chmod +x "$RUNNER_TEMP/agci/agci"
+          echo "$RUNNER_TEMP/agci" >> "$GITHUB_PATH"
+      # the artifact is the Linux binary
+      - if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          cargo build -r -p agci
+          echo "$(cd target/release && pwd -W)" >> "$GITHUB_PATH"
+      - shell: bash
+        env:
+          PROJECTS: ${{ join(matrix.projects, ' ') }}
+        run: agci check $PROJECTS
       - if: always()
         uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.artifact }}
-          path: |
-            ${{ matrix.project }}/coverage/
-            ${{ matrix.project }}/**/playwright-report/
-            ${{ matrix.project }}/*.log
+          path: ${{ matrix.paths }}
           if-no-files-found: ignore
           retention-days: 30
 
   ci:
-    needs: [detect, check]
+    needs: [config, check]
     if: always()
     runs-on: ubuntu-latest
     steps:
       - env:
-          DETECT: ${{ needs.detect.result }}
+          CONFIG: ${{ needs.config.result }}
           CHECK: ${{ needs.check.result }}
         run: |
-          echo "detect: $DETECT, check: $CHECK"
-          [[ "$DETECT" == "success" && ( "$CHECK" == "success" || "$CHECK" == "skipped" ) ]]
+          echo "config: $CONFIG, check: $CHECK"
+          [[ "$CONFIG" == "success" && ( "$CHECK" == "success" || "$CHECK" == "skipped" ) ]]
 
-  publish:
-    needs: detect
-    if: needs.detect.outputs.publish == 'true'
+  release:
+    needs: config
+    if: needs.config.outputs.release == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: write # GitHub releases and tags
@@ -120,14 +182,19 @@ jobs:
       id-token: write # npm provenance (OIDC)
     steps:
       - uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
       - uses: actions-rust-lang/setup-rust-toolchain@v1
       - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v6
         with:
           node-version: "24"
           registry-url: "https://registry.npmjs.org"
+      - uses: actions/download-artifact@v8
+        with:
+          name: agci
+          path: ${{ runner.temp }}/agci
+      - run: |
+          chmod +x "$RUNNER_TEMP/agci/agci"
+          echo "$RUNNER_TEMP/agci" >> "$GITHUB_PATH"
       - env:
           DOCKER_HUB_TOKEN: ${{ secrets.DOCKER_HUB_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -135,9 +202,7 @@ jobs:
           echo "$DOCKER_HUB_TOKEN" | docker login -u agnesoft --password-stdin
           echo "$GITHUB_TOKEN" | docker login ghcr.io -u agnesoft --password-stdin
       - env:
-          BEFORE: ${{ github.event.before }}
+          PROJECTS: ${{ needs.config.outputs.projects }}
           CARGO_REGISTRY_TOKEN: ${{ secrets.CRATES_IO_TOKEN }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          if [[ "$BEFORE" =~ ^0+$ ]]; then ARGS=(--all); else ARGS=(--base "$BEFORE"); fi
-          cargo run -q -p agci -- publish "${ARGS[@]}"
+        run: agci release --projects $PROJECTS

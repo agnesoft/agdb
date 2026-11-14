@@ -10,7 +10,7 @@
     "lint:boundaries:check": "node app/scripts/lint-boundaries.mjs",
     "test:server": "cargo test -p agdb_server --features studio -- studio basepath",
     "test:image": "bash ../agdb_server/test_image.sh",
-    "release:image": "bash ../agdb_server/publish_image.sh"
+    "release:image": "bash ../agdb_server/release_image.sh"
   },
   "dependencies": {
     "@agdb-studio/design": "workspace:*",
@@ -70,10 +70,10 @@
     "toolchains": [
       "rust"
     ],
-    "publish": [
+    "release": [
       "release:image"
     ],
-    "publish_dev": [
+    "release_dev": [
       "release:package",
       "release:image"
     ]

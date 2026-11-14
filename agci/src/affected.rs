@@ -30,15 +30,20 @@ const ALL_INPUTS: [&str; 1] = [".github/workflows/agdb.yaml"];
 
 #[derive(Debug, PartialEq, Serialize)]
 pub(crate) struct Job {
-    pub(crate) project: String,
+    /// The group or the directory of the only project.
+    pub(crate) name: String,
+    pub(crate) projects: Vec<String>,
     pub(crate) os: Os,
     #[serde(rename = "runs-on")]
     pub(crate) runs_on: &'static str,
+    pub(crate) rust: bool,
     pub(crate) node: bool,
     pub(crate) php: bool,
     pub(crate) coverage: bool,
     /// Name for the uploaded artifacts, unique per job.
     pub(crate) artifact: String,
+    /// Paths of the uploaded artifacts (coverage, test reports, logs), one per line.
+    pub(crate) paths: String,
 }
 
 fn matches(path: &str, input: &str) -> bool {
@@ -166,29 +171,53 @@ pub(crate) fn dependency_order(projects: &[Project]) -> Result<Vec<&Project>, CI
     Ok(ordered.into_iter().map(|(_, p)| p).collect())
 }
 
+/// A job per project and OS, projects of the same group share it.
 pub(crate) fn jobs(projects: &[Project], affected: &BTreeSet<&str>) -> Vec<Job> {
-    projects
+    let mut jobs: Vec<Job> = Vec::new();
+
+    for project in projects
         .iter()
         .filter(|p| affected.contains(p.dir.as_str()))
-        .flat_map(|p| {
-            p.config.os().into_iter().map(|os| Job {
-                project: p.dir.clone(),
+    {
+        let name = project.config.group.as_ref().unwrap_or(&project.dir);
+        let paths = ["coverage/", "**/playwright-report/", "*.log"]
+            .map(|p| format!("{}/{p}", project.dir))
+            .join("\n");
+
+        for os in project.config.os() {
+            if let Some(job) = jobs.iter_mut().find(|j| j.name == *name && j.os == os) {
+                job.projects.push(project.dir.clone());
+                job.rust |= project.needs(Toolchain::Rust);
+                job.node |= project.needs(Toolchain::Node);
+                job.php |= project.needs(Toolchain::Php);
+                job.coverage |= project.config.coverage.is_some();
+                job.paths = format!("{}\n{paths}", job.paths);
+                continue;
+            }
+
+            jobs.push(Job {
+                name: name.clone(),
+                projects: vec![project.dir.clone()],
                 os,
                 runs_on: match os {
                     Os::Linux => "ubuntu-latest",
                     Os::Windows => "windows-latest",
                 },
-                node: p.needs(Toolchain::Node),
-                php: p.needs(Toolchain::Php),
-                coverage: p.config.coverage.is_some(),
+                rust: project.needs(Toolchain::Rust),
+                node: project.needs(Toolchain::Node),
+                php: project.needs(Toolchain::Php),
+                coverage: project.config.coverage.is_some(),
                 artifact: format!(
                     "{}-{}",
-                    p.dir.replace('/', "_"),
+                    name.replace('/', "_"),
                     format!("{os:?}").to_lowercase()
                 ),
-            })
-        })
-        .collect()
+                paths: paths.clone(),
+            });
+        }
+    }
+
+    jobs
 }
 
 #[cfg(test)]
@@ -328,7 +357,49 @@ mod tests {
 
         assert_eq!(
             serde_json::to_string(&jobs).unwrap(),
-            r#"[{"project":"bench","os":"linux","runs-on":"ubuntu-latest","node":false,"php":false,"coverage":true,"artifact":"bench-linux"},{"project":"bench","os":"windows","runs-on":"windows-latest","node":false,"php":false,"coverage":true,"artifact":"bench-windows"},{"project":"client","os":"linux","runs-on":"ubuntu-latest","node":true,"php":true,"coverage":false,"artifact":"client-linux"}]"#
+            r#"[{"name":"bench","projects":["bench"],"os":"linux","runs-on":"ubuntu-latest","rust":true,"node":false,"php":false,"coverage":true,"artifact":"bench-linux","paths":"bench/coverage/\nbench/**/playwright-report/\nbench/*.log"},{"name":"bench","projects":["bench"],"os":"windows","runs-on":"windows-latest","rust":true,"node":false,"php":false,"coverage":true,"artifact":"bench-windows","paths":"bench/coverage/\nbench/**/playwright-report/\nbench/*.log"},{"name":"client","projects":["client"],"os":"linux","runs-on":"ubuntu-latest","rust":true,"node":true,"php":true,"coverage":false,"artifact":"client-linux","paths":"client/coverage/\nclient/**/playwright-report/\nclient/*.log"}]"#
         );
+    }
+
+    #[test]
+    fn grouped_projects_share_a_job_per_os() {
+        let mut projects = sample();
+        let (bench, client, db) = (0, 1, 2);
+        projects[bench].config.os = vec![Os::Linux, Os::Windows];
+
+        for i in [bench, client, db] {
+            projects[i].config.group = Some("small".to_string());
+        }
+
+        let jobs = jobs(&projects, &BTreeSet::from(["bench", "client", "db", "ui"]));
+        let summary: Vec<(&str, Os, Vec<&str>, bool, bool)> = jobs
+            .iter()
+            .map(|j| {
+                (
+                    j.name.as_str(),
+                    j.os,
+                    j.projects.iter().map(String::as_str).collect(),
+                    j.rust,
+                    j.node,
+                )
+            })
+            .collect();
+
+        assert_eq!(
+            summary,
+            vec![
+                (
+                    "small",
+                    Os::Linux,
+                    vec!["bench", "client", "db"],
+                    true,
+                    true
+                ),
+                ("small", Os::Windows, vec!["bench"], true, false),
+                ("ui", Os::Linux, vec!["ui"], false, true),
+            ]
+        );
+        assert_eq!(jobs[0].artifact, "small-linux");
+        assert!(jobs[0].paths.ends_with("\ndb/*.log"));
     }
 }

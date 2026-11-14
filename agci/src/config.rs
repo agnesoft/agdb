@@ -13,6 +13,8 @@ pub(crate) struct Config {
     pub(crate) os: Vec<Os>,
     /// Toolchains needed in addition to the project's own language.
     pub(crate) toolchains: Vec<Toolchain>,
+    /// Projects of the same group are checked in one job (per OS), one after another.
+    pub(crate) group: Option<String>,
     /// Rust only: run tests under `cargo llvm-cov` with this minimum line coverage, 100 also requires all regions and functions.
     pub(crate) coverage: Option<u8>,
     /// Rust only: features used instead of `--all-features`.
@@ -22,9 +24,9 @@ pub(crate) struct Config {
     /// Rust only: extra shell commands run in the project directory after the checks.
     pub(crate) run: Vec<String>,
     /// Run on a release (no tag for the version yet). Rust: `crates`. Node: package.json scripts.
-    pub(crate) publish: Vec<String>,
-    /// Node only: package.json scripts run on every push to main that affects the project.
-    pub(crate) publish_dev: Vec<String>,
+    pub(crate) release: Vec<String>,
+    /// Node only: package.json scripts run on every push to main that affects the project (`AGCI_VERSION=dev`).
+    pub(crate) release_dev: Vec<String>,
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq, PartialOrd, Ord)]
@@ -43,7 +45,7 @@ pub(crate) enum Toolchain {
 }
 
 pub(crate) const RUST_CHECKS: [&str; 6] = ["format", "lint", "testcheck", "doc", "bench", "test"];
-pub(crate) const RUST_PUBLISH: [&str; 1] = ["crates"];
+pub(crate) const RUST_RELEASE: [&str; 1] = ["crates"];
 
 impl Config {
     pub(crate) fn os(&self) -> Vec<Os> {

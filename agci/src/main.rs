@@ -6,8 +6,9 @@ mod git;
 mod language;
 mod manifest;
 mod project;
-mod publish;
+mod regenerate;
 mod release;
+mod report;
 mod utilities;
 
 use crate::ci_error::CIError;
@@ -16,17 +17,18 @@ use std::path::Path;
 use std::process::Command;
 
 const USAGE: &str = "usage:
-  agci                         update versions and regenerate the API clients (release)
+  agci                         update versions and regenerate the API clients
   agci projects                list the projects and their dependencies
   agci affected [--base <ref>] JSON job matrix of the projects affected by the changes since <ref>
                                (merge base), or by the uncommitted changes without --base
   agci affected --all          JSON job matrix of all projects
-  agci check [<project>...]    run the checks of the projects, default: the affected ones
-  agci publish (--base <ref>|--all) [--plan]
-                               after a push to main: publish_dev of the projects affected since <ref>
-                               and, if there is no v<version> tag for the root Cargo.toml version, the
-                               release (publish of all projects, then the GitHub release and tag);
-                               --plan only prints the steps";
+  agci check [<project>...]    run the checks of the projects, default: the affected ones; all of
+                               them run, failing ones are listed at the end
+  agci release (--base <ref>|--all|--projects [<project>...]) [--plan]
+                               after a push to main: release_dev of the projects affected since <ref>
+                               (or of the given ones) and, if there is no v<version> tag for the root
+                               Cargo.toml version, the release (release of all projects, then the
+                               GitHub release and tag); --plan only prints the steps";
 
 fn root() -> Result<String, CIError> {
     Ok(
@@ -70,7 +72,7 @@ fn published_crate(name: &str, version: &str) -> Result<bool, CIError> {
     }
 }
 
-fn publish(args: &[String]) -> Result<(), CIError> {
+fn release(args: &[String]) -> Result<(), CIError> {
     let (plan_only, args) = match args.split_last() {
         Some((last, rest)) if last == "--plan" => (true, rest),
         _ => (false, args),
@@ -81,14 +83,20 @@ fn publish(args: &[String]) -> Result<(), CIError> {
     }
 
     let projects = load()?;
-    let affected_dirs: Vec<String> = affected(args)?.into_iter().map(|p| p.dir).collect();
+    let affected_dirs: Vec<String> = match args {
+        [flag, dirs @ ..] if flag == "--projects" => select(&projects, dirs)?
+            .into_iter()
+            .map(|p| p.dir.clone())
+            .collect(),
+        _ => affected(args)?.into_iter().map(|p| p.dir).collect(),
+    };
     let version = git::new_version()?;
-    let publish = publish::Publish {
+    let release = release::Release {
         affected: affected_dirs.iter().map(String::as_str).collect(),
-        release: (!git::tag_exists(&format!("v{version}"))?).then_some(version),
+        version: (!git::tag_exists(&format!("v{version}"))?).then_some(version),
         sha: git::head()?,
     };
-    let steps = publish::plan(&projects, &publish, published_crate)?;
+    let steps = release::plan(&projects, &release, published_crate)?;
 
     if plan_only {
         for step in &steps {
@@ -96,8 +104,20 @@ fn publish(args: &[String]) -> Result<(), CIError> {
         }
         Ok(())
     } else {
-        check::run_steps("publish", &steps, &root()?)
+        check::run_steps("release", &steps, &root()?)
     }
+}
+
+fn select<'a>(projects: &'a [Project], dirs: &[String]) -> Result<Vec<&'a Project>, CIError> {
+    dirs.iter()
+        .map(|dir| {
+            let dir = dir.trim_end_matches('/');
+            projects
+                .iter()
+                .find(|p| p.dir == dir)
+                .ok_or(CIError::from(format!("unknown project '{dir}'")))
+        })
+        .collect()
 }
 
 fn affected(args: &[String]) -> Result<Vec<Project>, CIError> {
@@ -124,7 +144,7 @@ fn run(args: &[String]) -> Result<(), CIError> {
     std::env::set_current_dir(root()?)?;
 
     match args.first().map(String::as_str) {
-        None => release::release(),
+        None => regenerate::regenerate(),
         Some("projects") => {
             for p in load()? {
                 println!(
@@ -151,16 +171,7 @@ fn run(args: &[String]) -> Result<(), CIError> {
             let root = root()?;
             let projects = load()?;
             let selected: Vec<&Project> = if args.len() > 1 {
-                args[1..]
-                    .iter()
-                    .map(|dir| {
-                        let dir = dir.trim_end_matches('/');
-                        projects
-                            .iter()
-                            .find(|p| p.dir == dir)
-                            .ok_or(CIError::from(format!("unknown project '{dir}'")))
-                    })
-                    .collect::<Result<_, _>>()?
+                select(&projects, &args[1..])?
             } else {
                 let changed = changed(None)?;
                 let affected = affected::affected(&projects, &changed)?;
@@ -170,13 +181,15 @@ fn run(args: &[String]) -> Result<(), CIError> {
                     .collect()
             };
 
+            let mut report = report::Report::new();
+
             for project in selected {
-                check::check(project, &projects, &root)?;
+                check::check(project, &projects, &root, &mut report)?;
             }
 
-            Ok(())
+            report.finish()
         }
-        Some("publish") => publish(&args[1..]),
+        Some("release") => release(&args[1..]),
         Some(_) => Err(USAGE.into()),
     }
 }

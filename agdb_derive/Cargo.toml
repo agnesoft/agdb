@@ -18,5 +18,5 @@ quote.workspace = true
 syn = { workspace = true, features = ["full", "extra-traits"] }
 
 [package.metadata.agci]
-publish = ["crates"]
+release = ["crates"]
 checks = ["format", "lint", "test"]

@@ -1,7 +1,7 @@
 use crate::CIError;
 use crate::config::Config;
 use crate::config::RUST_CHECKS;
-use crate::config::RUST_PUBLISH;
+use crate::config::RUST_RELEASE;
 use crate::config::Toolchain;
 use crate::manifest::Dep;
 use crate::manifest::Lang;
@@ -134,6 +134,18 @@ pub(crate) fn projects(
     let dirs: BTreeSet<String> = projects.iter().map(|p| p.dir.clone()).collect();
 
     for project in &mut projects {
+        match project.config.group.as_deref() {
+            Some("") => return Err(format!("'{}' has an empty group", project.dir).into()),
+            Some(group) if dirs.contains(group) => {
+                return Err(format!(
+                    "'{}' group '{group}' is the directory of a project",
+                    project.dir
+                )
+                .into());
+            }
+            _ => {}
+        }
+
         for depend in &project.config.depends {
             if dirs.contains(depend) {
                 project.depends.insert(depend.clone());
@@ -198,18 +210,18 @@ fn validate(project: &Project, scripts: &BTreeSet<String>) -> Result<(), CIError
             }
 
             if let Some(target) = config
-                .publish
+                .release
                 .iter()
-                .find(|t| !RUST_PUBLISH.contains(&t.as_str()))
+                .find(|t| !RUST_RELEASE.contains(&t.as_str()))
             {
                 return Err(format!(
-                    "'{dir}' has unknown publish target '{target}', expected one of {RUST_PUBLISH:?}"
+                    "'{dir}' has unknown release target '{target}', expected one of {RUST_RELEASE:?}"
                 )
                 .into());
             }
 
-            if !config.publish_dev.is_empty() {
-                return Err(format!("'{dir}' sets publish_dev which is Node only").into());
+            if !config.release_dev.is_empty() {
+                return Err(format!("'{dir}' sets release_dev which is Node only").into());
             }
         }
         Lang::Node => {
@@ -221,8 +233,8 @@ fn validate(project: &Project, scripts: &BTreeSet<String>) -> Result<(), CIError
                 .checks
                 .iter()
                 .map(|s| ("check", s))
-                .chain(config.publish.iter().map(|s| ("publish", s)))
-                .chain(config.publish_dev.iter().map(|s| ("publish_dev", s)))
+                .chain(config.release.iter().map(|s| ("release", s)))
+                .chain(config.release_dev.iter().map(|s| ("release_dev", s)))
             {
                 if !scripts.contains(script) {
                     return Err(format!(
@@ -445,6 +457,20 @@ pub(crate) mod tests {
         assert!(
             error(vec![manifest("a", Lang::Node, vec![], Some(c))])
                 .starts_with("'a' sets Rust only fields")
+        );
+    }
+
+    #[test]
+    fn group_must_not_be_a_project_directory() {
+        let mut c = config(&["test"], &[]);
+        c.group = Some("b".to_string());
+
+        assert_eq!(
+            error(vec![
+                manifest("a", Lang::Rust, vec![], Some(c)),
+                manifest("b", Lang::Rust, vec![], Some(config(&["test"], &[]))),
+            ]),
+            "'a' group 'b' is the directory of a project"
         );
     }
 

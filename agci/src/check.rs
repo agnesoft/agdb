@@ -2,6 +2,7 @@ use crate::CIError;
 use crate::config::RUST_CHECKS;
 use crate::manifest::Lang;
 use crate::project::Project;
+use crate::report::Report;
 use crate::utilities;
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
@@ -54,27 +55,82 @@ pub(crate) fn run_steps(label: &str, steps: &[Step], root: &str) -> Result<(), C
     Ok(())
 }
 
-/// Runs the checks of the project. Fails if they modify tracked files, e.g. outdated generated sources.
-pub(crate) fn check(project: &Project, projects: &[Project], root: &str) -> Result<(), CIError> {
-    let before = tracked_changes()?;
-    run_steps(&project.dir, &steps(project, projects, root), root)?;
-    let after = tracked_changes()?;
-    let modified = modified_files(&before, &after);
+/// A named check (e.g. `lint`) of a project and the steps implementing it.
+#[derive(Debug, PartialEq)]
+pub(crate) struct Check {
+    pub(crate) name: String,
+    pub(crate) steps: Vec<Step>,
+}
 
-    if !modified.is_empty() {
-        return Err(format!(
-            "checks of '{}' modified tracked files, run them locally and commit the result:\n  {}",
-            project.dir,
-            modified.join("\n  ")
-        )
-        .into());
+fn named(name: &str, steps: Vec<Step>) -> Check {
+    Check {
+        name: name.to_string(),
+        steps,
     }
+}
+
+const UNCHANGED: &str = "unchanged files";
+
+/// Runs the checks of the project until one fails, then whether they left the files unchanged
+/// (e.g. outdated generated sources).
+pub(crate) fn check(
+    project: &Project,
+    projects: &[Project],
+    root: &str,
+    report: &mut Report,
+) -> Result<(), CIError> {
+    let before = tracked_changes()?;
+    let untracked_before = untracked()?;
+    let mut passed = true;
+
+    for check in checks(project, projects, root) {
+        if passed {
+            passed = report.run(&project.dir, &check.name, || {
+                run_steps(&project.dir, &check.steps, root)
+            });
+        } else {
+            report.skip(&project.dir, &check.name);
+        }
+    }
+
+    if !passed {
+        report.skip(&project.dir, UNCHANGED);
+        return Ok(());
+    }
+
+    report.run(&project.dir, UNCHANGED, || {
+        let mut modified = modified_files(&before, &tracked_changes()?);
+        modified.extend(untracked()?.difference(&untracked_before).cloned());
+
+        if modified.is_empty() {
+            Ok(())
+        } else {
+            Err(format!(
+                "checks of '{}' modified or created files, run them locally and commit the result:\n  {}",
+                project.dir,
+                modified.join("\n  ")
+            )
+            .into())
+        }
+    });
 
     Ok(())
 }
 
 fn tracked_changes() -> Result<String, CIError> {
     utilities::run_quiet(Command::new("git").args(["diff", "--no-renames", "HEAD"]))
+}
+
+/// Untracked files that are not ignored, e.g. newly generated sources.
+fn untracked() -> Result<BTreeSet<String>, CIError> {
+    Ok(utilities::run_quiet(Command::new("git").args([
+        "ls-files",
+        "--others",
+        "--exclude-standard",
+    ]))?
+    .lines()
+    .map(str::to_string)
+    .collect())
 }
 
 /// Files whose diff against HEAD differs between the two `git diff HEAD` outputs.
@@ -96,10 +152,10 @@ fn modified_files(before: &str, after: &str) -> Vec<String> {
         .collect()
 }
 
-pub(crate) fn steps(project: &Project, projects: &[Project], root: &str) -> Vec<Step> {
+pub(crate) fn checks(project: &Project, projects: &[Project], root: &str) -> Vec<Check> {
     match project.lang {
-        Lang::Rust => rust_steps(project, projects, root),
-        Lang::Node => node_steps(project),
+        Lang::Rust => rust_checks(project, projects, root),
+        Lang::Node => node_checks(project),
     }
 }
 
@@ -107,10 +163,17 @@ pub(crate) fn pnpm_install() -> Step {
     step(PNPM, &["install", "--frozen-lockfile"], "")
 }
 
-fn node_steps(project: &Project) -> Vec<Step> {
-    let mut steps = vec![pnpm_install()];
-    steps.extend(node_scripts(project, &project.config.checks));
-    steps
+fn node_checks(project: &Project) -> Vec<Check> {
+    let mut checks = vec![named("install", vec![pnpm_install()])];
+    checks.extend(
+        project
+            .config
+            .checks
+            .iter()
+            .zip(node_scripts(project, &project.config.checks))
+            .map(|(script, step)| named(script, vec![step])),
+    );
+    checks
 }
 
 /// The scripts run via turbo over all packages of the project (in the packages that define them).
@@ -138,7 +201,7 @@ pub(crate) fn node_scripts(project: &Project, scripts: &[String]) -> Vec<Step> {
     steps
 }
 
-fn rust_steps(project: &Project, projects: &[Project], root: &str) -> Vec<Step> {
+fn rust_checks(project: &Project, projects: &[Project], root: &str) -> Vec<Check> {
     let config = &project.config;
     let name = project.packages[0].as_str();
     let dir = project.dir.as_str();
@@ -152,12 +215,14 @@ fn rust_steps(project: &Project, projects: &[Project], root: &str) -> Vec<Step> 
         all.extend(extra);
         step("cargo", &all, "")
     };
-    let mut steps = Vec::new();
+    let mut checks = Vec::new();
 
     for check in RUST_CHECKS
         .iter()
         .filter(|c| config.checks.iter().any(|d| d == *c))
     {
+        let mut steps = Vec::new();
+
         match *check {
             "format" => steps.push(cargo(&["fmt", "-p", name, "--check"], &[])),
             "lint" => {
@@ -217,13 +282,22 @@ fn rust_steps(project: &Project, projects: &[Project], root: &str) -> Vec<Step> 
             },
             _ => unreachable!("validated by project"),
         }
+
+        checks.push(named(check, steps));
     }
 
-    for command in &config.run {
-        steps.push(step(utilities::BASH, &["-c", command], dir));
+    if !config.run.is_empty() {
+        checks.push(named(
+            "run",
+            config
+                .run
+                .iter()
+                .map(|command| step(utilities::BASH, &["-c", command], dir))
+                .collect(),
+        ));
     }
 
-    steps
+    checks
 }
 
 /// Coverage counts only the project's own sources: other Rust projects and its examples are ignored.
@@ -293,10 +367,44 @@ mod tests {
         let index = projects.iter().position(|p| p.dir == project).unwrap();
         edit(&mut projects[index].config);
 
-        steps(&projects[index], &projects, "/repo")
+        checks(&projects[index], &projects, "/repo")
             .into_iter()
+            .flat_map(|c| c.steps)
             .map(|s| format!("{}> {} {}", s.dir, s.program, s.args.join(" ")))
             .collect()
+    }
+
+    fn check_names(project: &str, edit: impl FnOnce(&mut crate::config::Config)) -> Vec<String> {
+        let projects = projects(
+            vec![
+                manifest("agdb", Lang::Rust, vec![], Some(config(&["test"], &[]))),
+                manifest("ui", Lang::Node, vec![], Some(config(&["test"], &[]))),
+            ],
+            |_| false,
+        )
+        .unwrap_or_else(|_| unreachable!());
+        let mut project = projects.into_iter().find(|p| p.dir == project).unwrap();
+        edit(&mut project.config);
+        checks(&project, &[], "/repo")
+            .into_iter()
+            .map(|c| c.name)
+            .collect()
+    }
+
+    #[test]
+    fn checks_are_named_after_the_metadata() {
+        assert_eq!(
+            check_names("agdb", |c| {
+                c.checks = vec!["test".to_string(), "lint".to_string()];
+                c.run = vec!["true".to_string(), "false".to_string()];
+            }),
+            vec!["lint", "test", "run"]
+        );
+        assert_eq!(
+            check_names("ui", |c| c.checks =
+                vec!["test".to_string(), "build".to_string()]),
+            vec!["install", "test", "build"]
+        );
     }
 
     #[test]

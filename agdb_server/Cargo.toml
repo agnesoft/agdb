@@ -53,4 +53,4 @@ anyhow.workspace = true
 checks = ["format", "lint", "test"]
 features = "tls"
 coverage = 0
-publish = ["crates"]
+release = ["crates"]

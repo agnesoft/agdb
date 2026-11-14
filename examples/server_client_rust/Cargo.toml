@@ -11,4 +11,5 @@ anyhow.workspace = true
 tokio = { workspace = true, features = ["full"] }
 
 [package.metadata.agci]
+group = "examples"
 checks = ["format", "lint", "test"]

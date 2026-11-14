@@ -30,6 +30,6 @@ utoipa = { workspace = true, optional = true }
 serde_json.workspace = true
 
 [package.metadata.agci]
-publish = ["crates"]
+release = ["crates"]
 checks = ["format", "lint", "doc", "test"]
 coverage = 0

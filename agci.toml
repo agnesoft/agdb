@@ -59,6 +59,12 @@ dependencies = ["agdb_server"]
 [projects.agdb_benchmark]
 dependencies = ["agdb_server"]
 
+[projects.agdb_server]
+add_toolchains = ["node"]
+
+[projects."agdb_server/image"]
+dependencies = ["agdb_server", "agdb_studio"]
+
 [projects.agplatform]
 os = ["linux", "windows"]
 coverage = true
@@ -82,12 +88,6 @@ feature_combinations = [
     "process,request,tokio",
     "fs,process,request,tokio",
 ]
-
-[projects.agdb_server]
-add_toolchains = ["node"]
-
-[projects."agdb_server/image"]
-dependencies = ["agdb_server", "agdb_studio"]
 
 [projects.agtestcheck]
 os = ["linux", "windows"]

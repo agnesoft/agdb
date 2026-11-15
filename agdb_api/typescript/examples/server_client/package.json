@@ -11,6 +11,9 @@
     "lint:check": "eslint --max-warnings=0 main.ts",
     "start": "tsc && node dist/main.js"
   },
+  "dependencies": {
+    "@agnesoft/agdb_api": "workspace:*"
+  },
   "devDependencies": {
     "@typescript-eslint/parser": "catalog:",
     "eslint": "catalog:",
@@ -18,8 +21,5 @@
     "prettier": "catalog:",
     "typescript": "catalog:",
     "typescript-eslint": "catalog:"
-  },
-  "dependencies": {
-    "@agnesoft/agdb_api": "workspace:*"
   }
 }

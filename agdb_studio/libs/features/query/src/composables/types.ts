@@ -107,6 +107,11 @@ export type Query = {
   executedQueries?: Partial<Record<TAB, Components.Schemas.QueryType[]>>;
   /** The step types of those queries, which decide how their results are shown. */
   executedStepTypes?: Partial<Record<TAB, QueryType[]>>;
+  /**
+   * The exec_mut rows were opened from a link and have not been confirmed
+   * yet, so running them asks first (a link could hold a harmful query).
+   */
+  unconfirmedLinkedMutation?: boolean;
   rows: {
     exec: QueryRow[];
     exec_mut: QueryRow[];

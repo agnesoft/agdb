@@ -191,6 +191,33 @@ const pasteQuerySteps = (
   return rows[targetIndex];
 };
 
+/**
+ * Replaces all rows of a tab (e.g. when restoring a saved view). Steps get
+ * new ids; the tab always keeps at least one (empty) row.
+ */
+const setQueryRows = (queryId: string, tab: TAB, rows: CopiedStep[][]) => {
+  const query = getQuery(queryId);
+  if (!query?.value) return;
+  const created = rows.map((steps) => ({
+    ...createRow(),
+    steps: steps.map(({ type, args }) => ({
+      id: `step-${crypto.randomUUID()}`,
+      type,
+      ...(args
+        ? { args: args.map((entry) => entry.map((field) => ({ ...field }))) }
+        : {}),
+    })),
+  }));
+  query.value.rows[tab] = created.length ? created : [createRow()];
+  validateQuerySteps(queryId, tab);
+};
+
+/** Marks the exec_mut rows as opened from a link (true) or confirmed (false). */
+const setUnconfirmedLinkedMutation = (queryId: string, value: boolean) => {
+  const query = getQuery(queryId);
+  if (query?.value) query.value.unconfirmedLinkedMutation = value;
+};
+
 const runQuery = async (
   queryId: string,
   runner?: () => Promise<void>,
@@ -377,6 +404,8 @@ export const useQueryStore = () => {
     getQuery,
     clearQuerySteps,
     pasteQuerySteps,
+    setQueryRows,
+    setUnconfirmedLinkedMutation,
     validateQuerySteps,
     setQueryResults,
     clearQueryResults,

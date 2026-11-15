@@ -16,7 +16,13 @@ const {
   db_exec_mut,
   admin_db_exec,
   admin_db_exec_mut,
+  queryState,
+  setUnconfirmedLinkedMutation,
+  openModal,
 } = vi.hoisted(() => ({
+  queryState: { unconfirmedLinkedMutation: false as boolean | undefined },
+  setUnconfirmedLinkedMutation: vi.fn(),
+  openModal: vi.fn(),
   routeState: {
     params: { owner: "alice", db: "main" },
     name: "db-view",
@@ -55,7 +61,13 @@ vi.mock("./queryStore", () => ({
     runQuery,
     stopQuery,
     setQueryResults,
+    setUnconfirmedLinkedMutation,
+    getQuery: (id: string) => (id === "q1" ? { value: queryState } : undefined),
   }),
+}));
+
+vi.mock("@agdb-studio/common/src/composables/modal/modal", () => ({
+  default: () => ({ openModal }),
 }));
 
 vi.mock("../utils/queryExecutionUtils", () => ({
@@ -110,6 +122,7 @@ describe("useQueryExecution", () => {
     routeState.params = { owner: "alice", db: "main" };
     routeState.name = "db-view";
     routeControl.throwUseRoute = false;
+    queryState.unconfirmedLinkedMutation = undefined;
     runQuery.mockImplementation(
       async (_queryId: string, runner?: () => Promise<void>) => {
         await runner?.();
@@ -329,6 +342,49 @@ describe("useQueryExecution", () => {
     expect(setQueryResults).toHaveBeenCalledWith("q1", "exec", mockResults, {
       queries: [{ built: true }],
       stepTypes: ["select"],
+    });
+  });
+
+  describe("mutations opened from a link", () => {
+    type ModalProps = {
+      header: string;
+      content: { paragraph: { text: string }[] }[];
+      onConfirm: () => boolean;
+    };
+    const modalProps = (): ModalProps =>
+      openModal.mock.calls[0]?.[0] as ModalProps;
+
+    beforeEach(() => {
+      queryState.unconfirmedLinkedMutation = true;
+    });
+
+    it("asks before running and shows the queries", async () => {
+      const steps = [makeStep("select"), makeStep("select.aliases")];
+      await setup({ tab: "exec_mut", steps }).runOrStopQuery();
+
+      expect(runQuery).not.toHaveBeenCalled();
+      expect(openModal).toHaveBeenCalledOnce();
+      const texts = modalProps().content.map((c) =>
+        c.paragraph.map((p) => p.text).join(""),
+      );
+      expect(texts[0]).toContain("change the database");
+      expect(texts[1]).toBe("QueryBuilder::select().aliases().query()");
+    });
+
+    it("runs once confirmed and does not ask again", async () => {
+      await setup({ tab: "exec_mut" }).runOrStopQuery();
+      expect(modalProps().onConfirm()).toBe(true);
+      await vi.waitFor(() => expect(db_exec_mut).toHaveBeenCalledOnce());
+      expect(setUnconfirmedLinkedMutation).toHaveBeenCalledWith("q1", false);
+    });
+
+    it("does not ask for other tabs or confirmed rows", async () => {
+      await setup({ tab: "exec" }).runOrStopQuery();
+      queryState.unconfirmedLinkedMutation = false;
+      await setup({ tab: "exec_mut" }).runOrStopQuery();
+      expect(openModal).not.toHaveBeenCalled();
+      expect(db_exec).toHaveBeenCalledOnce();
+      expect(db_exec_mut).toHaveBeenCalledOnce();
     });
   });
 });

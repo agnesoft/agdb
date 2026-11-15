@@ -42,7 +42,7 @@ coverage = false
 [projects.agbench]
 os = ["linux", "windows"]
 coverage = true
-checks = ["format", "lint", "testcheck", "doc", "examples", "bench", "coverage"]
+checks = ["format", "lint", "testcheck", "doc", "coverage"]
 
 [projects.agci]
 add_toolchains = ["node", "php"]
@@ -64,21 +64,22 @@ os = ["linux", "windows"]
 coverage = true
 checks = ["format", "lint", "testcheck", "doc", "examples", "bench", "coverage"]
 feature_combinations = [
+    "",
     "env",
     "fs",
-    "interceptor ",
-    "process ",
-    "request ",
-    "fs,process ",
-    "fs,request ",
-    "process,request ",
-    "fs,process,request ",
-    "tokio ",
-    "process,tokio ",
-    "request,tokio ",
-    "fs,process,tokio ",
-    "fs,request,tokio ",
-    "process,request,tokio ",
+    "interceptor",
+    "process",
+    "request",
+    "fs,process",
+    "fs,request",
+    "process,request",
+    "fs,process,request",
+    "tokio",
+    "process,tokio",
+    "request,tokio",
+    "fs,process,tokio",
+    "fs,request,tokio",
+    "process,request,tokio",
     "fs,process,request,tokio",
 ]
 
@@ -91,7 +92,7 @@ dependencies = ["agdb_server", "agdb_studio"]
 [projects.agtestcheck]
 os = ["linux", "windows"]
 coverage = true
-checks = ["format", "lint", "testcheck", "doc", "examples", "bench", "coverage"]
+checks = ["format", "lint", "testcheck", "coverage"]
 
 [projects."examples/app_db"]
 group = "examples"

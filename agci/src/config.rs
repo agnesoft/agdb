@@ -93,10 +93,11 @@ impl Config {
 }
 
 /// When neither `agci.toml` nor the project set them. Only those the project can run apply: Cargo
-/// `doc` for crates with a library, pnpm and Shell ones if the project has the script.
+/// `doc` for crates with a library, `bench` for crates with bench targets, pnpm and Shell ones if
+/// the project has the script.
 fn builtin(kind: Kind) -> toml::Table {
     let checks: &[&str] = match kind {
-        Kind::Cargo => &["format", "lint", "doc", "coverage"],
+        Kind::Cargo => &["format", "lint", "doc", "bench", "coverage"],
         Kind::Pnpm => &[
             "format:check",
             "build",
@@ -185,7 +186,10 @@ mod tests {
         assert!(!inherited);
 
         let (detected, inherited) = config(content, "agdb_derive", Kind::Cargo).unwrap();
-        assert_eq!(detected.checks, vec!["format", "lint", "doc", "coverage"]);
+        assert_eq!(
+            detected.checks,
+            vec!["format", "lint", "doc", "bench", "coverage"]
+        );
         assert_eq!(detected.coverage, Some(false));
         assert!(inherited);
 
@@ -221,7 +225,7 @@ mod tests {
         assert_eq!(file.config("b", Kind::Pnpm).unwrap().0.checks, vec!["test"]);
         assert_eq!(
             file.config("c", Kind::Cargo).unwrap().0.checks,
-            vec!["format", "lint", "doc", "coverage"]
+            vec!["format", "lint", "doc", "bench", "coverage"]
         );
     }
 

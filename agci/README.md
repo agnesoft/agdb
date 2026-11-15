@@ -66,7 +66,7 @@ Projects are detected from the manifests, their kind is the tool driving them: e
 
 The configuration is one optional file, `agci.toml` in the repository root, holding only the deviations from the conventions. `[defaults.cargo]`, `[defaults.pnpm]` and `[defaults.shell]` apply to every project of the kind, `[projects."<dir>"]` overrides them field by field. Without them the default checks are:
 
-- cargo: `format`, `lint`, `doc` (crates with a library only), `coverage`.
+- cargo: `format`, `lint`, `doc` (crates with a library only), `bench` (crates with bench targets only, runs each once), `coverage`.
 - pnpm: the tasks of the root `package.json` `check` script (`turbo run <task>...`, in that order), otherwise `format:check`, `build`, `lint:check`, `type-check`, `test`, `test:functional`.
 - shell: `format`, `lint`, `build`, `test`.
 

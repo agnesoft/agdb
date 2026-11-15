@@ -5,7 +5,8 @@
 #   nested in a project of the same kind, nested ones fold into it. A directory with an entry but
 #   without a manifest is a shell project.
 # - Default checks, those the project cannot run are skipped:
-#   - cargo: format, lint, doc (crates with a library), coverage.
+#   - cargo: format, lint, doc (crates with a library), bench (crates with bench targets),
+#     coverage.
 #   - pnpm: the tasks of the root package.json `check` script, run in the packages that have them.
 #   - shell: format, lint, build, test.
 # - A check that is not built in (cargo) or any check (shell) is the `<check>.sh`/`<check>.ps1`

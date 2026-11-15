@@ -19,7 +19,11 @@ test_server = ["dep:tokio"]
 
 [dependencies]
 agdb = { workspace = true, features = ["serde", "openapi"] }
-reqwest = { workspace = true, default-features = false, features = ["charset", "http2", "json"] }
+reqwest = { workspace = true, default-features = false, features = [
+    "charset",
+    "http2",
+    "json",
+] }
 serde = { workspace = true, features = ["derive"] }
 serde_json.workspace = true
 tokio = { workspace = true, features = ["full"], optional = true }

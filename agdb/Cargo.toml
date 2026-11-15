@@ -23,7 +23,11 @@ serde = ["dep:serde"]
 agdb_derive = { workspace = true, optional = true }
 regex = { workspace = true, optional = true }
 serde = { workspace = true, features = ["derive"], optional = true }
-tokio = { workspace = true, features = ["macros", "rt", "sync"], optional = true }
+tokio = { workspace = true, features = [
+    "macros",
+    "rt",
+    "sync",
+], optional = true }
 utoipa = { workspace = true, optional = true }
 
 [dev-dependencies]

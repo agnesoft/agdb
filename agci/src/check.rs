@@ -269,7 +269,7 @@ fn cargo_checks(project: &Project, projects: &[Project], root: &str) -> Vec<Chec
                 &["--doc"],
             )),
             "bench" => steps.push(cargo(
-                &[&["bench", "-p", name], &features[..]].concat(),
+                &[&["bench", "-p", name, "--bench", "*"], &features[..]].concat(),
                 &["--", "--samples", "1", "--iters", "1"],
             )),
             "coverage" if !config.coverage() => {
@@ -493,7 +493,7 @@ mod tests {
     fn rust_runs_checks_in_canonical_order() {
         assert_eq!(
             command_lines("agdb_server", |c| {
-                c.checks = ["smoke", "coverage", "doc", "lint", "format"]
+                c.checks = ["smoke", "coverage", "bench", "doc", "lint", "format"]
                     .iter()
                     .map(|s| s.to_string())
                     .collect();
@@ -503,6 +503,7 @@ mod tests {
                 "> cargo fmt -p agdb_server --check",
                 "> cargo clippy -p agdb_server --all-targets --all-features -- -D warnings",
                 "> cargo test -p agdb_server --all-features --doc",
+                "> cargo bench -p agdb_server --bench * --all-features -- --samples 1 --iters 1",
                 "> cargo test -p agdb_server --all-features",
                 &format!("agdb_server> {} smoke.sh", utilities::BASH),
             ]

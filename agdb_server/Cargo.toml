@@ -18,7 +18,10 @@ studio = ["dep:include_dir"]
 tikv-jemallocator.workspace = true
 
 [target.'cfg(target_os = "windows")'.dependencies]
-windows-sys = { workspace = true, features = ["Win32_System_ProcessStatus", "Win32_System_Threading"] }
+windows-sys = { workspace = true, features = [
+    "Win32_System_ProcessStatus",
+    "Win32_System_Threading",
+] }
 
 [dependencies]
 agdb = { workspace = true, features = ["serde", "openapi", "regex"] }
@@ -32,7 +35,13 @@ crc.workspace = true
 futures = { workspace = true, default-features = false, features = ["std"] }
 http-body-util.workspace = true
 include_dir = { workspace = true, optional = true }
-reqwest = { workspace = true, default-features = false, features = [ "charset", "http2", "system-proxy", "json", "stream"] }
+reqwest = { workspace = true, default-features = false, features = [
+    "charset",
+    "http2",
+    "system-proxy",
+    "json",
+    "stream",
+] }
 ring.workspace = true
 rustls = { workspace = true, optional = true }
 serde = { workspace = true, features = ["derive"] }

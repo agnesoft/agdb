@@ -4,11 +4,10 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
-documentation.workspace = true
 readme.workspace = true
 description = "Cargo subcommand checking the structure of Rust tests"
 keywords = ["parser", "cli", "test"]
-categories.workspace = true
+categories = ["development-tools"]
 
 [[bin]]
 name = "cargo-test-check"

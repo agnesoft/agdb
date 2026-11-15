@@ -4,10 +4,9 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
-documentation.workspace = true
 readme.workspace = true
 description = "Microbenchmark harness comparing targets doing the same work against a baseline"
 keywords = ["benchmark", "test"]
-categories.workspace = true
+categories = ["development-tools"]
 
 [lib]

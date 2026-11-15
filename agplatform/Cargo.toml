@@ -4,11 +4,10 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
-documentation.workspace = true
 readme.workspace = true
 description = "Platform providing env, fs, request and process infrastructure for production and testing"
 keywords = ["build", "test"]
-categories.workspace = true
+categories = ["development-tools"]
 
 [package.metadata.docs.rs]
 all-features = true
@@ -40,55 +39,46 @@ required-features = ["request", "tokio"]
 name = "env"
 required-features = ["env"]
 doc-scrape-examples = true
-test = true
 
 [[example]]
 name = "fs"
 required-features = ["fs"]
 doc-scrape-examples = true
-test = true
 
 [[example]]
 name = "process"
 required-features = ["process"]
 doc-scrape-examples = true
-test = true
 
 [[example]]
 name = "process_async"
 required-features = ["process", "tokio"]
 doc-scrape-examples = true
-test = true
 
 [[example]]
 name = "request"
 required-features = ["request"]
 doc-scrape-examples = true
-test = true
 
 [[example]]
 name = "request_async"
 required-features = ["request", "tokio"]
 doc-scrape-examples = true
-test = true
 
 [[example]]
 name = "download"
 required-features = ["fs", "request"]
 doc-scrape-examples = true
-test = true
 
 [[example]]
 name = "threads"
 required-features = ["fs", "process"]
 doc-scrape-examples = true
-test = true
 
 [[example]]
 name = "async_mirror"
 required-features = ["fs", "process", "request", "tokio"]
 doc-scrape-examples = true
-test = true
 
 [[test]]
 name = "platform_test"

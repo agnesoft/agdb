@@ -1,12 +1,15 @@
 [workspace]
 resolver = "2"
 members = [
+    "agbench",
     "agci",
     "agdb_api",
     "agdb_benchmark",
     "agdb_derive",
     "agdb_server",
     "agdb",
+    "agplatform",
+    "agtestcheck",
     "examples/app_db",
     "examples/indexes",
     "examples/joins",
@@ -52,7 +55,11 @@ serde_yaml = "0.9" # deprecated
 syn = "3"
 tikv-jemallocator = "0.7"
 tokio = "1"
-toml = { version = "1", default-features = false, features = ["std", "serde", "parse"] }
+toml = { version = "1", default-features = false, features = [
+    "std",
+    "serde",
+    "parse",
+] }
 tower = "0.5"
 tower-http = "0.7"
 utoipa = "6"

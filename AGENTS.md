@@ -11,6 +11,20 @@ The Agnesoft Graph Database (aka agdb) is an embedded/server graph database writ
 
 API client packages are available for Rust, TypeScript, and PHP. The OpenAPI specification is located at `agdb_server/openapi.json`.
 
+The repository also hosts crates outside the agdb ecosystem, each documented in its own `README.md`. All but `agci` (internal) are published:
+
+| Crate         | Purpose                                                                                                      |
+| ------------- | ------------------------------------------------------------------------------------------------------------ |
+| `agplatform`  | Env, fs, process and HTTP request behind one injectable `Platform`, with in-memory test doubles (`testing`)  |
+| `agbench`     | `cargo bench` harness comparing targets against a baseline, `--check` fails on a target over its fail factor |
+| `agtestcheck` | `cargo test-check` subcommand enforcing the structure of Rust tests (module paths, names, comments)          |
+| `agci`        | The repository's CI tool: project detection, affected checks, releases (see `agci/README.md`)                |
+
+For code in `agplatform`, `agbench` and `agtestcheck`:
+
+- Code built on `agplatform` (e.g. `agtestcheck`) never calls `std::env`, `std::fs`, `std::process` or `reqwest` directly but goes through the platform (see the cheat sheet in `agplatform/README.md`).
+- Tests follow the rules in `agtestcheck/README.md`: `type → method` modules, `<module>[_<args>]_should_<behaviour>` names, only `GIVEN`/`WHEN`/`THEN`/`AND`/`WHY` comments, 100 % coverage.
+
 # Setup
 
 - Install Rust: `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh`
@@ -33,6 +47,8 @@ API client packages are available for Rust, TypeScript, and PHP. The OpenAPI spe
 - Test debug: `cargo test --all-features -p <package>`
 - Lint package: `cargo clippy --all-features -p <package>`
 - Lint all: `cargo clippy --all-features`
+- Check test structure: `cargo run -p agtestcheck -- test-check <dir|file.rs>`
+- Run benchmarks: `cargo bench -p agplatform --all-features --bench <env|fs|process|request> -- [--filter <name>] [--check]`
 
 ## TypeScript
 
@@ -64,12 +80,15 @@ The packages are curated lists of main packages. They contain exact names of pac
 
 ## Rust
 
+- agbench
 - agci
 - agdb
 - agdb_benchmark
 - agdb_derive
 - agdb_server
 - agdb_api
+- agplatform
+- agtestcheck
 
 ## TypeScript
 

@@ -36,6 +36,12 @@
     <a href="https://github.com/agnesoft/agdb/actions/workflows/agdb.yaml"><img src="https://github.com/agnesoft/agdb/actions/workflows/agdb.yaml/badge.svg" alt="agdb"></a>
 </p>
 
+<p align="center">
+    <a href="https://github.com/agnesoft/agdb/tree/main/agplatform"><img src="https://img.shields.io/badge/agplatform-platform-555?style=for-the-badge" alt="agplatform"></a>
+    <a href="https://github.com/agnesoft/agdb/tree/main/agbench"><img src="https://img.shields.io/badge/agbench-benchmarks-555?style=for-the-badge" alt="agbench"></a>
+    <a href="https://github.com/agnesoft/agdb/tree/main/agtestcheck"><img src="https://img.shields.io/badge/agtestcheck-test_structure-555?style=for-the-badge" alt="agtestcheck"></a>
+</p>
+
 <!-- <p align="center">
     <img width="25" src="https://agdb.agnesoft.com/images/reddit.png" alt="reddit"> &nbsp;
     <img width="25" src="https://agdb.agnesoft.com/images/x.png" alt="x"> &nbsp;
@@ -57,6 +63,7 @@ The Agnesoft Graph Database (aka _agdb_) is application native database without 
 - [Key Features](#key-features)
 - [At a glance](#at-a-glance-db)
 - [Crate Features](#crate-features)
+- [Agnesoft Crates](#agnesoft-crates)
 - [Decision Tree](#decision-tree)
 - [Roadmap](#roadmap)
 - [Reference](#reference)
@@ -201,6 +208,16 @@ For database concepts and primitive data types see [concepts](https://agdb.agnes
 | ------- | ------- | ------------------------------------------------------------------------------ |
 | tls     | no      | Enables TLS support via `rustls`. On Windows requires MSVC and CMake to build. |
 | studio  | no      | Embeds the `agdb_studio` UI into the server at the `/studio` route.            |
+
+## <img width="25" src="https://agdb.agnesoft.com/images/logo.svg" alt="agdb logo">&nbsp;&nbsp;Agnesoft Crates
+
+Standalone crates developed in this repository, independent of agdb:
+
+| Crate                                                                 | Version                                                                                           | Description                                                                             |
+| --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| [agplatform](https://github.com/agnesoft/agdb/tree/main/agplatform)   | [![crates.io](https://img.shields.io/crates/v/agplatform)](https://crates.io/crates/agplatform)   | Env, fs, process and HTTP you can test: one injectable platform with in-memory doubles. |
+| [agbench](https://github.com/agnesoft/agdb/tree/main/agbench)         | [![crates.io](https://img.shields.io/crates/v/agbench)](https://crates.io/crates/agbench)         | Benchmarks against a baseline, usable as a CI gate.                                     |
+| [agtestcheck](https://github.com/agnesoft/agdb/tree/main/agtestcheck) | [![crates.io](https://img.shields.io/crates/v/agtestcheck)](https://crates.io/crates/agtestcheck) | `cargo test-check`: Rust tests that mirror the code.                                    |
 
 ## <img width="25" src="https://agdb.agnesoft.com/images/logo.svg" alt="agdb logo">&nbsp;&nbsp;Decision Tree
 

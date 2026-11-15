@@ -1,4 +1,132 @@
-# agplatform cheat sheet
+<p align="center">
+    <a href="https://github.com/agnesoft/agdb/tree/main/agplatform"><img width="300" src="https://agdb.agnesoft.com/images/logo.svg" alt="agnesoft logo"></a>
+</p>
+<h1 align="center">
+    agplatform
+</h1>
+<h3 align="center">
+    Env, fs, process and HTTP you can test.
+</h3>
+
+<p align="center">
+    <a href="https://github.com/agnesoft/agdb/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-Apache_2.0-blue.svg" alt="license"></a>
+    <a href="https://crates.io/crates/agplatform"><img src="https://img.shields.io/crates/v/agplatform" alt="Crates.io"></a>
+    <a href="https://docs.rs/agplatform/latest/agplatform/"><img src="https://docs.rs/agplatform/badge.svg" alt="docs.rs"></a>
+    <a href="https://github.com/agnesoft/agdb/actions/workflows/agdb.yaml"><img src="https://github.com/agnesoft/agdb/actions/workflows/agdb.yaml/badge.svg" alt="ci"></a>
+</p>
+
+## <img width="25" src="https://agdb.agnesoft.com/images/logo.svg" alt="agnesoft logo">&nbsp;&nbsp;Agnesoft Platform
+
+<p align="center">
+    <a href="#at-a-glance">Quickstart</a> | <a href="#cheat-sheet">CHEAT SHEET</a> | <a href="https://github.com/agnesoft/agdb/tree/main/agplatform/examples">Examples</a> | <a href="https://docs.rs/agplatform/latest/agplatform/">API</a>
+</p>
+
+The Agnesoft Platform (aka _agplatform_) is the environment, file system, processes and HTTP requests of a program behind one injectable `Platform`. Production code gets thin implementations over `std` and `reqwest`, tests get deterministic in-memory doubles held to the same contract. No real files, processes or network are needed to test code that uses them, and failures that are close to impossible to provoke on a real machine (a full disk, a crash before `fsync`, a connection dropped mid-body) are one line away.
+
+- [Key Features](#key-features)
+- [Why agplatform](#why-agplatform)
+- [At a glance](#at-a-glance)
+- [Crate Features](#crate-features)
+- [Cheat sheet](#cheat-sheet)
+- [Reference](#reference)
+
+## <img width="25" src="https://agdb.agnesoft.com/images/logo.svg" alt="agnesoft logo">&nbsp;&nbsp;Key Features
+
+- One `Platform` for `Env`, `Fs`, `Process` and `Request`, swapped as a whole in tests.
+- In-memory doubles `TestEnv`, `TestFs`, `TestProcess` and `TestRequest`: deterministic, thread-safe, no I/O.
+- The real and the in-memory implementations run the same contract test cases, so the doubles behave like the real thing.
+- No sleeping in tests: retry delays and timeouts are recorded instead of waited for.
+- The platform owns its environment: changing variables or the current directory never touches the process, so tests run in parallel safely.
+- Simple to use: the familiar `std::process::Command` and `reqwest` builders, run or sent through the platform.
+
+Technical features:
+
+- Static dispatch, the interfaces are associated types (no `dyn`). Platforms are `Send + Sync` and `Arc<P: Platform>` is a `Platform` too.
+- Blocking and async (tokio) runs and requests. Dropping the future kills the process or cancels the request.
+- Timeouts that kill the whole process group.
+- Streaming of large outputs and bodies to sinks, also async with backpressure.
+- [Interceptors](#interceptors) (middleware) for every run and request: retry (backoff, max delay, `Retry-After`, total deadline), output caching, dry run, accepting expected failures, live output streaming and your own.
+- Fault injection: I/O errors per operation, path and call, short reads and writes, disk capacity, crashes dropping unsynced data, processes that are not installed, time out or stay pending, transport errors, bodies interrupted mid-way.
+- One `Error` with a kind and the source, the failed command's output or the non-2xx response, the program or the request target (without credentials).
+- Proxies from the platform's environment.
+- Feature gated: `env`, `fs` and `process` have no dependencies, `request` uses `reqwest`.
+- Overhead against `std` measured by [agbench](https://crates.io/crates/agbench) and gated in CI.
+
+## <img width="25" src="https://agdb.agnesoft.com/images/logo.svg" alt="agnesoft logo">&nbsp;&nbsp;Why agplatform
+
+Code that touches the machine is hard to test. Tests either use the real one, which is slow, flaky, differs between operating systems and races in parallel because the environment and the current directory are global to the process, or every project wraps the calls it needs in its own traits and mocks. Those mocks only answer what each test expects and drift from what the real calls do, so the tests pass while the program fails.
+
+agplatform is that seam done once for the four things programs touch: the environment, the file system, child processes and HTTP. The in-memory doubles implement the full interfaces rather than canned answers, and the real and in-memory implementations are run against the same contract cases, so tests can rely on them. Because the production implementations are thin wrappers measured against `std`, the same code runs in production without a cost worth avoiding.
+
+## <img width="25" src="https://agdb.agnesoft.com/images/logo.svg" alt="agnesoft logo">&nbsp;&nbsp;At a glance
+
+```
+cargo add agplatform --features fs,process
+cargo add agplatform --dev --features fs,process,testing
+```
+
+A function taking the platform, run with the production one in `main` and with the in-memory one in its test:
+
+```rs
+use agplatform::{CommandExt, Fs, Platform};
+use std::process::Command;
+
+fn save_head(platform: &impl Platform) -> agplatform::Result {
+    let output = Command::new("git")
+        .args(["rev-parse", "HEAD"])
+        .run_blocking(platform.process())?;
+    platform.fs().write("HEAD.txt", output.stdout_str()?.trim())
+}
+
+fn main() -> agplatform::Result {
+    save_head(&agplatform::platform())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use agplatform::CommandOutput;
+    use agplatform::test_platform::test_platform;
+
+    #[test]
+    fn save_head_should_write_the_commit() {
+        let platform = test_platform();
+        platform
+            .process
+            .set_output("git rev-parse HEAD", CommandOutput::succeeded("abc123\n"));
+
+        save_head(&platform).unwrap();
+
+        assert_eq!(platform.fs.read_to_string("HEAD.txt").unwrap(), "abc123");
+    }
+}
+```
+
+The test runs no `git` and writes no file. A run that fails (`CommandOutput::failed(128, "not a git repository")`) or a write that fails (`platform.fs.set_io_error(FsOp::Write, "", ErrorKind::StorageFull)`) is set up the same way. See the [cheat sheet](#cheat-sheet) for the common tasks and the [examples](https://github.com/agnesoft/agdb/tree/main/agplatform/examples) for complete programs.
+
+## <img width="25" src="https://agdb.agnesoft.com/images/logo.svg" alt="agnesoft logo">&nbsp;&nbsp;Crate Features
+
+| Feature     | Default | Description                                                                                                              |
+| ----------- | ------- | ------------------------------------------------------------------------------------------------------------------------ |
+| env         | no      | Enables `Env`, `Platform` and `platform()`.                                                                              |
+| fs          | no      | Enables `Fs` (+ `env`).                                                                                                  |
+| process     | no      | Enables `Process` and `CommandExt` (+ `env`, `interceptor`).                                                             |
+| request     | no      | Enables `Request` with the blocking [`reqwest`](https://github.com/seanmonstar/reqwest) client (+ `env`, `interceptor`). |
+| tls         | no      | Enables `rustls` for `request`.                                                                                          |
+| native-tls  | no      | Enables the OS TLS for `request`.                                                                                        |
+| tokio       | no      | Enables `run_async`, `send_async` and the async `client()`.                                                              |
+| interceptor | no      | Enables `agplatform::interceptor` (pulled in by `process` and `request`).                                                |
+| testing     | no      | Enables `test_platform()`, `TestEnv`, `TestFs`, `TestProcess`, `TestRequest`, `TestDir` and `TestFile`.                  |
+
+```toml
+[dependencies]
+agplatform = { version = "...", features = ["fs", "process", "request", "tls"] }
+
+[dev-dependencies]
+agplatform = { version = "...", features = ["fs", "process", "request", "tls", "testing"] }
+```
+
+## <img width="25" src="https://agdb.agnesoft.com/images/logo.svg" alt="agnesoft logo">&nbsp;&nbsp;Cheat sheet
 
 Snippets for the common tasks, free of setup. Each one assumes the code takes the platform (or one of its interfaces) as a parameter, returns `agplatform::Result`, and has these in scope:
 
@@ -23,27 +151,7 @@ Rules of thumb:
 - All errors are `agplatform::Error`. Check them with `error.kind()` (`ErrorKind::{Env, Fs, Process, Request, Other}`).
 - You can get the source error with convenience `Error::command_output()`, `Error::request_output()` when the respective interface calls fail to get the error output.
 
-## Features
-
-| Feature       | Enables                                                                                     |
-| ------------- | ------------------------------------------------------------------------------------------- |
-| `env`         | `Env`, `Platform`, `platform()`                                                             |
-| `fs`          | `Fs` (+ `env`)                                                                              |
-| `process`     | `Process`, `CommandExt` (+ `env`, `interceptor`)                                            |
-| `request`     | `Request`, blocking reqwest (+ `env`, `interceptor`)                                        |
-| `tls`         | rustls for `request` (`native-tls` for the OS TLS)                                          |
-| `tokio`       | `run_async`, `send_async`, async `client()`                                                 |
-| `interceptor` | `agplatform::interceptor` (pulled in by `process` and `request`)                            |
-| `testing`     | `test_platform()`, `TestEnv`, `TestFs`, `TestProcess`, `TestRequest`, `TestDir`, `TestFile` |
-
-```toml
-agplatform = { version = "0.4", features = ["fs", "process", "request", "tls"] }
-
-[dev-dependencies]
-agplatform = { version = "0.4", features = ["fs", "process", "request", "tls", "testing"] }
-```
-
-## Platform
+### Platform
 
 ```rust
 fn tool(platform: &impl Platform) -> agplatform::Result { /* platform.env(), .fs(), ... */ }
@@ -73,7 +181,7 @@ let p = platform.clone();
 let config = tokio::task::spawn_blocking(move || p.fs().read_to_string("config.yaml")).await.unwrap()?;
 ```
 
-## Env
+### Env
 
 The env is the platform's own copy, loaded from the process on first use. Changing it never touches the process environment. Fs, process and request all see the changes: relative paths resolve against `current_dir()`, children get exactly `vars()`, and proxies are read from it.
 
@@ -96,7 +204,7 @@ let exe: &Path = env.current_exe();
 Err(agplatform::Error::env("HOME is not set"))?;                  // own Env error
 ```
 
-## Fs
+### Fs
 
 Relative paths resolve against `env.current_dir()`. Errors are `ErrorKind::Fs`, name the path, and carry the `std::io::Error` (`error.source_as::<std::io::Error>()`).
 
@@ -154,7 +262,7 @@ fs.create_hard_link("hard", "a.txt")?;
 Err(agplatform::Error::fs(format!("{}: {error}", path.display())))?; // own Fs error, e.g. in a sink
 ```
 
-## Process
+### Process
 
 Build a `std::process::Command`, optionally configure the run through `CommandExt`, then run it on the process. Output is captured by default. A non-success exit is an `Err` carrying the output. Use `Error::command_output()` to get the error output.
 
@@ -204,7 +312,7 @@ let output = Command::new("cargo").arg("test").timeout(Duration::from_secs(600))
 let output = Command::new("cargo").arg("build").run_async_with_sink(process, &mut |_: OutputStream, chunk: &[u8]| Ok(())).await?; // or any async Sink
 ```
 
-## Request
+### Request
 
 Build the request with the reqwest client from the platform, then send it with `send_blocking(request)` or `send_async(request)`. The whole body is read. A non-2xx status is an `Err` carrying the response. Use the platform's clients so that proxies come from the platform env. Use `Error::request_output()` to get the error output.
 
@@ -261,7 +369,7 @@ request.set_blocking_client(request.blocking_client_builder().user_agent("tool/1
 request.set_client(request.client_builder().timeout(Duration::from_secs(60)));          // async default
 ```
 
-## Interceptors
+### Interceptors
 
 Every command run and HTTP request passes through a chain of interceptors (middleware). By default a process has `StdStream`, which powers `.stream()`, and a request has none. You can set them on the platform interface, which applies to the runs that start afterwards, or per run.
 
@@ -352,7 +460,7 @@ chunk.run().state(|lines: &mut LineBuffer| lines.push(chunk.data()));
 // chunk.stream() (OutputStream for processes).
 ```
 
-## Errors
+### Errors
 
 ```rust
 agplatform::Error::env("..."); Error::fs("..."); Error::process("..."); Error::request("..."); Error::other("...");
@@ -367,7 +475,7 @@ error.program();                                    // program of a process erro
 error.request_target();                             // "METHOD url" of a request error (no credentials/query)
 ```
 
-## Testing
+### Testing
 
 Enable the `testing` feature in dev-dependencies. Every double is in-memory, deterministic and thread-safe. Retry delays and timeouts are recorded instead of waited for.
 
@@ -389,7 +497,7 @@ let fs = TestFs::new();
 save(&fs, ...)?;
 ```
 
-### TestEnv
+#### TestEnv
 
 ```rust
 TestEnv::new()                                      // no args, no vars, current dir ROOT
@@ -399,7 +507,7 @@ TestEnv::new()                                      // no args, no vars, current
     .with_current_exe("/bin/tool");
 ```
 
-### TestFs
+#### TestFs
 
 ```rust
 let fs = TestFs::new();                             // empty, prepare it with the Fs methods
@@ -416,7 +524,7 @@ fs.set_created("/a.txt", time)?;
 fs.set_owner("/a.txt", 1000, 1000)?;               // Unix only; set_hidden(path, true) is Windows only
 ```
 
-### TestProcess
+#### TestProcess
 
 Patterns are prefixes of the command line (`"git push"`), and `""` matches everything. The most recently set pattern wins, so set `""` first as a default. A run without a matching output fails.
 
@@ -437,7 +545,7 @@ assert_eq!(process.sleeps(), [Duration::from_secs(5)]); // retry delays
 process.clear_calls();
 ```
 
-### TestRequest
+#### TestRequest
 
 Patterns are substrings of `"METHOD URL"` (`"POST https://x/y"`, `"/releases/"`, `""`). The most recently set one wins.
 
@@ -459,7 +567,7 @@ assert_eq!(call.headers["authorization"], "Bearer secret");
 assert_eq!(request.sleeps(), [Duration::from_millis(100), Duration::from_millis(200)]);
 ```
 
-### Async tests
+#### Async tests
 
 `TestProcess` and `TestRequest` answer async runs immediately, so a current-thread runtime is enough. Use `set_pending` gates to observe in-flight work or cancellation.
 
@@ -472,7 +580,7 @@ async fn run_all_should_pass() {
 }
 ```
 
-### Real files
+#### Real files
 
 ```rust
 let dir = TestDir::new();                           // empty dir in the current dir named by the test, removed on drop (kept on panic)
@@ -480,3 +588,15 @@ let dir = TestDir::temp();                          // same, in the temp dir
 let file = TestFile::new();                         // path named by the test (not created), removed on drop
 std::fs::write(file.path(), "x")?;
 ```
+
+## <img width="25" src="https://agdb.agnesoft.com/images/logo.svg" alt="agnesoft logo">&nbsp;&nbsp;Reference
+
+- [API](https://docs.rs/agplatform/latest/agplatform/)
+
+- [Examples](https://github.com/agnesoft/agdb/tree/main/agplatform/examples)
+
+- [Benchmarks](https://github.com/agnesoft/agdb/tree/main/agplatform/benches)
+
+- [agbench](https://crates.io/crates/agbench)
+
+- [agtestcheck](https://crates.io/crates/agtestcheck)

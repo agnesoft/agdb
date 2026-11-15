@@ -13,7 +13,7 @@ members = [
 ]
 
 [workspace.package]
-version = "0.16.2"
+version = "0.17.0"
 edition = "2024"
 license = "Apache-2.0"
 repository = "https://github.com/agnesoft/agdb"
@@ -21,11 +21,11 @@ readme = "README.md"
 
 [workspace.dependencies]
 # local
-agbench = { version = "0.16.2", path = "agbench" }
-agdb = { version = "0.16.2", path = "agdb" }
-agdb_api = { version = "0.16.2", path = "agdb_api" }
-agdb_derive = { version = "0.16.2", path = "agdb_derive" }
-agplatform = { version = "0.16.2", path = "agplatform" }
+agbench = { version = "0.17.0", path = "agbench" }
+agdb = { version = "0.17.0", path = "agdb" }
+agdb_api = { version = "0.17.0", path = "agdb_api" }
+agdb_derive = { version = "0.17.0", path = "agdb_derive" }
+agplatform = { version = "0.17.0", path = "agplatform" }
 
 # external
 anyhow = "1"

@@ -49,6 +49,8 @@ pub(crate) struct Manifest {
     pub(crate) version: Option<String>,
     /// Cargo: has a library target (doc tests).
     pub(crate) library: bool,
+    /// Cargo: has example targets.
+    pub(crate) examples: bool,
     /// Cargo: has bench targets.
     pub(crate) benches: bool,
 }
@@ -222,6 +224,11 @@ fn cargo_manifests(metadata: &str) -> Result<Vec<Manifest>, CIError> {
                     .iter()
                     .flat_map(|t| &t.kind)
                     .any(|k| ["lib", "rlib", "dylib", "proc-macro"].contains(&k.as_str())),
+                examples: p
+                    .targets
+                    .iter()
+                    .flat_map(|t| &t.kind)
+                    .any(|k| k == "example"),
                 benches: p.targets.iter().flat_map(|t| &t.kind).any(|k| k == "bench"),
             })
         })
@@ -267,6 +274,7 @@ pub(crate) fn pnpm_manifest(dir: &str, content: &str) -> Result<Manifest, CIErro
         publish: !package.private,
         version: package.version,
         library: false,
+        examples: false,
         benches: false,
     })
 }
@@ -316,7 +324,7 @@ mod tests {
                     "dependencies": [],
                     "metadata": null,
                     "publish": [],
-                    "targets": [{ "kind": ["lib"] }, { "kind": ["bench"] }]
+                    "targets": [{ "kind": ["lib"] }, { "kind": ["example"] }, { "kind": ["bench"] }]
                 }
             ]
         }"#;
@@ -328,10 +336,12 @@ mod tests {
         assert_eq!(manifests[0].deps, vec![Dep::Dir("db".to_string())]);
         assert!(manifests[0].publish);
         assert!(!manifests[0].library);
+        assert!(!manifests[0].examples);
         assert!(!manifests[0].benches);
         assert_eq!(manifests[1].name, "db");
         assert!(!manifests[1].publish);
         assert!(manifests[1].library);
+        assert!(manifests[1].examples);
         assert!(manifests[1].benches);
     }
 

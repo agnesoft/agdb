@@ -66,7 +66,7 @@ Projects are detected from the manifests, their kind is the tool driving them: e
 
 The configuration is one optional file, `agci.toml` in the repository root, holding only the deviations from the conventions. `[defaults.cargo]`, `[defaults.pnpm]` and `[defaults.shell]` apply to every project of the kind, `[projects."<dir>"]` overrides them field by field. Without them the default checks are:
 
-- cargo: `format`, `lint`, `doc` (crates with a library only), `bench` (crates with bench targets only, runs each once), `coverage`.
+- cargo: `format`, `lint`, `doc` (crates with a library only), `examples` (crates with example targets only, runs the tests in the examples), `bench` (crates with bench targets only, runs each once), `coverage`.
 - pnpm: the tasks of the root `package.json` `check` script (`turbo run <task>...`, in that order), otherwise `format:check`, `build`, `lint:check`, `type-check`, `test`, `test:functional`.
 - shell: `format`, `lint`, `build`, `test`.
 
@@ -76,7 +76,7 @@ Dependencies come from the manifests (Cargo path dependencies, `workspace:`/`fil
 
 | field                  | applies to | description                                                                                                                                                                                                                                                                                           |
 | ---------------------- | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `checks`               | all        | cargo: any of `format`, `lint`, `testcheck`, `doc`, `bench`, `coverage` (always run in this order, all with `--all-features`), then scripts in the given order. pnpm: package.json scripts, run in the given order via turbo over all packages of the project. shell: scripts run in the given order. |
+| `checks`               | all        | cargo: any of `format`, `lint`, `testcheck`, `doc`, `examples`, `bench`, `coverage` (always run in this order, all with `--all-features`), then scripts in the given order. pnpm: package.json scripts, run in the given order via turbo over all packages of the project. shell: scripts run in the given order. |
 | `dependencies`         | all        | Additional dependencies: project directories (transitive) or repository paths.                                                                                                                                                                                                                        |
 | `os`                   | all        | `linux` (default) and/or `windows`.                                                                                                                                                                                                                                                                   |
 | `add_toolchains`       | all        | Toolchains installed besides the kind's own (cargo: `rust`, pnpm: `node`): `rust`, `node`, `php`.                                                                                                                                                                                                     |
@@ -87,7 +87,7 @@ Dependencies come from the manifests (Cargo path dependencies, `workspace:`/`fil
 ```toml
 [projects."libs/platform"]
 os = ["linux", "windows"]
-checks = ["format", "lint", "testcheck", "doc", "bench", "coverage"]
+checks = ["format", "lint", "testcheck", "doc", "examples", "bench", "coverage"]
 coverage = true
 feature_combinations = ["", "fs", "fs,process"]
 ```

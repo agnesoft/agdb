@@ -121,6 +121,7 @@ mod tests {
             scripts: Default::default(),
             published: Vec::new(),
             library: true,
+            examples: false,
             benches: false,
         }
     }

@@ -67,8 +67,15 @@ pub(crate) enum Toolchain {
     Rust,
 }
 
-pub(crate) const CARGO_CHECKS: [&str; 6] =
-    ["format", "lint", "testcheck", "doc", "bench", "coverage"];
+pub(crate) const CARGO_CHECKS: [&str; 7] = [
+    "format",
+    "lint",
+    "testcheck",
+    "doc",
+    "examples",
+    "bench",
+    "coverage",
+];
 
 impl Config {
     pub(crate) fn os(&self) -> Vec<Os> {
@@ -93,11 +100,11 @@ impl Config {
 }
 
 /// When neither `agci.toml` nor the project set them. Only those the project can run apply: Cargo
-/// `doc` for crates with a library, `bench` for crates with bench targets, pnpm and Shell ones if
-/// the project has the script.
+/// `doc` for crates with a library, `examples` and `bench` for crates with such targets, pnpm and
+/// Shell ones if the project has the script.
 fn builtin(kind: Kind) -> toml::Table {
     let checks: &[&str] = match kind {
-        Kind::Cargo => &["format", "lint", "doc", "bench", "coverage"],
+        Kind::Cargo => &["format", "lint", "doc", "examples", "bench", "coverage"],
         Kind::Pnpm => &[
             "format:check",
             "build",
@@ -188,7 +195,7 @@ mod tests {
         let (detected, inherited) = config(content, "agdb_derive", Kind::Cargo).unwrap();
         assert_eq!(
             detected.checks,
-            vec!["format", "lint", "doc", "bench", "coverage"]
+            vec!["format", "lint", "doc", "examples", "bench", "coverage"]
         );
         assert_eq!(detected.coverage, Some(false));
         assert!(inherited);
@@ -225,7 +232,7 @@ mod tests {
         assert_eq!(file.config("b", Kind::Pnpm).unwrap().0.checks, vec!["test"]);
         assert_eq!(
             file.config("c", Kind::Cargo).unwrap().0.checks,
-            vec!["format", "lint", "doc", "bench", "coverage"]
+            vec!["format", "lint", "doc", "examples", "bench", "coverage"]
         );
     }
 

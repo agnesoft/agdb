@@ -5,8 +5,8 @@
 #   nested in a project of the same kind, nested ones fold into it. A directory with an entry but
 #   without a manifest is a shell project.
 # - Default checks, those the project cannot run are skipped:
-#   - cargo: format, lint, doc (crates with a library), bench (crates with bench targets),
-#     coverage.
+#   - cargo: format, lint, doc (crates with a library), examples (crates with examples, their
+#     tests), bench (crates with bench targets), coverage.
 #   - pnpm: the tasks of the root package.json `check` script, run in the packages that have them.
 #   - shell: format, lint, build, test.
 # - A check that is not built in (cargo) or any check (shell) is the `<check>.sh`/`<check>.ps1`
@@ -22,9 +22,9 @@
 #
 # Fields:
 #   checks = [...]                Replace the default checks. cargo built-ins (always in this
-#                                 order): format, lint, testcheck, doc, bench, coverage, then
-#                                 scripts. pnpm: package.json scripts. shell: scripts. pnpm and
-#                                 scripts run in the given order.
+#                                 order): format, lint, testcheck, doc, examples, bench,
+#                                 coverage, then scripts. pnpm: package.json scripts. shell:
+#                                 scripts. pnpm and scripts run in the given order.
 #   dependencies = [...]          Project directories or repository paths affecting the project
 #                                 besides its manifest dependencies.
 #   os = [...]                    linux (default), windows.

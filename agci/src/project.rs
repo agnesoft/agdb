@@ -39,6 +39,8 @@ pub(crate) struct Project {
     pub(crate) published: Vec<Package>,
     /// Cargo: the crate has a library target.
     pub(crate) library: bool,
+    /// Cargo: the crate has example targets.
+    pub(crate) examples: bool,
     /// Cargo: the crate has bench targets.
     pub(crate) benches: bool,
 }
@@ -79,11 +81,12 @@ impl Project {
         self.kind == Kind::Cargo && self.config.has_check("coverage") && self.config.coverage()
     }
 
-    /// Cargo: a built-in check (`doc` needs a library, `bench` bench targets) or a script. pnpm and
-    /// Shell: a script.
+    /// Cargo: a built-in check (`doc` needs a library, `examples` example targets, `bench` bench
+    /// targets) or a script. pnpm and Shell: a script.
     pub(crate) fn can_run(&self, check: &str) -> bool {
         match (self.kind, check) {
             (Kind::Cargo, "doc") => self.library,
+            (Kind::Cargo, "examples") => self.examples,
             (Kind::Cargo, "bench") => self.benches,
             (Kind::Cargo, _) if CARGO_CHECKS.contains(&check) => true,
             _ => self.has_script(check),
@@ -138,6 +141,7 @@ pub(crate) fn projects(
         scripts: BTreeSet::new(),
         published: Vec::new(),
         library: false,
+        examples: false,
         benches: false,
     };
 
@@ -164,6 +168,7 @@ pub(crate) fn projects(
 
                 let mut project = new(&manifest.dir, manifest.kind, vec![manifest.name.clone()]);
                 project.library = manifest.library;
+                project.examples = manifest.examples;
                 project.benches = manifest.benches;
                 projects.push(project);
                 projects.last_mut().expect("just pushed")
@@ -310,6 +315,12 @@ fn validate(project: &Project) -> Result<(), CIError> {
                 return Err(format!("'{dir}' has the 'doc' check but no library").into());
             }
 
+            if config.has_check("examples") && !project.examples {
+                return Err(
+                    format!("'{dir}' has the 'examples' check but no example targets").into(),
+                );
+            }
+
             if config.has_check("bench") && !project.benches {
                 return Err(format!("'{dir}' has the 'bench' check but no bench targets").into());
             }
@@ -380,6 +391,7 @@ pub(crate) mod tests {
             publish: false,
             version: None,
             library: true,
+            examples: false,
             benches: false,
         });
         (manifest, config.map(|c| (dir.to_string(), c)))
@@ -739,35 +751,57 @@ pub(crate) mod tests {
     }
 
     #[test]
-    fn bench_only_for_crates_with_bench_targets() {
-        let benched = || {
-            let (mut manifest, config) = manifest("benched", Kind::Cargo, vec![], None);
-            manifest.as_mut().unwrap().benches = true;
+    fn examples_and_bench_only_for_crates_with_such_targets() {
+        let crate_with = |dir: &str, examples: bool, benches: bool| {
+            let (mut manifest, config) = manifest(dir, Kind::Cargo, vec![], None);
+            let m = manifest.as_mut().unwrap();
+            m.examples = examples;
+            m.benches = benches;
             (manifest, config)
         };
         let projects = build(
-            vec![benched(), manifest("plain", Kind::Cargo, vec![], None)],
+            vec![
+                crate_with("both", true, true),
+                crate_with("examples", true, false),
+                crate_with("plain", false, false),
+            ],
             |_| false,
         )
         .unwrap();
 
         assert_eq!(
             projects[0].config.checks,
-            vec!["format", "lint", "doc", "bench", "coverage"]
+            vec!["format", "lint", "doc", "examples", "bench", "coverage"]
         );
         assert_eq!(
             projects[1].config.checks,
-            vec!["format", "lint", "doc", "coverage"]
+            vec!["format", "lint", "doc", "examples", "coverage"]
         );
         assert_eq!(
-            error(vec![manifest(
-                "plain",
-                Kind::Cargo,
-                vec![],
-                Some(config(&["bench"], &[]))
-            )]),
-            "'plain' has the 'bench' check but no bench targets"
+            projects[2].config.checks,
+            vec!["format", "lint", "doc", "coverage"]
         );
+
+        for (check, error_message) in [
+            (
+                "examples",
+                "'plain' has the 'examples' check but no example targets",
+            ),
+            (
+                "bench",
+                "'plain' has the 'bench' check but no bench targets",
+            ),
+        ] {
+            assert_eq!(
+                error(vec![manifest(
+                    "plain",
+                    Kind::Cargo,
+                    vec![],
+                    Some(config(&[check], &[]))
+                )]),
+                error_message
+            );
+        }
     }
 
     #[test]
@@ -820,6 +854,7 @@ pub(crate) mod tests {
             publish,
             version: publish.then(|| "1.0.0".to_string()),
             library: false,
+            examples: false,
             benches: false,
         };
         let manifests = vec![

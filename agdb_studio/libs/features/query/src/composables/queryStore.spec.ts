@@ -746,4 +746,52 @@ describe("queryStore", () => {
       ).toBeUndefined();
     });
   });
+
+  describe("setQueryRows", () => {
+    it("replaces the rows of a tab with new ids and validates them", () => {
+      store.addQuery(makeQuery());
+      const args = [[{ selectedOption: "signed", value: "1" }]];
+      store.setQueryRows("q1", "context", [
+        [{ type: "select" }, { type: "select.ids", args }],
+        [{ type: "select.ids" }],
+      ]);
+      const rows = store.getQuery("q1")?.value.rows.context ?? [];
+      expect(rows).toHaveLength(2);
+      expect(rows[0]?.id).not.toBe(rows[1]?.id);
+      expect(rows[0]?.steps.map((s) => s.type)).toEqual([
+        "select",
+        "select.ids",
+      ]);
+      expect(rows[0]?.steps[1]?.args).toEqual(args);
+      expect(rows[0]?.steps[1]?.args).not.toBe(args);
+      expect(rows[0]?.steps[0]?.invalid).toBe(false);
+      // A step that cannot start a query is marked invalid.
+      expect(rows[1]?.steps[0]?.invalid).toBe(true);
+    });
+
+    it("keeps one empty row when given none", () => {
+      store.addQuery(makeQuery());
+      store.setQueryRows("q1", "exec", []);
+      const rows = store.getQuery("q1")?.value.rows.exec ?? [];
+      expect(rows).toHaveLength(1);
+      expect(rows[0]?.steps).toEqual([]);
+    });
+
+    it("ignores unknown queries", () => {
+      expect(() =>
+        store.setQueryRows("nope", "exec", [[{ type: "select" }]]),
+      ).not.toThrow();
+    });
+  });
+
+  it("marks and confirms mutations opened from a link", () => {
+    store.addQuery(makeQuery());
+    store.setUnconfirmedLinkedMutation("q1", true);
+    expect(store.getQuery("q1")?.value.unconfirmedLinkedMutation).toBe(true);
+    store.setUnconfirmedLinkedMutation("q1", false);
+    expect(store.getQuery("q1")?.value.unconfirmedLinkedMutation).toBe(false);
+    expect(() =>
+      store.setUnconfirmedLinkedMutation("nope", true),
+    ).not.toThrow();
+  });
 });

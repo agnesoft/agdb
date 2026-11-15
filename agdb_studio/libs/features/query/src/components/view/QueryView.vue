@@ -3,13 +3,16 @@ import { onMounted, provide, ref } from "vue";
 import QueryBuilderTabs from "../builder/QueryBuilderTabs.vue";
 import QueryResults from "../results/QueryResults.vue";
 import { useQueryStore } from "../../composables/queryStore";
+import { useQueryUrlSync } from "../../composables/queryUrlSync";
 
 const queryId = ref<string>();
 const queryStore = useQueryStore();
+const urlSync = useQueryUrlSync();
 onMounted(() => {
   const baseId = crypto.randomUUID();
   queryId.value = `query-${baseId}`;
   queryStore.addQuery({ id: queryId.value });
+  urlSync.start(queryId.value);
 });
 
 provide("queryId", queryId);

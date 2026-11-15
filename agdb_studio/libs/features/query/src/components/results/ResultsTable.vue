@@ -21,6 +21,7 @@ const keys = computed(() => {
   for (const el of elements.value) {
     for (const kv of el.values) seen.add(dbValueToString(kv.key));
   }
+
   return [...seen];
 });
 

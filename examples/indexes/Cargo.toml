@@ -1,8 +1,0 @@
-[package]
-name = "examples_indexes"
-edition.workspace = true
-license.workspace = true
-publish = false
-
-[dependencies]
-agdb.workspace = true

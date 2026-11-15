@@ -30,11 +30,13 @@
         "test": "node ../../agdb_server/test_server.mjs vitest run --coverage",
         "lint": "eslint --max-warnings=0 \"**/*.ts\" \"**/*.js\" --fix",
         "lint:check": "eslint --max-warnings=0 \"**/*.ts\" \"**/*.js\"",
-        "format": "prettier --write src/ tests/",
-        "format:check": "prettier --check src/ tests/",
+        "format": "prettier --write src/ tests/ \"examples/**/*.ts\"",
+        "format:check": "prettier --check src/ tests/ \"examples/**/*.ts\"",
+        "examples": "tsc -p examples/server_client && node ../../agdb_server/test_server.mjs node examples/server_client/dist/main.js",
         "before-commit": "pnpm run openapi && pnpm run format && pnpm run lint && pnpm run test",
         "openapi": "pnpm exec openapi typegen ../../agdb_server/openapi.json > src/openapi.d.ts",
-        "test_queries": "node query_test_generator.js && prettier --write tests/query.test.ts"
+        "test_queries": "node query_test_generator.js && prettier --write tests/query.test.ts",
+        "regenerate": "pnpm run openapi && pnpm run test_queries"
     },
     "dependencies": {
         "openapi-client-axios": "^7.6.0"

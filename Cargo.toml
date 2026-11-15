@@ -1,18 +1,15 @@
 [workspace]
 resolver = "2"
 members = [
+    "agbench",
     "agci",
     "agdb_api",
     "agdb_benchmark",
     "agdb_derive",
     "agdb_server",
     "agdb",
-    "examples/app_db",
-    "examples/indexes",
-    "examples/joins",
-    "examples/schema_migration",
-    "examples/server_client_rust",
-    "examples/user_types",
+    "agplatform",
+    "agtestcheck",
 ]
 
 [workspace.package]
@@ -24,9 +21,11 @@ readme = "README.md"
 
 [workspace.dependencies]
 # local
+agbench = { version = "0.16.2", path = "agbench" }
 agdb = { version = "0.16.2", path = "agdb" }
 agdb_api = { version = "0.16.2", path = "agdb_api" }
 agdb_derive = { version = "0.16.2", path = "agdb_derive" }
+agplatform = { version = "0.16.2", path = "agplatform" }
 
 # external
 anyhow = "1"
@@ -37,6 +36,8 @@ axum-server = "0.9"
 bytes = "1"
 crc = "3"
 futures = "0.3"
+http = "1"
+http-body = "1"
 http-body-util = "0.1"
 include_dir = "0.7"
 num-format = "0.4"
@@ -52,7 +53,11 @@ serde_yaml = "0.9" # deprecated
 syn = "3"
 tikv-jemallocator = "0.7"
 tokio = "1"
-toml = { version = "1", default-features = false, features = ["std", "serde", "parse"] }
+toml = { version = "1", default-features = false, features = [
+    "std",
+    "serde",
+    "parse",
+] }
 tower = "0.5"
 tower-http = "0.7"
 utoipa = "6"

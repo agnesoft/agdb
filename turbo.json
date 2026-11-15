@@ -19,6 +19,11 @@
         "lint": {},
         "lint:check": {},
         "test": {},
+        "examples": {
+            "dependsOn": [
+                "build"
+            ]
+        },
         "type-check": {},
         "test:functional": {},
         "before-commit": {},
@@ -26,6 +31,9 @@
             "cache": false
         },
         "test_queries": {
+            "cache": false
+        },
+        "regenerate": {
             "cache": false
         },
         "release:dev": {

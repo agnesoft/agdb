@@ -1,0 +1,24 @@
+[package]
+name = "agtestcheck"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+readme = "README.md"
+description = "Cargo subcommand checking the structure of Rust tests"
+keywords = ["parser", "cli", "test"]
+categories = ["development-tools"]
+
+[[bin]]
+name = "cargo-test-check"
+path = "src/main.rs"
+
+[dependencies]
+agplatform = { workspace = true, features = ["fs"] }
+proc-macro2 = { workspace = true, default-features = false, features = [
+    "span-locations",
+] }
+syn = { workspace = true, features = ["full"] }
+
+[dev-dependencies]
+agplatform = { workspace = true, features = ["testing"] }

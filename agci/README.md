@@ -1,6 +1,6 @@
 # description
 
-The `agci` utility drives the CI (see [ci](#ci)) and helps automate the release process. It determines the current version from the latest `v*` git tag and reads the new version from the root `Cargo.toml` (`[workspace.package].version`). It then updates version strings in workspace packages (e.g. TypeScript `package.json` files) and regenerates OpenAPI/client artifacts and test queries. For TypeScript projects it also runs `pnpm install`, which updates `pnpm-lock.yaml`.
+The `agci` utility drives the CI (see [ci](#ci)) and helps automate the release process. Without arguments it determines the current version from the latest `v*` git tag and the new one from the repository root (the root `Cargo.toml` `[workspace.package].version`), updates the versions in the manifests that have the current one (e.g. `package.json` files) and runs the `regenerate` hooks of the projects in dependency order (after `pnpm install --frozen-lockfile` if a pnpm project has one): `agdb_server/regenerate.sh` writes the OpenAPI spec and the test queries, the `regenerate` scripts of the API clients generate from them.
 
 - agdb
 - agdb_derive
@@ -54,7 +54,7 @@ A push to main checks nothing (that happened in the pull request), it only relea
 1. The `release:dev` hooks of the projects affected by the push, with `AGCI_VERSION=dev` (the studio package on the `dev` GitHub release and the `agnesoft/agdb:dev` image).
 2. A release when there is no `v<version>` tag for the root `Cargo.toml` version, all projects in dependency order (`AGCI_VERSION=<version>`): their packages are published (crates with `cargo publish`, npm packages built if they have a `build` script, then `pnpm publish --provenance`), then the `release` hook runs. The GitHub release with the tag comes last, so re-running a failed release retries it; packages whose version is already in the registry are skipped, hooks should tolerate re-runs.
 
-What is released follows from the manifests: a crate unless its `Cargo.toml` has `publish = false`, a `package.json` unless it is `"private": true`. Hooks are optional scripts of the project: pnpm `release`/`release:dev` package.json scripts (turbo tasks), cargo and shell `release.sh`/`release_dev.sh` (or `.ps1`).
+What is released follows from the manifests: a crate unless its `Cargo.toml` has `publish = false`, a `package.json` unless it is `"private": true`. Hooks are optional scripts of the project: pnpm `release`/`release:dev`/`regenerate` package.json scripts (turbo tasks), cargo and shell `release.sh`/`release_dev.sh`/`regenerate.sh` (or `.ps1`).
 
 `--plan` prints the steps without running them.
 
@@ -66,7 +66,7 @@ Projects are detected from the manifests, their kind is the tool driving them: e
 
 The configuration is one optional file, `agci.toml` in the repository root, holding only the deviations from the conventions. `[defaults.cargo]`, `[defaults.pnpm]` and `[defaults.shell]` apply to every project of the kind, `[projects."<dir>"]` overrides them field by field. Without them the default checks are:
 
-- cargo: `format`, `lint`, `doc` (crates with a library only), `coverage`.
+- cargo: `format`, `lint`, `doc` (crates with a library only), `examples` (crates with example targets only, runs the tests in the examples), `bench` (crates with bench targets only, runs each once), `coverage`.
 - pnpm: the tasks of the root `package.json` `check` script (`turbo run <task>...`, in that order), otherwise `format:check`, `build`, `lint:check`, `type-check`, `test`, `test:functional`.
 - shell: `format`, `lint`, `build`, `test`.
 
@@ -76,10 +76,10 @@ Dependencies come from the manifests (Cargo path dependencies, `workspace:`/`fil
 
 | field                  | applies to | description                                                                                                                                                                                                                                                                                           |
 | ---------------------- | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `checks`               | all        | cargo: any of `format`, `lint`, `testcheck`, `doc`, `bench`, `coverage` (always run in this order, all with `--all-features`), then scripts in the given order. pnpm: package.json scripts, run in the given order via turbo over all packages of the project. shell: scripts run in the given order. |
+| `checks`               | all        | cargo: any of `format`, `lint`, `testcheck`, `doc`, `examples`, `bench`, `coverage` (always run in this order, all with `--all-features`), then scripts in the given order. pnpm: package.json scripts, run in the given order via turbo over all packages of the project. shell: scripts run in the given order. |
 | `dependencies`         | all        | Additional dependencies: project directories (transitive) or repository paths.                                                                                                                                                                                                                        |
 | `os`                   | all        | `linux` (default) and/or `windows`.                                                                                                                                                                                                                                                                   |
-| `add_toolchains`       | all        | Toolchains installed besides the kind's own (cargo: `rust`, pnpm: `node`): `rust`, `node`, `php`.                                                                                                                                                                                                     |
+| `add_toolchains`       | all        | Toolchains installed besides the kind's own (cargo: `rust`, pnpm: `node`): `rust`, `node`, `php`, `coverage` (cargo llvm-cov).                                                                                                                                                                         |
 | `group`                | all        | Check together with the other projects of the group in one job per OS (toolchains of all of them). Cheap projects only, where the job setup dominates; keep coverage projects separate.                                                                                                               |
 | `coverage`             | cargo      | `false`: the `coverage` check only runs the tests (and is named `test`). By default it runs them under `cargo llvm-cov` requiring all lines, regions and functions covered, counting only the project's own sources.                                                                                  |
 | `feature_combinations` | cargo      | Also lint the library and all targets with `--no-default-features --features <combination>` for each entry.                                                                                                                                                                                           |
@@ -87,7 +87,7 @@ Dependencies come from the manifests (Cargo path dependencies, `workspace:`/`fil
 ```toml
 [projects."libs/platform"]
 os = ["linux", "windows"]
-checks = ["format", "lint", "testcheck", "doc", "bench", "coverage"]
+checks = ["format", "lint", "testcheck", "doc", "examples", "bench", "coverage"]
 coverage = true
 feature_combinations = ["", "fs", "fs,process"]
 ```

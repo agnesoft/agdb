@@ -1,28 +1,15 @@
 use crate::CIError;
 use crate::affected::dependency_order;
-use crate::check::PNPM;
 use crate::check::Step;
-use crate::check::pnpm_install;
-use crate::check::pnpm_scripts;
-use crate::check::shell_scripts;
 use crate::check::step;
-use crate::manifest::Kind;
 use crate::project::Project;
+use crate::project_type::Hook;
+use crate::project_type::Kind;
+use crate::project_type::Registry;
 use std::collections::BTreeSet;
 
 pub(crate) const VERSION_ENV: &str = "AGCI_VERSION";
 const DEV: &str = "dev";
-/// Run after the project's packages are published on a release.
-const RELEASE_HOOK: &str = "release";
-/// Run on every push to main that affects the project (`AGCI_VERSION=dev`).
-const DEV_HOOK: &str = "release:dev";
-pub(crate) const HOOKS: [&str; 2] = [RELEASE_HOOK, DEV_HOOK];
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(crate) enum Registry {
-    Crates,
-    Npm,
-}
 
 /// What to release after a push to main.
 pub(crate) struct Release<'a> {
@@ -41,66 +28,38 @@ pub(crate) struct Release<'a> {
 pub(crate) fn plan(
     projects: &[Project],
     release: &Release,
-    published: impl Fn(Registry, &str, &str) -> Result<bool, CIError>,
+    published: impl Fn(&dyn Registry, &str, &str) -> Result<bool, CIError>,
 ) -> Result<Vec<Step>, CIError> {
     let ordered = dependency_order(projects)?;
     let mut steps = Vec::new();
-    let hook = |project: &Project, hook: &str, version: &str| {
-        let steps = match project.kind {
-            Kind::Pnpm if project.has_script(hook) => pnpm_scripts(project, &[hook.to_string()]),
-            Kind::Cargo | Kind::Shell if project.has_script(hook) => {
-                shell_scripts(project, &[hook.to_string()])
-            }
-            _ => Vec::new(),
-        };
-        with_version(steps, version)
-    };
 
     for project in ordered
         .iter()
         .filter(|p| release.affected.contains(p.dir.as_str()))
     {
-        steps.extend(hook(project, DEV_HOOK, DEV));
+        steps.push((project.kind, hook(project, Hook::Dev, DEV)));
     }
 
     if let Some(version) = &release.version {
         for project in &ordered {
+            let mut project_steps = Vec::new();
+
             for package in &project.published {
-                let name = package.name.as_str();
-
-                if project.kind == Kind::Cargo {
-                    if !published(Registry::Crates, name, version)? {
-                        steps.push(step("cargo", &["publish", "-p", name], ""));
-                    }
-                } else {
-                    let package_version = package.version.as_deref().unwrap_or(version);
-
-                    if !published(Registry::Npm, name, package_version)? {
-                        let mut publish = Vec::new();
-
-                        if package.build {
-                            publish.push(build(name));
-                        }
-
-                        publish.push(step(
-                            PNPM,
-                            &[
-                                "publish",
-                                "--provenance",
-                                "--access",
-                                "public",
-                                "--no-git-checks",
-                            ],
-                            &package.dir,
-                        ));
-                        steps.extend(with_version(publish, version));
-                    }
+                if let Some(publish) = project.project_type.publish(package, version)
+                    && !published(publish.registry, &package.name, &publish.version)?
+                {
+                    project_steps.extend(publish.steps);
                 }
             }
 
-            steps.extend(hook(project, RELEASE_HOOK, version));
+            project_steps.extend(hook(project, Hook::Release, version));
+            steps.push((project.kind, project_steps));
         }
+    }
 
+    let mut steps = with_setup(steps);
+
+    if let Some(version) = &release.version {
         let tag = format!("v{version}");
         steps.push(step(
             "gh",
@@ -118,30 +77,29 @@ pub(crate) fn plan(
         ));
     }
 
-    if steps.iter().any(|s| s.program == PNPM) {
-        steps.insert(0, pnpm_install());
-    }
-
     Ok(steps)
 }
 
-fn build(package: &str) -> Step {
-    step(
-        PNPM,
-        &[
-            "exec",
-            "turbo",
-            "run",
-            "build",
-            "--env-mode=loose",
-            "--log-order=stream",
-            &format!("--filter={package}"),
-        ],
-        "",
-    )
+/// The steps of the hook with the version in the environment.
+pub(crate) fn hook(project: &Project, hook: Hook, version: &str) -> Vec<Step> {
+    with_version(project.project_type.hook(project, hook), version)
 }
 
-fn with_version(steps: Vec<Step>, version: &str) -> Vec<Step> {
+/// The steps of the projects preceded by the setup of the types that have any.
+pub(crate) fn with_setup(steps: Vec<(Kind, Vec<Step>)>) -> Vec<Step> {
+    let kinds: BTreeSet<Kind> = steps
+        .iter()
+        .filter(|(_, steps)| !steps.is_empty())
+        .map(|(kind, _)| *kind)
+        .collect();
+    kinds
+        .into_iter()
+        .flat_map(Kind::setup)
+        .chain(steps.into_iter().flat_map(|(_, steps)| steps))
+        .collect()
+}
+
+pub(crate) fn with_version(steps: Vec<Step>, version: &str) -> Vec<Step> {
     steps
         .into_iter()
         .map(|mut s| {
@@ -159,15 +117,20 @@ mod tests {
     use crate::project::tests::build;
     use crate::project::tests::config;
     use crate::project::tests::manifest;
+    use crate::project_type::Details;
+    use crate::project_type::pnpm::PNPM;
+    use crate::project_type::pnpm::tests::package_details;
     use crate::utilities::BASH;
 
-    fn with(mut entry: Entry, publish: Option<&str>, scripts: &[&str]) -> Entry {
+    /// Published, a package.json with the version.
+    fn with(mut entry: Entry, version: Option<&str>) -> Entry {
         let manifest = entry.0.as_mut().unwrap();
         manifest.publish = true;
-        manifest.version = publish.map(str::to_string);
-        manifest
-            .scripts
-            .extend(scripts.iter().map(|s| s.to_string()));
+
+        if let Details::Pnpm(_) = manifest.details {
+            manifest.details = package_details(&manifest.name, &["build", "test"], version);
+        }
+
         entry
     }
 
@@ -178,7 +141,8 @@ mod tests {
             vec![Dep::Name("client".to_string())],
             None,
         );
-        ui.0.as_mut().unwrap().scripts.insert(DEV_HOOK.to_string());
+        ui.0.as_mut().unwrap().details =
+            package_details("ui", &["build", "test", Hook::Dev.name()], None);
 
         build(
             vec![
@@ -191,7 +155,6 @@ mod tests {
                         Some(config(&["test"], &["server"])),
                     ),
                     Some("0.1.0"),
-                    &[],
                 ),
                 with(
                     manifest(
@@ -201,9 +164,8 @@ mod tests {
                         None,
                     ),
                     None,
-                    &[],
                 ),
-                with(manifest("db", Kind::Cargo, vec![], None), None, &[]),
+                with(manifest("db", Kind::Cargo, vec![], None), None),
                 manifest("tools", Kind::Cargo, vec![], None),
                 manifest(
                     "server/image",
@@ -234,7 +196,7 @@ mod tests {
         };
 
         plan(&projects, &release, |registry, name, version| {
-            Ok(published.contains(&format!("{registry:?} {name}@{version}").as_str()))
+            Ok(published.contains(&format!("{} {name}@{version}", registry.name()).as_str()))
         })
         .unwrap()
         .iter()
@@ -271,7 +233,7 @@ mod tests {
     #[test]
     fn release_publishes_in_dependency_order_with_tag_last() {
         assert_eq!(
-            lines(&[], Some("1.2.3"), &["Crates db@1.2.3"]),
+            lines(&[], Some("1.2.3"), &["crates.io db@1.2.3"]),
             vec![
                 format!("{PNPM} install --frozen-lockfile"),
                 "cargo publish -p server".to_string(),
@@ -293,7 +255,11 @@ mod tests {
             lines(
                 &[],
                 Some("1.2.3"),
-                &["Crates db@1.2.3", "Crates server@1.2.3", "Npm client@0.1.0"]
+                &[
+                    "crates.io db@1.2.3",
+                    "crates.io server@1.2.3",
+                    "npm client@0.1.0"
+                ]
             ),
             vec![
                 format!("AGCI_VERSION=1.2.3 {BASH} release.sh"),

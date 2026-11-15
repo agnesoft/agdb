@@ -6,7 +6,7 @@ This package provides client for [Agnesoft Graph Database](https://github.com/ag
 
 Full guide can be found at: https://github.com/agnesoft/agdb/blob/main/agdb_web/content/en/api/2.typescript/index.md
 
-Example project at code: https://github.com/agnesoft/agdb/tree/main/examples/server_client_typescript
+Example project at code: https://github.com/agnesoft/agdb/tree/main/agdb_api/typescript/examples/server_client
 
 ```ts
 import { QueryBuilder, AgdbApi } from "@agnesfot/agdb_api";

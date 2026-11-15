@@ -24,31 +24,31 @@ const filteredNavigation = computed<ContentNavigationItem[]>(() => {
           ...(child.children || []),
           {
             title: "app_db",
-            path: "https://github.com/agnesoft/agdb/tree/main/examples/app_db",
+            path: "https://github.com/agnesoft/agdb/blob/main/agdb/examples/app_db.rs",
           },
           {
             title: "indexes",
-            path: "https://github.com/agnesoft/agdb/tree/main/examples/indexes",
+            path: "https://github.com/agnesoft/agdb/blob/main/agdb/examples/indexes.rs",
           },
           {
             title: "joins",
-            path: "https://github.com/agnesoft/agdb/tree/main/examples/joins",
+            path: "https://github.com/agnesoft/agdb/blob/main/agdb/examples/joins.rs",
           },
           {
             title: "schema migration",
-            path: "https://github.com/agnesoft/agdb/tree/main/examples/schema_migration",
+            path: "https://github.com/agnesoft/agdb/blob/main/agdb/examples/schema_migration.rs",
           },
           {
             title: "server client - rust",
-            path: "https://github.com/agnesoft/agdb/tree/main/examples/server_client_rust",
+            path: "https://github.com/agnesoft/agdb/blob/main/agdb_api/examples/server_client.rs",
           },
           {
             title: "server client - typescript",
-            path: "https://github.com/agnesoft/agdb/tree/main/examples/server_client_typescript",
+            path: "https://github.com/agnesoft/agdb/tree/main/agdb_api/typescript/examples/server_client",
           },
           {
             title: "strong types",
-            path: "https://github.com/agnesoft/agdb/tree/main/examples/user_types",
+            path: "https://github.com/agnesoft/agdb/blob/main/agdb/examples/user_types.rs",
           },
         ],
       };

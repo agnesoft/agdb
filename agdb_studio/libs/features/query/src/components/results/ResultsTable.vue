@@ -1,17 +1,33 @@
 <script lang="ts" setup>
 import type { Components } from "@agnesoft/agdb_api";
 import { computed } from "vue";
-import { dbValueToString } from "../../utils/graphDataUtils";
+import {
+  dbValueToString,
+  dedupeResultElements,
+} from "../../utils/graphDataUtils";
 
 const props = defineProps<{
   results: Components.Schemas.QueryResult[];
+  /** Alias of a node id, shown in its own column when any node has one. */
+  aliasOf?: (id: number) => string | undefined;
 }>();
 
 const emit = defineEmits<{
   menu: [element: Components.Schemas.DbElement, x: number, y: number];
 }>();
 
-const elements = computed(() => props.results.flatMap((r) => r.elements));
+// An element several queries returned is one row; the JSON view keeps them all.
+const deduped = computed(() => dedupeResultElements(props.results));
+const elements = computed(() => deduped.value.map((d) => d.element));
+
+const aliases = computed(
+  () => new Map(elements.value.map((el) => [el.id, props.aliasOf?.(el.id)])),
+);
+const hasAliases = computed(() =>
+  [...aliases.value.values()].some((alias) => alias !== undefined),
+);
+// Which queries returned a row matters only for batches.
+const showOrigin = computed(() => props.results.length > 1);
 
 const hasEdges = computed(() => elements.value.some((el) => el.id < 0));
 
@@ -21,26 +37,27 @@ const keys = computed(() => {
   for (const el of elements.value) {
     for (const kv of el.values) seen.add(dbValueToString(kv.key));
   }
+
   return [...seen];
 });
 
-/** Keyed by result and id, as a batch can return an element more than once. */
 const rows = computed(() =>
-  props.results.flatMap((result, resultIndex) =>
-    result.elements.map((el) => {
-      const values = new Map(
-        el.values.map((kv) => [
-          dbValueToString(kv.key),
-          dbValueToString(kv.value),
-        ]),
-      );
-      return {
-        key: `${resultIndex}:${el.id}`,
-        element: el,
-        cells: keys.value.map((k) => values.get(k) ?? ""),
-      };
-    }),
-  ),
+  deduped.value.map(({ element: el, resultIndexes }, index) => {
+    const values = new Map(
+      el.values.map((kv) => [
+        dbValueToString(kv.key),
+        dbValueToString(kv.value),
+      ]),
+    );
+    return {
+      // Id 0 rows (not elements) can repeat.
+      key: el.id === 0 ? `0:${index}` : el.id,
+      element: el,
+      alias: aliases.value.get(el.id) ?? "",
+      origin: resultIndexes.map((i) => `#${i}`).join(", "),
+      cells: keys.value.map((k) => values.get(k) ?? ""),
+    };
+  }),
 );
 
 const openMenu = (element: Components.Schemas.DbElement, event: MouseEvent) => {
@@ -55,6 +72,10 @@ const openMenu = (element: Components.Schemas.DbElement, event: MouseEvent) => {
         <tr>
           <th class="actions-col"></th>
           <th>id</th>
+          <th v-if="hasAliases">alias</th>
+          <th v-if="showOrigin" title="Queries of the batch that returned it">
+            result
+          </th>
           <template v-if="hasEdges">
             <th>from</th>
             <th>to</th>
@@ -88,6 +109,8 @@ const openMenu = (element: Components.Schemas.DbElement, event: MouseEvent) => {
           <td class="id">
             {{ row.element.id === 0 ? "(database)" : row.element.id }}
           </td>
+          <td v-if="hasAliases" class="alias">{{ row.alias }}</td>
+          <td v-if="showOrigin" class="origin">{{ row.origin }}</td>
           <template v-if="hasEdges">
             <td>{{ row.element.id < 0 ? row.element.from : "" }}</td>
             <td>{{ row.element.id < 0 ? row.element.to : "" }}</td>
@@ -134,6 +157,10 @@ tbody tr:hover {
 }
 .id {
   font-weight: bold;
+}
+.alias,
+.origin {
+  color: var(--color-text-muted);
 }
 .actions-col {
   width: 2rem;

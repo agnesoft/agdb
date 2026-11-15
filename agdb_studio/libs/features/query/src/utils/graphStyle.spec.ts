@@ -58,6 +58,75 @@ describe("graphStyle", () => {
       expect(result.node).toBe(GRAPH_THEME_FALLBACK.node);
       el.remove();
     });
+
+    it("reads the palette, slot by slot", () => {
+      const el = document.createElement("div");
+      el.style.setProperty("--graph-palette-2", "#abcdef");
+      document.body.appendChild(el);
+      const { palette } = readGraphTheme(el);
+      expect(palette[1]).toBe("#abcdef");
+      expect(palette[0]).toBe(GRAPH_THEME_FALLBACK.palette[0]);
+      expect(palette).toHaveLength(GRAPH_THEME_FALLBACK.palette.length);
+      el.remove();
+    });
+  });
+
+  describe("custom colours", () => {
+    it("replaces the base colour but not the selection or hover state", () => {
+      const idle = emptyHighlightState();
+      expect(getNodeColor(node(1), idle, theme, "#ff0000")).toBe("#ff0000");
+      expect(getLinkColor(link(-1, 1, 2), idle, theme, "#ff0000")).toBe(
+        "#ff0000",
+      );
+      const selected = { ...idle, selectedId: 1 };
+      expect(getNodeColor(node(1), selected, theme, "#ff0000")).toBe(
+        theme.selected,
+      );
+      const hovering = {
+        ...idle,
+        hoveredLinkId: -2,
+        highlightLinks: new Set([-2]),
+      };
+      expect(getLinkColor(link(-3, 1, 2), hovering, theme, "#ff0000")).toBe(
+        withAlpha("#ff0000", 0.25),
+      );
+    });
+
+    it("keeps the custom colour on hover, as hover could pass for a palette colour", () => {
+      const hoverNode = {
+        ...emptyHighlightState(),
+        hoveredNodeId: 1,
+        highlightNodes: new Set([1]),
+      };
+      expect(getNodeColor(node(1), hoverNode, theme, "#ff0000")).toBe(
+        "#ff0000",
+      );
+      expect(getNodeColor(node(1), hoverNode, theme)).toBe(theme.hover);
+      const hoverLink = {
+        ...emptyHighlightState(),
+        hoveredLinkId: -1,
+        highlightLinks: new Set([-1]),
+      };
+      expect(getLinkColor(link(-1, 1, 2), hoverLink, theme, "#ff0000")).toBe(
+        "#ff0000",
+      );
+      expect(getLinkColor(link(-1, 1, 2), hoverLink, theme)).toBe(
+        theme.edgeAccent,
+      );
+    });
+
+    it("makes uncoloured nodes neutral while colours are in use", () => {
+      const idle = emptyHighlightState();
+      expect(getNodeColor(node(1), idle, theme, undefined, true)).toBe(
+        theme.uncolored,
+      );
+      expect(getNodeColor(node(1), idle, theme, "#ff0000", true)).toBe(
+        "#ff0000",
+      );
+      expect(getNodeColor(node(1, "context"), idle, theme)).toBe(
+        theme.contextNode,
+      );
+    });
   });
 
   describe("linkEndpointId", () => {
@@ -194,6 +263,12 @@ describe("graphStyle", () => {
       expect(html).toContain("&lt;b&gt;x&lt;/b&gt;");
       expect(html).not.toContain("<b>x</b>");
       expect(html).toContain("+2 more");
+    });
+
+    it("shows the escaped alias next to the id", () => {
+      const html = nodeTooltip({ ...node(7), alias: "<dave>" });
+      expect(html).toContain("Node 7");
+      expect(html).toContain("&lt;dave&gt;");
     });
 
     it("renders link endpoints", () => {

@@ -257,4 +257,68 @@ describe("useElementValues", () => {
     values.remove(-3);
     expect(values.describe(link)).toBe(link);
   });
+
+  describe("aliases", () => {
+    const aliasElement = (id: number, alias: string) => ({
+      id,
+      from: 0,
+      to: 0,
+      values: [{ key: { String: "alias" }, value: { String: alias } }],
+    });
+
+    it("loads all aliases and adds them when describing", async () => {
+      exec.mockResolvedValue([
+        { result: 1, elements: [aliasElement(1, "alice")] },
+      ]);
+      const values = useElementValues(exec);
+      await values.loadAliases();
+      expect(exec).toHaveBeenCalledWith([{ SelectAllAliases: {} }]);
+      expect(values.aliasOf(1)).toBe("alice");
+      expect(values.aliasOf(2)).toBeUndefined();
+      expect(values.describe(graphNode(1)).alias).toBe("alice");
+      expect(values.describe(graphNode(2))).not.toHaveProperty("alias");
+      values.remove(1);
+      expect(values.aliasOf(1)).toBeUndefined();
+    });
+
+    it("keeps the alias next to loading and loaded values", async () => {
+      exec.mockResolvedValueOnce([
+        { result: 1, elements: [aliasElement(1, "alice")] },
+      ]);
+      const values = useElementValues(exec);
+      await values.loadAliases();
+      const pending = deferred<unknown>();
+      exec.mockReturnValueOnce(pending.promise);
+      const loading = values.load([1]);
+      expect(values.describe(graphNode(1))).toMatchObject({
+        alias: "alice",
+        valuesState: "loading",
+      });
+      pending.resolve([{ result: 1, elements: [dbElement(1, [kv("a", 1)])] }]);
+      await loading;
+      expect(values.describe(graphNode(1))).toMatchObject({
+        alias: "alice",
+        valuesState: "loaded",
+      });
+    });
+
+    it("ignores failures and outdated responses", async () => {
+      exec.mockRejectedValueOnce(new Error("down"));
+      const values = useElementValues(exec);
+      await values.loadAliases();
+      expect(values.aliasOf(1)).toBeUndefined();
+
+      const pending = deferred<unknown>();
+      exec.mockReturnValueOnce(pending.promise);
+      const loading = values.loadAliases();
+      values.clear();
+      pending.resolve([{ result: 1, elements: [aliasElement(1, "old")] }]);
+      await loading;
+      expect(values.aliasOf(1)).toBeUndefined();
+
+      exec.mockResolvedValueOnce(undefined);
+      await values.loadAliases();
+      expect(values.aliasOf(1)).toBeUndefined();
+    });
+  });
 });

@@ -2,10 +2,11 @@ import type { Components } from "@agnesoft/agdb_api";
 import { reactive } from "vue";
 import type { ElementValuesState, GraphElement } from "./types";
 import {
+  selectAllAliasesQuery,
   selectElementQuery,
   selectExistingElementsQuery,
 } from "../utils/graphActionQueries";
-import { toDisplayValues } from "../utils/graphDataUtils";
+import { dbValueToString, toDisplayValues } from "../utils/graphDataUtils";
 
 type DbKeyValue = Components.Schemas.DbKeyValue;
 
@@ -45,6 +46,7 @@ const isQueryError = (error: unknown): boolean => {
 
 export const useElementValues = (exec: ExecQueries) => {
   const entries = reactive(new Map<number, Entry>());
+  const aliases = reactive(new Map<number, string>());
   /** Bumped on `clear` so responses of an outdated load are dropped. */
   let generation = 0;
 
@@ -104,6 +106,27 @@ export const useElementValues = (exec: ExecQueries) => {
     }
   };
 
+  /**
+   * Loads all aliases, replacing the cached ones. Failing to read them only
+   * means none are shown, so errors are ignored.
+   */
+  const loadAliases = async (): Promise<void> => {
+    const startedIn = generation;
+    try {
+      const results = await exec([selectAllAliasesQuery()]);
+      if (startedIn !== generation) return;
+      aliases.clear();
+      for (const el of (results ?? []).flatMap((r) => r.elements)) {
+        const alias = el.values[0]?.value;
+        if (alias) aliases.set(el.id, dbValueToString(alias));
+      }
+    } catch {
+      // No aliases shown.
+    }
+  };
+
+  const aliasOf = (id: number): string | undefined => aliases.get(id);
+
   /** Stores values known to be current (e.g. re-selected after a save). */
   const set = (id: number, values: DbKeyValue[]) => {
     entries.set(id, { state: "loaded", values });
@@ -111,6 +134,7 @@ export const useElementValues = (exec: ExecQueries) => {
 
   const remove = (id: number) => {
     entries.delete(id);
+    aliases.delete(id);
   };
 
   /** Forgets everything, e.g. when a new run may have changed values. */
@@ -125,14 +149,16 @@ export const useElementValues = (exec: ExecQueries) => {
    */
   const describe = <T extends GraphElement>(element: T): T => {
     const entry = entries.get(element.id);
-    if (!entry) return element;
+    const alias = aliases.get(element.id);
+    const withAlias = alias === undefined ? element : { ...element, alias };
+    if (!entry) return withAlias;
     if (entry.state !== "loaded" || !entry.values) {
-      return { ...element, valuesState: entry.state };
+      return { ...withAlias, valuesState: entry.state };
     }
     const stored = entry.values;
     const storedKeys = new Set(stored.map(keyId));
     return {
-      ...element,
+      ...withAlias,
       rawValues: stored,
       values: toDisplayValues(stored),
       valuesState: "loaded",
@@ -142,5 +168,5 @@ export const useElementValues = (exec: ExecQueries) => {
     };
   };
 
-  return { load, set, remove, clear, describe };
+  return { load, loadAliases, aliasOf, set, remove, clear, describe };
 };

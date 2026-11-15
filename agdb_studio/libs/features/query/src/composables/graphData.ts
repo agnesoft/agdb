@@ -3,6 +3,7 @@ import { useQueryStore } from "./queryStore";
 import type { GraphData, GraphElement } from "./types";
 import {
   convertElementsToGraphData,
+  dedupeResultElements,
   filterDanglingLinks,
   mergeGraphData,
 } from "../utils/graphDataUtils";
@@ -25,8 +26,13 @@ export const useGraphData = (queryId: Ref<string | undefined> | undefined) => {
     if (!results) return { nodes: [], links: [] };
 
     const activeTab = query.value?.lastExecutedTab ?? "exec";
-    const mainElements = (results[activeTab] ?? []).flatMap((r) => r.elements);
-    const queryGraphData = convertElementsToGraphData(mainElements, "query");
+    // An element several queries returned is shown once.
+    const deduped = dedupeResultElements(results[activeTab] ?? []);
+    const queryGraphData = convertElementsToGraphData(
+      deduped.map((d) => d.element),
+      "query",
+      new Map(deduped.map((d) => [d.element.id, d.resultIndexes])),
+    );
 
     const contextElements = [
       ...(results.context ?? []),

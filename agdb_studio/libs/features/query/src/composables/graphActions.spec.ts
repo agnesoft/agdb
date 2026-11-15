@@ -22,6 +22,8 @@ const { exec, execMut, openModal, addNotification, elementValues } = vi.hoisted(
     // The stored-values cache has its own spec; here only the wiring matters.
     elementValues: {
       load: vi.fn(async () => {}),
+      loadAliases: vi.fn(async () => {}),
+      aliasOf: vi.fn((): string | undefined => undefined),
       set: vi.fn(),
       remove: vi.fn(),
       clear: vi.fn(),
@@ -102,6 +104,7 @@ const setupQuery = (lastTab: "exec" | "exec_mut" = "exec") => {
   query.value.rows.exec = [{ id: "r", steps: [{ id: "s", type: "select" }] }];
   store.setQueryResults("q1", lastTab, initialResults(), {
     queries: [EXECUTED_QUERY],
+    rowIds: ["r"],
   });
   query.value.lastRun = new Date(1);
   return query;
@@ -153,6 +156,9 @@ describe("graphActions", () => {
     expect(isNode(graphLink(-1))).toBe(false);
     expect(elementLabel(graphNode(1))).toBe("node 1");
     expect(elementLabel(graphLink(-1))).toBe("edge -1");
+    expect(elementLabel({ ...graphNode(4), alias: "dave" })).toBe(
+      "node 4 (dave)",
+    );
   });
 
   it("provides node and edge specific actions", () => {
@@ -161,6 +167,7 @@ describe("graphActions", () => {
     expect(actions.getActions(graphNode(1)).map((a) => a.key)).toEqual([
       "view",
       "edit",
+      "pin",
       "expand",
       "add-edge",
       "delete",
@@ -168,8 +175,168 @@ describe("graphActions", () => {
     expect(actions.getActions(graphLink(-3)).map((a) => a.key)).toEqual([
       "view",
       "edit",
+      "pin",
       "delete",
     ]);
+  });
+
+  describe("colouring", () => {
+    const withValues = (element: GraphElement): GraphElement =>
+      element.id === 1
+        ? { ...element, values: [{ key: "role", value: "admin" }] }
+        : element;
+
+    it("colours elements by row, rule and hand, and indexes the values", async () => {
+      const query = setupQuery();
+      elementValues.describe.mockImplementation(withValues);
+      const actions = createActions(ref("q1"));
+      await nextTick();
+      const node1 = actions.elementsById.value.get(1) as GraphElement;
+      const node2 = actions.elementsById.value.get(2) as GraphElement;
+      expect(actions.colorSlotOf(node1)).toBeUndefined();
+      expect(actions.valueIndex.value).toEqual([
+        { key: "role", values: [{ value: "admin", count: 1 }] },
+      ]);
+      expect(actions.colorQueries.value).toEqual([
+        { rowId: "r", index: 0, label: "select", slot: undefined },
+      ]);
+
+      actions.setRowColor("r", 3);
+      expect(actions.rowColors.value).toEqual({ r: 3 });
+      expect(actions.colorQueries.value[0]?.slot).toBe(3);
+      expect(actions.colorSlotOf(node2)).toBe(3);
+      expect(actions.colorLegend.value).toEqual([
+        { label: "query 0", slot: 3, source: "query", count: 3 },
+      ]);
+
+      actions.setColorRules([{ kind: "palette", id: "p", key: "role" }]);
+      expect(actions.colorRules.value).toHaveLength(1);
+      expect(actions.colorSlotOf(node1)).toBe(0);
+
+      actions.setElementColor(node1, 4);
+      expect(actions.colorSlotOf(node1)).toBe(4);
+      actions.setElementColorById(99, 2);
+      expect(actions.colorElements.value).toEqual([
+        { id: 1, slot: 4, element: node1, label: "node 1" },
+        { id: 99, slot: 2, element: undefined, label: "node 99 (not shown)" },
+      ]);
+      expect(actions.colorLegend.value[0]).toEqual({
+        label: "node 1",
+        slot: 4,
+        source: "element",
+        count: 1,
+      });
+      actions.setElementColorById(-98, 1);
+      expect(actions.colorElements.value.at(-1)?.label).toBe(
+        "edge -98 (not shown)",
+      );
+      actions.setElementColorById(99);
+      actions.setElementColorById(-98);
+      expect(actions.colorElements.value.map((e) => e.id)).toEqual([1]);
+
+      // Results stay with the rows that ran, whatever happened to the rows since.
+      query.value.rows.exec = [
+        { id: "new", steps: [{ id: "n", type: "search" }] },
+        ...query.value.rows.exec,
+      ];
+      expect(actions.colorQueries.value.map((q) => q.rowId)).toEqual(["r"]);
+      expect(actions.colorSlotOf(node2)).toBe(3);
+      query.value.rows.exec = [];
+      expect(actions.colorQueries.value[0]?.label).toBe("(removed)");
+
+      actions.clearColors();
+      expect(actions.colorSlotOf(node1)).toBeUndefined();
+      elementValues.describe.mockImplementation((element) => element);
+    });
+
+    it("gives each query its own colour, as far as the palette goes", () => {
+      const query = setupQuery();
+      query.value.rows.exec = ["a", "b", "c"].map((id) => ({
+        id,
+        steps: [{ id: `s${id}`, type: "select" as const }],
+      }));
+      query.value.executedRowIds = { exec: ["a", "b", "c"] };
+      const actions = createActions(ref("q1"));
+      actions.paletteSize.value = 2;
+      actions.colorEachQuery();
+      expect(actions.rowColors.value).toEqual({ a: 0, b: 1 });
+    });
+
+    it("counts values and orders them by count", async () => {
+      setupQuery();
+      elementValues.describe.mockImplementation((element) => ({
+        ...element,
+        values: [
+          { key: "kind", value: element.id === -3 ? "b" : "a" },
+          { key: "age", value: "1" },
+        ],
+      }));
+      const actions = createActions(ref("q1"));
+      await nextTick();
+      expect(actions.valueIndex.value).toEqual([
+        { key: "age", values: [{ value: "1", count: 3 }] },
+        {
+          key: "kind",
+          values: [
+            { value: "a", count: 2 },
+            { value: "b", count: 1 },
+          ],
+        },
+      ]);
+      elementValues.describe.mockImplementation((element) => element);
+    });
+
+    it("does nothing without a query id or a run", () => {
+      setupQuery();
+      const actions = createActions(ref(undefined));
+      expect(() => {
+        actions.setRowColor("r", 1);
+        actions.setElementColor(graphNode(1), 1);
+        actions.setColorRules([]);
+        actions.setElementColorById(1, 1);
+        actions.clearColors();
+      }).not.toThrow();
+      expect(actions.colorLegend.value).toEqual([]);
+      expect(actions.colorQueries.value).toEqual([]);
+      expect(actions.colorElements.value).toEqual([]);
+    });
+  });
+
+  describe("pinning", () => {
+    it("pins with Shift+click or the menu and describes pinned elements", async () => {
+      setupQuery();
+      const actions = createActions(ref("q1"));
+      actions.clickNode(graphNode(1), { pin: true });
+      expect(actions.pinnedIds.value).toEqual([1]);
+      expect(actions.selectedId.value).toBeUndefined();
+      expect(elementValues.load).toHaveBeenCalledWith([1], { retry: true });
+
+      const pin = actions
+        .getActions(graphLink(-3))
+        .find((a) => a.key === "pin");
+      expect(pin?.label).toBe("Pin details");
+      pin?.action?.({ event: new Event("click"), params: undefined } as never);
+      expect(actions.pinnedIds.value).toEqual([1, -3]);
+      expect(actions.pinnedElements.value.map((e) => e.id)).toEqual([1, -3]);
+      expect(
+        actions.getActions(graphLink(-3)).find((a) => a.key === "pin")?.label,
+      ).toBe("Unpin details");
+
+      actions.togglePin(graphNode(1));
+      expect(actions.pinnedIds.value).toEqual([-3]);
+      actions.unpin(-3);
+      expect(actions.pinnedIds.value).toEqual([]);
+    });
+
+    it("drops pins of elements that are no longer shown", async () => {
+      setupQuery();
+      const actions = createActions(ref("q1"));
+      actions.togglePin(graphNode(1));
+      actions.togglePin(graphNode(2));
+      store.removeElementsFromResults("q1", [2]);
+      await nextTick();
+      expect(actions.pinnedIds.value).toEqual([1]);
+    });
   });
 
   it("runs menu actions and closes the menu", () => {
@@ -440,6 +607,7 @@ describe("graphActions", () => {
       expect(actions.pendingEdgeSourceId.value).toBeUndefined();
       expect(actions.selectedId.value).toBe(-9);
       expect(actions.panelMode.value).toBe("edit");
+      expect(actions.lastAddedEdgeId.value).toBe(-9);
     });
 
     it("handles missing results and errors", async () => {

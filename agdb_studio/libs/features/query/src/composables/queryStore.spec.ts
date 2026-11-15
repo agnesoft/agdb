@@ -746,4 +746,171 @@ describe("queryStore", () => {
       ).toBeUndefined();
     });
   });
+
+  describe("setQueryRows", () => {
+    it("replaces the rows of a tab with new ids and validates them", () => {
+      store.addQuery(makeQuery());
+      const args = [[{ selectedOption: "signed", value: "1" }]];
+      store.setQueryRows("q1", "context", [
+        [{ type: "select" }, { type: "select.ids", args }],
+        [{ type: "select.ids" }],
+      ]);
+      const rows = store.getQuery("q1")?.value.rows.context ?? [];
+      expect(rows).toHaveLength(2);
+      expect(rows[0]?.id).not.toBe(rows[1]?.id);
+      expect(rows[0]?.steps.map((s) => s.type)).toEqual([
+        "select",
+        "select.ids",
+      ]);
+      expect(rows[0]?.steps[1]?.args).toEqual(args);
+      expect(rows[0]?.steps[1]?.args).not.toBe(args);
+      expect(rows[0]?.steps[0]?.invalid).toBe(false);
+      // A step that cannot start a query is marked invalid.
+      expect(rows[1]?.steps[0]?.invalid).toBe(true);
+    });
+
+    it("keeps one empty row when given none", () => {
+      store.addQuery(makeQuery());
+      store.setQueryRows("q1", "exec", []);
+      const rows = store.getQuery("q1")?.value.rows.exec ?? [];
+      expect(rows).toHaveLength(1);
+      expect(rows[0]?.steps).toEqual([]);
+    });
+
+    it("ignores unknown queries", () => {
+      expect(() =>
+        store.setQueryRows("nope", "exec", [[{ type: "select" }]]),
+      ).not.toThrow();
+    });
+  });
+
+  describe("insertQueryRows / deleteQueryRows", () => {
+    const types = () =>
+      (store.getQuery("q1")?.value.rows.exec ?? []).map((r) =>
+        r.steps.map((s) => s.type).join("."),
+      );
+
+    it("inserts rows after a row with steps, or replaces an empty row", () => {
+      store.addQuery(makeQuery());
+      const first = store.getQuery("q1")!.value.rows.exec[0]!;
+      const inserted = store.insertQueryRows("q1", "exec", first.id, [
+        [{ type: "select" }],
+        [{ type: "search" }],
+      ]);
+      // The empty row is replaced.
+      expect(types()).toEqual(["select", "search"]);
+      expect(inserted).toHaveLength(2);
+
+      const [head] = store.getQuery("q1")!.value.rows.exec;
+      store.insertQueryRows("q1", "exec", head!.id, [[{ type: "insert" }]]);
+      expect(types()).toEqual(["select", "insert", "search"]);
+    });
+
+    it("ignores unknown rows, queries and empty input", () => {
+      store.addQuery(makeQuery());
+      expect(store.insertQueryRows("q1", "exec", "nope", [[]])).toEqual([]);
+      expect(store.insertQueryRows("nope", "exec", "r", [[]])).toEqual([]);
+      const first = store.getQuery("q1")!.value.rows.exec[0]!;
+      expect(store.insertQueryRows("q1", "exec", first.id, [])).toEqual([]);
+    });
+
+    it("removes several rows and keeps one empty row", () => {
+      store.addQuery(makeQuery());
+      const a = store.addQueryRow("q1", "exec")!;
+      const rows = store.getQuery("q1")!.value.rows.exec;
+      const ids = rows.map((r) => r.id);
+      store.deleteQueryRows("q1", "exec", [a.id]);
+      expect(store.getQuery("q1")!.value.rows.exec).toHaveLength(
+        ids.length - 1,
+      );
+      store.deleteQueryRows("q1", "exec", ids);
+      expect(store.getQuery("q1")!.value.rows.exec).toHaveLength(1);
+      expect(() => store.deleteQueryRows("nope", "exec", [])).not.toThrow();
+    });
+  });
+
+  it("marks and confirms mutations opened from a link", () => {
+    store.addQuery(makeQuery());
+    store.setUnconfirmedLinkedMutation("q1", true);
+    expect(store.getQuery("q1")?.value.unconfirmedLinkedMutation).toBe(true);
+    store.setUnconfirmedLinkedMutation("q1", false);
+    expect(store.getQuery("q1")?.value.unconfirmedLinkedMutation).toBe(false);
+    expect(() =>
+      store.setUnconfirmedLinkedMutation("nope", true),
+    ).not.toThrow();
+  });
+  describe("colours", () => {
+    it("sets and clears row, element and rule colours", () => {
+      store.addQuery(makeQuery());
+      const colors = () => store.getQuery("q1")!.value.colors;
+      store.setRowColor("q1", "r1", 2);
+      store.setElementColor("q1", 7, 1);
+      store.setColorRules("q1", [{ kind: "palette", id: "p", key: "role" }]);
+      expect(colors()).toEqual({
+        rows: { r1: 2 },
+        elements: { 7: 1 },
+        rules: [{ kind: "palette", id: "p", key: "role" }],
+      });
+      store.setRowColor("q1", "r1", undefined);
+      store.setElementColor("q1", 7, undefined);
+      expect(colors()?.rows).toEqual({});
+      expect(colors()?.elements).toEqual({});
+      store.clearColors("q1");
+      expect(colors()).toBeUndefined();
+    });
+
+    it("drops row colours of rows that are gone, but not of rows still shown", () => {
+      store.addQuery(makeQuery());
+      const query = store.getQuery("q1")!;
+      const [a, b] = [
+        store.addQueryRow("q1", "exec"),
+        store.addQueryRow("q1", "exec"),
+      ];
+      if (!a || !b) throw new Error("missing rows");
+      store.setQueryResults("q1", "exec", [], { rowIds: [a.id] });
+      store.setRowColor("q1", a.id, 1);
+      store.setRowColor("q1", b.id, 2);
+      store.setRowColor("q1", "old", 3);
+      // Removed and never run (or long gone).
+      store.deleteQueryRow("q1", "exec", b.id);
+      expect(query.value.colors?.rows).toEqual({ [a.id]: 1 });
+      // Removed, but its results are shown.
+      store.deleteQueryRows("q1", "exec", [a.id]);
+      expect(query.value.colors?.rows).toEqual({ [a.id]: 1 });
+      // A new run without it.
+      store.setQueryResults("q1", "exec", [], { rowIds: [] });
+      expect(query.value.colors?.rows).toEqual({});
+      store.setRowColor("q1", "gone", 1);
+      store.setQueryRows("q1", "exec", []);
+      expect(query.value.colors?.rows).toEqual({});
+    });
+
+    it("drops the colours of removed elements and their edges", () => {
+      store.addQuery(makeQuery());
+      store.setQueryResults("q1", "exec", [
+        {
+          result: 3,
+          elements: [
+            { id: 1, from: 0, to: 0, values: [] },
+            { id: 2, from: 0, to: 0, values: [] },
+            { id: -3, from: 1, to: 2, values: [] },
+          ],
+        },
+      ]);
+      store.setElementColor("q1", 1, 1);
+      store.setElementColor("q1", 2, 2);
+      store.setElementColor("q1", -3, 3);
+      store.removeElementsFromResults("q1", [2]);
+      expect(store.getQuery("q1")?.value.colors?.elements).toEqual({ 1: 1 });
+    });
+
+    it("ignores unknown queries", () => {
+      expect(() => {
+        store.setRowColor("nope", "r", 1);
+        store.setElementColor("nope", 1, 1);
+        store.setColorRules("nope", []);
+        store.clearColors("nope");
+      }).not.toThrow();
+    });
+  });
 });

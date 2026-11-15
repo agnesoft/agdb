@@ -1,3 +1,4 @@
+import type { ColorConfig } from "../utils/graphColorRules";
 import type { Components } from "@agnesoft/agdb_api";
 import { queryApiMock } from "../mock/queryApiMock";
 
@@ -48,6 +49,10 @@ export type StoredValuesInfo = {
   valuesState?: ElementValuesState;
   /** Values the query returned that are not stored (e.g. a computed `edge_count`). */
   queryOnlyValues?: Components.Schemas.DbKeyValue[];
+  /** The node's alias, if it has one. */
+  alias?: string;
+  /** Indexes of the main results (queries of the batch) that returned the element. */
+  resultIndexes?: number[];
 };
 
 /** A single node in the graph visualization. */
@@ -107,12 +112,24 @@ export type Query = {
   executedQueries?: Partial<Record<TAB, Components.Schemas.QueryType[]>>;
   /** The step types of those queries, which decide how their results are shown. */
   executedStepTypes?: Partial<Record<TAB, QueryType[]>>;
+  /**
+   * The ids of the rows the last run of each tab sent, in order: result `i`
+   * came from row `i`. Rows moved, added or removed since don't change it.
+   */
+  executedRowIds?: Partial<Record<TAB, string[]>>;
+  /**
+   * The exec_mut rows were opened from a link and have not been confirmed
+   * yet, so running them asks first (a link could hold a harmful query).
+   */
+  unconfirmedLinkedMutation?: boolean;
   rows: {
     exec: QueryRow[];
     exec_mut: QueryRow[];
     context: QueryRow[];
   };
   results: QueryResults;
+  /** How the graph colours elements (rules, per row, per element). */
+  colors?: ColorConfig;
 } & AddQueryParams;
 
 export const TABS = ["exec", "exec_mut", "context"] as const;

@@ -1,6 +1,8 @@
 <script lang="ts" setup>
 import type { Components } from "@agnesoft/agdb_api";
 import { computed, ref, watch } from "vue";
+import { LuPencil } from "@kalimahapps/vue-icons";
+import InlineFieldEditor from "./InlineFieldEditor.vue";
 import type {
   GraphElement,
   QueryStepFieldValue,
@@ -53,10 +55,11 @@ const emit = defineEmits<{
   ];
 }>();
 
-const title = computed(() =>
-  isNode(props.element)
-    ? `Node ${props.element.id}`
-    : `Edge ${props.element.id}`,
+const title = computed(
+  () =>
+    `${isNode(props.element) ? "Node" : "Edge"} ${props.element.id}${
+      props.element.alias ? ` (${props.element.alias})` : ""
+    }`,
 );
 
 const endpoints = computed(() =>
@@ -191,7 +194,162 @@ const dirty = computed(
         (row) => !row.original || !keyUntouched(row) || !valueUntouched(row),
       )),
 );
-watch(dirty, (value) => emit("dirty", value));
+
+/**
+ * In-place editing in the values table: one key or value at a time, or a
+ * new value. Each change is saved on its own; the form is for bulk edits.
+ */
+type InlineEdit = {
+  /** Index into `rawValues`, or "new" for a value being added. */
+  index: number | "new";
+  part: "key" | "value";
+  /** Edited in place by the inline editors, which get them as props. */
+  key: QueryStepFieldValue;
+  value: QueryStepFieldValue;
+};
+const inline = ref<InlineEdit>();
+const inlineError = ref<string>();
+
+const canInlineEdit = computed(
+  () => props.mode === "view" && valuesReady.value && !props.saving,
+);
+
+const isNested = (value: Components.Schemas.DbValue): boolean =>
+  dbValueToField(value).selectedOption === NESTED_TYPE;
+
+const startInline = (index: number, part: "key" | "value") => {
+  const kv = props.element.rawValues[index];
+  if (!kv || !canInlineEdit.value || isNested(kv[part])) return;
+  inlineError.value = undefined;
+  inline.value = {
+    index,
+    part,
+    key: dbValueToField(kv.key),
+    value: dbValueToField(kv.value),
+  };
+};
+
+const startAdd = () => {
+  /* v8 ignore if -- @preserve */
+  if (!canInlineEdit.value) return;
+  inlineError.value = undefined;
+  inline.value = {
+    index: "new",
+    part: "key",
+    key: { selectedOption: "string", value: "" },
+    value: { selectedOption: "string", value: "" },
+  };
+};
+
+const cancelInline = () => {
+  inline.value = undefined;
+  inlineError.value = undefined;
+};
+
+const isEditing = (index: number, part: "key" | "value") =>
+  inline.value?.index === index && inline.value.part === part;
+
+const inlineDirty = computed(() => {
+  const edit = inline.value;
+  if (!edit) return false;
+  if (edit.index === "new") return !!(edit.key.value || edit.value.value);
+  const kv = props.element.rawValues[edit.index];
+  return !!kv && !sameField(edit[edit.part], dbValueToField(kv[edit.part]));
+});
+
+/** Saves the in-place change, or explains why it cannot be saved. */
+const commitInline = () => {
+  const edit = inline.value;
+  /* v8 ignore if -- @preserve */
+  if (!edit) return;
+  const values = [...props.element.rawValues];
+  const keyTaken = (key: Components.Schemas.DbValue, except?: number) =>
+    values.some(
+      (kv, i) => i !== except && JSON.stringify(kv.key) === JSON.stringify(key),
+    );
+
+  if (edit.index === "new") {
+    if (!(edit.key.value ?? "").trim()) {
+      inlineError.value = "Key is required";
+      return;
+    }
+    const fieldError = validateField(edit.key) ?? validateField(edit.value);
+    if (fieldError) {
+      inlineError.value = fieldError;
+      return;
+    }
+    const added = {
+      key: fieldToDbValue(edit.key),
+      value: fieldToDbValue(edit.value),
+    };
+    if (keyTaken(added.key)) {
+      inlineError.value = "Duplicate key";
+      return;
+    }
+    values.push(added);
+  } else {
+    const kv = values[edit.index];
+    /* v8 ignore if -- @preserve: the row is gone only after a reload */
+    if (!kv) return cancelInline();
+    if (!inlineDirty.value) return cancelInline();
+    const field = edit[edit.part];
+    if (edit.part === "key" && !(field.value ?? "").trim()) {
+      inlineError.value = "Key is required";
+      return;
+    }
+    const fieldError = validateField(field);
+    if (fieldError) {
+      inlineError.value = fieldError;
+      return;
+    }
+    const changed = { ...kv, [edit.part]: fieldToDbValue(field) };
+    if (edit.part === "key" && keyTaken(changed.key, edit.index)) {
+      inlineError.value = "Duplicate key";
+      return;
+    }
+    values[edit.index] = changed;
+  }
+  cancelInline();
+  emit("save", values, props.element.rawValues);
+};
+
+/** Leaving the editor (e.g. clicking elsewhere) saves it, like Enter. */
+const onInlineFocusOut = (event: FocusEvent) => {
+  const cell = event.currentTarget;
+  const next = event.relatedTarget;
+  if (
+    cell instanceof HTMLElement &&
+    next instanceof Node &&
+    cell.contains(next)
+  )
+    return;
+  // An untouched new value is just dropped.
+  if (inline.value?.index === "new" && !inlineDirty.value) {
+    cancelInline();
+    return;
+  }
+  commitInline();
+};
+
+const removeValue = (index: number) => {
+  /* v8 ignore if -- @preserve */
+  if (!canInlineEdit.value) return;
+  emit(
+    "save",
+    props.element.rawValues.filter((_, i) => i !== index),
+    props.element.rawValues,
+  );
+};
+
+watch(
+  () => props.element.id,
+  () => cancelInline(),
+);
+
+watch(
+  () => dirty.value || inlineDirty.value,
+  (value) => emit("dirty", value),
+);
 
 /** Esc closes the panel, or leaves edit mode; unsaved edits are kept. */
 const onEscape = () => {
@@ -220,8 +378,24 @@ const save = () => {
     <header class="panel-header">
       <h3>{{ title }}</h3>
       <button
+        v-if="!showForm"
         type="button"
-        class="button close-button"
+        class="button header-button edit-button"
+        data-testid="panel-edit"
+        :disabled="!valuesReady"
+        :title="
+          valuesReady
+            ? 'Edit all values in a form'
+            : 'Waiting for the stored values'
+        "
+        aria-label="Edit all values in a form"
+        @click="emit('edit')"
+      >
+        <LuPencil />
+      </button>
+      <button
+        type="button"
+        class="button header-button close-button"
         title="Close details"
         data-testid="panel-close"
         @click="emit('close')"
@@ -259,12 +433,17 @@ const save = () => {
     </p>
 
     <template v-if="!showForm">
-      <table v-if="props.element.rawValues.length" class="values-table">
+      <table
+        v-if="props.element.rawValues.length || inline?.index === 'new'"
+        class="values-table"
+        :class="{ editable: canInlineEdit }"
+      >
         <thead>
           <tr>
             <th>Key</th>
             <th>Value</th>
             <th>Type</th>
+            <th class="actions-col"></th>
           </tr>
         </thead>
         <tbody>
@@ -273,13 +452,115 @@ const save = () => {
             :key="index"
             data-testid="panel-value-row"
           >
-            <td class="key">{{ dbValueToString(kv.key) }}</td>
-            <td class="value">{{ dbValueToString(kv.value) }}</td>
-            <td class="type">{{ dbValueTypeLabel(kv.value) }}</td>
+            <td
+              v-if="isEditing(index, 'key') && inline"
+              colspan="3"
+              class="editing"
+              @focusout="onInlineFocusOut"
+            >
+              <InlineFieldEditor
+                :model-value="inline.key"
+                label="Key"
+                autofocus
+                @commit="commitInline"
+                @cancel="cancelInline"
+              />
+            </td>
+            <td
+              v-else
+              class="key"
+              data-testid="panel-key-cell"
+              :title="
+                canInlineEdit && !isNested(kv.key) ? 'Click to edit' : undefined
+              "
+              @click="startInline(index, 'key')"
+            >
+              {{ dbValueToString(kv.key) }}
+            </td>
+            <template v-if="!isEditing(index, 'key')">
+              <td
+                v-if="isEditing(index, 'value') && inline"
+                colspan="2"
+                class="editing"
+                @focusout="onInlineFocusOut"
+              >
+                <InlineFieldEditor
+                  :model-value="inline.value"
+                  label="Value"
+                  autofocus
+                  @commit="commitInline"
+                  @cancel="cancelInline"
+                />
+              </td>
+              <template v-else>
+                <td
+                  class="value"
+                  data-testid="panel-value-cell"
+                  :title="
+                    canInlineEdit && !isNested(kv.value)
+                      ? 'Click to edit'
+                      : undefined
+                  "
+                  @click="startInline(index, 'value')"
+                >
+                  {{ dbValueToString(kv.value) }}
+                </td>
+                <td class="type">{{ dbValueTypeLabel(kv.value) }}</td>
+              </template>
+            </template>
+            <td class="actions-col">
+              <button
+                v-if="canInlineEdit"
+                type="button"
+                class="button remove-value-button"
+                title="Remove this value"
+                aria-label="Remove this value"
+                data-testid="panel-remove-value"
+                @click="removeValue(index)"
+              >
+                ×
+              </button>
+            </td>
+          </tr>
+          <tr v-if="inline?.index === 'new'" data-testid="panel-new-value-row">
+            <td colspan="4" class="editing" @focusout="onInlineFocusOut">
+              <div class="new-value">
+                <InlineFieldEditor
+                  :model-value="inline.key"
+                  label="New key"
+                  placeholder="key"
+                  autofocus
+                  @commit="commitInline"
+                  @cancel="cancelInline"
+                />
+                <InlineFieldEditor
+                  :model-value="inline.value"
+                  label="New value"
+                  placeholder="value"
+                  @commit="commitInline"
+                  @cancel="cancelInline"
+                />
+              </div>
+            </td>
           </tr>
         </tbody>
       </table>
       <p v-else class="empty">No values.</p>
+      <p v-if="inlineError" class="error" data-testid="panel-inline-error">
+        {{ inlineError }}
+      </p>
+      <p v-if="props.saving" class="values-note" data-testid="panel-saving">
+        Saving…
+      </p>
+      <button
+        v-if="canInlineEdit && inline?.index !== 'new'"
+        type="button"
+        class="button add-button add-value-button"
+        data-testid="panel-add-value"
+        @click="startAdd"
+      >
+        + Add value
+      </button>
       <template v-if="queryOnlyValues.length">
         <h4 class="section-title">From the query</h4>
         <p class="section-hint">
@@ -299,18 +580,6 @@ const save = () => {
           </tbody>
         </table>
       </template>
-      <div class="panel-actions">
-        <button
-          type="button"
-          class="button button-primary"
-          data-testid="panel-edit"
-          :disabled="!valuesReady"
-          :title="valuesReady ? undefined : 'Waiting for the stored values'"
-          @click="emit('edit')"
-        >
-          Edit values
-        </button>
-      </div>
     </template>
 
     <form v-else class="edit-form" @submit.prevent="save">
@@ -441,15 +710,21 @@ const save = () => {
 .panel-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 0.25rem;
   h3 {
     font-weight: bold;
+    margin-right: auto;
   }
 }
-.close-button,
+.header-button,
 .remove-button {
   padding: 0 0.5rem;
   line-height: 1.5rem;
+}
+.edit-button {
+  display: flex;
+  align-items: center;
+  height: 1.5rem;
 }
 .endpoints {
   color: var(--color-text-muted);
@@ -472,6 +747,43 @@ const save = () => {
     color: var(--color-text-muted);
     font-size: 0.85rem;
   }
+  .actions-col {
+    width: 1.5rem;
+    padding: 0;
+  }
+  &.editable {
+    .key[title],
+    .value[title] {
+      cursor: text;
+      &:hover {
+        background-color: var(--color-background-soft);
+      }
+    }
+  }
+  .editing {
+    padding: 0.15rem 0.25rem;
+  }
+  // Only on the hovered row, so the table stays calm.
+  .remove-value-button {
+    visibility: hidden;
+    padding: 0 0.3rem;
+    line-height: 1.2rem;
+    border: none;
+    background: none;
+    color: var(--color-text-muted);
+    &:hover {
+      color: var(--error-color);
+    }
+  }
+  tr:hover .remove-value-button,
+  .remove-value-button:focus-visible {
+    visibility: visible;
+  }
+}
+.new-value {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.25rem;
 }
 .empty {
   color: var(--color-text-muted);
@@ -528,6 +840,5 @@ const save = () => {
   display: flex;
   justify-content: flex-end;
   gap: 0.5rem;
-  margin-top: auto;
 }
 </style>

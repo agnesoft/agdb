@@ -1,4 +1,12 @@
-import { describe, it, expect, vi, beforeEach, afterAll } from "vitest";
+import {
+  afterEach,
+  describe,
+  it,
+  expect,
+  vi,
+  beforeEach,
+  afterAll,
+} from "vitest";
 import { mount } from "@vue/test-utils";
 import QueryGraph from "./QueryGraph.vue";
 import ForceGraph3D from "3d-force-graph";
@@ -24,6 +32,8 @@ vi.mock("../../composables/queryStore", () => ({
 
 vi.mock("../../utils/graphDataUtils", () => ({
   convertElementsToGraphData: vi.fn(() => ({ nodes: [], links: [] })),
+  dedupeResultElements: vi.fn(() => []),
+  dbValueToString: vi.fn(String),
   toDisplayValues: vi.fn(() => []),
   mergeGraphData: vi.fn(
     (query: { nodes: unknown[]; links: unknown[] }) => query,
@@ -42,6 +52,7 @@ vi.mock("3d-force-graph", () => {
     "nodeColor",
     "nodeLabel",
     "linkOpacity",
+    "linkMaterial",
     "linkColor",
     "linkWidth",
     "linkCurvature",
@@ -64,9 +75,12 @@ vi.mock("3d-force-graph", () => {
     "width",
     "d3ReheatSimulation",
     "zoomToFit",
+    "emitParticle",
   ];
   const instance: Record<string, ReturnType<typeof vi.fn>> = {
     _destructor: vi.fn(),
+    // Projects graph coordinates 1:1 to the screen.
+    graph2ScreenCoords: vi.fn((x: number, y: number) => ({ x, y })),
   };
   for (const method of METHODS) {
     instance[method] = vi.fn().mockReturnValue(instance);
@@ -354,6 +368,14 @@ describe("QueryGraph", () => {
       graphData: ref({ nodes: [node], links: [link] }),
       selectedId: ref<number>(),
       pendingEdgeSourceId: ref<number>(),
+      pinnedIds: ref<number[]>([]),
+      pinnedElements: ref<object[]>([]),
+      lastAddedEdgeId: ref<number>(),
+      togglePin: vi.fn(),
+      unpin: vi.fn(),
+      paletteSize: ref(5),
+      colorResolver: ref({}),
+      colorSlotOf: vi.fn((): number | undefined => undefined),
       clickNode: vi.fn(),
       openMenu: vi.fn(),
       closeMenu: vi.fn(),
@@ -386,7 +408,9 @@ describe("QueryGraph", () => {
       const event = { clientX: 5, clientY: 6, preventDefault: vi.fn() };
 
       handler("onNodeClick")(node);
-      expect(actions.clickNode).toHaveBeenCalledWith(node);
+      expect(actions.clickNode).toHaveBeenCalledWith(node, { pin: false });
+      handler("onNodeClick")(node, { shiftKey: true });
+      expect(actions.clickNode).toHaveBeenCalledWith(node, { pin: true });
 
       handler("onNodeRightClick")(node, event);
       expect(event.preventDefault).toHaveBeenCalled();
@@ -395,6 +419,9 @@ describe("QueryGraph", () => {
       handler("onLinkClick")(link);
       expect(actions.closeMenu).toHaveBeenCalled();
       expect(actions.viewElement).toHaveBeenCalledWith(link);
+      handler("onLinkClick")(link, { shiftKey: true });
+      expect(actions.togglePin).toHaveBeenCalledWith(link);
+      expect(actions.viewElement).toHaveBeenCalledTimes(1);
 
       handler("onLinkRightClick")(link, { clientX: 1, clientY: 2 });
       expect(actions.openMenu).toHaveBeenCalledWith(link, 1, 2);
@@ -443,6 +470,235 @@ describe("QueryGraph", () => {
       await nextTick();
       expect(instance?.linkColor.mock.calls.length).toBe(before + 2);
       wrapper.unmount();
+    });
+
+    describe("overlay", () => {
+      let frames: FrameRequestCallback[] = [];
+      const runFrame = async () => {
+        const pending = frames;
+        frames = [];
+        for (const cb of pending) cb(0);
+        await nextTick();
+      };
+      beforeEach(() => {
+        frames = [];
+        vi.stubGlobal("requestAnimationFrame", (cb: FrameRequestCallback) => {
+          frames.push(cb);
+          return frames.length;
+        });
+        vi.stubGlobal("cancelAnimationFrame", vi.fn());
+      });
+      afterEach(() => vi.unstubAllGlobals());
+
+      // jsdom has no PointerEvent; a MouseEvent carries the same fields.
+      const pointer = (type: string, init: MouseEventInit = {}) =>
+        new MouseEvent(type, { bubbles: true, ...init });
+
+      const laidOut = () => {
+        const a = { ...node, x: 10, y: 20, z: 0 };
+        const b = { ...node, id: 2, x: 50, y: 60, z: 0 };
+        // As the library leaves them: endpoints replaced by node objects.
+        const edge = { ...link, id: -3, source: a, target: b };
+        const actions = makeActions();
+        actions.graphData.value = {
+          nodes: [a, b],
+          links: [edge as unknown as typeof link],
+        };
+        return { actions, a, b, edge };
+      };
+
+      it("shows pinned cards next to their element and follows it", async () => {
+        const { actions, a, edge } = laidOut();
+        const { wrapper } = mountWithActions(actions);
+        actions.pinnedIds.value = [1, -3];
+        actions.pinnedElements.value = [
+          { ...a, alias: "alice" },
+          { ...edge, values: [{ key: "w", value: "5" }] },
+        ];
+        await nextTick();
+        await runFrame();
+        const cards = wrapper.findAll("[data-testid=pinned-card]");
+        expect(cards).toHaveLength(2);
+        expect(cards[0]?.text()).toContain("Node 1");
+        expect(cards[0]?.text()).toContain("alice");
+        expect(cards[0]?.attributes("style")).toContain("translate(28px, 2px)");
+        // An edge's card sits at its middle.
+        expect(cards[1]?.attributes("style")).toContain(
+          "translate(48px, 22px)",
+        );
+        expect(cards[1]?.text()).toContain("1 → 2");
+        expect(wrapper.findAll(".leader-line")).toHaveLength(2);
+
+        a.x = 100;
+        await runFrame();
+        expect(
+          wrapper.find("[data-testid=pinned-card]").attributes("style"),
+        ).toContain("translate(118px, 2px)");
+
+        await wrapper.find("[data-testid=pinned-card-unpin]").trigger("click");
+        expect(actions.unpin).toHaveBeenCalledWith(1);
+        await wrapper.find(".card-header").trigger("dblclick");
+        expect(actions.viewElement).toHaveBeenCalled();
+        wrapper.unmount();
+      });
+
+      it("moves a card by dragging its header", async () => {
+        const { actions, a } = laidOut();
+        const { wrapper } = mountWithActions(actions);
+        actions.pinnedIds.value = [1];
+        actions.pinnedElements.value = [a];
+        await nextTick();
+        await runFrame();
+        const header = wrapper.find(".card-header");
+        header.element.dispatchEvent(
+          pointer("pointerdown", { button: 0, clientX: 0, clientY: 0 }),
+        );
+        window.dispatchEvent(
+          pointer("pointermove", { clientX: 30, clientY: 40 }),
+        );
+        window.dispatchEvent(new Event("pointerup"));
+        // Further moves no longer drag it.
+        window.dispatchEvent(
+          pointer("pointermove", { clientX: 99, clientY: 99 }),
+        );
+        await nextTick();
+        expect(
+          wrapper.find("[data-testid=pinned-card]").attributes("style"),
+        ).toContain("translate(58px, 42px)");
+        // Unpinned and pinned again: back next to its element.
+        actions.pinnedIds.value = [];
+        await nextTick();
+        actions.pinnedIds.value = [1];
+        await nextTick();
+        await runFrame();
+        expect(
+          wrapper.find("[data-testid=pinned-card]").attributes("style"),
+        ).toContain("translate(28px, 2px)");
+        wrapper.unmount();
+      });
+
+      it("ends a drag on cancel and on unmount", async () => {
+        const { actions, a } = laidOut();
+        const { wrapper } = mountWithActions(actions);
+        actions.pinnedIds.value = [1];
+        actions.pinnedElements.value = [a];
+        await nextTick();
+        await runFrame();
+        const header = wrapper.find(".card-header");
+        const down = () =>
+          header.element.dispatchEvent(
+            pointer("pointerdown", { button: 0, clientX: 0, clientY: 0 }),
+          );
+        down();
+        window.dispatchEvent(new Event("pointercancel"));
+        window.dispatchEvent(
+          pointer("pointermove", { clientX: 30, clientY: 40 }),
+        );
+        await nextTick();
+        expect(
+          wrapper.find("[data-testid=pinned-card]").attributes("style"),
+        ).toContain("translate(28px, 2px)");
+        down();
+        // A second drag replaces the first.
+        down();
+        const remove = vi.spyOn(window, "removeEventListener");
+        wrapper.unmount();
+        expect(remove).toHaveBeenCalledWith(
+          "pointermove",
+          expect.any(Function),
+        );
+        remove.mockRestore();
+      });
+
+      it("hides cards of elements without a position yet", async () => {
+        const actions = makeActions();
+        const { wrapper } = mountWithActions(actions);
+        actions.pinnedIds.value = [1, -2, 9];
+        actions.pinnedElements.value = [node];
+        await nextTick();
+        await runFrame();
+        expect(wrapper.find("[data-testid=pinned-card]").exists()).toBe(false);
+        // Nothing attached any more: tracking stops.
+        actions.pinnedIds.value = [];
+        await nextTick();
+        await runFrame();
+        expect(frames).toHaveLength(0);
+        wrapper.unmount();
+      });
+
+      it("draws a line from the add-edge source to the pointer, snapping to a target", async () => {
+        const { actions, b } = laidOut();
+        const { wrapper, handler } = mountWithActions(actions);
+        actions.pendingEdgeSourceId.value = 1;
+        await nextTick();
+        await runFrame();
+        // No pointer yet.
+        expect(wrapper.find("[data-testid=graph-rubber-band]").exists()).toBe(
+          false,
+        );
+        wrapper
+          .find(".query-graph-wrapper")
+          .element.dispatchEvent(
+            pointer("pointermove", { clientX: 70, clientY: 80 }),
+          );
+        await runFrame();
+        const line = wrapper.find("[data-testid=graph-rubber-band]");
+        expect(line.attributes()).toMatchObject({
+          x1: "10",
+          y1: "20",
+          x2: "70",
+          y2: "80",
+        });
+        expect(line.classes()).not.toContain("snapped");
+        expect(wrapper.find(".query-graph").classes()).toContain("adding-edge");
+
+        handler("onNodeHover")(b);
+        await runFrame();
+        expect(
+          wrapper.find("[data-testid=graph-rubber-band]").attributes(),
+        ).toMatchObject({ x2: "50", y2: "60" });
+        expect(
+          wrapper.find("[data-testid=graph-rubber-band]").classes(),
+        ).toContain("snapped");
+
+        handler("onNodeHover")(null);
+        wrapper
+          .find(".query-graph-wrapper")
+          .element.dispatchEvent(pointer("pointerleave"));
+        await runFrame();
+        expect(wrapper.find("[data-testid=graph-rubber-band]").exists()).toBe(
+          false,
+        );
+        wrapper.unmount();
+      });
+
+      it("animates a new edge once it is in the graph", async () => {
+        vi.useFakeTimers();
+        const { actions, edge, a, b } = laidOut();
+        const { wrapper, instance } = mountWithActions(actions);
+        // Created, but the refreshed data is not there yet.
+        actions.lastAddedEdgeId.value = -7;
+        await nextTick();
+        expect(instance?.emitParticle).not.toHaveBeenCalled();
+        const created = { ...edge, id: -7 };
+        actions.graphData.value = {
+          nodes: [a, b],
+          links: [created as unknown as typeof link],
+        };
+        await nextTick();
+        vi.runAllTimers();
+        expect(instance?.emitParticle).toHaveBeenCalledTimes(3);
+
+        // An edge already shown is animated right away.
+        actions.lastAddedEdgeId.value = undefined;
+        await nextTick();
+        actions.lastAddedEdgeId.value = -7;
+        await nextTick();
+        vi.runAllTimers();
+        expect(instance?.emitParticle).toHaveBeenCalledTimes(6);
+        vi.useRealTimers();
+        wrapper.unmount();
+      });
     });
 
     it("passes tooltips for nodes and links", () => {

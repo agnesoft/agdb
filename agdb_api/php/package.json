@@ -7,9 +7,10 @@
     "prettier": "catalog:"
   },
   "scripts": {
-    "format": "prettier --plugin @prettier/plugin-php --write src tests",
-    "format:check": "prettier --plugin @prettier/plugin-php --check src tests",
-    "lint:check": "composer -d ../.. install && php ../../vendor/bin/phpstan analyse --memory-limit=1G --level=9 -v src tests",
+    "format": "prettier --plugin @prettier/plugin-php --write src tests \"examples/**/*.php\"",
+    "format:check": "prettier --plugin @prettier/plugin-php --check src tests \"examples/**/*.php\"",
+    "lint:check": "composer -d ../.. install && php ../../vendor/bin/phpstan analyse --memory-limit=1G --level=9 -v src tests \"examples/**/*.php\"",
+    "examples": "composer -d ../.. install && node ../../agdb_server/test_server.mjs php -d include_path=../.. examples/server_client/src/index.php",
     "openapi": "node -e \"for (const d of ['lib', 'docs', '.openapi-generator']) require('fs').rmSync(d, { recursive: true, force: true })\" && pnpm exec openapi-generator-cli generate -i ../../agdb_server/openapi.json -g php -o ./ -c openapi_generator.json && composer -d ../.. dump-autoload -o",
     "test_queries": "node query_test_generator.js && prettier --plugin @prettier/plugin-php --write tests/QueryTest.php",
     "regenerate": "pnpm run openapi && pnpm run test_queries",

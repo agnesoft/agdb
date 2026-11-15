@@ -58,6 +58,7 @@ For code in `agplatform`, `agbench` and `agtestcheck`:
 - Format: `pnpm run format --filter <package>`
 - Test: `pnpm run test --filter <package>`
 - Run functional tests: `pnpm run test:functional --filter <package>`
+- Run examples against a fresh server: `pnpm run examples --filter <package>` (`@agnesoft/agdb_api`, `agdb_api_php`)
 - Lint: `pnpm run lint --filter <package>`
 
 ## PHP
@@ -95,7 +96,6 @@ The packages are curated lists of main packages. They contain exact names of pac
 - agdb_studio
 - @agnesoft/agdb_api
 - agdb_web
-- examples_server_client
 
 # Core concepts
 

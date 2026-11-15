@@ -24,8 +24,5 @@
     ],
     "require": {
         "agnesoft/agdb_api": "*"
-    },
-    "require-dev": {
-        "phpstan/phpstan": "^1.11"
     }
 }

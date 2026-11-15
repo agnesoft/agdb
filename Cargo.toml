@@ -27,9 +27,11 @@ readme = "README.md"
 
 [workspace.dependencies]
 # local
+agbench = { version = "0.16.2", path = "agbench" }
 agdb = { version = "0.16.2", path = "agdb" }
 agdb_api = { version = "0.16.2", path = "agdb_api" }
 agdb_derive = { version = "0.16.2", path = "agdb_derive" }
+agplatform = { version = "0.16.2", path = "agplatform" }
 
 # external
 anyhow = "1"
@@ -40,6 +42,8 @@ axum-server = "0.9"
 bytes = "1"
 crc = "3"
 futures = "0.3"
+http = "1"
+http-body = "1"
 http-body-util = "0.1"
 include_dir = "0.7"
 num-format = "0.4"

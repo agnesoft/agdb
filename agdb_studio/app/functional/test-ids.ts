@@ -39,6 +39,7 @@ export const testIds = createTestIds({
 
   // Query results
   RESULTS_CHIP: "results-chip",
+  RESULTS_UNIQUE_CHIP: "results-unique-chip",
   RESULT_SCALAR: "result-scalar",
   RESULTS_TABLE: "results-table",
   RESULTS_TABLE_ROW: "results-table-row",
@@ -49,6 +50,8 @@ export const testIds = createTestIds({
   VIEW_JSON: "view-json",
   ELEMENT_DETAILS_PANEL: "element-details-panel",
   PANEL_VALUE_ROW: "panel-value-row",
+  PANEL_VALUE_CELL: "panel-value-cell",
+  INLINE_INPUT: "inline-input",
   PANEL_VALUE_INPUT: "panel-value-input",
   PANEL_SAVE: "panel-save",
 

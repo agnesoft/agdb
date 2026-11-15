@@ -147,7 +147,6 @@ defineExpose({
   text-align: left;
   padding: 0.2rem 0.3rem;
   font-size: 0.75rem;
-  font-family: inherit;
   cursor: pointer;
 }
 

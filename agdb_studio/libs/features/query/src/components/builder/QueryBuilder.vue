@@ -1,11 +1,28 @@
 <script lang="ts" setup>
-import { computed, inject, ref, type Ref } from "vue";
-import { AkChevronDownSmall, AkChevronUpSmall } from "@kalimahapps/vue-icons";
+import {
+  computed,
+  inject,
+  onBeforeUnmount,
+  onMounted,
+  ref,
+  watch,
+  type Ref,
+} from "vue";
+import {
+  AkChevronDownSmall,
+  AkChevronUpSmall,
+  LuCopy,
+  LuEraser,
+} from "@kalimahapps/vue-icons";
+import useModal from "@agdb-studio/common/src/composables/modal/modal";
+import { convertArrayOfStringsToContent } from "@agdb-studio/common/src/composables/content/utils";
 import type { TAB } from "../../composables/types";
 import { useQueryStore } from "../../composables/queryStore";
 import { useQueryExecution } from "../../composables/queryExecution";
 import QueryRow from "./QueryRow.vue";
 import { getQueryStepLabel } from "../../mock/queryApiMock";
+import { copyRows } from "../../utils/queryRowClipboard";
+import { notifyCopyResult } from "../../utils/rowCopyNotification";
 
 const queryStore = useQueryStore();
 
@@ -122,6 +139,141 @@ const onDragEnd = (): void => {
   dropTarget.value = undefined;
 };
 
+// Multi-row selection, by row id so it survives reordering.
+const selectedIds = ref<string[]>([]);
+const anchorId = ref<string>();
+const selectedRows = computed(() =>
+  rows.value.filter((row) => selectedIds.value.includes(row.id)),
+);
+// Rows removed elsewhere (e.g. by clearing) drop out of the selection.
+watch(rows, (current) => {
+  const ids = new Set(current.map((row) => row.id));
+  selectedIds.value = selectedIds.value.filter((id) => ids.has(id));
+});
+watch(
+  () => tab?.value,
+  () => clearSelection(),
+);
+
+const clearSelection = (): void => {
+  selectedIds.value = [];
+  anchorId.value = undefined;
+};
+
+const selectRow = (index: number, event: MouseEvent): void => {
+  const row = rows.value[index];
+  /* v8 ignore if -- @preserve */
+  if (!row) return;
+  const anchorIndex = rows.value.findIndex((r) => r.id === anchorId.value);
+  if (event.shiftKey && anchorIndex >= 0) {
+    const [from, to] = [anchorIndex, index].sort((a, b) => a - b);
+    selectedIds.value = rows.value.slice(from, to + 1).map((r) => r.id);
+    return;
+  }
+  if (event.ctrlKey || event.metaKey) {
+    selectedIds.value = selectedIds.value.includes(row.id)
+      ? selectedIds.value.filter((id) => id !== row.id)
+      : [...selectedIds.value, row.id];
+  } else {
+    selectedIds.value =
+      selectedIds.value.length === 1 && selectedIds.value[0] === row.id
+        ? []
+        : [row.id];
+  }
+  anchorId.value = row.id;
+};
+
+const copySelection = async (): Promise<void> => {
+  const toCopy = selectedRows.value.filter((row) => row.steps.length);
+  /* v8 ignore if -- @preserve */
+  if (!toCopy.length) return;
+  notifyCopyResult(
+    await copyRows(toCopy.map((row) => row.steps)),
+    toCopy.length,
+  );
+};
+
+const copyAll = async (): Promise<void> => {
+  notifyCopyResult(
+    await copyRows(nonEmptyRows.value.map((row) => row.steps)),
+    nonEmptyRows.value.length,
+  );
+};
+
+const removeSelection = (): void => {
+  /* v8 ignore if -- @preserve */
+  if (!queryId?.value) return;
+  queryStore.deleteQueryRows(
+    queryId.value,
+    tab?.value ?? "exec",
+    selectedIds.value,
+  );
+  clearSelection();
+};
+
+const { openModal } = useModal();
+// A single row has its own clear button.
+const canClear = computed(() => rows.value.length > 1);
+const clearAll = (): void => {
+  openModal({
+    header: "Clear all queries",
+    content: convertArrayOfStringsToContent(
+      [
+        `Are you sure you want to clear all queries in ${tab?.value ?? "exec"}?`,
+      ],
+      { emphasizedWords: ["clear"] },
+    ),
+    onConfirm: () => {
+      /* v8 ignore if -- @preserve */
+      if (!queryId?.value) return false;
+      // A run started while the dialog was open keeps its rows.
+      if (isRunning.value) return true;
+      queryStore.setQueryRows(queryId.value, tab?.value ?? "exec", []);
+      clearSelection();
+      return true;
+    },
+  });
+};
+
+const builderElement = ref<HTMLElement>();
+const isTextField = (target: EventTarget | null): boolean =>
+  target instanceof HTMLInputElement ||
+  target instanceof HTMLTextAreaElement ||
+  (target instanceof HTMLElement && target.isContentEditable);
+
+/** Ctrl/Cmd+C copies, Delete removes and Esc clears the row selection. */
+const onKeydown = (event: KeyboardEvent): void => {
+  if (!selectedIds.value.length || isTextField(event.target)) return;
+  if (event.key === "Escape") {
+    clearSelection();
+  } else if (
+    (event.ctrlKey || event.metaKey) &&
+    event.key.toLowerCase() === "c" &&
+    !window.getSelection()?.toString()
+  ) {
+    event.preventDefault();
+    void copySelection();
+  } else if (event.key === "Delete" && !isRunning.value) {
+    event.preventDefault();
+    removeSelection();
+  }
+};
+
+// A click anywhere outside the builder ends the selection.
+const onPointerDown = (event: PointerEvent): void => {
+  if (
+    selectedIds.value.length &&
+    event.target instanceof Node &&
+    !builderElement.value?.contains(event.target)
+  ) {
+    clearSelection();
+  }
+};
+onMounted(() => document.addEventListener("pointerdown", onPointerDown));
+onBeforeUnmount(() =>
+  document.removeEventListener("pointerdown", onPointerDown),
+);
+
 const addRow = (): void => {
   /* v8 ignore if -- @preserve */
   if (!queryId?.value) return;
@@ -130,7 +282,7 @@ const addRow = (): void => {
 </script>
 
 <template>
-  <div class="query-builder">
+  <div ref="builderElement" class="query-builder" @keydown="onKeydown">
     <div class="query-rows" :class="[tab]" @dragleave="onDragLeave">
       <button
         v-if="rowsHidden"
@@ -156,12 +308,17 @@ const addRow = (): void => {
           :can-remove="rows.length > 1"
           :can-add="index === rows.length - 1"
           :is-running="isRunning"
+          :selected="selectedIds.includes(row.id)"
+          :selection-count="selectedIds.length"
           :class="{
             dragging: dragIndex === index,
             'drop-before': dropTarget?.index === index && !dropTarget.after,
             'drop-after': dropTarget?.index === index && dropTarget.after,
           }"
           @add-row="addRow"
+          @select="(event: MouseEvent) => selectRow(index, event)"
+          @copy-selection="copySelection"
+          @remove-selection="removeSelection"
           @move="(toIndex: number) => moveRow(index, toIndex)"
           @drag-start="dragIndex = index"
           @dragover="(event: DragEvent) => onDragOver(event, index)"
@@ -180,16 +337,43 @@ const addRow = (): void => {
       >
         {{ runLabel }}
       </button>
-      <button
-        v-if="canHide"
-        type="button"
-        class="button button-transparent toggle-rows-button"
-        :aria-expanded="!rowsHidden"
-        @click="setRowsHidden(!rowsHidden)"
+      <div
+        v-if="canHide || nonEmptyRows.length > 1 || canClear"
+        class="builder-secondary"
       >
-        <component :is="rowsHidden ? AkChevronDownSmall : AkChevronUpSmall" />
-        {{ rowsHidden ? "Show" : "Hide" }} queries
-      </button>
+        <button
+          v-if="canHide"
+          type="button"
+          class="button button-transparent toggle-rows-button"
+          :aria-expanded="!rowsHidden"
+          @click="setRowsHidden(!rowsHidden)"
+        >
+          <component :is="rowsHidden ? AkChevronDownSmall : AkChevronUpSmall" />
+          {{ rowsHidden ? "Show" : "Hide" }} queries
+        </button>
+        <button
+          v-if="nonEmptyRows.length > 1"
+          type="button"
+          class="button button-transparent builder-action-button copy-all-button"
+          data-testid="query-copy-all"
+          title="Copy all queries as Rust code, one per line"
+          aria-label="Copy all queries"
+          @click="copyAll"
+        >
+          <LuCopy />
+        </button>
+        <button
+          v-if="canClear"
+          type="button"
+          class="button button-transparent builder-action-button clear-all-button"
+          data-testid="query-clear-all"
+          title="Remove all queries in this tab"
+          :disabled="isRunning"
+          @click="clearAll"
+        >
+          <LuEraser />
+        </button>
+      </div>
     </div>
   </div>
 </template>
@@ -212,7 +396,16 @@ const addRow = (): void => {
   // Matches the height of a single row (row min-height + the rows' border) and stays there as rows are added.
   height: calc(2rem + 2px);
 }
-.toggle-rows-button {
+// The toggle, then small icon buttons on the same line.
+.builder-secondary {
+  display: flex;
+  align-items: center;
+  .toggle-rows-button {
+    margin-right: auto;
+  }
+}
+.toggle-rows-button,
+.builder-action-button {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -220,9 +413,12 @@ const addRow = (): void => {
   font-size: 0.8rem;
   padding: 0.1rem 0.3rem;
   opacity: 0.7;
-  &:hover {
+  &:hover:not(:disabled) {
     opacity: 1;
   }
+}
+.clear-all-button:hover:not(:disabled) {
+  color: var(--error-color);
 }
 .hidden-summary {
   display: flex;

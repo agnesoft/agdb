@@ -11,6 +11,10 @@ export type GraphTheme = {
   contextEdge: string;
   hover: string;
   selected: string;
+  /** Nodes no colour applies to, while colours are in use. */
+  uncolored: string;
+  /** Categorical colours for colour rules, in fixed order. */
+  palette: string[];
 };
 
 export const GRAPH_THEME_FALLBACK: GraphTheme = {
@@ -22,6 +26,8 @@ export const GRAPH_THEME_FALLBACK: GraphTheme = {
   contextEdge: "#c8c8c8",
   hover: "#ffa02c",
   selected: "#007bff",
+  uncolored: "#b5b5b5",
+  palette: ["#17890b", "#2dbad8", "#eda100", "#9752fe", "#f92240"],
 };
 
 const THEME_VARS = [
@@ -33,16 +39,24 @@ const THEME_VARS = [
   ["contextEdge", "--graph-context-edge-color"],
   ["hover", "--graph-hover-color"],
   ["selected", "--graph-selected-color"],
+  ["uncolored", "--graph-uncolored-color"],
 ] as const satisfies readonly (readonly [keyof GraphTheme, string])[];
 
 /** Reads the graph theme from CSS custom properties on `el`. */
 export const readGraphTheme = (el: Element): GraphTheme => {
   const style = getComputedStyle(el);
-  const theme = { ...GRAPH_THEME_FALLBACK };
+  const theme = {
+    ...GRAPH_THEME_FALLBACK,
+    palette: [...GRAPH_THEME_FALLBACK.palette],
+  };
   for (const [key, cssVar] of THEME_VARS) {
     const value = style.getPropertyValue(cssVar).trim();
     if (value) theme[key] = value;
   }
+  theme.palette = theme.palette.map(
+    (fallback, i) =>
+      style.getPropertyValue(`--graph-palette-${i + 1}`).trim() || fallback,
+  );
   return theme;
 };
 
@@ -126,18 +140,31 @@ export const withAlpha = (color: string, alpha: number): string => {
 
 const DIM_ALPHA = 0.25;
 
+/**
+ * `custom` replaces the default colour, e.g. from a colour rule; it is kept
+ * on hover, as the hover colour could be mistaken for a palette colour.
+ * While colours are in use (`colored`), nodes without one are neutral.
+ */
 export const getNodeColor = (
   node: GraphNode,
   state: HighlightState,
   theme: GraphTheme,
+  custom?: string,
+  colored = false,
 ): string => {
   if (node.id === state.selectedId || node.id === state.pendingSourceId) {
     return theme.selected;
   }
   if (node.id === state.hoveredNodeId) {
-    return theme.hover;
+    return custom ?? theme.hover;
   }
-  const base = node.source === "context" ? theme.contextNode : theme.node;
+  const base =
+    custom ??
+    (colored
+      ? theme.uncolored
+      : node.source === "context"
+        ? theme.contextNode
+        : theme.node);
   if (hasHover(state) && !state.highlightNodes.has(node.id)) {
     return withAlpha(base, DIM_ALPHA);
   }
@@ -148,15 +175,17 @@ export const getLinkColor = (
   link: GraphLink,
   state: HighlightState,
   theme: GraphTheme,
+  custom?: string,
 ): string => {
   if (link.id === state.selectedId) {
     return theme.selected;
   }
   if (state.highlightLinks.has(link.id)) {
-    return theme.edgeAccent;
+    return custom ?? theme.edgeAccent;
   }
   const base =
-    link.elementSource === "context" ? theme.contextEdge : theme.edge;
+    custom ??
+    (link.elementSource === "context" ? theme.contextEdge : theme.edge);
   if (hasHover(state)) {
     return withAlpha(base, DIM_ALPHA);
   }
@@ -252,10 +281,19 @@ const tooltipValues = (element: GraphElement): string => {
   return shown + more + loading;
 };
 
+const tooltipTitle = (kind: string, element: GraphElement): string =>
+  `<div class="graph-tooltip-title">${kind} ${element.id}${
+    element.alias
+      ? ` <span class="graph-tooltip-alias">${escapeHtml(element.alias)}</span>`
+      : ""
+  }</div>`;
+
+const TOOLTIP_HINT = '<div class="graph-tooltip-hint">Shift+click to pin</div>';
+
 /** HTML tooltip for a node. All user data is escaped. */
 export const nodeTooltip = (node: GraphNode): string =>
-  `<div class="graph-tooltip"><div class="graph-tooltip-title">Node ${node.id}</div>${tooltipValues(node)}</div>`;
+  `<div class="graph-tooltip">${tooltipTitle("Node", node)}${tooltipValues(node)}${TOOLTIP_HINT}</div>`;
 
 /** HTML tooltip for a link. All user data is escaped. */
 export const linkTooltip = (link: GraphLink): string =>
-  `<div class="graph-tooltip"><div class="graph-tooltip-title">Edge ${link.id}</div><div class="graph-tooltip-row">${linkEndpointId(link.source)} → ${linkEndpointId(link.target)}</div>${tooltipValues(link)}</div>`;
+  `<div class="graph-tooltip">${tooltipTitle("Edge", link)}<div class="graph-tooltip-row">${linkEndpointId(link.source)} → ${linkEndpointId(link.target)}</div>${tooltipValues(link)}${TOOLTIP_HINT}</div>`;

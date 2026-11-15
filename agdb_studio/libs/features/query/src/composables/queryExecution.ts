@@ -66,6 +66,8 @@ export const useQueryExecution = (
     tab: TAB | undefined;
     /** Copies of the rows' steps, so later edits don't change the run. */
     rows: QueryStep[][];
+    /** Ids of those rows, so results stay tied to the rows that produced them. */
+    rowIds: string[];
   };
 
   const snapshot = (): RunSnapshot => ({
@@ -78,6 +80,7 @@ export const useQueryExecution = (
           : {}),
       })),
     ),
+    rowIds: activeRows.value.map((row) => row.id),
   });
 
   /** Asks before running exec_mut rows that came from a link, showing them in full. */
@@ -107,7 +110,7 @@ export const useQueryExecution = (
   };
 
   const execute = async (id: string, run: RunSnapshot): Promise<void> => {
-    const { tab: runTab, rows } = run;
+    const { tab: runTab, rows, rowIds } = run;
     try {
       await queryStore.runQuery(id, async () => {
         // All rows are sent in one request, so the server runs them as a single transaction.
@@ -124,6 +127,7 @@ export const useQueryExecution = (
           queryStore.setQueryResults(id, runTab, results, {
             queries,
             stepTypes,
+            rowIds,
           });
         }
       });

@@ -107,3 +107,36 @@ describe("ResultsTable", () => {
     expect(wrapper.text()).toContain("No elements.");
   });
 });
+
+describe("ResultsTable deduplication and aliases", () => {
+  const node = (id: number, key: string, value: string) => ({
+    id,
+    from: 0,
+    to: 0,
+    values: [{ key: s(key), value: s(value) }],
+  });
+
+  it("shows an element several queries returned once, with its results", () => {
+    const wrapper = mount(ResultsTable, {
+      props: {
+        results: [
+          { result: 1, elements: [node(1, "name", "A")] },
+          {
+            result: 2,
+            elements: [node(1, "role", "admin"), node(2, "name", "B")],
+          },
+        ],
+        aliasOf: (id: number) => (id === 1 ? "alice" : undefined),
+      },
+    });
+    const headers = wrapper.findAll("th").map((th) => th.text());
+    expect(headers).toEqual(["", "id", "alias", "result", "name", "role"]);
+    const rows = wrapper
+      .findAll("[data-testid=results-table-row]")
+      .map((row) => row.findAll("td").map((td) => td.text()));
+    expect(rows).toEqual([
+      ["⋮", "1", "alice", "#0, #1", "A", "admin"],
+      ["⋮", "2", "", "#1", "B", ""],
+    ]);
+  });
+});

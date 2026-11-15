@@ -1,8 +1,19 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { mount } from "@vue/test-utils";
+import { flushPromises, mount } from "@vue/test-utils";
 import QueryBuilder from "./QueryBuilder.vue";
 import { useQueryStore } from "../../composables/queryStore";
 import { ref } from "vue";
+
+const { openModal, addNotification } = vi.hoisted(() => ({
+  openModal: vi.fn(),
+  addNotification: vi.fn(),
+}));
+vi.mock("@agdb-studio/common/src/composables/modal/modal", () => ({
+  default: () => ({ openModal }),
+}));
+vi.mock("@agdb-studio/notification/src/composables/notificationStore", () => ({
+  addNotification,
+}));
 
 describe("QueryBuilder", () => {
   let queryStore: ReturnType<typeof useQueryStore>;
@@ -479,5 +490,136 @@ describe("QueryBuilder", () => {
     // Leaving the rows clears it.
     await rows.trigger("dragleave", { relatedTarget: document.body });
     expect(target.classes()).not.toContain("drop-after");
+  });
+
+  describe("row selection", () => {
+    const withSteps = (queryId: string, rowCount: number) => {
+      const mounted = mountWithRows(queryId, rowCount);
+      for (const [i, row] of mounted.query.value.rows.exec.entries()) {
+        queryStore.addQueryStep(queryId, "exec", row.id, {
+          id: `s${i}`,
+          type: i % 2 ? "select" : "search",
+        });
+      }
+      return mounted;
+    };
+    const selected = (wrapper: ReturnType<typeof mount>) =>
+      wrapper.findAll(".query-input").map((el) => el.classes("selected"));
+
+    it("selects with click, ctrl+click and shift+click", async () => {
+      const { wrapper } = withSteps("sel", 4);
+      await wrapper.vm.$nextTick();
+      const index = () => wrapper.findAll(".row-index");
+      await index()[1]!.trigger("click");
+      expect(selected(wrapper)).toEqual([false, true, false, false]);
+      await index()[3]!.trigger("click", { shiftKey: true });
+      expect(selected(wrapper)).toEqual([false, true, true, true]);
+      await index()[2]!.trigger("click", { ctrlKey: true });
+      expect(selected(wrapper)).toEqual([false, true, false, true]);
+      await index()[0]!.trigger("click");
+      expect(selected(wrapper)).toEqual([true, false, false, false]);
+      // Clicking the only selected row again deselects it.
+      await index()[0]!.trigger("click");
+      expect(selected(wrapper)).toEqual([false, false, false, false]);
+    });
+
+    it("clears the selection with Esc and removes it with Delete", async () => {
+      const { wrapper, rowIds } = withSteps("sel-del", 3);
+      await wrapper.vm.$nextTick();
+      const [, second, third] = rowIds();
+      await wrapper.findAll(".row-index")[1]!.trigger("click");
+      await wrapper
+        .find(".query-builder")
+        .trigger("keydown", { key: "Escape" });
+      expect(selected(wrapper)).toEqual([false, false, false]);
+
+      await wrapper.findAll(".row-index")[1]!.trigger("click");
+      await wrapper
+        .findAll(".row-index")[2]!
+        .trigger("click", { shiftKey: true });
+      await wrapper
+        .find(".query-builder")
+        .trigger("keydown", { key: "Delete" });
+      expect(rowIds()).not.toContain(second);
+      expect(rowIds()).not.toContain(third);
+      expect(rowIds()).toHaveLength(1);
+    });
+
+    it("copies the selection with Ctrl+C and all rows with Copy all", async () => {
+      let clipboard = "";
+      vi.stubGlobal("navigator", {
+        clipboard: {
+          writeText: vi.fn(async (text: string) => {
+            clipboard = text;
+          }),
+          readText: vi.fn(async () => clipboard),
+        },
+      });
+      const { wrapper } = withSteps("sel-copy", 3);
+      await wrapper.vm.$nextTick();
+      await wrapper.findAll(".row-index")[0]!.trigger("click");
+      await wrapper
+        .findAll(".row-index")[1]!
+        .trigger("click", { ctrlKey: true });
+      await wrapper
+        .find(".query-builder")
+        .trigger("keydown", { key: "c", ctrlKey: true });
+      await flushPromises();
+      expect(clipboard.split("\n")).toEqual([
+        "QueryBuilder::search().query()",
+        "QueryBuilder::select().query()",
+      ]);
+      expect(addNotification).toHaveBeenCalledWith(
+        expect.objectContaining({ title: "2 queries copied" }),
+      );
+
+      await wrapper.find(".copy-all-button").trigger("click");
+      await flushPromises();
+      expect(clipboard.split("\n")).toHaveLength(3);
+      vi.unstubAllGlobals();
+    });
+
+    it("clears the selection when clicking outside the builder", async () => {
+      const { wrapper } = withSteps("sel-out", 2);
+      await wrapper.vm.$nextTick();
+      await wrapper.findAll(".row-index")[0]!.trigger("click");
+      document.body.dispatchEvent(new Event("pointerdown", { bubbles: true }));
+      await wrapper.vm.$nextTick();
+      expect(selected(wrapper)).toEqual([false, false]);
+
+      // The listener goes with the builder.
+      const remove = vi.spyOn(document, "removeEventListener");
+      wrapper.unmount();
+      expect(remove).toHaveBeenCalledWith("pointerdown", expect.any(Function));
+      remove.mockRestore();
+    });
+  });
+
+  it("clears all rows after confirming", async () => {
+    openModal.mockClear();
+    const { wrapper, rowIds } = mountWithRows("clear-all", 1);
+    // A single row, even with steps, is cleared with its own button.
+    queryStore.pasteQuerySteps("clear-all", "exec", rowIds()[0] ?? "", [
+      { type: "select" },
+    ]);
+    await wrapper.vm.$nextTick();
+    expect(wrapper.find(".clear-all-button").exists()).toBe(false);
+    queryStore.addQueryRow("clear-all", "exec");
+    await wrapper.vm.$nextTick();
+    await wrapper.find(".clear-all-button").trigger("click");
+    const modal = openModal.mock.calls[0]?.[0];
+    expect(modal.header).toBe("Clear all queries");
+    expect(modal.onConfirm()).toBe(true);
+    expect(rowIds()).toHaveLength(1);
+  });
+
+  it("keeps the rows when a run started while the dialog was open", async () => {
+    openModal.mockClear();
+    const { query, wrapper, rowIds } = mountWithRows("clear-running", 2);
+    await wrapper.find(".clear-all-button").trigger("click");
+    const modal = openModal.mock.calls[0]?.[0];
+    query.value.isRunning = true;
+    expect(modal.onConfirm()).toBe(true);
+    expect(rowIds()).toHaveLength(2);
   });
 });

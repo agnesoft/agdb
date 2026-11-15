@@ -10,7 +10,14 @@ import type {
   QueryType,
   TAB,
 } from "./types";
+import { TABS } from "./types";
 import { queryApiMock } from "../mock/queryApiMock";
+import {
+  emptyColorConfig,
+  type ColorConfig,
+  type ColorRule,
+  type PaletteSlot,
+} from "../utils/graphColorRules";
 
 type DbElement = Components.Schemas.DbElement;
 
@@ -71,6 +78,17 @@ const findRowByStepId = (
   );
 };
 
+/** Copies steps with new ids; each copy gets its own args. */
+const withNewStepIds = (steps: CopiedStep[]): QueryStep[] =>
+  steps.map(({ type, args }) => ({
+    id: `step-${crypto.randomUUID()}`,
+    type,
+    // Plain copies also work for reactive args.
+    ...(args
+      ? { args: args.map((entry) => entry.map((field) => ({ ...field }))) }
+      : {}),
+  }));
+
 const addQueryRow = (queryId: string, tab: TAB): QueryRow | undefined => {
   const query = getQuery(queryId);
   if (!query?.value) return undefined;
@@ -85,6 +103,17 @@ const deleteQueryRow = (queryId: string, tab: TAB, rowId: string) => {
   if (!query?.value) return;
   const remaining = query.value.rows[tab].filter((r) => r.id !== rowId);
   query.value.rows[tab] = remaining.length ? remaining : [createRow()];
+  pruneRowColors(query.value);
+};
+
+/** Removes several rows at once. The tab always keeps at least one (empty) row. */
+const deleteQueryRows = (queryId: string, tab: TAB, rowIds: string[]) => {
+  const query = getQuery(queryId);
+  if (!query?.value) return;
+  const ids = new Set(rowIds);
+  const remaining = query.value.rows[tab].filter((r) => !ids.has(r.id));
+  query.value.rows[tab] = remaining.length ? remaining : [createRow()];
+  pruneRowColors(query.value);
 };
 
 /** Moves a row to a new position. Out-of-range indexes are ignored. */
@@ -192,6 +221,32 @@ const pasteQuerySteps = (
 };
 
 /**
+ * Inserts several pasted rows (with new step ids) after the given row, or
+ * replaces it when it is empty. Returns the inserted rows.
+ */
+const insertQueryRows = (
+  queryId: string,
+  tab: TAB,
+  rowId: string,
+  rows: CopiedStep[][],
+): QueryRow[] => {
+  const query = getQuery(queryId);
+  if (!query?.value || !rows.length) return [];
+  const all = query.value.rows[tab];
+  const index = all.findIndex((r) => r.id === rowId);
+  const current = all[index];
+  if (!current) return [];
+  const created = rows.map((steps) => ({
+    ...createRow(),
+    steps: withNewStepIds(steps),
+  }));
+  const start = current.steps.length ? index + 1 : index;
+  all.splice(start, current.steps.length ? 0 : 1, ...created);
+  validateQuerySteps(queryId, tab);
+  return all.slice(start, start + created.length);
+};
+
+/**
  * Replaces all rows of a tab (e.g. when restoring a saved view). Steps get
  * new ids; the tab always keeps at least one (empty) row.
  */
@@ -200,15 +255,10 @@ const setQueryRows = (queryId: string, tab: TAB, rows: CopiedStep[][]) => {
   if (!query?.value) return;
   const created = rows.map((steps) => ({
     ...createRow(),
-    steps: steps.map(({ type, args }) => ({
-      id: `step-${crypto.randomUUID()}`,
-      type,
-      ...(args
-        ? { args: args.map((entry) => entry.map((field) => ({ ...field }))) }
-        : {}),
-    })),
+    steps: withNewStepIds(steps),
   }));
   query.value.rows[tab] = created.length ? created : [createRow()];
+  pruneRowColors(query.value);
   validateQuerySteps(queryId, tab);
 };
 
@@ -216,6 +266,65 @@ const setQueryRows = (queryId: string, tab: TAB, rows: CopiedStep[][]) => {
 const setUnconfirmedLinkedMutation = (queryId: string, value: boolean) => {
   const query = getQuery(queryId);
   if (query?.value) query.value.unconfirmedLinkedMutation = value;
+};
+
+/** The query's colouring, created on first change. */
+const colorsOf = (queryId: string): ColorConfig | undefined => {
+  const query = getQuery(queryId);
+  if (!query?.value) return undefined;
+  query.value.colors ??= emptyColorConfig();
+  return query.value.colors;
+};
+
+/** Colours the elements a row returned; `undefined` clears it. */
+const setRowColor = (
+  queryId: string,
+  rowId: string,
+  slot: PaletteSlot | undefined,
+) => {
+  const colors = colorsOf(queryId);
+  if (!colors) return;
+  if (slot === undefined) delete colors.rows[rowId];
+  else colors.rows[rowId] = slot;
+};
+
+/** Colours one element by hand; `undefined` clears it. */
+const setElementColor = (
+  queryId: string,
+  elementId: number,
+  slot: PaletteSlot | undefined,
+) => {
+  const colors = colorsOf(queryId);
+  if (!colors) return;
+  if (slot === undefined) delete colors.elements[elementId];
+  else colors.elements[elementId] = slot;
+};
+
+const setColorRules = (queryId: string, rules: ColorRule[]) => {
+  const colors = colorsOf(queryId);
+  if (colors) colors.rules = rules;
+};
+
+/**
+ * Drops the colours of rows that are gone: neither in the builder nor among
+ * the rows whose results are shown.
+ */
+const pruneRowColors = (query: Query) => {
+  const rows = query.colors?.rows;
+  if (!rows) return;
+  const live = new Set([
+    ...TABS.flatMap((tab) => query.rows[tab].map((row) => row.id)),
+    ...Object.values(query.executedRowIds ?? {}).flat(),
+  ]);
+  for (const rowId of Object.keys(rows)) {
+    if (!live.has(rowId)) delete rows[rowId];
+  }
+};
+
+/** Removes all colouring of the query. */
+const clearColors = (queryId: string) => {
+  const query = getQuery(queryId);
+  if (query?.value) query.value.colors = undefined;
 };
 
 const runQuery = async (
@@ -263,6 +372,8 @@ const setQueryResults = (
     queries?: Components.Schemas.QueryType[];
     /** The step types of those queries, so later builder edits don't change the view. */
     stepTypes?: QueryType[];
+    /** The ids of the rows those queries came from. */
+    rowIds?: string[];
   } = {},
 ) => {
   const query = getQuery(queryId);
@@ -278,6 +389,13 @@ const setQueryResults = (
         ...query.value.executedStepTypes,
         [tab]: options.stepTypes,
       };
+    }
+    if (options.rowIds) {
+      query.value.executedRowIds = {
+        ...query.value.executedRowIds,
+        [tab]: options.rowIds,
+      };
+      pruneRowColors(query.value);
     }
     const updated: QueryResults = {
       ...query.value.results,
@@ -332,13 +450,20 @@ const mapAllResults = (
  */
 const removeElementsFromResults = (queryId: string, ids: number[]) => {
   const removed = new Set(ids);
+  // Edges of a removed node go with it.
+  const gone = new Set(ids);
   mapAllResults(queryId, (elements) =>
-    elements.filter(
-      (el) =>
+    elements.filter((el) => {
+      const keep =
         !removed.has(el.id) &&
-        !(el.id < 0 && (removed.has(el.from) || removed.has(el.to))),
-    ),
+        !(el.id < 0 && (removed.has(el.from) || removed.has(el.to)));
+      if (!keep) gone.add(el.id);
+      return keep;
+    }),
   );
+  // The database reuses ids, so a later element must not inherit the colour.
+  const colors = getQuery(queryId)?.value?.colors;
+  if (colors) for (const id of gone) delete colors.elements[id];
 };
 
 /** Clears stored results. Intended for use when query steps are modified or the view is reset. */
@@ -355,11 +480,15 @@ const clearQueryResults = (queryId: string, tab?: TAB) => {
     const stepTypes = { ...query.value.executedStepTypes };
     delete stepTypes[tab];
     query.value.executedStepTypes = stepTypes;
+    const rowIds = { ...query.value.executedRowIds };
+    delete rowIds[tab];
+    query.value.executedRowIds = rowIds;
   } else {
     query.value.results = {};
     query.value.lastExecutedTab = undefined;
     query.value.executedQueries = undefined;
     query.value.executedStepTypes = undefined;
+    query.value.executedRowIds = undefined;
   }
 };
 
@@ -394,6 +523,7 @@ export const useQueryStore = () => {
     deleteQuery,
     addQueryRow,
     deleteQueryRow,
+    deleteQueryRows,
     moveQueryRow,
     addQueryStep,
     updateQueryStep,
@@ -405,11 +535,16 @@ export const useQueryStore = () => {
     clearQuerySteps,
     pasteQuerySteps,
     setQueryRows,
+    insertQueryRows,
     setUnconfirmedLinkedMutation,
     validateQuerySteps,
     setQueryResults,
     clearQueryResults,
     appendExpandedResults,
     removeElementsFromResults,
+    setRowColor,
+    setElementColor,
+    setColorRules,
+    clearColors,
   };
 };

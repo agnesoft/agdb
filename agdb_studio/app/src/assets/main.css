@@ -1,5 +1,6 @@
 @import "./base.css";
 
+body,
 #app {
   font-family: var(--base-font);
   font-weight: normal;

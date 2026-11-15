@@ -298,6 +298,7 @@ describe("useQueryExecution", () => {
     expect(setQueryResults).toHaveBeenCalledWith("q1", "exec", mockResults, {
       queries: [{ built: true }],
       stepTypes: ["select"],
+      rowIds: ["r1"],
     });
   });
 
@@ -312,6 +313,7 @@ describe("useQueryExecution", () => {
       {
         queries: [{ built: true }],
         stepTypes: ["select"],
+        rowIds: ["r1"],
       },
     );
   });
@@ -323,6 +325,7 @@ describe("useQueryExecution", () => {
     expect(setQueryResults).toHaveBeenCalledWith("q1", "context", mockResults, {
       queries: [{ built: true }],
       stepTypes: ["select"],
+      rowIds: ["r1"],
     });
   });
 
@@ -342,6 +345,7 @@ describe("useQueryExecution", () => {
     expect(setQueryResults).toHaveBeenCalledWith("q1", "exec", mockResults, {
       queries: [{ built: true }],
       stepTypes: ["select"],
+      rowIds: ["r1"],
     });
   });
 
@@ -403,7 +407,11 @@ describe("useQueryExecution", () => {
         "q1",
         "exec_mut",
         mockResults,
-        { queries: [{ built: true }], stepTypes: ["select", "select.aliases"] },
+        {
+          queries: [{ built: true }],
+          stepTypes: ["select", "select.aliases"],
+          rowIds: ["r1"],
+        },
       );
     });
 

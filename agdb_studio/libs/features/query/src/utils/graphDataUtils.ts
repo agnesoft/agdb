@@ -35,15 +35,24 @@ export const toDisplayValues = (
 export const convertElementsToGraphData = (
   elements: Components.Schemas.DbElement[],
   source: GraphElementSource,
+  resultIndexes?: Map<number, number[]>,
 ): GraphData => {
   const nodes: GraphNode[] = [];
   const links: GraphLink[] = [];
 
   for (const el of elements) {
     const values = toDisplayValues(el.values);
+    const indexes = resultIndexes?.get(el.id);
+    const origin = indexes ? { resultIndexes: indexes } : {};
 
     if (el.id > 0) {
-      nodes.push({ id: el.id, values, rawValues: el.values, source });
+      nodes.push({
+        id: el.id,
+        values,
+        rawValues: el.values,
+        source,
+        ...origin,
+      });
     } else if (el.id < 0) {
       links.push({
         id: el.id,
@@ -52,11 +61,52 @@ export const convertElementsToGraphData = (
         source: el.from,
         target: el.to,
         elementSource: source,
+        ...origin,
       });
     }
   }
 
   return { nodes, links };
+};
+
+export type DedupedElement = {
+  element: Components.Schemas.DbElement;
+  /** Indexes of the results (queries of the batch) that returned the element. */
+  resultIndexes: number[];
+};
+
+/**
+ * One entry per element id across all results, in order of first
+ * appearance. When several queries return the same element, their values
+ * are merged by key (later ones win), as each may select different keys.
+ */
+export const dedupeResultElements = (
+  results: Components.Schemas.QueryResult[],
+): DedupedElement[] => {
+  const byId = new Map<
+    number | string,
+    { element: Components.Schemas.DbElement; resultIndexes: number[] }
+  >();
+  for (const [resultIndex, result] of results.entries()) {
+    for (const [elementIndex, el] of result.elements.entries()) {
+      // Id 0 is not an element (e.g. a count or an index list): never merged.
+      const key = el.id === 0 ? `0:${resultIndex}:${elementIndex}` : el.id;
+      const seen = byId.get(key);
+      if (!seen) {
+        byId.set(key, { element: el, resultIndexes: [resultIndex] });
+        continue;
+      }
+      if (seen.resultIndexes.at(-1) !== resultIndex) {
+        seen.resultIndexes.push(resultIndex);
+      }
+      const values = new Map(
+        seen.element.values.map((kv) => [JSON.stringify(kv.key), kv]),
+      );
+      for (const kv of el.values) values.set(JSON.stringify(kv.key), kv);
+      seen.element = { ...seen.element, values: [...values.values()] };
+    }
+  }
+  return [...byId.values()];
 };
 
 /**

@@ -39,6 +39,11 @@
 [defaults.cargo]
 coverage = false
 
+[projects.agbench]
+os = ["linux", "windows"]
+coverage = true
+checks = ["format", "lint", "testcheck", "doc", "examples", "bench", "coverage"]
+
 [projects.agci]
 add_toolchains = ["node", "php"]
 dependencies = ["agdb_server/openapi.json", "agdb_server/test_queries.json"]
@@ -54,11 +59,39 @@ dependencies = ["agdb_server"]
 [projects.agdb_benchmark]
 dependencies = ["agdb_server"]
 
+[projects.agplatform]
+os = ["linux", "windows"]
+coverage = true
+checks = ["format", "lint", "testcheck", "doc", "examples", "bench", "coverage"]
+feature_combinations = [
+    "env",
+    "fs",
+    "interceptor ",
+    "process ",
+    "request ",
+    "fs,process ",
+    "fs,request ",
+    "process,request ",
+    "fs,process,request ",
+    "tokio ",
+    "process,tokio ",
+    "request,tokio ",
+    "fs,process,tokio ",
+    "fs,request,tokio ",
+    "process,request,tokio ",
+    "fs,process,request,tokio",
+]
+
 [projects.agdb_server]
 add_toolchains = ["node"]
 
 [projects."agdb_server/image"]
 dependencies = ["agdb_server", "agdb_studio"]
+
+[projects.agtestcheck]
+os = ["linux", "windows"]
+coverage = true
+checks = ["format", "lint", "testcheck", "doc", "examples", "bench", "coverage"]
 
 [projects."examples/app_db"]
 group = "examples"

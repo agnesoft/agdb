@@ -118,13 +118,46 @@ describe("QueryRow", () => {
       showIndex: true,
     }).find(".row-index");
     expect(numbered.text()).toBe("1");
-    expect(numbered.attributes("title")).toBe("Result index");
+    expect(numbered.attributes("title")).toMatch(
+      /^Result index\. Click to select/,
+    );
 
     const skipped = mountRow(row, { index: 2, showIndex: true }).find(
       ".row-index",
     );
     expect(skipped.text()).toBe("");
-    expect(skipped.attributes("title")).toBe("Empty queries are skipped");
+    expect(skipped.attributes("title")).toMatch(/^Empty queries are skipped/);
+  });
+
+  it("emits select from the index and hands copy/remove to the selection", async () => {
+    const row = {
+      id: "r1",
+      steps: [{ id: "s1", type: "select" as const }],
+    };
+    const wrapper = mount(QueryRow, {
+      props: {
+        row,
+        index: 0,
+        showIndex: true,
+        canMove: false,
+        canRemove: true,
+        canAdd: false,
+        isRunning: false,
+        selected: true,
+        selectionCount: 2,
+      },
+      global: { provide: { queryId: ref("q1"), activeTab: ref("exec") } },
+    });
+    expect(wrapper.classes()).toContain("selected");
+    await wrapper.find(".row-index").trigger("click");
+    expect(wrapper.emitted("select")).toHaveLength(1);
+    await wrapper.find(".copy-row-button").trigger("click");
+    expect(wrapper.emitted("copy-selection")).toHaveLength(1);
+    expect(wrapper.find(".copy-row-button").attributes("title")).toBe(
+      "Copy the 2 selected queries as Rust code",
+    );
+    await wrapper.find(".remove-row-button").trigger("click");
+    expect(wrapper.emitted("remove-selection")).toHaveLength(1);
   });
 
   it("emits add-row from the add button, disabled while running", async () => {
@@ -210,6 +243,56 @@ describe("QueryRow", () => {
     await wrapper.find(".row-steps").trigger("click");
     expect(document.activeElement).toBe(wrapper.find(".step-input").element);
     wrapper.unmount();
+  });
+
+  it("colours the elements of a row with steps, outside the context tab", async () => {
+    queryStore.addQuery({ id: "q1" });
+    const row = { id: "r1", steps: [{ id: "s1", type: "select" as const }] };
+    const wrapper = mountRow(row);
+    await wrapper.get("[data-testid=swatch-trigger]").trigger("click");
+    await wrapper.findAll("[data-testid=swatch]")[1]?.trigger("click");
+    expect(queryStore.getQuery("q1")?.value.colors?.rows.r1).toBe(1);
+    expect(wrapper.get("[data-testid=swatch-trigger]").classes()).not.toContain(
+      "empty",
+    );
+
+    expect(
+      mountRow({ id: "r2", steps: [] })
+        .find("[data-testid=query-row-color]")
+        .exists(),
+    ).toBe(false);
+    const context = mount(QueryRow, {
+      props: {
+        row,
+        index: 0,
+        showIndex: false,
+        canMove: false,
+        canRemove: false,
+        canAdd: false,
+        isRunning: false,
+      },
+      global: {
+        provide: { queryId: ref("q1"), activeTab: ref("context") },
+      },
+    });
+    expect(context.find("[data-testid=query-row-color]").exists()).toBe(false);
+    const detached = mount(QueryRow, {
+      props: {
+        row,
+        index: 0,
+        showIndex: false,
+        canMove: false,
+        canRemove: false,
+        canAdd: false,
+        isRunning: false,
+      },
+      global: {
+        provide: { queryId: ref(undefined), activeTab: ref("exec") },
+      },
+    });
+    expect(detached.get("[data-testid=swatch-trigger]").classes()).toContain(
+      "empty",
+    );
   });
 
   it("does nothing without a queryId", () => {
@@ -340,6 +423,36 @@ describe("QueryRow", () => {
         "search.where",
         "search.where.node",
       ]);
+    });
+
+    it("pastes several copied queries as rows after this one", async () => {
+      const { query, first } = setup();
+      clipboard =
+        "QueryBuilder::select().node_count().query()\nQueryBuilder::select().edge_count().query()";
+      const wrapper = mountRow(first);
+      await wrapper.find(".paste-row-button").trigger("click");
+      await flushPromises();
+      expect(
+        query.value.rows.exec.map((r) => r.steps.map((s) => s.type).join(".")),
+      ).toEqual([
+        "select.select.ids",
+        "select.select.node_count",
+        "select.select.edge_count",
+      ]);
+    });
+
+    it("pastes several queries with Ctrl+V into an empty row", async () => {
+      const query = queryStore.addQuery({ id: "q1" });
+      const wrapper = mountRow(query.value.rows.exec[0]!);
+      wrapper.element.dispatchEvent(
+        pasteEvent(
+          "QueryBuilder::select().node_count().query()\nQueryBuilder::select().edge_count().query()",
+        ),
+      );
+      expect(query.value.rows.exec).toHaveLength(2);
+      expect(query.value.rows.exec[0]?.steps[1]?.type).toBe(
+        "select.node_count",
+      );
     });
 
     it("keeps a local copy when the browser has no clipboard API", async () => {

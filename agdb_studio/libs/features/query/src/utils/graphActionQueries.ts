@@ -19,6 +19,13 @@ export const selectElementQuery = (ids: number | number[]): QueryType =>
 export const selectExistingElementsQuery = (ids: number[]): QueryType =>
   QueryBuilder.select().search().elements().where().ids(ids).query();
 
+/**
+ * Selects every alias in the database. Selecting aliases of given ids fails
+ * when any of them has none, so all are read at once and looked up by id.
+ */
+export const selectAllAliasesQuery = (): QueryType =>
+  QueryBuilder.select().aliases().query();
+
 /** Removes an element. Removing a node also removes all its edges. */
 export const deleteElementQuery = (id: number): QueryType =>
   QueryBuilder.remove().ids(id).query();

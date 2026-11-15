@@ -9,8 +9,9 @@ import type {
 import { useQueryStore } from "../../composables/queryStore";
 import QueryStep from "./QueryStep.vue";
 import QueryStepInput from "./QueryStepInput.vue";
+import ColorSwatchPicker from "../graph/ColorSwatchPicker.vue";
+import { useGraphPalette } from "../../composables/graphPalette";
 import SpinnerIcon from "@agdb-studio/design/src/components/icons/SpinnerIcon.vue";
-import { addNotification } from "@agdb-studio/notification/src/composables/notificationStore";
 import {
   ClAddRow,
   ClTrashFull,
@@ -22,8 +23,13 @@ import {
 import {
   copySteps,
   pastedQuery,
-  readCopiedSteps,
+  readCopiedRows,
 } from "../../utils/queryRowClipboard";
+import {
+  notifyCopyResult,
+  notifyPasteFailure,
+} from "../../utils/rowCopyNotification";
+import type { PaletteSlot } from "../../utils/graphColorRules";
 
 const props = defineProps<{
   row: QueryRow;
@@ -36,13 +42,24 @@ const props = defineProps<{
   canRemove: boolean;
   canAdd: boolean;
   isRunning: boolean;
+  /** Part of the multi-row selection; copy and remove then act on all selected rows. */
+  selected?: boolean;
+  selectionCount?: number;
 }>();
 
 const emit = defineEmits<{
   (e: "add-row"): void;
   (e: "drag-start"): void;
   (e: "move", toIndex: number): void;
+  (e: "select", event: MouseEvent): void;
+  (e: "copy-selection"): void;
+  (e: "remove-selection"): void;
 }>();
+
+// Copy and remove act on the whole selection when this row is part of one.
+const inSelection = computed(
+  () => !!props.selected && (props.selectionCount ?? 0) > 1,
+);
 
 const rowElement = ref<HTMLElement>();
 const handleElement = ref<HTMLElement>();
@@ -78,6 +95,18 @@ const tab = inject<Ref<TAB>>("activeTab");
 
 const steps = computed(() => props.row.steps);
 
+// Elements this row returns can be given a colour in the graph.
+const palette = useGraphPalette();
+const rowColor = computed(() => {
+  if (!queryId?.value) return undefined;
+  return queryStore.getQuery(queryId.value)?.value.colors?.rows[props.row.id];
+});
+const setRowColor = (slot: PaletteSlot | undefined): void => {
+  /* v8 ignore if -- @preserve */
+  if (!queryId?.value) return;
+  queryStore.setRowColor(queryId.value, props.row.id, slot);
+};
+
 const clearSteps = (): void => {
   /* v8 ignore if -- @preserve */
   if (!queryId?.value) return;
@@ -85,6 +114,10 @@ const clearSteps = (): void => {
 };
 
 const removeRow = (): void => {
+  if (inSelection.value) {
+    emit("remove-selection");
+    return;
+  }
   /* v8 ignore if -- @preserve */
   if (!queryId?.value) return;
   queryStore.deleteQueryRow(queryId.value, tab?.value ?? "exec", props.row.id);
@@ -96,49 +129,39 @@ const pasteLabel = computed(() =>
     : "Paste a copied query here",
 );
 
+const copyLabel = computed(() =>
+  inSelection.value
+    ? `Copy the ${props.selectionCount} selected queries as Rust code`
+    : "Copy this query as Rust code",
+);
+
 const copyRow = async (): Promise<void> => {
-  const result = await copySteps(steps.value);
-  if (result === "copied") {
-    addNotification({ type: "success", title: "Query copied" });
-  } else if (result === "local") {
-    addNotification({
-      type: "info",
-      title: "Query copied in Studio only",
-      message:
-        "The system clipboard is not available here; paste it with the paste button.",
-    });
+  if (inSelection.value) {
+    emit("copy-selection");
+    return;
+  }
+  notifyCopyResult(await copySteps(steps.value));
+};
+
+/** Pastes one row into or after this one, or several rows after it. */
+const insertRows = (rows: CopiedStep[][]): void => {
+  /* v8 ignore if -- @preserve */
+  if (!queryId?.value) return;
+  const currentTab = tab?.value ?? "exec";
+  const [first] = rows;
+  if (rows.length === 1 && first) {
+    queryStore.pasteQuerySteps(queryId.value, currentTab, props.row.id, first);
   } else {
-    addNotification({ type: "error", title: "Copy to clipboard failed" });
+    queryStore.insertQueryRows(queryId.value, currentTab, props.row.id, rows);
   }
 };
 
-const insertSteps = (copied: CopiedStep[]): void => {
-  /* v8 ignore if -- @preserve */
-  if (!queryId?.value) return;
-  queryStore.pasteQuerySteps(
-    queryId.value,
-    tab?.value ?? "exec",
-    props.row.id,
-    copied,
-  );
-};
-
 const pasteRow = async (): Promise<void> => {
-  const read = await readCopiedSteps();
-  if ("steps" in read) {
-    insertSteps(read.steps);
-  } else if ("denied" in read) {
-    addNotification({
-      type: "warning",
-      title: "Clipboard access denied",
-      message: "Click into the query and press Ctrl+V (Cmd+V on Mac) instead.",
-    });
+  const read = await readCopiedRows();
+  if ("rows" in read) {
+    insertRows(read.rows);
   } else {
-    addNotification({
-      type: "warning",
-      title: "Could not paste the query",
-      message: read.error,
-    });
+    notifyPasteFailure(read);
   }
 };
 
@@ -159,7 +182,7 @@ const onPaste = (event: ClipboardEvent): void => {
   const copied = pastedQuery(event.clipboardData?.getData("text/plain") ?? "");
   if (!copied) return;
   event.preventDefault();
-  insertSteps(copied);
+  insertRows(copied);
 };
 
 const addStep = (stepType: QueryType) => {
@@ -176,6 +199,7 @@ const addStep = (stepType: QueryType) => {
   <div
     ref="rowElement"
     class="query-input"
+    :class="{ selected }"
     data-testid="query-row"
     @paste="onPaste"
   >
@@ -192,15 +216,28 @@ const addStep = (stepType: QueryType) => {
     >
       <LuGripVertical />
     </button>
-    <span
+    <button
       v-if="showIndex"
+      type="button"
       class="row-index"
       data-testid="query-row-index"
-      :title="
+      :aria-pressed="!!selected"
+      :title="`${
         resultIndex === undefined ? 'Empty queries are skipped' : 'Result index'
-      "
-      >{{ resultIndex }}</span
+      }. Click to select, Ctrl+click to add, Shift+click for a range`"
+      @click="emit('select', $event)"
     >
+      {{ resultIndex }}
+    </button>
+    <ColorSwatchPicker
+      v-if="tab !== 'context' && steps.length > 0"
+      class="row-color"
+      data-testid="query-row-color"
+      :palette="palette"
+      :model-value="rowColor"
+      label="Colour of this query's elements in the graph"
+      @update:model-value="setRowColor"
+    />
     <!-- Steps wrap within their own column, so the handle, index and actions stay put. -->
     <div class="row-steps" @click.self="stepInput?.focus()">
       <div v-for="step in steps" :key="step.id" class="query-step-wrapper">
@@ -230,8 +267,8 @@ const addStep = (stepType: QueryType) => {
         v-if="steps.length"
         type="button"
         class="button button-transparent row-action copy-row-button"
-        title="Copy this query as Rust code"
-        aria-label="Copy this query as Rust code"
+        :title="copyLabel"
+        :aria-label="copyLabel"
         @click="copyRow"
       >
         <LuCopy />
@@ -263,8 +300,16 @@ const addStep = (stepType: QueryType) => {
           v-if="canRemove"
           type="button"
           class="button button-transparent row-action row-action-danger remove-row-button"
-          title="Remove this query"
-          aria-label="Remove this query"
+          :title="
+            inSelection
+              ? `Remove the ${selectionCount} selected queries`
+              : 'Remove this query'
+          "
+          :aria-label="
+            inSelection
+              ? `Remove the ${selectionCount} selected queries`
+              : 'Remove this query'
+          "
           @click="removeRow"
         >
           <ClTrashFull />
@@ -285,6 +330,10 @@ const addStep = (stepType: QueryType) => {
   min-height: 2rem;
   & + & {
     border-top: 1px dashed var(--color-border);
+  }
+  &.selected {
+    background-color: var(--color-background-mute);
+    box-shadow: inset 3px 0 0 var(--blue-2);
   }
 }
 .row-steps {
@@ -316,6 +365,21 @@ const addStep = (stepType: QueryType) => {
   font-size: 0.75rem;
   opacity: 0.5;
   user-select: none;
+  // Reset the button look; it reads as the plain index.
+  padding: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+  &:hover,
+  &:focus-visible,
+  &[aria-pressed="true"] {
+    opacity: 1;
+  }
+}
+.row-color {
+  min-height: 1.6rem;
+  align-self: flex-start;
 }
 .row-actions {
   margin-left: auto;

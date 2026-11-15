@@ -15,12 +15,20 @@ import ElementDetailsPanel from "../graph/ElementDetailsPanel.vue";
 import ResultsTable from "./ResultsTable.vue";
 import ResultsJson from "./ResultsJson.vue";
 import ResultScalar from "./ResultScalar.vue";
+import ColorsPanel from "../graph/ColorsPanel.vue";
+import { LuPalette } from "@kalimahapps/vue-icons";
+import ColorLegend from "../graph/ColorLegend.vue";
+import { useGraphPalette } from "../../composables/graphPalette";
+import { hasColoring, type PaletteSlot } from "../../utils/graphColorRules";
 import {
   elementLabel,
   provideGraphActions,
 } from "../../composables/graphActions";
 import { useQueryStore } from "../../composables/queryStore";
-import { convertElementsToGraphData } from "../../utils/graphDataUtils";
+import {
+  convertElementsToGraphData,
+  dedupeResultElements,
+} from "../../utils/graphDataUtils";
 import {
   classifyResults,
   scalarLabel,
@@ -99,6 +107,13 @@ const chips = computed(() => {
   });
 });
 
+/** Distinct elements, shown when queries of the batch returned some of the same ones. */
+const uniqueCount = computed(() => {
+  const total = mainResults.value.reduce((n, r) => n + r.elements.length, 0);
+  const unique = dedupeResultElements(mainResults.value).length;
+  return unique < total ? unique : undefined;
+});
+
 const extraCounts = computed(() => {
   const count = (results?: Components.Schemas.QueryResult[]) =>
     (results ?? []).reduce((sum, r) => sum + r.elements.length, 0);
@@ -131,6 +146,23 @@ const openTableMenu = (
   const graphElement = known ?? converted.nodes[0] ?? converted.links[0];
   /* v8 ignore else -- @preserve: id 0 rows have no menu */
   if (graphElement) actions.openMenu(graphElement, x, y);
+};
+
+const palette = useGraphPalette();
+const colorsOpen = ref(false);
+const colored = computed(() => hasColoring(query.value?.colors));
+/** The colours in use, shown on the toolbar button. */
+const usedColors = computed(() => [
+  ...new Set(actions.colorLegend.value.map((entry) => entry.slot)),
+]);
+const menuColor = computed(() => {
+  const element = actions.menu.value?.element;
+  return element ? query.value?.colors?.elements[element.id] : undefined;
+});
+const setMenuColor = (slot: PaletteSlot | undefined) => {
+  const element = actions.menu.value?.element;
+  /* v8 ignore else -- @preserve: the menu is open while picking */
+  if (element) actions.setElementColor(element, slot);
 };
 
 const saving = ref(false);
@@ -175,6 +207,14 @@ onUnmounted(() => document.removeEventListener("keydown", onKeydown));
           >
             {{ chip.label }}
           </span>
+          <span
+            v-if="uniqueCount !== undefined"
+            class="chip chip-muted"
+            data-testid="results-unique-chip"
+            title="Elements returned by more than one query are shown once in the graph and table"
+          >
+            unique: {{ uniqueCount }}
+          </span>
           <span v-if="extraCounts.context" class="chip chip-muted">
             context: {{ extraCounts.context }}
           </span>
@@ -185,19 +225,61 @@ onUnmounted(() => document.removeEventListener("keydown", onKeydown));
         </template>
         <span v-else class="last-run">Run a query to see results.</span>
       </div>
-      <div class="view-toggle" role="group" aria-label="Result view">
-        <button
-          v-for="option in viewOptions"
-          :key="option.key"
-          type="button"
-          class="button button-tab"
-          :class="{ active: view === option.key }"
-          :aria-pressed="view === option.key"
-          :data-testid="`view-${option.key}`"
-          @click="selectView(option.key)"
-        >
-          {{ option.label }}
-        </button>
+      <div class="toolbar-actions">
+        <div class="colors-control">
+          <button
+            type="button"
+            class="button colors-button"
+            :class="{ colored }"
+            :aria-expanded="colorsOpen"
+            data-testid="colors-toggle"
+            title="Colour nodes and edges by query, by property or one by one"
+            @click="colorsOpen = !colorsOpen"
+          >
+            <LuPalette class="colors-icon" />
+            Colours
+            <span
+              v-if="usedColors.length"
+              class="used-colors"
+              aria-hidden="true"
+            >
+              <span
+                v-for="slot in usedColors"
+                :key="slot"
+                :style="{ backgroundColor: palette[slot] }"
+              ></span>
+            </span>
+          </button>
+          <ColorsPanel
+            v-if="colorsOpen"
+            class="colors-popover"
+            :palette="palette"
+            :queries="actions.colorQueries.value"
+            :rules="actions.colorRules.value"
+            :keys="actions.valueIndex.value"
+            :elements="actions.colorElements.value"
+            @row-color="actions.setRowColor"
+            @each-query="actions.colorEachQuery()"
+            @update:rules="actions.setColorRules"
+            @element-color="actions.setElementColorById"
+            @clear-all="actions.clearColors()"
+            @close="colorsOpen = false"
+          />
+        </div>
+        <div class="view-toggle" role="group" aria-label="Result view">
+          <button
+            v-for="option in viewOptions"
+            :key="option.key"
+            type="button"
+            class="button button-tab"
+            :class="{ active: view === option.key }"
+            :aria-pressed="view === option.key"
+            :data-testid="`view-${option.key}`"
+            @click="selectView(option.key)"
+          >
+            {{ option.label }}
+          </button>
+        </div>
       </div>
     </div>
 
@@ -206,10 +288,18 @@ onUnmounted(() => document.removeEventListener("keydown", onKeydown));
       <ResultsTable
         v-else-if="view === 'table'"
         :results="mainResults"
+        :alias-of="actions.aliasOf"
         @menu="openTableMenu"
       />
       <ResultsJson v-else-if="view === 'json'" :results="mainResults" />
       <ResultScalar v-else :label="scalar.label" :value="scalar.value" />
+      <!-- After the view chain: between its v-if and v-else it would break it. -->
+      <ColorLegend
+        v-if="view === 'graph' && actions.colorLegend.value.length"
+        :entries="actions.colorLegend.value"
+        :palette="palette"
+        @edit="colorsOpen = true"
+      />
 
       <div
         v-if="actions.pendingEdgeSourceId.value !== undefined"
@@ -246,8 +336,11 @@ onUnmounted(() => document.removeEventListener("keydown", onKeydown));
       v-if="actions.menu.value"
       :x="actions.menu.value.x"
       :y="actions.menu.value.y"
-      :title="elementLabel(actions.menu.value.element)"
+      :title="elementLabel(actions.describeElement(actions.menu.value.element))"
       :actions="menuActions"
+      :palette="palette"
+      :color="menuColor"
+      @color="setMenuColor"
       @close="actions.closeMenu()"
     />
   </section>
@@ -285,6 +378,40 @@ onUnmounted(() => document.removeEventListener("keydown", onKeydown));
 .chip-muted,
 .last-run {
   color: var(--color-text-muted);
+}
+.toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.colors-control {
+  position: relative;
+}
+.colors-button {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  &.colored {
+    border-color: var(--color-text-muted);
+  }
+}
+.colors-icon {
+  font-size: 1rem;
+}
+.used-colors {
+  display: inline-flex;
+  gap: 2px;
+  span {
+    width: 0.55rem;
+    height: 0.55rem;
+    border-radius: 50%;
+  }
+}
+.colors-popover {
+  position: absolute;
+  top: calc(100% + 0.25rem);
+  right: 0;
+  z-index: var(--z-index-dropdown);
 }
 .view-toggle {
   display: flex;

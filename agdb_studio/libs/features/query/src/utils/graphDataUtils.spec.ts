@@ -11,6 +11,7 @@ vi.mock(import("@agnesoft/agdb_api"), async (importOriginal) => {
 import {
   convertElementsToGraphData,
   dbValueToString,
+  dedupeResultElements,
   filterDanglingLinks,
   mergeGraphData,
 } from "./graphDataUtils";
@@ -369,5 +370,60 @@ describe("filterDanglingLinks", () => {
 
     expect(result.links).toHaveLength(1);
     expect(result.links[0]?.id).toBe(-1);
+  });
+});
+
+describe("dedupeResultElements", () => {
+  const el = (id: number, values: [string, number][]) => ({
+    id,
+    from: id < 0 ? 1 : 0,
+    to: id < 0 ? 2 : 0,
+    values: values.map(([k, v]) => ({ key: strVal(k), value: i64Val(v) })),
+  });
+
+  it("keeps one element per id, merging values and recording the results", () => {
+    const deduped = dedupeResultElements([
+      { result: 2, elements: [el(1, [["a", 1]]), el(-3, [])] },
+      { result: 1, elements: [el(2, [])] },
+      {
+        result: 2,
+        elements: [
+          el(1, [
+            ["a", 2],
+            ["b", 3],
+          ]),
+          el(1, []),
+        ],
+      },
+    ]);
+    expect(deduped.map((d) => d.element.id)).toEqual([1, -3, 2]);
+    expect(deduped[0]?.resultIndexes).toEqual([0, 2]);
+    expect(deduped[0]?.element.values).toEqual([
+      { key: strVal("a"), value: i64Val(2) },
+      { key: strVal("b"), value: i64Val(3) },
+    ]);
+    expect(deduped[1]?.resultIndexes).toEqual([0]);
+  });
+
+  it("never merges id 0, which is not an element", () => {
+    const deduped = dedupeResultElements([
+      { result: 1, elements: [el(0, [["count", 1]])] },
+      { result: 1, elements: [el(0, [["count", 2]])] },
+    ]);
+    expect(deduped).toHaveLength(2);
+    expect(deduped.map((d) => d.resultIndexes)).toEqual([[0], [1]]);
+  });
+
+  it("passes result indexes on to the graph elements", () => {
+    const data = convertElementsToGraphData(
+      [el(1, []), el(-2, [])],
+      "query",
+      new Map([
+        [1, [0, 1]],
+        [-2, [1]],
+      ]),
+    );
+    expect(data.nodes[0]?.resultIndexes).toEqual([0, 1]);
+    expect(data.links[0]?.resultIndexes).toEqual([1]);
   });
 });

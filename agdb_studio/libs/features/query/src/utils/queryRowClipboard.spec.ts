@@ -4,7 +4,10 @@ import {
   formatSteps,
   parseSteps,
   pastedQuery,
-  readCopiedSteps,
+  copyRows,
+  formatRows,
+  parseRows,
+  readCopiedRows,
   resetCopiedSteps,
 } from "./queryRowClipboard";
 import type { QueryStep } from "../composables/types";
@@ -45,8 +48,7 @@ describe("queryRowClipboard", () => {
     expect(pastedQuery("select")).toBeUndefined();
     expect(pastedQuery("some.text")).toBeUndefined();
     expect(pastedQuery("select.node_count")).toEqual([
-      { type: "select" },
-      { type: "select.node_count" },
+      [{ type: "select" }, { type: "select.node_count" }],
     ]);
   });
 
@@ -60,12 +62,12 @@ describe("queryRowClipboard", () => {
     });
     expect(await copySteps(steps)).toBe("copied");
     expect(stored).toBe(CODE);
-    expect(await readCopiedSteps()).toEqual({ steps: copied });
+    expect(await readCopiedRows()).toEqual({ rows: [copied] });
   });
 
   it("reports other clipboard text", async () => {
     stubClipboard({ readText: vi.fn().mockResolvedValue("some text") });
-    expect(await readCopiedSteps()).toHaveProperty("error");
+    expect(await readCopiedRows()).toHaveProperty("error");
   });
 
   it("reports denied clipboard access without falling back", async () => {
@@ -74,13 +76,54 @@ describe("queryRowClipboard", () => {
       readText: vi.fn().mockRejectedValue(new Error("denied")),
     });
     expect(await copySteps(steps)).toBe("failed");
-    expect(await readCopiedSteps()).toEqual({ denied: true });
+    expect(await readCopiedRows()).toEqual({ denied: true });
   });
 
   it("keeps a local copy when the browser has no clipboard API", async () => {
     stubClipboard(undefined);
-    expect(await readCopiedSteps()).toHaveProperty("error");
+    expect(await readCopiedRows()).toHaveProperty("error");
     expect(await copySteps(steps)).toBe("local");
-    expect(await readCopiedSteps()).toEqual({ steps: copied });
+    expect(await readCopiedRows()).toEqual({ rows: [copied] });
+  });
+
+  it("formats several rows one per line and skips empty ones", () => {
+    expect(formatRows([steps, [], steps])).toBe(`${CODE}\n${CODE}`);
+  });
+
+  it("parses several chains into rows, whatever code is around them", () => {
+    const text = `vec![\n  ${CODE},\n  QueryBuilder::select().node_count().query(),\n].into()`;
+    expect(parseRows(text)).toEqual({
+      rows: [copied, [{ type: "select" }, { type: "select.node_count" }]],
+    });
+    expect(parseRows(`db.exec(&${CODE})?;\ndb.exec(&${CODE})?;`)).toEqual({
+      rows: [copied, copied],
+    });
+    expect(parseRows(CODE)).toEqual({ rows: [copied] });
+  });
+
+  it("splits only at top-level chains, not in strings or nested queries", () => {
+    const quoted = parseRows(
+      'QueryBuilder::search().from("QueryBuilder::x \\" (").query()',
+    );
+    expect(quoted).toHaveProperty("rows");
+    expect("rows" in quoted && quoted.rows).toHaveLength(1);
+    expect(
+      parseRows(
+        "QueryBuilder::insert().edges().from(QueryBuilder::search().from(1).query()).to(2).query()",
+      ),
+    ).toEqual({ error: expect.stringContaining("Nested queries") });
+  });
+
+  it("names the chain that could not be read", () => {
+    expect(parseRows(`${CODE}\nQueryBuilder::select().nope().query()`)).toEqual(
+      { error: "Query 2: nope() cannot follow select()" },
+    );
+    expect(parseRows("  ")).toHaveProperty("error");
+  });
+
+  it("copies several rows and reads them back", async () => {
+    stubClipboard(undefined);
+    expect(await copyRows([steps, steps])).toBe("local");
+    expect(await readCopiedRows()).toEqual({ rows: [copied, copied] });
   });
 });

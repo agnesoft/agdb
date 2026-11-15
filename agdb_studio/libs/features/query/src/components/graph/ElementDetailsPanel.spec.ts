@@ -409,4 +409,183 @@ describe("ElementDetailsPanel", () => {
       expect(wrapper.emitted("retry")).toHaveLength(1);
     });
   });
+
+  describe("inline editing", () => {
+    const S = (v: string) => ({ String: v });
+
+    it("shows the alias in the title", () => {
+      const wrapper = mountPanel({ element: { ...node, alias: "alice" } });
+      expect(wrapper.find("h3").text()).toBe("Node 1 (alice)");
+    });
+
+    it("edits a value in place and saves it on Enter", async () => {
+      const wrapper = mountPanel();
+      await wrapper
+        .findAll("[data-testid=panel-value-cell]")[1]!
+        .trigger("click");
+      const input = wrapper.find("[data-testid=inline-input]");
+      expect((input.element as HTMLInputElement).value).toBe("30");
+      await input.setValue("31");
+      expect(wrapper.emitted("dirty")?.at(-1)).toEqual([true]);
+      await input.trigger("keydown", { key: "Enter" });
+      expect(wrapper.emitted("save")?.[0]).toEqual([
+        [
+          { key: S("name"), value: S("Alice") },
+          { key: S("age"), value: { I64: 31 } },
+        ],
+        node.rawValues,
+      ]);
+      expect(wrapper.find("[data-testid=inline-input]").exists()).toBe(false);
+    });
+
+    it("renames a key and rejects empty or duplicate keys", async () => {
+      const wrapper = mountPanel();
+      await wrapper
+        .findAll("[data-testid=panel-key-cell]")[1]!
+        .trigger("click");
+      const input = wrapper.find("[data-testid=inline-input]");
+      await input.setValue("");
+      await input.trigger("keydown", { key: "Enter" });
+      expect(wrapper.find("[data-testid=panel-inline-error]").text()).toBe(
+        "Key is required",
+      );
+      await input.setValue("name");
+      await input.trigger("keydown", { key: "Enter" });
+      expect(wrapper.find("[data-testid=panel-inline-error]").text()).toBe(
+        "Duplicate key",
+      );
+      await input.setValue("years");
+      await input.trigger("keydown", { key: "Enter" });
+      expect(wrapper.emitted("save")?.[0]?.[0]).toEqual([
+        { key: S("name"), value: S("Alice") },
+        { key: S("years"), value: { I64: 30 } },
+      ]);
+    });
+
+    it("validates the value and cancels on Esc without closing", async () => {
+      const wrapper = mountPanel();
+      await wrapper
+        .findAll("[data-testid=panel-value-cell]")[1]!
+        .trigger("click");
+      const input = wrapper.find("[data-testid=inline-input]");
+      await input.setValue("abc");
+      await input.trigger("keydown", { key: "Enter" });
+      expect(wrapper.find("[data-testid=panel-inline-error]").exists()).toBe(
+        true,
+      );
+      await input.trigger("keydown", { key: "Escape" });
+      expect(wrapper.find("[data-testid=inline-input]").exists()).toBe(false);
+      expect(wrapper.emitted("close")).toBeUndefined();
+      expect(wrapper.emitted("save")).toBeUndefined();
+    });
+
+    it("saves when focus leaves the editor, but not when nothing changed", async () => {
+      const wrapper = mountPanel();
+      await wrapper
+        .findAll("[data-testid=panel-value-cell]")[0]!
+        .trigger("click");
+      await wrapper.find("td.editing").trigger("focusout");
+      expect(wrapper.emitted("save")).toBeUndefined();
+      expect(wrapper.find("[data-testid=inline-input]").exists()).toBe(false);
+
+      await wrapper
+        .findAll("[data-testid=panel-value-cell]")[0]!
+        .trigger("click");
+      await wrapper.find("[data-testid=inline-input]").setValue("Bob");
+      // Moving between the type select and the input keeps editing.
+      await wrapper.find("td.editing").trigger("focusout", {
+        relatedTarget: wrapper.find("[data-testid=inline-type]").element,
+      });
+      expect(wrapper.emitted("save")).toBeUndefined();
+      await wrapper.find("td.editing").trigger("focusout");
+      expect(wrapper.emitted("save")?.[0]?.[0]).toEqual([
+        { key: S("name"), value: S("Bob") },
+        { key: S("age"), value: { I64: 30 } },
+      ]);
+    });
+
+    it("adds a new value and removes one", async () => {
+      const wrapper = mountPanel();
+      await wrapper.find("[data-testid=panel-add-value]").trigger("click");
+      const [key, value] = wrapper
+        .find("[data-testid=panel-new-value-row]")
+        .findAll("[data-testid=inline-input]");
+      await key!.trigger("keydown", { key: "Enter" });
+      expect(wrapper.find("[data-testid=panel-inline-error]").text()).toBe(
+        "Key is required",
+      );
+      await key!.setValue("age");
+      await value!.setValue("1");
+      await value!.trigger("keydown", { key: "Enter" });
+      expect(wrapper.find("[data-testid=panel-inline-error]").text()).toBe(
+        "Duplicate key",
+      );
+      await wrapper
+        .find("[data-testid=panel-new-value-row]")
+        .findAll("[data-testid=inline-type]")[1]!
+        .setValue("signed");
+      await value!.setValue("x");
+      await value!.trigger("keydown", { key: "Enter" });
+      expect(wrapper.find("[data-testid=panel-inline-error]").exists()).toBe(
+        true,
+      );
+      await key!.setValue("role");
+      await wrapper
+        .find("[data-testid=panel-new-value-row]")
+        .findAll("[data-testid=inline-type]")[1]!
+        .setValue("string");
+      await value!.setValue("admin");
+      await value!.trigger("keydown", { key: "Enter" });
+      expect(wrapper.emitted("save")?.[0]?.[0]).toEqual([
+        ...node.rawValues,
+        { key: S("role"), value: S("admin") },
+      ]);
+
+      await wrapper
+        .findAll("[data-testid=panel-remove-value]")[0]!
+        .trigger("click");
+      expect(wrapper.emitted("save")?.[1]?.[0]).toEqual([node.rawValues[1]]);
+    });
+
+    it("drops an untouched new value when focus leaves it", async () => {
+      const wrapper = mountPanel();
+      await wrapper.find("[data-testid=panel-add-value]").trigger("click");
+      await wrapper
+        .find("[data-testid=panel-new-value-row] td")
+        .trigger("focusout");
+      expect(wrapper.find("[data-testid=panel-new-value-row]").exists()).toBe(
+        false,
+      );
+      expect(wrapper.emitted("save")).toBeUndefined();
+    });
+
+    it("does not edit nested values, while saving or before values load", async () => {
+      const nested: GraphNode = {
+        ...node,
+        rawValues: [{ key: S("n"), value: { VecDbValue: [] } as never }],
+      };
+      const wrapper = mountPanel({ element: nested });
+      await wrapper.find("[data-testid=panel-value-cell]").trigger("click");
+      expect(wrapper.find("[data-testid=inline-input]").exists()).toBe(false);
+
+      const saving = mountPanel({ saving: true });
+      expect(saving.find("[data-testid=panel-saving]").exists()).toBe(true);
+      expect(saving.find("[data-testid=panel-add-value]").exists()).toBe(false);
+      await saving.find("[data-testid=panel-value-cell]").trigger("click");
+      expect(saving.find("[data-testid=inline-input]").exists()).toBe(false);
+
+      const loading = mountPanel({
+        element: { ...node, valuesState: "loading" },
+      });
+      await loading.find("[data-testid=panel-value-cell]").trigger("click");
+      expect(loading.find("[data-testid=inline-input]").exists()).toBe(false);
+    });
+
+    it("stops editing when another element is shown", async () => {
+      const wrapper = mountPanel();
+      await wrapper.find("[data-testid=panel-value-cell]").trigger("click");
+      await wrapper.setProps({ element: { ...node, id: 5 } });
+      expect(wrapper.find("[data-testid=inline-input]").exists()).toBe(false);
+    });
+  });
 });

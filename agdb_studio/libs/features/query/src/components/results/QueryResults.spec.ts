@@ -64,7 +64,10 @@ const run = async (
     { id: "r", steps: steps.map((type) => ({ id: type, type })) },
   ];
   // Sets lastRun too, like a real run.
-  store.setQueryResults("q1", tab, results, { stepTypes: steps });
+  store.setQueryResults("q1", tab, results, {
+    stepTypes: steps,
+    rowIds: ["r"],
+  });
   await nextTick();
 };
 
@@ -165,6 +168,22 @@ describe("QueryResults", () => {
     wrapper.unmount();
   });
 
+  it("counts unique elements when queries return the same ones", async () => {
+    const wrapper = mountResults();
+    await run([{ result: 1, elements: [el(1)] }]);
+    expect(wrapper.find("[data-testid=results-unique-chip]").exists()).toBe(
+      false,
+    );
+    await run([
+      { result: 2, elements: [el(1), el(2)] },
+      { result: 1, elements: [el(1)] },
+    ]);
+    expect(wrapper.find("[data-testid=results-unique-chip]").text()).toBe(
+      "unique: 2",
+    );
+    wrapper.unmount();
+  });
+
   it("opens the context menu and runs actions", async () => {
     const wrapper = mountResults();
     await run([{ result: 1, elements: [el(1)] }]);
@@ -262,7 +281,8 @@ describe("QueryResults", () => {
     await nextTick();
 
     const stored = wrapper.findAll("[data-testid=panel-value-row]");
-    expect(stored.map((row) => row.text())).toEqual(["nameAlicestring"]);
+    // The trailing × removes the value.
+    expect(stored.map((row) => row.text())).toEqual(["nameAlicestring ×"]);
     const fromQuery = wrapper.findAll("[data-testid=panel-query-value-row]");
     expect(fromQuery.map((row) => row.text())).toEqual(["edge_count0u64"]);
     // Hover tooltips get the same data.
@@ -380,12 +400,19 @@ describe("QueryResults", () => {
   });
 
   it("loads stored values once per run, without stale values in between", async () => {
+    const valueLoads = () =>
+      exec.mock.calls.filter(
+        (call) =>
+          !(call[0] as Components.Schemas.QueryType[]).some(
+            (q) => "SelectAllAliases" in q,
+          ),
+      ).length;
     db.set(1, [{ key: { String: "k" }, value: { I64: 1 } }]);
     exec.mockImplementation(serveStoredValues);
     const wrapper = mountResults();
     await run([{ result: 1, elements: [el(1)] }]);
     await flushPromises();
-    expect(exec).toHaveBeenCalledTimes(1);
+    expect(valueLoads()).toBe(1);
 
     // A mutation run changes the value; the next run must not show the old one.
     db.set(1, [{ key: { String: "k" }, value: { I64: 2 } }]);
@@ -402,7 +429,7 @@ describe("QueryResults", () => {
     expect(actions().describeElement(node).valuesState).toBe("loading");
     release();
     await flushPromises();
-    expect(exec).toHaveBeenCalledTimes(2);
+    expect(valueLoads()).toBe(2);
     expect(actions().describeElement(node).values).toEqual([
       { key: "k", value: "2" },
     ]);
@@ -412,6 +439,95 @@ describe("QueryResults", () => {
   it("renders without a query id", () => {
     const wrapper = mount(QueryResults);
     expect(wrapper.text()).toContain("Run a query to see results.");
+    wrapper.unmount();
+  });
+  it("colours queries and single elements from the panel, with a legend", async () => {
+    const wrapper = mountResults();
+    await run([{ result: 1, elements: [el(1)] }]);
+    expect(wrapper.find("[data-testid=color-legend]").exists()).toBe(false);
+    // Only the graph is shown, with or without a legend.
+    const onlyGraph = () => {
+      expect(wrapper.find(".mock-query-graph").exists()).toBe(true);
+      expect(wrapper.find("[data-testid=results-table]").exists()).toBe(false);
+      expect(wrapper.find(".result-scalar").exists()).toBe(false);
+    };
+    onlyGraph();
+    const toggle = wrapper.get("[data-testid=colors-toggle]");
+    expect(toggle.classes()).not.toContain("active");
+
+    await toggle.trigger("click");
+    // Colour the query of the run.
+    const queryLine = wrapper.get("[data-testid=colors-query]");
+    expect(queryLine.text()).toContain("select");
+    await queryLine.findAll("[data-testid=swatch]")[1]?.trigger("click");
+    expect(store.getQuery("q1")?.value.colors?.rows.r).toBe(1);
+    expect(toggle.classes()).toContain("colored");
+    expect(toggle.findAll(".used-colors span")).toHaveLength(1);
+    expect(wrapper.get("[data-testid=color-legend]").text()).toContain(
+      "query 0",
+    );
+    onlyGraph();
+
+    // The legend opens the panel again once closed.
+    await wrapper.get("[aria-label='Close colours']").trigger("click");
+    expect(wrapper.find("[data-testid=colors-panel]").exists()).toBe(false);
+    await wrapper.get("[data-testid=color-legend-edit]").trigger("click");
+    expect(wrapper.find("[data-testid=colors-panel]").exists()).toBe(true);
+
+    // Manual colour from the context menu.
+    const node = actions().elementsById.value.get(1) as GraphNode;
+    actions().openMenu(node, 10, 10);
+    await nextTick();
+    document
+      .querySelectorAll<HTMLElement>(
+        "[data-testid=menu-colors] [data-testid=swatch]",
+      )[2]
+      ?.click();
+    await nextTick();
+    expect(store.getQuery("q1")?.value.colors?.elements[1]).toBe(2);
+    expect(actions().menu.value).toBeUndefined();
+    // The panel lists it and can clear it.
+    const element = wrapper.get("[data-testid=colors-element]");
+    expect(element.text()).toContain("node 1");
+    await element.get("[data-testid=swatch-none]").trigger("click");
+    expect(store.getQuery("q1")?.value.colors?.elements[1]).toBeUndefined();
+    actions().setElementColor(node, 2);
+    actions().openMenu(node, 10, 10);
+    await nextTick();
+    expect(
+      document
+        .querySelectorAll("[data-testid=menu-colors] [data-testid=swatch]")[2]
+        ?.getAttribute("aria-pressed"),
+    ).toBe("true");
+    actions().closeMenu();
+
+    await wrapper.get("[data-testid=color-clear-all]").trigger("click");
+    expect(store.getQuery("q1")?.value.colors).toBeUndefined();
+    expect(wrapper.find("[data-testid=color-legend]").exists()).toBe(false);
+    await wrapper.get("[aria-label='Close colours']").trigger("click");
+    expect(wrapper.find("[data-testid=colors-panel]").exists()).toBe(false);
+    wrapper.unmount();
+  });
+  it("gives each query of the run its own colour", async () => {
+    const wrapper = mountResults();
+    const query = store.getQuery("q1")!;
+    query.value.rows.exec = ["a", "b"].map((id) => ({
+      id,
+      steps: [{ id: `s${id}`, type: "select" as const }],
+    }));
+    store.setQueryResults(
+      "q1",
+      "exec",
+      [
+        { result: 1, elements: [el(1)] },
+        { result: 1, elements: [el(2)] },
+      ],
+      { stepTypes: ["select"], rowIds: ["a", "b"] },
+    );
+    await nextTick();
+    await wrapper.get("[data-testid=colors-toggle]").trigger("click");
+    await wrapper.get("[data-testid=colors-each-query]").trigger("click");
+    expect(query.value.colors?.rows).toEqual({ a: 0, b: 1 });
     wrapper.unmount();
   });
 });

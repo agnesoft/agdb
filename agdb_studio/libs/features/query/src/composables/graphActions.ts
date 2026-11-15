@@ -17,6 +17,7 @@ import { useDbExec } from "./dbExec";
 import { PREFETCH_LIMIT, useElementValues } from "./elementValues";
 import { useGraphData } from "./graphData";
 import { useQueryStore } from "./queryStore";
+import { getQueryStepLabel } from "../mock/queryApiMock";
 import type { GraphElement, GraphNode } from "./types";
 import {
   deleteElementQuery,
@@ -25,6 +26,12 @@ import {
   selectElementQuery,
   updateValuesQueries,
 } from "../utils/graphActionQueries";
+import {
+  buildColorResolver,
+  type ColorRule,
+  type PaletteSlot,
+} from "../utils/graphColorRules";
+import { GRAPH_THEME_FALLBACK } from "../utils/graphStyle";
 
 export type PanelMode = "view" | "edit";
 
@@ -37,8 +44,9 @@ export type ContextMenuState = {
 export const isNode = (element: GraphElement): element is GraphNode =>
   element.id > 0;
 
+/** E.g. "node 4" or, with an alias, "node 4 (dave)". */
 export const elementLabel = (element: GraphElement): string =>
-  `${isNode(element) ? "node" : "edge"} ${element.id}`;
+  `${isNode(element) ? "node" : "edge"} ${element.id}${element.alias ? ` (${element.alias})` : ""}`;
 
 const plural = (count: number, word: string): string =>
   `${count} ${word}${count === 1 ? "" : "s"}`;
@@ -58,6 +66,10 @@ export const createGraphActions = (
   const panelMode = ref<PanelMode>("view");
   const menu = ref<ContextMenuState>();
   const pendingEdgeSourceId = ref<number>();
+  /** Elements whose details stay shown on the graph, in pinning order. */
+  const pinnedIds = ref<number[]>([]);
+  /** The edge created last, so the graph can animate it once. */
+  const lastAddedEdgeId = ref<number>();
 
   const elementValues = useElementValues(exec);
 
@@ -65,14 +77,22 @@ export const createGraphActions = (
   // data, not just what the query returned. A new run may have changed
   // values, so the cache starts over.
   let cachedForRun = query.value?.lastRun;
+  let aliasesLoaded = false;
   watch(
     [() => query.value?.lastRun, elementsById],
     ([lastRun, byId]) => {
-      if (lastRun !== cachedForRun) {
+      const newRun = lastRun !== cachedForRun;
+      if (newRun) {
         cachedForRun = lastRun;
         elementValues.clear();
       }
       void elementValues.load([...byId.keys()].slice(0, PREFETCH_LIMIT));
+      // A run may have added or removed aliases; nothing to label without elements.
+      if (newRun) aliasesLoaded = false;
+      if (!aliasesLoaded && byId.size > 0) {
+        aliasesLoaded = true;
+        void elementValues.loadAliases();
+      }
     },
     { immediate: true },
   );
@@ -85,6 +105,9 @@ export const createGraphActions = (
     const element = elementsById.value.get(selectedId.value);
     return element && elementValues.describe(element);
   });
+
+  const labelOf = (element: GraphElement): string =>
+    elementLabel(elementValues.describe(element));
 
   /** Thrown when no database is open, so nothing could run. */
   const NO_DATABASE = "No database is open, so nothing was changed.";
@@ -182,6 +205,151 @@ export const createGraphActions = (
     if (!keepUnsavedEdits()) closePanel();
   };
 
+  // Colouring. Result `i` came from the `i`-th row the last run sent.
+  const rowIdsByResult = computed(() => {
+    const tab = query.value?.lastExecutedTab;
+    if (!tab) return [];
+    return query.value?.executedRowIds?.[tab] ?? [];
+  });
+
+  /** Number of colours in the palette; set by the graph from the theme. */
+  const paletteSize = ref(GRAPH_THEME_FALLBACK.palette.length);
+
+  const colorResolver = computed(() =>
+    buildColorResolver(
+      query.value?.colors,
+      [...elementsById.value.values()].map(elementValues.describe),
+      rowIdsByResult.value,
+      paletteSize.value,
+      {
+        // Only rows of the last run colour something, so are in the legend.
+        row: (rowId) => `query ${rowIdsByResult.value.indexOf(rowId)}`,
+        element: (id) => {
+          const element = elementsById.value.get(id);
+          return element
+            ? elementLabel(elementValues.describe(element))
+            : `element ${id}`;
+        },
+      },
+    ),
+  );
+
+  /** The palette slot of an element, using all its stored values. */
+  const colorSlotOf = (element: GraphElement): PaletteSlot | undefined =>
+    colorResolver.value.slotOf(elementValues.describe(element));
+  const colorLegend = computed(() => colorResolver.value.legend);
+  const colorRules = computed(() => query.value?.colors?.rules ?? []);
+  const rowColors = computed(() => query.value?.colors?.rows ?? {});
+
+  const setElementColor = (element: GraphElement, slot?: PaletteSlot) => {
+    if (queryId?.value)
+      queryStore.setElementColor(queryId.value, element.id, slot);
+  };
+  const setRowColor = (rowId: string, slot?: PaletteSlot) => {
+    if (queryId?.value) queryStore.setRowColor(queryId.value, rowId, slot);
+  };
+  const setColorRules = (rules: ColorRule[]) => {
+    if (queryId?.value) queryStore.setColorRules(queryId.value, rules);
+  };
+  const clearColors = () => {
+    if (queryId?.value) queryStore.clearColors(queryId.value);
+  };
+  /**
+   * The keys of the shown elements with their values and how many elements
+   * have each, offered for colour rules. Values are sorted by count.
+   */
+  const valueIndex = computed(() => {
+    const index = new Map<string, Map<string, number>>();
+    for (const element of elementsById.value.values()) {
+      for (const v of elementValues.describe(element).values) {
+        const counts = index.get(v.key) ?? new Map<string, number>();
+        counts.set(v.value, (counts.get(v.value) ?? 0) + 1);
+        index.set(v.key, counts);
+      }
+    }
+    return [...index.entries()]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([key, counts]) => ({
+        key,
+        values: [...counts.entries()]
+          .map(([value, count]) => ({ value, count }))
+          .sort((a, b) => b.count - a.count || a.value.localeCompare(b.value)),
+      }));
+  });
+
+  /**
+   * The queries of the last run, for colouring by query. Labels come from the
+   * rows as they are now; a row removed since the run has none.
+   */
+  const colorQueries = computed(() => {
+    const tab = query.value?.lastExecutedTab;
+    const rows = tab ? query.value?.rows[tab] : undefined;
+    return rowIdsByResult.value.map((rowId, index) => {
+      const row = rows?.find((r) => r.id === rowId);
+      return {
+        rowId,
+        index,
+        label: row
+          ? row.steps.map((step) => getQueryStepLabel(step.type)).join(".")
+          : "(removed)",
+        slot: query.value?.colors?.rows[rowId],
+      };
+    });
+  });
+
+  /** Gives each query of the last run its own colour, as far as the palette goes. */
+  const colorEachQuery = () => {
+    colorQueries.value.forEach(({ rowId, index }) =>
+      setRowColor(rowId, index < paletteSize.value ? index : undefined),
+    );
+  };
+
+  /** Elements coloured by hand, shown or not, with a label. */
+  const colorElements = computed(() =>
+    Object.entries(query.value?.colors?.elements ?? {}).map(([key, slot]) => {
+      const id = Number(key);
+      const element = elementsById.value.get(id);
+      return {
+        id,
+        slot,
+        element,
+        label: element
+          ? elementLabel(elementValues.describe(element))
+          : `${id < 0 ? "edge" : "node"} ${id} (not shown)`,
+      };
+    }),
+  );
+  /** Sets (or with no slot clears) the colour of an element, shown or not. */
+  const setElementColorById = (id: number, slot?: PaletteSlot) => {
+    if (queryId?.value) queryStore.setElementColor(queryId.value, id, slot);
+  };
+
+  const isPinned = (id: number): boolean => pinnedIds.value.includes(id);
+
+  const togglePin = (element: GraphElement) => {
+    pinnedIds.value = isPinned(element.id)
+      ? pinnedIds.value.filter((id) => id !== element.id)
+      : [...pinnedIds.value, element.id];
+    if (isPinned(element.id)) void loadValues(element.id);
+  };
+
+  const unpin = (id: number) => {
+    pinnedIds.value = pinnedIds.value.filter((pinned) => pinned !== id);
+  };
+
+  const pinnedElements = computed(() =>
+    pinnedIds.value.flatMap((id) => {
+      const element = elementsById.value.get(id);
+      return element ? [elementValues.describe(element)] : [];
+    }),
+  );
+
+  // Pins of elements no longer shown (e.g. deleted, or a new run) are dropped.
+  watch(elementsById, (byId) => {
+    const kept = pinnedIds.value.filter((id) => byId.has(id));
+    if (kept.length !== pinnedIds.value.length) pinnedIds.value = kept;
+  });
+
   const openMenu = (element: GraphElement, x: number, y: number) => {
     menu.value = { element, x, y };
   };
@@ -223,7 +391,7 @@ export const createGraphActions = (
       addNotification({
         type: "info",
         title: "No changes",
-        message: `The values of ${elementLabel(element)} were not changed.`,
+        message: `The values of ${labelOf(element)} were not changed.`,
       });
       cancelEdit();
       return true;
@@ -238,7 +406,7 @@ export const createGraphActions = (
     addNotification({
       type: "success",
       title: "Values saved",
-      message: `Values of ${elementLabel(element)} were updated.`,
+      message: `Values of ${labelOf(element)} were updated.`,
     });
     cancelEdit();
 
@@ -251,7 +419,7 @@ export const createGraphActions = (
       addNotification({
         type: "warning",
         title: "Values not reloaded",
-        message: `The values were saved, but reloading ${elementLabel(element)} failed: ${errorMessage(error)}`,
+        message: `The values were saved, but reloading ${labelOf(element)} failed: ${errorMessage(error)}`,
       });
     }
     await refresh();
@@ -261,6 +429,8 @@ export const createGraphActions = (
   const deleteElement = async (element: GraphElement): Promise<boolean> => {
     const id = queryId?.value;
     if (!id) return false;
+    // Before the cache (and its alias) is cleared.
+    const label = labelOf(element);
     try {
       if (!(await execMut([deleteElementQuery(element.id)]))) {
         throw new Error(NO_DATABASE);
@@ -269,11 +439,14 @@ export const createGraphActions = (
       elementValues.remove(element.id);
       if (selectedId.value === element.id) closePanel();
       if (pendingEdgeSourceId.value === element.id) cancelAddEdge();
+      // The database reuses ids: an edge created later with the same id is
+      // new and should animate too.
+      lastAddedEdgeId.value = undefined;
       await refresh();
       addNotification({
         type: "success",
         title: "Element deleted",
-        message: `The ${elementLabel(element)} was deleted.`,
+        message: `The ${label} was deleted.`,
       });
       return true;
     } catch (error) {
@@ -283,12 +456,12 @@ export const createGraphActions = (
   };
 
   const confirmDelete = (element: GraphElement) => {
-    const lines = [`Are you sure you want to delete ${elementLabel(element)}?`];
+    const lines = [`Are you sure you want to delete ${labelOf(element)}?`];
     if (isNode(element)) {
       lines.push("All edges of the node will be deleted as well.");
     }
     openModal({
-      header: `Delete ${elementLabel(element)}`,
+      header: `Delete ${labelOf(element)}`,
       content: convertArrayOfStringsToContent(lines, {
         emphasizedWords: ["delete"],
       }),
@@ -339,6 +512,7 @@ export const createGraphActions = (
         title: "Edge created",
         message: `Edge ${edgeId ?? ""} from node ${from} to node ${to} was created.`,
       });
+      lastAddedEdgeId.value = edgeId;
       // Let the user add values to the new edge right away.
       if (edgeId !== undefined) {
         selectedId.value = edgeId;
@@ -365,11 +539,18 @@ export const createGraphActions = (
     });
   };
 
-  /** Handles a (left) click on a node: picks the edge target or opens details. */
-  const clickNode = (node: GraphNode) => {
+  /**
+   * Handles a (left) click on a node: picks the edge target, pins it with
+   * Shift, or opens its details.
+   */
+  const clickNode = (node: GraphNode, { pin = false } = {}) => {
     closeMenu();
     if (pendingEdgeSourceId.value !== undefined) {
       completeAddEdge(node);
+      return;
+    }
+    if (pin) {
+      togglePin(node);
       return;
     }
     viewElement(node);
@@ -394,6 +575,11 @@ export const createGraphActions = (
         key: "edit",
         label: "Edit values",
         action: run(() => editElement(element)),
+      },
+      {
+        key: "pin",
+        label: isPinned(element.id) ? "Unpin details" : "Pin details",
+        action: run(() => togglePin(element)),
       },
     ];
     if (isNode(element)) {
@@ -424,10 +610,32 @@ export const createGraphActions = (
     selectedId,
     selectedElement,
     describeElement: elementValues.describe,
+    aliasOf: elementValues.aliasOf,
     loadValues,
     panelMode: readonly(panelMode),
     menu,
     pendingEdgeSourceId,
+    pinnedIds: readonly(pinnedIds),
+    pinnedElements,
+    lastAddedEdgeId: readonly(lastAddedEdgeId),
+    isPinned,
+    togglePin,
+    paletteSize,
+    colorResolver,
+    colorSlotOf,
+    colorLegend,
+    colorRules,
+    rowColors,
+    valueIndex,
+    colorQueries,
+    colorEachQuery,
+    colorElements,
+    setElementColorById,
+    setElementColor,
+    setRowColor,
+    setColorRules,
+    clearColors,
+    unpin,
     openMenu,
     closeMenu,
     closePanel,

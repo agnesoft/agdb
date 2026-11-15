@@ -75,4 +75,18 @@ describe("GraphContextMenu", () => {
     expect(event.defaultPrevented).toBe(true);
     wrapper.unmount();
   });
+  it("shows colour swatches when a palette is given", async () => {
+    const wrapper = mountMenu();
+    expect(document.querySelector("[data-testid=menu-colors]")).toBeNull();
+    await wrapper.setProps({ palette: ["#111111", "#222222"], color: 1 });
+    const swatches = document.querySelectorAll<HTMLElement>(
+      "[data-testid=menu-colors] [data-testid=swatch]",
+    );
+    expect(swatches).toHaveLength(2);
+    expect(swatches[1]?.getAttribute("aria-pressed")).toBe("true");
+    swatches[0]?.click();
+    expect(wrapper.emitted("color")).toEqual([[0]]);
+    expect(wrapper.emitted("close")).toHaveLength(1);
+    wrapper.unmount();
+  });
 });

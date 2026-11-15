@@ -286,23 +286,36 @@ const BOB = { id: 2, from: null, to: null, values: [kv("name", "bob")] };
 const KNOWS = { id: -3, from: 1, to: 2, values: [kv("since", "2020")] };
 
 /**
- * Answers the run query with `results`, and the panel's lookup of stored
- * values (a select by ids) with the matching elements.
+ * Answers the run query with `results`, the lookup of aliases with
+ * `aliases` (element id → alias), and the panel's lookup of stored values
+ * (a select by ids) with the matching elements.
  */
-const mockQueries = async (page: Page, results: unknown[]) => {
+const mockQueries = async (
+  page: Page,
+  results: unknown[],
+  aliases: Record<number, string> = {},
+) => {
   await page.route(DB_EXEC_API, (route) => {
     const [query] = route.request().postDataJSON() ?? [];
     const ids: { Id: number }[] | undefined = query?.SelectValues?.ids?.Ids;
-    const body = ids
-      ? [
-          {
-            result: ids.length,
-            elements: [ALICE, BOB, KNOWS].filter((element) =>
-              ids.some((id) => id.Id === element.id),
-            ),
-          },
-        ]
-      : results;
+    const aliasElements = Object.entries(aliases).map(([id, alias]) => ({
+      id: Number(id),
+      from: null,
+      to: null,
+      values: [kv("alias", alias)],
+    }));
+    const body = query?.SelectAllAliases
+      ? [{ result: aliasElements.length, elements: aliasElements }]
+      : ids
+        ? [
+            {
+              result: ids.length,
+              elements: [ALICE, BOB, KNOWS].filter((element) =>
+                ids.some((id) => id.Id === element.id),
+              ),
+            },
+          ]
+        : results;
     return route.fulfill({
       status: 200,
       contentType: "application/json",
@@ -393,7 +406,9 @@ test.describe("Query results", () => {
       /name.*alice/,
     );
 
-    await panel.getByRole("button", { name: "Edit values" }).click();
+    await panel
+      .getByRole("button", { name: "Edit all values in a form" })
+      .click();
     await panel.getByTestId(testIds.PANEL_VALUE_INPUT).fill("carol");
     const request = page.waitForRequest(DB_EXEC_MUT_API);
     await panel.getByTestId(testIds.PANEL_SAVE).click();
@@ -402,6 +417,74 @@ test.describe("Query results", () => {
         InsertValues: {
           ids: { Ids: [{ Id: 1 }] },
           values: { Multi: [[kv("name", "carol")]] },
+        },
+      },
+    ]);
+    await expect(page.getByText("Values saved")).toBeVisible();
+  });
+
+  test("shows aliases, and elements returned twice once in the table but twice in JSON", async ({
+    page,
+  }) => {
+    await mockQueries(
+      page,
+      [
+        { result: 1, elements: [ALICE] },
+        { result: 2, elements: [ALICE, BOB] },
+      ],
+      { 1: "admin_alice" },
+    );
+    await gotoAndWaitForLoad(page, QUERY_PAGE);
+    await addSteps(page, 0, ["search", "elements"]);
+    await addQueryButton(page).click();
+    await addSteps(page, 1, ["search", "elements"]);
+    await runQuery(page);
+
+    await expect(page.getByTestId(testIds.RESULTS_UNIQUE_CHIP)).toHaveText(
+      "unique: 2",
+    );
+    await page.getByTestId(testIds.VIEW_TABLE).click();
+    const table = page.getByTestId(testIds.RESULTS_TABLE);
+    await expect(table.locator("th", { hasText: "alias" })).toBeVisible();
+    await expect(table.locator("th", { hasText: "result" })).toBeVisible();
+    const tableRows = page.getByTestId(testIds.RESULTS_TABLE_ROW);
+    await expect(tableRows).toHaveCount(2);
+    await expect(tableRows.nth(0)).toContainText("admin_alice");
+    await expect(tableRows.nth(0)).toContainText("#0, #1");
+
+    await page.getByTestId(testIds.VIEW_JSON).click();
+    await expect
+      .poll(
+        async () =>
+          (
+            (await page.getByTestId(testIds.RESULTS_JSON).textContent()) ?? ""
+          ).split('"alice"').length - 1,
+      )
+      .toBe(2);
+  });
+
+  test("edits a value in place in the details panel", async ({ page }) => {
+    await mockQueries(page, [{ result: 1, elements: [ALICE] }]);
+    await mockMutations(page);
+    await gotoAndWaitForLoad(page, QUERY_PAGE);
+    await addSteps(page, 0, ["search", "elements"]);
+    await runQuery(page);
+    await page.getByTestId(testIds.VIEW_TABLE).click();
+    await page.getByTestId(testIds.RESULTS_ROW_MENU).click();
+    await page.getByTestId(dynamicIds.menuItem("view")).click();
+
+    const panel = page.getByTestId(testIds.ELEMENT_DETAILS_PANEL);
+    await panel.getByTestId(testIds.PANEL_VALUE_CELL).click();
+    const input = panel.getByTestId(testIds.INLINE_INPUT);
+    await expect(input).toBeFocused();
+    await input.fill("dave");
+    const request = page.waitForRequest(DB_EXEC_MUT_API);
+    await input.press("Enter");
+    expect((await request).postDataJSON()).toEqual([
+      {
+        InsertValues: {
+          ids: { Ids: [{ Id: 1 }] },
+          values: { Multi: [[kv("name", "dave")]] },
         },
       },
     ]);

@@ -104,6 +104,20 @@
   --graph-edge-color-accent: var(--orange-dark);
   --graph-context-node-color: var(--gray-5);
   --graph-context-edge-color: var(--gray-6);
+
+  /*
+   * Categorical colours for graph colour rules, in fixed order: green, cyan,
+   * yellow, violet, red. One per hue family, so no two read alike; blue and
+   * orange are left out, they mean selected and hovered. Validated for colour
+   * vision deficiency, all pairs.
+   */
+  --graph-palette-1: #17890b;
+  --graph-palette-2: #2dbad8;
+  --graph-palette-3: #eda100;
+  --graph-palette-4: #9752fe;
+  --graph-palette-5: #f92240;
+  /* Nodes no colour applies to, while colours are in use. */
+  --graph-uncolored-color: var(--gray-5);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -136,6 +150,13 @@
     --graph-edge-color-accent: var(--orange-light);
     --graph-context-node-color: var(--gray-2);
     --graph-context-edge-color: var(--gray-1);
+
+    --graph-palette-1: #17780f;
+    --graph-palette-2: #34a2b6;
+    --graph-palette-3: #c98500;
+    --graph-palette-4: #9130db;
+    --graph-palette-5: #d71033;
+    --graph-uncolored-color: var(--gray-2);
   }
 }
 
@@ -145,6 +166,13 @@
   box-sizing: border-box;
   margin: 0;
   font-weight: normal;
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
 }
 
 body,

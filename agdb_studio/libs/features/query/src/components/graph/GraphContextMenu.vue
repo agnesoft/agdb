@@ -2,6 +2,8 @@
 import { computed, onMounted, onUnmounted, ref } from "vue";
 import AgdbMenu from "@agdb-studio/common/src/components/menu/AgdbMenu.vue";
 import type { Action } from "@agdb-studio/common/src/composables/content/types";
+import type { PaletteSlot } from "../../utils/graphColorRules";
+import ColorSwatchPicker from "./ColorSwatchPicker.vue";
 
 const props = withDefaults(
   defineProps<{
@@ -9,11 +11,22 @@ const props = withDefaults(
     y: number;
     title?: string;
     actions: Action<undefined>[];
+    /** When given, a row of swatches sets the element's own colour. */
+    palette?: readonly string[];
+    color?: PaletteSlot;
   }>(),
-  { title: "" },
+  { title: "", palette: undefined, color: undefined },
 );
 
-const emit = defineEmits<{ close: [] }>();
+const emit = defineEmits<{
+  close: [];
+  color: [slot: PaletteSlot | undefined];
+}>();
+
+const pickColor = (slot: PaletteSlot | undefined) => {
+  emit("color", slot);
+  emit("close");
+};
 
 const menuRef = ref<HTMLElement>();
 
@@ -63,6 +76,20 @@ onUnmounted(() => {
     >
       <div v-if="props.title" class="menu-title">{{ props.title }}</div>
       <AgdbMenu :actions="props.actions" />
+      <div
+        v-if="props.palette?.length"
+        class="menu-colors"
+        data-testid="menu-colors"
+      >
+        <span class="menu-colors-label">Colour</span>
+        <ColorSwatchPicker
+          inline
+          :palette="props.palette"
+          :model-value="props.color"
+          label="Colour of this element"
+          @update:model-value="pickColor"
+        />
+      </div>
     </div>
   </Teleport>
 </template>
@@ -71,6 +98,20 @@ onUnmounted(() => {
 .graph-context-menu {
   position: fixed;
   z-index: var(--z-index-dropdown);
+}
+.menu-colors {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+  padding: 0.35rem 0.5rem;
+  font-size: 0.8rem;
+  border-radius: 0.3rem;
+  background-color: var(--color-background-mute);
+  border: 1px solid var(--color-border);
+}
+.menu-colors-label {
+  color: var(--color-text-muted);
 }
 .menu-title {
   font-size: 0.8rem;

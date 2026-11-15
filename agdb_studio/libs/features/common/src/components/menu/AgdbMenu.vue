@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { ref, type PropType } from "vue";
+import { nextTick, ref, type PropType } from "vue";
 import { AkChevronRightSmall } from "@kalimahapps/vue-icons";
 import SlideUpTransition from "@agdb-studio/design/src/components/transitions/SlideUpTransition.vue";
 import type { Action } from "../../composables/content/types";
@@ -9,8 +9,18 @@ const props = defineProps({
 });
 
 const openedSubmenu = ref<string>();
-const openSubmenu = (key: string) => {
+const submenuLeft = ref(false);
+const openSubmenu = async (key: string, item: EventTarget | null) => {
+  if (openedSubmenu.value === key) return;
   openedSubmenu.value = key;
+  submenuLeft.value = false;
+  await nextTick();
+  const submenu = (item as HTMLElement | null)?.querySelector(".sub-menu");
+  if (openedSubmenu.value === key && submenu) {
+    submenuLeft.value =
+      submenu.getBoundingClientRect().right >
+      document.documentElement.clientWidth;
+  }
 };
 </script>
 
@@ -25,12 +35,12 @@ const openSubmenu = (key: string) => {
       @click.prevent="
         (event: MouseEvent) => {
           if (action.actions) {
-            openSubmenu(action.key);
+            openSubmenu(action.key, event.currentTarget);
           }
           action.action?.({ event, params: undefined });
         }
       "
-      @mouseover="openSubmenu(action.key)"
+      @mouseover="openSubmenu(action.key, $event.currentTarget)"
     >
       <a
         href="#"
@@ -47,6 +57,7 @@ const openSubmenu = (key: string) => {
         <AgdbMenu
           v-if="openedSubmenu === action.key && action.actions"
           class="sub-menu"
+          :class="{ 'sub-menu-left': submenuLeft }"
           :actions="action.actions"
         />
       </SlideUpTransition>
@@ -106,5 +117,9 @@ const openSubmenu = (key: string) => {
   position: absolute;
   left: calc(100% - 2rem);
   top: 0.5rem;
+  &.sub-menu-left {
+    left: auto;
+    right: calc(100% - 2rem);
+  }
 }
 </style>

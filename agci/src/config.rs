@@ -1,55 +1,45 @@
 use crate::CIError;
-use crate::manifest::Kind;
+use crate::project_type::Kind;
 use serde::Deserialize;
 use serde::Serialize;
+use serde::de::DeserializeOwned;
 use std::collections::BTreeMap;
 
 /// The configuration of the projects in the repository root, optional.
 pub(crate) const FILE: &str = "agci.toml";
 
-/// `agci.toml`: defaults per language and the entries of the projects by directory.
+/// `agci.toml`: defaults per project type and the entries of the projects by directory.
 #[derive(Debug, Default, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub(crate) struct File {
+    /// Fields of the projects of the type that they do not set themselves.
     #[serde(default)]
-    pub(crate) defaults: Defaults,
+    pub(crate) defaults: BTreeMap<Kind, toml::Table>,
     #[serde(default)]
     pub(crate) projects: BTreeMap<String, toml::Table>,
-    /// The tasks of the root package.json `check` script, the built-in pnpm checks if set.
+    /// The default checks the repository root sets per type, over the built-in ones.
     #[serde(skip)]
-    pub(crate) pnpm_checks: Option<Vec<String>>,
+    pub(crate) root_checks: BTreeMap<Kind, Vec<String>>,
 }
 
-/// Fields of the projects of the language that they do not set themselves.
-#[derive(Debug, Default, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub(crate) struct Defaults {
-    cargo: Option<toml::Table>,
-    pnpm: Option<toml::Table>,
-    shell: Option<toml::Table>,
-}
-
-/// `[projects."<dir>"]` (or `[defaults.<language>]`) in `agci.toml`.
+/// `[projects."<dir>"]` (or `[defaults.<type>]`) in `agci.toml`.
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
-#[serde(default, deny_unknown_fields)]
+#[serde(default)]
 pub(crate) struct Config {
-    /// Cargo: built-in checks (see `CARGO_CHECKS`) in their order, then the others. pnpm: package.json
-    /// scripts. Shell (and the other Cargo ones): `<check>.sh` or `<check>.ps1` in the project
-    /// directory. Except the Cargo built-ins they run in the given order.
+    /// What they are is up to the project type, those of the defaults only if the project can run
+    /// them.
     pub(crate) checks: Vec<String>,
     /// Project directories or repository paths that affect this project in addition to the manifest dependencies.
     pub(crate) dependencies: Vec<String>,
     /// Defaults to `["linux"]`.
     pub(crate) os: Vec<Os>,
-    /// Toolchains needed in addition to the project's own language.
+    /// Toolchains needed in addition to the project's own type.
     pub(crate) add_toolchains: Vec<Toolchain>,
     /// Projects of the same group are checked in one job (per OS), one after another.
     pub(crate) group: Option<String>,
-    /// Cargo only: the `coverage` check requires the project's own tests to cover all of its lines,
-    /// regions and functions (default), `false` only runs the tests (the check is named `test`).
-    pub(crate) coverage: Option<bool>,
-    /// Cargo only: additionally lint each combination with `--no-default-features`.
-    pub(crate) feature_combinations: Vec<String>,
+    /// Those of the project type.
+    #[serde(flatten)]
+    pub(crate) fields: toml::Table,
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq, PartialOrd, Ord)]
@@ -59,25 +49,57 @@ pub(crate) enum Os {
     Windows,
 }
 
-#[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq)]
+/// Installed in a job, in the order of the job matrix fields.
+#[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq, PartialOrd, Ord)]
 #[serde(rename_all = "lowercase")]
 pub(crate) enum Toolchain {
+    Rust,
     Node,
     Php,
-    Rust,
+    /// `cargo llvm-cov`.
+    Coverage,
 }
 
-pub(crate) const CARGO_CHECKS: [&str; 7] = [
-    "format",
-    "lint",
-    "testcheck",
-    "doc",
-    "examples",
-    "bench",
-    "coverage",
-];
+impl Toolchain {
+    pub(crate) const ALL: [Toolchain; 4] = [
+        Toolchain::Rust,
+        Toolchain::Node,
+        Toolchain::Php,
+        Toolchain::Coverage,
+    ];
+}
 
 impl Config {
+    /// The settings of the project and what its type resolves: the checks (`inherited` if not
+    /// its own) and its fields.
+    pub(crate) fn split(self, dir: &str, inherited: bool) -> (Settings, TypeConfig) {
+        (
+            Settings {
+                dependencies: self.dependencies,
+                os: self.os,
+                add_toolchains: self.add_toolchains,
+                group: self.group,
+            },
+            TypeConfig {
+                dir: dir.to_string(),
+                checks: self.checks,
+                inherited,
+                fields: self.fields,
+            },
+        )
+    }
+}
+
+/// The configuration of a project that does not depend on its type.
+#[derive(Clone, Debug, Default)]
+pub(crate) struct Settings {
+    pub(crate) dependencies: Vec<String>,
+    pub(crate) os: Vec<Os>,
+    pub(crate) add_toolchains: Vec<Toolchain>,
+    pub(crate) group: Option<String>,
+}
+
+impl Settings {
     pub(crate) fn os(&self) -> Vec<Os> {
         if self.os.is_empty() {
             vec![Os::Linux]
@@ -85,62 +107,51 @@ impl Config {
             self.os.clone()
         }
     }
+}
 
-    pub(crate) fn coverage(&self) -> bool {
-        self.coverage.unwrap_or(true)
-    }
+/// The part of a project's configuration its type resolves.
+#[derive(Debug, Default)]
+pub(crate) struct TypeConfig {
+    dir: String,
+    pub(crate) checks: Vec<String>,
+    /// The checks are the defaults: those the project cannot run are skipped, not an error.
+    pub(crate) inherited: bool,
+    fields: toml::Table,
+}
 
-    pub(crate) fn has_check(&self, name: &str) -> bool {
-        self.checks.iter().any(|c| c == name)
-    }
-
-    pub(crate) fn has_rust_only_fields(&self) -> bool {
-        self.coverage.is_some() || !self.feature_combinations.is_empty()
+impl TypeConfig {
+    /// The fields of the type, unknown ones are an error.
+    pub(crate) fn fields<T: DeserializeOwned>(&self) -> Result<T, CIError> {
+        toml::Value::Table(self.fields.clone())
+            .try_into()
+            .map_err(|e| format!("'{FILE}' project '{}': {e}", self.dir).into())
     }
 }
 
-/// When neither `agci.toml` nor the project set them. Only those the project can run apply: Cargo
-/// `doc` for crates with a library, `examples` and `bench` for crates with such targets, pnpm and
-/// Shell ones if the project has the script.
-fn builtin(kind: Kind) -> toml::Table {
-    let checks: &[&str] = match kind {
-        Kind::Cargo => &["format", "lint", "doc", "examples", "bench", "coverage"],
-        Kind::Pnpm => &[
-            "format:check",
-            "build",
-            "lint:check",
-            "type-check",
-            "test",
-            "test:functional",
-        ],
-        Kind::Shell => &["format", "lint", "build", "test"],
-    };
-    toml::Table::from_iter([(
-        "checks".to_string(),
-        toml::Value::Array(checks.iter().map(|c| toml::Value::from(*c)).collect()),
-    )])
-}
+/// The type has no fields besides the common ones.
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct NoFields {}
 
 impl File {
     pub(crate) fn parse(content: &str) -> Result<Self, CIError> {
         toml::from_str(content).map_err(|e| format!("'{FILE}': {e}").into())
     }
 
-    /// The fields the project sets over the defaults of its language over the built-in ones. Only
-    /// what is written counts, so a new field with a default does not change any project.
+    /// The fields the project sets over the defaults of its type over the root and built-in
+    /// checks. Only what is written counts, so a new field with a default does not change any
+    /// project.
     pub(crate) fn effective(&self, dir: &str, kind: Kind) -> toml::Table {
-        let defaults = match kind {
-            Kind::Cargo => self.defaults.cargo.as_ref(),
-            Kind::Pnpm => self.defaults.pnpm.as_ref(),
-            Kind::Shell => self.defaults.shell.as_ref(),
+        let checks = match self.root_checks.get(&kind) {
+            Some(checks) => toml::Value::from(checks.clone()),
+            None => toml::Value::from(kind.default_checks()),
         };
-        let mut table = builtin(kind);
+        let mut table = toml::Table::from_iter([("checks".to_string(), checks)]);
 
-        if let (Kind::Pnpm, Some(checks)) = (kind, &self.pnpm_checks) {
-            table.insert("checks".to_string(), toml::Value::from(checks.clone()));
-        }
-
-        for layer in [defaults, self.projects.get(dir)].into_iter().flatten() {
+        for layer in [self.defaults.get(&kind), self.projects.get(dir)]
+            .into_iter()
+            .flatten()
+        {
             table.extend(layer.clone());
         }
 
@@ -188,7 +199,7 @@ mod tests {
 
         let (agdb, inherited) = config(content, "agdb", Kind::Cargo).unwrap();
         assert_eq!(agdb.checks, vec!["format", "coverage"]);
-        assert_eq!(agdb.coverage, Some(true));
+        assert_eq!(agdb.fields["coverage"], toml::Value::from(true));
         assert_eq!(agdb.os, vec![Os::Linux, Os::Windows]);
         assert!(!inherited);
 
@@ -197,7 +208,7 @@ mod tests {
             detected.checks,
             vec!["format", "lint", "doc", "examples", "bench", "coverage"]
         );
-        assert_eq!(detected.coverage, Some(false));
+        assert_eq!(detected.fields["coverage"], toml::Value::from(false));
         assert!(inherited);
 
         let (node, _) = config(content, "web", Kind::Pnpm).unwrap();
@@ -221,9 +232,10 @@ mod tests {
     }
 
     #[test]
-    fn root_check_script_over_builtin_node_checks() {
+    fn root_checks_over_builtin_ones() {
         let mut file = File::parse("[projects.b]\nchecks = [\"test\"]").unwrap();
-        file.pnpm_checks = Some(vec!["openapi".to_string(), "test".to_string()]);
+        file.root_checks
+            .insert(Kind::Pnpm, vec!["openapi".to_string(), "test".to_string()]);
 
         assert_eq!(
             file.config("a", Kind::Pnpm).unwrap().0.checks,
@@ -238,12 +250,6 @@ mod tests {
 
     #[test]
     fn unknown_fields_fail() {
-        let error = config("[projects.a]\ncheck = []", "a", Kind::Cargo)
-            .unwrap_err()
-            .description;
-
-        assert!(error.contains("project 'a'"), "{error}");
-        assert!(error.contains("unknown field `check`"), "{error}");
         assert!(
             File::parse("[project.a]\nchecks = []")
                 .unwrap_err()
@@ -254,7 +260,7 @@ mod tests {
             File::parse("[defaults.php]\nchecks = []")
                 .unwrap_err()
                 .description
-                .contains("unknown field `php`")
+                .contains("unknown variant `php`")
         );
     }
 

@@ -31,7 +31,7 @@ Explore agdb documentation: concepts, quickstarts, server guides, and references
 
 - [server client - rust](https://github.com/agnesoft/agdb/blob/main/agdb_api/examples/server_client.rs)
 
-- [server client - typescript](https://github.com/agnesoft/agdb/tree/main/examples/server_client_typescript)
+- [server client - typescript](https://github.com/agnesoft/agdb/tree/main/agdb_api/typescript/examples/server_client)
 
 - [strong types](https://github.com/agnesoft/agdb/blob/main/agdb/examples/user_types.rs)
 

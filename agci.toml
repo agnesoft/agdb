@@ -13,8 +13,9 @@
 #   file in the project directory (`:` is `_`), `run.sh`/`run.ps1` is the last check (cargo,
 #   shell) unless `checks` place it.
 # - Releases: crates unless `publish = false`, npm packages unless `"private": true`, then the
-#   `release` hook; every push to main runs the `release:dev` hook of the affected projects. Hooks
-#   are package.json scripts (pnpm) or `release.sh`/`release_dev.sh` (cargo, shell).
+#   `release` hook; every push to main runs the `release:dev` hook of the affected projects, `agci`
+#   without arguments the `regenerate` hooks of all projects. Hooks are package.json scripts
+#   (pnpm) or `<hook>.sh`/`<hook>.ps1` (cargo, shell), e.g. `release_dev.sh`.
 #
 # Sections, an entry overrides the defaults of its kind field by field:
 #   [defaults.cargo], [defaults.pnpm], [defaults.shell]  any of the fields below
@@ -29,7 +30,7 @@
 #                                 besides its manifest dependencies.
 #   os = [...]                    linux (default), windows.
 #   add_toolchains = [...]        Installed besides the kind's own (cargo: rust, pnpm: node): rust,
-#                                 node, php.
+#                                 node, php, coverage (cargo llvm-cov).
 #   group = "<name>"              Check with the other projects of the group in one job per OS.
 #   coverage = false              cargo: the coverage check only runs the tests (named test),
 #                                 otherwise they must cover all lines, regions and functions.
@@ -93,7 +94,3 @@ feature_combinations = [
 os = ["linux", "windows"]
 coverage = true
 checks = ["format", "lint", "testcheck", "coverage"]
-
-[projects."examples/server_client_php"]
-add_toolchains = ["php"]
-dependencies = ["agdb_api/php"]

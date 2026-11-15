@@ -1,12 +1,11 @@
 use crate::CIError;
-use crate::affected::CARGO_INPUTS;
 use crate::affected::graph;
 use crate::project::Project;
+use crate::project_type::cargo;
 use crate::utilities;
 use agdb::QueryBuilder;
 use std::collections::BTreeSet;
 use std::path::Path;
-use std::path::PathBuf;
 use std::process::Command;
 
 const PACKAGE: &str = "agci";
@@ -14,7 +13,7 @@ const EXE: &str = if cfg!(windows) { "agci.exe" } else { "agci" };
 const FINGERPRINT: &str = "agci.fingerprint";
 
 /// Repository paths the agci binary is built from: its project, the projects it transitively depends
-/// on and the files affecting all Cargo projects. Extra inputs (`dependencies` paths) are not compiled in.
+/// on and the files affecting all projects of its type. Extra inputs (`dependencies` paths) are not compiled in.
 pub(crate) fn inputs(projects: &[Project]) -> Result<BTreeSet<String>, CIError> {
     let agci = projects
         .iter()
@@ -29,7 +28,9 @@ pub(crate) fn inputs(projects: &[Project]) -> Result<BTreeSet<String>, CIError> 
             .node()
             .query(),
     )?;
-    let mut paths: BTreeSet<String> = CARGO_INPUTS
+    let mut paths: BTreeSet<String> = agci
+        .project_type
+        .inputs()
         .iter()
         .map(|input| input.trim_end_matches('/').to_string())
         .collect();
@@ -81,48 +82,29 @@ pub(crate) fn check(dir: &Path, projects: Result<Vec<Project>, CIError>) -> Resu
 /// Builds agci from the sources into `dir` along with its fingerprint.
 pub(crate) fn build(dir: &Path, projects: &[Project]) -> Result<(), CIError> {
     let fingerprint = fingerprint(projects)?;
-    utilities::stream_command(Command::new("cargo").args(["build", "-r", "-p", PACKAGE]))?;
+    let built = cargo::build_release(PACKAGE, EXE)?;
     std::fs::create_dir_all(dir)?;
-    std::fs::copy(target_dir()?.join("release").join(EXE), dir.join(EXE))?;
+    std::fs::copy(built, dir.join(EXE))?;
     std::fs::write(dir.join(FINGERPRINT), fingerprint)?;
     println!("agci built into '{}'", dir.display());
     Ok(())
 }
 
-fn target_dir() -> Result<PathBuf, CIError> {
-    let metadata: serde_json::Value =
-        serde_json::from_str(&utilities::run_quiet(Command::new("cargo").args([
-            "metadata",
-            "--no-deps",
-            "--format-version",
-            "1",
-        ]))?)?;
-    Ok(PathBuf::from(
-        metadata["target_directory"]
-            .as_str()
-            .ok_or("cargo metadata without target_directory")?,
-    ))
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::manifest::Kind;
-    use crate::project::tests::config;
+    use crate::project_type::Kind;
 
     fn project(dir: &str, package: &str, depends: &[&str], inputs: &[&str]) -> Project {
         Project {
             dir: dir.to_string(),
             kind: Kind::Cargo,
             packages: vec![package.to_string()],
-            config: config(&[], &[]),
+            settings: Default::default(),
             depends: depends.iter().map(|d| d.to_string()).collect(),
             inputs: inputs.iter().map(|i| i.to_string()).collect(),
-            scripts: Default::default(),
             published: Vec::new(),
-            library: true,
-            examples: false,
-            benches: false,
+            project_type: Box::<cargo::Cargo>::default(),
         }
     }
 

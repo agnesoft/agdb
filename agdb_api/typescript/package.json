@@ -34,7 +34,8 @@
         "format:check": "prettier --check src/ tests/",
         "before-commit": "pnpm run openapi && pnpm run format && pnpm run lint && pnpm run test",
         "openapi": "pnpm exec openapi typegen ../../agdb_server/openapi.json > src/openapi.d.ts",
-        "test_queries": "node query_test_generator.js && prettier --write tests/query.test.ts"
+        "test_queries": "node query_test_generator.js && prettier --write tests/query.test.ts",
+        "regenerate": "pnpm run openapi && pnpm run test_queries"
     },
     "dependencies": {
         "openapi-client-axios": "^7.6.0"

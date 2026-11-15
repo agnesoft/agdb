@@ -1,7 +1,6 @@
 use crate::CIError;
 use crate::utilities::run_command;
 use std::collections::BTreeMap;
-use std::path::Path;
 use std::process::Command;
 
 /// The latest `v*` tag without the `v`. Shallow clones (CI) have no tags, then the remote ones are used.
@@ -31,14 +30,6 @@ fn remote_tags(pattern: &str) -> Result<Vec<String>, CIError> {
             .map(|(_, tag)| tag.to_string())
     })
     .collect())
-}
-
-pub(crate) fn new_version() -> Result<String, CIError> {
-    Ok(std::fs::read_to_string(Path::new("Cargo.toml"))?
-        .lines()
-        .find(|line| line.trim_start().starts_with("version"))
-        .and_then(|line| line.trim_start().split('"').nth(1).map(|v| v.to_string()))
-        .ok_or("version not found")?)
 }
 
 pub(crate) fn merge_base(base: &str) -> Result<String, CIError> {

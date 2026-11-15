@@ -4,7 +4,6 @@ use crate::config::File;
 use crate::config::Os;
 use crate::config::Toolchain;
 use crate::git;
-use crate::manifest::Kind;
 use crate::project::Project;
 use crate::project::is_within;
 use crate::utilities;
@@ -18,22 +17,8 @@ use std::collections::BTreeSet;
 /// Prefix of the evidence (actions cache keys) of passed check jobs.
 pub(crate) const EVIDENCE: &str = "agci-done-";
 
-/// Changes to these affect every project of the language. Entries ending with `/` are directories.
-pub(crate) const CARGO_INPUTS: [&str; 5] = [
-    "Cargo.toml",
-    "Cargo.lock",
-    "rust-toolchain",
-    "rust-toolchain.toml",
-    ".cargo/",
-];
-const PNPM_INPUTS: [&str; 6] = [
-    "package.json",
-    "pnpm-lock.yaml",
-    "pnpm-workspace.yaml",
-    "turbo.json",
-    "vitest.workspace.ts",
-    ".npmrc",
-];
+/// Changes to these affect every project, those of a project type its `inputs`. Entries ending with `/`
+/// are directories.
 const ALL_INPUTS: [&str; 1] = [".github/workflows/agdb.yaml"];
 
 #[derive(Debug, PartialEq, Serialize)]
@@ -44,10 +29,9 @@ pub(crate) struct Job {
     pub(crate) os: Os,
     #[serde(rename = "runs-on")]
     pub(crate) runs_on: &'static str,
-    pub(crate) rust: bool,
-    pub(crate) node: bool,
-    pub(crate) php: bool,
-    pub(crate) coverage: bool,
+    /// Whether the job installs the toolchain.
+    #[serde(flatten)]
+    pub(crate) toolchains: BTreeMap<Toolchain, bool>,
     /// Name for the uploaded artifacts, unique per job.
     pub(crate) artifact: String,
     /// Paths of the uploaded artifacts (coverage, test reports, logs), one per line.
@@ -119,7 +103,7 @@ impl Snapshot {
 
 /// What a project consists of in the snapshot: its effective `agci.toml` entry (with the defaults),
 /// its files (not those of projects nested in it), its `dependencies` paths and the files
-/// affecting every project of its language.
+/// affecting every project of its type.
 fn contents<'a>(
     projects: &'a [Project],
     snapshot: &Snapshot,
@@ -133,8 +117,6 @@ fn contents<'a>(
 
     for (path, id) in &snapshot.files {
         let all = ALL_INPUTS.iter().any(|i| matches(path, i));
-        let rust = all || CARGO_INPUTS.iter().any(|i| matches(path, i));
-        let node = all || PNPM_INPUTS.iter().any(|i| matches(path, i));
         let owner = projects
             .iter()
             .filter(|p| p.owns(path))
@@ -142,11 +124,12 @@ fn contents<'a>(
             .map(|p| p.dir.as_str());
 
         for project in projects {
-            let global = match project.kind {
-                Kind::Cargo => rust,
-                Kind::Pnpm => node,
-                Kind::Shell => all,
-            };
+            let global = all
+                || project
+                    .project_type
+                    .inputs()
+                    .iter()
+                    .any(|i| matches(path, i));
 
             if global
                 || owner == Some(project.dir.as_str())
@@ -254,18 +237,25 @@ pub(crate) fn jobs(
         .iter()
         .filter(|p| affected.contains(p.dir.as_str()))
     {
-        let name = project.config.group.as_ref().unwrap_or(&project.dir);
-        let paths = ["coverage/", "**/playwright-report/", "*.log"]
+        let name = project.settings.group.as_ref().unwrap_or(&project.dir);
+        let paths = project
+            .project_type
+            .artifacts()
+            .iter()
+            .chain(&["*.log"])
             .map(|p| format!("{}/{p}", project.dir))
+            .collect::<Vec<_>>()
             .join("\n");
+        let toolchains = || Toolchain::ALL.map(|t| (t, project.needs(t)));
 
-        for os in project.config.os() {
+        for os in project.settings.os() {
             if let Some(job) = jobs.iter_mut().find(|j| j.name == *name && j.os == os) {
                 job.projects.push(project.dir.clone());
-                job.rust |= project.needs(Toolchain::Rust);
-                job.node |= project.needs(Toolchain::Node);
-                job.php |= project.needs(Toolchain::Php);
-                job.coverage |= project.measures_coverage();
+
+                for (toolchain, needs) in toolchains() {
+                    *job.toolchains.entry(toolchain).or_default() |= needs;
+                }
+
                 job.paths = format!("{}\n{paths}", job.paths);
                 continue;
             }
@@ -278,10 +268,7 @@ pub(crate) fn jobs(
                     Os::Linux => "ubuntu-latest",
                     Os::Windows => "windows-latest",
                 },
-                rust: project.needs(Toolchain::Rust),
-                node: project.needs(Toolchain::Node),
-                php: project.needs(Toolchain::Php),
-                coverage: project.measures_coverage(),
+                toolchains: toolchains().into(),
                 artifact: format!(
                     "{}-{}",
                     name.replace('/', "_"),
@@ -316,6 +303,7 @@ mod tests {
     use crate::project::tests::build;
     use crate::project::tests::config;
     use crate::project::tests::manifest;
+    use crate::project_type::Kind;
 
     // db <- server <- client <- ui, server <- bench, ui has its own input file, server/image is a
     // Shell project nested in server
@@ -407,7 +395,7 @@ mod tests {
     }
 
     #[test]
-    fn change_propagates_to_dependents_across_languages() {
+    fn change_propagates_to_dependents_across_types() {
         assert_eq!(
             run(&["server/src/main.rs"]),
             vec!["bench", "client", "server", "server/image", "ui"]
@@ -456,7 +444,7 @@ mod tests {
     }
 
     #[test]
-    fn defaults_affect_the_projects_of_the_language_not_setting_the_field() {
+    fn defaults_affect_the_projects_of_the_type_not_setting_the_field() {
         let base = snapshot(&FILES, "[projects.db]\ncoverage = true");
         let head = snapshot(
             &FILES,
@@ -476,7 +464,7 @@ mod tests {
     }
 
     #[test]
-    fn language_inputs_affect_all_projects_of_the_language() {
+    fn type_inputs_affect_all_projects_of_the_type() {
         assert_eq!(run(&["pnpm-lock.yaml"]), vec!["client", "ui"]);
         assert_eq!(
             run(&["Cargo.toml"]),
@@ -539,9 +527,8 @@ mod tests {
     fn jobs_per_os_with_toolchains() {
         let mut projects = sample();
         let (bench, client) = (0, 1);
-        projects[bench].config.os = vec![Os::Linux, Os::Windows];
-        projects[bench].config.checks.push("coverage".to_string());
-        projects[client].config.add_toolchains = vec![Toolchain::Rust, Toolchain::Php];
+        projects[bench].settings.os = vec![Os::Linux, Os::Windows];
+        projects[client].settings.add_toolchains = vec![Toolchain::Rust, Toolchain::Php];
 
         let mut jobs = jobs(
             &projects,
@@ -559,7 +546,7 @@ mod tests {
 
         assert_eq!(
             serde_json::to_string(&jobs).unwrap(),
-            r#"[{"name":"bench","projects":["bench"],"os":"linux","runs-on":"ubuntu-latest","rust":true,"node":false,"php":false,"coverage":true,"artifact":"bench-linux","paths":"bench/coverage/\nbench/**/playwright-report/\nbench/*.log","evidence":""},{"name":"bench","projects":["bench"],"os":"windows","runs-on":"windows-latest","rust":true,"node":false,"php":false,"coverage":true,"artifact":"bench-windows","paths":"bench/coverage/\nbench/**/playwright-report/\nbench/*.log","evidence":""},{"name":"client","projects":["client"],"os":"linux","runs-on":"ubuntu-latest","rust":true,"node":true,"php":true,"coverage":false,"artifact":"client-linux","paths":"client/coverage/\nclient/**/playwright-report/\nclient/*.log","evidence":""}]"#
+            r#"[{"name":"bench","projects":["bench"],"os":"linux","runs-on":"ubuntu-latest","rust":true,"node":false,"php":false,"coverage":true,"artifact":"bench-linux","paths":"bench/*.log","evidence":""},{"name":"bench","projects":["bench"],"os":"windows","runs-on":"windows-latest","rust":true,"node":false,"php":false,"coverage":true,"artifact":"bench-windows","paths":"bench/*.log","evidence":""},{"name":"client","projects":["client"],"os":"linux","runs-on":"ubuntu-latest","rust":true,"node":true,"php":true,"coverage":false,"artifact":"client-linux","paths":"client/coverage/\nclient/**/playwright-report/\nclient/*.log","evidence":""}]"#
         );
     }
 
@@ -567,10 +554,10 @@ mod tests {
     fn grouped_projects_share_a_job_per_os() {
         let mut projects = sample();
         let (bench, client, db) = (0, 1, 2);
-        projects[bench].config.os = vec![Os::Linux, Os::Windows];
+        projects[bench].settings.os = vec![Os::Linux, Os::Windows];
 
         for i in [bench, client, db] {
-            projects[i].config.group = Some("small".to_string());
+            projects[i].settings.group = Some("small".to_string());
         }
 
         let jobs = jobs(
@@ -585,8 +572,8 @@ mod tests {
                     j.name.as_str(),
                     j.os,
                     j.projects.iter().map(String::as_str).collect(),
-                    j.rust,
-                    j.node,
+                    j.toolchains[&Toolchain::Rust],
+                    j.toolchains[&Toolchain::Node],
                 )
             })
             .collect();
@@ -613,8 +600,8 @@ mod tests {
     fn evidence_changes_with_the_fingerprint_of_any_project_of_the_job() {
         let mut projects = sample();
         let (bench, db) = (0, 2);
-        projects[bench].config.group = Some("small".to_string());
-        projects[db].config.group = Some("small".to_string());
+        projects[bench].settings.group = Some("small".to_string());
+        projects[db].settings.group = Some("small".to_string());
         let affected = BTreeSet::from(["bench", "db"]);
         let evidence = |fingerprints: &[(&str, &str)]| {
             let fingerprints = fingerprints

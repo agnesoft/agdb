@@ -28,6 +28,9 @@
         "test_queries": {
             "cache": false
         },
+        "regenerate": {
+            "cache": false
+        },
         "release:dev": {
             "cache": false,
             "dependsOn": [

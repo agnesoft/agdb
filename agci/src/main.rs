@@ -4,9 +4,9 @@ mod check;
 mod ci_error;
 mod config;
 mod git;
-mod language;
 mod manifest;
 mod project;
+mod project_type;
 mod regenerate;
 mod release;
 mod report;
@@ -22,7 +22,8 @@ use std::path::Path;
 use std::process::Command;
 
 const USAGE: &str = "usage:
-  agci                         update versions and regenerate the API clients
+  agci                         update the versions in the manifests to the repository version and
+                               run the regenerate hooks of the projects
   agci projects                list the projects, their dependencies and checks
   agci affected [--base <ref>] JSON job matrix of the projects affected by the changes since <ref>
                                (merge base), or by the uncommitted changes without --base
@@ -39,7 +40,7 @@ const USAGE: &str = "usage:
   agci release (--base <ref>|--all|--projects [<project>...]) [--plan]
                                after a push to main: the release:dev hooks of the projects affected
                                since <ref> (or of the given ones) and, if there is no v<version> tag
-                               for the root Cargo.toml version, the release (the packages and release
+                               for the repository version, the release (the packages and release
                                hooks of all projects, then the GitHub release and tag); --plan only
                                prints the steps";
 
@@ -62,8 +63,10 @@ fn load() -> Result<Vec<Project>, CIError> {
         None => config::File::default(),
     };
 
-    if let Some(content) = read("package.json")? {
-        file.pnpm_checks = manifest::root_checks(&content)?;
+    for kind in project_type::Kind::ALL {
+        if let Some(checks) = kind.root_checks(&read)? {
+            file.root_checks.insert(kind, checks);
+        }
     }
 
     project::projects(manifest::manifests()?, &file, |p| Path::new(p).exists())
@@ -87,50 +90,6 @@ fn affected_since<'a>(
         None => (head()?, Snapshot::of(None)?),
     };
     affected::affected(projects, &base, &head)
-}
-
-/// Whether the version of the package is already in the registry.
-fn published(registry: release::Registry, name: &str, version: &str) -> Result<bool, CIError> {
-    match registry {
-        release::Registry::Crates => published_crate(name, version),
-        release::Registry::Npm => published_npm(name, version),
-    }
-}
-
-fn published_crate(name: &str, version: &str) -> Result<bool, CIError> {
-    let status = utilities::run_quiet(Command::new("curl").args([
-        "-s",
-        "-o",
-        "/dev/null",
-        "-w",
-        "%{http_code}",
-        "-A",
-        "agci (https://github.com/agnesoft/agdb)",
-        &format!("https://crates.io/api/v1/crates/{name}/{version}"),
-    ]))?;
-
-    match status.trim() {
-        "200" => Ok(true),
-        "404" => Ok(false),
-        s => Err(format!("crates.io responded {s} for {name}@{version}").into()),
-    }
-}
-
-/// `npm view` prints nothing for an unknown version and fails with E404 for an unknown package.
-fn published_npm(name: &str, version: &str) -> Result<bool, CIError> {
-    let npm = if cfg!(windows) { "npm.cmd" } else { "npm" };
-    let out = Command::new(npm)
-        .args(["view", &format!("{name}@{version}"), "version"])
-        .output()?;
-    let stderr = String::from_utf8_lossy(&out.stderr);
-
-    if out.status.success() {
-        Ok(!out.stdout.trim_ascii().is_empty())
-    } else if stderr.contains("E404") {
-        Ok(false)
-    } else {
-        Err(format!("npm view {name}@{version} failed: {stderr}").into())
-    }
 }
 
 fn release(args: &[String]) -> Result<(), CIError> {
@@ -164,13 +123,22 @@ fn release(args: &[String]) -> Result<(), CIError> {
 }
 
 fn release_steps(projects: &[Project], affected: &[String]) -> Result<Vec<check::Step>, CIError> {
-    let version = git::new_version()?;
+    let version = project_type::version()?;
     let release = release::Release {
         affected: affected.iter().map(String::as_str).collect(),
         version: (!git::tag_exists(&format!("v{version}"))?).then_some(version),
         sha: git::head()?,
     };
-    release::plan(projects, &release, published)
+    release::plan(projects, &release, |registry, name, version| {
+        registry.published(name, version).map_err(|e| {
+            format!(
+                "{} lookup of {name}@{version} failed: {}",
+                registry.name(),
+                e.description
+            )
+            .into()
+        })
+    })
 }
 
 /// The outputs of the `config` job from the GitHub event: the `matrix` of the projects affected by a
@@ -303,7 +271,7 @@ fn run(args: &[String]) -> Result<(), CIError> {
     std::env::set_current_dir(root()?)?;
 
     match args.first().map(String::as_str) {
-        None => regenerate::regenerate(),
+        None => regenerate::regenerate(&load()?, &root()?),
         Some("projects") => {
             for p in load()? {
                 println!(
@@ -317,8 +285,7 @@ fn run(args: &[String]) -> Result<(), CIError> {
                     },
                     p.depends.iter().cloned().collect::<Vec<_>>().join(", ")
                 );
-                let checks: Vec<&str> = p.config.checks.iter().map(|c| p.check_name(c)).collect();
-                println!("  checks: {}", checks.join(", "));
+                println!("  checks: {}", p.project_type.check_names().join(", "));
 
                 if !p.published.is_empty() {
                     let names: Vec<&str> = p.published.iter().map(|p| p.name.as_str()).collect();

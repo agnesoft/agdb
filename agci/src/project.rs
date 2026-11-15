@@ -1,48 +1,37 @@
 use crate::CIError;
-use crate::config::CARGO_CHECKS;
-use crate::config::Config;
 use crate::config::File;
+use crate::config::Settings;
 use crate::config::Toolchain;
 use crate::manifest::Dep;
-use crate::manifest::Kind;
 use crate::manifest::Manifest;
-use crate::release::HOOKS;
+use crate::project_type::Details;
+use crate::project_type::Kind;
+use crate::project_type::ProjectType;
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 
-/// A package the project releases to its registry (crates.io, npm).
+/// A package the project releases to the registry of its type.
 #[derive(Debug)]
 pub(crate) struct Package {
     pub(crate) name: String,
     pub(crate) dir: String,
-    /// package.json only, crates have the release version.
-    pub(crate) version: Option<String>,
-    /// Has a `build` script, built before it is published.
-    pub(crate) build: bool,
 }
 
 #[derive(Debug)]
 pub(crate) struct Project {
     pub(crate) dir: String,
     pub(crate) kind: Kind,
-    /// Cargo: the crate. pnpm: the package in the directory followed by the packages folded into it.
-    /// Shell: none.
+    /// The names of the package in the directory followed by those folded into it, none without a
+    /// manifest.
     pub(crate) packages: Vec<String>,
-    pub(crate) config: Config,
+    pub(crate) settings: Settings,
     /// Directories of the projects this project depends on.
     pub(crate) depends: BTreeSet<String>,
     /// Repository paths (files or directories) outside of the project that affect it.
     pub(crate) inputs: Vec<String>,
-    /// pnpm: the package.json scripts of its packages. Cargo and Shell: its `<name>.sh`/`<name>.ps1`
-    /// files of the checks and release hooks.
-    pub(crate) scripts: BTreeSet<String>,
     pub(crate) published: Vec<Package>,
-    /// Cargo: the crate has a library target.
-    pub(crate) library: bool,
-    /// Cargo: the crate has example targets.
-    pub(crate) examples: bool,
-    /// Cargo: the crate has bench targets.
-    pub(crate) benches: bool,
+    /// Its checks and release hooks.
+    pub(crate) project_type: Box<dyn ProjectType>,
 }
 
 impl Project {
@@ -51,65 +40,19 @@ impl Project {
     }
 
     pub(crate) fn needs(&self, toolchain: Toolchain) -> bool {
-        let own = match self.kind {
-            Kind::Pnpm => Some(Toolchain::Node),
-            Kind::Cargo => Some(Toolchain::Rust),
-            Kind::Shell => None,
-        };
-        own == Some(toolchain) || self.config.add_toolchains.contains(&toolchain)
-    }
-
-    /// pnpm: a script of any of its packages. Cargo and Shell: a script file of the name.
-    pub(crate) fn has_script(&self, name: &str) -> bool {
-        match self.kind {
-            Kind::Pnpm => self.scripts.contains(name),
-            Kind::Cargo | Kind::Shell => self.shell_script(name).is_some(),
-        }
-    }
-
-    /// The name the check runs as: Cargo `coverage` without coverage is `test`.
-    pub(crate) fn check_name<'a>(&self, check: &'a str) -> &'a str {
-        if self.kind == Kind::Cargo && check == "coverage" && !self.config.coverage() {
-            "test"
-        } else {
-            check
-        }
-    }
-
-    /// Runs the tests under `cargo llvm-cov`.
-    pub(crate) fn measures_coverage(&self) -> bool {
-        self.kind == Kind::Cargo && self.config.has_check("coverage") && self.config.coverage()
-    }
-
-    /// Cargo: a built-in check (`doc` needs a library, `examples` example targets, `bench` bench
-    /// targets) or a script. pnpm and Shell: a script.
-    pub(crate) fn can_run(&self, check: &str) -> bool {
-        match (self.kind, check) {
-            (Kind::Cargo, "doc") => self.library,
-            (Kind::Cargo, "examples") => self.examples,
-            (Kind::Cargo, "bench") => self.benches,
-            (Kind::Cargo, _) if CARGO_CHECKS.contains(&check) => true,
-            _ => self.has_script(check),
-        }
-    }
-
-    /// The file of the script `name` (`:` is `_` in file names), the PowerShell one is
-    /// preferred on Windows, the bash one elsewhere.
-    pub(crate) fn shell_script(&self, name: &str) -> Option<&str> {
-        let [sh, ps1] = script_files(name);
-        let order = if cfg!(windows) { [ps1, sh] } else { [sh, ps1] };
-        order
-            .into_iter()
-            .find_map(|file| self.scripts.get(&file).map(String::as_str))
+        self.project_type.toolchains().contains(&toolchain)
+            || self.settings.add_toolchains.contains(&toolchain)
     }
 }
 
-/// The script of Cargo and Shell projects that runs as their last check if it exists.
-const RUN: &str = "run";
-
-fn script_files(name: &str) -> [String; 2] {
-    let base = name.replace(':', "_");
-    [format!("{base}.sh"), format!("{base}.ps1")]
+/// A project of the manifests before its configuration.
+struct Draft {
+    dir: String,
+    kind: Kind,
+    packages: Vec<String>,
+    published: Vec<Package>,
+    /// Of its manifests, its own first.
+    details: Vec<Details>,
 }
 
 pub(crate) fn is_within(path: &str, dir: &str) -> bool {
@@ -120,29 +63,23 @@ pub(crate) fn is_within(path: &str, dir: &str) -> bool {
 }
 
 /// Builds the projects from the manifests and `agci.toml`. A manifest is a project unless it is nested
-/// in a project of the same language (then it is folded into the nearest one) and has no entry of
-/// its own. An entry without a manifest is a Shell project. Each gets its effective configuration,
-/// inherited pnpm and Shell checks only if the project has the scripts.
+/// in a project of the same type (then it is folded into the nearest one) and has no entry of
+/// its own. An entry without a manifest is of `Kind::WITHOUT_MANIFEST`. Each gets its effective configuration,
+/// its type resolves the checks (inherited ones only if the project can run them).
 pub(crate) fn projects(
     mut manifests: Vec<Manifest>,
     file: &File,
     path_exists: impl Fn(&str) -> bool,
 ) -> Result<Vec<Project>, CIError> {
-    let mut projects: Vec<Project> = Vec::new();
-    let mut deps: Vec<(String, Dep)> = Vec::new();
+    let mut drafts: Vec<Draft> = Vec::new();
+    let mut deps: Vec<(String, Kind, Dep)> = Vec::new();
     let mut owners: BTreeMap<String, String> = BTreeMap::new();
-    let new = |dir: &str, kind: Kind, packages: Vec<String>| Project {
+    let new = |dir: &str, kind: Kind, packages: Vec<String>| Draft {
         dir: dir.to_string(),
         kind,
         packages,
-        config: Config::default(),
-        depends: BTreeSet::new(),
-        inputs: Vec::new(),
-        scripts: BTreeSet::new(),
         published: Vec::new(),
-        library: false,
-        examples: false,
-        benches: false,
+        details: Vec::new(),
     };
 
     if file.projects.keys().any(|dir| dir.is_empty() || dir == ".") {
@@ -152,9 +89,10 @@ pub(crate) fn projects(
     manifests.sort_by(|a, b| (a.dir.len(), &a.dir).cmp(&(b.dir.len(), &b.dir)));
 
     for manifest in manifests {
-        let parent = projects
+        let kind = manifest.kind();
+        let parent = drafts
             .iter_mut()
-            .filter(|p| p.kind == manifest.kind && is_within(&manifest.dir, &p.dir))
+            .filter(|p| p.kind == manifest.kind() && is_within(&manifest.dir, &p.dir))
             .max_by_key(|p| p.dir.len());
         let owner = match parent {
             Some(parent) if !file.projects.contains_key(&manifest.dir) => {
@@ -162,16 +100,16 @@ pub(crate) fn projects(
                 parent
             }
             _ => {
-                if projects.iter().any(|p| p.dir == manifest.dir) {
+                if drafts.iter().any(|p| p.dir == manifest.dir) {
                     return Err(format!("'{}' has more than one manifest", manifest.dir).into());
                 }
 
-                let mut project = new(&manifest.dir, manifest.kind, vec![manifest.name.clone()]);
-                project.library = manifest.library;
-                project.examples = manifest.examples;
-                project.benches = manifest.benches;
-                projects.push(project);
-                projects.last_mut().expect("just pushed")
+                drafts.push(new(
+                    &manifest.dir,
+                    manifest.kind(),
+                    vec![manifest.name.clone()],
+                ));
+                drafts.last_mut().expect("just pushed")
             }
         };
 
@@ -179,19 +117,17 @@ pub(crate) fn projects(
             owner.published.push(Package {
                 name: manifest.name,
                 dir: manifest.dir.clone(),
-                version: manifest.version,
-                build: manifest.scripts.contains("build"),
             });
         }
 
-        owner.scripts.extend(manifest.scripts);
+        owner.details.push(manifest.details);
         let owner = owner.dir.clone();
-        deps.extend(manifest.deps.into_iter().map(|d| (owner.clone(), d)));
+        deps.extend(manifest.deps.into_iter().map(|d| (owner.clone(), kind, d)));
         owners.insert(manifest.dir, owner);
     }
 
     for dir in file.projects.keys() {
-        if projects.iter().any(|p| p.dir == *dir) {
+        if drafts.iter().any(|p| p.dir == *dir) {
             continue;
         }
 
@@ -203,49 +139,42 @@ pub(crate) fn projects(
         }
 
         owners.insert(dir.clone(), dir.clone());
-        projects.push(new(dir, Kind::Shell, Vec::new()));
+        drafts.push(new(dir, Kind::WITHOUT_MANIFEST, Vec::new()));
     }
 
-    for project in &mut projects {
-        let (mut config, inherited) = file.config(&project.dir, project.kind)?;
+    let mut projects = Vec::new();
 
-        if project.kind != Kind::Pnpm {
-            for name in config
-                .checks
-                .iter()
-                .map(String::as_str)
-                .chain(HOOKS)
-                .chain([RUN])
-            {
-                for script in script_files(name) {
-                    if path_exists(&format!("{}/{script}", project.dir)) {
-                        project.scripts.insert(script);
-                    }
-                }
-            }
-        }
-
-        if inherited {
-            config.checks.retain(|check| project.can_run(check));
-        }
-
-        if project.kind != Kind::Pnpm && project.has_script(RUN) && !config.has_check(RUN) {
-            config.checks.push(RUN.to_string());
-        }
-
-        project.config = config;
+    for draft in drafts {
+        let (config, inherited) = file.config(&draft.dir, draft.kind)?;
+        let (settings, config) = config.split(&draft.dir, inherited);
+        let project_type = draft
+            .kind
+            .project(&draft.dir, config, draft.details, &path_exists)?;
+        projects.push(Project {
+            dir: draft.dir,
+            kind: draft.kind,
+            packages: draft.packages,
+            settings,
+            depends: BTreeSet::new(),
+            inputs: Vec::new(),
+            published: draft.published,
+            project_type,
+        });
     }
 
-    let names: BTreeMap<String, String> = projects
+    let names: BTreeMap<(Kind, String), String> = projects
         .iter()
-        .filter(|p| p.kind == Kind::Pnpm)
-        .flat_map(|p| p.packages.iter().map(|n| (n.clone(), p.dir.clone())))
+        .flat_map(|p| {
+            p.packages
+                .iter()
+                .map(|n| ((p.kind, n.clone()), p.dir.clone()))
+        })
         .collect();
 
-    for (dir, dep) in deps {
+    for (dir, kind, dep) in deps {
         let target = match &dep {
             Dep::Dir(d) => owners.get(d),
-            Dep::Name(n) => names.get(n),
+            Dep::Name(n) => names.get(&(kind, n.clone())),
         }
         .ok_or(format!(
             "'{dir}' depends on {dep:?} which is not part of any project"
@@ -260,7 +189,7 @@ pub(crate) fn projects(
     let dirs: BTreeSet<String> = projects.iter().map(|p| p.dir.clone()).collect();
 
     for project in &mut projects {
-        match project.config.group.as_deref() {
+        match project.settings.group.as_deref() {
             Some("") => return Err(format!("'{}' has an empty group", project.dir).into()),
             Some(group) if dirs.contains(group) => {
                 return Err(format!(
@@ -272,7 +201,7 @@ pub(crate) fn projects(
             _ => {}
         }
 
-        for depend in &project.config.dependencies {
+        for depend in &project.settings.dependencies {
             if dirs.contains(depend) {
                 project.depends.insert(depend.clone());
             } else if path_exists(depend) {
@@ -287,7 +216,6 @@ pub(crate) fn projects(
         }
 
         project.depends.remove(&project.dir);
-        validate(project)?;
     }
 
     projects.sort_by(|a, b| a.dir.cmp(&b.dir));
@@ -301,74 +229,13 @@ fn project_mut<'a>(projects: &'a mut [Project], dir: &str) -> &'a mut Project {
         .expect("dependency source is a project")
 }
 
-fn validate(project: &Project) -> Result<(), CIError> {
-    let dir = &project.dir;
-    let config = &project.config;
-
-    if config.checks.is_empty() {
-        return Err(format!("'{dir}' has no checks, set them in agci.toml").into());
-    }
-
-    match project.kind {
-        Kind::Cargo => {
-            if config.has_check("doc") && !project.library {
-                return Err(format!("'{dir}' has the 'doc' check but no library").into());
-            }
-
-            if config.has_check("examples") && !project.examples {
-                return Err(
-                    format!("'{dir}' has the 'examples' check but no example targets").into(),
-                );
-            }
-
-            if config.has_check("bench") && !project.benches {
-                return Err(format!("'{dir}' has the 'bench' check but no bench targets").into());
-            }
-
-            if let Some(check) = config.checks.iter().find(|c| !project.can_run(c)) {
-                let [sh, ps1] = script_files(check);
-                return Err(format!(
-                    "'{dir}' check '{check}' is neither one of {CARGO_CHECKS:?} nor has '{sh}' or '{ps1}'"
-                )
-                .into());
-            }
-
-            if !config.feature_combinations.is_empty() && !config.checks.iter().any(|c| c == "lint")
-            {
-                return Err(
-                    format!("'{dir}' sets feature_combinations without the 'lint' check").into(),
-                );
-            }
-        }
-        Kind::Pnpm | Kind::Shell => {
-            if config.has_rust_only_fields() {
-                return Err(format!(
-                    "'{dir}' sets cargo only fields (coverage, feature_combinations)"
-                )
-                .into());
-            }
-
-            if let Some(check) = config.checks.iter().find(|c| !project.has_script(c)) {
-                return Err(match project.kind {
-                    Kind::Pnpm => {
-                        format!("'{dir}' check '{check}' is not a script of any of its packages")
-                    }
-                    _ => {
-                        let [sh, ps1] = script_files(check);
-                        format!("'{dir}' check '{check}' has neither '{sh}' nor '{ps1}'")
-                    }
-                }
-                .into());
-            }
-        }
-    }
-
-    Ok(())
-}
-
 #[cfg(test)]
 pub(crate) mod tests {
     use super::*;
+    use crate::config::Config;
+    use crate::project_type::Hook;
+    use crate::project_type::cargo::tests::crate_details;
+    use crate::project_type::pnpm::tests::package_details;
 
     pub(crate) fn config(checks: &[&str], depends: &[&str]) -> Config {
         Config {
@@ -382,17 +249,18 @@ pub(crate) mod tests {
     pub(crate) type Entry = (Option<Manifest>, Option<(String, Config)>);
 
     pub(crate) fn manifest(dir: &str, kind: Kind, deps: Vec<Dep>, config: Option<Config>) -> Entry {
-        let manifest = (kind != Kind::Shell).then(|| Manifest {
+        let name = dir.replace('/', "_");
+        let details = match kind {
+            Kind::Cargo => Some(crate_details(true, false, false)),
+            Kind::Pnpm => Some(package_details(&name, &["build", "test"], None)),
+            Kind::Shell => None,
+        };
+        let manifest = details.map(|details| Manifest {
             dir: dir.to_string(),
-            kind,
-            name: dir.replace('/', "_"),
+            name,
             deps,
-            scripts: ["build", "test"].iter().map(|s| s.to_string()).collect(),
             publish: false,
-            version: None,
-            library: true,
-            examples: false,
-            benches: false,
+            details,
         });
         (manifest, config.map(|c| (dir.to_string(), c)))
     }
@@ -425,6 +293,22 @@ pub(crate) mod tests {
                 .collect(),
             ..Default::default()
         }
+    }
+
+    /// The steps of the checks of the project in `dir` as `<dir>> <program> <args>`.
+    pub(crate) fn command_lines(projects: &[Project], dir: &str) -> Vec<String> {
+        let project = projects.iter().find(|p| p.dir == dir).unwrap();
+        project
+            .project_type
+            .checks(project, projects, "/repo")
+            .into_iter()
+            .flat_map(|c| c.steps)
+            .map(|s| format!("{}> {} {}", s.dir, s.program, s.args.join(" ")))
+            .collect()
+    }
+
+    fn checks(project: &Project) -> Vec<String> {
+        project.project_type.check_names()
     }
 
     fn dir(d: &str) -> Dep {
@@ -464,7 +348,7 @@ pub(crate) mod tests {
     }
 
     #[test]
-    fn resolves_cross_language_depends_and_inputs() {
+    fn resolves_cross_type_depends_and_inputs() {
         let projects = build(
             vec![
                 manifest(
@@ -504,11 +388,11 @@ pub(crate) mod tests {
 
         assert_eq!(projects[0].dir, "tools/x");
         assert_eq!(
-            projects[0].config.checks,
+            checks(&projects[0]),
             vec!["format", "lint", "doc", "coverage"]
         );
         // the default pnpm checks that are scripts of the project
-        assert_eq!(projects[1].config.checks, vec!["build", "test"]);
+        assert_eq!(checks(&projects[1]), vec!["build", "test"]);
     }
 
     #[test]
@@ -530,7 +414,7 @@ pub(crate) mod tests {
     }
 
     #[test]
-    fn manifest_does_not_fold_into_other_language() {
+    fn manifest_does_not_fold_into_other_type() {
         let projects = build(
             vec![
                 manifest("api", Kind::Cargo, vec![], Some(config(&["coverage"], &[]))),
@@ -547,7 +431,7 @@ pub(crate) mod tests {
     #[test]
     fn node_without_any_default_script_fails() {
         let (mut node, _) = manifest("a", Kind::Pnpm, vec![], None);
-        node.as_mut().unwrap().scripts.clear();
+        node.as_mut().unwrap().details = package_details("a", &[], None);
 
         assert_eq!(
             error(vec![(node, None)]),
@@ -634,19 +518,30 @@ pub(crate) mod tests {
     }
 
     #[test]
-    fn node_rejects_rust_only_fields() {
-        let mut c = config(&["test"], &[]);
-        c.feature_combinations = vec![String::new()];
+    fn fields_the_type_does_not_have_fail() {
+        for (kind, field) in [
+            (Kind::Pnpm, "feature_combinations"),
+            (Kind::Shell, "coverage"),
+            (Kind::Cargo, "check"),
+        ] {
+            let mut c = config(&["test"], &[]);
+            c.fields
+                .insert(field.to_string(), toml::Value::Array(Vec::new()));
+            let error = build(vec![manifest("a", kind, vec![], Some(c))], |_| true)
+                .unwrap_err()
+                .description;
 
-        assert!(
-            error(vec![manifest("a", Kind::Pnpm, vec![], Some(c))])
-                .starts_with("'a' sets cargo only fields")
-        );
+            assert!(
+                error.starts_with("'agci.toml' project 'a': unknown field"),
+                "{error}"
+            );
+            assert!(error.contains(&format!("`{field}`")), "{error}");
+        }
     }
 
     #[test]
     fn group_must_not_be_a_project_directory() {
-        let mut c = config(&["test"], &[]);
+        let mut c = config(&["coverage"], &[]);
         c.group = Some("b".to_string());
 
         assert_eq!(
@@ -710,14 +605,18 @@ pub(crate) mod tests {
         );
         assert!(!projects[1].needs(Toolchain::Rust));
         assert!(!projects[1].needs(Toolchain::Node));
-        // the default checks with a script, the scripts of the checks and hooks only
-        assert_eq!(projects[1].config.checks, vec!["build", "test"]);
+        // the default checks with a script and the hooks that have one
+        assert_eq!(checks(&projects[1]), vec!["build", "test"]);
         assert_eq!(
-            projects[1].scripts,
-            BTreeSet::from(["build.ps1", "release_dev.sh", "test.sh"].map(str::to_string))
+            projects[1].project_type.hook(&projects[1], Hook::Dev)[0].args,
+            vec!["release_dev.sh"]
         );
-        assert!(projects[1].has_script("release:dev"));
-        assert!(!projects[1].has_script("release"));
+        assert!(
+            projects[1]
+                .project_type
+                .hook(&projects[1], Hook::Release)
+                .is_empty()
+        );
     }
 
     #[test]
@@ -726,24 +625,24 @@ pub(crate) mod tests {
         let file = File::parse("[defaults.cargo]\nchecks = [\"lint\", \"smoke\"]").unwrap();
         let projects = projects(manifests.into(), &file, |p| p == "b/smoke.ps1").unwrap();
 
-        assert_eq!(projects[0].config.checks, vec!["lint"]);
-        assert_eq!(projects[1].config.checks, vec!["lint", "smoke"]);
-        assert_eq!(projects[1].shell_script("smoke"), Some("smoke.ps1"));
+        assert_eq!(checks(&projects[0]), vec!["lint"]);
+        assert_eq!(checks(&projects[1]), vec!["lint", "smoke"]);
+        assert_eq!(
+            command_lines(&projects, "b").last().unwrap(),
+            "b> pwsh -NoProfile -File smoke.ps1"
+        );
     }
 
     #[test]
     fn doc_only_for_crates_with_a_library() {
         let bin = |config: Option<Config>| {
             let (mut manifest, config) = manifest("bin", Kind::Cargo, vec![], config);
-            manifest.as_mut().unwrap().library = false;
+            manifest.as_mut().unwrap().details = crate_details(false, false, false);
             (manifest, config)
         };
         let projects = build(vec![bin(None)], |_| false).unwrap();
 
-        assert_eq!(
-            projects[0].config.checks,
-            vec!["format", "lint", "coverage"]
-        );
+        assert_eq!(checks(&projects[0]), vec!["format", "lint", "coverage"]);
         assert_eq!(
             error(vec![bin(Some(config(&["doc"], &[])))]),
             "'bin' has the 'doc' check but no library"
@@ -755,8 +654,7 @@ pub(crate) mod tests {
         let crate_with = |dir: &str, examples: bool, benches: bool| {
             let (mut manifest, config) = manifest(dir, Kind::Cargo, vec![], None);
             let m = manifest.as_mut().unwrap();
-            m.examples = examples;
-            m.benches = benches;
+            m.details = crate_details(true, examples, benches);
             (manifest, config)
         };
         let projects = build(
@@ -770,15 +668,15 @@ pub(crate) mod tests {
         .unwrap();
 
         assert_eq!(
-            projects[0].config.checks,
+            checks(&projects[0]),
             vec!["format", "lint", "doc", "examples", "bench", "coverage"]
         );
         assert_eq!(
-            projects[1].config.checks,
+            checks(&projects[1]),
             vec!["format", "lint", "doc", "examples", "coverage"]
         );
         assert_eq!(
-            projects[2].config.checks,
+            checks(&projects[2]),
             vec!["format", "lint", "doc", "coverage"]
         );
 
@@ -816,13 +714,14 @@ pub(crate) mod tests {
         })
         .unwrap();
 
-        assert_eq!(projects[0].config.checks, vec!["lint", "run", "coverage"]);
+        // Cargo built-ins always run before the scripts
+        assert_eq!(checks(&projects[0]), vec!["lint", "coverage", "run"]);
         assert_eq!(
-            projects[1].config.checks,
+            checks(&projects[1]),
             vec!["format", "lint", "doc", "coverage", "run"]
         );
         assert_eq!(projects[2].kind, Kind::Shell);
-        assert_eq!(projects[2].config.checks, vec!["run"]);
+        assert_eq!(checks(&projects[2]), vec!["run"]);
     }
 
     #[test]
@@ -845,17 +744,15 @@ pub(crate) mod tests {
 
     #[test]
     fn published_packages_of_folded_manifests() {
-        let package = |dir: &str, publish: bool, scripts: &[&str]| Manifest {
-            dir: dir.to_string(),
-            kind: Kind::Pnpm,
-            name: dir.replace('/', "_"),
-            deps: Vec::new(),
-            scripts: scripts.iter().map(|s| s.to_string()).collect(),
-            publish,
-            version: publish.then(|| "1.0.0".to_string()),
-            library: false,
-            examples: false,
-            benches: false,
+        let package = |dir: &str, publish: bool, scripts: &[&str]| {
+            let name = dir.replace('/', "_");
+            Manifest {
+                dir: dir.to_string(),
+                details: package_details(&name, scripts, publish.then_some("1.0.0")),
+                name,
+                deps: Vec::new(),
+                publish,
+            }
         };
         let manifests = vec![
             package("ui", true, &["build", "test"]),
@@ -863,18 +760,30 @@ pub(crate) mod tests {
             package("ui/tool", false, &["build"]),
         ];
         let projects = projects(manifests, &File::default(), |_| false).unwrap();
-        let published: Vec<(&str, &str, bool)> = projects[0]
+        let published: Vec<(&str, &str, String, usize)> = projects[0]
             .published
             .iter()
-            .map(|p| (p.name.as_str(), p.dir.as_str(), p.build))
+            .map(|p| {
+                let publish = projects[0].project_type.publish(p, "9.9.9").unwrap();
+                (
+                    p.name.as_str(),
+                    p.dir.as_str(),
+                    publish.version,
+                    publish.steps.len(),
+                )
+            })
             .collect();
 
+        // built before it is published if it has a build script, in its own version
         assert_eq!(
             published,
-            vec![("ui", "ui", true), ("ui_lib", "ui/lib", false)]
+            vec![
+                ("ui", "ui", "1.0.0".to_string(), 2),
+                ("ui_lib", "ui/lib", "1.0.0".to_string(), 1)
+            ]
         );
-        assert_eq!(projects[0].published[0].version.as_deref(), Some("1.0.0"));
     }
+
     #[test]
     fn project_without_manifest_or_directory_fails() {
         assert_eq!(
@@ -896,19 +805,6 @@ pub(crate) mod tests {
         assert_eq!(
             error(vec![(rust, config), (node, None)]),
             "'a' has more than one manifest"
-        );
-    }
-
-    #[test]
-    fn shell_rejects_rust_only_fields() {
-        let mut c = config(&["test"], &[]);
-        c.coverage = Some(false);
-
-        assert!(
-            build(vec![manifest("a", Kind::Shell, vec![], Some(c))], |_| true)
-                .unwrap_err()
-                .description
-                .starts_with("'a' sets cargo only fields")
         );
     }
 }

@@ -44,7 +44,7 @@ const filteredNavigation = computed<ContentNavigationItem[]>(() => {
           },
           {
             title: "server client - typescript",
-            path: "https://github.com/agnesoft/agdb/tree/main/examples/server_client_typescript",
+            path: "https://github.com/agnesoft/agdb/tree/main/agdb_api/typescript/examples/server_client",
           },
           {
             title: "strong types",

@@ -70,12 +70,6 @@ The packages are curated lists of main packages. They contain exact names of pac
 - agdb_derive
 - agdb_server
 - agdb_api
-- examples_app_db
-- examples_indexes
-- examples_joins
-- examples_schema_migration
-- examples_server_client
-- examples_user_types
 
 ## TypeScript
 

@@ -1,8 +1,0 @@
-[package]
-name = "examples_schema_migration"
-edition.workspace = true
-license.workspace = true
-publish = false
-
-[dependencies]
-agdb.workspace = true

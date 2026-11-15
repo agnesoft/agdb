@@ -10,12 +10,6 @@ members = [
     "agdb",
     "agplatform",
     "agtestcheck",
-    "examples/app_db",
-    "examples/indexes",
-    "examples/joins",
-    "examples/schema_migration",
-    "examples/server_client_rust",
-    "examples/user_types",
 ]
 
 [workspace.package]

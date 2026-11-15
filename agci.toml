@@ -94,24 +94,6 @@ os = ["linux", "windows"]
 coverage = true
 checks = ["format", "lint", "testcheck", "coverage"]
 
-[projects."examples/app_db"]
-group = "examples"
-
-[projects."examples/indexes"]
-group = "examples"
-
-[projects."examples/joins"]
-group = "examples"
-
-[projects."examples/schema_migration"]
-group = "examples"
-
 [projects."examples/server_client_php"]
 add_toolchains = ["php"]
 dependencies = ["agdb_api/php"]
-
-[projects."examples/server_client_rust"]
-group = "examples"
-
-[projects."examples/user_types"]
-group = "examples"

@@ -21,19 +21,19 @@ Explore agdb documentation: concepts, quickstarts, server guides, and references
 
 ## Examples
 
-- [app_db](https://github.com/agnesoft/agdb/tree/main/examples/app_db)
+- [app_db](https://github.com/agnesoft/agdb/blob/main/agdb/examples/app_db.rs)
 
-- [indexes](https://github.com/agnesoft/agdb/tree/main/examples/indexes)
+- [indexes](https://github.com/agnesoft/agdb/blob/main/agdb/examples/indexes.rs)
 
-- [joins](https://github.com/agnesoft/agdb/tree/main/examples/joins)
+- [joins](https://github.com/agnesoft/agdb/blob/main/agdb/examples/joins.rs)
 
-- [schema migration](https://github.com/agnesoft/agdb/tree/main/examples/schema_migration)
+- [schema migration](https://github.com/agnesoft/agdb/blob/main/agdb/examples/schema_migration.rs)
 
-- [server client - rust](https://github.com/agnesoft/agdb/tree/main/examples/server_client_rust)
+- [server client - rust](https://github.com/agnesoft/agdb/blob/main/agdb_api/examples/server_client.rs)
 
 - [server client - typescript](https://github.com/agnesoft/agdb/tree/main/examples/server_client_typescript)
 
-- [strong types](https://github.com/agnesoft/agdb/tree/main/examples/user_types)
+- [strong types](https://github.com/agnesoft/agdb/blob/main/agdb/examples/user_types.rs)
 
 ## References
 

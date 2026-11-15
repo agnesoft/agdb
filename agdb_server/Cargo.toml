@@ -8,6 +8,7 @@ readme.workspace = true
 description = "Agnesoft Graph Database Server"
 keywords = ["graph", "database", "api"]
 categories = ["database", "database-implementations"]
+include = ["build.rs", "pepper", "src/**/*", "tests/**/*"]
 
 [features]
 default = []

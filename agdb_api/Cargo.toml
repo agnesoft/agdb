@@ -8,6 +8,7 @@ readme.workspace = true
 description = "Agnesoft Graph Database API (Client)"
 keywords = ["graph", "database", "api"]
 categories = ["database", "api-bindings"]
+include = ["examples/**/*", "src/**/*"]
 
 [lib]
 

@@ -492,3 +492,199 @@ test.describe("Query copy and paste", () => {
     expect(await rowQueries(page)).toEqual([""]);
   });
 });
+
+test.describe("Query link", () => {
+  test.beforeEach(async ({ page }) => {
+    await mockLogin(page);
+    await mockDatabaseListApi(page);
+    await mockDbUserListApi(page);
+    await mockDbExecApi(page);
+    await mockMutations(page);
+  });
+
+  /** The page URL with the given rows, e.g. `{ exec: ["select().aliases()"] }`. */
+  const linkTo = (params: Record<string, string[]>) => {
+    const search = new URLSearchParams();
+    for (const [tab, values] of Object.entries(params)) {
+      for (const value of values) search.append(tab, value);
+    }
+    return `${QUERY_PAGE}?${search}`;
+  };
+
+  const urlRows = (page: Page, tab: string) =>
+    new URL(page.url()).searchParams.getAll(tab);
+
+  const openTab = (page: Page, tab: string) =>
+    page.getByRole("tab", { name: tab, exact: true }).click();
+
+  /**
+   * The notification list. Warnings shown while the page opens may already
+   * have hidden their toast, so they are read from the list.
+   */
+  const notifications = async (page: Page) => {
+    await page.getByRole("button", { name: "Show notifications" }).click();
+    return page.locator(".notification-viewer");
+  };
+
+  test("keeps the queries of every tab in the URL", async ({ page }) => {
+    await gotoAndWaitForLoad(page, QUERY_PAGE);
+    await addSteps(page, 0, ["select", "node_count"]);
+    await addQueryButton(page).click();
+    await addSteps(page, 1, ["select", "indexes"]);
+    await openTab(page, "context");
+    await addSteps(page, 0, ["select", "aliases"]);
+
+    await expect
+      .poll(() => urlRows(page, "exec"))
+      .toEqual(["select().node_count()", "select().indexes()"]);
+    await expect
+      .poll(() => urlRows(page, "context"))
+      .toEqual(["select().aliases()"]);
+    expect(urlRows(page, "exec_mut")).toEqual([]);
+
+    // Removing a query removes it from the URL too.
+    await openTab(page, "exec");
+    await rows(page)
+      .nth(0)
+      .getByRole("button", { name: "Remove this query" })
+      .click();
+    await expect
+      .poll(() => urlRows(page, "exec"))
+      .toEqual(["select().indexes()"]);
+  });
+
+  test("restores the queries on reload without running them", async ({
+    page,
+  }) => {
+    await gotoAndWaitForLoad(page, QUERY_PAGE);
+    await addSteps(page, 0, ["select", "node_count"]);
+    await openTab(page, "context");
+    await addSteps(page, 0, ["select", "aliases"]);
+    await expect.poll(() => urlRows(page, "context")).toHaveLength(1);
+
+    let requests = 0;
+    page.on("request", (request) => {
+      if (request.url().includes("/exec")) requests++;
+    });
+    await page.reload();
+    await expect.poll(() => rowQueries(page)).toEqual(["select.node_count"]);
+    await openTab(page, "context");
+    expect(await rowQueries(page)).toEqual(["select.aliases"]);
+    expect(requests).toBe(0);
+  });
+
+  test("opens a shared link and runs it", async ({ page }) => {
+    await gotoAndWaitForLoad(
+      page,
+      linkTo({ exec: ["select().node_count()", "select().indexes()"] }),
+    );
+    await expect
+      .poll(() => rowQueries(page))
+      .toEqual(["select.node_count", "select.indexes"]);
+
+    const request = page.waitForRequest(DB_EXEC_API);
+    await runQuery(page);
+    expect((await request).postDataJSON()).toEqual([
+      { SelectNodeCount: {} },
+      { SelectIndexes: {} },
+    ]);
+  });
+
+  test("asks before running mutations from a link", async ({ page }) => {
+    await gotoAndWaitForLoad(
+      page,
+      linkTo({ exec_mut: ["insert().nodes().count(1)"] }),
+    );
+    await openTab(page, "exec_mut");
+    await expect
+      .poll(() => rowQueries(page))
+      .toEqual([expect.stringMatching(/^insert\.nodes\.count/)]);
+
+    let mutations = 0;
+    page.on("request", (request) => {
+      if (request.url().includes("/exec_mut")) mutations++;
+    });
+    await runQuery(page);
+    const modal = page.locator(".modal");
+    await expect(modal).toContainText("Run queries from a link?");
+    await expect(modal).toContainText("change the database");
+    await expect(modal).toContainText(
+      "QueryBuilder::insert().nodes().count(1).query()",
+    );
+
+    // Closing does not run anything.
+    await page.getByTestId(dynamicIds.modalButton("Close")).click();
+    await expect(modal).toHaveCount(0);
+    expect(mutations).toBe(0);
+
+    await runQuery(page);
+    const request = page.waitForRequest(DB_EXEC_MUT_API);
+    await page.getByTestId(dynamicIds.modalButton("Confirm")).click();
+    expect((await request).postDataJSON()).toEqual([
+      { InsertNodes: expect.anything() },
+    ]);
+
+    // Confirmed once: later runs do not ask again.
+    await expect(page.getByRole("button", { name: "Run query" })).toBeEnabled();
+    const again = page.waitForRequest(DB_EXEC_MUT_API);
+    await runQuery(page);
+    await again;
+    await expect(modal).toHaveCount(0);
+  });
+
+  test("does not ask before running queries made on the page", async ({
+    page,
+    context,
+  }) => {
+    await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+    await gotoAndWaitForLoad(page, QUERY_PAGE);
+    await openTab(page, "exec_mut");
+    await page.evaluate(() =>
+      navigator.clipboard.writeText(
+        "QueryBuilder::insert().nodes().count(1).query()",
+      ),
+    );
+    await rows(page)
+      .nth(0)
+      .getByRole("button", { name: "Paste a copied query here" })
+      .click();
+    await expect
+      .poll(() => rowQueries(page))
+      .toEqual([expect.stringMatching(/^insert\.nodes\.count/)]);
+
+    const request = page.waitForRequest(DB_EXEC_MUT_API);
+    await runQuery(page);
+    await request;
+    await expect(page.locator(".modal")).toHaveCount(0);
+  });
+
+  test("warns about queries in a link that cannot be read", async ({
+    page,
+  }) => {
+    await gotoAndWaitForLoad(
+      page,
+      linkTo({
+        exec: ["select().node_count()", "select().fly()"],
+        exec_mut: ["insert().nodes().count(1)", "nope"],
+      }),
+    );
+    await expect.poll(() => rowQueries(page)).toEqual(["select.node_count"]);
+    const list = await notifications(page);
+    await expect(list).toContainText("Some queries were not opened");
+    await expect(list).toContainText(
+      "2 queries in the link could not be read. The exec_mut queries were not opened.",
+    );
+    await page.locator(".notification-button").click();
+    // Mutations are opened all or none, as they run together.
+    await openTab(page, "exec_mut");
+    expect(await rowQueries(page)).toEqual([""]);
+  });
+
+  test("does not open links that are too long", async ({ page }) => {
+    const ids = Array.from({ length: 900 }, (_, i) => i + 1).join(", ");
+    await gotoAndWaitForLoad(page, linkTo({ exec: [`select().ids(${ids})`] }));
+    await expect(rows(page)).toHaveCount(1);
+    expect(await rowQueries(page)).toEqual([""]);
+    await expect(await notifications(page)).toContainText("Link too long");
+  });
+});

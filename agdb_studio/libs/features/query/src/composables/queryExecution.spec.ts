@@ -378,6 +378,35 @@ describe("useQueryExecution", () => {
       expect(setUnconfirmedLinkedMutation).toHaveBeenCalledWith("q1", false);
     });
 
+    it("runs what was shown even if the rows change while asking", async () => {
+      const queryRows = ref<QueryRow[]>([
+        { id: "r1", steps: [makeStep("select"), makeStep("select.aliases")] },
+      ]);
+      const execution = useQueryExecution(
+        ref("q1"),
+        ref<TAB>("exec_mut"),
+        computed(() => queryRows.value),
+        computed(() => false),
+      );
+      await execution.runOrStopQuery();
+      queryRows.value = [{ id: "r2", steps: [makeStep("select")] }];
+
+      modalProps().onConfirm();
+      await vi.waitFor(() => expect(setQueryResults).toHaveBeenCalledOnce());
+      // Built from the rows that were shown, not from the changed ones.
+      expect(buildQueryFromSteps).toHaveBeenCalledOnce();
+      expect(buildQueryFromSteps).toHaveBeenCalledWith([
+        expect.objectContaining({ type: "select" }),
+        expect.objectContaining({ type: "select.aliases" }),
+      ]);
+      expect(setQueryResults).toHaveBeenCalledWith(
+        "q1",
+        "exec_mut",
+        mockResults,
+        { queries: [{ built: true }], stepTypes: ["select", "select.aliases"] },
+      );
+    });
+
     it("does not ask for other tabs or confirmed rows", async () => {
       await setup({ tab: "exec" }).runOrStopQuery();
       queryState.unconfirmedLinkedMutation = false;

@@ -1,6 +1,6 @@
 import { computed, type ComputedRef, type Ref } from "vue";
 import { buildQueryFromSteps } from "../utils/queryExecutionUtils";
-import type { QueryRow, TAB } from "./types";
+import type { QueryRow, QueryStep, TAB } from "./types";
 import { useQueryStore } from "./queryStore";
 import { executeDbQueries, useMinimalRoute } from "./dbExec";
 import useModal from "@agdb-studio/common/src/composables/modal/modal";
@@ -49,20 +49,41 @@ export const useQueryExecution = (
     if (!canRun.value) return;
 
     const id = queryId.value;
+    // Snapshot now: the builder may change while the request runs, or while
+    // the confirmation is open, and what was shown must be what runs.
+    const run = snapshot();
     if (
-      tab?.value === "exec_mut" &&
+      run.tab === "exec_mut" &&
       queryStore.getQuery(id)?.value.unconfirmedLinkedMutation
     ) {
-      confirmLinkedMutation(id);
+      confirmLinkedMutation(id, run);
       return;
     }
-    await execute();
+    await execute(id, run);
   };
 
+  type RunSnapshot = {
+    tab: TAB | undefined;
+    /** Copies of the rows' steps, so later edits don't change the run. */
+    rows: QueryStep[][];
+  };
+
+  const snapshot = (): RunSnapshot => ({
+    tab: tab?.value,
+    rows: activeRows.value.map((row) =>
+      row.steps.map((step) => ({
+        ...step,
+        ...(step.args
+          ? { args: step.args.map((entry) => entry.map((f) => ({ ...f }))) }
+          : {}),
+      })),
+    ),
+  });
+
   /** Asks before running exec_mut rows that came from a link, showing them in full. */
-  const confirmLinkedMutation = (id: string) => {
-    const code: Content[] = activeRows.value.map((row) => ({
-      paragraph: [{ text: formatSteps(row.steps), style: CODE_STYLE }],
+  const confirmLinkedMutation = (id: string, run: RunSnapshot) => {
+    const code: Content[] = run.rows.map((steps) => ({
+      paragraph: [{ text: formatSteps(steps), style: CODE_STYLE }],
     }));
     openModal({
       header: "Run queries from a link?",
@@ -79,32 +100,28 @@ export const useQueryExecution = (
       wide: true,
       onConfirm: () => {
         queryStore.setUnconfirmedLinkedMutation(id, false);
-        void execute();
+        void execute(id, run);
         return true;
       },
     });
   };
 
-  const execute = async (): Promise<void> => {
-    /* v8 ignore next -- @preserve: only called after the checks above */
-    if (!queryId?.value) return;
+  const execute = async (id: string, run: RunSnapshot): Promise<void> => {
+    const { tab: runTab, rows } = run;
     try {
-      await queryStore.runQuery(queryId.value, async () => {
+      await queryStore.runQuery(id, async () => {
         // All rows are sent in one request, so the server runs them as a single transaction.
-        const queries = activeRows.value.map((row) =>
-          buildQueryFromSteps(row.steps),
-        );
-        // Snapshot now: the builder may change while the request runs.
-        const stepTypes = activeRows.value.flatMap((row) =>
-          row.steps.map((step) => step.type),
+        const queries = rows.map((steps) => buildQueryFromSteps(steps));
+        const stepTypes = rows.flatMap((steps) =>
+          steps.map((step) => step.type),
         );
         const results = await executeDbQueries(
           queries,
-          tab?.value === "exec_mut",
+          runTab === "exec_mut",
           route,
         );
-        if (results && queryId?.value && tab?.value) {
-          queryStore.setQueryResults(queryId.value, tab.value, results, {
+        if (results && runTab) {
+          queryStore.setQueryResults(id, runTab, results, {
             queries,
             stepTypes,
           });

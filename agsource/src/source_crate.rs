@@ -422,6 +422,11 @@ fn normalize(path: &Path) -> PathBuf {
             {
                 normalized.pop();
             }
+            Component::ParentDir
+                if matches!(
+                    normalized.components().next_back(),
+                    Some(Component::RootDir)
+                ) => {}
             _ => normalized.push(component),
         }
     }
@@ -781,6 +786,11 @@ mod tests {
                 normalize(Path::new("../a/../../b")),
                 PathBuf::from("../../b")
             );
+        }
+
+        #[test]
+        fn normalize_should_handle_root_dir() {
+            assert_eq!(normalize(Path::new("/../a/b")), PathBuf::from("/a/b"));
         }
     }
 }

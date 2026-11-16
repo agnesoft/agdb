@@ -17,10 +17,11 @@ The repository also hosts crates outside the agdb ecosystem, each documented in 
 | ------------- | ------------------------------------------------------------------------------------------------------------ |
 | `agplatform`  | Env, fs, process and HTTP request behind one injectable `Platform`, with in-memory test doubles (`testing`)  |
 | `agbench`     | `cargo bench` harness comparing targets against a baseline, `--check` fails on a target over its fail factor |
+| `agsource`    | Source model of a Rust crate read with syn: the module tree from a crate root (not published yet)            |
 | `agtestcheck` | `cargo test-check` subcommand enforcing the structure of Rust tests (module paths, names, comments)          |
 | `agci`        | The repository's CI tool: project detection, affected checks, releases (see `agci/README.md`)                |
 
-For code in `agplatform`, `agbench` and `agtestcheck`:
+For code in `agplatform`, `agbench`, `agsource` and `agtestcheck`:
 
 - Code built on `agplatform` (e.g. `agtestcheck`) never calls `std::env`, `std::fs`, `std::process` or `reqwest` directly but goes through the platform (see the cheat sheet in `agplatform/README.md`).
 - Tests follow the rules in `agtestcheck/README.md`: `type → method` modules, `<module>[_<args>]_should_<behaviour>` names, only `GIVEN`/`WHEN`/`THEN`/`AND`/`WHY` comments, 100 % coverage.
@@ -89,6 +90,7 @@ The packages are curated lists of main packages. They contain exact names of pac
 - agdb_server
 - agdb_api
 - agplatform
+- agsource
 - agtestcheck
 
 ## TypeScript

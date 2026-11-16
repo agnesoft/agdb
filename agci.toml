@@ -90,6 +90,11 @@ feature_combinations = [
     "fs,process,request,tokio",
 ]
 
+[projects.agsource]
+os = ["linux", "windows"]
+coverage = true
+checks = ["format", "lint", "testcheck", "doc", "coverage"]
+
 [projects.agtestcheck]
 os = ["linux", "windows"]
 coverage = true

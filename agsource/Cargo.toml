@@ -1,0 +1,21 @@
+[package]
+name = "agsource"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+readme = "README.md"
+description = "Source model of a Rust crate read with syn: modules, items and their resolution"
+keywords = ["parser", "syn", "source", "module"]
+categories = ["development-tools"]
+publish = false
+
+[dependencies]
+agplatform = { workspace = true, features = ["fs"] }
+proc-macro2 = { workspace = true, default-features = false, features = [
+    "span-locations",
+] }
+syn = { workspace = true, features = ["full"] }
+
+[dev-dependencies]
+agplatform = { workspace = true, features = ["testing"] }

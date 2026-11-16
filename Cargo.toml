@@ -9,6 +9,7 @@ members = [
     "agdb_server",
     "agdb",
     "agplatform",
+    "agsource",
     "agtestcheck",
 ]
 

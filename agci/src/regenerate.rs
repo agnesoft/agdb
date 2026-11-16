@@ -8,22 +8,36 @@ use crate::project_type;
 use crate::project_type::Hook;
 use crate::release::hook;
 use crate::release::with_setup;
+use agplatform::Fs;
+use agplatform::Platform;
 
 /// Updates the versions of the latest release in the manifests to the repository version and runs
 /// the `regenerate` hooks of the projects in dependency order.
-pub(crate) fn regenerate(projects: &[Project], root: &str) -> Result<(), CIError> {
-    let current_version = git::current_version()?;
-    let new_version = project_type::version()?;
+pub(crate) fn regenerate(
+    platform: &impl Platform,
+    projects: &[Project],
+    root: &str,
+) -> Result<(), CIError> {
+    let current_version = git::current_version(platform)?;
+    let new_version = project_type::version(platform)?;
     println!("Current version: {current_version}");
     println!("New version: {new_version}");
 
+    let fs = platform.fs();
+    let read = |file: &str| -> Result<String, CIError> { Ok(fs.read_to_string(file)?) };
+
     for project in projects {
-        project
-            .project_type
-            .set_version(&current_version, &new_version)?;
+        for (file, content) in
+            project
+                .project_type
+                .version_updates(&current_version, &new_version, &read)?
+        {
+            println!("Updating '{file}'");
+            fs.write(&file, content)?;
+        }
     }
 
-    run_steps("regenerate", &plan(projects, &new_version)?, root)
+    run_steps(platform, "regenerate", &plan(projects, &new_version)?, root)
 }
 
 fn plan(projects: &[Project], version: &str) -> Result<Vec<Step>, CIError> {

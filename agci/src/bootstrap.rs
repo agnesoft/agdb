@@ -4,6 +4,8 @@ use crate::project::Project;
 use crate::project_type::cargo;
 use crate::utilities;
 use agdb::QueryBuilder;
+use agplatform::Fs;
+use agplatform::Platform;
 use std::collections::BTreeSet;
 use std::path::Path;
 use std::process::Command;
@@ -44,18 +46,25 @@ pub(crate) fn inputs(projects: &[Project]) -> Result<BTreeSet<String>, CIError> 
 
 /// The git objects of the inputs on HEAD (missing ones are left out), one `<mode> <type> <hash>\t<path>`
 /// line each, so a change of any of them changes it.
-fn fingerprint(projects: &[Project]) -> Result<String, CIError> {
+fn fingerprint(platform: &impl Platform, projects: &[Project]) -> Result<String, CIError> {
     let mut args = vec!["ls-tree".to_string(), "HEAD".to_string(), "--".to_string()];
     args.extend(inputs(projects)?);
-    utilities::run_quiet(Command::new("git").args(&args))
+    utilities::run_quiet(platform, Command::new("git").args(&args))
 }
 
 /// Whether the binary in `dir` is outdated: the fingerprint it was built with differs from the current
 /// one. Written as `rebuild=<bool>` to the GitHub step outputs. Any error (e.g. the binary cannot
 /// parse metadata added after it was built) means it is outdated.
-pub(crate) fn check(dir: &Path, projects: Result<Vec<Project>, CIError>) -> Result<(), CIError> {
-    let built = std::fs::read_to_string(dir.join(FINGERPRINT)).unwrap_or_default();
-    let rebuild = match projects.and_then(|projects| fingerprint(&projects)) {
+pub(crate) fn check(
+    platform: &impl Platform,
+    dir: &Path,
+    projects: Result<Vec<Project>, CIError>,
+) -> Result<(), CIError> {
+    let built = platform
+        .fs()
+        .read_to_string(dir.join(FINGERPRINT))
+        .unwrap_or_default();
+    let rebuild = match projects.and_then(|projects| fingerprint(platform, &projects)) {
         Ok(current) if current == built => {
             println!("agci in '{}' is up to date", dir.display());
             false
@@ -76,16 +85,21 @@ pub(crate) fn check(dir: &Path, projects: Result<Vec<Project>, CIError>) -> Resu
         }
     };
 
-    utilities::set_output("rebuild", &rebuild.to_string())
+    utilities::set_output(platform, "rebuild", &rebuild.to_string())
 }
 
 /// Builds agci from the sources into `dir` along with its fingerprint.
-pub(crate) fn build(dir: &Path, projects: &[Project]) -> Result<(), CIError> {
-    let fingerprint = fingerprint(projects)?;
-    let built = cargo::build_release(PACKAGE, EXE)?;
-    std::fs::create_dir_all(dir)?;
-    std::fs::copy(built, dir.join(EXE))?;
-    std::fs::write(dir.join(FINGERPRINT), fingerprint)?;
+pub(crate) fn build(
+    platform: &impl Platform,
+    dir: &Path,
+    projects: &[Project],
+) -> Result<(), CIError> {
+    let fingerprint = fingerprint(platform, projects)?;
+    let built = cargo::build_release(platform, PACKAGE, EXE)?;
+    let fs = platform.fs();
+    fs.create_dir_all(dir)?;
+    fs.copy(built, dir.join(EXE))?;
+    fs.write(dir.join(FINGERPRINT), fingerprint)?;
     println!("agci built into '{}'", dir.display());
     Ok(())
 }

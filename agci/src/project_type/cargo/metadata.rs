@@ -8,13 +8,17 @@ use crate::project_type::Details;
 use crate::project_type::cargo::CrateDetails;
 use crate::project_type::cargo::Targets;
 use crate::utilities;
+use agplatform::Platform;
 use serde::Deserialize;
 use std::path::PathBuf;
 use std::process::Command;
 
 /// The workspace members, every tracked `Cargo.toml` (but the root one) must be one.
-pub(super) fn manifests(tracked: &[&str]) -> Result<Vec<Manifest>, CIError> {
-    let manifests = from_metadata(&metadata()?)?;
+pub(super) fn manifests(
+    platform: &impl Platform,
+    tracked: &[&str],
+) -> Result<Vec<Manifest>, CIError> {
+    let manifests = from_metadata(&metadata(platform)?)?;
 
     for (_, file) in nested(tracked, "Cargo.toml") {
         if !manifests
@@ -28,8 +32,8 @@ pub(super) fn manifests(tracked: &[&str]) -> Result<Vec<Manifest>, CIError> {
     Ok(manifests)
 }
 
-pub(super) fn target_dir() -> Result<PathBuf, CIError> {
-    let metadata: serde_json::Value = serde_json::from_str(&metadata()?)?;
+pub(super) fn target_dir(platform: &impl Platform) -> Result<PathBuf, CIError> {
+    let metadata: serde_json::Value = serde_json::from_str(&metadata(platform)?)?;
     Ok(PathBuf::from(
         metadata["target_directory"]
             .as_str()
@@ -37,13 +41,11 @@ pub(super) fn target_dir() -> Result<PathBuf, CIError> {
     ))
 }
 
-fn metadata() -> Result<String, CIError> {
-    utilities::run_quiet(Command::new("cargo").args([
-        "metadata",
-        "--no-deps",
-        "--format-version",
-        "1",
-    ]))
+fn metadata(platform: &impl Platform) -> Result<String, CIError> {
+    utilities::run_quiet(
+        platform,
+        Command::new("cargo").args(["metadata", "--no-deps", "--format-version", "1"]),
+    )
 }
 
 #[derive(Deserialize)]

@@ -10,6 +10,8 @@ use crate::utilities;
 use agdb::DbError;
 use agdb::DbMemory;
 use agdb::QueryBuilder;
+use agplatform::Fs;
+use agplatform::Platform;
 use serde::Serialize;
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
@@ -87,15 +89,15 @@ pub(crate) struct Snapshot {
 
 impl Snapshot {
     /// The commit or, without one, the working tree.
-    pub(crate) fn of(rev: Option<&str>) -> Result<Self, CIError> {
+    pub(crate) fn of(platform: &impl Platform, rev: Option<&str>) -> Result<Self, CIError> {
         let files = match rev {
-            Some(rev) => git::files_at(rev)?,
-            None => git::worktree_files()?,
+            Some(rev) => git::files_at(platform, rev)?,
+            None => git::worktree_files(platform)?,
         };
         let config = match rev {
             _ if !files.contains_key(FILE) => File::default(),
-            Some(rev) => File::parse(&git::file_at(rev, FILE)?)?,
-            None => File::parse(&std::fs::read_to_string(FILE)?)?,
+            Some(rev) => File::parse(&git::file_at(platform, rev, FILE)?)?,
+            None => File::parse(&platform.fs().read_to_string(FILE)?)?,
         };
         Ok(Self { files, config })
     }

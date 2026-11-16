@@ -12,6 +12,7 @@ use crate::project_type::Hook;
 use crate::project_type::ProjectType;
 use crate::project_type::no_checks;
 use crate::utilities;
+use agplatform::Platform;
 use std::collections::BTreeMap;
 
 const DEFAULT_CHECKS: [&str; 4] = ["format", "lint", "build", "test"];
@@ -100,7 +101,7 @@ pub(crate) struct Shell {
 
 impl ProjectType for Shell {
     /// Shell projects are `agci.toml` entries without a manifest.
-    fn manifests(_tracked: &[&str]) -> Result<Vec<Manifest>, CIError> {
+    fn manifests(_platform: &impl Platform, _tracked: &[&str]) -> Result<Vec<Manifest>, CIError> {
         Ok(Vec::new())
     }
 

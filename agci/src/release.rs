@@ -28,7 +28,7 @@ pub(crate) struct Release<'a> {
 pub(crate) fn plan(
     projects: &[Project],
     release: &Release,
-    published: impl Fn(&dyn Registry, &str, &str) -> Result<bool, CIError>,
+    published: impl Fn(Registry, &str, &str) -> Result<bool, CIError>,
 ) -> Result<Vec<Step>, CIError> {
     let ordered = dependency_order(projects)?;
     let mut steps = Vec::new();

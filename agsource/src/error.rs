@@ -37,6 +37,13 @@ pub enum Error {
         name: String,
         file: PathBuf,
     },
+    /// The cfg `name` in `path` is not known to the
+    /// [`CfgSet`](crate::CfgSet) and taken as false.
+    UnknownCfg {
+        path: PathBuf,
+        line: usize,
+        name: String,
+    },
 }
 
 impl std::fmt::Display for Error {
@@ -90,6 +97,11 @@ impl std::fmt::Display for Error {
                 path.display(),
                 file.display()
             ),
+            Error::UnknownCfg { path, line, name } => write!(
+                f,
+                "{}:{line}: unknown cfg `{name}`, taken as false",
+                path.display()
+            ),
         }
     }
 }
@@ -130,6 +142,11 @@ mod tests {
                     column: 5,
                     message: "expected `;`".into(),
                 };
+                let unknown = Error::UnknownCfg {
+                    path: "src/f.rs".into(),
+                    line: 7,
+                    name: "unix".into(),
+                };
                 let read = Error::Read {
                     path: "src/e.rs".into(),
                     error: agplatform::Error::fs("no such file"),
@@ -149,6 +166,10 @@ mod tests {
                 );
                 assert_eq!(parse.to_string(), "src/d.rs:2:5: expected `;`");
                 assert_eq!(read.to_string(), "src/e.rs: cannot read: [Fs] no such file");
+                assert_eq!(
+                    unknown.to_string(),
+                    "src/f.rs:7: unknown cfg `unix`, taken as false"
+                );
             }
         }
     }

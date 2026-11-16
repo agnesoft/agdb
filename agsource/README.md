@@ -15,13 +15,22 @@ It keeps the parsed files and the module tree over them. `rust_files` lists the 
 directory, skipping cache directories such as cargo's `target`, so files that no crate root reaches
 can be told apart.
 
+A `Cfg` selects the code:
+
+- `Cfg::All` keeps all of it and applies every `cfg_attr`;
+- `Cfg::Eval(CfgSet)` keeps what rustc compiles with the given options (`feature = "serde"`,
+  `test`, `unix`, ...). It strips the elements whose `#[cfg]` does not hold, wherever rustc strips
+  them, and applies a `cfg_attr` only when its predicate holds. A name the set does not know is
+  false and reported.
+
 A problem with one file does not stop loading. These are all collected as `Error`s with their
 location:
 
 - an unreadable file;
 - invalid Rust;
 - a module without a file or with two files;
-- a circular `#[path]`.
+- a circular `#[path]`;
+- an invalid or unknown cfg.
 
 All file access goes through [agplatform](https://crates.io/crates/agplatform), so it can be tested
 in memory.

@@ -63,9 +63,15 @@ fn is_cache_dir(p: &impl Platform, dir: &Path) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use agplatform::test_platform::ROOT;
     use agplatform::test_platform::test_fs::FsOp;
     use agplatform::test_platform::test_platform;
     use std::io::ErrorKind;
+
+    // WHY: `read_dir` yields paths resolved against the root, `C:\` on Windows.
+    fn root(path: &str) -> PathBuf {
+        Path::new(ROOT).join(path)
+    }
 
     mod rust_files {
         use super::*;
@@ -80,13 +86,7 @@ mod tests {
 
             let (files, errors) = rust_files(&platform, "/c");
 
-            assert_eq!(
-                files,
-                vec![
-                    PathBuf::from("/c/src/a/b.rs"),
-                    PathBuf::from("/c/src/lib.rs")
-                ]
-            );
+            assert_eq!(files, vec![root("c/src/a/b.rs"), root("c/src/lib.rs")]);
             assert!(errors.is_empty(), "{errors:?}");
         }
 
@@ -108,7 +108,7 @@ mod tests {
 
             let (files, _) = rust_files(&platform, "/c");
 
-            assert_eq!(files, vec![PathBuf::from("/c/tagged/kept.rs")]);
+            assert_eq!(files, vec![root("c/tagged/kept.rs")]);
         }
 
         #[test]
@@ -123,9 +123,9 @@ mod tests {
 
             let (files, errors) = rust_files(&platform, "/c");
 
-            assert_eq!(files, vec![PathBuf::from("/c/lib.rs")]);
+            assert_eq!(files, vec![root("c/lib.rs")]);
             assert!(
-                matches!(&errors[..], [Error::Read { path, .. }] if path == Path::new("/c/locked")),
+                matches!(&errors[..], [Error::Read { path, .. }] if *path == root("c/locked")),
                 "{errors:?}"
             );
         }
@@ -142,7 +142,7 @@ mod tests {
 
             let (files, errors) = rust_files(&platform, "/c");
 
-            assert_eq!(files, vec![PathBuf::from("/c/lib.rs")]);
+            assert_eq!(files, vec![root("c/lib.rs")]);
             assert!(
                 matches!(&errors[..], [Error::Read { path, .. }] if path == Path::new("/c")),
                 "{errors:?}"

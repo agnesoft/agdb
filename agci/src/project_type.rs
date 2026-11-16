@@ -10,6 +10,10 @@ use crate::config::TypeConfig;
 use crate::manifest::Manifest;
 use crate::project::Package;
 use crate::project::Project;
+use agplatform::BlockingRequestBuilderExt;
+use agplatform::Platform;
+use agplatform::Request;
+use agplatform::reqwest::header::USER_AGENT;
 use serde::Deserialize;
 
 /// How the projects of a type (the tool driving them) are found, checked and released. The static
@@ -17,7 +21,7 @@ use serde::Deserialize;
 /// checks and hooks resolved and validated when it is built.
 pub(crate) trait ProjectType: std::fmt::Debug {
     /// Its manifests among the tracked files, what only it needs of them in their `details`.
-    fn manifests(tracked: &[&str]) -> Result<Vec<Manifest>, CIError>
+    fn manifests(platform: &impl Platform, tracked: &[&str]) -> Result<Vec<Manifest>, CIError>
     where
         Self: Sized;
 
@@ -37,7 +41,7 @@ pub(crate) trait ProjectType: std::fmt::Debug {
     }
 
     /// The version of the repository's releases if the type defines it in the repository root.
-    fn version() -> Result<Option<String>, CIError>
+    fn version(_platform: &impl Platform) -> Result<Option<String>, CIError>
     where
         Self: Sized,
     {
@@ -88,9 +92,15 @@ pub(crate) trait ProjectType: std::fmt::Debug {
         None
     }
 
-    /// Updates the versions in its manifests that are `from` to `to`.
-    fn set_version(&self, _from: &str, _to: &str) -> Result<(), CIError> {
-        Ok(())
+    /// Its manifests with the versions that are `from` updated to `to` (file, content), `read`
+    /// takes repository paths.
+    fn version_updates(
+        &self,
+        _from: &str,
+        _to: &str,
+        _read: &dyn Fn(&str) -> Result<String, CIError>,
+    ) -> Result<Vec<(String, String)>, CIError> {
+        Ok(Vec::new())
     }
 }
 
@@ -130,11 +140,15 @@ impl Kind {
     /// Of an `agci.toml` entry without a manifest.
     pub(crate) const WITHOUT_MANIFEST: Kind = Kind::Shell;
 
-    pub(crate) fn manifests(self, tracked: &[&str]) -> Result<Vec<Manifest>, CIError> {
+    pub(crate) fn manifests(
+        self,
+        platform: &impl Platform,
+        tracked: &[&str],
+    ) -> Result<Vec<Manifest>, CIError> {
         match self {
-            Kind::Cargo => cargo::Cargo::manifests(tracked),
-            Kind::Pnpm => pnpm::Pnpm::manifests(tracked),
-            Kind::Shell => shell::Shell::manifests(tracked),
+            Kind::Cargo => cargo::Cargo::manifests(platform, tracked),
+            Kind::Pnpm => pnpm::Pnpm::manifests(platform, tracked),
+            Kind::Shell => shell::Shell::manifests(platform, tracked),
         }
     }
 
@@ -157,11 +171,11 @@ impl Kind {
         }
     }
 
-    fn version(self) -> Result<Option<String>, CIError> {
+    fn version(self, platform: &impl Platform) -> Result<Option<String>, CIError> {
         match self {
-            Kind::Cargo => cargo::Cargo::version(),
-            Kind::Pnpm => pnpm::Pnpm::version(),
-            Kind::Shell => shell::Shell::version(),
+            Kind::Cargo => cargo::Cargo::version(platform),
+            Kind::Pnpm => pnpm::Pnpm::version(platform),
+            Kind::Shell => shell::Shell::version(platform),
         }
     }
 
@@ -200,9 +214,9 @@ impl std::fmt::Display for Kind {
 }
 
 /// The version of the repository's releases, defined by one of the project types in the root.
-pub(crate) fn version() -> Result<String, CIError> {
+pub(crate) fn version(platform: &impl Platform) -> Result<String, CIError> {
     for kind in Kind::ALL {
-        if let Some(version) = kind.version()? {
+        if let Some(version) = kind.version(platform)? {
             return Ok(version);
         }
     }
@@ -236,16 +250,49 @@ impl Hook {
 }
 
 /// Where the packages of a type are published.
-pub(crate) trait Registry {
-    fn name(&self) -> &'static str;
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum Registry {
+    CratesIo,
+    Npm,
+}
+
+impl Registry {
+    pub(crate) fn name(self) -> &'static str {
+        match self {
+            Registry::CratesIo => "crates.io",
+            Registry::Npm => "npm",
+        }
+    }
 
     /// Whether the version of the package is already in the registry.
-    fn published(&self, package: &str, version: &str) -> Result<bool, CIError>;
+    pub(crate) fn published(
+        self,
+        platform: &impl Platform,
+        package: &str,
+        version: &str,
+    ) -> Result<bool, CIError> {
+        let request = platform.request();
+        let url = match self {
+            Registry::CratesIo => format!("https://crates.io/api/v1/crates/{package}/{version}"),
+            Registry::Npm => format!("https://registry.npmjs.org/{package}/{version}"),
+        };
+
+        match request
+            .blocking_client()?
+            .get(url)
+            .header(USER_AGENT, "agci (https://github.com/agnesoft/agdb)")
+            .send_blocking(request)
+        {
+            Ok(_) => Ok(true),
+            Err(e) if e.http_status() == Some(404) => Ok(false),
+            Err(e) => Err(e.into()),
+        }
+    }
 }
 
 /// Publishing a package of a release.
 pub(crate) struct Publish {
-    pub(crate) registry: &'static dyn Registry,
+    pub(crate) registry: Registry,
     /// The version that ends up in the registry.
     pub(crate) version: String,
     pub(crate) steps: Vec<Step>,
@@ -253,4 +300,66 @@ pub(crate) struct Publish {
 
 pub(crate) fn no_checks(dir: &str) -> CIError {
     format!("'{dir}' has no checks, set them in agci.toml").into()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use agplatform::RequestOutput;
+    use agplatform::test_platform::test_platform;
+
+    #[test]
+    fn published_versions_are_found_by_url() {
+        let platform = test_platform();
+        platform
+            .request
+            .set_response("", RequestOutput::status(404));
+        platform.request.set_response(
+            "GET https://crates.io/api/v1/crates/agdb/1.0.0",
+            RequestOutput::status(200),
+        );
+        platform.request.set_response(
+            "GET https://registry.npmjs.org/@agnesoft/agdb_api/1.0.0",
+            RequestOutput::status(200),
+        );
+
+        assert!(
+            Registry::CratesIo
+                .published(&platform, "agdb", "1.0.0")
+                .unwrap()
+        );
+        assert!(
+            !Registry::CratesIo
+                .published(&platform, "agdb", "2.0.0")
+                .unwrap()
+        );
+        assert!(
+            Registry::Npm
+                .published(&platform, "@agnesoft/agdb_api", "1.0.0")
+                .unwrap()
+        );
+        assert!(
+            !Registry::Npm
+                .published(&platform, "@agnesoft/agdb_api", "2.0.0")
+                .unwrap()
+        );
+        assert_eq!(
+            platform.request.call_details()[0].headers["user-agent"],
+            "agci (https://github.com/agnesoft/agdb)"
+        );
+    }
+
+    #[test]
+    fn published_other_status_fails() {
+        let platform = test_platform();
+        platform
+            .request
+            .set_response("", RequestOutput::status(503));
+
+        assert!(
+            Registry::CratesIo
+                .published(&platform, "agdb", "1.0.0")
+                .is_err()
+        );
+    }
 }

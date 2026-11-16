@@ -13,15 +13,16 @@ use crate::project_type::Details;
 use crate::project_type::Hook;
 use crate::project_type::ProjectType;
 use crate::project_type::Publish;
+use crate::project_type::Registry;
 use crate::project_type::RootChecks;
 use crate::project_type::no_checks;
 use crate::release::with_version;
-use registry::Npm;
+use agplatform::Fs;
+use agplatform::Platform;
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 
 mod package_json;
-mod registry;
 
 #[cfg(target_os = "windows")]
 pub(crate) const PNPM: &str = "pnpm.cmd";
@@ -73,11 +74,11 @@ pub(crate) struct Pnpm {
 }
 
 impl ProjectType for Pnpm {
-    fn manifests(tracked: &[&str]) -> Result<Vec<Manifest>, CIError> {
+    fn manifests(platform: &impl Platform, tracked: &[&str]) -> Result<Vec<Manifest>, CIError> {
         nested(tracked, "package.json")
             .into_iter()
             .map(|(dir, file)| {
-                package_json::from_package_json(dir, &std::fs::read_to_string(file)?)
+                package_json::from_package_json(dir, &platform.fs().read_to_string(file)?)
             })
             .collect()
     }
@@ -200,25 +201,29 @@ impl ProjectType for Pnpm {
             &package.dir,
         ));
         Some(Publish {
-            registry: &Npm,
+            registry: Registry::Npm,
             version: details.version.clone().unwrap_or(version.to_string()),
             steps: with_version(steps, version),
         })
     }
 
-    fn set_version(&self, from: &str, to: &str) -> Result<(), CIError> {
-        for package in self.packages.values() {
-            if package.version.as_deref() == Some(from) {
-                println!("Updating '{}'", package.file);
-                let content = std::fs::read_to_string(&package.file)?.replace(
+    fn version_updates(
+        &self,
+        from: &str,
+        to: &str,
+        read: &dyn Fn(&str) -> Result<String, CIError>,
+    ) -> Result<Vec<(String, String)>, CIError> {
+        self.packages
+            .values()
+            .filter(|package| package.version.as_deref() == Some(from))
+            .map(|package| {
+                let content = read(&package.file)?.replace(
                     &format!("\"version\": \"{from}\""),
                     &format!("\"version\": \"{to}\""),
                 );
-                std::fs::write(&package.file, content)?;
-            }
-        }
-
-        Ok(())
+                Ok((package.file.clone(), content))
+            })
+            .collect()
     }
 }
 

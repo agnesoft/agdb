@@ -1,4 +1,8 @@
 use crate::CIError;
+use agplatform::Env;
+use agplatform::Fs;
+use agplatform::OpenWriteOptions;
+use agplatform::Platform;
 use std::io::Write;
 use std::time::Duration;
 use std::time::Instant;
@@ -26,9 +30,12 @@ pub(crate) struct Report {
 }
 
 impl Report {
-    pub(crate) fn new() -> Self {
+    pub(crate) fn new(platform: &impl Platform) -> Self {
         Self {
-            github: std::env::var("GITHUB_ACTIONS").is_ok_and(|v| v == "true"),
+            github: platform
+                .env()
+                .var("GITHUB_ACTIONS")
+                .is_some_and(|v| v == "true"),
             entries: Vec::new(),
         }
     }
@@ -87,16 +94,15 @@ impl Report {
     }
 
     /// Prints the results (and writes the job summary), fails if any check failed.
-    pub(crate) fn finish(self) -> Result<(), CIError> {
+    pub(crate) fn finish(self, platform: &impl Platform) -> Result<(), CIError> {
         print!("\n{}", self.text());
 
         if self.github
-            && let Ok(path) = std::env::var("GITHUB_STEP_SUMMARY")
+            && let Some(path) = platform.env().var("GITHUB_STEP_SUMMARY")
         {
-            std::fs::OpenOptions::new()
-                .append(true)
-                .create(true)
-                .open(path)?
+            platform
+                .fs()
+                .open_write_options(path, OpenWriteOptions::new().append().create())?
                 .write_all(self.markdown().as_bytes())?;
         }
 
@@ -224,7 +230,10 @@ ui: build              passed   2.0s
     #[test]
     fn failed_projects_are_listed() {
         assert_eq!(
-            report().finish().unwrap_err().description,
+            report()
+                .finish(&agplatform::test_platform::test_platform())
+                .unwrap_err()
+                .description,
             "checks failed: agdb"
         );
     }

@@ -12,20 +12,20 @@ use crate::project_type::Hook;
 use crate::project_type::Kind;
 use crate::project_type::ProjectType;
 use crate::project_type::Publish;
+use crate::project_type::Registry;
 use crate::project_type::no_checks;
 use crate::project_type::shell::Hooks;
 use crate::project_type::shell::Script;
 use crate::project_type::shell::files;
 use crate::project_type::shell::push_run;
 use crate::utilities;
-use registry::CratesIo;
+use agplatform::Platform;
 use serde::Deserialize;
 use std::collections::BTreeSet;
 use std::path::PathBuf;
 use std::process::Command;
 
 mod metadata;
-mod registry;
 
 /// Changes to these affect every Cargo project. Entries ending with `/` are directories.
 pub(crate) const INPUTS: [&str; 5] = [
@@ -227,8 +227,8 @@ impl Cargo {
 }
 
 impl ProjectType for Cargo {
-    fn manifests(tracked: &[&str]) -> Result<Vec<Manifest>, CIError> {
-        metadata::manifests(tracked)
+    fn manifests(platform: &impl Platform, tracked: &[&str]) -> Result<Vec<Manifest>, CIError> {
+        metadata::manifests(platform, tracked)
     }
 
     fn default_checks() -> Vec<&'static str> {
@@ -236,11 +236,10 @@ impl ProjectType for Cargo {
     }
 
     /// `[workspace.package]` or `[package]` of the root `Cargo.toml`.
-    fn version() -> Result<Option<String>, CIError> {
-        let manifest: toml::Table = match std::fs::read_to_string("Cargo.toml") {
-            Ok(content) => toml::from_str(&content).map_err(|e| format!("'Cargo.toml': {e}"))?,
-            Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(None),
-            Err(e) => return Err(e.into()),
+    fn version(platform: &impl Platform) -> Result<Option<String>, CIError> {
+        let manifest: toml::Table = match utilities::read_if_exists(platform, "Cargo.toml")? {
+            Some(content) => toml::from_str(&content).map_err(|e| format!("'Cargo.toml': {e}"))?,
+            None => return Ok(None),
         };
         let package = manifest
             .get("workspace")
@@ -353,7 +352,7 @@ impl ProjectType for Cargo {
 
     fn publish(&self, package: &Package, version: &str) -> Option<Publish> {
         Some(Publish {
-            registry: &CratesIo,
+            registry: Registry::CratesIo,
             version: version.to_string(),
             steps: vec![step("cargo", &["publish", "-p", &package.name], "")],
         })
@@ -361,9 +360,16 @@ impl ProjectType for Cargo {
 }
 
 /// Builds the binary of the package in release mode, its path.
-pub(crate) fn build_release(package: &str, exe: &str) -> Result<PathBuf, CIError> {
-    utilities::stream_command(Command::new("cargo").args(["build", "-r", "-p", package]))?;
-    Ok(metadata::target_dir()?.join("release").join(exe))
+pub(crate) fn build_release(
+    platform: &impl Platform,
+    package: &str,
+    exe: &str,
+) -> Result<PathBuf, CIError> {
+    utilities::stream_command(
+        platform,
+        Command::new("cargo").args(["build", "-r", "-p", package]),
+    )?;
+    Ok(metadata::target_dir(platform)?.join("release").join(exe))
 }
 
 /// Coverage counts only the project's own sources: other Cargo projects and its examples are ignored.

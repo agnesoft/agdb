@@ -2,6 +2,7 @@ use crate::CIError;
 use crate::project::Project;
 use crate::report::Report;
 use crate::utilities;
+use agplatform::Platform;
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 use std::path::Path;
@@ -34,10 +35,16 @@ pub(crate) fn step(program: &str, args: &[&str], dir: &str) -> Step {
     }
 }
 
-pub(crate) fn run_steps(label: &str, steps: &[Step], root: &str) -> Result<(), CIError> {
+pub(crate) fn run_steps(
+    platform: &impl Platform,
+    label: &str,
+    steps: &[Step],
+    root: &str,
+) -> Result<(), CIError> {
     for step in steps {
         println!("[{label}] {step}");
         utilities::stream_command(
+            platform,
             Command::new(&step.program)
                 .args(&step.args)
                 .envs(step.env.iter().map(|(k, v)| (k, v)))
@@ -60,19 +67,20 @@ const UNCHANGED: &str = "unchanged files";
 /// Runs the checks of the project until one fails, then whether they left the files unchanged
 /// (e.g. outdated generated sources).
 pub(crate) fn check(
+    platform: &impl Platform,
     project: &Project,
     projects: &[Project],
     root: &str,
     report: &mut Report,
 ) -> Result<(), CIError> {
-    let before = tracked_changes()?;
-    let untracked_before = untracked()?;
+    let before = tracked_changes(platform)?;
+    let untracked_before = untracked(platform)?;
     let mut passed = true;
 
     for check in project.project_type.checks(project, projects, root) {
         if passed {
             passed = report.run(&project.dir, &check.name, || {
-                run_steps(&project.dir, &check.steps, root)
+                run_steps(platform, &project.dir, &check.steps, root)
             });
         } else {
             report.skip(&project.dir, &check.name);
@@ -85,8 +93,8 @@ pub(crate) fn check(
     }
 
     report.run(&project.dir, UNCHANGED, || {
-        let mut modified = modified_files(&before, &tracked_changes()?);
-        modified.extend(untracked()?.difference(&untracked_before).cloned());
+        let mut modified = modified_files(&before, &tracked_changes(platform)?);
+        modified.extend(untracked(platform)?.difference(&untracked_before).cloned());
 
         if modified.is_empty() {
             Ok(())
@@ -103,17 +111,19 @@ pub(crate) fn check(
     Ok(())
 }
 
-fn tracked_changes() -> Result<String, CIError> {
-    utilities::run_quiet(Command::new("git").args(["diff", "--no-renames", "HEAD"]))
+fn tracked_changes(platform: &impl Platform) -> Result<String, CIError> {
+    utilities::run_quiet(
+        platform,
+        Command::new("git").args(["diff", "--no-renames", "HEAD"]),
+    )
 }
 
 /// Untracked files that are not ignored, e.g. newly generated sources.
-fn untracked() -> Result<BTreeSet<String>, CIError> {
-    Ok(utilities::run_quiet(Command::new("git").args([
-        "ls-files",
-        "--others",
-        "--exclude-standard",
-    ]))?
+fn untracked(platform: &impl Platform) -> Result<BTreeSet<String>, CIError> {
+    Ok(utilities::run_quiet(
+        platform,
+        Command::new("git").args(["ls-files", "--others", "--exclude-standard"]),
+    )?
     .lines()
     .map(str::to_string)
     .collect())

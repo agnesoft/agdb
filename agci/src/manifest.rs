@@ -3,6 +3,7 @@ use crate::config::FILE;
 use crate::project_type::Details;
 use crate::project_type::Kind;
 use crate::utilities;
+use agplatform::Platform;
 use std::process::Command;
 
 #[derive(Debug, PartialEq, Eq)]
@@ -32,13 +33,13 @@ impl Manifest {
 }
 
 /// The manifests of all project types among the tracked files.
-pub(crate) fn manifests() -> Result<Vec<Manifest>, CIError> {
-    let files = utilities::run_quiet(Command::new("git").arg("ls-files"))?;
+pub(crate) fn manifests(platform: &impl Platform) -> Result<Vec<Manifest>, CIError> {
+    let files = utilities::run_quiet(platform, Command::new("git").arg("ls-files"))?;
     let tracked: Vec<&str> = files.lines().collect();
     let mut manifests = Vec::new();
 
     for kind in Kind::ALL {
-        manifests.extend(kind.manifests(&tracked)?);
+        manifests.extend(kind.manifests(platform, &tracked)?);
     }
 
     Ok(manifests)

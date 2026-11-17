@@ -12,6 +12,8 @@ pub(crate) enum Status {
     Passed,
     Failed,
     Skipped,
+    /// Passed before with the same fingerprint, not run.
+    Proven,
 }
 
 #[derive(Debug)]
@@ -84,6 +86,10 @@ impl Report {
         self.push(project, check, Status::Skipped, Duration::ZERO);
     }
 
+    pub(crate) fn proven(&mut self, project: &str, check: &str) {
+        self.push(project, check, Status::Proven, Duration::ZERO);
+    }
+
     fn push(&mut self, project: &str, check: &str, status: Status, duration: Duration) {
         self.entries.push(Entry {
             project: project.to_string(),
@@ -150,6 +156,7 @@ impl Report {
                 Status::Passed => "✅ passed",
                 Status::Failed => "❌ failed",
                 Status::Skipped => "⏭️ skipped",
+                Status::Proven => "☑️ proven",
             };
             markdown += &format!(
                 "| {} | `{}` | {status} | {} |\n",
@@ -167,7 +174,7 @@ fn time(entry: &Entry) -> String {
     let secs = entry.duration.as_secs();
 
     match entry.status {
-        Status::Skipped => String::new(),
+        Status::Skipped | Status::Proven => String::new(),
         _ if secs >= 60 => format!("{}m {:02}s", secs / 60, secs % 60),
         _ => format!("{:.1}s", entry.duration.as_secs_f64()),
     }
@@ -203,8 +210,9 @@ mod tests {
             Duration::from_millis(1500),
         );
         report.push("agdb", "test", Status::Failed, Duration::from_secs(83));
-        report.skip("agdb", "unchanged files");
+        report.skip("agdb", "doc");
         report.push("ui", "build", Status::Passed, Duration::from_secs(2));
+        report.proven("web", "lint");
         report
     }
 
@@ -212,10 +220,11 @@ mod tests {
     fn text_aligns_the_results() {
         assert_eq!(
             report().text(),
-            "agdb: format           passed   1.5s
-agdb: test             failed   1m 23s
-agdb: unchanged files  skipped
-ui: build              passed   2.0s
+            "agdb: format  passed   1.5s
+agdb: test    failed   1m 23s
+agdb: doc     skipped
+ui: build     passed   2.0s
+web: lint     proven
 "
         );
     }
@@ -223,7 +232,7 @@ ui: build              passed   2.0s
     #[test]
     fn markdown_table() {
         assert!(report().markdown().contains(
-            "| agdb | `test` | ❌ failed | 1m 23s |\n| agdb | `unchanged files` | ⏭️ skipped |  |\n"
+            "| agdb | `test` | ❌ failed | 1m 23s |\n| agdb | `doc` | ⏭️ skipped |  |\n"
         ));
     }
 

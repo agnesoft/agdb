@@ -1,9 +1,11 @@
 use crate::CIError;
 use crate::utilities::run_command;
 use crate::utilities::run_quiet;
+use crate::utilities::run_quiet_with_input;
 use agplatform::Fs;
 use agplatform::Platform;
 use std::collections::BTreeMap;
+use std::path::PathBuf;
 use std::process::Command;
 
 /// The latest `v*` tag without the `v`. Shallow clones (CI) have no tags, then the remote ones are used.
@@ -83,22 +85,31 @@ pub(crate) fn file_at(platform: &impl Platform, rev: &str, path: &str) -> Result
     )
 }
 
-/// The files of HEAD with the uncommitted changes: a changed or new file gets the hash of its
-/// content as its id, a deleted one is left out.
+/// The files of HEAD with the uncommitted changes: a changed or new file gets the git object id of
+/// its content (the one it gets when committed), a deleted one is left out.
 pub(crate) fn worktree_files(
     platform: &impl Platform,
 ) -> Result<BTreeMap<String, String>, CIError> {
     let mut files = files_at(platform, "HEAD")?;
+    let (present, deleted): (Vec<String>, Vec<String>) =
+        uncommitted(platform)?.into_iter().partition(|path| {
+            platform
+                .fs()
+                .metadata(path)
+                .is_ok_and(|metadata| metadata.file_type.is_file())
+        });
 
-    for path in uncommitted(platform)? {
-        match platform.fs().read(&path) {
-            Ok(content) => {
-                files.insert(path, crate::utilities::hash(&content));
-            }
-            Err(_) => {
-                files.remove(&path);
-            }
-        }
+    for path in deleted {
+        files.remove(&path);
+    }
+
+    if !present.is_empty() {
+        let ids = run_quiet_with_input(
+            platform,
+            Command::new("git").args(["hash-object", "--stdin-paths"]),
+            present.join("\n") + "\n",
+        )?;
+        files.extend(present.into_iter().zip(ids.lines().map(str::to_string)));
     }
 
     Ok(files)
@@ -106,22 +117,43 @@ pub(crate) fn worktree_files(
 
 /// Uncommitted (staged, unstaged and untracked) files.
 pub(crate) fn uncommitted(platform: &impl Platform) -> Result<Vec<String>, CIError> {
-    let mut files: Vec<String> = run_quiet(
+    let mut files = Vec::new();
+
+    for args in [
+        &["diff", "--name-only", "--no-renames", "-z", "HEAD"][..],
+        &["ls-files", "--others", "--exclude-standard", "-z"],
+    ] {
+        files.extend(
+            run_quiet(platform, Command::new("git").args(args))?
+                .split('\0')
+                .filter(|path| !path.is_empty())
+                .map(str::to_string),
+        );
+    }
+
+    Ok(files)
+}
+
+/// Updates `<remote>/<branch>`.
+pub(crate) fn fetch(platform: &impl Platform, remote: &str, branch: &str) -> Result<(), CIError> {
+    run_quiet(
         platform,
-        Command::new("git").args(["diff", "--name-only", "--no-renames", "HEAD"]),
-    )?
-    .lines()
-    .map(str::to_string)
-    .collect();
-    files.extend(
+        Command::new("git")
+            .args(["fetch", "--quiet", remote, branch])
+            .env("GIT_TERMINAL_PROMPT", "0"),
+    )
+    .map(|_| ())
+}
+
+/// The `.git` directory shared by all worktrees of the repository.
+pub(crate) fn common_dir(platform: &impl Platform) -> Result<PathBuf, CIError> {
+    Ok(PathBuf::from(
         run_quiet(
             platform,
-            Command::new("git").args(["ls-files", "--others", "--exclude-standard"]),
+            Command::new("git").args(["rev-parse", "--path-format=absolute", "--git-common-dir"]),
         )?
-        .lines()
-        .map(str::to_string),
-    );
-    Ok(files)
+        .trim(),
+    ))
 }
 
 /// Locally or on `origin` (shallow clones have no tags).

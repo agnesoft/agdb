@@ -227,6 +227,18 @@ pub(crate) fn dependency_order(projects: &[Project]) -> Result<Vec<&Project>, CI
     Ok(ordered.into_iter().map(|(_, p)| p).collect())
 }
 
+/// The affected projects that run on `os` and those that do not.
+pub(crate) fn on_os<'a>(
+    projects: &'a [Project],
+    affected: &BTreeSet<&str>,
+    os: Os,
+) -> (Vec<&'a Project>, Vec<&'a Project>) {
+    projects
+        .iter()
+        .filter(|p| affected.contains(p.dir.as_str()))
+        .partition(|p| p.settings.os().contains(&os))
+}
+
 /// A job per project and OS, projects of the same group share it.
 pub(crate) fn jobs(
     projects: &[Project],
@@ -523,6 +535,29 @@ mod tests {
         assert!(position("server") < position("client"));
         assert!(position("server") < position("bench"));
         assert!(position("client") < position("ui"));
+    }
+
+    #[test]
+    fn on_os_splits_the_affected_by_their_os() {
+        let mut projects = sample();
+        let bench = 0;
+        projects[bench].settings.os = vec![Os::Windows];
+        let dirs = |projects: Vec<&Project>| -> Vec<String> {
+            projects.into_iter().map(|p| p.dir.clone()).collect()
+        };
+        let affected = BTreeSet::from(["bench", "client", "db"]);
+
+        let (linux, not_linux) = on_os(&projects, &affected, Os::Linux);
+        let (windows, not_windows) = on_os(&projects, &affected, Os::Windows);
+
+        assert_eq!(
+            (dirs(linux), dirs(not_linux)),
+            (vec!["client".into(), "db".into()], vec!["bench".into()])
+        );
+        assert_eq!(
+            (dirs(windows), dirs(not_windows)),
+            (vec!["bench".into()], vec!["client".into(), "db".into()])
+        );
     }
 
     #[test]

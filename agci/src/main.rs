@@ -7,6 +7,7 @@ mod git;
 mod manifest;
 mod project;
 mod project_type;
+mod proof;
 mod regenerate;
 mod release;
 mod report;
@@ -15,6 +16,7 @@ mod utilities;
 use crate::affected::Job;
 use crate::affected::Snapshot;
 use crate::ci_error::CIError;
+use crate::config::Os;
 use crate::project::Project;
 use agplatform::Env;
 use agplatform::Fs;
@@ -23,6 +25,7 @@ use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 use std::path::Path;
 use std::process::Command;
+use std::time::SystemTime;
 
 const USAGE: &str = "usage:
   agci                         update the versions in the manifests to the repository version and
@@ -31,8 +34,13 @@ const USAGE: &str = "usage:
   agci affected [--base <ref>] JSON job matrix of the projects affected by the changes since <ref>
                                (merge base), or by the uncommitted changes without --base
   agci affected --all          JSON job matrix of all projects
-  agci check [<project>...]    run the checks of the projects, default: the affected ones; all of
-                               them run, failing ones are listed at the end
+  agci check [--force] [-p <project>]...
+                               run the checks of the given projects, default: those affected by the
+                               uncommitted changes or, in a clean worktree, since origin/main
+                               (fetched, merge base) that run on this OS; all of them run, failing
+                               ones are listed at the end; a check that passed before with the
+                               same fingerprint and steps is skipped unless --force
+  agci check --clean           remove all proofs of passed checks
   agci config                  on GitHub Actions: the outputs of the config job for the event, the
                                check matrix of a pull request (without the jobs that already passed
                                in it) or the release of a push to main
@@ -47,6 +55,10 @@ const USAGE: &str = "usage:
                                hooks of all projects, then the GitHub release and tag); --plan only
                                prints the steps";
 
+/// What `check` compares a clean worktree to: `<REMOTE>/<BRANCH>`.
+const REMOTE: &str = "origin";
+const BRANCH: &str = "main";
+
 fn root(platform: &impl Platform) -> Result<String, CIError> {
     Ok(utilities::run_quiet(
         platform,
@@ -56,12 +68,17 @@ fn root(platform: &impl Platform) -> Result<String, CIError> {
     .to_string())
 }
 
+/// `agci.toml`, the defaults without it.
+fn config_file(platform: &impl Platform) -> Result<config::File, CIError> {
+    match utilities::read_if_exists(platform, config::FILE)? {
+        Some(content) => config::File::parse(&content),
+        None => Ok(config::File::default()),
+    }
+}
+
 fn load(platform: &impl Platform) -> Result<Vec<Project>, CIError> {
     let read = |path: &str| utilities::read_if_exists(platform, path);
-    let mut file = match read(config::FILE)? {
-        Some(content) => config::File::parse(&content)?,
-        None => config::File::default(),
-    };
+    let mut file = config_file(platform)?;
 
     for kind in project_type::Kind::ALL {
         if let Some(checks) = kind.root_checks(&read)? {
@@ -100,6 +117,117 @@ fn affected_since<'a>(
         None => (head(platform)?, Snapshot::of(platform, None)?),
     };
     affected::affected(projects, &base, &head)
+}
+
+/// The projects `check` runs without `-p`: those affected by the uncommitted changes or, in a clean
+/// worktree, by the commits since the merge base with the fetched [`REMOTE`]/[`BRANCH`], if they run
+/// on this OS.
+fn to_check<'a>(
+    platform: &impl Platform,
+    projects: &'a [Project],
+) -> Result<Vec<&'a Project>, CIError> {
+    let base = format!("{REMOTE}/{BRANCH}");
+    let base = git::uncommitted(platform)?
+        .is_empty()
+        .then_some(base.as_str());
+
+    if base.is_some()
+        && let Err(e) = git::fetch(platform, REMOTE, BRANCH)
+    {
+        println!(
+            "Warning: fetching {REMOTE} {BRANCH} failed, using the local {REMOTE}/{BRANCH}: {}",
+            e.description
+        );
+    }
+
+    let affected = affected_since(platform, projects, base)?;
+    let (selected, skipped) = affected::on_os(projects, &affected, Os::CURRENT);
+    let dirs = |projects: &[&Project]| {
+        if projects.is_empty() {
+            "none".to_string()
+        } else {
+            projects
+                .iter()
+                .map(|p| p.dir.as_str())
+                .collect::<Vec<_>>()
+                .join(", ")
+        }
+    };
+
+    match base {
+        Some(base) => println!(
+            "Affected since {base} (clean worktree): {}",
+            dirs(&selected)
+        ),
+        None => println!("Affected by the uncommitted changes: {}", dirs(&selected)),
+    }
+
+    if !skipped.is_empty() {
+        println!("Not checked on {}: {}", Os::CURRENT, dirs(&skipped));
+    }
+
+    Ok(selected)
+}
+
+#[derive(Debug, PartialEq)]
+enum CheckArgs {
+    /// `--clean`: remove all proofs.
+    Clean,
+    /// `[--force] [-p <project>]...`: whether to rerun proven checks and the given projects.
+    Run { force: bool, dirs: Vec<String> },
+}
+
+fn check_args(args: &[String]) -> Result<CheckArgs, CIError> {
+    if let [clean] = args
+        && clean == "--clean"
+    {
+        return Ok(CheckArgs::Clean);
+    }
+
+    let mut force = false;
+    let mut dirs = Vec::new();
+    let mut args = args.iter();
+
+    while let Some(arg) = args.next() {
+        match arg.as_str() {
+            "--force" => force = true,
+            "-p" => dirs.push(args.next().ok_or(USAGE)?.clone()),
+            _ => return Err(USAGE.into()),
+        }
+    }
+
+    Ok(CheckArgs::Run { force, dirs })
+}
+
+/// Checks the projects, skipping the checks proven with their current fingerprint, after removing
+/// the proofs not used for the `[proofs]` `max_age_days`.
+fn check(platform: &impl Platform, args: &[String]) -> Result<(), CIError> {
+    let (force, dirs) = match check_args(args)? {
+        CheckArgs::Clean => {
+            return proof::Proofs::new(platform, false)?.clean(platform);
+        }
+        CheckArgs::Run { force, dirs } => (force, dirs),
+    };
+    let root = root(platform)?;
+    let projects = load(platform)?;
+    let selected = if dirs.is_empty() {
+        to_check(platform, &projects)?
+    } else {
+        select(&projects, &dirs)?
+    };
+    let proofs = proof::Proofs::new(platform, force)?;
+    proofs.prune(
+        platform,
+        SystemTime::now(),
+        config_file(platform)?.proofs.max_age(),
+    )?;
+    let mut report = report::Report::new(platform);
+
+    for project in selected {
+        check::check(platform, project, &projects, &root, &mut report, &proofs)?;
+    }
+
+    report.finish(platform)
 }
 
 fn release(platform: &impl Platform, args: &[String]) -> Result<(), CIError> {
@@ -323,27 +451,7 @@ fn run(platform: &impl Platform, args: &[String]) -> Result<(), CIError> {
             );
             Ok(())
         }
-        Some("check") => {
-            let root = root(platform)?;
-            let projects = load(platform)?;
-            let selected: Vec<&Project> = if args.len() > 1 {
-                select(&projects, &args[1..])?
-            } else {
-                let affected = affected_since(platform, &projects, None)?;
-                projects
-                    .iter()
-                    .filter(|p| affected.contains(p.dir.as_str()))
-                    .collect()
-            };
-
-            let mut report = report::Report::new(platform);
-
-            for project in selected {
-                check::check(platform, project, &projects, &root, &mut report)?;
-            }
-
-            report.finish(platform)
-        }
+        Some("check") => check(platform, &args[1..]),
         Some("config") if args.len() == 1 => config(platform),
         Some("bootstrap") => match &args[1..] {
             [flag, dir] if flag == "--check" => {
@@ -372,5 +480,32 @@ fn main() -> std::process::ExitCode {
             eprintln!("Error: {}", e.description);
             std::process::ExitCode::FAILURE
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn args(args: &[&str]) -> Vec<String> {
+        args.iter().map(|a| a.to_string()).collect()
+    }
+
+    #[test]
+    fn check_args_clean_force_and_projects() {
+        let run = |force: bool, dirs: &[&str]| CheckArgs::Run {
+            force,
+            dirs: args(dirs),
+        };
+
+        assert_eq!(check_args(&[]).unwrap(), run(false, &[]));
+        assert_eq!(
+            check_args(&args(&["-p", "agdb", "--force", "-p", "agdb_api/php"])).unwrap(),
+            run(true, &["agdb", "agdb_api/php"])
+        );
+        assert_eq!(check_args(&args(&["--clean"])).unwrap(), CheckArgs::Clean);
+        assert!(check_args(&args(&["--clean", "--force"])).is_err());
+        assert!(check_args(&args(&["agdb"])).is_err());
+        assert!(check_args(&args(&["-p"])).is_err());
     }
 }

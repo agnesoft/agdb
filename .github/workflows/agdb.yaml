@@ -2,8 +2,9 @@ name: agdb
 
 # Pull requests: agci checks the projects (agci.toml) whose fingerprint (their files, agci.toml entry
 # and dependencies) differs from the base, except the jobs that already passed with the same
-# fingerprints in the pull request. Only the `ci` job should be required, the matrix differs per
-# pull request.
+# fingerprints in the pull request. Within a job, the checks proven in earlier runs of the pull
+# request (agci check proofs, in the actions cache) are skipped. Only the `ci` job should be
+# required, the matrix differs per pull request.
 # Pushes to main build nothing but what agci releases: the `release:dev` hooks of the affected
 # projects and, when the root Cargo.toml version has no tag yet, the release.
 
@@ -130,11 +131,25 @@ jobs:
         run: |
           chmod +x "$RUNNER_TEMP"/agci/agci*
           echo "$RUNNER_TEMP/agci" >> "$GITHUB_PATH"
+      # the proofs of the checks that passed in earlier runs of the pull request, `agci check` skips
+      # them and adds those of the checks that pass
+      - uses: actions/cache/restore@v6
+        with:
+          path: .git/agci/proofs
+          key: agci-proofs-${{ matrix.artifact }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: agci-proofs-${{ matrix.artifact }}-
       - shell: bash
         env:
-          PROJECTS: ${{ join(matrix.projects, ' ') }}
-        run: agci check $PROJECTS
-      # evidence that the job passed with these fingerprints, `agci config` skips it until they change
+          PROJECTS: ${{ join(matrix.projects, ' -p ') }}
+        run: agci check -p $PROJECTS
+      # also when a check failed, so that a re-run skips those that passed
+      - if: ${{ !cancelled() }}
+        uses: actions/cache/save@v6
+        with:
+          path: .git/agci/proofs
+          key: agci-proofs-${{ matrix.artifact }}-${{ github.run_id }}-${{ github.run_attempt }}
+      # all checks of the job are proven with these fingerprints, `agci config` skips the job until
+      # they change
       - shell: bash
         env:
           EVIDENCE: ${{ matrix.evidence }}

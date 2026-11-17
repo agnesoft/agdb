@@ -70,6 +70,18 @@ paths that name nothing.
 `reachable` follows the parsed calls, expansions from the module of the call, and lists those it
 cannot parse: the macros of other crates and the calls that do not fit.
 
+With the `codegen` feature, `SourceCrate::ir` reads items (e.g. the reachable ones) into an
+intermediate representation of their declarations as written, and `codegen::rust::item` prints one
+back as Rust:
+
+- structs, enums, traits, impls, functions, consts, statics and type aliases;
+- attributes after `cfg_attr`, docs, visibility, generics with bounds and `where` clauses;
+- types and paths, each path with what it names (an item, a generic parameter, `Self`, ...).
+
+Bodies and expressions are their source text. An item using a construct the representation does
+not have is left out, and the construct is reported as an `Error`. `macro_rules!` are left out
+silently.
+
 A problem with one file does not stop loading. These are all collected as `Error`s with their
 location:
 

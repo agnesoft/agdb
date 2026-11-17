@@ -7,6 +7,9 @@
 //! what the [`SourceCrate::exports`] given as roots lead to, through the
 //! macro calls [`SourceCrate::macro_call`] parses too.
 //!
+//! With the `codegen` feature, [`SourceCrate::ir`] reads the
+//! items into the [`codegen::ir`].
+//!
 //! [`packages`] lists the crates of a cargo workspace, from `cargo metadata`.
 //!
 //! Problems with single files (unreadable, invalid, missing modules,
@@ -14,6 +17,8 @@
 //! collected as [`Error`]s and loading carries on with the rest.
 
 mod cfg;
+#[cfg(feature = "codegen")]
+pub mod codegen;
 mod error;
 mod files;
 mod macros;

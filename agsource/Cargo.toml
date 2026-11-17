@@ -10,6 +10,9 @@ keywords = ["parser", "syn", "source", "module"]
 categories = ["development-tools"]
 publish = false
 
+[features]
+codegen = []
+
 [dependencies]
 agplatform = { workspace = true, features = ["fs", "process"] }
 proc-macro2 = { workspace = true, default-features = false, features = [

@@ -1,6 +1,12 @@
 use crate::CIError;
+use crate::affected;
+use crate::affected::Snapshot;
+use crate::git;
 use crate::project::Project;
+use crate::proof;
+use crate::proof::Proofs;
 use crate::report::Report;
+use crate::report::Task;
 use crate::utilities;
 use agplatform::Platform;
 use std::collections::BTreeMap;
@@ -62,89 +68,82 @@ pub(crate) struct Check {
     pub(crate) steps: Vec<Step>,
 }
 
-const UNCHANGED: &str = "unchanged files";
-
-/// Runs the checks of the project until one fails, then whether they left the files unchanged
-/// (e.g. outdated generated sources).
+/// Runs the checks of the project until one fails. A check fails if it modifies or creates files
+/// (e.g. outdated generated sources), otherwise it passes with a proof. A check proven with the
+/// project's fingerprint and its steps is not run, each check builds what it needs itself (cargo,
+/// turbo `dependsOn`). A passed check left the files as they were, so the fingerprint holds for
+/// all. The setup of the project's kind (e.g. `pnpm install`) runs before the first check that runs.
 pub(crate) fn check(
     platform: &impl Platform,
     project: &Project,
     projects: &[Project],
     root: &str,
     report: &mut Report,
+    proofs: &Proofs,
 ) -> Result<(), CIError> {
-    let before = tracked_changes(platform)?;
-    let untracked_before = untracked(platform)?;
+    let before = Snapshot::of(platform, None)?;
+    let fingerprint = affected::fingerprints(projects, &before)?
+        .remove(&project.dir)
+        .unwrap_or_default();
+    let mut setup = Some(project.kind.setup()).filter(|steps| !steps.is_empty());
     let mut passed = true;
 
     for check in project.project_type.checks(project, projects, root) {
+        if !passed {
+            report.skip(&project.dir, Task::Check(&check.name));
+            continue;
+        }
+
+        let key = proof::key(&project.dir, &check, &fingerprint);
+
+        if proofs.proven(platform, &key) {
+            println!("[{}] {}: proven ({key})", project.dir, check.name);
+            report.proven(&project.dir, Task::Check(&check.name));
+            continue;
+        }
+
+        if let Some(steps) = setup.take()
+            && !report.run(&project.dir, Task::Setup, || {
+                run_steps(platform, &project.dir, &steps, root)
+            })
+        {
+            passed = false;
+            report.skip(&project.dir, Task::Check(&check.name));
+            continue;
+        }
+
+        passed = report.run(&project.dir, Task::Check(&check.name), || {
+            run_steps(platform, &project.dir, &check.steps, root)?;
+            let modified = modified(&before.files, &git::worktree_files(platform)?);
+
+            if modified.is_empty() {
+                Ok(())
+            } else {
+                Err(format!(
+                    "'{}' of '{}' modified or created files, run it locally and commit the result:\n  {}",
+                    check.name,
+                    project.dir,
+                    modified.join("\n  ")
+                )
+                .into())
+            }
+        });
+
         if passed {
-            passed = report.run(&project.dir, &check.name, || {
-                run_steps(platform, &project.dir, &check.steps, root)
-            });
-        } else {
-            report.skip(&project.dir, &check.name);
+            proofs.save(platform, &key)?;
         }
     }
-
-    if !passed {
-        report.skip(&project.dir, UNCHANGED);
-        return Ok(());
-    }
-
-    report.run(&project.dir, UNCHANGED, || {
-        let mut modified = modified_files(&before, &tracked_changes(platform)?);
-        modified.extend(untracked(platform)?.difference(&untracked_before).cloned());
-
-        if modified.is_empty() {
-            Ok(())
-        } else {
-            Err(format!(
-                "checks of '{}' modified or created files, run them locally and commit the result:\n  {}",
-                project.dir,
-                modified.join("\n  ")
-            )
-            .into())
-        }
-    });
 
     Ok(())
 }
 
-fn tracked_changes(platform: &impl Platform) -> Result<String, CIError> {
-    utilities::run_quiet(
-        platform,
-        Command::new("git").args(["diff", "--no-renames", "HEAD"]),
-    )
-}
-
-/// Untracked files that are not ignored, e.g. newly generated sources.
-fn untracked(platform: &impl Platform) -> Result<BTreeSet<String>, CIError> {
-    Ok(utilities::run_quiet(
-        platform,
-        Command::new("git").args(["ls-files", "--others", "--exclude-standard"]),
-    )?
-    .lines()
-    .map(str::to_string)
-    .collect())
-}
-
-/// Files whose diff against HEAD differs between the two `git diff HEAD` outputs.
-fn modified_files(before: &str, after: &str) -> Vec<String> {
-    fn per_file(diff: &str) -> BTreeMap<&str, &str> {
-        diff.split("diff --git a/")
-            .skip(1)
-            .filter_map(|chunk| chunk.split_once(' ').map(|(file, _)| (file, chunk)))
-            .collect()
-    }
-
-    let before = per_file(before);
-    let after = per_file(after);
-    let files: BTreeSet<&str> = before.keys().chain(after.keys()).copied().collect();
-    files
+/// The files that differ between the two snapshots (path -> git object id).
+fn modified(before: &BTreeMap<String, String>, after: &BTreeMap<String, String>) -> Vec<String> {
+    let paths: BTreeSet<&String> = before.keys().chain(after.keys()).collect();
+    paths
         .into_iter()
-        .filter(|f| before.get(f) != after.get(f))
-        .map(str::to_string)
+        .filter(|path| before.get(*path) != after.get(*path))
+        .cloned()
         .collect()
 }
 
@@ -153,11 +152,17 @@ mod tests {
     use super::*;
 
     #[test]
-    fn modified_files_compares_per_file_diffs() {
-        let before = "diff --git a/a.rs b/a.rs\n-x\n+y\ndiff --git a/b.rs b/b.rs\n-1\n+2\n";
-        let after = "diff --git a/a.rs b/a.rs\n-x\n+y\ndiff --git a/b.rs b/b.rs\n-1\n+3\ndiff --git a/c.rs b/c.rs\n+z\n";
+    fn modified_lists_changed_created_and_deleted_files() {
+        let files = |files: &[(&str, &str)]| -> BTreeMap<String, String> {
+            files
+                .iter()
+                .map(|(p, i)| (p.to_string(), i.to_string()))
+                .collect()
+        };
+        let before = files(&[("a.rs", "1"), ("b.rs", "2"), ("d.rs", "4")]);
+        let after = files(&[("a.rs", "1"), ("b.rs", "3"), ("c.rs", "5")]);
 
-        assert_eq!(modified_files(before, after), vec!["b.rs", "c.rs"]);
-        assert!(modified_files(before, before).is_empty());
+        assert_eq!(modified(&before, &after), vec!["b.rs", "c.rs", "d.rs"]);
+        assert!(modified(&before, &before).is_empty());
     }
 }

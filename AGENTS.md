@@ -70,8 +70,9 @@ For code in `agplatform`, `agbench`, `agsource` and `agtestcheck`:
 
 ## CI
 
-- Run the checks of the projects affected by the uncommitted changes: `cargo run -p agci -- check`
-- Run the checks of a project: `cargo run -p agci -- check <project dir>`, e.g. `agdb_server`
+- Run the checks of the affected projects that run on this OS (Linux or Windows): `cargo run -p agci -- check`. Affected by the uncommitted changes, or by the commits since `origin/main` (fetched) in a clean worktree.
+- Run the checks of a project: `cargo run -p agci -- check -p <project dir>`, e.g. `agdb_server`
+- Checks that passed with the same fingerprint and steps are skipped (proofs in `.git/agci/proofs`), `--force` reruns them, `check --clean` removes all proofs.
 - List the projects and their dependencies: `cargo run -p agci -- projects`
 - Cargo workspace members and package.json packages are detected as projects, the root `agci.toml` holds the defaults and per-project overrides, see `agci/README.md`.
 - Preview what a push to main would release: `cargo run -p agci -- release --base <ref> --plan`

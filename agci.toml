@@ -20,6 +20,8 @@
 # Sections, an entry overrides the defaults of its kind field by field:
 #   [defaults.cargo], [defaults.pnpm], [defaults.shell]  any of the fields below
 #   [projects."<dir>"]                                   the project in the directory
+#   [proofs]                                             max_age_days = 7: local proofs of passed
+#                                                        checks not used for longer are removed
 #
 # Fields:
 #   checks = [...]                Replace the default checks. cargo built-ins (always in this

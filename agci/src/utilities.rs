@@ -1,11 +1,14 @@
 use crate::CIError;
 use agplatform::CommandExt;
+use agplatform::CommandOptions;
 use agplatform::CommandOutput;
 use agplatform::Env;
 use agplatform::Fs;
 use agplatform::OpenWriteOptions;
 use agplatform::OutputStream;
 use agplatform::Platform;
+use agplatform::Process;
+use agplatform::ProcessCommand;
 use std::io::Write;
 use std::path::Path;
 use std::process::Command;
@@ -59,7 +62,26 @@ fn failed(command: &Command) -> CIError {
 
 /// Runs the command without echoing its output, returning stdout.
 pub(crate) fn run_quiet(platform: &impl Platform, command: &Command) -> Result<String, CIError> {
-    let out = output(platform, command)?;
+    quiet(output(platform, command)?, command)
+}
+
+/// [`run_quiet`] with `input` written to the standard input of the command.
+pub(crate) fn run_quiet_with_input(
+    platform: &impl Platform,
+    command: &Command,
+    input: String,
+) -> Result<String, CIError> {
+    let options = CommandOptions {
+        input: Some(input.into_bytes()),
+        ..Default::default()
+    };
+    let out = platform
+        .process()
+        .run_blocking(ProcessCommand::with_options(command, options));
+    quiet(output_of(out)?, command)
+}
+
+fn quiet(out: CommandOutput, command: &Command) -> Result<String, CIError> {
     if out.success {
         Ok(String::from_utf8(out.stdout)?)
     } else {
@@ -70,7 +92,11 @@ pub(crate) fn run_quiet(platform: &impl Platform, command: &Command) -> Result<S
 
 /// The output of the command that ran, whether it succeeded or not.
 fn output(platform: &impl Platform, command: &Command) -> Result<CommandOutput, CIError> {
-    match command.run_blocking(platform.process()) {
+    output_of(command.run_blocking(platform.process()))
+}
+
+fn output_of(result: agplatform::Result<CommandOutput>) -> Result<CommandOutput, CIError> {
+    match result {
         Ok(out) => Ok(out),
         Err(e) => match e.command_output() {
             Some(out) => Ok(out.clone()),

@@ -162,15 +162,13 @@ impl ProjectType for Pnpm {
     }
 
     fn checks(&self, project: &Project, _projects: &[Project], _root: &str) -> Vec<Check> {
-        let mut checks = vec![Check {
-            name: "install".to_string(),
-            steps: vec![install()],
-        }];
-        checks.extend(self.checks.iter().map(|c| Check {
-            name: c.0.clone(),
-            steps: vec![turbo(project, &c.0)],
-        }));
-        checks
+        self.checks
+            .iter()
+            .map(|c| Check {
+                name: c.0.clone(),
+                steps: vec![turbo(project, &c.0)],
+            })
+            .collect()
     }
 
     fn hook(&self, project: &Project, hook: Hook) -> Vec<Step> {
@@ -310,7 +308,6 @@ pub(crate) mod tests {
         assert_eq!(
             command_lines(&projects, "ui"),
             vec![
-                format!("> {PNPM} install --frozen-lockfile"),
                 format!(
                     "> {PNPM} exec turbo run test --force --env-mode=loose --log-order=stream --filter=ui --filter=ui_lib"
                 ),

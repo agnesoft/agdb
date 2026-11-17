@@ -12,6 +12,25 @@ pub(crate) enum Status {
     Passed,
     Failed,
     Skipped,
+    /// Passed before with the same fingerprint, not run.
+    Proven,
+}
+
+/// What a row of the report is about.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub(crate) enum Task<'a> {
+    /// The setup of the project's kind (e.g. `pnpm install`), before its first check that runs.
+    Setup,
+    Check(&'a str),
+}
+
+impl std::fmt::Display for Task<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(match self {
+            Task::Setup => "setup",
+            Task::Check(name) => name,
+        })
+    }
 }
 
 #[derive(Debug)]
@@ -44,10 +63,10 @@ impl Report {
     pub(crate) fn run(
         &mut self,
         project: &str,
-        check: &str,
+        task: Task,
         run: impl FnOnce() -> Result<(), CIError>,
     ) -> bool {
-        let title = format!("{project}: {check}");
+        let title = format!("{project}: {task}");
 
         if self.github {
             println!("::group::{title}");
@@ -76,18 +95,22 @@ impl Report {
                 Status::Failed
             }
         };
-        self.push(project, check, status, duration);
+        self.push(project, task, status, duration);
         status == Status::Passed
     }
 
-    pub(crate) fn skip(&mut self, project: &str, check: &str) {
-        self.push(project, check, Status::Skipped, Duration::ZERO);
+    pub(crate) fn skip(&mut self, project: &str, task: Task) {
+        self.push(project, task, Status::Skipped, Duration::ZERO);
     }
 
-    fn push(&mut self, project: &str, check: &str, status: Status, duration: Duration) {
+    pub(crate) fn proven(&mut self, project: &str, task: Task) {
+        self.push(project, task, Status::Proven, Duration::ZERO);
+    }
+
+    fn push(&mut self, project: &str, task: Task, status: Status, duration: Duration) {
         self.entries.push(Entry {
             project: project.to_string(),
-            check: check.to_string(),
+            check: task.to_string(),
             status,
             duration,
         });
@@ -150,6 +173,7 @@ impl Report {
                 Status::Passed => "✅ passed",
                 Status::Failed => "❌ failed",
                 Status::Skipped => "⏭️ skipped",
+                Status::Proven => "☑️ proven",
             };
             markdown += &format!(
                 "| {} | `{}` | {status} | {} |\n",
@@ -167,7 +191,7 @@ fn time(entry: &Entry) -> String {
     let secs = entry.duration.as_secs();
 
     match entry.status {
-        Status::Skipped => String::new(),
+        Status::Skipped | Status::Proven => String::new(),
         _ if secs >= 60 => format!("{}m {:02}s", secs / 60, secs % 60),
         _ => format!("{:.1}s", entry.duration.as_secs_f64()),
     }
@@ -196,15 +220,27 @@ mod tests {
             github: false,
             entries: Vec::new(),
         };
+        report.push("agdb", Task::Setup, Status::Passed, Duration::from_secs(4));
         report.push(
             "agdb",
-            "format",
+            Task::Check("format"),
             Status::Passed,
             Duration::from_millis(1500),
         );
-        report.push("agdb", "test", Status::Failed, Duration::from_secs(83));
-        report.skip("agdb", "unchanged files");
-        report.push("ui", "build", Status::Passed, Duration::from_secs(2));
+        report.push(
+            "agdb",
+            Task::Check("test"),
+            Status::Failed,
+            Duration::from_secs(83),
+        );
+        report.skip("agdb", Task::Check("doc"));
+        report.push(
+            "ui",
+            Task::Check("build"),
+            Status::Passed,
+            Duration::from_secs(2),
+        );
+        report.proven("web", Task::Check("lint"));
         report
     }
 
@@ -212,10 +248,12 @@ mod tests {
     fn text_aligns_the_results() {
         assert_eq!(
             report().text(),
-            "agdb: format           passed   1.5s
-agdb: test             failed   1m 23s
-agdb: unchanged files  skipped
-ui: build              passed   2.0s
+            "agdb: setup   passed   4.0s
+agdb: format  passed   1.5s
+agdb: test    failed   1m 23s
+agdb: doc     skipped
+ui: build     passed   2.0s
+web: lint     proven
 "
         );
     }
@@ -223,7 +261,7 @@ ui: build              passed   2.0s
     #[test]
     fn markdown_table() {
         assert!(report().markdown().contains(
-            "| agdb | `test` | ❌ failed | 1m 23s |\n| agdb | `unchanged files` | ⏭️ skipped |  |\n"
+            "| agdb | `test` | ❌ failed | 1m 23s |\n| agdb | `doc` | ⏭️ skipped |  |\n"
         ));
     }
 

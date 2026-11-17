@@ -17,9 +17,25 @@ pub(crate) struct File {
     pub(crate) defaults: BTreeMap<Kind, toml::Table>,
     #[serde(default)]
     pub(crate) projects: BTreeMap<String, toml::Table>,
+    #[serde(default)]
+    pub(crate) proofs: Proofs,
     /// The default checks the repository root sets per type, over the built-in ones.
     #[serde(skip)]
     pub(crate) root_checks: BTreeMap<Kind, Vec<String>>,
+}
+
+/// `[proofs]` in `agci.toml`: the local proofs of passed checks.
+#[derive(Debug, Default, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct Proofs {
+    /// Proofs not used for this many days are removed, 7 by default.
+    pub(crate) max_age_days: Option<u64>,
+}
+
+impl Proofs {
+    pub(crate) fn max_age(&self) -> std::time::Duration {
+        std::time::Duration::from_secs(self.max_age_days.unwrap_or(7) * 24 * 60 * 60)
+    }
 }
 
 /// `[projects."<dir>"]` (or `[defaults.<type>]`) in `agci.toml`.
@@ -47,6 +63,24 @@ pub(crate) struct Config {
 pub(crate) enum Os {
     Linux,
     Windows,
+}
+
+impl Os {
+    /// The one agci runs on, other systems check as Linux.
+    pub(crate) const CURRENT: Os = if cfg!(windows) {
+        Os::Windows
+    } else {
+        Os::Linux
+    };
+}
+
+impl std::fmt::Display for Os {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(match self {
+            Os::Linux => "linux",
+            Os::Windows => "windows",
+        })
+    }
 }
 
 /// Installed in a job, in the order of the job matrix fields.
@@ -177,6 +211,22 @@ mod tests {
 
     fn config(content: &str, dir: &str, kind: Kind) -> Result<(Config, bool), CIError> {
         File::parse(content)?.config(dir, kind)
+    }
+
+    #[test]
+    fn proofs_max_age_defaults_to_a_week() {
+        let day = 24 * 60 * 60;
+
+        assert_eq!(File::parse("").unwrap().proofs.max_age().as_secs(), 7 * day);
+        assert_eq!(
+            File::parse("[proofs]\nmax_age_days = 2")
+                .unwrap()
+                .proofs
+                .max_age()
+                .as_secs(),
+            2 * day
+        );
+        assert!(File::parse("[proofs]\ndays = 2").is_err());
     }
 
     #[test]

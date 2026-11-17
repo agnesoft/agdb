@@ -871,6 +871,10 @@ pub struct S<T> {
 
                 for (source, construct) in cases {
                     let (_, items, errors) = ir(source);
+                    let errors = errors
+                        .iter()
+                        .map(|e| e.replace('\\', "/"))
+                        .collect::<Vec<_>>();
 
                     assert!(items.is_empty(), "{source}: {items:?}");
                     assert_eq!(

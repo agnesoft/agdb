@@ -28,6 +28,16 @@ export const createRoutes = (): RouteRecordRaw[] => {
           component: () => import("@/views/QueryView.vue"),
         },
         {
+          path: "dashboards",
+          name: "dashboards",
+          component: () => import("@/views/DashboardsView.vue"),
+        },
+        {
+          path: "dashboards/:name",
+          name: "dashboard",
+          component: () => import("@/views/DashboardView.vue"),
+        },
+        {
           path: "admin",
           meta: { requiresAdmin: true, admin: true },
           children: [

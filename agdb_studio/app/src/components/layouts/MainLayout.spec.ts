@@ -68,6 +68,11 @@ describe("MainLayout", () => {
       "Databases",
     );
 
+    // dashboards page link exists
+    expect(
+      links.find((link) => link.props("to") === "/dashboards")?.text(),
+    ).toContain("Dashboards");
+
     expect(wrapper.find(".admin-label").exists()).toBe(false);
   });
 

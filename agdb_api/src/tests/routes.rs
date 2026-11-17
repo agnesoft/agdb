@@ -24,6 +24,7 @@ pub mod admin_user_list_test;
 pub mod admin_user_logout_test;
 
 // User DB Operations
+pub mod dashboard_test;
 pub mod db_add_test;
 pub mod db_audit_test;
 pub mod db_backup_restore_test;

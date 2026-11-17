@@ -1,14 +1,51 @@
 import type { Components } from "@agnesoft/agdb_api";
 import { checkClient, client } from "@agdb-studio/api/src/api";
 import { useRoute } from "vue-router";
+import {
+  hasInjectionContext,
+  inject,
+  provide,
+  toValue,
+  type InjectionKey,
+  type MaybeRefOrGetter,
+} from "vue";
 
 export type MinimalRoute = {
   params: Record<string, unknown>;
   name?: unknown;
 };
 
-/** Resolves the current route, falling back to an empty one outside a router context. */
+/** A database to run queries on instead of the one in the route. */
+export type DbTarget = { owner: string; db: string };
+
+const DB_TARGET_KEY: InjectionKey<MaybeRefOrGetter<DbTarget>> =
+  Symbol("dbTarget");
+
+/**
+ * Makes the query components below run on `target` instead of the route's
+ * database (e.g. a dashboard widget querying its own database).
+ */
+export const provideDbTarget = (target: MaybeRefOrGetter<DbTarget>): void =>
+  provide(DB_TARGET_KEY, target);
+
+/**
+ * Resolves the current route, or the provided database target. Falls back to
+ * an empty route outside a router context.
+ */
 export const useMinimalRoute = (): MinimalRoute => {
+  const target = hasInjectionContext()
+    ? inject(DB_TARGET_KEY, undefined)
+    : undefined;
+  if (target !== undefined) {
+    return {
+      // Read on use, so a target that changes is followed.
+      get params() {
+        const { owner, db } = toValue(target);
+        return { owner, db };
+      },
+      name: "query",
+    };
+  }
   try {
     // `useRoute` returns undefined (with a warning) outside of a router.
     const route: MinimalRoute | undefined = useRoute();
@@ -66,7 +103,7 @@ export const executeDbQueries = async (
   return response.data;
 };
 
-/** Composable binding `executeDbQueries` to the current route. */
+/** Composable binding `executeDbQueries` to the current route (or provided target). */
 export const useDbExec = () => {
   const route = useMinimalRoute();
   return {

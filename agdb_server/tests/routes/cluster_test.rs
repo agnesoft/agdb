@@ -194,3 +194,8 @@ async fn cluster_logout_selected_session() -> Result<(), TestError> {
 async fn admin_cluster_logout_selected_session() -> Result<(), TestError> {
     agdb_api::tests::routes::cluster_test::admin_cluster_logout_selected_session().await
 }
+
+#[tokio::test]
+async fn dashboard() -> Result<(), TestError> {
+    agdb_api::tests::routes::cluster_test::dashboard().await
+}

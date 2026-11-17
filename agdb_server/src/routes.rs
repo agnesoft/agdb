@@ -1,5 +1,6 @@
 pub(crate) mod admin;
 pub(crate) mod cluster;
+pub(crate) mod dashboard;
 pub(crate) mod db;
 pub(crate) mod resync;
 #[cfg(feature = "studio")]

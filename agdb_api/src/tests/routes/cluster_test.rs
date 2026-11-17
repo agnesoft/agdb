@@ -1163,5 +1163,34 @@ pub fn test_defs() -> Vec<agdb::type_def::Type> {
         __cluster_logout_all_keep_self_type_def(),
         __cluster_logout_selected_session_type_def(),
         __admin_cluster_logout_selected_session_type_def(),
+        __dashboard_type_def(),
     ]
+}
+
+#[cfg_attr(feature = "api", agdb::test_def())]
+pub async fn dashboard() -> Result<(), TestError> {
+    let cluster = TestCluster::new().await?;
+    let user = &next_user_name();
+    let mut client = cluster.follower();
+    client.cluster_user_login(ADMIN, ADMIN).await?;
+    client.admin_user_add(user, user).await?;
+    client.cluster_user_login(user, user).await?;
+    client.dashboard_add("ops", "{}").await?;
+    client.dashboard_save("ops", "{\"v\":2}").await?;
+    assert_eq!(client.dashboard_get("ops").await?.1.config, "{\"v\":2}");
+    client.dashboard_rename("ops", "sales").await?;
+    let mut leader = cluster.leader();
+    leader.user_login(user, user).await?;
+    assert_eq!(leader.dashboard_get("sales").await?.1.config, "{\"v\":2}");
+    let names: Vec<String> = client
+        .dashboard_list()
+        .await?
+        .1
+        .into_iter()
+        .map(|d| d.name)
+        .collect();
+    assert_eq!(names, vec!["sales".to_string()]);
+    client.dashboard_remove("sales").await?;
+    assert!(client.dashboard_list().await?.1.is_empty());
+    Ok(())
 }

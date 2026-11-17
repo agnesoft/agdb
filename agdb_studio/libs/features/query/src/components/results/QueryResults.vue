@@ -36,6 +36,14 @@ import {
   type ResultView,
 } from "../../utils/resultShape";
 
+const props = defineProps<{
+  /**
+   * Keep a chosen view even when the shape of the results changes, e.g. on a
+   * dashboard re-running a saved query whose results may briefly be empty.
+   */
+  keepView?: boolean;
+}>();
+
 const queryId = inject<Ref<string | undefined>>("queryId");
 const queryStore = useQueryStore();
 const actions = provideGraphActions(queryId);
@@ -60,18 +68,26 @@ const autoView = computed<Exclude<ResultView, "json">>(() =>
   lastTab.value ? classifyResults(mainResults.value, stepTypes.value) : "graph",
 );
 
-const view = ref<ResultView>(autoView.value);
-const pinned = ref(false);
+// A view picked earlier (kept in the store, e.g. for a dashboard widget) wins.
+const storedView = query.value?.view;
+const view = ref<ResultView>(storedView ?? autoView.value);
+const pinned = ref(storedView !== undefined);
 let lastAutoView = autoView.value;
 
+const storeView = (next: ResultView | undefined) => {
+  if (queryId?.value) queryStore.setView(queryId.value, next);
+};
+
 // After each run pick the best view, unless the user chose one and the
-// shape of the results did not change.
+// shape of the results did not change (or the view is kept).
 watch(
   () => query.value?.lastRun,
   () => {
     const auto = autoView.value;
-    if (!pinned.value || auto !== lastAutoView) {
+    const shapeChanged = !props.keepView && auto !== lastAutoView;
+    if (!pinned.value || shapeChanged) {
       view.value = auto;
+      if (pinned.value) storeView(undefined);
       pinned.value = false;
     }
     lastAutoView = auto;
@@ -81,6 +97,7 @@ watch(
 const selectView = (next: ResultView) => {
   view.value = next;
   pinned.value = true;
+  storeView(next);
 };
 
 const viewOptions = computed(() => {

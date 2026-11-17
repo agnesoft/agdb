@@ -112,6 +112,9 @@ use crate::AgdbApiClientDef;
 use crate::AgdbApiError;
 use crate::ChangePassword;
 use crate::ClusterStatus;
+use crate::Dashboard;
+use crate::DashboardConfig;
+use crate::DashboardSummary;
 use crate::DbAudit;
 use crate::DbKind;
 use crate::DbResource;
@@ -258,6 +261,9 @@ impl Api {
             AdminStatus::type_def(),
             ChangePassword::type_def(),
             ClusterStatus::type_def(),
+            Dashboard::type_def(),
+            DashboardConfig::type_def(),
+            DashboardSummary::type_def(),
             DbAudit::type_def(),
             DbKind::type_def(),
             DbResource::type_def(),
@@ -328,6 +334,7 @@ impl Api {
         defs.extend(crate::tests::routes::admin_user_delete_test::test_defs());
         defs.extend(crate::tests::routes::admin_user_list_test::test_defs());
         defs.extend(crate::tests::routes::admin_user_logout_test::test_defs());
+        defs.extend(crate::tests::routes::dashboard_test::test_defs());
         defs.extend(crate::tests::routes::db_add_test::test_defs());
         defs.extend(crate::tests::routes::db_audit_test::test_defs());
         defs.extend(crate::tests::routes::db_backup_restore_test::test_defs());

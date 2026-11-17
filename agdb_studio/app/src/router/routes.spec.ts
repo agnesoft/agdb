@@ -11,6 +11,8 @@ vi.mock("@/views/admin/AdminUserView.vue", () => ({ default: vi.fn() }));
 vi.mock("@/views/admin/AdminDbView.vue", () => ({ default: vi.fn() }));
 vi.mock("@/components/layouts/MainLayout.vue", () => ({ default: vi.fn() }));
 vi.mock("@/views/QueryView.vue", () => ({ default: vi.fn() }));
+vi.mock("@/views/DashboardsView.vue", () => ({ default: vi.fn() }));
+vi.mock("@/views/DashboardView.vue", () => ({ default: vi.fn() }));
 vi.mock("@agdb-studio/query/src/components/view/QueryView.vue", () => ({
   default: vi.fn(),
 }));

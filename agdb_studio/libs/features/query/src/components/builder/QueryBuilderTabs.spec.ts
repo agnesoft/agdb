@@ -47,4 +47,25 @@ describe("QueryBuilderTabs", () => {
     await tabs[0]?.trigger("keydown", { key: "Enter" });
     expect(wrapper.find(".button-tab.active").text()).toBe("exec");
   });
+
+  it("starts on the exec tab when given no tabs", () => {
+    const wrapper = mount(QueryBuilderTabs, { props: { tabs: [] } });
+    expect(wrapper.findAll(".query-tab")).toHaveLength(0);
+  });
+
+  it("shows only the given tabs and cycles through them", async () => {
+    const wrapper = mount(QueryBuilderTabs, {
+      props: { tabs: ["exec", "context"] },
+    });
+    const tabs = wrapper.findAll(".query-tab");
+    expect(tabs.map((t) => t.text())).toEqual(["exec", "context"]);
+    await wrapper.find(".query-builder-tabs").trigger("keydown", {
+      key: "ArrowRight",
+    });
+    expect(wrapper.findAll(".query-tab")[1]!.classes()).toContain("active");
+    await wrapper.find(".query-builder-tabs").trigger("keydown", {
+      key: "ArrowRight",
+    });
+    expect(wrapper.findAll(".query-tab")[0]!.classes()).toContain("active");
+  });
 });

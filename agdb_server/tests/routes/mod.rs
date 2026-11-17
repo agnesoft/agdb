@@ -23,6 +23,7 @@ mod admin_user_logout_all;
 mod admin_user_logout_test;
 mod cluster_test;
 mod cluster_test_extra;
+mod dashboard_test;
 mod db_add_test;
 mod db_audit_test;
 mod db_backup_restore_test;

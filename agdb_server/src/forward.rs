@@ -9,7 +9,7 @@ use std::time::Duration;
 
 const EXECUTED_WAIT_TIMEOUT: Duration = Duration::from_secs(30);
 
-const REDIRECT_PATHS: [&str; 16] = [
+const REDIRECT_PATHS: [&str; 17] = [
     "/add",
     "/backup",
     "/change_password",
@@ -26,6 +26,7 @@ const REDIRECT_PATHS: [&str; 16] = [
     "/rename",
     "/restore",
     "/rollback",
+    "/save",
 ];
 
 fn is_redirect_path(request: &Request) -> bool {

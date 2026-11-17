@@ -10,6 +10,7 @@ import type {
   QueryType,
   TAB,
 } from "./types";
+import type { ResultView } from "../utils/resultShape";
 import { TABS } from "./types";
 import { queryApiMock } from "../mock/queryApiMock";
 import {
@@ -266,6 +267,12 @@ const setQueryRows = (queryId: string, tab: TAB, rows: CopiedStep[][]) => {
 const setUnconfirmedLinkedMutation = (queryId: string, value: boolean) => {
   const query = getQuery(queryId);
   if (query?.value) query.value.unconfirmedLinkedMutation = value;
+};
+
+/** Keeps the results view the user picked (`undefined` = automatic). */
+const setView = (queryId: string, view: ResultView | undefined) => {
+  const query = getQuery(queryId);
+  if (query?.value) query.value.view = view;
 };
 
 /** The query's colouring, created on first change. */
@@ -537,6 +544,7 @@ export const useQueryStore = () => {
     setQueryRows,
     insertQueryRows,
     setUnconfirmedLinkedMutation,
+    setView,
     validateQuerySteps,
     setQueryResults,
     clearQueryResults,

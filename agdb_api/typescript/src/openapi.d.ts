@@ -342,6 +342,31 @@ declare namespace Components {
             NotEqual: number; // int64
         };
         /**
+         * A dashboard owned by a user. The `config` is an opaque document (JSON)
+         * interpreted by the client (e.g. agdb_studio).
+         */
+        export interface Dashboard {
+            config: string;
+            name: string;
+            updated: number; // int64
+        }
+        /**
+         * Request body for adding or saving a dashboard.
+         */
+        export interface DashboardConfig {
+            config: string;
+        }
+        export interface DashboardRenameParam {
+            new_name: string;
+        }
+        /**
+         * Dashboard listing entry (without the config).
+         */
+        export interface DashboardSummary {
+            name: string;
+            updated: number; // int64
+        }
+        /**
          * Complete audit log for a database.
          */
         export type DbAudit = /* A single entry in the database audit log. */ QueryAudit[];
@@ -2168,6 +2193,112 @@ declare namespace Paths {
             }
         }
     }
+    namespace DashboardAdd {
+        namespace Parameters {
+            export type Name = string;
+        }
+        export interface PathParameters {
+            name: Parameters.Name;
+        }
+        export type RequestBody = /* Request body for adding or saving a dashboard. */ Components.Schemas.DashboardConfig;
+        namespace Responses {
+            export interface $201 {
+            }
+            export interface $400 {
+            }
+            export interface $401 {
+            }
+            export interface $409 {
+            }
+            export interface $413 {
+            }
+        }
+    }
+    namespace DashboardGet {
+        namespace Parameters {
+            export type Name = string;
+        }
+        export interface PathParameters {
+            name: Parameters.Name;
+        }
+        namespace Responses {
+            export type $200 = /**
+             * A dashboard owned by a user. The `config` is an opaque document (JSON)
+             * interpreted by the client (e.g. agdb_studio).
+             */
+            Components.Schemas.Dashboard;
+            export interface $401 {
+            }
+            export interface $404 {
+            }
+        }
+    }
+    namespace DashboardList {
+        namespace Responses {
+            export type $200 = /* Dashboard listing entry (without the config). */ Components.Schemas.DashboardSummary[];
+            export interface $401 {
+            }
+        }
+    }
+    namespace DashboardRemove {
+        namespace Parameters {
+            export type Name = string;
+        }
+        export interface PathParameters {
+            name: Parameters.Name;
+        }
+        namespace Responses {
+            export interface $204 {
+            }
+            export interface $401 {
+            }
+            export interface $404 {
+            }
+        }
+    }
+    namespace DashboardRename {
+        namespace Parameters {
+            export type Name = string;
+            export type NewName = string;
+        }
+        export interface PathParameters {
+            name: Parameters.Name;
+        }
+        export interface QueryParameters {
+            new_name: Parameters.NewName;
+        }
+        namespace Responses {
+            export interface $201 {
+            }
+            export interface $400 {
+            }
+            export interface $401 {
+            }
+            export interface $404 {
+            }
+            export interface $409 {
+            }
+        }
+    }
+    namespace DashboardSave {
+        namespace Parameters {
+            export type Name = string;
+        }
+        export interface PathParameters {
+            name: Parameters.Name;
+        }
+        export type RequestBody = /* Request body for adding or saving a dashboard. */ Components.Schemas.DashboardConfig;
+        namespace Responses {
+            export interface $201 {
+            }
+            export interface $400 {
+            }
+            export interface $401 {
+            }
+            export interface $413 {
+            }
+        }
+    }
     namespace DbAdd {
         namespace Parameters {
             export type Db = string;
@@ -2870,6 +3001,54 @@ export interface OperationMethods {
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.ClusterUserLogout.Responses.$201>
   /**
+   * dashboard_list
+   */
+  'dashboard_list'(
+    parameters?: Parameters<UnknownParamsObject> | null,
+    data?: any,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.DashboardList.Responses.$200>
+  /**
+   * dashboard_get
+   */
+  'dashboard_get'(
+    parameters?: Parameters<Paths.DashboardGet.PathParameters> | null,
+    data?: any,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.DashboardGet.Responses.$200>
+  /**
+   * dashboard_add
+   */
+  'dashboard_add'(
+    parameters?: Parameters<Paths.DashboardAdd.PathParameters> | null,
+    data?: Paths.DashboardAdd.RequestBody,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.DashboardAdd.Responses.$201>
+  /**
+   * dashboard_remove
+   */
+  'dashboard_remove'(
+    parameters?: Parameters<Paths.DashboardRemove.PathParameters> | null,
+    data?: any,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.DashboardRemove.Responses.$204>
+  /**
+   * dashboard_rename
+   */
+  'dashboard_rename'(
+    parameters?: Parameters<Paths.DashboardRename.QueryParameters & Paths.DashboardRename.PathParameters> | null,
+    data?: any,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.DashboardRename.Responses.$201>
+  /**
+   * dashboard_save
+   */
+  'dashboard_save'(
+    parameters?: Parameters<Paths.DashboardSave.PathParameters> | null,
+    data?: Paths.DashboardSave.RequestBody,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.DashboardSave.Responses.$201>
+  /**
    * db_list
    */
   'db_list'(
@@ -3376,6 +3555,66 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.ClusterUserLogout.Responses.$201>
   }
+  ['/api/v1/dashboard/list']: {
+    /**
+     * dashboard_list
+     */
+    'get'(
+      parameters?: Parameters<UnknownParamsObject> | null,
+      data?: any,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.DashboardList.Responses.$200>
+  }
+  ['/api/v1/dashboard/{name}']: {
+    /**
+     * dashboard_get
+     */
+    'get'(
+      parameters?: Parameters<Paths.DashboardGet.PathParameters> | null,
+      data?: any,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.DashboardGet.Responses.$200>
+  }
+  ['/api/v1/dashboard/{name}/add']: {
+    /**
+     * dashboard_add
+     */
+    'post'(
+      parameters?: Parameters<Paths.DashboardAdd.PathParameters> | null,
+      data?: Paths.DashboardAdd.RequestBody,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.DashboardAdd.Responses.$201>
+  }
+  ['/api/v1/dashboard/{name}/remove']: {
+    /**
+     * dashboard_remove
+     */
+    'delete'(
+      parameters?: Parameters<Paths.DashboardRemove.PathParameters> | null,
+      data?: any,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.DashboardRemove.Responses.$204>
+  }
+  ['/api/v1/dashboard/{name}/rename']: {
+    /**
+     * dashboard_rename
+     */
+    'post'(
+      parameters?: Parameters<Paths.DashboardRename.QueryParameters & Paths.DashboardRename.PathParameters> | null,
+      data?: any,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.DashboardRename.Responses.$201>
+  }
+  ['/api/v1/dashboard/{name}/save']: {
+    /**
+     * dashboard_save
+     */
+    'put'(
+      parameters?: Parameters<Paths.DashboardSave.PathParameters> | null,
+      data?: Paths.DashboardSave.RequestBody,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.DashboardSave.Responses.$201>
+  }
   ['/api/v1/db/list']: {
     /**
      * db_list
@@ -3618,6 +3857,10 @@ export type ChangePassword = Components.Schemas.ChangePassword;
 export type ClusterStatus = Components.Schemas.ClusterStatus;
 export type Comparison = Components.Schemas.Comparison;
 export type CountComparison = Components.Schemas.CountComparison;
+export type Dashboard = Components.Schemas.Dashboard;
+export type DashboardConfig = Components.Schemas.DashboardConfig;
+export type DashboardRenameParam = Components.Schemas.DashboardRenameParam;
+export type DashboardSummary = Components.Schemas.DashboardSummary;
 export type DbAudit = Components.Schemas.DbAudit;
 export type DbElement = Components.Schemas.DbElement;
 export type DbF64 = Components.Schemas.DbF64;

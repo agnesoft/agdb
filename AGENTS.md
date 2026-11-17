@@ -305,7 +305,7 @@ Each node lists the same `cluster` array. The node identifies itself by finding 
 
 ## API endpoints
 
-The server exposes a REST API at `/api/v1` (or `{basepath}/api/v1`). Four endpoint families:
+The server exposes a REST API at `/api/v1` (or `{basepath}/api/v1`). Five endpoint families:
 
 ### Admin (`/api/v1/admin/...`) — requires admin token
 
@@ -360,6 +360,17 @@ Same structure as admin database routes but scoped by ownership and roles:
 - **Read** role: `exec`, `audit`
 - **Write** role: `exec_mut` + everything Read can do
 - **Admin** role: all operations including `backup`, `restore`, `convert`, `optimize`, user management
+
+### Dashboard (`/api/v1/dashboard/...`) — requires user token, own dashboards only
+
+The `config` is an opaque JSON string (max 256 KB) owned by agdb Studio. Names: `[A-Za-z0-9_.-]{1,64}`, no leading `.`, not `list`.
+
+- `GET /list` — own dashboards (`Vec<DashboardSummary>`)
+- `GET /{name}` — dashboard with config (`Dashboard`)
+- `POST /{name}/add` — create (body: `DashboardConfig`; 409 if it exists)
+- `PUT /{name}/save` — create or replace (body: `DashboardConfig`)
+- `POST /{name}/rename?new_name={new_name}` — rename (409 if the target exists)
+- `DELETE /{name}/remove` — remove
 
 ### Cluster (`/api/v1/cluster/...`) — propagates across nodes
 

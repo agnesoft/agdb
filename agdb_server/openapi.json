@@ -1438,6 +1438,262 @@
         ]
       }
     },
+    "/api/v1/dashboard/list": {
+      "get": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "dashboard_list",
+        "responses": {
+          "200": {
+            "description": "ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DashboardSummary"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/dashboard/{name}": {
+      "get": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "dashboard_get",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "description": "dashboard name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Dashboard"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "404": {
+            "description": "dashboard not found"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/dashboard/{name}/add": {
+      "post": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "dashboard_add",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "description": "dashboard name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DashboardConfig"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "dashboard added"
+          },
+          "400": {
+            "description": "invalid dashboard name"
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "409": {
+            "description": "dashboard already exists"
+          },
+          "413": {
+            "description": "dashboard config too large"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/dashboard/{name}/remove": {
+      "delete": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "dashboard_remove",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "description": "dashboard name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "dashboard removed"
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "404": {
+            "description": "dashboard not found"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/dashboard/{name}/rename": {
+      "post": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "dashboard_rename",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "description": "dashboard name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "new_name",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "dashboard renamed"
+          },
+          "400": {
+            "description": "invalid new dashboard name"
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "404": {
+            "description": "dashboard not found"
+          },
+          "409": {
+            "description": "target dashboard already exists"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/dashboard/{name}/save": {
+      "put": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "dashboard_save",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "description": "dashboard name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DashboardConfig"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "dashboard saved"
+          },
+          "400": {
+            "description": "invalid dashboard name"
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "413": {
+            "description": "dashboard config too large"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
     "/api/v1/db/list": {
       "get": {
         "tags": [
@@ -2952,6 +3208,69 @@
           }
         ],
         "description": "Comparison of unsigned integers (`u64`) used\nby `distance()` and `edge_count*()` conditions. Supports\nthe usual set of named comparisons: `==, !=, <, <=, >, >=`."
+      },
+      "Dashboard": {
+        "type": "object",
+        "description": "A dashboard owned by a user. The `config` is an opaque document (JSON)\ninterpreted by the client (e.g. agdb_studio).",
+        "required": [
+          "name",
+          "config",
+          "updated"
+        ],
+        "properties": {
+          "config": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "updated": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          }
+        }
+      },
+      "DashboardConfig": {
+        "type": "object",
+        "description": "Request body for adding or saving a dashboard.",
+        "required": [
+          "config"
+        ],
+        "properties": {
+          "config": {
+            "type": "string"
+          }
+        }
+      },
+      "DashboardRenameParam": {
+        "type": "object",
+        "required": [
+          "new_name"
+        ],
+        "properties": {
+          "new_name": {
+            "type": "string"
+          }
+        }
+      },
+      "DashboardSummary": {
+        "type": "object",
+        "description": "Dashboard listing entry (without the config).",
+        "required": [
+          "name",
+          "updated"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "updated": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          }
+        }
       },
       "DbAudit": {
         "type": "array",

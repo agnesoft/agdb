@@ -38,6 +38,14 @@ describe("queryStore", () => {
     expect(got?.value?.rows.exec[0]?.steps).toEqual([]);
   });
 
+  it("keeps a chosen view and ignores unknown queries", () => {
+    store.addQuery(makeQuery());
+    store.setView("q1", "table");
+    store.setView("missing", "json");
+    expect(store.getQuery("q1")?.value.view).toBe("table");
+    expect(store.getQuery("missing")).toBeUndefined();
+  });
+
   it("deletes a query", () => {
     const q = makeQuery();
     const queryRef = store.addQuery(q);

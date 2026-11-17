@@ -1,121 +1,128 @@
+use std::collections::BTreeSet;
+use std::collections::HashMap;
+use std::ffi::OsStr;
+use std::ffi::OsString;
+use std::path::Component;
 use std::path::Path;
 use std::path::PathBuf;
 
-use agplatform::DirEntry;
 use agplatform::Env;
 use agplatform::Fs;
 use agplatform::Platform;
 
-const CACHEDIR_SIGNATURE: &str = "Signature: 8a477f597d28d172789f06886806bc55";
+/// What `cargo test-check [<dir|file.rs>]` checks: the Rust files under the
+/// directory (the current one by default) or the file. Paths are relative to
+/// the current directory when they are under it.
+#[derive(Debug, Default)]
+pub(crate) struct Sources {
+    pub(crate) files: BTreeSet<PathBuf>,
+    /// The directories of the nearest `Cargo.toml` of the files.
+    pub(crate) packages: BTreeSet<PathBuf>,
+    /// The directories that could not be read.
+    pub(crate) errors: Vec<agsource::Error>,
+}
 
-pub(crate) fn sources(p: &impl Platform) -> Vec<PathBuf> {
-    let mut sources = Vec::new();
+pub(crate) fn sources(p: &impl Platform) -> Sources {
     let mut args = p.env().args().skip(1).peekable();
     args.next_if(|arg| *arg == "test-check");
-
-    if let Some(path) = args.next() {
-        if is_rust_source(path) {
-            if p.fs().open_read(path).is_ok() {
-                sources.push(path.into());
-            }
-        } else {
-            sources = read_dir_sources(Path::new(path), p);
-        }
+    let path = Path::new(args.next().map_or(OsStr::new("."), OsString::as_os_str));
+    let (files, errors) = if is_rust_source(path) {
+        let readable = p.fs().open_read(path).is_ok();
+        (
+            readable.then(|| path.to_path_buf()).into_iter().collect(),
+            Vec::new(),
+        )
     } else {
-        sources = read_dir_sources(Path::new("."), p);
-    }
-
+        agsource::rust_files(p, path)
+    };
     let current_dir = p.env().current_dir();
+    let mut packages = HashMap::new();
+    let mut sources = Sources {
+        errors,
+        ..Sources::default()
+    };
 
-    sources
-        .into_iter()
-        .map(|source| {
-            source
-                .strip_prefix(&current_dir)
+    for file in files {
+        let file = absolute(&current_dir, &file);
+        let dir = file.parent().unwrap_or(Path::new("")).to_path_buf();
+        let package = packages.entry(dir).or_insert_with_key(|dir: &PathBuf| {
+            dir.ancestors()
+                .find(|dir| p.fs().exists(dir.join("Cargo.toml")).unwrap_or(false))
                 .map(Path::to_path_buf)
-                .unwrap_or(source)
-        })
-        .collect()
-}
+        });
 
-pub(crate) fn warn_unreadable(error: &agplatform::Error) {
-    eprintln!("cannot read: {error}");
-}
-
-fn read_dir_sources(path: &Path, p: &impl Platform) -> Vec<PathBuf> {
-    match p.fs().read_dir(path) {
-        Ok(mut dir) => read_sources_in(&mut dir, p),
-        Err(error) => {
-            warn_unreadable(&error);
-            Vec::new()
+        if let Some(package) = package {
+            sources.packages.insert(relative(&current_dir, package));
         }
-    }
-}
 
-fn read_sources_in(
-    dir: &mut dyn Iterator<Item = agplatform::Result<DirEntry>>,
-    p: &impl Platform,
-) -> Vec<PathBuf> {
-    let mut sources = Vec::new();
-
-    for entry in dir {
-        match entry {
-            Ok(entry) => sources.extend(read_dir_entry(entry, p)),
-            Err(error) => warn_unreadable(&error),
-        }
+        sources.files.insert(relative(&current_dir, &file));
     }
 
     sources
 }
 
-fn read_dir_entry(entry: DirEntry, p: &impl Platform) -> Vec<PathBuf> {
-    match entry.file_type() {
-        agplatform::FileType::File if is_rust_source(entry.path()) => {
-            vec![PathBuf::from(entry.path())]
+/// The path from `current_dir` without `..` components (joining drops the
+/// `.` ones).
+fn absolute(current_dir: &Path, path: &Path) -> PathBuf {
+    let mut absolute = PathBuf::new();
+
+    for component in current_dir.join(path).components() {
+        if component == Component::ParentDir {
+            absolute.pop();
+        } else {
+            absolute.push(component);
         }
-        agplatform::FileType::Dir if is_cache_dir(&entry, p) => Vec::new(),
-        agplatform::FileType::Dir => read_dir_sources(entry.path(), p),
-        _ => Vec::new(),
     }
+
+    absolute
 }
 
-/// Cargo tags its target directories, whatever their name, with a
-/// `CACHEDIR.TAG` (https://bford.info/cachedir/).
-fn is_cache_dir(entry: &DirEntry, p: &impl Platform) -> bool {
-    p.fs()
-        .read_to_string(entry.path().join("CACHEDIR.TAG"))
-        .is_ok_and(|tag| tag.starts_with(CACHEDIR_SIGNATURE))
+pub(crate) fn relative(current_dir: &Path, path: &Path) -> PathBuf {
+    path.strip_prefix(current_dir)
+        .map_or_else(|_| path.to_path_buf(), Path::to_path_buf)
 }
 
-fn is_rust_source<P: AsRef<Path>>(path: P) -> bool {
+pub(crate) fn is_rust_source<P: AsRef<Path>>(path: P) -> bool {
     path.as_ref().extension().and_then(|s| s.to_str()) == Some("rs")
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use agplatform::TestEnv;
+    use agplatform::test_platform::ROOT;
     use agplatform::test_platform::test_platform;
+
+    fn paths(paths: &[&str]) -> BTreeSet<PathBuf> {
+        paths.iter().map(PathBuf::from).collect()
+    }
 
     mod sources {
         use super::*;
-        use agplatform::TestEnv;
 
         #[test]
-        fn sources_no_args_should_return_all_sources() {
+        fn sources_no_args_should_return_all_sources_and_their_packages() {
             let platform = test_platform();
-            platform.fs().create_dir_all("src/check").unwrap();
-            platform.fs().write("src/main.rs", b"fn main() {}").unwrap();
-            platform.fs().write("src/check/check.rs", b"").unwrap();
+            platform.fs().create_dir_all("a/src/check").unwrap();
+            platform.fs().create_dir_all("loose").unwrap();
+            platform.fs().write("Cargo.toml", "[workspace]").unwrap();
+            platform.fs().write("a/Cargo.toml", "").unwrap();
+            platform
+                .fs()
+                .write("a/src/main.rs", "fn main() {}")
+                .unwrap();
+            platform.fs().write("a/src/check/check.rs", "").unwrap();
+            platform.fs().write("loose/x.rs", "").unwrap();
+            platform.fs().write("a/src/notes.txt", "").unwrap();
 
-            let mut result = sources(&platform);
-            result.sort();
+            let result = sources(&platform);
+
             assert_eq!(
-                result,
-                vec![
-                    PathBuf::from("src/check/check.rs"),
-                    PathBuf::from("src/main.rs"),
-                ]
+                result.files,
+                paths(&["a/src/check/check.rs", "a/src/main.rs", "loose/x.rs"])
             );
+            assert_eq!(result.packages, paths(&["", "a"]));
+            assert!(result.errors.is_empty(), "{:?}", result.errors);
         }
 
         #[test]
@@ -123,11 +130,14 @@ mod tests {
             let platform =
                 test_platform().with_env(TestEnv::new().with_args(vec!["program", "src/main.rs"]));
             platform.fs().create_dir_all("src/check").unwrap();
-            platform.fs().write("src/main.rs", b"fn main() {}").unwrap();
-            platform.fs().write("src/check/check.rs", b"").unwrap();
+            platform.fs().write("Cargo.toml", "").unwrap();
+            platform.fs().write("src/main.rs", "fn main() {}").unwrap();
+            platform.fs().write("src/check/check.rs", "").unwrap();
 
             let result = sources(&platform);
-            assert_eq!(result, vec![PathBuf::from("src/main.rs")]);
+
+            assert_eq!(result.files, paths(&["src/main.rs"]));
+            assert_eq!(result.packages, paths(&[""]));
         }
 
         #[test]
@@ -135,10 +145,12 @@ mod tests {
             let platform =
                 test_platform().with_env(TestEnv::new().with_args(vec!["program", "test-check"]));
             platform.fs().create_dir_all("src").unwrap();
-            platform.fs().write("src/main.rs", b"fn main() {}").unwrap();
+            platform.fs().write("src/main.rs", "fn main() {}").unwrap();
 
             let result = sources(&platform);
-            assert_eq!(result, vec![PathBuf::from("src/main.rs")]);
+
+            assert_eq!(result.files, paths(&["src/main.rs"]));
+            assert_eq!(result.packages, paths(&[]));
         }
 
         #[test]
@@ -149,23 +161,33 @@ mod tests {
                 "src/main.rs",
             ]));
             platform.fs().create_dir_all("src/check").unwrap();
-            platform.fs().write("src/main.rs", b"fn main() {}").unwrap();
-            platform.fs().write("src/check/check.rs", b"").unwrap();
+            platform.fs().write("src/main.rs", "fn main() {}").unwrap();
+            platform.fs().write("src/check/check.rs", "").unwrap();
 
             let result = sources(&platform);
-            assert_eq!(result, vec![PathBuf::from("src/main.rs")]);
+
+            assert_eq!(result.files, paths(&["src/main.rs"]));
         }
 
         #[test]
-        fn sources_with_dir_arg_should_return_specific_source() {
-            let platform =
-                test_platform().with_env(TestEnv::new().with_args(vec!["program", "src/check"]));
-            platform.fs().create_dir_all("src/check").unwrap();
-            platform.fs().write("src/main.rs", b"fn main() {}").unwrap();
-            platform.fs().write("src/check/check.rs", b"").unwrap();
+        fn sources_with_dir_arg_should_return_its_sources_and_the_package_above() {
+            let platform = test_platform().with_env(
+                TestEnv::new()
+                    .with_args(vec!["program", "./src/check/../check"])
+                    .with_current_dir(Path::new(ROOT).join("a")),
+            );
+            platform.fs().create_dir_all("/a/src/check").unwrap();
+            platform.fs().write("/Cargo.toml", "").unwrap();
+            platform
+                .fs()
+                .write("/a/src/main.rs", "fn main() {}")
+                .unwrap();
+            platform.fs().write("/a/src/check/check.rs", "").unwrap();
 
             let result = sources(&platform);
-            assert_eq!(result, vec![PathBuf::from("src/check/check.rs")]);
+
+            assert_eq!(result.files, paths(&["src/check/check.rs"]));
+            assert_eq!(result.packages, BTreeSet::from([PathBuf::from(ROOT)]));
         }
 
         #[test]
@@ -173,139 +195,82 @@ mod tests {
             let platform =
                 test_platform().with_env(TestEnv::new().with_args(vec!["program", "src/check.rs"]));
             platform.fs().create_dir_all("src/check.rs").unwrap();
-            platform.fs().write("src/main.rs", b"fn main() {}").unwrap();
+            platform.fs().write("src/main.rs", "fn main() {}").unwrap();
+
             let result = sources(&platform);
-            assert_eq!(result, Vec::<PathBuf>::new());
+
+            assert_eq!(result.files, paths(&[]));
+            assert_eq!(result.packages, paths(&[]));
         }
 
         #[test]
-        fn sources_with_nonexistent_arg_should_return_no_sources() {
+        fn sources_with_nonexistent_arg_should_report_it() {
             let platform = test_platform()
                 .with_env(TestEnv::new().with_args(vec!["program", "src/nonexistent"]));
+
             let result = sources(&platform);
-            assert_eq!(result, Vec::<PathBuf>::new());
+
+            assert_eq!(result.files, paths(&[]));
+            assert!(
+                matches!(&result.errors[..], [agsource::Error::Read { path, .. }] if path == Path::new("src/nonexistent")),
+                "{:?}",
+                result.errors
+            );
         }
 
         #[test]
         fn sources_should_return_no_sources_when_none_exist() {
             let platform = test_platform();
             platform.fs().create_dir_all("src/check").unwrap();
-            platform
-                .fs()
-                .write("src/main.cpp", b"fn main() {}")
-                .unwrap();
-            platform.fs().write("src/check/check.cpp", b"").unwrap();
+            platform.fs().write("src/main.cpp", "fn main() {}").unwrap();
+            platform.fs().write("src/check/check.cpp", "").unwrap();
+
             let result = sources(&platform);
-            assert_eq!(result, Vec::<PathBuf>::new());
+
+            assert_eq!(result.files, paths(&[]));
+            assert_eq!(result.packages, paths(&[]));
         }
 
         #[test]
         fn sources_should_ignore_dir_with_rs_suffix() {
             let platform = test_platform();
             platform.fs().create_dir_all("src/check.rs").unwrap();
-            platform.fs().write("src/main.rs", b"fn main() {}").unwrap();
+            platform.fs().write("src/main.rs", "fn main() {}").unwrap();
+
             let result = sources(&platform);
-            assert_eq!(result, vec![PathBuf::from("src/main.rs")]);
-        }
 
-        #[test]
-        fn sources_should_include_integration_tests_of_crates() {
-            let platform = test_platform();
-
-            for dir in [
-                "tests",
-                "agplatform/tests",
-                "agplatform/src",
-                "src/parser/tests",
-                "fixtures/tests",
-            ] {
-                platform.fs().create_dir_all(dir).unwrap();
-            }
-
-            for file in [
-                "Cargo.toml",
-                "tests/root_test.rs",
-                "agplatform/Cargo.toml",
-                "agplatform/tests/platform_test.rs",
-                "agplatform/src/lib.rs",
-                "src/parser/tests/mod.rs",
-                "fixtures/tests/x.rs",
-            ] {
-                platform.fs().write(file, b"").unwrap();
-            }
-
-            let mut result = sources(&platform);
-            result.sort();
-            assert_eq!(
-                result,
-                vec![
-                    PathBuf::from("agplatform/src/lib.rs"),
-                    PathBuf::from("agplatform/tests/platform_test.rs"),
-                    PathBuf::from("fixtures/tests/x.rs"),
-                    PathBuf::from("src/parser/tests/mod.rs"),
-                    PathBuf::from("tests/root_test.rs"),
-                ]
-            );
-        }
-
-        #[test]
-        fn sources_should_skip_tagged_cache_dirs() {
-            let platform = test_platform();
-
-            for dir in ["target/debug/build/out", "build_cache", "src"] {
-                platform.fs().create_dir_all(dir).unwrap();
-            }
-
-            for (file, content) in [
-                (
-                    "target/CACHEDIR.TAG",
-                    format!("{CACHEDIR_SIGNATURE}\n# cargo"),
-                ),
-                ("target/debug/build/out/match.gen.rs", String::new()),
-                ("build_cache/CACHEDIR.TAG", String::from("Signature: other")),
-                ("build_cache/lib.rs", String::new()),
-                ("src/lib.rs", String::new()),
-            ] {
-                platform.fs().write(file, content.as_bytes()).unwrap();
-            }
-
-            let mut result = sources(&platform);
-            result.sort();
-            assert_eq!(
-                result,
-                vec![
-                    PathBuf::from("build_cache/lib.rs"),
-                    PathBuf::from("src/lib.rs"),
-                ]
-            );
-        }
-
-        #[test]
-        fn sources_no_args_should_ignore_missing_current_dir() {
-            let platform = test_platform().with_env(TestEnv::new().with_current_dir("/tmp"));
-            let result = sources(&platform);
-            assert_eq!(result, Vec::<PathBuf>::new());
+            assert_eq!(result.files, paths(&["src/main.rs"]));
         }
     }
 
-    mod read_sources_in {
+    mod absolute {
         use super::*;
 
         #[test]
-        fn read_sources_in_should_skip_unreadable_entries() {
-            let platform = test_platform();
-            platform.fs().create_dir_all("src").unwrap();
-            platform.fs().write("src/lib.rs", b"").unwrap();
-
-            let result = read_sources_in(
-                &mut std::iter::once(Err(agplatform::Error::fs("unreadable")))
-                    .chain(platform.fs().read_dir("src").unwrap()),
-                &platform,
-            );
+        fn absolute_should_join_onto_current_dir_and_resolve_parent_dirs() {
+            let current_dir = Path::new(ROOT).join("a");
 
             assert_eq!(
-                result,
-                vec![platform.env().current_dir().join("src").join("lib.rs")]
+                absolute(&current_dir, &current_dir.join("./src/../check/x.rs")),
+                Path::new(ROOT).join("a").join("check").join("x.rs")
+            );
+        }
+    }
+
+    mod relative {
+        use super::*;
+
+        #[test]
+        fn relative_should_keep_paths_outside_current_dir() {
+            let current_dir = Path::new(ROOT).join("a");
+
+            assert_eq!(
+                relative(&current_dir, &current_dir.join("src/lib.rs")),
+                PathBuf::from("src/lib.rs")
+            );
+            assert_eq!(
+                relative(&current_dir, &Path::new(ROOT).join("b")),
+                Path::new(ROOT).join("b")
             );
         }
     }

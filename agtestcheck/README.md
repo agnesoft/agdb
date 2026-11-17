@@ -42,7 +42,8 @@ Technical features:
 
 - Parses the sources with [`syn`](https://github.com/dtolnay/syn), nothing is compiled or run.
 - Checks unit tests, test files (`#[cfg(test)] mod tests;`) and integration tests.
-- Trait implementations, including default methods, are resolved within the file, or across the whole crate for test files.
+- Reads the files as the crates of their package reach them from their roots (library, binaries, tests, examples, benches, build script), so `cfg_attr(..., path = ...)` and `#[path]` modules are found and leftover files are reported.
+- Trait implementations, including default methods, are resolved within the file, or across the whole package for test files.
 - Any test attribute counts (`#[test]`, `#[tokio::test]`, ...).
 - Skips cache directories tagged with `CACHEDIR.TAG`, such as cargo's `target`.
 
@@ -121,17 +122,18 @@ Left to judgement:
 
 ### Files and tests
 
-Every `.rs` file is checked, including integration tests, except cache directories tagged with a `CACHEDIR.TAG` such as cargo's `target`. Each issue is printed as `file:line: message` and any issue makes the exit code 1.
+Every `.rs` file under the directory (or the given file) is checked, except cache directories tagged with a `CACHEDIR.TAG` such as cargo's `target`. The files are read as the crates of their package (the nearest `Cargo.toml`) reach them, following `mod` declarations from the roots `cargo metadata` lists: the library, binaries, integration tests, examples, benches and the build script. A package `cargo metadata` fails for is reported on stderr and not checked. A file that no crate root reaches (e.g. a leftover without a `mod`, or outside any package) is not checked, and is reported on stderr as `file: not reachable from any crate root`. Each issue is printed as `file:line: message` and any issue makes the exit code 1.
 
 A test is a `#[test]` function or, within `#[cfg(test)]` code, a function with any attribute ending in `test` (e.g. `#[test]`, `#[tokio::test]`). Modules without tests (helpers) are ignored.
 
 Tests may live in a separate test file, which is checked as the body of the `tests` module. A file is a test file when it is:
 
-- an integration test or its helper (under `tests/` next to a `Cargo.toml`),
+- part of an integration test (its root or a module of it, e.g. `tests/common/mod.rs`),
+- declared by a `#[cfg(test)]` module, or within one (e.g. the target of `#[cfg(test)] mod tests;`),
 - marked `#![cfg(test)]`, or
-- holding tests outside `#[cfg(test)]` modules, with no `#[cfg(test)]` test module of its own (e.g. the target of `#[cfg(test)] mod tests;`). Here any attribute ending in `test` makes a test.
+- holding tests outside `#[cfg(test)]` modules, with no `#[cfg(test)]` test module of its own. Here any attribute ending in `test` makes a test.
 
-A file without its own types, traits, functions or macros (a test file, or one with only a `#[cfg(test)] mod tests`) names the items of its whole crate, i.e. everything under the nearest `Cargo.toml`, with a type's impls merged across files. Any other file names only its own items.
+A file without its own types, traits, functions or macros (a test file, or one with only a `#[cfg(test)] mod tests`) names the items of its whole package, i.e. all of its crates, with a type's impls merged across files. Any other file names only its own items. This holds for a single file too, so `cargo test-check src/x/tests.rs` reads the rest of the package without checking it.
 
 ### Structure
 

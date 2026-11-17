@@ -1,8 +1,18 @@
+use std::collections::BTreeMap;
+use std::collections::BTreeSet;
 use std::collections::HashMap;
+use std::collections::HashSet;
+use std::path::Path;
 use std::path::PathBuf;
 
-use agplatform::Fs;
+use agplatform::Env;
 use agplatform::Platform;
+use agsource::Cfg;
+use agsource::ModuleId;
+use agsource::Package;
+use agsource::SourceCrate;
+use agsource::Target;
+use agsource::TargetKind;
 use proc_macro2::Delimiter;
 use proc_macro2::Span;
 use proc_macro2::TokenStream;
@@ -23,7 +33,9 @@ use syn::ext::IdentExt;
 use syn::punctuated::Punctuated;
 use syn::spanned::Spanned;
 
-use crate::sources::warn_unreadable;
+use crate::sources::Sources;
+use crate::sources::is_rust_source;
+use crate::sources::relative;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum SourceTypeKind {
@@ -77,64 +89,160 @@ pub(crate) struct SourceTypes {
 pub(crate) struct SourceMap {
     pub(crate) files: HashMap<PathBuf, SourceTypes>,
     pub(crate) errors: HashMap<PathBuf, String>,
+    /// Files of the packages mapped only for what the checked ones name.
+    pub(crate) unchecked: HashSet<PathBuf>,
+    pub(crate) warnings: BTreeSet<String>,
 }
 
-pub(crate) fn source_map(p: &impl Platform, sources: &[PathBuf]) -> SourceMap {
+/// Maps the sources that the crates of their packages reach, with all of
+/// their code (`Cfg::All`) and the other files of the packages as unchecked.
+/// Sources that no crate reaches are not mapped but warned about.
+pub(crate) fn source_map(p: &impl Platform, sources: &Sources) -> SourceMap {
+    let current_dir = p.env().current_dir();
     let mut map = SourceMap::default();
+    let mut reached = HashSet::new();
+    map.warn(sources, &current_dir, &sources.errors);
 
-    for source in sources {
-        let crate_dir = source
-            .ancestors()
-            .skip(1)
-            .find(|dir| p.fs().open_read(dir.join("Cargo.toml")).is_ok());
-        let integration_test = crate_dir.is_some_and(|dir| source.starts_with(dir.join("tests")));
+    let mut known: Vec<Package> = Vec::new();
 
-        match p
-            .fs()
-            .read_to_string(source)
-            .map(|content| parse_source(&content, integration_test))
-        {
-            Ok(Ok(mut types)) => {
-                types.crate_dir = crate_dir.map(PathBuf::from);
-                map.files.insert(source.clone(), types);
+    for package in &sources.packages {
+        let dir_of = |known: &Package| {
+            relative(
+                &current_dir,
+                known.manifest.parent().unwrap_or(Path::new("")),
+            )
+        };
+
+        // One `cargo metadata` lists the whole workspace of the package.
+        if !known.iter().any(|known| dir_of(known) == *package) {
+            match agsource::packages(p, &package.join("Cargo.toml")) {
+                Ok(packages) => known.extend(packages),
+                Err(error) => map.warn(sources, &current_dir, &[error]),
             }
-            Ok(Err(e)) => {
-                map.errors.insert(source.clone(), e);
+        }
+
+        let Some(found) = known.iter().find(|known| dir_of(known) == *package) else {
+            continue;
+        };
+
+        for target in &found.targets {
+            let target = Target {
+                root: relative(&current_dir, &target.root),
+                ..target.clone()
+            };
+            let source_crate = SourceCrate::load(p, &target, &Cfg::All);
+            map.warn(sources, &current_dir, source_crate.errors());
+            let mut file_modules = BTreeMap::new();
+
+            for (id, module) in source_crate.modules() {
+                file_modules.entry(module.file()).or_insert(id);
             }
-            Err(e) => warn_unreadable(&e),
+
+            for (file, module) in file_modules {
+                let file = source_crate.file(file);
+                let path = relative(&current_dir, file.path());
+
+                if !reached.insert(path.clone()) {
+                    continue;
+                }
+
+                let Some(ast) = file.ast() else {
+                    continue;
+                };
+
+                let test_file =
+                    target.kind == TargetKind::Test || declared_in_test(&source_crate, module);
+                let mut types = source_types(ast, file.text(), test_file);
+                types.crate_dir = Some(package.clone());
+
+                if !sources.files.contains(&path) {
+                    map.unchecked.insert(path.clone());
+                }
+
+                map.files.insert(path, types);
+            }
+
+            // With span-locations every parsed source is otherwise kept in a
+            // thread local store until the thread exits.
+            drop(source_crate);
+            proc_macro2::extra::invalidate_current_thread_spans();
         }
     }
 
+    map.warnings.extend(
+        sources
+            .files
+            .iter()
+            .filter(|file| !reached.contains(*file))
+            .map(|file| format!("{}: not reachable from any crate root", file.display())),
+    );
     map
 }
 
-/// A test file, e.g. `#[cfg(test)] mod tests;` or an integration test, is
-/// mapped as the body of a `tests` module.
-pub(crate) fn parse_source(content: &str, test_file: bool) -> Result<SourceTypes, String> {
-    let without_bom = content.strip_prefix('\u{feff}').unwrap_or(content);
-    let result = syn::parse_file(content)
-        .map_err(|e| parse_error(without_bom, &e))
-        .map(|file| {
-            // Spans are relative to the content without the BOM and the
-            // shebang that syn strips.
-            let content = &without_bom[file.shebang.as_ref().map_or(0, String::len)..];
-            let test_file = test_file || is_cfg_test(&file.attrs) || is_test_file(&file.items);
-            let types = parse_items(&file.items, test_file, content);
-            let mut code_after_tests = Vec::new();
+impl SourceMap {
+    /// Parse errors of the sources become their issues. Name resolution is
+    /// not used, so its errors are left out.
+    fn warn(&mut self, sources: &Sources, current_dir: &Path, errors: &[agsource::Error]) {
+        for error in errors {
+            let path = relative(current_dir, error.path());
+            let source = is_rust_source(&path);
 
-            if test_file {
-                (vec![test_module("tests", 0, types)], code_after_tests)
-            } else {
-                find_code_after_tests(&file.items, &mut code_after_tests);
-                (types, code_after_tests)
+            match error {
+                agsource::Error::UnknownCfg { .. } | agsource::Error::UnresolvedImport { .. } => {}
+                _ if source && !sources.files.contains(&path) => {}
+                agsource::Error::Parse {
+                    line,
+                    column,
+                    message,
+                    ..
+                } if source => {
+                    self.errors
+                        .insert(path, format!("{line}:{column}: {message}"));
+                }
+                error => {
+                    self.warnings.insert(error.to_string());
+                }
             }
-        });
+        }
+    }
+}
 
-    // With span-locations every parsed source is otherwise kept in a
-    // thread local store until the thread exits.
-    proc_macro2::extra::invalidate_current_thread_spans();
+/// Whether the `mod` declaring the module, or one of its ancestors, is
+/// `#[cfg(test)]`.
+fn declared_in_test(source_crate: &SourceCrate, mut module: ModuleId) -> bool {
+    loop {
+        let module_data = source_crate.module(module);
 
-    let (mut types, code_after_tests) = result?;
+        if let Some(item) = module_data.item()
+            && is_cfg_test(item_attrs(source_crate.item(item)))
+        {
+            return true;
+        }
+
+        match module_data.parent() {
+            Some(parent) => module = parent,
+            None => return false,
+        }
+    }
+}
+
+/// A test file, e.g. `#[cfg(test)] mod tests;` or an integration test, is
+/// mapped as the body of a `tests` module. `content` is the text of the file.
+pub(crate) fn source_types(file: &syn::File, content: &str, test_file: bool) -> SourceTypes {
+    // Spans are relative to the content without the BOM and the shebang
+    // that syn strips.
+    let without_bom = content.strip_prefix('\u{feff}').unwrap_or(content);
+    let content = &without_bom[file.shebang.as_ref().map_or(0, String::len)..];
+    let test_file = test_file || is_cfg_test(&file.attrs) || is_test_file(&file.items);
+    let types = parse_items(&file.items, test_file, content);
+    let mut code_after_tests = Vec::new();
+
+    let mut types = if test_file {
+        vec![test_module("tests", 0, types)]
+    } else {
+        find_code_after_tests(&file.items, &mut code_after_tests);
+        types
+    };
     sort(&mut types);
 
     let mut source_types = SourceTypes {
@@ -150,21 +258,7 @@ pub(crate) fn parse_source(content: &str, test_file: bool) -> Result<SourceTypes
             .push(source_type);
     }
 
-    Ok(source_types)
-}
-
-fn parse_error(content: &str, e: &syn::Error) -> String {
-    let span = e.span();
-
-    // Errors at the end of input carry an empty call site span.
-    let (line, column) = if span.byte_range().is_empty() {
-        let last_line = content.rsplit('\n').next().unwrap_or_default();
-        (content.matches('\n').count() + 1, last_line.chars().count())
-    } else {
-        (span.start().line, span.start().column)
-    };
-
-    format!("{line}:{}: {e}", column + 1)
+    source_types
 }
 
 fn parse_items(items: &[Item], in_test: bool, content: &str) -> Vec<SourceType> {
@@ -817,8 +911,12 @@ fn line(ident: &syn::Ident) -> usize {
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::*;
+    use agplatform::CommandOutput;
+    use agplatform::Fs;
+    use agplatform::test_platform::ROOT;
+    use agplatform::test_platform::TestPlatform;
     use agplatform::test_platform::test_platform;
 
     fn ty(kind: SourceTypeKind, name: &str, line: usize, types: Vec<SourceType>) -> SourceType {
@@ -837,6 +935,10 @@ mod tests {
     const TEST_MODULE: SourceTypeKind = SourceTypeKind::Module(ModuleKind::Test);
     const HELPER_MODULE: SourceTypeKind = SourceTypeKind::Module(ModuleKind::TestHelper);
 
+    fn parse(source: &str, test_file: bool) -> SourceTypes {
+        source_types(&syn::parse_file(source).unwrap(), source, test_file)
+    }
+
     fn comments_of_t(source: &str) -> Vec<Comment> {
         fn find(types: &[SourceType]) -> Option<Vec<Comment>> {
             types.iter().find_map(|t| {
@@ -848,12 +950,7 @@ mod tests {
             })
         }
 
-        let types: Vec<SourceType> = parse_source(source, false)
-            .unwrap()
-            .types
-            .into_values()
-            .flatten()
-            .collect();
+        let types: Vec<SourceType> = parse(source, false).types.into_values().flatten().collect();
         find(&types).expect("source should have test t")
     }
 
@@ -882,68 +979,117 @@ mod tests {
         source_types
     }
 
-    mod source_map {
-        use super::*;
-
-        #[test]
-        fn source_map_should_map_each_source() {
-            let platform = test_platform();
-            platform.fs().create_dir_all("src").unwrap();
-            platform.fs().write("src/main.rs", b"fn main() {}").unwrap();
-            platform.fs().write("src/lib.rs", b"struct S;").unwrap();
-
-            let map = source_map(
-                &platform,
-                &[PathBuf::from("src/main.rs"), PathBuf::from("src/lib.rs")],
-            );
-
-            assert_eq!(map.errors, HashMap::new());
-            assert_eq!(
-                map.files,
-                HashMap::from([
-                    (
-                        PathBuf::from("src/main.rs"),
-                        types(vec![leaf(SourceTypeKind::Function, "main", 1)])
-                    ),
-                    (
-                        PathBuf::from("src/lib.rs"),
-                        types(vec![leaf(SourceTypeKind::Type, "S", 1)])
-                    ),
-                ])
-            );
+    fn sources(files: &[&str], packages: &[&str]) -> Sources {
+        Sources {
+            files: files.iter().map(PathBuf::from).collect(),
+            packages: packages.iter().map(PathBuf::from).collect(),
+            errors: Vec::new(),
         }
+    }
 
-        #[test]
-        fn source_map_should_map_crate_dir_and_integration_tests() {
-            let platform = test_platform();
+    /// `cargo metadata` lists the `packages` (directory, targets of kind and
+    /// root in it) with absolute paths, like cargo does.
+    pub(crate) fn cargo_metadata(platform: &TestPlatform, packages: &[(&str, &[(&str, &str)])]) {
+        let path = |dir: &str, file: &str| {
+            format!(
+                "{:?}",
+                Path::new(ROOT).join(dir).join(file).display().to_string()
+            )
+        };
+        let packages: Vec<String> = packages
+            .iter()
+            .map(|(dir, targets)| {
+                let targets: Vec<String> = targets
+                    .iter()
+                    .map(|(kind, root)| {
+                        format!(
+                            r#"{{"name": "t", "kind": ["{kind}"], "src_path": {}}}"#,
+                            path(dir, root)
+                        )
+                    })
+                    .collect();
+                format!(
+                    r#"{{"name": "p", "manifest_path": {}, "dependencies": [], "targets": [{}]}}"#,
+                    path(dir, "Cargo.toml"),
+                    targets.join(", ")
+                )
+            })
+            .collect();
+        platform.process.set_output(
+            "cargo metadata",
+            CommandOutput {
+                status: Some(0),
+                stdout: format!(r#"{{"packages": [{}]}}"#, packages.join(", ")).into_bytes(),
+                ..CommandOutput::default()
+            },
+        );
+    }
 
-            for dir in ["a/src", "a/tests/common", "b/tests"] {
+    fn write(platform: &TestPlatform, files: &[(&str, &str)]) {
+        for (file, content) in files {
+            let dir = Path::new(file).parent().unwrap();
+
+            if !dir.as_os_str().is_empty() {
                 platform.fs().create_dir_all(dir).unwrap();
             }
 
-            for (file, content) in [
-                ("a/Cargo.toml", ""),
-                ("a/src/lib.rs", "struct S;"),
-                ("a/tests/common/mod.rs", "\npub fn helper() {}"),
-                ("b/tests/x.rs", "fn x() {}"),
-            ] {
-                platform.fs().write(file, content.as_bytes()).unwrap();
-            }
+            platform.fs().write(file, content).unwrap();
+        }
+    }
 
-            let map = source_map(
+    mod source_map {
+        use super::*;
+        use agplatform::test_platform::test_fs::FsOp;
+        use std::io::ErrorKind;
+
+        #[test]
+        fn source_map_should_map_the_files_the_crates_of_the_packages_reach() {
+            let platform = test_platform();
+            write(
                 &platform,
                 &[
-                    PathBuf::from("a/src/lib.rs"),
-                    PathBuf::from("a/tests/common/mod.rs"),
-                    PathBuf::from("b/tests/x.rs"),
+                    ("a/Cargo.toml", "[package]\nname = \"a\""),
+                    (
+                        "a/src/lib.rs",
+                        "struct S;\nmod shared;\n#[cfg(test)]\nmod tests;",
+                    ),
+                    ("a/src/shared.rs", ""),
+                    ("a/src/tests.rs", "fn helper() {}"),
+                    ("a/src/main.rs", "mod shared;\nfn main() {}"),
+                    ("a/tests/x.rs", "mod common;"),
+                    ("a/tests/common/mod.rs", "\npub fn helper() {}"),
                 ],
             );
+            cargo_metadata(
+                &platform,
+                &[(
+                    "a",
+                    &[
+                        ("lib", "src/lib.rs"),
+                        ("bin", "src/main.rs"),
+                        ("test", "tests/x.rs"),
+                    ],
+                )],
+            );
+            let files = [
+                "a/src/lib.rs",
+                "a/src/main.rs",
+                "a/src/shared.rs",
+                "a/src/tests.rs",
+                "a/tests/common/mod.rs",
+                "a/tests/x.rs",
+            ];
+
+            let map = source_map(&platform, &sources(&files, &["a"]));
 
             let in_crate = |types: SourceTypes| SourceTypes {
                 crate_dir: Some(PathBuf::from("a")),
                 ..types
             };
+            let helper = || in_crate(types(vec![leaf(HELPER_MODULE, "tests", 0)]));
             assert_eq!(map.errors, HashMap::new());
+            assert_eq!(map.warnings, BTreeSet::new());
+            assert_eq!(map.unchecked, HashSet::new());
             assert_eq!(
                 map.files,
                 HashMap::from([
@@ -951,44 +1097,143 @@ mod tests {
                         PathBuf::from("a/src/lib.rs"),
                         in_crate(types(vec![leaf(SourceTypeKind::Type, "S", 1)]))
                     ),
+                    (PathBuf::from("a/src/tests.rs"), helper()),
+                    (PathBuf::from("a/src/shared.rs"), in_crate(types(vec![]))),
                     (
-                        PathBuf::from("a/tests/common/mod.rs"),
-                        in_crate(types(vec![leaf(HELPER_MODULE, "tests", 0)]))
+                        PathBuf::from("a/src/main.rs"),
+                        in_crate(types(vec![leaf(SourceTypeKind::Function, "main", 2)]))
                     ),
-                    (
-                        PathBuf::from("b/tests/x.rs"),
-                        types(vec![leaf(SourceTypeKind::Function, "x", 1)])
-                    ),
+                    (PathBuf::from("a/tests/x.rs"), helper()),
+                    (PathBuf::from("a/tests/common/mod.rs"), helper()),
                 ])
             );
         }
 
         #[test]
-        fn source_map_should_record_unparsable_and_skip_unreadable_sources() {
+        fn source_map_other_files_of_the_packages_should_be_unchecked() {
             let platform = test_platform();
-            platform.fs().write("invalid.rs", b"fn () {}").unwrap();
+            write(
+                &platform,
+                &[
+                    ("a/Cargo.toml", "[package]\nname = \"a\""),
+                    ("a/src/lib.rs", "mod b;\nmod c;"),
+                    ("a/src/b.rs", "struct B;"),
+                    ("a/src/c.rs", "fn c() {"),
+                ],
+            );
+            cargo_metadata(&platform, &[("a", &[("lib", "src/lib.rs")])]);
+
+            let map = source_map(&platform, &sources(&["a/src/b.rs"], &["a"]));
+
+            assert_eq!(map.errors, HashMap::new());
+            assert_eq!(
+                map.unchecked,
+                HashSet::from([PathBuf::from("a/src/lib.rs")])
+            );
+            assert_eq!(
+                map.files.keys().collect::<BTreeSet<_>>(),
+                BTreeSet::from([&PathBuf::from("a/src/b.rs"), &PathBuf::from("a/src/lib.rs")])
+            );
+        }
+
+        #[test]
+        fn source_map_unreached_sources_should_be_warned_and_not_mapped() {
+            let platform = test_platform();
+            write(
+                &platform,
+                &[
+                    ("Cargo.toml", "[workspace]"),
+                    ("a/Cargo.toml", "[package]\nname = \"a\""),
+                    ("a/src/lib.rs", ""),
+                    ("a/src/orphan.rs", "struct O;"),
+                    ("loose.rs", ""),
+                ],
+            );
+            cargo_metadata(&platform, &[("a", &[("lib", "src/lib.rs")])]);
 
             let map = source_map(
                 &platform,
-                &[PathBuf::from("missing.rs"), PathBuf::from("invalid.rs")],
+                &sources(&["a/src/lib.rs", "a/src/orphan.rs", "loose.rs"], &["", "a"]),
             );
 
-            assert_eq!(map.files, HashMap::new());
+            assert_eq!(
+                map.files.keys().collect::<Vec<_>>(),
+                vec![&PathBuf::from("a/src/lib.rs")]
+            );
+            assert_eq!(
+                map.warnings,
+                BTreeSet::from([
+                    "a/src/orphan.rs: not reachable from any crate root".to_string(),
+                    "loose.rs: not reachable from any crate root".to_string(),
+                ])
+            );
+            assert_eq!(platform.process.calls().len(), 1);
+        }
+
+        #[test]
+        fn source_map_should_record_unparsable_sources_and_warn_of_load_problems() {
+            let platform = test_platform();
+            write(
+                &platform,
+                &[
+                    ("a/Cargo.toml", "[package]\nname = \"a\""),
+                    (
+                        "a/src/lib.rs",
+                        "mod invalid;\nmod locked;\nmod missing;\nuse nothing::X;\n#[cfg(unknown)]\nfn f() {}",
+                    ),
+                    ("a/src/invalid.rs", "fn () {}"),
+                    ("a/src/locked.rs", ""),
+                    ("b/Cargo.toml", "[package"),
+                ],
+            );
+            cargo_metadata(&platform, &[("a", &[("lib", "src/lib.rs")])]);
+            platform.process.set_output(
+                "cargo metadata --no-deps --format-version 1 --manifest-path b",
+                CommandOutput {
+                    status: Some(101),
+                    stderr: b"error: failed to parse manifest".to_vec(),
+                    ..CommandOutput::default()
+                },
+            );
+            platform
+                .fs
+                .set_io_error(FsOp::Open, "a/src/locked.rs", ErrorKind::PermissionDenied);
+            let mut sources = sources(
+                &["a/src/invalid.rs", "a/src/lib.rs", "a/src/locked.rs"],
+                &["a", "b"],
+            );
+            sources.errors.push(agsource::Error::Read {
+                path: PathBuf::from("c"),
+                error: agplatform::Error::fs("no such directory"),
+            });
+
+            let map = source_map(&platform, &sources);
+
+            // WHY: paths display with `\` on Windows.
+            let warnings: Vec<String> = map.warnings.iter().map(|w| w.replace('\\', "/")).collect();
             assert_eq!(
                 map.errors,
                 HashMap::from([(
-                    PathBuf::from("invalid.rs"),
+                    PathBuf::from("a/src/invalid.rs"),
                     "1:4: expected identifier".to_string()
                 )])
             );
+            assert_eq!(warnings.len(), 4, "{warnings:?}");
+            assert!(warnings[0].starts_with("a/src/lib.rs:3: file not found for module `missing`"));
+            assert!(warnings[1].starts_with("a/src/locked.rs: cannot read: "));
+            assert_eq!(
+                warnings[2],
+                "b/Cargo.toml: cargo metadata failed: error: failed to parse manifest"
+            );
+            assert_eq!(warnings[3], "c: cannot read: [Fs] no such directory");
         }
     }
 
-    mod parse_source {
+    mod source_types {
         use super::*;
 
         #[test]
-        fn parse_source_should_map_types_traits_and_functions() {
+        fn source_types_should_map_types_traits_and_functions() {
             let source = "\
 enum MyEnum { A }
 struct MyStruct;
@@ -998,7 +1243,7 @@ fn my_fn() {}
 fn r#type() {}
 ";
             assert_eq!(
-                parse_source(source, false).unwrap(),
+                parse(source, false),
                 types(vec![
                     leaf(SourceTypeKind::Type, "MyEnum", 1),
                     leaf(SourceTypeKind::Type, "MyStruct", 2),
@@ -1011,7 +1256,7 @@ fn r#type() {}
         }
 
         #[test]
-        fn parse_source_should_nest_impl_items_under_type() {
+        fn source_types_should_nest_impl_items_under_type() {
             let source = "\
 impl Cache {
     fn get(&self) {}
@@ -1029,7 +1274,7 @@ impl Display for &Cache {
 }
 ";
             assert_eq!(
-                parse_source(source, false).unwrap(),
+                parse(source, false),
                 types(vec![
                     ty(
                         SourceTypeKind::Type,
@@ -1065,7 +1310,7 @@ impl Display for &Cache {
         }
 
         #[test]
-        fn parse_source_should_nest_trait_impl_items_under_trait() {
+        fn source_types_should_nest_trait_impl_items_under_trait() {
             let source = "\
 struct S;
 impl S {
@@ -1088,7 +1333,7 @@ impl io::Write for S {
 }
 ";
             assert_eq!(
-                parse_source(source, false).unwrap(),
+                parse(source, false),
                 types(vec![ty(
                     SourceTypeKind::Type,
                     "S",
@@ -1128,7 +1373,7 @@ impl io::Write for S {
         }
 
         #[test]
-        fn parse_source_should_nest_methods_defaults_and_blanket_items_under_trait() {
+        fn source_types_should_nest_methods_defaults_and_blanket_items_under_trait() {
             let source = "\
 trait Fs {
     type In;
@@ -1142,7 +1387,7 @@ impl<T: Read> Fs for T {
 }
 ";
             assert_eq!(
-                parse_source(source, false).unwrap(),
+                parse(source, false),
                 types(vec![ty(
                     SourceTypeKind::Trait,
                     "Fs",
@@ -1159,14 +1404,14 @@ impl<T: Read> Fs for T {
         }
 
         #[test]
-        fn parse_source_should_map_blanket_impl_of_external_trait_as_trait() {
+        fn source_types_should_map_blanket_impl_of_external_trait_as_trait() {
             let source = "\
 impl<T: Display> MyExt for T {
     fn ext(&self) {}
 }
 ";
             assert_eq!(
-                parse_source(source, false).unwrap(),
+                parse(source, false),
                 types(vec![ty(
                     SourceTypeKind::Trait,
                     "MyExt",
@@ -1177,7 +1422,7 @@ impl<T: Display> MyExt for T {
         }
 
         #[test]
-        fn parse_source_should_map_impls_for_unnamed_types_under_trait() {
+        fn source_types_should_map_impls_for_unnamed_types_under_trait() {
             let source = "\
 impl MyTrait for [u8] {
     fn slice(&self) {}
@@ -1199,7 +1444,7 @@ impl [u8] {
 }
 ";
             assert_eq!(
-                parse_source(source, false).unwrap(),
+                parse(source, false),
                 types(vec![ty(
                     SourceTypeKind::Trait,
                     "MyTrait",
@@ -1221,7 +1466,7 @@ impl [u8] {
         }
 
         #[test]
-        fn parse_source_should_map_trait_impls_for_undefined_types_under_trait() {
+        fn source_types_should_map_trait_impls_for_undefined_types_under_trait() {
             let source = "\
 impl MyTrait for Vec<u8> {
     fn m(&self) {}
@@ -1237,7 +1482,7 @@ impl External {
 }
 ";
             assert_eq!(
-                parse_source(source, false).unwrap(),
+                parse(source, false),
                 types(vec![
                     ty(
                         SourceTypeKind::Trait,
@@ -1265,7 +1510,7 @@ impl External {
         }
 
         #[test]
-        fn parse_source_should_map_impls_without_items() {
+        fn source_types_should_map_impls_without_items() {
             let source = "\
 impl Error for MyError {}
 unsafe impl Send for MyError {}
@@ -1277,7 +1522,7 @@ impl Z {
 struct MyError;
 ";
             assert_eq!(
-                parse_source(source, false).unwrap(),
+                parse(source, false),
                 types(vec![
                     ty(
                         SourceTypeKind::Type,
@@ -1296,14 +1541,14 @@ struct MyError;
         }
 
         #[test]
-        fn parse_source_should_keep_items_of_same_name() {
+        fn source_types_should_keep_items_of_same_name() {
             let source = "\
 fn foo() {}
 mod foo {}
 struct Foo;
 ";
             assert_eq!(
-                parse_source(source, false).unwrap(),
+                parse(source, false),
                 types(vec![
                     leaf(SourceTypeKind::Function, "foo", 1),
                     leaf(MODULE, "foo", 2),
@@ -1313,7 +1558,7 @@ struct Foo;
         }
 
         #[test]
-        fn parse_source_should_attach_impl_to_type_not_function_of_same_name() {
+        fn source_types_should_attach_impl_to_type_not_function_of_same_name() {
             let source = "\
 fn bar() {}
 struct bar;
@@ -1322,7 +1567,7 @@ impl bar {
 }
 ";
             assert_eq!(
-                parse_source(source, false).unwrap(),
+                parse(source, false),
                 types(vec![
                     leaf(SourceTypeKind::Function, "bar", 1),
                     ty(
@@ -1336,7 +1581,7 @@ impl bar {
         }
 
         #[test]
-        fn parse_source_should_nest_inline_modules() {
+        fn source_types_should_nest_inline_modules() {
             let source = "\
 mod outer {
     struct Inner;
@@ -1349,7 +1594,7 @@ mod empty {}
 mod external;
 ";
             assert_eq!(
-                parse_source(source, false).unwrap(),
+                parse(source, false),
                 types(vec![
                     ty(
                         MODULE,
@@ -1372,7 +1617,7 @@ mod external;
         }
 
         #[test]
-        fn parse_source_should_map_macro_rules() {
+        fn source_types_should_map_macro_rules() {
             let source = "\
 macro_rules! my_macro { () => {} }
 #[macro_export]
@@ -1383,7 +1628,7 @@ println!(\"not a definition\");
 macro m2() {}
 ";
             assert_eq!(
-                parse_source(source, false).unwrap(),
+                parse(source, false),
                 types(vec![
                     leaf(SourceTypeKind::Macro, "my_macro", 1),
                     leaf(SourceTypeKind::Macro, "exported", 3),
@@ -1392,7 +1637,7 @@ macro m2() {}
         }
 
         #[test]
-        fn parse_source_should_ignore_test_and_unmapped_items() {
+        fn source_types_should_ignore_test_and_unmapped_items() {
             let source = "\
 #[cfg(test)]
 fn test_helper() {}
@@ -1435,7 +1680,7 @@ trait Alias = T;
 macro m2() {}
 ";
             assert_eq!(
-                parse_source(source, false).unwrap(),
+                parse(source, false),
                 types(vec![
                     leaf(SourceTypeKind::Type, "S", 17),
                     leaf(SourceTypeKind::Trait, "T", 25),
@@ -1444,7 +1689,7 @@ macro m2() {}
         }
 
         #[test]
-        fn parse_source_should_keep_items_not_exclusive_to_tests() {
+        fn source_types_should_keep_items_not_exclusive_to_tests() {
             let source = "\
 #[cfg(feature = \"x\")]
 fn featured() {}
@@ -1462,7 +1707,7 @@ fn bare() {}
 fn invalid() {}
 ";
             assert_eq!(
-                parse_source(source, false).unwrap(),
+                parse(source, false),
                 types(vec![
                     leaf(SourceTypeKind::Function, "featured", 2),
                     leaf(SourceTypeKind::Function, "test_or_featured", 4),
@@ -1476,7 +1721,7 @@ fn invalid() {}
         }
 
         #[test]
-        fn parse_source_should_map_impl_of_external_type() {
+        fn source_types_should_map_impl_of_external_type() {
             let source = "\
 impl External {
     fn run() {}
@@ -1486,7 +1731,7 @@ impl (External) {
 }
 ";
             assert_eq!(
-                parse_source(source, false).unwrap(),
+                parse(source, false),
                 types(vec![ty(
                     SourceTypeKind::Type,
                     "External",
@@ -1500,7 +1745,7 @@ impl (External) {
         }
 
         #[test]
-        fn parse_source_should_map_test_modules_and_tests() {
+        fn source_types_should_map_test_modules_and_tests() {
             let source = "\
 struct S;
 #[cfg(test)]
@@ -1542,7 +1787,7 @@ mod test_utils {
 }
 ";
             assert_eq!(
-                parse_source(source, false).unwrap(),
+                parse(source, false),
                 types(vec![
                     leaf(SourceTypeKind::Type, "S", 1),
                     ty(
@@ -1583,7 +1828,7 @@ mod test_utils {
         }
 
         #[test]
-        fn parse_source_should_map_contract_cases_in_test_code() {
+        fn source_types_should_map_contract_cases_in_test_code() {
             let source = "\
 struct S;
 fn outside_should_work() {}
@@ -1604,7 +1849,7 @@ mod tests {
             case.comments = vec![comment(7, "GIVEN s")];
 
             assert_eq!(
-                parse_source(source, false).unwrap(),
+                parse(source, false),
                 types(vec![
                     leaf(SourceTypeKind::Type, "S", 1),
                     leaf(SourceTypeKind::Function, "outside_should_work", 2),
@@ -1627,7 +1872,7 @@ mod tests {
         }
 
         #[test]
-        fn parse_source_should_map_calls_and_waiver_of_tests() {
+        fn source_types_should_map_calls_and_waiver_of_tests() {
             let source = r#"
 #[cfg(test)]
 mod tests {
@@ -1661,12 +1906,11 @@ mod tests {
     }
 }
 "#;
-            let tests: Vec<(String, Vec<String>, bool)> =
-                parse_source(source, false).unwrap().types["tests"][0]
-                    .types
-                    .iter()
-                    .map(|t| (t.name.clone(), t.calls.clone(), t.waived))
-                    .collect();
+            let tests: Vec<(String, Vec<String>, bool)> = parse(source, false).types["tests"][0]
+                .types
+                .iter()
+                .map(|t| (t.name.clone(), t.calls.clone(), t.waived))
+                .collect();
             let calls = |calls: &[&str]| calls.iter().map(|c| c.to_string()).collect();
 
             assert_eq!(
@@ -1686,11 +1930,11 @@ mod tests {
         }
 
         #[test]
-        fn parse_source_should_treat_inner_attribute_after_comment_as_attribute() {
+        fn source_types_should_treat_inner_attribute_after_comment_as_attribute() {
             let source = "#! // not a shebang\n[cfg(test)]\n#[test]\nfn t() {}\n";
 
             assert_eq!(
-                parse_source(source, false).unwrap(),
+                parse(source, false),
                 types(vec![ty(
                     TEST_MODULE,
                     "tests",
@@ -1701,7 +1945,7 @@ mod tests {
         }
 
         #[test]
-        fn parse_source_should_map_comments_in_test_body() {
+        fn source_types_should_map_comments_in_test_body() {
             for (body, expected) in [
                 ("    // GIVEN a value", vec![(3, "GIVEN a value")]),
                 ("    let x = 1; // trailing", vec![(3, "trailing")]),
@@ -1761,7 +2005,7 @@ mod tests {
         }
 
         #[test]
-        fn parse_source_should_not_map_comments_outside_test_body() {
+        fn source_types_should_not_map_comments_outside_test_body() {
             let source = "\
 // above
 /// doc
@@ -1773,7 +2017,7 @@ pub /* vis */ fn t(/* arg */) /* ret */ {} // after
         }
 
         #[test]
-        fn parse_source_should_skip_code_and_empty_comment_lines() {
+        fn source_types_should_skip_code_and_empty_comment_lines() {
             let source = r####"
 #[test]
 fn t() {
@@ -1795,7 +2039,7 @@ fn t() {
         }
 
         #[test]
-        fn parse_source_should_map_comment_lines_after_shebang_and_bom() {
+        fn source_types_should_map_comment_lines_after_shebang_and_bom() {
             for source in [
                 "#!/usr/bin/env run-cargo-script\n#[test]\nfn t() {\n    // é body\n}\n",
                 "\u{feff}\n#[test]\nfn t() {\n    // é body\n}\n",
@@ -1809,7 +2053,7 @@ fn t() {
         }
 
         #[test]
-        fn parse_source_should_not_map_comments_of_test_helpers() {
+        fn source_types_should_not_map_comments_of_test_helpers() {
             let source = "\
 #[cfg(test)]
 mod tests {
@@ -1824,7 +2068,7 @@ mod tests {
         }
 
         #[test]
-        fn parse_source_should_map_tests_outside_test_context() {
+        fn source_types_should_map_tests_outside_test_context() {
             let source = "\
 #[test]
 fn smoke() {}
@@ -1874,7 +2118,7 @@ mod gated_tests {
 }
 ";
             assert_eq!(
-                parse_source(source, false).unwrap(),
+                parse(source, false),
                 SourceTypes {
                     code_after_tests: vec![16],
                     ..types(vec![
@@ -1932,7 +2176,7 @@ mod gated_tests {
         }
 
         #[test]
-        fn parse_source_should_map_tests_of_inline_modules_in_module() {
+        fn source_types_should_map_tests_of_inline_modules_in_module() {
             let source = "\
 mod outer {
     struct Inner;
@@ -1944,7 +2188,7 @@ mod outer {
 }
 ";
             assert_eq!(
-                parse_source(source, false).unwrap(),
+                parse(source, false),
                 types(vec![ty(
                     MODULE,
                     "outer",
@@ -1963,7 +2207,7 @@ mod outer {
         }
 
         #[test]
-        fn parse_source_test_file_should_map_file_as_tests_module() {
+        fn source_types_test_file_should_map_file_as_tests_module() {
             let body =
                 "struct Mock;\n#[test]\nfn file_should_work() {}\nmod nested { mod deeper {} }\n";
 
@@ -1972,7 +2216,7 @@ mod outer {
                 (format!("\n{body}"), true),
             ] {
                 assert_eq!(
-                    parse_source(&source, test_file).unwrap(),
+                    parse(&source, test_file),
                     types(vec![ty(
                         TEST_MODULE,
                         "tests",
@@ -1993,7 +2237,7 @@ mod outer {
         }
 
         #[test]
-        fn parse_source_with_ungated_tests_should_map_file_as_tests_module() {
+        fn source_types_with_ungated_tests_should_map_file_as_tests_module() {
             let source = "\
 use super::*;
 fn helper() {}
@@ -2007,7 +2251,7 @@ mod sik {
 }
 ";
             assert_eq!(
-                parse_source(source, false).unwrap(),
+                parse(source, false),
                 types(vec![ty(
                     TEST_MODULE,
                     "tests",
@@ -2031,7 +2275,7 @@ mod sik {
         }
 
         #[test]
-        fn parse_source_should_map_first_code_after_tests_of_each_module() {
+        fn source_types_should_map_first_code_after_tests_of_each_module() {
             let source = "\
 struct S;
 #[cfg(test)]
@@ -2058,38 +2302,19 @@ fn loose() {}
 use std::fmt;
 mod later;
 ";
-            assert_eq!(
-                parse_source(source, false).unwrap().code_after_tests,
-                [10, 23]
-            );
+            assert_eq!(parse(source, false).code_after_tests, [10, 23]);
         }
 
         #[test]
-        fn parse_source_test_file_should_not_map_code_after_tests() {
+        fn source_types_test_file_should_not_map_code_after_tests() {
             let source = "#[test]\nfn t() {}\nfn helper() {}\n";
 
-            assert_eq!(
-                parse_source(source, true).unwrap().code_after_tests,
-                Vec::<usize>::new()
-            );
+            assert_eq!(parse(source, true).code_after_tests, Vec::<usize>::new());
         }
 
         #[test]
-        fn parse_source_empty_should_return_no_types() {
-            assert_eq!(parse_source("", false).unwrap(), SourceTypes::default());
-        }
-
-        #[test]
-        fn parse_source_invalid_should_fail_with_location() {
-            for (source, location) in [
-                ("struct S;\nfn () {}", "2:4: expected identifier"),
-                ("struct S;\nstruct T", "2:9: unexpected end of input"),
-                ("struct S;\nfn\n", "3:1: unexpected end of input"),
-                ("\u{feff}struct T", "1:9: unexpected end of input"),
-            ] {
-                let error = parse_source(source, false).unwrap_err();
-                assert!(error.starts_with(location), "{source:?}: {error}");
-            }
+        fn source_types_empty_should_return_no_types() {
+            assert_eq!(parse("", false), SourceTypes::default());
         }
     }
 }

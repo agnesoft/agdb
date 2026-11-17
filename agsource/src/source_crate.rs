@@ -1,7 +1,7 @@
 use crate::Cfg;
 use crate::Error;
+use crate::Target;
 use crate::cfg::configure;
-use crate::manifest;
 use crate::resolve::Scopes;
 use agplatform::Fs;
 use agplatform::Platform;
@@ -128,13 +128,13 @@ impl Module {
 }
 
 impl SourceCrate {
-    /// Loads the crate whose root file (`lib.rs`, `main.rs`, an integration
-    /// test, ...) is `root`, following its `mod` declarations, `#[path]`
+    /// Loads the crate from the root file of `target` (`lib.rs`, `main.rs`,
+    /// an integration test, ...), following its `mod` declarations, `#[path]`
     /// included, with the code selected by `cfg`. A module whose `#[cfg]`
-    /// or own `#![cfg]` does not hold is not loaded. The crates the code can
-    /// name come from the nearest `Cargo.toml`.
-    pub fn load(p: &impl Platform, root: impl AsRef<Path>, cfg: &Cfg) -> Self {
-        let root = normalize(root.as_ref());
+    /// or own `#![cfg]` does not hold is not loaded. The code can name the
+    /// crates of the target's `externs`.
+    pub fn load(p: &impl Platform, target: &Target, cfg: &Cfg) -> Self {
+        let root = normalize(&target.root);
         let mut source_crate = Self {
             cfg: cfg.clone(),
             ..Self::default()
@@ -165,8 +165,7 @@ impl SourceCrate {
             next += 1;
         }
 
-        let externs = manifest::externs(p, &root, &mut source_crate.errors);
-        let (scopes, errors) = Scopes::build(&source_crate, externs);
+        let (scopes, errors) = Scopes::build(&source_crate, target.externs.clone());
         source_crate.scopes = scopes;
         source_crate.errors.extend(errors);
         source_crate
@@ -494,6 +493,7 @@ pub(crate) fn normalize(path: &Path) -> PathBuf {
 mod tests {
     use super::*;
     use crate::CfgSet;
+    use crate::TargetKind;
     use agplatform::test_platform::TestPlatform;
     use agplatform::test_platform::test_fs::FsOp;
     use agplatform::test_platform::test_platform;
@@ -511,6 +511,10 @@ mod tests {
         }
 
         platform
+    }
+
+    fn lib(root: &str) -> Target {
+        Target::new(TargetKind::Lib, root)
     }
 
     fn module_files(source_crate: &SourceCrate) -> Vec<(String, PathBuf)> {
@@ -548,7 +552,7 @@ mod tests {
             fn name_should_be_crate_for_the_root_and_the_last_segment_otherwise() {
                 let platform = platform(&[("/c/src/lib.rs", "mod a { mod b {} }")]);
 
-                let source_crate = SourceCrate::load(&platform, "/c/src/lib.rs", &Cfg::All);
+                let source_crate = SourceCrate::load(&platform, &lib("/c/src/lib.rs"), &Cfg::All);
 
                 let names: Vec<_> = source_crate.modules().map(|(_, m)| m.name()).collect();
                 assert_eq!(names, vec!["crate", "a", "b"]);
@@ -566,7 +570,7 @@ mod tests {
             fn module_should_be_the_module_of_the_item() {
                 let platform = platform(&[("/c/src/lib.rs", "mod a { struct A; }")]);
 
-                let source_crate = SourceCrate::load(&platform, "/c/src/lib.rs", &Cfg::All);
+                let source_crate = SourceCrate::load(&platform, &lib("/c/src/lib.rs"), &Cfg::All);
 
                 let a = source_crate.module(source_crate.root()).children()[0];
                 let declaration = source_crate.module(a).item().unwrap();
@@ -592,7 +596,7 @@ mod tests {
                     ("/c/src/b/y.rs", ""),
                 ]);
 
-                let source_crate = SourceCrate::load(&platform, "/c/src/lib.rs", &Cfg::All);
+                let source_crate = SourceCrate::load(&platform, &lib("/c/src/lib.rs"), &Cfg::All);
 
                 assert_eq!(
                     module_files(&source_crate),
@@ -618,7 +622,7 @@ mod tests {
                     ("/c/src/x.rs", ""),
                 ]);
 
-                let source_crate = SourceCrate::load(&platform, "/c/src/lib.rs", &Cfg::All);
+                let source_crate = SourceCrate::load(&platform, &lib("/c/src/lib.rs"), &Cfg::All);
 
                 assert_eq!(
                     module_files(&source_crate),
@@ -642,7 +646,7 @@ mod tests {
                 ]);
                 let cfg = Cfg::Eval(CfgSet::new().feature("on"));
 
-                let source_crate = SourceCrate::load(&platform, "/c/src/lib.rs", &cfg);
+                let source_crate = SourceCrate::load(&platform, &lib("/c/src/lib.rs"), &cfg);
 
                 assert_eq!(
                     module_files(&source_crate),
@@ -661,7 +665,7 @@ mod tests {
                     ("/c/src/a/j/y.rs", ""),
                 ]);
 
-                let source_crate = SourceCrate::load(&platform, "/c/src/lib.rs", &Cfg::All);
+                let source_crate = SourceCrate::load(&platform, &lib("/c/src/lib.rs"), &Cfg::All);
 
                 assert_eq!(
                     module_files(&source_crate),
@@ -686,7 +690,7 @@ mod tests {
                     ("/c/other/y.rs", ""),
                 ]);
 
-                let source_crate = SourceCrate::load(&platform, "/c/src/lib.rs", &Cfg::All);
+                let source_crate = SourceCrate::load(&platform, &lib("/c/src/lib.rs"), &Cfg::All);
 
                 assert_eq!(
                     module_files(&source_crate),
@@ -706,7 +710,7 @@ mod tests {
                     ("/c/src/platform/x.rs", ""),
                 ]);
 
-                let source_crate = SourceCrate::load(&platform, "/c/src/lib.rs", &Cfg::All);
+                let source_crate = SourceCrate::load(&platform, &lib("/c/src/lib.rs"), &Cfg::All);
 
                 assert_eq!(
                     module_files(&source_crate),
@@ -723,7 +727,7 @@ mod tests {
                 let platform =
                     platform(&[("/c/src/lib.rs", "mod r#type;"), ("/c/src/type.rs", "")]);
 
-                let source_crate = SourceCrate::load(&platform, "/c/src/lib.rs", &Cfg::All);
+                let source_crate = SourceCrate::load(&platform, &lib("/c/src/lib.rs"), &Cfg::All);
 
                 assert_eq!(
                     module_files(&source_crate)[1],
@@ -735,7 +739,7 @@ mod tests {
             fn load_relative_root_should_resolve_beside_it() {
                 let platform = platform(&[("/lib.rs", "mod a;"), ("/a.rs", "")]);
 
-                let source_crate = SourceCrate::load(&platform, "./lib.rs", &Cfg::All);
+                let source_crate = SourceCrate::load(&platform, &lib("./lib.rs"), &Cfg::All);
 
                 assert_eq!(
                     module_files(&source_crate),
@@ -748,7 +752,7 @@ mod tests {
                 let platform =
                     platform(&[("/c/src/lib.rs", "mod a;\n#[path = \"gone.rs\"]\nmod b;")]);
 
-                let source_crate = SourceCrate::load(&platform, "/c/src/lib.rs", &Cfg::All);
+                let source_crate = SourceCrate::load(&platform, &lib("/c/src/lib.rs"), &Cfg::All);
 
                 assert_eq!(source_crate.modules().count(), 1);
                 assert_eq!(
@@ -768,7 +772,7 @@ mod tests {
                     ("/c/src/a/mod.rs", ""),
                 ]);
 
-                let source_crate = SourceCrate::load(&platform, "/c/src/lib.rs", &Cfg::All);
+                let source_crate = SourceCrate::load(&platform, &lib("/c/src/lib.rs"), &Cfg::All);
 
                 assert_eq!(source_crate.modules().count(), 1);
                 assert_eq!(
@@ -786,7 +790,7 @@ mod tests {
                     ("/c/src/a.rs", "#[path = \"a.rs\"]\nmod again;"),
                 ]);
 
-                let source_crate = SourceCrate::load(&platform, "/c/src/lib.rs", &Cfg::All);
+                let source_crate = SourceCrate::load(&platform, &lib("/c/src/lib.rs"), &Cfg::All);
 
                 assert_eq!(source_crate.modules().count(), 2);
                 assert_eq!(
@@ -805,7 +809,7 @@ mod tests {
                     ("/c/src/b.rs", "fn g() {\n    let y = 1;"),
                 ]);
 
-                let source_crate = SourceCrate::load(&platform, "/c/src/lib.rs", &Cfg::All);
+                let source_crate = SourceCrate::load(&platform, &lib("/c/src/lib.rs"), &Cfg::All);
 
                 assert_eq!(source_crate.modules().count(), 3);
                 assert!(source_crate.items(ModuleId(1)).is_empty());
@@ -825,7 +829,7 @@ mod tests {
                     .fs
                     .set_io_error(FsOp::Open, "/c/src/a.rs", ErrorKind::PermissionDenied);
 
-                let source_crate = SourceCrate::load(&platform, "/c/src/lib.rs", &Cfg::All);
+                let source_crate = SourceCrate::load(&platform, &lib("/c/src/lib.rs"), &Cfg::All);
 
                 assert_eq!(source_crate.modules().count(), 2);
                 assert_eq!(source_crate.file(FileId(1)).text(), "");
@@ -847,7 +851,7 @@ mod tests {
                     "struct A;\nmod i { struct B; mod j { struct C; } }",
                 )]);
 
-                let source_crate = SourceCrate::load(&platform, "/c/src/lib.rs", &Cfg::All);
+                let source_crate = SourceCrate::load(&platform, &lib("/c/src/lib.rs"), &Cfg::All);
 
                 let structs = |id: ModuleId| {
                     source_crate

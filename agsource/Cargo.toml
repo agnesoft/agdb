@@ -11,12 +11,13 @@ categories = ["development-tools"]
 publish = false
 
 [dependencies]
-agplatform = { workspace = true, features = ["fs"] }
+agplatform = { workspace = true, features = ["fs", "process"] }
 proc-macro2 = { workspace = true, default-features = false, features = [
     "span-locations",
 ] }
 syn = { workspace = true, features = ["full", "visit-mut"] }
-toml.workspace = true
+serde = { workspace = true, features = ["derive"] }
+serde_json.workspace = true
 
 [dev-dependencies]
 agplatform = { workspace = true, features = ["testing"] }

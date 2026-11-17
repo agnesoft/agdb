@@ -1,4 +1,5 @@
 use crate::ItemId;
+use crate::MacroCall;
 use crate::ModuleId;
 use crate::Namespace;
 use crate::Resolved;
@@ -33,6 +34,9 @@ pub struct Reachable {
     /// The paths that name nothing, with the item they are in: the items and
     /// imports of blocks, which are not resolved.
     pub unresolved: BTreeSet<(ItemId, String)>,
+    /// The macro calls that are not parsed, with the item they are in and
+    /// why (see [`SourceCrate::macro_call`]).
+    pub unparsed: BTreeSet<(ItemId, String)>,
 }
 
 impl Export {
@@ -87,8 +91,9 @@ impl SourceCrate {
     /// impls of the types reached, inherent or of a trait that is reached,
     /// exported or of another crate. A module root is its `pub` functions and those of
     /// its `pub` submodules. An `opaque` item is reached but not followed,
-    /// and neither are the impls of an opaque trait. Macro bodies and
-    /// arguments are not followed.
+    /// and neither are the impls of an opaque trait. Macro calls are
+    /// followed as [`SourceCrate::macro_call`] parses them, the expansions of
+    /// `macro_rules!` from the module of the call.
     pub fn reachable(&self, roots: &[&Export], opaque: &[ItemId]) -> Reachable {
         let opaque: HashSet<ItemId> = opaque.iter().copied().collect();
         let exported: HashSet<ItemId> = self
@@ -129,6 +134,10 @@ impl SourceCrate {
                         reach.add(&target, Some(id));
                     }
                 }
+
+                reach
+                    .unparsed
+                    .extend(paths.unparsed.into_iter().map(|reason| (id, reason)));
             }
 
             if matches!(item, Item::Trait(_)) {
@@ -155,6 +164,7 @@ impl SourceCrate {
             reached_from: reach.reached_from,
             external: reach.external,
             unresolved: reach.unresolved,
+            unparsed: reach.unparsed,
         }
     }
 
@@ -212,6 +222,7 @@ struct Reach {
     queue: Vec<ItemId>,
     external: BTreeSet<Vec<String>>,
     unresolved: BTreeSet<(ItemId, String)>,
+    unparsed: BTreeSet<(ItemId, String)>,
 }
 
 impl Reach {
@@ -239,14 +250,21 @@ impl Reach {
 
 /// The paths of an item, resolved from its module, apart from those that
 /// start with `Self` or a generic parameter of the item and the single
-/// names of its local bindings, as far as it binds them anywhere.
+/// names of its local bindings, as far as it binds them anywhere. The
+/// macro calls are parsed and their parts visited.
 struct Paths<'a> {
     c: &'a SourceCrate,
     module: ModuleId,
     generics: HashSet<String>,
     locals: HashSet<String>,
     found: Vec<(Resolved, String)>,
+    unparsed: Vec<String>,
+    /// The macro calls being visited, which expand in one another.
+    depth: usize,
 }
+
+/// rustc's default `recursion_limit`.
+const RECURSION_LIMIT: usize = 128;
 
 #[derive(Default)]
 struct Bindings {
@@ -265,6 +283,8 @@ impl<'a> Paths<'a> {
             generics: bindings.generics,
             locals: bindings.locals,
             found: Vec::new(),
+            unparsed: Vec::new(),
+            depth: 0,
         }
     }
 
@@ -301,6 +321,38 @@ impl<'a> Paths<'a> {
         let target = self.c.resolve(self.module, &path, namespace);
         self.found.push((target, display(&path)));
     }
+
+    fn call(&mut self, m: &syn::Macro, target: &Resolved) {
+        let name = display(&m.path);
+
+        if self.depth == RECURSION_LIMIT {
+            self.unparsed
+                .push(format!("{name}!: the recursion limit is reached"));
+            return;
+        }
+
+        match self.c.call(target, m) {
+            Ok(call) => {
+                let mut bindings = Bindings::default();
+                call.visit(&mut bindings);
+                self.locals.extend(bindings.locals);
+                self.depth += 1;
+                call.visit(self);
+                self.depth -= 1;
+
+                if let MacroCall::Format {
+                    format: Some(format),
+                    ..
+                } = &call
+                {
+                    for capture in &format.captures {
+                        self.path(None, &syn::Path::from(capture.clone()), Namespace::Value);
+                    }
+                }
+            }
+            Err(reason) => self.unparsed.push(format!("{name}!: {reason}")),
+        }
+    }
 }
 
 impl<'ast> Visit<'ast> for Paths<'_> {
@@ -311,7 +363,13 @@ impl<'ast> Visit<'ast> for Paths<'_> {
     fn visit_item_use(&mut self, _: &'ast syn::ItemUse) {}
 
     fn visit_macro(&mut self, m: &'ast syn::Macro) {
-        self.path(None, &m.path, Namespace::Macro);
+        let target = self.c.resolve(self.module, &m.path, Namespace::Macro);
+
+        if target != Resolved::Unresolved {
+            self.call(m, &target);
+        }
+
+        self.found.push((target, display(&m.path)));
     }
 
     fn visit_type_path(&mut self, t: &'ast syn::TypePath) {
@@ -813,6 +871,73 @@ impl Root {
                         (id(&c, "root"), "Local::g".to_string()),
                         (id(&c, "root"), "gone".to_string()),
                     ])
+                );
+            }
+
+            #[test]
+            fn reachable_should_follow_macro_arguments_and_expansions() {
+                let c = lib(r#"pub struct Root;
+pub struct Failure;
+impl Failure { fn new(_: String) -> Self { Failure } }
+const HOST: &str = "h";
+const WIDTH: usize = 1;
+const A: u8 = 0;
+const N: usize = 1;
+fn helper() -> u8 { 0 }
+pub enum E { V(u8) }
+pub struct Unused;
+macro_rules! bail {
+    ($fmt:literal) => { return Err(crate::Failure::new(format!($fmt))) };
+}
+macro_rules! forever { () => { forever!() }; }
+impl Root {
+    pub fn f(local: u8, e: E) -> Result<(), Failure> {
+        let _ = format!("{HOST:WIDTH$} {local} {}", helper());
+        assert_eq!(helper(), A);
+        let _ = (vec![A], vec![A; N]);
+        assert!(matches!(e, E::V(x) if x > local));
+        dbg!(Unused);
+        forever!();
+        gone!();
+        bail!("{HOST}");
+    }
+}"#);
+
+                let reachable = reachable(&c, &["Root"], &[]);
+
+                assert_eq!(
+                    reachable.items,
+                    BTreeSet::from([
+                        id(&c, "Root"),
+                        id(&c, "Failure"),
+                        id(&c, "HOST"),
+                        id(&c, "WIDTH"),
+                        id(&c, "A"),
+                        id(&c, "N"),
+                        id(&c, "helper"),
+                        id(&c, "E"),
+                        id(&c, "bail"),
+                        id(&c, "forever"),
+                        imp(&c, "Root", None),
+                        imp(&c, "Failure", None),
+                    ])
+                );
+                assert_eq!(
+                    reachable.unparsed,
+                    BTreeSet::from([
+                        (
+                            imp(&c, "Root", None),
+                            "dbg!: the arguments of std::dbg! are not known".to_string()
+                        ),
+                        (
+                            imp(&c, "Root", None),
+                            "forever!: the recursion limit is reached".to_string()
+                        ),
+                    ])
+                );
+                assert_eq!(
+                    reachable.unresolved,
+                    BTreeSet::from([(imp(&c, "Root", None), "gone".to_string())])
                 );
             }
 

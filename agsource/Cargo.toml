@@ -5,7 +5,7 @@ edition.workspace = true
 license.workspace = true
 repository.workspace = true
 readme = "README.md"
-description = "Source model of a Rust crate read with syn: modules, items and their resolution"
+description = "Source model of a Rust crate read with syn: modules, items, their resolution and macro calls"
 keywords = ["parser", "syn", "source", "module"]
 categories = ["development-tools"]
 publish = false
@@ -15,7 +15,7 @@ agplatform = { workspace = true, features = ["fs", "process"] }
 proc-macro2 = { workspace = true, default-features = false, features = [
     "span-locations",
 ] }
-syn = { workspace = true, features = ["full", "visit", "visit-mut"] }
+syn = { workspace = true, features = ["extra-traits", "full", "visit", "visit-mut"] }
 serde = { workspace = true, features = ["derive"] }
 serde_json.workspace = true
 

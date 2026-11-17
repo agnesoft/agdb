@@ -56,7 +56,19 @@ lead to, through the paths in the items:
 
 The caller can name opaque items, which are reached but not followed: the impls of an opaque trait
 are skipped too. Paths into other crates are listed, to continue in their exports, and so are the
-paths that name nothing. Macro bodies and arguments are not followed.
+paths that name nothing.
+
+`SourceCrate::macro_call` parses a macro call:
+
+- the std macros taking a format string (`format!`, `println!`, `write!`, `panic!`, `assert_eq!`,
+  ...) into the expressions before it and the format arguments, the names the string captures
+  (`{name}`, `{:width$}`) included;
+- `vec!` and `matches!` by their forms;
+- a `macro_rules!` of the crate by expanding it with the first rule that matches, into statements.
+  All fragment specifiers but `stmt` are supported, and an `expr` fragment stays one operand.
+
+`reachable` follows the parsed calls, expansions from the module of the call, and lists those it
+cannot parse: the macros of other crates and the calls that do not fit.
 
 A problem with one file does not stop loading. These are all collected as `Error`s with their
 location:

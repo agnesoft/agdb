@@ -126,6 +126,7 @@ impl MacroCall {
         }
     }
 
+    #[allow(dead_code)]
     pub(crate) fn visit_mut(&mut self, v: &mut impl VisitMut) {
         match self {
             MacroCall::Format { exprs, format } => {

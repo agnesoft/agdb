@@ -221,6 +221,14 @@ impl SourceCrate {
         &self.items(id.module)[id.index]
     }
 
+    /// The items of all modules, a module's in order, parents before their
+    /// children.
+    pub fn item_ids(&self) -> impl Iterator<Item = ItemId> {
+        self.modules().flat_map(|(module, _)| {
+            (0..self.items(module).len()).map(move |index| ItemId { module, index })
+        })
+    }
+
     pub fn errors(&self) -> &[Error] {
         &self.errors
     }
@@ -872,6 +880,29 @@ mod tests {
                 assert_eq!(source_crate.module(ids[2]).parent(), Some(ids[1]));
                 assert_eq!(source_crate.module(ids[1]).children(), &[ids[2]]);
                 assert_eq!(source_crate.files().count(), 1);
+            }
+        }
+
+        mod item_ids {
+            use super::*;
+
+            #[test]
+            fn item_ids_should_list_the_items_of_every_module_in_order() {
+                let platform = platform(&[(
+                    "/c/src/lib.rs",
+                    "struct A;\nmod i { struct B; struct C; }\nstruct D;",
+                )]);
+
+                let source_crate = SourceCrate::load(&platform, &lib("/c/src/lib.rs"), &Cfg::All);
+
+                let names: Vec<_> = source_crate
+                    .item_ids()
+                    .map(|id| match source_crate.item(id) {
+                        Item::Struct(s) => s.ident.to_string(),
+                        _ => "mod".to_string(),
+                    })
+                    .collect();
+                assert_eq!(names, ["A", "mod", "D", "B", "C"]);
             }
         }
     }

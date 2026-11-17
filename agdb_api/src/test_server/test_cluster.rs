@@ -16,7 +16,6 @@ use crate::test_server::TEST_TIMEOUT;
 use crate::test_server::TestServerImpl;
 use crate::test_server::api_for_test;
 use crate::test_server::test_error::TestError;
-use crate::test_server::test_error::bail;
 #[cfg(feature = "api")]
 use agdb::type_def::Type;
 #[cfg(feature = "api")]
@@ -99,7 +98,9 @@ pub async fn wait_for_leader(
         std::thread::sleep(std::time::Duration::from_millis(POLL_INTERVAL));
     }
 
-    bail!("Leader not found within {TEST_TIMEOUT}seconds")
+    Err(TestError::new(format!(
+        "Leader not found within {TEST_TIMEOUT}seconds"
+    )))
 }
 
 pub async fn create_cluster_with_max_log_entries(

@@ -1,23 +1,19 @@
 use crate::CIError;
 use crate::utilities;
-use agplatform::Fs;
 use agplatform::Platform;
 use agsource::Cfg;
 use agsource::CfgSet;
-use agsource::Export;
 use agsource::Package;
 use agsource::SourceCrate;
 use agsource::TargetKind;
+use agsource::codegen::compare::compare;
 use std::path::Path;
 use std::process::Command;
 
-/// The copy of the repository, and the target directory of its build (kept between the runs).
-const DIR: &str = "target/agci/roundtrip";
-
-/// The Rust round trip of the agsource IR: in a copy of the repository, the items that the exports
-/// of the libraries of the packages reach are replaced by the Rust printed from their IR, then the
-/// tests of the packages run there (`cargo test --all-features`). Fails if an item has a construct
-/// the IR does not have.
+/// The Rust round trip of the agsource IR: every item of the packages' libraries and integration
+/// tests, the unit tests included, printed from its IR is the item as written (see
+/// `agsource::codegen::compare`). Fails if an item has a construct the IR does not have or prints
+/// differently.
 pub(crate) fn roundtrip(
     platform: &impl Platform,
     root: &str,
@@ -27,67 +23,28 @@ pub(crate) fn roundtrip(
         return Err("roundtrip: no packages given".into());
     }
 
-    let dir = Path::new(root).join(DIR);
-    let src = dir.join("src");
-    copy(platform, root, &src)?;
     let cfg = host_cfg(platform)?;
-    let all = agsource::packages(platform, &src.join("Cargo.toml"))?;
+    let all = agsource::packages(platform, &Path::new(root).join("Cargo.toml"))?;
+    let mut failures = Vec::new();
 
     for name in packages {
         let package = all
             .iter()
             .find(|p| &p.name == name)
             .ok_or_else(|| format!("roundtrip: unknown package '{name}'"))?;
-        rewrite(platform, package, &cfg)?;
+        failures.extend(check(platform, package, &cfg));
     }
 
-    let mut cargo = Command::new("cargo");
-    cargo.arg("test");
-
-    for name in packages {
-        cargo.args(["-p", name]);
+    if failures.is_empty() {
+        return Ok(());
     }
 
-    cargo
-        .arg("--all-features")
-        .current_dir(&src)
-        .env("CARGO_TARGET_DIR", dir.join("target"));
-    utilities::stream_command(platform, &cargo, &mut std::io::stdout())
-}
-
-/// The files git does not ignore, the uncommitted ones included, into the empty `to`.
-fn copy(platform: &impl Platform, root: &str, to: &Path) -> Result<(), CIError> {
-    let fs = platform.fs();
-
-    if fs.exists(to)? {
-        fs.remove_dir_all(to)?;
-    }
-
-    let files = utilities::run_quiet(
-        platform,
-        Command::new("git")
-            .args([
-                "ls-files",
-                "-z",
-                "--cached",
-                "--others",
-                "--exclude-standard",
-            ])
-            .current_dir(root),
-    )?;
-
-    for file in files.split('\0').filter(|f| !f.is_empty()) {
-        let from = Path::new(root).join(file);
-
-        // WHY: a file deleted in the worktree is still in the index.
-        if fs.exists(&from)? {
-            let to = to.join(file);
-            fs.create_dir_all(to.parent().unwrap_or(&to))?;
-            fs.copy(&from, &to)?;
-        }
-    }
-
-    Ok(())
+    Err(format!(
+        "roundtrip: {} items differ or have constructs the IR does not have:\n{}",
+        failures.len(),
+        failures.join("\n")
+    )
+    .into())
 }
 
 /// The cfg of `cargo test` on this host: `rustc --print cfg` with `test` and `debug_assertions`.
@@ -120,50 +77,42 @@ fn parse_cfg(output: &str) -> Vec<(&str, Option<&str>)> {
         .collect()
 }
 
-/// Replaces the reached items of the package's library in its files.
-fn rewrite(platform: &impl Platform, package: &Package, cfg: &CfgSet) -> Result<(), CIError> {
-    let lib = package
-        .targets
-        .iter()
-        .find(|t| t.kind == TargetKind::Lib)
-        .ok_or_else(|| format!("roundtrip: {} has no library", package.name))?;
+/// The failures of the items of the package's library and integration tests.
+fn check(platform: &impl Platform, package: &Package, cfg: &CfgSet) -> Vec<String> {
     let cfg = package
         .features
         .iter()
         .fold(cfg.clone(), |cfg, feature| cfg.feature(feature));
-    let c = SourceCrate::load(platform, lib, &Cfg::Eval(cfg));
+    let mut failures = Vec::new();
 
-    // WHY: the build tells whether these matter, e.g. imports of names a derive generates.
-    for e in c.errors() {
-        println!("[roundtrip] {}: {e}", package.name);
+    for target in package
+        .targets
+        .iter()
+        .filter(|t| matches!(t.kind, TargetKind::Lib | TargetKind::Test))
+    {
+        let c = SourceCrate::load(platform, target, &Cfg::Eval(cfg.clone()));
+        let name = format!("{} {}", package.name, target.root.display());
+
+        // WHY: these do not fail the check, e.g. imports of names a derive generates.
+        for e in c.errors() {
+            println!("[roundtrip] {name}: {e}");
+        }
+
+        let (items, unsupported) = c.ir(c.item_ids());
+        let differ: Vec<_> = items
+            .iter()
+            .filter_map(|(id, item)| compare(&c, *id, item).err())
+            .collect();
+        println!(
+            "[roundtrip] {name}: {} items equal, {} differ, {} unsupported constructs",
+            items.len() - differ.len(),
+            differ.len(),
+            unsupported.len()
+        );
+        failures.extend(unsupported.iter().chain(&differ).map(ToString::to_string));
     }
 
-    let exports = c.exports();
-    let roots: Vec<&Export> = exports.iter().collect();
-    let reachable = c.reachable(&roots, &[]);
-    let (items, errors) = c.ir(reachable.items.iter().copied());
-
-    if !errors.is_empty() {
-        let errors: Vec<String> = errors.iter().map(ToString::to_string).collect();
-        return Err(format!(
-            "roundtrip: {} has constructs the IR does not have:\n{}",
-            package.name,
-            errors.join("\n")
-        )
-        .into());
-    }
-
-    for (path, text) in agsource::codegen::rust::rewrite(&c, &items) {
-        platform.fs().write(path, text)?;
-    }
-
-    println!(
-        "[roundtrip] {}: {} of {} reached items rewritten",
-        package.name,
-        items.len(),
-        reachable.items.len()
-    );
-    Ok(())
+    failures
 }
 
 #[cfg(test)]

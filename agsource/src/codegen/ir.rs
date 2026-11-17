@@ -1,13 +1,10 @@
-//! The declarations of a crate as written: items, their attributes,
-//! visibility, generics and types, every path with what it names. Bodies
-//! and expressions are their source text.
+//! The items of a crate as written: their attributes, visibility, generics,
+//! types and bodies, every path with what it names.
 
-use crate::ItemId;
 use crate::Resolved;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Item {
-    pub id: ItemId,
     pub attrs: Vec<Attr>,
     pub vis: Vis,
     pub kind: ItemKind,
@@ -23,6 +20,8 @@ pub enum ItemKind {
     Const(Const),
     Static(Static),
     TypeAlias(TypeAlias),
+    Use(Use),
+    ExternCrate(ExternCrate),
 }
 
 /// An outer attribute after `cfg_attr`s are applied.
@@ -86,11 +85,13 @@ pub enum Type {
     },
     Tuple(Vec<Type>),
     Slice(Box<Type>),
-    Array(Box<Type>, Expr),
+    Array(Box<Type>, Box<Expr>),
     ImplTrait(Vec<Bound>),
     DynTrait(Vec<Bound>),
     Paren(Box<Type>),
     FnPtr(FnTypes),
+    /// `_`.
+    Infer,
 }
 
 /// `<ty as Trait>::rest` or `<ty>::rest`.
@@ -126,6 +127,7 @@ pub struct Segment {
 #[derive(Debug, Clone, PartialEq)]
 pub enum Args {
     None,
+    /// `<A, B>`, `::<A, B>` in expressions and patterns.
     Angle(Vec<GenericArg>),
     /// `Fn(A) -> B`.
     Fn(FnTypes),
@@ -145,18 +147,43 @@ pub enum Target {
     /// A generic parameter in scope.
     Generic,
     SelfType,
+    /// A binding in scope: a parameter, `self` or a binding of a pattern.
+    Local,
+    /// An item of an enclosing block.
+    LocalItem,
     Resolved(Resolved),
 }
 
+/// `use tree;`, `use ::tree;`.
 #[derive(Debug, Clone, PartialEq)]
-pub enum Expr {
-    Verbatim(String),
+pub struct Use {
+    pub leading_colon: bool,
+    pub tree: UseTree,
 }
 
-/// A function body, braces included.
 #[derive(Debug, Clone, PartialEq)]
-pub enum Block {
-    Verbatim(String),
+pub enum UseTree {
+    /// `name::tree`.
+    Path { name: String, tree: Box<UseTree> },
+    /// `name`, `name as rename` (`self` for the path before it), with what
+    /// it names in the first of the type, value and macro namespaces it
+    /// names something in.
+    Name {
+        name: String,
+        rename: Option<String>,
+        target: Target,
+    },
+    /// `*`, with what the path before it names.
+    Glob(Target),
+    /// `{a, b::c}`.
+    Group(Vec<UseTree>),
+}
+
+/// `extern crate name;`, `extern crate name as rename;`.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ExternCrate {
+    pub name: String,
+    pub rename: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -271,6 +298,8 @@ pub enum Receiver {
         lifetime: Option<String>,
         mutable: bool,
     },
+    /// `self: Box<Self>`, `mut self: Rc<Self>`, ...
+    Typed { mutable: bool, ty: Box<Type> },
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -299,4 +328,391 @@ pub struct TypeAlias {
     pub name: String,
     pub generics: Generics,
     pub ty: Type,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Block {
+    pub stmts: Vec<Stmt>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum Stmt {
+    Let {
+        attrs: Vec<Attr>,
+        pat: Pat,
+        init: Option<Expr>,
+        /// The block of `let pat = init else { .. };`.
+        diverge: Option<Expr>,
+    },
+    Item(Item),
+    /// An expression with `;`, or without: the value of the block when it
+    /// is the last statement.
+    Expr {
+        attrs: Vec<Attr>,
+        expr: Expr,
+        semi: bool,
+    },
+}
+
+/// An expression with its parentheses as written.
+#[derive(Debug, Clone, PartialEq)]
+pub enum Expr {
+    Array(Vec<Expr>),
+    Assign {
+        left: Box<Expr>,
+        right: Box<Expr>,
+    },
+    /// `async {}`, `async move {}`.
+    Async {
+        capture: bool,
+        block: Block,
+    },
+    Await(Box<Expr>),
+    /// `#[attr] expr`, an expression with attributes.
+    Attributed {
+        attrs: Vec<Attr>,
+        expr: Box<Expr>,
+    },
+    Binary {
+        left: Box<Expr>,
+        op: BinOp,
+        right: Box<Expr>,
+    },
+    Block(Block),
+    Break,
+    Call {
+        func: Box<Expr>,
+        args: Vec<Expr>,
+    },
+    Cast {
+        expr: Box<Expr>,
+        ty: Box<Type>,
+    },
+    Closure(Box<Closure>),
+    /// `const { .. }`.
+    Const(Block),
+    Continue,
+    Field {
+        expr: Box<Expr>,
+        member: Member,
+    },
+    ForLoop {
+        pat: Box<Pat>,
+        expr: Box<Expr>,
+        body: Block,
+    },
+    If {
+        cond: Box<Expr>,
+        then_branch: Block,
+        /// A block or another `if`.
+        else_branch: Option<Box<Expr>>,
+    },
+    Index {
+        expr: Box<Expr>,
+        index: Box<Expr>,
+    },
+    /// `let pat = expr` in a condition.
+    Let {
+        pat: Box<Pat>,
+        expr: Box<Expr>,
+    },
+    Lit(Lit),
+    Loop(Block),
+    Macro(Box<Macro>),
+    Match {
+        expr: Box<Expr>,
+        arms: Vec<Arm>,
+    },
+    MethodCall {
+        receiver: Box<Expr>,
+        method: String,
+        turbofish: Vec<GenericArg>,
+        args: Vec<Expr>,
+    },
+    Paren(Box<Expr>),
+    Path(Path),
+    Qualified(Box<Qualified>),
+    Range {
+        start: Option<Box<Expr>>,
+        /// `..=`.
+        closed: bool,
+        end: Option<Box<Expr>>,
+    },
+    Reference {
+        mutable: bool,
+        expr: Box<Expr>,
+    },
+    /// `[expr; len]`.
+    Repeat {
+        expr: Box<Expr>,
+        len: Box<Expr>,
+    },
+    Return(Option<Box<Expr>>),
+    Struct {
+        path: Path,
+        fields: Vec<FieldValue>,
+    },
+    /// `expr?`.
+    Try(Box<Expr>),
+    Tuple(Vec<Expr>),
+    Unary {
+        op: UnOp,
+        expr: Box<Expr>,
+    },
+    While {
+        cond: Box<Expr>,
+        body: Block,
+    },
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BinOp {
+    Add,
+    Sub,
+    Mul,
+    Div,
+    Rem,
+    And,
+    Or,
+    BitXor,
+    BitAnd,
+    BitOr,
+    Shl,
+    Shr,
+    Eq,
+    Lt,
+    Le,
+    Ne,
+    Ge,
+    Gt,
+    AddAssign,
+    SubAssign,
+    MulAssign,
+    DivAssign,
+    RemAssign,
+    BitXorAssign,
+    BitAndAssign,
+    BitOrAssign,
+    ShlAssign,
+    ShrAssign,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum UnOp {
+    Deref,
+    Not,
+    Neg,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum Lit {
+    Str(String),
+    Char(char),
+    /// The digits in base 10.
+    Int {
+        digits: String,
+        suffix: String,
+    },
+    Float {
+        digits: String,
+        suffix: String,
+    },
+    Bool(bool),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum Member {
+    Named(String),
+    Index(u32),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct FieldValue {
+    pub member: Member,
+    pub expr: Expr,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Closure {
+    /// `move`.
+    pub capture: bool,
+    pub inputs: Vec<Pat>,
+    pub output: Option<Type>,
+    pub body: Expr,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Arm {
+    pub attrs: Vec<Attr>,
+    pub pat: Pat,
+    pub guard: Option<Expr>,
+    pub body: Expr,
+}
+
+/// A macro call by what the macro does with its arguments, see
+/// [`crate::MacroCall`].
+#[derive(Debug, Clone, PartialEq)]
+pub struct Macro {
+    pub path: Path,
+    pub call: MacroCall,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum MacroCall {
+    Format {
+        exprs: Vec<Expr>,
+        format: Option<FormatArgs>,
+    },
+    Vec(Vec<Expr>),
+    VecRepeat(Box<Expr>, Box<Expr>),
+    Matches {
+        expr: Box<Expr>,
+        pat: Box<Pat>,
+        guard: Option<Box<Expr>>,
+    },
+    /// The statics of `thread_local!`.
+    ThreadLocal(Vec<Item>),
+    /// `file!()`, `line!()`, `column!()`, `module_path!()`.
+    NoArgs,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct FormatArgs {
+    pub string: String,
+    pub args: Vec<FormatArg>,
+    /// The names the string uses that no argument gives.
+    pub captures: Vec<Path>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct FormatArg {
+    pub name: Option<String>,
+    pub expr: Expr,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum Pat {
+    /// `name`, `ref mut name @ subpat`, ...: an identifier that names no
+    /// constant, unit struct or unit variant.
+    Binding {
+        by_ref: bool,
+        mutable: bool,
+        name: String,
+        subpat: Option<Box<Pat>>,
+    },
+    Lit(Lit),
+    Or(Vec<Pat>),
+    Paren(Box<Pat>),
+    Path(Path),
+    /// `a..=b`, `a..`, `..=b`: the bounds are literals or paths.
+    Range {
+        start: Option<Box<Expr>>,
+        closed: bool,
+        end: Option<Box<Expr>>,
+    },
+    Ref {
+        mutable: bool,
+        pat: Box<Pat>,
+    },
+    Struct {
+        path: Path,
+        fields: Vec<FieldPat>,
+        /// `..`.
+        rest: bool,
+    },
+    Tuple(Vec<Pat>),
+    TupleStruct {
+        path: Path,
+        elems: Vec<Pat>,
+    },
+    /// `pat: ty` of a `let` or a closure parameter.
+    Type {
+        pat: Box<Pat>,
+        ty: Type,
+    },
+    Wild,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct FieldPat {
+    pub member: Member,
+    pub pat: Pat,
+}
+
+impl BinOp {
+    pub const ALL: [BinOp; 28] = [
+        BinOp::Add,
+        BinOp::Sub,
+        BinOp::Mul,
+        BinOp::Div,
+        BinOp::Rem,
+        BinOp::And,
+        BinOp::Or,
+        BinOp::BitXor,
+        BinOp::BitAnd,
+        BinOp::BitOr,
+        BinOp::Shl,
+        BinOp::Shr,
+        BinOp::Eq,
+        BinOp::Lt,
+        BinOp::Le,
+        BinOp::Ne,
+        BinOp::Ge,
+        BinOp::Gt,
+        BinOp::AddAssign,
+        BinOp::SubAssign,
+        BinOp::MulAssign,
+        BinOp::DivAssign,
+        BinOp::RemAssign,
+        BinOp::BitXorAssign,
+        BinOp::BitAndAssign,
+        BinOp::BitOrAssign,
+        BinOp::ShlAssign,
+        BinOp::ShrAssign,
+    ];
+
+    pub fn token(self) -> &'static str {
+        match self {
+            BinOp::Add => "+",
+            BinOp::Sub => "-",
+            BinOp::Mul => "*",
+            BinOp::Div => "/",
+            BinOp::Rem => "%",
+            BinOp::And => "&&",
+            BinOp::Or => "||",
+            BinOp::BitXor => "^",
+            BinOp::BitAnd => "&",
+            BinOp::BitOr => "|",
+            BinOp::Shl => "<<",
+            BinOp::Shr => ">>",
+            BinOp::Eq => "==",
+            BinOp::Lt => "<",
+            BinOp::Le => "<=",
+            BinOp::Ne => "!=",
+            BinOp::Ge => ">=",
+            BinOp::Gt => ">",
+            BinOp::AddAssign => "+=",
+            BinOp::SubAssign => "-=",
+            BinOp::MulAssign => "*=",
+            BinOp::DivAssign => "/=",
+            BinOp::RemAssign => "%=",
+            BinOp::BitXorAssign => "^=",
+            BinOp::BitAndAssign => "&=",
+            BinOp::BitOrAssign => "|=",
+            BinOp::ShlAssign => "<<=",
+            BinOp::ShrAssign => ">>=",
+        }
+    }
+}
+
+impl UnOp {
+    pub const ALL: [UnOp; 3] = [UnOp::Deref, UnOp::Not, UnOp::Neg];
+
+    pub fn token(self) -> &'static str {
+        match self {
+            UnOp::Deref => "*",
+            UnOp::Not => "!",
+            UnOp::Neg => "-",
+        }
+    }
 }

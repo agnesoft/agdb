@@ -14,7 +14,6 @@ use crate::config_impl::DEFAULT_REQUEST_BODY_LIMIT;
 use crate::config_impl::DEFAULT_TOKEN_EXPIRY_SECONDS;
 use crate::config_impl::config_to_str;
 use crate::test_server::test_error::TestError;
-use crate::test_server::test_error::bail;
 use agdb::SyncMode;
 #[cfg(feature = "api")]
 use agdb::type_def::TypeDefinition;
@@ -161,7 +160,7 @@ pub async fn wait_for_ready(api: &AgdbApi<ReqwestClient>) -> Result<(), TestErro
         std::thread::sleep(RETRY_TIMEOUT);
     }
 
-    bail!("Server not ready")
+    Err(TestError::new("Server not ready"))
 }
 
 #[cfg(feature = "api")]
@@ -302,7 +301,9 @@ impl TestServerImpl {
             status = code.to_string()
         }
 
-        bail!("Failed to start server '{api_address}' ({status})")
+        Err(TestError::new(format!(
+            "Failed to start server '{api_address}' ({status})"
+        )))
     }
 
     pub async fn new() -> Result<Self, TestError> {
@@ -411,7 +412,7 @@ impl TestServerImpl {
             std::thread::sleep(SHUTDOWN_RETRY_TIMEOUT);
         }
 
-        bail!("Failed to shutdown server")
+        Err(TestError::new("Failed to shutdown server"))
     }
 
     fn remove_dir_if_exists(dir: &str) -> Result<(), TestError> {

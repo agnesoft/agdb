@@ -44,6 +44,20 @@ A `macro_rules!` is in textual scope, in its module and the modules within, and 
 Names only the caller can know are not resolved: `Self`, generic parameters, and the items and
 imports declared inside function bodies.
 
+`SourceCrate::exports` lists the public names of the crate: the paths from its root through `pub`
+modules and re-exports, `pub` globs included. `SourceCrate::reachable` collects what some of them
+lead to, through the paths in the items:
+
+- field, variant and signature types, bounds and the paths in bodies (`Self`, generic parameters
+  and the bindings of the item are skipped);
+- the impls of the types reached: inherent ones and those of traits that are reached, exported or
+  of other crates;
+- for a module root, its `pub` functions and those of its `pub` submodules.
+
+The caller can name opaque items, which are reached but not followed: the impls of an opaque trait
+are skipped too. Paths into other crates are listed, to continue in their exports, and so are the
+paths that name nothing. Macro bodies and arguments are not followed.
+
 A problem with one file does not stop loading. These are all collected as `Error`s with their
 location:
 

@@ -15,7 +15,7 @@ agplatform = { workspace = true, features = ["fs", "process"] }
 proc-macro2 = { workspace = true, default-features = false, features = [
     "span-locations",
 ] }
-syn = { workspace = true, features = ["full", "visit-mut"] }
+syn = { workspace = true, features = ["full", "visit", "visit-mut"] }
 serde = { workspace = true, features = ["derive"] }
 serde_json.workspace = true
 

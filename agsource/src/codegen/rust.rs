@@ -20,6 +20,7 @@ use super::ir::Item;
 use super::ir::ItemKind;
 use super::ir::Path;
 use super::ir::Receiver;
+use super::ir::Segment;
 use super::ir::Signature;
 use super::ir::TraitItem;
 use super::ir::TraitItemKind;
@@ -322,6 +323,14 @@ fn bounds(bounds: &[Bound]) -> String {
 fn ty(t: &Type) -> String {
     match t {
         Type::Path(p) => path(p),
+        Type::Qualified(q) => format!(
+            "<{}{}>::{}",
+            ty(&q.ty),
+            q.trait_
+                .as_ref()
+                .map_or(String::new(), |t| format!(" as {}", path(t))),
+            q.rest.iter().map(segment).collect::<Vec<_>>().join("::")
+        ),
         Type::Ref {
             lifetime,
             mutable,
@@ -354,31 +363,31 @@ fn fn_types(f: &FnTypes) -> String {
 }
 
 fn path(p: &Path) -> String {
-    let segments: Vec<String> = p
-        .segments
-        .iter()
-        .map(|segment| match &segment.args {
-            Args::None => segment.name.clone(),
-            Args::Angle(args) => {
-                let args: Vec<String> = args
-                    .iter()
-                    .map(|arg| match arg {
-                        GenericArg::Type(t) => ty(t),
-                        GenericArg::Lifetime(l) => l.clone(),
-                        GenericArg::Const(e) => expr(e).to_string(),
-                        GenericArg::AssocType { name, ty: t } => format!("{name} = {}", ty(t)),
-                    })
-                    .collect();
-                format!("{}<{}>", segment.name, args.join(", "))
-            }
-            Args::Fn(f) => format!("{}{}", segment.name, fn_types(f)),
-        })
-        .collect();
+    let segments: Vec<String> = p.segments.iter().map(segment).collect();
     format!(
         "{}{}",
         if p.leading_colon { "::" } else { "" },
         segments.join("::")
     )
+}
+
+fn segment(segment: &Segment) -> String {
+    match &segment.args {
+        Args::None => segment.name.clone(),
+        Args::Angle(args) => {
+            let args: Vec<String> = args
+                .iter()
+                .map(|arg| match arg {
+                    GenericArg::Type(t) => ty(t),
+                    GenericArg::Lifetime(l) => l.clone(),
+                    GenericArg::Const(e) => expr(e).to_string(),
+                    GenericArg::AssocType { name, ty: t } => format!("{name} = {}", ty(t)),
+                })
+                .collect();
+            format!("{}<{}>", segment.name, args.join(", "))
+        }
+        Args::Fn(f) => format!("{}{}", segment.name, fn_types(f)),
+    }
 }
 
 fn expr(e: &Expr) -> &str {
@@ -546,6 +555,8 @@ impl S {}
 pub const C: [u8; 2] = [1, 2];
 static S: &'static str = \"s\";
 pub type Alias<T> = Result<T, Error<'static, 3, { 1 + 1 }, Item = u8>>;
+type Handle<P> = <<P as Platform>::Fs as Fs>::WriteHandle;
+type Output<T> = <T>::Output<u8>;
 ";
 
             assert_eq!(print(source), source);

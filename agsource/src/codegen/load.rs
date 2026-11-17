@@ -20,6 +20,7 @@ use super::ir::ItemKind;
 use super::ir::Param;
 use super::ir::Path;
 use super::ir::Predicate;
+use super::ir::Qualified;
 use super::ir::Receiver;
 use super::ir::Segment;
 use super::ir::Signature;
@@ -477,9 +478,10 @@ impl Load<'_> {
 
     fn ty(&mut self, ty: &syn::Type) -> Type {
         match ty {
-            syn::Type::Path(p) if p.attrs.is_empty() && p.qself.is_none() => {
-                Type::Path(self.path(&p.path))
-            }
+            syn::Type::Path(p) if p.attrs.is_empty() => match &p.qself {
+                None => Type::Path(self.path(&p.path)),
+                Some(qself) => self.qualified(qself, &p.path),
+            },
             syn::Type::Reference(r) if r.attrs.is_empty() => Type::Ref {
                 lifetime: r.lifetime.as_ref().map(ToString::to_string),
                 mutable: r.mutability.is_some(),
@@ -513,6 +515,28 @@ impl Load<'_> {
                 Type::Tuple(Vec::new())
             }
         }
+    }
+
+    /// The first `position` segments of the path are the trait.
+    fn qualified(&mut self, qself: &syn::QSelf, path: &syn::Path) -> Type {
+        let ty = self.ty(&qself.ty);
+        let trait_ = (qself.position > 0).then(|| {
+            self.path(&syn::Path {
+                leading_colon: path.leading_colon,
+                segments: path.segments.iter().take(qself.position).cloned().collect(),
+            })
+        });
+
+        Type::Qualified(Box::new(Qualified {
+            ty,
+            trait_,
+            rest: path
+                .segments
+                .iter()
+                .skip(qself.position)
+                .map(|s| self.segment(s))
+                .collect(),
+        }))
     }
 
     fn fn_types(

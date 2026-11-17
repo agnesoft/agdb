@@ -7,6 +7,7 @@ publish = false
 [dependencies]
 agdb.workspace = true
 agplatform = { workspace = true, features = ["fs", "process", "request", "tls"] }
+agsource = { workspace = true, features = ["codegen"] }
 serde = { workspace = true, features = ["derive"] }
 serde_json.workspace = true
 toml.workspace = true

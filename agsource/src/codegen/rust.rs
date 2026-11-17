@@ -26,8 +26,43 @@ use super::ir::TraitItemKind;
 use super::ir::Type;
 use super::ir::Variant;
 use super::ir::Vis;
+use crate::SourceCrate;
+use std::cmp::Reverse;
+use std::collections::BTreeMap;
+use std::path::PathBuf;
+use syn::spanned::Spanned;
 
 const INDENT: &str = "    ";
+
+/// The files of the items, items of `c`, with each item replaced at its span
+/// by the item printed; the rest of the files stays as it is.
+pub fn rewrite(c: &SourceCrate, items: &[Item]) -> BTreeMap<PathBuf, String> {
+    let mut edits = BTreeMap::<_, Vec<_>>::new();
+
+    for i in items {
+        let mut text = item(i);
+        text.pop();
+        edits
+            .entry(c.module(i.id.module()).file())
+            .or_default()
+            .push((c.item(i.id).span().byte_range(), text));
+    }
+
+    edits
+        .into_iter()
+        .map(|(file, mut edits)| {
+            let file = c.file(file);
+            let mut text = file.text().to_string();
+            edits.sort_by_key(|(range, _)| Reverse(range.start));
+
+            for (range, item) in edits {
+                text.replace_range(range, &item);
+            }
+
+            (file.path().to_path_buf(), text)
+        })
+        .collect()
+}
 
 /// The item ending with a newline.
 pub fn item(item: &Item) -> String {
@@ -360,6 +395,7 @@ fn block(b: &Block) -> &str {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use crate::Cfg;
     use crate::ItemId;
     use crate::SourceCrate;
@@ -369,23 +405,67 @@ mod tests {
     use agplatform::Platform;
     use agplatform::test_platform::test_platform;
 
-    /// The root items of the crate printed from the IR.
-    fn print(source: &str) -> String {
+    fn load(source: &str) -> SourceCrate {
         let platform = test_platform();
         platform.fs().create_dir_all("/c/src").unwrap();
         platform.fs().write("/c/src/lib.rs", source).unwrap();
-        let c = SourceCrate::load(
+        SourceCrate::load(
             &platform,
             &Target::new(TargetKind::Lib, "/c/src/lib.rs"),
             &Cfg::All,
-        );
-        let ids = (0..c.items(c.root()).len()).map(|index| ItemId {
+        )
+    }
+
+    fn ir(c: &SourceCrate, indices: &[usize]) -> Vec<Item> {
+        let ids = indices.iter().map(|&index| ItemId {
             module: c.root(),
             index,
         });
         let (items, errors) = c.ir(ids);
         assert!(errors.is_empty(), "{errors:?}");
-        items.iter().map(super::item).collect()
+        items
+    }
+
+    /// The root items of the crate printed from the IR.
+    fn print(source: &str) -> String {
+        let c = load(source);
+        let indices: Vec<usize> = (0..c.items(c.root()).len()).collect();
+        ir(&c, &indices).iter().map(super::item).collect()
+    }
+
+    mod rewrite {
+        use super::*;
+
+        #[test]
+        fn rewrite_should_replace_the_items_and_keep_the_rest() {
+            let c = load(
+                "pub struct A;
+
+fn keep() {}
+#[derive(Debug)]
+pub struct B { a: u8 }
+",
+            );
+            let items = ir(&c, &[0, 2]);
+
+            let files = super::super::rewrite(&c, &items);
+
+            assert_eq!(
+                files,
+                BTreeMap::from([(
+                    PathBuf::from("/c/src/lib.rs"),
+                    "pub struct A;
+
+fn keep() {}
+#[derive(Debug)]
+pub struct B {
+    a: u8,
+}
+"
+                    .to_string()
+                )])
+            );
+        }
     }
 
     mod item {

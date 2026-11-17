@@ -151,6 +151,13 @@ impl Platform for PlatformImpl {
     }
 }
 
+/// The production platform, see [`platform()`](crate::platform).
+impl Default for PlatformImpl {
+    fn default() -> Self {
+        crate::platform()
+    }
+}
+
 /// The platform shared by the [`Arc`].
 impl<P: Platform> Platform for Arc<P> {
     type Env = P::Env;

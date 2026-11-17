@@ -1,24 +1,46 @@
 use super::StorageData;
 use super::StorageSlice;
-use super::file_storage::FileStorage;
-use super::memory_storage::MemoryStorage;
+use super::file_storage::FileStorageImpl;
+use super::memory_storage::MemoryStorageImpl;
 use crate::DbError;
+use agplatform::Platform;
+use agplatform::PlatformImpl;
+use std::sync::Arc;
 
 /// The default implementation of the database storage implementing
-/// [`StorageData`]. It combines the [`FileStorage`] and [`MemoryStorage`]
+/// [`StorageData`]. It combines the [`FileStorageImpl`] and [`MemoryStorageImpl`]
 /// leveraging the former for the persistence and the latter for performance.
-/// The read operations are implemented in terms of the [`MemoryStorage`] only
-/// and the write operations are implemented in terms of both [`FileStorage`]
-/// and [`MemoryStorage`].
+/// The read operations are implemented in terms of the [`MemoryStorageImpl`] only
+/// and the write operations are implemented in terms of both [`FileStorageImpl`]
+/// and [`MemoryStorageImpl`].
 ///
 /// The file based storage is using write ahead logging (WAL) and single underlying
-/// file. See [`FileStorage`] for more details on the persistent storage.
-pub struct FileStorageMemoryMapped {
-    file: FileStorage,
-    memory: MemoryStorage,
+/// file. See [`FileStorageImpl`] for more details on the persistent storage.
+/// The files are accessed through the platform `P`, see
+/// [`FileStorageMemoryMapped`] for the production one.
+pub struct FileStorageMemoryMappedImpl<P: Platform> {
+    file: FileStorageImpl<P>,
+    memory: MemoryStorageImpl<P>,
 }
 
-impl StorageData for FileStorageMemoryMapped {
+/// The [`FileStorageMemoryMappedImpl`] on the production [`PlatformImpl`].
+pub type FileStorageMemoryMapped = FileStorageMemoryMappedImpl<PlatformImpl>;
+
+impl<P: Platform> FileStorageMemoryMappedImpl<P> {
+    /// Constructs or loads the storage `name` in the file system of the
+    /// `platform`, see [`StorageData::new()`].
+    pub fn with_platform(platform: Arc<P>, name: &str) -> Result<Self, DbError> {
+        let file = FileStorageImpl::with_platform(platform.clone(), name)?;
+        let buffer = file.read_all()?;
+
+        Ok(Self {
+            file,
+            memory: MemoryStorageImpl::from_buffer_with_platform(platform, name, buffer),
+        })
+    }
+}
+
+impl<P: Platform + Default> StorageData for FileStorageMemoryMappedImpl<P> {
     fn backup(&self, name: &str) -> Result<(), DbError> {
         self.file.backup(name)
     }
@@ -55,13 +77,7 @@ impl StorageData for FileStorageMemoryMapped {
     }
 
     fn new(name: &str) -> Result<Self, DbError> {
-        let file = FileStorage::new(name)?;
-        let buffer = file.read(0, file.len())?.to_vec();
-
-        Ok(Self {
-            file,
-            memory: MemoryStorage::from_buffer(name, buffer),
-        })
+        Self::with_platform(Arc::new(P::default()), name)
     }
 
     fn read(&'_ self, pos: u64, value_len: u64) -> Result<StorageSlice<'_>, DbError> {
@@ -85,8 +101,12 @@ impl StorageData for FileStorageMemoryMapped {
 
     fn recover_from_wal(&mut self) -> Result<(), DbError> {
         self.file.recover_from_wal()?;
-        let buffer = self.file.read(0, self.file.len())?.to_vec();
-        self.memory = MemoryStorage::from_buffer(self.file.name(), buffer);
+        let buffer = self.file.read_all()?;
+        self.memory = MemoryStorageImpl::from_buffer_with_platform(
+            self.file.platform().clone(),
+            self.file.name(),
+            buffer,
+        );
         Ok(())
     }
 }
@@ -827,7 +847,7 @@ mod tests {
             index3 = storage.insert(&value3).unwrap();
         }
 
-        let mut wal = WriteAheadLog::new(test_file.file_name()).unwrap();
+        let mut wal = WriteAheadLog::new(&agplatform::platform(), test_file.file_name()).unwrap();
         wal.insert(u64::serialized_size_static() * 5, &2_u64.serialize())
             .unwrap();
 

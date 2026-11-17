@@ -1,134 +1,140 @@
 use crate::DbError;
-use crate::FileStorage;
-use crate::FileStorageMemoryMapped;
-use crate::MemoryStorage;
+use crate::FileStorageImpl;
+use crate::FileStorageMemoryMappedImpl;
+use crate::MemoryStorageImpl;
 use crate::StorageData;
 use crate::StorageSlice;
+use agplatform::Platform;
+use agplatform::PlatformImpl;
 
 /// The enum that can hold any of the other storage types
 /// and that implements the `StorageData` trait by delegating
 /// to the inner storage type. When constructed with `AnyStorage::new()`
-/// it will be the memory mapped variant.
-pub enum AnyStorage {
-    MemoryMapped(FileStorageMemoryMapped),
-    Memory(MemoryStorage),
-    File(FileStorage),
+/// it will be the memory mapped variant. The storages use the platform
+/// `P`, see [`AnyStorage`] for the production one.
+pub enum AnyStorageImpl<P: Platform> {
+    MemoryMapped(FileStorageMemoryMappedImpl<P>),
+    Memory(MemoryStorageImpl<P>),
+    File(FileStorageImpl<P>),
 }
 
-impl StorageData for AnyStorage {
+/// The [`AnyStorageImpl`] on the production [`PlatformImpl`].
+pub type AnyStorage = AnyStorageImpl<PlatformImpl>;
+
+impl<P: Platform + Default> StorageData for AnyStorageImpl<P> {
     fn backup(&self, name: &str) -> Result<(), DbError> {
         match self {
-            AnyStorage::MemoryMapped(s) => s.backup(name),
-            AnyStorage::Memory(s) => s.backup(name),
-            AnyStorage::File(s) => s.backup(name),
+            Self::MemoryMapped(s) => s.backup(name),
+            Self::Memory(s) => s.backup(name),
+            Self::File(s) => s.backup(name),
         }
     }
 
     fn copy(&self, name: &str) -> Result<Self, DbError> {
         Ok(match self {
-            AnyStorage::MemoryMapped(s) => AnyStorage::MemoryMapped(s.copy(name)?),
-            AnyStorage::Memory(s) => AnyStorage::Memory(s.copy(name)?),
-            AnyStorage::File(s) => AnyStorage::File(s.copy(name)?),
+            Self::MemoryMapped(s) => Self::MemoryMapped(s.copy(name)?),
+            Self::Memory(s) => Self::Memory(s.copy(name)?),
+            Self::File(s) => Self::File(s.copy(name)?),
         })
     }
 
     fn flush(&mut self) -> Result<(), DbError> {
         match self {
-            AnyStorage::MemoryMapped(s) => s.flush(),
-            AnyStorage::Memory(s) => s.flush(),
-            AnyStorage::File(s) => s.flush(),
+            Self::MemoryMapped(s) => s.flush(),
+            Self::Memory(s) => s.flush(),
+            Self::File(s) => s.flush(),
         }
     }
 
     fn set_sync_mode(&mut self, mode: super::SyncMode) {
         match self {
-            AnyStorage::MemoryMapped(s) => s.set_sync_mode(mode),
-            AnyStorage::Memory(s) => s.set_sync_mode(mode),
-            AnyStorage::File(s) => s.set_sync_mode(mode),
+            Self::MemoryMapped(s) => s.set_sync_mode(mode),
+            Self::Memory(s) => s.set_sync_mode(mode),
+            Self::File(s) => s.set_sync_mode(mode),
         }
     }
 
     fn sync_mode(&self) -> super::SyncMode {
         match self {
-            AnyStorage::MemoryMapped(s) => s.sync_mode(),
-            AnyStorage::Memory(s) => s.sync_mode(),
-            AnyStorage::File(s) => s.sync_mode(),
+            Self::MemoryMapped(s) => s.sync_mode(),
+            Self::Memory(s) => s.sync_mode(),
+            Self::File(s) => s.sync_mode(),
         }
     }
 
     fn sync(&mut self) -> Result<(), DbError> {
         match self {
-            AnyStorage::MemoryMapped(s) => s.sync(),
-            AnyStorage::Memory(s) => s.sync(),
-            AnyStorage::File(s) => s.sync(),
+            Self::MemoryMapped(s) => s.sync(),
+            Self::Memory(s) => s.sync(),
+            Self::File(s) => s.sync(),
         }
     }
 
     fn len(&self) -> u64 {
         match self {
-            AnyStorage::MemoryMapped(s) => s.len(),
-            AnyStorage::Memory(s) => s.len(),
-            AnyStorage::File(s) => s.len(),
+            Self::MemoryMapped(s) => s.len(),
+            Self::Memory(s) => s.len(),
+            Self::File(s) => s.len(),
         }
     }
 
     fn name(&self) -> &str {
         match self {
-            AnyStorage::MemoryMapped(s) => s.name(),
-            AnyStorage::Memory(s) => s.name(),
-            AnyStorage::File(s) => s.name(),
+            Self::MemoryMapped(s) => s.name(),
+            Self::Memory(s) => s.name(),
+            Self::File(s) => s.name(),
         }
     }
 
     fn new(name: &str) -> Result<Self, DbError> {
-        Ok(Self::MemoryMapped(FileStorageMemoryMapped::new(name)?))
+        Ok(Self::MemoryMapped(FileStorageMemoryMappedImpl::new(name)?))
     }
 
     fn read(&'_ self, pos: u64, value_len: u64) -> Result<StorageSlice<'_>, DbError> {
         match self {
-            AnyStorage::MemoryMapped(s) => s.read(pos, value_len),
-            AnyStorage::Memory(s) => s.read(pos, value_len),
-            AnyStorage::File(s) => s.read(pos, value_len),
+            Self::MemoryMapped(s) => s.read(pos, value_len),
+            Self::Memory(s) => s.read(pos, value_len),
+            Self::File(s) => s.read(pos, value_len),
         }
     }
 
     fn rename(&mut self, new_name: &str) -> Result<(), DbError> {
         match self {
-            AnyStorage::MemoryMapped(s) => s.rename(new_name),
-            AnyStorage::Memory(s) => s.rename(new_name),
-            AnyStorage::File(s) => s.rename(new_name),
+            Self::MemoryMapped(s) => s.rename(new_name),
+            Self::Memory(s) => s.rename(new_name),
+            Self::File(s) => s.rename(new_name),
         }
     }
 
     fn resize(&mut self, new_len: u64) -> Result<(), DbError> {
         match self {
-            AnyStorage::MemoryMapped(s) => s.resize(new_len),
-            AnyStorage::Memory(s) => s.resize(new_len),
-            AnyStorage::File(s) => s.resize(new_len),
+            Self::MemoryMapped(s) => s.resize(new_len),
+            Self::Memory(s) => s.resize(new_len),
+            Self::File(s) => s.resize(new_len),
         }
     }
 
     fn write(&mut self, pos: u64, bytes: &[u8]) -> Result<(), DbError> {
         match self {
-            AnyStorage::MemoryMapped(s) => s.write(pos, bytes),
-            AnyStorage::Memory(s) => s.write(pos, bytes),
-            AnyStorage::File(s) => s.write(pos, bytes),
+            Self::MemoryMapped(s) => s.write(pos, bytes),
+            Self::Memory(s) => s.write(pos, bytes),
+            Self::File(s) => s.write(pos, bytes),
         }
     }
 
     fn is_empty(&self) -> bool {
         match self {
-            AnyStorage::MemoryMapped(s) => s.is_empty(),
-            AnyStorage::Memory(s) => s.is_empty(),
-            AnyStorage::File(s) => s.is_empty(),
+            Self::MemoryMapped(s) => s.is_empty(),
+            Self::Memory(s) => s.is_empty(),
+            Self::File(s) => s.is_empty(),
         }
     }
 
     fn recover_from_wal(&mut self) -> Result<(), DbError> {
         match self {
-            AnyStorage::MemoryMapped(s) => s.recover_from_wal(),
-            AnyStorage::Memory(s) => s.recover_from_wal(),
-            AnyStorage::File(s) => s.recover_from_wal(),
+            Self::MemoryMapped(s) => s.recover_from_wal(),
+            Self::Memory(s) => s.recover_from_wal(),
+            Self::File(s) => s.recover_from_wal(),
         }
     }
 }
@@ -136,6 +142,8 @@ impl StorageData for AnyStorage {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::FileStorage;
+    use crate::MemoryStorage;
 
     struct TestFile(String);
 

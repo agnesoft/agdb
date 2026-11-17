@@ -1,39 +1,70 @@
 use super::StorageData;
 use super::StorageSlice;
 use crate::DbError;
+use agplatform::Fs;
+use agplatform::Platform;
+use agplatform::PlatformImpl;
+use std::sync::Arc;
 
 /// In-memory buffer implementing [`StorageData`].
 ///
 /// Reads return a non-owning slice into the underlying buffer.
-/// [`backup()`](StorageData::backup) writes the buffer to a file,
+/// [`backup()`](StorageData::backup) writes the buffer to a file
+/// through the platform `P`, see [`MemoryStorage`] for the production one,
 /// while [`flush()`](StorageData::flush) is a no-op.
 ///
 /// Offers unmatched performance but **no persistence**.
-pub struct MemoryStorage {
+pub struct MemoryStorageImpl<P: Platform> {
+    platform: Arc<P>,
     buffer: Vec<u8>,
     name: String,
 }
 
+/// The [`MemoryStorageImpl`] on the production [`PlatformImpl`].
+pub type MemoryStorage = MemoryStorageImpl<PlatformImpl>;
+
 impl MemoryStorage {
     pub fn from_buffer(name: &str, buffer: Vec<u8>) -> Self {
+        Self::from_buffer_with_platform(Arc::new(PlatformImpl::default()), name, buffer)
+    }
+}
+
+impl<P: Platform> MemoryStorageImpl<P> {
+    /// Constructs the storage `name` with the `buffer` backed up to the
+    /// file system of the `platform`.
+    pub fn from_buffer_with_platform(platform: Arc<P>, name: &str, buffer: Vec<u8>) -> Self {
         Self {
+            platform,
             buffer,
             name: name.to_string(),
         }
     }
+
+    /// Constructs the storage `name` loading the file `name` from the file
+    /// system of the `platform` if it exists, see [`StorageData::new()`].
+    pub fn with_platform(platform: Arc<P>, name: &str) -> Result<Self, DbError> {
+        let buffer = if let Ok(true) = platform.fs().exists(name) {
+            platform.fs().read(name)?
+        } else {
+            vec![]
+        };
+
+        Ok(Self::from_buffer_with_platform(platform, name, buffer))
+    }
 }
 
-impl StorageData for MemoryStorage {
+impl<P: Platform + Default> StorageData for MemoryStorageImpl<P> {
     fn backup(&self, name: &str) -> Result<(), DbError> {
-        std::fs::write(name, &self.buffer)?;
+        self.platform.fs().write(name, &self.buffer)?;
         Ok(())
     }
 
     fn copy(&self, name: &str) -> Result<Self, DbError> {
-        Ok(Self {
-            buffer: self.buffer.clone(),
-            name: name.to_string(),
-        })
+        Ok(Self::from_buffer_with_platform(
+            self.platform.clone(),
+            name,
+            self.buffer.clone(),
+        ))
     }
 
     fn len(&self) -> u64 {
@@ -45,14 +76,7 @@ impl StorageData for MemoryStorage {
     }
 
     fn new(name: &str) -> Result<Self, DbError> {
-        Ok(Self {
-            buffer: if let Ok(true) = std::fs::exists(name) {
-                std::fs::read(name)?
-            } else {
-                vec![]
-            },
-            name: name.to_string(),
-        })
+        Self::with_platform(Arc::new(P::default()), name)
     }
 
     fn read(&'_ self, pos: u64, value_len: u64) -> Result<StorageSlice<'_>, DbError> {

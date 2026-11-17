@@ -303,6 +303,16 @@ pub(crate) mod tests {
     }
 
     mod platform_impl {
+        use super::*;
+
+        mod default {
+            use super::*;
+
+            #[test]
+            fn default_should_work() {
+                let _platform = PlatformImpl::default();
+            }
+        }
 
         mod platform {
 

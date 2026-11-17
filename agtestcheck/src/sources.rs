@@ -243,6 +243,20 @@ mod tests {
         }
     }
 
+    mod absolute {
+        use super::*;
+
+        #[test]
+        fn absolute_should_join_onto_current_dir_and_resolve_parent_dirs() {
+            let current_dir = Path::new(ROOT).join("a");
+
+            assert_eq!(
+                absolute(&current_dir, &current_dir.join("./src/../check/x.rs")),
+                Path::new(ROOT).join("a").join("check").join("x.rs")
+            );
+        }
+    }
+
     mod relative {
         use super::*;
 

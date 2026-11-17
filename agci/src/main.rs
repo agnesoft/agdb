@@ -55,9 +55,8 @@ const USAGE: &str = "usage:
                                for the repository version, the release (the packages and release
                                hooks of all projects, then the GitHub release and tag); --plan only
                                prints the steps
-  agci roundtrip <package>...  in a copy of the repository (target/agci/roundtrip), replace the
-                               items the exports of the packages' libraries reach with the Rust
-                               printed from their agsource IR and run the packages' tests there";
+  agci roundtrip <package>...  check that every item of the packages' libraries and tests, printed
+                               from its agsource IR, is the item as written";
 
 /// What `check` compares a clean worktree to: `<REMOTE>/<BRANCH>`.
 const REMOTE: &str = "origin";

@@ -2,6 +2,7 @@ use crate::Error;
 use crate::ItemId;
 use crate::ModuleId;
 use crate::SourceCrate;
+use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use syn::Item;
@@ -58,6 +59,9 @@ struct Scope {
 struct Binding {
     target: Resolved,
     visibility: Visibility,
+    /// A name of another crate imported in every namespace, as its own is
+    /// unknown. A binding of the name in the namespace replaces it.
+    guessed: bool,
 }
 
 struct Glob {
@@ -339,9 +343,30 @@ impl Scopes {
         target: Resolved,
         visibility: Visibility,
     ) {
-        self.scopes[module.0].names[namespace as usize]
-            .entry(name)
-            .or_insert(Binding { target, visibility });
+        self.bind_as(module, namespace, name, target, visibility, false);
+    }
+
+    fn bind_as(
+        &mut self,
+        module: ModuleId,
+        namespace: Namespace,
+        name: String,
+        target: Resolved,
+        visibility: Visibility,
+        guessed: bool,
+    ) {
+        let names = &mut self.scopes[module.0].names[namespace as usize];
+
+        if names.get(&name).is_none_or(|b| b.guessed && !guessed) {
+            names.insert(
+                name,
+                Binding {
+                    target,
+                    visibility,
+                    guessed,
+                },
+            );
+        }
     }
 
     /// Resolves the imports in rounds until a round resolves none. A name
@@ -447,8 +472,10 @@ impl Scopes {
                     return false;
                 }
 
+                let guessed = matches!(container, Resolved::External(_));
+
                 for (ns, target) in found {
-                    self.bind(module, ns, name.clone(), target, import.visibility);
+                    self.bind_as(module, ns, name.clone(), target, import.visibility, guessed);
                 }
             }
         }
@@ -693,6 +720,7 @@ impl Scopes {
                     Item::Enum(e) => Binding {
                         target: variant(e, *id, name)?,
                         visibility: Visibility::Public,
+                        guessed: false,
                     },
                     _ => return None,
                 },
@@ -701,8 +729,65 @@ impl Scopes {
             Some(Binding {
                 target: binding.target,
                 visibility: narrower(c, binding.visibility, glob.visibility),
+                guessed: binding.guessed,
             })
         })
+    }
+
+    /// The `pub` names of the module: its items and imports, then the names
+    /// of its `pub` globs of local modules and enums. The names of globs of
+    /// other crates are unknown.
+    pub(crate) fn public_names(
+        &self,
+        c: &SourceCrate,
+        module: ModuleId,
+    ) -> BTreeMap<(Namespace, String), Resolved> {
+        let mut names = BTreeMap::new();
+        self.public_names_in(c, module, &mut names, &mut HashSet::new());
+        names
+    }
+
+    fn public_names_in(
+        &self,
+        c: &SourceCrate,
+        module: ModuleId,
+        names: &mut BTreeMap<(Namespace, String), Resolved>,
+        visited: &mut HashSet<ModuleId>,
+    ) {
+        let scope = &self.scopes[module.0];
+        visited.insert(module);
+
+        for ns in NAMESPACES {
+            for (name, binding) in &scope.names[ns as usize] {
+                if binding.visibility == Visibility::Public {
+                    names
+                        .entry((ns, name.clone()))
+                        .or_insert_with(|| binding.target.clone());
+                }
+            }
+        }
+
+        for glob in &scope.globs {
+            if glob.visibility != Visibility::Public {
+                continue;
+            }
+
+            match &glob.source {
+                Resolved::Module(source) if !visited.contains(source) => {
+                    self.public_names_in(c, *source, names, visited);
+                }
+                Resolved::Item(id) => {
+                    if let Item::Enum(e) = c.item(*id) {
+                        for (index, v) in e.variants.iter().enumerate() {
+                            names
+                                .entry((Namespace::Type, unraw(&v.ident)))
+                                .or_insert(Resolved::Variant(*id, index));
+                        }
+                    }
+                }
+                _ => {}
+            }
+        }
     }
 
     fn external_glob(&self, module: ModuleId, name: &str) -> Option<Resolved> {
@@ -1341,6 +1426,24 @@ mod a { pub struct X; }
 mod b { pub struct X; }");
 
                 assert_eq!(ty(&c, "", "X"), item(&c, "a", 0));
+            }
+
+            #[test]
+            fn resolve_local_name_should_replace_the_same_name_of_another_crate() {
+                let c = lib_with_crates(
+                    "pub use dep::Name;
+pub use local::Name;
+pub use local::Other;
+pub use dep::Other;
+mod local { pub trait Name {} pub trait Other {} }",
+                );
+
+                assert_eq!(ty(&c, "", "Name"), item(&c, "local", 0));
+                assert_eq!(ty(&c, "", "Other"), item(&c, "local", 1));
+                assert_eq!(
+                    resolve(&c, "", "Name", Namespace::Macro),
+                    Resolved::External(vec!["dep".into(), "Name".into()])
+                );
             }
 
             #[test]

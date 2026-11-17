@@ -3,7 +3,8 @@
 //! declarations like rustc does, over the parsed files. A [`Cfg`] selects
 //! the code: all of it, or what rustc compiles with a [`CfgSet`].
 //! [`SourceCrate::resolve`] tells what a path names, following the imports
-//! of the modules like rustc does.
+//! of the modules like rustc does. [`SourceCrate::reachable`] collects
+//! what the [`SourceCrate::exports`] given as roots lead to.
 //!
 //! [`packages`] lists the crates of a cargo workspace, from `cargo metadata`.
 //!
@@ -15,6 +16,7 @@ mod cfg;
 mod error;
 mod files;
 mod package;
+mod reachable;
 mod resolve;
 mod source_crate;
 
@@ -26,6 +28,8 @@ pub use package::Package;
 pub use package::Target;
 pub use package::TargetKind;
 pub use package::packages;
+pub use reachable::Export;
+pub use reachable::Reachable;
 pub use resolve::Namespace;
 pub use resolve::Resolved;
 pub use source_crate::FileId;

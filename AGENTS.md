@@ -17,7 +17,7 @@ The repository also hosts crates outside the agdb ecosystem, each documented in 
 | ------------- | ------------------------------------------------------------------------------------------------------------ |
 | `agplatform`  | Env, fs, process and HTTP request behind one injectable `Platform`, with in-memory test doubles (`testing`)  |
 | `agbench`     | `cargo bench` harness comparing targets against a baseline, `--check` fails on a target over its fail factor |
-| `agsource`    | Source model of a Rust crate read with syn: modules, cfg and name resolution (not published yet)             |
+| `agsource`    | Source model of a Rust crate read with syn: modules, cfg, name resolution and reachability (not published)   |
 | `agtestcheck` | `cargo test-check` subcommand enforcing the structure of Rust tests (module paths, names, comments)          |
 | `agci`        | The repository's CI tool: project detection, affected checks, releases (see `agci/README.md`)                |
 

@@ -11,6 +11,7 @@ use crate::utilities;
 use agplatform::Platform;
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
+use std::io::Write;
 use std::path::Path;
 use std::process::Command;
 
@@ -46,15 +47,17 @@ pub(crate) fn run_steps(
     label: &str,
     steps: &[Step],
     root: &str,
+    out: &mut (dyn Write + Send),
 ) -> Result<(), CIError> {
     for step in steps {
-        println!("[{label}] {step}");
+        writeln!(out, "[{label}] {step}")?;
         utilities::stream_command(
             platform,
             Command::new(&step.program)
                 .args(&step.args)
                 .envs(step.env.iter().map(|(k, v)| (k, v)))
                 .current_dir(Path::new(root).join(&step.dir)),
+            out,
         )?;
     }
 
@@ -97,14 +100,13 @@ pub(crate) fn check(
         let key = proof::key(&project.dir, &check, &fingerprint);
 
         if proofs.proven(platform, &key) {
-            println!("[{}] {}: proven ({key})", project.dir, check.name);
-            report.proven(&project.dir, Task::Check(&check.name));
+            report.proven(&project.dir, Task::Check(&check.name), &key);
             continue;
         }
 
         if let Some(steps) = setup.take()
-            && !report.run(&project.dir, Task::Setup, || {
-                run_steps(platform, &project.dir, &steps, root)
+            && !report.run(&project.dir, Task::Setup, |out| {
+                run_steps(platform, &project.dir, &steps, root, out)
             })
         {
             passed = false;
@@ -112,8 +114,8 @@ pub(crate) fn check(
             continue;
         }
 
-        passed = report.run(&project.dir, Task::Check(&check.name), || {
-            run_steps(platform, &project.dir, &check.steps, root)?;
+        passed = report.run(&project.dir, Task::Check(&check.name), |out| {
+            run_steps(platform, &project.dir, &check.steps, root, out)?;
             let modified = modified(&before.files, &git::worktree_files(platform)?);
 
             if modified.is_empty() {

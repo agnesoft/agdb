@@ -1,4 +1,4 @@
-import { expect } from "@playwright/test";
+import { expect, type Locator, type Page } from "@playwright/test";
 import { test } from "./fixtures/agdb.fixtures";
 import { testIds } from "./test-ids";
 import {
@@ -29,9 +29,20 @@ test.describe("Database Row Actions", () => {
     await ui.element(testIds.DB_TABLE).isVisible();
   });
 
-  const openActionMenu = async (page: import("@playwright/test").Page) => {
+  // Menus slide in with a growing max-height and hidden overflow: until they settle, Playwright
+  // scrolls the clipped items into view and they then move away from the hovering pointer.
+  const settled = (menu: Locator) =>
+    expect(menu).not.toHaveClass(/slide-up-enter-active/);
+
+  const openActionMenu = async (page: Page) => {
     const row = page.getByTestId("table-row").first();
     await row.locator('button[title="Display menu"]').click();
+    await settled(page.locator(".content"));
+  };
+
+  const openSubmenu = async (page: Page, key: string) => {
+    await page.getByTestId(`menu-item-${key}`).hover();
+    await settled(page.locator(".sub-menu"));
   };
 
   test("opens action menu on row", async ({ page }) => {
@@ -189,8 +200,7 @@ test.describe("Database Row Actions", () => {
     await mockDatabaseListApi(page);
     await openActionMenu(page);
 
-    // Hover over "Convert" to open submenu
-    await page.getByTestId("menu-item-convert").hover();
+    await openSubmenu(page, "convert");
     await page.getByTestId("menu-item-memory").click();
 
     await expect(page.locator(".modal")).toBeVisible();
@@ -205,8 +215,7 @@ test.describe("Database Row Actions", () => {
     await mockDatabaseListApi(page);
     await openActionMenu(page);
 
-    // Hover over "Clear" to open submenu
-    await page.getByTestId("menu-item-clear").hover();
+    await openSubmenu(page, "clear");
     await page.getByTestId("menu-item-all").click();
 
     await expect(page.locator(".modal")).toBeVisible();

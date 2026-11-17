@@ -53,6 +53,13 @@ pub enum Error {
     },
     /// `cargo metadata` failed for the manifest `path`.
     Cargo { path: PathBuf, message: String },
+    /// The construct in `path` is not in the IR of
+    /// `SourceCrate::ir`.
+    Unsupported {
+        path: PathBuf,
+        line: usize,
+        construct: String,
+    },
 }
 
 impl Error {
@@ -66,7 +73,8 @@ impl Error {
             | Error::CircularModule { path, .. }
             | Error::UnknownCfg { path, .. }
             | Error::UnresolvedImport { path, .. }
-            | Error::Cargo { path, .. } => path,
+            | Error::Cargo { path, .. }
+            | Error::Unsupported { path, .. } => path,
         }
     }
 }
@@ -133,6 +141,11 @@ impl std::fmt::Display for Error {
             Error::Cargo { path, message } => {
                 write!(f, "{}: cargo metadata failed: {message}", path.display())
             }
+            Error::Unsupported {
+                path,
+                line,
+                construct,
+            } => write!(f, "{}:{line}: unsupported {construct}", path.display()),
         }
     }
 }
@@ -192,6 +205,11 @@ mod tests {
                     Error::Cargo {
                         path: path(),
                         message: String::new(),
+                    },
+                    Error::Unsupported {
+                        path: path(),
+                        line: 1,
+                        construct: String::new(),
                     },
                 ];
 
@@ -271,9 +289,19 @@ mod tests {
                     unresolved.to_string(),
                     "src/g.rs:8: unresolved import `a::b`"
                 );
+                let unsupported = Error::Unsupported {
+                    path: "src/h.rs".into(),
+                    line: 9,
+                    construct: "type `fn(u8)`".into(),
+                };
+
                 assert_eq!(
                     cargo.to_string(),
                     "Cargo.toml: cargo metadata failed: error: invalid manifest"
+                );
+                assert_eq!(
+                    unsupported.to_string(),
+                    "src/h.rs:9: unsupported type `fn(u8)`"
                 );
             }
         }

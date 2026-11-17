@@ -6,6 +6,7 @@ use crate::project::Project;
 use crate::proof;
 use crate::proof::Proofs;
 use crate::report::Report;
+use crate::report::Task;
 use crate::utilities;
 use agplatform::Platform;
 use std::collections::BTreeMap;
@@ -69,7 +70,9 @@ pub(crate) struct Check {
 
 /// Runs the checks of the project until one fails. A check fails if it modifies or creates files
 /// (e.g. outdated generated sources), otherwise it passes with a proof. A check proven with the
-/// current fingerprint (of the files before it) and steps is not run.
+/// project's fingerprint and its steps is not run, each check builds what it needs itself (cargo,
+/// turbo `dependsOn`). A passed check left the files as they were, so the fingerprint holds for
+/// all. The setup of the project's kind (e.g. `pnpm install`) runs before the first check that runs.
 pub(crate) fn check(
     platform: &impl Platform,
     project: &Project,
@@ -78,27 +81,38 @@ pub(crate) fn check(
     report: &mut Report,
     proofs: &Proofs,
 ) -> Result<(), CIError> {
+    let before = Snapshot::of(platform, None)?;
+    let fingerprint = affected::fingerprints(projects, &before)?
+        .remove(&project.dir)
+        .unwrap_or_default();
+    let mut setup = Some(project.kind.setup()).filter(|steps| !steps.is_empty());
     let mut passed = true;
 
     for check in project.project_type.checks(project, projects, root) {
         if !passed {
-            report.skip(&project.dir, &check.name);
+            report.skip(&project.dir, Task::Check(&check.name));
             continue;
         }
 
-        let before = Snapshot::of(platform, None)?;
-        let fingerprint = affected::fingerprints(projects, &before)?
-            .remove(&project.dir)
-            .unwrap_or_default();
         let key = proof::key(&project.dir, &check, &fingerprint);
 
         if proofs.proven(platform, &key) {
             println!("[{}] {}: proven ({key})", project.dir, check.name);
-            report.proven(&project.dir, &check.name);
+            report.proven(&project.dir, Task::Check(&check.name));
             continue;
         }
 
-        passed = report.run(&project.dir, &check.name, || {
+        if let Some(steps) = setup.take()
+            && !report.run(&project.dir, Task::Setup, || {
+                run_steps(platform, &project.dir, &steps, root)
+            })
+        {
+            passed = false;
+            report.skip(&project.dir, Task::Check(&check.name));
+            continue;
+        }
+
+        passed = report.run(&project.dir, Task::Check(&check.name), || {
             run_steps(platform, &project.dir, &check.steps, root)?;
             let modified = modified(&before.files, &git::worktree_files(platform)?);
 

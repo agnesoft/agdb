@@ -26,6 +26,11 @@
         },
         "type-check": {},
         "test:functional": {},
+        "agdb_studio#test:functional": {
+            "dependsOn": [
+                "build"
+            ]
+        },
         "before-commit": {},
         "openapi": {
             "cache": false

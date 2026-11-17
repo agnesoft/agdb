@@ -16,6 +16,7 @@ proc-macro2 = { workspace = true, default-features = false, features = [
     "span-locations",
 ] }
 syn = { workspace = true, features = ["full", "visit-mut"] }
+toml.workspace = true
 
 [dev-dependencies]
 agplatform = { workspace = true, features = ["testing"] }

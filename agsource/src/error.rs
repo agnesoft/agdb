@@ -44,6 +44,12 @@ pub enum Error {
         line: usize,
         name: String,
     },
+    /// The import `name` in `path` names nothing.
+    UnresolvedImport {
+        path: PathBuf,
+        line: usize,
+        name: String,
+    },
 }
 
 impl std::fmt::Display for Error {
@@ -102,6 +108,9 @@ impl std::fmt::Display for Error {
                 "{}:{line}: unknown cfg `{name}`, taken as false",
                 path.display()
             ),
+            Error::UnresolvedImport { path, line, name } => {
+                write!(f, "{}:{line}: unresolved import `{name}`", path.display())
+            }
         }
     }
 }
@@ -147,6 +156,11 @@ mod tests {
                     line: 7,
                     name: "unix".into(),
                 };
+                let unresolved = Error::UnresolvedImport {
+                    path: "src/g.rs".into(),
+                    line: 8,
+                    name: "a::b".into(),
+                };
                 let read = Error::Read {
                     path: "src/e.rs".into(),
                     error: agplatform::Error::fs("no such file"),
@@ -169,6 +183,10 @@ mod tests {
                 assert_eq!(
                     unknown.to_string(),
                     "src/f.rs:7: unknown cfg `unix`, taken as false"
+                );
+                assert_eq!(
+                    unresolved.to_string(),
+                    "src/g.rs:8: unresolved import `a::b`"
                 );
             }
         }

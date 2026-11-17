@@ -1,22 +1,34 @@
 use crate::DbError;
 use crate::utilities::serialize::Serialize;
 use crate::utilities::serialize::SerializeStatic;
-use std::fs::File;
-use std::fs::OpenOptions;
+use agplatform::Fs;
+use agplatform::OpenWriteOptions;
+use agplatform::Platform;
+use agplatform::WriteFile;
 use std::io::Read;
 use std::io::Seek;
 use std::io::SeekFrom;
 use std::io::Write;
 
+type FileHandle<P> = <<P as Platform>::Fs as Fs>::WriteHandle;
+
 /// The `len` covers only fully written records. Bytes past it are the
 /// remains of a failed insert (`torn`) and are cut off before the next
 /// insert so that the log never contains a partial record followed by
 /// valid ones.
-#[derive(Debug)]
-pub struct WriteAheadLog {
-    file: File,
+pub struct WriteAheadLog<P: Platform> {
+    file: FileHandle<P>,
     len: u64,
     torn: bool,
+}
+
+impl<P: Platform> std::fmt::Debug for WriteAheadLog<P> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("WriteAheadLog")
+            .field("len", &self.len)
+            .field("torn", &self.torn)
+            .finish_non_exhaustive()
+    }
 }
 
 pub struct WriteAheadLogRecord {
@@ -24,7 +36,7 @@ pub struct WriteAheadLogRecord {
     pub value: Vec<u8>,
 }
 
-impl WriteAheadLog {
+impl<P: Platform> WriteAheadLog<P> {
     pub fn clear(&mut self) -> Result<(), DbError> {
         self.file.set_len(0)?;
         self.len = 0;
@@ -55,14 +67,11 @@ impl WriteAheadLog {
         Ok(())
     }
 
-    pub fn new(filename: &str) -> Result<WriteAheadLog, DbError> {
+    pub fn new(platform: &P, filename: &str) -> Result<Self, DbError> {
         let mut wal = Self {
-            file: OpenOptions::new()
-                .read(true)
-                .write(true)
-                .truncate(false)
-                .create(true)
-                .open(WriteAheadLog::wal_filename(filename))?,
+            file: platform
+                .fs()
+                .open_write_options(wal_filename(filename), OpenWriteOptions::new().create())?,
             len: 0,
             torn: false,
         };
@@ -84,31 +93,14 @@ impl WriteAheadLog {
         Ok(records)
     }
 
-    pub(crate) fn wal_filename(filename: &str) -> String {
-        let pos;
-
-        if let Some(slash) = filename.rfind('/') {
-            pos = slash + 1;
-        } else if let Some(backslash) = filename.rfind('\\') {
-            pos = backslash + 1
-        } else {
-            pos = 0;
-        }
-
-        let mut name = filename.to_owned();
-        name.insert(pos, '.');
-
-        name
-    }
-
-    fn read_exact(file: &mut File, size: u64) -> Result<Vec<u8>, DbError> {
+    fn read_exact(file: &mut FileHandle<P>, size: u64) -> Result<Vec<u8>, DbError> {
         let mut buffer = vec![0_u8; size as usize];
         file.read_exact(&mut buffer)?;
 
         Ok(buffer)
     }
 
-    fn read_record(file: &mut File) -> Result<WriteAheadLogRecord, DbError> {
+    fn read_record(file: &mut FileHandle<P>) -> Result<WriteAheadLogRecord, DbError> {
         let pos = u64::deserialize(&Self::read_exact(file, u64::serialized_size_static())?)?;
         let size = u64::deserialize(&Self::read_exact(file, u64::serialized_size_static())?)?;
 
@@ -118,7 +110,7 @@ impl WriteAheadLog {
         })
     }
 
-    fn skip_record(file: &mut File) -> Result<(), DbError> {
+    fn skip_record(file: &mut FileHandle<P>) -> Result<(), DbError> {
         file.seek(SeekFrom::Current(u64::serialized_size_static() as i64))?;
         let value_size = u64::deserialize(&Self::read_exact(file, u64::serialized_size_static())?)?;
         file.seek(SeekFrom::Current(value_size as i64))?;
@@ -162,19 +154,37 @@ impl WriteAheadLog {
     }
 }
 
+pub(crate) fn wal_filename(filename: &str) -> String {
+    let pos;
+
+    if let Some(slash) = filename.rfind('/') {
+        pos = slash + 1;
+    } else if let Some(backslash) = filename.rfind('\\') {
+        pos = backslash + 1
+    } else {
+        pos = 0;
+    }
+
+    let mut name = filename.to_owned();
+    name.insert(pos, '.');
+
+    name
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::test_utilities::test_file::TestFile;
+    use std::fs::OpenOptions;
 
     #[test]
     fn records_ignore_bytes_past_len() {
         let test_file = TestFile::new();
-        let mut wal = WriteAheadLog::new(test_file.file_name()).unwrap();
+        let mut wal = WriteAheadLog::new(&agplatform::platform(), test_file.file_name()).unwrap();
         wal.insert(1, &[1, 2]).unwrap();
         OpenOptions::new()
             .append(true)
-            .open(WriteAheadLog::wal_filename(test_file.file_name()))
+            .open(super::wal_filename(test_file.file_name()))
             .unwrap()
             .write_all(&[0; 16])
             .unwrap();
@@ -190,11 +200,14 @@ mod tests {
     #[test]
     fn failed_insert_is_cut_off_before_next_insert() {
         let test_file = TestFile::new();
-        let mut wal = WriteAheadLog::new(test_file.file_name()).unwrap();
+        let mut wal = WriteAheadLog::new(&agplatform::platform(), test_file.file_name()).unwrap();
         wal.insert(1, &[1, 2]).unwrap();
         let file = std::mem::replace(
             &mut wal.file,
-            OpenOptions::new().write(true).open("/dev/full").unwrap(),
+            agplatform::platform()
+                .fs()
+                .open_write_options("/dev/full", OpenWriteOptions::new())
+                .unwrap(),
         );
 
         assert!(wal.insert(2, &[3, 4]).is_err());
@@ -214,10 +227,10 @@ mod tests {
 
     #[test]
     fn wal_filename() {
-        assert_eq!(WriteAheadLog::wal_filename("file"), ".file");
-        assert_eq!(WriteAheadLog::wal_filename("/file"), "/.file");
+        assert_eq!(super::wal_filename("file"), ".file");
+        assert_eq!(super::wal_filename("/file"), "/.file");
         assert_eq!(
-            WriteAheadLog::wal_filename("\\some\\path\\file"),
+            super::wal_filename("\\some\\path\\file"),
             "\\some\\path\\.file"
         );
     }

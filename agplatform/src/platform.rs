@@ -151,6 +151,13 @@ impl Platform for PlatformImpl {
     }
 }
 
+/// The production platform, see [`platform()`](crate::platform).
+impl Default for PlatformImpl {
+    fn default() -> Self {
+        crate::platform()
+    }
+}
+
 /// The platform shared by the [`Arc`].
 impl<P: Platform> Platform for Arc<P> {
     type Env = P::Env;
@@ -296,6 +303,16 @@ pub(crate) mod tests {
     }
 
     mod platform_impl {
+        use super::*;
+
+        mod default {
+            use super::*;
+
+            #[test]
+            fn default_should_work() {
+                let _platform = PlatformImpl::default();
+            }
+        }
 
         mod platform {
 

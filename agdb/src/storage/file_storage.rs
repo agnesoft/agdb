@@ -3,21 +3,27 @@ use super::StorageSlice;
 use super::SyncMode;
 use super::write_ahead_log::WriteAheadLog;
 use super::write_ahead_log::WriteAheadLogRecord;
+use super::write_ahead_log::wal_filename;
 use crate::DbError;
-use std::fs::File;
-use std::fs::OpenOptions;
-use std::io::Read;
+use agplatform::Fs;
+use agplatform::OpenWriteOptions;
+use agplatform::Platform;
+use agplatform::PlatformImpl;
+use agplatform::ReadFile;
+use agplatform::WriteFile;
 use std::io::Seek;
 use std::io::SeekFrom;
 use std::io::Write;
-use std::sync::Mutex;
+use std::sync::Arc;
+
+type FileHandle<P> = <<P as Platform>::Fs as Fs>::WriteHandle;
 
 /// Single file based storage with write ahead log (WAL) for resiliency
 /// implementing [`StorageData`]. It uses the storage name as the file
-/// name (`.{name}` for WAL). It allows multiple readers from the file
-/// by opening additional temporary file handles if the single member file
-/// handle is being used (read). The [`StorageData::read()`] always returns
-/// owning buffer.
+/// name (`.{name}` for WAL). The files are accessed through the platform
+/// `P`, see [`FileStorage`] for the production one. Multiple readers
+/// share the single file handle reading it positionally. The
+/// [`StorageData::read()`] always returns owning buffer.
 ///
 /// The [`StorageData::backup()`] is implemented so that it copies the file
 /// to the new name.
@@ -29,18 +35,67 @@ use std::sync::Mutex;
 /// prevents a crash from rolling back an already-committed transaction.
 /// Recovering from the WAL always syncs the restored file before clearing
 /// the WAL.
-#[derive(Debug)]
-pub struct FileStorage {
-    file: File,
+pub struct FileStorageImpl<P: Platform> {
+    platform: Arc<P>,
+    file: FileHandle<P>,
     filename: String,
     len: u64,
-    lock: Mutex<()>,
     sync_mode: SyncMode,
-    wal: WriteAheadLog,
+    wal: WriteAheadLog<P>,
 }
 
-impl FileStorage {
-    fn apply_wal_record(file: &mut File, record: WriteAheadLogRecord) -> Result<(), DbError> {
+/// The [`FileStorageImpl`] on the production [`PlatformImpl`].
+pub type FileStorage = FileStorageImpl<PlatformImpl>;
+
+impl<P: Platform> std::fmt::Debug for FileStorageImpl<P> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("FileStorage")
+            .field("filename", &self.filename)
+            .field("len", &self.len)
+            .field("sync_mode", &self.sync_mode)
+            .field("wal", &self.wal)
+            .finish_non_exhaustive()
+    }
+}
+
+impl<P: Platform> FileStorageImpl<P> {
+    /// Constructs or loads the storage `name` in the file system of the
+    /// `platform`, see [`StorageData::new()`].
+    pub fn with_platform(platform: Arc<P>, name: &str) -> Result<Self, DbError> {
+        let mut file = platform
+            .fs()
+            .open_write_options(name, OpenWriteOptions::new().create())?;
+        let mut wal = WriteAheadLog::new(&*platform, name)?;
+        let sync_mode = SyncMode::None;
+
+        Self::apply_wal(&mut file, &mut wal)?;
+
+        let len = file.seek(SeekFrom::End(0))?;
+
+        Ok(Self {
+            platform,
+            file,
+            filename: name.to_string(),
+            len,
+            sync_mode,
+            wal,
+        })
+    }
+
+    pub(crate) fn platform(&self) -> &Arc<P> {
+        &self.platform
+    }
+
+    pub(crate) fn read_all(&self) -> Result<Vec<u8>, DbError> {
+        let mut buffer = vec![0_u8; self.len as usize];
+        Self::read_impl(&self.file, 0, &mut buffer)?;
+        Ok(buffer)
+    }
+
+    fn apply_wal_record(
+        file: &mut FileHandle<P>,
+        record: WriteAheadLogRecord,
+    ) -> Result<(), DbError> {
         if record.value.is_empty() {
             file.set_len(record.pos)?;
         } else {
@@ -51,7 +106,7 @@ impl FileStorage {
         Ok(())
     }
 
-    fn apply_wal(file: &mut File, wal: &mut WriteAheadLog) -> Result<(), DbError> {
+    fn apply_wal(file: &mut FileHandle<P>, wal: &mut WriteAheadLog<P>) -> Result<(), DbError> {
         let records = wal.records()?;
 
         if records.is_empty() {
@@ -67,26 +122,20 @@ impl FileStorage {
         wal.sync()
     }
 
-    fn open_file(&self) -> Result<File, DbError> {
-        Ok(File::open(&self.filename)?)
-    }
-
-    fn read_impl(mut file: &File, pos: u64, buffer: &mut [u8]) -> Result<(), DbError> {
-        file.seek(SeekFrom::Start(pos))?;
-        file.read_exact(buffer)?;
-        Ok(())
+    fn read_impl(file: &FileHandle<P>, pos: u64, buffer: &mut [u8]) -> Result<(), DbError> {
+        Ok(file.read_exact_at(buffer, pos)?)
     }
 }
 
-impl StorageData for FileStorage {
+impl<P: Platform + Default> StorageData for FileStorageImpl<P> {
     fn backup(&self, name: &str) -> Result<(), DbError> {
-        std::fs::copy(&self.filename, name)?;
+        self.platform.fs().copy(&self.filename, name)?;
         Ok(())
     }
 
     fn copy(&self, name: &str) -> Result<Self, DbError> {
         self.backup(name)?;
-        Self::new(name)
+        Self::with_platform(self.platform.clone(), name)
     }
 
     fn flush(&mut self) -> Result<(), DbError> {
@@ -124,46 +173,21 @@ impl StorageData for FileStorage {
     }
 
     fn new(name: &str) -> Result<Self, DbError> {
-        let mut file = OpenOptions::new()
-            .read(true)
-            .write(true)
-            .truncate(false)
-            .create(true)
-            .open(name)?;
-        let mut wal: WriteAheadLog = WriteAheadLog::new(name)?;
-        let sync_mode = SyncMode::None;
-
-        Self::apply_wal(&mut file, &mut wal)?;
-
-        let len = file.seek(SeekFrom::End(0))?;
-
-        Ok(Self {
-            file,
-            filename: name.to_string(),
-            len,
-            lock: Mutex::new(()),
-            sync_mode,
-            wal,
-        })
+        Self::with_platform(Arc::new(P::default()), name)
     }
 
     fn read(&'_ self, pos: u64, value_len: u64) -> Result<StorageSlice<'_>, DbError> {
         let mut buffer = vec![0_u8; value_len as usize];
-
-        if let Ok(_guard) = self.lock.try_lock() {
-            Self::read_impl(&self.file, pos, &mut buffer)?;
-        } else {
-            Self::read_impl(&self.open_file()?, pos, &mut buffer)?;
-        }
-
+        Self::read_impl(&self.file, pos, &mut buffer)?;
         Ok(StorageSlice::Owned(buffer))
     }
 
     fn rename(&mut self, new_name: &str) -> Result<(), DbError> {
-        std::fs::rename(&self.filename, new_name)?;
-        self.file = OpenOptions::new().read(true).write(true).open(new_name)?;
-        self.wal = WriteAheadLog::new(new_name)?;
-        std::fs::remove_file(WriteAheadLog::wal_filename(&self.filename))?;
+        let fs = self.platform.fs();
+        fs.rename(&self.filename, new_name)?;
+        self.file = fs.open_write_options(new_name, OpenWriteOptions::new())?;
+        self.wal = WriteAheadLog::new(&*self.platform, new_name)?;
+        fs.remove_file(wal_filename(&self.filename))?;
         self.filename = new_name.to_string();
         Ok(())
     }
@@ -217,7 +241,7 @@ impl StorageData for FileStorage {
     }
 }
 
-impl Drop for FileStorage {
+impl<P: Platform> Drop for FileStorageImpl<P> {
     fn drop(&mut self) {
         let _ = Self::apply_wal(&mut self.file, &mut self.wal);
     }
@@ -234,6 +258,7 @@ mod tests {
     use crate::test_utilities::test_file::TestFile;
     use crate::utilities::serialize::Serialize;
     use crate::utilities::serialize::SerializeStatic;
+    use std::fs::File;
 
     #[test]
     fn bad_record_size() {
@@ -1004,7 +1029,7 @@ mod tests {
             index3 = storage.insert(&value3).unwrap();
         }
 
-        let mut wal = WriteAheadLog::new(test_file.file_name()).unwrap();
+        let mut wal = WriteAheadLog::new(&agplatform::platform(), test_file.file_name()).unwrap();
         wal.insert(u64::serialized_size_static() * 5, &2_u64.serialize())
             .unwrap();
 
@@ -1347,21 +1372,6 @@ mod tests {
     }
 
     #[test]
-    fn file_lock() {
-        let test_file = TestFile::new();
-        let mut file = FileStorage::new(test_file.file_name()).unwrap();
-        file.write(0, "Hello, World".as_bytes()).unwrap();
-
-        assert_eq!(file.read(0, 12).unwrap(), "Hello, World".as_bytes());
-        assert_eq!(file.len(), 12);
-
-        let _guard = file.lock.lock();
-
-        assert_eq!(file.read(0, 12).unwrap(), "Hello, World".as_bytes());
-        assert_eq!(file.len(), 12);
-    }
-
-    #[test]
     fn resize() {
         let test_file = TestFile::new();
         let mut file = FileStorage::new(test_file.file_name()).unwrap();
@@ -1379,7 +1389,8 @@ mod tests {
 
         //crate wal
         {
-            let mut wal = WriteAheadLog::new(test_file.file_name()).unwrap();
+            let mut wal =
+                WriteAheadLog::new(&agplatform::platform(), test_file.file_name()).unwrap();
             wal.insert(0, "Hello".as_bytes()).unwrap(); //len 5
             wal.insert(5, "World".as_bytes()).unwrap();
         }
@@ -1406,7 +1417,8 @@ mod tests {
 
         //crate wal
         {
-            let mut wal = WriteAheadLog::new(test_file.file_name()).unwrap();
+            let mut wal =
+                WriteAheadLog::new(&agplatform::platform(), test_file.file_name()).unwrap();
             wal.insert(0, "Hello".as_bytes()).unwrap(); //len 5
             wal.insert(5, "World".as_bytes()).unwrap();
         }

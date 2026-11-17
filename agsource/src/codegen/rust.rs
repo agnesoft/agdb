@@ -1,13 +1,15 @@
 //! Rust source from the IR, laid out like rustfmt for short lines: a member
-//! per line, indented by four spaces, `where` clauses inline. Bodies and
-//! expressions are printed as they are.
+//! or a statement per line, indented by four spaces, `where` clauses inline.
+//! The expressions are printed with the parentheses of the IR.
 
 use super::ir::Args;
+use super::ir::Arm;
 use super::ir::Attr;
 use super::ir::Block;
 use super::ir::Bound;
 use super::ir::Expr;
 use super::ir::Field;
+use super::ir::FieldValue;
 use super::ir::Fields;
 use super::ir::Fn;
 use super::ir::FnTypes;
@@ -18,15 +20,24 @@ use super::ir::ImplItem;
 use super::ir::ImplItemKind;
 use super::ir::Item;
 use super::ir::ItemKind;
+use super::ir::Lit;
+use super::ir::Macro;
+use super::ir::MacroCall;
+use super::ir::Member;
+use super::ir::Pat;
 use super::ir::Path;
+use super::ir::Qualified;
 use super::ir::Receiver;
 use super::ir::Segment;
 use super::ir::Signature;
+use super::ir::Stmt;
 use super::ir::TraitItem;
 use super::ir::TraitItemKind;
 use super::ir::Type;
+use super::ir::UseTree;
 use super::ir::Variant;
 use super::ir::Vis;
+use crate::ItemId;
 use crate::SourceCrate;
 use std::cmp::Reverse;
 use std::collections::BTreeMap;
@@ -37,16 +48,14 @@ const INDENT: &str = "    ";
 
 /// The files of the items, items of `c`, with each item replaced at its span
 /// by the item printed; the rest of the files stays as it is.
-pub fn rewrite(c: &SourceCrate, items: &[Item]) -> BTreeMap<PathBuf, String> {
+pub fn rewrite(c: &SourceCrate, items: &[(ItemId, Item)]) -> BTreeMap<PathBuf, String> {
     let mut edits = BTreeMap::<_, Vec<_>>::new();
 
-    for i in items {
-        let mut text = item(i);
-        text.pop();
+    for (id, i) in items {
         edits
-            .entry(c.module(i.id.module()).file())
+            .entry(c.module(id.module()).file())
             .or_default()
-            .push((c.item(i.id).span().byte_range(), text));
+            .push((c.item(*id).span().byte_range(), decl(i)));
     }
 
     edits
@@ -67,6 +76,10 @@ pub fn rewrite(c: &SourceCrate, items: &[Item]) -> BTreeMap<PathBuf, String> {
 
 /// The item ending with a newline.
 pub fn item(item: &Item) -> String {
+    format!("{}\n", decl(item))
+}
+
+fn decl(item: &Item) -> String {
     let vis = vis(item.vis);
     let decl = match &item.kind {
         ItemKind::Struct(s) => {
@@ -125,20 +138,55 @@ pub fn item(item: &Item) -> String {
             where_clause(&t.generics),
             ty(&t.ty)
         ),
+        ItemKind::Use(u) => format!(
+            "{vis}use {}{};",
+            if u.leading_colon { "::" } else { "" },
+            use_tree(&u.tree)
+        ),
+        ItemKind::ExternCrate(e) => format!("{vis}extern crate {}{};", e.name, rename(&e.rename)),
     };
 
-    format!("{}{decl}\n", attrs(&item.attrs, ""))
+    format!("{}{decl}", attrs(&item.attrs))
 }
 
-fn attrs(attrs: &[Attr], indent: &str) -> String {
+fn use_tree(tree: &UseTree) -> String {
+    match tree {
+        UseTree::Path { name, tree } => format!("{name}::{}", use_tree(tree)),
+        UseTree::Name {
+            name, rename: r, ..
+        } => format!("{name}{}", rename(r)),
+        UseTree::Glob(_) => "*".to_string(),
+        UseTree::Group(trees) => {
+            let trees: Vec<String> = trees.iter().map(use_tree).collect();
+            format!("{{{}}}", trees.join(", "))
+        }
+    }
+}
+
+fn rename(rename: &Option<String>) -> String {
+    rename
+        .as_ref()
+        .map_or(String::new(), |r| format!(" as {r}"))
+}
+
+/// The attributes before an expression on its line.
+fn inline_attrs(attrs: &[Attr]) -> String {
     attrs
         .iter()
         .map(|attr| match attr {
-            Attr::Doc(doc) => doc
-                .split('\n')
-                .map(|line| format!("{indent}///{line}\n"))
-                .collect(),
-            Attr::Meta(meta) => format!("{indent}#[{meta}]\n"),
+            Attr::Doc(doc) => format!("#[doc = {doc:?}] "),
+            Attr::Meta(meta) => format!("#[{meta}] "),
+        })
+        .collect()
+}
+
+/// A line per attribute.
+fn attrs(attrs: &[Attr]) -> String {
+    attrs
+        .iter()
+        .map(|attr| match attr {
+            Attr::Doc(doc) => doc.split('\n').map(|line| format!("///{line}\n")).collect(),
+            Attr::Meta(meta) => format!("#[{meta}]\n"),
         })
         .collect()
 }
@@ -152,22 +200,25 @@ fn vis(vis: Vis) -> &'static str {
     }
 }
 
-/// The members in braces, each on its own indented line.
+/// Each line indented.
+fn indent(text: &str) -> String {
+    text.lines()
+        .map(|line| format!("{INDENT}{line}\n"))
+        .collect()
+}
+
+/// The members in braces, each on its own indented lines.
 fn members<T>(members: &[T], member: fn(&T) -> String) -> String {
     if members.is_empty() {
         return "{}".to_string();
     }
 
-    let lines: String = members.iter().map(member).collect();
+    let lines: String = members.iter().map(|m| indent(&member(m))).collect();
     format!("{{\n{lines}}}")
 }
 
 fn named_field(field: &Field) -> String {
-    format!(
-        "{}{INDENT}{},\n",
-        attrs(&field.attrs, INDENT),
-        field_decl(field)
-    )
+    format!("{}{},", attrs(&field.attrs), field_decl(field))
 }
 
 fn field_decl(field: &Field) -> String {
@@ -208,8 +259,8 @@ fn variant(variant: &Variant) -> String {
         .as_ref()
         .map_or(String::new(), |e| format!(" = {}", expr(e)));
     format!(
-        "{}{INDENT}{}{fields}{discriminant},\n",
-        attrs(&variant.attrs, INDENT),
+        "{}{}{fields}{discriminant},",
+        attrs(&variant.attrs),
         variant.name
     )
 }
@@ -223,7 +274,7 @@ fn trait_item(item: &TraitItem) -> String {
         TraitItemKind::Type { name, bounds: b } if b.is_empty() => format!("type {name};"),
         TraitItemKind::Type { name, bounds: b } => format!("type {name}: {};", bounds(b)),
     };
-    format!("{}{INDENT}{decl}\n", attrs(&item.attrs, INDENT))
+    format!("{}{decl}", attrs(&item.attrs))
 }
 
 fn impl_item(item: &ImplItem) -> String {
@@ -231,11 +282,7 @@ fn impl_item(item: &ImplItem) -> String {
         ImplItemKind::Fn(f) => function(f),
         ImplItemKind::Type { name, ty: t } => format!("type {name} = {};", ty(t)),
     };
-    format!(
-        "{}{INDENT}{}{decl}\n",
-        attrs(&item.attrs, INDENT),
-        vis(item.vis)
-    )
+    format!("{}{}{decl}", attrs(&item.attrs), vis(item.vis))
 }
 
 fn function(f: &Fn) -> String {
@@ -244,23 +291,21 @@ fn function(f: &Fn) -> String {
 
 fn signature(sig: &Signature) -> String {
     let receiver = sig.receiver.as_ref().map(|r| match r {
-        Receiver::Value { mutable } => format!("{}self", if *mutable { "mut " } else { "" }),
+        Receiver::Value { mutable } => format!("{}self", mutability(*mutable)),
         Receiver::Ref { lifetime, mutable } => format!(
             "&{}{}self",
             lifetime.as_ref().map_or(String::new(), |l| format!("{l} ")),
-            if *mutable { "mut " } else { "" }
+            mutability(*mutable)
         ),
+        Receiver::Typed { mutable, ty: t } => format!("{}self: {}", mutability(*mutable), ty(t)),
     });
     let inputs: Vec<String> = receiver
         .into_iter()
-        .chain(sig.params.iter().map(|p| {
-            format!(
-                "{}{}: {}",
-                if p.mutable { "mut " } else { "" },
-                p.name,
-                ty(&p.ty)
-            )
-        }))
+        .chain(
+            sig.params
+                .iter()
+                .map(|p| format!("{}{}: {}", mutability(p.mutable), p.name, ty(&p.ty))),
+        )
         .collect();
     let output = sig
         .output
@@ -276,6 +321,10 @@ fn signature(sig: &Signature) -> String {
         inputs.join(", "),
         where_clause(&sig.generics)
     )
+}
+
+fn mutability(mutable: bool) -> &'static str {
+    if mutable { "mut " } else { "" }
 }
 
 fn params(generics: &Generics) -> String {
@@ -323,14 +372,7 @@ fn bounds(bounds: &[Bound]) -> String {
 fn ty(t: &Type) -> String {
     match t {
         Type::Path(p) => path(p),
-        Type::Qualified(q) => format!(
-            "<{}{}>::{}",
-            ty(&q.ty),
-            q.trait_
-                .as_ref()
-                .map_or(String::new(), |t| format!(" as {}", path(t))),
-            q.rest.iter().map(segment).collect::<Vec<_>>().join("::")
-        ),
+        Type::Qualified(q) => qualified(q, ""),
         Type::Ref {
             lifetime,
             mutable,
@@ -338,18 +380,43 @@ fn ty(t: &Type) -> String {
         } => format!(
             "&{}{}{}",
             lifetime.as_ref().map_or(String::new(), |l| format!("{l} ")),
-            if *mutable { "mut " } else { "" },
+            mutability(*mutable),
             ty(t)
         ),
-        Type::Tuple(types) if types.len() == 1 => format!("({},)", ty(&types[0])),
-        Type::Tuple(types) => format!("({})", types.iter().map(ty).collect::<Vec<_>>().join(", ")),
+        Type::Tuple(types) => tuple(&types.iter().map(ty).collect::<Vec<_>>()),
         Type::Slice(t) => format!("[{}]", ty(t)),
         Type::Array(t, len) => format!("[{}; {}]", ty(t), expr(len)),
         Type::ImplTrait(b) => format!("impl {}", bounds(b)),
         Type::DynTrait(b) => format!("dyn {}", bounds(b)),
         Type::Paren(t) => format!("({})", ty(t)),
         Type::FnPtr(f) => format!("fn{}", fn_types(f)),
+        Type::Infer => "_".to_string(),
     }
+}
+
+/// `(a, b)`, `(a,)`.
+fn tuple(elems: &[String]) -> String {
+    match elems {
+        [one] => format!("({one},)"),
+        elems => format!("({})", elems.join(", ")),
+    }
+}
+
+/// The generic arguments of the segments after `separator`: `::` in
+/// expressions and patterns.
+fn qualified(q: &Qualified, separator: &str) -> String {
+    format!(
+        "<{}{}>::{}",
+        ty(&q.ty),
+        q.trait_
+            .as_ref()
+            .map_or(String::new(), |t| format!(" as {}", path(t))),
+        q.rest
+            .iter()
+            .map(|s| segment(s, separator))
+            .collect::<Vec<_>>()
+            .join("::")
+    )
 }
 
 /// `(A, B) -> C`.
@@ -363,7 +430,15 @@ fn fn_types(f: &FnTypes) -> String {
 }
 
 fn path(p: &Path) -> String {
-    let segments: Vec<String> = p.segments.iter().map(segment).collect();
+    path_with(p, "")
+}
+
+fn expr_path(p: &Path) -> String {
+    path_with(p, "::")
+}
+
+fn path_with(p: &Path, separator: &str) -> String {
+    let segments: Vec<String> = p.segments.iter().map(|s| segment(s, separator)).collect();
     format!(
         "{}{}",
         if p.leading_colon { "::" } else { "" },
@@ -371,34 +446,294 @@ fn path(p: &Path) -> String {
     )
 }
 
-fn segment(segment: &Segment) -> String {
+fn segment(segment: &Segment, separator: &str) -> String {
     match &segment.args {
         Args::None => segment.name.clone(),
-        Args::Angle(args) => {
-            let args: Vec<String> = args
-                .iter()
-                .map(|arg| match arg {
-                    GenericArg::Type(t) => ty(t),
-                    GenericArg::Lifetime(l) => l.clone(),
-                    GenericArg::Const(e) => expr(e).to_string(),
-                    GenericArg::AssocType { name, ty: t } => format!("{name} = {}", ty(t)),
-                })
-                .collect();
-            format!("{}<{}>", segment.name, args.join(", "))
-        }
+        Args::Angle(args) => format!("{}{separator}<{}>", segment.name, generic_args(args)),
         Args::Fn(f) => format!("{}{}", segment.name, fn_types(f)),
     }
 }
 
-fn expr(e: &Expr) -> &str {
-    match e {
-        Expr::Verbatim(text) => text,
+fn generic_args(args: &[GenericArg]) -> String {
+    args.iter()
+        .map(|arg| match arg {
+            GenericArg::Type(t) => ty(t),
+            GenericArg::Lifetime(l) => l.clone(),
+            GenericArg::Const(e) => expr(e),
+            GenericArg::AssocType { name, ty: t } => format!("{name} = {}", ty(t)),
+        })
+        .collect::<Vec<_>>()
+        .join(", ")
+}
+
+fn block(b: &Block) -> String {
+    if b.stmts.is_empty() {
+        return "{}".to_string();
+    }
+
+    let lines: String = b.stmts.iter().map(|s| indent(&stmt(s))).collect();
+    format!("{{\n{lines}}}")
+}
+
+fn stmt(s: &Stmt) -> String {
+    match s {
+        Stmt::Let {
+            attrs: a,
+            pat: p,
+            init,
+            diverge,
+        } => format!(
+            "{}let {}{}{};",
+            attrs(a),
+            pat(p),
+            init.as_ref()
+                .map_or(String::new(), |e| format!(" = {}", expr(e))),
+            diverge
+                .as_ref()
+                .map_or(String::new(), |e| format!(" else {}", expr(e)))
+        ),
+        Stmt::Item(i) => decl(i),
+        Stmt::Expr {
+            attrs: a,
+            expr: e,
+            semi,
+        } => format!("{}{}{}", attrs(a), expr(e), if *semi { ";" } else { "" }),
     }
 }
 
-fn block(b: &Block) -> &str {
-    match b {
-        Block::Verbatim(text) => text,
+fn exprs(exprs: &[Expr]) -> String {
+    exprs.iter().map(expr).collect::<Vec<_>>().join(", ")
+}
+
+fn expr(e: &Expr) -> String {
+    match e {
+        Expr::Array(elems) => format!("[{}]", exprs(elems)),
+        Expr::Assign { left, right } => format!("{} = {}", expr(left), expr(right)),
+        Expr::Async { capture, block: b } => {
+            format!("async {}{}", if *capture { "move " } else { "" }, block(b))
+        }
+        Expr::Await(e) => format!("{}.await", expr(e)),
+        Expr::Attributed { attrs, expr: e } => format!("{}{}", inline_attrs(attrs), expr(e)),
+        Expr::Binary { left, op, right } => {
+            format!("{} {} {}", expr(left), op.token(), expr(right))
+        }
+        Expr::Block(b) => block(b),
+        Expr::Break => "break".to_string(),
+        Expr::Call { func, args } => format!("{}({})", expr(func), exprs(args)),
+        Expr::Cast { expr: e, ty: t } => format!("{} as {}", expr(e), ty(t)),
+        Expr::Closure(c) => {
+            let inputs: Vec<String> = c.inputs.iter().map(pat).collect();
+            let output = c
+                .output
+                .as_ref()
+                .map_or(String::new(), |t| format!(" -> {}", ty(t)));
+            format!(
+                "{}|{}|{output} {}",
+                if c.capture { "move " } else { "" },
+                inputs.join(", "),
+                expr(&c.body)
+            )
+        }
+        Expr::Const(b) => format!("const {}", block(b)),
+        Expr::Continue => "continue".to_string(),
+        Expr::Field { expr: e, member: m } => format!("{}.{}", expr(e), member(m)),
+        Expr::ForLoop {
+            pat: p,
+            expr: e,
+            body,
+        } => format!("for {} in {} {}", pat(p), expr(e), block(body)),
+        Expr::If {
+            cond,
+            then_branch,
+            else_branch,
+        } => format!(
+            "if {} {}{}",
+            expr(cond),
+            block(then_branch),
+            else_branch
+                .as_ref()
+                .map_or(String::new(), |e| format!(" else {}", expr(e)))
+        ),
+        Expr::Index { expr: e, index } => format!("{}[{}]", expr(e), expr(index)),
+        Expr::Let { pat: p, expr: e } => format!("let {} = {}", pat(p), expr(e)),
+        Expr::Lit(l) => lit(l),
+        Expr::Loop(b) => format!("loop {}", block(b)),
+        Expr::Macro(m) => mac(m),
+        Expr::Match { expr: e, arms } => format!("match {} {}", expr(e), members(arms, arm)),
+        Expr::MethodCall {
+            receiver,
+            method,
+            turbofish,
+            args,
+        } => {
+            let turbofish = if turbofish.is_empty() {
+                String::new()
+            } else {
+                format!("::<{}>", generic_args(turbofish))
+            };
+            format!("{}.{method}{turbofish}({})", expr(receiver), exprs(args))
+        }
+        Expr::Paren(e) => format!("({})", expr(e)),
+        Expr::Path(p) => expr_path(p),
+        Expr::Qualified(q) => qualified(q, "::"),
+        Expr::Range { start, closed, end } => range(start, *closed, end),
+        Expr::Reference { mutable, expr: e } => format!("&{}{}", mutability(*mutable), expr(e)),
+        Expr::Repeat { expr: e, len } => format!("[{}; {}]", expr(e), expr(len)),
+        Expr::Return(e) => match e {
+            Some(e) => format!("return {}", expr(e)),
+            None => "return".to_string(),
+        },
+        Expr::Struct { path: p, fields } if fields.is_empty() => format!("{} {{}}", expr_path(p)),
+        Expr::Struct { path: p, fields } => {
+            let fields: Vec<String> = fields.iter().map(field_value).collect();
+            format!("{} {{ {} }}", expr_path(p), fields.join(", "))
+        }
+        Expr::Try(e) => format!("{}?", expr(e)),
+        Expr::Tuple(elems) => tuple(&elems.iter().map(expr).collect::<Vec<_>>()),
+        Expr::Unary { op, expr: e } => format!("{}{}", op.token(), expr(e)),
+        Expr::While { cond, body } => format!("while {} {}", expr(cond), block(body)),
+    }
+}
+
+fn member(m: &Member) -> String {
+    match m {
+        Member::Named(name) => name.clone(),
+        Member::Index(index) => index.to_string(),
+    }
+}
+
+/// `name` for `name: name`.
+fn field_value(f: &FieldValue) -> String {
+    let m = member(&f.member);
+
+    match &f.expr {
+        Expr::Path(p) if expr_path(p) == m => m,
+        e => format!("{m}: {}", expr(e)),
+    }
+}
+
+/// Without a comma after a block.
+fn arm(a: &Arm) -> String {
+    let guard = a
+        .guard
+        .as_ref()
+        .map_or(String::new(), |g| format!(" if {}", expr(g)));
+    let comma = if matches!(a.body, Expr::Block(_)) {
+        ""
+    } else {
+        ","
+    };
+    format!(
+        "{}{}{guard} => {}{comma}",
+        attrs(&a.attrs),
+        pat(&a.pat),
+        expr(&a.body)
+    )
+}
+
+fn lit(l: &Lit) -> String {
+    match l {
+        Lit::Str(s) => format!("{s:?}"),
+        Lit::Char(c) => format!("{c:?}"),
+        Lit::Int { digits, suffix } | Lit::Float { digits, suffix } => format!("{digits}{suffix}"),
+        Lit::Bool(b) => b.to_string(),
+    }
+}
+
+fn mac(m: &Macro) -> String {
+    let args = match &m.call {
+        MacroCall::Format { exprs: e, format } => {
+            let format = format.iter().flat_map(|f| {
+                std::iter::once(format!("{:?}", f.string)).chain(f.args.iter().map(
+                    |a| match &a.name {
+                        Some(name) => format!("{name} = {}", expr(&a.expr)),
+                        None => expr(&a.expr),
+                    },
+                ))
+            });
+            let args: Vec<String> = e.iter().map(expr).chain(format).collect();
+            format!("({})", args.join(", "))
+        }
+        MacroCall::Vec(e) => format!("[{}]", exprs(e)),
+        MacroCall::NoArgs => "()".to_string(),
+        MacroCall::VecRepeat(value, count) => format!("[{}; {}]", expr(value), expr(count)),
+        MacroCall::Matches {
+            expr: e,
+            pat: p,
+            guard,
+        } => format!(
+            "({}, {}{})",
+            expr(e),
+            pat(p),
+            guard
+                .as_ref()
+                .map_or(String::new(), |g| format!(" if {}", expr(g)))
+        ),
+        MacroCall::ThreadLocal(statics) => format!(" {}", members(statics, decl)),
+    };
+    format!("{}!{args}", path(&m.path))
+}
+
+fn range(start: &Option<Box<Expr>>, closed: bool, end: &Option<Box<Expr>>) -> String {
+    format!(
+        "{}{}{}",
+        start.as_ref().map_or(String::new(), |e| expr(e)),
+        if closed { "..=" } else { ".." },
+        end.as_ref().map_or(String::new(), |e| expr(e))
+    )
+}
+
+fn pat(p: &Pat) -> String {
+    match p {
+        Pat::Binding {
+            by_ref,
+            mutable,
+            name,
+            subpat,
+        } => format!(
+            "{}{}{name}{}",
+            if *by_ref { "ref " } else { "" },
+            mutability(*mutable),
+            subpat
+                .as_ref()
+                .map_or(String::new(), |p| format!(" @ {}", pat(p)))
+        ),
+        Pat::Lit(l) => lit(l),
+        Pat::Or(cases) => cases.iter().map(pat).collect::<Vec<_>>().join(" | "),
+        Pat::Path(p) => expr_path(p),
+        Pat::Paren(p) => format!("({})", pat(p)),
+        Pat::Range { start, closed, end } => range(start, *closed, end),
+        Pat::Ref { mutable, pat: p } => format!("&{}{}", mutability(*mutable), pat(p)),
+        Pat::Struct {
+            path: p,
+            fields,
+            rest,
+        } => {
+            let fields = fields.iter().map(|f| {
+                let m = member(&f.member);
+
+                match &f.pat {
+                    Pat::Binding {
+                        name, subpat: None, ..
+                    } if *name == m => pat(&f.pat),
+                    p => format!("{m}: {}", pat(p)),
+                }
+            });
+            let fields: Vec<String> = fields.chain(rest.then(|| "..".to_string())).collect();
+
+            if fields.is_empty() {
+                format!("{} {{}}", expr_path(p))
+            } else {
+                format!("{} {{ {} }}", expr_path(p), fields.join(", "))
+            }
+        }
+        Pat::Tuple(elems) => tuple(&elems.iter().map(pat).collect::<Vec<_>>()),
+        Pat::TupleStruct { path: p, elems } => {
+            let elems: Vec<String> = elems.iter().map(pat).collect();
+            format!("{}({})", expr_path(p), elems.join(", "))
+        }
+        Pat::Type { pat: p, ty: t } => format!("{}: {}", pat(p), ty(t)),
+        Pat::Wild => "_".to_string(),
     }
 }
 
@@ -425,7 +760,7 @@ mod tests {
         )
     }
 
-    fn ir(c: &SourceCrate, indices: &[usize]) -> Vec<Item> {
+    fn ir(c: &SourceCrate, indices: &[usize]) -> Vec<(ItemId, Item)> {
         let ids = indices.iter().map(|&index| ItemId {
             module: c.root(),
             index,
@@ -439,7 +774,10 @@ mod tests {
     fn print(source: &str) -> String {
         let c = load(source);
         let indices: Vec<usize> = (0..c.items(c.root()).len()).collect();
-        ir(&c, &indices).iter().map(super::item).collect()
+        ir(&c, &indices)
+            .iter()
+            .map(|(_, i)| super::item(i))
+            .collect()
     }
 
     mod rewrite {
@@ -549,14 +887,155 @@ impl S {}
         #[test]
         fn item_should_print_functions_constants_statics_and_aliases_as_written() {
             let source = "pub fn f<'a, T>(a: &'a [T], b: &mut u8) -> &'a T where T: Copy {
-    #![allow(unused)]
     &a[*b as usize]
 }
 pub const C: [u8; 2] = [1, 2];
 static S: &'static str = \"s\";
-pub type Alias<T> = Result<T, Error<'static, 3, { 1 + 1 }, Item = u8>>;
+pub type Alias<T> = Result<T, Error<'static, 3, Item = u8>>;
 type Handle<P> = <<P as Platform>::Fs as Fs>::WriteHandle;
 type Output<T> = <T>::Output<u8>;
+";
+
+            assert_eq!(print(source), source);
+        }
+
+        #[test]
+        fn item_should_print_bodies_as_written() {
+            let source = r#"fn f<T: Default>(a: u8, mut b: Vec<u8>) -> u8 {
+    let c = [1, 2];
+    let d;
+    let (e, _): (u8, u8) = (1, 2);
+    d = a;
+    {
+        let j = 1;
+    }
+    let g = |x: u8| -> u8 {
+        x
+    };
+    let h = |y, (z, _)| y;
+    let i = const {
+        1
+    };
+    for k in 0..a {
+        continue;
+    }
+    while let Some(l) = b.pop() {
+        break;
+    }
+    loop {}
+    if a > 1 {
+        return a;
+    } else if a < 1 {
+        return;
+    } else {
+        a;
+    }
+    let m = match b.len() {
+        0 => 1,
+        n if n > 1 => {
+            2
+        }
+        _ => 3,
+    };
+    match a {}
+    let n = S { a, b: 1 };
+    let o = S {};
+    let S { a, b: _, .. } = n;
+    let S {} = o;
+    let S { 0: x } = o;
+    let q = Vec::<u8>::new();
+    let r = b.iter().map(|x| *x).collect::<Vec<_>>();
+    let s = <T as Default>::default();
+    let t = (a as u64, (a), !true, -1, &a, &mut b, a.0, b?, b[0], (a,));
+    let u = [0; 4];
+    let v = (1..=2, ..2, 1.., ..);
+    let w = ("s\n\"", 'c', '\'', 1.5f64, 2u8, 0, false, true);
+    let z = format!("{a} {}", b, c = 1);
+    println!();
+    let aa = vec![1, 2];
+    let ab = vec![0; 2];
+    let ac = matches!(a, 1 | 2 if b);
+    let ad = matches!(a, _);
+    assert_eq!(a, 1);
+    thread_local! {
+        static TL: u8 = 1;
+    }
+    match a {
+        A::B(x) | A::C { x } => {}
+        A::D => {}
+        &x => {}
+        &mut x => {}
+        #[cfg(all())]
+        1 => {}
+    }
+    struct Local;
+    use std::mem::swap as sw;
+    use std::mem::take;
+    if let A::B(x) = a {}
+    T::default()
+}
+"#;
+
+            assert_eq!(print(source), source);
+        }
+
+        #[test]
+        fn item_should_print_the_constructs_of_tests_as_written() {
+            let source = r#"use ::std::io;
+pub use std::{self as s, fmt::{Debug, Display as D}, collections::*};
+extern crate alloc;
+pub extern crate self as c;
+impl S {
+    fn f(self: Box<Self>) {}
+    fn g(mut self: Rc<Self>) {}
+}
+async fn h(a: Option<u8>) -> u8 {
+    let Some(b) = a else {
+        return 0;
+    };
+    #[allow(x)]
+    let c = 1;
+    #[allow(x)]
+    a;
+    #[allow(x)]
+    println!();
+    let d = async move {
+        1
+    }.await;
+    let e = async {};
+    let f = move || b;
+    let g = (file!(), line!(), column!(), module_path!());
+    let i = vec![#[allow(x)] 1, #[doc = " d"] 2];
+    match a {
+        Some(ref mut j @ 1..=2) => {}
+        Some(k @ (3 | 4)) => {}
+        Some(..=5 | 6..) => {}
+        _ => {}
+    }
+    b
+}
+"#;
+
+            assert_eq!(print(source), source);
+        }
+
+        #[test]
+        fn item_should_print_every_operator() {
+            let source = "fn f() {
+    (a + b, a - b, a * b, a / b, a % b, a && b, a || b, a ^ b, a & b, a | b, a << b, a >> b);
+    (a == b, a < b, a <= b, a != b, a >= b, a > b);
+    (*a, !a, -a);
+    a += b;
+    a -= b;
+    a *= b;
+    a /= b;
+    a %= b;
+    a ^= b;
+    a &= b;
+    a |= b;
+    a <<= b;
+    a >>= b;
+}
 ";
 
             assert_eq!(print(source), source);

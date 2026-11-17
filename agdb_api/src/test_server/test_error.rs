@@ -23,18 +23,6 @@ impl std::fmt::Display for TestError {
 
 impl std::error::Error for TestError {}
 
-/// Early-returns an `Err(TestError)` from the current function.
-/// Supports the same format-string syntax as `format!`.
-macro_rules! bail {
-    ($fmt:literal $(,)?) => {
-        return Err(crate::test_server::test_error::TestError::new(format!($fmt)))
-    };
-    ($fmt:literal, $($arg:tt)*) => {
-        return Err(crate::test_server::test_error::TestError::new(format!($fmt, $($arg)*)))
-    };
-}
-pub(crate) use bail;
-
 impl From<std::io::Error> for TestError {
     #[track_caller]
     fn from(error: std::io::Error) -> Self {

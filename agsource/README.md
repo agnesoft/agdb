@@ -63,7 +63,7 @@ paths that name nothing.
 - the std macros taking a format string (`format!`, `println!`, `write!`, `panic!`, `assert_eq!`,
   ...) into the expressions before it and the format arguments, the names the string captures
   (`{name}`, `{:width$}`) included;
-- `vec!` and `matches!` by their forms;
+- `vec!`, `matches!` and `thread_local!` by their forms;
 - a `macro_rules!` of the crate by expanding it with the first rule that matches, into statements.
   All fragment specifiers but `stmt` are supported, and an `expr` fragment stays one operand.
 
@@ -71,16 +71,32 @@ paths that name nothing.
 cannot parse: the macros of other crates and the calls that do not fit.
 
 With the `codegen` feature, `SourceCrate::ir` reads items (e.g. the reachable ones) into an
-intermediate representation of their declarations as written, and `codegen::rust::item` prints one
-back as Rust (`codegen::rust::rewrite` replaces the items in their files, for a round trip):
+intermediate representation of them as written, and `codegen::rust::item` prints one back as Rust
+(`codegen::rust::rewrite` replaces the items in their files):
 
-- structs, enums, traits, impls, functions, consts, statics and type aliases;
+- structs, enums, traits, impls, functions, consts, statics, type aliases, `use` trees and
+  `extern crate`;
 - attributes after `cfg_attr`, docs, visibility, generics with bounds and `where` clauses;
-- types and paths, each path with what it names (an item, a generic parameter, `Self`, ...).
+- types and paths, each path with what it names (an item, a variant, a generic parameter, `Self`,
+  a local binding or an item of a block, ...);
+- bodies as statements, expressions and patterns, `async`/`.await`, `move` closures and
+  `let`-`else` included. A macro call is one of the forms `agsource` parses (`format!` and the
+  like, `vec!`, `matches!`, `thread_local!`, `file!()` and the like) with its arguments loaded.
 
-Bodies and expressions are their source text. An item using a construct the representation does
-not have is left out, and the construct is reported as an `Error`. `macro_rules!` are left out
-silently.
+A single name in a pattern is a constant when it names a const, a unit struct or a variant, or a
+name of another crate starting upper case (`None`), and a binding otherwise.
+
+An item using a construct the representation does not have is left out, and the construct is
+reported as an `Error`: e.g. labels, `async` closures, `..base` in struct expressions, byte
+literals, slice patterns, glob imports in blocks, other macro calls (`macro_rules!` of the crate
+too) and `macro_rules!` or `mod` in bodies. `macro_rules!` and `mod` items are left out silently,
+the items of a module are items of their own.
+
+`codegen::compare::compare` checks an item's IR against the source: the item printed from it,
+parsed again, has the syntax tree of the item as loaded (after cfg). Layout and comments do not
+count, nor do the spellings the IR does not keep: literals are their values, trailing commas and
+the delimiters of macro calls do not count. A mismatch is an `Error` showing the lines of the two
+trees around the first difference.
 
 A problem with one file does not stop loading. These are all collected as `Error`s with their
 location:

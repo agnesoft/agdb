@@ -11,6 +11,7 @@ use proc_macro2::TokenTree;
 use std::collections::HashMap;
 use syn::Expr;
 use syn::Item;
+use syn::ItemStatic;
 use syn::LitStr;
 use syn::Pat;
 use syn::Stmt;
@@ -20,6 +21,7 @@ use syn::parse::ParseStream;
 use syn::parse::Parser;
 use syn::parse::discouraged::Speculative;
 use syn::visit::Visit;
+use syn::visit_mut::VisitMut;
 
 /// A macro call, parsed by what the macro does with its arguments.
 #[derive(Debug, Clone, PartialEq)]
@@ -44,6 +46,10 @@ pub enum MacroCall {
         pat: Box<Pat>,
         guard: Option<Box<Expr>>,
     },
+    /// The statics of `thread_local!`.
+    ThreadLocal(Vec<ItemStatic>),
+    /// `file!()`, `line!()`, `column!()`, `module_path!()`.
+    NoArgs,
     /// The statements a `macro_rules!` of the crate expands to. `$crate` is
     /// `crate`, the other paths are as written, to be resolved from the
     /// module of the call.
@@ -114,7 +120,39 @@ impl MacroCall {
                 v.visit_pat(pat);
                 guard.iter().for_each(|g| v.visit_expr(g));
             }
+            MacroCall::ThreadLocal(statics) => statics.iter().for_each(|s| v.visit_item_static(s)),
+            MacroCall::NoArgs => {}
             MacroCall::Expanded(stmts) => stmts.iter().for_each(|s| v.visit_stmt(s)),
+        }
+    }
+
+    #[allow(dead_code)]
+    pub(crate) fn visit_mut(&mut self, v: &mut impl VisitMut) {
+        match self {
+            MacroCall::Format { exprs, format } => {
+                exprs.iter_mut().for_each(|e| v.visit_expr_mut(e));
+                format.iter_mut().for_each(|f| {
+                    v.visit_lit_str_mut(&mut f.string);
+                    f.args
+                        .iter_mut()
+                        .for_each(|a| v.visit_expr_mut(&mut a.expr));
+                });
+            }
+            MacroCall::Vec(exprs) => exprs.iter_mut().for_each(|e| v.visit_expr_mut(e)),
+            MacroCall::VecRepeat(value, count) => {
+                v.visit_expr_mut(value);
+                v.visit_expr_mut(count);
+            }
+            MacroCall::Matches { expr, pat, guard } => {
+                v.visit_expr_mut(expr);
+                v.visit_pat_mut(pat);
+                guard.iter_mut().for_each(|g| v.visit_expr_mut(g));
+            }
+            MacroCall::ThreadLocal(statics) => {
+                statics.iter_mut().for_each(|s| v.visit_item_static_mut(s));
+            }
+            MacroCall::NoArgs => {}
+            MacroCall::Expanded(stmts) => stmts.iter_mut().for_each(|s| v.visit_stmt_mut(s)),
         }
     }
 }
@@ -136,6 +174,10 @@ fn std_call(name: &str, mac: &syn::Macro) -> Option<Result<MacroCall, String>> {
         }
         "vec" => mac.parse_body_with(vec_call),
         "matches" => mac.parse_body_with(matches_call),
+        "thread_local" => mac.parse_body_with(thread_local_call),
+        "file" | "line" | "column" | "module_path" => {
+            mac.parse_body_with(|_: ParseStream| Ok(MacroCall::NoArgs))
+        }
         _ => return None,
     };
     Some(result.map_err(|e| e.to_string()))
@@ -281,6 +323,16 @@ fn matches_call(input: ParseStream) -> syn::Result<MacroCall> {
         pat: Box::new(pat),
         guard,
     })
+}
+
+fn thread_local_call(input: ParseStream) -> syn::Result<MacroCall> {
+    let mut statics = Vec::new();
+
+    while !input.is_empty() {
+        statics.push(input.parse()?);
+    }
+
+    Ok(MacroCall::ThreadLocal(statics))
 }
 
 /// A token of a `macro_rules!` matcher (`V` is `$name:kind`) or
@@ -713,6 +765,66 @@ mod tests {
         }
     }
 
+    mod macro_call {
+        use super::*;
+
+        mod visit_mut {
+            use super::*;
+
+            struct Names(Vec<String>);
+
+            impl VisitMut for Names {
+                fn visit_ident_mut(&mut self, ident: &mut Ident) {
+                    self.0.push(ident.to_string());
+                }
+
+                fn visit_lit_str_mut(&mut self, lit: &mut LitStr) {
+                    self.0.push(lit.value());
+                }
+            }
+
+            #[test]
+            fn visit_mut_should_visit_every_argument() {
+                let c = lib("macro_rules! m { () => { let a = b; } }");
+                let calls = [
+                    r#"assert_eq!(a, b, "{}", c)"#,
+                    "assert!(a)",
+                    "vec![a]",
+                    "vec![a; b]",
+                    "matches!(a, b if c)",
+                    "matches!(a, b)",
+                    "thread_local!(static A: B = c;)",
+                    "m!()",
+                    "file!()",
+                ];
+
+                let names: Vec<Vec<String>> = calls
+                    .iter()
+                    .map(|text| {
+                        let mut names = Names(Vec::new());
+                        call(&c, text).unwrap().visit_mut(&mut names);
+                        names.0
+                    })
+                    .collect();
+
+                assert_eq!(
+                    names,
+                    [
+                        vec!["a", "b", "{}", "c"],
+                        vec!["a"],
+                        vec!["a"],
+                        vec!["a", "b"],
+                        vec!["a", "b", "c"],
+                        vec!["a", "b"],
+                        vec!["A", "B", "c"],
+                        vec!["a", "b"],
+                        vec![],
+                    ]
+                );
+            }
+        }
+    }
+
     mod source_crate {
         use super::*;
 
@@ -768,7 +880,7 @@ mod tests {
             }
 
             #[test]
-            fn macro_call_should_parse_vec_and_matches() {
+            fn macro_call_should_parse_vec_matches_and_thread_local() {
                 let c = lib("");
 
                 assert_eq!(call(&c, "vec![]"), Ok(MacroCall::Vec(Vec::new())));
@@ -794,6 +906,16 @@ mod tests {
                         ),
                         guard: Some(Box::new(expr("y"))),
                     })
+                );
+                assert_eq!(
+                    call(
+                        &c,
+                        "thread_local! { static A: u8 = 1; pub static B: u8 = const { 2 }; }"
+                    ),
+                    Ok(MacroCall::ThreadLocal(vec![
+                        syn::parse_str("static A: u8 = 1;").unwrap(),
+                        syn::parse_str("pub static B: u8 = const { 2 };").unwrap(),
+                    ]))
                 );
                 assert_eq!(
                     call(&c, "matches!(x, A)"),
@@ -835,6 +957,7 @@ mod tests {
                     "matches!(x y)",
                     "matches!(x, =)",
                     "matches!(x, A if =)",
+                    "thread_local!(static)",
                 ] {
                     assert!(call(&c, text).is_err(), "{text}");
                 }

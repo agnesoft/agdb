@@ -886,6 +886,7 @@ const N: usize = 1;
 fn helper() -> u8 { 0 }
 pub enum E { V(u8) }
 pub struct Unused;
+struct Cell;
 macro_rules! bail {
     ($fmt:literal) => { return Err(crate::Failure::new(format!($fmt))) };
 }
@@ -896,6 +897,8 @@ impl Root {
         assert_eq!(helper(), A);
         let _ = (vec![A], vec![A; N]);
         assert!(matches!(e, E::V(x) if x > local));
+        thread_local! { static C: Cell = Cell; }
+        let _ = file!();
         dbg!(Unused);
         forever!();
         gone!();
@@ -916,6 +919,7 @@ impl Root {
                         id(&c, "N"),
                         id(&c, "helper"),
                         id(&c, "E"),
+                        id(&c, "Cell"),
                         id(&c, "bail"),
                         id(&c, "forever"),
                         imp(&c, "Root", None),

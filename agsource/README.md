@@ -23,14 +23,33 @@ A `Cfg` selects the code:
   them, and applies a `cfg_attr` only when its predicate holds. A name the set does not know is
   false and reported.
 
+`SourceCrate::resolve` tells what a path names from a given module, in the type, value or macro
+namespace: a module, an item, an enum variant, an associated item of a local type (`S::new`), a
+primitive or a path into another crate. It follows the imports the way rustc does: renames, groups,
+`self`, globs with the names visible to the importing module, and `pub use` chains in any order.
+
+The crates the code can name come from the nearest `Cargo.toml`, as cargo passes them with
+`--extern`: the dependencies (dev and target-specific ones included), the package's own library for
+tests, binaries, examples and benches, and `proc_macro` for a proc-macro library. `std`, `core`,
+`alloc` and `extern crate`s are always there. The std prelude is spelled out, `Vec` is
+`std::vec::Vec`.
+
+A `macro_rules!` is in textual scope, in its module and the modules within, and from a
+`#[macro_use]` module in its parent. It gets a path with `#[macro_export]` (at the crate root) or
+`use`.
+
+Names only the caller can know are not resolved: `Self`, generic parameters, and the items and
+imports declared inside function bodies.
+
 A problem with one file does not stop loading. These are all collected as `Error`s with their
 location:
 
 - an unreadable file;
-- invalid Rust;
+- invalid Rust or an invalid `Cargo.toml`;
 - a module without a file or with two files;
 - a circular `#[path]`;
-- an invalid or unknown cfg.
+- an invalid or unknown cfg;
+- an unresolved import.
 
 All file access goes through [agplatform](https://crates.io/crates/agplatform), so it can be tested
 in memory.

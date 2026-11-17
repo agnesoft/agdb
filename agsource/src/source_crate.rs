@@ -1,6 +1,8 @@
 use crate::Cfg;
 use crate::Error;
 use crate::cfg::configure;
+use crate::manifest;
+use crate::resolve::Scopes;
 use agplatform::Fs;
 use agplatform::Platform;
 use std::path::Component;
@@ -15,7 +17,15 @@ pub struct FileId(usize);
 
 /// Index of a [`Module`] in its [`SourceCrate`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub struct ModuleId(usize);
+pub struct ModuleId(pub(crate) usize);
+
+/// An item of a [`Module`]: the module and the index among its
+/// [`SourceCrate::items`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct ItemId {
+    pub(crate) module: ModuleId,
+    pub(crate) index: usize,
+}
 
 /// A loaded source file. A file that could not be read or parsed has no
 /// syntax tree, the reason is among the [`SourceCrate::errors`].
@@ -33,6 +43,7 @@ pub struct Module {
     parent: Option<ModuleId>,
     children: Vec<ModuleId>,
     file: FileId,
+    item: Option<ItemId>,
     // Item indices of the inline `mod` blocks leading from the file's items
     // to the module's.
     inline: Vec<usize>,
@@ -48,6 +59,7 @@ pub struct SourceCrate {
     cfg: Cfg,
     files: Vec<SourceFile>,
     modules: Vec<Module>,
+    pub(crate) scopes: Scopes,
     errors: Vec<Error>,
 }
 
@@ -70,6 +82,12 @@ impl SourceFile {
 
     pub fn ast(&self) -> Option<&syn::File> {
         self.ast.as_ref()
+    }
+}
+
+impl ItemId {
+    pub fn module(self) -> ModuleId {
+        self.module
     }
 }
 
@@ -96,6 +114,11 @@ impl Module {
         self.file
     }
 
+    /// The `mod` item declaring the module, none for the root.
+    pub fn item(&self) -> Option<ItemId> {
+        self.item
+    }
+
     fn submodule_dir(&self) -> PathBuf {
         match &self.relative {
             Some(relative) => self.dir.join(relative),
@@ -108,7 +131,8 @@ impl SourceCrate {
     /// Loads the crate whose root file (`lib.rs`, `main.rs`, an integration
     /// test, ...) is `root`, following its `mod` declarations, `#[path]`
     /// included, with the code selected by `cfg`. A module whose `#[cfg]`
-    /// or own `#![cfg]` does not hold is not loaded.
+    /// or own `#![cfg]` does not hold is not loaded. The crates the code can
+    /// name come from the nearest `Cargo.toml`.
     pub fn load(p: &impl Platform, root: impl AsRef<Path>, cfg: &Cfg) -> Self {
         let root = normalize(root.as_ref());
         let mut source_crate = Self {
@@ -121,6 +145,7 @@ impl SourceCrate {
             parent: None,
             children: Vec::new(),
             file,
+            item: None,
             inline: Vec::new(),
             dir: parent_dir(&root),
             relative: None,
@@ -140,6 +165,10 @@ impl SourceCrate {
             next += 1;
         }
 
+        let externs = manifest::externs(p, &root, &mut source_crate.errors);
+        let (scopes, errors) = Scopes::build(&source_crate, externs);
+        source_crate.scopes = scopes;
+        source_crate.errors.extend(errors);
         source_crate
     }
 
@@ -189,6 +218,10 @@ impl SourceCrate {
         items
     }
 
+    pub fn item(&self, id: ItemId) -> &Item {
+        &self.items(id.module)[id.index]
+    }
+
     pub fn errors(&self) -> &[Error] {
         &self.errors
     }
@@ -218,6 +251,10 @@ impl SourceCrate {
         let parent = &self.modules[parent_id.0];
         let mut path = parent.path.clone();
         path.push(declaration.name.clone());
+        let item = Some(ItemId {
+            module: parent_id,
+            index: declaration.index,
+        });
 
         if declaration.inline {
             // `#[path]` on an inline module names its directory.
@@ -232,6 +269,7 @@ impl SourceCrate {
                 parent: Some(parent_id),
                 children: Vec::new(),
                 file: parent.file,
+                item,
                 inline,
                 dir,
                 relative: None,
@@ -263,6 +301,7 @@ impl SourceCrate {
             parent: Some(parent_id),
             children: Vec::new(),
             file,
+            item,
             inline: Vec::new(),
             dir: parent_dir(&file_path),
             relative,
@@ -425,7 +464,7 @@ fn parent_dir(path: &Path) -> PathBuf {
 
 /// Resolves `.` and `..` without touching the file system, so the same file
 /// reached on different paths compares equal.
-fn normalize(path: &Path) -> PathBuf {
+pub(crate) fn normalize(path: &Path) -> PathBuf {
     let mut normalized = PathBuf::new();
 
     for component in path.components() {
@@ -513,6 +552,26 @@ mod tests {
 
                 let names: Vec<_> = source_crate.modules().map(|(_, m)| m.name()).collect();
                 assert_eq!(names, vec!["crate", "a", "b"]);
+            }
+        }
+    }
+
+    mod item_id {
+        use super::*;
+
+        mod module {
+            use super::*;
+
+            #[test]
+            fn module_should_be_the_module_of_the_item() {
+                let platform = platform(&[("/c/src/lib.rs", "mod a { struct A; }")]);
+
+                let source_crate = SourceCrate::load(&platform, "/c/src/lib.rs", &Cfg::All);
+
+                let a = source_crate.module(source_crate.root()).children()[0];
+                let declaration = source_crate.module(a).item().unwrap();
+                assert_eq!(declaration.module(), source_crate.root());
+                assert!(matches!(source_crate.item(declaration), Item::Mod(m) if m.ident == "a"));
             }
         }
     }

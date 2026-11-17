@@ -37,7 +37,13 @@ pub(crate) fn regenerate(
         }
     }
 
-    run_steps(platform, "regenerate", &plan(projects, &new_version)?, root)
+    run_steps(
+        platform,
+        "regenerate",
+        &plan(projects, &new_version)?,
+        root,
+        &mut std::io::stdout(),
+    )
 }
 
 fn plan(projects: &[Project], version: &str) -> Result<Vec<Step>, CIError> {

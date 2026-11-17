@@ -121,7 +121,7 @@ fn affected_since<'a>(
 
 /// The projects `check` runs without `-p`: those affected by the uncommitted changes or, in a clean
 /// worktree, by the commits since the merge base with the fetched [`REMOTE`]/[`BRANCH`], if they run
-/// on this OS.
+/// on this OS. Says so if there are none, as the report is empty then.
 fn to_check<'a>(
     platform: &impl Platform,
     projects: &'a [Project],
@@ -141,29 +141,13 @@ fn to_check<'a>(
     }
 
     let affected = affected_since(platform, projects, base)?;
-    let (selected, skipped) = affected::on_os(projects, &affected, Os::CURRENT);
-    let dirs = |projects: &[&Project]| {
-        if projects.is_empty() {
-            "none".to_string()
-        } else {
-            projects
-                .iter()
-                .map(|p| p.dir.as_str())
-                .collect::<Vec<_>>()
-                .join(", ")
+    let (selected, _) = affected::on_os(projects, &affected, Os::CURRENT);
+
+    if selected.is_empty() {
+        match base {
+            Some(base) => println!("Nothing affected since {base} (clean worktree)"),
+            None => println!("Nothing affected by the uncommitted changes"),
         }
-    };
-
-    match base {
-        Some(base) => println!(
-            "Affected since {base} (clean worktree): {}",
-            dirs(&selected)
-        ),
-        None => println!("Affected by the uncommitted changes: {}", dirs(&selected)),
-    }
-
-    if !skipped.is_empty() {
-        println!("Not checked on {}: {}", Os::CURRENT, dirs(&skipped));
     }
 
     Ok(selected)
@@ -259,7 +243,13 @@ fn release(platform: &impl Platform, args: &[String]) -> Result<(), CIError> {
         }
         Ok(())
     } else {
-        check::run_steps(platform, "release", &steps, &root(platform)?)
+        check::run_steps(
+            platform,
+            "release",
+            &steps,
+            &root(platform)?,
+            &mut std::io::stdout(),
+        )
     }
 }
 

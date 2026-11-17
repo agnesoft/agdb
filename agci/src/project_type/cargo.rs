@@ -368,6 +368,7 @@ pub(crate) fn build_release(
     utilities::stream_command(
         platform,
         Command::new("cargo").args(["build", "-r", "-p", package]),
+        &mut std::io::stdout(),
     )?;
     Ok(metadata::target_dir(platform)?.join("release").join(exe))
 }

@@ -29,16 +29,18 @@ pub(crate) fn run_command(platform: &impl Platform, command: &Command) -> Result
     }
 }
 
-/// Runs the command with its stdout and stderr both streamed to stdout, so that the output stays
+/// Runs the command with its stdout and stderr both streamed to `out`, so that the output stays
 /// in order (and inside the GitHub log group of the check) as one stream.
-pub(crate) fn stream_command(platform: &impl Platform, command: &Command) -> Result<(), CIError> {
-    std::io::stdout().flush()?;
+pub(crate) fn stream_command(
+    platform: &impl Platform,
+    command: &Command,
+    out: &mut (dyn Write + Send),
+) -> Result<(), CIError> {
+    out.flush()?;
     let result =
         command.run_blocking_with_sink(platform.process(), &mut |_: OutputStream, chunk: &[u8]| {
-            let mut stdout = std::io::stdout().lock();
-            stdout
-                .write_all(chunk)
-                .and_then(|()| stdout.flush())
+            out.write_all(chunk)
+                .and_then(|()| out.flush())
                 .map_err(agplatform::Error::other)
         });
 

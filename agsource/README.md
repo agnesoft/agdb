@@ -29,7 +29,7 @@ primitive or a path into another crate. It follows the imports the way rustc doe
 `self`, globs with the names visible to the importing module, and `pub use` chains in any order.
 
 `packages` asks `cargo metadata` (`$CARGO` when set, as for a cargo subcommand) for the packages
-of a workspace and the crates cargo builds from them: the library, binaries, tests, examples,
+of a workspace, with their features, and the crates cargo builds from them: the library, binaries, tests, examples,
 benches and the build script, each a `Target` that `SourceCrate::load` takes. A target's `externs`
 are the crates its code can name, as cargo passes them with `--extern`: the dependencies (dev and
 target-specific ones included, build dependencies for the build script), the package's own library
@@ -72,7 +72,7 @@ cannot parse: the macros of other crates and the calls that do not fit.
 
 With the `codegen` feature, `SourceCrate::ir` reads items (e.g. the reachable ones) into an
 intermediate representation of their declarations as written, and `codegen::rust::item` prints one
-back as Rust:
+back as Rust (`codegen::rust::rewrite` replaces the items in their files, for a round trip):
 
 - structs, enums, traits, impls, functions, consts, statics and type aliases;
 - attributes after `cfg_attr`, docs, visibility, generics with bounds and `where` clauses;

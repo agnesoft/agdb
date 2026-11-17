@@ -11,6 +11,7 @@ mod proof;
 mod regenerate;
 mod release;
 mod report;
+mod roundtrip;
 mod utilities;
 
 use crate::affected::Job;
@@ -53,7 +54,10 @@ const USAGE: &str = "usage:
                                since <ref> (or of the given ones) and, if there is no v<version> tag
                                for the repository version, the release (the packages and release
                                hooks of all projects, then the GitHub release and tag); --plan only
-                               prints the steps";
+                               prints the steps
+  agci roundtrip <package>...  in a copy of the repository (target/agci/roundtrip), replace the
+                               items the exports of the packages' libraries reach with the Rust
+                               printed from their agsource IR and run the packages' tests there";
 
 /// What `check` compares a clean worktree to: `<REMOTE>/<BRANCH>`.
 const REMOTE: &str = "origin";
@@ -451,6 +455,7 @@ fn run(platform: &impl Platform, args: &[String]) -> Result<(), CIError> {
             _ => Err(USAGE.into()),
         },
         Some("release") => release(platform, &args[1..]),
+        Some("roundtrip") => roundtrip::roundtrip(platform, &root(platform)?, &args[1..]),
         Some(_) => Err(USAGE.into()),
     }
 }

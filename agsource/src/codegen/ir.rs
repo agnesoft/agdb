@@ -78,6 +78,7 @@ pub enum Bound {
 #[derive(Debug, Clone, PartialEq)]
 pub enum Type {
     Path(Path),
+    Qualified(Box<Qualified>),
     Ref {
         lifetime: Option<String>,
         mutable: bool,
@@ -90,6 +91,14 @@ pub enum Type {
     DynTrait(Vec<Bound>),
     Paren(Box<Type>),
     FnPtr(FnTypes),
+}
+
+/// `<ty as Trait>::rest` or `<ty>::rest`.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Qualified {
+    pub ty: Type,
+    pub trait_: Option<Path>,
+    pub rest: Vec<Segment>,
 }
 
 /// The parameter and return types of a function pointer or of a `Fn(..)`

@@ -20,14 +20,50 @@ use super::ir::Item;
 use super::ir::ItemKind;
 use super::ir::Path;
 use super::ir::Receiver;
+use super::ir::Segment;
 use super::ir::Signature;
 use super::ir::TraitItem;
 use super::ir::TraitItemKind;
 use super::ir::Type;
 use super::ir::Variant;
 use super::ir::Vis;
+use crate::SourceCrate;
+use std::cmp::Reverse;
+use std::collections::BTreeMap;
+use std::path::PathBuf;
+use syn::spanned::Spanned;
 
 const INDENT: &str = "    ";
+
+/// The files of the items, items of `c`, with each item replaced at its span
+/// by the item printed; the rest of the files stays as it is.
+pub fn rewrite(c: &SourceCrate, items: &[Item]) -> BTreeMap<PathBuf, String> {
+    let mut edits = BTreeMap::<_, Vec<_>>::new();
+
+    for i in items {
+        let mut text = item(i);
+        text.pop();
+        edits
+            .entry(c.module(i.id.module()).file())
+            .or_default()
+            .push((c.item(i.id).span().byte_range(), text));
+    }
+
+    edits
+        .into_iter()
+        .map(|(file, mut edits)| {
+            let file = c.file(file);
+            let mut text = file.text().to_string();
+            edits.sort_by_key(|(range, _)| Reverse(range.start));
+
+            for (range, item) in edits {
+                text.replace_range(range, &item);
+            }
+
+            (file.path().to_path_buf(), text)
+        })
+        .collect()
+}
 
 /// The item ending with a newline.
 pub fn item(item: &Item) -> String {
@@ -287,6 +323,14 @@ fn bounds(bounds: &[Bound]) -> String {
 fn ty(t: &Type) -> String {
     match t {
         Type::Path(p) => path(p),
+        Type::Qualified(q) => format!(
+            "<{}{}>::{}",
+            ty(&q.ty),
+            q.trait_
+                .as_ref()
+                .map_or(String::new(), |t| format!(" as {}", path(t))),
+            q.rest.iter().map(segment).collect::<Vec<_>>().join("::")
+        ),
         Type::Ref {
             lifetime,
             mutable,
@@ -319,31 +363,31 @@ fn fn_types(f: &FnTypes) -> String {
 }
 
 fn path(p: &Path) -> String {
-    let segments: Vec<String> = p
-        .segments
-        .iter()
-        .map(|segment| match &segment.args {
-            Args::None => segment.name.clone(),
-            Args::Angle(args) => {
-                let args: Vec<String> = args
-                    .iter()
-                    .map(|arg| match arg {
-                        GenericArg::Type(t) => ty(t),
-                        GenericArg::Lifetime(l) => l.clone(),
-                        GenericArg::Const(e) => expr(e).to_string(),
-                        GenericArg::AssocType { name, ty: t } => format!("{name} = {}", ty(t)),
-                    })
-                    .collect();
-                format!("{}<{}>", segment.name, args.join(", "))
-            }
-            Args::Fn(f) => format!("{}{}", segment.name, fn_types(f)),
-        })
-        .collect();
+    let segments: Vec<String> = p.segments.iter().map(segment).collect();
     format!(
         "{}{}",
         if p.leading_colon { "::" } else { "" },
         segments.join("::")
     )
+}
+
+fn segment(segment: &Segment) -> String {
+    match &segment.args {
+        Args::None => segment.name.clone(),
+        Args::Angle(args) => {
+            let args: Vec<String> = args
+                .iter()
+                .map(|arg| match arg {
+                    GenericArg::Type(t) => ty(t),
+                    GenericArg::Lifetime(l) => l.clone(),
+                    GenericArg::Const(e) => expr(e).to_string(),
+                    GenericArg::AssocType { name, ty: t } => format!("{name} = {}", ty(t)),
+                })
+                .collect();
+            format!("{}<{}>", segment.name, args.join(", "))
+        }
+        Args::Fn(f) => format!("{}{}", segment.name, fn_types(f)),
+    }
 }
 
 fn expr(e: &Expr) -> &str {
@@ -360,6 +404,7 @@ fn block(b: &Block) -> &str {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use crate::Cfg;
     use crate::ItemId;
     use crate::SourceCrate;
@@ -369,23 +414,67 @@ mod tests {
     use agplatform::Platform;
     use agplatform::test_platform::test_platform;
 
-    /// The root items of the crate printed from the IR.
-    fn print(source: &str) -> String {
+    fn load(source: &str) -> SourceCrate {
         let platform = test_platform();
         platform.fs().create_dir_all("/c/src").unwrap();
         platform.fs().write("/c/src/lib.rs", source).unwrap();
-        let c = SourceCrate::load(
+        SourceCrate::load(
             &platform,
             &Target::new(TargetKind::Lib, "/c/src/lib.rs"),
             &Cfg::All,
-        );
-        let ids = (0..c.items(c.root()).len()).map(|index| ItemId {
+        )
+    }
+
+    fn ir(c: &SourceCrate, indices: &[usize]) -> Vec<Item> {
+        let ids = indices.iter().map(|&index| ItemId {
             module: c.root(),
             index,
         });
         let (items, errors) = c.ir(ids);
         assert!(errors.is_empty(), "{errors:?}");
-        items.iter().map(super::item).collect()
+        items
+    }
+
+    /// The root items of the crate printed from the IR.
+    fn print(source: &str) -> String {
+        let c = load(source);
+        let indices: Vec<usize> = (0..c.items(c.root()).len()).collect();
+        ir(&c, &indices).iter().map(super::item).collect()
+    }
+
+    mod rewrite {
+        use super::*;
+
+        #[test]
+        fn rewrite_should_replace_the_items_and_keep_the_rest() {
+            let c = load(
+                "pub struct A;
+
+fn keep() {}
+#[derive(Debug)]
+pub struct B { a: u8 }
+",
+            );
+            let items = ir(&c, &[0, 2]);
+
+            let files = super::super::rewrite(&c, &items);
+
+            assert_eq!(
+                files,
+                BTreeMap::from([(
+                    PathBuf::from("/c/src/lib.rs"),
+                    "pub struct A;
+
+fn keep() {}
+#[derive(Debug)]
+pub struct B {
+    a: u8,
+}
+"
+                    .to_string()
+                )])
+            );
+        }
     }
 
     mod item {
@@ -466,6 +555,8 @@ impl S {}
 pub const C: [u8; 2] = [1, 2];
 static S: &'static str = \"s\";
 pub type Alias<T> = Result<T, Error<'static, 3, { 1 + 1 }, Item = u8>>;
+type Handle<P> = <<P as Platform>::Fs as Fs>::WriteHandle;
+type Output<T> = <T>::Output<u8>;
 ";
 
             assert_eq!(print(source), source);

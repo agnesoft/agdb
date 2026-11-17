@@ -3,6 +3,7 @@ use agplatform::CommandExt;
 use agplatform::Env;
 use agplatform::Platform;
 use serde::Deserialize;
+use std::collections::BTreeMap;
 use std::path::Path;
 use std::path::PathBuf;
 use std::process::Command;
@@ -15,6 +16,8 @@ pub struct Package {
     pub manifest: PathBuf,
     /// Sorted.
     pub targets: Vec<Target>,
+    /// The features of its `[features]`, sorted.
+    pub features: Vec<String>,
 }
 
 /// A crate of a package, what [`SourceCrate::load`](crate::SourceCrate::load)
@@ -51,6 +54,8 @@ struct MetadataPackage {
     manifest_path: PathBuf,
     targets: Vec<MetadataTarget>,
     dependencies: Vec<MetadataDependency>,
+    #[serde(default)]
+    features: BTreeMap<String, Vec<String>>,
 }
 
 #[derive(Deserialize)]
@@ -155,6 +160,7 @@ fn package(package: MetadataPackage) -> Package {
         name: package.name,
         manifest: package.manifest_path,
         targets,
+        features: package.features.into_keys().collect(),
     }
 }
 
@@ -207,7 +213,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn packages_should_list_the_targets_and_their_externs() {
+        fn packages_should_list_the_targets_their_externs_and_the_features() {
             let platform = platform(
                 r#"{"packages": [{
                     "name": "my-crate",
@@ -225,7 +231,8 @@ mod tests {
                         {"name": "real", "rename": "alias", "kind": null},
                         {"name": "dev", "rename": null, "kind": "dev"},
                         {"name": "cc", "rename": null, "kind": "build"}
-                    ]
+                    ],
+                    "features": {"serde": ["dep:serde"], "default": ["serde"]}
                 }]}"#,
             );
 
@@ -246,6 +253,7 @@ mod tests {
                         target(TargetKind::Bench, "/c/benches/b.rs", &with_lib),
                         target(TargetKind::Build, "/c/build.rs", &["cc", "my_crate"]),
                     ],
+                    features: vec!["default".to_string(), "serde".to_string()],
                 }]
             );
             assert_eq!(

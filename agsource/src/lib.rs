@@ -5,6 +5,8 @@
 //! [`SourceCrate::resolve`] tells what a path names, following the imports
 //! of the modules like rustc does.
 //!
+//! [`packages`] lists the crates of a cargo workspace, from `cargo metadata`.
+//!
 //! Problems with single files (unreadable, invalid, missing modules,
 //! unresolved imports) are
 //! collected as [`Error`]s and loading carries on with the rest.
@@ -12,7 +14,7 @@
 mod cfg;
 mod error;
 mod files;
-mod manifest;
+mod package;
 mod resolve;
 mod source_crate;
 
@@ -20,6 +22,10 @@ pub use cfg::Cfg;
 pub use cfg::CfgSet;
 pub use error::Error;
 pub use files::rust_files;
+pub use package::Package;
+pub use package::Target;
+pub use package::TargetKind;
+pub use package::packages;
 pub use resolve::Namespace;
 pub use resolve::Resolved;
 pub use source_crate::FileId;

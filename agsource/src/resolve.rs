@@ -865,12 +865,14 @@ fn unraw(ident: &syn::Ident) -> String {
 mod tests {
     use super::*;
     use crate::Cfg;
+    use crate::Target;
+    use crate::TargetKind;
     use agplatform::Fs;
     use agplatform::Platform;
     use agplatform::test_platform::test_platform;
     use std::path::Path;
 
-    fn load(files: &[(&str, &str)]) -> SourceCrate {
+    fn load(files: &[(&str, &str)], externs: &[&str]) -> SourceCrate {
         let platform = test_platform();
 
         for (path, content) in files {
@@ -881,21 +883,22 @@ mod tests {
             platform.fs().write(path, content).unwrap();
         }
 
-        SourceCrate::load(&platform, "/c/src/lib.rs", &Cfg::All)
+        let target = Target {
+            externs: externs.iter().map(ToString::to_string).collect(),
+            ..Target::new(TargetKind::Lib, "/c/src/lib.rs")
+        };
+        SourceCrate::load(&platform, &target, &Cfg::All)
     }
 
     fn lib(source: &str) -> SourceCrate {
-        load(&[("/c/src/lib.rs", source)])
+        load(&[("/c/src/lib.rs", source)], &[])
     }
 
     fn lib_with_crates(source: &str) -> SourceCrate {
-        load(&[
-            (
-                "/c/Cargo.toml",
-                "[dependencies]\nserde = \"1\"\nserde-json = \"1\"\ndep = \"1\"",
-            ),
-            ("/c/src/lib.rs", source),
-        ])
+        load(
+            &[("/c/src/lib.rs", source)],
+            &["serde", "serde_json", "dep"],
+        )
     }
 
     fn module(c: &SourceCrate, path: &str) -> ModuleId {

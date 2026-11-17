@@ -28,11 +28,14 @@ namespace: a module, an item, an enum variant, an associated item of a local typ
 primitive or a path into another crate. It follows the imports the way rustc does: renames, groups,
 `self`, globs with the names visible to the importing module, and `pub use` chains in any order.
 
-The crates the code can name come from the nearest `Cargo.toml`, as cargo passes them with
-`--extern`: the dependencies (dev and target-specific ones included), the package's own library for
-tests, binaries, examples and benches, and `proc_macro` for a proc-macro library. `std`, `core`,
-`alloc` and `extern crate`s are always there. The std prelude is spelled out, `Vec` is
-`std::vec::Vec`.
+`packages` asks `cargo metadata` (`$CARGO` when set, as for a cargo subcommand) for the packages
+of a workspace and the crates cargo builds from them: the library, binaries, tests, examples,
+benches and the build script, each a `Target` that `SourceCrate::load` takes. A target's `externs`
+are the crates its code can name, as cargo passes them with `--extern`: the dependencies (dev and
+target-specific ones included, build dependencies for the build script), the package's own library
+for the other crates, and `proc_macro` for a proc-macro library. `std`, `core`, `alloc` and
+`extern crate`s are always there.
+The std prelude is spelled out, `Vec` is `std::vec::Vec`.
 
 A `macro_rules!` is in textual scope, in its module and the modules within, and from a
 `#[macro_use]` module in its parent. It gets a path with `#[macro_export]` (at the crate root) or
@@ -45,13 +48,15 @@ A problem with one file does not stop loading. These are all collected as `Error
 location:
 
 - an unreadable file;
-- invalid Rust or an invalid `Cargo.toml`;
+- invalid Rust;
 - a module without a file or with two files;
 - a circular `#[path]`;
 - an invalid or unknown cfg;
 - an unresolved import.
 
-All file access goes through [agplatform](https://crates.io/crates/agplatform), so it can be tested
-in memory.
+`packages` returns an `Error` when `cargo metadata` fails.
+
+All file and process access goes through [agplatform](https://crates.io/crates/agplatform), so it
+can be tested in memory.
 
 Used by [agtestcheck](../agtestcheck) and the agdb API client generator.

@@ -27,6 +27,7 @@ agdb = { version = "0.17.0", path = "agdb" }
 agdb_api = { version = "0.17.0", path = "agdb_api" }
 agdb_derive = { version = "0.17.0", path = "agdb_derive" }
 agplatform = { version = "0.17.0", path = "agplatform" }
+agsource = { version = "0.17.0", path = "agsource" }
 
 # external
 anyhow = "1"

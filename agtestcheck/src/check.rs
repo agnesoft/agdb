@@ -195,6 +195,7 @@ pub(crate) fn check(map: &SourceMap) -> Vec<Issue> {
     }
 
     issues.extend(contract.issues());
+    issues.retain(|issue| !map.unchecked.contains(&issue.file));
     issues.sort_by(|a, b| (&a.file, a.line).cmp(&(&b.file, b.line)));
     issues
 }
@@ -938,15 +939,18 @@ mod tests {
     use std::collections::HashMap;
 
     use super::*;
-    use crate::source_map::parse_source;
+    use crate::source_map::SourceTypes;
+    use crate::source_map::source_types;
+
+    fn parse(source: &str) -> SourceTypes {
+        source_types(&syn::parse_file(source).unwrap(), source, false)
+    }
 
     fn issues(source: &str) -> Vec<(usize, IssueKind)> {
         let map = SourceMap {
-            files: HashMap::from([(
-                PathBuf::from("src/lib.rs"),
-                parse_source(source, false).unwrap(),
-            )]),
+            files: HashMap::from([(PathBuf::from("src/lib.rs"), parse(source))]),
             errors: HashMap::new(),
+            ..SourceMap::default()
         };
 
         check(&map).into_iter().map(|i| (i.line, i.kind)).collect()
@@ -1259,7 +1263,7 @@ mod tests {
         #[test]
         fn check_test_file_should_name_items_of_its_crate() {
             let file = |path: &str, krate: &str, source: &str| {
-                let mut types = parse_source(source, false).unwrap();
+                let mut types = parse(source);
                 types.crate_dir = Some(PathBuf::from(krate));
                 (PathBuf::from(path), types)
             };
@@ -1297,6 +1301,7 @@ mod cache {
                     ),
                 ]),
                 errors: HashMap::new(),
+                ..SourceMap::default()
             };
             let unknown = |file: &str, line: usize| Issue {
                 file: PathBuf::from(file),
@@ -1324,6 +1329,7 @@ mod cache {
                     PathBuf::from("src/lib.rs"),
                     "1:4: expected identifier".to_string(),
                 )]),
+                ..SourceMap::default()
             };
 
             assert_eq!(
@@ -1621,11 +1627,10 @@ mod tests {
                 let map = SourceMap {
                     files: files
                         .iter()
-                        .map(|(file, source)| {
-                            (PathBuf::from(file), parse_source(source, false).unwrap())
-                        })
+                        .map(|(file, source)| (PathBuf::from(file), parse(source)))
                         .collect(),
                     errors: HashMap::new(),
+                    ..SourceMap::default()
                 };
 
                 check(&map).into_iter().map(|i| i.kind).collect::<Vec<_>>()
@@ -1914,7 +1919,7 @@ impl io::Lock for NestedFs {
 }
 ";
             let file = |path: &str, krate: &str, source: &str| {
-                let mut types = parse_source(source, false).unwrap();
+                let mut types = parse(source);
                 types.crate_dir = Some(PathBuf::from(krate));
                 (PathBuf::from(path), types)
             };
@@ -1926,6 +1931,7 @@ impl io::Lock for NestedFs {
                     file("b/src/lib.rs", "b", other),
                 ]),
                 errors: HashMap::new(),
+                ..SourceMap::default()
             };
             let missing = |file: &str, line: usize, case: &str, module: &str| Issue {
                 file: PathBuf::from(file),
@@ -1986,16 +1992,11 @@ impl io::Lock for NestedFs {
             let source = "#[test]\nfn b() {}\n#[test]\nfn a() {}";
             let map = SourceMap {
                 files: HashMap::from([
-                    (
-                        PathBuf::from("src/b.rs"),
-                        parse_source(source, false).unwrap(),
-                    ),
-                    (
-                        PathBuf::from("src/a.rs"),
-                        parse_source(source, false).unwrap(),
-                    ),
+                    (PathBuf::from("src/b.rs"), parse(source)),
+                    (PathBuf::from("src/a.rs"), parse(source)),
                 ]),
                 errors: HashMap::new(),
+                ..SourceMap::default()
             };
 
             assert_eq!(

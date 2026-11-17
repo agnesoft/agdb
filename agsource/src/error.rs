@@ -1,3 +1,4 @@
+use std::path::Path;
 use std::path::PathBuf;
 
 /// A problem with one source file. Lines and columns are 1-based.
@@ -50,6 +51,24 @@ pub enum Error {
         line: usize,
         name: String,
     },
+    /// `cargo metadata` failed for the manifest `path`.
+    Cargo { path: PathBuf, message: String },
+}
+
+impl Error {
+    /// The file (or directory) the problem is in.
+    pub fn path(&self) -> &Path {
+        match self {
+            Error::Read { path, .. }
+            | Error::Parse { path, .. }
+            | Error::ModuleNotFound { path, .. }
+            | Error::ModuleAmbiguous { path, .. }
+            | Error::CircularModule { path, .. }
+            | Error::UnknownCfg { path, .. }
+            | Error::UnresolvedImport { path, .. }
+            | Error::Cargo { path, .. } => path,
+        }
+    }
 }
 
 impl std::fmt::Display for Error {
@@ -111,6 +130,9 @@ impl std::fmt::Display for Error {
             Error::UnresolvedImport { path, line, name } => {
                 write!(f, "{}:{line}: unresolved import `{name}`", path.display())
             }
+            Error::Cargo { path, message } => {
+                write!(f, "{}: cargo metadata failed: {message}", path.display())
+            }
         }
     }
 }
@@ -121,6 +143,63 @@ mod tests {
 
     mod error {
         use super::*;
+
+        mod path {
+            use super::*;
+
+            #[test]
+            fn path_should_be_the_file_of_every_kind() {
+                let path = || PathBuf::from("src/a.rs");
+                let errors = [
+                    Error::Read {
+                        path: path(),
+                        error: agplatform::Error::fs("no such file"),
+                    },
+                    Error::Parse {
+                        path: path(),
+                        line: 1,
+                        column: 1,
+                        message: String::new(),
+                    },
+                    Error::ModuleNotFound {
+                        path: path(),
+                        line: 1,
+                        name: String::new(),
+                        candidates: Vec::new(),
+                    },
+                    Error::ModuleAmbiguous {
+                        path: path(),
+                        line: 1,
+                        name: String::new(),
+                        candidates: Vec::new(),
+                    },
+                    Error::CircularModule {
+                        path: path(),
+                        line: 1,
+                        name: String::new(),
+                        file: PathBuf::new(),
+                    },
+                    Error::UnknownCfg {
+                        path: path(),
+                        line: 1,
+                        name: String::new(),
+                    },
+                    Error::UnresolvedImport {
+                        path: path(),
+                        line: 1,
+                        name: String::new(),
+                    },
+                    Error::Cargo {
+                        path: path(),
+                        message: String::new(),
+                    },
+                ];
+
+                for error in &errors {
+                    assert_eq!(error.path(), path(), "{error:?}");
+                }
+            }
+        }
 
         mod std_fmt_display {
             use super::*;
@@ -165,6 +244,10 @@ mod tests {
                     path: "src/e.rs".into(),
                     error: agplatform::Error::fs("no such file"),
                 };
+                let cargo = Error::Cargo {
+                    path: "Cargo.toml".into(),
+                    message: "error: invalid manifest".into(),
+                };
 
                 assert_eq!(
                     not_found.to_string(),
@@ -187,6 +270,10 @@ mod tests {
                 assert_eq!(
                     unresolved.to_string(),
                     "src/g.rs:8: unresolved import `a::b`"
+                );
+                assert_eq!(
+                    cargo.to_string(),
+                    "Cargo.toml: cargo metadata failed: error: invalid manifest"
                 );
             }
         }

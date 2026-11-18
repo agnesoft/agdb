@@ -41,6 +41,24 @@ impl Ty {
         }
     }
 
+    /// The type with every type within it replaced by `f` of it, inner types
+    /// first.
+    pub fn map(&self, f: &dyn Fn(&Ty) -> Ty) -> Ty {
+        let ty = match self {
+            Ty::List(inner) => Ty::List(Box::new(inner.map(f))),
+            Ty::Option(inner) => Ty::Option(Box::new(inner.map(f))),
+            Ty::Ref(inner) => Ty::Ref(Box::new(inner.map(f))),
+            Ty::Tuple(items) => Ty::Tuple(items.iter().map(|t| t.map(f)).collect()),
+            Ty::Named(name, args) => {
+                Ty::Named(name.clone(), args.iter().map(|t| t.map(f)).collect())
+            }
+            Ty::Dict(name, of) => Ty::Dict(name.clone(), Box::new(of.map(f))),
+            ty => ty.clone(),
+        };
+
+        f(&ty)
+    }
+
     pub fn strip_ref(&self) -> &Ty {
         match self {
             Ty::Ref(ty) => ty.strip_ref(),
@@ -537,6 +555,112 @@ impl Module {
             f(func, "");
         }
     }
+
+    /// Replaces every type of the module with `f` of it, inner types first.
+    pub fn map_types(&mut self, f: &dyn Fn(&Ty) -> Ty) {
+        let map = |ty: &mut Ty| *ty = ty.map(f);
+        let map_func = |func: &mut Func| {
+            map(&mut func.ret);
+            func.params.iter_mut().for_each(|(_, ty)| map(ty));
+            func.generics
+                .iter_mut()
+                .flat_map(|g| g.bounds.iter_mut())
+                .filter_map(|(_, arg)| arg.as_mut())
+                .for_each(map);
+            rewrite_body(&mut func.body, &mut |e| {
+                map(&mut e.ty);
+
+                if let K::TypeCase { arms, .. } = &mut e.k {
+                    arms.iter_mut().for_each(|(ty, _, _)| map(ty));
+                }
+            });
+        };
+
+        self.for_each_func(&mut |func, _| map_func(func));
+        self.traits.values_mut().flatten().for_each(map_func);
+        self.classes
+            .values_mut()
+            .flat_map(|c| c.fields.iter_mut())
+            .for_each(|(_, ty)| map(ty));
+
+        for v in self.enums.values_mut().flat_map(|e| e.variants.iter_mut()) {
+            match v {
+                Variant::Tuple(_, ty) => map(ty),
+                Variant::Struct(_, fields) => fields.iter_mut().for_each(|(_, ty)| map(ty)),
+                Variant::Unit(_) => {}
+            }
+        }
+    }
+
+    /// The `Default` value of the type.
+    pub fn default_of(&self, ty: &Ty) -> Expr {
+        let value = |k| Expr::typed(k, ty.clone());
+
+        match ty.strip_ref() {
+            Ty::Named(name, _) if self.defaults.contains_key(name) => self.defaults[name].clone(),
+            Ty::List(_) => value(K::Array(Vec::new())),
+            Ty::Option(_) => value(K::Variant {
+                en: "Option".into(),
+                var: "None".into(),
+                payload: None,
+            }),
+            Ty::Int(_) => value(K::Lit(Lit::Int(0))),
+            Ty::Float => value(K::Lit(Lit::Float(0.0))),
+            Ty::Bool => value(K::Lit(Lit::Bool(false))),
+            Ty::Str => value(K::Lit(Lit::Str(String::new()))),
+            _ => value(K::Unsupported(format!("default of {ty:?}"))),
+        }
+    }
+}
+
+/// A test that a pattern makes of the value it matches.
+#[derive(Clone, Debug, PartialEq)]
+pub enum Test {
+    IsSome(Expr),
+    IsVariant(Expr, String, String),
+    Eq(Expr, Lit),
+}
+
+impl Pat {
+    /// The tests the pattern makes of `base` and the place within `base`
+    /// that each binding refers to.
+    pub fn projections(&self, base: &Expr) -> (Vec<Test>, Vec<(String, Expr)>) {
+        let mut tests = Vec::new();
+        let mut binds = Vec::new();
+        self.project(base, &mut tests, &mut binds);
+        (tests, binds)
+    }
+
+    fn project(&self, base: &Expr, tests: &mut Vec<Test>, binds: &mut Vec<(String, Expr)>) {
+        match self {
+            Pat::Wild => {}
+            Pat::Bind(name) => binds.push((name.clone(), base.clone())),
+            Pat::Lit(lit) => tests.push(Test::Eq(base.clone(), lit.clone())),
+            Pat::Variant { en, var, inner } if en == "Option" && var == "Some" => {
+                tests.push(Test::IsSome(base.clone()));
+                let ty = match &base.ty {
+                    Ty::Option(ty) => (**ty).clone(),
+                    _ => Ty::Unknown,
+                };
+                let value = Expr::typed(K::Unwrap(base.clone().boxed()), ty);
+                inner.iter().for_each(|p| p.project(&value, tests, binds));
+            }
+            Pat::Variant { en, var, inner } => {
+                tests.push(Test::IsVariant(base.clone(), en.clone(), var.clone()));
+                let payload = Expr::new(K::Payload {
+                    base: base.clone().boxed(),
+                    en: en.clone(),
+                    var: var.clone(),
+                });
+                inner.iter().for_each(|p| p.project(&payload, tests, binds));
+            }
+            Pat::Struct { fields, .. } => {
+                for (name, p) in fields {
+                    p.project(&base.clone().field(name, Ty::Unknown), tests, binds);
+                }
+            }
+        }
+    }
 }
 
 #[cfg(test)]
@@ -652,6 +776,233 @@ mod tests {
             #[test]
             fn name_should_be_the_name_of_a_named_type_only() {
                 assert_eq!((Ty::named("A").name(), Ty::Bool.name()), (Some("A"), None));
+            }
+        }
+
+        mod map {
+            use super::*;
+
+            #[test]
+            fn map_should_replace_the_types_within_inner_first() {
+                let ty = Ty::Tuple(vec![
+                    Ty::List(Box::new(Ty::Bool)),
+                    Ty::Option(Box::new(Ty::Bool)),
+                    Ty::Ref(Box::new(Ty::Bool)),
+                    Ty::Named("A".into(), vec![Ty::Bool]),
+                    Ty::Dict("Tr".into(), Box::new(Ty::Bool)),
+                ]);
+
+                let mapped = ty.map(&|t| match t {
+                    Ty::Bool => Ty::Str,
+                    Ty::Named(_, args) if args == &[Ty::Str] => Ty::named("B"),
+                    t => t.clone(),
+                });
+
+                assert_eq!(
+                    print::ty(&mapped),
+                    "(Vec<str>, Option<str>, &str, B, dyn Tr<str>)"
+                );
+            }
+        }
+    }
+
+    mod module {
+        use super::*;
+
+        fn with(ty: Ty) -> Module {
+            let mut f = Func::new(
+                "f",
+                vec![
+                    ("p".into(), ty.clone()),
+                    ("q".into(), Ty::List(Box::new(ty.clone()))),
+                ],
+                ty.clone(),
+                vec![Expr::typed(
+                    K::TypeCase {
+                        value: Expr::local("v", ty.clone()).boxed(),
+                        arms: vec![(ty.clone(), Pat::Wild, Expr::local("v", ty.clone()))],
+                    },
+                    ty.clone(),
+                )],
+            );
+            f.generics.push(Generic {
+                name: "G".into(),
+                bounds: vec![("Into".into(), Some(ty.clone())), ("Tr".into(), None)],
+            });
+            let mut m = Module::default();
+            m.classes.insert(
+                "C".into(),
+                Class {
+                    name: "C".into(),
+                    generics: Vec::new(),
+                    fields: vec![("a".into(), ty.clone())],
+                    methods: vec![f.clone()],
+                    trait_impls: BTreeMap::new(),
+                },
+            );
+            m.enums.insert(
+                "E".into(),
+                Enum {
+                    name: "E".into(),
+                    variants: vec![
+                        Variant::Unit("A".into()),
+                        Variant::Tuple("B".into(), ty.clone()),
+                        Variant::Struct("C".into(), vec![("a".into(), ty.clone())]),
+                    ],
+                    methods: Vec::new(),
+                },
+            );
+            m.traits.insert("Tr".into(), vec![f]);
+            m
+        }
+
+        mod map_types {
+            use super::*;
+
+            #[test]
+            fn map_types_should_replace_every_type_of_the_module() {
+                let mut m = with(Ty::Bool);
+
+                m.map_types(&|t| match t {
+                    Ty::Bool => Ty::Str,
+                    t => t.clone(),
+                });
+
+                assert_eq!(m, with(Ty::Str));
+            }
+        }
+
+        mod default_of {
+            use super::*;
+
+            #[test]
+            fn default_of_should_be_the_default_value_of_the_type() {
+                let mut m = Module::default();
+                m.defaults
+                    .insert("D".into(), Expr::local("d", Ty::named("D")));
+                let types = [
+                    Ty::named("D"),
+                    Ty::List(Box::new(Ty::Bool)),
+                    Ty::Option(Box::new(Ty::Bool)),
+                    Ty::Ref(Box::new(Ty::Int("u8"))),
+                    Ty::Float,
+                    Ty::Bool,
+                    Ty::Str,
+                    Ty::named("X"),
+                ];
+
+                let defaults: Vec<String> = types
+                    .iter()
+                    .map(|t| print::expr(&m.default_of(t)))
+                    .collect();
+
+                assert_eq!(
+                    defaults,
+                    [
+                        "d",
+                        "vec![]",
+                        "Option::None",
+                        "0",
+                        "0.0",
+                        "false",
+                        "\"\"",
+                        "/* unsupported: default of Named(\"X\", []) */"
+                    ]
+                );
+            }
+        }
+    }
+
+    mod pat {
+        use super::*;
+
+        mod projections {
+            use super::*;
+
+            #[test]
+            fn projections_should_be_the_tests_and_the_places_of_the_bindings() {
+                let pat = Pat::Struct {
+                    name: "S".into(),
+                    fields: vec![
+                        ("a".into(), Pat::Wild),
+                        ("b".into(), Pat::Bind("b".into())),
+                        ("c".into(), Pat::Lit(Lit::Int(1))),
+                        (
+                            "d".into(),
+                            Pat::Variant {
+                                en: "Option".into(),
+                                var: "Some".into(),
+                                inner: vec![Pat::Bind("d".into())],
+                            },
+                        ),
+                        (
+                            "e".into(),
+                            Pat::Variant {
+                                en: "Option".into(),
+                                var: "None".into(),
+                                inner: Vec::new(),
+                            },
+                        ),
+                        (
+                            "f".into(),
+                            Pat::Variant {
+                                en: "E".into(),
+                                var: "A".into(),
+                                inner: vec![Pat::Bind("f".into())],
+                            },
+                        ),
+                    ],
+                };
+                let some = Pat::Variant {
+                    en: "Option".into(),
+                    var: "Some".into(),
+                    inner: vec![Pat::Bind("x".into())],
+                };
+                let x = Expr::local("x", Ty::Option(Box::new(Ty::Bool)));
+                let text = |(tests, binds): (Vec<Test>, Vec<(String, Expr)>)| {
+                    let tests: Vec<String> = tests
+                        .iter()
+                        .map(|t| match t {
+                            Test::IsSome(e) => format!("some {}", print::expr(e)),
+                            Test::IsVariant(e, en, var) => {
+                                format!("{} is {en}::{var}", print::expr(e))
+                            }
+                            Test::Eq(e, lit) => {
+                                format!(
+                                    "{} == {}",
+                                    print::expr(e),
+                                    print::expr(&Expr::new(K::Lit(lit.clone())))
+                                )
+                            }
+                        })
+                        .collect();
+                    let binds: Vec<String> = binds
+                        .iter()
+                        .map(|(n, e)| format!("{n}: {} {}", print::expr(e), print::ty(&e.ty)))
+                        .collect();
+                    (tests, binds)
+                };
+
+                assert_eq!(
+                    text(pat.projections(&Expr::local("s", Ty::named("S")))),
+                    (
+                        vec![
+                            "s.c == 1".to_owned(),
+                            "some s.d".to_owned(),
+                            "s.e is Option::None".to_owned(),
+                            "s.f is E::A".to_owned()
+                        ],
+                        vec![
+                            "b: s.b ?".to_owned(),
+                            "d: s.d@Some ?".to_owned(),
+                            "f: s.f@A ?".to_owned()
+                        ]
+                    )
+                );
+                assert_eq!(
+                    text(some.projections(&x)),
+                    (vec!["some x".to_owned()], vec!["x: x@Some bool".to_owned()])
+                );
             }
         }
     }

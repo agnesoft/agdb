@@ -116,7 +116,20 @@ needs in `Passes`, built-in or its own `Pass`, and can dump the module after eac
   `.into()`/`From` into conversions;
 - `Prune` keeps what the `pub` methods of the builders and the trait impls call and reports the
   unsupported constructs of what it keeps as `Error::Lowering`;
-- `ExplicitReturns` turns tail expressions into `return`s.
+- `ExplicitReturns` turns tail expressions into `return`s;
+- `Inline` replaces the calls of single-expression constructors and private helpers with their
+  bodies and records them in `Module::inlined`;
+- `LowerConversions` turns `G: Into<X>` generics into `Into(X)` parameters, dispatches `.into()`
+  statically where the type is known and generates the `into_X` normalizers from
+  `Module::conversions` otherwise;
+- `TraitDicts` passes trait implementations as dictionaries: a field for class generics, a
+  parameter for function generics and a global per named type (recorded in `Module::dicts`).
+  Its `reflective` traits get the one dictionary the target runtime provides;
+- `EraseOwnership` removes references, `mem::take`/`mem::swap` and assignments through pattern
+  bindings, for targets that share objects by reference;
+- `InferEmptyLists` types `vec![]` by what is pushed to it;
+- `EraseNewtypes` replaces the single-field tuple data structs with their field, as serde
+  serializes them.
 
 A problem with one file does not stop loading. These are all collected as `Error`s with their
 location:

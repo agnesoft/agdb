@@ -2,15 +2,30 @@
 //! the passes its target needs in [`Passes`], the built-in ones and its
 //! own.
 
+mod erase_newtypes;
+mod erase_ownership;
 mod explicit_returns;
+mod infer_empty_lists;
+mod inline;
+mod lower_conversions;
 mod prune;
 mod resolve;
+mod trait_dicts;
 
+pub use erase_newtypes::EraseNewtypes;
+pub use erase_ownership::EraseOwnership;
 pub use explicit_returns::ExplicitReturns;
+pub use infer_empty_lists::InferEmptyLists;
+pub use inline::Inline;
+pub use lower_conversions::LowerConversions;
+pub use lower_conversions::normalizer;
 pub use prune::Prune;
 pub use resolve::Resolve;
 pub use resolve::returned_ty;
 pub use resolve::subst;
+pub use trait_dicts::TraitDicts;
+pub use trait_dicts::dict_field;
+pub use trait_dicts::dict_global;
 
 use super::lowered::Module;
 use crate::Error;

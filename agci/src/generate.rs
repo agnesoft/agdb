@@ -12,10 +12,16 @@ use agsource::SourceCrate;
 use agsource::TargetKind;
 use agsource::codegen::lower::Roots;
 use agsource::codegen::lowered::Module;
+use agsource::codegen::pass::EraseNewtypes;
+use agsource::codegen::pass::EraseOwnership;
 use agsource::codegen::pass::ExplicitReturns;
+use agsource::codegen::pass::InferEmptyLists;
+use agsource::codegen::pass::Inline;
+use agsource::codegen::pass::LowerConversions;
 use agsource::codegen::pass::Passes;
 use agsource::codegen::pass::Prune;
 use agsource::codegen::pass::Resolve;
+use agsource::codegen::pass::TraitDicts;
 use agsource::codegen::print;
 use std::path::Path;
 
@@ -68,7 +74,15 @@ pub(crate) fn generate(platform: &impl Platform, root: &str, dump: &Path) -> Res
     let passes = Passes::new()
         .with(Resolve)
         .with(Prune)
-        .with(ExplicitReturns);
+        .with(ExplicitReturns)
+        .with(Inline)
+        .with(LowerConversions)
+        .with(TraitDicts {
+            reflective: vec!["DbType".into()],
+        })
+        .with(EraseOwnership)
+        .with(InferEmptyLists)
+        .with(EraseNewtypes);
     let mut failed = None;
     errors.extend(passes.run(&mut m, &mut |title: &str, m: &Module| {
         if let Err(e) = write(title, m) {

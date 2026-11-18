@@ -46,3 +46,17 @@ pub(crate) fn strings(errors: &[crate::Error]) -> Vec<String> {
         .map(|e| e.to_string().replace('\\', "/"))
         .collect()
 }
+
+/// The module of `Root` after [`Resolve`](super::pass::Resolve) and
+/// [`ExplicitReturns`](super::pass::ExplicitReturns), with neither the
+/// lowering nor the functions having errors.
+pub(crate) fn resolved(source: &str, traits: &[&str], data: &[&str]) -> Module {
+    use super::pass::Pass;
+
+    let (mut m, mut errors) = lower(source, traits, data);
+    super::pass::Resolve.run(&mut m, &mut Vec::new());
+    super::pass::ExplicitReturns.run(&mut m, &mut Vec::new());
+    m.for_each_func(&mut |f, _| errors.extend(f.errors.iter().cloned()));
+    assert_eq!(errors, Vec::<String>::new());
+    m
+}

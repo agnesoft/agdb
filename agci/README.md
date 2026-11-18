@@ -64,6 +64,8 @@ What is released follows from the manifests: a crate unless its `Cargo.toml` has
 
 `agci roundtrip <package>...` checks the agsource IR the clients are generated from, without building anything: every item of the packages' library and test targets (cfg evaluated for the host with all features) is printed as Rust from its IR and compared to the item as written (`agsource::codegen::compare`). It fails if an item differs or has a construct the IR does not have. agci's `run` check runs it for agdb and agdb_api.
 
+`agci generate [--dump <dir>]` lowers the agdb query builder for the API clients (`agsource::codegen::lower`) and runs the passes over it, dumping the module after loading and after each pass as `NN_<pass>.rs.txt` (by default to `target/agci/generate`). It fails if a used function has a construct the lowering does not handle.
+
 The first job (`bootstrap`, Linux and Windows) provides the binary of each OS to the others as the `agci-<os>` artifact. The latest cached binary decides whether it is outdated (`agci bootstrap --check`): its fingerprint, the git objects of its sources (agci, the projects it depends on and the root Rust files), differs from the current one, or it fails to load the projects (e.g. configuration it does not know yet) or the check itself fails (e.g. a binary older than the command). Only then, or without any cached binary, agci is built from the sources (`cargo run -r -p agci -- bootstrap <dir>`) and cached. The `config` job is then `agci config`: it writes the job outputs for the GitHub event. Only the `config` job clones the full history (the base and the tags), the others are shallow and look up tags on `origin`.
 
 ## projects

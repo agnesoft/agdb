@@ -23,7 +23,7 @@ pub(crate) fn roundtrip(
         return Err("roundtrip: no packages given".into());
     }
 
-    let cfg = host_cfg(platform)?;
+    let cfg = host_cfg(platform, true)?;
     let all = agsource::packages(platform, &Path::new(root).join("Cargo.toml"))?;
     let mut failures = Vec::new();
 
@@ -47,14 +47,15 @@ pub(crate) fn roundtrip(
     .into())
 }
 
-/// The cfg of `cargo test` on this host: `rustc --print cfg` with `test` and `debug_assertions`.
-fn host_cfg(platform: &impl Platform) -> Result<CfgSet, CIError> {
+/// The cfg of a debug build on this host, of `cargo test` with `test`: `rustc --print cfg` with
+/// `debug_assertions`.
+pub(crate) fn host_cfg(platform: &impl Platform, test: bool) -> Result<CfgSet, CIError> {
     let output = utilities::run_quiet(platform, Command::new("rustc").args(["--print", "cfg"]))?;
-    let cfg = ["windows", "unix", "docsrs", "miri", "feature"]
+    let cfg = ["windows", "unix", "docsrs", "miri", "feature", "test"]
         .into_iter()
         .fold(CfgSet::new(), CfgSet::unset)
-        .name("test")
         .name("debug_assertions");
+    let cfg = if test { cfg.name("test") } else { cfg };
 
     Ok(parse_cfg(&output)
         .into_iter()

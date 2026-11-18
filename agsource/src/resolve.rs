@@ -210,6 +210,14 @@ impl SourceCrate {
             namespace,
         )
     }
+
+    /// Resolves `a::b::C` from the crate root, e.g. to find an item that is
+    /// not exported.
+    pub fn resolve_str(&self, path: &str, namespace: Namespace) -> Resolved {
+        let segments: Vec<String> = path.split("::").map(str::to_owned).collect();
+        self.scopes
+            .resolve(self, self.root(), &segments, false, namespace)
+    }
 }
 
 impl Scopes {
@@ -1341,6 +1349,17 @@ fn f() {}");
                 assert_eq!(value("E::A::x"), Resolved::Unresolved);
                 assert_eq!(value("f::x"), Resolved::Unresolved);
                 assert_eq!(value("Gone::x"), Resolved::Unresolved);
+            }
+
+            #[test]
+            fn resolve_str_should_resolve_from_the_root() {
+                let c = lib("mod a { pub(crate) mod b { pub struct C; } }");
+
+                assert_eq!(
+                    c.resolve_str("a::b::C", Namespace::Type),
+                    item(&c, "a::b", 0)
+                );
+                assert_eq!(c.resolve_str("a::D", Namespace::Type), Resolved::Unresolved);
             }
 
             #[test]

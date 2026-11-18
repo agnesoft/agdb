@@ -98,6 +98,26 @@ count, nor do the spellings the IR does not keep: literals are their values, tra
 the delimiters of macro calls do not count. A mismatch is an `Error` showing the lines of the two
 trees around the first difference.
 
+For generators of other languages, `SourceCrate::lower` lowers the IR of a builder API into
+`codegen::lowered`: classes, enums and functions with typed expressions. The roots are the root
+builder, the traits whose impls to load and data types. Builders are the root and the structs
+the `pub` methods of builders return (also as type arguments) that have a `pub` method with a
+receiver. Data types are the types reached through fields, the signatures of builders and trait
+impls, and the data roots. All their inherent impls are loaded. A construct the lowered IR does
+not have (e.g. `for`, `?`, ranges, struct variants, destructuring `let`) is kept as
+`K::Unsupported` and noted on its function.
+
+`codegen::pass` holds the passes over the lowered IR. A generator lists the ones its target
+needs in `Passes`, built-in or its own `Pass`, and can dump the module after each with
+`codegen::print`:
+
+- `Resolve` types the expressions and resolves what lowering left by name: method calls into
+  member, associated, trait and std (intrinsic) calls, paths into variants and constants,
+  `.into()`/`From` into conversions;
+- `Prune` keeps what the `pub` methods of the builders and the trait impls call and reports the
+  unsupported constructs of what it keeps as `Error::Lowering`;
+- `ExplicitReturns` turns tail expressions into `return`s.
+
 A problem with one file does not stop loading. These are all collected as `Error`s with their
 location:
 

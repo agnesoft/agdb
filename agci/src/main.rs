@@ -3,6 +3,7 @@ mod bootstrap;
 mod check;
 mod ci_error;
 mod config;
+mod generate;
 mod git;
 mod manifest;
 mod project;
@@ -55,6 +56,9 @@ const USAGE: &str = "usage:
                                for the repository version, the release (the packages and release
                                hooks of all projects, then the GitHub release and tag); --plan only
                                prints the steps
+  agci generate [--dump <dir>] the query builder of the clients from the agdb source, with the
+                               lowered module after each pass in <dir> (default
+                               target/agci/generate)
   agci roundtrip <package>...  check that every item of the packages' libraries and tests, printed
                                from its agsource IR, is the item as written";
 
@@ -454,6 +458,14 @@ fn run(platform: &impl Platform, args: &[String]) -> Result<(), CIError> {
             _ => Err(USAGE.into()),
         },
         Some("release") => release(platform, &args[1..]),
+        Some("generate") => {
+            let dump = match &args[1..] {
+                [] => generate::DUMP_DIR,
+                [flag, dir] if flag == "--dump" => dir.as_str(),
+                _ => return Err(USAGE.into()),
+            };
+            generate::generate(platform, &root(platform)?, Path::new(dump))
+        }
         Some("roundtrip") => roundtrip::roundtrip(platform, &root(platform)?, &args[1..]),
         Some(_) => Err(USAGE.into()),
     }

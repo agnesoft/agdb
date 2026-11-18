@@ -43,7 +43,7 @@ Technical features:
 
 - Targets run in turn within every sample, rotating which goes first, so drifts in clock speed, caches and load hit all of them alike.
 - The overhead is the median of the per-sample ratios to the baseline, reported with their interquartile range.
-- Iterations are calibrated per benchmark to a target sample duration, or fixed with `--iters`.
+- Iterations are calibrated per target to a sample duration, so targets of very different speeds take about the same time, or fixed with `--iters`.
 - A shared fixture per benchmark, set up once and not measured.
 - An unmeasured input per iteration (`iteration_setup`) for work that consumes it, such as removing a file. Inputs are prepared up to 64 at a time.
 - Results are passed through `black_box` so the measured work is not optimized away.
@@ -108,13 +108,13 @@ cargo bench --bench collections
 ```
 benchmark                        target                iters       time  overhead  IQR
 string/concat                    concat                65536   148.5 ns
-                                 join                          152.8 ns     -1.2%  [-2.9% .. +2.9%]
-                                 collect                       173.1 ns    +11.4%  [+7.4% .. +17.6%]
+                                 join                  65536   152.8 ns     -1.2%  [-2.9% .. +2.9%]
+                                 collect               65536   173.1 ns    +11.4%  [+7.4% .. +17.6%]
 vec/remove_first                 remove                16384   675.0 ns
-                                 swap_remove                   412.7 ns    -38.3%  [-39.1% .. -35.4%]
+                                 swap_remove           32768   412.7 ns    -38.3%  [-39.1% .. -35.4%]
 ```
 
-`iters` is the number of iterations per sample, `time` the median time of one iteration, `overhead` the median ratio to the baseline and `IQR` the interquartile range of the ratios. In CI, add `--check` to fail the run (exit code 1) if `join` or `collect` is more than 1.5 times slower than `concat`:
+`iters` is the number of iterations of the target per sample, `time` the median time of one iteration, `overhead` the median ratio to the baseline and `IQR` the interquartile range of the ratios. In CI, add `--check` to fail the run (exit code 1) if `join` or `collect` is more than 1.5 times slower than `concat`:
 
 ```
 cargo bench --bench collections -- --check
@@ -129,7 +129,7 @@ Passed after `--` of `cargo bench [-p <crate>] [--bench <name>]`:
 | `--filter PATTERN`        |         | Runs only the benchmarks whose name contains `PATTERN`. Repeatable to run those matching any of them.             |
 | `--filter-target PATTERN` |         | Runs only the targets whose name contains `PATTERN`. Repeatable. The first selected target is the baseline.       |
 | `--samples N`             | 30      | Number of samples, each running every target.                                                                     |
-| `--sample-ms MS`          | 10      | Duration of one sample of the baseline that the calibration aims for.                                             |
+| `--sample-ms MS`          | 10      | Duration of one sample of each target that the calibration aims for.                                              |
 | `--iters N`               |         | Fixed number of iterations per sample instead of calibrating.                                                     |
 | `--list`                  |         | Lists the benchmarks and their targets without running them.                                                      |
 | `--check`                 |         | Fails (exit code 1) if a target is slower than its fail factor times the baseline in at least 3/4 of the samples. |
@@ -140,7 +140,7 @@ Passed after `--` of `cargo bench [-p <crate>] [--bench <name>]`:
 Each benchmark runs in phases:
 
 1. **Setup**: the fixture is created, unless no target is selected.
-2. **Calibration**: the iterations per sample are doubled until the baseline takes at least `--sample-ms`.
+2. **Calibration**: the iterations per sample of each target are doubled until it takes at least `--sample-ms`.
 3. **Measurement**: each of the `--samples` samples runs every target in turn, rotating which one goes first.
 4. **Cleanup**: the fixture is dropped.
 5. **Report**: the median time per iteration of each target, and the median and interquartile range of its per-sample ratios to the baseline.

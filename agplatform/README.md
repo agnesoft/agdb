@@ -240,6 +240,7 @@ for entry in fs.read_dir("a")? {
     if entry.file_type() == FileType::File { /* entry.path() */ }
 }
 fs.copy("a.txt", "b.txt")?;                         // returns bytes copied
+fs.copy_from(&file, "backup.bin")?;                 // through an open handle, even one open for writing
 fs.copy_dir_all("src_dir", "dst_dir")?;
 fs.remove_file("b.txt")?;
 fs.remove_dir("a/d")?;                              // must be empty

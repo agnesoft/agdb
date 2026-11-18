@@ -4999,6 +4999,68 @@ mod tests {
                 }
             }
 
+            mod copy_from {
+                use super::*;
+
+                #[test]
+                fn copy_from_should_copy_renamed_file_open_for_writing() {
+                    crate::fs::tests::fs::copy_from::copy_from_should_copy_renamed_file_open_for_writing(&TestFs::new());
+                }
+
+                #[test]
+                fn copy_from_should_truncate_target() {
+                    crate::fs::tests::fs::copy_from::copy_from_should_truncate_target(
+                        &TestFs::new(),
+                    );
+                }
+
+                #[test]
+                fn copy_from_should_copy_file_larger_than_buffer() {
+                    crate::fs::tests::fs::copy_from::copy_from_should_copy_file_larger_than_buffer(
+                        &TestFs::new(),
+                    );
+                }
+
+                #[test]
+                fn copy_from_invalid_target_should_fail() {
+                    crate::fs::tests::fs::copy_from::copy_from_invalid_target_should_fail(
+                        &TestFs::new(),
+                    );
+                }
+
+                #[test]
+                fn copy_from_fault_should_fail() {
+                    for (op, path) in [
+                        (FsOp::Read, "/a.txt"),
+                        (FsOp::Open, "/b.txt"),
+                        (FsOp::Write, "/b.txt"),
+                    ] {
+                        let fs = TestFs::new();
+                        let file = fs.open_write("/a.txt").unwrap();
+                        file.write_all_at(b"a", 0).unwrap();
+                        fs.set_io_error(op, path, ErrorKind::Other);
+
+                        assert_eq!(
+                            kind(fs.copy_from(&file, "/b.txt")),
+                            ErrorKind::Other,
+                            "op: {op:?}, path: {path}"
+                        );
+                    }
+                }
+
+                #[test]
+                fn copy_from_interrupted_read_should_retry() {
+                    let fs = TestFs::new();
+                    fs.write("/a.txt", "content").unwrap();
+                    let file = fs.open_read("/a.txt").unwrap();
+                    fs.set_io_errors(FsOp::Read, "/a.txt", [Some(ErrorKind::Interrupted), None]);
+
+                    assert_eq!(fs.copy_from(&file, "/b.txt").unwrap(), 7);
+
+                    assert_eq!(fs.read_to_string("/b.txt").unwrap(), "content");
+                }
+            }
+
             mod copy_dir_all {
                 use super::*;
 

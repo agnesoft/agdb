@@ -589,6 +589,39 @@ pub trait Fs: Send + Sync {
     /// ```
     fn copy<S: AsRef<Path>, T: AsRef<Path>>(&self, source: S, target: T) -> Result<u64>;
 
+    /// Copies the content of the open file `source` to `target`, creating
+    /// it or truncating it if it exists. Returns the number of bytes
+    /// copied. Unlike [`copy`](Fs::copy) it reads through the handle, so it
+    /// copies the file the handle has open even if it is open for writing
+    /// or was renamed, and the permissions are not copied.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the `source` cannot be read or the `target`
+    /// cannot be opened or written, see [`write`](Fs::write). The `target`
+    /// must not be the `source` file, which would be truncated first.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use agplatform::{Fs, Platform, WriteFile};
+    ///
+    /// let platform = agplatform::platform();
+    /// let fs = platform.fs();
+    /// # let fs = agplatform::test_platform::test_fs::TestFs::new();
+    /// let file = fs.open_write("/data.bin").unwrap();
+    /// file.write_all_at(b"hello", 0).unwrap();
+    /// assert_eq!(fs.copy_from(&file, "/backup.bin").unwrap(), 5);
+    /// assert_eq!(fs.read_to_string("/backup.bin").unwrap(), "hello");
+    /// ```
+    fn copy_from<T: AsRef<Path>>(&self, source: &impl ReadFile, target: T) -> Result<u64> {
+        let target = self.open_write_options(
+            target,
+            OpenWriteOptions::new().create().truncate().write_only(),
+        )?;
+        copy_file(source, &target)
+    }
+
     /// Copies the directory `source` with all of its content to the new
     /// path `target`. The `source` itself is followed if it is a symlink,
     /// the symlinks in it are copied as symlinks with the same target and
@@ -2757,6 +2790,25 @@ pub(crate) fn fs_error_at<T: std::error::Error + Send + Sync + 'static>(
     move |error| fs_error!("{error}: {}", path.display()).with_source(error)
 }
 
+const COPY_BUFFER_SIZE: usize = 64 * 1024;
+
+fn copy_file(source: &dyn ReadFile, target: &dyn WriteFile) -> Result<u64> {
+    let mut buffer = vec![0_u8; COPY_BUFFER_SIZE];
+    let mut copied = 0;
+
+    loop {
+        match source.read_at(&mut buffer, copied) {
+            Ok(0) => return Ok(copied),
+            Ok(read) => {
+                target.write_all_at(&buffer[..read], copied)?;
+                copied += read as u64;
+            }
+            Err(error) if is_interrupted(&error) => {}
+            Err(error) => return Err(error),
+        }
+    }
+}
+
 /// [internal]
 ///
 /// Returns whether the `error` is caused by an interrupted I/O call, which
@@ -3717,6 +3769,60 @@ pub(crate) mod tests {
                     );
                 }
                 assert!(!fs.exists("new").unwrap());
+            }
+        }
+
+        pub(crate) mod copy_from {
+            use super::*;
+
+            pub(crate) fn copy_from_should_copy_renamed_file_open_for_writing(fs: &impl Fs) {
+                // GIVEN a file open for writing that was renamed
+                let file = fs.open_write("a.txt").unwrap();
+                file.write_all_at(b"content", 0).unwrap();
+                fs.rename("a.txt", "moved.txt").unwrap();
+
+                // WHEN it is copied through its handle
+                let copied = fs.copy_from(&file, "b.txt").unwrap();
+
+                // THEN the copy holds its content
+                assert_eq!(copied, 7);
+                assert_eq!(fs.read_to_string("b.txt").unwrap(), "content");
+            }
+
+            pub(crate) fn copy_from_should_truncate_target(fs: &impl Fs) {
+                fs.write("a.txt", "new").unwrap();
+                fs.write("b.txt", "old content").unwrap();
+                let file = fs.open_read("a.txt").unwrap();
+
+                assert_eq!(fs.copy_from(&file, "b.txt").unwrap(), 3);
+
+                assert_eq!(fs.read_to_string("b.txt").unwrap(), "new");
+            }
+
+            pub(crate) fn copy_from_should_copy_file_larger_than_buffer(fs: &impl Fs) {
+                let content: Vec<u8> = (0..COPY_BUFFER_SIZE * 2 + 1).map(|i| i as u8).collect();
+                fs.write("a.bin", &content).unwrap();
+                let file = fs.open_read("a.bin").unwrap();
+
+                assert_eq!(fs.copy_from(&file, "b.bin").unwrap(), content.len() as u64);
+
+                assert_eq!(fs.read("b.bin").unwrap(), content);
+            }
+
+            pub(crate) fn copy_from_invalid_target_should_fail(fs: &impl Fs) {
+                fs.write("a.txt", "a").unwrap();
+                fs.create_dir("dir").unwrap();
+                let file = fs.open_read("a.txt").unwrap();
+
+                assert_eq!(
+                    io_kind(&fs.copy_from(&file, "x/b").unwrap_err()),
+                    Some(std::io::ErrorKind::NotFound)
+                );
+                let error = fs.copy_from(&file, "dir").unwrap_err();
+                #[cfg(unix)]
+                assert_eq!(io_kind(&error), Some(std::io::ErrorKind::IsADirectory));
+                #[cfg(windows)]
+                assert!(io_kind(&error).is_some());
             }
         }
 
@@ -6064,6 +6170,36 @@ pub(crate) mod tests {
                     let error = fs.copy("c.txt", "b.txt").unwrap_err();
                     assert_eq!(io_kind(&error), Some(std::io::ErrorKind::PermissionDenied));
                     assert_eq!(fs.read_to_string("b.txt").unwrap(), "content");
+                }
+            }
+
+            mod copy_from {
+                use super::*;
+
+                #[test]
+                fn copy_from_should_copy_renamed_file_open_for_writing() {
+                    let (_test_dir, fs) = test_fs();
+                    crate::fs::tests::fs::copy_from::copy_from_should_copy_renamed_file_open_for_writing(&fs);
+                }
+
+                #[test]
+                fn copy_from_should_truncate_target() {
+                    let (_test_dir, fs) = test_fs();
+                    crate::fs::tests::fs::copy_from::copy_from_should_truncate_target(&fs);
+                }
+
+                #[test]
+                fn copy_from_should_copy_file_larger_than_buffer() {
+                    let (_test_dir, fs) = test_fs();
+                    crate::fs::tests::fs::copy_from::copy_from_should_copy_file_larger_than_buffer(
+                        &fs,
+                    );
+                }
+
+                #[test]
+                fn copy_from_invalid_target_should_fail() {
+                    let (_test_dir, fs) = test_fs();
+                    crate::fs::tests::fs::copy_from::copy_from_invalid_target_should_fail(&fs);
                 }
             }
 

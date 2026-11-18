@@ -2,9 +2,10 @@ use super::StorageData;
 use super::StorageSlice;
 use super::SyncMode;
 use super::write_ahead_log::WriteAheadLog;
-use super::write_ahead_log::WriteAheadLogRecord;
+use super::write_ahead_log::remove_wal;
 use super::write_ahead_log::wal_filename;
 use crate::DbError;
+use crate::DbErrorType;
 use agplatform::Fs;
 use agplatform::OpenWriteOptions;
 use agplatform::Platform;
@@ -13,10 +14,12 @@ use agplatform::ReadFile;
 use agplatform::WriteFile;
 use std::io::Seek;
 use std::io::SeekFrom;
-use std::io::Write;
 use std::sync::Arc;
 
 type FileHandle<P> = <<P as Platform>::Fs as Fs>::WriteHandle;
+
+pub(crate) type OldBytes<'a, P> =
+    dyn Fn(&FileHandle<P>, u64, &mut [u8]) -> Result<(), DbError> + 'a;
 
 /// Single file based storage with write ahead log (WAL) for resiliency
 /// implementing [`StorageData`]. It uses the storage name as the file
@@ -68,7 +71,7 @@ impl<P: Platform> FileStorageImpl<P> {
         let mut wal = WriteAheadLog::new(&*platform, name)?;
         let sync_mode = SyncMode::None;
 
-        Self::apply_wal(&mut file, &mut wal)?;
+        Self::apply_wal(&file, &mut wal)?;
 
         let len = file.seek(SeekFrom::End(0))?;
 
@@ -88,48 +91,104 @@ impl<P: Platform> FileStorageImpl<P> {
 
     pub(crate) fn read_all(&self) -> Result<Vec<u8>, DbError> {
         let mut buffer = vec![0_u8; self.len as usize];
-        Self::read_impl(&self.file, 0, &mut buffer)?;
+        self.file.read_exact_at(&mut buffer, 0)?;
         Ok(buffer)
     }
 
-    fn apply_wal_record(
-        file: &mut FileHandle<P>,
-        record: WriteAheadLogRecord,
+    pub(crate) fn resize_with(
+        &mut self,
+        new_len: u64,
+        old_bytes: &OldBytes<P>,
     ) -> Result<(), DbError> {
-        if record.value.is_empty() {
-            file.set_len(record.pos)?;
+        let current_len = self.len;
+
+        if new_len < current_len {
+            self.wal
+                .insert_with(new_len, current_len - new_len, &|buffer| {
+                    old_bytes(&self.file, new_len, buffer)
+                })?;
+        } else if current_len < new_len {
+            self.wal.insert(current_len, &[])?;
         } else {
-            file.seek(SeekFrom::Start(record.pos))?;
-            file.write_all(&record.value)?;
+            return Ok(());
+        }
+
+        self.file.set_len(new_len)?;
+        self.len = new_len;
+        Ok(())
+    }
+
+    pub(crate) fn write_with(
+        &mut self,
+        pos: u64,
+        bytes: &[u8],
+        old_bytes: &OldBytes<P>,
+    ) -> Result<(), DbError> {
+        if bytes.is_empty() {
+            return Ok(());
+        }
+
+        let current_len = self.len;
+        let end = pos + bytes.len() as u64;
+
+        if pos < current_len {
+            self.wal
+                .insert_with(pos, std::cmp::min(current_len, end) - pos, &|buffer| {
+                    old_bytes(&self.file, pos, buffer)
+                })?;
+        }
+
+        if current_len < end {
+            self.wal.insert(current_len, &[])?;
+        }
+
+        self.file.write_all_at(bytes, pos)?;
+        self.len = std::cmp::max(current_len, end);
+        Ok(())
+    }
+
+    fn apply_wal_record(file: &FileHandle<P>, pos: u64, value: &[u8]) -> Result<(), DbError> {
+        if value.is_empty() {
+            file.set_len(pos)?;
+        } else {
+            file.write_all_at(value, pos)?;
         }
 
         Ok(())
     }
 
-    fn apply_wal(file: &mut FileHandle<P>, wal: &mut WriteAheadLog<P>) -> Result<(), DbError> {
-        let records = wal.records()?;
-
-        if records.is_empty() {
+    fn apply_wal(file: &FileHandle<P>, wal: &mut WriteAheadLog<P>) -> Result<(), DbError> {
+        if wal.is_empty() {
             return Ok(());
         }
 
-        for record in records.into_iter().rev() {
-            Self::apply_wal_record(file, record)?;
-        }
-
+        wal.rollback(|pos, value| Self::apply_wal_record(file, pos, value))?;
         file.sync_data()?;
-        wal.clear()?;
+        wal.truncate()?;
         wal.sync()
     }
 
-    fn read_impl(file: &FileHandle<P>, pos: u64, buffer: &mut [u8]) -> Result<(), DbError> {
+    fn read_file(file: &FileHandle<P>, pos: u64, buffer: &mut [u8]) -> Result<(), DbError> {
         Ok(file.read_exact_at(buffer, pos)?)
     }
 }
 
 impl<P: Platform + Default> StorageData for FileStorageImpl<P> {
+    /// The file is copied through its handle, which keeps the borrow of a
+    /// file open for writing, and the log of a file previously at `name`
+    /// is removed so that it is not replayed onto the copy.
     fn backup(&self, name: &str) -> Result<(), DbError> {
-        self.platform.fs().copy(&self.filename, name)?;
+        let fs = self.platform.fs();
+
+        if fs.exists(name)? && fs.canonicalize(name)? == fs.canonicalize(&self.filename)? {
+            return Err(DbError::storage(
+                DbErrorType::NotAllowed,
+                format!("Cannot back up '{}' onto itself", self.filename),
+            ));
+        }
+
+        remove_wal(&*self.platform, name)?;
+        fs.copy_from(&self.file, name)?;
         Ok(())
     }
 
@@ -139,17 +198,18 @@ impl<P: Platform + Default> StorageData for FileStorageImpl<P> {
     }
 
     fn flush(&mut self) -> Result<(), DbError> {
-        if matches!(self.sync_mode, SyncMode::Commit) {
-            self.file.sync_data()?;
+        if self.wal.is_empty() {
+            return Ok(());
         }
 
-        self.wal.clear()?;
-
-        if matches!(self.sync_mode, SyncMode::Commit) {
-            self.wal.sync()?;
+        match self.sync_mode {
+            SyncMode::None => self.wal.clear(),
+            SyncMode::Commit => {
+                self.file.sync_data()?;
+                self.wal.truncate()?;
+                self.wal.sync()
+            }
         }
-
-        Ok(())
     }
 
     fn set_sync_mode(&mut self, mode: SyncMode) {
@@ -178,64 +238,35 @@ impl<P: Platform + Default> StorageData for FileStorageImpl<P> {
 
     fn read(&'_ self, pos: u64, value_len: u64) -> Result<StorageSlice<'_>, DbError> {
         let mut buffer = vec![0_u8; value_len as usize];
-        Self::read_impl(&self.file, pos, &mut buffer)?;
+        self.file.read_exact_at(&mut buffer, pos)?;
         Ok(StorageSlice::Owned(buffer))
     }
 
+    /// The open files are renamed with their handles kept, so that they
+    /// stay valid if the renaming fails half way.
     fn rename(&mut self, new_name: &str) -> Result<(), DbError> {
         let fs = self.platform.fs();
         fs.rename(&self.filename, new_name)?;
-        self.file = fs.open_write_options(new_name, OpenWriteOptions::new())?;
-        self.wal = WriteAheadLog::new(&*self.platform, new_name)?;
-        fs.remove_file(wal_filename(&self.filename))?;
+
+        if let Err(error) = fs.rename(wal_filename(&self.filename), wal_filename(new_name)) {
+            let _ = fs.rename(new_name, &self.filename);
+            return Err(error.into());
+        }
+
         self.filename = new_name.to_string();
         Ok(())
     }
 
     fn resize(&mut self, new_len: u64) -> Result<(), DbError> {
-        let current_len = self.len();
-
-        if new_len < current_len {
-            let mut buffer = vec![0_u8; (current_len - new_len) as usize];
-            Self::read_impl(&self.file, new_len, &mut buffer)?;
-            self.wal.insert(new_len, &buffer)?;
-        } else if current_len < new_len {
-            self.wal.insert(current_len, &[])?;
-        } else {
-            return Ok(());
-        }
-
-        self.file.set_len(new_len)?;
-        self.len = new_len;
-        Ok(())
+        self.resize_with(new_len, &Self::read_file)
     }
 
     fn write(&mut self, pos: u64, bytes: &[u8]) -> Result<(), DbError> {
-        if bytes.is_empty() {
-            return Ok(());
-        }
-
-        let current_len = self.len();
-        let end = pos + bytes.len() as u64;
-
-        if pos < current_len {
-            let mut buffer = vec![0_u8; (std::cmp::min(current_len, end) - pos) as usize];
-            Self::read_impl(&self.file, pos, &mut buffer)?;
-            self.wal.insert(pos, &buffer)?;
-        }
-
-        if current_len < end {
-            self.wal.insert(current_len, &[])?;
-        }
-
-        self.file.seek(SeekFrom::Start(pos))?;
-        self.file.write_all(bytes)?;
-        self.len = std::cmp::max(current_len, end);
-        Ok(())
+        self.write_with(pos, bytes, &Self::read_file)
     }
 
     fn recover_from_wal(&mut self) -> Result<(), DbError> {
-        Self::apply_wal(&mut self.file, &mut self.wal)?;
+        Self::apply_wal(&self.file, &mut self.wal)?;
         self.len = self.file.seek(SeekFrom::End(0))?;
         Ok(())
     }
@@ -243,1871 +274,794 @@ impl<P: Platform + Default> StorageData for FileStorageImpl<P> {
 
 impl<P: Platform> Drop for FileStorageImpl<P> {
     fn drop(&mut self) {
-        let _ = Self::apply_wal(&mut self.file, &mut self.wal);
+        let _ = Self::apply_wal(&self.file, &mut self.wal);
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::DbErrorType;
-    use crate::storage::Storage;
-    use crate::storage::StorageIndex;
-    use crate::storage::storage_records::STORAGE_RECORD_SIZE;
-    use crate::storage::storage_records::StorageRecord;
-    use crate::test_utilities::test_file::TestFile;
-    use crate::utilities::serialize::Serialize;
-    use crate::utilities::serialize::SerializeStatic;
-    use std::fs::File;
+    use agplatform::test_platform::TestPlatform;
+    use agplatform::test_platform::test_fs::FsOp;
+    use agplatform::test_platform::test_platform;
+    use std::io::ErrorKind;
 
-    #[test]
-    fn bad_record_size() {
-        let test_file = TestFile::new();
-        let records = [
-            StorageRecord {
-                index: 0,
-                pos: 0,
-                size: 8,
-            },
-            StorageRecord {
-                index: 1,
-                pos: 24,
-                size: 48,
-            },
-            StorageRecord {
-                index: 4,
-                pos: 88,
-                size: 321654876,
-            },
-            StorageRecord {
-                index: 1,
-                pos: 104,
-                size: 0,
-            },
-            StorageRecord {
-                index: 2,
-                pos: 120,
-                size: 16,
-            },
-        ];
+    const NAME: &str = "/db";
+    const WAL: &str = "/.db";
 
-        {
-            let mut file = std::fs::File::create(test_file.file_name()).unwrap();
+    type TestFileStorage = FileStorageImpl<TestPlatform>;
 
-            for record in records {
-                let mut bytes = Vec::with_capacity(
-                    (record.index.serialized_size() + record.size.serialized_size()) as usize,
+    fn platform() -> Arc<TestPlatform> {
+        Arc::new(test_platform())
+    }
+
+    fn open(platform: &Arc<TestPlatform>) -> TestFileStorage {
+        FileStorageImpl::with_platform(platform.clone(), NAME).unwrap()
+    }
+
+    fn kill(platform: &Arc<TestPlatform>) {
+        platform.fs().sync();
+        platform.fs().crash();
+    }
+
+    fn read(storage: &TestFileStorage) -> Vec<u8> {
+        storage.read_all().unwrap()
+    }
+
+    /// Leaves the log of the storage `name` holding the pre-image of an
+    /// unflushed write as a process killed while writing it does.
+    fn stale_storage(platform: &Arc<TestPlatform>, name: &str) {
+        let mut storage = FileStorageImpl::with_platform(platform.clone(), name).unwrap();
+        storage.write(0, &[9, 9, 9, 9]).unwrap();
+        storage.flush().unwrap();
+        storage.write(0, &[8]).unwrap();
+        kill(platform);
+    }
+
+    fn written(platform: &Arc<TestPlatform>) -> TestFileStorage {
+        let mut storage = open(platform);
+        storage.write(0, &[1, 2, 3]).unwrap();
+        storage.flush().unwrap();
+        storage
+    }
+
+    mod file_storage_impl {
+        use super::*;
+
+        #[test]
+        fn file_storage_impl_should_roll_back_unflushed_writes_on_reopen() {
+            for killed in [false, true] {
+                let platform = platform();
+                let mut storage = open(&platform);
+                storage.write(0, &[1, 2, 3]).unwrap();
+                storage.flush().unwrap();
+                storage.write(1, &[4, 5, 6]).unwrap();
+                storage.resize(2).unwrap();
+
+                if killed {
+                    kill(&platform);
+                } else {
+                    drop(storage);
+                }
+
+                assert_eq!(read(&open(&platform)), vec![1, 2, 3], "killed: {killed}");
+            }
+        }
+
+        mod std_fmt_debug {
+            use super::*;
+
+            #[test]
+            fn fmt_should_show_name_len_sync_mode_and_wal() {
+                let platform = platform();
+                let mut storage = open(&platform);
+                storage.write(0, &[1]).unwrap();
+
+                assert_eq!(
+                    format!("{storage:?}"),
+                    "FileStorage { filename: \"/db\", len: 1, sync_mode: None, wal: WriteAheadLog { generation: Some(4611686018427387904), len: 48, .. }, .. }"
                 );
-                bytes.extend(record.index.serialize());
-                bytes.extend(record.size.serialize());
-                file.seek(SeekFrom::Start(record.pos)).unwrap();
-                file.write_all(&bytes).unwrap();
+            }
+        }
+
+        mod with_platform {
+            use super::*;
+
+            #[test]
+            fn with_platform_should_load_file() {
+                let platform = platform();
+                platform.fs().write(NAME, [1, 2, 3]).unwrap();
+
+                let storage = open(&platform);
+
+                assert_eq!(storage.len(), 3);
+                assert_eq!(read(&storage), vec![1, 2, 3]);
             }
 
-            file.seek(SeekFrom::Start(16)).unwrap();
-            file.write_all(&1_u64.to_le_bytes()).unwrap();
+            #[test]
+            fn with_platform_should_roll_back_writes_logged_before_crash() {
+                let platform = platform();
+                let mut storage = open(&platform);
+                storage.write(0, &[1, 2, 3]).unwrap();
+                storage.flush().unwrap();
+                storage.write(2, &[4, 5]).unwrap();
+                kill(&platform);
+
+                let storage = open(&platform);
+
+                assert_eq!(read(&storage), vec![1, 2, 3]);
+                assert!(storage.wal.is_empty());
+            }
+
+            #[test]
+            fn with_platform_should_roll_back_writes_logged_in_legacy_log() {
+                // GIVEN a write of [9, 9, 9] at 2 into [1, 2, 3, 4] logged by a version without the log header
+                let platform = platform();
+                platform.fs().write(NAME, [1, 2, 9, 9, 9]).unwrap();
+                let legacy_record = |pos: u64, value: &[u8]| {
+                    [
+                        &pos.to_le_bytes()[..],
+                        &(value.len() as u64).to_le_bytes(),
+                        value,
+                    ]
+                    .concat()
+                };
+                platform
+                    .fs()
+                    .write(
+                        WAL,
+                        [legacy_record(2, &[3, 4]), legacy_record(4, &[])].concat(),
+                    )
+                    .unwrap();
+
+                // WHEN the storage is opened
+                let storage = open(&platform);
+
+                // THEN the write is rolled back and the log is emptied
+                assert_eq!(read(&storage), vec![1, 2, 3, 4]);
+                assert!(storage.wal.is_empty());
+                drop(storage);
+                assert_eq!(platform.fs().read(NAME).unwrap(), [1, 2, 3, 4]);
+                assert!(platform.fs().read(WAL).unwrap().is_empty());
+            }
+
+            #[test]
+            fn with_platform_failure_should_fail() {
+                for (op, path) in [
+                    (FsOp::Open, NAME),
+                    (FsOp::Open, WAL),
+                    (FsOp::Read, WAL),
+                    (FsOp::Write, NAME),
+                    (FsOp::SetLen, NAME),
+                    (FsOp::SyncData, NAME),
+                    (FsOp::SetLen, WAL),
+                    (FsOp::SyncData, WAL),
+                    (FsOp::Seek, NAME),
+                ] {
+                    let platform = platform();
+                    let mut storage = open(&platform);
+                    storage.write(0, &[1, 2, 3]).unwrap();
+                    storage.flush().unwrap();
+                    storage.write(2, &[4, 5]).unwrap();
+                    kill(&platform);
+                    platform.fs().set_io_error(op, path, ErrorKind::Other);
+
+                    assert!(
+                        FileStorageImpl::with_platform(platform.clone(), NAME).is_err(),
+                        "op: {op:?}, path: {path}"
+                    );
+                }
+            }
         }
 
-        Storage::<FileStorage>::new(test_file.file_name()).unwrap_err();
-    }
+        mod platform {
+            use super::*;
 
-    #[test]
-    fn bad_file() {
-        assert!(Storage::<FileStorage>::new("/a/").is_err());
-    }
+            #[test]
+            fn platform_should_return_platform_of_storage() {
+                let platform = platform();
+                let storage = open(&platform);
 
-    #[test]
-    fn index_reuse() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-
-        let _index1 = storage.insert(&"Hello, World!".to_string()).unwrap();
-        let index2 = storage.insert(&10_i64).unwrap();
-        let _index3 = storage.insert(&vec![1_u64, 2_u64, 3_u64]).unwrap();
-
-        storage.remove(index2).unwrap();
-
-        let index4 = storage
-            .insert(&vec!["Hello".to_string(), "World".to_string()])
-            .unwrap();
-
-        assert_eq!(index2, index4);
-    }
-
-    #[test]
-    fn index_reuse_after_restore() {
-        let test_file = TestFile::new();
-
-        let index2;
-
-        {
-            let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-
-            let _index1 = storage.insert(&"Hello, World!".to_string()).unwrap();
-            index2 = storage.insert(&10_i64).unwrap();
-            let _index3 = storage.insert(&vec![1_u64, 2_u64, 3_u64]).unwrap();
-
-            storage.remove(index2).unwrap();
+                assert!(Arc::ptr_eq(storage.platform(), &platform));
+            }
         }
 
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+        mod read_all {
+            use super::*;
 
-        let index4 = storage
-            .insert(&vec!["Hello".to_string(), "World".to_string()])
-            .unwrap();
+            #[test]
+            fn read_all_should_return_all_bytes() {
+                let platform = platform();
+                let mut storage = open(&platform);
+                storage.write(1, &[1, 2]).unwrap();
 
-        assert_eq!(index2, index4);
-    }
+                assert_eq!(storage.read_all(), Ok(vec![0, 1, 2]));
+            }
 
-    #[test]
-    fn index_reuse_chain_after_restore() {
-        let test_file = TestFile::new();
+            #[test]
+            fn read_all_failure_should_fail() {
+                let platform = platform();
+                let mut storage = open(&platform);
+                storage.write(0, &[1]).unwrap();
+                platform
+                    .fs()
+                    .set_io_error(FsOp::Read, NAME, ErrorKind::Other);
 
-        let index1;
-        let index2;
-
-        {
-            let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-
-            index1 = storage.insert(&"Hello, World!".to_string()).unwrap();
-            index2 = storage.insert(&10_i64).unwrap();
-            let _index3 = storage.insert(&vec![1_u64, 2_u64, 3_u64]).unwrap();
-
-            storage.remove(index1).unwrap();
-            storage.remove(index2).unwrap();
+                assert!(storage.read_all().is_err());
+            }
         }
 
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-
-        let index4 = storage
-            .insert(&vec!["Hello".to_string(), "World".to_string()])
-            .unwrap();
-        let index5 = storage.insert(&1_u64).unwrap();
-        let index6 = storage.insert(&vec![0_u8; 0]).unwrap();
-
-        assert_eq!(index2, index4);
-        assert_eq!(index1, index5);
-        assert_eq!(index6.0, 4);
-    }
-
-    #[test]
-    fn insert() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-
-        let value1 = "Hello, World!".to_string();
-        let index1 = storage.insert(&value1).unwrap();
-        assert_eq!(storage.value_size(index1), Ok(value1.serialized_size()));
-        assert_eq!(storage.value_size(index1), Ok(value1.serialized_size()));
-        assert_eq!(storage.value(index1), Ok(value1));
-
-        let value2 = 10_i64;
-        let index2 = storage.insert(&value2).unwrap();
-        assert_eq!(
-            storage.value_size(index2),
-            Ok(i64::serialized_size_static())
-        );
-        assert_eq!(
-            storage.value_size(index2),
-            Ok(i64::serialized_size_static())
-        );
-        assert_eq!(storage.value(index2), Ok(value2));
-
-        let value3 = vec![1_u64, 2_u64, 3_u64];
-        let index3 = storage.insert(&value3).unwrap();
-        assert_eq!(storage.value_size(index3), Ok(value3.serialized_size()));
-        assert_eq!(storage.value_size(index3), Ok(value3.serialized_size()));
-        assert_eq!(storage.value(index3), Ok(value3));
-
-        let value4 = vec!["Hello".to_string(), "World".to_string()];
-        let index4 = storage.insert(&value4).unwrap();
-        assert_eq!(storage.value_size(index4), Ok(value4.serialized_size()));
-        assert_eq!(storage.value_size(index4), Ok(value4.serialized_size()));
-        assert_eq!(storage.value(index4), Ok(value4));
-    }
-
-    #[test]
-    fn insert_at() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-
-        let index = storage.insert(&vec![1_i64, 2_i64, 3_i64]).unwrap();
-        let offset = u64::serialized_size_static() + i64::serialized_size_static();
-
-        storage.insert_at(index, offset, &10_i64).unwrap();
-
-        assert_eq!(
-            storage.value::<Vec<i64>>(index).unwrap(),
-            vec![1_i64, 10_i64, 3_i64]
-        );
-    }
-
-    #[test]
-    fn insert_at_value_end() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-
-        let index = storage.insert(&vec![1_i64, 2_i64, 3_i64]).unwrap();
-        let offset = u64::serialized_size_static() + i64::serialized_size_static() * 3;
-
-        storage.insert_at(index, 0, &4_u64).unwrap();
-        storage.insert_at(index, offset, &10_i64).unwrap();
-
-        assert_eq!(
-            storage.value::<Vec<i64>>(index).unwrap(),
-            vec![1_i64, 2_i64, 3_i64, 10_i64]
-        );
-    }
-
-    #[test]
-    fn insert_at_value_end_multiple_values() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-
-        let index = storage.insert(&vec![1_i64, 2_i64, 3_i64]).unwrap();
-        storage.insert(&"Hello, World!".to_string()).unwrap();
-        let offset = u64::serialized_size_static() + i64::serialized_size_static() * 3;
-
-        storage.insert_at(index, 0, &4_u64).unwrap();
-        storage.insert_at(index, offset, &10_i64).unwrap();
-
-        assert_eq!(
-            storage.value::<Vec<i64>>(index).unwrap(),
-            vec![1_i64, 2_i64, 3_i64, 10_i64]
-        );
-    }
-
-    #[test]
-    fn insert_at_beyond_end() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-
-        let index = storage.insert(&vec![1_i64, 2_i64, 3_i64]).unwrap();
-        let offset = u64::serialized_size_static() + i64::serialized_size_static() * 4;
-
-        storage.insert_at(index, 0, &5_u64).unwrap();
-        storage.insert_at(index, offset, &10_i64).unwrap();
-
-        assert_eq!(
-            storage.value::<Vec<i64>>(index).unwrap(),
-            vec![1_i64, 2_i64, 3_i64, 0_i64, 10_i64]
-        );
-    }
-
-    #[test]
-    fn insert_at_beyond_end_multiple_values() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-
-        let index = storage.insert(&vec![1_i64, 2_i64, 3_i64]).unwrap();
-        storage.insert(&"Hello, World!".to_string()).unwrap();
-        let offset = u64::serialized_size_static() + i64::serialized_size_static() * 4;
-
-        storage.insert_at(index, 0, &5_u64).unwrap();
-        storage.insert_at(index, offset, &10_i64).unwrap();
-
-        assert_eq!(
-            storage.value::<Vec<i64>>(index).unwrap(),
-            vec![1_i64, 2_i64, 3_i64, 0_i64, 10_i64]
-        );
-    }
-
-    #[test]
-    fn insert_at_missing_index() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-
-        assert_eq!(
-            storage.insert_at(StorageIndex::from(1_u64), 8, &1_i64),
-            Err(DbError::storage(
-                DbErrorType::NotFound,
-                "Index (1) not found"
-            ))
-        );
-    }
-
-    #[test]
-    fn move_at_left() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-
-        let index = storage.insert(&vec![1_i64, 2_i64, 3_i64]).unwrap();
-        let offset_from = u64::serialized_size_static() + i64::serialized_size_static() * 2;
-        let offset_to = u64::serialized_size_static() + i64::serialized_size_static();
-        let size = i64::serialized_size_static();
-
-        storage
-            .move_at(index, offset_from, offset_to, size)
-            .unwrap();
-
-        assert_eq!(
-            storage.value::<Vec<i64>>(index).unwrap(),
-            vec![1_i64, 3_i64, 0_i64]
-        )
-    }
-
-    #[test]
-    fn move_at_left_overlapping() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-
-        let index = storage.insert(&vec![1_i64, 2_i64, 3_i64]).unwrap();
-        let offset_from = u64::serialized_size_static() + i64::serialized_size_static();
-        let offset_to = u64::serialized_size_static();
-        let size = u64::serialized_size_static() * 2;
-
-        storage
-            .move_at(index, offset_from, offset_to, size)
-            .unwrap();
-
-        assert_eq!(
-            storage.value::<Vec<i64>>(index).unwrap(),
-            vec![2_i64, 3_i64, 0_i64]
-        )
-    }
-
-    #[test]
-    fn move_at_right() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-
-        let index = storage.insert(&vec![1_i64, 2_i64, 3_i64]).unwrap();
-        let offset_from = u64::serialized_size_static() + i64::serialized_size_static();
-        let offset_to = u64::serialized_size_static() + i64::serialized_size_static() * 2;
-        let size = u64::serialized_size_static();
-
-        storage
-            .move_at(index, offset_from, offset_to, size)
-            .unwrap();
-
-        assert_eq!(
-            storage.value::<Vec<i64>>(index).unwrap(),
-            vec![1_i64, 0_i64, 2_i64]
-        )
-    }
-
-    #[test]
-    fn move_at_right_overlapping() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-
-        let index = storage.insert(&vec![1_i64, 2_i64, 3_i64]).unwrap();
-        let offset_from = u64::serialized_size_static();
-        let offset_to = u64::serialized_size_static() + i64::serialized_size_static();
-        let size = u64::serialized_size_static() * 2;
-
-        storage
-            .move_at(index, offset_from, offset_to, size)
-            .unwrap();
-
-        assert_eq!(
-            storage.value::<Vec<i64>>(index).unwrap(),
-            vec![0_i64, 1_i64, 2_i64]
-        )
-    }
-
-    #[test]
-    fn move_at_beyond_end() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-
-        let index = storage.insert(&vec![1_i64, 2_i64, 3_i64]).unwrap();
-        let offset_from = u64::serialized_size_static() + i64::serialized_size_static();
-        let offset_to = u64::serialized_size_static() + i64::serialized_size_static() * 4;
-        let size = u64::serialized_size_static();
-
-        storage
-            .move_at(index, offset_from, offset_to, size)
-            .unwrap();
-
-        storage.insert_at(index, 0, &5_u64).unwrap();
-
-        assert_eq!(
-            storage.value::<Vec<i64>>(index).unwrap(),
-            vec![1_i64, 0_i64, 3_i64, 0_i64, 2_i64]
-        )
-    }
-
-    #[test]
-    fn move_at_size_out_of_bounds() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-
-        let index = storage.insert(&vec![1_i64, 2_i64, 3_i64]).unwrap();
-
-        assert_eq!(
-            storage.move_at(index, 8, 16, 1000),
-            Err(DbError::storage(
-                DbErrorType::OutOfBounds,
-                "Value size (1008) out of bounds (32)"
-            ))
-        )
-    }
-
-    #[test]
-    fn move_at_same_offset() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-
-        let index = storage.insert(&vec![1_i64, 2_i64, 3_i64]).unwrap();
-        let offset_from = u64::serialized_size_static();
-        let offset_to = u64::serialized_size_static();
-        let size = u64::serialized_size_static();
-
-        storage
-            .move_at(index, offset_from, offset_to, size)
-            .unwrap();
-
-        assert_eq!(
-            storage.value::<Vec<i64>>(index).unwrap(),
-            vec![1_i64, 2_i64, 3_i64]
-        )
-    }
-
-    #[test]
-    fn move_at_zero_size() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-
-        let value = vec![1_i64, 2_i64, 3_i64];
-        let index = storage.insert(&value).unwrap();
-
-        storage.move_at(index, 0, 1, 0).unwrap();
-
-        assert_eq!(
-            storage.value::<Vec<i64>>(index).unwrap(),
-            vec![1_i64, 2_i64, 3_i64]
-        );
-    }
-
-    #[test]
-    fn remove() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-
-        let index = storage.insert(&1_i64).unwrap();
-
-        assert_eq!(storage.value::<i64>(index).unwrap(), 1_i64);
-
-        storage.remove(index).unwrap();
-
-        assert_eq!(
-            storage.value::<i64>(index),
-            Err(DbError::storage(
-                DbErrorType::NotFound,
-                "Index (1) not found"
-            ))
-        );
-    }
-
-    #[test]
-    fn remove_missing_index() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-
-        assert_eq!(
-            storage.remove(StorageIndex::from(1_u64)),
-            Err(DbError::storage(
-                DbErrorType::NotFound,
-                "Index (1) not found"
-            ))
-        );
-    }
-
-    #[test]
-    fn replace_larger() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-
-        let index = storage.insert(&1_i64).unwrap();
-        let value = "Hello, World!".to_string();
-        let expected_size = value.serialized_size();
-
-        storage.replace(index, &value).unwrap();
-
-        assert_eq!(storage.value_size(index).unwrap(), expected_size);
-    }
-
-    #[test]
-    fn replace_missing_index() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-
-        assert_eq!(
-            storage.replace(StorageIndex::from(1_u64), &10_i64),
-            Err(DbError::storage(
-                DbErrorType::NotFound,
-                "Index (1) not found"
-            ))
-        );
-    }
-
-    #[test]
-    fn replace_same_size() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-
-        let index = storage.insert(&1_i64).unwrap();
-        let size = storage.value_size(index).unwrap();
-
-        storage.replace(index, &10_i64).unwrap();
-
-        assert_eq!(storage.value_size(index).unwrap(), size);
-    }
-
-    #[test]
-    fn replace_smaller() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-
-        let index = storage.insert(&"Hello, World!".to_string()).unwrap();
-        let value = 1_i64;
-        let expected_size = i64::serialized_size_static();
-
-        storage.replace(index, &value).unwrap();
-
-        assert_eq!(storage.value_size(index).unwrap(), expected_size);
-    }
-
-    #[test]
-    fn resize_at_end_does_not_move() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-
-        let index = storage.insert(&1_i64).unwrap();
-        let size = storage.len();
-        let value_size = storage.value_size(index).unwrap();
-
-        storage.resize_value(index, value_size + 8).unwrap();
-
-        assert_eq!(storage.len(), size + 8);
-    }
-
-    #[test]
-    fn resize_value_greater() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-
-        let index = storage.insert(&10_i64).unwrap();
-        let expected_size = i64::serialized_size_static();
-
-        assert_eq!(storage.value_size(index), Ok(expected_size));
-
-        storage.resize_value(index, expected_size * 2).unwrap();
-
-        assert_eq!(storage.value_size(index), Ok(expected_size * 2));
-    }
-
-    #[test]
-    fn resize_value_missing_index() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-
-        assert_eq!(
-            storage.resize_value(StorageIndex::from(1_u64), 1),
-            Err(DbError::storage(
-                DbErrorType::NotFound,
-                "Index (1) not found"
-            ))
-        );
-    }
-
-    #[test]
-    fn resize_value_same() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-
-        let index = storage.insert(&10_i64).unwrap();
-        let expected_size = i64::serialized_size_static();
-
-        assert_eq!(storage.value_size(index), Ok(expected_size));
-
-        storage.resize_value(index, expected_size).unwrap();
-
-        assert_eq!(storage.value_size(index), Ok(expected_size));
-    }
-
-    #[test]
-    fn resize_value_smaller() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-
-        let index = storage.insert(&10_i64).unwrap();
-        let expected_size = i64::serialized_size_static();
-
-        assert_eq!(storage.value_size(index), Ok(expected_size));
-
-        storage.resize_value(index, expected_size / 2).unwrap();
-
-        assert_eq!(storage.value_size(index), Ok(expected_size / 2));
-    }
-
-    #[test]
-    fn resize_value_zero() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-
-        let index = storage.insert(&10_i64).unwrap();
-        let expected_size = i64::serialized_size_static();
-
-        assert_eq!(storage.value_size(index), Ok(expected_size));
-
-        storage.resize_value(index, 0).unwrap();
-
-        assert_eq!(storage.value_size(index), Ok(0));
-    }
-
-    #[test]
-    fn resize_value_resizes_file() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-
-        let index = storage.insert(&3_i64).unwrap();
-        let len = storage.len();
-        let size = u64::serialized_size_static() + i64::serialized_size_static() * 3;
-        let expected_len = len + i64::serialized_size_static() * 3;
-
-        storage.resize_value(index, size).unwrap();
-
-        assert_eq!(storage.value::<Vec<i64>>(index).unwrap(), vec![0_i64; 3]);
-        assert_eq!(storage.len(), expected_len);
-    }
-
-    #[test]
-    fn resize_value_invalidates_original_position() {
-        let test_file = TestFile::new();
-
-        let index;
-
-        {
-            let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-            index = storage.insert(&10_i64).unwrap();
-            storage.insert(&5_i64).unwrap();
-            storage.resize_value(index, 1).unwrap();
-            storage.remove(index).unwrap();
+        mod resize_with {
+            use super::*;
+
+            #[test]
+            fn resize_with_should_log_old_bytes_it_is_given() {
+                let platform = platform();
+                let mut storage = open(&platform);
+                storage.write(0, &[1, 2, 3]).unwrap();
+                storage.flush().unwrap();
+
+                storage
+                    .resize_with(1, &|_, _, buffer| {
+                        buffer.fill(9);
+                        Ok(())
+                    })
+                    .unwrap();
+
+                storage.recover_from_wal().unwrap();
+                assert_eq!(read(&storage), vec![1, 9, 9]);
+            }
+
+            #[test]
+            fn resize_with_old_bytes_failure_should_fail_without_resizing() {
+                let platform = platform();
+                let mut storage = open(&platform);
+                storage.write(0, &[1, 2, 3]).unwrap();
+
+                let result = storage.resize_with(1, &|_, _, _| {
+                    Err(DbError::storage(crate::DbErrorType::NotFound, "old bytes"))
+                });
+
+                assert!(result.is_err());
+                assert_eq!(read(&storage), vec![1, 2, 3]);
+            }
         }
 
-        let storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+        mod write_with {
+            use super::*;
 
-        assert_eq!(
-            storage.value::<i64>(index),
-            Err(DbError::storage(
-                DbErrorType::NotFound,
-                "Index (1) not found"
-            ))
-        );
-    }
+            #[test]
+            fn write_with_should_log_old_bytes_it_is_given() {
+                let platform = platform();
+                let mut storage = open(&platform);
+                storage.write(0, &[1, 2, 3]).unwrap();
+                storage.flush().unwrap();
 
-    #[test]
-    fn restore_from_file() {
-        let test_file = TestFile::new();
-        let value1 = vec![1_i64, 2_i64, 3_i64];
-        let value2 = 64_u64;
-        let value3 = vec![4_i64, 5_i64, 6_i64, 7_i64, 8_i64, 9_i64, 10_i64];
-        let index1;
-        let index2;
-        let index3;
+                storage
+                    .write_with(1, &[4, 5, 6], &|_, pos, buffer| {
+                        assert_eq!((pos, buffer.len()), (1, 2));
+                        buffer.fill(9);
+                        Ok(())
+                    })
+                    .unwrap();
 
-        {
-            let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-            index1 = storage.insert(&value1).unwrap();
-            index2 = storage.insert(&value2).unwrap();
-            index3 = storage.insert(&value3).unwrap();
+                storage.recover_from_wal().unwrap();
+                assert_eq!(read(&storage), vec![1, 9, 9]);
+            }
+
+            #[test]
+            fn write_with_old_bytes_failure_should_fail_without_writing() {
+                let platform = platform();
+                let mut storage = open(&platform);
+                storage.write(0, &[1, 2, 3]).unwrap();
+
+                let result = storage.write_with(0, &[4], &|_, _, _| {
+                    Err(DbError::storage(crate::DbErrorType::NotFound, "old bytes"))
+                });
+
+                assert!(result.is_err());
+                assert_eq!(read(&storage), vec![1, 2, 3]);
+            }
         }
 
-        let storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+        mod storage_data {
+            use super::*;
 
-        assert_eq!(storage.value::<Vec<i64>>(index1), Ok(value1));
-        assert_eq!(storage.value::<u64>(index2), Ok(value2));
-        assert_eq!(storage.value::<Vec<i64>>(index3), Ok(value3));
-    }
+            mod backup {
+                use super::*;
 
-    #[test]
-    fn restore_from_file_with_removed_index() {
-        let test_file = TestFile::new();
-        let value1 = vec![1_i64, 2_i64, 3_i64];
-        let value2 = 64_u64;
-        let value3 = vec![4_i64, 5_i64, 6_i64, 7_i64, 8_i64, 9_i64, 10_i64];
-        let index1;
-        let index2;
-        let index3;
+                #[test]
+                fn backup_should_write_bytes_to_name() {
+                    let platform = platform();
 
-        {
-            let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-            index1 = storage.insert(&value1).unwrap();
-            index2 = storage.insert(&value2).unwrap();
-            index3 = storage.insert(&value3).unwrap();
-            storage.remove(index2).unwrap();
+                    crate::storage::tests::storage_data::backup::backup_should_write_bytes_to_name(
+                        open(&platform),
+                        "/backup",
+                        |name| platform.fs().read(name).unwrap(),
+                    );
+                }
+
+                #[test]
+                fn backup_should_not_replay_log_of_storage_previously_at_name() {
+                    // GIVEN a storage killed with an unflushed write at the name
+                    let platform = platform();
+                    stale_storage(&platform, "/backup");
+                    let storage = written(&platform);
+
+                    // WHEN the storage is backed up to the name
+                    storage.backup("/backup").unwrap();
+
+                    // THEN the backup opens with the bytes of the storage
+                    assert!(!platform.fs().exists("/.backup").unwrap());
+                    let backup =
+                        FileStorageImpl::with_platform(platform.clone(), "/backup").unwrap();
+                    assert_eq!(read(&backup), vec![1, 2, 3]);
+                }
+
+                #[test]
+                fn backup_onto_itself_should_fail_keeping_bytes() {
+                    let platform = platform();
+                    let storage = written(&platform);
+                    platform.fs().create_symlink_file("/link", NAME).unwrap();
+
+                    for name in [NAME, "/link"] {
+                        assert_eq!(
+                            storage.backup(name),
+                            Err(DbError::storage(
+                                DbErrorType::NotAllowed,
+                                "Cannot back up '/db' onto itself"
+                            )),
+                            "name: {name}"
+                        );
+                        assert_eq!(read(&storage), vec![1, 2, 3], "name: {name}");
+                    }
+                }
+
+                #[test]
+                fn backup_failure_should_fail() {
+                    for (op, path) in [
+                        (FsOp::Metadata, "/backup"),
+                        (FsOp::Canonicalize, "/backup"),
+                        (FsOp::Canonicalize, NAME),
+                        (FsOp::Metadata, "/.backup"),
+                        (FsOp::Remove, "/.backup"),
+                        (FsOp::Open, "/backup"),
+                        (FsOp::Write, "/backup"),
+                        (FsOp::Read, NAME),
+                    ] {
+                        let platform = platform();
+                        platform.fs().write("/backup", [9]).unwrap();
+                        platform.fs().write("/.backup", [9]).unwrap();
+                        let storage = written(&platform);
+                        platform.fs().set_io_error(op, path, ErrorKind::Other);
+
+                        assert!(
+                            storage.backup("/backup").is_err(),
+                            "op: {op:?}, path: {path}"
+                        );
+                    }
+                }
+            }
+
+            mod copy {
+                use super::*;
+
+                #[test]
+                fn copy_should_create_independent_storage_named_name() {
+                    crate::storage::tests::storage_data::copy::copy_should_create_independent_storage_named_name(
+                        open(&platform()),
+                        "/copy",
+                    );
+                }
+
+                #[test]
+                fn copy_should_not_replay_log_of_storage_previously_at_name() {
+                    // GIVEN a storage killed with an unflushed write at the name
+                    let platform = platform();
+                    stale_storage(&platform, "/copy");
+                    let storage = written(&platform);
+
+                    // WHEN the storage is copied to the name
+                    let copy = storage.copy("/copy").unwrap();
+
+                    // THEN the copy holds the bytes of the storage
+                    assert_eq!(read(&copy), vec![1, 2, 3]);
+                }
+
+                #[test]
+                fn copy_failure_should_fail() {
+                    let platform = platform();
+                    let storage = written(&platform);
+                    platform
+                        .fs()
+                        .set_io_error(FsOp::Open, "/copy", ErrorKind::Other);
+
+                    assert!(storage.copy("/copy").is_err());
+                }
+            }
+
+            mod flush {
+                use super::*;
+
+                #[test]
+                fn flush_should_keep_written_bytes_on_recover() {
+                    crate::storage::tests::storage_data::flush::flush_should_keep_written_bytes_on_recover(open(
+                        &platform(),
+                    ));
+                }
+
+                #[test]
+                fn flush_should_make_writes_survive_crash_only_in_commit_mode() {
+                    for (mode, expected) in
+                        [(SyncMode::Commit, vec![1, 2, 3]), (SyncMode::None, vec![])]
+                    {
+                        let platform = platform();
+                        let mut storage = open(&platform);
+                        storage.set_sync_mode(mode);
+                        storage.write(0, &[1, 2, 3]).unwrap();
+
+                        storage.flush().unwrap();
+
+                        platform.fs().crash();
+                        assert_eq!(read(&open(&platform)), expected, "mode: {mode}");
+                    }
+                }
+
+                #[test]
+                fn flush_should_truncate_log_only_in_commit_mode() {
+                    for (mode, truncated) in [(SyncMode::Commit, true), (SyncMode::None, false)] {
+                        let platform = platform();
+                        let mut storage = open(&platform);
+                        storage.set_sync_mode(mode);
+                        storage.write(0, &[1, 2, 3]).unwrap();
+
+                        storage.flush().unwrap();
+
+                        assert!(storage.wal.is_empty(), "mode: {mode}");
+                        assert_eq!(
+                            platform.fs().metadata(WAL).unwrap().len == 0,
+                            truncated,
+                            "mode: {mode}"
+                        );
+                    }
+                }
+
+                #[test]
+                fn flush_without_writes_should_do_nothing() {
+                    let platform = platform();
+                    let mut storage = open(&platform);
+                    storage.set_sync_mode(SyncMode::Commit);
+                    platform
+                        .fs()
+                        .set_io_error(FsOp::SyncData, "", ErrorKind::Other);
+                    platform
+                        .fs()
+                        .set_io_error(FsOp::Write, "", ErrorKind::Other);
+
+                    assert_eq!(storage.flush(), Ok(()));
+                }
+
+                #[test]
+                fn flush_failure_should_fail() {
+                    for (mode, op, path) in [
+                        (SyncMode::Commit, FsOp::SyncData, NAME),
+                        (SyncMode::None, FsOp::Write, WAL),
+                        (SyncMode::Commit, FsOp::SetLen, WAL),
+                        (SyncMode::Commit, FsOp::SyncData, WAL),
+                    ] {
+                        let platform = platform();
+                        let mut storage = open(&platform);
+                        storage.set_sync_mode(mode);
+                        storage.write(0, &[1]).unwrap();
+                        platform.fs().set_io_error(op, path, ErrorKind::Other);
+
+                        assert!(
+                            storage.flush().is_err(),
+                            "mode: {mode}, op: {op:?}, path: {path}"
+                        );
+                    }
+                }
+            }
+
+            mod is_empty {
+                use super::*;
+
+                #[test]
+                fn is_empty_should_be_true_only_without_bytes() {
+                    crate::storage::tests::storage_data::is_empty::is_empty_should_be_true_only_without_bytes(open(
+                        &platform(),
+                    ));
+                }
+            }
+
+            mod set_sync_mode {
+                use super::*;
+
+                #[test]
+                fn set_sync_mode_should_set_mode_if_supported() {
+                    crate::storage::tests::storage_data::set_sync_mode::set_sync_mode_should_set_mode_if_supported(
+                        open(&platform()),
+                        true,
+                    );
+                }
+            }
+
+            mod sync_mode {
+                use super::*;
+
+                #[test]
+                fn sync_mode_should_default_to_none() {
+                    crate::storage::tests::storage_data::sync_mode::sync_mode_should_default_to_none(open(&platform()));
+                }
+            }
+
+            mod sync {
+                use super::*;
+
+                #[test]
+                fn sync_should_succeed() {
+                    crate::storage::tests::storage_data::sync::sync_should_succeed(open(
+                        &platform(),
+                    ));
+                }
+
+                #[test]
+                fn sync_should_make_bytes_survive_crash() {
+                    let platform = platform();
+                    let mut storage = open(&platform);
+                    storage.write(0, &[1, 2]).unwrap();
+
+                    storage.sync().unwrap();
+
+                    platform.fs().crash();
+                    assert_eq!(read(&open(&platform)), vec![1, 2]);
+                }
+
+                #[test]
+                fn sync_failure_should_fail() {
+                    let platform = platform();
+                    let mut storage = open(&platform);
+                    platform
+                        .fs()
+                        .set_io_error(FsOp::SyncData, NAME, ErrorKind::Other);
+
+                    assert!(storage.sync().is_err());
+                }
+            }
+
+            mod len {
+                use super::*;
+
+                #[test]
+                fn len_should_cover_written_bytes() {
+                    crate::storage::tests::storage_data::len::len_should_cover_written_bytes(open(
+                        &platform(),
+                    ));
+                }
+            }
+
+            mod name {
+                use super::*;
+
+                #[test]
+                fn name_should_return_name() {
+                    crate::storage::tests::storage_data::name::name_should_return_name(
+                        open(&platform()),
+                        NAME,
+                    );
+                }
+            }
+
+            mod new {
+                use super::*;
+
+                #[test]
+                fn new_should_create_empty_storage_named_name() {
+                    crate::storage::tests::storage_data::new::new_should_create_empty_storage_named_name::<TestFileStorage>();
+                }
+            }
+
+            mod read {
+                use super::*;
+
+                #[test]
+                fn read_should_return_bytes_at_pos() {
+                    crate::storage::tests::storage_data::read::read_should_return_bytes_at_pos(
+                        open(&platform()),
+                    );
+                }
+
+                #[test]
+                fn read_out_of_bounds_should_fail() {
+                    crate::storage::tests::storage_data::read::read_out_of_bounds_should_fail(
+                        open(&platform()),
+                    );
+                }
+            }
+
+            mod rename {
+                use super::*;
+
+                #[test]
+                fn rename_should_change_name_and_keep_bytes() {
+                    crate::storage::tests::storage_data::rename::rename_should_change_name_and_keep_bytes(
+                        open(&platform()),
+                        "/renamed",
+                    );
+                }
+
+                #[test]
+                fn rename_should_move_files_with_log() {
+                    let platform = platform();
+                    let mut storage = open(&platform);
+                    storage.write(0, &[1, 2]).unwrap();
+                    storage.flush().unwrap();
+                    storage.write(0, &[3]).unwrap();
+
+                    storage.rename("/renamed").unwrap();
+
+                    for (path, exists) in [
+                        (NAME, false),
+                        (WAL, false),
+                        ("/renamed", true),
+                        ("/.renamed", true),
+                    ] {
+                        assert_eq!(platform.fs().exists(path).unwrap(), exists, "path: {path}");
+                    }
+                    storage.recover_from_wal().unwrap();
+                    assert_eq!(read(&storage), vec![1, 2]);
+                }
+
+                #[test]
+                fn rename_failure_should_keep_name_and_files() {
+                    for path in [NAME, WAL] {
+                        let platform = platform();
+                        let mut storage = open(&platform);
+                        platform
+                            .fs()
+                            .set_io_error(FsOp::Rename, path, ErrorKind::Other);
+
+                        assert!(storage.rename("/renamed").is_err(), "path: {path}");
+
+                        assert_eq!(storage.name(), NAME, "path: {path}");
+                        assert!(platform.fs().exists(NAME).unwrap(), "path: {path}");
+                        assert!(!platform.fs().exists("/renamed").unwrap(), "path: {path}");
+                    }
+                }
+            }
+
+            mod resize {
+                use super::*;
+
+                #[test]
+                fn resize_should_zero_new_bytes_and_cut_off_others() {
+                    crate::storage::tests::storage_data::resize::resize_should_zero_new_bytes_and_cut_off_others(open(
+                        &platform(),
+                    ));
+                }
+
+                #[test]
+                fn resize_failure_should_fail_without_resizing() {
+                    for (op, path, len) in [
+                        (FsOp::Read, NAME, 1),
+                        (FsOp::Write, WAL, 1),
+                        (FsOp::Write, WAL, 5),
+                        (FsOp::SetLen, NAME, 1),
+                    ] {
+                        let platform = platform();
+                        let mut storage = open(&platform);
+                        storage.write(0, &[1, 2, 3]).unwrap();
+                        platform.fs().set_io_error(op, path, ErrorKind::Other);
+
+                        assert!(
+                            storage.resize(len).is_err(),
+                            "op: {op:?}, path: {path}, len: {len}"
+                        );
+
+                        assert_eq!(storage.len(), 3, "op: {op:?}, path: {path}, len: {len}");
+                    }
+                }
+            }
+
+            mod write {
+                use super::*;
+
+                #[test]
+                fn write_should_overwrite_and_extend() {
+                    crate::storage::tests::storage_data::write::write_should_overwrite_and_extend(
+                        open(&platform()),
+                    );
+                }
+
+                #[test]
+                fn write_past_end_should_zero_gap() {
+                    crate::storage::tests::storage_data::write::write_past_end_should_zero_gap(
+                        open(&platform()),
+                    );
+                }
+
+                #[test]
+                fn write_empty_should_do_nothing() {
+                    crate::storage::tests::storage_data::write::write_empty_should_do_nothing(
+                        open(&platform()),
+                    );
+                }
+
+                #[test]
+                fn write_failure_should_fail_without_writing() {
+                    for (op, path, pos) in [
+                        (FsOp::Read, NAME, 0),
+                        (FsOp::Write, WAL, 0),
+                        (FsOp::Write, WAL, 3),
+                        (FsOp::Write, NAME, 0),
+                    ] {
+                        let platform = platform();
+                        let mut storage = open(&platform);
+                        storage.write(0, &[1, 2, 3]).unwrap();
+                        platform.fs().set_io_error(op, path, ErrorKind::Other);
+
+                        assert!(
+                            storage.write(pos, &[4, 5]).is_err(),
+                            "op: {op:?}, path: {path}, pos: {pos}"
+                        );
+
+                        platform.fs().clear_faults();
+                        assert_eq!(
+                            read(&storage),
+                            vec![1, 2, 3],
+                            "op: {op:?}, path: {path}, pos: {pos}"
+                        );
+                    }
+                }
+            }
+
+            mod recover_from_wal {
+                use super::*;
+
+                #[test]
+                fn recover_from_wal_should_restore_flushed_bytes_if_logged() {
+                    crate::storage::tests::storage_data::recover_from_wal::recover_from_wal_should_restore_flushed_bytes_if_logged(
+                        open(&platform()),
+                        true,
+                    );
+                }
+
+                #[test]
+                fn recover_from_wal_failure_should_fail() {
+                    for (op, path) in [(FsOp::Read, WAL), (FsOp::Seek, NAME)] {
+                        let platform = platform();
+                        let mut storage = open(&platform);
+                        storage.write(0, &[1]).unwrap();
+                        platform.fs().set_io_error(op, path, ErrorKind::Other);
+
+                        assert!(
+                            storage.recover_from_wal().is_err(),
+                            "op: {op:?}, path: {path}"
+                        );
+                    }
+                }
+            }
         }
 
-        let storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+        mod drop {
+            use super::*;
 
-        assert_eq!(storage.value::<Vec<i64>>(index1), Ok(value1));
-        assert_eq!(
-            storage.value::<u64>(StorageIndex::default()),
-            Err(DbError::storage(
-                DbErrorType::NotFound,
-                "Index (0) not found"
-            ))
-        );
-        assert_eq!(
-            storage.value::<u64>(index2),
-            Err(DbError::storage(
-                DbErrorType::NotFound,
-                format!("Index ({}) not found", index2.0)
-            ))
-        );
-        assert_eq!(storage.value::<Vec<i64>>(index3), Ok(value3));
-    }
+            #[test]
+            fn drop_failure_should_keep_log_for_next_open() {
+                let platform = platform();
+                let mut storage = open(&platform);
+                storage.write(0, &[1, 2, 3]).unwrap();
+                storage.flush().unwrap();
+                storage.write(0, &[4]).unwrap();
+                platform
+                    .fs()
+                    .set_io_error(FsOp::Write, NAME, ErrorKind::Other);
 
-    #[test]
-    fn restore_from_file_with_all_indexes_removed() {
-        let test_file = TestFile::new();
-        let value1 = vec![1_i64, 2_i64, 3_i64];
-        let value2 = 64_u64;
-        let value3 = vec![4_i64, 5_i64, 6_i64, 7_i64, 8_i64, 9_i64, 10_i64];
-        let index1;
-        let index2;
-        let index3;
+                drop(storage);
 
-        {
-            let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-            index1 = storage.insert(&value1).unwrap();
-            index2 = storage.insert(&value2).unwrap();
-            index3 = storage.insert(&value3).unwrap();
-            storage.remove(index1).unwrap();
-            storage.remove(index2).unwrap();
-            storage.remove(index3).unwrap();
+                platform.fs().clear_faults();
+                assert_eq!(read(&open(&platform)), vec![1, 2, 3]);
+            }
         }
-
-        let storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-
-        assert_eq!(
-            storage.value::<u64>(StorageIndex::default()),
-            Err(DbError::storage(
-                DbErrorType::NotFound,
-                "Index (0) not found"
-            ))
-        );
-        assert_eq!(
-            storage.value::<Vec<i64>>(index1),
-            Err(DbError::storage(
-                DbErrorType::NotFound,
-                format!("Index ({}) not found", index1.0)
-            ))
-        );
-        assert_eq!(
-            storage.value::<u64>(index2),
-            Err(DbError::storage(
-                DbErrorType::NotFound,
-                format!("Index ({}) not found", index2.0)
-            ))
-        );
-        assert_eq!(
-            storage.value::<Vec<i64>>(index3),
-            Err(DbError::storage(
-                DbErrorType::NotFound,
-                format!("Index ({}) not found", index3.0)
-            ))
-        );
-    }
-
-    #[test]
-    fn restore_from_file_with_wal() {
-        let test_file = TestFile::new();
-        let value1 = vec![1_i64, 2_i64, 3_i64];
-        let value2 = 64_u64;
-        let value3 = vec![4_i64, 5_i64, 6_i64, 7_i64, 8_i64, 9_i64, 10_i64];
-        let index1;
-        let index2;
-        let index3;
-
-        {
-            let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-            index1 = storage.insert(&value1).unwrap();
-            index2 = storage.insert(&value2).unwrap();
-            index3 = storage.insert(&value3).unwrap();
-        }
-
-        let mut wal = WriteAheadLog::new(&agplatform::platform(), test_file.file_name()).unwrap();
-        wal.insert(u64::serialized_size_static() * 5, &2_u64.serialize())
-            .unwrap();
-
-        let storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-
-        assert_eq!(storage.value::<Vec<i64>>(index1), Ok(vec![1_i64, 2_i64]));
-        assert_eq!(storage.value::<u64>(index2), Ok(value2));
-        assert_eq!(storage.value::<Vec<i64>>(index3), Ok(value3));
-    }
-
-    #[test]
-    fn shrink_to_fit() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-
-        let index1 = storage.insert(&1_i64).unwrap();
-        let index2 = storage.insert(&2_i64).unwrap();
-        let index3 = storage.insert(&3_i64).unwrap();
-        storage.remove(index2).unwrap();
-        storage.optimize_storage().unwrap();
-
-        let actual_size = std::fs::metadata(test_file.file_name()).unwrap().len();
-        let expected_size =
-            (u64::serialized_size_static() * 2) * 3 + i64::serialized_size_static() * 3;
-
-        assert_eq!(actual_size, expected_size);
-        assert_eq!(storage.value(index1), Ok(1_i64));
-        assert_eq!(storage.value(index3), Ok(3_i64));
-    }
-
-    #[test]
-    fn shrink_to_fit_no_change() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-
-        let index1 = storage.insert(&1_i64).unwrap();
-        let index2 = storage.insert(&2_i64).unwrap();
-        let index3 = storage.insert(&3_i64).unwrap();
-
-        let actual_size = std::fs::metadata(test_file.file_name()).unwrap().len();
-
-        storage.optimize_storage().unwrap();
-
-        assert_eq!(
-            actual_size,
-            std::fs::metadata(test_file.file_name()).unwrap().len()
-        );
-        assert_eq!(storage.value(index1), Ok(1_i64));
-        assert_eq!(storage.value(index2), Ok(2_i64));
-        assert_eq!(storage.value(index3), Ok(3_i64));
-    }
-
-    #[test]
-    fn shrink_to_fit_uncommitted() {
-        let test_file = TestFile::new();
-
-        let expected_size;
-        let index1;
-        let index2;
-        let index3;
-
-        {
-            let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-            index1 = storage.insert(&1_i64).unwrap();
-            index2 = storage.insert(&2_i64).unwrap();
-            index3 = storage.insert(&3_i64).unwrap();
-            storage.remove(index2).unwrap();
-
-            expected_size = std::fs::metadata(test_file.file_name()).unwrap().len();
-
-            {
-                let this = &mut storage;
-                this.begin_transaction()
-            };
-            storage.optimize_storage().unwrap();
-        }
-
-        let actual_size = std::fs::metadata(test_file.file_name()).unwrap().len();
-        assert_eq!(actual_size, expected_size);
-
-        let storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-        assert_eq!(storage.value(index1), Ok(1_i64));
-        assert_eq!(
-            storage.value::<i64>(index2),
-            Err(DbError::storage(
-                DbErrorType::NotFound,
-                format!("Index ({}) not found", index2.0)
-            ))
-        );
-        assert_eq!(storage.value(index3), Ok(3_i64));
-    }
-
-    #[test]
-    fn transaction_commit() {
-        let test_file = TestFile::new();
-        let index;
-
-        {
-            let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-            let id = {
-                let this = &mut storage;
-                this.begin_transaction()
-            };
-            index = storage.insert(&1_i64).unwrap();
-            storage.commit(id).unwrap();
-            assert_eq!(storage.value::<i64>(index), Ok(1_i64));
-        }
-
-        let storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-        assert_eq!(storage.value::<i64>(index), Ok(1_i64));
-    }
-
-    #[test]
-    fn transaction_commit_no_transaction() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-        assert_eq!(storage.commit(0), Ok(()));
-    }
-
-    #[test]
-    fn transaction_unfinished() {
-        let test_file = TestFile::new();
-        let index;
-
-        {
-            let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-            {
-                let this = &mut storage;
-                this.begin_transaction()
-            };
-            index = storage.insert(&1_i64).unwrap();
-            assert_eq!(storage.value::<i64>(index), Ok(1_i64));
-        }
-
-        let storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-        assert_eq!(
-            storage.value::<i64>(index),
-            Err(DbError::storage(
-                DbErrorType::NotFound,
-                format!("Index ({}) not found", index.0)
-            ))
-        );
-    }
-
-    #[test]
-    fn transaction_nested_unfinished() {
-        let test_file = TestFile::new();
-        let index;
-
-        {
-            let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-            let _ = {
-                let this = &mut storage;
-                this.begin_transaction()
-            };
-            let id2 = {
-                let this = &mut storage;
-                this.begin_transaction()
-            };
-            index = storage.insert(&1_i64).unwrap();
-            assert_eq!(storage.value::<i64>(index), Ok(1_i64));
-            storage.commit(id2).unwrap();
-        }
-
-        let storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-        assert_eq!(
-            storage.value::<i64>(index),
-            Err(DbError::storage(
-                DbErrorType::NotFound,
-                format!("Index ({}) not found", index.0)
-            ))
-        );
-    }
-
-    #[test]
-    fn transaction_commit_mismatch() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-        let id1 = {
-            let this = &mut storage;
-            this.begin_transaction()
-        };
-        let id2 = {
-            let this = &mut storage;
-            this.begin_transaction()
-        };
-        let index = storage.insert(&1_i64).unwrap();
-        assert_eq!(storage.value::<i64>(index), Ok(1_i64));
-
-        assert_eq!(
-            storage.commit(id1),
-            Err(DbError::storage(
-                DbErrorType::NotAllowed,
-                format!("Cannot end transaction '{id1}'. Transaction '{id2}' in progress.")
-            ))
-        );
-    }
-
-    #[test]
-    fn value() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-        let index = storage.insert(&10_i64).unwrap();
-
-        assert_eq!(storage.value::<i64>(index), Ok(10_i64));
-    }
-
-    #[test]
-    fn value_at() {
-        let test_file = TestFile::new();
-
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-        let data = vec![1_i64, 2_i64, 3_i64];
-
-        let index = storage.insert(&data).unwrap();
-        let offset = u64::serialized_size_static() + i64::serialized_size_static();
-
-        assert_eq!(storage.value_at::<i64>(index, offset), Ok(2_i64));
-    }
-
-    #[test]
-    fn value_at_dynamic_size() {
-        let test_file = TestFile::new();
-
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-        let data = vec![2_i64, 1_i64, 2_i64];
-
-        let index = storage.insert(&data).unwrap();
-        let offset = u64::serialized_size_static();
-
-        assert_eq!(
-            storage.value_at::<Vec<i64>>(index, offset),
-            Ok(vec![1_i64, 2_i64])
-        );
-    }
-
-    #[test]
-    fn value_at_of_missing_index() {
-        let test_file = TestFile::new();
-        let storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-
-        assert_eq!(
-            storage.value_at::<i64>(StorageIndex::from(1_u64), 8),
-            Err(DbError::storage(
-                DbErrorType::NotFound,
-                "Index (1) not found"
-            ))
-        );
-    }
-
-    #[test]
-    fn value_at_out_of_bounds() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-
-        let data = vec![1_i64, 2_i64];
-        let index = storage.insert(&data).unwrap();
-        let offset = u64::serialized_size_static() + i64::serialized_size_static() * 2;
-
-        assert_eq!(
-            storage.value_at::<i64>(index, offset),
-            Err(DbError::storage(
-                DbErrorType::OutOfBounds,
-                "i64 deserialization error"
-            ))
-        );
-    }
-
-    #[test]
-    fn value_at_offset_overflow() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-
-        let data = vec![1_i64, 2_i64];
-        let index = storage.insert(&data).unwrap();
-        let offset = u64::serialized_size_static() + i64::serialized_size_static() * 3;
-
-        assert_eq!(
-            storage.value_at::<i64>(index, offset),
-            Err(DbError::storage(
-                DbErrorType::OutOfBounds,
-                "Offset (32) out of bounds (24)"
-            ))
-        );
-    }
-
-    #[test]
-    fn value_of_missing_index() {
-        let test_file = TestFile::new();
-        let storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-
-        assert_eq!(
-            storage.value::<i64>(StorageIndex::from(1_u64)),
-            Err(DbError::storage(
-                DbErrorType::NotFound,
-                "Index (1) not found"
-            ))
-        );
-    }
-
-    #[test]
-    fn value_out_of_bounds() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-
-        let index = storage.insert(&10_i64).unwrap();
-
-        assert_eq!(
-            storage.value::<Vec<i64>>(index),
-            Err(DbError::storage(
-                DbErrorType::OutOfBounds,
-                "Vec<i64> deserialization error"
-            ))
-        );
-    }
-
-    #[test]
-    fn value_size() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-
-        let index = storage.insert(&10_i64).unwrap();
-        let expected_size = i64::serialized_size_static();
-
-        assert_eq!(storage.value_size(index), Ok(expected_size));
-    }
-
-    #[test]
-    fn value_size_of_missing_index() {
-        let test_file = TestFile::new();
-        let storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-
-        assert_eq!(
-            storage.value_size(StorageIndex::from(1_u64)),
-            Err(DbError::storage(
-                DbErrorType::NotFound,
-                "Index (1) not found"
-            ))
-        );
-    }
-
-    #[test]
-    fn resize() {
-        let test_file = TestFile::new();
-        let mut file = FileStorage::new(test_file.file_name()).unwrap();
-        file.write(0, "Hello, World".as_bytes()).unwrap();
-        assert_eq!(file.len(), 12);
-        file.resize(20).unwrap();
-        assert_eq!(file.len(), 20);
-        file.resize(10).unwrap();
-        assert_eq!(file.read(0, 10).unwrap(), "Hello, Wor".as_bytes());
-    }
-
-    #[test]
-    fn corrupted_wal_is_truncated() {
-        let test_file = TestFile::new();
-
-        //crate wal
-        {
-            let mut wal =
-                WriteAheadLog::new(&agplatform::platform(), test_file.file_name()).unwrap();
-            wal.insert(0, "Hello".as_bytes()).unwrap(); //len 5
-            wal.insert(5, "World".as_bytes()).unwrap();
-        }
-
-        // truncate wal simulating cutoff during write
-        // of the value causing the wal record to overrun
-        // the file length
-        {
-            let file = File::options()
-                .write(true)
-                .open(TestFile::hidden_filename(test_file.file_name()))
-                .unwrap();
-            file.set_len((std::mem::size_of::<u64>() * 4 + 6) as u64)
-                .unwrap();
-        }
-
-        let storage = FileStorage::new(test_file.file_name()).unwrap();
-        assert_eq!(storage.len(), 5);
-    }
-
-    #[test]
-    fn corrupted_wal_is_truncated_validation_read_error() {
-        let test_file = TestFile::new();
-
-        //crate wal
-        {
-            let mut wal =
-                WriteAheadLog::new(&agplatform::platform(), test_file.file_name()).unwrap();
-            wal.insert(0, "Hello".as_bytes()).unwrap(); //len 5
-            wal.insert(5, "World".as_bytes()).unwrap();
-        }
-
-        // truncate wal simulating cutoff during write
-        // of value meta-data (i.e. pos or value len)
-        // causing the record to be unreadable
-        {
-            let file = File::options()
-                .write(true)
-                .open(TestFile::hidden_filename(test_file.file_name()))
-                .unwrap();
-            file.set_len((std::mem::size_of::<u64>() * 3 + 5) as u64)
-                .unwrap();
-        }
-
-        let storage = FileStorage::new(test_file.file_name()).unwrap();
-        assert_eq!(storage.len(), 5);
-    }
-
-    #[test]
-    fn load_with_version_info() {
-        let test_file = TestFile::new();
-
-        let mut with_version_record = 0_u64.serialize();
-        with_version_record.extend(8_u64.serialize());
-        with_version_record.extend(1_u64.serialize());
-        let value1 = vec![1_u64, 2, 3, 4, 5];
-        with_version_record.extend(1_u64.serialize());
-        with_version_record.extend(value1.serialized_size().serialize());
-        with_version_record.extend(value1.serialize());
-        let value2 = "Hello, world!".to_string();
-        with_version_record.extend(0_u64.serialize());
-        with_version_record.extend(value2.serialized_size().serialize());
-        with_version_record.extend(value2.serialize());
-        let value3 = -20_i64;
-        with_version_record.extend(3_u64.serialize());
-        with_version_record.extend(value3.serialized_size().serialize());
-        with_version_record.extend(value3.serialize());
-        std::fs::write(test_file.file_name(), with_version_record).unwrap();
-
-        let storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-        let vec = storage.value::<Vec<u64>>(StorageIndex(1)).unwrap();
-        let val = storage.value::<i64>(StorageIndex(3)).unwrap();
-
-        assert_eq!(vec, vec![1, 2, 3, 4, 5]);
-        assert_eq!(val, -20);
-        assert_eq!(storage.len(), 149);
-        assert_eq!(storage.version(), 1);
-    }
-
-    #[test]
-    fn load_with_version_info_optimize() {
-        let test_file = TestFile::new();
-
-        let mut with_version_record = 0_u64.serialize();
-        with_version_record.extend(8_u64.serialize());
-        with_version_record.extend(1_u64.serialize());
-        let value1 = vec![1_u64, 2, 3, 4, 5];
-        with_version_record.extend(1_u64.serialize());
-        with_version_record.extend(value1.serialized_size().serialize());
-        with_version_record.extend(value1.serialize());
-        let value2 = "Hello, world!".to_string();
-        with_version_record.extend(0_u64.serialize());
-        with_version_record.extend(value2.serialized_size().serialize());
-        with_version_record.extend(value2.serialize());
-        let value3 = -20_i64;
-        with_version_record.extend(3_u64.serialize());
-        with_version_record.extend(value3.serialized_size().serialize());
-        with_version_record.extend(value3.serialize());
-        std::fs::write(test_file.file_name(), with_version_record).unwrap();
-
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-        let vec = storage.value::<Vec<u64>>(StorageIndex(1)).unwrap();
-        let val = storage.value::<i64>(StorageIndex(3)).unwrap();
-
-        storage.optimize_storage().unwrap();
-
-        assert_eq!(vec, vec![1, 2, 3, 4, 5]);
-        assert_eq!(val, -20);
-        assert_eq!(storage.len(), 112);
-        assert_eq!(storage.version(), 1);
-    }
-
-    #[test]
-    fn load_without_version_info() {
-        let test_file = TestFile::new();
-
-        let mut buf = Vec::new();
-        let value1 = vec![1_u64, 2, 3, 4, 5];
-        buf.extend(1_u64.serialize());
-        buf.extend(value1.serialized_size().serialize());
-        buf.extend(value1.serialize());
-        let value2 = "Hello, world!".to_string();
-        buf.extend(0_u64.serialize());
-        buf.extend(value2.serialized_size().serialize());
-        buf.extend(value2.serialize());
-        let value3 = -20_i64;
-        buf.extend(3_u64.serialize());
-        buf.extend(value3.serialized_size().serialize());
-        buf.extend(value3.serialize());
-        std::fs::write(test_file.file_name(), buf).unwrap();
-
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-        let vec = storage.value::<Vec<u64>>(StorageIndex(1)).unwrap();
-        let val = storage.value::<i64>(StorageIndex(3)).unwrap();
-
-        storage.optimize_storage().unwrap();
-
-        assert_eq!(vec, vec![1, 2, 3, 4, 5]);
-        assert_eq!(val, -20);
-        assert_eq!(storage.len(), 112);
-        assert_eq!(storage.version(), 1);
-    }
-
-    #[test]
-    fn load_with_too_high_version_info() {
-        let test_file = TestFile::new();
-
-        let mut with_version_record = 0_u64.serialize();
-        with_version_record.extend(8_u64.serialize());
-        with_version_record.extend(2_u64.serialize());
-        std::fs::write(test_file.file_name(), with_version_record).unwrap();
-
-        assert_eq!(
-            Storage::<FileStorage>::new(test_file.file_name()).unwrap_err(),
-            DbError::storage(
-                DbErrorType::NotAllowed,
-                "Storage version '2' is higher than the current version '1'"
-            )
-        );
-    }
-
-    #[test]
-    fn load_with_corrupted_version_info() {
-        let test_file = TestFile::new();
-
-        let mut with_version_record = 0_u64.serialize();
-        with_version_record.extend(4_u64.serialize());
-        std::fs::write(test_file.file_name(), with_version_record).unwrap();
-
-        assert_eq!(
-            Storage::<FileStorage>::new(test_file.file_name()).unwrap_err(),
-            DbError::storage(
-                DbErrorType::NotEnoughData,
-                "Invalid version record size (4 < 8)"
-            )
-        );
-    }
-
-    #[test]
-    fn load_without_version_info_large_data() {
-        let test_file = TestFile::new();
-
-        let mut buf = Vec::new();
-        let value1 = vec![1_u64; 256000];
-        buf.extend(1_u64.serialize());
-        buf.extend(value1.serialized_size().serialize());
-        buf.extend(value1.serialize());
-        std::fs::write(test_file.file_name(), buf).unwrap();
-
-        let storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-        let vec = storage.value::<Vec<u64>>(StorageIndex(1)).unwrap();
-
-        assert_eq!(vec, value1);
-        assert_eq!(storage.version(), 1);
-    }
-
-    #[test]
-    fn file_storage_with_non_empty_free_region_is_readable() {
-        let test_file = TestFile::new();
-
-        let index1;
-        let index2;
-        let index3;
-
-        {
-            let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-            index1 = storage
-                .insert(&vec![1_i64, 2_i64, 3_i64, 4_i64, 5_i64])
-                .unwrap();
-            index2 = storage.insert(&42_i64).unwrap();
-            index3 = storage.insert(&43_i64).unwrap();
-            storage.resize_value(index1, 16).unwrap();
-        }
-
-        let storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-
-        assert_eq!(storage.value_size(index1).unwrap(), 16);
-        assert_eq!(storage.value::<i64>(index2), Ok(42_i64));
-        assert_eq!(storage.value::<i64>(index3), Ok(43_i64));
-    }
-
-    #[test]
-    fn remove_at_non_end_adds_free_region() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-
-        let _index1 = storage.insert(&1_i64).unwrap();
-        let index2 = storage.insert(&2_i64).unwrap();
-        let _index3 = storage.insert(&3_i64).unwrap();
-        let _index4 = storage.insert_bytes(&[1u8; 256]).unwrap();
-
-        let size_before = storage.len();
-
-        assert_eq!(storage.records.free_size(), 0);
-        storage.remove(index2).unwrap();
-        assert_eq!(storage.len(), size_before);
-        assert_eq!(storage.records.free_size(), i64::serialized_size_static());
-    }
-
-    #[test]
-    fn remove_at_end_truncates_file() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-
-        let _index1 = storage.insert(&1_i64).unwrap();
-        let index2 = storage.insert(&2_i64).unwrap();
-
-        let size_after_truncate =
-            storage.len() - STORAGE_RECORD_SIZE - i64::serialized_size_static();
-
-        storage.remove(index2).unwrap();
-
-        assert_eq!(storage.len(), size_after_truncate);
-        assert_eq!(storage.records.free_size(), 0);
-    }
-
-    #[test]
-    fn insert_after_remove_reuses_free_region() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-
-        let _index1 = storage.insert(&1_i64).unwrap();
-        let index2 = storage.insert(&2_i64).unwrap();
-        let _index3 = storage.insert(&3_i64).unwrap();
-        let _index4 = storage.insert(&4_i64).unwrap();
-
-        storage.remove(index2).unwrap();
-        let size_after_remove = storage.len();
-
-        assert_eq!(storage.records.free_size(), i64::serialized_size_static());
-        let index4 = storage.insert(&99_i64).unwrap();
-        assert_eq!(storage.len(), size_after_remove);
-        assert_eq!(storage.value::<i64>(index4), Ok(99_i64));
-        assert_eq!(storage.records.free_size(), 0);
-    }
-
-    #[test]
-    fn insert_after_remove_does_not_reuse_if_free_region_is_larger_less_than_header_size() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-
-        let _index1 = storage.insert(&1_i64).unwrap();
-        let index2 = storage.insert(&2_i64).unwrap();
-        let _index3 = storage.insert(&3_i64).unwrap();
-        let _index4 = storage.insert(&4_i64).unwrap();
-
-        storage.remove(index2).unwrap();
-        let size_after_remove = storage.len();
-
-        // Every free needs space for the header (16 bytes).
-        // Free region after remove is 8 bytes + HEADER_SIZE (16) = 24 bytes.
-        // Request is for 4 bytes + HEADER_SIZE (16) = 20 bytes.
-        // Free region would need to be split - remainder of 4 bytes.
-        // 4 bytes < HEADER_SIZE (16) → cannot split, append instead.
-        let index4 = storage.insert_bytes(&[0u8; 4]).unwrap();
-
-        assert!(storage.len() > size_after_remove);
-        assert_eq!(storage.value_as_bytes(index4).unwrap().len(), 4);
-        assert_eq!(storage.records.free_size(), 8);
-    }
-
-    #[test]
-    fn free_region_survives_reload() {
-        let test_file = TestFile::new();
-        let index2;
-
-        {
-            let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-            let _index1 = storage.insert(&1_i64).unwrap();
-            index2 = storage.insert(&2_i64).unwrap();
-            let _index3 = storage.insert(&3_i64).unwrap();
-            let _index4 = storage.insert(&4_i64).unwrap();
-            storage.remove(index2).unwrap();
-        }
-
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-        assert_eq!(storage.records.free_size(), i64::serialized_size_static());
-
-        let size_before = storage.len();
-        let index4 = storage.insert(&42_i64).unwrap();
-        assert_eq!(storage.len(), size_before);
-        assert_eq!(storage.value::<i64>(index4), Ok(42_i64));
-        assert_eq!(storage.records.free_size(), 0);
-    }
-
-    #[test]
-    fn insert_splits_large_free_region() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-
-        let _index1 = storage.insert(&1_i64).unwrap();
-        let index2 = storage.insert_bytes(&[0u8; 40]).unwrap();
-        let _index3 = storage.insert(&3_i64).unwrap();
-        let _index4 = storage.insert(&4_i64).unwrap();
-        let _index5 = storage.insert(&5_i64).unwrap();
-
-        storage.remove(index2).unwrap();
-        let size_after_remove = storage.len();
-
-        assert_eq!(storage.records.free_size(), 40);
-
-        // Every free needs space for the header (16 bytes).
-        // Free region after remove is 40 bytes + HEADER_SIZE (16) = 56 bytes.
-        // Request is for 4 bytes + HEADER_SIZE (16) = 20 bytes.
-        // Free region would need to be split - remainder of 36 bytes.
-        // 36 bytes ≥ HEADER_SIZE (16) → can split, new free region of 20 bytes + HEADER_SIZE (16).
-        let index4 = storage.insert_bytes(&[0u8; 4]).unwrap();
-
-        assert_eq!(storage.len(), size_after_remove);
-        assert_eq!(storage.value_as_bytes(index4).unwrap().len(), 4);
-        assert_eq!(storage.records.free_size(), 20);
-    }
-
-    #[test]
-    fn insert_splits_large_free_region_survives_reload() {
-        let test_file = TestFile::new();
-
-        let index4;
-        let size_after_remove;
-
-        {
-            let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-            let _index1 = storage.insert(&1_i64).unwrap();
-            let index2 = storage.insert_bytes(&[0u8; 40]).unwrap();
-            let _index3 = storage.insert(&3_i64).unwrap();
-            let _index4 = storage.insert(&4_i64).unwrap();
-            let _index5 = storage.insert(&5_i64).unwrap();
-
-            storage.remove(index2).unwrap();
-            size_after_remove = storage.len();
-            index4 = storage.insert_bytes(&[0u8; 4]).unwrap();
-        }
-
-        let storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-
-        assert_eq!(storage.len(), size_after_remove);
-        assert_eq!(storage.value_as_bytes(index4).unwrap().len(), 4);
-        assert_eq!(storage.records.free_size(), 20);
-    }
-
-    #[test]
-    fn removing_before_free_region_merges_them() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-
-        let _index1 = storage.insert(&1_i64).unwrap();
-        let index2 = storage.insert(&2_i64).unwrap();
-        let index3 = storage.insert(&3_i64).unwrap();
-        let _index4 = storage.insert(&4_i64).unwrap();
-        let _index5 = storage.insert(&5_i64).unwrap();
-
-        storage.remove(index3).unwrap();
-        storage.remove(index2).unwrap();
-
-        assert_eq!(
-            storage.records.free_size(),
-            2 * i64::serialized_size_static() + 16
-        );
-    }
-
-    #[test]
-    fn removing_after_free_region_merges_them() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-
-        let _index1 = storage.insert(&1_i64).unwrap();
-        let index2 = storage.insert(&2_i64).unwrap();
-        let index3 = storage.insert(&3_i64).unwrap();
-        let _index4 = storage.insert(&4_i64).unwrap();
-        let _index5 = storage.insert(&5_i64).unwrap();
-
-        storage.remove(index2).unwrap();
-        storage.remove(index3).unwrap();
-
-        assert_eq!(
-            storage.records.free_size(),
-            2 * i64::serialized_size_static() + 16
-        );
-    }
-
-    #[test]
-    fn removing_record_between_two_free_regions_merges_all_three() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-
-        let _index1 = storage.insert(&1_i64).unwrap();
-        let index2 = storage.insert(&2_i64).unwrap();
-        let index3 = storage.insert(&3_i64).unwrap();
-        let index4 = storage.insert(&4_i64).unwrap();
-        let _index5 = storage.insert(&5_i64).unwrap();
-
-        storage.remove(index4).unwrap();
-        storage.remove(index3).unwrap();
-        storage.remove(index2).unwrap();
-
-        assert_eq!(
-            storage.records.free_size(),
-            3 * i64::serialized_size_static() + 2 * 16
-        );
-    }
-
-    #[test]
-    fn optimize_storage_removes_all_free_regions() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-
-        let index1 = storage.insert(&1_i64).unwrap();
-        let index2 = storage.insert(&2_i64).unwrap();
-        let index3 = storage.insert(&3_i64).unwrap();
-        let index4 = storage.insert(&4_i64).unwrap();
-        let index5 = storage.insert(&5_i64).unwrap();
-        storage.remove(index1).unwrap();
-        storage.remove(index4).unwrap();
-
-        let size_before_compaction = storage.len();
-        assert_eq!(
-            storage.records.free_size(),
-            2 * i64::serialized_size_static()
-        );
-        storage.optimize_storage().unwrap();
-        let size_after_compaction =
-            size_before_compaction - 2 * (STORAGE_RECORD_SIZE + i64::serialized_size_static());
-
-        assert_eq!(storage.len(), size_after_compaction);
-        assert_eq!(storage.value::<i64>(index2), Ok(2_i64));
-        assert_eq!(storage.value::<i64>(index3), Ok(3_i64));
-        assert_eq!(storage.value::<i64>(index5), Ok(5_i64));
-        assert_eq!(storage.records.free_size(), 0);
-    }
-
-    #[test]
-    fn shrink_value_persists_free_region_on_reload() {
-        let test_file = TestFile::new();
-        let index1;
-        let index2;
-        let index3;
-
-        {
-            let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-            index1 = storage
-                .insert(&vec![1_i64, 2_i64, 3_i64, 4_i64, 5_i64])
-                .unwrap();
-            index2 = storage.insert(&42_i64).unwrap();
-            index3 = storage.insert(&43_i64).unwrap();
-            storage.resize_value(index1, 16).unwrap();
-        }
-
-        let storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-
-        assert_eq!(storage.value_size(index1).unwrap(), 16);
-        assert_eq!(storage.value::<i64>(index2), Ok(42_i64));
-        assert_eq!(storage.value::<i64>(index3), Ok(43_i64));
-        assert_eq!(storage.records.free_size(), 16);
-    }
-
-    #[test]
-    fn replace_smaller_reuses_space_and_persists() {
-        let test_file = TestFile::new();
-        let index_big;
-        let index_next;
-        let index_new;
-
-        {
-            let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-            index_big = storage
-                .insert(&vec![1_i64, 2_i64, 3_i64, 4_i64, 5_i64])
-                .unwrap();
-            index_next = storage.insert(&99_i64).unwrap();
-
-            storage.replace(index_big, &42_i64).unwrap();
-            index_new = storage.insert(&7_i64).unwrap();
-        }
-
-        let storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-        assert_eq!(storage.value::<i64>(index_big), Ok(42_i64));
-        assert_eq!(storage.value::<i64>(index_next), Ok(99_i64));
-        assert_eq!(storage.value::<i64>(index_new), Ok(7_i64));
-        assert_eq!(storage.records.free_size(), 0);
-    }
-
-    #[test]
-    fn shrink_move_to_end_frees_old_position() {
-        let test_file = TestFile::new();
-        let index1;
-        let index2;
-
-        {
-            let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-            index1 = storage.insert_bytes(&[1u8; 8]).unwrap();
-            index2 = storage.insert(&999_i64).unwrap();
-            storage.resize_value(index1, 4).unwrap();
-        }
-
-        let storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-        assert_eq!(storage.value::<i64>(index2), Ok(999_i64));
-        assert_eq!(storage.value_size(index1).unwrap(), 4);
-        assert_eq!(storage.records.free_size(), 8);
-    }
-
-    #[test]
-    fn compacted_file_reloads_correctly() {
-        let test_file = TestFile::new();
-        let index1;
-        let index3;
-
-        {
-            let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-            index1 = storage.insert(&11_i64).unwrap();
-            let index2 = storage.insert(&22_i64).unwrap();
-            index3 = storage.insert(&33_i64).unwrap();
-            storage.remove(index2).unwrap();
-            storage.optimize_storage().unwrap();
-        }
-
-        let storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-        assert_eq!(storage.value::<i64>(index1), Ok(11_i64));
-        assert_eq!(storage.value::<i64>(index3), Ok(33_i64));
-        assert_eq!(storage.records.free_size(), 0);
-    }
-
-    #[test]
-    fn free_region_at_eof_after_reload_is_truncated_by_optimize() {
-        let test_file = TestFile::new();
-        let index1;
-        let index2;
-
-        {
-            let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-            index1 = storage.insert_bytes(&[1u8; 8]).unwrap();
-            index2 = storage.insert(&999_i64).unwrap();
-            storage.resize_value(index1, 4).unwrap();
-        }
-
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-        assert_eq!(storage.records.free_size(), 8);
-
-        storage.optimize_storage().unwrap();
-
-        assert_eq!(storage.records.free_size(), 0);
-        assert_eq!(storage.value::<i64>(index2), Ok(999_i64));
-        assert_eq!(storage.value_size(index1).unwrap(), 4);
-    }
-
-    #[test]
-    fn recover_from_wal_overwrite() {
-        let test_file = TestFile::new();
-        let mut file = FileStorage::new(test_file.file_name()).unwrap();
-        file.write(0, &[1, 2, 3]).unwrap();
-        file.flush().unwrap();
-        file.write(0, &[4, 5]).unwrap();
-
-        file.recover_from_wal().unwrap();
-
-        assert_eq!(file.len(), 3);
-        assert_eq!(file.read(0, 3).unwrap().to_vec(), vec![1, 2, 3]);
-    }
-
-    #[test]
-    fn recover_from_wal_append() {
-        let test_file = TestFile::new();
-        let mut file = FileStorage::new(test_file.file_name()).unwrap();
-        file.write(0, &[1, 2, 3]).unwrap();
-        file.flush().unwrap();
-        file.write(3, &[4, 5]).unwrap();
-
-        file.recover_from_wal().unwrap();
-
-        assert_eq!(file.len(), 3);
-        assert_eq!(file.read(0, 3).unwrap().to_vec(), vec![1, 2, 3]);
-    }
-
-    #[test]
-    fn recover_from_wal_overwrite_past_end() {
-        let test_file = TestFile::new();
-        let mut file = FileStorage::new(test_file.file_name()).unwrap();
-        file.write(0, &[1, 2, 3]).unwrap();
-        file.flush().unwrap();
-        file.write(1, &[4, 5, 6, 7]).unwrap();
-
-        file.recover_from_wal().unwrap();
-
-        assert_eq!(file.len(), 3);
-        assert_eq!(file.read(0, 3).unwrap().to_vec(), vec![1, 2, 3]);
-        assert_eq!(std::fs::metadata(test_file.file_name()).unwrap().len(), 3);
-    }
-
-    #[test]
-    fn recover_from_wal_empty_write() {
-        let test_file = TestFile::new();
-        let mut file = FileStorage::new(test_file.file_name()).unwrap();
-        file.write(0, &[1, 2, 3]).unwrap();
-        file.flush().unwrap();
-        file.write(1, &[]).unwrap();
-
-        file.recover_from_wal().unwrap();
-
-        assert_eq!(file.len(), 3);
-        assert_eq!(file.read(0, 3).unwrap().to_vec(), vec![1, 2, 3]);
-    }
-
-    #[test]
-    fn recover_from_wal_write_after_end() {
-        let test_file = TestFile::new();
-        let mut file = FileStorage::new(test_file.file_name()).unwrap();
-        file.write(0, &[1, 2, 3]).unwrap();
-        file.flush().unwrap();
-        file.write(5, &[4, 5]).unwrap();
-
-        assert_eq!(file.read(0, 7).unwrap().to_vec(), vec![1, 2, 3, 0, 0, 4, 5]);
-
-        file.recover_from_wal().unwrap();
-
-        assert_eq!(file.len(), 3);
-        assert_eq!(file.read(0, 3).unwrap().to_vec(), vec![1, 2, 3]);
-    }
-
-    #[test]
-    fn recover_from_wal_resize_larger() {
-        let test_file = TestFile::new();
-        let mut file = FileStorage::new(test_file.file_name()).unwrap();
-        file.write(0, &[1, 2, 3]).unwrap();
-        file.flush().unwrap();
-        file.resize(10).unwrap();
-
-        file.recover_from_wal().unwrap();
-
-        assert_eq!(file.len(), 3);
-        assert_eq!(file.read(0, 3).unwrap().to_vec(), vec![1, 2, 3]);
-    }
-
-    #[test]
-    fn recover_from_wal_resize_same_len() {
-        let test_file = TestFile::new();
-        let mut file = FileStorage::new(test_file.file_name()).unwrap();
-        file.write(0, &[1, 2, 3]).unwrap();
-        file.flush().unwrap();
-        file.resize(3).unwrap();
-
-        file.recover_from_wal().unwrap();
-
-        assert_eq!(file.len(), 3);
-        assert_eq!(file.read(0, 3).unwrap().to_vec(), vec![1, 2, 3]);
-    }
-
-    #[test]
-    fn recover_from_wal_sync_mode_commit() {
-        let test_file = TestFile::new();
-        let mut file = FileStorage::new(test_file.file_name()).unwrap();
-        file.set_sync_mode(SyncMode::Commit);
-        file.write(0, &[1, 2, 3]).unwrap();
-        file.flush().unwrap();
-        file.write(1, &[4, 5, 6]).unwrap();
-        file.resize(10).unwrap();
-        file.resize(2).unwrap();
-
-        file.recover_from_wal().unwrap();
-
-        assert_eq!(file.len(), 3);
-        assert_eq!(file.read(0, 3).unwrap().to_vec(), vec![1, 2, 3]);
-    }
-
-    #[test]
-    fn overwrite_past_end_is_rolled_back_on_reopen() {
-        let test_file = TestFile::new();
-
-        {
-            let mut file = FileStorage::new(test_file.file_name()).unwrap();
-            file.write(0, &[1, 2, 3]).unwrap();
-            file.flush().unwrap();
-            file.write(1, &[4, 5, 6, 7]).unwrap();
-            file.write(5, &[8, 9]).unwrap();
-            std::mem::forget(file);
-        }
-
-        let file = FileStorage::new(test_file.file_name()).unwrap();
-
-        assert_eq!(file.len(), 3);
-        assert_eq!(file.read(0, 3).unwrap().to_vec(), vec![1, 2, 3]);
     }
 }

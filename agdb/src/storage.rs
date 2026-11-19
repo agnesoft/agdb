@@ -270,6 +270,15 @@ impl<D: StorageData> Storage<D> {
         self.commit(id)
     }
 
+    pub fn insert_zeroed(&mut self, size: u64) -> Result<StorageIndex, DbError> {
+        let record = self.new_record(self.len(), size);
+        let id = self.transaction();
+        self.write_record(&record)?;
+        self.data.resize(record.end())?;
+        self.commit(id)?;
+        Ok(StorageIndex::from(record.index))
+    }
+
     pub fn len(&self) -> u64 {
         self.data.len()
     }
@@ -1841,6 +1850,35 @@ pub(crate) mod tests {
                 assert_failures_recover(
                     |storage| vec![storage.insert_bytes(&[1, 2]).unwrap()],
                     |storage, indexes| storage.insert_bytes_at(indexes[0], 1, &[3, 4]),
+                );
+            }
+        }
+
+        mod insert_zeroed {
+            use super::*;
+
+            #[test]
+            fn insert_zeroed_should_append_zero_bytes_past_free_regions() {
+                let platform = platform();
+                let mut storage = new_storage(&platform);
+                let index = storage.insert_bytes(&[1; 40]).unwrap();
+                storage.insert_bytes(&[2; 8]).unwrap();
+                storage.remove(index).unwrap();
+                let len = storage.len();
+
+                let zeroed = storage.insert_zeroed(16).unwrap();
+
+                assert_eq!(storage.len(), len + 32);
+                assert_eq!(storage.records.free_size(), 40);
+                let storage = reopen_killed(&platform);
+                assert_eq!(value(&storage, zeroed), vec![0; 16]);
+            }
+
+            #[test]
+            fn insert_zeroed_failure_should_be_recovered() {
+                assert_failures_recover(
+                    |storage| vec![storage.insert_bytes(&[1, 2]).unwrap()],
+                    |storage, _| storage.insert_zeroed(16).map(|_| ()),
                 );
             }
         }

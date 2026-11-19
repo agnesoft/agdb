@@ -19,6 +19,12 @@ pub trait SerializeStatic: Serialize {
     }
 }
 
+pub(crate) fn u64_at(bytes: &[u8], word: usize) -> u64 {
+    let mut le = [0_u8; 8];
+    le.copy_from_slice(&bytes[word * 8..(word + 1) * 8]);
+    u64::from_le_bytes(le)
+}
+
 impl SerializeStatic for i64 {}
 impl SerializeStatic for u64 {}
 impl SerializeStatic for f64 {}
@@ -710,5 +716,17 @@ mod tests {
         let deserialized = IpAddr::deserialize(&bytes).unwrap();
 
         assert_eq!(addr, deserialized);
+    }
+
+    mod u64_at {
+        use super::*;
+
+        #[test]
+        fn u64_at_should_read_little_endian_word() {
+            let bytes = [1_u64.to_le_bytes(), 258_u64.to_le_bytes()].concat();
+
+            assert_eq!(u64_at(&bytes, 0), 1);
+            assert_eq!(u64_at(&bytes, 1), 258);
+        }
     }
 }

@@ -24,19 +24,13 @@ impl BitSet {
         Self { data: vec![] }
     }
 
-    pub fn with_capacity(capacity: u64) -> Self {
-        Self {
-            data: Vec::with_capacity(capacity as usize / 8),
-        }
-    }
-
     #[allow(dead_code)]
     pub fn unset(&mut self, value: u64) {
         let byte_index = value as usize / 8;
 
         if byte_index < self.data.len() {
             let bit_index = value as usize % 8;
-            self.data[byte_index] ^= 1 << bit_index;
+            self.data[byte_index] &= !(1 << bit_index);
         }
     }
 
@@ -57,107 +51,112 @@ impl BitSet {
 mod tests {
     use super::*;
 
-    #[test]
-    fn clear() {
-        let mut bitset = BitSet::new();
+    mod bit_set {
+        use super::*;
 
-        bitset.set(10_u64);
-        bitset.clear();
+        mod clear {
+            use super::*;
 
-        assert!(!bitset.value(10_u64));
-    }
+            #[test]
+            fn clear_should_unset_all_values() {
+                let mut bitset = BitSet::new();
+                bitset.set(2);
+                bitset.set(10);
 
-    #[test]
-    fn derived_from_default() {
-        let _bitset = BitSet::default();
-    }
+                bitset.clear();
 
-    #[test]
-    fn insert() {
-        let mut bitset = BitSet::new();
+                assert!(!bitset.value(2));
+                assert!(!bitset.value(10));
+            }
+        }
 
-        assert!(!bitset.value(10_u64));
+        mod set {
+            use super::*;
 
-        bitset.set(10_u64);
+            #[test]
+            fn set_should_set_only_the_value() {
+                let mut bitset = BitSet::new();
 
-        assert!(bitset.value(10_u64));
-    }
+                bitset.set(10);
 
-    #[test]
-    fn insert_multiple() {
-        let mut bitset = BitSet::new();
+                assert!(bitset.value(10));
+                assert!(!bitset.value(9));
+                assert!(!bitset.value(11));
+            }
 
-        assert!(!bitset.value(10_u64));
-        assert!(!bitset.value(11_u64));
-        assert!(!bitset.value(2_u64));
+            #[test]
+            fn set_should_keep_other_values() {
+                let mut bitset = BitSet::new();
 
-        bitset.set(10_u64);
-        bitset.set(11_u64);
-        bitset.set(2_u64);
+                for value in [10, 11, 2, 100] {
+                    bitset.set(value);
+                }
 
-        assert!(bitset.value(10_u64));
-        assert!(bitset.value(11_u64));
-        assert!(bitset.value(2_u64));
-    }
+                for value in [10, 11, 2, 100] {
+                    assert!(bitset.value(value), "value: {value}");
+                }
+            }
+        }
 
-    #[test]
-    fn unset() {
-        let mut bitset = BitSet::new();
+        mod new {
+            use super::*;
 
-        bitset.set(10_u64);
-        bitset.set(11_u64);
-        bitset.set(2_u64);
+            #[test]
+            fn new_should_have_no_values() {
+                let bitset = BitSet::new();
 
-        bitset.unset(11_u64);
+                assert!(!bitset.value(0));
+            }
+        }
 
-        assert!(bitset.value(10_u64));
-        assert!(!bitset.value(11_u64));
-        assert!(bitset.value(2_u64));
-    }
+        mod unset {
+            use super::*;
 
-    #[test]
-    fn remove_unset() {
-        let mut bitset = BitSet::new();
+            #[test]
+            fn unset_should_unset_only_the_value() {
+                let mut bitset = BitSet::new();
+                bitset.set(10);
+                bitset.set(11);
 
-        bitset.set(10_u64);
-        bitset.set(11_u64);
-        bitset.set(2_u64);
+                bitset.unset(11);
 
-        bitset.unset(9_u64);
+                assert!(bitset.value(10));
+                assert!(!bitset.value(11));
+            }
 
-        assert!(bitset.value(10_u64));
-        assert!(bitset.value(11_u64));
-        assert!(bitset.value(2_u64));
-    }
+            #[test]
+            fn unset_of_unset_value_should_keep_it_unset() {
+                let mut bitset = BitSet::new();
+                bitset.set(10);
 
-    #[test]
-    fn remove_beyond_length() {
-        let mut bitset = BitSet::new();
+                bitset.unset(9);
 
-        bitset.set(10_u64);
-        bitset.set(11_u64);
-        bitset.set(2_u64);
+                assert!(!bitset.value(9));
+                assert!(bitset.value(10));
+            }
 
-        bitset.unset(150_u64);
+            #[test]
+            fn unset_beyond_values_should_do_nothing() {
+                let mut bitset = BitSet::new();
+                bitset.set(10);
 
-        assert!(bitset.value(10_u64));
-        assert!(bitset.value(11_u64));
-        assert!(bitset.value(2_u64));
-    }
+                bitset.unset(150);
 
-    #[test]
-    fn value_missing() {
-        let mut bitset = BitSet::new();
+                assert!(!bitset.value(150));
+                assert!(bitset.value(10));
+            }
+        }
 
-        bitset.set(5_u64);
+        mod value {
+            use super::*;
 
-        assert!(!bitset.value(2_u64));
-    }
+            #[test]
+            fn value_beyond_values_should_be_false() {
+                let mut bitset = BitSet::new();
+                bitset.set(5);
 
-    #[test]
-    fn value_beyond_length() {
-        let bitset = BitSet::new();
-
-        assert!(!bitset.value(10_u64));
+                assert!(!bitset.value(150));
+            }
+        }
     }
 }

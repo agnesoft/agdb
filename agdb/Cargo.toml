@@ -12,6 +12,10 @@ categories = ["database", "database-implementations"]
 [lib]
 
 [[bench]]
+name = "collections"
+harness = false
+
+[[bench]]
 name = "storage"
 harness = false
 

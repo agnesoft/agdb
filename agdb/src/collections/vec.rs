@@ -3,8 +3,10 @@ use crate::DbErrorType;
 use crate::StorageData;
 use crate::storage::Storage;
 use crate::storage::StorageIndex;
+use crate::storage::StorageSlice;
 use crate::utilities::serialize::Serialize;
 use crate::utilities::serialize::SerializeStatic;
+use crate::utilities::serialize::u64_at;
 use std::marker::PhantomData;
 
 pub trait VecData<T, D, E>
@@ -18,7 +20,6 @@ where
     fn remove(&mut self, storage: &mut Storage<D>, index: u64) -> Result<T, E>;
     fn replace(&mut self, storage: &mut Storage<D>, index: u64, value: &T) -> Result<T, E>;
     fn resize(&mut self, storage: &mut Storage<D>, new_len: u64, value: &T) -> Result<(), E>;
-    fn swap(&mut self, storage: &mut Storage<D>, index: u64, other: u64) -> Result<(), E>;
     fn value(&self, storage: &Storage<D>, index: u64) -> Result<T, E>;
 }
 
@@ -143,13 +144,15 @@ where
             .to_vec();
 
         let value = T::load(storage, &bytes)?;
-        self.len -= 1;
+        let len = self.len - 1;
 
         let id = storage.transaction();
         T::remove(storage, &bytes)?;
         storage.move_at(self.storage_index, offset_from, offset_to, move_len)?;
-        storage.insert_at(self.storage_index, 0, &self.len)?;
+        storage.insert_at(self.storage_index, 0, &len)?;
         storage.commit(id)?;
+
+        self.len = len;
 
         Ok(value)
     }
@@ -187,9 +190,15 @@ where
     fn resize(&mut self, storage: &mut Storage<D>, new_len: u64, value: &T) -> Result<(), E> {
         let id = storage.transaction();
 
-        for index in self.len()..new_len {
-            let bytes = value.store(storage)?;
-            storage.insert_bytes_at(self.storage_index, Self::offset(index), &bytes)?;
+        if self.len() < new_len {
+            let mut bytes =
+                Vec::with_capacity(((new_len - self.len()) * T::storage_len()) as usize);
+
+            for _ in self.len()..new_len {
+                bytes.extend(value.store(storage)?);
+            }
+
+            storage.insert_bytes_at(self.storage_index, Self::offset(self.len()), &bytes)?;
         }
 
         for index in new_len..self.len() {
@@ -203,22 +212,6 @@ where
         storage.commit(id)?;
 
         self.len = new_len;
-
-        Ok(())
-    }
-
-    fn swap(&mut self, storage: &mut Storage<D>, index: u64, other: u64) -> Result<(), E> {
-        let offset_from = Self::offset(other);
-        let offset_to = Self::offset(index);
-        let size = T::storage_len();
-        let bytes = storage
-            .value_as_bytes_at_size(self.storage_index, Self::offset(index), T::storage_len())?
-            .to_vec();
-
-        let id = storage.transaction();
-        storage.move_at(self.storage_index, offset_from, offset_to, size)?;
-        storage.insert_bytes_at(self.storage_index, Self::offset(other), &bytes)?;
-        storage.commit(id)?;
 
         Ok(())
     }
@@ -350,16 +343,6 @@ where
         self.data.reallocate(storage, self.len())
     }
 
-    pub fn swap(&mut self, storage: &mut Storage<D>, index: u64, other: u64) -> Result<(), E> {
-        if index == other {
-            return Ok(());
-        }
-
-        self.validate_index(index)?;
-        self.validate_index(other)?;
-        self.data.swap(storage, index, other)
-    }
-
     pub fn value(&self, storage: &Storage<D>, index: u64) -> Result<T, E> {
         self.validate_index(index)?;
         self.data.value(storage, index)
@@ -400,8 +383,8 @@ where
         storage: &Storage<D>,
         storage_index: StorageIndex,
     ) -> Result<Self, DbError> {
-        let len = storage.value::<u64>(storage_index)?;
         let data_len = storage.value_size(storage_index)?;
+        let len = u64_at(&storage.value_as_bytes_at_size(storage_index, 0, 8)?, 0);
         let capacity = data_len.saturating_sub(u64::serialized_size_static()) / T::storage_len();
 
         Ok(DbVec {
@@ -418,577 +401,690 @@ where
     pub fn storage_index(&self) -> StorageIndex {
         self.data.storage_index
     }
+
+    pub fn bytes_at<'a>(
+        &self,
+        storage: &'a Storage<D>,
+        index: u64,
+        count: u64,
+    ) -> Result<StorageSlice<'a>, DbError> {
+        storage.value_as_bytes_at_size(
+            self.data.storage_index,
+            DbVecData::<T, D, DbError>::offset(index),
+            count * T::storage_len(),
+        )
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::DbErrorType;
-    use crate::MemoryStorage;
-    use crate::storage::file_storage_memory_mapped::FileStorageMemoryMapped;
-    use crate::test_utilities::test_file::TestFile;
+    use crate::collections::tests::TestStorage;
+    use crate::collections::tests::assert_io_failures;
+    use crate::collections::tests::storage;
+    use crate::storage::file_storage::FileStorageImpl;
+    use agplatform::test_platform::TestPlatform;
 
-    #[test]
-    fn remove_last_rolled_back_keeps_committed_data() {
-        let test_file = TestFile::new();
-        let mut storage =
-            Storage::<crate::storage::file_storage::FileStorage>::new(test_file.file_name())
-                .unwrap();
-        let mut vec = DbVec::<i64, _>::new(&mut storage).unwrap();
-        vec.push(&mut storage, &1).unwrap();
-        vec.push(&mut storage, &2).unwrap();
-        let other = storage.insert(&10_i64).unwrap();
+    type TestVec<T> = DbVec<T, FileStorageImpl<TestPlatform>>;
 
-        let _id = storage.transaction();
-        vec.remove(&mut storage, 1).unwrap();
-        storage.recover().unwrap();
+    fn strings(storage: &mut TestStorage, values: &[&str]) -> TestVec<String> {
+        let mut vec = TestVec::<String>::new(storage).unwrap();
 
-        let vec = DbVec::<i64, _>::from_storage(&storage, vec.storage_index()).unwrap();
-        assert_eq!(vec.len(), 2);
-        assert_eq!(vec.value(&storage, 1).unwrap(), 2);
-        assert_eq!(storage.value::<i64>(other).unwrap(), 10);
-    }
-
-    #[test]
-    fn from_storage_index() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::new(test_file.file_name()).unwrap();
-
-        let index;
-
-        {
-            let mut vec = DbVec::<String, FileStorageMemoryMapped>::new(&mut storage).unwrap();
-            vec.push(&mut storage, &"Hello".to_string()).unwrap();
-            vec.push(&mut storage, &", ".to_string()).unwrap();
-            vec.push(&mut storage, &"World".to_string()).unwrap();
-            vec.push(&mut storage, &"!".to_string()).unwrap();
-            index = vec.storage_index();
+        for value in values {
+            vec.push(storage, &value.to_string()).unwrap();
         }
 
-        let vec = DbVec::<String, FileStorageMemoryMapped>::from_storage(&storage, index).unwrap();
-
-        assert_eq!(
-            vec.iter(&storage).collect::<Vec<String>>(),
-            vec![
-                "Hello".to_string(),
-                ", ".to_string(),
-                "World".to_string(),
-                "!".to_string()
-            ]
-        );
+        vec
     }
 
-    #[test]
-    fn from_storage_capacity_i64_regression() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::new(test_file.file_name()).unwrap();
-
-        let index;
-
-        {
-            let mut vec = DbVec::<i64, FileStorageMemoryMapped>::new(&mut storage).unwrap();
-            vec.push(&mut storage, &10).unwrap();
-            vec.push(&mut storage, &20).unwrap();
-            vec.push(&mut storage, &30).unwrap();
-            vec.push(&mut storage, &40).unwrap();
-            index = vec.storage_index();
-        }
-
-        let vec = DbVec::<i64, FileStorageMemoryMapped>::from_storage(&storage, index).unwrap();
-
-        assert_eq!(vec.len(), 4);
-        assert_eq!(vec.capacity(), 4);
-        assert_eq!(
-            vec.iter(&storage).collect::<Vec<i64>>(),
-            vec![10, 20, 30, 40]
-        );
+    fn values(vec: &TestVec<String>, storage: &TestStorage) -> Vec<String> {
+        vec.iter(storage).collect()
     }
 
-    #[test]
-    fn from_storage_missing_index() {
-        let test_file = TestFile::new();
-        let storage = Storage::new(test_file.file_name()).unwrap();
-
-        assert_eq!(
-            DbVec::<String, FileStorageMemoryMapped>::from_storage(
-                &storage,
-                StorageIndex::from(1_u64)
-            )
-            .err()
-            .unwrap(),
-            DbError::collections(DbErrorType::NotFound, "Index (1) not found")
-        );
-    }
-
-    #[test]
-    fn iter() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::new(test_file.file_name()).unwrap();
-
-        let mut vec = DbVec::<String, FileStorageMemoryMapped>::new(&mut storage).unwrap();
-        vec.push(&mut storage, &"Hello".to_string()).unwrap();
-        vec.push(&mut storage, &", ".to_string()).unwrap();
-        vec.push(&mut storage, &"World".to_string()).unwrap();
-        vec.push(&mut storage, &"!".to_string()).unwrap();
-
-        assert_eq!(
-            vec.iter(&storage).collect::<Vec<String>>(),
-            vec!["Hello", ", ", "World", "!"]
-        );
-    }
-
-    #[test]
-    fn is_empty() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::new(test_file.file_name()).unwrap();
-
-        let mut vec = DbVec::<String, FileStorageMemoryMapped>::new(&mut storage).unwrap();
-
-        assert!(vec.is_empty());
-
-        vec.push(&mut storage, &"Hello, World!".to_string())
-            .unwrap();
-
-        assert!(!vec.is_empty());
-    }
-
-    #[test]
-    fn len() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::new(test_file.file_name()).unwrap();
-
-        let mut vec = DbVec::<String, FileStorageMemoryMapped>::new(&mut storage).unwrap();
-
-        assert_eq!(vec.len(), 0);
-
-        vec.push(&mut storage, &"Hello".to_string()).unwrap();
-        vec.push(&mut storage, &", ".to_string()).unwrap();
-        vec.push(&mut storage, &"World".to_string()).unwrap();
-        vec.push(&mut storage, &"!".to_string()).unwrap();
-
-        assert_eq!(vec.len(), 4)
-    }
-
-    #[test]
-    fn min_capacity() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::new(test_file.file_name()).unwrap();
-
-        let mut vec = DbVec::<String, FileStorageMemoryMapped>::new(&mut storage).unwrap();
-
-        assert_eq!(vec.capacity(), 0);
-
-        vec.push(&mut storage, &"Hello".to_string()).unwrap();
-        vec.push(&mut storage, &", ".to_string()).unwrap();
-        vec.push(&mut storage, &"World".to_string()).unwrap();
-        vec.push(&mut storage, &"!".to_string()).unwrap();
-
-        assert_eq!(vec.capacity(), 4);
-    }
-
-    #[test]
-    fn push() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::new(test_file.file_name()).unwrap();
-
-        let mut vec = DbVec::<String, FileStorageMemoryMapped>::new(&mut storage).unwrap();
-        vec.push(&mut storage, &"Hello".to_string()).unwrap();
-        vec.push(&mut storage, &", ".to_string()).unwrap();
-        vec.push(&mut storage, &"World".to_string()).unwrap();
-        vec.push(&mut storage, &"!".to_string()).unwrap();
-
-        let indexes = storage
-            .value::<Vec<StorageIndex>>(vec.storage_index())
-            .unwrap();
-
-        let mut values = Vec::<String>::new();
-
-        for index in indexes {
-            values.push(storage.value::<String>(index).unwrap());
-        }
-
-        assert_eq!(
-            values,
-            vec![
-                "Hello".to_string(),
-                ", ".to_string(),
-                "World".to_string(),
-                "!".to_string()
-            ]
-        );
-    }
-
-    #[test]
-    fn remove() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::new(test_file.file_name()).unwrap();
-
-        let mut vec = DbVec::<String, FileStorageMemoryMapped>::new(&mut storage).unwrap();
-        vec.push(&mut storage, &"Hello".to_string()).unwrap();
-        vec.push(&mut storage, &", ".to_string()).unwrap();
-        vec.push(&mut storage, &"World".to_string()).unwrap();
-        vec.push(&mut storage, &"!".to_string()).unwrap();
-
-        vec.remove(&mut storage, 1).unwrap();
-
-        assert_eq!(
-            vec.iter(&storage).collect::<Vec<String>>(),
-            vec!["Hello".to_string(), "World".to_string(), "!".to_string()]
-        );
-    }
-
-    #[test]
-    fn remove_at_end() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::new(test_file.file_name()).unwrap();
-
-        let mut vec = DbVec::<String, FileStorageMemoryMapped>::new(&mut storage).unwrap();
-        vec.push(&mut storage, &"Hello".to_string()).unwrap();
-        vec.push(&mut storage, &", ".to_string()).unwrap();
-        vec.push(&mut storage, &"World".to_string()).unwrap();
-        vec.push(&mut storage, &"!".to_string()).unwrap();
-
-        vec.remove(&mut storage, 3).unwrap();
-
-        assert_eq!(
-            vec.iter(&storage).collect::<Vec<String>>(),
-            vec!["Hello".to_string(), ", ".to_string(), "World".to_string(),]
-        );
-    }
-
-    #[test]
-    fn remove_index_out_of_bounds() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::new(test_file.file_name()).unwrap();
-
-        let mut vec = DbVec::<String, FileStorageMemoryMapped>::new(&mut storage).unwrap();
-
-        assert_eq!(
-            vec.remove(&mut storage, 0),
-            Err(DbError::collections(
-                DbErrorType::OutOfBounds,
-                "Index (0) out of bounds (0)"
-            ))
-        );
-    }
-
-    #[test]
-    fn reserve_larger() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::new(test_file.file_name()).unwrap();
-
-        let mut vec = DbVec::<String, FileStorageMemoryMapped>::new(&mut storage).unwrap();
-        assert_eq!(vec.capacity(), 0);
-
-        vec.reserve(&mut storage, 20).unwrap();
-
-        assert_eq!(vec.capacity(), 20);
-    }
-
-    #[test]
-    fn reserve_smaller() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::new(test_file.file_name()).unwrap();
-
-        let mut vec = DbVec::<String, FileStorageMemoryMapped>::new(&mut storage).unwrap();
-        vec.reserve(&mut storage, 20).unwrap();
-        vec.reserve(&mut storage, 10).unwrap();
-
-        assert_eq!(vec.capacity(), 20);
-    }
-
-    #[test]
-    fn resize_larger() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::new(test_file.file_name()).unwrap();
-
-        let mut vec = DbVec::<String, FileStorageMemoryMapped>::new(&mut storage).unwrap();
-        vec.push(&mut storage, &"Hello".to_string()).unwrap();
-        vec.push(&mut storage, &", ".to_string()).unwrap();
-        vec.push(&mut storage, &"World".to_string()).unwrap();
-        vec.push(&mut storage, &"!".to_string()).unwrap();
-
-        vec.resize(&mut storage, 6, &" ".to_string()).unwrap();
-
-        assert_eq!(
-            vec.iter(&storage).collect::<Vec<String>>(),
-            vec![
-                "Hello".to_string(),
-                ", ".to_string(),
-                "World".to_string(),
-                "!".to_string(),
-                " ".to_string(),
-                " ".to_string(),
-            ]
-        );
-    }
-
-    #[test]
-    fn resize_over_capacity() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::new(test_file.file_name()).unwrap();
-
-        let mut vec = DbVec::<String, FileStorageMemoryMapped>::new(&mut storage).unwrap();
-        vec.push(&mut storage, &"Hello".to_string()).unwrap();
-        vec.push(&mut storage, &", ".to_string()).unwrap();
-        vec.push(&mut storage, &"World".to_string()).unwrap();
-        vec.push(&mut storage, &"!".to_string()).unwrap();
-
-        vec.resize(&mut storage, 100, &" ".to_string()).unwrap();
-
-        let mut expected = Vec::<String>::new();
-        expected.resize(100, " ".to_string());
-        expected[0] = "Hello".to_string();
-        expected[1] = ", ".to_string();
-        expected[2] = "World".to_string();
-        expected[3] = "!".to_string();
-
-        assert_eq!(vec.len(), 100);
-        assert_eq!(vec.capacity(), 100);
-
-        assert_eq!(vec.iter(&storage).collect::<Vec<String>>(), expected);
-    }
-
-    #[test]
-    fn resize_same() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::new(test_file.file_name()).unwrap();
-
-        let mut vec = DbVec::<String, FileStorageMemoryMapped>::new(&mut storage).unwrap();
-        vec.push(&mut storage, &"Hello".to_string()).unwrap();
-        vec.push(&mut storage, &", ".to_string()).unwrap();
-        vec.push(&mut storage, &"World".to_string()).unwrap();
-        vec.push(&mut storage, &"!".to_string()).unwrap();
-
-        vec.resize(&mut storage, 4, &String::default()).unwrap();
-
-        assert_eq!(
-            vec.iter(&storage).collect::<Vec<String>>(),
-            vec![
-                "Hello".to_string(),
-                ", ".to_string(),
-                "World".to_string(),
-                "!".to_string()
-            ]
-        );
-    }
-
-    #[test]
-    fn resize_smaller() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::new(test_file.file_name()).unwrap();
-
-        let mut vec = DbVec::<String, FileStorageMemoryMapped>::new(&mut storage).unwrap();
-        vec.push(&mut storage, &"Hello".to_string()).unwrap();
-        vec.push(&mut storage, &", ".to_string()).unwrap();
-        vec.push(&mut storage, &"World".to_string()).unwrap();
-        vec.push(&mut storage, &"!".to_string()).unwrap();
-
-        vec.resize(&mut storage, 3, &String::default()).unwrap();
-
-        assert_eq!(
-            vec.iter(&storage).collect::<Vec<String>>(),
-            vec!["Hello".to_string(), ", ".to_string(), "World".to_string()]
-        );
-    }
-
-    #[test]
-    fn replace() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::new(test_file.file_name()).unwrap();
-
-        let mut vec = DbVec::<String, FileStorageMemoryMapped>::new(&mut storage).unwrap();
-        vec.push(&mut storage, &"Hello".to_string()).unwrap();
-        vec.push(&mut storage, &", ".to_string()).unwrap();
-        vec.push(&mut storage, &"World".to_string()).unwrap();
-        vec.push(&mut storage, &"!".to_string()).unwrap();
-
-        vec.replace(&mut storage, 1, &" ".to_string()).unwrap();
-
-        assert_eq!(vec.value(&storage, 0), Ok("Hello".to_string()));
-        assert_eq!(vec.value(&storage, 1), Ok(" ".to_string()));
-        assert_eq!(vec.value(&storage, 2), Ok("World".to_string()));
-        assert_eq!(vec.value(&storage, 3), Ok("!".to_string()));
-    }
-
-    #[test]
-    fn replace_out_of_bounds() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::new(test_file.file_name()).unwrap();
-
-        let mut vec = DbVec::<String, FileStorageMemoryMapped>::new(&mut storage).unwrap();
-
-        assert_eq!(
-            vec.replace(&mut storage, 0, &"".to_string()),
-            Err(DbError::collections(
-                DbErrorType::OutOfBounds,
-                "Index (0) out of bounds (0)"
-            ))
-        );
-    }
-
-    #[test]
-    fn shrink_to_fit() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::new(test_file.file_name()).unwrap();
-
-        let mut vec = DbVec::<String, FileStorageMemoryMapped>::new(&mut storage).unwrap();
-        vec.push(&mut storage, &"Hello".to_string()).unwrap();
-        vec.push(&mut storage, &", ".to_string()).unwrap();
-        vec.push(&mut storage, &"World".to_string()).unwrap();
-        vec.push(&mut storage, &"!".to_string()).unwrap();
-        vec.push(&mut storage, &"".to_string()).unwrap();
-
-        assert_eq!(vec.capacity(), 6);
-
-        vec.shrink_to_fit(&mut storage).unwrap();
-
-        assert_eq!(vec.capacity(), 5);
-
-        vec.shrink_to_fit(&mut storage).unwrap();
-
-        assert_eq!(vec.capacity(), 5);
-    }
-
-    #[test]
-    fn shrink_to_fit_empty() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::new(test_file.file_name()).unwrap();
-
-        let mut vec = DbVec::<String, FileStorageMemoryMapped>::new(&mut storage).unwrap();
-
-        assert_eq!(vec.capacity(), 0);
-
-        vec.shrink_to_fit(&mut storage).unwrap();
-
-        assert_eq!(vec.capacity(), 0);
-    }
-
-    #[test]
-    fn swap() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::new(test_file.file_name()).unwrap();
-        let mut vec = DbVec::<String, FileStorageMemoryMapped>::new(&mut storage).unwrap();
-        vec.push(&mut storage, &"Hello".to_string()).unwrap();
-        vec.push(&mut storage, &", ".to_string()).unwrap();
-        vec.push(&mut storage, &"World".to_string()).unwrap();
-        vec.push(&mut storage, &"!".to_string()).unwrap();
-        vec.swap(&mut storage, 0, 2).unwrap();
-        assert_eq!(
-            vec.iter(&storage).collect::<Vec<String>>(),
-            vec![
-                "World".to_string(),
-                ", ".to_string(),
-                "Hello".to_string(),
-                "!".to_string()
-            ]
-        );
-    }
-    #[test]
-    fn swap_self() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::new(test_file.file_name()).unwrap();
-        let mut vec = DbVec::<String, FileStorageMemoryMapped>::new(&mut storage).unwrap();
-        vec.push(&mut storage, &"Hello".to_string()).unwrap();
-        vec.push(&mut storage, &", ".to_string()).unwrap();
-        vec.push(&mut storage, &"World".to_string()).unwrap();
-        vec.push(&mut storage, &"!".to_string()).unwrap();
-        vec.swap(&mut storage, 1, 1).unwrap();
-        assert_eq!(
-            vec.iter(&storage).collect::<Vec<String>>(),
-            vec![
-                "Hello".to_string(),
-                ", ".to_string(),
-                "World".to_string(),
-                "!".to_string()
-            ]
-        );
-    }
-    #[test]
-    fn swap_invalid() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::new(test_file.file_name()).unwrap();
-        let mut vec = DbVec::<String, FileStorageMemoryMapped>::new(&mut storage).unwrap();
-        vec.push(&mut storage, &"Hello".to_string()).unwrap();
-        vec.push(&mut storage, &", ".to_string()).unwrap();
-        vec.push(&mut storage, &"World".to_string()).unwrap();
-        vec.push(&mut storage, &"!".to_string()).unwrap();
-        assert_eq!(
-            vec.swap(&mut storage, 1, 10),
-            Err(DbError::collections(
-                DbErrorType::OutOfBounds,
-                "Index (10) out of bounds (4)"
-            ))
-        );
-        assert_eq!(
-            vec.swap(&mut storage, 10, 1),
-            Err(DbError::collections(
-                DbErrorType::OutOfBounds,
-                "Index (10) out of bounds (4)"
-            ))
-        );
-    }
-
-    #[test]
-    fn value() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::new(test_file.file_name()).unwrap();
-
-        let mut vec = DbVec::<String, FileStorageMemoryMapped>::new(&mut storage).unwrap();
-        vec.push(&mut storage, &"Hello".to_string()).unwrap();
-        vec.push(&mut storage, &", ".to_string()).unwrap();
-        vec.push(&mut storage, &"World".to_string()).unwrap();
-        vec.push(&mut storage, &"!".to_string()).unwrap();
-
-        assert_eq!(vec.value(&storage, 0), Ok("Hello".to_string()));
-        assert_eq!(vec.value(&storage, 1), Ok(", ".to_string()));
-        assert_eq!(vec.value(&storage, 2), Ok("World".to_string()));
-        assert_eq!(vec.value(&storage, 3), Ok("!".to_string()));
-    }
-
-    #[test]
-    fn value_out_of_bounds() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::new(test_file.file_name()).unwrap();
-
-        let vec = DbVec::<String, FileStorageMemoryMapped>::new(&mut storage).unwrap();
-
-        assert_eq!(
-            vec.value(&storage, 0),
-            Err(DbError::collections(
-                DbErrorType::OutOfBounds,
-                "Index (0) out of bounds (0)"
-            ))
-        );
-    }
-
-    #[test]
-    fn remove_from_storage() {
-        let mut storage: Storage<MemoryStorage> = Storage::new("test").unwrap();
-        let mut vec = DbVec::<String, MemoryStorage>::new(&mut storage).unwrap();
-        vec.push(
-            &mut storage,
-            &"This is a long string that does not fit into small value".to_string(),
+    fn out_of_bounds(index: u64, len: u64) -> DbError {
+        DbError::collections(
+            DbErrorType::OutOfBounds,
+            format!("Index ({index}) out of bounds ({len})"),
         )
-        .unwrap();
-
-        let len = storage.len();
-        vec.remove_from_storage(&mut storage).unwrap();
-        storage.optimize_storage().unwrap();
-
-        assert!(storage.len() < len)
     }
 
-    #[test]
-    fn remove_at_end_trivial_after_optimize() {
-        let mut storage: Storage<MemoryStorage> = Storage::new("test").unwrap();
-        let mut vec = DbVec::<u64, MemoryStorage>::new(&mut storage).unwrap();
-        vec.push(&mut storage, &1).unwrap();
-        vec.push(&mut storage, &2).unwrap();
-        vec.push(&mut storage, &3).unwrap();
-        vec.shrink_to_fit(&mut storage).unwrap();
-        vec.remove(&mut storage, 2).unwrap();
+    mod vec_value {
+        use super::*;
 
-        assert_eq!(vec.len(), 2);
+        mod store {
+            use super::*;
+
+            #[test]
+            fn store_should_serialize_numbers() {
+                let mut storage = storage();
+
+                assert_eq!(1_u64.store(&mut storage), Ok(1_u64.serialize()));
+                assert_eq!((-1_i64).store(&mut storage), Ok((-1_i64).serialize()));
+            }
+
+            #[test]
+            fn store_string_should_insert_it_into_storage() {
+                let mut storage = storage();
+
+                let bytes = "Hello".to_string().store(&mut storage).unwrap();
+
+                let index = StorageIndex::deserialize(&bytes).unwrap();
+                assert_eq!(storage.value::<String>(index), Ok("Hello".to_string()));
+            }
+        }
+
+        mod load {
+            use super::*;
+
+            #[test]
+            fn load_should_read_stored_value() {
+                let mut storage = storage();
+                let u64_bytes = 1_u64.store(&mut storage).unwrap();
+                let i64_bytes = (-1_i64).store(&mut storage).unwrap();
+                let string_bytes = "Hello".to_string().store(&mut storage).unwrap();
+
+                assert_eq!(u64::load(&storage, &u64_bytes), Ok(1));
+                assert_eq!(i64::load(&storage, &i64_bytes), Ok(-1));
+                assert_eq!(
+                    String::load(&storage, &string_bytes),
+                    Ok("Hello".to_string())
+                );
+            }
+
+            #[test]
+            fn load_short_bytes_should_fail() {
+                let storage = storage();
+
+                assert!(<u64 as VecValue<_>>::load(&storage, &[1]).is_err());
+                assert!(<i64 as VecValue<_>>::load(&storage, &[1]).is_err());
+                assert!(<String as VecValue<_>>::load(&storage, &[1]).is_err());
+            }
+        }
+
+        mod remove {
+            use super::*;
+
+            #[test]
+            fn remove_string_should_remove_it_from_storage() {
+                let mut storage = storage();
+                let bytes = "Hello".to_string().store(&mut storage).unwrap();
+
+                <String as VecValue<_>>::remove(&mut storage, &bytes).unwrap();
+
+                let index = StorageIndex::deserialize(&bytes).unwrap();
+                assert!(storage.value::<String>(index).is_err());
+            }
+
+            #[test]
+            fn remove_number_should_do_nothing() {
+                let mut storage = storage();
+                let len = storage.len();
+
+                <u64 as VecValue<_>>::remove(&mut storage, &1_u64.serialize()).unwrap();
+                <i64 as VecValue<_>>::remove(&mut storage, &1_i64.serialize()).unwrap();
+
+                assert_eq!(storage.len(), len);
+            }
+
+            #[test]
+            fn remove_string_short_bytes_should_fail() {
+                let mut storage = storage();
+
+                assert!(<String as VecValue<_>>::remove(&mut storage, &[1]).is_err());
+            }
+        }
+
+        mod storage_len {
+            use super::*;
+
+            #[test]
+            fn storage_len_should_be_8_bytes() {
+                type D = FileStorageImpl<TestPlatform>;
+
+                assert_eq!(<u64 as VecValue<D>>::storage_len(), 8);
+                assert_eq!(<i64 as VecValue<D>>::storage_len(), 8);
+                assert_eq!(<String as VecValue<D>>::storage_len(), 8);
+            }
+        }
+    }
+
+    mod vec_iterator {
+        use super::*;
+
+        mod iterator {
+            use super::*;
+
+            mod next {
+                use super::*;
+
+                #[test]
+                fn next_should_yield_values_in_order_then_none() {
+                    let mut storage = storage();
+                    let vec = strings(&mut storage, &["a", "b"]);
+                    let mut iter = vec.iter(&storage);
+
+                    assert_eq!(iter.next(), Some("a".to_string()));
+                    assert_eq!(iter.next(), Some("b".to_string()));
+                    assert_eq!(iter.next(), None);
+                }
+            }
+        }
+    }
+
+    mod vec_impl {
+        use super::*;
+
+        mod capacity {
+            use super::*;
+
+            #[test]
+            fn capacity_of_new_vec_should_be_zero() {
+                let mut storage = storage();
+
+                assert_eq!(strings(&mut storage, &[]).capacity(), 0);
+            }
+        }
+
+        mod len {
+            use super::*;
+
+            #[test]
+            fn len_should_count_values() {
+                let mut storage = storage();
+
+                assert_eq!(strings(&mut storage, &[]).len(), 0);
+                assert_eq!(strings(&mut storage, &["a", "b", "c"]).len(), 3);
+            }
+        }
+
+        mod is_empty {
+            use super::*;
+
+            #[test]
+            fn is_empty_should_be_true_only_without_values() {
+                let mut storage = storage();
+
+                assert!(strings(&mut storage, &[]).is_empty());
+                assert!(!strings(&mut storage, &["a"]).is_empty());
+            }
+        }
+
+        mod iter {
+            use super::*;
+
+            #[test]
+            fn iter_should_yield_all_values_in_order() {
+                let mut storage = storage();
+                let vec = strings(&mut storage, &["Hello", ", ", "World", "!"]);
+
+                assert_eq!(values(&vec, &storage), vec!["Hello", ", ", "World", "!"]);
+            }
+        }
+
+        mod push {
+            use super::*;
+
+            #[test]
+            fn push_should_append_value() {
+                let mut storage = storage();
+                let mut vec = strings(&mut storage, &["a"]);
+
+                vec.push(&mut storage, &"b".to_string()).unwrap();
+
+                assert_eq!(values(&vec, &storage), vec!["a", "b"]);
+            }
+
+            #[test]
+            fn push_should_grow_capacity_by_half_from_two() {
+                let mut storage = storage();
+                let mut vec = TestVec::<u64>::new(&mut storage).unwrap();
+                let mut capacities = vec![];
+
+                for value in 0..7 {
+                    vec.push(&mut storage, &value).unwrap();
+                    capacities.push(vec.capacity());
+                }
+
+                assert_eq!(capacities, vec![1, 2, 3, 4, 6, 6, 9]);
+            }
+
+            #[test]
+            fn push_failure_should_fail() {
+                assert_io_failures(
+                    |storage| strings(storage, &["a"]),
+                    |storage, vec| vec.push(storage, &"b".to_string()),
+                );
+            }
+        }
+
+        mod remove_from_storage {
+            use super::*;
+
+            #[test]
+            fn remove_from_storage_should_remove_vec_and_its_values() {
+                let mut storage = storage();
+                let len = storage.len();
+                let vec = strings(&mut storage, &["a long value not fitting in an index"]);
+
+                vec.remove_from_storage(&mut storage).unwrap();
+
+                storage.optimize_storage().unwrap();
+                assert_eq!(storage.len(), len);
+            }
+
+            #[test]
+            fn remove_from_storage_failure_should_fail() {
+                assert_io_failures(
+                    |storage| Some(strings(storage, &["a", "b"])),
+                    |storage, vec| vec.take().unwrap().remove_from_storage(storage),
+                );
+            }
+        }
+
+        mod remove {
+            use super::*;
+
+            #[test]
+            fn remove_should_return_value_and_shift_following_ones() {
+                let mut storage = storage();
+                let mut vec = strings(&mut storage, &["a", "b", "c", "d"]);
+
+                assert_eq!(vec.remove(&mut storage, 1), Ok("b".to_string()));
+
+                assert_eq!(values(&vec, &storage), vec!["a", "c", "d"]);
+            }
+
+            #[test]
+            fn remove_last_should_keep_other_values() {
+                let mut storage = storage();
+                let mut vec = strings(&mut storage, &["a", "b", "c"]);
+
+                assert_eq!(vec.remove(&mut storage, 2), Ok("c".to_string()));
+
+                assert_eq!(values(&vec, &storage), vec!["a", "b"]);
+            }
+
+            #[test]
+            fn remove_last_at_capacity_should_keep_other_values() {
+                let mut storage = storage();
+                let mut vec = TestVec::<u64>::new(&mut storage).unwrap();
+                for value in 1..4 {
+                    vec.push(&mut storage, &value).unwrap();
+                }
+                vec.shrink_to_fit(&mut storage).unwrap();
+
+                assert_eq!(vec.remove(&mut storage, 2), Ok(3));
+
+                assert_eq!(vec.iter(&storage).collect::<Vec<u64>>(), vec![1, 2]);
+            }
+
+            #[test]
+            fn remove_rolled_back_should_keep_committed_values() {
+                // GIVEN a committed vec followed by another value
+                let mut storage = storage();
+                let mut vec = TestVec::<i64>::new(&mut storage).unwrap();
+                vec.push(&mut storage, &1).unwrap();
+                vec.push(&mut storage, &2).unwrap();
+                let other = storage.insert(&10_i64).unwrap();
+
+                // WHEN the last value is removed in a transaction that is rolled back
+                let _id = storage.transaction();
+                vec.remove(&mut storage, 1).unwrap();
+                storage.recover().unwrap();
+
+                // THEN the reloaded vec and the other value are as committed
+                let vec = TestVec::<i64>::from_storage(&storage, vec.storage_index()).unwrap();
+                assert_eq!(vec.iter(&storage).collect::<Vec<i64>>(), vec![1, 2]);
+                assert_eq!(storage.value::<i64>(other), Ok(10));
+            }
+
+            #[test]
+            fn remove_out_of_bounds_should_fail() {
+                let mut storage = storage();
+                let mut vec = strings(&mut storage, &["a"]);
+
+                assert_eq!(vec.remove(&mut storage, 1), Err(out_of_bounds(1, 1)));
+            }
+
+            #[test]
+            fn remove_failure_should_fail_and_keep_len() {
+                assert_io_failures(
+                    |storage| strings(storage, &["a", "b"]),
+                    |storage, vec| {
+                        let result = vec.remove(storage, 0);
+                        assert_eq!(vec.len(), if result.is_ok() { 1 } else { 2 });
+                        result
+                    },
+                );
+            }
+        }
+
+        mod replace {
+            use super::*;
+
+            #[test]
+            fn replace_should_return_old_value_and_store_new_one() {
+                let mut storage = storage();
+                let mut vec = strings(&mut storage, &["a", "b", "c"]);
+
+                assert_eq!(
+                    vec.replace(&mut storage, 1, &"x".to_string()),
+                    Ok("b".to_string())
+                );
+
+                assert_eq!(values(&vec, &storage), vec!["a", "x", "c"]);
+            }
+
+            #[test]
+            fn replace_out_of_bounds_should_fail() {
+                let mut storage = storage();
+                let mut vec = strings(&mut storage, &[]);
+
+                assert_eq!(
+                    vec.replace(&mut storage, 0, &"x".to_string()),
+                    Err(out_of_bounds(0, 0))
+                );
+            }
+
+            #[test]
+            fn replace_failure_should_fail() {
+                assert_io_failures(
+                    |storage| strings(storage, &["a"]),
+                    |storage, vec| vec.replace(storage, 0, &"x".to_string()),
+                );
+            }
+        }
+
+        mod reserve {
+            use super::*;
+
+            #[test]
+            fn reserve_larger_should_grow_capacity() {
+                let mut storage = storage();
+                let mut vec = strings(&mut storage, &["a"]);
+
+                vec.reserve(&mut storage, 20).unwrap();
+
+                assert_eq!(vec.capacity(), 20);
+                assert_eq!(values(&vec, &storage), vec!["a"]);
+            }
+
+            #[test]
+            fn reserve_smaller_should_keep_capacity() {
+                let mut storage = storage();
+                let mut vec = strings(&mut storage, &[]);
+                vec.reserve(&mut storage, 20).unwrap();
+
+                vec.reserve(&mut storage, 10).unwrap();
+
+                assert_eq!(vec.capacity(), 20);
+            }
+
+            #[test]
+            fn reserve_failure_should_fail() {
+                assert_io_failures(
+                    |storage| strings(storage, &["a"]),
+                    |storage, vec| vec.reserve(storage, 20),
+                );
+            }
+        }
+
+        mod resize {
+            use super::*;
+
+            #[test]
+            fn resize_larger_should_append_copies_of_value() {
+                let mut storage = storage();
+                let mut vec = strings(&mut storage, &["a", "b", "c", "d"]);
+
+                vec.resize(&mut storage, 6, &" ".to_string()).unwrap();
+
+                assert_eq!(values(&vec, &storage), vec!["a", "b", "c", "d", " ", " "]);
+            }
+
+            #[test]
+            fn resize_larger_should_store_each_copy() {
+                let mut storage = storage();
+                let mut vec = strings(&mut storage, &[]);
+                vec.resize(&mut storage, 2, &"a".to_string()).unwrap();
+
+                vec.replace(&mut storage, 0, &"b".to_string()).unwrap();
+
+                assert_eq!(values(&vec, &storage), vec!["b", "a"]);
+            }
+
+            #[test]
+            fn resize_over_capacity_should_grow_capacity_to_len() {
+                let mut storage = storage();
+                let mut vec = strings(&mut storage, &["a", "b", "c", "d"]);
+
+                vec.resize(&mut storage, 100, &" ".to_string()).unwrap();
+
+                let mut expected = vec!["a", "b", "c", "d"];
+                expected.resize(100, " ");
+                assert_eq!(vec.len(), 100);
+                assert_eq!(vec.capacity(), 100);
+                assert_eq!(values(&vec, &storage), expected);
+            }
+
+            #[test]
+            fn resize_same_should_keep_values() {
+                let mut storage = storage();
+                let mut vec = strings(&mut storage, &["a", "b"]);
+
+                vec.resize(&mut storage, 2, &String::new()).unwrap();
+
+                assert_eq!(values(&vec, &storage), vec!["a", "b"]);
+            }
+
+            #[test]
+            fn resize_smaller_should_remove_values_past_len() {
+                let mut storage = storage();
+                let len = storage.len();
+                let mut vec = strings(&mut storage, &[]);
+                vec.reserve(&mut storage, 4).unwrap();
+                let empty_vec_len = storage.len() - len;
+                vec.push(&mut storage, &"a".to_string()).unwrap();
+                vec.push(
+                    &mut storage,
+                    &"a long value not fitting in an index".to_string(),
+                )
+                .unwrap();
+
+                vec.resize(&mut storage, 0, &String::new()).unwrap();
+
+                storage.optimize_storage().unwrap();
+                assert_eq!(vec.len(), 0);
+                assert_eq!(storage.len(), len + empty_vec_len);
+            }
+
+            #[test]
+            fn resize_failure_should_fail() {
+                assert_io_failures(
+                    |storage| strings(storage, &["a", "b"]),
+                    |storage, vec| vec.resize(storage, 1, &String::new()),
+                );
+                assert_io_failures(
+                    |storage| strings(storage, &["a", "b"]),
+                    |storage, vec| vec.resize(storage, 10, &String::new()),
+                );
+            }
+        }
+
+        mod shrink_to_fit {
+            use super::*;
+
+            #[test]
+            fn shrink_to_fit_should_reduce_capacity_to_len() {
+                let mut storage = storage();
+                let mut vec = strings(&mut storage, &["a", "b", "c", "d", "e"]);
+                assert_eq!(vec.capacity(), 6);
+
+                vec.shrink_to_fit(&mut storage).unwrap();
+
+                assert_eq!(vec.capacity(), 5);
+                assert_eq!(values(&vec, &storage), vec!["a", "b", "c", "d", "e"]);
+            }
+
+            #[test]
+            fn shrink_to_fit_empty_should_keep_zero_capacity() {
+                let mut storage = storage();
+                let mut vec = strings(&mut storage, &[]);
+
+                vec.shrink_to_fit(&mut storage).unwrap();
+
+                assert_eq!(vec.capacity(), 0);
+            }
+
+            #[test]
+            fn shrink_to_fit_failure_should_fail() {
+                assert_io_failures(
+                    |storage| strings(storage, &["a", "b", "c", "d", "e"]),
+                    |storage, vec| vec.shrink_to_fit(storage),
+                );
+            }
+        }
+
+        mod value {
+            use super::*;
+
+            #[test]
+            fn value_should_return_value_at_index() {
+                let mut storage = storage();
+                let vec = strings(&mut storage, &["a", "b"]);
+
+                assert_eq!(vec.value(&storage, 0), Ok("a".to_string()));
+                assert_eq!(vec.value(&storage, 1), Ok("b".to_string()));
+            }
+
+            #[test]
+            fn value_out_of_bounds_should_fail() {
+                let mut storage = storage();
+                let vec = strings(&mut storage, &["a"]);
+
+                assert_eq!(vec.value(&storage, 1), Err(out_of_bounds(1, 1)));
+            }
+
+            #[test]
+            fn value_failure_should_fail() {
+                assert_io_failures(
+                    |storage| strings(storage, &["a"]),
+                    |storage, vec| vec.value(storage, 0),
+                );
+            }
+        }
+    }
+
+    mod db_vec {
+        use super::*;
+
+        mod new {
+            use super::*;
+
+            #[test]
+            fn new_should_create_empty_vec_in_storage() {
+                let mut storage = storage();
+
+                let vec = TestVec::<u64>::new(&mut storage).unwrap();
+
+                assert_eq!(vec.len(), 0);
+                assert_eq!(storage.value::<u64>(vec.storage_index()), Ok(0));
+            }
+
+            #[test]
+            fn new_failure_should_fail() {
+                assert_io_failures(|_| (), |storage, _| TestVec::<u64>::new(storage));
+            }
+        }
+
+        mod from_storage {
+            use super::*;
+
+            #[test]
+            fn from_storage_should_load_values_and_capacity() {
+                let mut storage = storage();
+                let vec = strings(&mut storage, &["Hello", ", ", "World", "!", "?"]);
+
+                let vec = TestVec::<String>::from_storage(&storage, vec.storage_index()).unwrap();
+
+                assert_eq!(vec.capacity(), 6);
+                assert_eq!(
+                    values(&vec, &storage),
+                    vec!["Hello", ", ", "World", "!", "?"]
+                );
+            }
+
+            #[test]
+            fn from_storage_of_signed_values_should_load_capacity() {
+                let mut storage = storage();
+                let mut vec = TestVec::<i64>::new(&mut storage).unwrap();
+                for value in [10, 20, 30, 40] {
+                    vec.push(&mut storage, &value).unwrap();
+                }
+
+                let vec = TestVec::<i64>::from_storage(&storage, vec.storage_index()).unwrap();
+
+                assert_eq!(vec.len(), 4);
+                assert_eq!(vec.capacity(), 4);
+                assert_eq!(
+                    vec.iter(&storage).collect::<Vec<i64>>(),
+                    vec![10, 20, 30, 40]
+                );
+            }
+
+            #[test]
+            fn from_storage_missing_index_should_fail() {
+                let storage = storage();
+
+                assert_eq!(
+                    TestVec::<String>::from_storage(&storage, StorageIndex::from(1_u64))
+                        .err()
+                        .unwrap(),
+                    DbError::collections(DbErrorType::NotFound, "Index (1) not found")
+                );
+            }
+
+            #[test]
+            fn from_storage_short_record_should_fail() {
+                let mut storage = storage();
+                let index = storage.insert_bytes(&[1]).unwrap();
+
+                assert!(TestVec::<String>::from_storage(&storage, index).is_err());
+            }
+
+            #[test]
+            fn from_storage_failure_should_fail() {
+                assert_io_failures(
+                    |storage| strings(storage, &["a"]).storage_index(),
+                    |storage, index| TestVec::<String>::from_storage(storage, *index),
+                );
+            }
+        }
+
+        mod bytes_at {
+            use super::*;
+
+            #[test]
+            fn bytes_at_should_return_stored_values_from_index() {
+                let mut storage = storage();
+                let mut vec = TestVec::<u64>::new(&mut storage).unwrap();
+                vec.push(&mut storage, &1).unwrap();
+                vec.push(&mut storage, &2).unwrap();
+                vec.push(&mut storage, &3).unwrap();
+
+                assert_eq!(
+                    vec.bytes_at(&storage, 1, 2).unwrap().to_vec(),
+                    [2_u64.serialize(), 3_u64.serialize()].concat()
+                );
+            }
+
+            #[test]
+            fn bytes_at_failure_should_fail() {
+                assert_io_failures(
+                    |storage| strings(storage, &["a", "b"]),
+                    |storage, vec| vec.bytes_at(storage, 1, 1).map(|bytes| bytes.to_vec()),
+                );
+            }
+        }
     }
 }

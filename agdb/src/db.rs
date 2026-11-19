@@ -51,6 +51,7 @@ use crate::storage::file_storage_memory_mapped::FileStorageMemoryMapped;
 use crate::storage::memory_storage::MemoryStorage;
 use crate::utilities::serialize::Serialize;
 use crate::utilities::serialize::SerializeStatic;
+use crate::utilities::serialize::u64_at;
 
 const CURRENT_VERSION: u64 = 1;
 
@@ -77,25 +78,35 @@ impl Serialize for DbStorageIndex {
     }
 
     fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
-        let size = i64::serialized_size_static() as usize;
+        if bytes.len() < Self::serialized_size_static() as usize {
+            return Err(DbError::db(
+                DbErrorType::NotEnoughData,
+                format!(
+                    "DbStorageIndex deserialization error: got {} bytes, expected at least {} bytes",
+                    bytes.len(),
+                    Self::serialized_size_static(),
+                ),
+            ));
+        }
 
-        let version = u64::deserialize(bytes)?;
-        let graph = StorageIndex::deserialize(&bytes[size..])?;
-        let aliases_1 = StorageIndex::deserialize(&bytes[size * 2..])?;
-        let aliases_2 = StorageIndex::deserialize(&bytes[size * 3..])?;
-        let indexes = StorageIndex::deserialize(&bytes[size * 4..])?;
-        let values = StorageIndex::deserialize(&bytes[size * 5..])?;
+        let field = |i: usize| u64_at(bytes, i);
 
         Ok(Self {
-            version,
-            graph,
-            aliases: (aliases_1, aliases_2),
-            indexes,
-            values,
+            version: field(0),
+            graph: StorageIndex(field(1)),
+            aliases: (StorageIndex(field(2)), StorageIndex(field(3))),
+            indexes: StorageIndex(field(4)),
+            values: StorageIndex(field(5)),
         })
     }
 
     fn serialized_size(&self) -> u64 {
+        Self::serialized_size_static()
+    }
+}
+
+impl SerializeStatic for DbStorageIndex {
+    fn serialized_size_static() -> u64 {
         i64::serialized_size_static() * 6
     }
 }
@@ -1598,6 +1609,38 @@ mod tests {
     #[test]
     fn db_storage_index_serialized_size() {
         assert_eq!(DbStorageIndex::default().serialized_size(), 48);
+    }
+
+    #[test]
+    fn db_storage_index_serialization() {
+        let index = DbStorageIndex {
+            version: 1,
+            graph: StorageIndex(2),
+            aliases: (StorageIndex(3), StorageIndex(4)),
+            indexes: StorageIndex(5),
+            values: StorageIndex(6),
+        };
+        let deserialized = DbStorageIndex::deserialize(&index.serialize()).unwrap();
+        assert_eq!(deserialized.version, 1);
+        assert_eq!(deserialized.graph, StorageIndex(2));
+        assert_eq!(deserialized.aliases, (StorageIndex(3), StorageIndex(4)));
+        assert_eq!(deserialized.indexes, StorageIndex(5));
+        assert_eq!(deserialized.values, StorageIndex(6));
+    }
+
+    #[test]
+    fn db_storage_index_short_bytes() {
+        for len in [0, 17, 40, 47] {
+            assert_eq!(
+                DbStorageIndex::deserialize(&vec![0; len]).err().unwrap(),
+                DbError::db(
+                    DbErrorType::NotEnoughData,
+                    format!(
+                        "DbStorageIndex deserialization error: got {len} bytes, expected at least 48 bytes"
+                    )
+                )
+            );
+        }
     }
 
     #[test]

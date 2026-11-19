@@ -106,13 +106,15 @@ where
 }
 
 pub trait OldSlot: Copy + Eq {
-    const NONE: Self;
+    fn none() -> Self;
     fn new(slot: u64) -> Self;
     fn get(self) -> u64;
 }
 
 impl OldSlot for u32 {
-    const NONE: Self = u32::MAX;
+    fn none() -> Self {
+        u32::MAX
+    }
 
     fn new(slot: u64) -> Self {
         slot as u32
@@ -124,7 +126,9 @@ impl OldSlot for u32 {
 }
 
 impl OldSlot for u64 {
-    const NONE: Self = u64::MAX;
+    fn none() -> Self {
+        u64::MAX
+    }
 
     fn new(slot: u64) -> Self {
         slot
@@ -135,7 +139,10 @@ impl OldSlot for u64 {
     }
 }
 
-const CHUNK: u64 = if cfg!(test) { 64 } else { 1024 * 1024 };
+#[cfg(test)]
+const CHUNK: u64 = 64;
+#[cfg(not(test))]
+const CHUNK: u64 = 1024 * 1024;
 
 struct SlotWindows<'a, V: VecValue<D>, D: StorageData> {
     vec: &'a DbVec<V, D>,
@@ -382,7 +389,7 @@ where
             V::storage_len(),
             |storage, chunk, bytes| {
                 for old_slot in chunk {
-                    if *old_slot != S::NONE {
+                    if *old_slot != S::none() {
                         bytes.extend_from_slice(moved.slot(storage, old_slot.get())?);
                     } else if let Some(slot) = invalid.next(storage)? {
                         bytes.extend_from_slice(taken.slot(storage, slot)?);
@@ -456,7 +463,7 @@ where
         let states = Self::append_vec(storage, old_slots, 1, |_, chunk, bytes| {
             bytes.extend(chunk.iter().map(
                 |old_slot| {
-                    if *old_slot == S::NONE { empty } else { valid }
+                    if *old_slot == S::none() { empty } else { valid }
                 },
             ));
             Ok(())
@@ -1059,7 +1066,7 @@ mod tests {
                     map.remove(&mut storage, &2).unwrap();
                     let mut data = TestData::from_storage(&storage, map.storage_index()).unwrap();
 
-                    data.rebuild(&mut storage, &[u32::NONE, 3, u32::NONE, 1])
+                    data.rebuild(&mut storage, &[u32::none(), 3, u32::none(), 1])
                         .unwrap();
 
                     let data = TestData::from_storage(&storage, data.storage_index()).unwrap();
@@ -1094,7 +1101,7 @@ mod tests {
                             let map = map(storage, &[(1, 10), (2, 20)]);
                             TestData::from_storage(storage, map.storage_index()).unwrap()
                         },
-                        |storage, data| data.rebuild(storage, &[2_u32, u32::NONE, 1]),
+                        |storage, data| data.rebuild(storage, &[2_u32, u32::none(), 1]),
                     );
                 }
             }
@@ -1130,7 +1137,7 @@ mod tests {
                 fn set_state_should_count_valid_and_deleted_states() {
                     let mut storage = storage();
                     let mut data = TestData::new(&mut storage).unwrap();
-                    data.rebuild(&mut storage, &[u32::NONE; 2]).unwrap();
+                    data.rebuild(&mut storage, &[u32::none(); 2]).unwrap();
 
                     data.set_state(&mut storage, 0, MapValueState::Deleted)
                         .unwrap();
@@ -1156,7 +1163,7 @@ mod tests {
                     assert_io_failures(
                         |storage| {
                             let mut data = TestData::new(storage).unwrap();
-                            data.rebuild(storage, &[u32::NONE; 1]).unwrap();
+                            data.rebuild(storage, &[u32::none(); 1]).unwrap();
                             data
                         },
                         |storage, data| {

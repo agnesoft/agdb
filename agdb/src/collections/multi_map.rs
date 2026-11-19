@@ -395,7 +395,7 @@ where
         storage: &mut Storage<D>,
         new_capacity: u64,
     ) -> Result<(), DbError> {
-        let mut old_slots = vec![S::NONE; new_capacity as usize];
+        let mut old_slots = vec![S::none(); new_capacity as usize];
         let mut placed = 0;
 
         self.data.for_each_valid_key(storage, |slot, key| {
@@ -406,7 +406,7 @@ where
             placed += 1;
             let mut pos = (key.stable_hash() % new_capacity) as usize;
 
-            while old_slots[pos] != S::NONE {
+            while old_slots[pos] != S::none() {
                 pos += 1;
 
                 if pos == old_slots.len() {

@@ -2,9 +2,9 @@ use crate::DbKind;
 use crate::DbUserRole;
 use crate::test_server::ADMIN;
 use crate::test_server::TestServer;
+use crate::test_server::audit_dir;
 use crate::test_server::audit_entries;
-use crate::test_server::audit_file;
-use crate::test_server::backup_audit_file;
+use crate::test_server::backup_audit_dir;
 use crate::test_server::next_db_name;
 use crate::test_server::next_user_name;
 use crate::test_server::test_error::TestError;
@@ -126,8 +126,8 @@ pub async fn memory_to_mapped_preserves_backup_and_audit() -> Result<(), TestErr
         .1;
     assert_eq!(results[0].result, 1);
 
-    let audit = audit_file(&server.data_dir, owner, db);
-    let backup_audit = backup_audit_file(&server.data_dir, owner, db);
+    let audit = audit_dir(&server.data_dir, owner, db);
+    let backup_audit = backup_audit_dir(&server.data_dir, owner, db);
     assert!(Path::new(&audit).exists());
     assert!(Path::new(&backup_audit).exists());
     assert_eq!(audit_entries(&audit)?, 1);
@@ -181,8 +181,8 @@ pub async fn file_to_memory_preserves_backup_and_audit() -> Result<(), TestError
         .1;
     assert_eq!(results[0].result, 1);
 
-    let audit = audit_file(&server.data_dir, owner, db);
-    let backup_audit = backup_audit_file(&server.data_dir, owner, db);
+    let audit = audit_dir(&server.data_dir, owner, db);
+    let backup_audit = backup_audit_dir(&server.data_dir, owner, db);
     assert!(Path::new(&audit).exists());
     assert!(Path::new(&backup_audit).exists());
     assert_eq!(audit_entries(&audit)?, 1);

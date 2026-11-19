@@ -309,6 +309,7 @@ impl Api {
 
         defs.extend(crate::tests::routes::admin_db_add_test::test_defs());
         defs.extend(crate::tests::routes::admin_db_audit_test::test_defs());
+        defs.extend(crate::tests::routes::admin_db_audit_trim_test::test_defs());
         defs.extend(crate::tests::routes::admin_db_backup_restore_test::test_defs());
         defs.extend(crate::tests::routes::admin_db_clear_test::test_defs());
         defs.extend(crate::tests::routes::admin_db_convert_test::test_defs());
@@ -330,6 +331,7 @@ impl Api {
         defs.extend(crate::tests::routes::admin_user_logout_test::test_defs());
         defs.extend(crate::tests::routes::db_add_test::test_defs());
         defs.extend(crate::tests::routes::db_audit_test::test_defs());
+        defs.extend(crate::tests::routes::db_audit_trim_test::test_defs());
         defs.extend(crate::tests::routes::db_backup_restore_test::test_defs());
         defs.extend(crate::tests::routes::db_clear_test::test_defs());
         defs.extend(crate::tests::routes::db_convert_test::test_defs());

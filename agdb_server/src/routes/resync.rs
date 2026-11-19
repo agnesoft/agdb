@@ -23,6 +23,7 @@ use crc::CRC_64_XZ;
 use crc::Crc;
 use std::path::PathBuf;
 use std::sync::Arc;
+use std::sync::atomic::AtomicU64;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;
 const SNAPSHOT_STAGING_TTL_SECS: u64 = 600;
@@ -31,13 +32,37 @@ struct SnapshotInFlightGuard {
     counter: Arc<AtomicUsize>,
     /// Optional staging dir to remove when the stream completes.
     staging_cleanup: Option<PathBuf>,
+    /// Reusable staging dir to remove once no snapshot used it for the TTL.
+    staging_expiry: Option<PathBuf>,
 }
+
+/// Bumped whenever a full snapshot stream ends, so that only the expiry
+/// scheduled by the last one removes the reusable staging dir.
+static STAGING_GENERATION: AtomicU64 = AtomicU64::new(0);
 
 impl Drop for SnapshotInFlightGuard {
     fn drop(&mut self) {
-        self.counter.fetch_sub(1, Ordering::Release);
+        let remaining = self
+            .counter
+            .fetch_sub(1, Ordering::AcqRel)
+            .saturating_sub(1);
         if let Some(dir) = self.staging_cleanup.take() {
             let _ = std::fs::remove_dir_all(dir);
+        }
+        if let Some(dir) = self.staging_expiry.take()
+            && let generation = STAGING_GENERATION.fetch_add(1, Ordering::AcqRel) + 1
+            && remaining == 0
+            && let Ok(runtime) = tokio::runtime::Handle::try_current()
+        {
+            let counter = self.counter.clone();
+            runtime.spawn(async move {
+                tokio::time::sleep(std::time::Duration::from_secs(SNAPSHOT_STAGING_TTL_SECS)).await;
+                if counter.load(Ordering::Acquire) == 0
+                    && STAGING_GENERATION.load(Ordering::Acquire) == generation
+                {
+                    let _ = std::fs::remove_dir_all(dir);
+                }
+            });
         }
     }
 }
@@ -114,6 +139,7 @@ pub(crate) async fn snapshot(
         StatusCode::OK
     };
 
+    let staging_expiry = Some(staging_dir.clone());
     let body = match snapshot_body_stream(
         staging_dir,
         SnapshotStreamParams {
@@ -124,6 +150,7 @@ pub(crate) async fn snapshot(
             in_flight: cluster.snapshot_in_flight.clone(),
             chunk_size: config.cluster_max_chunk_size as usize,
             staging_cleanup: None, // full-cluster staging dir is reusable
+            staging_expiry,
         },
     ) {
         Ok(b) => b,
@@ -268,22 +295,7 @@ async fn stage_snapshot_files(
             .await??;
         }
 
-        for src in [
-            db_pool::db_audit_file(owner, db_name, config),
-            db_pool::db_backup_file(owner, db_name, config),
-            db_pool::db_backup_audit_file(owner, db_name, config),
-        ] {
-            if src.exists() {
-                let rel = src
-                    .strip_prefix(data_dir)
-                    .map_err(|e| ServerError::from(e.to_string()))?;
-                let dst = staging_dir.join(rel);
-                if let Some(parent) = dst.parent() {
-                    std::fs::create_dir_all(parent)?;
-                }
-                tokio::fs::copy(&src, &dst).await?;
-            }
-        }
+        stage_db_files(config, data_dir, staging_dir, owner, db_name).await?;
     }
 
     let cluster_log_staging_str = staging_dir
@@ -321,6 +333,7 @@ struct SnapshotStreamParams {
     in_flight: Arc<AtomicUsize>,
     chunk_size: usize,
     staging_cleanup: Option<PathBuf>,
+    staging_expiry: Option<PathBuf>,
 }
 
 fn snapshot_body_stream(staging_dir: PathBuf, params: SnapshotStreamParams) -> ServerResult<Body> {
@@ -336,6 +349,7 @@ fn snapshot_file_stream(
     let guard = SnapshotInFlightGuard {
         counter: params.in_flight.clone(),
         staging_cleanup: params.staging_cleanup,
+        staging_expiry: params.staging_expiry,
     };
     let SnapshotStreamParams {
         start_offset,
@@ -456,8 +470,24 @@ fn cleanup_stale_snapshot_stagings(
     current_commit: u64,
     current_term: u64,
 ) {
-    let Some(parent) = data_dir.parent() else {
-        return;
+    remove_snapshot_stagings(
+        data_dir,
+        Some(&format!("{current_commit}_{current_term}")),
+        SNAPSHOT_STAGING_TTL_SECS,
+    );
+}
+
+/// Removes the full-snapshot staging dirs next to `data_dir` that are at least
+/// `min_age_secs` old, except the one of the current raft state (`keep`) that
+/// may be serving or about to be built.
+pub(crate) fn remove_snapshot_stagings(
+    data_dir: &std::path::Path,
+    keep: Option<&str>,
+    min_age_secs: u64,
+) {
+    let parent = match data_dir.parent() {
+        Some(parent) if !parent.as_os_str().is_empty() => parent,
+        _ => std::path::Path::new("."),
     };
 
     let Ok(entries) = std::fs::read_dir(parent) else {
@@ -465,26 +495,23 @@ fn cleanup_stale_snapshot_stagings(
     };
 
     let now = std::time::SystemTime::now();
-    let current_suffix = format!("{current_commit}_{current_term}");
 
     for entry in entries.flatten() {
         let name = entry.file_name();
-        let name_str = name.to_string_lossy();
-        if !name_str.starts_with(".snapshot_staging_") {
+        let Some(suffix) = name
+            .to_string_lossy()
+            .strip_prefix(".snapshot_staging_")
+            .map(str::to_string)
+        else {
             continue;
-        }
-        // Skip the staging dir matching current raft state (may be serving or about to be built)
-        let suffix = name_str.strip_prefix(".snapshot_staging_").unwrap_or("");
-        if suffix == current_suffix {
-            continue;
-        }
-        if !entry.path().is_dir() {
+        };
+        if keep == Some(suffix.as_str()) || !entry.path().is_dir() {
             continue;
         }
         if let Ok(metadata) = entry.metadata()
             && let Ok(modified) = metadata.modified()
             && let Ok(age) = now.duration_since(modified)
-            && age.as_secs() >= SNAPSHOT_STAGING_TTL_SECS
+            && age.as_secs() >= min_age_secs
         {
             let _ = std::fs::remove_dir_all(entry.path());
         }
@@ -674,6 +701,7 @@ pub(crate) async fn snapshot_db(
             in_flight: cluster.snapshot_in_flight.clone(),
             chunk_size: config.cluster_max_chunk_size as usize,
             staging_cleanup: Some(staging_cleanup),
+            staging_expiry: None,
         },
     ) {
         Ok(b) => b,
@@ -755,24 +783,45 @@ async fn stage_single_db(
         .await??;
     }
 
-    for src in [
-        db_pool::db_audit_file(owner, db, config),
-        db_pool::db_backup_file(owner, db, config),
-        db_pool::db_backup_audit_file(owner, db, config),
-    ] {
-        if src.exists() {
-            let rel = src
-                .strip_prefix(data_dir)
-                .map_err(|e| ServerError::from(e.to_string()))?;
-            let dst = staging_dir.join(rel);
-            if let Some(parent) = dst.parent() {
-                std::fs::create_dir_all(parent)?;
-            }
-            tokio::fs::copy(&src, &dst).await?;
+    stage_db_files(config, data_dir, staging_dir, owner, db).await
+}
+
+async fn stage_db_files(
+    config: &Config,
+    data_dir: &std::path::Path,
+    staging_dir: &std::path::Path,
+    owner: &str,
+    db: &str,
+) -> ServerResult<()> {
+    let staged = |path: &std::path::Path| -> ServerResult<PathBuf> {
+        Ok(staging_dir.join(
+            path.strip_prefix(data_dir)
+                .map_err(|e| ServerError::from(e.to_string()))?,
+        ))
+    };
+
+    let backup = db_pool::db_backup_file(owner, db, config);
+    if backup.exists() {
+        let dst = staged(&backup)?;
+        if let Some(parent) = dst.parent() {
+            std::fs::create_dir_all(parent)?;
         }
+        tokio::fs::copy(&backup, &dst).await?;
     }
 
-    Ok(())
+    let dirs = [
+        db_pool::db_audit_dir(owner, db, config),
+        db_pool::db_backup_audit_dir(owner, db, config),
+    ]
+    .map(|dir| staged(&dir).map(|target| (dir, target)))
+    .into_iter()
+    .collect::<ServerResult<Vec<_>>>()?;
+
+    tokio::task::spawn_blocking(move || {
+        dirs.iter()
+            .try_for_each(|(dir, target)| db_pool::audit::sync(dir, target))
+    })
+    .await?
 }
 
 pub(crate) async fn snapshot_server_db(
@@ -827,6 +876,7 @@ pub(crate) async fn snapshot_server_db(
             in_flight: cluster.snapshot_in_flight.clone(),
             chunk_size: config.cluster_max_chunk_size as usize,
             staging_cleanup: Some(staging_cleanup),
+            staging_expiry: None,
         },
     ) {
         Ok(b) => b,

@@ -99,35 +99,65 @@ pub fn next_db_name() -> String {
 }
 
 #[cfg_attr(feature = "api", agdb::fn_def())]
-pub fn audit_file(data_dir: &str, owner: &str, db: &str) -> String {
+pub fn audit_dir(data_dir: &str, owner: &str, db: &str) -> String {
     Path::new(data_dir)
         .join(owner)
         .join("audit")
-        .join(format!("{db}.log"))
+        .join(db)
         .to_string_lossy()
         .to_string()
 }
 
 #[cfg_attr(feature = "api", agdb::fn_def())]
-pub fn backup_audit_file(data_dir: &str, owner: &str, db: &str) -> String {
+pub fn backup_audit_dir(data_dir: &str, owner: &str, db: &str) -> String {
     Path::new(data_dir)
         .join(owner)
         .join("backups")
-        .join(format!("{db}.log"))
+        .join(format!("{db}.audit"))
         .to_string_lossy()
         .to_string()
 }
 
 #[cfg_attr(feature = "api", agdb::fn_def())]
 pub fn audit_entries(path: &str) -> Result<usize, TestError> {
-    let data = std::fs::read_to_string(path)?;
-    let entries: Vec<QueryAudit> = serde_json::from_str(&data).map_err(|e| {
-        std::io::Error::new(
-            std::io::ErrorKind::InvalidData,
-            format!("invalid audit json: {e}"),
-        )
+    let mut entries = 0;
+    for file in std::fs::read_dir(path)? {
+        let data = std::fs::read_to_string(file?.path())?;
+        for line in data.lines().filter(|line| !line.is_empty()) {
+            serde_json::from_str::<QueryAudit>(line).map_err(|e| {
+                std::io::Error::new(
+                    std::io::ErrorKind::InvalidData,
+                    format!("invalid audit json: {e}"),
+                )
+            })?;
+            entries += 1;
+        }
+    }
+    Ok(entries)
+}
+
+/// Appends an audit entry with the given `timestamp` to the day file
+/// `{day}.log` (`YYYY-MM-DD`) of the audit directory `dir`.
+#[cfg_attr(feature = "api", agdb::fn_def())]
+pub fn write_audit_entry(dir: &str, day: &str, timestamp: u64) -> Result<(), TestError> {
+    std::fs::create_dir_all(dir)?;
+    let entry = QueryAudit {
+        timestamp,
+        username: ADMIN.to_string(),
+        query: agdb::QueryBuilder::insert().nodes().count(1).query().into(),
+    };
+    let json = serde_json::to_string(&entry).map_err(|e| {
+        std::io::Error::new(std::io::ErrorKind::InvalidData, format!("audit json: {e}"))
     })?;
-    Ok(entries.len())
+    let line = format!("{json}\n");
+    std::io::Write::write_all(
+        &mut std::fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(Path::new(dir).join(format!("{day}.log")))?,
+        line.as_bytes(),
+    )?;
+    Ok(())
 }
 
 pub fn test_agent_name() -> String {
@@ -186,9 +216,10 @@ pub fn test_defs() -> Vec<agdb::type_def::Type> {
         __server_bin_type_def(),
         __next_user_name_type_def(),
         __next_db_name_type_def(),
-        __audit_file_type_def(),
-        __backup_audit_file_type_def(),
+        __audit_dir_type_def(),
+        __backup_audit_dir_type_def(),
         __audit_entries_type_def(),
+        __write_audit_entry_type_def(),
         __wait_for_ready_type_def(),
         TestError::type_def(),
         PathBuf::type_def(),

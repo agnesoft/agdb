@@ -1,6 +1,7 @@
 // Admin DB Operations
 pub mod admin_db_add_test;
 pub mod admin_db_audit_test;
+pub mod admin_db_audit_trim_test;
 pub mod admin_db_backup_restore_test;
 pub mod admin_db_clear_test;
 pub mod admin_db_convert_test;
@@ -26,6 +27,7 @@ pub mod admin_user_logout_test;
 // User DB Operations
 pub mod db_add_test;
 pub mod db_audit_test;
+pub mod db_audit_trim_test;
 pub mod db_backup_restore_test;
 pub mod db_clear_test;
 pub mod db_convert_test;

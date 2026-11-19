@@ -1,3 +1,4 @@
+pub(crate) mod audit;
 pub(crate) mod user_db;
 
 use crate::config::Config;
@@ -14,9 +15,6 @@ use agdb_api::DbResource;
 use agdb_api::Queries;
 use axum::http::StatusCode;
 use std::collections::HashMap;
-use std::io::Seek;
-use std::io::SeekFrom;
-use std::io::Write;
 use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -70,7 +68,11 @@ impl DbPool {
 
         for db in server_db.dbs().await? {
             let db_path = db_file(&db.owner, &db.db, &self.config);
-            std::fs::create_dir_all(db_audit_dir(&db.owner, &self.config))?;
+            std::fs::create_dir_all(Path::new(&self.config.data_dir).join(&db.owner))?;
+            self.migrate_audit(&db.owner, &db.db)?;
+            if let Err(e) = self.finish_audit_swap(&db.owner, &db.db) {
+                crate::warn!("{}", e.description);
+            }
             if db.db_type == DbKind::Memory && !db_path.exists() {
                 let backup = db_backup_file(&db.owner, &db.db, &self.config);
                 if backup.exists() {
@@ -101,7 +103,8 @@ impl DbPool {
         let db_path = Path::new(&self.config.data_dir).join(owner).join(db);
         let path = db_path.to_str().ok_or(ErrorCode::DbInvalid)?.to_string();
 
-        std::fs::create_dir_all(db_audit_dir(owner, &self.config))?;
+        std::fs::create_dir_all(Path::new(&self.config.data_dir).join(owner))?;
+        self.migrate_audit(owner, db)?;
 
         let user_db = UserDb::new(&path, db_type).map_err(|mut e| {
             e.status = ErrorCode::DbInvalid.into();
@@ -126,15 +129,27 @@ impl DbPool {
     }
 
     pub(crate) async fn audit(&self, owner: &str, db: &str) -> ServerResult<DbAudit> {
-        if let Ok(log) =
-            std::fs::OpenOptions::new()
-                .read(true)
-                .open(db_audit_file(owner, db, &self.config))
-        {
-            return Ok(DbAudit(serde_json::from_reader(log)?));
-        }
+        let dir = db_audit_dir(owner, db, &self.config);
+        Ok(DbAudit(
+            tokio::task::spawn_blocking(move || audit::read(&dir)).await??,
+        ))
+    }
 
-        Ok(DbAudit(vec![]))
+    pub(crate) async fn audit_trim(&self, owner: &str, db: &str, first_day: u64) -> ServerResult {
+        self.db(owner, db).await?;
+        audit::trim(&db_audit_dir(owner, db, &self.config), first_day)?;
+        audit::trim(&db_backup_audit_dir(owner, db, &self.config), first_day)
+    }
+
+    fn migrate_audit(&self, owner: &str, db: &str) -> ServerResult {
+        audit::migrate(
+            &db_audit_legacy_file(owner, db, &self.config),
+            &db_audit_dir(owner, db, &self.config),
+        )?;
+        audit::migrate(
+            &db_backup_audit_legacy_file(owner, db, &self.config),
+            &db_backup_audit_dir(owner, db, &self.config),
+        )
     }
 
     pub(crate) async fn backup_db(&self, owner: &str, db: &str) -> ServerResult<u64> {
@@ -145,16 +160,13 @@ impl DbPool {
         remove_file_if_exists(&backup_path)?;
         std::fs::create_dir_all(db_backup_dir(owner, &self.config))?;
 
-        let audit_path = db_audit_file(owner, db, &self.config);
-        let backup_audit_path = db_backup_audit_file(owner, db, &self.config);
-        remove_file_if_exists(&backup_audit_path)?;
-
         let db_guard = user_db.0.read().await;
         db_guard.backup(backup_path.to_string_lossy().as_ref())?;
 
-        if audit_path.exists() {
-            std::fs::copy(audit_path, backup_audit_path)?;
-        }
+        audit::sync(
+            &db_audit_dir(owner, db, &self.config),
+            &db_backup_audit_dir(owner, db, &self.config),
+        )?;
 
         Ok(SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs())
     }
@@ -169,14 +181,14 @@ impl DbPool {
         match resource {
             DbResource::All => {
                 self.do_clear_db(owner, db, database).await?;
-                remove_file_if_exists(db_audit_file(owner, db, &self.config))?;
+                audit::remove(&db_audit_dir(owner, db, &self.config))?;
                 self.do_clear_db_backup(owner, db, database).await?;
             }
             DbResource::Db => {
                 self.do_clear_db(owner, db, database).await?;
             }
             DbResource::Audit => {
-                remove_file_if_exists(db_audit_file(owner, db, &self.config))?;
+                audit::remove(&db_audit_dir(owner, db, &self.config))?;
             }
             DbResource::Backup => {
                 self.do_clear_db_backup(owner, db, database).await?;
@@ -198,7 +210,7 @@ impl DbPool {
     ) -> Result<(), ServerError> {
         let backup_file = db_backup_file(owner, db, &self.config);
         remove_file_if_exists(&backup_file)?;
-        remove_file_if_exists(db_backup_audit_file(owner, db, &self.config))?;
+        audit::remove(&db_backup_audit_dir(owner, db, &self.config))?;
         database.backup = 0;
         Ok(())
     }
@@ -293,11 +305,6 @@ impl DbPool {
         }
 
         std::fs::create_dir_all(Path::new(&self.config.data_dir).join(new_owner))?;
-        std::fs::create_dir_all(db_audit_dir(new_owner, &self.config))?;
-
-        let audit_path = db_audit_file(owner, db, &self.config);
-        let target_audit_path = db_audit_file(new_owner, new_db, &self.config);
-        remove_file_if_exists(&target_audit_path)?;
 
         let target_db = DbName::new(new_owner, new_db);
         let cloned_db;
@@ -307,9 +314,10 @@ impl DbPool {
             let db_guard = user_db.0.read().await;
             cloned_db = db_guard.copy(target_file.to_string_lossy().as_ref())?;
 
-            if audit_path.exists() {
-                std::fs::copy(audit_path, target_audit_path)?;
-            }
+            audit::sync(
+                &db_audit_dir(owner, db, &self.config),
+                &db_audit_dir(new_owner, new_db, &self.config),
+            )?;
         }
 
         self.pool
@@ -325,8 +333,10 @@ impl DbPool {
         remove_file_if_exists(db_file(owner, db, &self.config))?;
         remove_file_if_exists(db_file(owner, &format!(".{db}"), &self.config))?;
         remove_file_if_exists(db_backup_file(owner, db, &self.config))?;
-        remove_file_if_exists(db_backup_audit_file(owner, db, &self.config))?;
-        remove_file_if_exists(db_audit_file(owner, db, &self.config))
+        audit::remove(&db_backup_audit_dir(owner, db, &self.config))?;
+        audit::remove_legacy(&db_backup_audit_legacy_file(owner, db, &self.config))?;
+        audit::remove(&db_audit_dir(owner, db, &self.config))?;
+        audit::remove_legacy(&db_audit_legacy_file(owner, db, &self.config))
     }
 
     pub(crate) async fn exec(
@@ -352,20 +362,7 @@ impl DbPool {
             .await?;
 
         if !audit.is_empty() {
-            let mut log = std::fs::OpenOptions::new()
-                .create(true)
-                .truncate(false)
-                .write(true)
-                .open(db_audit_file(owner, db, &self.config))?;
-            let len = log.seek(SeekFrom::End(0))?;
-            if len == 0 {
-                serde_json::to_writer(&log, &audit)?;
-            } else {
-                let mut data = serde_json::to_vec(&audit)?;
-                data[0] = b',';
-                log.seek(SeekFrom::End(-1))?;
-                log.write_all(&data)?;
-            }
+            audit::append(&db_audit_dir(owner, db, &self.config), &audit)?;
         }
 
         Ok(r)
@@ -473,33 +470,14 @@ impl DbPool {
             std::fs::create_dir_all(backups_dir)?;
             std::fs::rename(backup_path, new_backup_path)?;
         }
-        let backup_audit_path = db_backup_audit_file(owner, db, &self.config);
-        if backup_audit_path.exists() {
-            let new_backup_audit_path = db_backup_audit_file(new_owner, new_db, &self.config);
-            let backups_dir = new_backup_audit_path.parent().ok_or(ServerError {
-                description: format!(
-                    "new backup audit path does not have a parent directory '{}' - cannot rename",
-                    new_backup_audit_path.display()
-                ),
-                status: StatusCode::NOT_FOUND,
-            })?;
-            std::fs::create_dir_all(backups_dir)?;
-            std::fs::rename(backup_audit_path, new_backup_audit_path)?;
-        }
-        let audit_path = db_audit_file(owner, db, &self.config);
-        if audit_path.exists() {
-            let new_audit_path = db_audit_file(new_owner, new_db, &self.config);
-            let audit_dir = new_audit_path.parent().ok_or(ServerError {
-                description: format!(
-                    "new audit path does not have a parent directory '{}' - cannot rename",
-                    new_audit_path.display()
-                ),
-                status: StatusCode::NOT_FOUND,
-            })?;
-            std::fs::create_dir_all(audit_dir)?;
-            std::fs::rename(audit_path, new_audit_path)?;
-        }
-        Ok(())
+        audit::rename(
+            &db_backup_audit_dir(owner, db, &self.config),
+            &db_backup_audit_dir(new_owner, new_db, &self.config),
+        )?;
+        audit::rename(
+            &db_audit_dir(owner, db, &self.config),
+            &db_audit_dir(new_owner, new_db, &self.config),
+        )
     }
 
     pub(crate) async fn restore_db(&self, owner: &str, db: &str, db_type: DbKind) -> ServerResult {
@@ -512,6 +490,7 @@ impl DbPool {
             });
         }
 
+        self.migrate_audit(owner, db)?;
         self.remove_db(owner, db).await?;
 
         let db_name = DbName::new(owner, db);
@@ -555,39 +534,30 @@ impl DbPool {
             )));
         }
 
-        for (src_path, dst_path) in [
-            (
-                install_dir.join(
-                    db_audit_file(owner, db, config)
-                        .strip_prefix(data_dir)
-                        .unwrap_or(Path::new("")),
-                ),
-                db_audit_file(owner, db, config),
-            ),
-            (
-                install_dir.join(
-                    db_backup_file(owner, db, config)
-                        .strip_prefix(data_dir)
-                        .unwrap_or(Path::new("")),
-                ),
-                db_backup_file(owner, db, config),
-            ),
-            (
-                install_dir.join(
-                    db_backup_audit_file(owner, db, config)
-                        .strip_prefix(data_dir)
-                        .unwrap_or(Path::new("")),
-                ),
-                db_backup_audit_file(owner, db, config),
-            ),
+        let installed = |path: &Path| install_dir.join(path.strip_prefix(data_dir).unwrap_or(path));
+
+        for dst_path in [
+            db_backup_file(owner, db, config),
+            db_audit_legacy_file(owner, db, config),
+            db_backup_audit_legacy_file(owner, db, config),
         ] {
-            if src_path.exists() {
+            let src_path = installed(&dst_path);
+            if src_path.is_file() {
                 if let Some(parent) = dst_path.parent() {
                     std::fs::create_dir_all(parent)?;
                 }
                 std::fs::copy(&src_path, &dst_path)?;
             }
         }
+
+        for dst_path in [
+            db_audit_dir(owner, db, config),
+            db_backup_audit_dir(owner, db, config),
+        ] {
+            audit::sync(&installed(&dst_path), &dst_path)?;
+        }
+
+        self.migrate_audit(owner, db)?;
 
         let db_name = DbName::new(owner, db);
         let user_db = UserDb::new(db_dst.to_string_lossy().as_ref(), db_type)?;
@@ -613,6 +583,7 @@ impl DbPool {
             });
         }
 
+        self.migrate_audit(owner, db)?;
         let db_name = DbName::new(owner, db);
         self.remove_db(owner, db).await?;
 
@@ -627,7 +598,8 @@ impl DbPool {
             self.pool.write().await.insert(db_name, user_db);
             self.restore_audit_from_backup(owner, db)?;
         } else {
-            let backup_temp = db_backup_dir(owner, &self.config).join(db);
+            let backup_temp = db_swap_dir(owner, &self.config).join(format!("{db}.bak"));
+            std::fs::create_dir_all(db_swap_dir(owner, &self.config))?;
             std::fs::rename(&current_path, &backup_temp)?;
             std::fs::rename(&backup_path, &current_path)?;
             std::fs::rename(backup_temp, &backup_path)?;
@@ -642,49 +614,26 @@ impl DbPool {
     }
 
     fn restore_audit_from_backup(&self, owner: &str, db: &str) -> ServerResult {
-        let audit_path = db_audit_file(owner, db, &self.config);
-        let backup_audit_path = db_backup_audit_file(owner, db, &self.config);
-
-        remove_file_if_exists(&audit_path)?;
-        if backup_audit_path.exists() {
-            std::fs::create_dir_all(db_audit_dir(owner, &self.config))?;
-            std::fs::copy(backup_audit_path, audit_path)?;
-        }
-
-        Ok(())
+        audit::sync(
+            &db_backup_audit_dir(owner, db, &self.config),
+            &db_audit_dir(owner, db, &self.config),
+        )
     }
 
     fn swap_audit_with_backup(&self, owner: &str, db: &str) -> ServerResult {
-        let audit_path = db_audit_file(owner, db, &self.config);
-        let backup_audit_path = db_backup_audit_file(owner, db, &self.config);
-        let backup_audit_temp = db_backup_dir(owner, &self.config).join(format!("{db}.audit"));
+        audit::swap(
+            &db_audit_dir(owner, db, &self.config),
+            &db_backup_audit_dir(owner, db, &self.config),
+            &db_audit_swap_dir(owner, db, &self.config),
+        )
+    }
 
-        if !audit_path.exists() && !backup_audit_path.exists() {
-            return Ok(());
-        }
-
-        std::fs::create_dir_all(db_audit_dir(owner, &self.config))?;
-        std::fs::create_dir_all(db_backup_dir(owner, &self.config))?;
-
-        remove_file_if_exists(&backup_audit_temp)?;
-
-        if audit_path.exists() {
-            std::fs::rename(&audit_path, &backup_audit_temp)?;
-        }
-
-        if backup_audit_path.exists() {
-            std::fs::rename(&backup_audit_path, &audit_path)?;
-        } else {
-            remove_file_if_exists(&audit_path)?;
-        }
-
-        if backup_audit_temp.exists() {
-            std::fs::rename(&backup_audit_temp, &backup_audit_path)?;
-        } else {
-            remove_file_if_exists(&backup_audit_path)?;
-        }
-
-        Ok(())
+    fn finish_audit_swap(&self, owner: &str, db: &str) -> ServerResult {
+        audit::finish_swap(
+            &db_audit_dir(owner, db, &self.config),
+            &db_backup_audit_dir(owner, db, &self.config),
+            &db_audit_swap_dir(owner, db, &self.config),
+        )
     }
 }
 
@@ -703,16 +652,35 @@ fn db_backup_dir(owner: &str, config: &Config) -> PathBuf {
     Path::new(&config.data_dir).join(owner).join("backups")
 }
 
-pub(crate) fn db_backup_audit_file(owner: &str, db: &str, config: &Config) -> PathBuf {
+/// Holds the files of a rollback in progress, never a name derived from a db name.
+fn db_swap_dir(owner: &str, config: &Config) -> PathBuf {
+    db_backup_dir(owner, config).join(".swap")
+}
+
+fn db_audit_swap_dir(owner: &str, db: &str, config: &Config) -> PathBuf {
+    db_swap_dir(owner, config).join(format!("{db}.audit"))
+}
+
+pub(crate) fn db_backup_audit_dir(owner: &str, db: &str, config: &Config) -> PathBuf {
+    db_backup_dir(owner, config).join(format!("{db}.audit"))
+}
+
+fn db_backup_audit_legacy_file(owner: &str, db: &str, config: &Config) -> PathBuf {
     db_backup_dir(owner, config).join(format!("{db}.log"))
 }
 
-fn db_audit_dir(owner: &str, config: &Config) -> PathBuf {
-    Path::new(&config.data_dir).join(owner).join("audit")
+pub(crate) fn db_audit_dir(owner: &str, db: &str, config: &Config) -> PathBuf {
+    Path::new(&config.data_dir)
+        .join(owner)
+        .join("audit")
+        .join(db)
 }
 
-pub(crate) fn db_audit_file(owner: &str, db: &str, config: &Config) -> PathBuf {
-    db_audit_dir(owner, config).join(format!("{db}.log"))
+fn db_audit_legacy_file(owner: &str, db: &str, config: &Config) -> PathBuf {
+    Path::new(&config.data_dir)
+        .join(owner)
+        .join("audit")
+        .join(format!("{db}.log"))
 }
 
 pub(crate) fn db_file(owner: &str, db: &str, config: &Config) -> PathBuf {

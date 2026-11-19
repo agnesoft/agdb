@@ -80,6 +80,9 @@ class AgdbApi
         'adminDbAudit' => [
             'application/json',
         ],
+        'adminDbAuditTrim' => [
+            'application/json',
+        ],
         'adminDbBackup' => [
             'application/json',
         ],
@@ -171,6 +174,9 @@ class AgdbApi
             'application/json',
         ],
         'dbAudit' => [
+            'application/json',
+        ],
+        'dbAuditTrim' => [
             'application/json',
         ],
         'dbBackup' => [
@@ -846,6 +852,277 @@ class AgdbApi
         $query = ObjectSerializer::buildQuery($queryParams);
         return new Request(
             'GET',
+            $operationHost . $resourcePath . ($query ? "?{$query}" : ''),
+            $headers,
+            $httpBody
+        );
+    }
+
+    /**
+     * Operation adminDbAuditTrim
+     *
+     * @param  string $owner user name (required)
+     * @param  string $db db name (required)
+     * @param  int $keep_days Number of UTC days to keep before today, the audit of the older days is removed. (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDbAuditTrim'] to see the possible values for this operation
+     *
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \InvalidArgumentException
+     * @return void
+     */
+    public function adminDbAuditTrim($owner, $db, $keep_days, string $contentType = self::contentTypes['adminDbAuditTrim'][0])
+    {
+        $this->adminDbAuditTrimWithHttpInfo($owner, $db, $keep_days, $contentType);
+    }
+
+    /**
+     * Operation adminDbAuditTrimWithHttpInfo
+     *
+     * @param  string $owner user name (required)
+     * @param  string $db db name (required)
+     * @param  int $keep_days Number of UTC days to keep before today, the audit of the older days is removed. (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDbAuditTrim'] to see the possible values for this operation
+     *
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \InvalidArgumentException
+     * @return array of null, HTTP status code, HTTP response headers (array of strings)
+     */
+    public function adminDbAuditTrimWithHttpInfo($owner, $db, $keep_days, string $contentType = self::contentTypes['adminDbAuditTrim'][0])
+    {
+        $request = $this->adminDbAuditTrimRequest($owner, $db, $keep_days, $contentType);
+
+        try {
+            $options = $this->createHttpClientOption();
+            try {
+                $response = $this->client->send($request, $options);
+            } catch (RequestException $e) {
+                $eResponse = $this->getExceptionResponse($e);
+                throw new ApiException(
+                    "[{$e->getCode()}] {$e->getMessage()}",
+                    (int) $e->getCode(),
+                    $eResponse ? $eResponse->getHeaders() : null,
+                    $eResponse ? (string) $eResponse->getBody() : null
+                );
+            } catch (NetworkExceptionInterface $e) {
+                throw new ApiException(
+                    "[{$e->getCode()}] {$e->getMessage()}",
+                    (int) $e->getCode(),
+                    null,
+                    null
+                );
+            }
+
+            $statusCode = $response->getStatusCode();
+
+
+            return [null, $statusCode, $response->getHeaders()];
+        } catch (ApiException $e) {
+            switch ($e->getCode()) {
+            }
+        
+
+            throw $e;
+        }
+    }
+
+    /**
+     * Operation adminDbAuditTrimAsync
+     *
+     * @param  string $owner user name (required)
+     * @param  string $db db name (required)
+     * @param  int $keep_days Number of UTC days to keep before today, the audit of the older days is removed. (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDbAuditTrim'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Promise\PromiseInterface
+     */
+    public function adminDbAuditTrimAsync($owner, $db, $keep_days, string $contentType = self::contentTypes['adminDbAuditTrim'][0])
+    {
+        return $this->adminDbAuditTrimAsyncWithHttpInfo($owner, $db, $keep_days, $contentType)
+            ->then(
+                function ($response) {
+                    return $response[0];
+                }
+            );
+    }
+
+    /**
+     * Operation adminDbAuditTrimAsyncWithHttpInfo
+     *
+     * @param  string $owner user name (required)
+     * @param  string $db db name (required)
+     * @param  int $keep_days Number of UTC days to keep before today, the audit of the older days is removed. (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDbAuditTrim'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Promise\PromiseInterface
+     */
+    public function adminDbAuditTrimAsyncWithHttpInfo($owner, $db, $keep_days, string $contentType = self::contentTypes['adminDbAuditTrim'][0])
+    {
+        $returnType = '';
+        $request = $this->adminDbAuditTrimRequest($owner, $db, $keep_days, $contentType);
+
+        return $this->client
+            ->sendAsync($request, $this->createHttpClientOption())
+            ->then(
+                function ($response) use ($returnType) {
+                    return [null, $response->getStatusCode(), $response->getHeaders()];
+                },
+                function ($exception) {
+                    $response = $this->getExceptionResponse($exception);
+                    if ($response === null) {
+                        throw new ApiException(
+                            "[{$exception->getCode()}] {$exception->getMessage()}",
+                            (int) $exception->getCode(),
+                            null,
+                            null
+                        );
+                    }
+                    $statusCode = $response->getStatusCode();
+                    throw new ApiException(
+                        sprintf(
+                            '[%d] Error connecting to the API (%s)',
+                            $statusCode,
+                            $exception->getRequest()->getUri()
+                        ),
+                        $statusCode,
+                        $response->getHeaders(),
+                        (string) $response->getBody()
+                    );
+                }
+            );
+    }
+
+    /**
+     * Create request for operation 'adminDbAuditTrim'
+     *
+     * @param  string $owner user name (required)
+     * @param  string $db db name (required)
+     * @param  int $keep_days Number of UTC days to keep before today, the audit of the older days is removed. (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDbAuditTrim'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Psr7\Request
+     */
+    public function adminDbAuditTrimRequest($owner, $db, $keep_days, string $contentType = self::contentTypes['adminDbAuditTrim'][0])
+    {
+
+        // verify the required parameter 'owner' is set
+        if ($owner === null || (is_array($owner) && count($owner) === 0)) {
+            throw new \InvalidArgumentException(
+                'Missing the required parameter $owner when calling adminDbAuditTrim'
+            );
+        }
+
+        // verify the required parameter 'db' is set
+        if ($db === null || (is_array($db) && count($db) === 0)) {
+            throw new \InvalidArgumentException(
+                'Missing the required parameter $db when calling adminDbAuditTrim'
+            );
+        }
+
+        // verify the required parameter 'keep_days' is set
+        if ($keep_days === null || (is_array($keep_days) && count($keep_days) === 0)) {
+            throw new \InvalidArgumentException(
+                'Missing the required parameter $keep_days when calling adminDbAuditTrim'
+            );
+        }
+        if ($keep_days < 0) {
+            throw new \InvalidArgumentException('invalid value for "$keep_days" when calling AgdbApi.adminDbAuditTrim, must be bigger than or equal to 0.');
+        }
+        
+
+        $resourcePath = '/api/v1/admin/db/{owner}/{db}/audit/trim';
+        $formParams = [];
+        $queryParams = [];
+        $headerParams = [];
+        $httpBody = '';
+        $multipart = false;
+
+        // query params
+        $queryParams = array_merge($queryParams, ObjectSerializer::toQueryValue(
+            $keep_days,
+            'keep_days', // param base name
+            'integer', // openApiType
+            'form', // style
+            true, // explode
+            true // required
+        ) ?? []);
+
+
+        // path params
+        if ($owner !== null) {
+            $resourcePath = str_replace(
+                '{owner}',
+                ObjectSerializer::toPathValue($owner),
+                $resourcePath
+            );
+        }
+        // path params
+        if ($db !== null) {
+            $resourcePath = str_replace(
+                '{db}',
+                ObjectSerializer::toPathValue($db),
+                $resourcePath
+            );
+        }
+
+
+        $headers = $this->headerSelector->selectHeaders(
+            [],
+            $contentType,
+            $multipart
+        );
+
+        // for model (json/xml)
+        if (count($formParams) > 0) {
+            if ($multipart) {
+                $multipartContents = [];
+                foreach ($formParams as $formParamName => $formParamValue) {
+                    $formParamValueItems = is_array($formParamValue) ? $formParamValue : [$formParamValue];
+                    foreach ($formParamValueItems as $formParamValueItem) {
+                        $multipartContents[] = [
+                            'name' => $formParamName,
+                            'contents' => $formParamValueItem
+                        ];
+                    }
+                }
+                // for HTTP post (form)
+                $httpBody = new MultipartStream($multipartContents);
+
+            } elseif (stripos($headers['Content-Type'], 'application/json') !== false) {
+                # if Content-Type contains "application/json", json_encode the form parameters
+                try {
+                    $httpBody = json_encode($formParams, JSON_THROW_ON_ERROR);
+                } catch (\JsonException $e) {
+                    throw new \InvalidArgumentException('json_encode error: ' . $e->getMessage(), 0, $e);
+                }
+            } else {
+                // for HTTP post (form)
+                $httpBody = ObjectSerializer::buildQuery($formParams);
+            }
+        }
+
+        // this endpoint requires Bearer authentication (access token)
+        if (!empty($this->config->getAccessToken())) {
+            $headers['Authorization'] = 'Bearer ' . $this->config->getAccessToken();
+        }
+
+        $defaultHeaders = [];
+        if ($this->config->getUserAgent()) {
+            $defaultHeaders['User-Agent'] = $this->config->getUserAgent();
+        }
+
+        $headers = array_merge(
+            $defaultHeaders,
+            $headerParams,
+            $headers
+        );
+
+        $operationHost = $this->config->getHost();
+        $query = ObjectSerializer::buildQuery($queryParams);
+        return new Request(
+            'POST',
             $operationHost . $resourcePath . ($query ? "?{$query}" : ''),
             $headers,
             $httpBody
@@ -9018,6 +9295,277 @@ class AgdbApi
         $query = ObjectSerializer::buildQuery($queryParams);
         return new Request(
             'GET',
+            $operationHost . $resourcePath . ($query ? "?{$query}" : ''),
+            $headers,
+            $httpBody
+        );
+    }
+
+    /**
+     * Operation dbAuditTrim
+     *
+     * @param  string $owner user name (required)
+     * @param  string $db db name (required)
+     * @param  int $keep_days Number of UTC days to keep before today, the audit of the older days is removed. (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dbAuditTrim'] to see the possible values for this operation
+     *
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \InvalidArgumentException
+     * @return void
+     */
+    public function dbAuditTrim($owner, $db, $keep_days, string $contentType = self::contentTypes['dbAuditTrim'][0])
+    {
+        $this->dbAuditTrimWithHttpInfo($owner, $db, $keep_days, $contentType);
+    }
+
+    /**
+     * Operation dbAuditTrimWithHttpInfo
+     *
+     * @param  string $owner user name (required)
+     * @param  string $db db name (required)
+     * @param  int $keep_days Number of UTC days to keep before today, the audit of the older days is removed. (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dbAuditTrim'] to see the possible values for this operation
+     *
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \InvalidArgumentException
+     * @return array of null, HTTP status code, HTTP response headers (array of strings)
+     */
+    public function dbAuditTrimWithHttpInfo($owner, $db, $keep_days, string $contentType = self::contentTypes['dbAuditTrim'][0])
+    {
+        $request = $this->dbAuditTrimRequest($owner, $db, $keep_days, $contentType);
+
+        try {
+            $options = $this->createHttpClientOption();
+            try {
+                $response = $this->client->send($request, $options);
+            } catch (RequestException $e) {
+                $eResponse = $this->getExceptionResponse($e);
+                throw new ApiException(
+                    "[{$e->getCode()}] {$e->getMessage()}",
+                    (int) $e->getCode(),
+                    $eResponse ? $eResponse->getHeaders() : null,
+                    $eResponse ? (string) $eResponse->getBody() : null
+                );
+            } catch (NetworkExceptionInterface $e) {
+                throw new ApiException(
+                    "[{$e->getCode()}] {$e->getMessage()}",
+                    (int) $e->getCode(),
+                    null,
+                    null
+                );
+            }
+
+            $statusCode = $response->getStatusCode();
+
+
+            return [null, $statusCode, $response->getHeaders()];
+        } catch (ApiException $e) {
+            switch ($e->getCode()) {
+            }
+        
+
+            throw $e;
+        }
+    }
+
+    /**
+     * Operation dbAuditTrimAsync
+     *
+     * @param  string $owner user name (required)
+     * @param  string $db db name (required)
+     * @param  int $keep_days Number of UTC days to keep before today, the audit of the older days is removed. (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dbAuditTrim'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Promise\PromiseInterface
+     */
+    public function dbAuditTrimAsync($owner, $db, $keep_days, string $contentType = self::contentTypes['dbAuditTrim'][0])
+    {
+        return $this->dbAuditTrimAsyncWithHttpInfo($owner, $db, $keep_days, $contentType)
+            ->then(
+                function ($response) {
+                    return $response[0];
+                }
+            );
+    }
+
+    /**
+     * Operation dbAuditTrimAsyncWithHttpInfo
+     *
+     * @param  string $owner user name (required)
+     * @param  string $db db name (required)
+     * @param  int $keep_days Number of UTC days to keep before today, the audit of the older days is removed. (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dbAuditTrim'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Promise\PromiseInterface
+     */
+    public function dbAuditTrimAsyncWithHttpInfo($owner, $db, $keep_days, string $contentType = self::contentTypes['dbAuditTrim'][0])
+    {
+        $returnType = '';
+        $request = $this->dbAuditTrimRequest($owner, $db, $keep_days, $contentType);
+
+        return $this->client
+            ->sendAsync($request, $this->createHttpClientOption())
+            ->then(
+                function ($response) use ($returnType) {
+                    return [null, $response->getStatusCode(), $response->getHeaders()];
+                },
+                function ($exception) {
+                    $response = $this->getExceptionResponse($exception);
+                    if ($response === null) {
+                        throw new ApiException(
+                            "[{$exception->getCode()}] {$exception->getMessage()}",
+                            (int) $exception->getCode(),
+                            null,
+                            null
+                        );
+                    }
+                    $statusCode = $response->getStatusCode();
+                    throw new ApiException(
+                        sprintf(
+                            '[%d] Error connecting to the API (%s)',
+                            $statusCode,
+                            $exception->getRequest()->getUri()
+                        ),
+                        $statusCode,
+                        $response->getHeaders(),
+                        (string) $response->getBody()
+                    );
+                }
+            );
+    }
+
+    /**
+     * Create request for operation 'dbAuditTrim'
+     *
+     * @param  string $owner user name (required)
+     * @param  string $db db name (required)
+     * @param  int $keep_days Number of UTC days to keep before today, the audit of the older days is removed. (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dbAuditTrim'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Psr7\Request
+     */
+    public function dbAuditTrimRequest($owner, $db, $keep_days, string $contentType = self::contentTypes['dbAuditTrim'][0])
+    {
+
+        // verify the required parameter 'owner' is set
+        if ($owner === null || (is_array($owner) && count($owner) === 0)) {
+            throw new \InvalidArgumentException(
+                'Missing the required parameter $owner when calling dbAuditTrim'
+            );
+        }
+
+        // verify the required parameter 'db' is set
+        if ($db === null || (is_array($db) && count($db) === 0)) {
+            throw new \InvalidArgumentException(
+                'Missing the required parameter $db when calling dbAuditTrim'
+            );
+        }
+
+        // verify the required parameter 'keep_days' is set
+        if ($keep_days === null || (is_array($keep_days) && count($keep_days) === 0)) {
+            throw new \InvalidArgumentException(
+                'Missing the required parameter $keep_days when calling dbAuditTrim'
+            );
+        }
+        if ($keep_days < 0) {
+            throw new \InvalidArgumentException('invalid value for "$keep_days" when calling AgdbApi.dbAuditTrim, must be bigger than or equal to 0.');
+        }
+        
+
+        $resourcePath = '/api/v1/db/{owner}/{db}/audit/trim';
+        $formParams = [];
+        $queryParams = [];
+        $headerParams = [];
+        $httpBody = '';
+        $multipart = false;
+
+        // query params
+        $queryParams = array_merge($queryParams, ObjectSerializer::toQueryValue(
+            $keep_days,
+            'keep_days', // param base name
+            'integer', // openApiType
+            'form', // style
+            true, // explode
+            true // required
+        ) ?? []);
+
+
+        // path params
+        if ($owner !== null) {
+            $resourcePath = str_replace(
+                '{owner}',
+                ObjectSerializer::toPathValue($owner),
+                $resourcePath
+            );
+        }
+        // path params
+        if ($db !== null) {
+            $resourcePath = str_replace(
+                '{db}',
+                ObjectSerializer::toPathValue($db),
+                $resourcePath
+            );
+        }
+
+
+        $headers = $this->headerSelector->selectHeaders(
+            [],
+            $contentType,
+            $multipart
+        );
+
+        // for model (json/xml)
+        if (count($formParams) > 0) {
+            if ($multipart) {
+                $multipartContents = [];
+                foreach ($formParams as $formParamName => $formParamValue) {
+                    $formParamValueItems = is_array($formParamValue) ? $formParamValue : [$formParamValue];
+                    foreach ($formParamValueItems as $formParamValueItem) {
+                        $multipartContents[] = [
+                            'name' => $formParamName,
+                            'contents' => $formParamValueItem
+                        ];
+                    }
+                }
+                // for HTTP post (form)
+                $httpBody = new MultipartStream($multipartContents);
+
+            } elseif (stripos($headers['Content-Type'], 'application/json') !== false) {
+                # if Content-Type contains "application/json", json_encode the form parameters
+                try {
+                    $httpBody = json_encode($formParams, JSON_THROW_ON_ERROR);
+                } catch (\JsonException $e) {
+                    throw new \InvalidArgumentException('json_encode error: ' . $e->getMessage(), 0, $e);
+                }
+            } else {
+                // for HTTP post (form)
+                $httpBody = ObjectSerializer::buildQuery($formParams);
+            }
+        }
+
+        // this endpoint requires Bearer authentication (access token)
+        if (!empty($this->config->getAccessToken())) {
+            $headers['Authorization'] = 'Bearer ' . $this->config->getAccessToken();
+        }
+
+        $defaultHeaders = [];
+        if ($this->config->getUserAgent()) {
+            $defaultHeaders['User-Agent'] = $this->config->getUserAgent();
+        }
+
+        $headers = array_merge(
+            $defaultHeaders,
+            $headerParams,
+            $headers
+        );
+
+        $operationHost = $this->config->getHost();
+        $query = ObjectSerializer::buildQuery($queryParams);
+        return new Request(
+            'POST',
             $operationHost . $resourcePath . ($query ? "?{$query}" : ''),
             $headers,
             $httpBody

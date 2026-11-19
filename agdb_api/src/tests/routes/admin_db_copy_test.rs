@@ -1,8 +1,8 @@
 use crate::DbKind;
 use crate::test_server::ADMIN;
 use crate::test_server::TestServer;
+use crate::test_server::audit_dir;
 use crate::test_server::audit_entries;
-use crate::test_server::audit_file;
 use crate::test_server::next_db_name;
 use crate::test_server::next_user_name;
 use crate::test_server::test_error::TestError;
@@ -65,7 +65,7 @@ pub async fn copy_to_different_user() -> Result<(), TestError> {
     let status = server.api.admin_db_copy(owner, db, owner2, db2).await?;
     assert_eq!(status, 201);
     assert!(Path::new(&server.data_dir).join(owner2).join(db2).exists());
-    let copied_audit = audit_file(&server.data_dir, owner2, db2);
+    let copied_audit = audit_dir(&server.data_dir, owner2, db2);
     assert!(Path::new(&copied_audit).exists());
     assert_eq!(audit_entries(&copied_audit)?, 1);
     let queries = &[QueryBuilder::select().ids("root").query().into()];

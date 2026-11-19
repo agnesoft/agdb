@@ -150,6 +150,8 @@ pub use db::db_id::DbId;
 pub use db::db_key_order::DbKeyOrder;
 pub use db::db_key_order::DbKeyOrders;
 pub use db::db_key_value::DbKeyValue;
+#[doc(hidden)]
+pub use db::db_type::DbFields;
 pub use db::db_type::DbType;
 pub use db::db_type::DbTypeMarker;
 pub use db::db_value::DbValue;

@@ -3,6 +3,7 @@ use crate::BitwiseOp;
 use crate::DbError;
 use crate::DbErrorType;
 use crate::DbTypeMarker;
+use crate::QueryId;
 use crate::StorageData;
 use crate::db::db_f64::DbF64;
 use crate::db::db_value_index::DbValueIndex;
@@ -760,6 +761,26 @@ impl From<bool> for DbValue {
     }
 }
 
+/// A numerical id becomes [`DbValue::I64`] and an alias
+/// [`DbValue::String`], so the value of an alias is the
+/// same as that of a string. It lets an element id be
+/// given as a value, e.g. under the `db_id` key.
+///
+/// ```
+/// use agdb::{DbId, DbValue, QueryId};
+///
+/// assert_eq!(DbValue::from(QueryId::Id(DbId(1))), DbValue::I64(1));
+/// assert_eq!(DbValue::from(QueryId::from("alias")), DbValue::from("alias"));
+/// ```
+impl From<QueryId> for DbValue {
+    fn from(id: QueryId) -> Self {
+        match id {
+            QueryId::Id(db_id) => DbValue::I64(db_id.0),
+            QueryId::Alias(alias) => DbValue::String(alias),
+        }
+    }
+}
+
 impl From<Vec<u8>> for DbValue {
     fn from(value: Vec<u8>) -> Self {
         DbValue::Bytes(value)
@@ -1482,6 +1503,11 @@ mod tests {
             DbValue::VecF64 { .. }
         ));
         assert!(matches!(DbValue::from(vec![""]), DbValue::VecString { .. }));
+        assert_eq!(DbValue::from(QueryId::Id(crate::DbId(1))), DbValue::I64(1));
+        assert_eq!(
+            DbValue::from(QueryId::from("alias")),
+            DbValue::from("alias")
+        );
     }
 
     #[test]

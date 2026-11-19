@@ -23,11 +23,24 @@ pub struct Roots {
     pub data: Vec<ItemId>,
 }
 
+impl Roots {
+    /// The builder API making the `data` types. The queries are the types
+    /// with a `From` impl into one of them, the makers the structs other
+    /// than the queries with a `pub` method returning a query or a maker,
+    /// and the root the one maker no maker returns. The traits are those of
+    /// the crate bounding the generics of the builders from the root (see
+    /// [`SourceCrate::lower`]), of their impls and of their `pub` methods.
+    pub fn of(c: &SourceCrate, data: Vec<ItemId>) -> Result<Roots, Error> {
+        Lower::new(c, &[]).roots(data)
+    }
+}
+
 impl SourceCrate {
     /// The builder API from `roots.root`. The builders are the structs the
     /// return types of the builders' `pub` methods lead to that have `pub`
-    /// methods with a receiver; the other types reached through fields, signatures and
-    /// `roots.data` are data. A type has its inherent methods (the unused
+    /// methods with a receiver; the other types reached through fields,
+    /// signatures, `roots.data` and the impls of `roots.traits` are data. A
+    /// type has its inherent methods (the unused
     /// ones of data types are left to [`Prune`](super::pass::Prune)) and
     /// the methods of its impls of `roots.traits`.
     ///
@@ -35,7 +48,7 @@ impl SourceCrate {
     /// [`Resolve`](super::pass::Resolve). A construct the lowered IR does
     /// not have is a [`K::Unsupported`] and among the [`Func::errors`].
     pub fn lower(&self, roots: &Roots) -> (Module, Vec<Error>) {
-        let mut lower = Lower::new(self, roots);
+        let mut lower = Lower::new(self, &roots.traits);
         lower.run(roots);
         (lower.m, lower.errors)
     }
@@ -45,6 +58,9 @@ struct Lower<'a> {
     c: &'a SourceCrate,
     inherent: HashMap<ItemId, Vec<ItemId>>,
     trait_impls: HashMap<ItemId, Vec<(ItemId, ItemId)>>,
+    /// The (type, impl) of the `From` impls in the order of the source.
+    from_impls: Vec<(ItemId, ItemId)>,
+    default_impls: HashMap<ItemId, ItemId>,
     items: HashMap<ItemId, Option<ir::Item>>,
     names: HashMap<String, ItemId>,
     builders: HashSet<ItemId>,
@@ -56,9 +72,11 @@ struct Lower<'a> {
 }
 
 impl<'a> Lower<'a> {
-    fn new(c: &'a SourceCrate, roots: &Roots) -> Self {
+    fn new(c: &'a SourceCrate, traits: &[ItemId]) -> Self {
         let mut inherent: HashMap<ItemId, Vec<ItemId>> = HashMap::new();
         let mut trait_impls: HashMap<ItemId, Vec<(ItemId, ItemId)>> = HashMap::new();
+        let mut from_impls = Vec::new();
+        let mut default_impls = HashMap::new();
 
         for id in c.item_ids() {
             let syn::Item::Impl(i) = c.item(id) else {
@@ -73,13 +91,18 @@ impl<'a> Lower<'a> {
 
             match &i.trait_ {
                 None => inherent.entry(ty).or_default().push(id),
-                Some((path, _)) => {
-                    if let Resolved::Item(t) = c.resolve(id.module, path, Namespace::Type)
-                        && roots.traits.contains(&t)
-                    {
+                Some((path, _)) => match c.resolve(id.module, path, Namespace::Type) {
+                    Resolved::Item(t) if traits.contains(&t) => {
                         trait_impls.entry(ty).or_default().push((t, id));
                     }
-                }
+                    Resolved::External(p) if p.ends_with(&["convert".into(), "From".into()]) => {
+                        from_impls.push((ty, id));
+                    }
+                    Resolved::External(p) if p.ends_with(&["default".into(), "Default".into()]) => {
+                        default_impls.insert(ty, id);
+                    }
+                    _ => {}
+                },
             }
         }
 
@@ -87,6 +110,8 @@ impl<'a> Lower<'a> {
             c,
             inherent,
             trait_impls,
+            from_impls,
+            default_impls,
             items: HashMap::new(),
             names: HashMap::new(),
             builders: HashSet::new(),
@@ -99,18 +124,45 @@ impl<'a> Lower<'a> {
     }
 
     fn run(&mut self, roots: &Roots) {
+        self.m.root = self.name(roots.root);
+        self.m.data = roots.data.iter().map(|d| self.name(*d)).collect();
         self.find_builders(roots.root);
 
         for t in &roots.traits {
             self.load_trait(*t);
         }
 
+        let mut implementors: Vec<ItemId> = self.trait_impls.keys().copied().collect();
+        implementors.sort();
         self.queue.push(roots.root);
+        self.queue.extend(implementors);
         self.drain();
 
         for d in &roots.data {
             self.reach(*d);
             self.drain();
+        }
+
+        for (ty, impl_) in self.from_impls.clone() {
+            if let Some(c) = self.conversion(ty, impl_) {
+                self.m.conversions.push(c);
+            }
+        }
+
+        let mut loaded: Vec<(String, ItemId)> = self
+            .names
+            .iter()
+            .filter(|(n, _)| self.m.classes.contains_key(*n) || self.m.enums.contains_key(*n))
+            .map(|(n, id)| (n.clone(), *id))
+            .collect();
+        loaded.sort();
+
+        for (name, id) in loaded {
+            if let Some(default) = self.default(id) {
+                self.m.defaults.insert(name.clone(), default);
+            }
+
+            self.skipped_defaults(&name, id);
         }
 
         let mut loaded = 0;
@@ -226,6 +278,164 @@ impl<'a> Lower<'a> {
 
     fn is_struct(&self, id: ItemId) -> bool {
         matches!(self.c.item(id), syn::Item::Struct(_))
+    }
+
+    fn roots(&mut self, data: Vec<ItemId>) -> Result<Roots, Error> {
+        let mut made: HashSet<ItemId> = HashSet::new();
+
+        for (to, impl_) in self.from_impls.clone() {
+            if data.contains(&to)
+                && let Some(source) = self.conversion_source(impl_)
+            {
+                made.insert(source);
+            }
+        }
+
+        let mut structs: Vec<ItemId> = self
+            .inherent
+            .keys()
+            .copied()
+            .filter(|id| self.is_struct(*id) && !made.contains(id))
+            .collect();
+        structs.sort();
+        let returns: HashMap<ItemId, Vec<ItemId>> =
+            structs.iter().map(|s| (*s, self.pub_returns(*s))).collect();
+        let mut makers: Vec<ItemId> = Vec::new();
+
+        while let Some(s) = structs
+            .iter()
+            .find(|s| !makers.contains(s) && returns[s].iter().any(|t| made.contains(t)))
+            .copied()
+        {
+            makers.push(s);
+            made.insert(s);
+        }
+
+        let returned: HashSet<ItemId> = makers.iter().flat_map(|b| returns[b].clone()).collect();
+        let roots: Vec<ItemId> = makers
+            .iter()
+            .copied()
+            .filter(|b| !returned.contains(b))
+            .collect();
+        let [root] = roots[..] else {
+            let mut names: Vec<String> = roots.iter().map(|r| self.name(*r)).collect();
+            names.sort();
+
+            return Err(Error::Lowering {
+                path: Default::default(),
+                line: 0,
+                item: data
+                    .iter()
+                    .map(|d| self.name(*d))
+                    .collect::<Vec<_>>()
+                    .join(", "),
+                message: format!("not one root of the makers but [{}]", names.join(", ")),
+            });
+        };
+        self.find_builders(root);
+        let mut builders: Vec<ItemId> = self.builders.iter().copied().collect();
+        builders.sort();
+        let mut traits = Vec::new();
+
+        for b in &builders {
+            for t in self.bounding_traits(*b) {
+                if !traits.contains(&t) {
+                    traits.push(t);
+                }
+            }
+        }
+
+        Ok(Roots { root, traits, data })
+    }
+
+    /// The type `S` of the `impl From<S>`, refs removed.
+    fn conversion_source(&mut self, impl_: ItemId) -> Option<ItemId> {
+        let Some(ir::Item {
+            kind: ir::ItemKind::Impl(i),
+            ..
+        }) = self.item(impl_)
+        else {
+            return None;
+        };
+        let mut ty = trait_arg(&i)?;
+
+        while let ir::Type::Ref { ty: inner, .. } | ir::Type::Paren(inner) = ty {
+            ty = *inner;
+        }
+
+        match ty {
+            ir::Type::Path(ir::Path {
+                target: Target::Resolved(Resolved::Item(id)),
+                ..
+            }) => Some(id),
+            _ => None,
+        }
+    }
+
+    /// The named types of the returns of the type's `pub` inherent methods.
+    fn pub_returns(&mut self, id: ItemId) -> Vec<ItemId> {
+        let mut out = Vec::new();
+
+        for i in self.inherent.get(&id).cloned().unwrap_or_default() {
+            for (vis, f, _) in self.impl_fns(i) {
+                if vis == ir::Vis::Public {
+                    named_types(f.sig.output.as_ref(), &mut out);
+                }
+            }
+        }
+
+        out
+    }
+
+    /// The crate's traits bounding the generics of the struct, of its
+    /// inherent impls and of their `pub` methods.
+    fn bounding_traits(&mut self, id: ItemId) -> Vec<ItemId> {
+        let mut generics = Vec::new();
+
+        if let Some(ir::Item {
+            kind: ir::ItemKind::Struct(s),
+            ..
+        }) = self.item(id)
+        {
+            generics.push(s.generics);
+        }
+
+        for i in self.inherent.get(&id).cloned().unwrap_or_default() {
+            if let Some(ir::Item {
+                kind: ir::ItemKind::Impl(imp),
+                ..
+            }) = self.item(i)
+            {
+                generics.push(imp.generics);
+            }
+
+            for (vis, f, _) in self.impl_fns(i) {
+                if vis == ir::Vis::Public {
+                    generics.push(f.sig.generics);
+                }
+            }
+        }
+
+        let mut out = Vec::new();
+
+        for g in &generics {
+            let params = g.params.iter().flat_map(|p| match p {
+                ir::GenericParam::Type { bounds, .. } => bounds.as_slice(),
+                _ => &[],
+            });
+
+            for b in params.chain(g.predicates.iter().flat_map(|p| p.bounds.iter())) {
+                if let ir::Bound::Trait(path) = b
+                    && let Target::Resolved(Resolved::Item(t)) = path.target
+                    && matches!(self.c.item(t), syn::Item::Trait(_))
+                    && !out.contains(&t)
+                {
+                    out.push(t);
+                }
+            }
+        }
+
+        out
     }
 
     /// The structs the returns of the `pub` methods of the builders lead to
@@ -424,6 +634,237 @@ impl<'a> Lower<'a> {
         self.m.traits.insert(name, fns);
     }
 
+    /// The `From` impl into a type of the module. Left out are the impls
+    /// from a type the module does not have and the ones with a generic
+    /// bounded by a trait of the crate the module does not load.
+    fn conversion(&mut self, ty: ItemId, impl_: ItemId) -> Option<Conversion> {
+        let to = self.name(ty);
+
+        if !self.m.classes.contains_key(&to) && !self.m.enums.contains_key(&to) {
+            return None;
+        }
+
+        let Some(ir::Item {
+            kind: ir::ItemKind::Impl(i),
+            ..
+        }) = self.item(impl_)
+        else {
+            return None;
+        };
+        let bounds = i
+            .generics
+            .params
+            .iter()
+            .flat_map(|p| match p {
+                ir::GenericParam::Type { bounds, .. } => bounds.as_slice(),
+                _ => &[],
+            })
+            .chain(i.generics.predicates.iter().flat_map(|p| p.bounds.iter()));
+
+        for b in bounds {
+            if let ir::Bound::Trait(path) = b
+                && let Target::Resolved(Resolved::Item(t)) = path.target
+                && !self.m.traits.contains_key(&self.name(t))
+            {
+                return None;
+            }
+        }
+
+        let source = trait_arg(&i)?;
+        let from = self.ty(&source, false);
+
+        if !self.representable(&from) {
+            return None;
+        }
+
+        let generics = self.generics(&i.generics, false);
+        let (_, f, at) = self
+            .impl_fns(impl_)
+            .into_iter()
+            .find(|(_, f, _)| f.sig.name == "from")?;
+        let param = f.sig.params.first()?.name.clone();
+        let mut body = self.block(&f.body);
+        let mut body = match body.len() {
+            1 => body.pop().expect("one statement"),
+            _ => Expr::new(self.unsupported("a conversion of more than one statement")),
+        };
+        if param != "v" && binds(&body, &param) {
+            body = Expr::new(self.unsupported("a binding shadowing the parameter"));
+        } else if param != "v" {
+            rename_bindings(&mut body, "v");
+            body.rewrite(&mut |e| {
+                if matches!(&e.k, K::Local(n) if *n == param) {
+                    e.k = K::Local("v".into());
+                }
+            });
+        }
+
+        Some(Conversion {
+            to,
+            from,
+            generics,
+            body,
+            at: Some(at),
+            errors: std::mem::take(&mut self.fn_errors),
+        })
+    }
+
+    /// The `Default` value of the type: the body of its `impl Default`, the
+    /// fields of a struct deriving it with their defaults or the
+    /// `#[default]` variant of an enum deriving it.
+    fn default(&mut self, id: ItemId) -> Option<Expr> {
+        if let Some(impl_) = self.default_impls.get(&id).copied() {
+            let (_, f, _) = self
+                .impl_fns(impl_)
+                .into_iter()
+                .find(|(_, f, _)| f.sig.name == "default")?;
+            let mut body = self.block(&f.body);
+            self.fn_errors.clear();
+
+            return (body.len() == 1).then(|| body.pop().expect("one statement"));
+        }
+
+        let item = self.item(id)?;
+
+        if !item.attrs.iter().any(|a| derives(a, "Default")) {
+            return None;
+        }
+
+        let name = self.name(id);
+        let default = || {
+            Expr::new(K::Call {
+                callee: Callee::Path(vec!["Default".into(), "default".into()], Vec::new()),
+                recv: None,
+                args: Vec::new(),
+            })
+        };
+
+        match item.kind {
+            ir::ItemKind::Struct(s) => {
+                let fields = match &s.fields {
+                    ir::Fields::Named(fields) | ir::Fields::Unnamed(fields) => fields
+                        .iter()
+                        .enumerate()
+                        .map(|(i, f)| (f.name.clone().unwrap_or_else(|| i.to_string()), default()))
+                        .collect(),
+                    ir::Fields::Unit => Vec::new(),
+                };
+
+                Some(Expr::new(K::Construct {
+                    class: name,
+                    fields,
+                }))
+            }
+            ir::ItemKind::Enum(e) => e
+                .variants
+                .iter()
+                .find(|v| {
+                    v.attrs
+                        .iter()
+                        .any(|a| matches!(a, ir::Attr::Meta(m) if m == "default"))
+                })
+                .map(|v| Expr::new(K::Path(vec![name, v.name.clone()]))),
+            _ => None,
+        }
+    }
+
+    /// The fields of the struct serde leaves out of the serialized value
+    /// (`skip_serializing_if`) with the value its predicate holds for.
+    fn skipped_defaults(&mut self, class: &str, id: ItemId) {
+        let Some(ir::Item {
+            kind: ir::ItemKind::Struct(s),
+            ..
+        }) = self.item(id)
+        else {
+            return;
+        };
+        let ir::Fields::Named(fields) = &s.fields else {
+            return;
+        };
+
+        for f in fields {
+            let Some(predicate) = f.attrs.iter().find_map(skip_serializing_if) else {
+                continue;
+            };
+            let name = f.name.clone().unwrap_or_default();
+
+            match self.skipped_value(id, &predicate) {
+                Some(value) => self
+                    .m
+                    .skipped_defaults
+                    .push((class.to_owned(), name, value)),
+                None => self.error(
+                    id,
+                    format!("unsupported `skip_serializing_if = \"{predicate}\"` of `{name}`"),
+                ),
+            }
+        }
+    }
+
+    /// The value the predicate holds for: the pattern of a method that is
+    /// a `matches!(self, ..)` of a unit variant, `None` for
+    /// `Option::is_none` and an empty list for `Vec::is_empty`.
+    fn skipped_value(&mut self, id: ItemId, predicate: &str) -> Option<Expr> {
+        let path = syn::parse_str::<syn::Path>(predicate).ok()?;
+
+        match self.c.resolve(id.module, &path, Namespace::Value) {
+            Resolved::External(p) => match p.as_slice() {
+                [.., ty, f] if ty == "Option" && f == "is_none" => {
+                    Some(Expr::variant("Option", "None", None))
+                }
+                [.., ty, f] if ty == "Vec" && f == "is_empty" => {
+                    Some(Expr::new(K::Array(Vec::new())))
+                }
+                _ => None,
+            },
+            Resolved::Associated(base, name) => match *base {
+                Resolved::Item(ty) => {
+                    let impls = self.inherent.get(&ty).cloned().unwrap_or_default();
+                    let f = impls
+                        .into_iter()
+                        .flat_map(|i| self.impl_fns(i))
+                        .find(|(_, f, _)| f.sig.name == name)?
+                        .1;
+                    let [ir::Stmt::Expr { expr, .. }] = f.body.stmts.as_slice() else {
+                        return None;
+                    };
+                    let ir::Expr::Macro(m) = expr else {
+                        return None;
+                    };
+                    let ir::MacroCall::Matches {
+                        pat, guard: None, ..
+                    } = &m.call
+                    else {
+                        return None;
+                    };
+
+                    match self.pat(pat) {
+                        Pat::Variant { en, var, inner } if inner.is_empty() => {
+                            Some(Expr::variant(&en, &var, None))
+                        }
+                        _ => None,
+                    }
+                }
+                _ => None,
+            },
+            _ => None,
+        }
+    }
+
+    /// Whether the type has only types the module has.
+    fn representable(&self, ty: &Ty) -> bool {
+        match ty {
+            Ty::Unknown => false,
+            Ty::Named(n, args) => {
+                (self.m.classes.contains_key(n) || self.m.enums.contains_key(n))
+                    && args.iter().all(|a| self.representable(a))
+            }
+            Ty::List(t) | Ty::Option(t) | Ty::Ref(t) => self.representable(t),
+            Ty::Tuple(items) => items.iter().all(|t| self.representable(t)),
+            _ => true,
+        }
+    }
+
     fn load_const(&mut self, id: ItemId) {
         let Some(ir::Item {
             kind: ir::ItemKind::Const(c),
@@ -617,6 +1058,32 @@ impl<'a> Lower<'a> {
 
     // --- bodies ----------------------------------------------------------
 
+    /// An `if`, with the conditions of a let chain as nested ones that each
+    /// have the `else`.
+    fn condition(&mut self, cond: &ir::Expr, then: Vec<Expr>, els: Option<Vec<Expr>>) -> K {
+        match cond {
+            ir::Expr::Binary {
+                left,
+                op: ir::BinOp::And,
+                right,
+            } if has_let(cond) => {
+                let inner = Expr::new(self.condition(right, then, els.clone()));
+                self.condition(left, vec![inner], els)
+            }
+            ir::Expr::Let { pat, expr } => K::IfLet {
+                pat: self.pat(pat),
+                value: self.expr(expr).boxed(),
+                then,
+                els,
+            },
+            cond => K::If {
+                cond: self.expr(cond).boxed(),
+                then,
+                els,
+            },
+        }
+    }
+
     fn unsupported(&mut self, construct: &str) -> K {
         self.fn_errors.push(format!("unsupported {construct}"));
         K::Unsupported(construct.to_owned())
@@ -632,10 +1099,17 @@ impl<'a> Lower<'a> {
                 diverge: Some(_), ..
             } => Expr::new(self.unsupported("`let`-`else`")),
             ir::Stmt::Let { pat, init, .. } => match binding(pat) {
-                Some(name) => Expr::new(K::Let {
-                    name,
-                    value: init.as_ref().map(|v| self.expr(v).boxed()),
-                }),
+                Some(name) => {
+                    let ty = match pat {
+                        ir::Pat::Type { ty, .. } => self.ty(ty, false),
+                        _ => Ty::Unknown,
+                    };
+                    let value = init.as_ref().map(|v| Expr { ty, ..self.expr(v) });
+                    Expr::new(K::Let {
+                        name,
+                        value: value.map(Expr::boxed),
+                    })
+                }
                 None => Expr::new(self.unsupported("a destructuring `let`")),
             },
             ir::Stmt::Item(_) => Expr::new(self.unsupported("an item in a body")),
@@ -719,20 +1193,7 @@ impl<'a> Lower<'a> {
             } => {
                 let then = self.block(then_branch);
                 let els = else_branch.as_ref().map(|e| self.stmts(e));
-
-                match &**cond {
-                    ir::Expr::Let { pat, expr } => K::IfLet {
-                        pat: self.pat(pat),
-                        value: self.expr(expr).boxed(),
-                        then,
-                        els,
-                    },
-                    cond => K::If {
-                        cond: self.expr(cond).boxed(),
-                        then,
-                        els,
-                    },
-                }
+                self.condition(cond, then, els)
             }
             ir::Expr::Index { expr, index } => K::Index {
                 base: self.expr(expr).boxed(),
@@ -799,7 +1260,10 @@ impl<'a> Lower<'a> {
             ir::Expr::Async { .. } => self.unsupported("`async`"),
             ir::Expr::Await(_) => self.unsupported("`.await`"),
             ir::Expr::Break => self.unsupported("`break`"),
-            ir::Expr::Cast { .. } => self.unsupported("`as`"),
+            ir::Expr::Cast { expr, ty } => {
+                let value = self.expr(expr).boxed();
+                return Expr::typed(K::Cast(value), self.ty(ty, false));
+            }
             ir::Expr::Const(_) => self.unsupported("a `const` block"),
             ir::Expr::Continue => self.unsupported("`continue`"),
             ir::Expr::ForLoop { .. } => self.unsupported("`for`"),
@@ -965,6 +1429,131 @@ impl<'a> Lower<'a> {
     }
 }
 
+/// Whether the attribute derives the trait.
+fn derives(attr: &ir::Attr, trait_: &str) -> bool {
+    let ir::Attr::Meta(text) = attr else {
+        return false;
+    };
+    let Ok(syn::Meta::List(list)) = syn::parse_str::<syn::Meta>(text) else {
+        return false;
+    };
+
+    list.path.is_ident("derive")
+        && list
+            .parse_args_with(
+                syn::punctuated::Punctuated::<syn::Path, syn::Token![,]>::parse_terminated,
+            )
+            .is_ok_and(|paths| {
+                paths
+                    .iter()
+                    .any(|p| p.segments.last().is_some_and(|s| s.ident == trait_))
+            })
+}
+
+/// The first type argument of the trait of an impl, `S` of `From<S>`.
+fn trait_arg(i: &ir::Impl) -> Option<ir::Type> {
+    let Some(ir::Segment {
+        args: ir::Args::Angle(args),
+        ..
+    }) = i.trait_.as_ref().and_then(|t| t.segments.last())
+    else {
+        return None;
+    };
+
+    args.iter().find_map(|a| match a {
+        ir::GenericArg::Type(t) => Some(t.clone()),
+        _ => None,
+    })
+}
+
+/// The predicate of a `#[serde(skip_serializing_if = "..")]`.
+fn skip_serializing_if(attr: &ir::Attr) -> Option<String> {
+    let ir::Attr::Meta(text) = attr else {
+        return None;
+    };
+    let Ok(syn::Meta::List(list)) = syn::parse_str::<syn::Meta>(text) else {
+        return None;
+    };
+
+    if !list.path.is_ident("serde") {
+        return None;
+    }
+
+    let mut predicate = None;
+    list.parse_nested_meta(|meta| {
+        if meta.path.is_ident("skip_serializing_if") {
+            predicate = Some(meta.value()?.parse::<syn::LitStr>()?.value());
+        } else if let Ok(value) = meta.value() {
+            value.parse::<syn::Expr>()?;
+        }
+
+        Ok(())
+    })
+    .ok()?;
+
+    predicate
+}
+
+/// The closure parameters, `let`s and pattern bindings named `name` renamed
+/// to a name the expression does not use, so that `name` refers to one value
+/// only.
+fn rename_bindings(e: &mut Expr, name: &str) {
+    let mut fresh = "x".to_owned();
+    let mut n = 0;
+
+    while e.any(&|x| matches!(&x.k, K::Local(l) if *l == fresh)) {
+        fresh = format!("x{n}");
+        n += 1;
+    }
+
+    if !binds(e, name) {
+        return;
+    }
+
+    e.rewrite(&mut |x| match &mut x.k {
+        K::Closure { params, .. } => params
+            .iter_mut()
+            .filter(|p| *p == name)
+            .for_each(|p| *p = fresh.clone()),
+        K::Let { name: l, .. } if l == name => *l = fresh.clone(),
+        K::Match { arms, .. } => arms
+            .iter_mut()
+            .for_each(|(p, _)| rename_pat(p, name, &fresh)),
+        K::IfLet { pat, .. } => rename_pat(pat, name, &fresh),
+        K::Local(l) if l == name => *l = fresh.clone(),
+        _ => {}
+    });
+}
+
+/// Whether a closure, `let` or pattern of `e` binds `name`.
+fn binds(e: &Expr, name: &str) -> bool {
+    e.any(&|x| match &x.k {
+        K::Closure { params, .. } => params.iter().any(|p| p == name),
+        K::Let { name: l, .. } => l == name,
+        K::Match { arms, .. } => arms.iter().any(|(p, _)| pat_binds(p, name)),
+        K::IfLet { pat, .. } => pat_binds(pat, name),
+        _ => false,
+    })
+}
+
+fn pat_binds(p: &Pat, name: &str) -> bool {
+    match p {
+        Pat::Bind(b) => b == name,
+        Pat::Variant { inner, .. } => inner.iter().any(|p| pat_binds(p, name)),
+        Pat::Struct { fields, .. } => fields.iter().any(|(_, p)| pat_binds(p, name)),
+        Pat::Wild | Pat::Lit(_) => false,
+    }
+}
+
+fn rename_pat(p: &mut Pat, name: &str, to: &str) {
+    match p {
+        Pat::Bind(b) if b == name => *b = to.to_owned(),
+        Pat::Variant { inner, .. } => inner.iter_mut().for_each(|p| rename_pat(p, name, to)),
+        Pat::Struct { fields, .. } => fields.iter_mut().for_each(|(_, p)| rename_pat(p, name, to)),
+        _ => {}
+    }
+}
+
 /// The name of the variant of the enum, empty for another item.
 fn variant_name(item: &syn::Item, index: usize) -> String {
     match item {
@@ -1086,6 +1675,19 @@ fn assigned(op: ir::BinOp) -> Option<ir::BinOp> {
     })
 }
 
+/// Whether the condition is a let chain.
+fn has_let(cond: &ir::Expr) -> bool {
+    match cond {
+        ir::Expr::Let { .. } => true,
+        ir::Expr::Binary {
+            left,
+            op: ir::BinOp::And,
+            right,
+        } => has_let(left) || has_let(right),
+        _ => false,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1142,6 +1744,88 @@ mod tests {
         m.method(class, name).unwrap()
     }
 
+    mod roots {
+        use super::*;
+
+        mod of {
+            use super::*;
+
+            fn names(c: &SourceCrate, ids: &[ItemId]) -> Vec<String> {
+                ids.iter().map(|id| Lower::new(c, &[]).name(*id)).collect()
+            }
+
+            #[test]
+            fn of_should_be_the_root_making_the_data_types_and_the_traits_bounding_the_builders() {
+                let c = load(
+                    r#"pub enum Wire { A(Qa), B(Qb) }
+pub struct Qa;
+pub struct Qb;
+impl From<Qa> for Wire { fn from(value: Qa) -> Self { Wire::A(value) } }
+impl From<&Qb> for Wire { fn from(value: &Qb) -> Self { Wire::B(Qb) } }
+impl From for Wire { fn from(value: Qb) -> Self { Wire::B(Qb) } }
+impl From<'static> for Wire { fn from(value: Qb) -> Self { Wire::B(Qb) } }
+impl From<Other> for Wire { const X: u8 = 1; fn from(value: Other) -> Self { Wire::B(Qb) } }
+impl From<Vec<u8>> for Wire { fn from(value: Vec<u8>) -> Self { Wire::B(Qb) } }
+impl From<u8> for Other { fn from(value: u8) -> Self { Other } }
+pub struct Other;
+pub trait Tr {}
+pub trait Unused {}
+pub struct Root;
+impl Root {
+    pub fn a<'a>(&self, x: &'a u8) -> A { A }
+    pub fn g<T: Tr>(&self, t: T) -> G<T> { G(t) }
+    pub fn b(&self) -> B { B(0) }
+    fn hidden(&self) -> Other { Other }
+}
+pub struct B(m!());
+impl B { pub fn q(&self) -> Qa { Qa } }
+impl B { m!(); }
+pub struct A;
+impl A { pub fn q(&self) -> Qa { Qa } }
+pub struct G<T: Tr>(T);
+impl<T: Tr> G<T> where T: Clone { pub fn q(self) -> T { self.0 } }
+impl Qa { pub fn new() -> Qa { Qa } }
+pub struct Data;
+impl Data { pub fn x(&self) -> u8 { 0 } }
+"#,
+                );
+
+                let roots = Roots::of(&c, vec![id(&c, "Wire")]).unwrap();
+
+                assert_eq!(names(&c, &[roots.root]), ["Root"]);
+                assert_eq!(names(&c, &roots.traits), ["Tr"]);
+                assert_eq!(names(&c, &roots.data), ["Wire"]);
+            }
+
+            #[test]
+            fn of_should_fail_without_one_root() {
+                let c = load(
+                    r#"pub enum Wire { A(Qa) }
+pub struct Qa;
+impl From<Qa> for Wire { fn from(value: Qa) -> Self { Wire::A(value) } }
+pub struct R1;
+impl R1 { pub fn q(&self) -> Qa { Qa } }
+pub struct R2;
+impl R2 { pub fn q(&self) -> Qa { Qa } }
+pub struct Plain;
+"#,
+                );
+
+                let two = Roots::of(&c, vec![id(&c, "Wire")]).err().unwrap();
+                let none = Roots::of(&c, vec![id(&c, "Plain")]).err().unwrap();
+
+                assert_eq!(
+                    two.to_string(),
+                    "`Wire`: not one root of the makers but [R1, R2]"
+                );
+                assert_eq!(
+                    none.to_string(),
+                    "`Plain`: not one root of the makers but []"
+                );
+            }
+        }
+    }
+
     mod source_crate {
         use super::*;
 
@@ -1186,6 +1870,155 @@ pub struct Extra { pub a: u8 }
                 assert_eq!(
                     dump(&m),
                     "// ===== after lower\n// Root\nfn select() -> Select {\n    Select(Query { ids: Ids::All, kind: Kind::A })/*unresolved*/;\n}\n\n// Root\nfn hidden() -> Hidden {\n    Hidden;\n}\n\n// Select\nfn ids(self, ids: Ids) -> SelectIds {\n    SelectIds(self.0)/*unresolved*/;\n}\n\n// Select\nfn indexes(self) -> Indexes {\n    Indexes;\n}\n\n// Indexes\nfn query(&self) -> Option<Query> {\n    None;\n}\n\n// Indexes\nfn a(&self) -> ? {\n    todo()/*unresolved*/;\n}\n\n// Indexes\nfn b(&self) -> (&Query, Vec<Kind>, ?) {\n    todo()/*unresolved*/;\n}\n\n// SelectIds\nfn query(&self) -> Query {\n    self.0.clone()/*unresolved*/;\n}\n\nclass Extra<> { a: u8 }\nclass Hidden<> {  }\n  x\nclass Indexes<> {  }\n  query\n  a\n  b\nclass Query<> { ids: Ids, kind: Kind }\n  priv helper\nclass Root<> {  }\n  select\n  priv hidden\nclass Select<> { 0: Query }\n  ids\n  indexes\nclass SelectIds<> { 0: Query }\n  query\nenum Ids [Unit(\"All\"), Tuple(\"Some\", List(Int(\"u64\")))] []\nenum Kind [Unit(\"A\")] []\n"
+                );
+            }
+
+            #[test]
+            fn lower_should_load_the_conversions_defaults_and_skipped_defaults() {
+                let (m, errors) = lower(
+                    r#"pub struct Root {
+    pub v: V, pub d: D, pub ats: Attrs, pub t: T, pub u: U, pub n: NoDefault, pub s: S, pub ms: Ms, pub nf: Nf,
+    pub un: Unnamed, pub nd: NotDefault, pub odd: Odd, pub gen: Gen<u8>,
+    #[serde(skip_serializing_if = "E::is_none")] pub a: E,
+    #[serde(skip_serializing_if = "Option::is_none")] pub o: Option<u8>,
+    #[serde(skip_serializing_if = "Vec::is_empty")] pub l: Vec<u8>,
+    #[serde(skip_serializing_if = "Root::other")] pub b: u8,
+    #[serde(skip_serializing_if = "Root::two")] pub c: u8,
+    #[serde(skip_serializing_if = "Root::guarded")] pub g: E,
+    #[serde(skip_serializing_if = "E::payload")] pub p: E,
+    #[serde(skip_serializing_if = "E::missing")] pub mi: E,
+    #[serde(skip_serializing_if = "String::is_empty")] pub st: String,
+    #[serde(skip_serializing_if = "is_zero")] pub z: u8,
+    #[serde(skip_serializing_if = "1 +")] pub bad: u8,
+    #[serde(rename = "x")] pub r: u8,
+    #[serde(skip_serializing_if = "u8::is_power_of_two")] pub pw: u8,
+    /// A doc.
+    #[deprecated] #[allow(unused)] #[serde(default)] pub at: u8,
+    #[serde(skip_serializing_if = 1)] pub lit: u8,
+}
+impl Clone for Root { fn clone(&self) -> Self { Root::default() } }
+/// A doc.
+#[must_use]
+pub struct Attrs;
+pub struct Unnamed(#[serde(skip_serializing_if = "Option::is_none")] pub Option<u8>);
+#[derive(Default)] pub struct D { pub a: u8, pub b: Option<u8> }
+#[derive(Default)] pub struct T(u8, u8);
+#[derive(Default)] pub struct U;
+#[derive(Clone, Default)] pub enum E { #[default] A, B(u8) }
+#[derive(Default)] pub enum NoDefault { A }
+#[derive(Clone)] pub struct NotDefault;
+pub struct S;
+impl Default for S { fn default() -> Self { S } }
+pub struct Ms;
+impl Default for Ms { fn default() -> Self { let x = 1; Ms } }
+pub struct Nf;
+impl Default for Nf { }
+pub struct V(u64);
+impl From<u64> for V { fn from(value: u64) -> Self { V(value) } }
+impl From<u8> for V { fn from(v: u8) -> Self { V(v.into()) } }
+impl<'a> From<&'a str> for V { fn from(s: &'a str) -> Self { let v = 1; V(v) } }
+impl From<(u64, u8)> for V { fn from(value: (u64, u8)) -> Self { V(value.0) } }
+impl From<Vec<u8>> for V { fn from(value: Vec<u8>) -> Self { V(value.iter().map(|v| { let x = *v; let v = x; v }).sum()) } }
+impl From for V { fn from(value: u8) -> Self { V(1) } }
+impl From<'static> for V { fn from(value: u8) -> Self { V(1) } }
+impl From<i8> for V { const X: u8 = 1; fn from(value: i8) -> Self { V(1) } }
+impl From<Vec<u64>> for V { fn from(value: Vec<u64>) -> Self { V(value.iter().map(|v| *v).sum()) } }
+impl From<Unknown> for V { fn from(value: Unknown) -> Self { V(1) } }
+impl From<V> for Unloaded { fn from(value: V) -> Self { Unloaded } }
+impl<X: NotLoaded> From<X> for V { fn from(value: X) -> Self { V(1) } }
+impl<X: Into<u64>> From<Vec<X>> for D where X: Clone { fn from(value: Vec<X>) -> Self { D::default() } }
+impl From<u32> for V { }
+pub struct Unloaded;
+pub trait NotLoaded {}
+impl E {
+    pub fn is_none(&self) -> bool { matches!(self, E::A) }
+    pub fn payload(&self) -> bool { matches!(self, E::B(_)) }
+}
+impl Root {
+    pub fn other(&self) -> bool { self.b == 0 }
+    pub fn two(&self) -> bool { let x = 1; true }
+    pub fn guarded(&self) -> bool { matches!(self.g, E::A if true) }
+}
+pub fn is_zero(v: &u8) -> bool { *v == 0 }
+pub struct Odd { #[serde(skip_serializing_if)] pub s: u8, #[serde(rename = )] pub r: u8 }
+pub struct Gen<T>(T);
+impl From<E> for V { fn from(value: E) -> Self { V(2) } }
+impl From<Gen<u8>> for V { fn from(value: Gen<u8>) -> Self { V(3) } }
+impl From<u16> for V { fn from() -> Self { V(0) } }
+impl From<Option<u8>> for V { fn from(value: Option<u8>) -> Self { if let Some(v) = value { V(v) } else { V(0) } } }
+impl From<Option<u16>> for V { fn from(value: Option<u16>) -> Self { match value { Some(v) => V(v), _ => V(0) } } }
+impl From<Odd> for V { fn from(o: Odd) -> Self { match o { Odd { s: v, r: 1 } => V(v) } } }
+impl From<Option<u32>> for V { fn from(x: Option<u32>) -> Self { if let Some(x) = x { V(1) } else { V(0) } } }
+"#,
+                    &[],
+                    &[],
+                );
+
+                assert_eq!(
+                    errors,
+                    [
+                        "/c/src/lib.rs:46: unsupported impl item `const X: u8 = 1;`",
+                        "/c/src/lib.rs:1: `Root`: unsupported `skip_serializing_if = \"Root::other\"` of `b`",
+                        "/c/src/lib.rs:1: `Root`: unsupported `skip_serializing_if = \"Root::two\"` of `c`",
+                        "/c/src/lib.rs:1: `Root`: unsupported `skip_serializing_if = \"Root::guarded\"` of `g`",
+                        "/c/src/lib.rs:1: `Root`: unsupported `skip_serializing_if = \"E::payload\"` of `p`",
+                        "/c/src/lib.rs:1: `Root`: unsupported `skip_serializing_if = \"E::missing\"` of `mi`",
+                        "/c/src/lib.rs:1: `Root`: unsupported `skip_serializing_if = \"String::is_empty\"` of `st`",
+                        "/c/src/lib.rs:1: `Root`: unsupported `skip_serializing_if = \"is_zero\"` of `z`",
+                        "/c/src/lib.rs:1: `Root`: unsupported `skip_serializing_if = \"1 +\"` of `bad`",
+                        "/c/src/lib.rs:1: `Root`: unsupported `skip_serializing_if = \"u8::is_power_of_two\"` of `pw`"
+                    ]
+                );
+                assert_eq!(
+                    m.conversions
+                        .iter()
+                        .map(|c| format!(
+                            "{} from {}{}: {} {:?}",
+                            c.to,
+                            print::ty(&c.from),
+                            c.generics
+                                .iter()
+                                .map(|g| format!(" {}: {}", g.name, g.bounds.len()))
+                                .collect::<String>(),
+                            print::expr(&c.body),
+                            c.errors
+                        ))
+                        .collect::<Vec<_>>(),
+                    [
+                        "V from u64: V(v)/*unresolved*/ []",
+                        "V from u8: V(v.into()/*unresolved*/)/*unresolved*/ []",
+                        "V from &str: /* unsupported: a conversion of more than one statement */ [\"unsupported a conversion of more than one statement\"]",
+                        "V from (u64, u8): V(v.0)/*unresolved*/ []",
+                        "V from Vec<u8>: V(v.iter()/*unresolved*/.map(|x0| {\n    let x: ? = *x0;\n    let x0: ? = x;\n    x0;\n})/*unresolved*/.sum()/*unresolved*/)/*unresolved*/ []",
+                        "V from Vec<u64>: V(v.iter()/*unresolved*/.map(|x| {\n    *x;\n})/*unresolved*/.sum()/*unresolved*/)/*unresolved*/ []",
+                        "D from Vec<X> X: 2: D::default()/*unresolved*/ []",
+                        "V from E: V(2)/*unresolved*/ []",
+                        "V from Gen<u8>: V(3)/*unresolved*/ []",
+                        "V from Option<u8>: if let Some(x) = v {\n    V(x)/*unresolved*/;\n} else {\n    V(0)/*unresolved*/;\n} []",
+                        "V from Option<u16>: match v {\n    Some(x) => {\n        V(x)/*unresolved*/;\n    },\n    _ => {\n        V(0)/*unresolved*/;\n    },\n} []",
+                        "V from Odd: match v {\n    Odd { s: x, r: 1 } => {\n        V(x)/*unresolved*/;\n    },\n} []",
+                        "V from Option<u32>: /* unsupported: a binding shadowing the parameter */ [\"unsupported a binding shadowing the parameter\"]"
+                    ]
+                );
+                assert_eq!(
+                    m.defaults
+                        .iter()
+                        .map(|(n, e)| format!("{n}: {}", print::expr(e)))
+                        .collect::<Vec<_>>(),
+                    [
+                        "D: D { a: Default::default()/*unresolved*/, b: Default::default()/*unresolved*/ }",
+                        "E: E::A",
+                        "S: S",
+                        "T: T(Default::default()/*unresolved*/, Default::default()/*unresolved*/)",
+                        "U: U {  }"
+                    ]
+                );
+                assert_eq!(
+                    m.skipped_defaults
+                        .iter()
+                        .map(|(c, f, e)| format!("{c}.{f}: {}", print::expr(e)))
+                        .collect::<Vec<_>>(),
+                    ["Root.a: E::A", "Root.o: Option::None", "Root.l: vec![]"]
                 );
             }
 
@@ -1387,7 +2220,6 @@ impl Root {
         a.await;
         loop { break; }
         for i in v { continue; }
-        a as u64;
         const { 1 };
         <Root>::f;
         0..1;
@@ -1400,7 +2232,7 @@ impl Root {
         let (p, q) = (1, 2);
         let Some(p) = o else { return 0 };
         fn inner() {}
-        if a > 0 && let Some(x) = o {}
+        if a > 0 || let Some(x) = o {}
         assert!(a > 0);
         matches!(o, None);
         match a { x @ 1 => 0, 1 | 2 => 0, 3..=4 => 0, _ => 0 };
@@ -1425,7 +2257,6 @@ impl Root {
                         "unsupported `.await`",
                         "unsupported `loop`",
                         "unsupported `for`",
-                        "unsupported `as`",
                         "unsupported a `const` block",
                         "unsupported a qualified path",
                         "unsupported a range",
@@ -1453,7 +2284,7 @@ impl Root {
                 );
                 assert_eq!(
                     print::func(func(&m, "Root", "f")),
-                    "fn f(self, a: u8, o: Option<u8>, v: Vec<u8>, e: E) -> u8 {\n    /* unsupported: `async` */;\n    /* unsupported: `.await` */;\n    /* unsupported: `loop` */;\n    /* unsupported: `for` */;\n    /* unsupported: `as` */;\n    /* unsupported: a `const` block */;\n    /* unsupported: a qualified path */;\n    /* unsupported: a range */;\n    /* unsupported: `[x; n]` */;\n    /* unsupported: `?` */;\n    /* unsupported: `while let` */;\n    /* unsupported: a match guard */;\n    /* unsupported: a call of an expression */;\n    /* unsupported: a closure parameter pattern */;\n    /* unsupported: a destructuring `let` */;\n    /* unsupported: `let`-`else` */;\n    /* unsupported: an item in a body */;\n    if ((a > 0) && /* unsupported: `let` in an expression */) {\n    };\n    /* unsupported: `assert!` */;\n    /* unsupported: `matches!` */;\n    match a {\n        _ => {\n            0;\n        },\n        _ => {\n            0;\n        },\n        _ => {\n            0;\n        },\n        _ => {\n            0;\n        },\n    };\n    match (a, a) {\n        _ => {\n            0;\n        },\n    };\n    /* unsupported: an integer beyond `i64` */;\n    match a {\n        _ => {\n            0;\n        },\n        _ => {\n            0;\n        },\n    };\n    /* unsupported: a struct variant */;\n    match e {\n        _ => {\n            x;\n        },\n    };\n    0;\n}"
+                    "fn f(self, a: u8, o: Option<u8>, v: Vec<u8>, e: E) -> u8 {\n    /* unsupported: `async` */;\n    /* unsupported: `.await` */;\n    /* unsupported: `loop` */;\n    /* unsupported: `for` */;\n    /* unsupported: a `const` block */;\n    /* unsupported: a qualified path */;\n    /* unsupported: a range */;\n    /* unsupported: `[x; n]` */;\n    /* unsupported: `?` */;\n    /* unsupported: `while let` */;\n    /* unsupported: a match guard */;\n    /* unsupported: a call of an expression */;\n    /* unsupported: a closure parameter pattern */;\n    /* unsupported: a destructuring `let` */;\n    /* unsupported: `let`-`else` */;\n    /* unsupported: an item in a body */;\n    if ((a > 0) || /* unsupported: `let` in an expression */) {\n    };\n    /* unsupported: `assert!` */;\n    /* unsupported: `matches!` */;\n    match a {\n        _ => {\n            0;\n        },\n        _ => {\n            0;\n        },\n        _ => {\n            0;\n        },\n        _ => {\n            0;\n        },\n    };\n    match (a, a) {\n        _ => {\n            0;\n        },\n    };\n    /* unsupported: an integer beyond `i64` */;\n    match a {\n        _ => {\n            0;\n        },\n        _ => {\n            0;\n        },\n    };\n    /* unsupported: a struct variant */;\n    match e {\n        _ => {\n            x;\n        },\n    };\n    0;\n}"
                 );
             }
 
@@ -1530,7 +2361,7 @@ pub unsafe trait Tr {}
                     traits: Vec::new(),
                     data: Vec::new(),
                 };
-                let lower = Lower::new(&c, &roots);
+                let lower = Lower::new(&c, &roots.traits);
                 let item = |index| ItemId {
                     module: c.root(),
                     index,
@@ -1540,6 +2371,20 @@ pub unsafe trait Tr {}
                     (0..5).map(|i| lower.name(item(i))).collect::<Vec<_>>(),
                     ["Root", "", "f", "U", "Al"]
                 );
+            }
+        }
+
+        mod default {
+            use super::*;
+
+            #[test]
+            fn default_should_be_none_for_a_deriving_item_other_than_a_struct_or_an_enum() {
+                let c = load("#[derive(Default)] pub type Al = u8;");
+                let mut lower = Lower::new(&c, &[]);
+
+                let default = lower.default(id(&c, "Al"));
+
+                assert_eq!(default, None);
             }
         }
     }

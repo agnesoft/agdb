@@ -1,11 +1,10 @@
-mod facts;
-
 use crate::CIError;
 use crate::roundtrip::host_cfg;
 use agplatform::Fs;
 use agplatform::Platform;
 
 use agsource::Cfg;
+use agsource::CfgSet;
 use agsource::Namespace;
 use agsource::Resolved;
 use agsource::SourceCrate;
@@ -21,46 +20,61 @@ use agsource::codegen::pass::LowerConversions;
 use agsource::codegen::pass::Passes;
 use agsource::codegen::pass::Prune;
 use agsource::codegen::pass::Resolve;
+use agsource::codegen::pass::TagResults;
 use agsource::codegen::pass::TraitDicts;
 use agsource::codegen::print;
+use agsource::codegen::ts::AcceptElementSources;
+use agsource::codegen::ts::Emitter;
+use agsource::codegen::ts::EraseCasts;
+use agsource::codegen::ts::OmitSkippedDefaults;
+use agsource::codegen::ts::RemoveDeadHelpers;
+use agsource::codegen::ts::TsConfig;
+use agsource::codegen::ts::UnescapeIdentifiers;
 use std::path::Path;
 
 /// Where `agci generate` dumps the module after each pass.
 pub(crate) const DUMP_DIR: &str = "target/agci/generate";
 
-/// The query builder of the clients from the agdb source: the lowered module of `QueryBuilder` is
-/// dumped to `dump` after loading and after each pass as `NN_<pass>.rs.txt`.
+/// The TS query builder, relative to the repository root.
+pub(crate) const TS: &str = "agdb_api/typescript/generated/query_builder.ts";
+
+/// The source crate of the clients' builder API.
+const SOURCE: &str = "agdb";
+
+/// The crate whose public API carries the types the builder API makes.
+const API: &str = "agdb_api";
+
+/// The query builder of the clients from the agdb source: the lowered module is dumped to `dump`
+/// after loading and after each pass as `NN_<pass>.rs.txt`.
 pub(crate) fn generate(platform: &impl Platform, root: &str, dump: &Path) -> Result<(), CIError> {
-    let agdb = agsource::packages(platform, &Path::new(root).join("Cargo.toml"))?
-        .into_iter()
-        .find(|p| p.name == "agdb")
-        .ok_or("generate: no package agdb")?;
-    let lib = agdb
-        .targets
+    let packages = agsource::packages(platform, &Path::new(root).join("Cargo.toml"))?;
+    let load = |name: &str, cfg: CfgSet| -> Result<SourceCrate, CIError> {
+        let lib = packages
+            .iter()
+            .find(|p| p.name == name)
+            .and_then(|p| p.targets.iter().find(|t| t.kind == TargetKind::Lib))
+            .ok_or_else(|| format!("generate: no library {name}"))?;
+        Ok(SourceCrate::load(platform, lib, &Cfg::Eval(cfg)))
+    };
+    let cfg = host_cfg(platform, false)?;
+    let c = load(SOURCE, cfg.clone().feature("serde").feature("derive"))?;
+    let (types, _) = load(API, cfg)?.external_api();
+    let data = types
         .iter()
-        .find(|t| t.kind == TargetKind::Lib)
-        .ok_or("generate: agdb has no library")?;
-    let cfg = host_cfg(platform, false)?
-        .feature("serde")
-        .feature("derive");
-    let c = SourceCrate::load(platform, lib, &Cfg::Eval(cfg));
-    let item = |path: &str| match c.resolve_str(path, Namespace::Type) {
-        Resolved::Item(id) => Ok(id),
-        _ => Err(CIError::from(format!("generate: no type {path} in agdb"))),
-    };
-    let roots = Roots {
-        root: item("QueryBuilder")?,
-        traits: vec![item("query_builder::search::SearchQueryBuilder")?],
-        data: vec![
-            item("QueryResult")?,
-            item("QueryType")?,
-            item("DbKeyValue")?,
-        ],
-    };
+        .filter(|p| p.first().is_some_and(|k| k == SOURCE))
+        .map(
+            |p| match c.resolve_str(&p[1..].join("::"), Namespace::Type) {
+                Resolved::Item(id) => Ok(id),
+                _ => Err(CIError::from(format!(
+                    "generate: no type {} in {SOURCE}",
+                    p.join("::")
+                ))),
+            },
+        )
+        .collect::<Result<Vec<_>, _>>()?;
+    let roots = Roots::of(&c, data)?;
 
     let (mut m, mut errors) = c.lower(&roots);
-    add_facts(&mut m);
-
     let fs = platform.fs();
     fs.create_dir_all(dump)?;
     let mut step = 0;
@@ -76,13 +90,17 @@ pub(crate) fn generate(platform: &impl Platform, root: &str, dump: &Path) -> Res
         .with(Prune)
         .with(ExplicitReturns)
         .with(Inline)
+        .with(AcceptElementSources)
         .with(LowerConversions)
-        .with(TraitDicts {
-            reflective: vec!["DbType".into()],
-        })
+        .with(TraitDicts)
         .with(EraseOwnership)
         .with(InferEmptyLists)
-        .with(EraseNewtypes);
+        .with(TagResults)
+        .with(EraseCasts)
+        .with(EraseNewtypes)
+        .with(UnescapeIdentifiers)
+        .with(OmitSkippedDefaults)
+        .with(RemoveDeadHelpers);
     let mut failed = None;
     errors.extend(passes.run(&mut m, &mut |title: &str, m: &Module| {
         if let Err(e) = write(title, m) {
@@ -92,6 +110,20 @@ pub(crate) fn generate(platform: &impl Platform, root: &str, dump: &Path) -> Res
 
     if let Some(e) = failed {
         return Err(e.into());
+    }
+
+    let config = ts_config();
+    let ts = Emitter::new(&m, &config).module();
+    fs.write(dump.join("ts_notes.txt"), ts.notes.join("\n") + "\n")?;
+    fs.write(Path::new(root).join(TS), ts.code)?;
+
+    if !ts.unsupported.is_empty() {
+        return Err(format!(
+            "generate: {} expressions without a TS form:\n{}",
+            ts.unsupported.len(),
+            ts.unsupported.join("\n")
+        )
+        .into());
     }
 
     if errors.is_empty() {
@@ -110,9 +142,10 @@ pub(crate) fn generate(platform: &impl Platform, root: &str, dump: &Path) -> Res
     .into())
 }
 
-fn add_facts(m: &mut Module) {
-    m.traits.insert("DbType".into(), facts::db_type_trait());
-    m.conversions = facts::conversions();
-    m.defaults.extend(facts::defaults());
-    m.skipped_defaults = facts::skipped_defaults();
+fn ts_config() -> TsConfig {
+    TsConfig {
+        header: format!("// GENERATED by `agci generate` from {SOURCE}. DO NOT EDIT."),
+        import: r#"import type { Components } from "../src/openapi.d.ts";"#.into(),
+        schemas: "Components.Schemas".into(),
+    }
 }

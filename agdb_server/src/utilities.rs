@@ -107,7 +107,7 @@ fn secs_to_datetime(secs: u64) -> (u64, u64, u64, u64, u64, u64) {
 
 // Convert days since Unix epoch (1970-01-01) to a civil date in constant time.
 // Based on Howard Hinnant's civil calendar conversion algorithm.
-fn civil_from_unix_days(days: u64) -> (u64, u64, u64) {
+pub(crate) fn civil_from_unix_days(days: u64) -> (u64, u64, u64) {
     let z = days + 719_468;
     let era = z / 146_097;
     let doe = z - era * 146_097; // [0, 146096]

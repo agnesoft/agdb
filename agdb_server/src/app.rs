@@ -80,6 +80,10 @@ pub(crate) fn app(
             routing::get(routes::admin::db::audit),
         )
         .route(
+            "/admin/db/{owner}/{db}/audit/trim",
+            routing::post(routes::admin::db::audit_trim),
+        )
+        .route(
             "/admin/db/{owner}/{db}/backup",
             routing::post(routes::admin::db::backup),
         )
@@ -142,6 +146,10 @@ pub(crate) fn app(
         .route("/db/list", routing::get(routes::db::list))
         .route("/db/{owner}/{db}/add", routing::post(routes::db::add))
         .route("/db/{owner}/{db}/audit", routing::get(routes::db::audit))
+        .route(
+            "/db/{owner}/{db}/audit/trim",
+            routing::post(routes::db::audit_trim),
+        )
         .route("/db/{owner}/{db}/backup", routing::post(routes::db::backup))
         .route("/db/{owner}/{db}/clear", routing::post(routes::db::clear))
         .route(

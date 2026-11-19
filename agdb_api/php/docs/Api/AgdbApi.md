@@ -8,6 +8,7 @@ All URIs are relative to http://localhost:3000, except if the operation defines 
 | ------------- | ------------- | ------------- |
 | [**adminDbAdd()**](AgdbApi.md#adminDbAdd) | **POST** /api/v1/admin/db/{owner}/{db}/add |  |
 | [**adminDbAudit()**](AgdbApi.md#adminDbAudit) | **GET** /api/v1/admin/db/{owner}/{db}/audit |  |
+| [**adminDbAuditTrim()**](AgdbApi.md#adminDbAuditTrim) | **POST** /api/v1/admin/db/{owner}/{db}/audit/trim |  |
 | [**adminDbBackup()**](AgdbApi.md#adminDbBackup) | **POST** /api/v1/admin/db/{owner}/{db}/backup |  |
 | [**adminDbClear()**](AgdbApi.md#adminDbClear) | **POST** /api/v1/admin/db/{owner}/{db}/clear |  |
 | [**adminDbConvert()**](AgdbApi.md#adminDbConvert) | **POST** /api/v1/admin/db/{owner}/{db}/convert |  |
@@ -39,6 +40,7 @@ All URIs are relative to http://localhost:3000, except if the operation defines 
 | [**clusterUserLogout()**](AgdbApi.md#clusterUserLogout) | **POST** /api/v1/cluster/user/logout |  |
 | [**dbAdd()**](AgdbApi.md#dbAdd) | **POST** /api/v1/db/{owner}/{db}/add |  |
 | [**dbAudit()**](AgdbApi.md#dbAudit) | **GET** /api/v1/db/{owner}/{db}/audit |  |
+| [**dbAuditTrim()**](AgdbApi.md#dbAuditTrim) | **POST** /api/v1/db/{owner}/{db}/audit/trim |  |
 | [**dbBackup()**](AgdbApi.md#dbBackup) | **POST** /api/v1/db/{owner}/{db}/backup |  |
 | [**dbClear()**](AgdbApi.md#dbClear) | **POST** /api/v1/db/{owner}/{db}/clear |  |
 | [**dbConvert()**](AgdbApi.md#dbConvert) | **POST** /api/v1/db/{owner}/{db}/convert |  |
@@ -179,6 +181,67 @@ try {
 
 - **Content-Type**: Not defined
 - **Accept**: `application/json`
+
+[[Back to top]](#) [[Back to API list]](../../README.md#endpoints)
+[[Back to Model list]](../../README.md#models)
+[[Back to README]](../../README.md)
+
+## `adminDbAuditTrim()`
+
+```php
+adminDbAuditTrim($owner, $db, $keep_days)
+```
+
+
+
+### Example
+
+```php
+<?php
+require_once(__DIR__ . '/vendor/autoload.php');
+
+
+// Configure Bearer authorization: Token
+$config = Agnesoft\AgdbApi\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
+
+
+$apiInstance = new Agnesoft\AgdbApi\Api\AgdbApi(
+    // If you want use custom http client, pass your client which implements `GuzzleHttp\ClientInterface`.
+    // This is optional, `GuzzleHttp\Client` will be used as default.
+    new GuzzleHttp\Client(),
+    $config
+);
+$owner = 'owner_example'; // string | user name
+$db = 'db_example'; // string | db name
+$keep_days = 56; // int | Number of UTC days to keep before today, the audit of the older days is removed.
+
+try {
+    $apiInstance->adminDbAuditTrim($owner, $db, $keep_days);
+} catch (Exception $e) {
+    echo 'Exception when calling AgdbApi->adminDbAuditTrim: ', $e->getMessage(), PHP_EOL;
+}
+```
+
+### Parameters
+
+| Name | Type | Description  | Notes |
+| ------------- | ------------- | ------------- | ------------- |
+| **owner** | **string**| user name | |
+| **db** | **string**| db name | |
+| **keep_days** | **int**| Number of UTC days to keep before today, the audit of the older days is removed. | |
+
+### Return type
+
+void (empty response body)
+
+### Authorization
+
+[Token](../../README.md#Token)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: Not defined
 
 [[Back to top]](#) [[Back to API list]](../../README.md#endpoints)
 [[Back to Model list]](../../README.md#models)
@@ -1997,6 +2060,67 @@ try {
 
 - **Content-Type**: Not defined
 - **Accept**: `application/json`
+
+[[Back to top]](#) [[Back to API list]](../../README.md#endpoints)
+[[Back to Model list]](../../README.md#models)
+[[Back to README]](../../README.md)
+
+## `dbAuditTrim()`
+
+```php
+dbAuditTrim($owner, $db, $keep_days)
+```
+
+
+
+### Example
+
+```php
+<?php
+require_once(__DIR__ . '/vendor/autoload.php');
+
+
+// Configure Bearer authorization: Token
+$config = Agnesoft\AgdbApi\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
+
+
+$apiInstance = new Agnesoft\AgdbApi\Api\AgdbApi(
+    // If you want use custom http client, pass your client which implements `GuzzleHttp\ClientInterface`.
+    // This is optional, `GuzzleHttp\Client` will be used as default.
+    new GuzzleHttp\Client(),
+    $config
+);
+$owner = 'owner_example'; // string | user name
+$db = 'db_example'; // string | db name
+$keep_days = 56; // int | Number of UTC days to keep before today, the audit of the older days is removed.
+
+try {
+    $apiInstance->dbAuditTrim($owner, $db, $keep_days);
+} catch (Exception $e) {
+    echo 'Exception when calling AgdbApi->dbAuditTrim: ', $e->getMessage(), PHP_EOL;
+}
+```
+
+### Parameters
+
+| Name | Type | Description  | Notes |
+| ------------- | ------------- | ------------- | ------------- |
+| **owner** | **string**| user name | |
+| **db** | **string**| db name | |
+| **keep_days** | **int**| Number of UTC days to keep before today, the audit of the older days is removed. | |
+
+### Return type
+
+void (empty response body)
+
+### Authorization
+
+[Token](../../README.md#Token)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: Not defined
 
 [[Back to top]](#) [[Back to API list]](../../README.md#endpoints)
 [[Back to Model list]](../../README.md#models)

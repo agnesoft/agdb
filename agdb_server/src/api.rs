@@ -19,6 +19,7 @@ use utoipa::openapi::security::SecurityScheme;
         routes::status,
         routes::admin::db::add,
         routes::admin::db::audit,
+        routes::admin::db::audit_trim,
         routes::admin::db::backup,
         routes::admin::db::clear,
         routes::admin::db::convert,
@@ -50,6 +51,7 @@ use utoipa::openapi::security::SecurityScheme;
         routes::user::status,
         routes::db::add,
         routes::db::audit,
+        routes::db::audit_trim,
         routes::db::backup,
         routes::db::clear,
         routes::db::convert,
@@ -73,6 +75,7 @@ use utoipa::openapi::security::SecurityScheme;
         routes::cluster::admin_logout_all,
     ),
     components(schemas(
+        routes::db::AuditTrimParam,
         routes::db::DbTypeParam,
         routes::db::OptimizeParam,
         routes::admin::db::ServerDatabaseAdminRename,

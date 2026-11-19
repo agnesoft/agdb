@@ -41,6 +41,7 @@ async fn main() -> ServerResult {
     logger::init(config.log_level);
 
     password::init(config.pepper);
+    routes::resync::remove_snapshot_stagings(std::path::Path::new(&config.data_dir), None, 0);
 
     let (shutdown_sender, shutdown_receiver) = broadcast::channel::<()>(1);
     let server_db = server_db::new(&config, shutdown_sender.subscribe()).await?;

@@ -1,9 +1,9 @@
 use crate::DbKind;
 use crate::test_server::ADMIN;
 use crate::test_server::TestServer;
+use crate::test_server::audit_dir;
 use crate::test_server::audit_entries;
-use crate::test_server::audit_file;
-use crate::test_server::backup_audit_file;
+use crate::test_server::backup_audit_dir;
 use crate::test_server::next_db_name;
 use crate::test_server::next_user_name;
 use crate::test_server::test_error::TestError;
@@ -36,7 +36,7 @@ pub async fn backup() -> Result<(), TestError> {
             .join(format!("{db}.bak"))
             .exists()
     );
-    let backup_audit = backup_audit_file(&server.data_dir, owner, db);
+    let backup_audit = backup_audit_dir(&server.data_dir, owner, db);
     assert!(Path::new(&backup_audit).exists());
     assert_eq!(audit_entries(&backup_audit)?, 1);
 
@@ -45,7 +45,7 @@ pub async fn backup() -> Result<(), TestError> {
 
     let status = server.api.admin_db_restore(owner, db).await?;
     assert_eq!(status, 201);
-    let audit = audit_file(&server.data_dir, owner, db);
+    let audit = audit_dir(&server.data_dir, owner, db);
     assert!(Path::new(&audit).exists());
     assert_eq!(audit_entries(&audit)?, 1);
     assert_eq!(audit_entries(&backup_audit)?, 1);
@@ -166,8 +166,8 @@ pub async fn rollback_of_backup() -> Result<(), TestError> {
     server.api.admin_db_exec_mut(owner, db, queries).await?;
     let status = server.api.admin_db_backup(owner, db).await?;
     assert_eq!(status, 201);
-    let audit = audit_file(&server.data_dir, owner, db);
-    let backup_audit = backup_audit_file(&server.data_dir, owner, db);
+    let audit = audit_dir(&server.data_dir, owner, db);
+    let backup_audit = backup_audit_dir(&server.data_dir, owner, db);
     assert!(Path::new(&backup_audit).exists());
     assert_eq!(audit_entries(&backup_audit)?, 1);
 
@@ -220,10 +220,10 @@ pub async fn restore_rollback_syncs_audit() -> Result<(), TestError> {
         )
         .await?;
     server.api.admin_db_backup(owner, db).await?;
-    let audit_file = audit_file(&server.data_dir, owner, db);
-    let backup_audit_file = backup_audit_file(&server.data_dir, owner, db);
-    assert!(Path::new(&backup_audit_file).exists());
-    assert_eq!(audit_entries(&backup_audit_file)?, 1);
+    let audit_dir = audit_dir(&server.data_dir, owner, db);
+    let backup_audit_dir = backup_audit_dir(&server.data_dir, owner, db);
+    assert!(Path::new(&backup_audit_dir).exists());
+    assert_eq!(audit_entries(&backup_audit_dir)?, 1);
 
     server
         .api
@@ -233,8 +233,8 @@ pub async fn restore_rollback_syncs_audit() -> Result<(), TestError> {
             &[QueryBuilder::remove().ids("root").query().into()],
         )
         .await?;
-    assert!(Path::new(&audit_file).exists());
-    assert_eq!(audit_entries(&audit_file)?, 2);
+    assert!(Path::new(&audit_dir).exists());
+    assert_eq!(audit_entries(&audit_dir)?, 2);
 
     let audit = server.api.admin_db_audit(owner, db).await?.1;
     assert_eq!(audit.0.len(), 2);
@@ -252,8 +252,8 @@ pub async fn restore_rollback_syncs_audit() -> Result<(), TestError> {
     assert_eq!(results[0].result, 1);
     let audit = server.api.admin_db_audit(owner, db).await?.1;
     assert_eq!(audit.0.len(), 1);
-    assert_eq!(audit_entries(&audit_file)?, 1);
-    assert_eq!(audit_entries(&backup_audit_file)?, 2);
+    assert_eq!(audit_entries(&audit_dir)?, 1);
+    assert_eq!(audit_entries(&backup_audit_dir)?, 2);
 
     server.api.admin_db_rollback(owner, db).await?;
     let err = server
@@ -269,8 +269,8 @@ pub async fn restore_rollback_syncs_audit() -> Result<(), TestError> {
     assert_eq!(err, "Alias 'root' not found");
     let audit = server.api.admin_db_audit(owner, db).await?.1;
     assert_eq!(audit.0.len(), 2);
-    assert_eq!(audit_entries(&audit_file)?, 2);
-    assert_eq!(audit_entries(&backup_audit_file)?, 1);
+    assert_eq!(audit_entries(&audit_dir)?, 2);
+    assert_eq!(audit_entries(&backup_audit_dir)?, 1);
 
     server.api.admin_db_restore(owner, db).await?;
     let results = server
@@ -285,8 +285,8 @@ pub async fn restore_rollback_syncs_audit() -> Result<(), TestError> {
     assert_eq!(results[0].result, 1);
     let audit = server.api.admin_db_audit(owner, db).await?.1;
     assert_eq!(audit.0.len(), 1);
-    assert_eq!(audit_entries(&audit_file)?, 1);
-    assert_eq!(audit_entries(&backup_audit_file)?, 1);
+    assert_eq!(audit_entries(&audit_dir)?, 1);
+    assert_eq!(audit_entries(&backup_audit_dir)?, 1);
 
     Ok(())
 }

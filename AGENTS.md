@@ -313,6 +313,7 @@ The server exposes a REST API at `/api/v1` (or `{basepath}/api/v1`). Four endpoi
 
 - `POST /add` — create database (body: `DbKind`)
 - `GET /audit` — database audit log
+- `POST /audit/trim?keep_days={n}` — remove the audit (live and backup) of the UTC days before today and the `n` days before it
 - `POST /backup` — create backup
 - `POST /clear` — clear resources (audit, backup) (body: `ClearAudit | ClearBackup | ClearAll`)
 - `POST /convert` — change storage type
@@ -359,7 +360,7 @@ Same structure as admin database routes but scoped by ownership and roles:
 
 - **Read** role: `exec`, `audit`
 - **Write** role: `exec_mut` + everything Read can do
-- **Admin** role: all operations including `backup`, `restore`, `convert`, `optimize`, user management
+- **Admin** role: all operations including `backup`, `restore`, `convert`, `optimize`, `audit/trim`, user management
 
 ### Cluster (`/api/v1/cluster/...`) — propagates across nodes
 

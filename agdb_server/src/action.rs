@@ -1,5 +1,6 @@
 pub(crate) mod change_password;
 pub(crate) mod db_add;
+pub(crate) mod db_audit_trim;
 pub(crate) mod db_backup;
 pub(crate) mod db_clear;
 pub(crate) mod db_convert;
@@ -24,6 +25,7 @@ pub(crate) mod user_delete;
 
 use crate::action::change_password::ChangePassword;
 use crate::action::db_add::DbAdd;
+use crate::action::db_audit_trim::DbAuditTrim;
 use crate::action::db_backup::DbBackup;
 use crate::action::db_clear::DbClear;
 use crate::action::db_convert::DbConvert;
@@ -83,6 +85,7 @@ pub(crate) enum ClusterAction {
     DbRename(DbRename),
     DbUserAdd(DbUserAdd),
     DbUserRemove(DbUserRemove),
+    DbAuditTrim(DbAuditTrim),
 }
 
 pub(crate) enum ClusterActionResult {
@@ -129,6 +132,7 @@ impl ClusterAction {
             Self::DbRename(_) => "DbRename",
             Self::DbUserAdd(_) => "DbUserAdd",
             Self::DbUserRemove(_) => "DbUserRemove",
+            Self::DbAuditTrim(_) => "DbAuditTrim",
         }
     }
 
@@ -154,6 +158,7 @@ impl ClusterAction {
             ],
             Self::DbUserAdd(a) => vec![ResyncTarget::UserDb(&a.owner, &a.db)],
             Self::DbUserRemove(a) => vec![ResyncTarget::UserDb(&a.owner, &a.db)],
+            Self::DbAuditTrim(a) => vec![ResyncTarget::UserDb(&a.owner, &a.db)],
             Self::UserAdd(_)
             | Self::SaveUserToken(_)
             | Self::RemoveUserToken(_)
@@ -195,6 +200,7 @@ impl ClusterAction {
             ClusterAction::DbRename(action) => action.exec(db, db_pool).await,
             ClusterAction::DbUserAdd(action) => action.exec(db, db_pool).await,
             ClusterAction::DbUserRemove(action) => action.exec(db, db_pool).await,
+            ClusterAction::DbAuditTrim(action) => action.exec(db, db_pool).await,
         }
     }
 }
@@ -334,6 +340,12 @@ impl From<DbUserAdd> for ClusterAction {
 impl From<DbUserRemove> for ClusterAction {
     fn from(value: DbUserRemove) -> Self {
         ClusterAction::DbUserRemove(value)
+    }
+}
+
+impl From<DbAuditTrim> for ClusterAction {
+    fn from(value: DbAuditTrim) -> Self {
+        ClusterAction::DbAuditTrim(value)
     }
 }
 

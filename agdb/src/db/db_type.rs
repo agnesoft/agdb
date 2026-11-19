@@ -1,8 +1,11 @@
 use crate::DbElement;
 use crate::DbError;
+use crate::DbId;
 use crate::DbKeyValue;
 use crate::DbValue;
 use crate::QueryId;
+
+const DB_ID: &str = "db_id";
 
 /// Trait that allows use of user defined values
 /// directly by facilitating translation from/to
@@ -91,6 +94,88 @@ impl<T: DbType> DbType for &T {
     }
 }
 
+/// The fields of a value as (key, value) with `None` for an `Option` field
+/// without a value and the key `db_id` for the id: what the `DbType` derive
+/// makes of the fields of a struct and the clients in other languages of
+/// their objects.
+#[doc(hidden)]
+#[derive(Clone, Debug, PartialEq)]
+pub struct DbFields(pub Vec<(DbValue, Option<DbValue>)>);
+
+impl DbFields {
+    /// The fields with a value.
+    pub fn into_db_values(self) -> Vec<DbKeyValue> {
+        self.0
+            .into_iter()
+            .filter_map(|(key, value)| value.map(|value| DbKeyValue { key, value }))
+            .collect()
+    }
+
+    fn is_db_id(key: &DbValue) -> bool {
+        if let DbValue::String(name) = key {
+            return name == DB_ID;
+        }
+
+        false
+    }
+
+    fn query_id(value: &DbValue) -> Option<QueryId> {
+        match value {
+            DbValue::I64(id) => Some(QueryId::Id(DbId(*id))),
+            DbValue::String(alias) => Some(QueryId::Alias(alias.clone())),
+            _ => None,
+        }
+    }
+}
+
+impl DbType for DbFields {
+    type ValueType = DbFields;
+
+    fn db_id(&self) -> Option<QueryId> {
+        let mut id: Option<QueryId> = None;
+        self.0.iter().for_each(|field| {
+            if let Some(value) = &field.1
+                && Self::is_db_id(&field.0)
+            {
+                id = Self::query_id(value);
+            }
+        });
+        id
+    }
+
+    fn db_keys() -> Vec<DbValue> {
+        Vec::new()
+    }
+
+    fn from_db_element(element: &DbElement) -> Result<Self::ValueType, DbError> {
+        let mut fields = vec![(DB_ID.into(), Some(element.id.0.into()))];
+        element.values.iter().for_each(|kv| {
+            fields.push((kv.key.clone(), Some(kv.value.clone())));
+        });
+        Ok(DbFields(fields))
+    }
+
+    /// The fields with a value other than the id.
+    fn to_db_values(&self) -> Vec<DbKeyValue> {
+        let mut values = Vec::new();
+        self.0.iter().for_each(|field| {
+            if let Some(value) = &field.1
+                && !Self::is_db_id(&field.0)
+            {
+                values.push(DbKeyValue {
+                    key: field.0.clone(),
+                    value: value.clone(),
+                });
+            }
+        });
+        values
+    }
+
+    fn db_element_id() -> Option<DbValue> {
+        None
+    }
+}
+
 /// Marker trait for user values to get around
 /// conflicting trait implementations between database
 /// and blanket `std` implementations. Implement it
@@ -110,3 +195,79 @@ impl<T: DbType> DbType for &T {
 /// impl agdb::DbTypeMarker for MyEnum {}
 /// ```
 pub trait DbTypeMarker {}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn fields() -> DbFields {
+        DbFields(vec![
+            ("key".into(), Some("value".into())),
+            ("none".into(), None),
+            (DB_ID.into(), Some("alias".into())),
+            (1.into(), Some(2.into())),
+        ])
+    }
+
+    #[test]
+    fn derived_from_debug() {
+        let _ = format!("{:?}", fields());
+    }
+
+    #[test]
+    fn derived_from_clone_and_partial_eq() {
+        assert_eq!(fields().clone(), fields());
+    }
+
+    #[test]
+    fn db_fields_into_db_values() {
+        assert_eq!(
+            fields().into_db_values(),
+            vec![
+                ("key", "value").into(),
+                (DB_ID, "alias").into(),
+                (1, 2).into()
+            ]
+        );
+    }
+
+    #[test]
+    fn db_fields_to_db_values() {
+        assert_eq!(
+            fields().to_db_values(),
+            vec![("key", "value").into(), (1, 2).into()]
+        );
+    }
+
+    #[test]
+    fn db_fields_db_id() {
+        let id = |value: DbValue| DbFields(vec![(DB_ID.into(), Some(value))]).db_id();
+
+        assert_eq!(fields().db_id(), Some(QueryId::Alias("alias".into())));
+        assert_eq!(id(DbValue::I64(1)), Some(QueryId::Id(DbId(1))));
+        assert_eq!(id(DbValue::U64(2)), None);
+        assert_eq!(id(DbValue::F64(1.0.into())), None);
+        assert_eq!(DbFields(vec![(DB_ID.into(), None)]).db_id(), None);
+    }
+
+    #[test]
+    fn db_fields_keys_and_element_id() {
+        assert_eq!(DbFields::db_keys(), Vec::<DbValue>::new());
+        assert_eq!(DbFields::db_element_id(), None);
+    }
+
+    #[test]
+    fn db_fields_from_db_element() {
+        let element = DbElement {
+            id: DbId(3),
+            from: DbId(0),
+            to: DbId(0),
+            values: vec![("key", "value").into()],
+        };
+
+        let fields = DbFields::from_db_element(&element).unwrap();
+
+        assert_eq!(fields.db_id(), Some(QueryId::Id(DbId(3))));
+        assert_eq!(fields.to_db_values(), element.values);
+    }
+}

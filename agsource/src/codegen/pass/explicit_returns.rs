@@ -3,8 +3,8 @@ use crate::Error;
 use crate::codegen::lowered::*;
 
 /// The tail expressions of the functions that return a value as `return`,
-/// through `if` branches. An `if` chain without `else` gets one
-/// that panics: Rust accepted it, so the chain is exhaustive.
+/// through `if` branches and `match` arms. An `if` chain without `else` gets
+/// one that panics: Rust accepted it, so the chain is exhaustive.
 pub struct ExplicitReturns;
 
 impl Pass for ExplicitReturns {
@@ -15,13 +15,14 @@ impl Pass for ExplicitReturns {
     fn run(&self, m: &mut Module, _errors: &mut Vec<Error>) {
         m.for_each_func(&mut |f, _| {
             if f.ret != Ty::Unit {
-                tail(&mut f.body);
+                return_tail(&mut f.body);
             }
         });
     }
 }
 
-fn tail(body: &mut [Expr]) {
+/// The tail of `body` as `return`.
+pub fn return_tail(body: &mut [Expr]) {
     let Some(last) = body.last_mut() else {
         return;
     };
@@ -29,13 +30,14 @@ fn tail(body: &mut [Expr]) {
     match &mut last.k {
         K::Return(_) | K::Let { .. } | K::Assign { .. } | K::While { .. } | K::Panic(_) => {}
         K::If { then, els, .. } | K::IfLet { then, els, .. } => {
-            tail(then);
+            return_tail(then);
 
             match els {
-                Some(e) if !e.is_empty() => tail(e),
+                Some(e) if !e.is_empty() => return_tail(e),
                 _ => *els = Some(vec![Expr::new(K::Panic("unreachable".into()))]),
             }
         }
+        K::Match { arms, .. } => arms.iter_mut().for_each(|(_, body)| return_tail(body)),
         _ => {
             let value = std::mem::replace(last, Expr::new(K::This));
             *last = Expr::typed(K::Return(Some(value.boxed())), Ty::Unit);
@@ -100,6 +102,15 @@ mod tests {
                             pub fn statements(&self) -> u8 {
                                 panic!("p")
                             }
+                            pub fn arms(&self, o: Option<u8>) -> u8 {
+                                match o {
+                                    Some(v) => v,
+                                    None => {
+                                        let a = 1;
+                                        a
+                                    }
+                                }
+                            }
                             pub fn empty(&self) -> u8 {}
                             pub fn unit(&self) {
                                 self.value()
@@ -114,7 +125,7 @@ mod tests {
 
                     assert_eq!(
                         print::module(&m, "explicit_returns"),
-                        "// ===== after explicit_returns\n// Root\nfn value(&self) -> u8 {\n    let a: ? = 1;\n    return a;\n}\n\n// Root\nfn branches(&self, c: bool, o: Option<u8>) -> u8 {\n    if c {\n        return 1;\n    } else {\n        if let Some(v) = o {\n            return v;\n        } else {\n            return 2;\n        };\n    };\n}\n\n// Root\nfn without_else(&self, c: bool) -> u8 {\n    if c {\n        return 1;\n    } else {\n        panic!(\"unreachable\");\n    };\n}\n\n// Root\nfn empty_else(&self, c: bool) -> u8 {\n    if c {\n        return 1;\n    } else {\n        panic!(\"unreachable\");\n    };\n}\n\n// Root\nfn statements(&self) -> u8 {\n    panic!(\"p\");\n}\n\n// Root\nfn empty(&self) -> u8 {\n}\n\n// Root\nfn unit(&self) -> () {\n    self.value()/*unresolved*/;\n}\n\n"
+                        "// ===== after explicit_returns\n// Root\nfn value(&self) -> u8 {\n    let a: ? = 1;\n    return a;\n}\n\n// Root\nfn branches(&self, c: bool, o: Option<u8>) -> u8 {\n    if c {\n        return 1;\n    } else {\n        if let Some(v) = o {\n            return v;\n        } else {\n            return 2;\n        };\n    };\n}\n\n// Root\nfn without_else(&self, c: bool) -> u8 {\n    if c {\n        return 1;\n    } else {\n        panic!(\"unreachable\");\n    };\n}\n\n// Root\nfn empty_else(&self, c: bool) -> u8 {\n    if c {\n        return 1;\n    } else {\n        panic!(\"unreachable\");\n    };\n}\n\n// Root\nfn statements(&self) -> u8 {\n    panic!(\"p\");\n}\n\n// Root\nfn arms(&self, o: Option<u8>) -> u8 {\n    match o {\n        Some(v) => {\n            return v;\n        },\n        None => {\n            let a: ? = 1;\n            return a;\n        },\n    };\n}\n\n// Root\nfn empty(&self) -> u8 {\n}\n\n// Root\nfn unit(&self) -> () {\n    self.value()/*unresolved*/;\n}\n\n"
                     );
                 }
             }

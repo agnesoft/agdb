@@ -131,17 +131,17 @@ fn to_db_values(
     let element_id_tokens = if let Some(element_id) = element_id {
         let element_id_str = element_id.to_string();
         quote! {
-            values.push((#DB_ELEMENT_ID, #element_id_str).into());
+            fields.push((#DB_ELEMENT_ID.into(), ::std::option::Option::Some(#element_id_str.into())));
         }
     } else {
         quote! {}
     };
 
     quote! {
-        let mut values = vec![];
+        let mut fields: ::std::vec::Vec<(::agdb::DbValue, ::std::option::Option<::agdb::DbValue>)> = ::std::vec::Vec::new();
         #(#fields)*
         #element_id_tokens
-        values
+        ::agdb::DbFields(fields).into_db_values()
     }
 }
 
@@ -192,7 +192,7 @@ fn impl_to_db_value(f: &syn::Field) -> Option<proc_macro2::TokenStream> {
                         let db_element_id: ::agdb::DbValue = #DB_ELEMENT_ID.into();
                         for kv in value.to_db_values() {
                             if kv.key != db_element_id {
-                                values.push(kv);
+                                fields.push((kv.key, ::std::option::Option::Some(kv.value)));
                             }
                         }
                     }
@@ -200,9 +200,7 @@ fn impl_to_db_value(f: &syn::Field) -> Option<proc_macro2::TokenStream> {
             }
 
             return Some(quote! {
-                if let ::std::option::Option::Some(value) = &self.#name {
-                    values.push((#key, value.clone()).into());
-                }
+                fields.push((#key.into(), self.#name.as_ref().map(|value| value.clone().into())));
             });
         }
 
@@ -211,14 +209,14 @@ fn impl_to_db_value(f: &syn::Field) -> Option<proc_macro2::TokenStream> {
                 let db_element_id: ::agdb::DbValue = #DB_ELEMENT_ID.into();
                 for kv in self.#name.to_db_values() {
                     if kv.key != db_element_id {
-                        values.push(kv);
+                        fields.push((kv.key, ::std::option::Option::Some(kv.value)));
                     }
                 }
             });
         }
 
         return Some(quote! {
-            values.push((#key, self.#name.clone()).into());
+            fields.push((#key.into(), ::std::option::Option::Some(self.#name.clone().into())));
         });
     }
 

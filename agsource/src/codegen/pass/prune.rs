@@ -4,10 +4,12 @@ use crate::codegen::lowered::*;
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 
-/// Removes the methods nothing calls: the functions the builder API uses
-/// are the `pub` methods of the builders, the methods of the trait impls
-/// and the functions of the module, and what they call. Reports the
-/// [`Func::errors`] of the functions it keeps.
+/// Removes the methods nothing calls. First the trait methods no function
+/// or conversion calls, from the traits and their impls. Then the methods
+/// the builder API does not use: it uses the `pub` methods of the builders,
+/// the remaining methods of the trait impls, the functions of the module
+/// and the conversions, and what they call. Reports the [`Func::errors`] of the functions it
+/// keeps.
 pub struct Prune;
 
 impl Pass for Prune {
@@ -16,6 +18,19 @@ impl Pass for Prune {
     }
 
     fn run(&self, m: &mut Module, errors: &mut Vec<Error>) {
+        let called = trait_calls(m);
+        let called = |t: &str, f: &Func| called.contains(&(t.to_owned(), f.name.clone()));
+
+        for (t, fs) in m.traits.iter_mut() {
+            fs.retain(|f| called(t, f));
+        }
+
+        for c in m.classes.values_mut() {
+            for (t, fs) in c.trait_impls.iter_mut() {
+                fs.retain(|f| called(t, f));
+            }
+        }
+
         let used = used(m);
         let keep = |class: &str, f: &Func| used.contains(&(class.to_owned(), f.name.clone()));
 
@@ -56,7 +71,7 @@ fn used(m: &mut Module) -> BTreeSet<(String, String)> {
         calls
             .entry((class.to_owned(), f.name.clone()))
             .or_default()
-            .extend(callees(f));
+            .extend(callees(&f.body));
     });
 
     let mut stack: Vec<(String, String)> = Vec::new();
@@ -73,6 +88,11 @@ fn used(m: &mut Module) -> BTreeSet<(String, String)> {
     }
 
     stack.extend(m.functions.iter().map(|f| (String::new(), f.name.clone())));
+    stack.extend(
+        m.conversions
+            .iter()
+            .flat_map(|c| callees(std::slice::from_ref(&c.body))),
+    );
     let mut used = BTreeSet::new();
 
     while let Some(id) = stack.pop() {
@@ -86,9 +106,47 @@ fn used(m: &mut Module) -> BTreeSet<(String, String)> {
     used
 }
 
-fn callees(f: &Func) -> Vec<(String, String)> {
+/// The (trait, method) pairs of the calls of the functions and the
+/// conversions: through a dictionary, or of a method of a class's trait impl.
+fn trait_calls(m: &mut Module) -> BTreeSet<(String, String)> {
+    let mut calls = BTreeSet::new();
+    let mut members = BTreeSet::new();
+    let mut note = |e: &mut Expr| match &e.k {
+        K::Call {
+            callee: Callee::Trait { trait_, name },
+            ..
+        } => {
+            calls.insert((trait_.clone(), name.clone()));
+        }
+        K::Call {
+            callee: Callee::Member { class, name } | Callee::Static { class, name },
+            ..
+        } => {
+            members.insert((class.clone(), name.clone()));
+        }
+        _ => {}
+    };
+    m.for_each_func(&mut |f, _| rewrite_body(&mut f.body, &mut note));
+    m.conversions
+        .iter_mut()
+        .for_each(|c| c.body.rewrite(&mut note));
+
+    for (class, name) in members {
+        let impls = m.classes.get(&class).map(|c| &c.trait_impls);
+
+        for (t, fs) in impls.into_iter().flatten() {
+            if fs.iter().any(|f| f.name == name) {
+                calls.insert((t.clone(), name.clone()));
+            }
+        }
+    }
+
+    calls
+}
+
+fn callees(body: &[Expr]) -> Vec<(String, String)> {
     let mut out = Vec::new();
-    let mut body = f.body.clone();
+    let mut body = body.to_vec();
 
     rewrite_body(&mut body, &mut |e| {
         if let K::Call {
@@ -136,7 +194,8 @@ mod tests {
                 use super::*;
 
                 #[test]
-                fn run_should_keep_what_the_builder_api_calls_and_report_its_errors() {
+                fn run_should_keep_what_the_builder_api_and_the_called_trait_methods_call_and_report_its_errors()
+                 {
                     let (mut m, _) = lower(
                         r#"
                         pub struct Root {
@@ -149,14 +208,19 @@ mod tests {
                         }
                         pub trait Tr {
                             fn t(&self);
+                            fn uncalled(&self);
                         }
                         impl Tr for D {
                             fn t(&self) {
                                 self.used_by_trait();
                             }
+                            fn uncalled(&self) {
+                                self.used_by_uncalled();
+                            }
                         }
                         impl Root {
                             pub fn api(&self) {
+                                self.d.t();
                                 self.helper();
                                 D::new();
                                 unknown();
@@ -168,6 +232,14 @@ mod tests {
                             fn unused(&self) {
                                 unknown();
                             }
+                            pub fn generic<T: Tr>(&self, t: T) {
+                                t.t();
+                            }
+                        }
+                        impl From<u8> for D {
+                            fn from(v: u8) -> Self {
+                                D::conv()
+                            }
                         }
                         impl D {
                             pub fn new() -> D {
@@ -175,7 +247,11 @@ mod tests {
                             }
                             pub fn used(&self) {}
                             pub fn used_by_trait(&self) {}
+                            pub fn used_by_uncalled(&self) {}
                             pub fn unused(&self) {}
+                            pub fn conv() -> D {
+                                D {}
+                            }
                         }
                         impl E {
                             pub fn unused(&self) {}
@@ -198,16 +274,18 @@ mod tests {
                             "D::new",
                             "D::used",
                             "D::used_by_trait",
+                            "D::conv",
                             "D::t",
                             "Root::api",
                             "Root::helper",
+                            "Root::generic",
                             "::f"
                         ]
                     );
                     assert_eq!(
                         strings(&errors),
                         vec![
-                            "/c/src/lib.rs:19: `Root::api`: unknown function `unknown`",
+                            "/c/src/lib.rs:23: `Root::api`: unknown function `unknown`",
                             "`f`: made"
                         ]
                     );

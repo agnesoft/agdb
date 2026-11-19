@@ -41,6 +41,18 @@ impl Ty {
         }
     }
 
+    /// The type without the references within it.
+    pub fn strip_refs(&self) -> Ty {
+        self.map(&|t| match t {
+            Ty::Ref(inner) => (**inner).clone(),
+            t => t.clone(),
+        })
+    }
+
+    pub fn is_primitive(&self) -> bool {
+        matches!(self, Ty::Bool | Ty::Int(_) | Ty::Float | Ty::Str)
+    }
+
     /// The type with every type within it replaced by `f` of it, inner types
     /// first.
     pub fn map(&self, f: &dyn Fn(&Ty) -> Ty) -> Ty {
@@ -234,6 +246,12 @@ pub enum K {
     Not(Box<Expr>),
     Ref(Box<Expr>),
     Deref(Box<Expr>),
+    /// A numeric `as` or a primitive `.into()`, the type of the expression
+    /// is the one converted into.
+    Cast(Box<Expr>),
+    /// A caller's value of a [reflective](Module::is_reflective) trait as
+    /// its fields: the (key, value) list of the type of the expression.
+    Fields(Box<Expr>),
     Closure {
         params: Vec<String>,
         body: Vec<Expr>,
@@ -332,7 +350,7 @@ impl Expr {
                 out.push(l);
                 out.push(r);
             }
-            K::Not(e) | K::Ref(e) | K::Deref(e) => out.push(e),
+            K::Not(e) | K::Ref(e) | K::Deref(e) | K::Cast(e) | K::Fields(e) => out.push(e),
             K::Closure { body, .. } => out.extend(body.iter_mut()),
             K::Ident(_)
             | K::Local(_)
@@ -387,7 +405,7 @@ pub enum Recv {
 }
 
 /// Where a function is in the source.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct Location {
     pub path: PathBuf,
     pub line: usize,
@@ -466,11 +484,22 @@ pub struct Enum {
 pub struct Conversion {
     pub to: String,
     pub from: Ty,
+    /// The generics of the impl.
+    pub generics: Vec<Generic>,
     pub body: Expr,
+    /// Where the impl is.
+    pub at: Option<Location>,
+    /// The constructs of the body the passes could not lower, reported once
+    /// the conversion is used.
+    pub errors: Vec<String>,
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct Module {
+    /// The class the builder API starts from.
+    pub root: String,
+    /// The types of [`Roots::data`](super::lower::Roots::data).
+    pub data: Vec<String>,
     /// The builders and the data types.
     pub classes: BTreeMap<String, Class>,
     pub enums: BTreeMap<String, Enum>,
@@ -491,9 +520,45 @@ pub struct Module {
     pub inlined: BTreeSet<(String, String)>,
     /// The (trait, type) dictionaries the `trait_dicts` pass refers to.
     pub dicts: BTreeSet<(String, String)>,
+    /// The types of the newtypes the `erase_newtypes` pass erased.
+    pub newtypes: BTreeMap<String, Ty>,
 }
 
 impl Module {
+    /// Whether the values of the trait are the callers': it bounds a generic
+    /// of a function they call, so they would supply the dictionary.
+    pub fn is_reflective(&self, trait_: &str) -> bool {
+        self.traits.contains_key(trait_)
+            && self.funcs().any(|f| {
+                !f.private
+                    && f.generics
+                        .iter()
+                        .any(|g| g.bounds.iter().any(|(b, _)| b == trait_))
+            })
+    }
+
+    /// The one class implementing the trait, the type the values of the
+    /// callers of a reflective trait become (see [`K::Fields`]).
+    pub fn fields_of(&self, trait_: &str) -> Option<&str> {
+        let mut impls = self
+            .classes
+            .values()
+            .filter(|c| c.trait_impls.contains_key(trait_));
+
+        match (impls.next(), impls.next()) {
+            (Some(c), None) => Some(&c.name),
+            _ => None,
+        }
+    }
+
+    fn funcs(&self) -> impl Iterator<Item = &Func> {
+        self.classes
+            .values()
+            .flat_map(|c| c.methods.iter().chain(c.trait_impls.values().flatten()))
+            .chain(self.enums.values().flat_map(|e| e.methods.iter()))
+            .chain(self.functions.iter())
+    }
+
     pub fn is_builder(&self, name: &str) -> bool {
         self.builders.iter().any(|b| b == name)
     }
@@ -617,6 +682,7 @@ impl Module {
 #[derive(Clone, Debug, PartialEq)]
 pub enum Test {
     IsSome(Expr),
+    IsNone(Expr),
     IsVariant(Expr, String, String),
     Eq(Expr, Lit),
 }
@@ -645,6 +711,9 @@ impl Pat {
                 let value = Expr::typed(K::Unwrap(base.clone().boxed()), ty);
                 inner.iter().for_each(|p| p.project(&value, tests, binds));
             }
+            Pat::Variant { en, var, .. } if en == "Option" && var == "None" => {
+                tests.push(Test::IsNone(base.clone()));
+            }
             Pat::Variant { en, var, inner } => {
                 tests.push(Test::IsVariant(base.clone(), en.clone(), var.clone()));
                 let payload = Expr::new(K::Payload {
@@ -652,7 +721,14 @@ impl Pat {
                     en: en.clone(),
                     var: var.clone(),
                 });
-                inner.iter().for_each(|p| p.project(&payload, tests, binds));
+
+                match inner.as_slice() {
+                    [one] => one.project(&payload, tests, binds),
+                    many => many.iter().enumerate().for_each(|(i, p)| {
+                        let field = payload.clone().field(&i.to_string(), Ty::Unknown);
+                        p.project(&field, tests, binds);
+                    }),
+                }
             }
             Pat::Struct { fields, .. } => {
                 for (name, p) in fields {
@@ -755,6 +831,8 @@ mod tests {
             K::Not(b(1)),
             K::Ref(b(1)),
             K::Deref(b(1)),
+            K::Cast(b(1)),
+            K::Fields(b(1)),
             K::Closure {
                 params: Vec::new(),
                 body: vec![lit(1)],
@@ -964,6 +1042,7 @@ mod tests {
                         .iter()
                         .map(|t| match t {
                             Test::IsSome(e) => format!("some {}", print::expr(e)),
+                            Test::IsNone(e) => format!("none {}", print::expr(e)),
                             Test::IsVariant(e, en, var) => {
                                 format!("{} is {en}::{var}", print::expr(e))
                             }
@@ -989,7 +1068,7 @@ mod tests {
                         vec![
                             "s.c == 1".to_owned(),
                             "some s.d".to_owned(),
-                            "s.e is Option::None".to_owned(),
+                            "none s.e".to_owned(),
                             "s.f is E::A".to_owned()
                         ],
                         vec![
@@ -1061,7 +1140,7 @@ mod tests {
                     vec![
                         "", "", "", "", "1 2", "1", "1", "1", "", "1", "1", "1", "1 2 3", "1 2",
                         "1 2", "1", "1 2", "1 2", "1", "1 2 3", "1 2 3", "1 2", "1", "1 2", "1",
-                        "1", "1", "1", "", ""
+                        "1", "1", "1", "1", "1", "", ""
                     ]
                 );
             }

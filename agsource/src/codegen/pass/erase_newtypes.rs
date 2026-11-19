@@ -4,8 +4,8 @@ use crate::codegen::lowered::*;
 
 /// The data structs with a single tuple field are serialized as the value of
 /// the field (serde's newtype structs), so they become the type of the
-/// field: their values become the values of the field and their fields are
-/// cleared.
+/// field: their values become the values of the field, their fields are
+/// cleared and their types recorded in [`Module::newtypes`].
 pub struct EraseNewtypes;
 
 impl Pass for EraseNewtypes {
@@ -46,6 +46,11 @@ impl Pass for EraseNewtypes {
             .values_mut()
             .filter(|c| inner_of(&c.name).is_some())
             .for_each(|c| c.fields.clear());
+        m.newtypes.extend(
+            newtypes
+                .iter()
+                .map(|(n, _)| (n.clone(), erase(&Ty::named(n), &newtypes))),
+        );
 
         m.for_each_func(&mut |f, _| rewrite_body(&mut f.body, &mut identity_map));
     }

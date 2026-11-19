@@ -174,6 +174,8 @@ pub fn expr(e: &Expr) -> String {
         K::Not(e) => format!("!{}", expr(e)),
         K::Ref(e) => format!("&{}", expr(e)),
         K::Deref(e) => format!("*{}", expr(e)),
+        K::Cast(v) => format!("({} as {})", expr(v), ty(&e.ty)),
+        K::Fields(v) => format!("fields::<{}>({})", ty(&e.ty), expr(v)),
         K::Panic(message) => format!("panic!({message:?})"),
         K::Unsupported(construct) => format!("/* unsupported: {construct} */"),
         K::Match { .. } | K::If { .. } | K::IfLet { .. } | K::While { .. } | K::Closure { .. } => {
@@ -360,6 +362,8 @@ mod tests {
                     recv: None,
                     args: Vec::new(),
                 },
+                K::Cast(this()),
+                K::Fields(this()),
             ];
 
             assert_eq!(
@@ -371,7 +375,9 @@ mod tests {
                     "self@A",
                     "typecase self { bool@b => true, str@_ => \"s\" }",
                     "<Tr>::f()",
-                    "a::f()/*unresolved*/"
+                    "a::f()/*unresolved*/",
+                    "(self as ?)",
+                    "fields::<?>(self)"
                 ]
             );
         }

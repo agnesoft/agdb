@@ -149,6 +149,8 @@ pub enum Intrinsic {
     MemSwap,
     IterForEach,
     Map,
+    /// `assert_eq!(left, right)`, the args.
+    AssertEq,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -522,6 +524,11 @@ pub struct Module {
     pub dicts: BTreeSet<(String, String)>,
     /// The types of the newtypes the `erase_newtypes` pass erased.
     pub newtypes: BTreeMap<String, Ty>,
+    /// The `#[test]` functions of a test crate of the source (see
+    /// [`SourceCrate::lower_tests`](crate::SourceCrate::lower_tests)).
+    pub tests: Vec<Func>,
+    /// The types the test crate declares, among the classes and enums.
+    pub test_types: BTreeSet<String>,
 }
 
 impl Module {
@@ -597,8 +604,8 @@ impl Module {
     }
 
     /// Every function: the methods of classes and their trait impls, of
-    /// enums, and the functions of the module, with the name of their type
-    /// ("" for the functions of the module).
+    /// enums, the functions of the module and the tests, with the name of
+    /// their type ("" for the functions of the module and the tests).
     pub fn for_each_func(&mut self, f: &mut dyn FnMut(&mut Func, &str)) {
         for (name, c) in self.classes.iter_mut() {
             for func in c
@@ -616,7 +623,7 @@ impl Module {
             }
         }
 
-        for func in self.functions.iter_mut() {
+        for func in self.functions.iter_mut().chain(self.tests.iter_mut()) {
             f(func, "");
         }
     }

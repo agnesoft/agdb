@@ -28,6 +28,7 @@
     "scripts": {
         "build": "tsc && copyfiles -f src/openapi.d.ts dist/",
         "test": "node ../../agdb_server/test_server.mjs vitest run --coverage",
+        "type-check": "tsc --noEmit -p generated",
         "lint": "eslint --max-warnings=0 \"**/*.ts\" \"**/*.js\" --fix",
         "lint:check": "eslint --max-warnings=0 \"**/*.ts\" \"**/*.js\"",
         "format": "prettier --write src/ tests/ \"examples/**/*.ts\"",

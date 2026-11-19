@@ -7,9 +7,10 @@ use std::collections::BTreeSet;
 /// Removes the methods nothing calls. First the trait methods no function
 /// or conversion calls, from the traits and their impls. Then the methods
 /// the builder API does not use: it uses the `pub` methods of the builders,
-/// the remaining methods of the trait impls, the functions of the module
-/// and the conversions, and what they call. Reports the [`Func::errors`] of the functions it
-/// keeps.
+/// the remaining methods of the trait impls, the functions of the module,
+/// the conversions and the tests, and what they call. Reports the
+/// [`Func::errors`] of the functions it keeps and a test calling a method
+/// that is not `pub`, which a client would not have.
 pub struct Prune;
 
 impl Pass for Prune {
@@ -28,6 +29,24 @@ impl Pass for Prune {
         for c in m.classes.values_mut() {
             for (t, fs) in c.trait_impls.iter_mut() {
                 fs.retain(|f| called(t, f));
+            }
+        }
+
+        for test in &m.tests {
+            for (class, name) in callees(&test.body) {
+                if m.method(&class, &name).is_some_and(|f| f.private) {
+                    let (path, line) = test
+                        .at
+                        .as_ref()
+                        .map(|at| (at.path.clone(), at.line))
+                        .unwrap_or_default();
+                    errors.push(Error::Lowering {
+                        path,
+                        line,
+                        item: test.name.clone(),
+                        message: format!("calls `{class}::{name}` a client does not have"),
+                    });
+                }
             }
         }
 
@@ -88,6 +107,7 @@ fn used(m: &mut Module) -> BTreeSet<(String, String)> {
     }
 
     stack.extend(m.functions.iter().map(|f| (String::new(), f.name.clone())));
+    stack.extend(m.tests.iter().flat_map(|f| callees(&f.body)));
     stack.extend(
         m.conversions
             .iter()
@@ -167,6 +187,7 @@ mod tests {
     use crate::codegen::pass::Resolve;
     use crate::codegen::test_utilities::lower;
     use crate::codegen::test_utilities::strings;
+    use crate::codegen::test_utilities::tested;
 
     fn names(m: &Module) -> Vec<String> {
         let mut out = Vec::new();
@@ -192,6 +213,43 @@ mod tests {
 
             mod run {
                 use super::*;
+
+                #[test]
+                fn run_should_keep_what_the_tests_call_and_report_their_calls_of_private_methods() {
+                    let (mut m, _) = tested(
+                        r#"pub struct Root { pub d: D }
+pub struct D;
+impl Root {
+    pub fn new() -> Root { Root { d: D {} } }
+    fn private(&self) {}
+}
+impl D {
+    pub fn tested(&self) {}
+    pub fn unused(&self) {}
+}"#,
+                        r#"use c::Root;
+#[test]
+fn t() {
+    let r: Root = Root::new();
+    r.private();
+    r.d.tested();
+}"#,
+                        &[],
+                    );
+                    Resolve.run(&mut m, &mut Vec::new());
+                    let mut errors = Vec::new();
+
+                    Prune.run(&mut m, &mut errors);
+
+                    assert_eq!(
+                        names(&m),
+                        ["D::tested", "Root::new", "Root::private", "::t"]
+                    );
+                    assert_eq!(
+                        strings(&errors),
+                        ["/c/tests/t.rs:3: `t`: calls `Root::private` a client does not have"]
+                    );
+                }
 
                 #[test]
                 fn run_should_keep_what_the_builder_api_and_the_called_trait_methods_call_and_report_its_errors()

@@ -52,6 +52,20 @@ impl SourceCrate {
         lower.run(roots);
         (lower.m, lower.errors)
     }
+
+    /// The `#[test]` functions of this crate, a test crate of `source`
+    /// whose library is `name` in its paths, into [`Module::tests`] of `m`
+    /// lowered from `source`. The structs and enums the crate declares are
+    /// data of `m` named in [`Module::test_types`]. A path of `source` is
+    /// its item in `m`.
+    pub fn lower_tests(&self, source: &SourceCrate, name: &str, m: &mut Module) -> Vec<Error> {
+        let mut lower = Lower::new(self, &[]);
+        lower.source = Some((source, name.to_owned()));
+        lower.m = std::mem::take(m);
+        lower.tests();
+        *m = lower.m;
+        lower.errors
+    }
 }
 
 struct Lower<'a> {
@@ -69,6 +83,8 @@ struct Lower<'a> {
     fn_errors: Vec<String>,
     errors: Vec<Error>,
     m: Module,
+    /// The crate a test crate tests, with its name in the paths.
+    source: Option<(&'a SourceCrate, String)>,
 }
 
 impl<'a> Lower<'a> {
@@ -120,6 +136,7 @@ impl<'a> Lower<'a> {
             fn_errors: Vec::new(),
             errors: Vec::new(),
             m: Module::default(),
+            source: None,
         }
     }
 
@@ -173,6 +190,71 @@ impl<'a> Lower<'a> {
         }
     }
 
+    fn tests(&mut self) {
+        let ids: Vec<ItemId> = self.c.item_ids().collect();
+        let mut types = Vec::new();
+
+        for id in &ids {
+            if !matches!(self.c.item(*id), syn::Item::Struct(_) | syn::Item::Enum(_)) {
+                continue;
+            }
+
+            let name = self.name(*id);
+
+            if self.m.classes.contains_key(&name) || self.m.enums.contains_key(&name) {
+                self.error(*id, "a type of the tested crate has the name".into());
+                continue;
+            }
+
+            self.m.test_types.insert(name.clone());
+            self.reach(*id);
+            self.drain();
+            types.push((name, *id));
+        }
+
+        for (name, id) in types {
+            if let Some(default) = self.default(id) {
+                self.m.defaults.insert(name, default);
+            }
+        }
+
+        for id in ids {
+            let (
+                Some(ir::Item {
+                    attrs,
+                    kind: ir::ItemKind::Fn(f),
+                    ..
+                }),
+                syn::Item::Fn(syn_fn),
+            ) = (self.item(id), self.c.item(id))
+            else {
+                continue;
+            };
+
+            if attrs
+                .iter()
+                .any(|a| matches!(a, ir::Attr::Meta(m) if m == "test"))
+            {
+                let at = self.location(id, syn_fn.sig.ident.span());
+                let test = self.func(&f.sig, Some(&f.body), false, at, true);
+                self.m.tests.push(test);
+            }
+        }
+    }
+
+    /// The names in the module of the item of the tested crate a path of
+    /// another crate names.
+    fn source_path(&self, p: &[String], namespace: Namespace) -> Option<Vec<String>> {
+        let (source, name) = self.source.as_ref()?;
+
+        match p {
+            [first, rest @ ..] if first == name && !rest.is_empty() => {
+                segments(source, &source.resolve_str(&rest.join("::"), namespace))
+            }
+            _ => None,
+        }
+    }
+
     // --- items -----------------------------------------------------------
 
     fn item(&mut self, id: ItemId) -> Option<ir::Item> {
@@ -186,17 +268,7 @@ impl<'a> Lower<'a> {
     }
 
     fn name(&self, id: ItemId) -> String {
-        match self.c.item(id) {
-            syn::Item::Struct(s) => s.ident.to_string(),
-            syn::Item::Enum(e) => e.ident.to_string(),
-            syn::Item::Trait(t) => t.ident.to_string(),
-            syn::Item::Const(c) => c.ident.to_string(),
-            syn::Item::Static(s) => s.ident.to_string(),
-            syn::Item::Type(t) => t.ident.to_string(),
-            syn::Item::Fn(f) => f.sig.ident.to_string(),
-            syn::Item::Union(u) => u.ident.to_string(),
-            _ => String::new(),
-        }
+        item_name(self.c, id)
     }
 
     /// The name of a type of the module, an error if another type has it.
@@ -1029,6 +1101,10 @@ impl<'a> Lower<'a> {
             Target::SelfType => Ty::SelfTy,
             Target::Resolved(Resolved::Primitive(p)) => primitive(p),
             Target::Resolved(Resolved::External(p)) => {
+                if let Some(segments) = self.source_path(p, Namespace::Type) {
+                    return Ty::Named(segments.join("::"), args);
+                }
+
                 match p.iter().map(String::as_str).collect::<Vec<_>>().as_slice() {
                     [_, "vec", "Vec"] => Ty::List(first(args)),
                     [_, "option", "Option"] => Ty::Option(first(args)),
@@ -1288,6 +1364,14 @@ impl<'a> Lower<'a> {
 
         match &m.call {
             ir::MacroCall::Vec(items) => K::Array(self.exprs(items)),
+            ir::MacroCall::Format {
+                exprs,
+                format: None,
+            } if name == "assert_eq" && exprs.len() == 2 => K::Call {
+                callee: Callee::Intrinsic(Intrinsic::AssertEq),
+                recv: None,
+                args: self.exprs(exprs),
+            },
             ir::MacroCall::Format { format, .. } if name == "panic" => K::Panic(
                 format
                     .as_ref()
@@ -1350,12 +1434,21 @@ impl<'a> Lower<'a> {
                 segments
             }),
             Resolved::Primitive(p) => Some(vec![p.clone()]),
-            Resolved::External(p) => match p.as_slice() {
-                [_, module, ty, variant] if module == "option" && ty == "Option" => {
-                    Some(vec![variant.clone()])
+            Resolved::External(p) => {
+                if let Some(segments) = self
+                    .source_path(p, Namespace::Value)
+                    .or_else(|| self.source_path(p, Namespace::Type))
+                {
+                    return Some(segments);
                 }
-                p => Some(p[1..].to_vec()),
-            },
+
+                match p.as_slice() {
+                    [_, module, ty, variant] if module == "option" && ty == "Option" => {
+                        Some(vec![variant.clone()])
+                    }
+                    p => Some(p[1..].to_vec()),
+                }
+            }
             Resolved::Module(_) | Resolved::Unresolved => None,
         }
     }
@@ -1426,6 +1519,35 @@ impl<'a> Lower<'a> {
             var,
             inner,
         }
+    }
+}
+
+/// The names of what a path of `c` resolves to.
+fn segments(c: &SourceCrate, r: &Resolved) -> Option<Vec<String>> {
+    match r {
+        Resolved::Item(id) => Some(vec![item_name(c, *id)]),
+        Resolved::Variant(id, index) => {
+            Some(vec![item_name(c, *id), variant_name(c.item(*id), *index)])
+        }
+        Resolved::Associated(base, name) => segments(c, base).map(|mut segments| {
+            segments.push(name.clone());
+            segments
+        }),
+        _ => None,
+    }
+}
+
+fn item_name(c: &SourceCrate, id: ItemId) -> String {
+    match c.item(id) {
+        syn::Item::Struct(s) => s.ident.to_string(),
+        syn::Item::Enum(e) => e.ident.to_string(),
+        syn::Item::Trait(t) => t.ident.to_string(),
+        syn::Item::Const(c) => c.ident.to_string(),
+        syn::Item::Static(s) => s.ident.to_string(),
+        syn::Item::Type(t) => t.ident.to_string(),
+        syn::Item::Fn(f) => f.sig.ident.to_string(),
+        syn::Item::Union(u) => u.ident.to_string(),
+        _ => String::new(),
     }
 }
 
@@ -1695,6 +1817,7 @@ mod tests {
     use crate::codegen::test_utilities::id;
     use crate::codegen::test_utilities::load;
     use crate::codegen::test_utilities::lower;
+    use crate::codegen::test_utilities::tested;
 
     fn dump(m: &Module) -> String {
         let mut out = print::module(m, "lower");
@@ -2340,6 +2463,58 @@ pub unsafe trait Tr {}
                 assert_eq!(
                     dump(&m),
                     "// ===== after lower\nclass Bad<> {  }\nclass Root<> { a: Bad, e: BadEnum, f: E }\nenum BadEnum [] []\nenum E [Unit(\"A\"), Tuple(\"B\", Int(\"u8\")), Tuple(\"C\", Tuple([Int(\"u8\"), Bool])), Struct(\"D\", [(\"x\", Int(\"u8\"))]), Tuple(\"F\", List(Named(\"E\", [])))] [\"f\"]\n"
+                );
+            }
+        }
+
+        mod lower_tests {
+            use super::*;
+
+            #[test]
+            fn lower_tests_should_lower_the_test_functions_and_the_types_of_a_test_crate() {
+                let (m, errors) = tested(
+                    r#"pub struct Root { pub e: E }
+pub enum E { A, B(u8) }
+pub use std::string::String as Text;
+impl Root {
+    pub fn new() -> Root { Root { e: E::A } }
+}"#,
+                    r#"use c::Root;
+#[derive(Default)]
+struct T { n: u8 }
+struct N;
+enum E { X }
+#[test]
+fn builds() {
+    let r: c::Root = Root::new();
+    let e = c::E::B(1);
+    let o: Option<u8> = None;
+    let p: c = c::nothing::X;
+    let s: c::Text;
+    assert_eq!(r.e, T::default().n);
+    assert_eq!(1, 2, "m");
+}
+fn helper() {}"#,
+                    &[],
+                );
+
+                assert_eq!(
+                    dump(&m),
+                    "// ===== after lower\n// Root\nfn new() -> Root {\n    Root { e: E::A };\n}\n\n// test\nfn builds() -> () {\n    let r: Root = Root::new()/*unresolved*/;\n    let e: ? = E::B(1)/*unresolved*/;\n    let o: Option<u8> = None;\n    let p: ? = nothing::X;\n    let s;\n    .AssertEq(r.e, T::default()/*unresolved*/.n);\n    /* unsupported: `assert_eq!` */;\n}\n\nclass N<> {  }\nclass Root<> { e: E }\n  new\nclass T<> { n: u8 }\nenum E [Unit(\"A\"), Tuple(\"B\", Int(\"u8\"))] []\n"
+                );
+                assert_eq!(
+                    (
+                        m.test_types.iter().cloned().collect::<Vec<_>>(),
+                        m.defaults.keys().cloned().collect::<Vec<_>>()
+                    ),
+                    (
+                        vec!["N".to_string(), "T".to_string()],
+                        vec!["T".to_string()]
+                    )
+                );
+                assert_eq!(
+                    errors,
+                    ["/c/tests/t.rs:5: `E`: a type of the tested crate has the name"]
                 );
             }
         }

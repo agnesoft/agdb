@@ -7,7 +7,8 @@ use std::collections::BTreeSet;
 /// `G: Into<X>` generics become `Into(X)` parameters. A `.into()` is
 /// dispatched statically where the type of the value is known and calls the
 /// normalizer of the target (see [`normalizer`]) otherwise. The normalizers
-/// are generated from [`Module::conversions`] as functions of the module.
+/// are generated from [`Module::conversions`] as functions of the module,
+/// those only the [tests](Module::tests) need after the others.
 pub struct LowerConversions;
 
 /// The name of the function converting an `Into(to)` into `to`.
@@ -26,50 +27,23 @@ impl Pass for LowerConversions {
         let facts = select(std::mem::take(&mut m.conversions));
         let mut needed = BTreeSet::new();
         let mut used = BTreeSet::new();
+        let mut done = BTreeSet::new();
+        let tests = std::mem::take(&mut m.tests);
         m.for_each_func(&mut |f, _| {
             rewrite_body(&mut f.body, &mut |e| {
                 dispatch(e, &facts, &mut needed, &mut used)
             });
         });
+        normalizers(m, &facts, &mut needed, &mut used, &mut done);
+        m.tests = tests;
 
-        let mut done = BTreeSet::new();
-
-        while let Some(to) = needed.difference(&done).next().cloned() {
-            done.insert(to.clone());
-            let ty = Ty::named(&to);
-            let mut arms = vec![(
-                ty.clone(),
-                Pat::Bind("v".into()),
-                Expr::local("v", ty.clone()),
-            )];
-            let mut generics: Vec<Generic> = Vec::new();
-
-            for (i, c) in facts.iter().enumerate().filter(|(_, c)| c.to == to) {
-                used.insert(i);
-                let mut body = c.body.clone();
-                body.rewrite(&mut |e| dispatch(e, &facts, &mut needed, &mut used));
-                arms.push((c.from.clone(), Pat::Bind("v".into()), body));
-                generics.extend(
-                    c.generics
-                        .iter()
-                        .filter(|g| !generics.iter().any(|x| x.name == g.name))
-                        .cloned()
-                        .collect::<Vec<_>>(),
-                );
-            }
-
-            let value = Expr::local("v", Ty::Into(to.clone())).boxed();
-            let case = Expr::typed(K::TypeCase { value, arms }, ty.clone());
-            m.functions.push(Func {
-                generics,
-                ..Func::new(
-                    &normalizer(&to),
-                    vec![("v".into(), Ty::Into(to.clone()))],
-                    ty,
-                    vec![Expr::new(K::Return(Some(case.boxed())))],
-                )
+        for f in &mut m.tests {
+            rewrite_body(&mut f.body, &mut |e| {
+                dispatch(e, &facts, &mut needed, &mut used)
             });
         }
+
+        normalizers(m, &facts, &mut needed, &mut used, &mut done);
 
         for c in used.into_iter().map(|i| &facts[i]) {
             let at = c.at.clone().unwrap_or_default();
@@ -82,6 +56,53 @@ impl Pass for LowerConversions {
         }
 
         m.conversions = facts;
+    }
+}
+
+/// The normalizers of the `needed` targets not `done` yet, and of the
+/// targets their conversions need in turn.
+fn normalizers(
+    m: &mut Module,
+    facts: &[Conversion],
+    needed: &mut BTreeSet<String>,
+    used: &mut BTreeSet<usize>,
+    done: &mut BTreeSet<String>,
+) {
+    while let Some(to) = needed.difference(done).next().cloned() {
+        done.insert(to.clone());
+        let ty = Ty::named(&to);
+        let mut arms = vec![(
+            ty.clone(),
+            Pat::Bind("v".into()),
+            Expr::local("v", ty.clone()),
+        )];
+        let mut generics: Vec<Generic> = Vec::new();
+
+        for (i, c) in facts.iter().enumerate().filter(|(_, c)| c.to == to) {
+            used.insert(i);
+            let mut body = c.body.clone();
+            body.rewrite(&mut |e| dispatch(e, facts, needed, used));
+            arms.push((c.from.clone(), Pat::Bind("v".into()), body));
+            generics.extend(
+                c.generics
+                    .iter()
+                    .filter(|g| !generics.iter().any(|x| x.name == g.name))
+                    .cloned()
+                    .collect::<Vec<_>>(),
+            );
+        }
+
+        let value = Expr::local("v", Ty::Into(to.clone())).boxed();
+        let case = Expr::typed(K::TypeCase { value, arms }, ty.clone());
+        m.functions.push(Func {
+            generics,
+            ..Func::new(
+                &normalizer(&to),
+                vec![("v".into(), Ty::Into(to.clone()))],
+                ty,
+                vec![Expr::new(K::Return(Some(case.boxed())))],
+            )
+        });
     }
 }
 
@@ -226,9 +247,11 @@ pub fn is_statement(body: &Expr) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::codegen::pass::Resolve;
     use crate::codegen::print;
     use crate::codegen::test_utilities::conversion;
     use crate::codegen::test_utilities::resolved;
+    use crate::codegen::test_utilities::tested;
 
     mod lower_conversions {
         use super::*;
@@ -311,6 +334,47 @@ mod tests {
                         "// ===== after lower_conversions\n// Root\nfn into(mut self, v: impl Into<V>) -> Root {\n    self.v.Push(v.into::<V>());\n    return self;\n}\n\n// Root\nfn list<R: Tr>(self, vs: Vec<impl Into<V>>, r: impl Into<V>, t: R, n: u8) -> Root {\n    return self;\n}\n\n// Root\nfn same(mut self, v: V) -> Root {\n    self.v.Push(v);\n    return self;\n}\n\n// Root\nfn known(mut self, n: u64) -> Root {\n    self.v.Push(V(n));\n    return self;\n}\n\nfn into_V(v: impl Into<V>) -> V {\n    return typecase v { V@v => v, u64@v => V(v), str@v => v.into::<W>() };\n}\n\nfn into_W(v: impl Into<W>) -> W {\n    return typecase v { W@v => v };\n}\n\n"
                     );
                     assert_eq!(m.conversions.len(), 2);
+                }
+
+                #[test]
+                fn run_should_make_the_normalizers_only_the_tests_need_after_the_others() {
+                    let (mut m, _) = tested(
+                        r#"pub struct Root { pub v: V, pub a: A }
+pub struct V;
+pub struct A;
+impl<T: Into<V>> From<(T, T)> for A {
+    fn from(v: (T, T)) -> Self { A }
+}
+impl From<u8> for V {
+    fn from(v: u8) -> Self { V }
+}
+impl Root {
+    pub fn set<T: Into<V>>(mut self, t: T) -> Root {
+        self.v = t.into();
+        self
+    }
+}"#,
+                        r#"#[test]
+fn t() {
+    let a: c::A = (1, 2).into();
+}"#,
+                        &[],
+                    );
+                    Resolve.run(&mut m, &mut Vec::new());
+
+                    LowerConversions.run(&mut m, &mut Vec::new());
+
+                    assert_eq!(
+                        m.functions
+                            .iter()
+                            .map(|f| f.name.as_str())
+                            .collect::<Vec<_>>(),
+                        ["into_V", "into_A"]
+                    );
+                    assert_eq!(
+                        print::func(&m.tests[0]),
+                        "fn t() -> () {\n    let a: A = (1, 2).into::<A>();\n}"
+                    );
                 }
 
                 #[test]

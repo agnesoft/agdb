@@ -15,7 +15,9 @@ use std::collections::BTreeSet;
 /// So do those returning a generic bounded by a trait whose implementors are
 /// all tagged into it, through the method `into_<data>` added to the trait
 /// and its dictionaries. The [`TypeCase`](K::TypeCase) arms of a tagged type
-/// match its variant. It runs after [`TraitDicts`](super::TraitDicts) and
+/// match its variant. The calls of the methods returning the data type
+/// instead are typed with it, and the callers' conversions of their values
+/// into it left out. It runs after [`TraitDicts`](super::TraitDicts) and
 /// before [`EraseNewtypes`](super::EraseNewtypes), which can make tagged
 /// types the same.
 pub struct TagResults;
@@ -53,12 +55,14 @@ impl Pass for TagResults {
         }
 
         let builders = &m.builders;
+        let mut retagged = Retagged::new();
 
-        for (_, class) in m.classes.iter_mut().filter(|(n, _)| builders.contains(n)) {
+        for (name, class) in m.classes.iter_mut().filter(|(n, _)| builders.contains(n)) {
             let dicts: Vec<String> = class.fields.iter().map(|(n, _)| n.clone()).collect();
 
             for f in class.methods.iter_mut().filter(|f| !f.private) {
                 if let Some((data, var)) = f.ret.name().and_then(|n| tags.get(n)) {
+                    retagged.insert((name.clone(), f.name.clone()), data.clone());
                     f.ret = Ty::named(data);
                     rewrite_returns(&mut f.body, &|e| Expr::variant(data, var, Some(e)));
                 } else if let Ty::Param(p) = &f.ret
@@ -67,6 +71,7 @@ impl Pass for TagResults {
                         .find(|(tr, _)| dicts.contains(&dict_field(p, tr)))
                 {
                     let dict = dict_field(p, tr);
+                    retagged.insert((name.clone(), f.name.clone()), data.clone());
                     f.ret = Ty::named(data);
                     rewrite_returns(&mut f.body, &|e| {
                         Expr::typed(
@@ -89,6 +94,8 @@ impl Pass for TagResults {
             }
         }
 
+        m.for_each_func(&mut |f, _| rewrite_body(&mut f.body, &mut |e| retype(e, &retagged)));
+
         for f in &mut m.functions {
             rewrite_body(&mut f.body, &mut |e| {
                 if let K::TypeCase { arms, .. } = &mut e.k {
@@ -105,6 +112,35 @@ impl Pass for TagResults {
                 }
             });
         }
+    }
+}
+
+/// The data type the builder methods (class, name) return instead.
+type Retagged = BTreeMap<(String, String), String>;
+
+/// A call of a retagged method typed with its data type, and wrapped into the
+/// data type by the variant the caller converted it with (`QueryType::from`)
+/// as it is.
+fn retype(e: &mut Expr, retagged: &Retagged) {
+    match &mut e.k {
+        K::Call {
+            callee: Callee::Member { class, name },
+            ..
+        } => {
+            if let Some(data) = retagged.get(&(class.clone(), name.clone())) {
+                e.ty = Ty::named(data);
+            }
+        }
+        K::Variant {
+            en,
+            payload: Some(value),
+            ..
+        } if matches!(&value.k, K::Call { callee: Callee::Member { class, name }, .. }
+                if retagged.get(&(class.clone(), name.clone())) == Some(en)) =>
+        {
+            *e = std::mem::replace(value.as_mut(), Expr::new(K::This));
+        }
+        _ => {}
     }
 }
 
@@ -282,6 +318,9 @@ mod tests {
                             pub fn a(&self) -> Qa {
                                 Qa { n: 1 }
                             }
+                            pub fn wrapped(&self) -> Wire {
+                                Wire::A(self.a())
+                            }
                             pub fn g(&self) -> G<Qb> {
                                 G(Qb {})
                             }
@@ -310,7 +349,7 @@ mod tests {
 
                     assert_eq!(
                         print::module(&m, "tag_results"),
-                        "// ===== after tag_results\n// Root\nfn a(&self) -> Wire {\n    return Wire::A(Qa { n: 1 });\n}\n\n// Root\nfn g(&self) -> G<Qb> {\n    return G { 0: Qb {  }, T_Tr: Qb_Tr };\n}\n\n// Root\nfn h(&self) -> H<Untagged> {\n    return H { 0: Untagged {  }, T_Other: Untagged_Other };\n}\n\n// Root\nfn take(mut self, w: impl Into<Wire>) -> Root {\n    self.w = w.into::<Wire>();\n    return self;\n}\n\n// Root\nfn n(&self) -> u8 {\n    return self.private().n;\n}\n\n// Root\nfn private(&self) -> Qa {\n    return Qa { n: 2 };\n}\n\n// H\nfn query(self) -> T {\n    return self.0;\n}\n\n// H\nfn other(&self) -> u8 {\n    return <Other>::other(self.T_Other, self.0);\n}\n\n// G\nfn query(self) -> Wire {\n    return <Tr>::into_wire(self.T_Tr, self.0);\n}\n\n// G\nfn get(&self) -> u8 {\n    return <Tr>::get(self.T_Tr, self.0);\n}\n\n// impl Tr for Qa\nfn get(&self) -> u8 {\n    return self.n;\n}\n\n// impl Tr for Qb\nfn get(&self) -> u8 {\n    return 0;\n}\n\n// impl Tr for Qb\nfn into_wire(self) -> Wire {\n    return Wire::B(self);\n}\n\n// impl Other for Untagged\nfn other(&self) -> u8 {\n    return 1;\n}\n\nfn into_Wire(v: impl Into<Wire>) -> Wire {\n    return typecase v { Wire@v => v, Wire@Wire::A(v) => Wire::A(v), Wire@Wire::B(v) => Wire::B(v), Untagged@v => Wire::B(Qb {  }) };\n}\n\n"
+                        "// ===== after tag_results\n// Root\nfn a(&self) -> Wire {\n    return Wire::A(Qa { n: 1 });\n}\n\n// Root\nfn wrapped(&self) -> Wire {\n    return self.a();\n}\n\n// Root\nfn g(&self) -> G<Qb> {\n    return G { 0: Qb {  }, T_Tr: Qb_Tr };\n}\n\n// Root\nfn h(&self) -> H<Untagged> {\n    return H { 0: Untagged {  }, T_Other: Untagged_Other };\n}\n\n// Root\nfn take(mut self, w: impl Into<Wire>) -> Root {\n    self.w = w.into::<Wire>();\n    return self;\n}\n\n// Root\nfn n(&self) -> u8 {\n    return self.private().n;\n}\n\n// Root\nfn private(&self) -> Qa {\n    return Qa { n: 2 };\n}\n\n// H\nfn query(self) -> T {\n    return self.0;\n}\n\n// H\nfn other(&self) -> u8 {\n    return <Other>::other(self.T_Other, self.0);\n}\n\n// G\nfn query(self) -> Wire {\n    return <Tr>::into_wire(self.T_Tr, self.0);\n}\n\n// G\nfn get(&self) -> u8 {\n    return <Tr>::get(self.T_Tr, self.0);\n}\n\n// impl Tr for Qa\nfn get(&self) -> u8 {\n    return self.n;\n}\n\n// impl Tr for Qb\nfn get(&self) -> u8 {\n    return 0;\n}\n\n// impl Tr for Qb\nfn into_wire(self) -> Wire {\n    return Wire::B(self);\n}\n\n// impl Other for Untagged\nfn other(&self) -> u8 {\n    return 1;\n}\n\nfn into_Wire(v: impl Into<Wire>) -> Wire {\n    return typecase v { Wire@v => v, Wire@Wire::A(v) => Wire::A(v), Wire@Wire::B(v) => Wire::B(v), Untagged@v => Wire::B(Qb {  }) };\n}\n\n"
                     );
                     assert_eq!(
                         m.traits

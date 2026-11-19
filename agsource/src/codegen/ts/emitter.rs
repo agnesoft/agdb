@@ -57,6 +57,8 @@ pub struct Emitter<'a> {
     indent: usize,
     /// Whether the code calls [`PANIC`].
     panics: bool,
+    /// The names of the module the code uses, for [`Emitter::tests`].
+    imports: BTreeSet<String>,
 }
 
 /// `panic!`: TS has no throw expression.
@@ -78,6 +80,7 @@ impl<'a> Emitter<'a> {
             generics: Vec::new(),
             indent: 0,
             panics: false,
+            imports: BTreeSet::new(),
         }
     }
 
@@ -116,6 +119,70 @@ impl<'a> Emitter<'a> {
 
         if self.panics {
             head += PANIC;
+        }
+
+        Ts {
+            code: head + &self.out,
+            notes: self.notes,
+            unsupported: self.unsupported,
+        }
+    }
+
+    /// The [tests](Module::tests) of the module emitted as `module` as a
+    /// vitest suite `name`. An `assert_eq!` expects its left value to equal
+    /// the right one as its schema type, so the compiler checks the expected
+    /// values against the schema.
+    pub fn tests(mut self, name: &str, module: &str) -> Ts {
+        let m = self.m;
+        self.line(0, &format!("describe({name:?}, () => {{"));
+
+        for (i, f) in m.tests.iter().enumerate() {
+            if i > 0 {
+                self.line(0, "");
+            }
+
+            self.current = f.name.clone();
+            self.reassigned = reassigned(&f.body);
+            self.line(1, &format!("it({:?}, () => {{", f.name));
+            self.block(&f.body, 2);
+            self.line(1, "});");
+        }
+
+        self.line(0, "});");
+        let exported = |n: &String| *n == m.root || m.functions.iter().any(|f| f.name == *n);
+
+        for n in self.imports.clone().iter().filter(|n| !exported(n)) {
+            self.unsupported(&format!("{n} is not exported"));
+        }
+
+        let imports: Vec<&String> = self.imports.iter().filter(|n| exported(n)).collect();
+        let mut head = format!(
+            "{}
+
+{}
+import {{ describe, expect, it }} from \"vitest\";
+",
+            self.config.header, self.config.import
+        );
+
+        if !imports.is_empty() {
+            let imports: Vec<&str> = imports.iter().map(|n| n.as_str()).collect();
+            let _ = writeln!(head, "import {{ {} }} from {module:?};", imports.join(", "));
+        }
+
+        head += "\n";
+        let mut types = String::new();
+
+        for name in self.schemas.borrow().iter() {
+            let _ = writeln!(types, "type {name} = {}.{name};", self.config.schemas);
+        }
+
+        if self.panics {
+            types += PANIC;
+        }
+
+        if !types.is_empty() {
+            head += &(types + "\n");
         }
 
         Ts {
@@ -301,7 +368,10 @@ impl<'a> Emitter<'a> {
             K::Unwrap(value) | K::Ref(value) | K::Deref(value) => self.expr(value),
             K::Index { base, index } => format!("{}[{}]", self.expr(base), self.expr(index)),
             K::Call { callee, recv, args } => self.call(callee, recv.as_deref(), args),
-            K::Convert { value, to } => format!("{}({})", normalizer(to), self.expr(value)),
+            K::Convert { value, to } => {
+                self.imports.insert(normalizer(to));
+                format!("{}({})", normalizer(to), self.expr(value))
+            }
             K::Fields(value) => self.fields(value, &e.ty),
             K::Binary { op, l, r } => {
                 let op = match *op {
@@ -359,13 +429,18 @@ impl<'a> Emitter<'a> {
         match callee {
             Callee::Member { class, name } if !self.m.is_builder(class) => {
                 let a = if a.is_empty() { r } else { format!("{r}, {a}") };
+                self.imports.insert(format!("{class}_{name}"));
                 format!("{class}_{name}({a})")
             }
             Callee::Member { name, .. } | Callee::Trait { name, .. } => format!("{r}.{name}({a})"),
             Callee::Static { class, name } if !self.m.is_builder(class) => {
+                self.imports.insert(format!("{class}_{name}"));
                 format!("{class}_{name}({a})")
             }
-            Callee::Static { class, name } => format!("{class}.{name}({a})"),
+            Callee::Static { class, name } => {
+                self.imports.insert(class.clone());
+                format!("{class}.{name}({a})")
+            }
             Callee::Extern(name) => format!("{name}({a})"),
             Callee::Intrinsic(i) => match i {
                 Intrinsic::Push => format!("{r}.push({a})"),
@@ -379,6 +454,12 @@ impl<'a> Emitter<'a> {
                 Intrinsic::Expect => format!("({r} ?? {})", self.panic(&a)),
                 Intrinsic::Map => format!("{r}.map({a})"),
                 Intrinsic::IterForEach => format!("{r}.forEach({a})"),
+                Intrinsic::AssertEq => {
+                    let left = self.expr(&args[0]);
+                    let right = self.expr(&args[1]);
+                    let ty = self.ty(&args[1].ty);
+                    format!("expect({left}).toEqual<{ty}>({right})")
+                }
                 Intrinsic::MemTake | Intrinsic::MemSwap => self.unsupported(&format!("{i:?}")),
             },
             Callee::Path(..) | Callee::Method(_) => self.unsupported(&format!("{callee:?}")),
@@ -407,7 +488,7 @@ impl<'a> Emitter<'a> {
         }
     }
 
-    fn tests(&mut self, tests: &[Test]) -> String {
+    fn conditions(&mut self, tests: &[Test]) -> String {
         if tests.is_empty() {
             return "true".into();
         }
@@ -472,7 +553,7 @@ impl<'a> Emitter<'a> {
                 els,
             } => {
                 let (tests, binds) = pat.projections(value);
-                let cond = self.tests(&tests);
+                let cond = self.conditions(&tests);
                 self.line(indent, &format!("if ({cond}) {{"));
                 self.arm(&binds, then, indent + 1);
                 self.els(els.as_deref(), indent);
@@ -563,7 +644,7 @@ impl<'a> Emitter<'a> {
                 return;
             }
 
-            let cond = self.tests(&tests);
+            let cond = self.conditions(&tests);
             let keyword = if open { "} else if" } else { "if" };
             self.line(indent, &format!("{keyword} ({cond}) {{"));
             self.arm(&binds, body, indent + 1);
@@ -731,7 +812,7 @@ impl<'a> Emitter<'a> {
 
             let (tests, binds) = pat.projections(&v);
             let guard = if matches!(pat, Pat::Variant { .. }) {
-                self.tests(&tests)
+                self.conditions(&tests)
             } else {
                 self.guard(&ty, "v")
             };
@@ -1160,6 +1241,7 @@ mod tests {
     use crate::codegen::pass::*;
     use crate::codegen::test_utilities::conversion;
     use crate::codegen::test_utilities::lower;
+    use crate::codegen::test_utilities::tested;
     use crate::codegen::ts::*;
     use std::collections::BTreeMap;
 
@@ -1174,6 +1256,18 @@ mod tests {
     fn emitted(source: &str, traits: &[&str], data: &[&str]) -> Ts {
         let (mut m, errors) = lower(source, traits, data);
         assert_eq!(errors, Vec::<String>::new());
+        passes(&mut m);
+        Emitter::new(&m, &config()).module()
+    }
+
+    fn emitted_tests(source: &str, tests: &str, data: &[&str]) -> Ts {
+        let (mut m, errors) = tested(source, tests, data);
+        assert_eq!(errors, Vec::<String>::new());
+        passes(&mut m);
+        Emitter::new(&m, &config()).tests("suite", "./m.ts")
+    }
+
+    fn passes(m: &mut Module) {
         let errors = Passes::new()
             .with(Resolve)
             .with(Prune)
@@ -1190,12 +1284,11 @@ mod tests {
             .with(UnescapeIdentifiers)
             .with(OmitSkippedDefaults)
             .with(RemoveDeadHelpers)
-            .run(&mut m, &mut |_, _| {});
+            .run(m, &mut |_, _| {});
         assert_eq!(
             errors.iter().map(ToString::to_string).collect::<Vec<_>>(),
             Vec::<String>::new()
         );
-        Emitter::new(&m, &config()).module()
     }
 
     fn class(name: &str, fields: Vec<(&str, Ty)>, methods: Vec<Func>) -> (String, Class) {
@@ -1255,6 +1348,68 @@ mod tests {
 
     mod emitter {
         use super::*;
+
+        mod tests {
+            use super::*;
+
+            #[test]
+            fn tests_should_be_a_vitest_suite_expecting_the_schema_types_and_importing_what_the_module_exports()
+             {
+                let ts = emitted_tests(
+                    r#"pub struct Root { pub q: Q, pub a: A, pub v: V, pub e: E }
+pub struct Q { pub n: u8 }
+pub enum E { X }
+pub struct A;
+pub struct V;
+impl<T: Into<V>> From<(T, T)> for A {
+    fn from(v: (T, T)) -> Self { A {} }
+}
+impl From<u8> for V {
+    fn from(v: u8) -> Self { V {} }
+}
+impl E {
+    pub fn get(&self) -> u8 { 1 }
+}
+impl Root {
+    pub fn new() -> Root { Root { q: Q { n: 1 }, a: A {}, v: V {}, e: E::X } }
+    pub fn q(&self) -> Q { Q { n: self.q.n } }
+}"#,
+                    r#"use c::Root;
+#[test]
+fn first() {
+    let r = Root::new();
+    assert_eq!(r.q(), c::Q { n: 1 });
+}
+#[test]
+fn second() {
+    let a: c::A = (1, 2).into();
+    let n = c::E::X.get();
+    panic!("p");
+}"#,
+                    &["Q", "E"],
+                );
+
+                assert_eq!(
+                    ts.code,
+                    "// header\n\nimport type { S } from \"s\";\nimport { describe, expect, it } from \"vitest\";\nimport { Root, into_A } from \"./m.ts\";\n\ntype Q = S.Q;\nfunction panic(msg: string): never {\n    throw new Error(msg);\n}\n\ndescribe(\"suite\", () => {\n    it(\"first\", () => {\n        const r = Root.new();\n        expect(r.q()).toEqual<Q>({ n: 1 });\n    });\n\n    it(\"second\", () => {\n        const a = into_A([1, 2]);\n        const n = E_get(\"X\");\n        panic(\"p\");\n    });\n});\n"
+                );
+                assert_eq!(ts.unsupported, ["second: `E_get is not exported`"]);
+            }
+
+            #[test]
+            fn tests_should_import_nothing_of_the_module_the_tests_do_not_use() {
+                let ts = emitted_tests(
+                    "pub struct Root;",
+                    "#[test]\nfn t() { assert_eq!(1, 1); }",
+                    &[],
+                );
+
+                assert_eq!(
+                    ts.code,
+                    "// header\n\nimport type { S } from \"s\";\nimport { describe, expect, it } from \"vitest\";\n\ndescribe(\"suite\", () => {\n    it(\"t\", () => {\n        expect(1).toEqual<number>(1);\n    });\n});\n"
+                );
+            }
+        }
 
         mod module {
             use super::*;

@@ -55,7 +55,7 @@ impl Pass for Resolve {
             }
         }
 
-        for f in m.functions.iter_mut() {
+        for f in m.functions.iter_mut().chain(m.tests.iter_mut()) {
             Ctx::new(&snapshot, "", Ty::Unknown, &[], f).func(f);
         }
 
@@ -154,6 +154,34 @@ impl<'a> Ctx<'a> {
                 .and_then(|fs| fs.iter().find(|f| f.name == method))
                 .map(|f| (t.clone(), f))
         })
+    }
+
+    /// The list the non-generic conversions into the `Into` target of `f`'s
+    /// generic `t` take, when they all agree on it: what Rust infers the
+    /// elements of an array argument from.
+    fn list_source(&self, f: &Func, t: &Ty) -> Option<Ty> {
+        let Ty::Param(p) = t else {
+            return None;
+        };
+        let Some((_, Some(Ty::Named(to, _)))) = f
+            .generics
+            .iter()
+            .filter(|g| g.name == *p)
+            .flat_map(|g| &g.bounds)
+            .find(|(t, _)| t == "Into")
+        else {
+            return None;
+        };
+        let mut lists = self
+            .m
+            .conversions
+            .iter()
+            .filter(|c| c.to == *to && c.generics.is_empty())
+            .map(|c| c.from.strip_refs())
+            .filter(|t| matches!(t, Ty::List(_)));
+        let first = lists.next()?;
+
+        lists.all(|l| l == first).then_some(first)
     }
 
     fn local(&self, n: &str) -> Option<Ty> {
@@ -752,7 +780,10 @@ impl<'a> Ctx<'a> {
             let params = self.class_params(c, cargs);
 
             for (a, (_, t)) in args.iter_mut().zip(f.params.iter()) {
-                let t = subst(t, &rt, &params);
+                let t = matches!(a.k, K::Array(_))
+                    .then(|| self.list_source(&f, t))
+                    .flatten()
+                    .unwrap_or_else(|| subst(t, &rt, &params));
                 self.expr(a, Some(&t));
             }
 
@@ -1281,6 +1312,89 @@ mod tests {
                         "fn std<T: Tr, I: Into<V>>(mut self, t: T, i: I) -> Root {\n    let a: usize = self.ids.Len();\n    let b: bool = self.ids.IsEmpty();\n    self.ids.Push(1);\n    let c: Option<u64> = self.ids.Pop();\n    let l: Option<&u64> = self.ids.LastMut();\n    self.ids.Extend(vec![]);\n    self.ids.Extend(&vec![2]);\n    self.ids.Reserve(1);\n    self.ids.IterForEach(|x| {\n    let y: u64 = x;\n});\n    let m: Vec<u64> = self.ids.Map(|x| {\n    return x;\n});\n    let m2: Vec<?> = self.ids.Map(|x| {\n    x;\n});\n    let n: u64 = self.o.UnwrapOrDefault();\n    let e: u64 = self.o.Expect(\"e\");\n    let s: str = \"s\";\n    let mt: Vec<u64> = .MemTake(&self.ids);\n    .MemSwap(&self.ids, &vec![]);\n    self;\n}\na: usize\nb: bool\nc: Option<u64>\nl: Option<&u64>\nm: Vec<u64>\nm2: Vec<?>\nn: u64\ne: u64\ns: str\nmt: Vec<u64>"
                     );
                     assert_eq!(errors(&m, "Root", "std"), Vec::<String>::new());
+                }
+
+                #[test]
+                fn run_should_type_the_elements_of_an_array_argument_by_the_lists_the_target_converts_from()
+                 {
+                    let (mut m, _) = lower(
+                        r#"
+                        pub struct Root {
+                            pub w: W,
+                        }
+                        pub struct V;
+                        pub struct W(u8);
+                        pub struct S;
+                        impl From<u8> for W {
+                            fn from(v: u8) -> Self {
+                                W(v)
+                            }
+                        }
+                        impl From<Vec<W>> for V {
+                            fn from(v: Vec<W>) -> Self {
+                                V
+                            }
+                        }
+                        impl From<&[W]> for V {
+                            fn from(v: &[W]) -> Self {
+                                V
+                            }
+                        }
+                        impl<X: Clone> From<Vec<X>> for V {
+                            fn from(v: Vec<X>) -> Self {
+                                V
+                            }
+                        }
+                        impl From<u8> for V {
+                            fn from(v: u8) -> Self {
+                                V
+                            }
+                        }
+                        impl From<Vec<u8>> for S {
+                            fn from(v: Vec<u8>) -> Self {
+                                S
+                            }
+                        }
+                        impl From<Vec<Vec<u8>>> for S {
+                            fn from(v: Vec<Vec<u8>>) -> Self {
+                                S
+                            }
+                        }
+                        impl Root {
+                            pub fn take<T: Into<V>>(self, t: T) -> Root {
+                                self
+                            }
+                            pub fn other<T: Into<S>>(self, t: T) -> Root {
+                                self
+                            }
+                            pub fn plain(self, t: Vec<u8>) -> Root {
+                                self
+                            }
+                            pub fn bound<T: Clone>(self, t: T) -> Root {
+                                self
+                            }
+                            pub fn list<T: Into<Vec<u8>>>(self, t: T) -> Root {
+                                self
+                            }
+                            pub fn single<T: Into<W>>(self, t: T) -> Root {
+                                self
+                            }
+                            pub fn calls(self) -> Root {
+                                self.take([1.into()]).other([1]).plain(vec![1]).bound([1]).list([1]).single([1]).take(1)
+                            }
+                        }
+                        "#,
+                        &[],
+                        &[],
+                    );
+
+                    Resolve.run(&mut m, &mut Vec::new());
+
+                    assert_eq!(
+                        method(&m, "Root", "calls"),
+                        "fn calls(self) -> Root {\n    self.take(vec![1.into::<W>()]).other(vec![1]).plain(vec![1]).bound(vec![1]).list(vec![1]).single(vec![1]).take(1);\n}"
+                    );
+                    assert_eq!(errors(&m, "Root", "calls"), Vec::<String>::new());
                 }
 
                 #[test]

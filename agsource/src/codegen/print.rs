@@ -246,7 +246,7 @@ fn generic(g: &Generic) -> String {
 }
 
 /// The dump of the module after `title`: the methods of the builders, the
-/// trait impls of the classes and the functions of the module.
+/// trait impls of the classes, the functions of the module and the tests.
 pub fn module(m: &Module, title: &str) -> String {
     let mut out = format!("// ===== after {title}\n");
 
@@ -266,6 +266,10 @@ pub fn module(m: &Module, title: &str) -> String {
 
     for f in &m.functions {
         out += &format!("{}\n\n", func(f));
+    }
+
+    for f in &m.tests {
+        out += &format!("// test\n{}\n\n", func(f));
     }
 
     out

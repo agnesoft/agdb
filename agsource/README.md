@@ -107,21 +107,29 @@ impls, and the data roots. All their inherent impls are loaded. A construct the 
 not have (e.g. `for`, `?`, ranges, struct variants, destructuring `let`) is kept as
 `K::Unsupported` and noted on its function.
 
+`SourceCrate::lower_tests` lowers the `#[test]` functions of a test crate of that crate into
+`Module::tests`, so a generator can translate them too: a path of the tested crate
+(`agdb::QueryBuilder`) names its item in the module, `assert_eq!(a, b)` is the `AssertEq`
+intrinsic, and the structs and enums the test crate declares are data types listed in
+`Module::test_types`. The passes treat the tests as callers of the API.
+
 `codegen::pass` holds the passes over the lowered IR. A generator lists the ones its target
 needs in `Passes`, built-in or its own `Pass`, and can dump the module after each with
 `codegen::print`:
 
 - `Resolve` types the expressions and resolves what lowering left by name: method calls into
   member, associated, trait and std (intrinsic) calls, paths into variants and constants,
-  `.into()`/`From` into conversions;
-- `Prune` keeps what the `pub` methods of the builders and the trait impls call and reports the
-  unsupported constructs of what it keeps as `Error::Lowering`;
+  `.into()`/`From` into conversions. The elements of an array argument get the type the
+  non-generic `From` impls of the parameter's `Into` target agree on, as rustc infers it;
+- `Prune` keeps what the `pub` methods of the builders, the trait impls and the tests call and
+  reports the unsupported constructs of what it keeps, and the tests' calls of private methods,
+  as `Error::Lowering`;
 - `ExplicitReturns` turns tail expressions into `return`s;
 - `Inline` replaces the calls of single-expression constructors and private helpers with their
-  bodies and records them in `Module::inlined`;
+  bodies and records them in `Module::inlined`, leaving the tests as they are;
 - `LowerConversions` turns `G: Into<X>` generics into `Into(X)` parameters, dispatches `.into()`
   statically where the type is known and generates the `into_X` normalizers from
-  `Module::conversions` otherwise;
+  `Module::conversions` otherwise, those only the tests need last;
 - `TraitDicts` passes trait implementations as dictionaries: a field for class generics, a
   parameter for function generics and a global per named type (recorded in `Module::dicts`).
   Its `reflective` traits get the one dictionary the target runtime provides;

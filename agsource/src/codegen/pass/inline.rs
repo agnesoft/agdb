@@ -5,7 +5,8 @@ use std::collections::BTreeSet;
 
 /// Calls of the single-expression constructors (`Type::new`) and private
 /// helpers replaced by their bodies. The inlined methods are recorded in
-/// [`Module::inlined`].
+/// [`Module::inlined`]. The [tests](Module::tests) call the API as a client
+/// does, so they are left as they are.
 pub struct Inline;
 
 /// The inlined bodies can contain calls to inline in turn.
@@ -19,6 +20,7 @@ impl Pass for Inline {
     fn run(&self, m: &mut Module, _errors: &mut Vec<Error>) {
         let snapshot = m.clone();
         let mut inlined = std::mem::take(&mut m.inlined);
+        let tests = std::mem::take(&mut m.tests);
 
         for _ in 0..DEPTH {
             m.for_each_func(&mut |func, _| {
@@ -27,6 +29,7 @@ impl Pass for Inline {
         }
 
         m.inlined = inlined;
+        m.tests = tests;
     }
 }
 

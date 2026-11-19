@@ -25,6 +25,20 @@ pub(crate) fn load(source: &str) -> SourceCrate {
     )
 }
 
+/// The module of `Root` of the crate `c` with the tests of a test crate of
+/// it, and the errors of both, with `/` separators.
+pub(crate) fn tested(source: &str, tests: &str, data: &[&str]) -> (Module, Vec<String>) {
+    let platform = test_platform();
+    platform.fs().create_dir_all("/c/tests").unwrap();
+    platform.fs().write("/c/tests/t.rs", tests).unwrap();
+    let mut target = Target::new(TargetKind::Test, "/c/tests/t.rs");
+    target.externs.push("c".into());
+    let t = SourceCrate::load(&platform, &target, &Cfg::All);
+    let (mut m, mut errors) = lower(source, &[], data);
+    errors.extend(strings(&t.lower_tests(&load(source), "c", &mut m)));
+    (m, errors)
+}
+
 pub(crate) fn id(c: &SourceCrate, path: &str) -> ItemId {
     c.item_ids()
         .find(|id| c.resolve_str(path, Namespace::Type) == Resolved::Item(*id))

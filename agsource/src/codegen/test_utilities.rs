@@ -1,5 +1,8 @@
 use super::lower::Roots;
+use super::lowered::Conversion;
+use super::lowered::Expr;
 use super::lowered::Module;
+use super::lowered::Ty;
 use crate::Cfg;
 use crate::ItemId;
 use crate::Namespace;
@@ -59,4 +62,16 @@ pub(crate) fn resolved(source: &str, traits: &[&str], data: &[&str]) -> Module {
     m.for_each_func(&mut |f, _| errors.extend(f.errors.iter().cloned()));
     assert_eq!(errors, Vec::<String>::new());
     m
+}
+
+/// A conversion with no generics, location or errors.
+pub(crate) fn conversion(to: &str, from: Ty, body: Expr) -> Conversion {
+    Conversion {
+        to: to.into(),
+        from,
+        generics: Vec::new(),
+        body,
+        at: None,
+        errors: Vec::new(),
+    }
 }

@@ -1053,6 +1053,50 @@ fn derive_db_type_rename_field() {
 }
 
 #[test]
+fn derive_db_type_rename_field_to_db_id() {
+    #[derive(DbType, PartialEq, Debug)]
+    struct Renamed {
+        #[agdb(rename = "db_id")]
+        id: String,
+    }
+
+    let renamed = Renamed { id: "id".into() };
+
+    assert_eq!(renamed.to_db_values(), vec![("db_id", "id").into()]);
+}
+
+#[test]
+fn derive_db_type_option_of_non_clone_type() {
+    #[derive(PartialEq, Debug)]
+    struct Name(String);
+
+    impl From<&Name> for DbValue {
+        fn from(name: &Name) -> Self {
+            name.0.as_str().into()
+        }
+    }
+
+    impl TryFrom<DbValue> for Name {
+        type Error = DbError;
+
+        fn try_from(value: DbValue) -> Result<Self, Self::Error> {
+            Ok(Name(value.to_string()))
+        }
+    }
+
+    #[derive(DbType, PartialEq, Debug)]
+    struct S {
+        name: Option<Name>,
+    }
+
+    let s = S {
+        name: Some(Name("name".into())),
+    };
+
+    assert_eq!(s.to_db_values(), vec![("name", "name").into()]);
+}
+
+#[test]
 fn derive_db_type_skip_generic() {
     #[derive(DbType)]
     struct S {

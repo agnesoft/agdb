@@ -18,7 +18,16 @@ impl Pass for Resolve {
         "resolve"
     }
 
-    fn run(&self, m: &mut Module, errors: &mut Vec<Error>) {
+    fn run(&self, m: &mut Module, _errors: &mut Vec<Error>) {
+        let snapshot = m.clone();
+
+        for (name, default) in m.defaults.iter_mut() {
+            let ty = Ty::named(name);
+            let f = Func::new("default", Vec::new(), ty.clone(), Vec::new());
+            let mut c = Ctx::new(&snapshot, name, ty.clone(), &[], &f);
+            c.expr(default, Some(&ty));
+        }
+
         let snapshot = m.clone();
 
         for (name, class) in m.classes.iter_mut() {
@@ -52,27 +61,34 @@ impl Pass for Resolve {
 
         for conv in m.conversions.iter_mut() {
             let name = format!("from_{}", conv.to);
-            let f = Func::new(
-                &name,
-                vec![("v".into(), conv.from.clone())],
-                Ty::named(&conv.to),
-                Vec::new(),
-            );
-            let db_type = Generic {
-                name: "DbType".into(),
-                bounds: vec![("DbType".into(), None)],
+            let f = Func {
+                generics: conv.generics.clone(),
+                ..Func::new(
+                    &name,
+                    vec![("v".into(), conv.from.clone())],
+                    Ty::named(&conv.to),
+                    Vec::new(),
+                )
             };
-            let mut c = Ctx::new(&snapshot, &conv.to, Ty::named(&conv.to), &[db_type], &f);
+            let mut c = Ctx::new(&snapshot, &conv.to, Ty::named(&conv.to), &[], &f);
             c.expr(&mut conv.body, Some(&Ty::named(&conv.to)));
-            errors.extend(c.errors.into_iter().map(|message| Error::Lowering {
-                path: Default::default(),
-                line: 0,
-                item: name.clone(),
-                message,
-            }));
+            conv.errors.append(&mut c.errors);
         }
     }
 }
+
+/// The methods of iterators and copies, the value itself outside of Rust.
+const IDENTITY: &[&str] = &[
+    "iter",
+    "into_iter",
+    "collect",
+    "clone",
+    "to_owned",
+    "to_string",
+    "as_str",
+    "to_vec",
+    "as_slice",
+];
 
 struct Ctx<'a> {
     m: &'a Module,
@@ -205,7 +221,8 @@ impl<'a> Ctx<'a> {
                 let m = m.clone();
                 let mut r = std::mem::replace(r.as_mut(), Expr::new(K::This));
                 let args = std::mem::take(args);
-                self.expr(&mut r, None);
+                let through = IDENTITY.contains(&m.as_str()) || m == "map";
+                self.expr(&mut r, if through { expected } else { None });
                 self.method_call(e, m, r, args, expected);
             }
             K::Field { base, name } => {
@@ -239,7 +256,14 @@ impl<'a> Ctx<'a> {
                 let name = name.clone();
                 let t = match value {
                     Some(v) => {
-                        self.expr(v, None);
+                        let annotated = std::mem::replace(&mut v.ty, Ty::Unknown);
+                        let expected = (annotated != Ty::Unknown).then_some(annotated);
+                        self.expr(v, expected.as_ref());
+
+                        if let Some(t) = expected {
+                            v.ty = t;
+                        }
+
                         v.ty.clone()
                     }
                     None => Ty::Unknown,
@@ -311,6 +335,7 @@ impl<'a> Ctx<'a> {
                 self.expr(v, Some(&Ty::Bool));
                 e.ty = Ty::Bool;
             }
+            K::Cast(v) | K::Fields(v) => self.expr(v, None),
             K::Ref(v) => {
                 self.expr(v, expected.map(|t| t.strip_ref()));
                 e.ty = Ty::Ref(Box::new(v.ty.clone()));
@@ -395,7 +420,7 @@ impl<'a> Ctx<'a> {
                 });
 
                 for a in args.iter_mut() {
-                    self.closure_or_expr(a, el.as_ref());
+                    self.closure_or_expr(a, el.as_ref(), None);
                 }
 
                 if i == Intrinsic::Map
@@ -425,13 +450,35 @@ impl<'a> Ctx<'a> {
         }
     }
 
-    fn closure_or_expr(&mut self, a: &mut Expr, param_ty: Option<&Ty>) {
+    /// An argument of an intrinsic; a function path is the closure calling
+    /// it.
+    fn closure_or_expr(&mut self, a: &mut Expr, param_ty: Option<&Ty>, ret: Option<&Ty>) {
+        if let K::Path(segs) = &a.k {
+            let call = Expr::new(K::Call {
+                callee: Callee::Path(segs.clone(), Vec::new()),
+                recv: None,
+                args: vec![Expr::new(K::Local("x".into()))],
+            });
+            a.k = K::Closure {
+                params: vec!["x".into()],
+                body: vec![call],
+            };
+        }
+
         if let K::Closure { params, body } = &mut a.k {
-            let binds = params
+            let binds: Vec<(String, Ty)> = params
                 .iter()
                 .map(|p| (p.clone(), param_ty.cloned().unwrap_or(Ty::Unknown)))
                 .collect();
-            self.scoped(body, binds);
+            let len = self.locals.len();
+            self.locals.extend(binds);
+            let tail = body.len().saturating_sub(1);
+
+            for (i, s) in body.iter_mut().enumerate() {
+                self.expr(s, if i == tail { ret } else { None });
+            }
+
+            self.locals.truncate(len);
             a.ty = Ty::Fn;
         } else {
             self.expr(a, param_ty);
@@ -477,6 +524,10 @@ impl<'a> Ctx<'a> {
         mut args: Vec<Expr>,
         expected: Option<&Ty>,
     ) {
+        let segs: Vec<String> = segs
+            .into_iter()
+            .map(|s| if s == "Self" { self.class.clone() } else { s })
+            .collect();
         let last = segs.last().cloned().unwrap_or_default();
         let prev = if segs.len() >= 2 {
             segs[segs.len() - 2].clone()
@@ -498,11 +549,7 @@ impl<'a> Ctx<'a> {
         }
 
         if segs.len() >= 2 {
-            let en = if prev == "Self" {
-                self.class.clone()
-            } else {
-                prev.clone()
-            };
+            let en = prev.clone();
 
             if self.m.variant(&en, &last).is_some() && !args.is_empty() {
                 let pt = self.payload_ty(&en, &last);
@@ -525,6 +572,11 @@ impl<'a> Ctx<'a> {
             let mut v = args.remove(0);
             self.expr(&mut v, None);
 
+            if let Some(p) = gens.first().filter(|t| t.is_primitive()) {
+                *e = Expr::typed(K::Cast(v.boxed()), p.clone());
+                return;
+            }
+
             match to {
                 Some(to) => {
                     *e = Expr::typed(
@@ -538,6 +590,29 @@ impl<'a> Ctx<'a> {
                 None => self.unsupported(e, "`into` without a target".into()),
             }
 
+            return;
+        }
+
+        if last == "default" && args.is_empty() {
+            let ty = if prev == "Default" {
+                expected.map(|t| t.strip_ref().clone())
+            } else {
+                self.m
+                    .defaults
+                    .contains_key(&prev)
+                    .then(|| Ty::named(&prev))
+            };
+
+            if let Some(ty) = ty {
+                *e = self.m.default_of(&ty);
+                self.expr(e, Some(&ty));
+                return;
+            }
+        }
+
+        if prev == "Vec" && last == "new" && args.is_empty() {
+            *e = Expr::new(K::Array(Vec::new()));
+            self.expr(e, expected);
             return;
         }
 
@@ -605,11 +680,7 @@ impl<'a> Ctx<'a> {
             return;
         }
 
-        let class = if prev == "Self" {
-            self.class.clone()
-        } else {
-            prev.clone()
-        };
+        let class = prev.clone();
 
         if let Some(f) = self.m.method(&class, &last).cloned() {
             for (a, (_, t)) in args.iter_mut().zip(f.params.iter()) {
@@ -653,6 +724,11 @@ impl<'a> Ctx<'a> {
                 _ => None,
             }
             .or_else(|| expected.cloned());
+
+            if let Some(p) = to.as_ref().filter(|t| t.is_primitive()) {
+                *e = Expr::typed(K::Cast(r.boxed()), p.clone());
+                return;
+            }
 
             match to.as_ref().and_then(|t| t.name()) {
                 Some(to) => {
@@ -740,8 +816,13 @@ impl<'a> Ctx<'a> {
         };
 
         if let Some((i, ty, arg_ty)) = intrinsic {
+            let ret = match (i, expected) {
+                (Intrinsic::Map, Some(Ty::List(t))) => Some((**t).clone()),
+                _ => None,
+            };
+
             for a in args.iter_mut() {
-                self.closure_or_expr(a, arg_ty.as_ref());
+                self.closure_or_expr(a, arg_ty.as_ref(), ret.as_ref());
             }
 
             let ty = match (i, args.first().map(|a| &a.k)) {
@@ -761,11 +842,7 @@ impl<'a> Ctx<'a> {
             return;
         }
 
-        // Iterators and copies are the value itself outside of Rust.
-        if matches!(
-            m.as_str(),
-            "iter" | "into_iter" | "collect" | "clone" | "to_owned" | "to_string" | "as_str"
-        ) {
+        if IDENTITY.contains(&m.as_str()) {
             *e = r;
             return;
         }
@@ -923,6 +1000,7 @@ pub fn returned_ty(body: &[Expr]) -> Option<Ty> {
 mod tests {
     use super::*;
     use crate::codegen::print;
+    use crate::codegen::test_utilities::conversion;
     use crate::codegen::test_utilities::lower;
     use crate::codegen::test_utilities::strings;
 
@@ -960,6 +1038,11 @@ mod tests {
             fn add(&self, v: u64) -> u64;
         }
         pub const K: u64 = 1;
+        impl Default for V {
+            fn default() -> Self {
+                V(0)
+            }
+        }
         impl Tr for V {
             fn keys() -> Vec<u64> {
                 vec![]
@@ -1032,6 +1115,21 @@ mod tests {
                 self.v = 1.into();
                 let v4 = Into::into(1);
                 let v5 = t.into();
+                self
+            }
+
+            pub fn rest(mut self) -> Self {
+                let p = Into::<u64>::into(1);
+                self.v = Default::default();
+                let dv = V::default();
+                let un = Default::default();
+                let g = self.q.get(self.t.0.into());
+                self.ids = self.ids.iter().map(|x| *x).collect();
+                let qs = self.ids.iter().map(Q::new).collect();
+                let ms = self.ids.iter().map(|x| {
+                    let y = *x;
+                    y
+                }).collect();
                 self
             }
 
@@ -1204,6 +1302,28 @@ mod tests {
                 }
 
                 #[test]
+                fn run_should_resolve_the_primitive_conversions_the_defaults_and_the_function_paths()
+                 {
+                    let (m, _) = resolve(|_| {});
+
+                    assert_eq!(
+                        method(&m, "Root", "rest"),
+                        "fn rest(mut self) -> Root {\n    let p: u64 = (1 as u64);\n    self.v = V(0);\n    let dv: V = V(0);\n    let un: ? = /* unsupported: unknown function `default::Default::default` */;\n    let g: u64 = self.q.get((self.t.0 as u64));\n    self.ids = self.ids.Map(|x| {\n    *x;\n});\n    let qs: Vec<?> = self.ids.Map(|x| {\n    Q::new(x);\n});\n    let ms: Vec<?> = self.ids.Map(|x| {\n    let y: u64 = *x;\n    y;\n});\n    self;\n}\np: u64\ndv: V\nun: ?\ng: u64\nqs: Vec<?>\nms: Vec<?>"
+                    );
+                    assert_eq!(
+                        errors(&m, "Root", "rest"),
+                        ["unknown function `default::Default::default`"]
+                    );
+                    assert_eq!(
+                        m.defaults
+                            .iter()
+                            .map(|(n, d)| format!("{n}: {} {}", print::expr(d), print::ty(&d.ty)))
+                            .collect::<Vec<_>>(),
+                        ["V: V(0) V"]
+                    );
+                }
+
+                #[test]
                 fn run_should_resolve_the_calls() {
                     let (m, _) = resolve(|_| {});
 
@@ -1252,22 +1372,22 @@ mod tests {
                 }
 
                 #[test]
-                fn run_should_resolve_from_into_a_conversion_and_report_its_errors() {
+                fn run_should_resolve_from_into_a_conversion_and_keep_its_errors() {
                     let (m, errors) = resolve(|m| {
                         m.conversions = vec![
-                            Conversion {
-                                to: "V".into(),
-                                from: Ty::Int("u64"),
-                                body: Expr::new(K::Construct {
+                            conversion(
+                                "V",
+                                Ty::Int("u64"),
+                                Expr::new(K::Construct {
                                     class: "V".into(),
                                     fields: vec![("0".into(), Expr::new(K::Local("v".into())))],
                                 }),
-                            },
-                            Conversion {
-                                to: "E".into(),
-                                from: Ty::Int("u64"),
-                                body: Expr::new(K::Path(vec!["nothing".into()])),
-                            },
+                            ),
+                            conversion(
+                                "E",
+                                Ty::Int("u64"),
+                                Expr::new(K::Path(vec!["nothing".into()])),
+                            ),
                         ];
                     });
 
@@ -1282,7 +1402,14 @@ mod tests {
                             .collect::<Vec<_>>(),
                         vec!["V(v)", "/* unsupported: unknown path `nothing` */"]
                     );
-                    assert_eq!(errors, vec!["`from_E`: unknown path `nothing`"]);
+                    assert_eq!(errors, Vec::<String>::new());
+                    assert_eq!(
+                        m.conversions
+                            .iter()
+                            .map(|c| c.errors.clone())
+                            .collect::<Vec<_>>(),
+                        vec![Vec::<String>::new(), vec!["unknown path `nothing`".into()]]
+                    );
                 }
 
                 #[test]

@@ -25,7 +25,7 @@ readme = "README.md"
 agbench = { version = "0.17.0", path = "agbench" }
 agdb = { version = "0.17.0", path = "agdb" }
 agdb_api = { version = "0.17.0", path = "agdb_api" }
-agdb_derive = { version = "0.17.0", path = "agdb_derive" }
+agdb_derive = { version = "=0.17.0", path = "agdb_derive" }
 agplatform = { version = "0.17.0", path = "agplatform" }
 agsource = { version = "0.17.0", path = "agsource" }
 

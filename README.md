@@ -200,7 +200,6 @@ For database concepts and primitive data types see [concepts](https://agdb.agnes
 | ----------- | ------- | ------------------------------------------------------------------------------------------------------- |
 | tls         | no      | Enables Rust TLS support for the underlying [`reqwest`](https://github.com/seanmonstar/reqwest) client. |
 | api         | no      | Enables API type-definition annotations used when generating bindings.                                  |
-| test_server | no      | Enables test helpers for local server-based integration tests.                                          |
 
 ### agdb_server
 

@@ -46,6 +46,7 @@ For code in `agplatform`, `agbench`, `agsource` and `agtestcheck`:
 - Test package with coverage: `cargo llvm-cov -p <package> --show-missing-lines`
 - Test all: `cargo test -r --all-features`
 - Test debug: `cargo test --all-features -p <package>`
+- Test agdb_server: `cargo test -p agdb_server --all-features`. Its `tests` target has its own runner (`harness = false`, `tests/runner.rs`) that starts the shared server and cluster first; register each test in its module's `tests![...]`. The TS/PHP tests get the same setup from `cargo run -p agdb_server --bin agdb_harness -- <command>` (the `agdb_server` binary must be built).
 - Lint package: `cargo clippy --all-features -p <package>`
 - Lint all: `cargo clippy --all-features`
 - Check test structure: `cargo run -p agtestcheck -- test-check <dir|file.rs>`

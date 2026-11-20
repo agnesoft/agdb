@@ -78,6 +78,7 @@ Class | Method | HTTP request | Description
 ------------ | ------------- | ------------- | -------------
 *AgdbApi* | [**adminDbAdd**](docs/Api/AgdbApi.md#admindbadd) | **POST** /api/v1/admin/db/{owner}/{db}/add | 
 *AgdbApi* | [**adminDbAudit**](docs/Api/AgdbApi.md#admindbaudit) | **GET** /api/v1/admin/db/{owner}/{db}/audit | 
+*AgdbApi* | [**adminDbAuditTrim**](docs/Api/AgdbApi.md#admindbaudittrim) | **POST** /api/v1/admin/db/{owner}/{db}/audit/trim | 
 *AgdbApi* | [**adminDbBackup**](docs/Api/AgdbApi.md#admindbbackup) | **POST** /api/v1/admin/db/{owner}/{db}/backup | 
 *AgdbApi* | [**adminDbClear**](docs/Api/AgdbApi.md#admindbclear) | **POST** /api/v1/admin/db/{owner}/{db}/clear | 
 *AgdbApi* | [**adminDbConvert**](docs/Api/AgdbApi.md#admindbconvert) | **POST** /api/v1/admin/db/{owner}/{db}/convert | 
@@ -115,6 +116,7 @@ Class | Method | HTTP request | Description
 *AgdbApi* | [**dashboardSave**](docs/Api/AgdbApi.md#dashboardsave) | **PUT** /api/v1/dashboard/{name}/save | 
 *AgdbApi* | [**dbAdd**](docs/Api/AgdbApi.md#dbadd) | **POST** /api/v1/db/{owner}/{db}/add | 
 *AgdbApi* | [**dbAudit**](docs/Api/AgdbApi.md#dbaudit) | **GET** /api/v1/db/{owner}/{db}/audit | 
+*AgdbApi* | [**dbAuditTrim**](docs/Api/AgdbApi.md#dbaudittrim) | **POST** /api/v1/db/{owner}/{db}/audit/trim | 
 *AgdbApi* | [**dbBackup**](docs/Api/AgdbApi.md#dbbackup) | **POST** /api/v1/db/{owner}/{db}/backup | 
 *AgdbApi* | [**dbClear**](docs/Api/AgdbApi.md#dbclear) | **POST** /api/v1/db/{owner}/{db}/clear | 
 *AgdbApi* | [**dbConvert**](docs/Api/AgdbApi.md#dbconvert) | **POST** /api/v1/db/{owner}/{db}/convert | 
@@ -144,6 +146,7 @@ Class | Method | HTTP request | Description
 - [Amend](docs/Model/Amend.md)
 - [AmendOneOf](docs/Model/AmendOneOf.md)
 - [AmendOneOf1](docs/Model/AmendOneOf1.md)
+- [AuditTrimParam](docs/Model/AuditTrimParam.md)
 - [BitwiseOp](docs/Model/BitwiseOp.md)
 - [ChangePassword](docs/Model/ChangePassword.md)
 - [ClusterStatus](docs/Model/ClusterStatus.md)

@@ -1,5 +1,6 @@
 mod admin_db_add_test;
 mod admin_db_audit_test;
+mod admin_db_audit_trim_test;
 mod admin_db_backup_restore_test;
 mod admin_db_clear_test;
 mod admin_db_convert_test;
@@ -25,7 +26,9 @@ mod cluster_test;
 mod cluster_test_extra;
 mod dashboard_test;
 mod db_add_test;
+mod db_audit_migration_test;
 mod db_audit_test;
+mod db_audit_trim_test;
 mod db_backup_restore_test;
 mod db_clear_test;
 mod db_convert_test;

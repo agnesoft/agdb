@@ -21,6 +21,11 @@ async fn admin_db_rollback() -> Result<(), TestError> {
 }
 
 #[tokio::test]
+async fn admin_db_audit_trim() -> Result<(), TestError> {
+    agdb_api::tests::routes::cluster_test::admin_db_audit_trim().await
+}
+
+#[tokio::test]
 async fn admin_db_clear() -> Result<(), TestError> {
     agdb_api::tests::routes::cluster_test::admin_db_clear().await
 }

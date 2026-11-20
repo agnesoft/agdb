@@ -115,6 +115,33 @@ impl<T: AgdbApiClient> AgdbApi<T> {
             .await
     }
 
+    /// `POST /admin/db/{owner}/{db}/audit/trim?keep_days={keep_days}`
+    ///
+    /// Removes the audit (including that of the backup) of the UTC days before
+    /// the last `keep_days` days, today is always kept.
+    ///
+    /// Returns `200` on success.
+    ///
+    /// Common error responses: `401` unauthorized, `404` user or database not found.
+    pub async fn admin_db_audit_trim(
+        &self,
+        owner: &str,
+        db: &str,
+        keep_days: u64,
+    ) -> AgdbApiResult<u16> {
+        Ok(self
+            .client
+            .post::<(), ()>(
+                &self.url(&format!(
+                    "/admin/db/{owner}/{db}/audit/trim?keep_days={keep_days}"
+                )),
+                None,
+                &self.token,
+            )
+            .await?
+            .0)
+    }
+
     /// `POST /admin/db/{owner}/{db}/backup`
     ///
     /// Creates a backup for the database.
@@ -1009,6 +1036,29 @@ impl<T: AgdbApiClient> AgdbApi<T> {
         self.client
             .get(&self.url(&format!("/db/{owner}/{db}/audit")), &self.token)
             .await
+    }
+
+    /// `POST /db/{owner}/{db}/audit/trim?keep_days={keep_days}`
+    ///
+    /// Removes the audit (including that of the backup) of the UTC days before
+    /// the last `keep_days` days, today is always kept.
+    ///
+    /// Returns `200` on success.
+    ///
+    /// Common error responses: `401` unauthorized, `403` admin role required,
+    /// `404` user or database not found.
+    pub async fn db_audit_trim(&self, owner: &str, db: &str, keep_days: u64) -> AgdbApiResult<u16> {
+        Ok(self
+            .client
+            .post::<(), ()>(
+                &self.url(&format!(
+                    "/db/{owner}/{db}/audit/trim?keep_days={keep_days}"
+                )),
+                None,
+                &self.token,
+            )
+            .await?
+            .0)
     }
 
     /// `POST /db/{owner}/{db}/backup`

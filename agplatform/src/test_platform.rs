@@ -228,6 +228,22 @@ impl Platform for TestPlatform {
     }
 }
 
+/// The same as [`test_platform()`], e.g. for code constructing its
+/// platform with `P::default()`.
+///
+/// # Examples
+///
+/// ```rust
+/// use agplatform::test_platform::TestPlatform;
+///
+/// let test_platform = TestPlatform::default();
+/// ```
+impl Default for TestPlatform {
+    fn default() -> Self {
+        test_platform()
+    }
+}
+
 /// Returns an instance of [`TestPlatform`] that implements the
 /// [`Platform`] trait via the mock implementations, sharing its
 /// [`TestEnv`].
@@ -462,6 +478,18 @@ mod tests {
                     test_platform.fs().canonicalize(".").unwrap(),
                     std::path::Path::new(HOME)
                 );
+            }
+        }
+
+        mod default {
+            use super::*;
+
+            #[test]
+            fn default_should_be_new_test_platform() {
+                let platform = TestPlatform::default();
+
+                assert_eq!(platform.env().args().count(), 0);
+                assert_eq!(platform.env().current_dir(), std::path::Path::new(ROOT));
             }
         }
 

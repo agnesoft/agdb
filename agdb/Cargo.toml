@@ -11,6 +11,14 @@ categories = ["database", "database-implementations"]
 
 [lib]
 
+[[bench]]
+name = "collections"
+harness = false
+
+[[bench]]
+name = "storage"
+harness = false
+
 [features]
 default = ["derive"]
 api = ["derive", "dep:tokio"]
@@ -21,6 +29,7 @@ serde = ["dep:serde"]
 
 [dependencies]
 agdb_derive = { workspace = true, optional = true }
+agplatform = { workspace = true, features = ["fs"] }
 regex = { workspace = true, optional = true }
 serde = { workspace = true, features = ["derive"], optional = true }
 tokio = { workspace = true, features = [
@@ -31,4 +40,6 @@ tokio = { workspace = true, features = [
 utoipa = { workspace = true, optional = true }
 
 [dev-dependencies]
+agbench.workspace = true
+agplatform = { workspace = true, features = ["fs", "testing"] }
 serde_json.workspace = true

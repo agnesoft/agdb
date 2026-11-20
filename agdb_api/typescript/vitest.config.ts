@@ -6,6 +6,7 @@ export default defineConfig({
             exclude: [
                 "dist/**",
                 "eslint.config.mjs",
+                "generated/**",
                 "src/index.ts",
                 "src/openapi.d.ts",
                 "query_test_generator.js",

@@ -2,6 +2,7 @@ pub(crate) mod user;
 
 use crate::action::ClusterActionResult;
 use crate::action::db_add::DbAdd;
+use crate::action::db_audit_trim::DbAuditTrim;
 use crate::action::db_backup::DbBackup;
 use crate::action::db_clear::DbClear;
 use crate::action::db_convert::DbConvert;
@@ -15,6 +16,7 @@ use crate::action::db_restore::DbRestore;
 use crate::action::db_rollback::DbRollback;
 use crate::cluster::Cluster;
 use crate::db_pool::DbPool;
+use crate::db_pool::audit;
 use crate::error_code::ErrorCode;
 use crate::server_db::ServerDb;
 use crate::server_error::ServerError;
@@ -38,6 +40,8 @@ use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use serde::Deserialize;
+use std::time::SystemTime;
+use std::time::UNIX_EPOCH;
 use utoipa::IntoParams;
 use utoipa::ToSchema;
 
@@ -57,6 +61,13 @@ pub(crate) struct DbTypeParam {
 #[into_params(parameter_in = Query)]
 pub struct ServerDatabaseResource {
     pub resource: DbResource,
+}
+
+#[derive(Deserialize, IntoParams, ToSchema, agdb::TypeDef)]
+#[into_params(parameter_in = Query)]
+pub struct AuditTrimParam {
+    /// Number of UTC days to keep before today, the audit of the older days is removed.
+    pub keep_days: u64,
 }
 
 #[derive(Deserialize, IntoParams, ToSchema, agdb::TypeDef)]
@@ -145,6 +156,50 @@ pub(crate) async fn audit(
     server_db.user_db_id(user.0, &owner, &db).await?;
 
     Ok((StatusCode::OK, Json(db_pool.audit(&owner, &db).await?)))
+}
+
+#[utoipa::path(post,
+    path = "/api/v1/db/{owner}/{db}/audit/trim",
+    operation_id = "db_audit_trim",
+    tag = "agdb",
+    security(("Token" = [])),
+    params(
+        ("owner" = String, Path, description = "user name"),
+        ("db" = String, Path, description = "db name"),
+        AuditTrimParam,
+    ),
+    responses(
+         (status = 200, description = "audit of the days before the last 'keep_days' days removed"),
+         (status = 401, description = "unauthorized"),
+         (status = 403, description = "must be a db admin"),
+         (status = 404, description = "user / db not found"),
+    )
+)]
+pub(crate) async fn audit_trim(
+    user: UserId,
+    State(cluster): State<Cluster>,
+    State(server_db): State<ServerDb>,
+    Path((owner, db)): Path<(String, String)>,
+    request: Query<AuditTrimParam>,
+) -> ServerResponse<impl IntoResponse> {
+    let db_id = server_db.user_db_id(user.0, &owner, &db).await?;
+
+    if !server_db.is_db_admin(user.0, db_id).await? {
+        return Err(permission_denied("admin only"));
+    }
+
+    let (commit_index, _result) = cluster
+        .exec(DbAuditTrim {
+            owner,
+            db,
+            first_day: audit::first_kept_day(
+                SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs(),
+                request.keep_days,
+            ),
+        })
+        .await?;
+
+    Ok((StatusCode::OK, [("commit-index", commit_index.to_string())]))
 }
 
 #[utoipa::path(post,

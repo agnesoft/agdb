@@ -27,6 +27,7 @@ const REDIRECT_PATHS: [&str; 17] = [
     "/restore",
     "/rollback",
     "/save",
+    "/trim",
 ];
 
 fn is_redirect_path(request: &Request) -> bool {

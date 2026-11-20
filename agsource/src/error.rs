@@ -53,6 +53,29 @@ pub enum Error {
     },
     /// `cargo metadata` failed for the manifest `path`.
     Cargo { path: PathBuf, message: String },
+    /// The construct in `path` is not in the IR of
+    /// `SourceCrate::ir`.
+    Unsupported {
+        path: PathBuf,
+        line: usize,
+        construct: String,
+    },
+    /// The lowering or a pass could not handle a construct of `item` (at
+    /// `line` of `path`, both empty for an item a pass made).
+    Lowering {
+        path: PathBuf,
+        line: usize,
+        item: String,
+        message: String,
+    },
+    /// The item at `line` of `path` printed from its IR is not the item as
+    /// written: the first lines where the two syntax trees differ.
+    Mismatch {
+        path: PathBuf,
+        line: usize,
+        original: String,
+        printed: String,
+    },
 }
 
 impl Error {
@@ -66,7 +89,10 @@ impl Error {
             | Error::CircularModule { path, .. }
             | Error::UnknownCfg { path, .. }
             | Error::UnresolvedImport { path, .. }
-            | Error::Cargo { path, .. } => path,
+            | Error::Cargo { path, .. }
+            | Error::Unsupported { path, .. }
+            | Error::Lowering { path, .. }
+            | Error::Mismatch { path, .. } => path,
         }
     }
 }
@@ -133,6 +159,33 @@ impl std::fmt::Display for Error {
             Error::Cargo { path, message } => {
                 write!(f, "{}: cargo metadata failed: {message}", path.display())
             }
+            Error::Unsupported {
+                path,
+                line,
+                construct,
+            } => write!(f, "{}:{line}: unsupported {construct}", path.display()),
+            Error::Lowering {
+                path,
+                item,
+                message,
+                ..
+            } if path.as_os_str().is_empty() => write!(f, "`{item}`: {message}"),
+            Error::Lowering {
+                path,
+                line,
+                item,
+                message,
+            } => write!(f, "{}:{line}: `{item}`: {message}", path.display()),
+            Error::Mismatch {
+                path,
+                line,
+                original,
+                printed,
+            } => write!(
+                f,
+                "{}:{line}: the printed item differs\n--- original\n{original}\n--- printed\n{printed}",
+                path.display()
+            ),
         }
     }
 }
@@ -192,6 +245,23 @@ mod tests {
                     Error::Cargo {
                         path: path(),
                         message: String::new(),
+                    },
+                    Error::Unsupported {
+                        path: path(),
+                        line: 1,
+                        construct: String::new(),
+                    },
+                    Error::Lowering {
+                        path: path(),
+                        line: 1,
+                        item: String::new(),
+                        message: String::new(),
+                    },
+                    Error::Mismatch {
+                        path: path(),
+                        line: 1,
+                        original: String::new(),
+                        printed: String::new(),
                     },
                 ];
 
@@ -271,10 +341,53 @@ mod tests {
                     unresolved.to_string(),
                     "src/g.rs:8: unresolved import `a::b`"
                 );
+                let unsupported = Error::Unsupported {
+                    path: "src/h.rs".into(),
+                    line: 9,
+                    construct: "type `fn(u8)`".into(),
+                };
+
                 assert_eq!(
                     cargo.to_string(),
                     "Cargo.toml: cargo metadata failed: error: invalid manifest"
                 );
+                assert_eq!(
+                    unsupported.to_string(),
+                    "src/h.rs:9: unsupported type `fn(u8)`"
+                );
+                let mismatch = Error::Mismatch {
+                    path: "src/i.rs".into(),
+                    line: 2,
+                    original: "a".into(),
+                    printed: "b".into(),
+                };
+
+                assert_eq!(
+                    mismatch.to_string(),
+                    "src/i.rs:2: the printed item differs\n--- original\na\n--- printed\nb"
+                );
+            }
+
+            #[test]
+            fn fmt_should_omit_the_location_of_an_item_a_pass_made() {
+                let lowered = Error::Lowering {
+                    path: "src/j.rs".into(),
+                    line: 4,
+                    item: "A::f".into(),
+                    message: "unknown method `g`".into(),
+                };
+                let made = Error::Lowering {
+                    path: PathBuf::new(),
+                    line: 0,
+                    item: "from_A".into(),
+                    message: "unknown method `g`".into(),
+                };
+
+                assert_eq!(
+                    lowered.to_string(),
+                    "src/j.rs:4: `A::f`: unknown method `g`"
+                );
+                assert_eq!(made.to_string(), "`from_A`: unknown method `g`");
             }
         }
     }

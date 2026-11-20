@@ -51,14 +51,14 @@ pub async fn audit_delete_db() -> Result<(), TestError> {
             .into(),
     ];
     server.api.db_exec_mut(owner, db, &queries).await?;
-    let db_audit_file = Path::new(&server.data_dir)
+    let db_audit_dir = Path::new(&server.data_dir)
         .join(owner)
         .join("audit")
-        .join(format!("{db}.log"));
-    assert!(db_audit_file.exists());
+        .join(db);
+    assert!(db_audit_dir.exists());
     let status = server.api.db_delete(owner, db).await?;
     assert_eq!(status, 204);
-    assert!(!db_audit_file.exists());
+    assert!(!db_audit_dir.exists());
     Ok(())
 }
 

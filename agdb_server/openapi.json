@@ -150,6 +150,61 @@
         ]
       }
     },
+    "/api/v1/admin/db/{owner}/{db}/audit/trim": {
+      "post": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "admin_db_audit_trim",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db",
+            "in": "path",
+            "description": "db name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "keep_days",
+            "in": "query",
+            "description": "Number of UTC days to keep before today, the audit of the older days is removed.",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "audit of the days before the last 'keep_days' days removed"
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "404": {
+            "description": "user / db not found"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
     "/api/v1/admin/db/{owner}/{db}/backup": {
       "post": {
         "tags": [
@@ -1834,6 +1889,64 @@
         ]
       }
     },
+    "/api/v1/db/{owner}/{db}/audit/trim": {
+      "post": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "db_audit_trim",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db",
+            "in": "path",
+            "description": "db name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "keep_days",
+            "in": "query",
+            "description": "Number of UTC days to keep before today, the audit of the older days is removed.",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "audit of the days before the last 'keep_days' days removed"
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "403": {
+            "description": "must be a db admin"
+          },
+          "404": {
+            "description": "user / db not found"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
     "/api/v1/db/{owner}/{db}/backup": {
       "post": {
         "tags": [
@@ -2910,6 +3023,20 @@
           }
         ],
         "description": "Amend operation for insert/remove value queries.\nControls how values are applied to existing properties."
+      },
+      "AuditTrimParam": {
+        "type": "object",
+        "required": [
+          "keep_days"
+        ],
+        "properties": {
+          "keep_days": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Number of UTC days to keep before today, the audit of the older days is removed.",
+            "minimum": 0
+          }
+        }
       },
       "BitwiseOp": {
         "type": "string",

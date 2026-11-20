@@ -196,6 +196,13 @@ impl From<IOError> for DbError {
     }
 }
 
+impl From<agplatform::Error> for DbError {
+    #[track_caller]
+    fn from(error: agplatform::Error) -> Self {
+        DbError::db(DbErrorType::TypeError, error.to_string())
+    }
+}
+
 impl From<FromUtf8Error> for DbError {
     #[track_caller]
     fn from(error: FromUtf8Error) -> Self {

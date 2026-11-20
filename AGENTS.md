@@ -17,7 +17,7 @@ The repository also hosts crates outside the agdb ecosystem, each documented in 
 | ------------- | ------------------------------------------------------------------------------------------------------------ |
 | `agplatform`  | Env, fs, process and HTTP request behind one injectable `Platform`, with in-memory test doubles (`testing`)  |
 | `agbench`     | `cargo bench` harness comparing targets against a baseline, `--check` fails on a target over its fail factor |
-| `agsource`    | Source model of a Rust crate read with syn: modules, cfg and name resolution (not published yet)             |
+| `agsource`    | Source model of a Rust crate read with syn: modules, cfg, resolution, reachability, macros (not published)   |
 | `agtestcheck` | `cargo test-check` subcommand enforcing the structure of Rust tests (module paths, names, comments)          |
 | `agci`        | The repository's CI tool: project detection, affected checks, releases (see `agci/README.md`)                |
 
@@ -313,6 +313,7 @@ The server exposes a REST API at `/api/v1` (or `{basepath}/api/v1`). Five endpoi
 
 - `POST /add` — create database (body: `DbKind`)
 - `GET /audit` — database audit log
+- `POST /audit/trim?keep_days={n}` — remove the audit (live and backup) of the UTC days before today and the `n` days before it
 - `POST /backup` — create backup
 - `POST /clear` — clear resources (audit, backup) (body: `ClearAudit | ClearBackup | ClearAll`)
 - `POST /convert` — change storage type
@@ -359,7 +360,7 @@ Same structure as admin database routes but scoped by ownership and roles:
 
 - **Read** role: `exec`, `audit`
 - **Write** role: `exec_mut` + everything Read can do
-- **Admin** role: all operations including `backup`, `restore`, `convert`, `optimize`, user management
+- **Admin** role: all operations including `backup`, `restore`, `convert`, `optimize`, `audit/trim`, user management
 
 ### Dashboard (`/api/v1/dashboard/...`) — requires user token, own dashboards only
 

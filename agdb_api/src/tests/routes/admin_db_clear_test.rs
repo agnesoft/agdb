@@ -48,11 +48,11 @@ pub async fn clear_audit() -> Result<(), TestError> {
         .admin_db_clear(owner, db, DbResource::Audit)
         .await?;
     assert_eq!(status, 200);
-    let db_audit_file = Path::new(&server.data_dir)
+    let db_audit_dir = Path::new(&server.data_dir)
         .join(owner)
         .join("audit")
-        .join(format!("{db}.log"));
-    assert!(!db_audit_file.exists());
+        .join(db);
+    assert!(!db_audit_dir.exists());
     Ok(())
 }
 
@@ -145,11 +145,11 @@ pub async fn clear_all() -> Result<(), TestError> {
         .await?;
     assert_eq!(status, 200);
     assert!(database.size < original_size);
-    let db_audit_file = Path::new(&server.data_dir)
+    let db_audit_dir = Path::new(&server.data_dir)
         .join(owner)
         .join("audit")
-        .join(format!("{db}.log"));
-    assert!(!db_audit_file.exists());
+        .join(db);
+    assert!(!db_audit_dir.exists());
     assert_eq!(database.backup, 0);
     Ok(())
 }

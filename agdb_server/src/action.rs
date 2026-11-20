@@ -3,6 +3,7 @@ pub(crate) mod dashboard_remove;
 pub(crate) mod dashboard_rename;
 pub(crate) mod dashboard_save;
 pub(crate) mod db_add;
+pub(crate) mod db_audit_trim;
 pub(crate) mod db_backup;
 pub(crate) mod db_clear;
 pub(crate) mod db_convert;
@@ -30,6 +31,7 @@ use crate::action::dashboard_remove::DashboardRemove;
 use crate::action::dashboard_rename::DashboardRename;
 use crate::action::dashboard_save::DashboardSave;
 use crate::action::db_add::DbAdd;
+use crate::action::db_audit_trim::DbAuditTrim;
 use crate::action::db_backup::DbBackup;
 use crate::action::db_clear::DbClear;
 use crate::action::db_convert::DbConvert;
@@ -92,6 +94,7 @@ pub(crate) enum ClusterAction {
     DashboardSave(DashboardSave),
     DashboardRename(DashboardRename),
     DashboardRemove(DashboardRemove),
+    DbAuditTrim(DbAuditTrim),
 }
 
 pub(crate) enum ClusterActionResult {
@@ -141,6 +144,7 @@ impl ClusterAction {
             Self::DashboardSave(_) => "DashboardSave",
             Self::DashboardRename(_) => "DashboardRename",
             Self::DashboardRemove(_) => "DashboardRemove",
+            Self::DbAuditTrim(_) => "DbAuditTrim",
         }
     }
 
@@ -166,6 +170,7 @@ impl ClusterAction {
             ],
             Self::DbUserAdd(a) => vec![ResyncTarget::UserDb(&a.owner, &a.db)],
             Self::DbUserRemove(a) => vec![ResyncTarget::UserDb(&a.owner, &a.db)],
+            Self::DbAuditTrim(a) => vec![ResyncTarget::UserDb(&a.owner, &a.db)],
             Self::UserAdd(_)
             | Self::SaveUserToken(_)
             | Self::RemoveUserToken(_)
@@ -213,6 +218,7 @@ impl ClusterAction {
             ClusterAction::DashboardSave(action) => action.exec(db, db_pool).await,
             ClusterAction::DashboardRename(action) => action.exec(db, db_pool).await,
             ClusterAction::DashboardRemove(action) => action.exec(db, db_pool).await,
+            ClusterAction::DbAuditTrim(action) => action.exec(db, db_pool).await,
         }
     }
 }
@@ -370,6 +376,12 @@ impl From<DashboardRename> for ClusterAction {
 impl From<DashboardRemove> for ClusterAction {
     fn from(value: DashboardRemove) -> Self {
         ClusterAction::DashboardRemove(value)
+    }
+}
+
+impl From<DbAuditTrim> for ClusterAction {
+    fn from(value: DbAuditTrim) -> Self {
+        ClusterAction::DbAuditTrim(value)
     }
 }
 

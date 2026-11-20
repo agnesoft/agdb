@@ -121,165 +121,285 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        storage::file_storage_memory_mapped::FileStorageMemoryMapped,
-        test_utilities::test_file::TestFile,
-    };
+    use crate::collections::tests::TestStorage;
+    use crate::collections::tests::add_spare_capacity;
+    use crate::collections::tests::assert_io_failures;
+    use crate::collections::tests::storage;
+    use crate::storage::file_storage::FileStorageImpl;
+    use agplatform::test_platform::TestPlatform;
 
-    #[test]
-    fn from_storage() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::new(test_file.file_name()).unwrap();
+    type TestMap = DbIndexedMap<String, u64, FileStorageImpl<TestPlatform>>;
 
-        let storage_index;
+    fn map(storage: &mut TestStorage, pairs: &[(&str, u64)]) -> TestMap {
+        let mut map = TestMap::new(storage).unwrap();
 
-        {
-            let mut map =
-                DbIndexedMap::<String, u64, FileStorageMemoryMapped>::new(&mut storage).unwrap();
-            let key = "alias".to_string();
-            let value = 1_u64;
-            map.insert(&mut storage, &key, &value).unwrap();
-            storage_index = map.storage_index();
+        for (key, value) in pairs {
+            map.insert(storage, &key.to_string(), value).unwrap();
         }
 
-        let map = DbIndexedMap::<String, u64, FileStorageMemoryMapped>::from_storage(
-            &storage,
-            storage_index,
-        )
-        .unwrap();
-        assert_eq!(
-            map.value(&storage, &"alias".to_string()).unwrap(),
-            Some(1_u64)
-        );
+        map
     }
 
-    #[test]
-    fn insert() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::new(test_file.file_name()).unwrap();
-        let mut map =
-            DbIndexedMap::<String, u64, FileStorageMemoryMapped>::new(&mut storage).unwrap();
-        let key = "alias".to_string();
-        let value = 1_u64;
-
-        assert_eq!(map.insert(&mut storage, &key, &value), Ok(()));
-
-        assert_eq!(map.value(&storage, &key), Ok(Some(value)));
-        assert_eq!(map.key(&storage, &value), Ok(Some(key)));
+    fn sorted(map: &TestMap, storage: &TestStorage) -> Vec<(String, u64)> {
+        let mut pairs = map.iter(storage).collect::<Vec<_>>();
+        pairs.sort();
+        pairs
     }
 
-    #[test]
-    fn iter() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::new(test_file.file_name()).unwrap();
-        let mut map =
-            DbIndexedMap::<String, u64, FileStorageMemoryMapped>::new(&mut storage).unwrap();
-        assert_eq!(
-            map.insert(&mut storage, &"alias1".to_string(), &1_u64),
-            Ok(())
-        );
-        assert_eq!(
-            map.insert(&mut storage, &"alias2".to_string(), &2_u64),
-            Ok(())
-        );
-        assert_eq!(
-            map.insert(&mut storage, &"alias3".to_string(), &3_u64),
-            Ok(())
-        );
+    fn pairs(pairs: &[(&str, u64)]) -> Vec<(String, u64)> {
+        pairs
+            .iter()
+            .map(|(key, value)| (key.to_string(), *value))
+            .collect()
+    }
 
-        let mut values = Vec::<(String, u64)>::new();
+    mod indexed_map_impl {
+        use super::*;
 
-        for key_value in map.iter(&storage) {
-            values.push(key_value);
+        mod insert {
+            use super::*;
+
+            #[test]
+            fn insert_should_map_both_ways() {
+                let mut storage = storage();
+                let mut map = map(&mut storage, &[]);
+
+                map.insert(&mut storage, &"a".to_string(), &1).unwrap();
+
+                assert_eq!(map.value(&storage, &"a".to_string()), Ok(Some(1)));
+                assert_eq!(map.key(&storage, &1), Ok(Some("a".to_string())));
+            }
+
+            #[test]
+            fn insert_existing_key_should_drop_its_old_value() {
+                let mut storage = storage();
+                let mut map = map(&mut storage, &[("a", 1)]);
+
+                map.insert(&mut storage, &"a".to_string(), &2).unwrap();
+
+                assert_eq!(map.key(&storage, &1), Ok(None));
+                assert_eq!(map.key(&storage, &2), Ok(Some("a".to_string())));
+                assert_eq!(sorted(&map, &storage), pairs(&[("a", 2)]));
+            }
+
+            #[test]
+            fn insert_existing_value_should_drop_its_old_key() {
+                let mut storage = storage();
+                let mut map = map(&mut storage, &[("a", 1)]);
+
+                map.insert(&mut storage, &"b".to_string(), &1).unwrap();
+
+                assert_eq!(map.value(&storage, &"a".to_string()), Ok(None));
+                assert_eq!(map.key(&storage, &1), Ok(Some("b".to_string())));
+                assert_eq!(sorted(&map, &storage), pairs(&[("b", 1)]));
+            }
+
+            #[test]
+            fn insert_existing_key_and_value_should_drop_both_old_pairs() {
+                let mut storage = storage();
+                let mut map = map(&mut storage, &[("a", 1), ("b", 2)]);
+
+                map.insert(&mut storage, &"a".to_string(), &2).unwrap();
+
+                assert_eq!(map.key(&storage, &1), Ok(None));
+                assert_eq!(map.value(&storage, &"b".to_string()), Ok(None));
+                assert_eq!(sorted(&map, &storage), pairs(&[("a", 2)]));
+            }
+
+            #[test]
+            fn insert_same_pair_should_keep_it() {
+                let mut storage = storage();
+                let mut map = map(&mut storage, &[("a", 1)]);
+
+                map.insert(&mut storage, &"a".to_string(), &1).unwrap();
+
+                assert_eq!(map.key(&storage, &1), Ok(Some("a".to_string())));
+                assert_eq!(sorted(&map, &storage), pairs(&[("a", 1)]));
+            }
+
+            #[test]
+            fn insert_failure_should_fail() {
+                assert_io_failures(
+                    |storage| map(storage, &[("a", 1), ("b", 2)]),
+                    |storage, map| map.insert(storage, &"a".to_string(), &2),
+                );
+            }
         }
 
-        values.sort();
+        mod iter {
+            use super::*;
 
-        assert_eq!(
-            values,
-            vec![
-                ("alias1".to_string(), 1_u64),
-                ("alias2".to_string(), 2_u64),
-                ("alias3".to_string(), 3_u64)
-            ]
-        );
+            #[test]
+            fn iter_should_yield_all_pairs() {
+                let mut storage = storage();
+                let map = map(&mut storage, &[("a", 1), ("b", 2), ("c", 3)]);
+
+                assert_eq!(
+                    sorted(&map, &storage),
+                    pairs(&[("a", 1), ("b", 2), ("c", 3)])
+                );
+            }
+        }
+
+        mod key {
+            use super::*;
+
+            #[test]
+            fn key_should_return_key_of_value() {
+                let mut storage = storage();
+                let map = map(&mut storage, &[("a", 1)]);
+
+                assert_eq!(map.key(&storage, &1), Ok(Some("a".to_string())));
+                assert_eq!(map.key(&storage, &2), Ok(None));
+            }
+        }
+
+        mod remove_key {
+            use super::*;
+
+            #[test]
+            fn remove_key_should_remove_pair() {
+                let mut storage = storage();
+                let mut map = map(&mut storage, &[("a", 1), ("b", 2)]);
+
+                map.remove_key(&mut storage, &"a".to_string()).unwrap();
+
+                assert_eq!(map.key(&storage, &1), Ok(None));
+                assert_eq!(sorted(&map, &storage), pairs(&[("b", 2)]));
+            }
+
+            #[test]
+            fn remove_key_missing_should_do_nothing() {
+                let mut storage = storage();
+                let mut map = map(&mut storage, &[("a", 1)]);
+
+                map.remove_key(&mut storage, &"b".to_string()).unwrap();
+
+                assert_eq!(sorted(&map, &storage), pairs(&[("a", 1)]));
+            }
+
+            #[test]
+            fn remove_key_failure_should_fail() {
+                assert_io_failures(
+                    |storage| map(storage, &[("a", 1)]),
+                    |storage, map| map.remove_key(storage, &"a".to_string()),
+                );
+            }
+        }
+
+        mod remove_value {
+            use super::*;
+
+            #[test]
+            fn remove_value_should_remove_pair() {
+                let mut storage = storage();
+                let mut map = map(&mut storage, &[("a", 1), ("b", 2)]);
+
+                map.remove_value(&mut storage, &1).unwrap();
+
+                assert_eq!(map.value(&storage, &"a".to_string()), Ok(None));
+                assert_eq!(sorted(&map, &storage), pairs(&[("b", 2)]));
+            }
+
+            #[test]
+            fn remove_value_missing_should_do_nothing() {
+                let mut storage = storage();
+                let mut map = map(&mut storage, &[("a", 1)]);
+
+                map.remove_value(&mut storage, &2).unwrap();
+
+                assert_eq!(sorted(&map, &storage), pairs(&[("a", 1)]));
+            }
+
+            #[test]
+            fn remove_value_failure_should_fail() {
+                assert_io_failures(
+                    |storage| map(storage, &[("a", 1)]),
+                    |storage, map| map.remove_value(storage, &1),
+                );
+            }
+        }
+
+        mod shrink_to_fit {
+            use super::*;
+
+            fn shrunk(storage: &mut TestStorage) -> TestMap {
+                let keys = (0..100).map(|i| format!("{i}")).collect::<Vec<_>>();
+                let mut map = map(storage, &[]);
+                for (value, key) in keys.iter().enumerate() {
+                    map.insert(storage, key, &(value as u64)).unwrap();
+                }
+                for key in &keys[1..] {
+                    map.remove_key(storage, key).unwrap();
+                }
+                add_spare_capacity(storage, map.storage_index().0);
+                add_spare_capacity(storage, map.storage_index().1);
+                TestMap::from_storage(storage, map.storage_index()).unwrap()
+            }
+
+            #[test]
+            fn shrink_to_fit_should_keep_pairs() {
+                let mut storage = storage();
+                let mut map = shrunk(&mut storage);
+
+                map.shrink_to_fit(&mut storage).unwrap();
+
+                assert_eq!(sorted(&map, &storage), pairs(&[("0", 0)]));
+            }
+
+            #[test]
+            fn shrink_to_fit_failure_should_fail() {
+                assert_io_failures(shrunk, |storage, map| map.shrink_to_fit(storage));
+            }
+        }
+
+        mod value {
+            use super::*;
+
+            #[test]
+            fn value_should_return_value_of_key() {
+                let mut storage = storage();
+                let map = map(&mut storage, &[("a", 1)]);
+
+                assert_eq!(map.value(&storage, &"a".to_string()), Ok(Some(1)));
+                assert_eq!(map.value(&storage, &"b".to_string()), Ok(None));
+            }
+        }
     }
 
-    #[test]
-    fn replace_by_key() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::new(test_file.file_name()).unwrap();
-        let mut map =
-            DbIndexedMap::<String, u64, FileStorageMemoryMapped>::new(&mut storage).unwrap();
-        let key = "alias".to_string();
-        let value = 1_u64;
-        let new_value = 2_u64;
+    mod db_indexed_map {
+        use super::*;
 
-        assert_eq!(map.insert(&mut storage, &key, &value), Ok(()));
-        assert_eq!(map.insert(&mut storage, &key, &new_value), Ok(()));
+        mod new {
+            use super::*;
 
-        assert_eq!(map.value(&storage, &key), Ok(Some(new_value)));
-        assert_eq!(map.key(&storage, &new_value), Ok(Some(key)));
-        assert_eq!(map.key(&storage, &value), Ok(None));
-    }
+            #[test]
+            fn new_failure_should_fail() {
+                assert_io_failures(|_| (), |storage, _| TestMap::new(storage));
+            }
+        }
 
-    #[test]
-    fn replace_by_value() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::new(test_file.file_name()).unwrap();
-        let mut map =
-            DbIndexedMap::<String, u64, FileStorageMemoryMapped>::new(&mut storage).unwrap();
-        let key = "alias".to_string();
-        let new_key = "new_alias".to_string();
-        let value = 1_u64;
+        mod from_storage {
+            use super::*;
 
-        assert_eq!(map.insert(&mut storage, &key, &value), Ok(()));
-        assert_eq!(map.insert(&mut storage, &new_key, &value), Ok(()));
+            #[test]
+            fn from_storage_should_load_both_ways() {
+                let mut storage = storage();
+                let map = map(&mut storage, &[("a", 1)]);
 
-        assert_eq!(map.value(&storage, &key), Ok(None));
-        assert_eq!(map.value(&storage, &new_key), Ok(Some(value)));
-        assert_eq!(map.key(&storage, &value), Ok(Some(new_key)));
-    }
+                let map = TestMap::from_storage(&storage, map.storage_index()).unwrap();
 
-    #[test]
-    fn remove_key() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::new(test_file.file_name()).unwrap();
-        let mut map =
-            DbIndexedMap::<String, u64, FileStorageMemoryMapped>::new(&mut storage).unwrap();
-        let key = "alias".to_string();
-        let value = 1_u64;
+                assert_eq!(map.value(&storage, &"a".to_string()), Ok(Some(1)));
+                assert_eq!(map.key(&storage, &1), Ok(Some("a".to_string())));
+            }
 
-        assert_eq!(map.insert(&mut storage, &key, &value), Ok(()));
-
-        assert_eq!(map.value(&storage, &key), Ok(Some(value)));
-        assert_eq!(map.key(&storage, &value), Ok(Some(key.clone())));
-
-        map.remove_key(&mut storage, &key).unwrap();
-        map.remove_key(&mut storage, &key).unwrap();
-
-        assert_eq!(map.value(&storage, &key), Ok(None));
-        assert_eq!(map.key(&storage, &value), Ok(None));
-    }
-
-    #[test]
-    fn remove_value() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::new(test_file.file_name()).unwrap();
-        let mut map =
-            DbIndexedMap::<String, u64, FileStorageMemoryMapped>::new(&mut storage).unwrap();
-        let key = "alias".to_string();
-        let value = 1_u64;
-
-        assert_eq!(map.insert(&mut storage, &key, &value), Ok(()));
-
-        assert_eq!(map.value(&storage, &key), Ok(Some(value)));
-        assert_eq!(map.key(&storage, &value), Ok(Some(key.clone())));
-
-        map.remove_value(&mut storage, &value).unwrap();
-        map.remove_value(&mut storage, &value).unwrap();
-
-        assert_eq!(map.value(&storage, &key), Ok(None));
-        assert_eq!(map.key(&storage, &value), Ok(None));
+            #[test]
+            fn from_storage_failure_should_fail() {
+                assert_io_failures(
+                    |storage| map(storage, &[("a", 1)]).storage_index(),
+                    |storage, index| TestMap::from_storage(storage, *index),
+                );
+            }
+        }
     }
 }

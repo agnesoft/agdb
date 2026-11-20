@@ -2,6 +2,7 @@ pub(crate) mod user;
 
 use crate::action::ClusterActionResult;
 use crate::action::db_add::DbAdd;
+use crate::action::db_audit_trim::DbAuditTrim;
 use crate::action::db_backup::DbBackup;
 use crate::action::db_clear::DbClear;
 use crate::action::db_convert::DbConvert;
@@ -16,7 +17,9 @@ use crate::action::db_rollback::DbRollback;
 use crate::cluster::Cluster;
 use crate::config::Config;
 use crate::db_pool::DbPool;
+use crate::db_pool::audit;
 use crate::error_code::ErrorCode;
+use crate::routes::db::AuditTrimParam;
 use crate::routes::db::DbTypeParam;
 use crate::routes::db::OptimizeParam;
 use crate::routes::db::ServerDatabaseResource;
@@ -39,6 +42,8 @@ use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use serde::Deserialize;
+use std::time::SystemTime;
+use std::time::UNIX_EPOCH;
 use utoipa::IntoParams;
 use utoipa::ToSchema;
 
@@ -121,6 +126,46 @@ pub(crate) async fn audit(
     server_db.user_db_id(owner_id, &owner, &db).await?;
 
     Ok((StatusCode::OK, Json(db_pool.audit(&owner, &db).await?)))
+}
+
+#[utoipa::path(post,
+    path = "/api/v1/admin/db/{owner}/{db}/audit/trim",
+    operation_id = "admin_db_audit_trim",
+    tag = "agdb",
+    security(("Token" = [])),
+    params(
+        ("owner" = String, Path, description = "user name"),
+        ("db" = String, Path, description = "db name"),
+        AuditTrimParam,
+    ),
+    responses(
+         (status = 200, description = "audit of the days before the last 'keep_days' days removed"),
+         (status = 401, description = "unauthorized"),
+         (status = 404, description = "user / db not found"),
+    )
+)]
+pub(crate) async fn audit_trim(
+    _admin: AdminId,
+    State(cluster): State<Cluster>,
+    State(server_db): State<ServerDb>,
+    Path((owner, db)): Path<(String, String)>,
+    request: Query<AuditTrimParam>,
+) -> ServerResponse<impl IntoResponse> {
+    let owner_id = server_db.user_id(&owner).await?;
+    server_db.user_db_id(owner_id, &owner, &db).await?;
+
+    let (commit_index, _result) = cluster
+        .exec(DbAuditTrim {
+            owner,
+            db,
+            first_day: audit::first_kept_day(
+                SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs(),
+                request.keep_days,
+            ),
+        })
+        .await?;
+
+    Ok((StatusCode::OK, [("commit-index", commit_index.to_string())]))
 }
 
 #[utoipa::path(post,

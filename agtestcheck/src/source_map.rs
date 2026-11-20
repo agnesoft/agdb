@@ -574,18 +574,51 @@ fn test_calls(f: &ItemFn, content: &str) -> Vec<String> {
 }
 
 fn scan_calls(stream: TokenStream, calls: &mut Vec<String>) {
-    let mut tokens = stream.into_iter().peekable();
+    let tokens: Vec<TokenTree> = stream.into_iter().collect();
+    let mut i = 0;
 
-    while let Some(token) = tokens.next() {
-        match token {
-            TokenTree::Ident(ident) if matches!(tokens.peek(), Some(TokenTree::Group(g)) if g.delimiter() == Delimiter::Parenthesis) =>
-            {
-                calls.push(name(&ident));
+    while i < tokens.len() {
+        match &tokens[i] {
+            TokenTree::Ident(ident) => {
+                let args_end = turbofish_end(&tokens, i + 1);
+
+                if matches!(tokens.get(args_end), Some(TokenTree::Group(g)) if g.delimiter() == Delimiter::Parenthesis)
+                {
+                    calls.push(name(ident));
+                }
+
+                i = args_end;
             }
-            TokenTree::Group(g) => scan_calls(g.stream(), calls),
-            _ => {}
+            TokenTree::Group(g) => {
+                scan_calls(g.stream(), calls);
+                i += 1;
+            }
+            _ => i += 1,
         }
     }
+}
+
+fn turbofish_end(tokens: &[TokenTree], start: usize) -> usize {
+    let is =
+        |i: usize, c: char| matches!(tokens.get(i), Some(TokenTree::Punct(p)) if p.as_char() == c);
+
+    if !(is(start, ':') && is(start + 1, ':') && is(start + 2, '<')) {
+        return start;
+    }
+
+    let mut depth = 0_usize;
+
+    (start + 2..tokens.len())
+        .find(|&i| {
+            if is(i, '<') {
+                depth += 1;
+            } else if is(i, '>') && !is(i - 1, '-') {
+                depth -= 1;
+            }
+
+            depth == 0
+        })
+        .map_or(tokens.len(), |i| i + 1)
 }
 
 /// A test without code whose `comments` are all WHY, starting with it and
@@ -1886,6 +1919,10 @@ mod tests {
         let s = S { f: 1 };
         x.method();
         r#match();
+        crate::cases::generic::<Vec<u8>, fn() -> u8>(x);
+        x.collect::<Vec<_>>();
+        y::<T>;
+        T::<U>::new();
     }
     #[test]
     fn b() {}
@@ -1918,7 +1955,10 @@ mod tests {
                 vec![
                     (
                         "a".to_string(),
-                        calls(&["case_a", "check", "is_ok", "inner", "method", "match"]),
+                        calls(&[
+                            "case_a", "check", "is_ok", "inner", "method", "match", "generic",
+                            "collect", "new"
+                        ]),
                         false
                     ),
                     ("b".to_string(), vec![], false),

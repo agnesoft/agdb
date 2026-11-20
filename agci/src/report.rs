@@ -59,12 +59,13 @@ impl Report {
         }
     }
 
-    /// Returns whether the check passed.
+    /// Returns whether the check passed. Its output goes to stdout on GitHub Actions; locally it is
+    /// printed only if the check fails.
     pub(crate) fn run(
         &mut self,
         project: &str,
         task: Task,
-        run: impl FnOnce() -> Result<(), CIError>,
+        run: impl FnOnce(&mut (dyn Write + Send)) -> Result<(), CIError>,
     ) -> bool {
         let title = format!("{project}: {task}");
 
@@ -73,11 +74,19 @@ impl Report {
         }
 
         let start = Instant::now();
-        let result = run();
+        let mut output = Vec::new();
+        let result = if self.github {
+            run(&mut std::io::stdout())
+        } else {
+            run(&mut output)
+        };
         let duration = start.elapsed();
 
         if self.github {
             println!("::endgroup::");
+        } else if result.is_err() {
+            let mut stdout = std::io::stdout().lock();
+            let _ = stdout.write_all(&output).and_then(|()| stdout.flush());
         }
 
         let status = match result {
@@ -103,7 +112,12 @@ impl Report {
         self.push(project, task, Status::Skipped, Duration::ZERO);
     }
 
-    pub(crate) fn proven(&mut self, project: &str, task: Task) {
+    /// Logs the proof's `key` on GitHub Actions.
+    pub(crate) fn proven(&mut self, project: &str, task: Task, key: &str) {
+        if self.github {
+            println!("[{project}] {task}: proven ({key})");
+        }
+
         self.push(project, task, Status::Proven, Duration::ZERO);
     }
 
@@ -118,7 +132,10 @@ impl Report {
 
     /// Prints the results (and writes the job summary), fails if any check failed.
     pub(crate) fn finish(self, platform: &impl Platform) -> Result<(), CIError> {
-        print!("\n{}", self.text());
+        let failed = self.entries.iter().any(|e| e.status == Status::Failed);
+        // Locally there is output before the report only for a failure.
+        let separator = if self.github || failed { "\n" } else { "" };
+        print!("{separator}{}", self.text());
 
         if self.github
             && let Some(path) = platform.env().var("GITHUB_STEP_SUMMARY")
@@ -240,7 +257,7 @@ mod tests {
             Status::Passed,
             Duration::from_secs(2),
         );
-        report.proven("web", Task::Check("lint"));
+        report.proven("web", Task::Check("lint"), "key");
         report
     }
 

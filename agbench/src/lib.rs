@@ -111,8 +111,8 @@ mod tests {
                 format!(
                     "{HEADER}\n\
                      fs/read                          std                       1   100.0 ns\n\
-                     \x20                                agplatform                    150.0 ns    +50.0%  [+50.0% .. +50.0%]\n\
-                     \x20                                in_memory                      50.0 ns    -50.0%  [-50.0% .. -50.0%]\n"
+                     \x20                                agplatform                1   150.0 ns    +50.0%  [+50.0% .. +50.0%]\n\
+                     \x20                                in_memory                 1    50.0 ns    -50.0%  [-50.0% .. -50.0%]\n"
                 )
             );
         }
@@ -141,12 +141,12 @@ mod tests {
                      FAILED: 1 target(s) slower than their fail factor\n",
                     "",
                     "agplatform",
-                    "",
+                    1,
                     "150.0 ns",
                     "+50.0%",
                     "",
                     "in_memory",
-                    "",
+                    1,
                     "50.0 ns",
                     "-50.0%"
                 )),

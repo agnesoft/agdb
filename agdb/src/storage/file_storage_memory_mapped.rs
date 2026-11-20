@@ -1,24 +1,46 @@
 use super::StorageData;
 use super::StorageSlice;
-use super::file_storage::FileStorage;
-use super::memory_storage::MemoryStorage;
+use super::file_storage::FileStorageImpl;
+use super::memory_storage::MemoryStorageImpl;
 use crate::DbError;
+use agplatform::Platform;
+use agplatform::PlatformImpl;
+use std::sync::Arc;
 
 /// The default implementation of the database storage implementing
-/// [`StorageData`]. It combines the [`FileStorage`] and [`MemoryStorage`]
+/// [`StorageData`]. It combines the [`FileStorageImpl`] and [`MemoryStorageImpl`]
 /// leveraging the former for the persistence and the latter for performance.
-/// The read operations are implemented in terms of the [`MemoryStorage`] only
-/// and the write operations are implemented in terms of both [`FileStorage`]
-/// and [`MemoryStorage`].
+/// The read operations are implemented in terms of the [`MemoryStorageImpl`] only
+/// and the write operations are implemented in terms of both [`FileStorageImpl`]
+/// and [`MemoryStorageImpl`].
 ///
 /// The file based storage is using write ahead logging (WAL) and single underlying
-/// file. See [`FileStorage`] for more details on the persistent storage.
-pub struct FileStorageMemoryMapped {
-    file: FileStorage,
-    memory: MemoryStorage,
+/// file. See [`FileStorageImpl`] for more details on the persistent storage.
+/// The files are accessed through the platform `P`, see
+/// [`FileStorageMemoryMapped`] for the production one.
+pub struct FileStorageMemoryMappedImpl<P: Platform> {
+    file: FileStorageImpl<P>,
+    memory: MemoryStorageImpl<P>,
 }
 
-impl StorageData for FileStorageMemoryMapped {
+/// The [`FileStorageMemoryMappedImpl`] on the production [`PlatformImpl`].
+pub type FileStorageMemoryMapped = FileStorageMemoryMappedImpl<PlatformImpl>;
+
+impl<P: Platform> FileStorageMemoryMappedImpl<P> {
+    /// Constructs or loads the storage `name` in the file system of the
+    /// `platform`, see [`StorageData::new()`].
+    pub fn with_platform(platform: Arc<P>, name: &str) -> Result<Self, DbError> {
+        let file = FileStorageImpl::with_platform(platform.clone(), name)?;
+        let buffer = file.read_all()?;
+
+        Ok(Self {
+            file,
+            memory: MemoryStorageImpl::from_buffer_with_platform(platform, name, buffer),
+        })
+    }
+}
+
+impl<P: Platform + Default> StorageData for FileStorageMemoryMappedImpl<P> {
     fn backup(&self, name: &str) -> Result<(), DbError> {
         self.file.backup(name)
     }
@@ -26,7 +48,11 @@ impl StorageData for FileStorageMemoryMapped {
     fn copy(&self, name: &str) -> Result<Self, DbError> {
         Ok(Self {
             file: self.file.copy(name)?,
-            memory: self.memory.copy(name)?,
+            memory: MemoryStorageImpl::from_buffer_with_platform(
+                self.file.platform().clone(),
+                name,
+                self.memory.bytes().to_vec(),
+            ),
         })
     }
 
@@ -55,13 +81,7 @@ impl StorageData for FileStorageMemoryMapped {
     }
 
     fn new(name: &str) -> Result<Self, DbError> {
-        let file = FileStorage::new(name)?;
-        let buffer = file.read(0, file.len())?.to_vec();
-
-        Ok(Self {
-            file,
-            memory: MemoryStorage::from_buffer(name, buffer),
-        })
+        Self::with_platform(Arc::new(P::default()), name)
     }
 
     fn read(&'_ self, pos: u64, value_len: u64) -> Result<StorageSlice<'_>, DbError> {
@@ -74,19 +94,29 @@ impl StorageData for FileStorageMemoryMapped {
     }
 
     fn resize(&mut self, new_len: u64) -> Result<(), DbError> {
-        self.memory.resize(new_len)?;
-        self.file.resize(new_len)
+        self.file.resize_with(new_len, &|_, pos, buffer| {
+            buffer.copy_from_slice(&self.memory.bytes()[pos as usize..][..buffer.len()]);
+            Ok(())
+        })?;
+        self.memory.resize(new_len)
     }
 
     fn write(&mut self, pos: u64, bytes: &[u8]) -> Result<(), DbError> {
-        self.memory.write(pos, bytes)?;
-        self.file.write(pos, bytes)
+        self.file.write_with(pos, bytes, &|_, pos, buffer| {
+            buffer.copy_from_slice(&self.memory.bytes()[pos as usize..][..buffer.len()]);
+            Ok(())
+        })?;
+        self.memory.write(pos, bytes)
     }
 
     fn recover_from_wal(&mut self) -> Result<(), DbError> {
         self.file.recover_from_wal()?;
-        let buffer = self.file.read(0, self.file.len())?.to_vec();
-        self.memory = MemoryStorage::from_buffer(self.file.name(), buffer);
+        let buffer = self.file.read_all()?;
+        self.memory = MemoryStorageImpl::from_buffer_with_platform(
+            self.file.platform().clone(),
+            self.file.name(),
+            buffer,
+        );
         Ok(())
     }
 }
@@ -94,1104 +124,369 @@ impl StorageData for FileStorageMemoryMapped {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::DbErrorType;
-    use crate::storage::Storage;
-    use crate::storage::StorageIndex;
-    use crate::storage::write_ahead_log::WriteAheadLog;
-    use crate::test_utilities::test_file::TestFile;
-    use crate::utilities::serialize::Serialize;
-    use crate::utilities::serialize::SerializeStatic;
+    use agplatform::Fs;
+    use agplatform::test_platform::TestPlatform;
+    use agplatform::test_platform::test_fs::FsOp;
+    use agplatform::test_platform::test_platform;
+    use std::io::ErrorKind;
 
-    #[test]
-    fn bad_file() {
-        assert!(Storage::<FileStorageMemoryMapped>::new("/a/").is_err());
+    const NAME: &str = "/db";
+    const WAL: &str = "/.db";
+
+    type TestMappedStorage = FileStorageMemoryMappedImpl<TestPlatform>;
+
+    fn platform() -> Arc<TestPlatform> {
+        Arc::new(test_platform())
     }
 
-    #[test]
-    fn index_reuse() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
-
-        let _index1 = storage.insert(&"Hello, World!".to_string()).unwrap();
-        let index2 = storage.insert(&10_i64).unwrap();
-        let _index3 = storage.insert(&vec![1_u64, 2_u64, 3_u64]).unwrap();
-
-        storage.remove(index2).unwrap();
-
-        let index4 = storage
-            .insert(&vec!["Hello".to_string(), "World".to_string()])
-            .unwrap();
-
-        assert_eq!(index2, index4);
+    fn open(platform: &Arc<TestPlatform>) -> TestMappedStorage {
+        FileStorageMemoryMappedImpl::with_platform(platform.clone(), NAME).unwrap()
     }
 
-    #[test]
-    fn index_reuse_after_restore() {
-        let test_file = TestFile::new();
+    mod file_storage_memory_mapped_impl {
+        use super::*;
 
-        let index2;
+        mod with_platform {
+            use super::*;
 
-        {
-            let mut storage =
-                Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
+            #[test]
+            fn with_platform_should_load_file_into_memory() {
+                let platform = platform();
+                platform.fs().write(NAME, [1, 2, 3]).unwrap();
 
-            let _index1 = storage.insert(&"Hello, World!".to_string()).unwrap();
-            index2 = storage.insert(&10_i64).unwrap();
-            let _index3 = storage.insert(&vec![1_u64, 2_u64, 3_u64]).unwrap();
+                let storage = open(&platform);
 
-            storage.remove(index2).unwrap();
+                assert_eq!(storage.memory.bytes(), [1, 2, 3]);
+            }
+
+            #[test]
+            fn with_platform_should_roll_back_writes_logged_in_legacy_log() {
+                // GIVEN a write of [9, 9, 9] at 2 into [1, 2, 3, 4] logged by a version without the log header
+                let platform = platform();
+                platform.fs().write(NAME, [1, 2, 9, 9, 9]).unwrap();
+                let legacy_record = |pos: u64, value: &[u8]| {
+                    [
+                        &pos.to_le_bytes()[..],
+                        &(value.len() as u64).to_le_bytes(),
+                        value,
+                    ]
+                    .concat()
+                };
+                platform
+                    .fs()
+                    .write(
+                        WAL,
+                        [legacy_record(2, &[3, 4]), legacy_record(4, &[])].concat(),
+                    )
+                    .unwrap();
+
+                // WHEN the storage is opened
+                let storage = open(&platform);
+
+                // THEN the write is rolled back and the log is emptied
+                assert_eq!(storage.memory.bytes(), [1, 2, 3, 4]);
+                drop(storage);
+                assert_eq!(platform.fs().read(NAME).unwrap(), [1, 2, 3, 4]);
+                assert!(platform.fs().read(WAL).unwrap().is_empty());
+            }
+
+            #[test]
+            fn with_platform_failure_should_fail() {
+                for op in [FsOp::Open, FsOp::Read] {
+                    let platform = platform();
+                    platform.fs().write(NAME, [1, 2, 3]).unwrap();
+                    platform.fs().set_io_error(op, NAME, ErrorKind::Other);
+
+                    assert!(
+                        FileStorageMemoryMappedImpl::with_platform(platform.clone(), NAME).is_err(),
+                        "op: {op:?}"
+                    );
+                }
+            }
         }
 
-        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
+        mod storage_data {
+            use super::*;
 
-        let index4 = storage
-            .insert(&vec!["Hello".to_string(), "World".to_string()])
-            .unwrap();
+            mod backup {
+                use super::*;
 
-        assert_eq!(index2, index4);
-    }
+                #[test]
+                fn backup_should_write_bytes_to_name() {
+                    let platform = platform();
 
-    #[test]
-    fn index_reuse_chain_after_restore() {
-        let test_file = TestFile::new();
+                    crate::storage::tests::storage_data::backup::backup_should_write_bytes_to_name(
+                        open(&platform),
+                        "/backup",
+                        |name| platform.fs().read(name).unwrap(),
+                    );
+                }
+            }
 
-        let index1;
-        let index2;
+            mod copy {
+                use super::*;
 
-        {
-            let mut storage =
-                Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
+                #[test]
+                fn copy_should_create_independent_storage_named_name() {
+                    crate::storage::tests::storage_data::copy::copy_should_create_independent_storage_named_name(
+                        open(&platform()),
+                        "/copy",
+                    );
+                }
 
-            index1 = storage.insert(&"Hello, World!".to_string()).unwrap();
-            index2 = storage.insert(&10_i64).unwrap();
-            let _index3 = storage.insert(&vec![1_u64, 2_u64, 3_u64]).unwrap();
+                #[test]
+                fn copy_failure_should_fail() {
+                    let platform = platform();
+                    let storage = open(&platform);
+                    platform
+                        .fs()
+                        .set_io_error(FsOp::Open, "/copy", ErrorKind::Other);
 
-            storage.remove(index1).unwrap();
-            storage.remove(index2).unwrap();
+                    assert!(storage.copy("/copy").is_err());
+                }
+            }
+
+            mod flush {
+                use super::*;
+
+                #[test]
+                fn flush_should_keep_written_bytes_on_recover() {
+                    crate::storage::tests::storage_data::flush::flush_should_keep_written_bytes_on_recover(open(&platform()));
+                }
+            }
+
+            mod is_empty {
+                use super::*;
+
+                #[test]
+                fn is_empty_should_be_true_only_without_bytes() {
+                    crate::storage::tests::storage_data::is_empty::is_empty_should_be_true_only_without_bytes(open(&platform()));
+                }
+            }
+
+            mod set_sync_mode {
+                use super::*;
+
+                #[test]
+                fn set_sync_mode_should_set_mode_if_supported() {
+                    crate::storage::tests::storage_data::set_sync_mode::set_sync_mode_should_set_mode_if_supported(open(&platform()), true);
+                }
+            }
+
+            mod sync_mode {
+                use super::*;
+
+                #[test]
+                fn sync_mode_should_default_to_none() {
+                    crate::storage::tests::storage_data::sync_mode::sync_mode_should_default_to_none(open(&platform()));
+                }
+            }
+
+            mod sync {
+                use super::*;
+
+                #[test]
+                fn sync_should_succeed() {
+                    crate::storage::tests::storage_data::sync::sync_should_succeed(open(
+                        &platform(),
+                    ));
+                }
+            }
+
+            mod len {
+                use super::*;
+
+                #[test]
+                fn len_should_cover_written_bytes() {
+                    crate::storage::tests::storage_data::len::len_should_cover_written_bytes(open(
+                        &platform(),
+                    ));
+                }
+            }
+
+            mod name {
+                use super::*;
+
+                #[test]
+                fn name_should_return_name() {
+                    crate::storage::tests::storage_data::name::name_should_return_name(
+                        open(&platform()),
+                        NAME,
+                    );
+                }
+            }
+
+            mod new {
+                use super::*;
+
+                #[test]
+                fn new_should_create_empty_storage_named_name() {
+                    crate::storage::tests::storage_data::new::new_should_create_empty_storage_named_name::<TestMappedStorage>();
+                }
+            }
+
+            mod read {
+                use super::*;
+
+                #[test]
+                fn read_should_return_bytes_at_pos() {
+                    crate::storage::tests::storage_data::read::read_should_return_bytes_at_pos(
+                        open(&platform()),
+                    );
+                }
+
+                #[test]
+                fn read_out_of_bounds_should_fail() {
+                    crate::storage::tests::storage_data::read::read_out_of_bounds_should_fail(
+                        open(&platform()),
+                    );
+                }
+            }
+
+            mod rename {
+                use super::*;
+
+                #[test]
+                fn rename_should_change_name_and_keep_bytes() {
+                    crate::storage::tests::storage_data::rename::rename_should_change_name_and_keep_bytes(open(&platform()), "/renamed");
+                }
+
+                #[test]
+                fn rename_failure_should_keep_name() {
+                    let platform = platform();
+                    let mut storage = open(&platform);
+                    platform
+                        .fs()
+                        .set_io_error(FsOp::Rename, NAME, ErrorKind::Other);
+
+                    assert!(storage.rename("/renamed").is_err());
+
+                    assert_eq!(storage.name(), NAME);
+                    assert_eq!(storage.memory.name(), NAME);
+                }
+            }
+
+            mod resize {
+                use super::*;
+
+                #[test]
+                fn resize_should_zero_new_bytes_and_cut_off_others() {
+                    crate::storage::tests::storage_data::resize::resize_should_zero_new_bytes_and_cut_off_others(open(&platform()));
+                }
+
+                #[test]
+                fn resize_should_log_old_bytes_from_memory() {
+                    let platform = platform();
+                    let mut storage = open(&platform);
+                    storage.write(0, &[1, 2, 3]).unwrap();
+                    storage.flush().unwrap();
+                    platform
+                        .fs()
+                        .set_io_error(FsOp::Read, NAME, ErrorKind::Other);
+
+                    storage.resize(1).unwrap();
+
+                    platform.fs().clear_faults();
+                    storage.recover_from_wal().unwrap();
+                    assert_eq!(storage.read(0, 3).unwrap().to_vec(), vec![1, 2, 3]);
+                }
+
+                #[test]
+                fn resize_failure_should_keep_memory() {
+                    let platform = platform();
+                    let mut storage = open(&platform);
+                    storage.write(0, &[1, 2, 3]).unwrap();
+                    platform
+                        .fs()
+                        .set_io_error(FsOp::SetLen, NAME, ErrorKind::Other);
+
+                    assert!(storage.resize(1).is_err());
+
+                    assert_eq!(storage.memory.bytes(), [1, 2, 3]);
+                }
+            }
+
+            mod write {
+                use super::*;
+
+                #[test]
+                fn write_should_overwrite_and_extend() {
+                    crate::storage::tests::storage_data::write::write_should_overwrite_and_extend(
+                        open(&platform()),
+                    );
+                }
+
+                #[test]
+                fn write_past_end_should_zero_gap() {
+                    crate::storage::tests::storage_data::write::write_past_end_should_zero_gap(
+                        open(&platform()),
+                    );
+                }
+
+                #[test]
+                fn write_empty_should_do_nothing() {
+                    crate::storage::tests::storage_data::write::write_empty_should_do_nothing(
+                        open(&platform()),
+                    );
+                }
+
+                #[test]
+                fn write_should_log_old_bytes_from_memory() {
+                    let platform = platform();
+                    let mut storage = open(&platform);
+                    storage.write(0, &[1, 2, 3]).unwrap();
+                    storage.flush().unwrap();
+                    platform
+                        .fs()
+                        .set_io_error(FsOp::Read, NAME, ErrorKind::Other);
+
+                    storage.write(1, &[4, 5, 6]).unwrap();
+
+                    platform.fs().clear_faults();
+                    storage.recover_from_wal().unwrap();
+                    assert_eq!(storage.read(0, 3).unwrap().to_vec(), vec![1, 2, 3]);
+                }
+
+                #[test]
+                fn write_failure_should_keep_memory() {
+                    let platform = platform();
+                    let mut storage = open(&platform);
+                    storage.write(0, &[1, 2, 3]).unwrap();
+                    platform
+                        .fs()
+                        .set_io_error(FsOp::Write, NAME, ErrorKind::Other);
+
+                    assert!(storage.write(1, &[4]).is_err());
+
+                    assert_eq!(storage.memory.bytes(), [1, 2, 3]);
+                }
+            }
+
+            mod recover_from_wal {
+                use super::*;
+
+                #[test]
+                fn recover_from_wal_should_restore_flushed_bytes_if_logged() {
+                    crate::storage::tests::storage_data::recover_from_wal::recover_from_wal_should_restore_flushed_bytes_if_logged(open(&platform()), true);
+                }
+
+                #[test]
+                fn recover_from_wal_failure_should_fail() {
+                    for (op, path) in [(FsOp::Read, WAL), (FsOp::Read, NAME)] {
+                        let platform = platform();
+                        let mut storage = open(&platform);
+                        storage.write(0, &[1]).unwrap();
+                        storage.flush().unwrap();
+                        storage.write(0, &[2]).unwrap();
+                        platform.fs().set_io_error(op, path, ErrorKind::Other);
+
+                        assert!(
+                            storage.recover_from_wal().is_err(),
+                            "op: {op:?}, path: {path}"
+                        );
+                    }
+                }
+            }
         }
-
-        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
-
-        let index4 = storage
-            .insert(&vec!["Hello".to_string(), "World".to_string()])
-            .unwrap();
-        let index5 = storage.insert(&1_u64).unwrap();
-        let index6 = storage.insert(&vec![0_u8; 0]).unwrap();
-
-        assert_eq!(index2, index4);
-        assert_eq!(index1, index5);
-        assert_eq!(index6.0, 4);
-    }
-
-    #[test]
-    fn insert() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
-
-        let value1 = "Hello, World!".to_string();
-        let index1 = storage.insert(&value1).unwrap();
-        assert_eq!(storage.value_size(index1), Ok(value1.serialized_size()));
-        assert_eq!(storage.value_size(index1), Ok(value1.serialized_size()));
-        assert_eq!(storage.value(index1), Ok(value1));
-
-        let value2 = 10_i64;
-        let index2 = storage.insert(&value2).unwrap();
-        assert_eq!(
-            storage.value_size(index2),
-            Ok(i64::serialized_size_static())
-        );
-        assert_eq!(
-            storage.value_size(index2),
-            Ok(i64::serialized_size_static())
-        );
-        assert_eq!(storage.value(index2), Ok(value2));
-
-        let value3 = vec![1_u64, 2_u64, 3_u64];
-        let index3 = storage.insert(&value3).unwrap();
-        assert_eq!(storage.value_size(index3), Ok(value3.serialized_size()));
-        assert_eq!(storage.value_size(index3), Ok(value3.serialized_size()));
-        assert_eq!(storage.value(index3), Ok(value3));
-
-        let value4 = vec!["Hello".to_string(), "World".to_string()];
-        let index4 = storage.insert(&value4).unwrap();
-        assert_eq!(storage.value_size(index4), Ok(value4.serialized_size()));
-        assert_eq!(storage.value_size(index4), Ok(value4.serialized_size()));
-        assert_eq!(storage.value(index4), Ok(value4));
-    }
-
-    #[test]
-    fn insert_at() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
-
-        let index = storage.insert(&vec![1_i64, 2_i64, 3_i64]).unwrap();
-        let offset = u64::serialized_size_static() + i64::serialized_size_static();
-
-        storage.insert_at(index, offset, &10_i64).unwrap();
-
-        assert_eq!(
-            storage.value::<Vec<i64>>(index).unwrap(),
-            vec![1_i64, 10_i64, 3_i64]
-        );
-    }
-
-    #[test]
-    fn insert_at_value_end() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
-
-        let index = storage.insert(&vec![1_i64, 2_i64, 3_i64]).unwrap();
-        let offset = u64::serialized_size_static() + i64::serialized_size_static() * 3;
-
-        storage.insert_at(index, 0, &4_u64).unwrap();
-        storage.insert_at(index, offset, &10_i64).unwrap();
-
-        assert_eq!(
-            storage.value::<Vec<i64>>(index).unwrap(),
-            vec![1_i64, 2_i64, 3_i64, 10_i64]
-        );
-    }
-
-    #[test]
-    fn insert_at_value_end_multiple_values() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
-
-        let index = storage.insert(&vec![1_i64, 2_i64, 3_i64]).unwrap();
-        storage.insert(&"Hello, World!".to_string()).unwrap();
-        let offset = u64::serialized_size_static() + i64::serialized_size_static() * 3;
-
-        storage.insert_at(index, 0, &4_u64).unwrap();
-        storage.insert_at(index, offset, &10_i64).unwrap();
-
-        assert_eq!(
-            storage.value::<Vec<i64>>(index).unwrap(),
-            vec![1_i64, 2_i64, 3_i64, 10_i64]
-        );
-    }
-
-    #[test]
-    fn insert_at_beyond_end() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
-
-        let index = storage.insert(&vec![1_i64, 2_i64, 3_i64]).unwrap();
-        let offset = u64::serialized_size_static() + i64::serialized_size_static() * 4;
-
-        storage.insert_at(index, 0, &5_u64).unwrap();
-        storage.insert_at(index, offset, &10_i64).unwrap();
-
-        assert_eq!(
-            storage.value::<Vec<i64>>(index).unwrap(),
-            vec![1_i64, 2_i64, 3_i64, 0_i64, 10_i64]
-        );
-    }
-
-    #[test]
-    fn insert_at_beyond_end_multiple_values() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
-
-        let index = storage.insert(&vec![1_i64, 2_i64, 3_i64]).unwrap();
-        storage.insert(&"Hello, World!".to_string()).unwrap();
-        let offset = u64::serialized_size_static() + i64::serialized_size_static() * 4;
-
-        storage.insert_at(index, 0, &5_u64).unwrap();
-        storage.insert_at(index, offset, &10_i64).unwrap();
-
-        assert_eq!(
-            storage.value::<Vec<i64>>(index).unwrap(),
-            vec![1_i64, 2_i64, 3_i64, 0_i64, 10_i64]
-        );
-    }
-
-    #[test]
-    fn insert_at_missing_index() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
-
-        assert_eq!(
-            storage.insert_at(StorageIndex::from(1_u64), 8, &1_i64),
-            Err(DbError::storage(
-                DbErrorType::NotFound,
-                "Index (1) not found"
-            ))
-        );
-    }
-
-    #[test]
-    fn move_at_left() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
-
-        let index = storage.insert(&vec![1_i64, 2_i64, 3_i64]).unwrap();
-        let offset_from = u64::serialized_size_static() + i64::serialized_size_static() * 2;
-        let offset_to = u64::serialized_size_static() + i64::serialized_size_static();
-        let size = i64::serialized_size_static();
-
-        storage
-            .move_at(index, offset_from, offset_to, size)
-            .unwrap();
-
-        assert_eq!(
-            storage.value::<Vec<i64>>(index).unwrap(),
-            vec![1_i64, 3_i64, 0_i64]
-        )
-    }
-
-    #[test]
-    fn move_at_left_overlapping() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
-
-        let index = storage.insert(&vec![1_i64, 2_i64, 3_i64]).unwrap();
-        let offset_from = u64::serialized_size_static() + i64::serialized_size_static();
-        let offset_to = u64::serialized_size_static();
-        let size = u64::serialized_size_static() * 2;
-
-        storage
-            .move_at(index, offset_from, offset_to, size)
-            .unwrap();
-
-        assert_eq!(
-            storage.value::<Vec<i64>>(index).unwrap(),
-            vec![2_i64, 3_i64, 0_i64]
-        )
-    }
-
-    #[test]
-    fn move_at_right() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
-
-        let index = storage.insert(&vec![1_i64, 2_i64, 3_i64]).unwrap();
-        let offset_from = u64::serialized_size_static() + i64::serialized_size_static();
-        let offset_to = u64::serialized_size_static() + i64::serialized_size_static() * 2;
-        let size = u64::serialized_size_static();
-
-        storage
-            .move_at(index, offset_from, offset_to, size)
-            .unwrap();
-
-        assert_eq!(
-            storage.value::<Vec<i64>>(index).unwrap(),
-            vec![1_i64, 0_i64, 2_i64]
-        )
-    }
-
-    #[test]
-    fn move_at_right_overlapping() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
-
-        let index = storage.insert(&vec![1_i64, 2_i64, 3_i64]).unwrap();
-        let offset_from = u64::serialized_size_static();
-        let offset_to = u64::serialized_size_static() + i64::serialized_size_static();
-        let size = u64::serialized_size_static() * 2;
-
-        storage
-            .move_at(index, offset_from, offset_to, size)
-            .unwrap();
-
-        assert_eq!(
-            storage.value::<Vec<i64>>(index).unwrap(),
-            vec![0_i64, 1_i64, 2_i64]
-        )
-    }
-
-    #[test]
-    fn move_at_beyond_end() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
-
-        let index = storage.insert(&vec![1_i64, 2_i64, 3_i64]).unwrap();
-        let offset_from = u64::serialized_size_static() + i64::serialized_size_static();
-        let offset_to = u64::serialized_size_static() + i64::serialized_size_static() * 4;
-        let size = u64::serialized_size_static();
-
-        storage
-            .move_at(index, offset_from, offset_to, size)
-            .unwrap();
-
-        storage.insert_at(index, 0, &5_u64).unwrap();
-
-        assert_eq!(
-            storage.value::<Vec<i64>>(index).unwrap(),
-            vec![1_i64, 0_i64, 3_i64, 0_i64, 2_i64]
-        )
-    }
-
-    #[test]
-    fn move_at_size_out_of_bounds() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
-
-        let index = storage.insert(&vec![1_i64, 2_i64, 3_i64]).unwrap();
-
-        assert_eq!(
-            storage.move_at(index, 8, 16, 1000),
-            Err(DbError::storage(
-                DbErrorType::OutOfBounds,
-                "Value size (1008) out of bounds (32)"
-            ))
-        )
-    }
-
-    #[test]
-    fn move_at_same_offset() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
-
-        let index = storage.insert(&vec![1_i64, 2_i64, 3_i64]).unwrap();
-        let offset_from = u64::serialized_size_static();
-        let offset_to = u64::serialized_size_static();
-        let size = u64::serialized_size_static();
-
-        storage
-            .move_at(index, offset_from, offset_to, size)
-            .unwrap();
-
-        assert_eq!(
-            storage.value::<Vec<i64>>(index).unwrap(),
-            vec![1_i64, 2_i64, 3_i64]
-        )
-    }
-
-    #[test]
-    fn move_at_zero_size() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
-
-        let value = vec![1_i64, 2_i64, 3_i64];
-        let index = storage.insert(&value).unwrap();
-
-        storage.move_at(index, 0, 1, 0).unwrap();
-
-        assert_eq!(
-            storage.value::<Vec<i64>>(index).unwrap(),
-            vec![1_i64, 2_i64, 3_i64]
-        );
-    }
-
-    #[test]
-    fn remove() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
-
-        let index = storage.insert(&1_i64).unwrap();
-
-        assert_eq!(storage.value::<i64>(index).unwrap(), 1_i64);
-
-        storage.remove(index).unwrap();
-
-        assert_eq!(
-            storage.value::<i64>(index),
-            Err(DbError::storage(
-                DbErrorType::NotFound,
-                "Index (1) not found"
-            ))
-        );
-    }
-
-    #[test]
-    fn remove_missing_index() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
-
-        assert_eq!(
-            storage.remove(StorageIndex::from(1_u64)),
-            Err(DbError::storage(
-                DbErrorType::NotFound,
-                "Index (1) not found"
-            ))
-        );
-    }
-
-    #[test]
-    fn replace_larger() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
-
-        let index = storage.insert(&1_i64).unwrap();
-        let value = "Hello, World!".to_string();
-        let expected_size = value.serialized_size();
-
-        storage.replace(index, &value).unwrap();
-
-        assert_eq!(storage.value_size(index).unwrap(), expected_size);
-    }
-
-    #[test]
-    fn replace_missing_index() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
-
-        assert_eq!(
-            storage.replace(StorageIndex::from(1_u64), &10_i64),
-            Err(DbError::storage(
-                DbErrorType::NotFound,
-                "Index (1) not found"
-            ))
-        );
-    }
-
-    #[test]
-    fn replace_same_size() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
-
-        let index = storage.insert(&1_i64).unwrap();
-        let size = storage.value_size(index).unwrap();
-
-        storage.replace(index, &10_i64).unwrap();
-
-        assert_eq!(storage.value_size(index).unwrap(), size);
-    }
-
-    #[test]
-    fn replace_smaller() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
-
-        let index = storage.insert(&"Hello, World!".to_string()).unwrap();
-        let value = 1_i64;
-        let expected_size = i64::serialized_size_static();
-
-        storage.replace(index, &value).unwrap();
-
-        assert_eq!(storage.value_size(index).unwrap(), expected_size);
-    }
-
-    #[test]
-    fn resize_at_end_does_not_move() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
-
-        let index = storage.insert(&1_i64).unwrap();
-        let size = storage.len();
-        let value_size = storage.value_size(index).unwrap();
-
-        storage.resize_value(index, value_size + 8).unwrap();
-
-        assert_eq!(storage.len(), size + 8);
-    }
-
-    #[test]
-    fn resize_value_greater() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
-
-        let index = storage.insert(&10_i64).unwrap();
-        let expected_size = i64::serialized_size_static();
-
-        assert_eq!(storage.value_size(index), Ok(expected_size));
-
-        storage.resize_value(index, expected_size * 2).unwrap();
-
-        assert_eq!(storage.value_size(index), Ok(expected_size * 2));
-    }
-
-    #[test]
-    fn resize_value_missing_index() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
-
-        assert_eq!(
-            storage.resize_value(StorageIndex::from(1_u64), 1),
-            Err(DbError::storage(
-                DbErrorType::NotFound,
-                "Index (1) not found"
-            ))
-        );
-    }
-
-    #[test]
-    fn resize_value_same() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
-
-        let index = storage.insert(&10_i64).unwrap();
-        let expected_size = i64::serialized_size_static();
-
-        assert_eq!(storage.value_size(index), Ok(expected_size));
-
-        storage.resize_value(index, expected_size).unwrap();
-
-        assert_eq!(storage.value_size(index), Ok(expected_size));
-    }
-
-    #[test]
-    fn resize_value_smaller() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
-
-        let index = storage.insert(&10_i64).unwrap();
-        let expected_size = i64::serialized_size_static();
-
-        assert_eq!(storage.value_size(index), Ok(expected_size));
-
-        storage.resize_value(index, expected_size / 2).unwrap();
-
-        assert_eq!(storage.value_size(index), Ok(expected_size / 2));
-    }
-
-    #[test]
-    fn resize_value_zero() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
-
-        let index = storage.insert(&10_i64).unwrap();
-        let expected_size = i64::serialized_size_static();
-
-        assert_eq!(storage.value_size(index), Ok(expected_size));
-
-        storage.resize_value(index, 0).unwrap();
-
-        assert_eq!(storage.value_size(index), Ok(0));
-    }
-
-    #[test]
-    fn resize_value_resizes_file() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
-
-        let index = storage.insert(&3_i64).unwrap();
-        let len = storage.len();
-        let size = u64::serialized_size_static() + i64::serialized_size_static() * 3;
-        let expected_len = len + i64::serialized_size_static() * 3;
-
-        storage.resize_value(index, size).unwrap();
-
-        assert_eq!(storage.value::<Vec<i64>>(index).unwrap(), vec![0_i64; 3]);
-        assert_eq!(storage.len(), expected_len);
-    }
-
-    #[test]
-    fn resize_value_invalidates_original_position() {
-        let test_file = TestFile::new();
-
-        let index;
-
-        {
-            let mut storage =
-                Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
-            index = storage.insert(&10_i64).unwrap();
-            storage.insert(&5_i64).unwrap();
-            storage.resize_value(index, 1).unwrap();
-            storage.remove(index).unwrap();
-        }
-
-        let storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
-
-        assert_eq!(
-            storage.value::<i64>(index),
-            Err(DbError::storage(
-                DbErrorType::NotFound,
-                "Index (1) not found"
-            ))
-        );
-    }
-
-    #[test]
-    fn restore_from_file() {
-        let test_file = TestFile::new();
-        let value1 = vec![1_i64, 2_i64, 3_i64];
-        let value2 = 64_u64;
-        let value3 = vec![4_i64, 5_i64, 6_i64, 7_i64, 8_i64, 9_i64, 10_i64];
-        let index1;
-        let index2;
-        let index3;
-
-        {
-            let mut storage =
-                Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
-            index1 = storage.insert(&value1).unwrap();
-            index2 = storage.insert(&value2).unwrap();
-            index3 = storage.insert(&value3).unwrap();
-        }
-
-        let storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
-
-        assert_eq!(storage.value::<Vec<i64>>(index1), Ok(value1));
-        assert_eq!(storage.value::<u64>(index2), Ok(value2));
-        assert_eq!(storage.value::<Vec<i64>>(index3), Ok(value3));
-    }
-
-    #[test]
-    fn restore_from_file_with_removed_index() {
-        let test_file = TestFile::new();
-        let value1 = vec![1_i64, 2_i64, 3_i64];
-        let value2 = 64_u64;
-        let value3 = vec![4_i64, 5_i64, 6_i64, 7_i64, 8_i64, 9_i64, 10_i64];
-        let index1;
-        let index2;
-        let index3;
-
-        {
-            let mut storage =
-                Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
-            index1 = storage.insert(&value1).unwrap();
-            index2 = storage.insert(&value2).unwrap();
-            index3 = storage.insert(&value3).unwrap();
-            storage.remove(index2).unwrap();
-        }
-
-        let storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
-
-        assert_eq!(storage.value::<Vec<i64>>(index1), Ok(value1));
-        assert_eq!(
-            storage.value::<u64>(StorageIndex::default()),
-            Err(DbError::storage(
-                DbErrorType::NotFound,
-                "Index (0) not found"
-            ))
-        );
-        assert_eq!(
-            storage.value::<u64>(index2),
-            Err(DbError::storage(
-                DbErrorType::NotFound,
-                format!("Index ({}) not found", index2.0)
-            ))
-        );
-        assert_eq!(storage.value::<Vec<i64>>(index3), Ok(value3));
-    }
-
-    #[test]
-    fn restore_from_file_with_all_indexes_removed() {
-        let test_file = TestFile::new();
-        let value1 = vec![1_i64, 2_i64, 3_i64];
-        let value2 = 64_u64;
-        let value3 = vec![4_i64, 5_i64, 6_i64, 7_i64, 8_i64, 9_i64, 10_i64];
-        let index1;
-        let index2;
-        let index3;
-
-        {
-            let mut storage =
-                Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
-            index1 = storage.insert(&value1).unwrap();
-            index2 = storage.insert(&value2).unwrap();
-            index3 = storage.insert(&value3).unwrap();
-            storage.remove(index1).unwrap();
-            storage.remove(index2).unwrap();
-            storage.remove(index3).unwrap();
-        }
-
-        let storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
-
-        assert_eq!(
-            storage.value::<u64>(StorageIndex::default()),
-            Err(DbError::storage(
-                DbErrorType::NotFound,
-                "Index (0) not found"
-            ))
-        );
-        assert_eq!(
-            storage.value::<Vec<i64>>(index1),
-            Err(DbError::storage(
-                DbErrorType::NotFound,
-                format!("Index ({}) not found", index1.0)
-            ))
-        );
-        assert_eq!(
-            storage.value::<u64>(index2),
-            Err(DbError::storage(
-                DbErrorType::NotFound,
-                format!("Index ({}) not found", index2.0)
-            ))
-        );
-        assert_eq!(
-            storage.value::<Vec<i64>>(index3),
-            Err(DbError::storage(
-                DbErrorType::NotFound,
-                format!("Index ({}) not found", index3.0)
-            ))
-        );
-    }
-
-    #[test]
-    fn restore_from_file_with_wal() {
-        let test_file = TestFile::new();
-        let value1 = vec![1_i64, 2_i64, 3_i64];
-        let value2 = 64_u64;
-        let value3 = vec![4_i64, 5_i64, 6_i64, 7_i64, 8_i64, 9_i64, 10_i64];
-        let index1;
-        let index2;
-        let index3;
-
-        {
-            let mut storage =
-                Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
-            index1 = storage.insert(&value1).unwrap();
-            index2 = storage.insert(&value2).unwrap();
-            index3 = storage.insert(&value3).unwrap();
-        }
-
-        let mut wal = WriteAheadLog::new(test_file.file_name()).unwrap();
-        wal.insert(u64::serialized_size_static() * 5, &2_u64.serialize())
-            .unwrap();
-
-        let storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
-
-        assert_eq!(storage.value::<Vec<i64>>(index1), Ok(vec![1_i64, 2_i64]));
-        assert_eq!(storage.value::<u64>(index2), Ok(value2));
-        assert_eq!(storage.value::<Vec<i64>>(index3), Ok(value3));
-    }
-
-    #[test]
-    fn shrink_to_fit() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
-
-        let index1 = storage.insert(&1_i64).unwrap();
-        let index2 = storage.insert(&2_i64).unwrap();
-        let index3 = storage.insert(&3_i64).unwrap();
-        storage.remove(index2).unwrap();
-        storage.optimize_storage().unwrap();
-
-        let actual_size = std::fs::metadata(test_file.file_name()).unwrap().len();
-        let expected_size =
-            (u64::serialized_size_static() * 2) * 3 + i64::serialized_size_static() * 3;
-
-        assert_eq!(actual_size, expected_size);
-        assert_eq!(storage.value(index1), Ok(1_i64));
-        assert_eq!(storage.value(index3), Ok(3_i64));
-    }
-
-    #[test]
-    fn shrink_to_fit_no_change() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
-
-        let index1 = storage.insert(&1_i64).unwrap();
-        let index2 = storage.insert(&2_i64).unwrap();
-        let index3 = storage.insert(&3_i64).unwrap();
-
-        let actual_size = std::fs::metadata(test_file.file_name()).unwrap().len();
-
-        storage.optimize_storage().unwrap();
-
-        assert_eq!(
-            actual_size,
-            std::fs::metadata(test_file.file_name()).unwrap().len()
-        );
-        assert_eq!(storage.value(index1), Ok(1_i64));
-        assert_eq!(storage.value(index2), Ok(2_i64));
-        assert_eq!(storage.value(index3), Ok(3_i64));
-    }
-
-    #[test]
-    fn shrink_to_fit_uncommitted() {
-        let test_file = TestFile::new();
-
-        let expected_size;
-        let index1;
-        let index2;
-        let index3;
-
-        {
-            let mut storage =
-                Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
-            index1 = storage.insert(&1_i64).unwrap();
-            index2 = storage.insert(&2_i64).unwrap();
-            index3 = storage.insert(&3_i64).unwrap();
-            storage.remove(index2).unwrap();
-
-            expected_size = std::fs::metadata(test_file.file_name()).unwrap().len();
-
-            storage.transaction();
-            storage.optimize_storage().unwrap();
-        }
-
-        let actual_size = std::fs::metadata(test_file.file_name()).unwrap().len();
-        assert_eq!(actual_size, expected_size);
-
-        let storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
-        assert_eq!(storage.value(index1), Ok(1_i64));
-        assert_eq!(
-            storage.value::<i64>(index2),
-            Err(DbError::storage(
-                DbErrorType::NotFound,
-                format!("Index ({}) not found", index2.0)
-            ))
-        );
-        assert_eq!(storage.value(index3), Ok(3_i64));
-    }
-
-    #[test]
-    fn transaction_commit() {
-        let test_file = TestFile::new();
-        let index;
-
-        {
-            let mut storage =
-                Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
-            let id = storage.transaction();
-            index = storage.insert(&1_i64).unwrap();
-            storage.commit(id).unwrap();
-            assert_eq!(storage.value::<i64>(index), Ok(1_i64));
-        }
-
-        let storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
-        assert_eq!(storage.value::<i64>(index), Ok(1_i64));
-    }
-
-    #[test]
-    fn transaction_commit_no_transaction() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
-        assert_eq!(storage.commit(0), Ok(()));
-    }
-
-    #[test]
-    fn transaction_unfinished() {
-        let test_file = TestFile::new();
-        let index;
-
-        {
-            let mut storage =
-                Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
-            storage.transaction();
-            index = storage.insert(&1_i64).unwrap();
-            assert_eq!(storage.value::<i64>(index), Ok(1_i64));
-        }
-
-        let storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
-        assert_eq!(
-            storage.value::<i64>(index),
-            Err(DbError::storage(
-                DbErrorType::NotFound,
-                format!("Index ({}) not found", index.0)
-            ))
-        );
-    }
-
-    #[test]
-    fn transaction_nested_unfinished() {
-        let test_file = TestFile::new();
-        let index;
-
-        {
-            let mut storage =
-                Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
-            let _ = storage.transaction();
-            let id2 = storage.transaction();
-            index = storage.insert(&1_i64).unwrap();
-            assert_eq!(storage.value::<i64>(index), Ok(1_i64));
-            storage.commit(id2).unwrap();
-        }
-
-        let storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
-        assert_eq!(
-            storage.value::<i64>(index),
-            Err(DbError::storage(
-                DbErrorType::NotFound,
-                format!("Index ({}) not found", index.0)
-            ))
-        );
-    }
-
-    #[test]
-    fn transaction_commit_mismatch() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
-        let id1 = storage.transaction();
-        let id2 = storage.transaction();
-        let index = storage.insert(&1_i64).unwrap();
-        assert_eq!(storage.value::<i64>(index), Ok(1_i64));
-
-        assert_eq!(
-            storage.commit(id1),
-            Err(DbError::storage(
-                DbErrorType::NotAllowed,
-                format!("Cannot end transaction '{id1}'. Transaction '{id2}' in progress.")
-            ))
-        );
-    }
-
-    #[test]
-    fn value() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
-        let index = storage.insert(&10_i64).unwrap();
-
-        assert_eq!(storage.value::<i64>(index), Ok(10_i64));
-    }
-
-    #[test]
-    fn value_at() {
-        let test_file = TestFile::new();
-
-        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
-        let data = vec![1_i64, 2_i64, 3_i64];
-
-        let index = storage.insert(&data).unwrap();
-        let offset = u64::serialized_size_static() + i64::serialized_size_static();
-
-        assert_eq!(storage.value_at::<i64>(index, offset), Ok(2_i64));
-    }
-
-    #[test]
-    fn value_at_dynamic_size() {
-        let test_file = TestFile::new();
-
-        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
-        let data = vec![2_i64, 1_i64, 2_i64];
-
-        let index = storage.insert(&data).unwrap();
-        let offset = u64::serialized_size_static();
-
-        assert_eq!(
-            storage.value_at::<Vec<i64>>(index, offset),
-            Ok(vec![1_i64, 2_i64])
-        );
-    }
-
-    #[test]
-    fn value_at_of_missing_index() {
-        let test_file = TestFile::new();
-        let storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
-
-        assert_eq!(
-            storage.value_at::<i64>(StorageIndex::from(1_u64), 8),
-            Err(DbError::storage(
-                DbErrorType::NotFound,
-                "Index (1) not found"
-            ))
-        );
-    }
-
-    #[test]
-    fn value_at_out_of_bounds() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
-
-        let data = vec![1_i64, 2_i64];
-        let index = storage.insert(&data).unwrap();
-        let offset = u64::serialized_size_static() + i64::serialized_size_static() * 2;
-
-        assert_eq!(
-            storage.value_at::<i64>(index, offset),
-            Err(DbError::storage(
-                DbErrorType::OutOfBounds,
-                "i64 deserialization error"
-            ))
-        );
-    }
-
-    #[test]
-    fn value_at_offset_overflow() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
-
-        let data = vec![1_i64, 2_i64];
-        let index = storage.insert(&data).unwrap();
-        let offset = u64::serialized_size_static() + i64::serialized_size_static() * 3;
-
-        assert_eq!(
-            storage.value_at::<i64>(index, offset),
-            Err(DbError::storage(
-                DbErrorType::OutOfBounds,
-                "Offset (32) out of bounds (24)"
-            ))
-        );
-    }
-
-    #[test]
-    fn value_of_missing_index() {
-        let test_file = TestFile::new();
-        let storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
-
-        assert_eq!(
-            storage.value::<i64>(StorageIndex::from(1_u64)),
-            Err(DbError::storage(
-                DbErrorType::NotFound,
-                "Index (1) not found"
-            ))
-        );
-    }
-
-    #[test]
-    fn value_out_of_bounds() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
-
-        let index = storage.insert(&10_i64).unwrap();
-
-        assert_eq!(
-            storage.value::<Vec<i64>>(index),
-            Err(DbError::storage(
-                DbErrorType::OutOfBounds,
-                "Vec<i64> deserialization error"
-            ))
-        );
-    }
-
-    #[test]
-    fn value_size() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
-
-        let index = storage.insert(&10_i64).unwrap();
-        let expected_size = i64::serialized_size_static();
-
-        assert_eq!(storage.value_size(index), Ok(expected_size));
-    }
-
-    #[test]
-    fn value_size_of_missing_index() {
-        let test_file = TestFile::new();
-        let storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
-
-        assert_eq!(
-            storage.value_size(StorageIndex::from(1_u64)),
-            Err(DbError::storage(
-                DbErrorType::NotFound,
-                "Index (1) not found"
-            ))
-        );
-    }
-
-    #[test]
-    fn recover_from_wal_overwrite() {
-        let test_file = TestFile::new();
-        let mut storage = FileStorageMemoryMapped::new(test_file.file_name()).unwrap();
-        storage.write(0, &[1, 2, 3]).unwrap();
-        storage.flush().unwrap();
-        storage.write(0, &[4, 5]).unwrap();
-
-        storage.recover_from_wal().unwrap();
-
-        assert_eq!(storage.len(), 3);
-        assert_eq!(storage.read(0, 3).unwrap().to_vec(), vec![1, 2, 3]);
-    }
-
-    #[test]
-    fn recover_from_wal_append() {
-        let test_file = TestFile::new();
-        let mut storage = FileStorageMemoryMapped::new(test_file.file_name()).unwrap();
-        storage.write(0, &[1, 2, 3]).unwrap();
-        storage.flush().unwrap();
-        storage.write(3, &[4, 5]).unwrap();
-
-        storage.recover_from_wal().unwrap();
-
-        assert_eq!(storage.len(), 3);
-        assert_eq!(storage.read(0, 3).unwrap().to_vec(), vec![1, 2, 3]);
-    }
-
-    #[test]
-    fn recover_from_wal_overwrite_past_end() {
-        let test_file = TestFile::new();
-        let mut storage = FileStorageMemoryMapped::new(test_file.file_name()).unwrap();
-        storage.write(0, &[1, 2, 3]).unwrap();
-        storage.flush().unwrap();
-        storage.write(1, &[4, 5, 6, 7]).unwrap();
-
-        storage.recover_from_wal().unwrap();
-
-        assert_eq!(storage.len(), 3);
-        assert_eq!(storage.memory.len(), 3);
-        assert_eq!(storage.read(0, 3).unwrap().to_vec(), vec![1, 2, 3]);
     }
 }

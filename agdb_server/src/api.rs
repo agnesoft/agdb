@@ -4,11 +4,11 @@
 //! including auth, database management, and query execution endpoints.
 
 use crate::routes;
-use utoipa::Modify;
-use utoipa::OpenApi;
 use utoipa::openapi::security::Http;
 use utoipa::openapi::security::HttpAuthScheme;
 use utoipa::openapi::security::SecurityScheme;
+use utoipa::Modify;
+use utoipa::OpenApi;
 
 #[derive(OpenApi)]
 #[openapi(
@@ -19,6 +19,7 @@ use utoipa::openapi::security::SecurityScheme;
         routes::status,
         routes::admin::db::add,
         routes::admin::db::audit,
+        routes::admin::db::audit_trim,
         routes::admin::db::backup,
         routes::admin::db::clear,
         routes::admin::db::convert,
@@ -56,6 +57,7 @@ use utoipa::openapi::security::SecurityScheme;
         routes::dashboard::remove,
         routes::db::add,
         routes::db::audit,
+        routes::db::audit_trim,
         routes::db::backup,
         routes::db::clear,
         routes::db::convert,
@@ -80,6 +82,7 @@ use utoipa::openapi::security::SecurityScheme;
     ),
     components(schemas(
         routes::dashboard::DashboardRenameParam,
+        routes::db::AuditTrimParam,
         routes::db::DbTypeParam,
         routes::db::OptimizeParam,
         routes::admin::db::ServerDatabaseAdminRename,

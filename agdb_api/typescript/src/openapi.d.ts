@@ -61,6 +61,12 @@ declare namespace Components {
              */
             BitwiseOp;
         };
+        export interface AuditTrimParam {
+            /**
+             * Number of UTC days to keep before today, the audit of the older days is removed.
+             */
+            keep_days: number; // int64
+        }
         /**
          * Bitwise operation for [`Amend::AddBitwise`] and [`Amend::RemoveBitwise`].
          * For integers (`i64`, `u64`) and bytes the bitwise op is applied directly.
@@ -1717,6 +1723,28 @@ declare namespace Paths {
             }
         }
     }
+    namespace AdminDbAuditTrim {
+        namespace Parameters {
+            export type Db = string;
+            export type KeepDays = number; // int64
+            export type Owner = string;
+        }
+        export interface PathParameters {
+            owner: Parameters.Owner;
+            db: Parameters.Db;
+        }
+        export interface QueryParameters {
+            keep_days: Parameters.KeepDays /* int64 */;
+        }
+        namespace Responses {
+            export interface $200 {
+            }
+            export interface $401 {
+            }
+            export interface $404 {
+            }
+        }
+    }
     namespace AdminDbBackup {
         namespace Parameters {
             export type Db = string;
@@ -2342,6 +2370,30 @@ declare namespace Paths {
             }
         }
     }
+    namespace DbAuditTrim {
+        namespace Parameters {
+            export type Db = string;
+            export type KeepDays = number; // int64
+            export type Owner = string;
+        }
+        export interface PathParameters {
+            owner: Parameters.Owner;
+            db: Parameters.Db;
+        }
+        export interface QueryParameters {
+            keep_days: Parameters.KeepDays /* int64 */;
+        }
+        namespace Responses {
+            export interface $200 {
+            }
+            export interface $401 {
+            }
+            export interface $403 {
+            }
+            export interface $404 {
+            }
+        }
+    }
     namespace DbBackup {
         namespace Parameters {
             export type Db = string;
@@ -2769,6 +2821,14 @@ export interface OperationMethods {
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.AdminDbAudit.Responses.$200>
   /**
+   * admin_db_audit_trim
+   */
+  'admin_db_audit_trim'(
+    parameters?: Parameters<Paths.AdminDbAuditTrim.QueryParameters & Paths.AdminDbAuditTrim.PathParameters> | null,
+    data?: any,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.AdminDbAuditTrim.Responses.$200>
+  /**
    * admin_db_backup
    */
   'admin_db_backup'(
@@ -3073,6 +3133,14 @@ export interface OperationMethods {
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.DbAudit.Responses.$200>
   /**
+   * db_audit_trim
+   */
+  'db_audit_trim'(
+    parameters?: Parameters<Paths.DbAuditTrim.QueryParameters & Paths.DbAuditTrim.PathParameters> | null,
+    data?: any,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.DbAuditTrim.Responses.$200>
+  /**
    * db_backup
    */
   'db_backup'(
@@ -3264,6 +3332,16 @@ export interface PathsDictionary {
       data?: any,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AdminDbAudit.Responses.$200>
+  }
+  ['/api/v1/admin/db/{owner}/{db}/audit/trim']: {
+    /**
+     * admin_db_audit_trim
+     */
+    'post'(
+      parameters?: Parameters<Paths.AdminDbAuditTrim.QueryParameters & Paths.AdminDbAuditTrim.PathParameters> | null,
+      data?: any,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.AdminDbAuditTrim.Responses.$200>
   }
   ['/api/v1/admin/db/{owner}/{db}/backup']: {
     /**
@@ -3645,6 +3723,16 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.DbAudit.Responses.$200>
   }
+  ['/api/v1/db/{owner}/{db}/audit/trim']: {
+    /**
+     * db_audit_trim
+     */
+    'post'(
+      parameters?: Parameters<Paths.DbAuditTrim.QueryParameters & Paths.DbAuditTrim.PathParameters> | null,
+      data?: any,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.DbAuditTrim.Responses.$200>
+  }
   ['/api/v1/db/{owner}/{db}/backup']: {
     /**
      * db_backup
@@ -3852,6 +3940,7 @@ export type Client = OpenAPIClient<OperationMethods, PathsDictionary>
 
 export type AdminStatus = Components.Schemas.AdminStatus;
 export type Amend = Components.Schemas.Amend;
+export type AuditTrimParam = Components.Schemas.AuditTrimParam;
 export type BitwiseOp = Components.Schemas.BitwiseOp;
 export type ChangePassword = Components.Schemas.ChangePassword;
 export type ClusterStatus = Components.Schemas.ClusterStatus;

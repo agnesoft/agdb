@@ -21,8 +21,8 @@ use crate::stats::summarize;
 ///
 /// 1. setup: the fixture is created, unless no target is selected
 ///    (and an input for each iteration, see [`Benchmark::iteration_setup`]),
-/// 2. calibration: the iterations per sample are doubled until the first
-///    target (the baseline) takes at least `--sample-ms`,
+/// 2. calibration: the iterations per sample of each target are doubled
+///    until it takes at least `--sample-ms`,
 /// 3. measurement: `--samples` samples each run every target in turn,
 ///    rotating which one goes first,
 /// 4. cleanup: the fixture is dropped,
@@ -152,19 +152,17 @@ impl<'a> Bench<'a> {
         }
 
         setup();
-        let iters = self.iters(&mut *targets[0].run);
-
-        for target in &mut targets[1..] {
-            (target.run)(iters, &mut *self.clock);
-        }
-
+        let iters: Vec<u64> = targets
+            .iter_mut()
+            .map(|target| self.iters(&mut *target.run))
+            .collect();
         let samples: Vec<Vec<f64>> = (0..self.config.samples)
             .map(|sample| {
                 let mut times = vec![0.0; targets.len()];
 
                 for offset in 0..targets.len() {
                     let target = (sample + offset) % targets.len();
-                    times[target] = self.per_iter(&mut *targets[target].run, iters);
+                    times[target] = self.per_iter(&mut *targets[target].run, iters[target]);
                 }
 
                 times
@@ -172,17 +170,17 @@ impl<'a> Bench<'a> {
             .collect();
 
         cleanup();
-        self.report(name, fail_factor, iters, &targets, &summarize(&samples));
+        self.report(name, fail_factor, &iters, &targets, &summarize(&samples));
     }
 
-    fn iters(&mut self, baseline: &mut Run) -> u64 {
+    fn iters(&mut self, target: &mut Run) -> u64 {
         if let Some(iters) = self.config.iters {
             return iters;
         }
 
         let mut iters = 1;
 
-        while self.elapsed(baseline, iters) < self.config.sample_time {
+        while self.elapsed(target, iters) < self.config.sample_time {
             iters *= 2;
         }
 
@@ -201,7 +199,7 @@ impl<'a> Bench<'a> {
         &mut self,
         name: &str,
         fail_factor: Option<f64>,
-        iters: u64,
+        iters: &[u64],
         targets: &[&mut Target],
         summaries: &[TargetSummary],
     ) {
@@ -214,12 +212,10 @@ impl<'a> Bench<'a> {
             ));
         }
 
-        for (index, (target, summary)) in targets.iter().zip(summaries).enumerate() {
-            let (name, iters) = if index == 0 {
-                (name, iters.to_string())
-            } else {
-                ("", String::new())
-            };
+        for (index, ((target, summary), iters)) in
+            targets.iter().zip(summaries).zip(iters).enumerate()
+        {
+            let name = if index == 0 { name } else { "" };
             let failed = summary
                 .ratio
                 .as_ref()
@@ -476,13 +472,7 @@ mod tests {
 
                 assert_eq!(
                     LOG.take(),
-                    [
-                        "setup fs/read",
-                        "agplatform",
-                        "std",
-                        "agplatform",
-                        "cleanup"
-                    ]
+                    ["setup fs/read", "std", "agplatform", "cleanup"]
                 );
             }
 
@@ -495,13 +485,7 @@ mod tests {
 
                 assert_eq!(
                     LOG.take(),
-                    [
-                        "setup fs/write",
-                        "agplatform",
-                        "std",
-                        "agplatform",
-                        "cleanup"
-                    ]
+                    ["setup fs/write", "std", "agplatform", "cleanup"]
                 );
                 assert!(out.contains("\nfs/write "), "{out}");
                 assert!(!out.contains("fs/read"), "{out}");
@@ -544,7 +528,7 @@ mod tests {
                 assert!(
                     out.ends_with(&format!(
                         "{:<32} {:<16} {:>10} {:>10}\n{:<32} {:<16} {:>10} {:>10} {:>9}  [-66.7% .. -66.7%]\n",
-                        "fs/read", "agplatform", 1, "150.0 ns", "", "in_memory", "", "50.0 ns", "-66.7%"
+                        "fs/read", "agplatform", 1, "150.0 ns", "", "in_memory", 1, "50.0 ns", "-66.7%"
                     )),
                     "{out}"
                 );
@@ -572,20 +556,33 @@ mod tests {
 
                 let _ = run_with(&["--iters", "1", "--samples", "3"], &[rotated]);
 
-                assert_eq!(
-                    LOG.take(),
-                    ["b", "c", "a", "b", "c", "b", "c", "a", "c", "a", "b"]
-                );
+                assert_eq!(LOG.take(), ["a", "b", "c", "b", "c", "a", "c", "a", "b"]);
             }
 
             #[test]
-            fn run_should_calibrate_iterations_to_sample_time() {
+            fn run_should_calibrate_iterations_of_each_target_to_sample_time() {
                 let (_, out) = run_with(&["--samples", "3", "--sample-ms", "1"], &[read]);
 
                 assert!(
-                    out.contains(
-                        "\nfs/read                          std                   16384   100.0 ns\n"
-                    ),
+                    out.ends_with(&format!(
+                        "{:<32} {:<16} {:>10} {:>10}\n\
+                         {:<32} {:<16} {:>10} {:>10} {:>9}  [+50.0% .. +50.0%]\n\
+                         {:<32} {:<16} {:>10} {:>10} {:>9}  [-50.0% .. -50.0%]\n",
+                        "fs/read",
+                        "std",
+                        16384,
+                        "100.0 ns",
+                        "",
+                        "agplatform",
+                        8192,
+                        "150.0 ns",
+                        "+50.0%",
+                        "",
+                        "in_memory",
+                        32768,
+                        "50.0 ns",
+                        "-50.0%"
+                    )),
                     "{out}"
                 );
             }
@@ -666,7 +663,7 @@ mod tests {
 
                 let _ = run_with(&["--iters", "1", "--samples", "1"], &[shared]);
 
-                assert_eq!(LOG.take(), ["b 1", "a 2", "b 3"]);
+                assert_eq!(LOG.take(), ["a 1", "b 2"]);
             }
         }
     }

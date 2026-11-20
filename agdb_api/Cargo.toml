@@ -16,7 +16,6 @@ include = ["examples/**/*", "src/**/*"]
 default = []
 tls = ["reqwest/default-tls"]
 api = ["agdb/api", "dep:tokio"]
-test_server = ["dep:tokio"]
 
 [dependencies]
 agdb = { workspace = true, features = ["serde", "openapi"] }

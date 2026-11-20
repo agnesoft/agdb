@@ -8,7 +8,13 @@ readme.workspace = true
 description = "Agnesoft Graph Database Server"
 keywords = ["graph", "database", "api"]
 categories = ["database", "database-implementations"]
-include = ["build.rs", "pepper", "src/**/*", "tests/**/*"]
+include = ["build.rs", "pepper", "src/**/*", "!src/bin/**/*", "tests/**/*"]
+default-run = "agdb_server"
+autotests = false
+
+[[test]]
+name = "tests"
+harness = false
 
 [features]
 default = []
@@ -55,5 +61,4 @@ utoipa.workspace = true
 uuid = { workspace = true, features = ["v4"] }
 
 [dev-dependencies]
-agdb_api = { workspace = true, features = ["test_server"] }
 anyhow.workspace = true

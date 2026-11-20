@@ -11,7 +11,6 @@
 //!   bindings.
 //! - `tls`: enables native TLS for the HTTP client transport (via
 //!   `reqwest/default-tls`).
-//! - `test_server`: adds helpers used by agdb server integration tests.
 
 #[cfg(feature = "api")]
 pub mod api;
@@ -20,10 +19,6 @@ mod api_result;
 mod api_types;
 mod client;
 mod http_client;
-#[cfg(feature = "test_server")]
-pub mod test_server;
-#[cfg(feature = "test_server")]
-pub mod tests;
 #[cfg(feature = "api")]
 pub mod transpiler;
 

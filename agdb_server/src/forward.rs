@@ -9,7 +9,7 @@ use std::time::Duration;
 
 const EXECUTED_WAIT_TIMEOUT: Duration = Duration::from_secs(30);
 
-const REDIRECT_PATHS: [&str; 17] = [
+const REDIRECT_PATHS: [&str; 18] = [
     "/add",
     "/backup",
     "/change_password",

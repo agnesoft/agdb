@@ -260,9 +260,9 @@ mod tests {
                 .index(&"username".into())
                 .unwrap()
                 .ids()
-                .value(&storage, &"user1".into())
+                .values(&storage, &"user1".into())
                 .unwrap(),
-            Some(DbId(5))
+            vec![DbId(5)]
         );
     }
 
@@ -320,12 +320,8 @@ mod tests {
             .ids_mut()
             .insert(&mut storage, &"user1".into(), &DbId(1))
             .unwrap();
-        let id = index
-            .ids()
-            .value(&storage, &"user1".into())
-            .unwrap()
-            .unwrap();
-        assert_eq!(id, DbId(1));
+        let ids = index.ids().values(&storage, &"user1".into()).unwrap();
+        assert_eq!(ids, vec![DbId(1)]);
     }
 
     #[test]

@@ -1,6 +1,7 @@
 use crate::db_pool::ErrorCode;
 use crate::db_pool::ServerError;
 use crate::server_error::ServerResult;
+use crate::utilities::log_migration;
 use agdb::DbAny;
 use agdb::DbAnyTransaction;
 use agdb::DbAnyTransactionMut;
@@ -31,6 +32,7 @@ impl UserDb {
             DbKind::Mapped => DbAny::new_mapped(name)?,
         };
         db.set_storage_config(config);
+        log_migration(name, &db);
         Ok(Self(Arc::new(RwLock::new(db))))
     }
 

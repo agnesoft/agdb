@@ -696,6 +696,19 @@ fn amend_add_missing_key_inserts() {
 }
 
 #[test]
+fn insert_values_new_empty_alias() {
+    let mut db = TestDb::new();
+    db.exec_mut_error(
+        QueryBuilder::insert()
+            .values([[("key", 1).into()]])
+            .ids("")
+            .query(),
+        "Empty alias is not allowed",
+    );
+    db.exec(QueryBuilder::search().elements().query(), 0);
+}
+
+#[test]
 fn amend_add_new_element_creates() {
     let mut db = TestDb::new();
     db.exec_mut_ids(

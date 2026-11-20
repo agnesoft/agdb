@@ -1,7 +1,6 @@
 use crate::DbError;
 use crate::DbErrorType;
 use crate::StorageData;
-use crate::collections::multi_map::MultiMapImpl;
 use crate::collections::vec::DbVec;
 use crate::collections::vec::VecValue;
 use crate::storage::Storage;
@@ -9,7 +8,6 @@ use crate::storage::StorageIndex;
 use crate::utilities::serialize::Serialize;
 use crate::utilities::serialize::SerializeStatic;
 use crate::utilities::serialize::u64_at;
-use crate::utilities::stable_hash::StableHash;
 use std::marker::PhantomData;
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
@@ -621,129 +619,18 @@ where
     }
 }
 
-pub struct MapImpl<K, T, D, Data>
-where
-    D: StorageData,
-    Data: MapData<K, T, D>,
-{
-    multi_map: MultiMapImpl<K, T, D, Data>,
-    storage: PhantomData<D>,
-}
-
-impl<K, T, D, Data> MapImpl<K, T, D, Data>
-where
-    K: Default + PartialEq + StableHash,
-    T: Default + PartialEq,
-    D: StorageData,
-    Data: MapData<K, T, D>,
-{
-    #[allow(dead_code)]
-    pub fn capacity(&self) -> u64 {
-        self.multi_map.capacity()
-    }
-
-    #[allow(dead_code)]
-    pub fn contains(&self, storage: &Storage<D>, key: &K) -> Result<bool, DbError> {
-        self.multi_map.contains(storage, key)
-    }
-
-    #[allow(dead_code)]
-    pub fn contains_value(
-        &self,
-        storage: &Storage<D>,
-        key: &K,
-        value: &T,
-    ) -> Result<bool, DbError> {
-        Ok(self.multi_map.value(storage, key)?.as_ref() == Some(value))
-    }
-
-    pub fn insert(
-        &mut self,
-        storage: &mut Storage<D>,
-        key: &K,
-        value: &T,
-    ) -> Result<Option<T>, DbError> {
-        self.multi_map
-            .insert_or_replace(storage, key, |_| true, value)
-    }
-
-    #[allow(dead_code)]
-    pub fn is_empty(&self) -> bool {
-        self.multi_map.is_empty()
-    }
-
-    pub fn iter<'a>(&'a self, storage: &'a Storage<D>) -> MapIterator<'a, K, T, D, Data> {
-        self.multi_map.iter(storage)
-    }
-
-    #[allow(dead_code)]
-    pub fn len(&self) -> u64 {
-        self.multi_map.len()
-    }
-
-    pub fn remove(&mut self, storage: &mut Storage<D>, key: &K) -> Result<(), DbError> {
-        self.multi_map.remove_key_impl(storage, key, true)
-    }
-
-    #[allow(dead_code)]
-    pub fn reserve(&mut self, storage: &mut Storage<D>, capacity: u64) -> Result<(), DbError> {
-        self.multi_map.reserve(storage, capacity)
-    }
-
-    pub fn shrink_to_fit(&mut self, storage: &mut Storage<D>) -> Result<(), DbError> {
-        self.multi_map.shrink_to_fit(storage)
-    }
-
-    pub fn value(&self, storage: &Storage<D>, key: &K) -> Result<Option<T>, DbError> {
-        self.multi_map.value(storage, key)
-    }
-}
-
-pub type DbMap<K, T, D> = MapImpl<K, T, D, DbMapData<K, T, D>>;
-
-impl<K, T, D> DbMap<K, T, D>
-where
-    K: Default + Clone + VecValue<D>,
-    T: Default + Clone + VecValue<D>,
-    D: StorageData,
-{
-    pub fn new(storage: &mut Storage<D>) -> Result<Self, DbError> {
-        Ok(Self {
-            multi_map: MultiMapImpl::<K, T, D, DbMapData<K, T, D>> {
-                data: DbMapData::<K, T, D>::new(storage)?,
-                phantom_marker: PhantomData,
-            },
-            storage: PhantomData,
-        })
-    }
-
-    pub fn from_storage(storage: &Storage<D>, index: StorageIndex) -> Result<Self, DbError> {
-        Ok(Self {
-            multi_map: MultiMapImpl::<K, T, D, DbMapData<K, T, D>> {
-                data: DbMapData::<K, T, D>::from_storage(storage, index)?,
-                phantom_marker: PhantomData,
-            },
-            storage: PhantomData,
-        })
-    }
-
-    pub fn storage_index(&self) -> StorageIndex {
-        self.multi_map.data.storage_index()
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::collections::multi_map::MultiMapStorage;
     use crate::collections::tests::TestStorage;
-    use crate::collections::tests::add_spare_capacity;
     use crate::collections::tests::assert_io_failures;
     use crate::collections::tests::storage;
     use crate::storage::file_storage::FileStorageImpl;
     use agplatform::test_platform::TestPlatform;
 
     type D = FileStorageImpl<TestPlatform>;
-    type TestMap = DbMap<u64, u64, D>;
+    type TestMap = MultiMapStorage<u64, u64, D>;
 
     fn map(storage: &mut TestStorage, pairs: &[(u64, u64)]) -> TestMap {
         let mut map = TestMap::new(storage).unwrap();
@@ -753,10 +640,6 @@ mod tests {
         }
 
         map
-    }
-
-    fn filled(storage: &mut TestStorage, len: u64) -> TestMap {
-        map(storage, &(0..len).map(|i| (i, i)).collect::<Vec<_>>())
     }
 
     fn sorted(map: &TestMap, storage: &TestStorage) -> Vec<(u64, u64)> {
@@ -1001,8 +884,8 @@ mod tests {
             fn from_storage_should_count_valid_and_deleted_states_of_all_chunks() {
                 let mut storage = storage();
                 let mut map = map(&mut storage, &(0..100).map(|i| (i, i)).collect::<Vec<_>>());
-                map.remove(&mut storage, &2).unwrap();
-                map.remove(&mut storage, &99).unwrap();
+                map.remove_value(&mut storage, &2, &2).unwrap();
+                map.remove_value(&mut storage, &99, &99).unwrap();
                 storage.insert_at(map.storage_index(), 0, &7_u64).unwrap();
 
                 let data = TestData::from_storage(&storage, map.storage_index()).unwrap();
@@ -1031,7 +914,7 @@ mod tests {
                 fn for_each_valid_key_should_visit_valid_slots_in_order() {
                     let mut storage = storage();
                     let mut map = map(&mut storage, &[(3, 30), (1, 10), (2, 20)]);
-                    map.remove(&mut storage, &2).unwrap();
+                    map.remove_value(&mut storage, &2, &20).unwrap();
                     let data = TestData::from_storage(&storage, map.storage_index()).unwrap();
                     let mut keys = vec![];
 
@@ -1063,7 +946,7 @@ mod tests {
                 fn rebuild_should_move_valid_slots_and_empty_others() {
                     let mut storage = storage();
                     let mut map = map(&mut storage, &[(1, 10), (2, 20), (3, 30)]);
-                    map.remove(&mut storage, &2).unwrap();
+                    map.remove_value(&mut storage, &2, &20).unwrap();
                     let mut data = TestData::from_storage(&storage, map.storage_index()).unwrap();
 
                     data.rebuild(&mut storage, &[u32::none(), 3, u32::none(), 1])
@@ -1190,7 +1073,7 @@ mod tests {
                 fn next_should_skip_empty_and_deleted_slots() {
                     let mut storage = storage();
                     let mut map = map(&mut storage, &[(1, 10), (5, 15), (7, 20), (2, 30)]);
-                    map.remove(&mut storage, &7).unwrap();
+                    map.remove_value(&mut storage, &7, &20).unwrap();
 
                     assert_eq!(sorted(&map, &storage), vec![(1, 10), (2, 30), (5, 15)]);
                 }
@@ -1202,437 +1085,6 @@ mod tests {
 
                     assert_eq!(map.iter(&storage).next(), None);
                 }
-            }
-        }
-    }
-
-    mod map_impl {
-        use super::*;
-
-        mod capacity {
-            use super::*;
-
-            #[test]
-            fn capacity_should_start_at_zero_then_minimum() {
-                let mut storage = storage();
-                let mut map = map(&mut storage, &[]);
-                assert_eq!(map.capacity(), 0);
-
-                map.insert(&mut storage, &1, &1).unwrap();
-
-                assert_eq!(map.capacity(), 64);
-            }
-        }
-
-        mod contains {
-            use super::*;
-
-            #[test]
-            fn contains_should_find_inserted_key() {
-                let mut storage = storage();
-                let map = map(&mut storage, &[(1, 10)]);
-
-                assert_eq!(map.contains(&storage, &1), Ok(true));
-            }
-
-            #[test]
-            fn contains_missing_key_should_be_false() {
-                let mut storage = storage();
-
-                assert_eq!(map(&mut storage, &[]).contains(&storage, &1), Ok(false));
-                assert_eq!(
-                    map(&mut storage, &[(1, 10)]).contains(&storage, &2),
-                    Ok(false)
-                );
-            }
-
-            #[test]
-            fn contains_removed_key_should_be_false() {
-                let mut storage = storage();
-                let mut map = map(&mut storage, &[(1, 10)]);
-                map.remove(&mut storage, &1).unwrap();
-
-                assert_eq!(map.contains(&storage, &1), Ok(false));
-            }
-
-            #[test]
-            fn contains_failure_should_fail() {
-                assert_io_failures(
-                    |storage| map(storage, &[(1, 10)]),
-                    |storage, map| map.contains(storage, &1),
-                );
-            }
-        }
-
-        mod contains_value {
-            use super::*;
-
-            #[test]
-            fn contains_value_should_match_key_and_value() {
-                let mut storage = storage();
-                let map = map(&mut storage, &[(1, 10)]);
-
-                assert_eq!(map.contains_value(&storage, &1, &10), Ok(true));
-                assert_eq!(map.contains_value(&storage, &1, &11), Ok(false));
-                assert_eq!(map.contains_value(&storage, &2, &10), Ok(false));
-            }
-
-            #[test]
-            fn contains_value_of_removed_key_should_be_false() {
-                let mut storage = storage();
-                let mut map = map(&mut storage, &[(1, 10)]);
-                map.remove(&mut storage, &1).unwrap();
-
-                assert_eq!(map.contains_value(&storage, &1, &10), Ok(false));
-            }
-
-            #[test]
-            fn contains_value_failure_should_fail() {
-                assert_io_failures(
-                    |storage| map(storage, &[(1, 10)]),
-                    |storage, map| map.contains_value(storage, &1, &10),
-                );
-            }
-        }
-
-        mod insert {
-            use super::*;
-
-            #[test]
-            fn insert_should_store_values() {
-                let mut storage = storage();
-                let mut map = map(&mut storage, &[]);
-
-                assert_eq!(map.insert(&mut storage, &1, &10), Ok(None));
-                assert_eq!(map.insert(&mut storage, &5, &15), Ok(None));
-                assert_eq!(map.insert(&mut storage, &7, &20), Ok(None));
-
-                assert_eq!(map.len(), 3);
-                assert_eq!(sorted(&map, &storage), vec![(1, 10), (5, 15), (7, 20)]);
-            }
-
-            #[test]
-            fn insert_same_key_should_replace_value() {
-                let mut storage = storage();
-                let mut map = map(&mut storage, &[(1, 10), (5, 15)]);
-
-                assert_eq!(map.insert(&mut storage, &5, &20), Ok(Some(15)));
-
-                assert_eq!(map.len(), 2);
-                assert_eq!(sorted(&map, &storage), vec![(1, 10), (5, 20)]);
-            }
-
-            #[test]
-            fn insert_over_max_len_should_double_capacity() {
-                let mut storage = storage();
-
-                let map = filled(&mut storage, 100);
-
-                assert_eq!(map.len(), 100);
-                assert_eq!(map.capacity(), 128);
-                for i in 0..100 {
-                    assert_eq!(map.value(&storage, &i), Ok(Some(i)));
-                }
-            }
-
-            #[test]
-            fn insert_colliding_keys_should_keep_all_values() {
-                let mut storage = storage();
-                let mut map = map(&mut storage, &[]);
-
-                for i in 1..100 {
-                    map.insert(&mut storage, &(i * 64 - 1), &i).unwrap();
-                }
-
-                for i in 1..100 {
-                    assert_eq!(map.value(&storage, &(i * 64 - 1)), Ok(Some(i)));
-                }
-            }
-
-            #[test]
-            fn insert_colliding_at_last_slot_should_wrap_around() {
-                let mut storage = storage();
-
-                let map = map(&mut storage, &[(127, 10), (255, 11), (191, 12)]);
-
-                assert_eq!(map.value(&storage, &127), Ok(Some(10)));
-                assert_eq!(map.value(&storage, &255), Ok(Some(11)));
-                assert_eq!(map.value(&storage, &191), Ok(Some(12)));
-            }
-
-            #[test]
-            fn insert_failure_should_fail() {
-                assert_io_failures(
-                    |storage| filled(storage, 60),
-                    |storage, map| map.insert(storage, &60, &60),
-                );
-            }
-        }
-
-        mod is_empty {
-            use super::*;
-
-            #[test]
-            fn is_empty_should_follow_len() {
-                let mut storage = storage();
-                let mut map = map(&mut storage, &[]);
-                assert!(map.is_empty());
-
-                map.insert(&mut storage, &1, &10).unwrap();
-                assert!(!map.is_empty());
-
-                map.remove(&mut storage, &1).unwrap();
-                assert!(map.is_empty());
-            }
-        }
-
-        mod iter {
-            use super::*;
-
-            #[test]
-            fn iter_should_yield_all_pairs() {
-                let mut storage = storage();
-                let map = map(&mut storage, &[(1, 10), (2, 20)]);
-
-                assert_eq!(sorted(&map, &storage), vec![(1, 10), (2, 20)]);
-            }
-        }
-
-        mod len {
-            use super::*;
-
-            #[test]
-            fn len_should_count_keys() {
-                let mut storage = storage();
-
-                assert_eq!(map(&mut storage, &[(1, 10), (1, 11), (2, 20)]).len(), 2);
-            }
-        }
-
-        mod remove {
-            use super::*;
-
-            #[test]
-            fn remove_should_remove_only_key() {
-                let mut storage = storage();
-                let mut map = map(&mut storage, &[(1, 10), (5, 15), (7, 20)]);
-
-                map.remove(&mut storage, &5).unwrap();
-
-                assert_eq!(map.len(), 2);
-                assert_eq!(sorted(&map, &storage), vec![(1, 10), (7, 20)]);
-            }
-
-            #[test]
-            fn remove_removed_key_should_do_nothing() {
-                let mut storage = storage();
-                let mut map = map(&mut storage, &[(1, 10), (5, 15)]);
-                map.remove(&mut storage, &5).unwrap();
-
-                map.remove(&mut storage, &5).unwrap();
-
-                assert_eq!(map.len(), 1);
-            }
-
-            #[test]
-            fn remove_missing_key_should_do_nothing() {
-                let mut storage = storage();
-                let mut empty = map(&mut storage, &[]);
-                let mut map = map(&mut storage, &[(1, 10)]);
-
-                assert_eq!(empty.remove(&mut storage, &0), Ok(()));
-                assert_eq!(map.remove(&mut storage, &0), Ok(()));
-
-                assert_eq!(map.len(), 1);
-            }
-
-            #[test]
-            fn remove_under_min_len_should_halve_capacity() {
-                let mut storage = storage();
-                let mut map = filled(&mut storage, 100);
-
-                for i in (0..100).rev() {
-                    map.remove(&mut storage, &i).unwrap();
-                }
-
-                assert_eq!(map.len(), 0);
-                assert_eq!(map.capacity(), 64);
-            }
-
-            #[test]
-            fn remove_failure_should_fail() {
-                assert_io_failures(
-                    |storage| filled(storage, 57),
-                    |storage, map| map.remove(storage, &0),
-                );
-            }
-        }
-
-        mod reserve {
-            use super::*;
-
-            #[test]
-            fn reserve_larger_should_double_capacity_to_fit() {
-                let mut storage = storage();
-                let mut map = map(&mut storage, &[(1, 1)]);
-
-                map.reserve(&mut storage, 74).unwrap();
-
-                assert_eq!(map.capacity(), 128);
-                assert_eq!(map.len(), 1);
-                assert_eq!(map.value(&storage, &1), Ok(Some(1)));
-            }
-
-            #[test]
-            fn reserve_same_or_smaller_should_keep_capacity() {
-                let mut storage = storage();
-                let mut map = map(&mut storage, &[(1, 1)]);
-
-                map.reserve(&mut storage, 64).unwrap();
-                map.reserve(&mut storage, 54).unwrap();
-
-                assert_eq!(map.capacity(), 64);
-                assert_eq!(map.len(), 1);
-            }
-
-            #[test]
-            fn reserve_failure_should_fail() {
-                assert_io_failures(
-                    |storage| map(storage, &[(1, 1)]),
-                    |storage, map| map.reserve(storage, 128),
-                );
-            }
-        }
-
-        mod shrink_to_fit {
-            use super::*;
-
-            fn spare(storage: &mut TestStorage) -> TestMap {
-                let map = filled(storage, 10);
-                add_spare_capacity(storage, map.storage_index());
-                TestMap::from_storage(storage, map.storage_index()).unwrap()
-            }
-
-            #[test]
-            fn shrink_to_fit_should_keep_capacity_and_values() {
-                let mut storage = storage();
-                let mut map = spare(&mut storage);
-                let len = storage.len();
-
-                map.shrink_to_fit(&mut storage).unwrap();
-
-                storage.optimize_storage().unwrap();
-                assert!(storage.len() < len);
-                assert_eq!(map.capacity(), 64);
-                assert_eq!(
-                    sorted(&map, &storage),
-                    (0..10).map(|i| (i, i)).collect::<Vec<_>>()
-                );
-            }
-
-            #[test]
-            fn shrink_to_fit_failure_should_fail() {
-                assert_io_failures(spare, |storage, map| map.shrink_to_fit(storage));
-            }
-        }
-
-        mod value {
-            use super::*;
-
-            #[test]
-            fn value_should_return_inserted_value() {
-                let mut storage = storage();
-                let map = map(&mut storage, &[(1, 10)]);
-
-                assert_eq!(map.value(&storage, &1), Ok(Some(10)));
-            }
-
-            #[test]
-            fn value_missing_should_be_none() {
-                let mut storage = storage();
-
-                assert_eq!(map(&mut storage, &[]).value(&storage, &0), Ok(None));
-                assert_eq!(map(&mut storage, &[(1, 10)]).value(&storage, &0), Ok(None));
-            }
-
-            #[test]
-            fn value_failure_should_fail() {
-                assert_io_failures(
-                    |storage| map(storage, &[(1, 10)]),
-                    |storage, map| map.value(storage, &1),
-                );
-            }
-        }
-    }
-
-    mod db_map {
-        use super::*;
-
-        mod new {
-            use super::*;
-
-            #[test]
-            fn new_should_create_empty_map() {
-                let mut storage = storage();
-
-                let map = TestMap::new(&mut storage).unwrap();
-
-                assert_eq!(map.len(), 0);
-                assert_eq!(map.capacity(), 0);
-            }
-
-            #[test]
-            fn new_failure_should_fail() {
-                assert_io_failures(|_| (), |storage, _| TestMap::new(storage));
-            }
-        }
-
-        mod from_storage {
-            use super::*;
-
-            #[test]
-            fn from_storage_should_load_pairs() {
-                let mut storage = storage();
-                let mut map = map(&mut storage, &[(1, 1), (3, 2), (5, 3)]);
-                map.remove(&mut storage, &3).unwrap();
-
-                let map = TestMap::from_storage(&storage, map.storage_index()).unwrap();
-
-                assert_eq!(sorted(&map, &storage), vec![(1, 1), (5, 3)]);
-            }
-
-            #[test]
-            fn from_storage_missing_index_should_fail() {
-                let storage = storage();
-
-                assert_eq!(
-                    TestMap::from_storage(&storage, StorageIndex::from(1_u64))
-                        .err()
-                        .unwrap(),
-                    DbError::collections(DbErrorType::NotFound, "Index (1) not found")
-                );
-            }
-
-            #[test]
-            fn from_storage_failure_should_fail() {
-                assert_io_failures(
-                    |storage| map(storage, &[(1, 10)]).storage_index(),
-                    |storage, index| TestMap::from_storage(storage, *index),
-                );
-            }
-        }
-
-        mod storage_index {
-            use super::*;
-
-            #[test]
-            fn storage_index_should_differ_per_map() {
-                let mut storage = storage();
-
-                let first = map(&mut storage, &[]).storage_index();
-                let second = map(&mut storage, &[]).storage_index();
-
-                assert_ne!(first, second);
             }
         }
     }

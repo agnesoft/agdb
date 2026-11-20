@@ -18,7 +18,13 @@ use crate::utilities::serialize::Serialize;
 use crate::utilities::serialize::SerializeStatic;
 use std::borrow::Cow;
 
+/// The version a storage without the version record is upgraded to.
 const CURRENT_VERSION: u64 = 1;
+/// The highest version that can be opened. The database sets it once
+/// its data have the layout of that version so that older versions,
+/// that open only the versions up to theirs, refuse it before changing
+/// anything.
+const MAX_VERSION: u64 = 2;
 const CHUNK_SIZE: u64 = 1024 * 1024;
 
 pub const DEFAULT_OVERLAY_LIMIT: u64 = 64 * 1024 * 1024;
@@ -466,7 +472,17 @@ impl<D: StorageData> Storage<D> {
         Ok(self.record(index.0)?.size)
     }
 
-    #[allow(dead_code)]
+    pub fn set_version(&mut self, version: u64) -> Result<(), DbError> {
+        let id = self.transaction();
+        self.data.write(
+            Self::current_version_record().value_start(),
+            &version.serialize(),
+        )?;
+        self.commit(id)?;
+        self.version = version;
+        Ok(())
+    }
+
     pub fn version(&self) -> u64 {
         self.version
     }
@@ -785,17 +801,17 @@ impl<D: StorageData> Storage<D> {
     }
 
     fn validate_or_update_version(&mut self) -> Result<(), DbError> {
-        if self.version > CURRENT_VERSION {
+        if self.version > MAX_VERSION {
             return Err(DbError::storage(
                 DbErrorType::NotAllowed,
                 format!(
-                    "Storage version '{}' is higher than the current version '{CURRENT_VERSION}'",
+                    "Storage version '{}' is higher than the current version '{MAX_VERSION}'",
                     self.version
                 ),
             ));
         }
 
-        if self.version == CURRENT_VERSION {
+        if self.version >= CURRENT_VERSION {
             return Ok(());
         }
 
@@ -1628,15 +1644,35 @@ pub(crate) mod tests {
                 let platform = platform();
                 platform
                     .fs()
-                    .write(NAME, version_record(CURRENT_VERSION + 1))
+                    .write(NAME, version_record(MAX_VERSION + 1))
                     .unwrap();
 
                 assert_eq!(
                     open(&platform).unwrap_err(),
                     DbError::storage(
                         DbErrorType::NotAllowed,
-                        "Storage version '2' is higher than the current version '1'"
+                        "Storage version '3' is higher than the current version '2'"
                     )
+                );
+            }
+
+            #[test]
+            fn new_with_max_version_should_keep_it() {
+                let platform = platform();
+                platform
+                    .fs()
+                    .write(
+                        NAME,
+                        [version_record(MAX_VERSION), record(1, &[1])].concat(),
+                    )
+                    .unwrap();
+
+                let storage = new_storage(&platform);
+
+                assert_eq!(storage.version(), MAX_VERSION);
+                assert_eq!(
+                    bytes(&storage),
+                    [version_record(MAX_VERSION), record(1, &[1])].concat()
                 );
             }
 
@@ -2737,6 +2773,33 @@ pub(crate) mod tests {
                 let storage = new_storage(&platform);
 
                 assert_eq!(storage.value_size(1.into()), Err(not_found(1)));
+            }
+        }
+
+        mod set_version {
+            use super::*;
+
+            #[test]
+            fn set_version_should_overwrite_version_record() {
+                let platform = platform();
+                let mut storage = new_storage(&platform);
+                let index = storage.insert(&1_u64).unwrap();
+
+                storage.set_version(MAX_VERSION).unwrap();
+
+                assert_eq!(storage.version(), MAX_VERSION);
+                drop(storage);
+                let storage = new_storage(&platform);
+                assert_eq!(storage.version(), MAX_VERSION);
+                assert_eq!(storage.value(index), Ok(1_u64));
+            }
+
+            #[test]
+            fn set_version_io_failure_should_keep_version_on_recover() {
+                assert_failures_recover(
+                    |storage| vec![storage.insert(&1_u64).unwrap()],
+                    |storage, _| storage.set_version(MAX_VERSION),
+                );
             }
         }
     }

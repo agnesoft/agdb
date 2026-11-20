@@ -738,11 +738,14 @@ pub(crate) async fn resync_single_db(
 
         // Validate by opening the copy; drop the handle before renaming
         // to avoid two live Db instances on the same underlying file.
-        if let Err(e) = agdb::Db::new(tmp_str) {
-            let _ = std::fs::remove_file(&server_db_tmp);
-            return Err(ServerError::from(format!(
-                "per-DB resync: downloaded server_db is invalid: {e}"
-            )));
+        match agdb::Db::new(tmp_str) {
+            Ok(db) => crate::utilities::log_migration(tmp_str, &db),
+            Err(e) => {
+                let _ = std::fs::remove_file(&server_db_tmp);
+                return Err(ServerError::from(format!(
+                    "per-DB resync: downloaded server_db is invalid: {e}"
+                )));
+            }
         }
 
         let mut db_guard = server_db.db.write().await;

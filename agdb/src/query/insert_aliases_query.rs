@@ -45,13 +45,6 @@ impl QueryMut for InsertAliasesQuery {
                 }
 
                 for (id, alias) in ids.iter().zip(&self.aliases) {
-                    if alias.is_empty() {
-                        return Err(DbError::query(
-                            DbErrorType::NotAllowed,
-                            "Empty alias is not allowed",
-                        ));
-                    }
-
                     let db_id = db.db_id(id)?;
                     db.insert_alias(db_id, alias)?;
                     result.result += 1;
@@ -72,13 +65,6 @@ impl QueryMut for InsertAliasesQuery {
                 }
 
                 for (db_id, alias) in db_ids.iter().zip(&self.aliases) {
-                    if alias.is_empty() {
-                        return Err(DbError::query(
-                            DbErrorType::NotAllowed,
-                            "Empty alias is not allowed",
-                        ));
-                    }
-
                     db.insert_alias(*db_id, alias)?;
                     result.result += 1;
                 }

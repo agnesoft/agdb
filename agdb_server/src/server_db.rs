@@ -144,6 +144,7 @@ pub(crate) async fn new(
 impl ServerDb {
     fn new(name: &str, token_expiry_seconds: u64) -> ServerResult<Self> {
         let mut db = Db::new(name)?;
+        crate::utilities::log_migration(name, &db);
 
         db.transaction_mut(|t| -> ServerResult<()> {
             let indexes: Vec<String> = t.exec(QueryBuilder::select().indexes().query())?.elements

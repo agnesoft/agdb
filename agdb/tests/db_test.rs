@@ -16,10 +16,12 @@ use agdb::DbElement;
 use agdb::DbFile;
 use agdb::DbId;
 use agdb::DbMemory;
+use agdb::DbMigration;
 use agdb::DbValue;
 use agdb::MemoryStorage;
 use agdb::QueryBuilder;
 use agdb::QueryId;
+use agdb::SearchQuery;
 use agdb::StorageData;
 use std::sync::Arc;
 use std::sync::RwLock;
@@ -668,6 +670,120 @@ fn convert_db_before_0_11_0() {
     );
     assert_eq!(result.elements[1].values, vec![(1, 2).into()]);
     assert_eq!(result.elements[2].values, vec![("tag", "label").into()]);
+    assert_eq!(db.migration().map(|m| (m.from, m.to)), Some((0, 2)));
+}
+
+#[test]
+fn convert_db_v1() {
+    let test_file = TestFile::new();
+    std::fs::copy("tests/test_db_v1.agdb", test_file.file_name()).unwrap();
+
+    let mut db = Db::new(test_file.file_name()).unwrap();
+
+    assert_eq!(
+        db.migration(),
+        Some(&DbMigration {
+            from: 1,
+            to: 2,
+            fixed: vec![
+                "empty alias of node 3 removed: aliases cannot be empty".to_string(),
+                "alias 'edge_alias' of edge -8 removed: edges cannot have aliases".to_string(),
+                "alias 'gone_edge' of missing element -12 removed".to_string(),
+            ],
+        })
+    );
+    let aliases = db
+        .exec(QueryBuilder::select().aliases().query())
+        .unwrap()
+        .elements
+        .into_iter()
+        .map(|e| (e.id.0, e.values[0].value.to_string()))
+        .collect::<Vec<_>>();
+    assert_eq!(
+        aliases,
+        vec![
+            (1, "users".to_string()),
+            (2, "workspace_mappings_long".to_string())
+        ]
+    );
+    let ids = |db: &Db, query: SearchQuery| {
+        db.exec(query)
+            .unwrap()
+            .elements
+            .iter()
+            .map(|e| e.id.0)
+            .collect::<Vec<_>>()
+    };
+    assert_eq!(
+        ids(&db, QueryBuilder::search().elements().query()),
+        vec![1, 2, 3, 4, 5, -7, -8, -10]
+    );
+    assert_eq!(
+        ids(&db, QueryBuilder::search().from(1).query()),
+        vec![1, -8, -7, 3, 2]
+    );
+    assert_eq!(
+        ids(&db, QueryBuilder::search().depth_first().from(1).query()),
+        vec![1, -8, 3, -7, 2]
+    );
+    assert_eq!(ids(&db, QueryBuilder::search().to(1).query()), vec![1]);
+    assert_eq!(
+        db.exec(
+            QueryBuilder::select()
+                .edge_count()
+                .ids([1, 2, 4, 5])
+                .query()
+        )
+        .unwrap()
+        .elements
+        .iter()
+        .map(|e| e.values[0].value.to_u64().unwrap())
+        .collect::<Vec<_>>(),
+        vec![2, 1, 2, 0]
+    );
+    assert_eq!(
+        db.exec(QueryBuilder::select().ids(4).query())
+            .unwrap()
+            .elements[0]
+            .values,
+        vec![("name", "b").into(), ("k", 1).into()]
+    );
+    assert_eq!(
+        db.exec(QueryBuilder::search().index("name").value("b").query())
+            .unwrap()
+            .ids(),
+        vec![DbId(2), DbId(4)]
+    );
+    assert_eq!(
+        db.exec(QueryBuilder::select().node_count().query())
+            .unwrap()
+            .result,
+        5
+    );
+
+    let nodes = db
+        .exec_mut(QueryBuilder::insert().nodes().count(3).query())
+        .unwrap()
+        .ids();
+    let edges = db
+        .exec_mut(QueryBuilder::insert().edges().from(1).to(2).query())
+        .unwrap()
+        .ids();
+
+    assert_eq!(nodes, vec![DbId(11), DbId(9), DbId(6)]);
+    assert_eq!(edges, vec![DbId(-13)]);
+    assert_eq!(
+        ids(&db, QueryBuilder::search().from(1).query()),
+        vec![1, -13, -8, -7, 2, 3]
+    );
+
+    drop(db);
+    let db = Db::new(test_file.file_name()).unwrap();
+    assert_eq!(db.migration(), None);
+    assert_eq!(
+        ids(&db, QueryBuilder::search().depth_first().from(1).query()),
+        vec![1, -13, 2, -8, 3, -7]
+    );
 }
 
 #[test]

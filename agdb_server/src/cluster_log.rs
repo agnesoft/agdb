@@ -37,6 +37,7 @@ pub(crate) async fn new(config: &Config) -> ServerResult<ClusterLog> {
 impl ClusterLog {
     async fn new(name: &str) -> ServerResult<Self> {
         let mut db = Db::new(name)?;
+        crate::utilities::log_migration(name, &db);
 
         db.transaction_mut(|t| -> ServerResult<()> {
             let indexes: Vec<String> = t.exec(QueryBuilder::select().indexes().query())?.elements

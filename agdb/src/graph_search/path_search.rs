@@ -1,8 +1,7 @@
 use crate::DbError;
 use crate::StorageData;
 use crate::collections::bit_set::BitSet;
-use crate::graph::GraphData;
-use crate::graph::GraphImpl;
+use crate::graph::DbGraph;
 use crate::graph::GraphIndex;
 use crate::storage::Storage;
 use std::cmp::Ordering;
@@ -17,15 +16,14 @@ struct Path {
     cost: u64,
 }
 
-pub struct PathSearch<'a, D, Data, Handler>
+pub struct PathSearch<'a, D, Handler>
 where
-    Data: GraphData<D>,
     D: StorageData,
     Handler: PathSearchHandler,
 {
     current_path: Path,
     destination: GraphIndex,
-    graph: &'a GraphImpl<D, Data>,
+    graph: &'a DbGraph<D>,
     storage: &'a Storage<D>,
     handler: Handler,
     paths: Vec<Path>,
@@ -34,14 +32,13 @@ where
     reverse: bool,
 }
 
-impl<'a, D, Data, Handler> PathSearch<'a, D, Data, Handler>
+impl<'a, D, Handler> PathSearch<'a, D, Handler>
 where
-    Data: GraphData<D>,
     D: StorageData,
     Handler: PathSearchHandler,
 {
     pub fn new(
-        graph: &'a GraphImpl<D, Data>,
+        graph: &'a DbGraph<D>,
         storage: &'a Storage<D>,
         from: GraphIndex,
         to: GraphIndex,
@@ -69,7 +66,7 @@ where
     }
 
     pub fn new_reverse(
-        graph: &'a GraphImpl<D, Data>,
+        graph: &'a DbGraph<D>,
         storage: &'a Storage<D>,
         from: GraphIndex,
         to: GraphIndex,

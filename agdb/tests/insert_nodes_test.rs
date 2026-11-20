@@ -49,6 +49,30 @@ fn insert_nodes_aliases() {
 }
 
 #[test]
+fn insert_nodes_empty_alias() {
+    let mut db = TestDb::new();
+    db.exec_mut_error(
+        QueryBuilder::insert()
+            .nodes()
+            .aliases(["alias", ""])
+            .query(),
+        "Empty alias is not allowed",
+    );
+    db.exec(QueryBuilder::search().elements().query(), 0);
+}
+
+#[test]
+fn insert_nodes_ids_empty_alias() {
+    let mut db = TestDb::new();
+    db.exec_mut(QueryBuilder::insert().nodes().aliases("alias").query(), 1);
+    db.exec_mut_error(
+        QueryBuilder::insert().nodes().ids(1).aliases("").query(),
+        "Empty alias is not allowed",
+    );
+    db.exec_ids(QueryBuilder::select().ids("alias").query(), &[1]);
+}
+
+#[test]
 fn insert_nodes_count() {
     let mut db = TestDb::new();
     db.exec_mut_ids(QueryBuilder::insert().nodes().count(2).query(), &[1, 2]);

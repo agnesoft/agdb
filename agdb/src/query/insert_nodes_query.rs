@@ -107,7 +107,7 @@ impl QueryMut for InsertNodesQuery {
                 }
 
                 if let Some(alias) = self.aliases.get(index) {
-                    db.insert_new_alias(*db_id, alias)?;
+                    db.insert_alias(*db_id, alias)?;
                 }
 
                 ids.push(*db_id);
@@ -132,7 +132,7 @@ impl QueryMut for InsertNodesQuery {
                 ids.push(db_id);
 
                 if let Some(alias) = self.aliases.get(index) {
-                    db.insert_new_alias(db_id, alias)?;
+                    db.insert_alias(db_id, alias)?;
                 }
 
                 db.reserve_key_value_capacity(db_id, key_values.len() as u64)?;

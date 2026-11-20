@@ -147,7 +147,7 @@ fn insert_values_new<Store: StorageData>(
     let db_id = db.insert_node()?;
 
     if let Some(alias) = alias {
-        db.insert_new_alias(db_id, alias)?;
+        db.insert_alias(db_id, alias)?;
     }
 
     db.reserve_key_value_capacity(db_id, values.len() as u64)?;

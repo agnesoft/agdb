@@ -4,9 +4,11 @@ export {
     CountComparison,
     Comparison,
     DbKeyOrder,
+} from "./query_builder.js";
+export {
     convertToNativeValue,
     convertTo,
     convertToDbKeyValue,
     convertToDbValue,
-} from "./query_builder.js";
+} from "./convert.js";
 export * as AgdbApi from "./client.js";

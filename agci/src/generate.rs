@@ -26,6 +26,7 @@ use agsource::codegen::print;
 use agsource::codegen::ts::AcceptElementSources;
 use agsource::codegen::ts::Emitter;
 use agsource::codegen::ts::EraseCasts;
+use agsource::codegen::ts::EraseTraits;
 use agsource::codegen::ts::OmitSkippedDefaults;
 use agsource::codegen::ts::RemoveDeadHelpers;
 use agsource::codegen::ts::TsConfig;
@@ -115,6 +116,7 @@ pub(crate) fn generate(platform: &impl Platform, root: &str, dump: &Path) -> Res
         .with(EraseOwnership)
         .with(InferEmptyLists)
         .with(TagResults)
+        .with(EraseTraits)
         .with(EraseCasts)
         .with(EraseNewtypes)
         .with(UnescapeIdentifiers)

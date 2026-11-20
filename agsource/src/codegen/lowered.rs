@@ -77,6 +77,18 @@ impl Ty {
             ty => ty,
         }
     }
+
+    /// Whether the generic `param` is in the type.
+    pub fn mentions(&self, param: &str) -> bool {
+        match self {
+            Ty::Param(p) => p == param,
+            Ty::List(inner) | Ty::Option(inner) | Ty::Ref(inner) | Ty::Dict(_, inner) => {
+                inner.mentions(param)
+            }
+            Ty::Tuple(items) | Ty::Named(_, items) => items.iter().any(|t| t.mentions(param)),
+            _ => false,
+        }
+    }
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -301,6 +313,16 @@ impl Expr {
         )
     }
 
+    /// Whether the expression is a place: a local or `self`, or a field of
+    /// one.
+    pub fn is_place(&self) -> bool {
+        match &self.k {
+            K::Local(_) | K::This => true,
+            K::Field { base, .. } | K::Ref(base) | K::Deref(base) => base.is_place(),
+            _ => false,
+        }
+    }
+
     pub fn children_mut(&mut self) -> Vec<&mut Expr> {
         let mut out: Vec<&mut Expr> = Vec::new();
 
@@ -431,6 +453,26 @@ pub struct Func {
 }
 
 impl Func {
+    /// Replaces every type of the function with `f` of it, inner types
+    /// first.
+    pub fn map_types(&mut self, f: &dyn Fn(&Ty) -> Ty) {
+        let map = |ty: &mut Ty| *ty = ty.map(f);
+        map(&mut self.ret);
+        self.params.iter_mut().for_each(|(_, ty)| map(ty));
+        self.generics
+            .iter_mut()
+            .flat_map(|g| g.bounds.iter_mut())
+            .filter_map(|(_, arg)| arg.as_mut())
+            .for_each(map);
+        rewrite_body(&mut self.body, &mut |e| {
+            map(&mut e.ty);
+
+            if let K::TypeCase { arms, .. } = &mut e.k {
+                arms.iter_mut().for_each(|(ty, _, _)| map(ty));
+            }
+        });
+    }
+
     /// A function the passes make.
     pub fn new(name: &str, params: Vec<(String, Ty)>, ret: Ty, body: Vec<Expr>) -> Func {
         Func {
@@ -529,6 +571,9 @@ pub struct Module {
     pub tests: Vec<Func>,
     /// The types the test crate declares, among the classes and enums.
     pub test_types: BTreeSet<String>,
+    /// The classes the passes make, which are no data type of the source:
+    /// the target declares them.
+    pub records: BTreeSet<String>,
 }
 
 impl Module {
@@ -558,7 +603,9 @@ impl Module {
         }
     }
 
-    fn funcs(&self) -> impl Iterator<Item = &Func> {
+    /// The functions of the classes, their trait impls, the enums and the
+    /// module.
+    pub fn funcs(&self) -> impl Iterator<Item = &Func> {
         self.classes
             .values()
             .flat_map(|c| c.methods.iter().chain(c.trait_impls.values().flatten()))
@@ -631,22 +678,7 @@ impl Module {
     /// Replaces every type of the module with `f` of it, inner types first.
     pub fn map_types(&mut self, f: &dyn Fn(&Ty) -> Ty) {
         let map = |ty: &mut Ty| *ty = ty.map(f);
-        let map_func = |func: &mut Func| {
-            map(&mut func.ret);
-            func.params.iter_mut().for_each(|(_, ty)| map(ty));
-            func.generics
-                .iter_mut()
-                .flat_map(|g| g.bounds.iter_mut())
-                .filter_map(|(_, arg)| arg.as_mut())
-                .for_each(map);
-            rewrite_body(&mut func.body, &mut |e| {
-                map(&mut e.ty);
-
-                if let K::TypeCase { arms, .. } = &mut e.k {
-                    arms.iter_mut().for_each(|(ty, _, _)| map(ty));
-                }
-            });
-        };
+        let map_func = |func: &mut Func| func.map_types(f);
 
         self.for_each_func(&mut |func, _| map_func(func));
         self.traits.values_mut().flatten().for_each(map_func);

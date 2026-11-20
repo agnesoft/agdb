@@ -117,7 +117,9 @@ fn stmts(body: Vec<Expr>, tmp: &mut usize, m: &Module) -> Vec<Expr> {
                 mut then,
                 els,
             } => {
-                let value = if is_place(&value) {
+                // The bindings are assigned through: a temporary copy of a
+                // value type would not update the place.
+                let value = if value.is_place() {
                     value
                 } else {
                     *tmp += 1;
@@ -151,16 +153,6 @@ fn stmts(body: Vec<Expr>, tmp: &mut usize, m: &Module) -> Vec<Expr> {
     }
 
     out
-}
-
-/// A place the pattern bindings can be assigned through, a temporary
-/// otherwise: a copy of a value type would not update the place.
-fn is_place(e: &Expr) -> bool {
-    match &e.k {
-        K::Local(_) | K::This => true,
-        K::Field { base, .. } | K::Ref(base) | K::Deref(base) => is_place(base),
-        _ => false,
-    }
 }
 
 #[cfg(test)]

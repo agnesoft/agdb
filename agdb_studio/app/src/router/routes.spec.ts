@@ -45,12 +45,17 @@ describe("routes", () => {
         expect(loaded).toBeDefined();
       }
 
-      if (route.children) {
-        await Promise.all(route.children.map(loadRouteComponents));
+      for (const child of route.children ?? []) {
+        await loadRouteComponents(child);
       }
     };
 
-    await Promise.all(routes.map(loadRouteComponents));
+    // One at a time: concurrent imports of the same mocked module (QueryView
+    // backs both "query" and "admin-query") stall for over a second in vitest,
+    // enough to time out on slow CI runners.
+    for (const route of routes) {
+      await loadRouteComponents(route);
+    }
   });
 
   it("admin routes have correct meta and children", () => {

@@ -186,6 +186,20 @@ describe("dashboardDocument", () => {
     expect(Object.getPrototypeOf(doc.widgets)).toBe(Object.prototype);
   });
 
+  it("drops row ids and colour keys that are __proto__", () => {
+    const doc = parseDocument(
+      '{"widgets":{"w":{"owner":"o","db":"d",' +
+        '"rows":{"exec":[{"id":"__proto__","query":"q"},{"id":"r","query":"q"}],"context":[]},' +
+        '"colors":{"rules":[],"rows":{"__proto__":1,"r":2},"elements":{"__proto__":3}}}}}',
+    );
+    const widget = doc.widgets.w!;
+    expect(widget.rows.exec).toEqual([{ id: "r", query: "q" }]);
+    expect(widget.colors?.rows).toEqual({ r: 2 });
+    expect(Object.hasOwn(widget.colors!.rows, "__proto__")).toBe(false);
+    expect(Object.getPrototypeOf(widget.colors!.rows)).toBe(Object.prototype);
+    expect(widget.colors?.elements).toEqual({});
+  });
+
   it("reads older configs that listed widgets with their sizes", () => {
     const doc = parseDocument(
       JSON.stringify({

@@ -134,7 +134,7 @@ pub struct DashboardConfig {
 }
 
 /// Dashboard listing entry (without the config).
-#[derive(Debug, Default, Clone, Deserialize, Serialize, ToSchema, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, Deserialize, Serialize, ToSchema, PartialEq, Eq, DbType)]
 #[cfg_attr(feature = "api", derive(agdb::TypeDef))]
 pub struct DashboardSummary {
     pub name: String,

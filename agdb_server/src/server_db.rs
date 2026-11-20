@@ -90,7 +90,6 @@ const OWNER: &str = "owner";
 const NAME: &str = "name";
 const ROLE: &str = "role";
 const TOKEN: &str = "token";
-const UPDATED: &str = "updated";
 const USERS: &str = "users";
 const USERNAME: &str = "username";
 pub(crate) const SERVER_DB_FILE: &str = "agdb_server.agdb";
@@ -285,42 +284,23 @@ impl ServerDb {
     }
 
     pub(crate) async fn dashboard(&self, owner: &str, name: &str) -> ServerResult<ServerDashboard> {
-        let dashboards: Vec<ServerDashboard> = self
-            .db
+        self.db
             .read()
             .await
-            .exec(
-                QueryBuilder::select()
-                    .elements::<ServerDashboard>()
-                    .search()
-                    .from(DASHBOARDS)
-                    .where_()
-                    .neighbor()
-                    .and()
-                    .key(OWNER)
-                    .value(owner)
-                    .and()
-                    .key(NAME)
-                    .value(name)
-                    .query(),
-            )?
-            .try_into()?;
-
-        dashboards
-            .into_iter()
-            .next()
-            .ok_or_else(|| dashboard_not_found(name))
+            .exec(find_dashboard_query(owner, name))?
+            .try_into()
+            .map_err(|_| dashboard_not_found(name))
     }
 
     /// The owner's dashboards by name, without their (possibly large) configs.
     pub(crate) async fn dashboards(&self, owner: &str) -> ServerResult<Vec<DashboardSummary>> {
-        let mut dashboards = self
+        let mut dashboards: Vec<DashboardSummary> = self
             .db
             .read()
             .await
             .exec(
                 QueryBuilder::select()
-                    .values([NAME, UPDATED])
+                    .elements::<DashboardSummary>()
                     .search()
                     .from(DASHBOARDS)
                     .where_()
@@ -330,18 +310,7 @@ impl ServerDb {
                     .value(owner)
                     .query(),
             )?
-            .elements
-            .into_iter()
-            .map(|e| {
-                let value = |key: &str| e.values.iter().find(|kv| kv.key == key.into());
-                Ok(DashboardSummary {
-                    name: value(NAME)
-                        .map(|kv| kv.value.to_string())
-                        .unwrap_or_default(),
-                    updated: value(UPDATED).map_or(Ok(0), |kv| kv.value.to_u64())?,
-                })
-            })
-            .collect::<ServerResult<Vec<DashboardSummary>>>()?;
+            .try_into()?;
         dashboards.sort_by(|a, b| a.name.cmp(&b.name));
         Ok(dashboards)
     }
@@ -386,18 +355,23 @@ impl ServerDb {
         new_name: &str,
         updated: u64,
     ) -> ServerResult<()> {
-        let mut dashboard = self.dashboard(owner, name).await?;
-        // Checked again here: a concurrent add or rename may have taken the name.
-        if self.dashboard(owner, new_name).await.is_ok() {
-            return Err(dashboard_exists(new_name));
-        }
-        dashboard.name = new_name.to_string();
-        dashboard.updated = updated;
         self.db
             .write()
             .await
-            .exec_mut(QueryBuilder::insert().element(&dashboard).query())?;
-        Ok(())
+            .transaction_mut(|t| -> ServerResult<()> {
+                let mut dashboard: ServerDashboard = t
+                    .exec(find_dashboard_query(owner, name))?
+                    .try_into()
+                    .map_err(|_| dashboard_not_found(name))?;
+                // An add or rename applied after the request was checked may have taken the name.
+                if t.exec(find_dashboard_query(owner, new_name))?.result != 0 {
+                    return Err(dashboard_exists(new_name));
+                }
+                dashboard.name = new_name.to_string();
+                dashboard.updated = updated;
+                t.exec_mut(QueryBuilder::insert().element(&dashboard).query())?;
+                Ok(())
+            })
     }
 
     /// Inserts a new dashboard or replaces the config of an existing one.
@@ -407,20 +381,20 @@ impl ServerDb {
         mut dashboard: ServerDashboard,
         create: bool,
     ) -> ServerResult<()> {
-        dashboard.db_id = self
-            .dashboard(&dashboard.owner, &dashboard.name)
-            .await
-            .ok()
-            .and_then(|d| d.db_id);
-
-        if create && dashboard.db_id.is_some() {
-            return Err(dashboard_exists(&dashboard.name));
-        }
-
         self.db
             .write()
             .await
             .transaction_mut(|t| -> ServerResult<()> {
+                dashboard.db_id = t
+                    .exec(find_dashboard_query(&dashboard.owner, &dashboard.name))?
+                    .elements
+                    .first()
+                    .map(|e| e.id);
+
+                if create && dashboard.db_id.is_some() {
+                    return Err(dashboard_exists(&dashboard.name));
+                }
+
                 let result = t.exec_mut(QueryBuilder::insert().element(&dashboard).query())?;
 
                 // Updating an existing element returns no new ids; only new dashboards get linked.
@@ -1135,6 +1109,22 @@ fn dashboard_not_found(name: &str) -> ServerError {
 
 fn db_not_found(name: &str) -> ServerError {
     ServerError::new(StatusCode::NOT_FOUND, &format!("db not found: {name}"))
+}
+
+fn find_dashboard_query(owner: &str, name: &str) -> SelectValuesQuery {
+    QueryBuilder::select()
+        .element::<ServerDashboard>()
+        .search()
+        .from(DASHBOARDS)
+        .where_()
+        .neighbor()
+        .and()
+        .key(OWNER)
+        .value(owner)
+        .and()
+        .key(NAME)
+        .value(name)
+        .query()
 }
 
 fn find_user_db_query(user: DbId, owner: &str, db: &str) -> SearchQuery {

@@ -53,6 +53,12 @@ export const oneOf = <T extends string | number>(
   fallback: T,
 ): T => options.find((option) => option === value) ?? fallback;
 
+/**
+ * Ids read from a document end up as object keys (widgets, row colours), where
+ * a plain assignment of `__proto__` would replace the object's prototype.
+ */
+const isSafeKey = (key: string): boolean => key !== "__proto__";
+
 const isSlot = (value: unknown): value is PaletteSlot =>
   typeof value === "number" && Number.isInteger(value) && value >= 0;
 
@@ -61,6 +67,7 @@ const readRows = (value: unknown): WidgetRow[] =>
     ? value.flatMap((row) =>
         isRecord(row) &&
         typeof row.id === "string" &&
+        isSafeKey(row.id) &&
         typeof row.query === "string"
           ? [{ id: row.id, query: row.query }]
           : [],
@@ -93,8 +100,9 @@ const readRule = (value: unknown): ColorRule[] => {
 const readSlots = (value: unknown): Record<string, PaletteSlot> =>
   isRecord(value)
     ? Object.fromEntries(
-        Object.entries(value).filter((entry): entry is [string, PaletteSlot] =>
-          isSlot(entry[1]),
+        Object.entries(value).filter(
+          (entry): entry is [string, PaletteSlot] =>
+            isSafeKey(entry[0]) && isSlot(entry[1]),
         ),
       )
     : {};
@@ -127,8 +135,7 @@ export const readWidget = (value: unknown): Widget | undefined => {
   const { id, title, owner, db } = value;
   if (
     typeof id !== "string" ||
-    // Widget ids are object keys in the document.
-    id === "__proto__" ||
+    !isSafeKey(id) ||
     typeof owner !== "string" ||
     typeof db !== "string"
   ) {

@@ -48,8 +48,12 @@ describe("QueryBuilderTabs", () => {
     expect(wrapper.find(".button-tab.active").text()).toBe("exec");
   });
 
-  it("starts on the exec tab when given no tabs", () => {
+  it("starts on the exec tab and ignores arrow keys when given no tabs", async () => {
     const wrapper = mount(QueryBuilderTabs, { props: { tabs: [] } });
+    expect(wrapper.findAll(".query-tab")).toHaveLength(0);
+    const root = wrapper.find(".query-builder-tabs");
+    await root.trigger("keydown", { key: "ArrowRight" });
+    await root.trigger("keydown", { key: "ArrowLeft" });
     expect(wrapper.findAll(".query-tab")).toHaveLength(0);
   });
 

@@ -13,6 +13,8 @@ const tabRefs = ref<HTMLElement[]>();
 const handleKeydown = (event: KeyboardEvent) => {
   const tabList = shownTabs.value;
   const currentIndex = tabList.indexOf(activeTab.value);
+  // Nothing to move between (no tabs, or the active one is not shown).
+  if (currentIndex < 0) return;
   if (event.key === "ArrowRight") {
     const nextIndex = (currentIndex + 1) % tabList.length;
 

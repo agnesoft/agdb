@@ -91,6 +91,10 @@ impl<'a> Emitter<'a> {
             self.trait_interface(name, sigs);
         }
 
+        for name in &m.records {
+            self.record(&m.classes[name]);
+        }
+
         self.dicts();
         self.constructors();
 
@@ -223,6 +227,7 @@ import {{ describe, expect, it }} from \"vitest\";
                     .collect();
                 format!("{name}<{}>", args.join(", "))
             }
+            Ty::Named(name, _) if self.m.records.contains(name) => name.clone(),
             Ty::Named(name, _) => self.schema(name),
             Ty::Param(p) if self.is_reflective(p) => "object".into(),
             Ty::Param(p) => p.clone(),
@@ -941,7 +946,7 @@ import {{ describe, expect, it }} from \"vitest\";
                     .iter()
                     .map(|(_, t)| t)
                     .chain([&f.ret])
-                    .any(|t| mentions(t, &g.name))
+                    .any(|t| t.mentions(&g.name))
             })
             .map(|g| {
                 if g.bounds.iter().any(|(b, _)| self.m.is_reflective(b)) {
@@ -986,6 +991,17 @@ import {{ describe, expect, it }} from \"vitest\";
                 .collect();
             let ret = self.ty(&subst(&f.ret, &Ty::Param("Self".into()), &[]));
             self.line(1, &format!("{}({}): {ret};", f.name, params.join(", ")));
+        }
+
+        self.line(0, "}\n");
+    }
+
+    fn record(&mut self, c: &Class) {
+        self.line(0, &format!("interface {} {{", c.name));
+
+        for (name, ty) in &c.fields {
+            let ty = self.ty(ty);
+            self.line(1, &format!("{name}: {ty};"));
         }
 
         self.line(0, "}\n");
@@ -1182,17 +1198,6 @@ fn into_targets(ty: &Ty, out: &mut BTreeSet<String>) {
     }
 }
 
-fn mentions(ty: &Ty, generic: &str) -> bool {
-    match ty {
-        Ty::Param(p) => p == generic,
-        Ty::List(inner) | Ty::Option(inner) | Ty::Ref(inner) | Ty::Dict(_, inner) => {
-            mentions(inner, generic)
-        }
-        Ty::Tuple(items) | Ty::Named(_, items) => items.iter().any(|t| mentions(t, generic)),
-        _ => false,
-    }
-}
-
 /// `name`, or with a number if the body uses it.
 fn fresh(body: &[Expr], name: &str) -> String {
     let used = |n: &str| {
@@ -1279,6 +1284,7 @@ mod tests {
             .with(EraseOwnership)
             .with(InferEmptyLists)
             .with(TagResults)
+            .with(EraseTraits)
             .with(EraseCasts)
             .with(EraseNewtypes)
             .with(UnescapeIdentifiers)
@@ -1913,6 +1919,48 @@ fn second() {
                 assert_eq!(
                     ts.code,
                     "// header\n\nimport type { S } from \"s\";\n\nexport class Root {\n    n(): number {\n        return 1;\n    }\n}\n\n"
+                );
+            }
+
+            #[test]
+            fn module_should_emit_the_records_of_the_erased_traits() {
+                let ts = emitted(
+                    r#"
+                    pub struct Qa {
+                        pub i: Inner,
+                    }
+                    pub struct Inner {
+                        pub n: u64,
+                    }
+                    pub trait Tr {
+                        fn inner(&mut self) -> &mut Inner;
+                    }
+                    impl Tr for Qa {
+                        fn inner(&mut self) -> &mut Inner {
+                            &mut self.i
+                        }
+                    }
+                    pub struct G<T: Tr>(pub T);
+                    impl<T: Tr> G<T> {
+                        pub fn n(mut self, n: u64) -> G<T> {
+                            self.0.inner().n = n;
+                            self
+                        }
+                    }
+                    pub struct Root;
+                    impl Root {
+                        pub fn g(self) -> G<Qa> {
+                            G(Qa { i: Inner { n: 0 } })
+                        }
+                    }
+                    "#,
+                    &["Tr"],
+                    &["Qa", "Inner"],
+                );
+
+                assert_eq!(
+                    ts.code,
+                    "// header\n\nimport type { S } from \"s\";\n\ntype Inner = S.Inner;\ninterface Tr {\n    inner: Inner;\n}\n\nexport class Root {\n    g(): G {\n        return new G({ inner: { i: { n: 0 } }.i });\n    }\n}\n\nclass G {\n    constructor(public _0: Tr) {}\n\n    n(n: number): G {\n        this._0.inner.n = n;\n        return this;\n    }\n}\n\n"
                 );
             }
 

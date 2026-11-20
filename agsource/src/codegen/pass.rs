@@ -27,6 +27,7 @@ pub use resolve::Resolve;
 pub use resolve::returned_ty;
 pub use resolve::subst;
 pub use tag_results::TagResults;
+pub use tag_results::snake_case;
 pub use trait_dicts::TraitDicts;
 pub use trait_dicts::dict_field;
 pub use trait_dicts::dict_global;

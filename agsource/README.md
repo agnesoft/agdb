@@ -136,8 +136,22 @@ needs in `Passes`, built-in or its own `Pass`, and can dump the module after eac
 - `EraseOwnership` removes references, `mem::take`/`mem::swap` and assignments through pattern
   bindings, for targets that share objects by reference;
 - `InferEmptyLists` types `vec![]` by what is pushed to it;
+- `TagResults` makes the builders return the data type their results convert into, tagged with
+  its variant, adding an `into_<data>` method to the traits whose implementors are all tagged;
 - `EraseNewtypes` replaces the single-field tuple data structs with their field, as serde
   serializes them.
+
+`codegen::ts` holds the passes TypeScript needs on top of these and its `Emitter`:
+
+- `AcceptElementSources` lets list elements of conversion targets take their sources, as TS
+  callers cannot convert them;
+- `EraseTraits` turns a trait value into a record of its methods' results, evaluated where a
+  builder gets a concrete type: the dictionaries, the generics and the `panic!` branches of the
+  impls go away. It erases only traits whose results stay the same, as objects are shared;
+- `EraseCasts` drops the casts between primitives;
+- `UnescapeIdentifiers` names `where_`-style methods as the keyword;
+- `OmitSkippedDefaults` leaves out the `skip_serializing_if` fields holding their default;
+- `RemoveDeadHelpers` removes the inlined methods without callers.
 
 A problem with one file does not stop loading. These are all collected as `Error`s with their
 location:

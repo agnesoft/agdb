@@ -190,10 +190,15 @@ fn tagged_traits(m: &Module, tags: &Tags) -> BTreeMap<String, String> {
 
 /// `into_<data>` in snake case.
 fn method_name(data: &str) -> String {
-    let mut out = String::from("into");
+    format!("into_{}", snake_case(data))
+}
 
-    for c in data.chars() {
-        if c.is_uppercase() {
+/// The type name `name` in snake case.
+pub fn snake_case(name: &str) -> String {
+    let mut out = String::new();
+
+    for c in name.chars() {
+        if c.is_uppercase() && !out.is_empty() {
             out.push('_');
         }
 
@@ -366,6 +371,15 @@ mod tests {
                     );
                 }
             }
+        }
+    }
+
+    mod snake_case {
+        use super::*;
+
+        #[test]
+        fn snake_case_should_separate_the_words_of_a_type_name() {
+            assert_eq!(snake_case("QueryType"), "query_type");
         }
     }
 }

@@ -31,9 +31,9 @@ export interface DbType<Self> {
     db_element_id(): DbValue | undefined;
 }
 
-export interface SearchQueryBuilder<Self> {
-    search_mut(self: Self): SearchQuery;
-    into_query_type(self: Self): QueryType;
+interface SearchQueryBuilder {
+    search_mut: SearchQuery;
+    into_query_type: QueryType;
 }
 
 const DbFields_DbType: DbType<([DbValue, DbValue | undefined])[]> = {
@@ -66,141 +66,6 @@ const DbFields_DbType: DbType<([DbValue, DbValue | undefined])[]> = {
     },
     db_element_id(): DbValue | undefined {
         return undefined;
-    },
-};
-
-const InsertAliasesQuery_SearchQueryBuilder: SearchQueryBuilder<InsertAliasesQuery> = {
-    search_mut(self: InsertAliasesQuery): SearchQuery {
-        if (typeof self.ids === "object" && self.ids !== null && "Search" in self.ids) {
-            const search = self.ids.Search;
-            return search;
-        } else {
-            panic("Expected search query");
-        }
-    },
-    into_query_type(self: InsertAliasesQuery): QueryType {
-        return { InsertAlias: self };
-    },
-};
-
-const InsertValuesQuery_SearchQueryBuilder: SearchQueryBuilder<InsertValuesQuery> = {
-    search_mut(self: InsertValuesQuery): SearchQuery {
-        if (typeof self.ids === "object" && self.ids !== null && "Search" in self.ids) {
-            const search = self.ids.Search;
-            return search;
-        } else {
-            panic("Expected search query");
-        }
-    },
-    into_query_type(self: InsertValuesQuery): QueryType {
-        return { InsertValues: self };
-    },
-};
-
-const RemoveQuery_SearchQueryBuilder: SearchQueryBuilder<QueryIds> = {
-    search_mut(self: QueryIds): SearchQuery {
-        if (typeof self === "object" && self !== null && "Search" in self) {
-            const search = self.Search;
-            return search;
-        } else {
-            panic("Expected search query");
-        }
-    },
-    into_query_type(self: QueryIds): QueryType {
-        return { Remove: self };
-    },
-};
-
-const RemoveValuesQuery_SearchQueryBuilder: SearchQueryBuilder<SelectValuesQuery> = {
-    search_mut(self: SelectValuesQuery): SearchQuery {
-        if (typeof self.ids === "object" && self.ids !== null && "Search" in self.ids) {
-            const search = self.ids.Search;
-            return search;
-        } else {
-            panic("Expected search query");
-        }
-    },
-    into_query_type(self: SelectValuesQuery): QueryType {
-        return { RemoveValues: self };
-    },
-};
-
-const SearchQuery_SearchQueryBuilder: SearchQueryBuilder<SearchQuery> = {
-    search_mut(self: SearchQuery): SearchQuery {
-        return self;
-    },
-    into_query_type(self: SearchQuery): QueryType {
-        return { Search: self };
-    },
-};
-
-const SelectAliasesQuery_SearchQueryBuilder: SearchQueryBuilder<QueryIds> = {
-    search_mut(self: QueryIds): SearchQuery {
-        if (typeof self === "object" && self !== null && "Search" in self) {
-            const search = self.Search;
-            return search;
-        } else {
-            panic("Expected search query");
-        }
-    },
-    into_query_type(self: QueryIds): QueryType {
-        return { SelectAliases: self };
-    },
-};
-
-const SelectEdgeCountQuery_SearchQueryBuilder: SearchQueryBuilder<SelectEdgeCountQuery> = {
-    search_mut(self: SelectEdgeCountQuery): SearchQuery {
-        if (typeof self.ids === "object" && self.ids !== null && "Search" in self.ids) {
-            const search = self.ids.Search;
-            return search;
-        } else {
-            panic("Expected search query");
-        }
-    },
-    into_query_type(self: SelectEdgeCountQuery): QueryType {
-        return { SelectEdgeCount: self };
-    },
-};
-
-const SelectKeyCountQuery_SearchQueryBuilder: SearchQueryBuilder<QueryIds> = {
-    search_mut(self: QueryIds): SearchQuery {
-        if (typeof self === "object" && self !== null && "Search" in self) {
-            const search = self.Search;
-            return search;
-        } else {
-            panic("Expected search query");
-        }
-    },
-    into_query_type(self: QueryIds): QueryType {
-        return { SelectKeyCount: self };
-    },
-};
-
-const SelectKeysQuery_SearchQueryBuilder: SearchQueryBuilder<QueryIds> = {
-    search_mut(self: QueryIds): SearchQuery {
-        if (typeof self === "object" && self !== null && "Search" in self) {
-            const search = self.Search;
-            return search;
-        } else {
-            panic("Expected search query");
-        }
-    },
-    into_query_type(self: QueryIds): QueryType {
-        return { SelectKeys: self };
-    },
-};
-
-const SelectValuesQuery_SearchQueryBuilder: SearchQueryBuilder<SelectValuesQuery> = {
-    search_mut(self: SelectValuesQuery): SearchQuery {
-        if (typeof self.ids === "object" && self.ids !== null && "Search" in self.ids) {
-            const search = self.ids.Search;
-            return search;
-        } else {
-            panic("Expected search query");
-        }
-    },
-    into_query_type(self: SelectValuesQuery): QueryType {
-        return { SelectValues: self };
     },
 };
 
@@ -499,8 +364,9 @@ export class QueryBuilder {
         return new Remove();
     }
 
-    static search(): Search<SearchQuery> {
-        return new Search({ algorithm: "BreadthFirst", origin: { Id: 0 }, destination: { Id: 0 }, limit: 0, offset: 0, order_by: [], conditions: [], reverse: false }, SearchQuery_SearchQueryBuilder);
+    static search(): Search {
+        const search_query: SearchQuery = { algorithm: "BreadthFirst", origin: { Id: 0 }, destination: { Id: 0 }, limit: 0, offset: 0, order_by: [], conditions: [], reverse: false };
+        return new Search({ search_mut: search_query, into_query_type: { Search: search_query } });
     }
 
     static select(): Select {
@@ -553,8 +419,9 @@ class Select {
         return new SelectNodeCount();
     }
 
-    search(): Search<SelectValuesQuery> {
-        return new Search({ keys: [], ids: { Search: { algorithm: "BreadthFirst", origin: { Id: 0 }, destination: { Id: 0 }, limit: 0, offset: 0, order_by: [], conditions: [], reverse: false } } }, SelectValuesQuery_SearchQueryBuilder);
+    search(): Search {
+        const search: SearchQuery = { algorithm: "BreadthFirst", origin: { Id: 0 }, destination: { Id: 0 }, limit: 0, offset: 0, order_by: [], conditions: [], reverse: false };
+        return new Search({ search_mut: search, into_query_type: { SelectValues: { keys: [], ids: { Search: search } } } });
     }
 
     values(keys: IntoDbValues): SelectValues {
@@ -570,7 +437,7 @@ class SelectValues {
         return new SelectValuesIds(this.query);
     }
 
-    search(): Search<SelectValuesQuery> {
+    search(): Search {
         const search: SearchQuery = { algorithm: "BreadthFirst", origin: { Id: 0 }, destination: { Id: 0 }, limit: 0, offset: 0, order_by: [], conditions: [], reverse: false };
         search.limit = this.limit;
         if (this.element_id !== undefined) {
@@ -578,110 +445,110 @@ class SelectValues {
             search.conditions.push({ logic: "And", modifier: "None", data: { KeyValue: { key: { String: "db_element_id" }, value: { Equal: element_id } } } });
         }
         this.query.ids = { Search: search };
-        return new Search(this.query, SelectValuesQuery_SearchQueryBuilder);
+        return new Search({ search_mut: search, into_query_type: { SelectValues: this.query } });
     }
 }
 
-class Search<T> {
-    constructor(public _0: T, public T_SearchQueryBuilder: SearchQueryBuilder<T>) {}
+class Search {
+    constructor(public _0: SearchQueryBuilder) {}
 
-    breadth_first(): SearchAlgorithm<T> {
-        this.T_SearchQueryBuilder.search_mut(this._0).algorithm = "BreadthFirst";
-        return new SearchAlgorithm(this._0, this.T_SearchQueryBuilder);
+    breadth_first(): SearchAlgorithm {
+        this._0.search_mut.algorithm = "BreadthFirst";
+        return new SearchAlgorithm(this._0);
     }
 
-    depth_first(): SearchAlgorithm<T> {
-        this.T_SearchQueryBuilder.search_mut(this._0).algorithm = "DepthFirst";
-        return new SearchAlgorithm(this._0, this.T_SearchQueryBuilder);
+    depth_first(): SearchAlgorithm {
+        this._0.search_mut.algorithm = "DepthFirst";
+        return new SearchAlgorithm(this._0);
     }
 
-    elements(): SearchTo<T> {
-        this.T_SearchQueryBuilder.search_mut(this._0).algorithm = "Elements";
-        return new SearchTo(this._0, this.T_SearchQueryBuilder);
+    elements(): SearchTo {
+        this._0.search_mut.algorithm = "Elements";
+        return new SearchTo(this._0);
     }
 
-    index(key: IntoDbValue): SearchIndex<T> {
-        return new SearchIndex(into_DbValue(key), this._0, this.T_SearchQueryBuilder);
+    index(key: IntoDbValue): SearchIndex {
+        return new SearchIndex(into_DbValue(key), this._0);
     }
 
-    from(id: IntoQueryId): SearchFrom<T> {
-        this.T_SearchQueryBuilder.search_mut(this._0).origin = into_QueryId(id);
-        return new SearchFrom(this._0, this.T_SearchQueryBuilder);
+    from(id: IntoQueryId): SearchFrom {
+        this._0.search_mut.origin = into_QueryId(id);
+        return new SearchFrom(this._0);
     }
 
-    to(id: IntoQueryId): SearchTo<T> {
-        this.T_SearchQueryBuilder.search_mut(this._0).destination = into_QueryId(id);
-        return new SearchTo(this._0, this.T_SearchQueryBuilder);
+    to(id: IntoQueryId): SearchTo {
+        this._0.search_mut.destination = into_QueryId(id);
+        return new SearchTo(this._0);
     }
 }
 
-class SearchTo<T> {
-    constructor(public _0: T, public T_SearchQueryBuilder: SearchQueryBuilder<T>) {}
+class SearchTo {
+    constructor(public _0: SearchQueryBuilder) {}
 
-    from(id: IntoQueryId): SearchFrom<T> {
-        this.T_SearchQueryBuilder.search_mut(this._0).origin = into_QueryId(id);
-        this.T_SearchQueryBuilder.search_mut(this._0).reverse = true;
-        return new SearchFrom(this._0, this.T_SearchQueryBuilder);
+    from(id: IntoQueryId): SearchFrom {
+        this._0.search_mut.origin = into_QueryId(id);
+        this._0.search_mut.reverse = true;
+        return new SearchFrom(this._0);
     }
 
-    limit(value: number): SelectLimit<T> {
-        this.T_SearchQueryBuilder.search_mut(this._0).limit = value;
-        return new SelectLimit(this._0, this.T_SearchQueryBuilder);
+    limit(value: number): SelectLimit {
+        this._0.search_mut.limit = value;
+        return new SelectLimit(this._0);
     }
 
-    offset(value: number): SelectOffset<T> {
-        this.T_SearchQueryBuilder.search_mut(this._0).offset = value;
-        return new SelectOffset(this._0, this.T_SearchQueryBuilder);
+    offset(value: number): SelectOffset {
+        this._0.search_mut.offset = value;
+        return new SelectOffset(this._0);
     }
 
-    order_by(keys: IntoDbKeyOrders): SearchOrderBy<T> {
-        this.T_SearchQueryBuilder.search_mut(this._0).order_by = into_DbKeyOrders(keys);
-        return new SearchOrderBy(this._0, this.T_SearchQueryBuilder);
+    order_by(keys: IntoDbKeyOrders): SearchOrderBy {
+        this._0.search_mut.order_by = into_DbKeyOrders(keys);
+        return new SearchOrderBy(this._0);
     }
 
     query(): QueryType {
-        return this.T_SearchQueryBuilder.into_query_type(this._0);
+        return this._0.into_query_type;
     }
 
-    where(): Where<T> {
-        return new Where("And", "None", [[]], this._0, this.T_SearchQueryBuilder);
+    where(): Where {
+        return new Where("And", "None", [[]], this._0);
     }
 }
 
-class Where<T> {
-    constructor(public logic: QueryConditionLogic, public modifier: QueryConditionModifier, public conditions: QueryCondition[][], public query: T, public T_SearchQueryBuilder: SearchQueryBuilder<T>) {}
+class Where {
+    constructor(public logic: QueryConditionLogic, public modifier: QueryConditionModifier, public conditions: QueryCondition[][], public query: SearchQueryBuilder) {}
 
-    beyond(): Where<T> {
+    beyond(): Where {
         this.modifier = "Beyond";
         return this;
     }
 
-    distance(comparison: IntoCountComparison): WhereLogicOperator<T> {
+    distance(comparison: IntoCountComparison): WhereLogicOperator {
         (this.conditions.at(-1) ?? panic("Conditions should not be empty")).push({ logic: this.logic, modifier: this.modifier, data: { Distance: into_CountComparison(comparison) } });
-        return new WhereLogicOperator(this, this.T_SearchQueryBuilder);
+        return new WhereLogicOperator(this);
     }
 
-    edge(): WhereLogicOperator<T> {
+    edge(): WhereLogicOperator {
         (this.conditions.at(-1) ?? panic("Conditions should not be empty")).push({ logic: this.logic, modifier: this.modifier, data: "Edge" });
-        return new WhereLogicOperator(this, this.T_SearchQueryBuilder);
+        return new WhereLogicOperator(this);
     }
 
-    edge_count(comparison: IntoCountComparison): WhereLogicOperator<T> {
+    edge_count(comparison: IntoCountComparison): WhereLogicOperator {
         (this.conditions.at(-1) ?? panic("Conditions should not be empty")).push({ logic: this.logic, modifier: this.modifier, data: { EdgeCount: into_CountComparison(comparison) } });
-        return new WhereLogicOperator(this, this.T_SearchQueryBuilder);
+        return new WhereLogicOperator(this);
     }
 
-    edge_count_from(comparison: IntoCountComparison): WhereLogicOperator<T> {
+    edge_count_from(comparison: IntoCountComparison): WhereLogicOperator {
         (this.conditions.at(-1) ?? panic("Conditions should not be empty")).push({ logic: this.logic, modifier: this.modifier, data: { EdgeCountFrom: into_CountComparison(comparison) } });
-        return new WhereLogicOperator(this, this.T_SearchQueryBuilder);
+        return new WhereLogicOperator(this);
     }
 
-    edge_count_to(comparison: IntoCountComparison): WhereLogicOperator<T> {
+    edge_count_to(comparison: IntoCountComparison): WhereLogicOperator {
         (this.conditions.at(-1) ?? panic("Conditions should not be empty")).push({ logic: this.logic, modifier: this.modifier, data: { EdgeCountTo: into_CountComparison(comparison) } });
-        return new WhereLogicOperator(this, this.T_SearchQueryBuilder);
+        return new WhereLogicOperator(this);
     }
 
-    element(): WhereLogicOperator<T> {
+    element(): WhereLogicOperator {
         const m1 = DbFields_DbType.db_element_id();
         if (m1 !== undefined) {
             const element_id = m1;
@@ -691,123 +558,123 @@ class Where<T> {
         }
     }
 
-    ids(ids: IntoQueryIds): WhereLogicOperator<T> {
+    ids(ids: IntoQueryIds): WhereLogicOperator {
         (this.conditions.at(-1) ?? panic("Conditions should not be empty")).push({ logic: this.logic, modifier: this.modifier, data: { Ids: QueryIds_get_ids(into_QueryIds(ids)) } });
-        return new WhereLogicOperator(this, this.T_SearchQueryBuilder);
+        return new WhereLogicOperator(this);
     }
 
-    key(key: IntoDbValue): WhereKey<T> {
-        return new WhereKey(into_DbValue(key), this, this.T_SearchQueryBuilder);
+    key(key: IntoDbValue): WhereKey {
+        return new WhereKey(into_DbValue(key), this);
     }
 
-    keys(keys: IntoDbValues): WhereLogicOperator<T> {
+    keys(keys: IntoDbValues): WhereLogicOperator {
         (this.conditions.at(-1) ?? panic("Conditions should not be empty")).push({ logic: this.logic, modifier: this.modifier, data: { Keys: into_DbValues(keys) } });
-        return new WhereLogicOperator(this, this.T_SearchQueryBuilder);
+        return new WhereLogicOperator(this);
     }
 
-    neighbor(): WhereLogicOperator<T> {
+    neighbor(): WhereLogicOperator {
         return this.distance({ Equal: 2 });
     }
 
-    distance_greater_than(v: number): WhereLogicOperator<T> {
+    distance_greater_than(v: number): WhereLogicOperator {
         return this.distance({ GreaterThan: v });
     }
 
-    distance_greater_than_or_equal(v: number): WhereLogicOperator<T> {
+    distance_greater_than_or_equal(v: number): WhereLogicOperator {
         return this.distance({ GreaterThanOrEqual: v });
     }
 
-    distance_less_than(v: number): WhereLogicOperator<T> {
+    distance_less_than(v: number): WhereLogicOperator {
         return this.distance({ LessThan: v });
     }
 
-    distance_less_than_or_equal(v: number): WhereLogicOperator<T> {
+    distance_less_than_or_equal(v: number): WhereLogicOperator {
         return this.distance({ LessThanOrEqual: v });
     }
 
-    distance_not_equal(v: number): WhereLogicOperator<T> {
+    distance_not_equal(v: number): WhereLogicOperator {
         return this.distance({ NotEqual: v });
     }
 
-    edge_count_greater_than(v: number): WhereLogicOperator<T> {
+    edge_count_greater_than(v: number): WhereLogicOperator {
         return this.edge_count({ GreaterThan: v });
     }
 
-    edge_count_greater_than_or_equal(v: number): WhereLogicOperator<T> {
+    edge_count_greater_than_or_equal(v: number): WhereLogicOperator {
         return this.edge_count({ GreaterThanOrEqual: v });
     }
 
-    edge_count_less_than(v: number): WhereLogicOperator<T> {
+    edge_count_less_than(v: number): WhereLogicOperator {
         return this.edge_count({ LessThan: v });
     }
 
-    edge_count_less_than_or_equal(v: number): WhereLogicOperator<T> {
+    edge_count_less_than_or_equal(v: number): WhereLogicOperator {
         return this.edge_count({ LessThanOrEqual: v });
     }
 
-    edge_count_not_equal(v: number): WhereLogicOperator<T> {
+    edge_count_not_equal(v: number): WhereLogicOperator {
         return this.edge_count({ NotEqual: v });
     }
 
-    edge_count_from_greater_than(v: number): WhereLogicOperator<T> {
+    edge_count_from_greater_than(v: number): WhereLogicOperator {
         return this.edge_count_from({ GreaterThan: v });
     }
 
-    edge_count_from_greater_than_or_equal(v: number): WhereLogicOperator<T> {
+    edge_count_from_greater_than_or_equal(v: number): WhereLogicOperator {
         return this.edge_count_from({ GreaterThanOrEqual: v });
     }
 
-    edge_count_from_less_than(v: number): WhereLogicOperator<T> {
+    edge_count_from_less_than(v: number): WhereLogicOperator {
         return this.edge_count_from({ LessThan: v });
     }
 
-    edge_count_from_less_than_or_equal(v: number): WhereLogicOperator<T> {
+    edge_count_from_less_than_or_equal(v: number): WhereLogicOperator {
         return this.edge_count_from({ LessThanOrEqual: v });
     }
 
-    edge_count_from_not_equal(v: number): WhereLogicOperator<T> {
+    edge_count_from_not_equal(v: number): WhereLogicOperator {
         return this.edge_count_from({ NotEqual: v });
     }
 
-    edge_count_to_greater_than(v: number): WhereLogicOperator<T> {
+    edge_count_to_greater_than(v: number): WhereLogicOperator {
         return this.edge_count_to({ GreaterThan: v });
     }
 
-    edge_count_to_greater_than_or_equal(v: number): WhereLogicOperator<T> {
+    edge_count_to_greater_than_or_equal(v: number): WhereLogicOperator {
         return this.edge_count_to({ GreaterThanOrEqual: v });
     }
 
-    edge_count_to_less_than(v: number): WhereLogicOperator<T> {
+    edge_count_to_less_than(v: number): WhereLogicOperator {
         return this.edge_count_to({ LessThan: v });
     }
 
-    edge_count_to_less_than_or_equal(v: number): WhereLogicOperator<T> {
+    edge_count_to_less_than_or_equal(v: number): WhereLogicOperator {
         return this.edge_count_to({ LessThanOrEqual: v });
     }
 
-    edge_count_to_not_equal(v: number): WhereLogicOperator<T> {
+    edge_count_to_not_equal(v: number): WhereLogicOperator {
         return this.edge_count_to({ NotEqual: v });
     }
 
-    node(): WhereLogicOperator<T> {
+    node(): WhereLogicOperator {
         (this.conditions.at(-1) ?? panic("Conditions should not be empty")).push({ logic: this.logic, modifier: this.modifier, data: "Node" });
-        return new WhereLogicOperator(this, this.T_SearchQueryBuilder);
+        return new WhereLogicOperator(this);
     }
 
-    not(): Where<T> {
+    not(): Where {
         this.modifier = "Not";
         return this;
     }
 
-    not_beyond(): Where<T> {
+    not_beyond(): Where {
         this.modifier = "NotBeyond";
         return this;
     }
 
-    where(): Where<T> {
+    where(): Where {
         (this.conditions.at(-1) ?? panic("Conditions should not be empty")).push({ logic: this.logic, modifier: this.modifier, data: { Where: [] } });
         this.conditions.push([]);
-        return new Where("And", "None", this.conditions, this.query, this.T_SearchQueryBuilder);
+        return new Where("And", "None", this.conditions, this.query);
     }
 
     collapse_conditions(): boolean {
@@ -824,230 +691,230 @@ class Where<T> {
     }
 }
 
-class WhereLogicOperator<T> {
-    constructor(public _0: Where<T>, public T_SearchQueryBuilder: SearchQueryBuilder<T>) {}
+class WhereLogicOperator {
+    constructor(public _0: Where) {}
 
-    and(): Where<T> {
-        return new Where("And", "None", this._0.conditions, this._0.query, this.T_SearchQueryBuilder);
+    and(): Where {
+        return new Where("And", "None", this._0.conditions, this._0.query);
     }
 
-    end_where(): WhereLogicOperator<T> {
+    end_where(): WhereLogicOperator {
         this._0.collapse_conditions();
-        return new WhereLogicOperator(this._0, this.T_SearchQueryBuilder);
+        return new WhereLogicOperator(this._0);
     }
 
-    or(): Where<T> {
-        return new Where("Or", "None", this._0.conditions, this._0.query, this.T_SearchQueryBuilder);
+    or(): Where {
+        return new Where("Or", "None", this._0.conditions, this._0.query);
     }
 
     query(): QueryType {
         while (this._0.collapse_conditions());
-        if (!(this.T_SearchQueryBuilder.search_mut(this._0.query).conditions.length === 0)) {
-            const existing_conditions = this.T_SearchQueryBuilder.search_mut(this._0.query).conditions;
-            this.T_SearchQueryBuilder.search_mut(this._0.query).conditions = [];
+        if (!(this._0.query.search_mut.conditions.length === 0)) {
+            const existing_conditions = this._0.query.search_mut.conditions;
+            this._0.query.search_mut.conditions = [];
             this._0.conditions[0].push(...existing_conditions);
         }
-        const tmp5 = this.T_SearchQueryBuilder.search_mut(this._0.query).conditions;
-        this.T_SearchQueryBuilder.search_mut(this._0.query).conditions = this._0.conditions[0];
+        const tmp5 = this._0.query.search_mut.conditions;
+        this._0.query.search_mut.conditions = this._0.conditions[0];
         this._0.conditions[0] = tmp5;
-        return this.T_SearchQueryBuilder.into_query_type(this._0.query);
+        return this._0.query.into_query_type;
     }
 }
 
-class WhereKey<T> {
-    constructor(public key: DbValue, public where_: Where<T>, public T_SearchQueryBuilder: SearchQueryBuilder<T>) {}
+class WhereKey {
+    constructor(public key: DbValue, public where_: Where) {}
 
-    value(comparison: IntoComparison): WhereLogicOperator<T> {
+    value(comparison: IntoComparison): WhereLogicOperator {
         const condition: QueryCondition = { logic: this.where_.logic, modifier: this.where_.modifier, data: { KeyValue: { key: this.key, value: into_Comparison(comparison) } } };
         (this.where_.conditions.at(-1) ?? panic("Conditions should not be empty")).push(condition);
-        return new WhereLogicOperator(this.where_, this.T_SearchQueryBuilder);
+        return new WhereLogicOperator(this.where_);
     }
 
-    greater_than(v: IntoDbValue): WhereLogicOperator<T> {
+    greater_than(v: IntoDbValue): WhereLogicOperator {
         return this.value({ GreaterThan: into_DbValue(v) });
     }
 
-    greater_than_or_equal(v: IntoDbValue): WhereLogicOperator<T> {
+    greater_than_or_equal(v: IntoDbValue): WhereLogicOperator {
         return this.value({ GreaterThanOrEqual: into_DbValue(v) });
     }
 
-    less_than(v: IntoDbValue): WhereLogicOperator<T> {
+    less_than(v: IntoDbValue): WhereLogicOperator {
         return this.value({ LessThan: into_DbValue(v) });
     }
 
-    less_than_or_equal(v: IntoDbValue): WhereLogicOperator<T> {
+    less_than_or_equal(v: IntoDbValue): WhereLogicOperator {
         return this.value({ LessThanOrEqual: into_DbValue(v) });
     }
 
-    not_equal(v: IntoDbValue): WhereLogicOperator<T> {
+    not_equal(v: IntoDbValue): WhereLogicOperator {
         return this.value({ NotEqual: into_DbValue(v) });
     }
 
-    contains(v: IntoDbValue): WhereLogicOperator<T> {
+    contains(v: IntoDbValue): WhereLogicOperator {
         return this.value({ Contains: into_DbValue(v) });
     }
 
-    starts_with(v: IntoDbValue): WhereLogicOperator<T> {
+    starts_with(v: IntoDbValue): WhereLogicOperator {
         return this.value({ StartsWith: into_DbValue(v) });
     }
 
-    ends_with(v: IntoDbValue): WhereLogicOperator<T> {
+    ends_with(v: IntoDbValue): WhereLogicOperator {
         return this.value({ EndsWith: into_DbValue(v) });
     }
 
-    any(v: IntoDbValue): WhereLogicOperator<T> {
+    any(v: IntoDbValue): WhereLogicOperator {
         return this.value({ Any: into_DbValue(v) });
     }
 
-    regex(v: IntoDbValue): WhereLogicOperator<T> {
+    regex(v: IntoDbValue): WhereLogicOperator {
         return this.value({ Regex: into_DbValue(v) });
     }
 }
 
-class SearchOrderBy<T> {
-    constructor(public _0: T, public T_SearchQueryBuilder: SearchQueryBuilder<T>) {}
+class SearchOrderBy {
+    constructor(public _0: SearchQueryBuilder) {}
 
-    limit(value: number): SelectLimit<T> {
-        this.T_SearchQueryBuilder.search_mut(this._0).limit = value;
-        return new SelectLimit(this._0, this.T_SearchQueryBuilder);
+    limit(value: number): SelectLimit {
+        this._0.search_mut.limit = value;
+        return new SelectLimit(this._0);
     }
 
-    offset(value: number): SelectOffset<T> {
-        this.T_SearchQueryBuilder.search_mut(this._0).offset = value;
-        return new SelectOffset(this._0, this.T_SearchQueryBuilder);
-    }
-
-    query(): QueryType {
-        return this.T_SearchQueryBuilder.into_query_type(this._0);
-    }
-
-    where(): Where<T> {
-        return new Where("And", "None", [[]], this._0, this.T_SearchQueryBuilder);
-    }
-}
-
-class SelectOffset<T> {
-    constructor(public _0: T, public T_SearchQueryBuilder: SearchQueryBuilder<T>) {}
-
-    limit(value: number): SelectLimit<T> {
-        this.T_SearchQueryBuilder.search_mut(this._0).limit = value;
-        return new SelectLimit(this._0, this.T_SearchQueryBuilder);
+    offset(value: number): SelectOffset {
+        this._0.search_mut.offset = value;
+        return new SelectOffset(this._0);
     }
 
     query(): QueryType {
-        return this.T_SearchQueryBuilder.into_query_type(this._0);
+        return this._0.into_query_type;
     }
 
-    where(): Where<T> {
-        return new Where("And", "None", [[]], this._0, this.T_SearchQueryBuilder);
-    }
-}
-
-class SelectLimit<T> {
-    constructor(public _0: T, public T_SearchQueryBuilder: SearchQueryBuilder<T>) {}
-
-    query(): QueryType {
-        return this.T_SearchQueryBuilder.into_query_type(this._0);
-    }
-
-    where(): Where<T> {
-        return new Where("And", "None", [[]], this._0, this.T_SearchQueryBuilder);
+    where(): Where {
+        return new Where("And", "None", [[]], this._0);
     }
 }
 
-class SearchFrom<T> {
-    constructor(public _0: T, public T_SearchQueryBuilder: SearchQueryBuilder<T>) {}
+class SelectOffset {
+    constructor(public _0: SearchQueryBuilder) {}
 
-    limit(value: number): SelectLimit<T> {
-        this.T_SearchQueryBuilder.search_mut(this._0).limit = value;
-        return new SelectLimit(this._0, this.T_SearchQueryBuilder);
-    }
-
-    offset(value: number): SelectOffset<T> {
-        this.T_SearchQueryBuilder.search_mut(this._0).offset = value;
-        return new SelectOffset(this._0, this.T_SearchQueryBuilder);
-    }
-
-    order_by(keys: IntoDbKeyOrders): SearchOrderBy<T> {
-        this.T_SearchQueryBuilder.search_mut(this._0).order_by = into_DbKeyOrders(keys);
-        return new SearchOrderBy(this._0, this.T_SearchQueryBuilder);
+    limit(value: number): SelectLimit {
+        this._0.search_mut.limit = value;
+        return new SelectLimit(this._0);
     }
 
     query(): QueryType {
-        return this.T_SearchQueryBuilder.into_query_type(this._0);
+        return this._0.into_query_type;
     }
 
-    to(id: IntoQueryId): SearchTo<T> {
-        this.T_SearchQueryBuilder.search_mut(this._0).destination = into_QueryId(id);
-        return new SearchTo(this._0, this.T_SearchQueryBuilder);
-    }
-
-    where(): Where<T> {
-        return new Where("And", "None", [[]], this._0, this.T_SearchQueryBuilder);
+    where(): Where {
+        return new Where("And", "None", [[]], this._0);
     }
 }
 
-class SearchIndex<T> {
-    constructor(public index: DbValue, public query: T, public T_SearchQueryBuilder: SearchQueryBuilder<T>) {}
+class SelectLimit {
+    constructor(public _0: SearchQueryBuilder) {}
 
-    value(value: IntoDbValue): SearchIndexValue<T> {
-        this.T_SearchQueryBuilder.search_mut(this.query).algorithm = "Index";
-        this.T_SearchQueryBuilder.search_mut(this.query).conditions.push({ data: { KeyValue: { key: this.index, value: { Equal: into_DbValue(value) } } }, logic: "And", modifier: "None" });
-        return new SearchIndexValue(this.query, this.T_SearchQueryBuilder);
+    query(): QueryType {
+        return this._0.into_query_type;
+    }
+
+    where(): Where {
+        return new Where("And", "None", [[]], this._0);
     }
 }
 
-class SearchIndexValue<T> {
-    constructor(public _0: T, public T_SearchQueryBuilder: SearchQueryBuilder<T>) {}
+class SearchFrom {
+    constructor(public _0: SearchQueryBuilder) {}
 
-    limit(value: number): SelectIndexLimit<T> {
-        this.T_SearchQueryBuilder.search_mut(this._0).limit = value;
-        return new SelectIndexLimit(this._0, this.T_SearchQueryBuilder);
+    limit(value: number): SelectLimit {
+        this._0.search_mut.limit = value;
+        return new SelectLimit(this._0);
     }
 
-    offset(value: number): SelectIndexOffset<T> {
-        this.T_SearchQueryBuilder.search_mut(this._0).offset = value;
-        return new SelectIndexOffset(this._0, this.T_SearchQueryBuilder);
+    offset(value: number): SelectOffset {
+        this._0.search_mut.offset = value;
+        return new SelectOffset(this._0);
     }
 
-    order_by(keys: IntoDbKeyOrders): SearchIndexOrderBy<T> {
-        this.T_SearchQueryBuilder.search_mut(this._0).order_by = into_DbKeyOrders(keys);
-        return new SearchIndexOrderBy(this._0, this.T_SearchQueryBuilder);
+    order_by(keys: IntoDbKeyOrders): SearchOrderBy {
+        this._0.search_mut.order_by = into_DbKeyOrders(keys);
+        return new SearchOrderBy(this._0);
     }
 
     query(): QueryType {
-        return this.T_SearchQueryBuilder.into_query_type(this._0);
+        return this._0.into_query_type;
     }
 
-    where(): WhereFilter<T> {
-        return new WhereFilter("And", "None", [[]], this._0, this.T_SearchQueryBuilder);
+    to(id: IntoQueryId): SearchTo {
+        this._0.search_mut.destination = into_QueryId(id);
+        return new SearchTo(this._0);
+    }
+
+    where(): Where {
+        return new Where("And", "None", [[]], this._0);
     }
 }
 
-class WhereFilter<T> {
-    constructor(public logic: QueryConditionLogic, public modifier: QueryConditionModifier, public conditions: QueryCondition[][], public query: T, public T_SearchQueryBuilder: SearchQueryBuilder<T>) {}
+class SearchIndex {
+    constructor(public index: DbValue, public query: SearchQueryBuilder) {}
 
-    edge(): WhereFilterLogicOperator<T> {
+    value(value: IntoDbValue): SearchIndexValue {
+        this.query.search_mut.algorithm = "Index";
+        this.query.search_mut.conditions.push({ data: { KeyValue: { key: this.index, value: { Equal: into_DbValue(value) } } }, logic: "And", modifier: "None" });
+        return new SearchIndexValue(this.query);
+    }
+}
+
+class SearchIndexValue {
+    constructor(public _0: SearchQueryBuilder) {}
+
+    limit(value: number): SelectIndexLimit {
+        this._0.search_mut.limit = value;
+        return new SelectIndexLimit(this._0);
+    }
+
+    offset(value: number): SelectIndexOffset {
+        this._0.search_mut.offset = value;
+        return new SelectIndexOffset(this._0);
+    }
+
+    order_by(keys: IntoDbKeyOrders): SearchIndexOrderBy {
+        this._0.search_mut.order_by = into_DbKeyOrders(keys);
+        return new SearchIndexOrderBy(this._0);
+    }
+
+    query(): QueryType {
+        return this._0.into_query_type;
+    }
+
+    where(): WhereFilter {
+        return new WhereFilter("And", "None", [[]], this._0);
+    }
+}
+
+class WhereFilter {
+    constructor(public logic: QueryConditionLogic, public modifier: QueryConditionModifier, public conditions: QueryCondition[][], public query: SearchQueryBuilder) {}
+
+    edge(): WhereFilterLogicOperator {
         (this.conditions.at(-1) ?? panic("Conditions should not be empty")).push({ logic: this.logic, modifier: this.modifier, data: "Edge" });
-        return new WhereFilterLogicOperator(this, this.T_SearchQueryBuilder);
+        return new WhereFilterLogicOperator(this);
     }
 
-    edge_count(comparison: IntoCountComparison): WhereFilterLogicOperator<T> {
+    edge_count(comparison: IntoCountComparison): WhereFilterLogicOperator {
         (this.conditions.at(-1) ?? panic("Conditions should not be empty")).push({ logic: this.logic, modifier: this.modifier, data: { EdgeCount: into_CountComparison(comparison) } });
-        return new WhereFilterLogicOperator(this, this.T_SearchQueryBuilder);
+        return new WhereFilterLogicOperator(this);
     }
 
-    edge_count_from(comparison: IntoCountComparison): WhereFilterLogicOperator<T> {
+    edge_count_from(comparison: IntoCountComparison): WhereFilterLogicOperator {
         (this.conditions.at(-1) ?? panic("Conditions should not be empty")).push({ logic: this.logic, modifier: this.modifier, data: { EdgeCountFrom: into_CountComparison(comparison) } });
-        return new WhereFilterLogicOperator(this, this.T_SearchQueryBuilder);
+        return new WhereFilterLogicOperator(this);
     }
 
-    edge_count_to(comparison: IntoCountComparison): WhereFilterLogicOperator<T> {
+    edge_count_to(comparison: IntoCountComparison): WhereFilterLogicOperator {
         (this.conditions.at(-1) ?? panic("Conditions should not be empty")).push({ logic: this.logic, modifier: this.modifier, data: { EdgeCountTo: into_CountComparison(comparison) } });
-        return new WhereFilterLogicOperator(this, this.T_SearchQueryBuilder);
+        return new WhereFilterLogicOperator(this);
     }
 
-    element(): WhereFilterLogicOperator<T> {
+    element(): WhereFilterLogicOperator {
         const m3 = DbFields_DbType.db_element_id();
         if (m3 !== undefined) {
             const element_id = m3;
@@ -1057,93 +924,93 @@ class WhereFilter<T> {
         }
     }
 
-    ids(ids: IntoQueryIds): WhereFilterLogicOperator<T> {
+    ids(ids: IntoQueryIds): WhereFilterLogicOperator {
         (this.conditions.at(-1) ?? panic("Conditions should not be empty")).push({ logic: this.logic, modifier: this.modifier, data: { Ids: QueryIds_get_ids(into_QueryIds(ids)) } });
-        return new WhereFilterLogicOperator(this, this.T_SearchQueryBuilder);
+        return new WhereFilterLogicOperator(this);
     }
 
-    key(key: IntoDbValue): WhereFilterKey<T> {
-        return new WhereFilterKey(into_DbValue(key), this, this.T_SearchQueryBuilder);
+    key(key: IntoDbValue): WhereFilterKey {
+        return new WhereFilterKey(into_DbValue(key), this);
     }
 
-    keys(keys: IntoDbValues): WhereFilterLogicOperator<T> {
+    keys(keys: IntoDbValues): WhereFilterLogicOperator {
         (this.conditions.at(-1) ?? panic("Conditions should not be empty")).push({ logic: this.logic, modifier: this.modifier, data: { Keys: into_DbValues(keys) } });
-        return new WhereFilterLogicOperator(this, this.T_SearchQueryBuilder);
+        return new WhereFilterLogicOperator(this);
     }
 
-    node(): WhereFilterLogicOperator<T> {
+    node(): WhereFilterLogicOperator {
         (this.conditions.at(-1) ?? panic("Conditions should not be empty")).push({ logic: this.logic, modifier: this.modifier, data: "Node" });
-        return new WhereFilterLogicOperator(this, this.T_SearchQueryBuilder);
+        return new WhereFilterLogicOperator(this);
     }
 
-    not(): WhereFilter<T> {
+    not(): WhereFilter {
         this.modifier = "Not";
         return this;
     }
 
-    where(): WhereFilter<T> {
+    where(): WhereFilter {
         (this.conditions.at(-1) ?? panic("Conditions should not be empty")).push({ logic: this.logic, modifier: this.modifier, data: { Where: [] } });
         this.conditions.push([]);
-        return new WhereFilter("And", "None", this.conditions, this.query, this.T_SearchQueryBuilder);
+        return new WhereFilter("And", "None", this.conditions, this.query);
     }
 
-    edge_count_greater_than(v: number): WhereFilterLogicOperator<T> {
+    edge_count_greater_than(v: number): WhereFilterLogicOperator {
         return this.edge_count({ GreaterThan: v });
     }
 
-    edge_count_greater_than_or_equal(v: number): WhereFilterLogicOperator<T> {
+    edge_count_greater_than_or_equal(v: number): WhereFilterLogicOperator {
         return this.edge_count({ GreaterThanOrEqual: v });
     }
 
-    edge_count_less_than(v: number): WhereFilterLogicOperator<T> {
+    edge_count_less_than(v: number): WhereFilterLogicOperator {
         return this.edge_count({ LessThan: v });
     }
 
-    edge_count_less_than_or_equal(v: number): WhereFilterLogicOperator<T> {
+    edge_count_less_than_or_equal(v: number): WhereFilterLogicOperator {
         return this.edge_count({ LessThanOrEqual: v });
     }
 
-    edge_count_not_equal(v: number): WhereFilterLogicOperator<T> {
+    edge_count_not_equal(v: number): WhereFilterLogicOperator {
         return this.edge_count({ NotEqual: v });
     }
 
-    edge_count_from_greater_than(v: number): WhereFilterLogicOperator<T> {
+    edge_count_from_greater_than(v: number): WhereFilterLogicOperator {
         return this.edge_count_from({ GreaterThan: v });
     }
 
-    edge_count_from_greater_than_or_equal(v: number): WhereFilterLogicOperator<T> {
+    edge_count_from_greater_than_or_equal(v: number): WhereFilterLogicOperator {
         return this.edge_count_from({ GreaterThanOrEqual: v });
     }
 
-    edge_count_from_less_than(v: number): WhereFilterLogicOperator<T> {
+    edge_count_from_less_than(v: number): WhereFilterLogicOperator {
         return this.edge_count_from({ LessThan: v });
     }
 
-    edge_count_from_less_than_or_equal(v: number): WhereFilterLogicOperator<T> {
+    edge_count_from_less_than_or_equal(v: number): WhereFilterLogicOperator {
         return this.edge_count_from({ LessThanOrEqual: v });
     }
 
-    edge_count_from_not_equal(v: number): WhereFilterLogicOperator<T> {
+    edge_count_from_not_equal(v: number): WhereFilterLogicOperator {
         return this.edge_count_from({ NotEqual: v });
     }
 
-    edge_count_to_greater_than(v: number): WhereFilterLogicOperator<T> {
+    edge_count_to_greater_than(v: number): WhereFilterLogicOperator {
         return this.edge_count_to({ GreaterThan: v });
     }
 
-    edge_count_to_greater_than_or_equal(v: number): WhereFilterLogicOperator<T> {
+    edge_count_to_greater_than_or_equal(v: number): WhereFilterLogicOperator {
         return this.edge_count_to({ GreaterThanOrEqual: v });
     }
 
-    edge_count_to_less_than(v: number): WhereFilterLogicOperator<T> {
+    edge_count_to_less_than(v: number): WhereFilterLogicOperator {
         return this.edge_count_to({ LessThan: v });
     }
 
-    edge_count_to_less_than_or_equal(v: number): WhereFilterLogicOperator<T> {
+    edge_count_to_less_than_or_equal(v: number): WhereFilterLogicOperator {
         return this.edge_count_to({ LessThanOrEqual: v });
     }
 
-    edge_count_to_not_equal(v: number): WhereFilterLogicOperator<T> {
+    edge_count_to_not_equal(v: number): WhereFilterLogicOperator {
         return this.edge_count_to({ NotEqual: v });
     }
 
@@ -1161,141 +1028,141 @@ class WhereFilter<T> {
     }
 }
 
-class WhereFilterLogicOperator<T> {
-    constructor(public _0: WhereFilter<T>, public T_SearchQueryBuilder: SearchQueryBuilder<T>) {}
+class WhereFilterLogicOperator {
+    constructor(public _0: WhereFilter) {}
 
-    and(): WhereFilter<T> {
-        return new WhereFilter("And", "None", this._0.conditions, this._0.query, this.T_SearchQueryBuilder);
+    and(): WhereFilter {
+        return new WhereFilter("And", "None", this._0.conditions, this._0.query);
     }
 
-    end_where(): WhereFilterLogicOperator<T> {
+    end_where(): WhereFilterLogicOperator {
         this._0.collapse_conditions();
-        return new WhereFilterLogicOperator(this._0, this.T_SearchQueryBuilder);
+        return new WhereFilterLogicOperator(this._0);
     }
 
-    or(): WhereFilter<T> {
-        return new WhereFilter("Or", "None", this._0.conditions, this._0.query, this.T_SearchQueryBuilder);
+    or(): WhereFilter {
+        return new WhereFilter("Or", "None", this._0.conditions, this._0.query);
     }
 
     query(): QueryType {
         while (this._0.collapse_conditions());
-        this.T_SearchQueryBuilder.search_mut(this._0.query).conditions.push(...this._0.conditions[0]);
-        return this.T_SearchQueryBuilder.into_query_type(this._0.query);
+        this._0.query.search_mut.conditions.push(...this._0.conditions[0]);
+        return this._0.query.into_query_type;
     }
 }
 
-class WhereFilterKey<T> {
-    constructor(public key: DbValue, public where_: WhereFilter<T>, public T_SearchQueryBuilder: SearchQueryBuilder<T>) {}
+class WhereFilterKey {
+    constructor(public key: DbValue, public where_: WhereFilter) {}
 
-    value(comparison: IntoComparison): WhereFilterLogicOperator<T> {
+    value(comparison: IntoComparison): WhereFilterLogicOperator {
         const condition: QueryCondition = { logic: this.where_.logic, modifier: this.where_.modifier, data: { KeyValue: { key: this.key, value: into_Comparison(comparison) } } };
         (this.where_.conditions.at(-1) ?? panic("Conditions should not be empty")).push(condition);
-        return new WhereFilterLogicOperator(this.where_, this.T_SearchQueryBuilder);
+        return new WhereFilterLogicOperator(this.where_);
     }
 
-    greater_than(v: IntoDbValue): WhereFilterLogicOperator<T> {
+    greater_than(v: IntoDbValue): WhereFilterLogicOperator {
         return this.value({ GreaterThan: into_DbValue(v) });
     }
 
-    greater_than_or_equal(v: IntoDbValue): WhereFilterLogicOperator<T> {
+    greater_than_or_equal(v: IntoDbValue): WhereFilterLogicOperator {
         return this.value({ GreaterThanOrEqual: into_DbValue(v) });
     }
 
-    less_than(v: IntoDbValue): WhereFilterLogicOperator<T> {
+    less_than(v: IntoDbValue): WhereFilterLogicOperator {
         return this.value({ LessThan: into_DbValue(v) });
     }
 
-    less_than_or_equal(v: IntoDbValue): WhereFilterLogicOperator<T> {
+    less_than_or_equal(v: IntoDbValue): WhereFilterLogicOperator {
         return this.value({ LessThanOrEqual: into_DbValue(v) });
     }
 
-    not_equal(v: IntoDbValue): WhereFilterLogicOperator<T> {
+    not_equal(v: IntoDbValue): WhereFilterLogicOperator {
         return this.value({ NotEqual: into_DbValue(v) });
     }
 
-    contains(v: IntoDbValue): WhereFilterLogicOperator<T> {
+    contains(v: IntoDbValue): WhereFilterLogicOperator {
         return this.value({ Contains: into_DbValue(v) });
     }
 
-    starts_with(v: IntoDbValue): WhereFilterLogicOperator<T> {
+    starts_with(v: IntoDbValue): WhereFilterLogicOperator {
         return this.value({ StartsWith: into_DbValue(v) });
     }
 
-    ends_with(v: IntoDbValue): WhereFilterLogicOperator<T> {
+    ends_with(v: IntoDbValue): WhereFilterLogicOperator {
         return this.value({ EndsWith: into_DbValue(v) });
     }
 
-    any(v: IntoDbValue): WhereFilterLogicOperator<T> {
+    any(v: IntoDbValue): WhereFilterLogicOperator {
         return this.value({ Any: into_DbValue(v) });
     }
 
-    regex(v: IntoDbValue): WhereFilterLogicOperator<T> {
+    regex(v: IntoDbValue): WhereFilterLogicOperator {
         return this.value({ Regex: into_DbValue(v) });
     }
 }
 
-class SearchIndexOrderBy<T> {
-    constructor(public _0: T, public T_SearchQueryBuilder: SearchQueryBuilder<T>) {}
+class SearchIndexOrderBy {
+    constructor(public _0: SearchQueryBuilder) {}
 
-    limit(value: number): SelectIndexLimit<T> {
-        this.T_SearchQueryBuilder.search_mut(this._0).limit = value;
-        return new SelectIndexLimit(this._0, this.T_SearchQueryBuilder);
+    limit(value: number): SelectIndexLimit {
+        this._0.search_mut.limit = value;
+        return new SelectIndexLimit(this._0);
     }
 
-    offset(value: number): SelectIndexOffset<T> {
-        this.T_SearchQueryBuilder.search_mut(this._0).offset = value;
-        return new SelectIndexOffset(this._0, this.T_SearchQueryBuilder);
-    }
-
-    query(): QueryType {
-        return this.T_SearchQueryBuilder.into_query_type(this._0);
-    }
-
-    where(): WhereFilter<T> {
-        return new WhereFilter("And", "None", [[]], this._0, this.T_SearchQueryBuilder);
-    }
-}
-
-class SelectIndexOffset<T> {
-    constructor(public _0: T, public T_SearchQueryBuilder: SearchQueryBuilder<T>) {}
-
-    limit(value: number): SelectIndexLimit<T> {
-        this.T_SearchQueryBuilder.search_mut(this._0).limit = value;
-        return new SelectIndexLimit(this._0, this.T_SearchQueryBuilder);
+    offset(value: number): SelectIndexOffset {
+        this._0.search_mut.offset = value;
+        return new SelectIndexOffset(this._0);
     }
 
     query(): QueryType {
-        return this.T_SearchQueryBuilder.into_query_type(this._0);
+        return this._0.into_query_type;
     }
 
-    where(): WhereFilter<T> {
-        return new WhereFilter("And", "None", [[]], this._0, this.T_SearchQueryBuilder);
+    where(): WhereFilter {
+        return new WhereFilter("And", "None", [[]], this._0);
     }
 }
 
-class SelectIndexLimit<T> {
-    constructor(public _0: T, public T_SearchQueryBuilder: SearchQueryBuilder<T>) {}
+class SelectIndexOffset {
+    constructor(public _0: SearchQueryBuilder) {}
+
+    limit(value: number): SelectIndexLimit {
+        this._0.search_mut.limit = value;
+        return new SelectIndexLimit(this._0);
+    }
 
     query(): QueryType {
-        return this.T_SearchQueryBuilder.into_query_type(this._0);
+        return this._0.into_query_type;
     }
 
-    where(): WhereFilter<T> {
-        return new WhereFilter("And", "None", [[]], this._0, this.T_SearchQueryBuilder);
+    where(): WhereFilter {
+        return new WhereFilter("And", "None", [[]], this._0);
     }
 }
 
-class SearchAlgorithm<T> {
-    constructor(public _0: T, public T_SearchQueryBuilder: SearchQueryBuilder<T>) {}
+class SelectIndexLimit {
+    constructor(public _0: SearchQueryBuilder) {}
 
-    from(id: IntoQueryId): SearchFrom<T> {
-        this.T_SearchQueryBuilder.search_mut(this._0).origin = into_QueryId(id);
-        return new SearchFrom(this._0, this.T_SearchQueryBuilder);
+    query(): QueryType {
+        return this._0.into_query_type;
     }
 
-    to(id: IntoQueryId): SearchTo<T> {
-        this.T_SearchQueryBuilder.search_mut(this._0).destination = into_QueryId(id);
-        return new SearchTo(this._0, this.T_SearchQueryBuilder);
+    where(): WhereFilter {
+        return new WhereFilter("And", "None", [[]], this._0);
+    }
+}
+
+class SearchAlgorithm {
+    constructor(public _0: SearchQueryBuilder) {}
+
+    from(id: IntoQueryId): SearchFrom {
+        this._0.search_mut.origin = into_QueryId(id);
+        return new SearchFrom(this._0);
+    }
+
+    to(id: IntoQueryId): SearchTo {
+        this._0.search_mut.destination = into_QueryId(id);
+        return new SearchTo(this._0);
     }
 }
 
@@ -1321,8 +1188,9 @@ class SelectKeyCount {
         return new SelectKeyCountIds(this._0);
     }
 
-    search(): Search<QueryIds> {
-        return new Search({ Search: { algorithm: "BreadthFirst", origin: { Id: 0 }, destination: { Id: 0 }, limit: 0, offset: 0, order_by: [], conditions: [], reverse: false } }, SelectKeyCountQuery_SearchQueryBuilder);
+    search(): Search {
+        const search: SearchQuery = { algorithm: "BreadthFirst", origin: { Id: 0 }, destination: { Id: 0 }, limit: 0, offset: 0, order_by: [], conditions: [], reverse: false };
+        return new Search({ search_mut: search, into_query_type: { SelectKeyCount: { Search: search } } });
     }
 }
 
@@ -1342,8 +1210,9 @@ class SelectKeys {
         return new SelectKeysIds(this._0);
     }
 
-    search(): Search<QueryIds> {
-        return new Search({ Search: { algorithm: "BreadthFirst", origin: { Id: 0 }, destination: { Id: 0 }, limit: 0, offset: 0, order_by: [], conditions: [], reverse: false } }, SelectKeysQuery_SearchQueryBuilder);
+    search(): Search {
+        const search: SearchQuery = { algorithm: "BreadthFirst", origin: { Id: 0 }, destination: { Id: 0 }, limit: 0, offset: 0, order_by: [], conditions: [], reverse: false };
+        return new Search({ search_mut: search, into_query_type: { SelectKeys: { Search: search } } });
     }
 }
 
@@ -1377,9 +1246,10 @@ class SelectEdgeCount {
         return new SelectEdgeCountIds(this._0);
     }
 
-    search(): Search<SelectEdgeCountQuery> {
-        this._0.ids = { Search: { algorithm: "BreadthFirst", origin: { Id: 0 }, destination: { Id: 0 }, limit: 0, offset: 0, order_by: [], conditions: [], reverse: false } };
-        return new Search(this._0, SelectEdgeCountQuery_SearchQueryBuilder);
+    search(): Search {
+        const search: SearchQuery = { algorithm: "BreadthFirst", origin: { Id: 0 }, destination: { Id: 0 }, limit: 0, offset: 0, order_by: [], conditions: [], reverse: false };
+        this._0.ids = { Search: search };
+        return new Search({ search_mut: search, into_query_type: { SelectEdgeCount: this._0 } });
     }
 }
 
@@ -1399,9 +1269,10 @@ class SelectAliases {
         return new SelectAliasesIds(this._0);
     }
 
-    search(): Search<QueryIds> {
-        this._0 = { Search: { algorithm: "BreadthFirst", origin: { Id: 0 }, destination: { Id: 0 }, limit: 0, offset: 0, order_by: [], conditions: [], reverse: false } };
-        return new Search(this._0, SelectAliasesQuery_SearchQueryBuilder);
+    search(): Search {
+        const search: SearchQuery = { algorithm: "BreadthFirst", origin: { Id: 0 }, destination: { Id: 0 }, limit: 0, offset: 0, order_by: [], conditions: [], reverse: false };
+        this._0 = { Search: search };
+        return new Search({ search_mut: search, into_query_type: { SelectAliases: this._0 } });
     }
 
     query(): QueryType {
@@ -1430,8 +1301,9 @@ class Remove {
         return new RemoveIndex(into_DbValue(key));
     }
 
-    search(): Search<QueryIds> {
-        return new Search({ Search: { algorithm: "BreadthFirst", origin: { Id: 0 }, destination: { Id: 0 }, limit: 0, offset: 0, order_by: [], conditions: [], reverse: false } }, RemoveQuery_SearchQueryBuilder);
+    search(): Search {
+        const search: SearchQuery = { algorithm: "BreadthFirst", origin: { Id: 0 }, destination: { Id: 0 }, limit: 0, offset: 0, order_by: [], conditions: [], reverse: false };
+        return new Search({ search_mut: search, into_query_type: { Remove: { Search: search } } });
     }
 
     values(keys: IntoDbValues): RemoveValues {
@@ -1479,9 +1351,10 @@ class InsertValues {
         return new InsertValuesIds(this._0);
     }
 
-    search(): Search<InsertValuesQuery> {
-        this._0.ids = { Search: { algorithm: "BreadthFirst", origin: { Id: 0 }, destination: { Id: 0 }, limit: 0, offset: 0, order_by: [], conditions: [], reverse: false } };
-        return new Search(this._0, InsertValuesQuery_SearchQueryBuilder);
+    search(): Search {
+        const search: SearchQuery = { algorithm: "BreadthFirst", origin: { Id: 0 }, destination: { Id: 0 }, limit: 0, offset: 0, order_by: [], conditions: [], reverse: false };
+        this._0.ids = { Search: search };
+        return new Search({ search_mut: search, into_query_type: { InsertValues: this._0 } });
     }
 }
 
@@ -1501,9 +1374,10 @@ class RemoveValues {
         return new RemoveValuesIds(this._0);
     }
 
-    search(): Search<SelectValuesQuery> {
-        this._0.ids = { Search: { algorithm: "BreadthFirst", origin: { Id: 0 }, destination: { Id: 0 }, limit: 0, offset: 0, order_by: [], conditions: [], reverse: false } };
-        return new Search(this._0, RemoveValuesQuery_SearchQueryBuilder);
+    search(): Search {
+        const search: SearchQuery = { algorithm: "BreadthFirst", origin: { Id: 0 }, destination: { Id: 0 }, limit: 0, offset: 0, order_by: [], conditions: [], reverse: false };
+        this._0.ids = { Search: search };
+        return new Search({ search_mut: search, into_query_type: { RemoveValues: this._0 } });
     }
 }
 
@@ -1795,9 +1669,10 @@ class InsertAliases {
         return new InsertAliasesIds(this._0);
     }
 
-    search(): Search<InsertAliasesQuery> {
-        this._0.ids = { Search: { algorithm: "BreadthFirst", origin: { Id: 0 }, destination: { Id: 0 }, limit: 0, offset: 0, order_by: [], conditions: [], reverse: false } };
-        return new Search(this._0, InsertAliasesQuery_SearchQueryBuilder);
+    search(): Search {
+        const search: SearchQuery = { algorithm: "BreadthFirst", origin: { Id: 0 }, destination: { Id: 0 }, limit: 0, offset: 0, order_by: [], conditions: [], reverse: false };
+        this._0.ids = { Search: search };
+        return new Search({ search_mut: search, into_query_type: { InsertAlias: this._0 } });
     }
 }
 

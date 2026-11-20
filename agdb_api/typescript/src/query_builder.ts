@@ -383,12 +383,12 @@ class Select {
         return new SelectEdgeCount({ ids: { Ids: [] }, from: true, to: true });
     }
 
-    edge_count_from(): SelectEdgeCount {
-        return new SelectEdgeCount({ ids: { Ids: [] }, from: true, to: false });
+    edge_count_from(): SelectDirectedEdgeCount {
+        return new SelectDirectedEdgeCount({ ids: { Ids: [] }, from: true, to: false });
     }
 
-    edge_count_to(): SelectEdgeCount {
-        return new SelectEdgeCount({ ids: { Ids: [] }, from: false, to: true });
+    edge_count_to(): SelectDirectedEdgeCount {
+        return new SelectDirectedEdgeCount({ ids: { Ids: [] }, from: false, to: true });
     }
 
     element(): SelectValues {
@@ -1238,7 +1238,7 @@ class SelectIds {
     }
 }
 
-class SelectEdgeCount {
+class SelectDirectedEdgeCount {
     constructor(public _0: SelectEdgeCountQuery) {}
 
     ids(ids: IntoQueryIds): SelectEdgeCountIds {
@@ -1258,6 +1258,25 @@ class SelectEdgeCountIds {
 
     query(): QueryType {
         return { SelectEdgeCount: this._0 };
+    }
+}
+
+class SelectEdgeCount {
+    constructor(public _0: SelectEdgeCountQuery) {}
+
+    ids(ids: IntoQueryIds): SelectEdgeCountIds {
+        this._0.ids = into_QueryIds(ids);
+        return new SelectEdgeCountIds(this._0);
+    }
+
+    search(): Search {
+        const search: SearchQuery = { algorithm: "BreadthFirst", origin: { Id: 0 }, destination: { Id: 0 }, limit: 0, offset: 0, order_by: [], conditions: [], reverse: false };
+        this._0.ids = { Search: search };
+        return new Search({ search_mut: search, into_query_type: { SelectEdgeCount: this._0 } });
+    }
+
+    query(): QueryType {
+        return { SelectAllEdgeCount: {  } };
     }
 }
 

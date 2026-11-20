@@ -4065,6 +4065,17 @@
                 "$ref": "#/components/schemas/SelectValuesQuery"
               }
             }
+          },
+          {
+            "type": "object",
+            "required": [
+              "SelectAllEdgeCount"
+            ],
+            "properties": {
+              "SelectAllEdgeCount": {
+                "$ref": "#/components/schemas/SelectAllEdgeCountQuery"
+              }
+            }
           }
         ],
         "description": "Convenience enum for serializing/deserializing queries."
@@ -4203,6 +4214,10 @@
       "SelectAllAliasesQuery": {
         "type": "object",
         "description": "Query to select all aliases in the database.\n\nThe result will be number of returned aliases and list\nof elements with a single property `String(\"alias\")` holding\nthe value `String`."
+      },
+      "SelectAllEdgeCountQuery": {
+        "type": "object",
+        "description": "Query to select number of edges in the database.\n\nThe edge count is returned in `QueryResult::result`."
       },
       "SelectEdgeCountQuery": {
         "type": "object",

@@ -17,6 +17,7 @@ pub mod remove_values_query;
 pub mod search_query;
 pub mod select_aliases_query;
 pub mod select_all_aliases_query;
+pub mod select_all_edge_count_query;
 pub mod select_edge_count_query;
 pub mod select_indexes_query;
 pub mod select_key_count_query;
@@ -45,8 +46,9 @@ pub trait QueryMut {
 use crate::{
     InsertAliasesQuery, InsertEdgesQuery, InsertIndexQuery, InsertNodesQuery, InsertValuesQuery,
     RemoveAliasesQuery, RemoveIndexQuery, RemoveQuery, RemoveValuesQuery, SearchQuery,
-    SelectAliasesQuery, SelectAllAliasesQuery, SelectEdgeCountQuery, SelectIndexesQuery,
-    SelectKeyCountQuery, SelectKeysQuery, SelectNodeCountQuery, SelectValuesQuery,
+    SelectAliasesQuery, SelectAllAliasesQuery, SelectAllEdgeCountQuery, SelectEdgeCountQuery,
+    SelectIndexesQuery, SelectKeyCountQuery, SelectKeysQuery, SelectNodeCountQuery,
+    SelectValuesQuery,
 };
 
 /// Convenience enum for serializing/deserializing queries.
@@ -76,6 +78,8 @@ pub enum QueryType {
     SelectKeyCount(SelectKeyCountQuery),
     SelectNodeCount(SelectNodeCountQuery),
     SelectValues(SelectValuesQuery),
+    // Appended: the cluster log serializes the variants by position.
+    SelectAllEdgeCount(SelectAllEdgeCountQuery),
 }
 
 #[cfg(any(feature = "serde", feature = "openapi"))]
@@ -163,6 +167,13 @@ impl From<SelectAllAliasesQuery> for QueryType {
 }
 
 #[cfg(any(feature = "serde", feature = "openapi"))]
+impl From<SelectAllEdgeCountQuery> for QueryType {
+    fn from(value: SelectAllEdgeCountQuery) -> Self {
+        QueryType::SelectAllEdgeCount(value)
+    }
+}
+
+#[cfg(any(feature = "serde", feature = "openapi"))]
 impl From<SelectEdgeCountQuery> for QueryType {
     fn from(value: SelectEdgeCountQuery) -> Self {
         QueryType::SelectEdgeCount(value)
@@ -241,6 +252,7 @@ mod tests {
             QueryBuilder::select().keys().ids(1).query().into(),
             QueryBuilder::select().key_count().ids(1).query().into(),
             QueryBuilder::select().edge_count().ids(1).query().into(),
+            QueryBuilder::select().edge_count().query().into(),
             QueryBuilder::select().node_count().query().into(),
             QueryBuilder::select().values("key").ids(1).query().into(),
             QueryBuilder::remove().aliases("node2").query().into(),

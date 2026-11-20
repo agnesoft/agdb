@@ -710,6 +710,10 @@ impl<Store: StorageData> DbImpl<Store> {
         }
     }
 
+    pub(crate) fn all_edge_count(&self) -> Result<u64, DbError> {
+        self.graph.edge_count(&self.storage)
+    }
+
     pub(crate) fn edge_count(&self, db_id: DbId, from: bool, to: bool) -> Result<u64, DbError> {
         let index = self.graph_index(db_id.0)?;
 

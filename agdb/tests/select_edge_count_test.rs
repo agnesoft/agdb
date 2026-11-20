@@ -336,3 +336,54 @@ fn select_edge_count_invalid_query() {
         }],
     );
 }
+
+#[test]
+fn select_edge_count_all_empty() {
+    let db = TestDb::new();
+
+    let result = db.exec_result(QueryBuilder::select().edge_count().query());
+    assert_eq!(result.result, 0);
+    assert!(result.elements.is_empty());
+}
+
+#[test]
+fn select_edge_count_all() {
+    let mut db = TestDb::new();
+    db.exec_mut(QueryBuilder::insert().nodes().count(3).query(), 3);
+    db.exec_mut(
+        QueryBuilder::insert()
+            .edges()
+            .from([1, 1, 2])
+            .to([2, 1, 3])
+            .query(),
+        3,
+    );
+
+    let result = db.exec_result(QueryBuilder::select().edge_count().query());
+    assert_eq!(result.result, 3);
+    assert!(result.elements.is_empty());
+}
+
+#[test]
+fn select_edge_count_all_after_removal() {
+    let mut db = TestDb::new();
+    db.exec_mut(QueryBuilder::insert().nodes().count(3).query(), 3);
+    db.exec_mut(
+        QueryBuilder::insert()
+            .edges()
+            .from([1, 1, 2, 3])
+            .to([2, 2, 3, 1])
+            .query(),
+        4,
+    );
+    db.exec_mut(QueryBuilder::remove().ids([-4, 3]).query(), 2);
+
+    let result = db.exec_result(QueryBuilder::select().edge_count().query());
+    assert_eq!(result.result, 1);
+
+    db.exec_mut(QueryBuilder::insert().nodes().count(1).query(), 1);
+    db.exec_mut(QueryBuilder::insert().edges().from(1).to(2).query(), 1);
+
+    let result = db.exec_result(QueryBuilder::select().edge_count().query());
+    assert_eq!(result.result, 2);
+}

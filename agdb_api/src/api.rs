@@ -75,6 +75,8 @@ use agdb::SelectAliases;
 use agdb::SelectAliasesIds;
 use agdb::SelectAliasesQuery;
 use agdb::SelectAllAliasesQuery;
+use agdb::SelectAllEdgeCountQuery;
+use agdb::SelectDirectedEdgeCount;
 use agdb::SelectEdgeCount;
 use agdb::SelectEdgeCountIds;
 use agdb::SelectEdgeCountQuery;
@@ -176,6 +178,7 @@ impl Api {
             SearchQueryAlgorithm::type_def(),
             SelectAliasesQuery::type_def(),
             SelectAllAliasesQuery::type_def(),
+            SelectAllEdgeCountQuery::type_def(),
             SelectEdgeCountQuery::type_def(),
             SelectIndexesQuery::type_def(),
             SelectKeyCountQuery::type_def(),
@@ -226,6 +229,7 @@ impl Api {
             Select::type_def(),
             SelectAliases::type_def(),
             SelectAliasesIds::type_def(),
+            SelectDirectedEdgeCount::type_def(),
             SelectEdgeCount::type_def(),
             SelectEdgeCountIds::type_def(),
             SelectIds::type_def(),

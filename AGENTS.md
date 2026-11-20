@@ -145,26 +145,27 @@ Each alias also has a `*Transaction` and `*TransactionMut` variant for use insid
 
 ### Immutable (use with `exec`)
 
-| Builder                                | Query type              | Returns                                                                                     |
-| -------------------------------------- | ----------------------- | ------------------------------------------------------------------------------------------- |
-| `select().ids(...)`                    | `SelectValuesQuery`     | All key-value properties of elements                                                        |
-| `select().values([...]).ids(...)`      | `SelectValuesQuery`     | Specific keys from elements                                                                 |
-| `select().keys().ids(...)`             | `SelectKeysQuery`       | Only key names from elements                                                                |
-| `select().key_count().ids(...)`        | `SelectKeyCountQuery`   | Number of keys per element                                                                  |
-| `select().aliases().ids(...)`          | `SelectAliasesQuery`    | Aliases of given elements                                                                   |
-| `select().aliases()`                   | `SelectAllAliasesQuery` | All aliases in the database                                                                 |
-| `select().edge_count...ids(...)`       | `SelectEdgeCountQuery`  | Edge counts (from/to/both)                                                                  |
-| `select().node_count()`                | `SelectNodeCountQuery`  | Total node count                                                                            |
-| `select().indexes()`                   | `SelectIndexesQuery`    | All existing indexes                                                                        |
-| `search().from(x)`                     | `SearchQuery`           | BFS from x (forward traversal)                                                              |
-| `search().to(x)`                       | `SearchQuery`           | BFS from x (reverse traversal)                                                              |
-| `search().from(x).to(y)`               | `SearchQuery`           | A* path search from x to y                                                                  |
-| `search().to(y).from(x)`               | `SearchQuery`           | Reverse A* path (follows incoming edges — faster when destination has fewer incoming edges) |
-| `search().elements()`                  | `SearchQuery`           | Full element scan                                                                           |
-| `search().index("key").value(v)`       | `SearchQuery`           | Indexed lookup                                                                              |
-| `select().search()...`                 | Nested                  | Select values via embedded search                                                           |
-| `select().element::<T>().search()...`  | Nested typed            | Select typed values (limit=1, auto keys)                                                    |
-| `select().elements::<T>().search()...` | Nested typed            | Select typed values (all matches)                                                           |
+| Builder                                | Query type                | Returns                                                                                     |
+| -------------------------------------- | ------------------------- | ------------------------------------------------------------------------------------------- |
+| `select().ids(...)`                    | `SelectValuesQuery`       | All key-value properties of elements                                                        |
+| `select().values([...]).ids(...)`      | `SelectValuesQuery`       | Specific keys from elements                                                                 |
+| `select().keys().ids(...)`             | `SelectKeysQuery`         | Only key names from elements                                                                |
+| `select().key_count().ids(...)`        | `SelectKeyCountQuery`     | Number of keys per element                                                                  |
+| `select().aliases().ids(...)`          | `SelectAliasesQuery`      | Aliases of given elements                                                                   |
+| `select().aliases()`                   | `SelectAllAliasesQuery`   | All aliases in the database                                                                 |
+| `select().edge_count...ids(...)`       | `SelectEdgeCountQuery`    | Edge counts (from/to/both)                                                                  |
+| `select().edge_count()`                | `SelectAllEdgeCountQuery` | Total edge count                                                                            |
+| `select().node_count()`                | `SelectNodeCountQuery`    | Total node count                                                                            |
+| `select().indexes()`                   | `SelectIndexesQuery`      | All existing indexes                                                                        |
+| `search().from(x)`                     | `SearchQuery`             | BFS from x (forward traversal)                                                              |
+| `search().to(x)`                       | `SearchQuery`             | BFS from x (reverse traversal)                                                              |
+| `search().from(x).to(y)`               | `SearchQuery`             | A* path search from x to y                                                                  |
+| `search().to(y).from(x)`               | `SearchQuery`             | Reverse A* path (follows incoming edges — faster when destination has fewer incoming edges) |
+| `search().elements()`                  | `SearchQuery`             | Full element scan                                                                           |
+| `search().index("key").value(v)`       | `SearchQuery`             | Indexed lookup                                                                              |
+| `select().search()...`                 | Nested                    | Select values via embedded search                                                           |
+| `select().element::<T>().search()...`  | Nested typed              | Select typed values (limit=1, auto keys)                                                    |
+| `select().elements::<T>().search()...` | Nested typed              | Select typed values (all matches)                                                           |
 
 ### Mutable (use with `exec_mut`)
 

@@ -35,6 +35,7 @@ use utoipa::OpenApi;
     agdb::SearchQueryAlgorithm,
     agdb::SelectAliasesQuery,
     agdb::SelectAllAliasesQuery,
+    agdb::SelectAllEdgeCountQuery,
     agdb::SelectEdgeCountQuery,
     agdb::SelectIndexesQuery,
     agdb::SelectKeyCountQuery,

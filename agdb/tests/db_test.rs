@@ -79,6 +79,7 @@ fn public_types() {
     use agdb::SearchQueryAlgorithm;
     use agdb::SelectAliasesQuery;
     use agdb::SelectAllAliasesQuery;
+    use agdb::SelectAllEdgeCountQuery;
     use agdb::SelectEdgeCountQuery;
     use agdb::SelectIndexesQuery;
     use agdb::SelectKeyCountQuery;

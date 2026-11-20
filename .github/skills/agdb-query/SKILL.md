@@ -59,6 +59,7 @@ QueryBuilder::select().key_count().ids([1, 2]).query();
 QueryBuilder::select().edge_count_from().ids(1).query();
 QueryBuilder::select().edge_count_to().ids(1).query();
 QueryBuilder::select().edge_count().ids(1).query();
+QueryBuilder::select().edge_count().query(); // all edges in the db
 // Select aliases
 QueryBuilder::select().aliases().ids(1).query();
 QueryBuilder::select().aliases().query(); // all aliases

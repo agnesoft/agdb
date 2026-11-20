@@ -1,4 +1,5 @@
 use crate::QueryIds;
+use crate::SelectAllEdgeCountQuery;
 use crate::SelectEdgeCountQuery;
 use crate::query_builder::search::Search;
 
@@ -6,6 +7,11 @@ use crate::query_builder::search::Search;
 #[cfg_attr(feature = "api", derive(agdb::TypeDef))]
 #[cfg_attr(feature = "api", type_def(inherent))]
 pub struct SelectEdgeCount(pub SelectEdgeCountQuery);
+
+/// Select outgoing or incoming edge count builder.
+#[cfg_attr(feature = "api", derive(agdb::TypeDef))]
+#[cfg_attr(feature = "api", type_def(inherent))]
+pub struct SelectDirectedEdgeCount(pub SelectEdgeCountQuery);
 
 /// Final builder that lets you create
 /// an actual query object.
@@ -15,6 +21,29 @@ pub struct SelectEdgeCountIds(pub SelectEdgeCountQuery);
 
 #[cfg_attr(feature = "api", agdb::impl_def())]
 impl SelectEdgeCount {
+    /// An id or list of ids or search query to select edge count of.
+    /// All ids specified must exist in the database.
+    pub fn ids<T: Into<QueryIds>>(mut self, ids: T) -> SelectEdgeCountIds {
+        self.0.ids = ids.into();
+
+        SelectEdgeCountIds(self.0)
+    }
+
+    /// Select edge count of elements returned from the search query.
+    /// Equivalent to `ids(QueryBuilder::search()/* ... */)`.
+    pub fn search(mut self) -> Search<SelectEdgeCountQuery> {
+        self.0.ids = QueryIds::Search(crate::SearchQuery::new());
+        Search(self.0)
+    }
+
+    /// Returns the built `SelectAllEdgeCountQuery` object.
+    pub fn query(self) -> SelectAllEdgeCountQuery {
+        SelectAllEdgeCountQuery {}
+    }
+}
+
+#[cfg_attr(feature = "api", agdb::impl_def())]
+impl SelectDirectedEdgeCount {
     /// An id or list of ids or search query to select edge count of.
     /// All ids specified must exist in the database.
     pub fn ids<T: Into<QueryIds>>(mut self, ids: T) -> SelectEdgeCountIds {

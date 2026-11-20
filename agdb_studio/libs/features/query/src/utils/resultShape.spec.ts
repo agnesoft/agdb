@@ -48,6 +48,9 @@ describe("resultShape", () => {
     expect(scalarLabel(["select", "select.node_count"], false)).toBe(
       "Node count",
     );
+    expect(scalarLabel(["select", "select.edge_count"], false)).toBe(
+      "Edge count",
+    );
     expect(scalarLabel(["insert"], true)).toBe("Affected");
     expect(scalarLabel(["select"], false)).toBe("Result");
   });

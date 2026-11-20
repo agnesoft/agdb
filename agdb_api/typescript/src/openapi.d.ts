@@ -1299,6 +1299,13 @@ declare namespace Components {
              * list of elements with the requested properties.
              */
             SelectValuesQuery;
+        } | {
+            SelectAllEdgeCount: /**
+             * Query to select number of edges in the database.
+             *
+             * The edge count is returned in `QueryResult::result`.
+             */
+            SelectAllEdgeCountQuery;
         };
         /**
          * Helper type distinguishing uniform (`Single`) values
@@ -1480,6 +1487,13 @@ declare namespace Components {
          * the value `String`.
          */
         export interface SelectAllAliasesQuery {
+        }
+        /**
+         * Query to select number of edges in the database.
+         *
+         * The edge count is returned in `QueryResult::result`.
+         */
+        export interface SelectAllEdgeCountQuery {
         }
         /**
          * Query to select number of edges of given node ids.
@@ -3749,6 +3763,7 @@ export type SearchQuery = Components.Schemas.SearchQuery;
 export type SearchQueryAlgorithm = Components.Schemas.SearchQueryAlgorithm;
 export type SelectAliasesQuery = Components.Schemas.SelectAliasesQuery;
 export type SelectAllAliasesQuery = Components.Schemas.SelectAllAliasesQuery;
+export type SelectAllEdgeCountQuery = Components.Schemas.SelectAllEdgeCountQuery;
 export type SelectEdgeCountQuery = Components.Schemas.SelectEdgeCountQuery;
 export type SelectIndexesQuery = Components.Schemas.SelectIndexesQuery;
 export type SelectKeyCountQuery = Components.Schemas.SelectKeyCountQuery;

@@ -23,6 +23,7 @@ export const TABLE_STEP_TYPES = new Set([
 ]);
 
 const SCALAR_LABELS: Record<string, string> = {
+  "select.edge_count": "Edge count",
   "select.node_count": "Node count",
 };
 

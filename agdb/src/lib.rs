@@ -109,6 +109,7 @@ pub use {
     query_builder::select::Select,
     query_builder::select_aliases::SelectAliases,
     query_builder::select_aliases::SelectAliasesIds,
+    query_builder::select_edge_count::SelectDirectedEdgeCount,
     query_builder::select_edge_count::SelectEdgeCount,
     query_builder::select_edge_count::SelectEdgeCountIds,
     query_builder::select_ids::SelectIds,
@@ -185,6 +186,7 @@ pub use query::search_query::SearchQuery;
 pub use query::search_query::SearchQueryAlgorithm;
 pub use query::select_aliases_query::SelectAliasesQuery;
 pub use query::select_all_aliases_query::SelectAllAliasesQuery;
+pub use query::select_all_edge_count_query::SelectAllEdgeCountQuery;
 pub use query::select_edge_count_query::SelectEdgeCountQuery;
 pub use query::select_indexes_query::SelectIndexesQuery;
 pub use query::select_key_count_query::SelectKeyCountQuery;

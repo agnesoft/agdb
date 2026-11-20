@@ -32,6 +32,7 @@ use agdb::SearchQuery;
 use agdb::SearchQueryAlgorithm;
 use agdb::SelectAliasesQuery;
 use agdb::SelectAllAliasesQuery;
+use agdb::SelectAllEdgeCountQuery;
 use agdb::SelectEdgeCountQuery;
 use agdb::SelectIndexesQuery;
 use agdb::SelectKeyCountQuery;
@@ -1790,6 +1791,14 @@ fn select_aliases() {
     assert_eq!(
         QueryType::from(QueryBuilder::select().aliases().query()),
         QueryType::SelectAllAliases(SelectAllAliasesQuery {})
+    );
+}
+
+#[test]
+fn select_edge_count() {
+    assert_eq!(
+        QueryType::from(QueryBuilder::select().edge_count().query()),
+        QueryType::SelectAllEdgeCount(SelectAllEdgeCountQuery {})
     );
 }
 

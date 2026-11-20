@@ -311,6 +311,10 @@ describe("query_builder_test", () => {
         expect(QueryBuilder.select().aliases().query()).toEqual<QueryType>({ SelectAllAliases: {  } });
     });
 
+    it("select_edge_count", () => {
+        expect(QueryBuilder.select().edge_count().query()).toEqual<QueryType>({ SelectAllEdgeCount: {  } });
+    });
+
     it("select_edge_count_ids", () => {
         expect(QueryBuilder.select().edge_count().ids([1, 2]).query()).toEqual<QueryType>({ SelectEdgeCount: { ids: { Ids: [{ Id: 1 }, { Id: 2 }] }, from: true, to: true } });
     });

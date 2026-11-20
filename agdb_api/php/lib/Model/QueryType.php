@@ -75,7 +75,8 @@ class QueryType implements ModelInterface, ArrayAccess, \JsonSerializable
         'select_keys' => '\Agnesoft\AgdbApi\Model\SelectKeysQuery',
         'select_key_count' => '\Agnesoft\AgdbApi\Model\SelectKeyCountQuery',
         'select_node_count' => 'object',
-        'select_values' => '\Agnesoft\AgdbApi\Model\SelectValuesQuery'
+        'select_values' => '\Agnesoft\AgdbApi\Model\SelectValuesQuery',
+        'select_all_edge_count' => 'object'
     ];
 
     /**
@@ -103,7 +104,8 @@ class QueryType implements ModelInterface, ArrayAccess, \JsonSerializable
         'select_keys' => null,
         'select_key_count' => null,
         'select_node_count' => null,
-        'select_values' => null
+        'select_values' => null,
+        'select_all_edge_count' => null
     ];
 
     /**
@@ -129,7 +131,8 @@ class QueryType implements ModelInterface, ArrayAccess, \JsonSerializable
         'select_keys' => false,
         'select_key_count' => false,
         'select_node_count' => false,
-        'select_values' => false
+        'select_values' => false,
+        'select_all_edge_count' => false
     ];
 
     /**
@@ -235,7 +238,8 @@ class QueryType implements ModelInterface, ArrayAccess, \JsonSerializable
         'select_keys' => 'SelectKeys',
         'select_key_count' => 'SelectKeyCount',
         'select_node_count' => 'SelectNodeCount',
-        'select_values' => 'SelectValues'
+        'select_values' => 'SelectValues',
+        'select_all_edge_count' => 'SelectAllEdgeCount'
     ];
 
     /**
@@ -261,7 +265,8 @@ class QueryType implements ModelInterface, ArrayAccess, \JsonSerializable
         'select_keys' => 'setSelectKeys',
         'select_key_count' => 'setSelectKeyCount',
         'select_node_count' => 'setSelectNodeCount',
-        'select_values' => 'setSelectValues'
+        'select_values' => 'setSelectValues',
+        'select_all_edge_count' => 'setSelectAllEdgeCount'
     ];
 
     /**
@@ -287,7 +292,8 @@ class QueryType implements ModelInterface, ArrayAccess, \JsonSerializable
         'select_keys' => 'getSelectKeys',
         'select_key_count' => 'getSelectKeyCount',
         'select_node_count' => 'getSelectNodeCount',
-        'select_values' => 'getSelectValues'
+        'select_values' => 'getSelectValues',
+        'select_all_edge_count' => 'getSelectAllEdgeCount'
     ];
 
     /**
@@ -365,6 +371,7 @@ class QueryType implements ModelInterface, ArrayAccess, \JsonSerializable
         $this->setIfExists('select_key_count', $data ?? [], null);
         $this->setIfExists('select_node_count', $data ?? [], null);
         $this->setIfExists('select_values', $data ?? [], null);
+        $this->setIfExists('select_all_edge_count', $data ?? [], null);
     }
 
     /**
@@ -447,6 +454,9 @@ class QueryType implements ModelInterface, ArrayAccess, \JsonSerializable
         }
         if ($this->container['select_values'] === null) {
             $invalidProperties[] = "'select_values' can't be null";
+        }
+        if ($this->container['select_all_edge_count'] === null) {
+            $invalidProperties[] = "'select_all_edge_count' can't be null";
         }
         return $invalidProperties;
     }
@@ -945,6 +955,33 @@ class QueryType implements ModelInterface, ArrayAccess, \JsonSerializable
             throw new \InvalidArgumentException('non-nullable select_values cannot be null');
         }
         $this->container['select_values'] = $select_values;
+
+        return $this;
+    }
+
+    /**
+     * Gets select_all_edge_count
+     *
+     * @return object
+     */
+    public function getSelectAllEdgeCount()
+    {
+        return $this->container['select_all_edge_count'];
+    }
+
+    /**
+     * Sets select_all_edge_count
+     *
+     * @param object $select_all_edge_count Query to select number of edges in the database.  The edge count is returned in `QueryResult::result`.
+     *
+     * @return self
+     */
+    public function setSelectAllEdgeCount($select_all_edge_count)
+    {
+        if (is_null($select_all_edge_count)) {
+            throw new \InvalidArgumentException('non-nullable select_all_edge_count cannot be null');
+        }
+        $this->container['select_all_edge_count'] = $select_all_edge_count;
 
         return $this;
     }

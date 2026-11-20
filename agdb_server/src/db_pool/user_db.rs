@@ -104,6 +104,7 @@ fn t_exec(
             t.exec(&*q)
         }
         QueryType::SelectAllAliases(q) => t.exec(&*q),
+        QueryType::SelectAllEdgeCount(q) => t.exec(&*q),
         QueryType::SelectEdgeCount(q) => t.exec(&*q),
         QueryType::SelectIndexes(q) => t.exec(&*q),
         QueryType::SelectKeys(q) => {
@@ -157,6 +158,7 @@ fn t_exec_mut(
             t.exec(&*q)
         }
         QueryType::SelectAllAliases(q) => t.exec(&*q),
+        QueryType::SelectAllEdgeCount(q) => t.exec(&*q),
         QueryType::SelectEdgeCount(q) => t.exec(&*q),
         QueryType::SelectIndexes(q) => t.exec(&*q),
         QueryType::SelectKeys(q) => {

@@ -16,6 +16,10 @@ name = "collections"
 harness = false
 
 [[bench]]
+name = "db"
+harness = false
+
+[[bench]]
 name = "storage"
 harness = false
 

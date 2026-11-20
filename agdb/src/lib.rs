@@ -190,6 +190,8 @@ pub use query::select_keys_query::SelectKeysQuery;
 pub use query::select_node_count::SelectNodeCountQuery;
 pub use query::select_values_query::SelectValuesQuery;
 pub use query_builder::QueryBuilder;
+pub use storage::DEFAULT_OVERLAY_LIMIT;
+pub use storage::StorageConfig;
 pub use storage::StorageData;
 pub use storage::StorageSlice;
 pub use storage::SyncMode;

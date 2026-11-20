@@ -72,7 +72,9 @@ impl Undo {
         (old, truncate)
     }
 
-    fn logged(&mut self, (old, truncate): UndoRecords) {
+    fn logged(&mut self, undo_records: UndoRecords) {
+        let (old, truncate) = undo_records;
+
         if let Some((start, end)) = old {
             self.logged.insert(start, end);
         }
@@ -1333,7 +1335,7 @@ mod tests {
 
                     let bytes = storage.read(1, 2).unwrap();
 
-                    assert!(matches!(bytes, StorageSlice::Borrowed(&[4, 5])));
+                    assert_eq!(bytes.to_vec(), vec![4, 5]);
                 }
 
                 #[test]

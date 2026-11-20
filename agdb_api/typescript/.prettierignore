@@ -1,1 +1,3 @@
 src/openapi.d.ts
+src/query_builder.ts
+tests/query_builder.test.ts

@@ -28,16 +28,15 @@
     "scripts": {
         "build": "tsc && copyfiles -f src/openapi.d.ts dist/",
         "test": "node ../../agdb_server/test_server.mjs vitest run --coverage",
-        "type-check": "tsc --noEmit -p generated",
-        "lint": "eslint --max-warnings=0 \"**/*.ts\" \"**/*.js\" --fix",
-        "lint:check": "eslint --max-warnings=0 \"**/*.ts\" \"**/*.js\"",
+        "type-check": "tsc --noEmit -p tests",
+        "lint": "eslint --max-warnings=0 \"**/*.ts\" --fix",
+        "lint:check": "eslint --max-warnings=0 \"**/*.ts\"",
         "format": "prettier --write src/ tests/ \"examples/**/*.ts\"",
         "format:check": "prettier --check src/ tests/ \"examples/**/*.ts\"",
         "examples": "tsc -p examples/server_client && node ../../agdb_server/test_server.mjs node examples/server_client/dist/main.js",
         "before-commit": "pnpm run openapi && pnpm run format && pnpm run lint && pnpm run test",
         "openapi": "pnpm exec openapi typegen ../../agdb_server/openapi.json > src/openapi.d.ts",
-        "test_queries": "node query_test_generator.js && prettier --write tests/query.test.ts",
-        "regenerate": "pnpm run openapi && pnpm run test_queries"
+        "regenerate": "pnpm run openapi"
     },
     "dependencies": {
         "openapi-client-axios": "^7.6.0"

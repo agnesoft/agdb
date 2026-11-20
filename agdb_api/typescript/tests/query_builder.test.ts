@@ -2,7 +2,7 @@
 
 import type { Components } from "../src/openapi.d.ts";
 import { describe, expect, it } from "vitest";
-import { QueryBuilder, into_DbKeyValue } from "./query_builder.ts";
+import { QueryBuilder, into_DbKeyValue } from "../src/query_builder.ts";
 
 type QueryType = Components.Schemas.QueryType;
 

@@ -43,6 +43,7 @@ use crate::query::query_condition::QueryConditionLogic;
 use crate::query::query_condition::QueryConditionModifier;
 use crate::query::query_id::QueryId;
 use crate::storage::Storage;
+use crate::storage::StorageConfig;
 use crate::storage::StorageIndex;
 use crate::storage::SyncMode;
 use crate::storage::any_storage::AnyStorage;
@@ -382,7 +383,7 @@ impl<Store: StorageData> DbImpl<Store> {
     /// be desired to perform the storage file optimization without fully shutting
     /// down.
     pub fn optimize_storage(&mut self) -> Result<(), DbError> {
-        self.storage.optimize_storage()
+        self.storage.optimize_storage().map_err(|e| self.recover(e))
     }
 
     /// Changes the name of the database changing also the names of the files
@@ -439,18 +440,18 @@ impl<Store: StorageData> DbImpl<Store> {
         };
 
         match commit_result {
-            Ok(()) => self.storage.commit(storage_transaction)?,
-            Err(rollback_err) => {
-                if let Err(recover_err) = self
-                    .storage
-                    .recover()
-                    .and_then(|_| self.reload_from_storage())
-                {
-                    self.poison();
-                    return Err(E::from((self.poisoned())(
-                        recover_err.caused_by(rollback_err),
-                    )));
+            Ok(()) => {
+                if let Err(e) = self.storage.commit(storage_transaction) {
+                    return Err(E::from(self.recover(e)));
                 }
+            }
+            Err(rollback_err) => {
+                let e = self.recover(rollback_err);
+
+                if self.poisoned {
+                    return Err(E::from(e));
+                }
+
                 return result;
             }
         }
@@ -463,6 +464,21 @@ impl<Store: StorageData> DbImpl<Store> {
     /// independent of `sync_mode` and always issues the sync syscall.
     pub fn sync(&mut self) -> Result<(), DbError> {
         self.storage.sync()
+    }
+
+    /// Returns the [`StorageConfig`] of this database.
+    pub fn storage_config(&self) -> StorageConfig {
+        StorageConfig {
+            sync_mode: self.storage.sync_mode(),
+            overlay_limit: self.storage.overlay_limit(),
+        }
+    }
+
+    /// Sets the [`StorageConfig`] of this database, see [`SyncMode`] and
+    /// [`StorageData::set_overlay_limit()`].
+    pub fn set_storage_config(&mut self, config: StorageConfig) {
+        self.storage.set_sync_mode(config.sync_mode);
+        self.storage.set_overlay_limit(config.overlay_limit);
     }
 
     /// Returns the current [`SyncMode`] for this database.
@@ -542,6 +558,20 @@ impl<Store: StorageData> DbImpl<Store> {
         self.values = values;
         self.undo_stack.clear();
         Ok(())
+    }
+
+    fn recover(&mut self, cause: DbError) -> DbError {
+        match self
+            .storage
+            .recover()
+            .and_then(|_| self.reload_from_storage())
+        {
+            Ok(()) => cause,
+            Err(e) => {
+                self.poison();
+                (self.poisoned())(e.caused_by(cause))
+            }
+        }
     }
 
     fn poison(&mut self) {
@@ -1950,5 +1980,209 @@ mod tests {
         let (db, _) = failable_db(&db_path);
         let r = db.exec(QueryBuilder::select().ids("n").query()).unwrap();
         assert_eq!(r.elements[0].values, vec![("k", "original").into()]);
+    }
+
+    mod db_impl {
+        use super::*;
+        use crate::storage::DEFAULT_OVERLAY_LIMIT;
+        use crate::storage::file_storage::FileStorageImpl;
+        use crate::storage::file_storage_memory_mapped::FileStorageMemoryMappedImpl;
+        use agplatform::Platform;
+        use agplatform::test_platform::TestPlatform;
+        use agplatform::test_platform::test_fs::FsOp;
+        use agplatform::test_platform::test_platform;
+        use std::io::ErrorKind;
+
+        const NAME: &str = "/db";
+        const WAL: &str = "/.db";
+
+        fn file(platform: &Arc<TestPlatform>) -> FileStorageImpl<TestPlatform> {
+            FileStorageImpl::with_platform(platform.clone(), NAME).unwrap()
+        }
+
+        fn mapped(platform: &Arc<TestPlatform>) -> FileStorageMemoryMappedImpl<TestPlatform> {
+            FileStorageMemoryMappedImpl::with_platform(platform.clone(), NAME).unwrap()
+        }
+
+        fn config(sync_mode: SyncMode, overlay_limit: u64) -> StorageConfig {
+            StorageConfig {
+                sync_mode,
+                overlay_limit,
+            }
+        }
+
+        fn open<D: StorageData>(data: D, config: StorageConfig) -> DbImpl<D> {
+            let mut db = DbImpl::try_new_with_storage(Storage::with_data(data).unwrap()).unwrap();
+            db.set_storage_config(config);
+            db
+        }
+
+        fn inserted<D: StorageData>(data: D, config: StorageConfig) -> DbImpl<D> {
+            let mut db = open(data, config);
+            db.exec_mut(
+                QueryBuilder::insert()
+                    .nodes()
+                    .aliases(["removed", "n"])
+                    .values(vec![
+                        vec![("k", vec![0_u64; 64]).into()],
+                        vec![("k", "original").into()],
+                    ])
+                    .query(),
+            )
+            .unwrap();
+            db.exec_mut(QueryBuilder::remove().ids("removed").query())
+                .unwrap();
+            db
+        }
+
+        fn modify<D: StorageData>(db: &mut DbImpl<D>) -> Result<QueryResult, DbError> {
+            db.exec_mut(
+                QueryBuilder::insert()
+                    .values(vec![vec![("k", "modified").into()]])
+                    .ids("n")
+                    .query(),
+            )
+        }
+
+        fn value<D: StorageData>(db: &DbImpl<D>) -> DbValue {
+            db.exec(QueryBuilder::select().ids("n").query())
+                .unwrap()
+                .elements[0]
+                .values[0]
+                .value
+                .clone()
+        }
+
+        fn kill(platform: &Arc<TestPlatform>) {
+            platform.fs().sync();
+            platform.fs().crash();
+        }
+
+        fn fail_once(platform: &Arc<TestPlatform>, op: FsOp, path: &str) {
+            platform
+                .fs()
+                .set_io_errors(op, path, [Some(ErrorKind::Other), None]);
+        }
+
+        fn failed_commit<D: StorageData>(
+            storage: fn(&Arc<TestPlatform>) -> D,
+            config: StorageConfig,
+            op: FsOp,
+            path: &str,
+        ) -> (bool, bool, DbValue, DbValue) {
+            let platform = Arc::new(test_platform());
+            let mut db = inserted(storage(&platform), config);
+            fail_once(&platform, op, path);
+
+            let failed = modify(&mut db).is_err();
+
+            let current = value(&db);
+            let poisoned = db.poisoned;
+            kill(&platform);
+            drop(db);
+            (
+                failed,
+                poisoned,
+                current,
+                value(&open(storage(&platform), config)),
+            )
+        }
+
+        mod transaction_mut {
+            use super::*;
+
+            #[test]
+            fn transaction_mut_should_roll_back_failed_commit() {
+                for (sync_mode, overlay_limit, op, path) in [
+                    (SyncMode::None, DEFAULT_OVERLAY_LIMIT, FsOp::Write, WAL),
+                    (SyncMode::None, DEFAULT_OVERLAY_LIMIT, FsOp::Write, NAME),
+                    (SyncMode::Commit, DEFAULT_OVERLAY_LIMIT, FsOp::SyncData, WAL),
+                    (
+                        SyncMode::Commit,
+                        DEFAULT_OVERLAY_LIMIT,
+                        FsOp::SyncData,
+                        NAME,
+                    ),
+                    (SyncMode::Commit, 0, FsOp::SyncData, NAME),
+                    (
+                        SyncMode::Strict,
+                        DEFAULT_OVERLAY_LIMIT,
+                        FsOp::SyncData,
+                        NAME,
+                    ),
+                ] {
+                    let config = config(sync_mode, overlay_limit);
+                    let original = (true, false, "original".into(), "original".into());
+
+                    assert_eq!(
+                        failed_commit(file, config, op, path),
+                        original,
+                        "file {config:?} {op:?} {path}"
+                    );
+                    assert_eq!(
+                        failed_commit(mapped, config, op, path),
+                        original,
+                        "mapped {config:?} {op:?} {path}"
+                    );
+                }
+            }
+
+            #[test]
+            fn transaction_mut_should_commit_after_failed_commit() {
+                let platform = Arc::new(test_platform());
+                let mut db = inserted(file(&platform), StorageConfig::default());
+                fail_once(&platform, FsOp::Write, NAME);
+                assert!(modify(&mut db).is_err());
+
+                modify(&mut db).unwrap();
+
+                assert_eq!(value(&db), "modified".into());
+                drop(db);
+                assert_eq!(
+                    value(&open(file(&platform), StorageConfig::default())),
+                    "modified".into()
+                );
+            }
+
+            #[test]
+            fn transaction_mut_failed_recovery_after_failed_commit_should_poison() {
+                let platform = Arc::new(test_platform());
+                let mut db = inserted(file(&platform), StorageConfig::default());
+                platform
+                    .fs()
+                    .set_io_error(FsOp::Write, NAME, ErrorKind::Other);
+
+                let err = modify(&mut db).unwrap_err();
+
+                assert_eq!(err.ty, DbErrorType::Poisoned);
+                assert!(db.poisoned);
+                platform.fs().clear_faults();
+                drop(db);
+                assert_eq!(
+                    value(&open(file(&platform), StorageConfig::default())),
+                    "original".into()
+                );
+            }
+        }
+
+        mod optimize_storage {
+            use super::*;
+
+            #[test]
+            fn optimize_storage_failure_should_roll_back() {
+                let platform = Arc::new(test_platform());
+                let mut db = inserted(file(&platform), StorageConfig::default());
+                let len = db.size();
+                fail_once(&platform, FsOp::Write, NAME);
+
+                assert!(db.optimize_storage().is_err());
+
+                assert!(!db.poisoned);
+                assert_eq!(db.size(), len);
+                assert_eq!(value(&db), "original".into());
+                db.optimize_storage().unwrap();
+                assert!(db.size() < len);
+            }
+        }
     }
 }

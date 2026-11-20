@@ -79,11 +79,14 @@ impl DbPool {
                     std::fs::copy(&backup, &db_path)?;
                 }
             }
-            let user_db = UserDb::new(db_path.to_string_lossy().as_ref(), db.db_type)?;
+            let user_db = UserDb::new(
+                db_path.to_string_lossy().as_ref(),
+                db.db_type,
+                self.config.storage,
+            )?;
             if db.db_type == DbKind::Memory {
                 remove_file_if_exists(&db_path)?;
             }
-            user_db.set_sync_mode(self.config.sync_mode).await;
             pool.insert(db.name(), user_db);
         }
 
@@ -106,13 +109,11 @@ impl DbPool {
         std::fs::create_dir_all(Path::new(&self.config.data_dir).join(owner))?;
         self.migrate_audit(owner, db)?;
 
-        let user_db = UserDb::new(&path, db_type).map_err(|mut e| {
+        let user_db = UserDb::new(&path, db_type, self.config.storage).map_err(|mut e| {
             e.status = ErrorCode::DbInvalid.into();
             e.description = format!("{}: {}", ErrorCode::DbInvalid.as_str(), e.description);
             e
         })?;
-
-        user_db.set_sync_mode(self.config.sync_mode).await;
 
         let backup = if std::fs::exists(db_backup_file(owner, db, &self.config))? {
             SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs()
@@ -230,11 +231,11 @@ impl DbPool {
             .ok_or(ErrorCode::DbInvalid)?
             .to_string();
         let user_db = pool.get_mut(&name).ok_or(db_not_found(owner, db))?;
-        *user_db = UserDb::new(&db_path, DbKind::Memory)?;
+        *user_db = UserDb::new(&db_path, DbKind::Memory, self.config.storage)?;
         if database.db_type != DbKind::Memory {
             remove_file_if_exists(db_file(owner, db, &self.config))?;
             remove_file_if_exists(db_file(owner, &format!(".{db}"), &self.config))?;
-            *user_db = UserDb::new(&db_path, database.db_type)?;
+            *user_db = UserDb::new(&db_path, database.db_type, self.config.storage)?;
         }
 
         Ok(())
@@ -281,7 +282,11 @@ impl DbPool {
                 .await
                 .backup(current_path.to_string_lossy().as_ref())?;
         }
-        *user_db = UserDb::new(current_path.to_string_lossy().as_ref(), target_type)?;
+        *user_db = UserDb::new(
+            current_path.to_string_lossy().as_ref(),
+            target_type,
+            self.config.storage,
+        )?;
         if target_type == DbKind::Memory {
             remove_file_if_exists(&current_path)?;
         }
@@ -496,7 +501,11 @@ impl DbPool {
         let db_name = DbName::new(owner, db);
         let current_path = db_file(owner, db, &self.config);
         std::fs::copy(&backup_path, &current_path)?;
-        let user_db = UserDb::new(current_path.to_string_lossy().as_ref(), db_type)?;
+        let user_db = UserDb::new(
+            current_path.to_string_lossy().as_ref(),
+            db_type,
+            self.config.storage,
+        )?;
         if db_type == DbKind::Memory {
             remove_file_if_exists(&current_path)?;
         }
@@ -560,7 +569,11 @@ impl DbPool {
         self.migrate_audit(owner, db)?;
 
         let db_name = DbName::new(owner, db);
-        let user_db = UserDb::new(db_dst.to_string_lossy().as_ref(), db_type)?;
+        let user_db = UserDb::new(
+            db_dst.to_string_lossy().as_ref(),
+            db_type,
+            self.config.storage,
+        )?;
         if db_type == DbKind::Memory {
             remove_file_if_exists(&db_dst)?;
         }
@@ -593,7 +606,11 @@ impl DbPool {
             // For memory DBs: copy backup to main file, load it, then consume the main file.
             // The backup (.bak) is preserved so the DB can be rolled back again.
             std::fs::copy(&backup_path, &current_path)?;
-            let user_db = UserDb::new(current_path.to_string_lossy().as_ref(), db_type)?;
+            let user_db = UserDb::new(
+                current_path.to_string_lossy().as_ref(),
+                db_type,
+                self.config.storage,
+            )?;
             remove_file_if_exists(&current_path)?;
             self.pool.write().await.insert(db_name, user_db);
             self.restore_audit_from_backup(owner, db)?;
@@ -603,7 +620,11 @@ impl DbPool {
             std::fs::rename(&current_path, &backup_temp)?;
             std::fs::rename(&backup_path, &current_path)?;
             std::fs::rename(backup_temp, &backup_path)?;
-            let user_db = UserDb::new(current_path.to_string_lossy().as_ref(), db_type)?;
+            let user_db = UserDb::new(
+                current_path.to_string_lossy().as_ref(),
+                db_type,
+                self.config.storage,
+            )?;
             self.pool.write().await.insert(db_name, user_db);
             self.swap_audit_with_backup(owner, db)?;
         }

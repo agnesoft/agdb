@@ -17,8 +17,6 @@ const VERSION: u64 = 1;
 const FIRST_GENERATION: u64 = 1 << 62;
 const GENERATION_POS: u64 = 8;
 const HEADER_SIZE: u64 = 16;
-const RECORD_HEADER_SIZE: u64 = 16;
-const TRAILER_SIZE: u64 = 16;
 const TRUNCATE_SIZE: u64 = 1024 * 1024;
 
 /// The log is `[VERSION][generation]` followed by the records
@@ -31,7 +29,7 @@ const TRUNCATE_SIZE: u64 = 1024 * 1024;
 /// written. An empty file is an empty log, its header is written with the
 /// first record. The log of a version without the header holds just the
 /// records and is truncated on clear. Truncating makes the following
-/// inserts slower as they grow the file again, but leaves nothing for a
+/// writes slower as they grow the file again, but leaves nothing for a
 /// following sync to write.
 pub struct WriteAheadLog<P: Platform> {
     file: FileHandle<P>,
@@ -39,6 +37,7 @@ pub struct WriteAheadLog<P: Platform> {
     /// `None` without the header.
     generation: Option<u64>,
     len: u64,
+    staged: Vec<u8>,
 }
 
 impl<P: Platform> std::fmt::Debug for WriteAheadLog<P> {
@@ -70,37 +69,12 @@ impl<P: Platform> WriteAheadLog<P> {
         Ok(())
     }
 
+    pub fn discard_staged(&mut self) {
+        self.staged.clear();
+    }
+
     pub fn sync(&mut self) -> Result<(), DbError> {
         Ok(self.file.sync_data()?)
-    }
-
-    pub fn insert(&mut self, pos: u64, value: &[u8]) -> Result<(), DbError> {
-        self.insert_with(pos, value.len() as u64, &|buffer| {
-            buffer.copy_from_slice(value);
-            Ok(())
-        })
-    }
-
-    pub fn insert_with(
-        &mut self,
-        pos: u64,
-        size: u64,
-        value: &dyn Fn(&mut [u8]) -> Result<(), DbError>,
-    ) -> Result<(), DbError> {
-        let (header, generation) = if self.len == 0 {
-            (&header(FIRST_GENERATION)[..], Some(FIRST_GENERATION))
-        } else {
-            (&[][..], self.generation)
-        };
-        let mut bytes = record(header, self.len, pos, size, generation);
-        value(&mut bytes[header.len() + RECORD_HEADER_SIZE as usize..][..size as usize])?;
-        let end = self.len + bytes.len() as u64;
-        let written = self.file.write_all_at(&bytes, self.len);
-        self.file_len = self.file_len.max(end);
-        written?;
-        self.generation = generation;
-        self.len = end;
-        Ok(())
     }
 
     pub fn is_empty(&self) -> bool {
@@ -124,6 +98,7 @@ impl<P: Platform> WriteAheadLog<P> {
             file_len: bytes.len() as u64,
             generation,
             len,
+            staged: Vec::new(),
         })
     }
 
@@ -145,12 +120,71 @@ impl<P: Platform> WriteAheadLog<P> {
         Ok(())
     }
 
+    pub fn stage(&mut self, pos: u64, value: &[u8]) {
+        let value_start = self.stage_record(pos, value.len() as u64);
+        self.staged[value_start..][..value.len()].copy_from_slice(value);
+    }
+
+    pub fn stage_with(
+        &mut self,
+        pos: u64,
+        size: u64,
+        value: &dyn Fn(&mut [u8]) -> Result<(), DbError>,
+    ) -> Result<(), DbError> {
+        let staged_len = self.staged.len();
+        let value_start = self.stage_record(pos, size);
+        let staged = value(&mut self.staged[value_start..][..size as usize]);
+
+        if staged.is_err() {
+            self.staged.truncate(staged_len);
+        }
+
+        staged
+    }
+
+    pub fn staged_len(&self) -> u64 {
+        self.staged.len() as u64
+    }
+
     pub fn truncate(&mut self) -> Result<(), DbError> {
         self.file.set_len(0)?;
         self.file_len = 0;
         self.generation = None;
         self.len = 0;
+        self.staged.clear();
         Ok(())
+    }
+
+    pub fn write_staged(&mut self) -> Result<(), DbError> {
+        if self.staged.is_empty() {
+            return Ok(());
+        }
+
+        let end = self.len + self.staged.len() as u64;
+        let written = self.file.write_all_at(&self.staged, self.len);
+        self.file_len = self.file_len.max(end);
+        written?;
+        self.generation = self.next_generation();
+        self.len = end;
+        self.staged.clear();
+        Ok(())
+    }
+
+    fn stage_record(&mut self, pos: u64, size: u64) -> usize {
+        if self.len + self.staged.len() as u64 == 0 {
+            self.staged.extend_from_slice(&header(FIRST_GENERATION));
+        }
+
+        let generation = self.next_generation();
+        append_record(&mut self.staged, self.len, pos, size, generation)
+    }
+
+    fn next_generation(&self) -> Option<u64> {
+        if self.len == 0 {
+            Some(FIRST_GENERATION)
+        } else {
+            self.generation
+        }
     }
 
     fn start(&self) -> u64 {
@@ -228,23 +262,25 @@ fn header(generation: u64) -> [u8; HEADER_SIZE as usize] {
     header
 }
 
-/// The `prefix` and the record written at the `offset` with a zeroed value.
-fn record(prefix: &[u8], offset: u64, pos: u64, size: u64, generation: Option<u64>) -> Vec<u8> {
-    let value_start = prefix.len() + RECORD_HEADER_SIZE as usize;
-    let value_end = value_start + size as usize;
-    let trailer_size = generation.map_or(0, |_| TRAILER_SIZE as usize);
-    let mut record = vec![0_u8; value_end + trailer_size];
-    record[..prefix.len()].copy_from_slice(prefix);
-    record[prefix.len()..][..8].copy_from_slice(&pos.to_le_bytes());
-    record[prefix.len() + 8..value_start].copy_from_slice(&size.to_le_bytes());
+fn append_record(
+    bytes: &mut Vec<u8>,
+    offset: u64,
+    pos: u64,
+    size: u64,
+    generation: Option<u64>,
+) -> usize {
+    bytes.extend_from_slice(&pos.to_le_bytes());
+    bytes.extend_from_slice(&size.to_le_bytes());
+    let value_start = bytes.len();
+    bytes.resize(value_start + size as usize, 0);
 
     if let Some(generation) = generation {
-        let end = offset + record.len() as u64;
-        record[value_end..][..8].copy_from_slice(&generation.to_le_bytes());
-        record[value_end + 8..].copy_from_slice(&end.to_le_bytes());
+        bytes.extend_from_slice(&generation.to_le_bytes());
+        let end = offset + bytes.len() as u64 + 8;
+        bytes.extend_from_slice(&end.to_le_bytes());
     }
 
-    record
+    value_start
 }
 
 pub(crate) fn remove_wal<P: Platform>(platform: &P, filename: &str) -> Result<(), DbError> {
@@ -295,8 +331,15 @@ mod tests {
     }
 
     fn record_at(offset: u64, pos: u64, value: &[u8], generation: u64) -> Vec<u8> {
-        let mut bytes = record(&[], offset, pos, value.len() as u64, Some(generation));
-        bytes[RECORD_HEADER_SIZE as usize..][..value.len()].copy_from_slice(value);
+        let mut bytes = Vec::new();
+        let value_start = append_record(
+            &mut bytes,
+            offset,
+            pos,
+            value.len() as u64,
+            Some(generation),
+        );
+        bytes[value_start..][..value.len()].copy_from_slice(value);
         bytes
     }
 
@@ -324,6 +367,17 @@ mod tests {
         platform.fs().crash();
     }
 
+    fn insert(
+        wal: &mut WriteAheadLog<TestPlatform>,
+        pos: u64,
+        value: &[u8],
+    ) -> Result<(), DbError> {
+        wal.stage(pos, value);
+        let written = wal.write_staged();
+        wal.discard_staged();
+        written
+    }
+
     fn wal_bytes(platform: &TestPlatform) -> Vec<u8> {
         platform.fs().read(WAL).unwrap()
     }
@@ -332,10 +386,10 @@ mod tests {
         platform.fs().metadata(WAL).unwrap().len
     }
 
-    fn tear_insert(platform: &TestPlatform, wal: &mut WriteAheadLog<TestPlatform>) {
+    fn tear_write(platform: &TestPlatform, wal: &mut WriteAheadLog<TestPlatform>) {
         platform.fs().set_short_io(FsOp::Write, WAL, 50);
         platform.fs().set_capacity(Some(wal.len + 50));
-        assert!(wal.insert(9, &[9; 100]).is_err());
+        assert!(insert(wal, 9, &[9; 100]).is_err());
         assert_eq!(wal_len(platform), wal.len + 50);
         platform.fs().set_capacity(None);
         platform.fs().clear_faults();
@@ -351,7 +405,7 @@ mod tests {
             fn fmt_should_show_generation_and_len() {
                 let platform = test_platform();
                 let mut wal = open(&platform);
-                wal.insert(1, &[1, 2]).unwrap();
+                insert(&mut wal, 1, &[1, 2]).unwrap();
 
                 assert_eq!(
                     format!("{wal:?}"),
@@ -367,8 +421,8 @@ mod tests {
             fn clear_should_invalidate_records_by_bumping_generation() {
                 let platform = test_platform();
                 let mut wal = open(&platform);
-                wal.insert(1, &[1, 2]).unwrap();
-                wal.insert(2, &[3]).unwrap();
+                insert(&mut wal, 1, &[1, 2]).unwrap();
+                insert(&mut wal, 2, &[3]).unwrap();
 
                 wal.clear().unwrap();
 
@@ -387,11 +441,11 @@ mod tests {
             fn clear_should_let_records_overwrite_invalidated_ones() {
                 let platform = test_platform();
                 let mut wal = open(&platform);
-                wal.insert(1, &[1, 2, 3, 4]).unwrap();
-                wal.insert(2, &[5]).unwrap();
+                insert(&mut wal, 1, &[1, 2, 3, 4]).unwrap();
+                insert(&mut wal, 2, &[5]).unwrap();
                 wal.clear().unwrap();
 
-                wal.insert(3, &[6]).unwrap();
+                insert(&mut wal, 3, &[6]).unwrap();
 
                 assert_eq!(records(&wal), vec![(3, vec![6])]);
                 assert_eq!(wal_len(&platform), 16 + 36 + 33);
@@ -419,13 +473,13 @@ mod tests {
             fn clear_large_log_should_truncate_it() {
                 let platform = test_platform();
                 let mut wal = open(&platform);
-                wal.insert(1, &vec![1; TRUNCATE_SIZE as usize]).unwrap();
+                insert(&mut wal, 1, &vec![1; TRUNCATE_SIZE as usize]).unwrap();
 
                 wal.clear().unwrap();
 
                 assert!(records(&wal).is_empty());
                 assert_eq!(wal_len(&platform), 0);
-                wal.insert(2, &[3]).unwrap();
+                insert(&mut wal, 2, &[3]).unwrap();
                 kill(&platform);
                 assert_eq!(records(&open(&platform)), vec![(2, vec![3])]);
             }
@@ -443,7 +497,7 @@ mod tests {
 
                 assert!(wal.is_empty());
                 assert_eq!(wal_len(&platform), 0);
-                wal.insert(2, &[3]).unwrap();
+                insert(&mut wal, 2, &[3]).unwrap();
                 kill(&platform);
                 assert_eq!(
                     wal_bytes(&platform),
@@ -461,13 +515,30 @@ mod tests {
                     let platform = test_platform();
                     let mut wal = open(&platform);
                     let value = vec![1; size as usize];
-                    wal.insert(1, &value).unwrap();
+                    insert(&mut wal, 1, &value).unwrap();
                     platform.fs().set_io_error(op, WAL, ErrorKind::Other);
 
                     assert!(wal.clear().is_err(), "op: {op:?}");
 
                     assert_eq!(records(&wal), vec![(1, value)], "op: {op:?}");
                 }
+            }
+        }
+
+        mod discard_staged {
+            use super::*;
+
+            #[test]
+            fn discard_staged_should_drop_staged_records() {
+                let platform = test_platform();
+                let mut wal = open(&platform);
+                insert(&mut wal, 1, &[1]).unwrap();
+                wal.stage(2, &[2; 1]);
+
+                wal.discard_staged();
+
+                wal.write_staged().unwrap();
+                assert_eq!(records(&wal), vec![(1, vec![1])]);
             }
         }
 
@@ -479,9 +550,9 @@ mod tests {
                 // GIVEN a synced record followed by one not synced
                 let platform = test_platform();
                 let mut wal = open(&platform);
-                wal.insert(1, &[1, 2]).unwrap();
+                insert(&mut wal, 1, &[1, 2]).unwrap();
                 wal.sync().unwrap();
-                wal.insert(2, &[3]).unwrap();
+                insert(&mut wal, 2, &[3]).unwrap();
 
                 // WHEN the system crashes
                 platform.fs().crash();
@@ -502,167 +573,6 @@ mod tests {
             }
         }
 
-        mod insert {
-            use super::*;
-
-            #[test]
-            fn insert_should_append_records_in_order() {
-                let platform = test_platform();
-                let mut wal = open(&platform);
-
-                wal.insert(1, &[1, 2]).unwrap();
-                wal.insert(5, &[]).unwrap();
-
-                assert_eq!(records(&wal), vec![(1, vec![1, 2]), (5, vec![])]);
-                assert_eq!(wal_len(&platform), 16 + 34 + 32);
-            }
-
-            #[test]
-            fn insert_into_new_log_should_write_header_with_record() {
-                let platform = test_platform();
-                let mut wal = open(&platform);
-
-                wal.insert(1, &[1, 2]).unwrap();
-
-                kill(&platform);
-                assert_eq!(
-                    wal_bytes(&platform),
-                    [
-                        header(FIRST_GENERATION).to_vec(),
-                        record_at(16, 1, &[1, 2], FIRST_GENERATION)
-                    ]
-                    .concat()
-                );
-            }
-
-            #[test]
-            fn insert_into_new_log_should_have_no_records_for_version_without_header() {
-                // GIVEN a log not cleared before a crash
-                let platform = test_platform();
-                let mut wal = open(&platform);
-                wal.insert(1, &[1, 2]).unwrap();
-                kill(&platform);
-
-                // WHEN a version without the header reads its records
-                let bytes = wal_bytes(&platform);
-                let records = Records::new(&bytes, 0, None).count();
-
-                // THEN there are none as the generation is a size past the end
-                assert_eq!(records, 0);
-            }
-
-            #[test]
-            fn insert_into_new_log_after_torn_insert_should_ignore_its_remains() {
-                // GIVEN a first insert that wrote only a part of its header and record
-                let platform = test_platform();
-                let mut wal = open(&platform);
-                tear_insert(&platform, &mut wal);
-
-                // WHEN a shorter record is inserted
-                wal.insert(2, &[3]).unwrap();
-
-                // THEN the reopened log holds just that record
-                kill(&platform);
-                assert_eq!(records(&open(&platform)), vec![(2, vec![3])]);
-            }
-
-            #[test]
-            fn insert_after_torn_insert_should_ignore_its_remains() {
-                // GIVEN an insert that wrote only a part of its record
-                let platform = test_platform();
-                let mut wal = open(&platform);
-                wal.insert(1, &[1, 2]).unwrap();
-                tear_insert(&platform, &mut wal);
-
-                // WHEN a shorter record is inserted in its place
-                wal.insert(3, &[4]).unwrap();
-
-                // THEN the remains of the torn one past it are not a record
-                kill(&platform);
-                assert_eq!(
-                    records(&open(&platform)),
-                    vec![(1, vec![1, 2]), (3, vec![4])]
-                );
-            }
-
-            #[test]
-            fn insert_failure_should_fail_and_keep_log_appendable() {
-                let platform = test_platform();
-                let mut wal = open(&platform);
-                wal.insert(1, &[1, 2]).unwrap();
-                platform
-                    .fs()
-                    .set_io_error(FsOp::Write, WAL, ErrorKind::StorageFull);
-
-                assert!(wal.insert(2, &[3, 4]).is_err());
-
-                platform.fs().clear_faults();
-                wal.insert(3, &[5]).unwrap();
-                assert_eq!(records(&wal), vec![(1, vec![1, 2]), (3, vec![5])]);
-            }
-
-            #[test]
-            fn insert_into_legacy_log_should_append_record_without_trailer() {
-                let platform = test_platform();
-                let legacy = legacy_record(24, &[1, 2]);
-                platform.fs().write(WAL, &legacy).unwrap();
-                let mut wal = open(&platform);
-
-                wal.insert(2, &[3]).unwrap();
-
-                kill(&platform);
-                assert_eq!(
-                    wal_bytes(&platform),
-                    [legacy, legacy_record(2, &[3])].concat()
-                );
-                assert_eq!(
-                    records(&open(&platform)),
-                    vec![(24, vec![1, 2]), (2, vec![3])]
-                );
-            }
-        }
-
-        mod insert_with {
-            use super::*;
-
-            #[test]
-            fn insert_with_should_insert_value_written_into_buffer() {
-                let platform = test_platform();
-                let mut wal = open(&platform);
-
-                wal.insert_with(1, 3, &|buffer| {
-                    buffer.copy_from_slice(&[1, 2, 3]);
-                    Ok(())
-                })
-                .unwrap();
-
-                assert_eq!(records(&wal), vec![(1, vec![1, 2, 3])]);
-            }
-
-            #[test]
-            fn insert_with_value_failure_should_fail_without_inserting() {
-                let platform = test_platform();
-                let mut wal = open(&platform);
-
-                let result = wal.insert_with(1, 3, &|_| {
-                    Err(DbError::storage(
-                        crate::DbErrorType::NotFound,
-                        "read failed",
-                    ))
-                });
-
-                assert_eq!(
-                    result,
-                    Err(DbError::storage(
-                        crate::DbErrorType::NotFound,
-                        "read failed"
-                    ))
-                );
-                assert!(wal.is_empty());
-                assert_eq!(wal_len(&platform), 0);
-            }
-        }
-
         mod is_empty {
             use super::*;
 
@@ -672,7 +582,7 @@ mod tests {
                 let mut wal = open(&platform);
                 let new = wal.is_empty();
 
-                wal.insert(1, &[]).unwrap();
+                insert(&mut wal, 1, &[]).unwrap();
 
                 assert!(new);
                 assert!(!wal.is_empty());
@@ -731,7 +641,7 @@ mod tests {
                     platform.fs().write(WAL, log.concat()).unwrap();
 
                     let mut wal = open(&platform);
-                    wal.insert(3, &[4]).unwrap();
+                    insert(&mut wal, 3, &[4]).unwrap();
 
                     kill(&platform);
                     assert_eq!(
@@ -817,8 +727,8 @@ mod tests {
             fn rollback_should_undo_records_from_newest() {
                 let platform = test_platform();
                 let mut wal = open(&platform);
-                wal.insert(2, &[1]).unwrap();
-                wal.insert(1, &[2, 3]).unwrap();
+                insert(&mut wal, 2, &[1]).unwrap();
+                insert(&mut wal, 1, &[2, 3]).unwrap();
 
                 let undone = undone(&wal);
 
@@ -829,8 +739,8 @@ mod tests {
             fn rollback_undo_failure_should_stop_and_fail() {
                 let platform = test_platform();
                 let mut wal = open(&platform);
-                wal.insert(2, &[1]).unwrap();
-                wal.insert(1, &[2, 3]).unwrap();
+                insert(&mut wal, 2, &[1]).unwrap();
+                insert(&mut wal, 1, &[2, 3]).unwrap();
                 let mut undone = Vec::new();
 
                 let result = wal.rollback(|pos, _| {
@@ -855,7 +765,7 @@ mod tests {
             fn rollback_failure_should_fail() {
                 let platform = test_platform();
                 let mut wal = open(&platform);
-                wal.insert(1, &[1, 2]).unwrap();
+                insert(&mut wal, 1, &[1, 2]).unwrap();
                 platform
                     .fs()
                     .set_io_error(FsOp::Read, WAL, ErrorKind::Other);
@@ -864,20 +774,107 @@ mod tests {
             }
         }
 
+        mod stage {
+            use super::*;
+
+            #[test]
+            fn stage_should_write_nothing_until_write_staged() {
+                let platform = test_platform();
+                let mut wal = open(&platform);
+
+                wal.stage(1, &[1; 2]);
+                wal.stage(5, &[]);
+
+                assert_eq!(wal_len(&platform), 0);
+                assert!(wal.is_empty());
+            }
+        }
+
+        mod stage_with {
+            use super::*;
+
+            #[test]
+            fn stage_with_should_stage_value_written_into_buffer() {
+                let platform = test_platform();
+                let mut wal = open(&platform);
+
+                wal.stage_with(1, 3, &|buffer| {
+                    buffer.copy_from_slice(&[1, 2, 3]);
+                    Ok(())
+                })
+                .unwrap();
+
+                assert_eq!(wal_len(&platform), 0);
+                wal.write_staged().unwrap();
+                assert_eq!(records(&wal), vec![(1, vec![1, 2, 3])]);
+            }
+
+            #[test]
+            fn stage_with_value_failure_should_fail_without_staging() {
+                let platform = test_platform();
+                let mut wal = open(&platform);
+
+                let result = wal.stage_with(1, 3, &|_| {
+                    Err(DbError::storage(
+                        crate::DbErrorType::NotFound,
+                        "read failed",
+                    ))
+                });
+
+                assert_eq!(
+                    result,
+                    Err(DbError::storage(
+                        crate::DbErrorType::NotFound,
+                        "read failed"
+                    ))
+                );
+                assert_eq!(wal.staged_len(), 0);
+            }
+        }
+
+        mod staged_len {
+            use super::*;
+
+            #[test]
+            fn staged_len_should_count_bytes_of_staged_records_and_header() {
+                let platform = test_platform();
+                let mut wal = open(&platform);
+
+                wal.stage(1, &[1, 2]);
+
+                assert_eq!(wal.staged_len(), 16 + 34);
+                wal.write_staged().unwrap();
+                assert_eq!(wal.staged_len(), 0);
+            }
+        }
+
         mod truncate {
             use super::*;
+
+            #[test]
+            fn truncate_should_discard_staged_records() {
+                let platform = test_platform();
+                let mut wal = open(&platform);
+                wal.stage(1, &[1; 1]);
+
+                wal.truncate().unwrap();
+
+                wal.write_staged().unwrap();
+                assert!(wal.is_empty());
+                assert_eq!(wal_len(&platform), 0);
+            }
 
             #[test]
             fn truncate_should_empty_log_file() {
                 let platform = test_platform();
                 let mut wal = open(&platform);
-                wal.insert(1, &[1, 2]).unwrap();
+                insert(&mut wal, 1, &[1, 2]).unwrap();
 
                 wal.truncate().unwrap();
 
                 assert!(wal.is_empty());
                 assert_eq!(wal_len(&platform), 0);
-                wal.insert(2, &[3]).unwrap();
+                insert(&mut wal, 2, &[3]).unwrap();
                 kill(&platform);
                 assert_eq!(records(&open(&platform)), vec![(2, vec![3])]);
             }
@@ -886,7 +883,7 @@ mod tests {
             fn truncate_failure_should_keep_records() {
                 let platform = test_platform();
                 let mut wal = open(&platform);
-                wal.insert(1, &[1, 2]).unwrap();
+                insert(&mut wal, 1, &[1, 2]).unwrap();
                 platform
                     .fs()
                     .set_io_error(FsOp::SetLen, WAL, ErrorKind::Other);
@@ -897,6 +894,171 @@ mod tests {
             }
         }
 
+        mod write_staged {
+            use super::*;
+
+            #[test]
+            fn write_staged_into_new_log_should_write_header_and_records_at_once() {
+                let platform = test_platform();
+                let mut wal = open(&platform);
+                wal.stage(1, &[1; 2]);
+                wal.stage(5, &[]);
+
+                wal.write_staged().unwrap();
+
+                kill(&platform);
+                assert_eq!(
+                    wal_bytes(&platform),
+                    [
+                        header(FIRST_GENERATION).to_vec(),
+                        record_at(16, 1, &[1, 1], FIRST_GENERATION),
+                        record_at(16 + 34, 5, &[], FIRST_GENERATION)
+                    ]
+                    .concat()
+                );
+            }
+
+            #[test]
+            fn write_staged_should_append_records_after_inserted_ones() {
+                let platform = test_platform();
+                let mut wal = open(&platform);
+                insert(&mut wal, 1, &[1]).unwrap();
+                wal.stage(2, &[2; 1]);
+                wal.stage(3, &[3; 1]);
+
+                wal.write_staged().unwrap();
+                insert(&mut wal, 4, &[4]).unwrap();
+
+                kill(&platform);
+                assert_eq!(
+                    records(&open(&platform)),
+                    vec![(1, vec![1]), (2, vec![2]), (3, vec![3]), (4, vec![4])]
+                );
+            }
+
+            #[test]
+            fn write_staged_after_clear_should_overwrite_invalidated_records() {
+                let platform = test_platform();
+                let mut wal = open(&platform);
+                insert(&mut wal, 1, &[1, 1, 1, 1]).unwrap();
+                wal.clear().unwrap();
+                wal.stage(2, &[2; 1]);
+
+                wal.write_staged().unwrap();
+
+                kill(&platform);
+                assert_eq!(records(&open(&platform)), vec![(2, vec![2])]);
+            }
+
+            #[test]
+            fn write_staged_empty_should_do_nothing() {
+                let platform = test_platform();
+                let mut wal = open(&platform);
+
+                wal.write_staged().unwrap();
+
+                assert_eq!(wal_len(&platform), 0);
+            }
+
+            #[test]
+            fn write_staged_failure_should_keep_records_staged() {
+                let platform = test_platform();
+                let mut wal = open(&platform);
+                wal.stage(1, &[1; 1]);
+                platform
+                    .fs()
+                    .set_io_error(FsOp::Write, WAL, ErrorKind::StorageFull);
+
+                assert!(wal.write_staged().is_err());
+
+                platform.fs().clear_faults();
+                wal.write_staged().unwrap();
+                assert_eq!(records(&wal), vec![(1, vec![1])]);
+            }
+
+            #[test]
+            fn write_staged_should_append_records_in_order() {
+                let platform = test_platform();
+                let mut wal = open(&platform);
+
+                insert(&mut wal, 1, &[1, 2]).unwrap();
+                insert(&mut wal, 5, &[]).unwrap();
+
+                assert_eq!(records(&wal), vec![(1, vec![1, 2]), (5, vec![])]);
+                assert_eq!(wal_len(&platform), 16 + 34 + 32);
+            }
+
+            #[test]
+            fn write_staged_into_new_log_should_have_no_records_for_version_without_header() {
+                // GIVEN a log not cleared before a crash
+                let platform = test_platform();
+                let mut wal = open(&platform);
+                insert(&mut wal, 1, &[1, 2]).unwrap();
+                kill(&platform);
+
+                // WHEN a version without the header reads its records
+                let bytes = wal_bytes(&platform);
+                let records = Records::new(&bytes, 0, None).count();
+
+                // THEN there are none as the generation is a size past the end
+                assert_eq!(records, 0);
+            }
+
+            #[test]
+            fn write_staged_into_new_log_after_torn_write_should_ignore_its_remains() {
+                // GIVEN a first write that wrote only a part of its header and record
+                let platform = test_platform();
+                let mut wal = open(&platform);
+                tear_write(&platform, &mut wal);
+
+                // WHEN a shorter record is written
+                insert(&mut wal, 2, &[3]).unwrap();
+
+                // THEN the reopened log holds just that record
+                kill(&platform);
+                assert_eq!(records(&open(&platform)), vec![(2, vec![3])]);
+            }
+
+            #[test]
+            fn write_staged_after_torn_write_should_ignore_its_remains() {
+                // GIVEN a write that wrote only a part of its record
+                let platform = test_platform();
+                let mut wal = open(&platform);
+                insert(&mut wal, 1, &[1, 2]).unwrap();
+                tear_write(&platform, &mut wal);
+
+                // WHEN a shorter record is written in its place
+                insert(&mut wal, 3, &[4]).unwrap();
+
+                // THEN the remains of the torn one past it are not a record
+                kill(&platform);
+                assert_eq!(
+                    records(&open(&platform)),
+                    vec![(1, vec![1, 2]), (3, vec![4])]
+                );
+            }
+
+            #[test]
+            fn write_staged_into_legacy_log_should_append_record_without_trailer() {
+                let platform = test_platform();
+                let legacy = legacy_record(24, &[1, 2]);
+                platform.fs().write(WAL, &legacy).unwrap();
+                let mut wal = open(&platform);
+
+                insert(&mut wal, 2, &[3]).unwrap();
+
+                kill(&platform);
+                assert_eq!(
+                    wal_bytes(&platform),
+                    [legacy, legacy_record(2, &[3])].concat()
+                );
+                assert_eq!(
+                    records(&open(&platform)),
+                    vec![(24, vec![1, 2]), (2, vec![3])]
+                );
+            }
+        }
+
         mod drop {
             use super::*;
 
@@ -904,7 +1066,7 @@ mod tests {
             fn drop_empty_log_should_truncate_it() {
                 let platform = test_platform();
                 let mut wal = open(&platform);
-                wal.insert(1, &[1, 2]).unwrap();
+                insert(&mut wal, 1, &[1, 2]).unwrap();
                 wal.clear().unwrap();
 
                 drop(wal);
@@ -926,7 +1088,7 @@ mod tests {
             fn drop_should_keep_records() {
                 let platform = test_platform();
                 let mut wal = open(&platform);
-                wal.insert(1, &[1, 2]).unwrap();
+                insert(&mut wal, 1, &[1, 2]).unwrap();
 
                 drop(wal);
 
@@ -1007,13 +1169,18 @@ mod tests {
         }
     }
 
-    mod record {
+    mod append_record {
         use super::*;
 
         #[test]
-        fn record_should_hold_prefix_pos_size_zeroed_value_and_trailer() {
+        fn append_record_should_append_pos_size_zeroed_value_and_trailer() {
+            let mut bytes = vec![9];
+
+            let value_start = append_record(&mut bytes, 100, 1, 2, Some(3));
+
+            assert_eq!(value_start, 17);
             assert_eq!(
-                record(&[9], 100, 1, 2, Some(3)),
+                bytes,
                 [
                     &[9][..],
                     &1_u64.to_le_bytes(),
@@ -1027,8 +1194,12 @@ mod tests {
         }
 
         #[test]
-        fn record_without_generation_should_have_no_trailer() {
-            assert_eq!(record(&[], 0, 1, 0, None), legacy_record(1, &[]));
+        fn append_record_without_generation_should_have_no_trailer() {
+            let mut bytes = Vec::new();
+
+            append_record(&mut bytes, 0, 1, 0, None);
+
+            assert_eq!(bytes, legacy_record(1, &[]));
         }
     }
 

@@ -1,6 +1,9 @@
+use super::DEFAULT_OVERLAY_LIMIT;
 use super::StorageData;
 use super::StorageSlice;
 use super::SyncMode;
+use super::overlay::Overlay;
+use super::ranges::Ranges;
 use super::write_ahead_log::WriteAheadLog;
 use super::write_ahead_log::remove_wal;
 use super::write_ahead_log::wal_filename;
@@ -18,26 +21,17 @@ use std::sync::Arc;
 
 type FileHandle<P> = <<P as Platform>::Fs as Fs>::WriteHandle;
 
-pub(crate) type OldBytes<'a, P> =
-    dyn Fn(&FileHandle<P>, u64, &mut [u8]) -> Result<(), DbError> + 'a;
-
 /// Single file based storage with write ahead log (WAL) for resiliency
 /// implementing [`StorageData`]. It uses the storage name as the file
 /// name (`.{name}` for WAL). The files are accessed through the platform
 /// `P`, see [`FileStorage`] for the production one. Multiple readers
-/// share the single file handle reading it positionally. The
-/// [`StorageData::read()`] always returns owning buffer.
+/// share the single file handle reading it positionally.
 ///
 /// The [`StorageData::backup()`] is implemented so that it copies the file
 /// to the new name.
 ///
-/// The [`StorageData::flush()`] clears the WAL. When `sync_mode` is
-/// [`SyncMode::Commit`], flush also issues `fdatasync` on the main file
-/// before clearing the WAL (ensuring committed data is durable) and on
-/// the WAL file after clearing (ensuring the clear is durable). This
-/// prevents a crash from rolling back an already-committed transaction.
-/// Recovering from the WAL always syncs the restored file before clearing
-/// the WAL.
+/// The changes are held in memory until [`StorageData::flush()`] unless
+/// they grow past [`StorageData::overlay_limit()`].
 pub struct FileStorageImpl<P: Platform> {
     platform: Arc<P>,
     file: FileHandle<P>,
@@ -45,6 +39,48 @@ pub struct FileStorageImpl<P: Platform> {
     len: u64,
     sync_mode: SyncMode,
     wal: WriteAheadLog<P>,
+    undo: Undo,
+    file_len: u64,
+    dirty: Ranges,
+    shortest: Option<u64>,
+    overlay: Overlay,
+    overlay_limit: u64,
+    wal_unsynced: bool,
+}
+
+struct Undo {
+    len: u64,
+    logged: Ranges,
+    truncated: bool,
+}
+
+type UndoRecords = (Option<(u64, u64)>, Option<u64>);
+
+impl Undo {
+    fn new(len: u64) -> Self {
+        Self {
+            len,
+            logged: Ranges::default(),
+            truncated: false,
+        }
+    }
+
+    fn records(&self, pos: u64, end: u64, len: u64) -> UndoRecords {
+        let old_end = end.min(len).min(self.len);
+        let old = (pos < old_end && !self.logged.contains(pos, old_end)).then_some((pos, old_end));
+        let truncate = (self.len < end && !self.truncated).then_some(self.len);
+        (old, truncate)
+    }
+
+    fn logged(&mut self, undo_records: UndoRecords) {
+        let (old, truncate) = undo_records;
+
+        if let Some((start, end)) = old {
+            self.logged.insert(start, end);
+        }
+
+        self.truncated |= truncate.is_some();
+    }
 }
 
 /// The [`FileStorageImpl`] on the production [`PlatformImpl`].
@@ -82,7 +118,42 @@ impl<P: Platform> FileStorageImpl<P> {
             len,
             sync_mode,
             wal,
+            undo: Undo::new(len),
+            file_len: len,
+            dirty: Ranges::default(),
+            shortest: None,
+            overlay: Overlay::default(),
+            overlay_limit: DEFAULT_OVERLAY_LIMIT,
+            wal_unsynced: false,
         })
+    }
+
+    pub(crate) fn defer_write(&mut self, pos: u64, len: u64, bytes: &[u8]) {
+        if len == 0 {
+            return;
+        }
+
+        let end = pos + len;
+        self.stage_from(pos, end, bytes);
+        self.dirty.insert(pos, end);
+        self.len = self.len.max(end);
+    }
+
+    pub(crate) fn defer_resize(&mut self, new_len: u64, bytes: &[u8]) {
+        self.stage_from(new_len.min(self.len), new_len.max(self.len), bytes);
+        self.hold_len(new_len);
+    }
+
+    pub(crate) fn flush_deferred(&mut self, bytes: &[u8]) -> Result<(), DbError> {
+        self.write_held(bytes)?;
+        self.commit_log()
+    }
+
+    pub(crate) fn is_deferring(&self) -> bool {
+        self.shortest.is_some()
+            || !self.dirty.is_empty()
+            || !self.overlay.is_empty()
+            || self.file_len != self.len
     }
 
     pub(crate) fn platform(&self) -> &Arc<P> {
@@ -90,60 +161,16 @@ impl<P: Platform> FileStorageImpl<P> {
     }
 
     pub(crate) fn read_all(&self) -> Result<Vec<u8>, DbError> {
-        let mut buffer = vec![0_u8; self.len as usize];
+        let mut buffer = vec![0_u8; self.file_len as usize];
         self.file.read_exact_at(&mut buffer, 0)?;
         Ok(buffer)
     }
 
-    pub(crate) fn resize_with(
-        &mut self,
-        new_len: u64,
-        old_bytes: &OldBytes<P>,
-    ) -> Result<(), DbError> {
-        let current_len = self.len;
-
-        if new_len < current_len {
-            self.wal
-                .insert_with(new_len, current_len - new_len, &|buffer| {
-                    old_bytes(&self.file, new_len, buffer)
-                })?;
-        } else if current_len < new_len {
-            self.wal.insert(current_len, &[])?;
-        } else {
-            return Ok(());
+    pub(crate) fn spill(&mut self, bytes: &[u8]) -> Result<(), DbError> {
+        if self.overlay_limit < self.wal.staged_len() + self.overlay.size() {
+            self.write_held(bytes)?;
         }
 
-        self.file.set_len(new_len)?;
-        self.len = new_len;
-        Ok(())
-    }
-
-    pub(crate) fn write_with(
-        &mut self,
-        pos: u64,
-        bytes: &[u8],
-        old_bytes: &OldBytes<P>,
-    ) -> Result<(), DbError> {
-        if bytes.is_empty() {
-            return Ok(());
-        }
-
-        let current_len = self.len;
-        let end = pos + bytes.len() as u64;
-
-        if pos < current_len {
-            self.wal
-                .insert_with(pos, std::cmp::min(current_len, end) - pos, &|buffer| {
-                    old_bytes(&self.file, pos, buffer)
-                })?;
-        }
-
-        if current_len < end {
-            self.wal.insert(current_len, &[])?;
-        }
-
-        self.file.write_all_at(bytes, pos)?;
-        self.len = std::cmp::max(current_len, end);
         Ok(())
     }
 
@@ -168,8 +195,142 @@ impl<P: Platform> FileStorageImpl<P> {
         wal.sync()
     }
 
-    fn read_file(file: &FileHandle<P>, pos: u64, buffer: &mut [u8]) -> Result<(), DbError> {
-        Ok(file.read_exact_at(buffer, pos)?)
+    fn commit_log(&mut self) -> Result<(), DbError> {
+        // Reset before anything can fail: logging more than needed is safe,
+        // missing a record that a cleared log would need is not.
+        self.undo = Undo::new(self.len);
+
+        if self.wal.is_empty() {
+            return Ok(());
+        }
+
+        if self.sync_mode != SyncMode::None {
+            self.file.sync_data()?;
+        }
+
+        self.wal_unsynced = true;
+        self.wal.clear()?;
+
+        if self.sync_mode == SyncMode::Strict {
+            self.wal.sync()?;
+            self.wal_unsynced = false;
+        }
+
+        Ok(())
+    }
+
+    fn disk_end(&self) -> u64 {
+        self.shortest
+            .map_or(self.file_len, |shortest| shortest.min(self.file_len))
+    }
+
+    fn hold_len(&mut self, new_len: u64) {
+        if new_len < self.len {
+            self.overlay.truncate(new_len);
+            self.shortest = Some(self.shortest.map_or(new_len, |len| len.min(new_len)));
+        }
+
+        self.len = new_len;
+    }
+
+    fn mark_logged(&mut self, records: UndoRecords) {
+        if let (_, Some(len)) = records {
+            self.wal.stage(len, &[]);
+        }
+
+        self.undo.logged(records);
+    }
+
+    fn read_into(
+        file: &FileHandle<P>,
+        overlay: &Overlay,
+        disk_end: u64,
+        pos: u64,
+        buffer: &mut [u8],
+    ) -> Result<(), DbError> {
+        let from_file = disk_end.saturating_sub(pos).min(buffer.len() as u64) as usize;
+
+        if from_file != 0 {
+            file.read_exact_at(&mut buffer[..from_file], pos)?;
+        }
+
+        overlay.patch(pos, buffer);
+        Ok(())
+    }
+
+    fn stage_from(&mut self, pos: u64, end: u64, bytes: &[u8]) {
+        let records = self.undo.records(pos, end, self.len);
+
+        if let (Some((start, end)), _) = records {
+            self.wal.stage(start, &bytes[start as usize..end as usize]);
+        }
+
+        self.mark_logged(records);
+    }
+
+    fn stage_read(&mut self, pos: u64, end: u64) -> Result<(), DbError> {
+        let records = self.undo.records(pos, end, self.len);
+
+        if let (Some((start, end)), _) = records {
+            let (file, overlay, disk_end) = (&self.file, &self.overlay, self.disk_end());
+            self.wal.stage_with(start, end - start, &|buffer| {
+                Self::read_into(file, overlay, disk_end, start, buffer)
+            })?;
+        }
+
+        self.mark_logged(records);
+        Ok(())
+    }
+
+    fn write_held(&mut self, bytes: &[u8]) -> Result<(), DbError> {
+        if self.wal.staged_len() != 0 {
+            self.wal_unsynced = true;
+            self.wal.write_staged()?;
+        }
+
+        if self.wal_unsynced && self.sync_mode != SyncMode::None && !self.wal.is_empty() {
+            self.wal.sync()?;
+            self.wal_unsynced = false;
+        }
+
+        if let Some(shortest) = self.shortest {
+            if shortest < self.file_len {
+                self.file.set_len(shortest)?;
+                self.file_len = shortest;
+            }
+
+            self.shortest = None;
+        }
+
+        for (start, end) in self.dirty.iter() {
+            if self.len <= start {
+                break;
+            }
+
+            let end = end.min(self.len);
+            let written = self
+                .file
+                .write_all_at(&bytes[start as usize..end as usize], start);
+            self.file_len = self.file_len.max(end);
+            written?;
+        }
+
+        self.dirty.clear();
+
+        for (start, range) in self.overlay.iter() {
+            let written = self.file.write_all_at(&range, start);
+            self.file_len = self.file_len.max(start + range.len() as u64);
+            written?;
+        }
+
+        self.overlay.clear();
+
+        if self.file_len != self.len {
+            self.file.set_len(self.len)?;
+            self.file_len = self.len;
+        }
+
+        Ok(())
     }
 }
 
@@ -198,18 +359,15 @@ impl<P: Platform + Default> StorageData for FileStorageImpl<P> {
     }
 
     fn flush(&mut self) -> Result<(), DbError> {
-        if self.wal.is_empty() {
-            return Ok(());
-        }
+        self.flush_deferred(&[])
+    }
 
-        match self.sync_mode {
-            SyncMode::None => self.wal.clear(),
-            SyncMode::Commit => {
-                self.file.sync_data()?;
-                self.wal.truncate()?;
-                self.wal.sync()
-            }
-        }
+    fn set_overlay_limit(&mut self, limit: u64) {
+        self.overlay_limit = limit;
+    }
+
+    fn overlay_limit(&self) -> u64 {
+        self.overlay_limit
     }
 
     fn set_sync_mode(&mut self, mode: SyncMode) {
@@ -237,8 +395,21 @@ impl<P: Platform + Default> StorageData for FileStorageImpl<P> {
     }
 
     fn read(&'_ self, pos: u64, value_len: u64) -> Result<StorageSlice<'_>, DbError> {
+        let end = pos.saturating_add(value_len);
+
+        if self.len < end {
+            return Err(DbError::storage(
+                DbErrorType::OutOfBounds,
+                format!("Read ({pos}..{end}) out of bounds ({})", self.len),
+            ));
+        }
+
+        if let Some(bytes) = self.overlay.get(pos, end) {
+            return Ok(StorageSlice::Borrowed(bytes));
+        }
+
         let mut buffer = vec![0_u8; value_len as usize];
-        self.file.read_exact_at(&mut buffer, pos)?;
+        Self::read_into(&self.file, &self.overlay, self.disk_end(), pos, &mut buffer)?;
         Ok(StorageSlice::Owned(buffer))
     }
 
@@ -258,29 +429,51 @@ impl<P: Platform + Default> StorageData for FileStorageImpl<P> {
     }
 
     fn resize(&mut self, new_len: u64) -> Result<(), DbError> {
-        self.resize_with(new_len, &Self::read_file)
+        self.stage_read(new_len.min(self.len), new_len.max(self.len))?;
+        self.hold_len(new_len);
+        self.spill(&[])
     }
 
     fn write(&mut self, pos: u64, bytes: &[u8]) -> Result<(), DbError> {
-        self.write_with(pos, bytes, &Self::read_file)
+        if bytes.is_empty() {
+            return Ok(());
+        }
+
+        let end = pos + bytes.len() as u64;
+        self.stage_read(pos, end)?;
+        self.overlay.write(pos, bytes);
+        self.len = self.len.max(end);
+        self.spill(&[])
     }
 
     fn recover_from_wal(&mut self) -> Result<(), DbError> {
+        self.wal.discard_staged();
         Self::apply_wal(&self.file, &mut self.wal)?;
+        self.dirty.clear();
+        self.overlay.clear();
+        self.shortest = None;
         self.len = self.file.seek(SeekFrom::End(0))?;
+        self.file_len = self.len;
+        self.undo = Undo::new(self.len);
         Ok(())
     }
 }
 
+/// Syncs the clearing of the log so that a clean close keeps the last commit.
 impl<P: Platform> Drop for FileStorageImpl<P> {
     fn drop(&mut self) {
         let _ = Self::apply_wal(&self.file, &mut self.wal);
+
+        if self.wal_unsynced && self.sync_mode != SyncMode::None {
+            let _ = self.wal.sync();
+        }
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::storage::overlay::RUN_OVERHEAD;
     use agplatform::test_platform::TestPlatform;
     use agplatform::test_platform::test_fs::FsOp;
     use agplatform::test_platform::test_platform;
@@ -308,10 +501,17 @@ mod tests {
         storage.read_all().unwrap()
     }
 
+    fn spilling(platform: &Arc<TestPlatform>) -> TestFileStorage {
+        let mut storage = open(platform);
+        storage.set_overlay_limit(0);
+        storage
+    }
+
     /// Leaves the log of the storage `name` holding the pre-image of an
     /// unflushed write as a process killed while writing it does.
     fn stale_storage(platform: &Arc<TestPlatform>, name: &str) {
         let mut storage = FileStorageImpl::with_platform(platform.clone(), name).unwrap();
+        storage.set_overlay_limit(0);
         storage.write(0, &[9, 9, 9, 9]).unwrap();
         storage.flush().unwrap();
         storage.write(0, &[8]).unwrap();
@@ -330,11 +530,17 @@ mod tests {
 
         #[test]
         fn file_storage_impl_should_roll_back_unflushed_writes_on_reopen() {
-            for killed in [false, true] {
+            for (killed, limit) in [
+                (false, 0),
+                (true, 0),
+                (false, DEFAULT_OVERLAY_LIMIT),
+                (true, DEFAULT_OVERLAY_LIMIT),
+            ] {
                 let platform = platform();
                 let mut storage = open(&platform);
                 storage.write(0, &[1, 2, 3]).unwrap();
                 storage.flush().unwrap();
+                storage.set_overlay_limit(limit);
                 storage.write(1, &[4, 5, 6]).unwrap();
                 storage.resize(2).unwrap();
 
@@ -344,7 +550,11 @@ mod tests {
                     drop(storage);
                 }
 
-                assert_eq!(read(&open(&platform)), vec![1, 2, 3], "killed: {killed}");
+                assert_eq!(
+                    read(&open(&platform)),
+                    vec![1, 2, 3],
+                    "killed: {killed}, limit: {limit}"
+                );
             }
         }
 
@@ -354,7 +564,7 @@ mod tests {
             #[test]
             fn fmt_should_show_name_len_sync_mode_and_wal() {
                 let platform = platform();
-                let mut storage = open(&platform);
+                let mut storage = spilling(&platform);
                 storage.write(0, &[1]).unwrap();
 
                 assert_eq!(
@@ -381,7 +591,7 @@ mod tests {
             #[test]
             fn with_platform_should_roll_back_writes_logged_before_crash() {
                 let platform = platform();
-                let mut storage = open(&platform);
+                let mut storage = spilling(&platform);
                 storage.write(0, &[1, 2, 3]).unwrap();
                 storage.flush().unwrap();
                 storage.write(2, &[4, 5]).unwrap();
@@ -439,7 +649,7 @@ mod tests {
                     (FsOp::Seek, NAME),
                 ] {
                     let platform = platform();
-                    let mut storage = open(&platform);
+                    let mut storage = spilling(&platform);
                     storage.write(0, &[1, 2, 3]).unwrap();
                     storage.flush().unwrap();
                     storage.write(2, &[4, 5]).unwrap();
@@ -450,6 +660,161 @@ mod tests {
                         FileStorageImpl::with_platform(platform.clone(), NAME).is_err(),
                         "op: {op:?}, path: {path}"
                     );
+                }
+            }
+        }
+
+        mod defer_write {
+            use super::*;
+
+            #[test]
+            fn defer_write_should_stage_old_bytes_without_writing_file() {
+                // GIVEN flushed bytes the storage holds differently
+                let platform = platform();
+                let mut storage = written(&platform);
+
+                // WHEN deferring a write over and past them
+                storage.defer_write(2, 3, &[1, 2, 9]);
+
+                // THEN the file is not written
+                assert_eq!(storage.len(), 5);
+                assert_eq!(read(&storage), vec![1, 2, 3]);
+                // AND the log rolls back to the old bytes of the storage
+                platform
+                    .fs()
+                    .set_io_error(FsOp::Write, NAME, ErrorKind::Other);
+                assert!(storage.flush_deferred(&[1, 2, 4, 5, 6]).is_err());
+                platform.fs().clear_faults();
+                storage.recover_from_wal().unwrap();
+                assert_eq!(read(&storage), vec![1, 2, 9]);
+            }
+
+            #[test]
+            fn defer_write_empty_should_do_nothing() {
+                let platform = platform();
+                let mut storage = written(&platform);
+
+                storage.defer_write(5, 0, &[1, 2, 3]);
+
+                assert!(!storage.is_deferring());
+                assert_eq!(storage.len(), 3);
+            }
+        }
+
+        mod defer_resize {
+            use super::*;
+
+            #[test]
+            fn defer_resize_should_stage_old_bytes_without_resizing_file() {
+                let platform = platform();
+                let mut storage = written(&platform);
+
+                storage.defer_resize(1, &[1, 9, 9]);
+
+                assert_eq!(storage.len(), 1);
+                assert_eq!(read(&storage), vec![1, 2, 3]);
+                platform
+                    .fs()
+                    .set_io_error(FsOp::SetLen, NAME, ErrorKind::Other);
+                assert!(storage.flush_deferred(&[1]).is_err());
+                platform.fs().clear_faults();
+                storage.recover_from_wal().unwrap();
+                assert_eq!(read(&storage), vec![1, 9, 9]);
+            }
+
+            #[test]
+            fn defer_resize_to_len_should_do_nothing() {
+                let platform = platform();
+                let mut storage = written(&platform);
+
+                storage.defer_resize(3, &[1, 2, 3]);
+
+                assert!(!storage.is_deferring());
+            }
+        }
+
+        mod flush_deferred {
+            use super::*;
+
+            #[test]
+            fn flush_deferred_should_write_changed_ranges_of_bytes() {
+                // GIVEN deferred writes and a shrink then growth past the file length
+                let platform = platform();
+                let mut storage = written(&platform);
+                storage.defer_write(0, 1, &[1, 2, 3]);
+                storage.defer_resize(1, &[7, 2, 3]);
+                storage.defer_resize(4, &[7]);
+                storage.defer_write(5, 1, &[7, 0, 0, 0]);
+
+                // WHEN flushing them with bytes differing also outside the changed ranges
+                storage.flush_deferred(&[7, 8, 8, 8, 8, 9]).unwrap();
+
+                // THEN only the changed ranges are written, the rest is zeroed by the resizes
+                assert_eq!(read(&storage), vec![7, 0, 0, 0, 0, 9]);
+                assert!(!storage.is_deferring());
+                assert!(storage.wal.is_empty());
+            }
+
+            #[test]
+            fn flush_deferred_should_not_write_ranges_cut_off_by_shrink() {
+                let platform = platform();
+                let mut storage = written(&platform);
+                storage.defer_write(2, 4, &[1, 2, 3]);
+                storage.defer_resize(1, &[1, 2, 4, 4, 4, 4]);
+
+                storage.flush_deferred(&[1]).unwrap();
+
+                assert_eq!(read(&storage), vec![1]);
+            }
+
+            #[test]
+            fn flush_deferred_failure_should_keep_writes_deferred() {
+                for (op, path) in [
+                    (FsOp::Write, WAL),
+                    (FsOp::SetLen, NAME),
+                    (FsOp::Write, NAME),
+                ] {
+                    let platform = platform();
+                    let mut storage = written(&platform);
+                    storage.defer_write(5, 1, &[1, 2, 3]);
+                    storage.defer_resize(1, &[1, 2, 3, 0, 0, 1]);
+                    storage.defer_write(0, 1, &[1]);
+                    platform.fs().set_io_error(op, path, ErrorKind::Other);
+
+                    assert!(
+                        storage.flush_deferred(&[4]).is_err(),
+                        "op: {op:?}, path: {path}"
+                    );
+
+                    assert!(storage.is_deferring(), "op: {op:?}, path: {path}");
+                    platform.fs().clear_faults();
+                    storage.flush_deferred(&[4]).unwrap();
+                    assert_eq!(read(&storage), vec![4], "op: {op:?}, path: {path}");
+                }
+            }
+        }
+
+        mod is_deferring {
+            use super::*;
+
+            #[test]
+            fn is_deferring_should_be_true_until_flush_deferred() {
+                for defer in [
+                    |storage: &mut TestFileStorage| storage.defer_write(0, 1, &[1, 2, 3]),
+                    |storage: &mut TestFileStorage| storage.defer_resize(5, &[1, 2, 3]),
+                    |storage: &mut TestFileStorage| storage.defer_resize(1, &[1, 2, 3]),
+                    |storage: &mut TestFileStorage| storage.write(0, &[1]).unwrap(),
+                ] {
+                    let platform = platform();
+                    let mut storage = written(&platform);
+                    assert!(!storage.is_deferring());
+
+                    defer(&mut storage);
+
+                    assert!(storage.is_deferring());
+                    let bytes = vec![1; storage.len() as usize];
+                    storage.flush_deferred(&bytes).unwrap();
+                    assert!(!storage.is_deferring());
                 }
             }
         }
@@ -470,10 +835,13 @@ mod tests {
             use super::*;
 
             #[test]
-            fn read_all_should_return_all_bytes() {
+            fn read_all_should_return_bytes_of_file_without_held_changes() {
                 let platform = platform();
                 let mut storage = open(&platform);
                 storage.write(1, &[1, 2]).unwrap();
+                storage.flush().unwrap();
+
+                storage.write(0, &[3]).unwrap();
 
                 assert_eq!(storage.read_all(), Ok(vec![0, 1, 2]));
             }
@@ -481,8 +849,7 @@ mod tests {
             #[test]
             fn read_all_failure_should_fail() {
                 let platform = platform();
-                let mut storage = open(&platform);
-                storage.write(0, &[1]).unwrap();
+                let storage = written(&platform);
                 platform
                     .fs()
                     .set_io_error(FsOp::Read, NAME, ErrorKind::Other);
@@ -491,76 +858,93 @@ mod tests {
             }
         }
 
-        mod resize_with {
+        mod spill {
             use super::*;
 
             #[test]
-            fn resize_with_should_log_old_bytes_it_is_given() {
+            fn spill_past_overlay_limit_should_write_held_changes_keeping_log() {
+                // GIVEN held changes past the overlay limit
                 let platform = platform();
-                let mut storage = open(&platform);
-                storage.write(0, &[1, 2, 3]).unwrap();
-                storage.flush().unwrap();
+                let mut storage = written(&platform);
+                storage.write(1, &[4, 5]).unwrap();
+                storage.resize(4).unwrap();
+                storage.set_overlay_limit(0);
 
-                storage
-                    .resize_with(1, &|_, _, buffer| {
-                        buffer.fill(9);
-                        Ok(())
-                    })
-                    .unwrap();
+                // WHEN spilling them
+                storage.spill(&[]).unwrap();
 
+                // THEN they are in the file
+                assert!(!storage.is_deferring());
+                assert_eq!(read(&storage), vec![1, 4, 5, 0]);
+                // AND the log still undoes them
                 storage.recover_from_wal().unwrap();
-                assert_eq!(read(&storage), vec![1, 9, 9]);
-            }
-
-            #[test]
-            fn resize_with_old_bytes_failure_should_fail_without_resizing() {
-                let platform = platform();
-                let mut storage = open(&platform);
-                storage.write(0, &[1, 2, 3]).unwrap();
-
-                let result = storage.resize_with(1, &|_, _, _| {
-                    Err(DbError::storage(crate::DbErrorType::NotFound, "old bytes"))
-                });
-
-                assert!(result.is_err());
                 assert_eq!(read(&storage), vec![1, 2, 3]);
             }
-        }
-
-        mod write_with {
-            use super::*;
 
             #[test]
-            fn write_with_should_log_old_bytes_it_is_given() {
+            fn spill_within_overlay_limit_should_keep_changes_held() {
                 let platform = platform();
-                let mut storage = open(&platform);
-                storage.write(0, &[1, 2, 3]).unwrap();
-                storage.flush().unwrap();
+                let mut storage = written(&platform);
+                storage.write(1, &[4, 5]).unwrap();
 
-                storage
-                    .write_with(1, &[4, 5, 6], &|_, pos, buffer| {
-                        assert_eq!((pos, buffer.len()), (1, 2));
-                        buffer.fill(9);
-                        Ok(())
-                    })
-                    .unwrap();
+                storage.spill(&[]).unwrap();
 
-                storage.recover_from_wal().unwrap();
-                assert_eq!(read(&storage), vec![1, 9, 9]);
+                assert!(storage.is_deferring());
+                assert_eq!(read(&storage), vec![1, 2, 3]);
             }
 
             #[test]
-            fn write_with_old_bytes_failure_should_fail_without_writing() {
+            fn spill_should_leave_flush_nothing_more_to_log() {
+                // GIVEN changes spilled in commit mode
                 let platform = platform();
-                let mut storage = open(&platform);
-                storage.write(0, &[1, 2, 3]).unwrap();
+                let mut storage = written(&platform);
+                storage.set_sync_mode(SyncMode::Commit);
+                storage.set_overlay_limit(0);
+                storage.write(1, &[4]).unwrap();
 
-                let result = storage.write_with(0, &[4], &|_, _, _| {
-                    Err(DbError::storage(crate::DbErrorType::NotFound, "old bytes"))
-                });
+                // WHEN flushing with the log failing to sync
+                platform
+                    .fs()
+                    .set_io_error(FsOp::SyncData, WAL, ErrorKind::Other);
 
-                assert!(result.is_err());
-                assert_eq!(read(&storage), vec![1, 2, 3]);
+                // THEN the flush neither writes nor syncs the log again
+                assert_eq!(storage.flush(), Ok(()));
+                assert_eq!(read(&storage), vec![1, 4, 3]);
+            }
+
+            #[test]
+            fn spill_failure_should_keep_changes_held() {
+                for (mode, op, path) in [
+                    (SyncMode::None, FsOp::Write, WAL),
+                    (SyncMode::Commit, FsOp::SyncData, WAL),
+                    (SyncMode::None, FsOp::SetLen, NAME),
+                    (SyncMode::None, FsOp::Write, NAME),
+                ] {
+                    let platform = platform();
+                    let mut storage = written(&platform);
+                    storage.set_sync_mode(mode);
+                    storage.resize(1).unwrap();
+                    storage.write(4, &[7]).unwrap();
+                    storage.set_overlay_limit(0);
+                    platform.fs().set_io_error(op, path, ErrorKind::Other);
+
+                    assert!(
+                        storage.spill(&[]).is_err(),
+                        "mode: {mode}, op: {op:?}, path: {path}"
+                    );
+
+                    assert!(
+                        storage.is_deferring(),
+                        "mode: {mode}, op: {op:?}, path: {path}"
+                    );
+                    platform.fs().clear_faults();
+                    storage.flush().unwrap();
+                    assert_eq!(
+                        read(&storage),
+                        vec![1, 0, 0, 0, 7],
+                        "mode: {mode}, op: {op:?}, path: {path}"
+                    );
+                }
             }
         }
 
@@ -691,73 +1075,97 @@ mod tests {
                 }
 
                 #[test]
-                fn flush_should_make_writes_survive_crash_only_in_commit_mode() {
-                    for (mode, expected) in
-                        [(SyncMode::Commit, vec![1, 2, 3]), (SyncMode::None, vec![])]
-                    {
+                fn flush_should_make_writes_survive_crash_by_sync_mode() {
+                    // GIVEN two flushed writes
+                    for (mode, expected) in [
+                        (SyncMode::None, vec![]),
+                        (SyncMode::Commit, vec![1, 2, 3]),
+                        (SyncMode::Strict, vec![4, 2, 3]),
+                    ] {
                         let platform = platform();
                         let mut storage = open(&platform);
                         storage.set_sync_mode(mode);
                         storage.write(0, &[1, 2, 3]).unwrap();
+                        storage.flush().unwrap();
+                        storage.write(0, &[4]).unwrap();
 
                         storage.flush().unwrap();
 
+                        // WHEN the system crashes
                         platform.fs().crash();
+
+                        // THEN nothing survives without syncs, the commit mode rolls back the last write and the strict one keeps it
                         assert_eq!(read(&open(&platform)), expected, "mode: {mode}");
                     }
                 }
 
                 #[test]
-                fn flush_should_truncate_log_only_in_commit_mode() {
-                    for (mode, truncated) in [(SyncMode::Commit, true), (SyncMode::None, false)] {
+                fn flush_should_sync_log_before_writing_file_unless_sync_mode_none() {
+                    for (mode, flushed) in [
+                        (SyncMode::None, true),
+                        (SyncMode::Commit, false),
+                        (SyncMode::Strict, false),
+                    ] {
                         let platform = platform();
-                        let mut storage = open(&platform);
+                        let mut storage = written(&platform);
                         storage.set_sync_mode(mode);
-                        storage.write(0, &[1, 2, 3]).unwrap();
+                        storage.write(0, &[4]).unwrap();
+                        platform
+                            .fs()
+                            .set_io_error(FsOp::SyncData, WAL, ErrorKind::Other);
 
-                        storage.flush().unwrap();
+                        assert_eq!(storage.flush().is_ok(), flushed, "mode: {mode}");
 
-                        assert!(storage.wal.is_empty(), "mode: {mode}");
-                        assert_eq!(
-                            platform.fs().metadata(WAL).unwrap().len == 0,
-                            truncated,
-                            "mode: {mode}"
-                        );
+                        let expected = if flushed { [4, 2, 3] } else { [1, 2, 3] };
+                        assert_eq!(read(&storage), expected, "mode: {mode}");
                     }
                 }
 
                 #[test]
                 fn flush_without_writes_should_do_nothing() {
-                    let platform = platform();
-                    let mut storage = open(&platform);
-                    storage.set_sync_mode(SyncMode::Commit);
-                    platform
-                        .fs()
-                        .set_io_error(FsOp::SyncData, "", ErrorKind::Other);
-                    platform
-                        .fs()
-                        .set_io_error(FsOp::Write, "", ErrorKind::Other);
+                    for flushed in [false, true] {
+                        let platform = platform();
+                        let mut storage = if flushed {
+                            written(&platform)
+                        } else {
+                            open(&platform)
+                        };
+                        storage.set_sync_mode(SyncMode::Strict);
+                        platform
+                            .fs()
+                            .set_io_error(FsOp::SyncData, "", ErrorKind::Other);
+                        platform
+                            .fs()
+                            .set_io_error(FsOp::Write, "", ErrorKind::Other);
 
-                    assert_eq!(storage.flush(), Ok(()));
+                        assert_eq!(storage.flush(), Ok(()), "flushed: {flushed}");
+                    }
                 }
 
                 #[test]
                 fn flush_failure_should_fail() {
-                    for (mode, op, path) in [
-                        (SyncMode::Commit, FsOp::SyncData, NAME),
-                        (SyncMode::None, FsOp::Write, WAL),
-                        (SyncMode::Commit, FsOp::SetLen, WAL),
-                        (SyncMode::Commit, FsOp::SyncData, WAL),
+                    for (mode, op, path, spilled) in [
+                        (SyncMode::None, FsOp::Write, WAL, false),
+                        (SyncMode::Commit, FsOp::SyncData, WAL, false),
+                        (SyncMode::Commit, FsOp::Write, NAME, false),
+                        (SyncMode::Commit, FsOp::SyncData, NAME, false),
+                        (SyncMode::None, FsOp::Write, WAL, true),
+                        (SyncMode::Strict, FsOp::SyncData, WAL, true),
                     ] {
                         let platform = platform();
                         let mut storage = open(&platform);
                         storage.set_sync_mode(mode);
+
+                        if spilled {
+                            storage.set_overlay_limit(0);
+                        }
+
                         storage.write(0, &[1]).unwrap();
                         platform.fs().set_io_error(op, path, ErrorKind::Other);
 
                         assert!(
                             storage.flush().is_err(),
-                            "mode: {mode}, op: {op:?}, path: {path}"
+                            "mode: {mode}, op: {op:?}, path: {path}, spilled: {spilled}"
                         );
                     }
                 }
@@ -771,6 +1179,29 @@ mod tests {
                     crate::storage::tests::storage_data::is_empty::is_empty_should_be_true_only_without_bytes(open(
                         &platform(),
                     ));
+                }
+            }
+
+            mod set_overlay_limit {
+                use super::*;
+
+                #[test]
+                fn set_overlay_limit_should_set_limit_if_supported() {
+                    crate::storage::tests::storage_data::set_overlay_limit::set_overlay_limit_should_set_limit_if_supported(
+                        open(&platform()),
+                        true,
+                    );
+                }
+            }
+
+            mod overlay_limit {
+                use super::*;
+
+                #[test]
+                fn overlay_limit_should_default_to_default_overlay_limit() {
+                    crate::storage::tests::storage_data::overlay_limit::overlay_limit_should_default_to_default_overlay_limit(
+                        open(&platform()),
+                    );
                 }
             }
 
@@ -810,6 +1241,7 @@ mod tests {
                     let platform = platform();
                     let mut storage = open(&platform);
                     storage.write(0, &[1, 2]).unwrap();
+                    storage.flush().unwrap();
 
                     storage.sync().unwrap();
 
@@ -877,6 +1309,68 @@ mod tests {
                         open(&platform()),
                     );
                 }
+
+                #[test]
+                fn read_out_of_bounds_should_report_range() {
+                    let platform = platform();
+                    let storage = written(&platform);
+
+                    assert_eq!(
+                        storage.read(1, 3),
+                        Err(DbError::storage(
+                            DbErrorType::OutOfBounds,
+                            "Read (1..4) out of bounds (3)"
+                        ))
+                    );
+                }
+
+                #[test]
+                fn read_within_held_write_should_borrow_its_bytes() {
+                    let platform = platform();
+                    let mut storage = written(&platform);
+                    storage.write(1, &[4, 5]).unwrap();
+                    platform
+                        .fs()
+                        .set_io_error(FsOp::Read, NAME, ErrorKind::Other);
+
+                    let bytes = storage.read(1, 2).unwrap();
+
+                    assert_eq!(bytes.to_vec(), vec![4, 5]);
+                }
+
+                #[test]
+                fn read_should_combine_file_and_held_writes() {
+                    let platform = platform();
+                    let mut storage = written(&platform);
+                    storage.write(1, &[9]).unwrap();
+                    storage.write(4, &[8]).unwrap();
+
+                    let bytes = storage.read(0, 5).unwrap();
+
+                    assert!(matches!(bytes, StorageSlice::Owned(_)));
+                    assert_eq!(bytes.to_vec(), vec![1, 9, 3, 0, 8]);
+                }
+
+                #[test]
+                fn read_after_shrink_should_not_return_bytes_cut_off_from_file() {
+                    let platform = platform();
+                    let mut storage = written(&platform);
+                    storage.resize(1).unwrap();
+                    storage.resize(3).unwrap();
+
+                    assert_eq!(storage.read(0, 3).unwrap().to_vec(), vec![1, 0, 0]);
+                }
+
+                #[test]
+                fn read_failure_should_fail() {
+                    let platform = platform();
+                    let storage = written(&platform);
+                    platform
+                        .fs()
+                        .set_io_error(FsOp::Read, NAME, ErrorKind::Other);
+
+                    assert!(storage.read(0, 1).is_err());
+                }
             }
 
             mod rename {
@@ -941,30 +1435,151 @@ mod tests {
                 }
 
                 #[test]
-                fn resize_failure_should_fail_without_resizing() {
-                    for (op, path, len) in [
-                        (FsOp::Read, NAME, 1),
-                        (FsOp::Write, WAL, 1),
-                        (FsOp::Write, WAL, 5),
-                        (FsOp::SetLen, NAME, 1),
-                    ] {
+                fn resize_should_hold_new_len_until_flush() {
+                    let platform = platform();
+                    let mut storage = written(&platform);
+
+                    storage.resize(5).unwrap();
+
+                    assert_eq!(storage.len(), 5);
+                    assert_eq!(read(&storage), vec![1, 2, 3]);
+                    storage.flush().unwrap();
+                    assert_eq!(read(&storage), vec![1, 2, 3, 0, 0]);
+                }
+
+                #[test]
+                fn resize_past_overlay_limit_should_write_file() {
+                    let platform = platform();
+                    let mut storage = written(&platform);
+                    storage.set_overlay_limit(0);
+
+                    storage.resize(1).unwrap();
+
+                    assert_eq!(read(&storage), vec![1]);
+                }
+
+                #[test]
+                fn resize_failure_should_fail() {
+                    for (op, path, len) in [(FsOp::Read, NAME, 1), (FsOp::Write, WAL, 5)] {
                         let platform = platform();
-                        let mut storage = open(&platform);
+                        let mut storage = spilling(&platform);
                         storage.write(0, &[1, 2, 3]).unwrap();
+                        storage.flush().unwrap();
                         platform.fs().set_io_error(op, path, ErrorKind::Other);
 
                         assert!(
                             storage.resize(len).is_err(),
                             "op: {op:?}, path: {path}, len: {len}"
                         );
-
-                        assert_eq!(storage.len(), 3, "op: {op:?}, path: {path}, len: {len}");
                     }
+                }
+
+                #[test]
+                fn resize_failure_to_read_old_bytes_should_fail_without_resizing() {
+                    let platform = platform();
+                    let mut storage = written(&platform);
+                    platform
+                        .fs()
+                        .set_io_error(FsOp::Read, NAME, ErrorKind::Other);
+
+                    assert!(storage.resize(1).is_err());
+
+                    assert_eq!(storage.len(), 3);
+                    assert_eq!(storage.wal.staged_len(), 0);
+                }
+
+                #[test]
+                fn resize_should_log_old_bytes_once_since_flush() {
+                    // GIVEN a shrink logging the bytes it cuts off
+                    let platform = platform();
+                    let mut storage = written(&platform);
+                    storage.resize(1).unwrap();
+                    let logged = storage.wal.staged_len();
+
+                    // WHEN growing and shrinking within the logged bytes
+                    storage.resize(3).unwrap();
+                    storage.resize(2).unwrap();
+
+                    // THEN nothing more is logged
+                    assert_eq!(storage.wal.staged_len(), logged);
+                    // AND recovering restores the flushed bytes
+                    storage.recover_from_wal().unwrap();
+                    assert_eq!(read(&storage), vec![1, 2, 3]);
+                }
+
+                #[test]
+                fn resize_past_len_at_flush_should_log_truncation_once() {
+                    let platform = platform();
+                    let mut storage = written(&platform);
+                    storage.resize(4).unwrap();
+                    let logged = storage.wal.staged_len();
+
+                    storage.resize(8).unwrap();
+                    storage.resize(5).unwrap();
+
+                    assert_eq!(storage.wal.staged_len(), logged);
+                    storage.recover_from_wal().unwrap();
+                    assert_eq!(read(&storage), vec![1, 2, 3]);
                 }
             }
 
             mod write {
                 use super::*;
+
+                #[test]
+                fn write_should_log_old_bytes_once_since_flush() {
+                    // GIVEN a write logging the old byte it overwrites
+                    let platform = platform();
+                    let mut storage = written(&platform);
+                    storage.write(0, &[4]).unwrap();
+                    let logged = storage.wal.staged_len();
+
+                    // WHEN overwriting it again
+                    storage.write(0, &[5]).unwrap();
+
+                    // THEN nothing more is logged
+                    assert_eq!(storage.wal.staged_len(), logged);
+                    // AND a write over the rest of the old bytes logs them
+                    storage.write(0, &[6, 6, 6]).unwrap();
+                    assert!(logged < storage.wal.staged_len());
+                    storage.recover_from_wal().unwrap();
+                    assert_eq!(read(&storage), vec![1, 2, 3]);
+                }
+
+                #[test]
+                fn write_past_len_at_flush_should_log_truncation_once() {
+                    let platform = platform();
+                    let mut storage = written(&platform);
+                    storage.write(3, &[4]).unwrap();
+                    let logged = storage.wal.staged_len();
+
+                    storage.write(4, &[5]).unwrap();
+                    storage.write(3, &[6, 7, 8]).unwrap();
+
+                    assert_eq!(storage.wal.staged_len(), logged);
+                    storage.recover_from_wal().unwrap();
+                    assert_eq!(read(&storage), vec![1, 2, 3]);
+                }
+
+                #[test]
+                fn write_after_shrink_should_roll_back_on_reopen() {
+                    for killed in [false, true] {
+                        let platform = platform();
+                        let mut storage = written(&platform);
+                        storage.set_overlay_limit(0);
+                        storage.resize(1).unwrap();
+                        storage.write(2, &[9]).unwrap();
+                        storage.write(4, &[8]).unwrap();
+
+                        if killed {
+                            kill(&platform);
+                        } else {
+                            drop(storage);
+                        }
+
+                        assert_eq!(read(&open(&platform)), vec![1, 2, 3], "killed: {killed}");
+                    }
+                }
 
                 #[test]
                 fn write_should_overwrite_and_extend() {
@@ -988,16 +1603,45 @@ mod tests {
                 }
 
                 #[test]
-                fn write_failure_should_fail_without_writing() {
+                fn write_should_hold_bytes_until_flush() {
+                    let platform = platform();
+                    let mut storage = written(&platform);
+
+                    storage.write(1, &[4, 5, 6]).unwrap();
+
+                    assert_eq!(storage.read(0, 4).unwrap().to_vec(), vec![1, 4, 5, 6]);
+                    assert_eq!(read(&storage), vec![1, 2, 3]);
+                    assert!(storage.wal.is_empty());
+                    storage.flush().unwrap();
+                    assert_eq!(read(&storage), vec![1, 4, 5, 6]);
+                }
+
+                #[test]
+                fn write_past_overlay_limit_should_write_file_keeping_log() {
+                    let platform = platform();
+                    let mut storage = written(&platform);
+                    storage.set_overlay_limit(40 + RUN_OVERHEAD);
+                    storage.write(0, &[4]).unwrap();
+                    assert_eq!(read(&storage), vec![1, 2, 3]);
+
+                    storage.write(2, &[5, 6]).unwrap();
+
+                    assert_eq!(read(&storage), vec![4, 2, 5, 6]);
+                    storage.recover_from_wal().unwrap();
+                    assert_eq!(read(&storage), vec![1, 2, 3]);
+                }
+
+                #[test]
+                fn write_failure_should_fail() {
                     for (op, path, pos) in [
                         (FsOp::Read, NAME, 0),
-                        (FsOp::Write, WAL, 0),
                         (FsOp::Write, WAL, 3),
                         (FsOp::Write, NAME, 0),
                     ] {
                         let platform = platform();
-                        let mut storage = open(&platform);
+                        let mut storage = spilling(&platform);
                         storage.write(0, &[1, 2, 3]).unwrap();
+                        storage.flush().unwrap();
                         platform.fs().set_io_error(op, path, ErrorKind::Other);
 
                         assert!(
@@ -1006,6 +1650,7 @@ mod tests {
                         );
 
                         platform.fs().clear_faults();
+                        storage.recover_from_wal().unwrap();
                         assert_eq!(
                             read(&storage),
                             vec![1, 2, 3],
@@ -1013,15 +1658,64 @@ mod tests {
                         );
                     }
                 }
+
+                #[test]
+                fn write_failure_to_read_old_bytes_should_fail_without_writing() {
+                    let platform = platform();
+                    let mut storage = written(&platform);
+                    platform
+                        .fs()
+                        .set_io_error(FsOp::Read, NAME, ErrorKind::Other);
+
+                    assert!(storage.write(0, &[4, 5]).is_err());
+
+                    assert_eq!(storage.len(), 3);
+                    assert!(!storage.is_deferring());
+                    assert_eq!(storage.wal.staged_len(), 0);
+                }
             }
 
             mod recover_from_wal {
                 use super::*;
 
                 #[test]
+                fn recover_from_wal_should_restore_flushed_bytes_after_random_changes() {
+                    let platform = platform();
+
+                    crate::storage::tests::storage_data::recover_from_wal::recover_from_wal_should_restore_flushed_bytes_after_random_changes(
+                        || open(&platform),
+                        || {
+                            platform.fs().clear_faults();
+                            platform.fs().set_capacity(None);
+                            kill(&platform);
+                        },
+                        |choice| {
+                            let fs = platform.fs();
+                            let used: u64 = [NAME, WAL]
+                                .iter()
+                                .map(|path| fs.metadata(path).map_or(0, |metadata| metadata.len))
+                                .sum();
+
+                            match choice % 3 {
+                                0 => fs.set_io_error(FsOp::Write, NAME, ErrorKind::Other),
+                                1 => fs.set_io_error(FsOp::Write, WAL, ErrorKind::Other),
+                                _ => {
+                                    fs.set_short_io(FsOp::Write, "", 8);
+                                    fs.set_capacity(Some(used + choice / 3 % 64));
+                                }
+                            }
+                        },
+                    );
+                }
+
+                #[test]
                 fn recover_from_wal_should_restore_flushed_bytes_if_logged() {
                     crate::storage::tests::storage_data::recover_from_wal::recover_from_wal_should_restore_flushed_bytes_if_logged(
                         open(&platform()),
+                        true,
+                    );
+                    crate::storage::tests::storage_data::recover_from_wal::recover_from_wal_should_restore_flushed_bytes_if_logged(
+                        spilling(&platform()),
                         true,
                     );
                 }
@@ -1030,7 +1724,7 @@ mod tests {
                 fn recover_from_wal_failure_should_fail() {
                     for (op, path) in [(FsOp::Read, WAL), (FsOp::Seek, NAME)] {
                         let platform = platform();
-                        let mut storage = open(&platform);
+                        let mut storage = spilling(&platform);
                         storage.write(0, &[1]).unwrap();
                         platform.fs().set_io_error(op, path, ErrorKind::Other);
 
@@ -1047,9 +1741,27 @@ mod tests {
             use super::*;
 
             #[test]
+            fn drop_should_make_last_flush_survive_crash_unless_sync_mode_none() {
+                for (mode, expected) in
+                    [(SyncMode::None, vec![]), (SyncMode::Commit, vec![1, 2, 3])]
+                {
+                    let platform = platform();
+                    let mut storage = open(&platform);
+                    storage.set_sync_mode(mode);
+                    storage.write(0, &[1, 2, 3]).unwrap();
+                    storage.flush().unwrap();
+
+                    drop(storage);
+
+                    platform.fs().crash();
+                    assert_eq!(read(&open(&platform)), expected, "mode: {mode}");
+                }
+            }
+
+            #[test]
             fn drop_failure_should_keep_log_for_next_open() {
                 let platform = platform();
-                let mut storage = open(&platform);
+                let mut storage = spilling(&platform);
                 storage.write(0, &[1, 2, 3]).unwrap();
                 storage.flush().unwrap();
                 storage.write(0, &[4]).unwrap();

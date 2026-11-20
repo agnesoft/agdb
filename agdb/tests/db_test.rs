@@ -826,6 +826,24 @@ fn rollback_after_replace() -> Result<(), agdb::DbError> {
 }
 
 #[test]
+fn file_db_storage_config() -> Result<(), agdb::DbError> {
+    let test_file = TestFile::new();
+    let mut db = DbFile::new(test_file.file_name())?;
+    assert_eq!(db.storage_config(), agdb::StorageConfig::default());
+    let config = agdb::StorageConfig {
+        sync_mode: agdb::SyncMode::Strict,
+        overlay_limit: 0,
+    };
+
+    db.set_storage_config(config);
+    db.exec_mut(QueryBuilder::insert().nodes().count(1).query())?;
+
+    assert_eq!(db.storage_config(), config);
+    assert_eq!(db.sync_mode(), agdb::SyncMode::Strict);
+    Ok(())
+}
+
+#[test]
 fn file_db_sync() -> Result<(), agdb::DbError> {
     let test_file = TestFile::new();
     let mut db = DbFile::new(test_file.file_name())?;

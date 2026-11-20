@@ -46,6 +46,22 @@ impl<P: Platform + Default> StorageData for AnyStorageImpl<P> {
         }
     }
 
+    fn set_overlay_limit(&mut self, limit: u64) {
+        match self {
+            Self::MemoryMapped(s) => s.set_overlay_limit(limit),
+            Self::Memory(s) => s.set_overlay_limit(limit),
+            Self::File(s) => s.set_overlay_limit(limit),
+        }
+    }
+
+    fn overlay_limit(&self) -> u64 {
+        match self {
+            Self::MemoryMapped(s) => s.overlay_limit(),
+            Self::Memory(s) => s.overlay_limit(),
+            Self::File(s) => s.overlay_limit(),
+        }
+    }
+
     fn set_sync_mode(&mut self, mode: super::SyncMode) {
         match self {
             Self::MemoryMapped(s) => s.set_sync_mode(mode),
@@ -243,6 +259,28 @@ mod tests {
                 }
             }
 
+            mod set_overlay_limit {
+                use super::*;
+
+                #[test]
+                fn set_overlay_limit_should_set_limit_if_supported() {
+                    for (storage, logged, _) in variants() {
+                        crate::storage::tests::storage_data::set_overlay_limit::set_overlay_limit_should_set_limit_if_supported(storage, logged);
+                    }
+                }
+            }
+
+            mod overlay_limit {
+                use super::*;
+
+                #[test]
+                fn overlay_limit_should_default_to_default_overlay_limit() {
+                    for (storage, _, _) in variants() {
+                        crate::storage::tests::storage_data::overlay_limit::overlay_limit_should_default_to_default_overlay_limit(storage);
+                    }
+                }
+            }
+
             mod set_sync_mode {
                 use super::*;
 
@@ -416,6 +454,11 @@ mod tests {
                     for (storage, logged, _) in variants() {
                         crate::storage::tests::storage_data::recover_from_wal::recover_from_wal_should_restore_flushed_bytes_if_logged(storage, logged);
                     }
+                }
+
+                #[test]
+                fn recover_from_wal_should_restore_flushed_bytes_after_random_changes() {
+                    // WHY: it forwards to the file storages, which are tested with it.
                 }
             }
         }

@@ -389,6 +389,29 @@ mod tests {
                 }
             }
 
+            mod set_overlay_limit {
+                use super::*;
+
+                #[test]
+                fn set_overlay_limit_should_set_limit_if_supported() {
+                    crate::storage::tests::storage_data::set_overlay_limit::set_overlay_limit_should_set_limit_if_supported(
+                        open(&platform()),
+                        false,
+                    );
+                }
+            }
+
+            mod overlay_limit {
+                use super::*;
+
+                #[test]
+                fn overlay_limit_should_default_to_default_overlay_limit() {
+                    crate::storage::tests::storage_data::overlay_limit::overlay_limit_should_default_to_default_overlay_limit(
+                        open(&platform()),
+                    );
+                }
+            }
+
             mod set_sync_mode {
                 use super::*;
 
@@ -457,6 +480,11 @@ mod tests {
                         open(&platform()),
                         false,
                     );
+                }
+
+                #[test]
+                fn recover_from_wal_should_restore_flushed_bytes_after_random_changes() {
+                    // WHY: the memory has no log to recover and nothing survives a crash.
                 }
             }
         }

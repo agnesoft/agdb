@@ -128,6 +128,7 @@ pub use {
     query_builder::where_filter::WhereFilterLogicOperator,
 };
 
+pub use db::DB_VERSION;
 pub use db::Db;
 pub use db::DbAny;
 pub use db::DbAnyTransaction;
@@ -150,6 +151,7 @@ pub use db::db_id::DbId;
 pub use db::db_key_order::DbKeyOrder;
 pub use db::db_key_order::DbKeyOrders;
 pub use db::db_key_value::DbKeyValue;
+pub use db::db_migration::DbMigration;
 #[doc(hidden)]
 pub use db::db_type::DbFields;
 pub use db::db_type::DbType;

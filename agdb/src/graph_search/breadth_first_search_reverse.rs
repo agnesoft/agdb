@@ -1,6 +1,5 @@
 use crate::StorageData;
-use crate::graph::GraphData;
-use crate::graph::GraphImpl;
+use crate::graph::DbGraph;
 use crate::graph::GraphIndex;
 use crate::graph_search::search_impl::SearchIndex;
 use crate::graph_search::search_impl::SearchIterator;
@@ -21,10 +20,10 @@ where
         }
     }
 
-    fn expand<Data: GraphData<D>>(
+    fn expand(
         &mut self,
         current_index: SearchIndex,
-        graph: &GraphImpl<D, Data>,
+        graph: &DbGraph<D>,
         storage: &Storage<D>,
         follow: bool,
     ) {

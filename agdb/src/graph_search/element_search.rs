@@ -2,32 +2,29 @@ use std::mem::swap;
 
 use crate::DbError;
 use crate::StorageData;
-use crate::graph::GraphData;
-use crate::graph::GraphImpl;
+use crate::graph::DbGraph;
 use crate::graph::GraphIndex;
 use crate::graph_search::SearchControl;
 use crate::graph_search::SearchHandler;
 use crate::storage::Storage;
 
-pub struct ElementSearch<'a, D, Data, Handler>
+pub struct ElementSearch<'a, D, Handler>
 where
-    Data: GraphData<D>,
     D: StorageData,
     Handler: SearchHandler,
 {
-    graph: &'a GraphImpl<D, Data>,
+    graph: &'a DbGraph<D>,
     storage: &'a Storage<D>,
     handler: Handler,
     result: Vec<GraphIndex>,
 }
 
-impl<'a, D, Data, Handler> ElementSearch<'a, D, Data, Handler>
+impl<'a, D, Handler> ElementSearch<'a, D, Handler>
 where
-    Data: GraphData<D>,
     D: StorageData,
     Handler: SearchHandler,
 {
-    pub fn new(graph: &'a GraphImpl<D, Data>, storage: &'a Storage<D>, handler: Handler) -> Self {
+    pub fn new(graph: &'a DbGraph<D>, storage: &'a Storage<D>, handler: Handler) -> Self {
         Self {
             graph,
             storage,

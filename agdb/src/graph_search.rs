@@ -16,8 +16,7 @@ use self::path_search::PathSearchHandler;
 use self::search_impl::SearchImpl;
 use crate::DbError;
 use crate::StorageData;
-use crate::graph::GraphData;
-use crate::graph::GraphImpl;
+use crate::graph::DbGraph;
 use crate::graph::GraphIndex;
 use crate::graph_search::element_search::ElementSearch;
 use crate::storage::Storage;
@@ -33,18 +32,16 @@ pub trait SearchHandler {
     fn process(&mut self, index: GraphIndex, distance: u64) -> Result<SearchControl, DbError>;
 }
 
-pub struct GraphSearch<'a, D, Data>
+pub struct GraphSearch<'a, D>
 where
-    Data: GraphData<D>,
     D: StorageData,
 {
-    graph: &'a GraphImpl<D, Data>,
+    graph: &'a DbGraph<D>,
     storage: &'a Storage<D>,
 }
 
-impl<'a, D, Data> GraphSearch<'a, D, Data>
+impl<'a, D> GraphSearch<'a, D>
 where
-    Data: GraphData<D>,
     D: StorageData,
 {
     pub fn breadth_first_search<Handler: SearchHandler>(
@@ -53,7 +50,7 @@ where
         handler: Handler,
     ) -> Result<Vec<GraphIndex>, DbError> {
         if self.is_valid_index(index) {
-            SearchImpl::<'a, D, Data, BreadthFirstSearch>::new(self.graph, self.storage, index)
+            SearchImpl::<'a, D, BreadthFirstSearch>::new(self.graph, self.storage, index)
                 .search(handler)
         } else {
             Ok(vec![])
@@ -66,12 +63,8 @@ where
         handler: Handler,
     ) -> Result<Vec<GraphIndex>, DbError> {
         if self.is_valid_index(index) {
-            SearchImpl::<'a, D, Data, BreadthFirstSearchReverse>::new(
-                self.graph,
-                self.storage,
-                index,
-            )
-            .search(handler)
+            SearchImpl::<'a, D, BreadthFirstSearchReverse>::new(self.graph, self.storage, index)
+                .search(handler)
         } else {
             Ok(vec![])
         }
@@ -83,7 +76,7 @@ where
         handler: Handler,
     ) -> Result<Vec<GraphIndex>, DbError> {
         if self.is_valid_index(index) {
-            SearchImpl::<'a, D, Data, DepthFirstSearch>::new(self.graph, self.storage, index)
+            SearchImpl::<'a, D, DepthFirstSearch>::new(self.graph, self.storage, index)
                 .search(handler)
         } else {
             Ok(vec![])
@@ -96,7 +89,7 @@ where
         handler: Handler,
     ) -> Result<Vec<GraphIndex>, DbError> {
         if self.is_valid_index(index) {
-            SearchImpl::<'a, D, Data, DepthFirstSearchReverse>::new(self.graph, self.storage, index)
+            SearchImpl::<'a, D, DepthFirstSearchReverse>::new(self.graph, self.storage, index)
                 .search(handler)
         } else {
             Ok(vec![])
@@ -110,8 +103,7 @@ where
         handler: Handler,
     ) -> Result<Vec<GraphIndex>, DbError> {
         if from != to && self.is_valid_node(from) && self.is_valid_node(to) {
-            PathSearch::<D, Data, Handler>::new(self.graph, self.storage, from, to, handler)
-                .search()
+            PathSearch::<D, Handler>::new(self.graph, self.storage, from, to, handler).search()
         } else {
             Ok(vec![])
         }
@@ -124,7 +116,7 @@ where
         handler: Handler,
     ) -> Result<Vec<GraphIndex>, DbError> {
         if from != to && self.is_valid_node(from) && self.is_valid_node(to) {
-            PathSearch::<D, Data, Handler>::new_reverse(self.graph, self.storage, from, to, handler)
+            PathSearch::<D, Handler>::new_reverse(self.graph, self.storage, from, to, handler)
                 .search()
         } else {
             Ok(vec![])
@@ -135,7 +127,7 @@ where
         &self,
         handler: Handler,
     ) -> Result<Vec<GraphIndex>, DbError> {
-        ElementSearch::<D, Data, Handler>::new(self.graph, self.storage, handler).search()
+        ElementSearch::<D, Handler>::new(self.graph, self.storage, handler).search()
     }
 
     fn is_valid_index(&self, index: GraphIndex) -> bool {
@@ -147,12 +139,11 @@ where
     }
 }
 
-impl<'a, D, Data> From<(&'a GraphImpl<D, Data>, &'a Storage<D>)> for GraphSearch<'a, D, Data>
+impl<'a, D> From<(&'a DbGraph<D>, &'a Storage<D>)> for GraphSearch<'a, D>
 where
-    Data: GraphData<D>,
     D: StorageData,
 {
-    fn from(graph_storage: (&'a GraphImpl<D, Data>, &'a Storage<D>)) -> Self {
+    fn from(graph_storage: (&'a DbGraph<D>, &'a Storage<D>)) -> Self {
         GraphSearch {
             graph: graph_storage.0,
             storage: graph_storage.1,

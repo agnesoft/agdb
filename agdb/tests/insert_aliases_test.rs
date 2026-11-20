@@ -60,8 +60,51 @@ fn insert_aliases_rollback() {
 }
 
 #[test]
+fn insert_aliases_moved_alias_rollback() {
+    let mut db = TestDb::new();
+    db.exec_mut(
+        QueryBuilder::insert().nodes().aliases(["a", "b"]).query(),
+        2,
+    );
+    db.transaction_mut_error(
+        |t| -> Result<(), DbError> {
+            t.exec_mut(QueryBuilder::insert().aliases("a").ids(2).query())?;
+            t.exec(QueryBuilder::select().ids("missing").query())?;
+            Ok(())
+        },
+        DbError::db(DbErrorType::NotFound, "Alias 'missing' not found"),
+    );
+
+    db.exec_ids(QueryBuilder::select().ids(["a", "b"]).query(), &[1, 2]);
+}
+
+#[test]
+fn insert_aliases_edge() {
+    let mut db = TestDb::new();
+    db.exec_mut(QueryBuilder::insert().nodes().count(2).query(), 2);
+    db.exec_mut(QueryBuilder::insert().edges().from(1).to(2).query(), 1);
+    db.exec_mut_error(
+        QueryBuilder::insert().aliases("edge").ids(-3).query(),
+        "Edges cannot have aliases: 'edge' on '-3'",
+    );
+    db.exec_error(
+        QueryBuilder::select().ids("edge").query(),
+        "Alias 'edge' not found",
+    );
+}
+
+#[test]
+fn insert_aliases_same_alias() {
+    let mut db = TestDb::new();
+    db.exec_mut(QueryBuilder::insert().nodes().aliases("a").query(), 1);
+    db.exec_mut(QueryBuilder::insert().aliases("a").ids(1).query(), 1);
+    db.exec_ids(QueryBuilder::select().ids("a").query(), &[1]);
+}
+
+#[test]
 fn insert_aliases_empty_alias() {
     let mut db = TestDb::new();
+    db.exec_mut(QueryBuilder::insert().nodes().count(1).query(), 1);
     db.exec_mut_error(
         QueryBuilder::insert().aliases(String::new()).ids(1).query(),
         "Empty alias is not allowed",

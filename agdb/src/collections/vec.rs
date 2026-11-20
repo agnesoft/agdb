@@ -284,11 +284,6 @@ where
         self.data.len()
     }
 
-    #[allow(dead_code)]
-    pub fn is_empty(&self) -> bool {
-        self.len() == 0
-    }
-
     pub fn iter<'a>(&'a self, storage: &'a Storage<D>) -> VecIterator<'a, T, D, Data, E> {
         VecIterator {
             index: 0,
@@ -594,18 +589,6 @@ mod tests {
 
                 assert_eq!(strings(&mut storage, &[]).len(), 0);
                 assert_eq!(strings(&mut storage, &["a", "b", "c"]).len(), 3);
-            }
-        }
-
-        mod is_empty {
-            use super::*;
-
-            #[test]
-            fn is_empty_should_be_true_only_without_values() {
-                let mut storage = storage();
-
-                assert!(strings(&mut storage, &[]).is_empty());
-                assert!(!strings(&mut storage, &["a"]).is_empty());
             }
         }
 

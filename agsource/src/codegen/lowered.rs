@@ -16,6 +16,8 @@ pub enum Ty {
     Str,
     List(Box<Ty>),
     Option(Box<Ty>),
+    /// `Result<T, E>`.
+    Result(Box<Ty>, Box<Ty>),
     Tuple(Vec<Ty>),
     Named(String, Vec<Ty>),
     Param(String),
@@ -60,6 +62,7 @@ impl Ty {
             Ty::List(inner) => Ty::List(Box::new(inner.map(f))),
             Ty::Option(inner) => Ty::Option(Box::new(inner.map(f))),
             Ty::Ref(inner) => Ty::Ref(Box::new(inner.map(f))),
+            Ty::Result(ok, err) => Ty::Result(Box::new(ok.map(f)), Box::new(err.map(f))),
             Ty::Tuple(items) => Ty::Tuple(items.iter().map(|t| t.map(f)).collect()),
             Ty::Named(name, args) => {
                 Ty::Named(name.clone(), args.iter().map(|t| t.map(f)).collect())
@@ -85,6 +88,7 @@ impl Ty {
             Ty::List(inner) | Ty::Option(inner) | Ty::Ref(inner) | Ty::Dict(_, inner) => {
                 inner.mentions(param)
             }
+            Ty::Result(ok, err) => ok.mentions(param) || err.mentions(param),
             Ty::Tuple(items) | Ty::Named(_, items) => items.iter().any(|t| t.mentions(param)),
             _ => false,
         }
@@ -122,8 +126,8 @@ pub enum Callee {
     /// An unresolved call of `a::b::c(..)` with the type arguments of the
     /// path.
     Path(Vec<String>, Vec<Ty>),
-    /// An unresolved method call by name.
-    Method(String),
+    /// An unresolved method call by name with the types of its turbofish.
+    Method(String, Vec<Ty>),
     /// A method of a class or enum of the module.
     Member {
         class: String,
@@ -139,6 +143,8 @@ pub enum Callee {
     Trait {
         trait_: String,
         name: String,
+        /// The types of the turbofish.
+        types: Vec<Ty>,
     },
     Intrinsic(Intrinsic),
     /// A function the target runtime provides.
@@ -161,6 +167,10 @@ pub enum Intrinsic {
     MemSwap,
     IterForEach,
     Map,
+    /// `Result::map`: the closure of the args applied to the value.
+    MapOk,
+    /// `str::starts_with`.
+    StartsWith,
     /// `assert_eq!(left, right)`, the args.
     AssertEq,
 }
@@ -270,6 +280,16 @@ pub enum K {
         params: Vec<String>,
         body: Vec<Expr>,
     },
+    /// `value.await`.
+    Await(Box<Expr>),
+    /// `value?` on a `Result`.
+    Try(Box<Expr>),
+    /// `format!`: the string of the pieces, a piece that is no string by its
+    /// `Display`.
+    Format(Vec<Expr>),
+    /// Raises the error of a `Result`, made by
+    /// [`ThrowErrors`](super::pass::ThrowErrors).
+    Throw(Box<Expr>),
     Panic(String),
     /// A construct the lowered IR does not have.
     Unsupported(String),
@@ -374,7 +394,15 @@ impl Expr {
                 out.push(l);
                 out.push(r);
             }
-            K::Not(e) | K::Ref(e) | K::Deref(e) | K::Cast(e) | K::Fields(e) => out.push(e),
+            K::Not(e)
+            | K::Ref(e)
+            | K::Deref(e)
+            | K::Cast(e)
+            | K::Fields(e)
+            | K::Await(e)
+            | K::Try(e)
+            | K::Throw(e) => out.push(e),
+            K::Format(pieces) => out.extend(pieces.iter_mut()),
             K::Closure { body, .. } => out.extend(body.iter_mut()),
             K::Ident(_)
             | K::Local(_)
@@ -443,6 +471,8 @@ pub struct Func {
     pub params: Vec<(String, Ty)>,
     pub ret: Ty,
     pub body: Vec<Expr>,
+    /// `async fn`: [`Func::ret`] is the output of its future.
+    pub is_async: bool,
     /// Not `pub`.
     pub private: bool,
     /// None for the functions the passes make.
@@ -482,6 +512,7 @@ impl Func {
             params,
             ret,
             body,
+            is_async: false,
             private: false,
             at: None,
             errors: Vec::new(),
@@ -602,8 +633,11 @@ pub struct Module {
     pub conversions: Vec<Conversion>,
     /// The classes of the builder API in the order they were found.
     pub builders: Vec<String>,
-    /// The method signatures of the traits.
+    /// The method signatures of the traits, with the bodies of the
+    /// provided methods.
     pub traits: BTreeMap<String, Vec<Func>>,
+    /// The supertraits of the traits of the module.
+    pub supertraits: BTreeMap<String, Vec<String>>,
     /// The functions the passes make, such as conversions.
     pub functions: Vec<Func>,
     /// The `Default` values of types.
@@ -705,8 +739,9 @@ impl Module {
     }
 
     /// Every function: the methods of classes and their trait impls, of
-    /// enums, the functions of the module and the tests, with the name of
-    /// their type ("" for the functions of the module and the tests).
+    /// enums, the provided methods of the traits, the functions of the
+    /// module and the tests, with the name of their type or trait ("" for
+    /// the functions of the module and the tests).
     pub fn for_each_func(&mut self, f: &mut dyn FnMut(&mut Func, &str)) {
         for (name, c) in self.classes.iter_mut() {
             for func in c
@@ -724,6 +759,12 @@ impl Module {
             }
         }
 
+        for (name, funcs) in self.traits.iter_mut() {
+            for func in funcs.iter_mut().filter(|func| !func.body.is_empty()) {
+                f(func, name);
+            }
+        }
+
         for func in self.functions.iter_mut().chain(self.tests.iter_mut()) {
             f(func, "");
         }
@@ -735,7 +776,11 @@ impl Module {
         let map_func = |func: &mut Func| func.map_types(f);
 
         self.for_each_func(&mut |func, _| map_func(func));
-        self.traits.values_mut().flatten().for_each(map_func);
+        self.traits
+            .values_mut()
+            .flatten()
+            .filter(|func| func.body.is_empty())
+            .for_each(map_func);
         self.classes
             .values_mut()
             .flat_map(|c| c.fields.iter_mut())
@@ -880,7 +925,7 @@ mod tests {
                 index: b(2),
             },
             K::Call {
-                callee: Callee::Method("m".into()),
+                callee: Callee::Method("m".into(), Vec::new()),
                 recv: Some(b(1)),
                 args: vec![lit(2)],
             },
@@ -972,6 +1017,25 @@ mod tests {
                 assert_eq!(
                     print::ty(&mapped),
                     "(Vec<str>, Option<str>, &str, B, dyn Tr<str>)"
+                );
+            }
+        }
+
+        mod mentions {
+            use super::*;
+
+            #[test]
+            fn mentions_should_find_the_parameter_within_the_type() {
+                let result = |ok, err| Ty::Result(Box::new(ok), Box::new(err));
+                let t = || Ty::Param("T".into());
+
+                assert_eq!(
+                    [
+                        result(Ty::Bool, t()).mentions("T"),
+                        result(t(), Ty::Bool).mentions("T"),
+                        result(Ty::Bool, Ty::Bool).mentions("T"),
+                    ],
+                    [true, true, false]
                 );
             }
         }

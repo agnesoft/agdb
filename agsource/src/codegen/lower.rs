@@ -70,6 +70,21 @@ impl SourceCrate {
 }
 
 impl SourceCrate {
+    /// The client API of this crate, an API crate of `source` whose
+    /// library is `name` in its paths: the builders are its exported structs
+    /// generic over a trait of the crate (the transport) and the structs
+    /// without serde they reach; the traits are the exported ones, those
+    /// bounding the builders' generics and their supertraits. A struct
+    /// implementing an exported trait is left to the target, and the serde
+    /// types the module reaches are data. The exported consts are the
+    /// module's.
+    pub fn lower_client(&self, source: &SourceCrate, name: &str) -> (Module, Vec<Error>) {
+        let mut lower = Lower::new(self, &[]);
+        lower.source = Some((source, name.to_owned()));
+        lower.client();
+        (lower.m, lower.errors)
+    }
+
     /// The exported serde types of this crate, an API crate of `source`
     /// whose library is `name` in its paths, into `m` lowered from `source`.
     /// A path of `source` is its item in `m`.
@@ -90,6 +105,8 @@ struct Lower<'a> {
     /// The (type, impl) of the `From` impls in the order of the source.
     from_impls: Vec<(ItemId, ItemId)>,
     default_impls: HashMap<ItemId, ItemId>,
+    /// The `Display` impls by type.
+    display_impls: HashMap<ItemId, ItemId>,
     items: HashMap<ItemId, Option<ir::Item>>,
     names: HashMap<String, ItemId>,
     builders: HashSet<ItemId>,
@@ -100,6 +117,8 @@ struct Lower<'a> {
     m: Module,
     /// The crate a test crate tests, with its name in the paths.
     source: Option<(&'a SourceCrate, String)>,
+    /// The destructuring temporaries of the function.
+    temps: usize,
 }
 
 impl<'a> Lower<'a> {
@@ -108,6 +127,7 @@ impl<'a> Lower<'a> {
         let mut trait_impls: HashMap<ItemId, Vec<(ItemId, ItemId)>> = HashMap::new();
         let mut from_impls = Vec::new();
         let mut default_impls = HashMap::new();
+        let mut display_impls = HashMap::new();
 
         for id in c.item_ids() {
             let syn::Item::Impl(i) = c.item(id) else {
@@ -132,6 +152,9 @@ impl<'a> Lower<'a> {
                     Resolved::External(p) if p.ends_with(&["default".into(), "Default".into()]) => {
                         default_impls.insert(ty, id);
                     }
+                    Resolved::External(p) if p.ends_with(&["fmt".into(), "Display".into()]) => {
+                        display_impls.insert(ty, id);
+                    }
                     _ => {}
                 },
             }
@@ -143,6 +166,7 @@ impl<'a> Lower<'a> {
             trait_impls,
             from_impls,
             default_impls,
+            display_impls,
             items: HashMap::new(),
             names: HashMap::new(),
             builders: HashSet::new(),
@@ -152,6 +176,7 @@ impl<'a> Lower<'a> {
             errors: Vec::new(),
             m: Module::default(),
             source: None,
+            temps: 0,
         }
     }
 
@@ -302,6 +327,82 @@ impl<'a> Lower<'a> {
 
         for id in clashes {
             self.error(id, "a type of the source crate has the name".into());
+        }
+    }
+
+    fn client(&mut self) {
+        let mut exported: Vec<ItemId> = self
+            .c
+            .exports()
+            .iter()
+            .filter_map(|e| match e.target() {
+                Resolved::Item(id) => Some(*id),
+                _ => None,
+            })
+            .collect();
+        exported.sort();
+        exported.dedup();
+        let traits: Vec<ItemId> = exported
+            .iter()
+            .copied()
+            .filter(|id| matches!(self.c.item(*id), syn::Item::Trait(_)))
+            .collect();
+        let implementors: HashSet<ItemId> = self
+            .c
+            .item_ids()
+            .filter_map(|id| {
+                let syn::Item::Impl(i) = self.c.item(id) else {
+                    return None;
+                };
+                let (path, _) = i.trait_.as_ref()?;
+                let Resolved::Item(t) = self.c.resolve(id.module, path, Namespace::Type) else {
+                    return None;
+                };
+                let syn::Type::Path(ty) = &*i.self_ty else {
+                    return None;
+                };
+
+                match self.c.resolve(id.module, &ty.path, Namespace::Type) {
+                    Resolved::Item(ty) if traits.contains(&t) => Some(ty),
+                    _ => None,
+                }
+            })
+            .collect();
+        let mut pending = traits.clone();
+
+        for id in exported {
+            match self.c.item(id) {
+                syn::Item::Struct(_) if !implementors.contains(&id) => {
+                    let bounds = self.bounding_traits(id);
+
+                    if !bounds.is_empty() {
+                        pending.extend(bounds);
+                        self.builders.insert(id);
+                        self.queue.push(id);
+                        self.drain();
+                    }
+                }
+                syn::Item::Const(_) => self.load_const(id),
+                _ => {}
+            }
+        }
+
+        // The structs the clients reach without a wire form are classes.
+        let classes: Vec<String> = self
+            .m
+            .classes
+            .keys()
+            .filter(|n| !self.m.wire.contains_key(*n) && !self.m.builders.contains(n))
+            .cloned()
+            .collect();
+        self.m.builders.extend(classes);
+
+        let mut loaded = HashSet::new();
+
+        while let Some(t) = pending.pop() {
+            if loaded.insert(t) {
+                pending.extend(self.load_trait(t));
+            }
         }
     }
 
@@ -666,6 +767,8 @@ impl<'a> Lower<'a> {
             methods.extend(self.impl_methods(i, builder));
         }
 
+        methods.extend(self.display(id));
+
         let mut trait_impls: std::collections::BTreeMap<String, Vec<Func>> = Default::default();
 
         for (t, i) in self.trait_impls.get(&id).cloned().unwrap_or_default() {
@@ -693,6 +796,39 @@ impl<'a> Lower<'a> {
                 self.func(&f.sig, Some(&f.body), private, at, follow)
             })
             .collect()
+    }
+
+    /// The `Display` impl of the type as its `to_string`: writing a string
+    /// or a `format!` to the formatter is that string.
+    fn display(&mut self, id: ItemId) -> Option<Func> {
+        let impl_ = *self.display_impls.get(&id)?;
+        let (_, f, at) = self
+            .impl_fns(impl_)
+            .into_iter()
+            .find(|(_, f, _)| f.sig.name == "fmt")?;
+        let mut func = self.func(&f.sig, Some(&f.body), false, at, false);
+        let formatter = func
+            .params
+            .first()
+            .map(|(n, _)| n.clone())
+            .unwrap_or_default();
+        func.name = "to_string".into();
+        func.params.clear();
+        func.ret = Ty::Str;
+        rewrite_body(&mut func.body, &mut |e| {
+            if let K::Call {
+                callee: Callee::Method(m, _),
+                recv: Some(r),
+                args,
+            } = &mut e.k
+                && (m == "write_str" || m == "write_fmt")
+                && matches!(&r.k, K::Local(n) if *n == formatter)
+                && args.len() == 1
+            {
+                *e = args.remove(0);
+            }
+        });
+        Some(func)
     }
 
     fn load_enum(&mut self, id: ItemId) {
@@ -752,12 +888,14 @@ impl<'a> Lower<'a> {
             methods.extend(self.impl_methods(i, false));
         }
 
+        methods.extend(self.display(id));
         let e = self.m.enums.get_mut(&name).expect("inserted above");
         e.variants = variants;
         e.methods = methods;
     }
 
-    fn load_trait(&mut self, id: ItemId) {
+    /// Loads the trait, returning the supertraits of the crate.
+    fn load_trait(&mut self, id: ItemId) -> Vec<ItemId> {
         let name = self.name(id);
         let (
             Some(ir::Item {
@@ -767,8 +905,25 @@ impl<'a> Lower<'a> {
             syn::Item::Trait(syn_trait),
         ) = (self.item(id), self.c.item(id))
         else {
-            return;
+            return Vec::new();
         };
+        let supertraits: Vec<ItemId> = t
+            .supertraits
+            .iter()
+            .filter_map(|b| match b {
+                ir::Bound::Trait(ir::Path {
+                    target: Target::Resolved(Resolved::Item(s)),
+                    ..
+                }) if matches!(self.c.item(*s), syn::Item::Trait(_)) => Some(*s),
+                _ => None,
+            })
+            .collect();
+
+        if !supertraits.is_empty() {
+            let names = supertraits.iter().map(|s| self.name(*s)).collect();
+            self.m.supertraits.insert(name.clone(), names);
+        }
+
         let locations: Vec<Location> = syn_trait
             .items
             .iter()
@@ -789,6 +944,7 @@ impl<'a> Lower<'a> {
             .collect();
 
         self.m.traits.insert(name, fns);
+        supertraits
     }
 
     /// The `From` impl into a type of the module. Left out are the impls
@@ -1068,6 +1224,7 @@ impl<'a> Lower<'a> {
             .as_ref()
             .map(|t| self.ty(t, follow))
             .unwrap_or(Ty::Unit);
+        self.temps = 0;
         let body = body.map(|b| self.block(b)).unwrap_or_default();
 
         Func {
@@ -1077,6 +1234,7 @@ impl<'a> Lower<'a> {
             params,
             ret,
             body,
+            is_async: sig.asyncness,
             private,
             at: Some(at),
             errors: std::mem::take(&mut self.fn_errors),
@@ -1193,6 +1351,11 @@ impl<'a> Lower<'a> {
                 match p.iter().map(String::as_str).collect::<Vec<_>>().as_slice() {
                     [_, "vec", "Vec"] => Ty::List(first(args)),
                     [_, "option", "Option"] => Ty::Option(first(args)),
+                    [_, "result", "Result"] => {
+                        let mut args = args.into_iter();
+                        let ok = args.next().unwrap_or(Ty::Unknown);
+                        Ty::Result(Box::new(ok), Box::new(args.next().unwrap_or(Ty::Unknown)))
+                    }
                     [_, "string", "String"] => Ty::Str,
                     _ => Ty::Unknown,
                 }
@@ -1202,7 +1365,20 @@ impl<'a> Lower<'a> {
                     Some(ir::Item {
                         kind: ir::ItemKind::TypeAlias(alias),
                         ..
-                    }) => self.ty(&alias.ty, follow),
+                    }) => {
+                        let params: Vec<(String, Ty)> = alias
+                            .generics
+                            .params
+                            .iter()
+                            .filter_map(|p| match p {
+                                ir::GenericParam::Type { name, .. } => Some(name.clone()),
+                                _ => None,
+                            })
+                            .zip(args)
+                            .collect();
+                        let ty = self.ty(&alias.ty, follow);
+                        super::pass::subst(&ty, &Ty::SelfTy, &params)
+                    }
                     _ => Ty::Unknown,
                 },
                 _ => {
@@ -1251,31 +1427,92 @@ impl<'a> Lower<'a> {
     }
 
     fn block(&mut self, b: &ir::Block) -> Vec<Expr> {
-        b.stmts.iter().map(|s| self.stmt(s)).collect()
+        let mut out = Vec::new();
+
+        for s in &b.stmts {
+            self.stmt(s, &mut out);
+        }
+
+        out
     }
 
-    fn stmt(&mut self, s: &ir::Stmt) -> Expr {
+    fn stmt(&mut self, s: &ir::Stmt, out: &mut Vec<Expr>) {
         match s {
             ir::Stmt::Let {
                 diverge: Some(_), ..
-            } => Expr::new(self.unsupported("`let`-`else`")),
-            ir::Stmt::Let { pat, init, .. } => match binding(pat) {
-                Some(name) => {
+            } => out.push(Expr::new(self.unsupported("`let`-`else`"))),
+            ir::Stmt::Let { pat, init, .. } => match (binding(pat), init) {
+                (Some(name), init) => {
                     let ty = match pat {
                         ir::Pat::Type { ty, .. } => self.ty(ty, false),
                         _ => Ty::Unknown,
                     };
                     let value = init.as_ref().map(|v| Expr { ty, ..self.expr(v) });
-                    Expr::new(K::Let {
+                    out.push(Expr::new(K::Let {
                         name,
                         value: value.map(Expr::boxed),
-                    })
+                    }));
                 }
-                None => Expr::new(self.unsupported("a destructuring `let`")),
+                (None, Some(init)) => {
+                    let value = self.expr(init);
+                    self.destructure(pat, value, out);
+                }
+                (None, None) => out.push(Expr::new(self.unsupported("a destructuring `let`"))),
             },
-            ir::Stmt::Item(_) => Expr::new(self.unsupported("an item in a body")),
-            ir::Stmt::Expr { expr, .. } => self.expr(expr),
+            ir::Stmt::Item(_) => out.push(Expr::new(self.unsupported("an item in a body"))),
+            ir::Stmt::Expr { expr, .. } => out.push(self.expr(expr)),
         }
+    }
+
+    /// The `let`s binding the names of a tuple pattern to the elements of
+    /// `value`, through a temporary unless it is a local.
+    fn destructure(&mut self, pat: &ir::Pat, mut value: Expr, out: &mut Vec<Expr>) {
+        match pat {
+            ir::Pat::Binding {
+                name, subpat: None, ..
+            } => out.push(Expr::new(K::Let {
+                name: name.clone(),
+                value: Some(value.boxed()),
+            })),
+            ir::Pat::Type { pat, ty } => {
+                value.ty = self.ty(ty, false);
+                self.destructure(pat, value, out);
+            }
+            ir::Pat::Paren(pat) => self.destructure(pat, value, out),
+            ir::Pat::Wild => {
+                if !matches!(value.k, K::Local(_) | K::Field { .. }) {
+                    out.push(value);
+                }
+            }
+            ir::Pat::Tuple(items) => {
+                let base = match value.k {
+                    K::Local(_) => value,
+                    _ => {
+                        let name = self.temp();
+                        out.push(Expr::new(K::Let {
+                            name: name.clone(),
+                            value: Some(value.boxed()),
+                        }));
+                        Expr::new(K::Local(name))
+                    }
+                };
+
+                for (i, item) in items.iter().enumerate() {
+                    let element = Expr::new(K::Field {
+                        base: base.clone().boxed(),
+                        name: i.to_string(),
+                    });
+                    self.destructure(item, element, out);
+                }
+            }
+            _ => out.push(Expr::new(self.unsupported("a destructuring `let`"))),
+        }
+    }
+
+    /// A local for a destructured value, unique in the function.
+    fn temp(&mut self) -> String {
+        self.temps += 1;
+        format!("tuple{}", self.temps)
     }
 
     /// A block or `if` of an `else` or an arm as statements.
@@ -1333,15 +1570,22 @@ impl<'a> Lower<'a> {
                 _ => self.unsupported("a call of an expression"),
             },
             ir::Expr::Closure(c) => {
-                let params: Option<Vec<String>> = c.inputs.iter().map(binding).collect();
+                let mut params = Vec::new();
+                let mut body = Vec::new();
 
-                match params {
-                    Some(params) => K::Closure {
-                        params,
-                        body: self.stmts(&c.body),
-                    },
-                    None => self.unsupported("a closure parameter pattern"),
+                for p in &c.inputs {
+                    match binding(p) {
+                        Some(name) => params.push(name),
+                        None => {
+                            let name = self.temp();
+                            self.destructure(p, Expr::new(K::Local(name.clone())), &mut body);
+                            params.push(name);
+                        }
+                    }
                 }
+
+                body.extend(self.stmts(&c.body));
+                K::Closure { params, body }
             }
             ir::Expr::Field { expr, member } => K::Field {
                 base: self.expr(expr).boxed(),
@@ -1376,10 +1620,19 @@ impl<'a> Lower<'a> {
             ir::Expr::MethodCall {
                 receiver,
                 method,
+                turbofish,
                 args,
-                ..
             } => K::Call {
-                callee: Callee::Method(method.clone()),
+                callee: Callee::Method(
+                    method.clone(),
+                    turbofish
+                        .iter()
+                        .filter_map(|a| match a {
+                            ir::GenericArg::Type(t) => Some(self.ty(t, false)),
+                            _ => None,
+                        })
+                        .collect(),
+                ),
                 recv: Some(self.expr(receiver).boxed()),
                 args: self.exprs(args),
             },
@@ -1419,7 +1672,7 @@ impl<'a> Lower<'a> {
                 body: self.block(body),
             },
             ir::Expr::Async { .. } => self.unsupported("`async`"),
-            ir::Expr::Await(_) => self.unsupported("`.await`"),
+            ir::Expr::Await(value) => K::Await(self.expr(value).boxed()),
             ir::Expr::Break => self.unsupported("`break`"),
             ir::Expr::Cast { expr, ty } => {
                 let value = self.expr(expr).boxed();
@@ -1433,7 +1686,7 @@ impl<'a> Lower<'a> {
             ir::Expr::Qualified(_) => self.unsupported("a qualified path"),
             ir::Expr::Range { .. } => self.unsupported("a range"),
             ir::Expr::Repeat { .. } => self.unsupported("`[x; n]`"),
-            ir::Expr::Try(_) => self.unsupported("`?`"),
+            ir::Expr::Try(value) => K::Try(self.expr(value).boxed()),
         };
 
         Expr::new(k)
@@ -1457,6 +1710,26 @@ impl<'a> Lower<'a> {
                 recv: None,
                 args: self.exprs(exprs),
             },
+            ir::MacroCall::Format {
+                exprs,
+                format: Some(format),
+            } if name == "format" && exprs.is_empty() => K::Format(self.format(format)),
+            ir::MacroCall::Format {
+                exprs,
+                format: Some(format),
+            } if (name == "write" || name == "writeln") && exprs.len() == 1 => {
+                let mut pieces = self.format(format);
+
+                if name == "writeln" {
+                    pieces.push(Expr::new(K::Lit(Lit::Str("\n".into()))));
+                }
+
+                K::Call {
+                    callee: Callee::Method("write_fmt".into(), Vec::new()),
+                    recv: Some(self.expr(&exprs[0]).boxed()),
+                    args: vec![Expr::new(K::Format(pieces))],
+                }
+            }
             ir::MacroCall::Format { format, .. } if name == "panic" => K::Panic(
                 format
                     .as_ref()
@@ -1465,6 +1738,74 @@ impl<'a> Lower<'a> {
             ),
             _ => self.unsupported(&format!("`{name}!`")),
         }
+    }
+
+    /// The pieces of a format string: its text and its arguments. An
+    /// argument with a format spec is unsupported.
+    fn format(&mut self, f: &ir::FormatArgs) -> Vec<Expr> {
+        let mut pieces = Vec::new();
+        let mut text = String::new();
+        let mut chars = f.string.chars().peekable();
+        let mut next = 0;
+
+        while let Some(c) = chars.next() {
+            if (c == '{' || c == '}') && chars.peek() == Some(&c) {
+                chars.next();
+                text.push(c);
+                continue;
+            }
+
+            if c != '{' {
+                text.push(c);
+                continue;
+            }
+
+            let mut spec = String::new();
+
+            for c in chars.by_ref() {
+                if c == '}' {
+                    break;
+                }
+
+                spec.push(c);
+            }
+
+            if !text.is_empty() {
+                pieces.push(Expr::new(K::Lit(Lit::Str(std::mem::take(&mut text)))));
+            }
+
+            let arg = match spec.as_str() {
+                "" => {
+                    next += 1;
+                    f.args.get(next - 1).map(|a| self.expr(&a.expr))
+                }
+                s if s.contains(':') => None,
+                s => match s.parse::<usize>() {
+                    Ok(i) => f.args.get(i).map(|a| self.expr(&a.expr)),
+                    Err(_) => f
+                        .args
+                        .iter()
+                        .find(|a| a.name.as_deref() == Some(s))
+                        .map(|a| self.expr(&a.expr))
+                        .or_else(|| {
+                            f.captures
+                                .iter()
+                                .find(|p| p.segments.len() == 1 && p.segments[0].name == s)
+                                .map(|p| Expr::new(self.path_expr(p)))
+                        }),
+                },
+            };
+            let arg = arg.unwrap_or_else(|| {
+                Expr::new(self.unsupported(&format!("the format argument `{{{spec}}}`")))
+            });
+            pieces.push(arg);
+        }
+
+        if !text.is_empty() {
+            pieces.push(Expr::new(K::Lit(Lit::Str(text))));
+        }
+
+        pieces
     }
 
     fn path_expr(&mut self, path: &ir::Path) -> K {
@@ -1528,7 +1869,10 @@ impl<'a> Lower<'a> {
                 }
 
                 match p.as_slice() {
-                    [_, module, ty, variant] if module == "option" && ty == "Option" => {
+                    [_, module, ty, variant]
+                        if (module == "option" && ty == "Option")
+                            || (module == "result" && ty == "Result") =>
+                    {
                         Some(vec![variant.clone()])
                     }
                     p => Some(p[1..].to_vec()),
@@ -1899,6 +2243,8 @@ fn has_let(cond: &ir::Expr) -> bool {
 mod tests {
     use super::*;
     use crate::codegen::print;
+    use crate::codegen::test_utilities::CLIENT;
+    use crate::codegen::test_utilities::client;
     use crate::codegen::test_utilities::exported;
     use crate::codegen::test_utilities::id;
     use crate::codegen::test_utilities::load;
@@ -2419,6 +2765,69 @@ impl Root {
             }
 
             #[test]
+            fn lower_should_destructure_the_patterns_of_a_let() {
+                let (m, _) = lower(
+                    r#"pub struct Root;
+impl Root {
+    pub fn d(&self, t: (u8, (u8, u8))) {
+        let (a, (b, _)) = t;
+        let (c) = 1;
+        let _ = self.d::<3>(t);
+        let (x, y): (u8, u8) = (1, 2);
+    }
+}
+"#,
+                    &[],
+                    &[],
+                );
+
+                assert_eq!(
+                    print::func(func(&m, "Root", "d")),
+                    "fn d(&self, t: (u8, (u8, u8))) -> () {\n    let a: ? = t.0;\n    let tuple1: ? = t.1;\n    let b: ? = tuple1.0;\n    let c: ? = 1;\n    self.d(t)/*unresolved*/;\n    let tuple2: (u8, u8) = (1, 2);\n    let x: ? = tuple2.0;\n    let y: ? = tuple2.1;\n}"
+                );
+            }
+
+            #[test]
+            fn lower_should_skip_a_display_impl_without_fmt() {
+                let (m, _) = lower(
+                    r#"pub struct Root;
+impl std::fmt::Display for Root {}
+"#,
+                    &[],
+                    &[],
+                );
+
+                assert_eq!(m.classes["Root"].methods, Vec::new());
+            }
+
+            #[test]
+            fn lower_should_lower_the_format_strings_into_their_pieces() {
+                let (m, _) = lower(
+                    r#"pub struct Root;
+impl Root {
+    pub fn f(&self, w: &mut String, a: u8) -> String {
+        writeln!(w, "{a}");
+        format!("{{}}{0}{b}{:?}{c}", a, b = 2)
+    }
+}
+"#,
+                    &[],
+                    &[],
+                );
+
+                assert_eq!(
+                    (
+                        print::func(func(&m, "Root", "f")),
+                        func(&m, "Root", "f").errors.clone()
+                    ),
+                    (
+                        "fn f(&self, w: &str, a: u8) -> str {\n    w.write_fmt(format!(a, \"\\n\"))/*unresolved*/;\n    format!(\"{}\", a, 2, /* unsupported: the format argument `{:?}` */, c);\n}".to_owned(),
+                        vec!["unsupported the format argument `{:?}`".to_owned()]
+                    )
+                );
+            }
+
+            #[test]
             fn lower_should_report_the_constructs_it_does_not_lower() {
                 let (m, errors) = lower(
                     r#"pub struct Root;
@@ -2426,19 +2835,18 @@ pub enum E { C { x: u8 } }
 impl Root {
     pub fn f(self, a: u8, o: Option<u8>, v: Vec<u8>, e: E) -> u8 {
         async { 1 };
-        a.await;
         loop { break; }
         for i in v { continue; }
         const { 1 };
         <Root>::f;
         0..1;
         [0; 3];
-        o?;
         while let Some(x) = o {}
         match a { x if x > 0 => 1, _ => 0 };
         (f)();
-        |(p, q)| p;
-        let (p, q) = (1, 2);
+        |Root| 0;
+        let Root = Root;
+        let (p, q);
         let Some(p) = o else { return 0 };
         fn inner() {}
         if a > 0 || let Some(x) = o {}
@@ -2463,18 +2871,17 @@ impl Root {
                     func(&m, "Root", "f").errors,
                     vec![
                         "unsupported `async`",
-                        "unsupported `.await`",
                         "unsupported `loop`",
                         "unsupported `for`",
                         "unsupported a `const` block",
                         "unsupported a qualified path",
                         "unsupported a range",
                         "unsupported `[x; n]`",
-                        "unsupported `?`",
                         "unsupported `while let`",
                         "unsupported a match guard",
                         "unsupported a call of an expression",
-                        "unsupported a closure parameter pattern",
+                        "unsupported a destructuring `let`",
+                        "unsupported a destructuring `let`",
                         "unsupported a destructuring `let`",
                         "unsupported `let`-`else`",
                         "unsupported an item in a body",
@@ -2493,7 +2900,7 @@ impl Root {
                 );
                 assert_eq!(
                     print::func(func(&m, "Root", "f")),
-                    "fn f(self, a: u8, o: Option<u8>, v: Vec<u8>, e: E) -> u8 {\n    /* unsupported: `async` */;\n    /* unsupported: `.await` */;\n    /* unsupported: `loop` */;\n    /* unsupported: `for` */;\n    /* unsupported: a `const` block */;\n    /* unsupported: a qualified path */;\n    /* unsupported: a range */;\n    /* unsupported: `[x; n]` */;\n    /* unsupported: `?` */;\n    /* unsupported: `while let` */;\n    /* unsupported: a match guard */;\n    /* unsupported: a call of an expression */;\n    /* unsupported: a closure parameter pattern */;\n    /* unsupported: a destructuring `let` */;\n    /* unsupported: `let`-`else` */;\n    /* unsupported: an item in a body */;\n    if ((a > 0) || /* unsupported: `let` in an expression */) {\n    };\n    /* unsupported: `assert!` */;\n    /* unsupported: `matches!` */;\n    match a {\n        _ => {\n            0;\n        },\n        _ => {\n            0;\n        },\n        _ => {\n            0;\n        },\n        _ => {\n            0;\n        },\n    };\n    match (a, a) {\n        _ => {\n            0;\n        },\n    };\n    /* unsupported: an integer beyond `i64` */;\n    match a {\n        _ => {\n            0;\n        },\n        _ => {\n            0;\n        },\n    };\n    /* unsupported: a struct variant */;\n    match e {\n        _ => {\n            x;\n        },\n    };\n    0;\n}"
+                    "fn f(self, a: u8, o: Option<u8>, v: Vec<u8>, e: E) -> u8 {\n    /* unsupported: `async` */;\n    /* unsupported: `loop` */;\n    /* unsupported: `for` */;\n    /* unsupported: a `const` block */;\n    /* unsupported: a qualified path */;\n    /* unsupported: a range */;\n    /* unsupported: `[x; n]` */;\n    /* unsupported: `while let` */;\n    /* unsupported: a match guard */;\n    /* unsupported: a call of an expression */;\n    |tuple1| {\n        /* unsupported: a destructuring `let` */;\n        0;\n    };\n    /* unsupported: a destructuring `let` */;\n    /* unsupported: a destructuring `let` */;\n    /* unsupported: `let`-`else` */;\n    /* unsupported: an item in a body */;\n    if ((a > 0) || /* unsupported: `let` in an expression */) {\n    };\n    /* unsupported: `assert!` */;\n    /* unsupported: `matches!` */;\n    match a {\n        _ => {\n            0;\n        },\n        _ => {\n            0;\n        },\n        _ => {\n            0;\n        },\n        _ => {\n            0;\n        },\n    };\n    match (a, a) {\n        _ => {\n            0;\n        },\n    };\n    /* unsupported: an integer beyond `i64` */;\n    match a {\n        _ => {\n            0;\n        },\n        _ => {\n            0;\n        },\n    };\n    /* unsupported: a struct variant */;\n    match e {\n        _ => {\n            x;\n        },\n    };\n    0;\n}"
                 );
             }
 
@@ -2549,6 +2956,69 @@ pub unsafe trait Tr {}
                 assert_eq!(
                     dump(&m),
                     "// ===== after lower\nclass Bad<> {  }\nclass Root<> { a: Bad, e: BadEnum, f: E }\nenum BadEnum [] []\nenum E [Unit(\"A\"), Tuple(\"B\", Int(\"u8\")), Tuple(\"C\", Tuple([Int(\"u8\"), Bool])), Struct(\"D\", [(\"x\", Int(\"u8\"))]), Tuple(\"F\", List(Named(\"E\", [])))] [\"f\"]\n"
+                );
+            }
+        }
+
+        mod lower_client {
+            use super::*;
+
+            #[test]
+            fn lower_client_should_load_the_builders_generic_over_a_trait_and_what_they_reach() {
+                let (m, errors) = client(CLIENT);
+
+                assert_eq!(errors, Vec::<String>::new());
+                assert_eq!(
+                    (
+                        m.builders.clone(),
+                        m.classes.keys().cloned().collect::<Vec<_>>(),
+                        m.traits.keys().cloned().collect::<Vec<_>>(),
+                        m.consts.keys().cloned().collect::<Vec<_>>(),
+                    ),
+                    (
+                        ["Api", "ApiError"].map(String::from).to_vec(),
+                        ["Api", "ApiError"].map(String::from).to_vec(),
+                        ["Client", "Http"].map(String::from).to_vec(),
+                        vec!["PREFIX".to_owned()],
+                    )
+                );
+                assert_eq!(
+                    m.supertraits,
+                    [("Client".to_owned(), vec!["Http".to_owned()])].into()
+                );
+            }
+
+            #[test]
+            fn lower_client_should_lower_async_results_destructuring_and_formatting() {
+                let (m, _) = client(CLIENT);
+
+                assert_eq!(
+                    [
+                        print::func(func(&m, "Api", "login")),
+                        print::func(func(&m, "Api", "kind")),
+                        print::func(&m.traits["Http"][1]),
+                    ],
+                    [
+                        "async fn login(&mut self) -> Result<u16, ApiError> {\n    let tuple1: (u16, str) = self.client.get(&self.url(\"/login\")/*unresolved*/)/*unresolved*/.await?;\n    let status: ? = tuple1.0;\n    let token: ? = tuple1.1;\n    self.token = Some(token)/*unresolved*/;\n    Ok(status)/*unresolved*/;\n}",
+                        "async fn kind(&self, kind: Kind, n: u64) -> Result<u16, ApiError> {\n    self.client.get::<()>(&self.url(&format!(\"/\", kind, \"/\", n.to_string()/*unresolved*/))/*unresolved*/)/*unresolved*/.await.map(|tuple1| {\n    let status: ? = tuple1.0;\n    status;\n})/*unresolved*/;\n}",
+                        "async fn status(&self, uri: &str) -> Result<u16, ApiError> {\n    Ok(self.get::<()>(uri)/*unresolved*/.await?.0)/*unresolved*/;\n}",
+                    ]
+                );
+            }
+
+            #[test]
+            fn lower_client_should_lower_the_display_impls_into_to_string() {
+                let (m, _) = client(CLIENT);
+
+                assert_eq!(
+                    [
+                        print::func(func(&m, "ApiError", "to_string")),
+                        print::func(&m.enums["Kind"].methods[0]),
+                    ],
+                    [
+                        "fn to_string(&self) -> str {\n    format!(self.status, \": {\", self.description, \"}\");\n}",
+                        "fn to_string(&self) -> str {\n    match self {\n        Kind::File => {\n            \"file\";\n        },\n        Kind::Memory => {\n            \"memory\";\n        },\n    };\n}",
+                    ]
                 );
             }
         }

@@ -1,0 +1,72 @@
+import { AgdbApi, AgdbApiError } from "../src/api.ts";
+import { FetchClient } from "../src/fetch_client.ts";
+import { QueryBuilder } from "../src/index.ts";
+import { describe, expect, it } from "vitest";
+
+const ADDRESS = "localhost:3000";
+
+async function admin(): Promise<AgdbApi<FetchClient>> {
+    const api = AgdbApi.new(new FetchClient(), ADDRESS);
+    await api.user_login("admin", "admin");
+    return api;
+}
+
+async function user(name: string): Promise<AgdbApi<FetchClient>> {
+    await (await admin()).admin_user_add(name, "password123");
+    const api = AgdbApi.new(new FetchClient("fetch_client_test"), ADDRESS);
+    await api.user_login(name, "password123");
+    return api;
+}
+
+describe("FetchClient", () => {
+    it("gets without a token", async () => {
+        const api = AgdbApi.new(new FetchClient(), `http://${ADDRESS}`);
+        expect(await api.status()).toBe(200);
+    });
+
+    it("posts the credentials and keeps the token", async () => {
+        const api = await admin();
+        expect(api.token).toBeTypeOf("string");
+        const [status, dbs] = await api.db_list();
+        expect(status).toBe(200);
+        expect(Array.isArray(dbs)).toBe(true);
+    });
+
+    it("throws the status and body of a failure", async () => {
+        const api = AgdbApi.new(new FetchClient(), ADDRESS);
+        const error = await api.db_list().catch((e: unknown) => e);
+        expect(error).toBeInstanceOf(AgdbApiError);
+        expect((error as AgdbApiError).status).toBe(401);
+        expect((error as AgdbApiError).to_string()).toMatch(/^401: /);
+    });
+
+    it("throws status 500 when the request fails", async () => {
+        const api = AgdbApi.new(new FetchClient(), "localhost:1");
+        await expect(api.status()).rejects.toMatchObject({ status: 500 });
+    });
+
+    it("executes queries, puts and deletes", async () => {
+        const api = await user("fetch_client_user");
+        expect(await api.db_add("fetch_client_user", "db", "memory")).toBe(201);
+
+        const [status, results] = await api.db_exec_mut(
+            "fetch_client_user",
+            "db",
+            [QueryBuilder.insert().nodes().count(2).query()],
+        );
+        expect(status).toBe(200);
+        expect(results[0].result).toBe(2);
+
+        expect(await api.dashboard_add("ops", "{}")).toBe(201);
+        expect(await api.dashboard_save("ops", '{"v":2}')).toBe(201);
+        expect((await api.dashboard_get("ops"))[1].config).toBe('{"v":2}');
+        expect(await api.dashboard_remove("ops")).toBe(204);
+        expect(await api.db_delete("fetch_client_user", "db")).toBe(204);
+    });
+
+    it("logs out and forgets the token", async () => {
+        const api = await admin();
+        expect(await api.user_logout()).toBe(201);
+        expect(api.token).toBeUndefined();
+    });
+});

@@ -11,6 +11,7 @@ pub fn ty(t: &Ty) -> String {
         Ty::Str => "str".into(),
         Ty::List(t) => format!("Vec<{}>", ty(t)),
         Ty::Option(t) => format!("Option<{}>", ty(t)),
+        Ty::Result(ok, err) => format!("Result<{}, {}>", ty(ok), ty(err)),
         Ty::Tuple(v) => format!("({})", join(v.iter().map(ty))),
         Ty::Named(name, args) if args.is_empty() => name.clone(),
         Ty::Named(name, args) => format!("{name}<{}>", join(args.iter().map(ty))),
@@ -176,6 +177,10 @@ pub fn expr(e: &Expr) -> String {
         K::Deref(e) => format!("*{}", expr(e)),
         K::Cast(v) => format!("({} as {})", expr(v), ty(&e.ty)),
         K::Fields(v) => format!("fields::<{}>({})", ty(&e.ty), expr(v)),
+        K::Await(v) => format!("{}.await", expr(v)),
+        K::Try(v) => format!("{}?", expr(v)),
+        K::Format(pieces) => format!("format!({})", list(pieces)),
+        K::Throw(v) => format!("throw {}", expr(v)),
         K::Panic(message) => format!("panic!({message:?})"),
         K::Unsupported(construct) => format!("/* unsupported: {construct} */"),
         K::Match { .. } | K::If { .. } | K::IfLet { .. } | K::While { .. } | K::Closure { .. } => {
@@ -190,15 +195,27 @@ fn call(callee: &Callee, recv: Option<&Expr>, args: &[Expr]) -> String {
 
     match callee {
         Callee::Path(path, _) => format!("{}({a})/*unresolved*/", path.join("::")),
-        Callee::Method(name) => format!("{r}.{name}({a})/*unresolved*/"),
+        Callee::Method(name, types) => format!("{r}.{name}{}({a})/*unresolved*/", turbofish(types)),
         Callee::Member { name, .. } => format!("{r}.{name}({a})"),
         Callee::Static { class, name } => format!("{class}::{name}({a})"),
-        Callee::Trait { trait_, name } => {
+        Callee::Trait {
+            trait_,
+            name,
+            types,
+        } => {
             let r = recv.map(|_| format!("{r}, ")).unwrap_or_default();
-            format!("<{trait_}>::{name}({r}{a})")
+            format!("<{trait_}>::{name}{}({r}{a})", turbofish(types))
         }
         Callee::Intrinsic(i) => format!("{r}.{i:?}({a})"),
         Callee::Extern(name) => format!("extern {name}({a})"),
+    }
+}
+
+fn turbofish(types: &[Ty]) -> String {
+    if types.is_empty() {
+        String::new()
+    } else {
+        format!("::<{}>", join(types.iter().map(ty)))
     }
 }
 
@@ -220,7 +237,8 @@ pub fn func(f: &Func) -> String {
     };
 
     format!(
-        "fn {}{generics}({params}) -> {} {}",
+        "{}fn {}{generics}({params}) -> {} {}",
+        if f.is_async { "async " } else { "" },
         f.name,
         ty(&f.ret),
         block(&f.body, 0)
@@ -357,6 +375,7 @@ mod tests {
                     callee: Callee::Trait {
                         trait_: "Tr".into(),
                         name: "f".into(),
+                        types: Vec::new(),
                     },
                     recv: None,
                     args: Vec::new(),

@@ -79,6 +79,7 @@ impl Pass for TagResults {
                                 callee: Callee::Trait {
                                     trait_: tr.clone(),
                                     name: method_name(data),
+                                    types: Vec::new(),
                                 },
                                 recv: Some(
                                     Expr::typed(K::This, Ty::Unknown)

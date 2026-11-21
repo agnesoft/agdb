@@ -595,7 +595,7 @@ impl Sites<'_> {
                 !matches!(&v.ty, Ty::Dict(t, _) if t == self.t)
             }),
             K::Call {
-                callee: Callee::Trait { trait_, name },
+                callee: Callee::Trait { trait_, name, .. },
                 recv: Some(dict),
                 args,
             } if trait_ == self.t && args.len() == 1 => {

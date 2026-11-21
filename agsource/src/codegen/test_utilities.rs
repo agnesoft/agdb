@@ -53,6 +53,163 @@ pub(crate) fn exported(source: &str, api: &str, data: &[&str]) -> (Module, Vec<S
     (m, errors)
 }
 
+/// A client crate: a builder generic over a transport trait with a
+/// supertrait, results, `async`, `format!` and `Display` impls.
+pub(crate) const CLIENT: &str = r#"use std::fmt;
+
+pub const PREFIX: &str = "/api";
+
+pub type ApiResult<T> = Result<T, ApiError>;
+
+pub struct ApiError {
+    pub status: u16,
+    pub description: String,
+}
+
+impl fmt::Display for ApiError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}: {{{}}}", self.status, self.description)
+    }
+}
+
+pub enum Kind {
+    File,
+    Memory,
+}
+
+impl fmt::Display for Kind {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Kind::File => f.write_str("file"),
+            Kind::Memory => f.write_str("memory"),
+        }
+    }
+}
+
+pub trait Http {
+    async fn get<T>(&self, uri: &str) -> ApiResult<(u16, T)>;
+
+    async fn status(&self, uri: &str) -> ApiResult<u16> {
+        Ok(self.get::<()>(uri).await?.0)
+    }
+}
+
+pub trait Client: Http {}
+
+pub struct Transport;
+
+impl Http for Transport {
+    async fn get<T>(&self, uri: &str) -> ApiResult<(u16, T)> {
+        panic!("glue")
+    }
+}
+
+impl Client for Transport {}
+
+pub struct Unrelated;
+
+impl Unrelated {
+    pub fn get(&self) -> u8 {
+        1
+    }
+}
+
+pub struct Api<T: Client> {
+    client: T,
+    base: String,
+    pub token: Option<String>,
+}
+
+impl<T: Client> Api<T> {
+    pub fn new(client: T, address: &str) -> Self {
+        let base = if address.starts_with("http") {
+            address.to_string()
+        } else {
+            format!("http://{address}{}", PREFIX)
+        };
+        Self {
+            client,
+            base,
+            token: None,
+        }
+    }
+
+    pub fn base(&self) -> &str {
+        &self.base
+    }
+
+    pub async fn kind(&self, kind: Kind, n: u64) -> ApiResult<u16> {
+        self.client
+            .get::<()>(&self.url(&format!("/{kind}/{0}", n.to_string())))
+            .await
+            .map(|(status, _)| status)
+    }
+
+    pub async fn login(&mut self) -> ApiResult<u16> {
+        let (status, token): (u16, String) = self.client.get(&self.url("/login")).await?;
+        self.token = Some(token);
+        Ok(status)
+    }
+
+    pub async fn ping(&self) -> ApiResult<u16> {
+        self.client.status(&self.url("/ping")).await
+    }
+
+    pub fn fail(&self) -> ApiResult<u16> {
+        Err(ApiError {
+            status: 1,
+            description: "fail".to_string(),
+        })
+    }
+
+    fn url(&self, path: &str) -> String {
+        format!("{}{path}", self.base)
+    }
+}
+"#;
+
+/// The [client](SourceCrate::lower_client) module of the API crate `api`
+/// of an empty crate `c`, and the errors, with `/` separators.
+pub(crate) fn client(api: &str) -> (Module, Vec<String>) {
+    let platform = test_platform();
+    platform.fs().create_dir_all("/api/src").unwrap();
+    platform.fs().write("/api/src/lib.rs", api).unwrap();
+    let mut target = Target::new(TargetKind::Lib, "/api/src/lib.rs");
+    target.externs.push("c".into());
+    let a = SourceCrate::load(&platform, &target, &Cfg::All);
+    let (m, errors) = a.lower_client(&load(""), "c");
+    (m, strings(&errors))
+}
+
+/// The client module of `api` after the passes of a TS client, with
+/// neither the lowering nor the functions having errors.
+pub(crate) fn client_passed(api: &str) -> Module {
+    use super::pass::EraseOwnership;
+    use super::pass::ExplicitReturns;
+    use super::pass::Inline;
+    use super::pass::Passes;
+    use super::pass::Prune;
+    use super::pass::Resolve;
+    use super::pass::ThrowErrors;
+    use super::ts::EraseCasts;
+    use super::ts::RemoveDeadHelpers;
+
+    let (mut m, mut errors) = client(api);
+    let passes = Passes::new()
+        .with(Resolve)
+        .with(Prune)
+        .with(ExplicitReturns)
+        .with(Inline)
+        .with(EraseOwnership)
+        .with(ThrowErrors)
+        .with(EraseCasts)
+        .with(RemoveDeadHelpers);
+    errors.extend(strings(&passes.run(&mut m, &mut |_, _| {})));
+    m.for_each_func(&mut |f, _| errors.extend(f.errors.iter().cloned()));
+    assert_eq!(errors, Vec::<String>::new());
+    m
+}
+
 pub(crate) fn id(c: &SourceCrate, path: &str) -> ItemId {
     c.item_ids()
         .find(|id| c.resolve_str(path, Namespace::Type) == Resolved::Item(*id))

@@ -21,6 +21,7 @@ use agsource::codegen::pass::Passes;
 use agsource::codegen::pass::Prune;
 use agsource::codegen::pass::Resolve;
 use agsource::codegen::pass::TagResults;
+use agsource::codegen::pass::ThrowErrors;
 use agsource::codegen::pass::TraitDicts;
 use agsource::codegen::print;
 use agsource::codegen::ts::AcceptElementSources;
@@ -41,6 +42,12 @@ pub(crate) const TS: &str = "agdb_api/typescript/src/query_builder.ts";
 
 /// The TS declarations of the serde types, relative to the repository root.
 pub(crate) const TS_TYPES: &str = "agdb_api/typescript/src/types.ts";
+
+/// The TS client generated from [`API`], relative to the repository root.
+pub(crate) const TS_API: &str = "agdb_api/typescript/src/api.ts";
+
+/// Where `agci generate` dumps the client module after each pass, in [`DUMP_DIR`].
+const CLIENT_DUMP: &str = "client";
 
 /// The source crate of the clients' builder API.
 const SOURCE: &str = "agdb";
@@ -139,16 +146,19 @@ pub(crate) fn generate(platform: &impl Platform, root: &str, dump: &Path) -> Res
         return Err(e.into());
     }
 
+    let client = client(platform, &api, &c, &dump.join(CLIENT_DUMP), &mut errors)?;
     let ts = Emitter::new(&m, &ts_config("./types.ts")).module();
     let tests = Emitter::new(&m, &ts_config("../src/types.ts")).tests(TESTS_NAME, TS_MODULE);
     fs.write(dump.join("ts_notes.txt"), ts.notes.join("\n") + "\n")?;
     fs.write(Path::new(root).join(TS_TYPES), declarations.code)?;
     fs.write(Path::new(root).join(TS), ts.code)?;
     fs.write(Path::new(root).join(TS_TESTS), tests.code)?;
+    fs.write(Path::new(root).join(TS_API), client.code)?;
     let unsupported: Vec<String> = declarations
         .unsupported
         .into_iter()
         .chain(ts.unsupported)
+        .chain(client.unsupported)
         .chain(tests.unsupported)
         .collect();
 
@@ -175,6 +185,49 @@ pub(crate) fn generate(platform: &impl Platform, root: &str, dump: &Path) -> Res
             .join("\n")
     )
     .into())
+}
+
+/// The client of `api`, an API crate of `source`, dumped to `dump` after loading and after each
+/// pass.
+fn client(
+    platform: &impl Platform,
+    api: &SourceCrate,
+    source: &SourceCrate,
+    dump: &Path,
+    errors: &mut Vec<agsource::Error>,
+) -> Result<agsource::codegen::ts::Ts, CIError> {
+    let (mut m, lowering) = api.lower_client(source, SOURCE);
+    errors.extend(lowering);
+    let fs = platform.fs();
+    fs.create_dir_all(dump)?;
+    let mut step = 0;
+    let mut write = |title: &str, m: &Module| {
+        let file = dump.join(format!("{step:02}_{title}.rs.txt"));
+        step += 1;
+        fs.write(&file, print::module(m, title))
+    };
+    write("load", &m)?;
+    let passes = Passes::new()
+        .with(Resolve)
+        .with(Prune)
+        .with(ExplicitReturns)
+        .with(Inline)
+        .with(EraseOwnership)
+        .with(ThrowErrors)
+        .with(EraseCasts)
+        .with(RemoveDeadHelpers);
+    let mut failed = None;
+    errors.extend(passes.run(&mut m, &mut |title: &str, m: &Module| {
+        if let Err(e) = write(title, m) {
+            failed.get_or_insert(e);
+        }
+    }));
+
+    if let Some(e) = failed {
+        return Err(e.into());
+    }
+
+    Ok(Emitter::new(&m, &ts_config("./types.ts")).client())
 }
 
 /// The serde types are imported from [`TS_TYPES`] at `types`, relative to the emitted file.

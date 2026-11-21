@@ -103,9 +103,17 @@ For generators of other languages, `SourceCrate::lower` lowers the IR of a build
 builder, the traits whose impls to load and data types. Builders are the root and the structs
 the `pub` methods of builders return (also as type arguments) that have a `pub` method with a
 receiver. Data types are the types reached through fields, the signatures of builders and trait
-impls, and the data roots. All their inherent impls are loaded. A construct the lowered IR does
-not have (e.g. `for`, `?`, ranges, struct variants, destructuring `let`) is kept as
-`K::Unsupported` and noted on its function.
+impls, and the data roots. All their inherent impls are loaded, and a `Display` impl is the
+type's `to_string` method. A construct the lowered IR does not have (e.g. `for`, ranges, struct
+variants, slice patterns) is kept as `K::Unsupported` and noted on its function. Bodies keep
+`async`/`.await`, `Result` with `?`, and `format!`/`write!` as their pieces; a tuple `let` or
+closure parameter is destructured into a temporary and its fields.
+
+`SourceCrate::lower_client` lowers the client of an API crate of that crate: the builders are its
+exported structs generic over one of its traits (the transport) and the structs without serde
+they reach, with all their `pub` methods; the traits are those, their supertraits and the exported
+ones. A struct implementing an exported trait is the target's glue and is left out. The exported
+consts are loaded too.
 
 `SourceCrate::lower_tests` lowers the `#[test]` functions of a test crate of that crate into
 `Module::tests`, so a generator can translate them too: a path of the tested crate
@@ -143,6 +151,8 @@ needs in `Passes`, built-in or its own `Pass`, and can dump the module after eac
 - `EraseOwnership` removes references, `mem::take`/`mem::swap` and assignments through pattern
   bindings, for targets that share objects by reference;
 - `InferEmptyLists` types `vec![]` by what is pushed to it;
+- `ThrowErrors` makes a `Result` the value it holds, for targets that throw: `Ok(x)` is `x`,
+  `Err(e)` throws `e` and `?` passes the value on;
 - `TagResults` makes the builders return the data type their results convert into, tagged with
   its variant, adding an `into_<data>` method to the traits whose implementors are all tagged;
 - `EraseNewtypes` replaces the single-field tuple data structs with their field, as serde
@@ -160,7 +170,10 @@ needs in `Passes`, built-in or its own `Pass`, and can dump the module after eac
 - `OmitSkippedDefaults` leaves out the `skip_serializing_if` fields holding their default;
 - `RemoveDeadHelpers` removes the inlined methods without callers.
 
-`Emitter::module` writes the builders and `Emitter::tests` writes their vitest suite. Their
+`Emitter::module` writes the builders and `Emitter::tests` writes their vitest suite.
+`Emitter::client` writes a client module: the consts, the traits as the types the target
+implements (an abstract class when they provide methods), and the builders as classes whose
+generics the traits bound, with `async` methods returning a `Promise`. Their
 literals use the serialized names of the wire types, and only externally tagged enums are
 supported. `Emitter::types` declares the wire types as serde serializes them. It runs on the
 module as lowered, before the passes. A struct is an interface of its fields; a newtype or a

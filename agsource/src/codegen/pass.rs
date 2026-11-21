@@ -11,6 +11,7 @@ mod lower_conversions;
 mod prune;
 mod resolve;
 mod tag_results;
+mod throw_errors;
 mod trait_dicts;
 
 pub use erase_newtypes::EraseNewtypes;
@@ -28,6 +29,7 @@ pub use resolve::returned_ty;
 pub use resolve::subst;
 pub use tag_results::TagResults;
 pub use tag_results::snake_case;
+pub use throw_errors::ThrowErrors;
 pub use trait_dicts::TraitDicts;
 pub use trait_dicts::dict_field;
 pub use trait_dicts::dict_global;

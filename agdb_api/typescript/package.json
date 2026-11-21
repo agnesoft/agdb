@@ -64,6 +64,14 @@
             "default": "./dist/index.js"
         },
         "./openapi": "./dist/openapi.d.ts",
+        "./api": {
+            "types": "./dist/api.d.ts",
+            "default": "./dist/api.js"
+        },
+        "./fetch_client": {
+            "types": "./dist/fetch_client.d.ts",
+            "default": "./dist/fetch_client.js"
+        },
         "./client": {
             "types": "./dist/client.d.ts",
             "default": "./dist/client.js"

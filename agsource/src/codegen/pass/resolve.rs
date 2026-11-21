@@ -55,6 +55,17 @@ impl Pass for Resolve {
             }
         }
 
+        for (name, funcs) in m.traits.iter_mut() {
+            let this = [Generic {
+                name: "Self".into(),
+                bounds: vec![(name.clone(), None)],
+            }];
+
+            for f in funcs.iter_mut().filter(|f| !f.body.is_empty()) {
+                Ctx::new(&snapshot, "", Ty::Param("Self".into()), &this, f).func(f);
+            }
+        }
+
         for f in m.functions.iter_mut().chain(m.tests.iter_mut()) {
             Ctx::new(&snapshot, "", Ty::Unknown, &[], f).func(f);
         }
@@ -146,14 +157,26 @@ impl<'a> Ctx<'a> {
 
     fn trait_with(&self, param: &str, method: &str) -> Option<(String, &'a Func)> {
         let g = self.generics.iter().find(|g| g.name == param)?;
+        let mut traits: Vec<String> = g.bounds.iter().map(|(t, _)| t.clone()).collect();
+        let mut i = 0;
 
-        g.bounds.iter().find_map(|(t, _)| {
-            self.m
+        while i < traits.len() {
+            let t = traits[i].clone();
+
+            if let Some(f) = self
+                .m
                 .traits
-                .get(t)
+                .get(&t)
                 .and_then(|fs| fs.iter().find(|f| f.name == method))
-                .map(|f| (t.clone(), f))
-        })
+            {
+                return Some((t, f));
+            }
+
+            traits.extend(self.m.supertraits.get(&t).into_iter().flatten().cloned());
+            i += 1;
+        }
+
+        None
     }
 
     /// The list the non-generic conversions into the `Into` target of `f`'s
@@ -242,16 +265,17 @@ impl<'a> Ctx<'a> {
                 self.call_path(e, segs, gens, args, expected);
             }
             K::Call {
-                callee: Callee::Method(m),
+                callee: Callee::Method(m, types),
                 recv: Some(r),
                 args,
             } => {
                 let m = m.clone();
+                let types = types.clone();
                 let mut r = std::mem::replace(r.as_mut(), Expr::new(K::This));
                 let args = std::mem::take(args);
                 let through = IDENTITY.contains(&m.as_str()) || m == "map";
                 self.expr(&mut r, if through { expected } else { None });
-                self.method_call(e, m, r, args, expected);
+                self.method_call(e, (m, types), r, args, expected);
             }
             K::Field { base, name } => {
                 self.expr(base, None);
@@ -462,13 +486,59 @@ impl<'a> Ctx<'a> {
                     self.expr(a, None);
                 }
             }
+            K::Await(v) => {
+                self.expr(v, expected);
+                e.ty = v.ty.clone();
+            }
+            K::Try(v) => {
+                self.expr(v, None);
+                e.ty = match &v.ty {
+                    Ty::Result(ok, _) => (**ok).clone(),
+                    _ => Ty::Unknown,
+                };
+            }
+            K::Format(pieces) => {
+                for p in pieces.iter_mut() {
+                    self.expr(p, None);
+                    self.display(p);
+                }
+
+                e.ty = Ty::Str;
+            }
             K::Ident(_)
             | K::Closure { .. }
+            | K::Throw(_)
             | K::Unsupported(_)
             | K::Payload { .. }
             | K::Unwrap(_)
             | K::TypeCase { .. } => {}
         }
+    }
+
+    /// A piece of a `format!` of a named type as the call of its `Display`,
+    /// lowered as its `to_string`.
+    fn display(&mut self, p: &mut Expr) {
+        let Ty::Named(class, _) = p.ty.strip_ref().clone() else {
+            return;
+        };
+
+        if self.m.method(&class, "to_string").is_none() {
+            self.unsupported(p, format!("no `Display` of `{class}`"));
+            return;
+        }
+
+        let recv = std::mem::replace(p, Expr::new(K::This));
+        *p = Expr::typed(
+            K::Call {
+                callee: Callee::Member {
+                    class,
+                    name: "to_string".into(),
+                },
+                recv: Some(recv.boxed()),
+                args: Vec::new(),
+            },
+            Ty::Str,
+        );
     }
 
     fn payload_ty(&self, en: &str, var: &str) -> Option<Ty> {
@@ -520,6 +590,18 @@ impl<'a> Ctx<'a> {
         expected: Option<&Ty>,
     ) -> Option<Expr> {
         if let [var] = segs
+            && (var == "Ok" || var == "Err")
+        {
+            let ty = match expected {
+                Some(t @ Ty::Result(..)) => t.clone(),
+                _ => Ty::Result(Box::new(Ty::Unknown), Box::new(Ty::Unknown)),
+            };
+            let mut v = Expr::variant("Result", var, payload);
+            v.ty = ty;
+            return Some(v);
+        }
+
+        if let [var] = segs
             && (var == "None" || var == "Some")
         {
             let ty = match expected {
@@ -563,16 +645,19 @@ impl<'a> Ctx<'a> {
             String::new()
         };
 
-        if segs.len() == 1 && last == "Some" && !args.is_empty() {
-            let inner = match expected {
-                Some(Ty::Option(t)) => Some((**t).clone()),
+        if segs.len() == 1 && ["Some", "Ok", "Err"].contains(&last.as_str()) && !args.is_empty() {
+            let inner = match (expected, last.as_str()) {
+                (Some(Ty::Option(t)), "Some") | (Some(Ty::Result(t, _)), "Ok") => {
+                    Some((**t).clone())
+                }
+                (Some(Ty::Result(_, t)), "Err") => Some((**t).clone()),
                 _ => None,
             };
             let mut p = args.remove(0);
             self.expr(&mut p, inner.as_ref());
             *e = self
                 .variant_path(&segs, Some(p), expected)
-                .expect("`Some` is a variant");
+                .expect("a variant of `Option` or `Result`");
             return;
         }
 
@@ -699,6 +784,7 @@ impl<'a> Ctx<'a> {
                     callee: Callee::Trait {
                         trait_: t,
                         name: last,
+                        types: Vec::new(),
                     },
                     recv: Some(Expr::typed(K::Path(vec![prev.clone()]), Ty::Param(prev)).boxed()),
                     args,
@@ -739,11 +825,12 @@ impl<'a> Ctx<'a> {
     fn method_call(
         &mut self,
         e: &mut Expr,
-        m: String,
+        method: (String, Vec<Ty>),
         r: Expr,
         mut args: Vec<Expr>,
         expected: Option<&Ty>,
     ) {
+        let (m, types) = method;
         let rt = r.ty.strip_ref().clone();
 
         if m == "into" {
@@ -805,14 +892,26 @@ impl<'a> Ctx<'a> {
         if let Ty::Param(p) = &rt
             && let Some((t, f)) = self.trait_with(p, &m)
         {
-            for a in args.iter_mut() {
-                self.expr(a, None);
+            let params: Vec<(String, Ty)> = f
+                .generics
+                .iter()
+                .map(|g| g.name.clone())
+                .zip(types.iter().cloned())
+                .collect();
+
+            for (a, (_, t)) in args.iter_mut().zip(f.params.iter()) {
+                let t = subst(t, &rt, &params);
+                self.expr(a, Some(&t));
             }
 
-            let ty = subst(&f.ret, &rt, &[]);
+            let ty = subst(&f.ret, &rt, &params);
             *e = Expr::typed(
                 K::Call {
-                    callee: Callee::Trait { trait_: t, name: m },
+                    callee: Callee::Trait {
+                        trait_: t,
+                        name: m,
+                        types,
+                    },
                     recv: Some(r.boxed()),
                     args,
                 },
@@ -839,6 +938,8 @@ impl<'a> Ctx<'a> {
                 Some((Intrinsic::IterForEach, Ty::Unit, Some((**t).clone())))
             }
             (Ty::List(t), "map") => Some((Intrinsic::Map, Ty::Unknown, Some((**t).clone()))),
+            (Ty::Result(t, _), "map") => Some((Intrinsic::MapOk, Ty::Unknown, Some((**t).clone()))),
+            (Ty::Str, "starts_with") => Some((Intrinsic::StartsWith, Ty::Bool, Some(Ty::Str))),
             (Ty::Option(t), "unwrap_or_default") => {
                 Some((Intrinsic::UnwrapOrDefault, (**t).clone(), None))
             }
@@ -856,9 +957,14 @@ impl<'a> Ctx<'a> {
                 self.closure_or_expr(a, arg_ty.as_ref(), ret.as_ref());
             }
 
-            let ty = match (i, args.first().map(|a| &a.k)) {
-                (Intrinsic::Map, Some(K::Closure { body, .. })) => {
-                    Ty::List(Box::new(returned_ty(body).unwrap_or(Ty::Unknown)))
+            let returned = match args.first().map(|a| &a.k) {
+                Some(K::Closure { body, .. }) => returned_ty(body).unwrap_or(Ty::Unknown),
+                _ => Ty::Unknown,
+            };
+            let ty = match (i, &rt) {
+                (Intrinsic::Map, _) => Ty::List(Box::new(returned)),
+                (Intrinsic::MapOk, Ty::Result(_, err)) => {
+                    Ty::Result(Box::new(returned), err.clone())
                 }
                 _ => ty,
             };
@@ -870,6 +976,11 @@ impl<'a> Ctx<'a> {
                 },
                 ty,
             );
+            return;
+        }
+
+        if m == "to_string" && rt.is_primitive() && rt != Ty::Str {
+            *e = Expr::typed(K::Format(vec![r]), Ty::Str);
             return;
         }
 
@@ -1006,6 +1117,10 @@ pub fn subst(t: &Ty, self_ty: &Ty, params: &[(String, Ty)]) -> Ty {
             .unwrap_or_else(|| t.clone()),
         Ty::List(i) => Ty::List(Box::new(subst(i, self_ty, params))),
         Ty::Option(i) => Ty::Option(Box::new(subst(i, self_ty, params))),
+        Ty::Result(ok, err) => Ty::Result(
+            Box::new(subst(ok, self_ty, params)),
+            Box::new(subst(err, self_ty, params)),
+        ),
         Ty::Ref(i) => Ty::Ref(Box::new(subst(i, self_ty, params))),
         Ty::Tuple(v) => Ty::Tuple(v.iter().map(|t| subst(t, self_ty, params)).collect()),
         Ty::Named(n, a) => Ty::Named(
@@ -1031,6 +1146,8 @@ pub fn returned_ty(body: &[Expr]) -> Option<Ty> {
 mod tests {
     use super::*;
     use crate::codegen::print;
+    use crate::codegen::test_utilities::CLIENT;
+    use crate::codegen::test_utilities::client;
     use crate::codegen::test_utilities::conversion;
     use crate::codegen::test_utilities::lower;
     use crate::codegen::test_utilities::strings;
@@ -1639,6 +1756,90 @@ mod tests {
                         "fn id(&self) -> u64 {\n    self.0;\n}"
                     );
                 }
+
+                #[test]
+                fn run_should_resolve_the_client_calls_through_the_supertraits_and_type_the_results()
+                 {
+                    let (mut m, _) = client(CLIENT);
+                    Resolve.run(&mut m, &mut Vec::new());
+
+                    assert_eq!(
+                        [
+                            method(&m, "Api", "kind"),
+                            method(&m, "Api", "login"),
+                            method(&m, "Api", "fail"),
+                            typed(&m.traits["Http"][1]),
+                        ],
+                        [
+                            "async fn kind(&self, kind: Kind, n: u64) -> Result<u16, ApiError> {\n    <Http>::get::<()>(self.client, &self.url(&format!(\"/\", kind.to_string(), \"/\", format!(n)))).await.MapOk(|tuple1| {\n    let status: u16 = tuple1.0;\n    status;\n});\n}",
+                            "async fn login(&mut self) -> Result<u16, ApiError> {\n    let tuple1: (u16, str) = <Http>::get(self.client, &self.url(\"/login\")).await?;\n    let status: u16 = tuple1.0;\n    let token: str = tuple1.1;\n    self.token = Option::Some(token);\n    Result::Ok(status);\n}\ntuple1: (u16, str)\nstatus: u16\ntoken: str",
+                            "fn fail(&self) -> Result<u16, ApiError> {\n    Result::Err(ApiError { status: 1, description: \"fail\" });\n}",
+                            "async fn status(&self, uri: &str) -> Result<u16, ApiError> {\n    Result::Ok(<Http>::get::<()>(self, uri).await?.0);\n}",
+                        ]
+                    );
+                }
+
+                #[test]
+                fn run_should_format_the_primitives_and_the_types_with_a_display_impl() {
+                    let (mut m, _) = client(CLIENT);
+                    Resolve.run(&mut m, &mut Vec::new());
+
+                    assert_eq!(
+                        [
+                            method(&m, "Api", "new"),
+                            method(&m, "ApiError", "to_string")
+                        ],
+                        [
+                            "fn new(client: T, address: &str) -> Api<T> {\n    let base: () = if address.StartsWith(\"http\") {\n    address;\n} else {\n    format!(\"http://\", address, \"/api\");\n};\n    Api { client: client, base: base, token: Option::None };\n}\nbase: ()",
+                            "fn to_string(&self) -> str {\n    format!(self.status, \": {\", self.description, \"}\");\n}",
+                        ]
+                    );
+                }
+
+                #[test]
+                fn run_should_type_the_results_by_the_expected_type() {
+                    let (mut m, _) = lower(
+                        r#"
+                        pub struct Root;
+                        impl Root {
+                            pub fn f(&self, o: Option<u8>) -> Option<u8> {
+                                let any = Ok(1);
+                                let err: Result<u8, bool> = Err(true);
+                                let v = o?;
+                                o
+                            }
+                        }
+                        "#,
+                        &[],
+                        &[],
+                    );
+                    Resolve.run(&mut m, &mut Vec::new());
+
+                    assert_eq!(
+                        method(&m, "Root", "f"),
+                        "fn f(&self, o: Option<u8>) -> Option<u8> {\n    let any: Result<?, ?> = Result::Ok(1);\n    let err: Result<u8, bool> = Result::Err(true);\n    let v: ? = o?;\n    o;\n}\nany: Result<?, ?>\nerr: Result<u8, bool>\nv: ?"
+                    );
+                }
+
+                #[test]
+                fn run_should_report_a_formatted_type_without_a_display_impl() {
+                    let (mut m, _) = lower(
+                        r#"
+                        pub struct Root;
+                        pub struct S;
+                        impl Root {
+                            pub fn f(&self, s: S) -> String {
+                                format!("{}", s)
+                            }
+                        }
+                        "#,
+                        &[],
+                        &[],
+                    );
+                    Resolve.run(&mut m, &mut Vec::new());
+
+                    assert_eq!(errors(&m, "Root", "f"), ["no `Display` of `S`"]);
+                }
             }
         }
     }
@@ -1654,12 +1855,13 @@ mod tests {
                 Ty::List(b(Ty::Param("T".into()))),
                 Ty::Option(b(Ty::Param("U".into()))),
                 Ty::Ref(b(Ty::Named("A".into(), vec![Ty::Param("T".into())]))),
+                Ty::Result(b(Ty::Param("T".into())), b(Ty::Param("U".into()))),
                 Ty::Bool,
             ]);
 
             assert_eq!(
                 print::ty(&subst(&t, &Ty::named("S"), &[("T".into(), Ty::Str)])),
-                "(S, Vec<str>, Option<U>, &A<str>, bool)"
+                "(S, Vec<str>, Option<U>, &A<str>, Result<str, U>, bool)"
             );
         }
     }

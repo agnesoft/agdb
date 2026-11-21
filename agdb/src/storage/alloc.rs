@@ -86,6 +86,14 @@ fn class(size: u64) -> Option<usize> {
     CLASSES.iter().position(|class| size <= *class)
 }
 
+/// The bytes an allocation of `size` bytes can hold.
+pub(crate) fn usable(size: u64) -> u64 {
+    class(size).map_or_else(
+        || u64::from(run_len(size)) * PAGE_SIZE,
+        |class| CLASSES[class],
+    )
+}
+
 /// Saturates at a length no file can hold so that allocating it fails.
 fn run_len(size: u64) -> u32 {
     size.div_ceil(PAGE_SIZE).min(u64::from(u32::MAX)) as u32
@@ -570,7 +578,7 @@ pub(crate) mod tests {
     use std::collections::BTreeSet;
     use std::sync::Arc;
 
-    type Heap = MemoryStorageImpl<TestPlatform>;
+    pub(crate) type Heap = MemoryStorageImpl<TestPlatform>;
 
     #[derive(Clone, Copy, Debug, PartialEq)]
     enum Owner {
@@ -583,14 +591,14 @@ pub(crate) mod tests {
     }
 
     /// Fails its `fail`-th read or write.
-    struct Faulty<'a, V> {
+    pub(crate) struct Faulty<'a, V> {
         view: &'a mut V,
-        calls: Cell<u64>,
-        fail: u64,
+        pub(crate) calls: Cell<u64>,
+        pub(crate) fail: u64,
     }
 
     impl<'a, V> Faulty<'a, V> {
-        fn new(view: &'a mut V, fail: u64) -> Self {
+        pub(crate) fn new(view: &'a mut V, fail: u64) -> Self {
             Self {
                 view,
                 calls: Cell::new(0),
@@ -632,7 +640,7 @@ pub(crate) mod tests {
         }
     }
 
-    fn heap() -> Heap {
+    pub(crate) fn heap() -> Heap {
         MemoryStorageImpl::from_buffer_with_platform(
             Arc::new(test_platform()),
             "/heap",
@@ -895,6 +903,19 @@ pub(crate) mod tests {
             assert_eq!(map_len(5, 0), 1);
             assert_eq!(map_len(8192, 1), 2);
             assert_eq!(map_len(u64::from(u32::MAX), 1 << 18), 1 << 20);
+        }
+    }
+
+    mod usable {
+        use super::*;
+
+        #[test]
+        fn usable_should_round_up_to_class_or_pages() {
+            assert_eq!(usable(1), 16);
+            assert_eq!(usable(40), 48);
+            assert_eq!(usable(504), 504);
+            assert_eq!(usable(505), PAGE_SIZE);
+            assert_eq!(usable(PAGE_SIZE + 1), 2 * PAGE_SIZE);
         }
     }
 

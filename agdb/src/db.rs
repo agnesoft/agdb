@@ -11,7 +11,7 @@ pub mod db_value;
 
 mod db_aliases;
 mod db_search_handlers;
-mod db_value_index;
+pub(crate) mod db_value_index;
 
 use self::db_aliases::DbAliases;
 use self::db_error::DbError;

@@ -1,6 +1,18 @@
+#[allow(dead_code)]
+pub(crate) mod aliases;
 pub mod bit_set;
+#[allow(dead_code)]
+pub(crate) mod graph;
+#[allow(dead_code)]
+pub(crate) mod indexes;
+#[allow(dead_code)]
+pub(crate) mod key_values;
 pub mod map;
 pub mod multi_map;
+#[allow(dead_code)]
+pub(crate) mod table;
+#[allow(dead_code)]
+pub(crate) mod value;
 pub mod vec;
 
 #[cfg(test)]

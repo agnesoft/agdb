@@ -11,6 +11,12 @@ use super::pages::ViewMut;
 use super::pages::Writer;
 use crate::DbError;
 use crate::DbErrorType;
+use crate::collections::aliases::Aliases;
+use crate::collections::graph::GRAPH_SIZE;
+use crate::collections::graph::GraphHeader;
+use crate::collections::indexes::INDEXES_SIZE;
+use crate::collections::indexes::Indexes;
+use crate::collections::table::TABLE_SIZE;
 use crate::utilities::serialize::u64_at;
 use std::borrow::Cow;
 
@@ -23,7 +29,10 @@ const VERSION: u64 = 2;
 const MAGIC: u64 = 0x746f_6f72_6264_6761;
 /// `[0 u64][8 u64][VERSION u64][MAGIC u64][meta_len u32]`
 const HEADER: usize = 36;
-const META_SIZE: usize = ALLOCATOR_SIZE;
+const GRAPH_AT: usize = HEADER + ALLOCATOR_SIZE;
+const ALIASES_AT: usize = GRAPH_AT + GRAPH_SIZE;
+const INDEXES_AT: usize = ALIASES_AT + TABLE_SIZE;
+const META_SIZE: usize = INDEXES_AT + INDEXES_SIZE - HEADER;
 const ROOT_SIZE: usize = HEADER + META_SIZE;
 const _: () = assert!(ROOT_SIZE as u64 <= ROOT_PAGES as u64 * PAGE_SIZE);
 
@@ -73,21 +82,27 @@ impl Format {
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct Meta {
     pub(crate) alloc: Allocator,
+    pub(crate) graph: GraphHeader,
+    pub(crate) aliases: Aliases,
+    pub(crate) indexes: Indexes,
 }
 
 impl Meta {
     fn new() -> Self {
         Self {
             alloc: Allocator::new(),
+            graph: GraphHeader::new(),
+            aliases: Aliases::default(),
+            indexes: Indexes::default(),
         }
     }
 
     fn load(view: &impl View) -> Result<Self, DbError> {
-        Self::decode(&view.read(0, ROOT_SIZE as u64)?, view.len())
+        Self::decode(view, &view.read(0, ROOT_SIZE as u64)?)
     }
 
-    /// Decodes the root of a storage of `len` bytes.
-    fn decode(bytes: &[u8], len: u64) -> Result<Self, DbError> {
+    /// Decodes the root `bytes` of the storage `view`.
+    fn decode(view: &impl View, bytes: &[u8]) -> Result<Self, DbError> {
         let meta_len = u32_at(bytes, 32);
 
         if meta_len as usize != META_SIZE {
@@ -98,22 +113,26 @@ impl Meta {
         }
 
         let mut alloc = [0_u8; ALLOCATOR_SIZE];
-        alloc.copy_from_slice(&bytes[HEADER..ROOT_SIZE]);
-        let meta = Self {
-            alloc: Allocator::decode(&alloc),
-        };
+        alloc.copy_from_slice(&bytes[HEADER..GRAPH_AT]);
+        let alloc = Allocator::decode(&alloc);
 
-        if meta.alloc.len() != len {
+        if alloc.len() != view.len() {
             return Err(DbError::storage(
                 DbErrorType::InvalidIndex,
                 format!(
-                    "Invalid root storage length ({} != {len})",
-                    meta.alloc.len()
+                    "Invalid root storage length ({} != {})",
+                    alloc.len(),
+                    view.len()
                 ),
             ));
         }
 
-        Ok(meta)
+        Ok(Self {
+            alloc,
+            graph: GraphHeader::decode(&bytes[GRAPH_AT..ALIASES_AT]),
+            aliases: Aliases::decode(&bytes[ALIASES_AT..INDEXES_AT]),
+            indexes: Indexes::load(view, &bytes[INDEXES_AT..ROOT_SIZE])?,
+        })
     }
 
     fn encode(&self) -> [u8; ROOT_SIZE] {
@@ -122,7 +141,10 @@ impl Meta {
         bytes[16..24].copy_from_slice(&VERSION.to_le_bytes());
         bytes[24..32].copy_from_slice(&MAGIC.to_le_bytes());
         bytes[32..36].copy_from_slice(&(META_SIZE as u32).to_le_bytes());
-        bytes[HEADER..].copy_from_slice(&self.alloc.encode());
+        bytes[HEADER..GRAPH_AT].copy_from_slice(&self.alloc.encode());
+        bytes[GRAPH_AT..ALIASES_AT].copy_from_slice(&self.graph.encode());
+        bytes[ALIASES_AT..INDEXES_AT].copy_from_slice(&self.aliases.encode());
+        bytes[INDEXES_AT..].copy_from_slice(&self.indexes.encode());
         bytes
     }
 }
@@ -215,8 +237,10 @@ impl<S: StorageData> RootMut<'_, S> {
     /// Writes the meta to the root only if it changed: the root already
     /// holds the committed one.
     pub(crate) fn commit(mut self) -> Result<(), DbError> {
-        if self.committed.as_ref() != Some(&self.meta) {
-            self.view.write(0, &self.meta.encode())?;
+        let root = self.meta.encode();
+
+        if self.committed.as_ref().map(Meta::encode) != Some(root) {
+            self.view.write(0, &root)?;
         }
 
         let result = self.view.commit();
@@ -228,6 +252,7 @@ impl<S: StorageData> RootMut<'_, S> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::DbId;
     use crate::storage::DEFAULT_OVERLAY_LIMIT;
     use crate::storage::SyncMode;
     use crate::storage::alloc::tests::pattern;
@@ -301,6 +326,25 @@ mod tests {
             transaction.view.write(pos, &pattern(id, size)).unwrap();
             live.push((pos, size, id));
         }
+    }
+
+    /// Inserts a node with a self-loop, an alias and an indexed value.
+    fn collections<S: StorageData>(transaction: &mut RootMut<'_, S>) {
+        let meta = &mut transaction.meta;
+        let view = &mut transaction.view;
+        let node = meta.graph.insert_node(view, &mut meta.alloc).unwrap();
+        meta.graph
+            .insert_edge(view, &mut meta.alloc, node, node)
+            .unwrap();
+        meta.aliases
+            .insert(view, &mut meta.alloc, &meta.graph, node, "root")
+            .unwrap();
+        meta.indexes
+            .insert_index(view, &mut meta.alloc, &"key".into())
+            .unwrap();
+        meta.indexes
+            .insert(view, &mut meta.alloc, &"key".into(), &"value".into(), node)
+            .unwrap();
     }
 
     /// Commits the allocations of `sizes`, returning the meta and the
@@ -502,31 +546,53 @@ mod tests {
             fn decode_should_return_encoded_meta() {
                 let platform = platform();
                 let mut root = open(&platform);
-                let (meta, _) = committed(&mut root, &[16, 600, 9000]);
+                let mut transaction = root.begin().unwrap();
+                collections(&mut transaction);
+                transaction.commit().unwrap();
+                let (reader, meta) = root.read().unwrap();
 
-                let decoded = Meta::decode(&meta.encode(), meta.alloc.len()).unwrap();
+                let decoded = Meta::decode(&reader, &meta.encode()).unwrap();
 
-                assert_eq!(decoded, meta);
+                assert_eq!(decoded, *meta);
             }
 
             #[test]
             fn decode_meta_len_mismatch_should_fail() {
+                let platform = platform();
+                let root = open(&platform);
                 let mut bytes = Meta::new().encode();
                 bytes[32] += 1;
 
-                let error = Meta::decode(&bytes, 4096).unwrap_err();
+                let error = Meta::decode(&root.read().unwrap().0, &bytes).unwrap_err();
 
-                assert_eq!(error.description, "Invalid root meta length (201 != 200)");
+                assert_eq!(error.description, "Invalid root meta length (289 != 288)");
             }
 
             #[test]
             fn decode_storage_len_mismatch_should_fail() {
-                let error = Meta::decode(&Meta::new().encode(), 5000).unwrap_err();
+                let platform = platform();
+                let mut root = open(&platform);
+                committed(&mut root, &[9000]);
+                let reader = root.read().unwrap().0;
+
+                let error = Meta::decode(&reader, &Meta::new().encode()).unwrap_err();
 
                 assert_eq!(
                     error.description,
-                    "Invalid root storage length (4096 != 5000)"
+                    format!("Invalid root storage length (4096 != {})", reader.len())
                 );
+            }
+
+            #[test]
+            fn decode_indexes_outside_storage_should_fail() {
+                let platform = platform();
+                let root = open(&platform);
+                let mut bytes = Meta::new().encode();
+                bytes[INDEXES_AT..].copy_from_slice(&words(&[4096, 1]));
+
+                let error = Meta::decode(&root.read().unwrap().0, &bytes).unwrap_err();
+
+                assert_eq!(error.description, "Read (4096..4144) out of bounds (4096)");
             }
         }
     }
@@ -587,6 +653,34 @@ mod tests {
                 let root = open(&platform);
 
                 assert_state(&root, &state);
+            }
+
+            #[test]
+            fn open_should_load_committed_collections() {
+                let platform = platform();
+                let mut root = open(&platform);
+                let mut transaction = root.begin().unwrap();
+                collections(&mut transaction);
+                let meta = transaction.meta.clone();
+                transaction.commit().unwrap();
+                drop(root);
+
+                let root = open(&platform);
+
+                let (reader, loaded) = root.read().unwrap();
+                assert_eq!(*loaded, meta);
+                assert_eq!(
+                    loaded.aliases.id(&reader, &loaded.graph, "root").unwrap(),
+                    Some(DbId(1))
+                );
+                assert_eq!(
+                    loaded
+                        .indexes
+                        .search(&reader, &"key".into(), &"value".into())
+                        .unwrap(),
+                    Some(vec![DbId(1)])
+                );
+                assert_eq!(loaded.graph.edge_count(), 1);
             }
 
             #[test]

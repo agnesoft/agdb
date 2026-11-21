@@ -737,56 +737,7 @@ async fn admin_cluster_logout_selected_session() -> Result<(), TestError> {
     Ok(())
 }
 
-<<<<<<< HEAD:agdb_api/src/tests/routes/cluster_test.rs
-#[cfg(feature = "api")]
-pub fn test_defs() -> Vec<agdb::type_def::Type> {
-    vec![
-        __status_type_def(),
-        __admin_db_add_type_def(),
-        __admin_db_backup_restore_type_def(),
-        __admin_db_rollback_type_def(),
-        __admin_db_audit_trim_type_def(),
-        __admin_db_clear_type_def(),
-        __admin_db_convert_type_def(),
-        __admin_db_copy_type_def(),
-        __admin_db_delete_type_def(),
-        __admin_db_exec_type_def(),
-        __admin_db_optimize_type_def(),
-        __admin_db_shrink_to_fit_type_def(),
-        __admin_db_remove_type_def(),
-        __admin_db_rename_type_def(),
-        __admin_db_user_add_remove_type_def(),
-        __admin_user_add_type_def(),
-        __admin_user_change_password_type_def(),
-        __admin_cluster_logout_type_def(),
-        __admin_cluster_logout_all_type_def(),
-        __admin_user_delete_type_def(),
-        __db_add_type_def(),
-        __db_backup_type_def(),
-        __db_rollback_type_def(),
-        __db_clear_type_def(),
-        __db_convert_type_def(),
-        __db_copy_type_def(),
-        __db_delete_type_def(),
-        __db_exec_type_def(),
-        __db_optimize_type_def(),
-        __db_shrink_to_fit_type_def(),
-        __db_remove_type_def(),
-        __db_rename_type_def(),
-        __db_user_add_remove_type_def(),
-        __user_change_password_type_def(),
-        __user_login_type_def(),
-        __cluster_logout_type_def(),
-        __cluster_logout_all_type_def(),
-        __cluster_logout_all_keep_self_type_def(),
-        __cluster_logout_selected_session_type_def(),
-        __admin_cluster_logout_selected_session_type_def(),
-        __dashboard_type_def(),
-    ]
-}
-
-#[cfg_attr(feature = "api", agdb::test_def())]
-pub async fn dashboard() -> Result<(), TestError> {
+async fn dashboard() -> Result<(), TestError> {
     let cluster = TestCluster::new().await?;
     let user = &next_user_name();
     let mut client = cluster.follower();
@@ -812,7 +763,7 @@ pub async fn dashboard() -> Result<(), TestError> {
     assert!(client.dashboard_list().await?.1.is_empty());
     Ok(())
 }
-=======
+
 pub(super) const TESTS: &[Test] = tests![
     status,
     admin_db_add,
@@ -846,5 +797,5 @@ pub(super) const TESTS: &[Test] = tests![
     cluster_logout_all_keep_self,
     cluster_logout_selected_session,
     admin_cluster_logout_selected_session,
+    dashboard,
 ];
->>>>>>> origin/main:agdb_server/tests/api/cluster_test.rs

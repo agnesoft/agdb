@@ -1,10 +1,11 @@
+use crate::runner::Test;
+use crate::runner::tests;
 use crate::test_server::ADMIN;
 use crate::test_server::TestServer;
 use crate::test_server::next_user_name;
 use crate::test_server::test_error::TestError;
 
-#[cfg_attr(feature = "api", agdb::test_def())]
-pub async fn add_get_list() -> Result<(), TestError> {
+async fn add_get_list() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
     let user = &next_user_name();
     server.api.user_login(ADMIN, ADMIN).await?;
@@ -26,8 +27,7 @@ pub async fn add_get_list() -> Result<(), TestError> {
     Ok(())
 }
 
-#[cfg_attr(feature = "api", agdb::test_def())]
-pub async fn add_existing() -> Result<(), TestError> {
+async fn add_existing() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
     let user = &next_user_name();
     server.api.user_login(ADMIN, ADMIN).await?;
@@ -44,8 +44,7 @@ pub async fn add_existing() -> Result<(), TestError> {
     Ok(())
 }
 
-#[cfg_attr(feature = "api", agdb::test_def())]
-pub async fn add_invalid_name() -> Result<(), TestError> {
+async fn add_invalid_name() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
     let user = &next_user_name();
     server.api.user_login(ADMIN, ADMIN).await?;
@@ -84,8 +83,7 @@ pub async fn add_invalid_name() -> Result<(), TestError> {
     Ok(())
 }
 
-#[cfg_attr(feature = "api", agdb::test_def())]
-pub async fn save_upserts() -> Result<(), TestError> {
+async fn save_upserts() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
     let user = &next_user_name();
     server.api.user_login(ADMIN, ADMIN).await?;
@@ -101,8 +99,7 @@ pub async fn save_upserts() -> Result<(), TestError> {
     Ok(())
 }
 
-#[cfg_attr(feature = "api", agdb::test_def())]
-pub async fn rename() -> Result<(), TestError> {
+async fn rename() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
     let user = &next_user_name();
     server.api.user_login(ADMIN, ADMIN).await?;
@@ -140,8 +137,7 @@ pub async fn rename() -> Result<(), TestError> {
     Ok(())
 }
 
-#[cfg_attr(feature = "api", agdb::test_def())]
-pub async fn remove() -> Result<(), TestError> {
+async fn remove() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
     let user = &next_user_name();
     server.api.user_login(ADMIN, ADMIN).await?;
@@ -157,8 +153,7 @@ pub async fn remove() -> Result<(), TestError> {
     Ok(())
 }
 
-#[cfg_attr(feature = "api", agdb::test_def())]
-pub async fn other_user() -> Result<(), TestError> {
+async fn other_user() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
     let owner = &next_user_name();
     let user = &next_user_name();
@@ -175,8 +170,7 @@ pub async fn other_user() -> Result<(), TestError> {
     Ok(())
 }
 
-#[cfg_attr(feature = "api", agdb::test_def())]
-pub async fn removed_with_user() -> Result<(), TestError> {
+async fn removed_with_user() -> Result<(), TestError> {
     let mut server = TestServer::new().await?;
     let user = &next_user_name();
     server.api.user_login(ADMIN, ADMIN).await?;
@@ -192,25 +186,21 @@ pub async fn removed_with_user() -> Result<(), TestError> {
     Ok(())
 }
 
-#[cfg_attr(feature = "api", agdb::test_def())]
-pub async fn no_token() -> Result<(), TestError> {
+async fn no_token() -> Result<(), TestError> {
     let server = TestServer::new().await?;
     let status = server.api.dashboard_list().await.unwrap_err().status;
     assert_eq!(status, 401);
     Ok(())
 }
 
-#[cfg(feature = "api")]
-pub fn test_defs() -> Vec<agdb::type_def::Type> {
-    vec![
-        __add_get_list_type_def(),
-        __add_existing_type_def(),
-        __add_invalid_name_type_def(),
-        __save_upserts_type_def(),
-        __rename_type_def(),
-        __remove_type_def(),
-        __other_user_type_def(),
-        __removed_with_user_type_def(),
-        __no_token_type_def(),
-    ]
-}
+pub(super) const TESTS: &[Test] = tests![
+    add_get_list,
+    add_existing,
+    add_invalid_name,
+    save_upserts,
+    rename,
+    remove,
+    other_user,
+    removed_with_user,
+    no_token,
+];

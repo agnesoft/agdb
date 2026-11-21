@@ -662,3 +662,34 @@ fn search_index_order_by_where() {
         &[3, 1],
     );
 }
+
+#[test]
+fn search_index_offset_limit_beyond_results() {
+    let mut db = TestDb::new();
+    db.exec_mut(QueryBuilder::insert().index("age").query(), 0);
+    db.exec_mut(
+        QueryBuilder::insert()
+            .nodes()
+            .values([vec![("age", 20).into()], vec![("age", 20).into()]])
+            .query(),
+        2,
+    );
+
+    db.exec_ids(
+        QueryBuilder::search()
+            .index("age")
+            .value(20)
+            .offset(1)
+            .limit(10)
+            .query(),
+        &[2],
+    );
+    db.exec_ids(
+        QueryBuilder::search()
+            .index("age")
+            .value(20)
+            .offset(5)
+            .query(),
+        &[],
+    );
+}

@@ -44,6 +44,15 @@ fn select_missing_ids() {
 }
 
 #[test]
+fn select_min_id() {
+    let db = TestDb::new();
+    db.exec_error(
+        QueryBuilder::select().ids(i64::MIN).query(),
+        "Id '-9223372036854775808' not found",
+    );
+}
+
+#[test]
 fn select_invalid_ids() {
     let db = TestDb::new();
     db.exec_error(QueryBuilder::select().ids(0).query(), "Id '0' not found");

@@ -74,3 +74,9 @@ fn remove_edges_search() {
     );
     db.exec_error(QueryBuilder::select().ids(-3).query(), "Id '-3' not found");
 }
+
+#[test]
+fn remove_min_id() {
+    let mut db = TestDb::new();
+    db.exec_mut(QueryBuilder::remove().ids(i64::MIN).query(), 0);
+}

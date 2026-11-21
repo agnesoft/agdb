@@ -753,3 +753,72 @@ fn search_to_from_with_conditions() {
         &[1, 2, 3],
     );
 }
+
+#[test]
+fn search_from_to_offset_beyond_results() {
+    let mut db = TestDb::new();
+    db.exec_mut(QueryBuilder::insert().nodes().count(3).query(), 3);
+    db.exec_mut(
+        QueryBuilder::insert()
+            .edges()
+            .from([1, 2])
+            .to([2, 3])
+            .query(),
+        2,
+    );
+    db.exec_ids(QueryBuilder::search().from(1).to(3).offset(10).query(), &[]);
+    db.exec_ids(
+        QueryBuilder::search()
+            .from(1)
+            .to(3)
+            .offset(4)
+            .limit(2)
+            .query(),
+        &[3],
+    );
+}
+
+#[test]
+fn search_from_to_offset_limit_overflow() {
+    let mut db = TestDb::new();
+    db.exec_mut(QueryBuilder::insert().nodes().count(3).query(), 3);
+    db.exec_mut(
+        QueryBuilder::insert()
+            .edges()
+            .from([1, 2])
+            .to([2, 3])
+            .query(),
+        2,
+    );
+    db.exec_ids(
+        QueryBuilder::search()
+            .from(1)
+            .to(3)
+            .offset(1)
+            .limit(u64::MAX)
+            .query(),
+        &[-4, 2, -5, 3],
+    );
+}
+
+#[test]
+fn search_from_offset_limit_overflow() {
+    let mut db = TestDb::new();
+    db.exec_mut(QueryBuilder::insert().nodes().count(3).query(), 3);
+    db.exec_mut(
+        QueryBuilder::insert()
+            .edges()
+            .from([1, 2])
+            .to([2, 3])
+            .query(),
+        2,
+    );
+    db.exec_ids(
+        QueryBuilder::search()
+            .from(1)
+            .offset(1)
+            .limit(u64::MAX)
+            .query(),
+        &[-4, 2, -5, 3],
+    );
+}

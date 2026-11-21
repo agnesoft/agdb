@@ -1346,3 +1346,30 @@ fn search_where_regex() {
         &[],
     );
 }
+
+#[test]
+fn search_path_where_distance_should_match_search_from() {
+    let db = create_db();
+    let path = [1, -5, 3, -10, 7];
+
+    for distance in 1..path.len() {
+        db.exec_ids(
+            QueryBuilder::search()
+                .from("root")
+                .to(7)
+                .where_()
+                .distance(CountComparison::GreaterThanOrEqual(distance as u64))
+                .query(),
+            &path[distance..],
+        );
+        db.exec_ids(
+            QueryBuilder::search()
+                .to(7)
+                .from("root")
+                .where_()
+                .distance(CountComparison::GreaterThanOrEqual(distance as u64))
+                .query(),
+            &path[..path.len() - distance],
+        );
+    }
+}

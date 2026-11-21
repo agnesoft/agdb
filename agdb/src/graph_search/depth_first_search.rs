@@ -1,5 +1,6 @@
 use super::search_impl::SearchIndex;
 use super::search_impl::SearchIterator;
+use crate::DbError;
 use crate::StorageData;
 use crate::graph::DbGraph;
 use crate::graph::GraphIndex;
@@ -25,25 +26,22 @@ where
         graph: &DbGraph<D>,
         storage: &Storage<D>,
         follow: bool,
-    ) {
+    ) -> Result<(), DbError> {
         if current_index.index.is_node() {
-            if follow
-                && let Some(i) = graph
-                    .first_edge_from(storage, current_index.index)
-                    .ok()
-                    .filter(|i| i.is_valid())
-            {
-                self.stack.push(SearchIndex {
-                    index: i,
-                    distance: current_index.distance + 1,
-                });
+            if follow {
+                let i = graph.first_edge_from(storage, current_index.index)?;
+
+                if i.is_valid() {
+                    self.stack.push(SearchIndex {
+                        index: i,
+                        distance: current_index.distance + 1,
+                    });
+                }
             }
         } else {
-            if let Some(i) = graph
-                .next_edge_from(storage, current_index.index)
-                .ok()
-                .filter(|i| i.is_valid())
-            {
+            let i = graph.next_edge_from(storage, current_index.index)?;
+
+            if i.is_valid() {
                 self.stack.push(SearchIndex {
                     index: i,
                     distance: current_index.distance,
@@ -52,11 +50,13 @@ where
 
             if follow {
                 self.stack.push(SearchIndex {
-                    index: graph.edge_to(storage, current_index.index),
+                    index: graph.edge_to(storage, current_index.index)?,
                     distance: current_index.distance + 1,
                 });
             }
         }
+
+        Ok(())
     }
 
     fn next(&mut self) -> Option<SearchIndex> {

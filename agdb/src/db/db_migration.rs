@@ -270,7 +270,8 @@ mod legacy {
                 phantom_data: PhantomData,
             };
 
-            if let Some((db_id, kv)) = it.next() {
+            if let Some(pair) = it.next() {
+                let (db_id, kv) = pair?;
                 pos = it.pos;
                 values.insert_value(storage, db_id.as_index(), &kv)?;
             } else {
@@ -350,6 +351,7 @@ mod tests {
     use crate::db::db_index::DbIndexes;
     use crate::db::db_key_value::DbKeyValues;
     use crate::graph::GraphIndex;
+    use crate::storage::DEFAULT_OVERLAY_LIMIT;
     use crate::storage::file_storage::FileStorageImpl;
     use agplatform::test_platform::TestPlatform;
 
@@ -420,7 +422,10 @@ mod tests {
         assert_eq!(storage.version(), DB_VERSION);
         let (graph, aliases, _, values) = TestDb::load_data_structures(storage).unwrap();
         assert_eq!(graph.node_count(storage).unwrap(), 2);
-        assert_eq!(graph.edge_from(storage, GraphIndex(-3)), GraphIndex(1));
+        assert_eq!(
+            graph.edge_from(storage, GraphIndex(-3)).unwrap(),
+            GraphIndex(1)
+        );
         assert_eq!(
             aliases.aliases(storage, &graph).unwrap(),
             vec![("root".to_string(), DbId(1))]
@@ -474,17 +479,22 @@ mod tests {
 
         #[test]
         fn migrate_legacy_should_keep_legacy_or_complete_on_io_failure() {
-            assert_io_failures_recover(
-                legacy_db,
-                |storage, _| migrate(storage),
-                |storage, _| {
-                    if storage.version() == v1::VERSION {
-                        assert_eq!(migrate(storage).unwrap(), report(0));
-                    }
+            for overlay_limit in [DEFAULT_OVERLAY_LIMIT, 0] {
+                assert_io_failures_recover(
+                    |storage| {
+                        legacy_db(storage);
+                        storage.set_overlay_limit(overlay_limit);
+                    },
+                    |storage, _| migrate(storage),
+                    |storage, _| {
+                        if storage.version() == v1::VERSION {
+                            assert_eq!(migrate(storage).unwrap(), report(0));
+                        }
 
-                    assert_migrated(storage);
-                },
-            );
+                        assert_migrated(storage);
+                    },
+                );
+            }
         }
 
         #[test]

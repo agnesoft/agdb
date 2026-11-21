@@ -46,11 +46,7 @@ impl DbId {
     /// Returns the absolute value of the id as a `u64` index
     /// (negates edge ids so they can be used as array offsets).
     pub fn as_index(&self) -> u64 {
-        if self.0 < 0 {
-            (-self.0) as u64
-        } else {
-            self.0 as u64
-        }
+        self.0.unsigned_abs()
     }
 }
 
@@ -61,6 +57,19 @@ mod tests {
     use std::collections::hash_map::DefaultHasher;
     use std::hash::Hash;
     use std::hash::Hasher;
+
+    mod db_id {
+        use super::*;
+
+        mod as_index {
+            use super::*;
+
+            #[test]
+            fn as_index_min_should_return_magnitude() {
+                assert_eq!(DbId(i64::MIN).as_index(), 1 << 63);
+            }
+        }
+    }
 
     #[test]
     fn derived_from_hash() {

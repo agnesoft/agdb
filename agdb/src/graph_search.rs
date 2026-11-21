@@ -49,7 +49,7 @@ where
         index: GraphIndex,
         handler: Handler,
     ) -> Result<Vec<GraphIndex>, DbError> {
-        if self.is_valid_index(index) {
+        if self.is_valid_index(index)? {
             SearchImpl::<'a, D, BreadthFirstSearch>::new(self.graph, self.storage, index)
                 .search(handler)
         } else {
@@ -62,7 +62,7 @@ where
         index: GraphIndex,
         handler: Handler,
     ) -> Result<Vec<GraphIndex>, DbError> {
-        if self.is_valid_index(index) {
+        if self.is_valid_index(index)? {
             SearchImpl::<'a, D, BreadthFirstSearchReverse>::new(self.graph, self.storage, index)
                 .search(handler)
         } else {
@@ -75,7 +75,7 @@ where
         index: GraphIndex,
         handler: Handler,
     ) -> Result<Vec<GraphIndex>, DbError> {
-        if self.is_valid_index(index) {
+        if self.is_valid_index(index)? {
             SearchImpl::<'a, D, DepthFirstSearch>::new(self.graph, self.storage, index)
                 .search(handler)
         } else {
@@ -88,7 +88,7 @@ where
         index: GraphIndex,
         handler: Handler,
     ) -> Result<Vec<GraphIndex>, DbError> {
-        if self.is_valid_index(index) {
+        if self.is_valid_index(index)? {
             SearchImpl::<'a, D, DepthFirstSearchReverse>::new(self.graph, self.storage, index)
                 .search(handler)
         } else {
@@ -102,8 +102,8 @@ where
         to: GraphIndex,
         handler: Handler,
     ) -> Result<Vec<GraphIndex>, DbError> {
-        if from != to && self.is_valid_node(from) && self.is_valid_node(to) {
-            PathSearch::<D, Handler>::new(self.graph, self.storage, from, to, handler).search()
+        if from != to && self.is_valid_node(from)? && self.is_valid_node(to)? {
+            PathSearch::<D, Handler>::new(self.graph, self.storage, from, to, handler)?.search()
         } else {
             Ok(vec![])
         }
@@ -115,8 +115,8 @@ where
         to: GraphIndex,
         handler: Handler,
     ) -> Result<Vec<GraphIndex>, DbError> {
-        if from != to && self.is_valid_node(from) && self.is_valid_node(to) {
-            PathSearch::<D, Handler>::new_reverse(self.graph, self.storage, from, to, handler)
+        if from != to && self.is_valid_node(from)? && self.is_valid_node(to)? {
+            PathSearch::<D, Handler>::new_reverse(self.graph, self.storage, from, to, handler)?
                 .search()
         } else {
             Ok(vec![])
@@ -130,12 +130,16 @@ where
         ElementSearch::<D, Handler>::new(self.graph, self.storage, handler).search()
     }
 
-    fn is_valid_index(&self, index: GraphIndex) -> bool {
-        self.is_valid_node(index) || self.graph.edge(self.storage, index).is_some()
+    fn is_valid_index(&self, index: GraphIndex) -> Result<bool, DbError> {
+        if index.is_edge() {
+            Ok(self.graph.edge(self.storage, index)?.is_some())
+        } else {
+            self.is_valid_node(index)
+        }
     }
 
-    fn is_valid_node(&self, index: GraphIndex) -> bool {
-        self.graph.node(self.storage, index).is_some()
+    fn is_valid_node(&self, index: GraphIndex) -> Result<bool, DbError> {
+        Ok(self.graph.node(self.storage, index)?.is_some())
     }
 }
 
@@ -351,5 +355,224 @@ mod tests {
         assert_eq!(control, SearchControl::Finish(false));
         control.flip();
         assert_eq!(control, SearchControl::Finish(true));
+    }
+
+    mod graph_search {
+        use super::*;
+        use crate::collections::tests::TestStorage;
+        use crate::collections::tests::assert_read_failures;
+        use crate::collections::tests::storage;
+        use crate::storage::file_storage::FileStorageImpl;
+        use agplatform::test_platform::TestPlatform;
+        use std::cell::RefCell;
+
+        type TestGraph = DbGraph<FileStorageImpl<TestPlatform>>;
+
+        #[derive(Default)]
+        struct Recorder {
+            visits: RefCell<Vec<(i64, u64)>>,
+        }
+
+        impl SearchHandler for &Recorder {
+            fn process(
+                &mut self,
+                index: GraphIndex,
+                distance: u64,
+            ) -> Result<SearchControl, DbError> {
+                self.visits.borrow_mut().push((index.0, distance));
+                Ok(SearchControl::Continue(true))
+            }
+        }
+
+        impl PathSearchHandler for &Recorder {
+            fn process(&self, index: GraphIndex, distance: u64) -> Result<(u64, bool), DbError> {
+                self.visits.borrow_mut().push((index.0, distance));
+                Ok((1, true))
+            }
+        }
+
+        /// 1 -4-> 2 -5-> 3
+        fn chain(storage: &mut TestStorage) -> TestGraph {
+            let mut graph = DbGraph::new(storage).unwrap();
+
+            for _ in 0..3 {
+                graph.insert_node(storage).unwrap();
+            }
+
+            graph
+                .insert_edge(storage, GraphIndex(1), GraphIndex(2))
+                .unwrap();
+            graph
+                .insert_edge(storage, GraphIndex(2), GraphIndex(3))
+                .unwrap();
+            graph
+        }
+
+        mod breadth_first_search {
+            use super::*;
+
+            #[test]
+            fn breadth_first_search_read_failure_should_return_error() {
+                assert_read_failures(chain, |storage, graph| {
+                    GraphSearch::from((&*graph, &*storage))
+                        .breadth_first_search(GraphIndex(1), &Recorder::default())
+                });
+            }
+
+            #[test]
+            fn breadth_first_search_edge_should_start_at_the_edge() {
+                // GIVEN
+                let mut storage = storage();
+                let graph = chain(&mut storage);
+
+                // WHEN
+                let result = GraphSearch::from((&graph, &storage))
+                    .breadth_first_search(GraphIndex(-4), &Recorder::default());
+
+                // THEN
+                assert_eq!(
+                    result,
+                    Ok(vec![
+                        GraphIndex(-4),
+                        GraphIndex(2),
+                        GraphIndex(-5),
+                        GraphIndex(3)
+                    ])
+                );
+            }
+
+            #[test]
+            fn breadth_first_search_edge_read_failure_should_return_error() {
+                assert_read_failures(chain, |storage, graph| {
+                    GraphSearch::from((&*graph, &*storage))
+                        .breadth_first_search(GraphIndex(-4), &Recorder::default())
+                });
+            }
+        }
+
+        mod breadth_first_search_reverse {
+            use super::*;
+
+            #[test]
+            fn breadth_first_search_reverse_read_failure_should_return_error() {
+                assert_read_failures(chain, |storage, graph| {
+                    GraphSearch::from((&*graph, &*storage))
+                        .breadth_first_search_reverse(GraphIndex(3), &Recorder::default())
+                });
+            }
+        }
+
+        mod depth_first_search {
+            use super::*;
+
+            #[test]
+            fn depth_first_search_read_failure_should_return_error() {
+                assert_read_failures(chain, |storage, graph| {
+                    GraphSearch::from((&*graph, &*storage))
+                        .depth_first_search(GraphIndex(1), &Recorder::default())
+                });
+            }
+        }
+
+        mod depth_first_search_reverse {
+            use super::*;
+
+            #[test]
+            fn depth_first_search_reverse_read_failure_should_return_error() {
+                assert_read_failures(chain, |storage, graph| {
+                    GraphSearch::from((&*graph, &*storage))
+                        .depth_first_search_reverse(GraphIndex(3), &Recorder::default())
+                });
+            }
+        }
+
+        mod elements {
+            use super::*;
+
+            #[test]
+            fn elements_read_failure_should_return_error() {
+                assert_read_failures(chain, |storage, graph| {
+                    GraphSearch::from((&*graph, &*storage)).elements(&Recorder::default())
+                });
+            }
+        }
+
+        mod path {
+            use super::*;
+
+            #[test]
+            fn path_should_pass_breadth_first_distances() {
+                let mut storage = storage();
+                let graph = chain(&mut storage);
+                let search = GraphSearch::from((&graph, &storage));
+                let path = Recorder::default();
+                let breadth_first = Recorder::default();
+
+                search.path(GraphIndex(1), GraphIndex(3), &path).unwrap();
+                search
+                    .breadth_first_search(GraphIndex(1), &breadth_first)
+                    .unwrap();
+
+                assert_eq!(
+                    path.visits.take(),
+                    vec![(1, 0), (-4, 1), (2, 2), (-5, 3), (3, 4)]
+                );
+                assert_eq!(
+                    breadth_first.visits.take(),
+                    vec![(1, 0), (-4, 1), (2, 2), (-5, 3), (3, 4)]
+                );
+            }
+
+            #[test]
+            fn path_read_failure_should_return_error() {
+                assert_read_failures(chain, |storage, graph| {
+                    GraphSearch::from((&*graph, &*storage)).path(
+                        GraphIndex(1),
+                        GraphIndex(3),
+                        &Recorder::default(),
+                    )
+                });
+            }
+        }
+
+        mod path_reverse {
+            use super::*;
+
+            #[test]
+            fn path_reverse_should_pass_breadth_first_reverse_distances() {
+                let mut storage = storage();
+                let graph = chain(&mut storage);
+                let search = GraphSearch::from((&graph, &storage));
+                let path = Recorder::default();
+                let breadth_first = Recorder::default();
+
+                search
+                    .path_reverse(GraphIndex(1), GraphIndex(3), &path)
+                    .unwrap();
+                search
+                    .breadth_first_search_reverse(GraphIndex(3), &breadth_first)
+                    .unwrap();
+
+                assert_eq!(
+                    path.visits.take(),
+                    vec![(3, 0), (-5, 1), (2, 2), (-4, 3), (1, 4)]
+                );
+                assert_eq!(
+                    breadth_first.visits.take(),
+                    vec![(3, 0), (-5, 1), (2, 2), (-4, 3), (1, 4)]
+                );
+            }
+
+            #[test]
+            fn path_reverse_read_failure_should_return_error() {
+                assert_read_failures(chain, |storage, graph| {
+                    GraphSearch::from((&*graph, &*storage)).path_reverse(
+                        GraphIndex(1),
+                        GraphIndex(3),
+                        &Recorder::default(),
+                    )
+                });
+            }
+        }
     }
 }

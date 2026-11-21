@@ -43,10 +43,10 @@ where
         from: GraphIndex,
         to: GraphIndex,
         handler: Handler,
-    ) -> Self {
-        let add = handler.process(from, 0).unwrap_or_default();
+    ) -> Result<Self, DbError> {
+        let add = handler.process(from, 0)?;
 
-        Self {
+        Ok(Self {
             current_path: Path {
                 elements: vec![],
                 cost: 0,
@@ -62,7 +62,7 @@ where
             result: vec![],
             visited: BitSet::new(),
             reverse: false,
-        }
+        })
     }
 
     pub fn new_reverse(
@@ -71,10 +71,10 @@ where
         from: GraphIndex,
         to: GraphIndex,
         handler: Handler,
-    ) -> Self {
-        let add = handler.process(to, 0).unwrap_or_default();
+    ) -> Result<Self, DbError> {
+        let add = handler.process(to, 0)?;
 
-        Self {
+        Ok(Self {
             current_path: Path {
                 elements: vec![],
                 cost: 0,
@@ -90,7 +90,7 @@ where
             result: vec![],
             visited: BitSet::new(),
             reverse: true,
-        }
+        })
     }
 
     pub fn search(&mut self) -> Result<Vec<GraphIndex>, DbError> {
@@ -114,7 +114,7 @@ where
     ) -> Result<(), DbError> {
         let cost = self
             .handler
-            .process(index, self.current_path.elements.len() as u64 + 1)?;
+            .process(index, self.current_path.elements.len() as u64)?;
 
         if cost.0 != 0 && !self.visited.value(node_index.as_u64()) {
             path.elements.push((index, cost.1));
@@ -140,18 +140,20 @@ where
     }
 
     fn expand(&mut self, index: GraphIndex) -> Result<(), DbError> {
-        let node = self
-            .graph
-            .node(self.storage, index)
-            .expect("unexpected invalid node index");
-        if self.reverse {
-            for edge in node.edge_iter_to() {
-                self.expand_edge(self.current_path.clone(), edge.index(), edge.index_from())?;
-            }
+        let edges = if self.reverse {
+            self.graph.edge_iter_to(self.storage, index)?
         } else {
-            for edge in node.edge_iter_from() {
-                self.expand_edge(self.current_path.clone(), edge.index(), edge.index_to())?;
-            }
+            self.graph.edge_iter_from(self.storage, index)?
+        };
+
+        for edge in edges {
+            let edge = edge?;
+            let next = if self.reverse {
+                edge.index_from()
+            } else {
+                edge.index_to()
+            };
+            self.expand_edge(self.current_path.clone(), edge.index(), next)?;
         }
 
         Ok(())

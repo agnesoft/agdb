@@ -22,7 +22,7 @@ pub trait SearchIterator<D: StorageData> {
         graph: &DbGraph<D>,
         storage: &Storage<D>,
         follow: bool,
-    );
+    ) -> Result<(), DbError>;
     fn next(&mut self) -> Option<SearchIndex>;
 }
 
@@ -85,13 +85,14 @@ where
     ) -> Result<bool, DbError> {
         let (add_index, result) = match handler.process(index.index, index.distance)? {
             SearchControl::Continue(add) => {
-                self.algorithm.expand(index, self.graph, self.storage, true);
+                self.algorithm
+                    .expand(index, self.graph, self.storage, true)?;
                 (add, true)
             }
             SearchControl::Finish(add) => (add, false),
             SearchControl::Stop(add) => {
                 self.algorithm
-                    .expand(index, self.graph, self.storage, false);
+                    .expand(index, self.graph, self.storage, false)?;
                 (add, true)
             }
         };

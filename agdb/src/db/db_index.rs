@@ -101,7 +101,7 @@ where
         let mut indexes = vec![];
 
         for storage_index in storage_indexes.iter(storage) {
-            let index = DbIndex::from_storage(storage, storage_index)?;
+            let index = DbIndex::from_storage(storage, storage_index?)?;
             indexes.push(index);
         }
 
@@ -142,13 +142,26 @@ where
     }
 
     pub fn remove(&mut self, storage: &mut Storage<D>, key: &DbValue) -> Result<(), DbError> {
-        if let Some(pos) = self.indexes.iter().position(|index| index.key() == key) {
-            self.storage_indexes.remove(storage, pos as u64)?;
-            let index = self.indexes.remove(pos);
+        if let Some(index) = self.take(storage, key)? {
             index.remove_from_storage(storage)?;
         }
 
         Ok(())
+    }
+
+    /// Removes the index of the `key` from the indexes without removing
+    /// its data from the `storage`.
+    pub fn take(
+        &mut self,
+        storage: &mut Storage<D>,
+        key: &DbValue,
+    ) -> Result<Option<DbIndex<D>>, DbError> {
+        if let Some(pos) = self.indexes.iter().position(|index| index.key() == key) {
+            self.storage_indexes.remove(storage, pos as u64)?;
+            return Ok(Some(self.indexes.remove(pos)));
+        }
+
+        Ok(None)
     }
 
     pub fn shrink_to_fit(&mut self, storage: &mut Storage<D>) -> Result<(), DbError> {

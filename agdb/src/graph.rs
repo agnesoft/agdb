@@ -26,11 +26,7 @@ impl GraphIndex {
     }
 
     pub fn as_u64(&self) -> u64 {
-        if self.is_edge() {
-            (-self.0) as u64
-        } else {
-            self.0 as u64
-        }
+        self.0.unsigned_abs()
     }
 }
 
@@ -97,7 +93,7 @@ where
     D: StorageData,
 {
     graph: &'a DbGraph<D>,
-    index: GraphIndex,
+    record: Record,
     storage: &'a Storage<D>,
 }
 
@@ -105,25 +101,21 @@ impl<'a, D> GraphNode<'a, D>
 where
     D: StorageData,
 {
-    pub fn edge_iter_from(&'a self) -> GraphEdgeIterator<'a, D> {
+    pub fn edge_iter_from(&self) -> GraphEdgeIterator<'a, D> {
         GraphEdgeIterator {
             graph: self.graph,
-            index: self
-                .graph
-                .first_edge_from(self.storage, self.index)
-                .unwrap_or_default(),
+            index: GraphIndex(-self.record[FROM]),
             storage: self.storage,
+            next: FROM_META,
         }
     }
 
-    pub fn edge_iter_to(&self) -> GraphEdgeReverseIterator<'_, D> {
-        GraphEdgeReverseIterator {
+    pub fn edge_iter_to(&self) -> GraphEdgeIterator<'a, D> {
+        GraphEdgeIterator {
             graph: self.graph,
-            index: self
-                .graph
-                .first_edge_to(self.storage, self.index)
-                .unwrap_or_default(),
+            index: GraphIndex(-self.record[TO]),
             storage: self.storage,
+            next: TO_META,
         }
     }
 
@@ -132,15 +124,11 @@ where
     }
 
     pub fn edge_count_from(&self) -> u64 {
-        self.graph
-            .field(self.storage, self.index.as_u64(), FROM_META)
-            .unwrap_or_default() as u64
+        self.record[FROM_META] as u64
     }
 
     pub fn edge_count_to(&self) -> u64 {
-        self.graph
-            .field(self.storage, self.index.as_u64(), TO_META)
-            .unwrap_or_default() as u64
+        self.record[TO_META] as u64
     }
 }
 
@@ -149,7 +137,7 @@ where
     D: StorageData,
 {
     graph: &'a DbGraph<D>,
-    index: Option<GraphIndex>,
+    slot: u64,
     storage: &'a Storage<D>,
 }
 
@@ -157,43 +145,51 @@ impl<D> Iterator for GraphIterator<'_, D>
 where
     D: StorageData,
 {
-    type Item = GraphIndex;
+    type Item = Result<GraphIndex, DbError>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if let Some(index) = self.index {
-            self.index = self.graph.next_element(self.storage, index);
+        while self.slot < self.graph.len {
+            let slot = self.slot;
+            self.slot += 1;
+
+            match self.graph.record(self.storage, slot) {
+                Ok(record) if 0 <= record[FROM_META] => {
+                    let slot = slot as i64;
+                    return Some(Ok(GraphIndex(if record[FROM] < 0 { -slot } else { slot })));
+                }
+                Ok(_) => {}
+                Err(error) => {
+                    self.slot = self.graph.len;
+                    return Some(Err(error));
+                }
+            }
         }
 
-        self.index
+        None
     }
 }
 
-pub struct GraphEdge<'a, D>
-where
-    D: StorageData,
-{
-    graph: &'a DbGraph<D>,
+pub struct GraphEdge {
     index: GraphIndex,
-    storage: &'a Storage<D>,
+    record: Record,
 }
 
-impl<D> GraphEdge<'_, D>
-where
-    D: StorageData,
-{
+impl GraphEdge {
     pub fn index(&self) -> GraphIndex {
         self.index
     }
 
     pub fn index_from(&self) -> GraphIndex {
-        self.graph.edge_from(self.storage, self.index)
+        GraphIndex(-self.record[FROM])
     }
 
     pub fn index_to(&self) -> GraphIndex {
-        self.graph.edge_to(self.storage, self.index)
+        GraphIndex(-self.record[TO])
     }
 }
 
+/// Follows the edges from (`next` is FROM_META) or to (TO_META) a
+/// node. A failed read is the last item.
 pub struct GraphEdgeIterator<'a, D>
 where
     D: StorageData,
@@ -201,65 +197,31 @@ where
     graph: &'a DbGraph<D>,
     index: GraphIndex,
     storage: &'a Storage<D>,
+    next: usize,
 }
 
-impl<'a, D> Iterator for GraphEdgeIterator<'a, D>
+impl<D> Iterator for GraphEdgeIterator<'_, D>
 where
     D: StorageData,
 {
-    type Item = GraphEdge<'a, D>;
+    type Item = Result<GraphEdge, DbError>;
 
     fn next(&mut self) -> Option<Self::Item> {
         if !self.index.is_valid() {
             return None;
         }
 
-        let current_index = self.index;
+        let index = self.index;
 
-        self.index = self
-            .graph
-            .next_edge_from(self.storage, self.index)
-            .unwrap_or_default();
-
-        Some(GraphEdge {
-            graph: self.graph,
-            index: current_index,
-            storage: self.storage,
-        })
-    }
-}
-
-pub struct GraphEdgeReverseIterator<'a, D>
-where
-    D: StorageData,
-{
-    graph: &'a DbGraph<D>,
-    index: GraphIndex,
-    storage: &'a Storage<D>,
-}
-
-impl<'a, D> Iterator for GraphEdgeReverseIterator<'a, D>
-where
-    D: StorageData,
-{
-    type Item = GraphEdge<'a, D>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if !self.index.is_valid() {
-            return None;
-        }
-
-        let current_index = self.index;
-
-        self.index = self
-            .graph
-            .next_edge_to(self.storage, self.index)
-            .unwrap_or_default();
-
-        Some(GraphEdge {
-            graph: self.graph,
-            index: current_index,
-            storage: self.storage,
+        Some(match self.graph.record(self.storage, index.as_u64()) {
+            Ok(record) => {
+                self.index = GraphIndex(-record[self.next]);
+                Ok(GraphEdge { index, record })
+            }
+            Err(error) => {
+                self.index = GraphIndex::default();
+                Err(error)
+            }
         })
     }
 }
@@ -332,46 +294,64 @@ where
         storage: &Storage<D>,
         index: GraphIndex,
     ) -> Result<Option<GraphAlias>, DbError> {
-        Ok(match self.element(storage, index)? {
-            Some(record) if index.is_node() && 0 <= record[FROM] => {
-                let mut alias = [0_u8; 16];
-                alias.copy_from_slice(&to_bytes(&record[ALIAS..]));
-                Some(alias)
-            }
-            _ => None,
-        })
+        Ok(self.node_record(storage, index)?.map(|record| {
+            let mut alias = [0_u8; 16];
+            alias.copy_from_slice(&to_bytes(&record[ALIAS..]));
+            alias
+        }))
     }
 
-    pub fn edge<'a>(
-        &'a self,
-        storage: &'a Storage<D>,
+    pub fn edge(
+        &self,
+        storage: &Storage<D>,
         index: GraphIndex,
-    ) -> Option<GraphEdge<'a, D>> {
-        self.validate_edge(storage, index).ok()?;
-
-        Some(GraphEdge {
-            graph: self,
-            index,
-            storage,
-        })
+    ) -> Result<Option<GraphEdge>, DbError> {
+        Ok(self
+            .edge_record(storage, index)?
+            .map(|record| GraphEdge { index, record }))
     }
 
-    #[allow(dead_code)]
     pub fn edge_count(&self, storage: &Storage<D>) -> Result<u64, DbError> {
         let root = self.record(storage, 0)?;
         Ok(self.len - 1 - root[NODE_COUNT] as u64 - root[FREE_COUNT] as u64)
     }
 
-    pub fn edge_from(&self, storage: &Storage<D>, index: GraphIndex) -> GraphIndex {
-        GraphIndex(
-            -self
-                .field(storage, index.as_u64(), FROM)
-                .unwrap_or_default(),
-        )
+    pub fn edge_from(
+        &self,
+        storage: &Storage<D>,
+        index: GraphIndex,
+    ) -> Result<GraphIndex, DbError> {
+        Ok(GraphIndex(-self.field(storage, index.as_u64(), FROM)?))
     }
 
-    pub fn edge_to(&self, storage: &Storage<D>, index: GraphIndex) -> GraphIndex {
-        GraphIndex(-self.field(storage, index.as_u64(), TO).unwrap_or_default())
+    pub fn edge_to(&self, storage: &Storage<D>, index: GraphIndex) -> Result<GraphIndex, DbError> {
+        Ok(GraphIndex(-self.field(storage, index.as_u64(), TO)?))
+    }
+
+    pub fn edge_iter_from<'a>(
+        &'a self,
+        storage: &'a Storage<D>,
+        index: GraphIndex,
+    ) -> Result<GraphEdgeIterator<'a, D>, DbError> {
+        Ok(GraphEdgeIterator {
+            graph: self,
+            index: self.first_edge_from(storage, index)?,
+            storage,
+            next: FROM_META,
+        })
+    }
+
+    pub fn edge_iter_to<'a>(
+        &'a self,
+        storage: &'a Storage<D>,
+        index: GraphIndex,
+    ) -> Result<GraphEdgeIterator<'a, D>, DbError> {
+        Ok(GraphEdgeIterator {
+            graph: self,
+            index: self.first_edge_to(storage, index)?,
+            storage,
+            next: TO_META,
+        })
     }
 
     pub fn first_edge_from(
@@ -447,7 +427,7 @@ where
     pub fn iter<'a>(&'a self, storage: &'a Storage<D>) -> GraphIterator<'a, D> {
         GraphIterator {
             graph: self,
-            index: Some(GraphIndex::default()),
+            slot: 1,
             storage,
         }
     }
@@ -456,14 +436,12 @@ where
         &'a self,
         storage: &'a Storage<D>,
         index: GraphIndex,
-    ) -> Option<GraphNode<'a, D>> {
-        self.validate_node(storage, index).ok()?;
-
-        Some(GraphNode {
+    ) -> Result<Option<GraphNode<'a, D>>, DbError> {
+        Ok(self.node_record(storage, index)?.map(|record| GraphNode {
             graph: self,
-            index,
+            record,
             storage,
-        })
+        }))
     }
 
     pub fn node_count(&self, storage: &Storage<D>) -> Result<u64, DbError> {
@@ -475,7 +453,7 @@ where
         storage: &mut Storage<D>,
         index: GraphIndex,
     ) -> Result<(), DbError> {
-        if self.validate_edge(storage, index).is_err() {
+        if self.edge_record(storage, index)?.is_none() {
             return Ok(());
         }
 
@@ -489,7 +467,7 @@ where
         storage: &mut Storage<D>,
         index: GraphIndex,
     ) -> Result<(), DbError> {
-        if self.validate_node(storage, index).is_err() {
+        if self.node_record(storage, index)?.is_none() {
             return Ok(());
         }
 
@@ -632,22 +610,6 @@ where
         Ok((0 <= record[FROM_META]).then_some(record))
     }
 
-    fn next_element(&self, storage: &Storage<D>, index: GraphIndex) -> Option<GraphIndex> {
-        for slot in (index.as_u64() + 1)..self.len {
-            if let Ok(record) = self.record(storage, slot)
-                && 0 <= record[FROM_META]
-            {
-                return Some(GraphIndex(if record[FROM] < 0 {
-                    -(slot as i64)
-                } else {
-                    slot as i64
-                }));
-            }
-        }
-
-        None
-    }
-
     fn offset(slot: u64) -> u64 {
         HEADER_SIZE + slot * RECORD_SIZE
     }
@@ -702,18 +664,29 @@ where
         Ok(())
     }
 
-    fn validate_edge(&self, storage: &Storage<D>, index: GraphIndex) -> Result<Record, DbError> {
-        match self.element(storage, index)? {
-            Some(record) if index.is_edge() && record[FROM] < 0 => Ok(record),
-            _ => Err(Self::invalid_index(index)),
-        }
+    fn edge_record(
+        &self,
+        storage: &Storage<D>,
+        index: GraphIndex,
+    ) -> Result<Option<Record>, DbError> {
+        Ok(self
+            .element(storage, index)?
+            .filter(|record| index.is_edge() && record[FROM] < 0))
+    }
+
+    fn node_record(
+        &self,
+        storage: &Storage<D>,
+        index: GraphIndex,
+    ) -> Result<Option<Record>, DbError> {
+        Ok(self
+            .element(storage, index)?
+            .filter(|record| index.is_node() && 0 <= record[FROM]))
     }
 
     fn validate_node(&self, storage: &Storage<D>, index: GraphIndex) -> Result<Record, DbError> {
-        match self.element(storage, index)? {
-            Some(record) if index.is_node() && 0 <= record[FROM] => Ok(record),
-            _ => Err(Self::invalid_index(index)),
-        }
+        self.node_record(storage, index)?
+            .ok_or_else(|| Self::invalid_index(index))
     }
 
     fn write(
@@ -1021,7 +994,7 @@ pub(crate) mod v1 {
                     assert!(storage.value_size(removed).is_err(), "{removed:?}");
                 }
                 assert_eq!(graph.node_count(&storage).unwrap(), 1);
-                assert!(graph.node(&storage, GraphIndex(1)).is_some());
+                assert!(graph.node(&storage, GraphIndex(1)).unwrap().is_some());
             }
 
             #[test]
@@ -1127,6 +1100,7 @@ mod tests {
     use super::*;
     use crate::collections::tests::TestStorage;
     use crate::collections::tests::assert_io_failures_recover;
+    use crate::collections::tests::assert_read_failures;
     use crate::collections::tests::storage;
     use crate::storage::file_storage::FileStorageImpl;
     use agplatform::test_platform::TestPlatform;
@@ -1156,14 +1130,18 @@ mod tests {
         graph
             .iter(storage)
             .map(|index| {
-                if let Some(node) = graph.node(storage, index) {
+                let index = index.unwrap();
+
+                if let Some(node) = graph.node(storage, index).unwrap() {
                     (
                         index.0,
-                        node.edge_iter_from().map(|e| e.index().0).collect(),
-                        node.edge_iter_to().map(|e| e.index().0).collect(),
+                        node.edge_iter_from()
+                            .map(|e| e.unwrap().index().0)
+                            .collect(),
+                        node.edge_iter_to().map(|e| e.unwrap().index().0).collect(),
                     )
                 } else {
-                    let edge = graph.edge(storage, index).unwrap();
+                    let edge = graph.edge(storage, index).unwrap().unwrap();
                     (index.0, vec![edge.index_from().0], vec![edge.index_to().0])
                 }
             })
@@ -1280,7 +1258,11 @@ mod tests {
             }
         }
 
-        let elements: Vec<GraphIndex> = graph.iter(storage).step_by(free).collect();
+        let elements: Vec<GraphIndex> = graph
+            .iter(storage)
+            .step_by(free)
+            .map(Result::unwrap)
+            .collect();
 
         for index in elements {
             if index.is_node() {
@@ -1338,6 +1320,11 @@ mod tests {
                 assert_eq!(GraphIndex(0).as_u64(), 0);
                 assert_eq!(GraphIndex(3).as_u64(), 3);
             }
+
+            #[test]
+            fn as_u64_min_should_return_magnitude() {
+                assert_eq!(GraphIndex(i64::MIN).as_u64(), 1 << 63);
+            }
         }
 
         mod from {
@@ -1379,10 +1366,32 @@ mod tests {
                 let second = edge(&mut storage, &mut graph, 1, 3);
                 edge(&mut storage, &mut graph, 2, 1);
 
-                let node = graph.node(&storage, GraphIndex(1)).unwrap();
-                let edges: Vec<GraphIndex> = node.edge_iter_from().map(|e| e.index()).collect();
+                let node = graph.node(&storage, GraphIndex(1)).unwrap().unwrap();
+                let edges: Vec<GraphIndex> =
+                    node.edge_iter_from().map(|e| e.unwrap().index()).collect();
 
                 assert_eq!(edges, vec![second, first]);
+            }
+
+            #[test]
+            fn edge_iter_from_read_failure_should_return_error() {
+                assert_read_failures(
+                    |storage| {
+                        let mut graph = graph(storage);
+                        nodes(storage, &mut graph, 2);
+                        edge(storage, &mut graph, 1, 2);
+                        edge(storage, &mut graph, 1, 1);
+                        graph
+                    },
+                    |storage, graph| {
+                        graph
+                            .node(storage, GraphIndex(1))?
+                            .unwrap()
+                            .edge_iter_from()
+                            .map(|edge| edge.map(|edge| edge.index()))
+                            .collect::<Result<Vec<GraphIndex>, DbError>>()
+                    },
+                );
             }
         }
 
@@ -1398,10 +1407,32 @@ mod tests {
                 let second = edge(&mut storage, &mut graph, 2, 3);
                 edge(&mut storage, &mut graph, 3, 1);
 
-                let node = graph.node(&storage, GraphIndex(3)).unwrap();
-                let edges: Vec<GraphIndex> = node.edge_iter_to().map(|e| e.index()).collect();
+                let node = graph.node(&storage, GraphIndex(3)).unwrap().unwrap();
+                let edges: Vec<GraphIndex> =
+                    node.edge_iter_to().map(|e| e.unwrap().index()).collect();
 
                 assert_eq!(edges, vec![second, first]);
+            }
+
+            #[test]
+            fn edge_iter_to_read_failure_should_return_error() {
+                assert_read_failures(
+                    |storage| {
+                        let mut graph = graph(storage);
+                        nodes(storage, &mut graph, 2);
+                        edge(storage, &mut graph, 2, 1);
+                        edge(storage, &mut graph, 1, 1);
+                        graph
+                    },
+                    |storage, graph| {
+                        graph
+                            .node(storage, GraphIndex(1))?
+                            .unwrap()
+                            .edge_iter_to()
+                            .map(|edge| edge.map(|edge| edge.index()))
+                            .collect::<Result<Vec<GraphIndex>, DbError>>()
+                    },
+                );
             }
         }
 
@@ -1417,7 +1448,7 @@ mod tests {
                 edge(&mut storage, &mut graph, 2, 1);
                 edge(&mut storage, &mut graph, 1, 1);
 
-                let node = graph.node(&storage, GraphIndex(1)).unwrap();
+                let node = graph.node(&storage, GraphIndex(1)).unwrap().unwrap();
 
                 assert_eq!(node.edge_count(), 4);
             }
@@ -1437,7 +1468,7 @@ mod tests {
                 edge(&mut storage, &mut graph, 2, 1);
                 graph.remove_edge(&mut storage, removed).unwrap();
 
-                let node = graph.node(&storage, GraphIndex(1)).unwrap();
+                let node = graph.node(&storage, GraphIndex(1)).unwrap().unwrap();
 
                 assert_eq!(node.edge_count_from(), 2);
             }
@@ -1457,7 +1488,7 @@ mod tests {
                 edge(&mut storage, &mut graph, 2, 1);
                 graph.remove_edge(&mut storage, removed).unwrap();
 
-                let node = graph.node(&storage, GraphIndex(2)).unwrap();
+                let node = graph.node(&storage, GraphIndex(2)).unwrap().unwrap();
 
                 assert_eq!(node.edge_count_to(), 2);
             }
@@ -1486,13 +1517,30 @@ mod tests {
 
                     let mut iterator = graph.iter(&storage);
 
-                    assert_eq!(iterator.next(), Some(GraphIndex(1)));
-                    assert_eq!(iterator.next(), Some(GraphIndex(3)));
-                    assert_eq!(iterator.next(), Some(GraphIndex(4)));
-                    assert_eq!(iterator.next(), Some(GraphIndex(-5)));
-                    assert_eq!(iterator.next(), Some(GraphIndex(-7)));
+                    assert_eq!(iterator.next().map(Result::unwrap), Some(GraphIndex(1)));
+                    assert_eq!(iterator.next().map(Result::unwrap), Some(GraphIndex(3)));
+                    assert_eq!(iterator.next().map(Result::unwrap), Some(GraphIndex(4)));
+                    assert_eq!(iterator.next().map(Result::unwrap), Some(GraphIndex(-5)));
+                    assert_eq!(iterator.next().map(Result::unwrap), Some(GraphIndex(-7)));
                     assert_eq!(iterator.next(), None);
                     assert_eq!(iterator.next(), None);
+                }
+
+                #[test]
+                fn next_read_failure_should_return_error() {
+                    assert_read_failures(
+                        |storage| {
+                            let mut graph = graph(storage);
+                            nodes(storage, &mut graph, 2);
+                            edge(storage, &mut graph, 1, 2);
+                            graph
+                        },
+                        |storage, graph| {
+                            graph
+                                .iter(storage)
+                                .collect::<Result<Vec<GraphIndex>, DbError>>()
+                        },
+                    );
                 }
             }
         }
@@ -1511,7 +1559,7 @@ mod tests {
                 nodes(&mut storage, &mut graph, 2);
                 let index = edge(&mut storage, &mut graph, 1, 2);
 
-                let edge = graph.edge(&storage, index).unwrap();
+                let edge = graph.edge(&storage, index).unwrap().unwrap();
 
                 assert_eq!(edge.index(), GraphIndex(-3));
             }
@@ -1527,7 +1575,7 @@ mod tests {
                 nodes(&mut storage, &mut graph, 2);
                 let index = edge(&mut storage, &mut graph, 2, 1);
 
-                let edge = graph.edge(&storage, index).unwrap();
+                let edge = graph.edge(&storage, index).unwrap().unwrap();
 
                 assert_eq!(edge.index_from(), GraphIndex(2));
             }
@@ -1543,7 +1591,7 @@ mod tests {
                 nodes(&mut storage, &mut graph, 2);
                 let index = edge(&mut storage, &mut graph, 2, 1);
 
-                let edge = graph.edge(&storage, index).unwrap();
+                let edge = graph.edge(&storage, index).unwrap().unwrap();
 
                 assert_eq!(edge.index_to(), GraphIndex(1));
             }
@@ -1566,27 +1614,15 @@ mod tests {
                     nodes(&mut storage, &mut graph, 2);
                     let first = edge(&mut storage, &mut graph, 1, 2);
                     let second = edge(&mut storage, &mut graph, 1, 1);
-                    let node = graph.node(&storage, GraphIndex(1)).unwrap();
+                    let node = graph.node(&storage, GraphIndex(1)).unwrap().unwrap();
 
                     let mut iterator = node.edge_iter_from();
 
-                    assert_eq!(iterator.next().map(|e| e.index()), Some(second));
-                    assert_eq!(iterator.next().map(|e| e.index()), Some(first));
+                    assert_eq!(iterator.next().map(|e| e.unwrap().index()), Some(second));
+                    assert_eq!(iterator.next().map(|e| e.unwrap().index()), Some(first));
                     assert!(iterator.next().is_none());
                     assert!(iterator.next().is_none());
                 }
-            }
-        }
-    }
-
-    mod graph_edge_reverse_iterator {
-        use super::*;
-
-        mod iterator {
-            use super::*;
-
-            mod next {
-                use super::*;
 
                 #[test]
                 fn next_should_follow_incoming_edges_until_none() {
@@ -1595,13 +1631,30 @@ mod tests {
                     nodes(&mut storage, &mut graph, 2);
                     let first = edge(&mut storage, &mut graph, 2, 1);
                     let second = edge(&mut storage, &mut graph, 1, 1);
-                    let node = graph.node(&storage, GraphIndex(1)).unwrap();
+                    let node = graph.node(&storage, GraphIndex(1)).unwrap().unwrap();
 
                     let mut iterator = node.edge_iter_to();
 
-                    assert_eq!(iterator.next().map(|e| e.index()), Some(second));
-                    assert_eq!(iterator.next().map(|e| e.index()), Some(first));
+                    assert_eq!(iterator.next().map(|e| e.unwrap().index()), Some(second));
+                    assert_eq!(iterator.next().map(|e| e.unwrap().index()), Some(first));
                     assert!(iterator.next().is_none());
+                    assert!(iterator.next().is_none());
+                }
+
+                #[test]
+                fn next_unreadable_edge_should_return_error_last() {
+                    let mut storage = storage();
+                    let mut graph = graph(&mut storage);
+                    nodes(&mut storage, &mut graph, 2);
+                    edge(&mut storage, &mut graph, 1, 2);
+                    edge(&mut storage, &mut graph, 1, 2);
+                    storage
+                        .resize_value(graph.storage_index(), TestGraph::offset(4))
+                        .unwrap();
+                    let node = graph.node(&storage, GraphIndex(1)).unwrap().unwrap();
+                    let mut iterator = node.edge_iter_from();
+
+                    assert!(iterator.next().unwrap().is_err());
                     assert!(iterator.next().is_none());
                 }
             }
@@ -1904,7 +1957,10 @@ mod tests {
                 nodes(&mut storage, &mut graph, 2);
                 let index = edge(&mut storage, &mut graph, 1, 2);
 
-                assert_eq!(graph.edge(&storage, index).map(|e| e.index()), Some(index));
+                assert_eq!(
+                    graph.edge(&storage, index).unwrap().map(|e| e.index()),
+                    Some(index)
+                );
             }
 
             #[test]
@@ -1923,8 +1979,25 @@ mod tests {
                     GraphIndex(-5),
                     GraphIndex(0),
                 ] {
-                    assert!(graph.edge(&storage, index).is_none(), "{index:?}");
+                    assert!(graph.edge(&storage, index).unwrap().is_none(), "{index:?}");
                 }
+            }
+
+            #[test]
+            fn edge_read_failure_should_return_error() {
+                assert_read_failures(
+                    |storage| {
+                        let mut graph = graph(storage);
+                        nodes(storage, &mut graph, 2);
+                        edge(storage, &mut graph, 1, 2);
+                        graph
+                    },
+                    |storage, graph| {
+                        Ok(graph
+                            .edge(storage, GraphIndex(-3))?
+                            .map(|edge| edge.index_to()))
+                    },
+                );
             }
         }
 
@@ -1964,15 +2037,15 @@ mod tests {
                 nodes(&mut storage, &mut graph, 2);
                 let index = edge(&mut storage, &mut graph, 2, 1);
 
-                assert_eq!(graph.edge_from(&storage, index), GraphIndex(2));
+                assert_eq!(graph.edge_from(&storage, index).unwrap(), GraphIndex(2));
             }
 
             #[test]
-            fn edge_from_out_of_bounds_should_return_default() {
+            fn edge_from_out_of_bounds_should_fail() {
                 let mut storage = storage();
                 let graph = graph(&mut storage);
 
-                assert_eq!(graph.edge_from(&storage, GraphIndex(-1)), GraphIndex(0));
+                assert!(graph.edge_from(&storage, GraphIndex(-1)).is_err());
             }
         }
 
@@ -1986,15 +2059,15 @@ mod tests {
                 nodes(&mut storage, &mut graph, 2);
                 let index = edge(&mut storage, &mut graph, 2, 1);
 
-                assert_eq!(graph.edge_to(&storage, index), GraphIndex(1));
+                assert_eq!(graph.edge_to(&storage, index).unwrap(), GraphIndex(1));
             }
 
             #[test]
-            fn edge_to_out_of_bounds_should_return_default() {
+            fn edge_to_out_of_bounds_should_fail() {
                 let mut storage = storage();
                 let graph = graph(&mut storage);
 
-                assert_eq!(graph.edge_to(&storage, GraphIndex(-1)), GraphIndex(0));
+                assert!(graph.edge_to(&storage, GraphIndex(-1)).is_err());
             }
         }
 
@@ -2273,7 +2346,7 @@ mod tests {
                 edge(&mut storage, &mut graph, 2, 1);
                 nodes(&mut storage, &mut graph, 1);
 
-                let elements: Vec<GraphIndex> = graph.iter(&storage).collect();
+                let elements: Vec<GraphIndex> = graph.iter(&storage).map(Result::unwrap).collect();
 
                 assert_eq!(
                     elements,
@@ -2282,7 +2355,7 @@ mod tests {
             }
 
             #[test]
-            fn iter_should_skip_unreadable_slots() {
+            fn iter_unreadable_slot_should_return_error_last() {
                 let mut storage = storage();
                 let mut graph = graph(&mut storage);
                 nodes(&mut storage, &mut graph, 2);
@@ -2293,9 +2366,11 @@ mod tests {
                     )
                     .unwrap();
 
-                let elements: Vec<GraphIndex> = graph.iter(&storage).collect();
+                let mut iterator = graph.iter(&storage);
 
-                assert_eq!(elements, vec![GraphIndex(1)]);
+                assert_eq!(iterator.next().map(Result::unwrap), Some(GraphIndex(1)));
+                assert!(iterator.next().unwrap().is_err());
+                assert!(iterator.next().is_none());
             }
         }
 
@@ -2308,7 +2383,7 @@ mod tests {
                 let mut graph = graph(&mut storage);
                 nodes(&mut storage, &mut graph, 2);
 
-                let node = graph.node(&storage, GraphIndex(2)).unwrap();
+                let node = graph.node(&storage, GraphIndex(2)).unwrap().unwrap();
 
                 assert_eq!(node.edge_count(), 0);
             }
@@ -2329,8 +2404,25 @@ mod tests {
                     GraphIndex(0),
                     GraphIndex(-1),
                 ] {
-                    assert!(graph.node(&storage, index).is_none(), "{index:?}");
+                    assert!(graph.node(&storage, index).unwrap().is_none(), "{index:?}");
                 }
+            }
+
+            #[test]
+            fn node_read_failure_should_return_error() {
+                assert_read_failures(
+                    |storage| {
+                        let mut graph = graph(storage);
+                        nodes(storage, &mut graph, 2);
+                        edge(storage, &mut graph, 1, 2);
+                        graph
+                    },
+                    |storage, graph| {
+                        Ok(graph
+                            .node(storage, GraphIndex(1))?
+                            .map(|node| node.edge_count()))
+                    },
+                );
             }
         }
 

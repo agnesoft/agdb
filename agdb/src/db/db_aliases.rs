@@ -237,8 +237,8 @@ pub(crate) mod v1 {
             let alias = keys.data.key(storage, pos)?;
             let id = keys.data.value(storage, pos)?;
 
-            if graph.node(storage, GraphIndex(id.0)).is_none() {
-                fixed.push(if graph.edge(storage, GraphIndex(id.0)).is_some() {
+            if graph.node(storage, GraphIndex(id.0))?.is_none() {
+                fixed.push(if graph.edge(storage, GraphIndex(id.0))?.is_some() {
                     format!(
                         "alias '{alias}' of edge {} removed: edges cannot have aliases",
                         id.0
@@ -274,6 +274,7 @@ pub(crate) mod v1 {
         use super::*;
         use crate::collections::tests::TestStorage;
         use crate::collections::tests::assert_io_failures_recover;
+        use crate::collections::tests::assert_read_failures;
         use crate::collections::tests::storage;
         use crate::db::db_aliases::tests::graph;
 
@@ -402,6 +403,26 @@ pub(crate) mod v1 {
                     )]
                 );
                 assert_eq!(aliases.id(&storage, &graph, dropped).unwrap(), None);
+            }
+
+            #[test]
+            fn convert_read_failure_should_return_error() {
+                assert_read_failures(
+                    |storage| {
+                        let mut graph = graph(storage, 2);
+                        let edge = graph
+                            .insert_edge(storage, GraphIndex(1), GraphIndex(2))
+                            .unwrap();
+                        let index = maps(storage, &[("edge", edge.0), ("unknown", 10)]);
+                        (graph, index)
+                    },
+                    |storage, subject| {
+                        let mut fixed = vec![];
+                        convert(storage, &mut subject.0, subject.1, &mut fixed)?;
+                        fixed.sort();
+                        Ok(fixed)
+                    },
+                );
             }
 
             #[test]

@@ -216,157 +216,183 @@ impl SearchControl {
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::*;
+    use crate::collections::tests::TestStorage;
+    use crate::storage::file_storage::FileStorageImpl;
+    use agplatform::test_platform::TestPlatform;
 
-    #[test]
-    fn derived_from_debug() {
-        let _ = format!("{:?}", SearchControl::Continue(false));
+    pub(crate) type TestGraph = DbGraph<FileStorageImpl<TestPlatform>>;
+
+    pub(crate) struct Handler(pub fn(GraphIndex, u64) -> SearchControl);
+
+    impl SearchHandler for Handler {
+        fn process(&mut self, index: GraphIndex, distance: u64) -> Result<SearchControl, DbError> {
+            Ok((self.0)(index, distance))
+        }
     }
 
-    #[test]
-    #[allow(clippy::clone_on_copy)]
-    fn derived_from_clone() {
-        let left = SearchControl::Continue(true);
-        let other = left.clone();
-        assert_eq!(left, other);
+    pub(crate) fn stop_at<const DISTANCE: u64>(_index: GraphIndex, distance: u64) -> SearchControl {
+        if distance == DISTANCE {
+            SearchControl::Stop(true)
+        } else {
+            SearchControl::Continue(true)
+        }
     }
 
-    #[test]
-    fn search_control_and() {
-        use SearchControl::Continue;
-        use SearchControl::Finish;
-        use SearchControl::Stop;
-
-        assert_eq!(Continue(true).and(Continue(true)), Continue(true));
-        assert_eq!(Continue(true).and(Continue(false)), Continue(false));
-        assert_eq!(Continue(false).and(Continue(true)), Continue(false));
-        assert_eq!(Continue(false).and(Continue(false)), Continue(false));
-
-        assert_eq!(Stop(true).and(Stop(true)), Stop(true));
-        assert_eq!(Stop(true).and(Stop(false)), Stop(false));
-        assert_eq!(Stop(false).and(Stop(true)), Stop(false));
-        assert_eq!(Stop(false).and(Stop(false)), Stop(false));
-
-        assert_eq!(Finish(true).and(Finish(true)), Finish(true));
-        assert_eq!(Finish(true).and(Finish(false)), Finish(false));
-        assert_eq!(Finish(false).and(Finish(true)), Finish(false));
-        assert_eq!(Finish(false).and(Finish(false)), Finish(false));
-
-        assert_eq!(Continue(true).and(Stop(true)), Stop(true));
-        assert_eq!(Continue(false).and(Stop(true)), Stop(false));
-        assert_eq!(Continue(true).and(Stop(false)), Stop(false));
-        assert_eq!(Continue(false).and(Stop(false)), Stop(false));
-
-        assert_eq!(Continue(true).and(Finish(true)), Finish(true));
-        assert_eq!(Continue(false).and(Finish(true)), Finish(false));
-        assert_eq!(Continue(true).and(Finish(false)), Finish(false));
-        assert_eq!(Continue(false).and(Finish(false)), Finish(false));
-
-        assert_eq!(Stop(true).and(Finish(true)), Finish(true));
-        assert_eq!(Stop(true).and(Finish(false)), Finish(false));
-        assert_eq!(Stop(false).and(Finish(false)), Finish(false));
-        assert_eq!(Stop(false).and(Finish(true)), Finish(false));
-
-        assert_eq!(Stop(true).and(Continue(true)), Stop(true));
-        assert_eq!(Stop(true).and(Continue(false)), Stop(false));
-        assert_eq!(Stop(false).and(Continue(true)), Stop(false));
-        assert_eq!(Stop(false).and(Continue(false)), Stop(false));
-
-        assert_eq!(Finish(true).and(Continue(true)), Finish(true));
-        assert_eq!(Finish(true).and(Continue(false)), Finish(false));
-        assert_eq!(Finish(false).and(Continue(true)), Finish(false));
-        assert_eq!(Finish(false).and(Continue(false)), Finish(false));
-
-        assert_eq!(Finish(true).and(Stop(true)), Finish(true));
-        assert_eq!(Finish(true).and(Stop(false)), Finish(false));
-        assert_eq!(Finish(false).and(Stop(false)), Finish(false));
-        assert_eq!(Finish(false).and(Stop(true)), Finish(false));
+    pub(crate) fn all() -> Handler {
+        Handler(|_, _| SearchControl::Continue(true))
     }
 
-    #[test]
-    fn search_control_or() {
-        use SearchControl::Continue;
-        use SearchControl::Finish;
-        use SearchControl::Stop;
+    /// Inserts nodes 1..=`nodes` and then the `edges` in order, so edge
+    /// ids start at `-(nodes + 1)`.
+    pub(crate) fn graph(storage: &mut TestStorage, nodes: u64, edges: &[(i64, i64)]) -> TestGraph {
+        let mut graph = DbGraph::new(storage).unwrap();
 
-        assert_eq!(Continue(true).or(Continue(true)), Continue(true));
-        assert_eq!(Continue(true).or(Continue(false)), Continue(true));
-        assert_eq!(Continue(false).or(Continue(true)), Continue(true));
-        assert_eq!(Continue(false).or(Continue(false)), Continue(false));
+        for _ in 0..nodes {
+            graph.insert_node(storage).unwrap();
+        }
 
-        assert_eq!(Stop(true).or(Stop(true)), Stop(true));
-        assert_eq!(Stop(true).or(Stop(false)), Stop(true));
-        assert_eq!(Stop(false).or(Stop(true)), Stop(true));
-        assert_eq!(Stop(false).or(Stop(false)), Stop(false));
+        for (from, to) in edges {
+            graph
+                .insert_edge(storage, GraphIndex(*from), GraphIndex(*to))
+                .unwrap();
+        }
 
-        assert_eq!(Finish(true).or(Finish(true)), Finish(true));
-        assert_eq!(Finish(true).or(Finish(false)), Finish(true));
-        assert_eq!(Finish(false).or(Finish(true)), Finish(true));
-        assert_eq!(Finish(false).or(Finish(false)), Finish(false));
-
-        assert_eq!(Continue(true).or(Stop(true)), Continue(true));
-        assert_eq!(Continue(false).or(Stop(true)), Continue(true));
-        assert_eq!(Continue(true).or(Stop(false)), Continue(true));
-        assert_eq!(Continue(false).or(Stop(false)), Continue(false));
-
-        assert_eq!(Continue(true).or(Finish(true)), Continue(true));
-        assert_eq!(Continue(false).or(Finish(true)), Continue(true));
-        assert_eq!(Continue(true).or(Finish(false)), Continue(true));
-        assert_eq!(Continue(false).or(Finish(false)), Continue(false));
-
-        assert_eq!(Stop(true).or(Finish(true)), Stop(true));
-        assert_eq!(Stop(true).or(Finish(false)), Stop(true));
-        assert_eq!(Stop(false).or(Finish(true)), Stop(true));
-        assert_eq!(Stop(false).or(Finish(false)), Stop(false));
-
-        assert_eq!(Stop(true).or(Continue(true)), Continue(true));
-        assert_eq!(Stop(true).or(Continue(false)), Continue(true));
-        assert_eq!(Stop(false).or(Continue(true)), Continue(true));
-        assert_eq!(Stop(false).or(Continue(false)), Continue(false));
-
-        assert_eq!(Finish(true).or(Continue(true)), Continue(true));
-        assert_eq!(Finish(true).or(Continue(false)), Continue(true));
-        assert_eq!(Finish(false).or(Continue(true)), Continue(true));
-        assert_eq!(Finish(false).or(Continue(false)), Continue(false));
-
-        assert_eq!(Finish(true).or(Stop(true)), Stop(true));
-        assert_eq!(Finish(true).or(Stop(false)), Stop(true));
-        assert_eq!(Finish(false).or(Stop(true)), Stop(true));
-        assert_eq!(Finish(false).or(Stop(false)), Stop(false));
+        graph
     }
 
-    #[test]
-    fn flip() {
-        let mut control = SearchControl::Continue(true);
-        control.flip();
-        assert_eq!(control, SearchControl::Continue(false));
-        control.flip();
-        assert_eq!(control, SearchControl::Continue(true));
+    /// 1 -5-> 2 -7-> 4 -9-> 1
+    /// 1 -6-> 3 -8-> 4
+    pub(crate) fn diamond(storage: &mut TestStorage) -> TestGraph {
+        graph(storage, 4, &[(1, 2), (1, 3), (2, 4), (3, 4), (4, 1)])
+    }
 
-        control = SearchControl::Stop(true);
-        control.flip();
-        assert_eq!(control, SearchControl::Stop(false));
-        control.flip();
-        assert_eq!(control, SearchControl::Stop(true));
+    pub(crate) fn indexes(ids: &[i64]) -> Result<Vec<GraphIndex>, DbError> {
+        Ok(ids.iter().map(|id| GraphIndex(*id)).collect())
+    }
 
-        control = SearchControl::Finish(true);
-        control.flip();
-        assert_eq!(control, SearchControl::Finish(false));
-        control.flip();
-        assert_eq!(control, SearchControl::Finish(true));
+    type Variant = fn(bool) -> SearchControl;
+
+    const CONTINUE: Variant = SearchControl::Continue;
+    const FINISH: Variant = SearchControl::Finish;
+    const STOP: Variant = SearchControl::Stop;
+    const VARIANTS: [Variant; 3] = [CONTINUE, FINISH, STOP];
+
+    mod search_control {
+        use super::*;
+
+        mod and {
+            use super::*;
+
+            #[test]
+            fn and_should_keep_finish_over_stop_over_continue_and_both_values() {
+                for (left, right, expected) in [
+                    (CONTINUE, CONTINUE, CONTINUE),
+                    (CONTINUE, FINISH, FINISH),
+                    (CONTINUE, STOP, STOP),
+                    (FINISH, CONTINUE, FINISH),
+                    (FINISH, FINISH, FINISH),
+                    (FINISH, STOP, FINISH),
+                    (STOP, CONTINUE, STOP),
+                    (STOP, FINISH, FINISH),
+                    (STOP, STOP, STOP),
+                ] {
+                    for (l, r) in [(false, false), (false, true), (true, false), (true, true)] {
+                        assert_eq!(
+                            left(l).and(right(r)),
+                            expected(l && r),
+                            "{:?} and {:?}",
+                            left(l),
+                            right(r)
+                        );
+                    }
+                }
+            }
+        }
+
+        mod or {
+            use super::*;
+
+            #[test]
+            fn or_should_keep_continue_over_stop_over_finish_and_either_value() {
+                for (left, right, expected) in [
+                    (CONTINUE, CONTINUE, CONTINUE),
+                    (CONTINUE, FINISH, CONTINUE),
+                    (CONTINUE, STOP, CONTINUE),
+                    (FINISH, CONTINUE, CONTINUE),
+                    (FINISH, FINISH, FINISH),
+                    (FINISH, STOP, STOP),
+                    (STOP, CONTINUE, CONTINUE),
+                    (STOP, FINISH, STOP),
+                    (STOP, STOP, STOP),
+                ] {
+                    for (l, r) in [(false, false), (false, true), (true, false), (true, true)] {
+                        assert_eq!(
+                            left(l).or(right(r)),
+                            expected(l || r),
+                            "{:?} or {:?}",
+                            left(l),
+                            right(r)
+                        );
+                    }
+                }
+            }
+        }
+
+        mod flip {
+            use super::*;
+
+            #[test]
+            fn flip_should_negate_the_value_and_keep_the_variant() {
+                for variant in VARIANTS {
+                    for value in [false, true] {
+                        let mut control = variant(value);
+
+                        control.flip();
+
+                        assert_eq!(control, variant(!value), "{:?}", variant(value));
+                    }
+                }
+            }
+        }
+
+        mod is_true {
+            use super::*;
+
+            #[test]
+            fn is_true_should_return_the_value() {
+                for variant in VARIANTS {
+                    for value in [false, true] {
+                        assert_eq!(variant(value).is_true(), value, "{:?}", variant(value));
+                    }
+                }
+            }
+        }
+
+        mod set_value {
+            use super::*;
+
+            #[test]
+            fn set_value_should_replace_the_value_and_keep_the_variant() {
+                for variant in VARIANTS {
+                    for (old, new) in [(false, false), (false, true), (true, false), (true, true)] {
+                        let mut control = variant(old);
+
+                        control.set_value(new);
+
+                        assert_eq!(control, variant(new), "{:?}", variant(old));
+                    }
+                }
+            }
+        }
     }
 
     mod graph_search {
         use super::*;
-        use crate::collections::tests::TestStorage;
         use crate::collections::tests::assert_read_failures;
         use crate::collections::tests::storage;
-        use crate::storage::file_storage::FileStorageImpl;
-        use agplatform::test_platform::TestPlatform;
         use std::cell::RefCell;
-
-        type TestGraph = DbGraph<FileStorageImpl<TestPlatform>>;
 
         #[derive(Default)]
         struct Recorder {
@@ -412,6 +438,21 @@ mod tests {
             use super::*;
 
             #[test]
+            fn breadth_first_search_missing_index_should_return_nothing() {
+                let mut storage = storage();
+                let graph = chain(&mut storage);
+
+                for index in [0, 10, -10] {
+                    assert_eq!(
+                        GraphSearch::from((&graph, &storage))
+                            .breadth_first_search(GraphIndex(index), &Recorder::default()),
+                        Ok(vec![]),
+                        "{index}"
+                    );
+                }
+            }
+
+            #[test]
             fn breadth_first_search_read_failure_should_return_error() {
                 assert_read_failures(chain, |storage, graph| {
                     GraphSearch::from((&*graph, &*storage))
@@ -454,6 +495,21 @@ mod tests {
             use super::*;
 
             #[test]
+            fn breadth_first_search_reverse_missing_index_should_return_nothing() {
+                let mut storage = storage();
+                let graph = chain(&mut storage);
+
+                for index in [0, 10, -10] {
+                    assert_eq!(
+                        GraphSearch::from((&graph, &storage))
+                            .breadth_first_search_reverse(GraphIndex(index), &Recorder::default()),
+                        Ok(vec![]),
+                        "{index}"
+                    );
+                }
+            }
+
+            #[test]
             fn breadth_first_search_reverse_read_failure_should_return_error() {
                 assert_read_failures(chain, |storage, graph| {
                     GraphSearch::from((&*graph, &*storage))
@@ -466,6 +522,21 @@ mod tests {
             use super::*;
 
             #[test]
+            fn depth_first_search_missing_index_should_return_nothing() {
+                let mut storage = storage();
+                let graph = chain(&mut storage);
+
+                for index in [0, 10, -10] {
+                    assert_eq!(
+                        GraphSearch::from((&graph, &storage))
+                            .depth_first_search(GraphIndex(index), &Recorder::default()),
+                        Ok(vec![]),
+                        "{index}"
+                    );
+                }
+            }
+
+            #[test]
             fn depth_first_search_read_failure_should_return_error() {
                 assert_read_failures(chain, |storage, graph| {
                     GraphSearch::from((&*graph, &*storage))
@@ -476,6 +547,21 @@ mod tests {
 
         mod depth_first_search_reverse {
             use super::*;
+
+            #[test]
+            fn depth_first_search_reverse_missing_index_should_return_nothing() {
+                let mut storage = storage();
+                let graph = chain(&mut storage);
+
+                for index in [0, 10, -10] {
+                    assert_eq!(
+                        GraphSearch::from((&graph, &storage))
+                            .depth_first_search_reverse(GraphIndex(index), &Recorder::default()),
+                        Ok(vec![]),
+                        "{index}"
+                    );
+                }
+            }
 
             #[test]
             fn depth_first_search_reverse_read_failure_should_return_error() {
@@ -499,6 +585,24 @@ mod tests {
 
         mod path {
             use super::*;
+
+            #[test]
+            fn path_same_or_missing_nodes_should_return_nothing() {
+                let mut storage = storage();
+                let graph = graph(&mut storage, 2, &[(1, 1), (1, 2)]);
+
+                for (from, to) in [(1, 1), (1, 10), (10, 2), (1, -4), (-4, 2)] {
+                    assert_eq!(
+                        GraphSearch::from((&graph, &storage)).path(
+                            GraphIndex(from),
+                            GraphIndex(to),
+                            &Recorder::default()
+                        ),
+                        Ok(vec![]),
+                        "{from} -> {to}"
+                    );
+                }
+            }
 
             #[test]
             fn path_should_pass_breadth_first_distances() {
@@ -537,6 +641,24 @@ mod tests {
 
         mod path_reverse {
             use super::*;
+
+            #[test]
+            fn path_reverse_same_or_missing_nodes_should_return_nothing() {
+                let mut storage = storage();
+                let graph = graph(&mut storage, 2, &[(1, 1), (1, 2)]);
+
+                for (from, to) in [(1, 1), (1, 10), (10, 2), (1, -4), (-4, 2)] {
+                    assert_eq!(
+                        GraphSearch::from((&graph, &storage)).path_reverse(
+                            GraphIndex(from),
+                            GraphIndex(to),
+                            &Recorder::default()
+                        ),
+                        Ok(vec![]),
+                        "{from} -> {to}"
+                    );
+                }
+            }
 
             #[test]
             fn path_reverse_should_pass_breadth_first_reverse_distances() {

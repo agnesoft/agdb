@@ -66,96 +66,44 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::super::SearchControl;
-    use super::super::SearchHandler;
-    use super::*;
-    use crate::DbError;
-    use crate::graph::DbGraph;
+    use crate::collections::tests::storage;
     use crate::graph::GraphIndex;
     use crate::graph_search::GraphSearch;
-    use crate::storage::file_storage::FileStorage;
-    use crate::test_utilities::test_file::TestFile;
+    use crate::graph_search::tests::Handler;
+    use crate::graph_search::tests::all;
+    use crate::graph_search::tests::diamond;
+    use crate::graph_search::tests::indexes;
+    use crate::graph_search::tests::stop_at;
 
-    struct Handler {
-        pub processor: fn(GraphIndex, u64) -> SearchControl,
-    }
+    mod depth_first_search_reverse {
+        use super::*;
 
-    impl Default for Handler {
-        fn default() -> Self {
-            Self {
-                processor: |_index: GraphIndex, _distance: u64| SearchControl::Continue(true),
+        #[test]
+        fn depth_first_search_reverse_should_visit_the_incoming_edges_branch_by_branch_once() {
+            let mut storage = storage();
+            let graph = diamond(&mut storage);
+
+            let result = GraphSearch::from((&graph, &storage))
+                .depth_first_search_reverse(GraphIndex(4), all());
+
+            assert_eq!(result, indexes(&[4, -8, 3, -6, 1, -9, -7, 2, -5]));
+        }
+
+        #[test]
+        fn depth_first_search_reverse_stopped_should_not_follow_the_stopped_elements() {
+            let mut storage = storage();
+            let graph = diamond(&mut storage);
+            let search = GraphSearch::from((&graph, &storage));
+
+            for (handler, expected) in [
+                (Handler(stop_at::<1>), indexes(&[4, -8, -7])),
+                (Handler(stop_at::<2>), indexes(&[4, -8, 3, -7, 2])),
+            ] {
+                assert_eq!(
+                    search.depth_first_search_reverse(GraphIndex(4), handler),
+                    expected
+                );
             }
         }
-    }
-
-    impl SearchHandler for Handler {
-        fn process(&mut self, index: GraphIndex, distance: u64) -> Result<SearchControl, DbError> {
-            Ok((self.processor)(index, distance))
-        }
-    }
-
-    #[test]
-    fn empty_graph_reverse() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-        let graph = DbGraph::new(&mut storage).unwrap();
-
-        let result = GraphSearch::from((&graph, &storage))
-            .depth_first_search_reverse(GraphIndex::default(), Handler::default());
-
-        assert_eq!(result, Ok(vec![]));
-    }
-
-    #[test]
-    fn search_in_reverse() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-        let mut graph = DbGraph::new(&mut storage).unwrap();
-
-        let node1 = graph.insert_node(&mut storage).unwrap();
-        let node2 = graph.insert_node(&mut storage).unwrap();
-        let node3 = graph.insert_node(&mut storage).unwrap();
-        let node4 = graph.insert_node(&mut storage).unwrap();
-
-        let edge1 = graph.insert_edge(&mut storage, node1, node2).unwrap();
-        let edge2 = graph.insert_edge(&mut storage, node2, node3).unwrap();
-        let edge3 = graph.insert_edge(&mut storage, node3, node4).unwrap();
-
-        let result = GraphSearch::from((&graph, &storage))
-            .depth_first_search_reverse(node4, Handler::default());
-        let expected = Ok(vec![node4, edge3, node3, edge2, node2, edge1, node1]);
-
-        assert_eq!(result, expected);
-    }
-
-    #[test]
-    fn stop_at_distance() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-        let mut graph = DbGraph::new(&mut storage).unwrap();
-
-        let node1 = graph.insert_node(&mut storage).unwrap();
-        let node2 = graph.insert_node(&mut storage).unwrap();
-        let node3 = graph.insert_node(&mut storage).unwrap();
-
-        let _edge1 = graph.insert_edge(&mut storage, node1, node2).unwrap();
-        let _edge2 = graph.insert_edge(&mut storage, node1, node2).unwrap();
-        let edge3 = graph.insert_edge(&mut storage, node2, node3).unwrap();
-        let _edge4 = graph.insert_edge(&mut storage, node3, node1).unwrap();
-
-        let result = GraphSearch::from((&graph, &storage)).depth_first_search_reverse(
-            node3,
-            Handler {
-                processor: |_index: GraphIndex, distance: u64| {
-                    if distance == 2 {
-                        SearchControl::Stop(true)
-                    } else {
-                        SearchControl::Continue(true)
-                    }
-                },
-            },
-        );
-
-        assert_eq!(result, Ok(vec![node3, edge3, node2]));
     }
 }

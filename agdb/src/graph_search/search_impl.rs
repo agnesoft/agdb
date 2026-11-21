@@ -122,29 +122,47 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::collections::tests::storage;
+    use crate::graph_search::breadth_first_search::BreadthFirstSearch;
+    use crate::graph_search::tests::Handler;
+    use crate::graph_search::tests::diamond;
+    use crate::graph_search::tests::indexes;
 
-    #[test]
-    #[allow(clippy::clone_on_copy)]
-    fn derived_from_clone() {
-        let index = SearchIndex {
-            index: GraphIndex(1),
-            distance: 10,
-        };
-        let other = index.clone();
+    mod search_impl {
+        use super::*;
 
-        assert_eq!(index.index, other.index);
-        assert_eq!(index.distance, other.distance);
-    }
+        mod search {
+            use super::*;
 
-    #[test]
-    fn derived_from_copy() {
-        let index = &SearchIndex {
-            index: GraphIndex(1),
-            distance: 10,
-        };
-        let other = *index;
+            #[test]
+            fn search_continue_false_should_follow_but_not_return_the_element() {
+                let mut storage = storage();
+                let graph = diamond(&mut storage);
 
-        assert_eq!(index.index, other.index);
-        assert_eq!(index.distance, other.distance);
+                let result =
+                    SearchImpl::<_, BreadthFirstSearch>::new(&graph, &storage, GraphIndex(1))
+                        .search(Handler(|index, _| SearchControl::Continue(index.is_node())));
+
+                assert_eq!(result, indexes(&[1, 3, 2, 4]));
+            }
+
+            #[test]
+            fn search_finish_should_end_the_search() {
+                let mut storage = storage();
+                let graph = diamond(&mut storage);
+
+                let result =
+                    SearchImpl::<_, BreadthFirstSearch>::new(&graph, &storage, GraphIndex(1))
+                        .search(Handler(|index, _| {
+                            if index.0 == 3 {
+                                SearchControl::Finish(true)
+                            } else {
+                                SearchControl::Continue(true)
+                            }
+                        }));
+
+                assert_eq!(result, indexes(&[1, -6, -5, 3]));
+            }
+        }
     }
 }

@@ -1,4 +1,5 @@
 import type { ColorConfig } from "../utils/graphColorRules";
+import type { ResultView } from "../utils/resultShape";
 import type {
   DbKeyValue,
   QueryResult,

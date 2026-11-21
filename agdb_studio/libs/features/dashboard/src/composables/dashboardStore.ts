@@ -1,6 +1,6 @@
 import { ref } from "vue";
 import { checkClient, client } from "@agdb-studio/api/src/api";
-import type { DashboardSummary } from "@agnesoft/agdb_api/openapi";
+import type { DashboardSummary } from "@agnesoft/agdb_api";
 import type { DashboardDocument, Widget, WidgetSize } from "../types";
 import {
   addToDocument,

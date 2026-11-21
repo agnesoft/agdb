@@ -152,6 +152,27 @@ export type CountComparison =
     /** property != this */
     | { NotEqual: number };
 
+/**
+ * A dashboard owned by a user. The `config` is an opaque document (JSON)
+ * interpreted by the client (e.g. agdb_studio).
+ */
+export interface Dashboard {
+    name: string;
+    config: string;
+    updated: number;
+}
+
+/** Request body for adding or saving a dashboard. */
+export interface DashboardConfig {
+    config: string;
+}
+
+/** Dashboard listing entry (without the config). */
+export interface DashboardSummary {
+    name: string;
+    updated: number;
+}
+
 /** Complete audit log for a database. */
 export type DbAudit = QueryAudit[];
 

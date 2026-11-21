@@ -4,30 +4,35 @@ use crate::collections::bit_set::BitSet;
 use crate::graph::DbGraph;
 use crate::graph::GraphIndex;
 use crate::storage::Storage;
-use std::cmp::Ordering;
+use std::cmp::Reverse;
+use std::collections::BinaryHeap;
 
 pub trait PathSearchHandler {
     fn process(&self, index: GraphIndex, distance: u64) -> Result<(u64, bool), DbError>;
 }
 
-#[derive(Clone)]
-struct Path {
-    elements: Vec<(GraphIndex, bool)>,
-    cost: u64,
+/// An element of a path linked to the previous element of the path.
+struct Step {
+    index: GraphIndex,
+    add: bool,
+    previous: Option<usize>,
 }
+
+/// The cost, length and last step of a path. The heap pops the cheapest
+/// path first, then the shortest and then the one added last.
+type Path = (Reverse<u64>, Reverse<u64>, usize);
 
 pub struct PathSearch<'a, D, Handler>
 where
     D: StorageData,
     Handler: PathSearchHandler,
 {
-    current_path: Path,
     destination: GraphIndex,
     graph: &'a DbGraph<D>,
     storage: &'a Storage<D>,
     handler: Handler,
-    paths: Vec<Path>,
-    result: Vec<(GraphIndex, bool)>,
+    paths: BinaryHeap<Path>,
+    steps: Vec<Step>,
     visited: BitSet,
     reverse: bool,
 }
@@ -44,25 +49,7 @@ where
         to: GraphIndex,
         handler: Handler,
     ) -> Result<Self, DbError> {
-        let add = handler.process(from, 0)?;
-
-        Ok(Self {
-            current_path: Path {
-                elements: vec![],
-                cost: 0,
-            },
-            destination: to,
-            graph,
-            storage,
-            handler,
-            paths: vec![Path {
-                elements: vec![(from, add.1)],
-                cost: 0,
-            }],
-            result: vec![],
-            visited: BitSet::new(),
-            reverse: false,
-        })
+        Self::with_direction(graph, storage, from, to, handler, false)
     }
 
     pub fn new_reverse(
@@ -72,74 +59,78 @@ where
         to: GraphIndex,
         handler: Handler,
     ) -> Result<Self, DbError> {
-        let add = handler.process(to, 0)?;
-
-        Ok(Self {
-            current_path: Path {
-                elements: vec![],
-                cost: 0,
-            },
-            destination: from,
-            graph,
-            storage,
-            handler,
-            paths: vec![Path {
-                elements: vec![(to, add.1)],
-                cost: 0,
-            }],
-            result: vec![],
-            visited: BitSet::new(),
-            reverse: true,
-        })
+        Self::with_direction(graph, storage, to, from, handler, true)
     }
 
     pub fn search(&mut self) -> Result<Vec<GraphIndex>, DbError> {
-        while !self.is_finished() {
-            self.sort_paths();
-            self.process_last_path()?;
+        while let Some((Reverse(cost), Reverse(len), last)) = self.paths.pop() {
+            let index = self.steps[last].index;
+
+            if !self.visited.value(index.as_u64()) {
+                if index.0 == self.destination.0 {
+                    return Ok(self.elements(last));
+                }
+
+                self.visited.set(index.as_u64());
+                self.expand(cost, len, last, index)?;
+            }
         }
 
-        let mut result: Vec<GraphIndex> = self.result.iter().filter(|e| e.1).map(|e| e.0).collect();
-        if self.reverse {
-            result.reverse();
-        }
-        Ok(result)
+        Ok(vec![])
     }
 
-    fn expand_edge(
+    fn with_direction(
+        graph: &'a DbGraph<D>,
+        storage: &'a Storage<D>,
+        origin: GraphIndex,
+        destination: GraphIndex,
+        handler: Handler,
+        reverse: bool,
+    ) -> Result<Self, DbError> {
+        let add = handler.process(origin, 0)?;
+
+        Ok(Self {
+            destination,
+            graph,
+            storage,
+            handler,
+            paths: BinaryHeap::from([(Reverse(0), Reverse(1), 0)]),
+            steps: vec![Step {
+                index: origin,
+                add: add.1,
+                previous: None,
+            }],
+            visited: BitSet::new(),
+            reverse,
+        })
+    }
+
+    fn elements(&self, last: usize) -> Vec<GraphIndex> {
+        let mut elements = vec![];
+        let mut current = Some(last);
+
+        while let Some(step) = current {
+            if self.steps[step].add {
+                elements.push(self.steps[step].index);
+            }
+
+            current = self.steps[step].previous;
+        }
+
+        if !self.reverse {
+            elements.reverse();
+        }
+
+        elements
+    }
+
+    fn expand(
         &mut self,
-        mut path: Path,
+        cost: u64,
+        len: u64,
+        last: usize,
         index: GraphIndex,
-        node_index: GraphIndex,
     ) -> Result<(), DbError> {
-        let cost = self
-            .handler
-            .process(index, self.current_path.elements.len() as u64)?;
-
-        if cost.0 != 0 && !self.visited.value(node_index.as_u64()) {
-            path.elements.push((index, cost.1));
-            path.cost += cost.0;
-            self.expand_node(path, node_index)?;
-        }
-
-        Ok(())
-    }
-
-    fn expand_node(&mut self, mut path: Path, index: GraphIndex) -> Result<(), DbError> {
-        let cost = self
-            .handler
-            .process(index, self.current_path.elements.len() as u64 + 1)?;
-
-        if cost.0 != 0 {
-            path.elements.push((index, cost.1));
-            path.cost += cost.0;
-            self.paths.push(path);
-        }
-
-        Ok(())
-    }
-
-    fn expand(&mut self, index: GraphIndex) -> Result<(), DbError> {
         let edges = if self.reverse {
             self.graph.edge_iter_to(self.storage, index)?
         } else {
@@ -153,56 +144,32 @@ where
             } else {
                 edge.index_to()
             };
-            self.expand_edge(self.current_path.clone(), edge.index(), next)?;
-        }
+            let edge_cost = self.handler.process(edge.index(), len)?;
 
-        Ok(())
-    }
+            if edge_cost.0 != 0 && !self.visited.value(next.as_u64()) {
+                let next_cost = self.handler.process(next, len + 1)?;
 
-    fn is_finished(&self) -> bool {
-        self.paths.is_empty() || !self.result.is_empty()
-    }
-
-    fn process_path(&mut self) -> Result<(), DbError> {
-        let index = self
-            .current_path
-            .elements
-            .last()
-            .map_or(GraphIndex::default(), |index| index.0);
-        self.process_index(index)
-    }
-
-    fn process_index(&mut self, index: GraphIndex) -> Result<(), DbError> {
-        if !self.visited.value(index.as_u64()) {
-            if index.0 == self.destination.0 {
-                std::mem::swap(&mut self.result, &mut self.current_path.elements);
-            } else {
-                self.visited.set(index.as_u64());
-                self.expand(index)?;
+                if next_cost.0 != 0 {
+                    self.steps.push(Step {
+                        index: edge.index(),
+                        add: edge_cost.1,
+                        previous: Some(last),
+                    });
+                    self.steps.push(Step {
+                        index: next,
+                        add: next_cost.1,
+                        previous: Some(self.steps.len() - 1),
+                    });
+                    self.paths.push((
+                        Reverse(cost + edge_cost.0 + next_cost.0),
+                        Reverse(len + 2),
+                        self.steps.len() - 1,
+                    ));
+                }
             }
         }
 
         Ok(())
-    }
-
-    fn process_last_path(&mut self) -> Result<(), DbError> {
-        self.current_path = self.paths.pop().unwrap_or(Path {
-            elements: vec![],
-            cost: 0,
-        });
-        self.process_path()
-    }
-
-    fn sort_paths(&mut self) {
-        self.paths.sort_by(|left, right| {
-            let ordering = left.cost.cmp(&right.cost);
-
-            if ordering == Ordering::Equal {
-                return left.elements.len().cmp(&right.elements.len()).reverse();
-            }
-
-            ordering.reverse()
-        });
     }
 }
 

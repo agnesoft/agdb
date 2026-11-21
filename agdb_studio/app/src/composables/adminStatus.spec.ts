@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { defineComponent, nextTick, type UnwrapRef } from "vue";
 import { mount, flushPromises, type VueWrapper } from "@vue/test-utils";
 import { useAdminStatus, resetAdminStatusState } from "./adminStatus";
-import type { AdminStatus } from "@agnesoft/agdb_api/openapi";
+import type { AdminStatus } from "@agnesoft/agdb_api";
 
 const mockClient = vi.hoisted(() => ({
   admin_status: vi.fn(),

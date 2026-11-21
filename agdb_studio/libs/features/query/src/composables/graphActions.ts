@@ -1,4 +1,4 @@
-import type { Components } from "@agnesoft/agdb_api";
+import type { DbKeyValue } from "@agnesoft/agdb_api";
 import {
   computed,
   inject,
@@ -381,8 +381,8 @@ export const createGraphActions = (
    */
   const saveValues = async (
     element: GraphElement,
-    edited: Components.Schemas.DbKeyValue[],
-    original: Components.Schemas.DbKeyValue[] = element.rawValues,
+    edited: DbKeyValue[],
+    original: DbKeyValue[] = element.rawValues,
   ): Promise<boolean> => {
     const id = queryId?.value;
     if (!id) return false;

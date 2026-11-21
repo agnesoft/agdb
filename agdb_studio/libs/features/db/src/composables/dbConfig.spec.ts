@@ -23,7 +23,7 @@ import {
 import { useContentInputs } from "@agdb-studio/common/src/composables/content/inputs";
 import { KEY_MODAL } from "@agdb-studio/common/src/composables/modal/constants";
 import useModal from "@agdb-studio/common/src/composables/modal/modal";
-import type { ServerDatabase } from "@agnesoft/agdb_api/openapi";
+import type { ServerDatabase } from "@agnesoft/agdb_api";
 import type {
   ActionProps,
   Input,

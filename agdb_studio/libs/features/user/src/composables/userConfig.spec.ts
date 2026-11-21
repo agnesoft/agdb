@@ -10,7 +10,7 @@ import {
 } from "@agdb-studio/testing/mocks/apiMock";
 import { useContentInputs } from "@agdb-studio/common/src/composables/content/inputs";
 import { KEY_MODAL } from "@agdb-studio/common/src/composables/modal/constants";
-import type { UserStatus } from "@agnesoft/agdb_api/openapi";
+import type { UserStatus } from "@agnesoft/agdb_api";
 import type {
   ActionProps,
   Input,

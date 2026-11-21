@@ -9,7 +9,7 @@ import {
   withResponse,
 } from "./mocks/api-helpers";
 import { MOCK_DATABASE_LIST } from "./mocks/db.mock";
-import type { ServerDatabase } from "@agnesoft/agdb_api/openapi" with {
+import type { ServerDatabase } from "@agnesoft/agdb_api" with {
   "resolution-mode": "import",
 };
 

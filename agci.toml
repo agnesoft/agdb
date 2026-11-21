@@ -52,6 +52,7 @@ add_toolchains = ["node", "php"]
 dependencies = [
     "agdb/tests/query_builder_test.rs",
     "agdb_api/typescript/src/query_builder.ts",
+    "agdb_api/typescript/src/types.ts",
     "agdb_api/typescript/tests/query_builder.test.ts",
     "agdb_server/openapi.json",
     "agdb_server/test_queries.json",

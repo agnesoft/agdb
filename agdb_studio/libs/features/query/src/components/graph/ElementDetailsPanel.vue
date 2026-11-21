@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import type { Components } from "@agnesoft/agdb_api";
+import type { DbKeyValue, DbValue } from "@agnesoft/agdb_api";
 import { computed, ref, watch } from "vue";
 import { LuPencil } from "@kalimahapps/vue-icons";
 import InlineFieldEditor from "./InlineFieldEditor.vue";
@@ -25,7 +25,7 @@ type EditRow = {
   value: QueryStepFieldValue;
   /** Original key-value and its initial fields, to keep untouched parts exact. */
   original?: {
-    kv: Components.Schemas.DbKeyValue;
+    kv: DbKeyValue;
     key: QueryStepFieldValue;
     value: QueryStepFieldValue;
   };
@@ -49,10 +49,7 @@ const emit = defineEmits<{
   /** Whether the form has changes that would be lost by closing it. */
   dirty: [dirty: boolean];
   /** `original` is the copy of the values taken when editing started. */
-  save: [
-    values: Components.Schemas.DbKeyValue[],
-    original: Components.Schemas.DbKeyValue[],
-  ];
+  save: [values: DbKeyValue[], original: DbKeyValue[]];
 }>();
 
 const title = computed(
@@ -83,7 +80,7 @@ let nextRowId = 0;
 const rows = ref<EditRow[]>([]);
 const error = ref<string>();
 /** Values when editing started; later result updates must not change it. */
-let baseline: Components.Schemas.DbKeyValue[] = [];
+let baseline: DbKeyValue[] = [];
 /** Whether the form was filled from the full stored values. */
 const baselineReady = ref(false);
 
@@ -174,7 +171,7 @@ const valueUntouched = (row: EditRow): boolean =>
  * Untouched keys and values keep their exact original `DbValue`, so editing
  * only the key (or only the value) never re-encodes the other part.
  */
-const rowToKeyValue = (row: EditRow): Components.Schemas.DbKeyValue => ({
+const rowToKeyValue = (row: EditRow): DbKeyValue => ({
   key:
     row.original && keyUntouched(row)
       ? row.original.kv.key
@@ -214,7 +211,7 @@ const canInlineEdit = computed(
   () => props.mode === "view" && valuesReady.value && !props.saving,
 );
 
-const isNested = (value: Components.Schemas.DbValue): boolean =>
+const isNested = (value: DbValue): boolean =>
   dbValueToField(value).selectedOption === NESTED_TYPE;
 
 const startInline = (index: number, part: "key" | "value") => {
@@ -263,7 +260,7 @@ const commitInline = () => {
   /* v8 ignore if -- @preserve */
   if (!edit) return;
   const values = [...props.element.rawValues];
-  const keyTaken = (key: Components.Schemas.DbValue, except?: number) =>
+  const keyTaken = (key: DbValue, except?: number) =>
     values.some(
       (kv, i) => i !== except && JSON.stringify(kv.key) === JSON.stringify(key),
     );

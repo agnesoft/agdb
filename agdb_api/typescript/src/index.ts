@@ -1,4 +1,5 @@
 export type { Components } from "./openapi.d.ts";
+export type * from "./types.ts";
 export {
     QueryBuilder,
     CountComparison,

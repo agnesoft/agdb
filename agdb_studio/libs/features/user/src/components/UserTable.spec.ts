@@ -2,7 +2,7 @@ import { vi, describe, it, beforeEach, expect } from "vitest";
 import UserTable from "./UserTable.vue";
 import { mount, shallowMount } from "@vue/test-utils";
 import { ref, nextTick } from "vue";
-import type { UserStatus } from "@agnesoft/agdb_api/openapi";
+import type { UserStatus } from "@agnesoft/agdb_api";
 
 const users = ref<UserStatus[]>([
   {

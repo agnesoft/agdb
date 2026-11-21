@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type { Components } from "@agnesoft/agdb_api";
+import type { DbElement, DbValue } from "@agnesoft/agdb_api";
 
 vi.mock(import("@agnesoft/agdb_api"), async (importOriginal) => {
   const actual = await importOriginal();
@@ -16,17 +16,17 @@ import {
   mergeGraphData,
 } from "./graphDataUtils";
 
-const strVal = (s: string): Components.Schemas.DbValue => ({ String: s });
-const i64Val = (n: number): Components.Schemas.DbValue => ({ I64: n });
-const u64Val = (n: number): Components.Schemas.DbValue => ({ U64: n });
-const f64Val = (n: number): Components.Schemas.DbValue => ({ F64: n });
-const vecStrVal = (arr: string[]): Components.Schemas.DbValue => ({
+const strVal = (s: string): DbValue => ({ String: s });
+const i64Val = (n: number): DbValue => ({ I64: n });
+const u64Val = (n: number): DbValue => ({ U64: n });
+const f64Val = (n: number): DbValue => ({ F64: n });
+const vecStrVal = (arr: string[]): DbValue => ({
   VecString: arr,
 });
-const vecI64Val = (arr: number[]): Components.Schemas.DbValue => ({
+const vecI64Val = (arr: number[]): DbValue => ({
   VecI64: arr,
 });
-const bytesVal = (arr: number[]): Components.Schemas.DbValue => ({
+const bytesVal = (arr: number[]): DbValue => ({
   Bytes: arr,
 });
 
@@ -67,7 +67,7 @@ describe("dbValueToString", () => {
 
 describe("convertElementsToGraphData", () => {
   it("converts positive-id elements to nodes", () => {
-    const elements: Components.Schemas.DbElement[] = [
+    const elements: DbElement[] = [
       {
         id: 1,
         from: 0,
@@ -101,7 +101,7 @@ describe("convertElementsToGraphData", () => {
   });
 
   it("converts negative-id elements to links", () => {
-    const elements: Components.Schemas.DbElement[] = [
+    const elements: DbElement[] = [
       {
         id: -10,
         from: 1,
@@ -125,9 +125,7 @@ describe("convertElementsToGraphData", () => {
   });
 
   it("skips elements with id === 0", () => {
-    const elements: Components.Schemas.DbElement[] = [
-      { id: 0, from: 0, to: 0, values: [] },
-    ];
+    const elements: DbElement[] = [{ id: 0, from: 0, to: 0, values: [] }];
 
     const result = convertElementsToGraphData(elements, "query");
 
@@ -136,7 +134,7 @@ describe("convertElementsToGraphData", () => {
   });
 
   it("handles mixed nodes and edges", () => {
-    const elements: Components.Schemas.DbElement[] = [
+    const elements: DbElement[] = [
       { id: 5, from: 0, to: 0, values: [] },
       { id: -1, from: 5, to: 10, values: [] },
       { id: 10, from: 0, to: 0, values: [] },

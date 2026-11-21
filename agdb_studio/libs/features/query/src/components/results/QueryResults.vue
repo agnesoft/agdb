@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import type { Components } from "@agnesoft/agdb_api";
+import type { DbElement, DbKeyValue, QueryResult } from "@agnesoft/agdb_api";
 import {
   computed,
   inject,
@@ -54,7 +54,7 @@ const query = computed(() =>
 
 const lastTab = computed(() => query.value?.lastExecutedTab);
 
-const mainResults = computed<Components.Schemas.QueryResult[]>(() =>
+const mainResults = computed<QueryResult[]>(() =>
   lastTab.value ? (query.value?.results[lastTab.value] ?? []) : [],
 );
 
@@ -132,7 +132,7 @@ const uniqueCount = computed(() => {
 });
 
 const extraCounts = computed(() => {
-  const count = (results?: Components.Schemas.QueryResult[]) =>
+  const count = (results?: QueryResult[]) =>
     (results ?? []).reduce((sum, r) => sum + r.elements.length, 0);
   return {
     context: count(query.value?.results.context),
@@ -153,11 +153,7 @@ const menuActions = computed(() =>
   actions.menu.value ? actions.getActions(actions.menu.value.element) : [],
 );
 
-const openTableMenu = (
-  element: Components.Schemas.DbElement,
-  x: number,
-  y: number,
-) => {
+const openTableMenu = (element: DbElement, x: number, y: number) => {
   const known = actions.elementsById.value.get(element.id);
   const converted = convertElementsToGraphData([element], "query");
   const graphElement = known ?? converted.nodes[0] ?? converted.links[0];
@@ -183,10 +179,7 @@ const setMenuColor = (slot: PaletteSlot | undefined) => {
 };
 
 const saving = ref(false);
-const saveValues = async (
-  values: Components.Schemas.DbKeyValue[],
-  original: Components.Schemas.DbKeyValue[],
-) => {
+const saveValues = async (values: DbKeyValue[], original: DbKeyValue[]) => {
   const element = actions.selectedElement.value;
   /* v8 ignore next -- @preserve */
   if (!element) return;

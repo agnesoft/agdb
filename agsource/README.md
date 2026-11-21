@@ -113,6 +113,13 @@ not have (e.g. `for`, `?`, ranges, struct variants, destructuring `let`) is kept
 intrinsic, and the structs and enums the test crate declares are data types listed in
 `Module::test_types`. The passes treat the tests as callers of the API.
 
+The data types deriving serde's `Serialize` or `Deserialize` also get their serialized form in
+`Module::wire`, read from their serde attributes: the container's `rename_all`, tagging and
+`transparent`, and the `rename`, `skip`, `default`, `skip_serializing_if` and `flatten` of the
+fields and variants. Any other serde attribute is an `Error::Lowering`.
+`SourceCrate::lower_exported` adds the serde types an API crate of that crate exports, with the
+types they reach. A name that a type of the tested crate already has is an error.
+
 `codegen::pass` holds the passes over the lowered IR. A generator lists the ones its target
 needs in `Passes`, built-in or its own `Pass`, and can dump the module after each with
 `codegen::print`:
@@ -152,6 +159,14 @@ needs in `Passes`, built-in or its own `Pass`, and can dump the module after eac
 - `UnescapeIdentifiers` names `where_`-style methods as the keyword;
 - `OmitSkippedDefaults` leaves out the `skip_serializing_if` fields holding their default;
 - `RemoveDeadHelpers` removes the inlined methods without callers.
+
+`Emitter::module` writes the builders and `Emitter::tests` writes their vitest suite. Their
+literals use the serialized names of the wire types, and only externally tagged enums are
+supported. `Emitter::types` declares the wire types as serde serializes them. It runs on the
+module as lowered, before the passes. A struct is an interface of its fields; a newtype or a
+`transparent` struct is its field; a tuple struct is a tuple; and a unit struct is `null`. An
+enum is the union of its variants in their tagging. An `Option` is an optional `T | null`, and
+a flattened field is an intersection.
 
 A problem with one file does not stop loading. These are all collected as `Error`s with their
 location:

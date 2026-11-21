@@ -39,6 +39,20 @@ pub(crate) fn tested(source: &str, tests: &str, data: &[&str]) -> (Module, Vec<S
     (m, errors)
 }
 
+/// The module of `Root` of the crate `c` with the exported types of the
+/// API crate `api` of it, and the errors of both, with `/` separators.
+pub(crate) fn exported(source: &str, api: &str, data: &[&str]) -> (Module, Vec<String>) {
+    let platform = test_platform();
+    platform.fs().create_dir_all("/api/src").unwrap();
+    platform.fs().write("/api/src/lib.rs", api).unwrap();
+    let mut target = Target::new(TargetKind::Lib, "/api/src/lib.rs");
+    target.externs.push("c".into());
+    let a = SourceCrate::load(&platform, &target, &Cfg::All);
+    let (mut m, mut errors) = lower(source, &[], data);
+    errors.extend(strings(&a.lower_exported(&load(source), "c", &mut m)));
+    (m, errors)
+}
+
 pub(crate) fn id(c: &SourceCrate, path: &str) -> ItemId {
     c.item_ids()
         .find(|id| c.resolve_str(path, Namespace::Type) == Resolved::Item(*id))

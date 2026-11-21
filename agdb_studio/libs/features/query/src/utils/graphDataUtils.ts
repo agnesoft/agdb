@@ -1,4 +1,9 @@
-import type { Components } from "@agnesoft/agdb_api";
+import type {
+  DbElement,
+  DbKeyValue,
+  DbValue,
+  QueryResult,
+} from "@agnesoft/agdb_api";
 import { convertToNativeValue } from "@agnesoft/agdb_api";
 import type {
   GraphData,
@@ -8,7 +13,7 @@ import type {
 } from "../composables/types";
 
 /** Converts a DbValue union to a display-friendly string. */
-export const dbValueToString = (value: Components.Schemas.DbValue): string => {
+export const dbValueToString = (value: DbValue): string => {
   const native = convertToNativeValue(value);
   if (Array.isArray(native)) {
     return native.map(String).join(", ");
@@ -18,7 +23,7 @@ export const dbValueToString = (value: Components.Schemas.DbValue): string => {
 
 /** Key-values as display strings. */
 export const toDisplayValues = (
-  values: Components.Schemas.DbKeyValue[],
+  values: DbKeyValue[],
 ): { key: string; value: string }[] =>
   values.map((kv) => ({
     key: dbValueToString(kv.key),
@@ -33,7 +38,7 @@ export const toDisplayValues = (
  * - Zero ids are skipped (logically invalid in agdb).
  */
 export const convertElementsToGraphData = (
-  elements: Components.Schemas.DbElement[],
+  elements: DbElement[],
   source: GraphElementSource,
   resultIndexes?: Map<number, number[]>,
 ): GraphData => {
@@ -70,7 +75,7 @@ export const convertElementsToGraphData = (
 };
 
 export type DedupedElement = {
-  element: Components.Schemas.DbElement;
+  element: DbElement;
   /** Indexes of the results (queries of the batch) that returned the element. */
   resultIndexes: number[];
 };
@@ -81,11 +86,11 @@ export type DedupedElement = {
  * are merged by key (later ones win), as each may select different keys.
  */
 export const dedupeResultElements = (
-  results: Components.Schemas.QueryResult[],
+  results: QueryResult[],
 ): DedupedElement[] => {
   const byId = new Map<
     number | string,
-    { element: Components.Schemas.DbElement; resultIndexes: number[] }
+    { element: DbElement; resultIndexes: number[] }
   >();
   for (const [resultIndex, result] of results.entries()) {
     for (const [elementIndex, el] of result.elements.entries()) {

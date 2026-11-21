@@ -1,4 +1,8 @@
-import type { Components } from "@agnesoft/agdb_api";
+import type {
+  DbElement,
+  QueryResult,
+  QueryType as AgdbQueryType,
+} from "@agnesoft/agdb_api";
 import { ref, type Ref } from "vue";
 import type {
   AddQueryParams,
@@ -19,8 +23,6 @@ import {
   type ColorRule,
   type PaletteSlot,
 } from "../utils/graphColorRules";
-
-type DbElement = Components.Schemas.DbElement;
 
 /** Every results bucket that can hold graph elements. */
 const RESULT_KEYS = [
@@ -372,11 +374,11 @@ const stopQuery = (queryId: string) => {
 const setQueryResults = (
   queryId: string,
   tab: TAB,
-  results: Components.Schemas.QueryResult[],
+  results: QueryResult[],
   options: {
     keepExpanded?: boolean;
     /** The queries that produced `results`; kept so they can be re-run. */
-    queries?: Components.Schemas.QueryType[];
+    queries?: AgdbQueryType[];
     /** The step types of those queries, so later builder edits don't change the view. */
     stepTypes?: QueryType[];
     /** The ids of the rows those queries came from. */
@@ -422,10 +424,7 @@ const setQueryResults = (
 };
 
 /** Appends on-demand loaded elements (e.g. neighbours) to the graph. */
-const appendExpandedResults = (
-  queryId: string,
-  results: Components.Schemas.QueryResult[],
-) => {
+const appendExpandedResults = (queryId: string, results: QueryResult[]) => {
   const query = getQuery(queryId);
   if (query?.value) {
     query.value.results = {

@@ -1,4 +1,4 @@
-import type { Components } from "@agnesoft/agdb_api";
+import type { QueryResult, QueryType } from "@agnesoft/agdb_api";
 import { checkClient, client } from "@agdb-studio/api/src/api";
 import { useRoute } from "vue-router";
 import {
@@ -77,10 +77,10 @@ export const isAdminRoute = (route: MinimalRoute): boolean =>
  * Returns `undefined` when the route does not identify a database.
  */
 export const executeDbQueries = async (
-  queries: Components.Schemas.QueryType[],
+  queries: QueryType[],
   mutation: boolean,
   route: MinimalRoute,
-): Promise<Components.Schemas.QueryResult[] | undefined> => {
+): Promise<QueryResult[] | undefined> => {
   checkClient(client);
 
   const params = getDbParams(route);
@@ -88,7 +88,7 @@ export const executeDbQueries = async (
     return undefined;
   }
 
-  let response: { data: Components.Schemas.QueryResult[] };
+  let response: { data: QueryResult[] };
 
   if (isAdminRoute(route)) {
     response = mutation
@@ -108,9 +108,7 @@ export const useDbExec = () => {
   const route = useMinimalRoute();
   return {
     route,
-    exec: (queries: Components.Schemas.QueryType[]) =>
-      executeDbQueries(queries, false, route),
-    execMut: (queries: Components.Schemas.QueryType[]) =>
-      executeDbQueries(queries, true, route),
+    exec: (queries: QueryType[]) => executeDbQueries(queries, false, route),
+    execMut: (queries: QueryType[]) => executeDbQueries(queries, true, route),
   };
 };

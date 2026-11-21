@@ -1,5 +1,5 @@
 import { ref } from "vue";
-import type { DbKind, ServerDatabase } from "@agnesoft/agdb_api/openapi";
+import type { DbKind, ServerDatabase } from "@agnesoft/agdb_api";
 import { useAccount } from "@agdb-studio/auth/src/account";
 import { addNotification } from "@agdb-studio/notification/src/composables/notificationStore";
 import type { DbIdentification } from "./types";

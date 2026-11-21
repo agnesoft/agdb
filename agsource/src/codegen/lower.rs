@@ -4,6 +4,7 @@
 use super::ir;
 use super::ir::Target;
 use super::lowered::*;
+use super::wire;
 use crate::Error;
 use crate::ItemId;
 use crate::Namespace;
@@ -63,6 +64,20 @@ impl SourceCrate {
         lower.source = Some((source, name.to_owned()));
         lower.m = std::mem::take(m);
         lower.tests();
+        *m = lower.m;
+        lower.errors
+    }
+}
+
+impl SourceCrate {
+    /// The exported serde types of this crate, an API crate of `source`
+    /// whose library is `name` in its paths, into `m` lowered from `source`.
+    /// A path of `source` is its item in `m`.
+    pub fn lower_exported(&self, source: &SourceCrate, name: &str, m: &mut Module) -> Vec<Error> {
+        let mut lower = Lower::new(self, &[]);
+        lower.source = Some((source, name.to_owned()));
+        lower.m = std::mem::take(m);
+        lower.exported();
         *m = lower.m;
         lower.errors
     }
@@ -239,6 +254,54 @@ impl<'a> Lower<'a> {
                 let test = self.func(&f.sig, Some(&f.body), false, at, true);
                 self.m.tests.push(test);
             }
+        }
+    }
+
+    fn exported(&mut self) {
+        let mut ids: Vec<ItemId> = self
+            .c
+            .exports()
+            .iter()
+            .filter_map(|e| match e.target() {
+                Resolved::Item(id) => Some(*id),
+                _ => None,
+            })
+            .filter(|id| matches!(self.c.item(*id), syn::Item::Struct(_) | syn::Item::Enum(_)))
+            .collect();
+        ids.sort();
+        ids.dedup();
+        let source: HashSet<String> = self
+            .m
+            .classes
+            .keys()
+            .chain(self.m.enums.keys())
+            .cloned()
+            .collect();
+
+        for id in ids {
+            if !self.item(id).is_some_and(|i| wire::is_serde(&i.attrs)) {
+                continue;
+            }
+
+            if source.contains(&self.name(id)) {
+                self.error(id, "a type of the source crate has the name".into());
+                continue;
+            }
+
+            self.reach(id);
+            self.drain();
+        }
+
+        let mut clashes: Vec<ItemId> = self
+            .names
+            .iter()
+            .filter(|(name, _)| source.contains(*name))
+            .map(|(_, id)| *id)
+            .collect();
+        clashes.sort();
+
+        for id in clashes {
+            self.error(id, "a type of the source crate has the name".into());
         }
     }
 
@@ -577,12 +640,23 @@ impl<'a> Lower<'a> {
     fn class(&mut self, id: ItemId) -> Class {
         let name = self.name(id);
         let Some(ir::Item {
+            attrs,
             kind: ir::ItemKind::Struct(s),
             ..
         }) = self.item(id)
         else {
             return empty_class(name);
         };
+
+        if wire::is_serde(&attrs) {
+            match wire::of_struct(&attrs, &s) {
+                Ok(w) => {
+                    self.m.wire.insert(name.clone(), w);
+                }
+                Err(e) => self.error(id, e),
+            }
+        }
+
         let generics = self.generics(&s.generics, true);
         let fields = self.fields(&s.fields, true);
         let builder = self.builders.contains(&id);
@@ -638,12 +712,23 @@ impl<'a> Lower<'a> {
         );
 
         let Some(ir::Item {
+            attrs,
             kind: ir::ItemKind::Enum(e),
             ..
         }) = self.item(id)
         else {
             return;
         };
+
+        if wire::is_serde(&attrs) {
+            match wire::of_enum(&attrs, &e) {
+                Ok(w) => {
+                    self.m.wire.insert(name.clone(), w);
+                }
+                Err(e) => self.error(id, e),
+            }
+        }
+
         let variants = e
             .variants
             .iter()
@@ -1814,6 +1899,7 @@ fn has_let(cond: &ir::Expr) -> bool {
 mod tests {
     use super::*;
     use crate::codegen::print;
+    use crate::codegen::test_utilities::exported;
     use crate::codegen::test_utilities::id;
     use crate::codegen::test_utilities::load;
     use crate::codegen::test_utilities::lower;
@@ -2463,6 +2549,56 @@ pub unsafe trait Tr {}
                 assert_eq!(
                     dump(&m),
                     "// ===== after lower\nclass Bad<> {  }\nclass Root<> { a: Bad, e: BadEnum, f: E }\nenum BadEnum [] []\nenum E [Unit(\"A\"), Tuple(\"B\", Int(\"u8\")), Tuple(\"C\", Tuple([Int(\"u8\"), Bool])), Struct(\"D\", [(\"x\", Int(\"u8\"))]), Tuple(\"F\", List(Named(\"E\", [])))] [\"f\"]\n"
+                );
+            }
+        }
+
+        mod lower_exported {
+            use super::*;
+
+            #[test]
+            fn lower_exported_should_lower_the_serde_types_of_the_api_crate_and_what_they_reach() {
+                let (m, errors) = exported(
+                    r#"pub struct Root;
+#[derive(Serialize)]
+pub enum E { A }"#,
+                    r#"pub use c::E;
+pub use self::Status as Again;
+#[derive(Serialize)]
+pub struct Status { pub e: c::E, pub inner: Inner }
+#[derive(Serialize)]
+pub struct Inner { pub a: u8 }
+pub struct Plain;
+pub fn f() {}
+#[derive(Serialize)]
+pub struct Root;
+#[derive(Serialize)]
+pub struct Uses { pub e: private::E }
+mod private {
+    #[derive(Serialize)]
+    pub struct E;
+}"#,
+                    &["E"],
+                );
+
+                assert_eq!(
+                    (
+                        m.classes.keys().cloned().collect::<Vec<_>>(),
+                        m.wire.keys().cloned().collect::<Vec<_>>()
+                    ),
+                    (
+                        ["E", "Inner", "Root", "Status", "Uses"]
+                            .map(String::from)
+                            .to_vec(),
+                        ["E", "Inner", "Status", "Uses"].map(String::from).to_vec()
+                    )
+                );
+                assert_eq!(
+                    errors,
+                    [
+                        "/api/src/lib.rs:9: `Root`: a type of the source crate has the name",
+                        "/api/src/lib.rs:14: `E`: a type of the source crate has the name"
+                    ]
                 );
             }
         }

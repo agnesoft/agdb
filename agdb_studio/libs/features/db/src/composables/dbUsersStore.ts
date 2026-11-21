@@ -1,4 +1,4 @@
-import type { DbUser, DbUserRole } from "@agnesoft/agdb_api/openapi";
+import type { DbUser, DbUserRole } from "@agnesoft/agdb_api";
 import { ref } from "vue";
 import { useDbStore } from "./dbStore";
 import { addNotification } from "@agdb-studio/notification/src/composables/notificationStore";

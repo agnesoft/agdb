@@ -9,6 +9,8 @@ use std::cell::RefCell;
 use std::collections::BTreeSet;
 use std::fmt::Write;
 
+mod types;
+
 /// What the TS module of a generator has beyond the module it is emitted
 /// from.
 #[derive(Clone, Debug, Default)]
@@ -59,6 +61,9 @@ pub struct Emitter<'a> {
     panics: bool,
     /// The names of the module the code uses, for [`Emitter::tests`].
     imports: BTreeSet<String>,
+    /// The exported values named as a schema type, whose alias is exported
+    /// along so that the name keeps both.
+    values: BTreeSet<String>,
 }
 
 /// `panic!`: TS has no throw expression.
@@ -81,6 +86,7 @@ impl<'a> Emitter<'a> {
             indent: 0,
             panics: false,
             imports: BTreeSet::new(),
+            values: BTreeSet::new(),
         }
     }
 
@@ -118,7 +124,16 @@ impl<'a> Emitter<'a> {
         let mut head = format!("{}\n\n{}\n\n", self.config.header, self.config.import);
 
         for name in self.schemas.borrow().iter() {
-            let _ = writeln!(head, "type {name} = {}.{name};", self.config.schemas);
+            let export = if self.values.contains(name) {
+                "export "
+            } else {
+                ""
+            };
+            let _ = writeln!(
+                head,
+                "{export}type {name} = {}.{name};",
+                self.config.schemas
+            );
         }
 
         if self.panics {
@@ -343,10 +358,12 @@ import {{ describe, expect, it }} from \"vitest\";
                     .collect();
                 format!("new {class}({})", args.join(", "))
             }
-            K::Construct { fields, .. } => {
+            K::Construct { class, fields } => {
                 let fields: Vec<String> = fields
                     .iter()
-                    .map(|(name, value)| format!("{}: {}", member(name), self.expr(value)))
+                    .map(|(name, value)| {
+                        format!("{}: {}", self.field_name(class, name), self.expr(value))
+                    })
                     .collect();
                 format!("{{ {} }}", fields.join(", "))
             }
@@ -355,21 +372,35 @@ import {{ describe, expect, it }} from \"vitest\";
                 None => "undefined".into(),
             },
             K::Variant {
-                var, payload: None, ..
-            } => format!("{var:?}"),
+                en,
+                var,
+                payload: None,
+            } => format!("{:?}", self.variant_name(en, var)),
             K::Variant {
+                en,
                 var,
                 payload: Some(p),
-                ..
-            } => format!("{{ {var}: {} }}", self.expr(p)),
+            } => {
+                let var = self.variant_name(en, var);
+                format!("{{ {var}: {} }}", self.expr(p))
+            }
             K::Path(path) => path.join("."),
             K::Field { base, name }
                 if name.parse::<usize>().is_ok() && !self.is_builder_value(base) =>
             {
                 format!("{}[{name}]", self.expr(base))
             }
-            K::Field { base, name } => format!("{}.{}", self.expr(base), member(name)),
-            K::Payload { base, var, .. } => format!("{}.{var}", self.expr(base)),
+            K::Field { base, name } => {
+                let name = match &base.ty {
+                    Ty::Named(class, _) => self.field_name(class, name),
+                    _ => member(name),
+                };
+                format!("{}.{name}", self.expr(base))
+            }
+            K::Payload { base, en, var } => {
+                let var = self.variant_name(en, var);
+                format!("{}.{var}", self.expr(base))
+            }
             K::Unwrap(value) | K::Ref(value) | K::Deref(value) => self.expr(value),
             K::Index { base, index } => format!("{}[{}]", self.expr(base), self.expr(index)),
             K::Call { callee, recv, args } => self.call(callee, recv.as_deref(), args),
@@ -471,6 +502,29 @@ import {{ describe, expect, it }} from \"vitest\";
         }
     }
 
+    /// The serialized name of variant `var` of `en`: the code builds and
+    /// tells apart the variants of externally tagged enums only.
+    fn variant_name(&mut self, en: &str, var: &str) -> String {
+        let Some(wire) = self.m.wire.get(en) else {
+            return var.to_owned();
+        };
+
+        if wire.tagging != Tagging::External {
+            return self.unsupported(&format!("{en} is not externally tagged"));
+        }
+
+        wire.members.get(var).map_or(var, |m| &m.name).to_owned()
+    }
+
+    /// The serialized name of field `name` of `class`.
+    fn field_name(&self, class: &str, name: &str) -> String {
+        self.m
+            .wire
+            .get(class)
+            .and_then(|w| w.members.get(name))
+            .map_or_else(|| member(name), |m| m.name.clone())
+    }
+
     fn unsupported(&mut self, what: &str) -> String {
         self.unsupported.push(format!("{}: `{what}`", self.current));
         "unsupported()".into()
@@ -483,9 +537,11 @@ import {{ describe, expect, it }} from \"vitest\";
             Test::IsVariant(base, en, var)
                 if matches!(self.m.variant(en, var), Some(Variant::Unit(_))) =>
             {
+                let var = self.variant_name(en, var);
                 format!("{} === {var:?}", self.expr(base))
             }
-            Test::IsVariant(base, _, var) => {
+            Test::IsVariant(base, en, var) => {
+                let var = self.variant_name(en, var);
                 let base = self.expr(base);
                 format!("typeof {base} === \"object\" && {base} !== null && {var:?} in {base}")
             }
@@ -833,6 +889,7 @@ import {{ describe, expect, it }} from \"vitest\";
             guards.push(guard.clone());
             let cast = match &pat {
                 Pat::Variant { en, var, .. } => {
+                    let var = self.variant_name(en, var);
                     format!("Extract<{}, {{ {var}: unknown }}>", self.schema(en))
                 }
                 _ => self.ty(&ty),
@@ -1059,12 +1116,15 @@ import {{ describe, expect, it }} from \"vitest\";
             .collect();
 
         for name in enums {
+            self.values.insert(name.to_owned());
             self.line(0, &format!("export const {name} = {{"));
             let ty = self.schema(name);
 
             for variant in &m.enums[name].variants {
+                let wire = self.variant_name(name, variant.name());
+
                 match variant {
-                    Variant::Unit(var) => self.line(1, &format!("{var}: {var:?} as {ty},")),
+                    Variant::Unit(var) => self.line(1, &format!("{var}: {wire:?} as {ty},")),
                     Variant::Tuple(var, payload) => {
                         let (param, value) = match payload.name() {
                             Some(x) if normalized.contains(x) => {
@@ -1074,7 +1134,7 @@ import {{ describe, expect, it }} from \"vitest\";
                         };
                         self.line(
                             1,
-                            &format!("{var}: (v: {param}): {ty} => ({{ {var}: {value} }}),"),
+                            &format!("{var}: (v: {param}): {ty} => ({{ {wire}: {value} }}),"),
                         );
                     }
                     Variant::Struct(..) => {}
@@ -1879,7 +1939,7 @@ fn second() {
 
                 assert_eq!(
                     ts.code,
-                    "// header\n\nimport type { S } from \"s\";\n\ntype C = S.C;\ntype D = S.D;\ntype Nope = S.Nope;\ntype U = S.U;\ntype X = S.X;\ntype Y = S.Y;\ntype Z = S.Z;\nfunction panic(msg: string): never {\n    throw new Error(msg);\n}\nexport interface Refl<Self> {\n}\n\nconst C_Tr: Tr<C> = {\n    add(n: number): number {\n        return n;\n    },\n};\n\nexport const X = {\n    P: (v: number): X => ({ P: v }),\n    B: (v: boolean): X => ({ B: v }),\n};\n\nexport const Y = {\n    P: (v: number): Y => ({ P: v }),\n    Q: (v: number): Y => ({ Q: v }),\n    R: (v: number): Y => ({ R: v }),\n};\n\nexport const Z = {\n    Z1: (v: IntoX): Z => ({ Z1: into_X(v) }),\n};\n\nexport type IntoX = boolean | number | string | number[] | [string, number] | X | U | D | Nope | Y | IntoZ | object | void;\n\nfunction is_into_X(v: unknown): v is IntoX {\n    return (typeof v === \"boolean\") || (Number.isInteger(v)) || (typeof v === \"number\") || (typeof v === \"string\") || (Array.isArray(v) && v.every((x) => Number.isInteger(x))) || (Array.isArray(v) && v.length === 2 && typeof v[0] === \"string\" && Number.isInteger(v[1])) || ((typeof v === \"object\" && v !== null && (\"P\" in v || \"B\" in v))) || (v === \"A\" || v === \"B\") || (typeof v === \"object\" && v !== null && \"a\" in v) || (true) || (typeof v === \"object\" && v !== null && \"Q\" in v) || (typeof v === \"object\" && v !== null && \"R\" in v) || (is_into_Z(v)) || (typeof v === \"object\" && v !== null && !Array.isArray(v));\n}\n\nexport function into_X(v: IntoX): X {\n    if (typeof v === \"boolean\") {\n        return { B: v };\n    }\n    if (Number.isInteger(v)) {\n        return { P: (v as number) };\n    }\n    if (typeof v === \"number\") {\n        return v;\n    }\n    if (typeof v === \"string\") {\n        return v;\n    }\n    if (Array.isArray(v) && v.every((x) => Number.isInteger(x))) {\n        return (v as number[]);\n    }\n    if (Array.isArray(v) && v.length === 2 && typeof v[0] === \"string\" && Number.isInteger(v[1])) {\n        return (v as [string, number]);\n    }\n    if ((typeof v === \"object\" && v !== null && (\"P\" in v || \"B\" in v))) {\n        return (v as X);\n    }\n    if (v === \"A\" || v === \"B\") {\n        return (v as U);\n    }\n    if (typeof v === \"object\" && v !== null && \"a\" in v) {\n        return (v as D);\n    }\n    if (true) {\n        return (v as Nope);\n    }\n    if (typeof v === \"object\" && v !== null && \"Q\" in v) {\n        return { P: (v as Extract<Y, { Q: unknown }>).Q };\n    }\n    if (typeof v === \"object\" && v !== null && \"R\" in v) {\n        return { P: 0 };\n    }\n    if (is_into_Z(v)) {\n        return (v as IntoZ);\n    }\n    if (typeof v === \"object\" && v !== null && !Array.isArray(v)) {\n        return (v as object);\n    }\n    return panic(`cannot convert ${JSON.stringify(v)} into X`);\n}\n\nexport type IntoZ = IntoX[] | [IntoX] | Z | IntoX | undefined;\n\nfunction is_into_Z(v: unknown): v is IntoZ {\n    return (Array.isArray(v) && v.every((x) => is_into_X(x))) || (Array.isArray(v) && v.length === 1 && is_into_X(v[0])) || ((typeof v === \"object\" && v !== null && (\"Z1\" in v || \"S\" in v))) || ((v === undefined || is_into_X(v)));\n}\n\nexport function into_Z(v: IntoZ): Z {\n    if (Array.isArray(v) && v.every((x) => is_into_X(x))) {\n        return (v as IntoX[]);\n    }\n    if (Array.isArray(v) && v.length === 1 && is_into_X(v[0])) {\n        return (v as [IntoX]);\n    }\n    if ((typeof v === \"object\" && v !== null && (\"Z1\" in v || \"S\" in v))) {\n        return (v as Z);\n    }\n    if ((v === undefined || is_into_X(v))) {\n        return (v as IntoX | undefined);\n    }\n    return panic(`cannot convert ${JSON.stringify(v)} into Z`);\n}\n\nfunction D_get(self: D): number {\n    return self.a;\n}\n\nfunction D_make(): D {\n    return 1;\n}\n\n"
+                    "// header\n\nimport type { S } from \"s\";\n\ntype C = S.C;\ntype D = S.D;\ntype Nope = S.Nope;\ntype U = S.U;\nexport type X = S.X;\nexport type Y = S.Y;\nexport type Z = S.Z;\nfunction panic(msg: string): never {\n    throw new Error(msg);\n}\nexport interface Refl<Self> {\n}\n\nconst C_Tr: Tr<C> = {\n    add(n: number): number {\n        return n;\n    },\n};\n\nexport const X = {\n    P: (v: number): X => ({ P: v }),\n    B: (v: boolean): X => ({ B: v }),\n};\n\nexport const Y = {\n    P: (v: number): Y => ({ P: v }),\n    Q: (v: number): Y => ({ Q: v }),\n    R: (v: number): Y => ({ R: v }),\n};\n\nexport const Z = {\n    Z1: (v: IntoX): Z => ({ Z1: into_X(v) }),\n};\n\nexport type IntoX = boolean | number | string | number[] | [string, number] | X | U | D | Nope | Y | IntoZ | object | void;\n\nfunction is_into_X(v: unknown): v is IntoX {\n    return (typeof v === \"boolean\") || (Number.isInteger(v)) || (typeof v === \"number\") || (typeof v === \"string\") || (Array.isArray(v) && v.every((x) => Number.isInteger(x))) || (Array.isArray(v) && v.length === 2 && typeof v[0] === \"string\" && Number.isInteger(v[1])) || ((typeof v === \"object\" && v !== null && (\"P\" in v || \"B\" in v))) || (v === \"A\" || v === \"B\") || (typeof v === \"object\" && v !== null && \"a\" in v) || (true) || (typeof v === \"object\" && v !== null && \"Q\" in v) || (typeof v === \"object\" && v !== null && \"R\" in v) || (is_into_Z(v)) || (typeof v === \"object\" && v !== null && !Array.isArray(v));\n}\n\nexport function into_X(v: IntoX): X {\n    if (typeof v === \"boolean\") {\n        return { B: v };\n    }\n    if (Number.isInteger(v)) {\n        return { P: (v as number) };\n    }\n    if (typeof v === \"number\") {\n        return v;\n    }\n    if (typeof v === \"string\") {\n        return v;\n    }\n    if (Array.isArray(v) && v.every((x) => Number.isInteger(x))) {\n        return (v as number[]);\n    }\n    if (Array.isArray(v) && v.length === 2 && typeof v[0] === \"string\" && Number.isInteger(v[1])) {\n        return (v as [string, number]);\n    }\n    if ((typeof v === \"object\" && v !== null && (\"P\" in v || \"B\" in v))) {\n        return (v as X);\n    }\n    if (v === \"A\" || v === \"B\") {\n        return (v as U);\n    }\n    if (typeof v === \"object\" && v !== null && \"a\" in v) {\n        return (v as D);\n    }\n    if (true) {\n        return (v as Nope);\n    }\n    if (typeof v === \"object\" && v !== null && \"Q\" in v) {\n        return { P: (v as Extract<Y, { Q: unknown }>).Q };\n    }\n    if (typeof v === \"object\" && v !== null && \"R\" in v) {\n        return { P: 0 };\n    }\n    if (is_into_Z(v)) {\n        return (v as IntoZ);\n    }\n    if (typeof v === \"object\" && v !== null && !Array.isArray(v)) {\n        return (v as object);\n    }\n    return panic(`cannot convert ${JSON.stringify(v)} into X`);\n}\n\nexport type IntoZ = IntoX[] | [IntoX] | Z | IntoX | undefined;\n\nfunction is_into_Z(v: unknown): v is IntoZ {\n    return (Array.isArray(v) && v.every((x) => is_into_X(x))) || (Array.isArray(v) && v.length === 1 && is_into_X(v[0])) || ((typeof v === \"object\" && v !== null && (\"Z1\" in v || \"S\" in v))) || ((v === undefined || is_into_X(v)));\n}\n\nexport function into_Z(v: IntoZ): Z {\n    if (Array.isArray(v) && v.every((x) => is_into_X(x))) {\n        return (v as IntoX[]);\n    }\n    if (Array.isArray(v) && v.length === 1 && is_into_X(v[0])) {\n        return (v as [IntoX]);\n    }\n    if ((typeof v === \"object\" && v !== null && (\"Z1\" in v || \"S\" in v))) {\n        return (v as Z);\n    }\n    if ((v === undefined || is_into_X(v))) {\n        return (v as IntoX | undefined);\n    }\n    return panic(`cannot convert ${JSON.stringify(v)} into Z`);\n}\n\nfunction D_get(self: D): number {\n    return self.a;\n}\n\nfunction D_make(): D {\n    return 1;\n}\n\n"
                 );
                 assert_eq!(
                     ts.notes,
@@ -1919,6 +1979,51 @@ fn second() {
                 assert_eq!(
                     ts.code,
                     "// header\n\nimport type { S } from \"s\";\n\nexport class Root {\n    n(): number {\n        return 1;\n    }\n}\n\n"
+                );
+            }
+
+            #[test]
+            fn module_should_write_the_serialized_names_of_the_wire_types() {
+                let ts = emitted(
+                    r#"
+                    pub struct Root;
+                    #[derive(Serialize)]
+                    #[serde(rename_all = "lowercase")]
+                    pub enum W { Ab(Q), Cd }
+                    #[derive(Serialize)]
+                    pub struct Q { #[serde(rename = "x")] pub a: u8 }
+                    #[derive(Serialize)]
+                    #[serde(tag = "t")]
+                    pub enum I { A }
+                    impl Root {
+                        pub fn w(&self, n: u8) -> W {
+                            let q = Q { a: n };
+                            W::Ab(Q { a: q.a })
+                        }
+                        pub fn a(&self, w: W) -> u8 {
+                            match w {
+                                W::Ab(q) => q.a,
+                                W::Cd => 0,
+                            }
+                        }
+                        pub fn cd(&self) -> W {
+                            W::Cd
+                        }
+                        pub fn i(&self) -> I {
+                            I::A
+                        }
+                    }
+                    "#,
+                    &[],
+                    &[],
+                );
+
+                assert_eq!(
+                    (ts.code.as_str(), ts.unsupported),
+                    (
+                        "// header\n\nimport type { S } from \"s\";\n\ntype I = S.I;\ntype Q = S.Q;\ntype W = S.W;\nfunction panic(msg: string): never {\n    throw new Error(msg);\n}\nexport class Root {\n    w(n: number): W {\n        const q: Q = { x: n };\n        return { ab: { x: q.x } };\n    }\n\n    a(w: W): number {\n        if (typeof w === \"object\" && w !== null && \"ab\" in w) {\n            const q = w.ab;\n            return q.x;\n        } else if (w === \"cd\") {\n            return 0;\n        } else {\n            panic(\"unreachable\");\n        }\n    }\n\n    cd(): W {\n        return \"cd\";\n    }\n\n    i(): I {\n        return \"unsupported()\";\n    }\n}\n\n",
+                        vec!["i: `I is not externally tagged`".to_owned()]
+                    )
                 );
             }
 
@@ -2141,7 +2246,7 @@ fn second() {
 
                 assert_eq!(
                     ts.code,
-                    "// header\n\nimport type { S } from \"s\";\n\ntype Qa = S.Qa;\ntype V = S.V;\ntype Wire = S.Wire;\nfunction panic(msg: string): never {\n    throw new Error(msg);\n}\nexport interface Ided<Self> {\n    id(self: Self): number;\n    into_wire(self: Self): Wire;\n}\n\nexport interface Keys<Self> {\n    keys(self: Self): string[];\n    none(): string[];\n}\n\nconst Qb_Ided: Ided<number> = {\n    id(self: number): number {\n        return self;\n    },\n    into_wire(self: number): Wire {\n        return { B: self };\n    },\n};\n\nconst Fields_Keys: Keys<([string, V | undefined])[]> = {\n    keys(self: ([string, V | undefined])[]): string[] {\n        const keys: string[] = [];\n        self.forEach((f) => {\n            if (f[1] !== undefined) {\n                const v = f[1];\n                if (V_is_id(v)) {\n                    keys.push(f[0]);\n                }\n            }\n        });\n        return keys;\n    },\n    none(): string[] {\n        return [];\n    },\n};\n\nexport const V = {\n    Id: (v: number): V => ({ Id: v }),\n    Name: (v: string): V => ({ Name: v }),\n    Pair: (v: [number, number]): V => ({ Pair: v }),\n    None: \"None\" as V,\n};\n\nexport const Wire = {\n    A: (v: Qa): Wire => ({ A: v }),\n    B: (v: number): Wire => ({ B: v }),\n};\n\nexport type IntoV = boolean | number | string | V | Wire;\n\nexport function into_V(v: IntoV): V {\n    if (typeof v === \"boolean\") {\n        if (v === true) {\n            return { Id: 1 };\n        } else if (v === false) {\n            return \"None\";\n        } else {\n            panic(\"unreachable\");\n        }\n    }\n    if (Number.isInteger(v)) {\n        return { Id: (v as number) };\n    }\n    if (typeof v === \"string\") {\n        return { Name: v };\n    }\n    if (v === \"None\" || (typeof v === \"object\" && v !== null && (\"Id\" in v || \"Name\" in v || \"Pair\" in v))) {\n        return (v as V);\n    }\n    if ((typeof v === \"object\" && v !== null && (\"A\" in v || \"B\" in v))) {\n        const value0 = v as Wire;\n        if (typeof value0 === \"object\" && value0 !== null && \"A\" in value0) {\n            return \"None\";\n        } else if (typeof value0 === \"object\" && value0 !== null && \"B\" in value0) {\n            const value = value0.B;\n            return { Id: value };\n        } else {\n            panic(\"unreachable\");\n        }\n    }\n    return panic(`cannot convert ${JSON.stringify(v)} into V`);\n}\n\nfunction V_zero(): V {\n    const zero: V = { Id: 0 };\n    return zero;\n}\n\nfunction V_is_id(self: V): boolean {\n    if (typeof self === \"object\" && self !== null && \"Id\" in self) {\n        return true;\n    } else if (typeof self === \"object\" && self !== null && \"Pair\" in self) {\n        const a = self.Pair[0];\n        const b = self.Pair[1];\n        return a === b;\n    } else {\n        return false;\n    }\n}\n\nexport class Root {\n    a(): A {\n        return new A({ ids: [], n: undefined, keys: [] });\n    }\n\n    b(n: number): Wire {\n        return { B: n };\n    }\n\n    g(): G<number> {\n        return new G(1, Qb_Ided);\n    }\n}\n\nclass G<T> {\n    constructor(public _0: T, public T_Ided: Ided<T>) {}\n\n    id(): number {\n        return this.T_Ided.id(this._0);\n    }\n\n    query(): Wire {\n        return this.T_Ided.into_wire(this._0);\n    }\n}\n\nclass A {\n    constructor(public _0: Qa) {}\n\n    ids(ids: IntoV[]): A {\n        ids.forEach((x) => this._0.ids.push(into_V(x)));\n        return this;\n    }\n\n    id(id: IntoV): A {\n        this._0.ids.push(into_V(id));\n        return this;\n    }\n\n    n(n: number): A {\n        if (n > 0) {\n            this._0.n = n;\n        } else if (n === 0) {\n            this._0.n = undefined;\n        } else {\n            panic(\"negative\");\n        }\n        return this;\n    }\n\n    values<T extends object>(t: T): A {\n        this._0.keys = Fields_Keys.keys(Object.entries(t).map(([k, v]): [string, V | undefined] => [k as string, v === undefined || v === null ? undefined : into_V(v as IntoV)]));\n        if (this._0.keys.length === 0) {\n            this._0.keys = Fields_Keys.none();\n        }\n        return this;\n    }\n\n    count(): number {\n        let n: number = 0;\n        this._0.ids.forEach((x) => {\n            n = n + 1;\n        });\n        this._0.ids.forEach((x) => {\n            if (V_is_id(x) && n > 1) {\n                n = n + 1;\n            }\n        });\n        return n;\n    }\n\n    flags(): number[] {\n        return this._0.ids.map((x) => (V_is_id(x) ? 1 : 0));\n    }\n\n    wire(w: Wire): A {\n        this._0.ids.push(into_V(w));\n        this._0.ids.push(V_zero());\n        return this;\n    }\n\n    first(): number {\n        if (this._0.n !== undefined) {\n            const id = this._0.n;\n            return id;\n        } else if (this._0.n === undefined) {\n            return 0;\n        } else {\n            panic(\"unreachable\");\n        }\n    }\n\n    query(): Wire {\n        return { A: this._0 };\n    }\n}\n\n"
+                    "// header\n\nimport type { S } from \"s\";\n\ntype Qa = S.Qa;\nexport type V = S.V;\nexport type Wire = S.Wire;\nfunction panic(msg: string): never {\n    throw new Error(msg);\n}\nexport interface Ided<Self> {\n    id(self: Self): number;\n    into_wire(self: Self): Wire;\n}\n\nexport interface Keys<Self> {\n    keys(self: Self): string[];\n    none(): string[];\n}\n\nconst Qb_Ided: Ided<number> = {\n    id(self: number): number {\n        return self;\n    },\n    into_wire(self: number): Wire {\n        return { B: self };\n    },\n};\n\nconst Fields_Keys: Keys<([string, V | undefined])[]> = {\n    keys(self: ([string, V | undefined])[]): string[] {\n        const keys: string[] = [];\n        self.forEach((f) => {\n            if (f[1] !== undefined) {\n                const v = f[1];\n                if (V_is_id(v)) {\n                    keys.push(f[0]);\n                }\n            }\n        });\n        return keys;\n    },\n    none(): string[] {\n        return [];\n    },\n};\n\nexport const V = {\n    Id: (v: number): V => ({ Id: v }),\n    Name: (v: string): V => ({ Name: v }),\n    Pair: (v: [number, number]): V => ({ Pair: v }),\n    None: \"None\" as V,\n};\n\nexport const Wire = {\n    A: (v: Qa): Wire => ({ A: v }),\n    B: (v: number): Wire => ({ B: v }),\n};\n\nexport type IntoV = boolean | number | string | V | Wire;\n\nexport function into_V(v: IntoV): V {\n    if (typeof v === \"boolean\") {\n        if (v === true) {\n            return { Id: 1 };\n        } else if (v === false) {\n            return \"None\";\n        } else {\n            panic(\"unreachable\");\n        }\n    }\n    if (Number.isInteger(v)) {\n        return { Id: (v as number) };\n    }\n    if (typeof v === \"string\") {\n        return { Name: v };\n    }\n    if (v === \"None\" || (typeof v === \"object\" && v !== null && (\"Id\" in v || \"Name\" in v || \"Pair\" in v))) {\n        return (v as V);\n    }\n    if ((typeof v === \"object\" && v !== null && (\"A\" in v || \"B\" in v))) {\n        const value0 = v as Wire;\n        if (typeof value0 === \"object\" && value0 !== null && \"A\" in value0) {\n            return \"None\";\n        } else if (typeof value0 === \"object\" && value0 !== null && \"B\" in value0) {\n            const value = value0.B;\n            return { Id: value };\n        } else {\n            panic(\"unreachable\");\n        }\n    }\n    return panic(`cannot convert ${JSON.stringify(v)} into V`);\n}\n\nfunction V_zero(): V {\n    const zero: V = { Id: 0 };\n    return zero;\n}\n\nfunction V_is_id(self: V): boolean {\n    if (typeof self === \"object\" && self !== null && \"Id\" in self) {\n        return true;\n    } else if (typeof self === \"object\" && self !== null && \"Pair\" in self) {\n        const a = self.Pair[0];\n        const b = self.Pair[1];\n        return a === b;\n    } else {\n        return false;\n    }\n}\n\nexport class Root {\n    a(): A {\n        return new A({ ids: [], n: undefined, keys: [] });\n    }\n\n    b(n: number): Wire {\n        return { B: n };\n    }\n\n    g(): G<number> {\n        return new G(1, Qb_Ided);\n    }\n}\n\nclass G<T> {\n    constructor(public _0: T, public T_Ided: Ided<T>) {}\n\n    id(): number {\n        return this.T_Ided.id(this._0);\n    }\n\n    query(): Wire {\n        return this.T_Ided.into_wire(this._0);\n    }\n}\n\nclass A {\n    constructor(public _0: Qa) {}\n\n    ids(ids: IntoV[]): A {\n        ids.forEach((x) => this._0.ids.push(into_V(x)));\n        return this;\n    }\n\n    id(id: IntoV): A {\n        this._0.ids.push(into_V(id));\n        return this;\n    }\n\n    n(n: number): A {\n        if (n > 0) {\n            this._0.n = n;\n        } else if (n === 0) {\n            this._0.n = undefined;\n        } else {\n            panic(\"negative\");\n        }\n        return this;\n    }\n\n    values<T extends object>(t: T): A {\n        this._0.keys = Fields_Keys.keys(Object.entries(t).map(([k, v]): [string, V | undefined] => [k as string, v === undefined || v === null ? undefined : into_V(v as IntoV)]));\n        if (this._0.keys.length === 0) {\n            this._0.keys = Fields_Keys.none();\n        }\n        return this;\n    }\n\n    count(): number {\n        let n: number = 0;\n        this._0.ids.forEach((x) => {\n            n = n + 1;\n        });\n        this._0.ids.forEach((x) => {\n            if (V_is_id(x) && n > 1) {\n                n = n + 1;\n            }\n        });\n        return n;\n    }\n\n    flags(): number[] {\n        return this._0.ids.map((x) => (V_is_id(x) ? 1 : 0));\n    }\n\n    wire(w: Wire): A {\n        this._0.ids.push(into_V(w));\n        this._0.ids.push(V_zero());\n        return this;\n    }\n\n    first(): number {\n        if (this._0.n !== undefined) {\n            const id = this._0.n;\n            return id;\n        } else if (this._0.n === undefined) {\n            return 0;\n        } else {\n            panic(\"unreachable\");\n        }\n    }\n\n    query(): Wire {\n        return { A: this._0 };\n    }\n}\n\n"
                 );
                 assert_eq!(ts.notes, Vec::<String>::new());
                 assert_eq!(ts.unsupported, Vec::<String>::new());

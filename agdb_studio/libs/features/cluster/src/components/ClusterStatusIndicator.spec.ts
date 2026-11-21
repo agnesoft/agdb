@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { mount } from "@vue/test-utils";
 import { nextTick, ref } from "vue";
 import ClusterStatusIndicator from "./ClusterStatusIndicator.vue";
-import type { ClusterStatus } from "@agnesoft/agdb_api/openapi";
+import type { ClusterStatus } from "@agnesoft/agdb_api";
 
 const clusterStatus = (
   address: string,

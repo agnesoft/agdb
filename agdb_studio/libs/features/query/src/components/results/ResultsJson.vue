@@ -1,11 +1,11 @@
 <script lang="ts" setup>
-import type { Components } from "@agnesoft/agdb_api";
+import type { QueryResult } from "@agnesoft/agdb_api";
 import { computed } from "vue";
 import { addNotification } from "@agdb-studio/notification/src/composables/notificationStore";
 import { copyText } from "../../utils/clipboard";
 
 const props = defineProps<{
-  results: Components.Schemas.QueryResult[];
+  results: QueryResult[];
 }>();
 
 const json = computed(() => JSON.stringify(props.results, null, 2));

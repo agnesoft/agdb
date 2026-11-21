@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import type { Components } from "@agnesoft/agdb_api";
+import type { DbElement, QueryResult } from "@agnesoft/agdb_api";
 import { computed } from "vue";
 import {
   dbValueToString,
@@ -7,13 +7,13 @@ import {
 } from "../../utils/graphDataUtils";
 
 const props = defineProps<{
-  results: Components.Schemas.QueryResult[];
+  results: QueryResult[];
   /** Alias of a node id, shown in its own column when any node has one. */
   aliasOf?: (id: number) => string | undefined;
 }>();
 
 const emit = defineEmits<{
-  menu: [element: Components.Schemas.DbElement, x: number, y: number];
+  menu: [element: DbElement, x: number, y: number];
 }>();
 
 // An element several queries returned is one row; the JSON view keeps them all.
@@ -60,7 +60,7 @@ const rows = computed(() =>
   }),
 );
 
-const openMenu = (element: Components.Schemas.DbElement, event: MouseEvent) => {
+const openMenu = (element: DbElement, event: MouseEvent) => {
   emit("menu", element, event.clientX, event.clientY);
 };
 </script>

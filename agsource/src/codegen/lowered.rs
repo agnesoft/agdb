@@ -538,6 +538,57 @@ pub struct Conversion {
     pub errors: Vec<String>,
 }
 
+/// How serde represents a data type: from its `#[serde(..)]` attributes.
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct Wire {
+    pub doc: Option<String>,
+    pub shape: Shape,
+    pub tagging: Tagging,
+    /// `#[serde(transparent)]`: the value is that of its one field.
+    pub transparent: bool,
+    /// The fields of a struct or the variants of an enum, by name.
+    pub members: BTreeMap<String, Member>,
+}
+
+/// The kind of struct, which the fields do not tell apart when empty.
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub enum Shape {
+    #[default]
+    Named,
+    Tuple,
+    Unit,
+}
+
+/// How the variants of an enum are told apart.
+#[derive(Clone, Debug, Default, PartialEq)]
+pub enum Tagging {
+    /// `{ "Variant": payload }`, a unit variant its name.
+    #[default]
+    External,
+    /// `#[serde(tag = "t")]`: the name in field `t` of the payload.
+    Internal(String),
+    /// `#[serde(tag = "t", content = "c")]`: `{ "t": name, "c": payload }`.
+    Adjacent(String, String),
+    /// `#[serde(untagged)]`: the payload alone.
+    Untagged,
+}
+
+/// A field or a variant as serialized.
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct Member {
+    /// The name in the serialized value.
+    pub name: String,
+    pub doc: Option<String>,
+    /// `skip`: not serialized.
+    pub skip: bool,
+    /// `default` or `skip_serializing_if`: a value may leave it out.
+    pub optional: bool,
+    /// `flatten`: its fields are those of the parent.
+    pub flatten: bool,
+    /// The fields of a struct variant, by name.
+    pub fields: BTreeMap<String, Member>,
+}
+
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct Module {
     /// The class the builder API starts from.
@@ -574,6 +625,9 @@ pub struct Module {
     /// The classes the passes make, which are no data type of the source:
     /// the target declares them.
     pub records: BTreeSet<String>,
+    /// The serde representation of the data types deriving `Serialize` or
+    /// `Deserialize`, by name.
+    pub wire: BTreeMap<String, Wire>,
 }
 
 impl Module {

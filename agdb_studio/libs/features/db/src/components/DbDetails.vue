@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import type { TRow } from "@agdb-studio/common/src/composables/table/types";
-import type { DbUser, DbUserRole } from "@agnesoft/agdb_api/openapi";
+import type { DbUser, DbUserRole } from "@agnesoft/agdb_api";
 import { computed, onMounted, ref, type PropType } from "vue";
 import { useDbUsersStore } from "../composables/dbUsersStore";
 import { ClCloseMd, ChPlus } from "@kalimahapps/vue-icons";

@@ -1,9 +1,13 @@
+#[allow(dead_code)]
+pub(crate) mod alloc;
 pub mod any_storage;
 pub mod file_storage;
 pub mod file_storage_memory_mapped;
 pub mod memory_storage;
 
 mod overlay;
+#[allow(dead_code)]
+pub(crate) mod pages;
 mod ranges;
 mod storage_records;
 mod write_ahead_log;

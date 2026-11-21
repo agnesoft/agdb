@@ -456,7 +456,11 @@ impl<Store: StorageData> DbImpl<Store> {
         match commit_result {
             Ok(()) => {
                 if let Err(e) = self.storage.commit(storage_transaction) {
-                    return Err(E::from(self.recover(e)));
+                    let e = self.recover(e);
+
+                    if result.is_ok() || self.poisoned {
+                        return Err(E::from(e));
+                    }
                 }
             }
             Err(rollback_err) => {
@@ -2095,6 +2099,21 @@ mod tests {
                     value(&open(file(&platform), StorageConfig::default())),
                     "modified".into()
                 );
+            }
+
+            #[test]
+            fn transaction_mut_should_return_query_error_after_failed_write() {
+                let platform = Arc::new(test_platform());
+                let mut db = inserted(file(&platform), config(SyncMode::None, 0));
+                fail_once(&platform, FsOp::Write, NAME);
+
+                let err = modify(&mut db).unwrap_err();
+
+                assert_eq!(err.description, "[Fs] simulated Write failure: /db");
+                assert!(!db.poisoned);
+                assert_eq!(value(&db), "original".into());
+                modify(&mut db).unwrap();
+                assert_eq!(value(&db), "modified".into());
             }
 
             #[test]

@@ -1,11 +1,14 @@
 <script lang="ts" setup>
-import { computed, onMounted, ref, watch } from "vue";
+import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import { onBeforeRouteLeave, onBeforeRouteUpdate } from "vue-router";
 import { useEventListener } from "@vueuse/core";
 import { ChPlus, MdRefresh } from "@kalimahapps/vue-icons";
 import SpinnerIcon from "@agdb-studio/design/src/components/icons/SpinnerIcon.vue";
 import { useDbStore } from "@agdb-studio/db/src/composables/dbStore";
-import { useDashboardStore } from "../composables/dashboardStore";
+import {
+  useDashboardStore,
+  type RemovedWidget,
+} from "../composables/dashboardStore";
 import {
   NewerDashboardError,
   createWidget,
@@ -18,14 +21,23 @@ import WidgetEditor from "./WidgetEditor.vue";
 const props = defineProps<{ name: string }>();
 
 const store = useDashboardStore();
-const { current, dirty } = store;
+const { current, dirty, saving, saveFailed } = store;
 const { fetchDatabases } = useDbStore();
 
 const loading = ref(true);
 /** Why the dashboard could not be loaded, if it could not. */
 const failed = ref<string>();
-const editing = ref(false);
 const refreshKey = ref(0);
+
+/** The last removed widget, offered back for a while. */
+const removed = ref<RemovedWidget>();
+const UNDO_MS = 8000;
+let undoTimer: ReturnType<typeof setTimeout> | undefined;
+const clearUndo = () => {
+  clearTimeout(undoTimer);
+  removed.value = undefined;
+};
+onUnmounted(clearUndo);
 
 let loadRun = 0;
 const load = async () => {
@@ -33,7 +45,7 @@ const load = async () => {
   const run = ++loadRun;
   loading.value = true;
   failed.value = undefined;
-  editing.value = false;
+  clearUndo();
   try {
     await store.loadDashboard(props.name);
   } catch (error) {
@@ -51,11 +63,20 @@ const load = async () => {
 onMounted(load);
 watch(() => props.name, load);
 
-const confirmDiscard = () =>
-  !dirty.value || window.confirm("Discard unsaved dashboard changes?");
+/**
+ * Edits save at once; only those whose save failed would be lost. A running
+ * save is waited for, so its failure is not missed after leaving.
+ */
+const confirmDiscard = async () => {
+  await store.settleSaves();
+  return (
+    !saveFailed.value ||
+    window.confirm("Some dashboard changes could not be saved. Discard them?")
+  );
+};
 
-onBeforeRouteLeave(() => {
-  if (!confirmDiscard()) return false;
+onBeforeRouteLeave(async () => {
+  if (!(await confirmDiscard())) return false;
   store.closeDashboard();
   return true;
 });
@@ -98,19 +119,15 @@ const placed = computed(() =>
   current.value ? orderedWidgets(current.value.document) : [],
 );
 
-const save = async () => {
-  try {
-    await store.saveDashboard();
-    editing.value = false;
-  } catch {
-    // The API error interceptor shows a notification; edits are kept.
-  }
+const removeWidget = (id: string) => {
+  clearUndo();
+  removed.value = store.removeWidget(id);
+  undoTimer = setTimeout(clearUndo, UNDO_MS);
 };
 
-const cancel = async () => {
-  if (!confirmDiscard()) return;
-  editing.value = false;
-  await load();
+const undoRemove = (widget: RemovedWidget) => {
+  store.restoreWidget(widget);
+  clearUndo();
 };
 </script>
 
@@ -118,57 +135,66 @@ const cancel = async () => {
   <div class="dashboard-view">
     <header class="toolbar">
       <h2>{{ name }}</h2>
-      <span v-if="dirty" class="unsaved" data-testid="dashboard-unsaved">
-        Unsaved changes
+      <span
+        v-if="removed"
+        class="status"
+        role="status"
+        data-testid="dashboard-removed"
+      >
+        Removed "{{ removed.widget.title || "Untitled" }}"
+        <button
+          type="button"
+          class="link"
+          data-testid="dashboard-undo"
+          @click="undoRemove(removed)"
+        >
+          Undo
+        </button>
+      </span>
+      <span
+        v-if="saveFailed"
+        class="status unsaved"
+        role="alert"
+        data-testid="dashboard-unsaved"
+      >
+        Changes not saved
+        <button
+          type="button"
+          class="link"
+          data-testid="dashboard-retry"
+          :disabled="saving"
+          @click="store.saveDashboard"
+        >
+          Retry
+        </button>
+      </span>
+      <span
+        v-else-if="saving"
+        class="status"
+        role="status"
+        data-testid="dashboard-saving"
+      >
+        Saving…
       </span>
       <div class="buttons">
-        <template v-if="editing">
-          <button
-            type="button"
-            class="button"
-            data-testid="dashboard-add-widget"
-            @click="addWidget"
-          >
-            <ChPlus /> Add widget
-          </button>
-          <button
-            type="button"
-            class="button"
-            data-testid="dashboard-cancel"
-            @click="cancel"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            class="button button-success"
-            data-testid="dashboard-save"
-            :disabled="!dirty"
-            @click="save"
-          >
-            Save
-          </button>
-        </template>
-        <template v-else>
-          <button
-            type="button"
-            class="button"
-            title="Refresh all widgets"
-            data-testid="dashboard-refresh"
-            @click="refreshKey++"
-          >
-            <MdRefresh /> Refresh
-          </button>
-          <button
-            type="button"
-            class="button"
-            data-testid="dashboard-edit"
-            :disabled="!current"
-            @click="editing = true"
-          >
-            Edit
-          </button>
-        </template>
+        <button
+          type="button"
+          class="button"
+          title="Refresh all widgets"
+          data-testid="dashboard-refresh"
+          @click="refreshKey++"
+        >
+          <MdRefresh /> Refresh
+        </button>
+        <button
+          type="button"
+          class="button"
+          data-testid="dashboard-add-widget"
+          :disabled="!current"
+          @click="addWidget"
+        >
+          <ChPlus /> Add widget
+        </button>
       </div>
     </header>
 
@@ -177,10 +203,8 @@ const cancel = async () => {
       {{ failed }}
     </p>
     <p v-else-if="!placed.length" class="empty" data-testid="dashboard-empty">
-      This dashboard has no widgets yet.
-      <template v-if="!editing"
-        >Click "Edit" to add one, or pin a query from the query page.</template
-      >
+      This dashboard has no widgets yet. Click "Add widget", or pin a query from
+      the query page.
     </p>
     <div v-else class="grid" data-testid="dashboard-grid">
       <DashboardWidget
@@ -188,14 +212,14 @@ const cancel = async () => {
         :key="widget.id"
         :widget="widget"
         :size="layout"
-        :editing="editing"
         :first="index === 0"
         :last="index === placed.length - 1"
         :refresh-key="refreshKey"
         @edit="editWidget(widget)"
-        @remove="store.removeWidget(widget.id)"
+        @remove="removeWidget(widget.id)"
         @move="(delta) => store.moveWidget(widget.id, delta)"
         @resize="(size) => store.resizeWidget(widget.id, size)"
+        @update="store.updateWidget"
       />
     </div>
     <WidgetEditor
@@ -234,9 +258,28 @@ const cancel = async () => {
     gap: 0.25rem;
   }
 }
-.unsaved {
-  color: var(--warning-color);
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
   font-size: 0.85rem;
+  color: var(--color-text-muted);
+  &.unsaved {
+    color: var(--warning-color);
+  }
+}
+.link {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--color-text);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+  &:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
 }
 .empty {
   color: var(--color-text-muted);

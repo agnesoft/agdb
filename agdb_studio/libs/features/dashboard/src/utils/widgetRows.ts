@@ -1,11 +1,18 @@
 import { toRaw } from "vue";
-import type { Query, QueryRow } from "@agdb-studio/query/src/composables/types";
+import type {
+  PinnedDetail,
+  Query,
+  QueryRow,
+} from "@agdb-studio/query/src/composables/types";
 import { useQueryStore } from "@agdb-studio/query/src/composables/queryStore";
 import {
   stepsToUrlValue,
   urlValueToSteps,
 } from "@agdb-studio/query/src/utils/queryUrl";
-import { hasColoring } from "@agdb-studio/query/src/utils/graphColorRules";
+import {
+  hasColoring,
+  type ColorConfig,
+} from "@agdb-studio/query/src/utils/graphColorRules";
 import { buildQueryFromSteps } from "@agdb-studio/query/src/utils/queryExecutionUtils";
 import { WIDGET_TABS, type Widget, type WidgetRow } from "../types";
 
@@ -37,6 +44,12 @@ export const fromQueryRows = (rows: QueryRow[]): WidgetRow[] =>
     .filter((row) => row.steps.length)
     .map((row) => ({ id: row.id, query: stepsToUrlValue(row.steps) }));
 
+/** Plain copies of pinned details (they may hold reactive objects, which cannot be cloned). */
+const copyPins = (pins: readonly PinnedDetail[]): PinnedDetail[] =>
+  pins.map(({ id, offset }) =>
+    offset ? { id, offset: { x: offset.x, y: offset.y } } : { id },
+  );
+
 /** Puts a widget's rows, colours and view into a (new) query store entry. */
 export const seedQuery = (queryId: string, widget: Widget): void => {
   const queryStore = useQueryStore();
@@ -49,7 +62,7 @@ export const seedQuery = (queryId: string, widget: Widget): void => {
   seedDisplay(queryId, widget);
 };
 
-/** Writes how the widget shows its results (colours and view) into its query store entry. */
+/** Writes how the widget shows its results (colours, view, pinned details) into its query store entry. */
 export const seedDisplay = (queryId: string, widget: Widget): void => {
   const queryStore = useQueryStore();
   const query = queryStore.getQuery(queryId);
@@ -59,25 +72,63 @@ export const seedDisplay = (queryId: string, widget: Widget): void => {
     ? structuredClone(toRaw(widget.colors))
     : undefined;
   queryStore.setView(queryId, widget.view);
+  queryStore.setPins(queryId, widget.pins ? copyPins(widget.pins) : []);
 };
 
-/** The widget as edited in a query store entry: rows, colours and view. */
-export const widgetFromQuery = (base: Widget, query: Query): Widget => {
-  const widget: Widget = {
-    ...base,
-    rows: {
-      exec: fromQueryRows(query.rows.exec),
-      context: fromQueryRows(query.rows.context),
-    },
-  };
-  delete widget.view;
-  delete widget.colors;
-  if (query.view) widget.view = query.view;
+/** The widget with the colours, view and pinned details of a query store entry. */
+export const withDisplay = (widget: Widget, query: Query): Widget => {
+  const result: Widget = { ...widget };
+  delete result.view;
+  delete result.colors;
+  delete result.pins;
+  if (query.view) result.view = query.view;
+  if (query.pins?.length) result.pins = copyPins(query.pins);
   if (query.colors && hasColoring(query.colors)) {
-    widget.colors = structuredClone(toRaw(query.colors));
+    result.colors = structuredClone(toRaw(query.colors));
   }
-  return widget;
+  return result;
 };
+
+/** The widget as edited in a query store entry: rows, colours, view and pins. */
+export const widgetFromQuery = (base: Widget, query: Query): Widget =>
+  withDisplay(
+    {
+      ...base,
+      rows: {
+        exec: fromQueryRows(query.rows.exec),
+        context: fromQueryRows(query.rows.context),
+      },
+    },
+    query,
+  );
+
+/** JSON with object keys sorted, so equal values give equal text. */
+const stableJson = (value: unknown): string =>
+  JSON.stringify(value, (_key, item: unknown) =>
+    typeof item === "object" && item !== null && !Array.isArray(item)
+      ? Object.fromEntries(
+          Object.entries(item).sort(([a], [b]) => (a < b ? -1 : 1)),
+        )
+      : item,
+  );
+
+/** Colours worth keeping: unset when nothing is coloured. */
+const coloring = (colors: ColorConfig | undefined) =>
+  colors && hasColoring(colors) ? colors : undefined;
+
+/** Pins worth keeping: unset when there are none. */
+const pinning = (pins: PinnedDetail[] | undefined) =>
+  pins?.length ? pins : undefined;
+
+/**
+ * The entry shows the results differently (colours, view or pinned details)
+ * than the widget saves. Reads the entry in full (not a raw copy), so a
+ * computed using this tracks every nested change.
+ */
+export const displayDiffers = (widget: Widget, query: Query): boolean =>
+  (query.view ?? undefined) !== widget.view ||
+  stableJson(coloring(query.colors)) !== stableJson(coloring(widget.colors)) ||
+  stableJson(pinning(query.pins)) !== stableJson(pinning(widget.pins));
 
 /** A row of the exec or context tab is not a complete, valid query yet. */
 export const hasUnfinishedRow = (query: Query): boolean =>

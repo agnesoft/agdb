@@ -86,8 +86,16 @@ describe("dbExec", () => {
     expect(client.value[fn]).toHaveBeenCalledWith(
       { owner: "alice", db: "main" },
       [query],
+      undefined,
     );
     expect(result).toBe(data);
+    // A quiet run asks for no global error notification.
+    await executeDbQueries([query], mut, routeState, { quiet: true });
+    expect(client.value[fn]).toHaveBeenLastCalledWith(
+      { owner: "alice", db: "main" },
+      [query],
+      { quietErrors: true },
+    );
   });
 
   it("returns undefined without db params", async () => {
@@ -126,12 +134,14 @@ describe("dbExec", () => {
     expect(client.value.db_exec).toHaveBeenCalledWith(
       { owner: "bob", db: "sales" },
       [query],
+      undefined,
     );
     target.value = { owner: "carol", db: "hr" };
     await bound!.execMut([query]);
     expect(client.value.db_exec_mut).toHaveBeenCalledWith(
       { owner: "carol", db: "hr" },
       [query],
+      undefined,
     );
     expect(client.value.admin_db_exec).not.toHaveBeenCalled();
   });

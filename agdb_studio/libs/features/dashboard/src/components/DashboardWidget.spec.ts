@@ -11,6 +11,9 @@ const { data, observer } = vi.hoisted(() => ({
       { lastRun?: Date } | undefined
     >,
     run: vi.fn(),
+    displayChanged: undefined as unknown as import("vue").Ref<boolean>,
+    resetDisplay: vi.fn(),
+    shownWidget: vi.fn(),
   },
   observer: {
     callback: undefined as
@@ -69,6 +72,9 @@ describe("DashboardWidget", () => {
     data.revision = ref(1);
     data.query = ref({ lastRun: new Date() });
     data.run.mockClear();
+    data.displayChanged = ref(false);
+    data.resetDisplay.mockClear();
+    data.shownWidget.mockReset();
     observer.callback = undefined;
   });
 
@@ -137,27 +143,77 @@ describe("DashboardWidget", () => {
     });
   });
 
-  it("emits edit actions in edit mode", async () => {
-    const wrapper = mountWidget({ editing: true, first: true, last: false });
+  it("offers the edit actions in its menu", async () => {
+    const wrapper = mountWidget({ first: true, last: false });
+    const toggle = wrapper.find('[data-testid="widget-menu"]');
+    expect(wrapper.find('[data-testid="widget-edit"]').exists()).toBe(false);
+    await toggle.trigger("click");
+    expect(toggle.attributes("aria-expanded")).toBe("true");
     expect(
       wrapper.find('[data-testid="widget-move-up"]').attributes("disabled"),
     ).toBeDefined();
     await wrapper.find('[data-testid="widget-move-up"]').trigger("click");
     await wrapper.find('[data-testid="widget-move-down"]').trigger("click");
-    await wrapper.find('[data-testid="widget-edit"]').trigger("click");
-    await wrapper.find('[data-testid="widget-remove"]').trigger("click");
-    await wrapper.find('[data-testid="widget-size"]').trigger("click");
     await wrapper.find('[data-testid="widget-size-4x3"]').trigger("click");
     expect(wrapper.emitted("move")).toEqual([[1]]);
     expect(wrapper.emitted("resize")).toEqual([[{ cols: 4, rows: 3 }]]);
+    // Moves and sizes keep the menu open for more of them.
+    await wrapper.find('[data-testid="widget-edit"]').trigger("click");
     expect(wrapper.emitted("edit")).toHaveLength(1);
+    expect(wrapper.find('[data-testid="widget-edit"]').exists()).toBe(false);
+    await toggle.trigger("click");
+    await wrapper.find('[data-testid="widget-remove"]').trigger("click");
     expect(wrapper.emitted("remove")).toHaveLength(1);
-    expect(wrapper.find('[data-testid="widget-refresh"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="widget-remove"]').exists()).toBe(false);
+  });
+
+  it("closes the menu on Escape, with focus back on its button, and on a click outside", async () => {
+    const wrapper = mount(DashboardWidget, {
+      props: { widget, size: { cols: 2, rows: 1 } },
+      global: { stubs },
+      attachTo: document.body,
+    });
+    const toggle = wrapper.find('[data-testid="widget-menu"]');
+    await toggle.trigger("click");
+    await wrapper
+      .find('[data-testid="widget-size-1x1"]')
+      .trigger("keydown", { key: "Escape" });
+    expect(wrapper.find(".menu-items").exists()).toBe(false);
+    expect(document.activeElement).toBe(toggle.element);
+    await toggle.trigger("click");
+    // The outside click handler skips clicks in the same tick as the last one.
+    await new Promise((resolve) => setTimeout(resolve));
+    document.body.dispatchEvent(new Event("pointerdown", { bubbles: true }));
+    document.body.click();
+    await wrapper.vm.$nextTick();
+    expect(wrapper.find(".menu-items").exists()).toBe(false);
+    wrapper.unmount();
+  });
+
+  it("names a widget without a title", () => {
+    const wrapper = mountWidget({ widget: { ...widget, title: "" } });
+    expect(wrapper.find("h3").text()).toBe("Untitled");
   });
 
   it("moves earlier when not first", async () => {
-    const wrapper = mountWidget({ editing: true, first: false, last: true });
+    const wrapper = mountWidget({ first: false, last: true });
+    await wrapper.find('[data-testid="widget-menu"]').trigger("click");
     await wrapper.find('[data-testid="widget-move-up"]').trigger("click");
     expect(wrapper.emitted("move")).toEqual([[-1]]);
+  });
+
+  it("offers to save or reset a changed view", async () => {
+    const wrapper = mountWidget({});
+    const note = () => wrapper.find('[data-testid="widget-view-changed"]');
+    expect(note().exists()).toBe(false);
+    data.displayChanged.value = true;
+    await wrapper.vm.$nextTick();
+    expect(note().text()).toContain("Unsaved view");
+    const shown = { ...widget, view: "table" as const };
+    data.shownWidget.mockReturnValue(shown);
+    await wrapper.find('[data-testid="widget-view-save"]').trigger("click");
+    expect(wrapper.emitted("update")).toEqual([[shown]]);
+    await wrapper.find('[data-testid="widget-view-reset"]').trigger("click");
+    expect(data.resetDisplay).toHaveBeenCalled();
   });
 });

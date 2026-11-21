@@ -38,15 +38,18 @@ import {
 
 const props = defineProps<{
   /**
-   * Keep a chosen view even when the shape of the results changes, e.g. on a
-   * dashboard re-running a saved query whose results may briefly be empty.
+   * Keep a chosen view, and pins of elements missing from the results, even
+   * when the results change, e.g. on a dashboard re-running a saved query
+   * whose results may briefly be empty.
    */
   keepView?: boolean;
 }>();
 
 const queryId = inject<Ref<string | undefined>>("queryId");
 const queryStore = useQueryStore();
-const actions = provideGraphActions(queryId);
+const actions = provideGraphActions(queryId, {
+  keepMissingPins: props.keepView,
+});
 
 const query = computed(() =>
   queryId?.value ? queryStore.getQuery(queryId.value)?.value : undefined,

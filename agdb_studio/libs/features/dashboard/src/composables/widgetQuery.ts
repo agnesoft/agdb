@@ -8,7 +8,12 @@ import { useQueryStore } from "@agdb-studio/query/src/composables/queryStore";
 import { buildQueryFromSteps } from "@agdb-studio/query/src/utils/queryExecutionUtils";
 import { WIDGET_TABS, type Widget } from "../types";
 import { isRefreshInterval } from "../utils/refresh";
-import { seedDisplay, seedQuery } from "../utils/widgetRows";
+import {
+  displayDiffers,
+  seedDisplay,
+  seedQuery,
+  withDisplay,
+} from "../utils/widgetRows";
 
 const field = (value: unknown, key: string): unknown =>
   typeof value === "object" && value !== null && key in value
@@ -23,6 +28,58 @@ export const errorMessage = (error: unknown): string => {
   if (status === 404) return "Database not found";
   if (typeof data === "string" && data) return data;
   return error instanceof Error ? error.message : String(error);
+};
+
+/** The database a widget's queries run on. */
+export type WidgetTarget = { owner: string; db: string };
+
+/**
+ * Runs the exec and context rows of a query store entry on a database and
+ * stores the results as the query view does. Results are stored only while
+ * `isLatest()` holds, so a newer run wins over a slower older one. Gives
+ * `false` when there is no exec row to run; throws when a row cannot be
+ * built (e.g. saved unfinished) or the request fails. A `quiet` run shows
+ * no global error notification; the caller shows the error.
+ */
+export const runEntryRows = async (
+  queryId: string,
+  target: WidgetTarget,
+  isLatest: () => boolean,
+  { quiet = false }: { quiet?: boolean } = {},
+): Promise<boolean> => {
+  const queryStore = useQueryStore();
+  const query = queryStore.getQuery(queryId)?.value;
+  /* v8 ignore next -- @preserve: callers run entries they keep */
+  if (!query) return false;
+  const tabs = WIDGET_TABS.map((tab) => {
+    const rows = query.rows[tab].filter((row) => row.steps.length);
+    return {
+      tab,
+      rows,
+      queries: [] as ReturnType<typeof buildQueryFromSteps>[],
+    };
+  });
+  if (!tabs[0]?.rows.length) return false;
+  for (const t of tabs)
+    t.queries = t.rows.map((row) => buildQueryFromSteps(row.steps));
+  const route = { params: { owner: target.owner, db: target.db } };
+  const results = await Promise.all(
+    tabs.map((t) =>
+      t.queries.length
+        ? executeDbQueries(t.queries, false, route, { quiet })
+        : Promise.resolve([]),
+    ),
+  );
+  if (!isLatest()) return true;
+  // Context first: the exec results mark the run (`lastRun`).
+  for (const [i, t] of [...tabs.entries()].reverse()) {
+    queryStore.setQueryResults(queryId, t.tab, results[i] ?? [], {
+      queries: t.queries,
+      stepTypes: t.rows.flatMap((row) => row.steps.map((s) => s.type)),
+      rowIds: t.rows.map((row) => row.id),
+    });
+  }
+  return true;
 };
 
 /**
@@ -70,45 +127,18 @@ export const useWidgetQuery = (widget: Ref<Widget>) => {
 
   const run = async (): Promise<void> => {
     const id = ++runId;
-    const query = queryStore.getQuery(queryId.value)?.value;
-    /* v8 ignore next -- @preserve: the entry lives as long as the widget */
-    if (!query) return;
-    const filled = WIDGET_TABS.map((tab) => ({
-      tab,
-      rows: query.rows[tab].filter((row) => row.steps.length),
-    }));
-    if (!filled[0]?.rows.length) {
-      error.value = "No query yet: edit the widget to add one.";
-      loading.value = false;
-      return;
-    }
     loading.value = true;
-    const route = {
-      params: { owner: widget.value.owner, db: widget.value.db },
-    };
     try {
-      // An unfinished chain (e.g. saved before it was complete) fails here.
-      const tabs = filled.map((t) => ({
-        ...t,
-        queries: t.rows.map((row) => buildQueryFromSteps(row.steps)),
-      }));
-      const results = await Promise.all(
-        tabs.map((t) =>
-          t.queries.length
-            ? executeDbQueries(t.queries, false, route)
-            : Promise.resolve([]),
-        ),
+      const ran = await runEntryRows(
+        queryId.value,
+        widget.value,
+        () => id === runId,
       );
       // A newer run (e.g. after an edit) wins over a slower older one.
       if (id !== runId) return;
-      // Context first: the exec results mark the run (`lastRun`).
-      const withResults = tabs.map((t, i) => ({ ...t, results: results[i] }));
-      for (const t of withResults.reverse()) {
-        queryStore.setQueryResults(queryId.value, t.tab, t.results ?? [], {
-          queries: t.queries,
-          stepTypes: t.rows.flatMap((row) => row.steps.map((s) => s.type)),
-          rowIds: t.rows.map((row) => row.id),
-        });
+      if (!ran) {
+        error.value = "No query yet: edit the widget to add one.";
+        return;
       }
       error.value = undefined;
       resumeRefresh();
@@ -140,14 +170,34 @@ export const useWidgetQuery = (widget: Ref<Widget>) => {
     },
     { immediate: true },
   );
-  // Colours and view only change how the results show: no re-run.
+  // Colours, view and pins only change how the results show: no re-run.
   const display = computed(() =>
-    JSON.stringify({ colors: widget.value.colors, view: widget.value.view }),
+    JSON.stringify({
+      colors: widget.value.colors,
+      view: widget.value.view,
+      pins: widget.value.pins,
+    }),
   );
-  watch(display, () => {
+  /** Shows the results with the widget's own colours and view again. */
+  const resetDisplay = () => {
     seedDisplay(queryId.value, widget.value);
     revision.value++;
+  };
+  // Saving what is shown (the view pill, the editor) needs no re-seed, which
+  // would remount the results and lay the graph out again.
+  watch(display, () => {
+    if (displayChanged.value) resetDisplay();
   });
+
+  const query = computed(() => queryStore.getQuery(queryId.value)?.value);
+  /** Colours, view or pinned details were changed in the results and are not on the widget. */
+  const displayChanged = computed(
+    () => !!query.value && displayDiffers(widget.value, query.value),
+  );
+  /** The widget with the colours, view and pins shown in its results. */
+  const shownWidget = (): Widget =>
+    /* v8 ignore next -- @preserve: the entry lives as long as the widget */
+    query.value ? withDisplay(widget.value, query.value) : widget.value;
 
   onScopeDispose(() => queryStore.deleteQuery(queryId.value));
 
@@ -157,6 +207,9 @@ export const useWidgetQuery = (widget: Ref<Widget>) => {
     error,
     loading,
     run,
-    query: computed(() => queryStore.getQuery(queryId.value)?.value),
+    query,
+    displayChanged,
+    resetDisplay,
+    shownWidget,
   };
 };

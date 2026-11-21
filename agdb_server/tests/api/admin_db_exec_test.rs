@@ -9,6 +9,7 @@ use agdb::DbElement;
 use agdb::DbId;
 use agdb::QueryBuilder;
 use agdb::QueryResult;
+use agdb::QueryType;
 use agdb_api::DbKind;
 
 async fn read_write() -> Result<(), TestError> {
@@ -18,7 +19,7 @@ async fn read_write() -> Result<(), TestError> {
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.admin_db_add(owner, db, DbKind::Mapped).await?;
-    let queries = &[
+    let queries: &[QueryType] = &[
         QueryBuilder::insert()
             .nodes()
             .aliases("root")
@@ -60,7 +61,7 @@ async fn read_only() -> Result<(), TestError> {
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.admin_db_add(owner, db, DbKind::Mapped).await?;
-    let queries = &[QueryBuilder::insert()
+    let queries: &[QueryType] = &[QueryBuilder::insert()
         .nodes()
         .aliases("root")
         .values([[("key", 1.1).into()]])
@@ -68,7 +69,7 @@ async fn read_only() -> Result<(), TestError> {
         .into()];
     let (status, _) = server.api.admin_db_exec_mut(owner, db, queries).await?;
     assert_eq!(status, 200);
-    let queries = &[QueryBuilder::select().ids("root").query().into()];
+    let queries: &[QueryType] = &[QueryBuilder::select().ids("root").query().into()];
     let (status, results) = server.api.admin_db_exec(owner, db, queries).await?;
     assert_eq!(status, 200);
     let expected = vec![QueryResult {
@@ -91,7 +92,7 @@ async fn query_error() -> Result<(), TestError> {
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.admin_db_add(owner, db, DbKind::Mapped).await?;
-    let queries = &[
+    let queries: &[QueryType] = &[
         QueryBuilder::insert()
             .nodes()
             .values([[("key", 1.1).into()]])

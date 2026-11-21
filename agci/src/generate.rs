@@ -30,6 +30,7 @@ use agsource::codegen::ts::EraseCasts;
 use agsource::codegen::ts::EraseTraits;
 use agsource::codegen::ts::OmitSkippedDefaults;
 use agsource::codegen::ts::RemoveDeadHelpers;
+use agsource::codegen::ts::RenameShadowed;
 use agsource::codegen::ts::TsConfig;
 use agsource::codegen::ts::UnescapeIdentifiers;
 use std::path::Path;
@@ -66,6 +67,30 @@ const TS_TESTS: &str = "agdb_api/typescript/tests/query_builder.test.ts";
 
 /// The import of [`TS`] in [`TS_TESTS`].
 const TS_MODULE: &str = "../src/query_builder.ts";
+
+/// The package with the tests of the routes the client calls.
+const SERVER: &str = "agdb_server";
+
+/// The test target of [`SERVER`] with the [`SUITE`].
+const SERVER_TESTS: &str = "tests/tests.rs";
+
+/// The module of [`SERVER_TESTS`] with the tests of the routes.
+const SUITE: &str = "api";
+
+/// The module of [`SERVER_TESTS`] whose items the TS tests import from [`TS_GLUE`].
+const GLUE: &str = "test_server";
+
+/// The handwritten TS of [`GLUE`], relative to [`TS_ROUTES`].
+const TS_GLUE: &str = "./test_server.ts";
+
+/// The TS tests of the routes, relative to the repository root.
+pub(crate) const TS_ROUTES: &str = "agdb_api/typescript/tests/routes.test.ts";
+
+/// The vitest suite of [`TS_ROUTES`].
+const ROUTES: &str = "routes";
+
+/// Where `agci generate` dumps the route tests module after each pass, in [`DUMP_DIR`].
+const ROUTES_DUMP: &str = "routes";
 
 /// The query builder of the clients from the agdb source: the lowered module is dumped to `dump`
 /// after loading and after each pass as `NN_<pass>.rs.txt`.
@@ -108,16 +133,6 @@ pub(crate) fn generate(platform: &impl Platform, root: &str, dump: &Path) -> Res
     errors.extend(tests.lower_tests(&c, SOURCE, &mut m));
     errors.extend(api.lower_exported(&c, SOURCE, &mut m));
     let declarations = Emitter::new(&m, &ts_config("")).types();
-    let fs = platform.fs();
-    fs.create_dir_all(dump)?;
-    let mut step = 0;
-    let mut write = |title: &str, m: &Module| {
-        let file = dump.join(format!("{step:02}_{title}.rs.txt"));
-        step += 1;
-        fs.write(&file, print::module(m, title))
-    };
-    write("load", &m)?;
-
     let passes = Passes::new()
         .with(Resolve)
         .with(Prune)
@@ -135,31 +150,69 @@ pub(crate) fn generate(platform: &impl Platform, root: &str, dump: &Path) -> Res
         .with(UnescapeIdentifiers)
         .with(OmitSkippedDefaults)
         .with(RemoveDeadHelpers);
-    let mut failed = None;
-    errors.extend(passes.run(&mut m, &mut |title: &str, m: &Module| {
-        if let Err(e) = write(title, m) {
-            failed.get_or_insert(e);
-        }
-    }));
+    run(platform, &mut m, &passes, dump, &mut errors)?;
 
-    if let Some(e) = failed {
-        return Err(e.into());
-    }
-
-    let client = client(platform, &api, &c, &dump.join(CLIENT_DUMP), &mut errors)?;
+    let server_tests = load(
+        SERVER,
+        TargetKind::Test,
+        Some(SERVER_TESTS),
+        host_cfg(platform, false)?.name("test"),
+    )?;
+    let (client_m, lowering) = api.lower_client(&c, SOURCE);
+    errors.extend(lowering);
+    // The builder's lowering errors again, already reported.
+    let (mut routes, _) = c.lower(&roots);
+    api.lower_exported(&c, SOURCE, &mut routes);
+    routes.provide(client_m.clone(), API);
+    errors.extend(server_tests.lower_suite(&[(&c, SOURCE), (&api, API)], SUITE, GLUE, &mut routes));
+    let passes = Passes::new()
+        .with(Resolve)
+        .with(Prune)
+        .with(ExplicitReturns)
+        .with(Inline)
+        .with(AcceptElementSources)
+        .with(LowerConversions)
+        .with(TraitDicts)
+        .with(EraseOwnership)
+        .with(ThrowErrors)
+        .with(InferEmptyLists)
+        .with(TagResults)
+        .with(EraseTraits)
+        .with(EraseCasts)
+        .with(EraseNewtypes)
+        .with(UnescapeIdentifiers)
+        .with(OmitSkippedDefaults)
+        .with(RemoveDeadHelpers)
+        .with(RenameShadowed);
+    run(
+        platform,
+        &mut routes,
+        &passes,
+        &dump.join(ROUTES_DUMP),
+        &mut errors,
+    )?;
+    let client = client(platform, client_m, &dump.join(CLIENT_DUMP), &mut errors)?;
     let ts = Emitter::new(&m, &ts_config("./types.ts")).module();
-    let tests = Emitter::new(&m, &ts_config("../src/types.ts")).tests(TESTS_NAME, TS_MODULE);
+    let fs = platform.fs();
+    let tests = Emitter::new(&m, &ts_config("../src/types.ts")).tests(TESTS_NAME, TS_MODULE, &[]);
+    let routes = Emitter::new(&routes, &ts_config("../src/types.ts")).tests(
+        ROUTES,
+        TS_MODULE,
+        &[(API, "../src/api.ts"), (GLUE, TS_GLUE)],
+    );
     fs.write(dump.join("ts_notes.txt"), ts.notes.join("\n") + "\n")?;
     fs.write(Path::new(root).join(TS_TYPES), declarations.code)?;
     fs.write(Path::new(root).join(TS), ts.code)?;
     fs.write(Path::new(root).join(TS_TESTS), tests.code)?;
     fs.write(Path::new(root).join(TS_API), client.code)?;
+    fs.write(Path::new(root).join(TS_ROUTES), routes.code)?;
     let unsupported: Vec<String> = declarations
         .unsupported
         .into_iter()
         .chain(ts.unsupported)
         .chain(client.unsupported)
         .chain(tests.unsupported)
+        .chain(routes.unsupported)
         .collect();
 
     if !unsupported.is_empty() {
@@ -187,17 +240,15 @@ pub(crate) fn generate(platform: &impl Platform, root: &str, dump: &Path) -> Res
     .into())
 }
 
-/// The client of `api`, an API crate of `source`, dumped to `dump` after loading and after each
-/// pass.
-fn client(
+/// `m` after `passes`, dumped to `dump` after loading and after each pass as
+/// `NN_<pass>.rs.txt`.
+fn run(
     platform: &impl Platform,
-    api: &SourceCrate,
-    source: &SourceCrate,
+    m: &mut Module,
+    passes: &Passes,
     dump: &Path,
     errors: &mut Vec<agsource::Error>,
-) -> Result<agsource::codegen::ts::Ts, CIError> {
-    let (mut m, lowering) = api.lower_client(source, SOURCE);
-    errors.extend(lowering);
+) -> Result<(), CIError> {
     let fs = platform.fs();
     fs.create_dir_all(dump)?;
     let mut step = 0;
@@ -206,7 +257,27 @@ fn client(
         step += 1;
         fs.write(&file, print::module(m, title))
     };
-    write("load", &m)?;
+    write("load", m)?;
+    let mut failed = None;
+    errors.extend(passes.run(m, &mut |title: &str, m: &Module| {
+        if let Err(e) = write(title, m) {
+            failed.get_or_insert(e);
+        }
+    }));
+
+    match failed {
+        Some(e) => Err(e.into()),
+        None => Ok(()),
+    }
+}
+
+/// The client module `m` after its passes, dumped to `dump`.
+fn client(
+    platform: &impl Platform,
+    mut m: Module,
+    dump: &Path,
+    errors: &mut Vec<agsource::Error>,
+) -> Result<agsource::codegen::ts::Ts, CIError> {
     let passes = Passes::new()
         .with(Resolve)
         .with(Prune)
@@ -216,17 +287,7 @@ fn client(
         .with(ThrowErrors)
         .with(EraseCasts)
         .with(RemoveDeadHelpers);
-    let mut failed = None;
-    errors.extend(passes.run(&mut m, &mut |title: &str, m: &Module| {
-        if let Err(e) = write(title, m) {
-            failed.get_or_insert(e);
-        }
-    }));
-
-    if let Some(e) = failed {
-        return Err(e.into());
-    }
-
+    run(platform, &mut m, &passes, dump, errors)?;
     Ok(Emitter::new(&m, &ts_config("./types.ts")).client())
 }
 

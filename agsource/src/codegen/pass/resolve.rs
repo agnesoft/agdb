@@ -466,6 +466,15 @@ impl<'a> Ctx<'a> {
                     self.expr(r, None);
                 }
 
+                if let (Intrinsic::AssertEq | Intrinsic::AssertNe, [left, right]) =
+                    (i, args.as_mut_slice())
+                {
+                    self.expr(left, None);
+                    let ty = left.ty.strip_ref().clone();
+                    self.expr(right, Some(&ty));
+                    return;
+                }
+
                 let el = recv.as_ref().and_then(|r| match r.ty.strip_ref() {
                     Ty::List(t) => Some((**t).clone()),
                     _ => None,
@@ -819,6 +828,24 @@ impl<'a> Ctx<'a> {
             return;
         }
 
+        if let [name] = segs.as_slice()
+            && let Some(f) = self.m.externs.iter().find(|f| f.name == *name).cloned()
+        {
+            for (a, (_, t)) in args.iter_mut().zip(f.params.iter()) {
+                self.expr(a, Some(t));
+            }
+
+            *e = Expr::typed(
+                K::Call {
+                    callee: Callee::Extern(f.name),
+                    recv: None,
+                    args,
+                },
+                f.ret,
+            );
+            return;
+        }
+
         self.unsupported(e, format!("unknown function `{}`", segs.join("::")));
     }
 
@@ -929,7 +956,10 @@ impl<'a> Ctx<'a> {
                 None,
             )),
             (Ty::List(_), "len") => Some((Intrinsic::Len, Ty::Int("usize"), None)),
-            (Ty::List(_), "is_empty") => Some((Intrinsic::IsEmpty, Ty::Bool, None)),
+            (Ty::List(_) | Ty::Str, "is_empty") => Some((Intrinsic::IsEmpty, Ty::Bool, None)),
+            (Ty::Option(_), "is_some") => Some((Intrinsic::IsSome, Ty::Bool, None)),
+            (Ty::Option(_), "is_none") => Some((Intrinsic::IsNone, Ty::Bool, None)),
+            (Ty::Option(t), "map") => Some((Intrinsic::MapSome, Ty::Unknown, Some((**t).clone()))),
             (Ty::List(_), "extend" | "append") => {
                 Some((Intrinsic::Extend, Ty::Unit, Some(rt.clone())))
             }
@@ -944,6 +974,23 @@ impl<'a> Ctx<'a> {
                 Some((Intrinsic::UnwrapOrDefault, (**t).clone(), None))
             }
             (Ty::Option(t), "expect") => Some((Intrinsic::Expect, (**t).clone(), None)),
+            (Ty::Option(t) | Ty::Result(t, _), "unwrap") => {
+                Some((Intrinsic::Unwrap, (**t).clone(), None))
+            }
+            (Ty::Result(t, _), "expect") => Some((Intrinsic::Unwrap, (**t).clone(), None)),
+            (Ty::Result(_, e), "unwrap_err") => Some((Intrinsic::UnwrapErr, (**e).clone(), None)),
+            (Ty::List(t), "find") => {
+                Some((Intrinsic::Find, Ty::Option(t.clone()), Some((**t).clone())))
+            }
+            (Ty::List(t), "any") => Some((Intrinsic::Any, Ty::Bool, Some((**t).clone()))),
+            (Ty::List(t), "all") => Some((Intrinsic::All, Ty::Bool, Some((**t).clone()))),
+            (Ty::List(t), "sort_by_key") => {
+                Some((Intrinsic::SortByKey, Ty::Unit, Some((**t).clone())))
+            }
+            (Ty::List(t), "remove") => {
+                Some((Intrinsic::Remove, (**t).clone(), Some(Ty::Int("usize"))))
+            }
+            (Ty::Str, "repeat") => Some((Intrinsic::Repeat, Ty::Str, Some(Ty::Int("usize")))),
             _ => None,
         };
 
@@ -966,6 +1013,7 @@ impl<'a> Ctx<'a> {
                 (Intrinsic::MapOk, Ty::Result(_, err)) => {
                     Ty::Result(Box::new(returned), err.clone())
                 }
+                (Intrinsic::MapSome, _) => Ty::Option(Box::new(returned)),
                 _ => ty,
             };
             *e = Expr::typed(
@@ -1147,10 +1195,12 @@ mod tests {
     use super::*;
     use crate::codegen::print;
     use crate::codegen::test_utilities::CLIENT;
+    use crate::codegen::test_utilities::SUITE;
     use crate::codegen::test_utilities::client;
     use crate::codegen::test_utilities::conversion;
     use crate::codegen::test_utilities::lower;
     use crate::codegen::test_utilities::strings;
+    use crate::codegen::test_utilities::suite;
 
     const SOURCE: &str = r#"
         pub struct Root {
@@ -1793,6 +1843,60 @@ mod tests {
                             "fn new(client: T, address: &str) -> Api<T> {\n    let base: () = if address.StartsWith(\"http\") {\n    address;\n} else {\n    format!(\"http://\", address, \"/api\");\n};\n    Api { client: client, base: base, token: Option::None };\n}\nbase: ()",
                             "fn to_string(&self) -> str {\n    format!(self.status, \": {\", self.description, \"}\");\n}",
                         ]
+                    );
+                }
+
+                #[test]
+                fn run_should_resolve_the_option_result_list_and_string_methods_of_tests() {
+                    let (mut m, _) = lower(
+                        r#"
+                        pub struct Root { pub ids: Vec<u64>, pub o: Option<u64> }
+                        impl Root {
+                            pub fn checks(&mut self, r: Result<u64, bool>, s: String) -> u64 {
+                                let a = self.o.unwrap();
+                                let b = self.o.is_some();
+                                let c = self.o.is_none();
+                                let d = self.o.map(|x| x + 1);
+                                let e = r.unwrap();
+                                let f = r.expect("e");
+                                let g = r.unwrap_err();
+                                let h = self.ids.iter().find(|x| **x == 1);
+                                let i = self.ids.iter().any(|x| *x == 1);
+                                let j = self.ids.iter().all(|x| *x == 1);
+                                self.ids.sort_by_key(|x| *x);
+                                let k = self.ids.remove(0);
+                                let l = s.repeat(2);
+                                let n = s.is_empty();
+                                assert_ne!(a, 1);
+                                a
+                            }
+                        }
+                        "#,
+                        &[],
+                        &[],
+                    );
+                    Resolve.run(&mut m, &mut Vec::new());
+
+                    assert_eq!(
+                        method(&m, "Root", "checks"),
+                        "fn checks(&mut self, r: Result<u64, bool>, s: str) -> u64 {\n    let a: u64 = self.o.Unwrap();\n    let b: bool = self.o.IsSome();\n    let c: bool = self.o.IsNone();\n    let d: Option<?> = self.o.MapSome(|x| {\n    (x + 1);\n});\n    let e: u64 = r.Unwrap();\n    let f: u64 = r.Unwrap(\"e\");\n    let g: bool = r.UnwrapErr();\n    let h: Option<u64> = self.ids.Find(|x| {\n    (**x == 1);\n});\n    let i: bool = self.ids.Any(|x| {\n    (*x == 1);\n});\n    let j: bool = self.ids.All(|x| {\n    (*x == 1);\n});\n    self.ids.SortByKey(|x| {\n    *x;\n});\n    let k: u64 = self.ids.Remove(0);\n    let l: str = s.Repeat(2);\n    let n: bool = s.IsEmpty();\n    .AssertNe(a, 1);\n    a;\n}\na: u64\nb: bool\nc: bool\nd: Option<?>\ne: u64\nf: u64\ng: bool\nh: Option<u64>\ni: bool\nj: bool\nk: u64\nl: str\nn: bool"
+                    );
+                    assert_eq!(errors(&m, "Root", "checks"), Vec::<String>::new());
+                }
+
+                #[test]
+                fn run_should_type_the_calls_of_the_externs_and_the_methods_of_the_opaque_classes()
+                {
+                    let (mut m, _) = suite(
+                        "pub struct Root;\nimpl Root { pub fn new() -> Root { Root } }",
+                        SUITE,
+                    );
+
+                    Resolve.run(&mut m, &mut Vec::new());
+
+                    assert_eq!(
+                        typed(&m.tests[1]),
+                        "async fn login::logs_in() -> () {\n    let server: Server = Server::new().await;\n    let status: u16 = server.api.login().await.Unwrap();\n    let name: str = extern next_name(\"user\");\n    let agent: str = Helpers::agent();\n    let pair: ? = /* unsupported: unknown function `Pair` */;\n    let port: ? = /* unsupported: unknown path `PORT` */;\n    .AssertNe(status, 0);\n}\nserver: Server\nstatus: u16\nname: str\nagent: str\npair: ?\nport: ?"
                     );
                 }
 

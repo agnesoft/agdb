@@ -3,8 +3,8 @@ use crate::Error;
 use crate::codegen::lowered::*;
 
 /// A `Result` as the value it holds, for targets that raise errors: `Ok(x)`
-/// is `x`, `Err(e)` throws `e` and `?` passes the value on, the error
-/// propagating by itself.
+/// is `x`, `Err(e)` throws `e`, and `?` and `unwrap` pass the value on, the
+/// error propagating by itself. A function ending with `Ok(())` just ends.
 pub struct ThrowErrors;
 
 impl Pass for ThrowErrors {
@@ -13,7 +13,16 @@ impl Pass for ThrowErrors {
     }
 
     fn run(&self, m: &mut Module, _errors: &mut Vec<Error>) {
-        m.for_each_func(&mut |f, _| rewrite_body(&mut f.body, &mut throw));
+        m.for_each_func(&mut |f, _| {
+            rewrite_body(&mut f.body, &mut throw);
+
+            if f.body
+                .last()
+                .is_some_and(|e| matches!(e.k, K::Return(None)))
+            {
+                f.body.pop();
+            }
+        });
         m.map_types(&|t| match t {
             Ty::Result(ok, _) => (**ok).clone(),
             t => t.clone(),
@@ -36,10 +45,22 @@ fn throw(e: &mut Expr) {
             let error = std::mem::replace(p.as_mut(), Expr::new(K::This));
             *e = Expr::typed(K::Throw(error.boxed()), Ty::Unit);
         }
+        K::Call {
+            callee: Callee::Intrinsic(Intrinsic::Unwrap),
+            recv: Some(value),
+            ..
+        } if matches!(value.ty, Ty::Result(..)) => {
+            let ty = std::mem::replace(&mut e.ty, Ty::Unknown);
+            *e = std::mem::replace(value.as_mut(), Expr::new(K::This));
+            e.ty = ty;
+        }
         K::Try(value) => {
             let ty = std::mem::replace(&mut e.ty, Ty::Unknown);
             *e = std::mem::replace(value.as_mut(), Expr::new(K::This));
             e.ty = ty;
+        }
+        K::Return(Some(value)) if matches!(value.k, K::Lit(Lit::Unit)) => {
+            *e = Expr::new(K::Return(None))
         }
         K::Return(Some(value)) if matches!(value.k, K::Throw(_)) => {
             *e = std::mem::replace(value.as_mut(), Expr::new(K::This));
@@ -56,6 +77,7 @@ mod tests {
     use crate::codegen::print;
     use crate::codegen::test_utilities::CLIENT;
     use crate::codegen::test_utilities::client;
+    use crate::codegen::test_utilities::lower;
 
     mod throw_errors {
         use super::*;
@@ -96,6 +118,35 @@ mod tests {
                             "async fn get<T>(&self, uri: &str) -> (u16, T) {\n}",
                             "async fn status(&self, uri: &str) -> u16 {\n    return <Http>::get::<()>(self, uri).await.0;\n}",
                         ]
+                    );
+                }
+
+                #[test]
+                fn run_should_pass_the_unwrapped_results_on_and_end_on_the_unit() {
+                    let (mut m, _) = lower(
+                        r#"
+                        pub struct Root;
+                        impl Root {
+                            pub fn done(&self, r: Result<u8, bool>) -> Result<(), bool> {
+                                let v = r.unwrap();
+                                if v > 1 {
+                                    return Ok(());
+                                }
+                                Ok(())
+                            }
+                        }
+                        "#,
+                        &[],
+                        &[],
+                    );
+                    Resolve.run(&mut m, &mut Vec::new());
+                    ExplicitReturns.run(&mut m, &mut Vec::new());
+
+                    ThrowErrors.run(&mut m, &mut Vec::new());
+
+                    assert_eq!(
+                        print::func(m.method("Root", "done").unwrap()),
+                        "fn done(&self, r: u8) -> () {\n    let v: u8 = r;\n    if (v > 1) {\n        return ;\n    };\n}"
                     );
                 }
             }

@@ -171,8 +171,30 @@ pub enum Intrinsic {
     MapOk,
     /// `str::starts_with`.
     StartsWith,
-    /// `assert_eq!(left, right)`, the args.
+    /// `Option::unwrap`, and `Result::unwrap`/`expect` until the errors are
+    /// thrown.
+    Unwrap,
+    /// `Result::unwrap_err`: the error the receiver throws.
+    UnwrapErr,
+    IsSome,
+    IsNone,
+    /// `Option::map`: the closure of the args applied to the value, if any.
+    MapSome,
+    /// The first element the closure holds for, an `Option`.
+    Find,
+    Any,
+    All,
+    SortByKey,
+    /// `Vec::remove`: the element at the index, taken out.
+    Remove,
+    /// `str::repeat`.
+    Repeat,
+    /// `assert!(condition)`, the arg; the message is left out.
+    Assert,
+    /// `assert_eq!(left, right)`, the args; the message is left out.
     AssertEq,
+    /// `assert_ne!(left, right)`, the args; the message is left out.
+    AssertNe,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -656,6 +678,11 @@ pub struct Module {
     pub tests: Vec<Func>,
     /// The types the test crate declares, among the classes and enums.
     pub test_types: BTreeSet<String>,
+    /// The classes and [externs](Module::externs) the target provides,
+    /// with the module they are from.
+    pub opaque: BTreeMap<String, String>,
+    /// The signatures of the free functions the target provides.
+    pub externs: Vec<Func>,
     /// The classes the passes make, which are no data type of the source:
     /// the target declares them.
     pub records: BTreeSet<String>,
@@ -699,6 +726,33 @@ impl Module {
             .flat_map(|c| c.methods.iter().chain(c.trait_impls.values().flatten()))
             .chain(self.enums.values().flat_map(|e| e.methods.iter()))
             .chain(self.functions.iter())
+    }
+
+    /// The builders of `other` that the module does not have, as the
+    /// target's from `origin` (see [`Module::opaque`]): their methods
+    /// without bodies and their generics without bounds.
+    pub fn provide(&mut self, mut other: Module, origin: &str) {
+        for name in other.builders {
+            let Some(mut class) = other.classes.remove(&name) else {
+                continue;
+            };
+
+            if self.classes.contains_key(&name) {
+                continue;
+            }
+
+            class.generics.iter_mut().for_each(|g| g.bounds.clear());
+
+            for f in class.methods.iter_mut() {
+                f.body.clear();
+                f.errors.clear();
+                f.generics.iter_mut().for_each(|g| g.bounds.clear());
+            }
+
+            class.trait_impls.clear();
+            self.classes.insert(name.clone(), class);
+            self.opaque.insert(name, origin.to_owned());
+        }
     }
 
     pub fn is_builder(&self, name: &str) -> bool {
@@ -1089,6 +1143,50 @@ mod tests {
             );
             m.traits.insert("Tr".into(), vec![f]);
             m
+        }
+
+        mod provide {
+            use super::*;
+
+            #[test]
+            fn provide_should_add_the_builders_the_module_lacks_without_their_bodies_and_bounds() {
+                let mut m = with(Ty::Bool);
+                let mut other = with(Ty::Str);
+                let class = other.classes.get_mut("C").unwrap();
+                class.generics.push(Generic {
+                    name: "T".into(),
+                    bounds: vec![("Tr".into(), None)],
+                });
+                class.methods[0].errors.push("e".into());
+                class.trait_impls.insert("Tr".into(), class.methods.clone());
+                let mut kept = class.clone();
+                kept.name = "D".into();
+                other.classes.insert("D".into(), kept);
+                other.builders = vec!["C".into(), "D".into(), "Missing".into()];
+                let d = m.classes.remove("C").unwrap();
+                m.classes.insert("D".into(), d.clone());
+
+                m.provide(other, "api");
+
+                let c = &m.classes["C"];
+                assert_eq!(
+                    (
+                        c.generics
+                            .iter()
+                            .map(|g| g.bounds.len())
+                            .collect::<Vec<_>>(),
+                        c.methods
+                            .iter()
+                            .map(|f| (f.body.len(), f.errors.len(), f.generics[0].bounds.len()))
+                            .collect::<Vec<_>>(),
+                        c.trait_impls.len(),
+                        c.fields.clone(),
+                    ),
+                    (vec![0], vec![(0, 0, 0)], 0, vec![("a".into(), Ty::Str)])
+                );
+                assert_eq!(m.classes["D"], d);
+                assert_eq!(m.opaque, BTreeMap::from([("C".into(), "api".into())]));
+            }
         }
 
         mod map_types {

@@ -12,11 +12,12 @@ async fn user_list() -> Result<(), TestError> {
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(user1, user1).await?;
     server.api.admin_user_add(user2, user2).await?;
-    let (status, mut list) = server.api.admin_user_list().await?;
-    list.sort();
+    let (status, list) = server.api.admin_user_list().await?;
     assert_eq!(status, 200);
-    let admin_user = &list[0];
-    assert_eq!(admin_user.username, "admin");
+    let admin_user = list
+        .iter()
+        .find(|u| u.username == ADMIN)
+        .expect("the admin is listed");
     assert!(admin_user.login);
     assert!(admin_user.admin);
     assert!(!admin_user.sessions.is_empty());

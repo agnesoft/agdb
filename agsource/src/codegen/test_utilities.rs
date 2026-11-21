@@ -181,6 +181,140 @@ pub(crate) fn client(api: &str) -> (Module, Vec<String>) {
     (m, strings(&errors))
 }
 
+/// The module of `Root` of the crate `c` of `source` with the builders of
+/// the [`CLIENT`] crate `api` [provided](Module::provide) and the tests of
+/// the module `suite` of the test crate `tests` of both, its module `glue`
+/// the glue, and the errors, with `/` separators.
+pub(crate) fn suite(source: &str, tests: &str) -> (Module, Vec<String>) {
+    let platform = test_platform();
+    platform.fs().create_dir_all("/api/src").unwrap();
+    platform.fs().write("/api/src/lib.rs", CLIENT).unwrap();
+    platform.fs().create_dir_all("/t/tests").unwrap();
+    platform.fs().write("/t/tests/t.rs", tests).unwrap();
+    let mut api = Target::new(TargetKind::Lib, "/api/src/lib.rs");
+    api.externs.push("c".into());
+    let a = SourceCrate::load(&platform, &api, &Cfg::All);
+    let mut target = Target::new(TargetKind::Test, "/t/tests/t.rs");
+    target.externs.extend(["c".into(), "api".into()]);
+    let t = SourceCrate::load(&platform, &target, &Cfg::All);
+    let c = load(source);
+    let (mut m, mut errors) = lower(source, &[], &[]);
+    let (client, client_errors) = a.lower_client(&c, "c");
+    errors.extend(strings(&client_errors));
+    m.provide(client, "api");
+    errors.extend(strings(&t.lower_suite(
+        &[(&c, "c"), (&a, "api")],
+        "suite",
+        "glue",
+        &mut m,
+    )));
+    (m, errors)
+}
+
+/// A test crate of [`suite`]: tests in the module `suite` and its modules
+/// using the structs, functions and constants of the module `glue`, the
+/// client of `api` and the types of `c`.
+pub(crate) const SUITE: &str = r#"mod glue {
+    use api::Api;
+    use api::Transport;
+
+    pub const ADMIN: &str = "admin";
+
+    pub type Name = String;
+
+    pub static PORT: u16 = 3000;
+
+    pub struct Server {
+        pub api: Api<Transport>,
+        pub dir: String,
+        port: u16,
+    }
+
+    pub struct Pair(pub u8, pub u8);
+
+    pub struct Helpers;
+
+    impl Helpers {
+        pub fn agent() -> String {
+            panic!("glue")
+        }
+    }
+
+    impl Server {
+        pub async fn new() -> Self {
+            panic!("glue")
+        }
+
+        pub fn address(&self) -> String {
+            panic!("glue")
+        }
+
+        fn private(&self) {}
+    }
+
+    pub fn next_name(prefix: &str) -> String {
+        panic!("glue")
+    }
+}
+
+mod suite {
+    use crate::glue::ADMIN;
+    use crate::glue::Server;
+
+    struct NotATest;
+
+    const TESTS: &[&str] = tests![status];
+
+    async fn broken() {
+        custom![1];
+    }
+
+    mod login {
+        use crate::glue::Helpers;
+        use crate::glue::Name;
+        use crate::glue::Pair;
+        use crate::glue::Server;
+        use crate::glue::next_name;
+        use c::Root;
+
+        async fn logs_in() {
+            let mut server = Server::new().await;
+            let status = server.api.login().await.unwrap();
+            let name: Name = next_name("user");
+            let agent = Helpers::agent();
+            let pair = Pair(1, 2);
+            let port = crate::glue::PORT;
+            assert_ne!(status, 0);
+        }
+
+        async fn fails() {
+            let server = Server::new().await;
+            let status = server.api.fail().unwrap_err().status;
+            let code = server.api.ping().await.unwrap_err().status;
+            let root = Root::new();
+            assert!(server.address().is_empty());
+        }
+    }
+
+    async fn status() {
+        let server = Server::new().await;
+        assert_eq!(server.dir, ADMIN);
+    }
+
+    mod logout {
+        use crate::glue::ADMIN;
+        use crate::glue::Server;
+
+        async fn logs_out() {
+            let server = Server::new().await;
+            assert_ne!(server.dir, ADMIN);
+        }
+    }
+}
+
+fn outside() {}
+"#;
+
 /// The client module of `api` after the passes of a TS client, with
 /// neither the lowering nor the functions having errors.
 pub(crate) fn client_passed(api: &str) -> Module {

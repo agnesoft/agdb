@@ -61,9 +61,35 @@ impl SourceCrate {
     /// its item in `m`.
     pub fn lower_tests(&self, source: &SourceCrate, name: &str, m: &mut Module) -> Vec<Error> {
         let mut lower = Lower::new(self, &[]);
-        lower.source = Some((source, name.to_owned()));
+        lower.sources = vec![(source, name.to_owned())];
         lower.m = std::mem::take(m);
         lower.tests();
+        *m = lower.m;
+        lower.errors
+    }
+}
+
+impl SourceCrate {
+    /// The functions of the module `suite` of this crate, a test crate of
+    /// the `sources` (each with its name in the paths), into
+    /// [`Module::tests`] of `m` lowered from the first source, named
+    /// `module::name` by their module in `suite`. The structs and functions
+    /// of the module `glue` they use are [opaque](Module::opaque): the
+    /// structs with their `pub` fields and the signatures of their `pub`
+    /// methods, the functions as [`Module::externs`]; its consts are
+    /// inlined, and its tuple structs and other items are errors.
+    pub fn lower_suite(
+        &self,
+        sources: &[(&SourceCrate, &str)],
+        suite: &str,
+        glue: &str,
+        m: &mut Module,
+    ) -> Vec<Error> {
+        let mut lower = Lower::new(self, &[]);
+        lower.sources = sources.iter().map(|(c, n)| (*c, (*n).to_owned())).collect();
+        lower.glue = Some((glue.to_owned(), Vec::new()));
+        lower.m = std::mem::take(m);
+        lower.suite(suite);
         *m = lower.m;
         lower.errors
     }
@@ -80,7 +106,7 @@ impl SourceCrate {
     /// module's.
     pub fn lower_client(&self, source: &SourceCrate, name: &str) -> (Module, Vec<Error>) {
         let mut lower = Lower::new(self, &[]);
-        lower.source = Some((source, name.to_owned()));
+        lower.sources = vec![(source, name.to_owned())];
         lower.client();
         (lower.m, lower.errors)
     }
@@ -90,7 +116,7 @@ impl SourceCrate {
     /// A path of `source` is its item in `m`.
     pub fn lower_exported(&self, source: &SourceCrate, name: &str, m: &mut Module) -> Vec<Error> {
         let mut lower = Lower::new(self, &[]);
-        lower.source = Some((source, name.to_owned()));
+        lower.sources = vec![(source, name.to_owned())];
         lower.m = std::mem::take(m);
         lower.exported();
         *m = lower.m;
@@ -115,8 +141,12 @@ struct Lower<'a> {
     fn_errors: Vec<String>,
     errors: Vec<Error>,
     m: Module,
-    /// The crate a test crate tests, with its name in the paths.
-    source: Option<(&'a SourceCrate, String)>,
+    /// The crates a test or API crate depends on, with their names in the
+    /// paths; the module is lowered from the first.
+    sources: Vec<(&'a SourceCrate, String)>,
+    /// The module whose items the target provides (see
+    /// [`SourceCrate::lower_suite`]), and those to load.
+    glue: Option<(String, Vec<ItemId>)>,
     /// The destructuring temporaries of the function.
     temps: usize,
 }
@@ -175,7 +205,8 @@ impl<'a> Lower<'a> {
             fn_errors: Vec::new(),
             errors: Vec::new(),
             m: Module::default(),
-            source: None,
+            sources: Vec::new(),
+            glue: None,
             temps: 0,
         }
     }
@@ -279,6 +310,131 @@ impl<'a> Lower<'a> {
                 let test = self.func(&f.sig, Some(&f.body), false, at, true);
                 self.m.tests.push(test);
             }
+        }
+    }
+
+    fn suite(&mut self, suite: &str) {
+        let ids: Vec<ItemId> = self.c.item_ids().collect();
+        let mut loaded = HashSet::new();
+
+        for id in ids {
+            let [first, module @ ..] = self.c.module(id.module).path() else {
+                continue;
+            };
+
+            let syn::Item::Fn(syn_fn) = self.c.item(id) else {
+                continue;
+            };
+
+            if first != suite {
+                continue;
+            }
+
+            let Some(ir::Item {
+                kind: ir::ItemKind::Fn(f),
+                ..
+            }) = self.item(id)
+            else {
+                continue;
+            };
+            let at = self.location(id, syn_fn.sig.ident.span());
+            let mut test = self.func(&f.sig, Some(&f.body), false, at, true);
+            test.name = module
+                .iter()
+                .cloned()
+                .chain([syn_fn.sig.ident.to_string()])
+                .collect::<Vec<_>>()
+                .join("::");
+            self.m.tests.push(test);
+            self.load_glue(&mut loaded);
+        }
+
+        let mut consts = 0;
+
+        while consts < self.consts.len() {
+            self.load_const(self.consts[consts]);
+            consts += 1;
+        }
+    }
+
+    /// Whether the item is of the [glue](SourceCrate::lower_suite) module.
+    fn is_glue(&self, id: ItemId) -> bool {
+        self.glue
+            .as_ref()
+            .is_some_and(|(glue, _)| self.c.module(id.module).path().first() == Some(glue))
+    }
+
+    /// Loads the glue items the functions use.
+    fn load_glue(&mut self, loaded: &mut HashSet<ItemId>) {
+        while let Some((origin, id)) = self
+            .glue
+            .as_mut()
+            .and_then(|(glue, pending)| Some((glue.clone(), pending.pop()?)))
+        {
+            if !loaded.insert(id) {
+                continue;
+            }
+
+            let name = self.name(id);
+
+            match self.item(id) {
+                Some(ir::Item {
+                    kind: ir::ItemKind::Struct(s),
+                    ..
+                }) => {
+                    let fields = match &s.fields {
+                        ir::Fields::Named(fields) => fields.as_slice(),
+                        ir::Fields::Unit => &[],
+                        ir::Fields::Unnamed(_) => {
+                            self.error(id, "unsupported a glue tuple struct".into());
+                            continue;
+                        }
+                    };
+                    let generics = self.generics(&s.generics, false);
+                    let fields = fields
+                        .iter()
+                        .filter(|f| f.vis == ir::Vis::Public)
+                        .map(|f| (f.name.clone().unwrap_or_default(), self.ty(&f.ty, false)))
+                        .collect();
+                    let mut methods = Vec::new();
+
+                    for i in self.inherent.get(&id).cloned().unwrap_or_default() {
+                        for (vis, f, at) in self.impl_fns(i) {
+                            if vis == ir::Vis::Public {
+                                methods.push(self.func(&f.sig, None, false, at, false));
+                            }
+                        }
+                    }
+
+                    self.m.classes.insert(
+                        name.clone(),
+                        Class {
+                            name: name.clone(),
+                            generics,
+                            fields,
+                            methods,
+                            trait_impls: Default::default(),
+                        },
+                    );
+                }
+                Some(ir::Item {
+                    kind: ir::ItemKind::Fn(f),
+                    ..
+                }) => {
+                    let at = self.location(id, self.c.item(id).span());
+                    let f = self.func(&f.sig, None, false, at, false);
+                    self.m.externs.push(f);
+                }
+                _ => {
+                    self.error(
+                        id,
+                        "unsupported a glue item that is not a struct or a function".into(),
+                    );
+                    continue;
+                }
+            }
+
+            self.m.opaque.insert(name, origin);
         }
     }
 
@@ -409,13 +565,16 @@ impl<'a> Lower<'a> {
     /// The names in the module of the item of the tested crate a path of
     /// another crate names.
     fn source_path(&self, p: &[String], namespace: Namespace) -> Option<Vec<String>> {
-        let (source, name) = self.source.as_ref()?;
+        let (source, _) = self
+            .sources
+            .iter()
+            .find(|(_, name)| p.first() == Some(name))?;
+        let rest = &p[1..];
 
-        match p {
-            [first, rest @ ..] if first == name && !rest.is_empty() => {
-                segments(source, &source.resolve_str(&rest.join("::"), namespace))
-            }
-            _ => None,
+        match source.resolve_str(&rest.join("::"), namespace) {
+            _ if rest.is_empty() => None,
+            Resolved::External(p) => self.source_path(&p, namespace),
+            r => segments(source, &r),
         }
     }
 
@@ -1702,14 +1861,24 @@ impl<'a> Lower<'a> {
 
         match &m.call {
             ir::MacroCall::Vec(items) => K::Array(self.exprs(items)),
-            ir::MacroCall::Format {
-                exprs,
-                format: None,
-            } if name == "assert_eq" && exprs.len() == 2 => K::Call {
-                callee: Callee::Intrinsic(Intrinsic::AssertEq),
-                recv: None,
-                args: self.exprs(exprs),
-            },
+            ir::MacroCall::Format { exprs, .. }
+                if matches!(
+                    (name.as_str(), exprs.len()),
+                    ("assert", 1) | ("assert_eq" | "assert_ne", 2)
+                ) =>
+            {
+                let i = match name.as_str() {
+                    "assert" => Intrinsic::Assert,
+                    "assert_eq" => Intrinsic::AssertEq,
+                    _ => Intrinsic::AssertNe,
+                };
+
+                K::Call {
+                    callee: Callee::Intrinsic(i),
+                    recv: None,
+                    args: self.exprs(exprs),
+                }
+            }
             ir::MacroCall::Format {
                 exprs,
                 format: Some(format),
@@ -1846,8 +2015,14 @@ impl<'a> Lower<'a> {
     fn resolved_segments(&mut self, r: &Resolved) -> Option<Vec<String>> {
         match r {
             Resolved::Item(id) => {
-                if matches!(self.c.item(*id), syn::Item::Const(_)) && !self.consts.contains(id) {
-                    self.consts.push(*id);
+                if matches!(self.c.item(*id), syn::Item::Const(_)) {
+                    if !self.consts.contains(id) {
+                        self.consts.push(*id);
+                    }
+                } else if self.is_glue(*id)
+                    && let Some((_, pending)) = self.glue.as_mut()
+                {
+                    pending.push(*id);
                 }
 
                 Some(vec![self.name(*id)])
@@ -2244,11 +2419,13 @@ mod tests {
     use super::*;
     use crate::codegen::print;
     use crate::codegen::test_utilities::CLIENT;
+    use crate::codegen::test_utilities::SUITE;
     use crate::codegen::test_utilities::client;
     use crate::codegen::test_utilities::exported;
     use crate::codegen::test_utilities::id;
     use crate::codegen::test_utilities::load;
     use crate::codegen::test_utilities::lower;
+    use crate::codegen::test_utilities::suite;
     use crate::codegen::test_utilities::tested;
 
     fn dump(m: &Module) -> String {
@@ -2850,7 +3027,7 @@ impl Root {
         let Some(p) = o else { return 0 };
         fn inner() {}
         if a > 0 || let Some(x) = o {}
-        assert!(a > 0);
+        assert!();
         matches!(o, None);
         match a { x @ 1 => 0, 1 | 2 => 0, 3..=4 => 0, _ => 0 };
         match (a, a) { (p, q) => 0 };
@@ -3073,6 +3250,49 @@ mod private {
             }
         }
 
+        mod lower_suite {
+            use super::*;
+
+            #[test]
+            fn lower_suite_should_lower_the_functions_of_the_suite_and_the_glue_they_use_as_opaque()
+            {
+                let (m, errors) = suite(
+                    "pub struct Root;\nimpl Root { pub fn new() -> Root { Root } }",
+                    SUITE,
+                );
+
+                assert_eq!(
+                    dump(&m),
+                    "// ===== after lower\n// Root\nfn new() -> Root {\n    Root;\n}\n\n// test\nasync fn status() -> () {\n    let server: ? = Server::new()/*unresolved*/.await;\n    .AssertEq(server.dir, ADMIN);\n}\n\n// test\nasync fn login::logs_in() -> () {\n    let server: ? = Server::new()/*unresolved*/.await;\n    let status: ? = server.api.login()/*unresolved*/.await.unwrap()/*unresolved*/;\n    let name: str = next_name(\"user\")/*unresolved*/;\n    let agent: ? = Helpers::agent()/*unresolved*/;\n    let pair: ? = Pair(1, 2)/*unresolved*/;\n    let port: ? = PORT;\n    .AssertNe(status, 0);\n}\n\n// test\nasync fn login::fails() -> () {\n    let server: ? = Server::new()/*unresolved*/.await;\n    let status: ? = server.api.fail()/*unresolved*/.unwrap_err()/*unresolved*/.status;\n    let code: ? = server.api.ping()/*unresolved*/.await.unwrap_err()/*unresolved*/.status;\n    let root: ? = Root::new()/*unresolved*/;\n    .Assert(server.address()/*unresolved*/.is_empty()/*unresolved*/);\n}\n\n// test\nasync fn logout::logs_out() -> () {\n    let server: ? = Server::new()/*unresolved*/.await;\n    .AssertNe(server.dir, ADMIN);\n}\n\nclass Api<T> { client: T, base: str, token: Option<str> }\n  new\n  base\n  kind\n  login\n  ping\n  fail\n  priv url\nclass ApiError<> { status: u16, description: str }\n  to_string\nclass Helpers<> {  }\n  agent\nclass Root<> {  }\n  new\nclass Server<> { api: Api<Transport>, dir: str }\n  new\n  address\nconst ADMIN: str = \"admin\"\n"
+                );
+                assert_eq!(
+                    m.opaque
+                        .iter()
+                        .map(|(n, o)| format!("{n}: {o}"))
+                        .collect::<Vec<_>>(),
+                    [
+                        "Api: api",
+                        "ApiError: api",
+                        "Helpers: glue",
+                        "Server: glue",
+                        "next_name: glue"
+                    ]
+                );
+                assert_eq!(
+                    m.externs.iter().map(print::func).collect::<Vec<_>>(),
+                    ["fn next_name(prefix: &str) -> str {\n}"]
+                );
+                assert_eq!(
+                    errors,
+                    [
+                        "/t/tests/t.rs:53: unsupported macro call `custom![1]`",
+                        "/t/tests/t.rs:9: `PORT`: unsupported a glue item that is not a struct or a function",
+                        "/t/tests/t.rs:17: `Pair`: unsupported a glue tuple struct"
+                    ]
+                );
+            }
+        }
+
         mod lower_tests {
             use super::*;
 
@@ -3099,6 +3319,8 @@ fn builds() {
     let s: c::Text;
     assert_eq!(r.e, T::default().n);
     assert_eq!(1, 2, "m");
+    assert!(true, "m");
+    assert_ne!(1, 2);
 }
 fn helper() {}"#,
                     &[],
@@ -3106,7 +3328,7 @@ fn helper() {}"#,
 
                 assert_eq!(
                     dump(&m),
-                    "// ===== after lower\n// Root\nfn new() -> Root {\n    Root { e: E::A };\n}\n\n// test\nfn builds() -> () {\n    let r: Root = Root::new()/*unresolved*/;\n    let e: ? = E::B(1)/*unresolved*/;\n    let o: Option<u8> = None;\n    let p: ? = nothing::X;\n    let s;\n    .AssertEq(r.e, T::default()/*unresolved*/.n);\n    /* unsupported: `assert_eq!` */;\n}\n\nclass N<> {  }\nclass Root<> { e: E }\n  new\nclass T<> { n: u8 }\nenum E [Unit(\"A\"), Tuple(\"B\", Int(\"u8\"))] []\n"
+                    "// ===== after lower\n// Root\nfn new() -> Root {\n    Root { e: E::A };\n}\n\n// test\nfn builds() -> () {\n    let r: Root = Root::new()/*unresolved*/;\n    let e: ? = E::B(1)/*unresolved*/;\n    let o: Option<u8> = None;\n    let p: ? = nothing::X;\n    let s;\n    .AssertEq(r.e, T::default()/*unresolved*/.n);\n    .AssertEq(1, 2);\n    .Assert(true);\n    .AssertNe(1, 2);\n}\n\nclass N<> {  }\nclass Root<> { e: E }\n  new\nclass T<> { n: u8 }\nenum E [Unit(\"A\"), Tuple(\"B\", Int(\"u8\"))] []\n"
                 );
                 assert_eq!(
                     (

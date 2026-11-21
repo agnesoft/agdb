@@ -13,6 +13,10 @@ impl DbValueIndex {
         Self { value: [0_u8; 16] }
     }
 
+    pub fn from_data(value: [u8; 16]) -> Self {
+        Self { value }
+    }
+
     pub fn data(&self) -> [u8; 16] {
         self.value
     }

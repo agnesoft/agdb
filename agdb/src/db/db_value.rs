@@ -342,6 +342,23 @@ impl DbValue {
         })
     }
 
+    /// Equals `load_db_value(value_index, storage)? == *self` without
+    /// allocating for inline strings.
+    pub(crate) fn equals_stored<D: StorageData>(
+        &self,
+        value_index: DbValueIndex,
+        storage: &Storage<D>,
+    ) -> Result<bool, DbError> {
+        match self {
+            DbValue::String(value)
+                if value_index.get_type() == STRING_META_VALUE && value_index.is_value() =>
+            {
+                Ok(value_index.value() == value.as_bytes())
+            }
+            _ => Ok(Self::load_db_value(value_index, storage)? == *self),
+        }
+    }
+
     pub(crate) fn store_db_value<D: StorageData>(
         &self,
         storage: &mut Storage<D>,

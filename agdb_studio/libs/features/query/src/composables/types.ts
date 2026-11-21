@@ -1,6 +1,10 @@
 import type { ColorConfig } from "../utils/graphColorRules";
 import type { ResultView } from "../utils/resultShape";
-import type { Components } from "@agnesoft/agdb_api";
+import type {
+  DbKeyValue,
+  QueryResult,
+  QueryType as AgdbQueryType,
+} from "@agnesoft/agdb_api";
 import { queryApiMock } from "../mock/queryApiMock";
 
 export type QueryType = keyof typeof queryApiMock;
@@ -49,7 +53,7 @@ export type StoredValuesInfo = {
   /** When "loaded", `values`/`rawValues` hold all stored values. */
   valuesState?: ElementValuesState;
   /** Values the query returned that are not stored (e.g. a computed `edge_count`). */
-  queryOnlyValues?: Components.Schemas.DbKeyValue[];
+  queryOnlyValues?: DbKeyValue[];
   /** The node's alias, if it has one. */
   alias?: string;
   /** Indexes of the main results (queries of the batch) that returned the element. */
@@ -61,7 +65,7 @@ export type GraphNode = {
   id: number;
   values: { key: string; value: string }[];
   /** Original typed key-values, kept so they can be edited without losing types. */
-  rawValues: Components.Schemas.DbKeyValue[];
+  rawValues: DbKeyValue[];
   source: GraphElementSource;
 } & StoredValuesInfo;
 
@@ -77,7 +81,7 @@ export type GraphLink = {
   id: number;
   values: { key: string; value: string }[];
   /** Original typed key-values, kept so they can be edited without losing types. */
-  rawValues: Components.Schemas.DbKeyValue[];
+  rawValues: DbKeyValue[];
   source: number;
   target: number;
   elementSource: GraphElementSource;
@@ -91,11 +95,11 @@ export type GraphData = {
 
 /** Raw API results stored per tab. */
 export type QueryResults = {
-  exec?: Components.Schemas.QueryResult[];
-  exec_mut?: Components.Schemas.QueryResult[];
-  context?: Components.Schemas.QueryResult[];
+  exec?: QueryResult[];
+  exec_mut?: QueryResult[];
+  context?: QueryResult[];
   /** Elements loaded on demand from the graph (e.g. "Expand neighbours"). */
-  expanded?: Components.Schemas.QueryResult[];
+  expanded?: QueryResult[];
 };
 
 /** A graph element (node or edge) that user actions operate on. */
@@ -110,7 +114,7 @@ export type Query = {
    * these after a change, so edits in the builder that were never run are not
    * picked up.
    */
-  executedQueries?: Partial<Record<TAB, Components.Schemas.QueryType[]>>;
+  executedQueries?: Partial<Record<TAB, AgdbQueryType[]>>;
   /** The step types of those queries, which decide how their results are shown. */
   executedStepTypes?: Partial<Record<TAB, QueryType[]>>;
   /**

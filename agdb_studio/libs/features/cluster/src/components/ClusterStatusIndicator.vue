@@ -11,7 +11,7 @@ import {
   FaUserCheck,
 } from "@kalimahapps/vue-icons";
 import FadeTransition from "@agdb-studio/design/src/components/transitions/FadeTransition.vue";
-import type { ClusterStatus } from "@agnesoft/agdb_api/openapi";
+import type { ClusterStatus } from "@agnesoft/agdb_api";
 
 const {
   servers,

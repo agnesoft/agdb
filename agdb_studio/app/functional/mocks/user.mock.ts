@@ -1,4 +1,4 @@
-import type { UserStatus } from "@agnesoft/agdb_api/openapi" with {
+import type { UserStatus } from "@agnesoft/agdb_api" with {
   "resolution-mode": "import",
 };
 

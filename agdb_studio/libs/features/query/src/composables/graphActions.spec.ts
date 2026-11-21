@@ -54,7 +54,7 @@ import {
   useGraphActions,
 } from "./graphActions";
 import { useQueryStore } from "./queryStore";
-import { QueryBuilder, type Components } from "@agnesoft/agdb_api";
+import { QueryBuilder, type QueryType } from "@agnesoft/agdb_api";
 
 const store = useQueryStore();
 
@@ -87,12 +87,8 @@ const graphLink = (id: number): GraphLink => ({
 });
 
 /** The query that was actually sent by the last run. */
-const EXECUTED_QUERY: Components.Schemas.QueryType = QueryBuilder.select()
-  .ids([1, 2])
-  .query();
-const CONTEXT_QUERY: Components.Schemas.QueryType = QueryBuilder.select()
-  .ids(7)
-  .query();
+const EXECUTED_QUERY: QueryType = QueryBuilder.select().ids([1, 2]).query();
+const CONTEXT_QUERY: QueryType = QueryBuilder.select().ids(7).query();
 
 const initialResults = () => [
   { result: 3, elements: [dbNode(1), dbNode(2), dbEdge(-3, 1, 2)] },

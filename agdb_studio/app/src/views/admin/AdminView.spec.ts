@@ -1,7 +1,7 @@
 import { vi, describe, it, beforeEach, expect } from "vitest";
 import AdminView from "./AdminView.vue";
 import { shallowMount, flushPromises } from "@vue/test-utils";
-import type { AdminStatus, ClusterStatus } from "@agnesoft/agdb_api/openapi";
+import type { AdminStatus, ClusterStatus } from "@agnesoft/agdb_api";
 import { ref } from "vue";
 
 const mockAdminStatus: AdminStatus = {

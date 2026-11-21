@@ -7,7 +7,7 @@ import type {
   DbUser,
   DbUserRole,
   ServerDatabase,
-} from "@agnesoft/agdb_api/openapi";
+} from "@agnesoft/agdb_api";
 import type { AxiosResponse } from "axios";
 import type { DbIdentification } from "./types";
 

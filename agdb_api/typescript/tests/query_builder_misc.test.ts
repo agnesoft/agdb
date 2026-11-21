@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
     Comparison,
-    Components,
     convertTo,
     convertToDbKeyValue,
     convertToDbValue,
@@ -9,6 +8,12 @@ import {
     CountComparison,
     DbKeyOrder,
     QueryBuilder,
+} from "../src/index.ts";
+import type {
+    QueryId,
+    QueryIds,
+    QueryResult,
+    SearchQuery,
 } from "../src/index.ts";
 
 describe("QueryBuilder misc tests", () => {
@@ -76,7 +81,7 @@ describe("QueryBuilder misc tests", () => {
 
     it(`convertTo single element`, () => {
         type User = { db_id: number; name: string };
-        const result: Components.Schemas.QueryResult = {
+        const result: QueryResult = {
             result: 1,
             elements: [
                 {
@@ -98,7 +103,7 @@ describe("QueryBuilder misc tests", () => {
 
     it(`convertTo multiple elements`, () => {
         type User = { db_id: number; name: string };
-        const result: Components.Schemas.QueryResult = {
+        const result: QueryResult = {
             result: 2,
             elements: [
                 {
@@ -227,7 +232,7 @@ describe("QueryBuilder misc tests", () => {
 
     it(`db_id as QueryId`, () => {
         class T {
-            db_id: Components.Schemas.QueryId = { Alias: "alias" };
+            db_id: QueryId = { Alias: "alias" };
         }
 
         const query = QueryBuilder.insert().element(new T()).query();
@@ -262,7 +267,7 @@ describe("QueryBuilder misc tests", () => {
     });
 
     it(`QueryIds passthrough`, () => {
-        const ids: Components.Schemas.QueryIds = {
+        const ids: QueryIds = {
             Ids: [{ Id: 1 }, { Alias: "a" }],
         };
         const query = QueryBuilder.select().ids(ids).query();
@@ -275,7 +280,7 @@ describe("QueryBuilder misc tests", () => {
     });
 
     it(`Search QueryIds passthrough`, () => {
-        const ids: Components.Schemas.QueryIds = {
+        const ids: QueryIds = {
             Search: {
                 algorithm: "BreadthFirst",
                 origin: { Id: 1 },
@@ -347,8 +352,7 @@ describe("QueryBuilder misc tests", () => {
             .neighbor()
             .query();
         expect(
-            (distance as { Search: Components.Schemas.SearchQuery }).Search
-                .conditions[0].data,
+            (distance as { Search: SearchQuery }).Search.conditions[0].data,
         ).toEqual({
             Distance: { Equal: 2 },
         });
@@ -359,8 +363,7 @@ describe("QueryBuilder misc tests", () => {
             .edge_count(2)
             .query();
         expect(
-            (edge_count as { Search: Components.Schemas.SearchQuery }).Search
-                .conditions[0].data,
+            (edge_count as { Search: SearchQuery }).Search.conditions[0].data,
         ).toEqual({
             EdgeCount: { Equal: 2 },
         });
@@ -371,8 +374,8 @@ describe("QueryBuilder misc tests", () => {
             .edge_count_from(2)
             .query();
         expect(
-            (edge_count_from as { Search: Components.Schemas.SearchQuery })
-                .Search.conditions[0].data,
+            (edge_count_from as { Search: SearchQuery }).Search.conditions[0]
+                .data,
         ).toEqual({
             EdgeCountFrom: { Equal: 2 },
         });
@@ -383,8 +386,8 @@ describe("QueryBuilder misc tests", () => {
             .edge_count_to(2)
             .query();
         expect(
-            (edge_count_to as { Search: Components.Schemas.SearchQuery }).Search
-                .conditions[0].data,
+            (edge_count_to as { Search: SearchQuery }).Search.conditions[0]
+                .data,
         ).toEqual({
             EdgeCountTo: { Equal: 2 },
         });

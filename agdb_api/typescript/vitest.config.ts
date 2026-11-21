@@ -9,6 +9,7 @@ export default defineConfig({
                 "src/index.ts",
                 "src/openapi.d.ts",
                 "src/query_builder.ts",
+                "src/types.ts",
                 "tests/**",
                 "vite.config.ts",
                 "vitest.config.ts",

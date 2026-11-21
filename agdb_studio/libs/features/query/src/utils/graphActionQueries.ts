@@ -1,11 +1,10 @@
 import {
   CountComparison,
   QueryBuilder,
-  type Components,
+  type DbKeyValue,
+  type DbValue,
+  type QueryType,
 } from "@agnesoft/agdb_api";
-
-type DbKeyValue = Components.Schemas.DbKeyValue;
-type QueryType = Components.Schemas.QueryType;
 
 /** Selects elements with all their stored values. */
 export const selectElementQuery = (ids: number | number[]): QueryType =>
@@ -30,7 +29,7 @@ export const selectAllAliasesQuery = (): QueryType =>
 export const deleteElementQuery = (id: number): QueryType =>
   QueryBuilder.remove().ids(id).query();
 
-const keyId = (key: Components.Schemas.DbValue): string => JSON.stringify(key);
+const keyId = (key: DbValue): string => JSON.stringify(key);
 
 /**
  * Builds the mutations that turn `original` values into `edited` values:

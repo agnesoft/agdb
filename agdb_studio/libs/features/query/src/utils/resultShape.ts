@@ -1,4 +1,4 @@
-import type { Components } from "@agnesoft/agdb_api";
+import type { QueryResult } from "@agnesoft/agdb_api";
 
 export type ResultView = "graph" | "table" | "json" | "scalar";
 
@@ -27,9 +27,7 @@ const SCALAR_LABELS: Record<string, string> = {
   "select.node_count": "Node count",
 };
 
-export const summarizeResults = (
-  results: Components.Schemas.QueryResult[],
-): ResultSummary[] =>
+export const summarizeResults = (results: QueryResult[]): ResultSummary[] =>
   results.map((r, index) => ({
     index,
     result: r.result,
@@ -40,7 +38,7 @@ export const summarizeResults = (
 
 /** Picks the most suitable default view for the results of a query. */
 export const classifyResults = (
-  results: Components.Schemas.QueryResult[],
+  results: QueryResult[],
   stepTypes: string[],
 ): Exclude<ResultView, "json"> => {
   const elements = results.flatMap((r) => r.elements);

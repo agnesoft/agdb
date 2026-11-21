@@ -1,4 +1,4 @@
-import type { Components } from "@agnesoft/agdb_api";
+import type { DbKeyValue, QueryResult, QueryType } from "@agnesoft/agdb_api";
 import { reactive } from "vue";
 import type { ElementValuesState, GraphElement } from "./types";
 import {
@@ -8,8 +8,6 @@ import {
 } from "../utils/graphActionQueries";
 import { dbValueToString, toDisplayValues } from "../utils/graphDataUtils";
 
-type DbKeyValue = Components.Schemas.DbKeyValue;
-
 /** Elements whose stored values are loaded right after a run. */
 export const PREFETCH_LIMIT = 1000;
 /** Ids per `select().ids()` query; all chunks go in one request. */
@@ -18,8 +16,8 @@ const CHUNK_SIZE = 500;
 type Entry = { state: ElementValuesState; values?: DbKeyValue[] };
 
 export type ExecQueries = (
-  queries: Components.Schemas.QueryType[],
-) => Promise<Components.Schemas.QueryResult[] | undefined>;
+  queries: QueryType[],
+) => Promise<QueryResult[] | undefined>;
 
 const keyId = (kv: DbKeyValue) => JSON.stringify(kv.key);
 
@@ -68,7 +66,7 @@ export const useElementValues = (exec: ExecQueries) => {
     const startedIn = generation;
     for (const id of missing) entries.set(id, { state: "loading" });
 
-    const store = (results: Components.Schemas.QueryResult[] | undefined) => {
+    const store = (results: QueryResult[] | undefined) => {
       for (const el of (results ?? []).flatMap((r) => r.elements)) {
         entries.set(el.id, { state: "loaded", values: el.values });
       }

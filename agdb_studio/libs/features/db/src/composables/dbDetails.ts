@@ -1,4 +1,4 @@
-import type { DbUserRole, ServerDatabase } from "@agnesoft/agdb_api/openapi";
+import type { DbUserRole, ServerDatabase } from "@agnesoft/agdb_api";
 import { useDbStore } from "./dbStore";
 import { useDbUsersStore } from "./dbUsersStore";
 import { useContentInputs } from "@agdb-studio/common/src/composables/content/inputs";

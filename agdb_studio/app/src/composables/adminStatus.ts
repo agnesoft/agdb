@@ -3,7 +3,7 @@ import { client, checkClient } from "@agdb-studio/api/src/api";
 import { useAuth } from "@agdb-studio/auth/src/auth";
 import { createLogger } from "@agdb-studio/utils/src/logger/logger";
 import { addNotification } from "@agdb-studio/notification/src/composables/notificationStore";
-import type { AdminStatus, LogLevelFilter } from "@agnesoft/agdb_api/openapi";
+import type { AdminStatus, LogLevelFilter } from "@agnesoft/agdb_api";
 
 const logger = createLogger("AdminStatus");
 

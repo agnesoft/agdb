@@ -13,7 +13,7 @@ import {
 import { useAuth } from "@agdb-studio/auth/src/auth";
 import { resolveServerUrl } from "@agdb-studio/api/src/serverUrl";
 import { createLogger } from "@agdb-studio/utils/src/logger/logger";
-import type { ClusterStatus } from "@agnesoft/agdb_api/openapi";
+import type { ClusterStatus } from "@agnesoft/agdb_api";
 
 export type OverallStatus = "red" | "amber" | "green" | "unknown";
 

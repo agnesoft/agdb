@@ -1,4 +1,4 @@
-import type { ServerDatabase } from "@agnesoft/agdb_api/openapi";
+import type { ServerDatabase } from "@agnesoft/agdb_api";
 import {
   dateFormatter,
   numberFormatter,

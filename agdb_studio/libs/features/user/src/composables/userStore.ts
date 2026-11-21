@@ -1,5 +1,5 @@
 import { client } from "@agdb-studio/api/src/api";
-import type { UserStatus } from "@agnesoft/agdb_api/openapi";
+import type { UserStatus } from "@agnesoft/agdb_api";
 import { ref } from "vue";
 import { addNotification } from "@agdb-studio/notification/src/composables/notificationStore";
 

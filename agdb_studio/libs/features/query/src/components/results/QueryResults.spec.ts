@@ -4,7 +4,7 @@ vi.mock("@agnesoft/agdb_api", async (importOriginal) => {
 });
 import { flushPromises, mount } from "@vue/test-utils";
 import { defineComponent, h, nextTick, ref } from "vue";
-import type { Components } from "@agnesoft/agdb_api";
+import type { DbKeyValue, QueryResult, QueryType } from "@agnesoft/agdb_api";
 
 const { exec, execMut, captured } = vi.hoisted(() => ({
   exec: vi.fn(),
@@ -37,8 +37,8 @@ const store = useQueryStore();
 const el = (id: number, from = 0, to = 0) => ({ id, from, to, values: [] });
 
 /** Stored values by element id, served to `select().ids()` queries. */
-const db = new Map<number, Components.Schemas.DbKeyValue[]>();
-const serveStoredValues = async (queries: Components.Schemas.QueryType[]) =>
+const db = new Map<number, DbKeyValue[]>();
+const serveStoredValues = async (queries: QueryType[]) =>
   queries.map((query) => {
     const ids =
       "SelectValues" in query && "Ids" in query.SelectValues.ids
@@ -54,7 +54,7 @@ const serveStoredValues = async (queries: Components.Schemas.QueryType[]) =>
   });
 
 const run = async (
-  results: Components.Schemas.QueryResult[],
+  results: QueryResult[],
   steps: QueryStep["type"][] = ["select"],
   tab: "exec" | "exec_mut" = "exec",
 ) => {
@@ -442,9 +442,7 @@ describe("QueryResults", () => {
     const valueLoads = () =>
       exec.mock.calls.filter(
         (call) =>
-          !(call[0] as Components.Schemas.QueryType[]).some(
-            (q) => "SelectAllAliases" in q,
-          ),
+          !(call[0] as QueryType[]).some((q) => "SelectAllAliases" in q),
       ).length;
     db.set(1, [{ key: { String: "k" }, value: { I64: 1 } }]);
     exec.mockImplementation(serveStoredValues);
@@ -457,7 +455,7 @@ describe("QueryResults", () => {
     db.set(1, [{ key: { String: "k" }, value: { I64: 2 } }]);
     let release = () => {};
     exec.mockImplementationOnce(
-      (queries: Components.Schemas.QueryType[]) =>
+      (queries: QueryType[]) =>
         new Promise((resolve) => {
           release = () => resolve(serveStoredValues(queries));
         }),

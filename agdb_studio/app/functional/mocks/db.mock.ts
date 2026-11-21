@@ -1,4 +1,4 @@
-import type { ServerDatabase } from "@agnesoft/agdb_api/openapi" with {
+import type { ServerDatabase } from "@agnesoft/agdb_api" with {
   "resolution-mode": "import",
 };
 

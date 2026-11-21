@@ -14,10 +14,7 @@ import {
 import { MOCK_TOKEN_RESPONSE, MOCK_USER_STATUS } from "./auth.mock";
 import { MOCK_DATABASE_LIST } from "./db.mock";
 import { MOCK_USER_LIST, MOCK_DB_USERS, MOCK_SESSIONS } from "./user.mock";
-import type {
-  ServerDatabase,
-  UserStatus,
-} from "@agnesoft/agdb_api/openapi" with {
+import type { ServerDatabase, UserStatus } from "@agnesoft/agdb_api" with {
   "resolution-mode": "import",
 };
 import openapi from "../../../../agdb_server/openapi.json";

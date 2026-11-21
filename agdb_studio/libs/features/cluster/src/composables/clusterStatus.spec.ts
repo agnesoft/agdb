@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { defineComponent, nextTick, type UnwrapRef } from "vue";
 import { mount, flushPromises, type VueWrapper } from "@vue/test-utils";
 import { useClusterStatus, resetClusterStatusState } from "./clusterStatus";
-import type { ClusterStatus } from "@agnesoft/agdb_api/openapi";
+import type { ClusterStatus } from "@agnesoft/agdb_api";
 
 const clusterStatus = (
   address: string,

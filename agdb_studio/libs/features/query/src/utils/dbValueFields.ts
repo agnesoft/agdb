@@ -1,4 +1,4 @@
-import { convertToDbValue, type Components } from "@agnesoft/agdb_api";
+import { convertToDbValue, type DbValue } from "@agnesoft/agdb_api";
 import type { QueryStepFieldValue } from "../composables/types";
 import { VALUE_TYPES } from "../mock/queryApiMock";
 import { parseDbValue } from "./queryExecutionUtils";
@@ -28,9 +28,7 @@ const splitItems = (raw: string | undefined): string[] =>
     .filter((item) => item.length > 0);
 
 /** Converts a typed form field (type option + raw text) to a `DbValue`. */
-export const fieldToDbValue = (
-  field: QueryStepFieldValue,
-): Components.Schemas.DbValue => {
+export const fieldToDbValue = (field: QueryStepFieldValue): DbValue => {
   if (field.selectedOption === BYTES_TYPE) {
     return { Bytes: splitItems(field.value).map(Number) };
   }
@@ -51,9 +49,7 @@ export const fieldToDbValue = (
  * can be pre-filled in an editor. `fieldToDbValue` converts it back to the
  * same variant (nested values excepted, see `NESTED_TYPE`).
  */
-export const dbValueToField = (
-  value: Components.Schemas.DbValue,
-): QueryStepFieldValue => {
+export const dbValueToField = (value: DbValue): QueryStepFieldValue => {
   // Booleans are stored as strings, so strings always stay strings.
   if ("String" in value) {
     return { selectedOption: "string", value: value.String };
@@ -89,7 +85,7 @@ export const dbValueToField = (
 };
 
 /** Short human-readable type label of a `DbValue`, e.g. "i64" or "string[]". */
-export const dbValueTypeLabel = (value: Components.Schemas.DbValue): string => {
+export const dbValueTypeLabel = (value: DbValue): string => {
   const key = Object.keys(value)[0] ?? "";
   const labels: Record<string, string> = {
     String: "string",

@@ -18,3 +18,4 @@ mod surface;
 #[cfg(test)]
 mod test_utilities;
 pub mod ts;
+mod wire;

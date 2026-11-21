@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 vi.mock("@agnesoft/agdb_api", async (importOriginal) => {
   return await importOriginal<typeof import("@agnesoft/agdb_api")>();
 });
-import type { Components } from "@agnesoft/agdb_api";
+import type { DbValue } from "@agnesoft/agdb_api";
 import {
   BYTES_TYPE,
   EDITABLE_VALUE_TYPES,
@@ -19,7 +19,7 @@ const f = (selectedOption: string, value?: string) => ({
 });
 
 describe("dbValueFields", () => {
-  it.each<[Components.Schemas.DbValue, ReturnType<typeof f>]>([
+  it.each<[DbValue, ReturnType<typeof f>]>([
     [{ String: "hi" }, f("string", "hi")],
     // Booleans are stored as strings, so they stay strings when edited.
     [{ String: "true" }, f("string", "true")],
@@ -38,7 +38,7 @@ describe("dbValueFields", () => {
     expect(dbValueToField(value)).toEqual(field);
   });
 
-  it.each<Components.Schemas.DbValue>([
+  it.each<DbValue>([
     { String: "hi" },
     { String: "true" },
     { I64: -3 },
@@ -60,7 +60,7 @@ describe("dbValueFields", () => {
     expect(fieldToDbValue(field)).toEqual(value);
   });
 
-  it.each<[ReturnType<typeof f>, Components.Schemas.DbValue]>([
+  it.each<[ReturnType<typeof f>, DbValue]>([
     [f("string", "hi"), { String: "hi" }],
     [f("signed", "-3"), { I64: -3 }],
     [f("unsigned", "3"), { U64: 3 }],
@@ -87,10 +87,10 @@ describe("dbValueFields", () => {
   it("labels value types", () => {
     expect(dbValueTypeLabel({ U64: 1 })).toBe("u64");
     expect(dbValueTypeLabel({ VecString: [] })).toBe("string[]");
-    expect(
-      dbValueTypeLabel({ Unknown: 1 } as unknown as Components.Schemas.DbValue),
-    ).toBe("Unknown");
-    expect(dbValueTypeLabel({} as Components.Schemas.DbValue)).toBe("");
+    expect(dbValueTypeLabel({ Unknown: 1 } as unknown as DbValue)).toBe(
+      "Unknown",
+    );
+    expect(dbValueTypeLabel({} as DbValue)).toBe("");
   });
 
   const TOO_BIG = "9007199254740993"; // 2^53 + 1

@@ -1,12 +1,10 @@
-import type { Components } from "./openapi.d.ts";
+import type { DbKeyValue, DbValue, QueryResult } from "./types.ts";
 
 type NativeValue = boolean | string | number | string[] | number[];
-type BuilderDbValue = NativeValue | Components.Schemas.DbValue;
-type BuilderDbKeyValue = BuilderDbValue[] | Components.Schemas.DbKeyValue;
+type BuilderDbValue = NativeValue | DbValue;
+type BuilderDbKeyValue = BuilderDbValue[] | DbKeyValue;
 
-export function convertToNativeValue(
-    value: Components.Schemas.DbValue,
-): NativeValue | undefined {
+export function convertToNativeValue(value: DbValue): NativeValue | undefined {
     if ("Bytes" in value) {
         return value.Bytes;
     }
@@ -53,7 +51,7 @@ export function convertToNativeValue(
 }
 
 export function convertTo<T extends Record<string, unknown>>(
-    result: Components.Schemas.QueryResult,
+    result: QueryResult,
 ): T | T[] {
     const res: T[] = [];
 
@@ -78,15 +76,8 @@ export function convertTo<T extends Record<string, unknown>>(
 }
 
 export function convertToDbValue(
-    value:
-        | string
-        | boolean
-        | number
-        | number[]
-        | string[]
-        | Components.Schemas.DbValue
-        | object,
-): Components.Schemas.DbValue {
+    value: string | boolean | number | number[] | string[] | DbValue | object,
+): DbValue {
     if (typeof value === "string") {
         return { String: value };
     }
@@ -115,12 +106,10 @@ export function convertToDbValue(
         return { VecString: value as string[] };
     }
 
-    return value as Components.Schemas.DbValue;
+    return value as DbValue;
 }
 
-export function convertToDbKeyValue(
-    key_value: BuilderDbKeyValue,
-): Components.Schemas.DbKeyValue {
+export function convertToDbKeyValue(key_value: BuilderDbKeyValue): DbKeyValue {
     if (Array.isArray(key_value)) {
         return {
             key: convertToDbValue(key_value[0]),

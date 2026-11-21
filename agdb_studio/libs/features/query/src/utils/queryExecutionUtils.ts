@@ -1,7 +1,8 @@
 import {
   DbKeyOrder,
   QueryBuilder as ApiQueryBuilder,
-  type Components,
+  type DbValue,
+  type QueryType,
 } from "@agnesoft/agdb_api";
 import {
   getQueryStepLabel,
@@ -15,7 +16,7 @@ import type {
 } from "../composables/types";
 
 export type BuilderDbValueInput =
-  string | boolean | number | number[] | string[] | Components.Schemas.DbValue;
+  string | boolean | number | number[] | string[] | DbValue;
 
 const parseBoolean = (value: string | undefined): boolean => {
   return String(value ?? "").toLowerCase() === "true";
@@ -207,7 +208,7 @@ const getStepArgs = (step: QueryStepModel): unknown[] => {
 
 export const buildQueryFromSteps = (
   querySteps: QueryStepModel[],
-): Components.Schemas.QueryType => {
+): QueryType => {
   if (!querySteps.length) {
     throw new Error("No query steps to execute");
   }
@@ -253,5 +254,5 @@ export const buildQueryFromSteps = (
     chain = queryFn.call(chain);
   }
 
-  return chain as Components.Schemas.QueryType;
+  return chain as QueryType;
 };

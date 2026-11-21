@@ -12,7 +12,7 @@ import {
   PhFillWifiHigh,
   PhFillWifiSlash,
 } from "@kalimahapps/vue-icons";
-import type { ClusterStatus, LogLevelFilter } from "@agnesoft/agdb_api/openapi";
+import type { ClusterStatus, LogLevelFilter } from "@agnesoft/agdb_api";
 import { ref } from "vue";
 
 const LOG_LEVELS: LogLevelFilter[] = [

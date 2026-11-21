@@ -2,11 +2,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("@agnesoft/agdb_api", async (importOriginal) => {
   return await importOriginal<typeof import("@agnesoft/agdb_api")>();
 });
-import type { Components } from "@agnesoft/agdb_api";
+import type { DbKeyValue, QueryType } from "@agnesoft/agdb_api";
 import { useElementValues } from "./elementValues";
 import type { GraphLink, GraphNode } from "./types";
-
-type DbKeyValue = Components.Schemas.DbKeyValue;
 
 const kv = (key: string, value: number): DbKeyValue => ({
   key: { String: key },
@@ -97,7 +95,7 @@ describe("useElementValues", () => {
 
   it("asks again for the existing ids when the server rejects a chunk", async () => {
     const stored = new Set([1, 2, 4]);
-    exec.mockImplementation(async (queries: Components.Schemas.QueryType[]) => {
+    exec.mockImplementation(async (queries: QueryType[]) => {
       const ids =
         queries[0] && "SelectValues" in queries[0]
           ? queries[0].SelectValues.ids

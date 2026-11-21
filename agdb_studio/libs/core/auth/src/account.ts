@@ -1,5 +1,5 @@
 import { client } from "@agdb-studio/api/src/api";
-import type { UserSession } from "@agnesoft/agdb_api/openapi";
+import type { UserSession } from "@agnesoft/agdb_api";
 import { useAuth } from "./auth";
 import { ref, watch } from "vue";
 

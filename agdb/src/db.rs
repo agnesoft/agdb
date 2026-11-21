@@ -2161,8 +2161,11 @@ mod tests {
             }
         }
 
-        /// The nodes a, b, c, d (1..=4) with the values 4, 3, 2, 1 of "k"
+        /// The nodes a, b, c, d (1..=4) with the values 4, 3, 2, 1 of "k",
+        /// the `LONG` key and value of a stored outside of its key-value
         /// and the edges a -> b (-5), a -> c (-6), b -> d (-7), c -> d (-8).
+        const LONG: &str = "longer than the 15 inline bytes";
+
         fn searched(platform: &Arc<TestPlatform>) -> DbImpl<FileStorageImpl<TestPlatform>> {
             let mut db = open(file(platform), StorageConfig::default());
             db.exec_mut(
@@ -2170,7 +2173,7 @@ mod tests {
                     .nodes()
                     .aliases(["a", "b", "c", "d"])
                     .values(vec![
-                        vec![("k", 4).into()],
+                        vec![("k", 4).into(), (LONG, LONG).into()],
                         vec![("k", 3).into()],
                         vec![("k", 2).into()],
                         vec![("k", 1).into()],
@@ -2291,6 +2294,18 @@ mod tests {
                         .value(Comparison::Equal(3.into()))
                         .query(),
                     QueryBuilder::search().from("a").where_().keys("k").query(),
+                    QueryBuilder::search()
+                        .elements()
+                        .where_()
+                        .key(LONG)
+                        .value(Comparison::Equal(LONG.into()))
+                        .query(),
+                    QueryBuilder::search()
+                        .elements()
+                        .order_by(DbKeyOrder::Desc(LONG.into()))
+                        .offset(1)
+                        .limit(2)
+                        .query(),
                 ] {
                     assert_read_failures_on(searched, |db| db.exec(&query));
                 }
@@ -2306,6 +2321,9 @@ mod tests {
                 });
                 assert_read_failures_on(searched, |db| {
                     db.exec(QueryBuilder::select().keys().ids(["a", "d"]).query())
+                });
+                assert_read_failures_on(searched, |db| {
+                    db.exec(QueryBuilder::select().values(LONG).ids("a").query())
                 });
             }
         }
@@ -2334,6 +2352,9 @@ mod tests {
                 });
                 assert_read_failures_on(searched, |db| {
                     db.exec_mut(QueryBuilder::remove().values("k").ids("a").query())
+                });
+                assert_read_failures_on(searched, |db| {
+                    db.exec_mut(QueryBuilder::remove().values(LONG).ids("a").query())
                 });
                 assert_read_failures_on(searched, |db| {
                     db.exec_mut(QueryBuilder::remove().index("k").query())

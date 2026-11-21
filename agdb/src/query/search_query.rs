@@ -3,7 +3,6 @@ use crate::DbError;
 use crate::DbErrorType;
 use crate::DbId;
 use crate::DbImpl;
-use crate::DbKeyValue;
 use crate::DbValue;
 use crate::Query;
 use crate::QueryCondition;
@@ -207,7 +206,7 @@ impl SearchQuery {
 
     fn sort<Store: StorageData>(
         &self,
-        ids: &mut [DbId],
+        ids: &mut Vec<DbId>,
         db: &DbImpl<Store>,
     ) -> Result<(), DbError> {
         let keys = self
@@ -218,23 +217,31 @@ impl SearchQuery {
             })
             .collect::<Vec<DbValue>>();
 
-        let mut sorted = ids
-            .iter()
-            .map(|id| Ok((*id, db.values_by_keys(*id, &keys)?)))
-            .collect::<Result<Vec<(DbId, Vec<DbKeyValue>)>, DbError>>()?;
+        let mut values = Vec::with_capacity(ids.len() * keys.len());
 
-        sorted.sort_by(|left, right| {
-            for (key_order, key) in self.order_by.iter().zip(&keys) {
-                let left_kv = left.1.iter().find(|kv| kv.key == *key);
-                let right_kv = right.1.iter().find(|kv| kv.key == *key);
+        for id in ids.iter() {
+            let kvs = db.values_by_keys(*id, &keys)?;
 
-                let ordering = match (left_kv, right_kv) {
+            for key in &keys {
+                values.push(
+                    kvs.iter()
+                        .find(|kv| kv.key == *key)
+                        .map(|kv| kv.value.clone()),
+                );
+            }
+        }
+
+        let row = |pos: usize| &values[pos * keys.len()..(pos + 1) * keys.len()];
+        let compare = |left: &usize, right: &usize| {
+            for (key_order, (l, r)) in self.order_by.iter().zip(row(*left).iter().zip(row(*right)))
+            {
+                let ordering = match (l, r) {
                     (None, None) => Ordering::Equal,
                     (None, Some(_)) => Ordering::Greater,
                     (Some(_), None) => Ordering::Less,
                     (Some(l), Some(r)) => match key_order {
-                        DbKeyOrder::Asc(_) => l.value.cmp(&r.value),
-                        DbKeyOrder::Desc(_) => l.value.cmp(&r.value).reverse(),
+                        DbKeyOrder::Asc(_) => l.cmp(r),
+                        DbKeyOrder::Desc(_) => l.cmp(r).reverse(),
                     },
                 };
 
@@ -243,12 +250,23 @@ impl SearchQuery {
                 }
             }
 
-            Ordering::Equal
-        });
+            left.cmp(right)
+        };
 
-        for (id, sorted) in ids.iter_mut().zip(sorted) {
-            *id = sorted.0;
+        let mut order = (0..ids.len()).collect::<Vec<usize>>();
+        let end = if self.limit == 0 {
+            order.len()
+        } else {
+            usize::try_from(self.offset.saturating_add(self.limit)).unwrap_or(usize::MAX)
+        };
+
+        if end < order.len() {
+            order.select_nth_unstable_by(end, compare);
+            order.truncate(end);
         }
+
+        order.sort_unstable_by(compare);
+        *ids = order.into_iter().map(|pos| ids[pos]).collect();
 
         Ok(())
     }

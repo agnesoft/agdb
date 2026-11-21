@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { watch } from "vue";
 
 const { client } = vi.hoisted(() => ({
   client: {
@@ -133,6 +134,26 @@ describe("dashboardStore", () => {
     expect(client.value.dashboard_get).toHaveBeenCalledTimes(2);
     expect(store.current.value?.name).toBe("sales");
     expect(store.saveFailed.value).toBe(false);
+    expect(store.dirty.value).toBe(false);
+  });
+
+  it("saves an edit made while the save loop is finishing", async () => {
+    await store.loadDashboard("ops");
+    let edited = false;
+    // Edits as the loop ends: it has seen the queue empty already.
+    const stop = watch(
+      store.saving,
+      (saving) => {
+        if (saving || edited) return;
+        edited = true;
+        store.moveWidget("a", 0);
+      },
+      { flush: "sync" },
+    );
+    store.moveWidget("a", 1);
+    await store.settleSaves();
+    stop();
+    expect(client.value.dashboard_save).toHaveBeenCalledTimes(2);
     expect(store.dirty.value).toBe(false);
   });
 

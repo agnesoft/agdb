@@ -87,7 +87,8 @@ let saveLoop: Promise<void> | undefined;
  * are already shown (`saveFailed`, the API error notification).
  */
 const settleSaves = async (): Promise<void> => {
-  await saveLoop;
+  // A loop may start again for edits made while the last one was finishing.
+  while (saveLoop) await saveLoop;
 };
 
 const runSaves = async (): Promise<void> => {
@@ -121,9 +122,16 @@ const runSaves = async (): Promise<void> => {
 const saveDashboard = (): Promise<void> => {
   if (!current.value) return Promise.resolve();
   toSave.add(current.value);
-  saveLoop ??= runSaves().finally(() => (saveLoop = undefined));
-  return saveLoop;
+  return startSaves();
 };
+
+/** Runs the queued saves unless they run already. */
+const startSaves = (): Promise<void> =>
+  (saveLoop ??= runSaves().finally(() => {
+    saveLoop = undefined;
+    // Queued after the loop had seen the queue empty, but before it ended.
+    if (toSave.size) void startSaves();
+  }));
 
 /** Closes the open dashboard, dropping unsaved edits (a running save still finishes). */
 const closeDashboard = () => {

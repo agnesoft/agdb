@@ -102,8 +102,8 @@ export const widgetFromQuery = (base: Widget, query: Query): Widget =>
     query,
   );
 
-/** JSON with object keys sorted, so equal values give equal text. */
-const stableJson = (value: unknown): string =>
+/** JSON with object keys sorted, so equal values give equal text; undefined stays undefined. */
+const stableJson = (value: unknown): string | undefined =>
   JSON.stringify(value, (_key, item: unknown) =>
     typeof item === "object" && item !== null && !Array.isArray(item)
       ? Object.fromEntries(

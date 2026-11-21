@@ -26,7 +26,7 @@ pub enum Command {
         key_value: DbKeyValue,
     },
     RemoveAlias {
-        alias: String,
+        id: DbId,
     },
     RemoveEdge {
         index: GraphIndex,

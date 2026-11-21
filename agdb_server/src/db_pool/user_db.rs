@@ -1,6 +1,7 @@
 use crate::db_pool::ErrorCode;
 use crate::db_pool::ServerError;
 use crate::server_error::ServerResult;
+use crate::utilities::log_migration;
 use agdb::DbAny;
 use agdb::DbAnyTransaction;
 use agdb::DbAnyTransactionMut;
@@ -11,6 +12,7 @@ use agdb::QueryIds;
 use agdb::QueryResult;
 use agdb::QueryType;
 use agdb::SearchQuery;
+use agdb::StorageConfig;
 use agdb_api::DbKind;
 use agdb_api::Queries;
 use agdb_api::QueryAudit;
@@ -23,16 +25,15 @@ use tokio::sync::RwLock;
 pub(crate) struct UserDb(pub(crate) Arc<RwLock<DbAny>>);
 
 impl UserDb {
-    pub(crate) fn new(name: &str, db_type: DbKind) -> ServerResult<Self> {
-        match db_type {
-            DbKind::Memory => Ok(Self(Arc::new(RwLock::new(DbAny::new_memory(name)?)))),
-            DbKind::File => Ok(Self(Arc::new(RwLock::new(DbAny::new_file(name)?)))),
-            DbKind::Mapped => Ok(Self(Arc::new(RwLock::new(DbAny::new_mapped(name)?)))),
-        }
-    }
-
-    pub(crate) async fn set_sync_mode(&self, mode: agdb::SyncMode) {
-        self.0.write().await.set_sync_mode(mode);
+    pub(crate) fn new(name: &str, db_type: DbKind, config: StorageConfig) -> ServerResult<Self> {
+        let mut db = match db_type {
+            DbKind::Memory => DbAny::new_memory(name)?,
+            DbKind::File => DbAny::new_file(name)?,
+            DbKind::Mapped => DbAny::new_mapped(name)?,
+        };
+        db.set_storage_config(config);
+        log_migration(name, &db);
+        Ok(Self(Arc::new(RwLock::new(db))))
     }
 
     pub(crate) async fn exec(&self, mut queries: Queries) -> ServerResult<Vec<QueryResult>> {
@@ -103,6 +104,7 @@ fn t_exec(
             t.exec(&*q)
         }
         QueryType::SelectAllAliases(q) => t.exec(&*q),
+        QueryType::SelectAllEdgeCount(q) => t.exec(&*q),
         QueryType::SelectEdgeCount(q) => t.exec(&*q),
         QueryType::SelectIndexes(q) => t.exec(&*q),
         QueryType::SelectKeys(q) => {
@@ -156,6 +158,7 @@ fn t_exec_mut(
             t.exec(&*q)
         }
         QueryType::SelectAllAliases(q) => t.exec(&*q),
+        QueryType::SelectAllEdgeCount(q) => t.exec(&*q),
         QueryType::SelectEdgeCount(q) => t.exec(&*q),
         QueryType::SelectIndexes(q) => t.exec(&*q),
         QueryType::SelectKeys(q) => {

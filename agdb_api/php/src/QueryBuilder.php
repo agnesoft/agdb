@@ -2284,7 +2284,7 @@ class SelectEdgeCountIdsBuilder
     }
 }
 
-class SelectEdgeCountBuilder
+class SelectDirectedEdgeCountBuilder
 {
     private bool $from;
     private bool $to;
@@ -2318,6 +2318,14 @@ class SelectEdgeCountBuilder
                 ]),
             ])
         );
+    }
+}
+
+class SelectEdgeCountBuilder extends SelectDirectedEdgeCountBuilder
+{
+    public function query(): QueryType
+    {
+        return new QueryType(["select_all_edge_count" => new stdClass()]);
     }
 }
 
@@ -2445,14 +2453,14 @@ class SelectBuilder
         return new SelectAliasesBuilder();
     }
 
-    public function edge_count_to(): SelectEdgeCountBuilder
+    public function edge_count_to(): SelectDirectedEdgeCountBuilder
     {
-        return new SelectEdgeCountBuilder(false, true);
+        return new SelectDirectedEdgeCountBuilder(false, true);
     }
 
-    public function edge_count_from(): SelectEdgeCountBuilder
+    public function edge_count_from(): SelectDirectedEdgeCountBuilder
     {
-        return new SelectEdgeCountBuilder(true, false);
+        return new SelectDirectedEdgeCountBuilder(true, false);
     }
 
     public function edge_count(): SelectEdgeCountBuilder

@@ -46,6 +46,7 @@ For code in `agplatform`, `agbench`, `agsource` and `agtestcheck`:
 - Test package with coverage: `cargo llvm-cov -p <package> --show-missing-lines`
 - Test all: `cargo test -r --all-features`
 - Test debug: `cargo test --all-features -p <package>`
+- Test agdb_server: `cargo test -p agdb_server --all-features`. Its `tests` target has its own runner (`harness = false`, `tests/runner.rs`) that starts the shared server and cluster first; register each test in its module's `tests![...]`. The TS/PHP tests get the same setup from `cargo run -p agdb_server --bin agdb_harness -- <command>` (the `agdb_server` binary must be built).
 - Lint package: `cargo clippy --all-features -p <package>`
 - Lint all: `cargo clippy --all-features`
 - Check test structure: `cargo run -p agtestcheck -- test-check <dir|file.rs>`
@@ -144,26 +145,27 @@ Each alias also has a `*Transaction` and `*TransactionMut` variant for use insid
 
 ### Immutable (use with `exec`)
 
-| Builder                                | Query type              | Returns                                                                                     |
-| -------------------------------------- | ----------------------- | ------------------------------------------------------------------------------------------- |
-| `select().ids(...)`                    | `SelectValuesQuery`     | All key-value properties of elements                                                        |
-| `select().values([...]).ids(...)`      | `SelectValuesQuery`     | Specific keys from elements                                                                 |
-| `select().keys().ids(...)`             | `SelectKeysQuery`       | Only key names from elements                                                                |
-| `select().key_count().ids(...)`        | `SelectKeyCountQuery`   | Number of keys per element                                                                  |
-| `select().aliases().ids(...)`          | `SelectAliasesQuery`    | Aliases of given elements                                                                   |
-| `select().aliases()`                   | `SelectAllAliasesQuery` | All aliases in the database                                                                 |
-| `select().edge_count...ids(...)`       | `SelectEdgeCountQuery`  | Edge counts (from/to/both)                                                                  |
-| `select().node_count()`                | `SelectNodeCountQuery`  | Total node count                                                                            |
-| `select().indexes()`                   | `SelectIndexesQuery`    | All existing indexes                                                                        |
-| `search().from(x)`                     | `SearchQuery`           | BFS from x (forward traversal)                                                              |
-| `search().to(x)`                       | `SearchQuery`           | BFS from x (reverse traversal)                                                              |
-| `search().from(x).to(y)`               | `SearchQuery`           | A* path search from x to y                                                                  |
-| `search().to(y).from(x)`               | `SearchQuery`           | Reverse A* path (follows incoming edges — faster when destination has fewer incoming edges) |
-| `search().elements()`                  | `SearchQuery`           | Full element scan                                                                           |
-| `search().index("key").value(v)`       | `SearchQuery`           | Indexed lookup                                                                              |
-| `select().search()...`                 | Nested                  | Select values via embedded search                                                           |
-| `select().element::<T>().search()...`  | Nested typed            | Select typed values (limit=1, auto keys)                                                    |
-| `select().elements::<T>().search()...` | Nested typed            | Select typed values (all matches)                                                           |
+| Builder                                | Query type                | Returns                                                                                     |
+| -------------------------------------- | ------------------------- | ------------------------------------------------------------------------------------------- |
+| `select().ids(...)`                    | `SelectValuesQuery`       | All key-value properties of elements                                                        |
+| `select().values([...]).ids(...)`      | `SelectValuesQuery`       | Specific keys from elements                                                                 |
+| `select().keys().ids(...)`             | `SelectKeysQuery`         | Only key names from elements                                                                |
+| `select().key_count().ids(...)`        | `SelectKeyCountQuery`     | Number of keys per element                                                                  |
+| `select().aliases().ids(...)`          | `SelectAliasesQuery`      | Aliases of given elements                                                                   |
+| `select().aliases()`                   | `SelectAllAliasesQuery`   | All aliases in the database                                                                 |
+| `select().edge_count...ids(...)`       | `SelectEdgeCountQuery`    | Edge counts (from/to/both)                                                                  |
+| `select().edge_count()`                | `SelectAllEdgeCountQuery` | Total edge count                                                                            |
+| `select().node_count()`                | `SelectNodeCountQuery`    | Total node count                                                                            |
+| `select().indexes()`                   | `SelectIndexesQuery`      | All existing indexes                                                                        |
+| `search().from(x)`                     | `SearchQuery`             | BFS from x (forward traversal)                                                              |
+| `search().to(x)`                       | `SearchQuery`             | BFS from x (reverse traversal)                                                              |
+| `search().from(x).to(y)`               | `SearchQuery`             | A* path search from x to y                                                                  |
+| `search().to(y).from(x)`               | `SearchQuery`             | Reverse A* path (follows incoming edges — faster when destination has fewer incoming edges) |
+| `search().elements()`                  | `SearchQuery`             | Full element scan                                                                           |
+| `search().index("key").value(v)`       | `SearchQuery`             | Indexed lookup                                                                              |
+| `select().search()...`                 | Nested                    | Select values via embedded search                                                           |
+| `select().element::<T>().search()...`  | Nested typed              | Select typed values (limit=1, auto keys)                                                    |
+| `select().elements::<T>().search()...` | Nested typed              | Select typed values (all matches)                                                           |
 
 ### Mutable (use with `exec_mut`)
 
@@ -249,31 +251,32 @@ Condition chains filter elements during search:
 
 The server reads a YAML-like config file (default: `agdb_server.yaml`). On first run it creates a default config.
 
-| Key                            | Default                 | Description                                                                  |
-| ------------------------------ | ----------------------- | ---------------------------------------------------------------------------- |
-| `bind`                         | `:::3000`               | Socket bind address                                                          |
-| `address`                      | `http://localhost:3000` | Public address for cluster node discovery                                    |
-| `basepath`                     | (empty)                 | URL path prefix, e.g. `/api`                                                 |
-| `static_roots`                 | `[]`                    | Directories to serve as static files                                         |
-| `admin`                        | `admin`                 | Admin username                                                               |
-| `log_level`                    | `info`                  | Logging level (`trace`, `debug`, `info`, `warn`, `error`, `off`)             |
-| `log_body_limit`               | `10240`                 | Max bytes of request/response body to log                                    |
-| `request_body_limit`           | `10485760`              | Max request body size (bytes)                                                |
-| `data_dir`                     | `agdb_server_data`      | Directory for databases and server state                                     |
-| `pepper_path`                  | (empty)                 | Path to 16-byte pepper file for password hashing                             |
-| `tls_certificate`              | (empty)                 | Path to TLS certificate (enables HTTPS)                                      |
-| `tls_key`                      | (empty)                 | Path to TLS private key                                                      |
-| `tls_root`                     | (empty)                 | Path to TLS root CA (for cluster mutual TLS)                                 |
-| `cluster_token`                | `cluster`               | Shared secret for cluster inter-node auth                                    |
-| `cluster`                      | `[]`                    | List of cluster node URLs, e.g. `["http://node1:3000", "http://node2:3000"]` |
-| `cluster_heartbeat_timeout_ms` | `1000`                  | Raft heartbeat interval                                                      |
-| `cluster_term_timeout_ms`      | `3000`                  | Raft term/election timeout                                                   |
-| `cluster_election_factor_ms`   | `1000`                  | Per-node election delay multiplier (node_id × factor)                        |
-| `cluster_max_log_entries`      | `1000`                  | Max Raft log entries before pruning                                          |
-| `cluster_max_chunk_size`       | `65536`                 | Max bytes per resync chunk                                                   |
-| `cluster_max_append_size`      | `4194304`               | Max bytes of log entries per catch-up append (≤ request_body_limit)          |
-| `token_expiry_seconds`         | `3600`                  | Auth token TTL (range: 60–86400)                                             |
-| `sync_mode`                    | `none`                  | Disk sync strategy: `none` (OS-managed) or `commit` (fsync on every commit)  |
+| Key                            | Default                 | Description                                                                                                        |
+| ------------------------------ | ----------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `bind`                         | `:::3000`               | Socket bind address                                                                                                |
+| `address`                      | `http://localhost:3000` | Public address for cluster node discovery                                                                          |
+| `basepath`                     | (empty)                 | URL path prefix, e.g. `/api`                                                                                       |
+| `static_roots`                 | `[]`                    | Directories to serve as static files                                                                               |
+| `admin`                        | `admin`                 | Admin username                                                                                                     |
+| `log_level`                    | `info`                  | Logging level (`trace`, `debug`, `info`, `warn`, `error`, `off`)                                                   |
+| `log_body_limit`               | `10240`                 | Max bytes of request/response body to log                                                                          |
+| `request_body_limit`           | `10485760`              | Max request body size (bytes)                                                                                      |
+| `data_dir`                     | `agdb_server_data`      | Directory for databases and server state                                                                           |
+| `pepper_path`                  | (empty)                 | Path to 16-byte pepper file for password hashing                                                                   |
+| `tls_certificate`              | (empty)                 | Path to TLS certificate (enables HTTPS)                                                                            |
+| `tls_key`                      | (empty)                 | Path to TLS private key                                                                                            |
+| `tls_root`                     | (empty)                 | Path to TLS root CA (for cluster mutual TLS)                                                                       |
+| `cluster_token`                | `cluster`               | Shared secret for cluster inter-node auth                                                                          |
+| `cluster`                      | `[]`                    | List of cluster node URLs, e.g. `["http://node1:3000", "http://node2:3000"]`                                       |
+| `cluster_heartbeat_timeout_ms` | `1000`                  | Raft heartbeat interval                                                                                            |
+| `cluster_term_timeout_ms`      | `3000`                  | Raft term/election timeout                                                                                         |
+| `cluster_election_factor_ms`   | `1000`                  | Per-node election delay multiplier (node_id × factor)                                                              |
+| `cluster_max_log_entries`      | `1000`                  | Max Raft log entries before pruning                                                                                |
+| `cluster_max_chunk_size`       | `65536`                 | Max bytes per resync chunk                                                                                         |
+| `cluster_max_append_size`      | `4194304`               | Max bytes of log entries per catch-up append (≤ request_body_limit)                                                |
+| `token_expiry_seconds`         | `3600`                  | Auth token TTL (range: 60–86400)                                                                                   |
+| `sync_mode`                    | `none`                  | Disk sync strategy: `none` (OS-managed), `commit` (fsync on every commit) or `strict` (also fsync the cleared WAL) |
+| `overlay_limit`                | `67108864`              | Bytes of a transaction held in memory before they are written ahead of its commit                                  |
 
 ## Cluster / Raft
 

@@ -75,6 +75,8 @@ use agdb::SelectAliases;
 use agdb::SelectAliasesIds;
 use agdb::SelectAliasesQuery;
 use agdb::SelectAllAliasesQuery;
+use agdb::SelectAllEdgeCountQuery;
+use agdb::SelectDirectedEdgeCount;
 use agdb::SelectEdgeCount;
 use agdb::SelectEdgeCountIds;
 use agdb::SelectEdgeCountQuery;
@@ -179,6 +181,7 @@ impl Api {
             SearchQueryAlgorithm::type_def(),
             SelectAliasesQuery::type_def(),
             SelectAllAliasesQuery::type_def(),
+            SelectAllEdgeCountQuery::type_def(),
             SelectEdgeCountQuery::type_def(),
             SelectIndexesQuery::type_def(),
             SelectKeyCountQuery::type_def(),
@@ -229,6 +232,7 @@ impl Api {
             Select::type_def(),
             SelectAliases::type_def(),
             SelectAliasesIds::type_def(),
+            SelectDirectedEdgeCount::type_def(),
             SelectEdgeCount::type_def(),
             SelectEdgeCountIds::type_def(),
             SelectIds::type_def(),
@@ -294,6 +298,7 @@ impl Api {
         defs.extend(Self::query_builder_types());
         defs.extend(Self::api_types());
         defs.extend(Self::misc_types());
+<<<<<<< HEAD
         #[cfg(feature = "test_server")]
         {
             defs.extend(Self::test_infra());
@@ -359,6 +364,8 @@ impl Api {
         defs.extend(crate::tests::routes::user_logout_test::test_defs());
         defs.extend(crate::tests::routes::user_logout_all_test::test_defs());
         defs.extend(crate::tests::routes::user_status::test_defs());
+=======
+>>>>>>> origin/main
 
         defs
     }

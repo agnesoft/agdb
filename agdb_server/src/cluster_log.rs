@@ -29,7 +29,7 @@ pub(crate) async fn new(config: &Config) -> ServerResult<ClusterLog> {
     std::fs::create_dir_all(&config.data_dir)?;
     let file = format!("{}/{}", config.data_dir, CLUSTER_LOG_FILE);
     let log = ClusterLog::new(&file).await?;
-    log.0.write().await.set_sync_mode(config.sync_mode);
+    log.0.write().await.set_storage_config(config.storage);
 
     Ok(log)
 }
@@ -37,6 +37,7 @@ pub(crate) async fn new(config: &Config) -> ServerResult<ClusterLog> {
 impl ClusterLog {
     async fn new(name: &str) -> ServerResult<Self> {
         let mut db = Db::new(name)?;
+        crate::utilities::log_migration(name, &db);
 
         db.transaction_mut(|t| -> ServerResult<()> {
             let indexes: Vec<String> = t.exec(QueryBuilder::select().indexes().query())?.elements
@@ -462,7 +463,6 @@ mod tests {
     use super::*;
     use crate::action::user_add::UserAdd;
     use crate::password;
-    use agdb::SyncMode;
     use agdb_api::LogLevelFilter;
     use agdb_api::config_impl::ConfigImpl;
     use agdb_api::config_impl::DEFAULT_CLUSTER_MAX_APPEND_SIZE;
@@ -530,7 +530,7 @@ mod tests {
                 .expect("system time should be after unix epoch")
                 .as_secs(),
             token_expiry_seconds: DEFAULT_TOKEN_EXPIRY_SECONDS,
-            sync_mode: SyncMode::None,
+            storage: agdb::StorageConfig::default(),
             pepper: None,
         });
 

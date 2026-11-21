@@ -2568,6 +2568,12 @@
     }
   ],
   [
+    "QueryBuilder::select().edge_count().query()",
+    {
+      "SelectAllEdgeCount": {}
+    }
+  ],
+  [
     "QueryBuilder::select().ids(\"a\").query()",
     {
       "SelectValues": {

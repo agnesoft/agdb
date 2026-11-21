@@ -103,8 +103,7 @@ pub(crate) async fn new(
     let db_name = format!("{}/{}", config.data_dir, SERVER_DB_FILE);
     let db = ServerDb::new(&db_name, config.token_expiry_seconds)?;
 
-    let sync_mode = config.sync_mode;
-    db.db.write().await.set_sync_mode(sync_mode);
+    db.db.write().await.set_storage_config(config.storage);
 
     let admin = if let Some(admin_id) = db.find_user_id(&config.admin).await? {
         admin_id
@@ -157,6 +156,7 @@ pub(crate) async fn new(
 impl ServerDb {
     fn new(name: &str, token_expiry_seconds: u64) -> ServerResult<Self> {
         let mut db = Db::new(name)?;
+        crate::utilities::log_migration(name, &db);
 
         db.transaction_mut(|t| -> ServerResult<()> {
             let indexes: Vec<String> = t.exec(QueryBuilder::select().indexes().query())?.elements

@@ -9,7 +9,7 @@ import {
     CountComparison,
     DbKeyOrder,
     QueryBuilder,
-} from "../src/index";
+} from "../src/index.ts";
 
 describe("QueryBuilder misc tests", () => {
     it(`convertToNativeValue`, () => {
@@ -19,6 +19,10 @@ describe("QueryBuilder misc tests", () => {
         expect(truthy).toStrictEqual(true);
         const falsey = convertToNativeValue({ String: "false" });
         expect(falsey).toStrictEqual(false);
+        const i64 = convertToNativeValue({ I64: -1 });
+        expect(i64).toStrictEqual(-1);
+        const string = convertToNativeValue({ String: "s" });
+        expect(string).toStrictEqual("s");
         const u64 = convertToNativeValue({ U64: 1 });
         expect(typeof u64).toStrictEqual("number");
         const f64 = convertToNativeValue({ F64: 1.1 });
@@ -38,6 +42,12 @@ describe("QueryBuilder misc tests", () => {
         expect(truthy).toStrictEqual({ String: "true" });
         const falsey = convertToDbValue(false);
         expect(falsey).toStrictEqual({ String: "false" });
+        const string = convertToDbValue("s");
+        expect(string).toStrictEqual({ String: "s" });
+        const i64 = convertToDbValue(1);
+        expect(i64).toStrictEqual({ I64: 1 });
+        const vec_i64 = convertToDbValue([1, 2]);
+        expect(vec_i64).toStrictEqual({ VecI64: [1, 2] });
         const f64 = convertToDbValue(1.1);
         expect(f64).toStrictEqual({ F64: 1.1 });
         const vec_f64 = convertToDbValue([1.1, 2.2]);
@@ -49,6 +59,11 @@ describe("QueryBuilder misc tests", () => {
     });
 
     it(`convertToDbKeyValue`, () => {
+        const pair = convertToDbKeyValue(["key", 1]);
+        expect(pair).toStrictEqual({
+            key: { String: "key" },
+            value: { I64: 1 },
+        });
         const kv = convertToDbKeyValue({
             key: { String: "key" },
             value: { String: "value" },
@@ -66,6 +81,8 @@ describe("QueryBuilder misc tests", () => {
             elements: [
                 {
                     id: 1,
+                    from: 0,
+                    to: 0,
                     values: [
                         {
                             key: { String: "name" },
@@ -86,6 +103,8 @@ describe("QueryBuilder misc tests", () => {
             elements: [
                 {
                     id: 1,
+                    from: 0,
+                    to: 0,
                     values: [
                         {
                             key: { String: "name" },
@@ -95,6 +114,8 @@ describe("QueryBuilder misc tests", () => {
                 },
                 {
                     id: 2,
+                    from: 0,
+                    to: 0,
                     values: [
                         {
                             key: { String: "name" },
@@ -226,14 +247,18 @@ describe("QueryBuilder misc tests", () => {
         });
     });
 
-    it(`db_id invalid type`, () => {
+    it(`db_id of another type is the default id`, () => {
         class T {
             db_id: string[] = ["hello"];
         }
 
-        expect(() => QueryBuilder.insert().element(new T()).query()).toThrow(
-            "Invalid db_id type",
-        );
+        const query = QueryBuilder.insert().element(new T()).query();
+        expect(query).toEqual({
+            InsertValues: {
+                ids: { Ids: [{ Id: 0 }] },
+                values: { Multi: [[]] },
+            },
+        });
     });
 
     it(`QueryIds passthrough`, () => {
@@ -321,7 +346,10 @@ describe("QueryBuilder misc tests", () => {
             .where()
             .neighbor()
             .query();
-        expect(distance["Search"].conditions[0].data).toEqual({
+        expect(
+            (distance as { Search: Components.Schemas.SearchQuery }).Search
+                .conditions[0].data,
+        ).toEqual({
             Distance: { Equal: 2 },
         });
 
@@ -330,7 +358,10 @@ describe("QueryBuilder misc tests", () => {
             .where()
             .edge_count(2)
             .query();
-        expect(edge_count["Search"].conditions[0].data).toEqual({
+        expect(
+            (edge_count as { Search: Components.Schemas.SearchQuery }).Search
+                .conditions[0].data,
+        ).toEqual({
             EdgeCount: { Equal: 2 },
         });
 
@@ -339,7 +370,10 @@ describe("QueryBuilder misc tests", () => {
             .where()
             .edge_count_from(2)
             .query();
-        expect(edge_count_from["Search"].conditions[0].data).toEqual({
+        expect(
+            (edge_count_from as { Search: Components.Schemas.SearchQuery })
+                .Search.conditions[0].data,
+        ).toEqual({
             EdgeCountFrom: { Equal: 2 },
         });
 
@@ -348,7 +382,10 @@ describe("QueryBuilder misc tests", () => {
             .where()
             .edge_count_to(2)
             .query();
-        expect(edge_count_to["Search"].conditions[0].data).toEqual({
+        expect(
+            (edge_count_to as { Search: Components.Schemas.SearchQuery }).Search
+                .conditions[0].data,
+        ).toEqual({
             EdgeCountTo: { Equal: 2 },
         });
     });

@@ -380,6 +380,8 @@ pub(crate) async fn new(
         config.cluster.iter().map(|url| url.to_string()).collect();
     sorted_cluster.sort();
     sorted_cluster.push(config.cluster_max_log_entries.to_string());
+    // Nodes on different database formats must not replicate to each other.
+    sorted_cluster.push(agdb::DB_VERSION.to_string());
     let hash = sorted_cluster.stable_hash();
     let resync = Arc::new(AtomicBool::new(false));
     let snapshot_in_flight = Arc::new(AtomicUsize::new(0));
@@ -731,10 +733,12 @@ impl ClusterStorage {
 
         let db_path = format!("{}/{}", config.data_dir, SERVER_DB_FILE);
         let new_db = agdb::Db::new(&db_path)?;
+        crate::utilities::log_migration(&db_path, &new_db);
         *self.db.db.write().await = new_db;
 
         let log_path = format!("{}/{}", config.data_dir, CLUSTER_LOG_FILE);
         let new_log_db = agdb::Db::new(&log_path)?;
+        crate::utilities::log_migration(&log_path, &new_log_db);
         *self.cluster_log.0.write().await = new_log_db;
 
         let (index, term, commit) = self.cluster_log.cluster_log().await?;

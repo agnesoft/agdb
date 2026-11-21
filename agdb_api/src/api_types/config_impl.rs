@@ -1,5 +1,5 @@
 use crate::LogLevelFilter;
-use agdb::SyncMode;
+use agdb::StorageConfig;
 
 pub const SALT_LEN: usize = 16;
 pub const DEFAULT_LOG_BODY_LIMIT: u64 = 10 * 1024;
@@ -38,7 +38,7 @@ pub struct ConfigImpl {
     pub cluster_node_id: usize,
     pub start_time: u64,
     pub token_expiry_seconds: u64,
-    pub sync_mode: SyncMode,
+    pub storage: StorageConfig,
     pub pepper: Option<[u8; SALT_LEN]>,
 }
 
@@ -101,6 +101,10 @@ pub fn config_to_str(config: &ConfigImpl) -> String {
         "token_expiry_seconds: {}\n",
         config.token_expiry_seconds
     ));
-    buffer.push_str(&format!("sync_mode: {}\n", config.sync_mode));
+    buffer.push_str(&format!("sync_mode: {}\n", config.storage.sync_mode));
+    buffer.push_str(&format!(
+        "overlay_limit: {}\n",
+        config.storage.overlay_limit
+    ));
     buffer
 }

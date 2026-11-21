@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { AgdbApi } from "../src/index.ts";
 
 class MyClass {
+    [key: string]: unknown;
     db_id: number | undefined | string;
     name: string = "";
     age: number = 0;

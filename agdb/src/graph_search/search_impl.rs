@@ -3,8 +3,7 @@ use super::SearchHandler;
 use crate::DbError;
 use crate::StorageData;
 use crate::collections::bit_set::BitSet;
-use crate::graph::GraphData;
-use crate::graph::GraphImpl;
+use crate::graph::DbGraph;
 use crate::graph::GraphIndex;
 use crate::storage::Storage;
 use std::mem::swap;
@@ -17,36 +16,34 @@ pub struct SearchIndex {
 
 pub trait SearchIterator<D: StorageData> {
     fn new(index: GraphIndex) -> Self;
-    fn expand<Data: GraphData<D>>(
+    fn expand(
         &mut self,
         current_index: SearchIndex,
-        graph: &GraphImpl<D, Data>,
+        graph: &DbGraph<D>,
         storage: &Storage<D>,
         follow: bool,
     );
     fn next(&mut self) -> Option<SearchIndex>;
 }
 
-pub struct SearchImpl<'a, D, Data, SearchIt>
+pub struct SearchImpl<'a, D, SearchIt>
 where
-    Data: GraphData<D>,
     D: StorageData,
     SearchIt: SearchIterator<D>,
 {
     algorithm: SearchIt,
-    graph: &'a GraphImpl<D, Data>,
+    graph: &'a DbGraph<D>,
     storage: &'a Storage<D>,
     result: Vec<GraphIndex>,
     visited: BitSet,
 }
 
-impl<'a, D, Data, SearchIt> SearchImpl<'a, D, Data, SearchIt>
+impl<'a, D, SearchIt> SearchImpl<'a, D, SearchIt>
 where
-    Data: GraphData<D>,
     D: StorageData,
     SearchIt: SearchIterator<D>,
 {
-    pub fn new(graph: &'a GraphImpl<D, Data>, storage: &'a Storage<D>, index: GraphIndex) -> Self {
+    pub fn new(graph: &'a DbGraph<D>, storage: &'a Storage<D>, index: GraphIndex) -> Self {
         Self {
             algorithm: SearchIt::new(index),
             graph,

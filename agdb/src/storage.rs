@@ -3,6 +3,8 @@ pub mod file_storage;
 pub mod file_storage_memory_mapped;
 pub mod memory_storage;
 
+mod overlay;
+mod ranges;
 mod storage_records;
 mod write_ahead_log;
 
@@ -16,8 +18,16 @@ use crate::utilities::serialize::Serialize;
 use crate::utilities::serialize::SerializeStatic;
 use std::borrow::Cow;
 
+/// The version a storage without the version record is upgraded to.
 const CURRENT_VERSION: u64 = 1;
+/// The highest version that can be opened. The database sets it once
+/// its data have the layout of that version so that older versions,
+/// that open only the versions up to theirs, refuse it before changing
+/// anything.
+const MAX_VERSION: u64 = 2;
 const CHUNK_SIZE: u64 = 1024 * 1024;
+
+pub const DEFAULT_OVERLAY_LIMIT: u64 = 64 * 1024 * 1024;
 
 /// Controls whether the underlying storage layer performs synchronization
 /// on every storage commit. For example issuing `fsync`/`fdatasync`
@@ -25,15 +35,20 @@ const CHUNK_SIZE: u64 = 1024 * 1024;
 ///
 /// - `None` — no explicit sync; relies on the OS to flush dirty pages.
 ///   Suitable for local filesystems or when running in a replicated cluster.
-/// - `Commit` — calls `sync_data()` on the main file before clearing the WAL
-///   at each transaction commit. Required for correctness on network
-///   filesystems with client-side write caching (e.g. WekaFS with `writecache`).
+/// - `Commit` — calls `sync_data()` on the WAL before writing the main file
+///   and on the main file before clearing the WAL at each transaction
+///   commit. The clearing is not synced, so a crash may roll back the last
+///   commit. Required for correctness on network filesystems with
+///   client-side write caching (e.g. WekaFS with `writecache`).
+/// - `Strict` — like `Commit` and also syncs the cleared WAL so that a
+///   commit survives a crash.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 #[cfg_attr(feature = "api", derive(agdb::TypeDef))]
 pub enum SyncMode {
     #[default]
     None,
     Commit,
+    Strict,
 }
 
 impl std::fmt::Display for SyncMode {
@@ -41,6 +56,23 @@ impl std::fmt::Display for SyncMode {
         match self {
             SyncMode::None => f.write_str("none"),
             SyncMode::Commit => f.write_str("commit"),
+            SyncMode::Strict => f.write_str("strict"),
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "api", derive(agdb::TypeDef))]
+pub struct StorageConfig {
+    pub sync_mode: SyncMode,
+    pub overlay_limit: u64,
+}
+
+impl Default for StorageConfig {
+    fn default() -> Self {
+        Self {
+            sync_mode: SyncMode::None,
+            overlay_limit: DEFAULT_OVERLAY_LIMIT,
         }
     }
 }
@@ -135,6 +167,16 @@ pub trait StorageData: Sized {
     /// a result the new bytes should be initialized to `0_u8`.
     fn resize(&mut self, new_len: u64) -> Result<(), DbError>;
 
+    /// Sets how many bytes of a transaction the storage holds in memory
+    /// before writing them ahead of the commit. The default implementation
+    /// does nothing which is appropriate for in-memory storages.
+    fn set_overlay_limit(&mut self, _limit: u64) {}
+
+    /// Returns the overlay limit. The default is [`DEFAULT_OVERLAY_LIMIT`].
+    fn overlay_limit(&self) -> u64 {
+        DEFAULT_OVERLAY_LIMIT
+    }
+
     /// Sets the sync mode for this storage. The default implementation
     /// does nothing which is appropriate for in-memory storages.
     fn set_sync_mode(&mut self, _mode: SyncMode) {}
@@ -210,8 +252,12 @@ impl<D: StorageData> Storage<D> {
     }
 
     pub fn copy(&self, name: &str) -> Result<Self, DbError> {
+        let mut data = self.data.copy(name)?;
+        data.set_sync_mode(self.data.sync_mode());
+        data.set_overlay_limit(self.data.overlay_limit());
+
         Ok(Self {
-            data: self.data.copy(name)?,
+            data,
             records: self.records.clone(),
             transactions: 0,
             version: self.version,
@@ -367,6 +413,14 @@ impl<D: StorageData> Storage<D> {
         self.begin_transaction()
     }
 
+    pub fn set_overlay_limit(&mut self, limit: u64) {
+        self.data.set_overlay_limit(limit);
+    }
+
+    pub fn overlay_limit(&self) -> u64 {
+        self.data.overlay_limit()
+    }
+
     pub fn set_sync_mode(&mut self, mode: SyncMode) {
         self.data.set_sync_mode(mode);
     }
@@ -418,7 +472,17 @@ impl<D: StorageData> Storage<D> {
         Ok(self.record(index.0)?.size)
     }
 
-    #[allow(dead_code)]
+    pub fn set_version(&mut self, version: u64) -> Result<(), DbError> {
+        let id = self.transaction();
+        self.data.write(
+            Self::current_version_record().value_start(),
+            &version.serialize(),
+        )?;
+        self.commit(id)?;
+        self.version = version;
+        Ok(())
+    }
+
     pub fn version(&self) -> u64 {
         self.version
     }
@@ -737,17 +801,17 @@ impl<D: StorageData> Storage<D> {
     }
 
     fn validate_or_update_version(&mut self) -> Result<(), DbError> {
-        if self.version > CURRENT_VERSION {
+        if self.version > MAX_VERSION {
             return Err(DbError::storage(
                 DbErrorType::NotAllowed,
                 format!(
-                    "Storage version '{}' is higher than the current version '{CURRENT_VERSION}'",
+                    "Storage version '{}' is higher than the current version '{MAX_VERSION}'",
                     self.version
                 ),
             ));
         }
 
-        if self.version == CURRENT_VERSION {
+        if self.version >= CURRENT_VERSION {
             return Ok(());
         }
 
@@ -947,6 +1011,26 @@ pub(crate) mod tests {
             fn fmt_should_show_lowercase_name() {
                 assert_eq!(SyncMode::None.to_string(), "none");
                 assert_eq!(SyncMode::Commit.to_string(), "commit");
+                assert_eq!(SyncMode::Strict.to_string(), "strict");
+            }
+        }
+    }
+
+    mod storage_config {
+        use super::*;
+
+        mod default {
+            use super::*;
+
+            #[test]
+            fn default_should_not_sync_and_use_default_overlay_limit() {
+                assert_eq!(
+                    StorageConfig::default(),
+                    StorageConfig {
+                        sync_mode: SyncMode::None,
+                        overlay_limit: DEFAULT_OVERLAY_LIMIT,
+                    }
+                );
             }
         }
     }
@@ -1217,6 +1301,30 @@ pub(crate) mod tests {
             }
         }
 
+        pub(crate) mod set_overlay_limit {
+            use super::*;
+
+            pub(crate) fn set_overlay_limit_should_set_limit_if_supported<S: StorageData>(
+                mut storage: S,
+                supported: bool,
+            ) {
+                storage.set_overlay_limit(5);
+
+                let expected = if supported { 5 } else { DEFAULT_OVERLAY_LIMIT };
+                assert_eq!(storage.overlay_limit(), expected);
+            }
+        }
+
+        pub(crate) mod overlay_limit {
+            use super::*;
+
+            pub(crate) fn overlay_limit_should_default_to_default_overlay_limit<S: StorageData>(
+                storage: S,
+            ) {
+                assert_eq!(storage.overlay_limit(), DEFAULT_OVERLAY_LIMIT);
+            }
+        }
+
         pub(crate) mod set_sync_mode {
             use super::*;
 
@@ -1301,6 +1409,86 @@ pub(crate) mod tests {
                 };
                 assert_eq!(storage.len(), len);
                 assert_eq!(storage.read(0, len).unwrap().to_vec(), expected);
+            }
+
+            fn bytes<S: StorageData>(storage: &S) -> Vec<u8> {
+                if storage.is_empty() {
+                    return Vec::new();
+                }
+
+                storage.read(0, storage.len()).unwrap().to_vec()
+            }
+
+            pub(crate) fn recover_from_wal_should_restore_flushed_bytes_after_random_changes<
+                S: StorageData,
+            >(
+                mut open: impl FnMut() -> S,
+                kill: impl Fn(),
+                fault: impl Fn(u64),
+            ) {
+                let mut seed = 0x9E37_79B9_7F4A_7C15_u64;
+                let mut random = move |n: u64| {
+                    seed ^= seed << 13;
+                    seed ^= seed >> 7;
+                    seed ^= seed << 17;
+                    seed % n
+                };
+                let mut storage = open();
+                let mut flushed = Vec::new();
+                let mut expected = Vec::new();
+
+                for round in 0..500 {
+                    storage
+                        .set_overlay_limit([0, 64, 512, DEFAULT_OVERLAY_LIMIT][random(4) as usize]);
+                    storage.set_sync_mode(
+                        [SyncMode::None, SyncMode::Commit, SyncMode::Strict][random(3) as usize],
+                    );
+
+                    for _ in 0..1 + random(8) {
+                        if random(4) == 0 {
+                            let len = random(64);
+                            storage.resize(len).unwrap();
+                            expected.resize(len as usize, 0);
+                        } else {
+                            let pos = random(expected.len() as u64 + 8) as usize;
+                            let value = vec![1 + random(255) as u8; 1 + random(16) as usize];
+                            storage.write(pos as u64, &value).unwrap();
+                            expected.resize(expected.len().max(pos + value.len()), 0);
+                            expected[pos..pos + value.len()].copy_from_slice(&value);
+                        }
+                    }
+
+                    assert_eq!(bytes(&storage), expected, "round: {round}");
+
+                    match random(4) {
+                        0 => {
+                            storage.flush().unwrap();
+                            flushed = expected.clone();
+                        }
+                        1 => {
+                            storage.recover_from_wal().unwrap();
+                            expected = flushed.clone();
+                        }
+                        2 => {
+                            kill();
+                            storage = open();
+                            expected = flushed.clone();
+                        }
+                        _ => {
+                            fault(random(u64::MAX));
+
+                            if storage.flush().is_ok() {
+                                flushed = expected.clone();
+                            }
+
+                            kill();
+                            storage = open();
+                            expected = flushed.clone();
+                        }
+                    }
+
+                    assert_eq!(bytes(&storage), expected, "round: {round}");
+                }
             }
         }
     }
@@ -1456,15 +1644,35 @@ pub(crate) mod tests {
                 let platform = platform();
                 platform
                     .fs()
-                    .write(NAME, version_record(CURRENT_VERSION + 1))
+                    .write(NAME, version_record(MAX_VERSION + 1))
                     .unwrap();
 
                 assert_eq!(
                     open(&platform).unwrap_err(),
                     DbError::storage(
                         DbErrorType::NotAllowed,
-                        "Storage version '2' is higher than the current version '1'"
+                        "Storage version '3' is higher than the current version '2'"
                     )
+                );
+            }
+
+            #[test]
+            fn new_with_max_version_should_keep_it() {
+                let platform = platform();
+                platform
+                    .fs()
+                    .write(
+                        NAME,
+                        [version_record(MAX_VERSION), record(1, &[1])].concat(),
+                    )
+                    .unwrap();
+
+                let storage = new_storage(&platform);
+
+                assert_eq!(storage.version(), MAX_VERSION);
+                assert_eq!(
+                    bytes(&storage),
+                    [version_record(MAX_VERSION), record(1, &[1])].concat()
                 );
             }
 
@@ -1633,6 +1841,7 @@ pub(crate) mod tests {
             fn recover_failure_should_fail() {
                 let platform = platform();
                 let mut storage = new_storage(&platform);
+                storage.set_overlay_limit(0);
                 storage.transaction();
                 storage.insert(&1_i64).unwrap();
                 platform
@@ -1674,6 +1883,19 @@ pub(crate) mod tests {
                 assert_eq!(copy.name(), "/copy");
                 assert_eq!(copy.value(index), Ok(1_i64));
                 assert_eq!(copy.insert(&2_i64), storage.insert(&3_i64));
+            }
+
+            #[test]
+            fn copy_should_keep_sync_mode_and_overlay_limit() {
+                let platform = platform();
+                let mut storage = new_storage(&platform);
+                storage.set_sync_mode(SyncMode::Strict);
+                storage.set_overlay_limit(16);
+
+                let copy = storage.copy("/copy").unwrap();
+
+                assert_eq!(copy.sync_mode(), SyncMode::Strict);
+                assert_eq!(copy.overlay_limit(), 16);
             }
 
             #[test]
@@ -2373,6 +2595,21 @@ pub(crate) mod tests {
             }
         }
 
+        mod set_overlay_limit {
+            use super::*;
+
+            #[test]
+            fn set_overlay_limit_should_set_limit_of_data() {
+                let platform = platform();
+                let mut storage = new_storage(&platform);
+
+                storage.set_overlay_limit(5);
+
+                assert_eq!(storage.overlay_limit(), 5);
+                assert_eq!(storage.data.overlay_limit(), 5);
+            }
+        }
+
         mod set_sync_mode {
             use super::*;
 
@@ -2536,6 +2773,33 @@ pub(crate) mod tests {
                 let storage = new_storage(&platform);
 
                 assert_eq!(storage.value_size(1.into()), Err(not_found(1)));
+            }
+        }
+
+        mod set_version {
+            use super::*;
+
+            #[test]
+            fn set_version_should_overwrite_version_record() {
+                let platform = platform();
+                let mut storage = new_storage(&platform);
+                let index = storage.insert(&1_u64).unwrap();
+
+                storage.set_version(MAX_VERSION).unwrap();
+
+                assert_eq!(storage.version(), MAX_VERSION);
+                drop(storage);
+                let storage = new_storage(&platform);
+                assert_eq!(storage.version(), MAX_VERSION);
+                assert_eq!(storage.value(index), Ok(1_u64));
+            }
+
+            #[test]
+            fn set_version_io_failure_should_keep_version_on_recover() {
+                assert_failures_recover(
+                    |storage| vec![storage.insert(&1_u64).unwrap()],
+                    |storage, _| storage.set_version(MAX_VERSION),
+                );
             }
         }
     }

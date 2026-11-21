@@ -109,6 +109,7 @@ pub use {
     query_builder::select::Select,
     query_builder::select_aliases::SelectAliases,
     query_builder::select_aliases::SelectAliasesIds,
+    query_builder::select_edge_count::SelectDirectedEdgeCount,
     query_builder::select_edge_count::SelectEdgeCount,
     query_builder::select_edge_count::SelectEdgeCountIds,
     query_builder::select_ids::SelectIds,
@@ -128,6 +129,7 @@ pub use {
     query_builder::where_filter::WhereFilterLogicOperator,
 };
 
+pub use db::DB_VERSION;
 pub use db::Db;
 pub use db::DbAny;
 pub use db::DbAnyTransaction;
@@ -150,6 +152,7 @@ pub use db::db_id::DbId;
 pub use db::db_key_order::DbKeyOrder;
 pub use db::db_key_order::DbKeyOrders;
 pub use db::db_key_value::DbKeyValue;
+pub use db::db_migration::DbMigration;
 #[doc(hidden)]
 pub use db::db_type::DbFields;
 pub use db::db_type::DbType;
@@ -183,6 +186,7 @@ pub use query::search_query::SearchQuery;
 pub use query::search_query::SearchQueryAlgorithm;
 pub use query::select_aliases_query::SelectAliasesQuery;
 pub use query::select_all_aliases_query::SelectAllAliasesQuery;
+pub use query::select_all_edge_count_query::SelectAllEdgeCountQuery;
 pub use query::select_edge_count_query::SelectEdgeCountQuery;
 pub use query::select_indexes_query::SelectIndexesQuery;
 pub use query::select_key_count_query::SelectKeyCountQuery;
@@ -190,6 +194,8 @@ pub use query::select_keys_query::SelectKeysQuery;
 pub use query::select_node_count::SelectNodeCountQuery;
 pub use query::select_values_query::SelectValuesQuery;
 pub use query_builder::QueryBuilder;
+pub use storage::DEFAULT_OVERLAY_LIMIT;
+pub use storage::StorageConfig;
 pub use storage::StorageData;
 pub use storage::StorageSlice;
 pub use storage::SyncMode;

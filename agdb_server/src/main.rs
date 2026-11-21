@@ -66,7 +66,8 @@ async fn main() -> ServerResult {
         "Data directory: {}",
         std::env::current_dir()?.join(&config.data_dir).display()
     );
-    crate::info!("Server sync_mode: {}", config.sync_mode);
+    crate::info!("Server sync_mode: {}", config.storage.sync_mode);
+    crate::info!("Server overlay_limit: {}", config.storage.overlay_limit);
 
     #[cfg(feature = "tls")]
     if !config.tls_certificate.is_empty() && !config.tls_key.is_empty() {

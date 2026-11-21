@@ -21,7 +21,7 @@ impl Query for SelectAllAliasesQuery {
     fn process<Store: StorageData>(&self, db: &DbImpl<Store>) -> Result<QueryResult, DbError> {
         let mut result = QueryResult::default();
 
-        let mut aliases = db.aliases();
+        let mut aliases = db.aliases()?;
         aliases.sort();
         result.elements.reserve(aliases.len());
         result.result = aliases.len() as u64;

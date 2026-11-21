@@ -5,14 +5,18 @@ pub mod db_id;
 pub mod db_index;
 pub mod db_key_order;
 pub mod db_key_value;
+pub mod db_migration;
 pub mod db_type;
 pub mod db_value;
 
+mod db_aliases;
 mod db_search_handlers;
 mod db_value_index;
 
+use self::db_aliases::DbAliases;
 use self::db_error::DbError;
 use self::db_error::DbErrorType;
+use self::db_migration::DbMigration;
 use self::db_search_handlers::DefaultHandler;
 use self::db_search_handlers::LimitHandler;
 use self::db_search_handlers::LimitOffsetHandler;
@@ -27,7 +31,6 @@ use crate::SearchQueryAlgorithm;
 use crate::StorageData;
 use crate::Transaction;
 use crate::TransactionMut;
-use crate::collections::indexed_map::DbIndexedMap;
 use crate::command::Command;
 use crate::db::db_index::DbIndexes;
 use crate::db::db_key_value::DbKeyValues;
@@ -43,6 +46,7 @@ use crate::query::query_condition::QueryConditionLogic;
 use crate::query::query_condition::QueryConditionModifier;
 use crate::query::query_id::QueryId;
 use crate::storage::Storage;
+use crate::storage::StorageConfig;
 use crate::storage::StorageIndex;
 use crate::storage::SyncMode;
 use crate::storage::any_storage::AnyStorage;
@@ -53,13 +57,15 @@ use crate::utilities::serialize::Serialize;
 use crate::utilities::serialize::SerializeStatic;
 use crate::utilities::serialize::u64_at;
 
-const CURRENT_VERSION: u64 = 1;
+/// Version of the database format. A database of an older version is
+/// migrated when opened and a newer one is refused.
+pub const DB_VERSION: u64 = 2;
 
 #[derive(Default)]
 struct DbStorageIndex {
     version: u64,
     graph: StorageIndex,
-    aliases: (StorageIndex, StorageIndex),
+    aliases: StorageIndex,
     indexes: StorageIndex,
     values: StorageIndex,
 }
@@ -69,8 +75,7 @@ impl Serialize for DbStorageIndex {
         [
             self.version.serialize(),
             self.graph.serialize(),
-            self.aliases.0.serialize(),
-            self.aliases.1.serialize(),
+            self.aliases.serialize(),
             self.indexes.serialize(),
             self.values.serialize(),
         ]
@@ -94,9 +99,9 @@ impl Serialize for DbStorageIndex {
         Ok(Self {
             version: field(0),
             graph: StorageIndex(field(1)),
-            aliases: (StorageIndex(field(2)), StorageIndex(field(3))),
-            indexes: StorageIndex(field(4)),
-            values: StorageIndex(field(5)),
+            aliases: StorageIndex(field(2)),
+            indexes: StorageIndex(field(3)),
+            values: StorageIndex(field(4)),
         })
     }
 
@@ -107,7 +112,7 @@ impl Serialize for DbStorageIndex {
 
 impl SerializeStatic for DbStorageIndex {
     fn serialized_size_static() -> u64 {
-        i64::serialized_size_static() * 6
+        i64::serialized_size_static() * 5
     }
 }
 
@@ -213,11 +218,12 @@ impl SerializeStatic for DbStorageIndex {
 pub struct DbImpl<Store: StorageData> {
     storage: Storage<Store>,
     graph: DbGraph<Store>,
-    aliases: DbIndexedMap<String, DbId, Store>,
+    aliases: DbAliases<Store>,
     indexes: DbIndexes<Store>,
     values: DbKeyValues<Store>,
     undo_stack: Vec<Command>,
     poisoned: bool,
+    migration: Option<DbMigration>,
 }
 
 /// The default implementation of the database using memory mapped file (full ACID) with
@@ -326,6 +332,7 @@ impl<Store: StorageData> DbImpl<Store> {
             values,
             undo_stack: vec![],
             poisoned: false,
+            migration: None,
         })
     }
 
@@ -376,13 +383,21 @@ impl<Store: StorageData> DbImpl<Store> {
         self.storage.name()
     }
 
+    /// Returns the conversion of the database to the current version
+    /// done when it was opened, `None` if it already was of the current
+    /// version. The conversion is permanent so the older versions of
+    /// `agdb` can no longer open the database.
+    pub fn migration(&self) -> Option<&DbMigration> {
+        self.migration.as_ref()
+    }
+
     /// Reclaims no longer used segments of the database file by packing all
     /// used storage segments together. This operation is done automatically
     /// when the database goes out of scope. In long running programs it might
     /// be desired to perform the storage file optimization without fully shutting
     /// down.
     pub fn optimize_storage(&mut self) -> Result<(), DbError> {
-        self.storage.optimize_storage()
+        self.storage.optimize_storage().map_err(|e| self.recover(e))
     }
 
     /// Changes the name of the database changing also the names of the files
@@ -439,18 +454,18 @@ impl<Store: StorageData> DbImpl<Store> {
         };
 
         match commit_result {
-            Ok(()) => self.storage.commit(storage_transaction)?,
-            Err(rollback_err) => {
-                if let Err(recover_err) = self
-                    .storage
-                    .recover()
-                    .and_then(|_| self.reload_from_storage())
-                {
-                    self.poison();
-                    return Err(E::from((self.poisoned())(
-                        recover_err.caused_by(rollback_err),
-                    )));
+            Ok(()) => {
+                if let Err(e) = self.storage.commit(storage_transaction) {
+                    return Err(E::from(self.recover(e)));
                 }
+            }
+            Err(rollback_err) => {
+                let e = self.recover(rollback_err);
+
+                if self.poisoned {
+                    return Err(E::from(e));
+                }
+
                 return result;
             }
         }
@@ -463,6 +478,21 @@ impl<Store: StorageData> DbImpl<Store> {
     /// independent of `sync_mode` and always issues the sync syscall.
     pub fn sync(&mut self) -> Result<(), DbError> {
         self.storage.sync()
+    }
+
+    /// Returns the [`StorageConfig`] of this database.
+    pub fn storage_config(&self) -> StorageConfig {
+        StorageConfig {
+            sync_mode: self.storage.sync_mode(),
+            overlay_limit: self.storage.overlay_limit(),
+        }
+    }
+
+    /// Sets the [`StorageConfig`] of this database, see [`SyncMode`] and
+    /// [`StorageData::set_overlay_limit()`].
+    pub fn set_storage_config(&mut self, config: StorageConfig) {
+        self.storage.set_sync_mode(config.sync_mode);
+        self.storage.set_overlay_limit(config.overlay_limit);
     }
 
     /// Returns the current [`SyncMode`] for this database.
@@ -519,16 +549,27 @@ impl<Store: StorageData> DbImpl<Store> {
     ) -> Result<
         (
             DbGraph<Store>,
-            DbIndexedMap<String, DbId, Store>,
+            DbAliases<Store>,
             DbIndexes<Store>,
             DbKeyValues<Store>,
         ),
         DbError,
     > {
         let index = storage.value::<DbStorageIndex>(StorageIndex(1))?;
+
+        if index.version != DB_VERSION {
+            return Err(DbError::db(
+                DbErrorType::NotAllowed,
+                format!(
+                    "Database version '{}' is not the current version '{DB_VERSION}'",
+                    index.version
+                ),
+            ));
+        }
+
         Ok((
             DbGraph::from_storage(storage, index.graph)?,
-            DbIndexedMap::from_storage(storage, index.aliases)?,
+            DbAliases::from_storage(storage, index.aliases)?,
             DbIndexes::from_storage(storage, index.indexes)?,
             DbKeyValues::from_storage(storage, index.values)?,
         ))
@@ -542,6 +583,20 @@ impl<Store: StorageData> DbImpl<Store> {
         self.values = values;
         self.undo_stack.clear();
         Ok(())
+    }
+
+    fn recover(&mut self, cause: DbError) -> DbError {
+        match self
+            .storage
+            .recover()
+            .and_then(|_| self.reload_from_storage())
+        {
+            Ok(()) => cause,
+            Err(e) => {
+                self.poison();
+                (self.poisoned())(e.caused_by(cause))
+            }
+        }
     }
 
     fn poison(&mut self) {
@@ -562,7 +617,8 @@ impl<Store: StorageData> DbImpl<Store> {
         for command in undo_stack.iter().rev() {
             match command {
                 Command::InsertAlias { id, alias } => {
-                    self.aliases.insert(&mut self.storage, alias, id)?
+                    self.aliases
+                        .insert(&mut self.storage, &mut self.graph, *id, alias)?
                 }
                 Command::InsertEdge { from, to } => self
                     .graph
@@ -587,8 +643,9 @@ impl<Store: StorageData> DbImpl<Store> {
                         .insert_value(&mut self.storage, id.as_index(), key_value)?
                 }
                 Command::InsertNode => self.graph.insert_node(&mut self.storage).map(|_| ())?,
-                Command::RemoveAlias { alias } => {
-                    self.aliases.remove_key(&mut self.storage, alias)?
+                Command::RemoveAlias { id } => {
+                    self.aliases
+                        .remove(&mut self.storage, &mut self.graph, *id)?;
                 }
                 Command::RemoveEdge { index } => {
                     self.graph.remove_edge(&mut self.storage, *index)?
@@ -628,29 +685,33 @@ impl<Store: StorageData> DbImpl<Store> {
     }
 
     pub(crate) fn alias(&self, db_id: DbId) -> Result<String, DbError> {
-        self.aliases.key(&self.storage, &db_id)?.ok_or(DbError::db(
-            DbErrorType::NotFound,
-            format!("Id '{}' not found", db_id.0),
-        ))
+        self.aliases
+            .alias(&self.storage, &self.graph, db_id)?
+            .ok_or(DbError::db(
+                DbErrorType::NotFound,
+                format!("Id '{}' not found", db_id.0),
+            ))
     }
 
-    pub(crate) fn aliases(&self) -> Vec<(String, DbId)> {
-        self.aliases.iter(&self.storage).collect()
+    pub(crate) fn aliases(&self) -> Result<Vec<(String, DbId)>, DbError> {
+        self.aliases.aliases(&self.storage, &self.graph)
     }
 
     pub(crate) fn db_id(&self, query_id: &QueryId) -> Result<DbId, DbError> {
         match query_id {
             QueryId::Id(id) => Ok(DbId(self.graph_index(id.0)?.0)),
-            QueryId::Alias(alias) => {
-                Ok(self
-                    .aliases
-                    .value(&self.storage, alias)?
-                    .ok_or(DbError::db(
-                        DbErrorType::NotFound,
-                        format!("Alias '{alias}' not found"),
-                    ))?)
-            }
+            QueryId::Alias(alias) => Ok(self
+                .aliases
+                .id(&self.storage, &self.graph, alias)?
+                .ok_or(DbError::db(
+                    DbErrorType::NotFound,
+                    format!("Alias '{alias}' not found"),
+                ))?),
         }
+    }
+
+    pub(crate) fn all_edge_count(&self) -> Result<u64, DbError> {
+        self.graph.edge_count(&self.storage)
     }
 
     pub(crate) fn edge_count(&self, db_id: DbId, from: bool, to: bool) -> Result<u64, DbError> {
@@ -704,19 +765,48 @@ impl<Store: StorageData> DbImpl<Store> {
             .collect()
     }
 
+    /// Sets the `alias` of the node `db_id` replacing its current alias
+    /// and taking the alias from the node that had it.
     pub(crate) fn insert_alias(&mut self, db_id: DbId, alias: &String) -> Result<(), DbError> {
-        if let Some(old_alias) = self.aliases.key(&self.storage, &db_id)? {
-            self.undo_stack.push(Command::InsertAlias {
-                id: db_id,
-                alias: old_alias.clone(),
-            });
-            self.aliases.remove_key(&mut self.storage, &old_alias)?;
+        if alias.is_empty() {
+            return Err(DbError::query(
+                DbErrorType::NotAllowed,
+                "Empty alias is not allowed",
+            ));
         }
 
-        self.undo_stack.push(Command::RemoveAlias {
-            alias: alias.clone(),
-        });
-        self.aliases.insert(&mut self.storage, alias, &db_id)
+        if db_id.0 < 0 {
+            return Err(DbError::query(
+                DbErrorType::NotAllowed,
+                format!("Edges cannot have aliases: '{alias}' on '{}'", db_id.0),
+            ));
+        }
+
+        if let Some(old_alias) = self.aliases.alias(&self.storage, &self.graph, db_id)? {
+            if old_alias == *alias {
+                return Ok(());
+            }
+
+            self.aliases
+                .remove(&mut self.storage, &mut self.graph, db_id)?;
+            self.undo_stack.push(Command::InsertAlias {
+                id: db_id,
+                alias: old_alias,
+            });
+        }
+
+        if let Some(owner) = self.aliases.id(&self.storage, &self.graph, alias)? {
+            self.aliases
+                .remove(&mut self.storage, &mut self.graph, owner)?;
+            self.undo_stack.push(Command::InsertAlias {
+                id: owner,
+                alias: alias.clone(),
+            });
+        }
+
+        self.undo_stack.push(Command::RemoveAlias { id: db_id });
+        self.aliases
+            .insert(&mut self.storage, &mut self.graph, db_id, alias)
     }
 
     pub(crate) fn insert_edge(&mut self, from: DbId, to: DbId) -> Result<DbId, DbError> {
@@ -763,15 +853,6 @@ impl<Store: StorageData> DbImpl<Store> {
         }
 
         Ok(index.ids().len())
-    }
-
-    pub(crate) fn insert_new_alias(&mut self, db_id: DbId, alias: &String) -> Result<(), DbError> {
-        self.undo_stack.push(Command::RemoveAlias {
-            alias: alias.clone(),
-        });
-        self.aliases.insert(&mut self.storage, alias, &db_id)?;
-
-        Ok(())
     }
 
     pub(crate) fn insert_node(&mut self) -> Result<DbId, DbError> {
@@ -897,7 +978,7 @@ impl<Store: StorageData> DbImpl<Store> {
         match query_id {
             QueryId::Id(db_id) => self.remove_id(*db_id),
             QueryId::Alias(alias) => {
-                if let Some(db_id) = self.aliases.value(&self.storage, alias)? {
+                if let Some(db_id) = self.aliases.id(&self.storage, &self.graph, alias)? {
                     self.remove_node(db_id, GraphIndex(db_id.0), Some(alias.clone()))?;
                     self.remove_all_values(db_id)?;
                     Ok(true)
@@ -911,7 +992,8 @@ impl<Store: StorageData> DbImpl<Store> {
     pub(crate) fn remove_id(&mut self, db_id: DbId) -> Result<bool, DbError> {
         if let Ok(graph_index) = self.graph_index(db_id.0) {
             if graph_index.is_node() {
-                self.remove_node(db_id, graph_index, self.aliases.key(&self.storage, &db_id)?)?;
+                let alias = self.aliases.alias(&self.storage, &self.graph, db_id)?;
+                self.remove_node(db_id, graph_index, alias)?;
             } else {
                 self.remove_edge(graph_index)?;
             }
@@ -922,13 +1004,14 @@ impl<Store: StorageData> DbImpl<Store> {
         Ok(false)
     }
 
-    pub(crate) fn remove_alias(&mut self, alias: &String) -> Result<bool, DbError> {
-        if let Some(id) = self.aliases.value(&self.storage, alias)? {
+    pub(crate) fn remove_alias(&mut self, alias: &str) -> Result<bool, DbError> {
+        if let Some(id) = self.aliases.id(&self.storage, &self.graph, alias)? {
+            self.aliases
+                .remove(&mut self.storage, &mut self.graph, id)?;
             self.undo_stack.push(Command::InsertAlias {
                 id,
-                alias: alias.clone(),
+                alias: alias.to_string(),
             });
-            self.aliases.remove_key(&mut self.storage, alias)?;
 
             return Ok(true);
         }
@@ -1226,11 +1309,10 @@ impl<Store: StorageData> DbImpl<Store> {
         alias: Option<String>,
     ) -> Result<(), DbError> {
         if let Some(alias) = alias {
-            self.undo_stack.push(Command::InsertAlias {
-                alias: alias.clone(),
-                id: db_id,
-            });
-            self.aliases.remove_key(&mut self.storage, &alias)?;
+            self.aliases
+                .remove(&mut self.storage, &mut self.graph, db_id)?;
+            self.undo_stack
+                .push(Command::InsertAlias { alias, id: db_id });
         }
 
         for edge in self.node_edges(graph_index)? {
@@ -1294,25 +1376,30 @@ impl<Store: StorageData> DbImpl<Store> {
         let aliases;
         let indexes;
         let values;
+        let mut migration = None;
 
         if storage.value_size(StorageIndex(1)).is_err() {
+            let id = storage.transaction();
             storage.insert(&DbStorageIndex::default())?;
             graph = DbGraph::new(&mut storage)?;
-            aliases = DbIndexedMap::new(&mut storage)?;
+            aliases = DbAliases::new(&mut storage)?;
             indexes = DbIndexes::new(&mut storage)?;
             values = DbKeyValues::new(&mut storage)?;
             let db_storage_index = DbStorageIndex {
-                version: CURRENT_VERSION,
+                version: DB_VERSION,
                 graph: graph.storage_index(),
                 aliases: aliases.storage_index(),
                 indexes: indexes.storage_index(),
                 values: values.storage_index(),
             };
             storage.insert_at(StorageIndex(1), 0, &db_storage_index)?;
+            storage.set_version(DB_VERSION)?;
+            storage.commit(id)?;
         } else {
-            if storage.value::<DbStorageIndex>(StorageIndex(1)).is_err() {
-                legacy::convert_to_current_version(&mut storage)?;
+            if storage.version() < DB_VERSION {
+                migration = Some(db_migration::migrate(&mut storage)?);
             }
+
             (graph, aliases, indexes, values) = Self::load_data_structures(&storage)?;
         }
 
@@ -1324,6 +1411,7 @@ impl<Store: StorageData> DbImpl<Store> {
             values,
             undo_stack: vec![],
             poisoned: false,
+            migration,
         })
     }
 
@@ -1368,7 +1456,7 @@ impl<Store: StorageData> DbImpl<Store> {
                             QueryId::Id(id) => id.0,
                             QueryId::Alias(alias) => {
                                 self.aliases
-                                    .value(&self.storage, alias)
+                                    .id(&self.storage, &self.graph, alias)
                                     .unwrap_or_default()
                                     .unwrap_or_default()
                                     .0
@@ -1496,107 +1584,6 @@ impl DbAny {
     }
 }
 
-// TODO: Remove this at some point in the future as it provides support for databases created in <= 0.10.0.
-mod legacy {
-    use crate::DbError;
-    use crate::DbId;
-    use crate::DbKeyValue;
-    use crate::StorageData;
-    use crate::collections::map::MapIterator;
-    use crate::collections::multi_map::MultiMapStorage;
-    use crate::db::CURRENT_VERSION;
-    use crate::db::DbStorageIndex;
-    use crate::db::db_key_value::DbKeyValues;
-    use crate::storage::Storage;
-    use crate::storage::StorageIndex;
-    use crate::utilities::serialize::Serialize;
-    use crate::utilities::serialize::SerializeStatic;
-    use std::marker::PhantomData;
-
-    pub(crate) struct DbStorageIndexLegacy {
-        pub(crate) graph: StorageIndex,
-        pub(crate) aliases: (StorageIndex, StorageIndex),
-        pub(crate) indexes: StorageIndex,
-        pub(crate) values: StorageIndex,
-    }
-
-    impl Serialize for DbStorageIndexLegacy {
-        fn serialize(&self) -> Vec<u8> {
-            [
-                self.graph.serialize(),
-                self.aliases.0.serialize(),
-                self.aliases.1.serialize(),
-                self.indexes.serialize(),
-                self.values.serialize(),
-            ]
-            .concat()
-        }
-
-        fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
-            let size = i64::serialized_size_static() as usize;
-
-            let graph = StorageIndex::deserialize(bytes)?;
-            let aliases_1 = StorageIndex::deserialize(&bytes[size..])?;
-            let aliases_2 = StorageIndex::deserialize(&bytes[size * 2..])?;
-            let indexes = StorageIndex::deserialize(&bytes[size * 3..])?;
-            let values = StorageIndex::deserialize(&bytes[size * 4..])?;
-
-            Ok(Self {
-                graph,
-                aliases: (aliases_1, aliases_2),
-                indexes,
-                values,
-            })
-        }
-
-        fn serialized_size(&self) -> u64 {
-            i64::serialized_size_static() * 5
-        }
-    }
-
-    pub fn convert_to_current_version<D: StorageData>(
-        storage: &mut Storage<D>,
-    ) -> Result<DbStorageIndex, DbError> {
-        let legacy_index = storage.value::<DbStorageIndexLegacy>(StorageIndex(1))?;
-        let legacy_values =
-            MultiMapStorage::<DbId, DbKeyValue, _>::from_storage(storage, legacy_index.values)?;
-        let t = storage.transaction();
-        let mut values = DbKeyValues::new(storage)?;
-        let mut pos = 0;
-
-        loop {
-            let mut it = MapIterator {
-                pos,
-                data: &legacy_values.data,
-                storage,
-                phantom_data: PhantomData,
-            };
-
-            if let Some((db_id, kv)) = it.next() {
-                pos = it.pos;
-                values.insert_value(storage, db_id.as_index(), &kv)?;
-            } else {
-                break;
-            }
-        }
-
-        legacy_values.remove_from_storage(storage)?;
-
-        let db_storage_index = DbStorageIndex {
-            version: CURRENT_VERSION,
-            graph: legacy_index.graph,
-            aliases: legacy_index.aliases,
-            indexes: legacy_index.indexes,
-            values: values.storage_index(),
-        };
-
-        storage.replace(StorageIndex(1), &db_storage_index)?;
-        storage.commit(t)?;
-        storage.optimize_storage()?;
-        Ok(db_storage_index)
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1608,35 +1595,35 @@ mod tests {
 
     #[test]
     fn db_storage_index_serialized_size() {
-        assert_eq!(DbStorageIndex::default().serialized_size(), 48);
+        assert_eq!(DbStorageIndex::default().serialized_size(), 40);
     }
 
     #[test]
     fn db_storage_index_serialization() {
         let index = DbStorageIndex {
-            version: 1,
-            graph: StorageIndex(2),
-            aliases: (StorageIndex(3), StorageIndex(4)),
+            version: 2,
+            graph: StorageIndex(3),
+            aliases: StorageIndex(4),
             indexes: StorageIndex(5),
             values: StorageIndex(6),
         };
         let deserialized = DbStorageIndex::deserialize(&index.serialize()).unwrap();
-        assert_eq!(deserialized.version, 1);
-        assert_eq!(deserialized.graph, StorageIndex(2));
-        assert_eq!(deserialized.aliases, (StorageIndex(3), StorageIndex(4)));
+        assert_eq!(deserialized.version, 2);
+        assert_eq!(deserialized.graph, StorageIndex(3));
+        assert_eq!(deserialized.aliases, StorageIndex(4));
         assert_eq!(deserialized.indexes, StorageIndex(5));
         assert_eq!(deserialized.values, StorageIndex(6));
     }
 
     #[test]
     fn db_storage_index_short_bytes() {
-        for len in [0, 17, 40, 47] {
+        for len in [0, 17, 32, 39] {
             assert_eq!(
                 DbStorageIndex::deserialize(&vec![0; len]).err().unwrap(),
                 DbError::db(
                     DbErrorType::NotEnoughData,
                     format!(
-                        "DbStorageIndex deserialization error: got {len} bytes, expected at least 48 bytes"
+                        "DbStorageIndex deserialization error: got {len} bytes, expected at least 40 bytes"
                     )
                 )
             );
@@ -1644,28 +1631,24 @@ mod tests {
     }
 
     #[test]
+    fn load_data_structures_other_version_should_fail() {
+        let mut storage = crate::collections::tests::storage();
+        storage.insert(&DbStorageIndex::default()).unwrap();
+
+        assert_eq!(
+            DbImpl::load_data_structures(&storage).err(),
+            Some(DbError::db(
+                DbErrorType::NotAllowed,
+                "Database version '0' is not the current version '2'"
+            ))
+        );
+    }
+
+    #[test]
     fn derived_from_debug() {
         let test_file = TestFile::new();
         let db = Db::new(test_file.file_name()).unwrap();
         let _ = format!("{db:?}");
-    }
-
-    #[test]
-    fn db_storage_index_legacy_serialization() {
-        let index = legacy::DbStorageIndexLegacy {
-            graph: StorageIndex(1),
-            aliases: (StorageIndex(2), StorageIndex(3)),
-            indexes: StorageIndex(4),
-            values: StorageIndex(5),
-        };
-        let serialized = index.serialize();
-        let deserialized = legacy::DbStorageIndexLegacy::deserialize(&serialized).unwrap();
-        assert_eq!(index.graph, deserialized.graph);
-        assert_eq!(index.aliases.0, deserialized.aliases.0);
-        assert_eq!(index.aliases.1, deserialized.aliases.1);
-        assert_eq!(index.indexes, deserialized.indexes);
-        assert_eq!(index.values, deserialized.values);
-        assert_eq!(index.serialized_size(), deserialized.serialized_size());
     }
 
     #[derive(Debug)]
@@ -1950,5 +1933,209 @@ mod tests {
         let (db, _) = failable_db(&db_path);
         let r = db.exec(QueryBuilder::select().ids("n").query()).unwrap();
         assert_eq!(r.elements[0].values, vec![("k", "original").into()]);
+    }
+
+    mod db_impl {
+        use super::*;
+        use crate::storage::DEFAULT_OVERLAY_LIMIT;
+        use crate::storage::file_storage::FileStorageImpl;
+        use crate::storage::file_storage_memory_mapped::FileStorageMemoryMappedImpl;
+        use agplatform::Platform;
+        use agplatform::test_platform::TestPlatform;
+        use agplatform::test_platform::test_fs::FsOp;
+        use agplatform::test_platform::test_platform;
+        use std::io::ErrorKind;
+
+        const NAME: &str = "/db";
+        const WAL: &str = "/.db";
+
+        fn file(platform: &Arc<TestPlatform>) -> FileStorageImpl<TestPlatform> {
+            FileStorageImpl::with_platform(platform.clone(), NAME).unwrap()
+        }
+
+        fn mapped(platform: &Arc<TestPlatform>) -> FileStorageMemoryMappedImpl<TestPlatform> {
+            FileStorageMemoryMappedImpl::with_platform(platform.clone(), NAME).unwrap()
+        }
+
+        fn config(sync_mode: SyncMode, overlay_limit: u64) -> StorageConfig {
+            StorageConfig {
+                sync_mode,
+                overlay_limit,
+            }
+        }
+
+        fn open<D: StorageData>(data: D, config: StorageConfig) -> DbImpl<D> {
+            let mut db = DbImpl::try_new_with_storage(Storage::with_data(data).unwrap()).unwrap();
+            db.set_storage_config(config);
+            db
+        }
+
+        fn inserted<D: StorageData>(data: D, config: StorageConfig) -> DbImpl<D> {
+            let mut db = open(data, config);
+            db.exec_mut(
+                QueryBuilder::insert()
+                    .nodes()
+                    .aliases(["removed", "n"])
+                    .values(vec![
+                        vec![("k", vec![0_u64; 64]).into()],
+                        vec![("k", "original").into()],
+                    ])
+                    .query(),
+            )
+            .unwrap();
+            db.exec_mut(QueryBuilder::remove().ids("removed").query())
+                .unwrap();
+            db
+        }
+
+        fn modify<D: StorageData>(db: &mut DbImpl<D>) -> Result<QueryResult, DbError> {
+            db.exec_mut(
+                QueryBuilder::insert()
+                    .values(vec![vec![("k", "modified").into()]])
+                    .ids("n")
+                    .query(),
+            )
+        }
+
+        fn value<D: StorageData>(db: &DbImpl<D>) -> DbValue {
+            db.exec(QueryBuilder::select().ids("n").query())
+                .unwrap()
+                .elements[0]
+                .values[0]
+                .value
+                .clone()
+        }
+
+        fn kill(platform: &Arc<TestPlatform>) {
+            platform.fs().sync();
+            platform.fs().crash();
+        }
+
+        fn fail_once(platform: &Arc<TestPlatform>, op: FsOp, path: &str) {
+            platform
+                .fs()
+                .set_io_errors(op, path, [Some(ErrorKind::Other), None]);
+        }
+
+        fn failed_commit<D: StorageData>(
+            storage: fn(&Arc<TestPlatform>) -> D,
+            config: StorageConfig,
+            op: FsOp,
+            path: &str,
+        ) -> (bool, bool, DbValue, DbValue) {
+            let platform = Arc::new(test_platform());
+            let mut db = inserted(storage(&platform), config);
+            fail_once(&platform, op, path);
+
+            let failed = modify(&mut db).is_err();
+
+            let current = value(&db);
+            let poisoned = db.poisoned;
+            kill(&platform);
+            drop(db);
+            (
+                failed,
+                poisoned,
+                current,
+                value(&open(storage(&platform), config)),
+            )
+        }
+
+        mod transaction_mut {
+            use super::*;
+
+            #[test]
+            fn transaction_mut_should_roll_back_failed_commit() {
+                for (sync_mode, overlay_limit, op, path) in [
+                    (SyncMode::None, DEFAULT_OVERLAY_LIMIT, FsOp::Write, WAL),
+                    (SyncMode::None, DEFAULT_OVERLAY_LIMIT, FsOp::Write, NAME),
+                    (SyncMode::Commit, DEFAULT_OVERLAY_LIMIT, FsOp::SyncData, WAL),
+                    (
+                        SyncMode::Commit,
+                        DEFAULT_OVERLAY_LIMIT,
+                        FsOp::SyncData,
+                        NAME,
+                    ),
+                    (SyncMode::Commit, 0, FsOp::SyncData, NAME),
+                    (
+                        SyncMode::Strict,
+                        DEFAULT_OVERLAY_LIMIT,
+                        FsOp::SyncData,
+                        NAME,
+                    ),
+                ] {
+                    let config = config(sync_mode, overlay_limit);
+                    let original = (true, false, "original".into(), "original".into());
+
+                    assert_eq!(
+                        failed_commit(file, config, op, path),
+                        original,
+                        "file {config:?} {op:?} {path}"
+                    );
+                    assert_eq!(
+                        failed_commit(mapped, config, op, path),
+                        original,
+                        "mapped {config:?} {op:?} {path}"
+                    );
+                }
+            }
+
+            #[test]
+            fn transaction_mut_should_commit_after_failed_commit() {
+                let platform = Arc::new(test_platform());
+                let mut db = inserted(file(&platform), StorageConfig::default());
+                fail_once(&platform, FsOp::Write, NAME);
+                assert!(modify(&mut db).is_err());
+
+                modify(&mut db).unwrap();
+
+                assert_eq!(value(&db), "modified".into());
+                drop(db);
+                assert_eq!(
+                    value(&open(file(&platform), StorageConfig::default())),
+                    "modified".into()
+                );
+            }
+
+            #[test]
+            fn transaction_mut_failed_recovery_after_failed_commit_should_poison() {
+                let platform = Arc::new(test_platform());
+                let mut db = inserted(file(&platform), StorageConfig::default());
+                platform
+                    .fs()
+                    .set_io_error(FsOp::Write, NAME, ErrorKind::Other);
+
+                let err = modify(&mut db).unwrap_err();
+
+                assert_eq!(err.ty, DbErrorType::Poisoned);
+                assert!(db.poisoned);
+                platform.fs().clear_faults();
+                drop(db);
+                assert_eq!(
+                    value(&open(file(&platform), StorageConfig::default())),
+                    "original".into()
+                );
+            }
+        }
+
+        mod optimize_storage {
+            use super::*;
+
+            #[test]
+            fn optimize_storage_failure_should_roll_back() {
+                let platform = Arc::new(test_platform());
+                let mut db = inserted(file(&platform), StorageConfig::default());
+                let len = db.size();
+                fail_once(&platform, FsOp::Write, NAME);
+
+                assert!(db.optimize_storage().is_err());
+
+                assert!(!db.poisoned);
+                assert_eq!(db.size(), len);
+                assert_eq!(value(&db), "original".into());
+                db.optimize_storage().unwrap();
+                assert!(db.size() < len);
+            }
+        }
     }
 }

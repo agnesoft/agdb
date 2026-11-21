@@ -103,6 +103,7 @@ pub(crate) fn vec_from_str(value: &str) -> Vec<String> {
 pub(crate) fn sync_mode_from_str(value: &str) -> SyncMode {
     match value {
         "commit" => SyncMode::Commit,
+        "strict" => SyncMode::Strict,
         _ => SyncMode::None,
     }
 }
@@ -206,13 +207,20 @@ pub(crate) fn from_str(content: &str) -> Result<ConfigImpl, String> {
                     }
                 }
                 "sync_mode" => match value {
-                    "none" | "commit" => config.sync_mode = sync_mode_from_str(value),
+                    "none" | "commit" | "strict" => {
+                        config.storage.sync_mode = sync_mode_from_str(value)
+                    }
                     _ => {
                         return Err(format!(
-                            "Invalid sync_mode: '{value}'. Must be 'none' or 'commit'."
+                            "Invalid sync_mode: '{value}'. Must be 'none', 'commit' or 'strict'."
                         ));
                     }
                 },
+                "overlay_limit" => {
+                    config.storage.overlay_limit = value
+                        .parse()
+                        .map_err(|e| format!("Invalid overlay_limit: {e:?}"))?
+                }
                 _ => return Err(format!("Unknown key: {key}")),
             }
         }
@@ -276,7 +284,7 @@ pub(crate) fn default_config() -> ConfigImpl {
         cluster_node_id: 0,
         start_time: 0,
         token_expiry_seconds: DEFAULT_TOKEN_EXPIRY_SECONDS,
-        sync_mode: SyncMode::None,
+        storage: agdb::StorageConfig::default(),
         pepper: None,
     }
 }
@@ -343,7 +351,7 @@ mod tests {
             cluster_node_id: 0,
             start_time: 0,
             token_expiry_seconds: DEFAULT_TOKEN_EXPIRY_SECONDS,
-            sync_mode: SyncMode::None,
+            storage: agdb::StorageConfig::default(),
             pepper: None,
         };
 
@@ -386,7 +394,7 @@ mod tests {
             cluster_node_id: 0,
             start_time: 0,
             token_expiry_seconds: DEFAULT_TOKEN_EXPIRY_SECONDS,
-            sync_mode: SyncMode::None,
+            storage: agdb::StorageConfig::default(),
             pepper: None,
         };
         std::fs::write(
@@ -428,7 +436,7 @@ mod tests {
             cluster_node_id: 0,
             start_time: 0,
             token_expiry_seconds: DEFAULT_TOKEN_EXPIRY_SECONDS,
-            sync_mode: SyncMode::None,
+            storage: agdb::StorageConfig::default(),
             pepper: None,
         };
         std::fs::write(
@@ -629,29 +637,47 @@ mod tests {
     #[test]
     fn sync_mode_values() {
         let config = config::from_str("sync_mode: none").unwrap();
-        assert_eq!(config.sync_mode, SyncMode::None);
+        assert_eq!(config.storage.sync_mode, SyncMode::None);
 
         let config = config::from_str("sync_mode: commit").unwrap();
-        assert_eq!(config.sync_mode, SyncMode::Commit);
+        assert_eq!(config.storage.sync_mode, SyncMode::Commit);
+
+        let config = config::from_str("sync_mode: strict").unwrap();
+        assert_eq!(config.storage.sync_mode, SyncMode::Strict);
 
         let err = config::from_str("sync_mode: ").unwrap_err();
-        assert_eq!(err, "Invalid sync_mode: ''. Must be 'none' or 'commit'.");
+        assert_eq!(
+            err,
+            "Invalid sync_mode: ''. Must be 'none', 'commit' or 'strict'."
+        );
 
         let err = config::from_str("sync_mode: invalid").unwrap_err();
         assert_eq!(
             err,
-            "Invalid sync_mode: 'invalid'. Must be 'none' or 'commit'."
+            "Invalid sync_mode: 'invalid'. Must be 'none', 'commit' or 'strict'."
         );
 
         let config = default_config();
-        assert_eq!(config.sync_mode, agdb::SyncMode::None);
+        assert_eq!(config.storage.sync_mode, agdb::SyncMode::None);
 
         let config = config::from_str(r#"cluster: ["http://localhost:3000"]"#).unwrap();
-        assert_eq!(config.sync_mode, agdb::SyncMode::None);
+        assert_eq!(config.storage.sync_mode, agdb::SyncMode::None);
 
         let config =
             config::from_str(r#"cluster: ["http://localhost:3000", "http://localhost:3001"]"#)
                 .unwrap();
-        assert_eq!(config.sync_mode, agdb::SyncMode::None);
+        assert_eq!(config.storage.sync_mode, agdb::SyncMode::None);
+    }
+
+    #[test]
+    fn overlay_limit_values() {
+        let config = default_config();
+        assert_eq!(config.storage.overlay_limit, agdb::DEFAULT_OVERLAY_LIMIT);
+
+        let config = config::from_str("overlay_limit: 1024").unwrap();
+        assert_eq!(config.storage.overlay_limit, 1024);
+
+        let err = config::from_str("overlay_limit: -1").unwrap_err();
+        assert!(err.starts_with("Invalid overlay_limit"));
     }
 }

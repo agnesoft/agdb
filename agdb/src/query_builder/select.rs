@@ -8,6 +8,7 @@ use crate::SelectValuesQuery;
 use crate::db::db_value::DbValues;
 use crate::query_builder::search::Search;
 use crate::query_builder::select_aliases::SelectAliases;
+use crate::query_builder::select_edge_count::SelectDirectedEdgeCount;
 use crate::query_builder::select_edge_count::SelectEdgeCount;
 use crate::query_builder::select_ids::SelectIds;
 use crate::query_builder::select_indexes::SelectIndexes;
@@ -34,11 +35,12 @@ impl Select {
         SelectAliases(SelectAliasesQuery(QueryIds::Ids(vec![])))
     }
 
-    /// Select number of outgoing and incoming edges.
+    /// Select number of outgoing and incoming edges of elements or,
+    /// without ids, number of edges in the database.
     ///
     /// The aggregated edge count is returned in `QueryResult::result`. Each element of
     /// the result also has a property `String("edge_count")` with
-    /// `u64` as the value.
+    /// `u64` as the value. Without ids the result has no elements.
     pub fn edge_count(self) -> SelectEdgeCount {
         SelectEdgeCount(SelectEdgeCountQuery {
             ids: QueryIds::Ids(vec![]),
@@ -52,8 +54,8 @@ impl Select {
     /// The aggregated edge count is returned in `QueryResult::result`. Each element of
     /// the result also has a property `String("edge_count")` with
     /// `u64` as the value.
-    pub fn edge_count_from(self) -> SelectEdgeCount {
-        SelectEdgeCount(SelectEdgeCountQuery {
+    pub fn edge_count_from(self) -> SelectDirectedEdgeCount {
+        SelectDirectedEdgeCount(SelectEdgeCountQuery {
             ids: QueryIds::Ids(vec![]),
             from: true,
             to: false,
@@ -65,8 +67,8 @@ impl Select {
     /// The aggregated edge count is returned in `QueryResult::result`. Each element of
     /// the result also has a property `String("edge_count")` with
     /// `u64` as the value.
-    pub fn edge_count_to(self) -> SelectEdgeCount {
-        SelectEdgeCount(SelectEdgeCountQuery {
+    pub fn edge_count_to(self) -> SelectDirectedEdgeCount {
+        SelectDirectedEdgeCount(SelectEdgeCountQuery {
             ids: QueryIds::Ids(vec![]),
             from: false,
             to: true,

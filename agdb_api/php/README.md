@@ -235,6 +235,7 @@ Class | Method | HTTP request | Description
 - [QueryTypeOneOf15](docs/Model/QueryTypeOneOf15.md)
 - [QueryTypeOneOf16](docs/Model/QueryTypeOneOf16.md)
 - [QueryTypeOneOf17](docs/Model/QueryTypeOneOf17.md)
+- [QueryTypeOneOf18](docs/Model/QueryTypeOneOf18.md)
 - [QueryTypeOneOf2](docs/Model/QueryTypeOneOf2.md)
 - [QueryTypeOneOf3](docs/Model/QueryTypeOneOf3.md)
 - [QueryTypeOneOf4](docs/Model/QueryTypeOneOf4.md)

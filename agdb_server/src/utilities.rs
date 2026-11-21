@@ -1,5 +1,7 @@
 use crate::server_error::ServerResult;
+use agdb::DbImpl;
 use agdb::QueryType;
+use agdb::StorageData;
 use agdb_api::DbUserRole;
 use agdb_api::Queries;
 use std::cell::RefCell;
@@ -46,6 +48,22 @@ where
     }
 
     Ok(())
+}
+
+/// Logs the conversion of the database `name` to the current version
+/// done when it was opened.
+pub(crate) fn log_migration<S: StorageData>(name: &str, db: &DbImpl<S>) {
+    if let Some(migration) = db.migration() {
+        crate::info!(
+            "Database '{name}' converted from version {} to {}",
+            migration.from,
+            migration.to
+        );
+
+        for fixed in &migration.fixed {
+            crate::warn!("Database '{name}' conversion fixed: {fixed}");
+        }
+    }
 }
 
 pub(crate) fn required_role(queries: &Queries) -> DbUserRole {
@@ -134,6 +152,27 @@ mod tests {
         let size = get_size("Cargo.toml").await.unwrap();
         assert_ne!(size, 0);
         Ok(())
+    }
+
+    #[test]
+    fn log_migration_of_converted_db() {
+        let dir =
+            std::env::temp_dir().join(format!("agdb_server_log_migration_{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let file = dir.join("v1.agdb");
+        std::fs::copy("../agdb/tests/test_db_v1.agdb", &file).unwrap();
+        let name = file.to_string_lossy().to_string();
+        let db = agdb::Db::new(&name).unwrap();
+
+        log_migration(&name, &db);
+
+        assert_eq!(db.migration().map(|m| m.fixed.len()), Some(3));
+        drop(db);
+        let db = agdb::Db::new(&name).unwrap();
+        log_migration(&name, &db);
+        assert_eq!(db.migration(), None);
+        drop(db);
+        std::fs::remove_dir_all(&dir).unwrap();
     }
 
     #[test]

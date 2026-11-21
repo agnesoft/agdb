@@ -1,3 +1,4 @@
+src/api.ts
 src/openapi.d.ts
 src/query_builder.ts
 src/types.ts

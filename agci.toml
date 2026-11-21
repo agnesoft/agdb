@@ -51,6 +51,7 @@ checks = ["format", "lint", "testcheck", "doc", "coverage"]
 add_toolchains = ["node", "php"]
 dependencies = [
     "agdb/tests/query_builder_test.rs",
+    "agdb_api/typescript/src/api.ts",
     "agdb_api/typescript/src/query_builder.ts",
     "agdb_api/typescript/src/types.ts",
     "agdb_api/typescript/tests/query_builder.test.ts",

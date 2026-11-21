@@ -325,6 +325,7 @@ mod tests {
                         callee: Callee::Trait {
                             trait_: "Tr".into(),
                             name: "t".into(),
+                            types: Vec::new(),
                         },
                         recv: Some(Expr::local("x", Ty::Unknown).boxed()),
                         args: Vec::new(),
@@ -333,6 +334,7 @@ mod tests {
                         callee: Callee::Trait {
                             trait_: "Tr".into(),
                             name: "t".into(),
+                            types: Vec::new(),
                         },
                         recv: Some(Expr::local("v", Ty::named("V")).boxed()),
                         args: Vec::new(),

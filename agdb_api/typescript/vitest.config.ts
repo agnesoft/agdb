@@ -5,6 +5,7 @@ export default defineConfig({
         coverage: {
             exclude: [
                 "dist/**",
+                "src/api.ts",
                 "eslint.config.mjs",
                 "src/index.ts",
                 "src/openapi.d.ts",

@@ -9,6 +9,7 @@ use std::cell::RefCell;
 use std::collections::BTreeSet;
 use std::fmt::Write;
 
+mod client;
 mod types;
 
 /// What the TS module of a generator has beyond the module it is emitted
@@ -64,6 +65,9 @@ pub struct Emitter<'a> {
     /// The exported values named as a schema type, whose alias is exported
     /// along so that the name keeps both.
     values: BTreeSet<String>,
+    /// The traits are types bounding the generics, as in a
+    /// [client](Emitter::client), not dictionaries.
+    bounded: bool,
 }
 
 /// `panic!`: TS has no throw expression.
@@ -87,6 +91,7 @@ impl<'a> Emitter<'a> {
             panics: false,
             imports: BTreeSet::new(),
             values: BTreeSet::new(),
+            bounded: false,
         }
     }
 
@@ -118,7 +123,7 @@ impl<'a> Emitter<'a> {
         self.data_methods();
 
         for b in &m.builders {
-            self.class(&m.classes[b]);
+            self.class(&m.classes[b], *b == m.root);
         }
 
         let mut head = format!("{}\n\n{}\n\n", self.config.header, self.config.import);
@@ -248,7 +253,7 @@ import {{ describe, expect, it }} from \"vitest\";
             Ty::Param(p) => p.clone(),
             Ty::Into(to) => format!("Into{to}"),
             Ty::Dict(tr, of) => format!("{tr}<{}>", self.ty(of)),
-            Ty::SelfTy | Ty::Ref(_) | Ty::Fn | Ty::Unknown => "unknown".into(),
+            Ty::SelfTy | Ty::Ref(_) | Ty::Result(..) | Ty::Fn | Ty::Unknown => "unknown".into(),
         }
     }
 
@@ -453,8 +458,34 @@ import {{ describe, expect, it }} from \"vitest\";
                     )
                 }
             },
+            K::Await(value) => format!("(await {})", self.expr(value)),
+            K::Format(pieces) => self.template(pieces),
             K::Panic(message) => self.panic(&format!("{message:?}")),
             _ => self.unsupported(&print::expr(e)),
+        }
+    }
+
+    /// A template literal of the pieces of a `format!`.
+    fn template(&mut self, pieces: &[Expr]) -> String {
+        let mut out = String::from("`");
+
+        self.pieces(pieces, &mut out);
+        out + "`"
+    }
+
+    /// The pieces of a template, those of a nested one in place.
+    fn pieces(&mut self, pieces: &[Expr], out: &mut String) {
+        for p in pieces {
+            match &p.k {
+                K::Lit(Lit::Str(s)) => {
+                    *out += &s
+                        .replace('\\', "\\\\")
+                        .replace('`', "\\`")
+                        .replace("${", "\\${")
+                }
+                K::Format(nested) => self.pieces(nested, out),
+                _ => *out += &format!("${{{}}}", self.expr(p)),
+            }
         }
     }
 
@@ -467,6 +498,9 @@ import {{ describe, expect, it }} from \"vitest\";
                 let a = if a.is_empty() { r } else { format!("{r}, {a}") };
                 self.imports.insert(format!("{class}_{name}"));
                 format!("{class}_{name}({a})")
+            }
+            Callee::Trait { name, types, .. } if !types.is_empty() => {
+                format!("{r}.{name}<{}>({a})", self.tys(types))
             }
             Callee::Member { name, .. } | Callee::Trait { name, .. } => format!("{r}.{name}({a})"),
             Callee::Static { class, name } if !self.m.is_builder(class) => {
@@ -489,6 +523,8 @@ import {{ describe, expect, it }} from \"vitest\";
                 Intrinsic::UnwrapOrDefault => format!("({r} ?? {a})"),
                 Intrinsic::Expect => format!("({r} ?? {})", self.panic(&a)),
                 Intrinsic::Map => format!("{r}.map({a})"),
+                Intrinsic::MapOk => format!("({a})({r})"),
+                Intrinsic::StartsWith => format!("{r}.startsWith({a})"),
                 Intrinsic::IterForEach => format!("{r}.forEach({a})"),
                 Intrinsic::AssertEq => {
                     let left = self.expr(&args[0]);
@@ -498,7 +534,7 @@ import {{ describe, expect, it }} from \"vitest\";
                 }
                 Intrinsic::MemTake | Intrinsic::MemSwap => self.unsupported(&format!("{i:?}")),
             },
-            Callee::Path(..) | Callee::Method(_) => self.unsupported(&format!("{callee:?}")),
+            Callee::Path(..) | Callee::Method(..) => self.unsupported(&format!("{callee:?}")),
         }
     }
 
@@ -516,13 +552,21 @@ import {{ describe, expect, it }} from \"vitest\";
         wire.members.get(var).map_or(var, |m| &m.name).to_owned()
     }
 
-    /// The serialized name of field `name` of `class`.
+    /// The serialized name of field `name` of `class`, `_name` when a
+    /// method of the class has the name, as in a getter.
     fn field_name(&self, class: &str, name: &str) -> String {
-        self.m
-            .wire
-            .get(class)
-            .and_then(|w| w.members.get(name))
-            .map_or_else(|| member(name), |m| m.name.clone())
+        match self.m.wire.get(class).and_then(|w| w.members.get(name)) {
+            Some(m) => m.name.clone(),
+            None if self
+                .m
+                .classes
+                .get(class)
+                .is_some_and(|c| c.methods.iter().any(|f| f.name == name)) =>
+            {
+                format!("_{name}")
+            }
+            None => member(name),
+        }
     }
 
     fn unsupported(&mut self, what: &str) -> String {
@@ -620,6 +664,10 @@ import {{ describe, expect, it }} from \"vitest\";
                 self.els(els.as_deref(), indent);
             }
             K::Match { value, arms } => self.arms(value, arms, indent),
+            K::Throw(value) => {
+                let value = self.expr(value);
+                self.line(indent, &format!("throw {value};"));
+            }
             K::While { cond, body } => {
                 let cond = self.expr(cond);
 
@@ -991,11 +1039,20 @@ import {{ describe, expect, it }} from \"vitest\";
     }
 
     fn func(&mut self, f: &Func, indent: usize, prefix: &str) {
+        let signature = self.signature(f, prefix, true);
+        self.reassigned = reassigned(&f.body);
+        self.line(indent, &format!("{signature} {{"));
+        self.block(&f.body, indent + 1);
+        self.line(indent, "}");
+    }
+
+    /// The signature of the function after `prefix`, an `async` one
+    /// returning a `Promise` (and `async` itself only with a `body`).
+    fn signature(&mut self, f: &Func, prefix: &str, body: bool) -> String {
         self.current = f.name.clone();
         self.generics.clear();
-        self.reassigned = reassigned(&f.body);
         // The type parameters only Rust's static dispatch used are erased.
-        let generics: Vec<String> = f
+        let generics: Vec<&Generic> = f
             .generics
             .iter()
             .filter(|g| {
@@ -1005,35 +1062,49 @@ import {{ describe, expect, it }} from \"vitest\";
                     .chain([&f.ret])
                     .any(|t| t.mentions(&g.name))
             })
-            .map(|g| {
-                if g.bounds.iter().any(|(b, _)| self.m.is_reflective(b)) {
-                    format!("{} extends object", g.name)
-                } else {
-                    g.name.clone()
-                }
-            })
             .collect();
-        let generics = if generics.is_empty() {
-            String::new()
-        } else {
-            format!("<{}>", generics.join(", "))
-        };
+        let generics = self.type_params(&generics);
         let params: Vec<String> = f
             .params
             .iter()
             .map(|(n, t)| format!("{n}: {}", self.ty(t)))
             .collect();
         let ret = self.ty(&f.ret);
-        self.line(
-            indent,
-            &format!(
-                "{prefix}{}{generics}({}): {ret} {{",
-                f.name,
-                params.join(", ")
-            ),
-        );
-        self.block(&f.body, indent + 1);
-        self.line(indent, "}");
+        let (prefix, ret) = match (f.is_async, body) {
+            (true, true) => (format!("{prefix}async "), format!("Promise<{ret}>")),
+            (true, false) => (prefix.to_owned(), format!("Promise<{ret}>")),
+            (false, _) => (prefix.to_owned(), ret),
+        };
+        format!("{prefix}{}{generics}({}): {ret}", f.name, params.join(", "))
+    }
+
+    /// The type parameters: a generic bounded by a reflective trait takes
+    /// objects, and the traits of a [client](Emitter::client) bound it.
+    fn type_params(&self, generics: &[&Generic]) -> String {
+        if generics.is_empty() {
+            return String::new();
+        }
+
+        let params: Vec<String> = generics
+            .iter()
+            .map(|g| {
+                let traits: Vec<&str> = g
+                    .bounds
+                    .iter()
+                    .map(|(b, _)| b.as_str())
+                    .filter(|b| self.bounded && self.m.traits.contains_key(*b))
+                    .collect();
+
+                if g.bounds.iter().any(|(b, _)| self.m.is_reflective(b)) {
+                    format!("{} extends object", g.name)
+                } else if traits.is_empty() {
+                    g.name.clone()
+                } else {
+                    format!("{} extends {}", g.name, traits.join(" & "))
+                }
+            })
+            .collect();
+        format!("<{}>", params.join(", "))
     }
 
     fn trait_interface(&mut self, name: &str, sigs: &[Func]) {
@@ -1173,28 +1244,31 @@ import {{ describe, expect, it }} from \"vitest\";
         }
     }
 
-    fn class(&mut self, c: &Class) {
-        let generics: Vec<&str> = c.generics.iter().map(|g| g.name.as_str()).collect();
-        let generics = if generics.is_empty() {
-            String::new()
-        } else {
-            format!("<{}>", generics.join(", "))
-        };
-        let export = if self.m.root == c.name { "export " } else { "" };
+    fn class(&mut self, c: &Class, export: bool) {
+        let generics: Vec<&Generic> = c.generics.iter().collect();
+        let generics = self.type_params(&generics);
+        let export = if export { "export " } else { "" };
         self.line(0, &format!("{export}class {}{generics} {{", c.name));
 
         if !c.fields.is_empty() {
             let fields: Vec<String> = c
                 .fields
                 .iter()
-                .map(|(n, t)| format!("public {}: {}", member(n), self.ty(t)))
+                .map(|(n, t)| format!("public {}: {}", self.field_name(&c.name, n), self.ty(t)))
                 .collect();
             self.line(1, &format!("constructor({}) {{}}\n", fields.join(", ")));
         }
 
         for f in &c.methods {
-            let prefix = if f.recv.is_none() { "static " } else { "" };
-            self.func(f, 1, prefix);
+            if f.recv.is_some() {
+                self.func(f, 1, "");
+            } else {
+                // A static member does not see the generics of the class.
+                let mut f = f.clone();
+                f.generics.splice(0..0, c.generics.iter().cloned());
+                self.func(&f, 1, "static ");
+            }
+
             self.out.push('\n');
         }
 
@@ -1589,7 +1663,7 @@ fn second() {
                     ),
                     call(Callee::Extern("ext".into()), None, vec![int(1)]),
                     call(Callee::Path(vec!["p".into()], Vec::new()), None, Vec::new()),
-                    call(Callee::Method("m".into()), None, Vec::new()),
+                    call(Callee::Method("m".into(), Vec::new()), None, Vec::new()),
                     intrinsic(
                         Intrinsic::Map,
                         vec![Expr::new(K::Closure {
@@ -1753,7 +1827,7 @@ fn second() {
                     [
                         "exprs: `unresolved/*unresolved*/`",
                         "exprs: `Path([\"p\"], [])`",
-                        "exprs: `Method(\"m\")`",
+                        "exprs: `Method(\"m\", [])`",
                         "exprs: `MemTake`",
                         "exprs: `u8`",
                         "exprs: `Vec<u8>`",

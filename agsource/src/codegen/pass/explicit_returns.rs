@@ -3,8 +3,9 @@ use crate::Error;
 use crate::codegen::lowered::*;
 
 /// The tail expressions of the functions that return a value as `return`,
-/// through `if` branches and `match` arms. An `if` chain without `else` gets
-/// one that panics: Rust accepted it, so the chain is exhaustive.
+/// through `if` branches and `match` arms, and those of the closures of
+/// more than one statement. An `if` chain without `else` gets one that
+/// panics: Rust accepted it, so the chain is exhaustive.
 pub struct ExplicitReturns;
 
 impl Pass for ExplicitReturns {
@@ -17,6 +18,15 @@ impl Pass for ExplicitReturns {
             if f.ret != Ty::Unit {
                 return_tail(&mut f.body);
             }
+
+            rewrite_body(&mut f.body, &mut |e| {
+                if let K::Closure { body, .. } = &mut e.k
+                    && body.len() > 1
+                    && body.last().is_some_and(|tail| tail.ty != Ty::Unit)
+                {
+                    return_tail(body);
+                }
+            });
         });
     }
 }
@@ -68,6 +78,33 @@ mod tests {
 
             mod run {
                 use super::*;
+
+                #[test]
+                fn run_should_return_the_tails_of_the_closures_of_more_than_one_statement() {
+                    let (mut m, _) = lower(
+                        r#"
+                        pub struct Root;
+                        impl Root {
+                            pub fn closures(&self) {
+                                let one = |x| x;
+                                let more = |x| {
+                                    let y = x;
+                                    y
+                                };
+                            }
+                        }
+                        "#,
+                        &[],
+                        &[],
+                    );
+
+                    ExplicitReturns.run(&mut m, &mut Vec::new());
+
+                    assert_eq!(
+                        print::func(m.method("Root", "closures").unwrap()),
+                        "fn closures(&self) -> () {\n    let one: ? = |x| {\n    x;\n};\n    let more: ? = |x| {\n    let y: ? = x;\n    return y;\n};\n}"
+                    );
+                }
 
                 #[test]
                 fn run_should_return_the_tails_of_the_functions_with_a_value() {

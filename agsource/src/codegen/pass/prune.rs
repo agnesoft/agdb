@@ -133,7 +133,7 @@ fn trait_calls(m: &mut Module) -> BTreeSet<(String, String)> {
     let mut members = BTreeSet::new();
     let mut note = |e: &mut Expr| match &e.k {
         K::Call {
-            callee: Callee::Trait { trait_, name },
+            callee: Callee::Trait { trait_, name, .. },
             ..
         } => {
             calls.insert((trait_.clone(), name.clone()));

@@ -176,222 +176,117 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::graph::DbGraph;
-    use crate::graph_search::GraphSearch;
-    use crate::storage::file_storage::FileStorage;
-    use crate::test_utilities::test_file::TestFile;
+    use crate::collections::tests::storage;
+    use crate::graph_search::tests::graph;
+    use crate::graph_search::tests::indexes;
 
-    struct Handler {
-        pub processor: fn(GraphIndex, u64) -> (u64, bool),
+    struct Costs(fn(GraphIndex, u64) -> (u64, bool));
+
+    impl PathSearchHandler for Costs {
+        fn process(&self, index: GraphIndex, distance: u64) -> Result<(u64, bool), DbError> {
+            Ok((self.0)(index, distance))
+        }
     }
 
-    impl Default for Handler {
-        fn default() -> Self {
-            Self {
-                processor: |_index: GraphIndex, _distance: u64| (1_u64, true),
+    const ONE: Costs = Costs(|_, _| (1, true));
+
+    /// 1 -4-> 3, 1 -5-> 2 -6-> 3
+    const SHORTCUT: &[(i64, i64)] = &[(1, 3), (1, 2), (2, 3)];
+
+    mod path_search {
+        use super::*;
+
+        #[test]
+        fn path_search_should_return_the_cheapest_then_the_shortest_path() {
+            let mut storage = storage();
+            let graph = graph(&mut storage, 3, SHORTCUT);
+
+            for (costs, expected) in [
+                (ONE, indexes(&[1, -4, 3])),
+                (
+                    Costs(|index, _| (if index.0 == -4 { 10 } else { 1 }, true)),
+                    indexes(&[1, -5, 2, -6, 3]),
+                ),
+                (
+                    Costs(|index, _| (if index.0 == -4 { 3 } else { 1 }, true)),
+                    indexes(&[1, -4, 3]),
+                ),
+            ] {
+                let result = PathSearch::new(&graph, &storage, GraphIndex(1), GraphIndex(3), costs)
+                    .unwrap()
+                    .search();
+
+                assert_eq!(result, expected);
             }
         }
-    }
 
-    impl PathSearchHandler for Handler {
-        fn process(&self, index: GraphIndex, distance: u64) -> Result<(u64, bool), DbError> {
-            Ok((self.processor)(index, distance))
+        #[test]
+        fn path_search_zero_cost_should_skip_the_element() {
+            let mut storage = storage();
+            let graph = graph(&mut storage, 3, SHORTCUT);
+            let costs = Costs(|index, _| (u64::from(index.0 != -4), true));
+
+            let result = PathSearch::new(&graph, &storage, GraphIndex(1), GraphIndex(3), costs)
+                .unwrap()
+                .search();
+
+            assert_eq!(result, indexes(&[1, -5, 2, -6, 3]));
         }
-    }
 
-    #[test]
-    fn circular_path() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-        let mut graph = DbGraph::new(&mut storage).unwrap();
-        let node = graph.insert_node(&mut storage).unwrap();
-        let _edge = graph.insert_edge(&mut storage, node, node).unwrap();
+        #[test]
+        fn path_search_parallel_edges_should_take_the_first_inserted_edge() {
+            let mut storage = storage();
+            let graph = graph(&mut storage, 3, &[(1, 2), (1, 2), (2, 3), (2, 3)]);
 
-        let result = GraphSearch::from((&graph, &storage)).path(node, node, Handler::default());
+            let result = PathSearch::new(&graph, &storage, GraphIndex(1), GraphIndex(3), ONE)
+                .unwrap()
+                .search();
 
-        assert_eq!(result, Ok(vec![]));
-    }
+            assert_eq!(result, indexes(&[1, -4, 2, -6, 3]));
+        }
 
-    #[test]
-    fn empty_graph() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-        let graph = DbGraph::new(&mut storage).unwrap();
+        #[test]
+        fn path_search_not_added_should_follow_but_not_return_the_element() {
+            let mut storage = storage();
+            let graph = graph(&mut storage, 3, &[(1, 2), (2, 2), (2, 3)]);
 
-        let result = GraphSearch::from((&graph, &storage)).path(
-            GraphIndex::default(),
-            GraphIndex::default(),
-            Handler::default(),
-        );
+            for (costs, expected) in [
+                (Costs(|index, _| (1, index.is_node())), indexes(&[1, 2, 3])),
+                (Costs(|index, _| (1, index.is_edge())), indexes(&[-4, -6])),
+            ] {
+                let result = PathSearch::new(&graph, &storage, GraphIndex(1), GraphIndex(3), costs)
+                    .unwrap()
+                    .search();
 
-        assert_eq!(result, Ok(vec![]));
-    }
+                assert_eq!(result, expected);
+            }
+        }
 
-    #[test]
-    fn multi_edge_path() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-        let mut graph = DbGraph::new(&mut storage).unwrap();
+        #[test]
+        fn path_search_unreachable_destination_should_return_nothing() {
+            let mut storage = storage();
+            let graph = graph(&mut storage, 3, &[(1, 2)]);
 
-        let node1 = graph.insert_node(&mut storage).unwrap();
-        let node2 = graph.insert_node(&mut storage).unwrap();
-        let node3 = graph.insert_node(&mut storage).unwrap();
+            let result = PathSearch::new(&graph, &storage, GraphIndex(1), GraphIndex(3), ONE)
+                .unwrap()
+                .search();
 
-        let edge1 = graph.insert_edge(&mut storage, node1, node2).unwrap();
-        let _edge2 = graph.insert_edge(&mut storage, node1, node2).unwrap();
+            assert_eq!(result, Ok(vec![]));
+        }
 
-        let edge3 = graph.insert_edge(&mut storage, node2, node3).unwrap();
-        let _edge4 = graph.insert_edge(&mut storage, node2, node3).unwrap();
+        #[test]
+        fn path_search_reverse_should_follow_the_incoming_edges_and_return_the_path_from_the_origin()
+         {
+            let mut storage = storage();
+            let graph = graph(&mut storage, 3, SHORTCUT);
+            let costs = Costs(|index, _| (u64::from(index.0 != -4), true));
 
-        let result = GraphSearch::from((&graph, &storage)).path(node1, node3, Handler::default());
+            let result =
+                PathSearch::new_reverse(&graph, &storage, GraphIndex(1), GraphIndex(3), costs)
+                    .unwrap()
+                    .search();
 
-        assert_eq!(result, Ok(vec![node1, edge1, node2, edge3, node3]));
-    }
-
-    #[test]
-    fn origin_is_destination() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-        let mut graph = DbGraph::new(&mut storage).unwrap();
-        let node = graph.insert_node(&mut storage).unwrap();
-
-        let result = GraphSearch::from((&graph, &storage)).path(node, node, Handler::default());
-
-        assert_eq!(result, Ok(vec![]));
-    }
-
-    #[test]
-    fn short_circuit_path() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-        let mut graph = DbGraph::new(&mut storage).unwrap();
-
-        let node1 = graph.insert_node(&mut storage).unwrap();
-        let node2 = graph.insert_node(&mut storage).unwrap();
-        let node3 = graph.insert_node(&mut storage).unwrap();
-
-        let edge1 = graph.insert_edge(&mut storage, node1, node3).unwrap();
-        let _edge2 = graph.insert_edge(&mut storage, node1, node2).unwrap();
-        let _edge3 = graph.insert_edge(&mut storage, node2, node3).unwrap();
-
-        let result = GraphSearch::from((&graph, &storage)).path(node1, node3, Handler::default());
-
-        assert_eq!(result, Ok(vec![node1, edge1, node3]));
-    }
-
-    #[test]
-    fn single_path() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-        let mut graph = DbGraph::new(&mut storage).unwrap();
-
-        let node1 = graph.insert_node(&mut storage).unwrap();
-        let node2 = graph.insert_node(&mut storage).unwrap();
-        let node3 = graph.insert_node(&mut storage).unwrap();
-
-        let edge1 = graph.insert_edge(&mut storage, node1, node2).unwrap();
-        let edge2 = graph.insert_edge(&mut storage, node2, node3).unwrap();
-
-        let result = GraphSearch::from((&graph, &storage)).path(node1, node3, Handler::default());
-
-        assert_eq!(result, Ok(vec![node1, edge1, node2, edge2, node3]));
-    }
-
-    #[test]
-    fn skip_short_circuit_path() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-        let mut graph = DbGraph::new(&mut storage).unwrap();
-
-        let node1 = graph.insert_node(&mut storage).unwrap();
-        let node2 = graph.insert_node(&mut storage).unwrap();
-        let node3 = graph.insert_node(&mut storage).unwrap();
-
-        let _edge1 = graph.insert_edge(&mut storage, node1, node3).unwrap();
-        let edge2 = graph.insert_edge(&mut storage, node1, node2).unwrap();
-        let edge3 = graph.insert_edge(&mut storage, node2, node3).unwrap();
-
-        let result = GraphSearch::from((&graph, &storage)).path(
-            node1,
-            node3,
-            Handler {
-                processor: |index: GraphIndex, _distance: u64| {
-                    if index.0 == -4 {
-                        return (0, true);
-                    }
-
-                    (1, true)
-                },
-            },
-        );
-
-        assert_eq!(result, Ok(vec![node1, edge2, node2, edge3, node3]));
-    }
-
-    #[test]
-    fn unconnected() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-        let mut graph = DbGraph::new(&mut storage).unwrap();
-
-        let node1 = graph.insert_node(&mut storage).unwrap();
-        let node2 = graph.insert_node(&mut storage).unwrap();
-        let node3 = graph.insert_node(&mut storage).unwrap();
-
-        let _edge1 = graph.insert_edge(&mut storage, node1, node2).unwrap();
-
-        let result = GraphSearch::from((&graph, &storage)).path(node1, node3, Handler::default());
-
-        assert_eq!(result, Ok(vec![]));
-    }
-
-    #[test]
-    fn filtered_nodes() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-        let mut graph = DbGraph::new(&mut storage).unwrap();
-
-        let node1 = graph.insert_node(&mut storage).unwrap();
-        let node2 = graph.insert_node(&mut storage).unwrap();
-        let node3 = graph.insert_node(&mut storage).unwrap();
-
-        let _edge1 = graph.insert_edge(&mut storage, node1, node2).unwrap();
-        let _edge2 = graph.insert_edge(&mut storage, node2, node2).unwrap();
-        let _edge3 = graph.insert_edge(&mut storage, node2, node3).unwrap();
-
-        let result = GraphSearch::from((&graph, &storage)).path(
-            node1,
-            node3,
-            Handler {
-                processor: |index: GraphIndex, _distance: u64| (1, index.is_node()),
-            },
-        );
-
-        assert_eq!(result, Ok(vec![node1, node2, node3]));
-    }
-
-    #[test]
-    fn filtered_edges() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-        let mut graph = DbGraph::new(&mut storage).unwrap();
-
-        let node1 = graph.insert_node(&mut storage).unwrap();
-        let node2 = graph.insert_node(&mut storage).unwrap();
-        let node3 = graph.insert_node(&mut storage).unwrap();
-
-        let edge1 = graph.insert_edge(&mut storage, node1, node2).unwrap();
-        let _edge2 = graph.insert_edge(&mut storage, node2, node2).unwrap();
-        let edge3 = graph.insert_edge(&mut storage, node2, node3).unwrap();
-
-        let result = GraphSearch::from((&graph, &storage)).path(
-            node1,
-            node3,
-            Handler {
-                processor: |index: GraphIndex, _distance: u64| (1, index.is_edge()),
-            },
-        );
-
-        assert_eq!(result, Ok(vec![edge1, edge3]));
+            assert_eq!(result, indexes(&[1, -5, 2, -6, 3]));
+        }
     }
 }

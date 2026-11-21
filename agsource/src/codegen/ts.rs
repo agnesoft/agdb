@@ -9,6 +9,7 @@ mod erase_casts;
 mod erase_traits;
 mod omit_skipped_defaults;
 mod remove_dead_helpers;
+mod rename_shadowed;
 mod unescape_identifiers;
 
 pub use accept_element_sources::AcceptElementSources;
@@ -19,4 +20,5 @@ pub use erase_casts::EraseCasts;
 pub use erase_traits::EraseTraits;
 pub use omit_skipped_defaults::OmitSkippedDefaults;
 pub use remove_dead_helpers::RemoveDeadHelpers;
+pub use rename_shadowed::RenameShadowed;
 pub use unescape_identifiers::UnescapeIdentifiers;

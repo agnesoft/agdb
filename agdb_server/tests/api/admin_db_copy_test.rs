@@ -8,6 +8,7 @@ use crate::test_server::test_error::TestError;
 use agdb::DbElement;
 use agdb::DbId;
 use agdb::QueryBuilder;
+use agdb::QueryType;
 use agdb_api::DbKind;
 
 async fn copy() -> Result<(), TestError> {
@@ -18,7 +19,7 @@ async fn copy() -> Result<(), TestError> {
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.admin_db_add(owner, db, DbKind::Mapped).await?;
-    let queries = &[QueryBuilder::insert()
+    let queries: &[QueryType] = &[QueryBuilder::insert()
         .nodes()
         .aliases(["root"])
         .query()
@@ -35,7 +36,7 @@ async fn copy() -> Result<(), TestError> {
             .iter()
             .any(|d| d.owner == *owner && d.db == *db2)
     );
-    let queries = &[QueryBuilder::select().ids("root").query().into()];
+    let queries: &[QueryType] = &[QueryBuilder::select().ids("root").query().into()];
     let results = server.api.admin_db_exec(owner, db2, queries).await?.1;
     assert_eq!(results.len(), 1);
     assert_eq!(results[0].result, 1);
@@ -61,7 +62,7 @@ async fn copy_to_different_user() -> Result<(), TestError> {
     server.api.admin_user_add(owner, owner).await?;
     server.api.admin_user_add(owner2, owner2).await?;
     server.api.admin_db_add(owner, db, DbKind::Mapped).await?;
-    let queries = &[QueryBuilder::insert()
+    let queries: &[QueryType] = &[QueryBuilder::insert()
         .nodes()
         .aliases(["root"])
         .query()
@@ -79,7 +80,7 @@ async fn copy_to_different_user() -> Result<(), TestError> {
             .any(|d| d.owner == *owner2 && d.db == *db2)
     );
     assert_eq!(server.api.admin_db_audit(owner2, db2).await?.1.0.len(), 1);
-    let queries = &[QueryBuilder::select().ids("root").query().into()];
+    let queries: &[QueryType] = &[QueryBuilder::select().ids("root").query().into()];
     let results = server.api.admin_db_exec(owner2, db2, queries).await?.1;
     assert_eq!(results.len(), 1);
     assert_eq!(results[0].result, 1);

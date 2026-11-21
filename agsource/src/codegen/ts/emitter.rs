@@ -6,6 +6,7 @@ use crate::codegen::pass::return_tail;
 use crate::codegen::pass::subst;
 use crate::codegen::print;
 use std::cell::RefCell;
+use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 use std::fmt::Write;
 
@@ -58,8 +59,8 @@ pub struct Emitter<'a> {
     generics: Vec<Generic>,
     /// The indent of the current statement, for the bodies of its closures.
     indent: usize,
-    /// Whether the code calls [`PANIC`].
-    panics: bool,
+    /// The helpers the code calls, such as [`PANIC`].
+    helpers: BTreeSet<&'static str>,
     /// The names of the module the code uses, for [`Emitter::tests`].
     imports: BTreeSet<String>,
     /// The exported values named as a schema type, whose alias is exported
@@ -68,10 +69,33 @@ pub struct Emitter<'a> {
     /// The traits are types bounding the generics, as in a
     /// [client](Emitter::client), not dictionaries.
     bounded: bool,
+    /// The [opaque](Module::opaque) classes the types name.
+    classes: RefCell<BTreeSet<String>>,
 }
 
 /// `panic!`: TS has no throw expression.
 const PANIC: &str = "function panic(msg: string): never {\n    throw new Error(msg);\n}\n";
+
+/// `Result::unwrap_err` of a call that throws its error.
+const UNWRAP_ERR: &str = "async function unwrap_err<E>(value: Promise<unknown>): Promise<E> {
+    try {
+        await value;
+    } catch (e) {
+        return e as E;
+    }
+    throw new Error(\"called `Result::unwrap_err()` on an `Ok` value\");
+}
+";
+
+/// The comparison of `sort_by_key`.
+const BY_KEY: &str = "function by_key<T, K>(key: (value: T) => K): (a: T, b: T) => number {
+    return (a, b) => {
+        const x = key(a);
+        const y = key(b);
+        return x < y ? -1 : x > y ? 1 : 0;
+    };
+}
+";
 
 impl<'a> Emitter<'a> {
     pub fn new(m: &'a Module, config: &'a TsConfig) -> Self {
@@ -88,10 +112,11 @@ impl<'a> Emitter<'a> {
             guarded: BTreeSet::new(),
             generics: Vec::new(),
             indent: 0,
-            panics: false,
+            helpers: BTreeSet::new(),
             imports: BTreeSet::new(),
             values: BTreeSet::new(),
             bounded: false,
+            classes: RefCell::default(),
         }
     }
 
@@ -141,9 +166,7 @@ impl<'a> Emitter<'a> {
             );
         }
 
-        if self.panics {
-            head += PANIC;
-        }
+        head.extend(self.helpers.iter().copied());
 
         Ts {
             code: head + &self.out,
@@ -153,33 +176,76 @@ impl<'a> Emitter<'a> {
     }
 
     /// The [tests](Module::tests) of the module emitted as `module` as a
-    /// vitest suite `name`. An `assert_eq!` expects its left value to equal
-    /// the right one as its schema type, so the compiler checks the expected
-    /// values against the schema.
-    pub fn tests(mut self, name: &str, module: &str) -> Ts {
+    /// vitest suite `name`, those named `suite::test` in a suite of their
+    /// own; an `async` test is an `async` one. An `assert_eq!` expects its
+    /// left value to equal the right one as its schema type, so the compiler
+    /// checks the expected values against the schema. The
+    /// [opaque](Module::opaque) names are imported from the path `glue`
+    /// gives their origin.
+    pub fn tests(mut self, name: &str, module: &str, glue: &[(&str, &str)]) -> Ts {
         let m = self.m;
         self.line(0, &format!("describe({name:?}, () => {{"));
+        let mut suite: Option<&str> = None;
 
         for (i, f) in m.tests.iter().enumerate() {
-            if i > 0 {
+            let (inner, test) = f
+                .name
+                .rsplit_once("::")
+                .map_or((None, f.name.as_str()), |(s, t)| (Some(s), t));
+
+            if inner != suite {
+                if suite.is_some() {
+                    self.line(1, "});");
+                }
+
+                if i > 0 {
+                    self.line(0, "");
+                }
+
+                if let Some(inner) = inner {
+                    self.line(1, &format!("describe({inner:?}, () => {{"));
+                }
+
+                suite = inner;
+            } else if i > 0 {
                 self.line(0, "");
             }
 
+            let indent = usize::from(suite.is_some());
+            let asyncness = if f.is_async { "async " } else { "" };
             self.current = f.name.clone();
             self.reassigned = reassigned(&f.body);
-            self.line(1, &format!("it({:?}, () => {{", f.name));
-            self.block(&f.body, 2);
+            self.line(indent + 1, &format!("it({test:?}, {asyncness}() => {{"));
+            self.block(&f.body, indent + 2);
+            self.line(indent + 1, "});");
+        }
+
+        if suite.is_some() {
             self.line(1, "});");
         }
 
         self.line(0, "});");
+        self.current = name.to_owned();
         let exported = |n: &String| *n == m.root || m.functions.iter().any(|f| f.name == *n);
+        let mut used = self.imports.clone();
+        used.extend(self.classes.take());
+        let mut from: BTreeMap<&str, Vec<&str>> = BTreeMap::new();
 
-        for n in self.imports.clone().iter().filter(|n| !exported(n)) {
-            self.unsupported(&format!("{n} is not exported"));
+        for n in &used {
+            match m.opaque.get(n) {
+                Some(origin) => match glue.iter().find(|(o, _)| o == origin) {
+                    Some((_, path)) => from.entry(path).or_default().push(n),
+                    None => {
+                        self.unsupported(&format!("{n} is from {origin} without a TS module"));
+                    }
+                },
+                None if exported(n) => from.entry(module).or_default().push(n),
+                None => {
+                    self.unsupported(&format!("{n} is not exported"));
+                }
+            }
         }
 
-        let imports: Vec<&String> = self.imports.iter().filter(|n| exported(n)).collect();
         let mut head = format!(
             "{}
 
@@ -189,9 +255,8 @@ import {{ describe, expect, it }} from \"vitest\";
             self.config.header, self.config.import
         );
 
-        if !imports.is_empty() {
-            let imports: Vec<&str> = imports.iter().map(|n| n.as_str()).collect();
-            let _ = writeln!(head, "import {{ {} }} from {module:?};", imports.join(", "));
+        for (path, names) in from {
+            let _ = writeln!(head, "import {{ {} }} from {path:?};", names.join(", "));
         }
 
         head += "\n";
@@ -201,9 +266,7 @@ import {{ describe, expect, it }} from \"vitest\";
             let _ = writeln!(types, "type {name} = {}.{name};", self.config.schemas);
         }
 
-        if self.panics {
-            types += PANIC;
-        }
+        types.extend(self.helpers.iter().copied());
 
         if !types.is_empty() {
             head += &(types + "\n");
@@ -233,7 +296,11 @@ import {{ describe, expect, it }} from \"vitest\";
             }
             Ty::Option(inner) => format!("{} | undefined", self.ty(inner)),
             Ty::Tuple(items) => format!("[{}]", self.tys(items)),
-            Ty::Named(name, args) if self.m.is_builder(name) => {
+            Ty::Named(name, args) if self.is_class(name) => {
+                if self.m.opaque.contains_key(name) {
+                    self.classes.borrow_mut().insert(name.clone());
+                }
+
                 let generics = self.m.generics_of(name);
 
                 if generics.is_empty() {
@@ -327,7 +394,7 @@ import {{ describe, expect, it }} from \"vitest\";
             Lit::Bool(b) => b.to_string(),
             Lit::Int(i) => i.to_string(),
             Lit::Float(f) => format!("{f:?}"),
-            Lit::Str(s) => format!("{s:?}"),
+            Lit::Str(s) => format!("\"{}\"", escape(s, '"')),
             Lit::Unit => "undefined".into(),
         }
     }
@@ -340,8 +407,13 @@ import {{ describe, expect, it }} from \"vitest\";
             .join(", ")
     }
 
+    /// A builder or a class the target provides: a TS class.
+    fn is_class(&self, name: &str) -> bool {
+        self.m.is_builder(name) || self.m.opaque.contains_key(name)
+    }
+
     fn is_builder_value(&self, e: &Expr) -> bool {
-        matches!(e.k, K::This) || e.ty.name().is_some_and(|n| self.m.is_builder(n))
+        matches!(e.k, K::This) || e.ty.name().is_some_and(|n| self.is_class(n))
     }
 
     fn expr(&mut self, e: &Expr) -> String {
@@ -350,7 +422,7 @@ import {{ describe, expect, it }} from \"vitest\";
             K::Local(name) => name.clone(),
             K::Lit(lit) => Self::lit(lit),
             K::Array(items) | K::Tuple(items) => format!("[{}]", self.list(items)),
-            K::Construct { class, fields } if self.m.is_builder(class) => {
+            K::Construct { class, fields } if self.is_class(class) => {
                 let args: Vec<String> = self.m.classes[class]
                     .fields
                     .iter()
@@ -408,6 +480,18 @@ import {{ describe, expect, it }} from \"vitest\";
             }
             K::Unwrap(value) | K::Ref(value) | K::Deref(value) => self.expr(value),
             K::Index { base, index } => format!("{}[{}]", self.expr(base), self.expr(index)),
+            K::Call {
+                callee: Callee::Intrinsic(Intrinsic::UnwrapErr),
+                recv,
+                ..
+            } => match recv.as_deref().map(|r| &r.k) {
+                Some(K::Await(value)) => {
+                    self.helpers.insert(UNWRAP_ERR);
+                    let ty = self.ty(&e.ty);
+                    format!("(await unwrap_err<{ty}>({}))", self.expr(value))
+                }
+                _ => self.unsupported("`unwrap_err` of a value that is not awaited"),
+            },
             K::Call { callee, recv, args } => self.call(callee, recv.as_deref(), args),
             K::Convert { value, to } => {
                 self.imports.insert(normalizer(to));
@@ -477,12 +561,7 @@ import {{ describe, expect, it }} from \"vitest\";
     fn pieces(&mut self, pieces: &[Expr], out: &mut String) {
         for p in pieces {
             match &p.k {
-                K::Lit(Lit::Str(s)) => {
-                    *out += &s
-                        .replace('\\', "\\\\")
-                        .replace('`', "\\`")
-                        .replace("${", "\\${")
-                }
+                K::Lit(Lit::Str(s)) => *out += &escape(s, '`').replace("${", "\\${"),
                 K::Format(nested) => self.pieces(nested, out),
                 _ => *out += &format!("${{{}}}", self.expr(p)),
             }
@@ -494,7 +573,7 @@ import {{ describe, expect, it }} from \"vitest\";
         let r = recv.map(|r| self.expr(r)).unwrap_or_default();
 
         match callee {
-            Callee::Member { class, name } if !self.m.is_builder(class) => {
+            Callee::Member { class, name } if !self.is_class(class) => {
                 let a = if a.is_empty() { r } else { format!("{r}, {a}") };
                 self.imports.insert(format!("{class}_{name}"));
                 format!("{class}_{name}({a})")
@@ -503,7 +582,7 @@ import {{ describe, expect, it }} from \"vitest\";
                 format!("{r}.{name}<{}>({a})", self.tys(types))
             }
             Callee::Member { name, .. } | Callee::Trait { name, .. } => format!("{r}.{name}({a})"),
-            Callee::Static { class, name } if !self.m.is_builder(class) => {
+            Callee::Static { class, name } if !self.is_class(class) => {
                 self.imports.insert(format!("{class}_{name}"));
                 format!("{class}_{name}({a})")
             }
@@ -511,7 +590,10 @@ import {{ describe, expect, it }} from \"vitest\";
                 self.imports.insert(class.clone());
                 format!("{class}.{name}({a})")
             }
-            Callee::Extern(name) => format!("{name}({a})"),
+            Callee::Extern(name) => {
+                self.imports.insert(name.clone());
+                format!("{name}({a})")
+            }
             Callee::Intrinsic(i) => match i {
                 Intrinsic::Push => format!("{r}.push({a})"),
                 Intrinsic::Pop => format!("{r}.pop()"),
@@ -522,6 +604,31 @@ import {{ describe, expect, it }} from \"vitest\";
                 Intrinsic::Reserve => "void 0".into(),
                 Intrinsic::UnwrapOrDefault => format!("({r} ?? {a})"),
                 Intrinsic::Expect => format!("({r} ?? {})", self.panic(&a)),
+                Intrinsic::Unwrap => format!(
+                    "({r} ?? {})",
+                    self.panic("\"called `Option::unwrap()` on a `None` value\"")
+                ),
+                Intrinsic::IsSome => format!("({r} !== undefined)"),
+                Intrinsic::IsNone => format!("({r} === undefined)"),
+                Intrinsic::MapSome => {
+                    format!("((value) => value === undefined ? undefined : ({a})(value))({r})")
+                }
+                Intrinsic::Find => format!("{r}.find({a})"),
+                Intrinsic::Any => format!("{r}.some({a})"),
+                Intrinsic::All => format!("{r}.every({a})"),
+                Intrinsic::SortByKey => {
+                    self.helpers.insert(BY_KEY);
+                    format!("{r}.sort(by_key({a}))")
+                }
+                Intrinsic::Remove => format!("{r}.splice({a}, 1)[0]"),
+                Intrinsic::Repeat => format!("{r}.repeat({a})"),
+                Intrinsic::Assert => format!("expect({a}).toBe(true)"),
+                Intrinsic::AssertNe => {
+                    let left = self.expr(&args[0]);
+                    let right = self.expr(&args[1]);
+                    let ty = self.ty(&args[1].ty);
+                    format!("expect({left}).not.toEqual<{ty}>({right})")
+                }
                 Intrinsic::Map => format!("{r}.map({a})"),
                 Intrinsic::MapOk => format!("({a})({r})"),
                 Intrinsic::StartsWith => format!("{r}.startsWith({a})"),
@@ -532,7 +639,9 @@ import {{ describe, expect, it }} from \"vitest\";
                     let ty = self.ty(&args[1].ty);
                     format!("expect({left}).toEqual<{ty}>({right})")
                 }
-                Intrinsic::MemTake | Intrinsic::MemSwap => self.unsupported(&format!("{i:?}")),
+                Intrinsic::MemTake | Intrinsic::MemSwap | Intrinsic::UnwrapErr => {
+                    self.unsupported(&format!("{i:?}"))
+                }
             },
             Callee::Path(..) | Callee::Method(..) => self.unsupported(&format!("{callee:?}")),
         }
@@ -606,7 +715,7 @@ import {{ describe, expect, it }} from \"vitest\";
     }
 
     fn panic(&mut self, message: &str) -> String {
-        self.panics = true;
+        self.helpers.insert(PANIC);
         format!("panic({message})")
     }
 
@@ -690,14 +799,18 @@ import {{ describe, expect, it }} from \"vitest\";
     }
 
     /// TS widens the literals of a `let` (a unit variant `"A"` to `string`,
-    /// `[]` to `never[]`), so those have their type.
+    /// `[]` to `never[]`, and so the lists of them), so those have their
+    /// type.
     fn binding(&mut self, name: &str, value: Option<&Expr>, indent: usize) {
-        let literal = |v: &Expr| match &v.k {
-            K::Array(items) => items.is_empty(),
-            K::Construct { class, .. } => !self.m.is_builder(class),
-            K::Variant { en, .. } => en != "Option",
-            _ => false,
-        };
+        fn literal(e: &Emitter, v: &Expr) -> bool {
+            match &v.k {
+                K::Array(items) => items.is_empty() || items.iter().any(|i| literal(e, i)),
+                K::Construct { class, .. } => !e.is_class(class),
+                K::Variant { en, .. } => en != "Option",
+                _ => false,
+            }
+        }
+        let literal = |v: &Expr| literal(self, v);
         let typed = value.filter(|v| {
             (literal(v) || self.reassigned.contains(name))
                 && match &v.ty {
@@ -1363,6 +1476,29 @@ fn reassigned(body: &[Expr]) -> BTreeSet<String> {
     out
 }
 
+/// The text of a TS string delimited by `quote`: the control characters
+/// as `\u{..}`, as TS reads `\0` followed by a digit as an octal escape.
+fn escape(s: &str, quote: char) -> String {
+    let mut out = String::new();
+
+    for c in s.chars() {
+        match c {
+            '\\' => out += "\\\\",
+            '\n' => out += "\\n",
+            '\r' => out += "\\r",
+            '\t' => out += "\\t",
+            c if c == quote => {
+                out.push('\\');
+                out.push(c);
+            }
+            c if c.is_control() => out += &format!("\\u{{{:x}}}", u32::from(c)),
+            c => out.push(c),
+        }
+    }
+
+    out
+}
+
 /// Whether the statement has no expression form.
 fn is_block_statement(e: &Expr) -> bool {
     match &e.k {
@@ -1378,8 +1514,10 @@ fn is_block_statement(e: &Expr) -> bool {
 mod tests {
     use super::*;
     use crate::codegen::pass::*;
+    use crate::codegen::test_utilities::SUITE;
     use crate::codegen::test_utilities::conversion;
     use crate::codegen::test_utilities::lower;
+    use crate::codegen::test_utilities::suite;
     use crate::codegen::test_utilities::tested;
     use crate::codegen::ts::*;
     use std::collections::BTreeMap;
@@ -1403,7 +1541,7 @@ mod tests {
         let (mut m, errors) = tested(source, tests, data);
         assert_eq!(errors, Vec::<String>::new());
         passes(&mut m);
-        Emitter::new(&m, &config()).tests("suite", "./m.ts")
+        Emitter::new(&m, &config()).tests("suite", "./m.ts", &[])
     }
 
     fn passes(m: &mut Module) {
@@ -1429,6 +1567,31 @@ mod tests {
             errors.iter().map(ToString::to_string).collect::<Vec<_>>(),
             Vec::<String>::new()
         );
+    }
+
+    /// The passes of the route tests: those of the builder, [`ThrowErrors`]
+    /// and [`RenameShadowed`].
+    fn route_passes(m: &mut Module) {
+        Passes::new()
+            .with(Resolve)
+            .with(Prune)
+            .with(ExplicitReturns)
+            .with(Inline)
+            .with(AcceptElementSources)
+            .with(LowerConversions)
+            .with(TraitDicts)
+            .with(EraseOwnership)
+            .with(ThrowErrors)
+            .with(InferEmptyLists)
+            .with(TagResults)
+            .with(EraseTraits)
+            .with(EraseCasts)
+            .with(EraseNewtypes)
+            .with(UnescapeIdentifiers)
+            .with(OmitSkippedDefaults)
+            .with(RemoveDeadHelpers)
+            .with(RenameShadowed)
+            .run(m, &mut |_, _| {});
     }
 
     fn class(name: &str, fields: Vec<(&str, Ty)>, methods: Vec<Func>) -> (String, Class) {
@@ -1533,7 +1696,90 @@ fn second() {
                     ts.code,
                     "// header\n\nimport type { S } from \"s\";\nimport { describe, expect, it } from \"vitest\";\nimport { Root, into_A } from \"./m.ts\";\n\ntype Q = S.Q;\nfunction panic(msg: string): never {\n    throw new Error(msg);\n}\n\ndescribe(\"suite\", () => {\n    it(\"first\", () => {\n        const r = Root.new();\n        expect(r.q()).toEqual<Q>({ n: 1 });\n    });\n\n    it(\"second\", () => {\n        const a = into_A([1, 2]);\n        const n = E_get(\"X\");\n        panic(\"p\");\n    });\n});\n"
                 );
-                assert_eq!(ts.unsupported, ["second: `E_get is not exported`"]);
+                assert_eq!(ts.unsupported, ["suite: `E_get is not exported`"]);
+            }
+
+            #[test]
+            fn tests_should_emit_the_methods_of_the_options_lists_and_strings_and_escape_the_literals()
+             {
+                let ts = emitted_tests(
+                    "pub struct Root;",
+                    r#"#[test]
+fn checks() {
+    let o: Option<u64> = Some(1);
+    let mut v: Vec<u64> = vec![2, 1];
+    let s = "a\0\u{1}\\\"'\n\r\t".to_string();
+    let a = o.unwrap();
+    assert!(o.is_some());
+    assert!(!o.is_none());
+    let d = o.map(|x| x + 1);
+    let f = v.iter().find(|x| **x == 1);
+    assert!(v.iter().any(|x| *x == 1));
+    assert!(v.iter().all(|x| *x > 0));
+    v.sort_by_key(|x| *x);
+    let r = v.remove(0);
+    let t = format!("{s}\0`");
+    assert_ne!(s.repeat(2), t);
+}"#,
+                    &[],
+                );
+
+                assert_eq!(
+                    ts.code,
+                    "// header\n\nimport type { S } from \"s\";\nimport { describe, expect, it } from \"vitest\";\n\nfunction by_key<T, K>(key: (value: T) => K): (a: T, b: T) => number {\n    return (a, b) => {\n        const x = key(a);\n        const y = key(b);\n        return x < y ? -1 : x > y ? 1 : 0;\n    };\n}\nfunction panic(msg: string): never {\n    throw new Error(msg);\n}\n\ndescribe(\"suite\", () => {\n    it(\"checks\", () => {\n        const o = 1;\n        const v = [2, 1];\n        const s = \"a\\u{0}\\u{1}\\\\\\\"'\\n\\r\\t\";\n        const a = (o ?? panic(\"called `Option::unwrap()` on a `None` value\"));\n        expect((o !== undefined)).toBe(true);\n        expect(!(o === undefined)).toBe(true);\n        const d = ((value) => value === undefined ? undefined : ((x) => x + 1)(value))(o);\n        const f = v.find((x) => x === 1);\n        expect(v.some((x) => x === 1)).toBe(true);\n        expect(v.every((x) => x > 0)).toBe(true);\n        v.sort(by_key((x) => x));\n        const r = v.splice(0, 1)[0];\n        const t = `${s}\\u{0}\\``;\n        expect(s.repeat(2)).not.toEqual<string>(t);\n    });\n});\n"
+                );
+                assert_eq!(ts.unsupported, Vec::<String>::new());
+            }
+
+            #[test]
+            fn tests_should_nest_the_suites_await_the_async_tests_and_import_the_opaque_names_from_their_glue()
+             {
+                let (mut m, _) = suite(
+                    "pub struct Root;\nimpl Root { pub fn new() -> Root { Root } }",
+                    SUITE,
+                );
+                route_passes(&mut m);
+                m.tests.rotate_left(1);
+
+                let ts = Emitter::new(&m, &config()).tests(
+                    "routes",
+                    "./m.ts",
+                    &[("api", "./api.ts"), ("glue", "./glue.ts")],
+                );
+
+                assert_eq!(
+                    ts.code,
+                    "// header\n\nimport type { S } from \"s\";\nimport { describe, expect, it } from \"vitest\";\nimport { ApiError } from \"./api.ts\";\nimport { Helpers, Server, next_name } from \"./glue.ts\";\nimport { Root } from \"./m.ts\";\n\nasync function unwrap_err<E>(value: Promise<unknown>): Promise<E> {\n    try {\n        await value;\n    } catch (e) {\n        return e as E;\n    }\n    throw new Error(\"called `Result::unwrap_err()` on an `Ok` value\");\n}\n\ndescribe(\"routes\", () => {\n    describe(\"login\", () => {\n        it(\"logs_in\", async () => {\n            const server = (await Server.new());\n            const status = (await server.api.login());\n            const name = next_name(\"user\");\n            const agent = Helpers.agent();\n            const pair = unsupported();\n            const port = unsupported();\n            expect(status).not.toEqual<number>(0);\n        });\n\n        it(\"fails\", async () => {\n            const server = (await Server.new());\n            const status = unsupported().status;\n            const code = (await unwrap_err<ApiError>(server.api.ping())).status;\n            const root = Root.new();\n            expect(server.address().length === 0).toBe(true);\n        });\n    });\n\n    describe(\"logout\", () => {\n        it(\"logs_out\", async () => {\n            const server = (await Server.new());\n            expect(server.dir).not.toEqual<string>(\"admin\");\n        });\n    });\n\n    it(\"status\", async () => {\n        const server = (await Server.new());\n        expect(server.dir).toEqual<string>(\"admin\");\n    });\n});\n"
+                );
+                assert_eq!(
+                    ts.unsupported,
+                    [
+                        "login::logs_in: `/* unsupported: unknown function `Pair` */`",
+                        "login::logs_in: `/* unsupported: unknown path `PORT` */`",
+                        "login::fails: ``unwrap_err` of a value that is not awaited`"
+                    ]
+                );
+            }
+
+            #[test]
+            fn tests_should_report_the_opaque_names_of_an_origin_without_a_ts_module() {
+                let (mut m, _) = suite(
+                    "pub struct Root;\nimpl Root { pub fn new() -> Root { Root } }",
+                    SUITE,
+                );
+                route_passes(&mut m);
+
+                let ts =
+                    Emitter::new(&m, &config()).tests("routes", "./m.ts", &[("api", "./api.ts")]);
+
+                assert_eq!(
+                    ts.unsupported[3..],
+                    [
+                        "routes: `Helpers is from glue without a TS module`",
+                        "routes: `Server is from glue without a TS module`",
+                        "routes: `next_name is from glue without a TS module`"
+                    ]
+                );
             }
 
             #[test]

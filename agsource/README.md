@@ -119,7 +119,16 @@ consts are loaded too.
 `Module::tests`, so a generator can translate them too: a path of the tested crate
 (`agdb::QueryBuilder`) names its item in the module, `assert_eq!(a, b)` is the `AssertEq`
 intrinsic, and the structs and enums the test crate declares are data types listed in
-`Module::test_types`. The passes treat the tests as callers of the API.
+`Module::test_types`. The passes treat the tests as callers of the API. `assert!` and
+`assert_ne!` are intrinsics too, and the messages of all three are left out.
+
+`SourceCrate::lower_suite` lowers the functions of one module of a test crate of several
+crates, each named in its paths, as tests named `module::name` by their module in the suite.
+Another module is the glue the target provides: the structs and functions of it that the tests
+use are opaque (`Module::opaque`, by origin), the structs with their `pub` named fields and the
+signatures of their `pub` methods, the functions as `Module::externs`. Its consts are inlined;
+a tuple struct or any other glue item is an error. `Module::provide` adds the builders of
+another module, a client's, the same way, with neither bodies nor bounds.
 
 The data types deriving serde's `Serialize` or `Deserialize` also get their serialized form in
 `Module::wire`, read from their serde attributes: the container's `rename_all`, tagging and
@@ -152,7 +161,8 @@ needs in `Passes`, built-in or its own `Pass`, and can dump the module after eac
   bindings, for targets that share objects by reference;
 - `InferEmptyLists` types `vec![]` by what is pushed to it;
 - `ThrowErrors` makes a `Result` the value it holds, for targets that throw: `Ok(x)` is `x`,
-  `Err(e)` throws `e` and `?` passes the value on;
+  `Err(e)` throws `e`, `?` and `unwrap` pass the value on, and a function ending with `Ok(())`
+  just ends;
 - `TagResults` makes the builders return the data type their results convert into, tagged with
   its variant, adding an `into_<data>` method to the traits whose implementors are all tagged;
 - `EraseNewtypes` replaces the single-field tuple data structs with their field, as serde
@@ -168,9 +178,14 @@ needs in `Passes`, built-in or its own `Pass`, and can dump the module after eac
 - `EraseCasts` drops the casts between primitives;
 - `UnescapeIdentifiers` names `where_`-style methods as the keyword;
 - `OmitSkippedDefaults` leaves out the `skip_serializing_if` fields holding their default;
-- `RemoveDeadHelpers` removes the inlined methods without callers.
+- `RemoveDeadHelpers` removes the inlined methods without callers;
+- `RenameShadowed` renames the second and later `let`s of a name in a function `name_N`, as TS
+  does not declare a name twice in a scope.
 
-`Emitter::module` writes the builders and `Emitter::tests` writes their vitest suite.
+`Emitter::module` writes the builders and `Emitter::tests` writes their vitest suite: the tests
+named `suite::test` in a `describe` of their own, the `async` ones awaited, and the opaque names
+imported from the module the generator gives their origin. An awaited `unwrap_err` catches the
+error the promise rejects with.
 `Emitter::client` writes a client module: the consts, the traits as the types the target
 implements (an abstract class when they provide methods), and the builders as classes whose
 generics the traits bound, with `async` methods returning a `Promise`. Their

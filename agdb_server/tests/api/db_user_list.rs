@@ -24,7 +24,7 @@ async fn list() -> Result<(), TestError> {
         .db_user_add(owner, db, user, DbUserRole::Write)
         .await?;
     let (status, mut list) = server.api.db_user_list(owner, db).await?;
-    list.sort();
+    list.sort_by_key(|u| u.username.clone());
     let mut expected = vec![
         DbUser {
             username: owner.to_string(),
@@ -35,7 +35,7 @@ async fn list() -> Result<(), TestError> {
             role: DbUserRole::Write,
         },
     ];
-    expected.sort();
+    expected.sort_by_key(|u| u.username.clone());
 
     assert_eq!(status, 200);
     assert_eq!(list, expected);

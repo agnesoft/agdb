@@ -3,3 +3,4 @@ src/openapi.d.ts
 src/query_builder.ts
 src/types.ts
 tests/query_builder.test.ts
+tests/routes.test.ts

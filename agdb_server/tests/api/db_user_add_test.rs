@@ -26,16 +26,13 @@ async fn add_db_user() -> Result<(), TestError> {
     server.api.user_login(user, user).await?;
     let list = server.api.db_list().await?.1;
     assert_eq!(list.len(), 1, "{list:?}");
-    assert!(
-        list.iter().any(|db_entry| {
-            matches!(
-                (&db_entry.db, &db_entry.owner, db_entry.db_type, db_entry.role),
-                (listed_db, listed_owner, DbKind::Mapped, DbUserRole::Write)
-                    if listed_db == db && listed_owner == owner
-            )
-        }),
-        "{list:?}"
-    );
+    let entry = list
+        .iter()
+        .find(|d| d.db == *db)
+        .expect("the database is listed");
+    assert_eq!(entry.owner, *owner);
+    assert_eq!(entry.db_type, DbKind::Mapped);
+    assert_eq!(entry.role, DbUserRole::Write);
     Ok(())
 }
 
@@ -63,16 +60,13 @@ async fn add_db_user_as_non_owner_admin() -> Result<(), TestError> {
     server.api.user_login(other, other).await?;
     let list = server.api.db_list().await?.1;
     assert_eq!(list.len(), 1, "{list:?}");
-    assert!(
-        list.iter().any(|db_entry| {
-            matches!(
-                (&db_entry.db, &db_entry.owner, db_entry.db_type, db_entry.role),
-                (listed_db, listed_owner, DbKind::Mapped, DbUserRole::Write)
-                    if listed_db == db && listed_owner == owner
-            )
-        }),
-        "{list:?}"
-    );
+    let entry = list
+        .iter()
+        .find(|d| d.db == *db)
+        .expect("the database is listed");
+    assert_eq!(entry.owner, *owner);
+    assert_eq!(entry.db_type, DbKind::Mapped);
+    assert_eq!(entry.role, DbUserRole::Write);
     Ok(())
 }
 
@@ -99,16 +93,13 @@ async fn change_user_role() -> Result<(), TestError> {
     server.api.user_login(user, user).await?;
     let list = server.api.db_list().await?.1;
     assert_eq!(list.len(), 1, "{list:?}");
-    assert!(
-        list.iter().any(|db_entry| {
-            matches!(
-                (&db_entry.db, &db_entry.owner, db_entry.db_type, db_entry.role),
-                (listed_db, listed_owner, DbKind::Mapped, DbUserRole::Read)
-                    if listed_db == db && listed_owner == owner
-            )
-        }),
-        "{list:?}"
-    );
+    let entry = list
+        .iter()
+        .find(|d| d.db == *db)
+        .expect("the database is listed");
+    assert_eq!(entry.owner, *owner);
+    assert_eq!(entry.db_type, DbKind::Mapped);
+    assert_eq!(entry.role, DbUserRole::Read);
     Ok(())
 }
 

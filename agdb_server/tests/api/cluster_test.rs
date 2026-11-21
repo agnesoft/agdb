@@ -9,11 +9,10 @@ use crate::test_server::test_cluster::TestCluster;
 use crate::test_server::test_error::TestError;
 use agdb::Comparison;
 use agdb::QueryBuilder;
-use agdb_api::AgdbApi;
+use agdb::QueryType;
 use agdb_api::DbKind;
 use agdb_api::DbResource;
 use agdb_api::DbUserRole;
-use agdb_api::ReqwestClient;
 
 async fn status() -> Result<(), TestError> {
     let server = TestServer::new().await?;
@@ -63,7 +62,7 @@ async fn admin_db_clear() -> Result<(), TestError> {
             &[QueryBuilder::insert().nodes().count(1).query().into()],
         )
         .await?;
-    let node_count_query = &[QueryBuilder::select().node_count().query().into()];
+    let node_count_query: &[QueryType] = &[QueryBuilder::select().node_count().query().into()];
     let node_count = client.admin_db_exec(owner, db, node_count_query).await?.1[0].result;
     assert_eq!(node_count, 1);
     client.admin_db_clear(owner, db, DbResource::All).await?;
@@ -354,7 +353,7 @@ async fn db_clear() -> Result<(), TestError> {
             &[QueryBuilder::insert().nodes().count(1).query().into()],
         )
         .await?;
-    let node_count_query = &[QueryBuilder::select().node_count().query().into()];
+    let node_count_query: &[QueryType] = &[QueryBuilder::select().node_count().query().into()];
     let node_count = client.db_exec(owner, db, node_count_query).await?.1[0].result;
     assert_eq!(node_count, 1);
     client.db_clear(owner, db, DbResource::All).await?;
@@ -578,11 +577,9 @@ async fn user_change_password() -> Result<(), TestError> {
 async fn user_login() -> Result<(), TestError> {
     let cluster = TestCluster::new().await?;
 
-    let token = {
-        let mut client = cluster.follower();
-        client.cluster_user_login(ADMIN, ADMIN).await?;
-        client.token.clone()
-    };
+    let mut client = cluster.follower();
+    client.cluster_user_login(ADMIN, ADMIN).await?;
+    let token = client.token.clone();
 
     let mut leader = cluster.leader();
     leader.token = token;
@@ -595,15 +592,13 @@ async fn cluster_logout() -> Result<(), TestError> {
     let cluster = TestCluster::new().await?;
     let user = &next_user_name();
 
-    let token = {
-        let mut client = cluster.follower();
-        client.cluster_user_login(ADMIN, ADMIN).await?;
-        client.admin_user_add(user, user).await?;
-        client.cluster_user_login(user, user).await?;
-        client.token.clone()
-    };
+    let mut login = cluster.follower();
+    login.cluster_user_login(ADMIN, ADMIN).await?;
+    login.admin_user_add(user, user).await?;
+    login.cluster_user_login(user, user).await?;
+    let token = login.token.clone();
 
-    let mut leader: AgdbApi<ReqwestClient> = cluster.leader();
+    let mut leader = cluster.leader();
 
     leader.token = token.clone();
     leader.user_status().await?;

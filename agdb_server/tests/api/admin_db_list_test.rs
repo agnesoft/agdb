@@ -21,26 +21,22 @@ async fn db_list() -> Result<(), TestError> {
     server.api.admin_db_add(owner2, db2, DbKind::Memory).await?;
     let (status, list) = server.api.admin_db_list().await?;
     assert_eq!(status, 200);
-    assert!(
-        list.iter().any(|db| {
-            matches!(
-                (&db.db, &db.owner, db.db_type, db.role),
-                (listed_db, listed_owner, DbKind::Memory, DbUserRole::Admin)
-                    if listed_db == db1 && listed_owner == owner1 && db.created != 0
-            )
-        }),
-        "{list:?}"
-    );
-    assert!(
-        list.iter().any(|db| {
-            matches!(
-                (&db.db, &db.owner, db.db_type, db.role),
-                (listed_db, listed_owner, DbKind::Memory, DbUserRole::Admin)
-                    if listed_db == db2 && listed_owner == owner2 && db.created != 0
-            )
-        }),
-        "{list:?}"
-    );
+    let db1_entry = list
+        .iter()
+        .find(|d| d.db == *db1)
+        .expect("the database is listed");
+    assert_eq!(db1_entry.owner, *owner1);
+    assert_eq!(db1_entry.db_type, DbKind::Memory);
+    assert_eq!(db1_entry.role, DbUserRole::Admin);
+    assert_ne!(db1_entry.created, 0);
+    let db2_entry = list
+        .iter()
+        .find(|d| d.db == *db2)
+        .expect("the database is listed");
+    assert_eq!(db2_entry.owner, *owner2);
+    assert_eq!(db2_entry.db_type, DbKind::Memory);
+    assert_eq!(db2_entry.role, DbUserRole::Admin);
+    assert_ne!(db2_entry.created, 0);
     Ok(())
 }
 

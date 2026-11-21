@@ -6,6 +6,7 @@ use crate::test_server::next_db_name;
 use crate::test_server::next_user_name;
 use crate::test_server::test_error::TestError;
 use agdb::QueryBuilder;
+use agdb::QueryType;
 use agdb_api::DbKind;
 
 async fn backup_overwrite() -> Result<(), TestError> {
@@ -15,7 +16,7 @@ async fn backup_overwrite() -> Result<(), TestError> {
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.admin_db_add(owner, db, DbKind::Mapped).await?;
-    let queries = &[QueryBuilder::insert()
+    let queries: &[QueryType] = &[QueryBuilder::insert()
         .nodes()
         .aliases(["root"])
         .query()
@@ -32,7 +33,7 @@ async fn backup_overwrite() -> Result<(), TestError> {
             .iter()
             .any(|d| d.owner == *owner && d.db == *db && d.backup != 0)
     );
-    let queries = &[QueryBuilder::remove().ids("root").query().into()];
+    let queries: &[QueryType] = &[QueryBuilder::remove().ids("root").query().into()];
     server.api.admin_db_exec_mut(owner, db, queries).await?;
     let status = server.api.admin_db_backup(owner, db).await?;
     assert_eq!(status, 201);
@@ -47,7 +48,7 @@ async fn backup_overwrite() -> Result<(), TestError> {
     );
     let status = server.api.admin_db_restore(owner, db).await?;
     assert_eq!(status, 201);
-    let queries = &[QueryBuilder::select().ids("root").query().into()];
+    let queries: &[QueryType] = &[QueryBuilder::select().ids("root").query().into()];
     let results = server
         .api
         .admin_db_exec(owner, db, queries)
@@ -65,7 +66,7 @@ async fn backup_of_backup() -> Result<(), TestError> {
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.admin_db_add(owner, db, DbKind::Mapped).await?;
-    let queries = &[QueryBuilder::insert()
+    let queries: &[QueryType] = &[QueryBuilder::insert()
         .nodes()
         .aliases(["root"])
         .query()
@@ -82,13 +83,13 @@ async fn backup_of_backup() -> Result<(), TestError> {
             .iter()
             .any(|d| d.owner == *owner && d.db == *db && d.backup != 0)
     );
-    let queries = &[QueryBuilder::remove().ids("root").query().into()];
+    let queries: &[QueryType] = &[QueryBuilder::remove().ids("root").query().into()];
     server.api.admin_db_exec_mut(owner, db, queries).await?;
     let status = server.api.admin_db_restore(owner, db).await?;
     assert_eq!(status, 201);
     let status = server.api.admin_db_restore(owner, db).await?;
     assert_eq!(status, 201);
-    let queries = &[QueryBuilder::select().ids("root").query().into()];
+    let queries: &[QueryType] = &[QueryBuilder::select().ids("root").query().into()];
     let results = server.api.admin_db_exec(owner, db, queries).await?.1;
     assert_eq!(results[0].result, 1);
 

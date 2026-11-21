@@ -39,9 +39,7 @@ impl Emitter<'_> {
             let _ = writeln!(head, "type {name} = {}.{name};", self.config.schemas);
         }
 
-        if self.panics {
-            head += super::PANIC;
-        }
+        head.extend(self.helpers.iter().copied());
 
         if !head.is_empty() {
             head += "\n";

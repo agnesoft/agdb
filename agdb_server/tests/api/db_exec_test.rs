@@ -9,6 +9,7 @@ use agdb::DbElement;
 use agdb::DbId;
 use agdb::QueryBuilder;
 use agdb::QueryResult;
+use agdb::QueryType;
 use agdb_api::DbKind;
 use agdb_api::DbUserRole;
 
@@ -20,7 +21,7 @@ async fn read_write() -> Result<(), TestError> {
     server.api.admin_user_add(owner, owner).await?;
     server.api.user_login(owner, owner).await?;
     server.api.db_add(owner, db, DbKind::Mapped).await?;
-    let queries = &[
+    let queries: &[QueryType] = &[
         QueryBuilder::insert()
             .nodes()
             .aliases("root")
@@ -63,7 +64,7 @@ async fn read_only() -> Result<(), TestError> {
     server.api.admin_user_add(owner, owner).await?;
     server.api.user_login(owner, owner).await?;
     server.api.db_add(owner, db, DbKind::Mapped).await?;
-    let queries = &[QueryBuilder::insert()
+    let queries: &[QueryType] = &[QueryBuilder::insert()
         .nodes()
         .aliases("root")
         .values([[("key", 1.1).into()]])
@@ -71,7 +72,7 @@ async fn read_only() -> Result<(), TestError> {
         .into()];
     let (status, _) = server.api.db_exec_mut(owner, db, queries).await?;
     assert_eq!(status, 200);
-    let queries = &[QueryBuilder::select().ids("root").query().into()];
+    let queries: &[QueryType] = &[QueryBuilder::select().ids("root").query().into()];
     let (status, results) = server.api.db_exec(owner, db, queries).await?;
     assert_eq!(status, 200);
     let expected = vec![QueryResult {
@@ -95,14 +96,14 @@ async fn read_queries() -> Result<(), TestError> {
     server.api.admin_user_add(owner, owner).await?;
     server.api.user_login(owner, owner).await?;
     server.api.db_add(owner, db, DbKind::Mapped).await?;
-    let queries = &[QueryBuilder::insert()
+    let queries: &[QueryType] = &[QueryBuilder::insert()
         .nodes()
         .aliases("node1")
         .values([[("key", "value").into()]])
         .query()
         .into()];
     server.api.db_exec_mut(owner, db, queries).await?;
-    let queries = &[
+    let queries: &[QueryType] = &[
         QueryBuilder::search().from(1).query().into(),
         QueryBuilder::select().ids(1).query().into(),
         QueryBuilder::select().aliases().ids(1).query().into(),
@@ -134,7 +135,7 @@ async fn write_queries() -> Result<(), TestError> {
     server.api.admin_user_add(owner, owner).await?;
     server.api.user_login(owner, owner).await?;
     server.api.db_add(owner, db, DbKind::Mapped).await?;
-    let queries = &[
+    let queries: &[QueryType] = &[
         QueryBuilder::insert().nodes().count(2).query().into(),
         QueryBuilder::insert()
             .aliases(["node1", "node2"])
@@ -188,7 +189,7 @@ async fn use_result_of_previous_query() -> Result<(), TestError> {
     server.api.admin_user_add(owner, owner).await?;
     server.api.user_login(owner, owner).await?;
     server.api.db_add(owner, db, DbKind::Mapped).await?;
-    let queries = &[
+    let queries: &[QueryType] = &[
         QueryBuilder::insert()
             .nodes()
             .aliases("users")
@@ -250,7 +251,7 @@ async fn use_result_in_subquery() -> Result<(), TestError> {
     server.api.admin_user_add(owner, owner).await?;
     server.api.user_login(owner, owner).await?;
     server.api.db_add(owner, db, DbKind::Mapped).await?;
-    let queries = &[
+    let queries: &[QueryType] = &[
         QueryBuilder::insert()
             .nodes()
             .aliases("users")
@@ -312,7 +313,7 @@ async fn use_result_in_condition() -> Result<(), TestError> {
     server.api.admin_user_add(owner, owner).await?;
     server.api.user_login(owner, owner).await?;
     server.api.db_add(owner, db, DbKind::Mapped).await?;
-    let queries = &[
+    let queries: &[QueryType] = &[
         QueryBuilder::insert()
             .nodes()
             .aliases("users")
@@ -351,7 +352,7 @@ async fn use_result_in_search() -> Result<(), TestError> {
     server.api.admin_user_add(owner, owner).await?;
     server.api.user_login(owner, owner).await?;
     server.api.db_add(owner, db, DbKind::Mapped).await?;
-    let queries = &[
+    let queries: &[QueryType] = &[
         QueryBuilder::insert().nodes().count(1).query().into(),
         QueryBuilder::insert().nodes().count(1).query().into(),
         QueryBuilder::insert()
@@ -401,7 +402,7 @@ async fn use_result_in_insert_ids() -> Result<(), TestError> {
     server.api.admin_user_add(owner, owner).await?;
     server.api.user_login(owner, owner).await?;
     server.api.db_add(owner, db, DbKind::Mapped).await?;
-    let queries = &[
+    let queries: &[QueryType] = &[
         QueryBuilder::insert()
             .nodes()
             .aliases("root")
@@ -476,7 +477,7 @@ async fn reentrant_queries() -> Result<(), TestError> {
     server.api.admin_user_add(owner, owner).await?;
     server.api.user_login(owner, owner).await?;
     server.api.db_add(owner, db, DbKind::Mapped).await?;
-    let queries = &[
+    let queries: &[QueryType] = &[
         QueryBuilder::insert()
             .nodes()
             .aliases("root")
@@ -580,7 +581,7 @@ async fn use_result_in_search_bad_query() -> Result<(), TestError> {
     server.api.admin_user_add(owner, owner).await?;
     server.api.user_login(owner, owner).await?;
     server.api.db_add(owner, db, DbKind::Mapped).await?;
-    let queries = &[QueryBuilder::search().from(":bad").query().into()];
+    let queries: &[QueryType] = &[QueryBuilder::search().from(":bad").query().into()];
     let error = server.api.db_exec(owner, db, queries).await.unwrap_err();
     assert_eq!(error.status, 470);
     assert_eq!(error.description, "Alias ':bad' not found");
@@ -595,7 +596,7 @@ async fn use_result_in_search_empty_result() -> Result<(), TestError> {
     server.api.admin_user_add(owner, owner).await?;
     server.api.user_login(owner, owner).await?;
     server.api.db_add(owner, db, DbKind::Mapped).await?;
-    let queries = &[
+    let queries: &[QueryType] = &[
         QueryBuilder::remove().ids(0).query().into(),
         QueryBuilder::search().from(":0").query().into(),
     ];
@@ -617,7 +618,7 @@ async fn use_result_bad_query() -> Result<(), TestError> {
     server.api.admin_user_add(owner, owner).await?;
     server.api.user_login(owner, owner).await?;
     server.api.db_add(owner, db, DbKind::Mapped).await?;
-    let queries = &[QueryBuilder::insert()
+    let queries: &[QueryType] = &[QueryBuilder::insert()
         .aliases("alias")
         .ids(":bad")
         .query()
@@ -640,7 +641,7 @@ async fn use_result_out_of_bounds() -> Result<(), TestError> {
     server.api.admin_user_add(owner, owner).await?;
     server.api.user_login(owner, owner).await?;
     server.api.db_add(owner, db, DbKind::Mapped).await?;
-    let queries = &[QueryBuilder::insert()
+    let queries: &[QueryType] = &[QueryBuilder::insert()
         .aliases("alias")
         .ids(":1")
         .query()
@@ -663,7 +664,7 @@ async fn query_error() -> Result<(), TestError> {
     server.api.admin_user_add(owner, owner).await?;
     server.api.user_login(owner, owner).await?;
     server.api.db_add(owner, db, DbKind::Mapped).await?;
-    let queries = &[
+    let queries: &[QueryType] = &[
         QueryBuilder::insert()
             .nodes()
             .values([[("key", 1.1).into()]])
@@ -695,7 +696,7 @@ async fn permission_denied() -> Result<(), TestError> {
         .admin_db_user_add(owner, db, user, DbUserRole::Read)
         .await?;
     server.api.user_login(user, user).await?;
-    let queries = &[
+    let queries: &[QueryType] = &[
         QueryBuilder::insert()
             .nodes()
             .aliases("root")

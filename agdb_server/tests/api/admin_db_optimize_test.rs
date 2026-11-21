@@ -6,6 +6,7 @@ use crate::test_server::next_db_name;
 use crate::test_server::next_user_name;
 use crate::test_server::test_error::TestError;
 use agdb::QueryBuilder;
+use agdb::QueryType;
 use agdb_api::DbKind;
 
 async fn optimize() -> Result<(), TestError> {
@@ -15,7 +16,7 @@ async fn optimize() -> Result<(), TestError> {
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.admin_db_add(owner, db, DbKind::Mapped).await?;
-    let queries = &[QueryBuilder::insert().nodes().count(100).query().into()];
+    let queries: &[QueryType] = &[QueryBuilder::insert().nodes().count(100).query().into()];
     server.api.admin_db_exec_mut(owner, db, queries).await?;
     let original_size = server
         .api
@@ -39,7 +40,7 @@ async fn shrink_to_fit() -> Result<(), TestError> {
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.admin_db_add(owner, db, DbKind::Mapped).await?;
-    let queries = &[QueryBuilder::insert().nodes().count(100).query().into()];
+    let queries: &[QueryType] = &[QueryBuilder::insert().nodes().count(100).query().into()];
     server.api.admin_db_exec_mut(owner, db, queries).await?;
     let original_size = server
         .api

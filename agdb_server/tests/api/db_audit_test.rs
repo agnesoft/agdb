@@ -6,6 +6,7 @@ use crate::test_server::next_db_name;
 use crate::test_server::next_user_name;
 use crate::test_server::test_error::TestError;
 use agdb::QueryBuilder;
+use agdb::QueryType;
 use agdb_api::DbKind;
 
 async fn audit() -> Result<(), TestError> {
@@ -16,7 +17,7 @@ async fn audit() -> Result<(), TestError> {
     server.api.admin_user_add(owner, owner).await?;
     server.api.user_login(owner, owner).await?;
     server.api.db_add(owner, db, DbKind::Mapped).await?;
-    let mut queries = vec![
+    let mut queries: Vec<QueryType> = vec![
         QueryBuilder::insert()
             .nodes()
             .aliases("root")

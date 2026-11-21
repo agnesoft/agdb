@@ -23,6 +23,7 @@ mod db_rename_test;
 mod misc_routes;
 #[cfg(feature = "tls")]
 mod tls;
+mod user_login_test;
 
 pub(super) const TESTS: &[&[crate::runner::Test]] = &[
     admin_db_audit_trim_test::TESTS,
@@ -50,4 +51,5 @@ pub(super) const TESTS: &[&[crate::runner::Test]] = &[
     misc_routes::TESTS,
     #[cfg(feature = "tls")]
     tls::TESTS,
+    user_login_test::TESTS,
 ];

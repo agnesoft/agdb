@@ -69,6 +69,36 @@ describe("dashboardDocument", () => {
     expect(parseDocument(serializeDocument(doc))).toEqual(doc);
   });
 
+  it("reads pinned details, dropping broken and repeated ones", () => {
+    const config = JSON.stringify({
+      version: 2,
+      widgets: {
+        w: {
+          owner: "o",
+          db: "d",
+          pins: [
+            { id: 1, offset: { x: 5, y: -6 } },
+            { id: -3, offset: { x: "5", y: 1 } },
+            { id: 1 },
+            { id: 0 },
+            { id: 1.5 },
+            "2",
+            { id: 4, offset: { x: Infinity, y: 0 } },
+          ],
+        },
+        plain: { owner: "o", db: "d", pins: "nope" },
+      },
+      layout: [],
+    });
+    const doc = parseDocument(config);
+    expect(doc.widgets.w!.pins).toEqual([
+      { id: 1, offset: { x: 5, y: -6 } },
+      { id: -3 },
+      { id: 4 },
+    ]);
+    expect(doc.widgets.plain!.pins).toBeUndefined();
+  });
+
   it("refuses a document from a newer Studio", () => {
     expect(() => parseDocument('{"version":3,"widgets":{}}')).toThrow(
       NewerDashboardError,

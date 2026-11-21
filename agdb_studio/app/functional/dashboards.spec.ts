@@ -102,7 +102,7 @@ test.describe("Dashboards", () => {
     await mockDbExecApi(page, [{ result: 42, elements: [] }]);
   });
 
-  test("creates a dashboard, builds a widget in the query editor, saves and reloads", async ({
+  test("creates a dashboard, builds a widget in the query editor, and keeps each change", async ({
     page,
   }) => {
     const store = await mockDashboardApi(page);
@@ -120,7 +120,6 @@ test.describe("Dashboards", () => {
     expect(store.has("ops")).toBe(true);
 
     // Add a widget: the editor is the query view with exec and context tabs.
-    await page.getByTestId("dashboard-edit").click();
     await page.getByTestId("dashboard-add-widget").click();
     const editor = page.getByTestId("widget-editor");
     await expect(editor).toBeVisible();
@@ -134,27 +133,25 @@ test.describe("Dashboards", () => {
       "admin/users",
     );
     await addSteps(page, ["search", "elements"]);
-    await page.getByRole("button", { name: "Run query" }).click();
+    // The preview runs by itself once the query is complete.
+    await expect(editor.getByText("result: 2")).toBeVisible();
     await editor.getByTestId(testIds.VIEW_TABLE).click();
     await expect(editor.getByTestId(testIds.RESULTS_TABLE_ROW)).toHaveCount(2);
     await editor.getByTestId("widget-editor-done").click();
     await expect(editor).toBeHidden();
-    await expect(page.getByTestId("dashboard-unsaved")).toBeVisible();
 
-    // Size is set on the grid, not in the editor.
-    await page.getByTestId("widget-size").click();
+    // Size is set from the widget's menu, not in the editor; it saves at once.
+    await page.getByTestId("widget-menu").click();
     await page.getByTestId("widget-size-4x2").hover();
     await page.getByTestId("widget-size-4x2").click();
-    await expect(page.getByTestId("widget-size")).toHaveText("4×2");
+    await page.keyboard.press("Escape");
 
-    // Save: rows and the chosen view are the widget; size is the layout.
-    await page.getByTestId("dashboard-save").click();
-    await expect(page.getByTestId("dashboard-unsaved")).toBeHidden();
+    // Rows and the chosen view are the widget; size is the layout.
+    await expect
+      .poll(() => JSON.parse(store.get("ops")!.config).layout)
+      .toEqual([{ id: expect.any(String), cols: 4, rows: 2 }]);
     const saved = JSON.parse(store.get("ops")!.config);
     const [widget] = Object.values(saved.widgets);
-    expect(saved.layout).toEqual([
-      { id: expect.any(String), cols: 4, rows: 2 },
-    ]);
     expect(widget).toMatchObject({
       title: "People",
       owner: "admin",
@@ -162,6 +159,18 @@ test.describe("Dashboards", () => {
       view: "table",
       rows: { exec: [{ query: "search().elements()" }], context: [] },
     });
+    await expect(page.getByTestId("dashboard-unsaved")).toBeHidden();
+
+    // Switching the view in the widget is not saved until asked to.
+    const viewChanged = page.getByTestId("widget-view-changed");
+    await expect(viewChanged).toBeHidden();
+    await page
+      .getByTestId("dashboard-grid")
+      .getByTestId(testIds.VIEW_JSON)
+      .click();
+    await expect(viewChanged).toBeVisible();
+    await page.getByTestId("widget-view-reset").click();
+    await expect(viewChanged).toBeHidden();
 
     // Reload: the widget comes back from the server and runs its query.
     await page.reload();

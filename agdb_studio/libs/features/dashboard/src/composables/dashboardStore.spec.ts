@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { watch } from "vue";
 
 const { client } = vi.hoisted(() => ({
   client: {
@@ -82,18 +83,112 @@ describe("dashboardStore", () => {
     expect(store.current.value).toBeUndefined();
   });
 
-  it("keeps edits made while saving marked as unsaved", async () => {
+  it("saves each edit at once, one save at a time", async () => {
     await store.loadDashboard("ops");
     let finishSave: (value: unknown) => void = () => {};
     client.value.dashboard_save.mockImplementationOnce(
       () => new Promise((resolve) => (finishSave = resolve)),
     );
     store.moveWidget("a", 1);
-    const saving = store.saveDashboard();
+    expect(store.saving.value).toBe(true);
     store.removeWidget("c");
-    finishSave(undefined);
-    await saving;
+    store.resizeWidget("a", { cols: 1, rows: 1 });
+    // The later edits wait for the running save, then go in one more.
+    expect(client.value.dashboard_save).toHaveBeenCalledTimes(1);
     expect(store.dirty.value).toBe(true);
+    finishSave(undefined);
+    await store.saveDashboard();
+    expect(client.value.dashboard_save).toHaveBeenCalledTimes(2);
+    const [, body] = client.value.dashboard_save.mock.calls[1]!;
+    expect(orderedWidgets(parseDocument(body.config)).length).toBe(2);
+    expect(store.dirty.value).toBe(false);
+    expect(store.saving.value).toBe(false);
+  });
+
+  it("keeps edits whose save failed until a retry", async () => {
+    await store.loadDashboard("ops");
+    client.value.dashboard_save.mockRejectedValueOnce(new Error("500"));
+    store.moveWidget("a", 1);
+    await vi.waitFor(() => expect(store.saving.value).toBe(false));
+    expect(store.saveFailed.value).toBe(true);
+    expect(store.dirty.value).toBe(true);
+    await store.saveDashboard();
+    expect(store.saveFailed.value).toBe(false);
+    expect(store.dirty.value).toBe(false);
+  });
+
+  it("finishes a save of a dashboard closed meanwhile without touching the next one", async () => {
+    await store.loadDashboard("ops");
+    let failSave: (error: unknown) => void = () => {};
+    client.value.dashboard_save.mockImplementationOnce(
+      () => new Promise((_, reject) => (failSave = reject)),
+    );
+    store.moveWidget("a", 1);
+    // The load waits for the running save, so it reads what was saved.
+    const loading = store.loadDashboard("sales");
+    await Promise.resolve();
+    expect(store.current.value).toBeUndefined();
+    expect(client.value.dashboard_get).toHaveBeenCalledTimes(1);
+    failSave(new Error("500"));
+    await loading;
+    expect(client.value.dashboard_get).toHaveBeenCalledTimes(2);
+    expect(store.current.value?.name).toBe("sales");
+    expect(store.saveFailed.value).toBe(false);
+    expect(store.dirty.value).toBe(false);
+  });
+
+  it("saves an edit made while the save loop is finishing", async () => {
+    await store.loadDashboard("ops");
+    let edited = false;
+    // Edits as the loop ends: it has seen the queue empty already.
+    const stop = watch(
+      store.saving,
+      (saving) => {
+        if (saving || edited) return;
+        edited = true;
+        store.moveWidget("a", 0);
+      },
+      { flush: "sync" },
+    );
+    store.moveWidget("a", 1);
+    await store.settleSaves();
+    stop();
+    expect(client.value.dashboard_save).toHaveBeenCalledTimes(2);
+    expect(store.dirty.value).toBe(false);
+  });
+
+  it("appends only after a running save", async () => {
+    await store.loadDashboard("ops");
+    let finishSave: (value: unknown) => void = () => {};
+    client.value.dashboard_save.mockImplementationOnce(
+      () => new Promise((resolve) => (finishSave = resolve)),
+    );
+    store.moveWidget("a", 1);
+    const appending = store.appendWidgets("ops", [widget("d")]);
+    await Promise.resolve();
+    expect(client.value.dashboard_get).toHaveBeenCalledTimes(1);
+    finishSave(undefined);
+    await appending;
+    expect(client.value.dashboard_get).toHaveBeenCalledTimes(2);
+  });
+
+  it("undoes a removal in place", async () => {
+    await store.loadDashboard("ops");
+    store.resizeWidget("b", { cols: 3, rows: 2 });
+    const removed = store.removeWidget("b")!;
+    expect(openIds(store)).toEqual(["a", "c"]);
+    store.restoreWidget(removed);
+    expect(openIds(store)).toEqual(["a", "b", "c"]);
+    expect(store.current.value!.document.layout[1]).toEqual({
+      id: "b",
+      cols: 3,
+      rows: 2,
+    });
+    // Already back: nothing to do.
+    const saves = client.value.dashboard_save.mock.calls.length;
+    store.restoreWidget(removed);
+    expect(client.value.dashboard_save).toHaveBeenCalledTimes(saves);
+    expect(store.removeWidget("missing")).toBeUndefined();
   });
 
   it("creates an empty dashboard", async () => {
@@ -118,12 +213,12 @@ describe("dashboardStore", () => {
     store.removeWidget("c");
     store.addWidget(widget("d"));
     store.updateWidget({ ...widget("b"), title: "Edited" });
+    expect(client.value.dashboard_save).toHaveBeenCalled();
     expect(openIds(store)).toEqual(["b", "a", "d"]);
     const doc = store.current.value!.document;
     // A content edit keeps the widget's size.
     expect(doc.widgets.b!.title).toBe("Edited");
     expect(doc.layout[0]).toEqual({ id: "b", cols: 4, rows: 2 });
-    expect(store.dirty.value).toBe(true);
 
     await store.saveDashboard();
     expect(client.value.dashboard_save).toHaveBeenCalledWith(
@@ -154,6 +249,41 @@ describe("dashboardStore", () => {
       new_name: "sales",
     });
     expect(store.current.value?.name).toBe("sales");
+  });
+
+  it("renames only after a running save", async () => {
+    await store.loadDashboard("ops");
+    let finishSave: (value: unknown) => void = () => {};
+    client.value.dashboard_save.mockImplementationOnce(
+      () => new Promise((resolve) => (finishSave = resolve)),
+    );
+    store.moveWidget("a", 1);
+    const renaming = store.renameDashboard("ops", "sales");
+    await Promise.resolve();
+    expect(client.value.dashboard_rename).not.toHaveBeenCalled();
+    finishSave(undefined);
+    await renaming;
+    expect(client.value.dashboard_rename).toHaveBeenCalledTimes(1);
+    expect(store.current.value?.name).toBe("sales");
+  });
+
+  it("removes only after a running save and drops the queued ones", async () => {
+    await store.loadDashboard("ops");
+    let finishSave: (value: unknown) => void = () => {};
+    client.value.dashboard_save.mockImplementationOnce(
+      () => new Promise((resolve) => (finishSave = resolve)),
+    );
+    store.moveWidget("a", 1);
+    // Queued behind the running save: it would create the dashboard again.
+    store.moveWidget("a", 0);
+    const removing = store.removeDashboard("ops");
+    await Promise.resolve();
+    expect(client.value.dashboard_remove).not.toHaveBeenCalled();
+    finishSave(undefined);
+    await removing;
+    expect(client.value.dashboard_save).toHaveBeenCalledTimes(1);
+    expect(client.value.dashboard_remove).toHaveBeenCalledTimes(1);
+    expect(store.current.value).toBeUndefined();
   });
 
   it("does nothing when a dashboard keeps its name", async () => {

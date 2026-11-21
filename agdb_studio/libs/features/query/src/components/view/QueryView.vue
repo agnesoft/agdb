@@ -11,6 +11,8 @@ const props = defineProps<{
   queryId?: string;
   /** The builder tabs to show (all by default). */
   tabs?: readonly TAB[];
+  /** Keep the chosen view and pins of missing elements (see QueryResults). */
+  keepView?: boolean;
 }>();
 
 const queryId = ref<string | undefined>(props.queryId);
@@ -31,7 +33,7 @@ defineExpose({ queryId });
 <template>
   <div class="query-workspace">
     <QueryBuilderTabs :tabs="tabs" />
-    <QueryResults />
+    <QueryResults :keep-view="keepView" />
   </div>
 </template>
 

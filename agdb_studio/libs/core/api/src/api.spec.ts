@@ -84,6 +84,16 @@ describe("client service", () => {
       ).rejects.toBe(response);
       expect(lastApiError.value?.message).toBe(response.message);
     });
+    it("leaves errors of quiet requests to the caller", async () => {
+      const response = {
+        message: "quiet error",
+        config: { quietErrors: true },
+      };
+      await expect(
+        errorInterceptor(response as unknown as AxiosError<string>),
+      ).rejects.toBe(response);
+      expect(lastApiError.value?.message).not.toBe(response.message);
+    });
     it("suppresses lastApi error when unauthorized", async () => {
       const trigger401 = {
         message: "unauthorized",

@@ -329,9 +329,72 @@ describe("graphActions", () => {
       const actions = createActions(ref("q1"));
       actions.togglePin(graphNode(1));
       actions.togglePin(graphNode(2));
-      store.removeElementsFromResults("q1", [2]);
+      // A new run that does not return the element.
+      store.setQueryResults(
+        "q1",
+        "exec",
+        [{ result: 1, elements: [dbNode(1)] }],
+        { queries: [EXECUTED_QUERY], rowIds: ["r"] },
+      );
       await nextTick();
       expect(actions.pinnedIds.value).toEqual([1]);
+    });
+
+    it("keeps pins of missing elements for a saved view", async () => {
+      setupQuery();
+      const actions = createActions(ref("q1"), { keepMissingPins: true });
+      actions.togglePin(graphNode(2));
+      // A new run that does not return the element.
+      store.setQueryResults(
+        "q1",
+        "exec",
+        [{ result: 1, elements: [dbNode(1)] }],
+        {
+          queries: [EXECUTED_QUERY],
+          rowIds: ["r"],
+        },
+      );
+      await nextTick();
+      expect(actions.pinnedIds.value).toEqual([2]);
+      expect(actions.pinnedElements.value).toEqual([]);
+    });
+
+    it("drops pins and colours of deleted elements, even for a saved view", async () => {
+      setupQuery();
+      const actions = createActions(ref("q1"), { keepMissingPins: true });
+      actions.togglePin(graphNode(1));
+      actions.togglePin(graphNode(2));
+      store.removeElementsFromResults("q1", [2]);
+      await nextTick();
+      // The database reuses ids: a later element must not get the pin.
+      expect(actions.pinnedIds.value).toEqual([1]);
+      store.removeElementsFromResults("q1", [1]);
+      expect(store.getQuery("q1")?.value.pins).toBeUndefined();
+    });
+
+    it("keeps card offsets in the query until unpinned", () => {
+      setupQuery();
+      const actions = createActions(ref("q1"));
+      actions.setCardOffset(1, { x: 1, y: 2 });
+      expect(actions.cardOffset(1)).toBeUndefined();
+      actions.togglePin(graphNode(1));
+      actions.setCardOffset(1, { x: 5, y: 6 });
+      expect(actions.cardOffset(1)).toEqual({ x: 5, y: 6 });
+      expect(store.getQuery("q1")?.value.pins).toEqual([
+        { id: 1, offset: { x: 5, y: 6 } },
+      ]);
+      // Pinned again: back to the default spot.
+      actions.togglePin(graphNode(1));
+      expect(store.getQuery("q1")?.value.pins).toBeUndefined();
+      actions.togglePin(graphNode(1));
+      expect(actions.cardOffset(1)).toBeUndefined();
+    });
+
+    it("does nothing without a query", () => {
+      const actions = createActions(undefined);
+      actions.togglePin(graphNode(1));
+      actions.setCardOffset(1, { x: 1, y: 1 });
+      expect(actions.pinnedIds.value).toEqual([]);
     });
   });
 
@@ -763,6 +826,13 @@ describe("graphActions", () => {
       setupQuery();
       createActions(ref("q1"));
       expect(elementValues.load).toHaveBeenCalledWith([1, 2]);
+    });
+
+    it("loads stored values of restored pins that are shown", () => {
+      setupQuery();
+      store.setPins("q1", [{ id: 2 }, { id: 99 }]);
+      createActions(ref("q1"), { keepMissingPins: true });
+      expect(elementValues.load).toHaveBeenCalledWith([2]);
     });
 
     it("starts over after a new run and loads again", async () => {

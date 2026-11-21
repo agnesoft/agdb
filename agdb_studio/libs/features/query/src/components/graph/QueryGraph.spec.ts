@@ -10,7 +10,7 @@ import {
 import { mount } from "@vue/test-utils";
 import QueryGraph from "./QueryGraph.vue";
 import ForceGraph3D from "3d-force-graph";
-import { nextTick, ref } from "vue";
+import { nextTick, reactive, ref } from "vue";
 import {
   GRAPH_ACTIONS_KEY,
   createGraphActions,
@@ -365,6 +365,13 @@ describe("QueryGraph", () => {
     };
 
     const makeActions = () => ({
+      offsets: reactive(new Map<number, { x: number; y: number }>()),
+      cardOffset(id: number) {
+        return this.offsets.get(id);
+      },
+      setCardOffset(id: number, offset: { x: number; y: number }) {
+        this.offsets.set(id, offset);
+      },
       graphData: ref({ nodes: [node], links: [link] }),
       selectedId: ref<number>(),
       pendingEdgeSourceId: ref<number>(),
@@ -565,15 +572,8 @@ describe("QueryGraph", () => {
         expect(
           wrapper.find("[data-testid=pinned-card]").attributes("style"),
         ).toContain("translate(58px, 42px)");
-        // Unpinned and pinned again: back next to its element.
-        actions.pinnedIds.value = [];
-        await nextTick();
-        actions.pinnedIds.value = [1];
-        await nextTick();
-        await runFrame();
-        expect(
-          wrapper.find("[data-testid=pinned-card]").attributes("style"),
-        ).toContain("translate(28px, 2px)");
+        // The offset is kept with the pin.
+        expect(actions.offsets.get(1)).toEqual({ x: 48, y: 22 });
         wrapper.unmount();
       });
 

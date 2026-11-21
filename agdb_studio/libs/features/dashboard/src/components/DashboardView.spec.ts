@@ -6,24 +6,28 @@ const { store, fetchDatabases, leaveGuard } = vi.hoisted(() => ({
   store: {
     current: undefined as unknown as import("vue").Ref<unknown>,
     dirty: undefined as unknown as import("vue").Ref<boolean>,
+    saving: undefined as unknown as import("vue").Ref<boolean>,
+    saveFailed: undefined as unknown as import("vue").Ref<boolean>,
     loadDashboard: vi.fn(),
     saveDashboard: vi.fn(),
     closeDashboard: vi.fn(),
+    settleSaves: vi.fn(),
     addWidget: vi.fn(),
     updateWidget: vi.fn(),
     removeWidget: vi.fn(),
+    restoreWidget: vi.fn(),
     moveWidget: vi.fn(),
     resizeWidget: vi.fn(),
   },
   fetchDatabases: vi.fn(),
   leaveGuard: {
-    fn: undefined as undefined | (() => boolean),
+    fn: undefined as undefined | (() => Promise<boolean>),
     update: undefined as
       | undefined
       | ((
           to: { params: { name?: string } },
           from: { params: { name?: string } },
-        ) => boolean),
+        ) => boolean | Promise<boolean>),
   },
 }));
 
@@ -34,7 +38,7 @@ vi.mock("@agdb-studio/db/src/composables/dbStore", () => ({
   useDbStore: () => ({ fetchDatabases }),
 }));
 vi.mock("vue-router", () => ({
-  onBeforeRouteLeave: (fn: () => boolean) => {
+  onBeforeRouteLeave: (fn: typeof leaveGuard.fn) => {
     leaveGuard.fn = fn;
   },
   onBeforeRouteUpdate: (fn: typeof leaveGuard.update) => {
@@ -52,8 +56,8 @@ import {
 
 const WidgetStub = {
   name: "DashboardWidget",
-  props: ["widget", "size", "editing", "first", "last", "refreshKey"],
-  emits: ["edit", "remove", "move", "resize"],
+  props: ["widget", "size", "first", "last", "refreshKey"],
+  emits: ["edit", "remove", "move", "resize", "update"],
   template: '<div class="widget-stub" />',
 };
 const EditorStub = {
@@ -103,8 +107,11 @@ describe("DashboardView", () => {
     vi.clearAllMocks();
     store.current = ref({ name: "ops", document: document() });
     store.dirty = ref(false);
+    store.saving = ref(false);
+    store.saveFailed = ref(false);
     store.loadDashboard.mockResolvedValue(undefined);
     store.saveDashboard.mockResolvedValue(undefined);
+    store.settleSaves.mockResolvedValue(undefined);
     fetchDatabases.mockResolvedValue(undefined);
     vi.spyOn(window, "confirm").mockReturnValue(true);
   });
@@ -161,11 +168,7 @@ describe("DashboardView", () => {
     };
     const empty = await mountView();
     expect(empty.find('[data-testid="dashboard-empty"]').text()).toContain(
-      "Edit",
-    );
-    await click(empty, "dashboard-edit");
-    expect(empty.find('[data-testid="dashboard-empty"]').text()).not.toContain(
-      "pin",
+      "Add widget",
     );
     // Closed meanwhile (e.g. deleted from another view): nothing to show.
     store.current.value = undefined;
@@ -179,20 +182,19 @@ describe("DashboardView", () => {
     expect(wrapper.findComponent(WidgetStub).props("refreshKey")).toBe(1);
   });
 
-  it("edits widgets through the store and saves", async () => {
+  it("edits widgets through the store", async () => {
     const wrapper = await mountView();
-    await click(wrapper, "dashboard-edit");
     const item = wrapper.findComponent(WidgetStub);
-    expect(item.props("editing")).toBe(true);
-    item.vm.$emit("remove");
     item.vm.$emit("move", 1);
-    expect(store.removeWidget).toHaveBeenCalledWith(widgets[0]!.id);
     expect(store.moveWidget).toHaveBeenCalledWith(widgets[0]!.id, 1);
     item.vm.$emit("resize", { cols: 3, rows: 2 });
     expect(store.resizeWidget).toHaveBeenCalledWith(widgets[0]!.id, {
       cols: 3,
       rows: 2,
     });
+    const shown = { ...widgets[0]!, view: "table" };
+    item.vm.$emit("update", shown);
+    expect(store.updateWidget).toHaveBeenCalledWith(shown);
 
     item.vm.$emit("edit");
     await flushPromises();
@@ -202,7 +204,7 @@ describe("DashboardView", () => {
     expect(editor().props("header")).toBe("Edit widget");
     editor().vm.$emit("done", widgets[0]);
     await flushPromises();
-    expect(store.updateWidget).toHaveBeenCalledWith(widgets[0]);
+    expect(store.updateWidget).toHaveBeenLastCalledWith(widgets[0]);
     expect(editor().exists()).toBe(false);
 
     fetchDatabases.mockRejectedValueOnce(new Error("offline"));
@@ -212,66 +214,106 @@ describe("DashboardView", () => {
     editor().vm.$emit("done", created);
     await flushPromises();
     expect(store.addWidget).toHaveBeenCalledWith(created);
-    expect(store.updateWidget).toHaveBeenCalledTimes(1);
+    expect(store.updateWidget).toHaveBeenCalledTimes(2);
 
     await click(wrapper, "dashboard-add-widget");
     editor().vm.$emit("cancel");
     await flushPromises();
     expect(editor().exists()).toBe(false);
     expect(store.addWidget).toHaveBeenCalledTimes(1);
+  });
 
-    store.dirty.value = true;
+  it("offers to undo a removal for a while", async () => {
+    vi.useFakeTimers();
+    try {
+      const removed = { widget: widgets[0], layout: {}, index: 0 };
+      store.removeWidget.mockReturnValue(removed);
+      const wrapper = await mountView();
+      const item = wrapper.findComponent(WidgetStub);
+      const banner = () => wrapper.find('[data-testid="dashboard-removed"]');
+      item.vm.$emit("remove");
+      await flushPromises();
+      expect(store.removeWidget).toHaveBeenCalledWith(widgets[0]!.id);
+      expect(banner().text()).toContain(widgets[0]!.title);
+      await click(wrapper, "dashboard-undo");
+      expect(store.restoreWidget).toHaveBeenCalledWith(removed);
+      expect(banner().exists()).toBe(false);
+
+      item.vm.$emit("remove");
+      await flushPromises();
+      vi.advanceTimersByTime(8000);
+      await flushPromises();
+      expect(banner().exists()).toBe(false);
+      expect(store.restoreWidget).toHaveBeenCalledTimes(1);
+
+      store.removeWidget.mockReturnValue({
+        ...removed,
+        widget: { ...widgets[0], title: "" },
+      });
+      item.vm.$emit("remove");
+      await flushPromises();
+      expect(banner().text()).toContain('Removed "Untitled"');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("shows saving and failed saves with a retry", async () => {
+    const wrapper = await mountView();
+    const has = (id: string) => wrapper.find(`[data-testid="${id}"]`).exists();
+    expect(has("dashboard-saving")).toBe(false);
+    store.saving.value = true;
     await flushPromises();
-    expect(wrapper.find('[data-testid="dashboard-unsaved"]').exists()).toBe(
-      true,
-    );
-    await click(wrapper, "dashboard-save");
+    expect(has("dashboard-saving")).toBe(true);
+    store.saving.value = false;
+    store.saveFailed.value = true;
+    await flushPromises();
+    expect(has("dashboard-saving")).toBe(false);
+    expect(has("dashboard-unsaved")).toBe(true);
+    await click(wrapper, "dashboard-retry");
     expect(store.saveDashboard).toHaveBeenCalled();
-    expect(wrapper.find('[data-testid="dashboard-edit"]').exists()).toBe(true);
   });
 
-  it("keeps edit mode when saving fails", async () => {
-    store.saveDashboard.mockRejectedValueOnce(new Error("500"));
-    store.dirty.value = true;
-    const wrapper = await mountView();
-    await click(wrapper, "dashboard-edit");
-    await click(wrapper, "dashboard-save");
-    expect(wrapper.find('[data-testid="dashboard-save"]').exists()).toBe(true);
-  });
-
-  it("asks before discarding edits on cancel", async () => {
-    const wrapper = await mountView();
-    await click(wrapper, "dashboard-edit");
-    store.dirty.value = true;
-    vi.mocked(window.confirm).mockReturnValueOnce(false);
-    await click(wrapper, "dashboard-cancel");
-    expect(wrapper.find('[data-testid="dashboard-cancel"]').exists()).toBe(
-      true,
-    );
-    await click(wrapper, "dashboard-cancel");
-    expect(store.loadDashboard).toHaveBeenCalledTimes(2);
-    expect(wrapper.find('[data-testid="dashboard-edit"]').exists()).toBe(true);
-  });
-
-  it("asks before leaving with unsaved edits", async () => {
+  it("asks before leaving with edits that failed to save", async () => {
     await mountView();
-    expect(leaveGuard.fn?.()).toBe(true);
+    store.dirty.value = true;
+    expect(await leaveGuard.fn?.()).toBe(true);
     expect(window.confirm).not.toHaveBeenCalled();
     expect(store.closeDashboard).toHaveBeenCalledTimes(1);
-    store.dirty.value = true;
+    store.saveFailed.value = true;
     vi.mocked(window.confirm).mockReturnValueOnce(false);
-    expect(leaveGuard.fn?.()).toBe(false);
+    expect(await leaveGuard.fn?.()).toBe(false);
     expect(store.closeDashboard).toHaveBeenCalledTimes(1);
   });
 
-  it("asks before switching to another dashboard with unsaved edits", async () => {
+  it("waits for a running save before deciding to leave", async () => {
+    await mountView();
+    let finishSave: () => void = () => {};
+    store.settleSaves.mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          finishSave = resolve;
+        }),
+    );
+    const leaving = leaveGuard.fn?.();
+    await flushPromises();
+    expect(window.confirm).not.toHaveBeenCalled();
+    // The running save fails: its edits would be lost.
+    store.saveFailed.value = true;
+    vi.mocked(window.confirm).mockReturnValueOnce(false);
+    finishSave();
+    expect(await leaving).toBe(false);
+    expect(window.confirm).toHaveBeenCalledTimes(1);
+  });
+
+  it("asks before switching to another dashboard with edits that failed to save", async () => {
     await mountView();
     const at = (name: string) => ({ params: { name } });
-    store.dirty.value = true;
+    store.saveFailed.value = true;
     expect(leaveGuard.update?.(at("ops"), at("ops"))).toBe(true);
     expect(window.confirm).not.toHaveBeenCalled();
     vi.mocked(window.confirm).mockReturnValueOnce(false);
-    expect(leaveGuard.update?.(at("other"), at("ops"))).toBe(false);
+    expect(await leaveGuard.update?.(at("other"), at("ops"))).toBe(false);
   });
 
   it("warns before closing the tab with unsaved edits", async () => {

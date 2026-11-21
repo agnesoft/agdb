@@ -31,6 +31,13 @@ const _apiUrl = ref(import.meta.env.VITE_API_URL);
 const _lastApiError = ref<AxiosError | undefined>(undefined);
 const _lastConnectionError = ref<string | undefined>(undefined);
 
+declare module "axios" {
+  interface AxiosRequestConfig {
+    /** The caller shows its own error: no global error notification. */
+    quietErrors?: boolean;
+  }
+}
+
 const logger = createLogger("ApiClient");
 
 export const client = computed((): AgdbApi.AgdbApiClient | undefined => {
@@ -72,7 +79,7 @@ export const errorInterceptor = (error: AxiosError) => {
     return Promise.reject(error);
   }
 
-  if (!_isUnauthorized) {
+  if (!_isUnauthorized && !error.config?.quietErrors) {
     _lastApiError.value = error;
   }
 

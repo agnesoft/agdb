@@ -137,7 +137,18 @@ export type Query = {
   colors?: ColorConfig;
   /** The results view the user picked; unset lets the results pick one. */
   view?: ResultView;
+  /** Elements whose details stay shown on the graph, in pinning order. */
+  pins?: PinnedDetail[];
 } & AddQueryParams;
+
+/** A point on screen, in px. */
+export type ScreenPoint = { x: number; y: number };
+
+/**
+ * An element whose details card stays shown on the graph. `offset` is where
+ * the card was dragged to, relative to its element; unset is the default spot.
+ */
+export type PinnedDetail = { id: number; offset?: ScreenPoint };
 
 export const TABS = ["exec", "exec_mut", "context"] as const;
 

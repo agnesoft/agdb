@@ -171,9 +171,11 @@ describe("useQueryExecution", () => {
 
     expect(checkClient).toHaveBeenCalled();
     expect(buildQueryFromSteps).toHaveBeenCalledWith([makeStep()]);
-    expect(db_exec).toHaveBeenCalledWith({ owner: "alice", db: "main" }, [
-      { built: true },
-    ]);
+    expect(db_exec).toHaveBeenCalledWith(
+      { owner: "alice", db: "main" },
+      [{ built: true }],
+      undefined,
+    );
   });
 
   it("sends every non-empty row as one transaction payload", async () => {
@@ -196,10 +198,11 @@ describe("useQueryExecution", () => {
       makeStep("search"),
     ]);
     expect(db_exec).toHaveBeenCalledOnce();
-    expect(db_exec).toHaveBeenCalledWith({ owner: "alice", db: "main" }, [
-      { built: true },
-      { built: true },
-    ]);
+    expect(db_exec).toHaveBeenCalledWith(
+      { owner: "alice", db: "main" },
+      [{ built: true }, { built: true }],
+      undefined,
+    );
   });
 
   it("cannot run when all rows are empty", () => {
@@ -238,24 +241,29 @@ describe("useQueryExecution", () => {
     const execution = setup({ tab: "exec_mut" });
     await execution.runOrStopQuery();
 
-    expect(db_exec_mut).toHaveBeenCalledWith({ owner: "alice", db: "main" }, [
-      { built: true },
-    ]);
+    expect(db_exec_mut).toHaveBeenCalledWith(
+      { owner: "alice", db: "main" },
+      [{ built: true }],
+      undefined,
+    );
   });
 
   it("calls admin exec endpoints on admin routes", async () => {
     routeState.name = "admin-db-view";
 
     await setup({ tab: "exec" }).runOrStopQuery();
-    expect(admin_db_exec).toHaveBeenCalledWith({ owner: "alice", db: "main" }, [
-      { built: true },
-    ]);
+    expect(admin_db_exec).toHaveBeenCalledWith(
+      { owner: "alice", db: "main" },
+      [{ built: true }],
+      undefined,
+    );
 
     vi.clearAllMocks();
     await setup({ tab: "exec_mut" }).runOrStopQuery();
     expect(admin_db_exec_mut).toHaveBeenCalledWith(
       { owner: "alice", db: "main" },
       [{ built: true }],
+      undefined,
     );
   });
 

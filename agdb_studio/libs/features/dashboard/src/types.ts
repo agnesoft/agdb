@@ -1,5 +1,6 @@
 import type { ResultView } from "@agdb-studio/query/src/utils/resultShape";
 import type { ColorConfig } from "@agdb-studio/query/src/utils/graphColorRules";
+import type { PinnedDetail } from "@agdb-studio/query/src/composables/types";
 
 export const WIDGET_COLS = [1, 2, 3, 4] as const;
 export const WIDGET_ROWS = [1, 2, 3] as const;
@@ -44,6 +45,8 @@ export type Widget = {
   view?: ResultView;
   /** Graph colouring, as in the query view. */
   colors?: ColorConfig;
+  /** Element details pinned on the graph, with where their cards were dragged. */
+  pins?: PinnedDetail[];
   /** Optional auto refresh interval, see `isRefreshInterval` in utils/refresh.ts. */
   refreshSeconds?: number;
 };

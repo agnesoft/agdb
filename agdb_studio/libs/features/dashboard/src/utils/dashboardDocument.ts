@@ -1,3 +1,4 @@
+import type { PinnedDetail } from "@agdb-studio/query/src/composables/types";
 import type {
   ColorConfig,
   ColorRule,
@@ -121,6 +122,35 @@ const readColors = (value: unknown): ColorConfig | undefined => {
   };
 };
 
+const isFiniteNumber = (value: unknown): value is number =>
+  typeof value === "number" && Number.isFinite(value);
+
+/** Reads pinned details: element ids (edges are negative) once each, with a card offset. */
+const readPins = (value: unknown): PinnedDetail[] => {
+  if (!Array.isArray(value)) return [];
+  const pins: PinnedDetail[] = [];
+  for (const pin of value) {
+    if (
+      !isRecord(pin) ||
+      !Number.isInteger(pin.id) ||
+      pin.id === 0 ||
+      pins.some((p) => p.id === pin.id)
+    ) {
+      continue;
+    }
+    const { offset } = pin;
+    pins.push({
+      id: Number(pin.id),
+      ...(isRecord(offset) &&
+      isFiniteNumber(offset.x) &&
+      isFiniteNumber(offset.y)
+        ? { offset: { x: offset.x, y: offset.y } }
+        : {}),
+    });
+  }
+  return pins;
+};
+
 /** Version 1 widgets held one query chain and a fixed view; charts are gone. */
 const V1_VIEWS: Record<string, Widget["view"]> = {
   stat: "scalar",
@@ -153,6 +183,7 @@ export const readWidget = (value: unknown): Widget | undefined => {
     RESULT_VIEWS.find((v) => v === value.view) ??
     (typeof value.view === "string" ? V1_VIEWS[value.view] : undefined);
   const colors = readColors(value.colors);
+  const pins = readPins(value.pins);
   const refresh = value.refreshSeconds;
   return {
     id,
@@ -162,6 +193,7 @@ export const readWidget = (value: unknown): Widget | undefined => {
     rows: widgetRows,
     ...(view ? { view } : {}),
     ...(colors ? { colors } : {}),
+    ...(pins.length ? { pins } : {}),
     ...(typeof refresh === "number" && isRefreshInterval(refresh)
       ? { refreshSeconds: refresh }
       : {}),

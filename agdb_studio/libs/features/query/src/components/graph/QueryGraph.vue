@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import ForceGraph3D, { type ForceGraph3DInstance } from "3d-force-graph";
-import { onMounted, onUnmounted, reactive, ref, useId, watch } from "vue";
+import { onMounted, onUnmounted, ref, useId, watch } from "vue";
 import PinnedCard from "./PinnedCard.vue";
 import type { GraphNode, GraphLink, GraphData } from "../../composables/types";
 import { useGraphActions } from "../../composables/graphActions";
@@ -232,21 +232,10 @@ const elementPoint = (id: number): Point | undefined => {
 
 /** Where pinned elements are on screen; cards are drawn next to them. */
 const pinAnchors = ref<Record<number, Point>>({});
-/** Card position relative to its element, changed by dragging. */
-const cardOffsets = reactive(new Map<number, Point>());
+/** Card position relative to its element, changed by dragging (kept with the pin). */
 const DEFAULT_CARD_OFFSET: Point = { x: 18, y: -18 };
 const cardOffset = (id: number): Point =>
-  cardOffsets.get(id) ?? DEFAULT_CARD_OFFSET;
-
-// A card pinned again starts next to its element.
-watch(
-  () => actions.pinnedIds.value,
-  (ids) => {
-    for (const id of cardOffsets.keys()) {
-      if (!ids.includes(id)) cardOffsets.delete(id);
-    }
-  },
-);
+  actions.cardOffset(id) ?? DEFAULT_CARD_OFFSET;
 
 const samePoints = (a: Record<number, Point>, b: Record<number, Point>) => {
   const keys = Object.keys(a);
@@ -322,7 +311,7 @@ const startCardDrag = (id: number, event: PointerEvent) => {
   const start = { x: event.clientX, y: event.clientY };
   const startOffset = cardOffset(id);
   const move = (e: PointerEvent) => {
-    cardOffsets.set(id, {
+    actions.setCardOffset(id, {
       x: startOffset.x + e.clientX - start.x,
       y: startOffset.y + e.clientY - start.y,
     });

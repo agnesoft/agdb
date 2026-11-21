@@ -46,6 +46,22 @@ describe("queryStore", () => {
     expect(store.getQuery("missing")).toBeUndefined();
   });
 
+  it("keeps pinned details with card offsets and ignores unknown queries", () => {
+    store.addQuery(makeQuery());
+    store.setPins("q1", [{ id: 1 }, { id: -2 }]);
+    store.setPinOffset("q1", -2, { x: 3, y: 4 });
+    store.setPinOffset("q1", 9, { x: 1, y: 1 });
+    expect(store.getQuery("q1")?.value.pins).toEqual([
+      { id: 1 },
+      { id: -2, offset: { x: 3, y: 4 } },
+    ]);
+    store.setPins("q1", []);
+    expect(store.getQuery("q1")?.value.pins).toBeUndefined();
+    store.setPins("missing", [{ id: 1 }]);
+    store.setPinOffset("missing", 1, { x: 1, y: 1 });
+    expect(store.getQuery("missing")).toBeUndefined();
+  });
+
   it("deletes a query", () => {
     const q = makeQuery();
     const queryRef = store.addQuery(q);

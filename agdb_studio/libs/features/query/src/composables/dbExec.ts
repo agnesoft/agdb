@@ -80,6 +80,7 @@ export const executeDbQueries = async (
   queries: QueryType[],
   mutation: boolean,
   route: MinimalRoute,
+  { quiet = false }: { quiet?: boolean } = {},
 ): Promise<QueryResult[] | undefined> => {
   checkClient(client);
 
@@ -88,16 +89,18 @@ export const executeDbQueries = async (
     return undefined;
   }
 
+  // Quiet runs show their own errors, without the global notification.
+  const config = quiet ? { quietErrors: true } : undefined;
   let response: { data: QueryResult[] };
 
   if (isAdminRoute(route)) {
     response = mutation
-      ? await client.value.admin_db_exec_mut(params, queries)
-      : await client.value.admin_db_exec(params, queries);
+      ? await client.value.admin_db_exec_mut(params, queries, config)
+      : await client.value.admin_db_exec(params, queries, config);
   } else {
     response = mutation
-      ? await client.value.db_exec_mut(params, queries)
-      : await client.value.db_exec(params, queries);
+      ? await client.value.db_exec_mut(params, queries, config)
+      : await client.value.db_exec(params, queries, config);
   }
 
   return response.data;

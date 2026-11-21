@@ -3,15 +3,17 @@ import type {
   QueryResult,
   QueryType as AgdbQueryType,
 } from "@agnesoft/agdb_api";
-import { ref, type Ref } from "vue";
+import { ref, toRaw, type Ref } from "vue";
 import type {
   AddQueryParams,
   CopiedStep,
+  PinnedDetail,
   Query,
   QueryResults,
   QueryRow,
   QueryStep,
   QueryType,
+  ScreenPoint,
   TAB,
 } from "./types";
 import type { ResultView } from "../utils/resultShape";
@@ -277,6 +279,20 @@ const setView = (queryId: string, view: ResultView | undefined) => {
   if (query?.value) query.value.view = view;
 };
 
+/** Sets the pinned details cards; an empty list clears them. */
+const setPins = (queryId: string, pins: PinnedDetail[]) => {
+  const query = getQuery(queryId);
+  if (!query?.value) return;
+  // Stored plain, so copies (e.g. a dashboard widget's) can be cloned.
+  query.value.pins = pins.length ? pins.map((pin) => toRaw(pin)) : undefined;
+};
+
+/** Where a pinned card sits relative to its element. */
+const setPinOffset = (queryId: string, id: number, offset: ScreenPoint) => {
+  const pin = getQuery(queryId)?.value?.pins?.find((p) => p.id === id);
+  if (pin) pin.offset = offset;
+};
+
 /** The query's colouring, created on first change. */
 const colorsOf = (queryId: string): ColorConfig | undefined => {
   const query = getQuery(queryId);
@@ -467,9 +483,15 @@ const removeElementsFromResults = (queryId: string, ids: number[]) => {
       return keep;
     }),
   );
-  // The database reuses ids, so a later element must not inherit the colour.
-  const colors = getQuery(queryId)?.value?.colors;
+  // The database reuses ids, so a later element must not inherit the colour
+  // or the pinned details (kept on a dashboard while an element is missing).
+  const query = getQuery(queryId)?.value;
+  const colors = query?.colors;
   if (colors) for (const id of gone) delete colors.elements[id];
+  if (query?.pins) {
+    const kept = query.pins.filter((pin) => !gone.has(pin.id));
+    query.pins = kept.length ? kept : undefined;
+  }
 };
 
 /** Clears stored results. Intended for use when query steps are modified or the view is reset. */
@@ -544,6 +566,8 @@ export const useQueryStore = () => {
     insertQueryRows,
     setUnconfirmedLinkedMutation,
     setView,
+    setPins,
+    setPinOffset,
     validateQuerySteps,
     setQueryResults,
     clearQueryResults,

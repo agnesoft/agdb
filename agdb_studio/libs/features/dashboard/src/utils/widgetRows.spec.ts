@@ -7,11 +7,13 @@ import { useQueryStore } from "@agdb-studio/query/src/composables/queryStore";
 import { emptyColorConfig } from "@agdb-studio/query/src/utils/graphColorRules";
 import { createWidget } from "./dashboardDocument";
 import {
+  displayDiffers,
   fromQueryRows,
   hasUnfinishedRow,
   seedQuery,
   toQueryRows,
   widgetFromQuery,
+  withDisplay,
 } from "./widgetRows";
 
 const USERS = 'select().ids("users")';
@@ -79,6 +81,36 @@ describe("widgetRows", () => {
     expect(queryStore.getQuery("q")!.value.view).toBeUndefined();
   });
 
+  it("seeds, reads back and compares pinned details", () => {
+    const pins = [{ id: 1, offset: { x: 5, y: 6 } }, { id: -3 }];
+    const widget = createWidget({ owner: "o", db: "d", pins });
+    seedQuery("q", widget);
+    const query = queryStore.getQuery("q")!.value;
+    expect(query.pins).toEqual(pins);
+    expect(query.pins).not.toBe(pins);
+    expect(displayDiffers(widget, query)).toBe(false);
+    queryStore.setPinOffset("q", 1, { x: 9, y: 9 });
+    expect(displayDiffers(widget, query)).toBe(true);
+    expect(withDisplay(widget, query).pins?.[0]?.offset).toEqual({
+      x: 9,
+      y: 9,
+    });
+    // Pins added next to ones read from the (reactive) entry still copy.
+    queryStore.setPins("q", [...query.pins!, { id: 2 }]);
+    expect(withDisplay(widget, query).pins).toEqual([
+      { id: 1, offset: { x: 9, y: 9 } },
+      { id: -3 },
+      { id: 2 },
+    ]);
+    // No pins on either side, even when the widget keeps an empty list.
+    queryStore.setPins("q", []);
+    const unpinned = withDisplay(widget, query);
+    expect(unpinned.pins).toBeUndefined();
+    expect(displayDiffers({ ...widget, pins: [] }, query)).toBe(false);
+    seedQuery("q", unpinned);
+    expect(queryStore.getQuery("q")!.value.pins).toBeUndefined();
+  });
+
   it("builds the widget from an edited entry", () => {
     const base = createWidget({
       owner: "o",
@@ -109,5 +141,36 @@ describe("widgetRows", () => {
     const styled = widgetFromQuery(base, query.value);
     expect(styled.view).toBe("graph");
     expect(styled.colors?.rows).toEqual({ r1: 0 });
+  });
+
+  it("tells when the entry shows other colours or view than the widget", () => {
+    const widget = createWidget({
+      owner: "o",
+      db: "d",
+      colors: { rules: [], rows: { r1: 1, r2: 2 }, elements: {} },
+    });
+    seedQuery("q", widget);
+    const query = queryStore.getQuery("q")!;
+    expect(displayDiffers(widget, query.value)).toBe(false);
+    // Same colours set in another order are the same.
+    query.value.colors = { elements: {}, rows: { r2: 2, r1: 1 }, rules: [] };
+    expect(displayDiffers(widget, query.value)).toBe(false);
+    query.value.colors.rows.r1 = 3;
+    expect(displayDiffers(widget, query.value)).toBe(true);
+    expect(withDisplay(widget, query.value).colors?.rows.r1).toBe(3);
+
+    // No colouring on either side, even when one keeps empty colours.
+    const plain = createWidget({
+      owner: "o",
+      db: "d",
+      colors: emptyColorConfig(),
+    });
+    seedQuery("p", plain);
+    const entry = queryStore.getQuery("p")!;
+    entry.value.colors = undefined;
+    expect(displayDiffers(plain, entry.value)).toBe(false);
+    entry.value.view = "table";
+    expect(displayDiffers(plain, entry.value)).toBe(true);
+    expect(withDisplay(plain, entry.value)).toMatchObject({ view: "table" });
   });
 });

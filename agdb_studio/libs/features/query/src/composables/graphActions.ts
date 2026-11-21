@@ -18,7 +18,12 @@ import { PREFETCH_LIMIT, useElementValues } from "./elementValues";
 import { useGraphData } from "./graphData";
 import { useQueryStore } from "./queryStore";
 import { getQueryStepLabel } from "../mock/queryApiMock";
-import type { GraphElement, GraphNode } from "./types";
+import type {
+  GraphElement,
+  GraphNode,
+  PinnedDetail,
+  ScreenPoint,
+} from "./types";
 import {
   deleteElementQuery,
   insertEdgeQuery,
@@ -54,8 +59,14 @@ const plural = (count: number, word: string): string =>
 const errorMessage = (error: unknown): string =>
   error instanceof Error ? error.message : String(error);
 
+export type GraphActionsOptions = {
+  /** Keep pins of elements missing from the results (a saved view, e.g. a dashboard widget). */
+  keepMissingPins?: boolean;
+};
+
 export const createGraphActions = (
   queryId: Ref<string | undefined> | undefined,
+  { keepMissingPins = false }: GraphActionsOptions = {},
 ) => {
   const queryStore = useQueryStore();
   const { exec, execMut } = useDbExec();
@@ -66,8 +77,12 @@ export const createGraphActions = (
   const panelMode = ref<PanelMode>("view");
   const menu = ref<ContextMenuState>();
   const pendingEdgeSourceId = ref<number>();
-  /** Elements whose details stay shown on the graph, in pinning order. */
-  const pinnedIds = ref<number[]>([]);
+  /** Elements whose details stay shown on the graph, in pinning order (kept in the query). */
+  const pins = computed(() => query.value?.pins ?? []);
+  const pinnedIds = computed(() => pins.value.map((pin) => pin.id));
+  const setPins = (next: PinnedDetail[]) => {
+    if (queryId?.value) queryStore.setPins(queryId.value, next);
+  };
   /** The edge created last, so the graph can animate it once. */
   const lastAddedEdgeId = ref<number>();
 
@@ -326,15 +341,25 @@ export const createGraphActions = (
 
   const isPinned = (id: number): boolean => pinnedIds.value.includes(id);
 
-  const togglePin = (element: GraphElement) => {
-    pinnedIds.value = isPinned(element.id)
-      ? pinnedIds.value.filter((id) => id !== element.id)
-      : [...pinnedIds.value, element.id];
-    if (isPinned(element.id)) void loadValues(element.id);
+  // A card pinned again starts next to its element: unpinning drops its offset.
+  const unpin = (id: number) => {
+    setPins(pins.value.filter((pin) => pin.id !== id));
   };
 
-  const unpin = (id: number) => {
-    pinnedIds.value = pinnedIds.value.filter((pinned) => pinned !== id);
+  const togglePin = (element: GraphElement) => {
+    if (isPinned(element.id)) {
+      unpin(element.id);
+      return;
+    }
+    setPins([...pins.value, { id: element.id }]);
+    void loadValues(element.id);
+  };
+
+  /** Where a pinned card sits relative to its element (px); unset is the default spot. */
+  const cardOffset = (id: number): ScreenPoint | undefined =>
+    pins.value.find((pin) => pin.id === id)?.offset;
+  const setCardOffset = (id: number, offset: ScreenPoint) => {
+    if (queryId?.value) queryStore.setPinOffset(queryId.value, id, offset);
   };
 
   const pinnedElements = computed(() =>
@@ -344,10 +369,23 @@ export const createGraphActions = (
     }),
   );
 
-  // Pins of elements no longer shown (e.g. deleted, or a new run) are dropped.
+  // Pins (e.g. restored with a saved view) show stored values beyond the prefetch.
+  watch(
+    [pinnedIds, elementsById],
+    ([ids, byId]) => {
+      const shown = ids.filter((id) => byId.has(id));
+      if (shown.length) void elementValues.load(shown);
+    },
+    { immediate: true },
+  );
+
+  // Pins of elements no longer shown (e.g. deleted, or a new run) are
+  // dropped, unless they are kept with a saved view (they show again when
+  // their element is back).
   watch(elementsById, (byId) => {
-    const kept = pinnedIds.value.filter((id) => byId.has(id));
-    if (kept.length !== pinnedIds.value.length) pinnedIds.value = kept;
+    if (keepMissingPins) return;
+    const kept = pins.value.filter((pin) => byId.has(pin.id));
+    if (kept.length !== pins.value.length) setPins(kept);
   });
 
   const openMenu = (element: GraphElement, x: number, y: number) => {
@@ -615,8 +653,10 @@ export const createGraphActions = (
     panelMode: readonly(panelMode),
     menu,
     pendingEdgeSourceId,
-    pinnedIds: readonly(pinnedIds),
+    pinnedIds,
     pinnedElements,
+    cardOffset,
+    setCardOffset,
     lastAddedEdgeId: readonly(lastAddedEdgeId),
     isPinned,
     togglePin,
@@ -666,8 +706,9 @@ export const GRAPH_ACTIONS_KEY: InjectionKey<GraphActions> =
 /** Creates graph actions for a query and provides them to descendants. */
 export const provideGraphActions = (
   queryId: Ref<string | undefined> | undefined,
+  options?: GraphActionsOptions,
 ): GraphActions => {
-  const actions = createGraphActions(queryId);
+  const actions = createGraphActions(queryId, options);
   provide(GRAPH_ACTIONS_KEY, actions);
   return actions;
 };

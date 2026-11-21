@@ -90,9 +90,12 @@ describe("useWidgetQuery", () => {
     expect(data.loading.value).toBe(true);
     await flushPromises();
     expect(executeDbQueries).toHaveBeenCalledTimes(2);
-    expect(executeDbQueries).toHaveBeenCalledWith([expect.anything()], false, {
-      params: { owner: "o", db: "d" },
-    });
+    expect(executeDbQueries).toHaveBeenCalledWith(
+      [expect.anything()],
+      false,
+      { params: { owner: "o", db: "d" } },
+      { quiet: false },
+    );
     const query = data.query.value!;
     expect(query.results.exec).toEqual(execResults);
     expect(query.results.context).toEqual(contextResults);
@@ -203,6 +206,46 @@ describe("useWidgetQuery", () => {
     expect(data.revision.value).toBe(revision + 2);
     expect(data.query.value!.colors?.rows).toEqual({ r1: 2 });
     expect(executeDbQueries).toHaveBeenCalledTimes(2);
+  });
+
+  it("tells when the view changed in the results and resets it", async () => {
+    const { widget, data } = setup({ view: "graph" });
+    await flushPromises();
+    expect(data.displayChanged.value).toBe(false);
+    expect(data.shownWidget()).toEqual(widget.value);
+    queryStore.setView(data.queryId.value, "table");
+    expect(data.displayChanged.value).toBe(true);
+    expect(data.shownWidget().view).toBe("table");
+    const revision = data.revision.value;
+    data.resetDisplay();
+    expect(data.revision.value).toBe(revision + 1);
+    expect(data.query.value!.view).toBe("graph");
+    expect(data.displayChanged.value).toBe(false);
+  });
+
+  it("notices nested colour changes in the results", async () => {
+    const { data } = setup({
+      colors: { rules: [], rows: { r1: 1 }, elements: {} },
+    });
+    await flushPromises();
+    expect(data.displayChanged.value).toBe(false);
+    queryStore.setElementColor(data.queryId.value, 7, 0);
+    expect(data.displayChanged.value).toBe(true);
+    queryStore.setElementColor(data.queryId.value, 7, undefined);
+    expect(data.displayChanged.value).toBe(false);
+    queryStore.setRowColor(data.queryId.value, "r1", 3);
+    expect(data.displayChanged.value).toBe(true);
+  });
+
+  it("does not start over when the widget saves what its results show", async () => {
+    const { widget, data } = setup();
+    await flushPromises();
+    queryStore.setView(data.queryId.value, "table");
+    const revision = data.revision.value;
+    widget.value = data.shownWidget();
+    await flushPromises();
+    expect(data.revision.value).toBe(revision);
+    expect(data.displayChanged.value).toBe(false);
   });
 
   it("shows no results when the database returns none", async () => {

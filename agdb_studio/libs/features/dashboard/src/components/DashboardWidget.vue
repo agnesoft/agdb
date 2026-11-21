@@ -1,10 +1,11 @@
 <script lang="ts" setup>
 import { computed, ref, toRef, useTemplateRef, watch } from "vue";
-import { useIntersectionObserver } from "@vueuse/core";
+import { onClickOutside, useIntersectionObserver } from "@vueuse/core";
 import {
   AkChevronDownSmall,
   AkChevronRightSmall,
   AkChevronUpSmall,
+  AkMoreHorizontalFill,
   ClCloseMd,
   LuMaximize2,
   LuMinimize2,
@@ -21,7 +22,6 @@ const props = defineProps<{
   widget: Widget;
   /** Its size on the grid, from the dashboard layout. */
   size: WidgetSize;
-  editing?: boolean;
   first?: boolean;
   last?: boolean;
   /** Changes to re-run the queries (dashboard "Refresh all"). */
@@ -33,11 +33,38 @@ const emit = defineEmits<{
   remove: [];
   move: [delta: number];
   resize: [size: WidgetSize];
+  /** Saves the widget with changed content (the colours and view shown). */
+  update: [widget: Widget];
 }>();
 
-const { error, loading, revision, run, query } = useWidgetQuery(
-  toRef(props, "widget"),
-);
+const {
+  error,
+  loading,
+  revision,
+  run,
+  query,
+  displayChanged,
+  resetDisplay,
+  shownWidget,
+} = useWidgetQuery(toRef(props, "widget"));
+
+const menuOpen = ref(false);
+const menu = useTemplateRef<HTMLElement>("menu");
+onClickOutside(menu, () => (menuOpen.value = false));
+
+const menuToggle = useTemplateRef<HTMLButtonElement>("menuToggle");
+/** Closes the menu from the keyboard; focus goes back to its button. */
+const closeMenu = () => {
+  menuOpen.value = false;
+  menuToggle.value?.focus();
+};
+
+/** Runs a menu entry that leaves the widget's place (edit, remove) and closes the menu. */
+const fromMenu = (event: "edit" | "remove") => {
+  menuOpen.value = false;
+  if (event === "edit") emit("edit");
+  else emit("remove");
+};
 
 watch(
   () => props.refreshKey,
@@ -78,82 +105,113 @@ const firstLoad = computed(() => loading.value && !query.value?.lastRun);
     :data-testid="`widget-${widget.id}`"
   >
     <header>
-      <h3 class="title" :title="widget.title">{{ widget.title }}</h3>
+      <h3 class="title" :title="widget.title || 'Untitled'">
+        {{ widget.title || "Untitled" }}
+      </h3>
       <span class="db" :title="`${widget.owner}/${widget.db}`">
         {{ widget.owner }}/{{ widget.db }}
       </span>
+      <div
+        v-if="displayChanged"
+        class="view-note"
+        data-testid="widget-view-changed"
+      >
+        <span
+          title="The view, colours or pinned details changed here are not saved to the dashboard"
+        >
+          Unsaved view
+        </span>
+        <button
+          type="button"
+          data-testid="widget-view-save"
+          @click="emit('update', shownWidget())"
+        >
+          Save
+        </button>
+        <button
+          type="button"
+          data-testid="widget-view-reset"
+          @click="resetDisplay"
+        >
+          Reset
+        </button>
+      </div>
       <div class="actions">
-        <template v-if="editing">
-          <WidgetSizePicker :size="size" @resize="emit('resize', $event)" />
+        <button
+          type="button"
+          title="Refresh"
+          aria-label="Refresh"
+          data-testid="widget-refresh"
+          @click="run"
+        >
+          <MdRefresh />
+        </button>
+        <RouterLink
+          :to="queryLink"
+          title="Open in query editor"
+          aria-label="Open in query editor"
+          data-testid="widget-open-query"
+        >
+          <AkChevronRightSmall />
+        </RouterLink>
+        <button
+          type="button"
+          :title="maximized ? 'Restore' : 'Maximize'"
+          :aria-label="maximized ? 'Restore' : 'Maximize'"
+          :aria-pressed="maximized"
+          data-testid="widget-maximize"
+          @click="maximized = !maximized"
+        >
+          <LuMinimize2 v-if="maximized" />
+          <LuMaximize2 v-else />
+        </button>
+        <div ref="menu" class="menu" @keydown.esc.stop="closeMenu">
           <button
+            ref="menuToggle"
             type="button"
-            title="Move earlier"
-            aria-label="Move earlier"
-            data-testid="widget-move-up"
-            :disabled="first"
-            @click="emit('move', -1)"
+            title="Widget options"
+            aria-label="Widget options"
+            :aria-expanded="menuOpen"
+            data-testid="widget-menu"
+            @click="menuOpen = !menuOpen"
           >
-            <AkChevronUpSmall />
+            <AkMoreHorizontalFill />
           </button>
-          <button
-            type="button"
-            title="Move later"
-            aria-label="Move later"
-            data-testid="widget-move-down"
-            :disabled="last"
-            @click="emit('move', 1)"
-          >
-            <AkChevronDownSmall />
-          </button>
-          <button
-            type="button"
-            title="Edit widget"
-            aria-label="Edit widget"
-            data-testid="widget-edit"
-            @click="emit('edit')"
-          >
-            <LuPencil />
-          </button>
-          <button
-            type="button"
-            title="Remove widget"
-            aria-label="Remove widget"
-            data-testid="widget-remove"
-            @click="emit('remove')"
-          >
-            <ClCloseMd />
-          </button>
-        </template>
-        <template v-else>
-          <button
-            type="button"
-            title="Refresh"
-            aria-label="Refresh"
-            data-testid="widget-refresh"
-            @click="run"
-          >
-            <MdRefresh />
-          </button>
-          <RouterLink
-            :to="queryLink"
-            title="Open in query editor"
-            aria-label="Open in query editor"
-            data-testid="widget-open-query"
-          >
-            <AkChevronRightSmall />
-          </RouterLink>
-          <button
-            type="button"
-            :title="maximized ? 'Restore' : 'Maximize'"
-            :aria-label="maximized ? 'Restore' : 'Maximize'"
-            :aria-pressed="maximized"
-            data-testid="widget-maximize"
-            @click="maximized = !maximized"
-          >
-            <LuMinimize2 v-if="maximized" />
-            <LuMaximize2 v-else />
-          </button>
-        </template>
+          <div v-if="menuOpen" class="menu-items">
+            <button
+              type="button"
+              data-testid="widget-edit"
+              @click="fromMenu('edit')"
+            >
+              <LuPencil /> Edit widget…
+            </button>
+            <WidgetSizePicker :size="size" @resize="emit('resize', $event)" />
+            <button
+              type="button"
+              data-testid="widget-move-up"
+              :disabled="first"
+              @click="emit('move', -1)"
+            >
+              <AkChevronUpSmall /> Move earlier
+            </button>
+            <button
+              type="button"
+              data-testid="widget-move-down"
+              :disabled="last"
+              @click="emit('move', 1)"
+            >
+              <AkChevronDownSmall /> Move later
+            </button>
+            <button
+              type="button"
+              class="danger"
+              data-testid="widget-remove"
+              @click="fromMenu('remove')"
+            >
+              <ClCloseMd /> Remove
+            </button>
+          </div>
+        </div>
       </div>
     </header>
     <div ref="body" class="body">
@@ -181,8 +239,7 @@ const firstLoad = computed(() => loading.value && !query.value?.lastRun);
   }
 }
 header {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
+  display: flex;
   flex: none;
   align-items: center;
   gap: 0.5rem;
@@ -190,6 +247,7 @@ header {
   border-bottom: 1px solid var(--color-border);
 }
 .title {
+  min-width: 0;
   margin: 0;
   font-size: 1rem;
   overflow: hidden;
@@ -197,6 +255,10 @@ header {
   white-space: nowrap;
 }
 .db {
+  // Pushes the note and actions to the right.
+  margin-right: auto;
+  flex-shrink: 1;
+  min-width: 0;
   font-size: 0.75rem;
   color: var(--color-text-muted);
   max-width: 12rem;
@@ -226,6 +288,66 @@ header {
     &:disabled {
       opacity: 0.4;
       cursor: default;
+    }
+  }
+}
+.menu {
+  position: relative;
+}
+.menu-items {
+  position: absolute;
+  top: calc(100% + 0.25rem);
+  right: 0;
+  z-index: var(--z-index-dropdown);
+  display: flex;
+  flex-direction: column;
+  min-width: 11rem;
+  padding: 0.25rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.375rem;
+  background: var(--color-background);
+  > button {
+    justify-content: flex-start;
+    gap: 0.5rem;
+    width: 100%;
+    padding: 0 0.5rem;
+    font-size: 0.85rem;
+    white-space: nowrap;
+  }
+  .danger {
+    color: var(--error-color);
+  }
+}
+.view-note {
+  display: flex;
+  flex: none;
+  align-items: center;
+  height: 1.5rem;
+  padding-left: 0.5rem;
+  border: 1px solid color-mix(in srgb, var(--warning-color) 45%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--warning-color) 8%, transparent);
+  font-size: 0.75rem;
+  white-space: nowrap;
+  color: var(--warning-color);
+  span {
+    padding-right: 0.4rem;
+  }
+  button {
+    height: 100%;
+    padding: 0 0.5rem;
+    border: none;
+    border-left: 1px solid
+      color-mix(in srgb, var(--warning-color) 30%, transparent);
+    background: transparent;
+    color: var(--color-text);
+    font-size: 0.75rem;
+    cursor: pointer;
+    &:last-child {
+      border-radius: 0 999px 999px 0;
+    }
+    &:hover {
+      background: var(--color-background-mute);
     }
   }
 }

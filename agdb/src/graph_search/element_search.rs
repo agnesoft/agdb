@@ -35,6 +35,7 @@ where
 
     pub fn search(&mut self) -> Result<Vec<GraphIndex>, DbError> {
         for (distance, index) in self.graph.iter(self.storage).enumerate() {
+            let index = index?;
             let (add_index, finished) = match self.handler.process(index, distance as u64)? {
                 SearchControl::Continue(add) => (add, false),
                 SearchControl::Finish(add) => (add, true),

@@ -587,35 +587,43 @@ where
 
 impl<K, T, D, Data> Iterator for MapIterator<'_, K, T, D, Data>
 where
-    K: Default,
-    T: Default,
     D: StorageData,
     Data: MapData<K, T, D>,
 {
-    type Item = (K, T);
+    type Item = Result<(K, T), DbError>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        while self.pos != self.data.capacity() {
+        while self.pos < self.data.capacity() {
             let current_pos = self.pos;
             self.pos += 1;
 
-            if self
-                .data
-                .state(self.storage, current_pos)
-                .unwrap_or_default()
-                == MapValueState::Valid
-            {
-                let key = self.data.key(self.storage, current_pos).unwrap_or_default();
-                let value = self
-                    .data
-                    .value(self.storage, current_pos)
-                    .unwrap_or_default();
+            let pair = match self.data.state(self.storage, current_pos) {
+                Ok(MapValueState::Valid) => self.pair(current_pos),
+                Ok(_) => continue,
+                Err(error) => Err(error),
+            };
 
-                return Some((key, value));
+            if pair.is_err() {
+                self.pos = self.data.capacity();
             }
+
+            return Some(pair);
         }
 
         None
+    }
+}
+
+impl<K, T, D, Data> MapIterator<'_, K, T, D, Data>
+where
+    D: StorageData,
+    Data: MapData<K, T, D>,
+{
+    fn pair(&self, pos: u64) -> Result<(K, T), DbError> {
+        Ok((
+            self.data.key(self.storage, pos)?,
+            self.data.value(self.storage, pos)?,
+        ))
     }
 }
 
@@ -625,6 +633,7 @@ mod tests {
     use crate::collections::multi_map::MultiMapStorage;
     use crate::collections::tests::TestStorage;
     use crate::collections::tests::assert_io_failures;
+    use crate::collections::tests::assert_read_failures;
     use crate::collections::tests::storage;
     use crate::storage::file_storage::FileStorageImpl;
     use agplatform::test_platform::TestPlatform;
@@ -643,7 +652,7 @@ mod tests {
     }
 
     fn sorted(map: &TestMap, storage: &TestStorage) -> Vec<(u64, u64)> {
-        let mut pairs = map.iter(storage).collect::<Vec<_>>();
+        let mut pairs = map.iter(storage).collect::<Result<Vec<_>, _>>().unwrap();
         pairs.sort();
         pairs
     }
@@ -1084,6 +1093,21 @@ mod tests {
                     let map = map(&mut storage, &[]);
 
                     assert_eq!(map.iter(&storage).next(), None);
+                }
+
+                #[test]
+                fn next_read_failure_should_return_error_last() {
+                    assert_read_failures(
+                        |storage| map(storage, &[(1, 10), (5, 15), (2, 30)]),
+                        |storage, map| {
+                            // WHEN
+                            let results = map.iter(storage).collect::<Vec<_>>();
+
+                            // THEN
+                            assert!(results.iter().rev().skip(1).all(Result::is_ok));
+                            results.into_iter().collect::<Result<Vec<_>, _>>()
+                        },
+                    );
                 }
             }
         }

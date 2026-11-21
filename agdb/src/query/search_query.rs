@@ -3,6 +3,7 @@ use crate::DbError;
 use crate::DbErrorType;
 use crate::DbId;
 use crate::DbImpl;
+use crate::DbKeyValue;
 use crate::DbValue;
 use crate::Query;
 use crate::QueryCondition;
@@ -136,7 +137,7 @@ impl SearchQuery {
                     self.sort(&mut ids, db)?;
                 }
 
-                return self.slice(ids);
+                return Ok(self.slice(ids));
             } else {
                 return Err(DbError::query(
                     DbErrorType::NotAllowed,
@@ -157,7 +158,7 @@ impl SearchQuery {
             } else {
                 let mut ids = db.search_from(DbId(0), self.algorithm, 0, 0, &self.conditions)?;
                 self.sort(&mut ids, db)?;
-                self.slice(ids)
+                Ok(self.slice(ids))
             }
         } else if self.destination == QueryId::Id(DbId(0)) {
             let origin = db.db_id(&self.origin)?;
@@ -173,7 +174,7 @@ impl SearchQuery {
             } else {
                 let mut ids = db.search_from(origin, self.algorithm, 0, 0, &self.conditions)?;
                 self.sort(&mut ids, db)?;
-                self.slice(ids)
+                Ok(self.slice(ids))
             }
         } else if self.origin == QueryId::Id(DbId(0)) {
             let destination = db.db_id(&self.destination)?;
@@ -189,7 +190,7 @@ impl SearchQuery {
             } else {
                 let mut ids = db.search_to(destination, self.algorithm, 0, 0, &self.conditions)?;
                 self.sort(&mut ids, db)?;
-                self.slice(ids)
+                Ok(self.slice(ids))
             }
         } else {
             let origin = db.db_id(&self.origin)?;
@@ -200,7 +201,7 @@ impl SearchQuery {
                 db.search_from_to(origin, destination, &self.conditions)?
             };
             self.sort(&mut ids, db)?;
-            self.slice(ids)
+            Ok(self.slice(ids))
         }
     }
 
@@ -217,13 +218,15 @@ impl SearchQuery {
             })
             .collect::<Vec<DbValue>>();
 
-        ids.sort_by(|left, right| {
-            let left_values = db.values_by_keys(*left, &keys).unwrap_or_default();
-            let right_values = db.values_by_keys(*right, &keys).unwrap_or_default();
+        let mut sorted = ids
+            .iter()
+            .map(|id| Ok((*id, db.values_by_keys(*id, &keys)?)))
+            .collect::<Result<Vec<(DbId, Vec<DbKeyValue>)>, DbError>>()?;
 
+        sorted.sort_by(|left, right| {
             for (key_order, key) in self.order_by.iter().zip(&keys) {
-                let left_kv = left_values.iter().find(|kv| kv.key == *key);
-                let right_kv = right_values.iter().find(|kv| kv.key == *key);
+                let left_kv = left.1.iter().find(|kv| kv.key == *key);
+                let right_kv = right.1.iter().find(|kv| kv.key == *key);
 
                 let ordering = match (left_kv, right_kv) {
                     (None, None) => Ordering::Equal,
@@ -243,19 +246,22 @@ impl SearchQuery {
             Ordering::Equal
         });
 
+        for (id, sorted) in ids.iter_mut().zip(sorted) {
+            *id = sorted.0;
+        }
+
         Ok(())
     }
 
-    fn slice(&self, mut ids: Vec<DbId>) -> Result<Vec<DbId>, DbError> {
-        Ok(match (self.limit, self.offset) {
-            (0, 0) => ids,
-            (0, _) => ids[self.offset as usize..].to_vec(),
-            (_, 0) => {
-                ids.truncate(self.limit as usize);
-                ids
-            }
-            (_, _) => ids[self.offset as usize..(self.offset + self.limit) as usize].to_vec(),
-        })
+    fn slice(&self, mut ids: Vec<DbId>) -> Vec<DbId> {
+        let offset = usize::try_from(self.offset).unwrap_or(usize::MAX);
+        ids.drain(..offset.min(ids.len()));
+
+        if self.limit != 0 {
+            ids.truncate(usize::try_from(self.limit).unwrap_or(usize::MAX));
+        }
+
+        ids
     }
 
     pub(crate) fn new() -> Self {

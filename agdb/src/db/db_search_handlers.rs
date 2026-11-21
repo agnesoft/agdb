@@ -75,7 +75,7 @@ impl<'a, Store: StorageData> LimitOffsetHandler<'a, Store> {
         conditions: &'a Vec<QueryCondition>,
     ) -> Self {
         Self {
-            limit: limit + offset,
+            limit: limit.saturating_add(offset),
             offset,
             counter: 0,
             db,

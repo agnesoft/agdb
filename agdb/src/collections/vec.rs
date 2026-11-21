@@ -259,13 +259,21 @@ where
     Data: VecData<T, D, E>,
     E: From<DbError>,
 {
-    type Item = T;
+    type Item = Result<T, E>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let value = self.vec.value(self.storage, self.index).ok();
-        self.index += 1;
+        if self.index >= self.vec.len() {
+            return None;
+        }
 
-        value
+        let value = self.vec.value(self.storage, self.index);
+        self.index = if value.is_ok() {
+            self.index + 1
+        } else {
+            self.vec.len()
+        };
+
+        Some(value)
     }
 }
 
@@ -416,6 +424,7 @@ mod tests {
     use super::*;
     use crate::collections::tests::TestStorage;
     use crate::collections::tests::assert_io_failures;
+    use crate::collections::tests::assert_read_failures;
     use crate::collections::tests::storage;
     use crate::storage::file_storage::FileStorageImpl;
     use agplatform::test_platform::TestPlatform;
@@ -433,7 +442,7 @@ mod tests {
     }
 
     fn values(vec: &TestVec<String>, storage: &TestStorage) -> Vec<String> {
-        vec.iter(storage).collect()
+        vec.iter(storage).collect::<Result<_, _>>().unwrap()
     }
 
     fn out_of_bounds(index: u64, len: u64) -> DbError {
@@ -558,9 +567,24 @@ mod tests {
                     let vec = strings(&mut storage, &["a", "b"]);
                     let mut iter = vec.iter(&storage);
 
-                    assert_eq!(iter.next(), Some("a".to_string()));
-                    assert_eq!(iter.next(), Some("b".to_string()));
+                    assert_eq!(iter.next(), Some(Ok("a".to_string())));
+                    assert_eq!(iter.next(), Some(Ok("b".to_string())));
                     assert_eq!(iter.next(), None);
+                }
+
+                #[test]
+                fn next_read_failure_should_return_error_last() {
+                    assert_read_failures(
+                        |storage| strings(storage, &["a", "b"]),
+                        |storage, vec| {
+                            // WHEN
+                            let results = vec.iter(storage).collect::<Vec<_>>();
+
+                            // THEN
+                            assert!(results.iter().rev().skip(1).all(Result::is_ok));
+                            results.into_iter().collect::<Result<Vec<_>, _>>()
+                        },
+                    );
                 }
             }
         }
@@ -698,7 +722,10 @@ mod tests {
 
                 assert_eq!(vec.remove(&mut storage, 2), Ok(3));
 
-                assert_eq!(vec.iter(&storage).collect::<Vec<u64>>(), vec![1, 2]);
+                assert_eq!(
+                    vec.iter(&storage).collect::<Result<Vec<u64>, _>>().unwrap(),
+                    vec![1, 2]
+                );
             }
 
             #[test]
@@ -717,7 +744,10 @@ mod tests {
 
                 // THEN the reloaded vec and the other value are as committed
                 let vec = TestVec::<i64>::from_storage(&storage, vec.storage_index()).unwrap();
-                assert_eq!(vec.iter(&storage).collect::<Vec<i64>>(), vec![1, 2]);
+                assert_eq!(
+                    vec.iter(&storage).collect::<Result<Vec<i64>, _>>().unwrap(),
+                    vec![1, 2]
+                );
                 assert_eq!(storage.value::<i64>(other), Ok(10));
             }
 
@@ -1010,7 +1040,7 @@ mod tests {
                 assert_eq!(vec.len(), 4);
                 assert_eq!(vec.capacity(), 4);
                 assert_eq!(
-                    vec.iter(&storage).collect::<Vec<i64>>(),
+                    vec.iter(&storage).collect::<Result<Vec<i64>, _>>().unwrap(),
                     vec![10, 20, 30, 40]
                 );
             }

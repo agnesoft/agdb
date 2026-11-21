@@ -461,7 +461,7 @@ mod tests {
     }
 
     fn sorted(map: &TestMap, storage: &TestStorage) -> Vec<(u64, u64)> {
-        let mut pairs = map.iter(storage).collect::<Vec<_>>();
+        let mut pairs = map.iter(storage).collect::<Result<Vec<_>, _>>().unwrap();
         pairs.sort();
         pairs
     }
@@ -970,7 +970,7 @@ mod tests {
             }
 
             fn string_pairs(map: &StringMap, storage: &TestStorage) -> Vec<(String, String)> {
-                let mut pairs = map.iter(storage).collect::<Vec<_>>();
+                let mut pairs = map.iter(storage).collect::<Result<Vec<_>, _>>().unwrap();
                 pairs.sort();
                 pairs
             }

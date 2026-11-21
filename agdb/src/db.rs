@@ -721,7 +721,7 @@ impl<Store: StorageData> DbImpl<Store> {
     pub(crate) fn edge_count(&self, db_id: DbId, from: bool, to: bool) -> Result<u64, DbError> {
         let index = self.graph_index(db_id.0)?;
 
-        if let Some(node) = self.graph.node(&self.storage, index) {
+        if let Some(node) = self.graph.node(&self.storage, index)? {
             return Ok(match (from, to) {
                 (true, true) => node.edge_count(),
                 (true, false) => node.edge_count_from(),
@@ -737,7 +737,7 @@ impl<Store: StorageData> DbImpl<Store> {
     pub(crate) fn from_id(&self, id: DbId) -> Result<DbId, DbError> {
         if id.0 < 0 {
             Ok(DbId(
-                self.graph.edge_from(&self.storage, GraphIndex(id.0)).0,
+                self.graph.edge_from(&self.storage, GraphIndex(id.0))?.0,
             ))
         } else {
             Ok(DbId(
@@ -750,7 +750,7 @@ impl<Store: StorageData> DbImpl<Store> {
 
     pub(crate) fn to_id(&self, id: DbId) -> Result<DbId, DbError> {
         if id.0 < 0 {
-            Ok(DbId(self.graph.edge_to(&self.storage, GraphIndex(id.0)).0))
+            Ok(DbId(self.graph.edge_to(&self.storage, GraphIndex(id.0))?.0))
         } else {
             Ok(DbId(
                 self.graph.first_edge_to(&self.storage, GraphIndex(id.0))?.0,
@@ -839,7 +839,7 @@ impl<Store: StorageData> DbImpl<Store> {
             let kvs = self.values.values(&self.storage, i)?;
             let db_id = if self
                 .graph
-                .node(&self.storage, GraphIndex(i as i64))
+                .node(&self.storage, GraphIndex(i as i64))?
                 .is_some()
             {
                 DbId(i as i64)
@@ -994,7 +994,7 @@ impl<Store: StorageData> DbImpl<Store> {
     }
 
     pub(crate) fn remove_id(&mut self, db_id: DbId) -> Result<bool, DbError> {
-        if let Ok(graph_index) = self.graph_index(db_id.0) {
+        if let Some(graph_index) = self.existing_index(db_id.0)? {
             if graph_index.is_node() {
                 let alias = self.aliases.alias(&self.storage, &self.graph, db_id)?;
                 self.remove_node(db_id, graph_index, alias)?;
@@ -1024,28 +1024,32 @@ impl<Store: StorageData> DbImpl<Store> {
     }
 
     pub(crate) fn remove_index(&mut self, key: &DbValue) -> Result<u64, DbError> {
-        let mut count = None;
+        let ids = match self.indexes.index(key) {
+            Some(index) => index
+                .ids()
+                .iter(&self.storage)
+                .collect::<Result<Vec<_>, DbError>>()?,
+            None => return Ok(0),
+        };
+        let mut count = 0;
 
-        if let Some(index) = self.indexes.index(key) {
-            for (value, id) in index.ids().iter(&self.storage) {
+        if let Some(index) = self.indexes.take(&mut self.storage, key)? {
+            count = index.ids().len();
+
+            for (value, id) in ids {
                 self.undo_stack.push(Command::InsertToIndex {
                     key: key.clone(),
-                    value: value.clone(),
+                    value,
                     id,
                 });
             }
 
-            count = Some(index.ids().len());
-        }
-
-        if let Some(count) = count {
             self.undo_stack
                 .push(Command::InsertIndex { key: key.clone() });
-            self.indexes.remove(&mut self.storage, key)?;
-            Ok(count)
-        } else {
-            Ok(0)
+            index.remove_from_storage(&mut self.storage)?;
         }
+
+        Ok(count)
     }
 
     pub(crate) fn reserve_key_value_capacity(
@@ -1242,24 +1246,19 @@ impl<Store: StorageData> DbImpl<Store> {
     }
 
     fn graph_index(&self, id: i64) -> Result<GraphIndex, DbError> {
-        match id.cmp(&0) {
-            std::cmp::Ordering::Less => {
-                if self.graph.edge(&self.storage, GraphIndex(id)).is_some() {
-                    return Ok(GraphIndex(id));
-                }
-            }
-            std::cmp::Ordering::Equal => {}
-            std::cmp::Ordering::Greater => {
-                if self.graph.node(&self.storage, GraphIndex(id)).is_some() {
-                    return Ok(GraphIndex(id));
-                }
-            }
-        }
+        self.existing_index(id)?
+            .ok_or_else(|| DbError::db(DbErrorType::NotFound, format!("Id '{id}' not found")))
+    }
 
-        Err(DbError::db(
-            DbErrorType::NotFound,
-            format!("Id '{id}' not found"),
-        ))
+    fn existing_index(&self, id: i64) -> Result<Option<GraphIndex>, DbError> {
+        let index = GraphIndex(id);
+        let exists = if index.is_edge() {
+            self.graph.edge(&self.storage, index)?.is_some()
+        } else {
+            self.graph.node(&self.storage, index)?.is_some()
+        };
+
+        Ok(exists.then_some(index))
     }
 
     fn node_edges(
@@ -1269,17 +1268,19 @@ impl<Store: StorageData> DbImpl<Store> {
         let mut edges = vec![];
         let node = self
             .graph
-            .node(&self.storage, graph_index)
+            .node(&self.storage, graph_index)?
             .ok_or(DbError::db(
                 DbErrorType::NotFound,
                 format!("Node {} not found", graph_index.0),
             ))?;
 
         for edge in node.edge_iter_from() {
+            let edge = edge?;
             edges.push((edge.index(), edge.index_from(), edge.index_to()));
         }
 
         for edge in node.edge_iter_to() {
+            let edge = edge?;
             let from = edge.index_from();
             if from != graph_index {
                 edges.push((edge.index(), from, edge.index_to()));
@@ -1293,7 +1294,7 @@ impl<Store: StorageData> DbImpl<Store> {
         let (from, to) = {
             let edge = self
                 .graph
-                .edge(&self.storage, graph_index)
+                .edge(&self.storage, graph_index)?
                 .ok_or(DbError::db(
                     DbErrorType::NotFound,
                     format!("Edge {} not found", graph_index.0),
@@ -1433,40 +1434,42 @@ impl<Store: StorageData> DbImpl<Store> {
             QueryConditionData::Distance(value) => Ok(value.compare_distance(distance)),
             QueryConditionData::Edge => Ok(SearchControl::Continue(index.is_edge())),
             QueryConditionData::EdgeCount(value) => Ok(SearchControl::Continue(
-                if let Some(node) = self.graph.node(&self.storage, index) {
+                if let Some(node) = self.graph.node(&self.storage, index)? {
                     value.compare(node.edge_count())
                 } else {
                     false
                 },
             )),
             QueryConditionData::EdgeCountFrom(value) => Ok(SearchControl::Continue(
-                if let Some(node) = self.graph.node(&self.storage, index) {
+                if let Some(node) = self.graph.node(&self.storage, index)? {
                     value.compare(node.edge_count_from())
                 } else {
                     false
                 },
             )),
             QueryConditionData::EdgeCountTo(value) => Ok(SearchControl::Continue(
-                if let Some(node) = self.graph.node(&self.storage, index) {
+                if let Some(node) = self.graph.node(&self.storage, index)? {
                     value.compare(node.edge_count_to())
                 } else {
                     false
                 },
             )),
             QueryConditionData::Ids(values) => {
-                Ok(SearchControl::Continue(values.iter().any(|id| {
-                    index.0
-                        == match id {
-                            QueryId::Id(id) => id.0,
-                            QueryId::Alias(alias) => {
-                                self.aliases
-                                    .id(&self.storage, &self.graph, alias)
-                                    .unwrap_or_default()
-                                    .unwrap_or_default()
-                                    .0
-                            }
-                        }
-                })))
+                for id in values {
+                    let id = match id {
+                        QueryId::Id(id) => *id,
+                        QueryId::Alias(alias) => self
+                            .aliases
+                            .id(&self.storage, &self.graph, alias)?
+                            .unwrap_or_default(),
+                    };
+
+                    if index.0 == id.0 {
+                        return Ok(SearchControl::Continue(true));
+                    }
+                }
+
+                Ok(SearchControl::Continue(false))
             }
             QueryConditionData::KeyValue(kvc) => Ok(SearchControl::Continue(
                 if let Some(value) = self.values.value(&self.storage, index.as_u64(), &kvc.key)? {
@@ -1941,6 +1944,7 @@ mod tests {
 
     mod db_impl {
         use super::*;
+        use crate::collections::tests::assert_read_failures_on;
         use crate::storage::DEFAULT_OVERLAY_LIMIT;
         use crate::storage::file_storage::FileStorageImpl;
         use crate::storage::file_storage_memory_mapped::FileStorageMemoryMappedImpl;
@@ -2154,6 +2158,233 @@ mod tests {
                 assert_eq!(value(&db), "original".into());
                 db.optimize_storage().unwrap();
                 assert!(db.size() < len);
+            }
+        }
+
+        /// The nodes a, b, c, d (1..=4) with the values 4, 3, 2, 1 of "k"
+        /// and the edges a -> b (-5), a -> c (-6), b -> d (-7), c -> d (-8).
+        fn searched(platform: &Arc<TestPlatform>) -> DbImpl<FileStorageImpl<TestPlatform>> {
+            let mut db = open(file(platform), StorageConfig::default());
+            db.exec_mut(
+                QueryBuilder::insert()
+                    .nodes()
+                    .aliases(["a", "b", "c", "d"])
+                    .values(vec![
+                        vec![("k", 4).into()],
+                        vec![("k", 3).into()],
+                        vec![("k", 2).into()],
+                        vec![("k", 1).into()],
+                    ])
+                    .query(),
+            )
+            .unwrap();
+            db.exec_mut(
+                QueryBuilder::insert()
+                    .edges()
+                    .from(["a", "a", "b", "c"])
+                    .to(["b", "c", "d", "d"])
+                    .query(),
+            )
+            .unwrap();
+            db.exec_mut(QueryBuilder::insert().index("k").query())
+                .unwrap();
+            db
+        }
+
+        mod exec {
+            use super::*;
+            use crate::Comparison;
+            use crate::DbKeyOrder;
+
+            #[test]
+            fn exec_read_failure_should_return_error() {
+                for query in [
+                    QueryBuilder::search().from("a").query(),
+                    QueryBuilder::search().depth_first().to("d").query(),
+                    QueryBuilder::search().from("a").to("d").query(),
+                    QueryBuilder::search().to("d").from("a").query(),
+                    QueryBuilder::search().elements().query(),
+                    QueryBuilder::search()
+                        .from("a")
+                        .order_by(DbKeyOrder::Asc("k".into()))
+                        .query(),
+                    QueryBuilder::search()
+                        .from("a")
+                        .where_()
+                        .edge_count_from_greater_than(1)
+                        .or()
+                        .edge_count_to(1)
+                        .or()
+                        .edge_count(2)
+                        .query(),
+                    QueryBuilder::search().from("a").where_().ids("c").query(),
+                    QueryBuilder::search()
+                        .from("a")
+                        .to("d")
+                        .where_()
+                        .edge_count_from(1)
+                        .query(),
+                    QueryBuilder::search()
+                        .to("d")
+                        .from("a")
+                        .where_()
+                        .edge_count_from(1)
+                        .query(),
+                    QueryBuilder::search()
+                        .from("a")
+                        .limit(2)
+                        .where_()
+                        .edge_count_from(1)
+                        .query(),
+                    QueryBuilder::search()
+                        .to("d")
+                        .offset(1)
+                        .where_()
+                        .edge_count_from(1)
+                        .query(),
+                    QueryBuilder::search()
+                        .elements()
+                        .offset(1)
+                        .limit(1)
+                        .where_()
+                        .edge_count_from(1)
+                        .query(),
+                    QueryBuilder::search()
+                        .elements()
+                        .order_by(DbKeyOrder::Asc("k".into()))
+                        .query(),
+                    QueryBuilder::search()
+                        .to("d")
+                        .order_by(DbKeyOrder::Asc("k".into()))
+                        .query(),
+                    QueryBuilder::search()
+                        .index("k")
+                        .value(3)
+                        .order_by(DbKeyOrder::Asc("k".into()))
+                        .where_()
+                        .edge_count_from(1)
+                        .query(),
+                    QueryBuilder::search()
+                        .depth_first()
+                        .from("a")
+                        .where_()
+                        .not_beyond()
+                        .edge()
+                        .query(),
+                    QueryBuilder::search()
+                        .depth_first()
+                        .to("d")
+                        .where_()
+                        .not_beyond()
+                        .edge()
+                        .query(),
+                    QueryBuilder::search()
+                        .to("d")
+                        .where_()
+                        .not_beyond()
+                        .edge()
+                        .query(),
+                    QueryBuilder::search()
+                        .from("a")
+                        .where_()
+                        .key("k")
+                        .value(Comparison::Equal(3.into()))
+                        .query(),
+                    QueryBuilder::search().from("a").where_().keys("k").query(),
+                ] {
+                    assert_read_failures_on(searched, |db| db.exec(&query));
+                }
+
+                assert_read_failures_on(searched, |db| {
+                    db.exec(QueryBuilder::select().edge_count().ids(["a", "d"]).query())
+                });
+                assert_read_failures_on(searched, |db| {
+                    db.exec(QueryBuilder::select().ids(["a", "d"]).query())
+                });
+                assert_read_failures_on(searched, |db| {
+                    db.exec(QueryBuilder::select().values("k").ids(["a", "d"]).query())
+                });
+                assert_read_failures_on(searched, |db| {
+                    db.exec(QueryBuilder::select().keys().ids(["a", "d"]).query())
+                });
+            }
+        }
+
+        mod exec_mut {
+            use super::*;
+
+            #[test]
+            fn exec_mut_read_failure_should_return_error() {
+                assert_read_failures_on(searched, |db| {
+                    db.exec_mut(QueryBuilder::remove().ids("a").query())
+                });
+                assert_read_failures_on(searched, |db| {
+                    db.exec_mut(QueryBuilder::remove().ids(-7).query())
+                });
+                assert_read_failures_on(searched, |db| {
+                    db.exec_mut(QueryBuilder::insert().index("j").query())
+                });
+                assert_read_failures_on(searched, |db| {
+                    db.exec_mut(
+                        QueryBuilder::insert()
+                            .values_uniform([("k", 5).into(), ("j", 6).into()])
+                            .ids("a")
+                            .query(),
+                    )
+                });
+                assert_read_failures_on(searched, |db| {
+                    db.exec_mut(QueryBuilder::remove().values("k").ids("a").query())
+                });
+                assert_read_failures_on(searched, |db| {
+                    db.exec_mut(QueryBuilder::remove().index("k").query())
+                });
+            }
+
+            #[test]
+            fn exec_mut_remove_index_read_failure_should_keep_the_index() {
+                for nth in 0.. {
+                    // GIVEN
+                    let platform = Arc::new(test_platform());
+                    let mut db = searched(&platform);
+                    let mut results = vec![None; nth];
+                    results.extend([Some(ErrorKind::Other), None]);
+                    platform.fs().set_io_errors(FsOp::Read, NAME, results);
+
+                    // WHEN
+                    let result = db.exec_mut(QueryBuilder::remove().index("k").query());
+
+                    // THEN
+                    let found = db
+                        .exec(QueryBuilder::search().index("k").value(3).query())
+                        .map(|found| found.ids());
+
+                    if result.is_ok() {
+                        assert!(nth > 0);
+                        assert!(found.is_err());
+                        break;
+                    }
+
+                    assert_eq!(found, Ok(vec![DbId(2)]), "read {nth}");
+                }
+            }
+        }
+
+        mod try_new_with_storage {
+            use super::*;
+
+            #[test]
+            fn try_new_with_storage_read_failure_should_return_error() {
+                assert_read_failures_on(
+                    |platform| {
+                        drop(searched(platform));
+                        platform.clone()
+                    },
+                    |platform| {
+                        let data = FileStorageImpl::with_platform(platform.clone(), NAME)?;
+                        let db = DbImpl::try_new_with_storage(Storage::with_data(data)?)?;
+                        db.exec(QueryBuilder::select().indexes().query())
+                    },
+                );
             }
         }
     }

@@ -14,6 +14,7 @@ pub(crate) mod tests {
     use agplatform::test_platform::TestPlatform;
     use agplatform::test_platform::test_fs::FsOp;
     use agplatform::test_platform::test_platform;
+    use std::fmt::Debug;
     use std::io::ErrorKind;
     use std::sync::Arc;
 
@@ -67,6 +68,55 @@ pub(crate) mod tests {
             verify(storage, subject);
             storage.recover().unwrap();
         });
+    }
+
+    /// Fails each read of the database file the `action` does, one at a
+    /// time, on the subject the `setup` prepared, and checks that the
+    /// failure is returned until the `action` runs out of reads and returns
+    /// what it returns without failures.
+    pub(crate) fn assert_read_failures<T, R: Debug + PartialEq>(
+        setup: impl Fn(&mut TestStorage) -> T,
+        action: impl Fn(&mut TestStorage, &mut T) -> Result<R, DbError>,
+    ) {
+        assert_read_failures_on(
+            |platform| {
+                let mut storage = new_storage(platform);
+                let subject = setup(&mut storage);
+                (storage, subject)
+            },
+            |subject| action(&mut subject.0, &mut subject.1),
+        );
+    }
+
+    /// As [`assert_read_failures`] for a subject that `open` creates with
+    /// its own storage on the platform.
+    pub(crate) fn assert_read_failures_on<T, R: Debug + PartialEq>(
+        open: impl Fn(&Arc<TestPlatform>) -> T,
+        action: impl Fn(&mut T) -> Result<R, DbError>,
+    ) {
+        let expected = action(&mut open(&Arc::new(test_platform()))).unwrap();
+        let mut failures = 0;
+
+        for nth in 0.. {
+            let platform = Arc::new(test_platform());
+            let mut subject = open(&platform);
+            let mut results = vec![None; nth];
+            results.push(Some(ErrorKind::Other));
+            platform.fs().set_io_errors(FsOp::Read, NAME, results);
+
+            let result = action(&mut subject);
+
+            platform.fs().clear_faults();
+
+            if let Ok(result) = result {
+                assert_eq!(result, expected, "read {nth} failed silently");
+                break;
+            }
+
+            failures += 1;
+        }
+
+        assert!(failures > 0, "the action should read");
     }
 
     fn io_failures<T, R>(

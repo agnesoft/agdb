@@ -75,12 +75,10 @@ impl<S: StorageData> DbKeyValues<S> {
         index: u64,
         value: &DbKeyValue,
     ) -> Result<Option<DbKeyValue>, DbError> {
-        if !self.valid_index(storage, index)? {
+        let Some(mut kvs) = self.existing_kvs(storage, index)? else {
             self.insert_value(storage, index, value)?;
             return Ok(None);
-        }
-
-        let mut kvs = self.kvs(storage, index)?;
+        };
 
         if let Some((index, kv)) = find(&kvs, storage, &value.key)? {
             kvs.replace(storage, index, value)?;
@@ -93,28 +91,22 @@ impl<S: StorageData> DbKeyValues<S> {
     }
 
     pub fn key_count(&self, storage: &Storage<S>, index: u64) -> Result<u64, DbError> {
-        if !self.valid_index(storage, index)? {
-            return Ok(0);
-        }
-
-        Ok(self.kvs(storage, index)?.len())
+        Ok(self
+            .existing_kvs(storage, index)?
+            .map_or(0, |kvs| kvs.len()))
     }
 
     pub fn keys(&self, storage: &Storage<S>, index: u64) -> Result<Vec<DbValue>, DbError> {
-        if !self.valid_index(storage, index)? {
+        let Some(kvs) = self.existing_kvs(storage, index)? else {
             return Ok(vec![]);
-        }
-
-        let kvs = self.kvs(storage, index)?;
+        };
         kvs.iter(storage).map(|kv| Ok(kv?.key)).collect()
     }
 
     pub fn remove(&mut self, storage: &mut Storage<S>, index: u64) -> Result<(), DbError> {
-        if !self.valid_index(storage, index)? {
+        let Some(kvs) = self.existing_kvs(storage, index)? else {
             return Ok(());
-        }
-
-        let kvs = self.kvs(storage, index)?;
+        };
         kvs.remove_from_storage(storage)?;
 
         if self.0.len() - 1 == index {
@@ -132,11 +124,9 @@ impl<S: StorageData> DbKeyValues<S> {
         index: u64,
         key: &DbValue,
     ) -> Result<(), DbError> {
-        if !self.valid_index(storage, index)? {
+        let Some(mut kvs) = self.existing_kvs(storage, index)? else {
             return Ok(());
-        }
-
-        let mut kvs = self.kvs(storage, index)?;
+        };
 
         if let Some((index, _)) = find(&kvs, storage, key)? {
             kvs.remove(storage, index)?;
@@ -171,8 +161,8 @@ impl<S: StorageData> DbKeyValues<S> {
 
     pub fn shrink_to_fit(&mut self, storage: &mut Storage<S>) -> Result<(), DbError> {
         for index in 0..self.0.len() {
-            if self.valid_index(storage, index)? {
-                self.kvs(storage, index)?.shrink_to_fit(storage)?;
+            if let Some(mut kvs) = self.existing_kvs(storage, index)? {
+                kvs.shrink_to_fit(storage)?;
             }
         }
 
@@ -185,20 +175,16 @@ impl<S: StorageData> DbKeyValues<S> {
         index: u64,
         key: &DbValue,
     ) -> Result<Option<DbValue>, DbError> {
-        if !self.valid_index(storage, index)? {
+        let Some(kvs) = self.existing_kvs(storage, index)? else {
             return Ok(None);
-        }
-
-        let kvs = self.kvs(storage, index)?;
+        };
         Ok(find(&kvs, storage, key)?.map(|found| found.1.value))
     }
 
     pub fn values(&self, storage: &Storage<S>, index: u64) -> Result<Vec<DbKeyValue>, DbError> {
-        if !self.valid_index(storage, index)? {
+        let Some(kvs) = self.existing_kvs(storage, index)? else {
             return Ok(vec![]);
-        }
-
-        let kvs = self.kvs(storage, index)?;
+        };
         kvs.iter(storage).collect()
     }
 
@@ -208,18 +194,21 @@ impl<S: StorageData> DbKeyValues<S> {
         index: u64,
         keys: &[DbValue],
     ) -> Result<Vec<DbKeyValue>, DbError> {
-        if !self.valid_index(storage, index)? {
+        let Some(kvs) = self.existing_kvs(storage, index)? else {
             return Ok(vec![]);
-        }
-
-        let kvs = self.kvs(storage, index)?;
+        };
         let mut values = vec![];
 
-        for kv in kvs.iter(storage) {
-            let kv = kv?;
-
-            if let Some(pos) = keys.iter().position(|k| k == &kv.key) {
-                values.push((pos, kv));
+        for (_, key_index, value_index) in stored(&kvs, storage)? {
+            if let Some(pos) = position(keys, key_index, storage)? {
+                let value = DbValue::load_db_value(value_index, storage)?;
+                values.push((
+                    pos,
+                    DbKeyValue {
+                        key: keys[pos].clone(),
+                        value,
+                    },
+                ));
             }
         }
 
@@ -227,13 +216,22 @@ impl<S: StorageData> DbKeyValues<S> {
         Ok(values.into_iter().map(|(_, kv)| kv).collect())
     }
 
-    fn kvs(&self, storage: &Storage<S>, index: u64) -> Result<DbVec<DbKeyValue, S>, DbError> {
-        let storage_index = self.0.value(storage, index)?;
-        DbVec::from_storage(storage, storage_index)
-    }
+    fn existing_kvs(
+        &self,
+        storage: &Storage<S>,
+        index: u64,
+    ) -> Result<Option<DbVec<DbKeyValue, S>>, DbError> {
+        if self.0.len() <= index {
+            return Ok(None);
+        }
 
-    fn valid_index(&self, storage: &Storage<S>, index: u64) -> Result<bool, DbError> {
-        Ok(index < self.0.len() && self.0.value(storage, index)?.0 != 0)
+        let storage_index = self.0.value(storage, index)?;
+
+        if storage_index.0 == 0 {
+            return Ok(None);
+        }
+
+        Ok(Some(DbVec::from_storage(storage, storage_index)?))
     }
 }
 
@@ -242,15 +240,61 @@ fn find<S: StorageData>(
     storage: &Storage<S>,
     key: &DbValue,
 ) -> Result<Option<(u64, DbKeyValue)>, DbError> {
-    for (index, kv) in kvs.iter(storage).enumerate() {
-        let kv = kv?;
-
-        if kv.key == *key {
-            return Ok(Some((index as u64, kv)));
+    for (index, key_index, value_index) in stored(kvs, storage)? {
+        if key.equals_stored(key_index, storage)? {
+            let value = DbValue::load_db_value(value_index, storage)?;
+            return Ok(Some((
+                index,
+                DbKeyValue {
+                    key: key.clone(),
+                    value,
+                },
+            )));
         }
     }
 
     Ok(None)
+}
+
+fn position<S: StorageData>(
+    keys: &[DbValue],
+    key_index: DbValueIndex,
+    storage: &Storage<S>,
+) -> Result<Option<usize>, DbError> {
+    for (pos, key) in keys.iter().enumerate() {
+        if key.equals_stored(key_index, storage)? {
+            return Ok(Some(pos));
+        }
+    }
+
+    Ok(None)
+}
+
+/// Reads the key and value indexes of all `kvs` at once so that
+/// the values can be loaded only for the matching keys.
+fn stored<S: StorageData>(
+    kvs: &DbVec<DbKeyValue, S>,
+    storage: &Storage<S>,
+) -> Result<Vec<(u64, DbValueIndex, DbValueIndex)>, DbError> {
+    let bytes = kvs.bytes_at(storage, 0, kvs.len())?;
+    let mut indexes = Vec::with_capacity(kvs.len() as usize);
+
+    for (index, kv) in bytes
+        .as_chunks::<16>()
+        .0
+        .as_chunks::<2>()
+        .0
+        .iter()
+        .enumerate()
+    {
+        indexes.push((
+            index as u64,
+            DbValueIndex::from_data(kv[0]),
+            DbValueIndex::from_data(kv[1]),
+        ));
+    }
+
+    Ok(indexes)
 }
 
 impl<K, T> From<(K, T)> for DbKeyValue

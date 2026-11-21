@@ -1,28 +1,34 @@
 <script lang="ts" setup>
-import { provide, ref } from "vue";
+import { computed, provide, ref } from "vue";
 import QueryBuilder from "./QueryBuilder.vue";
 import { type TAB, TABS } from "../../composables/types";
 
-const activeTab = ref<TAB>(TABS[0]);
+const props = defineProps<{ tabs?: readonly TAB[] }>();
+const shownTabs = computed(() => props.tabs ?? TABS);
 
-const tabs = ref<HTMLElement[]>();
+const activeTab = ref<TAB>(shownTabs.value[0] ?? TABS[0]);
+
+const tabRefs = ref<HTMLElement[]>();
 
 const handleKeydown = (event: KeyboardEvent) => {
-  const currentIndex = TABS.indexOf(activeTab.value);
+  const tabList = shownTabs.value;
+  const currentIndex = tabList.indexOf(activeTab.value);
+  // Nothing to move between (no tabs, or the active one is not shown).
+  if (currentIndex < 0) return;
   if (event.key === "ArrowRight") {
-    const nextIndex = (currentIndex + 1) % TABS.length;
+    const nextIndex = (currentIndex + 1) % tabList.length;
 
     /* v8 ignore next -- @preserve */
-    activeTab.value = TABS[nextIndex] ?? activeTab.value;
+    activeTab.value = tabList[nextIndex] ?? activeTab.value;
     event.preventDefault();
-    tabs.value?.[TABS.indexOf(activeTab.value)]?.focus();
+    tabRefs.value?.[tabList.indexOf(activeTab.value)]?.focus();
   } else if (event.key === "ArrowLeft") {
-    const prevIndex = (currentIndex - 1 + TABS.length) % TABS.length;
+    const prevIndex = (currentIndex - 1 + tabList.length) % tabList.length;
 
     /* v8 ignore next -- @preserve */
-    activeTab.value = TABS[prevIndex] ?? activeTab.value;
+    activeTab.value = tabList[prevIndex] ?? activeTab.value;
     event.preventDefault();
-    tabs.value?.[TABS.indexOf(activeTab.value)]?.focus();
+    tabRefs.value?.[tabList.indexOf(activeTab.value)]?.focus();
   }
 };
 
@@ -33,10 +39,10 @@ provide("activeTab", activeTab);
   <div class="query-builder-tabs" @keydown="handleKeydown">
     <div class="tabs" role="tablist">
       <button
-        v-for="tab in TABS"
+        v-for="tab in shownTabs"
         :id="`query-tabpanel-${tab}`"
         :key="tab"
-        ref="tabs"
+        ref="tabRefs"
         class="button button-tab query-tab"
         :class="{ active: activeTab === tab }"
         type="button"

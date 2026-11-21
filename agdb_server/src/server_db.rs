@@ -14,6 +14,7 @@ use agdb::QueryId;
 use agdb::QueryResult;
 use agdb::SearchQuery;
 use agdb::SelectValuesQuery;
+use agdb_api::DashboardSummary;
 use agdb_api::DbKind;
 use agdb_api::DbUser;
 use agdb_api::DbUserRole;
@@ -55,6 +56,15 @@ pub(crate) struct Database {
     pub(crate) created: u64,
 }
 
+#[derive(Default, DbType)]
+pub(crate) struct ServerDashboard {
+    pub(crate) db_id: Option<DbId>,
+    pub(crate) owner: String,
+    pub(crate) name: String,
+    pub(crate) config: String,
+    pub(crate) updated: u64,
+}
+
 impl Database {
     pub(crate) fn name(&self) -> DbName {
         DbName {
@@ -72,10 +82,12 @@ pub(crate) struct ServerDb {
 
 const ADMIN: &str = "admin";
 const CREATED: &str = "created";
+const DASHBOARDS: &str = "dashboards";
 const DB: &str = "db";
 const DBS: &str = "dbs";
 const EXPIRES_AT: &str = "expires_at";
 const OWNER: &str = "owner";
+const NAME: &str = "name";
 const ROLE: &str = "role";
 const TOKEN: &str = "token";
 const USERS: &str = "users";
@@ -174,6 +186,12 @@ impl ServerDb {
                 t.exec_mut(QueryBuilder::insert().nodes().aliases(DBS).query())?;
             }
 
+            if t.exec(QueryBuilder::select().ids(DASHBOARDS).query())
+                .is_err()
+            {
+                t.exec_mut(QueryBuilder::insert().nodes().aliases(DASHBOARDS).query())?;
+            }
+
             // Remove all old user tokens still on users from previous db version, remove in later versions
             if t.exec(QueryBuilder::select().values(TOKEN).ids(ADMIN).query())
                 .is_ok()
@@ -263,6 +281,134 @@ impl ServerDb {
             });
 
         Ok(users)
+    }
+
+    pub(crate) async fn dashboard(&self, owner: &str, name: &str) -> ServerResult<ServerDashboard> {
+        self.db
+            .read()
+            .await
+            .exec(find_dashboard_query(owner, name))?
+            .try_into()
+            .map_err(|_| dashboard_not_found(name))
+    }
+
+    /// The owner's dashboards by name, without their (possibly large) configs.
+    pub(crate) async fn dashboards(&self, owner: &str) -> ServerResult<Vec<DashboardSummary>> {
+        let mut dashboards: Vec<DashboardSummary> = self
+            .db
+            .read()
+            .await
+            .exec(
+                QueryBuilder::select()
+                    .elements::<DashboardSummary>()
+                    .search()
+                    .from(DASHBOARDS)
+                    .where_()
+                    .neighbor()
+                    .and()
+                    .key(OWNER)
+                    .value(owner)
+                    .query(),
+            )?
+            .try_into()?;
+        dashboards.sort_by(|a, b| a.name.cmp(&b.name));
+        Ok(dashboards)
+    }
+
+    pub(crate) async fn remove_dashboard(&self, owner: &str, name: &str) -> ServerResult<()> {
+        self.db.write().await.exec_mut(
+            QueryBuilder::remove()
+                .search()
+                .from(DASHBOARDS)
+                .where_()
+                .neighbor()
+                .and()
+                .key(OWNER)
+                .value(owner)
+                .and()
+                .key(NAME)
+                .value(name)
+                .query(),
+        )?;
+        Ok(())
+    }
+
+    pub(crate) async fn remove_dashboards(&self, owner: &str) -> ServerResult<()> {
+        self.db.write().await.exec_mut(
+            QueryBuilder::remove()
+                .search()
+                .from(DASHBOARDS)
+                .where_()
+                .neighbor()
+                .and()
+                .key(OWNER)
+                .value(owner)
+                .query(),
+        )?;
+        Ok(())
+    }
+
+    pub(crate) async fn rename_dashboard(
+        &self,
+        owner: &str,
+        name: &str,
+        new_name: &str,
+        updated: u64,
+    ) -> ServerResult<()> {
+        self.db
+            .write()
+            .await
+            .transaction_mut(|t| -> ServerResult<()> {
+                let mut dashboard: ServerDashboard = t
+                    .exec(find_dashboard_query(owner, name))?
+                    .try_into()
+                    .map_err(|_| dashboard_not_found(name))?;
+                // An add or rename applied after the request was checked may have taken the name.
+                if t.exec(find_dashboard_query(owner, new_name))?.result != 0 {
+                    return Err(dashboard_exists(new_name));
+                }
+                dashboard.name = new_name.to_string();
+                dashboard.updated = updated;
+                t.exec_mut(QueryBuilder::insert().element(&dashboard).query())?;
+                Ok(())
+            })
+    }
+
+    /// Inserts a new dashboard or replaces the config of an existing one.
+    /// With `create` an existing dashboard is an error (a concurrent add won).
+    pub(crate) async fn save_dashboard(
+        &self,
+        mut dashboard: ServerDashboard,
+        create: bool,
+    ) -> ServerResult<()> {
+        self.db
+            .write()
+            .await
+            .transaction_mut(|t| -> ServerResult<()> {
+                dashboard.db_id = t
+                    .exec(find_dashboard_query(&dashboard.owner, &dashboard.name))?
+                    .elements
+                    .first()
+                    .map(|e| e.id);
+
+                if create && dashboard.db_id.is_some() {
+                    return Err(dashboard_exists(&dashboard.name));
+                }
+
+                let result = t.exec_mut(QueryBuilder::insert().element(&dashboard).query())?;
+
+                // Updating an existing element returns no new ids; only new dashboards get linked.
+                if dashboard.db_id.is_none() {
+                    t.exec_mut(
+                        QueryBuilder::insert()
+                            .edges()
+                            .from(DASHBOARDS)
+                            .to(result)
+                            .query(),
+                    )?;
+                }
+                Ok(())
+            })
     }
 
     pub(crate) async fn dbs(&self) -> ServerResult<Vec<Database>> {
@@ -463,6 +609,7 @@ impl ServerDb {
         let mut dbs = vec![];
 
         self.remove_tokens(user).await?;
+        self.remove_dashboards(username).await?;
 
         self.user_dbs(user)
             .await?
@@ -946,8 +1093,38 @@ fn user_sessions_query(user_id: DbId) -> SelectValuesQuery {
         .query()
 }
 
+pub(crate) fn dashboard_exists(name: &str) -> ServerError {
+    ServerError::new(
+        StatusCode::CONFLICT,
+        &format!("dashboard already exists: {name}"),
+    )
+}
+
+fn dashboard_not_found(name: &str) -> ServerError {
+    ServerError::new(
+        StatusCode::NOT_FOUND,
+        &format!("dashboard not found: {name}"),
+    )
+}
+
 fn db_not_found(name: &str) -> ServerError {
     ServerError::new(StatusCode::NOT_FOUND, &format!("db not found: {name}"))
+}
+
+fn find_dashboard_query(owner: &str, name: &str) -> SelectValuesQuery {
+    QueryBuilder::select()
+        .element::<ServerDashboard>()
+        .search()
+        .from(DASHBOARDS)
+        .where_()
+        .neighbor()
+        .and()
+        .key(OWNER)
+        .value(owner)
+        .and()
+        .key(NAME)
+        .value(name)
+        .query()
 }
 
 fn find_user_db_query(user: DbId, owner: &str, db: &str) -> SearchQuery {
@@ -1074,6 +1251,44 @@ mod tests {
         )?;
         assert_eq!(result.result, 0, "{result:?}");
 
+        Ok(())
+    }
+
+    fn test_dashboard(name: &str) -> ServerDashboard {
+        ServerDashboard {
+            db_id: None,
+            owner: "user".to_string(),
+            name: name.to_string(),
+            config: "{}".to_string(),
+            updated: 1,
+        }
+    }
+
+    #[tokio::test]
+    async fn dashboard_conflicts_checked_when_applied() -> ServerResult<()> {
+        let test_file = TestFile::new();
+        let db = ServerDb::new(test_file.file_name(), 3600)?;
+        db.save_dashboard(test_dashboard("a"), true).await?;
+        db.save_dashboard(test_dashboard("b"), true).await?;
+
+        // An add that lost a race to another add does not replace it.
+        let error = db
+            .save_dashboard(test_dashboard("a"), true)
+            .await
+            .unwrap_err();
+        assert_eq!(error.status, StatusCode::CONFLICT);
+        db.save_dashboard(test_dashboard("a"), false).await?;
+
+        // A rename onto a name taken meanwhile does not create a duplicate.
+        let error = db.rename_dashboard("user", "a", "b", 2).await.unwrap_err();
+        assert_eq!(error.status, StatusCode::CONFLICT);
+        let names: Vec<String> = db
+            .dashboards("user")
+            .await?
+            .into_iter()
+            .map(|d| d.name)
+            .collect();
+        assert_eq!(names, vec!["a", "b"]);
         Ok(())
     }
 

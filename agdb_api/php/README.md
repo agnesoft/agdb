@@ -108,6 +108,12 @@ Class | Method | HTTP request | Description
 *AgdbApi* | [**clusterStatus**](docs/Api/AgdbApi.md#clusterstatus) | **GET** /api/v1/cluster/status | 
 *AgdbApi* | [**clusterUserLogin**](docs/Api/AgdbApi.md#clusteruserlogin) | **POST** /api/v1/cluster/user/login | 
 *AgdbApi* | [**clusterUserLogout**](docs/Api/AgdbApi.md#clusteruserlogout) | **POST** /api/v1/cluster/user/logout | 
+*AgdbApi* | [**dashboardAdd**](docs/Api/AgdbApi.md#dashboardadd) | **POST** /api/v1/dashboard/{name}/add | 
+*AgdbApi* | [**dashboardGet**](docs/Api/AgdbApi.md#dashboardget) | **GET** /api/v1/dashboard/{name} | 
+*AgdbApi* | [**dashboardList**](docs/Api/AgdbApi.md#dashboardlist) | **GET** /api/v1/dashboard/list | 
+*AgdbApi* | [**dashboardRemove**](docs/Api/AgdbApi.md#dashboardremove) | **DELETE** /api/v1/dashboard/{name}/remove | 
+*AgdbApi* | [**dashboardRename**](docs/Api/AgdbApi.md#dashboardrename) | **POST** /api/v1/dashboard/{name}/rename | 
+*AgdbApi* | [**dashboardSave**](docs/Api/AgdbApi.md#dashboardsave) | **PUT** /api/v1/dashboard/{name}/save | 
 *AgdbApi* | [**dbAdd**](docs/Api/AgdbApi.md#dbadd) | **POST** /api/v1/db/{owner}/{db}/add | 
 *AgdbApi* | [**dbAudit**](docs/Api/AgdbApi.md#dbaudit) | **GET** /api/v1/db/{owner}/{db}/audit | 
 *AgdbApi* | [**dbAuditTrim**](docs/Api/AgdbApi.md#dbaudittrim) | **POST** /api/v1/db/{owner}/{db}/audit/trim | 
@@ -163,6 +169,10 @@ Class | Method | HTTP request | Description
 - [CountComparisonOneOf3](docs/Model/CountComparisonOneOf3.md)
 - [CountComparisonOneOf4](docs/Model/CountComparisonOneOf4.md)
 - [CountComparisonOneOf5](docs/Model/CountComparisonOneOf5.md)
+- [Dashboard](docs/Model/Dashboard.md)
+- [DashboardConfig](docs/Model/DashboardConfig.md)
+- [DashboardRenameParam](docs/Model/DashboardRenameParam.md)
+- [DashboardSummary](docs/Model/DashboardSummary.md)
 - [DbElement](docs/Model/DbElement.md)
 - [DbKeyOrder](docs/Model/DbKeyOrder.md)
 - [DbKeyOrderOneOf](docs/Model/DbKeyOrderOneOf.md)

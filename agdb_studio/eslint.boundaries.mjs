@@ -14,6 +14,7 @@ const domainPackages = [
   "@agdb-studio/query",
   "@agdb-studio/user",
   "@agdb-studio/cluster",
+  "@agdb-studio/dashboard",
 ];
 
 const withWildcards = (packages) =>
@@ -87,6 +88,13 @@ const boundaryConfig = [
   createDomainRule("@agdb-studio/cluster", [
     "libs/features/cluster/src/**/*.{ts,vue,spec.ts}",
   ]),
+  // Dashboards are built from queries: widgets reuse the query execution and
+  // result views, and pick databases from the db store.
+  createDomainRule(
+    "@agdb-studio/dashboard",
+    ["libs/features/dashboard/src/**/*.{ts,vue,spec.ts}"],
+    ["@agdb-studio/query", "@agdb-studio/db"],
+  ),
 ];
 
 export { boundaryConfig };

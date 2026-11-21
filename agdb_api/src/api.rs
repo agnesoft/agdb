@@ -114,6 +114,9 @@ use crate::AgdbApiClientDef;
 use crate::AgdbApiError;
 use crate::ChangePassword;
 use crate::ClusterStatus;
+use crate::Dashboard;
+use crate::DashboardConfig;
+use crate::DashboardSummary;
 use crate::DbAudit;
 use crate::DbKind;
 use crate::DbResource;
@@ -262,6 +265,9 @@ impl Api {
             AdminStatus::type_def(),
             ChangePassword::type_def(),
             ClusterStatus::type_def(),
+            Dashboard::type_def(),
+            DashboardConfig::type_def(),
+            DashboardSummary::type_def(),
             DbAudit::type_def(),
             DbKind::type_def(),
             DbResource::type_def(),

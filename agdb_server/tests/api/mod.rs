@@ -21,6 +21,7 @@ mod admin_user_delete_test;
 mod admin_user_list_test;
 mod admin_user_logout_test;
 mod cluster_test;
+mod dashboard_test;
 mod db_add_test;
 mod db_audit_test;
 mod db_audit_trim_test;
@@ -68,6 +69,7 @@ pub(super) const TESTS: &[&[crate::runner::Test]] = &[
     admin_user_list_test::TESTS,
     admin_user_logout_test::TESTS,
     cluster_test::TESTS,
+    dashboard_test::TESTS,
     db_add_test::TESTS,
     db_audit_test::TESTS,
     db_audit_trim_test::TESTS,

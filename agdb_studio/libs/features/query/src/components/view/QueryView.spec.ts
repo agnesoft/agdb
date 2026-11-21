@@ -14,6 +14,7 @@ vi.mock("../results/QueryResults.vue", () => ({
 vi.mock("../builder/QueryBuilderTabs.vue", () => ({
   default: {
     name: "QueryBuilderTabs",
+    props: ["tabs"],
     template:
       "<div class='mock-query-builder-tabs'>Mock Query Builder Tabs</div>",
   },
@@ -86,5 +87,30 @@ describe("QueryView", () => {
 
     expect(builderTabs.exists()).toBe(true);
     expect(queryResults.exists()).toBe(true);
+  });
+
+  it("creates its own query entry and exposes its id", async () => {
+    vi.spyOn(crypto, "randomUUID").mockReturnValueOnce("a-b-c-d-e");
+    const wrapper = mount(QueryView, {
+      global: { stubs: { QueryBuilderTabs: true, QueryResults: true } },
+    });
+    await flushPromises();
+    const vm = wrapper.vm as unknown as { queryId: string };
+    expect(vm.queryId).toBe("query-a-b-c-d-e");
+    expect(queryStore.getQuery("query-a-b-c-d-e")).toBeDefined();
+  });
+
+  it("works on a given query entry and passes the tabs to the builder", async () => {
+    queryStore.addQuery({ id: "given" });
+    const wrapper = mount(QueryView, {
+      props: { queryId: "given", tabs: ["exec", "context"] },
+      global: { stubs: { QueryResults: true } },
+    });
+    await flushPromises();
+    const vm = wrapper.vm as unknown as { queryId: string };
+    expect(vm.queryId).toBe("given");
+    expect(
+      wrapper.findComponent({ name: "QueryBuilderTabs" }).props("tabs"),
+    ).toEqual(["exec", "context"]);
   });
 });

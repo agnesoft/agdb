@@ -1,4 +1,5 @@
 import type { ColorConfig } from "../utils/graphColorRules";
+import type { ResultView } from "../utils/resultShape";
 import type { Components } from "@agnesoft/agdb_api";
 import { queryApiMock } from "../mock/queryApiMock";
 
@@ -130,6 +131,8 @@ export type Query = {
   results: QueryResults;
   /** How the graph colours elements (rules, per row, per element). */
   colors?: ColorConfig;
+  /** The results view the user picked; unset lets the results pick one. */
+  view?: ResultView;
 } & AddQueryParams;
 
 export const TABS = ["exec", "exec_mut", "context"] as const;

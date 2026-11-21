@@ -116,6 +116,31 @@ pub struct ChangePassword {
     pub new_password: String,
 }
 
+/// A dashboard owned by a user. The `config` is an opaque document (JSON)
+/// interpreted by the client (e.g. agdb_studio).
+#[derive(Debug, Default, Clone, Deserialize, Serialize, ToSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "api", derive(agdb::TypeDef))]
+pub struct Dashboard {
+    pub name: String,
+    pub config: String,
+    pub updated: u64,
+}
+
+/// Request body for adding or saving a dashboard.
+#[derive(Debug, Default, Clone, Deserialize, Serialize, ToSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "api", derive(agdb::TypeDef))]
+pub struct DashboardConfig {
+    pub config: String,
+}
+
+/// Dashboard listing entry (without the config).
+#[derive(Debug, Default, Clone, Deserialize, Serialize, ToSchema, PartialEq, Eq, DbType)]
+#[cfg_attr(feature = "api", derive(agdb::TypeDef))]
+pub struct DashboardSummary {
+    pub name: String,
+    pub updated: u64,
+}
+
 /// Status of a single node in the server cluster.
 #[derive(Debug, Default, Clone, Deserialize, Serialize, ToSchema, PartialEq)]
 #[cfg_attr(feature = "api", derive(agdb::TypeDef))]

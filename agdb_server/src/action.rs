@@ -1,4 +1,7 @@
 pub(crate) mod change_password;
+pub(crate) mod dashboard_remove;
+pub(crate) mod dashboard_rename;
+pub(crate) mod dashboard_save;
 pub(crate) mod db_add;
 pub(crate) mod db_audit_trim;
 pub(crate) mod db_backup;
@@ -24,6 +27,9 @@ pub(crate) mod user_add;
 pub(crate) mod user_delete;
 
 use crate::action::change_password::ChangePassword;
+use crate::action::dashboard_remove::DashboardRemove;
+use crate::action::dashboard_rename::DashboardRename;
+use crate::action::dashboard_save::DashboardSave;
 use crate::action::db_add::DbAdd;
 use crate::action::db_audit_trim::DbAuditTrim;
 use crate::action::db_backup::DbBackup;
@@ -85,6 +91,9 @@ pub(crate) enum ClusterAction {
     DbRename(DbRename),
     DbUserAdd(DbUserAdd),
     DbUserRemove(DbUserRemove),
+    DashboardSave(DashboardSave),
+    DashboardRename(DashboardRename),
+    DashboardRemove(DashboardRemove),
     DbAuditTrim(DbAuditTrim),
 }
 
@@ -132,6 +141,9 @@ impl ClusterAction {
             Self::DbRename(_) => "DbRename",
             Self::DbUserAdd(_) => "DbUserAdd",
             Self::DbUserRemove(_) => "DbUserRemove",
+            Self::DashboardSave(_) => "DashboardSave",
+            Self::DashboardRename(_) => "DashboardRename",
+            Self::DashboardRemove(_) => "DashboardRemove",
             Self::DbAuditTrim(_) => "DbAuditTrim",
         }
     }
@@ -167,7 +179,10 @@ impl ClusterAction {
             | Self::RemoveUserSession(_)
             | Self::RemoveAllTokens(_)
             | Self::ChangePassword(_)
-            | Self::UserDelete(_) => vec![ResyncTarget::ServerDb],
+            | Self::UserDelete(_)
+            | Self::DashboardSave(_)
+            | Self::DashboardRename(_)
+            | Self::DashboardRemove(_) => vec![ResyncTarget::ServerDb],
         }
     }
 
@@ -200,6 +215,9 @@ impl ClusterAction {
             ClusterAction::DbRename(action) => action.exec(db, db_pool).await,
             ClusterAction::DbUserAdd(action) => action.exec(db, db_pool).await,
             ClusterAction::DbUserRemove(action) => action.exec(db, db_pool).await,
+            ClusterAction::DashboardSave(action) => action.exec(db, db_pool).await,
+            ClusterAction::DashboardRename(action) => action.exec(db, db_pool).await,
+            ClusterAction::DashboardRemove(action) => action.exec(db, db_pool).await,
             ClusterAction::DbAuditTrim(action) => action.exec(db, db_pool).await,
         }
     }
@@ -343,6 +361,24 @@ impl From<DbUserRemove> for ClusterAction {
     }
 }
 
+impl From<DashboardSave> for ClusterAction {
+    fn from(value: DashboardSave) -> Self {
+        ClusterAction::DashboardSave(value)
+    }
+}
+
+impl From<DashboardRename> for ClusterAction {
+    fn from(value: DashboardRename) -> Self {
+        ClusterAction::DashboardRename(value)
+    }
+}
+
+impl From<DashboardRemove> for ClusterAction {
+    fn from(value: DashboardRemove) -> Self {
+        ClusterAction::DashboardRemove(value)
+    }
+}
+
 impl From<DbAuditTrim> for ClusterAction {
     fn from(value: DbAuditTrim) -> Self {
         ClusterAction::DbAuditTrim(value)
@@ -450,6 +486,23 @@ mod test {
             }),
             ClusterAction::RemoveAllTokens(RemoveAllTokens {}),
             ClusterAction::UserDelete(UserDelete { user: "u".into() }),
+            ClusterAction::DashboardSave(DashboardSave {
+                owner: "u".into(),
+                name: "d".into(),
+                config: "{}".into(),
+                create: false,
+                updated: 0,
+            }),
+            ClusterAction::DashboardRename(DashboardRename {
+                owner: "u".into(),
+                name: "d".into(),
+                new_name: "e".into(),
+                updated: 0,
+            }),
+            ClusterAction::DashboardRemove(DashboardRemove {
+                owner: "u".into(),
+                name: "d".into(),
+            }),
         ];
         for (i, action) in cases.into_iter().enumerate() {
             let targets = action.resync_targets();

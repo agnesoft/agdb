@@ -143,6 +143,24 @@ pub(crate) fn app(
             "/admin/db/{owner}/{db}/user/{username}/remove",
             routing::delete(routes::admin::db::user::remove),
         )
+        .route("/dashboard/list", routing::get(routes::dashboard::list))
+        .route("/dashboard/{name}", routing::get(routes::dashboard::get))
+        .route(
+            "/dashboard/{name}/add",
+            routing::post(routes::dashboard::add),
+        )
+        .route(
+            "/dashboard/{name}/save",
+            routing::put(routes::dashboard::save),
+        )
+        .route(
+            "/dashboard/{name}/rename",
+            routing::post(routes::dashboard::rename),
+        )
+        .route(
+            "/dashboard/{name}/remove",
+            routing::delete(routes::dashboard::remove),
+        )
         .route("/db/list", routing::get(routes::db::list))
         .route("/db/{owner}/{db}/add", routing::post(routes::db::add))
         .route("/db/{owner}/{db}/audit", routing::get(routes::db::audit))

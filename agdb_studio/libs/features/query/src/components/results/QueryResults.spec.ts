@@ -71,8 +71,9 @@ const run = async (
   await nextTick();
 };
 
-const mountResults = () =>
+const mountResults = (props: { keepView?: boolean } = {}) =>
   mount(QueryResults, {
+    props,
     attachTo: document.body,
     global: { provide: { queryId: ref("q1") } },
   });
@@ -148,6 +149,44 @@ describe("QueryResults", () => {
 
     await wrapper.find("[data-testid=view-table]").trigger("click");
     expect(wrapper.find("[data-testid=results-table]").exists()).toBe(true);
+    wrapper.unmount();
+  });
+
+  it("keeps the chosen view in the store and starts from it", async () => {
+    store.setView("q1", "json");
+    const wrapper = mountResults();
+    expect(wrapper.find("[data-testid=results-json]").exists()).toBe(true);
+    // A run with results of the shape shown so far keeps a stored view.
+    await run([{ result: 1, elements: [el(1)] }]);
+    expect(wrapper.find("[data-testid=results-json]").exists()).toBe(true);
+    await wrapper.find("[data-testid=view-table]").trigger("click");
+    expect(store.getQuery("q1")?.value.view).toBe("table");
+    // A different shape picks the view again and forgets the choice.
+    await run([{ result: 0, elements: [] }]);
+    expect(wrapper.find("[data-testid=result-scalar]").exists()).toBe(true);
+    expect(store.getQuery("q1")?.value.view).toBeUndefined();
+    wrapper.unmount();
+  });
+
+  it("switches views without a query store entry", async () => {
+    const wrapper = mount(QueryResults, {
+      attachTo: document.body,
+      global: { provide: { queryId: ref(undefined) } },
+    });
+    await wrapper.find("[data-testid=view-json]").trigger("click");
+    expect(wrapper.find("[data-testid=results-json]").exists()).toBe(true);
+    expect(store.getQuery("q1")?.value.view).toBeUndefined();
+    wrapper.unmount();
+  });
+
+  it("keeps a stored view across shape changes when asked to", async () => {
+    store.setView("q1", "table");
+    const wrapper = mountResults({ keepView: true });
+    await run([{ result: 1, elements: [el(1)] }]);
+    await run([{ result: 0, elements: [] }]);
+    await run([{ result: 1, elements: [el(1)] }]);
+    expect(wrapper.find("[data-testid=results-table]").exists()).toBe(true);
+    expect(store.getQuery("q1")?.value.view).toBe("table");
     wrapper.unmount();
   });
 

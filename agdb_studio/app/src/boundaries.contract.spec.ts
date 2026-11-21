@@ -33,7 +33,7 @@ const getRestrictedGroups = (entry: BoundaryEntry): string[] => {
 
 describe("boundaryConfig contract", () => {
   it("keeps the expected number of boundary rule groups", () => {
-    expect(boundaryConfig).toHaveLength(7);
+    expect(boundaryConfig).toHaveLength(8);
   });
 
   it("prevents platform packages from importing shared and domain packages", () => {
@@ -94,6 +94,7 @@ describe("boundaryConfig contract", () => {
       "@agdb-studio/query",
       "@agdb-studio/user",
       "@agdb-studio/cluster",
+      "@agdb-studio/dashboard",
     ];
 
     for (const [glob, selfDomain] of domainGlobs) {
@@ -110,6 +111,26 @@ describe("boundaryConfig contract", () => {
         expect(restricted).toContain(domain);
         expect(restricted).toContain(`${domain}/*`);
       }
+    }
+  });
+
+  it("lets the dashboard package use only the query and db domains", () => {
+    const dashboardRule = getRuleByFileGlob(
+      "libs/features/dashboard/src/**/*.{ts,vue,spec.ts}",
+    );
+    const restricted = getRestrictedGroups(dashboardRule);
+
+    for (const allowed of ["@agdb-studio/query", "@agdb-studio/db"]) {
+      expect(restricted).not.toContain(allowed);
+      expect(restricted).not.toContain(`${allowed}/*`);
+    }
+    for (const domain of [
+      "@agdb-studio/profile",
+      "@agdb-studio/user",
+      "@agdb-studio/cluster",
+    ]) {
+      expect(restricted).toContain(domain);
+      expect(restricted).toContain(`${domain}/*`);
     }
   });
 });

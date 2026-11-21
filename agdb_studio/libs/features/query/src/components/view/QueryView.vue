@@ -4,11 +4,20 @@ import QueryBuilderTabs from "../builder/QueryBuilderTabs.vue";
 import QueryResults from "../results/QueryResults.vue";
 import { useQueryStore } from "../../composables/queryStore";
 import { useQueryUrlSync } from "../../composables/queryUrlSync";
+import type { TAB } from "../../composables/types";
 
-const queryId = ref<string>();
+const props = defineProps<{
+  /** An existing query store entry to work on; it is not synced to the URL. */
+  queryId?: string;
+  /** The builder tabs to show (all by default). */
+  tabs?: readonly TAB[];
+}>();
+
+const queryId = ref<string | undefined>(props.queryId);
 const queryStore = useQueryStore();
 const urlSync = useQueryUrlSync();
 onMounted(() => {
+  if (props.queryId) return;
   const baseId = crypto.randomUUID();
   queryId.value = `query-${baseId}`;
   queryStore.addQuery({ id: queryId.value });
@@ -16,11 +25,12 @@ onMounted(() => {
 });
 
 provide("queryId", queryId);
+defineExpose({ queryId });
 </script>
 
 <template>
   <div class="query-workspace">
-    <QueryBuilderTabs />
+    <QueryBuilderTabs :tabs="tabs" />
     <QueryResults />
   </div>
 </template>

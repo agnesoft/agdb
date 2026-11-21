@@ -26,8 +26,11 @@ vi.mock("vue-router", () => ({
 
 vi.mock("@agdb-studio/api/src/api", () => ({ checkClient, client }));
 
+import { h, ref } from "vue";
+import { mount } from "@vue/test-utils";
 import {
   executeDbQueries,
+  provideDbTarget,
   getDbParams,
   isAdminRoute,
   useDbExec,
@@ -100,5 +103,36 @@ describe("dbExec", () => {
     await execMut([query]);
     expect(client.value.db_exec).toHaveBeenCalledTimes(1);
     expect(client.value.db_exec_mut).toHaveBeenCalledTimes(1);
+  });
+
+  it("uses a provided database target instead of the route", async () => {
+    routeState.name = "admin-db-view";
+    const target = ref({ owner: "bob", db: "sales" });
+    let bound: ReturnType<typeof useDbExec> | undefined;
+    const Child = {
+      setup() {
+        bound = useDbExec();
+        return () => null;
+      },
+    };
+    mount({
+      setup() {
+        provideDbTarget(target);
+        return () => h(Child);
+      },
+    });
+    expect(bound!.route.name).toBe("query");
+    await bound!.exec([query]);
+    expect(client.value.db_exec).toHaveBeenCalledWith(
+      { owner: "bob", db: "sales" },
+      [query],
+    );
+    target.value = { owner: "carol", db: "hr" };
+    await bound!.execMut([query]);
+    expect(client.value.db_exec_mut).toHaveBeenCalledWith(
+      { owner: "carol", db: "hr" },
+      [query],
+    );
+    expect(client.value.admin_db_exec).not.toHaveBeenCalled();
   });
 });

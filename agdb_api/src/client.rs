@@ -1,6 +1,9 @@
 use crate::AdminStatus;
 use crate::ChangePassword;
 use crate::ClusterStatus;
+use crate::Dashboard;
+use crate::DashboardConfig;
+use crate::DashboardSummary;
 use crate::DbAudit;
 use crate::DbResource;
 use crate::DbUser;
@@ -897,6 +900,107 @@ impl<T: AgdbApiClient> AgdbApi<T> {
     /// Returns `(200, Vec<ClusterStatus>)` on success.
     pub async fn cluster_status(&self) -> AgdbApiResult<(u16, Vec<ClusterStatus>)> {
         self.client.get(&self.url("/cluster/status"), &None).await
+    }
+
+    /// `POST /dashboard/{name}/add`
+    ///
+    /// Adds a dashboard owned by the current user. The `config` is an opaque
+    /// document (e.g. JSON) interpreted by the client.
+    ///
+    /// Returns `201` on success.
+    ///
+    /// Common error responses: `400` invalid name, `401` unauthorized,
+    /// `409` dashboard already exists, `413` config too large.
+    pub async fn dashboard_add(&self, name: &str, config: &str) -> AgdbApiResult<u16> {
+        Ok(self
+            .client
+            .post::<DashboardConfig, ()>(
+                &self.url(&format!("/dashboard/{name}/add")),
+                Some(DashboardConfig {
+                    config: config.to_string(),
+                }),
+                &self.token,
+            )
+            .await?
+            .0)
+    }
+
+    /// `GET /dashboard/{name}`
+    ///
+    /// Returns a dashboard of the current user.
+    ///
+    /// Returns `(200, Dashboard)` on success.
+    ///
+    /// Common error responses: `401` unauthorized, `404` dashboard not found.
+    pub async fn dashboard_get(&self, name: &str) -> AgdbApiResult<(u16, Dashboard)> {
+        self.client
+            .get(&self.url(&format!("/dashboard/{name}")), &self.token)
+            .await
+    }
+
+    /// `GET /dashboard/list`
+    ///
+    /// Lists dashboards of the current user, sorted by name.
+    ///
+    /// Returns `(200, Vec<DashboardSummary>)` on success.
+    ///
+    /// Common error responses: `401` unauthorized.
+    pub async fn dashboard_list(&self) -> AgdbApiResult<(u16, Vec<DashboardSummary>)> {
+        self.client
+            .get(&self.url("/dashboard/list"), &self.token)
+            .await
+    }
+
+    /// `DELETE /dashboard/{name}/remove`
+    ///
+    /// Removes a dashboard of the current user.
+    ///
+    /// Returns `204` on success.
+    ///
+    /// Common error responses: `401` unauthorized, `404` dashboard not found.
+    pub async fn dashboard_remove(&self, name: &str) -> AgdbApiResult<u16> {
+        self.client
+            .delete(&self.url(&format!("/dashboard/{name}/remove")), &self.token)
+            .await
+    }
+
+    /// `POST /dashboard/{name}/rename?new_name={new_name}`
+    ///
+    /// Renames a dashboard of the current user.
+    ///
+    /// Returns `201` on success.
+    ///
+    /// Common error responses: `400` invalid new name, `401` unauthorized,
+    /// `404` dashboard not found, `409` target dashboard already exists.
+    pub async fn dashboard_rename(&self, name: &str, new_name: &str) -> AgdbApiResult<u16> {
+        Ok(self
+            .client
+            .post::<(), ()>(
+                &self.url(&format!("/dashboard/{name}/rename?new_name={new_name}")),
+                None,
+                &self.token,
+            )
+            .await?
+            .0)
+    }
+
+    /// `PUT /dashboard/{name}/save`
+    ///
+    /// Adds or replaces a dashboard of the current user.
+    ///
+    /// Returns `201` on success.
+    ///
+    /// Common error responses: `400` invalid name, `401` unauthorized, `413` config too large.
+    pub async fn dashboard_save(&self, name: &str, config: &str) -> AgdbApiResult<u16> {
+        self.client
+            .put(
+                &self.url(&format!("/dashboard/{name}/save")),
+                Some(DashboardConfig {
+                    config: config.to_string(),
+                }),
+                &self.token,
+            )
+            .await
     }
 
     /// `POST /db/{owner}/{db}/add?db_type={db_type}`

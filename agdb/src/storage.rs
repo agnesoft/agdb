@@ -9,6 +9,8 @@ mod overlay;
 #[allow(dead_code)]
 pub(crate) mod pages;
 mod ranges;
+#[allow(dead_code)]
+pub(crate) mod root;
 mod storage_records;
 mod write_ahead_log;
 

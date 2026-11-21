@@ -9,6 +9,8 @@ pub(crate) const ROOT_PAGES: u32 = 4;
 const CLASSES: [u64; 15] = [
     16, 24, 32, 48, 64, 80, 96, 112, 128, 144, 168, 200, 248, 336, 504,
 ];
+/// The bytes of an encoded [`Allocator`].
+pub(crate) const ALLOCATOR_SIZE: usize = 4 * (3 + CLASSES.len() + BUCKETS);
 const SLAB_HEADER: u64 = 16;
 const SLAB_PREV: u64 = 8;
 const SLAB_NEXT: u64 = 12;
@@ -63,7 +65,7 @@ fn u16_at(bytes: &[u8], at: u64) -> u16 {
     u16::from_le_bytes([bytes[at], bytes[at + 1]])
 }
 
-fn u32_at(bytes: &[u8], at: u64) -> u32 {
+pub(crate) fn u32_at(bytes: &[u8], at: u64) -> u32 {
     let at = at as usize;
     u32::from_le_bytes([bytes[at], bytes[at + 1], bytes[at + 2], bytes[at + 3]])
 }
@@ -179,6 +181,42 @@ impl Allocator {
             slabs: [0; CLASSES.len()],
             runs: [0; BUCKETS],
         }
+    }
+
+    pub(crate) fn decode(bytes: &[u8; ALLOCATOR_SIZE]) -> Self {
+        let mut words = bytes
+            .as_chunks::<4>()
+            .0
+            .iter()
+            .map(|word| u32::from_le_bytes(*word));
+        let mut next = || words.next().unwrap_or_default();
+
+        Self {
+            pages: next(),
+            map: next(),
+            map_pages: next(),
+            slabs: std::array::from_fn(|_| next()),
+            runs: std::array::from_fn(|_| next()),
+        }
+    }
+
+    pub(crate) fn encode(&self) -> [u8; ALLOCATOR_SIZE] {
+        let mut bytes = [0_u8; ALLOCATOR_SIZE];
+        let words = [self.pages, self.map, self.map_pages]
+            .into_iter()
+            .chain(self.slabs)
+            .chain(self.runs);
+
+        for (chunk, word) in bytes.as_chunks_mut::<4>().0.iter_mut().zip(words) {
+            *chunk = word.to_le_bytes();
+        }
+
+        bytes
+    }
+
+    /// The length of the file the allocator owns.
+    pub(crate) fn len(&self) -> u64 {
+        page_pos(self.pages)
     }
 
     /// Returns the position of `size` bytes of storage, which may hold
@@ -602,7 +640,7 @@ pub(crate) mod tests {
         )
     }
 
-    fn pattern(id: u64, size: u64) -> Vec<u8> {
+    pub(crate) fn pattern(id: u64, size: u64) -> Vec<u8> {
         (0..size).map(|i| (id * 31 + i) as u8).collect()
     }
 
@@ -742,7 +780,7 @@ pub(crate) mod tests {
 
     /// Allocates, frees or reallocates at random checking the bytes of
     /// the touched allocations, `live` being (pos, size, pattern id).
-    fn random_op(
+    pub(crate) fn random_op(
         allocator: &mut Allocator,
         view: &mut impl ViewMut,
         live: &mut Vec<(u64, u64, u64)>,
@@ -794,7 +832,7 @@ pub(crate) mod tests {
         allocator.free(view, 4 * 1024 + 16, 16)
     }
 
-    fn sizes(live: &[(u64, u64, u64)]) -> Vec<(u64, u64)> {
+    pub(crate) fn sizes(live: &[(u64, u64, u64)]) -> Vec<(u64, u64)> {
         live.iter().map(|(pos, size, _)| (*pos, *size)).collect()
     }
 

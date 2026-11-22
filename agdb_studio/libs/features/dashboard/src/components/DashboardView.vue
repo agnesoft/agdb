@@ -6,6 +6,9 @@ import { ChPlus, MdRefresh } from "@kalimahapps/vue-icons";
 import SpinnerIcon from "@agdb-studio/design/src/components/icons/SpinnerIcon.vue";
 import { useDbStore } from "@agdb-studio/db/src/composables/dbStore";
 import {
+  adminMode,
+  canEdit,
+  dashboardLabel,
   useDashboardStore,
   type RemovedWidget,
 } from "../composables/dashboardStore";
@@ -18,7 +21,7 @@ import type { Widget } from "../types";
 import DashboardWidget from "./DashboardWidget.vue";
 import WidgetEditor from "./WidgetEditor.vue";
 
-const props = defineProps<{ name: string }>();
+const props = defineProps<{ owner: string; name: string }>();
 
 const store = useDashboardStore();
 const { current, dirty, saving, saveFailed } = store;
@@ -40,6 +43,8 @@ const clearUndo = () => {
 onUnmounted(clearUndo);
 
 let loadRun = 0;
+/** The dashboard this view opened, closed again when the view goes away. */
+let opened: typeof current.value;
 const load = async () => {
   // Only the latest load (e.g. after quick name changes) updates the page.
   const run = ++loadRun;
@@ -47,7 +52,8 @@ const load = async () => {
   failed.value = undefined;
   clearUndo();
   try {
-    await store.loadDashboard(props.name);
+    await store.loadDashboard({ owner: props.owner, name: props.name });
+    if (run === loadRun) opened = current.value;
   } catch (error) {
     if (run !== loadRun) return;
     // The API error interceptor shows a notification for request errors.
@@ -61,7 +67,7 @@ const load = async () => {
 };
 
 onMounted(load);
-watch(() => props.name, load);
+watch(() => [props.owner, props.name], load);
 
 /**
  * Edits save at once; only those whose save failed would be lost. A running
@@ -75,14 +81,18 @@ const confirmDiscard = async () => {
   );
 };
 
-onBeforeRouteLeave(async () => {
-  if (!(await confirmDiscard())) return false;
-  store.closeDashboard();
-  return true;
+onBeforeRouteLeave(confirmDiscard);
+// Closed on unmount, not when leaving: a navigation that ends on this same
+// dashboard (e.g. the logo's start page redirecting to the home dashboard)
+// keeps the view without loading it again.
+onUnmounted(() => {
+  if (opened && current.value === opened) store.closeDashboard();
 });
 // Switching to another dashboard reuses this component.
 onBeforeRouteUpdate((to, from) =>
-  to.params.name === from.params.name ? true : confirmDiscard(),
+  to.params.owner === from.params.owner && to.params.name === from.params.name
+    ? true
+    : confirmDiscard(),
 );
 useEventListener(window, "beforeunload", (event: BeforeUnloadEvent) => {
   if (dirty.value) event.preventDefault();
@@ -115,6 +125,9 @@ const finishEditing = (widget: Widget, adding: boolean) => {
   editor.value = undefined;
 };
 
+/** Read-only users see the widgets but cannot change them. */
+const editable = computed(() => !!current.value && canEdit(current.value.role));
+
 const placed = computed(() =>
   current.value ? orderedWidgets(current.value.document) : [],
 );
@@ -134,7 +147,31 @@ const undoRemove = (widget: RemovedWidget) => {
 <template>
   <div class="dashboard-view">
     <header class="toolbar">
-      <h2>{{ name }}</h2>
+      <h2>{{ dashboardLabel({ owner, name }) }}</h2>
+      <span
+        v-if="current && !editable"
+        class="badge"
+        title="You can view this dashboard but not change it"
+        data-testid="dashboard-read-only"
+      >
+        Read only
+      </span>
+      <span
+        v-if="current?.public"
+        class="badge"
+        title="All users can view this dashboard"
+        data-testid="dashboard-public-badge"
+      >
+        Public
+      </span>
+      <span
+        v-if="current && adminMode()"
+        class="badge"
+        title="Viewed as the server admin: widgets run their queries with admin access to every database"
+        data-testid="dashboard-admin-badge"
+      >
+        Admin access
+      </span>
       <span
         v-if="removed"
         class="status"
@@ -187,6 +224,7 @@ const undoRemove = (widget: RemovedWidget) => {
           <MdRefresh /> Refresh
         </button>
         <button
+          v-if="editable || !current"
           type="button"
           class="button"
           data-testid="dashboard-add-widget"
@@ -203,8 +241,10 @@ const undoRemove = (widget: RemovedWidget) => {
       {{ failed }}
     </p>
     <p v-else-if="!placed.length" class="empty" data-testid="dashboard-empty">
-      This dashboard has no widgets yet. Click "Add widget", or pin a query from
-      the query page.
+      This dashboard has no widgets yet.
+      <template v-if="editable"
+        >Click "Add widget", or pin a query from the query page.</template
+      >
     </p>
     <div v-else class="grid" data-testid="dashboard-grid">
       <DashboardWidget
@@ -215,6 +255,7 @@ const undoRemove = (widget: RemovedWidget) => {
         :first="index === 0"
         :last="index === placed.length - 1"
         :refresh-key="refreshKey"
+        :read-only="!editable"
         @edit="editWidget(widget)"
         @remove="removeWidget(widget.id)"
         @move="(delta) => store.moveWidget(widget.id, delta)"
@@ -257,6 +298,13 @@ const undoRemove = (widget: RemovedWidget) => {
     align-items: center;
     gap: 0.25rem;
   }
+}
+.badge {
+  color: var(--color-text-muted);
+  font-size: 0.8rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.25rem;
+  padding: 0 0.35rem;
 }
 .status {
   display: inline-flex;

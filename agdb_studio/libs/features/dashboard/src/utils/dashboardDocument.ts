@@ -329,7 +329,6 @@ export const serializeDocument = (doc: DashboardDocument): string =>
 export const DASHBOARD_NAME_PATTERN = /^[A-Za-z0-9_-][A-Za-z0-9_.-]{0,63}$/;
 
 export const validateDashboardName = (name: string): string | undefined => {
-  if (name === "list") return "The name 'list' is reserved";
   if (!DASHBOARD_NAME_PATTERN.test(name)) {
     return "Use 1-64 characters: letters, digits, '_', '-' or '.' (not first)";
   }

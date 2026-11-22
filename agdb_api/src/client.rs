@@ -3,6 +3,7 @@ use crate::ChangePassword;
 use crate::ClusterStatus;
 use crate::Dashboard;
 use crate::DashboardConfig;
+use crate::DashboardName;
 use crate::DashboardSummary;
 use crate::DbAudit;
 use crate::DbResource;
@@ -77,6 +78,236 @@ impl<T: AgdbApiClient> AgdbApi<T> {
     /// Returns the computed base URL (`{address}/api/v1`).
     pub fn base_url(&self) -> &str {
         &self.base_url
+    }
+
+    /// `POST /admin/dashboard/{owner}/{name}/add`
+    ///
+    /// Adds a dashboard for the specified user, who becomes its admin.
+    ///
+    /// Returns `201` on success.
+    ///
+    /// Common error responses: `400` invalid name, `401` unauthorized
+    /// (not the server admin), `404` user not found, `409` dashboard already
+    /// exists, `413` config too large.
+    pub async fn admin_dashboard_add(
+        &self,
+        owner: &str,
+        name: &str,
+        config: &str,
+    ) -> AgdbApiResult<u16> {
+        Ok(self
+            .client
+            .post::<DashboardConfig, ()>(
+                &self.url(&format!("/admin/dashboard/{owner}/{name}/add")),
+                Some(DashboardConfig {
+                    config: config.to_string(),
+                }),
+                &self.token,
+            )
+            .await?
+            .0)
+    }
+
+    /// `GET /admin/dashboard/{owner}/{name}`
+    ///
+    /// Returns any dashboard with the admin role.
+    ///
+    /// Returns `(200, Dashboard)` on success.
+    ///
+    /// Common error responses: `401` unauthorized (not the server admin),
+    /// `404` dashboard not found.
+    pub async fn admin_dashboard_get(
+        &self,
+        owner: &str,
+        name: &str,
+    ) -> AgdbApiResult<(u16, Dashboard)> {
+        self.client
+            .get(
+                &self.url(&format!("/admin/dashboard/{owner}/{name}")),
+                &self.token,
+            )
+            .await
+    }
+
+    /// `GET /admin/dashboard/list`
+    ///
+    /// Lists all dashboards on the server with the admin role, sorted by
+    /// owner and name.
+    ///
+    /// Returns `(200, Vec<DashboardSummary>)` on success.
+    ///
+    /// Common error responses: `401` unauthorized (not the server admin).
+    pub async fn admin_dashboard_list(&self) -> AgdbApiResult<(u16, Vec<DashboardSummary>)> {
+        self.client
+            .get(&self.url("/admin/dashboard/list"), &self.token)
+            .await
+    }
+
+    /// `PUT /admin/dashboard/{owner}/{name}/public?public={is_public}`
+    ///
+    /// Makes any dashboard public (viewable by every user) or private.
+    ///
+    /// Returns `201` on success.
+    ///
+    /// Common error responses: `401` unauthorized (not the server admin),
+    /// `404` dashboard not found.
+    pub async fn admin_dashboard_public(
+        &self,
+        owner: &str,
+        name: &str,
+        is_public: bool,
+    ) -> AgdbApiResult<u16> {
+        self.client
+            .put::<()>(
+                &self.url(&format!(
+                    "/admin/dashboard/{owner}/{name}/public?public={is_public}"
+                )),
+                None,
+                &self.token,
+            )
+            .await
+    }
+
+    /// `DELETE /admin/dashboard/{owner}/{name}/remove`
+    ///
+    /// Removes any dashboard.
+    ///
+    /// Returns `204` on success.
+    ///
+    /// Common error responses: `401` unauthorized (not the server admin),
+    /// `404` dashboard not found.
+    pub async fn admin_dashboard_remove(&self, owner: &str, name: &str) -> AgdbApiResult<u16> {
+        self.client
+            .delete(
+                &self.url(&format!("/admin/dashboard/{owner}/{name}/remove")),
+                &self.token,
+            )
+            .await
+    }
+
+    /// `POST /admin/dashboard/{owner}/{name}/rename?new_name={new_name}`
+    ///
+    /// Renames any dashboard.
+    ///
+    /// Returns `201` on success.
+    ///
+    /// Common error responses: `400` invalid new name, `401` unauthorized
+    /// (not the server admin), `404` dashboard not found, `409` target
+    /// dashboard already exists.
+    pub async fn admin_dashboard_rename(
+        &self,
+        owner: &str,
+        name: &str,
+        new_name: &str,
+    ) -> AgdbApiResult<u16> {
+        Ok(self
+            .client
+            .post::<(), ()>(
+                &self.url(&format!(
+                    "/admin/dashboard/{owner}/{name}/rename?new_name={new_name}"
+                )),
+                None,
+                &self.token,
+            )
+            .await?
+            .0)
+    }
+
+    /// `PUT /admin/dashboard/{owner}/{name}/save`
+    ///
+    /// Replaces the config of any dashboard.
+    ///
+    /// Returns `201` on success.
+    ///
+    /// Common error responses: `401` unauthorized (not the server admin),
+    /// `404` dashboard not found, `413` config too large.
+    pub async fn admin_dashboard_save(
+        &self,
+        owner: &str,
+        name: &str,
+        config: &str,
+    ) -> AgdbApiResult<u16> {
+        self.client
+            .put(
+                &self.url(&format!("/admin/dashboard/{owner}/{name}/save")),
+                Some(DashboardConfig {
+                    config: config.to_string(),
+                }),
+                &self.token,
+            )
+            .await
+    }
+
+    /// `PUT /admin/dashboard/{owner}/{name}/user/{username}/add?db_role={db_role}`
+    ///
+    /// Adds/updates a user's role on any dashboard. The owner's role cannot be
+    /// changed.
+    ///
+    /// Returns `201` on success.
+    ///
+    /// Common error responses: `401` unauthorized, `403` cannot change
+    /// dashboard owner role, `404` user or dashboard not found.
+    pub async fn admin_dashboard_user_add(
+        &self,
+        owner: &str,
+        name: &str,
+        username: &str,
+        db_role: DbUserRole,
+    ) -> AgdbApiResult<u16> {
+        self.client
+            .put::<()>(
+                &self.url(&format!(
+                    "/admin/dashboard/{owner}/{name}/user/{username}/add?db_role={db_role}"
+                )),
+                None,
+                &self.token,
+            )
+            .await
+    }
+
+    /// `GET /admin/dashboard/{owner}/{name}/user/list`
+    ///
+    /// Lists users with a role on any dashboard (including the owner), by name.
+    ///
+    /// Returns `(200, Vec<DbUser>)` on success.
+    ///
+    /// Common error responses: `401` unauthorized (not the server admin),
+    /// `404` dashboard not found.
+    pub async fn admin_dashboard_user_list(
+        &self,
+        owner: &str,
+        name: &str,
+    ) -> AgdbApiResult<(u16, Vec<DbUser>)> {
+        self.client
+            .get(
+                &self.url(&format!("/admin/dashboard/{owner}/{name}/user/list")),
+                &self.token,
+            )
+            .await
+    }
+
+    /// `DELETE /admin/dashboard/{owner}/{name}/user/{username}/remove`
+    ///
+    /// Removes a user's role on any dashboard. The owner cannot be removed.
+    ///
+    /// Returns `204` on success.
+    ///
+    /// Common error responses: `401` unauthorized, `403` cannot remove
+    /// dashboard owner, `404` user or dashboard not found.
+    pub async fn admin_dashboard_user_remove(
+        &self,
+        owner: &str,
+        name: &str,
+        username: &str,
+    ) -> AgdbApiResult<u16> {
+        self.client
+            .delete(
+                &self.url(&format!(
+                    "/admin/dashboard/{owner}/{name}/user/{username}/remove"
+                )),
+                &self.token,
+            )
+            .await
     }
 
     /// `POST /admin/db/{owner}/{db}/add?db_type={db_type}`
@@ -902,20 +1133,22 @@ impl<T: AgdbApiClient> AgdbApi<T> {
         self.client.get(&self.url("/cluster/status"), &None).await
     }
 
-    /// `POST /dashboard/{name}/add`
+    /// `POST /dashboard/{owner}/{name}/add`
     ///
-    /// Adds a dashboard owned by the current user. The `config` is an opaque
-    /// document (e.g. JSON) interpreted by the client.
+    /// Adds a dashboard owned by the current user, who becomes its admin. The
+    /// owner must be the current user. The `config` is an opaque document
+    /// (e.g. JSON) interpreted by the client.
     ///
     /// Returns `201` on success.
     ///
     /// Common error responses: `400` invalid name, `401` unauthorized,
-    /// `409` dashboard already exists, `413` config too large.
-    pub async fn dashboard_add(&self, name: &str, config: &str) -> AgdbApiResult<u16> {
+    /// `403` cannot add dashboard to another user, `409` dashboard already exists,
+    /// `413` config too large.
+    pub async fn dashboard_add(&self, owner: &str, name: &str, config: &str) -> AgdbApiResult<u16> {
         Ok(self
             .client
             .post::<DashboardConfig, ()>(
-                &self.url(&format!("/dashboard/{name}/add")),
+                &self.url(&format!("/dashboard/{owner}/{name}/add")),
                 Some(DashboardConfig {
                     config: config.to_string(),
                 }),
@@ -925,22 +1158,27 @@ impl<T: AgdbApiClient> AgdbApi<T> {
             .0)
     }
 
-    /// `GET /dashboard/{name}`
+    /// `GET /dashboard/{owner}/{name}`
     ///
-    /// Returns a dashboard of the current user.
+    /// Returns a dashboard the current user has a role on, with that role, or
+    /// a public dashboard (with the read role when the user has none).
     ///
     /// Returns `(200, Dashboard)` on success.
     ///
     /// Common error responses: `401` unauthorized, `404` dashboard not found.
-    pub async fn dashboard_get(&self, name: &str) -> AgdbApiResult<(u16, Dashboard)> {
+    pub async fn dashboard_get(&self, owner: &str, name: &str) -> AgdbApiResult<(u16, Dashboard)> {
         self.client
-            .get(&self.url(&format!("/dashboard/{name}")), &self.token)
+            .get(
+                &self.url(&format!("/dashboard/{owner}/{name}")),
+                &self.token,
+            )
             .await
     }
 
     /// `GET /dashboard/list`
     ///
-    /// Lists dashboards of the current user, sorted by name.
+    /// Lists dashboards the current user has a role on (owned and shared) and
+    /// the public ones, sorted by owner and name.
     ///
     /// Returns `(200, Vec<DashboardSummary>)` on success.
     ///
@@ -951,32 +1189,69 @@ impl<T: AgdbApiClient> AgdbApi<T> {
             .await
     }
 
-    /// `DELETE /dashboard/{name}/remove`
+    /// `PUT /dashboard/{owner}/{name}/public?public={is_public}`
     ///
-    /// Removes a dashboard of the current user.
+    /// Makes a dashboard public (viewable by every user) or private. Only its
+    /// owner can change it.
     ///
-    /// Returns `204` on success.
+    /// Returns `201` on success.
     ///
-    /// Common error responses: `401` unauthorized, `404` dashboard not found.
-    pub async fn dashboard_remove(&self, name: &str) -> AgdbApiResult<u16> {
+    /// Common error responses: `401` unauthorized, `403` owner only,
+    /// `404` dashboard not found.
+    pub async fn dashboard_public(
+        &self,
+        owner: &str,
+        name: &str,
+        is_public: bool,
+    ) -> AgdbApiResult<u16> {
         self.client
-            .delete(&self.url(&format!("/dashboard/{name}/remove")), &self.token)
+            .put::<()>(
+                &self.url(&format!(
+                    "/dashboard/{owner}/{name}/public?public={is_public}"
+                )),
+                None,
+                &self.token,
+            )
             .await
     }
 
-    /// `POST /dashboard/{name}/rename?new_name={new_name}`
+    /// `DELETE /dashboard/{owner}/{name}/remove`
     ///
-    /// Renames a dashboard of the current user.
+    /// Removes a dashboard. Only its owner can remove it.
+    ///
+    /// Returns `204` on success.
+    ///
+    /// Common error responses: `401` unauthorized, `403` owner only,
+    /// `404` dashboard not found.
+    pub async fn dashboard_remove(&self, owner: &str, name: &str) -> AgdbApiResult<u16> {
+        self.client
+            .delete(
+                &self.url(&format!("/dashboard/{owner}/{name}/remove")),
+                &self.token,
+            )
+            .await
+    }
+
+    /// `POST /dashboard/{owner}/{name}/rename?new_name={new_name}`
+    ///
+    /// Renames a dashboard. Only its owner can rename it.
     ///
     /// Returns `201` on success.
     ///
     /// Common error responses: `400` invalid new name, `401` unauthorized,
-    /// `404` dashboard not found, `409` target dashboard already exists.
-    pub async fn dashboard_rename(&self, name: &str, new_name: &str) -> AgdbApiResult<u16> {
+    /// `403` owner only, `404` dashboard not found, `409` target dashboard already exists.
+    pub async fn dashboard_rename(
+        &self,
+        owner: &str,
+        name: &str,
+        new_name: &str,
+    ) -> AgdbApiResult<u16> {
         Ok(self
             .client
             .post::<(), ()>(
-                &self.url(&format!("/dashboard/{name}/rename?new_name={new_name}")),
+                &self.url(&format!(
+                    "/dashboard/{owner}/{name}/rename?new_name={new_name}"
+                )),
                 None,
                 &self.token,
             )
@@ -984,20 +1259,97 @@ impl<T: AgdbApiClient> AgdbApi<T> {
             .0)
     }
 
-    /// `PUT /dashboard/{name}/save`
+    /// `PUT /dashboard/{owner}/{name}/save`
     ///
-    /// Adds or replaces a dashboard of the current user.
+    /// Replaces the config of a dashboard. Requires the write or admin role.
     ///
     /// Returns `201` on success.
     ///
-    /// Common error responses: `400` invalid name, `401` unauthorized, `413` config too large.
-    pub async fn dashboard_save(&self, name: &str, config: &str) -> AgdbApiResult<u16> {
+    /// Common error responses: `401` unauthorized, `403` write rights required,
+    /// `404` dashboard not found, `413` config too large.
+    pub async fn dashboard_save(
+        &self,
+        owner: &str,
+        name: &str,
+        config: &str,
+    ) -> AgdbApiResult<u16> {
         self.client
             .put(
-                &self.url(&format!("/dashboard/{name}/save")),
+                &self.url(&format!("/dashboard/{owner}/{name}/save")),
                 Some(DashboardConfig {
                     config: config.to_string(),
                 }),
+                &self.token,
+            )
+            .await
+    }
+
+    /// `PUT /dashboard/{owner}/{name}/user/{username}/add?db_role={db_role}`
+    ///
+    /// Adds/updates a user's role on the dashboard. Requires the admin role.
+    /// Owner's role cannot be changed.
+    ///
+    /// Returns `201` on success.
+    ///
+    /// Common error responses: `401` unauthorized, `403` admin only or cannot change
+    /// dashboard owner role, `404` user or dashboard not found.
+    pub async fn dashboard_user_add(
+        &self,
+        owner: &str,
+        name: &str,
+        username: &str,
+        db_role: DbUserRole,
+    ) -> AgdbApiResult<u16> {
+        self.client
+            .put::<()>(
+                &self.url(&format!(
+                    "/dashboard/{owner}/{name}/user/{username}/add?db_role={db_role}"
+                )),
+                None,
+                &self.token,
+            )
+            .await
+    }
+
+    /// `GET /dashboard/{owner}/{name}/user/list`
+    ///
+    /// Lists users with a role on the dashboard (including the owner), by name.
+    ///
+    /// Returns `(200, Vec<DbUser>)` on success.
+    ///
+    /// Common error responses: `401` unauthorized, `403` no role on the dashboard
+    /// (a public one), `404` dashboard not found.
+    pub async fn dashboard_user_list(
+        &self,
+        owner: &str,
+        name: &str,
+    ) -> AgdbApiResult<(u16, Vec<DbUser>)> {
+        self.client
+            .get(
+                &self.url(&format!("/dashboard/{owner}/{name}/user/list")),
+                &self.token,
+            )
+            .await
+    }
+
+    /// `DELETE /dashboard/{owner}/{name}/user/{username}/remove`
+    ///
+    /// Removes a user's role on the dashboard. Requires the admin role unless
+    /// users remove themselves. The owner cannot be removed.
+    ///
+    /// Returns `204` on success.
+    ///
+    /// Common error responses: `401` unauthorized, `403` admin only or cannot remove
+    /// dashboard owner, `404` user or dashboard not found.
+    pub async fn dashboard_user_remove(
+        &self,
+        owner: &str,
+        name: &str,
+        username: &str,
+    ) -> AgdbApiResult<u16> {
+        self.client
+            .delete(
+                &self.url(&format!("/dashboard/{owner}/{name}/user/{username}/remove")),
                 &self.token,
             )
             .await
@@ -1562,6 +1914,50 @@ impl<T: AgdbApiClient> AgdbApi<T> {
                     password: old_password.to_string(),
                     new_password: new_password.to_string(),
                 }),
+                &self.token,
+            )
+            .await
+    }
+
+    /// `GET /user/home_dashboard`
+    ///
+    /// Returns the dashboard the current user opens by default, if any.
+    ///
+    /// Returns `(200, Option<DashboardName>)` on success.
+    ///
+    /// Common error responses: `401` unauthorized.
+    pub async fn user_home_dashboard(&self) -> AgdbApiResult<(u16, Option<DashboardName>)> {
+        self.client
+            .get(&self.url("/user/home_dashboard"), &self.token)
+            .await
+    }
+
+    /// `DELETE /user/home_dashboard`
+    ///
+    /// Clears the dashboard the current user opens by default.
+    ///
+    /// Returns `204` on success.
+    ///
+    /// Common error responses: `401` unauthorized.
+    pub async fn user_home_dashboard_clear(&self) -> AgdbApiResult<u16> {
+        self.client
+            .delete(&self.url("/user/home_dashboard"), &self.token)
+            .await
+    }
+
+    /// `PUT /user/home_dashboard?owner={owner}&name={name}`
+    ///
+    /// Sets the dashboard the current user opens by default. Any role on the
+    /// dashboard suffices.
+    ///
+    /// Returns `201` on success.
+    ///
+    /// Common error responses: `401` unauthorized, `404` dashboard not found.
+    pub async fn user_home_dashboard_set(&self, owner: &str, name: &str) -> AgdbApiResult<u16> {
+        self.client
+            .put::<()>(
+                &self.url(&format!("/user/home_dashboard?owner={owner}&name={name}")),
+                None,
                 &self.token,
             )
             .await

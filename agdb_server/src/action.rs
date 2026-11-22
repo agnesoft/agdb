@@ -1,7 +1,11 @@
 pub(crate) mod change_password;
+pub(crate) mod dashboard_home_set;
+pub(crate) mod dashboard_public_set;
 pub(crate) mod dashboard_remove;
 pub(crate) mod dashboard_rename;
 pub(crate) mod dashboard_save;
+pub(crate) mod dashboard_user_add;
+pub(crate) mod dashboard_user_remove;
 pub(crate) mod db_add;
 pub(crate) mod db_audit_trim;
 pub(crate) mod db_backup;
@@ -27,9 +31,13 @@ pub(crate) mod user_add;
 pub(crate) mod user_delete;
 
 use crate::action::change_password::ChangePassword;
+use crate::action::dashboard_home_set::DashboardHomeSet;
+use crate::action::dashboard_public_set::DashboardPublicSet;
 use crate::action::dashboard_remove::DashboardRemove;
 use crate::action::dashboard_rename::DashboardRename;
 use crate::action::dashboard_save::DashboardSave;
+use crate::action::dashboard_user_add::DashboardUserAdd;
+use crate::action::dashboard_user_remove::DashboardUserRemove;
 use crate::action::db_add::DbAdd;
 use crate::action::db_audit_trim::DbAuditTrim;
 use crate::action::db_backup::DbBackup;
@@ -95,6 +103,10 @@ pub(crate) enum ClusterAction {
     DashboardRename(DashboardRename),
     DashboardRemove(DashboardRemove),
     DbAuditTrim(DbAuditTrim),
+    DashboardUserAdd(DashboardUserAdd),
+    DashboardUserRemove(DashboardUserRemove),
+    DashboardHomeSet(DashboardHomeSet),
+    DashboardPublicSet(DashboardPublicSet),
 }
 
 pub(crate) enum ClusterActionResult {
@@ -144,6 +156,10 @@ impl ClusterAction {
             Self::DashboardSave(_) => "DashboardSave",
             Self::DashboardRename(_) => "DashboardRename",
             Self::DashboardRemove(_) => "DashboardRemove",
+            Self::DashboardUserAdd(_) => "DashboardUserAdd",
+            Self::DashboardUserRemove(_) => "DashboardUserRemove",
+            Self::DashboardHomeSet(_) => "DashboardHomeSet",
+            Self::DashboardPublicSet(_) => "DashboardPublicSet",
             Self::DbAuditTrim(_) => "DbAuditTrim",
         }
     }
@@ -182,7 +198,11 @@ impl ClusterAction {
             | Self::UserDelete(_)
             | Self::DashboardSave(_)
             | Self::DashboardRename(_)
-            | Self::DashboardRemove(_) => vec![ResyncTarget::ServerDb],
+            | Self::DashboardRemove(_)
+            | Self::DashboardUserAdd(_)
+            | Self::DashboardUserRemove(_)
+            | Self::DashboardHomeSet(_)
+            | Self::DashboardPublicSet(_) => vec![ResyncTarget::ServerDb],
         }
     }
 
@@ -218,6 +238,10 @@ impl ClusterAction {
             ClusterAction::DashboardSave(action) => action.exec(db, db_pool).await,
             ClusterAction::DashboardRename(action) => action.exec(db, db_pool).await,
             ClusterAction::DashboardRemove(action) => action.exec(db, db_pool).await,
+            ClusterAction::DashboardUserAdd(action) => action.exec(db, db_pool).await,
+            ClusterAction::DashboardUserRemove(action) => action.exec(db, db_pool).await,
+            ClusterAction::DashboardHomeSet(action) => action.exec(db, db_pool).await,
+            ClusterAction::DashboardPublicSet(action) => action.exec(db, db_pool).await,
             ClusterAction::DbAuditTrim(action) => action.exec(db, db_pool).await,
         }
     }
@@ -379,6 +403,30 @@ impl From<DashboardRemove> for ClusterAction {
     }
 }
 
+impl From<DashboardUserAdd> for ClusterAction {
+    fn from(value: DashboardUserAdd) -> Self {
+        ClusterAction::DashboardUserAdd(value)
+    }
+}
+
+impl From<DashboardUserRemove> for ClusterAction {
+    fn from(value: DashboardUserRemove) -> Self {
+        ClusterAction::DashboardUserRemove(value)
+    }
+}
+
+impl From<DashboardHomeSet> for ClusterAction {
+    fn from(value: DashboardHomeSet) -> Self {
+        ClusterAction::DashboardHomeSet(value)
+    }
+}
+
+impl From<DashboardPublicSet> for ClusterAction {
+    fn from(value: DashboardPublicSet) -> Self {
+        ClusterAction::DashboardPublicSet(value)
+    }
+}
+
 impl From<DbAuditTrim> for ClusterAction {
     fn from(value: DbAuditTrim) -> Self {
         ClusterAction::DbAuditTrim(value)
@@ -407,6 +455,7 @@ impl<'de> Deserialize<'de> for ClusterAction {
 #[cfg(test)]
 mod test {
     use super::*;
+    use agdb_api::DbUserRole;
 
     #[test]
     fn resync_targets_user_db() {
@@ -502,6 +551,26 @@ mod test {
             ClusterAction::DashboardRemove(DashboardRemove {
                 owner: "u".into(),
                 name: "d".into(),
+            }),
+            ClusterAction::DashboardUserAdd(DashboardUserAdd {
+                owner: "u".into(),
+                name: "d".into(),
+                user: "v".into(),
+                role: DbUserRole::Read,
+            }),
+            ClusterAction::DashboardUserRemove(DashboardUserRemove {
+                owner: "u".into(),
+                name: "d".into(),
+                user: "v".into(),
+            }),
+            ClusterAction::DashboardHomeSet(DashboardHomeSet {
+                user: "v".into(),
+                dashboard: Some(("u".into(), "d".into())),
+            }),
+            ClusterAction::DashboardPublicSet(DashboardPublicSet {
+                owner: "u".into(),
+                name: "d".into(),
+                public: true,
             }),
         ];
         for (i, action) in cases.into_iter().enumerate() {

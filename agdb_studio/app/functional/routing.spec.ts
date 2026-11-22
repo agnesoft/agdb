@@ -88,7 +88,7 @@ test.describe("Routing & Navigation", () => {
     await expect(adminLabel).toHaveText("admin");
   });
 
-  test("shows Databases and Users nav links in admin view", async ({
+  test("shows Databases, Dashboards and Users nav links in admin view", async ({
     page,
   }) => {
     await mockLogin(page);
@@ -97,9 +97,10 @@ test.describe("Routing & Navigation", () => {
     await gotoAdminDbPage(page);
 
     const navLinks = page.locator("nav a");
-    await expect(navLinks).toHaveCount(3);
+    await expect(navLinks).toHaveCount(4);
     await expect(navLinks.nth(0)).toHaveText("Status");
     await expect(navLinks.nth(1)).toHaveText("Databases");
-    await expect(navLinks.nth(2)).toHaveText("Users");
+    await expect(navLinks.nth(2)).toHaveText("Dashboards");
+    await expect(navLinks.nth(3)).toHaveText("Users");
   });
 });

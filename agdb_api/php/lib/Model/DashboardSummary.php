@@ -35,7 +35,7 @@ use \Agnesoft\AgdbApi\ObjectSerializer;
  * DashboardSummary Class Doc Comment
  *
  * @category Class
- * @description Dashboard listing entry (without the config).
+ * @description Dashboard listing entry (without the config) with the current user&#39;s role. &#x60;member&#x60; is false for a public dashboard listed only because it is public (the user has no role on it and &#x60;role&#x60; is read).
  * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
@@ -58,7 +58,11 @@ class DashboardSummary implements ModelInterface, ArrayAccess, \JsonSerializable
      * @var string[]
      */
     protected static $openAPITypes = [
+        'member' => 'bool',
         'name' => 'string',
+        'owner' => 'string',
+        'public' => 'bool',
+        'role' => '\Agnesoft\AgdbApi\Model\DbUserRole',
         'updated' => 'int'
     ];
 
@@ -70,7 +74,11 @@ class DashboardSummary implements ModelInterface, ArrayAccess, \JsonSerializable
      * @psalm-var array<string, string|null>
      */
     protected static $openAPIFormats = [
+        'member' => null,
         'name' => null,
+        'owner' => null,
+        'public' => null,
+        'role' => null,
         'updated' => 'int64'
     ];
 
@@ -80,7 +88,11 @@ class DashboardSummary implements ModelInterface, ArrayAccess, \JsonSerializable
      * @var boolean[]
      */
     protected static array $openAPINullables = [
+        'member' => false,
         'name' => false,
+        'owner' => false,
+        'public' => false,
+        'role' => false,
         'updated' => false
     ];
 
@@ -170,7 +182,11 @@ class DashboardSummary implements ModelInterface, ArrayAccess, \JsonSerializable
      * @var string[]
      */
     protected static $attributeMap = [
+        'member' => 'member',
         'name' => 'name',
+        'owner' => 'owner',
+        'public' => 'public',
+        'role' => 'role',
         'updated' => 'updated'
     ];
 
@@ -180,7 +196,11 @@ class DashboardSummary implements ModelInterface, ArrayAccess, \JsonSerializable
      * @var string[]
      */
     protected static $setters = [
+        'member' => 'setMember',
         'name' => 'setName',
+        'owner' => 'setOwner',
+        'public' => 'setPublic',
+        'role' => 'setRole',
         'updated' => 'setUpdated'
     ];
 
@@ -190,7 +210,11 @@ class DashboardSummary implements ModelInterface, ArrayAccess, \JsonSerializable
      * @var string[]
      */
     protected static $getters = [
+        'member' => 'getMember',
         'name' => 'getName',
+        'owner' => 'getOwner',
+        'public' => 'getPublic',
+        'role' => 'getRole',
         'updated' => 'getUpdated'
     ];
 
@@ -251,7 +275,11 @@ class DashboardSummary implements ModelInterface, ArrayAccess, \JsonSerializable
      */
     public function __construct(?array $data = null)
     {
+        $this->setIfExists('member', $data ?? [], null);
         $this->setIfExists('name', $data ?? [], null);
+        $this->setIfExists('owner', $data ?? [], null);
+        $this->setIfExists('public', $data ?? [], null);
+        $this->setIfExists('role', $data ?? [], null);
         $this->setIfExists('updated', $data ?? [], null);
     }
 
@@ -282,8 +310,20 @@ class DashboardSummary implements ModelInterface, ArrayAccess, \JsonSerializable
     {
         $invalidProperties = [];
 
+        if ($this->container['member'] === null) {
+            $invalidProperties[] = "'member' can't be null";
+        }
         if ($this->container['name'] === null) {
             $invalidProperties[] = "'name' can't be null";
+        }
+        if ($this->container['owner'] === null) {
+            $invalidProperties[] = "'owner' can't be null";
+        }
+        if ($this->container['public'] === null) {
+            $invalidProperties[] = "'public' can't be null";
+        }
+        if ($this->container['role'] === null) {
+            $invalidProperties[] = "'role' can't be null";
         }
         if ($this->container['updated'] === null) {
             $invalidProperties[] = "'updated' can't be null";
@@ -308,6 +348,33 @@ class DashboardSummary implements ModelInterface, ArrayAccess, \JsonSerializable
 
 
     /**
+     * Gets member
+     *
+     * @return bool
+     */
+    public function getMember()
+    {
+        return $this->container['member'];
+    }
+
+    /**
+     * Sets member
+     *
+     * @param bool $member member
+     *
+     * @return self
+     */
+    public function setMember($member)
+    {
+        if (is_null($member)) {
+            throw new \InvalidArgumentException('non-nullable member cannot be null');
+        }
+        $this->container['member'] = $member;
+
+        return $this;
+    }
+
+    /**
      * Gets name
      *
      * @return string
@@ -330,6 +397,87 @@ class DashboardSummary implements ModelInterface, ArrayAccess, \JsonSerializable
             throw new \InvalidArgumentException('non-nullable name cannot be null');
         }
         $this->container['name'] = $name;
+
+        return $this;
+    }
+
+    /**
+     * Gets owner
+     *
+     * @return string
+     */
+    public function getOwner()
+    {
+        return $this->container['owner'];
+    }
+
+    /**
+     * Sets owner
+     *
+     * @param string $owner owner
+     *
+     * @return self
+     */
+    public function setOwner($owner)
+    {
+        if (is_null($owner)) {
+            throw new \InvalidArgumentException('non-nullable owner cannot be null');
+        }
+        $this->container['owner'] = $owner;
+
+        return $this;
+    }
+
+    /**
+     * Gets public
+     *
+     * @return bool
+     */
+    public function getPublic()
+    {
+        return $this->container['public'];
+    }
+
+    /**
+     * Sets public
+     *
+     * @param bool $public public
+     *
+     * @return self
+     */
+    public function setPublic($public)
+    {
+        if (is_null($public)) {
+            throw new \InvalidArgumentException('non-nullable public cannot be null');
+        }
+        $this->container['public'] = $public;
+
+        return $this;
+    }
+
+    /**
+     * Gets role
+     *
+     * @return \Agnesoft\AgdbApi\Model\DbUserRole
+     */
+    public function getRole()
+    {
+        return $this->container['role'];
+    }
+
+    /**
+     * Sets role
+     *
+     * @param \Agnesoft\AgdbApi\Model\DbUserRole $role role
+     *
+     * @return self
+     */
+    public function setRole($role)
+    {
+        if (is_null($role)) {
+            throw new \InvalidArgumentException('non-nullable role cannot be null');
+        }
+        $this->container['role'] = $role;
 
         return $this;
     }

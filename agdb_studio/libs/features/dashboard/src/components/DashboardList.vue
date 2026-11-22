@@ -1,26 +1,33 @@
 <script lang="ts" setup>
 import { onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
-import { ChPlus, ClCloseMd, LuPencil } from "@kalimahapps/vue-icons";
+import { ChPlus } from "@kalimahapps/vue-icons";
 import SpinnerIcon from "@agdb-studio/design/src/components/icons/SpinnerIcon.vue";
 import useModal from "@agdb-studio/common/src/composables/modal/modal";
-import { useContentInputs } from "@agdb-studio/common/src/composables/content/inputs";
-import { KEY_MODAL } from "@agdb-studio/common/src/composables/modal/constants";
-import { EMPHASIZED_CLASSNAME } from "@agdb-studio/common/src/composables/content/utils";
-import { useDashboardStore } from "../composables/dashboardStore";
-import { validateDashboardName } from "../utils/dashboardDocument";
+import {
+  adminMode,
+  dashboardRoute,
+  useDashboardStore,
+} from "../composables/dashboardStore";
+import { dashboardNameInput, modalInputValue } from "../utils/dashboardInputs";
+import DashboardTable from "./DashboardTable.vue";
 
 const store = useDashboardStore();
-const { dashboards } = store;
+const { dashboards, mine, shared, publicOnly } = store;
 const { openModal } = useModal();
-const { getInputValue } = useContentInputs();
 const router = useRouter();
 
+/** The server admin manages every user's dashboards in one table. */
+const admin = adminMode();
 const loading = ref(true);
 
 onMounted(async () => {
   try {
-    await store.fetchDashboards();
+    await Promise.all(
+      admin
+        ? [store.fetchDashboards()]
+        : [store.fetchDashboards(), store.fetchHome()],
+    );
   } catch {
     // The API error interceptor shows a notification.
   } finally {
@@ -28,62 +35,31 @@ onMounted(async () => {
   }
 });
 
-const nameInput = (value = "") => ({
+const ownerInput = {
   input: {
-    key: "name",
-    label: "Name (letters, digits, '_', '-', '.')",
+    key: "owner",
+    label: "Owner (username)",
     type: "text" as const,
     autofocus: true,
     required: true,
-    value,
-    rules: [(v: string) => validateDashboardName(String(v ?? "").trim())],
   },
-});
-
-const inputName = () => String(getInputValue(KEY_MODAL, "name") ?? "").trim();
+};
 
 const create = () =>
   openModal({
     header: "New dashboard",
-    content: [nameInput()],
+    content: admin
+      ? [ownerInput, dashboardNameInput("", false)]
+      : [dashboardNameInput()],
     onConfirm: async () => {
-      const name = inputName();
-      await store.createDashboard(name);
-      await router.push({ name: "dashboard", params: { name } });
+      const owner = admin ? modalInputValue("owner") : undefined;
+      // The admin creates for a user: without one, nothing is created.
+      if (owner === "") return false;
+      const key = await store.createDashboard(modalInputValue("name"), owner);
+      await router.push(dashboardRoute(key));
       return true;
     },
   });
-
-const rename = (name: string) =>
-  openModal({
-    header: `Rename dashboard ${name}`,
-    content: [nameInput(name)],
-    onConfirm: async () => {
-      await store.renameDashboard(name, inputName());
-      return true;
-    },
-  });
-
-const remove = (name: string) =>
-  openModal({
-    header: "Delete dashboard",
-    content: [
-      {
-        paragraph: [
-          { text: "Delete dashboard " },
-          { text: name, className: EMPHASIZED_CLASSNAME },
-          { text: "? The databases it shows are not changed." },
-        ],
-      },
-    ],
-    onConfirm: async () => {
-      await store.removeDashboard(name);
-      return true;
-    },
-  });
-
-const formatDate = (seconds: number) =>
-  seconds ? new Date(seconds * 1000).toLocaleString() : "";
 </script>
 
 <template>
@@ -100,42 +76,41 @@ const formatDate = (seconds: number) =>
       </button>
     </header>
     <SpinnerIcon v-if="loading" />
-    <p
-      v-else-if="!dashboards.length"
-      class="empty"
-      data-testid="dashboards-empty"
+    <DashboardTable
+      v-else-if="admin"
+      title="All dashboards"
+      :dashboards="dashboards"
+      data-testid="dashboards-all"
     >
-      No dashboards yet. Create one, or pin a query from the query page.
-    </p>
-    <ul v-else class="items">
-      <li v-for="dashboard of dashboards" :key="dashboard.name" class="item">
-        <RouterLink
-          :to="{ name: 'dashboard', params: { name: dashboard.name } }"
-          class="name"
-        >
-          {{ dashboard.name }}
-        </RouterLink>
-        <span class="updated">{{ formatDate(dashboard.updated) }}</span>
-        <button
-          type="button"
-          title="Rename"
-          aria-label="Rename"
-          data-testid="dashboard-rename"
-          @click="rename(dashboard.name)"
-        >
-          <LuPencil />
-        </button>
-        <button
-          type="button"
-          title="Delete"
-          aria-label="Delete"
-          data-testid="dashboard-remove"
-          @click="remove(dashboard.name)"
-        >
-          <ClCloseMd />
-        </button>
-      </li>
-    </ul>
+      <template #empty>
+        <p class="empty" data-testid="dashboards-empty">No dashboards yet.</p>
+      </template>
+    </DashboardTable>
+    <template v-else>
+      <DashboardTable
+        title="My dashboards"
+        :dashboards="mine"
+        data-testid="dashboards-mine"
+      >
+        <template #empty>
+          <p class="empty" data-testid="dashboards-empty">
+            No dashboards yet. Create one, or pin a query from the query page.
+          </p>
+        </template>
+      </DashboardTable>
+      <DashboardTable
+        v-if="shared.length"
+        title="Shared with me"
+        :dashboards="shared"
+        data-testid="dashboards-shared"
+      />
+      <DashboardTable
+        v-if="publicOnly.length"
+        title="Public"
+        :dashboards="publicOnly"
+        data-testid="dashboards-public"
+      />
+    </template>
   </div>
 </template>
 
@@ -158,34 +133,5 @@ const formatDate = (seconds: number) =>
 .empty {
   color: var(--color-text-muted);
   text-align: center;
-}
-.items {
-  list-style: none;
-  padding: 0;
-}
-.item {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto auto;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 0.75rem;
-  border-bottom: 1px solid var(--color-border);
-  button {
-    display: flex;
-    align-items: center;
-    border: none;
-    background: transparent;
-    color: var(--color-text);
-    cursor: pointer;
-  }
-}
-.name {
-  font-weight: 600;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.updated {
-  color: var(--color-text-muted);
-  font-size: 0.8rem;
 }
 </style>

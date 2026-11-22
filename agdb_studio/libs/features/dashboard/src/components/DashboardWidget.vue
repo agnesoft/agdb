@@ -15,6 +15,7 @@ import {
 import SpinnerIcon from "@agdb-studio/design/src/components/icons/SpinnerIcon.vue";
 import QueryResults from "@agdb-studio/query/src/components/results/QueryResults.vue";
 import { useWidgetQuery } from "../composables/widgetQuery";
+import { adminMode } from "../composables/dashboardStore";
 import type { Widget, WidgetSize } from "../types";
 import WidgetSizePicker from "./WidgetSizePicker.vue";
 
@@ -26,6 +27,8 @@ const props = defineProps<{
   last?: boolean;
   /** Changes to re-run the queries (dashboard "Refresh all"). */
   refreshKey?: number;
+  /** Shown without the actions that change the dashboard (read-only role). */
+  readOnly?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -71,8 +74,10 @@ watch(
   () => void run(),
 );
 
+// The admin view opens the query editor with admin access, as the widget runs.
+const queryRoute = adminMode() ? "admin-query" : "query";
 const queryLink = computed(() => ({
-  name: "query",
+  name: queryRoute,
   params: { owner: props.widget.owner, db: props.widget.db },
   query: {
     exec: props.widget.rows.exec.map((row) => row.query),
@@ -122,6 +127,7 @@ const firstLoad = computed(() => loading.value && !query.value?.lastRun);
           Unsaved view
         </span>
         <button
+          v-if="!readOnly"
           type="button"
           data-testid="widget-view-save"
           @click="emit('update', shownWidget())"
@@ -165,7 +171,12 @@ const firstLoad = computed(() => loading.value && !query.value?.lastRun);
           <LuMinimize2 v-if="maximized" />
           <LuMaximize2 v-else />
         </button>
-        <div ref="menu" class="menu" @keydown.esc.stop="closeMenu">
+        <div
+          v-if="!readOnly"
+          ref="menu"
+          class="menu"
+          @keydown.esc.stop="closeMenu"
+        >
           <button
             ref="menuToggle"
             type="button"

@@ -8,7 +8,7 @@ export default mergeConfig(
   defineConfig({
     test: {
       root: path.resolve(__dirname, "."),
-      setupFiles: ["@agdb-studio/testing/vitest.setup.ts"],
+      setupFiles: ["@agdb-studio/testing/vitest.setup.ts", "./vitest.setup.ts"],
     },
     resolve: {
       alias: {

@@ -1,3 +1,4 @@
+mod admin_dashboard_test;
 mod admin_db_add_test;
 mod admin_db_audit_test;
 mod admin_db_audit_trim_test;
@@ -46,6 +47,7 @@ mod user_logout_test;
 mod user_status;
 
 pub(super) const TESTS: &[&[crate::runner::Test]] = &[
+    admin_dashboard_test::TESTS,
     admin_db_add_test::TESTS,
     admin_db_audit_test::TESTS,
     admin_db_audit_trim_test::TESTS,

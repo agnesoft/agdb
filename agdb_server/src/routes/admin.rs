@@ -1,3 +1,4 @@
+pub(crate) mod dashboard;
 pub(crate) mod db;
 pub(crate) mod user;
 

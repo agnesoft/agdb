@@ -849,6 +849,9 @@ importers:
       '@agdb-studio/api':
         specifier: workspace:*
         version: link:../../core/api
+      '@agdb-studio/auth':
+        specifier: workspace:*
+        version: link:../../core/auth
       '@agdb-studio/common':
         specifier: workspace:*
         version: link:../common
@@ -864,6 +867,9 @@ importers:
       '@agdb-studio/query':
         specifier: workspace:*
         version: link:../query
+      '@agdb-studio/router':
+        specifier: workspace:*
+        version: link:../../core/router
       '@agnesoft/agdb_api':
         specifier: workspace:*
         version: link:../../../../agdb_api/typescript

@@ -74,6 +74,36 @@ class AgdbApi
 
     /** @var string[] $contentTypes **/
     public const contentTypes = [
+        'adminDashboardAdd' => [
+            'application/json',
+        ],
+        'adminDashboardGet' => [
+            'application/json',
+        ],
+        'adminDashboardList' => [
+            'application/json',
+        ],
+        'adminDashboardPublic' => [
+            'application/json',
+        ],
+        'adminDashboardRemove' => [
+            'application/json',
+        ],
+        'adminDashboardRename' => [
+            'application/json',
+        ],
+        'adminDashboardSave' => [
+            'application/json',
+        ],
+        'adminDashboardUserAdd' => [
+            'application/json',
+        ],
+        'adminDashboardUserList' => [
+            'application/json',
+        ],
+        'adminDashboardUserRemove' => [
+            'application/json',
+        ],
         'adminDbAdd' => [
             'application/json',
         ],
@@ -179,6 +209,9 @@ class AgdbApi
         'dashboardList' => [
             'application/json',
         ],
+        'dashboardPublic' => [
+            'application/json',
+        ],
         'dashboardRemove' => [
             'application/json',
         ],
@@ -186,6 +219,15 @@ class AgdbApi
             'application/json',
         ],
         'dashboardSave' => [
+            'application/json',
+        ],
+        'dashboardUserAdd' => [
+            'application/json',
+        ],
+        'dashboardUserList' => [
+            'application/json',
+        ],
+        'dashboardUserRemove' => [
             'application/json',
         ],
         'dbAdd' => [
@@ -254,6 +296,15 @@ class AgdbApi
         'userChangePassword' => [
             'application/json',
         ],
+        'userHomeDashboard' => [
+            'application/json',
+        ],
+        'userHomeDashboardClear' => [
+            'application/json',
+        ],
+        'userHomeDashboardSet' => [
+            'application/json',
+        ],
         'userLogin' => [
             'application/json',
         ],
@@ -309,6 +360,2735 @@ class AgdbApi
     public function getConfig()
     {
         return $this->config;
+    }
+
+    /**
+     * Operation adminDashboardAdd
+     *
+     * @param  string $owner dashboard owner user name (required)
+     * @param  string $name dashboard name (required)
+     * @param  \Agnesoft\AgdbApi\Model\DashboardConfig $dashboard_config dashboard_config (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDashboardAdd'] to see the possible values for this operation
+     *
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \InvalidArgumentException
+     * @return void
+     */
+    public function adminDashboardAdd($owner, $name, $dashboard_config, string $contentType = self::contentTypes['adminDashboardAdd'][0])
+    {
+        $this->adminDashboardAddWithHttpInfo($owner, $name, $dashboard_config, $contentType);
+    }
+
+    /**
+     * Operation adminDashboardAddWithHttpInfo
+     *
+     * @param  string $owner dashboard owner user name (required)
+     * @param  string $name dashboard name (required)
+     * @param  \Agnesoft\AgdbApi\Model\DashboardConfig $dashboard_config (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDashboardAdd'] to see the possible values for this operation
+     *
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \InvalidArgumentException
+     * @return array of null, HTTP status code, HTTP response headers (array of strings)
+     */
+    public function adminDashboardAddWithHttpInfo($owner, $name, $dashboard_config, string $contentType = self::contentTypes['adminDashboardAdd'][0])
+    {
+        $request = $this->adminDashboardAddRequest($owner, $name, $dashboard_config, $contentType);
+
+        try {
+            $options = $this->createHttpClientOption();
+            try {
+                $response = $this->client->send($request, $options);
+            } catch (RequestException $e) {
+                $eResponse = $this->getExceptionResponse($e);
+                throw new ApiException(
+                    "[{$e->getCode()}] {$e->getMessage()}",
+                    (int) $e->getCode(),
+                    $eResponse ? $eResponse->getHeaders() : null,
+                    $eResponse ? (string) $eResponse->getBody() : null
+                );
+            } catch (NetworkExceptionInterface $e) {
+                throw new ApiException(
+                    "[{$e->getCode()}] {$e->getMessage()}",
+                    (int) $e->getCode(),
+                    null,
+                    null
+                );
+            }
+
+            $statusCode = $response->getStatusCode();
+
+
+            return [null, $statusCode, $response->getHeaders()];
+        } catch (ApiException $e) {
+            switch ($e->getCode()) {
+            }
+        
+
+            throw $e;
+        }
+    }
+
+    /**
+     * Operation adminDashboardAddAsync
+     *
+     * @param  string $owner dashboard owner user name (required)
+     * @param  string $name dashboard name (required)
+     * @param  \Agnesoft\AgdbApi\Model\DashboardConfig $dashboard_config (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDashboardAdd'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Promise\PromiseInterface
+     */
+    public function adminDashboardAddAsync($owner, $name, $dashboard_config, string $contentType = self::contentTypes['adminDashboardAdd'][0])
+    {
+        return $this->adminDashboardAddAsyncWithHttpInfo($owner, $name, $dashboard_config, $contentType)
+            ->then(
+                function ($response) {
+                    return $response[0];
+                }
+            );
+    }
+
+    /**
+     * Operation adminDashboardAddAsyncWithHttpInfo
+     *
+     * @param  string $owner dashboard owner user name (required)
+     * @param  string $name dashboard name (required)
+     * @param  \Agnesoft\AgdbApi\Model\DashboardConfig $dashboard_config (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDashboardAdd'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Promise\PromiseInterface
+     */
+    public function adminDashboardAddAsyncWithHttpInfo($owner, $name, $dashboard_config, string $contentType = self::contentTypes['adminDashboardAdd'][0])
+    {
+        $returnType = '';
+        $request = $this->adminDashboardAddRequest($owner, $name, $dashboard_config, $contentType);
+
+        return $this->client
+            ->sendAsync($request, $this->createHttpClientOption())
+            ->then(
+                function ($response) use ($returnType) {
+                    return [null, $response->getStatusCode(), $response->getHeaders()];
+                },
+                function ($exception) {
+                    $response = $this->getExceptionResponse($exception);
+                    if ($response === null) {
+                        throw new ApiException(
+                            "[{$exception->getCode()}] {$exception->getMessage()}",
+                            (int) $exception->getCode(),
+                            null,
+                            null
+                        );
+                    }
+                    $statusCode = $response->getStatusCode();
+                    throw new ApiException(
+                        sprintf(
+                            '[%d] Error connecting to the API (%s)',
+                            $statusCode,
+                            $exception->getRequest()->getUri()
+                        ),
+                        $statusCode,
+                        $response->getHeaders(),
+                        (string) $response->getBody()
+                    );
+                }
+            );
+    }
+
+    /**
+     * Create request for operation 'adminDashboardAdd'
+     *
+     * @param  string $owner dashboard owner user name (required)
+     * @param  string $name dashboard name (required)
+     * @param  \Agnesoft\AgdbApi\Model\DashboardConfig $dashboard_config (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDashboardAdd'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Psr7\Request
+     */
+    public function adminDashboardAddRequest($owner, $name, $dashboard_config, string $contentType = self::contentTypes['adminDashboardAdd'][0])
+    {
+
+        // verify the required parameter 'owner' is set
+        if ($owner === null || (is_array($owner) && count($owner) === 0)) {
+            throw new \InvalidArgumentException(
+                'Missing the required parameter $owner when calling adminDashboardAdd'
+            );
+        }
+
+        // verify the required parameter 'name' is set
+        if ($name === null || (is_array($name) && count($name) === 0)) {
+            throw new \InvalidArgumentException(
+                'Missing the required parameter $name when calling adminDashboardAdd'
+            );
+        }
+
+        // verify the required parameter 'dashboard_config' is set
+        if ($dashboard_config === null || (is_array($dashboard_config) && count($dashboard_config) === 0)) {
+            throw new \InvalidArgumentException(
+                'Missing the required parameter $dashboard_config when calling adminDashboardAdd'
+            );
+        }
+
+
+        $resourcePath = '/api/v1/admin/dashboard/{owner}/{name}/add';
+        $formParams = [];
+        $queryParams = [];
+        $headerParams = [];
+        $httpBody = '';
+        $multipart = false;
+
+
+
+        // path params
+        if ($owner !== null) {
+            $resourcePath = str_replace(
+                '{owner}',
+                ObjectSerializer::toPathValue($owner),
+                $resourcePath
+            );
+        }
+        // path params
+        if ($name !== null) {
+            $resourcePath = str_replace(
+                '{name}',
+                ObjectSerializer::toPathValue($name),
+                $resourcePath
+            );
+        }
+
+
+        $headers = $this->headerSelector->selectHeaders(
+            [],
+            $contentType,
+            $multipart
+        );
+
+        // for model (json/xml)
+        if (isset($dashboard_config)) {
+            if (stripos($headers['Content-Type'], 'application/json') !== false) {
+                # if Content-Type contains "application/json", json_encode the body
+                try {
+                    $httpBody = json_encode(ObjectSerializer::sanitizeForSerialization($dashboard_config), JSON_THROW_ON_ERROR);
+                } catch (\JsonException $e) {
+                    throw new \InvalidArgumentException('json_encode error: ' . $e->getMessage(), 0, $e);
+                }
+            } else {
+                $httpBody = $dashboard_config;
+            }
+        } elseif (count($formParams) > 0) {
+            if ($multipart) {
+                $multipartContents = [];
+                foreach ($formParams as $formParamName => $formParamValue) {
+                    $formParamValueItems = is_array($formParamValue) ? $formParamValue : [$formParamValue];
+                    foreach ($formParamValueItems as $formParamValueItem) {
+                        $multipartContents[] = [
+                            'name' => $formParamName,
+                            'contents' => $formParamValueItem
+                        ];
+                    }
+                }
+                // for HTTP post (form)
+                $httpBody = new MultipartStream($multipartContents);
+
+            } elseif (stripos($headers['Content-Type'], 'application/json') !== false) {
+                # if Content-Type contains "application/json", json_encode the form parameters
+                try {
+                    $httpBody = json_encode($formParams, JSON_THROW_ON_ERROR);
+                } catch (\JsonException $e) {
+                    throw new \InvalidArgumentException('json_encode error: ' . $e->getMessage(), 0, $e);
+                }
+            } else {
+                // for HTTP post (form)
+                $httpBody = ObjectSerializer::buildQuery($formParams);
+            }
+        }
+
+        // this endpoint requires Bearer authentication (access token)
+        if (!empty($this->config->getAccessToken())) {
+            $headers['Authorization'] = 'Bearer ' . $this->config->getAccessToken();
+        }
+
+        $defaultHeaders = [];
+        if ($this->config->getUserAgent()) {
+            $defaultHeaders['User-Agent'] = $this->config->getUserAgent();
+        }
+
+        $headers = array_merge(
+            $defaultHeaders,
+            $headerParams,
+            $headers
+        );
+
+        $operationHost = $this->config->getHost();
+        $query = ObjectSerializer::buildQuery($queryParams);
+        return new Request(
+            'POST',
+            $operationHost . $resourcePath . ($query ? "?{$query}" : ''),
+            $headers,
+            $httpBody
+        );
+    }
+
+    /**
+     * Operation adminDashboardGet
+     *
+     * @param  string $owner dashboard owner user name (required)
+     * @param  string $name dashboard name (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDashboardGet'] to see the possible values for this operation
+     *
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \InvalidArgumentException
+     * @return \Agnesoft\AgdbApi\Model\Dashboard
+     */
+    public function adminDashboardGet($owner, $name, string $contentType = self::contentTypes['adminDashboardGet'][0])
+    {
+        list($response) = $this->adminDashboardGetWithHttpInfo($owner, $name, $contentType);
+        return $response;
+    }
+
+    /**
+     * Operation adminDashboardGetWithHttpInfo
+     *
+     * @param  string $owner dashboard owner user name (required)
+     * @param  string $name dashboard name (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDashboardGet'] to see the possible values for this operation
+     *
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \InvalidArgumentException
+     * @return array of \Agnesoft\AgdbApi\Model\Dashboard, HTTP status code, HTTP response headers (array of strings)
+     */
+    public function adminDashboardGetWithHttpInfo($owner, $name, string $contentType = self::contentTypes['adminDashboardGet'][0])
+    {
+        $request = $this->adminDashboardGetRequest($owner, $name, $contentType);
+
+        try {
+            $options = $this->createHttpClientOption();
+            try {
+                $response = $this->client->send($request, $options);
+            } catch (RequestException $e) {
+                $eResponse = $this->getExceptionResponse($e);
+                throw new ApiException(
+                    "[{$e->getCode()}] {$e->getMessage()}",
+                    (int) $e->getCode(),
+                    $eResponse ? $eResponse->getHeaders() : null,
+                    $eResponse ? (string) $eResponse->getBody() : null
+                );
+            } catch (NetworkExceptionInterface $e) {
+                throw new ApiException(
+                    "[{$e->getCode()}] {$e->getMessage()}",
+                    (int) $e->getCode(),
+                    null,
+                    null
+                );
+            }
+
+            $statusCode = $response->getStatusCode();
+
+
+            switch($statusCode) {
+                case 200:
+                    return $this->handleResponseWithDataType(
+                        '\Agnesoft\AgdbApi\Model\Dashboard',
+                        $request,
+                        $response,
+                    );
+            }
+
+            
+
+            if ($statusCode < 200 || $statusCode > 299) {
+                throw new ApiException(
+                    sprintf(
+                        '[%d] Error connecting to the API (%s)',
+                        $statusCode,
+                        (string) $request->getUri()
+                    ),
+                    $statusCode,
+                    $response->getHeaders(),
+                    (string) $response->getBody()
+                );
+            }
+
+            return $this->handleResponseWithDataType(
+                '\Agnesoft\AgdbApi\Model\Dashboard',
+                $request,
+                $response,
+            );
+        } catch (ApiException $e) {
+            switch ($e->getCode()) {
+                case 200:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\Agnesoft\AgdbApi\Model\Dashboard',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    throw $e;
+            }
+        
+
+            throw $e;
+        }
+    }
+
+    /**
+     * Operation adminDashboardGetAsync
+     *
+     * @param  string $owner dashboard owner user name (required)
+     * @param  string $name dashboard name (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDashboardGet'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Promise\PromiseInterface
+     */
+    public function adminDashboardGetAsync($owner, $name, string $contentType = self::contentTypes['adminDashboardGet'][0])
+    {
+        return $this->adminDashboardGetAsyncWithHttpInfo($owner, $name, $contentType)
+            ->then(
+                function ($response) {
+                    return $response[0];
+                }
+            );
+    }
+
+    /**
+     * Operation adminDashboardGetAsyncWithHttpInfo
+     *
+     * @param  string $owner dashboard owner user name (required)
+     * @param  string $name dashboard name (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDashboardGet'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Promise\PromiseInterface
+     */
+    public function adminDashboardGetAsyncWithHttpInfo($owner, $name, string $contentType = self::contentTypes['adminDashboardGet'][0])
+    {
+        $returnType = '\Agnesoft\AgdbApi\Model\Dashboard';
+        $request = $this->adminDashboardGetRequest($owner, $name, $contentType);
+
+        return $this->client
+            ->sendAsync($request, $this->createHttpClientOption())
+            ->then(
+                function ($response) use ($returnType) {
+                    if ($returnType === '\SplFileObject') {
+                        $content = $response->getBody(); //stream goes to serializer
+                    } else {
+                        $content = (string) $response->getBody();
+                        if ($returnType !== 'string') {
+                            $content = json_decode($content);
+                        }
+                    }
+
+                    return [
+                        ObjectSerializer::deserialize($content, $returnType, []),
+                        $response->getStatusCode(),
+                        $response->getHeaders()
+                    ];
+                },
+                function ($exception) {
+                    $response = $this->getExceptionResponse($exception);
+                    if ($response === null) {
+                        throw new ApiException(
+                            "[{$exception->getCode()}] {$exception->getMessage()}",
+                            (int) $exception->getCode(),
+                            null,
+                            null
+                        );
+                    }
+                    $statusCode = $response->getStatusCode();
+                    throw new ApiException(
+                        sprintf(
+                            '[%d] Error connecting to the API (%s)',
+                            $statusCode,
+                            $exception->getRequest()->getUri()
+                        ),
+                        $statusCode,
+                        $response->getHeaders(),
+                        (string) $response->getBody()
+                    );
+                }
+            );
+    }
+
+    /**
+     * Create request for operation 'adminDashboardGet'
+     *
+     * @param  string $owner dashboard owner user name (required)
+     * @param  string $name dashboard name (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDashboardGet'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Psr7\Request
+     */
+    public function adminDashboardGetRequest($owner, $name, string $contentType = self::contentTypes['adminDashboardGet'][0])
+    {
+
+        // verify the required parameter 'owner' is set
+        if ($owner === null || (is_array($owner) && count($owner) === 0)) {
+            throw new \InvalidArgumentException(
+                'Missing the required parameter $owner when calling adminDashboardGet'
+            );
+        }
+
+        // verify the required parameter 'name' is set
+        if ($name === null || (is_array($name) && count($name) === 0)) {
+            throw new \InvalidArgumentException(
+                'Missing the required parameter $name when calling adminDashboardGet'
+            );
+        }
+
+
+        $resourcePath = '/api/v1/admin/dashboard/{owner}/{name}';
+        $formParams = [];
+        $queryParams = [];
+        $headerParams = [];
+        $httpBody = '';
+        $multipart = false;
+
+
+
+        // path params
+        if ($owner !== null) {
+            $resourcePath = str_replace(
+                '{owner}',
+                ObjectSerializer::toPathValue($owner),
+                $resourcePath
+            );
+        }
+        // path params
+        if ($name !== null) {
+            $resourcePath = str_replace(
+                '{name}',
+                ObjectSerializer::toPathValue($name),
+                $resourcePath
+            );
+        }
+
+
+        $headers = $this->headerSelector->selectHeaders(
+            ['application/json', ],
+            $contentType,
+            $multipart
+        );
+
+        // for model (json/xml)
+        if (count($formParams) > 0) {
+            if ($multipart) {
+                $multipartContents = [];
+                foreach ($formParams as $formParamName => $formParamValue) {
+                    $formParamValueItems = is_array($formParamValue) ? $formParamValue : [$formParamValue];
+                    foreach ($formParamValueItems as $formParamValueItem) {
+                        $multipartContents[] = [
+                            'name' => $formParamName,
+                            'contents' => $formParamValueItem
+                        ];
+                    }
+                }
+                // for HTTP post (form)
+                $httpBody = new MultipartStream($multipartContents);
+
+            } elseif (stripos($headers['Content-Type'], 'application/json') !== false) {
+                # if Content-Type contains "application/json", json_encode the form parameters
+                try {
+                    $httpBody = json_encode($formParams, JSON_THROW_ON_ERROR);
+                } catch (\JsonException $e) {
+                    throw new \InvalidArgumentException('json_encode error: ' . $e->getMessage(), 0, $e);
+                }
+            } else {
+                // for HTTP post (form)
+                $httpBody = ObjectSerializer::buildQuery($formParams);
+            }
+        }
+
+        // this endpoint requires Bearer authentication (access token)
+        if (!empty($this->config->getAccessToken())) {
+            $headers['Authorization'] = 'Bearer ' . $this->config->getAccessToken();
+        }
+
+        $defaultHeaders = [];
+        if ($this->config->getUserAgent()) {
+            $defaultHeaders['User-Agent'] = $this->config->getUserAgent();
+        }
+
+        $headers = array_merge(
+            $defaultHeaders,
+            $headerParams,
+            $headers
+        );
+
+        $operationHost = $this->config->getHost();
+        $query = ObjectSerializer::buildQuery($queryParams);
+        return new Request(
+            'GET',
+            $operationHost . $resourcePath . ($query ? "?{$query}" : ''),
+            $headers,
+            $httpBody
+        );
+    }
+
+    /**
+     * Operation adminDashboardList
+     *
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDashboardList'] to see the possible values for this operation
+     *
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \InvalidArgumentException
+     * @return \Agnesoft\AgdbApi\Model\DashboardSummary[]
+     */
+    public function adminDashboardList(string $contentType = self::contentTypes['adminDashboardList'][0])
+    {
+        list($response) = $this->adminDashboardListWithHttpInfo($contentType);
+        return $response;
+    }
+
+    /**
+     * Operation adminDashboardListWithHttpInfo
+     *
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDashboardList'] to see the possible values for this operation
+     *
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \InvalidArgumentException
+     * @return array of \Agnesoft\AgdbApi\Model\DashboardSummary[], HTTP status code, HTTP response headers (array of strings)
+     */
+    public function adminDashboardListWithHttpInfo(string $contentType = self::contentTypes['adminDashboardList'][0])
+    {
+        $request = $this->adminDashboardListRequest($contentType);
+
+        try {
+            $options = $this->createHttpClientOption();
+            try {
+                $response = $this->client->send($request, $options);
+            } catch (RequestException $e) {
+                $eResponse = $this->getExceptionResponse($e);
+                throw new ApiException(
+                    "[{$e->getCode()}] {$e->getMessage()}",
+                    (int) $e->getCode(),
+                    $eResponse ? $eResponse->getHeaders() : null,
+                    $eResponse ? (string) $eResponse->getBody() : null
+                );
+            } catch (NetworkExceptionInterface $e) {
+                throw new ApiException(
+                    "[{$e->getCode()}] {$e->getMessage()}",
+                    (int) $e->getCode(),
+                    null,
+                    null
+                );
+            }
+
+            $statusCode = $response->getStatusCode();
+
+
+            switch($statusCode) {
+                case 200:
+                    return $this->handleResponseWithDataType(
+                        '\Agnesoft\AgdbApi\Model\DashboardSummary[]',
+                        $request,
+                        $response,
+                    );
+            }
+
+            
+
+            if ($statusCode < 200 || $statusCode > 299) {
+                throw new ApiException(
+                    sprintf(
+                        '[%d] Error connecting to the API (%s)',
+                        $statusCode,
+                        (string) $request->getUri()
+                    ),
+                    $statusCode,
+                    $response->getHeaders(),
+                    (string) $response->getBody()
+                );
+            }
+
+            return $this->handleResponseWithDataType(
+                '\Agnesoft\AgdbApi\Model\DashboardSummary[]',
+                $request,
+                $response,
+            );
+        } catch (ApiException $e) {
+            switch ($e->getCode()) {
+                case 200:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\Agnesoft\AgdbApi\Model\DashboardSummary[]',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    throw $e;
+            }
+        
+
+            throw $e;
+        }
+    }
+
+    /**
+     * Operation adminDashboardListAsync
+     *
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDashboardList'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Promise\PromiseInterface
+     */
+    public function adminDashboardListAsync(string $contentType = self::contentTypes['adminDashboardList'][0])
+    {
+        return $this->adminDashboardListAsyncWithHttpInfo($contentType)
+            ->then(
+                function ($response) {
+                    return $response[0];
+                }
+            );
+    }
+
+    /**
+     * Operation adminDashboardListAsyncWithHttpInfo
+     *
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDashboardList'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Promise\PromiseInterface
+     */
+    public function adminDashboardListAsyncWithHttpInfo(string $contentType = self::contentTypes['adminDashboardList'][0])
+    {
+        $returnType = '\Agnesoft\AgdbApi\Model\DashboardSummary[]';
+        $request = $this->adminDashboardListRequest($contentType);
+
+        return $this->client
+            ->sendAsync($request, $this->createHttpClientOption())
+            ->then(
+                function ($response) use ($returnType) {
+                    if ($returnType === '\SplFileObject') {
+                        $content = $response->getBody(); //stream goes to serializer
+                    } else {
+                        $content = (string) $response->getBody();
+                        if ($returnType !== 'string') {
+                            $content = json_decode($content);
+                        }
+                    }
+
+                    return [
+                        ObjectSerializer::deserialize($content, $returnType, []),
+                        $response->getStatusCode(),
+                        $response->getHeaders()
+                    ];
+                },
+                function ($exception) {
+                    $response = $this->getExceptionResponse($exception);
+                    if ($response === null) {
+                        throw new ApiException(
+                            "[{$exception->getCode()}] {$exception->getMessage()}",
+                            (int) $exception->getCode(),
+                            null,
+                            null
+                        );
+                    }
+                    $statusCode = $response->getStatusCode();
+                    throw new ApiException(
+                        sprintf(
+                            '[%d] Error connecting to the API (%s)',
+                            $statusCode,
+                            $exception->getRequest()->getUri()
+                        ),
+                        $statusCode,
+                        $response->getHeaders(),
+                        (string) $response->getBody()
+                    );
+                }
+            );
+    }
+
+    /**
+     * Create request for operation 'adminDashboardList'
+     *
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDashboardList'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Psr7\Request
+     */
+    public function adminDashboardListRequest(string $contentType = self::contentTypes['adminDashboardList'][0])
+    {
+
+
+        $resourcePath = '/api/v1/admin/dashboard/list';
+        $formParams = [];
+        $queryParams = [];
+        $headerParams = [];
+        $httpBody = '';
+        $multipart = false;
+
+
+
+
+
+        $headers = $this->headerSelector->selectHeaders(
+            ['application/json', ],
+            $contentType,
+            $multipart
+        );
+
+        // for model (json/xml)
+        if (count($formParams) > 0) {
+            if ($multipart) {
+                $multipartContents = [];
+                foreach ($formParams as $formParamName => $formParamValue) {
+                    $formParamValueItems = is_array($formParamValue) ? $formParamValue : [$formParamValue];
+                    foreach ($formParamValueItems as $formParamValueItem) {
+                        $multipartContents[] = [
+                            'name' => $formParamName,
+                            'contents' => $formParamValueItem
+                        ];
+                    }
+                }
+                // for HTTP post (form)
+                $httpBody = new MultipartStream($multipartContents);
+
+            } elseif (stripos($headers['Content-Type'], 'application/json') !== false) {
+                # if Content-Type contains "application/json", json_encode the form parameters
+                try {
+                    $httpBody = json_encode($formParams, JSON_THROW_ON_ERROR);
+                } catch (\JsonException $e) {
+                    throw new \InvalidArgumentException('json_encode error: ' . $e->getMessage(), 0, $e);
+                }
+            } else {
+                // for HTTP post (form)
+                $httpBody = ObjectSerializer::buildQuery($formParams);
+            }
+        }
+
+        // this endpoint requires Bearer authentication (access token)
+        if (!empty($this->config->getAccessToken())) {
+            $headers['Authorization'] = 'Bearer ' . $this->config->getAccessToken();
+        }
+
+        $defaultHeaders = [];
+        if ($this->config->getUserAgent()) {
+            $defaultHeaders['User-Agent'] = $this->config->getUserAgent();
+        }
+
+        $headers = array_merge(
+            $defaultHeaders,
+            $headerParams,
+            $headers
+        );
+
+        $operationHost = $this->config->getHost();
+        $query = ObjectSerializer::buildQuery($queryParams);
+        return new Request(
+            'GET',
+            $operationHost . $resourcePath . ($query ? "?{$query}" : ''),
+            $headers,
+            $httpBody
+        );
+    }
+
+    /**
+     * Operation adminDashboardPublic
+     *
+     * @param  string $owner dashboard owner user name (required)
+     * @param  string $name dashboard name (required)
+     * @param  bool $public Every user can view a public dashboard. (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDashboardPublic'] to see the possible values for this operation
+     *
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \InvalidArgumentException
+     * @return void
+     */
+    public function adminDashboardPublic($owner, $name, $public, string $contentType = self::contentTypes['adminDashboardPublic'][0])
+    {
+        $this->adminDashboardPublicWithHttpInfo($owner, $name, $public, $contentType);
+    }
+
+    /**
+     * Operation adminDashboardPublicWithHttpInfo
+     *
+     * @param  string $owner dashboard owner user name (required)
+     * @param  string $name dashboard name (required)
+     * @param  bool $public Every user can view a public dashboard. (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDashboardPublic'] to see the possible values for this operation
+     *
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \InvalidArgumentException
+     * @return array of null, HTTP status code, HTTP response headers (array of strings)
+     */
+    public function adminDashboardPublicWithHttpInfo($owner, $name, $public, string $contentType = self::contentTypes['adminDashboardPublic'][0])
+    {
+        $request = $this->adminDashboardPublicRequest($owner, $name, $public, $contentType);
+
+        try {
+            $options = $this->createHttpClientOption();
+            try {
+                $response = $this->client->send($request, $options);
+            } catch (RequestException $e) {
+                $eResponse = $this->getExceptionResponse($e);
+                throw new ApiException(
+                    "[{$e->getCode()}] {$e->getMessage()}",
+                    (int) $e->getCode(),
+                    $eResponse ? $eResponse->getHeaders() : null,
+                    $eResponse ? (string) $eResponse->getBody() : null
+                );
+            } catch (NetworkExceptionInterface $e) {
+                throw new ApiException(
+                    "[{$e->getCode()}] {$e->getMessage()}",
+                    (int) $e->getCode(),
+                    null,
+                    null
+                );
+            }
+
+            $statusCode = $response->getStatusCode();
+
+
+            return [null, $statusCode, $response->getHeaders()];
+        } catch (ApiException $e) {
+            switch ($e->getCode()) {
+            }
+        
+
+            throw $e;
+        }
+    }
+
+    /**
+     * Operation adminDashboardPublicAsync
+     *
+     * @param  string $owner dashboard owner user name (required)
+     * @param  string $name dashboard name (required)
+     * @param  bool $public Every user can view a public dashboard. (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDashboardPublic'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Promise\PromiseInterface
+     */
+    public function adminDashboardPublicAsync($owner, $name, $public, string $contentType = self::contentTypes['adminDashboardPublic'][0])
+    {
+        return $this->adminDashboardPublicAsyncWithHttpInfo($owner, $name, $public, $contentType)
+            ->then(
+                function ($response) {
+                    return $response[0];
+                }
+            );
+    }
+
+    /**
+     * Operation adminDashboardPublicAsyncWithHttpInfo
+     *
+     * @param  string $owner dashboard owner user name (required)
+     * @param  string $name dashboard name (required)
+     * @param  bool $public Every user can view a public dashboard. (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDashboardPublic'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Promise\PromiseInterface
+     */
+    public function adminDashboardPublicAsyncWithHttpInfo($owner, $name, $public, string $contentType = self::contentTypes['adminDashboardPublic'][0])
+    {
+        $returnType = '';
+        $request = $this->adminDashboardPublicRequest($owner, $name, $public, $contentType);
+
+        return $this->client
+            ->sendAsync($request, $this->createHttpClientOption())
+            ->then(
+                function ($response) use ($returnType) {
+                    return [null, $response->getStatusCode(), $response->getHeaders()];
+                },
+                function ($exception) {
+                    $response = $this->getExceptionResponse($exception);
+                    if ($response === null) {
+                        throw new ApiException(
+                            "[{$exception->getCode()}] {$exception->getMessage()}",
+                            (int) $exception->getCode(),
+                            null,
+                            null
+                        );
+                    }
+                    $statusCode = $response->getStatusCode();
+                    throw new ApiException(
+                        sprintf(
+                            '[%d] Error connecting to the API (%s)',
+                            $statusCode,
+                            $exception->getRequest()->getUri()
+                        ),
+                        $statusCode,
+                        $response->getHeaders(),
+                        (string) $response->getBody()
+                    );
+                }
+            );
+    }
+
+    /**
+     * Create request for operation 'adminDashboardPublic'
+     *
+     * @param  string $owner dashboard owner user name (required)
+     * @param  string $name dashboard name (required)
+     * @param  bool $public Every user can view a public dashboard. (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDashboardPublic'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Psr7\Request
+     */
+    public function adminDashboardPublicRequest($owner, $name, $public, string $contentType = self::contentTypes['adminDashboardPublic'][0])
+    {
+
+        // verify the required parameter 'owner' is set
+        if ($owner === null || (is_array($owner) && count($owner) === 0)) {
+            throw new \InvalidArgumentException(
+                'Missing the required parameter $owner when calling adminDashboardPublic'
+            );
+        }
+
+        // verify the required parameter 'name' is set
+        if ($name === null || (is_array($name) && count($name) === 0)) {
+            throw new \InvalidArgumentException(
+                'Missing the required parameter $name when calling adminDashboardPublic'
+            );
+        }
+
+        // verify the required parameter 'public' is set
+        if ($public === null || (is_array($public) && count($public) === 0)) {
+            throw new \InvalidArgumentException(
+                'Missing the required parameter $public when calling adminDashboardPublic'
+            );
+        }
+
+
+        $resourcePath = '/api/v1/admin/dashboard/{owner}/{name}/public';
+        $formParams = [];
+        $queryParams = [];
+        $headerParams = [];
+        $httpBody = '';
+        $multipart = false;
+
+        // query params
+        $queryParams = array_merge($queryParams, ObjectSerializer::toQueryValue(
+            $public,
+            'public', // param base name
+            'boolean', // openApiType
+            'form', // style
+            true, // explode
+            true // required
+        ) ?? []);
+
+
+        // path params
+        if ($owner !== null) {
+            $resourcePath = str_replace(
+                '{owner}',
+                ObjectSerializer::toPathValue($owner),
+                $resourcePath
+            );
+        }
+        // path params
+        if ($name !== null) {
+            $resourcePath = str_replace(
+                '{name}',
+                ObjectSerializer::toPathValue($name),
+                $resourcePath
+            );
+        }
+
+
+        $headers = $this->headerSelector->selectHeaders(
+            [],
+            $contentType,
+            $multipart
+        );
+
+        // for model (json/xml)
+        if (count($formParams) > 0) {
+            if ($multipart) {
+                $multipartContents = [];
+                foreach ($formParams as $formParamName => $formParamValue) {
+                    $formParamValueItems = is_array($formParamValue) ? $formParamValue : [$formParamValue];
+                    foreach ($formParamValueItems as $formParamValueItem) {
+                        $multipartContents[] = [
+                            'name' => $formParamName,
+                            'contents' => $formParamValueItem
+                        ];
+                    }
+                }
+                // for HTTP post (form)
+                $httpBody = new MultipartStream($multipartContents);
+
+            } elseif (stripos($headers['Content-Type'], 'application/json') !== false) {
+                # if Content-Type contains "application/json", json_encode the form parameters
+                try {
+                    $httpBody = json_encode($formParams, JSON_THROW_ON_ERROR);
+                } catch (\JsonException $e) {
+                    throw new \InvalidArgumentException('json_encode error: ' . $e->getMessage(), 0, $e);
+                }
+            } else {
+                // for HTTP post (form)
+                $httpBody = ObjectSerializer::buildQuery($formParams);
+            }
+        }
+
+        // this endpoint requires Bearer authentication (access token)
+        if (!empty($this->config->getAccessToken())) {
+            $headers['Authorization'] = 'Bearer ' . $this->config->getAccessToken();
+        }
+
+        $defaultHeaders = [];
+        if ($this->config->getUserAgent()) {
+            $defaultHeaders['User-Agent'] = $this->config->getUserAgent();
+        }
+
+        $headers = array_merge(
+            $defaultHeaders,
+            $headerParams,
+            $headers
+        );
+
+        $operationHost = $this->config->getHost();
+        $query = ObjectSerializer::buildQuery($queryParams);
+        return new Request(
+            'PUT',
+            $operationHost . $resourcePath . ($query ? "?{$query}" : ''),
+            $headers,
+            $httpBody
+        );
+    }
+
+    /**
+     * Operation adminDashboardRemove
+     *
+     * @param  string $owner dashboard owner user name (required)
+     * @param  string $name dashboard name (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDashboardRemove'] to see the possible values for this operation
+     *
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \InvalidArgumentException
+     * @return void
+     */
+    public function adminDashboardRemove($owner, $name, string $contentType = self::contentTypes['adminDashboardRemove'][0])
+    {
+        $this->adminDashboardRemoveWithHttpInfo($owner, $name, $contentType);
+    }
+
+    /**
+     * Operation adminDashboardRemoveWithHttpInfo
+     *
+     * @param  string $owner dashboard owner user name (required)
+     * @param  string $name dashboard name (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDashboardRemove'] to see the possible values for this operation
+     *
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \InvalidArgumentException
+     * @return array of null, HTTP status code, HTTP response headers (array of strings)
+     */
+    public function adminDashboardRemoveWithHttpInfo($owner, $name, string $contentType = self::contentTypes['adminDashboardRemove'][0])
+    {
+        $request = $this->adminDashboardRemoveRequest($owner, $name, $contentType);
+
+        try {
+            $options = $this->createHttpClientOption();
+            try {
+                $response = $this->client->send($request, $options);
+            } catch (RequestException $e) {
+                $eResponse = $this->getExceptionResponse($e);
+                throw new ApiException(
+                    "[{$e->getCode()}] {$e->getMessage()}",
+                    (int) $e->getCode(),
+                    $eResponse ? $eResponse->getHeaders() : null,
+                    $eResponse ? (string) $eResponse->getBody() : null
+                );
+            } catch (NetworkExceptionInterface $e) {
+                throw new ApiException(
+                    "[{$e->getCode()}] {$e->getMessage()}",
+                    (int) $e->getCode(),
+                    null,
+                    null
+                );
+            }
+
+            $statusCode = $response->getStatusCode();
+
+
+            return [null, $statusCode, $response->getHeaders()];
+        } catch (ApiException $e) {
+            switch ($e->getCode()) {
+            }
+        
+
+            throw $e;
+        }
+    }
+
+    /**
+     * Operation adminDashboardRemoveAsync
+     *
+     * @param  string $owner dashboard owner user name (required)
+     * @param  string $name dashboard name (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDashboardRemove'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Promise\PromiseInterface
+     */
+    public function adminDashboardRemoveAsync($owner, $name, string $contentType = self::contentTypes['adminDashboardRemove'][0])
+    {
+        return $this->adminDashboardRemoveAsyncWithHttpInfo($owner, $name, $contentType)
+            ->then(
+                function ($response) {
+                    return $response[0];
+                }
+            );
+    }
+
+    /**
+     * Operation adminDashboardRemoveAsyncWithHttpInfo
+     *
+     * @param  string $owner dashboard owner user name (required)
+     * @param  string $name dashboard name (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDashboardRemove'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Promise\PromiseInterface
+     */
+    public function adminDashboardRemoveAsyncWithHttpInfo($owner, $name, string $contentType = self::contentTypes['adminDashboardRemove'][0])
+    {
+        $returnType = '';
+        $request = $this->adminDashboardRemoveRequest($owner, $name, $contentType);
+
+        return $this->client
+            ->sendAsync($request, $this->createHttpClientOption())
+            ->then(
+                function ($response) use ($returnType) {
+                    return [null, $response->getStatusCode(), $response->getHeaders()];
+                },
+                function ($exception) {
+                    $response = $this->getExceptionResponse($exception);
+                    if ($response === null) {
+                        throw new ApiException(
+                            "[{$exception->getCode()}] {$exception->getMessage()}",
+                            (int) $exception->getCode(),
+                            null,
+                            null
+                        );
+                    }
+                    $statusCode = $response->getStatusCode();
+                    throw new ApiException(
+                        sprintf(
+                            '[%d] Error connecting to the API (%s)',
+                            $statusCode,
+                            $exception->getRequest()->getUri()
+                        ),
+                        $statusCode,
+                        $response->getHeaders(),
+                        (string) $response->getBody()
+                    );
+                }
+            );
+    }
+
+    /**
+     * Create request for operation 'adminDashboardRemove'
+     *
+     * @param  string $owner dashboard owner user name (required)
+     * @param  string $name dashboard name (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDashboardRemove'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Psr7\Request
+     */
+    public function adminDashboardRemoveRequest($owner, $name, string $contentType = self::contentTypes['adminDashboardRemove'][0])
+    {
+
+        // verify the required parameter 'owner' is set
+        if ($owner === null || (is_array($owner) && count($owner) === 0)) {
+            throw new \InvalidArgumentException(
+                'Missing the required parameter $owner when calling adminDashboardRemove'
+            );
+        }
+
+        // verify the required parameter 'name' is set
+        if ($name === null || (is_array($name) && count($name) === 0)) {
+            throw new \InvalidArgumentException(
+                'Missing the required parameter $name when calling adminDashboardRemove'
+            );
+        }
+
+
+        $resourcePath = '/api/v1/admin/dashboard/{owner}/{name}/remove';
+        $formParams = [];
+        $queryParams = [];
+        $headerParams = [];
+        $httpBody = '';
+        $multipart = false;
+
+
+
+        // path params
+        if ($owner !== null) {
+            $resourcePath = str_replace(
+                '{owner}',
+                ObjectSerializer::toPathValue($owner),
+                $resourcePath
+            );
+        }
+        // path params
+        if ($name !== null) {
+            $resourcePath = str_replace(
+                '{name}',
+                ObjectSerializer::toPathValue($name),
+                $resourcePath
+            );
+        }
+
+
+        $headers = $this->headerSelector->selectHeaders(
+            [],
+            $contentType,
+            $multipart
+        );
+
+        // for model (json/xml)
+        if (count($formParams) > 0) {
+            if ($multipart) {
+                $multipartContents = [];
+                foreach ($formParams as $formParamName => $formParamValue) {
+                    $formParamValueItems = is_array($formParamValue) ? $formParamValue : [$formParamValue];
+                    foreach ($formParamValueItems as $formParamValueItem) {
+                        $multipartContents[] = [
+                            'name' => $formParamName,
+                            'contents' => $formParamValueItem
+                        ];
+                    }
+                }
+                // for HTTP post (form)
+                $httpBody = new MultipartStream($multipartContents);
+
+            } elseif (stripos($headers['Content-Type'], 'application/json') !== false) {
+                # if Content-Type contains "application/json", json_encode the form parameters
+                try {
+                    $httpBody = json_encode($formParams, JSON_THROW_ON_ERROR);
+                } catch (\JsonException $e) {
+                    throw new \InvalidArgumentException('json_encode error: ' . $e->getMessage(), 0, $e);
+                }
+            } else {
+                // for HTTP post (form)
+                $httpBody = ObjectSerializer::buildQuery($formParams);
+            }
+        }
+
+        // this endpoint requires Bearer authentication (access token)
+        if (!empty($this->config->getAccessToken())) {
+            $headers['Authorization'] = 'Bearer ' . $this->config->getAccessToken();
+        }
+
+        $defaultHeaders = [];
+        if ($this->config->getUserAgent()) {
+            $defaultHeaders['User-Agent'] = $this->config->getUserAgent();
+        }
+
+        $headers = array_merge(
+            $defaultHeaders,
+            $headerParams,
+            $headers
+        );
+
+        $operationHost = $this->config->getHost();
+        $query = ObjectSerializer::buildQuery($queryParams);
+        return new Request(
+            'DELETE',
+            $operationHost . $resourcePath . ($query ? "?{$query}" : ''),
+            $headers,
+            $httpBody
+        );
+    }
+
+    /**
+     * Operation adminDashboardRename
+     *
+     * @param  string $owner dashboard owner user name (required)
+     * @param  string $name dashboard name (required)
+     * @param  string $new_name new_name (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDashboardRename'] to see the possible values for this operation
+     *
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \InvalidArgumentException
+     * @return void
+     */
+    public function adminDashboardRename($owner, $name, $new_name, string $contentType = self::contentTypes['adminDashboardRename'][0])
+    {
+        $this->adminDashboardRenameWithHttpInfo($owner, $name, $new_name, $contentType);
+    }
+
+    /**
+     * Operation adminDashboardRenameWithHttpInfo
+     *
+     * @param  string $owner dashboard owner user name (required)
+     * @param  string $name dashboard name (required)
+     * @param  string $new_name (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDashboardRename'] to see the possible values for this operation
+     *
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \InvalidArgumentException
+     * @return array of null, HTTP status code, HTTP response headers (array of strings)
+     */
+    public function adminDashboardRenameWithHttpInfo($owner, $name, $new_name, string $contentType = self::contentTypes['adminDashboardRename'][0])
+    {
+        $request = $this->adminDashboardRenameRequest($owner, $name, $new_name, $contentType);
+
+        try {
+            $options = $this->createHttpClientOption();
+            try {
+                $response = $this->client->send($request, $options);
+            } catch (RequestException $e) {
+                $eResponse = $this->getExceptionResponse($e);
+                throw new ApiException(
+                    "[{$e->getCode()}] {$e->getMessage()}",
+                    (int) $e->getCode(),
+                    $eResponse ? $eResponse->getHeaders() : null,
+                    $eResponse ? (string) $eResponse->getBody() : null
+                );
+            } catch (NetworkExceptionInterface $e) {
+                throw new ApiException(
+                    "[{$e->getCode()}] {$e->getMessage()}",
+                    (int) $e->getCode(),
+                    null,
+                    null
+                );
+            }
+
+            $statusCode = $response->getStatusCode();
+
+
+            return [null, $statusCode, $response->getHeaders()];
+        } catch (ApiException $e) {
+            switch ($e->getCode()) {
+            }
+        
+
+            throw $e;
+        }
+    }
+
+    /**
+     * Operation adminDashboardRenameAsync
+     *
+     * @param  string $owner dashboard owner user name (required)
+     * @param  string $name dashboard name (required)
+     * @param  string $new_name (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDashboardRename'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Promise\PromiseInterface
+     */
+    public function adminDashboardRenameAsync($owner, $name, $new_name, string $contentType = self::contentTypes['adminDashboardRename'][0])
+    {
+        return $this->adminDashboardRenameAsyncWithHttpInfo($owner, $name, $new_name, $contentType)
+            ->then(
+                function ($response) {
+                    return $response[0];
+                }
+            );
+    }
+
+    /**
+     * Operation adminDashboardRenameAsyncWithHttpInfo
+     *
+     * @param  string $owner dashboard owner user name (required)
+     * @param  string $name dashboard name (required)
+     * @param  string $new_name (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDashboardRename'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Promise\PromiseInterface
+     */
+    public function adminDashboardRenameAsyncWithHttpInfo($owner, $name, $new_name, string $contentType = self::contentTypes['adminDashboardRename'][0])
+    {
+        $returnType = '';
+        $request = $this->adminDashboardRenameRequest($owner, $name, $new_name, $contentType);
+
+        return $this->client
+            ->sendAsync($request, $this->createHttpClientOption())
+            ->then(
+                function ($response) use ($returnType) {
+                    return [null, $response->getStatusCode(), $response->getHeaders()];
+                },
+                function ($exception) {
+                    $response = $this->getExceptionResponse($exception);
+                    if ($response === null) {
+                        throw new ApiException(
+                            "[{$exception->getCode()}] {$exception->getMessage()}",
+                            (int) $exception->getCode(),
+                            null,
+                            null
+                        );
+                    }
+                    $statusCode = $response->getStatusCode();
+                    throw new ApiException(
+                        sprintf(
+                            '[%d] Error connecting to the API (%s)',
+                            $statusCode,
+                            $exception->getRequest()->getUri()
+                        ),
+                        $statusCode,
+                        $response->getHeaders(),
+                        (string) $response->getBody()
+                    );
+                }
+            );
+    }
+
+    /**
+     * Create request for operation 'adminDashboardRename'
+     *
+     * @param  string $owner dashboard owner user name (required)
+     * @param  string $name dashboard name (required)
+     * @param  string $new_name (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDashboardRename'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Psr7\Request
+     */
+    public function adminDashboardRenameRequest($owner, $name, $new_name, string $contentType = self::contentTypes['adminDashboardRename'][0])
+    {
+
+        // verify the required parameter 'owner' is set
+        if ($owner === null || (is_array($owner) && count($owner) === 0)) {
+            throw new \InvalidArgumentException(
+                'Missing the required parameter $owner when calling adminDashboardRename'
+            );
+        }
+
+        // verify the required parameter 'name' is set
+        if ($name === null || (is_array($name) && count($name) === 0)) {
+            throw new \InvalidArgumentException(
+                'Missing the required parameter $name when calling adminDashboardRename'
+            );
+        }
+
+        // verify the required parameter 'new_name' is set
+        if ($new_name === null || (is_array($new_name) && count($new_name) === 0)) {
+            throw new \InvalidArgumentException(
+                'Missing the required parameter $new_name when calling adminDashboardRename'
+            );
+        }
+
+
+        $resourcePath = '/api/v1/admin/dashboard/{owner}/{name}/rename';
+        $formParams = [];
+        $queryParams = [];
+        $headerParams = [];
+        $httpBody = '';
+        $multipart = false;
+
+        // query params
+        $queryParams = array_merge($queryParams, ObjectSerializer::toQueryValue(
+            $new_name,
+            'new_name', // param base name
+            'string', // openApiType
+            'form', // style
+            true, // explode
+            true // required
+        ) ?? []);
+
+
+        // path params
+        if ($owner !== null) {
+            $resourcePath = str_replace(
+                '{owner}',
+                ObjectSerializer::toPathValue($owner),
+                $resourcePath
+            );
+        }
+        // path params
+        if ($name !== null) {
+            $resourcePath = str_replace(
+                '{name}',
+                ObjectSerializer::toPathValue($name),
+                $resourcePath
+            );
+        }
+
+
+        $headers = $this->headerSelector->selectHeaders(
+            [],
+            $contentType,
+            $multipart
+        );
+
+        // for model (json/xml)
+        if (count($formParams) > 0) {
+            if ($multipart) {
+                $multipartContents = [];
+                foreach ($formParams as $formParamName => $formParamValue) {
+                    $formParamValueItems = is_array($formParamValue) ? $formParamValue : [$formParamValue];
+                    foreach ($formParamValueItems as $formParamValueItem) {
+                        $multipartContents[] = [
+                            'name' => $formParamName,
+                            'contents' => $formParamValueItem
+                        ];
+                    }
+                }
+                // for HTTP post (form)
+                $httpBody = new MultipartStream($multipartContents);
+
+            } elseif (stripos($headers['Content-Type'], 'application/json') !== false) {
+                # if Content-Type contains "application/json", json_encode the form parameters
+                try {
+                    $httpBody = json_encode($formParams, JSON_THROW_ON_ERROR);
+                } catch (\JsonException $e) {
+                    throw new \InvalidArgumentException('json_encode error: ' . $e->getMessage(), 0, $e);
+                }
+            } else {
+                // for HTTP post (form)
+                $httpBody = ObjectSerializer::buildQuery($formParams);
+            }
+        }
+
+        // this endpoint requires Bearer authentication (access token)
+        if (!empty($this->config->getAccessToken())) {
+            $headers['Authorization'] = 'Bearer ' . $this->config->getAccessToken();
+        }
+
+        $defaultHeaders = [];
+        if ($this->config->getUserAgent()) {
+            $defaultHeaders['User-Agent'] = $this->config->getUserAgent();
+        }
+
+        $headers = array_merge(
+            $defaultHeaders,
+            $headerParams,
+            $headers
+        );
+
+        $operationHost = $this->config->getHost();
+        $query = ObjectSerializer::buildQuery($queryParams);
+        return new Request(
+            'POST',
+            $operationHost . $resourcePath . ($query ? "?{$query}" : ''),
+            $headers,
+            $httpBody
+        );
+    }
+
+    /**
+     * Operation adminDashboardSave
+     *
+     * @param  string $owner dashboard owner user name (required)
+     * @param  string $name dashboard name (required)
+     * @param  \Agnesoft\AgdbApi\Model\DashboardConfig $dashboard_config dashboard_config (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDashboardSave'] to see the possible values for this operation
+     *
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \InvalidArgumentException
+     * @return void
+     */
+    public function adminDashboardSave($owner, $name, $dashboard_config, string $contentType = self::contentTypes['adminDashboardSave'][0])
+    {
+        $this->adminDashboardSaveWithHttpInfo($owner, $name, $dashboard_config, $contentType);
+    }
+
+    /**
+     * Operation adminDashboardSaveWithHttpInfo
+     *
+     * @param  string $owner dashboard owner user name (required)
+     * @param  string $name dashboard name (required)
+     * @param  \Agnesoft\AgdbApi\Model\DashboardConfig $dashboard_config (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDashboardSave'] to see the possible values for this operation
+     *
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \InvalidArgumentException
+     * @return array of null, HTTP status code, HTTP response headers (array of strings)
+     */
+    public function adminDashboardSaveWithHttpInfo($owner, $name, $dashboard_config, string $contentType = self::contentTypes['adminDashboardSave'][0])
+    {
+        $request = $this->adminDashboardSaveRequest($owner, $name, $dashboard_config, $contentType);
+
+        try {
+            $options = $this->createHttpClientOption();
+            try {
+                $response = $this->client->send($request, $options);
+            } catch (RequestException $e) {
+                $eResponse = $this->getExceptionResponse($e);
+                throw new ApiException(
+                    "[{$e->getCode()}] {$e->getMessage()}",
+                    (int) $e->getCode(),
+                    $eResponse ? $eResponse->getHeaders() : null,
+                    $eResponse ? (string) $eResponse->getBody() : null
+                );
+            } catch (NetworkExceptionInterface $e) {
+                throw new ApiException(
+                    "[{$e->getCode()}] {$e->getMessage()}",
+                    (int) $e->getCode(),
+                    null,
+                    null
+                );
+            }
+
+            $statusCode = $response->getStatusCode();
+
+
+            return [null, $statusCode, $response->getHeaders()];
+        } catch (ApiException $e) {
+            switch ($e->getCode()) {
+            }
+        
+
+            throw $e;
+        }
+    }
+
+    /**
+     * Operation adminDashboardSaveAsync
+     *
+     * @param  string $owner dashboard owner user name (required)
+     * @param  string $name dashboard name (required)
+     * @param  \Agnesoft\AgdbApi\Model\DashboardConfig $dashboard_config (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDashboardSave'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Promise\PromiseInterface
+     */
+    public function adminDashboardSaveAsync($owner, $name, $dashboard_config, string $contentType = self::contentTypes['adminDashboardSave'][0])
+    {
+        return $this->adminDashboardSaveAsyncWithHttpInfo($owner, $name, $dashboard_config, $contentType)
+            ->then(
+                function ($response) {
+                    return $response[0];
+                }
+            );
+    }
+
+    /**
+     * Operation adminDashboardSaveAsyncWithHttpInfo
+     *
+     * @param  string $owner dashboard owner user name (required)
+     * @param  string $name dashboard name (required)
+     * @param  \Agnesoft\AgdbApi\Model\DashboardConfig $dashboard_config (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDashboardSave'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Promise\PromiseInterface
+     */
+    public function adminDashboardSaveAsyncWithHttpInfo($owner, $name, $dashboard_config, string $contentType = self::contentTypes['adminDashboardSave'][0])
+    {
+        $returnType = '';
+        $request = $this->adminDashboardSaveRequest($owner, $name, $dashboard_config, $contentType);
+
+        return $this->client
+            ->sendAsync($request, $this->createHttpClientOption())
+            ->then(
+                function ($response) use ($returnType) {
+                    return [null, $response->getStatusCode(), $response->getHeaders()];
+                },
+                function ($exception) {
+                    $response = $this->getExceptionResponse($exception);
+                    if ($response === null) {
+                        throw new ApiException(
+                            "[{$exception->getCode()}] {$exception->getMessage()}",
+                            (int) $exception->getCode(),
+                            null,
+                            null
+                        );
+                    }
+                    $statusCode = $response->getStatusCode();
+                    throw new ApiException(
+                        sprintf(
+                            '[%d] Error connecting to the API (%s)',
+                            $statusCode,
+                            $exception->getRequest()->getUri()
+                        ),
+                        $statusCode,
+                        $response->getHeaders(),
+                        (string) $response->getBody()
+                    );
+                }
+            );
+    }
+
+    /**
+     * Create request for operation 'adminDashboardSave'
+     *
+     * @param  string $owner dashboard owner user name (required)
+     * @param  string $name dashboard name (required)
+     * @param  \Agnesoft\AgdbApi\Model\DashboardConfig $dashboard_config (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDashboardSave'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Psr7\Request
+     */
+    public function adminDashboardSaveRequest($owner, $name, $dashboard_config, string $contentType = self::contentTypes['adminDashboardSave'][0])
+    {
+
+        // verify the required parameter 'owner' is set
+        if ($owner === null || (is_array($owner) && count($owner) === 0)) {
+            throw new \InvalidArgumentException(
+                'Missing the required parameter $owner when calling adminDashboardSave'
+            );
+        }
+
+        // verify the required parameter 'name' is set
+        if ($name === null || (is_array($name) && count($name) === 0)) {
+            throw new \InvalidArgumentException(
+                'Missing the required parameter $name when calling adminDashboardSave'
+            );
+        }
+
+        // verify the required parameter 'dashboard_config' is set
+        if ($dashboard_config === null || (is_array($dashboard_config) && count($dashboard_config) === 0)) {
+            throw new \InvalidArgumentException(
+                'Missing the required parameter $dashboard_config when calling adminDashboardSave'
+            );
+        }
+
+
+        $resourcePath = '/api/v1/admin/dashboard/{owner}/{name}/save';
+        $formParams = [];
+        $queryParams = [];
+        $headerParams = [];
+        $httpBody = '';
+        $multipart = false;
+
+
+
+        // path params
+        if ($owner !== null) {
+            $resourcePath = str_replace(
+                '{owner}',
+                ObjectSerializer::toPathValue($owner),
+                $resourcePath
+            );
+        }
+        // path params
+        if ($name !== null) {
+            $resourcePath = str_replace(
+                '{name}',
+                ObjectSerializer::toPathValue($name),
+                $resourcePath
+            );
+        }
+
+
+        $headers = $this->headerSelector->selectHeaders(
+            [],
+            $contentType,
+            $multipart
+        );
+
+        // for model (json/xml)
+        if (isset($dashboard_config)) {
+            if (stripos($headers['Content-Type'], 'application/json') !== false) {
+                # if Content-Type contains "application/json", json_encode the body
+                try {
+                    $httpBody = json_encode(ObjectSerializer::sanitizeForSerialization($dashboard_config), JSON_THROW_ON_ERROR);
+                } catch (\JsonException $e) {
+                    throw new \InvalidArgumentException('json_encode error: ' . $e->getMessage(), 0, $e);
+                }
+            } else {
+                $httpBody = $dashboard_config;
+            }
+        } elseif (count($formParams) > 0) {
+            if ($multipart) {
+                $multipartContents = [];
+                foreach ($formParams as $formParamName => $formParamValue) {
+                    $formParamValueItems = is_array($formParamValue) ? $formParamValue : [$formParamValue];
+                    foreach ($formParamValueItems as $formParamValueItem) {
+                        $multipartContents[] = [
+                            'name' => $formParamName,
+                            'contents' => $formParamValueItem
+                        ];
+                    }
+                }
+                // for HTTP post (form)
+                $httpBody = new MultipartStream($multipartContents);
+
+            } elseif (stripos($headers['Content-Type'], 'application/json') !== false) {
+                # if Content-Type contains "application/json", json_encode the form parameters
+                try {
+                    $httpBody = json_encode($formParams, JSON_THROW_ON_ERROR);
+                } catch (\JsonException $e) {
+                    throw new \InvalidArgumentException('json_encode error: ' . $e->getMessage(), 0, $e);
+                }
+            } else {
+                // for HTTP post (form)
+                $httpBody = ObjectSerializer::buildQuery($formParams);
+            }
+        }
+
+        // this endpoint requires Bearer authentication (access token)
+        if (!empty($this->config->getAccessToken())) {
+            $headers['Authorization'] = 'Bearer ' . $this->config->getAccessToken();
+        }
+
+        $defaultHeaders = [];
+        if ($this->config->getUserAgent()) {
+            $defaultHeaders['User-Agent'] = $this->config->getUserAgent();
+        }
+
+        $headers = array_merge(
+            $defaultHeaders,
+            $headerParams,
+            $headers
+        );
+
+        $operationHost = $this->config->getHost();
+        $query = ObjectSerializer::buildQuery($queryParams);
+        return new Request(
+            'PUT',
+            $operationHost . $resourcePath . ($query ? "?{$query}" : ''),
+            $headers,
+            $httpBody
+        );
+    }
+
+    /**
+     * Operation adminDashboardUserAdd
+     *
+     * @param  string $owner dashboard owner user name (required)
+     * @param  string $name dashboard name (required)
+     * @param  string $username user name (required)
+     * @param  \Agnesoft\AgdbApi\Model\DbUserRole $db_role db_role (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDashboardUserAdd'] to see the possible values for this operation
+     *
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \InvalidArgumentException
+     * @return void
+     */
+    public function adminDashboardUserAdd($owner, $name, $username, $db_role, string $contentType = self::contentTypes['adminDashboardUserAdd'][0])
+    {
+        $this->adminDashboardUserAddWithHttpInfo($owner, $name, $username, $db_role, $contentType);
+    }
+
+    /**
+     * Operation adminDashboardUserAddWithHttpInfo
+     *
+     * @param  string $owner dashboard owner user name (required)
+     * @param  string $name dashboard name (required)
+     * @param  string $username user name (required)
+     * @param  \Agnesoft\AgdbApi\Model\DbUserRole $db_role (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDashboardUserAdd'] to see the possible values for this operation
+     *
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \InvalidArgumentException
+     * @return array of null, HTTP status code, HTTP response headers (array of strings)
+     */
+    public function adminDashboardUserAddWithHttpInfo($owner, $name, $username, $db_role, string $contentType = self::contentTypes['adminDashboardUserAdd'][0])
+    {
+        $request = $this->adminDashboardUserAddRequest($owner, $name, $username, $db_role, $contentType);
+
+        try {
+            $options = $this->createHttpClientOption();
+            try {
+                $response = $this->client->send($request, $options);
+            } catch (RequestException $e) {
+                $eResponse = $this->getExceptionResponse($e);
+                throw new ApiException(
+                    "[{$e->getCode()}] {$e->getMessage()}",
+                    (int) $e->getCode(),
+                    $eResponse ? $eResponse->getHeaders() : null,
+                    $eResponse ? (string) $eResponse->getBody() : null
+                );
+            } catch (NetworkExceptionInterface $e) {
+                throw new ApiException(
+                    "[{$e->getCode()}] {$e->getMessage()}",
+                    (int) $e->getCode(),
+                    null,
+                    null
+                );
+            }
+
+            $statusCode = $response->getStatusCode();
+
+
+            return [null, $statusCode, $response->getHeaders()];
+        } catch (ApiException $e) {
+            switch ($e->getCode()) {
+            }
+        
+
+            throw $e;
+        }
+    }
+
+    /**
+     * Operation adminDashboardUserAddAsync
+     *
+     * @param  string $owner dashboard owner user name (required)
+     * @param  string $name dashboard name (required)
+     * @param  string $username user name (required)
+     * @param  \Agnesoft\AgdbApi\Model\DbUserRole $db_role (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDashboardUserAdd'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Promise\PromiseInterface
+     */
+    public function adminDashboardUserAddAsync($owner, $name, $username, $db_role, string $contentType = self::contentTypes['adminDashboardUserAdd'][0])
+    {
+        return $this->adminDashboardUserAddAsyncWithHttpInfo($owner, $name, $username, $db_role, $contentType)
+            ->then(
+                function ($response) {
+                    return $response[0];
+                }
+            );
+    }
+
+    /**
+     * Operation adminDashboardUserAddAsyncWithHttpInfo
+     *
+     * @param  string $owner dashboard owner user name (required)
+     * @param  string $name dashboard name (required)
+     * @param  string $username user name (required)
+     * @param  \Agnesoft\AgdbApi\Model\DbUserRole $db_role (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDashboardUserAdd'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Promise\PromiseInterface
+     */
+    public function adminDashboardUserAddAsyncWithHttpInfo($owner, $name, $username, $db_role, string $contentType = self::contentTypes['adminDashboardUserAdd'][0])
+    {
+        $returnType = '';
+        $request = $this->adminDashboardUserAddRequest($owner, $name, $username, $db_role, $contentType);
+
+        return $this->client
+            ->sendAsync($request, $this->createHttpClientOption())
+            ->then(
+                function ($response) use ($returnType) {
+                    return [null, $response->getStatusCode(), $response->getHeaders()];
+                },
+                function ($exception) {
+                    $response = $this->getExceptionResponse($exception);
+                    if ($response === null) {
+                        throw new ApiException(
+                            "[{$exception->getCode()}] {$exception->getMessage()}",
+                            (int) $exception->getCode(),
+                            null,
+                            null
+                        );
+                    }
+                    $statusCode = $response->getStatusCode();
+                    throw new ApiException(
+                        sprintf(
+                            '[%d] Error connecting to the API (%s)',
+                            $statusCode,
+                            $exception->getRequest()->getUri()
+                        ),
+                        $statusCode,
+                        $response->getHeaders(),
+                        (string) $response->getBody()
+                    );
+                }
+            );
+    }
+
+    /**
+     * Create request for operation 'adminDashboardUserAdd'
+     *
+     * @param  string $owner dashboard owner user name (required)
+     * @param  string $name dashboard name (required)
+     * @param  string $username user name (required)
+     * @param  \Agnesoft\AgdbApi\Model\DbUserRole $db_role (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDashboardUserAdd'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Psr7\Request
+     */
+    public function adminDashboardUserAddRequest($owner, $name, $username, $db_role, string $contentType = self::contentTypes['adminDashboardUserAdd'][0])
+    {
+
+        // verify the required parameter 'owner' is set
+        if ($owner === null || (is_array($owner) && count($owner) === 0)) {
+            throw new \InvalidArgumentException(
+                'Missing the required parameter $owner when calling adminDashboardUserAdd'
+            );
+        }
+
+        // verify the required parameter 'name' is set
+        if ($name === null || (is_array($name) && count($name) === 0)) {
+            throw new \InvalidArgumentException(
+                'Missing the required parameter $name when calling adminDashboardUserAdd'
+            );
+        }
+
+        // verify the required parameter 'username' is set
+        if ($username === null || (is_array($username) && count($username) === 0)) {
+            throw new \InvalidArgumentException(
+                'Missing the required parameter $username when calling adminDashboardUserAdd'
+            );
+        }
+
+        // verify the required parameter 'db_role' is set
+        if ($db_role === null || (is_array($db_role) && count($db_role) === 0)) {
+            throw new \InvalidArgumentException(
+                'Missing the required parameter $db_role when calling adminDashboardUserAdd'
+            );
+        }
+
+
+        $resourcePath = '/api/v1/admin/dashboard/{owner}/{name}/user/{username}/add';
+        $formParams = [];
+        $queryParams = [];
+        $headerParams = [];
+        $httpBody = '';
+        $multipart = false;
+
+        // query params
+        $queryParams = array_merge($queryParams, ObjectSerializer::toQueryValue(
+            $db_role,
+            'db_role', // param base name
+            'DbUserRole', // openApiType
+            'form', // style
+            true, // explode
+            true // required
+        ) ?? []);
+
+
+        // path params
+        if ($owner !== null) {
+            $resourcePath = str_replace(
+                '{owner}',
+                ObjectSerializer::toPathValue($owner),
+                $resourcePath
+            );
+        }
+        // path params
+        if ($name !== null) {
+            $resourcePath = str_replace(
+                '{name}',
+                ObjectSerializer::toPathValue($name),
+                $resourcePath
+            );
+        }
+        // path params
+        if ($username !== null) {
+            $resourcePath = str_replace(
+                '{username}',
+                ObjectSerializer::toPathValue($username),
+                $resourcePath
+            );
+        }
+
+
+        $headers = $this->headerSelector->selectHeaders(
+            [],
+            $contentType,
+            $multipart
+        );
+
+        // for model (json/xml)
+        if (count($formParams) > 0) {
+            if ($multipart) {
+                $multipartContents = [];
+                foreach ($formParams as $formParamName => $formParamValue) {
+                    $formParamValueItems = is_array($formParamValue) ? $formParamValue : [$formParamValue];
+                    foreach ($formParamValueItems as $formParamValueItem) {
+                        $multipartContents[] = [
+                            'name' => $formParamName,
+                            'contents' => $formParamValueItem
+                        ];
+                    }
+                }
+                // for HTTP post (form)
+                $httpBody = new MultipartStream($multipartContents);
+
+            } elseif (stripos($headers['Content-Type'], 'application/json') !== false) {
+                # if Content-Type contains "application/json", json_encode the form parameters
+                try {
+                    $httpBody = json_encode($formParams, JSON_THROW_ON_ERROR);
+                } catch (\JsonException $e) {
+                    throw new \InvalidArgumentException('json_encode error: ' . $e->getMessage(), 0, $e);
+                }
+            } else {
+                // for HTTP post (form)
+                $httpBody = ObjectSerializer::buildQuery($formParams);
+            }
+        }
+
+        // this endpoint requires Bearer authentication (access token)
+        if (!empty($this->config->getAccessToken())) {
+            $headers['Authorization'] = 'Bearer ' . $this->config->getAccessToken();
+        }
+
+        $defaultHeaders = [];
+        if ($this->config->getUserAgent()) {
+            $defaultHeaders['User-Agent'] = $this->config->getUserAgent();
+        }
+
+        $headers = array_merge(
+            $defaultHeaders,
+            $headerParams,
+            $headers
+        );
+
+        $operationHost = $this->config->getHost();
+        $query = ObjectSerializer::buildQuery($queryParams);
+        return new Request(
+            'PUT',
+            $operationHost . $resourcePath . ($query ? "?{$query}" : ''),
+            $headers,
+            $httpBody
+        );
+    }
+
+    /**
+     * Operation adminDashboardUserList
+     *
+     * @param  string $owner dashboard owner user name (required)
+     * @param  string $name dashboard name (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDashboardUserList'] to see the possible values for this operation
+     *
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \InvalidArgumentException
+     * @return \Agnesoft\AgdbApi\Model\DbUser[]
+     */
+    public function adminDashboardUserList($owner, $name, string $contentType = self::contentTypes['adminDashboardUserList'][0])
+    {
+        list($response) = $this->adminDashboardUserListWithHttpInfo($owner, $name, $contentType);
+        return $response;
+    }
+
+    /**
+     * Operation adminDashboardUserListWithHttpInfo
+     *
+     * @param  string $owner dashboard owner user name (required)
+     * @param  string $name dashboard name (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDashboardUserList'] to see the possible values for this operation
+     *
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \InvalidArgumentException
+     * @return array of \Agnesoft\AgdbApi\Model\DbUser[], HTTP status code, HTTP response headers (array of strings)
+     */
+    public function adminDashboardUserListWithHttpInfo($owner, $name, string $contentType = self::contentTypes['adminDashboardUserList'][0])
+    {
+        $request = $this->adminDashboardUserListRequest($owner, $name, $contentType);
+
+        try {
+            $options = $this->createHttpClientOption();
+            try {
+                $response = $this->client->send($request, $options);
+            } catch (RequestException $e) {
+                $eResponse = $this->getExceptionResponse($e);
+                throw new ApiException(
+                    "[{$e->getCode()}] {$e->getMessage()}",
+                    (int) $e->getCode(),
+                    $eResponse ? $eResponse->getHeaders() : null,
+                    $eResponse ? (string) $eResponse->getBody() : null
+                );
+            } catch (NetworkExceptionInterface $e) {
+                throw new ApiException(
+                    "[{$e->getCode()}] {$e->getMessage()}",
+                    (int) $e->getCode(),
+                    null,
+                    null
+                );
+            }
+
+            $statusCode = $response->getStatusCode();
+
+
+            switch($statusCode) {
+                case 200:
+                    return $this->handleResponseWithDataType(
+                        '\Agnesoft\AgdbApi\Model\DbUser[]',
+                        $request,
+                        $response,
+                    );
+            }
+
+            
+
+            if ($statusCode < 200 || $statusCode > 299) {
+                throw new ApiException(
+                    sprintf(
+                        '[%d] Error connecting to the API (%s)',
+                        $statusCode,
+                        (string) $request->getUri()
+                    ),
+                    $statusCode,
+                    $response->getHeaders(),
+                    (string) $response->getBody()
+                );
+            }
+
+            return $this->handleResponseWithDataType(
+                '\Agnesoft\AgdbApi\Model\DbUser[]',
+                $request,
+                $response,
+            );
+        } catch (ApiException $e) {
+            switch ($e->getCode()) {
+                case 200:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\Agnesoft\AgdbApi\Model\DbUser[]',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    throw $e;
+            }
+        
+
+            throw $e;
+        }
+    }
+
+    /**
+     * Operation adminDashboardUserListAsync
+     *
+     * @param  string $owner dashboard owner user name (required)
+     * @param  string $name dashboard name (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDashboardUserList'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Promise\PromiseInterface
+     */
+    public function adminDashboardUserListAsync($owner, $name, string $contentType = self::contentTypes['adminDashboardUserList'][0])
+    {
+        return $this->adminDashboardUserListAsyncWithHttpInfo($owner, $name, $contentType)
+            ->then(
+                function ($response) {
+                    return $response[0];
+                }
+            );
+    }
+
+    /**
+     * Operation adminDashboardUserListAsyncWithHttpInfo
+     *
+     * @param  string $owner dashboard owner user name (required)
+     * @param  string $name dashboard name (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDashboardUserList'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Promise\PromiseInterface
+     */
+    public function adminDashboardUserListAsyncWithHttpInfo($owner, $name, string $contentType = self::contentTypes['adminDashboardUserList'][0])
+    {
+        $returnType = '\Agnesoft\AgdbApi\Model\DbUser[]';
+        $request = $this->adminDashboardUserListRequest($owner, $name, $contentType);
+
+        return $this->client
+            ->sendAsync($request, $this->createHttpClientOption())
+            ->then(
+                function ($response) use ($returnType) {
+                    if ($returnType === '\SplFileObject') {
+                        $content = $response->getBody(); //stream goes to serializer
+                    } else {
+                        $content = (string) $response->getBody();
+                        if ($returnType !== 'string') {
+                            $content = json_decode($content);
+                        }
+                    }
+
+                    return [
+                        ObjectSerializer::deserialize($content, $returnType, []),
+                        $response->getStatusCode(),
+                        $response->getHeaders()
+                    ];
+                },
+                function ($exception) {
+                    $response = $this->getExceptionResponse($exception);
+                    if ($response === null) {
+                        throw new ApiException(
+                            "[{$exception->getCode()}] {$exception->getMessage()}",
+                            (int) $exception->getCode(),
+                            null,
+                            null
+                        );
+                    }
+                    $statusCode = $response->getStatusCode();
+                    throw new ApiException(
+                        sprintf(
+                            '[%d] Error connecting to the API (%s)',
+                            $statusCode,
+                            $exception->getRequest()->getUri()
+                        ),
+                        $statusCode,
+                        $response->getHeaders(),
+                        (string) $response->getBody()
+                    );
+                }
+            );
+    }
+
+    /**
+     * Create request for operation 'adminDashboardUserList'
+     *
+     * @param  string $owner dashboard owner user name (required)
+     * @param  string $name dashboard name (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDashboardUserList'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Psr7\Request
+     */
+    public function adminDashboardUserListRequest($owner, $name, string $contentType = self::contentTypes['adminDashboardUserList'][0])
+    {
+
+        // verify the required parameter 'owner' is set
+        if ($owner === null || (is_array($owner) && count($owner) === 0)) {
+            throw new \InvalidArgumentException(
+                'Missing the required parameter $owner when calling adminDashboardUserList'
+            );
+        }
+
+        // verify the required parameter 'name' is set
+        if ($name === null || (is_array($name) && count($name) === 0)) {
+            throw new \InvalidArgumentException(
+                'Missing the required parameter $name when calling adminDashboardUserList'
+            );
+        }
+
+
+        $resourcePath = '/api/v1/admin/dashboard/{owner}/{name}/user/list';
+        $formParams = [];
+        $queryParams = [];
+        $headerParams = [];
+        $httpBody = '';
+        $multipart = false;
+
+
+
+        // path params
+        if ($owner !== null) {
+            $resourcePath = str_replace(
+                '{owner}',
+                ObjectSerializer::toPathValue($owner),
+                $resourcePath
+            );
+        }
+        // path params
+        if ($name !== null) {
+            $resourcePath = str_replace(
+                '{name}',
+                ObjectSerializer::toPathValue($name),
+                $resourcePath
+            );
+        }
+
+
+        $headers = $this->headerSelector->selectHeaders(
+            ['application/json', ],
+            $contentType,
+            $multipart
+        );
+
+        // for model (json/xml)
+        if (count($formParams) > 0) {
+            if ($multipart) {
+                $multipartContents = [];
+                foreach ($formParams as $formParamName => $formParamValue) {
+                    $formParamValueItems = is_array($formParamValue) ? $formParamValue : [$formParamValue];
+                    foreach ($formParamValueItems as $formParamValueItem) {
+                        $multipartContents[] = [
+                            'name' => $formParamName,
+                            'contents' => $formParamValueItem
+                        ];
+                    }
+                }
+                // for HTTP post (form)
+                $httpBody = new MultipartStream($multipartContents);
+
+            } elseif (stripos($headers['Content-Type'], 'application/json') !== false) {
+                # if Content-Type contains "application/json", json_encode the form parameters
+                try {
+                    $httpBody = json_encode($formParams, JSON_THROW_ON_ERROR);
+                } catch (\JsonException $e) {
+                    throw new \InvalidArgumentException('json_encode error: ' . $e->getMessage(), 0, $e);
+                }
+            } else {
+                // for HTTP post (form)
+                $httpBody = ObjectSerializer::buildQuery($formParams);
+            }
+        }
+
+        // this endpoint requires Bearer authentication (access token)
+        if (!empty($this->config->getAccessToken())) {
+            $headers['Authorization'] = 'Bearer ' . $this->config->getAccessToken();
+        }
+
+        $defaultHeaders = [];
+        if ($this->config->getUserAgent()) {
+            $defaultHeaders['User-Agent'] = $this->config->getUserAgent();
+        }
+
+        $headers = array_merge(
+            $defaultHeaders,
+            $headerParams,
+            $headers
+        );
+
+        $operationHost = $this->config->getHost();
+        $query = ObjectSerializer::buildQuery($queryParams);
+        return new Request(
+            'GET',
+            $operationHost . $resourcePath . ($query ? "?{$query}" : ''),
+            $headers,
+            $httpBody
+        );
+    }
+
+    /**
+     * Operation adminDashboardUserRemove
+     *
+     * @param  string $owner dashboard owner user name (required)
+     * @param  string $name dashboard name (required)
+     * @param  string $username user name (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDashboardUserRemove'] to see the possible values for this operation
+     *
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \InvalidArgumentException
+     * @return void
+     */
+    public function adminDashboardUserRemove($owner, $name, $username, string $contentType = self::contentTypes['adminDashboardUserRemove'][0])
+    {
+        $this->adminDashboardUserRemoveWithHttpInfo($owner, $name, $username, $contentType);
+    }
+
+    /**
+     * Operation adminDashboardUserRemoveWithHttpInfo
+     *
+     * @param  string $owner dashboard owner user name (required)
+     * @param  string $name dashboard name (required)
+     * @param  string $username user name (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDashboardUserRemove'] to see the possible values for this operation
+     *
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \InvalidArgumentException
+     * @return array of null, HTTP status code, HTTP response headers (array of strings)
+     */
+    public function adminDashboardUserRemoveWithHttpInfo($owner, $name, $username, string $contentType = self::contentTypes['adminDashboardUserRemove'][0])
+    {
+        $request = $this->adminDashboardUserRemoveRequest($owner, $name, $username, $contentType);
+
+        try {
+            $options = $this->createHttpClientOption();
+            try {
+                $response = $this->client->send($request, $options);
+            } catch (RequestException $e) {
+                $eResponse = $this->getExceptionResponse($e);
+                throw new ApiException(
+                    "[{$e->getCode()}] {$e->getMessage()}",
+                    (int) $e->getCode(),
+                    $eResponse ? $eResponse->getHeaders() : null,
+                    $eResponse ? (string) $eResponse->getBody() : null
+                );
+            } catch (NetworkExceptionInterface $e) {
+                throw new ApiException(
+                    "[{$e->getCode()}] {$e->getMessage()}",
+                    (int) $e->getCode(),
+                    null,
+                    null
+                );
+            }
+
+            $statusCode = $response->getStatusCode();
+
+
+            return [null, $statusCode, $response->getHeaders()];
+        } catch (ApiException $e) {
+            switch ($e->getCode()) {
+            }
+        
+
+            throw $e;
+        }
+    }
+
+    /**
+     * Operation adminDashboardUserRemoveAsync
+     *
+     * @param  string $owner dashboard owner user name (required)
+     * @param  string $name dashboard name (required)
+     * @param  string $username user name (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDashboardUserRemove'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Promise\PromiseInterface
+     */
+    public function adminDashboardUserRemoveAsync($owner, $name, $username, string $contentType = self::contentTypes['adminDashboardUserRemove'][0])
+    {
+        return $this->adminDashboardUserRemoveAsyncWithHttpInfo($owner, $name, $username, $contentType)
+            ->then(
+                function ($response) {
+                    return $response[0];
+                }
+            );
+    }
+
+    /**
+     * Operation adminDashboardUserRemoveAsyncWithHttpInfo
+     *
+     * @param  string $owner dashboard owner user name (required)
+     * @param  string $name dashboard name (required)
+     * @param  string $username user name (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDashboardUserRemove'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Promise\PromiseInterface
+     */
+    public function adminDashboardUserRemoveAsyncWithHttpInfo($owner, $name, $username, string $contentType = self::contentTypes['adminDashboardUserRemove'][0])
+    {
+        $returnType = '';
+        $request = $this->adminDashboardUserRemoveRequest($owner, $name, $username, $contentType);
+
+        return $this->client
+            ->sendAsync($request, $this->createHttpClientOption())
+            ->then(
+                function ($response) use ($returnType) {
+                    return [null, $response->getStatusCode(), $response->getHeaders()];
+                },
+                function ($exception) {
+                    $response = $this->getExceptionResponse($exception);
+                    if ($response === null) {
+                        throw new ApiException(
+                            "[{$exception->getCode()}] {$exception->getMessage()}",
+                            (int) $exception->getCode(),
+                            null,
+                            null
+                        );
+                    }
+                    $statusCode = $response->getStatusCode();
+                    throw new ApiException(
+                        sprintf(
+                            '[%d] Error connecting to the API (%s)',
+                            $statusCode,
+                            $exception->getRequest()->getUri()
+                        ),
+                        $statusCode,
+                        $response->getHeaders(),
+                        (string) $response->getBody()
+                    );
+                }
+            );
+    }
+
+    /**
+     * Create request for operation 'adminDashboardUserRemove'
+     *
+     * @param  string $owner dashboard owner user name (required)
+     * @param  string $name dashboard name (required)
+     * @param  string $username user name (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDashboardUserRemove'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Psr7\Request
+     */
+    public function adminDashboardUserRemoveRequest($owner, $name, $username, string $contentType = self::contentTypes['adminDashboardUserRemove'][0])
+    {
+
+        // verify the required parameter 'owner' is set
+        if ($owner === null || (is_array($owner) && count($owner) === 0)) {
+            throw new \InvalidArgumentException(
+                'Missing the required parameter $owner when calling adminDashboardUserRemove'
+            );
+        }
+
+        // verify the required parameter 'name' is set
+        if ($name === null || (is_array($name) && count($name) === 0)) {
+            throw new \InvalidArgumentException(
+                'Missing the required parameter $name when calling adminDashboardUserRemove'
+            );
+        }
+
+        // verify the required parameter 'username' is set
+        if ($username === null || (is_array($username) && count($username) === 0)) {
+            throw new \InvalidArgumentException(
+                'Missing the required parameter $username when calling adminDashboardUserRemove'
+            );
+        }
+
+
+        $resourcePath = '/api/v1/admin/dashboard/{owner}/{name}/user/{username}/remove';
+        $formParams = [];
+        $queryParams = [];
+        $headerParams = [];
+        $httpBody = '';
+        $multipart = false;
+
+
+
+        // path params
+        if ($owner !== null) {
+            $resourcePath = str_replace(
+                '{owner}',
+                ObjectSerializer::toPathValue($owner),
+                $resourcePath
+            );
+        }
+        // path params
+        if ($name !== null) {
+            $resourcePath = str_replace(
+                '{name}',
+                ObjectSerializer::toPathValue($name),
+                $resourcePath
+            );
+        }
+        // path params
+        if ($username !== null) {
+            $resourcePath = str_replace(
+                '{username}',
+                ObjectSerializer::toPathValue($username),
+                $resourcePath
+            );
+        }
+
+
+        $headers = $this->headerSelector->selectHeaders(
+            [],
+            $contentType,
+            $multipart
+        );
+
+        // for model (json/xml)
+        if (count($formParams) > 0) {
+            if ($multipart) {
+                $multipartContents = [];
+                foreach ($formParams as $formParamName => $formParamValue) {
+                    $formParamValueItems = is_array($formParamValue) ? $formParamValue : [$formParamValue];
+                    foreach ($formParamValueItems as $formParamValueItem) {
+                        $multipartContents[] = [
+                            'name' => $formParamName,
+                            'contents' => $formParamValueItem
+                        ];
+                    }
+                }
+                // for HTTP post (form)
+                $httpBody = new MultipartStream($multipartContents);
+
+            } elseif (stripos($headers['Content-Type'], 'application/json') !== false) {
+                # if Content-Type contains "application/json", json_encode the form parameters
+                try {
+                    $httpBody = json_encode($formParams, JSON_THROW_ON_ERROR);
+                } catch (\JsonException $e) {
+                    throw new \InvalidArgumentException('json_encode error: ' . $e->getMessage(), 0, $e);
+                }
+            } else {
+                // for HTTP post (form)
+                $httpBody = ObjectSerializer::buildQuery($formParams);
+            }
+        }
+
+        // this endpoint requires Bearer authentication (access token)
+        if (!empty($this->config->getAccessToken())) {
+            $headers['Authorization'] = 'Bearer ' . $this->config->getAccessToken();
+        }
+
+        $defaultHeaders = [];
+        if ($this->config->getUserAgent()) {
+            $defaultHeaders['User-Agent'] = $this->config->getUserAgent();
+        }
+
+        $headers = array_merge(
+            $defaultHeaders,
+            $headerParams,
+            $headers
+        );
+
+        $operationHost = $this->config->getHost();
+        $query = ObjectSerializer::buildQuery($queryParams);
+        return new Request(
+            'DELETE',
+            $operationHost . $resourcePath . ($query ? "?{$query}" : ''),
+            $headers,
+            $httpBody
+        );
     }
 
     /**
@@ -8757,6 +11537,7 @@ class AgdbApi
     /**
      * Operation dashboardAdd
      *
+     * @param  string $owner dashboard owner user name (required)
      * @param  string $name dashboard name (required)
      * @param  \Agnesoft\AgdbApi\Model\DashboardConfig $dashboard_config dashboard_config (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dashboardAdd'] to see the possible values for this operation
@@ -8765,14 +11546,15 @@ class AgdbApi
      * @throws \InvalidArgumentException
      * @return void
      */
-    public function dashboardAdd($name, $dashboard_config, string $contentType = self::contentTypes['dashboardAdd'][0])
+    public function dashboardAdd($owner, $name, $dashboard_config, string $contentType = self::contentTypes['dashboardAdd'][0])
     {
-        $this->dashboardAddWithHttpInfo($name, $dashboard_config, $contentType);
+        $this->dashboardAddWithHttpInfo($owner, $name, $dashboard_config, $contentType);
     }
 
     /**
      * Operation dashboardAddWithHttpInfo
      *
+     * @param  string $owner dashboard owner user name (required)
      * @param  string $name dashboard name (required)
      * @param  \Agnesoft\AgdbApi\Model\DashboardConfig $dashboard_config (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dashboardAdd'] to see the possible values for this operation
@@ -8781,9 +11563,9 @@ class AgdbApi
      * @throws \InvalidArgumentException
      * @return array of null, HTTP status code, HTTP response headers (array of strings)
      */
-    public function dashboardAddWithHttpInfo($name, $dashboard_config, string $contentType = self::contentTypes['dashboardAdd'][0])
+    public function dashboardAddWithHttpInfo($owner, $name, $dashboard_config, string $contentType = self::contentTypes['dashboardAdd'][0])
     {
-        $request = $this->dashboardAddRequest($name, $dashboard_config, $contentType);
+        $request = $this->dashboardAddRequest($owner, $name, $dashboard_config, $contentType);
 
         try {
             $options = $this->createHttpClientOption();
@@ -8822,6 +11604,7 @@ class AgdbApi
     /**
      * Operation dashboardAddAsync
      *
+     * @param  string $owner dashboard owner user name (required)
      * @param  string $name dashboard name (required)
      * @param  \Agnesoft\AgdbApi\Model\DashboardConfig $dashboard_config (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dashboardAdd'] to see the possible values for this operation
@@ -8829,9 +11612,9 @@ class AgdbApi
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Promise\PromiseInterface
      */
-    public function dashboardAddAsync($name, $dashboard_config, string $contentType = self::contentTypes['dashboardAdd'][0])
+    public function dashboardAddAsync($owner, $name, $dashboard_config, string $contentType = self::contentTypes['dashboardAdd'][0])
     {
-        return $this->dashboardAddAsyncWithHttpInfo($name, $dashboard_config, $contentType)
+        return $this->dashboardAddAsyncWithHttpInfo($owner, $name, $dashboard_config, $contentType)
             ->then(
                 function ($response) {
                     return $response[0];
@@ -8842,6 +11625,7 @@ class AgdbApi
     /**
      * Operation dashboardAddAsyncWithHttpInfo
      *
+     * @param  string $owner dashboard owner user name (required)
      * @param  string $name dashboard name (required)
      * @param  \Agnesoft\AgdbApi\Model\DashboardConfig $dashboard_config (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dashboardAdd'] to see the possible values for this operation
@@ -8849,10 +11633,10 @@ class AgdbApi
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Promise\PromiseInterface
      */
-    public function dashboardAddAsyncWithHttpInfo($name, $dashboard_config, string $contentType = self::contentTypes['dashboardAdd'][0])
+    public function dashboardAddAsyncWithHttpInfo($owner, $name, $dashboard_config, string $contentType = self::contentTypes['dashboardAdd'][0])
     {
         $returnType = '';
-        $request = $this->dashboardAddRequest($name, $dashboard_config, $contentType);
+        $request = $this->dashboardAddRequest($owner, $name, $dashboard_config, $contentType);
 
         return $this->client
             ->sendAsync($request, $this->createHttpClientOption())
@@ -8888,6 +11672,7 @@ class AgdbApi
     /**
      * Create request for operation 'dashboardAdd'
      *
+     * @param  string $owner dashboard owner user name (required)
      * @param  string $name dashboard name (required)
      * @param  \Agnesoft\AgdbApi\Model\DashboardConfig $dashboard_config (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dashboardAdd'] to see the possible values for this operation
@@ -8895,8 +11680,15 @@ class AgdbApi
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Psr7\Request
      */
-    public function dashboardAddRequest($name, $dashboard_config, string $contentType = self::contentTypes['dashboardAdd'][0])
+    public function dashboardAddRequest($owner, $name, $dashboard_config, string $contentType = self::contentTypes['dashboardAdd'][0])
     {
+
+        // verify the required parameter 'owner' is set
+        if ($owner === null || (is_array($owner) && count($owner) === 0)) {
+            throw new \InvalidArgumentException(
+                'Missing the required parameter $owner when calling dashboardAdd'
+            );
+        }
 
         // verify the required parameter 'name' is set
         if ($name === null || (is_array($name) && count($name) === 0)) {
@@ -8913,7 +11705,7 @@ class AgdbApi
         }
 
 
-        $resourcePath = '/api/v1/dashboard/{name}/add';
+        $resourcePath = '/api/v1/dashboard/{owner}/{name}/add';
         $formParams = [];
         $queryParams = [];
         $headerParams = [];
@@ -8922,6 +11714,14 @@ class AgdbApi
 
 
 
+        // path params
+        if ($owner !== null) {
+            $resourcePath = str_replace(
+                '{owner}',
+                ObjectSerializer::toPathValue($owner),
+                $resourcePath
+            );
+        }
         // path params
         if ($name !== null) {
             $resourcePath = str_replace(
@@ -9007,6 +11807,7 @@ class AgdbApi
     /**
      * Operation dashboardGet
      *
+     * @param  string $owner dashboard owner user name (required)
      * @param  string $name dashboard name (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dashboardGet'] to see the possible values for this operation
      *
@@ -9014,15 +11815,16 @@ class AgdbApi
      * @throws \InvalidArgumentException
      * @return \Agnesoft\AgdbApi\Model\Dashboard
      */
-    public function dashboardGet($name, string $contentType = self::contentTypes['dashboardGet'][0])
+    public function dashboardGet($owner, $name, string $contentType = self::contentTypes['dashboardGet'][0])
     {
-        list($response) = $this->dashboardGetWithHttpInfo($name, $contentType);
+        list($response) = $this->dashboardGetWithHttpInfo($owner, $name, $contentType);
         return $response;
     }
 
     /**
      * Operation dashboardGetWithHttpInfo
      *
+     * @param  string $owner dashboard owner user name (required)
      * @param  string $name dashboard name (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dashboardGet'] to see the possible values for this operation
      *
@@ -9030,9 +11832,9 @@ class AgdbApi
      * @throws \InvalidArgumentException
      * @return array of \Agnesoft\AgdbApi\Model\Dashboard, HTTP status code, HTTP response headers (array of strings)
      */
-    public function dashboardGetWithHttpInfo($name, string $contentType = self::contentTypes['dashboardGet'][0])
+    public function dashboardGetWithHttpInfo($owner, $name, string $contentType = self::contentTypes['dashboardGet'][0])
     {
-        $request = $this->dashboardGetRequest($name, $contentType);
+        $request = $this->dashboardGetRequest($owner, $name, $contentType);
 
         try {
             $options = $this->createHttpClientOption();
@@ -9107,15 +11909,16 @@ class AgdbApi
     /**
      * Operation dashboardGetAsync
      *
+     * @param  string $owner dashboard owner user name (required)
      * @param  string $name dashboard name (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dashboardGet'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Promise\PromiseInterface
      */
-    public function dashboardGetAsync($name, string $contentType = self::contentTypes['dashboardGet'][0])
+    public function dashboardGetAsync($owner, $name, string $contentType = self::contentTypes['dashboardGet'][0])
     {
-        return $this->dashboardGetAsyncWithHttpInfo($name, $contentType)
+        return $this->dashboardGetAsyncWithHttpInfo($owner, $name, $contentType)
             ->then(
                 function ($response) {
                     return $response[0];
@@ -9126,16 +11929,17 @@ class AgdbApi
     /**
      * Operation dashboardGetAsyncWithHttpInfo
      *
+     * @param  string $owner dashboard owner user name (required)
      * @param  string $name dashboard name (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dashboardGet'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Promise\PromiseInterface
      */
-    public function dashboardGetAsyncWithHttpInfo($name, string $contentType = self::contentTypes['dashboardGet'][0])
+    public function dashboardGetAsyncWithHttpInfo($owner, $name, string $contentType = self::contentTypes['dashboardGet'][0])
     {
         $returnType = '\Agnesoft\AgdbApi\Model\Dashboard';
-        $request = $this->dashboardGetRequest($name, $contentType);
+        $request = $this->dashboardGetRequest($owner, $name, $contentType);
 
         return $this->client
             ->sendAsync($request, $this->createHttpClientOption())
@@ -9184,14 +11988,22 @@ class AgdbApi
     /**
      * Create request for operation 'dashboardGet'
      *
+     * @param  string $owner dashboard owner user name (required)
      * @param  string $name dashboard name (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dashboardGet'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Psr7\Request
      */
-    public function dashboardGetRequest($name, string $contentType = self::contentTypes['dashboardGet'][0])
+    public function dashboardGetRequest($owner, $name, string $contentType = self::contentTypes['dashboardGet'][0])
     {
+
+        // verify the required parameter 'owner' is set
+        if ($owner === null || (is_array($owner) && count($owner) === 0)) {
+            throw new \InvalidArgumentException(
+                'Missing the required parameter $owner when calling dashboardGet'
+            );
+        }
 
         // verify the required parameter 'name' is set
         if ($name === null || (is_array($name) && count($name) === 0)) {
@@ -9201,7 +12013,7 @@ class AgdbApi
         }
 
 
-        $resourcePath = '/api/v1/dashboard/{name}';
+        $resourcePath = '/api/v1/dashboard/{owner}/{name}';
         $formParams = [];
         $queryParams = [];
         $headerParams = [];
@@ -9210,6 +12022,14 @@ class AgdbApi
 
 
 
+        // path params
+        if ($owner !== null) {
+            $resourcePath = str_replace(
+                '{owner}',
+                ObjectSerializer::toPathValue($owner),
+                $resourcePath
+            );
+        }
         // path params
         if ($name !== null) {
             $resourcePath = str_replace(
@@ -9539,8 +12359,277 @@ class AgdbApi
     }
 
     /**
+     * Operation dashboardPublic
+     *
+     * @param  string $owner dashboard owner user name (required)
+     * @param  string $name dashboard name (required)
+     * @param  bool $public Every user can view a public dashboard. (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dashboardPublic'] to see the possible values for this operation
+     *
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \InvalidArgumentException
+     * @return void
+     */
+    public function dashboardPublic($owner, $name, $public, string $contentType = self::contentTypes['dashboardPublic'][0])
+    {
+        $this->dashboardPublicWithHttpInfo($owner, $name, $public, $contentType);
+    }
+
+    /**
+     * Operation dashboardPublicWithHttpInfo
+     *
+     * @param  string $owner dashboard owner user name (required)
+     * @param  string $name dashboard name (required)
+     * @param  bool $public Every user can view a public dashboard. (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dashboardPublic'] to see the possible values for this operation
+     *
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \InvalidArgumentException
+     * @return array of null, HTTP status code, HTTP response headers (array of strings)
+     */
+    public function dashboardPublicWithHttpInfo($owner, $name, $public, string $contentType = self::contentTypes['dashboardPublic'][0])
+    {
+        $request = $this->dashboardPublicRequest($owner, $name, $public, $contentType);
+
+        try {
+            $options = $this->createHttpClientOption();
+            try {
+                $response = $this->client->send($request, $options);
+            } catch (RequestException $e) {
+                $eResponse = $this->getExceptionResponse($e);
+                throw new ApiException(
+                    "[{$e->getCode()}] {$e->getMessage()}",
+                    (int) $e->getCode(),
+                    $eResponse ? $eResponse->getHeaders() : null,
+                    $eResponse ? (string) $eResponse->getBody() : null
+                );
+            } catch (NetworkExceptionInterface $e) {
+                throw new ApiException(
+                    "[{$e->getCode()}] {$e->getMessage()}",
+                    (int) $e->getCode(),
+                    null,
+                    null
+                );
+            }
+
+            $statusCode = $response->getStatusCode();
+
+
+            return [null, $statusCode, $response->getHeaders()];
+        } catch (ApiException $e) {
+            switch ($e->getCode()) {
+            }
+        
+
+            throw $e;
+        }
+    }
+
+    /**
+     * Operation dashboardPublicAsync
+     *
+     * @param  string $owner dashboard owner user name (required)
+     * @param  string $name dashboard name (required)
+     * @param  bool $public Every user can view a public dashboard. (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dashboardPublic'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Promise\PromiseInterface
+     */
+    public function dashboardPublicAsync($owner, $name, $public, string $contentType = self::contentTypes['dashboardPublic'][0])
+    {
+        return $this->dashboardPublicAsyncWithHttpInfo($owner, $name, $public, $contentType)
+            ->then(
+                function ($response) {
+                    return $response[0];
+                }
+            );
+    }
+
+    /**
+     * Operation dashboardPublicAsyncWithHttpInfo
+     *
+     * @param  string $owner dashboard owner user name (required)
+     * @param  string $name dashboard name (required)
+     * @param  bool $public Every user can view a public dashboard. (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dashboardPublic'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Promise\PromiseInterface
+     */
+    public function dashboardPublicAsyncWithHttpInfo($owner, $name, $public, string $contentType = self::contentTypes['dashboardPublic'][0])
+    {
+        $returnType = '';
+        $request = $this->dashboardPublicRequest($owner, $name, $public, $contentType);
+
+        return $this->client
+            ->sendAsync($request, $this->createHttpClientOption())
+            ->then(
+                function ($response) use ($returnType) {
+                    return [null, $response->getStatusCode(), $response->getHeaders()];
+                },
+                function ($exception) {
+                    $response = $this->getExceptionResponse($exception);
+                    if ($response === null) {
+                        throw new ApiException(
+                            "[{$exception->getCode()}] {$exception->getMessage()}",
+                            (int) $exception->getCode(),
+                            null,
+                            null
+                        );
+                    }
+                    $statusCode = $response->getStatusCode();
+                    throw new ApiException(
+                        sprintf(
+                            '[%d] Error connecting to the API (%s)',
+                            $statusCode,
+                            $exception->getRequest()->getUri()
+                        ),
+                        $statusCode,
+                        $response->getHeaders(),
+                        (string) $response->getBody()
+                    );
+                }
+            );
+    }
+
+    /**
+     * Create request for operation 'dashboardPublic'
+     *
+     * @param  string $owner dashboard owner user name (required)
+     * @param  string $name dashboard name (required)
+     * @param  bool $public Every user can view a public dashboard. (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dashboardPublic'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Psr7\Request
+     */
+    public function dashboardPublicRequest($owner, $name, $public, string $contentType = self::contentTypes['dashboardPublic'][0])
+    {
+
+        // verify the required parameter 'owner' is set
+        if ($owner === null || (is_array($owner) && count($owner) === 0)) {
+            throw new \InvalidArgumentException(
+                'Missing the required parameter $owner when calling dashboardPublic'
+            );
+        }
+
+        // verify the required parameter 'name' is set
+        if ($name === null || (is_array($name) && count($name) === 0)) {
+            throw new \InvalidArgumentException(
+                'Missing the required parameter $name when calling dashboardPublic'
+            );
+        }
+
+        // verify the required parameter 'public' is set
+        if ($public === null || (is_array($public) && count($public) === 0)) {
+            throw new \InvalidArgumentException(
+                'Missing the required parameter $public when calling dashboardPublic'
+            );
+        }
+
+
+        $resourcePath = '/api/v1/dashboard/{owner}/{name}/public';
+        $formParams = [];
+        $queryParams = [];
+        $headerParams = [];
+        $httpBody = '';
+        $multipart = false;
+
+        // query params
+        $queryParams = array_merge($queryParams, ObjectSerializer::toQueryValue(
+            $public,
+            'public', // param base name
+            'boolean', // openApiType
+            'form', // style
+            true, // explode
+            true // required
+        ) ?? []);
+
+
+        // path params
+        if ($owner !== null) {
+            $resourcePath = str_replace(
+                '{owner}',
+                ObjectSerializer::toPathValue($owner),
+                $resourcePath
+            );
+        }
+        // path params
+        if ($name !== null) {
+            $resourcePath = str_replace(
+                '{name}',
+                ObjectSerializer::toPathValue($name),
+                $resourcePath
+            );
+        }
+
+
+        $headers = $this->headerSelector->selectHeaders(
+            [],
+            $contentType,
+            $multipart
+        );
+
+        // for model (json/xml)
+        if (count($formParams) > 0) {
+            if ($multipart) {
+                $multipartContents = [];
+                foreach ($formParams as $formParamName => $formParamValue) {
+                    $formParamValueItems = is_array($formParamValue) ? $formParamValue : [$formParamValue];
+                    foreach ($formParamValueItems as $formParamValueItem) {
+                        $multipartContents[] = [
+                            'name' => $formParamName,
+                            'contents' => $formParamValueItem
+                        ];
+                    }
+                }
+                // for HTTP post (form)
+                $httpBody = new MultipartStream($multipartContents);
+
+            } elseif (stripos($headers['Content-Type'], 'application/json') !== false) {
+                # if Content-Type contains "application/json", json_encode the form parameters
+                try {
+                    $httpBody = json_encode($formParams, JSON_THROW_ON_ERROR);
+                } catch (\JsonException $e) {
+                    throw new \InvalidArgumentException('json_encode error: ' . $e->getMessage(), 0, $e);
+                }
+            } else {
+                // for HTTP post (form)
+                $httpBody = ObjectSerializer::buildQuery($formParams);
+            }
+        }
+
+        // this endpoint requires Bearer authentication (access token)
+        if (!empty($this->config->getAccessToken())) {
+            $headers['Authorization'] = 'Bearer ' . $this->config->getAccessToken();
+        }
+
+        $defaultHeaders = [];
+        if ($this->config->getUserAgent()) {
+            $defaultHeaders['User-Agent'] = $this->config->getUserAgent();
+        }
+
+        $headers = array_merge(
+            $defaultHeaders,
+            $headerParams,
+            $headers
+        );
+
+        $operationHost = $this->config->getHost();
+        $query = ObjectSerializer::buildQuery($queryParams);
+        return new Request(
+            'PUT',
+            $operationHost . $resourcePath . ($query ? "?{$query}" : ''),
+            $headers,
+            $httpBody
+        );
+    }
+
+    /**
      * Operation dashboardRemove
      *
+     * @param  string $owner dashboard owner user name (required)
      * @param  string $name dashboard name (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dashboardRemove'] to see the possible values for this operation
      *
@@ -9548,14 +12637,15 @@ class AgdbApi
      * @throws \InvalidArgumentException
      * @return void
      */
-    public function dashboardRemove($name, string $contentType = self::contentTypes['dashboardRemove'][0])
+    public function dashboardRemove($owner, $name, string $contentType = self::contentTypes['dashboardRemove'][0])
     {
-        $this->dashboardRemoveWithHttpInfo($name, $contentType);
+        $this->dashboardRemoveWithHttpInfo($owner, $name, $contentType);
     }
 
     /**
      * Operation dashboardRemoveWithHttpInfo
      *
+     * @param  string $owner dashboard owner user name (required)
      * @param  string $name dashboard name (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dashboardRemove'] to see the possible values for this operation
      *
@@ -9563,9 +12653,9 @@ class AgdbApi
      * @throws \InvalidArgumentException
      * @return array of null, HTTP status code, HTTP response headers (array of strings)
      */
-    public function dashboardRemoveWithHttpInfo($name, string $contentType = self::contentTypes['dashboardRemove'][0])
+    public function dashboardRemoveWithHttpInfo($owner, $name, string $contentType = self::contentTypes['dashboardRemove'][0])
     {
-        $request = $this->dashboardRemoveRequest($name, $contentType);
+        $request = $this->dashboardRemoveRequest($owner, $name, $contentType);
 
         try {
             $options = $this->createHttpClientOption();
@@ -9604,15 +12694,16 @@ class AgdbApi
     /**
      * Operation dashboardRemoveAsync
      *
+     * @param  string $owner dashboard owner user name (required)
      * @param  string $name dashboard name (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dashboardRemove'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Promise\PromiseInterface
      */
-    public function dashboardRemoveAsync($name, string $contentType = self::contentTypes['dashboardRemove'][0])
+    public function dashboardRemoveAsync($owner, $name, string $contentType = self::contentTypes['dashboardRemove'][0])
     {
-        return $this->dashboardRemoveAsyncWithHttpInfo($name, $contentType)
+        return $this->dashboardRemoveAsyncWithHttpInfo($owner, $name, $contentType)
             ->then(
                 function ($response) {
                     return $response[0];
@@ -9623,16 +12714,17 @@ class AgdbApi
     /**
      * Operation dashboardRemoveAsyncWithHttpInfo
      *
+     * @param  string $owner dashboard owner user name (required)
      * @param  string $name dashboard name (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dashboardRemove'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Promise\PromiseInterface
      */
-    public function dashboardRemoveAsyncWithHttpInfo($name, string $contentType = self::contentTypes['dashboardRemove'][0])
+    public function dashboardRemoveAsyncWithHttpInfo($owner, $name, string $contentType = self::contentTypes['dashboardRemove'][0])
     {
         $returnType = '';
-        $request = $this->dashboardRemoveRequest($name, $contentType);
+        $request = $this->dashboardRemoveRequest($owner, $name, $contentType);
 
         return $this->client
             ->sendAsync($request, $this->createHttpClientOption())
@@ -9668,14 +12760,22 @@ class AgdbApi
     /**
      * Create request for operation 'dashboardRemove'
      *
+     * @param  string $owner dashboard owner user name (required)
      * @param  string $name dashboard name (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dashboardRemove'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Psr7\Request
      */
-    public function dashboardRemoveRequest($name, string $contentType = self::contentTypes['dashboardRemove'][0])
+    public function dashboardRemoveRequest($owner, $name, string $contentType = self::contentTypes['dashboardRemove'][0])
     {
+
+        // verify the required parameter 'owner' is set
+        if ($owner === null || (is_array($owner) && count($owner) === 0)) {
+            throw new \InvalidArgumentException(
+                'Missing the required parameter $owner when calling dashboardRemove'
+            );
+        }
 
         // verify the required parameter 'name' is set
         if ($name === null || (is_array($name) && count($name) === 0)) {
@@ -9685,7 +12785,7 @@ class AgdbApi
         }
 
 
-        $resourcePath = '/api/v1/dashboard/{name}/remove';
+        $resourcePath = '/api/v1/dashboard/{owner}/{name}/remove';
         $formParams = [];
         $queryParams = [];
         $headerParams = [];
@@ -9694,6 +12794,14 @@ class AgdbApi
 
 
 
+        // path params
+        if ($owner !== null) {
+            $resourcePath = str_replace(
+                '{owner}',
+                ObjectSerializer::toPathValue($owner),
+                $resourcePath
+            );
+        }
         // path params
         if ($name !== null) {
             $resourcePath = str_replace(
@@ -9768,6 +12876,7 @@ class AgdbApi
     /**
      * Operation dashboardRename
      *
+     * @param  string $owner dashboard owner user name (required)
      * @param  string $name dashboard name (required)
      * @param  string $new_name new_name (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dashboardRename'] to see the possible values for this operation
@@ -9776,14 +12885,15 @@ class AgdbApi
      * @throws \InvalidArgumentException
      * @return void
      */
-    public function dashboardRename($name, $new_name, string $contentType = self::contentTypes['dashboardRename'][0])
+    public function dashboardRename($owner, $name, $new_name, string $contentType = self::contentTypes['dashboardRename'][0])
     {
-        $this->dashboardRenameWithHttpInfo($name, $new_name, $contentType);
+        $this->dashboardRenameWithHttpInfo($owner, $name, $new_name, $contentType);
     }
 
     /**
      * Operation dashboardRenameWithHttpInfo
      *
+     * @param  string $owner dashboard owner user name (required)
      * @param  string $name dashboard name (required)
      * @param  string $new_name (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dashboardRename'] to see the possible values for this operation
@@ -9792,9 +12902,9 @@ class AgdbApi
      * @throws \InvalidArgumentException
      * @return array of null, HTTP status code, HTTP response headers (array of strings)
      */
-    public function dashboardRenameWithHttpInfo($name, $new_name, string $contentType = self::contentTypes['dashboardRename'][0])
+    public function dashboardRenameWithHttpInfo($owner, $name, $new_name, string $contentType = self::contentTypes['dashboardRename'][0])
     {
-        $request = $this->dashboardRenameRequest($name, $new_name, $contentType);
+        $request = $this->dashboardRenameRequest($owner, $name, $new_name, $contentType);
 
         try {
             $options = $this->createHttpClientOption();
@@ -9833,6 +12943,7 @@ class AgdbApi
     /**
      * Operation dashboardRenameAsync
      *
+     * @param  string $owner dashboard owner user name (required)
      * @param  string $name dashboard name (required)
      * @param  string $new_name (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dashboardRename'] to see the possible values for this operation
@@ -9840,9 +12951,9 @@ class AgdbApi
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Promise\PromiseInterface
      */
-    public function dashboardRenameAsync($name, $new_name, string $contentType = self::contentTypes['dashboardRename'][0])
+    public function dashboardRenameAsync($owner, $name, $new_name, string $contentType = self::contentTypes['dashboardRename'][0])
     {
-        return $this->dashboardRenameAsyncWithHttpInfo($name, $new_name, $contentType)
+        return $this->dashboardRenameAsyncWithHttpInfo($owner, $name, $new_name, $contentType)
             ->then(
                 function ($response) {
                     return $response[0];
@@ -9853,6 +12964,7 @@ class AgdbApi
     /**
      * Operation dashboardRenameAsyncWithHttpInfo
      *
+     * @param  string $owner dashboard owner user name (required)
      * @param  string $name dashboard name (required)
      * @param  string $new_name (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dashboardRename'] to see the possible values for this operation
@@ -9860,10 +12972,10 @@ class AgdbApi
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Promise\PromiseInterface
      */
-    public function dashboardRenameAsyncWithHttpInfo($name, $new_name, string $contentType = self::contentTypes['dashboardRename'][0])
+    public function dashboardRenameAsyncWithHttpInfo($owner, $name, $new_name, string $contentType = self::contentTypes['dashboardRename'][0])
     {
         $returnType = '';
-        $request = $this->dashboardRenameRequest($name, $new_name, $contentType);
+        $request = $this->dashboardRenameRequest($owner, $name, $new_name, $contentType);
 
         return $this->client
             ->sendAsync($request, $this->createHttpClientOption())
@@ -9899,6 +13011,7 @@ class AgdbApi
     /**
      * Create request for operation 'dashboardRename'
      *
+     * @param  string $owner dashboard owner user name (required)
      * @param  string $name dashboard name (required)
      * @param  string $new_name (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dashboardRename'] to see the possible values for this operation
@@ -9906,8 +13019,15 @@ class AgdbApi
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Psr7\Request
      */
-    public function dashboardRenameRequest($name, $new_name, string $contentType = self::contentTypes['dashboardRename'][0])
+    public function dashboardRenameRequest($owner, $name, $new_name, string $contentType = self::contentTypes['dashboardRename'][0])
     {
+
+        // verify the required parameter 'owner' is set
+        if ($owner === null || (is_array($owner) && count($owner) === 0)) {
+            throw new \InvalidArgumentException(
+                'Missing the required parameter $owner when calling dashboardRename'
+            );
+        }
 
         // verify the required parameter 'name' is set
         if ($name === null || (is_array($name) && count($name) === 0)) {
@@ -9924,7 +13044,7 @@ class AgdbApi
         }
 
 
-        $resourcePath = '/api/v1/dashboard/{name}/rename';
+        $resourcePath = '/api/v1/dashboard/{owner}/{name}/rename';
         $formParams = [];
         $queryParams = [];
         $headerParams = [];
@@ -9942,6 +13062,14 @@ class AgdbApi
         ) ?? []);
 
 
+        // path params
+        if ($owner !== null) {
+            $resourcePath = str_replace(
+                '{owner}',
+                ObjectSerializer::toPathValue($owner),
+                $resourcePath
+            );
+        }
         // path params
         if ($name !== null) {
             $resourcePath = str_replace(
@@ -10016,6 +13144,7 @@ class AgdbApi
     /**
      * Operation dashboardSave
      *
+     * @param  string $owner dashboard owner user name (required)
      * @param  string $name dashboard name (required)
      * @param  \Agnesoft\AgdbApi\Model\DashboardConfig $dashboard_config dashboard_config (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dashboardSave'] to see the possible values for this operation
@@ -10024,14 +13153,15 @@ class AgdbApi
      * @throws \InvalidArgumentException
      * @return void
      */
-    public function dashboardSave($name, $dashboard_config, string $contentType = self::contentTypes['dashboardSave'][0])
+    public function dashboardSave($owner, $name, $dashboard_config, string $contentType = self::contentTypes['dashboardSave'][0])
     {
-        $this->dashboardSaveWithHttpInfo($name, $dashboard_config, $contentType);
+        $this->dashboardSaveWithHttpInfo($owner, $name, $dashboard_config, $contentType);
     }
 
     /**
      * Operation dashboardSaveWithHttpInfo
      *
+     * @param  string $owner dashboard owner user name (required)
      * @param  string $name dashboard name (required)
      * @param  \Agnesoft\AgdbApi\Model\DashboardConfig $dashboard_config (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dashboardSave'] to see the possible values for this operation
@@ -10040,9 +13170,9 @@ class AgdbApi
      * @throws \InvalidArgumentException
      * @return array of null, HTTP status code, HTTP response headers (array of strings)
      */
-    public function dashboardSaveWithHttpInfo($name, $dashboard_config, string $contentType = self::contentTypes['dashboardSave'][0])
+    public function dashboardSaveWithHttpInfo($owner, $name, $dashboard_config, string $contentType = self::contentTypes['dashboardSave'][0])
     {
-        $request = $this->dashboardSaveRequest($name, $dashboard_config, $contentType);
+        $request = $this->dashboardSaveRequest($owner, $name, $dashboard_config, $contentType);
 
         try {
             $options = $this->createHttpClientOption();
@@ -10081,6 +13211,7 @@ class AgdbApi
     /**
      * Operation dashboardSaveAsync
      *
+     * @param  string $owner dashboard owner user name (required)
      * @param  string $name dashboard name (required)
      * @param  \Agnesoft\AgdbApi\Model\DashboardConfig $dashboard_config (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dashboardSave'] to see the possible values for this operation
@@ -10088,9 +13219,9 @@ class AgdbApi
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Promise\PromiseInterface
      */
-    public function dashboardSaveAsync($name, $dashboard_config, string $contentType = self::contentTypes['dashboardSave'][0])
+    public function dashboardSaveAsync($owner, $name, $dashboard_config, string $contentType = self::contentTypes['dashboardSave'][0])
     {
-        return $this->dashboardSaveAsyncWithHttpInfo($name, $dashboard_config, $contentType)
+        return $this->dashboardSaveAsyncWithHttpInfo($owner, $name, $dashboard_config, $contentType)
             ->then(
                 function ($response) {
                     return $response[0];
@@ -10101,6 +13232,7 @@ class AgdbApi
     /**
      * Operation dashboardSaveAsyncWithHttpInfo
      *
+     * @param  string $owner dashboard owner user name (required)
      * @param  string $name dashboard name (required)
      * @param  \Agnesoft\AgdbApi\Model\DashboardConfig $dashboard_config (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dashboardSave'] to see the possible values for this operation
@@ -10108,10 +13240,10 @@ class AgdbApi
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Promise\PromiseInterface
      */
-    public function dashboardSaveAsyncWithHttpInfo($name, $dashboard_config, string $contentType = self::contentTypes['dashboardSave'][0])
+    public function dashboardSaveAsyncWithHttpInfo($owner, $name, $dashboard_config, string $contentType = self::contentTypes['dashboardSave'][0])
     {
         $returnType = '';
-        $request = $this->dashboardSaveRequest($name, $dashboard_config, $contentType);
+        $request = $this->dashboardSaveRequest($owner, $name, $dashboard_config, $contentType);
 
         return $this->client
             ->sendAsync($request, $this->createHttpClientOption())
@@ -10147,6 +13279,7 @@ class AgdbApi
     /**
      * Create request for operation 'dashboardSave'
      *
+     * @param  string $owner dashboard owner user name (required)
      * @param  string $name dashboard name (required)
      * @param  \Agnesoft\AgdbApi\Model\DashboardConfig $dashboard_config (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dashboardSave'] to see the possible values for this operation
@@ -10154,8 +13287,15 @@ class AgdbApi
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Psr7\Request
      */
-    public function dashboardSaveRequest($name, $dashboard_config, string $contentType = self::contentTypes['dashboardSave'][0])
+    public function dashboardSaveRequest($owner, $name, $dashboard_config, string $contentType = self::contentTypes['dashboardSave'][0])
     {
+
+        // verify the required parameter 'owner' is set
+        if ($owner === null || (is_array($owner) && count($owner) === 0)) {
+            throw new \InvalidArgumentException(
+                'Missing the required parameter $owner when calling dashboardSave'
+            );
+        }
 
         // verify the required parameter 'name' is set
         if ($name === null || (is_array($name) && count($name) === 0)) {
@@ -10172,7 +13312,7 @@ class AgdbApi
         }
 
 
-        $resourcePath = '/api/v1/dashboard/{name}/save';
+        $resourcePath = '/api/v1/dashboard/{owner}/{name}/save';
         $formParams = [];
         $queryParams = [];
         $headerParams = [];
@@ -10181,6 +13321,14 @@ class AgdbApi
 
 
 
+        // path params
+        if ($owner !== null) {
+            $resourcePath = str_replace(
+                '{owner}',
+                ObjectSerializer::toPathValue($owner),
+                $resourcePath
+            );
+        }
         // path params
         if ($name !== null) {
             $resourcePath = str_replace(
@@ -10257,6 +13405,858 @@ class AgdbApi
         $query = ObjectSerializer::buildQuery($queryParams);
         return new Request(
             'PUT',
+            $operationHost . $resourcePath . ($query ? "?{$query}" : ''),
+            $headers,
+            $httpBody
+        );
+    }
+
+    /**
+     * Operation dashboardUserAdd
+     *
+     * @param  string $owner dashboard owner user name (required)
+     * @param  string $name dashboard name (required)
+     * @param  string $username user name (required)
+     * @param  \Agnesoft\AgdbApi\Model\DbUserRole $db_role db_role (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dashboardUserAdd'] to see the possible values for this operation
+     *
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \InvalidArgumentException
+     * @return void
+     */
+    public function dashboardUserAdd($owner, $name, $username, $db_role, string $contentType = self::contentTypes['dashboardUserAdd'][0])
+    {
+        $this->dashboardUserAddWithHttpInfo($owner, $name, $username, $db_role, $contentType);
+    }
+
+    /**
+     * Operation dashboardUserAddWithHttpInfo
+     *
+     * @param  string $owner dashboard owner user name (required)
+     * @param  string $name dashboard name (required)
+     * @param  string $username user name (required)
+     * @param  \Agnesoft\AgdbApi\Model\DbUserRole $db_role (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dashboardUserAdd'] to see the possible values for this operation
+     *
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \InvalidArgumentException
+     * @return array of null, HTTP status code, HTTP response headers (array of strings)
+     */
+    public function dashboardUserAddWithHttpInfo($owner, $name, $username, $db_role, string $contentType = self::contentTypes['dashboardUserAdd'][0])
+    {
+        $request = $this->dashboardUserAddRequest($owner, $name, $username, $db_role, $contentType);
+
+        try {
+            $options = $this->createHttpClientOption();
+            try {
+                $response = $this->client->send($request, $options);
+            } catch (RequestException $e) {
+                $eResponse = $this->getExceptionResponse($e);
+                throw new ApiException(
+                    "[{$e->getCode()}] {$e->getMessage()}",
+                    (int) $e->getCode(),
+                    $eResponse ? $eResponse->getHeaders() : null,
+                    $eResponse ? (string) $eResponse->getBody() : null
+                );
+            } catch (NetworkExceptionInterface $e) {
+                throw new ApiException(
+                    "[{$e->getCode()}] {$e->getMessage()}",
+                    (int) $e->getCode(),
+                    null,
+                    null
+                );
+            }
+
+            $statusCode = $response->getStatusCode();
+
+
+            return [null, $statusCode, $response->getHeaders()];
+        } catch (ApiException $e) {
+            switch ($e->getCode()) {
+            }
+        
+
+            throw $e;
+        }
+    }
+
+    /**
+     * Operation dashboardUserAddAsync
+     *
+     * @param  string $owner dashboard owner user name (required)
+     * @param  string $name dashboard name (required)
+     * @param  string $username user name (required)
+     * @param  \Agnesoft\AgdbApi\Model\DbUserRole $db_role (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dashboardUserAdd'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Promise\PromiseInterface
+     */
+    public function dashboardUserAddAsync($owner, $name, $username, $db_role, string $contentType = self::contentTypes['dashboardUserAdd'][0])
+    {
+        return $this->dashboardUserAddAsyncWithHttpInfo($owner, $name, $username, $db_role, $contentType)
+            ->then(
+                function ($response) {
+                    return $response[0];
+                }
+            );
+    }
+
+    /**
+     * Operation dashboardUserAddAsyncWithHttpInfo
+     *
+     * @param  string $owner dashboard owner user name (required)
+     * @param  string $name dashboard name (required)
+     * @param  string $username user name (required)
+     * @param  \Agnesoft\AgdbApi\Model\DbUserRole $db_role (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dashboardUserAdd'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Promise\PromiseInterface
+     */
+    public function dashboardUserAddAsyncWithHttpInfo($owner, $name, $username, $db_role, string $contentType = self::contentTypes['dashboardUserAdd'][0])
+    {
+        $returnType = '';
+        $request = $this->dashboardUserAddRequest($owner, $name, $username, $db_role, $contentType);
+
+        return $this->client
+            ->sendAsync($request, $this->createHttpClientOption())
+            ->then(
+                function ($response) use ($returnType) {
+                    return [null, $response->getStatusCode(), $response->getHeaders()];
+                },
+                function ($exception) {
+                    $response = $this->getExceptionResponse($exception);
+                    if ($response === null) {
+                        throw new ApiException(
+                            "[{$exception->getCode()}] {$exception->getMessage()}",
+                            (int) $exception->getCode(),
+                            null,
+                            null
+                        );
+                    }
+                    $statusCode = $response->getStatusCode();
+                    throw new ApiException(
+                        sprintf(
+                            '[%d] Error connecting to the API (%s)',
+                            $statusCode,
+                            $exception->getRequest()->getUri()
+                        ),
+                        $statusCode,
+                        $response->getHeaders(),
+                        (string) $response->getBody()
+                    );
+                }
+            );
+    }
+
+    /**
+     * Create request for operation 'dashboardUserAdd'
+     *
+     * @param  string $owner dashboard owner user name (required)
+     * @param  string $name dashboard name (required)
+     * @param  string $username user name (required)
+     * @param  \Agnesoft\AgdbApi\Model\DbUserRole $db_role (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dashboardUserAdd'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Psr7\Request
+     */
+    public function dashboardUserAddRequest($owner, $name, $username, $db_role, string $contentType = self::contentTypes['dashboardUserAdd'][0])
+    {
+
+        // verify the required parameter 'owner' is set
+        if ($owner === null || (is_array($owner) && count($owner) === 0)) {
+            throw new \InvalidArgumentException(
+                'Missing the required parameter $owner when calling dashboardUserAdd'
+            );
+        }
+
+        // verify the required parameter 'name' is set
+        if ($name === null || (is_array($name) && count($name) === 0)) {
+            throw new \InvalidArgumentException(
+                'Missing the required parameter $name when calling dashboardUserAdd'
+            );
+        }
+
+        // verify the required parameter 'username' is set
+        if ($username === null || (is_array($username) && count($username) === 0)) {
+            throw new \InvalidArgumentException(
+                'Missing the required parameter $username when calling dashboardUserAdd'
+            );
+        }
+
+        // verify the required parameter 'db_role' is set
+        if ($db_role === null || (is_array($db_role) && count($db_role) === 0)) {
+            throw new \InvalidArgumentException(
+                'Missing the required parameter $db_role when calling dashboardUserAdd'
+            );
+        }
+
+
+        $resourcePath = '/api/v1/dashboard/{owner}/{name}/user/{username}/add';
+        $formParams = [];
+        $queryParams = [];
+        $headerParams = [];
+        $httpBody = '';
+        $multipart = false;
+
+        // query params
+        $queryParams = array_merge($queryParams, ObjectSerializer::toQueryValue(
+            $db_role,
+            'db_role', // param base name
+            'DbUserRole', // openApiType
+            'form', // style
+            true, // explode
+            true // required
+        ) ?? []);
+
+
+        // path params
+        if ($owner !== null) {
+            $resourcePath = str_replace(
+                '{owner}',
+                ObjectSerializer::toPathValue($owner),
+                $resourcePath
+            );
+        }
+        // path params
+        if ($name !== null) {
+            $resourcePath = str_replace(
+                '{name}',
+                ObjectSerializer::toPathValue($name),
+                $resourcePath
+            );
+        }
+        // path params
+        if ($username !== null) {
+            $resourcePath = str_replace(
+                '{username}',
+                ObjectSerializer::toPathValue($username),
+                $resourcePath
+            );
+        }
+
+
+        $headers = $this->headerSelector->selectHeaders(
+            [],
+            $contentType,
+            $multipart
+        );
+
+        // for model (json/xml)
+        if (count($formParams) > 0) {
+            if ($multipart) {
+                $multipartContents = [];
+                foreach ($formParams as $formParamName => $formParamValue) {
+                    $formParamValueItems = is_array($formParamValue) ? $formParamValue : [$formParamValue];
+                    foreach ($formParamValueItems as $formParamValueItem) {
+                        $multipartContents[] = [
+                            'name' => $formParamName,
+                            'contents' => $formParamValueItem
+                        ];
+                    }
+                }
+                // for HTTP post (form)
+                $httpBody = new MultipartStream($multipartContents);
+
+            } elseif (stripos($headers['Content-Type'], 'application/json') !== false) {
+                # if Content-Type contains "application/json", json_encode the form parameters
+                try {
+                    $httpBody = json_encode($formParams, JSON_THROW_ON_ERROR);
+                } catch (\JsonException $e) {
+                    throw new \InvalidArgumentException('json_encode error: ' . $e->getMessage(), 0, $e);
+                }
+            } else {
+                // for HTTP post (form)
+                $httpBody = ObjectSerializer::buildQuery($formParams);
+            }
+        }
+
+        // this endpoint requires Bearer authentication (access token)
+        if (!empty($this->config->getAccessToken())) {
+            $headers['Authorization'] = 'Bearer ' . $this->config->getAccessToken();
+        }
+
+        $defaultHeaders = [];
+        if ($this->config->getUserAgent()) {
+            $defaultHeaders['User-Agent'] = $this->config->getUserAgent();
+        }
+
+        $headers = array_merge(
+            $defaultHeaders,
+            $headerParams,
+            $headers
+        );
+
+        $operationHost = $this->config->getHost();
+        $query = ObjectSerializer::buildQuery($queryParams);
+        return new Request(
+            'PUT',
+            $operationHost . $resourcePath . ($query ? "?{$query}" : ''),
+            $headers,
+            $httpBody
+        );
+    }
+
+    /**
+     * Operation dashboardUserList
+     *
+     * @param  string $owner dashboard owner user name (required)
+     * @param  string $name dashboard name (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dashboardUserList'] to see the possible values for this operation
+     *
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \InvalidArgumentException
+     * @return \Agnesoft\AgdbApi\Model\DbUser[]
+     */
+    public function dashboardUserList($owner, $name, string $contentType = self::contentTypes['dashboardUserList'][0])
+    {
+        list($response) = $this->dashboardUserListWithHttpInfo($owner, $name, $contentType);
+        return $response;
+    }
+
+    /**
+     * Operation dashboardUserListWithHttpInfo
+     *
+     * @param  string $owner dashboard owner user name (required)
+     * @param  string $name dashboard name (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dashboardUserList'] to see the possible values for this operation
+     *
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \InvalidArgumentException
+     * @return array of \Agnesoft\AgdbApi\Model\DbUser[], HTTP status code, HTTP response headers (array of strings)
+     */
+    public function dashboardUserListWithHttpInfo($owner, $name, string $contentType = self::contentTypes['dashboardUserList'][0])
+    {
+        $request = $this->dashboardUserListRequest($owner, $name, $contentType);
+
+        try {
+            $options = $this->createHttpClientOption();
+            try {
+                $response = $this->client->send($request, $options);
+            } catch (RequestException $e) {
+                $eResponse = $this->getExceptionResponse($e);
+                throw new ApiException(
+                    "[{$e->getCode()}] {$e->getMessage()}",
+                    (int) $e->getCode(),
+                    $eResponse ? $eResponse->getHeaders() : null,
+                    $eResponse ? (string) $eResponse->getBody() : null
+                );
+            } catch (NetworkExceptionInterface $e) {
+                throw new ApiException(
+                    "[{$e->getCode()}] {$e->getMessage()}",
+                    (int) $e->getCode(),
+                    null,
+                    null
+                );
+            }
+
+            $statusCode = $response->getStatusCode();
+
+
+            switch($statusCode) {
+                case 200:
+                    return $this->handleResponseWithDataType(
+                        '\Agnesoft\AgdbApi\Model\DbUser[]',
+                        $request,
+                        $response,
+                    );
+            }
+
+            
+
+            if ($statusCode < 200 || $statusCode > 299) {
+                throw new ApiException(
+                    sprintf(
+                        '[%d] Error connecting to the API (%s)',
+                        $statusCode,
+                        (string) $request->getUri()
+                    ),
+                    $statusCode,
+                    $response->getHeaders(),
+                    (string) $response->getBody()
+                );
+            }
+
+            return $this->handleResponseWithDataType(
+                '\Agnesoft\AgdbApi\Model\DbUser[]',
+                $request,
+                $response,
+            );
+        } catch (ApiException $e) {
+            switch ($e->getCode()) {
+                case 200:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\Agnesoft\AgdbApi\Model\DbUser[]',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    throw $e;
+            }
+        
+
+            throw $e;
+        }
+    }
+
+    /**
+     * Operation dashboardUserListAsync
+     *
+     * @param  string $owner dashboard owner user name (required)
+     * @param  string $name dashboard name (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dashboardUserList'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Promise\PromiseInterface
+     */
+    public function dashboardUserListAsync($owner, $name, string $contentType = self::contentTypes['dashboardUserList'][0])
+    {
+        return $this->dashboardUserListAsyncWithHttpInfo($owner, $name, $contentType)
+            ->then(
+                function ($response) {
+                    return $response[0];
+                }
+            );
+    }
+
+    /**
+     * Operation dashboardUserListAsyncWithHttpInfo
+     *
+     * @param  string $owner dashboard owner user name (required)
+     * @param  string $name dashboard name (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dashboardUserList'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Promise\PromiseInterface
+     */
+    public function dashboardUserListAsyncWithHttpInfo($owner, $name, string $contentType = self::contentTypes['dashboardUserList'][0])
+    {
+        $returnType = '\Agnesoft\AgdbApi\Model\DbUser[]';
+        $request = $this->dashboardUserListRequest($owner, $name, $contentType);
+
+        return $this->client
+            ->sendAsync($request, $this->createHttpClientOption())
+            ->then(
+                function ($response) use ($returnType) {
+                    if ($returnType === '\SplFileObject') {
+                        $content = $response->getBody(); //stream goes to serializer
+                    } else {
+                        $content = (string) $response->getBody();
+                        if ($returnType !== 'string') {
+                            $content = json_decode($content);
+                        }
+                    }
+
+                    return [
+                        ObjectSerializer::deserialize($content, $returnType, []),
+                        $response->getStatusCode(),
+                        $response->getHeaders()
+                    ];
+                },
+                function ($exception) {
+                    $response = $this->getExceptionResponse($exception);
+                    if ($response === null) {
+                        throw new ApiException(
+                            "[{$exception->getCode()}] {$exception->getMessage()}",
+                            (int) $exception->getCode(),
+                            null,
+                            null
+                        );
+                    }
+                    $statusCode = $response->getStatusCode();
+                    throw new ApiException(
+                        sprintf(
+                            '[%d] Error connecting to the API (%s)',
+                            $statusCode,
+                            $exception->getRequest()->getUri()
+                        ),
+                        $statusCode,
+                        $response->getHeaders(),
+                        (string) $response->getBody()
+                    );
+                }
+            );
+    }
+
+    /**
+     * Create request for operation 'dashboardUserList'
+     *
+     * @param  string $owner dashboard owner user name (required)
+     * @param  string $name dashboard name (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dashboardUserList'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Psr7\Request
+     */
+    public function dashboardUserListRequest($owner, $name, string $contentType = self::contentTypes['dashboardUserList'][0])
+    {
+
+        // verify the required parameter 'owner' is set
+        if ($owner === null || (is_array($owner) && count($owner) === 0)) {
+            throw new \InvalidArgumentException(
+                'Missing the required parameter $owner when calling dashboardUserList'
+            );
+        }
+
+        // verify the required parameter 'name' is set
+        if ($name === null || (is_array($name) && count($name) === 0)) {
+            throw new \InvalidArgumentException(
+                'Missing the required parameter $name when calling dashboardUserList'
+            );
+        }
+
+
+        $resourcePath = '/api/v1/dashboard/{owner}/{name}/user/list';
+        $formParams = [];
+        $queryParams = [];
+        $headerParams = [];
+        $httpBody = '';
+        $multipart = false;
+
+
+
+        // path params
+        if ($owner !== null) {
+            $resourcePath = str_replace(
+                '{owner}',
+                ObjectSerializer::toPathValue($owner),
+                $resourcePath
+            );
+        }
+        // path params
+        if ($name !== null) {
+            $resourcePath = str_replace(
+                '{name}',
+                ObjectSerializer::toPathValue($name),
+                $resourcePath
+            );
+        }
+
+
+        $headers = $this->headerSelector->selectHeaders(
+            ['application/json', ],
+            $contentType,
+            $multipart
+        );
+
+        // for model (json/xml)
+        if (count($formParams) > 0) {
+            if ($multipart) {
+                $multipartContents = [];
+                foreach ($formParams as $formParamName => $formParamValue) {
+                    $formParamValueItems = is_array($formParamValue) ? $formParamValue : [$formParamValue];
+                    foreach ($formParamValueItems as $formParamValueItem) {
+                        $multipartContents[] = [
+                            'name' => $formParamName,
+                            'contents' => $formParamValueItem
+                        ];
+                    }
+                }
+                // for HTTP post (form)
+                $httpBody = new MultipartStream($multipartContents);
+
+            } elseif (stripos($headers['Content-Type'], 'application/json') !== false) {
+                # if Content-Type contains "application/json", json_encode the form parameters
+                try {
+                    $httpBody = json_encode($formParams, JSON_THROW_ON_ERROR);
+                } catch (\JsonException $e) {
+                    throw new \InvalidArgumentException('json_encode error: ' . $e->getMessage(), 0, $e);
+                }
+            } else {
+                // for HTTP post (form)
+                $httpBody = ObjectSerializer::buildQuery($formParams);
+            }
+        }
+
+        // this endpoint requires Bearer authentication (access token)
+        if (!empty($this->config->getAccessToken())) {
+            $headers['Authorization'] = 'Bearer ' . $this->config->getAccessToken();
+        }
+
+        $defaultHeaders = [];
+        if ($this->config->getUserAgent()) {
+            $defaultHeaders['User-Agent'] = $this->config->getUserAgent();
+        }
+
+        $headers = array_merge(
+            $defaultHeaders,
+            $headerParams,
+            $headers
+        );
+
+        $operationHost = $this->config->getHost();
+        $query = ObjectSerializer::buildQuery($queryParams);
+        return new Request(
+            'GET',
+            $operationHost . $resourcePath . ($query ? "?{$query}" : ''),
+            $headers,
+            $httpBody
+        );
+    }
+
+    /**
+     * Operation dashboardUserRemove
+     *
+     * @param  string $owner dashboard owner user name (required)
+     * @param  string $name dashboard name (required)
+     * @param  string $username user name (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dashboardUserRemove'] to see the possible values for this operation
+     *
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \InvalidArgumentException
+     * @return void
+     */
+    public function dashboardUserRemove($owner, $name, $username, string $contentType = self::contentTypes['dashboardUserRemove'][0])
+    {
+        $this->dashboardUserRemoveWithHttpInfo($owner, $name, $username, $contentType);
+    }
+
+    /**
+     * Operation dashboardUserRemoveWithHttpInfo
+     *
+     * @param  string $owner dashboard owner user name (required)
+     * @param  string $name dashboard name (required)
+     * @param  string $username user name (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dashboardUserRemove'] to see the possible values for this operation
+     *
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \InvalidArgumentException
+     * @return array of null, HTTP status code, HTTP response headers (array of strings)
+     */
+    public function dashboardUserRemoveWithHttpInfo($owner, $name, $username, string $contentType = self::contentTypes['dashboardUserRemove'][0])
+    {
+        $request = $this->dashboardUserRemoveRequest($owner, $name, $username, $contentType);
+
+        try {
+            $options = $this->createHttpClientOption();
+            try {
+                $response = $this->client->send($request, $options);
+            } catch (RequestException $e) {
+                $eResponse = $this->getExceptionResponse($e);
+                throw new ApiException(
+                    "[{$e->getCode()}] {$e->getMessage()}",
+                    (int) $e->getCode(),
+                    $eResponse ? $eResponse->getHeaders() : null,
+                    $eResponse ? (string) $eResponse->getBody() : null
+                );
+            } catch (NetworkExceptionInterface $e) {
+                throw new ApiException(
+                    "[{$e->getCode()}] {$e->getMessage()}",
+                    (int) $e->getCode(),
+                    null,
+                    null
+                );
+            }
+
+            $statusCode = $response->getStatusCode();
+
+
+            return [null, $statusCode, $response->getHeaders()];
+        } catch (ApiException $e) {
+            switch ($e->getCode()) {
+            }
+        
+
+            throw $e;
+        }
+    }
+
+    /**
+     * Operation dashboardUserRemoveAsync
+     *
+     * @param  string $owner dashboard owner user name (required)
+     * @param  string $name dashboard name (required)
+     * @param  string $username user name (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dashboardUserRemove'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Promise\PromiseInterface
+     */
+    public function dashboardUserRemoveAsync($owner, $name, $username, string $contentType = self::contentTypes['dashboardUserRemove'][0])
+    {
+        return $this->dashboardUserRemoveAsyncWithHttpInfo($owner, $name, $username, $contentType)
+            ->then(
+                function ($response) {
+                    return $response[0];
+                }
+            );
+    }
+
+    /**
+     * Operation dashboardUserRemoveAsyncWithHttpInfo
+     *
+     * @param  string $owner dashboard owner user name (required)
+     * @param  string $name dashboard name (required)
+     * @param  string $username user name (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dashboardUserRemove'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Promise\PromiseInterface
+     */
+    public function dashboardUserRemoveAsyncWithHttpInfo($owner, $name, $username, string $contentType = self::contentTypes['dashboardUserRemove'][0])
+    {
+        $returnType = '';
+        $request = $this->dashboardUserRemoveRequest($owner, $name, $username, $contentType);
+
+        return $this->client
+            ->sendAsync($request, $this->createHttpClientOption())
+            ->then(
+                function ($response) use ($returnType) {
+                    return [null, $response->getStatusCode(), $response->getHeaders()];
+                },
+                function ($exception) {
+                    $response = $this->getExceptionResponse($exception);
+                    if ($response === null) {
+                        throw new ApiException(
+                            "[{$exception->getCode()}] {$exception->getMessage()}",
+                            (int) $exception->getCode(),
+                            null,
+                            null
+                        );
+                    }
+                    $statusCode = $response->getStatusCode();
+                    throw new ApiException(
+                        sprintf(
+                            '[%d] Error connecting to the API (%s)',
+                            $statusCode,
+                            $exception->getRequest()->getUri()
+                        ),
+                        $statusCode,
+                        $response->getHeaders(),
+                        (string) $response->getBody()
+                    );
+                }
+            );
+    }
+
+    /**
+     * Create request for operation 'dashboardUserRemove'
+     *
+     * @param  string $owner dashboard owner user name (required)
+     * @param  string $name dashboard name (required)
+     * @param  string $username user name (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dashboardUserRemove'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Psr7\Request
+     */
+    public function dashboardUserRemoveRequest($owner, $name, $username, string $contentType = self::contentTypes['dashboardUserRemove'][0])
+    {
+
+        // verify the required parameter 'owner' is set
+        if ($owner === null || (is_array($owner) && count($owner) === 0)) {
+            throw new \InvalidArgumentException(
+                'Missing the required parameter $owner when calling dashboardUserRemove'
+            );
+        }
+
+        // verify the required parameter 'name' is set
+        if ($name === null || (is_array($name) && count($name) === 0)) {
+            throw new \InvalidArgumentException(
+                'Missing the required parameter $name when calling dashboardUserRemove'
+            );
+        }
+
+        // verify the required parameter 'username' is set
+        if ($username === null || (is_array($username) && count($username) === 0)) {
+            throw new \InvalidArgumentException(
+                'Missing the required parameter $username when calling dashboardUserRemove'
+            );
+        }
+
+
+        $resourcePath = '/api/v1/dashboard/{owner}/{name}/user/{username}/remove';
+        $formParams = [];
+        $queryParams = [];
+        $headerParams = [];
+        $httpBody = '';
+        $multipart = false;
+
+
+
+        // path params
+        if ($owner !== null) {
+            $resourcePath = str_replace(
+                '{owner}',
+                ObjectSerializer::toPathValue($owner),
+                $resourcePath
+            );
+        }
+        // path params
+        if ($name !== null) {
+            $resourcePath = str_replace(
+                '{name}',
+                ObjectSerializer::toPathValue($name),
+                $resourcePath
+            );
+        }
+        // path params
+        if ($username !== null) {
+            $resourcePath = str_replace(
+                '{username}',
+                ObjectSerializer::toPathValue($username),
+                $resourcePath
+            );
+        }
+
+
+        $headers = $this->headerSelector->selectHeaders(
+            [],
+            $contentType,
+            $multipart
+        );
+
+        // for model (json/xml)
+        if (count($formParams) > 0) {
+            if ($multipart) {
+                $multipartContents = [];
+                foreach ($formParams as $formParamName => $formParamValue) {
+                    $formParamValueItems = is_array($formParamValue) ? $formParamValue : [$formParamValue];
+                    foreach ($formParamValueItems as $formParamValueItem) {
+                        $multipartContents[] = [
+                            'name' => $formParamName,
+                            'contents' => $formParamValueItem
+                        ];
+                    }
+                }
+                // for HTTP post (form)
+                $httpBody = new MultipartStream($multipartContents);
+
+            } elseif (stripos($headers['Content-Type'], 'application/json') !== false) {
+                # if Content-Type contains "application/json", json_encode the form parameters
+                try {
+                    $httpBody = json_encode($formParams, JSON_THROW_ON_ERROR);
+                } catch (\JsonException $e) {
+                    throw new \InvalidArgumentException('json_encode error: ' . $e->getMessage(), 0, $e);
+                }
+            } else {
+                // for HTTP post (form)
+                $httpBody = ObjectSerializer::buildQuery($formParams);
+            }
+        }
+
+        // this endpoint requires Bearer authentication (access token)
+        if (!empty($this->config->getAccessToken())) {
+            $headers['Authorization'] = 'Bearer ' . $this->config->getAccessToken();
+        }
+
+        $defaultHeaders = [];
+        if ($this->config->getUserAgent()) {
+            $defaultHeaders['User-Agent'] = $this->config->getUserAgent();
+        }
+
+        $headers = array_merge(
+            $defaultHeaders,
+            $headerParams,
+            $headers
+        );
+
+        $operationHost = $this->config->getHost();
+        $query = ObjectSerializer::buildQuery($queryParams);
+        return new Request(
+            'DELETE',
             $operationHost . $resourcePath . ($query ? "?{$query}" : ''),
             $headers,
             $httpBody
@@ -16125,6 +20125,719 @@ class AgdbApi
                 $httpBody = $change_password;
             }
         } elseif (count($formParams) > 0) {
+            if ($multipart) {
+                $multipartContents = [];
+                foreach ($formParams as $formParamName => $formParamValue) {
+                    $formParamValueItems = is_array($formParamValue) ? $formParamValue : [$formParamValue];
+                    foreach ($formParamValueItems as $formParamValueItem) {
+                        $multipartContents[] = [
+                            'name' => $formParamName,
+                            'contents' => $formParamValueItem
+                        ];
+                    }
+                }
+                // for HTTP post (form)
+                $httpBody = new MultipartStream($multipartContents);
+
+            } elseif (stripos($headers['Content-Type'], 'application/json') !== false) {
+                # if Content-Type contains "application/json", json_encode the form parameters
+                try {
+                    $httpBody = json_encode($formParams, JSON_THROW_ON_ERROR);
+                } catch (\JsonException $e) {
+                    throw new \InvalidArgumentException('json_encode error: ' . $e->getMessage(), 0, $e);
+                }
+            } else {
+                // for HTTP post (form)
+                $httpBody = ObjectSerializer::buildQuery($formParams);
+            }
+        }
+
+        // this endpoint requires Bearer authentication (access token)
+        if (!empty($this->config->getAccessToken())) {
+            $headers['Authorization'] = 'Bearer ' . $this->config->getAccessToken();
+        }
+
+        $defaultHeaders = [];
+        if ($this->config->getUserAgent()) {
+            $defaultHeaders['User-Agent'] = $this->config->getUserAgent();
+        }
+
+        $headers = array_merge(
+            $defaultHeaders,
+            $headerParams,
+            $headers
+        );
+
+        $operationHost = $this->config->getHost();
+        $query = ObjectSerializer::buildQuery($queryParams);
+        return new Request(
+            'PUT',
+            $operationHost . $resourcePath . ($query ? "?{$query}" : ''),
+            $headers,
+            $httpBody
+        );
+    }
+
+    /**
+     * Operation userHomeDashboard
+     *
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['userHomeDashboard'] to see the possible values for this operation
+     *
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \InvalidArgumentException
+     * @return \AgnesoftAgdbApiModelDashboardName
+     */
+    public function userHomeDashboard(string $contentType = self::contentTypes['userHomeDashboard'][0])
+    {
+        list($response) = $this->userHomeDashboardWithHttpInfo($contentType);
+        return $response;
+    }
+
+    /**
+     * Operation userHomeDashboardWithHttpInfo
+     *
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['userHomeDashboard'] to see the possible values for this operation
+     *
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \InvalidArgumentException
+     * @return array of \AgnesoftAgdbApiModelDashboardName, HTTP status code, HTTP response headers (array of strings)
+     */
+    public function userHomeDashboardWithHttpInfo(string $contentType = self::contentTypes['userHomeDashboard'][0])
+    {
+        $request = $this->userHomeDashboardRequest($contentType);
+
+        try {
+            $options = $this->createHttpClientOption();
+            try {
+                $response = $this->client->send($request, $options);
+            } catch (RequestException $e) {
+                $eResponse = $this->getExceptionResponse($e);
+                throw new ApiException(
+                    "[{$e->getCode()}] {$e->getMessage()}",
+                    (int) $e->getCode(),
+                    $eResponse ? $eResponse->getHeaders() : null,
+                    $eResponse ? (string) $eResponse->getBody() : null
+                );
+            } catch (NetworkExceptionInterface $e) {
+                throw new ApiException(
+                    "[{$e->getCode()}] {$e->getMessage()}",
+                    (int) $e->getCode(),
+                    null,
+                    null
+                );
+            }
+
+            $statusCode = $response->getStatusCode();
+
+
+            switch($statusCode) {
+                case 200:
+                    return $this->handleResponseWithDataType(
+                        '\AgnesoftAgdbApiModelDashboardName',
+                        $request,
+                        $response,
+                    );
+            }
+
+            
+
+            if ($statusCode < 200 || $statusCode > 299) {
+                throw new ApiException(
+                    sprintf(
+                        '[%d] Error connecting to the API (%s)',
+                        $statusCode,
+                        (string) $request->getUri()
+                    ),
+                    $statusCode,
+                    $response->getHeaders(),
+                    (string) $response->getBody()
+                );
+            }
+
+            return $this->handleResponseWithDataType(
+                '\Agnesoft\AgdbApi\Model\DashboardName',
+                $request,
+                $response,
+            );
+        } catch (ApiException $e) {
+            switch ($e->getCode()) {
+                case 200:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\AgnesoftAgdbApiModelDashboardName',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    throw $e;
+            }
+        
+
+            throw $e;
+        }
+    }
+
+    /**
+     * Operation userHomeDashboardAsync
+     *
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['userHomeDashboard'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Promise\PromiseInterface
+     */
+    public function userHomeDashboardAsync(string $contentType = self::contentTypes['userHomeDashboard'][0])
+    {
+        return $this->userHomeDashboardAsyncWithHttpInfo($contentType)
+            ->then(
+                function ($response) {
+                    return $response[0];
+                }
+            );
+    }
+
+    /**
+     * Operation userHomeDashboardAsyncWithHttpInfo
+     *
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['userHomeDashboard'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Promise\PromiseInterface
+     */
+    public function userHomeDashboardAsyncWithHttpInfo(string $contentType = self::contentTypes['userHomeDashboard'][0])
+    {
+        $returnType = '\Agnesoft\AgdbApi\Model\DashboardName';
+        $request = $this->userHomeDashboardRequest($contentType);
+
+        return $this->client
+            ->sendAsync($request, $this->createHttpClientOption())
+            ->then(
+                function ($response) use ($returnType) {
+                    if ($returnType === '\SplFileObject') {
+                        $content = $response->getBody(); //stream goes to serializer
+                    } else {
+                        $content = (string) $response->getBody();
+                        if ($returnType !== 'string') {
+                            $content = json_decode($content);
+                        }
+                    }
+
+                    return [
+                        ObjectSerializer::deserialize($content, $returnType, []),
+                        $response->getStatusCode(),
+                        $response->getHeaders()
+                    ];
+                },
+                function ($exception) {
+                    $response = $this->getExceptionResponse($exception);
+                    if ($response === null) {
+                        throw new ApiException(
+                            "[{$exception->getCode()}] {$exception->getMessage()}",
+                            (int) $exception->getCode(),
+                            null,
+                            null
+                        );
+                    }
+                    $statusCode = $response->getStatusCode();
+                    throw new ApiException(
+                        sprintf(
+                            '[%d] Error connecting to the API (%s)',
+                            $statusCode,
+                            $exception->getRequest()->getUri()
+                        ),
+                        $statusCode,
+                        $response->getHeaders(),
+                        (string) $response->getBody()
+                    );
+                }
+            );
+    }
+
+    /**
+     * Create request for operation 'userHomeDashboard'
+     *
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['userHomeDashboard'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Psr7\Request
+     */
+    public function userHomeDashboardRequest(string $contentType = self::contentTypes['userHomeDashboard'][0])
+    {
+
+
+        $resourcePath = '/api/v1/user/home_dashboard';
+        $formParams = [];
+        $queryParams = [];
+        $headerParams = [];
+        $httpBody = '';
+        $multipart = false;
+
+
+
+
+
+        $headers = $this->headerSelector->selectHeaders(
+            ['application/json', ],
+            $contentType,
+            $multipart
+        );
+
+        // for model (json/xml)
+        if (count($formParams) > 0) {
+            if ($multipart) {
+                $multipartContents = [];
+                foreach ($formParams as $formParamName => $formParamValue) {
+                    $formParamValueItems = is_array($formParamValue) ? $formParamValue : [$formParamValue];
+                    foreach ($formParamValueItems as $formParamValueItem) {
+                        $multipartContents[] = [
+                            'name' => $formParamName,
+                            'contents' => $formParamValueItem
+                        ];
+                    }
+                }
+                // for HTTP post (form)
+                $httpBody = new MultipartStream($multipartContents);
+
+            } elseif (stripos($headers['Content-Type'], 'application/json') !== false) {
+                # if Content-Type contains "application/json", json_encode the form parameters
+                try {
+                    $httpBody = json_encode($formParams, JSON_THROW_ON_ERROR);
+                } catch (\JsonException $e) {
+                    throw new \InvalidArgumentException('json_encode error: ' . $e->getMessage(), 0, $e);
+                }
+            } else {
+                // for HTTP post (form)
+                $httpBody = ObjectSerializer::buildQuery($formParams);
+            }
+        }
+
+        // this endpoint requires Bearer authentication (access token)
+        if (!empty($this->config->getAccessToken())) {
+            $headers['Authorization'] = 'Bearer ' . $this->config->getAccessToken();
+        }
+
+        $defaultHeaders = [];
+        if ($this->config->getUserAgent()) {
+            $defaultHeaders['User-Agent'] = $this->config->getUserAgent();
+        }
+
+        $headers = array_merge(
+            $defaultHeaders,
+            $headerParams,
+            $headers
+        );
+
+        $operationHost = $this->config->getHost();
+        $query = ObjectSerializer::buildQuery($queryParams);
+        return new Request(
+            'GET',
+            $operationHost . $resourcePath . ($query ? "?{$query}" : ''),
+            $headers,
+            $httpBody
+        );
+    }
+
+    /**
+     * Operation userHomeDashboardClear
+     *
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['userHomeDashboardClear'] to see the possible values for this operation
+     *
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \InvalidArgumentException
+     * @return void
+     */
+    public function userHomeDashboardClear(string $contentType = self::contentTypes['userHomeDashboardClear'][0])
+    {
+        $this->userHomeDashboardClearWithHttpInfo($contentType);
+    }
+
+    /**
+     * Operation userHomeDashboardClearWithHttpInfo
+     *
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['userHomeDashboardClear'] to see the possible values for this operation
+     *
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \InvalidArgumentException
+     * @return array of null, HTTP status code, HTTP response headers (array of strings)
+     */
+    public function userHomeDashboardClearWithHttpInfo(string $contentType = self::contentTypes['userHomeDashboardClear'][0])
+    {
+        $request = $this->userHomeDashboardClearRequest($contentType);
+
+        try {
+            $options = $this->createHttpClientOption();
+            try {
+                $response = $this->client->send($request, $options);
+            } catch (RequestException $e) {
+                $eResponse = $this->getExceptionResponse($e);
+                throw new ApiException(
+                    "[{$e->getCode()}] {$e->getMessage()}",
+                    (int) $e->getCode(),
+                    $eResponse ? $eResponse->getHeaders() : null,
+                    $eResponse ? (string) $eResponse->getBody() : null
+                );
+            } catch (NetworkExceptionInterface $e) {
+                throw new ApiException(
+                    "[{$e->getCode()}] {$e->getMessage()}",
+                    (int) $e->getCode(),
+                    null,
+                    null
+                );
+            }
+
+            $statusCode = $response->getStatusCode();
+
+
+            return [null, $statusCode, $response->getHeaders()];
+        } catch (ApiException $e) {
+            switch ($e->getCode()) {
+            }
+        
+
+            throw $e;
+        }
+    }
+
+    /**
+     * Operation userHomeDashboardClearAsync
+     *
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['userHomeDashboardClear'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Promise\PromiseInterface
+     */
+    public function userHomeDashboardClearAsync(string $contentType = self::contentTypes['userHomeDashboardClear'][0])
+    {
+        return $this->userHomeDashboardClearAsyncWithHttpInfo($contentType)
+            ->then(
+                function ($response) {
+                    return $response[0];
+                }
+            );
+    }
+
+    /**
+     * Operation userHomeDashboardClearAsyncWithHttpInfo
+     *
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['userHomeDashboardClear'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Promise\PromiseInterface
+     */
+    public function userHomeDashboardClearAsyncWithHttpInfo(string $contentType = self::contentTypes['userHomeDashboardClear'][0])
+    {
+        $returnType = '';
+        $request = $this->userHomeDashboardClearRequest($contentType);
+
+        return $this->client
+            ->sendAsync($request, $this->createHttpClientOption())
+            ->then(
+                function ($response) use ($returnType) {
+                    return [null, $response->getStatusCode(), $response->getHeaders()];
+                },
+                function ($exception) {
+                    $response = $this->getExceptionResponse($exception);
+                    if ($response === null) {
+                        throw new ApiException(
+                            "[{$exception->getCode()}] {$exception->getMessage()}",
+                            (int) $exception->getCode(),
+                            null,
+                            null
+                        );
+                    }
+                    $statusCode = $response->getStatusCode();
+                    throw new ApiException(
+                        sprintf(
+                            '[%d] Error connecting to the API (%s)',
+                            $statusCode,
+                            $exception->getRequest()->getUri()
+                        ),
+                        $statusCode,
+                        $response->getHeaders(),
+                        (string) $response->getBody()
+                    );
+                }
+            );
+    }
+
+    /**
+     * Create request for operation 'userHomeDashboardClear'
+     *
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['userHomeDashboardClear'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Psr7\Request
+     */
+    public function userHomeDashboardClearRequest(string $contentType = self::contentTypes['userHomeDashboardClear'][0])
+    {
+
+
+        $resourcePath = '/api/v1/user/home_dashboard';
+        $formParams = [];
+        $queryParams = [];
+        $headerParams = [];
+        $httpBody = '';
+        $multipart = false;
+
+
+
+
+
+        $headers = $this->headerSelector->selectHeaders(
+            [],
+            $contentType,
+            $multipart
+        );
+
+        // for model (json/xml)
+        if (count($formParams) > 0) {
+            if ($multipart) {
+                $multipartContents = [];
+                foreach ($formParams as $formParamName => $formParamValue) {
+                    $formParamValueItems = is_array($formParamValue) ? $formParamValue : [$formParamValue];
+                    foreach ($formParamValueItems as $formParamValueItem) {
+                        $multipartContents[] = [
+                            'name' => $formParamName,
+                            'contents' => $formParamValueItem
+                        ];
+                    }
+                }
+                // for HTTP post (form)
+                $httpBody = new MultipartStream($multipartContents);
+
+            } elseif (stripos($headers['Content-Type'], 'application/json') !== false) {
+                # if Content-Type contains "application/json", json_encode the form parameters
+                try {
+                    $httpBody = json_encode($formParams, JSON_THROW_ON_ERROR);
+                } catch (\JsonException $e) {
+                    throw new \InvalidArgumentException('json_encode error: ' . $e->getMessage(), 0, $e);
+                }
+            } else {
+                // for HTTP post (form)
+                $httpBody = ObjectSerializer::buildQuery($formParams);
+            }
+        }
+
+        // this endpoint requires Bearer authentication (access token)
+        if (!empty($this->config->getAccessToken())) {
+            $headers['Authorization'] = 'Bearer ' . $this->config->getAccessToken();
+        }
+
+        $defaultHeaders = [];
+        if ($this->config->getUserAgent()) {
+            $defaultHeaders['User-Agent'] = $this->config->getUserAgent();
+        }
+
+        $headers = array_merge(
+            $defaultHeaders,
+            $headerParams,
+            $headers
+        );
+
+        $operationHost = $this->config->getHost();
+        $query = ObjectSerializer::buildQuery($queryParams);
+        return new Request(
+            'DELETE',
+            $operationHost . $resourcePath . ($query ? "?{$query}" : ''),
+            $headers,
+            $httpBody
+        );
+    }
+
+    /**
+     * Operation userHomeDashboardSet
+     *
+     * @param  string $owner owner (required)
+     * @param  string $name name (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['userHomeDashboardSet'] to see the possible values for this operation
+     *
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \InvalidArgumentException
+     * @return void
+     */
+    public function userHomeDashboardSet($owner, $name, string $contentType = self::contentTypes['userHomeDashboardSet'][0])
+    {
+        $this->userHomeDashboardSetWithHttpInfo($owner, $name, $contentType);
+    }
+
+    /**
+     * Operation userHomeDashboardSetWithHttpInfo
+     *
+     * @param  string $owner (required)
+     * @param  string $name (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['userHomeDashboardSet'] to see the possible values for this operation
+     *
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \InvalidArgumentException
+     * @return array of null, HTTP status code, HTTP response headers (array of strings)
+     */
+    public function userHomeDashboardSetWithHttpInfo($owner, $name, string $contentType = self::contentTypes['userHomeDashboardSet'][0])
+    {
+        $request = $this->userHomeDashboardSetRequest($owner, $name, $contentType);
+
+        try {
+            $options = $this->createHttpClientOption();
+            try {
+                $response = $this->client->send($request, $options);
+            } catch (RequestException $e) {
+                $eResponse = $this->getExceptionResponse($e);
+                throw new ApiException(
+                    "[{$e->getCode()}] {$e->getMessage()}",
+                    (int) $e->getCode(),
+                    $eResponse ? $eResponse->getHeaders() : null,
+                    $eResponse ? (string) $eResponse->getBody() : null
+                );
+            } catch (NetworkExceptionInterface $e) {
+                throw new ApiException(
+                    "[{$e->getCode()}] {$e->getMessage()}",
+                    (int) $e->getCode(),
+                    null,
+                    null
+                );
+            }
+
+            $statusCode = $response->getStatusCode();
+
+
+            return [null, $statusCode, $response->getHeaders()];
+        } catch (ApiException $e) {
+            switch ($e->getCode()) {
+            }
+        
+
+            throw $e;
+        }
+    }
+
+    /**
+     * Operation userHomeDashboardSetAsync
+     *
+     * @param  string $owner (required)
+     * @param  string $name (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['userHomeDashboardSet'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Promise\PromiseInterface
+     */
+    public function userHomeDashboardSetAsync($owner, $name, string $contentType = self::contentTypes['userHomeDashboardSet'][0])
+    {
+        return $this->userHomeDashboardSetAsyncWithHttpInfo($owner, $name, $contentType)
+            ->then(
+                function ($response) {
+                    return $response[0];
+                }
+            );
+    }
+
+    /**
+     * Operation userHomeDashboardSetAsyncWithHttpInfo
+     *
+     * @param  string $owner (required)
+     * @param  string $name (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['userHomeDashboardSet'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Promise\PromiseInterface
+     */
+    public function userHomeDashboardSetAsyncWithHttpInfo($owner, $name, string $contentType = self::contentTypes['userHomeDashboardSet'][0])
+    {
+        $returnType = '';
+        $request = $this->userHomeDashboardSetRequest($owner, $name, $contentType);
+
+        return $this->client
+            ->sendAsync($request, $this->createHttpClientOption())
+            ->then(
+                function ($response) use ($returnType) {
+                    return [null, $response->getStatusCode(), $response->getHeaders()];
+                },
+                function ($exception) {
+                    $response = $this->getExceptionResponse($exception);
+                    if ($response === null) {
+                        throw new ApiException(
+                            "[{$exception->getCode()}] {$exception->getMessage()}",
+                            (int) $exception->getCode(),
+                            null,
+                            null
+                        );
+                    }
+                    $statusCode = $response->getStatusCode();
+                    throw new ApiException(
+                        sprintf(
+                            '[%d] Error connecting to the API (%s)',
+                            $statusCode,
+                            $exception->getRequest()->getUri()
+                        ),
+                        $statusCode,
+                        $response->getHeaders(),
+                        (string) $response->getBody()
+                    );
+                }
+            );
+    }
+
+    /**
+     * Create request for operation 'userHomeDashboardSet'
+     *
+     * @param  string $owner (required)
+     * @param  string $name (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['userHomeDashboardSet'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Psr7\Request
+     */
+    public function userHomeDashboardSetRequest($owner, $name, string $contentType = self::contentTypes['userHomeDashboardSet'][0])
+    {
+
+        // verify the required parameter 'owner' is set
+        if ($owner === null || (is_array($owner) && count($owner) === 0)) {
+            throw new \InvalidArgumentException(
+                'Missing the required parameter $owner when calling userHomeDashboardSet'
+            );
+        }
+
+        // verify the required parameter 'name' is set
+        if ($name === null || (is_array($name) && count($name) === 0)) {
+            throw new \InvalidArgumentException(
+                'Missing the required parameter $name when calling userHomeDashboardSet'
+            );
+        }
+
+
+        $resourcePath = '/api/v1/user/home_dashboard';
+        $formParams = [];
+        $queryParams = [];
+        $headerParams = [];
+        $httpBody = '';
+        $multipart = false;
+
+        // query params
+        $queryParams = array_merge($queryParams, ObjectSerializer::toQueryValue(
+            $owner,
+            'owner', // param base name
+            'string', // openApiType
+            'form', // style
+            true, // explode
+            true // required
+        ) ?? []);
+        // query params
+        $queryParams = array_merge($queryParams, ObjectSerializer::toQueryValue(
+            $name,
+            'name', // param base name
+            'string', // openApiType
+            'form', // style
+            true, // explode
+            true // required
+        ) ?? []);
+
+
+
+
+        $headers = $this->headerSelector->selectHeaders(
+            [],
+            $contentType,
+            $multipart
+        );
+
+        // for model (json/xml)
+        if (count($formParams) > 0) {
             if ($multipart) {
                 $multipartContents = [];
                 foreach ($formParams as $formParamName => $formParamValue) {

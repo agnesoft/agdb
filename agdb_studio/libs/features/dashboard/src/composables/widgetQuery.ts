@@ -8,6 +8,7 @@ import { useQueryStore } from "@agdb-studio/query/src/composables/queryStore";
 import { buildQueryFromSteps } from "@agdb-studio/query/src/utils/queryExecutionUtils";
 import { WIDGET_TABS, type Widget } from "../types";
 import { isRefreshInterval } from "../utils/refresh";
+import { adminMode } from "./dashboardStore";
 import {
   displayDiffers,
   seedDisplay,
@@ -30,8 +31,11 @@ export const errorMessage = (error: unknown): string => {
   return error instanceof Error ? error.message : String(error);
 };
 
-/** The database a widget's queries run on. */
-export type WidgetTarget = { owner: string; db: string };
+/**
+ * The database a widget's queries run on; `admin` runs them with admin access
+ * (the admin view runs every user's widgets so).
+ */
+export type WidgetTarget = { owner: string; db: string; admin?: boolean };
 
 /**
  * Runs the exec and context rows of a query store entry on a database and
@@ -62,7 +66,10 @@ export const runEntryRows = async (
   if (!tabs[0]?.rows.length) return false;
   for (const t of tabs)
     t.queries = t.rows.map((row) => buildQueryFromSteps(row.steps));
-  const route = { params: { owner: target.owner, db: target.db } };
+  const route = {
+    params: { owner: target.owner, db: target.db },
+    name: target.admin ? "admin-query" : "query",
+  };
   const results = await Promise.all(
     tabs.map((t) =>
       t.queries.length
@@ -93,7 +100,14 @@ export const useWidgetQuery = (widget: Ref<Widget>) => {
   const queryStore = useQueryStore();
   const queryId = ref(`dashboard-${widget.value.id}-${crypto.randomUUID()}`);
   provide("queryId", queryId);
-  provideDbTarget(() => ({ owner: widget.value.owner, db: widget.value.db }));
+  // Captured once: the widget lives on one page (admin or not).
+  const admin = adminMode();
+  const target = (): WidgetTarget => ({
+    owner: widget.value.owner,
+    db: widget.value.db,
+    admin,
+  });
+  provideDbTarget(target);
 
   const error = ref<string>();
   const loading = ref(false);
@@ -131,7 +145,7 @@ export const useWidgetQuery = (widget: Ref<Widget>) => {
     try {
       const ran = await runEntryRows(
         queryId.value,
-        widget.value,
+        target(),
         () => id === runId,
       );
       // A newer run (e.g. after an edit) wins over a slower older one.

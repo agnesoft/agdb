@@ -57,10 +57,21 @@ describe("FetchClient", () => {
         expect(status).toBe(200);
         expect(results[0].result).toBe(2);
 
-        expect(await api.dashboard_add("ops", "{}")).toBe(201);
-        expect(await api.dashboard_save("ops", '{"v":2}')).toBe(201);
-        expect((await api.dashboard_get("ops"))[1].config).toBe('{"v":2}');
-        expect(await api.dashboard_remove("ops")).toBe(204);
+        const owner = "fetch_client_user";
+        expect(await api.dashboard_add(owner, "ops", "{}")).toBe(201);
+        expect(await api.dashboard_save(owner, "ops", '{"v":2}')).toBe(201);
+        expect((await api.dashboard_get(owner, "ops"))[1].config).toBe(
+            '{"v":2}',
+        );
+        // No home is `null` on the wire, `undefined` as the `Option` type says.
+        expect((await api.user_home_dashboard())[1]).toBeUndefined();
+        expect(await api.user_home_dashboard_set(owner, "ops")).toBe(201);
+        expect((await api.user_home_dashboard())[1]).toEqual({
+            owner,
+            name: "ops",
+        });
+        expect(await api.user_home_dashboard_clear()).toBe(204);
+        expect(await api.dashboard_remove(owner, "ops")).toBe(204);
         expect(await api.db_delete("fetch_client_user", "db")).toBe(204);
     });
 

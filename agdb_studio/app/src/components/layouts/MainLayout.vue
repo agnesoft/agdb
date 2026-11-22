@@ -18,6 +18,7 @@ const links = computed(() => {
     return [
       { to: "/admin", text: "Status" },
       { to: "/admin/db", text: "Databases" },
+      { to: "/admin/dashboards", text: "Dashboards" },
       { to: "/admin/users", text: "Users" },
     ];
   }

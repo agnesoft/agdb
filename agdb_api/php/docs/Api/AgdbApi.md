@@ -6,6 +6,16 @@ All URIs are relative to http://localhost:3000, except if the operation defines 
 
 | Method | HTTP request | Description |
 | ------------- | ------------- | ------------- |
+| [**adminDashboardAdd()**](AgdbApi.md#adminDashboardAdd) | **POST** /api/v1/admin/dashboard/{owner}/{name}/add |  |
+| [**adminDashboardGet()**](AgdbApi.md#adminDashboardGet) | **GET** /api/v1/admin/dashboard/{owner}/{name} |  |
+| [**adminDashboardList()**](AgdbApi.md#adminDashboardList) | **GET** /api/v1/admin/dashboard/list |  |
+| [**adminDashboardPublic()**](AgdbApi.md#adminDashboardPublic) | **PUT** /api/v1/admin/dashboard/{owner}/{name}/public |  |
+| [**adminDashboardRemove()**](AgdbApi.md#adminDashboardRemove) | **DELETE** /api/v1/admin/dashboard/{owner}/{name}/remove |  |
+| [**adminDashboardRename()**](AgdbApi.md#adminDashboardRename) | **POST** /api/v1/admin/dashboard/{owner}/{name}/rename |  |
+| [**adminDashboardSave()**](AgdbApi.md#adminDashboardSave) | **PUT** /api/v1/admin/dashboard/{owner}/{name}/save |  |
+| [**adminDashboardUserAdd()**](AgdbApi.md#adminDashboardUserAdd) | **PUT** /api/v1/admin/dashboard/{owner}/{name}/user/{username}/add |  |
+| [**adminDashboardUserList()**](AgdbApi.md#adminDashboardUserList) | **GET** /api/v1/admin/dashboard/{owner}/{name}/user/list |  |
+| [**adminDashboardUserRemove()**](AgdbApi.md#adminDashboardUserRemove) | **DELETE** /api/v1/admin/dashboard/{owner}/{name}/user/{username}/remove |  |
 | [**adminDbAdd()**](AgdbApi.md#adminDbAdd) | **POST** /api/v1/admin/db/{owner}/{db}/add |  |
 | [**adminDbAudit()**](AgdbApi.md#adminDbAudit) | **GET** /api/v1/admin/db/{owner}/{db}/audit |  |
 | [**adminDbAuditTrim()**](AgdbApi.md#adminDbAuditTrim) | **POST** /api/v1/admin/db/{owner}/{db}/audit/trim |  |
@@ -38,12 +48,16 @@ All URIs are relative to http://localhost:3000, except if the operation defines 
 | [**clusterStatus()**](AgdbApi.md#clusterStatus) | **GET** /api/v1/cluster/status |  |
 | [**clusterUserLogin()**](AgdbApi.md#clusterUserLogin) | **POST** /api/v1/cluster/user/login |  |
 | [**clusterUserLogout()**](AgdbApi.md#clusterUserLogout) | **POST** /api/v1/cluster/user/logout |  |
-| [**dashboardAdd()**](AgdbApi.md#dashboardAdd) | **POST** /api/v1/dashboard/{name}/add |  |
-| [**dashboardGet()**](AgdbApi.md#dashboardGet) | **GET** /api/v1/dashboard/{name} |  |
+| [**dashboardAdd()**](AgdbApi.md#dashboardAdd) | **POST** /api/v1/dashboard/{owner}/{name}/add |  |
+| [**dashboardGet()**](AgdbApi.md#dashboardGet) | **GET** /api/v1/dashboard/{owner}/{name} |  |
 | [**dashboardList()**](AgdbApi.md#dashboardList) | **GET** /api/v1/dashboard/list |  |
-| [**dashboardRemove()**](AgdbApi.md#dashboardRemove) | **DELETE** /api/v1/dashboard/{name}/remove |  |
-| [**dashboardRename()**](AgdbApi.md#dashboardRename) | **POST** /api/v1/dashboard/{name}/rename |  |
-| [**dashboardSave()**](AgdbApi.md#dashboardSave) | **PUT** /api/v1/dashboard/{name}/save |  |
+| [**dashboardPublic()**](AgdbApi.md#dashboardPublic) | **PUT** /api/v1/dashboard/{owner}/{name}/public |  |
+| [**dashboardRemove()**](AgdbApi.md#dashboardRemove) | **DELETE** /api/v1/dashboard/{owner}/{name}/remove |  |
+| [**dashboardRename()**](AgdbApi.md#dashboardRename) | **POST** /api/v1/dashboard/{owner}/{name}/rename |  |
+| [**dashboardSave()**](AgdbApi.md#dashboardSave) | **PUT** /api/v1/dashboard/{owner}/{name}/save |  |
+| [**dashboardUserAdd()**](AgdbApi.md#dashboardUserAdd) | **PUT** /api/v1/dashboard/{owner}/{name}/user/{username}/add |  |
+| [**dashboardUserList()**](AgdbApi.md#dashboardUserList) | **GET** /api/v1/dashboard/{owner}/{name}/user/list |  |
+| [**dashboardUserRemove()**](AgdbApi.md#dashboardUserRemove) | **DELETE** /api/v1/dashboard/{owner}/{name}/user/{username}/remove |  |
 | [**dbAdd()**](AgdbApi.md#dbAdd) | **POST** /api/v1/db/{owner}/{db}/add |  |
 | [**dbAudit()**](AgdbApi.md#dbAudit) | **GET** /api/v1/db/{owner}/{db}/audit |  |
 | [**dbAuditTrim()**](AgdbApi.md#dbAuditTrim) | **POST** /api/v1/db/{owner}/{db}/audit/trim |  |
@@ -66,10 +80,615 @@ All URIs are relative to http://localhost:3000, except if the operation defines 
 | [**setLogLevel()**](AgdbApi.md#setLogLevel) | **POST** /api/v1/admin/set_log_level |  |
 | [**status()**](AgdbApi.md#status) | **GET** /api/v1/status |  |
 | [**userChangePassword()**](AgdbApi.md#userChangePassword) | **PUT** /api/v1/user/change_password |  |
+| [**userHomeDashboard()**](AgdbApi.md#userHomeDashboard) | **GET** /api/v1/user/home_dashboard |  |
+| [**userHomeDashboardClear()**](AgdbApi.md#userHomeDashboardClear) | **DELETE** /api/v1/user/home_dashboard |  |
+| [**userHomeDashboardSet()**](AgdbApi.md#userHomeDashboardSet) | **PUT** /api/v1/user/home_dashboard |  |
 | [**userLogin()**](AgdbApi.md#userLogin) | **POST** /api/v1/user/login |  |
 | [**userLogout()**](AgdbApi.md#userLogout) | **POST** /api/v1/user/logout |  |
 | [**userStatus()**](AgdbApi.md#userStatus) | **GET** /api/v1/user/status |  |
 
+
+## `adminDashboardAdd()`
+
+```php
+adminDashboardAdd($owner, $name, $dashboard_config)
+```
+
+
+
+### Example
+
+```php
+<?php
+require_once(__DIR__ . '/vendor/autoload.php');
+
+
+// Configure Bearer authorization: Token
+$config = Agnesoft\AgdbApi\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
+
+
+$apiInstance = new Agnesoft\AgdbApi\Api\AgdbApi(
+    // If you want use custom http client, pass your client which implements `GuzzleHttp\ClientInterface`.
+    // This is optional, `GuzzleHttp\Client` will be used as default.
+    new GuzzleHttp\Client(),
+    $config
+);
+$owner = 'owner_example'; // string | dashboard owner user name
+$name = 'name_example'; // string | dashboard name
+$dashboard_config = new \Agnesoft\AgdbApi\Model\DashboardConfig(); // \Agnesoft\AgdbApi\Model\DashboardConfig
+
+try {
+    $apiInstance->adminDashboardAdd($owner, $name, $dashboard_config);
+} catch (Exception $e) {
+    echo 'Exception when calling AgdbApi->adminDashboardAdd: ', $e->getMessage(), PHP_EOL;
+}
+```
+
+### Parameters
+
+| Name | Type | Description  | Notes |
+| ------------- | ------------- | ------------- | ------------- |
+| **owner** | **string**| dashboard owner user name | |
+| **name** | **string**| dashboard name | |
+| **dashboard_config** | [**\Agnesoft\AgdbApi\Model\DashboardConfig**](../Model/DashboardConfig.md)|  | |
+
+### Return type
+
+void (empty response body)
+
+### Authorization
+
+[Token](../../README.md#Token)
+
+### HTTP request headers
+
+- **Content-Type**: `application/json`
+- **Accept**: Not defined
+
+[[Back to top]](#) [[Back to API list]](../../README.md#endpoints)
+[[Back to Model list]](../../README.md#models)
+[[Back to README]](../../README.md)
+
+## `adminDashboardGet()`
+
+```php
+adminDashboardGet($owner, $name): \Agnesoft\AgdbApi\Model\Dashboard
+```
+
+
+
+### Example
+
+```php
+<?php
+require_once(__DIR__ . '/vendor/autoload.php');
+
+
+// Configure Bearer authorization: Token
+$config = Agnesoft\AgdbApi\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
+
+
+$apiInstance = new Agnesoft\AgdbApi\Api\AgdbApi(
+    // If you want use custom http client, pass your client which implements `GuzzleHttp\ClientInterface`.
+    // This is optional, `GuzzleHttp\Client` will be used as default.
+    new GuzzleHttp\Client(),
+    $config
+);
+$owner = 'owner_example'; // string | dashboard owner user name
+$name = 'name_example'; // string | dashboard name
+
+try {
+    $result = $apiInstance->adminDashboardGet($owner, $name);
+    print_r($result);
+} catch (Exception $e) {
+    echo 'Exception when calling AgdbApi->adminDashboardGet: ', $e->getMessage(), PHP_EOL;
+}
+```
+
+### Parameters
+
+| Name | Type | Description  | Notes |
+| ------------- | ------------- | ------------- | ------------- |
+| **owner** | **string**| dashboard owner user name | |
+| **name** | **string**| dashboard name | |
+
+### Return type
+
+[**\Agnesoft\AgdbApi\Model\Dashboard**](../Model/Dashboard.md)
+
+### Authorization
+
+[Token](../../README.md#Token)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: `application/json`
+
+[[Back to top]](#) [[Back to API list]](../../README.md#endpoints)
+[[Back to Model list]](../../README.md#models)
+[[Back to README]](../../README.md)
+
+## `adminDashboardList()`
+
+```php
+adminDashboardList(): \Agnesoft\AgdbApi\Model\DashboardSummary[]
+```
+
+
+
+### Example
+
+```php
+<?php
+require_once(__DIR__ . '/vendor/autoload.php');
+
+
+// Configure Bearer authorization: Token
+$config = Agnesoft\AgdbApi\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
+
+
+$apiInstance = new Agnesoft\AgdbApi\Api\AgdbApi(
+    // If you want use custom http client, pass your client which implements `GuzzleHttp\ClientInterface`.
+    // This is optional, `GuzzleHttp\Client` will be used as default.
+    new GuzzleHttp\Client(),
+    $config
+);
+
+try {
+    $result = $apiInstance->adminDashboardList();
+    print_r($result);
+} catch (Exception $e) {
+    echo 'Exception when calling AgdbApi->adminDashboardList: ', $e->getMessage(), PHP_EOL;
+}
+```
+
+### Parameters
+
+This endpoint does not need any parameter.
+
+### Return type
+
+[**\Agnesoft\AgdbApi\Model\DashboardSummary[]**](../Model/DashboardSummary.md)
+
+### Authorization
+
+[Token](../../README.md#Token)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: `application/json`
+
+[[Back to top]](#) [[Back to API list]](../../README.md#endpoints)
+[[Back to Model list]](../../README.md#models)
+[[Back to README]](../../README.md)
+
+## `adminDashboardPublic()`
+
+```php
+adminDashboardPublic($owner, $name, $public)
+```
+
+
+
+### Example
+
+```php
+<?php
+require_once(__DIR__ . '/vendor/autoload.php');
+
+
+// Configure Bearer authorization: Token
+$config = Agnesoft\AgdbApi\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
+
+
+$apiInstance = new Agnesoft\AgdbApi\Api\AgdbApi(
+    // If you want use custom http client, pass your client which implements `GuzzleHttp\ClientInterface`.
+    // This is optional, `GuzzleHttp\Client` will be used as default.
+    new GuzzleHttp\Client(),
+    $config
+);
+$owner = 'owner_example'; // string | dashboard owner user name
+$name = 'name_example'; // string | dashboard name
+$public = True; // bool | Every user can view a public dashboard.
+
+try {
+    $apiInstance->adminDashboardPublic($owner, $name, $public);
+} catch (Exception $e) {
+    echo 'Exception when calling AgdbApi->adminDashboardPublic: ', $e->getMessage(), PHP_EOL;
+}
+```
+
+### Parameters
+
+| Name | Type | Description  | Notes |
+| ------------- | ------------- | ------------- | ------------- |
+| **owner** | **string**| dashboard owner user name | |
+| **name** | **string**| dashboard name | |
+| **public** | **bool**| Every user can view a public dashboard. | |
+
+### Return type
+
+void (empty response body)
+
+### Authorization
+
+[Token](../../README.md#Token)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: Not defined
+
+[[Back to top]](#) [[Back to API list]](../../README.md#endpoints)
+[[Back to Model list]](../../README.md#models)
+[[Back to README]](../../README.md)
+
+## `adminDashboardRemove()`
+
+```php
+adminDashboardRemove($owner, $name)
+```
+
+
+
+### Example
+
+```php
+<?php
+require_once(__DIR__ . '/vendor/autoload.php');
+
+
+// Configure Bearer authorization: Token
+$config = Agnesoft\AgdbApi\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
+
+
+$apiInstance = new Agnesoft\AgdbApi\Api\AgdbApi(
+    // If you want use custom http client, pass your client which implements `GuzzleHttp\ClientInterface`.
+    // This is optional, `GuzzleHttp\Client` will be used as default.
+    new GuzzleHttp\Client(),
+    $config
+);
+$owner = 'owner_example'; // string | dashboard owner user name
+$name = 'name_example'; // string | dashboard name
+
+try {
+    $apiInstance->adminDashboardRemove($owner, $name);
+} catch (Exception $e) {
+    echo 'Exception when calling AgdbApi->adminDashboardRemove: ', $e->getMessage(), PHP_EOL;
+}
+```
+
+### Parameters
+
+| Name | Type | Description  | Notes |
+| ------------- | ------------- | ------------- | ------------- |
+| **owner** | **string**| dashboard owner user name | |
+| **name** | **string**| dashboard name | |
+
+### Return type
+
+void (empty response body)
+
+### Authorization
+
+[Token](../../README.md#Token)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: Not defined
+
+[[Back to top]](#) [[Back to API list]](../../README.md#endpoints)
+[[Back to Model list]](../../README.md#models)
+[[Back to README]](../../README.md)
+
+## `adminDashboardRename()`
+
+```php
+adminDashboardRename($owner, $name, $new_name)
+```
+
+
+
+### Example
+
+```php
+<?php
+require_once(__DIR__ . '/vendor/autoload.php');
+
+
+// Configure Bearer authorization: Token
+$config = Agnesoft\AgdbApi\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
+
+
+$apiInstance = new Agnesoft\AgdbApi\Api\AgdbApi(
+    // If you want use custom http client, pass your client which implements `GuzzleHttp\ClientInterface`.
+    // This is optional, `GuzzleHttp\Client` will be used as default.
+    new GuzzleHttp\Client(),
+    $config
+);
+$owner = 'owner_example'; // string | dashboard owner user name
+$name = 'name_example'; // string | dashboard name
+$new_name = 'new_name_example'; // string
+
+try {
+    $apiInstance->adminDashboardRename($owner, $name, $new_name);
+} catch (Exception $e) {
+    echo 'Exception when calling AgdbApi->adminDashboardRename: ', $e->getMessage(), PHP_EOL;
+}
+```
+
+### Parameters
+
+| Name | Type | Description  | Notes |
+| ------------- | ------------- | ------------- | ------------- |
+| **owner** | **string**| dashboard owner user name | |
+| **name** | **string**| dashboard name | |
+| **new_name** | **string**|  | |
+
+### Return type
+
+void (empty response body)
+
+### Authorization
+
+[Token](../../README.md#Token)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: Not defined
+
+[[Back to top]](#) [[Back to API list]](../../README.md#endpoints)
+[[Back to Model list]](../../README.md#models)
+[[Back to README]](../../README.md)
+
+## `adminDashboardSave()`
+
+```php
+adminDashboardSave($owner, $name, $dashboard_config)
+```
+
+
+
+### Example
+
+```php
+<?php
+require_once(__DIR__ . '/vendor/autoload.php');
+
+
+// Configure Bearer authorization: Token
+$config = Agnesoft\AgdbApi\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
+
+
+$apiInstance = new Agnesoft\AgdbApi\Api\AgdbApi(
+    // If you want use custom http client, pass your client which implements `GuzzleHttp\ClientInterface`.
+    // This is optional, `GuzzleHttp\Client` will be used as default.
+    new GuzzleHttp\Client(),
+    $config
+);
+$owner = 'owner_example'; // string | dashboard owner user name
+$name = 'name_example'; // string | dashboard name
+$dashboard_config = new \Agnesoft\AgdbApi\Model\DashboardConfig(); // \Agnesoft\AgdbApi\Model\DashboardConfig
+
+try {
+    $apiInstance->adminDashboardSave($owner, $name, $dashboard_config);
+} catch (Exception $e) {
+    echo 'Exception when calling AgdbApi->adminDashboardSave: ', $e->getMessage(), PHP_EOL;
+}
+```
+
+### Parameters
+
+| Name | Type | Description  | Notes |
+| ------------- | ------------- | ------------- | ------------- |
+| **owner** | **string**| dashboard owner user name | |
+| **name** | **string**| dashboard name | |
+| **dashboard_config** | [**\Agnesoft\AgdbApi\Model\DashboardConfig**](../Model/DashboardConfig.md)|  | |
+
+### Return type
+
+void (empty response body)
+
+### Authorization
+
+[Token](../../README.md#Token)
+
+### HTTP request headers
+
+- **Content-Type**: `application/json`
+- **Accept**: Not defined
+
+[[Back to top]](#) [[Back to API list]](../../README.md#endpoints)
+[[Back to Model list]](../../README.md#models)
+[[Back to README]](../../README.md)
+
+## `adminDashboardUserAdd()`
+
+```php
+adminDashboardUserAdd($owner, $name, $username, $db_role)
+```
+
+
+
+### Example
+
+```php
+<?php
+require_once(__DIR__ . '/vendor/autoload.php');
+
+
+// Configure Bearer authorization: Token
+$config = Agnesoft\AgdbApi\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
+
+
+$apiInstance = new Agnesoft\AgdbApi\Api\AgdbApi(
+    // If you want use custom http client, pass your client which implements `GuzzleHttp\ClientInterface`.
+    // This is optional, `GuzzleHttp\Client` will be used as default.
+    new GuzzleHttp\Client(),
+    $config
+);
+$owner = 'owner_example'; // string | dashboard owner user name
+$name = 'name_example'; // string | dashboard name
+$username = 'username_example'; // string | user name
+$db_role = new \Agnesoft\AgdbApi\Model\\Agnesoft\AgdbApi\Model\DbUserRole(); // \Agnesoft\AgdbApi\Model\DbUserRole
+
+try {
+    $apiInstance->adminDashboardUserAdd($owner, $name, $username, $db_role);
+} catch (Exception $e) {
+    echo 'Exception when calling AgdbApi->adminDashboardUserAdd: ', $e->getMessage(), PHP_EOL;
+}
+```
+
+### Parameters
+
+| Name | Type | Description  | Notes |
+| ------------- | ------------- | ------------- | ------------- |
+| **owner** | **string**| dashboard owner user name | |
+| **name** | **string**| dashboard name | |
+| **username** | **string**| user name | |
+| **db_role** | [**\Agnesoft\AgdbApi\Model\DbUserRole**](../Model/.md)|  | |
+
+### Return type
+
+void (empty response body)
+
+### Authorization
+
+[Token](../../README.md#Token)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: Not defined
+
+[[Back to top]](#) [[Back to API list]](../../README.md#endpoints)
+[[Back to Model list]](../../README.md#models)
+[[Back to README]](../../README.md)
+
+## `adminDashboardUserList()`
+
+```php
+adminDashboardUserList($owner, $name): \Agnesoft\AgdbApi\Model\DbUser[]
+```
+
+
+
+### Example
+
+```php
+<?php
+require_once(__DIR__ . '/vendor/autoload.php');
+
+
+// Configure Bearer authorization: Token
+$config = Agnesoft\AgdbApi\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
+
+
+$apiInstance = new Agnesoft\AgdbApi\Api\AgdbApi(
+    // If you want use custom http client, pass your client which implements `GuzzleHttp\ClientInterface`.
+    // This is optional, `GuzzleHttp\Client` will be used as default.
+    new GuzzleHttp\Client(),
+    $config
+);
+$owner = 'owner_example'; // string | dashboard owner user name
+$name = 'name_example'; // string | dashboard name
+
+try {
+    $result = $apiInstance->adminDashboardUserList($owner, $name);
+    print_r($result);
+} catch (Exception $e) {
+    echo 'Exception when calling AgdbApi->adminDashboardUserList: ', $e->getMessage(), PHP_EOL;
+}
+```
+
+### Parameters
+
+| Name | Type | Description  | Notes |
+| ------------- | ------------- | ------------- | ------------- |
+| **owner** | **string**| dashboard owner user name | |
+| **name** | **string**| dashboard name | |
+
+### Return type
+
+[**\Agnesoft\AgdbApi\Model\DbUser[]**](../Model/DbUser.md)
+
+### Authorization
+
+[Token](../../README.md#Token)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: `application/json`
+
+[[Back to top]](#) [[Back to API list]](../../README.md#endpoints)
+[[Back to Model list]](../../README.md#models)
+[[Back to README]](../../README.md)
+
+## `adminDashboardUserRemove()`
+
+```php
+adminDashboardUserRemove($owner, $name, $username)
+```
+
+
+
+### Example
+
+```php
+<?php
+require_once(__DIR__ . '/vendor/autoload.php');
+
+
+// Configure Bearer authorization: Token
+$config = Agnesoft\AgdbApi\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
+
+
+$apiInstance = new Agnesoft\AgdbApi\Api\AgdbApi(
+    // If you want use custom http client, pass your client which implements `GuzzleHttp\ClientInterface`.
+    // This is optional, `GuzzleHttp\Client` will be used as default.
+    new GuzzleHttp\Client(),
+    $config
+);
+$owner = 'owner_example'; // string | dashboard owner user name
+$name = 'name_example'; // string | dashboard name
+$username = 'username_example'; // string | user name
+
+try {
+    $apiInstance->adminDashboardUserRemove($owner, $name, $username);
+} catch (Exception $e) {
+    echo 'Exception when calling AgdbApi->adminDashboardUserRemove: ', $e->getMessage(), PHP_EOL;
+}
+```
+
+### Parameters
+
+| Name | Type | Description  | Notes |
+| ------------- | ------------- | ------------- | ------------- |
+| **owner** | **string**| dashboard owner user name | |
+| **name** | **string**| dashboard name | |
+| **username** | **string**| user name | |
+
+### Return type
+
+void (empty response body)
+
+### Authorization
+
+[Token](../../README.md#Token)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: Not defined
+
+[[Back to top]](#) [[Back to API list]](../../README.md#endpoints)
+[[Back to Model list]](../../README.md#models)
+[[Back to README]](../../README.md)
 
 ## `adminDbAdd()`
 
@@ -1953,7 +2572,7 @@ void (empty response body)
 ## `dashboardAdd()`
 
 ```php
-dashboardAdd($name, $dashboard_config)
+dashboardAdd($owner, $name, $dashboard_config)
 ```
 
 
@@ -1975,11 +2594,12 @@ $apiInstance = new Agnesoft\AgdbApi\Api\AgdbApi(
     new GuzzleHttp\Client(),
     $config
 );
+$owner = 'owner_example'; // string | dashboard owner user name
 $name = 'name_example'; // string | dashboard name
 $dashboard_config = new \Agnesoft\AgdbApi\Model\DashboardConfig(); // \Agnesoft\AgdbApi\Model\DashboardConfig
 
 try {
-    $apiInstance->dashboardAdd($name, $dashboard_config);
+    $apiInstance->dashboardAdd($owner, $name, $dashboard_config);
 } catch (Exception $e) {
     echo 'Exception when calling AgdbApi->dashboardAdd: ', $e->getMessage(), PHP_EOL;
 }
@@ -1989,6 +2609,7 @@ try {
 
 | Name | Type | Description  | Notes |
 | ------------- | ------------- | ------------- | ------------- |
+| **owner** | **string**| dashboard owner user name | |
 | **name** | **string**| dashboard name | |
 | **dashboard_config** | [**\Agnesoft\AgdbApi\Model\DashboardConfig**](../Model/DashboardConfig.md)|  | |
 
@@ -2012,7 +2633,7 @@ void (empty response body)
 ## `dashboardGet()`
 
 ```php
-dashboardGet($name): \Agnesoft\AgdbApi\Model\Dashboard
+dashboardGet($owner, $name): \Agnesoft\AgdbApi\Model\Dashboard
 ```
 
 
@@ -2034,10 +2655,11 @@ $apiInstance = new Agnesoft\AgdbApi\Api\AgdbApi(
     new GuzzleHttp\Client(),
     $config
 );
+$owner = 'owner_example'; // string | dashboard owner user name
 $name = 'name_example'; // string | dashboard name
 
 try {
-    $result = $apiInstance->dashboardGet($name);
+    $result = $apiInstance->dashboardGet($owner, $name);
     print_r($result);
 } catch (Exception $e) {
     echo 'Exception when calling AgdbApi->dashboardGet: ', $e->getMessage(), PHP_EOL;
@@ -2048,6 +2670,7 @@ try {
 
 | Name | Type | Description  | Notes |
 | ------------- | ------------- | ------------- | ------------- |
+| **owner** | **string**| dashboard owner user name | |
 | **name** | **string**| dashboard name | |
 
 ### Return type
@@ -2122,10 +2745,10 @@ This endpoint does not need any parameter.
 [[Back to Model list]](../../README.md#models)
 [[Back to README]](../../README.md)
 
-## `dashboardRemove()`
+## `dashboardPublic()`
 
 ```php
-dashboardRemove($name)
+dashboardPublic($owner, $name, $public)
 ```
 
 
@@ -2147,10 +2770,72 @@ $apiInstance = new Agnesoft\AgdbApi\Api\AgdbApi(
     new GuzzleHttp\Client(),
     $config
 );
+$owner = 'owner_example'; // string | dashboard owner user name
+$name = 'name_example'; // string | dashboard name
+$public = True; // bool | Every user can view a public dashboard.
+
+try {
+    $apiInstance->dashboardPublic($owner, $name, $public);
+} catch (Exception $e) {
+    echo 'Exception when calling AgdbApi->dashboardPublic: ', $e->getMessage(), PHP_EOL;
+}
+```
+
+### Parameters
+
+| Name | Type | Description  | Notes |
+| ------------- | ------------- | ------------- | ------------- |
+| **owner** | **string**| dashboard owner user name | |
+| **name** | **string**| dashboard name | |
+| **public** | **bool**| Every user can view a public dashboard. | |
+
+### Return type
+
+void (empty response body)
+
+### Authorization
+
+[Token](../../README.md#Token)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: Not defined
+
+[[Back to top]](#) [[Back to API list]](../../README.md#endpoints)
+[[Back to Model list]](../../README.md#models)
+[[Back to README]](../../README.md)
+
+## `dashboardRemove()`
+
+```php
+dashboardRemove($owner, $name)
+```
+
+
+
+### Example
+
+```php
+<?php
+require_once(__DIR__ . '/vendor/autoload.php');
+
+
+// Configure Bearer authorization: Token
+$config = Agnesoft\AgdbApi\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
+
+
+$apiInstance = new Agnesoft\AgdbApi\Api\AgdbApi(
+    // If you want use custom http client, pass your client which implements `GuzzleHttp\ClientInterface`.
+    // This is optional, `GuzzleHttp\Client` will be used as default.
+    new GuzzleHttp\Client(),
+    $config
+);
+$owner = 'owner_example'; // string | dashboard owner user name
 $name = 'name_example'; // string | dashboard name
 
 try {
-    $apiInstance->dashboardRemove($name);
+    $apiInstance->dashboardRemove($owner, $name);
 } catch (Exception $e) {
     echo 'Exception when calling AgdbApi->dashboardRemove: ', $e->getMessage(), PHP_EOL;
 }
@@ -2160,6 +2845,7 @@ try {
 
 | Name | Type | Description  | Notes |
 | ------------- | ------------- | ------------- | ------------- |
+| **owner** | **string**| dashboard owner user name | |
 | **name** | **string**| dashboard name | |
 
 ### Return type
@@ -2182,7 +2868,7 @@ void (empty response body)
 ## `dashboardRename()`
 
 ```php
-dashboardRename($name, $new_name)
+dashboardRename($owner, $name, $new_name)
 ```
 
 
@@ -2204,11 +2890,12 @@ $apiInstance = new Agnesoft\AgdbApi\Api\AgdbApi(
     new GuzzleHttp\Client(),
     $config
 );
+$owner = 'owner_example'; // string | dashboard owner user name
 $name = 'name_example'; // string | dashboard name
 $new_name = 'new_name_example'; // string
 
 try {
-    $apiInstance->dashboardRename($name, $new_name);
+    $apiInstance->dashboardRename($owner, $name, $new_name);
 } catch (Exception $e) {
     echo 'Exception when calling AgdbApi->dashboardRename: ', $e->getMessage(), PHP_EOL;
 }
@@ -2218,6 +2905,7 @@ try {
 
 | Name | Type | Description  | Notes |
 | ------------- | ------------- | ------------- | ------------- |
+| **owner** | **string**| dashboard owner user name | |
 | **name** | **string**| dashboard name | |
 | **new_name** | **string**|  | |
 
@@ -2241,7 +2929,7 @@ void (empty response body)
 ## `dashboardSave()`
 
 ```php
-dashboardSave($name, $dashboard_config)
+dashboardSave($owner, $name, $dashboard_config)
 ```
 
 
@@ -2263,11 +2951,12 @@ $apiInstance = new Agnesoft\AgdbApi\Api\AgdbApi(
     new GuzzleHttp\Client(),
     $config
 );
+$owner = 'owner_example'; // string | dashboard owner user name
 $name = 'name_example'; // string | dashboard name
 $dashboard_config = new \Agnesoft\AgdbApi\Model\DashboardConfig(); // \Agnesoft\AgdbApi\Model\DashboardConfig
 
 try {
-    $apiInstance->dashboardSave($name, $dashboard_config);
+    $apiInstance->dashboardSave($owner, $name, $dashboard_config);
 } catch (Exception $e) {
     echo 'Exception when calling AgdbApi->dashboardSave: ', $e->getMessage(), PHP_EOL;
 }
@@ -2277,6 +2966,7 @@ try {
 
 | Name | Type | Description  | Notes |
 | ------------- | ------------- | ------------- | ------------- |
+| **owner** | **string**| dashboard owner user name | |
 | **name** | **string**| dashboard name | |
 | **dashboard_config** | [**\Agnesoft\AgdbApi\Model\DashboardConfig**](../Model/DashboardConfig.md)|  | |
 
@@ -2291,6 +2981,190 @@ void (empty response body)
 ### HTTP request headers
 
 - **Content-Type**: `application/json`
+- **Accept**: Not defined
+
+[[Back to top]](#) [[Back to API list]](../../README.md#endpoints)
+[[Back to Model list]](../../README.md#models)
+[[Back to README]](../../README.md)
+
+## `dashboardUserAdd()`
+
+```php
+dashboardUserAdd($owner, $name, $username, $db_role)
+```
+
+
+
+### Example
+
+```php
+<?php
+require_once(__DIR__ . '/vendor/autoload.php');
+
+
+// Configure Bearer authorization: Token
+$config = Agnesoft\AgdbApi\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
+
+
+$apiInstance = new Agnesoft\AgdbApi\Api\AgdbApi(
+    // If you want use custom http client, pass your client which implements `GuzzleHttp\ClientInterface`.
+    // This is optional, `GuzzleHttp\Client` will be used as default.
+    new GuzzleHttp\Client(),
+    $config
+);
+$owner = 'owner_example'; // string | dashboard owner user name
+$name = 'name_example'; // string | dashboard name
+$username = 'username_example'; // string | user name
+$db_role = new \Agnesoft\AgdbApi\Model\\Agnesoft\AgdbApi\Model\DbUserRole(); // \Agnesoft\AgdbApi\Model\DbUserRole
+
+try {
+    $apiInstance->dashboardUserAdd($owner, $name, $username, $db_role);
+} catch (Exception $e) {
+    echo 'Exception when calling AgdbApi->dashboardUserAdd: ', $e->getMessage(), PHP_EOL;
+}
+```
+
+### Parameters
+
+| Name | Type | Description  | Notes |
+| ------------- | ------------- | ------------- | ------------- |
+| **owner** | **string**| dashboard owner user name | |
+| **name** | **string**| dashboard name | |
+| **username** | **string**| user name | |
+| **db_role** | [**\Agnesoft\AgdbApi\Model\DbUserRole**](../Model/.md)|  | |
+
+### Return type
+
+void (empty response body)
+
+### Authorization
+
+[Token](../../README.md#Token)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: Not defined
+
+[[Back to top]](#) [[Back to API list]](../../README.md#endpoints)
+[[Back to Model list]](../../README.md#models)
+[[Back to README]](../../README.md)
+
+## `dashboardUserList()`
+
+```php
+dashboardUserList($owner, $name): \Agnesoft\AgdbApi\Model\DbUser[]
+```
+
+
+
+### Example
+
+```php
+<?php
+require_once(__DIR__ . '/vendor/autoload.php');
+
+
+// Configure Bearer authorization: Token
+$config = Agnesoft\AgdbApi\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
+
+
+$apiInstance = new Agnesoft\AgdbApi\Api\AgdbApi(
+    // If you want use custom http client, pass your client which implements `GuzzleHttp\ClientInterface`.
+    // This is optional, `GuzzleHttp\Client` will be used as default.
+    new GuzzleHttp\Client(),
+    $config
+);
+$owner = 'owner_example'; // string | dashboard owner user name
+$name = 'name_example'; // string | dashboard name
+
+try {
+    $result = $apiInstance->dashboardUserList($owner, $name);
+    print_r($result);
+} catch (Exception $e) {
+    echo 'Exception when calling AgdbApi->dashboardUserList: ', $e->getMessage(), PHP_EOL;
+}
+```
+
+### Parameters
+
+| Name | Type | Description  | Notes |
+| ------------- | ------------- | ------------- | ------------- |
+| **owner** | **string**| dashboard owner user name | |
+| **name** | **string**| dashboard name | |
+
+### Return type
+
+[**\Agnesoft\AgdbApi\Model\DbUser[]**](../Model/DbUser.md)
+
+### Authorization
+
+[Token](../../README.md#Token)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: `application/json`
+
+[[Back to top]](#) [[Back to API list]](../../README.md#endpoints)
+[[Back to Model list]](../../README.md#models)
+[[Back to README]](../../README.md)
+
+## `dashboardUserRemove()`
+
+```php
+dashboardUserRemove($owner, $name, $username)
+```
+
+
+
+### Example
+
+```php
+<?php
+require_once(__DIR__ . '/vendor/autoload.php');
+
+
+// Configure Bearer authorization: Token
+$config = Agnesoft\AgdbApi\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
+
+
+$apiInstance = new Agnesoft\AgdbApi\Api\AgdbApi(
+    // If you want use custom http client, pass your client which implements `GuzzleHttp\ClientInterface`.
+    // This is optional, `GuzzleHttp\Client` will be used as default.
+    new GuzzleHttp\Client(),
+    $config
+);
+$owner = 'owner_example'; // string | dashboard owner user name
+$name = 'name_example'; // string | dashboard name
+$username = 'username_example'; // string | user name
+
+try {
+    $apiInstance->dashboardUserRemove($owner, $name, $username);
+} catch (Exception $e) {
+    echo 'Exception when calling AgdbApi->dashboardUserRemove: ', $e->getMessage(), PHP_EOL;
+}
+```
+
+### Parameters
+
+| Name | Type | Description  | Notes |
+| ------------- | ------------- | ------------- | ------------- |
+| **owner** | **string**| dashboard owner user name | |
+| **name** | **string**| dashboard name | |
+| **username** | **string**| user name | |
+
+### Return type
+
+void (empty response body)
+
+### Authorization
+
+[Token](../../README.md#Token)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
 - **Accept**: Not defined
 
 [[Back to top]](#) [[Back to API list]](../../README.md#endpoints)
@@ -3602,6 +4476,174 @@ void (empty response body)
 ### HTTP request headers
 
 - **Content-Type**: `application/json`
+- **Accept**: Not defined
+
+[[Back to top]](#) [[Back to API list]](../../README.md#endpoints)
+[[Back to Model list]](../../README.md#models)
+[[Back to README]](../../README.md)
+
+## `userHomeDashboard()`
+
+```php
+userHomeDashboard(): \Agnesoft\AgdbApi\Model\DashboardName
+```
+
+
+
+### Example
+
+```php
+<?php
+require_once(__DIR__ . '/vendor/autoload.php');
+
+
+// Configure Bearer authorization: Token
+$config = Agnesoft\AgdbApi\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
+
+
+$apiInstance = new Agnesoft\AgdbApi\Api\AgdbApi(
+    // If you want use custom http client, pass your client which implements `GuzzleHttp\ClientInterface`.
+    // This is optional, `GuzzleHttp\Client` will be used as default.
+    new GuzzleHttp\Client(),
+    $config
+);
+
+try {
+    $result = $apiInstance->userHomeDashboard();
+    print_r($result);
+} catch (Exception $e) {
+    echo 'Exception when calling AgdbApi->userHomeDashboard: ', $e->getMessage(), PHP_EOL;
+}
+```
+
+### Parameters
+
+This endpoint does not need any parameter.
+
+### Return type
+
+[**\Agnesoft\AgdbApi\Model\DashboardName**](../Model/DashboardName.md)
+
+### Authorization
+
+[Token](../../README.md#Token)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: `application/json`
+
+[[Back to top]](#) [[Back to API list]](../../README.md#endpoints)
+[[Back to Model list]](../../README.md#models)
+[[Back to README]](../../README.md)
+
+## `userHomeDashboardClear()`
+
+```php
+userHomeDashboardClear()
+```
+
+
+
+### Example
+
+```php
+<?php
+require_once(__DIR__ . '/vendor/autoload.php');
+
+
+// Configure Bearer authorization: Token
+$config = Agnesoft\AgdbApi\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
+
+
+$apiInstance = new Agnesoft\AgdbApi\Api\AgdbApi(
+    // If you want use custom http client, pass your client which implements `GuzzleHttp\ClientInterface`.
+    // This is optional, `GuzzleHttp\Client` will be used as default.
+    new GuzzleHttp\Client(),
+    $config
+);
+
+try {
+    $apiInstance->userHomeDashboardClear();
+} catch (Exception $e) {
+    echo 'Exception when calling AgdbApi->userHomeDashboardClear: ', $e->getMessage(), PHP_EOL;
+}
+```
+
+### Parameters
+
+This endpoint does not need any parameter.
+
+### Return type
+
+void (empty response body)
+
+### Authorization
+
+[Token](../../README.md#Token)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: Not defined
+
+[[Back to top]](#) [[Back to API list]](../../README.md#endpoints)
+[[Back to Model list]](../../README.md#models)
+[[Back to README]](../../README.md)
+
+## `userHomeDashboardSet()`
+
+```php
+userHomeDashboardSet($owner, $name)
+```
+
+
+
+### Example
+
+```php
+<?php
+require_once(__DIR__ . '/vendor/autoload.php');
+
+
+// Configure Bearer authorization: Token
+$config = Agnesoft\AgdbApi\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
+
+
+$apiInstance = new Agnesoft\AgdbApi\Api\AgdbApi(
+    // If you want use custom http client, pass your client which implements `GuzzleHttp\ClientInterface`.
+    // This is optional, `GuzzleHttp\Client` will be used as default.
+    new GuzzleHttp\Client(),
+    $config
+);
+$owner = 'owner_example'; // string
+$name = 'name_example'; // string
+
+try {
+    $apiInstance->userHomeDashboardSet($owner, $name);
+} catch (Exception $e) {
+    echo 'Exception when calling AgdbApi->userHomeDashboardSet: ', $e->getMessage(), PHP_EOL;
+}
+```
+
+### Parameters
+
+| Name | Type | Description  | Notes |
+| ------------- | ------------- | ------------- | ------------- |
+| **owner** | **string**|  | |
+| **name** | **string**|  | |
+
+### Return type
+
+void (empty response body)
+
+### Authorization
+
+[Token](../../README.md#Token)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
 - **Accept**: Not defined
 
 [[Back to top]](#) [[Back to API list]](../../README.md#endpoints)

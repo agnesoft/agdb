@@ -735,17 +735,34 @@ async fn admin_cluster_logout_selected_session() -> Result<(), TestError> {
 async fn dashboard() -> Result<(), TestError> {
     let cluster = TestCluster::new().await?;
     let user = &next_user_name();
+    let other = &next_user_name();
     let mut client = cluster.follower();
     client.cluster_user_login(ADMIN, ADMIN).await?;
     client.admin_user_add(user, user).await?;
+    client.admin_user_add(other, other).await?;
     client.cluster_user_login(user, user).await?;
-    client.dashboard_add("ops", "{}").await?;
-    client.dashboard_save("ops", "{\"v\":2}").await?;
-    assert_eq!(client.dashboard_get("ops").await?.1.config, "{\"v\":2}");
-    client.dashboard_rename("ops", "sales").await?;
+    client.dashboard_add(user, "ops", "{}").await?;
+    client.dashboard_save(user, "ops", "{\"v\":2}").await?;
+    assert_eq!(
+        client.dashboard_get(user, "ops").await?.1.config,
+        "{\"v\":2}"
+    );
+    client.dashboard_rename(user, "ops", "sales").await?;
+    client
+        .dashboard_user_add(user, "sales", other, DbUserRole::Read)
+        .await?;
+    client.user_home_dashboard_set(user, "sales").await?;
     let mut leader = cluster.leader();
     leader.user_login(user, user).await?;
-    assert_eq!(leader.dashboard_get("sales").await?.1.config, "{\"v\":2}");
+    assert_eq!(
+        leader.dashboard_get(user, "sales").await?.1.config,
+        "{\"v\":2}"
+    );
+    assert_eq!(
+        leader.user_home_dashboard().await?.1.map(|d| d.name),
+        Some("sales".to_string())
+    );
+    assert_eq!(client.dashboard_user_list(user, "sales").await?.1.len(), 2);
     let names: Vec<String> = client
         .dashboard_list()
         .await?
@@ -754,7 +771,16 @@ async fn dashboard() -> Result<(), TestError> {
         .map(|d| d.name)
         .collect();
     assert_eq!(names, vec!["sales".to_string()]);
-    client.dashboard_remove("sales").await?;
+    // A forwarded write is executed on the node it was sent to before it
+    // answers, so that node reads it back at once.
+    client.dashboard_public(user, "sales", true).await?;
+    assert!(client.dashboard_get(user, "sales").await?.1.public);
+    client.dashboard_public(user, "sales", false).await?;
+    assert!(!client.dashboard_get(user, "sales").await?.1.public);
+    client.user_home_dashboard_clear().await?;
+    client.dashboard_user_remove(user, "sales", other).await?;
+    assert_eq!(client.dashboard_user_list(user, "sales").await?.1.len(), 1);
+    client.dashboard_remove(user, "sales").await?;
     assert!(client.dashboard_list().await?.1.is_empty());
     Ok(())
 }

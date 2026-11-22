@@ -343,6 +343,14 @@ The server exposes a REST API at `/api/v1` (or `{basepath}/api/v1`). Five endpoi
 - `POST /{username}/logout?session={session}` — logout specific session
 - `POST /logout_all` — logout all users
 
+**Dashboard**: `/admin/dashboard/...` — the server admin acts as the owner of any dashboard
+
+- `GET /list` — all dashboards
+- `GET /{owner}/{name}` — dashboard with config
+- `POST /{owner}/{name}/add` — create for an existing user (body: `DashboardConfig`)
+- `PUT /{owner}/{name}/save`, `POST /{owner}/{name}/rename?new_name=`, `DELETE /{owner}/{name}/remove`, `PUT /{owner}/{name}/public?public=`
+- `GET /{owner}/{name}/user/list`, `PUT /{owner}/{name}/user/{username}/add?db_role=`, `DELETE /{owner}/{name}/user/{username}/remove` — the owner's role cannot be changed or removed
+
 **Server**: `/admin/...`
 
 - `POST /shutdown` — shutdown server
@@ -356,6 +364,7 @@ The server exposes a REST API at `/api/v1` (or `{basepath}/api/v1`). Five endpoi
 - `POST /logout?session=others|all|{id}` — logout other/all/specific sessions
 - `PUT /change_password` — change own password
 - `GET /status` — own status and sessions (`UserStatus`)
+- `GET|PUT|DELETE /home_dashboard` — the user's home dashboard (`PUT ?owner=&name=`)
 
 ### Database (`/api/v1/db/{owner}/{db}/...`) — requires user token + role
 
@@ -365,16 +374,22 @@ Same structure as admin database routes but scoped by ownership and roles:
 - **Write** role: `exec_mut` + everything Read can do
 - **Admin** role: all operations including `backup`, `restore`, `convert`, `optimize`, `audit/trim`, user management
 
-### Dashboard (`/api/v1/dashboard/...`) — requires user token, own dashboards only
+### Dashboard (`/api/v1/dashboard/...`) — requires user token + role
 
-The `config` is an opaque JSON string (max 256 KB) owned by agdb Studio. Names: `[A-Za-z0-9_.-]{1,64}`, no leading `.`, not `list`.
+The `config` is an opaque JSON string (max 256 KB) owned by agdb Studio. Names: `[A-Za-z0-9_.-]{1,64}`, no leading `.`. Dashboards are shared with users by DB-style roles (the owner is admin). A public dashboard can be read by every user; for others a dashboard without a role is not found (404).
 
-- `GET /list` — own dashboards (`Vec<DashboardSummary>`)
-- `GET /{name}` — dashboard with config (`Dashboard`)
-- `POST /{name}/add` — create (body: `DashboardConfig`; 409 if it exists)
-- `PUT /{name}/save` — create or replace (body: `DashboardConfig`)
-- `POST /{name}/rename?new_name={new_name}` — rename (409 if the target exists)
-- `DELETE /{name}/remove` — remove
+- `GET /list` — dashboards the user has a role on plus public ones (`Vec<DashboardSummary>`; `member` is false for public ones without a role)
+- `GET /{owner}/{name}` — dashboard with config and the user's role (`Dashboard`)
+- `POST /{owner}/{name}/add` — create own dashboard (body: `DashboardConfig`; 409 if it exists)
+- `PUT /{owner}/{name}/save` — replace the config (write role)
+- `POST /{owner}/{name}/rename?new_name={new_name}` — rename (owner only; 409 if the target exists)
+- `DELETE /{owner}/{name}/remove` — remove (owner only)
+- `PUT /{owner}/{name}/public?public={bool}` — make public or private (owner only; private drops it as the home of users without a role)
+- `GET /{owner}/{name}/user/list` — users and roles (role holders only)
+- `PUT /{owner}/{name}/user/{username}/add?db_role={role}` — add or change a user (admin role; not the owner)
+- `DELETE /{owner}/{name}/user/{username}/remove` — remove a user (admin role, or the user leaving; not the owner)
+
+The home dashboard (start page in Studio) is per user: `GET|PUT|DELETE /api/v1/user/home_dashboard` (`PUT` takes `?owner=&name=`).
 
 ### Cluster (`/api/v1/cluster/...`) — propagates across nodes
 

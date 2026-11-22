@@ -4,14 +4,22 @@ import { useRoute } from "vue-router";
 import DashboardViewComponent from "@agdb-studio/dashboard/src/components/DashboardView.vue";
 
 const route = useRoute();
-const name = computed(() =>
-  typeof route.params.name === "string" ? route.params.name : "",
-);
+const param = (key: "owner" | "name") => {
+  const value = route.params[key];
+  return typeof value === "string" ? value : "";
+};
+const owner = computed(() => param("owner"));
+const name = computed(() => param("name"));
 </script>
 
 <template>
   <div class="dashboard-page">
-    <DashboardViewComponent :name="name" />
+    <!-- The admin and user pages differ in access: never reuse one for the other. -->
+    <DashboardViewComponent
+      :key="String(route.name)"
+      :owner="owner"
+      :name="name"
+    />
   </div>
 </template>
 

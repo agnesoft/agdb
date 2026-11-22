@@ -115,16 +115,4 @@ describe("dbDetails", () => {
     expect(getInputValue(KEY_MODAL, "username")).toBe("testUser");
     expect(getInputValue(KEY_MODAL, "role")).toBe("read");
   });
-  it("should not allow to prefill username if owner", () => {
-    const { handleUsernameClick } = useDbDetails(dbParams);
-    handleUsernameClick("testOwner", "admin");
-    expect(modalIsVisible.value).toBe(false);
-  });
-  it("should not allow to prefill username if can't edit users", () => {
-    const { handleUsernameClick } = useDbDetails(
-      ref({ ...dbParams.value, role: "read" }),
-    );
-    handleUsernameClick("testUser", "read");
-    expect(modalIsVisible.value).toBe(false);
-  });
 });

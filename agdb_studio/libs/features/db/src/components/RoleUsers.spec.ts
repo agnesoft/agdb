@@ -75,6 +75,8 @@ describe("RoleUsers", () => {
     const names = wrapper.findAll(".username");
     expect(names[0]!.classes()).not.toContain("clickable");
     expect(names[1]!.classes()).toContain("clickable");
+    await names[0]!.trigger("click");
+    expect(wrapper.emitted("edit")).toBeUndefined();
     await names[1]!.trigger("click");
     expect(wrapper.emitted("edit")).toEqual([["ann", "write"]]);
 
@@ -84,11 +86,15 @@ describe("RoleUsers", () => {
     expect(wrapper.emitted("remove")).toEqual([["bob"]]);
   });
 
-  it("shows read only users to others", () => {
+  it("shows read only users to others", async () => {
     const wrapper = mountUsers({ canEdit: false });
     expect(wrapper.find(".add-button").exists()).toBe(false);
     expect(wrapper.find(".remove-button").exists()).toBe(false);
     expect(wrapper.find(".clickable").exists()).toBe(false);
+    const names = wrapper.findAll(".username");
+    expect(names).toHaveLength(3);
+    for (const name of names) await name.trigger("click");
+    expect(wrapper.emitted("edit")).toBeUndefined();
   });
 
   it("collapses long groups and expands them", async () => {

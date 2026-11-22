@@ -135,11 +135,6 @@ const removeUser = (username: string) =>
       return true;
     },
   });
-
-const editUser = (username: string, role: DbUserRole) => {
-  if (username === props.owner || !canEdit.value) return;
-  addUser(username, role);
-};
 </script>
 
 <template>
@@ -150,7 +145,7 @@ const editUser = (username: string, role: DbUserRole) => {
     :can-edit="canEdit"
     data-testid="dashboard-users"
     @add="addUser()"
-    @edit="editUser"
+    @edit="addUser"
     @remove="removeUser"
   />
 </template>

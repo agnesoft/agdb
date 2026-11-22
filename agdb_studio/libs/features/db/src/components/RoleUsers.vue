@@ -31,6 +31,11 @@ const ROLE_ORDER: RoleEntry[] = [
 ];
 
 const isOwner = (username: string) => username === props.owner;
+/** Editors may change and remove every user but the owner. */
+const editable = (username: string) => props.canEdit && !isOwner(username);
+const edit = (user: DbUser) => {
+  if (editable(user.username)) emit("edit", user.username, user.role);
+};
 
 const filteredUsers = computed(() => {
   const q = searchQuery.value.toLowerCase().trim();
@@ -126,13 +131,13 @@ const isCollapsible = (group: UserGroup) => {
           <span
             class="username"
             :class="{
-              clickable: !isOwner(user.username) && canEdit,
+              clickable: editable(user.username),
             }"
-            @click="emit('edit', user.username, user.role)"
+            @click="edit(user)"
             >{{ user.username }}</span
           >
           <button
-            v-if="!isOwner(user.username) && canEdit"
+            v-if="editable(user.username)"
             class="button button-bordered button-danger remove-button button-circle"
             title="Remove user"
             type="button"

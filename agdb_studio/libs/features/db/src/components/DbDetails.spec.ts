@@ -8,7 +8,6 @@ const {
   isDbRoleType,
   handleRemoveUser,
   handleAddUser,
-  isOwner,
   handleUsernameClick,
 } = vi.hoisted(() => {
   return {
@@ -16,7 +15,6 @@ const {
     isDbRoleType: vi.fn().mockReturnValue(true),
     handleRemoveUser: vi.fn(),
     handleAddUser: vi.fn(),
-    isOwner: vi.fn().mockImplementation((name: string) => name === "testUser3"),
     handleUsernameClick: vi.fn(),
   };
 });
@@ -58,7 +56,6 @@ vi.mock("../composables/dbDetails", () => {
         canEditUsers: canEditUsers,
         handleRemoveUser,
         handleAddUser,
-        isOwner,
         handleUsernameClick,
       };
     },

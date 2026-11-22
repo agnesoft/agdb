@@ -137,6 +137,28 @@ fields and variants. Any other serde attribute is an `Error::Lowering`.
 `SourceCrate::lower_exported` adds the serde types an API crate of that crate exports, with the
 types they reach. A name that a type of the tested crate already has is an error.
 
+`codegen::routes` checks a client against the server it calls from their sources, without
+running either:
+
+- `SourceCrate::lower_routes` reads the routes of a server crate: the axum routers passed to
+  `axum::serve`, followed through locals, assignments, `if`s, loops, blocks and the functions
+  returning a `Router`, built with `route`, `nest` and `merge`. The path parameters, `Query`,
+  body and response body of each handler are lowered like data types. The body is a `Json` or
+  the `Json::<T>::from_request` of a local `FromRequest` extractor. The response body is a
+  `Json` or the `Json(self.field)` of a local `IntoResponse` type, through `Result`s, aliases and
+  `(StatusCode, headers.., body)` tuples. A path or router it cannot read is an unknown segment
+  or no routes, so a call to it fails the check instead of passing;
+- `SourceCrate::transport` reads the request each method of the impls of a client's transport
+  trait sends through reqwest: the verb, the URL parameter, the JSON body parameter and where the
+  decoded response is in what the method returns. Impls that disagree are an error;
+- `routes::check` matches each transport call in the client's methods (after `Inline`) to a
+  route. The URL's literal segments and values must match the route's path, without the base path
+  of the constructor and the server's leading unknown segments. It also checks the verb, the path
+  and query values by type, a `Display` value's strings against the serde names the server reads,
+  the query keys against the fields of the `Query` struct (every required one sent), and the body
+  and the response by their serialized form. Each mismatch is an `Error::Lowering` on the client
+  method. `Checked::dump` lists the matches and the routes no call reaches.
+
 `codegen::pass` holds the passes over the lowered IR. A generator lists the ones its target
 needs in `Passes`, built-in or its own `Pass`, and can dump the module after each with
 `codegen::print`:
@@ -144,7 +166,9 @@ needs in `Passes`, built-in or its own `Pass`, and can dump the module after eac
 - `Resolve` types the expressions and resolves what lowering left by name: method calls into
   member, associated, trait and std (intrinsic) calls, paths into variants and constants,
   `.into()`/`From` into conversions. The elements of an array argument get the type the
-  non-generic `From` impls of the parameter's `Into` target agree on, as rustc infers it;
+  non-generic `From` impls of the parameter's `Into` target agree on, as rustc infers it. The
+  generic arguments of a trait call its arguments leave open are inferred from the type expected
+  of it (a function's return type for its tail), on the call's type only;
 - `Prune` keeps what the `pub` methods of the builders, the trait impls and the tests call and
   reports the unsupported constructs of what it keeps, and the tests' calls of private methods,
   as `Error::Lowering`;

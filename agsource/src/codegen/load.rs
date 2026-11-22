@@ -98,6 +98,29 @@ impl SourceCrate {
     }
 }
 
+impl SourceCrate {
+    /// The IR of a type written in `module` where `generics` are generic
+    /// parameters, and the constructs it uses that the IR does not have.
+    pub(super) fn ir_ty(
+        &self,
+        module: ModuleId,
+        generics: &[String],
+        ty: &syn::Type,
+    ) -> (Type, Vec<Error>) {
+        let mut load = Load {
+            c: self,
+            module,
+            file: self.file(self.module(module).file()),
+            generics: generics.to_vec(),
+            scope: Vec::new(),
+            barrier: 0,
+            errors: Vec::new(),
+        };
+        let ty = load.ty(ty);
+        (ty, load.errors)
+    }
+}
+
 struct Load<'a> {
     c: &'a SourceCrate,
     module: ModuleId,

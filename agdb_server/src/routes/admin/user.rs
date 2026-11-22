@@ -9,6 +9,7 @@ use crate::routes::user::LOGOUT_ALL_SESSIONS;
 use crate::routes::user::LOGOUT_OTHER_SESSIONS;
 use crate::routes::user::LogoutQuery;
 use crate::server_db::ServerDb;
+use crate::server_error::CommitIndexHeader;
 use crate::server_error::ServerResponse;
 use crate::user_id::AdminId;
 use agdb_api::UserCredentials;
@@ -18,7 +19,6 @@ use axum::extract::Path;
 use axum::extract::Query;
 use axum::extract::State;
 use axum::http::StatusCode;
-use axum::response::IntoResponse;
 
 #[utoipa::path(post,
     path = "/api/v1/admin/user/{username}/add",
@@ -43,7 +43,7 @@ pub(crate) async fn add(
     State(cluster): State<Cluster>,
     Path(username): Path<String>,
     Json(request): Json<UserCredentials>,
-) -> ServerResponse<impl IntoResponse> {
+) -> ServerResponse<(StatusCode, CommitIndexHeader)> {
     password::validate_username(&username)?;
     password::validate_password(&request.password)?;
 
@@ -88,7 +88,7 @@ pub(crate) async fn change_password(
     State(cluster): State<Cluster>,
     Path(username): Path<String>,
     Json(request): Json<UserCredentials>,
-) -> ServerResponse<impl IntoResponse> {
+) -> ServerResponse<(StatusCode, CommitIndexHeader)> {
     let _user = server_db.user_id(&username).await?;
     let pswd = Password::create(&username, &request.password);
 
@@ -199,7 +199,7 @@ pub(crate) async fn delete(
     State(server_db): State<ServerDb>,
     State(cluster): State<Cluster>,
     Path(username): Path<String>,
-) -> ServerResponse<impl IntoResponse> {
+) -> ServerResponse<(StatusCode, CommitIndexHeader)> {
     server_db.user_id(&username).await?;
 
     let (commit_index, _result) = cluster

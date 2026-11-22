@@ -4,6 +4,7 @@ use crate::action::dashboard_save::DashboardSave;
 use crate::cluster::Cluster;
 use crate::server_db::ServerDb;
 use crate::server_db::dashboard_exists;
+use crate::server_error::CommitIndexHeader;
 use crate::server_error::ServerError;
 use crate::server_error::ServerResponse;
 use crate::server_error::ServerResult;
@@ -16,7 +17,6 @@ use axum::extract::Path;
 use axum::extract::Query;
 use axum::extract::State;
 use axum::http::StatusCode;
-use axum::response::IntoResponse;
 use serde::Deserialize;
 use std::time::SystemTime;
 use std::time::UNIX_EPOCH;
@@ -147,7 +147,7 @@ pub(crate) async fn add(
     State(server_db): State<ServerDb>,
     Path(name): Path<String>,
     Json(request): Json<DashboardConfig>,
-) -> ServerResponse<impl IntoResponse> {
+) -> ServerResponse<(StatusCode, CommitIndexHeader)> {
     validate_name(&name)?;
     validate_config(&request.config)?;
     let owner = server_db.user_name(user.0).await?;
@@ -194,7 +194,7 @@ pub(crate) async fn save(
     State(server_db): State<ServerDb>,
     Path(name): Path<String>,
     Json(request): Json<DashboardConfig>,
-) -> ServerResponse<impl IntoResponse> {
+) -> ServerResponse<(StatusCode, CommitIndexHeader)> {
     validate_name(&name)?;
     validate_config(&request.config)?;
     let owner = server_db.user_name(user.0).await?;
@@ -238,7 +238,7 @@ pub(crate) async fn rename(
     State(server_db): State<ServerDb>,
     Path(name): Path<String>,
     request: Query<DashboardRenameParam>,
-) -> ServerResponse<impl IntoResponse> {
+) -> ServerResponse<(StatusCode, CommitIndexHeader)> {
     let owner = server_db.user_name(user.0).await?;
     let _ = server_db.dashboard(&owner, &name).await?;
 
@@ -282,7 +282,7 @@ pub(crate) async fn remove(
     State(cluster): State<Cluster>,
     State(server_db): State<ServerDb>,
     Path(name): Path<String>,
-) -> ServerResponse<impl IntoResponse> {
+) -> ServerResponse<(StatusCode, CommitIndexHeader)> {
     let owner = server_db.user_name(user.0).await?;
     let _ = server_db.dashboard(&owner, &name).await?;
 

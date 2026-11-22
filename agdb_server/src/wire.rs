@@ -37,7 +37,7 @@ pub(crate) fn decode<T: AgdbSerialize>(bytes: &[u8]) -> ServerResult<T> {
 }
 
 /// Request body accepted as JSON or as agdb's binary serialization
-/// ([`BINARY_CONTENT_TYPE`]). The reply should use the same encoding.
+/// ([`BINARY_CONTENT_TYPE`]), and the reply in the same encoding.
 pub(crate) struct Negotiated<T> {
     pub(crate) value: T,
     pub(crate) binary: bool,
@@ -68,15 +68,17 @@ impl<S: Send + Sync, T: DeserializeOwned + AgdbSerialize> FromRequest<S> for Neg
     }
 }
 
-pub(crate) fn reply<T: serde::Serialize + AgdbSerialize>(value: T, binary: bool) -> Response {
-    if binary {
-        (
-            [(header::CONTENT_TYPE, BINARY_CONTENT_TYPE)],
-            encode(&value),
-        )
-            .into_response()
-    } else {
-        Json(value).into_response()
+impl<T: serde::Serialize + AgdbSerialize> IntoResponse for Negotiated<T> {
+    fn into_response(self) -> Response {
+        if self.binary {
+            (
+                [(header::CONTENT_TYPE, BINARY_CONTENT_TYPE)],
+                encode(&self.value),
+            )
+                .into_response()
+        } else {
+            Json(self.value).into_response()
+        }
     }
 }
 

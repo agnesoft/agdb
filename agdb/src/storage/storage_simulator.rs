@@ -123,6 +123,10 @@ impl<P: Platform + Default> StorageData for StorageSimulator<P> {
         Ok(copy)
     }
 
+    fn create(&self, name: &str) -> Result<Self, DbError> {
+        Ok(Self::with_platform(self.platform.clone(), name))
+    }
+
     fn flush(&mut self) -> Result<(), DbError> {
         self.flushed.0 = self.len;
         self.flushed.1.clear();
@@ -446,6 +450,18 @@ pub(crate) mod tests {
                     contract::copy::copy_should_create_independent_storage_named_name(
                         open(),
                         "/copy",
+                    );
+                }
+            }
+
+            mod create {
+                use super::*;
+
+                #[test]
+                fn create_should_replace_name_with_empty_storage() {
+                    contract::create::create_should_replace_name_with_empty_storage(
+                        open(),
+                        "/created",
                     );
                 }
             }

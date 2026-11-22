@@ -279,7 +279,6 @@ fn data_remove_persistence() {
 }
 
 #[test]
-#[ignore = "needs the legacy reader (storage rewrite step 5)"]
 fn invalid_db_file() {
     let test_file = TestFile::new();
     let bytes = [0_u64.to_le_bytes(), 0_u64.to_le_bytes()].concat();
@@ -389,7 +388,6 @@ fn filename() {
 }
 
 #[test]
-#[ignore = "needs the optimize rebuild (storage rewrite step 5)"]
 fn optimize_storage() {
     let mut db = TestDb::new();
 
@@ -400,6 +398,12 @@ fn optimize_storage() {
             .values_uniform([("key", 123).into()])
             .query(),
         100,
+    );
+    db.exec_mut(
+        QueryBuilder::remove()
+            .ids((1..=50).collect::<Vec<i64>>())
+            .query(),
+        50,
     );
 
     let size = db.db.size();
@@ -625,7 +629,6 @@ fn large_queries() {
 }
 
 #[test]
-#[ignore = "needs the legacy reader (storage rewrite step 5)"]
 fn convert_db_before_0_11_0() {
     let test_file = TestFile::new();
     std::fs::copy("tests/test_db_prior_0_11_0.agdb", test_file.file_name()).unwrap();
@@ -644,7 +647,6 @@ fn convert_db_before_0_11_0() {
 }
 
 #[test]
-#[ignore = "needs the legacy reader (storage rewrite step 5)"]
 fn convert_db_v1() {
     let test_file = TestFile::new();
     std::fs::copy("tests/test_db_v1.agdb", test_file.file_name()).unwrap();
@@ -741,11 +743,11 @@ fn convert_db_v1() {
         .unwrap()
         .ids();
 
-    assert_eq!(nodes, vec![DbId(11), DbId(9), DbId(6)]);
-    assert_eq!(edges, vec![DbId(-13)]);
+    assert_eq!(nodes, vec![DbId(6), DbId(7), DbId(8)]);
+    assert_eq!(edges, vec![DbId(-9)]);
     assert_eq!(
         ids(&db, QueryBuilder::search().from(1).query()),
-        vec![1, -13, -8, -7, 2, 3]
+        vec![1, -9, -8, -7, 2, 3]
     );
 
     drop(db);
@@ -753,7 +755,7 @@ fn convert_db_v1() {
     assert_eq!(db.migration(), None);
     assert_eq!(
         ids(&db, QueryBuilder::search().depth_first().from(1).query()),
-        vec![1, -13, 2, -8, 3, -7]
+        vec![1, -9, 2, -8, 3, -7]
     );
 }
 
@@ -838,44 +840,6 @@ fn using_ref_insert_element() {
         .unwrap();
     db.exec_mut(QueryBuilder::insert().element(s).query())
         .unwrap();
-}
-
-#[test]
-#[ignore = "needs the optimize rebuild (storage rewrite step 5)"]
-fn shrink_to_fit() {
-    let test_file = TestFile::new();
-    let mut db = DbMemory::new(test_file.file_name()).unwrap();
-    db.exec_mut(QueryBuilder::insert().index("key0").query())
-        .unwrap();
-    db.exec_mut(QueryBuilder::insert().nodes().aliases("root").query())
-        .unwrap();
-
-    for i in 0..1000 {
-        let mut values = vec![];
-        for j in 0..(i % 10) {
-            values.push((format!("key{}", j), format!("value{}", j)).into());
-        }
-        let node = db
-            .exec_mut(QueryBuilder::insert().nodes().values([values]).query())
-            .unwrap();
-        db.exec_mut(QueryBuilder::insert().edges().from("root").to(node).query())
-            .unwrap();
-    }
-
-    let size = db.size();
-    db.optimize_storage().unwrap();
-    let optimized_size = db.size();
-    db.shrink_to_fit().unwrap();
-    let shrunk_size = db.size();
-
-    assert!(
-        optimized_size < size,
-        "{optimized_size} (optimized) < {size} (original)"
-    );
-    assert!(
-        shrunk_size < optimized_size,
-        "{shrunk_size} (shrunk) < {optimized_size} (optimized)"
-    );
 }
 
 #[test]

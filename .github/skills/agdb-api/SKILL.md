@@ -43,7 +43,6 @@ Require admin authentication. Manage all databases, users, and server state.
   - `POST /copy` — Copy database (body: `{new_name}`)
   - `DELETE /delete` — Permanently delete database and files
   - `POST /optimize` — Defragment storage, returns `ServerDatabase` with new size
-  - `POST /optimize_shrink_to_fit` — Defragment and shrink file on disk
   - `DELETE /remove` — Disassociate from server (keep data files)
   - `POST /rename` — Rename/move database (body: `{new_name}`)
   - `POST /restore` — Restore from backup

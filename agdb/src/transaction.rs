@@ -14,6 +14,8 @@ use crate::db::db_search_handlers::LimitHandler;
 use crate::db::db_search_handlers::LimitOffsetHandler;
 use crate::db::db_search_handlers::OffsetHandler;
 use crate::db::db_search_handlers::PathHandler;
+use crate::db::rebuild::Element;
+use crate::db::rebuild::Source;
 use crate::graph_search::GraphSearch;
 use crate::graph_search::SearchControl;
 use crate::query::Query;
@@ -517,5 +519,79 @@ impl<'a, Store: StorageData> Transaction<'a, Store> {
         }
 
         Ok(result)
+    }
+}
+
+/// The committed database read by an optimization: it has nothing to fix.
+impl<S: StorageData> Source for Transaction<'_, S> {
+    fn slots(&self) -> u64 {
+        self.meta.graph.slots()
+    }
+
+    fn graph(&self, start: u64, count: u64) -> Result<Vec<Element>, DbError> {
+        let graph = &self.meta.graph;
+        let mut elements = Vec::new();
+
+        for slot in start..start + count {
+            let id = slot as i64;
+            let mut node = graph.node(&self.view, DbId(id))?;
+            let mut edge = graph.edge(&self.view, DbId(-id))?;
+
+            if let Some(node) = &mut node {
+                node.data = 0;
+            }
+
+            if let Some(edge) = &mut edge {
+                edge.data = 0;
+            }
+
+            elements.push((node, edge));
+        }
+
+        Ok(elements)
+    }
+
+    fn indexes(&self) -> Result<Vec<DbValue>, DbError> {
+        Ok(self
+            .meta
+            .indexes
+            .list()
+            .iter()
+            .map(|index| index.key.clone())
+            .collect())
+    }
+
+    fn aliases(&self, _fixed: &mut Vec<String>) -> Result<Vec<(DbId, String)>, DbError> {
+        Ok(Transaction::aliases(self)?
+            .into_iter()
+            .map(|(alias, id)| (id, alias))
+            .collect())
+    }
+
+    fn value_slots(&self) -> Result<u64, DbError> {
+        Ok(self.meta.graph.slots())
+    }
+
+    fn values(
+        &self,
+        start: u64,
+        count: u64,
+        _fixed: &mut Vec<String>,
+    ) -> Result<Vec<(DbId, DbKeyValue)>, DbError> {
+        let mut values = Vec::new();
+
+        for (slot, (node, edge)) in (start..).zip(Source::graph(self, start, count)?) {
+            let id = slot as i64;
+
+            for (exists, id) in [(node.is_some(), DbId(id)), (edge.is_some(), DbId(-id))] {
+                if exists {
+                    for key_value in Transaction::values(self, id)? {
+                        values.push((id, key_value));
+                    }
+                }
+            }
+        }
+
+        Ok(values)
     }
 }

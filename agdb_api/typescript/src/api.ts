@@ -216,10 +216,6 @@ export class AgdbApi<T extends AgdbApiClient> {
         return (await this.client.post<void, ServerDatabase>(`${this._base_url}/admin/db/${owner}/${db}/optimize`, undefined, this.token));
     }
 
-    async admin_db_optimize_shrink_to_fit(owner: string, db: string): Promise<[number, ServerDatabase]> {
-        return (await this.client.post<void, ServerDatabase>(`${this._base_url}/admin/db/${owner}/${db}/optimize?shrink_to_fit=true`, undefined, this.token));
-    }
-
     async admin_db_remove(owner: string, db: string): Promise<number> {
         return (await this.client.delete(`${this._base_url}/admin/db/${owner}/${db}/remove`, this.token));
     }
@@ -418,10 +414,6 @@ export class AgdbApi<T extends AgdbApiClient> {
 
     async db_optimize(owner: string, db: string): Promise<[number, ServerDatabase]> {
         return (await this.client.post<void, ServerDatabase>(`${this._base_url}/db/${owner}/${db}/optimize`, undefined, this.token));
-    }
-
-    async db_optimize_shrink_to_fit(owner: string, db: string): Promise<[number, ServerDatabase]> {
-        return (await this.client.post<void, ServerDatabase>(`${this._base_url}/db/${owner}/${db}/optimize?shrink_to_fit=true`, undefined, this.token));
     }
 
     async db_remove(owner: string, db: string): Promise<number> {

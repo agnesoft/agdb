@@ -324,7 +324,6 @@ The server exposes a REST API at `/api/v1` (or `{basepath}/api/v1`). Five endpoi
 - `DELETE /delete` — permanently delete
 - `POST /exec`, `POST /exec_mut` — execute queries
 - `POST /optimize` — defragment storage
-- `POST /optimize_shrink_to_fit` — defragment and shrink file
 - `DELETE /remove` — disassociate from server (keep data files)
 - `POST /rename` — rename/move database
 - `POST /restore` — restore from backup

@@ -38,6 +38,14 @@ impl<P: Platform + Default> StorageData for AnyStorageImpl<P> {
         }
     }
 
+    fn create(&self, name: &str) -> Result<Self, DbError> {
+        match self {
+            Self::MemoryMapped(s) => s.create(name).map(Self::MemoryMapped),
+            Self::Memory(s) => s.create(name).map(Self::Memory),
+            Self::File(s) => s.create(name).map(Self::File),
+        }
+    }
+
     fn flush(&mut self) -> Result<(), DbError> {
         match self {
             Self::MemoryMapped(s) => s.flush(),
@@ -244,6 +252,25 @@ mod tests {
                             .set_io_error(FsOp::Open, "/copy", ErrorKind::Other);
 
                         assert_eq!(storage.copy("/copy").is_err(), logged, "logged: {logged}");
+                    }
+                }
+            }
+
+            mod create {
+                use super::*;
+
+                #[test]
+                fn create_should_replace_name_with_empty_storage_of_same_variant() {
+                    for (storage, _, _) in variants() {
+                        let variant = std::mem::discriminant(&storage);
+
+                        let created = std::mem::discriminant(&storage.create("/created").unwrap());
+
+                        assert_eq!(created, variant);
+                        crate::storage::tests::storage_data::create::create_should_replace_name_with_empty_storage(
+                            storage,
+                            "/created",
+                        );
                     }
                 }
             }

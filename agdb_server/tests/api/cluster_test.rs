@@ -155,7 +155,15 @@ async fn admin_db_optimize() -> Result<(), TestError> {
         .admin_db_exec_mut(
             owner,
             db,
-            &[QueryBuilder::insert().nodes().count(100).query().into()],
+            &[
+                QueryBuilder::insert().nodes().count(100).query().into(),
+                QueryBuilder::remove()
+                    .search()
+                    .elements()
+                    .offset(50)
+                    .query()
+                    .into(),
+            ],
         )
         .await?;
     let original_size = client
@@ -168,35 +176,6 @@ async fn admin_db_optimize() -> Result<(), TestError> {
         .size;
     client.admin_db_optimize(owner, db).await?;
     let server_db = client.admin_db_optimize(owner, db).await?.1;
-    assert!(server_db.size < original_size);
-    Ok(())
-}
-
-async fn admin_db_shrink_to_fit() -> Result<(), TestError> {
-    let cluster = TestCluster::new().await?;
-    let owner = &next_user_name();
-    let db = &next_db_name();
-    let mut client = cluster.follower();
-    client.cluster_user_login(ADMIN, ADMIN).await?;
-    client.admin_user_add(owner, owner).await?;
-    client.admin_db_add(owner, db, DbKind::Memory).await?;
-    client
-        .admin_db_exec_mut(
-            owner,
-            db,
-            &[QueryBuilder::insert().nodes().count(100).query().into()],
-        )
-        .await?;
-    let original_size = client
-        .admin_db_list()
-        .await?
-        .1
-        .iter()
-        .find(|d| d.db == *db && d.owner == *owner)
-        .unwrap()
-        .size;
-    client.admin_db_optimize_shrink_to_fit(owner, db).await?;
-    let server_db = client.admin_db_optimize_shrink_to_fit(owner, db).await?.1;
     assert!(server_db.size < original_size);
     Ok(())
 }
@@ -469,35 +448,20 @@ async fn db_optimize() -> Result<(), TestError> {
         .db_exec_mut(
             owner,
             db,
-            &[QueryBuilder::insert().nodes().count(100).query().into()],
+            &[
+                QueryBuilder::insert().nodes().count(100).query().into(),
+                QueryBuilder::remove()
+                    .search()
+                    .elements()
+                    .offset(50)
+                    .query()
+                    .into(),
+            ],
         )
         .await?;
     let original_size = client.db_list().await?.1[0].size;
     client.db_optimize(owner, db).await?;
     let server_db = client.db_optimize(owner, db).await?.1;
-    assert!(server_db.size < original_size);
-    Ok(())
-}
-
-async fn db_shrink_to_fit() -> Result<(), TestError> {
-    let cluster = TestCluster::new().await?;
-    let owner = &next_user_name();
-    let db = &next_db_name();
-    let mut client = cluster.follower();
-    client.cluster_user_login(ADMIN, ADMIN).await?;
-    client.admin_user_add(owner, owner).await?;
-    client.cluster_user_login(owner, owner).await?;
-    client.db_add(owner, db, DbKind::Memory).await?;
-    client
-        .db_exec_mut(
-            owner,
-            db,
-            &[QueryBuilder::insert().nodes().count(100).query().into()],
-        )
-        .await?;
-    let original_size = client.db_list().await?.1[0].size;
-    client.db_optimize_shrink_to_fit(owner, db).await?;
-    let server_db = client.db_optimize_shrink_to_fit(owner, db).await?.1;
     assert!(server_db.size < original_size);
     Ok(())
 }
@@ -792,8 +756,7 @@ pub(super) const TESTS: &[Test] = tests![
     admin_db_copy,
     admin_db_delete,
     admin_db_exec,
-    admin_db_optimize = ignore("needs the optimize rebuild (storage rewrite step 5)"),
-    admin_db_shrink_to_fit = ignore("needs the optimize rebuild (storage rewrite step 5)"),
+    admin_db_optimize,
     admin_db_remove,
     admin_db_rename,
     admin_db_user_add_remove,
@@ -806,8 +769,7 @@ pub(super) const TESTS: &[Test] = tests![
     db_copy,
     db_delete,
     db_exec,
-    db_optimize = ignore("needs the optimize rebuild (storage rewrite step 5)"),
-    db_shrink_to_fit = ignore("needs the optimize rebuild (storage rewrite step 5)"),
+    db_optimize,
     db_remove,
     db_rename,
     db_user_add_remove,

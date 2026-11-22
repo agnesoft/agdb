@@ -18,11 +18,13 @@ use crate::storage::alloc::Allocator;
 use crate::storage::pages::View;
 use crate::storage::pages::ViewMut;
 use crate::utilities::serialize::Serialize;
+use crate::utilities::serialize::u64_at;
 use std::borrow::Cow;
 
 // A value is its type and bytes. Up to 15 bytes are inline in its
 // index, longer ones are an allocation whose position the index holds
-// in bytes 0–7 and its length in bytes 8–14.
+// in bytes 0–7 and its length in bytes 8–14. Numeric vectors are their
+// elements as 8 LE bytes each.
 
 pub(crate) fn encode(value: &DbValue) -> (u8, Cow<'_, [u8]>) {
     match value {
@@ -34,13 +36,33 @@ pub(crate) fn encode(value: &DbValue) -> (u8, Cow<'_, [u8]>) {
             Cow::Owned(v.to_f64().to_le_bytes().to_vec()),
         ),
         DbValue::String(v) => (STRING_META_VALUE, Cow::Borrowed(v.as_bytes())),
-        DbValue::VecI64(v) => (VEC_I64_META_VALUE, Cow::Owned(v.serialize())),
-        DbValue::VecU64(v) => (VEC_U64_META_VALUE, Cow::Owned(v.serialize())),
-        DbValue::VecF64(v) => (VEC_F64_META_VALUE, Cow::Owned(v.serialize())),
+        DbValue::VecI64(v) => (
+            VEC_I64_META_VALUE,
+            Cow::Owned(v.iter().flat_map(|x| x.to_le_bytes()).collect()),
+        ),
+        DbValue::VecU64(v) => (
+            VEC_U64_META_VALUE,
+            Cow::Owned(v.iter().flat_map(|x| x.to_le_bytes()).collect()),
+        ),
+        DbValue::VecF64(v) => (
+            VEC_F64_META_VALUE,
+            Cow::Owned(v.iter().flat_map(|x| x.to_f64().to_le_bytes()).collect()),
+        ),
         DbValue::VecString(v) => (VEC_STRING_META_VALUE, Cow::Owned(v.serialize())),
         DbValue::VecDbValue(v) => (VEC_DBVALUE_META_VALUE, Cow::Owned(v.serialize())),
         DbValue::None => (NONE_META_VALUE, Cow::Borrowed(&[])),
     }
+}
+
+fn words(bytes: &[u8]) -> Result<impl Iterator<Item = u64> + '_, DbError> {
+    if !bytes.len().is_multiple_of(8) {
+        return Err(DbError::db(
+            DbErrorType::InvalidIndex,
+            format!("Invalid numeric vector length '{}'", bytes.len()),
+        ));
+    }
+
+    Ok((0..bytes.len() / 8).map(|word| u64_at(bytes, word)))
 }
 
 fn decode(kind: u8, bytes: &[u8]) -> Result<DbValue, DbError> {
@@ -50,9 +72,11 @@ fn decode(kind: u8, bytes: &[u8]) -> Result<DbValue, DbError> {
         U64_META_VALUE => DbValue::U64(u64::deserialize(bytes)?),
         F64_META_VALUE => DbValue::F64(DbF64::from(f64::deserialize(bytes)?)),
         STRING_META_VALUE => DbValue::String(String::from_utf8_lossy(bytes).into_owned()),
-        VEC_I64_META_VALUE => DbValue::VecI64(Vec::deserialize(bytes)?),
-        VEC_U64_META_VALUE => DbValue::VecU64(Vec::deserialize(bytes)?),
-        VEC_F64_META_VALUE => DbValue::VecF64(Vec::deserialize(bytes)?),
+        VEC_I64_META_VALUE => DbValue::VecI64(words(bytes)?.map(|w| w as i64).collect()),
+        VEC_U64_META_VALUE => DbValue::VecU64(words(bytes)?.collect()),
+        VEC_F64_META_VALUE => {
+            DbValue::VecF64(words(bytes)?.map(|w| f64::from_bits(w).into()).collect())
+        }
         VEC_STRING_META_VALUE => DbValue::VecString(Vec::deserialize(bytes)?),
         VEC_DBVALUE_META_VALUE => DbValue::VecDbValue(Vec::deserialize(bytes)?),
         NONE_META_VALUE => DbValue::None,
@@ -226,12 +250,44 @@ pub(crate) mod tests {
             DbValue::String(long.to_string()),
             DbValue::VecI64(vec![]),
             DbValue::VecI64(vec![1, -2]),
+            DbValue::VecI64(vec![i64::MIN]),
             DbValue::VecU64(vec![1, 2]),
+            DbValue::VecU64(vec![u64::MAX]),
             DbValue::VecF64(vec![1.1.into()]),
+            DbValue::VecF64(vec![(-0.5).into(), f64::MAX.into()]),
             DbValue::VecString(vec![long.to_string()]),
             DbValue::VecDbValue(vec![DbValue::I64(1), long.into()]),
             DbValue::None,
         ]
+    }
+
+    mod encode {
+        use super::*;
+
+        #[test]
+        fn encode_numeric_vectors_should_be_le_words() {
+            let cases = [
+                (
+                    DbValue::VecI64(vec![1, -2]),
+                    VEC_I64_META_VALUE,
+                    [1_i64.to_le_bytes(), (-2_i64).to_le_bytes()].concat(),
+                ),
+                (DbValue::VecU64(vec![]), VEC_U64_META_VALUE, vec![]),
+                (
+                    DbValue::VecF64(vec![1.5.into()]),
+                    VEC_F64_META_VALUE,
+                    1.5_f64.to_le_bytes().to_vec(),
+                ),
+            ];
+
+            for (value, kind, bytes) in &cases {
+                assert_eq!(
+                    encode(value),
+                    (*kind, Cow::Borrowed(&bytes[..])),
+                    "{value:?}"
+                );
+            }
+        }
     }
 
     mod store {

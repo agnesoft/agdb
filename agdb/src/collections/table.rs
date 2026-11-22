@@ -682,7 +682,11 @@ pub(crate) mod tests {
     use crate::collections::value::tests::assert_failures;
     use crate::collections::value::tests::with_view;
     use crate::storage::alloc::tests::verify;
+    use crate::storage::pages::Reader;
     use crate::storage::pages::tests::XorShift;
+    use crate::storage::storage_simulator::tests::SCALE;
+    use crate::storage::storage_simulator::tests::Scale;
+    use crate::storage::storage_simulator::tests::Simulation;
     use std::collections::BTreeSet;
 
     /// The (pos, size) of each allocation of the table.
@@ -748,7 +752,7 @@ pub(crate) mod tests {
 
     fn find_at(
         table: &TableHeader,
-        view: &TestView,
+        view: &impl View,
         kind: &Kind,
         key: u64,
     ) -> Result<Option<u64>, DbError> {
@@ -763,14 +767,14 @@ pub(crate) mod tests {
         Ok(None)
     }
 
-    fn find(table: &TableHeader, view: &TestView, kind: &Kind, key: u64) -> Option<u64> {
+    fn find(table: &TableHeader, view: &impl View, kind: &Kind, key: u64) -> Option<u64> {
         find_at(table, view, kind, key).unwrap()
     }
 
     /// Inserts the missing `key` at the end of its probe.
     fn insert(
         table: &mut TableHeader,
-        view: &mut TestView,
+        view: &mut impl ViewMut,
         alloc: &mut Allocator,
         kind: &Kind,
         key: u64,
@@ -783,7 +787,7 @@ pub(crate) mod tests {
 
     fn remove(
         table: &mut TableHeader,
-        view: &mut TestView,
+        view: &mut impl ViewMut,
         alloc: &mut Allocator,
         kind: &Kind,
         key: u64,
@@ -912,6 +916,36 @@ pub(crate) mod tests {
                     verify(alloc, view, &[]);
                 });
             }
+        }
+
+        #[test]
+        fn table_header_should_do_flat_io_from_1k_to_100k_keys() {
+            let mut simulation = Simulation::new();
+            let mut table = TableHeader::default();
+            let mut inserts = Scale::default();
+            let mut finds = Scale::default();
+            let mut removes = Scale::default();
+
+            for key in 0..SCALE {
+                simulation.run(&mut inserts, key, |view, alloc| {
+                    insert(&mut table, view, alloc, &IDS, key)
+                });
+                let found = simulation.run(&mut finds, key + 1, |view, _| {
+                    find_at(&table, view, &IDS, key / 2)
+                });
+                assert!(found.is_some());
+            }
+
+            for key in 0..SCALE {
+                simulation.run(&mut removes, SCALE - key, |view, alloc| {
+                    remove(&mut table, view, alloc, &IDS, key)
+                });
+            }
+
+            inserts.assert_flat();
+            finds.assert_flat();
+            removes.assert_flat();
+            verify(&simulation.alloc, &Reader::new(&simulation.storage), &[]);
         }
 
         #[test]

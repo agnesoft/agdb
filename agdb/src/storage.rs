@@ -12,6 +12,8 @@ mod ranges;
 #[allow(dead_code)]
 pub(crate) mod root;
 mod storage_records;
+#[allow(dead_code)]
+pub(crate) mod storage_simulator;
 mod write_ahead_log;
 
 use self::storage_records::StorageRecord;

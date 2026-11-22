@@ -3399,7 +3399,7 @@ describe("routes", () => {
             const status = tuple1[0];
             const results = tuple1[1];
             expect(status).toEqual<number>(200);
-            expect(results[3]).toEqual<QueryResult>({ result: 2, elements: [{ id: 3, from: 0, to: 0 - 5, values: [into_DbKeyValue(["key", 2.2])] }, { id: 2, from: 0, to: 0 - 4, values: [into_DbKeyValue(["key", 1.1])] }] });
+            expect(results[3]).toEqual<QueryResult>({ result: 2, elements: [{ id: 3, from: 0, to: 0 - 2, values: [into_DbKeyValue(["key", 2.2])] }, { id: 2, from: 0, to: 0 - 1, values: [into_DbKeyValue(["key", 1.1])] }] });
         });
 
         it("use_result_in_subquery", async () => {
@@ -3415,7 +3415,7 @@ describe("routes", () => {
             const status = tuple1[0];
             const results = tuple1[1];
             expect(status).toEqual<number>(200);
-            expect(results[3]).toEqual<QueryResult>({ result: 2, elements: [{ id: 3, from: 0, to: 0 - 5, values: [into_DbKeyValue(["key", 2.2])] }, { id: 2, from: 0, to: 0 - 4, values: [into_DbKeyValue(["key", 1.1])] }] });
+            expect(results[3]).toEqual<QueryResult>({ result: 2, elements: [{ id: 3, from: 0, to: 0 - 2, values: [into_DbKeyValue(["key", 2.2])] }, { id: 2, from: 0, to: 0 - 1, values: [into_DbKeyValue(["key", 1.1])] }] });
         });
 
         it("use_result_in_condition", async () => {
@@ -3447,7 +3447,7 @@ describe("routes", () => {
             const status = tuple1[0];
             const results = tuple1[1];
             expect(status).toEqual<number>(200);
-            expect(results[3]).toEqual<QueryResult>({ result: 3, elements: [{ id: 1, from: 0 - 3, to: 0, values: [] }, { id: 0 - 3, from: 1, to: 2, values: [] }, { id: 2, from: 0, to: 0 - 3, values: [] }] });
+            expect(results[3]).toEqual<QueryResult>({ result: 3, elements: [{ id: 1, from: 0 - 1, to: 0, values: [] }, { id: 0 - 1, from: 1, to: 2, values: [] }, { id: 2, from: 0, to: 0 - 1, values: [] }] });
         });
 
         it("use_result_in_insert_ids", async () => {
@@ -3463,7 +3463,7 @@ describe("routes", () => {
             const status = tuple1[0];
             const results = tuple1[1];
             expect(status).toEqual<number>(200);
-            expect(results[3]).toEqual<QueryResult>({ result: 3, elements: [{ id: 1, from: 0 - 7, to: 0, values: [] }, { id: 0 - 5, from: 1, to: 2, values: [] }, { id: 2, from: 0, to: 0 - 5, values: [] }] });
+            expect(results[3]).toEqual<QueryResult>({ result: 3, elements: [{ id: 1, from: 0 - 3, to: 0, values: [] }, { id: 0 - 1, from: 1, to: 2, values: [] }, { id: 2, from: 0, to: 0 - 1, values: [] }] });
         });
 
         it("reentrant_queries", async () => {
@@ -3479,12 +3479,12 @@ describe("routes", () => {
             const status = tuple1[0];
             const results = tuple1[1];
             expect(status).toEqual<number>(200);
-            expect(results[4]).toEqual<QueryResult>({ result: 3, elements: [{ id: 1, from: 0 - 7, to: 0, values: [] }, { id: 0 - 5, from: 1, to: 2, values: [] }, { id: 2, from: 0, to: 0 - 5, values: [] }] });
+            expect(results[4]).toEqual<QueryResult>({ result: 3, elements: [{ id: 1, from: 0 - 3, to: 0, values: [] }, { id: 0 - 1, from: 1, to: 2, values: [] }, { id: 2, from: 0, to: 0 - 1, values: [] }] });
             const tuple2 = (await server.api.db_exec_mut(owner, db, queries));
             const status_2 = tuple2[0];
             const results_2 = tuple2[1];
             expect(status_2).toEqual<number>(200);
-            expect(results_2[4]).toEqual<QueryResult>({ result: 3, elements: [{ id: 1, from: 0 - 7, to: 0, values: [] }, { id: 0 - 7, from: 1, to: 4, values: [] }, { id: 4, from: 0, to: 0 - 7, values: [] }] });
+            expect(results_2[4]).toEqual<QueryResult>({ result: 3, elements: [{ id: 1, from: 0 - 3, to: 0, values: [] }, { id: 0 - 3, from: 1, to: 4, values: [] }, { id: 4, from: 0, to: 0 - 3, values: [] }] });
         });
 
         it("use_result_in_search_bad_query", async () => {

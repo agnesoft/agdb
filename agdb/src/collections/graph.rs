@@ -15,19 +15,17 @@ const RECORDS_SIZE: usize = ARRAY_SIZE + 24;
 /// The bytes of an encoded [`GraphHeader`].
 pub(crate) const GRAPH_SIZE: usize = 2 * RECORDS_SIZE;
 
-// Node (64 B until the alias leaves it, plan 4c c): [first edge from u64]
-// [first edge to u64][edge count from u32][edge count to u32]
-// [data 3 × u64][0 16 B].
+// Node, 32 B: [first edge from u64][first edge to u64]
+// [edge count from u32][edge count to u32][data u64].
 // Edge, fields of the id width: [from][to][next edge from][next edge to]
 // [previous edge from][previous edge to] then [data u64], 32 B with
 // `U32` ids, 64 B with `U64` ones (8 B of 0 at the end).
 // Free: [VACANT][next free slot] in fields of the width, VACANT all ones
 // for a node and 0 (no node) for an edge.
-const NODE_SHIFT: u32 = 6;
+const NODE_SHIFT: u32 = 5;
 const NODE_FIRST: u64 = 0;
 const NODE_COUNT: u64 = 16;
 const NODE_DATA: u64 = 24;
-const NODE_DATA_FIELDS: u64 = 3;
 const EDGE_NEXT: u64 = 2;
 const EDGE_PREVIOUS: u64 = 4;
 const EDGE_DATA: u64 = 6;
@@ -65,7 +63,7 @@ pub(crate) struct Node {
     pub(crate) from_count: u64,
     pub(crate) to_count: u64,
     /// Kept for the users of the graph, 0 in a new node.
-    pub(crate) data: [u64; NODE_DATA_FIELDS as usize],
+    pub(crate) data: u64,
 }
 
 #[derive(Debug, PartialEq)]
@@ -170,7 +168,7 @@ impl GraphHeader {
             first_to: edge_id(u64_at(&bytes, 1)),
             from_count: uint(&bytes, NODE_COUNT, 4),
             to_count: uint(&bytes, NODE_COUNT + 4, 4),
-            data: std::array::from_fn(|i| u64_at(&bytes, NODE_DATA as usize / 8 + i)),
+            data: u64_at(&bytes, NODE_DATA as usize / 8),
         }))
     }
 
@@ -194,32 +192,25 @@ impl GraphHeader {
         }))
     }
 
-    /// Writes the `data` of the element `id` from its data field `index`.
+    /// Writes the `data` of the element `id`.
     pub(crate) fn set_data(
         &self,
         view: &mut impl ViewMut,
         id: DbId,
-        index: usize,
-        data: &[u64],
+        data: u64,
     ) -> Result<(), DbError> {
-        let (records, at, fields) = if 0 < id.0 {
-            (&self.nodes, NODE_DATA, NODE_DATA_FIELDS)
+        let (records, at) = if 0 < id.0 {
+            (&self.nodes, NODE_DATA)
         } else {
-            (&self.edges, EDGE_DATA * self.edges.width, 1)
+            (&self.edges, EDGE_DATA * self.edges.width)
         };
         let slot = id.0.unsigned_abs();
 
-        if records.record(view, slot)?.is_none() || fields < (index + data.len()) as u64 {
+        if records.record(view, slot)?.is_none() {
             return Err(invalid(id));
         }
 
-        let mut bytes = [0_u8; RECORD];
-
-        for (chunk, data) in bytes.as_chunks_mut::<8>().0.iter_mut().zip(data) {
-            *chunk = data.to_le_bytes();
-        }
-
-        records.write(view, slot, at + index as u64 * 8, &bytes[..data.len() * 8])
+        records.write(view, slot, at, &data.to_le_bytes())
     }
 
     pub(crate) fn insert_node(
@@ -755,8 +746,8 @@ pub(crate) mod tests {
                         graph.remove_node(view, DbId(1))?;
                         graph.insert_node(view, alloc)?;
                         graph.insert_edge(view, alloc, DbId(2), DbId(2))?;
-                        graph.set_data(view, DbId(2), 1, &[1, 2])?;
-                        graph.set_data(view, DbId(-3), 0, &[7])?;
+                        graph.set_data(view, DbId(2), 2)?;
+                        graph.set_data(view, DbId(-3), 7)?;
                         graph.node(view, DbId(2))?;
                         graph.edge(view, DbId(-3))?;
                         graph.elements(view).collect::<Result<Vec<_>, _>>()?;
@@ -815,28 +806,14 @@ pub(crate) mod tests {
                         let mut graph = GraphHeader::new(layout);
                         let node = graph.insert_node(view, alloc).unwrap();
                         let edge = graph.insert_edge(view, alloc, node, node).unwrap();
-                        graph.set_data(view, node, 1, &[5, 6]).unwrap();
-                        graph.set_data(view, edge, 0, &[u64::MAX]).unwrap();
+                        graph.set_data(view, node, u64::MAX - 1).unwrap();
+                        graph.set_data(view, edge, u64::MAX).unwrap();
                         let node = graph.node(view, node).unwrap().unwrap();
-                        assert_eq!((node.data, node.from_count), ([0, 5, 6], 1));
+                        assert_eq!((node.data, node.from_count), (u64::MAX - 1, 1));
                         let edge = graph.edge(view, edge).unwrap().unwrap();
                         assert_eq!((edge.data, edge.from), (u64::MAX, DbId(1)));
                     });
                 }
-            }
-
-            #[test]
-            fn set_data_past_data_of_element_should_fail() {
-                with_view(|view, alloc| {
-                    let mut graph = GraphHeader::new(Layout::default());
-                    let node = graph.insert_node(view, alloc).unwrap();
-                    let edge = graph.insert_edge(view, alloc, node, node).unwrap();
-                    let error = graph.set_data(view, edge, 0, &[1, 2]).unwrap_err();
-                    assert_eq!(error.description, "'-1' is invalid index");
-                    let error = graph.set_data(view, node, 3, &[1]).unwrap_err();
-                    assert_eq!(error.description, "'1' is invalid index");
-                    assert_eq!(graph.node(view, node).unwrap().unwrap().data, [0; 3]);
-                });
             }
 
             #[test]
@@ -846,7 +823,7 @@ pub(crate) mod tests {
                     graph.insert_node(view, alloc).unwrap();
 
                     for id in [-1, 0, 2] {
-                        let error = graph.set_data(view, DbId(id), 0, &[1]).unwrap_err();
+                        let error = graph.set_data(view, DbId(id), 1).unwrap_err();
                         assert_eq!(error.description, format!("'{id}' is invalid index"));
                     }
                 });

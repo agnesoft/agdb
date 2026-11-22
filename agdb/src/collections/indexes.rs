@@ -1,11 +1,14 @@
 use crate::DbError;
+use crate::DbErrorType;
 use crate::DbId;
 use crate::DbValue;
+use crate::collections::keys::ALIAS;
 use crate::collections::keys::KeyId;
 use crate::collections::keys::Keys;
 use crate::collections::table::Kind;
 use crate::collections::table::Lookup;
 use crate::collections::table::Slot;
+use crate::collections::table::TABLE_SIZE;
 use crate::collections::table::TableHeader;
 use crate::collections::table::fmix64;
 use crate::collections::table::stored_hash;
@@ -30,8 +33,9 @@ const IDS: Kind = Kind {
 };
 /// `[key id u64][values TableHeader][count u64]`
 const ENTRY: u64 = 40;
-/// The bytes of encoded [`Indexes`].
-pub(crate) const INDEXES_SIZE: usize = 16;
+/// The bytes of encoded [`Indexes`]: `[pos u64][len u64]` of the list then
+/// the values and the count of the aliases.
+pub(crate) const INDEXES_SIZE: usize = 16 + TABLE_SIZE + 8;
 
 fn id_hash(slot: &[u8]) -> u64 {
     fmix64(u64_at(slot, 0))
@@ -57,6 +61,17 @@ impl Ids {
         }
     }
 
+    fn ids(&self, view: &impl View) -> Result<Vec<DbId>, DbError> {
+        Ok(match self {
+            Self::Single(id) => vec![*id],
+            Self::Set(set) => set
+                .slots(view, &IDS)?
+                .chunks(8)
+                .map(|id| DbId(u64_at(id, 0) as i64))
+                .collect(),
+        })
+    }
+
     fn encode(&self, slot: &mut Slot) {
         match self {
             Self::Single(id) => {
@@ -80,15 +95,75 @@ pub(crate) struct Index {
     pub(crate) count: u64,
 }
 
-/// The indexes, listed in one allocation of entries. They are loaded
-/// with the root and each entry is written as it changes.
-#[derive(Clone, Debug, Default, PartialEq)]
+/// The indexes of the keys, listed in one allocation of entries, and the
+/// unique index of the aliases, the values of [`ALIAS`]. They are
+/// loaded with the root and each entry is written as it changes, the
+/// aliases being kept in the root.
+#[derive(Clone, Debug, PartialEq)]
 pub(crate) struct Indexes {
     pos: u64,
     list: Vec<Index>,
+    aliases: Index,
+}
+
+impl Default for Indexes {
+    fn default() -> Self {
+        Self {
+            pos: 0,
+            list: Vec::new(),
+            aliases: Index::new(DbValue::None, ALIAS),
+        }
+    }
 }
 
 impl Index {
+    fn new(key: DbValue, key_id: KeyId) -> Self {
+        Self {
+            key,
+            key_id,
+            values: TableHeader::default(),
+            count: 0,
+        }
+    }
+
+    /// The ids with the `value`.
+    pub(crate) fn search(&self, view: &impl View, value: &DbValue) -> Result<Vec<DbId>, DbError> {
+        let Lookup::Found(_, slot) = self.find(view, value, fmix64(value.stable_hash()))? else {
+            return Ok(Vec::new());
+        };
+
+        Ids::decode(&slot).ids(view)
+    }
+
+    /// The values with their ids in the slot order of the table.
+    pub(crate) fn values(&self, view: &impl View) -> Result<Vec<(DbValue, Vec<DbId>)>, DbError> {
+        let mut values = Vec::new();
+
+        for slot in self
+            .values
+            .slots(view, &VALUES)?
+            .chunks(VALUES.size as usize)
+        {
+            let value = value::load(view, &value_index(&slot[8..]))?;
+            values.push((value, Ids::decode(slot).ids(view)?));
+        }
+
+        Ok(values)
+    }
+
+    /// Writes the entry of a listed index at `at`.
+    fn write(&self, view: &mut impl ViewMut, at: Option<u64>) -> Result<(), DbError> {
+        let Some(at) = at else {
+            return Ok(());
+        };
+
+        let mut entry = [0_u8; ENTRY as usize];
+        entry[..8].copy_from_slice(&u64::from(self.key_id.0).to_le_bytes());
+        entry[8..32].copy_from_slice(&self.values.encode());
+        entry[32..].copy_from_slice(&self.count.to_le_bytes());
+        view.write(at, &entry)
+    }
+
     fn find(&self, view: &impl View, value: &DbValue, hash: u64) -> Result<Lookup, DbError> {
         let (kind, bytes) = value::encode(value);
         let mut probe = self.values.probe(view, &VALUES, hash)?;
@@ -119,14 +194,23 @@ impl Indexes {
             });
         }
 
-        Ok(Self { pos, list })
+        let mut aliases = Index::new(DbValue::None, ALIAS);
+        aliases.values = TableHeader::decode(&bytes[16..16 + TABLE_SIZE]);
+        aliases.count = u64_at(bytes, 5);
+        Ok(Self { pos, list, aliases })
     }
 
     pub(crate) fn encode(&self) -> [u8; INDEXES_SIZE] {
         let mut bytes = [0_u8; INDEXES_SIZE];
         bytes[..8].copy_from_slice(&self.pos.to_le_bytes());
-        bytes[8..].copy_from_slice(&(self.list.len() as u64).to_le_bytes());
+        bytes[8..16].copy_from_slice(&(self.list.len() as u64).to_le_bytes());
+        bytes[16..16 + TABLE_SIZE].copy_from_slice(&self.aliases.values.encode());
+        bytes[16 + TABLE_SIZE..].copy_from_slice(&self.aliases.count.to_le_bytes());
         bytes
+    }
+
+    pub(crate) fn aliases(&self) -> &Index {
+        &self.aliases
     }
 
     pub(crate) fn list(&self) -> &[Index] {
@@ -152,13 +236,8 @@ impl Indexes {
         } else {
             alloc.realloc(view, self.pos, len * ENTRY, (len + 1) * ENTRY)?
         };
-        self.list.push(Index {
-            key: key.clone(),
-            key_id,
-            values: TableHeader::default(),
-            count: 0,
-        });
-        self.write_entry(view, len as usize)
+        self.list.push(Index::new(key.clone(), key_id));
+        self.list[len as usize].write(view, Some(self.pos + len * ENTRY))
     }
 
     /// Removes the index of the `key` returning its number of ids, 0 if
@@ -193,7 +272,7 @@ impl Indexes {
         let len = self.list.len() as u64;
 
         for j in i..self.list.len() {
-            self.write_entry(view, j)?;
+            self.list[j].write(view, Some(self.pos + j as u64 * ENTRY))?;
         }
 
         if len == 0 {
@@ -207,7 +286,8 @@ impl Indexes {
     }
 
     /// Adds the `id` to the ids of the `value` in the index of the `key`
-    /// if there is one. The `id` must not have the value yet.
+    /// if there is one. The `id` must not have the value yet and an alias
+    /// must not be taken.
     pub(crate) fn insert(
         &mut self,
         view: &mut impl ViewMut,
@@ -216,14 +296,19 @@ impl Indexes {
         value: &DbValue,
         id: DbId,
     ) -> Result<(), DbError> {
-        let Some(i) = self.list.iter().position(|index| index.key_id == key) else {
+        let Some((index, entry)) = self.find_mut(key) else {
             return Ok(());
         };
 
-        let index = &mut self.list[i];
         let hash = fmix64(value.stable_hash());
 
         match index.find(view, value, hash)? {
+            Lookup::Found(_, slot) if key == ALIAS => {
+                return Err(DbError::db(
+                    DbErrorType::NotAllowed,
+                    format!("Alias '{value}' is taken by '{}'", u64_at(&slot, 4) as i64),
+                ));
+            }
             Lookup::Found(at, mut slot) => {
                 let mut set = match Ids::decode(&slot) {
                     Ids::Single(other) => {
@@ -247,7 +332,7 @@ impl Indexes {
         }
 
         index.count += 1;
-        self.write_entry(view, i)
+        index.write(view, entry)
     }
 
     /// Removes the `id` from the ids of the `value` in the index of the
@@ -260,11 +345,9 @@ impl Indexes {
         value: &DbValue,
         id: DbId,
     ) -> Result<(), DbError> {
-        let Some(i) = self.list.iter().position(|index| index.key_id == key) else {
+        let Some((index, entry)) = self.find_mut(key) else {
             return Ok(());
         };
-
-        let index = &mut self.list[i];
 
         let Lookup::Found(at, mut slot) = index.find(view, value, fmix64(value.stable_hash()))?
         else {
@@ -300,7 +383,7 @@ impl Indexes {
         }
 
         index.count -= 1;
-        self.write_entry(view, i)
+        index.write(view, entry)
     }
 
     /// The ids with the `value` in the index of the `key`, `None` if
@@ -315,27 +398,18 @@ impl Indexes {
             return Ok(None);
         };
 
-        let Lookup::Found(_, slot) = index.find(view, value, fmix64(value.stable_hash()))? else {
-            return Ok(Some(Vec::new()));
-        };
-
-        Ok(Some(match Ids::decode(&slot) {
-            Ids::Single(id) => vec![id],
-            Ids::Set(set) => set
-                .slots(view, &IDS)?
-                .chunks(8)
-                .map(|id| DbId(u64_at(id, 0) as i64))
-                .collect(),
-        }))
+        index.search(view, value).map(Some)
     }
 
-    fn write_entry(&self, view: &mut impl ViewMut, i: usize) -> Result<(), DbError> {
-        let index = &self.list[i];
-        let mut entry = [0_u8; ENTRY as usize];
-        entry[..8].copy_from_slice(&u64::from(index.key_id.0).to_le_bytes());
-        entry[8..32].copy_from_slice(&index.values.encode());
-        entry[32..].copy_from_slice(&index.count.to_le_bytes());
-        view.write(self.pos + i as u64 * ENTRY, &entry)
+    /// The index of the `key` with the position of its entry, `None` for
+    /// the aliases.
+    fn find_mut(&mut self, key: KeyId) -> Option<(&mut Index, Option<u64>)> {
+        if key == ALIAS {
+            return Some((&mut self.aliases, None));
+        }
+
+        let i = self.list.iter().position(|index| index.key_id == key)?;
+        Some((&mut self.list[i], Some(self.pos + i as u64 * ENTRY)))
     }
 }
 
@@ -355,12 +429,13 @@ mod tests {
     use std::collections::BTreeMap;
     use std::collections::BTreeSet;
 
+    /// The ids by value of each index, the aliases under `DbValue::None`.
     type Model = BTreeMap<DbValue, BTreeMap<DbValue, BTreeSet<i64>>>;
 
     const LONG: &str = "a value longer than 15 bytes";
 
     fn keys_pool() -> Vec<DbValue> {
-        vec!["k".into(), LONG.into(), 1.into()]
+        vec!["k".into(), LONG.into(), 1.into(), DbValue::None]
     }
 
     fn values_pool() -> Vec<DbValue> {
@@ -378,15 +453,31 @@ mod tests {
     fn keys(view: &mut TestView, alloc: &mut Allocator) -> Keys {
         let mut keys = Keys::new(DEFAULT_PAGE_SHIFT);
 
-        for key in keys_pool() {
-            keys.insert(view, alloc, &key).unwrap();
+        for key in keys_pool().iter().filter(|key| **key != DbValue::None) {
+            keys.insert(view, alloc, key).unwrap();
         }
 
         keys
     }
 
     fn key_id(view: &TestView, keys: &Keys, key: &DbValue) -> KeyId {
+        if *key == DbValue::None {
+            return ALIAS;
+        }
+
         keys.id(view, key).unwrap().unwrap()
+    }
+
+    fn model() -> Model {
+        Model::from([(DbValue::None, BTreeMap::new())])
+    }
+
+    fn index<'a>(indexes: &'a Indexes, key: &DbValue) -> Option<&'a Index> {
+        if *key == DbValue::None {
+            return Some(indexes.aliases());
+        }
+
+        indexes.index(key)
     }
 
     fn live(view: &TestView, keys: &Keys, indexes: &Indexes) -> Vec<(u64, u64)> {
@@ -394,7 +485,7 @@ mod tests {
         let len = indexes.list.len() as u64;
         live.extend((len != 0).then(|| (indexes.pos, len * ENTRY)));
 
-        for index in &indexes.list {
+        for index in indexes.list.iter().chain([&indexes.aliases]) {
             live.extend(table_allocations(&index.values, view, &VALUES));
 
             for slot in index.values.slots(view, &VALUES).unwrap().chunks(48) {
@@ -418,17 +509,23 @@ mod tests {
             .list()
             .iter()
             .map(|index| index.key.clone())
+            .chain([DbValue::None])
             .collect::<BTreeSet<_>>();
         assert_eq!(indexed, model.keys().cloned().collect());
+        assert_eq!(
+            indexes.search(view, &DbValue::None, &1.into()).unwrap(),
+            None
+        );
 
         for key in keys_pool() {
-            let indexed = u64::from(model.contains_key(&key));
-            assert_eq!(refs(keys, view, key_id(view, keys, &key)), 1 + indexed);
+            if key != DbValue::None {
+                let indexed = u64::from(model.contains_key(&key));
+                assert_eq!(refs(keys, view, key_id(view, keys, &key)), 1 + indexed);
+            }
 
             for value in values_pool() {
-                let ids = indexes
-                    .search(view, &key, &value)
-                    .unwrap()
+                let ids = index(indexes, &key)
+                    .map(|index| index.search(view, &value).unwrap())
                     .map(|ids| ids.iter().map(|id| id.0).collect::<BTreeSet<_>>());
                 let expected = model
                     .get(&key)
@@ -438,17 +535,20 @@ mod tests {
         }
 
         for (key, values) in model {
+            let index = index(indexes, key).unwrap();
             let count = values.values().map(|ids| ids.len() as u64).sum::<u64>();
-            assert_eq!(indexes.index(key).unwrap().count, count);
+            assert_eq!(index.count, count);
+            let mut listed = BTreeMap::new();
 
-            for slot in indexes
-                .index(key)
-                .unwrap()
-                .values
-                .slots(view, &VALUES)
-                .unwrap()
-                .chunks(48)
-            {
+            for entry in index.values(view).unwrap() {
+                let ids = entry.1.iter().map(|id| id.0).collect::<BTreeSet<_>>();
+                assert_eq!(ids.len(), entry.1.len());
+                listed.insert(entry.0, ids);
+            }
+
+            assert_eq!(&listed, values);
+
+            for slot in index.values.slots(view, &VALUES).unwrap().chunks(48) {
                 let value = value::load(view, &value_index(&slot[8..])).unwrap();
                 assert_eq!(
                     matches!(Ids::decode(slot), Ids::Single(_)),
@@ -477,6 +577,7 @@ mod tests {
         };
 
         match random.next(20) {
+            0 | 1 if *key == DbValue::None => {}
             0 => {
                 let count = indexes.remove_index(view, alloc, keys, key).unwrap();
                 let expected = model.remove(key).map_or(0, |values| {
@@ -493,7 +594,17 @@ mod tests {
                     .get(key)
                     .is_some_and(|values| values.get(value).is_some_and(|ids| ids.contains(&id.0)));
 
-                if !has {
+                let taken = *key == DbValue::None
+                    && model[key].get(value).is_some_and(|ids| !ids.is_empty());
+
+                if taken {
+                    let error = indexes.insert(view, alloc, key_id, value, id).unwrap_err();
+                    let owner = model[key][value].first().unwrap();
+                    assert_eq!(
+                        error.description,
+                        format!("Alias '{value}' is taken by '{owner}'")
+                    );
+                } else if !has {
                     indexes.insert(view, alloc, key_id, value, id).unwrap();
 
                     if let Some(values) = model.get_mut(key) {
@@ -527,7 +638,7 @@ mod tests {
                     let mut random = XorShift(seed);
                     let mut keys = keys(view, alloc);
                     let mut indexes = Indexes::default();
-                    let mut model = Model::new();
+                    let mut model = model();
 
                     for _ in 0..500 {
                         random_op(
@@ -568,6 +679,11 @@ mod tests {
                     }
 
                     indexes.search(view, &long, &long)?;
+                    indexes.insert(view, alloc, ALIAS, &long, DbId(1))?;
+                    indexes.aliases().search(view, &long)?;
+                    indexes.aliases().values(view)?;
+                    indexes.index(&long).unwrap().values(view)?;
+                    indexes.remove(view, alloc, ALIAS, &long, DbId(1))?;
                     Indexes::load(view, keys, &indexes.encode())?;
 
                     for id in 1..=3 {

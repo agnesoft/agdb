@@ -4,6 +4,7 @@ use crate::DbId;
 use crate::DbKeyValue;
 use crate::DbValue;
 use crate::collections::graph::GraphHeader;
+use crate::collections::keys::ALIAS;
 use crate::collections::keys::KeyId;
 use crate::collections::keys::Keys;
 use crate::collections::value;
@@ -13,13 +14,13 @@ use crate::storage::alloc::u32_at;
 use crate::storage::pages::View;
 use crate::storage::pages::ViewMut;
 
-// The values of an element are held by its graph data, the last data
-// field of a node and the only one of an edge: 0 for none, a single
-// label (a key whose value is `DbValue::None`) as `INLINE | key id`, or
+// The values of an element are held by its graph data: 0 for none, a
+// single label (a key whose value is `DbValue::None`) as `INLINE | key id`, or
 // the position of one allocation `[used u32][cap u32]` followed by `cap`
 // bytes of entries in insertion order. A label entry is
 // `[key id | LABEL u32]`, any other `[key id u32][value DbValueIndex]`.
-// Each entry holds a reference to its key in the [`Keys`]. The
+// Each entry holds a reference to its key in the [`Keys`], except the
+// alias of a node, which is the value of [`ALIAS`]. The
 // allocation is freed when its last value is removed.
 
 const HEADER: u64 = 8;
@@ -163,7 +164,7 @@ pub(crate) struct KeyValues<'a>(pub(crate) &'a GraphHeader);
 impl KeyValues<'_> {
     fn list(&self, view: &impl View, id: DbId) -> Result<List, DbError> {
         let data = if 0 < id.0 {
-            self.0.node(view, id)?.map(|node| node.data[2])
+            self.0.node(view, id)?.map(|node| node.data)
         } else {
             self.0.edge(view, id)?.map(|edge| edge.data)
         }
@@ -187,8 +188,7 @@ impl KeyValues<'_> {
     }
 
     fn set_data(&self, view: &mut impl ViewMut, id: DbId, data: u64) -> Result<(), DbError> {
-        let index = if 0 < id.0 { 2 } else { 0 };
-        self.0.set_data(view, id, index, &[data])
+        self.0.set_data(view, id, data)
     }
 
     /// Moves the entries to an allocation of `cap` bytes of entries.
@@ -275,12 +275,24 @@ impl KeyValues<'_> {
     ) -> Result<DbValue, DbError> {
         let value = value::load(view, &entry.value)?;
         value::free(view, alloc, &entry.value)?;
-        keys.remove(view, alloc, entry.key)?;
+
+        if entry.key != ALIAS {
+            keys.remove(view, alloc, entry.key)?;
+        }
+
         Ok(value)
     }
 
+    /// The number of keys, the alias not counted.
     pub(crate) fn key_count(&self, view: &impl View, id: DbId) -> Result<u64, DbError> {
-        Ok(entries(view, &self.list(view, id)?)?.len() as u64)
+        Ok(self.entries(view, id)?.len() as u64)
+    }
+
+    /// The entries without the alias.
+    fn entries(&self, view: &impl View, id: DbId) -> Result<Vec<Entry>, DbError> {
+        let mut entries = entries(view, &self.list(view, id)?)?;
+        entries.retain(|entry| entry.key != ALIAS);
+        Ok(entries)
     }
 
     pub(crate) fn keys(
@@ -289,7 +301,7 @@ impl KeyValues<'_> {
         keys: &Keys,
         id: DbId,
     ) -> Result<Vec<DbValue>, DbError> {
-        entries(view, &self.list(view, id)?)?
+        self.entries(view, id)?
             .iter()
             .map(|entry| keys.key(view, entry.key))
             .collect()
@@ -303,7 +315,7 @@ impl KeyValues<'_> {
     ) -> Result<Vec<DbKeyValue>, DbError> {
         let mut values = Vec::new();
 
-        for entry in entries(view, &self.list(view, id)?)? {
+        for entry in self.entries(view, id)? {
             values.push(DbKeyValue {
                 key: keys.key(view, entry.key)?,
                 value: value::load(view, &entry.value)?,
@@ -313,7 +325,8 @@ impl KeyValues<'_> {
         Ok(values)
     }
 
-    /// The value of the `key`, `DbValue::None` for a label.
+    /// The value of the `key`, `DbValue::None` for a label and the alias
+    /// for [`ALIAS`].
     pub(crate) fn value(
         &self,
         view: &impl View,
@@ -372,25 +385,43 @@ impl KeyValues<'_> {
         id: DbId,
         key_value: &DbKeyValue,
     ) -> Result<(KeyId, Option<DbValue>), DbError> {
+        if let Some(key) = keys.id(view, &key_value.key)? {
+            let old = self.set(view, alloc, keys, id, key, &key_value.value)?;
+            return Ok((key, old));
+        }
+
         let mut list = self.list(view, id)?;
+        let key = keys.insert(view, alloc, &key_value.key)?;
+        self.push_to(view, alloc, id, &mut list, key, &key_value.value)?;
+        Ok((key, None))
+    }
 
-        let Some(key) = keys.id(view, &key_value.key)? else {
-            let key = keys.insert(view, alloc, &key_value.key)?;
-            self.push_to(view, alloc, id, &mut list, key, &key_value.value)?;
-            return Ok((key, None));
-        };
-
+    /// Sets the value of the existing `key`, or the alias for
+    /// [`ALIAS`], returning the value it replaced.
+    pub(crate) fn set(
+        &self,
+        view: &mut impl ViewMut,
+        alloc: &mut Allocator,
+        keys: &mut Keys,
+        id: DbId,
+        key: KeyId,
+        value: &DbValue,
+    ) -> Result<Option<DbValue>, DbError> {
+        let mut list = self.list(view, id)?;
         let mut entries = entries(view, &list)?;
 
         let Some(i) = find(&entries, key) else {
-            keys.acquire(view, key)?;
-            self.push_to(view, alloc, id, &mut list, key, &key_value.value)?;
-            return Ok((key, None));
+            if key != ALIAS {
+                keys.acquire(view, key)?;
+            }
+
+            self.push_to(view, alloc, id, &mut list, key, value)?;
+            return Ok(None);
         };
 
         let old = value::load(view, &entries[i].value)?;
         value::free(view, alloc, &entries[i].value)?;
-        let new = value::store(view, alloc, &key_value.value)?;
+        let new = value::store(view, alloc, value)?;
         let at = entries[i].at;
 
         if entry_size(&new) == entry_size(&entries[i].value) {
@@ -403,7 +434,7 @@ impl KeyValues<'_> {
             self.write_at(view, alloc, id, &mut list, at, &bytes)?;
         }
 
-        Ok((key, Some(old)))
+        Ok(Some(old))
     }
 
     /// Removes the key returning its value.
@@ -435,8 +466,9 @@ impl KeyValues<'_> {
         Ok(Some(removed))
     }
 
-    /// Removes all values of the element returning them with the ids of
-    /// their keys, which are freed unless referenced elsewhere.
+    /// Removes all values of the element, the alias included, returning
+    /// them with the ids of their keys, which are freed unless referenced
+    /// elsewhere.
     pub(crate) fn remove_all(
         &self,
         view: &mut impl ViewMut,
@@ -500,6 +532,7 @@ mod tests {
     use crate::storage::root::Layout;
     use std::collections::BTreeMap;
 
+    /// The values of the elements, the alias under the key `DbValue::None`.
     type Model = BTreeMap<i64, Vec<DbKeyValue>>;
 
     const LONG: &str = "a value longer than 15 bytes";
@@ -510,7 +543,16 @@ mod tests {
             DbValue::from("a key longer than 15 bytes"),
             DbValue::from(1_u64),
             DbValue::from(vec![1_i64, 2]),
+            DbValue::None,
         ]
+    }
+
+    fn key_id(view: &TestView, keys: &Keys, key: &DbValue) -> Option<KeyId> {
+        if *key == DbValue::None {
+            return Some(ALIAS);
+        }
+
+        keys.id(view, key).unwrap()
     }
 
     fn kv(key: &DbValue, value: &DbValue) -> DbKeyValue {
@@ -549,10 +591,14 @@ mod tests {
     fn assert_values(view: &TestView, graph: &GraphHeader, keys: &Keys, model: &Model) {
         let mut counts = BTreeMap::<DbValue, u64>::new();
 
-        for (id, expected) in model {
+        for (id, all) in model {
             let id = DbId(*id);
             let values = KeyValues(graph);
-            assert_eq!(&values.values(view, keys, id).unwrap(), expected);
+            let (alias, expected): (Vec<_>, Vec<_>) =
+                all.iter().cloned().partition(|kv| kv.key == DbValue::None);
+            let alias = alias.first().map(|kv| kv.value.clone());
+            assert_eq!(values.value(view, id, ALIAS).unwrap(), alias);
+            assert_eq!(values.values(view, keys, id).unwrap(), expected);
             assert_eq!(values.key_count(view, id).unwrap(), expected.len() as u64);
             let expected_keys = expected.iter().map(|kv| kv.key.clone()).collect::<Vec<_>>();
             assert_eq!(values.keys(view, keys, id).unwrap(), expected_keys);
@@ -560,6 +606,7 @@ mod tests {
             pool.reverse();
             let ids = pool
                 .iter()
+                .filter(|key| **key != DbValue::None)
                 .filter_map(|key| keys.id(view, key).unwrap())
                 .collect::<Vec<_>>();
             let by_keys = ids
@@ -574,7 +621,7 @@ mod tests {
                 .collect::<Vec<_>>();
             assert_eq!(values.values_by_keys(view, id, &ids).unwrap(), by_keys);
 
-            for kv in expected {
+            for kv in &expected {
                 let key = keys.id(view, &kv.key).unwrap().unwrap();
                 assert_eq!(values.value(view, id, key).unwrap(), Some(kv.value.clone()));
                 *counts.entry(kv.key.clone()).or_default() += 1;
@@ -614,10 +661,17 @@ mod tests {
 
         match random.next(10) {
             0..=4 => {
-                let (key_id, old) = KeyValues(graph)
-                    .insert(view, alloc, keys, id, &kv(key, value))
-                    .unwrap();
-                assert_eq!(keys.key(view, key_id).unwrap(), *key);
+                let old = if *key == DbValue::None {
+                    KeyValues(graph)
+                        .set(view, alloc, keys, id, ALIAS, value)
+                        .unwrap()
+                } else {
+                    let (key_id, old) = KeyValues(graph)
+                        .insert(view, alloc, keys, id, &kv(key, value))
+                        .unwrap();
+                    assert_eq!(keys.key(view, key_id).unwrap(), *key);
+                    old
+                };
                 assert_eq!(old.as_ref(), found.map(|i| &expected[i].value));
 
                 match found {
@@ -626,9 +680,7 @@ mod tests {
                 }
             }
             5..=7 => {
-                let removed = keys
-                    .id(view, key)
-                    .unwrap()
+                let removed = key_id(view, keys, key)
                     .map(|key| KeyValues(graph).remove(view, alloc, keys, id, key).unwrap());
                 assert_eq!(removed.flatten(), found.map(|i| expected.remove(i).value));
             }
@@ -754,6 +806,10 @@ mod tests {
                     values.insert(view, alloc, keys, node, &kv(&1.into(), &DbValue::None))?;
                     values.insert(view, alloc, keys, node, &kv(&1.into(), &long))?;
                     values.remove(view, alloc, keys, edge, KeyId(4))?;
+                    values.set(view, alloc, keys, node, ALIAS, &long)?;
+                    values.set(view, alloc, keys, node, ALIAS, &"a".into())?;
+                    values.set(view, alloc, keys, edge, ALIAS, &long)?;
+                    values.remove(view, alloc, keys, edge, ALIAS)?;
                     values.key_count(view, node)?;
                     values.keys(view, keys, node)?;
                     values.values(view, keys, node)?;
@@ -860,6 +916,37 @@ mod tests {
                     }
 
                     assert_eq!(values.list(view, node).unwrap().used, 4 + 20 + 4);
+                    verify(alloc, view, &live(view, &graph, &keys, &[node, edge]));
+                });
+            }
+        }
+
+        mod set {
+            use super::*;
+
+            #[test]
+            fn set_alias_should_keep_it_apart_from_keys() {
+                with_view(|view, alloc| {
+                    let (graph, node, edge) = graph(view, alloc);
+                    let mut keys = Keys::new(DEFAULT_PAGE_SHIFT);
+                    let values = KeyValues(&graph);
+                    let pair = kv(&1.into(), &LONG.into());
+                    let alias = DbValue::from(LONG);
+                    values.push(view, alloc, &mut keys, node, &pair).unwrap();
+                    let old = values
+                        .set(view, alloc, &mut keys, node, ALIAS, &alias)
+                        .unwrap();
+                    assert_eq!(old, None);
+                    assert_eq!(values.values(view, &keys, node).unwrap(), vec![pair]);
+                    assert_eq!(values.keys(view, &keys, node).unwrap(), vec![1.into()]);
+                    assert_eq!(values.key_count(view, node).unwrap(), 1);
+                    let value = values.value(view, node, ALIAS).unwrap();
+                    assert_eq!(value, Some(alias.clone()));
+                    assert_eq!(keys.len(), 1);
+                    verify(alloc, view, &live(view, &graph, &keys, &[node, edge]));
+                    let removed = values.remove_all(view, alloc, &mut keys, node).unwrap();
+                    assert_eq!(removed, [(KeyId(1), LONG.into()), (ALIAS, alias)]);
+                    assert_eq!(keys.len(), 0);
                     verify(alloc, view, &live(view, &graph, &keys, &[node, edge]));
                 });
             }

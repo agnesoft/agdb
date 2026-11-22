@@ -12,14 +12,12 @@ use super::pages::ViewMut;
 use super::pages::Writer;
 use crate::DbError;
 use crate::DbErrorType;
-use crate::collections::aliases::Aliases;
 use crate::collections::graph::GRAPH_SIZE;
 use crate::collections::graph::GraphHeader;
 use crate::collections::indexes::INDEXES_SIZE;
 use crate::collections::indexes::Indexes;
 use crate::collections::keys::KEYS_SIZE;
 use crate::collections::keys::Keys;
-use crate::collections::table::TABLE_SIZE;
 use crate::utilities::serialize::u64_at;
 use std::borrow::Cow;
 
@@ -34,8 +32,7 @@ const MAGIC: u64 = 0x746f_6f72_6264_6761;
 /// [id_bytes u8][0 u16]`
 const HEADER: usize = 40;
 const GRAPH_AT: usize = HEADER + ALLOCATOR_SIZE;
-const ALIASES_AT: usize = GRAPH_AT + GRAPH_SIZE;
-const KEYS_AT: usize = ALIASES_AT + TABLE_SIZE;
+const KEYS_AT: usize = GRAPH_AT + GRAPH_SIZE;
 const INDEXES_AT: usize = KEYS_AT + KEYS_SIZE;
 const META_SIZE: usize = INDEXES_AT + INDEXES_SIZE - HEADER;
 const ROOT_SIZE: usize = HEADER + META_SIZE;
@@ -159,7 +156,6 @@ pub(crate) struct Meta {
     pub(crate) layout: Layout,
     pub(crate) alloc: Allocator,
     pub(crate) graph: GraphHeader,
-    pub(crate) aliases: Aliases,
     pub(crate) keys: Keys,
     pub(crate) indexes: Indexes,
 }
@@ -170,7 +166,6 @@ impl Meta {
             layout,
             alloc: Allocator::new(layout.page_shift),
             graph: GraphHeader::new(layout),
-            aliases: Aliases::default(),
             keys: Keys::new(layout.page_shift),
             indexes: Indexes::default(),
         }
@@ -212,8 +207,7 @@ impl Meta {
         Ok(Self {
             layout,
             alloc,
-            graph: GraphHeader::decode(&bytes[GRAPH_AT..ALIASES_AT], layout),
-            aliases: Aliases::decode(&bytes[ALIASES_AT..KEYS_AT]),
+            graph: GraphHeader::decode(&bytes[GRAPH_AT..KEYS_AT], layout),
             indexes: Indexes::load(view, &keys, &bytes[INDEXES_AT..ROOT_SIZE])?,
             keys,
         })
@@ -227,8 +221,7 @@ impl Meta {
         bytes[32..36].copy_from_slice(&(META_SIZE as u32).to_le_bytes());
         self.layout.encode(&mut bytes);
         bytes[HEADER..GRAPH_AT].copy_from_slice(&self.alloc.encode());
-        bytes[GRAPH_AT..ALIASES_AT].copy_from_slice(&self.graph.encode());
-        bytes[ALIASES_AT..KEYS_AT].copy_from_slice(&self.aliases.encode());
+        bytes[GRAPH_AT..KEYS_AT].copy_from_slice(&self.graph.encode());
         bytes[KEYS_AT..INDEXES_AT].copy_from_slice(&self.keys.encode());
         bytes[INDEXES_AT..].copy_from_slice(&self.indexes.encode());
         bytes
@@ -343,6 +336,9 @@ impl<S: StorageData> RootMut<'_, S> {
 mod tests {
     use super::*;
     use crate::DbId;
+    use crate::DbValue;
+    use crate::collections::key_values::KeyValues;
+    use crate::collections::keys::ALIAS;
     use crate::storage::DEFAULT_OVERLAY_LIMIT;
     use crate::storage::SyncMode;
     use crate::storage::alloc::tests::pattern;
@@ -426,8 +422,12 @@ mod tests {
         meta.graph
             .insert_edge(view, &mut meta.alloc, node, node)
             .unwrap();
-        meta.aliases
-            .insert(view, &mut meta.alloc, &meta.graph, node, "root")
+        let alias = DbValue::from("root");
+        KeyValues(&meta.graph)
+            .set(view, &mut meta.alloc, &mut meta.keys, node, ALIAS, &alias)
+            .unwrap();
+        meta.indexes
+            .insert(view, &mut meta.alloc, ALIAS, &alias, node)
             .unwrap();
         meta.indexes
             .insert_index(view, &mut meta.alloc, &mut meta.keys, &"key".into())
@@ -712,7 +712,7 @@ mod tests {
                 let platform = platform();
                 let root = open(&platform);
                 let mut bytes = Meta::new(Layout::default()).encode();
-                bytes[INDEXES_AT..].copy_from_slice(&words(&[4096, 1]));
+                bytes[INDEXES_AT..INDEXES_AT + 16].copy_from_slice(&words(&[4096, 1]));
 
                 let error = Meta::decode(&root.read().unwrap().0, &bytes).unwrap_err();
 
@@ -852,8 +852,12 @@ mod tests {
                 let (reader, loaded) = root.read().unwrap();
                 assert_eq!(*loaded, meta);
                 assert_eq!(
-                    loaded.aliases.id(&reader, &loaded.graph, "root").unwrap(),
-                    Some(DbId(1))
+                    loaded
+                        .indexes
+                        .aliases()
+                        .search(&reader, &"root".into())
+                        .unwrap(),
+                    vec![DbId(1)]
                 );
                 assert_eq!(
                     loaded

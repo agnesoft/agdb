@@ -35,8 +35,8 @@ pub(crate) const KEYS_SIZE: usize = ARRAY_SIZE + 16 + TABLE_SIZE;
 pub(crate) struct KeyId(pub(crate) u32);
 
 impl KeyId {
-    /// The top bit marks labels in the key-values.
-    pub(crate) const MAX: u32 = u32::MAX >> 1;
+    /// The highest key id, the top bit marks labels in the key-values.
+    pub(crate) const MAX_KEY_ID: u32 = u32::MAX >> 1;
 }
 
 struct Record {
@@ -247,10 +247,10 @@ impl Keys {
             return Ok(id);
         }
 
-        if u64::from(KeyId::MAX) < self.len {
+        if u64::from(KeyId::MAX_KEY_ID) < self.len {
             return Err(DbError::db(
                 DbErrorType::OutOfBounds,
-                format!("Too many keys ({})", KeyId::MAX),
+                format!("Too many keys ({})", KeyId::MAX_KEY_ID),
             ));
         }
 
@@ -455,7 +455,7 @@ pub(crate) mod tests {
             fn insert_past_last_id_should_fail() {
                 with_view(|view, alloc| {
                     let mut keys = Keys::new(DEFAULT_PAGE_SHIFT);
-                    keys.len = u64::from(KeyId::MAX) + 1;
+                    keys.len = u64::from(KeyId::MAX_KEY_ID) + 1;
                     let error = keys.insert(view, alloc, &1.into()).unwrap_err();
                     assert_eq!(error.description, "Too many keys (2147483647)");
                     verify(alloc, view, &[]);

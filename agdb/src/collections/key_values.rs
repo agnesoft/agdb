@@ -356,7 +356,7 @@ impl KeyValues<'_> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::collections::graph::tests::allocation as graph_allocation;
+    use crate::collections::graph::tests::allocations as graph_allocations;
     use crate::collections::value::tests::TestView;
     use crate::collections::value::tests::allocation;
     use crate::collections::value::tests::assert_failures;
@@ -365,6 +365,7 @@ mod tests {
     use crate::storage::alloc::tests::verify;
     use crate::storage::pages::DEFAULT_PAGE_SHIFT;
     use crate::storage::pages::tests::XorShift;
+    use crate::storage::root::Layout;
     use std::collections::BTreeMap;
 
     type Model = BTreeMap<i64, Vec<DbKeyValue>>;
@@ -517,7 +518,7 @@ mod tests {
             for seed in 1..=5 {
                 with_view(|view, alloc| {
                     let mut random = XorShift(seed);
-                    let mut graph = GraphHeader::new();
+                    let mut graph = GraphHeader::new(Layout::default());
                     let node = graph.insert_node(view, alloc).unwrap();
                     let edge = graph.insert_edge(view, alloc, node, node).unwrap();
                     let mut model = Model::from([(node.0, vec![]), (edge.0, vec![])]);
@@ -528,7 +529,7 @@ mod tests {
                     }
 
                     let mut live = live(view, &graph, &[node, edge]);
-                    live.push(graph_allocation(&graph));
+                    live.extend(graph_allocations(&graph));
                     verify(alloc, view, &live);
                 });
             }
@@ -539,7 +540,7 @@ mod tests {
             let long = DbValue::from("a value longer than 15 bytes");
             assert_failures(
                 |view, alloc| {
-                    let mut graph = GraphHeader::new();
+                    let mut graph = GraphHeader::new(Layout::default());
                     let node = graph.insert_node(view, alloc).unwrap();
                     let edge = graph.insert_edge(view, alloc, node, node).unwrap();
                     KeyValues(&graph)
@@ -576,7 +577,7 @@ mod tests {
             #[test]
             fn push_to_missing_element_should_fail() {
                 with_view(|view, alloc| {
-                    let graph = GraphHeader::new();
+                    let graph = GraphHeader::new(Layout::default());
                     let error = KeyValues(&graph)
                         .push(view, alloc, DbId(1), &kv(&1.into(), &1.into()))
                         .unwrap_err();
@@ -587,7 +588,7 @@ mod tests {
             #[test]
             fn push_should_keep_duplicate_keys() {
                 with_view(|view, alloc| {
-                    let mut graph = GraphHeader::new();
+                    let mut graph = GraphHeader::new(Layout::default());
                     let node = graph.insert_node(view, alloc).unwrap();
                     KeyValues(&graph)
                         .push(view, alloc, node, &kv(&1.into(), &1.into()))
@@ -609,7 +610,7 @@ mod tests {
             #[test]
             fn reserve_should_grow_list_in_place() {
                 with_view(|view, alloc| {
-                    let mut graph = GraphHeader::new();
+                    let mut graph = GraphHeader::new(Layout::default());
                     let node = graph.insert_node(view, alloc).unwrap();
                     KeyValues(&graph).reserve(view, alloc, node, 20).unwrap();
                     let list = KeyValues(&graph).list(view, node).unwrap();

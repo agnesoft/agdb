@@ -165,7 +165,7 @@ impl Meta {
         Self {
             layout,
             alloc: Allocator::new(layout.page_shift),
-            graph: GraphHeader::new(),
+            graph: GraphHeader::new(layout),
             aliases: Aliases::default(),
             indexes: Indexes::default(),
         }
@@ -205,7 +205,7 @@ impl Meta {
         Ok(Self {
             layout,
             alloc,
-            graph: GraphHeader::decode(&bytes[GRAPH_AT..ALIASES_AT]),
+            graph: GraphHeader::decode(&bytes[GRAPH_AT..ALIASES_AT], layout),
             aliases: Aliases::decode(&bytes[ALIASES_AT..INDEXES_AT]),
             indexes: Indexes::load(view, &bytes[INDEXES_AT..ROOT_SIZE])?,
         })

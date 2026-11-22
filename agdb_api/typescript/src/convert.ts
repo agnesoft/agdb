@@ -5,6 +5,10 @@ type BuilderDbValue = NativeValue | DbValue;
 type BuilderDbKeyValue = BuilderDbValue[] | DbKeyValue;
 
 export function convertToNativeValue(value: DbValue): NativeValue | undefined {
+    if (value === "None") {
+        return undefined;
+    }
+
     if ("Bytes" in value) {
         return value.Bytes;
     }

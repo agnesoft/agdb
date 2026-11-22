@@ -1,7 +1,7 @@
 //! The test runner of this target (`harness = false`): it starts what the tests
 //! share once and then runs them like libtest does, each on its own thread named
 //! after the test. Arguments: `[FILTER...] [--exact] [--skip FILTER]... [--list]
-//! [--test-threads N] [--nocapture]`.
+//! [--ignored | --include-ignored] [--test-threads N] [--nocapture]`.
 
 use std::fmt::Display;
 use std::future::Future;
@@ -18,16 +18,20 @@ pub type TestFuture = Pin<Box<dyn Future<Output = Result<(), String>>>>;
 
 pub struct Test {
     pub name: &'static str,
+    pub ignore: Option<&'static str>,
     pub run: fn() -> TestFuture,
 }
 
-/// `tests![a, b, #[cfg(feature = "x")] c]` registers the async test functions of
-/// the module, they return a `Result` with a `Debug` error. Keep the functions
-/// private: one missing in the list is then dead code that fails the lint.
+/// `tests![a, b, #[cfg(feature = "x")] c, d = ignore("reason")]` registers the
+/// async test functions of the module, they return a `Result` with a `Debug`
+/// error. An ignored test runs only with `--ignored` or `--include-ignored`, as
+/// `#[ignore]` in libtest. Keep the functions private: one missing in the list
+/// is then dead code that fails the lint.
 macro_rules! tests {
-    ($($(#[$attr:meta])* $test:ident),* $(,)?) => {
+    ($($(#[$attr:meta])* $test:ident $(= ignore($reason:literal))?),* $(,)?) => {
         &[$($(#[$attr])* $crate::runner::Test {
             name: concat!(module_path!(), "::", stringify!($test)),
+            ignore: $crate::runner::ignore_reason!($($reason)?),
             run: || -> $crate::runner::TestFuture {
                 Box::pin(async { $test().await.map_err(|e| format!("{e:?}")) })
             },
@@ -35,13 +39,31 @@ macro_rules! tests {
     };
 }
 
+macro_rules! ignore_reason {
+    () => {
+        None
+    };
+    ($reason:literal) => {
+        Some($reason)
+    };
+}
+
+pub(crate) use ignore_reason;
 pub(crate) use tests;
+
+#[derive(Clone, Copy, PartialEq)]
+enum Ignored {
+    Skip,
+    Only,
+    Include,
+}
 
 struct Options {
     filters: Vec<String>,
     skip: Vec<String>,
     exact: bool,
     list: bool,
+    ignored: Ignored,
     threads: usize,
 }
 
@@ -52,6 +74,7 @@ impl Options {
             skip: Vec::new(),
             exact: false,
             list: false,
+            ignored: Ignored::Skip,
             threads: std::env::var("RUST_TEST_THREADS")
                 .ok()
                 .and_then(|threads| threads.parse().ok())
@@ -75,6 +98,8 @@ impl Options {
 
             match arg.as_str() {
                 "--exact" => options.exact = true,
+                "--ignored" => options.ignored = Ignored::Only,
+                "--include-ignored" => options.ignored = Ignored::Include,
                 "--list" => options.list = true,
                 // The output of the tests is never captured.
                 "--nocapture" => {}
@@ -102,9 +127,10 @@ impl Options {
         }
     }
 
-    fn selects(&self, name: &str) -> bool {
+    fn selects(&self, name: &str, test: &Test) -> bool {
         (self.filters.is_empty() || self.filters.iter().any(|f| self.matches(name, f)))
             && !self.skip.iter().any(|s| self.matches(name, s))
+            && (self.ignored != Ignored::Only || test.ignore.is_some())
     }
 }
 
@@ -125,7 +151,7 @@ pub fn main<G, E: Display, F: Future<Output = Result<G, E>>>(
     let selected: Vec<(&str, &Test)> = tests
         .iter()
         .map(|test| (name(test), *test))
-        .filter(|(name, _)| options.selects(name))
+        .filter(|(name, test)| options.selects(name, test))
         .collect();
     let filtered = tests.len() - selected.len();
 
@@ -136,7 +162,17 @@ pub fn main<G, E: Display, F: Future<Output = Result<G, E>>>(
         return ExitCode::SUCCESS;
     }
 
-    println!("\nrunning {} tests", selected.len());
+    let (selected, ignored): (Vec<_>, Vec<_>) = selected
+        .into_iter()
+        .partition(|(_, test)| options.ignored != Ignored::Skip || test.ignore.is_none());
+
+    println!("\nrunning {} tests", selected.len() + ignored.len());
+    for (name, test) in &ignored {
+        println!(
+            "test {name} ... ignored, {}",
+            test.ignore.unwrap_or_default()
+        );
+    }
     let start = Instant::now();
     let failures = Mutex::new(Vec::new());
 
@@ -189,10 +225,11 @@ pub fn main<G, E: Display, F: Future<Output = Result<G, E>>>(
     }
 
     println!(
-        "\ntest result: {}. {} passed; {} failed; 0 ignored; 0 measured; {filtered} filtered out; finished in {:.2}s\n",
+        "\ntest result: {}. {} passed; {} failed; {} ignored; 0 measured; {filtered} filtered out; finished in {:.2}s\n",
         if failures.is_empty() { "ok" } else { "FAILED" },
         selected.len() - failures.len(),
         failures.len(),
+        ignored.len(),
         start.elapsed().as_secs_f64()
     );
 

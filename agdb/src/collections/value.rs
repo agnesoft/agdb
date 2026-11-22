@@ -151,6 +151,7 @@ pub(crate) mod tests {
     use crate::storage::alloc::tests::Heap;
     use crate::storage::alloc::tests::heap;
     use crate::storage::alloc::tests::verify;
+    use crate::storage::pages::DEFAULT_PAGE_SHIFT;
     use crate::storage::pages::Overlay;
     use crate::storage::pages::Reader;
     use crate::storage::pages::Writer;
@@ -160,10 +161,10 @@ pub(crate) mod tests {
     /// Runs the `test` over a never failing view of an empty heap.
     pub(crate) fn with_view<T>(test: impl FnOnce(&mut TestView, &mut Allocator) -> T) -> T {
         let mut storage = heap();
-        let mut overlay = Overlay::default();
+        let mut overlay = Overlay::new(DEFAULT_PAGE_SHIFT);
         let mut writer = Writer::new(&mut storage, &mut overlay).unwrap();
         let mut view = Faulty::new(&mut writer, u64::MAX);
-        test(&mut view, &mut Allocator::new())
+        test(&mut view, &mut Allocator::new(DEFAULT_PAGE_SHIFT))
     }
 
     fn bytes(view: &impl View) -> Vec<u8> {
@@ -180,8 +181,8 @@ pub(crate) mod tests {
     ) {
         for fail in 0.. {
             let mut storage = heap();
-            let mut overlay = Overlay::default();
-            let mut alloc = Allocator::new();
+            let mut overlay = Overlay::new(DEFAULT_PAGE_SHIFT);
+            let mut alloc = Allocator::new(DEFAULT_PAGE_SHIFT);
             let mut writer = Writer::new(&mut storage, &mut overlay).unwrap();
             let state = setup(&mut Faulty::new(&mut writer, u64::MAX), &mut alloc);
             writer.commit().unwrap();

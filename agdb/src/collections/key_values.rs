@@ -7,8 +7,6 @@ use crate::collections::value;
 use crate::db::db_value_index::DbValueIndex;
 use crate::storage::alloc::Allocator;
 use crate::storage::alloc::u32_at;
-use crate::storage::alloc::usable;
-use crate::storage::pages::PAGE_SIZE;
 use crate::storage::pages::View;
 use crate::storage::pages::ViewMut;
 
@@ -33,16 +31,16 @@ fn size(cap: u64) -> u64 {
 }
 
 /// The pairs an allocation for at least `cap` pairs holds.
-fn fit(cap: u64) -> u64 {
-    (usable(size(cap)) - HEADER) / PAIR
+fn fit(alloc: &Allocator, cap: u64) -> u64 {
+    (alloc.usable(size(cap)) - HEADER) / PAIR
 }
 
 /// The next size class while the list is small, then double the pages.
-fn grown(cap: u64) -> u64 {
-    if usable(size(cap + 1)) < PAGE_SIZE {
-        fit(cap + 1)
+fn grown(alloc: &Allocator, cap: u64) -> u64 {
+    if alloc.usable(size(cap + 1)) < alloc.page_size() {
+        fit(alloc, cap + 1)
     } else {
-        fit((cap * 2).max(cap + 1))
+        fit(alloc, (cap * 2).max(cap + 1))
     }
 }
 
@@ -164,7 +162,7 @@ impl KeyValues<'_> {
         key_value: &DbKeyValue,
     ) -> Result<(), DbError> {
         if list.len == list.cap {
-            self.resize(view, alloc, id, list, grown(list.cap))?;
+            self.resize(view, alloc, id, list, grown(alloc, list.cap))?;
         }
 
         let key = value::store(view, alloc, &key_value.key)?;
@@ -348,7 +346,7 @@ impl KeyValues<'_> {
         let cap = list.len + additional;
 
         if list.cap < cap {
-            self.resize(view, alloc, id, &mut list, fit(cap))?;
+            self.resize(view, alloc, id, &mut list, fit(alloc, cap))?;
         }
 
         Ok(())
@@ -365,6 +363,7 @@ mod tests {
     use crate::collections::value::tests::values as all_values;
     use crate::collections::value::tests::with_view;
     use crate::storage::alloc::tests::verify;
+    use crate::storage::pages::DEFAULT_PAGE_SHIFT;
     use crate::storage::pages::tests::XorShift;
     use std::collections::BTreeMap;
 
@@ -496,10 +495,11 @@ mod tests {
 
         #[test]
         fn grown_should_take_next_size_class_then_double_pages() {
+            let alloc = Allocator::new(DEFAULT_PAGE_SHIFT);
             let mut caps = vec![0];
 
             while caps.last() < Some(&500) {
-                caps.push(grown(*caps.last().unwrap()));
+                caps.push(grown(&alloc, *caps.last().unwrap()));
             }
 
             assert_eq!(
@@ -541,13 +541,15 @@ mod tests {
                 |view, alloc| {
                     let mut graph = GraphHeader::new();
                     let node = graph.insert_node(view, alloc).unwrap();
+                    let edge = graph.insert_edge(view, alloc, node, node).unwrap();
                     KeyValues(&graph)
                         .push(view, alloc, node, &kv(&long, &long))
                         .unwrap();
-                    (graph, node)
+                    (graph, node, edge)
                 },
                 |view, alloc, state| {
-                    let (graph, node) = state;
+                    let (graph, node, edge) = state;
+                    KeyValues(&graph).push(view, alloc, edge, &kv(&long, &long))?;
                     KeyValues(&graph).reserve(view, alloc, node, 2)?;
                     KeyValues(&graph).push(view, alloc, node, &kv(&1.into(), &long))?;
                     KeyValues(&graph).push(view, alloc, node, &kv(&2.into(), &long))?;

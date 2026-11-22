@@ -2,7 +2,7 @@ use crate::DbError;
 use crate::DbErrorType;
 use crate::DbId;
 use crate::storage::alloc::Allocator;
-use crate::storage::pages::PAGE_SIZE;
+use crate::storage::pages::DEFAULT_PAGE_SHIFT;
 use crate::storage::pages::View;
 use crate::storage::pages::ViewMut;
 use crate::utilities::serialize::u64_at;
@@ -12,6 +12,8 @@ pub(crate) const GRAPH_SIZE: usize = 48;
 const FIELDS: usize = 7;
 const RECORD_SIZE: u64 = FIELDS as u64 * 8;
 /// The records of a page, which a record never crosses.
+/// Until the graph takes the page size of the storage (plan 4c b).
+const PAGE_SIZE: u64 = 1 << DEFAULT_PAGE_SHIFT;
 const RECORDS: u64 = PAGE_SIZE / RECORD_SIZE;
 
 // Node: first edge from, first edge to, edge count from, edge count to,

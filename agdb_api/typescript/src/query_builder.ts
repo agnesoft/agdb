@@ -108,6 +108,7 @@ export const DbValue = {
     VecF64: (v: number[]): DbValue => ({ VecF64: v }),
     VecString: (v: string[]): DbValue => ({ VecString: v }),
     VecDbValue: (v: DbValue[]): DbValue => ({ VecDbValue: v }),
+    None: "None" as DbValue,
 };
 
 export const QueryId = {
@@ -159,7 +160,7 @@ export function into_DbKeyOrders(v: IntoDbKeyOrders): DbKeyOrder[] {
 export type IntoDbValue = number | boolean | string | number[] | string[] | boolean[] | DbValue | QueryId;
 
 function is_into_DbValue(v: unknown): v is IntoDbValue {
-    return (Number.isInteger(v)) || (typeof v === "boolean") || (typeof v === "number") || (typeof v === "string") || (Array.isArray(v) && v.every((x) => Number.isInteger(x))) || (Array.isArray(v) && v.every((x) => typeof x === "number")) || (Array.isArray(v) && v.every((x) => typeof x === "string")) || (Array.isArray(v) && v.every((x) => typeof x === "boolean")) || ((typeof v === "object" && v !== null && ("Bytes" in v || "I64" in v || "U64" in v || "F64" in v || "String" in v || "VecI64" in v || "VecU64" in v || "VecF64" in v || "VecString" in v || "VecDbValue" in v))) || ((typeof v === "object" && v !== null && ("Id" in v || "Alias" in v)));
+    return (Number.isInteger(v)) || (typeof v === "boolean") || (typeof v === "number") || (typeof v === "string") || (Array.isArray(v) && v.every((x) => Number.isInteger(x))) || (Array.isArray(v) && v.every((x) => typeof x === "number")) || (Array.isArray(v) && v.every((x) => typeof x === "string")) || (Array.isArray(v) && v.every((x) => typeof x === "boolean")) || (v === "None" || (typeof v === "object" && v !== null && ("Bytes" in v || "I64" in v || "U64" in v || "F64" in v || "String" in v || "VecI64" in v || "VecU64" in v || "VecF64" in v || "VecString" in v || "VecDbValue" in v))) || ((typeof v === "object" && v !== null && ("Id" in v || "Alias" in v)));
 }
 
 export function into_DbValue(v: IntoDbValue): DbValue {
@@ -187,7 +188,7 @@ export function into_DbValue(v: IntoDbValue): DbValue {
     if (Array.isArray(v) && v.every((x) => typeof x === "boolean")) {
         return { VecU64: (v as boolean[]).map((b) => (b ? 1 : 0)) };
     }
-    if ((typeof v === "object" && v !== null && ("Bytes" in v || "I64" in v || "U64" in v || "F64" in v || "String" in v || "VecI64" in v || "VecU64" in v || "VecF64" in v || "VecString" in v || "VecDbValue" in v))) {
+    if (v === "None" || (typeof v === "object" && v !== null && ("Bytes" in v || "I64" in v || "U64" in v || "F64" in v || "String" in v || "VecI64" in v || "VecU64" in v || "VecF64" in v || "VecString" in v || "VecDbValue" in v))) {
         return (v as DbValue);
     }
     if ((typeof v === "object" && v !== null && ("Id" in v || "Alias" in v))) {
@@ -217,7 +218,7 @@ export function into_DbValues(v: IntoDbValues): DbValue[] {
     if (typeof v === "string") {
         return [{ String: v }];
     }
-    if (Array.isArray(v) && v.every((x) => (typeof x === "object" && x !== null && ("Bytes" in x || "I64" in x || "U64" in x || "F64" in x || "String" in x || "VecI64" in x || "VecU64" in x || "VecF64" in x || "VecString" in x || "VecDbValue" in x)))) {
+    if (Array.isArray(v) && v.every((x) => x === "None" || (typeof x === "object" && x !== null && ("Bytes" in x || "I64" in x || "U64" in x || "F64" in x || "String" in x || "VecI64" in x || "VecU64" in x || "VecF64" in x || "VecString" in x || "VecDbValue" in x)))) {
         return (v as DbValue[]);
     }
     if (Array.isArray(v) && v.every((x) => is_into_DbValue(x))) {

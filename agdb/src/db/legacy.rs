@@ -754,7 +754,16 @@ pub(crate) mod tests {
                 string("vec_string"),
                 stored(
                     VEC_STRING_META_VALUE,
-                    file.vec(2, &[&words(&[1])[..], "x".as_bytes(), &words(&[2]), "yy".as_bytes()].concat()),
+                    file.vec(
+                        2,
+                        &[
+                            &words(&[1])[..],
+                            "x".as_bytes(),
+                            &words(&[2]),
+                            "yy".as_bytes(),
+                        ]
+                        .concat(),
+                    ),
                 ),
                 DbValue::from(vec!["x", "yy"]),
             ),

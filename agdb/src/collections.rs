@@ -1,6 +1,4 @@
 #[allow(dead_code)]
-pub(crate) mod aliases;
-#[allow(dead_code)]
 pub(crate) mod array;
 pub mod bit_set;
 #[allow(dead_code)]

@@ -34,6 +34,8 @@ pub(crate) const KEYS_SIZE: usize = ARRAY_SIZE + 16 + TABLE_SIZE;
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub(crate) struct KeyId(pub(crate) u32);
 
+/// The key of the alias of a node, which has no record.
+pub(crate) const ALIAS: KeyId = KeyId(0);
 /// The highest key id, the top bit marks labels in the key-values.
 pub(crate) const MAX_KEY_ID: u32 = u32::MAX >> 1;
 
@@ -57,8 +59,8 @@ fn record_bytes(key: &DbValueIndex, refs: u64, hash: u64) -> [u8; RECORD] {
 
 /// The dictionary of the keys of the values, each stored once under an
 /// id and freed with its last reference. The records are in an array by
-/// id, the slot 0 being reserved, and a table maps the hash of a key to
-/// its id.
+/// id, the slot 0 being [`ALIAS`], and a table maps the hash of a
+/// key to its id.
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct Keys {
     array: SegmentedArray,

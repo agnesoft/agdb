@@ -638,6 +638,9 @@ pub(crate) mod tests {
     use crate::storage::pages::Reader;
     use crate::storage::pages::Writer;
     use crate::storage::pages::tests::XorShift;
+    use crate::storage::storage_simulator::tests::SCALE;
+    use crate::storage::storage_simulator::tests::Scale;
+    use crate::storage::storage_simulator::tests::Simulation;
     use agplatform::test_platform::TestPlatform;
     use agplatform::test_platform::test_platform;
     use std::cell::Cell;
@@ -1038,6 +1041,46 @@ pub(crate) mod tests {
                     random_transactions(&mut with_root(mapped, limit), seed, DEFAULT_PAGE_SHIFT);
                 }
             }
+        }
+
+        #[test]
+        fn allocator_should_do_flat_io_from_1k_to_100k_allocations() {
+            let mut simulation = Simulation::new();
+            let mut random = XorShift(1);
+            let mut live = Vec::new();
+            let mut allocs = Scale::default();
+            let mut frees = Scale::default();
+
+            while (live.len() as u64) < SCALE {
+                if random.next(4) == 0 && !live.is_empty() {
+                    let (pos, size) = live.swap_remove(random.next(live.len() as u64) as usize);
+                    simulation.run(&mut frees, live.len() as u64 + 1, |view, alloc| {
+                        alloc.free(view, pos, size)
+                    });
+                } else {
+                    let size = if random.next(128) == 0 {
+                        1024 * (1 + random.next(4))
+                    } else {
+                        1 + random.next(64)
+                    };
+                    let size_before = live.len() as u64;
+                    let pos = simulation.run(&mut allocs, size_before, |view, alloc| {
+                        alloc.alloc(view, size)
+                    });
+                    live.push((pos, size));
+                }
+            }
+
+            while !live.is_empty() {
+                let (pos, size) = live.swap_remove(random.next(live.len() as u64) as usize);
+                simulation.run(&mut frees, live.len() as u64 + 1, |view, alloc| {
+                    alloc.free(view, pos, size)
+                });
+            }
+
+            allocs.assert_flat();
+            frees.assert_flat();
+            verify(&simulation.alloc, &Reader::new(&simulation.storage), &[]);
         }
 
         #[test]

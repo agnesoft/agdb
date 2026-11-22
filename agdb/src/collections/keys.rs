@@ -275,7 +275,11 @@ pub(crate) mod tests {
     use crate::collections::value::tests::with_view;
     use crate::storage::alloc::tests::verify;
     use crate::storage::pages::DEFAULT_PAGE_SHIFT;
+    use crate::storage::pages::Reader;
     use crate::storage::pages::tests::XorShift;
+    use crate::storage::storage_simulator::tests::SCALE;
+    use crate::storage::storage_simulator::tests::Scale;
+    use crate::storage::storage_simulator::tests::Simulation;
     use std::collections::BTreeMap;
 
     /// The ids and references of the keys.
@@ -381,6 +385,36 @@ pub(crate) mod tests {
                     verify(alloc, view, &allocations(&keys, view));
                 });
             }
+        }
+
+        #[test]
+        fn keys_should_do_flat_io_from_1k_to_100k_keys() {
+            let mut simulation = Simulation::new();
+            let mut keys = Keys::new(DEFAULT_PAGE_SHIFT);
+            let key = |i: u64| DbValue::from(format!("a key longer than 15 bytes {i}"));
+            let mut inserts = Scale::default();
+            let mut ids = Scale::default();
+            let mut removes = Scale::default();
+
+            for i in 0..SCALE {
+                simulation.run(&mut inserts, i, |view, alloc| {
+                    keys.insert(view, alloc, &key(i))
+                });
+                let id = simulation.run(&mut ids, i + 1, |view, _| keys.id(view, &key(i / 2)));
+                assert_eq!(id, Some(KeyId(1 + i as u32 / 2)));
+            }
+
+            for i in 0..SCALE {
+                simulation.run(&mut removes, SCALE - i, |view, alloc| {
+                    keys.remove(view, alloc, KeyId(1 + i as u32))
+                });
+            }
+
+            inserts.assert_flat();
+            ids.assert_flat();
+            removes.assert_flat();
+            let view = Reader::new(&simulation.storage);
+            verify(&simulation.alloc, &view, &allocations(&keys, &view));
         }
 
         #[test]

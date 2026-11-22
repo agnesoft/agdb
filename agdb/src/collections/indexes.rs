@@ -425,7 +425,11 @@ mod tests {
     use crate::collections::value::tests::with_view;
     use crate::storage::alloc::tests::verify;
     use crate::storage::pages::DEFAULT_PAGE_SHIFT;
+    use crate::storage::pages::Reader;
     use crate::storage::pages::tests::XorShift;
+    use crate::storage::storage_simulator::tests::SCALE;
+    use crate::storage::storage_simulator::tests::Scale;
+    use crate::storage::storage_simulator::tests::Simulation;
     use std::collections::BTreeMap;
     use std::collections::BTreeSet;
 
@@ -480,7 +484,7 @@ mod tests {
         indexes.index(key)
     }
 
-    fn live(view: &TestView, keys: &Keys, indexes: &Indexes) -> Vec<(u64, u64)> {
+    fn live(view: &impl View, keys: &Keys, indexes: &Indexes) -> Vec<(u64, u64)> {
         let mut live = keys_allocations(keys, view);
         let len = indexes.list.len() as u64;
         live.extend((len != 0).then(|| (indexes.pos, len * ENTRY)));
@@ -655,6 +659,63 @@ mod tests {
                     verify(alloc, view, &live(view, &keys, &indexes));
                 });
             }
+        }
+
+        #[test]
+        fn indexes_should_do_flat_io_from_1k_to_100k_ids() {
+            let mut simulation = Simulation::new();
+            let mut keys = Keys::new(DEFAULT_PAGE_SHIFT);
+            let mut indexes = Indexes::default();
+            let distinct = DbValue::from("distinct");
+            let label = DbValue::from("label");
+            let mut setup = Scale::default();
+            simulation.run(&mut setup, 0, |view, alloc| {
+                indexes
+                    .insert_index(view, alloc, &mut keys, &distinct)
+                    .unwrap();
+                indexes.insert_index(view, alloc, &mut keys, &label)
+            });
+            let view = Reader::new(&simulation.storage);
+            let distinct_id = keys.id(&view, &distinct).unwrap().unwrap();
+            let label_id = keys.id(&view, &label).unwrap().unwrap();
+            let value = |i: u64| DbValue::from(format!("a value longer than 15 bytes {i}"));
+            let mut value_inserts = Scale::default();
+            let mut label_inserts = Scale::default();
+            let mut searches = Scale::default();
+            let mut value_removes = Scale::default();
+            let mut label_removes = Scale::default();
+
+            for i in 0..SCALE {
+                let id = DbId(1 + i as i64);
+                simulation.run(&mut value_inserts, i, |view, alloc| {
+                    indexes.insert(view, alloc, distinct_id, &value(i), id)
+                });
+                simulation.run(&mut label_inserts, i, |view, alloc| {
+                    indexes.insert(view, alloc, label_id, &DbValue::None, id)
+                });
+                let found = simulation.run(&mut searches, i + 1, |view, _| {
+                    indexes.search(view, &distinct, &value(i / 2))
+                });
+                assert_eq!(found, Some(vec![DbId(1 + (i / 2) as i64)]));
+            }
+
+            for i in 0..SCALE {
+                let id = DbId(1 + i as i64);
+                simulation.run(&mut value_removes, SCALE - i, |view, alloc| {
+                    indexes.remove(view, alloc, distinct_id, &value(i), id)
+                });
+                simulation.run(&mut label_removes, SCALE - i, |view, alloc| {
+                    indexes.remove(view, alloc, label_id, &DbValue::None, id)
+                });
+            }
+
+            value_inserts.assert_flat();
+            label_inserts.assert_flat();
+            searches.assert_flat();
+            value_removes.assert_flat();
+            label_removes.assert_flat();
+            let view = Reader::new(&simulation.storage);
+            verify(&simulation.alloc, &view, &live(&view, &keys, &indexes));
         }
 
         #[test]

@@ -85,9 +85,9 @@ impl Aliases {
         graph: &GraphHeader,
         alias: &str,
     ) -> Result<Option<DbId>, DbError> {
-        let mut probe = self.0.probe(hash(alias.as_bytes()));
+        let mut probe = self.0.probe(view, &ALIASES, hash(alias.as_bytes()))?;
 
-        while let Some((_, slot)) = self.0.next(view, &ALIASES, &mut probe)? {
+        while let Some((_, slot)) = probe.next(&ALIASES) {
             let id = slot_id(&slot);
 
             if let Some(index) = stored(view, graph, id)?
@@ -159,13 +159,18 @@ impl Aliases {
         };
 
         let alias = value::load_bytes(view, &index)?;
-        let mut probe = self.0.probe(hash(&alias));
+        let mut probe = self.0.probe(view, &ALIASES, hash(&alias))?;
+        let mut found = None;
 
-        while let Some((at, slot)) = self.0.next(view, &ALIASES, &mut probe)? {
+        while let Some((at, slot)) = probe.next(&ALIASES) {
             if slot_id(&slot) == id {
-                self.0.remove(view, alloc, &ALIASES, at)?;
+                found = Some(at);
                 break;
             }
+        }
+
+        if let Some(at) = found {
+            self.0.remove(view, alloc, &ALIASES, at)?;
         }
 
         value::free(view, alloc, &index)?;
@@ -178,7 +183,7 @@ impl Aliases {
 mod tests {
     use super::*;
     use crate::collections::graph::tests::allocations as graph_allocations;
-    use crate::collections::table::tests::allocation as table_allocation;
+    use crate::collections::table::tests::allocations as table_allocations;
     use crate::collections::value::tests::TestView;
     use crate::collections::value::tests::allocation;
     use crate::collections::value::tests::assert_failures;
@@ -264,7 +269,7 @@ mod tests {
                     }
 
                     let mut live = graph_allocations(&graph);
-                    live.extend(table_allocation(&aliases.0, &ALIASES));
+                    live.extend(table_allocations(&aliases.0, view, &ALIASES));
 
                     for id in &ids {
                         live.extend(

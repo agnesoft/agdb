@@ -645,7 +645,7 @@ declare namespace Components {
              * with `to_string()` but otherwise requires a `match`.
              */
             DbValue[];
-        };
+        } | ("None");
         /**
          * Query to insert or update aliases of existing nodes.
          * All `ids` must exist. None of the `aliases` can be empty.

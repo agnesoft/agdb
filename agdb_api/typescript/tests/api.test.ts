@@ -215,18 +215,18 @@ describe("openapi test", () => {
         expect(res.data[3].elements).toEqual([
             {
                 id: 1,
-                from: -3,
+                from: -1,
                 to: 0,
                 values: [],
             },
             {
                 id: 2,
                 from: 0,
-                to: -3,
+                to: -1,
                 values: [],
             },
             {
-                id: -3,
+                id: -1,
                 from: 1,
                 to: 2,
                 values: [],

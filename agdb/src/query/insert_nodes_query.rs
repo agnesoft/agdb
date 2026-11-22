@@ -2,12 +2,12 @@ use crate::DbElement;
 use crate::DbError;
 use crate::DbErrorType;
 use crate::DbId;
-use crate::DbImpl;
 use crate::QueryId;
 use crate::QueryIds;
 use crate::QueryMut;
 use crate::QueryResult;
 use crate::StorageData;
+use crate::TransactionMut;
 use crate::query::query_values::QueryValues;
 
 /// Query to insert nodes to the database. Only one of
@@ -48,7 +48,10 @@ pub struct InsertNodesQuery {
 }
 
 impl QueryMut for InsertNodesQuery {
-    fn process<Store: StorageData>(&self, db: &mut DbImpl<Store>) -> Result<QueryResult, DbError> {
+    fn process<Store: StorageData>(
+        &self,
+        db: &mut TransactionMut<Store>,
+    ) -> Result<QueryResult, DbError> {
         let mut result = QueryResult::default();
         let mut ids = vec![];
         let count = std::cmp::max(self.count, self.aliases.len() as u64);
@@ -57,7 +60,7 @@ impl QueryMut for InsertNodesQuery {
                 .iter()
                 .map(|query_id| db.db_id(query_id))
                 .collect::<Result<Vec<DbId>, DbError>>()?,
-            QueryIds::Search(search_query) => search_query.search(db)?,
+            QueryIds::Search(search_query) => search_query.search(&db.read())?,
         };
         let values = match &self.values {
             QueryValues::Single(v) => vec![v; std::cmp::max(query_ids.len(), count as usize)],
@@ -161,7 +164,10 @@ impl QueryMut for InsertNodesQuery {
 }
 
 impl QueryMut for &InsertNodesQuery {
-    fn process<Store: StorageData>(&self, db: &mut DbImpl<Store>) -> Result<QueryResult, DbError> {
+    fn process<Store: StorageData>(
+        &self,
+        db: &mut TransactionMut<Store>,
+    ) -> Result<QueryResult, DbError> {
         (*self).process(db)
     }
 }

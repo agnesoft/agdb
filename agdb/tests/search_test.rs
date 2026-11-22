@@ -20,7 +20,7 @@ fn search_from() {
     );
     db.exec_ids(
         QueryBuilder::search().from(1).query(),
-        &[1, -11, 3, -12, 5, -13, 7, -14, 9],
+        &[1, -1, 3, -2, 5, -3, 7, -4, 9],
     );
 }
 
@@ -38,7 +38,7 @@ fn search_from_multiple_edges() {
     );
     db.exec_ids(
         QueryBuilder::search().from(1).query(),
-        &[1, -10, -6, 2, -11, -7, 3, -12, -8, 4, -13, -9, 5],
+        &[1, -5, -1, 2, -6, -2, 3, -7, -3, 4, -8, -4, 5],
     );
 }
 
@@ -56,7 +56,7 @@ fn search_from_circular() {
     );
     db.exec_ids(
         QueryBuilder::search().from(1).query(),
-        &[1, -4, 2, -5, 3, -6],
+        &[1, -1, 2, -2, 3, -3],
     );
 }
 
@@ -72,7 +72,7 @@ fn search_from_self_referential() {
             .query(),
         2,
     );
-    db.exec_ids(QueryBuilder::search().from(1).query(), &[1, -3, -2]);
+    db.exec_ids(QueryBuilder::search().from(1).query(), &[1, -2, -1]);
 }
 
 #[test]
@@ -89,7 +89,7 @@ fn search_from_limit() {
     );
     db.exec_ids(
         QueryBuilder::search().from(1).limit(5).query(),
-        &[1, -11, 3, -12, 5],
+        &[1, -1, 3, -2, 5],
     );
 }
 
@@ -107,7 +107,7 @@ fn search_from_offset() {
     );
     db.exec_ids(
         QueryBuilder::search().from(1).offset(4).query(),
-        &[5, -13, 7, -14, 9],
+        &[5, -3, 7, -4, 9],
     );
 }
 
@@ -125,7 +125,7 @@ fn search_from_offset_limit() {
     );
     db.exec_ids(
         QueryBuilder::search().from(1).offset(4).limit(2).query(),
-        &[5, -13],
+        &[5, -3],
     );
 }
 
@@ -143,7 +143,7 @@ fn search_from_to() {
     );
     db.exec_ids(
         QueryBuilder::search().from(1).to(4).query(),
-        &[1, -6, 2, -7, 3, -8, 4],
+        &[1, -1, 2, -2, 3, -3, 4],
     );
 }
 
@@ -159,7 +159,7 @@ fn search_from_to_shortcut() {
             .query(),
         5,
     );
-    db.exec_ids(QueryBuilder::search().from(1).to(5).query(), &[1, -10, 5]);
+    db.exec_ids(QueryBuilder::search().from(1).to(5).query(), &[1, -5, 5]);
 }
 
 #[test]
@@ -176,7 +176,7 @@ fn search_from_to_limit() {
     );
     db.exec_ids(
         QueryBuilder::search().from(1).to(4).limit(4).query(),
-        &[1, -6, 2, -7],
+        &[1, -1, 2, -2],
     );
 }
 
@@ -194,7 +194,7 @@ fn search_from_to_offset() {
     );
     db.exec_ids(
         QueryBuilder::search().from(1).to(4).offset(3).query(),
-        &[-7, 3, -8, 4],
+        &[-2, 3, -3, 4],
     );
 }
 
@@ -217,7 +217,7 @@ fn search_from_to_offset_limit() {
             .offset(3)
             .limit(2)
             .query(),
-        &[-7, 3],
+        &[-2, 3],
     );
 }
 
@@ -235,7 +235,7 @@ fn search_to() {
     );
     db.exec_ids(
         QueryBuilder::search().to(9).query(),
-        &[9, -14, 7, -13, 5, -12, 3, -11, 1],
+        &[9, -4, 7, -3, 5, -2, 3, -1, 1],
     );
 }
 
@@ -251,7 +251,7 @@ fn search_to_limit() {
             .query(),
         4,
     );
-    db.exec_ids(QueryBuilder::search().to(9).limit(3).query(), &[9, -14, 7]);
+    db.exec_ids(QueryBuilder::search().to(9).limit(3).query(), &[9, -4, 7]);
 }
 
 #[test]
@@ -268,7 +268,7 @@ fn search_to_offset() {
     );
     db.exec_ids(
         QueryBuilder::search().to(9).offset(2).query(),
-        &[7, -13, 5, -12, 3, -11, 1],
+        &[7, -3, 5, -2, 3, -1, 1],
     );
 }
 
@@ -286,7 +286,7 @@ fn search_to_offset_limit() {
     );
     db.exec_ids(
         QueryBuilder::search().to(9).offset(2).limit(4).query(),
-        &[7, -13, 5, -12],
+        &[7, -3, 5, -2],
     );
 }
 
@@ -334,7 +334,7 @@ fn search_from_ordered_by() {
             )
             .query(),
         &[
-            5, 4, 2, 8, 7, 3, 9, 10, 11, 6, 1, -21, -20, -19, -18, -17, -16, -15, -14, -13, -12,
+            5, 4, 2, 8, 7, 3, 9, 10, 11, 6, 1, -10, -9, -8, -7, -6, -5, -4, -3, -2, -1,
         ],
     );
 }
@@ -388,19 +388,19 @@ fn search_from_ordered_by_limit_offset() {
             DbElement {
                 id: DbId(8),
                 from: DbId::default(),
-                to: DbId(-18),
+                to: DbId(-7),
                 values: vec![("name", "y").into(), ("age", 28).into(), ("id", 7).into()],
             },
             DbElement {
                 id: DbId(7),
                 from: DbId::default(),
-                to: DbId(-17),
+                to: DbId(-6),
                 values: vec![("name", "s").into(), ("age", 18).into(), ("id", 6).into()],
             },
             DbElement {
                 id: DbId(3),
                 from: DbId::default(),
-                to: DbId(-13),
+                to: DbId(-2),
                 values: vec![("name", "x").into(), ("age", 12).into(), ("id", 2).into()],
             },
         ],
@@ -454,19 +454,19 @@ fn search_to_ordered_by() {
         &[
             DbElement {
                 id: DbId(6),
-                from: DbId(-16),
+                from: DbId(-5),
                 to: DbId::default(),
                 values: vec![("name", "f").into(), ("age", 4).into(), ("id", 5).into()],
             },
             DbElement {
                 id: DbId(11),
-                from: DbId(-21),
+                from: DbId(-10),
                 to: DbId::default(),
                 values: vec![("name", "c").into(), ("age", 5).into(), ("id", 10).into()],
             },
             DbElement {
                 id: DbId(10),
-                from: DbId(-20),
+                from: DbId(-9),
                 to: DbId::default(),
                 values: vec![("name", "w").into(), ("age", 6).into(), ("id", 9).into()],
             },
@@ -488,7 +488,7 @@ fn search_breadth_first_from() {
     );
     db.exec_ids(
         QueryBuilder::search().breadth_first().from(1).query(),
-        &[1, -15, -11, 3, -16, -12, 5, -17, -13, 7, -18, -14, 9],
+        &[1, -5, -1, 3, -6, -2, 5, -7, -3, 7, -8, -4, 9],
     );
 }
 
@@ -510,7 +510,7 @@ fn search_depth_first_from_limit() {
             .from(1)
             .limit(3)
             .query(),
-        &[1, -15, 3],
+        &[1, -5, 3],
     );
 }
 
@@ -532,7 +532,7 @@ fn search_depth_first_from_offset() {
             .from(1)
             .offset(3)
             .query(),
-        &[-16, 5, -17, 7, -18, 9, -14, -13, -12, -11],
+        &[-6, 5, -7, 7, -8, 9, -4, -3, -2, -1],
     );
 }
 
@@ -555,7 +555,7 @@ fn search_depth_first_from_offset_limit() {
             .offset(3)
             .limit(3)
             .query(),
-        &[-16, 5, -17],
+        &[-6, 5, -7],
     );
 }
 
@@ -573,7 +573,7 @@ fn search_depth_first_from() {
     );
     db.exec_ids(
         QueryBuilder::search().depth_first().from(1).query(),
-        &[1, -15, 3, -16, 5, -17, 7, -18, 9, -14, -13, -12, -11],
+        &[1, -5, 3, -6, 5, -7, 7, -8, 9, -4, -3, -2, -1],
     );
 }
 
@@ -591,7 +591,7 @@ fn search_depth_first_to() {
     );
     db.exec_ids(
         QueryBuilder::search().depth_first().to(9).query(),
-        &[9, -18, 7, -17, 5, -16, 3, -15, 1, -11, -12, -13, -14],
+        &[9, -8, 7, -7, 5, -6, 3, -5, 1, -1, -2, -3, -4],
     );
 }
 
@@ -609,7 +609,7 @@ fn search_depth_first_to_limit() {
     );
     db.exec_ids(
         QueryBuilder::search().depth_first().to(9).limit(3).query(),
-        &[9, -18, 7],
+        &[9, -8, 7],
     );
 }
 
@@ -627,7 +627,7 @@ fn search_depth_first_to_offset() {
     );
     db.exec_ids(
         QueryBuilder::search().depth_first().to(9).offset(3).query(),
-        &[-17, 5, -16, 3, -15, 1, -11, -12, -13, -14],
+        &[-7, 5, -6, 3, -5, 1, -1, -2, -3, -4],
     );
 }
 
@@ -650,7 +650,7 @@ fn search_depth_first_to_offset_limit() {
             .offset(3)
             .limit(3)
             .query(),
-        &[-17, 5, -16],
+        &[-7, 5, -6],
     );
 }
 
@@ -672,7 +672,7 @@ fn search_to_from() {
     // Reverse path search should find the same path as forward
     db.exec_ids(
         QueryBuilder::search().to(4).from(1).query(),
-        &[1, -5, 2, -6, 3, -7, 4],
+        &[1, -1, 2, -2, 3, -3, 4],
     );
 }
 
@@ -692,12 +692,12 @@ fn search_to_from_same_as_forward() {
     // Forward path
     db.exec_ids(
         QueryBuilder::search().from(1).to(4).query(),
-        &[1, -6, 2, -7, 3, -8, 4],
+        &[1, -1, 2, -2, 3, -3, 4],
     );
     // Reverse path should yield the same result
     db.exec_ids(
         QueryBuilder::search().to(4).from(1).query(),
-        &[1, -6, 2, -7, 3, -8, 4],
+        &[1, -1, 2, -2, 3, -3, 4],
     );
 }
 
@@ -731,7 +731,7 @@ fn search_to_from_shortcut() {
         5,
     );
     // Should find the shortcut 1 -> 5
-    db.exec_ids(QueryBuilder::search().to(5).from(1).query(), &[1, -10, 5]);
+    db.exec_ids(QueryBuilder::search().to(5).from(1).query(), &[1, -5, 5]);
 }
 
 #[test]
@@ -797,7 +797,7 @@ fn search_from_to_offset_limit_overflow() {
             .offset(1)
             .limit(u64::MAX)
             .query(),
-        &[-4, 2, -5, 3],
+        &[-1, 2, -2, 3],
     );
 }
 
@@ -819,6 +819,6 @@ fn search_from_offset_limit_overflow() {
             .offset(1)
             .limit(u64::MAX)
             .query(),
-        &[-4, 2, -5, 3],
+        &[-1, 2, -2, 3],
     );
 }

@@ -1,9 +1,3 @@
-use crate::DbError;
-use crate::StorageData;
-use crate::collections::vec::VecValue;
-use crate::storage::Storage;
-use crate::utilities::serialize::Serialize;
-use crate::utilities::serialize::SerializeStatic;
 use crate::utilities::stable_hash::StableHash;
 
 /// Database id is a wrapper around `i64`.
@@ -21,24 +15,6 @@ pub struct DbId(pub i64);
 impl StableHash for DbId {
     fn stable_hash(&self) -> u64 {
         self.0.stable_hash()
-    }
-}
-
-impl<D: StorageData> VecValue<D> for DbId {
-    fn store(&self, _storage: &mut Storage<D>) -> Result<Vec<u8>, DbError> {
-        Ok(self.0.serialize())
-    }
-
-    fn load(_storage: &Storage<D>, bytes: &[u8]) -> Result<Self, DbError> {
-        Ok(Self(i64::deserialize(bytes)?))
-    }
-
-    fn remove(_storage: &mut Storage<D>, _bytes: &[u8]) -> Result<(), DbError> {
-        Ok(())
-    }
-
-    fn storage_len() -> u64 {
-        i64::serialized_size_static()
     }
 }
 

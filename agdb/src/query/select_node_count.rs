@@ -1,8 +1,8 @@
 use crate::DbError;
-use crate::DbImpl;
 use crate::Query;
 use crate::QueryResult;
 use crate::StorageData;
+use crate::Transaction;
 
 /// Query to select number of nodes in the database.
 ///
@@ -15,16 +15,16 @@ use crate::StorageData;
 pub struct SelectNodeCountQuery {}
 
 impl Query for SelectNodeCountQuery {
-    fn process<Store: StorageData>(&self, db: &DbImpl<Store>) -> Result<QueryResult, DbError> {
+    fn process<Store: StorageData>(&self, db: &Transaction<Store>) -> Result<QueryResult, DbError> {
         Ok(QueryResult {
-            result: db.node_count()?,
+            result: db.node_count(),
             elements: vec![],
         })
     }
 }
 
 impl Query for &SelectNodeCountQuery {
-    fn process<Store: StorageData>(&self, db: &DbImpl<Store>) -> Result<QueryResult, DbError> {
+    fn process<Store: StorageData>(&self, db: &Transaction<Store>) -> Result<QueryResult, DbError> {
         (*self).process(db)
     }
 }

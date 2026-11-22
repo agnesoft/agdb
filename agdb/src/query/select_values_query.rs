@@ -1,13 +1,13 @@
 use crate::DbElement;
 use crate::DbError;
 use crate::DbErrorType;
-use crate::DbImpl;
 use crate::DbValue;
 use crate::Query;
 use crate::QueryIds;
 use crate::QueryResult;
 use crate::SearchQuery;
 use crate::StorageData;
+use crate::Transaction;
 use crate::query_builder::search::SearchQueryBuilder;
 
 /// Query to select elements with only certain properties of
@@ -27,7 +27,7 @@ pub struct SelectValuesQuery {
 }
 
 impl Query for SelectValuesQuery {
-    fn process<Store: StorageData>(&self, db: &DbImpl<Store>) -> Result<QueryResult, DbError> {
+    fn process<Store: StorageData>(&self, db: &Transaction<Store>) -> Result<QueryResult, DbError> {
         let mut result = QueryResult::default();
 
         let (db_ids, is_search) = match &self.ids {
@@ -45,12 +45,13 @@ impl Query for SelectValuesQuery {
 
         result.elements.reserve(db_ids.len());
         result.result = db_ids.len() as u64;
+        let key_ids = db.key_ids(&self.keys)?;
 
         for id in db_ids {
             let values = if self.keys.is_empty() {
                 db.values(id)?
             } else {
-                db.values_by_keys(id, &self.keys)?
+                db.values_by_keys(id, &key_ids)?
             };
 
             if !is_search && values.len() != self.keys.len() {
@@ -77,7 +78,7 @@ impl Query for SelectValuesQuery {
 }
 
 impl Query for &SelectValuesQuery {
-    fn process<Store: StorageData>(&self, db: &DbImpl<Store>) -> Result<QueryResult, DbError> {
+    fn process<Store: StorageData>(&self, db: &Transaction<Store>) -> Result<QueryResult, DbError> {
         (*self).process(db)
     }
 }

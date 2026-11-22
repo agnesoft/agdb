@@ -1,11 +1,11 @@
 use crate::DbError;
-use crate::DbImpl;
 use crate::QueryIds;
 use crate::QueryMut;
 use crate::QueryResult;
 use crate::SearchQuery;
 use crate::SelectValuesQuery;
 use crate::StorageData;
+use crate::TransactionMut;
 use crate::query_builder::search::SearchQueryBuilder;
 
 /// Query to remove properties from existing elements
@@ -21,7 +21,10 @@ use crate::query_builder::search::SearchQueryBuilder;
 pub struct RemoveValuesQuery(pub SelectValuesQuery);
 
 impl QueryMut for RemoveValuesQuery {
-    fn process<Store: StorageData>(&self, db: &mut DbImpl<Store>) -> Result<QueryResult, DbError> {
+    fn process<Store: StorageData>(
+        &self,
+        db: &mut TransactionMut<Store>,
+    ) -> Result<QueryResult, DbError> {
         let mut result = QueryResult::default();
 
         match &self.0.ids {
@@ -32,7 +35,7 @@ impl QueryMut for RemoveValuesQuery {
                 }
             }
             QueryIds::Search(search_query) => {
-                for db_id in search_query.search(db)? {
+                for db_id in search_query.search(&db.read())? {
                     result.result += db.remove_keys(db_id, &self.0.keys)?;
                 }
             }
@@ -43,7 +46,10 @@ impl QueryMut for RemoveValuesQuery {
 }
 
 impl QueryMut for &RemoveValuesQuery {
-    fn process<Store: StorageData>(&self, db: &mut DbImpl<Store>) -> Result<QueryResult, DbError> {
+    fn process<Store: StorageData>(
+        &self,
+        db: &mut TransactionMut<Store>,
+    ) -> Result<QueryResult, DbError> {
         (*self).process(db)
     }
 }

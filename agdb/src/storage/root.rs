@@ -160,6 +160,12 @@ pub(crate) struct Meta {
     pub(crate) indexes: Indexes,
 }
 
+impl Default for Meta {
+    fn default() -> Self {
+        Self::new(Layout::default())
+    }
+}
+
 impl Meta {
     fn new(layout: Layout) -> Self {
         Self {
@@ -277,6 +283,14 @@ impl<S: StorageData> Root<S> {
         }
 
         Ok(root)
+    }
+
+    pub(crate) fn storage(&self) -> &S {
+        &self.storage
+    }
+
+    pub(crate) fn storage_mut(&mut self) -> &mut S {
+        &mut self.storage
     }
 
     /// The committed view and meta. It is refused while the storage may

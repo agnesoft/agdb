@@ -130,7 +130,7 @@ fn remove_nodes_with_edges_rollback() {
         },
         DbError::db(DbErrorType::NotAllowed, "error"),
     );
-    db.exec_ids(QueryBuilder::select().ids(-2).query(), &[-2]);
+    db.exec_ids(QueryBuilder::select().ids(-1).query(), &[-1]);
 }
 
 #[test]
@@ -199,7 +199,7 @@ fn remove_nodes_with_values_rollback() {
 fn remove_nodes_search() {
     let mut db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().nodes().count(2).query(), 2);
-    db.exec_mut_ids(QueryBuilder::insert().edges().from(1).to(2).query(), &[-3]);
+    db.exec_mut_ids(QueryBuilder::insert().edges().from(1).to(2).query(), &[-1]);
 
     db.exec_mut(
         QueryBuilder::remove()
@@ -215,7 +215,7 @@ fn remove_nodes_search() {
 fn remove_nodes_search_alt() {
     let mut db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().nodes().count(2).query(), 2);
-    db.exec_mut_ids(QueryBuilder::insert().edges().from(1).to(2).query(), &[-3]);
+    db.exec_mut_ids(QueryBuilder::insert().edges().from(1).to(2).query(), &[-1]);
 
     db.exec_mut(QueryBuilder::remove().search().from(1).query(), 2);
     db.exec_error(QueryBuilder::select().ids(1).query(), "Id '1' not found");
@@ -245,16 +245,16 @@ fn remove_nodes_removes_edges_with_all_values() {
         2,
     );
     db.exec_elements(
-        QueryBuilder::select().ids([-2, -4]).query(),
+        QueryBuilder::select().ids([-1, -2]).query(),
         &[
             DbElement {
-                id: DbId(-2),
+                id: DbId(-1),
                 from: DbId(1),
                 to: DbId(3),
                 values: vec![],
             },
             DbElement {
-                id: DbId(-4),
+                id: DbId(-2),
                 from: DbId(1),
                 to: DbId(3),
                 values: vec![],
@@ -291,9 +291,9 @@ fn remove_nodes_removes_edges_with_all_values_rollback() {
         DbError::db(DbErrorType::NotAllowed, "error"),
     );
     db.exec_elements(
-        QueryBuilder::select().ids(-4).query(),
+        QueryBuilder::select().ids(-1).query(),
         &[DbElement {
-            id: DbId(-4),
+            id: DbId(-1),
             from: DbId(2),
             to: DbId(3),
             values: vec![("some_key", 100).into()],

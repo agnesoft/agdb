@@ -335,7 +335,8 @@ impl<'a> Lower<'a> {
                 .any(|a| matches!(a, ir::Attr::Meta(m) if m == "test"))
             {
                 let at = self.location(id, syn_fn.sig.ident.span());
-                let test = self.func(&f.sig, Some(&f.body), false, at, true);
+                let mut test = self.func(&f.sig, Some(&f.body), false, at, true);
+                test.ignore = attrs.iter().find_map(ignore);
                 self.m.tests.push(test);
             }
         }
@@ -344,19 +345,33 @@ impl<'a> Lower<'a> {
     fn suite(&mut self, suite: &str) {
         let ids: Vec<ItemId> = self.c.item_ids().collect();
         let mut loaded = HashSet::new();
+        let mut ignored = HashMap::new();
 
         for id in ids {
             let [first, module @ ..] = self.c.module(id.module).path() else {
                 continue;
             };
 
-            let syn::Item::Fn(syn_fn) = self.c.item(id) else {
-                continue;
-            };
-
             if first != suite {
                 continue;
             }
+
+            let path = |name: String| module.iter().cloned().chain([name]).collect::<Vec<_>>();
+
+            if let syn::Item::Const(registration) = self.c.item(id)
+                && let syn::Expr::Macro(registration) = &*registration.expr
+            {
+                ignored.extend(
+                    ignored_entries(&registration.mac)
+                        .into_iter()
+                        .map(|(name, reason)| (path(name).join("::"), reason)),
+                );
+                continue;
+            }
+
+            let syn::Item::Fn(syn_fn) = self.c.item(id) else {
+                continue;
+            };
 
             let Some(ir::Item {
                 kind: ir::ItemKind::Fn(f),
@@ -367,14 +382,15 @@ impl<'a> Lower<'a> {
             };
             let at = self.location(id, syn_fn.sig.ident.span());
             let mut test = self.func(&f.sig, Some(&f.body), false, at, true);
-            test.name = module
-                .iter()
-                .cloned()
-                .chain([syn_fn.sig.ident.to_string()])
-                .collect::<Vec<_>>()
-                .join("::");
+            test.name = path(syn_fn.sig.ident.to_string()).join("::");
             self.m.tests.push(test);
             self.load_glue(&mut loaded);
+        }
+
+        for test in &mut self.m.tests {
+            if let Some(reason) = ignored.remove(&test.name) {
+                test.ignore = Some(reason);
+            }
         }
 
         let mut consts = 0;
@@ -1425,6 +1441,7 @@ impl<'a> Lower<'a> {
             private,
             at: Some(at),
             errors: std::mem::take(&mut self.fn_errors),
+            ignore: None,
         }
     }
 
@@ -2181,6 +2198,55 @@ fn item_name(c: &SourceCrate, id: ItemId) -> String {
         syn::Item::Union(u) => u.ident.to_string(),
         _ => String::new(),
     }
+}
+
+/// The reason of a libtest `#[ignore]` or `#[ignore = "reason"]`, empty
+/// without one.
+fn ignore(attr: &ir::Attr) -> Option<String> {
+    let ir::Attr::Meta(text) = attr else {
+        return None;
+    };
+
+    match syn::parse_str::<syn::Meta>(text) {
+        Ok(syn::Meta::Path(path)) if path.is_ident("ignore") => Some(String::new()),
+        Ok(syn::Meta::NameValue(syn::MetaNameValue {
+            path,
+            value:
+                syn::Expr::Lit(syn::ExprLit {
+                    lit: syn::Lit::Str(reason),
+                    ..
+                }),
+            ..
+        })) if path.is_ident("ignore") => Some(reason.value()),
+        _ => None,
+    }
+}
+
+/// The `name = ignore("reason")` entries of a macro registering the tests
+/// of a `harness = false` runner, as libtest's `#[ignore = "reason"]`.
+fn ignored_entries(registration: &syn::Macro) -> Vec<(String, String)> {
+    registration
+        .parse_body_with(syn::punctuated::Punctuated::<syn::Expr, syn::Token![,]>::parse_terminated)
+        .unwrap_or_default()
+        .iter()
+        .filter_map(|entry| {
+            if let syn::Expr::Assign(entry) = entry
+                && let syn::Expr::Path(name) = &*entry.left
+                && let Some(name) = name.path.get_ident()
+                && let syn::Expr::Call(call) = &*entry.right
+                && let syn::Expr::Path(func) = &*call.func
+                && func.path.is_ident("ignore")
+                && let Some(syn::Expr::Lit(syn::ExprLit {
+                    lit: syn::Lit::Str(reason),
+                    ..
+                })) = call.args.first()
+            {
+                Some((name.to_string(), reason.value()))
+            } else {
+                None
+            }
+        })
+        .collect()
 }
 
 /// Whether the attribute derives the trait.
@@ -3291,7 +3357,7 @@ mod private {
 
                 assert_eq!(
                     dump(&m),
-                    "// ===== after lower\n// Root\nfn new() -> Root {\n    Root;\n}\n\n// test\nasync fn status() -> () {\n    let server: ? = Server::new()/*unresolved*/.await;\n    .AssertEq(server.dir, ADMIN);\n}\n\n// test\nasync fn login::logs_in() -> () {\n    let server: ? = Server::new()/*unresolved*/.await;\n    let status: ? = server.api.login()/*unresolved*/.await.unwrap()/*unresolved*/;\n    let name: str = next_name(\"user\")/*unresolved*/;\n    let agent: ? = Helpers::agent()/*unresolved*/;\n    let pair: ? = Pair(1, 2)/*unresolved*/;\n    let port: ? = PORT;\n    .AssertNe(status, 0);\n}\n\n// test\nasync fn login::fails() -> () {\n    let server: ? = Server::new()/*unresolved*/.await;\n    let status: ? = server.api.fail()/*unresolved*/.unwrap_err()/*unresolved*/.status;\n    let code: ? = server.api.ping()/*unresolved*/.await.unwrap_err()/*unresolved*/.status;\n    let root: ? = Root::new()/*unresolved*/;\n    .Assert(server.address()/*unresolved*/.is_empty()/*unresolved*/);\n}\n\n// test\nasync fn logout::logs_out() -> () {\n    let server: ? = Server::new()/*unresolved*/.await;\n    .AssertNe(server.dir, ADMIN);\n}\n\nclass Api<T> { client: T, base: str, token: Option<str> }\n  new\n  base\n  kind\n  login\n  ping\n  fail\n  priv url\nclass ApiError<> { status: u16, description: str }\n  to_string\nclass Helpers<> {  }\n  agent\nclass Root<> {  }\n  new\nclass Server<> { api: Api<Transport>, dir: str }\n  new\n  address\nconst ADMIN: str = \"admin\"\n"
+                    "// ===== after lower\n// Root\nfn new() -> Root {\n    Root;\n}\n\n// test ignored \"needs a server\"\nasync fn status() -> () {\n    let server: ? = Server::new()/*unresolved*/.await;\n    .AssertEq(server.dir, ADMIN);\n}\n\n// test\nasync fn login::logs_in() -> () {\n    let server: ? = Server::new()/*unresolved*/.await;\n    let status: ? = server.api.login()/*unresolved*/.await.unwrap()/*unresolved*/;\n    let name: str = next_name(\"user\")/*unresolved*/;\n    let agent: ? = Helpers::agent()/*unresolved*/;\n    let pair: ? = Pair(1, 2)/*unresolved*/;\n    let port: ? = PORT;\n    .AssertNe(status, 0);\n}\n\n// test\nasync fn login::fails() -> () {\n    let server: ? = Server::new()/*unresolved*/.await;\n    let status: ? = server.api.fail()/*unresolved*/.unwrap_err()/*unresolved*/.status;\n    let code: ? = server.api.ping()/*unresolved*/.await.unwrap_err()/*unresolved*/.status;\n    let root: ? = Root::new()/*unresolved*/;\n    .Assert(server.address()/*unresolved*/.is_empty()/*unresolved*/);\n}\n\n// test\nasync fn logout::logs_out() -> () {\n    let server: ? = Server::new()/*unresolved*/.await;\n    .AssertNe(server.dir, ADMIN);\n}\n\nclass Api<T> { client: T, base: str, token: Option<str> }\n  new\n  base\n  kind\n  login\n  ping\n  fail\n  priv url\nclass ApiError<> { status: u16, description: str }\n  to_string\nclass Helpers<> {  }\n  agent\nclass Root<> {  }\n  new\nclass Server<> { api: Api<Transport>, dir: str }\n  new\n  address\nconst ADMIN: str = \"admin\"\n"
                 );
                 assert_eq!(
                     m.opaque
@@ -3338,7 +3404,9 @@ impl Root {
 struct T { n: u8 }
 struct N;
 enum E { X }
+/// Builds.
 #[test]
+#[ignore = "slow"]
 fn builds() {
     let r: c::Root = Root::new();
     let e = c::E::B(1);
@@ -3356,7 +3424,7 @@ fn helper() {}"#,
 
                 assert_eq!(
                     dump(&m),
-                    "// ===== after lower\n// Root\nfn new() -> Root {\n    Root { e: E::A };\n}\n\n// test\nfn builds() -> () {\n    let r: Root = Root::new()/*unresolved*/;\n    let e: ? = E::B(1)/*unresolved*/;\n    let o: Option<u8> = None;\n    let p: ? = nothing::X;\n    let s;\n    .AssertEq(r.e, T::default()/*unresolved*/.n);\n    .AssertEq(1, 2);\n    .Assert(true);\n    .AssertNe(1, 2);\n}\n\nclass N<> {  }\nclass Root<> { e: E }\n  new\nclass T<> { n: u8 }\nenum E [Unit(\"A\"), Tuple(\"B\", Int(\"u8\"))] []\n"
+                    "// ===== after lower\n// Root\nfn new() -> Root {\n    Root { e: E::A };\n}\n\n// test ignored \"slow\"\nfn builds() -> () {\n    let r: Root = Root::new()/*unresolved*/;\n    let e: ? = E::B(1)/*unresolved*/;\n    let o: Option<u8> = None;\n    let p: ? = nothing::X;\n    let s;\n    .AssertEq(r.e, T::default()/*unresolved*/.n);\n    .AssertEq(1, 2);\n    .Assert(true);\n    .AssertNe(1, 2);\n}\n\nclass N<> {  }\nclass Root<> { e: E }\n  new\nclass T<> { n: u8 }\nenum E [Unit(\"A\"), Tuple(\"B\", Int(\"u8\"))] []\n"
                 );
                 assert_eq!(
                     (

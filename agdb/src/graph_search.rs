@@ -15,11 +15,10 @@ use self::path_search::PathSearch;
 use self::path_search::PathSearchHandler;
 use self::search_impl::SearchImpl;
 use crate::DbError;
-use crate::StorageData;
-use crate::graph::DbGraph;
-use crate::graph::GraphIndex;
+use crate::DbId;
+use crate::collections::graph::GraphHeader;
 use crate::graph_search::element_search::ElementSearch;
-use crate::storage::Storage;
+use crate::storage::pages::View;
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum SearchControl {
@@ -29,29 +28,32 @@ pub enum SearchControl {
 }
 
 pub trait SearchHandler {
-    fn process(&mut self, index: GraphIndex, distance: u64) -> Result<SearchControl, DbError>;
+    fn process(&mut self, id: DbId, distance: u64) -> Result<SearchControl, DbError>;
 }
 
-pub struct GraphSearch<'a, D>
-where
-    D: StorageData,
-{
-    graph: &'a DbGraph<D>,
-    storage: &'a Storage<D>,
+/// The key of the element `id` in a set of visited elements, nodes and
+/// edges having the same slots.
+pub(crate) fn visit_key(id: DbId) -> u64 {
+    (id.0.unsigned_abs() << 1) | u64::from(id.0 < 0)
 }
 
-impl<'a, D> GraphSearch<'a, D>
-where
-    D: StorageData,
-{
+pub struct GraphSearch<'a, V: View> {
+    graph: &'a GraphHeader,
+    view: &'a V,
+}
+
+impl<'a, V: View> GraphSearch<'a, V> {
+    pub fn new(graph: &'a GraphHeader, view: &'a V) -> Self {
+        Self { graph, view }
+    }
+
     pub fn breadth_first_search<Handler: SearchHandler>(
         &self,
-        index: GraphIndex,
+        id: DbId,
         handler: Handler,
-    ) -> Result<Vec<GraphIndex>, DbError> {
-        if self.is_valid_index(index)? {
-            SearchImpl::<'a, D, BreadthFirstSearch>::new(self.graph, self.storage, index)
-                .search(handler)
+    ) -> Result<Vec<DbId>, DbError> {
+        if self.is_valid(id)? {
+            SearchImpl::<V, BreadthFirstSearch>::new(self.graph, self.view, id).search(handler)
         } else {
             Ok(vec![])
         }
@@ -59,11 +61,11 @@ where
 
     pub fn breadth_first_search_reverse<Handler: SearchHandler>(
         &self,
-        index: GraphIndex,
+        id: DbId,
         handler: Handler,
-    ) -> Result<Vec<GraphIndex>, DbError> {
-        if self.is_valid_index(index)? {
-            SearchImpl::<'a, D, BreadthFirstSearchReverse>::new(self.graph, self.storage, index)
+    ) -> Result<Vec<DbId>, DbError> {
+        if self.is_valid(id)? {
+            SearchImpl::<V, BreadthFirstSearchReverse>::new(self.graph, self.view, id)
                 .search(handler)
         } else {
             Ok(vec![])
@@ -72,12 +74,11 @@ where
 
     pub fn depth_first_search<Handler: SearchHandler>(
         &self,
-        index: GraphIndex,
+        id: DbId,
         handler: Handler,
-    ) -> Result<Vec<GraphIndex>, DbError> {
-        if self.is_valid_index(index)? {
-            SearchImpl::<'a, D, DepthFirstSearch>::new(self.graph, self.storage, index)
-                .search(handler)
+    ) -> Result<Vec<DbId>, DbError> {
+        if self.is_valid(id)? {
+            SearchImpl::<V, DepthFirstSearch>::new(self.graph, self.view, id).search(handler)
         } else {
             Ok(vec![])
         }
@@ -85,12 +86,11 @@ where
 
     pub fn depth_first_search_reverse<Handler: SearchHandler>(
         &self,
-        index: GraphIndex,
+        id: DbId,
         handler: Handler,
-    ) -> Result<Vec<GraphIndex>, DbError> {
-        if self.is_valid_index(index)? {
-            SearchImpl::<'a, D, DepthFirstSearchReverse>::new(self.graph, self.storage, index)
-                .search(handler)
+    ) -> Result<Vec<DbId>, DbError> {
+        if self.is_valid(id)? {
+            SearchImpl::<V, DepthFirstSearchReverse>::new(self.graph, self.view, id).search(handler)
         } else {
             Ok(vec![])
         }
@@ -98,12 +98,12 @@ where
 
     pub fn path<Handler: PathSearchHandler>(
         &self,
-        from: GraphIndex,
-        to: GraphIndex,
+        from: DbId,
+        to: DbId,
         handler: Handler,
-    ) -> Result<Vec<GraphIndex>, DbError> {
-        if from != to && self.is_valid_node(from)? && self.is_valid_node(to)? {
-            PathSearch::<D, Handler>::new(self.graph, self.storage, from, to, handler)?.search()
+    ) -> Result<Vec<DbId>, DbError> {
+        if from != to && self.is_node(from)? && self.is_node(to)? {
+            PathSearch::<V, Handler>::new(self.graph, self.view, from, to, handler)?.search()
         } else {
             Ok(vec![])
         }
@@ -111,47 +111,32 @@ where
 
     pub fn path_reverse<Handler: PathSearchHandler>(
         &self,
-        from: GraphIndex,
-        to: GraphIndex,
+        from: DbId,
+        to: DbId,
         handler: Handler,
-    ) -> Result<Vec<GraphIndex>, DbError> {
-        if from != to && self.is_valid_node(from)? && self.is_valid_node(to)? {
-            PathSearch::<D, Handler>::new_reverse(self.graph, self.storage, from, to, handler)?
+    ) -> Result<Vec<DbId>, DbError> {
+        if from != to && self.is_node(from)? && self.is_node(to)? {
+            PathSearch::<V, Handler>::new_reverse(self.graph, self.view, from, to, handler)?
                 .search()
         } else {
             Ok(vec![])
         }
     }
 
-    pub fn elements<Handler: SearchHandler>(
-        &self,
-        handler: Handler,
-    ) -> Result<Vec<GraphIndex>, DbError> {
-        ElementSearch::<D, Handler>::new(self.graph, self.storage, handler).search()
+    pub fn elements<Handler: SearchHandler>(&self, handler: Handler) -> Result<Vec<DbId>, DbError> {
+        ElementSearch::<V, Handler>::new(self.graph, self.view, handler).search()
     }
 
-    fn is_valid_index(&self, index: GraphIndex) -> Result<bool, DbError> {
-        if index.is_edge() {
-            Ok(self.graph.edge(self.storage, index)?.is_some())
+    fn is_valid(&self, id: DbId) -> Result<bool, DbError> {
+        if id.0 < 0 {
+            Ok(self.graph.edge(self.view, id)?.is_some())
         } else {
-            self.is_valid_node(index)
+            self.is_node(id)
         }
     }
 
-    fn is_valid_node(&self, index: GraphIndex) -> Result<bool, DbError> {
-        Ok(self.graph.node(self.storage, index)?.is_some())
-    }
-}
-
-impl<'a, D> From<(&'a DbGraph<D>, &'a Storage<D>)> for GraphSearch<'a, D>
-where
-    D: StorageData,
-{
-    fn from(graph_storage: (&'a DbGraph<D>, &'a Storage<D>)) -> Self {
-        GraphSearch {
-            graph: graph_storage.0,
-            storage: graph_storage.1,
-        }
+    fn is_node(&self, id: DbId) -> Result<bool, DbError> {
+        Ok(self.graph.node(self.view, id)?.is_some())
     }
 }
 
@@ -218,21 +203,19 @@ impl SearchControl {
 #[cfg(test)]
 pub(crate) mod tests {
     use super::*;
-    use crate::collections::tests::TestStorage;
-    use crate::storage::file_storage::FileStorageImpl;
-    use agplatform::test_platform::TestPlatform;
+    use crate::collections::value::tests::TestView;
+    use crate::storage::alloc::Allocator;
+    use crate::storage::root::Layout;
 
-    pub(crate) type TestGraph = DbGraph<FileStorageImpl<TestPlatform>>;
-
-    pub(crate) struct Handler(pub fn(GraphIndex, u64) -> SearchControl);
+    pub(crate) struct Handler(pub fn(DbId, u64) -> SearchControl);
 
     impl SearchHandler for Handler {
-        fn process(&mut self, index: GraphIndex, distance: u64) -> Result<SearchControl, DbError> {
-            Ok((self.0)(index, distance))
+        fn process(&mut self, id: DbId, distance: u64) -> Result<SearchControl, DbError> {
+            Ok((self.0)(id, distance))
         }
     }
 
-    pub(crate) fn stop_at<const DISTANCE: u64>(_index: GraphIndex, distance: u64) -> SearchControl {
+    pub(crate) fn stop_at<const DISTANCE: u64>(_id: DbId, distance: u64) -> SearchControl {
         if distance == DISTANCE {
             SearchControl::Stop(true)
         } else {
@@ -245,31 +228,36 @@ pub(crate) mod tests {
     }
 
     /// Inserts nodes 1..=`nodes` and then the `edges` in order, so edge
-    /// ids start at `-(nodes + 1)`.
-    pub(crate) fn graph(storage: &mut TestStorage, nodes: u64, edges: &[(i64, i64)]) -> TestGraph {
-        let mut graph = DbGraph::new(storage).unwrap();
+    /// ids start at -1.
+    pub(crate) fn graph(
+        view: &mut TestView,
+        alloc: &mut Allocator,
+        nodes: u64,
+        edges: &[(i64, i64)],
+    ) -> GraphHeader {
+        let mut graph = GraphHeader::new(Layout::default());
 
         for _ in 0..nodes {
-            graph.insert_node(storage).unwrap();
+            graph.insert_node(view, alloc).unwrap();
         }
 
         for (from, to) in edges {
             graph
-                .insert_edge(storage, GraphIndex(*from), GraphIndex(*to))
+                .insert_edge(view, alloc, DbId(*from), DbId(*to))
                 .unwrap();
         }
 
         graph
     }
 
-    /// 1 -5-> 2 -7-> 4 -9-> 1
-    /// 1 -6-> 3 -8-> 4
-    pub(crate) fn diamond(storage: &mut TestStorage) -> TestGraph {
-        graph(storage, 4, &[(1, 2), (1, 3), (2, 4), (3, 4), (4, 1)])
+    /// 1 -1-> 2 -3-> 4 -5-> 1
+    /// 1 -2-> 3 -4-> 4
+    pub(crate) fn diamond(view: &mut TestView, alloc: &mut Allocator) -> GraphHeader {
+        graph(view, alloc, 4, &[(1, 2), (1, 3), (2, 4), (3, 4), (4, 1)])
     }
 
-    pub(crate) fn indexes(ids: &[i64]) -> Result<Vec<GraphIndex>, DbError> {
-        Ok(ids.iter().map(|id| GraphIndex(*id)).collect())
+    pub(crate) fn ids(ids: &[i64]) -> Result<Vec<DbId>, DbError> {
+        Ok(ids.iter().map(|id| DbId(*id)).collect())
     }
 
     type Variant = fn(bool) -> SearchControl;
@@ -390,8 +378,8 @@ pub(crate) mod tests {
 
     mod graph_search {
         use super::*;
-        use crate::collections::tests::assert_read_failures;
-        use crate::collections::tests::storage;
+        use crate::collections::value::tests::assert_failures;
+        use crate::collections::value::tests::with_view;
         use std::cell::RefCell;
 
         #[derive(Default)]
@@ -400,38 +388,22 @@ pub(crate) mod tests {
         }
 
         impl SearchHandler for &Recorder {
-            fn process(
-                &mut self,
-                index: GraphIndex,
-                distance: u64,
-            ) -> Result<SearchControl, DbError> {
-                self.visits.borrow_mut().push((index.0, distance));
+            fn process(&mut self, id: DbId, distance: u64) -> Result<SearchControl, DbError> {
+                self.visits.borrow_mut().push((id.0, distance));
                 Ok(SearchControl::Continue(true))
             }
         }
 
         impl PathSearchHandler for &Recorder {
-            fn process(&self, index: GraphIndex, distance: u64) -> Result<(u64, bool), DbError> {
-                self.visits.borrow_mut().push((index.0, distance));
+            fn process(&self, id: DbId, distance: u64) -> Result<(u64, bool), DbError> {
+                self.visits.borrow_mut().push((id.0, distance));
                 Ok((1, true))
             }
         }
 
-        /// 1 -4-> 2 -5-> 3
-        fn chain(storage: &mut TestStorage) -> TestGraph {
-            let mut graph = DbGraph::new(storage).unwrap();
-
-            for _ in 0..3 {
-                graph.insert_node(storage).unwrap();
-            }
-
-            graph
-                .insert_edge(storage, GraphIndex(1), GraphIndex(2))
-                .unwrap();
-            graph
-                .insert_edge(storage, GraphIndex(2), GraphIndex(3))
-                .unwrap();
-            graph
+        /// 1 -1-> 2 -2-> 3
+        fn chain(view: &mut TestView, alloc: &mut Allocator) -> GraphHeader {
+            graph(view, alloc, 3, &[(1, 2), (2, 3)])
         }
 
         mod breadth_first_search {
@@ -439,54 +411,50 @@ pub(crate) mod tests {
 
             #[test]
             fn breadth_first_search_missing_index_should_return_nothing() {
-                let mut storage = storage();
-                let graph = chain(&mut storage);
+                with_view(|view, alloc| {
+                    let graph = chain(view, alloc);
 
-                for index in [0, 10, -10] {
-                    assert_eq!(
-                        GraphSearch::from((&graph, &storage))
-                            .breadth_first_search(GraphIndex(index), &Recorder::default()),
-                        Ok(vec![]),
-                        "{index}"
-                    );
-                }
+                    for id in [0, 10, -10] {
+                        assert_eq!(
+                            GraphSearch::new(&graph, &*view)
+                                .breadth_first_search(DbId(id), &Recorder::default()),
+                            Ok(vec![]),
+                            "{id}"
+                        );
+                    }
+                });
             }
 
             #[test]
             fn breadth_first_search_read_failure_should_return_error() {
-                assert_read_failures(chain, |storage, graph| {
-                    GraphSearch::from((&*graph, &*storage))
-                        .breadth_first_search(GraphIndex(1), &Recorder::default())
+                assert_failures(chain, |view, _, graph| {
+                    GraphSearch::new(&graph, &*view)
+                        .breadth_first_search(DbId(1), &Recorder::default())
+                        .map(|_| ())
                 });
             }
 
             #[test]
             fn breadth_first_search_edge_should_start_at_the_edge() {
-                // GIVEN
-                let mut storage = storage();
-                let graph = chain(&mut storage);
+                with_view(|view, alloc| {
+                    // GIVEN
+                    let graph = chain(view, alloc);
 
-                // WHEN
-                let result = GraphSearch::from((&graph, &storage))
-                    .breadth_first_search(GraphIndex(-4), &Recorder::default());
+                    // WHEN
+                    let result = GraphSearch::new(&graph, &*view)
+                        .breadth_first_search(DbId(-1), &Recorder::default());
 
-                // THEN
-                assert_eq!(
-                    result,
-                    Ok(vec![
-                        GraphIndex(-4),
-                        GraphIndex(2),
-                        GraphIndex(-5),
-                        GraphIndex(3)
-                    ])
-                );
+                    // THEN
+                    assert_eq!(result, ids(&[-1, 2, -2, 3]));
+                });
             }
 
             #[test]
             fn breadth_first_search_edge_read_failure_should_return_error() {
-                assert_read_failures(chain, |storage, graph| {
-                    GraphSearch::from((&*graph, &*storage))
-                        .breadth_first_search(GraphIndex(-4), &Recorder::default())
+                assert_failures(chain, |view, _, graph| {
+                    GraphSearch::new(&graph, &*view)
+                        .breadth_first_search(DbId(-1), &Recorder::default())
+                        .map(|_| ())
                 });
             }
         }
@@ -496,24 +464,26 @@ pub(crate) mod tests {
 
             #[test]
             fn breadth_first_search_reverse_missing_index_should_return_nothing() {
-                let mut storage = storage();
-                let graph = chain(&mut storage);
+                with_view(|view, alloc| {
+                    let graph = chain(view, alloc);
 
-                for index in [0, 10, -10] {
-                    assert_eq!(
-                        GraphSearch::from((&graph, &storage))
-                            .breadth_first_search_reverse(GraphIndex(index), &Recorder::default()),
-                        Ok(vec![]),
-                        "{index}"
-                    );
-                }
+                    for id in [0, 10, -10] {
+                        assert_eq!(
+                            GraphSearch::new(&graph, &*view)
+                                .breadth_first_search_reverse(DbId(id), &Recorder::default()),
+                            Ok(vec![]),
+                            "{id}"
+                        );
+                    }
+                });
             }
 
             #[test]
             fn breadth_first_search_reverse_read_failure_should_return_error() {
-                assert_read_failures(chain, |storage, graph| {
-                    GraphSearch::from((&*graph, &*storage))
-                        .breadth_first_search_reverse(GraphIndex(3), &Recorder::default())
+                assert_failures(chain, |view, _, graph| {
+                    GraphSearch::new(&graph, &*view)
+                        .breadth_first_search_reverse(DbId(3), &Recorder::default())
+                        .map(|_| ())
                 });
             }
         }
@@ -523,24 +493,26 @@ pub(crate) mod tests {
 
             #[test]
             fn depth_first_search_missing_index_should_return_nothing() {
-                let mut storage = storage();
-                let graph = chain(&mut storage);
+                with_view(|view, alloc| {
+                    let graph = chain(view, alloc);
 
-                for index in [0, 10, -10] {
-                    assert_eq!(
-                        GraphSearch::from((&graph, &storage))
-                            .depth_first_search(GraphIndex(index), &Recorder::default()),
-                        Ok(vec![]),
-                        "{index}"
-                    );
-                }
+                    for id in [0, 10, -10] {
+                        assert_eq!(
+                            GraphSearch::new(&graph, &*view)
+                                .depth_first_search(DbId(id), &Recorder::default()),
+                            Ok(vec![]),
+                            "{id}"
+                        );
+                    }
+                });
             }
 
             #[test]
             fn depth_first_search_read_failure_should_return_error() {
-                assert_read_failures(chain, |storage, graph| {
-                    GraphSearch::from((&*graph, &*storage))
-                        .depth_first_search(GraphIndex(1), &Recorder::default())
+                assert_failures(chain, |view, _, graph| {
+                    GraphSearch::new(&graph, &*view)
+                        .depth_first_search(DbId(1), &Recorder::default())
+                        .map(|_| ())
                 });
             }
         }
@@ -550,24 +522,26 @@ pub(crate) mod tests {
 
             #[test]
             fn depth_first_search_reverse_missing_index_should_return_nothing() {
-                let mut storage = storage();
-                let graph = chain(&mut storage);
+                with_view(|view, alloc| {
+                    let graph = chain(view, alloc);
 
-                for index in [0, 10, -10] {
-                    assert_eq!(
-                        GraphSearch::from((&graph, &storage))
-                            .depth_first_search_reverse(GraphIndex(index), &Recorder::default()),
-                        Ok(vec![]),
-                        "{index}"
-                    );
-                }
+                    for id in [0, 10, -10] {
+                        assert_eq!(
+                            GraphSearch::new(&graph, &*view)
+                                .depth_first_search_reverse(DbId(id), &Recorder::default()),
+                            Ok(vec![]),
+                            "{id}"
+                        );
+                    }
+                });
             }
 
             #[test]
             fn depth_first_search_reverse_read_failure_should_return_error() {
-                assert_read_failures(chain, |storage, graph| {
-                    GraphSearch::from((&*graph, &*storage))
-                        .depth_first_search_reverse(GraphIndex(3), &Recorder::default())
+                assert_failures(chain, |view, _, graph| {
+                    GraphSearch::new(&graph, &*view)
+                        .depth_first_search_reverse(DbId(3), &Recorder::default())
+                        .map(|_| ())
                 });
             }
         }
@@ -577,8 +551,10 @@ pub(crate) mod tests {
 
             #[test]
             fn elements_read_failure_should_return_error() {
-                assert_read_failures(chain, |storage, graph| {
-                    GraphSearch::from((&*graph, &*storage)).elements(&Recorder::default())
+                assert_failures(chain, |view, _, graph| {
+                    GraphSearch::new(&graph, &*view)
+                        .elements(&Recorder::default())
+                        .map(|_| ())
                 });
             }
         }
@@ -588,53 +564,53 @@ pub(crate) mod tests {
 
             #[test]
             fn path_same_or_missing_nodes_should_return_nothing() {
-                let mut storage = storage();
-                let graph = graph(&mut storage, 2, &[(1, 1), (1, 2)]);
+                with_view(|view, alloc| {
+                    let graph = graph(view, alloc, 2, &[(1, 1), (1, 2)]);
 
-                for (from, to) in [(1, 1), (1, 10), (10, 2), (1, -4), (-4, 2)] {
-                    assert_eq!(
-                        GraphSearch::from((&graph, &storage)).path(
-                            GraphIndex(from),
-                            GraphIndex(to),
-                            &Recorder::default()
-                        ),
-                        Ok(vec![]),
-                        "{from} -> {to}"
-                    );
-                }
+                    for (from, to) in [(1, 1), (1, 10), (10, 2), (1, -2), (-2, 2)] {
+                        assert_eq!(
+                            GraphSearch::new(&graph, &*view).path(
+                                DbId(from),
+                                DbId(to),
+                                &Recorder::default()
+                            ),
+                            Ok(vec![]),
+                            "{from} -> {to}"
+                        );
+                    }
+                });
             }
 
             #[test]
             fn path_should_pass_breadth_first_distances() {
-                let mut storage = storage();
-                let graph = chain(&mut storage);
-                let search = GraphSearch::from((&graph, &storage));
-                let path = Recorder::default();
-                let breadth_first = Recorder::default();
+                with_view(|view, alloc| {
+                    let graph = chain(view, alloc);
+                    let search = GraphSearch::new(&graph, &*view);
+                    let path = Recorder::default();
+                    let breadth_first = Recorder::default();
 
-                search.path(GraphIndex(1), GraphIndex(3), &path).unwrap();
-                search
-                    .breadth_first_search(GraphIndex(1), &breadth_first)
-                    .unwrap();
+                    search.path(DbId(1), DbId(3), &path).unwrap();
+                    search
+                        .breadth_first_search(DbId(1), &breadth_first)
+                        .unwrap();
 
-                assert_eq!(
-                    path.visits.take(),
-                    vec![(1, 0), (-4, 1), (2, 2), (-5, 3), (3, 4)]
-                );
-                assert_eq!(
-                    breadth_first.visits.take(),
-                    vec![(1, 0), (-4, 1), (2, 2), (-5, 3), (3, 4)]
-                );
+                    assert_eq!(
+                        path.visits.take(),
+                        vec![(1, 0), (-1, 1), (2, 2), (-2, 3), (3, 4)]
+                    );
+                    assert_eq!(
+                        breadth_first.visits.take(),
+                        vec![(1, 0), (-1, 1), (2, 2), (-2, 3), (3, 4)]
+                    );
+                });
             }
 
             #[test]
             fn path_read_failure_should_return_error() {
-                assert_read_failures(chain, |storage, graph| {
-                    GraphSearch::from((&*graph, &*storage)).path(
-                        GraphIndex(1),
-                        GraphIndex(3),
-                        &Recorder::default(),
-                    )
+                assert_failures(chain, |view, _, graph| {
+                    GraphSearch::new(&graph, &*view)
+                        .path(DbId(1), DbId(3), &Recorder::default())
+                        .map(|_| ())
                 });
             }
         }
@@ -644,55 +620,53 @@ pub(crate) mod tests {
 
             #[test]
             fn path_reverse_same_or_missing_nodes_should_return_nothing() {
-                let mut storage = storage();
-                let graph = graph(&mut storage, 2, &[(1, 1), (1, 2)]);
+                with_view(|view, alloc| {
+                    let graph = graph(view, alloc, 2, &[(1, 1), (1, 2)]);
 
-                for (from, to) in [(1, 1), (1, 10), (10, 2), (1, -4), (-4, 2)] {
-                    assert_eq!(
-                        GraphSearch::from((&graph, &storage)).path_reverse(
-                            GraphIndex(from),
-                            GraphIndex(to),
-                            &Recorder::default()
-                        ),
-                        Ok(vec![]),
-                        "{from} -> {to}"
-                    );
-                }
+                    for (from, to) in [(1, 1), (1, 10), (10, 2), (1, -2), (-2, 2)] {
+                        assert_eq!(
+                            GraphSearch::new(&graph, &*view).path_reverse(
+                                DbId(from),
+                                DbId(to),
+                                &Recorder::default()
+                            ),
+                            Ok(vec![]),
+                            "{from} -> {to}"
+                        );
+                    }
+                });
             }
 
             #[test]
             fn path_reverse_should_pass_breadth_first_reverse_distances() {
-                let mut storage = storage();
-                let graph = chain(&mut storage);
-                let search = GraphSearch::from((&graph, &storage));
-                let path = Recorder::default();
-                let breadth_first = Recorder::default();
+                with_view(|view, alloc| {
+                    let graph = chain(view, alloc);
+                    let search = GraphSearch::new(&graph, &*view);
+                    let path = Recorder::default();
+                    let breadth_first = Recorder::default();
 
-                search
-                    .path_reverse(GraphIndex(1), GraphIndex(3), &path)
-                    .unwrap();
-                search
-                    .breadth_first_search_reverse(GraphIndex(3), &breadth_first)
-                    .unwrap();
+                    search.path_reverse(DbId(1), DbId(3), &path).unwrap();
+                    search
+                        .breadth_first_search_reverse(DbId(3), &breadth_first)
+                        .unwrap();
 
-                assert_eq!(
-                    path.visits.take(),
-                    vec![(3, 0), (-5, 1), (2, 2), (-4, 3), (1, 4)]
-                );
-                assert_eq!(
-                    breadth_first.visits.take(),
-                    vec![(3, 0), (-5, 1), (2, 2), (-4, 3), (1, 4)]
-                );
+                    assert_eq!(
+                        path.visits.take(),
+                        vec![(3, 0), (-2, 1), (2, 2), (-1, 3), (1, 4)]
+                    );
+                    assert_eq!(
+                        breadth_first.visits.take(),
+                        vec![(3, 0), (-2, 1), (2, 2), (-1, 3), (1, 4)]
+                    );
+                });
             }
 
             #[test]
             fn path_reverse_read_failure_should_return_error() {
-                assert_read_failures(chain, |storage, graph| {
-                    GraphSearch::from((&*graph, &*storage)).path_reverse(
-                        GraphIndex(1),
-                        GraphIndex(3),
-                        &Recorder::default(),
-                    )
+                assert_failures(chain, |view, _, graph| {
+                    GraphSearch::new(&graph, &*view)
+                        .path_reverse(DbId(1), DbId(3), &Recorder::default())
+                        .map(|_| ())
                 });
             }
         }

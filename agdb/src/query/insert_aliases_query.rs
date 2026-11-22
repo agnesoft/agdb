@@ -1,11 +1,11 @@
 use crate::DbError;
 use crate::DbErrorType;
-use crate::DbImpl;
 use crate::QueryIds;
 use crate::QueryMut;
 use crate::QueryResult;
 use crate::SearchQuery;
 use crate::StorageData;
+use crate::TransactionMut;
 use crate::query_builder::search::SearchQueryBuilder;
 
 /// Query to insert or update aliases of existing nodes.
@@ -28,7 +28,10 @@ pub struct InsertAliasesQuery {
 }
 
 impl QueryMut for InsertAliasesQuery {
-    fn process<Store: StorageData>(&self, db: &mut DbImpl<Store>) -> Result<QueryResult, DbError> {
+    fn process<Store: StorageData>(
+        &self,
+        db: &mut TransactionMut<Store>,
+    ) -> Result<QueryResult, DbError> {
         let mut result = QueryResult::default();
 
         match &self.ids {
@@ -51,7 +54,7 @@ impl QueryMut for InsertAliasesQuery {
                 }
             }
             QueryIds::Search(search_query) => {
-                let db_ids = search_query.search(db)?;
+                let db_ids = search_query.search(&db.read())?;
 
                 if db_ids.len() != self.aliases.len() {
                     return Err(DbError::query(
@@ -76,7 +79,10 @@ impl QueryMut for InsertAliasesQuery {
 }
 
 impl QueryMut for &InsertAliasesQuery {
-    fn process<Store: StorageData>(&self, db: &mut DbImpl<Store>) -> Result<QueryResult, DbError> {
+    fn process<Store: StorageData>(
+        &self,
+        db: &mut TransactionMut<Store>,
+    ) -> Result<QueryResult, DbError> {
         (*self).process(db)
     }
 }
@@ -127,7 +133,7 @@ mod tests {
             }),
             aliases: vec!["alias1".to_string(), "alias2".to_string()],
         };
-        let result = query.process(&mut db).unwrap();
+        let result = db.exec_mut(&query).unwrap();
         assert_eq!(result.result, 2);
     }
 
@@ -157,7 +163,7 @@ mod tests {
             }),
             aliases: vec!["only_one".to_string()],
         };
-        assert!(query.process(&mut db).is_err());
+        assert!(db.exec_mut(&query).is_err());
     }
 
     #[test]

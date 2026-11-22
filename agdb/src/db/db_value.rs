@@ -4,11 +4,7 @@ use crate::DbError;
 use crate::DbErrorType;
 use crate::DbTypeMarker;
 use crate::QueryId;
-use crate::StorageData;
 use crate::db::db_f64::DbF64;
-use crate::db::db_value_index::DbValueIndex;
-use crate::storage::Storage;
-use crate::storage::StorageIndex;
 use crate::utilities::stable_hash::StableHash;
 use std::fmt::Display;
 use std::fmt::Formatter;
@@ -298,139 +294,6 @@ impl DbValue {
             DbValue::VecDbValue(_) => Self::type_error("Vec<db_value>", "Vec<bool>"),
             DbValue::None => Self::type_error("none", "Vec<bool>"),
         }
-    }
-
-    pub(crate) fn load_db_value<D: StorageData>(
-        value_index: DbValueIndex,
-        storage: &Storage<D>,
-    ) -> Result<DbValue, DbError> {
-        Ok(match value_index.get_type() {
-            BYTES_META_VALUE => {
-                if value_index.is_value() {
-                    DbValue::Bytes(value_index.value().to_vec())
-                } else {
-                    DbValue::Bytes(
-                        storage
-                            .value_as_bytes(StorageIndex(value_index.index()))?
-                            .to_vec(),
-                    )
-                }
-            }
-            I64_META_VALUE => {
-                let mut bytes = [0_u8; 8];
-                bytes.copy_from_slice(value_index.value());
-                DbValue::I64(i64::from_le_bytes(bytes))
-            }
-            U64_META_VALUE => {
-                let mut bytes = [0_u8; 8];
-                bytes.copy_from_slice(value_index.value());
-                DbValue::U64(u64::from_le_bytes(bytes))
-            }
-            F64_META_VALUE => {
-                let mut bytes = [0_u8; 8];
-                bytes.copy_from_slice(value_index.value());
-                DbValue::F64(DbF64::from(f64::from_le_bytes(bytes)))
-            }
-            STRING_META_VALUE => {
-                if value_index.is_value() {
-                    DbValue::String(String::from_utf8_lossy(value_index.value()).to_string())
-                } else {
-                    DbValue::String(storage.value::<String>(StorageIndex(value_index.index()))?)
-                }
-            }
-            VEC_I64_META_VALUE => {
-                DbValue::VecI64(storage.value::<Vec<i64>>(StorageIndex(value_index.index()))?)
-            }
-            VEC_U64_META_VALUE => {
-                DbValue::VecU64(storage.value::<Vec<u64>>(StorageIndex(value_index.index()))?)
-            }
-            VEC_F64_META_VALUE => {
-                DbValue::VecF64(storage.value::<Vec<DbF64>>(StorageIndex(value_index.index()))?)
-            }
-            VEC_STRING_META_VALUE => {
-                DbValue::VecString(storage.value::<Vec<String>>(StorageIndex(value_index.index()))?)
-            }
-            VEC_DBVALUE_META_VALUE => DbValue::VecDbValue(
-                storage.value::<Vec<DbValue>>(StorageIndex(value_index.index()))?,
-            ),
-            NONE_META_VALUE => DbValue::None,
-            _ => panic!(),
-        })
-    }
-
-    /// Equals `load_db_value(value_index, storage)? == *self` without
-    /// allocating for inline strings.
-    pub(crate) fn equals_stored<D: StorageData>(
-        &self,
-        value_index: DbValueIndex,
-        storage: &Storage<D>,
-    ) -> Result<bool, DbError> {
-        match self {
-            DbValue::String(value)
-                if value_index.get_type() == STRING_META_VALUE && value_index.is_value() =>
-            {
-                Ok(value_index.value() == value.as_bytes())
-            }
-            _ => Ok(Self::load_db_value(value_index, storage)? == *self),
-        }
-    }
-
-    pub(crate) fn store_db_value<D: StorageData>(
-        &self,
-        storage: &mut Storage<D>,
-    ) -> Result<DbValueIndex, DbError> {
-        let mut index = DbValueIndex::new();
-
-        match self {
-            DbValue::Bytes(v) => {
-                index.set_type(BYTES_META_VALUE);
-                if !index.set_value(v) {
-                    index.set_index(storage.insert_bytes(v)?.0);
-                }
-            }
-            DbValue::I64(v) => {
-                index.set_type(I64_META_VALUE);
-                index.set_value(&v.to_le_bytes());
-            }
-            DbValue::U64(v) => {
-                index.set_type(U64_META_VALUE);
-                index.set_value(&v.to_le_bytes());
-            }
-            DbValue::F64(v) => {
-                index.set_type(F64_META_VALUE);
-                index.set_value(&v.to_f64().to_le_bytes());
-            }
-            DbValue::String(v) => {
-                index.set_type(STRING_META_VALUE);
-                let bytes = v.as_bytes();
-                if !index.set_value(bytes) {
-                    index.set_index(storage.insert(v)?.0);
-                }
-            }
-            DbValue::VecI64(v) => {
-                index.set_type(VEC_I64_META_VALUE);
-                index.set_index(storage.insert(v)?.0);
-            }
-            DbValue::VecU64(v) => {
-                index.set_type(VEC_U64_META_VALUE);
-                index.set_index(storage.insert(v)?.0);
-            }
-            DbValue::VecF64(v) => {
-                index.set_type(VEC_F64_META_VALUE);
-                index.set_index(storage.insert(v)?.0);
-            }
-            DbValue::VecString(v) => {
-                index.set_type(VEC_STRING_META_VALUE);
-                index.set_index(storage.insert(v)?.0);
-            }
-            DbValue::VecDbValue(v) => {
-                index.set_type(VEC_DBVALUE_META_VALUE);
-                index.set_index(storage.insert(v)?.0);
-            }
-            DbValue::None => {}
-        }
-
-        Ok(index)
     }
 
     /// Produces a new value by *adding* `other` to `self`.
@@ -1398,8 +1261,6 @@ impl DbTypeMarker for IpAddr {}
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::storage::file_storage::FileStorage;
-    use crate::test_utilities::test_file::TestFile;
     use std::cmp::Ordering;
     use std::collections::HashSet;
     use std::net::IpAddr;
@@ -1559,17 +1420,6 @@ mod tests {
         assert_ne!(DbValue::from(vec![1_u64]).stable_hash(), 0);
         assert_ne!(DbValue::from(vec![1.0_f64]).stable_hash(), 0);
         assert_ne!(DbValue::from(vec![""]).stable_hash(), 0);
-    }
-
-    #[test]
-    #[should_panic]
-    fn bad_deserialization() {
-        let test_file = TestFile::new();
-        let storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-        let mut index = DbValueIndex::new();
-        index.set_type(15);
-
-        let _ = DbValue::load_db_value(index, &storage);
     }
 
     #[test]
@@ -2865,55 +2715,6 @@ mod tests {
     }
 
     #[test]
-    fn vec_db_value_storage_roundtrip() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-
-        let original = DbValue::VecDbValue(vec![
-            DbValue::Bytes(vec![1, 2, 3]),
-            DbValue::Bytes(vec![4, 5, 6]),
-        ]);
-
-        let index = original.store_db_value(&mut storage).unwrap();
-        let loaded = DbValue::load_db_value(index, &storage).unwrap();
-
-        assert_eq!(original, loaded);
-    }
-
-    #[test]
-    fn vec_db_value_storage_roundtrip_heterogeneous() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-
-        let original = DbValue::VecDbValue(vec![
-            DbValue::from(42_u64),
-            DbValue::from("hello"),
-            #[allow(clippy::approx_constant)]
-            DbValue::from(3.14_f64),
-            DbValue::from(-7_i64),
-            DbValue::Bytes(vec![0xDE, 0xAD]),
-        ]);
-
-        let index = original.store_db_value(&mut storage).unwrap();
-        let loaded = DbValue::load_db_value(index, &storage).unwrap();
-
-        assert_eq!(original, loaded);
-    }
-
-    #[test]
-    fn vec_db_value_storage_roundtrip_empty() {
-        let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-
-        let original = DbValue::VecDbValue(vec![]);
-
-        let index = original.store_db_value(&mut storage).unwrap();
-        let loaded = DbValue::load_db_value(index, &storage).unwrap();
-
-        assert_eq!(original, loaded);
-    }
-
-    #[test]
     fn vec_db_value_try_from_roundtrip() {
         // Vec<SystemTime> now goes through VecDbValue, verify the round-trip
         let times = vec![
@@ -3018,12 +2819,6 @@ mod tests {
             assert_eq!(none.to_string(), "");
             assert_eq!(none.stable_hash(), u64::MAX);
             assert!(DbValue::VecDbValue(vec![]) < none);
-
-            let test_file = TestFile::new();
-            let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
-            let index = none.store_db_value(&mut storage).unwrap();
-            assert_eq!(index, DbValueIndex::new());
-            assert_eq!(DbValue::load_db_value(index, &storage).unwrap(), none);
         }
     }
 }

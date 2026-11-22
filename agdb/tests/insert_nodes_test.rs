@@ -409,8 +409,8 @@ fn insert_or_update_edge_id() {
     db.exec_mut(QueryBuilder::insert().nodes().count(2).query(), 2);
     db.exec_mut(QueryBuilder::insert().edges().from(1).to(2).query(), 1);
     db.exec_mut_error(
-        QueryBuilder::insert().nodes().ids(-3).count(1).query(),
-        "The ids for insert or update must all refer to nodes - edge id '-3' found",
+        QueryBuilder::insert().nodes().ids(-1).count(1).query(),
+        "The ids for insert or update must all refer to nodes - edge id '-1' found",
     );
 }
 

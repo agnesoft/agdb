@@ -50,7 +50,7 @@ pub enum DbErrorCategory {
 /// Universal `agdb` database error. It represents
 /// any error caused by the database processing such as
 /// loading a database, running queries, writing data etc.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct DbError {
     /// Error description
     pub description: String,

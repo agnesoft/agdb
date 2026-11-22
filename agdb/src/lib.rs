@@ -36,9 +36,7 @@
 extern crate self as agdb;
 
 mod collections;
-mod command;
 mod db;
-mod graph;
 mod graph_search;
 mod query;
 mod query_builder;

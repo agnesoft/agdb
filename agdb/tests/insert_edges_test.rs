@@ -51,7 +51,7 @@ fn insert_edges_from_to() {
             .to(["alias3", "alias4"])
             .each()
             .query(),
-        &[-5, -6, -7, -8],
+        &[-1, -2, -3, -4],
     );
 }
 
@@ -71,7 +71,7 @@ fn insert_edges_from_to_each() {
             .from(["alias1", "alias2"])
             .to("alias3")
             .query(),
-        &[-4, -5],
+        &[-1, -2],
     );
 }
 
@@ -95,16 +95,16 @@ fn insert_edges_from_to_values() {
         2,
     );
     db.exec_elements(
-        QueryBuilder::select().ids([-5, -6]).query(),
+        QueryBuilder::select().ids([-1, -2]).query(),
         &[
             DbElement {
-                id: DbId(-5),
+                id: DbId(-1),
                 from: DbId(1),
                 to: DbId(3),
                 values: vec![("key", "value").into()],
             },
             DbElement {
-                id: DbId(-6),
+                id: DbId(-2),
                 from: DbId(2),
                 to: DbId(4),
                 values: vec![("key", "value2").into()],
@@ -139,28 +139,28 @@ fn insert_edges_from_to_each_values() {
         4,
     );
     db.exec_elements(
-        QueryBuilder::select().ids([-5, -6, -7, -8]).query(),
+        QueryBuilder::select().ids([-1, -2, -3, -4]).query(),
         &[
             DbElement {
-                id: DbId(-5),
+                id: DbId(-1),
                 from: DbId(1),
                 to: DbId(3),
                 values: vec![("key", "value1").into()],
             },
             DbElement {
-                id: DbId(-6),
+                id: DbId(-2),
                 from: DbId(1),
                 to: DbId(4),
                 values: vec![("key", "value2").into()],
             },
             DbElement {
-                id: DbId(-7),
+                id: DbId(-3),
                 from: DbId(2),
                 to: DbId(3),
                 values: vec![("key", "value3").into()],
             },
             DbElement {
-                id: DbId(-8),
+                id: DbId(-4),
                 from: DbId(2),
                 to: DbId(4),
                 values: vec![("key", "value4").into()],
@@ -190,28 +190,28 @@ fn insert_edges_from_to_each_values_uniform() {
         4,
     );
     db.exec_elements(
-        QueryBuilder::select().ids([-5, -6, -7, -8]).query(),
+        QueryBuilder::select().ids([-1, -2, -3, -4]).query(),
         &[
             DbElement {
-                id: DbId(-5),
+                id: DbId(-1),
                 from: DbId(1),
                 to: DbId(3),
                 values: vec![("key", "value").into(), ("key", "value2").into()],
             },
             DbElement {
-                id: DbId(-6),
+                id: DbId(-2),
                 from: DbId(1),
                 to: DbId(4),
                 values: vec![("key", "value").into(), ("key", "value2").into()],
             },
             DbElement {
-                id: DbId(-7),
+                id: DbId(-3),
                 from: DbId(2),
                 to: DbId(3),
                 values: vec![("key", "value").into(), ("key", "value2").into()],
             },
             DbElement {
-                id: DbId(-8),
+                id: DbId(-4),
                 from: DbId(2),
                 to: DbId(4),
                 values: vec![("key", "value").into(), ("key", "value2").into()],
@@ -283,16 +283,16 @@ fn insert_edges_from_to_values_asymmetric() {
         2,
     );
     db.exec_elements(
-        QueryBuilder::select().ids([-4, -5]).query(),
+        QueryBuilder::select().ids([-1, -2]).query(),
         &[
             DbElement {
-                id: DbId(-4),
+                id: DbId(-1),
                 from: DbId(1),
                 to: DbId(3),
                 values: vec![("key", "value").into()],
             },
             DbElement {
-                id: DbId(-5),
+                id: DbId(-2),
                 from: DbId(2),
                 to: DbId(3),
                 values: vec![("key", "value2").into()],
@@ -321,16 +321,16 @@ fn insert_edges_from_to_values_uniform() {
         2,
     );
     db.exec_elements(
-        QueryBuilder::select().ids([-4, -5]).query(),
+        QueryBuilder::select().ids([-1, -2]).query(),
         &[
             DbElement {
-                id: DbId(-4),
+                id: DbId(-1),
                 from: DbId(1),
                 to: DbId(3),
                 values: vec![("key", "value").into(), ("key", "value2").into()],
             },
             DbElement {
-                id: DbId(-5),
+                id: DbId(-2),
                 from: DbId(2),
                 to: DbId(3),
                 values: vec![("key", "value").into(), ("key", "value2").into()],
@@ -357,7 +357,7 @@ fn insert_edges_from_to_search() {
             .from(QueryBuilder::search().from(1).query())
             .to(QueryBuilder::search().from(3).query())
             .query(),
-        &[-7, -8],
+        &[-3, -4],
     );
 }
 
@@ -369,7 +369,7 @@ fn insert_edges_from_to_inserted_nodes() {
 
     db.exec_mut_ids(
         QueryBuilder::insert().edges().from(from).to(to).query(),
-        &[-5, -6],
+        &[-1, -2],
     );
 }
 
@@ -384,7 +384,7 @@ fn insert_or_update_new_edge() {
             .from(1)
             .to(2)
             .query(),
-        &[-3],
+        &[-1],
     );
 }
 
@@ -396,12 +396,12 @@ fn insert_or_update_existing_edge() {
     db.exec_mut_ids(
         QueryBuilder::insert()
             .edges()
-            .ids(-3)
+            .ids(-1)
             .from(1)
             .to(2)
             .values([[("key", 1).into()]])
             .query(),
-        &[-3],
+        &[-1],
     );
 }
 
@@ -413,7 +413,7 @@ fn insert_or_update_mismatch_length() {
     db.exec_mut_error(
         QueryBuilder::insert()
             .edges()
-            .ids(-3)
+            .ids(-1)
             .from(1)
             .to(2)
             .values(Vec::<Vec<DbKeyValue>>::new())

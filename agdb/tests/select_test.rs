@@ -82,7 +82,7 @@ fn select_from_search() {
         QueryBuilder::select()
             .ids(QueryBuilder::search().from("alias1").query())
             .query(),
-        &[1, -6, 3, -7, 5],
+        &[1, -1, 3, -2, 5],
     );
 }
 
@@ -123,20 +123,20 @@ fn select_embedded_search() {
         &[
             DbElement {
                 id: DbId(1),
-                from: DbId(-6),
+                from: DbId(-1),
                 to: DbId::default(),
                 values: vec![("k", 1).into()],
             },
             DbElement {
                 id: DbId(3),
-                from: DbId(-7),
-                to: DbId(-6),
+                from: DbId(-2),
+                to: DbId(-1),
                 values: vec![("k", 3).into()],
             },
             DbElement {
                 id: DbId(5),
                 from: DbId::default(),
-                to: DbId(-7),
+                to: DbId(-2),
                 values: vec![("k", 5).into()],
             },
         ],

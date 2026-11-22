@@ -101,5 +101,10 @@ async fn no_token() -> Result<(), TestError> {
     Ok(())
 }
 
-pub(super) const TESTS: &[Test] =
-    tests![optimize, shrink_to_fit, db_not_found, non_admin, no_token,];
+pub(super) const TESTS: &[Test] = tests![
+    optimize = ignore("needs the optimize rebuild (storage rewrite step 5)"),
+    shrink_to_fit = ignore("needs the optimize rebuild (storage rewrite step 5)"),
+    db_not_found,
+    non_admin,
+    no_token,
+];

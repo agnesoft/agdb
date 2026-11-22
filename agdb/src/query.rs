@@ -26,20 +26,24 @@ pub mod select_node_count;
 pub mod select_values_query;
 
 use crate::DbError;
-use crate::DbImpl;
 use crate::QueryResult;
 use crate::StorageData;
+use crate::Transaction;
+use crate::TransactionMut;
 
 /// Trait for immutable `agdb` database queries. This
 /// trait is unlikely to be implementable for user types.
 pub trait Query {
-    fn process<Store: StorageData>(&self, db: &DbImpl<Store>) -> Result<QueryResult, DbError>;
+    fn process<Store: StorageData>(&self, db: &Transaction<Store>) -> Result<QueryResult, DbError>;
 }
 
 /// Trait for mutable `agdb` database queries. This
 /// trait is unlikely to be implementable for user types.
 pub trait QueryMut {
-    fn process<Store: StorageData>(&self, db: &mut DbImpl<Store>) -> Result<QueryResult, DbError>;
+    fn process<Store: StorageData>(
+        &self,
+        db: &mut TransactionMut<Store>,
+    ) -> Result<QueryResult, DbError>;
 }
 
 #[cfg(any(feature = "serde", feature = "openapi"))]

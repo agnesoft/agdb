@@ -263,7 +263,7 @@ mod suite {
 
     struct NotATest;
 
-    const TESTS: &[&str] = tests![status];
+    const TESTS: &[&str] = tests![status = ignore("needs a server")];
 
     async fn broken() {
         custom![1];
@@ -276,6 +276,8 @@ mod suite {
         use crate::glue::Server;
         use crate::glue::next_name;
         use c::Root;
+
+        const TESTS: &[&str] = tests![logs_in, fails];
 
         async fn logs_in() {
             let mut server = Server::new().await;

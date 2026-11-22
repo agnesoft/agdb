@@ -215,7 +215,15 @@ impl<'a> Emitter<'a> {
             let asyncness = if f.is_async { "async " } else { "" };
             self.current = f.name.clone();
             self.reassigned = reassigned(&f.body);
-            self.line(indent + 1, &format!("it({test:?}, {asyncness}() => {{"));
+            let it = match f.ignore.as_deref() {
+                Some("") => "it.skip",
+                Some(reason) => {
+                    self.line(indent + 1, &format!("// {reason}"));
+                    "it.skip"
+                }
+                None => "it",
+            };
+            self.line(indent + 1, &format!("{it}({test:?}, {asyncness}() => {{"));
             self.block(&f.body, indent + 2);
             self.line(indent + 1, "});");
         }
@@ -1763,7 +1771,7 @@ fn checks() {
 
                 assert_eq!(
                     ts.code,
-                    "// header\n\nimport type { S } from \"s\";\nimport { describe, expect, it } from \"vitest\";\nimport { ApiError } from \"./api.ts\";\nimport { Helpers, Server, next_name } from \"./glue.ts\";\nimport { Root } from \"./m.ts\";\n\nasync function unwrap_err<E>(value: Promise<unknown>): Promise<E> {\n    try {\n        await value;\n    } catch (e) {\n        return e as E;\n    }\n    throw new Error(\"called `Result::unwrap_err()` on an `Ok` value\");\n}\n\ndescribe(\"routes\", () => {\n    describe(\"login\", () => {\n        it(\"logs_in\", async () => {\n            const server = (await Server.new());\n            const status = (await server.api.login());\n            const name = next_name(\"user\");\n            const agent = Helpers.agent();\n            const pair = unsupported();\n            const port = unsupported();\n            expect(status).not.toEqual<number>(0);\n        });\n\n        it(\"fails\", async () => {\n            const server = (await Server.new());\n            const status = unsupported().status;\n            const code = (await unwrap_err<ApiError>(server.api.ping())).status;\n            const root = Root.new();\n            expect(server.address().length === 0).toBe(true);\n        });\n    });\n\n    describe(\"logout\", () => {\n        it(\"logs_out\", async () => {\n            const server = (await Server.new());\n            expect(server.dir).not.toEqual<string>(\"admin\");\n        });\n    });\n\n    it(\"status\", async () => {\n        const server = (await Server.new());\n        expect(server.dir).toEqual<string>(\"admin\");\n    });\n});\n"
+                    "// header\n\nimport type { S } from \"s\";\nimport { describe, expect, it } from \"vitest\";\nimport { ApiError } from \"./api.ts\";\nimport { Helpers, Server, next_name } from \"./glue.ts\";\nimport { Root } from \"./m.ts\";\n\nasync function unwrap_err<E>(value: Promise<unknown>): Promise<E> {\n    try {\n        await value;\n    } catch (e) {\n        return e as E;\n    }\n    throw new Error(\"called `Result::unwrap_err()` on an `Ok` value\");\n}\n\ndescribe(\"routes\", () => {\n    describe(\"login\", () => {\n        it(\"logs_in\", async () => {\n            const server = (await Server.new());\n            const status = (await server.api.login());\n            const name = next_name(\"user\");\n            const agent = Helpers.agent();\n            const pair = unsupported();\n            const port = unsupported();\n            expect(status).not.toEqual<number>(0);\n        });\n\n        it(\"fails\", async () => {\n            const server = (await Server.new());\n            const status = unsupported().status;\n            const code = (await unwrap_err<ApiError>(server.api.ping())).status;\n            const root = Root.new();\n            expect(server.address().length === 0).toBe(true);\n        });\n    });\n\n    describe(\"logout\", () => {\n        it(\"logs_out\", async () => {\n            const server = (await Server.new());\n            expect(server.dir).not.toEqual<string>(\"admin\");\n        });\n    });\n\n    // needs a server\n    it.skip(\"status\", async () => {\n        const server = (await Server.new());\n        expect(server.dir).toEqual<string>(\"admin\");\n    });\n});\n"
                 );
                 assert_eq!(
                     ts.unsupported,
@@ -1793,6 +1801,20 @@ fn checks() {
                         "routes: `Server is from glue without a TS module`",
                         "routes: `next_name is from glue without a TS module`"
                     ]
+                );
+            }
+
+            #[test]
+            fn tests_should_skip_the_ignored_tests_after_their_reason() {
+                let ts = emitted_tests(
+                    "pub struct Root;",
+                    "#[test]\n#[ignore]\nfn t() {}\n#[test]\n#[ignore = \"slow\"]\nfn u() {}",
+                    &[],
+                );
+
+                assert_eq!(
+                    ts.code,
+                    "// header\n\nimport type { S } from \"s\";\nimport { describe, expect, it } from \"vitest\";\n\ndescribe(\"suite\", () => {\n    it.skip(\"t\", () => {\n    });\n\n    // slow\n    it.skip(\"u\", () => {\n    });\n});\n"
                 );
             }
 

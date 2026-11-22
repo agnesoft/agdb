@@ -502,6 +502,8 @@ pub struct Func {
     /// The constructs of the function the passes could not lower, reported
     /// once it is known to be used (see [`Prune`](super::pass::Prune)).
     pub errors: Vec<String>,
+    /// An ignored test with the reason, empty without one.
+    pub ignore: Option<String>,
 }
 
 impl Func {
@@ -538,6 +540,7 @@ impl Func {
             private: false,
             at: None,
             errors: Vec::new(),
+            ignore: None,
         }
     }
 }

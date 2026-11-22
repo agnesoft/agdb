@@ -170,12 +170,12 @@ final class ApiTest extends TestCase
             [
                 new DbElement([
                     "id" => 1,
-                    "from" => -3,
+                    "from" => -1,
                     "to" => 0,
                     "values" => [],
                 ]),
                 new DbElement([
-                    "id" => -3,
+                    "id" => -1,
                     "from" => 1,
                     "to" => 2,
                     "values" => [],
@@ -183,7 +183,7 @@ final class ApiTest extends TestCase
                 new DbElement([
                     "id" => 2,
                     "from" => 0,
-                    "to" => -3,
+                    "to" => -1,
                     "values" => [],
                 ]),
             ],

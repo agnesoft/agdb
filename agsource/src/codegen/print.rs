@@ -287,7 +287,8 @@ pub fn module(m: &Module, title: &str) -> String {
     }
 
     for f in &m.tests {
-        out += &format!("// test\n{}\n\n", func(f));
+        let ignore = f.ignore.as_ref().map(|r| format!(" ignored {r:?}"));
+        out += &format!("// test{}\n{}\n\n", ignore.unwrap_or_default(), func(f));
     }
 
     out

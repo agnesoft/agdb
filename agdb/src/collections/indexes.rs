@@ -2,6 +2,7 @@ use crate::DbError;
 use crate::DbId;
 use crate::DbValue;
 use crate::collections::table::Kind;
+use crate::collections::table::Lookup;
 use crate::collections::table::Slot;
 use crate::collections::table::TableHeader;
 use crate::collections::table::fmix64;
@@ -86,22 +87,17 @@ pub(crate) struct Indexes {
 }
 
 impl Index {
-    fn find(
-        &self,
-        view: &impl View,
-        value: &DbValue,
-        hash: u64,
-    ) -> Result<Option<(u64, Slot)>, DbError> {
+    fn find(&self, view: &impl View, value: &DbValue, hash: u64) -> Result<Lookup, DbError> {
         let (kind, bytes) = value::encode(value);
-        let mut probe = self.values.probe(hash);
+        let mut probe = self.values.probe(view, &VALUES, hash)?;
 
-        while let Some((at, slot)) = self.values.next(view, &VALUES, &mut probe)? {
+        while let Some((at, slot)) = probe.next(&VALUES) {
             if value::equals_bytes(view, &value_index(&slot[8..]), kind, &bytes)? {
-                return Ok(Some((at, slot)));
+                return Ok(Lookup::Found(at, slot));
             }
         }
 
-        Ok(None)
+        Ok(Lookup::Missing(probe.end()))
     }
 }
 
@@ -223,24 +219,27 @@ impl Indexes {
         let index = &mut self.list[i];
         let hash = fmix64(value.stable_hash());
 
-        if let Some((at, mut slot)) = index.find(view, value, hash)? {
-            let mut set = match Ids::decode(&slot) {
-                Ids::Single(other) => {
-                    let mut set = TableHeader::default();
-                    set.insert(view, alloc, &IDS, &other.0.to_le_bytes())?;
-                    set
-                }
-                Ids::Set(set) => set,
-            };
-            set.insert(view, alloc, &IDS, &id.0.to_le_bytes())?;
-            Ids::Set(set).encode(&mut slot);
-            index.values.replace(view, &VALUES, at, &slot)?;
-        } else {
-            let mut slot = [0_u8; 48];
-            slot[..8].copy_from_slice(&hash.to_le_bytes());
-            slot[8..24].copy_from_slice(&value::store(view, alloc, value)?.data());
-            Ids::Single(id).encode(&mut slot);
-            index.values.insert(view, alloc, &VALUES, &slot)?;
+        match index.find(view, value, hash)? {
+            Lookup::Found(at, mut slot) => {
+                let mut set = match Ids::decode(&slot) {
+                    Ids::Single(other) => {
+                        let mut set = TableHeader::default();
+                        set.insert(view, alloc, &IDS, &other.0.to_le_bytes())?;
+                        set
+                    }
+                    Ids::Set(set) => set,
+                };
+                set.insert(view, alloc, &IDS, &id.0.to_le_bytes())?;
+                Ids::Set(set).encode(&mut slot);
+                index.values.replace(view, at, &slot)?;
+            }
+            Lookup::Missing(end) => {
+                let mut slot = [0_u8; 48];
+                slot[..8].copy_from_slice(&hash.to_le_bytes());
+                slot[8..24].copy_from_slice(&value::store(view, alloc, value)?.data());
+                Ids::Single(id).encode(&mut slot);
+                index.values.insert_at(view, alloc, &VALUES, end, &slot)?;
+            }
         }
 
         index.count += 1;
@@ -263,7 +262,8 @@ impl Indexes {
 
         let index = &mut self.list[i];
 
-        let Some((at, mut slot)) = index.find(view, value, fmix64(value.stable_hash()))? else {
+        let Lookup::Found(at, mut slot) = index.find(view, value, fmix64(value.stable_hash()))?
+        else {
             return Ok(());
         };
 
@@ -274,9 +274,9 @@ impl Indexes {
             }
             Ids::Single(_) => return Ok(()),
             Ids::Set(mut set) => {
-                let mut probe = set.probe(fmix64(id.0 as u64));
+                let mut probe = set.probe(view, &IDS, fmix64(id.0 as u64))?;
 
-                let Some((id_at, _)) = set.next(view, &IDS, &mut probe)? else {
+                let Some((id_at, _)) = probe.next(&IDS) else {
                     return Ok(());
                 };
 
@@ -291,7 +291,7 @@ impl Indexes {
                 };
 
                 ids.encode(&mut slot);
-                index.values.replace(view, &VALUES, at, &slot)?;
+                index.values.replace(view, at, &slot)?;
             }
         }
 
@@ -311,7 +311,7 @@ impl Indexes {
             return Ok(None);
         };
 
-        let Some((_, slot)) = index.find(view, value, fmix64(value.stable_hash()))? else {
+        let Lookup::Found(_, slot) = index.find(view, value, fmix64(value.stable_hash()))? else {
             return Ok(Some(Vec::new()));
         };
 
@@ -338,7 +338,7 @@ impl Indexes {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::collections::table::tests::allocation as table_allocation;
+    use crate::collections::table::tests::allocations as table_allocations;
     use crate::collections::value::tests::TestView;
     use crate::collections::value::tests::allocation;
     use crate::collections::value::tests::assert_failures;
@@ -373,13 +373,13 @@ mod tests {
 
         for index in &indexes.list {
             live.extend(allocation(&index.stored_key));
-            live.extend(table_allocation(&index.values, &VALUES));
+            live.extend(table_allocations(&index.values, view, &VALUES));
 
             for slot in index.values.slots(view, &VALUES).unwrap().chunks(48) {
                 live.extend(allocation(&value_index(&slot[8..])));
 
                 if let Ids::Set(set) = Ids::decode(slot) {
-                    live.extend(table_allocation(&set, &IDS));
+                    live.extend(table_allocations(&set, view, &IDS));
                 }
             }
         }

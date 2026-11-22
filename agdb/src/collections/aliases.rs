@@ -177,7 +177,7 @@ impl Aliases {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::collections::graph::tests::allocation as graph_allocation;
+    use crate::collections::graph::tests::allocations as graph_allocations;
     use crate::collections::table::tests::allocation as table_allocation;
     use crate::collections::value::tests::TestView;
     use crate::collections::value::tests::allocation;
@@ -185,12 +185,13 @@ mod tests {
     use crate::collections::value::tests::with_view;
     use crate::storage::alloc::tests::verify;
     use crate::storage::pages::tests::XorShift;
+    use crate::storage::root::Layout;
     use std::collections::BTreeMap;
 
     const LONG: &str = "an alias longer than 15 bytes";
 
     fn nodes(view: &mut TestView, alloc: &mut Allocator, count: usize) -> (GraphHeader, Vec<DbId>) {
-        let mut graph = GraphHeader::new();
+        let mut graph = GraphHeader::new(Layout::default());
         let ids = (0..count)
             .map(|_| graph.insert_node(view, alloc).unwrap())
             .collect();
@@ -262,7 +263,7 @@ mod tests {
                         assert_eq!(aliases.id(view, &graph, "missing").unwrap(), None);
                     }
 
-                    let mut live = vec![graph_allocation(&graph)];
+                    let mut live = graph_allocations(&graph);
                     live.extend(table_allocation(&aliases.0, &ALIASES));
 
                     for id in &ids {
@@ -344,7 +345,7 @@ mod tests {
                     let error = Aliases::default()
                         .insert(view, alloc, &graph, edge, "a")
                         .unwrap_err();
-                    assert_eq!(error.description, "'-2' is invalid index");
+                    assert_eq!(error.description, "'-1' is invalid index");
                 });
             }
         }

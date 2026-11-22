@@ -1,0 +1,4787 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "agdb_server",
+    "description": "Agnesoft Graph Database Server",
+    "license": {
+      "name": "Apache-2.0",
+      "identifier": "Apache-2.0"
+    },
+    "version": "0.17.0"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": "Local server"
+    }
+  ],
+  "paths": {
+    "/api/v1/admin/db/list": {
+      "get": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "admin_db_list",
+        "responses": {
+          "200": {
+            "description": "ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ServerDatabase"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/db/{owner}/{db}/add": {
+      "post": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "admin_db_add",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db",
+            "in": "path",
+            "description": "db name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db_type",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/DbKind"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "db added"
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "404": {
+            "description": "user not found"
+          },
+          "465": {
+            "description": "db exists"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/db/{owner}/{db}/audit": {
+      "get": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "admin_db_audit",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db",
+            "in": "path",
+            "description": "db name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DbAudit"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/db/{owner}/{db}/audit/trim": {
+      "post": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "admin_db_audit_trim",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db",
+            "in": "path",
+            "description": "db name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "keep_days",
+            "in": "query",
+            "description": "Number of UTC days to keep before today, the audit of the older days is removed.",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "audit of the days before the last 'keep_days' days removed"
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "404": {
+            "description": "user / db not found"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/db/{owner}/{db}/backup": {
+      "post": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "admin_db_backup",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db",
+            "in": "path",
+            "description": "db name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "backup created"
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "404": {
+            "description": "db / user not found"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/db/{owner}/{db}/clear": {
+      "post": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "admin_db_clear",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db",
+            "in": "path",
+            "description": "db name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "resource",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/DbResource"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "db resource(s) cleared",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerDatabase"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "404": {
+            "description": "user / db not found"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/db/{owner}/{db}/convert": {
+      "post": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "admin_db_convert",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db",
+            "in": "path",
+            "description": "db name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db_type",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/DbKind"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "db type changed"
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "404": {
+            "description": "user / db not found"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/db/{owner}/{db}/copy": {
+      "post": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "admin_db_copy",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "db owner user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db",
+            "in": "path",
+            "description": "db name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "new_owner",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "new_db",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "db copied"
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "404": {
+            "description": "user / db not found"
+          },
+          "465": {
+            "description": "target db exists"
+          },
+          "467": {
+            "description": "invalid db"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/db/{owner}/{db}/delete": {
+      "delete": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "admin_db_delete",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db",
+            "in": "path",
+            "description": "db name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "db deleted"
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "404": {
+            "description": "db not found"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/db/{owner}/{db}/exec": {
+      "post": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "admin_db_exec",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "db owner user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db",
+            "in": "path",
+            "description": "db name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Queries"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QueriesResults"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "403": {
+            "description": "mutable queries not allowed"
+          },
+          "404": {
+            "description": "db not found"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/db/{owner}/{db}/exec_mut": {
+      "post": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "admin_db_exec_mut",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "db owner user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db",
+            "in": "path",
+            "description": "db name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Queries"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QueriesResults"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "404": {
+            "description": "db not found"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/db/{owner}/{db}/optimize": {
+      "post": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "admin_db_optimize",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db",
+            "in": "path",
+            "description": "db name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "shrink_to_fit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerDatabase"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/db/{owner}/{db}/remove": {
+      "delete": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "admin_db_remove",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db",
+            "in": "path",
+            "description": "db name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "db removed"
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "404": {
+            "description": "db not found"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/db/{owner}/{db}/rename": {
+      "post": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "admin_db_rename",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "db owner user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db",
+            "in": "path",
+            "description": "db name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "new_owner",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "new_db",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "db renamed"
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "404": {
+            "description": "user / db not found"
+          },
+          "465": {
+            "description": "target db exists"
+          },
+          "467": {
+            "description": "invalid db"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/db/{owner}/{db}/restore": {
+      "post": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "admin_db_restore",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db",
+            "in": "path",
+            "description": "db name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "db restored"
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "404": {
+            "description": "db or backup not found"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/db/{owner}/{db}/rollback": {
+      "post": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "admin_db_rollback",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db",
+            "in": "path",
+            "description": "db name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "db rolled back"
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "404": {
+            "description": "db or backup not found"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/db/{owner}/{db}/user/list": {
+      "get": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "admin_db_user_list",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "db owner user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db",
+            "in": "path",
+            "description": "db name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DbUser"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "404": {
+            "description": "db not found"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/db/{owner}/{db}/user/{username}/add": {
+      "put": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "admin_db_user_add",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "db owner user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db",
+            "in": "path",
+            "description": "db name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "username",
+            "in": "path",
+            "description": "user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db_role",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/DbUserRole"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "user added"
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "403": {
+            "description": "cannot change role of db owner"
+          },
+          "404": {
+            "description": "user / db not found"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/db/{owner}/{db}/user/{username}/remove": {
+      "delete": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "admin_db_user_remove",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "db owner user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db",
+            "in": "path",
+            "description": "db name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "username",
+            "in": "path",
+            "description": "user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "user removed"
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "403": {
+            "description": "cannot remove db owner"
+          },
+          "404": {
+            "description": "user / db not found"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/set_log_level": {
+      "post": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "set_log_level",
+        "parameters": [
+          {
+            "name": "new_level",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/LogLevelFilter"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "log level changed"
+          },
+          "400": {
+            "description": "invalid log level"
+          },
+          "401": {
+            "description": "unauthorized"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/shutdown": {
+      "post": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "admin_shutdown",
+        "responses": {
+          "202": {
+            "description": "server is shutting down"
+          },
+          "401": {
+            "description": "unauthorized"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/status": {
+      "get": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "admin_status",
+        "responses": {
+          "200": {
+            "description": "server is ready",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminStatus"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/user/list": {
+      "get": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "admin_user_list",
+        "responses": {
+          "200": {
+            "description": "ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/UserStatus"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/user/logout_all": {
+      "post": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "admin_user_logout_all",
+        "responses": {
+          "201": {
+            "description": "users logged out"
+          },
+          "401": {
+            "description": "admin only"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/user/{username}/add": {
+      "post": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "admin_user_add",
+        "parameters": [
+          {
+            "name": "username",
+            "in": "path",
+            "description": "desired user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserCredentials"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "user created"
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "461": {
+            "description": "password too short (<8)"
+          },
+          "462": {
+            "description": "name too short (<3)"
+          },
+          "463": {
+            "description": "user exists"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/user/{username}/change_password": {
+      "put": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "admin_user_change_password",
+        "parameters": [
+          {
+            "name": "username",
+            "in": "path",
+            "description": "user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserCredentials"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "password changed"
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "464": {
+            "description": "user not found"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/user/{username}/delete": {
+      "delete": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "admin_user_delete",
+        "parameters": [
+          {
+            "name": "username",
+            "in": "path",
+            "description": "user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "user deleted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/UserStatus"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "404": {
+            "description": "user not found"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/user/{username}/logout": {
+      "post": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "admin_user_logout",
+        "parameters": [
+          {
+            "name": "username",
+            "in": "path",
+            "description": "user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "session",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "user logged out"
+          },
+          "401": {
+            "description": "admin only"
+          },
+          "404": {
+            "description": "user not found"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/cluster/admin/user/logout_all": {
+      "post": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "cluster_admin_user_logout_all",
+        "responses": {
+          "201": {
+            "description": "users logged out"
+          },
+          "401": {
+            "description": "admin only"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/cluster/admin/user/{username}/logout": {
+      "post": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "cluster_admin_user_logout",
+        "parameters": [
+          {
+            "name": "username",
+            "in": "path",
+            "description": "user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "session",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "user logged out"
+          },
+          "401": {
+            "description": "admin only"
+          },
+          "404": {
+            "description": "user not found"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/cluster/status": {
+      "get": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "cluster_status",
+        "responses": {
+          "200": {
+            "description": "Cluster status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ClusterStatus"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/cluster/user/login": {
+      "post": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "cluster_user_login",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserLogin"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "login successful",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "invalid credentials"
+          }
+        }
+      }
+    },
+    "/api/v1/cluster/user/logout": {
+      "post": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "cluster_user_logout",
+        "parameters": [
+          {
+            "name": "session",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "user logged out"
+          },
+          "401": {
+            "description": "invalid credentials"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/dashboard/list": {
+      "get": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "dashboard_list",
+        "responses": {
+          "200": {
+            "description": "ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DashboardSummary"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/dashboard/{name}": {
+      "get": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "dashboard_get",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "description": "dashboard name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Dashboard"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "404": {
+            "description": "dashboard not found"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/dashboard/{name}/add": {
+      "post": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "dashboard_add",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "description": "dashboard name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DashboardConfig"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "dashboard added"
+          },
+          "400": {
+            "description": "invalid dashboard name"
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "409": {
+            "description": "dashboard already exists"
+          },
+          "413": {
+            "description": "dashboard config too large"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/dashboard/{name}/remove": {
+      "delete": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "dashboard_remove",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "description": "dashboard name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "dashboard removed"
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "404": {
+            "description": "dashboard not found"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/dashboard/{name}/rename": {
+      "post": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "dashboard_rename",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "description": "dashboard name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "new_name",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "dashboard renamed"
+          },
+          "400": {
+            "description": "invalid new dashboard name"
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "404": {
+            "description": "dashboard not found"
+          },
+          "409": {
+            "description": "target dashboard already exists"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/dashboard/{name}/save": {
+      "put": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "dashboard_save",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "description": "dashboard name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DashboardConfig"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "dashboard saved"
+          },
+          "400": {
+            "description": "invalid dashboard name"
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "413": {
+            "description": "dashboard config too large"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/db/list": {
+      "get": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "db_list",
+        "responses": {
+          "200": {
+            "description": "ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ServerDatabase"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/db/{owner}/{db}/add": {
+      "post": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "db_add",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db",
+            "in": "path",
+            "description": "db name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db_type",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/DbKind"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "db added"
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "403": {
+            "description": "cannot add db to another user"
+          },
+          "465": {
+            "description": "db already exists"
+          },
+          "467": {
+            "description": "db invalid"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/db/{owner}/{db}/audit": {
+      "get": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "db_audit",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db",
+            "in": "path",
+            "description": "db name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DbAudit"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "404": {
+            "description": "user / db not found"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/db/{owner}/{db}/audit/trim": {
+      "post": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "db_audit_trim",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db",
+            "in": "path",
+            "description": "db name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "keep_days",
+            "in": "query",
+            "description": "Number of UTC days to keep before today, the audit of the older days is removed.",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "audit of the days before the last 'keep_days' days removed"
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "403": {
+            "description": "must be a db admin"
+          },
+          "404": {
+            "description": "user / db not found"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/db/{owner}/{db}/backup": {
+      "post": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "db_backup",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db",
+            "in": "path",
+            "description": "db name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "backup created"
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "403": {
+            "description": "must be a db admin / memory db cannot have backup"
+          },
+          "404": {
+            "description": "user / db not found"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/db/{owner}/{db}/clear": {
+      "post": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "db_clear",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db",
+            "in": "path",
+            "description": "db name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "resource",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/DbResource"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "db resource(s) cleared",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerDatabase"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "403": {
+            "description": "must be a db admin"
+          },
+          "404": {
+            "description": "user / db not found"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/db/{owner}/{db}/convert": {
+      "post": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "db_convert",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db",
+            "in": "path",
+            "description": "db name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db_type",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/DbKind"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "db type changes"
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "403": {
+            "description": "must be a db admin"
+          },
+          "404": {
+            "description": "user / db not found"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/db/{owner}/{db}/copy": {
+      "post": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "db_copy",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "db owner user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db",
+            "in": "path",
+            "description": "db name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "new_db",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "db copied"
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "404": {
+            "description": "user / db not found"
+          },
+          "465": {
+            "description": "target db exists"
+          },
+          "467": {
+            "description": "invalid db"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/db/{owner}/{db}/delete": {
+      "delete": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "db_delete",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "db owner user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db",
+            "in": "path",
+            "description": "db name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "db deleted"
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "403": {
+            "description": "user must be a db owner"
+          },
+          "404": {
+            "description": "db not found"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/db/{owner}/{db}/exec": {
+      "post": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "db_exec",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "db owner user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db",
+            "in": "path",
+            "description": "db name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Queries"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QueriesResults"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "403": {
+            "description": "mutable queries not allowed"
+          },
+          "404": {
+            "description": "db not found"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/db/{owner}/{db}/exec_mut": {
+      "post": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "db_exec_mut",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "db owner user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db",
+            "in": "path",
+            "description": "db name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Queries"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QueriesResults"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "403": {
+            "description": "must have at least write role"
+          },
+          "404": {
+            "description": "db not found"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/db/{owner}/{db}/optimize": {
+      "post": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "db_optimize",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db",
+            "in": "path",
+            "description": "db name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "shrink_to_fit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerDatabase"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "403": {
+            "description": "must have write permissions"
+          },
+          "404": {
+            "description": "db not found"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/db/{owner}/{db}/remove": {
+      "delete": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "db_remove",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "db owner user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db",
+            "in": "path",
+            "description": "db name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "db removed"
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "403": {
+            "description": "user must be a db owner"
+          },
+          "404": {
+            "description": "db not found"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/db/{owner}/{db}/rename": {
+      "post": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "db_rename",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "db owner user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db",
+            "in": "path",
+            "description": "db name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "new_db",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "db renamed"
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "403": {
+            "description": "user must be a db owner"
+          },
+          "404": {
+            "description": "user / db not found"
+          },
+          "465": {
+            "description": "target db exists"
+          },
+          "467": {
+            "description": "invalid db"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/db/{owner}/{db}/restore": {
+      "post": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "db_restore",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db",
+            "in": "path",
+            "description": "db name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "db restored"
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "403": {
+            "description": "must be a db admin"
+          },
+          "404": {
+            "description": "backup not found"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/db/{owner}/{db}/rollback": {
+      "post": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "db_rollback",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db",
+            "in": "path",
+            "description": "db name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "db rolled back"
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "403": {
+            "description": "must be a db admin"
+          },
+          "404": {
+            "description": "backup not found"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/db/{owner}/{db}/user/list": {
+      "get": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "db_user_list",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "db owner user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db",
+            "in": "path",
+            "description": "db name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DbUser"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "404": {
+            "description": "db not found"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/db/{owner}/{db}/user/{username}/add": {
+      "put": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "db_user_add",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "db owner user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db",
+            "in": "path",
+            "description": "db name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "username",
+            "in": "path",
+            "description": "user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db_role",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/DbUserRole"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "user added"
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "403": {
+            "description": "user must be a db admin / cannot change role of db owner"
+          },
+          "404": {
+            "description": "user / db not found"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/db/{owner}/{db}/user/{username}/remove": {
+      "delete": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "db_user_remove",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "db owner user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db",
+            "in": "path",
+            "description": "db name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "username",
+            "in": "path",
+            "description": "user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "user removed"
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "403": {
+            "description": "must be admin / cannot remove db owner"
+          },
+          "404": {
+            "description": "user / db not found"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/status": {
+      "get": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "status",
+        "responses": {
+          "200": {
+            "description": "Server is ready"
+          }
+        }
+      }
+    },
+    "/api/v1/user/change_password": {
+      "put": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "user_change_password",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangePassword"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "password changed"
+          },
+          "403": {
+            "description": "invalid credentials"
+          },
+          "461": {
+            "description": "password too short (<8)"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/user/login": {
+      "post": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "user_login",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserLogin"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "login successful",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "invalid credentials"
+          }
+        }
+      }
+    },
+    "/api/v1/user/logout": {
+      "post": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "user_logout",
+        "parameters": [
+          {
+            "name": "session",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "user logged out"
+          },
+          "401": {
+            "description": "invalid credentials"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/user/status": {
+      "get": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "user_status",
+        "responses": {
+          "200": {
+            "description": "User status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserStatus"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AdminStatus": {
+        "type": "object",
+        "description": "Server-wide status information returned by the admin status endpoint.",
+        "required": [
+          "uptime",
+          "dbs",
+          "users",
+          "logged_in_users",
+          "size",
+          "memory",
+          "log_level"
+        ],
+        "properties": {
+          "dbs": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "log_level": {
+            "$ref": "#/components/schemas/LogLevelFilter"
+          },
+          "logged_in_users": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "memory": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "size": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "uptime": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "users": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          }
+        }
+      },
+      "Amend": {
+        "oneOf": [
+          {
+            "type": "string",
+            "description": "Default behavior: overwrite the existing value.",
+            "enum": [
+              "None"
+            ]
+          },
+          {
+            "type": "string",
+            "description": "Add to / increment / append / concatenate the existing value.\nFor numerics: adds the new value to the existing one.\nFor strings: concatenates the new string to the existing one.\nFor bytes: appends the new bytes to the existing byte array.\nFor vec types: extends the existing list with the new elements.\nA scalar value can also be pushed onto the matching vec type.\nIf the key does not exist, falls back to a regular insert.",
+            "enum": [
+              "Add"
+            ]
+          },
+          {
+            "type": "string",
+            "description": "Remove from / decrement the existing value.\nFor numerics: subtracts the new value from the existing one.\nFor strings: removes all occurrences of the substring.\nFor bytes: error is returned as removing from a byte array is not semantically clear operation.\nFor vec types: removes first occurrence of each element.\nA scalar value can also be removed from the matching vec type.\nIf the key does not exist, this is a no-op.",
+            "enum": [
+              "Remove"
+            ]
+          },
+          {
+            "type": "object",
+            "description": "Apply a bitwise operation in an \"add\" context.\nFor integer types (`i64`, `u64`) the bitwise op is applied directly,\nwith cross-type `i64`↔`u64` interop.\nFor bytes the op is applied element-wise (shorter operand zero-padded).\nFor all other types falls back to `Add` semantics\n(concatenate, extend, etc.).\nIf the key does not exist, falls back to a regular insert.",
+            "required": [
+              "AddBitwise"
+            ],
+            "properties": {
+              "AddBitwise": {
+                "$ref": "#/components/schemas/BitwiseOp",
+                "description": "Apply a bitwise operation in an \"add\" context.\nFor integer types (`i64`, `u64`) the bitwise op is applied directly,\nwith cross-type `i64`↔`u64` interop.\nFor bytes the op is applied element-wise (shorter operand zero-padded).\nFor all other types falls back to `Add` semantics\n(concatenate, extend, etc.).\nIf the key does not exist, falls back to a regular insert."
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "Apply a bitwise operation in a \"remove\" context.\nFor integer types (`i64`, `u64`) the bitwise op is applied directly,\nwith cross-type `i64`↔`u64` interop.\nFor bytes the op is applied element-wise (shorter operand zero-padded).\nFor all other types falls back to `Remove` semantics\n(subtract, remove occurrences, etc.).\nIf the key does not exist, this is a no-op (same as `Remove`).",
+            "required": [
+              "RemoveBitwise"
+            ],
+            "properties": {
+              "RemoveBitwise": {
+                "$ref": "#/components/schemas/BitwiseOp",
+                "description": "Apply a bitwise operation in a \"remove\" context.\nFor integer types (`i64`, `u64`) the bitwise op is applied directly,\nwith cross-type `i64`↔`u64` interop.\nFor bytes the op is applied element-wise (shorter operand zero-padded).\nFor all other types falls back to `Remove` semantics\n(subtract, remove occurrences, etc.).\nIf the key does not exist, this is a no-op (same as `Remove`)."
+              }
+            }
+          }
+        ],
+        "description": "Amend operation for insert/remove value queries.\nControls how values are applied to existing properties."
+      },
+      "AuditTrimParam": {
+        "type": "object",
+        "required": [
+          "keep_days"
+        ],
+        "properties": {
+          "keep_days": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Number of UTC days to keep before today, the audit of the older days is removed.",
+            "minimum": 0
+          }
+        }
+      },
+      "BitwiseOp": {
+        "type": "string",
+        "description": "Bitwise operation for [`Amend::AddBitwise`] and [`Amend::RemoveBitwise`].\nFor integers (`i64`, `u64`) and bytes the bitwise op is applied directly.\nOther types fall back to `Add` or `Remove` semantics respectively.",
+        "enum": [
+          "And",
+          "Or",
+          "Xor"
+        ]
+      },
+      "ChangePassword": {
+        "type": "object",
+        "description": "Request body for changing a user's password.",
+        "required": [
+          "password",
+          "new_password"
+        ],
+        "properties": {
+          "new_password": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          }
+        }
+      },
+      "ClusterStatus": {
+        "type": "object",
+        "description": "Status of a single node in the server cluster.",
+        "required": [
+          "address",
+          "status",
+          "leader",
+          "executed_index",
+          "resync"
+        ],
+        "properties": {
+          "address": {
+            "type": "string"
+          },
+          "executed_index": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "leader": {
+            "type": "boolean"
+          },
+          "resync": {
+            "type": "boolean"
+          },
+          "status": {
+            "type": "boolean"
+          }
+        }
+      },
+      "Comparison": {
+        "oneOf": [
+          {
+            "type": "object",
+            "description": "property == this",
+            "required": [
+              "Equal"
+            ],
+            "properties": {
+              "Equal": {
+                "$ref": "#/components/schemas/DbValue",
+                "description": "property == this"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "property > this",
+            "required": [
+              "GreaterThan"
+            ],
+            "properties": {
+              "GreaterThan": {
+                "$ref": "#/components/schemas/DbValue",
+                "description": "property > this"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "property >= this",
+            "required": [
+              "GreaterThanOrEqual"
+            ],
+            "properties": {
+              "GreaterThanOrEqual": {
+                "$ref": "#/components/schemas/DbValue",
+                "description": "property >= this"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "property < this",
+            "required": [
+              "LessThan"
+            ],
+            "properties": {
+              "LessThan": {
+                "$ref": "#/components/schemas/DbValue",
+                "description": "property < this"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "property <= this",
+            "required": [
+              "LessThanOrEqual"
+            ],
+            "properties": {
+              "LessThanOrEqual": {
+                "$ref": "#/components/schemas/DbValue",
+                "description": "property <= this"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "property != this",
+            "required": [
+              "NotEqual"
+            ],
+            "properties": {
+              "NotEqual": {
+                "$ref": "#/components/schemas/DbValue",
+                "description": "property != this"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "property.contains(this)",
+            "required": [
+              "Contains"
+            ],
+            "properties": {
+              "Contains": {
+                "$ref": "#/components/schemas/DbValue",
+                "description": "property.contains(this)"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "property.starts_with(this)",
+            "required": [
+              "StartsWith"
+            ],
+            "properties": {
+              "StartsWith": {
+                "$ref": "#/components/schemas/DbValue",
+                "description": "property.starts_with(this)"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "property.ends_with(this)",
+            "required": [
+              "EndsWith"
+            ],
+            "properties": {
+              "EndsWith": {
+                "$ref": "#/components/schemas/DbValue",
+                "description": "property.ends_with(this)"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "property.any(this) - true if at least one element of `this`\nis present in the property. For scalar right-hand side,\nbehaves identically to `Contains`. For vector right-hand\nside, uses existential (OR) semantics rather than universal\n(AND) semantics. Empty right-hand vector yields `false`.",
+            "required": [
+              "Any"
+            ],
+            "properties": {
+              "Any": {
+                "$ref": "#/components/schemas/DbValue",
+                "description": "property.any(this) - true if at least one element of `this`\nis present in the property. For scalar right-hand side,\nbehaves identically to `Contains`. For vector right-hand\nside, uses existential (OR) semantics rather than universal\n(AND) semantics. Empty right-hand vector yields `false`."
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "property matches regex pattern. The inner value must be\n`DbValue::String` holding a valid regex pattern. Non-string\nvalues or invalid patterns yield `false`. Requires `regex`\nfeature to be enabled; without it the comparison always\nyields `false`.",
+            "required": [
+              "Regex"
+            ],
+            "properties": {
+              "Regex": {
+                "$ref": "#/components/schemas/DbValue",
+                "description": "property matches regex pattern. The inner value must be\n`DbValue::String` holding a valid regex pattern. Non-string\nvalues or invalid patterns yield `false`. Requires `regex`\nfeature to be enabled; without it the comparison always\nyields `false`."
+              }
+            }
+          }
+        ],
+        "description": "Comparison of database values ([`DbValue`]) used\nby `key()` condition. Supports\nthe usual set of named comparisons: `==, !=, <, <=, >, >=`\nplus `contains()`, `any()`, `starts_with()` and `ends_with()`.\nThe comparisons are type strict except for the `contains`\nand `any` comparisons which allow vectorized version of the\nbase type. `contains` uses universal (AND) semantics while\n`any` uses existential (OR) semantics."
+      },
+      "CountComparison": {
+        "oneOf": [
+          {
+            "type": "object",
+            "description": "property == this",
+            "required": [
+              "Equal"
+            ],
+            "properties": {
+              "Equal": {
+                "type": "integer",
+                "format": "int64",
+                "description": "property == this",
+                "minimum": 0
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "property > this",
+            "required": [
+              "GreaterThan"
+            ],
+            "properties": {
+              "GreaterThan": {
+                "type": "integer",
+                "format": "int64",
+                "description": "property > this",
+                "minimum": 0
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "property >= this",
+            "required": [
+              "GreaterThanOrEqual"
+            ],
+            "properties": {
+              "GreaterThanOrEqual": {
+                "type": "integer",
+                "format": "int64",
+                "description": "property >= this",
+                "minimum": 0
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "property < this",
+            "required": [
+              "LessThan"
+            ],
+            "properties": {
+              "LessThan": {
+                "type": "integer",
+                "format": "int64",
+                "description": "property < this",
+                "minimum": 0
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "property <= this",
+            "required": [
+              "LessThanOrEqual"
+            ],
+            "properties": {
+              "LessThanOrEqual": {
+                "type": "integer",
+                "format": "int64",
+                "description": "property <= this",
+                "minimum": 0
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "property != this",
+            "required": [
+              "NotEqual"
+            ],
+            "properties": {
+              "NotEqual": {
+                "type": "integer",
+                "format": "int64",
+                "description": "property != this",
+                "minimum": 0
+              }
+            }
+          }
+        ],
+        "description": "Comparison of unsigned integers (`u64`) used\nby `distance()` and `edge_count*()` conditions. Supports\nthe usual set of named comparisons: `==, !=, <, <=, >, >=`."
+      },
+      "Dashboard": {
+        "type": "object",
+        "description": "A dashboard owned by a user. The `config` is an opaque document (JSON)\ninterpreted by the client (e.g. agdb_studio).",
+        "required": [
+          "name",
+          "config",
+          "updated"
+        ],
+        "properties": {
+          "config": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "updated": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          }
+        }
+      },
+      "DashboardConfig": {
+        "type": "object",
+        "description": "Request body for adding or saving a dashboard.",
+        "required": [
+          "config"
+        ],
+        "properties": {
+          "config": {
+            "type": "string"
+          }
+        }
+      },
+      "DashboardRenameParam": {
+        "type": "object",
+        "required": [
+          "new_name"
+        ],
+        "properties": {
+          "new_name": {
+            "type": "string"
+          }
+        }
+      },
+      "DashboardSummary": {
+        "type": "object",
+        "description": "Dashboard listing entry (without the config).",
+        "required": [
+          "name",
+          "updated"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "updated": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          }
+        }
+      },
+      "DbAudit": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/QueryAudit"
+        },
+        "description": "Complete audit log for a database."
+      },
+      "DbElement": {
+        "type": "object",
+        "description": "Database element used in [`QueryResult`]\nthat represents a node or an edge.",
+        "required": [
+          "id",
+          "from",
+          "to",
+          "values"
+        ],
+        "properties": {
+          "from": {
+            "$ref": "#/components/schemas/DbId",
+            "description": "If edge: origin node id. If node: first outgoing edge id. Id == 0 if no outgoing edge."
+          },
+          "id": {
+            "$ref": "#/components/schemas/DbId",
+            "description": "Element id."
+          },
+          "to": {
+            "$ref": "#/components/schemas/DbId",
+            "description": "If edge: destination node id. If node: first incoming edge id. Id == 0 if no incoming edge."
+          },
+          "values": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DbKeyValue"
+            },
+            "description": "List of key-value pairs associated with the element."
+          }
+        }
+      },
+      "DbF64": {
+        "type": "number",
+        "format": "double",
+        "description": "Database float is a wrapper around `f64` to provide\nfunctionality like comparison. The comparison is\nusing `total_cmp` standard library function. See its\n[docs](https://doc.rust-lang.org/std/primitive.f64.html#method.total_cmp)\nto understand how it handles NaNs and other edge cases\nof floating point numbers."
+      },
+      "DbId": {
+        "type": "integer",
+        "format": "int64",
+        "description": "Database id is a wrapper around `i64`.\nThe id is an identifier of a database element\nboth nodes and edges. The positive ids represent nodes,\nnegative ids represent edges. The value of `0` is\nlogically invalid (there cannot be element with id 0) and a default."
+      },
+      "DbKeyOrder": {
+        "oneOf": [
+          {
+            "type": "object",
+            "description": "Ascending order (from smallest)",
+            "required": [
+              "Asc"
+            ],
+            "properties": {
+              "Asc": {
+                "$ref": "#/components/schemas/DbValue",
+                "description": "Ascending order (from smallest)"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "Descending order (from largest)",
+            "required": [
+              "Desc"
+            ],
+            "properties": {
+              "Desc": {
+                "$ref": "#/components/schemas/DbValue",
+                "description": "Descending order (from largest)"
+              }
+            }
+          }
+        ],
+        "description": "Ordering for search queries"
+      },
+      "DbKeyValue": {
+        "type": "object",
+        "description": "Database key-value pair (aka property) attached to\ndatabase elements. It can be constructed from a\ntuple of types that are convertible to `DbValue`.",
+        "required": [
+          "key",
+          "value"
+        ],
+        "properties": {
+          "key": {
+            "$ref": "#/components/schemas/DbValue",
+            "description": "Key of the property"
+          },
+          "value": {
+            "$ref": "#/components/schemas/DbValue",
+            "description": "Value of the property"
+          }
+        }
+      },
+      "DbKind": {
+        "type": "string",
+        "description": "Database storage backend kind.",
+        "enum": [
+          "memory",
+          "mapped",
+          "file"
+        ]
+      },
+      "DbResource": {
+        "type": "string",
+        "description": "Selects which database resource to operate on (e.g. clear or restore).",
+        "enum": [
+          "all",
+          "db",
+          "audit",
+          "backup"
+        ]
+      },
+      "DbTypeParam": {
+        "type": "object",
+        "required": [
+          "db_type"
+        ],
+        "properties": {
+          "db_type": {
+            "$ref": "#/components/schemas/DbKind"
+          }
+        }
+      },
+      "DbUser": {
+        "type": "object",
+        "description": "A user's access entry for a database.",
+        "required": [
+          "username",
+          "role"
+        ],
+        "properties": {
+          "role": {
+            "$ref": "#/components/schemas/DbUserRole"
+          },
+          "username": {
+            "type": "string"
+          }
+        }
+      },
+      "DbUserRole": {
+        "type": "string",
+        "description": "Role a user may hold on a database.",
+        "enum": [
+          "admin",
+          "write",
+          "read"
+        ]
+      },
+      "DbUserRoleParam": {
+        "type": "object",
+        "required": [
+          "db_role"
+        ],
+        "properties": {
+          "db_role": {
+            "$ref": "#/components/schemas/DbUserRole"
+          }
+        }
+      },
+      "DbValue": {
+        "oneOf": [
+          {
+            "type": "object",
+            "description": "Byte array, sometimes referred to as blob",
+            "required": [
+              "Bytes"
+            ],
+            "properties": {
+              "Bytes": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "format": "int32",
+                  "minimum": 0
+                },
+                "description": "Byte array, sometimes referred to as blob"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "64-bit wide signed integer",
+            "required": [
+              "I64"
+            ],
+            "properties": {
+              "I64": {
+                "type": "integer",
+                "format": "int64",
+                "description": "64-bit wide signed integer"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "64-bit wide unsigned integer",
+            "required": [
+              "U64"
+            ],
+            "properties": {
+              "U64": {
+                "type": "integer",
+                "format": "int64",
+                "description": "64-bit wide unsigned integer",
+                "minimum": 0
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "64-bit floating point number",
+            "required": [
+              "F64"
+            ],
+            "properties": {
+              "F64": {
+                "$ref": "#/components/schemas/DbF64",
+                "description": "64-bit floating point number"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "UTF-8 string",
+            "required": [
+              "String"
+            ],
+            "properties": {
+              "String": {
+                "type": "string",
+                "description": "UTF-8 string"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "List of 64-bit wide signed integers",
+            "required": [
+              "VecI64"
+            ],
+            "properties": {
+              "VecI64": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "format": "int64"
+                },
+                "description": "List of 64-bit wide signed integers"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "List of 64-bit wide unsigned integers",
+            "required": [
+              "VecU64"
+            ],
+            "properties": {
+              "VecU64": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "format": "int64",
+                  "minimum": 0
+                },
+                "description": "List of 64-bit wide unsigned integers"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "List of 64-bit floating point numbers",
+            "required": [
+              "VecF64"
+            ],
+            "properties": {
+              "VecF64": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/DbF64"
+                },
+                "description": "List of 64-bit floating point numbers"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "List of UTF-8 strings",
+            "required": [
+              "VecString"
+            ],
+            "properties": {
+              "VecString": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "List of UTF-8 strings"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "List of database values (heterogeneous)",
+            "required": [
+              "VecDbValue"
+            ],
+            "properties": {
+              "VecDbValue": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/DbValue"
+                },
+                "description": "List of database values (heterogeneous)"
+              }
+            }
+          },
+          {
+            "type": "string",
+            "description": "No value, the value of a key that is a label",
+            "enum": [
+              "None"
+            ]
+          }
+        ],
+        "description": "Database value is a strongly typed value.\n\nIt is an enum of limited number supported types\nthat are universal across all platforms\nand programming languages.\n\nThe value is constructible from large number of\nraw types or associated types (e.g. i32, &str, etc.).\nGetting the raw value back as string can be done\nwith `to_string()` but otherwise requires a `match`."
+      },
+      "InsertAliasesQuery": {
+        "type": "object",
+        "description": "Query to insert or update aliases of existing nodes.\nAll `ids` must exist. None of the `aliases` can be empty.\nIf there is an existing alias for any of the elements it\nwill be overwritten with a new one.\n\nThe result will contain number of aliases inserted/updated but no elements.",
+        "required": [
+          "ids",
+          "aliases"
+        ],
+        "properties": {
+          "aliases": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Aliases to be inserted"
+          },
+          "ids": {
+            "$ref": "#/components/schemas/QueryIds",
+            "description": "Ids to be aliased"
+          }
+        }
+      },
+      "InsertEdgesQuery": {
+        "type": "object",
+        "description": "Query to inserts edges to the database. The `from`\nand `to` ids must exist in the database. There must be\nenough `values` for all new edges unless set to `Single`\nin which case they will be uniformly applied to all new\nedges. The `each` flag is only useful if `from` and `to` are\nsymmetric (same length) but you still want to connect every\norigin to every destination. By default it would connect only\nthe pairs. For asymmetric inserts `each` is assumed.\n\nIf the `ids` member is empty the query will insert new edges\notherwise it will update the existing edges. The rules for length\nof `values` still apply and the search yield or static list must\nhave equal length to the `values` (or the `Single` variant must\nbe used).\n\nThe result will contain number of edges inserted or updated and elements\nwith their ids, origin and destination, but no properties.",
+        "required": [
+          "from",
+          "to",
+          "ids",
+          "values",
+          "each"
+        ],
+        "properties": {
+          "each": {
+            "type": "boolean",
+            "description": "If `true` create an edge between each origin\nand destination."
+          },
+          "from": {
+            "$ref": "#/components/schemas/QueryIds",
+            "description": "Origins"
+          },
+          "ids": {
+            "$ref": "#/components/schemas/QueryIds",
+            "description": "Optional ids of edges (optionally a search sub-query).\nThis can be empty."
+          },
+          "to": {
+            "$ref": "#/components/schemas/QueryIds",
+            "description": "Destinations"
+          },
+          "values": {
+            "$ref": "#/components/schemas/QueryValues",
+            "description": "Key value pairs to be associated with\nthe new edges."
+          }
+        }
+      },
+      "InsertIndexQuery": {
+        "$ref": "#/components/schemas/DbValue",
+        "description": "Query to create a new index on\na given key."
+      },
+      "InsertNodesQuery": {
+        "type": "object",
+        "description": "Query to insert nodes to the database. Only one of\n`count`, `values` or `aliases` need to be given as the\nimplementation will derive the count from the other\nparameters. If `values` is set to `Single` either `count`\nor `aliases` must be provided however. If `values` are not\nset to `Single` there must be enough value for `count/aliases`\nunless they are not set, and the count is derived from `values`.\n\nIf the `ids` member is empty the query will insert new nodes\notherwise it will update the existing nodes. The rules for length\nof `values` still apply and the search yield or static list must\nhave equal length to the `values` (or the `Single` variant must\nbe used).\n\nThe result will contain number of nodes inserted or updated and elements\nwith their ids but no properties.",
+        "required": [
+          "count",
+          "values",
+          "aliases",
+          "ids"
+        ],
+        "properties": {
+          "aliases": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Aliases of the new nodes."
+          },
+          "count": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Number of nodes to be inserted.",
+            "minimum": 0
+          },
+          "ids": {
+            "$ref": "#/components/schemas/QueryIds",
+            "description": "Optional ids of nodes (optionally a search sub-query).\nThis can be empty."
+          },
+          "values": {
+            "$ref": "#/components/schemas/QueryValues",
+            "description": "Key value pairs to be associated with\nthe new nodes."
+          }
+        }
+      },
+      "InsertValuesQuery": {
+        "type": "object",
+        "description": "Query to insert or update key-value pairs (properties)\nto existing elements in the database. All `ids` must exist\nin the database. If `values` is set to `Single` the properties\nwill be inserted uniformly to all `ids` otherwise there must be\nenough `values` for all `ids`.\n\nThe result will be number of inserted/updated values and inserted new\nelements (nodes).\n\nNOTE: The result is NOT number of affected elements but individual properties.",
+        "required": [
+          "ids",
+          "values"
+        ],
+        "properties": {
+          "amend": {
+            "$ref": "#/components/schemas/Amend",
+            "description": "Amend operation. `None` (default) overwrites existing values,\n`Add` increments/appends, `Remove` decrements/removes-from."
+          },
+          "ids": {
+            "$ref": "#/components/schemas/QueryIds",
+            "description": "Ids whose properties should be updated"
+          },
+          "values": {
+            "$ref": "#/components/schemas/QueryValues",
+            "description": "Key value pairs to be inserted to the existing elements."
+          }
+        }
+      },
+      "KeyValueComparison": {
+        "type": "object",
+        "description": "Comparison of a value stored under specific `key` to\na value using the comparison operator.",
+        "required": [
+          "key",
+          "value"
+        ],
+        "properties": {
+          "key": {
+            "$ref": "#/components/schemas/DbValue",
+            "description": "Property key"
+          },
+          "value": {
+            "$ref": "#/components/schemas/Comparison",
+            "description": "Comparison operator (e.g. Equal, GreaterThan etc.)"
+          }
+        }
+      },
+      "LogLevelFilter": {
+        "type": "string",
+        "description": "Server-side log level filter.",
+        "enum": [
+          "off",
+          "error",
+          "warn",
+          "info",
+          "debug",
+          "trace"
+        ]
+      },
+      "LogoutQuery": {
+        "type": "object",
+        "properties": {
+          "session": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "OptimizeParam": {
+        "type": "object",
+        "properties": {
+          "shrink_to_fit": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          }
+        }
+      },
+      "Queries": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/QueryType"
+        },
+        "description": "Batch of queries to execute against a database."
+      },
+      "QueriesResults": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/QueryResult"
+        },
+        "description": "Results of a batch query execution, one per input query."
+      },
+      "QueryAudit": {
+        "type": "object",
+        "description": "A single entry in the database audit log.",
+        "required": [
+          "timestamp",
+          "username",
+          "query"
+        ],
+        "properties": {
+          "query": {
+            "$ref": "#/components/schemas/QueryType"
+          },
+          "timestamp": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "username": {
+            "type": "string"
+          }
+        }
+      },
+      "QueryCondition": {
+        "type": "object",
+        "description": "Query condition. The condition consists of\n`data`, logic operator and a modifier.",
+        "required": [
+          "logic",
+          "modifier",
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/QueryConditionData",
+            "description": "Condition data (or type) defining what type\nof validation is to be performed."
+          },
+          "logic": {
+            "$ref": "#/components/schemas/QueryConditionLogic",
+            "description": "Logic operator (e.g. And, Or)"
+          },
+          "modifier": {
+            "$ref": "#/components/schemas/QueryConditionModifier",
+            "description": "Condition modifier (e.g. None, Beyond, Not, NotBeyond)"
+          }
+        }
+      },
+      "QueryConditionData": {
+        "oneOf": [
+          {
+            "type": "object",
+            "description": "Distance from the search origin. Takes count comparison\n(e.g. Equal, GreaterThan).",
+            "required": [
+              "Distance"
+            ],
+            "properties": {
+              "Distance": {
+                "$ref": "#/components/schemas/CountComparison",
+                "description": "Distance from the search origin. Takes count comparison\n(e.g. Equal, GreaterThan)."
+              }
+            }
+          },
+          {
+            "type": "string",
+            "description": "Is the current element an edge? I.e. `id < 0`.",
+            "enum": [
+              "Edge"
+            ]
+          },
+          {
+            "type": "object",
+            "description": "Tests number of edges (from+to) of the current element.\nOnly nodes will pass. Self-referential edges are\ncounted twice. Takes count comparison\n(e.g. Equal, GreaterThan).",
+            "required": [
+              "EdgeCount"
+            ],
+            "properties": {
+              "EdgeCount": {
+                "$ref": "#/components/schemas/CountComparison",
+                "description": "Tests number of edges (from+to) of the current element.\nOnly nodes will pass. Self-referential edges are\ncounted twice. Takes count comparison\n(e.g. Equal, GreaterThan)."
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "Tests the number of outgoing edges (from) of the\ncurrent element. Takes count comparison\n(e.g. Equal, GreaterThan).",
+            "required": [
+              "EdgeCountFrom"
+            ],
+            "properties": {
+              "EdgeCountFrom": {
+                "$ref": "#/components/schemas/CountComparison",
+                "description": "Tests the number of outgoing edges (from) of the\ncurrent element. Takes count comparison\n(e.g. Equal, GreaterThan)."
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "Tests the number of incoming edges (to) of the\ncurrent element. Takes count comparison\n(e.g. Equal, GreaterThan).",
+            "required": [
+              "EdgeCountTo"
+            ],
+            "properties": {
+              "EdgeCountTo": {
+                "$ref": "#/components/schemas/CountComparison",
+                "description": "Tests the number of incoming edges (to) of the\ncurrent element. Takes count comparison\n(e.g. Equal, GreaterThan)."
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "Tests if the current id is in the list of ids.",
+            "required": [
+              "Ids"
+            ],
+            "properties": {
+              "Ids": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/QueryId"
+                },
+                "description": "Tests if the current id is in the list of ids."
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "Tests if the current element has a property `key`\nwith a value that evaluates true against `comparison`.",
+            "required": [
+              "KeyValue"
+            ],
+            "properties": {
+              "KeyValue": {
+                "$ref": "#/components/schemas/KeyValueComparison",
+                "description": "Tests if the current element has a property `key`\nwith a value that evaluates true against `comparison`."
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "Test if the current element has **all** of the keys listed.",
+            "required": [
+              "Keys"
+            ],
+            "properties": {
+              "Keys": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/DbValue"
+                },
+                "description": "Test if the current element has **all** of the keys listed."
+              }
+            }
+          },
+          {
+            "type": "string",
+            "description": "Is the current element a node? I.e. `0 < id`.",
+            "enum": [
+              "Node"
+            ]
+          },
+          {
+            "type": "object",
+            "description": "Nested list of conditions (equivalent to brackets).",
+            "required": [
+              "Where"
+            ],
+            "properties": {
+              "Where": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/QueryCondition"
+                },
+                "description": "Nested list of conditions (equivalent to brackets)."
+              }
+            }
+          }
+        ],
+        "description": "Query condition data"
+      },
+      "QueryConditionLogic": {
+        "type": "string",
+        "description": "Logical operator for query conditions",
+        "enum": [
+          "And",
+          "Or"
+        ]
+      },
+      "QueryConditionModifier": {
+        "type": "string",
+        "description": "Query condition modifier",
+        "enum": [
+          "None",
+          "Beyond",
+          "Not",
+          "NotBeyond"
+        ]
+      },
+      "QueryId": {
+        "oneOf": [
+          {
+            "type": "object",
+            "description": "Numerical id as [`DbId`]",
+            "required": [
+              "Id"
+            ],
+            "properties": {
+              "Id": {
+                "$ref": "#/components/schemas/DbId",
+                "description": "Numerical id as [`DbId`]"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "String alias",
+            "required": [
+              "Alias"
+            ],
+            "properties": {
+              "Alias": {
+                "type": "string",
+                "description": "String alias"
+              }
+            }
+          }
+        ],
+        "description": "Database id used in queries that lets\nyou refer to a database element as numerical\nid or a string alias."
+      },
+      "QueryIds": {
+        "oneOf": [
+          {
+            "type": "object",
+            "description": "List of [`QueryId`]s",
+            "required": [
+              "Ids"
+            ],
+            "properties": {
+              "Ids": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/QueryId"
+                },
+                "description": "List of [`QueryId`]s"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "Search query",
+            "required": [
+              "Search"
+            ],
+            "properties": {
+              "Search": {
+                "$ref": "#/components/schemas/SearchQuery",
+                "description": "Search query"
+              }
+            }
+          }
+        ],
+        "description": "List of database ids used in queries. It\ncan either represent a list of [`QueryId`]s\nor a search query. Search query allows query\nnesting and sourcing the ids dynamically for\nanother query most commonly with the\nselect queries."
+      },
+      "QueryResult": {
+        "type": "object",
+        "description": "Universal database result. Successful\nexecution of a query will always yield\nthis type. The `result` field is a numerical\nrepresentation of the result while the\n`elements` are the list of `DbElement`s\nwith database ids and properties (key-value pairs).",
+        "required": [
+          "result",
+          "elements"
+        ],
+        "properties": {
+          "elements": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DbElement"
+            },
+            "description": "List of elements yielded by the query\npossibly with a list of properties."
+          },
+          "result": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Query result",
+            "minimum": 0
+          }
+        }
+      },
+      "QueryType": {
+        "oneOf": [
+          {
+            "type": "object",
+            "required": [
+              "InsertAlias"
+            ],
+            "properties": {
+              "InsertAlias": {
+                "$ref": "#/components/schemas/InsertAliasesQuery"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "InsertEdges"
+            ],
+            "properties": {
+              "InsertEdges": {
+                "$ref": "#/components/schemas/InsertEdgesQuery"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "InsertIndex"
+            ],
+            "properties": {
+              "InsertIndex": {
+                "$ref": "#/components/schemas/InsertIndexQuery"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "InsertNodes"
+            ],
+            "properties": {
+              "InsertNodes": {
+                "$ref": "#/components/schemas/InsertNodesQuery"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "InsertValues"
+            ],
+            "properties": {
+              "InsertValues": {
+                "$ref": "#/components/schemas/InsertValuesQuery"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "Remove"
+            ],
+            "properties": {
+              "Remove": {
+                "$ref": "#/components/schemas/RemoveQuery"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "RemoveAliases"
+            ],
+            "properties": {
+              "RemoveAliases": {
+                "$ref": "#/components/schemas/RemoveAliasesQuery"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "RemoveIndex"
+            ],
+            "properties": {
+              "RemoveIndex": {
+                "$ref": "#/components/schemas/RemoveIndexQuery"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "RemoveValues"
+            ],
+            "properties": {
+              "RemoveValues": {
+                "$ref": "#/components/schemas/RemoveValuesQuery"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "Search"
+            ],
+            "properties": {
+              "Search": {
+                "$ref": "#/components/schemas/SearchQuery"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "SelectAliases"
+            ],
+            "properties": {
+              "SelectAliases": {
+                "$ref": "#/components/schemas/SelectAliasesQuery"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "SelectAllAliases"
+            ],
+            "properties": {
+              "SelectAllAliases": {
+                "$ref": "#/components/schemas/SelectAllAliasesQuery"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "SelectEdgeCount"
+            ],
+            "properties": {
+              "SelectEdgeCount": {
+                "$ref": "#/components/schemas/SelectEdgeCountQuery"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "SelectIndexes"
+            ],
+            "properties": {
+              "SelectIndexes": {
+                "$ref": "#/components/schemas/SelectIndexesQuery"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "SelectKeys"
+            ],
+            "properties": {
+              "SelectKeys": {
+                "$ref": "#/components/schemas/SelectKeysQuery"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "SelectKeyCount"
+            ],
+            "properties": {
+              "SelectKeyCount": {
+                "$ref": "#/components/schemas/SelectKeyCountQuery"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "SelectNodeCount"
+            ],
+            "properties": {
+              "SelectNodeCount": {
+                "$ref": "#/components/schemas/SelectNodeCountQuery"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "SelectValues"
+            ],
+            "properties": {
+              "SelectValues": {
+                "$ref": "#/components/schemas/SelectValuesQuery"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "SelectAllEdgeCount"
+            ],
+            "properties": {
+              "SelectAllEdgeCount": {
+                "$ref": "#/components/schemas/SelectAllEdgeCountQuery"
+              }
+            }
+          }
+        ],
+        "description": "Convenience enum for serializing/deserializing queries."
+      },
+      "QueryValues": {
+        "oneOf": [
+          {
+            "type": "object",
+            "description": "Single list of properties (key-value pairs)\nto be applied to all elements in a query.",
+            "required": [
+              "Single"
+            ],
+            "properties": {
+              "Single": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/DbKeyValue"
+                },
+                "description": "Single list of properties (key-value pairs)\nto be applied to all elements in a query."
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "List of lists of properties (key-value pairs)\nto be applied to all elements in a query. There\nmust be as many lists of properties as ids\nin a query.",
+            "required": [
+              "Multi"
+            ],
+            "properties": {
+              "Multi": {
+                "type": "array",
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DbKeyValue"
+                  }
+                },
+                "description": "List of lists of properties (key-value pairs)\nto be applied to all elements in a query. There\nmust be as many lists of properties as ids\nin a query."
+              }
+            }
+          }
+        ],
+        "description": "Helper type distinguishing uniform (`Single`) values\nand multiple (`Multi`) values in database queries."
+      },
+      "RemoveAliasesQuery": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "Query to remove aliases from the database. It\nis not an error if an alias to be removed already\ndoes not exist.\n\nThe result will be a number signifying how\nmany aliases have been actually removed."
+      },
+      "RemoveIndexQuery": {
+        "$ref": "#/components/schemas/DbValue",
+        "description": "Query to remove an existing index on\na given key."
+      },
+      "RemoveQuery": {
+        "$ref": "#/components/schemas/QueryIds",
+        "description": "Query to remove database elements (nodes & edges). It\nis not an error if any of the `ids` do not already exist.\n\nAll properties associated with a given element are also removed.\n\nIf removing nodes all of its incoming and outgoing edges are\nalso removed along with their properties."
+      },
+      "RemoveValuesQuery": {
+        "$ref": "#/components/schemas/SelectValuesQuery",
+        "description": "Query to remove properties from existing elements\nin the database. All of the specified `ids` must\nexist in the database however they do not need to have\nall the listed keys (it is NOT an error if any or all keys\ndo not exist on any of the elements)."
+      },
+      "SearchQuery": {
+        "type": "object",
+        "description": "Query to search for ids in the database following the graph.",
+        "required": [
+          "algorithm",
+          "origin",
+          "destination",
+          "limit",
+          "offset",
+          "order_by",
+          "conditions",
+          "reverse"
+        ],
+        "properties": {
+          "algorithm": {
+            "$ref": "#/components/schemas/SearchQueryAlgorithm",
+            "description": "Search algorithm to be used. Will be bypassed for path\nsearches that unconditionally use A*."
+          },
+          "conditions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/QueryCondition"
+            },
+            "description": "Set of conditions every element must satisfy to be included in the\nresult. Some conditions also influence the search path as well."
+          },
+          "destination": {
+            "$ref": "#/components/schemas/QueryId",
+            "description": "Target element of the path search (if origin is specified)\nor starting element of the reverse search (if origin is not specified)."
+          },
+          "limit": {
+            "type": "integer",
+            "format": "int64",
+            "description": "How many elements maximum to return.",
+            "minimum": 0
+          },
+          "offset": {
+            "type": "integer",
+            "format": "int64",
+            "description": "How many elements that would be returned should be\nskipped in the result.",
+            "minimum": 0
+          },
+          "order_by": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DbKeyOrder"
+            },
+            "description": "Order of the elements in the result. The sorting happens before\n`offset` and `limit` are applied."
+          },
+          "origin": {
+            "$ref": "#/components/schemas/QueryId",
+            "description": "Starting element of the search."
+          },
+          "reverse": {
+            "type": "boolean",
+            "description": "When true and both origin and destination are set,\nthe path search follows edges in reverse (incoming edges).\nSet by the `to().from()` builder order."
+          }
+        }
+      },
+      "SearchQueryAlgorithm": {
+        "type": "string",
+        "description": "Search algorithm to be used",
+        "enum": [
+          "BreadthFirst",
+          "DepthFirst",
+          "Index",
+          "Elements"
+        ]
+      },
+      "SelectAliasesQuery": {
+        "$ref": "#/components/schemas/QueryIds",
+        "description": "Query to select aliases of given ids. All of the ids\nmust exist in the database and have an alias.\n\nThe result will be number of returned aliases and list\nof elements with a single property `String(\"alias\")` holding\nthe value `String`."
+      },
+      "SelectAllAliasesQuery": {
+        "type": "object",
+        "description": "Query to select all aliases in the database.\n\nThe result will be number of returned aliases and list\nof elements with a single property `String(\"alias\")` holding\nthe value `String`."
+      },
+      "SelectAllEdgeCountQuery": {
+        "type": "object",
+        "description": "Query to select number of edges in the database.\n\nThe edge count is returned in `QueryResult::result`."
+      },
+      "SelectEdgeCountQuery": {
+        "type": "object",
+        "description": "Query to select number of edges of given node ids.\nAll of the ids must exist in the database.\n\nThe result is the sum of all selected edge counts.\nThe elements still contain individual\nedge counts in property `String(\"edge_count\")` as `u64`.\nIf any of the element ids are edges their count will be 0.\n\nNOTE: Self-referential edges are counted twice (once as\noutgoing and once as incoming). Therefore the edge count\nmight be greater than number of unique db elements.",
+        "required": [
+          "ids",
+          "from",
+          "to"
+        ],
+        "properties": {
+          "from": {
+            "type": "boolean",
+            "description": "If set to `true` the query will count outgoing edges\nfrom the nodes."
+          },
+          "ids": {
+            "$ref": "#/components/schemas/QueryIds",
+            "description": "Ids of the nodes to select edge count for."
+          },
+          "to": {
+            "type": "boolean",
+            "description": "If set to `true` the query will count incoming edges\nto the nodes."
+          }
+        }
+      },
+      "SelectIndexesQuery": {
+        "type": "object",
+        "description": "Query to select all indexes in the database.\n\nThe result will be number of returned indexes and single element\nwith index 0 and the properties corresponding to the names of the indexes\n(keys) with `u64` values representing number of indexed values in each\nindex."
+      },
+      "SelectKeyCountQuery": {
+        "$ref": "#/components/schemas/QueryIds",
+        "description": "Query to select number of properties (key count) of\ngiven ids. All of the ids must exist in the database.\n\nThe result is the sum of all selected key counts.\nThe elements still contain individual\nkey counts in property `String(\"key_count\")` as `u64`."
+      },
+      "SelectKeysQuery": {
+        "$ref": "#/components/schemas/QueryIds",
+        "description": "Query to select only property keys of given ids. All\nof the ids must exist in the database.\n\nThe result will be number of elements returned and the list\nof elements with all properties except all values will be empty."
+      },
+      "SelectNodeCountQuery": {
+        "type": "object",
+        "description": "Query to select number of nodes in the database.\n\nThe node count is returned in `QueryResult::result`."
+      },
+      "SelectValuesQuery": {
+        "type": "object",
+        "description": "Query to select elements with only certain properties of\ngiven ids. All ids must exist in the database and all\nof them must have the requested properties.\n\nThe result will be number of elements and the\nlist of elements with the requested properties.",
+        "required": [
+          "keys",
+          "ids"
+        ],
+        "properties": {
+          "ids": {
+            "$ref": "#/components/schemas/QueryIds"
+          },
+          "keys": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DbValue"
+            }
+          }
+        }
+      },
+      "ServerDatabase": {
+        "type": "object",
+        "description": "Metadata for a database as seen by the current user.",
+        "required": [
+          "db",
+          "owner",
+          "db_type",
+          "role",
+          "size",
+          "backup",
+          "created"
+        ],
+        "properties": {
+          "backup": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "created": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "db": {
+            "type": "string"
+          },
+          "db_type": {
+            "$ref": "#/components/schemas/DbKind"
+          },
+          "owner": {
+            "type": "string"
+          },
+          "role": {
+            "$ref": "#/components/schemas/DbUserRole"
+          },
+          "size": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          }
+        }
+      },
+      "ServerDatabaseAdminRename": {
+        "type": "object",
+        "required": [
+          "new_owner",
+          "new_db"
+        ],
+        "properties": {
+          "new_db": {
+            "type": "string"
+          },
+          "new_owner": {
+            "type": "string"
+          }
+        }
+      },
+      "ServerDatabaseRename": {
+        "type": "object",
+        "required": [
+          "new_db"
+        ],
+        "properties": {
+          "new_db": {
+            "type": "string"
+          }
+        }
+      },
+      "ServerDatabaseResource": {
+        "type": "object",
+        "required": [
+          "resource"
+        ],
+        "properties": {
+          "resource": {
+            "$ref": "#/components/schemas/DbResource"
+          }
+        }
+      },
+      "SetLogLevelRequest": {
+        "type": "object",
+        "required": [
+          "new_level"
+        ],
+        "properties": {
+          "new_level": {
+            "$ref": "#/components/schemas/LogLevelFilter"
+          }
+        }
+      },
+      "UserCredentials": {
+        "type": "object",
+        "description": "Payload carrying only a password (e.g. for user creation).",
+        "required": [
+          "password"
+        ],
+        "properties": {
+          "password": {
+            "type": "string"
+          }
+        }
+      },
+      "UserLogin": {
+        "type": "object",
+        "description": "Credentials for logging in a user.",
+        "required": [
+          "username",
+          "password"
+        ],
+        "properties": {
+          "password": {
+            "type": "string"
+          },
+          "username": {
+            "type": "string"
+          }
+        }
+      },
+      "UserSession": {
+        "type": "object",
+        "description": "An active login session for a user.",
+        "required": [
+          "session",
+          "agent",
+          "created",
+          "expires_at"
+        ],
+        "properties": {
+          "agent": {
+            "type": "string"
+          },
+          "created": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "expires_at": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "session": {
+            "type": "string"
+          }
+        }
+      },
+      "UserStatus": {
+        "type": "object",
+        "description": "Current status of a user account including active sessions.",
+        "required": [
+          "username",
+          "login",
+          "admin",
+          "sessions"
+        ],
+        "properties": {
+          "admin": {
+            "type": "boolean"
+          },
+          "login": {
+            "type": "boolean"
+          },
+          "sessions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UserSession"
+            }
+          },
+          "username": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "Token": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    }
+  }
+}

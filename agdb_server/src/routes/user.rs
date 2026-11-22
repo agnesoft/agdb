@@ -1,4 +1,5 @@
 use crate::action::change_password::ChangePassword as ChangePasswordAction;
+use crate::action::dashboard_home_set::DashboardHomeSet;
 use crate::cluster::Cluster;
 use crate::config::Config;
 use crate::password;
@@ -14,6 +15,7 @@ use crate::user_id::UserName;
 use crate::user_id::UserToken;
 use agdb::DbId;
 use agdb_api::ChangePassword;
+use agdb_api::DashboardName;
 use agdb_api::UserLogin;
 use agdb_api::UserStatus;
 use axum::Json;
@@ -32,6 +34,13 @@ pub(crate) const LOGOUT_OTHER_SESSIONS: &str = "others";
 #[into_params(parameter_in = Query)]
 pub struct LogoutQuery {
     pub session: Option<String>,
+}
+
+#[derive(Deserialize, IntoParams, ToSchema, agdb::TypeDef)]
+#[into_params(parameter_in = Query)]
+pub struct HomeDashboardParam {
+    pub owner: String,
+    pub name: String,
 }
 
 pub(crate) async fn do_login(
@@ -191,5 +200,88 @@ pub(crate) async fn status(
             login: true,
             sessions,
         }),
+    ))
+}
+
+#[utoipa::path(get,
+    path = "/api/v1/user/home_dashboard",
+    operation_id = "user_home_dashboard",
+    tag = "agdb",
+    security(("Token" = [])),
+    responses(
+         (status = 200, description = "the dashboard the user opens by default (null if none)", body = Option<DashboardName>),
+         (status = 401, description = "unauthorized"),
+    )
+)]
+pub(crate) async fn home_dashboard(
+    user: UserId,
+    State(server_db): State<ServerDb>,
+) -> ServerResponse<(StatusCode, Json<Option<DashboardName>>)> {
+    Ok((
+        StatusCode::OK,
+        Json(server_db.home_dashboard(user.0).await?),
+    ))
+}
+
+#[utoipa::path(put,
+    path = "/api/v1/user/home_dashboard",
+    operation_id = "user_home_dashboard_set",
+    tag = "agdb",
+    security(("Token" = [])),
+    params(HomeDashboardParam),
+    responses(
+         (status = 201, description = "home dashboard set"),
+         (status = 401, description = "unauthorized"),
+         (status = 404, description = "dashboard not found"),
+    )
+)]
+pub(crate) async fn home_dashboard_set(
+    user: UserId,
+    username: UserName,
+    State(cluster): State<Cluster>,
+    State(server_db): State<ServerDb>,
+    request: Query<HomeDashboardParam>,
+) -> ServerResponse<(StatusCode, CommitIndexHeader)> {
+    let _ = server_db
+        .user_dashboard(user.0, &request.owner, &request.name)
+        .await?;
+
+    let (commit_index, _result) = cluster
+        .exec(DashboardHomeSet {
+            user: username.0,
+            dashboard: Some((request.owner.clone(), request.name.clone())),
+        })
+        .await?;
+
+    Ok((
+        StatusCode::CREATED,
+        [("commit-index", commit_index.to_string())],
+    ))
+}
+
+#[utoipa::path(delete,
+    path = "/api/v1/user/home_dashboard",
+    operation_id = "user_home_dashboard_clear",
+    tag = "agdb",
+    security(("Token" = [])),
+    responses(
+         (status = 204, description = "home dashboard cleared"),
+         (status = 401, description = "unauthorized"),
+    )
+)]
+pub(crate) async fn home_dashboard_clear(
+    username: UserName,
+    State(cluster): State<Cluster>,
+) -> ServerResponse<(StatusCode, CommitIndexHeader)> {
+    let (commit_index, _result) = cluster
+        .exec(DashboardHomeSet {
+            user: username.0,
+            dashboard: None,
+        })
+        .await?;
+
+    Ok((
+        StatusCode::NO_CONTENT,
+        [("commit-index", commit_index.to_string())],
     ))
 }

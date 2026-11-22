@@ -6,6 +6,7 @@ type AdminStatus = types.AdminStatus;
 type ClusterStatus = types.ClusterStatus;
 type Dashboard = types.Dashboard;
 type DashboardConfig = types.DashboardConfig;
+type DashboardName = types.DashboardName;
 type DashboardSummary = types.DashboardSummary;
 type DbAudit = types.DbAudit;
 type DbKind = types.DbKind;
@@ -125,6 +126,46 @@ export class AgdbApi<T extends AgdbApiClient> {
 
     base_url(): string {
         return this._base_url;
+    }
+
+    async admin_dashboard_add(owner: string, name: string, config: string): Promise<number> {
+        return (await this.client.post<DashboardConfig, void>(`${this._base_url}/admin/dashboard/${owner}/${name}/add`, { config: config }, this.token))[0];
+    }
+
+    async admin_dashboard_get(owner: string, name: string): Promise<[number, Dashboard]> {
+        return (await this.client.get(`${this._base_url}/admin/dashboard/${owner}/${name}`, this.token));
+    }
+
+    async admin_dashboard_list(): Promise<[number, DashboardSummary[]]> {
+        return (await this.client.get(`${this._base_url}/admin/dashboard/list`, this.token));
+    }
+
+    async admin_dashboard_public(owner: string, name: string, is_public: boolean): Promise<number> {
+        return (await this.client.put<void>(`${this._base_url}/admin/dashboard/${owner}/${name}/public?public=${is_public}`, undefined, this.token));
+    }
+
+    async admin_dashboard_remove(owner: string, name: string): Promise<number> {
+        return (await this.client.delete(`${this._base_url}/admin/dashboard/${owner}/${name}/remove`, this.token));
+    }
+
+    async admin_dashboard_rename(owner: string, name: string, new_name: string): Promise<number> {
+        return (await this.client.post<void, void>(`${this._base_url}/admin/dashboard/${owner}/${name}/rename?new_name=${new_name}`, undefined, this.token))[0];
+    }
+
+    async admin_dashboard_save(owner: string, name: string, config: string): Promise<number> {
+        return (await this.client.put(`${this._base_url}/admin/dashboard/${owner}/${name}/save`, { config: config }, this.token));
+    }
+
+    async admin_dashboard_user_add(owner: string, name: string, username: string, db_role: DbUserRole): Promise<number> {
+        return (await this.client.put<void>(`${this._base_url}/admin/dashboard/${owner}/${name}/user/${username}/add?db_role=${DbUserRole_to_string(db_role)}`, undefined, this.token));
+    }
+
+    async admin_dashboard_user_list(owner: string, name: string): Promise<[number, DbUser[]]> {
+        return (await this.client.get(`${this._base_url}/admin/dashboard/${owner}/${name}/user/list`, this.token));
+    }
+
+    async admin_dashboard_user_remove(owner: string, name: string, username: string): Promise<number> {
+        return (await this.client.delete(`${this._base_url}/admin/dashboard/${owner}/${name}/user/${username}/remove`, this.token));
     }
 
     async admin_db_add(owner: string, db: string, db_type: DbKind): Promise<number> {
@@ -291,28 +332,44 @@ export class AgdbApi<T extends AgdbApiClient> {
         return (await this.client.get(`${this._base_url}/cluster/status`, undefined));
     }
 
-    async dashboard_add(name: string, config: string): Promise<number> {
-        return (await this.client.post<DashboardConfig, void>(`${this._base_url}/dashboard/${name}/add`, { config: config }, this.token))[0];
+    async dashboard_add(owner: string, name: string, config: string): Promise<number> {
+        return (await this.client.post<DashboardConfig, void>(`${this._base_url}/dashboard/${owner}/${name}/add`, { config: config }, this.token))[0];
     }
 
-    async dashboard_get(name: string): Promise<[number, Dashboard]> {
-        return (await this.client.get(`${this._base_url}/dashboard/${name}`, this.token));
+    async dashboard_get(owner: string, name: string): Promise<[number, Dashboard]> {
+        return (await this.client.get(`${this._base_url}/dashboard/${owner}/${name}`, this.token));
     }
 
     async dashboard_list(): Promise<[number, DashboardSummary[]]> {
         return (await this.client.get(`${this._base_url}/dashboard/list`, this.token));
     }
 
-    async dashboard_remove(name: string): Promise<number> {
-        return (await this.client.delete(`${this._base_url}/dashboard/${name}/remove`, this.token));
+    async dashboard_public(owner: string, name: string, is_public: boolean): Promise<number> {
+        return (await this.client.put<void>(`${this._base_url}/dashboard/${owner}/${name}/public?public=${is_public}`, undefined, this.token));
     }
 
-    async dashboard_rename(name: string, new_name: string): Promise<number> {
-        return (await this.client.post<void, void>(`${this._base_url}/dashboard/${name}/rename?new_name=${new_name}`, undefined, this.token))[0];
+    async dashboard_remove(owner: string, name: string): Promise<number> {
+        return (await this.client.delete(`${this._base_url}/dashboard/${owner}/${name}/remove`, this.token));
     }
 
-    async dashboard_save(name: string, config: string): Promise<number> {
-        return (await this.client.put(`${this._base_url}/dashboard/${name}/save`, { config: config }, this.token));
+    async dashboard_rename(owner: string, name: string, new_name: string): Promise<number> {
+        return (await this.client.post<void, void>(`${this._base_url}/dashboard/${owner}/${name}/rename?new_name=${new_name}`, undefined, this.token))[0];
+    }
+
+    async dashboard_save(owner: string, name: string, config: string): Promise<number> {
+        return (await this.client.put(`${this._base_url}/dashboard/${owner}/${name}/save`, { config: config }, this.token));
+    }
+
+    async dashboard_user_add(owner: string, name: string, username: string, db_role: DbUserRole): Promise<number> {
+        return (await this.client.put<void>(`${this._base_url}/dashboard/${owner}/${name}/user/${username}/add?db_role=${DbUserRole_to_string(db_role)}`, undefined, this.token));
+    }
+
+    async dashboard_user_list(owner: string, name: string): Promise<[number, DbUser[]]> {
+        return (await this.client.get(`${this._base_url}/dashboard/${owner}/${name}/user/list`, this.token));
+    }
+
+    async dashboard_user_remove(owner: string, name: string, username: string): Promise<number> {
+        return (await this.client.delete(`${this._base_url}/dashboard/${owner}/${name}/user/${username}/remove`, this.token));
     }
 
     async db_add(owner: string, db: string, db_type: DbKind): Promise<number> {
@@ -432,6 +489,18 @@ export class AgdbApi<T extends AgdbApiClient> {
 
     async user_change_password(old_password: string, new_password: string): Promise<number> {
         return (await this.client.put(`${this._base_url}/user/change_password`, { password: old_password, new_password: new_password }, this.token));
+    }
+
+    async user_home_dashboard(): Promise<[number, DashboardName | undefined]> {
+        return (await this.client.get(`${this._base_url}/user/home_dashboard`, this.token));
+    }
+
+    async user_home_dashboard_clear(): Promise<number> {
+        return (await this.client.delete(`${this._base_url}/user/home_dashboard`, this.token));
+    }
+
+    async user_home_dashboard_set(owner: string, name: string): Promise<number> {
+        return (await this.client.put<void>(`${this._base_url}/user/home_dashboard?owner=${owner}&name=${name}`, undefined, this.token));
     }
 
     async user_status(): Promise<[number, UserStatus]> {

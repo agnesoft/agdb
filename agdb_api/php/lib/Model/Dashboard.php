@@ -35,7 +35,7 @@ use \Agnesoft\AgdbApi\ObjectSerializer;
  * Dashboard Class Doc Comment
  *
  * @category Class
- * @description A dashboard owned by a user. The &#x60;config&#x60; is an opaque document (JSON) interpreted by the client (e.g. agdb_studio).
+ * @description A dashboard owned by a user and possibly shared with others. The &#x60;config&#x60; is an opaque document (JSON) interpreted by the client (e.g. agdb_studio). The &#x60;role&#x60; is the current user&#39;s role on the dashboard.
  * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
@@ -60,6 +60,8 @@ class Dashboard implements ModelInterface, ArrayAccess, \JsonSerializable
     protected static $openAPITypes = [
         'config' => 'string',
         'name' => 'string',
+        'owner' => 'string',
+        'role' => '\Agnesoft\AgdbApi\Model\DbUserRole',
         'updated' => 'int'
     ];
 
@@ -73,6 +75,8 @@ class Dashboard implements ModelInterface, ArrayAccess, \JsonSerializable
     protected static $openAPIFormats = [
         'config' => null,
         'name' => null,
+        'owner' => null,
+        'role' => null,
         'updated' => 'int64'
     ];
 
@@ -84,6 +88,8 @@ class Dashboard implements ModelInterface, ArrayAccess, \JsonSerializable
     protected static array $openAPINullables = [
         'config' => false,
         'name' => false,
+        'owner' => false,
+        'role' => false,
         'updated' => false
     ];
 
@@ -175,6 +181,8 @@ class Dashboard implements ModelInterface, ArrayAccess, \JsonSerializable
     protected static $attributeMap = [
         'config' => 'config',
         'name' => 'name',
+        'owner' => 'owner',
+        'role' => 'role',
         'updated' => 'updated'
     ];
 
@@ -186,6 +194,8 @@ class Dashboard implements ModelInterface, ArrayAccess, \JsonSerializable
     protected static $setters = [
         'config' => 'setConfig',
         'name' => 'setName',
+        'owner' => 'setOwner',
+        'role' => 'setRole',
         'updated' => 'setUpdated'
     ];
 
@@ -197,6 +207,8 @@ class Dashboard implements ModelInterface, ArrayAccess, \JsonSerializable
     protected static $getters = [
         'config' => 'getConfig',
         'name' => 'getName',
+        'owner' => 'getOwner',
+        'role' => 'getRole',
         'updated' => 'getUpdated'
     ];
 
@@ -259,6 +271,8 @@ class Dashboard implements ModelInterface, ArrayAccess, \JsonSerializable
     {
         $this->setIfExists('config', $data ?? [], null);
         $this->setIfExists('name', $data ?? [], null);
+        $this->setIfExists('owner', $data ?? [], null);
+        $this->setIfExists('role', $data ?? [], null);
         $this->setIfExists('updated', $data ?? [], null);
     }
 
@@ -294,6 +308,12 @@ class Dashboard implements ModelInterface, ArrayAccess, \JsonSerializable
         }
         if ($this->container['name'] === null) {
             $invalidProperties[] = "'name' can't be null";
+        }
+        if ($this->container['owner'] === null) {
+            $invalidProperties[] = "'owner' can't be null";
+        }
+        if ($this->container['role'] === null) {
+            $invalidProperties[] = "'role' can't be null";
         }
         if ($this->container['updated'] === null) {
             $invalidProperties[] = "'updated' can't be null";
@@ -367,6 +387,60 @@ class Dashboard implements ModelInterface, ArrayAccess, \JsonSerializable
             throw new \InvalidArgumentException('non-nullable name cannot be null');
         }
         $this->container['name'] = $name;
+
+        return $this;
+    }
+
+    /**
+     * Gets owner
+     *
+     * @return string
+     */
+    public function getOwner()
+    {
+        return $this->container['owner'];
+    }
+
+    /**
+     * Sets owner
+     *
+     * @param string $owner owner
+     *
+     * @return self
+     */
+    public function setOwner($owner)
+    {
+        if (is_null($owner)) {
+            throw new \InvalidArgumentException('non-nullable owner cannot be null');
+        }
+        $this->container['owner'] = $owner;
+
+        return $this;
+    }
+
+    /**
+     * Gets role
+     *
+     * @return \Agnesoft\AgdbApi\Model\DbUserRole
+     */
+    public function getRole()
+    {
+        return $this->container['role'];
+    }
+
+    /**
+     * Sets role
+     *
+     * @param \Agnesoft\AgdbApi\Model\DbUserRole $role role
+     *
+     * @return self
+     */
+    public function setRole($role)
+    {
+        if (is_null($role)) {
+            throw new \InvalidArgumentException('non-nullable role cannot be null');
+        }
+        $this->container['role'] = $role;
 
         return $this;
     }

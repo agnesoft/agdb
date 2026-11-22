@@ -35,7 +35,7 @@ use \Agnesoft\AgdbApi\ObjectSerializer;
  * DashboardSummary Class Doc Comment
  *
  * @category Class
- * @description Dashboard listing entry (without the config).
+ * @description Dashboard listing entry (without the config) with the current user&#39;s role.
  * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
@@ -59,6 +59,8 @@ class DashboardSummary implements ModelInterface, ArrayAccess, \JsonSerializable
      */
     protected static $openAPITypes = [
         'name' => 'string',
+        'owner' => 'string',
+        'role' => '\Agnesoft\AgdbApi\Model\DbUserRole',
         'updated' => 'int'
     ];
 
@@ -71,6 +73,8 @@ class DashboardSummary implements ModelInterface, ArrayAccess, \JsonSerializable
      */
     protected static $openAPIFormats = [
         'name' => null,
+        'owner' => null,
+        'role' => null,
         'updated' => 'int64'
     ];
 
@@ -81,6 +85,8 @@ class DashboardSummary implements ModelInterface, ArrayAccess, \JsonSerializable
      */
     protected static array $openAPINullables = [
         'name' => false,
+        'owner' => false,
+        'role' => false,
         'updated' => false
     ];
 
@@ -171,6 +177,8 @@ class DashboardSummary implements ModelInterface, ArrayAccess, \JsonSerializable
      */
     protected static $attributeMap = [
         'name' => 'name',
+        'owner' => 'owner',
+        'role' => 'role',
         'updated' => 'updated'
     ];
 
@@ -181,6 +189,8 @@ class DashboardSummary implements ModelInterface, ArrayAccess, \JsonSerializable
      */
     protected static $setters = [
         'name' => 'setName',
+        'owner' => 'setOwner',
+        'role' => 'setRole',
         'updated' => 'setUpdated'
     ];
 
@@ -191,6 +201,8 @@ class DashboardSummary implements ModelInterface, ArrayAccess, \JsonSerializable
      */
     protected static $getters = [
         'name' => 'getName',
+        'owner' => 'getOwner',
+        'role' => 'getRole',
         'updated' => 'getUpdated'
     ];
 
@@ -252,6 +264,8 @@ class DashboardSummary implements ModelInterface, ArrayAccess, \JsonSerializable
     public function __construct(?array $data = null)
     {
         $this->setIfExists('name', $data ?? [], null);
+        $this->setIfExists('owner', $data ?? [], null);
+        $this->setIfExists('role', $data ?? [], null);
         $this->setIfExists('updated', $data ?? [], null);
     }
 
@@ -284,6 +298,12 @@ class DashboardSummary implements ModelInterface, ArrayAccess, \JsonSerializable
 
         if ($this->container['name'] === null) {
             $invalidProperties[] = "'name' can't be null";
+        }
+        if ($this->container['owner'] === null) {
+            $invalidProperties[] = "'owner' can't be null";
+        }
+        if ($this->container['role'] === null) {
+            $invalidProperties[] = "'role' can't be null";
         }
         if ($this->container['updated'] === null) {
             $invalidProperties[] = "'updated' can't be null";
@@ -330,6 +350,60 @@ class DashboardSummary implements ModelInterface, ArrayAccess, \JsonSerializable
             throw new \InvalidArgumentException('non-nullable name cannot be null');
         }
         $this->container['name'] = $name;
+
+        return $this;
+    }
+
+    /**
+     * Gets owner
+     *
+     * @return string
+     */
+    public function getOwner()
+    {
+        return $this->container['owner'];
+    }
+
+    /**
+     * Sets owner
+     *
+     * @param string $owner owner
+     *
+     * @return self
+     */
+    public function setOwner($owner)
+    {
+        if (is_null($owner)) {
+            throw new \InvalidArgumentException('non-nullable owner cannot be null');
+        }
+        $this->container['owner'] = $owner;
+
+        return $this;
+    }
+
+    /**
+     * Gets role
+     *
+     * @return \Agnesoft\AgdbApi\Model\DbUserRole
+     */
+    public function getRole()
+    {
+        return $this->container['role'];
+    }
+
+    /**
+     * Sets role
+     *
+     * @param \Agnesoft\AgdbApi\Model\DbUserRole $role role
+     *
+     * @return self
+     */
+    public function setRole($role)
+    {
+        if (is_null($role)) {
+            throw new \InvalidArgumentException('non-nullable role cannot be null');
+        }
+        $this->container['role'] = $role;
 
         return $this;
     }

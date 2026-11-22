@@ -1,6 +1,8 @@
-import { ref } from "vue";
+import { computed, ref } from "vue";
 import { checkClient, client } from "@agdb-studio/api/src/api";
-import type { DashboardSummary } from "@agnesoft/agdb_api";
+import type { DashboardSummary, DbUserRole } from "@agnesoft/agdb_api";
+import { useAccount } from "@agdb-studio/auth/src/account";
+import { useAdmin } from "@agdb-studio/router/src/admin";
 import type {
   DashboardDocument,
   Widget,
@@ -17,13 +19,48 @@ import {
   serializeDocument,
 } from "../utils/dashboardDocument";
 
-export type OpenDashboard = {
-  name: string;
+/** Dashboards are unique per owner, so both identify one. */
+export type DashboardKey = { owner: string; name: string };
+
+export type OpenDashboard = DashboardKey & {
+  /** The current user's role on the dashboard. */
+  role: DbUserRole;
+  /** Every user can view a public dashboard. */
+  public: boolean;
   document: DashboardDocument;
 };
 
+const { username } = useAccount();
+const { isAdmin, isAdminView } = useAdmin();
+
+/**
+ * In the admin view the server admin manages every user's dashboards through
+ * the admin routes, as the owner would.
+ */
+export const adminMode = (): boolean => isAdminView.value && isAdmin.value;
+
+/** The route of a dashboard's page (the admin one in the admin view). */
+export const dashboardRoute = (key: DashboardKey) => ({
+  name: adminMode() ? "admin-dashboard" : "dashboard",
+  params: { owner: key.owner, name: key.name },
+});
+
 const dashboards = ref<DashboardSummary[]>([]);
+/** Dashboards the current user owns. */
+const mine = computed(() =>
+  dashboards.value.filter((d) => d.owner === username.value),
+);
+/** Dashboards others shared with the current user (public or not). */
+const shared = computed(() =>
+  dashboards.value.filter((d) => d.owner !== username.value && d.member),
+);
+/** Public dashboards the current user has no role on. */
+const publicOnly = computed(() =>
+  dashboards.value.filter((d) => d.owner !== username.value && !d.member),
+);
 const current = ref<OpenDashboard>();
+/** The dashboard the user opens at the start page, if any. */
+const home = ref<DashboardKey>();
 /** The open dashboard has edits that are not saved (yet). */
 const dirty = ref(false);
 /** A save of the open dashboard is running. */
@@ -35,47 +72,94 @@ let edits = 0;
 /** The latest load; responses of earlier loads are dropped. */
 let loadId = 0;
 
+export const sameDashboard = (a?: DashboardKey, b?: DashboardKey): boolean =>
+  !!a && !!b && a.owner === b.owner && a.name === b.name;
+
+/** Write and admin may change the widgets, as `exec_mut` on databases. */
+export const canEdit = (role: DbUserRole): boolean => role !== "read";
+
+/** Only admins share the dashboard with others. */
+export const canShare = (role: DbUserRole): boolean => role === "admin";
+
+/**
+ * Only the owner renames, deletes or publishes the dashboard, as with
+ * databases; in the admin view the server admin acts as every owner.
+ */
+export const isOwner = (key: DashboardKey): boolean =>
+  key.owner === username.value || adminMode();
+
+/** "name" for own dashboards, "owner/name" for others (and in the admin view). */
+export const dashboardLabel = (key: DashboardKey): string =>
+  key.owner === username.value && !adminMode()
+    ? key.name
+    : `${key.owner}/${key.name}`;
+
 const fetchDashboards = async (): Promise<void> => {
   checkClient(client);
-  const response = await client.value.dashboard_list();
+  const response = adminMode()
+    ? await client.value.admin_dashboard_list()
+    : await client.value.dashboard_list();
   dashboards.value = response.data;
+};
+
+const getDashboard = async (key: DashboardKey) => {
+  checkClient(client);
+  const params = { owner: key.owner, name: key.name };
+  return adminMode()
+    ? await client.value.admin_dashboard_get(params)
+    : await client.value.dashboard_get(params);
 };
 
 /**
  * Opens a dashboard. The previous one closes at once, so edits never go to a
  * dashboard other than the one being shown, even if this load fails.
  */
-const loadDashboard = async (name: string): Promise<OpenDashboard> => {
+const loadDashboard = async (key: DashboardKey): Promise<OpenDashboard> => {
   checkClient(client);
   const id = ++loadId;
   current.value = undefined;
   dirty.value = false;
   saveFailed.value = false;
   await settleSaves();
-  const response = await client.value.dashboard_get({ name });
-  const open = { name, document: parseDocument(response.data.config) };
+  const response = await getDashboard(key);
+  const open = {
+    owner: key.owner,
+    name: key.name,
+    role: response.data.role,
+    public: response.data.public,
+    document: parseDocument(response.data.config),
+  };
   if (id === loadId) current.value = open;
   return open;
 };
 
-const createDashboard = async (name: string): Promise<void> => {
+/**
+ * Creates a dashboard owned by the current user or, by the server admin in
+ * the admin view, by `owner`.
+ */
+const createDashboard = async (
+  name: string,
+  owner?: string,
+): Promise<DashboardKey> => {
   checkClient(client);
-  await client.value.dashboard_add(
-    { name },
-    { config: serializeDocument(emptyDocument()) },
-  );
+  const forOwner = adminMode() && owner !== undefined;
+  const key = { owner: forOwner ? owner : (username.value ?? ""), name };
+  const body = { config: serializeDocument(emptyDocument()) };
+  if (forOwner) await client.value.admin_dashboard_add({ ...key }, body);
+  else await client.value.dashboard_add({ ...key }, body);
   await fetchDashboards();
+  return key;
 };
 
 const saveDocument = async (
-  name: string,
+  key: DashboardKey,
   document: DashboardDocument,
 ): Promise<void> => {
   checkClient(client);
-  await client.value.dashboard_save(
-    { name },
-    { config: serializeDocument(document) },
-  );
+  const params = { owner: key.owner, name: key.name };
+  const body = { config: serializeDocument(document) };
+  if (adminMode()) await client.value.admin_dashboard_save(params, body);
+  else await client.value.dashboard_save(params, body);
 };
 
 /** Dashboards to save (again) after the running save. */
@@ -98,7 +182,7 @@ const runSaves = async (): Promise<void> => {
       toSave.delete(open);
       const sent = edits;
       try {
-        await saveDocument(open.name, open.document);
+        await saveDocument(open, open.document);
       } catch {
         // The API error interceptor shows a notification; edits are kept.
         if (current.value === open) saveFailed.value = true;
@@ -140,38 +224,102 @@ const closeDashboard = () => {
   saveFailed.value = false;
 };
 
-const renameDashboard = async (name: string, newName: string) => {
+const renameDashboard = async (key: DashboardKey, newName: string) => {
   // Keeping the name is not a conflict with itself.
-  if (newName === name) return;
+  if (newName === key.name) return;
   checkClient(client);
   // A save landing after the rename would bring the old name back.
   await settleSaves();
-  await client.value.dashboard_rename({ name, new_name: newName });
-  if (current.value?.name === name) current.value.name = newName;
+  const params = { owner: key.owner, name: key.name, new_name: newName };
+  if (adminMode()) await client.value.admin_dashboard_rename(params);
+  else await client.value.dashboard_rename(params);
+  if (current.value && sameDashboard(current.value, key))
+    current.value.name = newName;
+  if (sameDashboard(home.value, key)) home.value = { ...key, name: newName };
   await fetchDashboards();
 };
 
-const removeDashboard = async (name: string) => {
+/** Forgets a dashboard that is gone or no longer accessible. */
+const forget = (key: DashboardKey) => {
+  if (sameDashboard(current.value, key)) closeDashboard();
+  // The server drops the home with the dashboard or the access to it.
+  if (sameDashboard(home.value, key)) home.value = undefined;
+};
+
+const removeDashboard = async (key: DashboardKey) => {
   checkClient(client);
   // A save landing after the removal would create the dashboard again.
-  for (const open of toSave) if (open.name === name) toSave.delete(open);
+  for (const open of toSave) if (sameDashboard(open, key)) toSave.delete(open);
   await settleSaves();
-  await client.value.dashboard_remove({ name });
-  if (current.value?.name === name) closeDashboard();
+  const params = { owner: key.owner, name: key.name };
+  if (adminMode()) await client.value.admin_dashboard_remove(params);
+  else await client.value.dashboard_remove(params);
+  forget(key);
   await fetchDashboards();
+};
+
+/** Makes a dashboard public (viewable by every user) or private. */
+const setPublic = async (key: DashboardKey, isPublic: boolean) => {
+  checkClient(client);
+  const params = { owner: key.owner, name: key.name, public: isPublic };
+  if (adminMode()) await client.value.admin_dashboard_public(params);
+  else await client.value.dashboard_public(params);
+  if (current.value && sameDashboard(current.value, key))
+    current.value.public = isPublic;
+  // Making it private drops it as the home of users without a role on it.
+  await fetchDashboards();
+};
+
+/** Removes the current user's access to a dashboard shared with them. */
+const leaveDashboard = async (key: DashboardKey) => {
+  checkClient(client);
+  // Saves after leaving would be rejected.
+  for (const open of toSave) if (sameDashboard(open, key)) toSave.delete(open);
+  await settleSaves();
+  await client.value.dashboard_user_remove({
+    ...key,
+    username: username.value ?? "",
+  });
+  if (current.value && sameDashboard(current.value, key)) closeDashboard();
+  // A public dashboard stays readable, and so stays the home on the server.
+  await Promise.all([fetchDashboards(), fetchHome()]);
+};
+
+const fetchHome = async (): Promise<DashboardKey | undefined> => {
+  checkClient(client);
+  const response = await client.value.user_home_dashboard();
+  // No home dashboard is `null`.
+  home.value = response.data
+    ? { owner: response.data.owner, name: response.data.name }
+    : undefined;
+  return home.value;
+};
+
+/** Sets the dashboard opened at the start page; `undefined` clears it. */
+const setHome = async (key?: DashboardKey): Promise<void> => {
+  checkClient(client);
+  if (key) {
+    await client.value.user_home_dashboard_set({ ...key });
+    home.value = { owner: key.owner, name: key.name };
+  } else {
+    await client.value.user_home_dashboard_clear();
+    home.value = undefined;
+  }
 };
 
 /**
  * Appends widgets to a saved dashboard in one save, e.g. when pinning queries
  * from the query page (the dashboard page is closed then).
  */
-const appendWidgets = async (name: string, added: Widget[]): Promise<void> => {
-  checkClient(client);
+const appendWidgets = async (
+  key: DashboardKey,
+  added: Widget[],
+): Promise<void> => {
   await settleSaves();
-  const response = await client.value.dashboard_get({ name });
+  const response = await getDashboard(key);
   const document = parseDocument(response.data.config);
   addToDocument(document, added);
-  await saveDocument(name, document);
+  await saveDocument(key, document);
 };
 
 /** Runs an edit of the open dashboard; edits that change something are saved at once. */
@@ -237,7 +385,11 @@ const resizeWidget = (id: string, size: WidgetSize) =>
 
 export const useDashboardStore = () => ({
   dashboards,
+  mine,
+  shared,
+  publicOnly,
   current,
+  home,
   dirty,
   saving,
   saveFailed,
@@ -248,6 +400,10 @@ export const useDashboardStore = () => ({
   settleSaves,
   renameDashboard,
   removeDashboard,
+  setPublic,
+  leaveDashboard,
+  fetchHome,
+  setHome,
   appendWidgets,
   addWidget,
   updateWidget,

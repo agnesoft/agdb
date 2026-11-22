@@ -16,6 +16,537 @@
     }
   ],
   "paths": {
+    "/api/v1/admin/dashboard/list": {
+      "get": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "admin_dashboard_list",
+        "responses": {
+          "200": {
+            "description": "ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DashboardSummary"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/dashboard/{owner}/{name}": {
+      "get": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "admin_dashboard_get",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "dashboard owner user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "name",
+            "in": "path",
+            "description": "dashboard name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Dashboard"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "404": {
+            "description": "dashboard not found"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/dashboard/{owner}/{name}/add": {
+      "post": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "admin_dashboard_add",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "dashboard owner user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "name",
+            "in": "path",
+            "description": "dashboard name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DashboardConfig"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "dashboard added"
+          },
+          "400": {
+            "description": "invalid dashboard name"
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "404": {
+            "description": "user not found"
+          },
+          "409": {
+            "description": "dashboard already exists"
+          },
+          "413": {
+            "description": "dashboard config too large"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/dashboard/{owner}/{name}/public": {
+      "put": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "admin_dashboard_public",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "dashboard owner user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "name",
+            "in": "path",
+            "description": "dashboard name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "public",
+            "in": "query",
+            "description": "Every user can view a public dashboard.",
+            "required": true,
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "dashboard made public / private"
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "404": {
+            "description": "dashboard not found"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/dashboard/{owner}/{name}/remove": {
+      "delete": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "admin_dashboard_remove",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "dashboard owner user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "name",
+            "in": "path",
+            "description": "dashboard name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "dashboard removed"
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "404": {
+            "description": "dashboard not found"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/dashboard/{owner}/{name}/rename": {
+      "post": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "admin_dashboard_rename",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "dashboard owner user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "name",
+            "in": "path",
+            "description": "dashboard name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "new_name",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "dashboard renamed"
+          },
+          "400": {
+            "description": "invalid new dashboard name"
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "404": {
+            "description": "dashboard not found"
+          },
+          "409": {
+            "description": "target dashboard already exists"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/dashboard/{owner}/{name}/save": {
+      "put": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "admin_dashboard_save",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "dashboard owner user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "name",
+            "in": "path",
+            "description": "dashboard name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DashboardConfig"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "dashboard saved"
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "404": {
+            "description": "dashboard not found"
+          },
+          "413": {
+            "description": "dashboard config too large"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/dashboard/{owner}/{name}/user/list": {
+      "get": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "admin_dashboard_user_list",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "dashboard owner user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "name",
+            "in": "path",
+            "description": "dashboard name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DbUser"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "404": {
+            "description": "dashboard not found"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/dashboard/{owner}/{name}/user/{username}/add": {
+      "put": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "admin_dashboard_user_add",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "dashboard owner user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "name",
+            "in": "path",
+            "description": "dashboard name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "username",
+            "in": "path",
+            "description": "user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db_role",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/DbUserRole"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "user added"
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "403": {
+            "description": "cannot change role of dashboard owner"
+          },
+          "404": {
+            "description": "user / dashboard not found"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/dashboard/{owner}/{name}/user/{username}/remove": {
+      "delete": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "admin_dashboard_user_remove",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "dashboard owner user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "name",
+            "in": "path",
+            "description": "dashboard name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "username",
+            "in": "path",
+            "description": "user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "user removed"
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "403": {
+            "description": "cannot remove dashboard owner"
+          },
+          "404": {
+            "description": "user / dashboard not found"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
     "/api/v1/admin/db/list": {
       "get": {
         "tags": [
@@ -1524,13 +2055,22 @@
         ]
       }
     },
-    "/api/v1/dashboard/{name}": {
+    "/api/v1/dashboard/{owner}/{name}": {
       "get": {
         "tags": [
           "agdb"
         ],
         "operationId": "dashboard_get",
         "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "dashboard owner user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
           {
             "name": "name",
             "in": "path",
@@ -1566,13 +2106,22 @@
         ]
       }
     },
-    "/api/v1/dashboard/{name}/add": {
+    "/api/v1/dashboard/{owner}/{name}/add": {
       "post": {
         "tags": [
           "agdb"
         ],
         "operationId": "dashboard_add",
         "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "dashboard owner user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
           {
             "name": "name",
             "in": "path",
@@ -1603,6 +2152,9 @@
           "401": {
             "description": "unauthorized"
           },
+          "403": {
+            "description": "cannot add dashboard to another user"
+          },
           "409": {
             "description": "dashboard already exists"
           },
@@ -1617,13 +2169,78 @@
         ]
       }
     },
-    "/api/v1/dashboard/{name}/remove": {
+    "/api/v1/dashboard/{owner}/{name}/public": {
+      "put": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "dashboard_public",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "dashboard owner user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "name",
+            "in": "path",
+            "description": "dashboard name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "public",
+            "in": "query",
+            "description": "Every user can view a public dashboard.",
+            "required": true,
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "dashboard made public / private"
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "403": {
+            "description": "owner only"
+          },
+          "404": {
+            "description": "dashboard not found"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/dashboard/{owner}/{name}/remove": {
       "delete": {
         "tags": [
           "agdb"
         ],
         "operationId": "dashboard_remove",
         "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "dashboard owner user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
           {
             "name": "name",
             "in": "path",
@@ -1641,6 +2258,9 @@
           "401": {
             "description": "unauthorized"
           },
+          "403": {
+            "description": "owner only"
+          },
           "404": {
             "description": "dashboard not found"
           }
@@ -1652,13 +2272,22 @@
         ]
       }
     },
-    "/api/v1/dashboard/{name}/rename": {
+    "/api/v1/dashboard/{owner}/{name}/rename": {
       "post": {
         "tags": [
           "agdb"
         ],
         "operationId": "dashboard_rename",
         "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "dashboard owner user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
           {
             "name": "name",
             "in": "path",
@@ -1687,6 +2316,9 @@
           "401": {
             "description": "unauthorized"
           },
+          "403": {
+            "description": "owner only"
+          },
           "404": {
             "description": "dashboard not found"
           },
@@ -1701,13 +2333,22 @@
         ]
       }
     },
-    "/api/v1/dashboard/{name}/save": {
+    "/api/v1/dashboard/{owner}/{name}/save": {
       "put": {
         "tags": [
           "agdb"
         ],
         "operationId": "dashboard_save",
         "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "dashboard owner user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
           {
             "name": "name",
             "in": "path",
@@ -1732,14 +2373,194 @@
           "201": {
             "description": "dashboard saved"
           },
-          "400": {
-            "description": "invalid dashboard name"
+          "401": {
+            "description": "unauthorized"
+          },
+          "403": {
+            "description": "write rights required"
+          },
+          "404": {
+            "description": "dashboard not found"
+          },
+          "413": {
+            "description": "dashboard config too large"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/dashboard/{owner}/{name}/user/list": {
+      "get": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "dashboard_user_list",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "dashboard owner user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "name",
+            "in": "path",
+            "description": "dashboard name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DbUser"
+                  }
+                }
+              }
+            }
           },
           "401": {
             "description": "unauthorized"
           },
-          "413": {
-            "description": "dashboard config too large"
+          "403": {
+            "description": "users of a public dashboard are listed to its users only"
+          },
+          "404": {
+            "description": "dashboard not found"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/dashboard/{owner}/{name}/user/{username}/add": {
+      "put": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "dashboard_user_add",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "dashboard owner user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "name",
+            "in": "path",
+            "description": "dashboard name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "username",
+            "in": "path",
+            "description": "user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db_role",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/DbUserRole"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "user added"
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "403": {
+            "description": "user must be a dashboard admin / cannot change role of dashboard owner"
+          },
+          "404": {
+            "description": "user / dashboard not found"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/dashboard/{owner}/{name}/user/{username}/remove": {
+      "delete": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "dashboard_user_remove",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "dashboard owner user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "name",
+            "in": "path",
+            "description": "dashboard name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "username",
+            "in": "path",
+            "description": "user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "user removed"
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "403": {
+            "description": "must be admin / cannot remove dashboard owner"
+          },
+          "404": {
+            "description": "user / dashboard not found"
           }
         },
         "security": [
@@ -2829,6 +3650,100 @@
         ]
       }
     },
+    "/api/v1/user/home_dashboard": {
+      "get": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "user_home_dashboard",
+        "responses": {
+          "200": {
+            "description": "the dashboard the user opens by default (null if none)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/DashboardName"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "user_home_dashboard_set",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "name",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "home dashboard set"
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "404": {
+            "description": "dashboard not found"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "user_home_dashboard_clear",
+        "responses": {
+          "204": {
+            "description": "home dashboard cleared"
+          },
+          "401": {
+            "description": "unauthorized"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
     "/api/v1/user/login": {
       "post": {
         "tags": [
@@ -3338,11 +4253,14 @@
       },
       "Dashboard": {
         "type": "object",
-        "description": "A dashboard owned by a user. The `config` is an opaque document (JSON)\ninterpreted by the client (e.g. agdb_studio).",
+        "description": "A dashboard owned by a user and possibly shared with others. The `config`\nis an opaque document (JSON) interpreted by the client (e.g. agdb_studio).\nThe `role` is the current user's role on the dashboard (read on a public\ndashboard the user has no role on). A `public` dashboard can be viewed by\nevery user.",
         "required": [
+          "owner",
           "name",
           "config",
-          "updated"
+          "updated",
+          "role",
+          "public"
         ],
         "properties": {
           "config": {
@@ -3350,6 +4268,15 @@
           },
           "name": {
             "type": "string"
+          },
+          "owner": {
+            "type": "string"
+          },
+          "public": {
+            "type": "boolean"
+          },
+          "role": {
+            "$ref": "#/components/schemas/DbUserRole"
           },
           "updated": {
             "type": "integer",
@@ -3370,6 +4297,34 @@
           }
         }
       },
+      "DashboardName": {
+        "type": "object",
+        "description": "Identifies a dashboard, e.g. the user's home dashboard.",
+        "required": [
+          "owner",
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "owner": {
+            "type": "string"
+          }
+        }
+      },
+      "DashboardPublicParam": {
+        "type": "object",
+        "required": [
+          "public"
+        ],
+        "properties": {
+          "public": {
+            "type": "boolean",
+            "description": "Every user can view a public dashboard."
+          }
+        }
+      },
       "DashboardRenameParam": {
         "type": "object",
         "required": [
@@ -3383,14 +4338,30 @@
       },
       "DashboardSummary": {
         "type": "object",
-        "description": "Dashboard listing entry (without the config).",
+        "description": "Dashboard listing entry (without the config) with the current user's role.\n`member` is false for a public dashboard listed only because it is public\n(the user has no role on it and `role` is read).",
         "required": [
+          "owner",
           "name",
-          "updated"
+          "updated",
+          "role",
+          "public",
+          "member"
         ],
         "properties": {
+          "member": {
+            "type": "boolean"
+          },
           "name": {
             "type": "string"
+          },
+          "owner": {
+            "type": "string"
+          },
+          "public": {
+            "type": "boolean"
+          },
+          "role": {
+            "$ref": "#/components/schemas/DbUserRole"
           },
           "updated": {
             "type": "integer",
@@ -3544,7 +4515,7 @@
       },
       "DbUserRole": {
         "type": "string",
-        "description": "Role a user may hold on a database.",
+        "description": "Role a user may hold on a database or a dashboard.",
         "enum": [
           "admin",
           "write",
@@ -3729,6 +4700,21 @@
           }
         ],
         "description": "Database value is a strongly typed value.\n\nIt is an enum of limited number supported types\nthat are universal across all platforms\nand programming languages.\n\nThe value is constructible from large number of\nraw types or associated types (e.g. i32, &str, etc.).\nGetting the raw value back as string can be done\nwith `to_string()` but otherwise requires a `match`."
+      },
+      "HomeDashboardParam": {
+        "type": "object",
+        "required": [
+          "owner",
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "owner": {
+            "type": "string"
+          }
+        }
       },
       "InsertAliasesQuery": {
         "type": "object",

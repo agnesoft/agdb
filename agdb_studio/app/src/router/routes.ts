@@ -1,4 +1,5 @@
 import type { RouteRecordRaw } from "vue-router";
+import { homeRedirect } from "@agdb-studio/dashboard/src/utils/homeRedirect";
 
 export const createRoutes = (): RouteRecordRaw[] => {
   return [
@@ -14,8 +15,9 @@ export const createRoutes = (): RouteRecordRaw[] => {
         {
           path: "",
           name: "home",
-          // component: () => import("@/views/HomeView.vue"),
-          redirect: { name: "db" },
+          // Always redirects: to the home dashboard, or to the databases.
+          beforeEnter: homeRedirect,
+          component: () => import("@/views/DbView.vue"),
         },
         {
           path: "db",
@@ -33,7 +35,7 @@ export const createRoutes = (): RouteRecordRaw[] => {
           component: () => import("@/views/DashboardsView.vue"),
         },
         {
-          path: "dashboards/:name",
+          path: "dashboards/:owner/:name",
           name: "dashboard",
           component: () => import("@/views/DashboardView.vue"),
         },
@@ -60,6 +62,16 @@ export const createRoutes = (): RouteRecordRaw[] => {
               path: "query/:owner/:db",
               name: "admin-query",
               component: () => import("@/views/QueryView.vue"),
+            },
+            {
+              path: "dashboards",
+              name: "admin-dashboards",
+              component: () => import("@/views/DashboardsView.vue"),
+            },
+            {
+              path: "dashboards/:owner/:name",
+              name: "admin-dashboard",
+              component: () => import("@/views/DashboardView.vue"),
             },
           ],
         },

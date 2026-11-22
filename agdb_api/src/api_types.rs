@@ -98,7 +98,7 @@ pub struct DbUser {
     Ord,
     DbSerialize,
 )]
-/// Role a user may hold on a database.
+/// Role a user may hold on a database or a dashboard.
 #[cfg_attr(feature = "api", derive(agdb::TypeDef))]
 #[serde(rename_all = "snake_case")]
 pub enum DbUserRole {
@@ -116,14 +116,20 @@ pub struct ChangePassword {
     pub new_password: String,
 }
 
-/// A dashboard owned by a user. The `config` is an opaque document (JSON)
-/// interpreted by the client (e.g. agdb_studio).
+/// A dashboard owned by a user and possibly shared with others. The `config`
+/// is an opaque document (JSON) interpreted by the client (e.g. agdb_studio).
+/// The `role` is the current user's role on the dashboard (read on a public
+/// dashboard the user has no role on). A `public` dashboard can be viewed by
+/// every user.
 #[derive(Debug, Default, Clone, Deserialize, Serialize, ToSchema, PartialEq, Eq)]
 #[cfg_attr(feature = "api", derive(agdb::TypeDef))]
 pub struct Dashboard {
+    pub owner: String,
     pub name: String,
     pub config: String,
     pub updated: u64,
+    pub role: DbUserRole,
+    pub public: bool,
 }
 
 /// Request body for adding or saving a dashboard.
@@ -133,12 +139,26 @@ pub struct DashboardConfig {
     pub config: String,
 }
 
-/// Dashboard listing entry (without the config).
-#[derive(Debug, Default, Clone, Deserialize, Serialize, ToSchema, PartialEq, Eq, DbType)]
+/// Dashboard listing entry (without the config) with the current user's role.
+/// `member` is false for a public dashboard listed only because it is public
+/// (the user has no role on it and `role` is read).
+#[derive(Debug, Default, Clone, Deserialize, Serialize, ToSchema, PartialEq, Eq)]
 #[cfg_attr(feature = "api", derive(agdb::TypeDef))]
 pub struct DashboardSummary {
+    pub owner: String,
     pub name: String,
     pub updated: u64,
+    pub role: DbUserRole,
+    pub public: bool,
+    pub member: bool,
+}
+
+/// Identifies a dashboard, e.g. the user's home dashboard.
+#[derive(Debug, Default, Clone, Deserialize, Serialize, ToSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "api", derive(agdb::TypeDef))]
+pub struct DashboardName {
+    pub owner: String,
+    pub name: String,
 }
 
 /// Status of a single node in the server cluster.

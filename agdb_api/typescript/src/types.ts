@@ -153,13 +153,19 @@ export type CountComparison =
     | { NotEqual: number };
 
 /**
- * A dashboard owned by a user. The `config` is an opaque document (JSON)
- * interpreted by the client (e.g. agdb_studio).
+ * A dashboard owned by a user and possibly shared with others. The `config`
+ * is an opaque document (JSON) interpreted by the client (e.g. agdb_studio).
+ * The `role` is the current user's role on the dashboard (read on a public
+ * dashboard the user has no role on). A `public` dashboard can be viewed by
+ * every user.
  */
 export interface Dashboard {
+    owner: string;
     name: string;
     config: string;
     updated: number;
+    role: DbUserRole;
+    public: boolean;
 }
 
 /** Request body for adding or saving a dashboard. */
@@ -167,10 +173,24 @@ export interface DashboardConfig {
     config: string;
 }
 
-/** Dashboard listing entry (without the config). */
+/** Identifies a dashboard, e.g. the user's home dashboard. */
+export interface DashboardName {
+    owner: string;
+    name: string;
+}
+
+/**
+ * Dashboard listing entry (without the config) with the current user's role.
+ * `member` is false for a public dashboard listed only because it is public
+ * (the user has no role on it and `role` is read).
+ */
 export interface DashboardSummary {
+    owner: string;
     name: string;
     updated: number;
+    role: DbUserRole;
+    public: boolean;
+    member: boolean;
 }
 
 /** Complete audit log for a database. */
@@ -248,7 +268,7 @@ export interface DbUser {
     role: DbUserRole;
 }
 
-/** Role a user may hold on a database. */
+/** Role a user may hold on a database or a dashboard. */
 export type DbUserRole =
     | "admin"
     | "write"

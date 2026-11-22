@@ -348,12 +348,18 @@ declare namespace Components {
             NotEqual: number; // int64
         };
         /**
-         * A dashboard owned by a user. The `config` is an opaque document (JSON)
-         * interpreted by the client (e.g. agdb_studio).
+         * A dashboard owned by a user and possibly shared with others. The `config`
+         * is an opaque document (JSON) interpreted by the client (e.g. agdb_studio).
+         * The `role` is the current user's role on the dashboard (read on a public
+         * dashboard the user has no role on). A `public` dashboard can be viewed by
+         * every user.
          */
         export interface Dashboard {
             config: string;
             name: string;
+            owner: string;
+            public: boolean;
+            role: /* Role a user may hold on a database or a dashboard. */ DbUserRole;
             updated: number; // int64
         }
         /**
@@ -362,14 +368,33 @@ declare namespace Components {
         export interface DashboardConfig {
             config: string;
         }
+        /**
+         * Identifies a dashboard, e.g. the user's home dashboard.
+         */
+        export interface DashboardName {
+            name: string;
+            owner: string;
+        }
+        export interface DashboardPublicParam {
+            /**
+             * Every user can view a public dashboard.
+             */
+            public: boolean;
+        }
         export interface DashboardRenameParam {
             new_name: string;
         }
         /**
-         * Dashboard listing entry (without the config).
+         * Dashboard listing entry (without the config) with the current user's role.
+         * `member` is false for a public dashboard listed only because it is public
+         * (the user has no role on it and `role` is read).
          */
         export interface DashboardSummary {
+            member: boolean;
             name: string;
+            owner: string;
+            public: boolean;
+            role: /* Role a user may hold on a database or a dashboard. */ DbUserRole;
             updated: number; // int64
         }
         /**
@@ -533,15 +558,15 @@ declare namespace Components {
          * A user's access entry for a database.
          */
         export interface DbUser {
-            role: /* Role a user may hold on a database. */ DbUserRole;
+            role: /* Role a user may hold on a database or a dashboard. */ DbUserRole;
             username: string;
         }
         /**
-         * Role a user may hold on a database.
+         * Role a user may hold on a database or a dashboard.
          */
         export type DbUserRole = "admin" | "write" | "read";
         export interface DbUserRoleParam {
-            db_role: /* Role a user may hold on a database. */ DbUserRole;
+            db_role: /* Role a user may hold on a database or a dashboard. */ DbUserRole;
         }
         /**
          * Database value is a strongly typed value.
@@ -1041,6 +1066,10 @@ declare namespace Components {
              */
             QueryCondition[];
         };
+        export interface HomeDashboardParam {
+            name: string;
+            owner: string;
+        }
         /**
          * Logical operator for query conditions
          */
@@ -1648,7 +1677,7 @@ declare namespace Components {
             db: string;
             db_type: /* Database storage backend kind. */ DbKind;
             owner: string;
-            role: /* Role a user may hold on a database. */ DbUserRole;
+            role: /* Role a user may hold on a database or a dashboard. */ DbUserRole;
             size: number; // int64
         }
         export interface ServerDatabaseAdminRename {
@@ -1698,6 +1727,219 @@ declare namespace Components {
     }
 }
 declare namespace Paths {
+    namespace AdminDashboardAdd {
+        namespace Parameters {
+            export type Name = string;
+            export type Owner = string;
+        }
+        export interface PathParameters {
+            owner: Parameters.Owner;
+            name: Parameters.Name;
+        }
+        export type RequestBody = /* Request body for adding or saving a dashboard. */ Components.Schemas.DashboardConfig;
+        namespace Responses {
+            export interface $201 {
+            }
+            export interface $400 {
+            }
+            export interface $401 {
+            }
+            export interface $404 {
+            }
+            export interface $409 {
+            }
+            export interface $413 {
+            }
+        }
+    }
+    namespace AdminDashboardGet {
+        namespace Parameters {
+            export type Name = string;
+            export type Owner = string;
+        }
+        export interface PathParameters {
+            owner: Parameters.Owner;
+            name: Parameters.Name;
+        }
+        namespace Responses {
+            export type $200 = /**
+             * A dashboard owned by a user and possibly shared with others. The `config`
+             * is an opaque document (JSON) interpreted by the client (e.g. agdb_studio).
+             * The `role` is the current user's role on the dashboard (read on a public
+             * dashboard the user has no role on). A `public` dashboard can be viewed by
+             * every user.
+             */
+            Components.Schemas.Dashboard;
+            export interface $401 {
+            }
+            export interface $404 {
+            }
+        }
+    }
+    namespace AdminDashboardList {
+        namespace Responses {
+            export type $200 = /**
+             * Dashboard listing entry (without the config) with the current user's role.
+             * `member` is false for a public dashboard listed only because it is public
+             * (the user has no role on it and `role` is read).
+             */
+            Components.Schemas.DashboardSummary[];
+            export interface $401 {
+            }
+        }
+    }
+    namespace AdminDashboardPublic {
+        namespace Parameters {
+            export type Name = string;
+            export type Owner = string;
+            export type Public = boolean;
+        }
+        export interface PathParameters {
+            owner: Parameters.Owner;
+            name: Parameters.Name;
+        }
+        export interface QueryParameters {
+            public: Parameters.Public;
+        }
+        namespace Responses {
+            export interface $201 {
+            }
+            export interface $401 {
+            }
+            export interface $404 {
+            }
+        }
+    }
+    namespace AdminDashboardRemove {
+        namespace Parameters {
+            export type Name = string;
+            export type Owner = string;
+        }
+        export interface PathParameters {
+            owner: Parameters.Owner;
+            name: Parameters.Name;
+        }
+        namespace Responses {
+            export interface $204 {
+            }
+            export interface $401 {
+            }
+            export interface $404 {
+            }
+        }
+    }
+    namespace AdminDashboardRename {
+        namespace Parameters {
+            export type Name = string;
+            export type NewName = string;
+            export type Owner = string;
+        }
+        export interface PathParameters {
+            owner: Parameters.Owner;
+            name: Parameters.Name;
+        }
+        export interface QueryParameters {
+            new_name: Parameters.NewName;
+        }
+        namespace Responses {
+            export interface $201 {
+            }
+            export interface $400 {
+            }
+            export interface $401 {
+            }
+            export interface $404 {
+            }
+            export interface $409 {
+            }
+        }
+    }
+    namespace AdminDashboardSave {
+        namespace Parameters {
+            export type Name = string;
+            export type Owner = string;
+        }
+        export interface PathParameters {
+            owner: Parameters.Owner;
+            name: Parameters.Name;
+        }
+        export type RequestBody = /* Request body for adding or saving a dashboard. */ Components.Schemas.DashboardConfig;
+        namespace Responses {
+            export interface $201 {
+            }
+            export interface $401 {
+            }
+            export interface $404 {
+            }
+            export interface $413 {
+            }
+        }
+    }
+    namespace AdminDashboardUserAdd {
+        namespace Parameters {
+            export type DbRole = /* Role a user may hold on a database or a dashboard. */ Components.Schemas.DbUserRole;
+            export type Name = string;
+            export type Owner = string;
+            export type Username = string;
+        }
+        export interface PathParameters {
+            owner: Parameters.Owner;
+            name: Parameters.Name;
+            username: Parameters.Username;
+        }
+        export interface QueryParameters {
+            db_role: Parameters.DbRole;
+        }
+        namespace Responses {
+            export interface $201 {
+            }
+            export interface $401 {
+            }
+            export interface $403 {
+            }
+            export interface $404 {
+            }
+        }
+    }
+    namespace AdminDashboardUserList {
+        namespace Parameters {
+            export type Name = string;
+            export type Owner = string;
+        }
+        export interface PathParameters {
+            owner: Parameters.Owner;
+            name: Parameters.Name;
+        }
+        namespace Responses {
+            export type $200 = /* A user's access entry for a database. */ Components.Schemas.DbUser[];
+            export interface $401 {
+            }
+            export interface $404 {
+            }
+        }
+    }
+    namespace AdminDashboardUserRemove {
+        namespace Parameters {
+            export type Name = string;
+            export type Owner = string;
+            export type Username = string;
+        }
+        export interface PathParameters {
+            owner: Parameters.Owner;
+            name: Parameters.Name;
+            username: Parameters.Username;
+        }
+        namespace Responses {
+            export interface $204 {
+            }
+            export interface $401 {
+            }
+            export interface $403 {
+            }
+            export interface $404 {
+            }
+        }
+    }
     namespace AdminDbAdd {
         namespace Parameters {
             export type Db = string;
@@ -2015,7 +2257,7 @@ declare namespace Paths {
     namespace AdminDbUserAdd {
         namespace Parameters {
             export type Db = string;
-            export type DbRole = /* Role a user may hold on a database. */ Components.Schemas.DbUserRole;
+            export type DbRole = /* Role a user may hold on a database or a dashboard. */ Components.Schemas.DbUserRole;
             export type Owner = string;
             export type Username = string;
         }
@@ -2238,8 +2480,10 @@ declare namespace Paths {
     namespace DashboardAdd {
         namespace Parameters {
             export type Name = string;
+            export type Owner = string;
         }
         export interface PathParameters {
+            owner: Parameters.Owner;
             name: Parameters.Name;
         }
         export type RequestBody = /* Request body for adding or saving a dashboard. */ Components.Schemas.DashboardConfig;
@@ -2250,6 +2494,8 @@ declare namespace Paths {
             }
             export interface $401 {
             }
+            export interface $403 {
+            }
             export interface $409 {
             }
             export interface $413 {
@@ -2259,14 +2505,19 @@ declare namespace Paths {
     namespace DashboardGet {
         namespace Parameters {
             export type Name = string;
+            export type Owner = string;
         }
         export interface PathParameters {
+            owner: Parameters.Owner;
             name: Parameters.Name;
         }
         namespace Responses {
             export type $200 = /**
-             * A dashboard owned by a user. The `config` is an opaque document (JSON)
-             * interpreted by the client (e.g. agdb_studio).
+             * A dashboard owned by a user and possibly shared with others. The `config`
+             * is an opaque document (JSON) interpreted by the client (e.g. agdb_studio).
+             * The `role` is the current user's role on the dashboard (read on a public
+             * dashboard the user has no role on). A `public` dashboard can be viewed by
+             * every user.
              */
             Components.Schemas.Dashboard;
             export interface $401 {
@@ -2277,22 +2528,55 @@ declare namespace Paths {
     }
     namespace DashboardList {
         namespace Responses {
-            export type $200 = /* Dashboard listing entry (without the config). */ Components.Schemas.DashboardSummary[];
+            export type $200 = /**
+             * Dashboard listing entry (without the config) with the current user's role.
+             * `member` is false for a public dashboard listed only because it is public
+             * (the user has no role on it and `role` is read).
+             */
+            Components.Schemas.DashboardSummary[];
             export interface $401 {
+            }
+        }
+    }
+    namespace DashboardPublic {
+        namespace Parameters {
+            export type Name = string;
+            export type Owner = string;
+            export type Public = boolean;
+        }
+        export interface PathParameters {
+            owner: Parameters.Owner;
+            name: Parameters.Name;
+        }
+        export interface QueryParameters {
+            public: Parameters.Public;
+        }
+        namespace Responses {
+            export interface $201 {
+            }
+            export interface $401 {
+            }
+            export interface $403 {
+            }
+            export interface $404 {
             }
         }
     }
     namespace DashboardRemove {
         namespace Parameters {
             export type Name = string;
+            export type Owner = string;
         }
         export interface PathParameters {
+            owner: Parameters.Owner;
             name: Parameters.Name;
         }
         namespace Responses {
             export interface $204 {
             }
             export interface $401 {
+            }
+            export interface $403 {
             }
             export interface $404 {
             }
@@ -2302,8 +2586,10 @@ declare namespace Paths {
         namespace Parameters {
             export type Name = string;
             export type NewName = string;
+            export type Owner = string;
         }
         export interface PathParameters {
+            owner: Parameters.Owner;
             name: Parameters.Name;
         }
         export interface QueryParameters {
@@ -2316,6 +2602,8 @@ declare namespace Paths {
             }
             export interface $401 {
             }
+            export interface $403 {
+            }
             export interface $404 {
             }
             export interface $409 {
@@ -2325,19 +2613,90 @@ declare namespace Paths {
     namespace DashboardSave {
         namespace Parameters {
             export type Name = string;
+            export type Owner = string;
         }
         export interface PathParameters {
+            owner: Parameters.Owner;
             name: Parameters.Name;
         }
         export type RequestBody = /* Request body for adding or saving a dashboard. */ Components.Schemas.DashboardConfig;
         namespace Responses {
             export interface $201 {
             }
-            export interface $400 {
+            export interface $401 {
+            }
+            export interface $403 {
+            }
+            export interface $404 {
+            }
+            export interface $413 {
+            }
+        }
+    }
+    namespace DashboardUserAdd {
+        namespace Parameters {
+            export type DbRole = /* Role a user may hold on a database or a dashboard. */ Components.Schemas.DbUserRole;
+            export type Name = string;
+            export type Owner = string;
+            export type Username = string;
+        }
+        export interface PathParameters {
+            owner: Parameters.Owner;
+            name: Parameters.Name;
+            username: Parameters.Username;
+        }
+        export interface QueryParameters {
+            db_role: Parameters.DbRole;
+        }
+        namespace Responses {
+            export interface $201 {
             }
             export interface $401 {
             }
-            export interface $413 {
+            export interface $403 {
+            }
+            export interface $404 {
+            }
+        }
+    }
+    namespace DashboardUserList {
+        namespace Parameters {
+            export type Name = string;
+            export type Owner = string;
+        }
+        export interface PathParameters {
+            owner: Parameters.Owner;
+            name: Parameters.Name;
+        }
+        namespace Responses {
+            export type $200 = /* A user's access entry for a database. */ Components.Schemas.DbUser[];
+            export interface $401 {
+            }
+            export interface $403 {
+            }
+            export interface $404 {
+            }
+        }
+    }
+    namespace DashboardUserRemove {
+        namespace Parameters {
+            export type Name = string;
+            export type Owner = string;
+            export type Username = string;
+        }
+        export interface PathParameters {
+            owner: Parameters.Owner;
+            name: Parameters.Name;
+            username: Parameters.Username;
+        }
+        namespace Responses {
+            export interface $204 {
+            }
+            export interface $401 {
+            }
+            export interface $403 {
+            }
+            export interface $404 {
             }
         }
     }
@@ -2682,7 +3041,7 @@ declare namespace Paths {
     namespace DbUserAdd {
         namespace Parameters {
             export type Db = string;
-            export type DbRole = /* Role a user may hold on a database. */ Components.Schemas.DbUserRole;
+            export type DbRole = /* Role a user may hold on a database or a dashboard. */ Components.Schemas.DbUserRole;
             export type Owner = string;
             export type Username = string;
         }
@@ -2777,6 +3136,39 @@ declare namespace Paths {
             }
         }
     }
+    namespace UserHomeDashboard {
+        namespace Responses {
+            export type $200 = /* Identifies a dashboard, e.g. the user's home dashboard. */ Components.Schemas.DashboardName | null;
+            export interface $401 {
+            }
+        }
+    }
+    namespace UserHomeDashboardClear {
+        namespace Responses {
+            export interface $204 {
+            }
+            export interface $401 {
+            }
+        }
+    }
+    namespace UserHomeDashboardSet {
+        namespace Parameters {
+            export type Name = string;
+            export type Owner = string;
+        }
+        export interface QueryParameters {
+            owner: Parameters.Owner;
+            name: Parameters.Name;
+        }
+        namespace Responses {
+            export interface $201 {
+            }
+            export interface $401 {
+            }
+            export interface $404 {
+            }
+        }
+    }
     namespace UserLogin {
         export type RequestBody = /* Credentials for logging in a user. */ Components.Schemas.UserLogin;
         namespace Responses {
@@ -2810,6 +3202,86 @@ declare namespace Paths {
 
 
 export interface OperationMethods {
+  /**
+   * admin_dashboard_list
+   */
+  'admin_dashboard_list'(
+    parameters?: Parameters<UnknownParamsObject> | null,
+    data?: any,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.AdminDashboardList.Responses.$200>
+  /**
+   * admin_dashboard_get
+   */
+  'admin_dashboard_get'(
+    parameters?: Parameters<Paths.AdminDashboardGet.PathParameters> | null,
+    data?: any,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.AdminDashboardGet.Responses.$200>
+  /**
+   * admin_dashboard_add
+   */
+  'admin_dashboard_add'(
+    parameters?: Parameters<Paths.AdminDashboardAdd.PathParameters> | null,
+    data?: Paths.AdminDashboardAdd.RequestBody,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.AdminDashboardAdd.Responses.$201>
+  /**
+   * admin_dashboard_public
+   */
+  'admin_dashboard_public'(
+    parameters?: Parameters<Paths.AdminDashboardPublic.QueryParameters & Paths.AdminDashboardPublic.PathParameters> | null,
+    data?: any,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.AdminDashboardPublic.Responses.$201>
+  /**
+   * admin_dashboard_remove
+   */
+  'admin_dashboard_remove'(
+    parameters?: Parameters<Paths.AdminDashboardRemove.PathParameters> | null,
+    data?: any,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.AdminDashboardRemove.Responses.$204>
+  /**
+   * admin_dashboard_rename
+   */
+  'admin_dashboard_rename'(
+    parameters?: Parameters<Paths.AdminDashboardRename.QueryParameters & Paths.AdminDashboardRename.PathParameters> | null,
+    data?: any,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.AdminDashboardRename.Responses.$201>
+  /**
+   * admin_dashboard_save
+   */
+  'admin_dashboard_save'(
+    parameters?: Parameters<Paths.AdminDashboardSave.PathParameters> | null,
+    data?: Paths.AdminDashboardSave.RequestBody,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.AdminDashboardSave.Responses.$201>
+  /**
+   * admin_dashboard_user_list
+   */
+  'admin_dashboard_user_list'(
+    parameters?: Parameters<Paths.AdminDashboardUserList.PathParameters> | null,
+    data?: any,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.AdminDashboardUserList.Responses.$200>
+  /**
+   * admin_dashboard_user_add
+   */
+  'admin_dashboard_user_add'(
+    parameters?: Parameters<Paths.AdminDashboardUserAdd.QueryParameters & Paths.AdminDashboardUserAdd.PathParameters> | null,
+    data?: any,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.AdminDashboardUserAdd.Responses.$201>
+  /**
+   * admin_dashboard_user_remove
+   */
+  'admin_dashboard_user_remove'(
+    parameters?: Parameters<Paths.AdminDashboardUserRemove.PathParameters> | null,
+    data?: any,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.AdminDashboardUserRemove.Responses.$204>
   /**
    * admin_db_list
    */
@@ -3099,6 +3571,14 @@ export interface OperationMethods {
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.DashboardAdd.Responses.$201>
   /**
+   * dashboard_public
+   */
+  'dashboard_public'(
+    parameters?: Parameters<Paths.DashboardPublic.QueryParameters & Paths.DashboardPublic.PathParameters> | null,
+    data?: any,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.DashboardPublic.Responses.$201>
+  /**
    * dashboard_remove
    */
   'dashboard_remove'(
@@ -3122,6 +3602,30 @@ export interface OperationMethods {
     data?: Paths.DashboardSave.RequestBody,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.DashboardSave.Responses.$201>
+  /**
+   * dashboard_user_list
+   */
+  'dashboard_user_list'(
+    parameters?: Parameters<Paths.DashboardUserList.PathParameters> | null,
+    data?: any,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.DashboardUserList.Responses.$200>
+  /**
+   * dashboard_user_add
+   */
+  'dashboard_user_add'(
+    parameters?: Parameters<Paths.DashboardUserAdd.QueryParameters & Paths.DashboardUserAdd.PathParameters> | null,
+    data?: any,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.DashboardUserAdd.Responses.$201>
+  /**
+   * dashboard_user_remove
+   */
+  'dashboard_user_remove'(
+    parameters?: Parameters<Paths.DashboardUserRemove.PathParameters> | null,
+    data?: any,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.DashboardUserRemove.Responses.$204>
   /**
    * db_list
    */
@@ -3291,6 +3795,30 @@ export interface OperationMethods {
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.UserChangePassword.Responses.$201>
   /**
+   * user_home_dashboard
+   */
+  'user_home_dashboard'(
+    parameters?: Parameters<UnknownParamsObject> | null,
+    data?: any,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.UserHomeDashboard.Responses.$200>
+  /**
+   * user_home_dashboard_set
+   */
+  'user_home_dashboard_set'(
+    parameters?: Parameters<Paths.UserHomeDashboardSet.QueryParameters> | null,
+    data?: any,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.UserHomeDashboardSet.Responses.$201>
+  /**
+   * user_home_dashboard_clear
+   */
+  'user_home_dashboard_clear'(
+    parameters?: Parameters<UnknownParamsObject> | null,
+    data?: any,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.UserHomeDashboardClear.Responses.$204>
+  /**
    * user_login
    */
   'user_login'(
@@ -3317,6 +3845,106 @@ export interface OperationMethods {
 }
 
 export interface PathsDictionary {
+  ['/api/v1/admin/dashboard/list']: {
+    /**
+     * admin_dashboard_list
+     */
+    'get'(
+      parameters?: Parameters<UnknownParamsObject> | null,
+      data?: any,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.AdminDashboardList.Responses.$200>
+  }
+  ['/api/v1/admin/dashboard/{owner}/{name}']: {
+    /**
+     * admin_dashboard_get
+     */
+    'get'(
+      parameters?: Parameters<Paths.AdminDashboardGet.PathParameters> | null,
+      data?: any,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.AdminDashboardGet.Responses.$200>
+  }
+  ['/api/v1/admin/dashboard/{owner}/{name}/add']: {
+    /**
+     * admin_dashboard_add
+     */
+    'post'(
+      parameters?: Parameters<Paths.AdminDashboardAdd.PathParameters> | null,
+      data?: Paths.AdminDashboardAdd.RequestBody,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.AdminDashboardAdd.Responses.$201>
+  }
+  ['/api/v1/admin/dashboard/{owner}/{name}/public']: {
+    /**
+     * admin_dashboard_public
+     */
+    'put'(
+      parameters?: Parameters<Paths.AdminDashboardPublic.QueryParameters & Paths.AdminDashboardPublic.PathParameters> | null,
+      data?: any,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.AdminDashboardPublic.Responses.$201>
+  }
+  ['/api/v1/admin/dashboard/{owner}/{name}/remove']: {
+    /**
+     * admin_dashboard_remove
+     */
+    'delete'(
+      parameters?: Parameters<Paths.AdminDashboardRemove.PathParameters> | null,
+      data?: any,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.AdminDashboardRemove.Responses.$204>
+  }
+  ['/api/v1/admin/dashboard/{owner}/{name}/rename']: {
+    /**
+     * admin_dashboard_rename
+     */
+    'post'(
+      parameters?: Parameters<Paths.AdminDashboardRename.QueryParameters & Paths.AdminDashboardRename.PathParameters> | null,
+      data?: any,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.AdminDashboardRename.Responses.$201>
+  }
+  ['/api/v1/admin/dashboard/{owner}/{name}/save']: {
+    /**
+     * admin_dashboard_save
+     */
+    'put'(
+      parameters?: Parameters<Paths.AdminDashboardSave.PathParameters> | null,
+      data?: Paths.AdminDashboardSave.RequestBody,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.AdminDashboardSave.Responses.$201>
+  }
+  ['/api/v1/admin/dashboard/{owner}/{name}/user/list']: {
+    /**
+     * admin_dashboard_user_list
+     */
+    'get'(
+      parameters?: Parameters<Paths.AdminDashboardUserList.PathParameters> | null,
+      data?: any,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.AdminDashboardUserList.Responses.$200>
+  }
+  ['/api/v1/admin/dashboard/{owner}/{name}/user/{username}/add']: {
+    /**
+     * admin_dashboard_user_add
+     */
+    'put'(
+      parameters?: Parameters<Paths.AdminDashboardUserAdd.QueryParameters & Paths.AdminDashboardUserAdd.PathParameters> | null,
+      data?: any,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.AdminDashboardUserAdd.Responses.$201>
+  }
+  ['/api/v1/admin/dashboard/{owner}/{name}/user/{username}/remove']: {
+    /**
+     * admin_dashboard_user_remove
+     */
+    'delete'(
+      parameters?: Parameters<Paths.AdminDashboardUserRemove.PathParameters> | null,
+      data?: any,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.AdminDashboardUserRemove.Responses.$204>
+  }
   ['/api/v1/admin/db/list']: {
     /**
      * admin_db_list
@@ -3657,7 +4285,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.DashboardList.Responses.$200>
   }
-  ['/api/v1/dashboard/{name}']: {
+  ['/api/v1/dashboard/{owner}/{name}']: {
     /**
      * dashboard_get
      */
@@ -3667,7 +4295,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.DashboardGet.Responses.$200>
   }
-  ['/api/v1/dashboard/{name}/add']: {
+  ['/api/v1/dashboard/{owner}/{name}/add']: {
     /**
      * dashboard_add
      */
@@ -3677,7 +4305,17 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.DashboardAdd.Responses.$201>
   }
-  ['/api/v1/dashboard/{name}/remove']: {
+  ['/api/v1/dashboard/{owner}/{name}/public']: {
+    /**
+     * dashboard_public
+     */
+    'put'(
+      parameters?: Parameters<Paths.DashboardPublic.QueryParameters & Paths.DashboardPublic.PathParameters> | null,
+      data?: any,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.DashboardPublic.Responses.$201>
+  }
+  ['/api/v1/dashboard/{owner}/{name}/remove']: {
     /**
      * dashboard_remove
      */
@@ -3687,7 +4325,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.DashboardRemove.Responses.$204>
   }
-  ['/api/v1/dashboard/{name}/rename']: {
+  ['/api/v1/dashboard/{owner}/{name}/rename']: {
     /**
      * dashboard_rename
      */
@@ -3697,7 +4335,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.DashboardRename.Responses.$201>
   }
-  ['/api/v1/dashboard/{name}/save']: {
+  ['/api/v1/dashboard/{owner}/{name}/save']: {
     /**
      * dashboard_save
      */
@@ -3706,6 +4344,36 @@ export interface PathsDictionary {
       data?: Paths.DashboardSave.RequestBody,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.DashboardSave.Responses.$201>
+  }
+  ['/api/v1/dashboard/{owner}/{name}/user/list']: {
+    /**
+     * dashboard_user_list
+     */
+    'get'(
+      parameters?: Parameters<Paths.DashboardUserList.PathParameters> | null,
+      data?: any,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.DashboardUserList.Responses.$200>
+  }
+  ['/api/v1/dashboard/{owner}/{name}/user/{username}/add']: {
+    /**
+     * dashboard_user_add
+     */
+    'put'(
+      parameters?: Parameters<Paths.DashboardUserAdd.QueryParameters & Paths.DashboardUserAdd.PathParameters> | null,
+      data?: any,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.DashboardUserAdd.Responses.$201>
+  }
+  ['/api/v1/dashboard/{owner}/{name}/user/{username}/remove']: {
+    /**
+     * dashboard_user_remove
+     */
+    'delete'(
+      parameters?: Parameters<Paths.DashboardUserRemove.PathParameters> | null,
+      data?: any,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.DashboardUserRemove.Responses.$204>
   }
   ['/api/v1/db/list']: {
     /**
@@ -3917,6 +4585,32 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.UserChangePassword.Responses.$201>
   }
+  ['/api/v1/user/home_dashboard']: {
+    /**
+     * user_home_dashboard
+     */
+    'get'(
+      parameters?: Parameters<UnknownParamsObject> | null,
+      data?: any,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.UserHomeDashboard.Responses.$200>
+    /**
+     * user_home_dashboard_set
+     */
+    'put'(
+      parameters?: Parameters<Paths.UserHomeDashboardSet.QueryParameters> | null,
+      data?: any,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.UserHomeDashboardSet.Responses.$201>
+    /**
+     * user_home_dashboard_clear
+     */
+    'delete'(
+      parameters?: Parameters<UnknownParamsObject> | null,
+      data?: any,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.UserHomeDashboardClear.Responses.$204>
+  }
   ['/api/v1/user/login']: {
     /**
      * user_login
@@ -3962,6 +4656,8 @@ export type Comparison = Components.Schemas.Comparison;
 export type CountComparison = Components.Schemas.CountComparison;
 export type Dashboard = Components.Schemas.Dashboard;
 export type DashboardConfig = Components.Schemas.DashboardConfig;
+export type DashboardName = Components.Schemas.DashboardName;
+export type DashboardPublicParam = Components.Schemas.DashboardPublicParam;
 export type DashboardRenameParam = Components.Schemas.DashboardRenameParam;
 export type DashboardSummary = Components.Schemas.DashboardSummary;
 export type DbAudit = Components.Schemas.DbAudit;
@@ -3977,6 +4673,7 @@ export type DbUser = Components.Schemas.DbUser;
 export type DbUserRole = Components.Schemas.DbUserRole;
 export type DbUserRoleParam = Components.Schemas.DbUserRoleParam;
 export type DbValue = Components.Schemas.DbValue;
+export type HomeDashboardParam = Components.Schemas.HomeDashboardParam;
 export type InsertAliasesQuery = Components.Schemas.InsertAliasesQuery;
 export type InsertEdgesQuery = Components.Schemas.InsertEdgesQuery;
 export type InsertIndexQuery = Components.Schemas.InsertIndexQuery;

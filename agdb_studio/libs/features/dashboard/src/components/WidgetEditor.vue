@@ -3,6 +3,7 @@ import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import { watchDebounced } from "@vueuse/core";
 import QueryView from "@agdb-studio/query/src/components/view/QueryView.vue";
 import { provideDbTarget } from "@agdb-studio/query/src/composables/dbExec";
+import { adminMode } from "../composables/dashboardStore";
 import { useQueryStore } from "@agdb-studio/query/src/composables/queryStore";
 import { useDbStore } from "@agdb-studio/db/src/composables/dbStore";
 import { WIDGET_TABS, type Widget } from "../types";
@@ -55,9 +56,11 @@ const refreshOptions = computed(() =>
     .map((seconds) => ({ seconds, label: formatRefresh(seconds) })),
 );
 
+// The admin view tries the query with admin access, as the widget will run.
+const admin = adminMode();
 const target = computed(() => {
   const [owner = "", ...db] = database.value.split("/");
-  return { owner, db: db.join("/") };
+  return { owner, db: db.join("/"), admin };
 });
 
 const databaseOptions = computed(() => {

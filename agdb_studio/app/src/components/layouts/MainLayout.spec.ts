@@ -121,6 +121,11 @@ describe("MainLayout", () => {
       links.find((link) => link.props("to") === "/admin/db")?.text(),
     ).toContain("Databases");
 
+    // admin dashboards page link exists
+    expect(
+      links.find((link) => link.props("to") === "/admin/dashboards")?.text(),
+    ).toContain("Dashboards");
+
     expect(wrapper.find(".admin-label").exists()).toBe(true);
   });
 

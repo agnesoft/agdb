@@ -7,6 +7,7 @@ use crate::server_error::ServerError;
 use crate::server_error::ServerResult;
 use agdb::AgdbSerialize;
 use agdb::Db;
+use agdb::DbElement;
 use agdb::DbId;
 use agdb::DbType;
 use agdb::QueryBuilder;
@@ -14,6 +15,7 @@ use agdb::QueryId;
 use agdb::QueryResult;
 use agdb::SearchQuery;
 use agdb::SelectValuesQuery;
+use agdb_api::DashboardName;
 use agdb_api::DashboardSummary;
 use agdb_api::DbKind;
 use agdb_api::DbUser;
@@ -21,6 +23,8 @@ use agdb_api::DbUserRole;
 use agdb_api::UserSession;
 use agdb_api::UserStatus;
 use reqwest::StatusCode;
+use std::collections::HashMap;
+use std::collections::HashSet;
 use std::sync::Arc;
 use std::time::Duration;
 use std::time::SystemTime;
@@ -74,6 +78,33 @@ impl Database {
     }
 }
 
+/// The dashboard fields listed without the config.
+#[derive(DbType)]
+struct DashboardListing {
+    db_id: Option<DbId>,
+    owner: String,
+    name: String,
+    updated: u64,
+}
+
+/// What a user may do with a dashboard.
+pub(crate) struct DashboardAccess {
+    pub(crate) dashboard: ServerDashboard,
+    /// The user's role; read on a public dashboard the user has no role on.
+    pub(crate) role: DbUserRole,
+    /// The user has a role on the dashboard (as its owner or shared).
+    pub(crate) member: bool,
+    pub(crate) public: bool,
+}
+
+/// A `user —role→ db/dashboard` edge.
+struct RoleEdge {
+    id: DbId,
+    from: DbId,
+    to: DbId,
+    role: DbUserRole,
+}
+
 #[derive(Clone)]
 pub(crate) struct ServerDb {
     pub(crate) db: Arc<RwLock<Db>>,
@@ -86,7 +117,10 @@ const DASHBOARDS: &str = "dashboards";
 const DB: &str = "db";
 const DBS: &str = "dbs";
 const EXPIRES_AT: &str = "expires_at";
+const HOME_DASHBOARD: &str = "home_dashboard";
 const OWNER: &str = "owner";
+/// Alias of the node linking to every public dashboard.
+const PUBLIC_DASHBOARDS: &str = "public_dashboards";
 const NAME: &str = "name";
 const ROLE: &str = "role";
 const TOKEN: &str = "token";
@@ -192,6 +226,66 @@ impl ServerDb {
                 t.exec_mut(QueryBuilder::insert().nodes().aliases(DASHBOARDS).query())?;
             }
 
+            if t.exec(QueryBuilder::select().ids(PUBLIC_DASHBOARDS).query())
+                .is_err()
+            {
+                t.exec_mut(
+                    QueryBuilder::insert()
+                        .nodes()
+                        .aliases(PUBLIC_DASHBOARDS)
+                        .query(),
+                )?;
+            }
+
+            // Give owners of dashboards created before sharing their admin role, remove in later versions
+            let dashboards = t
+                .exec(
+                    QueryBuilder::select()
+                        .values([OWNER])
+                        .search()
+                        .from(DASHBOARDS)
+                        .where_()
+                        .neighbor()
+                        .query(),
+                )?
+                .elements;
+            for dashboard in dashboards {
+                let has_role = t
+                    .exec(
+                        QueryBuilder::search()
+                            .to(dashboard.id)
+                            .where_()
+                            .distance(1)
+                            .and()
+                            .keys(ROLE)
+                            .query(),
+                    )?
+                    .result
+                    != 0;
+                let owner = t
+                    .exec(
+                        QueryBuilder::search()
+                            .index(USERNAME)
+                            .value(dashboard.values[0].value.to_string())
+                            .query(),
+                    )?
+                    .elements
+                    .first()
+                    .map(|e| e.id);
+                if let Some(owner) = owner
+                    && !has_role
+                {
+                    t.exec_mut(
+                        QueryBuilder::insert()
+                            .edges()
+                            .from(owner)
+                            .to(dashboard.id)
+                            .values_uniform([(ROLE, DbUserRole::Admin).into()])
+                            .query(),
+                    )?;
+                }
+            }
+
             // Remove all old user tokens still on users from previous db version, remove in later versions
             if t.exec(QueryBuilder::select().values(TOKEN).ids(ADMIN).query())
                 .is_ok()
@@ -292,27 +386,370 @@ impl ServerDb {
             .map_err(|_| dashboard_not_found(name))
     }
 
-    /// The owner's dashboards by name, without their (possibly large) configs.
-    pub(crate) async fn dashboards(&self, owner: &str) -> ServerResult<Vec<DashboardSummary>> {
-        let mut dashboards: Vec<DashboardSummary> = self
+    /// The dashboard and what `user` may do with it. Without a role the
+    /// dashboard is not found, as with databases, unless it is public.
+    pub(crate) async fn user_dashboard(
+        &self,
+        user: DbId,
+        owner: &str,
+        name: &str,
+    ) -> ServerResult<DashboardAccess> {
+        self.db
+            .read()
+            .await
+            .transaction(|t| -> ServerResult<DashboardAccess> {
+                let dashboard: ServerDashboard = t
+                    .exec(find_dashboard_query(owner, name))?
+                    .try_into()
+                    .map_err(|_| dashboard_not_found(name))?;
+                let id = dashboard.db_id.ok_or_else(|| dashboard_not_found(name))?;
+                let role = role_edges(&t.exec(dashboard_edges_query(id))?)
+                    .into_iter()
+                    .find(|edge| edge.from == user)
+                    .map(|edge| edge.role);
+                let public = !t.exec(public_edge_query(id))?.ids().is_empty();
+                match (role, public) {
+                    (Some(role), _) => Ok(DashboardAccess {
+                        dashboard,
+                        role,
+                        member: true,
+                        public,
+                    }),
+                    (None, true) => Ok(DashboardAccess {
+                        dashboard,
+                        role: DbUserRole::Read,
+                        member: false,
+                        public,
+                    }),
+                    (None, false) => Err(dashboard_not_found(name)),
+                }
+            })
+    }
+
+    /// Whether the dashboard is public.
+    pub(crate) async fn dashboard_public(&self, dashboard: DbId) -> ServerResult<bool> {
+        Ok(!self
             .db
             .read()
             .await
-            .exec(
-                QueryBuilder::select()
-                    .elements::<DashboardSummary>()
-                    .search()
-                    .from(DASHBOARDS)
-                    .where_()
-                    .neighbor()
-                    .and()
-                    .key(OWNER)
-                    .value(owner)
-                    .query(),
-            )?
-            .try_into()?;
-        dashboards.sort_by(|a, b| a.name.cmp(&b.name));
+            .exec(public_edge_query(dashboard))?
+            .ids()
+            .is_empty())
+    }
+
+    /// Dashboards `user` has a role on (owned and shared) and the public
+    /// ones, without their (possibly large) configs, sorted by owner and name.
+    pub(crate) async fn user_dashboards(&self, user: DbId) -> ServerResult<Vec<DashboardSummary>> {
+        let mut dashboards =
+            self.db
+                .read()
+                .await
+                .transaction(|t| -> ServerResult<Vec<DashboardSummary>> {
+                    let all: HashSet<DbId> =
+                        t.exec(all_dashboards_query())?.ids().into_iter().collect();
+                    let public: HashSet<DbId> = t
+                        .exec(public_dashboards_query())?
+                        .ids()
+                        .into_iter()
+                        .collect();
+                    let roles: Vec<RoleEdge> = role_edges(&t.exec(user_edges_query(user))?)
+                        .into_iter()
+                        .filter(|edge| all.contains(&edge.to))
+                        .collect();
+                    let member: HashMap<DbId, DbUserRole> =
+                        roles.iter().map(|edge| (edge.to, edge.role)).collect();
+                    let ids: Vec<DbId> = member
+                        .keys()
+                        .copied()
+                        .chain(public.iter().copied().filter(|id| !member.contains_key(id)))
+                        .collect();
+
+                    if ids.is_empty() {
+                        return Ok(vec![]);
+                    }
+
+                    let listings: Vec<DashboardListing> = t
+                        .exec(
+                            QueryBuilder::select()
+                                .elements::<DashboardListing>()
+                                .ids(ids)
+                                .query(),
+                        )?
+                        .try_into()?;
+
+                    Ok(listings
+                        .into_iter()
+                        .map(|listing| {
+                            let role = listing.db_id.and_then(|id| member.get(&id).copied());
+                            summary(
+                                listing,
+                                role.unwrap_or(DbUserRole::Read),
+                                role.is_some(),
+                                &public,
+                            )
+                        })
+                        .collect())
+                })?;
+        dashboards.sort_by(|a, b| (&a.owner, &a.name).cmp(&(&b.owner, &b.name)));
         Ok(dashboards)
+    }
+
+    /// Every dashboard for server admins, who act as their owners, sorted by
+    /// owner and name.
+    pub(crate) async fn dashboards(&self) -> ServerResult<Vec<DashboardSummary>> {
+        let mut dashboards =
+            self.db
+                .read()
+                .await
+                .transaction(|t| -> ServerResult<Vec<DashboardSummary>> {
+                    let public: HashSet<DbId> = t
+                        .exec(public_dashboards_query())?
+                        .ids()
+                        .into_iter()
+                        .collect();
+                    let listings: Vec<DashboardListing> = t
+                        .exec(
+                            QueryBuilder::select()
+                                .elements::<DashboardListing>()
+                                .search()
+                                .from(DASHBOARDS)
+                                .where_()
+                                .neighbor()
+                                .query(),
+                        )?
+                        .try_into()?;
+                    Ok(listings
+                        .into_iter()
+                        .map(|listing| summary(listing, DbUserRole::Admin, true, &public))
+                        .collect())
+                })?;
+        dashboards.sort_by(|a, b| (&a.owner, &a.name).cmp(&(&b.owner, &b.name)));
+        Ok(dashboards)
+    }
+
+    /// Makes the dashboard public or private. Users who can no longer see a
+    /// private dashboard lose it as their home.
+    pub(crate) async fn set_dashboard_public(
+        &self,
+        dashboard: DbId,
+        public: bool,
+    ) -> ServerResult<()> {
+        self.db
+            .write()
+            .await
+            .transaction_mut(|t| -> ServerResult<()> {
+                let edges: Vec<DbId> = t.exec(public_edge_query(dashboard))?.ids();
+
+                match (public, edges.is_empty()) {
+                    (true, true) => {
+                        t.exec_mut(
+                            QueryBuilder::insert()
+                                .edges()
+                                .from(PUBLIC_DASHBOARDS)
+                                .to(dashboard)
+                                .query(),
+                        )?;
+                    }
+                    (false, false) => {
+                        t.exec_mut(QueryBuilder::remove().ids(edges).query())?;
+                        let incoming = t
+                            .exec(
+                                QueryBuilder::select()
+                                    .search()
+                                    .to(dashboard)
+                                    .where_()
+                                    .distance(1)
+                                    .query(),
+                            )?
+                            .elements;
+                        let members: Vec<DbId> = incoming
+                            .iter()
+                            .filter(|edge| has_key(edge, ROLE))
+                            .map(|edge| edge.from)
+                            .collect();
+                        let homes: Vec<DbId> = incoming
+                            .iter()
+                            .filter(|edge| {
+                                has_key(edge, HOME_DASHBOARD) && !members.contains(&edge.from)
+                            })
+                            .map(|edge| edge.id)
+                            .collect();
+                        if !homes.is_empty() {
+                            t.exec_mut(QueryBuilder::remove().ids(homes).query())?;
+                        }
+                    }
+                    _ => {}
+                }
+                Ok(())
+            })
+    }
+
+    /// Users with a role on the dashboard (including its owner) by name.
+    pub(crate) async fn dashboard_users(&self, dashboard: DbId) -> ServerResult<Vec<DbUser>> {
+        let mut users = self
+            .db
+            .read()
+            .await
+            .transaction(|t| -> ServerResult<Vec<DbUser>> {
+                let edges = t.exec(
+                    QueryBuilder::select()
+                        .values([ROLE])
+                        .search()
+                        .to(dashboard)
+                        .where_()
+                        .distance(1)
+                        .and()
+                        .keys(ROLE)
+                        .query(),
+                )?;
+
+                edges
+                    .elements
+                    .iter()
+                    .map(|edge| {
+                        let username = t
+                            .exec(
+                                QueryBuilder::select()
+                                    .values(USERNAME)
+                                    .ids(edge.from)
+                                    .query(),
+                            )?
+                            .elements[0]
+                            .values[0]
+                            .value
+                            .to_string();
+                        Ok(DbUser {
+                            username,
+                            role: (&edge.values[0].value).into(),
+                        })
+                    })
+                    .collect()
+            })?;
+        users.sort_by(|a, b| a.username.cmp(&b.username));
+        Ok(users)
+    }
+
+    /// Adds or changes the role of `user` on the dashboard.
+    pub(crate) async fn insert_dashboard_user(
+        &self,
+        dashboard: DbId,
+        user: DbId,
+        role: DbUserRole,
+    ) -> ServerResult<()> {
+        self.db
+            .write()
+            .await
+            .transaction_mut(|t| -> ServerResult<()> {
+                let existing = role_edges(&t.exec(dashboard_edges_query(dashboard))?)
+                    .into_iter()
+                    .find(|edge| edge.from == user);
+
+                if let Some(edge) = existing {
+                    t.exec_mut(
+                        QueryBuilder::insert()
+                            .values([[(ROLE, role).into()]])
+                            .ids(edge.id)
+                            .query(),
+                    )?;
+                } else {
+                    t.exec_mut(
+                        QueryBuilder::insert()
+                            .edges()
+                            .from(user)
+                            .to(dashboard)
+                            .values_uniform([(ROLE, role).into()])
+                            .query(),
+                    )?;
+                }
+                Ok(())
+            })
+    }
+
+    /// Removes the role of `user` on the dashboard, and the dashboard as the
+    /// user's home with it unless it is public (so the user still sees it).
+    pub(crate) async fn remove_dashboard_user(
+        &self,
+        dashboard: DbId,
+        user: DbId,
+    ) -> ServerResult<()> {
+        self.db
+            .write()
+            .await
+            .transaction_mut(|t| -> ServerResult<()> {
+                let public = !t.exec(public_edge_query(dashboard))?.ids().is_empty();
+                let edges: Vec<DbId> = t
+                    .exec(dashboard_edges_query(dashboard))?
+                    .elements
+                    .into_iter()
+                    .filter(|edge| edge.from == user)
+                    .filter(|edge| !public || !has_key(edge, HOME_DASHBOARD))
+                    .map(|edge| edge.id)
+                    .collect();
+
+                if !edges.is_empty() {
+                    t.exec_mut(QueryBuilder::remove().ids(edges).query())?;
+                }
+                Ok(())
+            })
+    }
+
+    /// The dashboard `user` opens by default, if any.
+    pub(crate) async fn home_dashboard(&self, user: DbId) -> ServerResult<Option<DashboardName>> {
+        self.db
+            .read()
+            .await
+            .transaction(|t| -> ServerResult<Option<DashboardName>> {
+                let Some(edge) = t.exec(home_edges_query(user))?.elements.into_iter().next() else {
+                    return Ok(None);
+                };
+                let dashboard = &t
+                    .exec(
+                        QueryBuilder::select()
+                            .values([OWNER, NAME])
+                            .ids(edge.to)
+                            .query(),
+                    )?
+                    .elements[0];
+                Ok(Some(DashboardName {
+                    owner: dashboard.values[0].value.to_string(),
+                    name: dashboard.values[1].value.to_string(),
+                }))
+            })
+    }
+
+    /// Replaces the home dashboard of `user`; `None` clears it.
+    pub(crate) async fn set_home_dashboard(
+        &self,
+        user: DbId,
+        dashboard: Option<DbId>,
+    ) -> ServerResult<()> {
+        self.db
+            .write()
+            .await
+            .transaction_mut(|t| -> ServerResult<()> {
+                let existing: Vec<DbId> = t
+                    .exec(home_edges_query(user))?
+                    .elements
+                    .into_iter()
+                    .map(|edge| edge.id)
+                    .collect();
+
+                if !existing.is_empty() {
+                    t.exec_mut(QueryBuilder::remove().ids(existing).query())?;
+                }
+
+                if let Some(dashboard) = dashboard {
+                    t.exec_mut(
+                        QueryBuilder::insert()
+                            .edges()
+                            .from(user)
+                            .to(dashboard)
+                            .values_uniform([(HOME_DASHBOARD, true).into()])
+                            .query(),
+                    )?;
+                }
+                Ok(())
+            })
     }
 
     pub(crate) async fn remove_dashboard(&self, owner: &str, name: &str) -> ServerResult<()> {
@@ -374,8 +811,9 @@ impl ServerDb {
             })
     }
 
-    /// Inserts a new dashboard or replaces the config of an existing one.
-    /// With `create` an existing dashboard is an error (a concurrent add won).
+    /// With `create` inserts a new dashboard owned (with the admin role) by
+    /// its `owner`; an existing dashboard is an error (a concurrent add won).
+    /// Otherwise replaces the config of an existing dashboard.
     pub(crate) async fn save_dashboard(
         &self,
         mut dashboard: ServerDashboard,
@@ -391,21 +829,39 @@ impl ServerDb {
                     .first()
                     .map(|e| e.id);
 
-                if create && dashboard.db_id.is_some() {
-                    return Err(dashboard_exists(&dashboard.name));
+                match (create, dashboard.db_id) {
+                    (true, Some(_)) => return Err(dashboard_exists(&dashboard.name)),
+                    // A remove or rename applied after the request was checked.
+                    (false, None) => return Err(dashboard_not_found(&dashboard.name)),
+                    _ => {}
                 }
 
-                let result = t.exec_mut(QueryBuilder::insert().element(&dashboard).query())?;
-
-                // Updating an existing element returns no new ids; only new dashboards get linked.
-                if dashboard.db_id.is_none() {
+                if create {
+                    let owner = t
+                        .exec(
+                            QueryBuilder::search()
+                                .index(USERNAME)
+                                .value(&dashboard.owner)
+                                .query(),
+                        )?
+                        .elements
+                        .first()
+                        .map(|e| e.id)
+                        .ok_or_else(|| user_not_found(&dashboard.owner))?;
+                    let id = t
+                        .exec_mut(QueryBuilder::insert().element(&dashboard).query())?
+                        .elements[0]
+                        .id;
                     t.exec_mut(
                         QueryBuilder::insert()
                             .edges()
-                            .from(DASHBOARDS)
-                            .to(result)
+                            .from([QueryId::from(owner), DASHBOARDS.into()])
+                            .to(id)
+                            .values([vec![(ROLE, DbUserRole::Admin).into()], vec![]])
                             .query(),
                     )?;
+                } else {
+                    t.exec_mut(QueryBuilder::insert().element(&dashboard).query())?;
                 }
                 Ok(())
             })
@@ -861,12 +1317,20 @@ impl ServerDb {
             )?
             .elements;
 
+        // Each edge precedes its node. Users also point at dashboards (role and
+        // home edges), which are skipped.
+        let mut role = None;
         for e in elements {
             if e.id.0 < 0 {
-                dbs.push(((&e.values[0].value).into(), Database::default()));
-            } else {
-                dbs.last_mut().expect("Expected at least one database").1 =
-                    Database::from_db_element(&e)?;
+                role = e
+                    .values
+                    .iter()
+                    .find(|kv| kv.key == ROLE.into())
+                    .map(|kv| DbUserRole::from(&kv.value));
+            } else if let Some(role) = role.take()
+                && has_key(&e, DB)
+            {
+                dbs.push((role, Database::from_db_element(&e)?));
             }
         }
 
@@ -1100,7 +1564,7 @@ pub(crate) fn dashboard_exists(name: &str) -> ServerError {
     )
 }
 
-fn dashboard_not_found(name: &str) -> ServerError {
+pub(crate) fn dashboard_not_found(name: &str) -> ServerError {
     ServerError::new(
         StatusCode::NOT_FOUND,
         &format!("dashboard not found: {name}"),
@@ -1125,6 +1589,102 @@ fn find_dashboard_query(owner: &str, name: &str) -> SelectValuesQuery {
         .key(NAME)
         .value(name)
         .query()
+}
+
+fn all_dashboards_query() -> SearchQuery {
+    QueryBuilder::search()
+        .from(DASHBOARDS)
+        .where_()
+        .neighbor()
+        .query()
+}
+
+/// The edge that makes the dashboard public, if it is.
+fn public_edge_query(dashboard: DbId) -> SearchQuery {
+    QueryBuilder::search()
+        .from(PUBLIC_DASHBOARDS)
+        .to(dashboard)
+        .where_()
+        .edge()
+        .query()
+}
+
+fn public_dashboards_query() -> SearchQuery {
+    QueryBuilder::search()
+        .from(PUBLIC_DASHBOARDS)
+        .where_()
+        .neighbor()
+        .query()
+}
+
+fn summary(
+    listing: DashboardListing,
+    role: DbUserRole,
+    member: bool,
+    public: &HashSet<DbId>,
+) -> DashboardSummary {
+    DashboardSummary {
+        public: listing.db_id.is_some_and(|id| public.contains(&id)),
+        owner: listing.owner,
+        name: listing.name,
+        updated: listing.updated,
+        role,
+        member,
+    }
+}
+
+fn has_key(element: &DbElement, key: &str) -> bool {
+    element.values.iter().any(|kv| kv.key == key.into())
+}
+
+/// The outgoing edges of a user: roles on dbs and dashboards, and the home
+/// dashboard. Each carries its destination in `to`.
+fn user_edges_query(user: DbId) -> SelectValuesQuery {
+    QueryBuilder::select()
+        .search()
+        .from(user)
+        .where_()
+        .distance(1)
+        .query()
+}
+
+/// The incoming edges of a dashboard: the roles of its users, their homes and
+/// the public alias. Far fewer than the outgoing edges of a user.
+fn dashboard_edges_query(dashboard: DbId) -> SelectValuesQuery {
+    QueryBuilder::select()
+        .search()
+        .to(dashboard)
+        .where_()
+        .distance(1)
+        .query()
+}
+
+/// The home dashboard edge of a user (at most one).
+fn home_edges_query(user: DbId) -> SelectValuesQuery {
+    QueryBuilder::select()
+        .search()
+        .from(user)
+        .where_()
+        .distance(1)
+        .and()
+        .keys(HOME_DASHBOARD)
+        .query()
+}
+
+fn role_edges(result: &QueryResult) -> Vec<RoleEdge> {
+    result
+        .elements
+        .iter()
+        .filter_map(|edge| {
+            let role = edge.values.iter().find(|kv| kv.key == ROLE.into())?;
+            Some(RoleEdge {
+                id: edge.id,
+                from: edge.from,
+                to: edge.to,
+                role: (&role.value).into(),
+            })
+        })
+        .collect()
 }
 
 fn find_user_db_query(user: DbId, owner: &str, db: &str) -> SearchQuery {
@@ -1254,41 +1814,325 @@ mod tests {
         Ok(())
     }
 
-    fn test_dashboard(name: &str) -> ServerDashboard {
+    fn test_dashboard(owner: &str, name: &str) -> ServerDashboard {
         ServerDashboard {
             db_id: None,
-            owner: "user".to_string(),
+            owner: owner.to_string(),
             name: name.to_string(),
             config: "{}".to_string(),
             updated: 1,
         }
     }
 
+    async fn test_user(db: &ServerDb, username: &str) -> ServerResult<DbId> {
+        db.insert_user(ServerUser {
+            db_id: None,
+            username: username.to_string(),
+            password: vec![],
+            salt: vec![],
+        })
+        .await
+    }
+
+    async fn dashboard_id(db: &ServerDb, owner: &str, name: &str) -> ServerResult<DbId> {
+        Ok(db.dashboard(owner, name).await?.db_id.unwrap())
+    }
+
+    fn names(dashboards: Vec<DashboardSummary>) -> Vec<String> {
+        dashboards
+            .into_iter()
+            .map(|d| format!("{}/{}:{}", d.owner, d.name, d.role))
+            .collect()
+    }
+
     #[tokio::test]
     async fn dashboard_conflicts_checked_when_applied() -> ServerResult<()> {
         let test_file = TestFile::new();
         let db = ServerDb::new(test_file.file_name(), 3600)?;
-        db.save_dashboard(test_dashboard("a"), true).await?;
-        db.save_dashboard(test_dashboard("b"), true).await?;
+        let user = test_user(&db, "user").await?;
+        db.save_dashboard(test_dashboard("user", "a"), true).await?;
+        db.save_dashboard(test_dashboard("user", "b"), true).await?;
 
         // An add that lost a race to another add does not replace it.
         let error = db
-            .save_dashboard(test_dashboard("a"), true)
+            .save_dashboard(test_dashboard("user", "a"), true)
             .await
             .unwrap_err();
         assert_eq!(error.status, StatusCode::CONFLICT);
-        db.save_dashboard(test_dashboard("a"), false).await?;
+        db.save_dashboard(test_dashboard("user", "a"), false)
+            .await?;
+
+        // A save that lost a race to a remove does not recreate it.
+        let error = db
+            .save_dashboard(test_dashboard("user", "c"), false)
+            .await
+            .unwrap_err();
+        assert_eq!(error.status, StatusCode::NOT_FOUND);
 
         // A rename onto a name taken meanwhile does not create a duplicate.
         let error = db.rename_dashboard("user", "a", "b", 2).await.unwrap_err();
         assert_eq!(error.status, StatusCode::CONFLICT);
-        let names: Vec<String> = db
-            .dashboards("user")
-            .await?
-            .into_iter()
-            .map(|d| d.name)
-            .collect();
-        assert_eq!(names, vec!["a", "b"]);
+        assert_eq!(
+            names(db.user_dashboards(user).await?),
+            vec!["user/a:admin", "user/b:admin"]
+        );
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn dashboard_shared_roles() -> ServerResult<()> {
+        let test_file = TestFile::new();
+        let db = ServerDb::new(test_file.file_name(), 3600)?;
+        let owner = test_user(&db, "owner").await?;
+        let user = test_user(&db, "user").await?;
+        db.save_dashboard(test_dashboard("owner", "ops"), true)
+            .await?;
+        db.save_dashboard(test_dashboard("user", "own"), true)
+            .await?;
+        let ops = dashboard_id(&db, "owner", "ops").await?;
+
+        assert!(matches!(
+            db.user_dashboard(user, "owner", "ops").await,
+            Err(e) if e.status == StatusCode::NOT_FOUND
+        ));
+
+        db.insert_dashboard_user(ops, user, DbUserRole::Read)
+            .await?;
+        db.set_home_dashboard(user, Some(ops)).await?;
+        // The home edge next to the role edge changes neither the role nor the users.
+        db.insert_dashboard_user(ops, user, DbUserRole::Write)
+            .await?;
+        assert_eq!(
+            db.user_dashboard(user, "owner", "ops").await?.role,
+            DbUserRole::Write
+        );
+        assert_eq!(
+            names(db.user_dashboards(user).await?),
+            vec!["owner/ops:write", "user/own:admin"]
+        );
+        assert_eq!(
+            db.dashboard_users(ops).await?,
+            vec![
+                DbUser {
+                    username: "owner".to_string(),
+                    role: DbUserRole::Admin,
+                },
+                DbUser {
+                    username: "user".to_string(),
+                    role: DbUserRole::Write,
+                },
+            ]
+        );
+        assert_eq!(
+            names(db.user_dashboards(owner).await?),
+            vec!["owner/ops:admin"]
+        );
+
+        // Removing the role removes the dashboard as home too.
+        db.remove_dashboard_user(ops, user).await?;
+        assert_eq!(db.home_dashboard(user).await?, None);
+        assert_eq!(
+            names(db.user_dashboards(user).await?),
+            vec!["user/own:admin"]
+        );
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn dashboard_home() -> ServerResult<()> {
+        let test_file = TestFile::new();
+        let db = ServerDb::new(test_file.file_name(), 3600)?;
+        let user = test_user(&db, "user").await?;
+        db.save_dashboard(test_dashboard("user", "a"), true).await?;
+        db.save_dashboard(test_dashboard("user", "b"), true).await?;
+        let a = dashboard_id(&db, "user", "a").await?;
+        let b = dashboard_id(&db, "user", "b").await?;
+        let home = |name: &str| {
+            Some(DashboardName {
+                owner: "user".to_string(),
+                name: name.to_string(),
+            })
+        };
+
+        assert_eq!(db.home_dashboard(user).await?, None);
+        db.set_home_dashboard(user, Some(a)).await?;
+        db.set_home_dashboard(user, Some(b)).await?;
+        assert_eq!(db.home_dashboard(user).await?, home("b"));
+
+        // The home follows a rename and goes with a remove.
+        db.rename_dashboard("user", "b", "c", 2).await?;
+        assert_eq!(db.home_dashboard(user).await?, home("c"));
+        db.remove_dashboard("user", "c").await?;
+        assert_eq!(db.home_dashboard(user).await?, None);
+
+        db.set_home_dashboard(user, Some(a)).await?;
+        db.set_home_dashboard(user, None).await?;
+        assert_eq!(db.home_dashboard(user).await?, None);
+        // Clearing only removed the home, not the owner's role.
+        assert_eq!(names(db.user_dashboards(user).await?), vec!["user/a:admin"]);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn user_dbs_skip_dashboards() -> ServerResult<()> {
+        let test_file = TestFile::new();
+        let db = ServerDb::new(test_file.file_name(), 3600)?;
+        let owner = test_user(&db, "owner").await?;
+        let user = test_user(&db, "user").await?;
+        db.insert_db(
+            user,
+            Database {
+                db: "data".to_string(),
+                owner: "user".to_string(),
+                ..Default::default()
+            },
+        )
+        .await?;
+        db.save_dashboard(test_dashboard("user", "own"), true)
+            .await?;
+        db.save_dashboard(test_dashboard("owner", "ops"), true)
+            .await?;
+        let ops = dashboard_id(&db, "owner", "ops").await?;
+        db.insert_dashboard_user(ops, user, DbUserRole::Read)
+            .await?;
+        db.set_home_dashboard(user, Some(ops)).await?;
+        db.set_dashboard_public(ops, true).await?;
+
+        let dbs = db.user_dbs(user).await?;
+        assert_eq!(dbs.len(), 1);
+        assert_eq!(dbs[0].0, DbUserRole::Admin);
+        assert_eq!(dbs[0].1.db, "data");
+        assert!(db.user_dbs(owner).await?.is_empty());
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn dashboard_public() -> ServerResult<()> {
+        let test_file = TestFile::new();
+        let db = ServerDb::new(test_file.file_name(), 3600)?;
+        test_user(&db, "owner").await?;
+        let member = test_user(&db, "member").await?;
+        let viewer = test_user(&db, "viewer").await?;
+        db.save_dashboard(test_dashboard("owner", "ops"), true)
+            .await?;
+        db.save_dashboard(test_dashboard("owner", "other"), true)
+            .await?;
+        let ops = dashboard_id(&db, "owner", "ops").await?;
+        db.insert_dashboard_user(ops, member, DbUserRole::Write)
+            .await?;
+        let listed = |dashboards: Vec<DashboardSummary>| {
+            dashboards
+                .into_iter()
+                .map(|d| {
+                    format!(
+                        "{}/{}:{}:{}:{}",
+                        d.owner, d.name, d.role, d.public, d.member
+                    )
+                })
+                .collect::<Vec<_>>()
+        };
+
+        assert!(!db.dashboard_public(ops).await?);
+        assert!(db.user_dashboards(viewer).await?.is_empty());
+
+        // Twice is the same as once.
+        db.set_dashboard_public(ops, true).await?;
+        db.set_dashboard_public(ops, true).await?;
+        assert!(db.dashboard_public(ops).await?);
+        let access = db.user_dashboard(viewer, "owner", "ops").await?;
+        assert_eq!(access.role, DbUserRole::Read);
+        assert!(!access.member && access.public);
+        let access = db.user_dashboard(member, "owner", "ops").await?;
+        assert_eq!(access.role, DbUserRole::Write);
+        assert!(access.member && access.public);
+        assert_eq!(
+            listed(db.user_dashboards(viewer).await?),
+            vec!["owner/ops:read:true:false"]
+        );
+        assert_eq!(
+            listed(db.user_dashboards(member).await?),
+            vec!["owner/ops:write:true:true"]
+        );
+        assert_eq!(
+            listed(db.dashboards().await?),
+            vec!["owner/ops:admin:true:true", "owner/other:admin:false:true"]
+        );
+        // The public link is not a user.
+        assert_eq!(db.dashboard_users(ops).await?.len(), 2);
+
+        // A member removed from a public dashboard keeps it as home.
+        db.set_home_dashboard(viewer, Some(ops)).await?;
+        db.set_home_dashboard(member, Some(ops)).await?;
+        db.remove_dashboard_user(ops, member).await?;
+        assert!(db.home_dashboard(member).await?.is_some());
+        db.insert_dashboard_user(ops, member, DbUserRole::Read)
+            .await?;
+
+        // Private again: only users with a role keep it as home.
+        db.set_dashboard_public(ops, false).await?;
+        db.set_dashboard_public(ops, false).await?;
+        assert!(!db.dashboard_public(ops).await?);
+        assert_eq!(db.home_dashboard(viewer).await?, None);
+        assert!(db.home_dashboard(member).await?.is_some());
+        assert!(matches!(
+            db.user_dashboard(viewer, "owner", "ops").await,
+            Err(e) if e.status == StatusCode::NOT_FOUND
+        ));
+        assert!(db.user_dashboards(viewer).await?.is_empty());
+
+        // A rename keeps it public, a remove drops the public link.
+        db.set_dashboard_public(ops, true).await?;
+        db.rename_dashboard("owner", "ops", "sales", 2).await?;
+        assert_eq!(
+            listed(db.user_dashboards(viewer).await?),
+            vec!["owner/sales:read:true:false"]
+        );
+        db.remove_dashboard("owner", "sales").await?;
+        assert!(db.user_dashboards(viewer).await?.is_empty());
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn migrate_dashboard_owner_role() -> ServerResult<()> {
+        let test_file = TestFile::new();
+
+        {
+            let db = ServerDb::new(test_file.file_name(), 3600)?;
+            test_user(&db, "user").await?;
+            // A dashboard saved before owners got their role edge.
+            db.db
+                .write()
+                .await
+                .transaction_mut(|t| -> ServerResult<()> {
+                    let id = t
+                        .exec_mut(
+                            QueryBuilder::insert()
+                                .element(test_dashboard("user", "old"))
+                                .query(),
+                        )?
+                        .elements[0]
+                        .id;
+                    t.exec_mut(
+                        QueryBuilder::insert()
+                            .edges()
+                            .from(DASHBOARDS)
+                            .to(id)
+                            .query(),
+                    )?;
+                    Ok(())
+                })?;
+        }
+
+        let db = ServerDb::new(test_file.file_name(), 3600)?;
+        let user = db.user_id("user").await?;
+        assert_eq!(
+            names(db.user_dashboards(user).await?),
+            vec!["user/old:admin"]
+        );
+        // Starting again adds no second role.
+        let db = ServerDb::new(test_file.file_name(), 3600)?;
+        let id = dashboard_id(&db, "user", "old").await?;
+        assert_eq!(db.dashboard_users(id).await?.len(), 1);
         Ok(())
     }
 

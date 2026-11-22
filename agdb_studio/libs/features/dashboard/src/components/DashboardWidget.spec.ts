@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mount } from "@vue/test-utils";
-import { ref } from "vue";
+import { ref, type Ref } from "vue";
+import { useAdmin } from "@agdb-studio/router/src/admin";
 
 const { data, observer } = vi.hoisted(() => ({
   data: {
@@ -215,5 +216,28 @@ describe("DashboardWidget", () => {
     expect(wrapper.emitted("update")).toEqual([[shown]]);
     await wrapper.find('[data-testid="widget-view-reset"]').trigger("click");
     expect(data.resetDisplay).toHaveBeenCalled();
+  });
+
+  it("shows a read-only widget without the actions that change it", async () => {
+    data.displayChanged.value = true;
+    const wrapper = mountWidget({ readOnly: true });
+    await wrapper.vm.$nextTick();
+    expect(wrapper.find('[data-testid="widget-menu"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="widget-view-save"]').exists()).toBe(
+      false,
+    );
+    // The view can still be reset, it changes nothing saved.
+    expect(wrapper.find('[data-testid="widget-view-reset"]').exists()).toBe(
+      true,
+    );
+    expect(wrapper.find('[data-testid="widget-refresh"]').exists()).toBe(true);
+  });
+
+  it("links to the admin query editor in the admin view", () => {
+    const { isAdmin, isAdminView } = useAdmin();
+    (isAdmin as Ref<boolean>).value = true;
+    (isAdminView as Ref<boolean>).value = true;
+    const link = mountWidget({}).findComponent(stubs.RouterLink);
+    expect(link.props("to")).toMatchObject({ name: "admin-query" });
   });
 });

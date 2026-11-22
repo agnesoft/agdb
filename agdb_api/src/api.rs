@@ -116,6 +116,7 @@ use crate::ChangePassword;
 use crate::ClusterStatus;
 use crate::Dashboard;
 use crate::DashboardConfig;
+use crate::DashboardName;
 use crate::DashboardSummary;
 use crate::DbAudit;
 use crate::DbKind;
@@ -267,6 +268,7 @@ impl Api {
             ClusterStatus::type_def(),
             Dashboard::type_def(),
             DashboardConfig::type_def(),
+            DashboardName::type_def(),
             DashboardSummary::type_def(),
             DbAudit::type_def(),
             DbKind::type_def(),

@@ -143,23 +143,82 @@ pub(crate) fn app(
             "/admin/db/{owner}/{db}/user/{username}/remove",
             routing::delete(routes::admin::db::user::remove),
         )
-        .route("/dashboard/list", routing::get(routes::dashboard::list))
-        .route("/dashboard/{name}", routing::get(routes::dashboard::get))
         .route(
-            "/dashboard/{name}/add",
+            "/admin/dashboard/list",
+            routing::get(routes::admin::dashboard::list),
+        )
+        .route(
+            "/admin/dashboard/{owner}/{name}",
+            routing::get(routes::admin::dashboard::get),
+        )
+        .route(
+            "/admin/dashboard/{owner}/{name}/add",
+            routing::post(routes::admin::dashboard::add),
+        )
+        .route(
+            "/admin/dashboard/{owner}/{name}/public",
+            routing::put(routes::admin::dashboard::public),
+        )
+        .route(
+            "/admin/dashboard/{owner}/{name}/remove",
+            routing::delete(routes::admin::dashboard::remove),
+        )
+        .route(
+            "/admin/dashboard/{owner}/{name}/rename",
+            routing::post(routes::admin::dashboard::rename),
+        )
+        .route(
+            "/admin/dashboard/{owner}/{name}/save",
+            routing::put(routes::admin::dashboard::save),
+        )
+        .route(
+            "/admin/dashboard/{owner}/{name}/user/list",
+            routing::get(routes::admin::dashboard::user::list),
+        )
+        .route(
+            "/admin/dashboard/{owner}/{name}/user/{username}/add",
+            routing::put(routes::admin::dashboard::user::add),
+        )
+        .route(
+            "/admin/dashboard/{owner}/{name}/user/{username}/remove",
+            routing::delete(routes::admin::dashboard::user::remove),
+        )
+        .route("/dashboard/list", routing::get(routes::dashboard::list))
+        .route(
+            "/dashboard/{owner}/{name}",
+            routing::get(routes::dashboard::get),
+        )
+        .route(
+            "/dashboard/{owner}/{name}/add",
             routing::post(routes::dashboard::add),
         )
         .route(
-            "/dashboard/{name}/save",
+            "/dashboard/{owner}/{name}/save",
             routing::put(routes::dashboard::save),
         )
         .route(
-            "/dashboard/{name}/rename",
+            "/dashboard/{owner}/{name}/rename",
             routing::post(routes::dashboard::rename),
         )
         .route(
-            "/dashboard/{name}/remove",
+            "/dashboard/{owner}/{name}/public",
+            routing::put(routes::dashboard::public),
+        )
+        .route(
+            "/dashboard/{owner}/{name}/remove",
             routing::delete(routes::dashboard::remove),
+        )
+        .route(
+            "/dashboard/{owner}/{name}/user/list",
+            routing::get(routes::dashboard::user::list),
+        )
+        .route(
+            "/dashboard/{owner}/{name}/user/{username}/add",
+            routing::put(routes::dashboard::user::add),
+        )
+        .route(
+            "/dashboard/{owner}/{name}/user/{username}/remove",
+            routing::delete(routes::dashboard::user::remove),
         )
         .route("/db/list", routing::get(routes::db::list))
         .route("/db/{owner}/{db}/add", routing::post(routes::db::add))
@@ -244,7 +303,13 @@ pub(crate) fn app(
             "/user/change_password",
             routing::put(routes::user::change_password),
         )
-        .route("/user/status", routing::get(routes::user::status));
+        .route("/user/status", routing::get(routes::user::status))
+        .route(
+            "/user/home_dashboard",
+            routing::get(routes::user::home_dashboard)
+                .put(routes::user::home_dashboard_set)
+                .delete(routes::user::home_dashboard_clear),
+        );
 
     let cors = CorsLayer::new()
         .allow_methods([Method::GET, Method::POST, Method::PUT, Method::DELETE])

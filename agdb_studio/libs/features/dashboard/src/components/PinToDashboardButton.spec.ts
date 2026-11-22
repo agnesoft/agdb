@@ -7,16 +7,23 @@ vi.mock("@agnesoft/agdb_api", async (importOriginal) => {
 
 const { store, addNotification } = vi.hoisted(() => ({
   store: {
-    dashboards: undefined as unknown as import("vue").Ref<{ name: string }[]>,
+    dashboards: undefined as unknown as import("vue").Ref<
+      { owner: string; name: string; role: string }[]
+    >,
     fetchDashboards: vi.fn(),
     createDashboard: vi.fn(),
     appendWidgets: vi.fn(),
   },
   addNotification: vi.fn(),
 }));
-vi.mock("../composables/dashboardStore", () => ({
+vi.mock("../composables/dashboardStore", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../composables/dashboardStore")>()),
   useDashboardStore: () => store,
 }));
+vi.mock("@agdb-studio/auth/src/account", async () => {
+  const { ref } = await import("vue");
+  return { useAccount: () => ({ username: ref("me") }) };
+});
 vi.mock("@agdb-studio/notification/src/composables/notificationStore", () => ({
   addNotification,
 }));
@@ -66,7 +73,7 @@ describe("PinToDashboardButton", () => {
     vi.clearAllMocks();
     closeModal();
     seed([Q1]);
-    store.dashboards = ref([{ name: "ops" }]);
+    store.dashboards = ref([{ owner: "me", name: "ops", role: "admin" }]);
     store.fetchDashboards.mockResolvedValue(undefined);
   });
 
@@ -102,19 +109,22 @@ describe("PinToDashboardButton", () => {
     await handleConfirm();
     await flushPromises();
     expect(store.createDashboard).not.toHaveBeenCalled();
-    expect(store.appendWidgets).toHaveBeenCalledWith("ops", [
-      expect.objectContaining({
-        owner: "o",
-        db: "d",
-        title: "Users",
-        view: "table",
-        rows: {
-          exec: [{ id: "r0", query: Q1 }],
-          context: [{ id: "c0", query: Q2 }],
-        },
-        colors: expect.objectContaining({ rows: { r0: 1 } }),
-      }),
-    ]);
+    expect(store.appendWidgets).toHaveBeenCalledWith(
+      { owner: "me", name: "ops" },
+      [
+        expect.objectContaining({
+          owner: "o",
+          db: "d",
+          title: "Users",
+          view: "table",
+          rows: {
+            exec: [{ id: "r0", query: Q1 }],
+            context: [{ id: "c0", query: Q2 }],
+          },
+          colors: expect.objectContaining({ rows: { r0: 1 } }),
+        }),
+      ],
+    );
     expect(addNotification).toHaveBeenCalledWith(
       expect.objectContaining({
         type: "success",
@@ -128,14 +138,15 @@ describe("PinToDashboardButton", () => {
     seed([Q1, Q2]);
     await open(mountButton());
     const rule = modal.content[1]!.input!.rules![0]!;
-    expect(rule("list")).toBeDefined();
+    expect(rule("bad!")).toBeDefined();
     expect(rule(undefined as unknown as string)).toBeDefined();
     set("new_name", "fresh");
+    store.createDashboard.mockResolvedValueOnce({ owner: "me", name: "fresh" });
     await handleConfirm();
     await flushPromises();
     expect(store.createDashboard).toHaveBeenCalledWith("fresh");
-    const [[name, widgets]] = store.appendWidgets.mock.calls;
-    expect(name).toBe("fresh");
+    const [[key, widgets]] = store.appendWidgets.mock.calls;
+    expect(key).toEqual({ owner: "me", name: "fresh" });
     expect(widgets).toHaveLength(1);
     expect(widgets[0].title).toBe("o/d");
     expect(widgets[0].rows.exec).toHaveLength(2);
@@ -143,6 +154,7 @@ describe("PinToDashboardButton", () => {
 
   it("does not create the new dashboard again when retrying a failed pin", async () => {
     store.dashboards.value = [];
+    store.createDashboard.mockResolvedValueOnce({ owner: "me", name: "fresh" });
     store.appendWidgets.mockRejectedValueOnce(new Error("offline"));
     await open(mountButton());
     set("new_name", "fresh");
@@ -157,11 +169,34 @@ describe("PinToDashboardButton", () => {
 
   it("skips the new name rule for existing dashboards", async () => {
     await open(mountButton());
-    expect(modal.content[1]!.input!.rules![0]!("list")).toBeUndefined();
+    expect(modal.content[1]!.input!.rules![0]!("bad!")).toBeUndefined();
     useContentInputs().getContentInputs(KEY_MODAL)?.delete("title");
     await handleConfirm();
     await flushPromises();
     expect(store.appendWidgets).toHaveBeenCalled();
+  });
+
+  it("offers only dashboards the user can edit, labelled owner/name", async () => {
+    store.dashboards.value = [
+      { owner: "ann", name: "seen", role: "read" },
+      { owner: "ann", name: "ops", role: "write" },
+    ];
+    await open(mountButton());
+    const input = modal.content[0]!.input!;
+    expect(input.options).toEqual([
+      { value: "ann/ops", label: "ann/ops" },
+      { value: ".", label: "+ New dashboard" },
+    ]);
+    expect(input.value).toBe("ann/ops");
+    await handleConfirm();
+    await flushPromises();
+    expect(store.appendWidgets).toHaveBeenCalledWith(
+      { owner: "ann", name: "ops" },
+      expect.any(Array),
+    );
+    expect(addNotification).toHaveBeenCalledWith(
+      expect.objectContaining({ message: '"o/d" added to ann/ops.' }),
+    );
   });
 
   it("explains a dashboard it cannot add to and keeps the dialog open", async () => {

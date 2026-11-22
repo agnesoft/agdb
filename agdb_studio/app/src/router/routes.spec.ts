@@ -65,7 +65,7 @@ describe("routes", () => {
     const adminRoute = mainLayout!.children!.find((r) => r.path === "admin");
     expect(adminRoute).toBeDefined();
     expect(adminRoute!.meta).toEqual({ requiresAdmin: true, admin: true });
-    expect(adminRoute!.children).toHaveLength(4);
+    expect(adminRoute!.children).toHaveLength(6);
 
     const adminChildrenNames = adminRoute!.children!.map((r) => r.name);
     expect(adminChildrenNames).toEqual([
@@ -73,6 +73,8 @@ describe("routes", () => {
       "admin-users",
       "admin-db",
       "admin-query",
+      "admin-dashboards",
+      "admin-dashboard",
     ]);
   });
 

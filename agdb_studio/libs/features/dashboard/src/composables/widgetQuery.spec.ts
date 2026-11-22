@@ -25,6 +25,7 @@ vi.mock("@vueuse/core", async (importOriginal) => ({
 }));
 
 import { useMinimalRoute } from "@agdb-studio/query/src/composables/dbExec";
+import { useAdmin } from "@agdb-studio/router/src/admin";
 import { useQueryStore } from "@agdb-studio/query/src/composables/queryStore";
 import { errorMessage, useWidgetQuery } from "./widgetQuery";
 import { createWidget } from "../utils/dashboardDocument";
@@ -47,13 +48,19 @@ const setup = (init: Partial<Widget> = {}) => {
     }),
   );
   let data!: ReturnType<typeof useWidgetQuery>;
-  let injected: { id?: Ref<string>; params?: Record<string, unknown> } = {};
+  let injected: {
+    id?: Ref<string>;
+    params?: Record<string, unknown>;
+    name?: unknown;
+  } = {};
   // Plain component objects: one defineComponent per file keeps lint happy.
   const Child = {
     setup() {
+      const route = useMinimalRoute();
       injected = {
         id: inject<Ref<string>>("queryId"),
-        params: useMinimalRoute().params,
+        params: route.params,
+        name: route.name,
       };
       return () => null;
     },
@@ -93,7 +100,7 @@ describe("useWidgetQuery", () => {
     expect(executeDbQueries).toHaveBeenCalledWith(
       [expect.anything()],
       false,
-      { params: { owner: "o", db: "d" } },
+      { params: { owner: "o", db: "d" }, name: "query" },
       { quiet: false },
     );
     const query = data.query.value!;
@@ -105,8 +112,25 @@ describe("useWidgetQuery", () => {
     expect(data.loading.value).toBe(false);
     expect(injected().id?.value).toBe(data.queryId.value);
     expect(injected().params).toEqual({ owner: "o", db: "d" });
+    expect(injected().name).toBe("query");
     wrapper.unmount();
     expect(queryStore.getQuery(data.queryId.value)).toBeUndefined();
+  });
+
+  it("runs with admin access in the admin view", async () => {
+    const { isAdmin, isAdminView } = useAdmin();
+    (isAdmin as Ref<boolean>).value = true;
+    (isAdminView as Ref<boolean>).value = true;
+    const { injected, wrapper } = setup();
+    await flushPromises();
+    expect(executeDbQueries).toHaveBeenCalledWith(
+      [expect.anything()],
+      false,
+      { params: { owner: "o", db: "d" }, name: "admin-query" },
+      { quiet: false },
+    );
+    expect(injected().name).toBe("admin-query");
+    wrapper.unmount();
   });
 
   it("skips an empty context tab", async () => {

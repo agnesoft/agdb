@@ -128,16 +128,9 @@ export const useDbDetails = (dbParams: Ref<DbDetailsParams>) => {
     });
   };
 
-  const isOwner = (username: string) => {
-    return username === dbParams.value.owner;
-  };
-
-  const handleUsernameClick = (username: string, role: DbUserRole) => {
-    if (isOwner(username) || !canEditUsers.value) {
-      return;
-    }
+  /** The owner is excluded by RoleUsers, which only offers the users the viewer may change. */
+  const handleUsernameClick = (username: string, role: DbUserRole) =>
     handleAddUser({ username, db_role: role });
-  };
 
   return {
     users,
@@ -145,7 +138,6 @@ export const useDbDetails = (dbParams: Ref<DbDetailsParams>) => {
     canEditUsers,
     handleRemoveUser,
     handleAddUser,
-    isOwner,
     handleUsernameClick,
   };
 };

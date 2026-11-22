@@ -145,4 +145,30 @@ describe("dbExec", () => {
     );
     expect(client.value.admin_db_exec).not.toHaveBeenCalled();
   });
+
+  it("runs an admin database target through the admin endpoints", async () => {
+    const target = ref({ owner: "bob", db: "sales", admin: true });
+    let bound: ReturnType<typeof useDbExec> | undefined;
+    const Child = {
+      setup() {
+        bound = useDbExec();
+        return () => null;
+      },
+    };
+    mount({
+      setup() {
+        provideDbTarget(target);
+        return () => h(Child);
+      },
+    });
+    expect(bound!.route.name).toBe("admin-query");
+    await bound!.exec([query]);
+    expect(client.value.admin_db_exec).toHaveBeenCalledWith(
+      { owner: "bob", db: "sales" },
+      [query],
+      undefined,
+    );
+    target.value = { owner: "bob", db: "sales", admin: false };
+    expect(bound!.route.name).toBe("query");
+  });
 });

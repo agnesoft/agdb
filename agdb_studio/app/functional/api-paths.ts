@@ -70,5 +70,7 @@ export const CLUSTER_ADMIN_USER_LOGOUT_ALL_API =
 // Cluster
 export const CLUSTER_STATUS_API = "**/api/v1/cluster/status*";
 
-// Dashboards: /api/v1/dashboard/list and /api/v1/dashboard/{name}/{action}
+// Dashboards: /api/v1/dashboard/list and /api/v1/dashboard/{owner}/{name}/{action}
 export const DASHBOARD_API = "**/api/v1/dashboard/**";
+export const HOME_DASHBOARD_API = "**/api/v1/user/home_dashboard*";
+export const ADMIN_DASHBOARD_API = "**/api/v1/admin/dashboard/**";

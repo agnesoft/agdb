@@ -21,11 +21,13 @@
     "@vueuse/core": "catalog:",
     "@kalimahapps/vue-icons": "catalog:",
     "@agdb-studio/api": "workspace:*",
+    "@agdb-studio/auth": "workspace:*",
     "@agdb-studio/common": "workspace:*",
     "@agdb-studio/db": "workspace:*",
     "@agdb-studio/design": "workspace:*",
     "@agdb-studio/notification": "workspace:*",
     "@agdb-studio/query": "workspace:*",
+    "@agdb-studio/router": "workspace:*",
     "@agnesoft/agdb_api": "workspace:*"
   },
   "devDependencies": {

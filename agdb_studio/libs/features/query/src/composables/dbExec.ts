@@ -15,8 +15,11 @@ export type MinimalRoute = {
   name?: unknown;
 };
 
-/** A database to run queries on instead of the one in the route. */
-export type DbTarget = { owner: string; db: string };
+/**
+ * A database to run queries on instead of the one in the route; `admin` runs
+ * them through the admin endpoints.
+ */
+export type DbTarget = { owner: string; db: string; admin?: boolean };
 
 const DB_TARGET_KEY: InjectionKey<MaybeRefOrGetter<DbTarget>> =
   Symbol("dbTarget");
@@ -43,7 +46,9 @@ export const useMinimalRoute = (): MinimalRoute => {
         const { owner, db } = toValue(target);
         return { owner, db };
       },
-      name: "query",
+      get name() {
+        return toValue(target).admin ? "admin-query" : "query";
+      },
     };
   }
   try {

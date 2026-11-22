@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { defineComponent } from "vue";
+import { defineComponent, type Ref } from "vue";
 import { flushPromises, mount } from "@vue/test-utils";
 vi.mock("@agnesoft/agdb_api", async (importOriginal) => {
   return await importOriginal<typeof import("@agnesoft/agdb_api")>();
@@ -55,6 +55,7 @@ import { useQueryStore } from "@agdb-studio/query/src/composables/queryStore";
 import { createWidget } from "../utils/dashboardDocument";
 import { toQueryRows } from "../utils/widgetRows";
 import type { Widget } from "../types";
+import { useAdmin } from "@agdb-studio/router/src/admin";
 
 const USERS = 'select().ids("users")';
 const queryStore = useQueryStore();
@@ -180,6 +181,26 @@ describe("WidgetEditor", () => {
     expect(options(5)).not.toContain("5 s");
   });
 
+  it("previews with admin access in the admin view", async () => {
+    const { isAdmin, isAdminView } = useAdmin();
+    (isAdmin as Ref<boolean>).value = true;
+    (isAdminView as Ref<boolean>).value = true;
+    mountEditor(
+      createWidget({
+        owner: "a",
+        db: "one",
+        rows: { exec: [{ id: "r1", query: USERS }], context: [] },
+      }),
+    );
+    await flushPromises();
+    expect(executeDbQueries).toHaveBeenLastCalledWith(
+      [expect.anything()],
+      false,
+      { params: { owner: "a", db: "one" }, name: "admin-query" },
+      { quiet: true },
+    );
+  });
+
   it("previews the widget at once, and again after edits", async () => {
     vi.useFakeTimers();
     try {
@@ -195,7 +216,7 @@ describe("WidgetEditor", () => {
       expect(executeDbQueries).toHaveBeenLastCalledWith(
         [expect.anything()],
         false,
-        { params: { owner: "a", db: "one" } },
+        { params: { owner: "a", db: "one" }, name: "query" },
         // Errors show in the hint, not as notifications.
         { quiet: true },
       );
@@ -207,7 +228,7 @@ describe("WidgetEditor", () => {
       expect(executeDbQueries).toHaveBeenLastCalledWith(
         [expect.anything()],
         false,
-        { params: { owner: "b", db: "two" } },
+        { params: { owner: "b", db: "two" }, name: "query" },
         // Errors show in the hint, not as notifications.
         { quiet: true },
       );

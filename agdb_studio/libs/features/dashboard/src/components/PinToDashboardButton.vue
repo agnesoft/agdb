@@ -5,7 +5,12 @@ import useModal from "@agdb-studio/common/src/composables/modal/modal";
 import { useContentInputs } from "@agdb-studio/common/src/composables/content/inputs";
 import { KEY_MODAL } from "@agdb-studio/common/src/composables/modal/constants";
 import { addNotification } from "@agdb-studio/notification/src/composables/notificationStore";
-import { useDashboardStore } from "../composables/dashboardStore";
+import {
+  canEdit,
+  dashboardLabel,
+  useDashboardStore,
+  type DashboardKey,
+} from "../composables/dashboardStore";
 import { useQueryStore } from "@agdb-studio/query/src/composables/queryStore";
 import {
   NewerDashboardError,
@@ -21,8 +26,11 @@ const props = defineProps<{
   queryId?: string;
 }>();
 
-/** Not a valid dashboard name (a leading "." is rejected), so no dashboard can clash with it. */
+/** Has no "/", so no "owner/name" option value can clash with it. */
 const NEW_DASHBOARD = ".";
+
+/** Option values are "owner/name"; dashboard names cannot contain "/". */
+const optionValue = (key: DashboardKey) => `${key.owner}/${key.name}`;
 
 const store = useDashboardStore();
 const { openModal } = useModal();
@@ -49,8 +57,9 @@ const pin = async () => {
   } catch {
     return;
   }
-  const names = store.dashboards.value.map((d) => d.name);
-  let created: string | undefined;
+  // Widgets are added by saving, so only dashboards the user can change.
+  const targets = store.dashboards.value.filter((d) => canEdit(d.role));
+  let created: DashboardKey | undefined;
   openModal({
     header: "Add to dashboard",
     content: [
@@ -60,10 +69,13 @@ const pin = async () => {
           label: "Dashboard",
           type: "select",
           options: [
-            ...names.map((n) => ({ value: n, label: n })),
+            ...targets.map((d) => ({
+              value: optionValue(d),
+              label: dashboardLabel(d),
+            })),
             { value: NEW_DASHBOARD, label: "+ New dashboard" },
           ],
-          value: names[0] ?? NEW_DASHBOARD,
+          value: targets[0] ? optionValue(targets[0]) : NEW_DASHBOARD,
         },
       },
       {
@@ -91,12 +103,20 @@ const pin = async () => {
       },
     ],
     onConfirm: async () => {
-      let name = text("dashboard");
-      if (name === NEW_DASHBOARD) {
-        name = text("new_name");
+      const selected = text("dashboard");
+      let key: DashboardKey;
+      if (selected === NEW_DASHBOARD) {
+        const name = text("new_name");
         // A retry after a failed pin must not create the dashboard again.
-        if (name !== created) await store.createDashboard(name);
-        created = name;
+        key =
+          created?.name === name ? created : await store.createDashboard(name);
+        created = key;
+      } else {
+        const slash = selected.lastIndexOf("/");
+        key = {
+          owner: selected.slice(0, slash),
+          name: selected.slice(slash + 1),
+        };
       }
       /* v8 ignore next -- @preserve: the button is disabled without a query */
       if (!query.value) return false;
@@ -110,7 +130,7 @@ const pin = async () => {
         query.value,
       );
       try {
-        await store.appendWidgets(name, [widget]);
+        await store.appendWidgets(key, [widget]);
       } catch (error) {
         // Request errors get a notification from the API error interceptor.
         if (!(error instanceof NewerDashboardError)) throw error;
@@ -124,7 +144,7 @@ const pin = async () => {
       addNotification({
         type: "success",
         title: "Added to dashboard",
-        message: `"${widget.title}" added to ${name}.`,
+        message: `"${widget.title}" added to ${dashboardLabel(key)}.`,
       });
       return true;
     },

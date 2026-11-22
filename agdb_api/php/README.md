@@ -58,14 +58,14 @@ $apiInstance = new Agnesoft\AgdbApi\Api\AgdbApi(
     new GuzzleHttp\Client(),
     $config
 );
-$owner = 'owner_example'; // string | user name
-$db = 'db_example'; // string | db name
-$db_type = new \Agnesoft\AgdbApi\Model\\Agnesoft\AgdbApi\Model\DbKind(); // \Agnesoft\AgdbApi\Model\DbKind
+$owner = 'owner_example'; // string | dashboard owner user name
+$name = 'name_example'; // string | dashboard name
+$dashboard_config = new \Agnesoft\AgdbApi\Model\DashboardConfig(); // \Agnesoft\AgdbApi\Model\DashboardConfig
 
 try {
-    $apiInstance->adminDbAdd($owner, $db, $db_type);
+    $apiInstance->adminDashboardAdd($owner, $name, $dashboard_config);
 } catch (Exception $e) {
-    echo 'Exception when calling AgdbApi->adminDbAdd: ', $e->getMessage(), PHP_EOL;
+    echo 'Exception when calling AgdbApi->adminDashboardAdd: ', $e->getMessage(), PHP_EOL;
 }
 
 ```
@@ -76,6 +76,16 @@ All URIs are relative to *http://localhost:3000*
 
 Class | Method | HTTP request | Description
 ------------ | ------------- | ------------- | -------------
+*AgdbApi* | [**adminDashboardAdd**](docs/Api/AgdbApi.md#admindashboardadd) | **POST** /api/v1/admin/dashboard/{owner}/{name}/add | 
+*AgdbApi* | [**adminDashboardGet**](docs/Api/AgdbApi.md#admindashboardget) | **GET** /api/v1/admin/dashboard/{owner}/{name} | 
+*AgdbApi* | [**adminDashboardList**](docs/Api/AgdbApi.md#admindashboardlist) | **GET** /api/v1/admin/dashboard/list | 
+*AgdbApi* | [**adminDashboardPublic**](docs/Api/AgdbApi.md#admindashboardpublic) | **PUT** /api/v1/admin/dashboard/{owner}/{name}/public | 
+*AgdbApi* | [**adminDashboardRemove**](docs/Api/AgdbApi.md#admindashboardremove) | **DELETE** /api/v1/admin/dashboard/{owner}/{name}/remove | 
+*AgdbApi* | [**adminDashboardRename**](docs/Api/AgdbApi.md#admindashboardrename) | **POST** /api/v1/admin/dashboard/{owner}/{name}/rename | 
+*AgdbApi* | [**adminDashboardSave**](docs/Api/AgdbApi.md#admindashboardsave) | **PUT** /api/v1/admin/dashboard/{owner}/{name}/save | 
+*AgdbApi* | [**adminDashboardUserAdd**](docs/Api/AgdbApi.md#admindashboarduseradd) | **PUT** /api/v1/admin/dashboard/{owner}/{name}/user/{username}/add | 
+*AgdbApi* | [**adminDashboardUserList**](docs/Api/AgdbApi.md#admindashboarduserlist) | **GET** /api/v1/admin/dashboard/{owner}/{name}/user/list | 
+*AgdbApi* | [**adminDashboardUserRemove**](docs/Api/AgdbApi.md#admindashboarduserremove) | **DELETE** /api/v1/admin/dashboard/{owner}/{name}/user/{username}/remove | 
 *AgdbApi* | [**adminDbAdd**](docs/Api/AgdbApi.md#admindbadd) | **POST** /api/v1/admin/db/{owner}/{db}/add | 
 *AgdbApi* | [**adminDbAudit**](docs/Api/AgdbApi.md#admindbaudit) | **GET** /api/v1/admin/db/{owner}/{db}/audit | 
 *AgdbApi* | [**adminDbAuditTrim**](docs/Api/AgdbApi.md#admindbaudittrim) | **POST** /api/v1/admin/db/{owner}/{db}/audit/trim | 
@@ -108,12 +118,16 @@ Class | Method | HTTP request | Description
 *AgdbApi* | [**clusterStatus**](docs/Api/AgdbApi.md#clusterstatus) | **GET** /api/v1/cluster/status | 
 *AgdbApi* | [**clusterUserLogin**](docs/Api/AgdbApi.md#clusteruserlogin) | **POST** /api/v1/cluster/user/login | 
 *AgdbApi* | [**clusterUserLogout**](docs/Api/AgdbApi.md#clusteruserlogout) | **POST** /api/v1/cluster/user/logout | 
-*AgdbApi* | [**dashboardAdd**](docs/Api/AgdbApi.md#dashboardadd) | **POST** /api/v1/dashboard/{name}/add | 
-*AgdbApi* | [**dashboardGet**](docs/Api/AgdbApi.md#dashboardget) | **GET** /api/v1/dashboard/{name} | 
+*AgdbApi* | [**dashboardAdd**](docs/Api/AgdbApi.md#dashboardadd) | **POST** /api/v1/dashboard/{owner}/{name}/add | 
+*AgdbApi* | [**dashboardGet**](docs/Api/AgdbApi.md#dashboardget) | **GET** /api/v1/dashboard/{owner}/{name} | 
 *AgdbApi* | [**dashboardList**](docs/Api/AgdbApi.md#dashboardlist) | **GET** /api/v1/dashboard/list | 
-*AgdbApi* | [**dashboardRemove**](docs/Api/AgdbApi.md#dashboardremove) | **DELETE** /api/v1/dashboard/{name}/remove | 
-*AgdbApi* | [**dashboardRename**](docs/Api/AgdbApi.md#dashboardrename) | **POST** /api/v1/dashboard/{name}/rename | 
-*AgdbApi* | [**dashboardSave**](docs/Api/AgdbApi.md#dashboardsave) | **PUT** /api/v1/dashboard/{name}/save | 
+*AgdbApi* | [**dashboardPublic**](docs/Api/AgdbApi.md#dashboardpublic) | **PUT** /api/v1/dashboard/{owner}/{name}/public | 
+*AgdbApi* | [**dashboardRemove**](docs/Api/AgdbApi.md#dashboardremove) | **DELETE** /api/v1/dashboard/{owner}/{name}/remove | 
+*AgdbApi* | [**dashboardRename**](docs/Api/AgdbApi.md#dashboardrename) | **POST** /api/v1/dashboard/{owner}/{name}/rename | 
+*AgdbApi* | [**dashboardSave**](docs/Api/AgdbApi.md#dashboardsave) | **PUT** /api/v1/dashboard/{owner}/{name}/save | 
+*AgdbApi* | [**dashboardUserAdd**](docs/Api/AgdbApi.md#dashboarduseradd) | **PUT** /api/v1/dashboard/{owner}/{name}/user/{username}/add | 
+*AgdbApi* | [**dashboardUserList**](docs/Api/AgdbApi.md#dashboarduserlist) | **GET** /api/v1/dashboard/{owner}/{name}/user/list | 
+*AgdbApi* | [**dashboardUserRemove**](docs/Api/AgdbApi.md#dashboarduserremove) | **DELETE** /api/v1/dashboard/{owner}/{name}/user/{username}/remove | 
 *AgdbApi* | [**dbAdd**](docs/Api/AgdbApi.md#dbadd) | **POST** /api/v1/db/{owner}/{db}/add | 
 *AgdbApi* | [**dbAudit**](docs/Api/AgdbApi.md#dbaudit) | **GET** /api/v1/db/{owner}/{db}/audit | 
 *AgdbApi* | [**dbAuditTrim**](docs/Api/AgdbApi.md#dbaudittrim) | **POST** /api/v1/db/{owner}/{db}/audit/trim | 
@@ -136,6 +150,9 @@ Class | Method | HTTP request | Description
 *AgdbApi* | [**setLogLevel**](docs/Api/AgdbApi.md#setloglevel) | **POST** /api/v1/admin/set_log_level | 
 *AgdbApi* | [**status**](docs/Api/AgdbApi.md#status) | **GET** /api/v1/status | 
 *AgdbApi* | [**userChangePassword**](docs/Api/AgdbApi.md#userchangepassword) | **PUT** /api/v1/user/change_password | 
+*AgdbApi* | [**userHomeDashboard**](docs/Api/AgdbApi.md#userhomedashboard) | **GET** /api/v1/user/home_dashboard | 
+*AgdbApi* | [**userHomeDashboardClear**](docs/Api/AgdbApi.md#userhomedashboardclear) | **DELETE** /api/v1/user/home_dashboard | 
+*AgdbApi* | [**userHomeDashboardSet**](docs/Api/AgdbApi.md#userhomedashboardset) | **PUT** /api/v1/user/home_dashboard | 
 *AgdbApi* | [**userLogin**](docs/Api/AgdbApi.md#userlogin) | **POST** /api/v1/user/login | 
 *AgdbApi* | [**userLogout**](docs/Api/AgdbApi.md#userlogout) | **POST** /api/v1/user/logout | 
 *AgdbApi* | [**userStatus**](docs/Api/AgdbApi.md#userstatus) | **GET** /api/v1/user/status | 
@@ -171,6 +188,8 @@ Class | Method | HTTP request | Description
 - [CountComparisonOneOf5](docs/Model/CountComparisonOneOf5.md)
 - [Dashboard](docs/Model/Dashboard.md)
 - [DashboardConfig](docs/Model/DashboardConfig.md)
+- [DashboardName](docs/Model/DashboardName.md)
+- [DashboardPublicParam](docs/Model/DashboardPublicParam.md)
 - [DashboardRenameParam](docs/Model/DashboardRenameParam.md)
 - [DashboardSummary](docs/Model/DashboardSummary.md)
 - [DbElement](docs/Model/DbElement.md)
@@ -195,6 +214,7 @@ Class | Method | HTTP request | Description
 - [DbValueOneOf7](docs/Model/DbValueOneOf7.md)
 - [DbValueOneOf8](docs/Model/DbValueOneOf8.md)
 - [DbValueOneOf9](docs/Model/DbValueOneOf9.md)
+- [HomeDashboardParam](docs/Model/HomeDashboardParam.md)
 - [InsertAliasesQuery](docs/Model/InsertAliasesQuery.md)
 - [InsertEdgesQuery](docs/Model/InsertEdgesQuery.md)
 - [InsertIndexQuery](docs/Model/InsertIndexQuery.md)

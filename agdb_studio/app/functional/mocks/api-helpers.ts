@@ -10,6 +10,7 @@ import {
   LOGIN_API,
   OPENAPI_API,
   USER_STATUS_API,
+  HOME_DASHBOARD_API,
 } from "../api-paths";
 import { MOCK_TOKEN_RESPONSE, MOCK_USER_STATUS } from "./auth.mock";
 import { MOCK_DATABASE_LIST } from "./db.mock";
@@ -49,6 +50,17 @@ export async function mockUserStatusApi(page: Page) {
   });
 }
 
+/** No home dashboard, so the start page opens the databases. */
+export async function mockNoHomeDashboardApi(page: Page) {
+  await page.route(HOME_DASHBOARD_API, async (route) => {
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: "null",
+    });
+  });
+}
+
 export async function mockLogin(page: Page) {
   await page.addInitScript(() => {
     window.localStorage.setItem("studio_token", "mocked-token");
@@ -79,6 +91,7 @@ export async function mockAllApis(page: Page) {
   await mockOpenApi(page);
   await mockLoginApi(page);
   await mockUserStatusApi(page);
+  await mockNoHomeDashboardApi(page);
 }
 
 export async function mockAdminUserStatus(page: Page) {

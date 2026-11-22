@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { flushPromises, mount } from "@vue/test-utils";
-import { ref } from "vue";
+import { ref, type Ref } from "vue";
+import { useAdmin } from "@agdb-studio/router/src/admin";
 
 const { store, fetchDatabases, leaveGuard } = vi.hoisted(() => ({
   store: {
@@ -25,15 +26,20 @@ const { store, fetchDatabases, leaveGuard } = vi.hoisted(() => ({
     update: undefined as
       | undefined
       | ((
-          to: { params: { name?: string } },
-          from: { params: { name?: string } },
+          to: { params: { owner?: string; name?: string } },
+          from: { params: { owner?: string; name?: string } },
         ) => boolean | Promise<boolean>),
   },
 }));
 
-vi.mock("../composables/dashboardStore", () => ({
+vi.mock("../composables/dashboardStore", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../composables/dashboardStore")>()),
   useDashboardStore: () => store,
 }));
+vi.mock("@agdb-studio/auth/src/account", async () => {
+  const { ref } = await import("vue");
+  return { useAccount: () => ({ username: ref("me") }) };
+});
 vi.mock("@agdb-studio/db/src/composables/dbStore", () => ({
   useDbStore: () => ({ fetchDatabases }),
 }));
@@ -56,7 +62,7 @@ import {
 
 const WidgetStub = {
   name: "DashboardWidget",
-  props: ["widget", "size", "first", "last", "refreshKey"],
+  props: ["widget", "size", "first", "last", "refreshKey", "readOnly"],
   emits: ["edit", "remove", "move", "resize", "update"],
   template: '<div class="widget-stub" />',
 };
@@ -87,9 +93,9 @@ const document = () => {
 const mounted: ReturnType<typeof mount>[] = [];
 afterEach(() => mounted.splice(0).forEach((w) => w.unmount()));
 
-const mountView = async () => {
+const mountView = async (owner = "me") => {
   const wrapper = mount(DashboardView, {
-    props: { name: "ops" },
+    props: { owner, name: "ops" },
     global: { stubs },
   });
   mounted.push(wrapper);
@@ -105,7 +111,13 @@ const click = async (wrapper: ReturnType<typeof mount>, id: string) => {
 describe("DashboardView", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    store.current = ref({ name: "ops", document: document() });
+    store.current = ref({
+      owner: "me",
+      name: "ops",
+      role: "admin",
+      public: false,
+      document: document(),
+    });
     store.dirty = ref(false);
     store.saving = ref(false);
     store.saveFailed = ref(false);
@@ -118,8 +130,15 @@ describe("DashboardView", () => {
 
   it("loads the dashboard and shows its widgets in order", async () => {
     const wrapper = await mountView();
-    expect(store.loadDashboard).toHaveBeenCalledWith("ops");
+    expect(
+      wrapper.find('[data-testid="dashboard-public-badge"]').exists(),
+    ).toBe(false);
+    expect(store.loadDashboard).toHaveBeenCalledWith({
+      owner: "me",
+      name: "ops",
+    });
     const items = wrapper.findAllComponents(WidgetStub);
+    expect(items[0]!.props("readOnly")).toBe(false);
     expect(items).toHaveLength(2);
     expect(items[0]!.props("first")).toBe(true);
     expect(items[1]!.props("last")).toBe(true);
@@ -143,11 +162,79 @@ describe("DashboardView", () => {
     expect(wrapper.findAllComponents(WidgetStub)).toHaveLength(2);
   });
 
+  it("shows a shared read-only dashboard without editing", async () => {
+    store.current.value = {
+      owner: "ann",
+      name: "ops",
+      role: "read",
+      public: true,
+      document: emptyDocument(),
+    };
+    const wrapper = await mountView("ann");
+    expect(wrapper.find('[data-testid="dashboard-public-badge"]').text()).toBe(
+      "Public",
+    );
+    expect(store.loadDashboard).toHaveBeenCalledWith({
+      owner: "ann",
+      name: "ops",
+    });
+    expect(wrapper.find("h2").text()).toBe("ann/ops");
+    expect(wrapper.find('[data-testid="dashboard-read-only"]').exists()).toBe(
+      true,
+    );
+    expect(wrapper.find('[data-testid="dashboard-add-widget"]').exists()).toBe(
+      false,
+    );
+    expect(
+      wrapper.find('[data-testid="dashboard-empty"]').text(),
+    ).not.toContain("Add widget");
+  });
+
+  it("shows the widgets of a read-only dashboard without their edit actions", async () => {
+    store.current.value = {
+      owner: "ann",
+      name: "ops",
+      role: "read",
+      public: false,
+      document: document(),
+    };
+    const wrapper = await mountView("ann");
+    expect(wrapper.findComponent(WidgetStub).props("readOnly")).toBe(true);
+  });
+
+  it("marks the admin access in the admin view", async () => {
+    expect(
+      (await mountView())
+        .find('[data-testid="dashboard-admin-badge"]')
+        .exists(),
+    ).toBe(false);
+    const { isAdmin, isAdminView } = useAdmin();
+    (isAdmin as Ref<boolean>).value = true;
+    (isAdminView as Ref<boolean>).value = true;
+    const wrapper = await mountView("ann");
+    expect(wrapper.find('[data-testid="dashboard-admin-badge"]').text()).toBe(
+      "Admin access",
+    );
+  });
+
+  it("reloads when the owner changes", async () => {
+    const wrapper = await mountView();
+    await wrapper.setProps({ owner: "ann" });
+    await flushPromises();
+    expect(store.loadDashboard).toHaveBeenLastCalledWith({
+      owner: "ann",
+      name: "ops",
+    });
+  });
+
   it("reloads when the name changes", async () => {
     const wrapper = await mountView();
     await wrapper.setProps({ name: "sales" });
     await flushPromises();
-    expect(store.loadDashboard).toHaveBeenLastCalledWith("sales");
+    expect(store.loadDashboard).toHaveBeenLastCalledWith({
+      owner: "me",
+      name: "sales",
+    });
   });
 
   it("shows a load failure and an empty dashboard", async () => {
@@ -163,7 +250,10 @@ describe("DashboardView", () => {
     );
 
     store.current.value = {
+      owner: "me",
       name: "ops",
+      role: "write",
+      public: false,
       document: emptyDocument(),
     };
     const empty = await mountView();
@@ -279,11 +369,33 @@ describe("DashboardView", () => {
     store.dirty.value = true;
     expect(await leaveGuard.fn?.()).toBe(true);
     expect(window.confirm).not.toHaveBeenCalled();
-    expect(store.closeDashboard).toHaveBeenCalledTimes(1);
     store.saveFailed.value = true;
     vi.mocked(window.confirm).mockReturnValueOnce(false);
     expect(await leaveGuard.fn?.()).toBe(false);
+  });
+
+  it("keeps the dashboard open when a navigation ends on it again", async () => {
+    // E.g. the logo's start page redirecting to this home dashboard: the
+    // leave guard runs, but the view stays and is not loaded again.
+    const wrapper = await mountView();
+    expect(await leaveGuard.fn?.()).toBe(true);
+    expect(store.closeDashboard).not.toHaveBeenCalled();
+    expect(
+      wrapper.find('[data-testid="dashboard-add-widget"]').attributes(),
+    ).not.toHaveProperty("disabled");
+  });
+
+  it("closes its dashboard when it goes away", async () => {
+    const wrapper = await mountView();
+    wrapper.unmount();
     expect(store.closeDashboard).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not close a dashboard another view opened meanwhile", async () => {
+    const wrapper = await mountView();
+    store.current.value = { name: "sales", document: document() };
+    wrapper.unmount();
+    expect(store.closeDashboard).not.toHaveBeenCalled();
   });
 
   it("waits for a running save before deciding to leave", async () => {
@@ -308,12 +420,17 @@ describe("DashboardView", () => {
 
   it("asks before switching to another dashboard with edits that failed to save", async () => {
     await mountView();
-    const at = (name: string) => ({ params: { name } });
+    const at = (owner: string, name: string) => ({ params: { owner, name } });
     store.saveFailed.value = true;
-    expect(leaveGuard.update?.(at("ops"), at("ops"))).toBe(true);
+    expect(leaveGuard.update?.(at("me", "ops"), at("me", "ops"))).toBe(true);
     expect(window.confirm).not.toHaveBeenCalled();
-    vi.mocked(window.confirm).mockReturnValueOnce(false);
-    expect(await leaveGuard.update?.(at("other"), at("ops"))).toBe(false);
+    vi.mocked(window.confirm).mockReturnValue(false);
+    expect(await leaveGuard.update?.(at("me", "other"), at("me", "ops"))).toBe(
+      false,
+    );
+    expect(await leaveGuard.update?.(at("ann", "ops"), at("me", "ops"))).toBe(
+      false,
+    );
   });
 
   it("warns before closing the tab with unsaved edits", async () => {

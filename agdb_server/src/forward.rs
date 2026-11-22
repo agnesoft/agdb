@@ -1,6 +1,7 @@
 use crate::server_state::ServerState;
 use axum::extract::Request;
 use axum::extract::State;
+use axum::http::Method;
 use axum::middleware::Next;
 use axum::response::Response;
 use reqwest::StatusCode;
@@ -9,7 +10,7 @@ use std::time::Duration;
 
 const EXECUTED_WAIT_TIMEOUT: Duration = Duration::from_secs(30);
 
-const REDIRECT_PATHS: [&str; 18] = [
+const REDIRECT_PATHS: [&str; 19] = [
     "/add",
     "/backup",
     "/change_password",
@@ -22,6 +23,7 @@ const REDIRECT_PATHS: [&str; 18] = [
     "/delete",
     "/exec_mut",
     "/optimize",
+    "/public",
     "/remove",
     "/rename",
     "/restore",
@@ -35,6 +37,8 @@ fn is_redirect_path(request: &Request) -> bool {
 
     REDIRECT_PATHS.iter().any(|pattern| path.ends_with(pattern))
         || (path.ends_with("/logout") && path.contains("/cluster/admin/user/"))
+        // Setting and clearing it are writes, getting it is not.
+        || (path.ends_with("/user/home_dashboard") && request.method() != Method::GET)
 }
 
 pub(crate) async fn forward_to_leader(

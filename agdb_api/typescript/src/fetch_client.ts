@@ -71,8 +71,12 @@ export class FetchClient extends HttpClient implements AgdbApiClient {
     }
 }
 
-/** The JSON of the body, `undefined` when it is empty. */
+/**
+ * The JSON of the body, `undefined` when it is empty or `null`: the generated
+ * client types a Rust `Option` as `T | undefined`.
+ */
 async function body<T>(response: Response): Promise<T> {
     const text = await response.text();
-    return (text === "" ? undefined : JSON.parse(text)) as T;
+    const json: unknown = text === "" ? undefined : JSON.parse(text);
+    return (json === null ? undefined : json) as T;
 }

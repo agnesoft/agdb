@@ -321,7 +321,7 @@ describe("dashboardDocument", () => {
 
   it("validates dashboard names like the server", () => {
     expect(validateDashboardName("ops-2026_q1.v2")).toBeUndefined();
-    expect(validateDashboardName("list")).toContain("reserved");
+    expect(validateDashboardName("list")).toBeUndefined();
     expect(validateDashboardName("")).toBeDefined();
     expect(validateDashboardName("has space")).toBeDefined();
     expect(validateDashboardName("x".repeat(65))).toBeDefined();

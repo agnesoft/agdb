@@ -29,6 +29,7 @@ pub use api_types::ChangePassword;
 pub use api_types::ClusterStatus;
 pub use api_types::Dashboard;
 pub use api_types::DashboardConfig;
+pub use api_types::DashboardName;
 pub use api_types::DashboardSummary;
 pub use api_types::DbAudit;
 pub use api_types::DbKind;

@@ -108,6 +108,7 @@ export const DbValue = {
     VecF64: (v: number[]): DbValue => ({ VecF64: v }),
     VecString: (v: string[]): DbValue => ({ VecString: v }),
     VecDbValue: (v: DbValue[]): DbValue => ({ VecDbValue: v }),
+    None: "None" as DbValue,
 };
 
 export const QueryId = {
@@ -217,7 +218,7 @@ export function into_DbValues(v: IntoDbValues): DbValue[] {
     if (typeof v === "string") {
         return [{ String: v }];
     }
-    if (Array.isArray(v) && v.every((x) => (typeof x === "object" && x !== null && ("Bytes" in x || "I64" in x || "U64" in x || "F64" in x || "String" in x || "VecI64" in x || "VecU64" in x || "VecF64" in x || "VecString" in x || "VecDbValue" in x)))) {
+    if (Array.isArray(v) && v.every((x) => x === "None" || (typeof x === "object" && x !== null && ("Bytes" in x || "I64" in x || "U64" in x || "F64" in x || "String" in x || "VecI64" in x || "VecU64" in x || "VecF64" in x || "VecString" in x || "VecDbValue" in x)))) {
         return (v as DbValue[]);
     }
     if (Array.isArray(v) && v.every((x) => is_into_DbValue(x))) {

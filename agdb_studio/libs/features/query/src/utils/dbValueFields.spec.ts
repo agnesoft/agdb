@@ -7,6 +7,7 @@ import {
   BYTES_TYPE,
   EDITABLE_VALUE_TYPES,
   NESTED_TYPE,
+  NONE_TYPE,
   dbValueToField,
   dbValueTypeLabel,
   fieldToDbValue,
@@ -34,6 +35,7 @@ describe("dbValueFields", () => {
     [{ VecString: [] }, f("string[]", "")],
     [{ Bytes: [1, 2] }, f(BYTES_TYPE, "1, 2")],
     [{ VecDbValue: [{ I64: 1 }, { String: "a" }] }, f(NESTED_TYPE, "1, a")],
+    ["None", f(NONE_TYPE, "")],
   ])("converts %j to a field", (value, field) => {
     expect(dbValueToField(value)).toEqual(field);
   });
@@ -54,6 +56,7 @@ describe("dbValueFields", () => {
     { VecString: [] },
     { Bytes: [0, 255] },
     { Bytes: [] },
+    "None",
   ])("round-trips %j without changing its type", (value) => {
     const field = dbValueToField(value);
     expect(validateField(field)).toBeUndefined();
@@ -74,18 +77,21 @@ describe("dbValueFields", () => {
     [f("float[]", "1.5"), { VecF64: [1.5] }],
     [f(BYTES_TYPE, "1, 2"), { Bytes: [1, 2] }],
     [f(BYTES_TYPE), { Bytes: [] }],
+    [f(NONE_TYPE, "ignored"), "None"],
   ])("converts field %j to a DbValue", (field, value) => {
     expect(fieldToDbValue(field)).toEqual(value);
   });
 
-  it("offers the builder value types plus bytes", () => {
+  it("offers the builder value types plus bytes and none", () => {
     expect(EDITABLE_VALUE_TYPES).toContain("signed");
     expect(EDITABLE_VALUE_TYPES).toContain(BYTES_TYPE);
+    expect(EDITABLE_VALUE_TYPES).toContain(NONE_TYPE);
     expect(EDITABLE_VALUE_TYPES).not.toContain(NESTED_TYPE);
   });
 
   it("labels value types", () => {
     expect(dbValueTypeLabel({ U64: 1 })).toBe("u64");
+    expect(dbValueTypeLabel("None")).toBe(NONE_TYPE);
     expect(dbValueTypeLabel({ VecString: [] })).toBe("string[]");
     expect(dbValueTypeLabel({ Unknown: 1 } as unknown as DbValue)).toBe(
       "Unknown",
@@ -131,6 +137,7 @@ describe("dbValueFields", () => {
     [f(BYTES_TYPE, "-1"), "Expected comma-separated bytes (0-255)"],
     [f(BYTES_TYPE, "1.5"), "Expected comma-separated bytes (0-255)"],
     [f(NESTED_TYPE, "1, a"), undefined],
+    [f(NONE_TYPE, ""), undefined],
   ])("validates %j", (field, expected) => {
     const result = validateField(field);
     if (expected === undefined) {

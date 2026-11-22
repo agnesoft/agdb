@@ -5,6 +5,7 @@ use crate::db::db_f64::DbF64;
 use crate::db::db_value::BYTES_META_VALUE;
 use crate::db::db_value::F64_META_VALUE;
 use crate::db::db_value::I64_META_VALUE;
+use crate::db::db_value::NONE_META_VALUE;
 use crate::db::db_value::STRING_META_VALUE;
 use crate::db::db_value::U64_META_VALUE;
 use crate::db::db_value::VEC_DBVALUE_META_VALUE;
@@ -38,6 +39,7 @@ pub(crate) fn encode(value: &DbValue) -> (u8, Cow<'_, [u8]>) {
         DbValue::VecF64(v) => (VEC_F64_META_VALUE, Cow::Owned(v.serialize())),
         DbValue::VecString(v) => (VEC_STRING_META_VALUE, Cow::Owned(v.serialize())),
         DbValue::VecDbValue(v) => (VEC_DBVALUE_META_VALUE, Cow::Owned(v.serialize())),
+        DbValue::None => (NONE_META_VALUE, Cow::Borrowed(&[])),
     }
 }
 
@@ -53,6 +55,7 @@ fn decode(kind: u8, bytes: &[u8]) -> Result<DbValue, DbError> {
         VEC_F64_META_VALUE => DbValue::VecF64(Vec::deserialize(bytes)?),
         VEC_STRING_META_VALUE => DbValue::VecString(Vec::deserialize(bytes)?),
         VEC_DBVALUE_META_VALUE => DbValue::VecDbValue(Vec::deserialize(bytes)?),
+        NONE_META_VALUE => DbValue::None,
         _ => {
             return Err(DbError::db(
                 DbErrorType::InvalidIndex,
@@ -227,6 +230,7 @@ pub(crate) mod tests {
             DbValue::VecF64(vec![1.1.into()]),
             DbValue::VecString(vec![long.to_string()]),
             DbValue::VecDbValue(vec![DbValue::I64(1), long.into()]),
+            DbValue::None,
         ]
     }
 

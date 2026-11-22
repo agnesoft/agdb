@@ -1,6 +1,8 @@
 use crate::DbError;
 use crate::DbId;
 use crate::DbValue;
+use crate::collections::keys::KeyId;
+use crate::collections::keys::Keys;
 use crate::collections::table::Kind;
 use crate::collections::table::Lookup;
 use crate::collections::table::Slot;
@@ -26,8 +28,8 @@ const IDS: Kind = Kind {
     size: 8,
     hash: id_hash,
 };
-/// `[key DbValueIndex][values TableHeader][count u64]`
-const ENTRY: u64 = 48;
+/// `[key id u64][values TableHeader][count u64]`
+const ENTRY: u64 = 40;
 /// The bytes of encoded [`Indexes`].
 pub(crate) const INDEXES_SIZE: usize = 16;
 
@@ -68,11 +70,11 @@ impl Ids {
 }
 
 /// The index of the values of a key: a table of the values, each with the
-/// ids of the elements having it.
+/// ids of the elements having it. It holds a reference to its key.
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct Index {
     pub(crate) key: DbValue,
-    stored_key: DbValueIndex,
+    pub(crate) key_id: KeyId,
     values: TableHeader,
     /// The number of ids of all values.
     pub(crate) count: u64,
@@ -102,18 +104,18 @@ impl Index {
 }
 
 impl Indexes {
-    pub(crate) fn load(view: &impl View, bytes: &[u8]) -> Result<Self, DbError> {
+    pub(crate) fn load(view: &impl View, keys: &Keys, bytes: &[u8]) -> Result<Self, DbError> {
         let pos = u64_at(bytes, 0);
         let entries = view.read(pos, u64_at(bytes, 1) * ENTRY)?;
         let mut list = Vec::new();
 
         for entry in entries.chunks(ENTRY as usize) {
-            let stored_key = value_index(entry);
+            let key_id = KeyId(u64_at(entry, 0) as u32);
             list.push(Index {
-                key: value::load(view, &stored_key)?,
-                stored_key,
-                values: TableHeader::decode(&entry[16..40]),
-                count: u64_at(entry, 5),
+                key: keys.key(view, key_id)?,
+                key_id,
+                values: TableHeader::decode(&entry[8..32]),
+                count: u64_at(entry, 4),
             });
         }
 
@@ -140,9 +142,10 @@ impl Indexes {
         &mut self,
         view: &mut impl ViewMut,
         alloc: &mut Allocator,
+        keys: &mut Keys,
         key: &DbValue,
     ) -> Result<(), DbError> {
-        let stored_key = value::store(view, alloc, key)?;
+        let key_id = keys.insert(view, alloc, key)?;
         let len = self.list.len() as u64;
         self.pos = if len == 0 {
             alloc.alloc(view, ENTRY)?
@@ -151,7 +154,7 @@ impl Indexes {
         };
         self.list.push(Index {
             key: key.clone(),
-            stored_key,
+            key_id,
             values: TableHeader::default(),
             count: 0,
         });
@@ -164,6 +167,7 @@ impl Indexes {
         &mut self,
         view: &mut impl ViewMut,
         alloc: &mut Allocator,
+        keys: &mut Keys,
         key: &DbValue,
     ) -> Result<u64, DbError> {
         let Some(i) = self.list.iter().position(|index| index.key == *key) else {
@@ -185,7 +189,7 @@ impl Indexes {
         }
 
         index.values.free(view, alloc, &VALUES)?;
-        value::free(view, alloc, &index.stored_key)?;
+        keys.remove(view, alloc, index.key_id)?;
         let len = self.list.len() as u64;
 
         for j in i..self.list.len() {
@@ -208,11 +212,11 @@ impl Indexes {
         &mut self,
         view: &mut impl ViewMut,
         alloc: &mut Allocator,
-        key: &DbValue,
+        key: KeyId,
         value: &DbValue,
         id: DbId,
     ) -> Result<(), DbError> {
-        let Some(i) = self.list.iter().position(|index| index.key == *key) else {
+        let Some(i) = self.list.iter().position(|index| index.key_id == key) else {
             return Ok(());
         };
 
@@ -252,11 +256,11 @@ impl Indexes {
         &mut self,
         view: &mut impl ViewMut,
         alloc: &mut Allocator,
-        key: &DbValue,
+        key: KeyId,
         value: &DbValue,
         id: DbId,
     ) -> Result<(), DbError> {
-        let Some(i) = self.list.iter().position(|index| index.key == *key) else {
+        let Some(i) = self.list.iter().position(|index| index.key_id == key) else {
             return Ok(());
         };
 
@@ -328,9 +332,9 @@ impl Indexes {
     fn write_entry(&self, view: &mut impl ViewMut, i: usize) -> Result<(), DbError> {
         let index = &self.list[i];
         let mut entry = [0_u8; ENTRY as usize];
-        entry[..16].copy_from_slice(&index.stored_key.data());
-        entry[16..40].copy_from_slice(&index.values.encode());
-        entry[40..].copy_from_slice(&index.count.to_le_bytes());
+        entry[..8].copy_from_slice(&u64::from(index.key_id.0).to_le_bytes());
+        entry[8..32].copy_from_slice(&index.values.encode());
+        entry[32..].copy_from_slice(&index.count.to_le_bytes());
         view.write(self.pos + i as u64 * ENTRY, &entry)
     }
 }
@@ -338,12 +342,15 @@ impl Indexes {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::collections::keys::tests::allocations as keys_allocations;
+    use crate::collections::keys::tests::refs;
     use crate::collections::table::tests::allocations as table_allocations;
     use crate::collections::value::tests::TestView;
     use crate::collections::value::tests::allocation;
     use crate::collections::value::tests::assert_failures;
     use crate::collections::value::tests::with_view;
     use crate::storage::alloc::tests::verify;
+    use crate::storage::pages::DEFAULT_PAGE_SHIFT;
     use crate::storage::pages::tests::XorShift;
     use std::collections::BTreeMap;
     use std::collections::BTreeSet;
@@ -363,16 +370,31 @@ mod tests {
             "v".into(),
             LONG.into(),
             vec![1_u64; 3].into(),
+            DbValue::None,
         ]
     }
 
-    fn live(view: &TestView, indexes: &Indexes) -> Vec<(u64, u64)> {
-        let mut live = Vec::new();
+    /// The keys of the pool, each with a reference of the test.
+    fn keys(view: &mut TestView, alloc: &mut Allocator) -> Keys {
+        let mut keys = Keys::new(DEFAULT_PAGE_SHIFT);
+
+        for key in keys_pool() {
+            keys.insert(view, alloc, &key).unwrap();
+        }
+
+        keys
+    }
+
+    fn key_id(view: &TestView, keys: &Keys, key: &DbValue) -> KeyId {
+        keys.id(view, key).unwrap().unwrap()
+    }
+
+    fn live(view: &TestView, keys: &Keys, indexes: &Indexes) -> Vec<(u64, u64)> {
+        let mut live = keys_allocations(keys, view);
         let len = indexes.list.len() as u64;
         live.extend((len != 0).then(|| (indexes.pos, len * ENTRY)));
 
         for index in &indexes.list {
-            live.extend(allocation(&index.stored_key));
             live.extend(table_allocations(&index.values, view, &VALUES));
 
             for slot in index.values.slots(view, &VALUES).unwrap().chunks(48) {
@@ -387,16 +409,22 @@ mod tests {
         live
     }
 
-    fn assert_indexes(view: &TestView, indexes: &Indexes, model: &Model) {
-        assert_eq!(&Indexes::load(view, &indexes.encode()).unwrap(), indexes);
-        let keys = indexes
+    fn assert_indexes(view: &TestView, keys: &Keys, indexes: &Indexes, model: &Model) {
+        assert_eq!(
+            &Indexes::load(view, keys, &indexes.encode()).unwrap(),
+            indexes
+        );
+        let indexed = indexes
             .list()
             .iter()
             .map(|index| index.key.clone())
             .collect::<BTreeSet<_>>();
-        assert_eq!(keys, model.keys().cloned().collect());
+        assert_eq!(indexed, model.keys().cloned().collect());
 
         for key in keys_pool() {
+            let indexed = u64::from(model.contains_key(&key));
+            assert_eq!(refs(keys, view, key_id(view, keys, &key)), 1 + indexed);
+
             for value in values_pool() {
                 let ids = indexes
                     .search(view, &key, &value)
@@ -433,14 +461,16 @@ mod tests {
     fn random_op(
         view: &mut TestView,
         alloc: &mut Allocator,
+        keys: &mut Keys,
         indexes: &mut Indexes,
         model: &mut Model,
         random: &mut XorShift,
     ) {
-        let keys = keys_pool();
+        let pool = keys_pool();
         let values = values_pool();
-        let key = &keys[random.next(keys.len() as u64) as usize];
+        let key = &pool[random.next(pool.len() as u64) as usize];
         let value = &values[random.next(values.len() as u64) as usize];
+        let key_id = key_id(view, keys, key);
         let id = match random.next(20) as i64 - 10 {
             0 => DbId(10),
             id => DbId(id),
@@ -448,14 +478,14 @@ mod tests {
 
         match random.next(20) {
             0 => {
-                let count = indexes.remove_index(view, alloc, key).unwrap();
+                let count = indexes.remove_index(view, alloc, keys, key).unwrap();
                 let expected = model.remove(key).map_or(0, |values| {
                     values.values().map(|ids| ids.len() as u64).sum()
                 });
                 assert_eq!(count, expected);
             }
             1 if !model.contains_key(key) => {
-                indexes.insert_index(view, alloc, key).unwrap();
+                indexes.insert_index(view, alloc, keys, key).unwrap();
                 model.insert(key.clone(), BTreeMap::new());
             }
             2..=10 => {
@@ -464,7 +494,7 @@ mod tests {
                     .is_some_and(|values| values.get(value).is_some_and(|ids| ids.contains(&id.0)));
 
                 if !has {
-                    indexes.insert(view, alloc, key, value, id).unwrap();
+                    indexes.insert(view, alloc, key_id, value, id).unwrap();
 
                     if let Some(values) = model.get_mut(key) {
                         values.entry(value.clone()).or_default().insert(id.0);
@@ -472,7 +502,7 @@ mod tests {
                 }
             }
             _ => {
-                indexes.remove(view, alloc, key, value, id).unwrap();
+                indexes.remove(view, alloc, key_id, value, id).unwrap();
 
                 if let Some(values) = model.get_mut(key)
                     && let Some(ids) = values.get_mut(value)
@@ -495,15 +525,23 @@ mod tests {
             for seed in 1..=5 {
                 with_view(|view, alloc| {
                     let mut random = XorShift(seed);
+                    let mut keys = keys(view, alloc);
                     let mut indexes = Indexes::default();
                     let mut model = Model::new();
 
                     for _ in 0..500 {
-                        random_op(view, alloc, &mut indexes, &mut model, &mut random);
-                        assert_indexes(view, &indexes, &model);
+                        random_op(
+                            view,
+                            alloc,
+                            &mut keys,
+                            &mut indexes,
+                            &mut model,
+                            &mut random,
+                        );
+                        assert_indexes(view, &keys, &indexes, &model);
                     }
 
-                    verify(alloc, view, &live(view, &indexes));
+                    verify(alloc, view, &live(view, &keys, &indexes));
                 });
             }
         }
@@ -512,28 +550,35 @@ mod tests {
         fn indexes_failure_should_fail() {
             let long = DbValue::from(LONG);
             assert_failures(
-                |_, _| Indexes::default(),
-                |view, alloc, mut indexes| {
-                    indexes.insert_index(view, alloc, &long)?;
-                    indexes.insert_index(view, alloc, &1.into())?;
-                    indexes.insert_index(view, alloc, &2.into())?;
+                |view, alloc| {
+                    let mut keys = Keys::new(DEFAULT_PAGE_SHIFT);
+                    keys.insert(view, alloc, &2.into()).unwrap();
+                    (keys, Indexes::default())
+                },
+                |view, alloc, state| {
+                    let (mut keys, mut indexes) = state;
+                    let keys = &mut keys;
+                    indexes.insert_index(view, alloc, keys, &long)?;
+                    indexes.insert_index(view, alloc, keys, &1.into())?;
+                    indexes.insert_index(view, alloc, keys, &2.into())?;
+                    let key = indexes.index(&long).unwrap().key_id;
 
                     for id in 1..=3 {
-                        indexes.insert(view, alloc, &long, &long, DbId(id))?;
+                        indexes.insert(view, alloc, key, &long, DbId(id))?;
                     }
 
                     indexes.search(view, &long, &long)?;
-                    Indexes::load(view, &indexes.encode())?;
+                    Indexes::load(view, keys, &indexes.encode())?;
 
                     for id in 1..=3 {
-                        indexes.remove(view, alloc, &long, &long, DbId(id))?;
+                        indexes.remove(view, alloc, key, &long, DbId(id))?;
                     }
 
-                    indexes.insert(view, alloc, &long, &long, DbId(1))?;
-                    indexes.insert(view, alloc, &long, &long, DbId(2))?;
-                    indexes.remove_index(view, alloc, &1.into())?;
-                    indexes.remove_index(view, alloc, &long)?;
-                    indexes.remove_index(view, alloc, &2.into())?;
+                    indexes.insert(view, alloc, key, &long, DbId(1))?;
+                    indexes.insert(view, alloc, key, &long, DbId(2))?;
+                    indexes.remove_index(view, alloc, keys, &1.into())?;
+                    indexes.remove_index(view, alloc, keys, &long)?;
+                    indexes.remove_index(view, alloc, keys, &2.into())?;
                     Ok(())
                 },
             );
@@ -545,10 +590,14 @@ mod tests {
             #[test]
             fn search_with_colliding_hash_should_compare_value() {
                 with_view(|view, alloc| {
+                    let mut keys = Keys::new(DEFAULT_PAGE_SHIFT);
                     let mut indexes = Indexes::default();
-                    indexes.insert_index(view, alloc, &1.into()).unwrap();
                     indexes
-                        .insert(view, alloc, &1.into(), &"a".into(), DbId(1))
+                        .insert_index(view, alloc, &mut keys, &1.into())
+                        .unwrap();
+                    let key = indexes.list[0].key_id;
+                    indexes
+                        .insert(view, alloc, key, &"a".into(), DbId(1))
                         .unwrap();
                     let hash = fmix64(DbValue::from("b").stable_hash());
                     let mut slot = [0_u8; 48];
@@ -566,7 +615,7 @@ mod tests {
                         Some(vec![])
                     );
                     indexes
-                        .remove(view, alloc, &1.into(), &"b".into(), DbId(2))
+                        .remove(view, alloc, key, &"b".into(), DbId(2))
                         .unwrap();
                     assert_eq!(
                         indexes.search(view, &1.into(), &"c".into()).unwrap(),
@@ -582,25 +631,30 @@ mod tests {
             #[test]
             fn remove_id_without_value_should_do_nothing() {
                 with_view(|view, alloc| {
+                    let mut keys = Keys::new(DEFAULT_PAGE_SHIFT);
+                    let other = keys.insert(view, alloc, &2.into()).unwrap();
                     let mut indexes = Indexes::default();
-                    indexes.insert_index(view, alloc, &1.into()).unwrap();
                     indexes
-                        .insert(view, alloc, &1.into(), &1.into(), DbId(1))
+                        .insert_index(view, alloc, &mut keys, &1.into())
+                        .unwrap();
+                    let key = indexes.list[0].key_id;
+                    indexes
+                        .insert(view, alloc, key, &1.into(), DbId(1))
                         .unwrap();
                     indexes
-                        .remove(view, alloc, &1.into(), &1.into(), DbId(2))
+                        .remove(view, alloc, key, &1.into(), DbId(2))
                         .unwrap();
                     indexes
-                        .insert(view, alloc, &1.into(), &2.into(), DbId(1))
+                        .insert(view, alloc, key, &2.into(), DbId(1))
                         .unwrap();
                     indexes
-                        .insert(view, alloc, &1.into(), &2.into(), DbId(2))
+                        .insert(view, alloc, key, &2.into(), DbId(2))
                         .unwrap();
                     indexes
-                        .remove(view, alloc, &1.into(), &2.into(), DbId(3))
+                        .remove(view, alloc, key, &2.into(), DbId(3))
                         .unwrap();
                     indexes
-                        .remove(view, alloc, &2.into(), &2.into(), DbId(1))
+                        .remove(view, alloc, other, &2.into(), DbId(1))
                         .unwrap();
                     assert_eq!(indexes.index(&1.into()).unwrap().count, 3);
                     assert_eq!(

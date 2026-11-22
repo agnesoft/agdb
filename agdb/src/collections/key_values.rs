@@ -1,8 +1,11 @@
 use crate::DbError;
+use crate::DbErrorType;
 use crate::DbId;
 use crate::DbKeyValue;
 use crate::DbValue;
 use crate::collections::graph::GraphHeader;
+use crate::collections::keys::KeyId;
+use crate::collections::keys::Keys;
 use crate::collections::value;
 use crate::db::db_value_index::DbValueIndex;
 use crate::storage::alloc::Allocator;
@@ -10,126 +13,185 @@ use crate::storage::alloc::u32_at;
 use crate::storage::pages::View;
 use crate::storage::pages::ViewMut;
 
-// The values of an element are one allocation at the position its graph
-// data holds, the last data field of a node and the only one of an edge:
-// `[len u32][cap u32]` then `cap` pairs of the key and the value index. It
-// is freed when its last value is removed.
+// The values of an element are held by its graph data, the last data
+// field of a node and the only one of an edge: 0 for none, a single
+// label (a key whose value is `DbValue::None`) as `INLINE | key id`, or
+// the position of one allocation `[used u32][cap u32]` followed by `cap`
+// bytes of entries in insertion order. A label entry is
+// `[key id | LABEL u32]`, any other `[key id u32][value DbValueIndex]`.
+// Each entry holds a reference to its key in the [`Keys`]. The
+// allocation is freed when its last value is removed.
 
 const HEADER: u64 = 8;
-const PAIR: u64 = 32;
+const PAIR: u64 = 20;
+const LABEL_SIZE: u64 = 4;
+const LABEL: u32 = 1 << 31;
+const INLINE: u64 = 1 << 63;
 
 struct List {
-    pos: u64,
-    len: u64,
+    /// The graph data of the element.
+    data: u64,
+    used: u64,
     cap: u64,
 }
 
-type Pair = (DbValueIndex, DbValueIndex);
-
-fn size(cap: u64) -> u64 {
-    HEADER + cap * PAIR
-}
-
-/// The pairs an allocation for at least `cap` pairs holds.
-fn fit(alloc: &Allocator, cap: u64) -> u64 {
-    (alloc.usable(size(cap)) - HEADER) / PAIR
-}
-
-/// The next size class while the list is small, then double the pages.
-fn grown(alloc: &Allocator, cap: u64) -> u64 {
-    if alloc.usable(size(cap + 1)) < alloc.page_size() {
-        fit(alloc, cap + 1)
-    } else {
-        fit(alloc, (cap * 2).max(cap + 1))
+impl List {
+    fn pos(&self) -> u64 {
+        if self.data & INLINE == 0 {
+            self.data
+        } else {
+            0
+        }
     }
 }
 
-fn pair_pos(list: &List, i: u64) -> u64 {
-    list.pos + HEADER + i * PAIR
+struct Entry {
+    key: KeyId,
+    /// All zero for a label.
+    value: DbValueIndex,
+    /// The offset in the entries.
+    at: u64,
 }
 
-fn pair_bytes(pair: &Pair) -> [u8; PAIR as usize] {
-    let mut bytes = [0_u8; PAIR as usize];
-    bytes[..16].copy_from_slice(&pair.0.data());
-    bytes[16..].copy_from_slice(&pair.1.data());
+fn is_label(value: &DbValueIndex) -> bool {
+    *value == DbValueIndex::new()
+}
+
+fn entry_size(value: &DbValueIndex) -> u64 {
+    if is_label(value) { LABEL_SIZE } else { PAIR }
+}
+
+fn push_entry(bytes: &mut Vec<u8>, key: KeyId, value: &DbValueIndex) {
+    if is_label(value) {
+        bytes.extend_from_slice(&(key.0 | LABEL).to_le_bytes());
+    } else {
+        bytes.extend_from_slice(&key.0.to_le_bytes());
+        bytes.extend_from_slice(&value.data());
+    }
+}
+
+fn entries_bytes(entries: &[Entry]) -> Vec<u8> {
+    let mut bytes = Vec::new();
+
+    for entry in entries {
+        push_entry(&mut bytes, entry.key, &entry.value);
+    }
+
     bytes
 }
 
-fn pairs(view: &impl View, list: &List) -> Result<Vec<Pair>, DbError> {
-    Ok(view
-        .read(pair_pos(list, 0), list.len * PAIR)?
-        .as_chunks::<32>()
-        .0
-        .iter()
-        .map(|pair| {
-            let mut key = [0_u8; 16];
-            let mut value = [0_u8; 16];
-            key.copy_from_slice(&pair[..16]);
-            value.copy_from_slice(&pair[16..]);
-            (DbValueIndex::from_data(key), DbValueIndex::from_data(value))
-        })
-        .collect())
+/// The entry bytes an allocation for at least `bytes` of entries holds.
+fn fit(alloc: &Allocator, bytes: u64) -> u64 {
+    alloc.usable(HEADER + bytes) - HEADER
 }
 
-fn find(view: &impl View, pairs: &[Pair], key: &DbValue) -> Result<Option<usize>, DbError> {
-    let (kind, bytes) = value::encode(key);
+/// The next size class holding `needed` bytes while the list is small,
+/// then double the pages.
+fn grown(alloc: &Allocator, cap: u64, needed: u64) -> u64 {
+    if alloc.usable(HEADER + needed) < alloc.page_size() {
+        fit(alloc, needed)
+    } else {
+        fit(alloc, (cap * 2).max(needed))
+    }
+}
 
-    for (i, pair) in pairs.iter().enumerate() {
-        if value::equals_bytes(view, &pair.0, kind, &bytes)? {
-            return Ok(Some(i));
-        }
+/// The entry at the offset `at` and the offset past it.
+fn entry_at(bytes: &[u8], at: u64) -> Option<(Entry, u64)> {
+    let word = u32_at(bytes.get(at as usize..(at + LABEL_SIZE) as usize)?, 0);
+    let mut value = [0_u8; 16];
+    let mut next = at + LABEL_SIZE;
+
+    if word & LABEL == 0 {
+        next = at + PAIR;
+        value.copy_from_slice(bytes.get((at + LABEL_SIZE) as usize..next as usize)?);
     }
 
-    Ok(None)
+    let entry = Entry {
+        key: KeyId(word & !LABEL),
+        value: DbValueIndex::from_data(value),
+        at,
+    };
+
+    Some((entry, next))
 }
 
-fn load(view: &impl View, pair: &Pair) -> Result<DbKeyValue, DbError> {
-    Ok(DbKeyValue {
-        key: value::load(view, &pair.0)?,
-        value: value::load(view, &pair.1)?,
-    })
+fn entries(view: &impl View, list: &List) -> Result<Vec<Entry>, DbError> {
+    if list.data & INLINE != 0 {
+        return Ok(vec![Entry {
+            key: KeyId(list.data as u32),
+            value: DbValueIndex::new(),
+            at: 0,
+        }]);
+    }
+
+    if list.data == 0 {
+        return Ok(Vec::new());
+    }
+
+    let bytes = view.read(list.data + HEADER, list.used)?;
+    let mut entries = Vec::new();
+    let mut at = 0;
+
+    while at < list.used {
+        let Some((entry, next)) = entry_at(&bytes, at) else {
+            return Err(DbError::db(
+                DbErrorType::InvalidIndex,
+                format!("Invalid values at '{}'", list.data),
+            ));
+        };
+
+        entries.push(entry);
+        at = next;
+    }
+
+    Ok(entries)
+}
+
+fn find(entries: &[Entry], key: KeyId) -> Option<usize> {
+    entries.iter().position(|entry| entry.key == key)
 }
 
 fn write_header(view: &mut impl ViewMut, list: &List) -> Result<(), DbError> {
-    let header = (list.len | (list.cap << 32)).to_le_bytes();
-    view.write(list.pos, &header)
+    let header = (list.used | (list.cap << 32)).to_le_bytes();
+    view.write(list.data, &header)
 }
 
-/// The values of the elements of the graph.
+/// The values of the elements of the graph, their keys being in the
+/// [`Keys`].
 pub(crate) struct KeyValues<'a>(pub(crate) &'a GraphHeader);
 
 impl KeyValues<'_> {
     fn list(&self, view: &impl View, id: DbId) -> Result<List, DbError> {
-        let pos = if 0 < id.0 {
+        let data = if 0 < id.0 {
             self.0.node(view, id)?.map(|node| node.data[2])
         } else {
             self.0.edge(view, id)?.map(|edge| edge.data)
         }
         .unwrap_or(0);
 
-        if pos == 0 {
-            return Ok(List {
-                pos,
-                len: 0,
-                cap: 0,
-            });
+        let mut list = List {
+            data,
+            used: 0,
+            cap: 0,
+        };
+
+        if data & INLINE != 0 {
+            list.used = LABEL_SIZE;
+        } else if data != 0 {
+            let header = view.read(data, HEADER)?;
+            list.used = u64::from(u32_at(&header, 0));
+            list.cap = u64::from(u32_at(&header, 4));
         }
 
-        let header = view.read(pos, HEADER)?;
-
-        Ok(List {
-            pos,
-            len: u64::from(u32_at(&header, 0)),
-            cap: u64::from(u32_at(&header, 4)),
-        })
+        Ok(list)
     }
 
-    fn set_pos(&self, view: &mut impl ViewMut, id: DbId, pos: u64) -> Result<(), DbError> {
+    fn set_data(&self, view: &mut impl ViewMut, id: DbId, data: u64) -> Result<(), DbError> {
         let index = if 0 < id.0 { 2 } else { 0 };
-        self.0.set_data(view, id, index, &[pos])
+        self.0.set_data(view, id, index, &[data])
     }
 
-    /// Moves the list to an allocation of `cap` pairs.
+    /// Moves the entries to an allocation of `cap` bytes of entries.
     fn resize(
         &self,
         view: &mut impl ViewMut,
@@ -138,151 +200,210 @@ impl KeyValues<'_> {
         list: &mut List,
         cap: u64,
     ) -> Result<(), DbError> {
-        let pos = if list.pos == 0 {
-            alloc.alloc(view, size(cap))?
+        let pos = if list.pos() == 0 {
+            let pos = alloc.alloc(view, HEADER + cap)?;
+
+            if list.data != 0 {
+                view.write(pos + HEADER, &((list.data as u32) | LABEL).to_le_bytes())?;
+            }
+
+            pos
         } else {
-            alloc.realloc(view, list.pos, size(list.cap), size(cap))?
+            alloc.realloc(view, list.data, HEADER + list.cap, HEADER + cap)?
         };
 
-        if pos != list.pos {
-            self.set_pos(view, id, pos)?;
+        if pos != list.data {
+            self.set_data(view, id, pos)?;
         }
 
-        list.pos = pos;
+        list.data = pos;
         list.cap = cap;
         write_header(view, list)
     }
 
+    /// Writes the entry `bytes` at the offset `at`, the entries past them
+    /// being dropped.
+    fn write_at(
+        &self,
+        view: &mut impl ViewMut,
+        alloc: &mut Allocator,
+        id: DbId,
+        list: &mut List,
+        at: u64,
+        bytes: &[u8],
+    ) -> Result<(), DbError> {
+        let used = at + bytes.len() as u64;
+
+        if list.cap < used {
+            self.resize(view, alloc, id, list, grown(alloc, list.cap, used))?;
+        }
+
+        view.write(list.data + HEADER + at, bytes)?;
+        list.used = used;
+        write_header(view, list)
+    }
+
+    /// Appends the entry of the `key`, to which the caller added the
+    /// reference of the entry.
     fn push_to(
         &self,
         view: &mut impl ViewMut,
         alloc: &mut Allocator,
         id: DbId,
         list: &mut List,
-        key_value: &DbKeyValue,
+        key: KeyId,
+        value: &DbValue,
     ) -> Result<(), DbError> {
-        if list.len == list.cap {
-            self.resize(view, alloc, id, list, grown(alloc, list.cap))?;
+        let value = value::store(view, alloc, value)?;
+
+        if list.data == 0 && is_label(&value) {
+            return self.set_data(view, id, INLINE | u64::from(key.0));
         }
 
-        let key = value::store(view, alloc, &key_value.key)?;
-        let value = value::store(view, alloc, &key_value.value)?;
-        view.write(pair_pos(list, list.len), &pair_bytes(&(key, value)))?;
-        list.len += 1;
-        write_header(view, list)
+        let mut bytes = Vec::new();
+        push_entry(&mut bytes, key, &value);
+        self.write_at(view, alloc, id, list, list.used, &bytes)
     }
 
-    fn free_list(
+    /// Loads and frees the value of the `entry`, releasing its key.
+    fn free_entry(
         &self,
         view: &mut impl ViewMut,
         alloc: &mut Allocator,
-        id: DbId,
-        list: &List,
-        pairs: &[Pair],
-    ) -> Result<Vec<DbKeyValue>, DbError> {
-        let mut removed = Vec::new();
-
-        for pair in pairs {
-            removed.push(load(view, pair)?);
-            value::free(view, alloc, &pair.0)?;
-            value::free(view, alloc, &pair.1)?;
-        }
-
-        alloc.free(view, list.pos, size(list.cap))?;
-        self.set_pos(view, id, 0)?;
-        Ok(removed)
+        keys: &mut Keys,
+        entry: &Entry,
+    ) -> Result<DbValue, DbError> {
+        let value = value::load(view, &entry.value)?;
+        value::free(view, alloc, &entry.value)?;
+        keys.remove(view, alloc, entry.key)?;
+        Ok(value)
     }
 
     pub(crate) fn key_count(&self, view: &impl View, id: DbId) -> Result<u64, DbError> {
-        Ok(self.list(view, id)?.len)
+        Ok(entries(view, &self.list(view, id)?)?.len() as u64)
     }
 
-    pub(crate) fn keys(&self, view: &impl View, id: DbId) -> Result<Vec<DbValue>, DbError> {
-        pairs(view, &self.list(view, id)?)?
+    pub(crate) fn keys(
+        &self,
+        view: &impl View,
+        keys: &Keys,
+        id: DbId,
+    ) -> Result<Vec<DbValue>, DbError> {
+        entries(view, &self.list(view, id)?)?
             .iter()
-            .map(|pair| value::load(view, &pair.0))
+            .map(|entry| keys.key(view, entry.key))
             .collect()
     }
 
-    pub(crate) fn values(&self, view: &impl View, id: DbId) -> Result<Vec<DbKeyValue>, DbError> {
-        pairs(view, &self.list(view, id)?)?
-            .iter()
-            .map(|pair| load(view, pair))
-            .collect()
-    }
-
-    pub(crate) fn value(
+    pub(crate) fn values(
         &self,
         view: &impl View,
+        keys: &Keys,
         id: DbId,
-        key: &DbValue,
-    ) -> Result<Option<DbValue>, DbError> {
-        let pairs = pairs(view, &self.list(view, id)?)?;
-
-        find(view, &pairs, key)?
-            .map(|i| value::load(view, &pairs[i].1))
-            .transpose()
-    }
-
-    /// The values of the `keys` the element has, in the order of the `keys`.
-    pub(crate) fn values_by_keys(
-        &self,
-        view: &impl View,
-        id: DbId,
-        keys: &[DbValue],
     ) -> Result<Vec<DbKeyValue>, DbError> {
-        let pairs = pairs(view, &self.list(view, id)?)?;
         let mut values = Vec::new();
 
-        for key in keys {
-            if let Some(i) = find(view, &pairs, key)? {
-                values.push(DbKeyValue {
-                    key: key.clone(),
-                    value: value::load(view, &pairs[i].1)?,
-                });
-            }
+        for entry in entries(view, &self.list(view, id)?)? {
+            values.push(DbKeyValue {
+                key: keys.key(view, entry.key)?,
+                value: value::load(view, &entry.value)?,
+            });
         }
 
         Ok(values)
     }
 
-    /// Appends the `key_value` without looking for its key.
+    /// The value of the `key`, `DbValue::None` for a label.
+    pub(crate) fn value(
+        &self,
+        view: &impl View,
+        id: DbId,
+        key: KeyId,
+    ) -> Result<Option<DbValue>, DbError> {
+        let entries = entries(view, &self.list(view, id)?)?;
+
+        find(&entries, key)
+            .map(|i| value::load(view, &entries[i].value))
+            .transpose()
+    }
+
+    /// The values of the `keys`, `None` for those the element does not
+    /// have.
+    pub(crate) fn values_by_keys(
+        &self,
+        view: &impl View,
+        id: DbId,
+        keys: &[KeyId],
+    ) -> Result<Vec<Option<DbValue>>, DbError> {
+        let entries = entries(view, &self.list(view, id)?)?;
+
+        keys.iter()
+            .map(|key| {
+                find(&entries, *key)
+                    .map(|i| value::load(view, &entries[i].value))
+                    .transpose()
+            })
+            .collect()
+    }
+
+    /// Appends the `key_value` without looking for its key, returning the
+    /// id of the key.
     pub(crate) fn push(
         &self,
         view: &mut impl ViewMut,
         alloc: &mut Allocator,
+        keys: &mut Keys,
         id: DbId,
         key_value: &DbKeyValue,
-    ) -> Result<(), DbError> {
+    ) -> Result<KeyId, DbError> {
         let mut list = self.list(view, id)?;
-        self.push_to(view, alloc, id, &mut list, key_value)
+        let key = keys.insert(view, alloc, &key_value.key)?;
+        self.push_to(view, alloc, id, &mut list, key, &key_value.value)?;
+        Ok(key)
     }
 
-    /// Sets the value of the key returning the value it replaced.
+    /// Sets the value of the key returning the id of the key and the
+    /// value it replaced.
     pub(crate) fn insert(
         &self,
         view: &mut impl ViewMut,
         alloc: &mut Allocator,
+        keys: &mut Keys,
         id: DbId,
         key_value: &DbKeyValue,
-    ) -> Result<Option<DbKeyValue>, DbError> {
+    ) -> Result<(KeyId, Option<DbValue>), DbError> {
         let mut list = self.list(view, id)?;
-        let pairs = pairs(view, &list)?;
 
-        let Some(i) = find(view, &pairs, &key_value.key)? else {
-            self.push_to(view, alloc, id, &mut list, key_value)?;
-            return Ok(None);
+        let Some(key) = keys.id(view, &key_value.key)? else {
+            let key = keys.insert(view, alloc, &key_value.key)?;
+            self.push_to(view, alloc, id, &mut list, key, &key_value.value)?;
+            return Ok((key, None));
         };
 
-        let old = value::load(view, &pairs[i].1)?;
-        value::free(view, alloc, &pairs[i].1)?;
-        let new = value::store(view, alloc, &key_value.value)?;
-        view.write(pair_pos(&list, i as u64) + 16, &new.data())?;
+        let mut entries = entries(view, &list)?;
 
-        Ok(Some(DbKeyValue {
-            key: key_value.key.clone(),
-            value: old,
-        }))
+        let Some(i) = find(&entries, key) else {
+            keys.acquire(view, key)?;
+            self.push_to(view, alloc, id, &mut list, key, &key_value.value)?;
+            return Ok((key, None));
+        };
+
+        let old = value::load(view, &entries[i].value)?;
+        value::free(view, alloc, &entries[i].value)?;
+        let new = value::store(view, alloc, &key_value.value)?;
+        let at = entries[i].at;
+
+        if entry_size(&new) == entry_size(&entries[i].value) {
+            if !is_label(&new) {
+                view.write(list.data + HEADER + at + 4, &new.data())?;
+            }
+        } else {
+            entries[i].value = new;
+            let bytes = entries_bytes(&entries[i..]);
+            self.write_at(view, alloc, id, &mut list, at, &bytes)?;
+        }
+
+        Ok((key, Some(old)))
     }
 
     /// Removes the key returning its value.
@@ -290,51 +411,60 @@ impl KeyValues<'_> {
         &self,
         view: &mut impl ViewMut,
         alloc: &mut Allocator,
+        keys: &mut Keys,
         id: DbId,
-        key: &DbValue,
-    ) -> Result<Option<DbKeyValue>, DbError> {
+        key: KeyId,
+    ) -> Result<Option<DbValue>, DbError> {
         let mut list = self.list(view, id)?;
-        let pairs = pairs(view, &list)?;
+        let entries = entries(view, &list)?;
 
-        let Some(i) = find(view, &pairs, key)? else {
+        let Some(i) = find(&entries, key) else {
             return Ok(None);
         };
 
-        if list.len == 1 {
-            return Ok(self.free_list(view, alloc, id, &list, &pairs)?.pop());
+        if entries.len() == 1 {
+            return Ok(self
+                .remove_all(view, alloc, keys, id)?
+                .pop()
+                .map(|entry| entry.1));
         }
 
-        let removed = load(view, &pairs[i])?;
-        value::free(view, alloc, &pairs[i].0)?;
-        value::free(view, alloc, &pairs[i].1)?;
-        let tail = pairs[i + 1..]
-            .iter()
-            .flat_map(pair_bytes)
-            .collect::<Vec<u8>>();
-        view.write(pair_pos(&list, i as u64), &tail)?;
-        list.len -= 1;
-        write_header(view, &list)?;
+        let removed = self.free_entry(view, alloc, keys, &entries[i])?;
+        let bytes = entries_bytes(&entries[i + 1..]);
+        self.write_at(view, alloc, id, &mut list, entries[i].at, &bytes)?;
         Ok(Some(removed))
     }
 
-    /// Removes all values of the element returning them.
+    /// Removes all values of the element returning them with the ids of
+    /// their keys, which are freed unless referenced elsewhere.
     pub(crate) fn remove_all(
         &self,
         view: &mut impl ViewMut,
         alloc: &mut Allocator,
+        keys: &mut Keys,
         id: DbId,
-    ) -> Result<Vec<DbKeyValue>, DbError> {
+    ) -> Result<Vec<(KeyId, DbValue)>, DbError> {
         let list = self.list(view, id)?;
 
-        if list.pos == 0 {
+        if list.data == 0 {
             return Ok(Vec::new());
         }
 
-        let pairs = pairs(view, &list)?;
-        self.free_list(view, alloc, id, &list, &pairs)
+        let mut removed = Vec::new();
+
+        for entry in entries(view, &list)? {
+            removed.push((entry.key, self.free_entry(view, alloc, keys, &entry)?));
+        }
+
+        if list.pos() != 0 {
+            alloc.free(view, list.data, HEADER + list.cap)?;
+        }
+
+        self.set_data(view, id, 0)?;
+        Ok(removed)
     }
 
-    /// Makes room for `additional` values.
+    /// Makes room for `additional` values that are not labels.
     pub(crate) fn reserve(
         &self,
         view: &mut impl ViewMut,
@@ -343,7 +473,7 @@ impl KeyValues<'_> {
         additional: u64,
     ) -> Result<(), DbError> {
         let mut list = self.list(view, id)?;
-        let cap = list.len + additional;
+        let cap = list.used + additional * PAIR;
 
         if list.cap < cap {
             self.resize(view, alloc, id, &mut list, fit(alloc, cap))?;
@@ -357,6 +487,8 @@ impl KeyValues<'_> {
 mod tests {
     use super::*;
     use crate::collections::graph::tests::allocations as graph_allocations;
+    use crate::collections::keys::tests::allocations as keys_allocations;
+    use crate::collections::keys::tests::refs;
     use crate::collections::value::tests::TestView;
     use crate::collections::value::tests::allocation;
     use crate::collections::value::tests::assert_failures;
@@ -369,6 +501,8 @@ mod tests {
     use std::collections::BTreeMap;
 
     type Model = BTreeMap<i64, Vec<DbKeyValue>>;
+
+    const LONG: &str = "a value longer than 15 bytes";
 
     fn keys_pool() -> Vec<DbValue> {
         vec![
@@ -386,54 +520,73 @@ mod tests {
         }
     }
 
-    /// The allocations of the values of the `ids`: their lists and the
-    /// stored keys and values.
-    fn live(view: &TestView, graph: &GraphHeader, ids: &[DbId]) -> Vec<(u64, u64)> {
-        let mut live = Vec::new();
+    /// A graph of a node and an edge from it to itself.
+    fn graph(view: &mut TestView, alloc: &mut Allocator) -> (GraphHeader, DbId, DbId) {
+        let mut graph = GraphHeader::new(Layout::default());
+        let node = graph.insert_node(view, alloc).unwrap();
+        let edge = graph.insert_edge(view, alloc, node, node).unwrap();
+        (graph, node, edge)
+    }
+
+    /// The allocations of the graph, the keys and the values of the
+    /// `ids`.
+    fn live(view: &TestView, graph: &GraphHeader, keys: &Keys, ids: &[DbId]) -> Vec<(u64, u64)> {
+        let mut live = graph_allocations(graph);
+        live.extend(keys_allocations(keys, view));
 
         for id in ids {
             let list = KeyValues(graph).list(view, *id).unwrap();
+            live.extend((list.pos() != 0).then_some((list.data, HEADER + list.cap)));
 
-            live.extend((list.pos != 0).then(|| (list.pos, size(list.cap))));
-
-            for pair in pairs(view, &list).unwrap() {
-                live.extend(allocation(&pair.0));
-                live.extend(allocation(&pair.1));
+            for entry in entries(view, &list).unwrap() {
+                live.extend(allocation(&entry.value));
             }
         }
 
         live
     }
 
-    fn assert_values(view: &TestView, graph: &GraphHeader, model: &Model) {
+    fn assert_values(view: &TestView, graph: &GraphHeader, keys: &Keys, model: &Model) {
+        let mut counts = BTreeMap::<DbValue, u64>::new();
+
         for (id, expected) in model {
             let id = DbId(*id);
-            assert_eq!(&KeyValues(graph).values(view, id).unwrap(), expected);
-            assert_eq!(
-                KeyValues(graph).key_count(view, id).unwrap(),
-                expected.len() as u64
-            );
+            let values = KeyValues(graph);
+            assert_eq!(&values.values(view, keys, id).unwrap(), expected);
+            assert_eq!(values.key_count(view, id).unwrap(), expected.len() as u64);
             let expected_keys = expected.iter().map(|kv| kv.key.clone()).collect::<Vec<_>>();
-            assert_eq!(KeyValues(graph).keys(view, id).unwrap(), expected_keys);
+            assert_eq!(values.keys(view, keys, id).unwrap(), expected_keys);
+            let mut pool = keys_pool();
+            pool.reverse();
+            let ids = pool
+                .iter()
+                .filter_map(|key| keys.id(view, key).unwrap())
+                .collect::<Vec<_>>();
+            let by_keys = ids
+                .iter()
+                .map(|key| {
+                    let key = keys.key(view, *key).unwrap();
+                    expected
+                        .iter()
+                        .find(|kv| kv.key == key)
+                        .map(|kv| kv.value.clone())
+                })
+                .collect::<Vec<_>>();
+            assert_eq!(values.values_by_keys(view, id, &ids).unwrap(), by_keys);
 
             for kv in expected {
-                assert_eq!(
-                    KeyValues(graph).value(view, id, &kv.key).unwrap().as_ref(),
-                    Some(&kv.value)
-                );
+                let key = keys.id(view, &kv.key).unwrap().unwrap();
+                assert_eq!(values.value(view, id, key).unwrap(), Some(kv.value.clone()));
+                *counts.entry(kv.key.clone()).or_default() += 1;
             }
+        }
 
-            let mut reversed = keys_pool();
-            reversed.reverse();
-            let by_keys = reversed
-                .iter()
-                .filter_map(|key| expected.iter().find(|kv| kv.key == *key).cloned())
-                .collect::<Vec<_>>();
+        assert_eq!(keys.len(), counts.len() as u64);
+
+        for (key, count) in counts {
             assert_eq!(
-                KeyValues(graph)
-                    .values_by_keys(view, id, &reversed)
-                    .unwrap(),
-                by_keys
+                refs(keys, view, keys.id(view, &key).unwrap().unwrap()),
+                count
             );
         }
     }
@@ -442,10 +595,11 @@ mod tests {
         view: &mut TestView,
         alloc: &mut Allocator,
         graph: &GraphHeader,
+        keys: &mut Keys,
         model: &mut Model,
         random: &mut XorShift,
     ) {
-        let keys = keys_pool();
+        let pool = keys_pool();
         let values = all_values();
         let id = DbId(
             *model
@@ -453,17 +607,18 @@ mod tests {
                 .nth(random.next(model.len() as u64) as usize)
                 .unwrap(),
         );
-        let key = &keys[random.next(keys.len() as u64) as usize];
+        let key = &pool[random.next(pool.len() as u64) as usize];
         let value = &values[random.next(values.len() as u64) as usize];
         let expected = model.get_mut(&id.0).unwrap();
         let found = expected.iter().position(|kv| kv.key == *key);
 
         match random.next(10) {
             0..=4 => {
-                let old = KeyValues(graph)
-                    .insert(view, alloc, id, &kv(key, value))
+                let (key_id, old) = KeyValues(graph)
+                    .insert(view, alloc, keys, id, &kv(key, value))
                     .unwrap();
-                assert_eq!(old.as_ref(), found.map(|i| &expected[i]));
+                assert_eq!(keys.key(view, key_id).unwrap(), *key);
+                assert_eq!(old.as_ref(), found.map(|i| &expected[i].value));
 
                 match found {
                     Some(i) => expected[i].value = value.clone(),
@@ -471,23 +626,33 @@ mod tests {
                 }
             }
             5..=7 => {
-                let removed = KeyValues(graph).remove(view, alloc, id, key).unwrap();
-                assert_eq!(removed, found.map(|i| expected.remove(i)));
+                let removed = keys
+                    .id(view, key)
+                    .unwrap()
+                    .map(|key| KeyValues(graph).remove(view, alloc, keys, id, key).unwrap());
+                assert_eq!(removed.flatten(), found.map(|i| expected.remove(i).value));
             }
             8 => {
                 let additional = random.next(5);
+                let used = KeyValues(graph).list(view, id).unwrap().used;
                 KeyValues(graph)
                     .reserve(view, alloc, id, additional)
                     .unwrap();
-                assert!(
-                    expected.len() as u64 + additional
-                        <= KeyValues(graph).list(view, id).unwrap().cap
-                );
+                assert!(used + additional * PAIR <= KeyValues(graph).list(view, id).unwrap().cap);
             }
-            _ => assert_eq!(
-                KeyValues(graph).remove_all(view, alloc, id).unwrap(),
-                std::mem::take(expected)
-            ),
+            _ => {
+                let removed = KeyValues(graph)
+                    .remove_all(view, alloc, keys, id)
+                    .unwrap()
+                    .into_iter()
+                    .map(|pair| pair.1)
+                    .collect::<Vec<_>>();
+                let expected = std::mem::take(expected)
+                    .into_iter()
+                    .map(|kv| kv.value)
+                    .collect::<Vec<_>>();
+                assert_eq!(removed, expected);
+            }
         }
     }
 
@@ -499,14 +664,43 @@ mod tests {
             let alloc = Allocator::new(DEFAULT_PAGE_SHIFT);
             let mut caps = vec![0];
 
-            while caps.last() < Some(&500) {
-                caps.push(grown(&alloc, *caps.last().unwrap()));
+            while caps.last() < Some(&10_000) {
+                let cap = *caps.last().unwrap();
+                caps.push(grown(&alloc, cap, cap + PAIR));
             }
 
             assert_eq!(
                 caps,
-                [0, 1, 2, 3, 4, 5, 6, 7, 10, 15, 31, 63, 127, 255, 511]
+                [
+                    0, 24, 56, 88, 120, 160, 192, 240, 328, 496, 1016, 2040, 4088, 8184, 16376
+                ]
             );
+        }
+    }
+
+    mod entries {
+        use super::*;
+
+        #[test]
+        fn entries_of_truncated_list_should_fail() {
+            with_view(|view, alloc| {
+                let (graph, node, _) = graph(view, alloc);
+                let mut keys = Keys::new(DEFAULT_PAGE_SHIFT);
+                let values = KeyValues(&graph);
+                values
+                    .push(view, alloc, &mut keys, node, &kv(&1.into(), &1.into()))
+                    .unwrap();
+                let mut list = values.list(view, node).unwrap();
+
+                for used in [2, 8] {
+                    list.used = used;
+                    let error = entries(view, &list).err().unwrap();
+                    assert_eq!(
+                        error.description,
+                        format!("Invalid values at '{}'", list.data)
+                    );
+                }
+            });
         }
     }
 
@@ -518,54 +712,57 @@ mod tests {
             for seed in 1..=5 {
                 with_view(|view, alloc| {
                     let mut random = XorShift(seed);
-                    let mut graph = GraphHeader::new(Layout::default());
-                    let node = graph.insert_node(view, alloc).unwrap();
-                    let edge = graph.insert_edge(view, alloc, node, node).unwrap();
+                    let (graph, node, edge) = graph(view, alloc);
+                    let mut keys = Keys::new(DEFAULT_PAGE_SHIFT);
                     let mut model = Model::from([(node.0, vec![]), (edge.0, vec![])]);
 
                     for _ in 0..300 {
-                        random_op(view, alloc, &graph, &mut model, &mut random);
-                        assert_values(view, &graph, &model);
+                        random_op(view, alloc, &graph, &mut keys, &mut model, &mut random);
+                        assert_values(view, &graph, &keys, &model);
                     }
 
-                    let mut live = live(view, &graph, &[node, edge]);
-                    live.extend(graph_allocations(&graph));
-                    verify(alloc, view, &live);
+                    verify(alloc, view, &live(view, &graph, &keys, &[node, edge]));
                 });
             }
         }
 
         #[test]
         fn key_values_failure_should_fail() {
-            let long = DbValue::from("a value longer than 15 bytes");
+            let long = DbValue::from(LONG);
             assert_failures(
                 |view, alloc| {
-                    let mut graph = GraphHeader::new(Layout::default());
-                    let node = graph.insert_node(view, alloc).unwrap();
-                    let edge = graph.insert_edge(view, alloc, node, node).unwrap();
+                    let (graph, node, edge) = graph(view, alloc);
+                    let mut keys = Keys::new(DEFAULT_PAGE_SHIFT);
                     KeyValues(&graph)
-                        .push(view, alloc, node, &kv(&long, &long))
+                        .push(view, alloc, &mut keys, node, &kv(&long, &long))
                         .unwrap();
-                    (graph, node, edge)
+                    (graph, keys, node, edge)
                 },
                 |view, alloc, state| {
-                    let (graph, node, edge) = state;
-                    KeyValues(&graph).push(view, alloc, edge, &kv(&long, &long))?;
-                    KeyValues(&graph).reserve(view, alloc, node, 2)?;
-                    KeyValues(&graph).push(view, alloc, node, &kv(&1.into(), &long))?;
-                    KeyValues(&graph).push(view, alloc, node, &kv(&2.into(), &long))?;
-                    KeyValues(&graph).push(view, alloc, node, &kv(&3.into(), &long))?;
-                    KeyValues(&graph).insert(view, alloc, node, &kv(&long, &long))?;
-                    KeyValues(&graph).insert(view, alloc, node, &kv(&4.into(), &long))?;
-                    KeyValues(&graph).key_count(view, node)?;
-                    KeyValues(&graph).keys(view, node)?;
-                    KeyValues(&graph).values(view, node)?;
-                    KeyValues(&graph).value(view, node, &long)?;
-                    KeyValues(&graph).values_by_keys(view, node, &[long.clone(), 2.into()])?;
-                    KeyValues(&graph).remove(view, alloc, node, &long)?;
-                    KeyValues(&graph).remove_all(view, alloc, node)?;
-                    KeyValues(&graph).push(view, alloc, node, &kv(&long, &long))?;
-                    KeyValues(&graph).remove(view, alloc, node, &long)?;
+                    let (graph, mut keys, node, edge) = state;
+                    let values = KeyValues(&graph);
+                    let keys = &mut keys;
+                    values.push(view, alloc, keys, edge, &kv(&5.into(), &DbValue::None))?;
+                    values.push(view, alloc, keys, edge, &kv(&long, &long))?;
+                    values.reserve(view, alloc, node, 2)?;
+                    values.push(view, alloc, keys, node, &kv(&1.into(), &long))?;
+                    values.push(view, alloc, keys, node, &kv(&2.into(), &long))?;
+                    values.push(view, alloc, keys, node, &kv(&3.into(), &long))?;
+                    let (key, _) = values.insert(view, alloc, keys, node, &kv(&long, &long))?;
+                    values.insert(view, alloc, keys, node, &kv(&4.into(), &long))?;
+                    values.insert(view, alloc, keys, edge, &kv(&4.into(), &long))?;
+                    values.insert(view, alloc, keys, node, &kv(&1.into(), &DbValue::None))?;
+                    values.insert(view, alloc, keys, node, &kv(&1.into(), &long))?;
+                    values.remove(view, alloc, keys, edge, KeyId(4))?;
+                    values.key_count(view, node)?;
+                    values.keys(view, keys, node)?;
+                    values.values(view, keys, node)?;
+                    values.value(view, node, key)?;
+                    values.values_by_keys(view, node, &[key, KeyId(2)])?;
+                    values.remove(view, alloc, keys, node, key)?;
+                    values.remove_all(view, alloc, keys, node)?;
+                    values.push(view, alloc, keys, node, &kv(&long, &long))?;
+                    values.remove(view, alloc, keys, node, key)?;
                     Ok(())
                 },
             );
@@ -578,28 +775,116 @@ mod tests {
             fn push_to_missing_element_should_fail() {
                 with_view(|view, alloc| {
                     let graph = GraphHeader::new(Layout::default());
+                    let mut keys = Keys::new(DEFAULT_PAGE_SHIFT);
                     let error = KeyValues(&graph)
-                        .push(view, alloc, DbId(1), &kv(&1.into(), &1.into()))
+                        .push(view, alloc, &mut keys, DbId(1), &kv(&1.into(), &1.into()))
                         .unwrap_err();
                     assert_eq!(error.description, "'1' is invalid index");
                 });
             }
 
             #[test]
+            fn push_label_to_empty_element_should_keep_it_inline() {
+                with_view(|view, alloc| {
+                    let (graph, node, edge) = graph(view, alloc);
+                    let mut keys = Keys::new(DEFAULT_PAGE_SHIFT);
+                    let values = KeyValues(&graph);
+                    let label = kv(&LONG.into(), &DbValue::None);
+                    let key = values.push(view, alloc, &mut keys, edge, &label).unwrap();
+                    assert_eq!(
+                        values.list(view, edge).unwrap().data,
+                        INLINE | u64::from(key.0)
+                    );
+                    assert_eq!(
+                        values.values(view, &keys, edge).unwrap(),
+                        vec![label.clone()]
+                    );
+                    assert_eq!(values.value(view, edge, key).unwrap(), Some(DbValue::None));
+                    assert_eq!(values.key_count(view, edge).unwrap(), 1);
+                    verify(alloc, view, &live(view, &graph, &keys, &[node, edge]));
+                    let pair = kv(&1.into(), &LONG.into());
+                    values.push(view, alloc, &mut keys, edge, &pair).unwrap();
+                    assert_eq!(values.values(view, &keys, edge).unwrap(), vec![label, pair]);
+                    verify(alloc, view, &live(view, &graph, &keys, &[node, edge]));
+                });
+            }
+
+            #[test]
             fn push_should_keep_duplicate_keys() {
                 with_view(|view, alloc| {
-                    let mut graph = GraphHeader::new(Layout::default());
-                    let node = graph.insert_node(view, alloc).unwrap();
-                    KeyValues(&graph)
-                        .push(view, alloc, node, &kv(&1.into(), &1.into()))
+                    let (graph, node, _) = graph(view, alloc);
+                    let mut keys = Keys::new(DEFAULT_PAGE_SHIFT);
+                    let values = KeyValues(&graph);
+                    let first = values
+                        .push(view, alloc, &mut keys, node, &kv(&1.into(), &1.into()))
                         .unwrap();
-                    KeyValues(&graph)
-                        .push(view, alloc, node, &kv(&1.into(), &2.into()))
+                    let second = values
+                        .push(view, alloc, &mut keys, node, &kv(&1.into(), &2.into()))
                         .unwrap();
+                    assert_eq!(first, second);
+                    assert_eq!(refs(&keys, view, first), 2);
                     assert_eq!(
-                        KeyValues(&graph).values(view, node).unwrap(),
+                        values.values(view, &keys, node).unwrap(),
                         vec![kv(&1.into(), &1.into()), kv(&1.into(), &2.into())]
                     );
+                });
+            }
+        }
+
+        mod insert {
+            use super::*;
+
+            #[test]
+            fn insert_changing_label_and_value_should_keep_order() {
+                with_view(|view, alloc| {
+                    let (graph, node, edge) = graph(view, alloc);
+                    let mut keys = Keys::new(DEFAULT_PAGE_SHIFT);
+                    let values = KeyValues(&graph);
+                    let mut expected = vec![
+                        kv(&1.into(), &1.into()),
+                        kv(&2.into(), &DbValue::None),
+                        kv(&3.into(), &LONG.into()),
+                    ];
+
+                    for pair in &expected {
+                        values.push(view, alloc, &mut keys, node, pair).unwrap();
+                    }
+
+                    for (i, value) in [(1, LONG.into()), (0, DbValue::None), (2, DbValue::None)] {
+                        let old = values
+                            .insert(view, alloc, &mut keys, node, &kv(&expected[i].key, &value))
+                            .unwrap()
+                            .1;
+                        assert_eq!(old, Some(std::mem::replace(&mut expected[i].value, value)));
+                        assert_eq!(values.values(view, &keys, node).unwrap(), expected);
+                    }
+
+                    assert_eq!(values.list(view, node).unwrap().used, 4 + 20 + 4);
+                    verify(alloc, view, &live(view, &graph, &keys, &[node, edge]));
+                });
+            }
+        }
+
+        mod remove {
+            use super::*;
+
+            #[test]
+            fn remove_last_reference_should_free_key() {
+                with_view(|view, alloc| {
+                    let (graph, node, edge) = graph(view, alloc);
+                    let mut keys = Keys::new(DEFAULT_PAGE_SHIFT);
+                    let values = KeyValues(&graph);
+                    let key = values
+                        .push(view, alloc, &mut keys, node, &kv(&LONG.into(), &1.into()))
+                        .unwrap();
+                    values
+                        .push(view, alloc, &mut keys, edge, &kv(&LONG.into(), &2.into()))
+                        .unwrap();
+                    values.remove(view, alloc, &mut keys, node, key).unwrap();
+                    assert_eq!(keys.id(view, &LONG.into()).unwrap(), Some(key));
+                    values.remove(view, alloc, &mut keys, edge, key).unwrap();
+                    assert_eq!(keys.id(view, &LONG.into()).unwrap(), None);
+                    verify(alloc, view, &live(view, &graph, &keys, &[node, edge]));
                 });
             }
         }
@@ -608,15 +893,30 @@ mod tests {
             use super::*;
 
             #[test]
+            fn reserve_with_inline_label_should_move_it_to_list() {
+                with_view(|view, alloc| {
+                    let (graph, node, edge) = graph(view, alloc);
+                    let mut keys = Keys::new(DEFAULT_PAGE_SHIFT);
+                    let values = KeyValues(&graph);
+                    let label = kv(&1.into(), &DbValue::None);
+                    values.push(view, alloc, &mut keys, node, &label).unwrap();
+                    values.reserve(view, alloc, node, 1).unwrap();
+                    let list = values.list(view, node).unwrap();
+                    assert_eq!((list.pos(), list.used, list.cap), (list.data, 4, 24));
+                    assert_eq!(values.values(view, &keys, node).unwrap(), vec![label]);
+                    verify(alloc, view, &live(view, &graph, &keys, &[node, edge]));
+                });
+            }
+
+            #[test]
             fn reserve_should_grow_list_in_place() {
                 with_view(|view, alloc| {
-                    let mut graph = GraphHeader::new(Layout::default());
-                    let node = graph.insert_node(view, alloc).unwrap();
-                    KeyValues(&graph).reserve(view, alloc, node, 20).unwrap();
-                    let list = KeyValues(&graph).list(view, node).unwrap();
+                    let (graph, node, _) = graph(view, alloc);
                     KeyValues(&graph).reserve(view, alloc, node, 60).unwrap();
+                    let list = KeyValues(&graph).list(view, node).unwrap();
+                    KeyValues(&graph).reserve(view, alloc, node, 150).unwrap();
                     let reserved = KeyValues(&graph).list(view, node).unwrap();
-                    assert_eq!((reserved.pos, reserved.cap), (list.pos, 63));
+                    assert_eq!((reserved.data, reserved.cap), (list.data, 3064));
                 });
             }
         }

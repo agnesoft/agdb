@@ -286,7 +286,9 @@ export type DbValue =
     /** List of UTF-8 strings */
     | { VecString: string[] }
     /** List of database values (heterogeneous) */
-    | { VecDbValue: DbValue[] };
+    | { VecDbValue: DbValue[] }
+    /** No value, the value of a key that is a label */
+    | "None";
 
 /**
  * Query to insert or update aliases of existing nodes.

@@ -9,6 +9,8 @@ pub(crate) mod graph;
 pub(crate) mod indexes;
 #[allow(dead_code)]
 pub(crate) mod key_values;
+#[allow(dead_code)]
+pub(crate) mod keys;
 pub mod map;
 pub mod multi_map;
 #[allow(dead_code)]

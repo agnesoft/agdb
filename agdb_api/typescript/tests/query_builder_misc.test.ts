@@ -40,6 +40,8 @@ describe("QueryBuilder misc tests", () => {
         expect(Array.isArray(vec_u64)).toStrictEqual(true);
         const vec_f64 = convertToNativeValue({ VecF64: [1.1, 2.2] });
         expect(Array.isArray(vec_f64)).toStrictEqual(true);
+        const none = convertToNativeValue("None");
+        expect(none).toStrictEqual(undefined);
     });
 
     it(`convertToDbValue`, () => {

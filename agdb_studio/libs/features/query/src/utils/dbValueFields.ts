@@ -6,6 +6,9 @@ import { parseDbValue } from "./queryExecutionUtils";
 /** Edits raw bytes as comma-separated numbers 0-255 (editor-only type). */
 export const BYTES_TYPE = "bytes";
 
+/** A label: a key without a value (editor-only type, the text is ignored). */
+export const NONE_TYPE = "none";
+
 /**
  * Marks a nested `VecDbValue`. It has no editor, so the panel keeps the
  * original value and shows it read-only.
@@ -16,6 +19,7 @@ export const NESTED_TYPE = "nested";
 export const EDITABLE_VALUE_TYPES: readonly string[] = [
   ...VALUE_TYPES,
   BYTES_TYPE,
+  NONE_TYPE,
 ];
 
 const isBooleanString = (value: string): boolean =>
@@ -29,6 +33,9 @@ const splitItems = (raw: string | undefined): string[] =>
 
 /** Converts a typed form field (type option + raw text) to a `DbValue`. */
 export const fieldToDbValue = (field: QueryStepFieldValue): DbValue => {
+  if (field.selectedOption === NONE_TYPE) {
+    return "None";
+  }
   if (field.selectedOption === BYTES_TYPE) {
     return { Bytes: splitItems(field.value).map(Number) };
   }
@@ -50,6 +57,9 @@ export const fieldToDbValue = (field: QueryStepFieldValue): DbValue => {
  * same variant (nested values excepted, see `NESTED_TYPE`).
  */
 export const dbValueToField = (value: DbValue): QueryStepFieldValue => {
+  if (value === "None") {
+    return { selectedOption: NONE_TYPE, value: "" };
+  }
   // Booleans are stored as strings, so strings always stay strings.
   if ("String" in value) {
     return { selectedOption: "string", value: value.String };
@@ -86,6 +96,9 @@ export const dbValueToField = (value: DbValue): QueryStepFieldValue => {
 
 /** Short human-readable type label of a `DbValue`, e.g. "i64" or "string[]". */
 export const dbValueTypeLabel = (value: DbValue): string => {
+  if (value === "None") {
+    return NONE_TYPE;
+  }
   const key = Object.keys(value)[0] ?? "";
   const labels: Record<string, string> = {
     String: "string",

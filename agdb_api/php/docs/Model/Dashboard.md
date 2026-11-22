@@ -7,6 +7,7 @@ Name | Type | Description | Notes
 **config** | **string** |  |
 **name** | **string** |  |
 **owner** | **string** |  |
+**public** | **bool** |  |
 **role** | [**\Agnesoft\AgdbApi\Model\DbUserRole**](DbUserRole.md) |  |
 **updated** | **int** |  |
 

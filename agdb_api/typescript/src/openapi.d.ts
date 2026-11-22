@@ -671,6 +671,10 @@ declare namespace Components {
              */
             DbValue[];
         } | ("None");
+        export interface HomeDashboardParam {
+            name: string;
+            owner: string;
+        }
         /**
          * Query to insert or update aliases of existing nodes.
          * All `ids` must exist. None of the `aliases` can be empty.
@@ -1066,10 +1070,6 @@ declare namespace Components {
              */
             QueryCondition[];
         };
-        export interface HomeDashboardParam {
-            name: string;
-            owner: string;
-        }
         /**
          * Logical operator for query conditions
          */

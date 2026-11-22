@@ -24,6 +24,7 @@ use agsource::codegen::pass::TagResults;
 use agsource::codegen::pass::ThrowErrors;
 use agsource::codegen::pass::TraitDicts;
 use agsource::codegen::print;
+use agsource::codegen::routes;
 use agsource::codegen::ts::AcceptElementSources;
 use agsource::codegen::ts::Emitter;
 use agsource::codegen::ts::EraseCasts;
@@ -91,6 +92,12 @@ const ROUTES: &str = "routes";
 
 /// Where `agci generate` dumps the route tests module after each pass, in [`DUMP_DIR`].
 const ROUTES_DUMP: &str = "routes";
+
+/// The root of the binary of [`SERVER`] whose routes the client calls.
+const SERVER_MAIN: &str = "src/main.rs";
+
+/// Where `agci generate` writes the routes each client method calls, in [`DUMP_DIR`].
+const ROUTE_CHECK_DUMP: &str = "route_check.txt";
 
 /// The query builder of the clients from the agdb source: the lowered module is dumped to `dump`
 /// after loading and after each pass as `NN_<pass>.rs.txt`.
@@ -191,7 +198,22 @@ pub(crate) fn generate(platform: &impl Platform, root: &str, dump: &Path) -> Res
         &dump.join(ROUTES_DUMP),
         &mut errors,
     )?;
-    let client = client(platform, client_m, &dump.join(CLIENT_DUMP), &mut errors)?;
+    let (client, checked_m) = client(platform, client_m, &dump.join(CLIENT_DUMP), &mut errors)?;
+    let server = load(
+        SERVER,
+        TargetKind::Bin,
+        Some(SERVER_MAIN),
+        host_cfg(platform, false)?,
+    )?;
+    errors.extend(server.errors().iter().cloned());
+    let (mut defs, _) = c.lower(&roots);
+    api.lower_exported(&c, SOURCE, &mut defs);
+    let (transport, lowering) = api.transport();
+    errors.extend(lowering);
+    let (served, lowering) = server.lower_routes(&[(&c, SOURCE), (&api, API)]);
+    errors.extend(lowering);
+    let (checked, lowering) = routes::check(&checked_m, &[&defs], &transport, &served);
+    errors.extend(lowering);
     let ts = Emitter::new(&m, &ts_config("./types.ts")).module();
     let fs = platform.fs();
     let tests = Emitter::new(&m, &ts_config("../src/types.ts")).tests(TESTS_NAME, TS_MODULE, &[]);
@@ -201,6 +223,7 @@ pub(crate) fn generate(platform: &impl Platform, root: &str, dump: &Path) -> Res
         &[(API, "../src/api.ts"), (GLUE, TS_GLUE)],
     );
     fs.write(dump.join("ts_notes.txt"), ts.notes.join("\n") + "\n")?;
+    fs.write(dump.join(ROUTE_CHECK_DUMP), checked.dump())?;
     fs.write(Path::new(root).join(TS_TYPES), declarations.code)?;
     fs.write(Path::new(root).join(TS), ts.code)?;
     fs.write(Path::new(root).join(TS_TESTS), tests.code)?;
@@ -249,15 +272,31 @@ fn run(
     dump: &Path,
     errors: &mut Vec<agsource::Error>,
 ) -> Result<(), CIError> {
+    run_from(platform, m, passes, dump, 0, errors)
+}
+
+/// [`run`] numbering the dumps from `first`, the module after loading only
+/// dumped for `0`.
+fn run_from(
+    platform: &impl Platform,
+    m: &mut Module,
+    passes: &Passes,
+    dump: &Path,
+    first: usize,
+    errors: &mut Vec<agsource::Error>,
+) -> Result<(), CIError> {
     let fs = platform.fs();
     fs.create_dir_all(dump)?;
-    let mut step = 0;
+    let mut step = first;
     let mut write = |title: &str, m: &Module| {
         let file = dump.join(format!("{step:02}_{title}.rs.txt"));
         step += 1;
         fs.write(&file, print::module(m, title))
     };
-    write("load", m)?;
+    if first == 0 {
+        write("load", m)?;
+    }
+
     let mut failed = None;
     errors.extend(passes.run(m, &mut |title: &str, m: &Module| {
         if let Err(e) = write(title, m) {
@@ -271,24 +310,28 @@ fn run(
     }
 }
 
-/// The client module `m` after its passes, dumped to `dump`.
+/// The client module `m` after its passes, dumped to `dump`, and the module
+/// after [`Inline`], with the URLs and the types of its requests.
 fn client(
     platform: &impl Platform,
     mut m: Module,
     dump: &Path,
     errors: &mut Vec<agsource::Error>,
-) -> Result<agsource::codegen::ts::Ts, CIError> {
+) -> Result<(agsource::codegen::ts::Ts, Module), CIError> {
     let passes = Passes::new()
         .with(Resolve)
         .with(Prune)
         .with(ExplicitReturns)
-        .with(Inline)
+        .with(Inline);
+    run(platform, &mut m, &passes, dump, errors)?;
+    let inlined = m.clone();
+    let passes = Passes::new()
         .with(EraseOwnership)
         .with(ThrowErrors)
         .with(EraseCasts)
         .with(RemoveDeadHelpers);
-    run(platform, &mut m, &passes, dump, errors)?;
-    Ok(Emitter::new(&m, &ts_config("./types.ts")).client())
+    run_from(platform, &mut m, &passes, dump, 5, errors)?;
+    Ok((Emitter::new(&m, &ts_config("./types.ts")).client(), inlined))
 }
 
 /// The serde types are imported from [`TS_TYPES`] at `types`, relative to the emitted file.

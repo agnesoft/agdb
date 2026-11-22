@@ -5,6 +5,7 @@ use crate::password;
 use crate::password::Password;
 use crate::routes::ServerResult;
 use crate::server_db::ServerDb;
+use crate::server_error::CommitIndexHeader;
 use crate::server_error::ServerError;
 use crate::server_error::ServerResponse;
 use crate::user_id::UserAgent;
@@ -19,7 +20,6 @@ use axum::Json;
 use axum::extract::Query;
 use axum::extract::State;
 use axum::http::StatusCode;
-use axum::response::IntoResponse;
 use serde::Deserialize;
 use utoipa::IntoParams;
 use utoipa::ToSchema;
@@ -138,7 +138,7 @@ pub(crate) async fn change_password(
     State(server_db): State<ServerDb>,
     State(cluster): State<Cluster>,
     Json(request): Json<ChangePassword>,
-) -> ServerResponse<impl IntoResponse> {
+) -> ServerResponse<(StatusCode, CommitIndexHeader)> {
     let user = server_db.user_by_id(user.0).await?;
     let old_pswd = Password::new(&user.username, &user.password, &user.salt)?;
 

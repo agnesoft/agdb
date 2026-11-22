@@ -394,3 +394,380 @@ pub(crate) fn conversion(to: &str, from: Ty, body: Expr) -> Conversion {
         errors: Vec::new(),
     }
 }
+
+/// An API crate of [`ROUTES_SERVER`]: serde types, an enum sent by its
+/// `Display`, a transport trait with a provided method, its reqwest
+/// implementation through a `Deref` field and a helper, and a client
+/// sending requests to `{address}/api`.
+pub(crate) const ROUTES_API: &str = r#"use serde::Deserialize;
+use serde::Serialize;
+use serde::de::DeserializeOwned;
+use std::fmt;
+
+pub type ApiResult<T> = Result<T, ApiError>;
+
+pub struct ApiError {
+    pub status: u16,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct Login {
+    pub name: String,
+    pub password: String,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct Item {
+    pub id: u64,
+    #[serde(rename = "label")]
+    pub name: String,
+    #[serde(default)]
+    pub note: Option<String>,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct Items(pub Vec<Item>);
+
+#[derive(Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Kind {
+    InMemory,
+    File,
+}
+
+impl fmt::Display for Kind {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Kind::InMemory => f.write_str("in_memory"),
+            Kind::File => f.write_str("file"),
+        }
+    }
+}
+
+pub trait Http {
+    async fn get<T: DeserializeOwned>(&self, uri: &str) -> ApiResult<(u16, T)>;
+    async fn post<T: Serialize, R: DeserializeOwned>(
+        &self,
+        uri: &str,
+        json: Option<T>,
+    ) -> ApiResult<(u16, R)>;
+    async fn delete(&self, uri: &str) -> ApiResult<u16>;
+
+    async fn exec(&self, uri: &str, items: &[Item]) -> ApiResult<(u16, Vec<Item>)> {
+        self.post(uri, Some(items)).await
+    }
+}
+
+pub struct Inner(pub reqwest::Client);
+
+impl std::ops::Deref for Inner {
+    type Target = reqwest::Client;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+pub struct Reqwest {
+    pub client: Inner,
+}
+
+impl Http for Reqwest {
+    async fn get<T: DeserializeOwned>(&self, uri: &str) -> ApiResult<(u16, T)> {
+        let response = self.client.get(uri).send().await?;
+        let body = response.json::<T>().await?;
+        Ok((200, body))
+    }
+
+    async fn post<T: Serialize, R: DeserializeOwned>(
+        &self,
+        uri: &str,
+        json: Option<T>,
+    ) -> ApiResult<(u16, R)> {
+        let mut request = self.client.post(uri);
+        if let Some(json) = json {
+            request = request.json(&json);
+        }
+        let response = request.send().await?;
+        if response.status().is_success() {
+            let body = response.json::<R>().await?;
+            Ok((200, body))
+        } else {
+            Err(ApiError { status: 500 })
+        }
+    }
+
+    async fn delete(&self, uri: &str) -> ApiResult<u16> {
+        self.send_delete(uri).await
+    }
+}
+
+impl Reqwest {
+    async fn send_delete(&self, uri: &str) -> ApiResult<u16> {
+        self.client.delete(uri).send().await?;
+        Ok(200)
+    }
+}
+
+pub struct Api<T: Http> {
+    client: T,
+    base_url: String,
+}
+
+impl<T: Http> Api<T> {
+    pub fn new(client: T, address: &str) -> Self {
+        Self {
+            client,
+            base_url: format!("{address}/api"),
+        }
+    }
+
+    pub async fn login(&self, name: &str, password: &str) -> ApiResult<String> {
+        Ok(self
+            .client
+            .post::<Login, String>(
+                &self.url("/login"),
+                Some(Login {
+                    name: name.to_string(),
+                    password: password.to_string(),
+                }),
+            )
+            .await?
+            .1)
+    }
+
+    pub async fn items(&self, owner: &str) -> ApiResult<(u16, Items)> {
+        self.client
+            .get(&self.url(&format!("/items/{owner}/list")))
+            .await
+    }
+
+    pub async fn add(&self, owner: &str, kind: Kind) -> ApiResult<u16> {
+        Ok(self
+            .client
+            .post::<(), ()>(
+                &self.url(&format!("/items/{owner}/add?kind={kind}&force=true")),
+                None,
+            )
+            .await?
+            .0)
+    }
+
+    pub async fn remove(&self, owner: &str, id: u64) -> ApiResult<u16> {
+        self.client
+            .delete(&self.url(&format!("/items/{owner}/{id}")))
+            .await
+    }
+
+    pub async fn exec(&self, owner: &str, items: &[Item]) -> ApiResult<(u16, Vec<Item>)> {
+        self.client
+            .exec(&self.url(&format!("/items/{owner}/exec")), items)
+            .await
+    }
+
+    fn url(&self, uri: &str) -> String {
+        format!("{}{uri}", self.base_url)
+    }
+}
+"#;
+
+/// A server binary of [`ROUTES_API`]: an axum router nested under a base
+/// path known when it runs, handlers with `Path`, `Query`, `Json` and local
+/// extractors, answering through aliases, header arrays and a local
+/// `IntoResponse`, and a route no client method calls.
+pub(crate) const ROUTES_SERVER: &str = r#"use axum::Json;
+use axum::Router;
+use axum::extract::FromRequest;
+use axum::extract::FromRequestParts;
+use axum::extract::Path;
+use axum::extract::Query;
+use axum::extract::Request;
+use axum::extract::State;
+use axum::http::StatusCode;
+use axum::http::request::Parts;
+use axum::response::IntoResponse;
+use axum::response::Response;
+use axum::routing;
+use serde::Deserialize;
+
+type Answer<T = StatusCode> = Result<T, StatusCode>;
+
+type Header = [(&'static str, String); 1];
+
+#[derive(Deserialize)]
+struct AddParams {
+    kind: api::Kind,
+    #[serde(default)]
+    force: bool,
+}
+
+struct User;
+
+impl<S> FromRequestParts<S> for User {
+    type Rejection = StatusCode;
+
+    async fn from_request_parts(_parts: &mut Parts, _state: &S) -> Result<Self, StatusCode> {
+        Ok(User)
+    }
+}
+
+struct Batch<T>(T);
+
+impl<S, T> FromRequest<S> for Batch<T> {
+    type Rejection = StatusCode;
+
+    async fn from_request(request: Request, state: &S) -> Result<Self, StatusCode> {
+        let Json(value) = Json::<T>::from_request(request, state).await?;
+        Ok(Batch(value))
+    }
+}
+
+struct Reply<T> {
+    value: T,
+}
+
+impl<T> IntoResponse for Reply<T> {
+    fn into_response(self) -> Response {
+        Json(self.value).into_response()
+    }
+}
+
+async fn login(Json(login): Json<api::Login>) -> Answer<(StatusCode, Json<String>)> {
+    Ok((StatusCode::OK, Json(login.name)))
+}
+
+async fn items(_user: User, Path(owner): Path<String>) -> Answer<(StatusCode, Json<api::Items>)> {
+    Err(StatusCode::NOT_FOUND)
+}
+
+async fn add(
+    _user: User,
+    State(_state): State<u8>,
+    Path(owner): Path<String>,
+    Query(params): Query<AddParams>,
+) -> Answer<(StatusCode, Header)> {
+    Ok((StatusCode::CREATED, [("commit-index", owner)]))
+}
+
+async fn remove(Path((owner, id)): Path<(String, u64)>) -> Answer {
+    Ok(StatusCode::NO_CONTENT)
+}
+
+async fn exec(
+    Path(owner): Path<String>,
+    Batch(items): Batch<Vec<api::Item>>,
+) -> Answer<(StatusCode, Reply<Vec<api::Item>>)> {
+    Ok((StatusCode::OK, Reply { value: items }))
+}
+
+async fn internal() -> StatusCode {
+    StatusCode::OK
+}
+
+fn app(basepath: String) -> Router {
+    let api = Router::new()
+        .route("/login", routing::post(login))
+        .route("/items/{owner}/list", routing::get(items))
+        .route("/items/{owner}/add", routing::post(add))
+        .route("/items/{owner}/{id}", routing::delete(remove))
+        .route("/items/{owner}/exec", routing::post(exec))
+        .route("/internal", routing::get(internal));
+    let router = Router::new().nest("/api", api).with_state(0);
+
+    if basepath.is_empty() {
+        router
+    } else {
+        Router::new().nest(&basepath, router)
+    }
+}
+
+#[tokio::main]
+async fn main() {
+    let app = app(String::new());
+    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
+    axum::serve(listener, app).await.unwrap();
+}
+"#;
+
+/// The API crate `api` of [`routes_server`], naming the crates of a
+/// client.
+fn routes_api(api: &str) -> SourceCrate {
+    let platform = test_platform();
+    platform.fs().create_dir_all("/api/src").unwrap();
+    platform.fs().write("/api/src/lib.rs", api).unwrap();
+    let mut target = Target::new(TargetKind::Lib, "/api/src/lib.rs");
+    target
+        .externs
+        .extend(["c".into(), "reqwest".into(), "serde".into()]);
+    SourceCrate::load(&platform, &target, &Cfg::All)
+}
+
+/// The server binary `server`, naming the API crate `api` and the crates
+/// of a server.
+fn routes_server(server: &str) -> SourceCrate {
+    let platform = test_platform();
+    platform.fs().create_dir_all("/s/src").unwrap();
+    platform.fs().write("/s/src/main.rs", server).unwrap();
+    let mut target = Target::new(TargetKind::Bin, "/s/src/main.rs");
+    target
+        .externs
+        .extend(["api".into(), "axum".into(), "serde".into(), "tokio".into()]);
+    SourceCrate::load(&platform, &target, &Cfg::All)
+}
+
+/// The routes of the server binary `server` of the API crate `api`, and
+/// the errors, with `/` separators.
+pub(crate) fn served(api: &str, server: &str) -> (super::routes::Routes, Vec<String>) {
+    let a = routes_api(api);
+    let (routes, errors) = routes_server(server).lower_routes(&[(&a, "api")]);
+    (routes, strings(&errors))
+}
+
+/// The transport of the API crate `api`, and the errors, with `/`
+/// separators.
+pub(crate) fn transport(api: &str) -> (super::routes::Transport, Vec<String>) {
+    let (transport, errors) = routes_api(api).transport();
+    (transport, strings(&errors))
+}
+
+/// The check of the client of the API crate `api` after
+/// [`Inline`](super::pass::Inline) against the server binary `server`, and
+/// the errors of the lowering, the passes, the transport, the routes and
+/// the check, with `/` separators.
+pub(crate) fn checked(api: &str, server: &str) -> (super::routes::Checked, Vec<String>) {
+    use super::pass::ExplicitReturns;
+    use super::pass::Inline;
+    use super::pass::Passes;
+    use super::pass::Prune;
+    use super::pass::Resolve;
+
+    let a = routes_api(api);
+    let c = load("");
+    let (mut client, errors) = a.lower_client(&c, "c");
+    let mut errors = strings(&errors);
+    let passes = Passes::new()
+        .with(Resolve)
+        .with(Prune)
+        .with(ExplicitReturns)
+        .with(Inline);
+    errors.extend(strings(&passes.run(&mut client, &mut |_, _| {})));
+    client.for_each_func(&mut |f, _| errors.extend(f.errors.iter().cloned()));
+    let mut data = Module::default();
+    errors.extend(strings(&a.lower_exported(&c, "c", &mut data)));
+    let (transport, transport_errors) = a.transport();
+    errors.extend(strings(&transport_errors));
+    let (routes, route_errors) = routes_server(server).lower_routes(&[(&a, "api")]);
+    errors.extend(strings(&route_errors));
+    let (checked, check_errors) = super::routes::check(&client, &[&data], &transport, &routes);
+    errors.extend(strings(&check_errors));
+    (checked, errors)
+}
+
+/// The source with each `(from, to)` replacing the first `from`, which must
+/// be in it.
+pub(crate) fn edited(source: &str, edits: &[(&str, &str)]) -> String {
+    edits.iter().fold(source.to_owned(), |source, (from, to)| {
+        assert!(source.contains(from), "no `{from}` in the source");
+        source.replacen(from, to, 1)
+    })
+}

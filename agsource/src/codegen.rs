@@ -13,6 +13,7 @@ pub mod lower;
 pub mod lowered;
 pub mod pass;
 pub mod print;
+pub mod routes;
 pub mod rust;
 mod surface;
 #[cfg(test)]

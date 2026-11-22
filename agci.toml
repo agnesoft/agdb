@@ -57,6 +57,7 @@ dependencies = [
     "agdb_api/typescript/tests/query_builder.test.ts",
     "agdb_api/typescript/tests/routes.test.ts",
     "agdb_server/openapi.json",
+    "agdb_server/src",
     "agdb_server/test_queries.json",
     "agdb_server/tests/api",
     "agdb_server/tests/test_server",

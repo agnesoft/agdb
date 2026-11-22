@@ -7,6 +7,7 @@ use super::lowered::*;
 use super::wire;
 use crate::Error;
 use crate::ItemId;
+use crate::ModuleId;
 use crate::Namespace;
 use crate::Resolved;
 use crate::SourceCrate;
@@ -121,6 +122,33 @@ impl SourceCrate {
         lower.exported();
         *m = lower.m;
         lower.errors
+    }
+}
+
+/// The types of a crate lowered one at a time, outside of the items
+/// [`SourceCrate::ir`] has: its own types they name are reached into the
+/// module as data.
+pub(super) struct TypeLowering<'a>(Lower<'a>);
+
+impl<'a> TypeLowering<'a> {
+    /// For the crate `c` of the `sources`, each with its name in the paths.
+    pub(super) fn new(c: &'a SourceCrate, sources: &[(&'a SourceCrate, &str)]) -> Self {
+        let mut lower = Lower::new(c, &[]);
+        lower.sources = sources.iter().map(|(c, n)| (*c, (*n).to_owned())).collect();
+        Self(lower)
+    }
+
+    /// The type written in `module`, with the `generics` as parameters.
+    pub(super) fn ty(&mut self, module: ModuleId, generics: &[String], ty: &syn::Type) -> Ty {
+        let (ir, mut errors) = self.0.c.ir_ty(module, generics, ty);
+        self.0.errors.append(&mut errors);
+        let ty = self.0.ty(&ir, true);
+        self.0.drain();
+        ty
+    }
+
+    pub(super) fn finish(self) -> (Module, Vec<Error>) {
+        (self.0.m, self.0.errors)
     }
 }
 

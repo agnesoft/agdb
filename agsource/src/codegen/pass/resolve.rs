@@ -129,9 +129,15 @@ impl<'a> Ctx<'a> {
 
     fn func(mut self, f: &mut Func) {
         self.ret = self.self_subst(&f.ret);
+        let ret = self.ret.clone();
+        let tail = f.body.len().checked_sub(1).filter(|_| ret != Ty::Unit);
 
-        for s in f.body.iter_mut() {
-            self.stmt(s);
+        for (i, s) in f.body.iter_mut().enumerate() {
+            if Some(i) == tail {
+                self.expr(s, Some(&ret));
+            } else {
+                self.stmt(s);
+            }
         }
 
         f.ret = self.ret.clone();
@@ -919,16 +925,25 @@ impl<'a> Ctx<'a> {
         if let Ty::Param(p) = &rt
             && let Some((t, f)) = self.trait_with(p, &m)
         {
-            let params: Vec<(String, Ty)> = f
+            let mut params: Vec<(String, Ty)> = f
                 .generics
                 .iter()
                 .map(|g| g.name.clone())
                 .zip(types.iter().cloned())
                 .collect();
+            let free: Vec<String> = f.generics[params.len()..]
+                .iter()
+                .map(|g| g.name.clone())
+                .collect();
+
+            if let Some(expected) = expected {
+                unify(&subst(&f.ret, &rt, &params), expected, &free, &mut params);
+            }
 
             for (a, (_, t)) in args.iter_mut().zip(f.params.iter()) {
                 let t = subst(t, &rt, &params);
                 self.expr(a, Some(&t));
+                unify(&t, &a.ty, &free, &mut params);
             }
 
             let ty = subst(&f.ret, &rt, &params);
@@ -1176,6 +1191,30 @@ pub fn subst(t: &Ty, self_ty: &Ty, params: &[(String, Ty)]) -> Ty {
             a.iter().map(|t| subst(t, self_ty, params)).collect(),
         ),
         t => t.clone(),
+    }
+}
+
+/// Binds the `free` generics of `pattern` to the parts of `actual` at
+/// their places, the first binding of each.
+fn unify(pattern: &Ty, actual: &Ty, free: &[String], params: &mut Vec<(String, Ty)>) {
+    match (pattern, actual.strip_ref()) {
+        (Ty::Param(p), actual) => {
+            if free.contains(p) && !params.iter().any(|(n, _)| n == p) && *actual != Ty::Unknown {
+                params.push((p.clone(), actual.clone()));
+            }
+        }
+        (Ty::Ref(p), actual) => unify(p, actual, free, params),
+        (Ty::List(p), Ty::List(a)) | (Ty::Option(p), Ty::Option(a)) => unify(p, a, free, params),
+        (Ty::Result(p_ok, p_err), Ty::Result(a_ok, a_err)) => {
+            unify(p_ok, a_ok, free, params);
+            unify(p_err, a_err, free, params);
+        }
+        (Ty::Tuple(p), Ty::Tuple(a)) | (Ty::Named(_, p), Ty::Named(_, a)) => {
+            for (p, a) in p.iter().zip(a) {
+                unify(p, a, free, params);
+            }
+        }
+        _ => {}
     }
 }
 
@@ -1966,6 +2005,49 @@ mod tests {
             assert_eq!(
                 print::ty(&subst(&t, &Ty::named("S"), &[("T".into(), Ty::Str)])),
                 "(S, Vec<str>, Option<U>, &A<str>, Result<str, U>, bool)"
+            );
+        }
+    }
+
+    mod unify {
+        use super::*;
+
+        #[test]
+        fn unify_should_bind_each_free_parameter_once_to_a_known_type() {
+            // GIVEN
+            let b = |t| Box::new(t);
+            let pattern = Ty::Tuple(vec![
+                Ty::Param("A".into()),
+                Ty::Param("A".into()),
+                Ty::Param("B".into()),
+                Ty::Param("C".into()),
+                Ty::Ref(b(Ty::Option(b(Ty::Param("D".into()))))),
+            ]);
+            let actual = Ty::Tuple(vec![
+                Ty::Unknown,
+                Ty::Bool,
+                Ty::Str,
+                Ty::Float,
+                Ty::Option(b(Ty::Unit)),
+            ]);
+            let mut params = vec![("B".into(), Ty::Unit)];
+
+            // WHEN
+            unify(
+                &pattern,
+                &actual,
+                &["A".into(), "B".into(), "D".into()],
+                &mut params,
+            );
+
+            // THEN
+            assert_eq!(
+                params,
+                [
+                    ("B".to_owned(), Ty::Unit),
+                    ("A".to_owned(), Ty::Bool),
+                    ("D".to_owned(), Ty::Unit)
+                ]
             );
         }
     }

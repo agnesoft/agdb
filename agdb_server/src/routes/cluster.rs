@@ -19,6 +19,7 @@ use crate::routes::user::LOGOUT_OTHER_SESSIONS;
 use crate::routes::user::LogoutQuery;
 use crate::routes::user::do_login;
 use crate::server_db::ServerDb;
+use crate::server_error::CommitIndexHeader;
 use crate::server_error::ServerError;
 use crate::server_error::ServerResponse;
 use crate::server_error::ServerResult;
@@ -222,7 +223,7 @@ pub(crate) async fn admin_logout(
     State(server_db): State<ServerDb>,
     State(cluster): State<Cluster>,
     Path(username): Path<String>,
-) -> ServerResponse<impl IntoResponse> {
+) -> ServerResponse<(StatusCode, CommitIndexHeader)> {
     let _user_id = server_db.user_id(&username).await?;
 
     let (commit_index, _result) = match request.session.as_deref() {
@@ -257,7 +258,7 @@ pub(crate) async fn admin_logout(
 pub(crate) async fn admin_logout_all(
     _admin: AdminId,
     State(cluster): State<Cluster>,
-) -> ServerResponse<impl IntoResponse> {
+) -> ServerResponse<(StatusCode, CommitIndexHeader)> {
     let (commit_index, _result) = cluster.exec(RemoveAllTokens {}).await?;
 
     Ok((
@@ -281,7 +282,7 @@ pub(crate) async fn login(
     State(server_db): State<ServerDb>,
     State(cluster): State<Cluster>,
     Json(request): Json<UserLogin>,
-) -> ServerResponse<impl IntoResponse> {
+) -> ServerResponse<(StatusCode, CommitIndexHeader, Json<String>)> {
     let (_user_id, token, session) =
         do_login(&server_db, &request.username, &request.password).await?;
     let (commit_index, _result) = cluster
@@ -318,7 +319,7 @@ pub(crate) async fn logout(
     token: UserToken,
     Query(request): Query<LogoutQuery>,
     State(cluster): State<Cluster>,
-) -> ServerResponse<impl IntoResponse> {
+) -> ServerResponse<(StatusCode, CommitIndexHeader)> {
     let (commit_index, _result) = match request.session.as_deref() {
         None => cluster.exec(RemoveUserToken { token: token.0 }).await?,
         Some(LOGOUT_ALL_SESSIONS) => cluster.exec(RemoveUserTokens { user: username.0 }).await?,

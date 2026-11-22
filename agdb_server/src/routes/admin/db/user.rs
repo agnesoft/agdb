@@ -3,6 +3,7 @@ use crate::action::db_user_remove::DbUserRemove;
 use crate::cluster::Cluster;
 use crate::routes::db::user::DbUserRoleParam;
 use crate::server_db::ServerDb;
+use crate::server_error::CommitIndexHeader;
 use crate::server_error::ServerResponse;
 use crate::server_error::permission_denied;
 use crate::user_id::AdminId;
@@ -12,7 +13,6 @@ use axum::extract::Path;
 use axum::extract::Query;
 use axum::extract::State;
 use axum::http::StatusCode;
-use axum::response::IntoResponse;
 
 #[utoipa::path(put,
     path = "/api/v1/admin/db/{owner}/{db}/user/{username}/add",
@@ -38,7 +38,7 @@ pub(crate) async fn add(
     State(cluster): State<Cluster>,
     Path((owner, db, username)): Path<(String, String, String)>,
     request: Query<DbUserRoleParam>,
-) -> ServerResponse<impl IntoResponse> {
+) -> ServerResponse<(StatusCode, CommitIndexHeader)> {
     if owner == username {
         return Err(permission_denied("cannot change role of db owner"));
     }
@@ -110,7 +110,7 @@ pub(crate) async fn remove(
     State(server_db): State<ServerDb>,
     State(cluster): State<Cluster>,
     Path((owner, db, username)): Path<(String, String, String)>,
-) -> ServerResponse<impl IntoResponse> {
+) -> ServerResponse<(StatusCode, CommitIndexHeader)> {
     if owner == username {
         return Err(permission_denied("cannot remove owner"));
     }

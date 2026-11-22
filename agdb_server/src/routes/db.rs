@@ -19,12 +19,12 @@ use crate::db_pool::DbPool;
 use crate::db_pool::audit;
 use crate::error_code::ErrorCode;
 use crate::server_db::ServerDb;
+use crate::server_error::CommitIndexHeader;
 use crate::server_error::ServerError;
 use crate::server_error::ServerResponse;
 use crate::server_error::permission_denied;
 use crate::user_id::UserId;
 use crate::utilities::required_role;
-use crate::wire;
 use crate::wire::Negotiated;
 use agdb_api::DbAudit;
 use agdb_api::DbKind;
@@ -38,7 +38,6 @@ use axum::extract::Path;
 use axum::extract::Query;
 use axum::extract::State;
 use axum::http::StatusCode;
-use axum::response::IntoResponse;
 use serde::Deserialize;
 use std::time::SystemTime;
 use std::time::UNIX_EPOCH;
@@ -100,7 +99,7 @@ pub(crate) async fn add(
     State(server_db): State<ServerDb>,
     Path((owner, db)): Path<(String, String)>,
     request: Query<DbTypeParam>,
-) -> ServerResponse<impl IntoResponse> {
+) -> ServerResponse<(StatusCode, CommitIndexHeader)> {
     let username = server_db.user_name(user.0).await?;
 
     if username != owner {
@@ -181,7 +180,7 @@ pub(crate) async fn audit_trim(
     State(server_db): State<ServerDb>,
     Path((owner, db)): Path<(String, String)>,
     request: Query<AuditTrimParam>,
-) -> ServerResponse<impl IntoResponse> {
+) -> ServerResponse<(StatusCode, CommitIndexHeader)> {
     let db_id = server_db.user_db_id(user.0, &owner, &db).await?;
 
     if !server_db.is_db_admin(user.0, db_id).await? {
@@ -223,7 +222,7 @@ pub(crate) async fn backup(
     State(cluster): State<Cluster>,
     State(server_db): State<ServerDb>,
     Path((owner, db)): Path<(String, String)>,
-) -> ServerResponse<impl IntoResponse> {
+) -> ServerResponse<(StatusCode, CommitIndexHeader)> {
     let db_id = server_db.user_db_id(user.0, &owner, &db).await?;
 
     if !server_db.is_db_admin(user.0, db_id).await? {
@@ -262,7 +261,7 @@ pub(crate) async fn clear(
     State(server_db): State<ServerDb>,
     Path((owner, db)): Path<(String, String)>,
     request: Query<ServerDatabaseResource>,
-) -> ServerResponse<impl IntoResponse> {
+) -> ServerResponse<(StatusCode, CommitIndexHeader, Json<ServerDatabase>)> {
     let db_id = server_db.user_db_id(user.0, &owner, &db).await?;
     let role = server_db.user_db_role(user.0, &owner, &db).await?;
 
@@ -320,7 +319,7 @@ pub(crate) async fn convert(
     State(server_db): State<ServerDb>,
     Path((owner, db)): Path<(String, String)>,
     request: Query<DbTypeParam>,
-) -> ServerResponse<impl IntoResponse> {
+) -> ServerResponse<(StatusCode, CommitIndexHeader)> {
     let database = server_db.user_db(user.0, &owner, &db).await?;
 
     if !server_db
@@ -372,7 +371,7 @@ pub(crate) async fn copy(
     State(server_db): State<ServerDb>,
     Path((owner, db)): Path<(String, String)>,
     request: Query<ServerDatabaseRename>,
-) -> ServerResponse<impl IntoResponse> {
+) -> ServerResponse<(StatusCode, CommitIndexHeader)> {
     let db_type = server_db.user_db(user.0, &owner, &db).await?.db_type;
     let username = server_db.user_name(user.0).await?;
 
@@ -421,7 +420,7 @@ pub(crate) async fn delete(
     State(cluster): State<Cluster>,
     State(server_db): State<ServerDb>,
     Path((owner, db)): Path<(String, String)>,
-) -> ServerResponse<impl IntoResponse> {
+) -> ServerResponse<(StatusCode, CommitIndexHeader)> {
     let username = server_db.user_name(user.0).await?;
 
     if owner != username {
@@ -464,7 +463,7 @@ pub(crate) async fn exec(
         value: queries,
         binary,
     }: Negotiated<Queries>,
-) -> ServerResponse<impl IntoResponse> {
+) -> ServerResponse<(StatusCode, Negotiated<QueriesResults>)> {
     let _ = server_db.user_db_id(user.0, &owner, &db).await?;
     let required_role = required_role(&queries);
     if required_role != DbUserRole::Read {
@@ -473,7 +472,13 @@ pub(crate) async fn exec(
         ));
     }
     let results = db_pool.exec(&owner, &db, queries).await?;
-    Ok((StatusCode::OK, wire::reply(QueriesResults(results), binary)))
+    Ok((
+        StatusCode::OK,
+        Negotiated {
+            value: QueriesResults(results),
+            binary,
+        },
+    ))
 }
 
 #[utoipa::path(post,
@@ -503,7 +508,7 @@ pub(crate) async fn exec_mut(
         value: queries,
         binary,
     }: Negotiated<Queries>,
-) -> ServerResponse<impl IntoResponse> {
+) -> ServerResponse<(StatusCode, CommitIndexHeader, Negotiated<QueriesResults>)> {
     let role = server_db.user_db_role(user.0, &owner, &db).await?;
     let required_role = required_role(&queries);
 
@@ -537,7 +542,10 @@ pub(crate) async fn exec_mut(
     Ok((
         StatusCode::OK,
         [("commit-index", commit_index.to_string())],
-        wire::reply(QueriesResults(results), binary),
+        Negotiated {
+            value: QueriesResults(results),
+            binary,
+        },
     ))
 }
 
@@ -609,7 +617,7 @@ pub(crate) async fn optimize(
     State(server_db): State<ServerDb>,
     Path((owner, db)): Path<(String, String)>,
     request: Query<OptimizeParam>,
-) -> ServerResponse<impl IntoResponse> {
+) -> ServerResponse<(StatusCode, CommitIndexHeader, Json<ServerDatabase>)> {
     let database = server_db.user_db(user.0, &owner, &db).await?;
     let role = server_db.user_db_role(user.0, &owner, &db).await?;
 
@@ -662,7 +670,7 @@ pub(crate) async fn remove(
     State(cluster): State<Cluster>,
     State(server_db): State<ServerDb>,
     Path((owner, db)): Path<(String, String)>,
-) -> ServerResponse<impl IntoResponse> {
+) -> ServerResponse<(StatusCode, CommitIndexHeader)> {
     let user_name = server_db.user_name(user.0).await?;
 
     if owner != user_name {
@@ -704,7 +712,7 @@ pub(crate) async fn rename(
     State(server_db): State<ServerDb>,
     Path((owner, db)): Path<(String, String)>,
     request: Query<ServerDatabaseRename>,
-) -> ServerResponse<impl IntoResponse> {
+) -> ServerResponse<(StatusCode, CommitIndexHeader)> {
     let username = server_db.user_name(user.0).await?;
 
     if owner != username {
@@ -759,7 +767,7 @@ pub(crate) async fn restore(
     State(cluster): State<Cluster>,
     State(server_db): State<ServerDb>,
     Path((owner, db)): Path<(String, String)>,
-) -> ServerResponse<impl IntoResponse> {
+) -> ServerResponse<(StatusCode, CommitIndexHeader)> {
     let db_id = server_db.user_db_id(user.0, &owner, &db).await?;
 
     if !server_db.is_db_admin(user.0, db_id).await? {
@@ -795,7 +803,7 @@ pub(crate) async fn rollback(
     State(cluster): State<Cluster>,
     State(server_db): State<ServerDb>,
     Path((owner, db)): Path<(String, String)>,
-) -> ServerResponse<impl IntoResponse> {
+) -> ServerResponse<(StatusCode, CommitIndexHeader)> {
     let db_id = server_db.user_db_id(user.0, &owner, &db).await?;
 
     if !server_db.is_db_admin(user.0, db_id).await? {

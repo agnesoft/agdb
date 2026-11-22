@@ -548,7 +548,11 @@ pub(crate) mod tests {
     use crate::collections::value::tests::with_view;
     use crate::storage::alloc::tests::verify;
     use crate::storage::pages::DEFAULT_PAGE_SHIFT;
+    use crate::storage::pages::Reader;
     use crate::storage::pages::tests::XorShift;
+    use crate::storage::storage_simulator::tests::SCALE;
+    use crate::storage::storage_simulator::tests::Scale;
+    use crate::storage::storage_simulator::tests::Simulation;
     use std::collections::BTreeMap;
     use std::collections::BTreeSet;
 
@@ -716,6 +720,61 @@ pub(crate) mod tests {
                         verify(alloc, view, &allocations(&graph));
                     });
                 }
+            }
+        }
+
+        #[test]
+        fn graph_header_should_do_flat_io_from_1k_to_100k_elements() {
+            for layout in layouts() {
+                let mut simulation = Simulation::new();
+                let mut random = XorShift(1);
+                let mut graph = GraphHeader::new(layout);
+                let mut node_inserts = Scale::default();
+                let mut edge_inserts = Scale::default();
+                let mut edge_removes = Scale::default();
+                let mut node_removes = Scale::default();
+
+                let mut edges = Vec::new();
+                let mut unmeasured = Scale::default();
+
+                for size in 0..SCALE {
+                    let to = simulation.run(&mut node_inserts, size, |view, alloc| {
+                        graph.insert_node(view, alloc)
+                    });
+                    let from = DbId(1 + random.next(size + 1) as i64);
+                    let edge = simulation.run(&mut edge_inserts, size, |view, alloc| {
+                        graph.insert_edge(view, alloc, from, to)
+                    });
+                    edges.push((edge, from, to));
+                    let at = random.next(edges.len() as u64) as usize;
+                    let removed = edges[at];
+                    simulation.run(&mut edge_removes, size + 1, |view, _| {
+                        graph.remove_edge(view, removed.0)
+                    });
+                    edges[at].0 = simulation.run(&mut unmeasured, size, |view, alloc| {
+                        graph.insert_edge(view, alloc, removed.1, removed.2)
+                    });
+                }
+
+                for edge in edges {
+                    simulation.run(&mut unmeasured, 0, |view, _| {
+                        graph.remove_edge(view, edge.0)
+                    });
+                }
+
+                for i in 0..SCALE {
+                    simulation.run(&mut node_removes, SCALE - i, |view, _| {
+                        graph.remove_node(view, DbId(1 + i as i64))
+                    });
+                }
+
+                node_inserts.assert_flat();
+                edge_inserts.assert_flat();
+                edge_removes.assert_flat();
+                node_removes.assert_flat();
+                assert_eq!(graph.node_count() + graph.edge_count(), 0);
+                let view = Reader::new(&simulation.storage);
+                verify(&simulation.alloc, &view, &allocations(&graph));
             }
         }
 

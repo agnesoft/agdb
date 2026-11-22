@@ -3,7 +3,10 @@ use super::StorageSlice;
 use crate::DbError;
 use crate::DbErrorType;
 
-pub(crate) const PAGE_SIZE: u64 = 1024;
+/// 1 KiB pages unless the storage was created with another size.
+pub(crate) const DEFAULT_PAGE_SHIFT: u32 = 10;
+/// 32 KiB, the largest page: the offsets in a page are `u16`.
+pub(crate) const MAX_PAGE_SHIFT: u32 = 15;
 
 /// The arena capacity an overlay keeps after a transaction.
 const KEPT_ARENA: usize = 1 << 20;
@@ -49,8 +52,8 @@ impl<S: StorageData> View for Reader<'_, S> {
 /// The pages written by a transaction, each copied from the storage on
 /// its first write. It is kept by the owner of the storage and reused by
 /// its transactions, so that its page table is not rebuilt each time.
-#[derive(Default)]
 pub(crate) struct Overlay {
+    shift: u32,
     table: Vec<u32>,
     arena: Vec<u8>,
     pages: Vec<u64>,
@@ -58,6 +61,21 @@ pub(crate) struct Overlay {
 }
 
 impl Overlay {
+    /// The overlay of pages of `1 << shift` bytes.
+    pub(crate) fn new(shift: u32) -> Self {
+        Self {
+            shift,
+            table: Vec::new(),
+            arena: Vec::new(),
+            pages: Vec::new(),
+            poisoned: false,
+        }
+    }
+
+    pub(crate) fn page_size(&self) -> u64 {
+        1 << self.shift
+    }
+
     /// The storage failed to restore after a transaction and may hold
     /// some of its writes until the next [`Writer::new`] restores it.
     pub(crate) fn poisoned(&self) -> bool {
@@ -69,7 +87,8 @@ impl Overlay {
     }
 
     fn bytes(&self, slot: usize) -> &[u8] {
-        &self.arena[slot * PAGE_SIZE as usize..][..PAGE_SIZE as usize]
+        let size = self.page_size() as usize;
+        &self.arena[slot * size..][..size]
     }
 
     fn slot(&self, page: u64) -> Option<usize> {
@@ -94,8 +113,8 @@ impl Overlay {
     /// Zeroes the bytes from `len` to `end`, looking up either the pages
     /// cut off or the pages held, whichever are fewer.
     fn cut(&mut self, len: u64, end: u64) {
-        let first = len / PAGE_SIZE;
-        let cut = end.div_ceil(PAGE_SIZE) - first;
+        let first = len >> self.shift;
+        let cut = end.div_ceil(self.page_size()) - first;
 
         if cut <= self.pages.len() as u64 {
             for page in first..first + cut {
@@ -115,8 +134,9 @@ impl Overlay {
     }
 
     fn zero(&mut self, slot: usize, page: u64, len: u64) {
-        let from = len.saturating_sub(page * PAGE_SIZE) as usize;
-        self.arena[slot * PAGE_SIZE as usize..][from..PAGE_SIZE as usize].fill(0);
+        let size = self.page_size() as usize;
+        let from = len.saturating_sub(page << self.shift) as usize;
+        self.arena[slot * size..][from..size].fill(0);
     }
 }
 
@@ -192,10 +212,10 @@ impl<'a, S: StorageData> Writer<'a, S> {
         slots.sort_unstable();
 
         for (page, slot) in slots {
-            let start = page * PAGE_SIZE;
+            let start = page << self.overlay.shift;
 
             if start < self.len {
-                let len = PAGE_SIZE.min(self.len - start) as usize;
+                let len = self.overlay.page_size().min(self.len - start) as usize;
                 self.storage
                     .write(start, &self.overlay.bytes(slot)[..len])?;
             }
@@ -215,8 +235,9 @@ impl<'a, S: StorageData> Writer<'a, S> {
             return Ok(slot);
         }
 
-        let start = page * PAGE_SIZE;
-        let from_base = self.base_end().saturating_sub(start).min(PAGE_SIZE);
+        let size = self.overlay.page_size();
+        let start = page << self.overlay.shift;
+        let from_base = self.base_end().saturating_sub(start).min(size);
         let slot = self.overlay.pages.len();
         let arena_len = self.overlay.arena.len();
 
@@ -225,7 +246,7 @@ impl<'a, S: StorageData> Writer<'a, S> {
             self.overlay.arena.extend_from_slice(&bytes);
         }
 
-        self.overlay.arena.resize(arena_len + PAGE_SIZE as usize, 0);
+        self.overlay.arena.resize(arena_len + size as usize, 0);
 
         if self.overlay.table.len() <= page as usize {
             self.overlay.table.resize(page as usize + 1, 0);
@@ -264,13 +285,14 @@ impl<S: StorageData> View for Writer<'_, S> {
             return Ok(StorageSlice::Borrowed(&[]));
         }
 
-        let first = pos / PAGE_SIZE;
-        let last = (end - 1) / PAGE_SIZE;
+        let shift = self.overlay.shift;
+        let first = pos >> shift;
+        let last = (end - 1) >> shift;
 
         if first == last
             && let Some(page) = self.overlay.page(first)
         {
-            let offset = (pos - first * PAGE_SIZE) as usize;
+            let offset = (pos - (first << shift)) as usize;
             return Ok(StorageSlice::Borrowed(&page[offset..][..len as usize]));
         }
 
@@ -290,9 +312,9 @@ impl<S: StorageData> View for Writer<'_, S> {
 
         for page in first..=last {
             if let Some(bytes) = self.overlay.page(page) {
-                let start = (page * PAGE_SIZE).max(pos);
-                let stop = (page * PAGE_SIZE + PAGE_SIZE).min(end);
-                let offset = (start - page * PAGE_SIZE) as usize;
+                let start = (page << shift).max(pos);
+                let stop = ((page + 1) << shift).min(end);
+                let offset = (start - (page << shift)) as usize;
                 buffer[(start - pos) as usize..(stop - pos) as usize]
                     .copy_from_slice(&bytes[offset..][..(stop - start) as usize]);
             }
@@ -310,13 +332,15 @@ impl<S: StorageData> ViewMut for Writer<'_, S> {
             return Err(out_of_bounds("Write", pos, end, self.len));
         }
 
+        let shift = self.overlay.shift;
+        let size = self.overlay.page_size() as usize;
+
         while !bytes.is_empty() {
-            let page = pos / PAGE_SIZE;
-            let offset = (pos - page * PAGE_SIZE) as usize;
-            let len = (PAGE_SIZE as usize - offset).min(bytes.len());
+            let page = pos >> shift;
+            let offset = (pos - (page << shift)) as usize;
+            let len = (size - offset).min(bytes.len());
             let slot = self.lift(page)?;
-            self.overlay.arena[slot * PAGE_SIZE as usize + offset..][..len]
-                .copy_from_slice(&bytes[..len]);
+            self.overlay.arena[slot * size + offset..][..len].copy_from_slice(&bytes[..len]);
             pos += len as u64;
             bytes = &bytes[len..];
         }
@@ -432,11 +456,13 @@ pub(crate) mod tests {
 
     /// Runs random writes, resizes and reads against a plain buffer and
     /// commits or rolls back, returning the storage bytes expected after it.
+    /// Lengths and writes scale with the page size of the `overlay`.
     fn random_transaction<S: StorageData>(
         storage: &mut S,
         overlay: &mut Overlay,
         seed: u64,
     ) -> Vec<u8> {
+        let scale = overlay.page_size() >> DEFAULT_PAGE_SHIFT;
         let mut random = XorShift(seed);
         let original = committed(storage);
         let mut model = original.clone();
@@ -445,7 +471,7 @@ pub(crate) mod tests {
         for _ in 0..200 {
             match random.next(4) {
                 0 => {
-                    model.resize(random.next(8000) as usize, 0);
+                    model.resize(random.next(8000 * scale) as usize, 0);
                     writer.set_len(model.len() as u64);
                 }
                 1 => {
@@ -456,7 +482,7 @@ pub(crate) mod tests {
                 }
                 _ => {
                     let pos = random.next(model.len() as u64 + 1);
-                    let len = random.next(3000.min(model.len() as u64 - pos) + 1);
+                    let len = random.next((3000 * scale).min(model.len() as u64 - pos) + 1);
                     let value = vec![random.next(255) as u8 + 1; len as usize];
                     model[pos as usize..][..len as usize].copy_from_slice(&value);
                     writer.write(pos, &value).unwrap();
@@ -530,11 +556,11 @@ pub(crate) mod tests {
                     .into_iter()
                     .map(|limit| {
                         let storage = file_at(&platform, &format!("/file{limit}"), 3000, limit);
-                        (storage, Overlay::default())
+                        (storage, Overlay::new(DEFAULT_PAGE_SHIFT))
                     })
                     .collect();
-                let mut memory_overlay = Overlay::default();
-                let mut mapped_overlay = Overlay::default();
+                let mut memory_overlay = Overlay::new(DEFAULT_PAGE_SHIFT);
+                let mut mapped_overlay = Overlay::new(DEFAULT_PAGE_SHIFT);
 
                 for round in 0..3 {
                     let seed = seed * 10 + round;
@@ -556,6 +582,31 @@ pub(crate) mod tests {
             }
         }
 
+        #[test]
+        fn writer_with_largest_pages_should_match_buffer_over_random_transactions() {
+            let size = 3000 << (MAX_PAGE_SHIFT - DEFAULT_PAGE_SHIFT);
+
+            for seed in 1..=5 {
+                let platform = platform();
+                let mut memory = MemoryStorageImpl::from_buffer_with_platform(
+                    platform.clone(),
+                    "/memory",
+                    bytes(size),
+                );
+                let mut file = file(&platform, size, 65536);
+                let mut memory_overlay = Overlay::new(MAX_PAGE_SHIFT);
+                let mut file_overlay = Overlay::new(MAX_PAGE_SHIFT);
+
+                for round in 0..3 {
+                    let seed = seed * 10 + round;
+                    let expected = random_transaction(&mut memory, &mut memory_overlay, seed);
+                    assert_eq!(committed(&memory), expected, "memory, seed: {seed}");
+                    let expected = random_transaction(&mut file, &mut file_overlay, seed);
+                    assert_eq!(file.read_all().unwrap(), expected, "file, seed: {seed}");
+                }
+            }
+        }
+
         mod new {
             use super::*;
 
@@ -564,7 +615,7 @@ pub(crate) mod tests {
                 let platform = platform();
                 let mut storage = file(&platform, 3000, DEFAULT_OVERLAY_LIMIT);
 
-                let mut overlay = Overlay::default();
+                let mut overlay = Overlay::new(DEFAULT_PAGE_SHIFT);
                 let writer = Writer::new(&mut storage, &mut overlay).unwrap();
 
                 assert_eq!(writer.len(), 3000);
@@ -575,7 +626,7 @@ pub(crate) mod tests {
             fn new_poisoned_should_restore_storage() {
                 let platform = platform();
                 let mut storage = file(&platform, 3000, 0);
-                let mut overlay = Overlay::default();
+                let mut overlay = Overlay::new(DEFAULT_PAGE_SHIFT);
                 poison(&platform, &mut storage, &mut overlay);
 
                 let writer = Writer::new(&mut storage, &mut overlay).unwrap();
@@ -590,7 +641,7 @@ pub(crate) mod tests {
             fn new_poisoned_restore_failure_should_fail() {
                 let platform = platform();
                 let mut storage = file(&platform, 3000, 0);
-                let mut overlay = Overlay::default();
+                let mut overlay = Overlay::new(DEFAULT_PAGE_SHIFT);
                 poison(&platform, &mut storage, &mut overlay);
                 platform
                     .fs()
@@ -608,7 +659,7 @@ pub(crate) mod tests {
             fn commit_should_write_pages_to_storage() {
                 let platform = platform();
                 let mut storage = file(&platform, 3000, DEFAULT_OVERLAY_LIMIT);
-                let mut overlay = Overlay::default();
+                let mut overlay = Overlay::new(DEFAULT_PAGE_SHIFT);
                 let mut writer = Writer::new(&mut storage, &mut overlay).unwrap();
                 writer.set_len(4000);
                 writer.write(1000, &[9; 100]).unwrap();
@@ -629,7 +680,7 @@ pub(crate) mod tests {
             fn commit_shrunk_should_drop_pages_past_len() {
                 let platform = platform();
                 let mut storage = file(&platform, 3000, DEFAULT_OVERLAY_LIMIT);
-                let mut overlay = Overlay::default();
+                let mut overlay = Overlay::new(DEFAULT_PAGE_SHIFT);
                 let mut writer = Writer::new(&mut storage, &mut overlay).unwrap();
                 writer.write(1100, &[9]).unwrap();
                 writer.write(2100, &[9]).unwrap();
@@ -646,7 +697,7 @@ pub(crate) mod tests {
             fn commit_shrunk_and_grown_should_zero_dropped_bytes() {
                 let platform = platform();
                 let mut storage = file(&platform, 3000, DEFAULT_OVERLAY_LIMIT);
-                let mut overlay = Overlay::default();
+                let mut overlay = Overlay::new(DEFAULT_PAGE_SHIFT);
                 let mut writer = Writer::new(&mut storage, &mut overlay).unwrap();
                 writer.set_len(100);
                 writer.set_len(2500);
@@ -664,7 +715,7 @@ pub(crate) mod tests {
             fn commit_spilled_should_keep_writes() {
                 let platform = platform();
                 let mut storage = file(&platform, 3000, 0);
-                let mut overlay = Overlay::default();
+                let mut overlay = Overlay::new(DEFAULT_PAGE_SHIFT);
                 let mut writer = Writer::new(&mut storage, &mut overlay).unwrap();
                 writer.write(1000, &[9; 100]).unwrap();
 
@@ -691,7 +742,7 @@ pub(crate) mod tests {
                         let platform = platform();
                         let mut storage = file(&platform, 3000, limit);
                         storage.set_sync_mode(mode);
-                        let mut overlay = Overlay::default();
+                        let mut overlay = Overlay::new(DEFAULT_PAGE_SHIFT);
                         let mut writer = Writer::new(&mut storage, &mut overlay).unwrap();
                         writer.write(100, &[9; 2000]).unwrap();
                         writer.write(0, &[7]).unwrap();
@@ -738,7 +789,7 @@ pub(crate) mod tests {
             fn commit_restore_failure_should_poison_overlay() {
                 let platform = platform();
                 let mut storage = file(&platform, 3000, DEFAULT_OVERLAY_LIMIT);
-                let mut overlay = Overlay::default();
+                let mut overlay = Overlay::new(DEFAULT_PAGE_SHIFT);
                 let mut writer = Writer::new(&mut storage, &mut overlay).unwrap();
                 writer.write(1000, &[9]).unwrap();
                 platform
@@ -757,7 +808,7 @@ pub(crate) mod tests {
             fn rollback_should_discard_writes() {
                 let platform = platform();
                 let mut storage = file(&platform, 3000, DEFAULT_OVERLAY_LIMIT);
-                let mut overlay = Overlay::default();
+                let mut overlay = Overlay::new(DEFAULT_PAGE_SHIFT);
                 let mut writer = Writer::new(&mut storage, &mut overlay).unwrap();
                 writer.write(1000, &[9; 100]).unwrap();
                 writer.set_len(5000);
@@ -771,7 +822,7 @@ pub(crate) mod tests {
             fn rollback_spilled_should_restore_storage() {
                 let platform = platform();
                 let mut storage = file(&platform, 3000, 0);
-                let mut overlay = Overlay::default();
+                let mut overlay = Overlay::new(DEFAULT_PAGE_SHIFT);
                 let mut writer = Writer::new(&mut storage, &mut overlay).unwrap();
                 writer.write(1000, &[9; 100]).unwrap();
                 writer.set_len(5000);
@@ -788,7 +839,7 @@ pub(crate) mod tests {
             fn rollback_spilled_failure_should_fail() {
                 let platform = platform();
                 let mut storage = file(&platform, 3000, 0);
-                let mut overlay = Overlay::default();
+                let mut overlay = Overlay::new(DEFAULT_PAGE_SHIFT);
                 let mut writer = Writer::new(&mut storage, &mut overlay).unwrap();
                 writer.write(1000, &[9]).unwrap();
                 platform
@@ -809,7 +860,7 @@ pub(crate) mod tests {
                 fn len_should_return_transaction_len() {
                     let platform = platform();
                     let mut storage = file(&platform, 3000, DEFAULT_OVERLAY_LIMIT);
-                    let mut overlay = Overlay::default();
+                    let mut overlay = Overlay::new(DEFAULT_PAGE_SHIFT);
                     let mut writer = Writer::new(&mut storage, &mut overlay).unwrap();
 
                     writer.set_len(5000);
@@ -828,7 +879,7 @@ pub(crate) mod tests {
                         "/memory",
                         bytes(3000),
                     );
-                    let mut overlay = Overlay::default();
+                    let mut overlay = Overlay::new(DEFAULT_PAGE_SHIFT);
                     let mut writer = Writer::new(&mut storage, &mut overlay).unwrap();
                     writer.write(1100, &[1, 2, 3]).unwrap();
 
@@ -845,7 +896,7 @@ pub(crate) mod tests {
                         "/memory",
                         bytes(3000),
                     );
-                    let mut overlay = Overlay::default();
+                    let mut overlay = Overlay::new(DEFAULT_PAGE_SHIFT);
                     let mut writer = Writer::new(&mut storage, &mut overlay).unwrap();
                     writer.write(2100, &[1]).unwrap();
 
@@ -859,7 +910,7 @@ pub(crate) mod tests {
                 fn read_across_dirty_page_should_patch_storage_bytes() {
                     let platform = platform();
                     let mut storage = file(&platform, 3000, DEFAULT_OVERLAY_LIMIT);
-                    let mut overlay = Overlay::default();
+                    let mut overlay = Overlay::new(DEFAULT_PAGE_SHIFT);
                     let mut writer = Writer::new(&mut storage, &mut overlay).unwrap();
                     writer.write(1500, &[9; 10]).unwrap();
 
@@ -874,7 +925,7 @@ pub(crate) mod tests {
                 fn read_past_storage_len_should_return_zeros() {
                     let platform = platform();
                     let mut storage = file(&platform, 3000, DEFAULT_OVERLAY_LIMIT);
-                    let mut overlay = Overlay::default();
+                    let mut overlay = Overlay::new(DEFAULT_PAGE_SHIFT);
                     let mut writer = Writer::new(&mut storage, &mut overlay).unwrap();
                     writer.set_len(5000);
 
@@ -889,7 +940,7 @@ pub(crate) mod tests {
                 fn read_after_shrink_should_return_zeros_past_shortest_len() {
                     let platform = platform();
                     let mut storage = file(&platform, 3000, DEFAULT_OVERLAY_LIMIT);
-                    let mut overlay = Overlay::default();
+                    let mut overlay = Overlay::new(DEFAULT_PAGE_SHIFT);
                     let mut writer = Writer::new(&mut storage, &mut overlay).unwrap();
                     writer.set_len(1000);
                     writer.set_len(3000);
@@ -905,7 +956,7 @@ pub(crate) mod tests {
                 fn read_empty_should_return_nothing() {
                     let platform = platform();
                     let mut storage = file(&platform, 3000, DEFAULT_OVERLAY_LIMIT);
-                    let mut overlay = Overlay::default();
+                    let mut overlay = Overlay::new(DEFAULT_PAGE_SHIFT);
                     let writer = Writer::new(&mut storage, &mut overlay).unwrap();
 
                     assert!(writer.read(3000, 0).unwrap().is_empty());
@@ -915,7 +966,7 @@ pub(crate) mod tests {
                 fn read_past_len_should_fail() {
                     let platform = platform();
                     let mut storage = file(&platform, 3000, DEFAULT_OVERLAY_LIMIT);
-                    let mut overlay = Overlay::default();
+                    let mut overlay = Overlay::new(DEFAULT_PAGE_SHIFT);
                     let writer = Writer::new(&mut storage, &mut overlay).unwrap();
 
                     let error = writer.read(2990, 20).unwrap_err();
@@ -927,7 +978,7 @@ pub(crate) mod tests {
                 fn read_storage_failure_should_fail() {
                     let platform = platform();
                     let mut storage = file(&platform, 3000, DEFAULT_OVERLAY_LIMIT);
-                    let mut overlay = Overlay::default();
+                    let mut overlay = Overlay::new(DEFAULT_PAGE_SHIFT);
                     let mut writer = Writer::new(&mut storage, &mut overlay).unwrap();
                     writer.write(1500, &[9]).unwrap();
                     platform
@@ -949,7 +1000,7 @@ pub(crate) mod tests {
                 fn write_should_span_pages() {
                     let platform = platform();
                     let mut storage = file(&platform, 3000, DEFAULT_OVERLAY_LIMIT);
-                    let mut overlay = Overlay::default();
+                    let mut overlay = Overlay::new(DEFAULT_PAGE_SHIFT);
                     let mut writer = Writer::new(&mut storage, &mut overlay).unwrap();
 
                     writer.write(900, &[7; 2100]).unwrap();
@@ -964,7 +1015,7 @@ pub(crate) mod tests {
                 fn write_past_limit_should_spill_to_storage() {
                     let platform = platform();
                     let mut storage = file(&platform, 3000, 2048);
-                    let mut overlay = Overlay::default();
+                    let mut overlay = Overlay::new(DEFAULT_PAGE_SHIFT);
                     let mut writer = Writer::new(&mut storage, &mut overlay).unwrap();
                     writer.write(0, &[7]).unwrap();
                     writer.write(1024, &[7]).unwrap();
@@ -984,7 +1035,7 @@ pub(crate) mod tests {
                 fn write_past_len_should_fail() {
                     let platform = platform();
                     let mut storage = file(&platform, 3000, DEFAULT_OVERLAY_LIMIT);
-                    let mut overlay = Overlay::default();
+                    let mut overlay = Overlay::new(DEFAULT_PAGE_SHIFT);
                     let mut writer = Writer::new(&mut storage, &mut overlay).unwrap();
 
                     let error = writer.write(2999, &[1, 2]).unwrap_err();
@@ -996,7 +1047,7 @@ pub(crate) mod tests {
                 fn write_page_read_failure_should_fail() {
                     let platform = platform();
                     let mut storage = file(&platform, 3000, DEFAULT_OVERLAY_LIMIT);
-                    let mut overlay = Overlay::default();
+                    let mut overlay = Overlay::new(DEFAULT_PAGE_SHIFT);
                     let mut writer = Writer::new(&mut storage, &mut overlay).unwrap();
                     platform
                         .fs()
@@ -1009,7 +1060,7 @@ pub(crate) mod tests {
                 fn write_spill_failure_should_fail() {
                     let platform = platform();
                     let mut storage = file(&platform, 3000, 0);
-                    let mut overlay = Overlay::default();
+                    let mut overlay = Overlay::new(DEFAULT_PAGE_SHIFT);
                     let mut writer = Writer::new(&mut storage, &mut overlay).unwrap();
                     platform
                         .fs()
@@ -1026,7 +1077,7 @@ pub(crate) mod tests {
                 fn set_len_should_zero_new_bytes() {
                     let platform = platform();
                     let mut storage = file(&platform, 3000, DEFAULT_OVERLAY_LIMIT);
-                    let mut overlay = Overlay::default();
+                    let mut overlay = Overlay::new(DEFAULT_PAGE_SHIFT);
                     let mut writer = Writer::new(&mut storage, &mut overlay).unwrap();
 
                     writer.set_len(5000);
@@ -1040,7 +1091,7 @@ pub(crate) mod tests {
                 fn set_len_shorter_should_zero_written_bytes_past_len() {
                     let platform = platform();
                     let mut storage = file(&platform, 3000, DEFAULT_OVERLAY_LIMIT);
-                    let mut overlay = Overlay::default();
+                    let mut overlay = Overlay::new(DEFAULT_PAGE_SHIFT);
                     let mut writer = Writer::new(&mut storage, &mut overlay).unwrap();
                     writer.write(1000, &[9; 100]).unwrap();
                     writer.write(2500, &[9]).unwrap();
@@ -1058,7 +1109,7 @@ pub(crate) mod tests {
                 fn set_len_shorter_than_written_pages_should_zero_them_past_len() {
                     let platform = platform();
                     let mut storage = file(&platform, 3000, DEFAULT_OVERLAY_LIMIT);
-                    let mut overlay = Overlay::default();
+                    let mut overlay = Overlay::new(DEFAULT_PAGE_SHIFT);
                     let mut writer = Writer::new(&mut storage, &mut overlay).unwrap();
                     writer.write(0, &[9; 100]).unwrap();
 
@@ -1079,7 +1130,7 @@ pub(crate) mod tests {
             fn drop_should_leave_storage_unchanged() {
                 let platform = platform();
                 let mut storage = file(&platform, 3000, DEFAULT_OVERLAY_LIMIT);
-                let mut overlay = Overlay::default();
+                let mut overlay = Overlay::new(DEFAULT_PAGE_SHIFT);
                 let mut writer = Writer::new(&mut storage, &mut overlay).unwrap();
                 writer.write(1000, &[9; 100]).unwrap();
 
@@ -1092,7 +1143,7 @@ pub(crate) mod tests {
             fn drop_spilled_should_restore_storage() {
                 let platform = platform();
                 let mut storage = file(&platform, 3000, 0);
-                let mut overlay = Overlay::default();
+                let mut overlay = Overlay::new(DEFAULT_PAGE_SHIFT);
                 let mut writer = Writer::new(&mut storage, &mut overlay).unwrap();
                 writer.write(1000, &[9; 100]).unwrap();
                 writer.set_len(1500);
@@ -1106,7 +1157,7 @@ pub(crate) mod tests {
             fn drop_spilled_restore_failure_should_poison_overlay() {
                 let platform = platform();
                 let mut storage = file(&platform, 3000, 0);
-                let mut overlay = Overlay::default();
+                let mut overlay = Overlay::new(DEFAULT_PAGE_SHIFT);
                 let mut writer = Writer::new(&mut storage, &mut overlay).unwrap();
                 writer.write(1000, &[9]).unwrap();
                 platform
@@ -1122,7 +1173,7 @@ pub(crate) mod tests {
             fn drop_should_reset_overlay() {
                 let platform = platform();
                 let mut storage = file(&platform, 3_000_000, DEFAULT_OVERLAY_LIMIT);
-                let mut overlay = Overlay::default();
+                let mut overlay = Overlay::new(DEFAULT_PAGE_SHIFT);
                 let mut writer = Writer::new(&mut storage, &mut overlay).unwrap();
                 writer.write(0, &[9; 2_000_000]).unwrap();
 

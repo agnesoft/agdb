@@ -1,10 +1,11 @@
 use super::StorageData;
 use super::alloc::ALLOCATOR_SIZE;
 use super::alloc::Allocator;
-use super::alloc::ROOT_PAGES;
+use super::alloc::ROOT_BYTES;
 use super::alloc::u32_at;
+use super::pages::DEFAULT_PAGE_SHIFT;
+use super::pages::MAX_PAGE_SHIFT;
 use super::pages::Overlay;
-use super::pages::PAGE_SIZE;
 use super::pages::Reader;
 use super::pages::View;
 use super::pages::ViewMut;
@@ -27,14 +28,85 @@ const VERSION: u64 = 2;
 /// where it is.
 /// `agdbroot` in little-endian bytes.
 const MAGIC: u64 = 0x746f_6f72_6264_6761;
-/// `[0 u64][8 u64][VERSION u64][MAGIC u64][meta_len u32]`
-const HEADER: usize = 36;
+/// `[0 u64][8 u64][VERSION u64][MAGIC u64][meta_len u32][page_shift u8]
+/// [id_bytes u8][0 u16]`
+const HEADER: usize = 40;
 const GRAPH_AT: usize = HEADER + ALLOCATOR_SIZE;
 const ALIASES_AT: usize = GRAPH_AT + GRAPH_SIZE;
 const INDEXES_AT: usize = ALIASES_AT + TABLE_SIZE;
 const META_SIZE: usize = INDEXES_AT + INDEXES_SIZE - HEADER;
 const ROOT_SIZE: usize = HEADER + META_SIZE;
-const _: () = assert!(ROOT_SIZE as u64 <= ROOT_PAGES as u64 * PAGE_SIZE);
+const _: () = assert!(ROOT_SIZE as u64 <= ROOT_BYTES);
+
+/// The width of the ids of the graph.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub(crate) enum IdWidth {
+    /// At most `u32::MAX` nodes and as many edges, 32 B per edge.
+    U32,
+    /// Limited by the storage only, 64 B per edge.
+    U64,
+}
+
+/// What a storage is created with and keeps for its life: changing it
+/// takes a rebuild.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub(crate) struct Layout {
+    pub(crate) page_shift: u32,
+    pub(crate) ids: IdWidth,
+}
+
+impl Default for Layout {
+    fn default() -> Self {
+        Self {
+            page_shift: DEFAULT_PAGE_SHIFT,
+            ids: IdWidth::U32,
+        }
+    }
+}
+
+impl Layout {
+    /// The layout if the storage supports it.
+    fn validate(self) -> Result<Self, DbError> {
+        if (DEFAULT_PAGE_SHIFT..=MAX_PAGE_SHIFT).contains(&self.page_shift) {
+            return Ok(self);
+        }
+
+        Err(DbError::storage(
+            DbErrorType::InvalidIndex,
+            format!(
+                "Unsupported page shift {} ({DEFAULT_PAGE_SHIFT}..={MAX_PAGE_SHIFT})",
+                self.page_shift
+            ),
+        ))
+    }
+
+    fn decode(bytes: &[u8]) -> Result<Self, DbError> {
+        let ids = match (bytes[37], u16::from_le_bytes([bytes[38], bytes[39]])) {
+            (4, 0) => IdWidth::U32,
+            (8, 0) => IdWidth::U64,
+            (id_bytes, reserved) => {
+                return Err(DbError::storage(
+                    DbErrorType::InvalidIndex,
+                    format!("Invalid root id width ({id_bytes} bytes, reserved {reserved})"),
+                ));
+            }
+        };
+
+        Self {
+            page_shift: u32::from(bytes[36]),
+            ids,
+        }
+        .validate()
+    }
+
+    fn encode(&self, bytes: &mut [u8]) {
+        bytes[36] = self.page_shift as u8;
+        bytes[37] = match self.ids {
+            IdWidth::U32 => 4,
+            IdWidth::U64 => 8,
+        };
+    }
+}
 
 /// What a storage holds.
 #[derive(Debug, PartialEq)]
@@ -81,6 +153,7 @@ impl Format {
 /// by each commit.
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct Meta {
+    pub(crate) layout: Layout,
     pub(crate) alloc: Allocator,
     pub(crate) graph: GraphHeader,
     pub(crate) aliases: Aliases,
@@ -88,9 +161,10 @@ pub(crate) struct Meta {
 }
 
 impl Meta {
-    fn new() -> Self {
+    fn new(layout: Layout) -> Self {
         Self {
-            alloc: Allocator::new(),
+            layout,
+            alloc: Allocator::new(layout.page_shift),
             graph: GraphHeader::new(),
             aliases: Aliases::default(),
             indexes: Indexes::default(),
@@ -112,9 +186,10 @@ impl Meta {
             ));
         }
 
+        let layout = Layout::decode(bytes)?;
         let mut alloc = [0_u8; ALLOCATOR_SIZE];
         alloc.copy_from_slice(&bytes[HEADER..GRAPH_AT]);
-        let alloc = Allocator::decode(&alloc);
+        let alloc = Allocator::decode(&alloc, layout.page_shift);
 
         if alloc.len() != view.len() {
             return Err(DbError::storage(
@@ -128,6 +203,7 @@ impl Meta {
         }
 
         Ok(Self {
+            layout,
             alloc,
             graph: GraphHeader::decode(&bytes[GRAPH_AT..ALIASES_AT]),
             aliases: Aliases::decode(&bytes[ALIASES_AT..INDEXES_AT]),
@@ -141,6 +217,7 @@ impl Meta {
         bytes[16..24].copy_from_slice(&VERSION.to_le_bytes());
         bytes[24..32].copy_from_slice(&MAGIC.to_le_bytes());
         bytes[32..36].copy_from_slice(&(META_SIZE as u32).to_le_bytes());
+        self.layout.encode(&mut bytes);
         bytes[HEADER..GRAPH_AT].copy_from_slice(&self.alloc.encode());
         bytes[GRAPH_AT..ALIASES_AT].copy_from_slice(&self.graph.encode());
         bytes[ALIASES_AT..INDEXES_AT].copy_from_slice(&self.aliases.encode());
@@ -168,29 +245,33 @@ pub(crate) struct RootMut<'a, S: StorageData> {
 }
 
 impl<S: StorageData> Root<S> {
-    /// Creates the root in an empty storage or loads it. Legacy storages
-    /// are refused as they need a migration.
-    pub(crate) fn open(storage: S) -> Result<Self, DbError> {
+    /// Creates the root of the `layout` in an empty storage or loads it
+    /// with the layout it has. Legacy storages are refused as they need a
+    /// migration.
+    pub(crate) fn open(storage: S, layout: Layout) -> Result<Self, DbError> {
         let format = Format::detect(&Reader::new(&storage))?;
-        let mut root = Self {
-            storage,
-            overlay: Overlay::default(),
-            meta: Some(Meta::new()),
-        };
-
-        match format {
-            Format::Empty => root.begin().and_then(|mut transaction| {
-                transaction.view.set_len(transaction.meta.alloc.len());
-                transaction.view.write(0, &transaction.meta.encode())?;
-                transaction.commit()
-            })?,
-            Format::Root => root.meta = Some(Meta::load(&Reader::new(&root.storage))?),
+        let meta = match format {
+            Format::Empty => Meta::new(layout.validate()?),
+            Format::Root => Meta::load(&Reader::new(&storage))?,
             Format::Legacy(version) => {
                 return Err(DbError::storage(
                     DbErrorType::NotAllowed,
                     format!("Storage version '{version}' needs a migration"),
                 ));
             }
+        };
+        let mut root = Self {
+            storage,
+            overlay: Overlay::new(meta.layout.page_shift),
+            meta: Some(meta),
+        };
+
+        if format == Format::Empty {
+            root.begin().and_then(|mut transaction| {
+                transaction.view.set_len(transaction.meta.alloc.len());
+                transaction.view.write(0, &transaction.meta.encode())?;
+                transaction.commit()
+            })?;
         }
 
         Ok(root)
@@ -291,13 +372,13 @@ mod tests {
     }
 
     fn open(platform: &Arc<TestPlatform>) -> Root<TestFile> {
-        Root::open(storage(platform)).unwrap()
+        Root::open(storage(platform), Layout::default()).unwrap()
     }
 
     fn strict(platform: &Arc<TestPlatform>) -> Root<TestFile> {
         let mut storage = storage(platform);
         storage.set_sync_mode(SyncMode::Strict);
-        Root::open(storage).unwrap()
+        Root::open(storage, Layout::default()).unwrap()
     }
 
     fn words(words: &[u64]) -> Vec<u8> {
@@ -408,9 +489,9 @@ mod tests {
 
     /// Runs transactions of random operations over the root, dropping
     /// about a third of them and reopening the storage at random.
-    fn random_transactions<S: StorageData>(open: impl Fn() -> S, seed: u64) {
+    fn random_transactions<S: StorageData>(open: impl Fn() -> S, seed: u64, layout: Layout) {
         let mut random = XorShift(seed);
-        let mut root = Root::open(open()).unwrap();
+        let mut root = Root::open(open(), layout).unwrap();
         let mut live = Vec::new();
         let mut id = 0;
 
@@ -439,7 +520,7 @@ mod tests {
 
             if random.next(3) == 0 {
                 drop(root);
-                root = Root::open(open()).unwrap();
+                root = Root::open(open(), Layout::default()).unwrap();
             }
 
             let (reader, meta) = root.read().unwrap();
@@ -560,12 +641,44 @@ mod tests {
             fn decode_meta_len_mismatch_should_fail() {
                 let platform = platform();
                 let root = open(&platform);
-                let mut bytes = Meta::new().encode();
+                let mut bytes = Meta::new(Layout::default()).encode();
                 bytes[32] += 1;
 
                 let error = Meta::decode(&root.read().unwrap().0, &bytes).unwrap_err();
 
-                assert_eq!(error.description, "Invalid root meta length (289 != 288)");
+                assert_eq!(
+                    error.description,
+                    format!(
+                        "Invalid root meta length ({} != {META_SIZE})",
+                        META_SIZE + 1
+                    )
+                );
+            }
+
+            #[test]
+            fn decode_invalid_layout_should_fail() {
+                let platform = platform();
+                let root = open(&platform);
+                let reader = root.read().unwrap().0;
+                let encoded = Meta::new(Layout::default()).encode();
+                let mut shift = encoded;
+                shift[36] = 16;
+                let mut ids = encoded;
+                ids[37] = 5;
+                let mut reserved = encoded;
+                reserved[39] = 1;
+
+                let errors = [shift, ids, reserved]
+                    .map(|bytes| Meta::decode(&reader, &bytes).unwrap_err().description);
+
+                assert_eq!(
+                    errors,
+                    [
+                        "Unsupported page shift 16 (10..=15)",
+                        "Invalid root id width (5 bytes, reserved 0)",
+                        "Invalid root id width (4 bytes, reserved 256)"
+                    ]
+                );
             }
 
             #[test]
@@ -575,7 +688,8 @@ mod tests {
                 committed(&mut root, &[9000]);
                 let reader = root.read().unwrap().0;
 
-                let error = Meta::decode(&reader, &Meta::new().encode()).unwrap_err();
+                let error =
+                    Meta::decode(&reader, &Meta::new(Layout::default()).encode()).unwrap_err();
 
                 assert_eq!(
                     error.description,
@@ -587,7 +701,7 @@ mod tests {
             fn decode_indexes_outside_storage_should_fail() {
                 let platform = platform();
                 let root = open(&platform);
-                let mut bytes = Meta::new().encode();
+                let mut bytes = Meta::new(Layout::default()).encode();
                 bytes[INDEXES_AT..].copy_from_slice(&words(&[4096, 1]));
 
                 let error = Meta::decode(&root.read().unwrap().0, &bytes).unwrap_err();
@@ -613,7 +727,7 @@ mod tests {
                         file.set_overlay_limit(limit);
                         file
                     };
-                    random_transactions(file, seed);
+                    random_transactions(file, seed, Layout::default());
                     let name = format!("/mapped{seed}_{limit}");
                     let mapped = || {
                         let mut mapped =
@@ -622,8 +736,23 @@ mod tests {
                         mapped.set_overlay_limit(limit);
                         mapped
                     };
-                    random_transactions(mapped, seed);
+                    random_transactions(mapped, seed, Layout::default());
                 }
+            }
+        }
+
+        #[test]
+        fn root_with_largest_pages_should_keep_allocations_over_random_transactions_and_reopens() {
+            let platform = platform();
+            let layout = Layout {
+                page_shift: MAX_PAGE_SHIFT,
+                ids: IdWidth::U32,
+            };
+
+            for seed in 1..=2 {
+                let name = format!("/file{seed}");
+                let file = || FileStorageImpl::with_platform(platform.clone(), &name).unwrap();
+                random_transactions(file, seed, layout);
             }
         }
 
@@ -636,10 +765,10 @@ mod tests {
 
                 let root = open(&platform);
 
-                let mut expected = Meta::new().encode().to_vec();
+                let mut expected = Meta::new(Layout::default()).encode().to_vec();
                 expected.resize(4096, 0);
                 assert_eq!(content(&root.read().unwrap().0), expected);
-                assert_eq!(*root.read().unwrap().1, Meta::new());
+                assert_eq!(*root.read().unwrap().1, Meta::new(Layout::default()));
                 assert_eq!(expected[..32], words(&[0, 8, 2, MAGIC]));
             }
 
@@ -653,6 +782,49 @@ mod tests {
                 let root = open(&platform);
 
                 assert_state(&root, &state);
+            }
+
+            #[test]
+            fn open_should_keep_layout_of_storage() {
+                let platform = platform();
+                let layout = Layout {
+                    page_shift: MAX_PAGE_SHIFT,
+                    ids: IdWidth::U64,
+                };
+                let mut root = Root::open(storage(&platform), layout).unwrap();
+                let state = committed(&mut root, &[16, 600, 40000]);
+                drop(root);
+
+                let root = open(&platform);
+
+                assert_eq!(root.read().unwrap().1.layout, layout);
+                assert_eq!(root.overlay.page_size(), 1 << MAX_PAGE_SHIFT);
+                assert_state(&root, &state);
+            }
+
+            #[test]
+            fn open_empty_with_unsupported_page_shift_should_fail() {
+                let platform = platform();
+
+                let errors = [DEFAULT_PAGE_SHIFT - 1, MAX_PAGE_SHIFT + 1].map(|page_shift| {
+                    let layout = Layout {
+                        page_shift,
+                        ids: IdWidth::U32,
+                    };
+                    Root::open(storage(&platform), layout)
+                        .err()
+                        .unwrap()
+                        .description
+                });
+
+                assert_eq!(
+                    errors,
+                    [
+                        "Unsupported page shift 9 (10..=15)",
+                        "Unsupported page shift 16 (10..=15)"
+                    ]
+                );
+                assert_eq!(storage(&platform).len(), 0);
             }
 
             #[test]
@@ -688,7 +860,7 @@ mod tests {
                 let platform = platform();
                 let storage = with_bytes(&platform, &words(&[0, 8, 1]));
 
-                let error = Root::open(storage).err().unwrap();
+                let error = Root::open(storage, Layout::default()).err().unwrap();
 
                 assert_eq!(error.description, "Storage version '1' needs a migration");
             }
@@ -698,7 +870,7 @@ mod tests {
                 let platform = platform();
                 let storage = with_bytes(&platform, &words(&[0, 8, 3]));
 
-                assert!(Root::open(storage).is_err());
+                assert!(Root::open(storage, Layout::default()).is_err());
             }
 
             #[test]
@@ -706,7 +878,7 @@ mod tests {
                 let platform = platform();
                 let storage = with_bytes(&platform, &words(&[0, 8, 2, MAGIC]));
 
-                assert!(Root::open(storage).is_err());
+                assert!(Root::open(storage, Layout::default()).is_err());
             }
 
             #[test]
@@ -719,7 +891,7 @@ mod tests {
                         .fs()
                         .set_io_error(FsOp::Write, NAME, ErrorKind::Other);
 
-                    assert!(Root::open(storage).is_err());
+                    assert!(Root::open(storage, Layout::default()).is_err());
 
                     platform.fs().clear_faults();
                     assert!(self::storage(&platform).is_empty(), "limit: {limit}");

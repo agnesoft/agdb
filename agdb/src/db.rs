@@ -10,6 +10,8 @@ pub mod db_value;
 
 pub(crate) mod db_search_handlers;
 pub(crate) mod db_value_index;
+pub(crate) mod legacy;
+pub(crate) mod rebuild;
 
 use self::db_error::DbError;
 use self::db_error::DbErrorType;
@@ -27,6 +29,7 @@ use crate::storage::file_storage::FileStorage;
 use crate::storage::file_storage_memory_mapped::FileStorageMemoryMapped;
 use crate::storage::memory_storage::MemoryStorage;
 use crate::storage::pages::Reader;
+use crate::storage::root::Format;
 use crate::storage::root::Layout;
 use crate::storage::root::Root;
 use crate::transaction::ReadView;
@@ -208,6 +211,14 @@ impl<Store: StorageData> DbImpl<Store> {
     /// let mut db = DbMemory::with_data(MemoryStorage::new("test").unwrap()).unwrap();
     /// ```
     pub fn with_data(data: Store) -> Result<Self, DbError> {
+        if let Format::Legacy(_) = Format::detect(&Reader::new(&data))? {
+            let (root, migration) = rebuild::migrate(data)?;
+            return Ok(Self {
+                root,
+                migration: Some(migration),
+            });
+        }
+
         Ok(Self {
             root: Root::open(data, Layout::default())?,
             migration: None,
@@ -294,7 +305,7 @@ impl<Store: StorageData> DbImpl<Store> {
     /// be desired to perform the storage file optimization without fully shutting
     /// down.
     pub fn optimize_storage(&mut self) -> Result<(), DbError> {
-        Ok(())
+        rebuild::optimize(&mut self.root)
     }
 
     /// Changes the name of the database changing also the names of the files
@@ -392,15 +403,6 @@ impl<Store: StorageData> DbImpl<Store> {
     /// block size.
     pub fn size(&self) -> u64 {
         self.root.storage().len()
-    }
-
-    /// Shrinks all the allocated internal storage buffers to the current size of the data
-    /// and optimizes the storage. This may further reduce the size of the database
-    /// both on disk and in memory at the cost of requiring more allocations upon inserting
-    /// more data. Best to use only when the database is used for read-only operations after
-    /// initial data population.
-    pub fn shrink_to_fit(&mut self) -> Result<(), DbError> {
-        self.optimize_storage()
     }
 }
 
@@ -749,6 +751,7 @@ mod tests {
         use crate::storage::DEFAULT_OVERLAY_LIMIT;
         use crate::storage::file_storage::FileStorageImpl;
         use crate::storage::file_storage_memory_mapped::FileStorageMemoryMappedImpl;
+        use agplatform::Fs;
         use agplatform::Platform;
         use agplatform::test_platform::TestPlatform;
         use agplatform::test_platform::test_fs::FsOp;
@@ -757,6 +760,7 @@ mod tests {
 
         const NAME: &str = "/db";
         const WAL: &str = "/.db";
+        const REBUILD: &str = "/db.rebuild";
 
         fn file(platform: &Arc<TestPlatform>) -> FileStorageImpl<TestPlatform> {
             FileStorageImpl::with_platform(platform.clone(), NAME).unwrap()
@@ -1017,12 +1021,11 @@ mod tests {
             use super::*;
 
             #[test]
-            #[ignore = "needs the optimize rebuild (storage rewrite step 5)"]
             fn optimize_storage_failure_should_roll_back() {
                 let platform = Arc::new(test_platform());
                 let mut db = inserted(file(&platform), StorageConfig::default());
                 let len = db.size();
-                fail_once(&platform, FsOp::Write, NAME);
+                fail_once(&platform, FsOp::Write, REBUILD);
 
                 assert!(db.optimize_storage().is_err());
 
@@ -1030,7 +1033,9 @@ mod tests {
                 assert_eq!(db.size(), len);
                 assert_eq!(value(&db), "original".into());
                 db.optimize_storage().unwrap();
-                assert!(db.size() < len);
+                assert!(db.size() <= len);
+                assert_eq!(value(&db), "original".into());
+                assert!(!platform.fs().exists(REBUILD).unwrap());
             }
         }
 

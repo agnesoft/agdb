@@ -74,6 +74,14 @@ impl<P: Platform + Default> StorageData for MemoryStorageImpl<P> {
         ))
     }
 
+    fn create(&self, name: &str) -> Result<Self, DbError> {
+        Ok(Self::from_buffer_with_platform(
+            self.platform.clone(),
+            name,
+            Vec::new(),
+        ))
+    }
+
     fn len(&self) -> u64 {
         self.buffer.len() as u64
     }
@@ -276,6 +284,18 @@ mod tests {
                     crate::storage::tests::storage_data::copy::copy_should_create_independent_storage_named_name(
                         open(&platform()),
                         "/copy",
+                    );
+                }
+            }
+
+            mod create {
+                use super::*;
+
+                #[test]
+                fn create_should_replace_name_with_empty_storage() {
+                    crate::storage::tests::storage_data::create::create_should_replace_name_with_empty_storage(
+                        open(&platform()),
+                        "/created",
                     );
                 }
             }

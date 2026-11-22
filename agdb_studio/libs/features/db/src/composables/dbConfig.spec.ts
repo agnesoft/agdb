@@ -171,40 +171,11 @@ describe("dbConfig", () => {
       clearAllInputs();
     });
 
-    it("should run the optimize action with shrink_to_fit option", async () => {
+    it("should run the optimize action", async () => {
       const action = dbActions.find((action) => action.key === "optimize");
       const params = { db: "test_db", owner: "test_owner" };
-      addInput(KEY_MODAL, {
-        key: "shrink_to_fit",
-        value: true,
-        label: "Shrink to fit",
-        type: "checkbox",
-      });
-      setInputValue(KEY_MODAL, "shrink_to_fit", true);
       await action?.action?.({ params } as ActionProps<ServerDatabase>);
-      expect(db_optimize).toHaveBeenCalledWith({
-        ...params,
-        shrink_to_fit: true,
-      });
-      clearAllInputs();
-    });
-
-    it("should run the optimize action without shrink_to_fit option", async () => {
-      const action = dbActions.find((action) => action.key === "optimize");
-      const params = { db: "test_db", owner: "test_owner" };
-      addInput(KEY_MODAL, {
-        key: "shrink_to_fit",
-        value: false,
-        label: "Shrink to fit",
-        type: "checkbox",
-      });
-      setInputValue(KEY_MODAL, "shrink_to_fit", false);
-      await action?.action?.({ params } as ActionProps<ServerDatabase>);
-      expect(db_optimize).toHaveBeenCalledWith({
-        ...params,
-        shrink_to_fit: false,
-      });
-      clearAllInputs();
+      expect(db_optimize).toHaveBeenCalledWith(params);
     });
 
     it("should print the empty audit log", async () => {
@@ -319,38 +290,6 @@ describe("dbConfig", () => {
       expect(content).toHaveLength(3);
       expect(content[1]?.input?.key).toBe("new_db");
       expect(content[2]?.input?.key).toBe("new_owner");
-    });
-
-    it("should create correct inputs for optimize action for user", () => {
-      const action = dbActions.find((action) => action.key === "optimize");
-      const params = { db: "test_db", owner: "test_owner" };
-
-      if (typeof action?.confirmation !== "function") {
-        throw new Error("Confirmation function not found");
-      }
-
-      const content = action.confirmation({
-        params,
-      } as ActionProps<ServerDatabase>);
-      expect(content).toHaveLength(2);
-      expect(content[1]?.input?.key).toBe("shrink_to_fit");
-    });
-
-    it("should create correct inputs for optimize action for admin", () => {
-      isAdmin.value = true;
-      isAdminView.value = true;
-      const action = dbActions.find((action) => action.key === "optimize");
-      const params = { db: "test_db", owner: "test_owner" };
-
-      if (typeof action?.confirmation !== "function") {
-        throw new Error("Confirmation function not found");
-      }
-
-      const content = action.confirmation({
-        params,
-      } as ActionProps<ServerDatabase>);
-      expect(content).toHaveLength(2);
-      expect(content[1]?.input?.key).toBe("shrink_to_fit");
     });
   });
 

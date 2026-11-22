@@ -289,6 +289,10 @@ impl<S: StorageData> Root<S> {
         &self.storage
     }
 
+    pub(crate) fn into_storage(self) -> S {
+        self.storage
+    }
+
     pub(crate) fn storage_mut(&mut self) -> &mut S {
         &mut self.storage
     }

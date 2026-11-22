@@ -358,6 +358,13 @@ impl<P: Platform + Default> StorageData for FileStorageImpl<P> {
         Self::with_platform(self.platform.clone(), name)
     }
 
+    fn create(&self, name: &str) -> Result<Self, DbError> {
+        let mut storage = Self::with_platform(self.platform.clone(), name)?;
+        storage.resize(0)?;
+        storage.flush()?;
+        Ok(storage)
+    }
+
     fn flush(&mut self) -> Result<(), DbError> {
         self.flush_deferred(&[])
     }
@@ -414,13 +421,14 @@ impl<P: Platform + Default> StorageData for FileStorageImpl<P> {
     }
 
     /// The open files are renamed with their handles kept, so that they
-    /// stay valid if the renaming fails half way.
+    /// stay valid if the renaming fails half way. The log goes first: a
+    /// file already named `new_name` is replaced only once both moved.
     fn rename(&mut self, new_name: &str) -> Result<(), DbError> {
         let fs = self.platform.fs();
-        fs.rename(&self.filename, new_name)?;
+        fs.rename(wal_filename(&self.filename), wal_filename(new_name))?;
 
-        if let Err(error) = fs.rename(wal_filename(&self.filename), wal_filename(new_name)) {
-            let _ = fs.rename(new_name, &self.filename);
+        if let Err(error) = fs.rename(&self.filename, new_name) {
+            let _ = fs.rename(wal_filename(new_name), wal_filename(&self.filename));
             return Err(error.into());
         }
 
@@ -1064,6 +1072,48 @@ mod tests {
                 }
             }
 
+            mod create {
+                use super::*;
+
+                #[test]
+                fn create_should_replace_name_with_empty_storage() {
+                    crate::storage::tests::storage_data::create::create_should_replace_name_with_empty_storage(
+                        open(&platform()),
+                        "/created",
+                    );
+                }
+
+                #[test]
+                fn create_should_empty_file_at_name() {
+                    let platform = platform();
+                    let storage = written(&platform);
+                    drop(storage.copy("/created").unwrap());
+
+                    drop(storage.create("/created").unwrap());
+
+                    assert!(platform.fs().read("/created").unwrap().is_empty());
+                }
+
+                #[test]
+                fn create_failure_should_fail() {
+                    for (op, path) in [
+                        (FsOp::Open, "/created"),
+                        (FsOp::Read, "/created"),
+                        (FsOp::Write, "/.created"),
+                    ] {
+                        let platform = platform();
+                        let storage = written(&platform);
+                        drop(storage.copy("/created").unwrap());
+                        platform.fs().set_io_error(op, path, ErrorKind::Other);
+
+                        assert!(
+                            storage.create("/created").is_err(),
+                            "op: {op:?}, path: {path}"
+                        );
+                    }
+                }
+            }
+
             mod flush {
                 use super::*;
 
@@ -1420,6 +1470,26 @@ mod tests {
                         assert_eq!(storage.name(), NAME, "path: {path}");
                         assert!(platform.fs().exists(NAME).unwrap(), "path: {path}");
                         assert!(!platform.fs().exists("/renamed").unwrap(), "path: {path}");
+                    }
+                }
+
+                #[test]
+                fn rename_failure_over_existing_file_should_keep_it() {
+                    for path in [NAME, WAL] {
+                        let platform = platform();
+                        let mut storage = open(&platform);
+                        platform.fs().write("/existing", [7]).unwrap();
+                        platform
+                            .fs()
+                            .set_io_error(FsOp::Rename, path, ErrorKind::Other);
+
+                        assert!(storage.rename("/existing").is_err(), "path: {path}");
+
+                        assert_eq!(
+                            platform.fs().read("/existing").unwrap(),
+                            vec![7],
+                            "path: {path}"
+                        );
                     }
                 }
             }

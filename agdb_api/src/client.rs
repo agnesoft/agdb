@@ -583,30 +583,6 @@ impl<T: AgdbApiClient> AgdbApi<T> {
             .await
     }
 
-    /// `POST /admin/db/{owner}/{db}/optimize?shrink_to_fit=true`
-    ///
-    /// Optimizes database storage and requests shrink-to-fit behavior
-    /// aggressively reclaiming all unused space.
-    ///
-    /// Returns `(200, ServerDatabase)` on success.
-    ///
-    /// Common error responses: `401` unauthorized, `404` database not found.
-    pub async fn admin_db_optimize_shrink_to_fit(
-        &self,
-        owner: &str,
-        db: &str,
-    ) -> AgdbApiResult<(u16, ServerDatabase)> {
-        self.client
-            .post::<(), ServerDatabase>(
-                &self.url(&format!(
-                    "/admin/db/{owner}/{db}/optimize?shrink_to_fit=true"
-                )),
-                None,
-                &self.token,
-            )
-            .await
-    }
-
     /// `DELETE /admin/db/{owner}/{db}/remove`
     ///
     /// Disassociates a database and related resources from the server. This
@@ -1616,31 +1592,6 @@ impl<T: AgdbApiClient> AgdbApi<T> {
         self.client
             .post::<(), ServerDatabase>(
                 &self.url(&format!("/db/{owner}/{db}/optimize")),
-                None,
-                &self.token,
-            )
-            .await
-    }
-
-    /// `POST /db/{owner}/{db}/optimize?shrink_to_fit=true`
-    ///
-    /// Optimizes database storage with shrink-to-fit. This aggressively reclaims all unused space and can reduce
-    /// storage usage to a minimum after heavy updates or deletions, but it can be slower than regular optimize
-    /// and may require reallocating some of the reclaimed space upon subsequent updates. It is best suited when the
-    /// database will stay mostly stable afterward or when minimizing storage usage matters more than update performance.
-    ///
-    /// Returns `(200, ServerDatabase)` on success.
-    ///
-    /// Common error responses: `401` unauthorized, `403` write access required,
-    /// `404` database not found.
-    pub async fn db_optimize_shrink_to_fit(
-        &self,
-        owner: &str,
-        db: &str,
-    ) -> AgdbApiResult<(u16, ServerDatabase)> {
-        self.client
-            .post::<(), ServerDatabase>(
-                &self.url(&format!("/db/{owner}/{db}/optimize?shrink_to_fit=true")),
                 None,
                 &self.token,
             )

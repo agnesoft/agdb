@@ -82,6 +82,16 @@ pub trait StorageData: Sized {
     /// Copies the storage to a new `name`.
     fn copy(&self, name: &str) -> Result<Self, DbError>;
 
+    /// Creates an empty storage of the same kind as this one named `name`,
+    /// discarding what was stored under that name. The default
+    /// implementation opens `name` with [`new()`](Self::new) and empties it.
+    fn create(&self, name: &str) -> Result<Self, DbError> {
+        let mut storage = Self::new(name)?;
+        storage.resize(0)?;
+        storage.flush()?;
+        Ok(storage)
+    }
+
     /// Flushes any buffers to the underlying storage (e.g. file). The
     /// default implementation does nothing.
     fn flush(&mut self) -> Result<(), DbError> {
@@ -227,6 +237,26 @@ pub(crate) mod tests {
                 assert_eq!(copy.read(0, 3).unwrap().to_vec(), vec![1, 2, 3]);
                 copy.write(0, &[4]).unwrap();
                 assert_eq!(storage.read(0, 1).unwrap().to_vec(), vec![1]);
+            }
+        }
+
+        pub(crate) mod create {
+            use super::*;
+
+            pub(crate) fn create_should_replace_name_with_empty_storage<S: StorageData>(
+                mut storage: S,
+                name: &str,
+            ) {
+                storage.write(0, &[1, 2, 3]).unwrap();
+                storage.flush().unwrap();
+                drop(storage.copy(name).unwrap());
+
+                let mut created = storage.create(name).unwrap();
+
+                assert_eq!(created.name(), name);
+                assert_eq!(created.len(), 0);
+                created.write(0, &[4]).unwrap();
+                assert_eq!(storage.read(0, 3).unwrap().to_vec(), vec![1, 2, 3]);
             }
         }
 

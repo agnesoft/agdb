@@ -886,36 +886,17 @@ describe("routes", () => {
     });
 
     describe("admin_db_optimize_test", () => {
-        // needs the optimize rebuild (storage rewrite step 5)
-        it.skip("optimize", async () => {
+        it("optimize", async () => {
             const server = (await TestServer.new());
             const owner = next_user_name();
             const db = next_db_name();
             (await server.api.user_login("admin", "admin"));
             (await server.api.admin_user_add(owner, owner));
             (await server.api.admin_db_add(owner, db, "mapped"));
-            const queries = [QueryBuilder.insert().nodes().count(100).query()];
+            const queries = [QueryBuilder.insert().nodes().count(100).query(), QueryBuilder.remove().search().elements().offset(50).query()];
             (await server.api.admin_db_exec_mut(owner, db, queries));
             const original_size = ((await server.api.admin_db_list())[1].find((d) => d.db === db && d.owner === owner) ?? panic("called `Option::unwrap()` on a `None` value")).size;
             const tuple1 = (await server.api.admin_db_optimize(owner, db));
-            const status = tuple1[0];
-            const db_2 = tuple1[1];
-            expect(status).toEqual<number>(200);
-            expect(db_2.size < original_size).toBe(true);
-        });
-
-        // needs the optimize rebuild (storage rewrite step 5)
-        it.skip("shrink_to_fit", async () => {
-            const server = (await TestServer.new());
-            const owner = next_user_name();
-            const db = next_db_name();
-            (await server.api.user_login("admin", "admin"));
-            (await server.api.admin_user_add(owner, owner));
-            (await server.api.admin_db_add(owner, db, "mapped"));
-            const queries = [QueryBuilder.insert().nodes().count(100).query()];
-            (await server.api.admin_db_exec_mut(owner, db, queries));
-            const original_size = ((await server.api.admin_db_list())[1].find((d) => d.db === db && d.owner === owner) ?? panic("called `Option::unwrap()` on a `None` value")).size;
-            const tuple1 = (await server.api.admin_db_optimize_shrink_to_fit(owner, db));
             const status = tuple1[0];
             const db_2 = tuple1[1];
             expect(status).toEqual<number>(200);
@@ -1607,8 +1588,7 @@ describe("routes", () => {
             expect(result).toEqual<number>(1);
         });
 
-        // needs the optimize rebuild (storage rewrite step 5)
-        it.skip("admin_db_optimize", async () => {
+        it("admin_db_optimize", async () => {
             const cluster = (await TestCluster.new());
             const owner = next_user_name();
             const db = next_db_name();
@@ -1616,26 +1596,10 @@ describe("routes", () => {
             (await client.cluster_user_login("admin", "admin"));
             (await client.admin_user_add(owner, owner));
             (await client.admin_db_add(owner, db, "memory"));
-            (await client.admin_db_exec_mut(owner, db, [QueryBuilder.insert().nodes().count(100).query()]));
+            (await client.admin_db_exec_mut(owner, db, [QueryBuilder.insert().nodes().count(100).query(), QueryBuilder.remove().search().elements().offset(50).query()]));
             const original_size = ((await client.admin_db_list())[1].find((d) => d.db === db && d.owner === owner) ?? panic("called `Option::unwrap()` on a `None` value")).size;
             (await client.admin_db_optimize(owner, db));
             const server_db = (await client.admin_db_optimize(owner, db))[1];
-            expect(server_db.size < original_size).toBe(true);
-        });
-
-        // needs the optimize rebuild (storage rewrite step 5)
-        it.skip("admin_db_shrink_to_fit", async () => {
-            const cluster = (await TestCluster.new());
-            const owner = next_user_name();
-            const db = next_db_name();
-            const client = cluster.follower();
-            (await client.cluster_user_login("admin", "admin"));
-            (await client.admin_user_add(owner, owner));
-            (await client.admin_db_add(owner, db, "memory"));
-            (await client.admin_db_exec_mut(owner, db, [QueryBuilder.insert().nodes().count(100).query()]));
-            const original_size = ((await client.admin_db_list())[1].find((d) => d.db === db && d.owner === owner) ?? panic("called `Option::unwrap()` on a `None` value")).size;
-            (await client.admin_db_optimize_shrink_to_fit(owner, db));
-            const server_db = (await client.admin_db_optimize_shrink_to_fit(owner, db))[1];
             expect(server_db.size < original_size).toBe(true);
         });
 
@@ -1827,8 +1791,7 @@ describe("routes", () => {
             expect(result).toEqual<number>(1);
         });
 
-        // needs the optimize rebuild (storage rewrite step 5)
-        it.skip("db_optimize", async () => {
+        it("db_optimize", async () => {
             const cluster = (await TestCluster.new());
             const owner = next_user_name();
             const db = next_db_name();
@@ -1837,27 +1800,10 @@ describe("routes", () => {
             (await client.admin_user_add(owner, owner));
             (await client.cluster_user_login(owner, owner));
             (await client.db_add(owner, db, "memory"));
-            (await client.db_exec_mut(owner, db, [QueryBuilder.insert().nodes().count(100).query()]));
+            (await client.db_exec_mut(owner, db, [QueryBuilder.insert().nodes().count(100).query(), QueryBuilder.remove().search().elements().offset(50).query()]));
             const original_size = (await client.db_list())[1][0].size;
             (await client.db_optimize(owner, db));
             const server_db = (await client.db_optimize(owner, db))[1];
-            expect(server_db.size < original_size).toBe(true);
-        });
-
-        // needs the optimize rebuild (storage rewrite step 5)
-        it.skip("db_shrink_to_fit", async () => {
-            const cluster = (await TestCluster.new());
-            const owner = next_user_name();
-            const db = next_db_name();
-            const client = cluster.follower();
-            (await client.cluster_user_login("admin", "admin"));
-            (await client.admin_user_add(owner, owner));
-            (await client.cluster_user_login(owner, owner));
-            (await client.db_add(owner, db, "memory"));
-            (await client.db_exec_mut(owner, db, [QueryBuilder.insert().nodes().count(100).query()]));
-            const original_size = (await client.db_list())[1][0].size;
-            (await client.db_optimize_shrink_to_fit(owner, db));
-            const server_db = (await client.db_optimize_shrink_to_fit(owner, db))[1];
             expect(server_db.size < original_size).toBe(true);
         });
 
@@ -3677,8 +3623,7 @@ describe("routes", () => {
     });
 
     describe("db_optimize_test", () => {
-        // needs the optimize rebuild (storage rewrite step 5)
-        it.skip("optimize", async () => {
+        it("optimize", async () => {
             const server = (await TestServer.new());
             const owner = next_user_name();
             const db = next_db_name();
@@ -3686,29 +3631,10 @@ describe("routes", () => {
             (await server.api.admin_user_add(owner, owner));
             (await server.api.user_login(owner, owner));
             (await server.api.db_add(owner, db, "mapped"));
-            const queries = [QueryBuilder.insert().nodes().count(100).query()];
+            const queries = [QueryBuilder.insert().nodes().count(100).query(), QueryBuilder.remove().search().elements().offset(50).query()];
             (await server.api.db_exec_mut(owner, db, queries));
             const original_size = ((await server.api.db_list())[1].find((d) => d.db === db && d.owner === owner) ?? panic("called `Option::unwrap()` on a `None` value")).size;
             const tuple1 = (await server.api.db_optimize(owner, db));
-            const status = tuple1[0];
-            const db_2 = tuple1[1];
-            expect(status).toEqual<number>(200);
-            expect(db_2.size < original_size).toBe(true);
-        });
-
-        // needs the optimize rebuild (storage rewrite step 5)
-        it.skip("shrink_to_fit", async () => {
-            const server = (await TestServer.new());
-            const owner = next_user_name();
-            const db = next_db_name();
-            (await server.api.user_login("admin", "admin"));
-            (await server.api.admin_user_add(owner, owner));
-            (await server.api.user_login(owner, owner));
-            (await server.api.db_add(owner, db, "mapped"));
-            const queries = [QueryBuilder.insert().nodes().count(100).query()];
-            (await server.api.db_exec_mut(owner, db, queries));
-            const original_size = ((await server.api.db_list())[1].find((d) => d.db === db && d.owner === owner) ?? panic("called `Option::unwrap()` on a `None` value")).size;
-            const tuple1 = (await server.api.db_optimize_shrink_to_fit(owner, db));
             const status = tuple1[0];
             const db_2 = tuple1[1];
             expect(status).toEqual<number>(200);

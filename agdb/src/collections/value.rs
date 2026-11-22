@@ -65,7 +65,7 @@ fn words(bytes: &[u8]) -> Result<impl Iterator<Item = u64> + '_, DbError> {
     Ok((0..bytes.len() / 8).map(|word| u64_at(bytes, word)))
 }
 
-fn decode(kind: u8, bytes: &[u8]) -> Result<DbValue, DbError> {
+pub(crate) fn decode(kind: u8, bytes: &[u8]) -> Result<DbValue, DbError> {
     Ok(match kind {
         BYTES_META_VALUE => DbValue::Bytes(bytes.to_vec()),
         I64_META_VALUE => DbValue::I64(i64::deserialize(bytes)?),

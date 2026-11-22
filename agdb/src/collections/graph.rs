@@ -56,7 +56,7 @@ struct Records {
     frees: u64,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Default, PartialEq)]
 pub(crate) struct Node {
     pub(crate) first_from: DbId,
     pub(crate) first_to: DbId,
@@ -66,7 +66,7 @@ pub(crate) struct Node {
     pub(crate) data: u64,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Default, PartialEq)]
 pub(crate) struct Edge {
     pub(crate) from: DbId,
     pub(crate) to: DbId,
@@ -143,6 +143,11 @@ impl GraphHeader {
 
     pub(crate) fn node_count(&self) -> u64 {
         self.nodes.count()
+    }
+
+    /// The slots of the longer array, the slot 0 included.
+    pub(crate) fn slots(&self) -> u64 {
+        self.nodes.len.max(self.edges.len)
     }
 
     pub(crate) fn edge_count(&self) -> u64 {
@@ -277,6 +282,111 @@ impl GraphHeader {
         }
 
         Ok(edge_id(slot))
+    }
+
+    /// Appends the `node`, or a free slot for `None`, as the next node
+    /// slot of a graph copied slot by slot. The links are written as
+    /// given: the graph is consistent once all slots are in.
+    pub(crate) fn push_node(
+        &mut self,
+        view: &mut impl ViewMut,
+        alloc: &mut Allocator,
+        node: Option<&Node>,
+    ) -> Result<(), DbError> {
+        let slot = self.nodes.append(view, alloc, self.limit, "node")?;
+
+        let Some(node) = node else {
+            return self.nodes.release(view, slot);
+        };
+
+        let mut record = [0_u8; 1 << NODE_SHIFT];
+        record[..8].copy_from_slice(&node.first_from.0.unsigned_abs().to_le_bytes());
+        record[8..16].copy_from_slice(&node.first_to.0.unsigned_abs().to_le_bytes());
+        record[16..20].copy_from_slice(&(node.from_count as u32).to_le_bytes());
+        record[20..24].copy_from_slice(&(node.to_count as u32).to_le_bytes());
+        record[24..].copy_from_slice(&node.data.to_le_bytes());
+        self.nodes.write(view, slot, 0, &record)
+    }
+
+    /// Appends the `edge`, or a free slot for `None`, as the next edge
+    /// slot of a graph copied slot by slot, see
+    /// [`push_node`](Self::push_node).
+    pub(crate) fn push_edge(
+        &mut self,
+        view: &mut impl ViewMut,
+        alloc: &mut Allocator,
+        edge: Option<&Edge>,
+    ) -> Result<(), DbError> {
+        let slot = self.edges.append(view, alloc, self.limit, "edge")?;
+
+        let Some(edge) = edge else {
+            return self.edges.release(view, slot);
+        };
+
+        let width = self.edges.width as usize;
+        let mut record = [0_u8; RECORD];
+        let fields = [
+            edge.from,
+            edge.to,
+            edge.next_from,
+            edge.next_to,
+            edge.previous_from,
+            edge.previous_to,
+        ];
+
+        for (field, id) in fields.into_iter().enumerate() {
+            record[field * width..][..width]
+                .copy_from_slice(&id.0.unsigned_abs().to_le_bytes()[..width]);
+        }
+
+        record[EDGE_DATA as usize * width..][..8].copy_from_slice(&edge.data.to_le_bytes());
+        self.edges.write(view, slot, 0, &record[..8 * width])
+    }
+
+    /// Sets the previous links and the edge counts of the `node` from
+    /// its first and next links, which a graph pushed without them
+    /// lacks, and returns the counts from and to. A list that runs into a missing edge, an edge of another
+    /// node or a cycle fails.
+    pub(crate) fn relink(&self, view: &mut impl ViewMut, node: DbId) -> Result<[u64; 2], DbError> {
+        let slot = node.0 as u64;
+        let width = self.edges.width;
+        let mut counts = [0; 2];
+
+        for direction in 0..2 {
+            let mut previous = 0;
+            let mut edge = self.nodes.get(view, slot, NODE_FIRST + direction * 8)?;
+            let mut count = 0;
+
+            while edge != 0 {
+                let record = self.edges.record(view, edge)?;
+                let next = match record {
+                    Some(bytes)
+                        if uint(&bytes, direction * width, width) == slot
+                            && count < self.edges.count() =>
+                    {
+                        uint(&bytes, (EDGE_NEXT + direction) * width, width)
+                    }
+                    _ => {
+                        return Err(DbError::graph(
+                            DbErrorType::InvalidIndex,
+                            format!("Node '{}' links invalid edge '{}'", node.0, edge_id(edge).0),
+                        ));
+                    }
+                };
+
+                self.edges
+                    .set(view, edge, (EDGE_PREVIOUS + direction) * width, previous)?;
+                previous = edge;
+                edge = next;
+                count += 1;
+            }
+
+            self.nodes
+                .set_u32(view, slot, NODE_COUNT + direction * 4, count)?;
+            counts[direction as usize] = count;
+        }
+
+        Ok(counts)
     }
 
     /// Removes the node `id` with its edges, if it exists.
@@ -473,6 +583,17 @@ impl Records {
             return Ok(slot);
         }
 
+        self.append(view, alloc, limit, kind)
+    }
+
+    /// Takes a new slot at the end, at most `limit`.
+    fn append(
+        &mut self,
+        view: &mut impl ViewMut,
+        alloc: &mut Allocator,
+        limit: u64,
+        kind: &str,
+    ) -> Result<u64, DbError> {
         if limit < self.len {
             return Err(DbError::graph(
                 DbErrorType::OutOfBounds,
@@ -724,6 +845,73 @@ pub(crate) mod tests {
         }
 
         #[test]
+        fn graph_header_pushed_slot_by_slot_should_equal_source() {
+            for layout in layouts() {
+                for linked in [true, false] {
+                    with_view(|view, alloc| {
+                        let mut random = XorShift(7);
+                        let mut graph = GraphHeader::new(layout);
+                        let mut model = Model::default();
+
+                        for _ in 0..600 {
+                            random_op(&mut graph, view, alloc, &mut model, &mut random);
+                        }
+
+                        let ids = graph.elements(view).collect::<Result<Vec<_>, _>>().unwrap();
+
+                        for (slot, id) in ids.into_iter().enumerate() {
+                            graph.set_data(view, id, slot as u64).unwrap();
+                        }
+
+                        let mut copy = GraphHeader::new(layout);
+
+                        for slot in 1..graph.nodes.len {
+                            let mut node = graph.node(view, node_id(slot)).unwrap();
+
+                            if let Some(node) = node.as_mut().filter(|_| !linked) {
+                                (node.from_count, node.to_count) = (0, 0);
+                            }
+
+                            copy.push_node(view, alloc, node.as_ref()).unwrap();
+                        }
+
+                        for slot in 1..graph.edges.len {
+                            let mut edge = graph.edge(view, edge_id(slot)).unwrap();
+
+                            if let Some(edge) = edge.as_mut().filter(|_| !linked) {
+                                (edge.previous_from, edge.previous_to) = (DbId(0), DbId(0));
+                            }
+
+                            copy.push_edge(view, alloc, edge.as_ref()).unwrap();
+                        }
+
+                        for node in model.nodes.iter().filter(|_| !linked) {
+                            copy.relink(view, DbId(*node)).unwrap();
+                        }
+
+                        assert_graph(&copy, view, &model);
+
+                        for slot in 1..graph.nodes.len.max(graph.edges.len) {
+                            let (node, edge) = (node_id(slot), edge_id(slot));
+                            assert_eq!(
+                                copy.node(view, node).unwrap(),
+                                graph.node(view, node).unwrap()
+                            );
+                            assert_eq!(
+                                copy.edge(view, edge).unwrap(),
+                                graph.edge(view, edge).unwrap()
+                            );
+                        }
+
+                        let mut live = allocations(&graph);
+                        live.extend(allocations(&copy));
+                        verify(alloc, view, &live);
+                    });
+                }
+            }
+        }
+
+        #[test]
         fn graph_header_should_do_flat_io_from_1k_to_100k_elements() {
             for layout in layouts() {
                 let mut simulation = Simulation::new();
@@ -810,6 +998,20 @@ pub(crate) mod tests {
                         graph.node(view, DbId(2))?;
                         graph.edge(view, DbId(-3))?;
                         graph.elements(view).collect::<Result<Vec<_>, _>>()?;
+                        let mut copy = GraphHeader::new(layout);
+
+                        for slot in 1..graph.nodes.len {
+                            let node = graph.node(view, node_id(slot))?;
+                            copy.push_node(view, alloc, node.as_ref())?;
+                        }
+
+                        for slot in 1..graph.edges.len {
+                            let edge = graph.edge(view, edge_id(slot))?;
+                            copy.push_edge(view, alloc, edge.as_ref())?;
+                        }
+
+                        copy.relink(view, DbId(2))?;
+
                         Ok(())
                     },
                 );
@@ -932,6 +1134,103 @@ pub(crate) mod tests {
                     );
                     assert_eq!(graph.nodes.array.capacity(), 0);
                 });
+            }
+        }
+
+        mod push_node {
+            use super::*;
+
+            #[test]
+            fn push_node_past_u32_slots_with_u32_ids_should_fail() {
+                with_view(|view, alloc| {
+                    let mut graph = GraphHeader::new(Layout::default());
+                    graph.nodes.len = 1 << 32;
+
+                    for node in [None, Some(&Node::default())] {
+                        let error = graph.push_node(view, alloc, node).unwrap_err();
+                        assert_eq!(
+                            error.description,
+                            "Graph full (4294967295 nodes), rebuild with 64-bit ids"
+                        );
+                    }
+                });
+            }
+        }
+
+        mod push_edge {
+            use super::*;
+
+            #[test]
+            fn push_edge_past_u32_slots_with_u32_ids_should_fail() {
+                with_view(|view, alloc| {
+                    let mut graph = GraphHeader::new(Layout::default());
+                    graph.edges.len = 1 << 32;
+                    let edge = Edge::default();
+
+                    for edge in [None, Some(&edge)] {
+                        let error = graph.push_edge(view, alloc, edge).unwrap_err();
+                        assert_eq!(
+                            error.description,
+                            "Graph full (4294967295 edges), rebuild with 64-bit ids"
+                        );
+                    }
+                });
+            }
+        }
+
+        mod relink {
+            use super::*;
+
+            #[test]
+            fn relink_of_invalid_list_should_fail() {
+                // GIVEN nodes 1 and 2 whose lists end in a free slot, an
+                // edge of the other node and the edge itself
+                let edges = [
+                    (DbId(-1), DbId(-3), DbId(-3)),
+                    (DbId(-2), DbId(0), DbId(-2)),
+                    (DbId(-1), DbId(-1), DbId(-1)),
+                ];
+
+                for (first_from, next_from, edge) in edges {
+                    with_view(|view, alloc| {
+                        let mut graph = GraphHeader::new(Layout::default());
+                        let node = Node {
+                            first_from,
+                            first_to: DbId(0),
+                            from_count: 0,
+                            to_count: 0,
+                            data: 0,
+                        };
+                        graph.push_node(view, alloc, Some(&node)).unwrap();
+                        graph
+                            .push_node(view, alloc, Some(&Node::default()))
+                            .unwrap();
+
+                        for to in [DbId(1), DbId(2)] {
+                            let edge = Edge {
+                                from: to,
+                                to,
+                                next_from,
+                                next_to: DbId(0),
+                                previous_from: DbId(0),
+                                previous_to: DbId(0),
+                                data: 0,
+                            };
+                            graph.push_edge(view, alloc, Some(&edge)).unwrap();
+                        }
+
+                        graph.push_edge(view, alloc, None).unwrap();
+
+                        // WHEN the node 1 is relinked
+                        let error = graph.relink(view, DbId(1)).unwrap_err();
+
+                        // THEN its list fails at the invalid edge
+                        assert_eq!(
+                            error.description,
+                            format!("Node '1' links invalid edge '{}'", edge.0)
+                        );
+                    });
+                }
             }
         }
 

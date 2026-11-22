@@ -63,6 +63,17 @@ impl<P: Platform + Default> StorageData for FileStorageMemoryMappedImpl<P> {
         })
     }
 
+    fn create(&self, name: &str) -> Result<Self, DbError> {
+        Ok(Self {
+            file: self.file.create(name)?,
+            memory: MemoryStorageImpl::from_buffer_with_platform(
+                self.file.platform().clone(),
+                name,
+                Vec::new(),
+            ),
+        })
+    }
+
     fn flush(&mut self) -> Result<(), DbError> {
         self.file.flush_deferred(self.memory.bytes())
     }
@@ -284,6 +295,29 @@ mod tests {
                         .set_io_error(FsOp::Open, "/copy", ErrorKind::Other);
 
                     assert!(storage.copy("/copy").is_err());
+                }
+            }
+
+            mod create {
+                use super::*;
+
+                #[test]
+                fn create_should_replace_name_with_empty_storage() {
+                    crate::storage::tests::storage_data::create::create_should_replace_name_with_empty_storage(
+                        open(&platform()),
+                        "/created",
+                    );
+                }
+
+                #[test]
+                fn create_failure_should_fail() {
+                    let platform = platform();
+                    let storage = open(&platform);
+                    platform
+                        .fs()
+                        .set_io_error(FsOp::Open, "/created", ErrorKind::Other);
+
+                    assert!(storage.create("/created").is_err());
                 }
             }
 

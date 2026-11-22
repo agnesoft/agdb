@@ -102,7 +102,6 @@ use utoipa::openapi::security::SecurityScheme;
         routes::dashboard::DashboardRenameParam,
         routes::db::AuditTrimParam,
         routes::db::DbTypeParam,
-        routes::db::OptimizeParam,
         routes::admin::db::ServerDatabaseAdminRename,
         routes::db::ServerDatabaseRename,
         routes::db::ServerDatabaseResource,

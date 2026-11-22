@@ -17,6 +17,8 @@ use crate::collections::graph::GRAPH_SIZE;
 use crate::collections::graph::GraphHeader;
 use crate::collections::indexes::INDEXES_SIZE;
 use crate::collections::indexes::Indexes;
+use crate::collections::keys::KEYS_SIZE;
+use crate::collections::keys::Keys;
 use crate::collections::table::TABLE_SIZE;
 use crate::utilities::serialize::u64_at;
 use std::borrow::Cow;
@@ -33,7 +35,8 @@ const MAGIC: u64 = 0x746f_6f72_6264_6761;
 const HEADER: usize = 40;
 const GRAPH_AT: usize = HEADER + ALLOCATOR_SIZE;
 const ALIASES_AT: usize = GRAPH_AT + GRAPH_SIZE;
-const INDEXES_AT: usize = ALIASES_AT + TABLE_SIZE;
+const KEYS_AT: usize = ALIASES_AT + TABLE_SIZE;
+const INDEXES_AT: usize = KEYS_AT + KEYS_SIZE;
 const META_SIZE: usize = INDEXES_AT + INDEXES_SIZE - HEADER;
 const ROOT_SIZE: usize = HEADER + META_SIZE;
 const _: () = assert!(ROOT_SIZE as u64 <= ROOT_BYTES);
@@ -157,6 +160,7 @@ pub(crate) struct Meta {
     pub(crate) alloc: Allocator,
     pub(crate) graph: GraphHeader,
     pub(crate) aliases: Aliases,
+    pub(crate) keys: Keys,
     pub(crate) indexes: Indexes,
 }
 
@@ -167,6 +171,7 @@ impl Meta {
             alloc: Allocator::new(layout.page_shift),
             graph: GraphHeader::new(layout),
             aliases: Aliases::default(),
+            keys: Keys::new(layout.page_shift),
             indexes: Indexes::default(),
         }
     }
@@ -202,12 +207,15 @@ impl Meta {
             ));
         }
 
+        let keys = Keys::decode(&bytes[KEYS_AT..INDEXES_AT], layout.page_shift);
+
         Ok(Self {
             layout,
             alloc,
             graph: GraphHeader::decode(&bytes[GRAPH_AT..ALIASES_AT], layout),
-            aliases: Aliases::decode(&bytes[ALIASES_AT..INDEXES_AT]),
-            indexes: Indexes::load(view, &bytes[INDEXES_AT..ROOT_SIZE])?,
+            aliases: Aliases::decode(&bytes[ALIASES_AT..KEYS_AT]),
+            indexes: Indexes::load(view, &keys, &bytes[INDEXES_AT..ROOT_SIZE])?,
+            keys,
         })
     }
 
@@ -220,7 +228,8 @@ impl Meta {
         self.layout.encode(&mut bytes);
         bytes[HEADER..GRAPH_AT].copy_from_slice(&self.alloc.encode());
         bytes[GRAPH_AT..ALIASES_AT].copy_from_slice(&self.graph.encode());
-        bytes[ALIASES_AT..INDEXES_AT].copy_from_slice(&self.aliases.encode());
+        bytes[ALIASES_AT..KEYS_AT].copy_from_slice(&self.aliases.encode());
+        bytes[KEYS_AT..INDEXES_AT].copy_from_slice(&self.keys.encode());
         bytes[INDEXES_AT..].copy_from_slice(&self.indexes.encode());
         bytes
     }
@@ -421,10 +430,11 @@ mod tests {
             .insert(view, &mut meta.alloc, &meta.graph, node, "root")
             .unwrap();
         meta.indexes
-            .insert_index(view, &mut meta.alloc, &"key".into())
+            .insert_index(view, &mut meta.alloc, &mut meta.keys, &"key".into())
             .unwrap();
+        let key = meta.indexes.list()[0].key_id;
         meta.indexes
-            .insert(view, &mut meta.alloc, &"key".into(), &"value".into(), node)
+            .insert(view, &mut meta.alloc, key, &"value".into(), node)
             .unwrap();
     }
 
@@ -706,7 +716,7 @@ mod tests {
 
                 let error = Meta::decode(&root.read().unwrap().0, &bytes).unwrap_err();
 
-                assert_eq!(error.description, "Read (4096..4144) out of bounds (4096)");
+                assert_eq!(error.description, "Read (4096..4136) out of bounds (4096)");
             }
         }
     }

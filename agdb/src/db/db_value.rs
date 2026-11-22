@@ -64,12 +64,16 @@ pub enum DbValue {
     /// List of database values (heterogeneous)
     #[cfg_attr(feature = "openapi", schema(no_recursion))]
     VecDbValue(Vec<DbValue>),
+
+    /// No value, the value of a key that is a label
+    None,
 }
 
 /// Newtype wrapper around `Vec<DbValue>` used for blanket `From` conversions.
 #[cfg_attr(feature = "api", derive(agdb::TypeDef))]
 pub struct DbValues(pub Vec<DbValue>);
 
+pub(crate) const NONE_META_VALUE: u8 = 0_u8;
 pub(crate) const BYTES_META_VALUE: u8 = 1_u8;
 pub(crate) const I64_META_VALUE: u8 = 2_u8;
 pub(crate) const U64_META_VALUE: u8 = 3_u8;
@@ -96,6 +100,7 @@ impl DbValue {
             DbValue::VecF64(_) => Self::type_error("vec<f64>", "bytes"),
             DbValue::VecString(_) => Self::type_error("vec<string>", "bytes"),
             DbValue::VecDbValue(_) => Self::type_error("vec<db_value>", "bytes"),
+            DbValue::None => Self::type_error("none", "bytes"),
         }
     }
 
@@ -113,6 +118,7 @@ impl DbValue {
             DbValue::VecF64(_) => Self::type_error("vec<f64>", "string"),
             DbValue::VecString(_) => Self::type_error("vec<string>", "string"),
             DbValue::VecDbValue(_) => Self::type_error("vec<db_value>", "string"),
+            DbValue::None => Self::type_error("none", "string"),
         }
     }
 
@@ -132,6 +138,7 @@ impl DbValue {
             DbValue::VecF64(_) => Self::type_error("Vec<f64>", "bool"),
             DbValue::VecString(_) => Self::type_error("Vec<string>", "bool"),
             DbValue::VecDbValue(_) => Self::type_error("Vec<db_value>", "bool"),
+            DbValue::None => Self::type_error("none", "bool"),
         }
     }
 
@@ -150,6 +157,7 @@ impl DbValue {
             DbValue::VecF64(_) => Self::type_error("vec<f64>", "f64"),
             DbValue::VecString(_) => Self::type_error("vec<string>", "f64"),
             DbValue::VecDbValue(_) => Self::type_error("vec<db_value>", "f64"),
+            DbValue::None => Self::type_error("none", "f64"),
         }
     }
 
@@ -168,6 +176,7 @@ impl DbValue {
             DbValue::VecF64(_) => Self::type_error("vec<f64>", "i64"),
             DbValue::VecString(_) => Self::type_error("vec<string>", "i64"),
             DbValue::VecDbValue(_) => Self::type_error("vec<db_value>", "i64"),
+            DbValue::None => Self::type_error("none", "i64"),
         }
     }
 
@@ -186,6 +195,7 @@ impl DbValue {
             DbValue::VecF64(_) => Self::type_error("vec<f64>", "u64"),
             DbValue::VecString(_) => Self::type_error("vec<string>", "u64"),
             DbValue::VecDbValue(_) => Self::type_error("vec<db_value>", "u64"),
+            DbValue::None => Self::type_error("none", "u64"),
         }
     }
 
@@ -203,6 +213,7 @@ impl DbValue {
             DbValue::VecF64(v) => Ok(v),
             DbValue::VecString(_) => Self::type_error("vec<string>", "vec<f64>"),
             DbValue::VecDbValue(_) => Self::type_error("vec<db_value>", "vec<f64>"),
+            DbValue::None => Self::type_error("none", "vec<f64>"),
         }
     }
 
@@ -220,6 +231,7 @@ impl DbValue {
             DbValue::VecF64(_) => Self::type_error("vec<f64>", "vec<i64>"),
             DbValue::VecString(_) => Self::type_error("vec<string>", "vec<i64>"),
             DbValue::VecDbValue(_) => Self::type_error("vec<db_value>", "vec<i64>"),
+            DbValue::None => Self::type_error("none", "vec<i64>"),
         }
     }
 
@@ -237,6 +249,7 @@ impl DbValue {
             DbValue::VecF64(_) => Self::type_error("vec<f64>", "vec<u64>"),
             DbValue::VecString(_) => Self::type_error("vec<string>", "vec<u64>"),
             DbValue::VecDbValue(_) => Self::type_error("vec<db_value>", "vec<u64>"),
+            DbValue::None => Self::type_error("none", "vec<u64>"),
         }
     }
 
@@ -254,6 +267,7 @@ impl DbValue {
             DbValue::VecF64(_) => Self::type_error("vec<f64>", "vec<string>"),
             DbValue::VecString(v) => Ok(v),
             DbValue::VecDbValue(_) => Self::type_error("vec<db_value>", "vec<string>"),
+            DbValue::None => Self::type_error("none", "vec<string>"),
         }
     }
 
@@ -282,6 +296,7 @@ impl DbValue {
             DbValue::VecF64(v) => Ok(v.iter().map(|i| *i != 0.0.into()).collect()),
             DbValue::VecString(v) => Ok(v.iter().map(|s| s == "true" || s == "1").collect()),
             DbValue::VecDbValue(_) => Self::type_error("Vec<db_value>", "Vec<bool>"),
+            DbValue::None => Self::type_error("none", "Vec<bool>"),
         }
     }
 
@@ -338,6 +353,7 @@ impl DbValue {
             VEC_DBVALUE_META_VALUE => DbValue::VecDbValue(
                 storage.value::<Vec<DbValue>>(StorageIndex(value_index.index()))?,
             ),
+            NONE_META_VALUE => DbValue::None,
             _ => panic!(),
         })
     }
@@ -411,6 +427,7 @@ impl DbValue {
                 index.set_type(VEC_DBVALUE_META_VALUE);
                 index.set_index(storage.insert(v)?.0);
             }
+            DbValue::None => {}
         }
 
         Ok(index)
@@ -658,6 +675,7 @@ impl DbValue {
             DbValue::VecF64(_) => "vec<f64>",
             DbValue::VecString(_) => "vec<string>",
             DbValue::VecDbValue(_) => "vec<db_value>",
+            DbValue::None => "none",
         }
     }
 
@@ -1292,6 +1310,7 @@ impl<T: TryFrom<DbValue, Error = DbError>> TryFrom<DbValue> for Vec<T> {
             DbValue::U64(_) => DbValue::type_error("u64", "Vec<DbValue>"),
             DbValue::F64(_) => DbValue::type_error("f64", "Vec<DbValue>"),
             DbValue::String(_) => DbValue::type_error("string", "Vec<DbValue>"),
+            DbValue::None => DbValue::type_error("none", "Vec<DbValue>"),
         }?;
         db_values
             .into_iter()
@@ -1341,6 +1360,7 @@ impl Display for DbValue {
                     .collect::<Vec<String>>()
                     .join(", ")
             ),
+            DbValue::None => Ok(()),
         }
     }
 }
@@ -1358,6 +1378,7 @@ impl StableHash for DbValue {
             DbValue::VecF64(value) => value.stable_hash(),
             DbValue::VecString(value) => value.stable_hash(),
             DbValue::VecDbValue(value) => value.stable_hash(),
+            DbValue::None => u64::MAX,
         }
     }
 }
@@ -1545,8 +1566,10 @@ mod tests {
     fn bad_deserialization() {
         let test_file = TestFile::new();
         let storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+        let mut index = DbValueIndex::new();
+        index.set_type(15);
 
-        let _ = DbValue::load_db_value(DbValueIndex::new(), &storage);
+        let _ = DbValue::load_db_value(index, &storage);
     }
 
     #[test]
@@ -2944,5 +2967,63 @@ mod tests {
         let struct_back: TestStruct = db_value.try_into().unwrap();
 
         assert_eq!(original, struct_back);
+    }
+
+    mod db_value {
+        use super::*;
+
+        #[test]
+        fn db_value_none_should_fail_conversions_and_store_inline() {
+            let none = DbValue::None;
+            let errors = [
+                none.bytes().unwrap_err(),
+                none.string().unwrap_err(),
+                none.to_bool().unwrap_err(),
+                none.to_f64().unwrap_err(),
+                none.to_i64().unwrap_err(),
+                none.to_u64().unwrap_err(),
+                none.vec_f64().unwrap_err(),
+                none.vec_i64().unwrap_err(),
+                none.vec_u64().unwrap_err(),
+                none.vec_string().unwrap_err(),
+                none.vec_bool().unwrap_err(),
+                Vec::<i64>::try_from(DbValue::None).unwrap_err(),
+            ];
+            let targets = [
+                "bytes",
+                "string",
+                "bool",
+                "f64",
+                "i64",
+                "u64",
+                "vec<f64>",
+                "vec<i64>",
+                "vec<u64>",
+                "vec<string>",
+                "Vec<bool>",
+                "Vec<DbValue>",
+            ];
+
+            for (error, target) in errors.iter().zip(targets) {
+                assert_eq!(
+                    error.description,
+                    format!("Cannot convert 'none' to '{target}'.")
+                );
+            }
+
+            assert_eq!(
+                none.amend_add(&1.into()).unwrap_err().description,
+                "Cannot amend 'none' with 'i64'."
+            );
+            assert_eq!(none.to_string(), "");
+            assert_eq!(none.stable_hash(), u64::MAX);
+            assert!(DbValue::VecDbValue(vec![]) < none);
+
+            let test_file = TestFile::new();
+            let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+            let index = none.store_db_value(&mut storage).unwrap();
+            assert_eq!(index, DbValueIndex::new());
+            assert_eq!(DbValue::load_db_value(index, &storage).unwrap(), none);
+        }
     }
 }

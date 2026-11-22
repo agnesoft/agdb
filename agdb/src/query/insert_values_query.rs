@@ -3,7 +3,6 @@ use crate::DbElement;
 use crate::DbError;
 use crate::DbErrorType;
 use crate::DbId;
-use crate::DbImpl;
 use crate::DbKeyValue;
 use crate::QueryId;
 use crate::QueryIds;
@@ -11,6 +10,7 @@ use crate::QueryMut;
 use crate::QueryResult;
 use crate::SearchQuery;
 use crate::StorageData;
+use crate::TransactionMut;
 use crate::query::query_values::QueryValues;
 use crate::query_builder::search::SearchQueryBuilder;
 
@@ -46,7 +46,10 @@ pub struct InsertValuesQuery {
 }
 
 impl QueryMut for InsertValuesQuery {
-    fn process<Store: StorageData>(&self, db: &mut DbImpl<Store>) -> Result<QueryResult, DbError> {
+    fn process<Store: StorageData>(
+        &self,
+        db: &mut TransactionMut<Store>,
+    ) -> Result<QueryResult, DbError> {
         let mut result = QueryResult::default();
 
         match &self.ids {
@@ -70,7 +73,7 @@ impl QueryMut for InsertValuesQuery {
                 }
             },
             QueryIds::Search(search_query) => {
-                let db_ids = search_query.search(db)?;
+                let db_ids = search_query.search(&db.read())?;
 
                 match &self.values {
                     QueryValues::Single(values) => {
@@ -103,13 +106,16 @@ impl QueryMut for InsertValuesQuery {
 }
 
 impl QueryMut for &InsertValuesQuery {
-    fn process<Store: StorageData>(&self, db: &mut DbImpl<Store>) -> Result<QueryResult, DbError> {
+    fn process<Store: StorageData>(
+        &self,
+        db: &mut TransactionMut<Store>,
+    ) -> Result<QueryResult, DbError> {
         (*self).process(db)
     }
 }
 
 fn insert_values<Store: StorageData>(
-    db: &mut DbImpl<Store>,
+    db: &mut TransactionMut<Store>,
     id: &QueryId,
     values: &[DbKeyValue],
     amend: &Amend,
@@ -131,7 +137,7 @@ fn insert_values<Store: StorageData>(
 }
 
 fn insert_values_new<Store: StorageData>(
-    db: &mut DbImpl<Store>,
+    db: &mut TransactionMut<Store>,
     alias: Option<&String>,
     values: &[DbKeyValue],
     amend: &Amend,
@@ -168,7 +174,7 @@ fn insert_values_new<Store: StorageData>(
 }
 
 fn insert_values_id<Store: StorageData>(
-    db: &mut DbImpl<Store>,
+    db: &mut TransactionMut<Store>,
     db_id: DbId,
     values: &[DbKeyValue],
     amend: &Amend,

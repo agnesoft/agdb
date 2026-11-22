@@ -84,8 +84,8 @@ fn insert_aliases_edge() {
     db.exec_mut(QueryBuilder::insert().nodes().count(2).query(), 2);
     db.exec_mut(QueryBuilder::insert().edges().from(1).to(2).query(), 1);
     db.exec_mut_error(
-        QueryBuilder::insert().aliases("edge").ids(-3).query(),
-        "Edges cannot have aliases: 'edge' on '-3'",
+        QueryBuilder::insert().aliases("edge").ids(-1).query(),
+        "Edges cannot have aliases: 'edge' on '-1'",
     );
     db.exec_error(
         QueryBuilder::select().ids("edge").query(),

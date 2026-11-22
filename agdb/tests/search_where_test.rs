@@ -21,7 +21,7 @@ fn create_db() -> TestDb {
             .query(),
         3,
     );
-    //-4, -5
+    //-1, -2
     db.exec_mut(
         QueryBuilder::insert()
             .edges()
@@ -30,7 +30,7 @@ fn create_db() -> TestDb {
             .query(),
         2,
     );
-    //6, 7, 8
+    //4, 5, 6
     let docs = db.exec_mut_result(
         QueryBuilder::insert()
             .nodes()
@@ -54,7 +54,7 @@ fn create_db() -> TestDb {
             ])
             .query(),
     );
-    //-9, -10, -11
+    //-3, -4, -5
     db.exec_mut(
         QueryBuilder::insert()
             .edges()
@@ -63,7 +63,7 @@ fn create_db() -> TestDb {
             .query(),
         3,
     );
-    //12, 13, 14, 15, 16
+    //7, 8, 9, 10, 11
     let users = db.exec_mut_result(
         QueryBuilder::insert()
             .nodes()
@@ -101,7 +101,7 @@ fn create_db() -> TestDb {
             ])
             .query(),
     );
-    //-17, -18, -19, -20, -21
+    //-6, -7, -8, -9, -10
     db.exec_mut(
         QueryBuilder::insert()
             .edges()
@@ -110,7 +110,7 @@ fn create_db() -> TestDb {
             .query(),
         5,
     );
-    //-22, -23, -24
+    //-11, -12, -13
     db.exec_mut(
         QueryBuilder::insert()
             .edges()
@@ -145,7 +145,7 @@ fn search_from_where_keys() {
             .where_()
             .keys(["username", "id"])
             .query(),
-        &[16, 15, 14, 13, 12],
+        &[11, 10, 9, 8, 7],
     );
 }
 
@@ -158,7 +158,7 @@ fn search_from_where_distance() {
             .where_()
             .distance(CountComparison::LessThan(3))
             .query(),
-        &[1, -5, -4, 3, 2],
+        &[1, -2, -1, 3, 2],
     );
     db.exec_ids(
         QueryBuilder::search()
@@ -166,7 +166,7 @@ fn search_from_where_distance() {
             .where_()
             .distance(CountComparison::LessThanOrEqual(2))
             .query(),
-        &[1, -5, -4, 3, 2],
+        &[1, -2, -1, 3, 2],
     );
     db.exec_ids(
         QueryBuilder::search()
@@ -233,7 +233,7 @@ fn search_from_where_edge_count_test() {
             .where_()
             .edge_count_to(CountComparison::GreaterThan(1))
             .query(),
-        &[8, 7, 6],
+        &[6, 5, 4],
     );
     db.exec_ids(
         QueryBuilder::search()
@@ -241,7 +241,7 @@ fn search_from_where_edge_count_test() {
             .where_()
             .edge_count(CountComparison::GreaterThanOrEqual(2))
             .query(),
-        &[1, 3, 2, 8, 7, 6, 15, 14, 12],
+        &[1, 3, 2, 6, 5, 4, 10, 9, 7],
     );
     db.exec_ids(
         QueryBuilder::search()
@@ -249,7 +249,7 @@ fn search_from_where_edge_count_test() {
             .where_()
             .edge_count(CountComparison::LessThanOrEqual(2))
             .query(),
-        &[1, 8, 7, 6, 16, 15, 14, 13, 12],
+        &[1, 6, 5, 4, 11, 10, 9, 8, 7],
     );
     db.exec_ids(
         QueryBuilder::search()
@@ -257,7 +257,7 @@ fn search_from_where_edge_count_test() {
             .where_()
             .edge_count(CountComparison::LessThan(2))
             .query(),
-        &[16, 13],
+        &[11, 8],
     );
     db.exec_ids(
         QueryBuilder::search()
@@ -265,7 +265,7 @@ fn search_from_where_edge_count_test() {
             .where_()
             .edge_count(2)
             .query(),
-        &[1, 8, 7, 6, 15, 14, 12],
+        &[1, 6, 5, 4, 10, 9, 7],
     );
     db.exec_ids(
         QueryBuilder::search()
@@ -273,7 +273,7 @@ fn search_from_where_edge_count_test() {
             .where_()
             .edge_count(CountComparison::NotEqual(2))
             .query(),
-        &[3, 2, 16, 13],
+        &[3, 2, 11, 8],
     );
 }
 
@@ -292,11 +292,11 @@ fn search_from_where_node_edge() {
             .not_beyond()
             .ids("users")
             .query(),
-        &[8, 7, 6],
+        &[6, 5, 4],
     );
     db.exec_ids(
         QueryBuilder::search().from("docs").where_().edge().query(),
-        &[-11, -10, -9],
+        &[-5, -4, -3],
     );
 }
 
@@ -327,7 +327,7 @@ fn search_from_where_key_value() {
             .key("active")
             .value(1)
             .query(),
-        &[12, 14, 15],
+        &[7, 9, 10],
     );
     db.exec_ids(
         QueryBuilder::search()
@@ -337,7 +337,7 @@ fn search_from_where_key_value() {
             .key("active")
             .value(Comparison::NotEqual(1.into()))
             .query(),
-        &[13, 16],
+        &[8, 11],
     );
     db.exec_ids(
         QueryBuilder::search()
@@ -347,7 +347,7 @@ fn search_from_where_key_value() {
             .key("active")
             .value(Comparison::LessThan(1.into()))
             .query(),
-        &[13, 16],
+        &[8, 11],
     );
     db.exec_ids(
         QueryBuilder::search()
@@ -357,7 +357,7 @@ fn search_from_where_key_value() {
             .key("active")
             .value(Comparison::LessThanOrEqual(1.into()))
             .query(),
-        &[12, 13, 14, 15, 16],
+        &[7, 8, 9, 10, 11],
     );
     db.exec_ids(
         QueryBuilder::search()
@@ -367,7 +367,7 @@ fn search_from_where_key_value() {
             .key("active")
             .value(Comparison::GreaterThan(0.into()))
             .query(),
-        &[15, 14, 12],
+        &[10, 9, 7],
     );
     db.exec_ids(
         QueryBuilder::search()
@@ -377,7 +377,7 @@ fn search_from_where_key_value() {
             .key("active")
             .value(Comparison::GreaterThanOrEqual(0.into()))
             .query(),
-        &[16, 15, 14, 13, 12],
+        &[11, 10, 9, 8, 7],
     );
 }
 
@@ -402,7 +402,7 @@ fn search_from_where_where() {
             .key("type")
             .value("writes")
             .query(),
-        &[16, 15, 14, 13, 12, -22],
+        &[11, 10, 9, 8, 7, -11],
     );
 }
 
@@ -422,7 +422,7 @@ fn search_from_limit_offset_where() {
             .not_beyond()
             .ids("users")
             .query(),
-        &[8, 7],
+        &[6, 5],
     );
     db.exec_ids(
         QueryBuilder::search()
@@ -437,7 +437,7 @@ fn search_from_limit_offset_where() {
             .not_beyond()
             .ids("users")
             .query(),
-        &[7, 6],
+        &[5, 4],
     );
     db.exec_ids(
         QueryBuilder::search()
@@ -453,7 +453,7 @@ fn search_from_limit_offset_where() {
             .not_beyond()
             .ids("users")
             .query(),
-        &[7],
+        &[5],
     );
 }
 
@@ -464,14 +464,14 @@ fn search_from_to_where() {
     db.exec_ids(
         QueryBuilder::search()
             .from("root")
-            .to(7)
+            .to(5)
             .where_()
             .not_beyond()
             .ids("docs")
             .and()
             .keys("id")
             .query(),
-        &[12.into()],
+        &[7.into()],
     )
 }
 
@@ -497,7 +497,7 @@ fn search_from_to_where_filter() {
 
     db.exec_ids(
         QueryBuilder::search().from("start").to("end").query(),
-        &[1, -3, 2],
+        &[1, -1, 2],
     );
 
     db.exec_ids(
@@ -507,7 +507,7 @@ fn search_from_to_where_filter() {
             .where_()
             .keys("key")
             .query(),
-        &[-4],
+        &[-2],
     );
 }
 
@@ -521,7 +521,7 @@ fn search_from_where_key_value_contains() {
             .key("content")
             .value(Comparison::Contains("apples".into()))
             .query(),
-        &[8],
+        &[6],
     );
 }
 
@@ -535,7 +535,7 @@ fn search_path_with_distance() {
             .where_()
             .distance(CountComparison::LessThanOrEqual(2))
             .query(),
-        &[1, -4, 2],
+        &[1, -1, 2],
     );
 }
 
@@ -609,7 +609,7 @@ fn search_where_starts_with() {
             .key("content")
             .value(Comparison::StartsWith("Lorem".into()))
             .query(),
-        &[7],
+        &[5],
     );
     db.exec_ids(
         QueryBuilder::search()
@@ -632,7 +632,7 @@ fn search_where_ends_with() {
             .key("content")
             .value(Comparison::EndsWith(vec!["adipiscing ", "elit"].into()))
             .query(),
-        &[7],
+        &[5],
     );
     db.exec_ids(
         QueryBuilder::search()
@@ -693,7 +693,7 @@ fn beyond_simplified() {
             .beyond()
             .edge()
             .query(),
-        &[1, -5, -4, 3, 2],
+        &[1, -2, -1, 3, 2],
     );
 }
 
@@ -993,7 +993,7 @@ fn search_where_key_value_shortcuts() {
             .key("active")
             .greater_than(0)
             .query(),
-        &[15, 14, 12],
+        &[10, 9, 7],
     );
 
     // greater_than_or_equal
@@ -1005,7 +1005,7 @@ fn search_where_key_value_shortcuts() {
             .key("active")
             .greater_than_or_equal(0)
             .query(),
-        &[16, 15, 14, 13, 12],
+        &[11, 10, 9, 8, 7],
     );
 
     // less_than
@@ -1017,7 +1017,7 @@ fn search_where_key_value_shortcuts() {
             .key("active")
             .less_than(1)
             .query(),
-        &[13, 16],
+        &[8, 11],
     );
 
     // less_than_or_equal
@@ -1029,7 +1029,7 @@ fn search_where_key_value_shortcuts() {
             .key("active")
             .less_than_or_equal(1)
             .query(),
-        &[12, 13, 14, 15, 16],
+        &[7, 8, 9, 10, 11],
     );
 
     // not_equal
@@ -1041,7 +1041,7 @@ fn search_where_key_value_shortcuts() {
             .key("active")
             .not_equal(1)
             .query(),
-        &[13, 16],
+        &[8, 11],
     );
 
     // contains
@@ -1052,7 +1052,7 @@ fn search_where_key_value_shortcuts() {
             .key("content")
             .contains("apples")
             .query(),
-        &[8],
+        &[6],
     );
 
     // starts_with
@@ -1063,7 +1063,7 @@ fn search_where_key_value_shortcuts() {
             .key("content")
             .starts_with("Lorem")
             .query(),
-        &[7],
+        &[5],
     );
 
     // ends_with
@@ -1074,7 +1074,7 @@ fn search_where_key_value_shortcuts() {
             .key("content")
             .ends_with(vec!["adipiscing ", "elit"])
             .query(),
-        &[7],
+        &[5],
     );
 
     // any
@@ -1085,7 +1085,7 @@ fn search_where_key_value_shortcuts() {
             .key("content")
             .any(vec!["nothere", "apples"])
             .query(),
-        &[8],
+        &[6],
     );
 }
 
@@ -1100,7 +1100,7 @@ fn search_where_distance_shortcuts() {
             .where_()
             .distance_less_than(3)
             .query(),
-        &[1, -5, -4, 3, 2],
+        &[1, -2, -1, 3, 2],
     );
 
     // distance_less_than_or_equal
@@ -1110,7 +1110,7 @@ fn search_where_distance_shortcuts() {
             .where_()
             .distance_less_than_or_equal(2)
             .query(),
-        &[1, -5, -4, 3, 2],
+        &[1, -2, -1, 3, 2],
     );
 
     // distance_greater_than combined with distance_less_than
@@ -1171,7 +1171,7 @@ fn search_where_edge_count_shortcuts() {
             .where_()
             .edge_count_greater_than_or_equal(2)
             .query(),
-        &[1, 3, 2, 8, 7, 6, 15, 14, 12],
+        &[1, 3, 2, 6, 5, 4, 10, 9, 7],
     );
 
     // edge_count_less_than
@@ -1181,7 +1181,7 @@ fn search_where_edge_count_shortcuts() {
             .where_()
             .edge_count_less_than(2)
             .query(),
-        &[16, 13],
+        &[11, 8],
     );
 
     // edge_count_less_than_or_equal
@@ -1191,7 +1191,7 @@ fn search_where_edge_count_shortcuts() {
             .where_()
             .edge_count_less_than_or_equal(2)
             .query(),
-        &[1, 8, 7, 6, 16, 15, 14, 13, 12],
+        &[1, 6, 5, 4, 11, 10, 9, 8, 7],
     );
 
     // edge_count_not_equal
@@ -1201,7 +1201,7 @@ fn search_where_edge_count_shortcuts() {
             .where_()
             .edge_count_not_equal(2)
             .query(),
-        &[3, 2, 16, 13],
+        &[3, 2, 11, 8],
     );
 
     // edge_count_from_greater_than
@@ -1221,7 +1221,7 @@ fn search_where_edge_count_shortcuts() {
             .where_()
             .edge_count_to_greater_than(1)
             .query(),
-        &[8, 7, 6],
+        &[6, 5, 4],
     );
 }
 
@@ -1239,7 +1239,7 @@ fn search_where_regex() {
             .key("username")
             .regex("^user_[1-3]$")
             .query(),
-        &[12, 13, 14],
+        &[7, 8, 9],
     );
 
     // Match usernames ending with digits > 3 using regex
@@ -1251,7 +1251,7 @@ fn search_where_regex() {
             .key("username")
             .regex("_[4-5]$")
             .query(),
-        &[15, 16],
+        &[10, 11],
     );
 
     // Case-insensitive regex via (?i) flag
@@ -1263,7 +1263,7 @@ fn search_where_regex() {
             .key("name")
             .regex("(?i)^BOOK$")
             .query(),
-        &[7],
+        &[5],
     );
 
     // Regex that matches no elements
@@ -1286,7 +1286,7 @@ fn search_where_regex() {
             .key("name")
             .regex("^(notes|book)$")
             .query(),
-        &[7, 6],
+        &[5, 4],
     );
 
     // Regex via explicit Comparison::Regex (not shortcut)
@@ -1297,11 +1297,11 @@ fn search_where_regex() {
             .key("username")
             .value(Comparison::Regex("user_1".into()))
             .query(),
-        &[12],
+        &[7],
     );
 
     // Regex on VecString — any element matches
-    // Node 6 content: ["abc", "def", "ghi"], Node 8 content: ["apples", "oranges"]
+    // Node 4 content: ["abc", "def", "ghi"], Node 6 content: ["apples", "oranges"]
     db.exec_ids(
         QueryBuilder::search()
             .from("docs")
@@ -1310,10 +1310,10 @@ fn search_where_regex() {
             .key("content")
             .regex("^a")
             .query(),
-        &[6, 8],
+        &[4, 6],
     );
 
-    // Regex on VecString — only "oranges" matches, so only node 8
+    // Regex on VecString — only "oranges" matches, so only node 6
     db.exec_ids(
         QueryBuilder::search()
             .from("docs")
@@ -1321,7 +1321,7 @@ fn search_where_regex() {
             .key("content")
             .regex("^or")
             .query(),
-        &[8],
+        &[6],
     );
 
     // Invalid regex pattern yields false (no matches, no panic)
@@ -1350,13 +1350,13 @@ fn search_where_regex() {
 #[test]
 fn search_path_where_distance_should_match_search_from() {
     let db = create_db();
-    let path = [1, -5, 3, -10, 7];
+    let path = [1, -2, 3, -4, 5];
 
     for distance in 1..path.len() {
         db.exec_ids(
             QueryBuilder::search()
                 .from("root")
-                .to(7)
+                .to(5)
                 .where_()
                 .distance(CountComparison::GreaterThanOrEqual(distance as u64))
                 .query(),
@@ -1364,7 +1364,7 @@ fn search_path_where_distance_should_match_search_from() {
         );
         db.exec_ids(
             QueryBuilder::search()
-                .to(7)
+                .to(5)
                 .from("root")
                 .where_()
                 .distance(CountComparison::GreaterThanOrEqual(distance as u64))

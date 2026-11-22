@@ -26,7 +26,7 @@ fn select_edge_count_ids() {
         1,
         &[DbElement {
             id: DbId(1),
-            from: DbId(-3),
+            from: DbId(-1),
             to: DbId::default(),
             values: vec![("edge_count", 1_u64).into()],
         }],
@@ -38,7 +38,7 @@ fn select_edge_count_ids() {
         &[DbElement {
             id: DbId(2),
             from: DbId::default(),
-            to: DbId(-3),
+            to: DbId(-1),
             values: vec![("edge_count", 1_u64).into()],
         }],
     );
@@ -64,7 +64,7 @@ fn select_edge_count_from_ids() {
         1,
         &[DbElement {
             id: DbId(1),
-            from: DbId(-3),
+            from: DbId(-1),
             to: DbId::default(),
             values: vec![("edge_count", 1_u64).into()],
         }],
@@ -76,7 +76,7 @@ fn select_edge_count_from_ids() {
         &[DbElement {
             id: DbId(2),
             from: DbId::default(),
-            to: DbId(-3),
+            to: DbId(-1),
             values: vec![("edge_count", 0_u64).into()],
         }],
     );
@@ -102,7 +102,7 @@ fn select_edge_count_to_ids() {
         0,
         &[DbElement {
             id: DbId(1),
-            from: DbId(-3),
+            from: DbId(-1),
             to: DbId::default(),
             values: vec![("edge_count", 0_u64).into()],
         }],
@@ -114,7 +114,7 @@ fn select_edge_count_to_ids() {
         &[DbElement {
             id: DbId(2),
             from: DbId::default(),
-            to: DbId(-3),
+            to: DbId(-1),
             values: vec![("edge_count", 1_u64).into()],
         }],
     );
@@ -148,20 +148,20 @@ fn select_edge_count_multi() {
         &[
             DbElement {
                 id: DbId(1),
-                from: DbId(-6),
+                from: DbId(-3),
                 to: DbId::default(),
                 values: vec![("edge_count", 2_u64).into()],
             },
             DbElement {
                 id: DbId(2),
-                from: DbId(-5),
-                to: DbId(-4),
+                from: DbId(-2),
+                to: DbId(-1),
                 values: vec![("edge_count", 2_u64).into()],
             },
             DbElement {
                 id: DbId(3),
                 from: DbId::default(),
-                to: DbId(-6),
+                to: DbId(-3),
                 values: vec![("edge_count", 2_u64).into()],
             },
         ],
@@ -201,8 +201,8 @@ fn select_edge_count_search() {
         4,
         &[DbElement {
             id: DbId(2),
-            from: DbId(-7),
-            to: DbId(-7),
+            from: DbId(-4),
+            to: DbId(-4),
             values: vec![("edge_count", 4_u64).into()],
         }],
     );
@@ -238,8 +238,8 @@ fn select_edge_count_search_alt() {
         4,
         &[DbElement {
             id: DbId(2),
-            from: DbId(-7),
-            to: DbId(-7),
+            from: DbId(-4),
+            to: DbId(-4),
             values: vec![("edge_count", 4_u64).into()],
         }],
     );
@@ -255,8 +255,8 @@ fn select_edge_count_search_alt() {
         2,
         &[DbElement {
             id: DbId(2),
-            from: DbId(-7),
-            to: DbId(-7),
+            from: DbId(-4),
+            to: DbId(-4),
             values: vec![("edge_count", 2_u64).into()],
         }],
     );
@@ -272,8 +272,8 @@ fn select_edge_count_search_alt() {
         2,
         &[DbElement {
             id: DbId(2),
-            from: DbId(-7),
-            to: DbId(-7),
+            from: DbId(-4),
+            to: DbId(-4),
             values: vec![("edge_count", 2_u64).into()],
         }],
     );
@@ -295,10 +295,10 @@ fn select_edge_count_non_nodes() {
     );
 
     db.exec_count_elements(
-        QueryBuilder::select().edge_count().ids(-3).query(),
+        QueryBuilder::select().edge_count().ids(-1).query(),
         0,
         &[DbElement {
-            id: DbId(-3),
+            id: DbId(-1),
             from: DbId(1),
             to: DbId(2),
             values: vec![("edge_count", 0_u64).into()],
@@ -330,7 +330,7 @@ fn select_edge_count_invalid_query() {
         0,
         &[DbElement {
             id: DbId(1),
-            from: DbId(-3),
+            from: DbId(-1),
             to: DbId::default(),
             values: vec![("edge_count", 0_u64).into()],
         }],
@@ -376,7 +376,7 @@ fn select_edge_count_all_after_removal() {
             .query(),
         4,
     );
-    db.exec_mut(QueryBuilder::remove().ids([-4, 3]).query(), 2);
+    db.exec_mut(QueryBuilder::remove().ids([-1, 3]).query(), 2);
 
     let result = db.exec_result(QueryBuilder::select().edge_count().query());
     assert_eq!(result.result, 1);

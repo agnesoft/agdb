@@ -166,24 +166,24 @@ fn insert_values_uniform_search() {
         &[
             DbElement {
                 id: DbId(1),
-                from: DbId(-4),
+                from: DbId(-1),
                 to: DbId::default(),
                 values: vec![("key", "value").into()],
             },
             DbElement {
-                id: DbId(-4),
+                id: DbId(-1),
                 from: DbId(1),
                 to: DbId(2),
                 values: vec![("key", "value").into()],
             },
             DbElement {
                 id: DbId(2),
-                from: DbId(-5),
-                to: DbId(-4),
+                from: DbId(-2),
+                to: DbId(-1),
                 values: vec![("key", "value").into()],
             },
             DbElement {
-                id: DbId(-5),
+                id: DbId(-2),
                 from: DbId(2),
                 to: DbId(3),
                 values: vec![("key", "value").into()],
@@ -191,7 +191,7 @@ fn insert_values_uniform_search() {
             DbElement {
                 id: DbId(3),
                 from: DbId::default(),
-                to: DbId(-5),
+                to: DbId(-2),
                 values: vec![("key", "value").into()],
             },
         ],
@@ -221,12 +221,12 @@ fn insert_values_search() {
         &[
             DbElement {
                 id: DbId(1),
-                from: DbId(-4),
+                from: DbId(-1),
                 to: DbId::default(),
                 values: vec![("key1", "value1").into()],
             },
             DbElement {
-                id: DbId(-4),
+                id: DbId(-1),
                 from: DbId(1),
                 to: DbId(3),
                 values: vec![("key2", "value2").into()],
@@ -234,7 +234,7 @@ fn insert_values_search() {
             DbElement {
                 id: DbId(3),
                 from: DbId::default(),
-                to: DbId(-4),
+                to: DbId(-1),
                 values: vec![("key3", "value3").into()],
             },
         ],
@@ -265,12 +265,12 @@ fn insert_values_search_alt() {
         &[
             DbElement {
                 id: DbId(1),
-                from: DbId(-4),
+                from: DbId(-1),
                 to: DbId::default(),
                 values: vec![("key1", "value1").into()],
             },
             DbElement {
-                id: DbId(-4),
+                id: DbId(-1),
                 from: DbId(1),
                 to: DbId(3),
                 values: vec![("key2", "value2").into()],
@@ -278,7 +278,7 @@ fn insert_values_search_alt() {
             DbElement {
                 id: DbId(3),
                 from: DbId::default(),
-                to: DbId(-4),
+                to: DbId(-1),
                 values: vec![("key3", "value3").into()],
             },
         ],

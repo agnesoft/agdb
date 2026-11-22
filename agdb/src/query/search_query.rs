@@ -2,7 +2,6 @@ use crate::DbElement;
 use crate::DbError;
 use crate::DbErrorType;
 use crate::DbId;
-use crate::DbImpl;
 use crate::DbValue;
 use crate::Query;
 use crate::QueryCondition;
@@ -10,8 +9,8 @@ use crate::QueryConditionData;
 use crate::QueryId;
 use crate::QueryResult;
 use crate::StorageData;
+use crate::Transaction;
 use crate::db::db_key_order::DbKeyOrder;
-use crate::graph::GraphIndex;
 use crate::query_builder::search::SearchQueryBuilder;
 use std::cmp::Ordering;
 
@@ -82,7 +81,7 @@ pub struct SearchQuery {
 }
 
 impl Query for SearchQuery {
-    fn process<Store: StorageData>(&self, db: &DbImpl<Store>) -> Result<QueryResult, DbError> {
+    fn process<Store: StorageData>(&self, db: &Transaction<Store>) -> Result<QueryResult, DbError> {
         let mut result = QueryResult::default();
 
         for id in self.search(db)? {
@@ -103,7 +102,7 @@ impl Query for SearchQuery {
 impl SearchQuery {
     pub(crate) fn search<Store: StorageData>(
         &self,
-        db: &DbImpl<Store>,
+        db: &Transaction<Store>,
     ) -> Result<Vec<DbId>, DbError> {
         if self.algorithm == SearchQueryAlgorithm::Index {
             let condition = self.conditions.first().ok_or_else(|| {
@@ -121,10 +120,7 @@ impl SearchQuery {
                     let mut filtered = Vec::new();
 
                     for id in ids {
-                        if db
-                            .evaluate_conditions(GraphIndex(id.0), 0, remaining)?
-                            .is_true()
-                        {
+                        if db.evaluate_conditions(id, 0, remaining)?.is_true() {
                             filtered.push(id);
                         }
                     }
@@ -207,7 +203,7 @@ impl SearchQuery {
     fn sort<Store: StorageData>(
         &self,
         ids: &mut Vec<DbId>,
-        db: &DbImpl<Store>,
+        db: &Transaction<Store>,
     ) -> Result<(), DbError> {
         let keys = self
             .order_by
@@ -217,10 +213,11 @@ impl SearchQuery {
             })
             .collect::<Vec<DbValue>>();
 
+        let key_ids = db.key_ids(&keys)?;
         let mut values = Vec::with_capacity(ids.len() * keys.len());
 
         for id in ids.iter() {
-            let kvs = db.values_by_keys(*id, &keys)?;
+            let kvs = db.values_by_keys(*id, &key_ids)?;
 
             for key in &keys {
                 values.push(
@@ -297,7 +294,7 @@ impl SearchQuery {
 }
 
 impl Query for &SearchQuery {
-    fn process<Store: StorageData>(&self, db: &DbImpl<Store>) -> Result<QueryResult, DbError> {
+    fn process<Store: StorageData>(&self, db: &Transaction<Store>) -> Result<QueryResult, DbError> {
         (*self).process(db)
     }
 }

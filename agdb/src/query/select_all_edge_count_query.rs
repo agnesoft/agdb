@@ -1,8 +1,8 @@
 use crate::DbError;
-use crate::DbImpl;
 use crate::Query;
 use crate::QueryResult;
 use crate::StorageData;
+use crate::Transaction;
 
 /// Query to select number of edges in the database.
 ///
@@ -15,16 +15,16 @@ use crate::StorageData;
 pub struct SelectAllEdgeCountQuery {}
 
 impl Query for SelectAllEdgeCountQuery {
-    fn process<Store: StorageData>(&self, db: &DbImpl<Store>) -> Result<QueryResult, DbError> {
+    fn process<Store: StorageData>(&self, db: &Transaction<Store>) -> Result<QueryResult, DbError> {
         Ok(QueryResult {
-            result: db.all_edge_count()?,
+            result: db.all_edge_count(),
             elements: vec![],
         })
     }
 }
 
 impl Query for &SelectAllEdgeCountQuery {
-    fn process<Store: StorageData>(&self, db: &DbImpl<Store>) -> Result<QueryResult, DbError> {
+    fn process<Store: StorageData>(&self, db: &Transaction<Store>) -> Result<QueryResult, DbError> {
         (*self).process(db)
     }
 }

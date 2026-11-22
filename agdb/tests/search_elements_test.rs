@@ -16,7 +16,7 @@ fn search_elements_edges() {
     let mut db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().nodes().count(3).query(), 3);
     db.exec_mut(QueryBuilder::insert().edges().from(1).to(3).query(), 1);
-    db.exec_ids(QueryBuilder::search().elements().query(), &[1, 2, 3, -4]);
+    db.exec_ids(QueryBuilder::search().elements().query(), &[1, 2, 3, -1]);
 }
 
 #[test]
@@ -25,7 +25,7 @@ fn search_elements_removed_node() {
     db.exec_mut(QueryBuilder::insert().nodes().count(3).query(), 3);
     db.exec_mut(QueryBuilder::insert().edges().from(1).to(3).query(), 1);
     db.exec_mut(QueryBuilder::remove().ids(2).query(), 1);
-    db.exec_ids(QueryBuilder::search().elements().query(), &[1, 3, -4]);
+    db.exec_ids(QueryBuilder::search().elements().query(), &[1, 3, -1]);
 }
 
 #[test]
@@ -35,7 +35,7 @@ fn search_elements_removed_node_inserted_edge() {
     db.exec_mut(QueryBuilder::insert().edges().from(1).to(3).query(), 1);
     db.exec_mut(QueryBuilder::remove().ids(2).query(), 1);
     db.exec_mut(QueryBuilder::insert().edges().from(3).to(1).query(), 1);
-    db.exec_ids(QueryBuilder::search().elements().query(), &[1, -2, 3, -4]);
+    db.exec_ids(QueryBuilder::search().elements().query(), &[1, 3, -1, -2]);
 }
 
 #[test]
@@ -53,7 +53,7 @@ fn search_elements_offset() {
     db.exec_mut(QueryBuilder::insert().edges().from(1).to(3).query(), 1);
     db.exec_ids(
         QueryBuilder::search().elements().offset(2).query(),
-        &[3, -4],
+        &[3, -1],
     );
 }
 
@@ -88,7 +88,7 @@ fn search_elements_order_by() {
             .elements()
             .order_by([DbKeyOrder::Asc("age".into())])
             .query(),
-        &[2, 1, 3, -4],
+        &[2, 1, 3, -1],
     );
 }
 
@@ -106,6 +106,6 @@ fn search_elements_condition() {
             .and()
             .edge()
             .query(),
-        &[-4],
+        &[-1],
     );
 }

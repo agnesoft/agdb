@@ -1,49 +1,38 @@
-use std::mem::swap;
-
 use crate::DbError;
-use crate::StorageData;
-use crate::graph::DbGraph;
-use crate::graph::GraphIndex;
+use crate::DbId;
+use crate::collections::graph::GraphHeader;
 use crate::graph_search::SearchControl;
 use crate::graph_search::SearchHandler;
-use crate::storage::Storage;
+use crate::storage::pages::View;
 
-pub struct ElementSearch<'a, D, Handler>
-where
-    D: StorageData,
-    Handler: SearchHandler,
-{
-    graph: &'a DbGraph<D>,
-    storage: &'a Storage<D>,
+pub struct ElementSearch<'a, V: View, Handler: SearchHandler> {
+    graph: &'a GraphHeader,
+    view: &'a V,
     handler: Handler,
-    result: Vec<GraphIndex>,
 }
 
-impl<'a, D, Handler> ElementSearch<'a, D, Handler>
-where
-    D: StorageData,
-    Handler: SearchHandler,
-{
-    pub fn new(graph: &'a DbGraph<D>, storage: &'a Storage<D>, handler: Handler) -> Self {
+impl<'a, V: View, Handler: SearchHandler> ElementSearch<'a, V, Handler> {
+    pub fn new(graph: &'a GraphHeader, view: &'a V, handler: Handler) -> Self {
         Self {
             graph,
-            storage,
+            view,
             handler,
-            result: vec![],
         }
     }
 
-    pub fn search(&mut self) -> Result<Vec<GraphIndex>, DbError> {
-        for (distance, index) in self.graph.iter(self.storage).enumerate() {
-            let index = index?;
-            let (add_index, finished) = match self.handler.process(index, distance as u64)? {
+    pub fn search(&mut self) -> Result<Vec<DbId>, DbError> {
+        let mut result = vec![];
+
+        for (distance, id) in self.graph.elements(self.view).enumerate() {
+            let id = id?;
+            let (add, finished) = match self.handler.process(id, distance as u64)? {
                 SearchControl::Continue(add) => (add, false),
                 SearchControl::Finish(add) => (add, true),
                 SearchControl::Stop(add) => (add, false),
             };
 
-            if add_index {
-                self.result.push(index);
+            if add {
+                result.push(id);
             }
 
             if finished {
@@ -51,13 +40,6 @@ where
             }
         }
 
-        Ok(self.take_result())
-    }
-
-    fn take_result(&mut self) -> Vec<GraphIndex> {
-        let mut res = Vec::<GraphIndex>::new();
-        swap(&mut res, &mut self.result);
-
-        res
+        Ok(result)
     }
 }

@@ -184,7 +184,11 @@ impl<'a, S: StorageData> Writer<'a, S> {
             }
             Err(error) => Err(match self.restore() {
                 Ok(()) => error,
-                Err(restore) => restore.caused_by(error),
+                Err(restore) => DbError::storage(
+                    DbErrorType::Poisoned,
+                    "Storage was not restored after a failed transaction",
+                )
+                .caused_by(restore.caused_by(error)),
             }),
         }
     }

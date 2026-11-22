@@ -1,9 +1,9 @@
 use crate::DbError;
-use crate::DbImpl;
 use crate::DbValue;
 use crate::QueryMut;
 use crate::QueryResult;
 use crate::StorageData;
+use crate::TransactionMut;
 
 /// Query to remove an existing index on
 /// a given key.
@@ -15,7 +15,10 @@ use crate::StorageData;
 pub struct RemoveIndexQuery(pub DbValue);
 
 impl QueryMut for RemoveIndexQuery {
-    fn process<Store: StorageData>(&self, db: &mut DbImpl<Store>) -> Result<QueryResult, DbError> {
+    fn process<Store: StorageData>(
+        &self,
+        db: &mut TransactionMut<Store>,
+    ) -> Result<QueryResult, DbError> {
         let result = db.remove_index(&self.0)?;
 
         Ok(QueryResult {
@@ -26,7 +29,10 @@ impl QueryMut for RemoveIndexQuery {
 }
 
 impl QueryMut for &RemoveIndexQuery {
-    fn process<Store: StorageData>(&self, db: &mut DbImpl<Store>) -> Result<QueryResult, DbError> {
+    fn process<Store: StorageData>(
+        &self,
+        db: &mut TransactionMut<Store>,
+    ) -> Result<QueryResult, DbError> {
         (*self).process(db)
     }
 }

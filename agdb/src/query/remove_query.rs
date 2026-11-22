@@ -1,10 +1,10 @@
 use crate::DbError;
-use crate::DbImpl;
 use crate::QueryIds;
 use crate::QueryMut;
 use crate::QueryResult;
 use crate::SearchQuery;
 use crate::StorageData;
+use crate::TransactionMut;
 use crate::query_builder::search::SearchQueryBuilder;
 
 /// Query to remove database elements (nodes & edges). It
@@ -22,7 +22,10 @@ use crate::query_builder::search::SearchQueryBuilder;
 pub struct RemoveQuery(pub QueryIds);
 
 impl QueryMut for RemoveQuery {
-    fn process<Store: StorageData>(&self, db: &mut DbImpl<Store>) -> Result<QueryResult, DbError> {
+    fn process<Store: StorageData>(
+        &self,
+        db: &mut TransactionMut<Store>,
+    ) -> Result<QueryResult, DbError> {
         let mut result = QueryResult::default();
 
         match &self.0 {
@@ -34,7 +37,7 @@ impl QueryMut for RemoveQuery {
                 }
             }
             QueryIds::Search(search_query) => {
-                for db_id in search_query.search(db)? {
+                for db_id in search_query.search(&db.read())? {
                     if db.remove_id(db_id)? {
                         result.result += 1;
                     }
@@ -47,7 +50,10 @@ impl QueryMut for RemoveQuery {
 }
 
 impl QueryMut for &RemoveQuery {
-    fn process<Store: StorageData>(&self, db: &mut DbImpl<Store>) -> Result<QueryResult, DbError> {
+    fn process<Store: StorageData>(
+        &self,
+        db: &mut TransactionMut<Store>,
+    ) -> Result<QueryResult, DbError> {
         (*self).process(db)
     }
 }

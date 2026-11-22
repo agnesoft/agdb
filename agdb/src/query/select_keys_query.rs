@@ -1,12 +1,12 @@
 use crate::DbElement;
 use crate::DbError;
-use crate::DbImpl;
 use crate::DbValue;
 use crate::Query;
 use crate::QueryIds;
 use crate::QueryResult;
 use crate::SearchQuery;
 use crate::StorageData;
+use crate::Transaction;
 use crate::query_builder::search::SearchQueryBuilder;
 
 /// Query to select only property keys of given ids. All
@@ -22,7 +22,7 @@ use crate::query_builder::search::SearchQueryBuilder;
 pub struct SelectKeysQuery(pub QueryIds);
 
 impl Query for SelectKeysQuery {
-    fn process<Store: StorageData>(&self, db: &DbImpl<Store>) -> Result<QueryResult, DbError> {
+    fn process<Store: StorageData>(&self, db: &Transaction<Store>) -> Result<QueryResult, DbError> {
         let mut result = QueryResult::default();
 
         let db_ids = match &self.0 {
@@ -59,7 +59,7 @@ impl Query for SelectKeysQuery {
 }
 
 impl Query for &SelectKeysQuery {
-    fn process<Store: StorageData>(&self, db: &DbImpl<Store>) -> Result<QueryResult, DbError> {
+    fn process<Store: StorageData>(&self, db: &Transaction<Store>) -> Result<QueryResult, DbError> {
         (*self).process(db)
     }
 }

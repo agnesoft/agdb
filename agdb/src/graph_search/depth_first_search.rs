@@ -1,57 +1,50 @@
 use super::search_impl::SearchIndex;
 use super::search_impl::SearchIterator;
 use crate::DbError;
-use crate::StorageData;
-use crate::graph::DbGraph;
-use crate::graph::GraphIndex;
-use crate::storage::Storage;
+use crate::DbId;
+use crate::collections::graph::GraphHeader;
+use crate::storage::pages::View;
 
 pub struct DepthFirstSearch {
     stack: Vec<SearchIndex>,
 }
 
-impl<D> SearchIterator<D> for DepthFirstSearch
-where
-    D: StorageData,
-{
-    fn new(index: GraphIndex) -> Self {
+impl SearchIterator for DepthFirstSearch {
+    fn new(id: DbId) -> Self {
         Self {
-            stack: vec![SearchIndex { index, distance: 0 }],
+            stack: vec![SearchIndex { id, distance: 0 }],
         }
     }
 
     fn expand(
         &mut self,
-        current_index: SearchIndex,
-        graph: &DbGraph<D>,
-        storage: &Storage<D>,
+        current: SearchIndex,
+        graph: &GraphHeader,
+        view: &impl View,
         follow: bool,
     ) -> Result<(), DbError> {
-        if current_index.index.is_node() {
-            if follow {
-                let i = graph.first_edge_from(storage, current_index.index)?;
-
-                if i.is_valid() {
-                    self.stack.push(SearchIndex {
-                        index: i,
-                        distance: current_index.distance + 1,
-                    });
-                }
-            }
-        } else {
-            let i = graph.next_edge_from(storage, current_index.index)?;
-
-            if i.is_valid() {
+        if 0 < current.id.0 {
+            if follow
+                && let Some(node) = graph.node(view, current.id)?
+                && node.first_from.0 != 0
+            {
                 self.stack.push(SearchIndex {
-                    index: i,
-                    distance: current_index.distance,
-                })
+                    id: node.first_from,
+                    distance: current.distance + 1,
+                });
+            }
+        } else if let Some(edge) = graph.edge(view, current.id)? {
+            if edge.next_from.0 != 0 {
+                self.stack.push(SearchIndex {
+                    id: edge.next_from,
+                    distance: current.distance,
+                });
             }
 
             if follow {
                 self.stack.push(SearchIndex {
-                    index: graph.edge_to(storage, current_index.index)?,
-                    distance: current_index.distance + 1,
+                    id: edge.to,
+                    distance: current.distance + 1,
                 });
             }
         }
@@ -66,13 +59,13 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::collections::tests::storage;
-    use crate::graph::GraphIndex;
+    use crate::DbId;
+    use crate::collections::value::tests::with_view;
     use crate::graph_search::GraphSearch;
     use crate::graph_search::tests::Handler;
     use crate::graph_search::tests::all;
     use crate::graph_search::tests::diamond;
-    use crate::graph_search::tests::indexes;
+    use crate::graph_search::tests::ids;
     use crate::graph_search::tests::stop_at;
 
     mod depth_first_search {
@@ -80,27 +73,28 @@ mod tests {
 
         #[test]
         fn depth_first_search_should_visit_the_outgoing_edges_branch_by_branch_once() {
-            let mut storage = storage();
-            let graph = diamond(&mut storage);
+            with_view(|view, alloc| {
+                let graph = diamond(view, alloc);
 
-            let result =
-                GraphSearch::from((&graph, &storage)).depth_first_search(GraphIndex(1), all());
+                let result = GraphSearch::new(&graph, &*view).depth_first_search(DbId(1), all());
 
-            assert_eq!(result, indexes(&[1, -6, 3, -8, 4, -9, -5, 2, -7]));
+                assert_eq!(result, ids(&[1, -2, 3, -4, 4, -5, -1, 2, -3]));
+            });
         }
 
         #[test]
         fn depth_first_search_stopped_should_not_follow_the_stopped_elements() {
-            let mut storage = storage();
-            let graph = diamond(&mut storage);
-            let search = GraphSearch::from((&graph, &storage));
+            with_view(|view, alloc| {
+                let graph = diamond(view, alloc);
+                let search = GraphSearch::new(&graph, &*view);
 
-            for (handler, expected) in [
-                (Handler(stop_at::<1>), indexes(&[1, -6, -5])),
-                (Handler(stop_at::<2>), indexes(&[1, -6, 3, -5, 2])),
-            ] {
-                assert_eq!(search.depth_first_search(GraphIndex(1), handler), expected);
-            }
+                for (handler, expected) in [
+                    (Handler(stop_at::<1>), ids(&[1, -2, -1])),
+                    (Handler(stop_at::<2>), ids(&[1, -2, 3, -1, 2])),
+                ] {
+                    assert_eq!(search.depth_first_search(DbId(1), handler), expected);
+                }
+            });
         }
     }
 }

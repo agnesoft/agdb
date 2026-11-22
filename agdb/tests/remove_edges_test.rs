@@ -17,12 +17,12 @@ fn remove_edges_rollback() {
     );
     db.transaction_mut_error(
         |t| {
-            t.exec_mut(QueryBuilder::remove().ids(-3).query())?;
-            t.exec(QueryBuilder::select().ids(-3).query())
+            t.exec_mut(QueryBuilder::remove().ids(-1).query())?;
+            t.exec(QueryBuilder::select().ids(-1).query())
         },
-        DbError::db(DbErrorType::NotFound, "Id '-3' not found"),
+        DbError::db(DbErrorType::NotFound, "Id '-1' not found"),
     );
-    db.exec(QueryBuilder::select().ids(-3).query(), 1);
+    db.exec(QueryBuilder::select().ids(-1).query(), 1);
 }
 
 #[test]
@@ -38,7 +38,7 @@ fn remove_edges() {
             .query(),
         2,
     );
-    db.exec_mut(QueryBuilder::remove().ids([-3, -4]).query(), 2);
+    db.exec_mut(QueryBuilder::remove().ids([-1, -2]).query(), 2);
 }
 
 #[test]
@@ -64,7 +64,7 @@ fn remove_missing_edges_rollback() {
 fn remove_edges_search() {
     let mut db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().nodes().count(2).query(), 2);
-    db.exec_mut_ids(QueryBuilder::insert().edges().from(1).to(2).query(), &[-3]);
+    db.exec_mut_ids(QueryBuilder::insert().edges().from(1).to(2).query(), &[-1]);
 
     db.exec_mut(
         QueryBuilder::remove()
@@ -72,7 +72,7 @@ fn remove_edges_search() {
             .query(),
         2,
     );
-    db.exec_error(QueryBuilder::select().ids(-3).query(), "Id '-3' not found");
+    db.exec_error(QueryBuilder::select().ids(-1).query(), "Id '-1' not found");
 }
 
 #[test]

@@ -2,8 +2,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { nextTick, ref, type Ref } from "vue";
 
 type ApiError = {
-  message: string;
-  response?: { statusText?: string; data?: unknown };
+  status: number;
+  description: string;
 };
 
 describe("setupApiNotifications", () => {
@@ -39,32 +39,15 @@ describe("setupApiNotifications", () => {
     setupApiNotifications();
   });
 
-  it("shows response error notification", async () => {
-    lastApiError.value = {
-      message: "network error",
-      response: { statusText: "Bad Request", data: "invalid payload" },
-    };
+  it("shows the status and the description of the error", async () => {
+    lastApiError.value = { status: 400, description: "invalid payload" };
 
     await nextTick();
 
     expect(addNotification).toHaveBeenCalledWith({
       type: "error",
-      title: "Error: Bad Request",
+      title: "Error: 400",
       message: "invalid payload",
-    });
-  });
-
-  it("shows generic error notification", async () => {
-    lastApiError.value = {
-      message: "connection failed",
-    };
-
-    await nextTick();
-
-    expect(addNotification).toHaveBeenCalledWith({
-      type: "error",
-      title: "Error",
-      message: "connection failed",
     });
   });
 
@@ -86,9 +69,7 @@ describe("setupApiNotifications", () => {
   });
 
   it("does not notify when api error is cleared", async () => {
-    lastApiError.value = {
-      message: "temporary failure",
-    };
+    lastApiError.value = { status: 500, description: "temporary failure" };
     await nextTick();
     expect(addNotification).toHaveBeenCalledTimes(1);
 

@@ -1,21 +1,26 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { routeState, routeControl, checkClient, client } = vi.hoisted(() => ({
-  routeState: {
-    params: { owner: "alice", db: "main" },
-    name: "db-view",
-  } as { params: Record<string, unknown>; name?: unknown },
-  routeControl: { throwUseRoute: false, noRoute: false },
-  checkClient: vi.fn(),
-  client: {
-    value: {
+const { routeState, routeControl, checkClient, client, quiet, quietClient } =
+  vi.hoisted(() => {
+    const exec = () => ({
       db_exec: vi.fn(),
       db_exec_mut: vi.fn(),
       admin_db_exec: vi.fn(),
       admin_db_exec_mut: vi.fn(),
-    },
-  },
-}));
+    });
+    const quiet = exec();
+    return {
+      quiet,
+      quietClient: vi.fn(() => quiet),
+      client: { value: exec() },
+      routeState: {
+        params: { owner: "alice", db: "main" },
+        name: "db-view",
+      } as { params: Record<string, unknown>; name?: unknown },
+      routeControl: { throwUseRoute: false, noRoute: false },
+      checkClient: vi.fn(),
+    };
+  });
 
 vi.mock("vue-router", () => ({
   useRoute: () => {
@@ -24,7 +29,11 @@ vi.mock("vue-router", () => ({
   },
 }));
 
-vi.mock("@agdb-studio/api/src/api", () => ({ checkClient, client }));
+vi.mock("@agdb-studio/api/src/api", () => ({
+  checkClient,
+  client,
+  quietClient,
+}));
 
 import { h, ref } from "vue";
 import { mount } from "@vue/test-utils";
@@ -47,8 +56,11 @@ describe("dbExec", () => {
     routeState.name = "db-view";
     routeControl.throwUseRoute = false;
     routeControl.noRoute = false;
-    for (const fn of Object.values(client.value)) {
-      fn.mockResolvedValue({ data });
+    for (const fn of [
+      ...Object.values(client.value),
+      ...Object.values(quiet),
+    ]) {
+      fn.mockResolvedValue([200, data]);
     }
   });
 
@@ -83,19 +95,21 @@ describe("dbExec", () => {
     routeState.name = name;
     const result = await executeDbQueries([query], mut, routeState);
     expect(checkClient).toHaveBeenCalled();
-    expect(client.value[fn]).toHaveBeenCalledWith(
-      { owner: "alice", db: "main" },
-      [query],
-      undefined,
-    );
+    expect(client.value[fn]).toHaveBeenCalledWith({
+      owner: "alice",
+      db: "main",
+      queries: [query],
+    });
     expect(result).toBe(data);
-    // A quiet run asks for no global error notification.
+    // A quiet run goes through a client without global error notifications.
     await executeDbQueries([query], mut, routeState, { quiet: true });
-    expect(client.value[fn]).toHaveBeenLastCalledWith(
-      { owner: "alice", db: "main" },
-      [query],
-      { quietErrors: true },
-    );
+    expect(quietClient).toHaveBeenCalledWith(client.value);
+    expect(quiet[fn]).toHaveBeenCalledWith({
+      owner: "alice",
+      db: "main",
+      queries: [query],
+    });
+    expect(client.value[fn]).toHaveBeenCalledTimes(1);
   });
 
   it("returns undefined without db params", async () => {
@@ -131,18 +145,18 @@ describe("dbExec", () => {
     });
     expect(bound!.route.name).toBe("query");
     await bound!.exec([query]);
-    expect(client.value.db_exec).toHaveBeenCalledWith(
-      { owner: "bob", db: "sales" },
-      [query],
-      undefined,
-    );
+    expect(client.value.db_exec).toHaveBeenCalledWith({
+      owner: "bob",
+      db: "sales",
+      queries: [query],
+    });
     target.value = { owner: "carol", db: "hr" };
     await bound!.execMut([query]);
-    expect(client.value.db_exec_mut).toHaveBeenCalledWith(
-      { owner: "carol", db: "hr" },
-      [query],
-      undefined,
-    );
+    expect(client.value.db_exec_mut).toHaveBeenCalledWith({
+      owner: "carol",
+      db: "hr",
+      queries: [query],
+    });
     expect(client.value.admin_db_exec).not.toHaveBeenCalled();
   });
 
@@ -163,11 +177,11 @@ describe("dbExec", () => {
     });
     expect(bound!.route.name).toBe("admin-query");
     await bound!.exec([query]);
-    expect(client.value.admin_db_exec).toHaveBeenCalledWith(
-      { owner: "bob", db: "sales" },
-      [query],
-      undefined,
-    );
+    expect(client.value.admin_db_exec).toHaveBeenCalledWith({
+      owner: "bob",
+      db: "sales",
+      queries: [query],
+    });
     target.value = { owner: "bob", db: "sales", admin: false };
     expect(bound!.route.name).toBe("query");
   });

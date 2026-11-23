@@ -49,6 +49,13 @@ pub(crate) const TS_TYPES: &str = "agdb_api/typescript/src/types.ts";
 /// The TS client generated from [`API`], relative to the repository root.
 pub(crate) const TS_API: &str = "agdb_api/typescript/src/api.ts";
 
+/// The entry of the TS package, re-exporting [`TS_TYPES`], [`TS`], [`TS_API`] and
+/// [`TS_TRANSPORT`], relative to the repository root.
+const TS_INDEX: &str = "agdb_api/typescript/src/index.ts";
+
+/// The handwritten transport of [`TS_API`] the TS package provides, relative to [`TS_INDEX`].
+const TS_TRANSPORT: &str = "./fetch_client.js";
+
 /// Where `agci generate` dumps the client module after each pass, in [`DUMP_DIR`].
 const CLIENT_DUMP: &str = "client";
 
@@ -237,6 +244,7 @@ pub(crate) fn generate(platform: &impl Platform, root: &str, dump: &Path) -> Res
     fs.write(Path::new(root).join(TS_TESTS), tests.code)?;
     fs.write(Path::new(root).join(TS_API), client.code)?;
     fs.write(Path::new(root).join(TS_ROUTES), routes.code)?;
+    fs.write(Path::new(root).join(TS_INDEX), index(&ts.values))?;
     let unsupported: Vec<String> = declarations
         .unsupported
         .into_iter()
@@ -340,6 +348,23 @@ fn client(
         .with(RemoveDeadHelpers);
     run_from(platform, &mut m, &passes, dump, 5, errors)?;
     Ok((Emitter::new(&m, &ts_config("./types.ts")).client(), inlined))
+}
+
+/// [`TS_INDEX`]: the builder's `values` are exported by name, as [`TS_TYPES`] exports their types
+/// too.
+fn index(values: &[String]) -> String {
+    let module = |path: &str| {
+        let stem = Path::new(path).file_stem().unwrap_or_default();
+        format!("./{}", stem.to_string_lossy())
+    };
+    let (types, builder, api) = (module(TS_TYPES), module(TS), module(TS_API));
+    let values = values.join(", ");
+    format!(
+        "{header}\n\nexport type * from \"{types}.ts\";\nexport * from \"{builder}.js\";\n\
+         export {{ {values} }} from \"{builder}.js\";\nexport * from \"{api}.js\";\n\
+         export * from {TS_TRANSPORT:?};\n",
+        header = ts_config("").header
+    )
 }
 
 /// The serde types are imported from [`TS_TYPES`] at `types`, relative to the emitted file.

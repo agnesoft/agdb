@@ -6,7 +6,7 @@ import type { AdminStatus } from "@agnesoft/agdb_api";
 
 const mockClient = vi.hoisted(() => ({
   admin_status: vi.fn(),
-  set_log_level: vi.fn(),
+  admin_set_log_level: vi.fn(),
 }));
 
 const mockCheckClient = vi.hoisted(() => vi.fn());
@@ -59,7 +59,7 @@ describe("useAdminStatus", () => {
     vi.clearAllMocks();
     vi.useFakeTimers();
     resetAdminStatusState();
-    mockClient.admin_status.mockResolvedValue({ data: mockAdminStatus });
+    mockClient.admin_status.mockResolvedValue([200, mockAdminStatus]);
   });
 
   afterEach(() => {
@@ -219,8 +219,8 @@ describe("useAdminStatus", () => {
   });
 
   describe("setLogLevel", () => {
-    it("should call set_log_level and re-fetch status", async () => {
-      mockClient.set_log_level.mockResolvedValue({});
+    it("should call admin_set_log_level and re-fetch status", async () => {
+      mockClient.admin_set_log_level.mockResolvedValue(202);
 
       const vm = mountComposable();
       await vi.advanceTimersByTimeAsync(0);
@@ -233,14 +233,14 @@ describe("useAdminStatus", () => {
       await flushPromises();
       await nextTick();
 
-      expect(mockClient.set_log_level).toHaveBeenCalledWith({
-        new_level: "debug",
+      expect(mockClient.admin_set_log_level).toHaveBeenCalledWith({
+        level: "debug",
       });
       expect(mockClient.admin_status).toHaveBeenCalledTimes(callsBefore + 1);
     });
 
     it("should show success notification after setting log level", async () => {
-      mockClient.set_log_level.mockResolvedValue({});
+      mockClient.admin_set_log_level.mockResolvedValue(202);
 
       const vm = mountComposable();
       await vi.advanceTimersByTimeAsync(0);
@@ -260,7 +260,7 @@ describe("useAdminStatus", () => {
 
     it("should set isSettingLogLevel while request is in-flight", async () => {
       let resolveSetLogLevel!: () => void;
-      mockClient.set_log_level.mockReturnValue(
+      mockClient.admin_set_log_level.mockReturnValue(
         new Promise<void>((r) => {
           resolveSetLogLevel = r;
         }),
@@ -285,8 +285,8 @@ describe("useAdminStatus", () => {
       expect(vm.isSettingLogLevel).toBe(false);
     });
 
-    it("should handle set_log_level errors gracefully and re-fetch status", async () => {
-      mockClient.set_log_level.mockRejectedValue(new Error("Forbidden"));
+    it("should handle admin_set_log_level errors gracefully and re-fetch status", async () => {
+      mockClient.admin_set_log_level.mockRejectedValue(new Error("Forbidden"));
 
       const vm = mountComposable();
       await vi.advanceTimersByTimeAsync(0);

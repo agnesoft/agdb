@@ -99,7 +99,7 @@ const fetchDashboards = async (): Promise<void> => {
   const response = adminMode()
     ? await client.value.admin_dashboard_list()
     : await client.value.dashboard_list();
-  dashboards.value = response.data;
+  dashboards.value = response[1];
 };
 
 const getDashboard = async (key: DashboardKey) => {
@@ -125,9 +125,9 @@ const loadDashboard = async (key: DashboardKey): Promise<OpenDashboard> => {
   const open = {
     owner: key.owner,
     name: key.name,
-    role: response.data.role,
-    public: response.data.public,
-    document: parseDocument(response.data.config),
+    role: response[1].role,
+    public: response[1].public,
+    document: parseDocument(response[1].config),
   };
   if (id === loadId) current.value = open;
   return open;
@@ -145,8 +145,8 @@ const createDashboard = async (
   const forOwner = adminMode() && owner !== undefined;
   const key = { owner: forOwner ? owner : (username.value ?? ""), name };
   const body = { config: serializeDocument(emptyDocument()) };
-  if (forOwner) await client.value.admin_dashboard_add({ ...key }, body);
-  else await client.value.dashboard_add({ ...key }, body);
+  if (forOwner) await client.value.admin_dashboard_add({ ...key, ...body });
+  else await client.value.dashboard_add({ ...key, ...body });
   await fetchDashboards();
   return key;
 };
@@ -158,8 +158,9 @@ const saveDocument = async (
   checkClient(client);
   const params = { owner: key.owner, name: key.name };
   const body = { config: serializeDocument(document) };
-  if (adminMode()) await client.value.admin_dashboard_save(params, body);
-  else await client.value.dashboard_save(params, body);
+  if (adminMode())
+    await client.value.admin_dashboard_save({ ...params, ...body });
+  else await client.value.dashboard_save({ ...params, ...body });
 };
 
 /** Dashboards to save (again) after the running save. */
@@ -184,7 +185,7 @@ const runSaves = async (): Promise<void> => {
       try {
         await saveDocument(open, open.document);
       } catch {
-        // The API error interceptor shows a notification; edits are kept.
+        // The studio client shows a notification; edits are kept.
         if (current.value === open) saveFailed.value = true;
         continue;
       }
@@ -261,7 +262,7 @@ const removeDashboard = async (key: DashboardKey) => {
 /** Makes a dashboard public (viewable by every user) or private. */
 const setPublic = async (key: DashboardKey, isPublic: boolean) => {
   checkClient(client);
-  const params = { owner: key.owner, name: key.name, public: isPublic };
+  const params = { owner: key.owner, name: key.name, is_public: isPublic };
   if (adminMode()) await client.value.admin_dashboard_public(params);
   else await client.value.dashboard_public(params);
   if (current.value && sameDashboard(current.value, key))
@@ -288,9 +289,8 @@ const leaveDashboard = async (key: DashboardKey) => {
 const fetchHome = async (): Promise<DashboardKey | undefined> => {
   checkClient(client);
   const response = await client.value.user_home_dashboard();
-  // No home dashboard is `null`.
-  home.value = response.data
-    ? { owner: response.data.owner, name: response.data.name }
+  home.value = response[1]
+    ? { owner: response[1].owner, name: response[1].name }
     : undefined;
   return home.value;
 };
@@ -317,7 +317,7 @@ const appendWidgets = async (
 ): Promise<void> => {
   await settleSaves();
   const response = await getDashboard(key);
-  const document = parseDocument(response.data.config);
+  const document = parseDocument(response[1].config);
   addToDocument(document, added);
   await saveDocument(key, document);
 };

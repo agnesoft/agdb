@@ -143,8 +143,8 @@ const accountActions: Action<undefined>[] = [
           if (newPassword !== confirmNewPassword) {
             return false;
           }
-          const response = await client.value?.user_change_password(null, {
-            password: currentPassword,
+          const response = await client.value?.user_change_password({
+            old_password: currentPassword,
             new_password: newPassword,
           });
           return response !== undefined;

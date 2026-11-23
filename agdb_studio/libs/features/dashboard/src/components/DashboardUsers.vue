@@ -36,7 +36,7 @@ const fetchUsers = async () => {
   const response = adminMode()
     ? await client.value.admin_dashboard_user_list(key())
     : await client.value.dashboard_user_list(key());
-  users.value = response.data;
+  users.value = response[1];
 };
 
 onMounted(async () => {

@@ -578,6 +578,7 @@ impl<'a> Lower<'a> {
                     if !bounds.is_empty() {
                         pending.extend(bounds);
                         self.builders.insert(id);
+                        self.m.clients.insert(self.name(id));
                         self.queue.push(id);
                         self.drain();
                     }

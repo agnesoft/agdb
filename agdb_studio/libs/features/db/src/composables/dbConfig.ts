@@ -51,12 +51,12 @@ const dbActions: Action<ServerDatabase>[] = [
     label: "Audit",
     action: ({ params }: DbActionProps) =>
       dbAudit(params).then((res) => {
-        const content: Content[] = res.data.length
+        const content: Content[] = res[1].length
           ? [
               {
                 table: {
                   headers: ["Timestamp", "User", "Query"],
-                  rows: res.data.map((item) => [
+                  rows: res[1].map((item) => [
                     dateFormatter(item.timestamp),
                     item.username,
                     JSON.stringify(item.query),

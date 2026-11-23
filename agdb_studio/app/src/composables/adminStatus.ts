@@ -24,7 +24,7 @@ export const useAdminStatus = () => {
     try {
       checkClient(client);
       const response = await client.value.admin_status();
-      status.value = response.data;
+      status.value = response[1];
       lastUpdated.value = new Date();
       logger.debug("Admin status fetched");
     } catch (error) {
@@ -42,7 +42,7 @@ export const useAdminStatus = () => {
     isSettingLogLevel.value = true;
     try {
       checkClient(client);
-      await client.value.set_log_level({ new_level: level });
+      await client.value.admin_set_log_level({ level });
       await fetchStatus();
       addNotification({
         type: "success",

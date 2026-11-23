@@ -35,6 +35,10 @@ pub struct Ts {
     /// The expressions without a TS form, `function: expression`, emitted
     /// as `unsupported()`.
     pub unsupported: Vec<String>,
+    /// The exported values of a [module](Emitter::module) named as a schema
+    /// type, which it exports an alias of along: a module re-exporting both
+    /// it and the schema types names them explicitly.
+    pub values: Vec<String>,
 }
 
 /// The TS module of a lowered module. The data types are their schema
@@ -69,6 +73,9 @@ pub struct Emitter<'a> {
     /// The traits are types bounding the generics, as in a
     /// [client](Emitter::client), not dictionaries.
     bounded: bool,
+    /// The methods emitted are of a [client](Module::clients): they take
+    /// their parameters as one object.
+    by_name: bool,
     /// The [opaque](Module::opaque) classes the types name.
     classes: RefCell<BTreeSet<String>>,
     /// The enums whose variants the [tests](Emitter::tests) build through
@@ -120,6 +127,7 @@ impl<'a> Emitter<'a> {
             imports: BTreeSet::new(),
             values: BTreeSet::new(),
             bounded: false,
+            by_name: false,
             classes: RefCell::default(),
             constructors: BTreeSet::new(),
         }
@@ -177,6 +185,7 @@ impl<'a> Emitter<'a> {
             code: head + &self.out,
             notes: self.notes,
             unsupported: self.unsupported,
+            values: self.values.into_iter().collect(),
         }
     }
 
@@ -294,6 +303,7 @@ import {{ describe, expect, it }} from \"vitest\";
             code: head + &self.out,
             notes: self.notes,
             unsupported: self.unsupported,
+            values: Vec::new(),
         }
     }
 
@@ -631,11 +641,28 @@ import {{ describe, expect, it }} from \"vitest\";
     fn call(&mut self, callee: &Callee, recv: Option<&Expr>, args: &[Expr]) -> String {
         // An assertion emits its expected value as a literal, so it does not
         // import the constructors the list would.
+        let named = match callee {
+            Callee::Member { class, name, .. } if self.m.clients.contains(class) => {
+                self.m.method(class, name).filter(|f| by_name(f))
+            }
+            _ => None,
+        };
         let a = if matches!(
             callee,
             Callee::Intrinsic(Intrinsic::AssertEq | Intrinsic::AssertNe)
         ) {
             String::new()
+        } else if let Some(f) = named {
+            let fields: Vec<String> = f
+                .params
+                .iter()
+                .zip(args)
+                .map(|((n, _), a)| match self.expr(a) {
+                    v if v == *n => v,
+                    v => format!("{n}: {v}"),
+                })
+                .collect();
+            format!("{{ {} }}", fields.join(", "))
         } else {
             self.list(args)
         };
@@ -1273,13 +1300,19 @@ import {{ describe, expect, it }} from \"vitest\";
             .iter()
             .map(|(n, t)| format!("{n}: {}", self.ty(t)))
             .collect();
+        let params = if self.by_name && by_name(f) {
+            let names: Vec<&str> = f.params.iter().map(|(n, _)| n.as_str()).collect();
+            format!("{{ {} }}: {{ {} }}", names.join(", "), params.join("; "))
+        } else {
+            params.join(", ")
+        };
         let ret = self.ty(&f.ret);
         let (prefix, ret) = match (f.is_async, body) {
             (true, true) => (format!("{prefix}async "), format!("Promise<{ret}>")),
             (true, false) => (prefix.to_owned(), format!("Promise<{ret}>")),
             (false, _) => (prefix.to_owned(), ret),
         };
-        format!("{prefix}{}{generics}({}): {ret}", f.name, params.join(", "))
+        format!("{prefix}{}{generics}({params}): {ret}", f.name)
     }
 
     /// The type parameters: a generic bounded by a reflective trait takes
@@ -1456,6 +1489,8 @@ import {{ describe, expect, it }} from \"vitest\";
             self.line(1, &format!("constructor({}) {{}}\n", fields.join(", ")));
         }
 
+        self.by_name = self.m.clients.contains(&c.name);
+
         for f in &c.methods {
             if f.recv.is_some() {
                 self.func(f, 1, "");
@@ -1469,10 +1504,17 @@ import {{ describe, expect, it }} from \"vitest\";
             self.out.push('\n');
         }
 
+        self.by_name = false;
         self.out.truncate(self.out.trim_end().len());
         self.out.push('\n');
         self.line(0, "}\n");
     }
+}
+
+/// Whether the [client](Module::clients) method `f` takes its parameters
+/// as one object: a method with parameters.
+fn by_name(f: &Func) -> bool {
+    f.recv.is_some() && !f.params.is_empty()
 }
 
 /// A member name: the tuple fields `0`, `1`, ... are `_0`, `_1`, ...
@@ -1942,6 +1984,58 @@ fn checks() {
                 assert_eq!(
                     ts.code,
                     "// header\n\nimport type { S } from \"s\";\nimport { describe, expect, it } from \"vitest\";\nimport { S_Refl } from \"./derived.ts\";\nimport { Root } from \"./m.ts\";\n\ndescribe(\"suite\", () => {\n    it(\"t\", () => {\n        expect(Root.new().stat(S_Refl)).toEqual<number>(2);\n    });\n});\n"
+                );
+                assert_eq!(ts.unsupported, Vec::<String>::new());
+            }
+
+            #[test]
+            fn tests_should_pass_the_arguments_of_a_client_method_by_name() {
+                let (mut m, _) = suite(
+                    "pub struct Root;",
+                    r#"mod glue {
+    use api::Api;
+    use api::Transport;
+
+    pub struct Server {
+        pub api: Api<Transport>,
+    }
+
+    impl Server {
+        pub async fn new() -> Self {
+            panic!("glue")
+        }
+    }
+
+    pub fn file() -> api::Kind {
+        panic!("glue")
+    }
+}
+
+mod suite {
+    use crate::glue::Server;
+    use crate::glue::file;
+
+    const TESTS: &[&str] = tests![kind];
+
+    async fn kind() {
+        let server = Server::new().await;
+        let kind = file();
+        let status = server.api.kind(kind, 1).await.unwrap();
+    }
+}
+"#,
+                );
+                route_passes(&mut m);
+
+                let ts = Emitter::new(&m, &config()).tests(
+                    "routes",
+                    "./m.ts",
+                    &[("api", "./api.ts"), ("glue", "./glue.ts")],
+                );
+
+                assert_eq!(
+                    ts.code,
+                    "// header\n\nimport type { S } from \"s\";\nimport { describe, expect, it } from \"vitest\";\nimport { Server, file } from \"./glue.ts\";\n\ndescribe(\"routes\", () => {\n    it(\"kind\", async () => {\n        const server = (await Server.new());\n        const kind = file();\n        const status = (await server.api.kind({ kind, n: 1 }));\n    });\n});\n"
                 );
                 assert_eq!(ts.unsupported, Vec::<String>::new());
             }
@@ -2819,6 +2913,7 @@ fn checks() {
                 );
                 assert_eq!(ts.notes, Vec::<String>::new());
                 assert_eq!(ts.unsupported, Vec::<String>::new());
+                assert_eq!(ts.values, vec!["V".to_owned(), "Wire".to_owned()]);
             }
         }
     }

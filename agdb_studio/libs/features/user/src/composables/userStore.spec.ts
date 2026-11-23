@@ -5,8 +5,9 @@ import {
   admin_user_list,
 } from "@agdb-studio/testing/mocks/apiMock";
 
-admin_user_list.mockResolvedValue({
-  data: [
+admin_user_list.mockResolvedValue([
+  200,
+  [
     {
       username: "test_user",
       admin: false,
@@ -22,7 +23,7 @@ admin_user_list.mockResolvedValue({
       ],
     },
   ],
-});
+]);
 
 const { users, fetchUsers, addUser } = useUserStore();
 
@@ -46,8 +47,9 @@ describe("userStore.ts", () => {
   });
 
   it("sorts users alphabetically when admin flags are equal", async () => {
-    admin_user_list.mockResolvedValueOnce({
-      data: [
+    admin_user_list.mockResolvedValueOnce([
+      200,
+      [
         {
           username: "zeta",
           admin: false,
@@ -61,7 +63,7 @@ describe("userStore.ts", () => {
           sessions: [],
         },
       ],
-    });
+    ]);
 
     await fetchUsers();
 

@@ -1,5 +1,5 @@
 import type { QueryResult, QueryType } from "@agnesoft/agdb_api";
-import { checkClient, client } from "@agdb-studio/api/src/api";
+import { checkClient, client, quietClient } from "@agdb-studio/api/src/api";
 import { useRoute } from "vue-router";
 import {
   hasInjectionContext,
@@ -95,20 +95,20 @@ export const executeDbQueries = async (
   }
 
   // Quiet runs show their own errors, without the global notification.
-  const config = quiet ? { quietErrors: true } : undefined;
-  let response: { data: QueryResult[] };
+  const api = quiet ? quietClient(client.value) : client.value;
+  let response: [number, QueryResult[]];
 
   if (isAdminRoute(route)) {
     response = mutation
-      ? await client.value.admin_db_exec_mut(params, queries, config)
-      : await client.value.admin_db_exec(params, queries, config);
+      ? await api.admin_db_exec_mut({ ...params, queries })
+      : await api.admin_db_exec({ ...params, queries });
   } else {
     response = mutation
-      ? await client.value.db_exec_mut(params, queries, config)
-      : await client.value.db_exec(params, queries, config);
+      ? await api.db_exec_mut({ ...params, queries })
+      : await api.db_exec({ ...params, queries });
   }
 
-  return response.data;
+  return response[1];
 };
 
 /** Composable binding `executeDbQueries` to the current route (or provided target). */

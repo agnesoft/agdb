@@ -1,73 +1,55 @@
-import {
-    QueryBuilder,
-    AgdbApi,
-    convertToNativeValue,
-} from "@agnesoft/agdb_api";
+import { AgdbApi, FetchClient, QueryBuilder } from "@agnesoft/agdb_api";
 
 async function main() {
     // Requires the server to be running. Run it with `cargo run -p agdb_server`
     // from the root.
 
-    // Creates a client connecting to the remote server.
-    const client = await AgdbApi.client("http://localhost:3000");
+    const client = AgdbApi.new(new FetchClient(), "localhost:3000");
 
-    // Creates a user using default admin credentials.
-    await client.login({ username: "admin", password: "admin" });
-    await client.admin_user_add("user1", { password: "password123" });
-
-    // Creates a database using the newly created user.
-    await client.login({ username: "user1", password: "password123" });
-    await client.db_add({
-        owner: "user1",
-        db: "db1",
-        db_type: "memory",
+    // Log in as admin and create a new user.
+    await client.user_login({ username: "admin", password: "admin" });
+    await client.admin_user_add({
+        username: "client",
+        password: "password111",
     });
 
-    // Prepare the queries to be executed on the remote database.
-    let queries = [
-        QueryBuilder.insert().nodes().aliases("users").query(),
-        QueryBuilder.insert()
-            .nodes()
-            .values([
-                [
-                    ["username", "user1"],
-                    ["password", "password123"],
-                ],
-                [
-                    ["username", "user1"],
-                    ["password", "password456"],
-                ],
-            ])
-            .query(),
+    // Switch to the new user and create a database.
+    await client.user_login({ username: "client", password: "password111" });
+    await client.db_add({ owner: "client", db: "db", db_type: "memory" });
+
+    const users = [
+        { username: "user1", password: "password123" },
+        { username: "user2", password: "password456" },
     ];
 
-    // Execute the first batch of queries.
+    // Insert a root "users" alias and the user nodes.
+    let queries = [
+        QueryBuilder.insert().nodes().aliases(["users"]).query(),
+        QueryBuilder.insert().nodes().values(users).query(),
+    ];
     let results = (
-        await client.db_exec_mut({ owner: "user1", db: "db1" }, queries)
-    ).data;
+        await client.db_exec_mut({ owner: "client", db: "db", queries })
+    )[1];
 
-    // Prepare the second batch using the result of the previous batch.
+    // Link users to root and search for one by username.
     queries = [
         QueryBuilder.insert().edges().from("users").to(results[1]).query(),
         QueryBuilder.select()
             .search()
+            .depth_first()
             .from("users")
             .where()
             .key("username")
             .value("user1")
             .query(),
     ];
+    results = (
+        await client.db_exec_mut({ owner: "client", db: "db", queries })
+    )[1];
 
-    // Execute the second batch of queries.
-    results = (await client.db_exec_mut({ owner: "user1", db: "db1" }, queries))
-        .data;
-
-    // Print the result of the second query.
-    console.log(`User (id: ${results[1].elements[0].id})`);
+    console.log(`User: ${results[1].elements[0].id}`);
     for (const { key, value } of results[1].elements[0].values) {
-        console.log(
-            `${convertToNativeValue(key)}: ${convertToNativeValue(value)}`,
-        );
+        console.log(`  ${JSON.stringify(key)}: ${JSON.stringify(value)}`);
     }
 }
 

@@ -29,6 +29,7 @@ impl Emitter<'_> {
             code: format!("{}\n\n{}", self.config.header, self.out),
             notes: self.notes,
             unsupported: self.unsupported,
+            values: Vec::new(),
         }
     }
 

@@ -3,6 +3,7 @@ import { ref } from "vue";
 import {
   admin_user_change_password,
   admin_user_logout,
+  admin_user_logout_session,
   admin_user_logout_all,
   admin_user_delete,
   cluster_admin_user_logout,
@@ -212,7 +213,7 @@ describe("userConfig.ts", () => {
       const content = openModal.mock.calls[0]?.[0]?.content;
       const onLogout = content[0]?.table?.rowActions[0]?.onClick;
       await onLogout?.(1);
-      expect(admin_user_logout).toHaveBeenCalledWith({
+      expect(admin_user_logout_session).toHaveBeenCalledWith({
         username: "test_user",
         session: "s2",
       });
@@ -230,7 +231,7 @@ describe("userConfig.ts", () => {
       const content = openModal.mock.calls[0]?.[0]?.content;
       const onLogout = content[0]?.table?.rowActions[0]?.onClick;
       await onLogout?.(99);
-      expect(admin_user_logout).not.toHaveBeenCalled();
+      expect(admin_user_logout_session).not.toHaveBeenCalled();
     });
 
     it("handles fetchUsers failure in sessions modal row logout", async () => {
@@ -244,7 +245,7 @@ describe("userConfig.ts", () => {
       const content = openModal.mock.calls[0]?.[0]?.content;
       const onLogout = content[0]?.table?.rowActions[0]?.onClick;
       await onLogout?.(0);
-      expect(admin_user_logout).toHaveBeenCalledWith({
+      expect(admin_user_logout_session).toHaveBeenCalledWith({
         username: "test_user",
         session: "s1",
       });
@@ -286,10 +287,10 @@ describe("userConfig.ts", () => {
       await action?.action?.({
         params: { username: "test_user" },
       } as ActionProps<UserStatus>);
-      expect(admin_user_change_password).toHaveBeenCalledWith(
-        { username: "test_user" },
-        { password: "new_password" },
-      );
+      expect(admin_user_change_password).toHaveBeenCalledWith({
+        username: "test_user",
+        password: "new_password",
+      });
     });
 
     it("executes the logout action", async () => {
@@ -385,7 +386,7 @@ describe("userConfig.ts", () => {
 
       const onConfirm = openModal.mock.calls[0]?.[0]?.onConfirm;
       await onConfirm?.();
-      expect(admin_user_logout).toHaveBeenCalledWith({
+      expect(admin_user_logout_session).toHaveBeenCalledWith({
         username: "test_user",
         session: "s1",
       });

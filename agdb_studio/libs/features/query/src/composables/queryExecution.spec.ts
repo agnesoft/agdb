@@ -35,16 +35,14 @@ const {
   setQueryResults: vi.fn(),
   buildQueryFromSteps: vi.fn(() => ({ built: true })),
   checkClient: vi.fn(),
-  db_exec: vi.fn().mockResolvedValue({ data: [{ result: 1, elements: [] }] }),
-  db_exec_mut: vi
-    .fn()
-    .mockResolvedValue({ data: [{ result: 1, elements: [] }] }),
+  db_exec: vi.fn().mockResolvedValue([200, [{ result: 1, elements: [] }]]),
+  db_exec_mut: vi.fn().mockResolvedValue([200, [{ result: 1, elements: [] }]]),
   admin_db_exec: vi
     .fn()
-    .mockResolvedValue({ data: [{ result: 1, elements: [] }] }),
+    .mockResolvedValue([200, [{ result: 1, elements: [] }]]),
   admin_db_exec_mut: vi
     .fn()
-    .mockResolvedValue({ data: [{ result: 1, elements: [] }] }),
+    .mockResolvedValue([200, [{ result: 1, elements: [] }]]),
 }));
 
 vi.mock("vue-router", () => ({
@@ -128,10 +126,10 @@ describe("useQueryExecution", () => {
         await runner?.();
       },
     );
-    db_exec.mockResolvedValue({ data: mockResults });
-    db_exec_mut.mockResolvedValue({ data: mockResults });
-    admin_db_exec.mockResolvedValue({ data: mockResults });
-    admin_db_exec_mut.mockResolvedValue({ data: mockResults });
+    db_exec.mockResolvedValue([200, mockResults]);
+    db_exec_mut.mockResolvedValue([200, mockResults]);
+    admin_db_exec.mockResolvedValue([200, mockResults]);
+    admin_db_exec_mut.mockResolvedValue([200, mockResults]);
   });
 
   it("exposes run label and canRun for a runnable query", () => {
@@ -171,11 +169,11 @@ describe("useQueryExecution", () => {
 
     expect(checkClient).toHaveBeenCalled();
     expect(buildQueryFromSteps).toHaveBeenCalledWith([makeStep()]);
-    expect(db_exec).toHaveBeenCalledWith(
-      { owner: "alice", db: "main" },
-      [{ built: true }],
-      undefined,
-    );
+    expect(db_exec).toHaveBeenCalledWith({
+      owner: "alice",
+      db: "main",
+      queries: [{ built: true }],
+    });
   });
 
   it("sends every non-empty row as one transaction payload", async () => {
@@ -198,11 +196,11 @@ describe("useQueryExecution", () => {
       makeStep("search"),
     ]);
     expect(db_exec).toHaveBeenCalledOnce();
-    expect(db_exec).toHaveBeenCalledWith(
-      { owner: "alice", db: "main" },
-      [{ built: true }, { built: true }],
-      undefined,
-    );
+    expect(db_exec).toHaveBeenCalledWith({
+      owner: "alice",
+      db: "main",
+      queries: [{ built: true }, { built: true }],
+    });
   });
 
   it("cannot run when all rows are empty", () => {
@@ -241,30 +239,30 @@ describe("useQueryExecution", () => {
     const execution = setup({ tab: "exec_mut" });
     await execution.runOrStopQuery();
 
-    expect(db_exec_mut).toHaveBeenCalledWith(
-      { owner: "alice", db: "main" },
-      [{ built: true }],
-      undefined,
-    );
+    expect(db_exec_mut).toHaveBeenCalledWith({
+      owner: "alice",
+      db: "main",
+      queries: [{ built: true }],
+    });
   });
 
   it("calls admin exec endpoints on admin routes", async () => {
     routeState.name = "admin-db-view";
 
     await setup({ tab: "exec" }).runOrStopQuery();
-    expect(admin_db_exec).toHaveBeenCalledWith(
-      { owner: "alice", db: "main" },
-      [{ built: true }],
-      undefined,
-    );
+    expect(admin_db_exec).toHaveBeenCalledWith({
+      owner: "alice",
+      db: "main",
+      queries: [{ built: true }],
+    });
 
     vi.clearAllMocks();
     await setup({ tab: "exec_mut" }).runOrStopQuery();
-    expect(admin_db_exec_mut).toHaveBeenCalledWith(
-      { owner: "alice", db: "main" },
-      [{ built: true }],
-      undefined,
-    );
+    expect(admin_db_exec_mut).toHaveBeenCalledWith({
+      owner: "alice",
+      db: "main",
+      queries: [{ built: true }],
+    });
   });
 
   it("skips API execution when route params are missing", async () => {

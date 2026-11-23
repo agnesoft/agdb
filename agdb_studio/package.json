@@ -16,7 +16,6 @@
     "@kalimahapps/vue-icons": "catalog:",
     "@vueuse/components": "catalog:",
     "@vueuse/core": "catalog:",
-    "openapi-client-axios": "catalog:",
     "vue": "catalog:",
     "vue-router": "catalog:"
   },
@@ -35,7 +34,6 @@
     "@vue/eslint-config-typescript": "catalog:",
     "@vue/test-utils": "catalog:",
     "@vue/tsconfig": "catalog:",
-    "axios": "catalog:",
     "eslint": "catalog:",
     "eslint-config-prettier": "catalog:",
     "eslint-import-resolver-alias": "catalog:",

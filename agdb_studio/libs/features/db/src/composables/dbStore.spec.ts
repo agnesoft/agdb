@@ -14,8 +14,9 @@ const { username, admin, dbAdd, dbList } = vi.hoisted(() => {
         backup: 0,
       },
     }),
-    dbList: vi.fn().mockResolvedValue({
-      data: [
+    dbList: vi.fn().mockResolvedValue([
+      200,
+      [
         {
           name: "test_db",
           db_type: "memory",
@@ -31,7 +32,7 @@ const { username, admin, dbAdd, dbList } = vi.hoisted(() => {
           backup: 0,
         },
       ],
-    }),
+    ]),
   };
 });
 vi.mock("@agdb-studio/auth/src/account", () => {

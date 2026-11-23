@@ -9,9 +9,10 @@ import {
 import { ACCESS_TOKEN } from "@agdb-studio/api/src/constants";
 import { resolveServerUrl } from "@agdb-studio/api/src/serverUrl";
 import { computed, ref, watch } from "vue";
-import type { LoginProps } from "@agnesoft/agdb_api/client";
-
-type StudioLoginProps = LoginProps & {
+type StudioLoginProps = {
+  username: string;
+  password: string;
+  cluster?: boolean;
   server?: string;
 };
 
@@ -24,9 +25,8 @@ const isLoggedIn = computed(() => {
 export const refreshToken = (): void => {
   const prevLogin = isLoggedIn.value;
   const localStorageToken = localStorage.getItem(ACCESS_TOKEN);
-  const clientToken = client.value?.get_token();
-  if (localStorageToken && clientToken !== localStorageToken) {
-    client.value?.set_token(localStorageToken);
+  if (client.value && localStorageToken) {
+    client.value.token = localStorageToken;
   }
   if (accessToken.value !== localStorageToken) {
     accessToken.value = localStorageToken ?? undefined;
@@ -60,13 +60,44 @@ const login = async ({
     }
   }
 
-  return client.value
-    ?.login?.({ username, password, cluster })
-    .then((token) => {
-      resetUnauthorized();
-      setLocalStorageToken(token);
-      return token;
-    });
+  const api = client.value;
+  if (!api) {
+    return undefined;
+  }
+
+  await (cluster
+    ? api.cluster_user_login({ username, password })
+    : api.user_login({ username, password }));
+  const token = api.token;
+  if (token) {
+    resetUnauthorized();
+    setLocalStorageToken(token);
+  }
+  return token;
+};
+
+const logoutCall = (
+  cluster?: boolean,
+  session?: string,
+): Promise<number> | undefined => {
+  const api = client.value;
+  if (!api) {
+    return undefined;
+  }
+  if (session === "all") {
+    return cluster ? api.cluster_user_logout_all() : api.user_logout_all();
+  }
+  if (session === "others") {
+    return cluster
+      ? api.cluster_user_logout_others()
+      : api.user_logout_others();
+  }
+  if (session) {
+    return cluster
+      ? api.cluster_user_logout_session({ session })
+      : api.user_logout_session({ session });
+  }
+  return cluster ? api.cluster_user_logout() : api.user_logout();
 };
 
 const logoutSession = async (
@@ -84,12 +115,7 @@ const logoutSession = async (
     notifyUnauthorized();
   }
 
-  const params = session ? { session } : undefined;
-  const call = cluster
-    ? client.value?.cluster_user_logout(params)
-    : client.value?.user_logout(params);
-
-  await call?.catch((error) => {
+  await logoutCall(cluster, session)?.catch((error) => {
     console.error("Logout failed:", error);
   });
 
@@ -108,7 +134,7 @@ const logout = async (
   accessToken.value = undefined;
   if (serverLogout) {
     notifyUnauthorized();
-    await client.value?.logout(cluster).catch((error) => {
+    await logoutCall(cluster)?.catch((error) => {
       console.error("Logout failed:", error);
     });
   }

@@ -23,9 +23,9 @@ const fetchUserStatus = async () => {
   }
 
   return client.value?.user_status()?.then((status) => {
-    username.value = status.data.username;
-    admin.value = status.data.admin;
-    sessions.value = status.data.sessions ?? [];
+    username.value = status[1].username;
+    admin.value = status[1].admin;
+    sessions.value = status[1].sessions;
   });
 };
 watch(

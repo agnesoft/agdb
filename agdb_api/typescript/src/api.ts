@@ -117,11 +117,11 @@ export class AgdbApi<T extends AgdbApiClient> {
         return this._base_url;
     }
 
-    async admin_dashboard_add(owner: string, name: string, config: string): Promise<number> {
+    async admin_dashboard_add({ owner, name, config }: { owner: string; name: string; config: string }): Promise<number> {
         return (await this.client.post<DashboardConfig, void>(`${this._base_url}/admin/dashboard/${owner}/${name}/add`, { config: config }, this.token))[0];
     }
 
-    async admin_dashboard_get(owner: string, name: string): Promise<[number, Dashboard]> {
+    async admin_dashboard_get({ owner, name }: { owner: string; name: string }): Promise<[number, Dashboard]> {
         return (await this.client.get(`${this._base_url}/admin/dashboard/${owner}/${name}`, this.token));
     }
 
@@ -129,71 +129,71 @@ export class AgdbApi<T extends AgdbApiClient> {
         return (await this.client.get(`${this._base_url}/admin/dashboard/list`, this.token));
     }
 
-    async admin_dashboard_public(owner: string, name: string, is_public: boolean): Promise<number> {
+    async admin_dashboard_public({ owner, name, is_public }: { owner: string; name: string; is_public: boolean }): Promise<number> {
         return (await this.client.put<void>(`${this._base_url}/admin/dashboard/${owner}/${name}/public?public=${is_public}`, undefined, this.token));
     }
 
-    async admin_dashboard_remove(owner: string, name: string): Promise<number> {
+    async admin_dashboard_remove({ owner, name }: { owner: string; name: string }): Promise<number> {
         return (await this.client.delete(`${this._base_url}/admin/dashboard/${owner}/${name}/remove`, this.token));
     }
 
-    async admin_dashboard_rename(owner: string, name: string, new_name: string): Promise<number> {
+    async admin_dashboard_rename({ owner, name, new_name }: { owner: string; name: string; new_name: string }): Promise<number> {
         return (await this.client.post<void, void>(`${this._base_url}/admin/dashboard/${owner}/${name}/rename?new_name=${new_name}`, undefined, this.token))[0];
     }
 
-    async admin_dashboard_save(owner: string, name: string, config: string): Promise<number> {
+    async admin_dashboard_save({ owner, name, config }: { owner: string; name: string; config: string }): Promise<number> {
         return (await this.client.put(`${this._base_url}/admin/dashboard/${owner}/${name}/save`, { config: config }, this.token));
     }
 
-    async admin_dashboard_user_add(owner: string, name: string, username: string, db_role: DbUserRole): Promise<number> {
+    async admin_dashboard_user_add({ owner, name, username, db_role }: { owner: string; name: string; username: string; db_role: DbUserRole }): Promise<number> {
         return (await this.client.put<void>(`${this._base_url}/admin/dashboard/${owner}/${name}/user/${username}/add?db_role=${DbUserRole_to_string(db_role)}`, undefined, this.token));
     }
 
-    async admin_dashboard_user_list(owner: string, name: string): Promise<[number, DbUser[]]> {
+    async admin_dashboard_user_list({ owner, name }: { owner: string; name: string }): Promise<[number, DbUser[]]> {
         return (await this.client.get(`${this._base_url}/admin/dashboard/${owner}/${name}/user/list`, this.token));
     }
 
-    async admin_dashboard_user_remove(owner: string, name: string, username: string): Promise<number> {
+    async admin_dashboard_user_remove({ owner, name, username }: { owner: string; name: string; username: string }): Promise<number> {
         return (await this.client.delete(`${this._base_url}/admin/dashboard/${owner}/${name}/user/${username}/remove`, this.token));
     }
 
-    async admin_db_add(owner: string, db: string, db_type: DbKind): Promise<number> {
+    async admin_db_add({ owner, db, db_type }: { owner: string; db: string; db_type: DbKind }): Promise<number> {
         return (await this.client.post<void, void>(`${this._base_url}/admin/db/${owner}/${db}/add?db_type=${DbKind_to_string(db_type)}`, undefined, this.token))[0];
     }
 
-    async admin_db_audit(owner: string, db: string): Promise<[number, DbAudit]> {
+    async admin_db_audit({ owner, db }: { owner: string; db: string }): Promise<[number, DbAudit]> {
         return (await this.client.get(`${this._base_url}/admin/db/${owner}/${db}/audit`, this.token));
     }
 
-    async admin_db_audit_trim(owner: string, db: string, keep_days: number): Promise<number> {
+    async admin_db_audit_trim({ owner, db, keep_days }: { owner: string; db: string; keep_days: number }): Promise<number> {
         return (await this.client.post<void, void>(`${this._base_url}/admin/db/${owner}/${db}/audit/trim?keep_days=${keep_days}`, undefined, this.token))[0];
     }
 
-    async admin_db_backup(owner: string, db: string): Promise<number> {
+    async admin_db_backup({ owner, db }: { owner: string; db: string }): Promise<number> {
         return (await this.client.post<void, void>(`${this._base_url}/admin/db/${owner}/${db}/backup`, undefined, this.token))[0];
     }
 
-    async admin_db_clear(owner: string, db: string, resource: DbResource): Promise<[number, ServerDatabase]> {
+    async admin_db_clear({ owner, db, resource }: { owner: string; db: string; resource: DbResource }): Promise<[number, ServerDatabase]> {
         return (await this.client.post<void, ServerDatabase>(`${this._base_url}/admin/db/${owner}/${db}/clear?resource=${DbResource_to_string(resource)}`, undefined, this.token));
     }
 
-    async admin_db_convert(owner: string, db: string, db_type: DbKind): Promise<number> {
+    async admin_db_convert({ owner, db, db_type }: { owner: string; db: string; db_type: DbKind }): Promise<number> {
         return (await this.client.post<void, void>(`${this._base_url}/admin/db/${owner}/${db}/convert?db_type=${DbKind_to_string(db_type)}`, undefined, this.token))[0];
     }
 
-    async admin_db_copy(owner: string, db: string, new_owner: string, new_db: string): Promise<number> {
+    async admin_db_copy({ owner, db, new_owner, new_db }: { owner: string; db: string; new_owner: string; new_db: string }): Promise<number> {
         return (await this.client.post<void, void>(`${this._base_url}/admin/db/${owner}/${db}/copy?new_owner=${new_owner}&new_db=${new_db}`, undefined, this.token))[0];
     }
 
-    async admin_db_delete(owner: string, db: string): Promise<number> {
+    async admin_db_delete({ owner, db }: { owner: string; db: string }): Promise<number> {
         return (await this.client.delete(`${this._base_url}/admin/db/${owner}/${db}/delete`, this.token));
     }
 
-    async admin_db_exec(owner: string, db: string, queries: QueryType[]): Promise<[number, QueryResult[]]> {
+    async admin_db_exec({ owner, db, queries }: { owner: string; db: string; queries: QueryType[] }): Promise<[number, QueryResult[]]> {
         return (await this.client.exec(`${this._base_url}/admin/db/${owner}/${db}/exec`, queries, this.token));
     }
 
-    async admin_db_exec_mut(owner: string, db: string, queries: QueryType[]): Promise<[number, QueryResult[]]> {
+    async admin_db_exec_mut({ owner, db, queries }: { owner: string; db: string; queries: QueryType[] }): Promise<[number, QueryResult[]]> {
         return (await this.client.exec(`${this._base_url}/admin/db/${owner}/${db}/exec_mut`, queries, this.token));
     }
 
@@ -201,35 +201,35 @@ export class AgdbApi<T extends AgdbApiClient> {
         return (await this.client.get(`${this._base_url}/admin/db/list`, this.token));
     }
 
-    async admin_db_optimize(owner: string, db: string): Promise<[number, ServerDatabase]> {
+    async admin_db_optimize({ owner, db }: { owner: string; db: string }): Promise<[number, ServerDatabase]> {
         return (await this.client.post<void, ServerDatabase>(`${this._base_url}/admin/db/${owner}/${db}/optimize`, undefined, this.token));
     }
 
-    async admin_db_remove(owner: string, db: string): Promise<number> {
+    async admin_db_remove({ owner, db }: { owner: string; db: string }): Promise<number> {
         return (await this.client.delete(`${this._base_url}/admin/db/${owner}/${db}/remove`, this.token));
     }
 
-    async admin_db_rename(owner: string, db: string, new_owner: string, new_db: string): Promise<number> {
+    async admin_db_rename({ owner, db, new_owner, new_db }: { owner: string; db: string; new_owner: string; new_db: string }): Promise<number> {
         return (await this.client.post<void, void>(`${this._base_url}/admin/db/${owner}/${db}/rename?new_owner=${new_owner}&new_db=${new_db}`, undefined, this.token))[0];
     }
 
-    async admin_db_restore(owner: string, db: string): Promise<number> {
+    async admin_db_restore({ owner, db }: { owner: string; db: string }): Promise<number> {
         return (await this.client.post<void, void>(`${this._base_url}/admin/db/${owner}/${db}/restore`, undefined, this.token))[0];
     }
 
-    async admin_db_rollback(owner: string, db: string): Promise<number> {
+    async admin_db_rollback({ owner, db }: { owner: string; db: string }): Promise<number> {
         return (await this.client.post<void, void>(`${this._base_url}/admin/db/${owner}/${db}/rollback`, undefined, this.token))[0];
     }
 
-    async admin_db_user_add(owner: string, db: string, username: string, db_role: DbUserRole): Promise<number> {
+    async admin_db_user_add({ owner, db, username, db_role }: { owner: string; db: string; username: string; db_role: DbUserRole }): Promise<number> {
         return (await this.client.put<void>(`${this._base_url}/admin/db/${owner}/${db}/user/${username}/add?db_role=${DbUserRole_to_string(db_role)}`, undefined, this.token));
     }
 
-    async admin_db_user_list(owner: string, db: string): Promise<[number, DbUser[]]> {
+    async admin_db_user_list({ owner, db }: { owner: string; db: string }): Promise<[number, DbUser[]]> {
         return (await this.client.get(`${this._base_url}/admin/db/${owner}/${db}/user/list`, this.token));
     }
 
-    async admin_db_user_remove(owner: string, db: string, username: string): Promise<number> {
+    async admin_db_user_remove({ owner, db, username }: { owner: string; db: string; username: string }): Promise<number> {
         return (await this.client.delete(`${this._base_url}/admin/db/${owner}/${db}/user/${username}/remove`, this.token));
     }
 
@@ -237,7 +237,7 @@ export class AgdbApi<T extends AgdbApiClient> {
         return (await this.client.post<void, void>(`${this._base_url}/admin/shutdown`, undefined, this.token))[0];
     }
 
-    async admin_set_log_level(level: LogLevelFilter): Promise<number> {
+    async admin_set_log_level({ level }: { level: LogLevelFilter }): Promise<number> {
         return (await this.client.post<void, void>(`${this._base_url}/admin/set_log_level?new_level=${LogLevelFilter_to_string(level)}`, undefined, this.token))[0];
     }
 
@@ -245,11 +245,11 @@ export class AgdbApi<T extends AgdbApiClient> {
         return (await this.client.get(`${this._base_url}/admin/status`, this.token));
     }
 
-    async admin_user_add(username: string, password: string): Promise<number> {
+    async admin_user_add({ username, password }: { username: string; password: string }): Promise<number> {
         return (await this.client.post<UserCredentials, void>(`${this._base_url}/admin/user/${username}/add`, { password: password }, this.token))[0];
     }
 
-    async admin_user_change_password(username: string, password: string): Promise<number> {
+    async admin_user_change_password({ username, password }: { username: string; password: string }): Promise<number> {
         return (await this.client.put<UserCredentials>(`${this._base_url}/admin/user/${username}/change_password`, { password: password }, this.token));
     }
 
@@ -257,11 +257,11 @@ export class AgdbApi<T extends AgdbApiClient> {
         return (await this.client.get(`${this._base_url}/admin/user/list`, this.token));
     }
 
-    async admin_user_logout(username: string): Promise<number> {
+    async admin_user_logout({ username }: { username: string }): Promise<number> {
         return (await this.client.post<void, void>(`${this._base_url}/admin/user/${username}/logout`, undefined, this.token))[0];
     }
 
-    async admin_user_logout_session(username: string, session: string): Promise<number> {
+    async admin_user_logout_session({ username, session }: { username: string; session: string }): Promise<number> {
         return (await this.client.post<void, void>(`${this._base_url}/admin/user/${username}/logout?session=${session}`, undefined, this.token))[0];
     }
 
@@ -269,15 +269,15 @@ export class AgdbApi<T extends AgdbApiClient> {
         return (await this.client.post<void, void>(`${this._base_url}/admin/user/logout_all`, undefined, this.token))[0];
     }
 
-    async admin_user_delete(username: string): Promise<number> {
+    async admin_user_delete({ username }: { username: string }): Promise<number> {
         return (await this.client.delete(`${this._base_url}/admin/user/${username}/delete`, this.token));
     }
 
-    async cluster_admin_user_logout(username: string): Promise<number> {
+    async cluster_admin_user_logout({ username }: { username: string }): Promise<number> {
         return (await this.client.post<void, void>(`${this._base_url}/cluster/admin/user/${username}/logout`, undefined, this.token))[0];
     }
 
-    async cluster_admin_user_logout_session(username: string, session: string): Promise<number> {
+    async cluster_admin_user_logout_session({ username, session }: { username: string; session: string }): Promise<number> {
         return (await this.client.post<void, void>(`${this._base_url}/cluster/admin/user/${username}/logout?session=${session}`, undefined, this.token))[0];
     }
 
@@ -285,7 +285,7 @@ export class AgdbApi<T extends AgdbApiClient> {
         return (await this.client.post<void, void>(`${this._base_url}/cluster/admin/user/logout_all`, undefined, this.token))[0];
     }
 
-    async cluster_user_login(username: string, password: string): Promise<number> {
+    async cluster_user_login({ username, password }: { username: string; password: string }): Promise<number> {
         const tuple1 = (await this.client.post<UserLogin, string>(`${this._base_url}/cluster/user/login`, { username: username, password: password }, undefined));
         const status = tuple1[0];
         const token = tuple1[1];
@@ -309,7 +309,7 @@ export class AgdbApi<T extends AgdbApiClient> {
         return status;
     }
 
-    async cluster_user_logout_session(session: string): Promise<number> {
+    async cluster_user_logout_session({ session }: { session: string }): Promise<number> {
         return (await this.client.post<void, void>(`${this._base_url}/cluster/user/logout?session=${session}`, undefined, this.token))[0];
     }
 
@@ -317,11 +317,11 @@ export class AgdbApi<T extends AgdbApiClient> {
         return (await this.client.get(`${this._base_url}/cluster/status`, undefined));
     }
 
-    async dashboard_add(owner: string, name: string, config: string): Promise<number> {
+    async dashboard_add({ owner, name, config }: { owner: string; name: string; config: string }): Promise<number> {
         return (await this.client.post<DashboardConfig, void>(`${this._base_url}/dashboard/${owner}/${name}/add`, { config: config }, this.token))[0];
     }
 
-    async dashboard_get(owner: string, name: string): Promise<[number, Dashboard]> {
+    async dashboard_get({ owner, name }: { owner: string; name: string }): Promise<[number, Dashboard]> {
         return (await this.client.get(`${this._base_url}/dashboard/${owner}/${name}`, this.token));
     }
 
@@ -329,71 +329,71 @@ export class AgdbApi<T extends AgdbApiClient> {
         return (await this.client.get(`${this._base_url}/dashboard/list`, this.token));
     }
 
-    async dashboard_public(owner: string, name: string, is_public: boolean): Promise<number> {
+    async dashboard_public({ owner, name, is_public }: { owner: string; name: string; is_public: boolean }): Promise<number> {
         return (await this.client.put<void>(`${this._base_url}/dashboard/${owner}/${name}/public?public=${is_public}`, undefined, this.token));
     }
 
-    async dashboard_remove(owner: string, name: string): Promise<number> {
+    async dashboard_remove({ owner, name }: { owner: string; name: string }): Promise<number> {
         return (await this.client.delete(`${this._base_url}/dashboard/${owner}/${name}/remove`, this.token));
     }
 
-    async dashboard_rename(owner: string, name: string, new_name: string): Promise<number> {
+    async dashboard_rename({ owner, name, new_name }: { owner: string; name: string; new_name: string }): Promise<number> {
         return (await this.client.post<void, void>(`${this._base_url}/dashboard/${owner}/${name}/rename?new_name=${new_name}`, undefined, this.token))[0];
     }
 
-    async dashboard_save(owner: string, name: string, config: string): Promise<number> {
+    async dashboard_save({ owner, name, config }: { owner: string; name: string; config: string }): Promise<number> {
         return (await this.client.put(`${this._base_url}/dashboard/${owner}/${name}/save`, { config: config }, this.token));
     }
 
-    async dashboard_user_add(owner: string, name: string, username: string, db_role: DbUserRole): Promise<number> {
+    async dashboard_user_add({ owner, name, username, db_role }: { owner: string; name: string; username: string; db_role: DbUserRole }): Promise<number> {
         return (await this.client.put<void>(`${this._base_url}/dashboard/${owner}/${name}/user/${username}/add?db_role=${DbUserRole_to_string(db_role)}`, undefined, this.token));
     }
 
-    async dashboard_user_list(owner: string, name: string): Promise<[number, DbUser[]]> {
+    async dashboard_user_list({ owner, name }: { owner: string; name: string }): Promise<[number, DbUser[]]> {
         return (await this.client.get(`${this._base_url}/dashboard/${owner}/${name}/user/list`, this.token));
     }
 
-    async dashboard_user_remove(owner: string, name: string, username: string): Promise<number> {
+    async dashboard_user_remove({ owner, name, username }: { owner: string; name: string; username: string }): Promise<number> {
         return (await this.client.delete(`${this._base_url}/dashboard/${owner}/${name}/user/${username}/remove`, this.token));
     }
 
-    async db_add(owner: string, db: string, db_type: DbKind): Promise<number> {
+    async db_add({ owner, db, db_type }: { owner: string; db: string; db_type: DbKind }): Promise<number> {
         return (await this.client.post<void, void>(`${this._base_url}/db/${owner}/${db}/add?db_type=${DbKind_to_string(db_type)}`, undefined, this.token))[0];
     }
 
-    async db_audit(owner: string, db: string): Promise<[number, DbAudit]> {
+    async db_audit({ owner, db }: { owner: string; db: string }): Promise<[number, DbAudit]> {
         return (await this.client.get(`${this._base_url}/db/${owner}/${db}/audit`, this.token));
     }
 
-    async db_audit_trim(owner: string, db: string, keep_days: number): Promise<number> {
+    async db_audit_trim({ owner, db, keep_days }: { owner: string; db: string; keep_days: number }): Promise<number> {
         return (await this.client.post<void, void>(`${this._base_url}/db/${owner}/${db}/audit/trim?keep_days=${keep_days}`, undefined, this.token))[0];
     }
 
-    async db_backup(owner: string, db: string): Promise<number> {
+    async db_backup({ owner, db }: { owner: string; db: string }): Promise<number> {
         return (await this.client.post<void, void>(`${this._base_url}/db/${owner}/${db}/backup`, undefined, this.token))[0];
     }
 
-    async db_clear(owner: string, db: string, resource: DbResource): Promise<[number, ServerDatabase]> {
+    async db_clear({ owner, db, resource }: { owner: string; db: string; resource: DbResource }): Promise<[number, ServerDatabase]> {
         return (await this.client.post<void, ServerDatabase>(`${this._base_url}/db/${owner}/${db}/clear?resource=${DbResource_to_string(resource)}`, undefined, this.token));
     }
 
-    async db_convert(owner: string, db: string, db_type: DbKind): Promise<number> {
+    async db_convert({ owner, db, db_type }: { owner: string; db: string; db_type: DbKind }): Promise<number> {
         return (await this.client.post<void, void>(`${this._base_url}/db/${owner}/${db}/convert?db_type=${DbKind_to_string(db_type)}`, undefined, this.token))[0];
     }
 
-    async db_copy(owner: string, db: string, new_db: string): Promise<number> {
+    async db_copy({ owner, db, new_db }: { owner: string; db: string; new_db: string }): Promise<number> {
         return (await this.client.post<void, void>(`${this._base_url}/db/${owner}/${db}/copy?new_db=${new_db}`, undefined, this.token))[0];
     }
 
-    async db_delete(owner: string, db: string): Promise<number> {
+    async db_delete({ owner, db }: { owner: string; db: string }): Promise<number> {
         return (await this.client.delete(`${this._base_url}/db/${owner}/${db}/delete`, this.token));
     }
 
-    async db_exec(owner: string, db: string, queries: QueryType[]): Promise<[number, QueryResult[]]> {
+    async db_exec({ owner, db, queries }: { owner: string; db: string; queries: QueryType[] }): Promise<[number, QueryResult[]]> {
         return (await this.client.exec(`${this._base_url}/db/${owner}/${db}/exec`, queries, this.token));
     }
 
-    async db_exec_mut(owner: string, db: string, queries: QueryType[]): Promise<[number, QueryResult[]]> {
+    async db_exec_mut({ owner, db, queries }: { owner: string; db: string; queries: QueryType[] }): Promise<[number, QueryResult[]]> {
         return (await this.client.exec(`${this._base_url}/db/${owner}/${db}/exec_mut`, queries, this.token));
     }
 
@@ -401,35 +401,35 @@ export class AgdbApi<T extends AgdbApiClient> {
         return (await this.client.get(`${this._base_url}/db/list`, this.token));
     }
 
-    async db_optimize(owner: string, db: string): Promise<[number, ServerDatabase]> {
+    async db_optimize({ owner, db }: { owner: string; db: string }): Promise<[number, ServerDatabase]> {
         return (await this.client.post<void, ServerDatabase>(`${this._base_url}/db/${owner}/${db}/optimize`, undefined, this.token));
     }
 
-    async db_remove(owner: string, db: string): Promise<number> {
+    async db_remove({ owner, db }: { owner: string; db: string }): Promise<number> {
         return (await this.client.delete(`${this._base_url}/db/${owner}/${db}/remove`, this.token));
     }
 
-    async db_rename(owner: string, db: string, new_db: string): Promise<number> {
+    async db_rename({ owner, db, new_db }: { owner: string; db: string; new_db: string }): Promise<number> {
         return (await this.client.post<void, void>(`${this._base_url}/db/${owner}/${db}/rename?new_db=${new_db}`, undefined, this.token))[0];
     }
 
-    async db_restore(owner: string, db: string): Promise<number> {
+    async db_restore({ owner, db }: { owner: string; db: string }): Promise<number> {
         return (await this.client.post<void, void>(`${this._base_url}/db/${owner}/${db}/restore`, undefined, this.token))[0];
     }
 
-    async db_rollback(owner: string, db: string): Promise<number> {
+    async db_rollback({ owner, db }: { owner: string; db: string }): Promise<number> {
         return (await this.client.post<void, void>(`${this._base_url}/db/${owner}/${db}/rollback`, undefined, this.token))[0];
     }
 
-    async db_user_add(owner: string, db: string, username: string, db_role: DbUserRole): Promise<number> {
+    async db_user_add({ owner, db, username, db_role }: { owner: string; db: string; username: string; db_role: DbUserRole }): Promise<number> {
         return (await this.client.put<void>(`${this._base_url}/db/${owner}/${db}/user/${username}/add?db_role=${DbUserRole_to_string(db_role)}`, undefined, this.token));
     }
 
-    async db_user_list(owner: string, db: string): Promise<[number, DbUser[]]> {
+    async db_user_list({ owner, db }: { owner: string; db: string }): Promise<[number, DbUser[]]> {
         return (await this.client.get(`${this._base_url}/db/${owner}/${db}/user/list`, this.token));
     }
 
-    async db_user_remove(owner: string, db: string, username: string): Promise<number> {
+    async db_user_remove({ owner, db, username }: { owner: string; db: string; username: string }): Promise<number> {
         return (await this.client.delete(`${this._base_url}/db/${owner}/${db}/user/${username}/remove`, this.token));
     }
 
@@ -437,7 +437,7 @@ export class AgdbApi<T extends AgdbApiClient> {
         return (await this.client.get<void>(`${this._base_url}/status`, undefined))[0];
     }
 
-    async user_login(username: string, password: string): Promise<number> {
+    async user_login({ username, password }: { username: string; password: string }): Promise<number> {
         const tuple1 = (await this.client.post<UserLogin, string>(`${this._base_url}/user/login`, { username: username, password: password }, undefined));
         const status = tuple1[0];
         const token = tuple1[1];
@@ -461,14 +461,14 @@ export class AgdbApi<T extends AgdbApiClient> {
         return status;
     }
 
-    async user_logout_session(session: string): Promise<number> {
+    async user_logout_session({ session }: { session: string }): Promise<number> {
         return ((tuple1) => {
             const status = tuple1[0];
             return status;
         })((await this.client.post<void, void>(`${this._base_url}/user/logout?session=${session}`, undefined, this.token)));
     }
 
-    async user_change_password(old_password: string, new_password: string): Promise<number> {
+    async user_change_password({ old_password, new_password }: { old_password: string; new_password: string }): Promise<number> {
         return (await this.client.put(`${this._base_url}/user/change_password`, { password: old_password, new_password: new_password }, this.token));
     }
 
@@ -480,7 +480,7 @@ export class AgdbApi<T extends AgdbApiClient> {
         return (await this.client.delete(`${this._base_url}/user/home_dashboard`, this.token));
     }
 
-    async user_home_dashboard_set(owner: string, name: string): Promise<number> {
+    async user_home_dashboard_set({ owner, name }: { owner: string; name: string }): Promise<number> {
         return (await this.client.put<void>(`${this._base_url}/user/home_dashboard?owner=${owner}&name=${name}`, undefined, this.token));
     }
 

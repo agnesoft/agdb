@@ -62,12 +62,13 @@ describe("DashboardUsers", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     closeModal();
-    client.value.dashboard_user_list.mockResolvedValue({
-      data: [
+    client.value.dashboard_user_list.mockResolvedValue([
+      200,
+      [
         { username: "me", role: "admin" },
         { username: "ann", role: "read" },
       ],
-    });
+    ]);
   });
 
   it("lists the users by role", async () => {
@@ -114,12 +115,13 @@ describe("DashboardUsers", () => {
   });
 
   it("refreshes the dashboards after changing the own role", async () => {
-    client.value.dashboard_user_list.mockResolvedValue({
-      data: [
+    client.value.dashboard_user_list.mockResolvedValue([
+      200,
+      [
         { username: "ann", role: "admin" },
         { username: "me", role: "admin" },
       ],
-    });
+    ]);
     const wrapper = await mountUsers("admin", shared);
     await wrapper.findAll(".username")[1]!.trigger("click");
     setInputValue(KEY_MODAL, "role", "read");
@@ -134,12 +136,13 @@ describe("DashboardUsers", () => {
   });
 
   it("leaves through the store when removing oneself", async () => {
-    client.value.dashboard_user_list.mockResolvedValue({
-      data: [
+    client.value.dashboard_user_list.mockResolvedValue([
+      200,
+      [
         { username: "ann", role: "admin" },
         { username: "me", role: "admin" },
       ],
-    });
+    ]);
     const wrapper = await mountUsers("admin", shared);
     await wrapper.find(".remove-button").trigger("click");
     await handleConfirm();
@@ -190,12 +193,13 @@ describe("DashboardUsers", () => {
     const { isAdmin, isAdminView } = useAdmin();
     (isAdmin as Ref<boolean>).value = true;
     (isAdminView as Ref<boolean>).value = true;
-    client.value.admin_dashboard_user_list.mockResolvedValue({
-      data: [
+    client.value.admin_dashboard_user_list.mockResolvedValue([
+      200,
+      [
         { username: "me", role: "admin" },
         { username: "ann", role: "read" },
       ],
-    });
+    ]);
     const wrapper = await mountUsers();
     expect(usernames(wrapper)).toContain("ann");
     expect(client.value.dashboard_user_list).not.toHaveBeenCalled();

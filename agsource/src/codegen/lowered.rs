@@ -660,6 +660,9 @@ pub struct Module {
     pub conversions: Vec<Conversion>,
     /// The classes of the builder API in the order they were found.
     pub builders: Vec<String>,
+    /// The builders of a [client](crate::SourceCrate::lower_client), whose
+    /// methods the target's callers pass their parameters to by name.
+    pub clients: BTreeSet<String>,
     /// The method signatures of the traits, with the bodies of the
     /// provided methods.
     pub traits: BTreeMap<String, Vec<Func>>,
@@ -755,6 +758,11 @@ impl Module {
             }
 
             class.trait_impls.clear();
+
+            if other.clients.contains(&name) {
+                self.clients.insert(name.clone());
+            }
+
             self.classes.insert(name.clone(), class);
             self.opaque.insert(name, origin.to_owned());
         }

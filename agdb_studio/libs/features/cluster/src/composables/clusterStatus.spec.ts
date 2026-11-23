@@ -18,7 +18,7 @@ const clusterStatus = (
 
 const mockClient = vi.hoisted(() => ({
   cluster_status: vi.fn(),
-  get_token: vi.fn(),
+  token: undefined as string | undefined,
 }));
 
 const mockCheckClient = vi.hoisted(() => vi.fn());
@@ -26,8 +26,8 @@ const mockReconnectClient = vi.hoisted(() => vi.fn());
 const mockApiUrl = vi.hoisted(() => ({ value: "http://server1:8080" }));
 const mockLogout = vi.hoisted(() => vi.fn());
 const mockServerUserStatus = vi.hoisted(() => vi.fn());
-const mockServerSetToken = vi.hoisted(() => vi.fn());
-const mockAgdbClient = vi.hoisted(() => vi.fn());
+const mockAgdbNew = vi.hoisted(() => vi.fn());
+const MockFetchClient = vi.hoisted(() => class {});
 const mockResolveServerUrl = vi.hoisted(() =>
   vi.fn((current, target) => {
     const url = new URL(target.includes("://") ? target : `http://${target}`);
@@ -58,8 +58,9 @@ vi.mock("@agdb-studio/auth/src/auth", () => ({
 
 vi.mock("@agnesoft/agdb_api", () => ({
   AgdbApi: {
-    client: mockAgdbClient,
+    new: mockAgdbNew,
   },
+  FetchClient: MockFetchClient,
 }));
 
 vi.mock("@agdb-studio/utils/src/logger/logger", () => ({
@@ -88,19 +89,19 @@ describe("useClusterStatus", () => {
     mockReconnectClient.mockResolvedValue(undefined);
     mockLogout.mockResolvedValue(undefined);
     mockApiUrl.value = "http://server1:8080";
-    mockClient.get_token.mockReturnValue(null);
-    mockAgdbClient.mockClear();
-    mockAgdbClient.mockResolvedValue({
+    mockClient.token = undefined;
+    mockAgdbNew.mockClear();
+    mockAgdbNew.mockImplementation(() => ({
       user_status: mockServerUserStatus,
-      set_token: mockServerSetToken,
-    });
+      token: undefined,
+    }));
     // Reset mocks explicitly
     mockCheckClient.mockClear();
     mockClient.cluster_status.mockClear();
     mockServerUserStatus.mockClear();
     // Set up default behavior
     mockClient.cluster_status.mockImplementation(() =>
-      Promise.resolve({ data: [] }),
+      Promise.resolve([200, []]),
     );
   });
 
@@ -124,7 +125,7 @@ describe("useClusterStatus", () => {
   };
 
   it("should have unknown status while loading", () => {
-    mockClient.cluster_status.mockResolvedValue({ data: [] });
+    mockClient.cluster_status.mockResolvedValue([200, []]);
 
     const vm = mountComposable();
 
@@ -134,7 +135,7 @@ describe("useClusterStatus", () => {
   });
 
   it("should start with unknown status when no servers", async () => {
-    mockClient.cluster_status.mockResolvedValue({ data: [] });
+    mockClient.cluster_status.mockResolvedValue([200, []]);
 
     const vm = mountComposable();
     await vi.advanceTimersByTimeAsync(0);
@@ -151,10 +152,10 @@ describe("useClusterStatus", () => {
       clusterStatus("server2:8080", true, false),
     ];
 
-    mockClient.cluster_status.mockResolvedValue({ data: mockServers });
+    mockClient.cluster_status.mockResolvedValue([200, mockServers]);
     mockServerUserStatus
-      .mockResolvedValueOnce({ data: { login: true } })
-      .mockResolvedValueOnce({ data: { login: true } });
+      .mockResolvedValueOnce([200, { login: true }])
+      .mockResolvedValueOnce([200, { login: true }]);
 
     const vm = mountComposable();
     await vi.advanceTimersByTimeAsync(0);
@@ -174,7 +175,7 @@ describe("useClusterStatus", () => {
       clusterStatus("server2:8080", false, false),
     ];
 
-    mockClient.cluster_status.mockResolvedValue({ data: mockServers });
+    mockClient.cluster_status.mockResolvedValue([200, mockServers]);
 
     const vm = mountComposable();
     await vi.advanceTimersByTimeAsync(0);
@@ -191,10 +192,10 @@ describe("useClusterStatus", () => {
       clusterStatus("server2:8080", true, false),
     ];
 
-    mockClient.cluster_status.mockResolvedValue({ data: mockServers });
+    mockClient.cluster_status.mockResolvedValue([200, mockServers]);
     mockServerUserStatus
-      .mockResolvedValueOnce({ data: { login: true } })
-      .mockResolvedValueOnce({ data: { login: true } });
+      .mockResolvedValueOnce([200, { login: true }])
+      .mockResolvedValueOnce([200, { login: true }]);
 
     const vm = mountComposable();
     await vi.advanceTimersByTimeAsync(0);
@@ -211,8 +212,8 @@ describe("useClusterStatus", () => {
       clusterStatus("server2:8080", false, false),
     ];
 
-    mockClient.cluster_status.mockResolvedValue({ data: mockServers });
-    mockServerUserStatus.mockResolvedValueOnce({ data: { login: true } });
+    mockClient.cluster_status.mockResolvedValue([200, mockServers]);
+    mockServerUserStatus.mockResolvedValueOnce([200, { login: true }]);
 
     const vm = mountComposable();
     await vi.advanceTimersByTimeAsync(0);
@@ -252,7 +253,7 @@ describe("useClusterStatus", () => {
       clusterStatus("server1:8080", true, true),
     ];
 
-    mockClient.cluster_status.mockResolvedValue({ data: mockServers });
+    mockClient.cluster_status.mockResolvedValue([200, mockServers]);
 
     mountComposable();
 
@@ -277,10 +278,10 @@ describe("useClusterStatus", () => {
       clusterStatus("server1:8080", true, true),
     ];
 
-    mockClient.cluster_status.mockResolvedValue({ data: mockServers });
+    mockClient.cluster_status.mockResolvedValue([200, mockServers]);
     mockServerUserStatus
-      .mockResolvedValueOnce({ data: { login: true } })
-      .mockResolvedValueOnce({ data: { login: false } });
+      .mockResolvedValueOnce([200, { login: true }])
+      .mockResolvedValueOnce([200, { login: false }]);
 
     mountComposable();
 
@@ -308,8 +309,8 @@ describe("useClusterStatus", () => {
       clusterStatus("server1:8080", true, true),
     ];
 
-    mockClient.cluster_status.mockResolvedValue({ data: mockServers });
-    mockServerUserStatus.mockResolvedValueOnce({ data: { login: true } });
+    mockClient.cluster_status.mockResolvedValue([200, mockServers]);
+    mockServerUserStatus.mockResolvedValueOnce([200, { login: true }]);
 
     const vm = mountComposable();
 
@@ -328,7 +329,7 @@ describe("useClusterStatus", () => {
       clusterStatus("server1:8080", true, true),
     ];
 
-    mockClient.cluster_status.mockResolvedValue({ data: mockServers });
+    mockClient.cluster_status.mockResolvedValue([200, mockServers]);
 
     const vm = mountComposable();
 
@@ -348,7 +349,7 @@ describe("useClusterStatus", () => {
   });
 
   it("should handle multiple components using the composable", async () => {
-    mockClient.cluster_status.mockResolvedValue({ data: [] });
+    mockClient.cluster_status.mockResolvedValue([200, []]);
 
     // Mount first component
     const vm1 = mountComposable();
@@ -366,7 +367,7 @@ describe("useClusterStatus", () => {
   });
 
   it("should not start polling again if already polling", async () => {
-    mockClient.cluster_status.mockResolvedValue({ data: [] });
+    mockClient.cluster_status.mockResolvedValue([200, []]);
 
     const vm = mountComposable();
 
@@ -389,7 +390,7 @@ describe("useClusterStatus", () => {
   });
 
   it("should stop polling on unmount", async () => {
-    mockClient.cluster_status.mockResolvedValue({ data: [] });
+    mockClient.cluster_status.mockResolvedValue([200, []]);
 
     const vm = mountComposable();
 
@@ -429,10 +430,10 @@ describe("useClusterStatus", () => {
       },
     ];
 
-    mockClient.cluster_status.mockResolvedValue({ data: mockServers });
+    mockClient.cluster_status.mockResolvedValue([200, mockServers]);
     mockServerUserStatus
-      .mockResolvedValueOnce({ data: { login: true } })
-      .mockResolvedValueOnce({ data: { login: true } });
+      .mockResolvedValueOnce([200, { login: true }])
+      .mockResolvedValueOnce([200, { login: true }]);
 
     const vm = mountComposable();
 
@@ -465,10 +466,10 @@ describe("useClusterStatus", () => {
       },
     ];
 
-    mockClient.cluster_status.mockResolvedValue({ data: mockServers });
+    mockClient.cluster_status.mockResolvedValue([200, mockServers]);
     mockServerUserStatus
-      .mockResolvedValueOnce({ data: { login: true } })
-      .mockResolvedValueOnce({ data: { login: false } });
+      .mockResolvedValueOnce([200, { login: true }])
+      .mockResolvedValueOnce([200, { login: false }]);
 
     const vm = mountComposable();
 
@@ -498,10 +499,10 @@ describe("useClusterStatus", () => {
         resync: false,
       },
     ];
-    mockClient.cluster_status.mockResolvedValue({ data: mockServers });
+    mockClient.cluster_status.mockResolvedValue([200, mockServers]);
     mockServerUserStatus
-      .mockResolvedValueOnce({ data: { login: true } })
-      .mockResolvedValueOnce({ data: { login: false } });
+      .mockResolvedValueOnce([200, { login: true }])
+      .mockResolvedValueOnce([200, { login: false }]);
 
     const vm = mountComposable();
     await vi.advanceTimersByTimeAsync(0);
@@ -513,7 +514,7 @@ describe("useClusterStatus", () => {
   });
 
   it("should not switch to offline server", async () => {
-    mockClient.cluster_status.mockResolvedValue({ data: [] });
+    mockClient.cluster_status.mockResolvedValue([200, []]);
 
     const offlineServer: ClusterStatus = {
       address: "server2:8080",
@@ -549,10 +550,10 @@ describe("useClusterStatus", () => {
       },
     ];
 
-    mockClient.cluster_status.mockResolvedValue({ data: mockServers });
+    mockClient.cluster_status.mockResolvedValue([200, mockServers]);
     mockServerUserStatus
-      .mockResolvedValueOnce({ data: { login: true } })
-      .mockResolvedValueOnce({ data: { login: true } });
+      .mockResolvedValueOnce([200, { login: true }])
+      .mockResolvedValueOnce([200, { login: true }]);
 
     const vm = mountComposable();
     await vi.advanceTimersByTimeAsync(0);
@@ -567,7 +568,7 @@ describe("useClusterStatus", () => {
 
   it("should handle malformed addresses and malformed api url", async () => {
     mockApiUrl.value = "http://server1:8080";
-    mockClient.cluster_status.mockResolvedValue({ data: [] });
+    mockClient.cluster_status.mockResolvedValue([200, []]);
 
     const vm = mountComposable();
     await vi.advanceTimersByTimeAsync(0);
@@ -605,10 +606,10 @@ describe("useClusterStatus", () => {
       },
     ];
 
-    mockClient.cluster_status.mockResolvedValue({ data: mockServers });
+    mockClient.cluster_status.mockResolvedValue([200, mockServers]);
     mockServerUserStatus
-      .mockResolvedValueOnce({ data: { login: true } })
-      .mockResolvedValueOnce({ data: { login: true } });
+      .mockResolvedValueOnce([200, { login: true }])
+      .mockResolvedValueOnce([200, { login: true }]);
     mockReconnectClient.mockRejectedValueOnce(new Error("switch failed"));
 
     const vm = mountComposable();
@@ -626,16 +627,20 @@ describe("useClusterStatus", () => {
       clusterStatus("server1:8080", true, true),
     ];
 
-    mockClient.get_token.mockReturnValue("token-123");
-    mockClient.cluster_status.mockResolvedValue({ data: mockServers });
-    mockServerUserStatus.mockResolvedValueOnce({ data: { login: true } });
+    mockClient.token = "token-123";
+    mockClient.cluster_status.mockResolvedValue([200, mockServers]);
+    mockServerUserStatus.mockResolvedValueOnce([200, { login: true }]);
 
     mountComposable();
     await vi.advanceTimersByTimeAsync(0);
     await flushPromises();
     await nextTick();
 
-    expect(mockServerSetToken).toHaveBeenCalledWith("token-123");
+    expect(mockAgdbNew).toHaveBeenCalledWith(
+      expect.any(MockFetchClient),
+      "http://server1:8080",
+    );
+    expect(mockAgdbNew.mock.results[0]?.value.token).toBe("token-123");
   });
 
   it("should normalize host-only addresses to default port 80", async () => {
@@ -645,10 +650,10 @@ describe("useClusterStatus", () => {
       clusterStatus("agdb1:9090", true, false),
     ];
 
-    mockClient.cluster_status.mockResolvedValue({ data: mockServers });
+    mockClient.cluster_status.mockResolvedValue([200, mockServers]);
     mockServerUserStatus
-      .mockResolvedValueOnce({ data: { login: true } })
-      .mockResolvedValueOnce({ data: { login: false } });
+      .mockResolvedValueOnce([200, { login: true }])
+      .mockResolvedValueOnce([200, { login: false }]);
 
     const vm = mountComposable();
     await vi.advanceTimersByTimeAsync(0);
@@ -679,10 +684,10 @@ describe("useClusterStatus", () => {
       },
     ];
 
-    mockClient.cluster_status.mockResolvedValue({ data: mockServers });
+    mockClient.cluster_status.mockResolvedValue([200, mockServers]);
     mockServerUserStatus
-      .mockResolvedValueOnce({ data: { login: true } })
-      .mockResolvedValueOnce({ data: { login: true } });
+      .mockResolvedValueOnce([200, { login: true }])
+      .mockResolvedValueOnce([200, { login: true }]);
     mockReconnectClient.mockRejectedValueOnce("switch failed");
 
     const vm = mountComposable();
@@ -697,7 +702,7 @@ describe("useClusterStatus", () => {
 
   it("should normalize unknown protocol addresses to default port", async () => {
     mockApiUrl.value = "custom://node";
-    mockClient.cluster_status.mockResolvedValue({ data: [] });
+    mockClient.cluster_status.mockResolvedValue([200, []]);
 
     const vm = mountComposable();
     await vi.advanceTimersByTimeAsync(0);
@@ -715,7 +720,7 @@ describe("useClusterStatus", () => {
 
   it("should fallback to lowercase value when address parsing fails", async () => {
     mockApiUrl.value = "http://server1:8080";
-    mockClient.cluster_status.mockResolvedValue({ data: [] });
+    mockClient.cluster_status.mockResolvedValue([200, []]);
 
     const vm = mountComposable();
     await vi.advanceTimersByTimeAsync(0);
@@ -733,7 +738,7 @@ describe("useClusterStatus", () => {
 
   it("should normalize https addresses without port to 443", async () => {
     mockApiUrl.value = "https://secure-host";
-    mockClient.cluster_status.mockResolvedValue({ data: [] });
+    mockClient.cluster_status.mockResolvedValue([200, []]);
 
     const vm = mountComposable();
     await vi.advanceTimersByTimeAsync(0);
@@ -752,7 +757,7 @@ describe("useClusterStatus", () => {
 
   it("should skip fetch when not logged in", async () => {
     mockIsLoggedIn.value = false;
-    mockClient.cluster_status.mockResolvedValue({ data: [] });
+    mockClient.cluster_status.mockResolvedValue([200, []]);
 
     mountComposable();
     await vi.advanceTimersByTimeAsync(0);

@@ -1,4 +1,9 @@
-import type { DbKeyValue, QueryResult, QueryType } from "@agnesoft/agdb_api";
+import {
+  AgdbApiError,
+  type DbKeyValue,
+  type QueryResult,
+  type QueryType,
+} from "@agnesoft/agdb_api";
 import { reactive } from "vue";
 import type { ElementValuesState, GraphElement } from "./types";
 import {
@@ -29,18 +34,8 @@ const keyId = (kv: DbKeyValue) => JSON.stringify(kv.key);
 /** The server's status for a query that failed, e.g. on an id that does not exist. */
 const QUERY_ERROR_STATUS = 470;
 
-const isQueryError = (error: unknown): boolean => {
-  if (typeof error !== "object" || error === null || !("response" in error)) {
-    return false;
-  }
-  const { response } = error;
-  return (
-    typeof response === "object" &&
-    response !== null &&
-    "status" in response &&
-    response.status === QUERY_ERROR_STATUS
-  );
-};
+const isQueryError = (error: unknown): boolean =>
+  error instanceof AgdbApiError && error.status === QUERY_ERROR_STATUS;
 
 export const useElementValues = (exec: ExecQueries) => {
   const entries = reactive(new Map<number, Entry>());

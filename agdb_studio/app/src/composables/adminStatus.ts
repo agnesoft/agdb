@@ -1,3 +1,4 @@
+import { errorMessage } from "@agdb-studio/api/src/apiError";
 import { ref, onMounted, onUnmounted, type Ref } from "vue";
 import { client, checkClient } from "@agdb-studio/api/src/api";
 import { useAuth } from "@agdb-studio/auth/src/auth";
@@ -28,10 +29,7 @@ export const useAdminStatus = () => {
       lastUpdated.value = new Date();
       logger.debug("Admin status fetched");
     } catch (error) {
-      logger.error(
-        "Failed to fetch admin status:",
-        error instanceof Error ? error.message : String(error),
-      );
+      logger.error("Failed to fetch admin status:", errorMessage(error));
       status.value = null;
     } finally {
       isLoading.value = false;
@@ -50,10 +48,7 @@ export const useAdminStatus = () => {
         message: `Log level set to "${level}".`,
       });
     } catch (error) {
-      logger.error(
-        "Failed to set log level:",
-        error instanceof Error ? error.message : String(error),
-      );
+      logger.error("Failed to set log level:", errorMessage(error));
       await fetchStatus();
     } finally {
       isSettingLogLevel.value = false;

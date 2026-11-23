@@ -1,3 +1,4 @@
+import { errorMessage } from "@agdb-studio/api/src/apiError";
 import { ref, computed, onMounted, onUnmounted, type Ref } from "vue";
 import { AgdbApi, FetchClient } from "@agnesoft/agdb_api";
 import {
@@ -140,10 +141,7 @@ export const useClusterStatus = () => {
       lastUpdated.value = new Date();
       logger.debug("Cluster status fetched:", servers.value.length, "servers");
     } catch (error) {
-      logger.error(
-        "Failed to fetch cluster status:",
-        error instanceof Error ? error.message : String(error),
-      );
+      logger.error("Failed to fetch cluster status:", errorMessage(error));
       servers.value = [];
       loggedInByServerAddress.value = {};
     } finally {
@@ -202,10 +200,7 @@ export const useClusterStatus = () => {
       await fetchStatus(true);
       logger.info("Switched active cluster node:", server.address);
     } catch (error) {
-      logger.error(
-        "Failed to switch cluster node:",
-        error instanceof Error ? error.message : String(error),
-      );
+      logger.error("Failed to switch cluster node:", errorMessage(error));
     } finally {
       switchingServerAddress.value = null;
     }

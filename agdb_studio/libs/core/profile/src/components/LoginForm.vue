@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import { onMounted, ref } from "vue";
+import { AgdbApiError } from "@agnesoft/agdb_api";
 import { useAuth } from "@agdb-studio/auth/src/auth";
 import { getRouter } from "@agdb-studio/router/src/router";
 import { SESSION_LOGIN_SERVER_URL } from "@agdb-studio/api/src/constants";
@@ -62,7 +63,7 @@ const onLogin = async () => {
     .catch((e) => {
       logger.error("Login failed:", e);
       loading.value = false;
-      if (e.response && e.response.status === 401) {
+      if (e instanceof AgdbApiError && e.status === 401) {
         error.value = "Invalid username or password.";
       } else {
         error.value = "An unexpected error occurred. Please try again later.";

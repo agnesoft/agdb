@@ -2,7 +2,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("@agnesoft/agdb_api", async (importOriginal) => {
   return await importOriginal<typeof import("@agnesoft/agdb_api")>();
 });
-import type { DbKeyValue, QueryType } from "@agnesoft/agdb_api";
+import {
+  AgdbApiError,
+  type DbKeyValue,
+  type QueryType,
+} from "@agnesoft/agdb_api";
 import { useElementValues } from "./elementValues";
 import type { GraphLink, GraphNode } from "./types";
 
@@ -101,9 +105,7 @@ describe("useElementValues", () => {
           ? queries[0].SelectValues.ids
           : undefined;
       if (ids && "Ids" in ids) {
-        throw Object.assign(new Error("Id '3' not found"), {
-          response: { status: 470 },
-        });
+        throw new AgdbApiError(470, "Id '3' not found");
       }
       // The search returns only the elements that exist.
       return [
@@ -120,9 +122,7 @@ describe("useElementValues", () => {
   });
 
   it("marks a rejected chunk failed when the fallback fails too", async () => {
-    exec.mockRejectedValue(
-      Object.assign(new Error("Id not found"), { response: { status: 470 } }),
-    );
+    exec.mockRejectedValue(new AgdbApiError(470, "Id not found"));
     const values = useElementValues(exec);
     await values.load([1, 2]);
     expect(exec).toHaveBeenCalledTimes(2);
@@ -132,9 +132,7 @@ describe("useElementValues", () => {
   it("drops a fallback answer that arrives after the cache was cleared", async () => {
     const late = deferred<unknown>();
     exec
-      .mockRejectedValueOnce(
-        Object.assign(new Error("Id not found"), { response: { status: 470 } }),
-      )
+      .mockRejectedValueOnce(new AgdbApiError(470, "Id not found"))
       .mockReturnValueOnce(late.promise);
     const values = useElementValues(exec);
     const loading = values.load([1]);
@@ -151,21 +149,14 @@ describe("useElementValues", () => {
     const values = useElementValues(exec);
     const loading = values.load([1]);
     values.clear();
-    late.reject(Object.assign(new Error("x"), { response: { status: 470 } }));
+    late.reject(new AgdbApiError(470, "x"));
     await loading;
     expect(exec).toHaveBeenCalledTimes(1);
   });
 
   it.each([
     ["a network error", new Error("offline")],
-    [
-      "a server error",
-      Object.assign(new Error("boom"), { response: { status: 500 } }),
-    ],
-    [
-      "an error without a status",
-      Object.assign(new Error("x"), { response: null }),
-    ],
+    ["a server error", new AgdbApiError(500, "boom")],
   ])("does not split on %s", async (_, error) => {
     exec.mockRejectedValue(error);
     const values = useElementValues(exec);

@@ -1,3 +1,5 @@
+import { AgdbApiError } from "@agnesoft/agdb_api";
+import { errorMessage as apiErrorMessage } from "@agdb-studio/api/src/apiError";
 import { useDocumentVisibility, useIntervalFn } from "@vueuse/core";
 import { computed, onScopeDispose, provide, ref, watch, type Ref } from "vue";
 import {
@@ -16,19 +18,14 @@ import {
   withDisplay,
 } from "../utils/widgetRows";
 
-const field = (value: unknown, key: string): unknown =>
-  typeof value === "object" && value !== null && key in value
-    ? Reflect.get(value, key)
-    : undefined;
-
 export const errorMessage = (error: unknown): string => {
-  const response = field(error, "response");
-  const status = field(response, "status");
-  const data = field(response, "data");
-  if (status === 403) return "No access to this database";
-  if (status === 404) return "Database not found";
-  if (typeof data === "string" && data) return data;
-  return error instanceof Error ? error.message : String(error);
+  if (error instanceof AgdbApiError && error.status === 403) {
+    return "No access to this database";
+  }
+  if (error instanceof AgdbApiError && error.status === 404) {
+    return "Database not found";
+  }
+  return apiErrorMessage(error);
 };
 
 /**

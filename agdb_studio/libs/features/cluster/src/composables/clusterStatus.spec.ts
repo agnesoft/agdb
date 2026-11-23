@@ -56,7 +56,8 @@ vi.mock("@agdb-studio/auth/src/auth", () => ({
   }),
 }));
 
-vi.mock("@agnesoft/agdb_api", () => ({
+vi.mock("@agnesoft/agdb_api", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@agnesoft/agdb_api")>()),
   AgdbApi: {
     new: mockAgdbNew,
   },

@@ -106,12 +106,19 @@ impl<'a, Store: StorageData> Transaction<'a, Store> {
     }
 
     pub(crate) fn alias(&self, id: DbId) -> Result<String, DbError> {
-        match self.key_values().value(&self.view, id, ALIAS)? {
-            Some(alias) => Ok(alias.string()?.clone()),
+        match self.find_alias(id)? {
+            Some(alias) => Ok(alias),
             None => Err(DbError::db(
                 DbErrorType::NotFound,
                 format!("Id '{}' not found", id.0),
             )),
+        }
+    }
+
+    pub(crate) fn find_alias(&self, id: DbId) -> Result<Option<String>, DbError> {
+        match self.key_values().value(&self.view, id, ALIAS)? {
+            Some(alias) => Ok(Some(alias.string()?.clone())),
+            None => Ok(None),
         }
     }
 

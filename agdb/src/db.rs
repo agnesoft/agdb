@@ -439,6 +439,8 @@ impl DbAny {
 
 #[cfg(test)]
 mod tests {
+    mod test_model;
+
     use super::*;
     use crate::QueryBuilder;
     use crate::test_utilities::test_file::TestFile;
@@ -745,12 +747,15 @@ mod tests {
     }
 
     mod db_impl {
+        use super::test_model::Dump;
+        use super::test_model::Run;
         use super::*;
         use crate::DbId;
         use crate::DbValue;
         use crate::storage::DEFAULT_OVERLAY_LIMIT;
         use crate::storage::file_storage::FileStorageImpl;
         use crate::storage::file_storage_memory_mapped::FileStorageMemoryMappedImpl;
+        use crate::storage::memory_storage::MemoryStorageImpl;
         use agplatform::Fs;
         use agplatform::Platform;
         use agplatform::test_platform::TestPlatform;
@@ -761,6 +766,9 @@ mod tests {
         const NAME: &str = "/db";
         const WAL: &str = "/.db";
         const REBUILD: &str = "/db.rebuild";
+        const MODEL_STEPS: u64 = 300;
+        const FAULT_STEPS: u64 = 100;
+        const CRASH_STEPS: u64 = 60;
 
         fn file(platform: &Arc<TestPlatform>) -> FileStorageImpl<TestPlatform> {
             FileStorageImpl::with_platform(platform.clone(), NAME).unwrap()
@@ -864,6 +872,157 @@ mod tests {
             }
 
             assert!(failures > 0, "the action should read");
+        }
+
+        fn memory(platform: &Arc<TestPlatform>) -> MemoryStorageImpl<TestPlatform> {
+            MemoryStorageImpl::with_platform(platform.clone(), NAME).unwrap()
+        }
+
+        /// The storage kinds with the overlay limit of each: the default
+        /// and 0, spilling every page ahead of the commit.
+        fn model_configs() -> [StorageConfig; 2] {
+            [
+                config(SyncMode::None, DEFAULT_OVERLAY_LIMIT),
+                config(SyncMode::None, 0),
+            ]
+        }
+
+        /// Runs the random queries of `seed` on the `db`, checking it
+        /// against the model after each and calling `between` every
+        /// `every` steps.
+        fn model_run<D: StorageData>(
+            mut db: DbImpl<D>,
+            seed: u64,
+            every: u64,
+            mut between: impl FnMut(DbImpl<D>, &Run) -> DbImpl<D>,
+        ) {
+            let mut run = Run::new(seed);
+
+            for step in 1..=MODEL_STEPS {
+                run.step(&mut db);
+
+                if step % every == 0 {
+                    db = between(db, &run);
+                }
+            }
+        }
+
+        fn optimized<D: StorageData>(mut db: DbImpl<D>, run: &Run) -> DbImpl<D> {
+            db.optimize_storage().unwrap();
+            run.check(&db, "optimize_storage");
+            db
+        }
+
+        /// Fails the `fs_op` once at each of its calls, one at a time,
+        /// in each random query of `seed` on a file database and checks
+        /// after each failure that the database still holds the model.
+        fn model_faults(fs_op: FsOp, config: StorageConfig, seed: u64) {
+            let platform = Arc::new(test_platform());
+            let mut db = open(file(&platform), config);
+            let mut run = Run::new(seed);
+
+            for _ in 0..FAULT_STEPS {
+                let op = run.op();
+
+                for nth in 0.. {
+                    let mut results = vec![None; nth];
+                    results.extend([Some(ErrorKind::Other), None]);
+                    platform.fs().set_io_errors(fs_op, "", results);
+
+                    let result = op.run(&mut db);
+
+                    platform.fs().clear_faults();
+
+                    if result.is_ok() || run.model.fails(&op) {
+                        run.apply(&op, &result);
+                        run.check(&db, &format!("{op:?}"));
+                        break;
+                    }
+
+                    let error = result.unwrap_err().to_string();
+                    assert!(error.contains("simulated"), "{fs_op:?} {nth}: {error}");
+                    run.check(&db, &format!("{fs_op:?} {nth} failed: {op:?}"));
+                }
+            }
+        }
+
+        fn saved(platform: &Arc<TestPlatform>) -> Vec<(&'static str, Vec<u8>)> {
+            [NAME, WAL]
+                .into_iter()
+                .filter(|path| platform.fs().exists(path).unwrap())
+                .map(|path| (path, platform.fs().read(path).unwrap()))
+                .collect()
+        }
+
+        fn restored(files: &[(&'static str, Vec<u8>)]) -> Arc<TestPlatform> {
+            let platform = Arc::new(test_platform());
+
+            for (path, bytes) in files {
+                platform.fs().write(path, bytes).unwrap();
+            }
+
+            platform.fs().sync();
+            platform
+        }
+
+        /// Crashes a file database at each write of each random query of
+        /// `seed`, one at a time (all writes from it on fail), and checks
+        /// that reopened it holds the model before or after the query, and
+        /// after it if the query returned unless a power loss may roll back
+        /// the last commit (`SyncMode::Commit`). `power_loss` loses the
+        /// writes not synced, otherwise only the process dies.
+        fn model_crashes(config: StorageConfig, power_loss: bool, seed: u64) {
+            let mut run = Run::new(seed);
+            let mut files = Vec::new();
+            let durable = !power_loss || config.sync_mode == SyncMode::Strict;
+
+            for _ in 0..CRASH_STEPS {
+                let op = run.op();
+                let before = run.model.clone();
+                let platform = restored(&files);
+                let mut db = open(file(&platform), config);
+                let result = op.run(&mut db);
+                run.apply(&op, &result);
+                run.check(&db, &format!("{op:?}"));
+                drop(db);
+                let pre = std::mem::replace(&mut files, saved(&platform));
+
+                if before.fails(&op) {
+                    continue;
+                }
+
+                for nth in 0.. {
+                    let platform = restored(&pre);
+                    let mut db = open(file(&platform), config);
+                    let mut results = vec![None; nth];
+                    results.push(Some(ErrorKind::Other));
+                    platform.fs().set_io_errors(FsOp::Write, "", results);
+
+                    let result = op.run(&mut db);
+
+                    if !power_loss {
+                        platform.fs().sync();
+                    }
+
+                    platform.fs().crash();
+                    platform.fs().clear_faults();
+                    std::mem::forget(db);
+                    let db = open(file(&platform), config);
+                    let after = Dump::of(&db, &run.model) == run.model.dump();
+                    let kept = after || Dump::of(&db, &before) == before.dump();
+                    let context = format!("{config:?} crash at write {nth}: {op:?}");
+
+                    if result.is_ok() {
+                        assert!(
+                            after || !durable && kept,
+                            "{context} returned, did not last"
+                        );
+                        break;
+                    }
+
+                    assert!(kept, "{context}");
+                }
+            }
         }
 
         fn kill(platform: &Arc<TestPlatform>) {
@@ -1037,6 +1196,20 @@ mod tests {
                 assert_eq!(value(&db), "original".into());
                 assert!(!platform.fs().exists(REBUILD).unwrap());
             }
+
+            #[test]
+            fn optimize_storage_should_keep_the_model_state() {
+                for seed in 1..=2 {
+                    for config in model_configs() {
+                        let platform = Arc::new(test_platform());
+                        model_run(open(memory(&platform), config), seed, 25, optimized);
+                        let platform = Arc::new(test_platform());
+                        model_run(open(file(&platform), config), seed, 25, optimized);
+                        let platform = Arc::new(test_platform());
+                        model_run(open(mapped(&platform), config), seed, 25, optimized);
+                    }
+                }
+            }
         }
 
         /// The nodes a, b, c, d (1..=4) with the values 4, 3, 2, 1 of "k",
@@ -1203,6 +1376,9 @@ mod tests {
                 assert_read_failures_on(searched, |db| {
                     db.exec(QueryBuilder::select().values(LONG).ids("a").query())
                 });
+                assert_read_failures_on(searched, |db| {
+                    db.exec(QueryBuilder::select().aliases().search().from("a").query())
+                });
             }
         }
 
@@ -1266,6 +1442,59 @@ mod tests {
                     assert_eq!(found, Ok(vec![DbId(2)]), "read {nth}");
                 }
             }
+
+            #[test]
+            fn exec_mut_should_match_the_model_over_random_queries() {
+                for seed in 1..=4 {
+                    for config in model_configs() {
+                        let platform = Arc::new(test_platform());
+                        model_run(open(memory(&platform), config), seed, 1, |db, _| db);
+                        let platform = Arc::new(test_platform());
+                        model_run(open(file(&platform), config), seed, 1, |db, _| db);
+                        let platform = Arc::new(test_platform());
+                        model_run(open(mapped(&platform), config), seed, 1, |db, _| db);
+                    }
+                }
+            }
+
+            #[test]
+            fn exec_mut_read_failure_should_keep_the_model_state() {
+                for seed in 1..=2 {
+                    for config in model_configs() {
+                        model_faults(FsOp::Read, config, seed);
+                    }
+                }
+            }
+
+            #[test]
+            fn exec_mut_write_failure_should_keep_the_model_state() {
+                for seed in 1..=2 {
+                    for config in model_configs() {
+                        model_faults(FsOp::Write, config, seed);
+                    }
+
+                    model_faults(
+                        FsOp::SyncData,
+                        config(SyncMode::Commit, DEFAULT_OVERLAY_LIMIT),
+                        seed,
+                    );
+                }
+            }
+
+            #[test]
+            fn exec_mut_crash_should_recover_the_state_before_or_after_the_query() {
+                for seed in 1..=2 {
+                    for config in model_configs() {
+                        model_crashes(config, false, seed);
+                    }
+
+                    for sync_mode in [SyncMode::Commit, SyncMode::Strict] {
+                        for overlay_limit in [DEFAULT_OVERLAY_LIMIT, 0] {
+                            model_crashes(config(sync_mode, overlay_limit), true, seed);
+                        }
+                    }
+                }
+            }
         }
 
         mod with_data {
@@ -1284,6 +1513,28 @@ mod tests {
                         db.exec(QueryBuilder::select().indexes().query())
                     },
                 );
+            }
+
+            #[test]
+            fn with_data_should_reopen_the_model_state() {
+                for seed in 1..=2 {
+                    for config in model_configs() {
+                        let platform = Arc::new(test_platform());
+                        model_run(open(file(&platform), config), seed, 20, |db, run| {
+                            drop(db);
+                            let db = open(file(&platform), config);
+                            run.check(&db, "reopened");
+                            db
+                        });
+                        let platform = Arc::new(test_platform());
+                        model_run(open(mapped(&platform), config), seed, 20, |db, run| {
+                            drop(db);
+                            let db = open(mapped(&platform), config);
+                            run.check(&db, "reopened");
+                            db
+                        });
+                    }
+                }
             }
         }
     }

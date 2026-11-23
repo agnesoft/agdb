@@ -56,7 +56,7 @@ impl Query for SelectAliasesQuery {
             }
             QueryIds::Search(search_query) => {
                 for db_id in search_query.search(db)? {
-                    if let Ok(alias) = db.alias(db_id) {
+                    if let Some(alias) = db.find_alias(db_id)? {
                         result.elements.push(DbElement {
                             id: db_id,
                             from: db.from_id(db_id)?,

@@ -132,6 +132,8 @@ pub enum Callee {
     Member {
         class: String,
         name: String,
+        /// The types of the turbofish.
+        types: Vec<Ty>,
     },
     /// An associated function, `Type::name(..)`.
     Static {

@@ -3,7 +3,7 @@
 import type * as types from "../src/types.ts";
 import { describe, expect, it } from "vitest";
 import { AgdbApiError } from "../src/api.ts";
-import { QueryBuilder, into_DbKeyValue } from "../src/query_builder.ts";
+import { Comparison, DbValue, QueryBuilder, into_DbKeyValue } from "../src/query_builder.ts";
 import { TestCluster, TestServer, api_for_test, api_with_agent, next_db_name, next_user_name, test_agent_name } from "./test_server.ts";
 
 type DbElement = types.DbElement;
@@ -1238,6 +1238,34 @@ describe("routes", () => {
         });
     });
 
+    describe("admin_set_log_level_test", () => {
+        it("non_admin", async () => {
+            const server = (await TestServer.new());
+            const user = next_user_name();
+            (await server.api.user_login("admin", "admin"));
+            (await server.api.admin_user_add(user, user));
+            (await server.api.user_login(user, user));
+            const status = (await unwrap_err<AgdbApiError>(server.api.admin_set_log_level("debug"))).status;
+            expect(status).toEqual<number>(401);
+        });
+
+        it("no_token", async () => {
+            const server = (await TestServer.new());
+            const status = (await unwrap_err<AgdbApiError>(server.api.admin_set_log_level("off"))).status;
+            expect(status).toEqual<number>(401);
+            const status_2 = (await unwrap_err<AgdbApiError>(server.api.admin_set_log_level("error"))).status;
+            expect(status_2).toEqual<number>(401);
+            const status_3 = (await unwrap_err<AgdbApiError>(server.api.admin_set_log_level("warn"))).status;
+            expect(status_3).toEqual<number>(401);
+            const status_4 = (await unwrap_err<AgdbApiError>(server.api.admin_set_log_level("info"))).status;
+            expect(status_4).toEqual<number>(401);
+            const status_5 = (await unwrap_err<AgdbApiError>(server.api.admin_set_log_level("debug"))).status;
+            expect(status_5).toEqual<number>(401);
+            const status_6 = (await unwrap_err<AgdbApiError>(server.api.admin_set_log_level("trace"))).status;
+            expect(status_6).toEqual<number>(401);
+        });
+    });
+
     describe("admin_status_test", () => {
         it("status", async () => {
             const server = (await TestServer.new());
@@ -1432,6 +1460,24 @@ describe("routes", () => {
         it("no_token", async () => {
             const server = (await TestServer.new());
             const status = (await unwrap_err<AgdbApiError>(server.api.admin_user_list())).status;
+            expect(status).toEqual<number>(401);
+        });
+    });
+
+    describe("admin_user_logout_all_test", () => {
+        it("non_admin", async () => {
+            const server = (await TestServer.new());
+            const user = next_user_name();
+            (await server.api.user_login("admin", "admin"));
+            (await server.api.admin_user_add(user, user));
+            (await server.api.user_login(user, user));
+            const status = (await unwrap_err<AgdbApiError>(server.api.admin_user_logout_all())).status;
+            expect(status).toEqual<number>(401);
+        });
+
+        it("no_token", async () => {
+            const server = (await TestServer.new());
+            const status = (await unwrap_err<AgdbApiError>(server.api.admin_user_logout_all())).status;
             expect(status).toEqual<number>(401);
         });
     });
@@ -1695,6 +1741,12 @@ describe("routes", () => {
             expect((await unwrap_err<AgdbApiError>(follower.user_status())).status).toEqual<number>(401);
         });
 
+        it("admin_cluster_logout_all_no_token", async () => {
+            const cluster = (await TestCluster.new());
+            const status = (await unwrap_err<AgdbApiError>(cluster.follower().cluster_admin_user_logout_all())).status;
+            expect(status).toEqual<number>(401);
+        });
+
         it("admin_user_delete", async () => {
             const cluster = (await TestCluster.new());
             const client = cluster.follower();
@@ -1784,7 +1836,7 @@ describe("routes", () => {
             (await client.admin_user_add(owner, owner));
             (await client.cluster_user_login(owner, owner));
             (await client.db_add(owner, db, "memory"));
-            const res = (await client.db_exec_mut(owner, db, [QueryBuilder.insert().nodes().aliases("root").query(), QueryBuilder.insert().nodes().values([[into_DbKeyValue(["desc", "hello"])], [into_DbKeyValue(["desc", "world"])], [into_DbKeyValue(["desc", "!"])]]).query(), QueryBuilder.insert().edges().from("root").to(":1").query(), QueryBuilder.select().search().from("root").where().key("desc").value({ Contains: { String: "o" } }).query()]));
+            const res = (await client.db_exec_mut(owner, db, [QueryBuilder.insert().nodes().aliases("root").query(), QueryBuilder.insert().nodes().values([[into_DbKeyValue(["desc", "hello"])], [into_DbKeyValue(["desc", "world"])], [into_DbKeyValue(["desc", "!"])]]).query(), QueryBuilder.insert().edges().from("root").to(":1").query(), QueryBuilder.select().search().from("root").where().key("desc").value(Comparison.Contains(DbValue.String("o"))).query()]));
             expect(res[1][3].result).toEqual<number>(2);
             (await client.user_login(owner, owner));
             const result = (await client.db_exec(owner, db, [QueryBuilder.select().ids("root").query()]))[1][0].result;
@@ -4071,6 +4123,17 @@ describe("routes", () => {
             const server = (await TestServer.new());
             const status = (await server.api.status());
             expect(status).toEqual<number>(200);
+        });
+
+        it("base_url", async () => {
+            const server = (await TestServer.new());
+            expect(server.api.base_url()).toEqual<string>(`${server.api.address()}/api/v1`);
+        });
+
+        it("shutdown_no_token", async () => {
+            const server = (await TestServer.new());
+            const status = (await unwrap_err<AgdbApiError>(server.api.admin_shutdown())).status;
+            expect(status).toEqual<number>(401);
         });
     });
 

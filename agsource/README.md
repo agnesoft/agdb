@@ -179,8 +179,11 @@ needs in `Passes`, built-in or its own `Pass`, and can dump the module after eac
   statically where the type is known and generates the `into_X` normalizers from
   `Module::conversions` otherwise, those only the tests need last;
 - `TraitDicts` passes trait implementations as dictionaries: a field for class generics, a
-  parameter for function generics and a global per named type (recorded in `Module::dicts`).
-  Its `reflective` traits get the one dictionary the target runtime provides;
+  parameter for function generics, which a method call passes for its turbofish type, and a
+  global per named type (recorded in `Module::dicts`). The values of its `reflective` traits get
+  the one dictionary the target runtime provides; their methods without a receiver have no value,
+  so a function calling one on its generic takes the caller's dictionary. A test type's
+  dictionary that the module has no impl of is opaque from `DERIVED`, as its derives make it;
 - `EraseOwnership` removes references, `mem::take`/`mem::swap` and assignments through pattern
   bindings, for targets that share objects by reference;
 - `InferEmptyLists` types `vec![]` by what is pushed to it;
@@ -206,10 +209,15 @@ needs in `Passes`, built-in or its own `Pass`, and can dump the module after eac
 - `RenameShadowed` renames the second and later `let`s of a name in a function `name_N`, as TS
   does not declare a name twice in a scope.
 
-`Emitter::module` writes the builders and `Emitter::tests` writes their vitest suite: the tests
+`Emitter::module` writes the builders. A reflective trait's interface is its static side, the
+methods the callers' dictionaries implement. It emits no branch the types rule out: a `match` is an
+`if` chain whose last arm is the `else`, and a conversion's last source takes whatever the
+earlier ones leave. `Emitter::tests` writes their vitest suite: the tests
 named `suite::test` in a `describe` of their own, the `async` ones awaited, and the opaque names
 imported from the module the generator gives their origin. An awaited `unwrap_err` catches the
-error the promise rejects with.
+error the promise rejects with. The tests build the variants of the enums with exported constructors
+through them, so the suite calls the constructors, while the expected values of the assertions stay
+literals.
 `Emitter::client` writes a client module: the consts, the traits as the types the target
 implements (an abstract class when they provide methods), and the builders as classes whose
 generics the traits bound, with `async` methods returning a `Promise`. Their

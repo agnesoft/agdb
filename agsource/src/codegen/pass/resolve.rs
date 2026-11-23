@@ -548,6 +548,7 @@ impl<'a> Ctx<'a> {
                 callee: Callee::Member {
                     class,
                     name: "to_string".into(),
+                    types: Vec::new(),
                 },
                 recv: Some(recv.boxed()),
                 args: Vec::new(),
@@ -913,6 +914,7 @@ impl<'a> Ctx<'a> {
                     callee: Callee::Member {
                         class: c.clone(),
                         name: m,
+                        types,
                     },
                     recv: Some(r.boxed()),
                     args,

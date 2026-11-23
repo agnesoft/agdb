@@ -3399,6 +3399,7 @@ pub use std::string::String as Text;
 impl Root {
     pub fn new() -> Root { Root { e: E::A } }
 }"#,
+                    &[],
                     r#"use c::Root;
 #[derive(Default)]
 struct T { n: u8 }

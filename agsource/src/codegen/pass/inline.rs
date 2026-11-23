@@ -60,7 +60,7 @@ fn inlinable<'a>(m: &'a Module, class: &str, name: &str) -> Option<&'a Func> {
 
 fn inline(e: &mut Expr, m: &Module, inlined: &mut BTreeSet<(String, String)>) {
     let K::Call {
-        callee: Callee::Static { class, name } | Callee::Member { class, name },
+        callee: Callee::Static { class, name } | Callee::Member { class, name, .. },
         recv,
         args,
     } = &e.k

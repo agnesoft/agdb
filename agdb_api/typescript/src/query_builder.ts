@@ -24,10 +24,8 @@ type SelectValuesQuery = types.SelectValuesQuery;
 function panic(msg: string): never {
     throw new Error(msg);
 }
-export interface DbType<Self> {
-    db_id(self: Self): QueryId | undefined;
+export interface DbType {
     db_keys(): DbValue[];
-    to_db_values(self: Self): DbKeyValue[];
     db_element_id(): DbValue | undefined;
 }
 
@@ -36,7 +34,7 @@ interface SearchQueryBuilder {
     into_query_type: QueryType;
 }
 
-const DbFields_DbType: DbType<([DbValue, DbValue | undefined])[]> = {
+const DbFields_DbType = {
     db_id(self: ([DbValue, DbValue | undefined])[]): QueryId | undefined {
         let id: QueryId | undefined = undefined;
         self.forEach((field) => {
@@ -49,9 +47,6 @@ const DbFields_DbType: DbType<([DbValue, DbValue | undefined])[]> = {
         });
         return id;
     },
-    db_keys(): DbValue[] {
-        return [];
-    },
     to_db_values(self: ([DbValue, DbValue | undefined])[]): DbKeyValue[] {
         const values: DbKeyValue[] = [];
         self.forEach((field) => {
@@ -63,9 +58,6 @@ const DbFields_DbType: DbType<([DbValue, DbValue | undefined])[]> = {
             }
         });
         return values;
-    },
-    db_element_id(): DbValue | undefined {
-        return undefined;
     },
 };
 
@@ -127,10 +119,7 @@ export function into_Comparison(v: IntoComparison): Comparison {
     if ((typeof v === "object" && v !== null && ("Equal" in v || "GreaterThan" in v || "GreaterThanOrEqual" in v || "LessThan" in v || "LessThanOrEqual" in v || "NotEqual" in v || "Contains" in v || "StartsWith" in v || "EndsWith" in v || "Any" in v || "Regex" in v))) {
         return (v as Comparison);
     }
-    if (is_into_DbValue(v)) {
-        return { Equal: into_DbValue((v as IntoDbValue)) };
-    }
-    return panic(`cannot convert ${JSON.stringify(v)} into Comparison`);
+    return { Equal: into_DbValue((v as IntoDbValue)) };
 }
 
 export type IntoCountComparison = number | CountComparison;
@@ -139,10 +128,7 @@ export function into_CountComparison(v: IntoCountComparison): CountComparison {
     if (Number.isInteger(v)) {
         return { Equal: (v as number) };
     }
-    if ((typeof v === "object" && v !== null && ("Equal" in v || "GreaterThan" in v || "GreaterThanOrEqual" in v || "LessThan" in v || "LessThanOrEqual" in v || "NotEqual" in v))) {
-        return (v as CountComparison);
-    }
-    return panic(`cannot convert ${JSON.stringify(v)} into CountComparison`);
+    return (v as CountComparison);
 }
 
 export type IntoDbKeyOrders = DbKeyOrder[] | DbKeyOrder;
@@ -151,10 +137,7 @@ export function into_DbKeyOrders(v: IntoDbKeyOrders): DbKeyOrder[] {
     if (Array.isArray(v) && v.every((x) => (typeof x === "object" && x !== null && ("Asc" in x || "Desc" in x)))) {
         return (v as DbKeyOrder[]);
     }
-    if ((typeof v === "object" && v !== null && ("Asc" in v || "Desc" in v))) {
-        return [(v as DbKeyOrder)];
-    }
-    return panic(`cannot convert ${JSON.stringify(v)} into DbKeyOrders`);
+    return [(v as DbKeyOrder)];
 }
 
 export type IntoDbValue = number | boolean | string | number[] | string[] | boolean[] | DbValue | QueryId;
@@ -191,19 +174,14 @@ export function into_DbValue(v: IntoDbValue): DbValue {
     if ((typeof v === "object" && v !== null && ("Bytes" in v || "I64" in v || "U64" in v || "F64" in v || "String" in v || "VecI64" in v || "VecU64" in v || "VecF64" in v || "VecString" in v || "VecDbValue" in v))) {
         return (v as DbValue);
     }
-    if ((typeof v === "object" && v !== null && ("Id" in v || "Alias" in v))) {
-        const value = v as QueryId;
-        if (typeof value === "object" && value !== null && "Id" in value) {
-            const db_id = value.Id;
-            return { I64: db_id };
-        } else if (typeof value === "object" && value !== null && "Alias" in value) {
-            const alias = value.Alias;
-            return { String: alias };
-        } else {
-            panic("unreachable");
-        }
+    const value = v as QueryId;
+    if (typeof value === "object" && value !== null && "Id" in value) {
+        const db_id = value.Id;
+        return { I64: db_id };
+    } else {
+        const alias = value.Alias;
+        return { String: alias };
     }
-    return panic(`cannot convert ${JSON.stringify(v)} into DbValue`);
 }
 
 export type IntoDbValues = number | string | DbValue[] | IntoDbValue[];
@@ -221,10 +199,7 @@ export function into_DbValues(v: IntoDbValues): DbValue[] {
     if (Array.isArray(v) && v.every((x) => x === "None" || (typeof x === "object" && x !== null && ("Bytes" in x || "I64" in x || "U64" in x || "F64" in x || "String" in x || "VecI64" in x || "VecU64" in x || "VecF64" in x || "VecString" in x || "VecDbValue" in x)))) {
         return (v as DbValue[]);
     }
-    if (Array.isArray(v) && v.every((x) => is_into_DbValue(x))) {
-        return (v as IntoDbValue[]).map((x) => into_DbValue(x));
-    }
-    return panic(`cannot convert ${JSON.stringify(v)} into DbValues`);
+    return (v as IntoDbValue[]).map((x) => into_DbValue(x));
 }
 
 export type IntoMultiValues = DbKeyValue[][] | IntoDbKeyValue[][] | object[] | object;
@@ -239,10 +214,7 @@ export function into_MultiValues(v: IntoMultiValues): DbKeyValue[][] {
     if (Array.isArray(v) && v.every((x) => typeof x === "object" && x !== null && !Array.isArray(x))) {
         return (v as object[]).map((x) => DbFields_DbType.to_db_values(Object.entries(x).map(([k, v]): [DbValue, DbValue | undefined] => [into_DbValue(k as IntoDbValue), v === undefined || v === null ? undefined : into_DbValue(v as IntoDbValue)])));
     }
-    if (typeof v === "object" && v !== null && !Array.isArray(v)) {
-        return [DbFields_DbType.to_db_values(Object.entries((v as object)).map(([k, v]): [DbValue, DbValue | undefined] => [into_DbValue(k as IntoDbValue), v === undefined || v === null ? undefined : into_DbValue(v as IntoDbValue)]))];
-    }
-    return panic(`cannot convert ${JSON.stringify(v)} into MultiValues`);
+    return [DbFields_DbType.to_db_values(Object.entries((v as object)).map(([k, v]): [DbValue, DbValue | undefined] => [into_DbValue(k as IntoDbValue), v === undefined || v === null ? undefined : into_DbValue(v as IntoDbValue)]))];
 }
 
 export type IntoDbKeyValue = [IntoDbValue, IntoDbValue] | DbKeyValue;
@@ -255,10 +227,7 @@ export function into_DbKeyValue(v: IntoDbKeyValue): DbKeyValue {
     if (Array.isArray(v) && v.length === 2 && is_into_DbValue(v[0]) && is_into_DbValue(v[1])) {
         return { key: into_DbValue((v as [IntoDbValue, IntoDbValue])[0]), value: into_DbValue((v as [IntoDbValue, IntoDbValue])[1]) };
     }
-    if (typeof v === "object" && v !== null && "key" in v && "value" in v) {
-        return (v as DbKeyValue);
-    }
-    return panic(`cannot convert ${JSON.stringify(v)} into DbKeyValue`);
+    return (v as DbKeyValue);
 }
 
 export type IntoQueryAliases = string | string[];
@@ -267,10 +236,7 @@ export function into_QueryAliases(v: IntoQueryAliases): string[] {
     if (typeof v === "string") {
         return [v];
     }
-    if (Array.isArray(v) && v.every((x) => typeof x === "string")) {
-        return (v as string[]);
-    }
-    return panic(`cannot convert ${JSON.stringify(v)} into QueryAliases`);
+    return (v as string[]);
 }
 
 export type IntoQueryId = number | string | QueryId;
@@ -286,10 +252,7 @@ export function into_QueryId(v: IntoQueryId): QueryId {
     if (typeof v === "string") {
         return { Alias: v };
     }
-    if ((typeof v === "object" && v !== null && ("Id" in v || "Alias" in v))) {
-        return (v as QueryId);
-    }
-    return panic(`cannot convert ${JSON.stringify(v)} into QueryId`);
+    return (v as QueryId);
 }
 
 export type IntoQueryIds = IntoQueryId[] | QueryIds | QueryResult | QueryType | IntoQueryId;
@@ -304,10 +267,7 @@ export function into_QueryIds(v: IntoQueryIds): QueryIds {
     if (typeof v === "object" && v !== null && "result" in v && "elements" in v) {
         return { Ids: (v as QueryResult).elements.map((e) => ({ Id: e.id })) };
     }
-    if (is_into_QueryId(v)) {
-        return { Ids: [into_QueryId((v as IntoQueryId))] };
-    }
-    return panic(`cannot convert ${JSON.stringify(v)} into QueryIds`);
+    return { Ids: [into_QueryId((v as IntoQueryId))] };
 }
 
 export type IntoSingleValues = DbKeyValue[] | IntoDbKeyValue[] | object;
@@ -319,20 +279,15 @@ export function into_SingleValues(v: IntoSingleValues): DbKeyValue[] {
     if (Array.isArray(v) && v.every((x) => is_into_DbKeyValue(x))) {
         return (v as IntoDbKeyValue[]).map((x0) => into_DbKeyValue(x0));
     }
-    if (typeof v === "object" && v !== null && !Array.isArray(v)) {
-        return DbFields_DbType.to_db_values(Object.entries((v as object)).map(([k, v]): [DbValue, DbValue | undefined] => [into_DbValue(k as IntoDbValue), v === undefined || v === null ? undefined : into_DbValue(v as IntoDbValue)]));
-    }
-    return panic(`cannot convert ${JSON.stringify(v)} into SingleValues`);
+    return DbFields_DbType.to_db_values(Object.entries((v as object)).map(([k, v]): [DbValue, DbValue | undefined] => [into_DbValue(k as IntoDbValue), v === undefined || v === null ? undefined : into_DbValue(v as IntoDbValue)]));
 }
 
 function QueryIds_get_ids(self: QueryIds): QueryId[] {
     if (typeof self === "object" && self !== null && "Ids" in self) {
         const ids = self.Ids;
         return ids;
-    } else if (typeof self === "object" && self !== null && "Search" in self) {
-        return [];
     } else {
-        panic("unreachable");
+        return [];
     }
 }
 
@@ -392,12 +347,12 @@ class Select {
         return new SelectDirectedEdgeCount({ ids: { Ids: [] }, from: false, to: true });
     }
 
-    element(): SelectValues {
-        return new SelectValues({ keys: DbFields_DbType.db_keys(), ids: { Ids: [] } }, DbFields_DbType.db_element_id(), 1);
+    element(T_DbType: DbType): SelectValues {
+        return new SelectValues({ keys: T_DbType.db_keys(), ids: { Ids: [] } }, T_DbType.db_element_id(), 1);
     }
 
-    elements(): SelectValues {
-        return new SelectValues({ keys: DbFields_DbType.db_keys(), ids: { Ids: [] } }, DbFields_DbType.db_element_id(), 0);
+    elements(T_DbType: DbType): SelectValues {
+        return new SelectValues({ keys: T_DbType.db_keys(), ids: { Ids: [] } }, T_DbType.db_element_id(), 0);
     }
 
     ids(ids: IntoQueryIds): SelectIds {
@@ -549,13 +504,13 @@ class Where {
         return new WhereLogicOperator(this);
     }
 
-    element(): WhereLogicOperator {
-        const m1 = DbFields_DbType.db_element_id();
+    element(E_DbType: DbType): WhereLogicOperator {
+        const m1 = E_DbType.db_element_id();
         if (m1 !== undefined) {
             const element_id = m1;
             return this.key("db_element_id").value(element_id);
         } else {
-            return this.keys(DbFields_DbType.db_keys());
+            return this.keys(E_DbType.db_keys());
         }
     }
 
@@ -915,13 +870,13 @@ class WhereFilter {
         return new WhereFilterLogicOperator(this);
     }
 
-    element(): WhereFilterLogicOperator {
-        const m3 = DbFields_DbType.db_element_id();
+    element(E_DbType: DbType): WhereFilterLogicOperator {
+        const m3 = E_DbType.db_element_id();
         if (m3 !== undefined) {
             const element_id = m3;
             return this.key("db_element_id").value(element_id);
         } else {
-            return this.keys(DbFields_DbType.db_keys());
+            return this.keys(E_DbType.db_keys());
         }
     }
 

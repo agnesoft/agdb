@@ -139,7 +139,7 @@ fn trait_calls(m: &mut Module) -> BTreeSet<(String, String)> {
             calls.insert((trait_.clone(), name.clone()));
         }
         K::Call {
-            callee: Callee::Member { class, name } | Callee::Static { class, name },
+            callee: Callee::Member { class, name, .. } | Callee::Static { class, name },
             ..
         } => {
             members.insert((class.clone(), name.clone()));
@@ -170,7 +170,7 @@ fn callees(body: &[Expr]) -> Vec<(String, String)> {
 
     rewrite_body(&mut body, &mut |e| {
         if let K::Call {
-            callee: Callee::Member { class, name } | Callee::Static { class, name },
+            callee: Callee::Member { class, name, .. } | Callee::Static { class, name },
             ..
         } = &e.k
         {
@@ -227,6 +227,7 @@ impl D {
     pub fn tested(&self) {}
     pub fn unused(&self) {}
 }"#,
+                        &[],
                         r#"use c::Root;
 #[test]
 fn t() {

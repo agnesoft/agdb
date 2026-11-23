@@ -108,7 +108,7 @@ fn erasable(m: &Module, t: &str) -> Option<(Bounded, Shapes)> {
     };
     let direct = |e: &Expr| {
         matches!(&e.k, K::Call {
-            callee: Callee::Member { class, name },
+            callee: Callee::Member { class, name, .. },
             ..
         } if implements(class, name))
     };
@@ -265,7 +265,11 @@ fn wraps(e: &Expr) -> bool {
 fn called_outside(m: &Module, bounded: &Bounded, class: &str, name: &str) -> bool {
     let calls = |e: &Expr| match &e.k {
         K::Call {
-            callee: Callee::Member { class: c, name: n } | Callee::Static { class: c, name: n },
+            callee:
+                Callee::Member {
+                    class: c, name: n, ..
+                }
+                | Callee::Static { class: c, name: n },
             ..
         } => c == class && n == name,
         _ => false,

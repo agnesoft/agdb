@@ -311,16 +311,30 @@ impl KeyValues<'_> {
         Ok(value)
     }
 
-    /// The number of keys, the alias not counted.
-    pub(crate) fn key_count(&self, view: &impl View, id: DbId) -> Result<u64, DbError> {
-        Ok(self.entries(view, id)?.len() as u64)
+    /// Calls `f` with the entries in order until it returns `false`.
+    fn each(
+        &self,
+        view: &impl View,
+        id: DbId,
+        mut f: impl FnMut(Entry) -> Result<bool, DbError>,
+    ) -> Result<(), DbError> {
+        for entry in scan(view, &self.list(view, id)?)? {
+            if !f(entry?)? {
+                break;
+            }
+        }
+
+        Ok(())
     }
 
-    /// The entries without the alias.
-    fn entries(&self, view: &impl View, id: DbId) -> Result<Vec<Entry>, DbError> {
-        let mut entries = entries(view, &self.list(view, id)?)?;
-        entries.retain(|entry| entry.key != ALIAS);
-        Ok(entries)
+    /// The number of keys, the alias not counted.
+    pub(crate) fn key_count(&self, view: &impl View, id: DbId) -> Result<u64, DbError> {
+        let mut count = 0;
+        self.each(view, id, |entry| {
+            count += u64::from(entry.key != ALIAS);
+            Ok(true)
+        })?;
+        Ok(count)
     }
 
     pub(crate) fn keys(
@@ -329,10 +343,15 @@ impl KeyValues<'_> {
         keys: &Keys,
         id: DbId,
     ) -> Result<Vec<DbValue>, DbError> {
-        self.entries(view, id)?
-            .iter()
-            .map(|entry| keys.key(view, entry.key))
-            .collect()
+        let mut names = Vec::new();
+        self.each(view, id, |entry| {
+            if entry.key != ALIAS {
+                names.push(keys.key(view, entry.key)?);
+            }
+
+            Ok(true)
+        })?;
+        Ok(names)
     }
 
     pub(crate) fn values(
@@ -342,14 +361,16 @@ impl KeyValues<'_> {
         id: DbId,
     ) -> Result<Vec<DbKeyValue>, DbError> {
         let mut values = Vec::new();
+        self.each(view, id, |entry| {
+            if entry.key != ALIAS {
+                values.push(DbKeyValue {
+                    key: keys.key(view, entry.key)?,
+                    value: value::load(view, &entry.value)?,
+                });
+            }
 
-        for entry in self.entries(view, id)? {
-            values.push(DbKeyValue {
-                key: keys.key(view, entry.key)?,
-                value: value::load(view, &entry.value)?,
-            });
-        }
-
+            Ok(true)
+        })?;
         Ok(values)
     }
 
@@ -361,15 +382,15 @@ impl KeyValues<'_> {
         id: DbId,
         key: KeyId,
     ) -> Result<Option<DbValue>, DbError> {
-        for entry in scan(view, &self.list(view, id)?)? {
-            let entry = entry?;
-
+        let mut found = None;
+        self.each(view, id, |entry| {
             if entry.key == key {
-                return value::load(view, &entry.value).map(Some);
+                found = Some(value::load(view, &entry.value)?);
             }
-        }
 
-        Ok(None)
+            Ok(found.is_none())
+        })?;
+        Ok(found)
     }
 
     /// The values of the `keys`, `None` for those the element does not
@@ -381,16 +402,15 @@ impl KeyValues<'_> {
         keys: &[KeyId],
     ) -> Result<Vec<Option<DbValue>>, DbError> {
         let mut found = vec![None; keys.len()];
-
-        for entry in scan(view, &self.list(view, id)?)? {
-            let entry = entry?;
-
+        self.each(view, id, |entry| {
             for (key, value) in keys.iter().zip(&mut found) {
                 if *key == entry.key && value.is_none() {
                     *value = Some(entry.value);
                 }
             }
-        }
+
+            Ok(true)
+        })?;
 
         found
             .into_iter()

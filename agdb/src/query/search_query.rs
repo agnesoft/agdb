@@ -1,4 +1,3 @@
-use crate::DbElement;
 use crate::DbError;
 use crate::DbErrorType;
 use crate::DbId;
@@ -83,12 +82,7 @@ impl Query for SearchQuery {
         let mut result = QueryResult::default();
 
         for id in self.search(db)? {
-            result.elements.push(DbElement {
-                id,
-                from: db.from_id(id)?,
-                to: db.to_id(id)?,
-                values: vec![],
-            });
+            result.elements.push(db.element(id, vec![])?);
         }
 
         result.result = result.elements.len() as u64;

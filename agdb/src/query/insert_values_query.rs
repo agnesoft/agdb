@@ -1,5 +1,4 @@
 use crate::Amend;
-use crate::DbElement;
 use crate::DbError;
 use crate::DbErrorType;
 use crate::DbId;
@@ -162,12 +161,7 @@ fn insert_values_new<Store: StorageData>(
     }
 
     result.result += values.len() as u64;
-    result.elements.push(DbElement {
-        id: db_id,
-        from: db.from_id(db_id)?,
-        to: db.to_id(db_id)?,
-        values: vec![],
-    });
+    result.elements.push(db.element(db_id, vec![])?);
 
     Ok(())
 }

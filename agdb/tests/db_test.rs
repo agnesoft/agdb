@@ -689,15 +689,15 @@ fn convert_db_v1() {
     };
     assert_eq!(
         ids(&db, QueryBuilder::search().elements().query()),
-        vec![1, 2, 3, 4, 5, -7, -8, -10]
+        vec![1, 2, 3, 4, 5, -1, -2, -3]
     );
     assert_eq!(
         ids(&db, QueryBuilder::search().from(1).query()),
-        vec![1, -8, -7, 3, 2]
+        vec![1, -2, -1, 3, 2]
     );
     assert_eq!(
         ids(&db, QueryBuilder::search().depth_first().from(1).query()),
-        vec![1, -8, 3, -7, 2]
+        vec![1, -2, 3, -1, 2]
     );
     assert_eq!(ids(&db, QueryBuilder::search().to(1).query()), vec![1]);
     assert_eq!(
@@ -744,10 +744,10 @@ fn convert_db_v1() {
         .ids();
 
     assert_eq!(nodes, vec![DbId(6), DbId(7), DbId(8)]);
-    assert_eq!(edges, vec![DbId(-9)]);
+    assert_eq!(edges, vec![DbId(-4)]);
     assert_eq!(
         ids(&db, QueryBuilder::search().from(1).query()),
-        vec![1, -9, -8, -7, 2, 3]
+        vec![1, -4, -2, -1, 2, 3]
     );
 
     drop(db);
@@ -755,7 +755,7 @@ fn convert_db_v1() {
     assert_eq!(db.migration(), None);
     assert_eq!(
         ids(&db, QueryBuilder::search().depth_first().from(1).query()),
-        vec![1, -9, 2, -8, 3, -7]
+        vec![1, -4, 2, -2, 3, -1]
     );
 }
 

@@ -1,4 +1,3 @@
-use crate::DbElement;
 use crate::DbError;
 use crate::Query;
 use crate::QueryIds;
@@ -43,12 +42,9 @@ impl Query for SelectKeyCountQuery {
         for id in db_ids {
             let key_count = db.key_count(id)?;
             total_count += key_count;
-            result.elements.push(DbElement {
-                id,
-                from: db.from_id(id)?,
-                to: db.to_id(id)?,
-                values: vec![("key_count", key_count).into()],
-            });
+            result
+                .elements
+                .push(db.element(id, vec![("key_count", key_count).into()])?);
         }
 
         result.result = total_count;

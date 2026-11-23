@@ -1,4 +1,3 @@
-use crate::DbElement;
 use crate::DbError;
 use crate::DbErrorType;
 use crate::DbValue;
@@ -64,12 +63,7 @@ impl Query for SelectValuesQuery {
                 }
             }
 
-            result.elements.push(DbElement {
-                id,
-                from: db.from_id(id)?,
-                to: db.to_id(id)?,
-                values,
-            });
+            result.elements.push(db.element(id, values)?);
         }
 
         Ok(result)

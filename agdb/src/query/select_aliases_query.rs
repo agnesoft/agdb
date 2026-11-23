@@ -1,4 +1,3 @@
-use crate::DbElement;
 use crate::DbError;
 use crate::Query;
 use crate::QueryId;
@@ -34,21 +33,15 @@ impl Query for SelectAliasesQuery {
                     match id {
                         QueryId::Id(db_id) => {
                             let alias = db.alias(*db_id)?;
-                            result.elements.push(DbElement {
-                                id: *db_id,
-                                from: db.from_id(*db_id)?,
-                                to: db.to_id(*db_id)?,
-                                values: vec![("alias", alias).into()],
-                            })
+                            result
+                                .elements
+                                .push(db.element(*db_id, vec![("alias", alias).into()])?)
                         }
                         QueryId::Alias(alias) => {
                             let id = db.db_id(id)?;
-                            result.elements.push(DbElement {
-                                id,
-                                from: db.from_id(id)?,
-                                to: db.to_id(id)?,
-                                values: vec![("alias", alias).into()],
-                            })
+                            result
+                                .elements
+                                .push(db.element(id, vec![("alias", alias).into()])?)
                         }
                     }
                 }
@@ -56,12 +49,9 @@ impl Query for SelectAliasesQuery {
             QueryIds::Search(search_query) => {
                 for db_id in search_query.search(db)? {
                     if let Some(alias) = db.find_alias(db_id)? {
-                        result.elements.push(DbElement {
-                            id: db_id,
-                            from: db.from_id(db_id)?,
-                            to: db.to_id(db_id)?,
-                            values: vec![("alias", alias).into()],
-                        });
+                        result
+                            .elements
+                            .push(db.element(db_id, vec![("alias", alias).into()])?);
                     }
                 }
 

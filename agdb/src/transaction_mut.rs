@@ -1,4 +1,5 @@
 use crate::Amend;
+use crate::DbElement;
 use crate::DbError;
 use crate::DbErrorType;
 use crate::DbId;
@@ -88,7 +89,7 @@ impl<'a, Store: StorageData> TransactionMut<'a, Store> {
     pub(crate) fn read(&self) -> Transaction<'_, Store> {
         Transaction::new(
             ReadView::Writing(&self.root.view),
-            Cow::Borrowed(&self.root.meta),
+            Cow::Borrowed(self.root.meta),
         )
     }
 
@@ -96,13 +97,8 @@ impl<'a, Store: StorageData> TransactionMut<'a, Store> {
         self.read().db_id(query_id)
     }
 
-    #[allow(clippy::wrong_self_convention)]
-    pub(crate) fn from_id(&self, id: DbId) -> Result<DbId, DbError> {
-        self.read().from_id(id)
-    }
-
-    pub(crate) fn to_id(&self, id: DbId) -> Result<DbId, DbError> {
-        self.read().to_id(id)
+    pub(crate) fn element(&self, id: DbId, values: Vec<DbKeyValue>) -> Result<DbElement, DbError> {
+        self.read().element(id, values)
     }
 
     /// Sets the `alias` of the node `id` replacing its current alias

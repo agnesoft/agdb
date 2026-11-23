@@ -1,3 +1,4 @@
+use crate::DbElement;
 use crate::DbError;
 use crate::DbErrorType;
 use crate::DbId;
@@ -183,34 +184,26 @@ impl<'a, Store: StorageData> Transaction<'a, Store> {
         })
     }
 
-    /// The origin of an edge, the first edge from a node.
-    #[allow(clippy::wrong_self_convention)]
-    pub(crate) fn from_id(&self, id: DbId) -> Result<DbId, DbError> {
-        Ok(if id.0 < 0 {
+    /// The element `id` with the `values`: an edge from its origin to its
+    /// destination, a node from its first edge from to its first edge to.
+    pub(crate) fn element(&self, id: DbId, values: Vec<DbKeyValue>) -> Result<DbElement, DbError> {
+        let (from, to) = if id.0 < 0 {
             self.meta
                 .graph
                 .edge(&self.view, id)?
-                .map_or(DbId(0), |edge| edge.from)
+                .map_or((DbId(0), DbId(0)), |edge| (edge.from, edge.to))
         } else {
             self.meta
                 .graph
                 .node(&self.view, id)?
-                .map_or(DbId(0), |node| node.first_from)
-        })
-    }
+                .map_or((DbId(0), DbId(0)), |node| (node.first_from, node.first_to))
+        };
 
-    /// The destination of an edge, the first edge to a node.
-    pub(crate) fn to_id(&self, id: DbId) -> Result<DbId, DbError> {
-        Ok(if id.0 < 0 {
-            self.meta
-                .graph
-                .edge(&self.view, id)?
-                .map_or(DbId(0), |edge| edge.to)
-        } else {
-            self.meta
-                .graph
-                .node(&self.view, id)?
-                .map_or(DbId(0), |node| node.first_to)
+        Ok(DbElement {
+            id,
+            from,
+            to,
+            values,
         })
     }
 

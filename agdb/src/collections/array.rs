@@ -43,6 +43,7 @@ impl SegmentedArray {
         bytes
     }
 
+    #[inline]
     pub(crate) fn record_size(&self) -> u64 {
         1 << self.record_shift
     }
@@ -53,6 +54,7 @@ impl SegmentedArray {
 
     /// The position of the record `slot`, which must be below the
     /// capacity.
+    #[inline]
     pub(crate) fn pos(&self, slot: u64) -> u64 {
         let index = slot + (1 << self.base_shift());
         let top = index.ilog2();
@@ -82,6 +84,7 @@ impl SegmentedArray {
     }
 
     /// The records of a page.
+    #[inline]
     fn base_shift(&self) -> u32 {
         self.page_shift - self.record_shift
     }

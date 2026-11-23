@@ -51,6 +51,7 @@ For code in `agplatform`, `agbench`, `agsource` and `agtestcheck`:
 - Lint all: `cargo clippy --all-features`
 - Check test structure: `cargo run -p agtestcheck -- test-check <dir|file.rs>`
 - Run benchmarks: `cargo bench -p agplatform --all-features --bench <env|fs|process|request> -- [--filter <name>] [--check]`
+- Compare agdb in the working tree with a git ref (default HEAD): `cargo run -r -p agdb_benchmark -- baseline [<ref>] [-- <agbench args>]`
 
 ## TypeScript
 

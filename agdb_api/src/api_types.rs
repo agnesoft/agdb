@@ -15,7 +15,6 @@ use utoipa::ToSchema;
 #[derive(
     Debug, Default, Clone, Copy, Serialize, Deserialize, ToSchema, PartialEq, Eq, PartialOrd, Ord,
 )]
-#[cfg_attr(feature = "api", derive(agdb::TypeDef))]
 #[serde(rename_all = "snake_case")]
 pub enum LogLevelFilter {
     Off,
@@ -42,7 +41,6 @@ pub enum LogLevelFilter {
     DbSerialize,
 )]
 /// Database storage backend kind.
-#[cfg_attr(feature = "api", derive(agdb::TypeDef))]
 #[serde(rename_all = "snake_case")]
 pub enum DbKind {
     #[default]
@@ -66,7 +64,6 @@ pub enum DbKind {
     DbSerialize,
 )]
 /// Selects which database resource to operate on (e.g. clear or restore).
-#[cfg_attr(feature = "api", derive(agdb::TypeDef))]
 #[serde(rename_all = "snake_case")]
 pub enum DbResource {
     #[default]
@@ -78,7 +75,6 @@ pub enum DbResource {
 
 /// A user's access entry for a database.
 #[derive(Debug, Deserialize, Serialize, ToSchema, PartialEq, Eq, PartialOrd, Ord)]
-#[cfg_attr(feature = "api", derive(agdb::TypeDef))]
 pub struct DbUser {
     pub username: String,
     pub role: DbUserRole,
@@ -99,7 +95,6 @@ pub struct DbUser {
     DbSerialize,
 )]
 /// Role a user may hold on a database or a dashboard.
-#[cfg_attr(feature = "api", derive(agdb::TypeDef))]
 #[serde(rename_all = "snake_case")]
 pub enum DbUserRole {
     #[default]
@@ -110,7 +105,6 @@ pub enum DbUserRole {
 
 /// Request body for changing a user's password.
 #[derive(Deserialize, Serialize, ToSchema)]
-#[cfg_attr(feature = "api", derive(agdb::TypeDef))]
 pub struct ChangePassword {
     pub password: String,
     pub new_password: String,
@@ -122,7 +116,6 @@ pub struct ChangePassword {
 /// dashboard the user has no role on). A `public` dashboard can be viewed by
 /// every user.
 #[derive(Debug, Default, Clone, Deserialize, Serialize, ToSchema, PartialEq, Eq)]
-#[cfg_attr(feature = "api", derive(agdb::TypeDef))]
 pub struct Dashboard {
     pub owner: String,
     pub name: String,
@@ -134,7 +127,6 @@ pub struct Dashboard {
 
 /// Request body for adding or saving a dashboard.
 #[derive(Debug, Default, Clone, Deserialize, Serialize, ToSchema, PartialEq, Eq)]
-#[cfg_attr(feature = "api", derive(agdb::TypeDef))]
 pub struct DashboardConfig {
     pub config: String,
 }
@@ -143,7 +135,6 @@ pub struct DashboardConfig {
 /// `member` is false for a public dashboard listed only because it is public
 /// (the user has no role on it and `role` is read).
 #[derive(Debug, Default, Clone, Deserialize, Serialize, ToSchema, PartialEq, Eq)]
-#[cfg_attr(feature = "api", derive(agdb::TypeDef))]
 pub struct DashboardSummary {
     pub owner: String,
     pub name: String,
@@ -155,7 +146,6 @@ pub struct DashboardSummary {
 
 /// Identifies a dashboard, e.g. the user's home dashboard.
 #[derive(Debug, Default, Clone, Deserialize, Serialize, ToSchema, PartialEq, Eq)]
-#[cfg_attr(feature = "api", derive(agdb::TypeDef))]
 pub struct DashboardName {
     pub owner: String,
     pub name: String,
@@ -163,7 +153,6 @@ pub struct DashboardName {
 
 /// Status of a single node in the server cluster.
 #[derive(Debug, Default, Clone, Deserialize, Serialize, ToSchema, PartialEq)]
-#[cfg_attr(feature = "api", derive(agdb::TypeDef))]
 pub struct ClusterStatus {
     pub address: String,
     pub status: bool,
@@ -174,7 +163,6 @@ pub struct ClusterStatus {
 
 /// Server-wide status information returned by the admin status endpoint.
 #[derive(Debug, Default, Clone, Deserialize, Serialize, ToSchema, PartialEq)]
-#[cfg_attr(feature = "api", derive(agdb::TypeDef))]
 pub struct AdminStatus {
     pub uptime: u64,
     pub dbs: u64,
@@ -195,7 +183,6 @@ pub struct QueriesResults(pub Vec<QueryResult>);
 
 /// A single entry in the database audit log.
 #[derive(Debug, Deserialize, Serialize, ToSchema, PartialEq)]
-#[cfg_attr(feature = "api", derive(agdb::TypeDef))]
 pub struct QueryAudit {
     pub timestamp: u64,
     pub username: String,
@@ -204,12 +191,10 @@ pub struct QueryAudit {
 
 /// Complete audit log for a database.
 #[derive(Debug, Deserialize, Serialize, ToSchema, PartialEq)]
-#[cfg_attr(feature = "api", derive(agdb::TypeDef))]
 pub struct DbAudit(pub Vec<QueryAudit>);
 
 /// Metadata for a database as seen by the current user.
 #[derive(Debug, Default, Deserialize, Serialize, ToSchema, PartialEq, Eq, PartialOrd, Ord)]
-#[cfg_attr(feature = "api", derive(agdb::TypeDef))]
 pub struct ServerDatabase {
     pub db: String,
     pub owner: String,
@@ -222,14 +207,12 @@ pub struct ServerDatabase {
 
 /// Payload carrying only a password (e.g. for user creation).
 #[derive(Deserialize, Serialize, ToSchema)]
-#[cfg_attr(feature = "api", derive(agdb::TypeDef))]
 pub struct UserCredentials {
     pub password: String,
 }
 
 /// Credentials for logging in a user.
 #[derive(Deserialize, Serialize, ToSchema)]
-#[cfg_attr(feature = "api", derive(agdb::TypeDef))]
 pub struct UserLogin {
     pub username: String,
     pub password: String,
@@ -239,7 +222,6 @@ pub struct UserLogin {
 #[derive(
     Debug, Default, Deserialize, Serialize, ToSchema, PartialEq, Eq, PartialOrd, Ord, DbType,
 )]
-#[cfg_attr(feature = "api", derive(agdb::TypeDef))]
 pub struct UserSession {
     pub session: String,
     pub agent: String,
@@ -249,7 +231,6 @@ pub struct UserSession {
 
 /// Current status of a user account including active sessions.
 #[derive(Debug, Deserialize, Serialize, ToSchema, PartialEq, Eq, PartialOrd, Ord)]
-#[cfg_attr(feature = "api", derive(agdb::TypeDef))]
 pub struct UserStatus {
     pub username: String,
     pub login: bool,

@@ -6,41 +6,28 @@ use crate::query::query_values::SingleValues;
 
 /// Insert edges builder that lets you add `from`
 /// (origin) nodes.
-#[cfg_attr(feature = "api", derive(agdb::TypeDef))]
-#[cfg_attr(feature = "api", type_def(inherent))]
 pub struct InsertEdges(pub InsertEdgesQuery);
 
 /// Insert edges builder that lets you add values.
-#[cfg_attr(feature = "api", derive(agdb::TypeDef))]
-#[cfg_attr(feature = "api", type_def(inherent))]
 pub struct InsertEdgesEach(pub InsertEdgesQuery);
 
 /// Insert edges builder that lets you add `to`
 /// (destination) nodes.
-#[cfg_attr(feature = "api", derive(agdb::TypeDef))]
-#[cfg_attr(feature = "api", type_def(inherent))]
 pub struct InsertEdgesFrom(pub InsertEdgesQuery);
 
 /// Insert edges builder that lets you add values
 /// or set `each`.
-#[cfg_attr(feature = "api", derive(agdb::TypeDef))]
-#[cfg_attr(feature = "api", type_def(inherent))]
 pub struct InsertEdgesFromTo(pub InsertEdgesQuery);
 
 /// Insert edges builder with ids allowing insert
 /// or update semantics that lets you add `from`
 /// (origin) nodes.
-#[cfg_attr(feature = "api", derive(agdb::TypeDef))]
-#[cfg_attr(feature = "api", type_def(inherent))]
 pub struct InsertEdgesIds(pub InsertEdgesQuery);
 
 /// Final builder that lets you create
 /// an actual query object.
-#[cfg_attr(feature = "api", derive(agdb::TypeDef))]
-#[cfg_attr(feature = "api", type_def(inherent))]
 pub struct InsertEdgesValues(pub InsertEdgesQuery);
 
-#[cfg_attr(feature = "api", agdb::impl_def())]
 impl InsertEdges {
     /// An id or list of ids or search query from where the edges should come from (origin).
     ///
@@ -80,7 +67,6 @@ impl InsertEdges {
     }
 }
 
-#[cfg_attr(feature = "api", agdb::impl_def())]
 impl InsertEdgesIds {
     /// An id or list of ids or search query from where the edges should come from (origin).
     ///
@@ -100,7 +86,6 @@ impl InsertEdgesIds {
     }
 }
 
-#[cfg_attr(feature = "api", agdb::impl_def())]
 impl InsertEdgesEach {
     /// Returns the built `InsertEdgesQuery` object.
     pub fn query(self) -> InsertEdgesQuery {
@@ -123,7 +108,6 @@ impl InsertEdgesEach {
     }
 }
 
-#[cfg_attr(feature = "api", agdb::impl_def())]
 impl InsertEdgesFrom {
     /// An id or list of ids or search query to where the edges should go (destination).
     ///
@@ -144,7 +128,6 @@ impl InsertEdgesFrom {
     }
 }
 
-#[cfg_attr(feature = "api", agdb::impl_def())]
 impl InsertEdgesFromTo {
     /// A modifier to create edges from each origin (from) to each destination (to)
     /// even if the number of origins and destinations is the same. This modifier is assumed
@@ -186,7 +169,6 @@ impl InsertEdgesFromTo {
     }
 }
 
-#[cfg_attr(feature = "api", agdb::impl_def())]
 impl InsertEdgesValues {
     /// Returns the built `InsertEdgesQuery` object.
     pub fn query(self) -> InsertEdgesQuery {

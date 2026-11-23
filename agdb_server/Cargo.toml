@@ -32,7 +32,7 @@ windows-sys = { workspace = true, features = [
 
 [dependencies]
 agdb = { workspace = true, features = ["serde", "openapi", "regex"] }
-agdb_api = { workspace = true, features = ["api"] }
+agdb_api.workspace = true
 async-stream.workspace = true
 axum = { workspace = true, features = ["http2"] }
 axum-extra = { workspace = true, features = ["typed-header", "routing"] }

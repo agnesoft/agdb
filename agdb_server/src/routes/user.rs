@@ -30,13 +30,13 @@ use uuid::Uuid;
 pub(crate) const LOGOUT_ALL_SESSIONS: &str = "all";
 pub(crate) const LOGOUT_OTHER_SESSIONS: &str = "others";
 
-#[derive(Deserialize, IntoParams, ToSchema, agdb::TypeDef)]
+#[derive(Deserialize, IntoParams, ToSchema)]
 #[into_params(parameter_in = Query)]
 pub struct LogoutQuery {
     pub session: Option<String>,
 }
 
-#[derive(Deserialize, IntoParams, ToSchema, agdb::TypeDef)]
+#[derive(Deserialize, IntoParams, ToSchema)]
 #[into_params(parameter_in = Query)]
 pub struct HomeDashboardParam {
     pub owner: String,

@@ -12,7 +12,6 @@ use crate::db::db_element::DbElement;
 #[derive(Debug, Default, Eq, PartialOrd, Ord, PartialEq, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
-#[cfg_attr(feature = "api", derive(agdb::TypeDef))]
 #[cfg_attr(feature = "derive", derive(agdb::DbSerialize))]
 pub struct QueryResult {
     /// Query result

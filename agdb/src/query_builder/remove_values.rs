@@ -5,17 +5,12 @@ use crate::query_builder::search::Search;
 
 /// Remove values builder that lets you select the ids from
 /// which to remove the values.
-#[cfg_attr(feature = "api", derive(agdb::TypeDef))]
-#[cfg_attr(feature = "api", type_def(inherent))]
 pub struct RemoveValues(pub RemoveValuesQuery);
 
 /// Final builder that lets you create
 /// an actual query object.
-#[cfg_attr(feature = "api", derive(agdb::TypeDef))]
-#[cfg_attr(feature = "api", type_def(inherent))]
 pub struct RemoveValuesIds(pub RemoveValuesQuery);
 
-#[cfg_attr(feature = "api", agdb::impl_def())]
 impl RemoveValues {
     /// Id, list of ids or search of the database elements to delete
     /// the values from. All of the ids must exist in the database.
@@ -33,7 +28,6 @@ impl RemoveValues {
     }
 }
 
-#[cfg_attr(feature = "api", agdb::impl_def())]
 impl RemoveValuesIds {
     /// Returns the built `RemoveValuesQuery` object.
     pub fn query(self) -> RemoveValuesQuery {

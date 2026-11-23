@@ -14,8 +14,6 @@ use crate::query_builder::search::SearchQueryBuilder;
 pub const DB_ELEMENT_ID_KEY: &str = "db_element_id";
 
 /// Condition builder
-#[cfg_attr(feature = "api", derive(agdb::TypeDef))]
-#[cfg_attr(feature = "api", type_def(inherent))]
 pub struct Where<T: SearchQueryBuilder> {
     logic: QueryConditionLogic,
     modifier: QueryConditionModifier,
@@ -24,19 +22,14 @@ pub struct Where<T: SearchQueryBuilder> {
 }
 
 /// Condition builder for `key` condition.
-#[cfg_attr(feature = "api", derive(agdb::TypeDef))]
-#[cfg_attr(feature = "api", type_def(inherent))]
 pub struct WhereKey<T: SearchQueryBuilder> {
     key: DbValue,
     where_: Where<T>,
 }
 
 /// Condition builder setting the logic operator.
-#[cfg_attr(feature = "api", derive(agdb::TypeDef))]
-#[cfg_attr(feature = "api", type_def(inherent))]
 pub struct WhereLogicOperator<T: SearchQueryBuilder>(pub Where<T>);
 
-#[cfg_attr(feature = "api", agdb::impl_def())]
 impl<T: SearchQueryBuilder> Where<T> {
     /// Sets the condition modifier for the following condition so
     /// that the search will continue beyond current element only
@@ -525,7 +518,6 @@ impl<T: SearchQueryBuilder> Where<T> {
     }
 }
 
-#[cfg_attr(feature = "api", agdb::impl_def())]
 impl<T: SearchQueryBuilder> WhereKey<T> {
     /// Sets the value of the `key` condition to `comparison`. Taking comparison method. If
     /// a value is provided without a method it will default to `Comparison::Equal`).
@@ -593,7 +585,6 @@ impl<T: SearchQueryBuilder> WhereKey<T> {
     }
 }
 
-#[cfg_attr(feature = "api", agdb::impl_def())]
 impl<T: SearchQueryBuilder> WhereLogicOperator<T> {
     /// Sets the logic operator for the following condition
     /// to logical AND (&&). The condition passes only if

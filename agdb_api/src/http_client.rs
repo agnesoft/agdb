@@ -4,8 +4,6 @@ use crate::client::AgdbApiClient;
 use agdb::AgdbSerialize;
 use agdb::QueryResult;
 use agdb::QueryType;
-#[cfg(feature = "api")]
-use agdb::type_def::{Type, TypeDefinition};
 use reqwest::header::CONTENT_TYPE;
 use reqwest::header::USER_AGENT;
 use serde::Serialize;
@@ -21,7 +19,6 @@ pub const BINARY_CONTENT_TYPE: &str = "application/vnd.agdb.api.v1";
 
 /// Abstraction over HTTP verbs used by [`AgdbApi`](crate::AgdbApi).
 /// Implement this trait to swap the transport layer.
-#[cfg_attr(feature = "api", agdb::trait_def())]
 #[allow(async_fn_in_trait)]
 pub trait HttpClient {
     async fn delete(&self, uri: &str, token: &Option<String>) -> AgdbApiResult<u16>;
@@ -55,42 +52,13 @@ pub trait HttpClient {
     }
 }
 
-pub struct ReqwestClientTypeDef(pub reqwest::Client);
-
-impl std::ops::Deref for ReqwestClientTypeDef {
-    type Target = reqwest::Client;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl std::ops::DerefMut for ReqwestClientTypeDef {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
-    }
-}
-
-#[cfg(feature = "api")]
-impl TypeDefinition for ReqwestClientTypeDef {
-    fn type_def() -> Type {
-        Type::Struct(agdb::type_def::Struct {
-            name: "reqwest::Client".to_owned(),
-            generics: vec![],
-            fields: vec![],
-            impl_defs: Vec::new,
-        })
-    }
-}
-
 /// Default [`HttpClient`] implementation backed by [`reqwest`].
 ///
 /// Query batches are sent as [`BINARY_CONTENT_TYPE`]. If the server answers
 /// 415 the client switches to JSON until the server becomes unreachable
 /// (e.g. while it is restarted with a newer version).
-#[cfg_attr(feature = "api", derive(agdb::TypeDef))]
 pub struct ReqwestClient {
-    pub client: ReqwestClientTypeDef,
+    pub client: reqwest::Client,
     pub user_agent: String,
     json_only: AtomicBool,
 }
@@ -112,7 +80,7 @@ impl ReqwestClient {
     /// Creates a client from an existing [`reqwest::Client`] with a custom user-agent string.
     pub fn with_user_agent(client: reqwest::Client, user_agent: impl Into<String>) -> Self {
         Self {
-            client: ReqwestClientTypeDef(client),
+            client,
             user_agent: user_agent.into(),
             json_only: AtomicBool::new(false),
         }
@@ -207,7 +175,6 @@ fn decode_results(bytes: &[u8]) -> AgdbApiResult<Vec<QueryResult>> {
     Ok(results)
 }
 
-#[cfg_attr(feature = "api", agdb::impl_def())]
 impl HttpClient for ReqwestClient {
     async fn delete(&self, uri: &str, token: &Option<String>) -> AgdbApiResult<u16> {
         let mut request = self.client.delete(uri).header(USER_AGENT, &self.user_agent);

@@ -32,7 +32,6 @@ pub const DEFAULT_OVERLAY_LIMIT: u64 = 64 * 1024 * 1024;
 /// - `Strict` — like `Commit` and also syncs the cleared WAL so that a
 ///   commit survives a crash.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-#[cfg_attr(feature = "api", derive(agdb::TypeDef))]
 pub enum SyncMode {
     #[default]
     None,
@@ -51,7 +50,6 @@ impl std::fmt::Display for SyncMode {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-#[cfg_attr(feature = "api", derive(agdb::TypeDef))]
 pub struct StorageConfig {
     pub sync_mode: SyncMode,
     pub overlay_limit: u64,

@@ -20,11 +20,6 @@ use crate::http_client::HttpClient;
 use agdb::QueryResult;
 use agdb::QueryType;
 
-#[cfg(feature = "api")]
-#[cfg_attr(feature = "api", agdb::trait_def())]
-pub trait AgdbApiClient: HttpClient + agdb::type_def::TypeDefinition {}
-
-#[cfg(not(feature = "api"))]
 pub trait AgdbApiClient: HttpClient {}
 
 /// Typed API client for agdb server endpoints.
@@ -41,7 +36,6 @@ pub trait AgdbApiClient: HttpClient {}
 /// let api = AgdbApi::new(ReqwestClient::new(), "http://localhost:3000");
 /// assert_eq!(api.base_url(), "http://localhost:3000/api/v1");
 /// ```
-#[cfg_attr(feature = "api", derive(agdb::TypeDef))]
 pub struct AgdbApi<T: AgdbApiClient> {
     client: T,
     address: String,
@@ -49,7 +43,6 @@ pub struct AgdbApi<T: AgdbApiClient> {
     pub token: Option<String>,
 }
 
-#[cfg_attr(feature = "api", agdb::impl_def())]
 impl<T: AgdbApiClient> AgdbApi<T> {
     /// Creates a new API client.
     ///

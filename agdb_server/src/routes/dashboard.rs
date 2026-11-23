@@ -34,13 +34,13 @@ use utoipa::ToSchema;
 pub(crate) const MAX_DASHBOARD_CONFIG: usize = 256 * 1024;
 const MAX_DASHBOARD_NAME: usize = 64;
 
-#[derive(Deserialize, IntoParams, ToSchema, agdb::TypeDef)]
+#[derive(Deserialize, IntoParams, ToSchema)]
 #[into_params(parameter_in = Query)]
 pub struct DashboardRenameParam {
     pub new_name: String,
 }
 
-#[derive(Deserialize, IntoParams, ToSchema, agdb::TypeDef)]
+#[derive(Deserialize, IntoParams, ToSchema)]
 #[into_params(parameter_in = Query)]
 pub struct DashboardPublicParam {
     /// Every user can view a public dashboard.

@@ -17,8 +17,6 @@ use crate::query_builder::where_::DB_ELEMENT_ID_KEY;
 /// excludes traversal-specific conditions that have no meaning
 /// outside of a graph search: `distance`, `beyond`, `not_beyond`,
 /// and `neighbor`.
-#[cfg_attr(feature = "api", derive(agdb::TypeDef))]
-#[cfg_attr(feature = "api", type_def(inherent))]
 pub struct WhereFilter<T: SearchQueryBuilder> {
     logic: QueryConditionLogic,
     modifier: QueryConditionModifier,
@@ -27,19 +25,14 @@ pub struct WhereFilter<T: SearchQueryBuilder> {
 }
 
 /// Condition builder for `key` condition in non-graph searches.
-#[cfg_attr(feature = "api", derive(agdb::TypeDef))]
-#[cfg_attr(feature = "api", type_def(inherent))]
 pub struct WhereFilterKey<T: SearchQueryBuilder> {
     key: DbValue,
     where_: WhereFilter<T>,
 }
 
 /// Condition builder setting the logic operator in non-graph searches.
-#[cfg_attr(feature = "api", derive(agdb::TypeDef))]
-#[cfg_attr(feature = "api", type_def(inherent))]
 pub struct WhereFilterLogicOperator<T: SearchQueryBuilder>(pub WhereFilter<T>);
 
-#[cfg_attr(feature = "api", agdb::impl_def())]
 impl<T: SearchQueryBuilder> WhereFilter<T> {
     /// Only elements that are edges will pass this condition.
     ///
@@ -395,7 +388,6 @@ impl<T: SearchQueryBuilder> WhereFilter<T> {
     }
 }
 
-#[cfg_attr(feature = "api", agdb::impl_def())]
 impl<T: SearchQueryBuilder> WhereFilterKey<T> {
     /// Sets the value of the `key` condition to `comparison`. Taking comparison method. If
     /// a value is provided without a method it will default to `Comparison::Equal`).
@@ -466,7 +458,6 @@ impl<T: SearchQueryBuilder> WhereFilterKey<T> {
     }
 }
 
-#[cfg_attr(feature = "api", agdb::impl_def())]
 impl<T: SearchQueryBuilder> WhereFilterLogicOperator<T> {
     /// Sets the logic operator for the following condition
     /// to logical AND (&&). The condition passes only if

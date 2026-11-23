@@ -15,7 +15,6 @@
 //! - `openapi`: adds `utoipa` schema support for query builders and generated API
 //!   documentation.
 //! - `serde`: serializes/deserializes queries and `QueryResult` via `serde`.
-//! - `api`: emits type-definition metadata used by generated clients/transpilers.
 //! - `regex`: enables regex-based string comparisons such as
 //!   `where_().key("name").regex("^user_")`.
 //!
@@ -53,79 +52,6 @@ pub use query::QueryType;
 
 #[cfg(feature = "derive")]
 pub use agdb_derive::{DbElement, DbSerialize, DbType, DbTypeMarker, DbValue};
-
-#[cfg(feature = "api")]
-pub mod type_def;
-
-#[cfg(feature = "api")]
-pub use agdb_derive::{TypeDef, fn_def, impl_def, static_def, test_def, trait_def};
-
-#[cfg(feature = "api")]
-#[rustfmt::skip]
-pub use {
-    db::db_value::DbValues,
-    query::query_aliases::QueryAliases,
-    query::query_values::MultiValues,
-    query::query_values::SingleValues,
-    query_builder::insert::Insert,
-    query_builder::insert_aliases::InsertAliases,
-    query_builder::insert_aliases::InsertAliasesIds,
-    query_builder::insert_edge::InsertEdges,
-    query_builder::insert_edge::InsertEdgesEach,
-    query_builder::insert_edge::InsertEdgesFrom,
-    query_builder::insert_edge::InsertEdgesFromTo,
-    query_builder::insert_edge::InsertEdgesIds,
-    query_builder::insert_edge::InsertEdgesValues,
-    query_builder::insert_index::InsertIndex,
-    query_builder::insert_nodes::InsertNodes,
-    query_builder::insert_nodes::InsertNodesAliases,
-    query_builder::insert_nodes::InsertNodesCount,
-    query_builder::insert_nodes::InsertNodesIds,
-    query_builder::insert_nodes::InsertNodesValues,
-    query_builder::insert_values::InsertValues,
-    query_builder::insert_values::InsertValuesIds,
-    query_builder::remove::Remove,
-    query_builder::remove_aliases::RemoveAliases,
-    query_builder::remove_ids::RemoveIds,
-    query_builder::remove_index::RemoveIndex,
-    query_builder::remove_values::RemoveValues,
-    query_builder::remove_values::RemoveValuesIds,
-    query_builder::search::Search,
-    query_builder::search::SearchAlgorithm,
-    query_builder::search::SearchFrom,
-    query_builder::search::SearchIndex as SearchIndexBuilder,
-    query_builder::search::SearchIndexOrderBy,
-    query_builder::search::SearchIndexValue,
-    query_builder::search::SearchOrderBy,
-    query_builder::search::SearchQueryBuilder,
-    query_builder::search::SearchQueryBuilderDef,
-    query_builder::search::SearchTo,
-    query_builder::search::SelectIndexLimit,
-    query_builder::search::SelectIndexOffset,
-    query_builder::search::SelectLimit,
-    query_builder::search::SelectOffset,
-    query_builder::select::Select,
-    query_builder::select_aliases::SelectAliases,
-    query_builder::select_aliases::SelectAliasesIds,
-    query_builder::select_edge_count::SelectDirectedEdgeCount,
-    query_builder::select_edge_count::SelectEdgeCount,
-    query_builder::select_edge_count::SelectEdgeCountIds,
-    query_builder::select_ids::SelectIds,
-    query_builder::select_indexes::SelectIndexes,
-    query_builder::select_key_count::SelectKeyCount,
-    query_builder::select_key_count::SelectKeyCountIds,
-    query_builder::select_keys::SelectKeys,
-    query_builder::select_keys::SelectKeysIds,
-    query_builder::select_node_count::SelectNodeCount,
-    query_builder::select_values::SelectValues,
-    query_builder::select_values::SelectValuesIds,
-    query_builder::where_::Where,
-    query_builder::where_::WhereKey,
-    query_builder::where_::WhereLogicOperator,
-    query_builder::where_filter::WhereFilter,
-    query_builder::where_filter::WhereFilterKey,
-    query_builder::where_filter::WhereFilterLogicOperator,
-};
 
 pub use db::DB_VERSION;
 pub use db::Db;

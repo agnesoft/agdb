@@ -5,7 +5,6 @@
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 #[cfg_attr(feature = "derive", derive(agdb::DbSerialize))]
-#[cfg_attr(feature = "api", derive(agdb::TypeDef))]
 pub enum BitwiseOp {
     /// Bitwise AND (`existing & value`).
     And,
@@ -21,7 +20,6 @@ pub enum BitwiseOp {
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 #[cfg_attr(feature = "derive", derive(agdb::DbSerialize))]
-#[cfg_attr(feature = "api", derive(agdb::TypeDef))]
 pub enum Amend {
     /// Default behavior: overwrite the existing value.
     #[default]

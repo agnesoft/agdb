@@ -191,7 +191,6 @@ For database concepts and primitive data types see [concepts](https://agdb.agnes
 | derive  | yes     | Enables the `DbType`, `DbElement`, `DbValue`, and related derive macros for user-defined graph data.                   |
 | openapi | no      | Enables `utoipa` `ToSchema` support so query structs can be exported to OpenAPI/Swagger schema JSON.                   |
 | serde   | no      | Enables serialization/deserialization of queries and `QueryResult` using [`serde`](https://github.com/serde-rs/serde). |
-| api     | no      | Enables type-definition annotations used by generated clients and transpilers for other languages.                     |
 | regex   | no      | Enables regex comparisons for string matching in `where_().key(...).regex(...)` conditions (`Comparison::Regex` variant). |
 
 ### agdb_api
@@ -199,7 +198,6 @@ For database concepts and primitive data types see [concepts](https://agdb.agnes
 | Feature     | Default | Description                                                                                             |
 | ----------- | ------- | ------------------------------------------------------------------------------------------------------- |
 | tls         | no      | Enables Rust TLS support for the underlying [`reqwest`](https://github.com/seanmonstar/reqwest) client. |
-| api         | no      | Enables API type-definition annotations used when generating bindings.                                  |
 
 ### agdb_server
 

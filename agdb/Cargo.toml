@@ -25,7 +25,6 @@ harness = false
 
 [features]
 default = ["derive"]
-api = ["derive", "dep:tokio"]
 derive = ["dep:agdb_derive"]
 openapi = ["dep:utoipa"]
 regex = ["dep:regex"]
@@ -36,11 +35,6 @@ agdb_derive = { workspace = true, optional = true }
 agplatform = { workspace = true, features = ["fs"] }
 regex = { workspace = true, optional = true }
 serde = { workspace = true, features = ["derive"], optional = true }
-tokio = { workspace = true, features = [
-    "macros",
-    "rt",
-    "sync",
-], optional = true }
 utoipa = { workspace = true, optional = true }
 
 [dev-dependencies]

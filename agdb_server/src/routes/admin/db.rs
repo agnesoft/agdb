@@ -45,7 +45,7 @@ use std::time::UNIX_EPOCH;
 use utoipa::IntoParams;
 use utoipa::ToSchema;
 
-#[derive(Deserialize, IntoParams, ToSchema, agdb::TypeDef)]
+#[derive(Deserialize, IntoParams, ToSchema)]
 #[into_params(parameter_in = Query)]
 pub struct ServerDatabaseAdminRename {
     pub new_owner: String,

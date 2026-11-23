@@ -240,7 +240,9 @@ export type DbKeyOrder =
 /**
  * Database key-value pair (aka property) attached to
  * database elements. It can be constructed from a
- * tuple of types that are convertible to `DbValue`.
+ * tuple of types that are convertible to `DbValue`
+ * or from a bare key which makes it a label
+ * (value `DbValue::None`).
  */
 export interface DbKeyValue {
     /** Key of the property */
@@ -811,7 +813,8 @@ export type SelectKeyCountQuery = QueryIds;
  * of the ids must exist in the database.
  *
  * The result will be number of elements returned and the list
- * of elements with all properties except all values will be empty.
+ * of elements with all property keys, each with the value
+ * `DbValue::None`.
  */
 export type SelectKeysQuery = QueryIds;
 

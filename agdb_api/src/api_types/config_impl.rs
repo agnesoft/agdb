@@ -12,7 +12,6 @@ pub const DEFAULT_CLUSTER_MAX_CHUNK_SIZE: u64 = 65_536;
 pub const DEFAULT_CLUSTER_MAX_APPEND_SIZE: u64 = 4 * 1024 * 1024;
 
 #[derive(Debug)]
-#[cfg_attr(feature = "api", derive(agdb::TypeDef))]
 pub struct ConfigImpl {
     pub bind: String,
     pub address: String,
@@ -48,7 +47,6 @@ impl ConfigImpl {
     }
 }
 
-#[cfg_attr(feature = "api", agdb::fn_def())]
 pub fn config_to_str(config: &ConfigImpl) -> String {
     let mut buffer = String::new();
     buffer.push_str(&format!("bind: {}\n", config.bind));

@@ -6,7 +6,6 @@ use crate::DbKeyValue;
 #[derive(Debug, PartialEq, Eq, Clone, PartialOrd, Ord)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
-#[cfg_attr(feature = "api", derive(agdb::TypeDef))]
 #[cfg_attr(feature = "derive", derive(agdb::DbSerialize))]
 pub struct DbElement {
     /// Element id.

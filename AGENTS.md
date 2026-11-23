@@ -5,7 +5,7 @@ The Agnesoft Graph Database (aka agdb) is an embedded/server graph database writ
 | Crate         | Purpose                                                                                                         |
 | ------------- | --------------------------------------------------------------------------------------------------------------- |
 | `agdb`        | Core database engine — query builder, storage backends, transactions, derive macros                             |
-| `agdb_derive` | Proc-macro crate powering `#[derive(DbType)]`, `DbElement`, `DbValue`, `DbSerialize`, `DbTypeMarker`, `TypeDef` |
+| `agdb_derive` | Proc-macro crate powering `#[derive(DbType)]`, `DbElement`, `DbValue`, `DbSerialize`, `DbTypeMarker`            |
 | `agdb_server` | HTTP server wrapping `agdb` with REST API, auth, multi-tenancy, backup/restore, and optional Raft cluster       |
 | `agdb_api`    | Rust client SDK for `agdb_server` (also ships shared request/response types used by all language clients)       |
 
@@ -133,7 +133,6 @@ Each alias also has a `*Transaction` and `*TransactionMut` variant for use insid
 | `DbValue`      | `TryFrom<DbValue>` + `Into<DbValue>` for custom scalar types                 |
 | `DbSerialize`  | Binary serialization for storage (needed by `DbValue` types)                 |
 | `DbTypeMarker` | Marker trait allowing a type to be used inside `Vec<T>` in `DbType` structs  |
-| `TypeDef`      | OpenAPI schema generation for types                                          |
 
 ### DbType field attributes
 

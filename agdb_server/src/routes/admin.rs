@@ -21,7 +21,7 @@ use tokio::sync::broadcast::Sender;
 use utoipa::IntoParams;
 use utoipa::ToSchema;
 
-#[derive(Deserialize, IntoParams, ToSchema, agdb::TypeDef)]
+#[derive(Deserialize, IntoParams, ToSchema)]
 #[into_params(parameter_in = Query)]
 pub struct SetLogLevelRequest {
     pub new_level: LogLevelFilter,

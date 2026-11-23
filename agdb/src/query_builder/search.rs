@@ -12,38 +12,23 @@ use crate::SearchQueryAlgorithm;
 use crate::db::db_key_order::DbKeyOrders;
 use crate::query::query_condition::KeyValueComparison;
 
-#[cfg(feature = "api")]
-#[cfg_attr(feature = "api", agdb::trait_def())]
-pub trait SearchQueryBuilder: agdb::type_def::TypeDefinition {
-    fn search_mut(&mut self) -> &mut SearchQuery;
-}
-
-#[cfg(not(feature = "api"))]
 pub trait SearchQueryBuilder {
     fn search_mut(&mut self) -> &mut SearchQuery;
 }
 
 /// Search builder query.
-#[cfg_attr(feature = "api", derive(agdb::TypeDef))]
-#[cfg_attr(feature = "api", type_def(inherent))]
 pub struct Search<T: SearchQueryBuilder>(pub T);
 
 /// Search builder query that lets you choose search origin
 /// and other parameters.
-#[cfg_attr(feature = "api", derive(agdb::TypeDef))]
-#[cfg_attr(feature = "api", type_def(inherent))]
 pub struct SearchFrom<T: SearchQueryBuilder>(pub T);
 
 /// Search builder query that lets you choose search destination
 /// and other parameters.
-#[cfg_attr(feature = "api", derive(agdb::TypeDef))]
-#[cfg_attr(feature = "api", type_def(inherent))]
 pub struct SearchTo<T: SearchQueryBuilder>(pub T);
 
 /// Search builder query that lets you choose an index to search
 /// instead of the graph search.
-#[cfg_attr(feature = "api", derive(agdb::TypeDef))]
-#[cfg_attr(feature = "api", type_def(inherent))]
 pub struct SearchIndex<T: SearchQueryBuilder> {
     pub index: DbValue,
     pub query: T,
@@ -51,47 +36,30 @@ pub struct SearchIndex<T: SearchQueryBuilder> {
 
 /// Search builder query that lets you choose a value to find
 /// in the index.
-#[cfg_attr(feature = "api", derive(agdb::TypeDef))]
-#[cfg_attr(feature = "api", type_def(inherent))]
 pub struct SearchIndexValue<T: SearchQueryBuilder>(pub T);
 
 /// Search builder query that lets you choose limit and offset.
-#[cfg_attr(feature = "api", derive(agdb::TypeDef))]
-#[cfg_attr(feature = "api", type_def(inherent))]
 pub struct SearchOrderBy<T: SearchQueryBuilder>(pub T);
 
 /// Search builder query that lets you choose conditions.
-#[cfg_attr(feature = "api", derive(agdb::TypeDef))]
-#[cfg_attr(feature = "api", type_def(inherent))]
 pub struct SelectLimit<T: SearchQueryBuilder>(pub T);
 
 /// Search builder query that lets you choose limit.
-#[cfg_attr(feature = "api", derive(agdb::TypeDef))]
-#[cfg_attr(feature = "api", type_def(inherent))]
 pub struct SelectOffset<T: SearchQueryBuilder>(pub T);
 
 /// Search builder query that lets you choose limit and where (index searches).
-#[cfg_attr(feature = "api", derive(agdb::TypeDef))]
-#[cfg_attr(feature = "api", type_def(inherent))]
 pub struct SelectIndexLimit<T: SearchQueryBuilder>(pub T);
 
 /// Search builder query that lets you choose limit and where (index searches).
-#[cfg_attr(feature = "api", derive(agdb::TypeDef))]
-#[cfg_attr(feature = "api", type_def(inherent))]
 pub struct SelectIndexOffset<T: SearchQueryBuilder>(pub T);
 
 /// Search builder query that lets you choose limit, offset and where (index searches).
-#[cfg_attr(feature = "api", derive(agdb::TypeDef))]
-#[cfg_attr(feature = "api", type_def(inherent))]
 pub struct SearchIndexOrderBy<T: SearchQueryBuilder>(pub T);
 
 /// Search builder query that lets you choose search origin
 /// and other parameters.
-#[cfg_attr(feature = "api", derive(agdb::TypeDef))]
-#[cfg_attr(feature = "api", type_def(inherent))]
 pub struct SearchAlgorithm<T: SearchQueryBuilder>(pub T);
 
-#[cfg_attr(feature = "api", agdb::impl_def())]
 impl<T: SearchQueryBuilder> Search<T> {
     /// Use breadth-first (BFS) search algorithm. This option is redundant as
     /// BFS is the default. BFS means each level of the graph is examined in full
@@ -208,7 +176,6 @@ impl<T: SearchQueryBuilder> Search<T> {
     }
 }
 
-#[cfg_attr(feature = "api", agdb::impl_def())]
 impl<T: SearchQueryBuilder> SearchAlgorithm<T> {
     /// Sets the origin of the search.
     ///
@@ -248,7 +215,6 @@ impl<T: SearchQueryBuilder> SearchAlgorithm<T> {
     }
 }
 
-#[cfg_attr(feature = "api", agdb::impl_def())]
 impl<T: SearchQueryBuilder> SearchFrom<T> {
     /// Sets the limit to number of ids returned. If during the search
     /// the `limit + offset` is hit the search ends and the result is returned.
@@ -355,7 +321,6 @@ impl<T: SearchQueryBuilder> SearchFrom<T> {
     }
 }
 
-#[cfg_attr(feature = "api", agdb::impl_def())]
 impl<T: SearchQueryBuilder> SearchOrderBy<T> {
     /// Sets the limit to number of ids returned. If during the search
     /// the `limit + offset` is hit the search ends and the result is returned.
@@ -427,7 +392,6 @@ impl<T: SearchQueryBuilder> SearchOrderBy<T> {
     }
 }
 
-#[cfg_attr(feature = "api", agdb::impl_def())]
 impl<T: SearchQueryBuilder> SearchTo<T> {
     /// Sets the origin for a reverse path search. The search starts at the
     /// destination and follows edges in reverse (incoming edges) toward the
@@ -538,7 +502,6 @@ impl<T: SearchQueryBuilder> SearchTo<T> {
     }
 }
 
-#[cfg_attr(feature = "api", agdb::impl_def())]
 impl<T: SearchQueryBuilder> SelectLimit<T> {
     /// Returns the built query object.
     pub fn query(self) -> T {
@@ -572,7 +535,6 @@ impl<T: SearchQueryBuilder> SelectLimit<T> {
     }
 }
 
-#[cfg_attr(feature = "api", agdb::impl_def())]
 impl<T: SearchQueryBuilder> SelectOffset<T> {
     /// Sets the limit to number of ids returned. If during the search
     /// the `limit + offset` is hit the search ends and the result is returned.
@@ -624,7 +586,6 @@ impl<T: SearchQueryBuilder> SelectOffset<T> {
     }
 }
 
-#[cfg_attr(feature = "api", agdb::impl_def())]
 impl<T: SearchQueryBuilder> SearchIndex<T> {
     /// Sets the value to be searched in the index.
     pub fn value<V: Into<DbValue>>(mut self, value: V) -> SearchIndexValue<T> {
@@ -641,7 +602,6 @@ impl<T: SearchQueryBuilder> SearchIndex<T> {
     }
 }
 
-#[cfg_attr(feature = "api", agdb::impl_def())]
 impl<T: SearchQueryBuilder> SearchIndexValue<T> {
     /// Sets the limit to number of ids returned.
     ///
@@ -721,7 +681,6 @@ impl<T: SearchQueryBuilder> SearchIndexValue<T> {
     }
 }
 
-#[cfg_attr(feature = "api", agdb::impl_def())]
 impl<T: SearchQueryBuilder> SelectIndexLimit<T> {
     /// Returns the built query object.
     pub fn query(self) -> T {
@@ -743,7 +702,6 @@ impl<T: SearchQueryBuilder> SelectIndexLimit<T> {
     }
 }
 
-#[cfg_attr(feature = "api", agdb::impl_def())]
 impl<T: SearchQueryBuilder> SelectIndexOffset<T> {
     /// Sets the limit to number of ids returned.
     ///
@@ -780,7 +738,6 @@ impl<T: SearchQueryBuilder> SelectIndexOffset<T> {
     }
 }
 
-#[cfg_attr(feature = "api", agdb::impl_def())]
 impl<T: SearchQueryBuilder> SearchIndexOrderBy<T> {
     /// Sets the limit to number of ids returned.
     ///

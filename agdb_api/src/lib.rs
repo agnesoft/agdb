@@ -7,20 +7,14 @@
 //!
 //! # Features
 //!
-//! - `api`: enables type-definition metadata used by transpilers and language
-//!   bindings.
 //! - `tls`: enables native TLS for the HTTP client transport (via
 //!   `reqwest/default-tls`).
 
-#[cfg(feature = "api")]
-pub mod api;
 mod api_error;
 mod api_result;
 mod api_types;
 mod client;
 mod http_client;
-#[cfg(feature = "api")]
-pub mod transpiler;
 
 pub use api_error::AgdbApiError;
 pub use api_result::AgdbApiResult;
@@ -50,5 +44,3 @@ pub use client::AgdbApi;
 pub use http_client::BINARY_CONTENT_TYPE;
 pub use http_client::HttpClient;
 pub use http_client::ReqwestClient;
-#[cfg(feature = "api")]
-pub use {client::AgdbApiClientDef, http_client::HttpClientDef};

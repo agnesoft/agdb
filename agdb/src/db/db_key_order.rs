@@ -5,7 +5,6 @@ use crate::DbValue;
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 #[cfg_attr(feature = "derive", derive(agdb::DbSerialize))]
-#[cfg_attr(feature = "api", derive(agdb::TypeDef))]
 pub enum DbKeyOrder {
     /// Ascending order (from smallest)
     Asc(DbValue),
@@ -16,7 +15,6 @@ pub enum DbKeyOrder {
 
 /// Newtype wrapper around `Vec<DbKeyOrder>` used for blanket `From` conversions
 /// in order-by clauses.
-#[cfg_attr(feature = "api", derive(agdb::TypeDef))]
 pub struct DbKeyOrders(pub Vec<DbKeyOrder>);
 
 impl From<Vec<DbKeyOrder>> for DbKeyOrders {

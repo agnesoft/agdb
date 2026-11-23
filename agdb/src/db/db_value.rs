@@ -28,7 +28,6 @@ use std::time::SystemTime;
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 #[cfg_attr(feature = "derive", derive(agdb::DbSerialize))]
-#[cfg_attr(feature = "api", derive(agdb::TypeDef))]
 pub enum DbValue {
     /// Byte array, sometimes referred to as blob
     Bytes(Vec<u8>),
@@ -66,7 +65,6 @@ pub enum DbValue {
 }
 
 /// Newtype wrapper around `Vec<DbValue>` used for blanket `From` conversions.
-#[cfg_attr(feature = "api", derive(agdb::TypeDef))]
 pub struct DbValues(pub Vec<DbValue>);
 
 pub(crate) const NONE_META_VALUE: u8 = 0_u8;

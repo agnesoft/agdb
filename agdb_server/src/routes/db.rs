@@ -44,25 +44,25 @@ use std::time::UNIX_EPOCH;
 use utoipa::IntoParams;
 use utoipa::ToSchema;
 
-#[derive(Deserialize, IntoParams, ToSchema, agdb::TypeDef)]
+#[derive(Deserialize, IntoParams, ToSchema)]
 #[into_params(parameter_in = Query)]
 pub struct ServerDatabaseRename {
     pub new_db: String,
 }
 
-#[derive(Deserialize, IntoParams, ToSchema, agdb::TypeDef)]
+#[derive(Deserialize, IntoParams, ToSchema)]
 #[into_params(parameter_in = Query)]
 pub(crate) struct DbTypeParam {
     pub(crate) db_type: DbKind,
 }
 
-#[derive(Deserialize, IntoParams, ToSchema, agdb::TypeDef)]
+#[derive(Deserialize, IntoParams, ToSchema)]
 #[into_params(parameter_in = Query)]
 pub struct ServerDatabaseResource {
     pub resource: DbResource,
 }
 
-#[derive(Deserialize, IntoParams, ToSchema, agdb::TypeDef)]
+#[derive(Deserialize, IntoParams, ToSchema)]
 #[into_params(parameter_in = Query)]
 pub struct AuditTrimParam {
     /// Number of UTC days to keep before today, the audit of the older days is removed.

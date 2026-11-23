@@ -1,4 +1,3 @@
-use crate::DbElement;
 use crate::DbError;
 use crate::DbKeyValue;
 use crate::Query;
@@ -42,12 +41,9 @@ impl Query for SelectKeysQuery {
         result.result = db_ids.len() as u64;
 
         for id in db_ids {
-            result.elements.push(DbElement {
-                id,
-                from: db.from_id(id)?,
-                to: db.to_id(id)?,
-                values: db.keys(id)?.into_iter().map(DbKeyValue::from).collect(),
-            });
+            result
+                .elements
+                .push(db.element(id, db.keys(id)?.into_iter().map(DbKeyValue::from).collect())?);
         }
 
         Ok(result)

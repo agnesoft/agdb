@@ -1,4 +1,3 @@
-use crate::DbElement;
 use crate::DbError;
 use crate::Query;
 use crate::QueryResult;
@@ -26,12 +25,9 @@ impl Query for SelectAllAliasesQuery {
         result.result = aliases.len() as u64;
 
         for alias in aliases {
-            result.elements.push(DbElement {
-                id: alias.1,
-                from: db.from_id(alias.1)?,
-                to: db.to_id(alias.1)?,
-                values: vec![("alias", alias.0).into()],
-            });
+            result
+                .elements
+                .push(db.element(alias.1, vec![("alias", alias.0).into()])?);
         }
 
         Ok(result)

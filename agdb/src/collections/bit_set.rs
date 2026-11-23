@@ -4,6 +4,7 @@ pub struct BitSet {
 }
 
 impl BitSet {
+    #[inline]
     pub fn set(&mut self, value: u64) {
         let byte_index = value as usize / 8;
         let bit_index = value as usize % 8;
@@ -19,6 +20,7 @@ impl BitSet {
         Self { data: vec![] }
     }
 
+    #[inline]
     pub fn value(&self, value: u64) -> bool {
         let byte_index = value as usize / 8;
 

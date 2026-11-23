@@ -33,6 +33,7 @@ pub trait SearchHandler {
 
 /// The key of the element `id` in a set of visited elements, nodes and
 /// edges having the same slots.
+#[inline]
 pub(crate) fn visit_key(id: DbId) -> u64 {
     (id.0.unsigned_abs() << 1) | u64::from(id.0 < 0)
 }
@@ -141,6 +142,7 @@ impl<'a, V: View> GraphSearch<'a, V> {
 }
 
 impl SearchControl {
+    #[inline]
     pub fn and(self, other: SearchControl) -> SearchControl {
         use SearchControl::Continue;
         use SearchControl::Finish;
@@ -159,6 +161,7 @@ impl SearchControl {
         }
     }
 
+    #[inline]
     pub fn or(self, other: SearchControl) -> SearchControl {
         use SearchControl::Continue;
         use SearchControl::Finish;
@@ -177,6 +180,7 @@ impl SearchControl {
         }
     }
 
+    #[inline]
     pub fn flip(&mut self) {
         match self {
             SearchControl::Continue(v) | SearchControl::Finish(v) | SearchControl::Stop(v) => {
@@ -185,12 +189,14 @@ impl SearchControl {
         };
     }
 
+    #[inline]
     pub fn is_true(&self) -> bool {
         match self {
             SearchControl::Continue(v) | SearchControl::Finish(v) | SearchControl::Stop(v) => *v,
         }
     }
 
+    #[inline]
     pub fn set_value(&mut self, value: bool) {
         match self {
             SearchControl::Continue(v) | SearchControl::Finish(v) | SearchControl::Stop(v) => {
@@ -385,6 +391,7 @@ pub(crate) mod tests {
         #[derive(Default)]
         struct Recorder {
             visits: RefCell<Vec<(i64, u64)>>,
+            fail: bool,
         }
 
         impl SearchHandler for &Recorder {
@@ -396,6 +403,13 @@ pub(crate) mod tests {
 
         impl PathSearchHandler for &Recorder {
             fn process(&self, id: DbId, distance: u64) -> Result<(u64, bool), DbError> {
+                if self.fail {
+                    return Err(DbError::query(
+                        crate::DbErrorType::NotAllowed,
+                        "recorder failure",
+                    ));
+                }
+
                 self.visits.borrow_mut().push((id.0, distance));
                 Ok((1, true))
             }
@@ -613,6 +627,23 @@ pub(crate) mod tests {
                         .map(|_| ())
                 });
             }
+
+            #[test]
+            fn path_handler_failure_should_return_error() {
+                with_view(|view, alloc| {
+                    let graph = chain(view, alloc);
+                    let handler = Recorder {
+                        visits: RefCell::default(),
+                        fail: true,
+                    };
+
+                    assert!(
+                        GraphSearch::new(&graph, &*view)
+                            .path(DbId(1), DbId(3), &handler)
+                            .is_err()
+                    );
+                });
+            }
         }
 
         mod path_reverse {
@@ -667,6 +698,23 @@ pub(crate) mod tests {
                     GraphSearch::new(&graph, &*view)
                         .path_reverse(DbId(1), DbId(3), &Recorder::default())
                         .map(|_| ())
+                });
+            }
+
+            #[test]
+            fn path_reverse_handler_failure_should_return_error() {
+                with_view(|view, alloc| {
+                    let graph = chain(view, alloc);
+                    let handler = Recorder {
+                        visits: RefCell::default(),
+                        fail: true,
+                    };
+
+                    assert!(
+                        GraphSearch::new(&graph, &*view)
+                            .path_reverse(DbId(1), DbId(3), &handler)
+                            .is_err()
+                    );
                 });
             }
         }

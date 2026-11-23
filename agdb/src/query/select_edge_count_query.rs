@@ -1,4 +1,3 @@
-use crate::DbElement;
 use crate::DbError;
 use crate::Query;
 use crate::QueryIds;
@@ -59,12 +58,9 @@ impl Query for SelectEdgeCountQuery {
         for id in db_ids {
             let edge_count = db.edge_count(id, self.from, self.to)?;
             total_count += edge_count;
-            result.elements.push(DbElement {
-                id,
-                from: db.from_id(id)?,
-                to: db.to_id(id)?,
-                values: vec![("edge_count", edge_count).into()],
-            });
+            result
+                .elements
+                .push(db.element(id, vec![("edge_count", edge_count).into()])?);
         }
 
         result.result = total_count;

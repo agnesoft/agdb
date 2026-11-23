@@ -134,16 +134,15 @@ pub(crate) fn store(
 }
 
 /// The bytes of the stored value.
-pub(crate) fn load_bytes(view: &impl View, index: &DbValueIndex) -> Result<Vec<u8>, DbError> {
+pub(crate) fn load(view: &impl View, index: &DbValueIndex) -> Result<DbValue, DbError> {
     if index.is_value() {
-        return Ok(index.value().to_vec());
+        return decode(index.get_type(), index.value());
     }
 
-    Ok(view.read(index.index(), stored_len(index))?.to_vec())
-}
-
-pub(crate) fn load(view: &impl View, index: &DbValueIndex) -> Result<DbValue, DbError> {
-    decode(index.get_type(), &load_bytes(view, index)?)
+    decode(
+        index.get_type(),
+        &view.read(index.index(), stored_len(index))?,
+    )
 }
 
 /// Compares the stored value with the `bytes` of a value of type `kind`,

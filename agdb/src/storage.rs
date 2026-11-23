@@ -1,4 +1,3 @@
-#[allow(dead_code)]
 pub(crate) mod alloc;
 pub mod any_storage;
 pub mod file_storage;
@@ -9,7 +8,6 @@ mod overlay;
 #[allow(dead_code)]
 pub(crate) mod pages;
 mod ranges;
-#[allow(dead_code)]
 pub(crate) mod root;
 #[allow(dead_code)]
 pub(crate) mod storage_simulator;

@@ -298,9 +298,7 @@ pub(crate) mod tests {
 
     impl Simulation {
         pub(crate) fn new() -> Self {
-            let alloc = Allocator::new(DEFAULT_PAGE_SHIFT);
-            let mut storage = TestSimulator::new("/simulation").unwrap();
-            storage.resize(alloc.len()).unwrap();
+            let (mut storage, alloc) = heap(DEFAULT_PAGE_SHIFT);
             storage.flush().unwrap();
 
             Self {
@@ -325,6 +323,25 @@ pub(crate) mod tests {
             scale.add(self.storage.take_io(), size);
             result
         }
+    }
+
+    /// Runs the `test` in a transaction over a [`StorageSimulator`] holding
+    /// an empty heap of pages of `1 << shift` bytes, to reach terabytes.
+    pub(crate) fn with_simulator<T>(
+        shift: u32,
+        test: impl FnOnce(&mut Writer<TestSimulator>, &mut Allocator) -> T,
+    ) -> T {
+        let (mut storage, mut alloc) = heap(shift);
+        let mut overlay = Overlay::new(shift);
+        let mut writer = Writer::new(&mut storage, &mut overlay).unwrap();
+        test(&mut writer, &mut alloc)
+    }
+
+    fn heap(shift: u32) -> (TestSimulator, Allocator) {
+        let alloc = Allocator::new(shift);
+        let mut storage = TestSimulator::new("/simulation").unwrap();
+        storage.resize(alloc.len()).unwrap();
+        (storage, alloc)
     }
 
     const NAME: &str = "/simulator";

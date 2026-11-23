@@ -217,17 +217,20 @@ export function into_MultiValues(v: IntoMultiValues): DbKeyValue[][] {
     return [DbFields_DbType.to_db_values(Object.entries((v as object)).map(([k, v]): [DbValue, DbValue | undefined] => [into_DbValue(k as IntoDbValue), v === undefined || v === null ? undefined : into_DbValue(v as IntoDbValue)]))];
 }
 
-export type IntoDbKeyValue = [IntoDbValue, IntoDbValue] | DbKeyValue;
+export type IntoDbKeyValue = [IntoDbValue, IntoDbValue] | DbKeyValue | IntoDbValue;
 
 function is_into_DbKeyValue(v: unknown): v is IntoDbKeyValue {
-    return (Array.isArray(v) && v.length === 2 && is_into_DbValue(v[0]) && is_into_DbValue(v[1])) || (typeof v === "object" && v !== null && "key" in v && "value" in v);
+    return (Array.isArray(v) && v.length === 2 && is_into_DbValue(v[0]) && is_into_DbValue(v[1])) || (typeof v === "object" && v !== null && "key" in v && "value" in v) || (is_into_DbValue(v));
 }
 
 export function into_DbKeyValue(v: IntoDbKeyValue): DbKeyValue {
     if (Array.isArray(v) && v.length === 2 && is_into_DbValue(v[0]) && is_into_DbValue(v[1])) {
         return { key: into_DbValue((v as [IntoDbValue, IntoDbValue])[0]), value: into_DbValue((v as [IntoDbValue, IntoDbValue])[1]) };
     }
-    return (v as DbKeyValue);
+    if (typeof v === "object" && v !== null && "key" in v && "value" in v) {
+        return (v as DbKeyValue);
+    }
+    return { key: into_DbValue((v as IntoDbValue)), value: "None" };
 }
 
 export type IntoQueryAliases = string | string[];

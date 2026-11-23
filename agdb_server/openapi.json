@@ -4435,7 +4435,7 @@
       },
       "DbKeyValue": {
         "type": "object",
-        "description": "Database key-value pair (aka property) attached to\ndatabase elements. It can be constructed from a\ntuple of types that are convertible to `DbValue`.",
+        "description": "Database key-value pair (aka property) attached to\ndatabase elements. It can be constructed from a\ntuple of types that are convertible to `DbValue`\nor from a bare key which makes it a label\n(value `DbValue::None`).",
         "required": [
           "key",
           "value"
@@ -5537,7 +5537,7 @@
       },
       "SelectKeysQuery": {
         "$ref": "#/components/schemas/QueryIds",
-        "description": "Query to select only property keys of given ids. All\nof the ids must exist in the database.\n\nThe result will be number of elements returned and the list\nof elements with all properties except all values will be empty."
+        "description": "Query to select only property keys of given ids. All\nof the ids must exist in the database.\n\nThe result will be number of elements returned and the list\nof elements with all property keys, each with the value\n`DbValue::None`."
       },
       "SelectNodeCountQuery": {
         "type": "object",

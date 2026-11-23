@@ -102,19 +102,26 @@ pub(crate) fn store_bytes(
     kind: u8,
     bytes: &[u8],
 ) -> Result<DbValueIndex, DbError> {
-    let mut index = DbValueIndex::new();
-    index.set_type(kind);
-
-    if !index.set_value(bytes) {
-        let pos = alloc.alloc(view, bytes.len() as u64)?;
-        view.write(pos, bytes)?;
-        index.set_index(pos);
-        let mut data = index.data();
-        data[8..15].copy_from_slice(&(bytes.len() as u64).to_le_bytes()[..7]);
-        index = DbValueIndex::from_data(data);
+    if let Some(index) = inline(kind, bytes) {
+        return Ok(index);
     }
 
-    Ok(index)
+    let mut index = DbValueIndex::new();
+    index.set_type(kind);
+    let pos = alloc.alloc(view, bytes.len() as u64)?;
+    view.write(pos, bytes)?;
+    index.set_index(pos);
+    let mut data = index.data();
+    data[8..15].copy_from_slice(&(bytes.len() as u64).to_le_bytes()[..7]);
+    Ok(DbValueIndex::from_data(data))
+}
+
+/// The index holding the `bytes` of a value of type `kind`, `None` if
+/// they are too long to be inline.
+pub(crate) fn inline(kind: u8, bytes: &[u8]) -> Option<DbValueIndex> {
+    let mut index = DbValueIndex::new();
+    index.set_type(kind);
+    index.set_value(bytes).then_some(index)
 }
 
 pub(crate) fn store(

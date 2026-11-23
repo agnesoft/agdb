@@ -9,6 +9,7 @@ use crate::collections::keys::KeyId;
 use crate::collections::keys::Keys;
 use crate::collections::value;
 use crate::db::db_value_index::DbValueIndex;
+use crate::storage::StorageSlice;
 use crate::storage::alloc::Allocator;
 use crate::storage::alloc::u32_at;
 use crate::storage::pages::View;
@@ -116,36 +117,63 @@ fn entry_at(bytes: &[u8], at: u64) -> Option<(Entry, u64)> {
     Some((entry, next))
 }
 
-fn entries(view: &impl View, list: &List) -> Result<Vec<Entry>, DbError> {
+/// The entries of a list in order, failing at the first that overruns
+/// it.
+struct Entries<'a> {
+    bytes: StorageSlice<'a>,
+    inline: Option<Entry>,
+    data: u64,
+    at: u64,
+}
+
+impl Iterator for Entries<'_> {
+    type Item = Result<Entry, DbError>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if let Some(entry) = self.inline.take() {
+            return Some(Ok(entry));
+        }
+
+        if self.bytes.len() as u64 <= self.at {
+            return None;
+        }
+
+        let Some((entry, next)) = entry_at(&self.bytes, self.at) else {
+            self.at = self.bytes.len() as u64;
+            return Some(Err(DbError::db(
+                DbErrorType::InvalidIndex,
+                format!("Invalid values at '{}'", self.data),
+            )));
+        };
+
+        self.at = next;
+        Some(Ok(entry))
+    }
+}
+
+fn scan<'a>(view: &'a impl View, list: &List) -> Result<Entries<'a>, DbError> {
+    let mut entries = Entries {
+        bytes: StorageSlice::Borrowed(&[]),
+        inline: None,
+        data: list.data,
+        at: 0,
+    };
+
     if list.data & INLINE != 0 {
-        return Ok(vec![Entry {
+        entries.inline = Some(Entry {
             key: KeyId(list.data as u32),
             value: DbValueIndex::new(),
             at: 0,
-        }]);
-    }
-
-    if list.data == 0 {
-        return Ok(Vec::new());
-    }
-
-    let bytes = view.read(list.data + HEADER, list.used)?;
-    let mut entries = Vec::new();
-    let mut at = 0;
-
-    while at < list.used {
-        let Some((entry, next)) = entry_at(&bytes, at) else {
-            return Err(DbError::db(
-                DbErrorType::InvalidIndex,
-                format!("Invalid values at '{}'", list.data),
-            ));
-        };
-
-        entries.push(entry);
-        at = next;
+        });
+    } else if list.data != 0 {
+        entries.bytes = view.read(list.data + HEADER, list.used)?;
     }
 
     Ok(entries)
+}
+
+fn entries(view: &impl View, list: &List) -> Result<Vec<Entry>, DbError> {
+    scan(view, list)?.collect()
 }
 
 fn find(entries: &[Entry], key: KeyId) -> Option<usize> {
@@ -333,11 +361,15 @@ impl KeyValues<'_> {
         id: DbId,
         key: KeyId,
     ) -> Result<Option<DbValue>, DbError> {
-        let entries = entries(view, &self.list(view, id)?)?;
+        for entry in scan(view, &self.list(view, id)?)? {
+            let entry = entry?;
 
-        find(&entries, key)
-            .map(|i| value::load(view, &entries[i].value))
-            .transpose()
+            if entry.key == key {
+                return value::load(view, &entry.value).map(Some);
+            }
+        }
+
+        Ok(None)
     }
 
     /// The values of the `keys`, `None` for those the element does not
@@ -348,14 +380,21 @@ impl KeyValues<'_> {
         id: DbId,
         keys: &[KeyId],
     ) -> Result<Vec<Option<DbValue>>, DbError> {
-        let entries = entries(view, &self.list(view, id)?)?;
+        let mut found = vec![None; keys.len()];
 
-        keys.iter()
-            .map(|key| {
-                find(&entries, *key)
-                    .map(|i| value::load(view, &entries[i].value))
-                    .transpose()
-            })
+        for entry in scan(view, &self.list(view, id)?)? {
+            let entry = entry?;
+
+            for (key, value) in keys.iter().zip(&mut found) {
+                if *key == entry.key && value.is_none() {
+                    *value = Some(entry.value);
+                }
+            }
+        }
+
+        found
+            .into_iter()
+            .map(|value| value.map(|value| value::load(view, &value)).transpose())
             .collect()
     }
 
@@ -822,6 +861,89 @@ mod tests {
                     Ok(())
                 },
             );
+        }
+
+        mod value {
+            use super::*;
+
+            #[test]
+            fn value_with_duplicate_key_should_return_first_value() {
+                with_view(|view, alloc| {
+                    let (graph, node, _) = graph(view, alloc);
+                    let mut keys = Keys::new(DEFAULT_PAGE_SHIFT);
+                    let values = KeyValues(&graph);
+                    let key = values
+                        .push(view, alloc, &mut keys, node, &kv(&1.into(), &1.into()))
+                        .unwrap();
+                    values
+                        .push(view, alloc, &mut keys, node, &kv(&1.into(), &2.into()))
+                        .unwrap();
+                    assert_eq!(values.value(view, node, key).unwrap(), Some(1.into()));
+                });
+            }
+
+            #[test]
+            fn value_of_truncated_list_should_fail() {
+                with_view(|view, alloc| {
+                    let (graph, node, _) = graph(view, alloc);
+                    let mut keys = Keys::new(DEFAULT_PAGE_SHIFT);
+                    let values = KeyValues(&graph);
+                    values
+                        .push(view, alloc, &mut keys, node, &kv(&1.into(), &1.into()))
+                        .unwrap();
+                    let mut list = values.list(view, node).unwrap();
+                    list.used = 8;
+                    write_header(view, &list).unwrap();
+                    let error = values.value(view, node, KeyId(2)).unwrap_err();
+                    assert_eq!(
+                        error.description,
+                        format!("Invalid values at '{}'", list.data)
+                    );
+                });
+            }
+        }
+
+        mod values_by_keys {
+            use super::*;
+
+            #[test]
+            fn values_by_keys_with_duplicate_key_should_return_first_value() {
+                with_view(|view, alloc| {
+                    let (graph, node, _) = graph(view, alloc);
+                    let mut keys = Keys::new(DEFAULT_PAGE_SHIFT);
+                    let values = KeyValues(&graph);
+                    let key = values
+                        .push(view, alloc, &mut keys, node, &kv(&1.into(), &1.into()))
+                        .unwrap();
+                    values
+                        .push(view, alloc, &mut keys, node, &kv(&1.into(), &2.into()))
+                        .unwrap();
+                    assert_eq!(
+                        values.values_by_keys(view, node, &[key, key]).unwrap(),
+                        [Some(1.into()), Some(1.into())]
+                    );
+                });
+            }
+
+            #[test]
+            fn values_by_keys_of_truncated_list_should_fail() {
+                with_view(|view, alloc| {
+                    let (graph, node, _) = graph(view, alloc);
+                    let mut keys = Keys::new(DEFAULT_PAGE_SHIFT);
+                    let values = KeyValues(&graph);
+                    let key = values
+                        .push(view, alloc, &mut keys, node, &kv(&1.into(), &1.into()))
+                        .unwrap();
+                    let mut list = values.list(view, node).unwrap();
+                    list.used = 8;
+                    write_header(view, &list).unwrap();
+                    let error = values.values_by_keys(view, node, &[key]).unwrap_err();
+                    assert_eq!(
+                        error.description,
+                        format!("Invalid values at '{}'", list.data)
+                    );
+                });
+            }
         }
 
         mod push {

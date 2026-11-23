@@ -357,6 +357,7 @@ mod tests {
     use crate::DbValue;
     use crate::collections::key_values::KeyValues;
     use crate::collections::keys::ALIAS;
+    use crate::collections::keys::tests::memoized;
     use crate::storage::DEFAULT_OVERLAY_LIMIT;
     use crate::storage::SyncMode;
     use crate::storage::alloc::tests::pattern;
@@ -1051,8 +1052,39 @@ mod tests {
             assert!(!assert_either(&root, [&state, &after]));
         }
 
+        #[test]
+        fn root_mut_should_drop_key_memo_when_dropped() {
+            let platform = platform();
+            let mut root = open(&platform);
+            let mut transaction = root.begin().unwrap();
+            let meta = &mut transaction.meta;
+            meta.keys
+                .insert(&mut transaction.view, &mut meta.alloc, &"a".into())
+                .unwrap();
+
+            drop(transaction);
+
+            assert_eq!(memoized(&root.read().unwrap().1.keys), 0);
+        }
+
         mod commit {
             use super::*;
+
+            #[test]
+            fn commit_should_keep_key_memo_for_next_transaction() {
+                let platform = platform();
+                let mut root = open(&platform);
+                let mut transaction = root.begin().unwrap();
+                let meta = &mut transaction.meta;
+                meta.keys
+                    .insert(&mut transaction.view, &mut meta.alloc, &"a".into())
+                    .unwrap();
+
+                transaction.commit().unwrap();
+
+                assert_eq!(memoized(&root.read().unwrap().1.keys), 1);
+                assert_eq!(memoized(&root.begin().unwrap().meta.keys), 1);
+            }
 
             #[test]
             fn commit_should_store_meta() {

@@ -261,12 +261,14 @@ impl CountComparison {
 
 impl Comparison {
     pub(crate) fn compare(&self, left: &DbValue) -> bool {
+        let ordered = |right: &DbValue| *left != DbValue::None && *right != DbValue::None;
+
         match self {
             Comparison::Equal(right) => left == right,
-            Comparison::GreaterThan(right) => left > right,
-            Comparison::GreaterThanOrEqual(right) => left >= right,
-            Comparison::LessThan(right) => left < right,
-            Comparison::LessThanOrEqual(right) => left <= right,
+            Comparison::GreaterThan(right) => ordered(right) && left > right,
+            Comparison::GreaterThanOrEqual(right) => ordered(right) && left >= right,
+            Comparison::LessThan(right) => ordered(right) && left < right,
+            Comparison::LessThanOrEqual(right) => ordered(right) && left <= right,
             Comparison::NotEqual(right) => left != right,
 
             Comparison::Contains(right) => match (left, right) {
@@ -875,5 +877,75 @@ mod tests {
 
         // Unsupported type combination -> false
         assert!(!Comparison::Any("abc".into()).compare(&1.into()));
+    }
+    mod comparison {
+        use super::*;
+
+        mod compare {
+            use super::*;
+
+            #[test]
+            fn compare_equal_none_should_match_only_none() {
+                // GIVEN
+                let equal = Comparison::Equal(DbValue::None);
+                let not_equal = Comparison::NotEqual(DbValue::None);
+
+                // THEN
+                assert!(equal.compare(&DbValue::None));
+                assert!(!equal.compare(&0.into()));
+                assert!(!equal.compare(&DbValue::VecDbValue(vec![])));
+                assert!(!not_equal.compare(&DbValue::None));
+                assert!(not_equal.compare(&0.into()));
+                assert!(!Comparison::Equal(0.into()).compare(&DbValue::None));
+                assert!(Comparison::NotEqual(0.into()).compare(&DbValue::None));
+            }
+
+            #[test]
+            fn compare_ordering_with_none_should_not_match() {
+                // GIVEN
+                let orderings: [fn(DbValue) -> Comparison; 4] = [
+                    Comparison::GreaterThan,
+                    Comparison::GreaterThanOrEqual,
+                    Comparison::LessThan,
+                    Comparison::LessThanOrEqual,
+                ];
+
+                for ordering in orderings {
+                    // THEN
+                    assert!(!ordering(DbValue::None).compare(&DbValue::None));
+                    assert!(!ordering(DbValue::None).compare(&0.into()));
+                    assert!(!ordering(0.into()).compare(&DbValue::None));
+                    assert!(!ordering("a".into()).compare(&DbValue::None));
+                }
+
+                // AND
+                assert!(Comparison::LessThanOrEqual(0.into()).compare(&0.into()));
+            }
+
+            #[test]
+            fn compare_none_with_value_comparisons_should_not_match() {
+                // GIVEN
+                let comparisons: [fn(DbValue) -> Comparison; 5] = [
+                    Comparison::Contains,
+                    Comparison::StartsWith,
+                    Comparison::EndsWith,
+                    Comparison::Any,
+                    Comparison::Regex,
+                ];
+
+                for comparison in comparisons {
+                    // THEN
+                    assert!(!comparison(DbValue::None).compare(&DbValue::None));
+                    assert!(!comparison(DbValue::None).compare(&"a".into()));
+                    assert!(!comparison("a".into()).compare(&DbValue::None));
+                }
+
+                // AND
+                assert!(
+                    Comparison::Contains(DbValue::None)
+                        .compare(&DbValue::VecDbValue(vec![DbValue::None]))
+                );
+            }
+        }
     }
 }

@@ -753,6 +753,7 @@ mod tests {
         use crate::DbId;
         use crate::DbValue;
         use crate::storage::DEFAULT_OVERLAY_LIMIT;
+        use crate::storage::any_storage::AnyStorageImpl;
         use crate::storage::file_storage::FileStorageImpl;
         use crate::storage::file_storage_memory_mapped::FileStorageMemoryMappedImpl;
         use crate::storage::memory_storage::MemoryStorageImpl;
@@ -783,6 +784,37 @@ mod tests {
                 sync_mode,
                 overlay_limit,
             }
+        }
+
+        /// The nodes 1..=3 with the label "label" and ("k", 1), ("k", 2)
+        /// and ("label", 3), the "label" indexed, on each storage kind.
+        fn labelled() -> Vec<DbImpl<AnyStorageImpl<TestPlatform>>> {
+            let platform = || Arc::new(test_platform());
+
+            [
+                AnyStorageImpl::Memory(memory(&platform())),
+                AnyStorageImpl::File(file(&platform())),
+                AnyStorageImpl::MemoryMapped(mapped(&platform())),
+            ]
+            .into_iter()
+            .map(|storage| {
+                let mut db = open(storage, StorageConfig::default());
+                db.exec_mut(QueryBuilder::insert().index("label").query())
+                    .unwrap();
+                db.exec_mut(
+                    QueryBuilder::insert()
+                        .nodes()
+                        .values([
+                            vec!["label".into(), ("k", 1).into()],
+                            vec![("k", 2).into()],
+                            vec![("label", 3).into()],
+                        ])
+                        .query(),
+                )
+                .unwrap();
+                db
+            })
+            .collect()
         }
 
         fn open<D: StorageData>(data: D, config: StorageConfig) -> DbImpl<D> {
@@ -1380,10 +1412,109 @@ mod tests {
                     db.exec(QueryBuilder::select().aliases().search().from("a").query())
                 });
             }
+
+            #[test]
+            fn exec_search_by_label_should_match_only_labels() {
+                for db in labelled() {
+                    let search = |comparison: Comparison| {
+                        db.exec(
+                            QueryBuilder::search()
+                                .elements()
+                                .where_()
+                                .key("label")
+                                .value(comparison)
+                                .query(),
+                        )
+                        .unwrap()
+                        .ids()
+                    };
+
+                    // THEN
+                    assert_eq!(search(Comparison::Equal(DbValue::None)), vec![DbId(1)]);
+                    assert_eq!(search(Comparison::NotEqual(DbValue::None)), vec![DbId(3)]);
+                    assert_eq!(search(Comparison::LessThan(DbValue::None)), vec![]);
+                    assert_eq!(search(Comparison::GreaterThan(0.into())), vec![DbId(3)]);
+
+                    // AND
+                    assert_eq!(
+                        db.exec(
+                            QueryBuilder::search()
+                                .index("label")
+                                .value(DbValue::None)
+                                .query()
+                        )
+                        .unwrap()
+                        .ids(),
+                        vec![DbId(1)]
+                    );
+                    assert_eq!(
+                        db.exec(
+                            QueryBuilder::search()
+                                .elements()
+                                .where_()
+                                .keys("label")
+                                .query()
+                        )
+                        .unwrap()
+                        .ids(),
+                        vec![DbId(1), DbId(3)]
+                    );
+                }
+            }
         }
 
         mod exec_mut {
             use super::*;
+            use crate::DbElement;
+
+            #[test]
+            fn exec_mut_insert_labels_should_select_them_as_none() {
+                for db in labelled() {
+                    // WHEN
+                    let selected = db
+                        .exec(QueryBuilder::select().values("label").ids([1, 3]).query())
+                        .unwrap();
+
+                    // THEN
+                    assert_eq!(
+                        selected.elements,
+                        vec![
+                            DbElement {
+                                id: DbId(1),
+                                from: DbId(0),
+                                to: DbId(0),
+                                values: vec!["label".into()],
+                            },
+                            DbElement {
+                                id: DbId(3),
+                                from: DbId(0),
+                                to: DbId(0),
+                                values: vec![("label", 3).into()],
+                            },
+                        ]
+                    );
+
+                    // AND
+                    assert_eq!(
+                        db.exec(QueryBuilder::select().ids(1).query())
+                            .unwrap()
+                            .elements[0]
+                            .values,
+                        vec!["label".into(), ("k", 1).into()]
+                    );
+                    assert_eq!(
+                        db.exec(QueryBuilder::select().keys().ids(1).query())
+                            .unwrap()
+                            .elements[0]
+                            .values,
+                        vec!["label".into(), "k".into()]
+                    );
+                    assert!(
+                        db.exec(QueryBuilder::select().values("label").ids(2).query())
+                            .is_err()
+                    );
+                }
+            }
 
             #[test]
             fn exec_mut_read_failure_should_return_error() {

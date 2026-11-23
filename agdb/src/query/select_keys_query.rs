@@ -1,6 +1,6 @@
 use crate::DbElement;
 use crate::DbError;
-use crate::DbValue;
+use crate::DbKeyValue;
 use crate::Query;
 use crate::QueryIds;
 use crate::QueryResult;
@@ -13,7 +13,8 @@ use crate::query_builder::search::SearchQueryBuilder;
 /// of the ids must exist in the database.
 ///
 /// The result will be number of elements returned and the list
-/// of elements with all properties except all values will be empty.
+/// of elements with all property keys, each with the value
+/// `DbValue::None`.
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 #[cfg_attr(feature = "derive", derive(agdb::DbSerialize))]
@@ -46,11 +47,7 @@ impl Query for SelectKeysQuery {
                 id,
                 from: db.from_id(id)?,
                 to: db.to_id(id)?,
-                values: db
-                    .keys(id)?
-                    .into_iter()
-                    .map(|k| (k, DbValue::default()).into())
-                    .collect(),
+                values: db.keys(id)?.into_iter().map(DbKeyValue::from).collect(),
             });
         }
 

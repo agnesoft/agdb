@@ -35,7 +35,7 @@ use \Agnesoft\AgdbApi\ObjectSerializer;
  * DbKeyValue Class Doc Comment
  *
  * @category Class
- * @description Database key-value pair (aka property) attached to database elements. It can be constructed from a tuple of types that are convertible to &#x60;DbValue&#x60;.
+ * @description Database key-value pair (aka property) attached to database elements. It can be constructed from a tuple of types that are convertible to &#x60;DbValue&#x60; or from a bare key which makes it a label (value &#x60;DbValue::None&#x60;).
  * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech

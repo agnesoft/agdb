@@ -35,7 +35,7 @@ use \Agnesoft\AgdbApi\ObjectSerializer;
  * SelectKeysQuery Class Doc Comment
  *
  * @category Class
- * @description Query to select only property keys of given ids. All of the ids must exist in the database.  The result will be number of elements returned and the list of elements with all properties except all values will be empty.
+ * @description Query to select only property keys of given ids. All of the ids must exist in the database.  The result will be number of elements returned and the list of elements with all property keys, each with the value &#x60;DbValue::None&#x60;.
  * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech

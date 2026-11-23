@@ -284,6 +284,19 @@ async fn admin_cluster_logout() -> Result<(), TestError> {
     Ok(())
 }
 
+async fn admin_cluster_logout_all_no_token() -> Result<(), TestError> {
+    let cluster = TestCluster::new().await?;
+    let status = cluster
+        .follower()
+        .cluster_admin_user_logout_all()
+        .await
+        .unwrap_err()
+        .status;
+    assert_eq!(status, 401);
+
+    Ok(())
+}
+
 async fn admin_user_delete() -> Result<(), TestError> {
     let cluster = TestCluster::new().await?;
     let mut client = cluster.follower();
@@ -763,6 +776,7 @@ pub(super) const TESTS: &[Test] = tests![
     admin_user_add,
     admin_user_change_password,
     admin_cluster_logout,
+    admin_cluster_logout_all_no_token,
     admin_user_delete,
     db_add,
     db_clear,

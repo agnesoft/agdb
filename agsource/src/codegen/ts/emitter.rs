@@ -71,6 +71,10 @@ pub struct Emitter<'a> {
     bounded: bool,
     /// The [opaque](Module::opaque) classes the types name.
     classes: RefCell<BTreeSet<String>>,
+    /// The enums whose variants the [tests](Emitter::tests) build through
+    /// the exported [constructors](constructed): empty while they emit an
+    /// expected value, which stays a literal.
+    constructors: BTreeSet<String>,
 }
 
 /// `panic!`: TS has no throw expression.
@@ -117,14 +121,15 @@ impl<'a> Emitter<'a> {
             values: BTreeSet::new(),
             bounded: false,
             classes: RefCell::default(),
+            constructors: BTreeSet::new(),
         }
     }
 
     pub fn module(mut self) -> Ts {
         let m = self.m;
 
-        for (name, sigs) in &m.traits {
-            self.trait_interface(name, sigs);
+        for name in m.traits.keys() {
+            self.trait_interface(name);
         }
 
         for name in &m.records {
@@ -184,6 +189,7 @@ impl<'a> Emitter<'a> {
     /// gives their origin.
     pub fn tests(mut self, name: &str, module: &str, glue: &[(&str, &str)]) -> Ts {
         let m = self.m;
+        self.constructors = constructed(m).into_iter().map(str::to_owned).collect();
         self.line(0, &format!("describe({name:?}, () => {{"));
         let mut suite: Option<&str> = None;
 
@@ -234,7 +240,10 @@ impl<'a> Emitter<'a> {
 
         self.line(0, "});");
         self.current = name.to_owned();
-        let exported = |n: &String| *n == m.root || m.functions.iter().any(|f| f.name == *n);
+        let constructors = std::mem::take(&mut self.constructors);
+        let exported = |n: &String| {
+            *n == m.root || m.functions.iter().any(|f| f.name == *n) || constructors.contains(n)
+        };
         let mut used = self.imports.clone();
         used.extend(self.classes.take());
         let mut from: BTreeMap<&str, Vec<&str>> = BTreeMap::new();
@@ -270,7 +279,8 @@ import {{ describe, expect, it }} from \"vitest\";
         head += "\n";
         let mut types = String::new();
 
-        for name in self.schemas.borrow().iter() {
+        // An imported constructor object brings its type along.
+        for name in self.schemas.borrow().iter().filter(|n| !used.contains(*n)) {
             let _ = writeln!(types, "type {name} = {}.{name};", self.config.schemas);
         }
 
@@ -327,9 +337,33 @@ import {{ describe, expect, it }} from \"vitest\";
             Ty::Param(p) if self.is_reflective(p) => "object".into(),
             Ty::Param(p) => p.clone(),
             Ty::Into(to) => format!("Into{to}"),
+            Ty::Dict(tr, _) if !self.has_self(tr) => tr.clone(),
             Ty::Dict(tr, of) => format!("{tr}<{}>", self.ty(of)),
             Ty::SelfTy | Ty::Ref(_) | Ty::Result(..) | Ty::Fn | Ty::Unknown => "unknown".into(),
         }
+    }
+
+    /// The signatures of the interface of a trait: of a reflective one only
+    /// those without a receiver, as the callers' dictionaries implement them
+    /// and their values go through the [one class](Module::fields_of).
+    fn interface_sigs(&self, name: &str) -> impl Iterator<Item = &'a Func> + use<'a> {
+        let m = self.m;
+        let reflective = m.is_reflective(name);
+        m.traits[name]
+            .iter()
+            .filter(move |f| !reflective || f.recv.is_none())
+    }
+
+    /// Whether the interface of the trait takes the type it is of.
+    fn has_self(&self, name: &str) -> bool {
+        self.interface_sigs(name).any(|f| {
+            f.recv.is_some()
+                || f.params
+                    .iter()
+                    .map(|(_, t)| t)
+                    .chain([&f.ret])
+                    .any(|t| subst(t, &Ty::Param("Self".into()), &[]).mentions("Self"))
+        })
     }
 
     /// Whether the generic of the current function is bounded by a
@@ -465,11 +499,29 @@ import {{ describe, expect, it }} from \"vitest\";
                 en,
                 var,
                 payload: Some(p),
+            } if self.constructors.contains(en)
+                && matches!(self.m.variant(en, var), Some(Variant::Tuple(..))) =>
+            {
+                self.imports.insert(en.clone());
+                format!("{en}.{var}({})", self.expr(p))
+            }
+            K::Variant {
+                en,
+                var,
+                payload: Some(p),
             } => {
                 let var = self.variant_name(en, var);
                 format!("{{ {var}: {} }}", self.expr(p))
             }
-            K::Path(path) => path.join("."),
+            K::Path(path) => {
+                if let [name] = path.as_slice()
+                    && self.m.opaque.contains_key(name)
+                {
+                    self.imports.insert(name.clone());
+                }
+
+                path.join(".")
+            }
             K::Field { base, name }
                 if name.parse::<usize>().is_ok() && !self.is_builder_value(base) =>
             {
@@ -577,11 +629,20 @@ import {{ describe, expect, it }} from \"vitest\";
     }
 
     fn call(&mut self, callee: &Callee, recv: Option<&Expr>, args: &[Expr]) -> String {
-        let a = self.list(args);
+        // An assertion emits its expected value as a literal, so it does not
+        // import the constructors the list would.
+        let a = if matches!(
+            callee,
+            Callee::Intrinsic(Intrinsic::AssertEq | Intrinsic::AssertNe)
+        ) {
+            String::new()
+        } else {
+            self.list(args)
+        };
         let r = recv.map(|r| self.expr(r)).unwrap_or_default();
 
         match callee {
-            Callee::Member { class, name } if !self.is_class(class) => {
+            Callee::Member { class, name, .. } if !self.is_class(class) => {
                 let a = if a.is_empty() { r } else { format!("{r}, {a}") };
                 self.imports.insert(format!("{class}_{name}"));
                 format!("{class}_{name}({a})")
@@ -631,22 +692,12 @@ import {{ describe, expect, it }} from \"vitest\";
                 Intrinsic::Remove => format!("{r}.splice({a}, 1)[0]"),
                 Intrinsic::Repeat => format!("{r}.repeat({a})"),
                 Intrinsic::Assert => format!("expect({a}).toBe(true)"),
-                Intrinsic::AssertNe => {
-                    let left = self.expr(&args[0]);
-                    let right = self.expr(&args[1]);
-                    let ty = self.ty(&args[1].ty);
-                    format!("expect({left}).not.toEqual<{ty}>({right})")
-                }
                 Intrinsic::Map => format!("{r}.map({a})"),
                 Intrinsic::MapOk => format!("({a})({r})"),
                 Intrinsic::StartsWith => format!("{r}.startsWith({a})"),
                 Intrinsic::IterForEach => format!("{r}.forEach({a})"),
-                Intrinsic::AssertEq => {
-                    let left = self.expr(&args[0]);
-                    let right = self.expr(&args[1]);
-                    let ty = self.ty(&args[1].ty);
-                    format!("expect({left}).toEqual<{ty}>({right})")
-                }
+                Intrinsic::AssertNe => self.assert_eq(args, ".not"),
+                Intrinsic::AssertEq => self.assert_eq(args, ""),
                 Intrinsic::MemTake | Intrinsic::MemSwap | Intrinsic::UnwrapErr => {
                     self.unsupported(&format!("{i:?}"))
                 }
@@ -684,6 +735,17 @@ import {{ describe, expect, it }} from \"vitest\";
             }
             None => member(name),
         }
+    }
+
+    /// `expect(actual){not}.toEqual(expected)` of `args`, the expected value
+    /// a literal.
+    fn assert_eq(&mut self, args: &[Expr], not: &str) -> String {
+        let left = self.expr(&args[0]);
+        let constructors = std::mem::take(&mut self.constructors);
+        let right = self.expr(&args[1]);
+        self.constructors = constructors;
+        let ty = self.ty(&args[1].ty);
+        format!("expect({left}){not}.toEqual<{ty}>({right})")
     }
 
     fn unsupported(&mut self, what: &str) -> String {
@@ -855,14 +917,15 @@ import {{ describe, expect, it }} from \"vitest\";
         self.block(body, indent);
     }
 
-    /// A `match` as an `if` chain, exhaustive as Rust checked it.
+    /// A `match` as an `if` chain whose last arm is the `else`: Rust checked
+    /// that the arms are exhaustive.
     fn arms(&mut self, value: &Expr, arms: &[(Pat, Vec<Expr>)], indent: usize) {
         let mut open = false;
 
-        for (pat, body) in arms {
+        for (i, (pat, body)) in arms.iter().enumerate() {
             let (tests, binds) = pat.projections(value);
 
-            if tests.is_empty() {
+            if tests.is_empty() || i + 1 == arms.len() {
                 if open {
                     self.line(indent, "} else {");
                     self.arm(&binds, body, indent + 1);
@@ -880,11 +943,6 @@ import {{ describe, expect, it }} from \"vitest\";
             self.arm(&binds, body, indent + 1);
             open = true;
         }
-
-        self.line(indent, "} else {");
-        let panic = self.panic("\"unreachable\"");
-        self.line(indent + 1, &format!("{panic};"));
-        self.line(indent, "}");
     }
 
     fn els(&mut self, els: Option<&[Expr]>, indent: usize) {
@@ -1104,7 +1162,9 @@ import {{ describe, expect, it }} from \"vitest\";
             &format!("export function {}(v: Into{to}): {ret} {{", f.name),
         );
 
-        for (ty, binds, guard, mut body, cast) in kept {
+        let last = kept.len().saturating_sub(1);
+
+        for (i, (ty, binds, guard, mut body, cast)) in kept.into_iter().enumerate() {
             body.rewrite(&mut |e| {
                 if let K::Local(n) = &e.k
                     && let Some((_, place)) = binds.iter().find(|(b, _)| b == n)
@@ -1113,8 +1173,16 @@ import {{ describe, expect, it }} from \"vitest\";
                     *e = place.clone();
                 }
             });
-            let narrowed = !matches!(ty, Ty::Bool | Ty::Str | Ty::Float);
-            self.line(1, &format!("if ({guard}) {{"));
+            // The last arm is the tail: the earlier guards took the rest of
+            // the union, so the value is cast like a type the guard does not
+            // narrow.
+            let tail = i == last;
+            let narrowed = tail || !matches!(ty, Ty::Bool | Ty::Str | Ty::Float);
+            let indent = if tail { 1 } else { 2 };
+
+            if !tail {
+                self.line(1, &format!("if ({guard}) {{"));
+            }
 
             if is_statement(&body) {
                 let mut block = vec![body];
@@ -1127,11 +1195,11 @@ import {{ describe, expect, it }} from \"vitest\";
                             e.k = K::Local(value.clone());
                         }
                     });
-                    self.line(2, &format!("const {value} = v as {cast};"));
+                    self.line(indent, &format!("const {value} = v as {cast};"));
                 }
 
                 return_tail(&mut block);
-                self.block(&block, 2);
+                self.block(&block, indent);
             } else {
                 // `Number.isInteger`, `every` and `in` do not narrow the type.
                 if narrowed {
@@ -1143,16 +1211,14 @@ import {{ describe, expect, it }} from \"vitest\";
                 }
 
                 let body = self.expr(&body);
-                self.line(2, &format!("return {body};"));
+                self.line(indent, &format!("return {body};"));
             }
 
-            self.line(1, "}");
+            if !tail {
+                self.line(1, "}");
+            }
         }
 
-        let panic = self.panic(&format!(
-            "`cannot convert ${{JSON.stringify(v)}} into {to}`"
-        ));
-        self.line(1, &format!("return {panic};"));
         self.line(0, "}\n");
     }
 
@@ -1195,7 +1261,10 @@ import {{ describe, expect, it }} from \"vitest\";
                     .iter()
                     .map(|(_, t)| t)
                     .chain([&f.ret])
-                    .any(|t| t.mentions(&g.name))
+                    .any(|t| match t {
+                        Ty::Dict(tr, _) if !self.has_self(tr) => false,
+                        t => t.mentions(&g.name),
+                    })
             })
             .collect();
         let generics = self.type_params(&generics);
@@ -1242,10 +1311,11 @@ import {{ describe, expect, it }} from \"vitest\";
         format!("<{}>", params.join(", "))
     }
 
-    fn trait_interface(&mut self, name: &str, sigs: &[Func]) {
-        self.line(0, &format!("export interface {name}<Self> {{"));
+    fn trait_interface(&mut self, name: &str) {
+        let generics = if self.has_self(name) { "<Self>" } else { "" };
+        self.line(0, &format!("export interface {name}{generics} {{"));
 
-        for f in sigs {
+        for f in self.interface_sigs(name) {
             let params: Vec<String> = f
                 .recv
                 .iter()
@@ -1279,9 +1349,14 @@ import {{ describe, expect, it }} from \"vitest\";
                 continue;
             };
             let self_ty = self.ty(&self.self_ty(of));
+            let annotation = if m.is_reflective(tr) {
+                String::new()
+            } else {
+                format!(": {tr}<{self_ty}>")
+            };
             self.line(
                 0,
-                &format!("const {}: {tr}<{self_ty}> = {{", dict_global(of, tr)),
+                &format!("const {}{annotation} = {{", dict_global(of, tr)),
             );
             self.this = "self";
 
@@ -1303,25 +1378,12 @@ import {{ describe, expect, it }} from \"vitest\";
         }
     }
 
-    /// The objects of variant constructors of the enums the users build the
-    /// values of: the ones the normalizers convert into and from.
+    /// The objects of variant constructors of the [constructed] enums.
     fn constructors(&mut self) {
         let m = self.m;
-        let normalized: BTreeSet<&str> = m
-            .functions
-            .iter()
-            .map(|f| f.name.trim_start_matches("into_"))
-            .collect();
-        let enums: BTreeSet<&str> = m
-            .conversions
-            .iter()
-            .filter(|c| normalized.contains(c.to.as_str()))
-            .flat_map(|c| [Some(c.to.as_str()), c.from.name()])
-            .flatten()
-            .filter(|n| m.enums.contains_key(*n))
-            .collect();
+        let normalized = normalized(m);
 
-        for name in enums {
+        for name in constructed(m) {
             self.values.insert(name.to_owned());
             self.line(0, &format!("export const {name} = {{"));
             let ty = self.schema(name);
@@ -1414,6 +1476,27 @@ import {{ describe, expect, it }} from \"vitest\";
 }
 
 /// A member name: the tuple fields `0`, `1`, ... are `_0`, `_1`, ...
+/// The targets of the normalizers of `m`.
+fn normalized(m: &Module) -> BTreeSet<&str> {
+    m.functions
+        .iter()
+        .map(|f| f.name.trim_start_matches("into_"))
+        .collect()
+}
+
+/// The enums of `m` the users build the values of, with an exported object
+/// of variant constructors: the ones the normalizers convert into and from.
+fn constructed(m: &Module) -> BTreeSet<&str> {
+    let normalized = normalized(m);
+    m.conversions
+        .iter()
+        .filter(|c| normalized.contains(c.to.as_str()))
+        .flat_map(|c| [Some(c.to.as_str()), c.from.name()])
+        .flatten()
+        .filter(|n| m.enums.contains_key(*n))
+        .collect()
+}
+
 fn member(name: &str) -> String {
     if name.starts_with(|c: char| c.is_ascii_digit()) {
         format!("_{name}")
@@ -1560,7 +1643,7 @@ mod tests {
     }
 
     fn emitted_tests(source: &str, tests: &str, data: &[&str]) -> Ts {
-        let (mut m, errors) = tested(source, tests, data);
+        let (mut m, errors) = tested(source, &[], tests, data);
         assert_eq!(errors, Vec::<String>::new());
         passes(&mut m);
         Emitter::new(&m, &config()).tests("suite", "./m.ts", &[])
@@ -1722,6 +1805,39 @@ fn second() {
             }
 
             #[test]
+            fn tests_should_build_the_variants_of_the_normalized_enums_through_their_constructors_but_the_expected_values()
+             {
+                let ts = emitted_tests(
+                    r#"pub struct Root { pub v: V, pub w: W }
+pub enum V { Id(u64), Name(String), None }
+pub enum W { P(u8) }
+impl From<u64> for V {
+    fn from(id: u64) -> Self { V::Id(id) }
+}
+impl Root {
+    pub fn new() -> Root { Root { v: V::None, w: W::P(0) } }
+    pub fn id(&self, v: impl Into<V>) -> V { v.into() }
+}"#,
+                    r#"use c::Root;
+use c::V;
+#[test]
+fn t() {
+    let r = Root::new();
+    assert_eq!(r.id(V::Id(1)), V::Id(1));
+    assert_ne!(r.id(V::Name("a".to_string())), V::None);
+    let w = c::W::P(1);
+}"#,
+                    &["V", "W"],
+                );
+
+                assert_eq!(
+                    ts.code,
+                    "// header\n\nimport type { S } from \"s\";\nimport { describe, expect, it } from \"vitest\";\nimport { Root, V } from \"./m.ts\";\n\ntype W = S.W;\n\ndescribe(\"suite\", () => {\n    it(\"t\", () => {\n        const r = Root.new();\n        expect(r.id(V.Id(1))).toEqual<V>({ Id: 1 });\n        expect(r.id(V.Name(\"a\"))).not.toEqual<V>(\"None\");\n        const w: W = { P: 1 };\n    });\n});\n"
+                );
+                assert!(ts.unsupported.is_empty());
+            }
+
+            #[test]
             fn tests_should_emit_the_methods_of_the_options_lists_and_strings_and_escape_the_literals()
              {
                 let ts = emitted_tests(
@@ -1781,6 +1897,53 @@ fn checks() {
                         "login::fails: ``unwrap_err` of a value that is not awaited`"
                     ]
                 );
+            }
+
+            #[test]
+            fn tests_should_pass_the_dictionaries_of_the_test_types_from_their_derives() {
+                let (mut m, errors) = tested(
+                    r#"
+                    pub trait Refl {
+                        fn r(&self) -> u8;
+                        fn s() -> u8;
+                    }
+                    pub struct F(Vec<(u8, u8)>);
+                    impl Refl for F {
+                        fn r(&self) -> u8 {
+                            1
+                        }
+                        fn s() -> u8 {
+                            2
+                        }
+                    }
+                    pub struct Root;
+                    impl Root {
+                        pub fn new() -> Root {
+                            Root {}
+                        }
+                        pub fn stat<R: Refl>(self) -> u8 {
+                            R::s()
+                        }
+                    }
+                    "#,
+                    &["Refl"],
+                    "use c::Root;\nstruct S;\n#[test]\nfn t() { assert_eq!(Root::new().stat::<S>(), 2); }",
+                    &[],
+                );
+                assert_eq!(errors, Vec::<String>::new());
+                passes(&mut m);
+
+                let ts = Emitter::new(&m, &config()).tests(
+                    "suite",
+                    "./m.ts",
+                    &[(DERIVED, "./derived.ts")],
+                );
+
+                assert_eq!(
+                    ts.code,
+                    "// header\n\nimport type { S } from \"s\";\nimport { describe, expect, it } from \"vitest\";\nimport { S_Refl } from \"./derived.ts\";\nimport { Root } from \"./m.ts\";\n\ndescribe(\"suite\", () => {\n    it(\"t\", () => {\n        expect(Root.new().stat(S_Refl)).toEqual<number>(2);\n    });\n});\n"
+                );
+                assert_eq!(ts.unsupported, Vec::<String>::new());
             }
 
             #[test]
@@ -1923,6 +2086,7 @@ fn checks() {
                         Callee::Member {
                             class: "E".into(),
                             name: "f".into(),
+                            types: Vec::new(),
                         },
                         Some(e.clone()),
                         vec![int(1)],
@@ -1931,6 +2095,7 @@ fn checks() {
                         Callee::Member {
                             class: "E".into(),
                             name: "g".into(),
+                            types: Vec::new(),
                         },
                         Some(e.clone()),
                         Vec::new(),
@@ -2082,15 +2247,23 @@ fn checks() {
                     .collect(),
                     traits: [(
                         "Refl".to_owned(),
-                        vec![Func {
-                            recv: Some(Recv::Ref),
-                            ..Func::new(
-                                "keys",
+                        vec![
+                            Func {
+                                recv: Some(Recv::Ref),
+                                ..Func::new(
+                                    "keys",
+                                    vec![("n".into(), Ty::Int("u64"))],
+                                    Ty::SelfTy,
+                                    Vec::new(),
+                                )
+                            },
+                            Func::new(
+                                "make",
                                 vec![("n".into(), Ty::Int("u64"))],
                                 Ty::SelfTy,
                                 Vec::new(),
-                            )
-                        }],
+                            ),
+                        ],
                     )]
                     .into_iter()
                     .collect(),
@@ -2101,7 +2274,7 @@ fn checks() {
 
                 assert_eq!(
                     ts.code,
-                    "// header\n\nimport type { S } from \"s\";\n\ntype D = S.D;\ntype E = S.E;\nfunction panic(msg: string): never {\n    throw new Error(msg);\n}\nexport interface Refl<Self> {\n    keys(self: Self, n: number): Self;\n}\n\nexport class Root {\n    exprs<T extends object, P>(b: boolean, l: (number | undefined)[], e: E, t: [number, string], s: unknown, o: T | undefined, r: unknown, n: D, dict: Refl<U>, x: T, pp: P): void {\n        1.5;\n        undefined;\n        true;\n        \"A\";\n        t[0];\n        e[0];\n        root._0;\n        e.B;\n        l[0];\n        !(b !== true);\n        !(l.length === 0);\n        !b;\n        const y = (b ? 1 : 2);\n        (x) => {\n            const z = x;\n            return x;\n        };\n        () => ({ a: 1 });\n        unsupported();\n        E_f(e, 1);\n        E_g(e);\n        Root.new(1);\n        ext(1);\n        unsupported();\n        unsupported();\n        l.map((x) => x);\n        l.pop();\n        l.at(-1);\n        l.length;\n        l.push(...l);\n        (l ?? 0);\n        (l ?? panic(\"e\"));\n        unsupported();\n        unsupported();\n        unsupported();\n        unsupported();\n        let r: number = 1;\n        r = 2;\n        const a: number[] = [];\n        const u = [];\n        const c: D = { a: 1 };\n        const cu = { a: 1 };\n        const v: E = { B: 1 };\n        const n = undefined;\n        3;\n        if (b) {\n            4;\n        }\n        if (b) {\n            5;\n        } else {\n            6;\n        }\n        if (b) {\n            7;\n        } else if (b !== true) {\n            8;\n        }\n        if (e === \"A\") {\n            9;\n        }\n        if (typeof e === \"object\" && e !== null && \"B\" in e) {\n            const p = e.B;\n            return p;\n        }\n        if (true) {\n            10;\n        }\n        while (b);\n        while (b) {\n            11;\n        }\n        if (e === \"A\") {\n            12;\n        } else if (e === 1) {\n            13;\n        } else {\n            const w = e;\n            return w;\n        }\n        if (e === \"A\") {\n            14;\n        } else if (typeof e === \"object\" && e !== null && \"B\" in e) {\n            15;\n        } else {\n            panic(\"unreachable\");\n        }\n        return undefined;\n    }\n\n    static new(): Root {\n    }\n}\n\n"
+                    "// header\n\nimport type { S } from \"s\";\n\ntype D = S.D;\ntype E = S.E;\nfunction panic(msg: string): never {\n    throw new Error(msg);\n}\nexport interface Refl<Self> {\n    make(n: number): Self;\n}\n\nexport class Root {\n    exprs<T extends object, P>(b: boolean, l: (number | undefined)[], e: E, t: [number, string], s: unknown, o: T | undefined, r: unknown, n: D, dict: Refl<U>, x: T, pp: P): void {\n        1.5;\n        undefined;\n        true;\n        \"A\";\n        t[0];\n        e[0];\n        root._0;\n        e.B;\n        l[0];\n        !(b !== true);\n        !(l.length === 0);\n        !b;\n        const y = (b ? 1 : 2);\n        (x) => {\n            const z = x;\n            return x;\n        };\n        () => ({ a: 1 });\n        unsupported();\n        E_f(e, 1);\n        E_g(e);\n        Root.new(1);\n        ext(1);\n        unsupported();\n        unsupported();\n        l.map((x) => x);\n        l.pop();\n        l.at(-1);\n        l.length;\n        l.push(...l);\n        (l ?? 0);\n        (l ?? panic(\"e\"));\n        unsupported();\n        unsupported();\n        unsupported();\n        unsupported();\n        let r: number = 1;\n        r = 2;\n        const a: number[] = [];\n        const u = [];\n        const c: D = { a: 1 };\n        const cu = { a: 1 };\n        const v: E = { B: 1 };\n        const n = undefined;\n        3;\n        if (b) {\n            4;\n        }\n        if (b) {\n            5;\n        } else {\n            6;\n        }\n        if (b) {\n            7;\n        } else if (b !== true) {\n            8;\n        }\n        if (e === \"A\") {\n            9;\n        }\n        if (typeof e === \"object\" && e !== null && \"B\" in e) {\n            const p = e.B;\n            return p;\n        }\n        if (true) {\n            10;\n        }\n        while (b);\n        while (b) {\n            11;\n        }\n        if (e === \"A\") {\n            12;\n        } else if (e === 1) {\n            13;\n        } else {\n            const w = e;\n            return w;\n        }\n        if (e === \"A\") {\n            14;\n        } else {\n            15;\n        }\n        return undefined;\n    }\n\n    static new(): Root {\n    }\n}\n\n"
                 );
                 assert_eq!(ts.notes, Vec::<String>::new());
                 assert_eq!(
@@ -2296,7 +2469,7 @@ fn checks() {
 
                 assert_eq!(
                     ts.code,
-                    "// header\n\nimport type { S } from \"s\";\n\ntype C = S.C;\ntype D = S.D;\ntype Nope = S.Nope;\ntype U = S.U;\nexport type X = S.X;\nexport type Y = S.Y;\nexport type Z = S.Z;\nfunction panic(msg: string): never {\n    throw new Error(msg);\n}\nexport interface Refl<Self> {\n}\n\nconst C_Tr: Tr<C> = {\n    add(n: number): number {\n        return n;\n    },\n};\n\nexport const X = {\n    P: (v: number): X => ({ P: v }),\n    B: (v: boolean): X => ({ B: v }),\n};\n\nexport const Y = {\n    P: (v: number): Y => ({ P: v }),\n    Q: (v: number): Y => ({ Q: v }),\n    R: (v: number): Y => ({ R: v }),\n};\n\nexport const Z = {\n    Z1: (v: IntoX): Z => ({ Z1: into_X(v) }),\n};\n\nexport type IntoX = boolean | number | string | number[] | [string, number] | U[] | X | U | D | Nope | Y | IntoZ | object | void;\n\nfunction is_into_X(v: unknown): v is IntoX {\n    return (typeof v === \"boolean\") || (Number.isInteger(v)) || (typeof v === \"number\") || (typeof v === \"string\") || (Array.isArray(v) && v.every((x) => Number.isInteger(x))) || (Array.isArray(v) && v.length === 2 && typeof v[0] === \"string\" && Number.isInteger(v[1])) || (Array.isArray(v) && v.every((x) => x === \"A\" || x === \"B\")) || ((typeof v === \"object\" && v !== null && (\"P\" in v || \"B\" in v))) || (typeof v === \"object\" && v !== null && \"a\" in v) || (true) || (typeof v === \"object\" && v !== null && \"Q\" in v) || (typeof v === \"object\" && v !== null && \"R\" in v) || (is_into_Z(v)) || (typeof v === \"object\" && v !== null && !Array.isArray(v));\n}\n\nexport function into_X(v: IntoX): X {\n    if (typeof v === \"boolean\") {\n        return { B: v };\n    }\n    if (Number.isInteger(v)) {\n        return { P: (v as number) };\n    }\n    if (typeof v === \"number\") {\n        return v;\n    }\n    if (typeof v === \"string\") {\n        return v;\n    }\n    if (Array.isArray(v) && v.every((x) => Number.isInteger(x))) {\n        return (v as number[]);\n    }\n    if (Array.isArray(v) && v.length === 2 && typeof v[0] === \"string\" && Number.isInteger(v[1])) {\n        return (v as [string, number]);\n    }\n    if (Array.isArray(v) && v.every((x) => x === \"A\" || x === \"B\")) {\n        return (v as U[]);\n    }\n    if ((typeof v === \"object\" && v !== null && (\"P\" in v || \"B\" in v))) {\n        return (v as X);\n    }\n    if (typeof v === \"object\" && v !== null && \"a\" in v) {\n        return (v as D);\n    }\n    if (true) {\n        return (v as Nope);\n    }\n    if (typeof v === \"object\" && v !== null && \"Q\" in v) {\n        return { P: (v as Extract<Y, { Q: unknown }>).Q };\n    }\n    if (typeof v === \"object\" && v !== null && \"R\" in v) {\n        return { P: 0 };\n    }\n    if (is_into_Z(v)) {\n        return (v as IntoZ);\n    }\n    if (typeof v === \"object\" && v !== null && !Array.isArray(v)) {\n        return (v as object);\n    }\n    return panic(`cannot convert ${JSON.stringify(v)} into X`);\n}\n\nexport type IntoZ = IntoX[] | [IntoX] | Z | IntoX | undefined;\n\nfunction is_into_Z(v: unknown): v is IntoZ {\n    return (Array.isArray(v) && v.every((x) => is_into_X(x))) || (Array.isArray(v) && v.length === 1 && is_into_X(v[0])) || ((typeof v === \"object\" && v !== null && (\"Z1\" in v || \"S\" in v))) || ((v === undefined || is_into_X(v)));\n}\n\nexport function into_Z(v: IntoZ): Z {\n    if (Array.isArray(v) && v.every((x) => is_into_X(x))) {\n        return (v as IntoX[]);\n    }\n    if (Array.isArray(v) && v.length === 1 && is_into_X(v[0])) {\n        return (v as [IntoX]);\n    }\n    if ((typeof v === \"object\" && v !== null && (\"Z1\" in v || \"S\" in v))) {\n        return (v as Z);\n    }\n    if ((v === undefined || is_into_X(v))) {\n        return (v as IntoX | undefined);\n    }\n    return panic(`cannot convert ${JSON.stringify(v)} into Z`);\n}\n\nfunction D_get(self: D): number {\n    return self.a;\n}\n\nfunction D_make(): D {\n    return 1;\n}\n\n"
+                    "// header\n\nimport type { S } from \"s\";\n\ntype C = S.C;\ntype D = S.D;\ntype Nope = S.Nope;\ntype U = S.U;\nexport type X = S.X;\nexport type Y = S.Y;\nexport type Z = S.Z;\nexport interface Refl {\n}\n\nconst C_Tr: Tr<C> = {\n    add(n: number): number {\n        return n;\n    },\n};\n\nexport const X = {\n    P: (v: number): X => ({ P: v }),\n    B: (v: boolean): X => ({ B: v }),\n};\n\nexport const Y = {\n    P: (v: number): Y => ({ P: v }),\n    Q: (v: number): Y => ({ Q: v }),\n    R: (v: number): Y => ({ R: v }),\n};\n\nexport const Z = {\n    Z1: (v: IntoX): Z => ({ Z1: into_X(v) }),\n};\n\nexport type IntoX = boolean | number | string | number[] | [string, number] | U[] | X | U | D | Nope | Y | IntoZ | object | void;\n\nfunction is_into_X(v: unknown): v is IntoX {\n    return (typeof v === \"boolean\") || (Number.isInteger(v)) || (typeof v === \"number\") || (typeof v === \"string\") || (Array.isArray(v) && v.every((x) => Number.isInteger(x))) || (Array.isArray(v) && v.length === 2 && typeof v[0] === \"string\" && Number.isInteger(v[1])) || (Array.isArray(v) && v.every((x) => x === \"A\" || x === \"B\")) || ((typeof v === \"object\" && v !== null && (\"P\" in v || \"B\" in v))) || (typeof v === \"object\" && v !== null && \"a\" in v) || (true) || (typeof v === \"object\" && v !== null && \"Q\" in v) || (typeof v === \"object\" && v !== null && \"R\" in v) || (is_into_Z(v)) || (typeof v === \"object\" && v !== null && !Array.isArray(v));\n}\n\nexport function into_X(v: IntoX): X {\n    if (typeof v === \"boolean\") {\n        return { B: v };\n    }\n    if (Number.isInteger(v)) {\n        return { P: (v as number) };\n    }\n    if (typeof v === \"number\") {\n        return v;\n    }\n    if (typeof v === \"string\") {\n        return v;\n    }\n    if (Array.isArray(v) && v.every((x) => Number.isInteger(x))) {\n        return (v as number[]);\n    }\n    if (Array.isArray(v) && v.length === 2 && typeof v[0] === \"string\" && Number.isInteger(v[1])) {\n        return (v as [string, number]);\n    }\n    if (Array.isArray(v) && v.every((x) => x === \"A\" || x === \"B\")) {\n        return (v as U[]);\n    }\n    if ((typeof v === \"object\" && v !== null && (\"P\" in v || \"B\" in v))) {\n        return (v as X);\n    }\n    if (typeof v === \"object\" && v !== null && \"a\" in v) {\n        return (v as D);\n    }\n    if (true) {\n        return (v as Nope);\n    }\n    if (typeof v === \"object\" && v !== null && \"Q\" in v) {\n        return { P: (v as Extract<Y, { Q: unknown }>).Q };\n    }\n    if (typeof v === \"object\" && v !== null && \"R\" in v) {\n        return { P: 0 };\n    }\n    if (is_into_Z(v)) {\n        return (v as IntoZ);\n    }\n    return (v as object);\n}\n\nexport type IntoZ = IntoX[] | [IntoX] | Z | IntoX | undefined;\n\nfunction is_into_Z(v: unknown): v is IntoZ {\n    return (Array.isArray(v) && v.every((x) => is_into_X(x))) || (Array.isArray(v) && v.length === 1 && is_into_X(v[0])) || ((typeof v === \"object\" && v !== null && (\"Z1\" in v || \"S\" in v))) || ((v === undefined || is_into_X(v)));\n}\n\nexport function into_Z(v: IntoZ): Z {\n    if (Array.isArray(v) && v.every((x) => is_into_X(x))) {\n        return (v as IntoX[]);\n    }\n    if (Array.isArray(v) && v.length === 1 && is_into_X(v[0])) {\n        return (v as [IntoX]);\n    }\n    if ((typeof v === \"object\" && v !== null && (\"Z1\" in v || \"S\" in v))) {\n        return (v as Z);\n    }\n    return (v as IntoX | undefined);\n}\n\nfunction D_get(self: D): number {\n    return self.a;\n}\n\nfunction D_make(): D {\n    return 1;\n}\n\n"
                 );
                 assert_eq!(
                     ts.notes,
@@ -2316,6 +2489,44 @@ fn checks() {
                         "empty: `a function other than a conversion`",
                         "returns: `a function other than a conversion`"
                     ]
+                );
+            }
+
+            #[test]
+            fn module_should_take_the_callers_dictionaries_for_the_static_methods_of_a_reflective_trait()
+             {
+                let ts = emitted(
+                    r#"
+                    pub trait Refl {
+                        fn r(&self) -> u8;
+                        fn s() -> u8;
+                    }
+                    pub struct F(Vec<(u8, u8)>);
+                    impl Refl for F {
+                        fn r(&self) -> u8 {
+                            1
+                        }
+                        fn s() -> u8 {
+                            2
+                        }
+                    }
+                    pub struct Root;
+                    impl Root {
+                        pub fn both<R: Refl>(self, r: R) -> u8 {
+                            r.r() + R::s()
+                        }
+                        pub fn stat<R: Refl>(self) -> u8 {
+                            R::s()
+                        }
+                    }
+                    "#,
+                    &["Refl"],
+                    &[],
+                );
+
+                assert_eq!(
+                    ts.code,
+                    "// header\n\nimport type { S } from \"s\";\n\nexport interface Refl {\n    s(): number;\n}\n\nconst F_Refl = {\n    r(self: ([number, number])[]): number {\n        return 1;\n    },\n};\n\nexport class Root {\n    both<R extends object>(r: R, R_Refl: Refl): number {\n        return F_Refl.r(Object.entries(r).map(([k, v]): [number, number] => [k as number, v as number])) + R_Refl.s();\n    }\n\n    stat(R_Refl: Refl): number {\n        return R_Refl.s();\n    }\n}\n\n"
                 );
             }
 
@@ -2379,7 +2590,7 @@ fn checks() {
                 assert_eq!(
                     (ts.code.as_str(), ts.unsupported),
                     (
-                        "// header\n\nimport type { S } from \"s\";\n\ntype I = S.I;\ntype Q = S.Q;\ntype W = S.W;\nfunction panic(msg: string): never {\n    throw new Error(msg);\n}\nexport class Root {\n    w(n: number): W {\n        const q: Q = { x: n };\n        return { ab: { x: q.x } };\n    }\n\n    a(w: W): number {\n        if (typeof w === \"object\" && w !== null && \"ab\" in w) {\n            const q = w.ab;\n            return q.x;\n        } else if (w === \"cd\") {\n            return 0;\n        } else {\n            panic(\"unreachable\");\n        }\n    }\n\n    cd(): W {\n        return \"cd\";\n    }\n\n    i(): I {\n        return \"unsupported()\";\n    }\n}\n\n",
+                        "// header\n\nimport type { S } from \"s\";\n\ntype I = S.I;\ntype Q = S.Q;\ntype W = S.W;\nexport class Root {\n    w(n: number): W {\n        const q: Q = { x: n };\n        return { ab: { x: q.x } };\n    }\n\n    a(w: W): number {\n        if (typeof w === \"object\" && w !== null && \"ab\" in w) {\n            const q = w.ab;\n            return q.x;\n        } else {\n            return 0;\n        }\n    }\n\n    cd(): W {\n        return \"cd\";\n    }\n\n    i(): I {\n        return \"unsupported()\";\n    }\n}\n\n",
                         vec!["i: `I is not externally tagged`".to_owned()]
                     )
                 );
@@ -2567,8 +2778,8 @@ fn checks() {
                         }
                         pub fn first(&self) -> u64 {
                             match self.0.n {
-                                Some(id) => id,
                                 None => 0,
+                                Some(id) => id,
                             }
                         }
                         pub fn query(self) -> Qa {
@@ -2604,7 +2815,7 @@ fn checks() {
 
                 assert_eq!(
                     ts.code,
-                    "// header\n\nimport type { S } from \"s\";\n\ntype Qa = S.Qa;\nexport type V = S.V;\nexport type Wire = S.Wire;\nfunction panic(msg: string): never {\n    throw new Error(msg);\n}\nexport interface Ided<Self> {\n    id(self: Self): number;\n    into_wire(self: Self): Wire;\n}\n\nexport interface Keys<Self> {\n    keys(self: Self): string[];\n    none(): string[];\n}\n\nconst Qb_Ided: Ided<number> = {\n    id(self: number): number {\n        return self;\n    },\n    into_wire(self: number): Wire {\n        return { B: self };\n    },\n};\n\nconst Fields_Keys: Keys<([string, V | undefined])[]> = {\n    keys(self: ([string, V | undefined])[]): string[] {\n        const keys: string[] = [];\n        self.forEach((f) => {\n            if (f[1] !== undefined) {\n                const v = f[1];\n                if (V_is_id(v)) {\n                    keys.push(f[0]);\n                }\n            }\n        });\n        return keys;\n    },\n    none(): string[] {\n        return [];\n    },\n};\n\nexport const V = {\n    Id: (v: number): V => ({ Id: v }),\n    Name: (v: string): V => ({ Name: v }),\n    Pair: (v: [number, number]): V => ({ Pair: v }),\n    None: \"None\" as V,\n};\n\nexport const Wire = {\n    A: (v: Qa): Wire => ({ A: v }),\n    B: (v: number): Wire => ({ B: v }),\n};\n\nexport type IntoV = boolean | number | string | V | Wire;\n\nexport function into_V(v: IntoV): V {\n    if (typeof v === \"boolean\") {\n        if (v === true) {\n            return { Id: 1 };\n        } else if (v === false) {\n            return \"None\";\n        } else {\n            panic(\"unreachable\");\n        }\n    }\n    if (Number.isInteger(v)) {\n        return { Id: (v as number) };\n    }\n    if (typeof v === \"string\") {\n        return { Name: v };\n    }\n    if ((typeof v === \"object\" && v !== null && (\"Id\" in v || \"Name\" in v || \"Pair\" in v))) {\n        return (v as V);\n    }\n    if ((typeof v === \"object\" && v !== null && (\"A\" in v || \"B\" in v))) {\n        const value0 = v as Wire;\n        if (typeof value0 === \"object\" && value0 !== null && \"A\" in value0) {\n            return \"None\";\n        } else if (typeof value0 === \"object\" && value0 !== null && \"B\" in value0) {\n            const value = value0.B;\n            return { Id: value };\n        } else {\n            panic(\"unreachable\");\n        }\n    }\n    return panic(`cannot convert ${JSON.stringify(v)} into V`);\n}\n\nfunction V_zero(): V {\n    const zero: V = { Id: 0 };\n    return zero;\n}\n\nfunction V_is_id(self: V): boolean {\n    if (typeof self === \"object\" && self !== null && \"Id\" in self) {\n        return true;\n    } else if (typeof self === \"object\" && self !== null && \"Pair\" in self) {\n        const a = self.Pair[0];\n        const b = self.Pair[1];\n        return a === b;\n    } else {\n        return false;\n    }\n}\n\nexport class Root {\n    a(): A {\n        return new A({ ids: [], n: undefined, keys: [] });\n    }\n\n    b(n: number): Wire {\n        return { B: n };\n    }\n\n    g(): G<number> {\n        return new G(1, Qb_Ided);\n    }\n}\n\nclass G<T> {\n    constructor(public _0: T, public T_Ided: Ided<T>) {}\n\n    id(): number {\n        return this.T_Ided.id(this._0);\n    }\n\n    query(): Wire {\n        return this.T_Ided.into_wire(this._0);\n    }\n}\n\nclass A {\n    constructor(public _0: Qa) {}\n\n    ids(ids: IntoV[]): A {\n        ids.forEach((x) => this._0.ids.push(into_V(x)));\n        return this;\n    }\n\n    id(id: IntoV): A {\n        this._0.ids.push(into_V(id));\n        return this;\n    }\n\n    n(n: number): A {\n        if (n > 0) {\n            this._0.n = n;\n        } else if (n === 0) {\n            this._0.n = undefined;\n        } else {\n            panic(\"negative\");\n        }\n        return this;\n    }\n\n    values<T extends object>(t: T): A {\n        this._0.keys = Fields_Keys.keys(Object.entries(t).map(([k, v]): [string, V | undefined] => [k as string, v === undefined || v === null ? undefined : into_V(v as IntoV)]));\n        if (this._0.keys.length === 0) {\n            this._0.keys = Fields_Keys.none();\n        }\n        return this;\n    }\n\n    count(): number {\n        let n: number = 0;\n        this._0.ids.forEach((x) => {\n            n = n + 1;\n        });\n        this._0.ids.forEach((x) => {\n            if (V_is_id(x) && n > 1) {\n                n = n + 1;\n            }\n        });\n        return n;\n    }\n\n    flags(): number[] {\n        return this._0.ids.map((x) => (V_is_id(x) ? 1 : 0));\n    }\n\n    wire(w: Wire): A {\n        this._0.ids.push(into_V(w));\n        this._0.ids.push(V_zero());\n        return this;\n    }\n\n    first(): number {\n        if (this._0.n !== undefined) {\n            const id = this._0.n;\n            return id;\n        } else if (this._0.n === undefined) {\n            return 0;\n        } else {\n            panic(\"unreachable\");\n        }\n    }\n\n    query(): Wire {\n        return { A: this._0 };\n    }\n}\n\n"
+                    "// header\n\nimport type { S } from \"s\";\n\ntype Qa = S.Qa;\nexport type V = S.V;\nexport type Wire = S.Wire;\nfunction panic(msg: string): never {\n    throw new Error(msg);\n}\nexport interface Ided<Self> {\n    id(self: Self): number;\n    into_wire(self: Self): Wire;\n}\n\nexport interface Keys {\n    none(): string[];\n}\n\nconst Qb_Ided: Ided<number> = {\n    id(self: number): number {\n        return self;\n    },\n    into_wire(self: number): Wire {\n        return { B: self };\n    },\n};\n\nconst Fields_Keys = {\n    keys(self: ([string, V | undefined])[]): string[] {\n        const keys: string[] = [];\n        self.forEach((f) => {\n            if (f[1] !== undefined) {\n                const v = f[1];\n                if (V_is_id(v)) {\n                    keys.push(f[0]);\n                }\n            }\n        });\n        return keys;\n    },\n};\n\nexport const V = {\n    Id: (v: number): V => ({ Id: v }),\n    Name: (v: string): V => ({ Name: v }),\n    Pair: (v: [number, number]): V => ({ Pair: v }),\n    None: \"None\" as V,\n};\n\nexport const Wire = {\n    A: (v: Qa): Wire => ({ A: v }),\n    B: (v: number): Wire => ({ B: v }),\n};\n\nexport type IntoV = boolean | number | string | V | Wire;\n\nexport function into_V(v: IntoV): V {\n    if (typeof v === \"boolean\") {\n        if (v === true) {\n            return { Id: 1 };\n        } else {\n            return \"None\";\n        }\n    }\n    if (Number.isInteger(v)) {\n        return { Id: (v as number) };\n    }\n    if (typeof v === \"string\") {\n        return { Name: v };\n    }\n    if ((typeof v === \"object\" && v !== null && (\"Id\" in v || \"Name\" in v || \"Pair\" in v))) {\n        return (v as V);\n    }\n    const value0 = v as Wire;\n    if (typeof value0 === \"object\" && value0 !== null && \"A\" in value0) {\n        return \"None\";\n    } else {\n        const value = value0.B;\n        return { Id: value };\n    }\n}\n\nfunction V_zero(): V {\n    const zero: V = { Id: 0 };\n    return zero;\n}\n\nfunction V_is_id(self: V): boolean {\n    if (typeof self === \"object\" && self !== null && \"Id\" in self) {\n        return true;\n    } else if (typeof self === \"object\" && self !== null && \"Pair\" in self) {\n        const a = self.Pair[0];\n        const b = self.Pair[1];\n        return a === b;\n    } else {\n        return false;\n    }\n}\n\nexport class Root {\n    a(): A {\n        return new A({ ids: [], n: undefined, keys: [] });\n    }\n\n    b(n: number): Wire {\n        return { B: n };\n    }\n\n    g(): G<number> {\n        return new G(1, Qb_Ided);\n    }\n}\n\nclass G<T> {\n    constructor(public _0: T, public T_Ided: Ided<T>) {}\n\n    id(): number {\n        return this.T_Ided.id(this._0);\n    }\n\n    query(): Wire {\n        return this.T_Ided.into_wire(this._0);\n    }\n}\n\nclass A {\n    constructor(public _0: Qa) {}\n\n    ids(ids: IntoV[]): A {\n        ids.forEach((x) => this._0.ids.push(into_V(x)));\n        return this;\n    }\n\n    id(id: IntoV): A {\n        this._0.ids.push(into_V(id));\n        return this;\n    }\n\n    n(n: number): A {\n        if (n > 0) {\n            this._0.n = n;\n        } else if (n === 0) {\n            this._0.n = undefined;\n        } else {\n            panic(\"negative\");\n        }\n        return this;\n    }\n\n    values<T extends object>(t: T, T_Keys: Keys): A {\n        this._0.keys = Fields_Keys.keys(Object.entries(t).map(([k, v]): [string, V | undefined] => [k as string, v === undefined || v === null ? undefined : into_V(v as IntoV)]));\n        if (this._0.keys.length === 0) {\n            this._0.keys = T_Keys.none();\n        }\n        return this;\n    }\n\n    count(): number {\n        let n: number = 0;\n        this._0.ids.forEach((x) => {\n            n = n + 1;\n        });\n        this._0.ids.forEach((x) => {\n            if (V_is_id(x) && n > 1) {\n                n = n + 1;\n            }\n        });\n        return n;\n    }\n\n    flags(): number[] {\n        return this._0.ids.map((x) => (V_is_id(x) ? 1 : 0));\n    }\n\n    wire(w: Wire): A {\n        this._0.ids.push(into_V(w));\n        this._0.ids.push(V_zero());\n        return this;\n    }\n\n    first(): number {\n        if (this._0.n === undefined) {\n            return 0;\n        } else {\n            const id = this._0.n;\n            return id;\n        }\n    }\n\n    query(): Wire {\n        return { A: this._0 };\n    }\n}\n\n"
                 );
                 assert_eq!(ts.notes, Vec::<String>::new());
                 assert_eq!(ts.unsupported, Vec::<String>::new());

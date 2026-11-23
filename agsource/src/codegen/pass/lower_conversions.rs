@@ -354,6 +354,7 @@ impl Root {
         self
     }
 }"#,
+                        &[],
                         r#"#[test]
 fn t() {
     let a: c::A = (1, 2).into();

@@ -20,9 +20,6 @@ type ServerDatabase = types.ServerDatabase;
 type UserCredentials = types.UserCredentials;
 type UserLogin = types.UserLogin;
 type UserStatus = types.UserStatus;
-function panic(msg: string): never {
-    throw new Error(msg);
-}
 
 export const BINARY_CONTENT_TYPE: string = "application/vnd.agdb.api.v1";
 
@@ -61,10 +58,8 @@ function DbKind_to_string(self: DbKind): string {
         return "file";
     } else if (self === "mapped") {
         return "mapped";
-    } else if (self === "memory") {
-        return "memory";
     } else {
-        panic("unreachable");
+        return "memory";
     }
 }
 
@@ -75,10 +70,8 @@ function DbResource_to_string(self: DbResource): string {
         return "db";
     } else if (self === "audit") {
         return "audit";
-    } else if (self === "backup") {
-        return "backup";
     } else {
-        panic("unreachable");
+        return "backup";
     }
 }
 
@@ -87,10 +80,8 @@ function DbUserRole_to_string(self: DbUserRole): string {
         return "admin";
     } else if (self === "read") {
         return "read";
-    } else if (self === "write") {
-        return "write";
     } else {
-        panic("unreachable");
+        return "write";
     }
 }
 
@@ -105,10 +96,8 @@ function LogLevelFilter_to_string(self: LogLevelFilter): string {
         return "info";
     } else if (self === "debug") {
         return "debug";
-    } else if (self === "trace") {
-        return "trace";
     } else {
-        panic("unreachable");
+        return "trace";
     }
 }
 

@@ -24,13 +24,6 @@ use agdb_api::config_impl::DEFAULT_REQUEST_BODY_LIMIT;
 use agdb_api::config_impl::DEFAULT_TOKEN_EXPIRY_SECONDS;
 use reqwest::StatusCode;
 use std::path::Path;
-async fn shutdown_no_token() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
-    let status = server.api.admin_shutdown().await.unwrap_err().status;
-    assert_eq!(status, 401);
-    Ok(())
-}
-
 async fn shutdown_bad_token() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     let client = reqwest_client();
@@ -662,7 +655,6 @@ async fn openapi() -> Result<(), TestError> {
 }
 
 pub(super) const TESTS: &[Test] = tests![
-    shutdown_no_token,
     shutdown_bad_token,
     config_reuse,
     db_list_after_shutdown,

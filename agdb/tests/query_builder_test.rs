@@ -4,6 +4,7 @@ use agdb::Amend;
 use agdb::BitwiseOp;
 use agdb::Comparison;
 use agdb::CountComparison;
+use agdb::DbElement;
 use agdb::DbId;
 use agdb::DbKeyOrder;
 use agdb::DbKeyValue;
@@ -45,6 +46,11 @@ struct T {
     db_id: Option<QueryId>,
     value1: String,
     value2: i64,
+}
+
+#[derive(DbElement)]
+struct E {
+    value: i64,
 }
 
 #[test]
@@ -724,6 +730,67 @@ fn insert_nodes_values() {
 }
 
 #[test]
+fn insert_nodes_values_element() {
+    assert_eq!(
+        QueryType::from(QueryBuilder::insert().nodes().values(T::default()).query()),
+        QueryType::InsertNodes(InsertNodesQuery {
+            count: 0,
+            values: QueryValues::Multi(vec![vec![
+                DbKeyValue {
+                    key: DbValue::String("value1".to_string()),
+                    value: DbValue::String("".to_string())
+                },
+                DbKeyValue {
+                    key: DbValue::String("value2".to_string()),
+                    value: DbValue::I64(0)
+                }
+            ]]),
+            aliases: vec![],
+            ids: QueryIds::Ids(vec![])
+        })
+    );
+}
+
+#[test]
+fn insert_nodes_values_elements() {
+    assert_eq!(
+        QueryType::from(
+            QueryBuilder::insert()
+                .nodes()
+                .values([T::default(), T::default()])
+                .query()
+        ),
+        QueryType::InsertNodes(InsertNodesQuery {
+            count: 0,
+            values: QueryValues::Multi(vec![
+                vec![
+                    DbKeyValue {
+                        key: DbValue::String("value1".to_string()),
+                        value: DbValue::String("".to_string())
+                    },
+                    DbKeyValue {
+                        key: DbValue::String("value2".to_string()),
+                        value: DbValue::I64(0)
+                    }
+                ],
+                vec![
+                    DbKeyValue {
+                        key: DbValue::String("value1".to_string()),
+                        value: DbValue::String("".to_string())
+                    },
+                    DbKeyValue {
+                        key: DbValue::String("value2".to_string()),
+                        value: DbValue::I64(0)
+                    }
+                ]
+            ]),
+            aliases: vec![],
+            ids: QueryIds::Ids(vec![])
+        })
+    );
+}
+
+#[test]
 fn insert_nodes_ids_count_id() {
     assert_eq!(
         QueryType::from(QueryBuilder::insert().nodes().ids(1).count(1).query()),
@@ -931,6 +998,57 @@ fn insert_elements() {
                     DbKeyValue {
                         key: DbValue::String("value2".to_string()),
                         value: DbValue::I64(0)
+                    }
+                ]
+            ]),
+            amend: Amend::None
+        })
+    );
+}
+
+#[test]
+fn insert_elements_db_ids() {
+    assert_eq!(
+        QueryType::from(
+            QueryBuilder::insert()
+                .elements(&[
+                    T {
+                        db_id: Some(QueryId::Id(DbId(42))),
+                        value1: "a".to_string(),
+                        value2: 1
+                    },
+                    T {
+                        db_id: Some(QueryId::Alias("users".to_string())),
+                        value1: "b".to_string(),
+                        value2: 2
+                    }
+                ])
+                .query()
+        ),
+        QueryType::InsertValues(InsertValuesQuery {
+            ids: QueryIds::Ids(vec![
+                QueryId::Id(DbId(42)),
+                QueryId::Alias("users".to_string())
+            ]),
+            values: QueryValues::Multi(vec![
+                vec![
+                    DbKeyValue {
+                        key: DbValue::String("value1".to_string()),
+                        value: DbValue::String("a".to_string())
+                    },
+                    DbKeyValue {
+                        key: DbValue::String("value2".to_string()),
+                        value: DbValue::I64(1)
+                    }
+                ],
+                vec![
+                    DbKeyValue {
+                        key: DbValue::String("value1".to_string()),
+                        value: DbValue::String("b".to_string())
+                    },
+                    DbKeyValue {
+                        key: DbValue::String("value2".to_string()),
+                        value: DbValue::I64(2)
                     }
                 ]
             ]),
@@ -1153,6 +1271,145 @@ fn insert_values_uniform_search_from() {
                 DbKeyValue {
                     key: DbValue::I64(1),
                     value: DbValue::I64(10)
+                }
+            ]),
+            amend: Amend::None
+        })
+    );
+}
+
+#[test]
+fn insert_values_uniform_element_ids() {
+    assert_eq!(
+        QueryType::from(
+            QueryBuilder::insert()
+                .values_uniform(T::default())
+                .ids(1)
+                .query()
+        ),
+        QueryType::InsertValues(InsertValuesQuery {
+            ids: QueryIds::Ids(vec![QueryId::Id(DbId(1))]),
+            values: QueryValues::Single(vec![
+                DbKeyValue {
+                    key: DbValue::String("value1".to_string()),
+                    value: DbValue::String("".to_string())
+                },
+                DbKeyValue {
+                    key: DbValue::String("value2".to_string()),
+                    value: DbValue::I64(0)
+                }
+            ]),
+            amend: Amend::None
+        })
+    );
+}
+
+#[test]
+fn insert_values_uniform_converted_values_ids() {
+    assert_eq!(
+        QueryType::from(
+            QueryBuilder::insert()
+                .values_uniform([
+                    ("bool", true).into(),
+                    ("false", false).into(),
+                    ("strs", vec!["a", "b"]).into(),
+                    ("bools", vec![true, false]).into(),
+                    ("ints", vec![1_i64, 2]).into(),
+                    ("floats", vec![1.5, 2.5]).into(),
+                    ("value", DbValue::U64(1)).into(),
+                    ("id", QueryId::Id(DbId(1))).into(),
+                    ("alias", QueryId::Alias("a".to_string())).into()
+                ])
+                .ids(1)
+                .query()
+        ),
+        QueryType::InsertValues(InsertValuesQuery {
+            ids: QueryIds::Ids(vec![QueryId::Id(DbId(1))]),
+            values: QueryValues::Single(vec![
+                DbKeyValue {
+                    key: DbValue::String("bool".to_string()),
+                    value: DbValue::U64(1)
+                },
+                DbKeyValue {
+                    key: DbValue::String("false".to_string()),
+                    value: DbValue::U64(0)
+                },
+                DbKeyValue {
+                    key: DbValue::String("strs".to_string()),
+                    value: DbValue::VecString(vec!["a".to_string(), "b".to_string()])
+                },
+                DbKeyValue {
+                    key: DbValue::String("bools".to_string()),
+                    value: DbValue::VecU64(vec![1, 0])
+                },
+                DbKeyValue {
+                    key: DbValue::String("ints".to_string()),
+                    value: DbValue::VecI64(vec![1, 2])
+                },
+                DbKeyValue {
+                    key: DbValue::String("floats".to_string()),
+                    value: DbValue::VecF64(vec![1.5.into(), 2.5.into()])
+                },
+                DbKeyValue {
+                    key: DbValue::String("value".to_string()),
+                    value: DbValue::U64(1)
+                },
+                DbKeyValue {
+                    key: DbValue::String("id".to_string()),
+                    value: DbValue::I64(1)
+                },
+                DbKeyValue {
+                    key: DbValue::String("alias".to_string()),
+                    value: DbValue::String("a".to_string())
+                }
+            ]),
+            amend: Amend::None
+        })
+    );
+}
+
+#[test]
+fn insert_values_uniform_db_values_ids() {
+    assert_eq!(
+        QueryType::from(
+            QueryBuilder::insert()
+                .values_uniform([
+                    ("bytes", DbValue::Bytes(vec![1])).into(),
+                    ("float", DbValue::F64(1.5.into())).into(),
+                    ("u64s", DbValue::VecU64(vec![1])).into(),
+                    ("f64s", DbValue::VecF64(vec![1.5.into()])).into(),
+                    ("strings", DbValue::VecString(vec!["a".to_string()])).into(),
+                    ("values", DbValue::VecDbValue(vec![DbValue::I64(1)])).into()
+                ])
+                .ids(1)
+                .query()
+        ),
+        QueryType::InsertValues(InsertValuesQuery {
+            ids: QueryIds::Ids(vec![QueryId::Id(DbId(1))]),
+            values: QueryValues::Single(vec![
+                DbKeyValue {
+                    key: DbValue::String("bytes".to_string()),
+                    value: DbValue::Bytes(vec![1])
+                },
+                DbKeyValue {
+                    key: DbValue::String("float".to_string()),
+                    value: DbValue::F64(1.5.into())
+                },
+                DbKeyValue {
+                    key: DbValue::String("u64s".to_string()),
+                    value: DbValue::VecU64(vec![1])
+                },
+                DbKeyValue {
+                    key: DbValue::String("f64s".to_string()),
+                    value: DbValue::VecF64(vec![1.5.into()])
+                },
+                DbKeyValue {
+                    key: DbValue::String("strings".to_string()),
+                    value: DbValue::VecString(vec!["a".to_string()])
+                },
+                DbKeyValue {
+                    key: DbValue::String("values".to_string()),
+                    value: DbValue::VecDbValue(vec![DbValue::I64(1)])
                 }
             ]),
             amend: Amend::None
@@ -1906,6 +2163,72 @@ fn select_ids_search() {
 }
 
 #[test]
+fn select_ids_query_id() {
+    assert_eq!(
+        QueryType::from(
+            QueryBuilder::select()
+                .ids(QueryId::Alias("a".to_string()))
+                .query()
+        ),
+        QueryType::SelectValues(SelectValuesQuery {
+            keys: vec![],
+            ids: QueryIds::Ids(vec![QueryId::Alias("a".to_string())])
+        })
+    );
+}
+
+#[test]
+fn select_ids_query_ids() {
+    assert_eq!(
+        QueryType::from(
+            QueryBuilder::select()
+                .ids(QueryIds::Ids(vec![
+                    QueryId::Id(DbId(1)),
+                    QueryId::Alias("a".to_string())
+                ]))
+                .query()
+        ),
+        QueryType::SelectValues(SelectValuesQuery {
+            keys: vec![],
+            ids: QueryIds::Ids(vec![QueryId::Id(DbId(1)), QueryId::Alias("a".to_string())])
+        })
+    );
+}
+
+#[test]
+fn select_ids_query_ids_search() {
+    assert_eq!(
+        QueryType::from(
+            QueryBuilder::select()
+                .ids(QueryIds::Search(SearchQuery {
+                    algorithm: SearchQueryAlgorithm::BreadthFirst,
+                    origin: QueryId::Id(DbId(1)),
+                    destination: QueryId::Id(DbId(0)),
+                    limit: 0,
+                    offset: 0,
+                    order_by: vec![],
+                    conditions: vec![],
+                    reverse: false
+                }))
+                .query()
+        ),
+        QueryType::SelectValues(SelectValuesQuery {
+            keys: vec![],
+            ids: QueryIds::Search(SearchQuery {
+                algorithm: SearchQueryAlgorithm::BreadthFirst,
+                origin: QueryId::Id(DbId(1)),
+                destination: QueryId::Id(DbId(0)),
+                limit: 0,
+                offset: 0,
+                order_by: vec![],
+                conditions: vec![],
+                reverse: false
+            })
+        })
+    );
+}
+
+#[test]
 fn select_search_from() {
     assert_eq!(
         QueryType::from(QueryBuilder::select().search().from(1).query()),
@@ -2302,6 +2625,133 @@ fn select_values_search_from() {
 }
 
 #[test]
+fn select_values_int_ids() {
+    assert_eq!(
+        QueryType::from(QueryBuilder::select().values(1).ids(1).query()),
+        QueryType::SelectValues(SelectValuesQuery {
+            keys: vec![DbValue::I64(1)],
+            ids: QueryIds::Ids(vec![QueryId::Id(DbId(1))])
+        })
+    );
+}
+
+#[test]
+fn select_values_float_ids() {
+    assert_eq!(
+        QueryType::from(QueryBuilder::select().values(1.5).ids(1).query()),
+        QueryType::SelectValues(SelectValuesQuery {
+            keys: vec![DbValue::F64(1.5.into())],
+            ids: QueryIds::Ids(vec![QueryId::Id(DbId(1))])
+        })
+    );
+}
+
+#[test]
+fn select_values_db_values_ids() {
+    assert_eq!(
+        QueryType::from(
+            QueryBuilder::select()
+                .values(vec![DbValue::String("k".to_string()), DbValue::I64(1)])
+                .ids(1)
+                .query()
+        ),
+        QueryType::SelectValues(SelectValuesQuery {
+            keys: vec![DbValue::String("k".to_string()), DbValue::I64(1)],
+            ids: QueryIds::Ids(vec![QueryId::Id(DbId(1))])
+        })
+    );
+}
+
+#[test]
+fn select_element_ids() {
+    assert_eq!(
+        QueryType::from(QueryBuilder::select().element::<T>().ids(1).query()),
+        QueryType::SelectValues(SelectValuesQuery {
+            keys: vec![
+                DbValue::String("value1".to_string()),
+                DbValue::String("value2".to_string())
+            ],
+            ids: QueryIds::Ids(vec![QueryId::Id(DbId(1))])
+        })
+    );
+}
+
+#[test]
+fn select_elements_search_from() {
+    assert_eq!(
+        QueryType::from(
+            QueryBuilder::select()
+                .elements::<E>()
+                .search()
+                .from(1)
+                .query()
+        ),
+        QueryType::SelectValues(SelectValuesQuery {
+            keys: vec![DbValue::String("value".to_string())],
+            ids: QueryIds::Search(SearchQuery {
+                algorithm: SearchQueryAlgorithm::BreadthFirst,
+                origin: QueryId::Id(DbId(1)),
+                destination: QueryId::Id(DbId(0)),
+                limit: 0,
+                offset: 0,
+                order_by: vec![],
+                conditions: vec![QueryCondition {
+                    logic: QueryConditionLogic::And,
+                    modifier: QueryConditionModifier::None,
+                    data: QueryConditionData::KeyValue(KeyValueComparison {
+                        key: DbValue::String("db_element_id".to_string()),
+                        value: Comparison::Equal(DbValue::String("E".to_string()))
+                    })
+                }],
+                reverse: false
+            })
+        })
+    );
+}
+
+#[test]
+fn select_elements_search_from_where_node() {
+    assert_eq!(
+        QueryType::from(
+            QueryBuilder::select()
+                .elements::<E>()
+                .search()
+                .from(1)
+                .where_()
+                .node()
+                .query()
+        ),
+        QueryType::SelectValues(SelectValuesQuery {
+            keys: vec![DbValue::String("value".to_string())],
+            ids: QueryIds::Search(SearchQuery {
+                algorithm: SearchQueryAlgorithm::BreadthFirst,
+                origin: QueryId::Id(DbId(1)),
+                destination: QueryId::Id(DbId(0)),
+                limit: 0,
+                offset: 0,
+                order_by: vec![],
+                conditions: vec![
+                    QueryCondition {
+                        logic: QueryConditionLogic::And,
+                        modifier: QueryConditionModifier::None,
+                        data: QueryConditionData::Node
+                    },
+                    QueryCondition {
+                        logic: QueryConditionLogic::And,
+                        modifier: QueryConditionModifier::None,
+                        data: QueryConditionData::KeyValue(KeyValueComparison {
+                            key: DbValue::String("db_element_id".to_string()),
+                            value: Comparison::Equal(DbValue::String("E".to_string()))
+                        })
+                    }
+                ],
+                reverse: false
+            })
+        })
+    );
+}
+
+#[test]
 fn search_from() {
     assert_eq!(
         QueryType::from(QueryBuilder::search().from("a").query()),
@@ -2585,6 +3035,90 @@ fn search_index_value_offset_limit_where_node() {
                     logic: QueryConditionLogic::And,
                     modifier: QueryConditionModifier::None,
                     data: QueryConditionData::Node
+                }
+            ],
+            reverse: false
+        })
+    );
+}
+
+#[test]
+fn search_index_value_limit_where_element() {
+    assert_eq!(
+        QueryType::from(
+            QueryBuilder::search()
+                .index("age")
+                .value(20)
+                .limit(1)
+                .where_()
+                .element::<T>()
+                .query()
+        ),
+        QueryType::Search(SearchQuery {
+            algorithm: SearchQueryAlgorithm::Index,
+            origin: QueryId::Id(DbId(0)),
+            destination: QueryId::Id(DbId(0)),
+            limit: 1,
+            offset: 0,
+            order_by: vec![],
+            conditions: vec![
+                QueryCondition {
+                    logic: QueryConditionLogic::And,
+                    modifier: QueryConditionModifier::None,
+                    data: QueryConditionData::KeyValue(KeyValueComparison {
+                        key: DbValue::String("age".to_string()),
+                        value: Comparison::Equal(DbValue::I64(20))
+                    })
+                },
+                QueryCondition {
+                    logic: QueryConditionLogic::And,
+                    modifier: QueryConditionModifier::None,
+                    data: QueryConditionData::Keys(vec![
+                        DbValue::String("value1".to_string()),
+                        DbValue::String("value2".to_string())
+                    ])
+                }
+            ],
+            reverse: false
+        })
+    );
+}
+
+#[test]
+fn search_index_value_limit_where_element_id() {
+    assert_eq!(
+        QueryType::from(
+            QueryBuilder::search()
+                .index("age")
+                .value(20)
+                .limit(1)
+                .where_()
+                .element::<E>()
+                .query()
+        ),
+        QueryType::Search(SearchQuery {
+            algorithm: SearchQueryAlgorithm::Index,
+            origin: QueryId::Id(DbId(0)),
+            destination: QueryId::Id(DbId(0)),
+            limit: 1,
+            offset: 0,
+            order_by: vec![],
+            conditions: vec![
+                QueryCondition {
+                    logic: QueryConditionLogic::And,
+                    modifier: QueryConditionModifier::None,
+                    data: QueryConditionData::KeyValue(KeyValueComparison {
+                        key: DbValue::String("age".to_string()),
+                        value: Comparison::Equal(DbValue::I64(20))
+                    })
+                },
+                QueryCondition {
+                    logic: QueryConditionLogic::And,
+                    modifier: QueryConditionModifier::None,
+                    data: QueryConditionData::KeyValue(KeyValueComparison {
+                        key: DbValue::String("db_element_id".to_string()),
+                        value: Comparison::Equal(DbValue::String("E".to_string()))
+                    })
                 }
             ],
             reverse: false
@@ -4365,6 +4899,33 @@ fn search_from_where_distance() {
 }
 
 #[test]
+fn search_from_where_distance_equal() {
+    assert_eq!(
+        QueryType::from(
+            QueryBuilder::search()
+                .from(1)
+                .where_()
+                .distance(CountComparison::Equal(2))
+                .query()
+        ),
+        QueryType::Search(SearchQuery {
+            algorithm: SearchQueryAlgorithm::BreadthFirst,
+            origin: QueryId::Id(DbId(1)),
+            destination: QueryId::Id(DbId(0)),
+            limit: 0,
+            offset: 0,
+            order_by: vec![],
+            conditions: vec![QueryCondition {
+                logic: QueryConditionLogic::And,
+                modifier: QueryConditionModifier::None,
+                data: QueryConditionData::Distance(CountComparison::Equal(2))
+            }],
+            reverse: false
+        })
+    );
+}
+
+#[test]
 fn search_from_where_neighbor() {
     assert_eq!(
         QueryType::from(QueryBuilder::search().from(1).where_().neighbor().query()),
@@ -4379,6 +4940,66 @@ fn search_from_where_neighbor() {
                 logic: QueryConditionLogic::And,
                 modifier: QueryConditionModifier::None,
                 data: QueryConditionData::Distance(CountComparison::Equal(2))
+            }],
+            reverse: false
+        })
+    );
+}
+
+#[test]
+fn search_from_where_element() {
+    assert_eq!(
+        QueryType::from(
+            QueryBuilder::search()
+                .from(1)
+                .where_()
+                .element::<T>()
+                .query()
+        ),
+        QueryType::Search(SearchQuery {
+            algorithm: SearchQueryAlgorithm::BreadthFirst,
+            origin: QueryId::Id(DbId(1)),
+            destination: QueryId::Id(DbId(0)),
+            limit: 0,
+            offset: 0,
+            order_by: vec![],
+            conditions: vec![QueryCondition {
+                logic: QueryConditionLogic::And,
+                modifier: QueryConditionModifier::None,
+                data: QueryConditionData::Keys(vec![
+                    DbValue::String("value1".to_string()),
+                    DbValue::String("value2".to_string())
+                ])
+            }],
+            reverse: false
+        })
+    );
+}
+
+#[test]
+fn search_from_where_element_id() {
+    assert_eq!(
+        QueryType::from(
+            QueryBuilder::search()
+                .from(1)
+                .where_()
+                .element::<E>()
+                .query()
+        ),
+        QueryType::Search(SearchQuery {
+            algorithm: SearchQueryAlgorithm::BreadthFirst,
+            origin: QueryId::Id(DbId(1)),
+            destination: QueryId::Id(DbId(0)),
+            limit: 0,
+            offset: 0,
+            order_by: vec![],
+            conditions: vec![QueryCondition {
+                logic: QueryConditionLogic::And,
+                modifier: QueryConditionModifier::None,
+                data: QueryConditionData::KeyValue(KeyValueComparison {
+                    key: DbValue::String("db_element_id".to_string()),
+                    value: Comparison::Equal(DbValue::String("E".to_string()))
+                })
             }],
             reverse: false
         })
@@ -4454,6 +5075,87 @@ fn search_from_where_edge_count_from() {
                 logic: QueryConditionLogic::And,
                 modifier: QueryConditionModifier::None,
                 data: QueryConditionData::EdgeCountFrom(CountComparison::Equal(1))
+            }],
+            reverse: false
+        })
+    );
+}
+
+#[test]
+fn search_from_where_edge_count_u64() {
+    assert_eq!(
+        QueryType::from(
+            QueryBuilder::search()
+                .from(1)
+                .where_()
+                .edge_count(2)
+                .query()
+        ),
+        QueryType::Search(SearchQuery {
+            algorithm: SearchQueryAlgorithm::BreadthFirst,
+            origin: QueryId::Id(DbId(1)),
+            destination: QueryId::Id(DbId(0)),
+            limit: 0,
+            offset: 0,
+            order_by: vec![],
+            conditions: vec![QueryCondition {
+                logic: QueryConditionLogic::And,
+                modifier: QueryConditionModifier::None,
+                data: QueryConditionData::EdgeCount(CountComparison::Equal(2))
+            }],
+            reverse: false
+        })
+    );
+}
+
+#[test]
+fn search_from_where_edge_count_from_u64() {
+    assert_eq!(
+        QueryType::from(
+            QueryBuilder::search()
+                .from(1)
+                .where_()
+                .edge_count_from(2)
+                .query()
+        ),
+        QueryType::Search(SearchQuery {
+            algorithm: SearchQueryAlgorithm::BreadthFirst,
+            origin: QueryId::Id(DbId(1)),
+            destination: QueryId::Id(DbId(0)),
+            limit: 0,
+            offset: 0,
+            order_by: vec![],
+            conditions: vec![QueryCondition {
+                logic: QueryConditionLogic::And,
+                modifier: QueryConditionModifier::None,
+                data: QueryConditionData::EdgeCountFrom(CountComparison::Equal(2))
+            }],
+            reverse: false
+        })
+    );
+}
+
+#[test]
+fn search_from_where_edge_count_to_u64() {
+    assert_eq!(
+        QueryType::from(
+            QueryBuilder::search()
+                .from(1)
+                .where_()
+                .edge_count_to(2)
+                .query()
+        ),
+        QueryType::Search(SearchQuery {
+            algorithm: SearchQueryAlgorithm::BreadthFirst,
+            origin: QueryId::Id(DbId(1)),
+            destination: QueryId::Id(DbId(0)),
+            limit: 0,
+            offset: 0,
+            order_by: vec![],
+            conditions: vec![QueryCondition {
+                logic: QueryConditionLogic::And,
+                modifier: QueryConditionModifier::None,
+                data: QueryConditionData::EdgeCountTo(CountComparison::Equal(2))
             }],
             reverse: false
         })
@@ -4540,6 +5242,152 @@ fn search_from_where_key_value() {
 }
 
 #[test]
+fn search_from_where_key_value_equal() {
+    assert_eq!(
+        QueryType::from(
+            QueryBuilder::search()
+                .from(1)
+                .where_()
+                .key("k")
+                .value(Comparison::Equal(1.into()))
+                .query()
+        ),
+        QueryType::Search(SearchQuery {
+            algorithm: SearchQueryAlgorithm::BreadthFirst,
+            origin: QueryId::Id(DbId(1)),
+            destination: QueryId::Id(DbId(0)),
+            limit: 0,
+            offset: 0,
+            order_by: vec![],
+            conditions: vec![QueryCondition {
+                logic: QueryConditionLogic::And,
+                modifier: QueryConditionModifier::None,
+                data: QueryConditionData::KeyValue(KeyValueComparison {
+                    key: DbValue::String("k".to_string()),
+                    value: Comparison::Equal(DbValue::I64(1))
+                })
+            }],
+            reverse: false
+        })
+    );
+}
+
+#[test]
+fn search_from_where_key_value_regex() {
+    assert_eq!(
+        QueryType::from(
+            QueryBuilder::search()
+                .from(1)
+                .where_()
+                .key("k")
+                .value(Comparison::Regex("^a".into()))
+                .query()
+        ),
+        QueryType::Search(SearchQuery {
+            algorithm: SearchQueryAlgorithm::BreadthFirst,
+            origin: QueryId::Id(DbId(1)),
+            destination: QueryId::Id(DbId(0)),
+            limit: 0,
+            offset: 0,
+            order_by: vec![],
+            conditions: vec![QueryCondition {
+                logic: QueryConditionLogic::And,
+                modifier: QueryConditionModifier::None,
+                data: QueryConditionData::KeyValue(KeyValueComparison {
+                    key: DbValue::String("k".to_string()),
+                    value: Comparison::Regex(DbValue::String("^a".to_string()))
+                })
+            }],
+            reverse: false
+        })
+    );
+}
+
+#[test]
+fn search_from_where_key_value_comparisons_distance() {
+    assert_eq!(
+        QueryType::from(
+            QueryBuilder::search()
+                .from(1)
+                .where_()
+                .key("k")
+                .value(Comparison::GreaterThan(1.into()))
+                .and()
+                .key("k")
+                .value(Comparison::GreaterThanOrEqual(2.into()))
+                .and()
+                .key("k")
+                .value(Comparison::LessThan(3.into()))
+                .and()
+                .key("k")
+                .value(Comparison::LessThanOrEqual(4.into()))
+                .and()
+                .key("k")
+                .value(Comparison::NotEqual(5.into()))
+                .and()
+                .distance(CountComparison::LessThanOrEqual(2))
+                .query()
+        ),
+        QueryType::Search(SearchQuery {
+            algorithm: SearchQueryAlgorithm::BreadthFirst,
+            origin: QueryId::Id(DbId(1)),
+            destination: QueryId::Id(DbId(0)),
+            limit: 0,
+            offset: 0,
+            order_by: vec![],
+            conditions: vec![
+                QueryCondition {
+                    logic: QueryConditionLogic::And,
+                    modifier: QueryConditionModifier::None,
+                    data: QueryConditionData::KeyValue(KeyValueComparison {
+                        key: DbValue::String("k".to_string()),
+                        value: Comparison::GreaterThan(DbValue::I64(1))
+                    })
+                },
+                QueryCondition {
+                    logic: QueryConditionLogic::And,
+                    modifier: QueryConditionModifier::None,
+                    data: QueryConditionData::KeyValue(KeyValueComparison {
+                        key: DbValue::String("k".to_string()),
+                        value: Comparison::GreaterThanOrEqual(DbValue::I64(2))
+                    })
+                },
+                QueryCondition {
+                    logic: QueryConditionLogic::And,
+                    modifier: QueryConditionModifier::None,
+                    data: QueryConditionData::KeyValue(KeyValueComparison {
+                        key: DbValue::String("k".to_string()),
+                        value: Comparison::LessThan(DbValue::I64(3))
+                    })
+                },
+                QueryCondition {
+                    logic: QueryConditionLogic::And,
+                    modifier: QueryConditionModifier::None,
+                    data: QueryConditionData::KeyValue(KeyValueComparison {
+                        key: DbValue::String("k".to_string()),
+                        value: Comparison::LessThanOrEqual(DbValue::I64(4))
+                    })
+                },
+                QueryCondition {
+                    logic: QueryConditionLogic::And,
+                    modifier: QueryConditionModifier::None,
+                    data: QueryConditionData::KeyValue(KeyValueComparison {
+                        key: DbValue::String("k".to_string()),
+                        value: Comparison::NotEqual(DbValue::I64(5))
+                    })
+                },
+                QueryCondition {
+                    logic: QueryConditionLogic::And,
+                    modifier: QueryConditionModifier::None,
+                    data: QueryConditionData::Distance(CountComparison::LessThanOrEqual(2))
+                }
+            ],
+            reverse: false
+        })
+    );
+}
+
+#[test]
 fn search_from_where_keys() {
     assert_eq!(
         QueryType::from(
@@ -4615,6 +5463,33 @@ fn search_from_where_ids() {
                 logic: QueryConditionLogic::And,
                 modifier: QueryConditionModifier::None,
                 data: QueryConditionData::Ids(vec![QueryId::Id(DbId(1)), QueryId::Id(DbId(2))])
+            }],
+            reverse: false
+        })
+    );
+}
+
+#[test]
+fn search_from_where_ids_search() {
+    assert_eq!(
+        QueryType::from(
+            QueryBuilder::search()
+                .from(1)
+                .where_()
+                .ids(QueryBuilder::search().from(2).query())
+                .query()
+        ),
+        QueryType::Search(SearchQuery {
+            algorithm: SearchQueryAlgorithm::BreadthFirst,
+            origin: QueryId::Id(DbId(1)),
+            destination: QueryId::Id(DbId(0)),
+            limit: 0,
+            offset: 0,
+            order_by: vec![],
+            conditions: vec![QueryCondition {
+                logic: QueryConditionLogic::And,
+                modifier: QueryConditionModifier::None,
+                data: QueryConditionData::Ids(vec![])
             }],
             reverse: false
         })

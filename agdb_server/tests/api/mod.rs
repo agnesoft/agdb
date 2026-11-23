@@ -15,11 +15,13 @@ mod admin_db_rename_test;
 mod admin_db_user_add_test;
 mod admin_db_user_list_test;
 mod admin_db_user_remove_test;
+mod admin_set_log_level_test;
 mod admin_status_test;
 mod admin_user_add_test;
 mod admin_user_change_password_test;
 mod admin_user_delete_test;
 mod admin_user_list_test;
+mod admin_user_logout_all_test;
 mod admin_user_logout_test;
 mod cluster_test;
 mod dashboard_test;
@@ -64,11 +66,13 @@ pub(super) const TESTS: &[&[crate::runner::Test]] = &[
     admin_db_user_add_test::TESTS,
     admin_db_user_list_test::TESTS,
     admin_db_user_remove_test::TESTS,
+    admin_set_log_level_test::TESTS,
     admin_status_test::TESTS,
     admin_user_add_test::TESTS,
     admin_user_change_password_test::TESTS,
     admin_user_delete_test::TESTS,
     admin_user_list_test::TESTS,
+    admin_user_logout_all_test::TESTS,
     admin_user_logout_test::TESTS,
     cluster_test::TESTS,
     dashboard_test::TESTS,

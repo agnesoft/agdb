@@ -11,6 +11,7 @@ use agsource::SourceCrate;
 use agsource::TargetKind;
 use agsource::codegen::lower::Roots;
 use agsource::codegen::lowered::Module;
+use agsource::codegen::pass::DERIVED;
 use agsource::codegen::pass::EraseNewtypes;
 use agsource::codegen::pass::EraseOwnership;
 use agsource::codegen::pass::ExplicitReturns;
@@ -68,6 +69,9 @@ const TS_TESTS: &str = "agdb_api/typescript/tests/query_builder.test.ts";
 
 /// The import of [`TS`] in [`TS_TESTS`].
 const TS_MODULE: &str = "../src/query_builder.ts";
+
+/// The handwritten TS of the trait impls the types of [`TESTS`] derive, relative to [`TS_TESTS`].
+const TS_DERIVED: &str = "./query_builder_derived.ts";
 
 /// The package with the tests of the routes the client calls.
 const SERVER: &str = "agdb_server";
@@ -216,7 +220,11 @@ pub(crate) fn generate(platform: &impl Platform, root: &str, dump: &Path) -> Res
     errors.extend(lowering);
     let ts = Emitter::new(&m, &ts_config("./types.ts")).module();
     let fs = platform.fs();
-    let tests = Emitter::new(&m, &ts_config("../src/types.ts")).tests(TESTS_NAME, TS_MODULE, &[]);
+    let tests = Emitter::new(&m, &ts_config("../src/types.ts")).tests(
+        TESTS_NAME,
+        TS_MODULE,
+        &[(DERIVED, TS_DERIVED)],
+    );
     let routes = Emitter::new(&routes, &ts_config("../src/types.ts")).tests(
         ROUTES,
         TS_MODULE,

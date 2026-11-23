@@ -2,7 +2,8 @@
 
 import type * as types from "../src/types.ts";
 import { describe, expect, it } from "vitest";
-import { QueryBuilder, into_DbKeyValue } from "../src/query_builder.ts";
+import { Comparison, CountComparison, DbKeyOrder, DbValue, QueryBuilder, QueryId, QueryIds, into_DbKeyValue } from "../src/query_builder.ts";
+import { E_DbType, T_DbType } from "./query_builder_derived.ts";
 
 type QueryType = types.QueryType;
 
@@ -115,6 +116,14 @@ describe("query_builder_test", () => {
         expect(QueryBuilder.insert().nodes().values([[into_DbKeyValue(["k", 1])], [into_DbKeyValue(["k", 2])]]).query()).toEqual<QueryType>({ InsertNodes: { count: 0, values: { Multi: [[{ key: { String: "k" }, value: { I64: 1 } }], [{ key: { String: "k" }, value: { I64: 2 } }]] }, aliases: [], ids: { Ids: [] } } });
     });
 
+    it("insert_nodes_values_element", () => {
+        expect(QueryBuilder.insert().nodes().values({ db_id: undefined, value1: "", value2: 0 }).query()).toEqual<QueryType>({ InsertNodes: { count: 0, values: { Multi: [[{ key: { String: "value1" }, value: { String: "" } }, { key: { String: "value2" }, value: { I64: 0 } }]] }, aliases: [], ids: { Ids: [] } } });
+    });
+
+    it("insert_nodes_values_elements", () => {
+        expect(QueryBuilder.insert().nodes().values([{ db_id: undefined, value1: "", value2: 0 }, { db_id: undefined, value1: "", value2: 0 }]).query()).toEqual<QueryType>({ InsertNodes: { count: 0, values: { Multi: [[{ key: { String: "value1" }, value: { String: "" } }, { key: { String: "value2" }, value: { I64: 0 } }], [{ key: { String: "value1" }, value: { String: "" } }, { key: { String: "value2" }, value: { I64: 0 } }]] }, aliases: [], ids: { Ids: [] } } });
+    });
+
     it("insert_nodes_ids_count_id", () => {
         expect(QueryBuilder.insert().nodes().ids(1).count(1).query()).toEqual<QueryType>({ InsertNodes: { count: 1, values: { Single: [] }, aliases: [], ids: { Ids: [{ Id: 1 }] } } });
     });
@@ -155,6 +164,10 @@ describe("query_builder_test", () => {
         expect(QueryBuilder.insert().elements([{ db_id: undefined, value1: "", value2: 0 }, { db_id: undefined, value1: "", value2: 0 }]).query()).toEqual<QueryType>({ InsertValues: { ids: { Ids: [{ Id: 0 }, { Id: 0 }] }, values: { Multi: [[{ key: { String: "value1" }, value: { String: "" } }, { key: { String: "value2" }, value: { I64: 0 } }], [{ key: { String: "value1" }, value: { String: "" } }, { key: { String: "value2" }, value: { I64: 0 } }]] } } });
     });
 
+    it("insert_elements_db_ids", () => {
+        expect(QueryBuilder.insert().elements([{ db_id: QueryId.Id(42), value1: "a", value2: 1 }, { db_id: QueryId.Alias("users"), value1: "b", value2: 2 }]).query()).toEqual<QueryType>({ InsertValues: { ids: { Ids: [{ Id: 42 }, { Alias: "users" }] }, values: { Multi: [[{ key: { String: "value1" }, value: { String: "a" } }, { key: { String: "value2" }, value: { I64: 1 } }], [{ key: { String: "value1" }, value: { String: "b" } }, { key: { String: "value2" }, value: { I64: 2 } }]] } } });
+    });
+
     it("insert_values_ids_ids", () => {
         expect(QueryBuilder.insert().values([[into_DbKeyValue(["k", "v"]), into_DbKeyValue([1, 10])], [into_DbKeyValue(["k", 2])]]).ids([1, 2]).query()).toEqual<QueryType>({ InsertValues: { ids: { Ids: [{ Id: 1 }, { Id: 2 }] }, values: { Multi: [[{ key: { String: "k" }, value: { String: "v" } }, { key: { I64: 1 }, value: { I64: 10 } }], [{ key: { String: "k" }, value: { I64: 2 } }]] } } });
     });
@@ -177,6 +190,18 @@ describe("query_builder_test", () => {
 
     it("insert_values_uniform_search_from", () => {
         expect(QueryBuilder.insert().values_uniform([into_DbKeyValue(["k", "v"]), into_DbKeyValue([1, 10])]).search().from("a").query()).toEqual<QueryType>({ InsertValues: { ids: { Search: { algorithm: "BreadthFirst", origin: { Alias: "a" }, destination: { Id: 0 }, limit: 0, offset: 0, order_by: [], conditions: [], reverse: false } }, values: { Single: [{ key: { String: "k" }, value: { String: "v" } }, { key: { I64: 1 }, value: { I64: 10 } }] } } });
+    });
+
+    it("insert_values_uniform_element_ids", () => {
+        expect(QueryBuilder.insert().values_uniform({ db_id: undefined, value1: "", value2: 0 }).ids(1).query()).toEqual<QueryType>({ InsertValues: { ids: { Ids: [{ Id: 1 }] }, values: { Single: [{ key: { String: "value1" }, value: { String: "" } }, { key: { String: "value2" }, value: { I64: 0 } }] } } });
+    });
+
+    it("insert_values_uniform_converted_values_ids", () => {
+        expect(QueryBuilder.insert().values_uniform([into_DbKeyValue(["bool", true]), into_DbKeyValue(["false", false]), into_DbKeyValue(["strs", ["a", "b"]]), into_DbKeyValue(["bools", [true, false]]), into_DbKeyValue(["ints", [1, 2]]), into_DbKeyValue(["floats", [1.5, 2.5]]), into_DbKeyValue(["value", DbValue.U64(1)]), into_DbKeyValue(["id", QueryId.Id(1)]), into_DbKeyValue(["alias", QueryId.Alias("a")])]).ids(1).query()).toEqual<QueryType>({ InsertValues: { ids: { Ids: [{ Id: 1 }] }, values: { Single: [{ key: { String: "bool" }, value: { U64: 1 } }, { key: { String: "false" }, value: { U64: 0 } }, { key: { String: "strs" }, value: { VecString: ["a", "b"] } }, { key: { String: "bools" }, value: { VecU64: [1, 0] } }, { key: { String: "ints" }, value: { VecI64: [1, 2] } }, { key: { String: "floats" }, value: { VecF64: [1.5, 2.5] } }, { key: { String: "value" }, value: { U64: 1 } }, { key: { String: "id" }, value: { I64: 1 } }, { key: { String: "alias" }, value: { String: "a" } }] } } });
+    });
+
+    it("insert_values_uniform_db_values_ids", () => {
+        expect(QueryBuilder.insert().values_uniform([into_DbKeyValue(["bytes", DbValue.Bytes([1])]), into_DbKeyValue(["float", DbValue.F64(1.5)]), into_DbKeyValue(["u64s", DbValue.VecU64([1])]), into_DbKeyValue(["f64s", DbValue.VecF64([1.5])]), into_DbKeyValue(["strings", DbValue.VecString(["a"])]), into_DbKeyValue(["values", DbValue.VecDbValue([DbValue.I64(1)])])]).ids(1).query()).toEqual<QueryType>({ InsertValues: { ids: { Ids: [{ Id: 1 }] }, values: { Single: [{ key: { String: "bytes" }, value: { Bytes: [1] } }, { key: { String: "float" }, value: { F64: 1.5 } }, { key: { String: "u64s" }, value: { VecU64: [1] } }, { key: { String: "f64s" }, value: { VecF64: [1.5] } }, { key: { String: "strings" }, value: { VecString: ["a"] } }, { key: { String: "values" }, value: { VecDbValue: [{ I64: 1 }] } }] } } });
     });
 
     it("insert_amend_ids", () => {
@@ -343,6 +368,18 @@ describe("query_builder_test", () => {
         expect(QueryBuilder.select().ids(QueryBuilder.search().from(1).query()).query()).toEqual<QueryType>({ SelectValues: { keys: [], ids: { Search: { algorithm: "BreadthFirst", origin: { Id: 1 }, destination: { Id: 0 }, limit: 0, offset: 0, order_by: [], conditions: [], reverse: false } } } });
     });
 
+    it("select_ids_query_id", () => {
+        expect(QueryBuilder.select().ids(QueryId.Alias("a")).query()).toEqual<QueryType>({ SelectValues: { keys: [], ids: { Ids: [{ Alias: "a" }] } } });
+    });
+
+    it("select_ids_query_ids", () => {
+        expect(QueryBuilder.select().ids(QueryIds.Ids([QueryId.Id(1), QueryId.Alias("a")])).query()).toEqual<QueryType>({ SelectValues: { keys: [], ids: { Ids: [{ Id: 1 }, { Alias: "a" }] } } });
+    });
+
+    it("select_ids_query_ids_search", () => {
+        expect(QueryBuilder.select().ids(QueryIds.Search({ algorithm: "BreadthFirst", origin: QueryId.Id(1), destination: QueryId.Id(0), limit: 0, offset: 0, order_by: [], conditions: [], reverse: false })).query()).toEqual<QueryType>({ SelectValues: { keys: [], ids: { Search: { algorithm: "BreadthFirst", origin: { Id: 1 }, destination: { Id: 0 }, limit: 0, offset: 0, order_by: [], conditions: [], reverse: false } } } });
+    });
+
     it("select_search_from", () => {
         expect(QueryBuilder.select().search().from(1).query()).toEqual<QueryType>({ SelectValues: { keys: [], ids: { Search: { algorithm: "BreadthFirst", origin: { Id: 1 }, destination: { Id: 0 }, limit: 0, offset: 0, order_by: [], conditions: [], reverse: false } } } });
     });
@@ -364,7 +401,7 @@ describe("query_builder_test", () => {
     });
 
     it("select_search_from_order_by", () => {
-        expect(QueryBuilder.select().search().from("a").order_by({ Desc: { String: "age" } }).query()).toEqual<QueryType>({ SelectValues: { keys: [], ids: { Search: { algorithm: "BreadthFirst", origin: { Alias: "a" }, destination: { Id: 0 }, limit: 0, offset: 0, order_by: [{ Desc: { String: "age" } }], conditions: [], reverse: false } } } });
+        expect(QueryBuilder.select().search().from("a").order_by(DbKeyOrder.Desc(DbValue.String("age"))).query()).toEqual<QueryType>({ SelectValues: { keys: [], ids: { Search: { algorithm: "BreadthFirst", origin: { Alias: "a" }, destination: { Id: 0 }, limit: 0, offset: 0, order_by: [{ Desc: { String: "age" } }], conditions: [], reverse: false } } } });
     });
 
     it("select_search_from_where_node", () => {
@@ -427,6 +464,30 @@ describe("query_builder_test", () => {
         expect(QueryBuilder.select().values(["k", "k2"]).search().from(1).query()).toEqual<QueryType>({ SelectValues: { keys: [{ String: "k" }, { String: "k2" }], ids: { Search: { algorithm: "BreadthFirst", origin: { Id: 1 }, destination: { Id: 0 }, limit: 0, offset: 0, order_by: [], conditions: [], reverse: false } } } });
     });
 
+    it("select_values_int_ids", () => {
+        expect(QueryBuilder.select().values(1).ids(1).query()).toEqual<QueryType>({ SelectValues: { keys: [{ I64: 1 }], ids: { Ids: [{ Id: 1 }] } } });
+    });
+
+    it("select_values_float_ids", () => {
+        expect(QueryBuilder.select().values(1.5).ids(1).query()).toEqual<QueryType>({ SelectValues: { keys: [{ F64: 1.5 }], ids: { Ids: [{ Id: 1 }] } } });
+    });
+
+    it("select_values_db_values_ids", () => {
+        expect(QueryBuilder.select().values([DbValue.String("k"), DbValue.I64(1)]).ids(1).query()).toEqual<QueryType>({ SelectValues: { keys: [{ String: "k" }, { I64: 1 }], ids: { Ids: [{ Id: 1 }] } } });
+    });
+
+    it("select_element_ids", () => {
+        expect(QueryBuilder.select().element(T_DbType).ids(1).query()).toEqual<QueryType>({ SelectValues: { keys: [{ String: "value1" }, { String: "value2" }], ids: { Ids: [{ Id: 1 }] } } });
+    });
+
+    it("select_elements_search_from", () => {
+        expect(QueryBuilder.select().elements(E_DbType).search().from(1).query()).toEqual<QueryType>({ SelectValues: { keys: [{ String: "value" }], ids: { Search: { algorithm: "BreadthFirst", origin: { Id: 1 }, destination: { Id: 0 }, limit: 0, offset: 0, order_by: [], conditions: [{ logic: "And", modifier: "None", data: { KeyValue: { key: { String: "db_element_id" }, value: { Equal: { String: "E" } } } } }], reverse: false } } } });
+    });
+
+    it("select_elements_search_from_where_node", () => {
+        expect(QueryBuilder.select().elements(E_DbType).search().from(1).where().node().query()).toEqual<QueryType>({ SelectValues: { keys: [{ String: "value" }], ids: { Search: { algorithm: "BreadthFirst", origin: { Id: 1 }, destination: { Id: 0 }, limit: 0, offset: 0, order_by: [], conditions: [{ logic: "And", modifier: "None", data: "Node" }, { logic: "And", modifier: "None", data: { KeyValue: { key: { String: "db_element_id" }, value: { Equal: { String: "E" } } } } }], reverse: false } } } });
+    });
+
     it("search_from", () => {
         expect(QueryBuilder.search().from("a").query()).toEqual<QueryType>({ Search: { algorithm: "BreadthFirst", origin: { Alias: "a" }, destination: { Id: 0 }, limit: 0, offset: 0, order_by: [], conditions: [], reverse: false } });
     });
@@ -477,6 +538,14 @@ describe("query_builder_test", () => {
 
     it("search_index_value_offset_limit_where_node", () => {
         expect(QueryBuilder.search().index("age").value(20).offset(5).limit(1).where().node().query()).toEqual<QueryType>({ Search: { algorithm: "Index", origin: { Id: 0 }, destination: { Id: 0 }, limit: 1, offset: 5, order_by: [], conditions: [{ logic: "And", modifier: "None", data: { KeyValue: { key: { String: "age" }, value: { Equal: { I64: 20 } } } } }, { logic: "And", modifier: "None", data: "Node" }], reverse: false } });
+    });
+
+    it("search_index_value_limit_where_element", () => {
+        expect(QueryBuilder.search().index("age").value(20).limit(1).where().element(T_DbType).query()).toEqual<QueryType>({ Search: { algorithm: "Index", origin: { Id: 0 }, destination: { Id: 0 }, limit: 1, offset: 0, order_by: [], conditions: [{ logic: "And", modifier: "None", data: { KeyValue: { key: { String: "age" }, value: { Equal: { I64: 20 } } } } }, { logic: "And", modifier: "None", data: { Keys: [{ String: "value1" }, { String: "value2" }] } }], reverse: false } });
+    });
+
+    it("search_index_value_limit_where_element_id", () => {
+        expect(QueryBuilder.search().index("age").value(20).limit(1).where().element(E_DbType).query()).toEqual<QueryType>({ Search: { algorithm: "Index", origin: { Id: 0 }, destination: { Id: 0 }, limit: 1, offset: 0, order_by: [], conditions: [{ logic: "And", modifier: "None", data: { KeyValue: { key: { String: "age" }, value: { Equal: { I64: 20 } } } } }, { logic: "And", modifier: "None", data: { KeyValue: { key: { String: "db_element_id" }, value: { Equal: { String: "E" } } } } }], reverse: false } });
     });
 
     it("search_index_value_limit_where_edge", () => {
@@ -620,27 +689,27 @@ describe("query_builder_test", () => {
     });
 
     it("search_index_value_order_by", () => {
-        expect(QueryBuilder.search().index("age").value(20).order_by([{ Asc: { String: "k" } }]).query()).toEqual<QueryType>({ Search: { algorithm: "Index", origin: { Id: 0 }, destination: { Id: 0 }, limit: 0, offset: 0, order_by: [{ Asc: { String: "k" } }], conditions: [{ logic: "And", modifier: "None", data: { KeyValue: { key: { String: "age" }, value: { Equal: { I64: 20 } } } } }], reverse: false } });
+        expect(QueryBuilder.search().index("age").value(20).order_by([DbKeyOrder.Asc(DbValue.String("k"))]).query()).toEqual<QueryType>({ Search: { algorithm: "Index", origin: { Id: 0 }, destination: { Id: 0 }, limit: 0, offset: 0, order_by: [{ Asc: { String: "k" } }], conditions: [{ logic: "And", modifier: "None", data: { KeyValue: { key: { String: "age" }, value: { Equal: { I64: 20 } } } } }], reverse: false } });
     });
 
     it("search_index_value_order_by_where_node", () => {
-        expect(QueryBuilder.search().index("age").value(20).order_by([{ Asc: { String: "k" } }]).where().node().query()).toEqual<QueryType>({ Search: { algorithm: "Index", origin: { Id: 0 }, destination: { Id: 0 }, limit: 0, offset: 0, order_by: [{ Asc: { String: "k" } }], conditions: [{ logic: "And", modifier: "None", data: { KeyValue: { key: { String: "age" }, value: { Equal: { I64: 20 } } } } }, { logic: "And", modifier: "None", data: "Node" }], reverse: false } });
+        expect(QueryBuilder.search().index("age").value(20).order_by([DbKeyOrder.Asc(DbValue.String("k"))]).where().node().query()).toEqual<QueryType>({ Search: { algorithm: "Index", origin: { Id: 0 }, destination: { Id: 0 }, limit: 0, offset: 0, order_by: [{ Asc: { String: "k" } }], conditions: [{ logic: "And", modifier: "None", data: { KeyValue: { key: { String: "age" }, value: { Equal: { I64: 20 } } } } }, { logic: "And", modifier: "None", data: "Node" }], reverse: false } });
     });
 
     it("search_index_value_order_by_offset_where_node", () => {
-        expect(QueryBuilder.search().index("age").value(20).order_by([{ Asc: { String: "k" } }]).offset(5).where().node().query()).toEqual<QueryType>({ Search: { algorithm: "Index", origin: { Id: 0 }, destination: { Id: 0 }, limit: 0, offset: 5, order_by: [{ Asc: { String: "k" } }], conditions: [{ logic: "And", modifier: "None", data: { KeyValue: { key: { String: "age" }, value: { Equal: { I64: 20 } } } } }, { logic: "And", modifier: "None", data: "Node" }], reverse: false } });
+        expect(QueryBuilder.search().index("age").value(20).order_by([DbKeyOrder.Asc(DbValue.String("k"))]).offset(5).where().node().query()).toEqual<QueryType>({ Search: { algorithm: "Index", origin: { Id: 0 }, destination: { Id: 0 }, limit: 0, offset: 5, order_by: [{ Asc: { String: "k" } }], conditions: [{ logic: "And", modifier: "None", data: { KeyValue: { key: { String: "age" }, value: { Equal: { I64: 20 } } } } }, { logic: "And", modifier: "None", data: "Node" }], reverse: false } });
     });
 
     it("search_index_value_order_by_limit_where_node", () => {
-        expect(QueryBuilder.search().index("age").value(20).order_by([{ Asc: { String: "k" } }]).limit(5).where().node().query()).toEqual<QueryType>({ Search: { algorithm: "Index", origin: { Id: 0 }, destination: { Id: 0 }, limit: 5, offset: 0, order_by: [{ Asc: { String: "k" } }], conditions: [{ logic: "And", modifier: "None", data: { KeyValue: { key: { String: "age" }, value: { Equal: { I64: 20 } } } } }, { logic: "And", modifier: "None", data: "Node" }], reverse: false } });
+        expect(QueryBuilder.search().index("age").value(20).order_by([DbKeyOrder.Asc(DbValue.String("k"))]).limit(5).where().node().query()).toEqual<QueryType>({ Search: { algorithm: "Index", origin: { Id: 0 }, destination: { Id: 0 }, limit: 5, offset: 0, order_by: [{ Asc: { String: "k" } }], conditions: [{ logic: "And", modifier: "None", data: { KeyValue: { key: { String: "age" }, value: { Equal: { I64: 20 } } } } }, { logic: "And", modifier: "None", data: "Node" }], reverse: false } });
     });
 
     it("search_index_value_order_by_offset_limit_where_node", () => {
-        expect(QueryBuilder.search().index("age").value(20).order_by([{ Asc: { String: "k" } }]).offset(5).limit(5).where().node().query()).toEqual<QueryType>({ Search: { algorithm: "Index", origin: { Id: 0 }, destination: { Id: 0 }, limit: 5, offset: 5, order_by: [{ Asc: { String: "k" } }], conditions: [{ logic: "And", modifier: "None", data: { KeyValue: { key: { String: "age" }, value: { Equal: { I64: 20 } } } } }, { logic: "And", modifier: "None", data: "Node" }], reverse: false } });
+        expect(QueryBuilder.search().index("age").value(20).order_by([DbKeyOrder.Asc(DbValue.String("k"))]).offset(5).limit(5).where().node().query()).toEqual<QueryType>({ Search: { algorithm: "Index", origin: { Id: 0 }, destination: { Id: 0 }, limit: 5, offset: 5, order_by: [{ Asc: { String: "k" } }], conditions: [{ logic: "And", modifier: "None", data: { KeyValue: { key: { String: "age" }, value: { Equal: { I64: 20 } } } } }, { logic: "And", modifier: "None", data: "Node" }], reverse: false } });
     });
 
     it("search_from_order_by", () => {
-        expect(QueryBuilder.search().from(1).order_by([{ Desc: { String: "age" } }, { Asc: { String: "name" } }]).query()).toEqual<QueryType>({ Search: { algorithm: "BreadthFirst", origin: { Id: 1 }, destination: { Id: 0 }, limit: 0, offset: 0, order_by: [{ Desc: { String: "age" } }, { Asc: { String: "name" } }], conditions: [], reverse: false } });
+        expect(QueryBuilder.search().from(1).order_by([DbKeyOrder.Desc(DbValue.String("age")), DbKeyOrder.Asc(DbValue.String("name"))]).query()).toEqual<QueryType>({ Search: { algorithm: "BreadthFirst", origin: { Id: 1 }, destination: { Id: 0 }, limit: 0, offset: 0, order_by: [{ Desc: { String: "age" } }, { Asc: { String: "name" } }], conditions: [], reverse: false } });
     });
 
     it("search_from_offset", () => {
@@ -652,15 +721,15 @@ describe("query_builder_test", () => {
     });
 
     it("search_from_order_by_offset", () => {
-        expect(QueryBuilder.search().from(1).order_by([{ Desc: { String: "k" } }]).offset(10).query()).toEqual<QueryType>({ Search: { algorithm: "BreadthFirst", origin: { Id: 1 }, destination: { Id: 0 }, limit: 0, offset: 10, order_by: [{ Desc: { String: "k" } }], conditions: [], reverse: false } });
+        expect(QueryBuilder.search().from(1).order_by([DbKeyOrder.Desc(DbValue.String("k"))]).offset(10).query()).toEqual<QueryType>({ Search: { algorithm: "BreadthFirst", origin: { Id: 1 }, destination: { Id: 0 }, limit: 0, offset: 10, order_by: [{ Desc: { String: "k" } }], conditions: [], reverse: false } });
     });
 
     it("search_from_order_by_limit", () => {
-        expect(QueryBuilder.search().from(1).order_by([{ Desc: { String: "k" } }]).limit(5).query()).toEqual<QueryType>({ Search: { algorithm: "BreadthFirst", origin: { Id: 1 }, destination: { Id: 0 }, limit: 5, offset: 0, order_by: [{ Desc: { String: "k" } }], conditions: [], reverse: false } });
+        expect(QueryBuilder.search().from(1).order_by([DbKeyOrder.Desc(DbValue.String("k"))]).limit(5).query()).toEqual<QueryType>({ Search: { algorithm: "BreadthFirst", origin: { Id: 1 }, destination: { Id: 0 }, limit: 5, offset: 0, order_by: [{ Desc: { String: "k" } }], conditions: [], reverse: false } });
     });
 
     it("search_from_order_by_offset_limit", () => {
-        expect(QueryBuilder.search().from(1).order_by([{ Desc: { String: "k" } }]).offset(10).limit(5).query()).toEqual<QueryType>({ Search: { algorithm: "BreadthFirst", origin: { Id: 1 }, destination: { Id: 0 }, limit: 5, offset: 10, order_by: [{ Desc: { String: "k" } }], conditions: [], reverse: false } });
+        expect(QueryBuilder.search().from(1).order_by([DbKeyOrder.Desc(DbValue.String("k"))]).offset(10).limit(5).query()).toEqual<QueryType>({ Search: { algorithm: "BreadthFirst", origin: { Id: 1 }, destination: { Id: 0 }, limit: 5, offset: 10, order_by: [{ Desc: { String: "k" } }], conditions: [], reverse: false } });
     });
 
     it("search_from_offset_limit", () => {
@@ -668,11 +737,23 @@ describe("query_builder_test", () => {
     });
 
     it("search_from_where_distance", () => {
-        expect(QueryBuilder.search().from(1).where().distance({ LessThan: 3 }).query()).toEqual<QueryType>({ Search: { algorithm: "BreadthFirst", origin: { Id: 1 }, destination: { Id: 0 }, limit: 0, offset: 0, order_by: [], conditions: [{ logic: "And", modifier: "None", data: { Distance: { LessThan: 3 } } }], reverse: false } });
+        expect(QueryBuilder.search().from(1).where().distance(CountComparison.LessThan(3)).query()).toEqual<QueryType>({ Search: { algorithm: "BreadthFirst", origin: { Id: 1 }, destination: { Id: 0 }, limit: 0, offset: 0, order_by: [], conditions: [{ logic: "And", modifier: "None", data: { Distance: { LessThan: 3 } } }], reverse: false } });
+    });
+
+    it("search_from_where_distance_equal", () => {
+        expect(QueryBuilder.search().from(1).where().distance(CountComparison.Equal(2)).query()).toEqual<QueryType>({ Search: { algorithm: "BreadthFirst", origin: { Id: 1 }, destination: { Id: 0 }, limit: 0, offset: 0, order_by: [], conditions: [{ logic: "And", modifier: "None", data: { Distance: { Equal: 2 } } }], reverse: false } });
     });
 
     it("search_from_where_neighbor", () => {
         expect(QueryBuilder.search().from(1).where().neighbor().query()).toEqual<QueryType>({ Search: { algorithm: "BreadthFirst", origin: { Id: 1 }, destination: { Id: 0 }, limit: 0, offset: 0, order_by: [], conditions: [{ logic: "And", modifier: "None", data: { Distance: { Equal: 2 } } }], reverse: false } });
+    });
+
+    it("search_from_where_element", () => {
+        expect(QueryBuilder.search().from(1).where().element(T_DbType).query()).toEqual<QueryType>({ Search: { algorithm: "BreadthFirst", origin: { Id: 1 }, destination: { Id: 0 }, limit: 0, offset: 0, order_by: [], conditions: [{ logic: "And", modifier: "None", data: { Keys: [{ String: "value1" }, { String: "value2" }] } }], reverse: false } });
+    });
+
+    it("search_from_where_element_id", () => {
+        expect(QueryBuilder.search().from(1).where().element(E_DbType).query()).toEqual<QueryType>({ Search: { algorithm: "BreadthFirst", origin: { Id: 1 }, destination: { Id: 0 }, limit: 0, offset: 0, order_by: [], conditions: [{ logic: "And", modifier: "None", data: { KeyValue: { key: { String: "db_element_id" }, value: { Equal: { String: "E" } } } } }], reverse: false } });
     });
 
     it("search_from_where_edge", () => {
@@ -680,15 +761,27 @@ describe("query_builder_test", () => {
     });
 
     it("search_from_where_edge_count", () => {
-        expect(QueryBuilder.search().from(1).where().edge_count({ GreaterThan: 2 }).query()).toEqual<QueryType>({ Search: { algorithm: "BreadthFirst", origin: { Id: 1 }, destination: { Id: 0 }, limit: 0, offset: 0, order_by: [], conditions: [{ logic: "And", modifier: "None", data: { EdgeCount: { GreaterThan: 2 } } }], reverse: false } });
+        expect(QueryBuilder.search().from(1).where().edge_count(CountComparison.GreaterThan(2)).query()).toEqual<QueryType>({ Search: { algorithm: "BreadthFirst", origin: { Id: 1 }, destination: { Id: 0 }, limit: 0, offset: 0, order_by: [], conditions: [{ logic: "And", modifier: "None", data: { EdgeCount: { GreaterThan: 2 } } }], reverse: false } });
     });
 
     it("search_from_where_edge_count_from", () => {
         expect(QueryBuilder.search().from(1).where().edge_count_from(1).query()).toEqual<QueryType>({ Search: { algorithm: "BreadthFirst", origin: { Id: 1 }, destination: { Id: 0 }, limit: 0, offset: 0, order_by: [], conditions: [{ logic: "And", modifier: "None", data: { EdgeCountFrom: { Equal: 1 } } }], reverse: false } });
     });
 
+    it("search_from_where_edge_count_u64", () => {
+        expect(QueryBuilder.search().from(1).where().edge_count(2).query()).toEqual<QueryType>({ Search: { algorithm: "BreadthFirst", origin: { Id: 1 }, destination: { Id: 0 }, limit: 0, offset: 0, order_by: [], conditions: [{ logic: "And", modifier: "None", data: { EdgeCount: { Equal: 2 } } }], reverse: false } });
+    });
+
+    it("search_from_where_edge_count_from_u64", () => {
+        expect(QueryBuilder.search().from(1).where().edge_count_from(2).query()).toEqual<QueryType>({ Search: { algorithm: "BreadthFirst", origin: { Id: 1 }, destination: { Id: 0 }, limit: 0, offset: 0, order_by: [], conditions: [{ logic: "And", modifier: "None", data: { EdgeCountFrom: { Equal: 2 } } }], reverse: false } });
+    });
+
+    it("search_from_where_edge_count_to_u64", () => {
+        expect(QueryBuilder.search().from(1).where().edge_count_to(2).query()).toEqual<QueryType>({ Search: { algorithm: "BreadthFirst", origin: { Id: 1 }, destination: { Id: 0 }, limit: 0, offset: 0, order_by: [], conditions: [{ logic: "And", modifier: "None", data: { EdgeCountTo: { Equal: 2 } } }], reverse: false } });
+    });
+
     it("search_from_where_edge_count_to", () => {
-        expect(QueryBuilder.search().from(1).where().edge_count_to({ NotEqual: 1 }).query()).toEqual<QueryType>({ Search: { algorithm: "BreadthFirst", origin: { Id: 1 }, destination: { Id: 0 }, limit: 0, offset: 0, order_by: [], conditions: [{ logic: "And", modifier: "None", data: { EdgeCountTo: { NotEqual: 1 } } }], reverse: false } });
+        expect(QueryBuilder.search().from(1).where().edge_count_to(CountComparison.NotEqual(1)).query()).toEqual<QueryType>({ Search: { algorithm: "BreadthFirst", origin: { Id: 1 }, destination: { Id: 0 }, limit: 0, offset: 0, order_by: [], conditions: [{ logic: "And", modifier: "None", data: { EdgeCountTo: { NotEqual: 1 } } }], reverse: false } });
     });
 
     it("search_from_where_node", () => {
@@ -697,6 +790,18 @@ describe("query_builder_test", () => {
 
     it("search_from_where_key_value", () => {
         expect(QueryBuilder.search().from(1).where().key("k").value(1).query()).toEqual<QueryType>({ Search: { algorithm: "BreadthFirst", origin: { Id: 1 }, destination: { Id: 0 }, limit: 0, offset: 0, order_by: [], conditions: [{ logic: "And", modifier: "None", data: { KeyValue: { key: { String: "k" }, value: { Equal: { I64: 1 } } } } }], reverse: false } });
+    });
+
+    it("search_from_where_key_value_equal", () => {
+        expect(QueryBuilder.search().from(1).where().key("k").value(Comparison.Equal(DbValue.I64(1))).query()).toEqual<QueryType>({ Search: { algorithm: "BreadthFirst", origin: { Id: 1 }, destination: { Id: 0 }, limit: 0, offset: 0, order_by: [], conditions: [{ logic: "And", modifier: "None", data: { KeyValue: { key: { String: "k" }, value: { Equal: { I64: 1 } } } } }], reverse: false } });
+    });
+
+    it("search_from_where_key_value_regex", () => {
+        expect(QueryBuilder.search().from(1).where().key("k").value(Comparison.Regex(DbValue.String("^a"))).query()).toEqual<QueryType>({ Search: { algorithm: "BreadthFirst", origin: { Id: 1 }, destination: { Id: 0 }, limit: 0, offset: 0, order_by: [], conditions: [{ logic: "And", modifier: "None", data: { KeyValue: { key: { String: "k" }, value: { Regex: { String: "^a" } } } } }], reverse: false } });
+    });
+
+    it("search_from_where_key_value_comparisons_distance", () => {
+        expect(QueryBuilder.search().from(1).where().key("k").value(Comparison.GreaterThan(DbValue.I64(1))).and().key("k").value(Comparison.GreaterThanOrEqual(DbValue.I64(2))).and().key("k").value(Comparison.LessThan(DbValue.I64(3))).and().key("k").value(Comparison.LessThanOrEqual(DbValue.I64(4))).and().key("k").value(Comparison.NotEqual(DbValue.I64(5))).and().distance(CountComparison.LessThanOrEqual(2)).query()).toEqual<QueryType>({ Search: { algorithm: "BreadthFirst", origin: { Id: 1 }, destination: { Id: 0 }, limit: 0, offset: 0, order_by: [], conditions: [{ logic: "And", modifier: "None", data: { KeyValue: { key: { String: "k" }, value: { GreaterThan: { I64: 1 } } } } }, { logic: "And", modifier: "None", data: { KeyValue: { key: { String: "k" }, value: { GreaterThanOrEqual: { I64: 2 } } } } }, { logic: "And", modifier: "None", data: { KeyValue: { key: { String: "k" }, value: { LessThan: { I64: 3 } } } } }, { logic: "And", modifier: "None", data: { KeyValue: { key: { String: "k" }, value: { LessThanOrEqual: { I64: 4 } } } } }, { logic: "And", modifier: "None", data: { KeyValue: { key: { String: "k" }, value: { NotEqual: { I64: 5 } } } } }, { logic: "And", modifier: "None", data: { Distance: { LessThanOrEqual: 2 } } }], reverse: false } });
     });
 
     it("search_from_where_keys", () => {
@@ -709,6 +814,10 @@ describe("query_builder_test", () => {
 
     it("search_from_where_ids", () => {
         expect(QueryBuilder.search().from(1).where().ids([1, 2]).query()).toEqual<QueryType>({ Search: { algorithm: "BreadthFirst", origin: { Id: 1 }, destination: { Id: 0 }, limit: 0, offset: 0, order_by: [], conditions: [{ logic: "And", modifier: "None", data: { Ids: [{ Id: 1 }, { Id: 2 }] } }], reverse: false } });
+    });
+
+    it("search_from_where_ids_search", () => {
+        expect(QueryBuilder.search().from(1).where().ids(QueryBuilder.search().from(2).query()).query()).toEqual<QueryType>({ Search: { algorithm: "BreadthFirst", origin: { Id: 1 }, destination: { Id: 0 }, limit: 0, offset: 0, order_by: [], conditions: [{ logic: "And", modifier: "None", data: { Ids: [] } }], reverse: false } });
     });
 
     it("search_from_where_beyond_keys", () => {
@@ -728,7 +837,7 @@ describe("query_builder_test", () => {
     });
 
     it("search_from_where_node_and_distance", () => {
-        expect(QueryBuilder.search().from(1).where().node().and().distance({ GreaterThanOrEqual: 3 }).query()).toEqual<QueryType>({ Search: { algorithm: "BreadthFirst", origin: { Id: 1 }, destination: { Id: 0 }, limit: 0, offset: 0, order_by: [], conditions: [{ logic: "And", modifier: "None", data: "Node" }, { logic: "And", modifier: "None", data: { Distance: { GreaterThanOrEqual: 3 } } }], reverse: false } });
+        expect(QueryBuilder.search().from(1).where().node().and().distance(CountComparison.GreaterThanOrEqual(3)).query()).toEqual<QueryType>({ Search: { algorithm: "BreadthFirst", origin: { Id: 1 }, destination: { Id: 0 }, limit: 0, offset: 0, order_by: [], conditions: [{ logic: "And", modifier: "None", data: "Node" }, { logic: "And", modifier: "None", data: { Distance: { GreaterThanOrEqual: 3 } } }], reverse: false } });
     });
 
     it("search_from_where_node_or_where_edge_and_key_value_end_where_equal", () => {
@@ -736,27 +845,27 @@ describe("query_builder_test", () => {
     });
 
     it("search_from_where_node_or_where_edge_and_key_value_end_where_contains", () => {
-        expect(QueryBuilder.search().from(1).where().node().or().where().edge().and().key("k").value({ Contains: { I64: 1 } }).end_where().query()).toEqual<QueryType>({ Search: { algorithm: "BreadthFirst", origin: { Id: 1 }, destination: { Id: 0 }, limit: 0, offset: 0, order_by: [], conditions: [{ logic: "And", modifier: "None", data: "Node" }, { logic: "Or", modifier: "None", data: { Where: [{ logic: "And", modifier: "None", data: "Edge" }, { logic: "And", modifier: "None", data: { KeyValue: { key: { String: "k" }, value: { Contains: { I64: 1 } } } } }] } }], reverse: false } });
+        expect(QueryBuilder.search().from(1).where().node().or().where().edge().and().key("k").value(Comparison.Contains(DbValue.I64(1))).end_where().query()).toEqual<QueryType>({ Search: { algorithm: "BreadthFirst", origin: { Id: 1 }, destination: { Id: 0 }, limit: 0, offset: 0, order_by: [], conditions: [{ logic: "And", modifier: "None", data: "Node" }, { logic: "Or", modifier: "None", data: { Where: [{ logic: "And", modifier: "None", data: "Edge" }, { logic: "And", modifier: "None", data: { KeyValue: { key: { String: "k" }, value: { Contains: { I64: 1 } } } } }] } }], reverse: false } });
     });
 
     it("search_from_where_node_or_where_edge_and_key_value_end_where_contains_list", () => {
-        expect(QueryBuilder.search().from(1).where().node().or().where().edge().and().key("k").value({ Contains: { VecI64: [1, 2] } }).end_where().query()).toEqual<QueryType>({ Search: { algorithm: "BreadthFirst", origin: { Id: 1 }, destination: { Id: 0 }, limit: 0, offset: 0, order_by: [], conditions: [{ logic: "And", modifier: "None", data: "Node" }, { logic: "Or", modifier: "None", data: { Where: [{ logic: "And", modifier: "None", data: "Edge" }, { logic: "And", modifier: "None", data: { KeyValue: { key: { String: "k" }, value: { Contains: { VecI64: [1, 2] } } } } }] } }], reverse: false } });
+        expect(QueryBuilder.search().from(1).where().node().or().where().edge().and().key("k").value(Comparison.Contains(DbValue.VecI64([1, 2]))).end_where().query()).toEqual<QueryType>({ Search: { algorithm: "BreadthFirst", origin: { Id: 1 }, destination: { Id: 0 }, limit: 0, offset: 0, order_by: [], conditions: [{ logic: "And", modifier: "None", data: "Node" }, { logic: "Or", modifier: "None", data: { Where: [{ logic: "And", modifier: "None", data: "Edge" }, { logic: "And", modifier: "None", data: { KeyValue: { key: { String: "k" }, value: { Contains: { VecI64: [1, 2] } } } } }] } }], reverse: false } });
     });
 
     it("search_from_where_node_or_where_edge_and_key_value_end_where_starts_with", () => {
-        expect(QueryBuilder.search().from(1).where().node().or().where().edge().and().key("k").value({ StartsWith: { I64: 1 } }).end_where().query()).toEqual<QueryType>({ Search: { algorithm: "BreadthFirst", origin: { Id: 1 }, destination: { Id: 0 }, limit: 0, offset: 0, order_by: [], conditions: [{ logic: "And", modifier: "None", data: "Node" }, { logic: "Or", modifier: "None", data: { Where: [{ logic: "And", modifier: "None", data: "Edge" }, { logic: "And", modifier: "None", data: { KeyValue: { key: { String: "k" }, value: { StartsWith: { I64: 1 } } } } }] } }], reverse: false } });
+        expect(QueryBuilder.search().from(1).where().node().or().where().edge().and().key("k").value(Comparison.StartsWith(DbValue.I64(1))).end_where().query()).toEqual<QueryType>({ Search: { algorithm: "BreadthFirst", origin: { Id: 1 }, destination: { Id: 0 }, limit: 0, offset: 0, order_by: [], conditions: [{ logic: "And", modifier: "None", data: "Node" }, { logic: "Or", modifier: "None", data: { Where: [{ logic: "And", modifier: "None", data: "Edge" }, { logic: "And", modifier: "None", data: { KeyValue: { key: { String: "k" }, value: { StartsWith: { I64: 1 } } } } }] } }], reverse: false } });
     });
 
     it("search_from_where_node_or_where_edge_and_key_value_end_where_ends_with_list", () => {
-        expect(QueryBuilder.search().from(1).where().node().or().where().edge().and().key("k").value({ EndsWith: { VecI64: [1, 2] } }).end_where().query()).toEqual<QueryType>({ Search: { algorithm: "BreadthFirst", origin: { Id: 1 }, destination: { Id: 0 }, limit: 0, offset: 0, order_by: [], conditions: [{ logic: "And", modifier: "None", data: "Node" }, { logic: "Or", modifier: "None", data: { Where: [{ logic: "And", modifier: "None", data: "Edge" }, { logic: "And", modifier: "None", data: { KeyValue: { key: { String: "k" }, value: { EndsWith: { VecI64: [1, 2] } } } } }] } }], reverse: false } });
+        expect(QueryBuilder.search().from(1).where().node().or().where().edge().and().key("k").value(Comparison.EndsWith(DbValue.VecI64([1, 2]))).end_where().query()).toEqual<QueryType>({ Search: { algorithm: "BreadthFirst", origin: { Id: 1 }, destination: { Id: 0 }, limit: 0, offset: 0, order_by: [], conditions: [{ logic: "And", modifier: "None", data: "Node" }, { logic: "Or", modifier: "None", data: { Where: [{ logic: "And", modifier: "None", data: "Edge" }, { logic: "And", modifier: "None", data: { KeyValue: { key: { String: "k" }, value: { EndsWith: { VecI64: [1, 2] } } } } }] } }], reverse: false } });
     });
 
     it("search_from_where_node_or_where_edge_and_key_value_end_where_any_list", () => {
-        expect(QueryBuilder.search().from(1).where().node().or().where().edge().and().key("k").value({ Any: { VecI64: [1, 2] } }).end_where().query()).toEqual<QueryType>({ Search: { algorithm: "BreadthFirst", origin: { Id: 1 }, destination: { Id: 0 }, limit: 0, offset: 0, order_by: [], conditions: [{ logic: "And", modifier: "None", data: "Node" }, { logic: "Or", modifier: "None", data: { Where: [{ logic: "And", modifier: "None", data: "Edge" }, { logic: "And", modifier: "None", data: { KeyValue: { key: { String: "k" }, value: { Any: { VecI64: [1, 2] } } } } }] } }], reverse: false } });
+        expect(QueryBuilder.search().from(1).where().node().or().where().edge().and().key("k").value(Comparison.Any(DbValue.VecI64([1, 2]))).end_where().query()).toEqual<QueryType>({ Search: { algorithm: "BreadthFirst", origin: { Id: 1 }, destination: { Id: 0 }, limit: 0, offset: 0, order_by: [], conditions: [{ logic: "And", modifier: "None", data: "Node" }, { logic: "Or", modifier: "None", data: { Where: [{ logic: "And", modifier: "None", data: "Edge" }, { logic: "And", modifier: "None", data: { KeyValue: { key: { String: "k" }, value: { Any: { VecI64: [1, 2] } } } } }] } }], reverse: false } });
     });
 
     it("search_from_order_by_where_node", () => {
-        expect(QueryBuilder.search().from(1).order_by([{ Asc: { String: "k" } }]).where().node().query()).toEqual<QueryType>({ Search: { algorithm: "BreadthFirst", origin: { Id: 1 }, destination: { Id: 0 }, limit: 0, offset: 0, order_by: [{ Asc: { String: "k" } }], conditions: [{ logic: "And", modifier: "None", data: "Node" }], reverse: false } });
+        expect(QueryBuilder.search().from(1).order_by([DbKeyOrder.Asc(DbValue.String("k"))]).where().node().query()).toEqual<QueryType>({ Search: { algorithm: "BreadthFirst", origin: { Id: 1 }, destination: { Id: 0 }, limit: 0, offset: 0, order_by: [{ Asc: { String: "k" } }], conditions: [{ logic: "And", modifier: "None", data: "Node" }], reverse: false } });
     });
 
     it("search_from_limit_where_node", () => {
@@ -780,7 +889,7 @@ describe("query_builder_test", () => {
     });
 
     it("search_to_order_by_where_node", () => {
-        expect(QueryBuilder.search().to(1).order_by([{ Asc: { String: "k" } }]).where().node().query()).toEqual<QueryType>({ Search: { algorithm: "BreadthFirst", origin: { Id: 0 }, destination: { Id: 1 }, limit: 0, offset: 0, order_by: [{ Asc: { String: "k" } }], conditions: [{ logic: "And", modifier: "None", data: "Node" }], reverse: false } });
+        expect(QueryBuilder.search().to(1).order_by([DbKeyOrder.Asc(DbValue.String("k"))]).where().node().query()).toEqual<QueryType>({ Search: { algorithm: "BreadthFirst", origin: { Id: 0 }, destination: { Id: 1 }, limit: 0, offset: 0, order_by: [{ Asc: { String: "k" } }], conditions: [{ logic: "And", modifier: "None", data: "Node" }], reverse: false } });
     });
 
     it("search_from_where_key_greater_than", () => {

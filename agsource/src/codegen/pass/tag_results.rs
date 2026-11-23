@@ -125,7 +125,7 @@ type Retagged = BTreeMap<(String, String), String>;
 fn retype(e: &mut Expr, retagged: &Retagged) {
     match &mut e.k {
         K::Call {
-            callee: Callee::Member { class, name },
+            callee: Callee::Member { class, name, .. },
             ..
         } => {
             if let Some(data) = retagged.get(&(class.clone(), name.clone())) {
@@ -136,7 +136,7 @@ fn retype(e: &mut Expr, retagged: &Retagged) {
             en,
             payload: Some(value),
             ..
-        } if matches!(&value.k, K::Call { callee: Callee::Member { class, name }, .. }
+        } if matches!(&value.k, K::Call { callee: Callee::Member { class, name, .. }, .. }
                 if retagged.get(&(class.clone(), name.clone())) == Some(en)) =>
         {
             *e = std::mem::replace(value.as_mut(), Expr::new(K::This));

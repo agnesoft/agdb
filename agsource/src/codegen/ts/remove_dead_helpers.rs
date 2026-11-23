@@ -18,7 +18,7 @@ impl Pass for RemoveDeadHelpers {
         snapshot.for_each_func(&mut |f, _| {
             rewrite_body(&mut f.body, &mut |e| {
                 if let K::Call {
-                    callee: Callee::Member { class, name } | Callee::Static { class, name },
+                    callee: Callee::Member { class, name, .. } | Callee::Static { class, name },
                     ..
                 } = &e.k
                 {

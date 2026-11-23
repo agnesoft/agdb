@@ -1,6 +1,6 @@
-//! Copies a database into a new storage element by element, keeping the
-//! ids, in transactions of [`BATCH`] items: the migration of the legacy
-//! format and the optimization of the storage.
+//! Copies a database into a new storage element by element, keeping or
+//! renumbering the ids, in transactions of [`BATCH`] items: the migration
+//! of the legacy format and the optimization of the storage.
 
 use crate::DbError;
 use crate::DbErrorType;
@@ -69,44 +69,173 @@ pub(crate) trait Source {
     ) -> Result<Vec<(DbId, DbKeyValue)>, DbError>;
 }
 
-/// Copies the `source` into the empty `root`, reporting what it drops as
-/// `fixed`. Each array of the graph ends at its highest element, so the
-/// free slots above it are dropped.
-pub(crate) fn rebuild<S: StorageData>(
+/// The ids of the elements copied by a [`rebuild`].
+#[derive(Clone, Copy, Debug, PartialEq)]
+enum Ids {
+    /// Each element keeps its id, so the free slots below the highest
+    /// element of each kind are kept too: the ids held by a running
+    /// program stay valid.
+    Keep,
+    /// The nodes and the edges are numbered from 1 each in the order of
+    /// their ids, so no free slots are left.
+    Renumber,
+}
+
+/// The used slots of a kind of elements, how many are before each word of
+/// them and in all: the rank of a used slot is the new id of its element.
+#[derive(Default)]
+struct Ranks {
+    used: Vec<u64>,
+    before: Vec<u64>,
+    len: u64,
+}
+
+impl Ranks {
+    fn set(&mut self, slot: u64) {
+        let word = (slot / 64) as usize;
+
+        if self.used.len() <= word {
+            self.used.resize(word + 1, 0);
+        }
+
+        self.used[word] |= 1 << (slot % 64);
+    }
+
+    /// Counts the used slots, once all are set.
+    fn count(&mut self) {
+        self.before = self
+            .used
+            .iter()
+            .map(|word| {
+                let before = self.len;
+                self.len += u64::from(word.count_ones());
+                before
+            })
+            .collect();
+    }
+
+    /// The rank of the used `slot`, 0 for the slot 0 that links nothing and
+    /// past the last one for a missing slot so that the relink rejects the
+    /// link like that of a kept id.
+    fn rank(&self, slot: u64) -> u64 {
+        let word = (slot / 64) as usize;
+        let bit = 1 << (slot % 64);
+
+        match self.used.get(word) {
+            _ if slot == 0 => 0,
+            Some(used) if used & bit != 0 => {
+                self.before[word] + u64::from((used & (bit - 1)).count_ones()) + 1
+            }
+            _ => self.len + 1,
+        }
+    }
+}
+
+/// The new ids of the elements, see [`Ids`].
+struct Numbering {
+    ids: Ids,
+    nodes: Ranks,
+    edges: Ranks,
+}
+
+impl Numbering {
+    fn node(&self, id: DbId) -> DbId {
+        match self.ids {
+            Ids::Keep => id,
+            Ids::Renumber => DbId(self.nodes.rank(id.0.unsigned_abs()) as i64),
+        }
+    }
+
+    fn edge(&self, id: DbId) -> DbId {
+        match self.ids {
+            Ids::Keep => id,
+            Ids::Renumber => DbId(-(self.edges.rank(id.0.unsigned_abs()) as i64)),
+        }
+    }
+
+    fn element(&self, id: DbId) -> DbId {
+        if id.0 < 0 {
+            self.edge(id)
+        } else {
+            self.node(id)
+        }
+    }
+
+    /// The `element` with the new ids it links.
+    fn renumbered(&self, element: &Element) -> Element {
+        let node = element.0.as_ref().map(|node| Node {
+            first_from: self.edge(node.first_from),
+            first_to: self.edge(node.first_to),
+            from_count: node.from_count,
+            to_count: node.to_count,
+            data: node.data,
+        });
+        let edge = element.1.as_ref().map(|edge| Edge {
+            from: self.node(edge.from),
+            to: self.node(edge.to),
+            next_from: self.edge(edge.next_from),
+            next_to: self.edge(edge.next_to),
+            previous_from: self.edge(edge.previous_from),
+            previous_to: self.edge(edge.previous_to),
+            data: edge.data,
+        });
+
+        (node, edge)
+    }
+}
+
+/// Copies the `source` into the empty `root` with the `ids`, reporting what
+/// it drops as `fixed`. Each array of the graph ends at its highest
+/// element, so the free slots above it are dropped.
+fn rebuild<S: StorageData>(
     source: &impl Source,
     root: &mut Root<S>,
     fixed: &mut Vec<String>,
+    ids: Ids,
 ) -> Result<(), DbError> {
     let slots = source.slots();
     let mut nodes = 0;
     let mut edges = 0;
-    let mut edge_count = 0;
+    let mut numbering = Numbering {
+        ids,
+        nodes: Ranks::default(),
+        edges: Ranks::default(),
+    };
 
     for start in (1..slots).step_by(BATCH as usize) {
         for (slot, element) in (start..).zip(source.graph(start, BATCH)?) {
             if element.0.is_some() {
                 nodes = slot;
+                numbering.nodes.set(slot);
             }
 
             if element.1.is_some() {
                 edges = slot;
-                edge_count += 1;
+                numbering.edges.set(slot);
             }
         }
     }
 
+    numbering.nodes.count();
+    numbering.edges.count();
+    let keep = ids == Ids::Keep;
+
     for start in (1..=nodes.max(edges)).step_by(BATCH as usize) {
-        let elements = source.graph(start, BATCH)?;
+        let elements: Vec<Element> = source
+            .graph(start, BATCH)?
+            .iter()
+            .map(|element| numbering.renumbered(element))
+            .collect();
         batch(root, &mut |transaction| {
             let graph = &mut transaction.meta.graph;
             let alloc = &mut transaction.meta.alloc;
 
             for (slot, element) in (start..).zip(&elements) {
-                if slot <= nodes {
+                if slot <= nodes && (keep || element.0.is_some()) {
                     graph.push_node(&mut transaction.view, alloc, element.0.as_ref())?;
                 }
 
-                if slot <= edges {
+                if slot <= edges && (keep || element.1.is_some()) {
                     graph.push_edge(&mut transaction.view, alloc, element.1.as_ref())?;
                 }
             }
@@ -115,7 +244,8 @@ pub(crate) fn rebuild<S: StorageData>(
         })?;
     }
 
-    relink(root, nodes, edge_count)?;
+    let linked = if keep { nodes } else { numbering.nodes.len };
+    relink(root, linked, numbering.edges.len)?;
     let indexes = source.indexes()?;
     batch(root, &mut |transaction| {
         let meta = &mut transaction.meta;
@@ -136,7 +266,13 @@ pub(crate) fn rebuild<S: StorageData>(
         Ok(())
     })?;
 
-    for aliases in source.aliases(fixed)?.chunks(BATCH as usize) {
+    let mut aliases = source.aliases(fixed)?;
+
+    for alias in &mut aliases {
+        alias.0 = numbering.node(alias.0);
+    }
+
+    for aliases in aliases.chunks(BATCH as usize) {
         batch(root, &mut |transaction| {
             let meta = &mut transaction.meta;
             let view = &mut transaction.view;
@@ -161,6 +297,7 @@ pub(crate) fn rebuild<S: StorageData>(
 
     for start in (0..source.value_slots()?).step_by(BATCH as usize) {
         let values = source.values(start, BATCH, fixed)?;
+
         batch(root, &mut |transaction| {
             let meta = &mut transaction.meta;
             let view = &mut transaction.view;
@@ -169,30 +306,31 @@ pub(crate) fn rebuild<S: StorageData>(
                 KeyValues(&meta.graph).reserve(
                     view,
                     &mut meta.alloc,
-                    element[0].0,
+                    numbering.element(element[0].0),
                     element.len() as u64,
                 )?;
             }
 
-            for (id, key_value) in &values {
+            for (source_id, key_value) in &values {
+                let id = numbering.element(*source_id);
                 let (key, old) = KeyValues(&meta.graph).insert(
                     view,
                     &mut meta.alloc,
                     &mut meta.keys,
-                    *id,
+                    id,
                     key_value,
                 )?;
 
                 if let Some(old) = old {
                     fixed.push(format!(
                         "value '{old}' of duplicate key '{}' of element {} removed",
-                        key_value.key, id.0
+                        key_value.key, source_id.0
                     ));
-                    meta.indexes.remove(view, &mut meta.alloc, key, &old, *id)?;
+                    meta.indexes.remove(view, &mut meta.alloc, key, &old, id)?;
                 }
 
                 meta.indexes
-                    .insert(view, &mut meta.alloc, key, &key_value.value, *id)?;
+                    .insert(view, &mut meta.alloc, key, &key_value.value, id)?;
             }
 
             Ok(())
@@ -250,7 +388,7 @@ pub(crate) fn migrate<S: StorageData>(storage: S) -> Result<(Root<S>, DbMigratio
         let legacy = Legacy::open(&reader)?;
         from = legacy.version();
         root = Root::open(target(&storage)?, Layout::default())?;
-        rebuild(&legacy, &mut root, &mut fixed)?;
+        rebuild(&legacy, &mut root, &mut fixed, Ids::Renumber)?;
         root.storage_mut().sync()?;
     }
 
@@ -273,7 +411,7 @@ pub(crate) fn optimize<S: StorageData>(root: &mut Root<S>) -> Result<(), DbError
         let (reader, meta) = root.read()?;
         let mut rebuilt = Root::open(target(root.storage())?, meta.layout)?;
         let transaction = Transaction::new(ReadView::Committed(reader), meta);
-        rebuild(&transaction, &mut rebuilt, &mut vec![])?;
+        rebuild(&transaction, &mut rebuilt, &mut vec![], Ids::Keep)?;
         rebuilt
     };
 
@@ -474,6 +612,86 @@ mod tests {
         use super::*;
 
         #[test]
+        fn rebuild_duplicates_should_be_fixed() {
+            let platform = Arc::new(test_platform());
+            let storage = memory(&graph_only(&GRAPH));
+            let reader = Reader::new(&storage);
+            let source = Fake::new(
+                Legacy::open(&reader).unwrap(),
+                vec!["k".into(), "k".into()],
+                vec![(DbId(1), ("k", 1).into()), (DbId(1), ("k", 2).into())],
+                0,
+            );
+            let mut root = empty_root(&platform);
+            let mut fixed = vec![];
+
+            rebuild(&source, &mut root, &mut fixed, Ids::Keep).unwrap();
+
+            assert_eq!(
+                fixed,
+                vec![
+                    "duplicate index 'k' removed",
+                    "value '1' of duplicate key 'k' of element 1 removed",
+                ]
+            );
+            assert_eq!(
+                ids(exec(
+                    &root,
+                    QueryBuilder::search().index("k").value(2).query()
+                )),
+                vec![1]
+            );
+            assert_eq!(
+                ids(exec(
+                    &root,
+                    QueryBuilder::search().index("k").value(1).query()
+                )),
+                Vec::<i64>::new()
+            );
+        }
+
+        #[test]
+        fn rebuild_failed_source_should_fail() {
+            let storage = memory(&database().0);
+            let reader = Reader::new(&storage);
+            let mut fail = 1;
+
+            loop {
+                let platform = Arc::new(test_platform());
+                let source = duplicates(&reader, fail);
+                let mut root = empty_root(&platform);
+
+                match rebuild(&source, &mut root, &mut vec![], Ids::Keep) {
+                    Ok(()) => break,
+                    Err(error) => assert_eq!(error.description, format!("Call {fail} failed")),
+                }
+
+                fail += 1;
+            }
+
+            assert_eq!(fail, 7);
+        }
+
+        #[test]
+        fn rebuild_into_unrecoverable_root_should_fail() {
+            let platform = Arc::new(test_platform());
+            let storage = memory(&database().0);
+            let reader = Reader::new(&storage);
+            let legacy = Legacy::open(&reader).unwrap();
+            let mut root = empty_root(&platform);
+            let mut transaction = TransactionMut::new(root.begin().unwrap());
+            transaction
+                .exec_mut(QueryBuilder::insert().nodes().count(1).query())
+                .unwrap();
+            platform
+                .fs()
+                .set_io_error(FsOp::Read, "/.target", ErrorKind::Other);
+            drop(transaction);
+
+            assert!(rebuild(&legacy, &mut root, &mut vec![], Ids::Keep).is_err());
+        }
+
+        #[test]
         fn rebuild_should_copy_elements_with_their_ids() {
             let platform = Arc::new(test_platform());
             let (file, values) = database();
@@ -483,7 +701,7 @@ mod tests {
             let mut root = empty_root(&platform);
             let mut fixed = vec![];
 
-            rebuild(&legacy, &mut root, &mut fixed).unwrap();
+            rebuild(&legacy, &mut root, &mut fixed, Ids::Keep).unwrap();
 
             assert_eq!(fixed.len(), 11);
             assert_eq!(
@@ -540,7 +758,7 @@ mod tests {
             let reader = Reader::new(&storage);
             let legacy = Legacy::open(&reader).unwrap();
             let mut root = empty_root(&platform);
-            rebuild(&legacy, &mut root, &mut vec![]).unwrap();
+            rebuild(&legacy, &mut root, &mut vec![], Ids::Keep).unwrap();
 
             let nodes = exec_mut(&mut root, QueryBuilder::insert().nodes().count(2).query());
             let edges = exec_mut(
@@ -557,86 +775,6 @@ mod tests {
         }
 
         #[test]
-        fn rebuild_duplicates_should_be_fixed() {
-            let platform = Arc::new(test_platform());
-            let storage = memory(&graph_only(&GRAPH));
-            let reader = Reader::new(&storage);
-            let source = Fake::new(
-                Legacy::open(&reader).unwrap(),
-                vec!["k".into(), "k".into()],
-                vec![(DbId(1), ("k", 1).into()), (DbId(1), ("k", 2).into())],
-                0,
-            );
-            let mut root = empty_root(&platform);
-            let mut fixed = vec![];
-
-            rebuild(&source, &mut root, &mut fixed).unwrap();
-
-            assert_eq!(
-                fixed,
-                vec![
-                    "duplicate index 'k' removed",
-                    "value '1' of duplicate key 'k' of element 1 removed",
-                ]
-            );
-            assert_eq!(
-                ids(exec(
-                    &root,
-                    QueryBuilder::search().index("k").value(2).query()
-                )),
-                vec![1]
-            );
-            assert_eq!(
-                ids(exec(
-                    &root,
-                    QueryBuilder::search().index("k").value(1).query()
-                )),
-                Vec::<i64>::new()
-            );
-        }
-
-        #[test]
-        fn rebuild_failed_source_should_fail() {
-            let storage = memory(&database().0);
-            let reader = Reader::new(&storage);
-            let mut fail = 1;
-
-            loop {
-                let platform = Arc::new(test_platform());
-                let source = duplicates(&reader, fail);
-                let mut root = empty_root(&platform);
-
-                match rebuild(&source, &mut root, &mut vec![]) {
-                    Ok(()) => break,
-                    Err(error) => assert_eq!(error.description, format!("Call {fail} failed")),
-                }
-
-                fail += 1;
-            }
-
-            assert_eq!(fail, 7);
-        }
-
-        #[test]
-        fn rebuild_into_unrecoverable_root_should_fail() {
-            let platform = Arc::new(test_platform());
-            let storage = memory(&database().0);
-            let reader = Reader::new(&storage);
-            let legacy = Legacy::open(&reader).unwrap();
-            let mut root = empty_root(&platform);
-            let mut transaction = TransactionMut::new(root.begin().unwrap());
-            transaction
-                .exec_mut(QueryBuilder::insert().nodes().count(1).query())
-                .unwrap();
-            platform
-                .fs()
-                .set_io_error(FsOp::Read, "/.target", ErrorKind::Other);
-            drop(transaction);
-
-            assert!(rebuild(&legacy, &mut root, &mut vec![]).is_err());
-        }
-
-        #[test]
         fn rebuild_should_keep_free_slots_below_highest_elements() {
             let platform = Arc::new(test_platform());
             let storage = memory(&graph_only(&[
@@ -648,7 +786,7 @@ mod tests {
             let reader = Reader::new(&storage);
             let legacy = Legacy::open(&reader).unwrap();
             let mut root = empty_root(&platform);
-            rebuild(&legacy, &mut root, &mut vec![]).unwrap();
+            rebuild(&legacy, &mut root, &mut vec![], Ids::Keep).unwrap();
 
             let nodes = exec_mut(&mut root, QueryBuilder::insert().nodes().count(2).query());
 
@@ -656,8 +794,116 @@ mod tests {
         }
 
         #[test]
+        fn rebuild_renumber_should_number_nodes_and_edges_from_1_in_id_order() {
+            let platform = Arc::new(test_platform());
+            let (file, mut values) = database();
+            values.last_mut().unwrap().0 = DbId(-1);
+            let storage = memory(&file);
+            let reader = Reader::new(&storage);
+            let legacy = Legacy::open(&reader).unwrap();
+            let mut root = empty_root(&platform);
+            let mut fixed = vec![];
+
+            rebuild(&legacy, &mut root, &mut fixed, Ids::Renumber).unwrap();
+
+            assert_eq!(fixed.len(), 11);
+            assert_eq!(
+                ids(exec(&root, QueryBuilder::search().elements().query())),
+                vec![1, 2, -1, -2]
+            );
+            assert_eq!(
+                ids(exec(&root, QueryBuilder::search().from(1).query())),
+                vec![1, -1, 2, -2]
+            );
+            assert_eq!(
+                exec(
+                    &root,
+                    QueryBuilder::select().edge_count().ids([1, 2]).query()
+                )
+                .elements
+                .iter()
+                .map(|element| element.values[0].value.to_u64().unwrap())
+                .collect::<Vec<_>>(),
+                vec![1, 3]
+            );
+            assert_eq!(
+                exec(&root, QueryBuilder::select().aliases().query())
+                    .elements
+                    .iter()
+                    .map(|element| (element.id.0, element.values[0].value.to_string()))
+                    .collect::<Vec<_>>(),
+                vec![(1, "a".to_string()), (2, "c".to_string())]
+            );
+            assert_eq!(
+                exec(&root, QueryBuilder::select().ids([1, 2, -1]).query())
+                    .elements
+                    .into_iter()
+                    .flat_map(|element| element
+                        .values
+                        .into_iter()
+                        .map(move |key_value| (element.id, key_value)))
+                    .collect::<Vec<_>>(),
+                values
+            );
+            assert_eq!(
+                ids(exec(
+                    &root,
+                    QueryBuilder::search().index("k").value(1_u64).query()
+                )),
+                vec![1]
+            );
+        }
+
+        #[test]
+        fn rebuild_renumber_should_leave_no_free_slots() {
+            let platform = Arc::new(test_platform());
+            let storage = memory(&database().0);
+            let reader = Reader::new(&storage);
+            let legacy = Legacy::open(&reader).unwrap();
+            let mut root = empty_root(&platform);
+            rebuild(&legacy, &mut root, &mut vec![], Ids::Renumber).unwrap();
+
+            let nodes = exec_mut(&mut root, QueryBuilder::insert().nodes().count(2).query());
+            let edges = exec_mut(
+                &mut root,
+                QueryBuilder::insert()
+                    .edges()
+                    .from([1, 1, 1, 1])
+                    .to([2, 2, 2, 2])
+                    .query(),
+            );
+
+            assert_eq!(ids(nodes), vec![3, 4]);
+            assert_eq!(ids(edges), vec![-3, -4, -5, -6]);
+        }
+
+        #[test]
+        fn rebuild_renumber_missing_element_should_fail() {
+            let platform = Arc::new(test_platform());
+            let storage = memory(&graph_only(&[
+                [0, 0, FREE, 2],
+                [0, 0, 0, 0],
+                [0, 0, 0, 0],
+                [-1, -7, 0, 0],
+            ]));
+            let reader = Reader::new(&storage);
+            let legacy = Legacy::open(&reader).unwrap();
+            let mut root = empty_root(&platform);
+
+            let error = rebuild(&legacy, &mut root, &mut vec![], Ids::Renumber).unwrap_err();
+
+            assert_eq!(
+                error.description,
+                "Graph has edges not linked by their nodes (0 from, 0 to of 1)"
+            );
+        }
+
+        #[test]
         fn rebuild_failed_target_io_should_fail() {
-            for op in [FsOp::Read, FsOp::Write] {
+            for (ids, op) in [Ids::Keep, Ids::Renumber]
+                .into_iter()
+                .flat_map(|ids| [(ids, FsOp::Read), (ids, FsOp::Write)])
+            {
                 let mut fail = 0;
 
                 loop {
@@ -674,15 +920,15 @@ mod tests {
                             .chain([None]),
                     );
 
-                    if rebuild(&source, &mut root, &mut vec![]).is_ok() {
+                    if rebuild(&source, &mut root, &mut vec![], ids).is_ok() {
                         break;
                     }
 
                     fail += 1;
-                    assert!(fail < 10_000, "op: {op:?}");
+                    assert!(fail < 10_000, "ids: {ids:?}, op: {op:?}");
                 }
 
-                assert!(10 < fail, "op: {op:?}, fail: {fail}");
+                assert!(10 < fail, "ids: {ids:?}, op: {op:?}, fail: {fail}");
             }
         }
     }
@@ -709,7 +955,7 @@ mod tests {
                 let mut root = empty_root(&platform);
 
                 assert_eq!(
-                    rebuild(&legacy, &mut root, &mut vec![])
+                    rebuild(&legacy, &mut root, &mut vec![], Ids::Keep)
                         .unwrap_err()
                         .description,
                     description
@@ -741,7 +987,7 @@ mod tests {
                 .unwrap();
                 assert_eq!(
                     ids(exec(&root, QueryBuilder::search().from(1).query()))[..2],
-                    [1, -3]
+                    [1, -1]
                 );
             }
         }

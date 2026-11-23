@@ -7,8 +7,12 @@ publish = false
 [dependencies]
 agdb_api.workspace = true
 agdb.workspace = true
+agplatform = { workspace = true, features = ["fs", "process"] }
 num-format = { workspace = true, features = ["with-serde"] }
 reqwest = { workspace = true, default-features = false, features = ["http2", "rustls"] }
 serde = { workspace = true, features = ["derive"] }
 serde_yaml.workspace = true
 tokio = { workspace = true, features = ["full"] }
+
+[dev-dependencies]
+agplatform = { workspace = true, features = ["fs", "process", "testing"] }

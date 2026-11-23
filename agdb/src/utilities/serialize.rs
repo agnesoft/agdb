@@ -19,6 +19,7 @@ pub trait SerializeStatic: Serialize {
     }
 }
 
+#[inline]
 pub(crate) fn u64_at(bytes: &[u8], word: usize) -> u64 {
     let mut le = [0_u8; 8];
     le.copy_from_slice(&bytes[word * 8..(word + 1) * 8]);

@@ -94,15 +94,18 @@ fn invalid(id: DbId) -> DbError {
     )
 }
 
+#[inline]
 fn node_id(slot: u64) -> DbId {
     DbId(slot as i64)
 }
 
+#[inline]
 fn edge_id(slot: u64) -> DbId {
     DbId(-(slot as i64))
 }
 
 /// The `width` (4 or 8) bytes at `at` of the `bytes` of a record.
+#[inline]
 fn uint(bytes: &[u8], at: u64, width: u64) -> u64 {
     let at = at as usize;
 
@@ -163,6 +166,7 @@ impl GraphHeader {
         }
     }
 
+    #[inline]
     pub(crate) fn node(&self, view: &impl View, id: DbId) -> Result<Option<Node>, DbError> {
         if id.0 < 0 {
             return Ok(None);
@@ -177,6 +181,7 @@ impl GraphHeader {
         }))
     }
 
+    #[inline]
     pub(crate) fn edge(&self, view: &impl View, id: DbId) -> Result<Option<Edge>, DbError> {
         if 0 < id.0 {
             return Ok(None);
@@ -513,6 +518,7 @@ impl Records {
 
     /// The bytes of the record `slot`, `None` for the slot 0, free and
     /// out of bounds slots.
+    #[inline]
     fn record<'a>(
         &self,
         view: &'a impl View,
@@ -526,6 +532,7 @@ impl Records {
         Ok((uint(&bytes, 0, self.width) != self.vacant).then_some(bytes))
     }
 
+    #[inline]
     fn read<'a>(&self, view: &'a impl View, slot: u64) -> Result<StorageSlice<'a>, DbError> {
         view.read(self.array.pos(slot), self.array.record_size())
     }

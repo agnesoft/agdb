@@ -75,6 +75,7 @@ fn u16_at(bytes: &[u8], at: u64) -> u16 {
     u16::from_le_bytes([bytes[at], bytes[at + 1]])
 }
 
+#[inline]
 pub(crate) fn u32_at(bytes: &[u8], at: u64) -> u32 {
     let at = at as usize;
     u32::from_le_bytes([bytes[at], bytes[at + 1], bytes[at + 2], bytes[at + 3]])

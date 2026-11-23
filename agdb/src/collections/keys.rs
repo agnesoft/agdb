@@ -18,6 +18,7 @@ use crate::storage::pages::ViewMut;
 use crate::utilities::serialize::u64_at;
 use crate::utilities::stable_hash::StableHash;
 use std::collections::HashMap;
+use std::sync::Arc;
 use std::sync::Mutex;
 use std::sync::PoisonError;
 
@@ -64,11 +65,14 @@ fn record_bytes(key: &DbValueIndex, refs: u64, hash: u64) -> [u8; RECORD] {
 }
 
 /// The ids of the short keys by their inline index, a cache that is not
-/// part of the state. A clone starts empty, so the memo stays with the
-/// meta a write transaction takes and is dropped with its rollback. It
-/// never waits for the lock: a contended lookup reads the table.
+/// part of the state. A clone starts empty, a [`share`](Self::share) is
+/// the same memo: the root shares one between the committed keys and those
+/// of its transactions and clears it when one rolls back. Lookups never
+/// wait for the lock: a contended one reads the table.
 #[derive(Debug, Default)]
-struct Memo(Mutex<HashMap<[u8; 16], KeyId>>);
+struct Memo(Arc<Mutex<Option<KeyIds>>>);
+
+type KeyIds = HashMap<[u8; 16], KeyId>;
 
 impl Clone for Memo {
     fn clone(&self) -> Self {
@@ -85,22 +89,36 @@ impl PartialEq for Memo {
 impl Memo {
     fn get(&self, key: Option<DbValueIndex>) -> Option<KeyId> {
         let key = key?.data();
-        self.0.try_lock().ok()?.get(&key).copied()
+        self.0.try_lock().ok()?.as_ref()?.get(&key).copied()
     }
 
     fn insert(&self, key: Option<DbValueIndex>, id: KeyId) {
-        if let (Some(key), Ok(mut ids)) = (key, self.0.try_lock())
-            && ids.len() < MEMO_LIMIT
-        {
-            ids.insert(key.data(), id);
+        if let (Some(key), Ok(mut ids)) = (key, self.0.try_lock()) {
+            let ids = ids.get_or_insert_with(HashMap::new);
+
+            if ids.len() < MEMO_LIMIT {
+                ids.insert(key.data(), id);
+            }
         }
     }
 
-    fn remove(&mut self, key: &DbValueIndex) {
-        self.0
-            .get_mut()
+    fn remove(&self, key: &DbValueIndex) {
+        if let Some(ids) = self
+            .0
+            .lock()
             .unwrap_or_else(PoisonError::into_inner)
-            .remove(&key.data());
+            .as_mut()
+        {
+            ids.remove(&key.data());
+        }
+    }
+
+    fn share(&self) -> Self {
+        Self(Arc::clone(&self.0))
+    }
+
+    fn clear(&self) {
+        self.0.lock().unwrap_or_else(PoisonError::into_inner).take();
     }
 }
 
@@ -150,6 +168,20 @@ impl Keys {
 
     pub(crate) fn len(&self) -> u64 {
         self.table.len()
+    }
+
+    /// Makes the keys equal to the `keys`, sharing their memo.
+    pub(crate) fn share(&mut self, keys: &Keys) {
+        self.array = keys.array.clone();
+        self.len = keys.len;
+        self.free = keys.free;
+        self.table = keys.table;
+        self.memo = keys.memo.share();
+    }
+
+    /// Clears the memo, also of the keys sharing it.
+    pub(crate) fn forget(&self) {
+        self.memo.clear();
     }
 
     /// The id of the `key`, `None` if it is not referenced.
@@ -378,7 +410,7 @@ pub(crate) mod tests {
 
     /// The number of keys in the memo of the `keys`.
     pub(crate) fn memoized(keys: &Keys) -> usize {
-        keys.memo.0.lock().unwrap().len()
+        keys.memo.0.lock().unwrap().as_ref().map_or(0, HashMap::len)
     }
 
     fn short(key: &str) -> Option<DbValueIndex> {

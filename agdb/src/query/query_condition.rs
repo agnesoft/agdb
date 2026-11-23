@@ -200,6 +200,7 @@ pub struct KeyValueComparison {
 }
 
 impl CountComparison {
+    #[inline]
     pub(crate) fn compare_distance(&self, right: u64) -> SearchControl {
         match self {
             CountComparison::Equal(left) => match right.cmp(left) {
@@ -240,6 +241,7 @@ impl CountComparison {
         }
     }
 
+    #[inline]
     pub(crate) fn compare(&self, left: u64) -> bool {
         match self {
             CountComparison::Equal(right) => left == *right,

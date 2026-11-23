@@ -181,6 +181,18 @@ impl Meta {
         Self::decode(view, &view.read(0, ROOT_SIZE as u64)?)
     }
 
+    /// Makes the meta equal to the `meta`, sharing its key memo.
+    fn copy_from(&mut self, meta: &Self) {
+        self.layout = meta.layout;
+        self.alloc.clone_from(&meta.alloc);
+        self.graph.clone_from(&meta.graph);
+        self.keys.share(&meta.keys);
+
+        if self.indexes != meta.indexes {
+            self.indexes.clone_from(&meta.indexes);
+        }
+    }
+
     /// Decodes the root `bytes` of the storage `view`.
     fn decode(view: &impl View, bytes: &[u8]) -> Result<Self, DbError> {
         let meta_len = u32_at(bytes, 32);
@@ -234,22 +246,44 @@ impl Meta {
     }
 }
 
-/// Owns the storage, the overlay its transactions reuse and the
-/// committed [`Meta`].
+/// Owns the storage, the overlay its transactions reuse, the committed
+/// [`Meta`] and the one the transactions change.
 pub(crate) struct Root<S: StorageData> {
     storage: S,
     overlay: Overlay,
     /// `None` after a failed commit, after which the storage may hold
     /// either meta, so it is read from the root until it is reloaded.
     meta: Option<Meta>,
+    /// Equal to the committed meta when `current`, i.e. unless the last
+    /// transaction did not commit, so it is copied only then.
+    work: Meta,
+    current: bool,
 }
 
 /// A transaction over the [`Root`]: its writes and meta reach the
 /// storage on [`commit`](Self::commit) and are dropped otherwise.
 pub(crate) struct RootMut<'a, S: StorageData> {
     pub(crate) view: Writer<'a, S>,
-    pub(crate) meta: Meta,
-    committed: &'a mut Option<Meta>,
+    pub(crate) meta: &'a mut Meta,
+    committed: Committed<'a>,
+}
+
+/// The committed meta of the [`Root`] of a transaction and whether the
+/// transaction committed.
+struct Committed<'a> {
+    meta: &'a mut Option<Meta>,
+    current: &'a mut bool,
+}
+
+/// A transaction that did not commit may have memoized the keys it added
+/// or forgotten those it removed, in the memo it shares with the committed
+/// meta.
+impl Drop for Committed<'_> {
+    fn drop(&mut self) {
+        if let (false, Some(meta)) = (*self.current, self.meta.as_ref()) {
+            meta.keys.forget();
+        }
+    }
 }
 
 impl<S: StorageData> Root<S> {
@@ -272,6 +306,8 @@ impl<S: StorageData> Root<S> {
             storage,
             overlay: Overlay::new(meta.layout.page_shift),
             meta: Some(meta),
+            work: Meta::default(),
+            current: false,
         };
 
         if format == Format::Empty {
@@ -320,16 +356,26 @@ impl<S: StorageData> Root<S> {
     /// one failed to.
     pub(crate) fn begin(&mut self) -> Result<RootMut<'_, S>, DbError> {
         let view = Writer::new(&mut self.storage, &mut self.overlay)?;
-        let meta = match self.meta.take() {
-            Some(meta) => meta,
-            None => Meta::load(&view)?,
-        };
-        self.meta = Some(meta.clone());
+
+        match &self.meta {
+            Some(meta) if !self.current => self.work.copy_from(meta),
+            Some(_) => {}
+            None => {
+                let meta = Meta::load(&view)?;
+                self.work.copy_from(&meta);
+                self.meta = Some(meta);
+            }
+        }
+
+        self.current = false;
 
         Ok(RootMut {
             view,
-            meta,
-            committed: &mut self.meta,
+            meta: &mut self.work,
+            committed: Committed {
+                meta: &mut self.meta,
+                current: &mut self.current,
+            },
         })
     }
 }
@@ -338,14 +384,24 @@ impl<S: StorageData> RootMut<'_, S> {
     /// Writes the meta to the root only if it changed: the root already
     /// holds the committed one.
     pub(crate) fn commit(mut self) -> Result<(), DbError> {
-        let root = self.meta.encode();
+        let changed = self.committed.meta.as_ref() != Some(&*self.meta);
 
-        if self.committed.as_ref().map(Meta::encode) != Some(root) {
-            self.view.write(0, &root)?;
+        if changed {
+            self.view.write(0, &self.meta.encode())?;
         }
 
         let result = self.view.commit();
-        *self.committed = result.is_ok().then_some(self.meta);
+
+        if result.is_err() {
+            *self.committed.meta = None;
+        } else if changed {
+            self.committed
+                .meta
+                .get_or_insert_with(Meta::default)
+                .copy_from(self.meta);
+        }
+
+        *self.committed.current = result.is_ok();
         result
     }
 }
@@ -1016,7 +1072,7 @@ mod tests {
 
                 let transaction = root.begin().unwrap();
 
-                assert_eq!(transaction.meta, state.0);
+                assert_eq!(*transaction.meta, state.0);
                 drop(transaction);
                 assert_eq!(root.meta, Some(state.0));
             }

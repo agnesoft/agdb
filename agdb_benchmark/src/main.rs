@@ -8,6 +8,8 @@ use agdb::FileStorage;
 use agdb::FileStorageMemoryMapped;
 use agdb::MemoryStorage;
 use agdb::StorageData;
+use agplatform::Env;
+use agplatform::Platform;
 use bench_result::BenchResult;
 use config::Config;
 use config::DbType;
@@ -17,6 +19,7 @@ use database::ServerDatabase;
 use database::create_server_http_client;
 use std::time::Instant;
 
+mod baseline;
 mod bench_error;
 mod bench_result;
 mod config;
@@ -193,8 +196,23 @@ async fn run_server(
 
 #[tokio::main]
 async fn main() -> BenchResult<()> {
-    let config_file = std::env::args()
-        .nth(1)
+    let platform = agplatform::platform();
+    let args: Vec<String> = platform
+        .env()
+        .args()
+        .skip(1)
+        .map(|arg| arg.to_string_lossy().into_owned())
+        .collect();
+
+    if args.first().is_some_and(|arg| arg == "baseline") {
+        let manifest_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
+        let root = manifest_dir.parent().unwrap_or(manifest_dir);
+        return Ok(baseline::run(&platform, root, &args[1..])?);
+    }
+
+    let config_file = args
+        .first()
+        .cloned()
         .unwrap_or_else(|| BENCH_CONFIG_FILE.to_string());
     let config = Config::new(&config_file)?;
 

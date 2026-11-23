@@ -260,17 +260,23 @@ mod tests {
                 use super::*;
 
                 #[test]
-                fn create_should_replace_name_with_empty_storage_of_same_variant() {
+                fn create_should_replace_name_with_empty_storage() {
+                    for (storage, _, _) in variants() {
+                        crate::storage::tests::storage_data::create::create_should_replace_name_with_empty_storage(
+                            storage,
+                            "/created",
+                        );
+                    }
+                }
+
+                #[test]
+                fn create_should_keep_variant() {
                     for (storage, _, _) in variants() {
                         let variant = std::mem::discriminant(&storage);
 
                         let created = std::mem::discriminant(&storage.create("/created").unwrap());
 
                         assert_eq!(created, variant);
-                        crate::storage::tests::storage_data::create::create_should_replace_name_with_empty_storage(
-                            storage,
-                            "/created",
-                        );
                     }
                 }
             }

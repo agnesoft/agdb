@@ -107,14 +107,7 @@ impl QueryMut for InsertEdgesQuery {
         result.result = ids.len() as u64;
         result.elements = ids
             .into_iter()
-            .map(|id| {
-                Ok(DbElement {
-                    id,
-                    from: db.from_id(id)?,
-                    to: db.to_id(id)?,
-                    values: vec![],
-                })
-            })
+            .map(|id| db.element(id, vec![]))
             .collect::<Result<Vec<DbElement>, DbError>>()?;
 
         Ok(result)

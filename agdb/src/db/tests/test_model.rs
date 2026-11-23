@@ -1,4 +1,3 @@
-use crate::storage::pages::tests::XorShift;
 use crate::DbElement;
 use crate::DbError;
 use crate::DbErrorType;
@@ -10,6 +9,7 @@ use crate::QueryBuilder;
 use crate::QueryResult;
 use crate::StorageData;
 use crate::TransactionMut;
+use crate::storage::pages::tests::XorShift;
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 

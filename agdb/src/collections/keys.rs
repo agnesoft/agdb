@@ -17,6 +17,9 @@ use crate::storage::pages::View;
 use crate::storage::pages::ViewMut;
 use crate::utilities::serialize::u64_at;
 use crate::utilities::stable_hash::StableHash;
+use std::collections::HashMap;
+use std::sync::Mutex;
+use std::sync::PoisonError;
 
 /// `[hash u64][key id u32]`
 const KEYS: Kind = Kind {
@@ -29,6 +32,9 @@ const RECORD_SHIFT: u32 = 5;
 const RECORD: usize = 1 << RECORD_SHIFT;
 /// The bytes of encoded [`Keys`].
 pub(crate) const KEYS_SIZE: usize = ARRAY_SIZE + 16 + TABLE_SIZE;
+
+/// The most keys the [`Memo`] holds.
+const MEMO_LIMIT: usize = 1 << 12;
 
 /// The id of a key in the [`Keys`].
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -57,6 +63,47 @@ fn record_bytes(key: &DbValueIndex, refs: u64, hash: u64) -> [u8; RECORD] {
     bytes
 }
 
+/// The ids of the short keys by their inline index, a cache that is not
+/// part of the state. A clone starts empty, so the memo stays with the
+/// meta a write transaction takes and is dropped with its rollback. It
+/// never waits for the lock: a contended lookup reads the table.
+#[derive(Debug, Default)]
+struct Memo(Mutex<HashMap<[u8; 16], KeyId>>);
+
+impl Clone for Memo {
+    fn clone(&self) -> Self {
+        Self::default()
+    }
+}
+
+impl PartialEq for Memo {
+    fn eq(&self, _other: &Self) -> bool {
+        true
+    }
+}
+
+impl Memo {
+    fn get(&self, key: Option<DbValueIndex>) -> Option<KeyId> {
+        let key = key?.data();
+        self.0.try_lock().ok()?.get(&key).copied()
+    }
+
+    fn insert(&self, key: Option<DbValueIndex>, id: KeyId) {
+        if let (Some(key), Ok(mut ids)) = (key, self.0.try_lock())
+            && ids.len() < MEMO_LIMIT
+        {
+            ids.insert(key.data(), id);
+        }
+    }
+
+    fn remove(&mut self, key: &DbValueIndex) {
+        self.0
+            .get_mut()
+            .unwrap_or_else(PoisonError::into_inner)
+            .remove(&key.data());
+    }
+}
+
 /// The dictionary of the keys of the values, each stored once under an
 /// id and freed with its last reference. The records are in an array by
 /// id, the slot 0 being [`ALIAS`], and a table maps the hash of a
@@ -68,6 +115,7 @@ pub(crate) struct Keys {
     len: u64,
     free: u64,
     table: TableHeader,
+    memo: Memo,
 }
 
 impl Keys {
@@ -77,6 +125,7 @@ impl Keys {
             len: 1,
             free: 0,
             table: TableHeader::default(),
+            memo: Memo::default(),
         }
     }
 
@@ -106,10 +155,19 @@ impl Keys {
     /// The id of the `key`, `None` if it is not referenced.
     pub(crate) fn id(&self, view: &impl View, key: &DbValue) -> Result<Option<KeyId>, DbError> {
         let (kind, bytes) = value::encode(key);
+        let short = value::inline(kind, &bytes);
+
+        if let Some(id) = self.memo.get(short) {
+            return Ok(Some(id));
+        }
 
         Ok(
             match self.find(view, kind, &bytes, fmix64(key.stable_hash()))? {
-                Lookup::Found(_, slot) => Some(slot_id(&slot)),
+                Lookup::Found(_, slot) => {
+                    let id = slot_id(&slot);
+                    self.memo.insert(short, id);
+                    Some(id)
+                }
                 Lookup::Missing(_) => None,
             },
         )
@@ -135,12 +193,19 @@ impl Keys {
         }
 
         let (kind, bytes) = value::encode(key);
-        let hash = fmix64(key.stable_hash());
+        let short = value::inline(kind, &bytes);
 
+        if let Some(id) = self.memo.get(short) {
+            self.acquire(view, id)?;
+            return Ok(id);
+        }
+
+        let hash = fmix64(key.stable_hash());
         let end = match self.find(view, kind, &bytes, hash)? {
             Lookup::Found(_, slot) => {
                 let id = slot_id(&slot);
                 self.acquire(view, id)?;
+                self.memo.insert(short, id);
                 return Ok(id);
             }
             Lookup::Missing(end) => end,
@@ -153,6 +218,7 @@ impl Keys {
         slot[..8].copy_from_slice(&hash.to_le_bytes());
         slot[8..].copy_from_slice(&id.0.to_le_bytes());
         self.table.insert_at(view, alloc, &KEYS, end, &slot)?;
+        self.memo.insert(short, id);
         Ok(id)
     }
 
@@ -190,6 +256,7 @@ impl Keys {
         }
 
         value::free(view, alloc, &record.key)?;
+        self.memo.remove(&record.key);
         let free = record_bytes(&DbValueIndex::new(), 0, self.free);
         view.write(self.pos(id), &free)?;
         self.free = u64::from(id.0);
@@ -273,6 +340,7 @@ pub(crate) mod tests {
     use crate::collections::value::tests::assert_failures;
     use crate::collections::value::tests::values;
     use crate::collections::value::tests::with_view;
+    use crate::db::db_value::STRING_META_VALUE;
     use crate::storage::alloc::tests::verify;
     use crate::storage::pages::DEFAULT_PAGE_SHIFT;
     use crate::storage::pages::Reader;
@@ -306,6 +374,15 @@ pub(crate) mod tests {
     /// The references of the key `id`.
     pub(crate) fn refs(keys: &Keys, view: &impl View, id: KeyId) -> u64 {
         keys.record(view, id).unwrap().refs
+    }
+
+    /// The number of keys in the memo of the `keys`.
+    pub(crate) fn memoized(keys: &Keys) -> usize {
+        keys.memo.0.lock().unwrap().len()
+    }
+
+    fn short(key: &str) -> Option<DbValueIndex> {
+        value::inline(STRING_META_VALUE, key.as_bytes())
     }
 
     fn assert_keys(view: &TestView, keys: &Keys, model: &Model) {
@@ -361,6 +438,42 @@ pub(crate) mod tests {
                         assert!(model.values().all(|entry| entry.0 != id));
                         model.insert(key.clone(), (id, 1));
                     }
+                }
+            }
+        }
+    }
+
+    mod memo {
+        use super::*;
+
+        mod clone {
+            use super::*;
+
+            #[allow(clippy::module_inception)]
+            mod clone {
+                use super::*;
+
+                #[test]
+                fn clone_should_start_empty() {
+                    let memo = Memo::default();
+                    memo.insert(short("a"), KeyId(1));
+                    assert_eq!(memo.clone().get(short("a")), None);
+                    assert_eq!(memo.get(short("a")), Some(KeyId(1)));
+                }
+            }
+        }
+
+        mod partial_eq {
+            use super::*;
+
+            mod eq {
+                use super::*;
+
+                #[test]
+                fn eq_should_ignore_ids() {
+                    let memo = Memo::default();
+                    memo.insert(short("a"), KeyId(1));
+                    assert_eq!(memo, Memo::default());
                 }
             }
         }
@@ -457,11 +570,54 @@ pub(crate) mod tests {
                     // WHY: the record of "a" now holds "b", as if the two keys had the same hash
                     view.write(keys.pos(id), &record_bytes(&stored, 1, hash))
                         .unwrap();
+                    // WHY: as reopened, without the memo of "a"
+                    let mut keys = Keys::decode(&keys.encode(), DEFAULT_PAGE_SHIFT);
                     assert_eq!(keys.id(view, &"a".into()).unwrap(), None);
                     let other = keys.insert(view, alloc, &"a".into()).unwrap();
                     assert_ne!(other, id);
                     keys.remove(view, alloc, id).unwrap();
                     assert_eq!(keys.id(view, &"a".into()).unwrap(), Some(other));
+                });
+            }
+
+            #[test]
+            fn id_of_found_short_key_should_not_read_again() {
+                with_view(|view, alloc| {
+                    let mut keys = Keys::new(DEFAULT_PAGE_SHIFT);
+                    let id = keys.insert(view, alloc, &"a".into()).unwrap();
+                    // WHY: as reopened, without the memo of "a"
+                    let keys = Keys::decode(&keys.encode(), DEFAULT_PAGE_SHIFT);
+                    assert_eq!(keys.id(view, &"a".into()).unwrap(), Some(id));
+                    let calls = view.calls.get();
+                    assert_eq!(keys.id(view, &"a".into()).unwrap(), Some(id));
+                    assert_eq!(view.calls.get(), calls);
+                });
+            }
+
+            #[test]
+            fn id_of_long_key_should_read_table() {
+                with_view(|view, alloc| {
+                    let mut keys = Keys::new(DEFAULT_PAGE_SHIFT);
+                    let key = DbValue::from("a key longer than 15 bytes");
+                    let id = keys.insert(view, alloc, &key).unwrap();
+                    let calls = view.calls.get();
+                    assert_eq!(keys.id(view, &key).unwrap(), Some(id));
+                    assert!(calls < view.calls.get());
+                });
+            }
+
+            #[test]
+            fn id_with_locked_memo_should_read_table() {
+                with_view(|view, alloc| {
+                    let mut keys = Keys::new(DEFAULT_PAGE_SHIFT);
+                    let id = keys.insert(view, alloc, &"a".into()).unwrap();
+                    let keys = Keys::decode(&keys.encode(), DEFAULT_PAGE_SHIFT);
+                    let ids = keys.memo.0.lock().unwrap();
+                    let calls = view.calls.get();
+                    assert_eq!(keys.id(view, &"a".into()).unwrap(), Some(id));
+                    assert!(calls < view.calls.get());
+                    drop(ids);
+                    assert_eq!(memoized(&keys), 0);
                 });
             }
         }
@@ -482,6 +638,36 @@ pub(crate) mod tests {
                     assert_eq!(keys.insert(view, alloc, &"x".into()).unwrap(), ids[2]);
                     assert_eq!(keys.insert(view, alloc, &"y".into()).unwrap(), ids[0]);
                     assert_eq!(keys.insert(view, alloc, &"z".into()).unwrap(), KeyId(4));
+                });
+            }
+
+            #[test]
+            fn insert_known_short_key_should_only_add_reference() {
+                with_view(|view, alloc| {
+                    let mut keys = Keys::new(DEFAULT_PAGE_SHIFT);
+                    let id = keys.insert(view, alloc, &"a".into()).unwrap();
+                    let calls = view.calls.get();
+                    assert_eq!(keys.insert(view, alloc, &"a".into()).unwrap(), id);
+                    // WHY: the read and write of the references of the record
+                    assert_eq!(view.calls.get(), calls + 2);
+                    assert_eq!(refs(&keys, view, id), 2);
+                });
+            }
+
+            #[test]
+            fn insert_past_memo_limit_should_not_memoize() {
+                with_view(|view, alloc| {
+                    let mut keys = Keys::new(DEFAULT_PAGE_SHIFT);
+
+                    for key in 0..MEMO_LIMIT as i64 {
+                        keys.insert(view, alloc, &key.into()).unwrap();
+                    }
+
+                    let id = keys.insert(view, alloc, &"a".into()).unwrap();
+                    assert_eq!(memoized(&keys), MEMO_LIMIT);
+                    let calls = view.calls.get();
+                    assert_eq!(keys.id(view, &"a".into()).unwrap(), Some(id));
+                    assert!(calls < view.calls.get());
                 });
             }
 
@@ -522,6 +708,18 @@ pub(crate) mod tests {
                     keys.remove(view, alloc, id).unwrap();
                     assert_eq!(keys.len(), 1);
                     assert!(keys.key(view, id).is_err());
+                });
+            }
+
+            #[test]
+            fn remove_last_reference_should_forget_short_key() {
+                with_view(|view, alloc| {
+                    let mut keys = Keys::new(DEFAULT_PAGE_SHIFT);
+                    let id = keys.insert(view, alloc, &"a".into()).unwrap();
+                    keys.remove(view, alloc, id).unwrap();
+                    assert_eq!(keys.insert(view, alloc, &"b".into()).unwrap(), id);
+                    assert_eq!(keys.id(view, &"a".into()).unwrap(), None);
+                    assert_eq!(memoized(&keys), 1);
                 });
             }
         }

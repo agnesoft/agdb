@@ -663,7 +663,6 @@ impl<V: View> Iterator for Elements<'_, V> {
 pub(crate) mod tests {
     use super::*;
     use crate::collections::array::tests::allocations as array_allocations;
-    use crate::collections::array::tests::sparse;
     use crate::collections::value::tests::TestView;
     use crate::collections::value::tests::assert_failures;
     use crate::collections::value::tests::with_view;
@@ -674,6 +673,7 @@ pub(crate) mod tests {
     use crate::storage::storage_simulator::tests::SCALE;
     use crate::storage::storage_simulator::tests::Scale;
     use crate::storage::storage_simulator::tests::Simulation;
+    use crate::storage::storage_simulator::tests::with_simulator;
     use std::collections::BTreeMap;
     use std::collections::BTreeSet;
 
@@ -849,7 +849,7 @@ pub(crate) mod tests {
             for layout in layouts() {
                 for linked in [true, false] {
                     with_view(|view, alloc| {
-                        let mut random = XorShift(7);
+                        let mut random = XorShift(2);
                         let mut graph = GraphHeader::new(layout);
                         let mut model = Model::default();
 
@@ -1097,28 +1097,26 @@ pub(crate) mod tests {
             #[test]
             fn insert_node_at_last_u32_slot_should_take_it_with_any_id_width() {
                 for layout in layouts() {
-                    let mut alloc = Allocator::new(DEFAULT_PAGE_SHIFT);
-                    let mut view = sparse(&alloc);
-                    let mut graph = GraphHeader::new(layout);
-                    let node = graph.insert_node(&mut view, &mut alloc).unwrap();
+                    with_simulator(DEFAULT_PAGE_SHIFT, |view, alloc| {
+                        let mut graph = GraphHeader::new(layout);
+                        let node = graph.insert_node(view, alloc).unwrap();
 
-                    while graph.nodes.array.capacity() <= u64::from(u32::MAX) {
-                        graph.nodes.array.grow(&mut view, &mut alloc).unwrap();
-                    }
+                        while graph.nodes.array.capacity() <= u64::from(u32::MAX) {
+                            graph.nodes.array.grow(view, alloc).unwrap();
+                        }
 
-                    graph.nodes.len = u64::from(u32::MAX);
-                    let last = graph.insert_node(&mut view, &mut alloc).unwrap();
-                    assert_eq!(last, DbId(u32::MAX.into()));
-                    let edge = graph
-                        .insert_edge(&mut view, &mut alloc, last, node)
-                        .unwrap();
-                    let edge = graph.edge(&view, edge).unwrap().unwrap();
-                    assert_eq!((edge.from, edge.to), (last, node));
+                        graph.nodes.len = u64::from(u32::MAX);
+                        let last = graph.insert_node(view, alloc).unwrap();
+                        assert_eq!(last, DbId(u32::MAX.into()));
+                        let edge = graph.insert_edge(view, alloc, last, node).unwrap();
+                        let edge = graph.edge(view, edge).unwrap().unwrap();
+                        assert_eq!((edge.from, edge.to), (last, node));
 
-                    if layout.ids == IdWidth::U64 {
-                        let next = graph.insert_node(&mut view, &mut alloc).unwrap();
-                        assert_eq!(next, DbId(1 << 32));
-                    }
+                        if layout.ids == IdWidth::U64 {
+                            let next = graph.insert_node(view, alloc).unwrap();
+                            assert_eq!(next, DbId(1 << 32));
+                        }
+                    });
                 }
             }
 
@@ -1278,31 +1276,27 @@ pub(crate) mod tests {
             #[test]
             fn insert_edge_at_last_u32_slot_should_take_it_with_any_id_width() {
                 for layout in layouts() {
-                    let mut alloc = Allocator::new(DEFAULT_PAGE_SHIFT);
-                    let mut view = sparse(&alloc);
-                    let mut graph = GraphHeader::new(layout);
-                    let node = graph.insert_node(&mut view, &mut alloc).unwrap();
+                    with_simulator(DEFAULT_PAGE_SHIFT, |view, alloc| {
+                        let mut graph = GraphHeader::new(layout);
+                        let node = graph.insert_node(view, alloc).unwrap();
 
-                    while graph.edges.array.capacity() <= u64::from(u32::MAX) {
-                        graph.edges.array.grow(&mut view, &mut alloc).unwrap();
-                    }
+                        while graph.edges.array.capacity() <= u64::from(u32::MAX) {
+                            graph.edges.array.grow(view, alloc).unwrap();
+                        }
 
-                    graph.edges.len = u64::from(u32::MAX);
-                    let last = graph
-                        .insert_edge(&mut view, &mut alloc, node, node)
-                        .unwrap();
-                    assert_eq!(last, DbId(-i64::from(u32::MAX)));
-                    let record = graph.node(&view, node).unwrap().unwrap();
-                    assert_eq!((record.first_from, record.first_to), (last, last));
+                        graph.edges.len = u64::from(u32::MAX);
+                        let last = graph.insert_edge(view, alloc, node, node).unwrap();
+                        assert_eq!(last, DbId(-i64::from(u32::MAX)));
+                        let record = graph.node(view, node).unwrap().unwrap();
+                        assert_eq!((record.first_from, record.first_to), (last, last));
 
-                    if layout.ids == IdWidth::U64 {
-                        let next = graph
-                            .insert_edge(&mut view, &mut alloc, node, node)
-                            .unwrap();
-                        assert_eq!(next, DbId(-(1 << 32)));
-                        let edge = graph.edge(&view, next).unwrap().unwrap();
-                        assert_eq!((edge.next_from, edge.next_to), (last, last));
-                    }
+                        if layout.ids == IdWidth::U64 {
+                            let next = graph.insert_edge(view, alloc, node, node).unwrap();
+                            assert_eq!(next, DbId(-(1 << 32)));
+                            let edge = graph.edge(view, next).unwrap().unwrap();
+                            assert_eq!((edge.next_from, edge.next_to), (last, last));
+                        }
+                    });
                 }
             }
 

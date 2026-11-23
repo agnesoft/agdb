@@ -10,6 +10,11 @@ pub(crate) const MAX_PAGE_SHIFT: u32 = 15;
 
 /// The arena capacity an overlay keeps after a transaction.
 const KEPT_ARENA: usize = 1 << 20;
+/// The smallest page table: room for 32 pages at half load.
+const MIN_TABLE: usize = 64;
+/// 2^64 / φ: its products spread consecutive and strided pages over the
+/// top bits.
+const FIBONACCI: u64 = 0x9e37_79b9_7f4a_7c15;
 
 pub(crate) trait View {
     fn len(&self) -> u64;
@@ -51,12 +56,15 @@ impl<S: StorageData> View for Reader<'_, S> {
 
 /// The pages written by a transaction, each copied from the storage on
 /// its first write. It is kept by the owner of the storage and reused by
-/// its transactions, so that its page table is not rebuilt each time.
+/// its transactions, so that its buffers are not reallocated each time.
 pub(crate) struct Overlay {
     shift: u32,
+    /// Open addressing by page with linear probing, at most half full:
+    /// the slot + 1 of a page, 0 = free.
     table: Vec<u32>,
     arena: Vec<u8>,
-    pages: Vec<u64>,
+    /// The page of each slot and its position in the table.
+    pages: Vec<(u64, usize)>,
     poisoned: bool,
 }
 
@@ -65,7 +73,7 @@ impl Overlay {
     pub(crate) fn new(shift: u32) -> Self {
         Self {
             shift,
-            table: Vec::new(),
+            table: vec![0; MIN_TABLE],
             arena: Vec::new(),
             pages: Vec::new(),
             poisoned: false,
@@ -92,9 +100,50 @@ impl Overlay {
     }
 
     fn slot(&self, page: u64) -> Option<usize> {
-        match self.table.get(page as usize) {
-            Some(slot) if *slot != 0 => Some(*slot as usize - 1),
-            _ => None,
+        if self.pages.is_empty() {
+            return None;
+        }
+
+        self.find(page).ok()
+    }
+
+    /// The slot of the `page`, or the free position it would take.
+    fn find(&self, page: u64) -> Result<usize, usize> {
+        let mask = self.table.len() - 1;
+        let mut pos =
+            (page.wrapping_mul(FIBONACCI) >> (self.table.len().leading_zeros() + 1)) as usize;
+
+        loop {
+            match self.table[pos] {
+                0 => return Err(pos),
+                entry if self.pages[entry as usize - 1].0 == page => {
+                    return Ok(entry as usize - 1);
+                }
+                _ => pos = (pos + 1) & mask,
+            }
+        }
+    }
+
+    /// Adds the `page` that is not in the table as the next slot.
+    fn insert(&mut self, page: u64) -> usize {
+        if self.table.len() < 2 * (self.pages.len() + 1) {
+            self.rehash(2 * self.table.len());
+        }
+
+        let slot = self.pages.len();
+        let pos = self.find(page).unwrap_err();
+        self.table[pos] = slot as u32 + 1;
+        self.pages.push((page, pos));
+        slot
+    }
+
+    fn rehash(&mut self, len: usize) {
+        self.table = vec![0; len];
+
+        for slot in 0..self.pages.len() {
+            let pos = self.find(self.pages[slot].0).unwrap_err();
+            self.table[pos] = slot as u32 + 1;
+            self.pages[slot].1 = pos;
         }
     }
 
@@ -103,11 +152,23 @@ impl Overlay {
     }
 
     fn reset(&mut self) {
-        for page in self.pages.drain(..) {
-            self.table[page as usize] = 0;
+        for (_, pos) in self.pages.drain(..) {
+            self.table[pos] = 0;
         }
 
         self.arena.clear();
+    }
+
+    /// Keeps the capacity for [`KEPT_ARENA`] bytes of pages after a reset.
+    fn shrink(&mut self) {
+        let kept = ((2 * KEPT_ARENA) >> self.shift).max(MIN_TABLE);
+
+        if kept < self.table.len() {
+            self.table = vec![0; kept];
+        }
+
+        self.arena.shrink_to(KEPT_ARENA);
+        self.pages.shrink_to(kept / 2);
     }
 
     /// Zeroes the bytes from `len` to `end`, looking up either the pages
@@ -124,7 +185,7 @@ impl Overlay {
             }
         } else {
             for slot in 0..self.pages.len() {
-                let page = self.pages[slot];
+                let page = self.pages[slot].0;
 
                 if first <= page {
                     self.zero(slot, page, len);
@@ -211,7 +272,7 @@ impl<'a, S: StorageData> Writer<'a, S> {
             .pages
             .iter()
             .enumerate()
-            .map(|(slot, page)| (*page, slot))
+            .map(|(slot, (page, _))| (*page, slot))
             .collect();
         slots.sort_unstable();
 
@@ -242,7 +303,6 @@ impl<'a, S: StorageData> Writer<'a, S> {
         let size = self.overlay.page_size();
         let start = page << self.overlay.shift;
         let from_base = self.base_end().saturating_sub(start).min(size);
-        let slot = self.overlay.pages.len();
         let arena_len = self.overlay.arena.len();
 
         if from_base != 0 {
@@ -251,14 +311,7 @@ impl<'a, S: StorageData> Writer<'a, S> {
         }
 
         self.overlay.arena.resize(arena_len + size as usize, 0);
-
-        if self.overlay.table.len() <= page as usize {
-            self.overlay.table.resize(page as usize + 1, 0);
-        }
-
-        self.overlay.table[page as usize] = slot as u32 + 1;
-        self.overlay.pages.push(page);
-        Ok(slot)
+        Ok(self.overlay.insert(page))
     }
 
     fn restore(&mut self) -> Result<(), DbError> {
@@ -372,7 +425,7 @@ impl<S: StorageData> Drop for Writer<'_, S> {
     fn drop(&mut self) {
         let _ = self.restore();
         self.overlay.reset();
-        self.overlay.arena.shrink_to(KEPT_ARENA);
+        self.overlay.shrink();
     }
 }
 
@@ -384,6 +437,7 @@ pub(crate) mod tests {
     use crate::storage::file_storage::FileStorageImpl;
     use crate::storage::file_storage_memory_mapped::FileStorageMemoryMappedImpl;
     use crate::storage::memory_storage::MemoryStorageImpl;
+    use crate::storage::storage_simulator::tests::TestSimulator;
     use agplatform::Platform;
     use agplatform::test_platform::TestPlatform;
     use agplatform::test_platform::test_fs::FsOp;
@@ -1012,7 +1066,8 @@ pub(crate) mod tests {
                     let mut expected = bytes(3000);
                     expected[900..].fill(7);
                     assert_eq!(content(&writer), expected);
-                    assert_eq!(writer.overlay.pages, [0, 1, 2]);
+                    let pages: Vec<u64> = writer.overlay.pages.iter().map(|page| page.0).collect();
+                    assert_eq!(pages, [0, 1, 2]);
                 }
 
                 #[test]
@@ -1033,6 +1088,24 @@ pub(crate) mod tests {
                     assert!(writer.touched);
                     assert_eq!(writer.overlay.size(), 0);
                     assert_eq!(content(&writer), expected);
+                }
+
+                #[test]
+                fn write_past_u32_pages_should_hold_only_written_pages() {
+                    let mut storage = TestSimulator::new(NAME).unwrap();
+                    let mut overlay = Overlay::new(DEFAULT_PAGE_SHIFT);
+                    let mut writer = Writer::new(&mut storage, &mut overlay).unwrap();
+                    let last = (4 << 40) - 1;
+                    writer.set_len(last + 1);
+
+                    writer.write(last, &[7]).unwrap();
+                    writer.write(0, &[8]).unwrap();
+                    writer.commit().unwrap();
+
+                    assert_eq!(overlay.table.len(), MIN_TABLE);
+                    assert_eq!(storage.len(), last + 1);
+                    assert_eq!(storage.read(last, 1).unwrap()[..], [7]);
+                    assert_eq!(storage.read(0, 1).unwrap()[..], [8]);
                 }
 
                 #[test]
@@ -1180,10 +1253,12 @@ pub(crate) mod tests {
                 let mut overlay = Overlay::new(DEFAULT_PAGE_SHIFT);
                 let mut writer = Writer::new(&mut storage, &mut overlay).unwrap();
                 writer.write(0, &[9; 2_000_000]).unwrap();
+                assert_eq!(writer.overlay.table.len(), 4096);
 
                 drop(writer);
 
                 assert!(overlay.pages.is_empty());
+                assert_eq!(overlay.table.len(), (2 * KEPT_ARENA) >> DEFAULT_PAGE_SHIFT);
                 assert!(overlay.table.iter().all(|slot| *slot == 0));
                 assert!(overlay.arena.is_empty());
                 assert!(overlay.arena.capacity() <= KEPT_ARENA);

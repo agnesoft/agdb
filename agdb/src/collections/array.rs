@@ -92,86 +92,11 @@ pub(crate) mod tests {
     use super::*;
     use crate::collections::value::tests::assert_failures;
     use crate::collections::value::tests::with_view;
-    use crate::storage::StorageSlice;
     use crate::storage::alloc::tests::verify;
     use crate::storage::pages::DEFAULT_PAGE_SHIFT;
     use crate::storage::pages::MAX_PAGE_SHIFT;
     use crate::storage::pages::View;
-    use std::collections::BTreeMap;
-
-    /// The smallest page, so that the length of the file is a number of
-    /// chunks.
-    const CHUNK_SHIFT: u32 = DEFAULT_PAGE_SHIFT;
-    const CHUNK: u64 = 1 << CHUNK_SHIFT;
-
-    /// A view of zero bytes that keeps only the chunks written to it, to
-    /// run files of terabytes.
-    #[derive(Default)]
-    pub(crate) struct Sparse {
-        len: u64,
-        chunks: BTreeMap<u64, Vec<u8>>,
-    }
-
-    impl View for Sparse {
-        fn len(&self) -> u64 {
-            self.len
-        }
-
-        fn read(&self, pos: u64, len: u64) -> Result<StorageSlice<'_>, DbError> {
-            assert!(pos + len <= self.len, "read {pos} + {len}");
-            let mut bytes = vec![0; len as usize];
-            let mut at = pos;
-
-            while at < pos + len {
-                let offset = (at % CHUNK) as usize;
-                let size = (CHUNK - at % CHUNK).min(pos + len - at) as usize;
-
-                if let Some(chunk) = self.chunks.get(&(at >> CHUNK_SHIFT)) {
-                    bytes[(at - pos) as usize..][..size]
-                        .copy_from_slice(&chunk[offset..offset + size]);
-                }
-
-                at += size as u64;
-            }
-
-            Ok(StorageSlice::Owned(bytes))
-        }
-    }
-
-    impl ViewMut for Sparse {
-        fn write(&mut self, pos: u64, bytes: &[u8]) -> Result<(), DbError> {
-            assert!(pos + bytes.len() as u64 <= self.len, "write {pos}");
-            let mut at = pos;
-            let mut rest = bytes;
-
-            while !rest.is_empty() {
-                let offset = (at % CHUNK) as usize;
-                let size = (CHUNK as usize - offset).min(rest.len());
-                let chunk = self
-                    .chunks
-                    .entry(at >> CHUNK_SHIFT)
-                    .or_insert_with(|| vec![0; CHUNK as usize]);
-                chunk[offset..offset + size].copy_from_slice(&rest[..size]);
-                at += size as u64;
-                rest = &rest[size..];
-            }
-
-            Ok(())
-        }
-
-        fn set_len(&mut self, len: u64) {
-            self.chunks.retain(|chunk, _| *chunk << CHUNK_SHIFT < len);
-            self.len = len;
-        }
-    }
-
-    /// The sparse view of a file holding only the root.
-    pub(crate) fn sparse(alloc: &Allocator) -> Sparse {
-        Sparse {
-            len: alloc.len(),
-            chunks: BTreeMap::new(),
-        }
-    }
+    use crate::storage::storage_simulator::tests::with_simulator;
 
     /// The (pos, size) of each segment.
     pub(crate) fn allocations(array: &SegmentedArray) -> Vec<(u64, u64)> {
@@ -273,25 +198,25 @@ pub(crate) mod tests {
             #[test]
             fn grow_past_storage_should_fail() {
                 for shift in [DEFAULT_PAGE_SHIFT, MAX_PAGE_SHIFT] {
-                    let mut alloc = Allocator::new(shift);
-                    let mut view = sparse(&alloc);
-                    let mut array = SegmentedArray::new(shift, shift);
+                    with_simulator(shift, |view, alloc| {
+                        let mut array = SegmentedArray::new(shift, shift);
 
-                    let mut result = Ok(());
+                        let mut result = Ok(());
 
-                    while result.is_ok() {
-                        result = array.grow(&mut view, &mut alloc);
-                    }
+                        while result.is_ok() {
+                            result = array.grow(view, alloc);
+                        }
 
-                    let error = result.unwrap_err();
-                    assert!(error.description.starts_with("Storage full"), "{error}");
-                    assert_eq!(array.len(), 31);
-                    assert_eq!(array.capacity(), (1 << 31) - 1);
-                    let last = array.pos(array.capacity() - 1);
-                    assert_eq!(last + (1 << shift), view.len());
-                    assert_eq!(view.read(last, 2).unwrap()[..], [0, 0]);
-                    view.write(last, &[1]).unwrap();
-                    assert_eq!(view.read(last, 2).unwrap()[..], [1, 0]);
+                        let error = result.unwrap_err();
+                        assert!(error.description.starts_with("Storage full"), "{error}");
+                        assert_eq!(array.len(), 31);
+                        assert_eq!(array.capacity(), (1 << 31) - 1);
+                        let last = array.pos(array.capacity() - 1);
+                        assert_eq!(last + (1 << shift), view.len());
+                        assert_eq!(view.read(last, 2).unwrap()[..], [0, 0]);
+                        view.write(last, &[1]).unwrap();
+                        assert_eq!(view.read(last, 2).unwrap()[..], [1, 0]);
+                    });
                 }
             }
         }

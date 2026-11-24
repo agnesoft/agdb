@@ -51,8 +51,8 @@ const layout = computed(() => {
   const valueLabels = points.map((p) => formatCompact(p.value));
   const valueLabelWidth =
     Math.max(...valueLabels.map((l) => l.length)) * CHAR_WIDTH + LABEL_PAD;
-    const negative = points.some((p) => p.value < 0);
-    const positive = points.some((p) => p.value > 0);
+  const negative = points.some((p) => p.value < 0);
+  const positive = points.some((p) => p.value > 0);
   if (vertical.value) {
     const axisWidth =
       Math.max(...scale.value.ticks.map((t) => formatCompact(t).length)) *

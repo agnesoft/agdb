@@ -111,6 +111,26 @@ describe("widgetRows", () => {
     expect(queryStore.getQuery("q")!.value.pins).toBeUndefined();
   });
 
+  it("seeds, reads back and compares the chart", () => {
+    const chart = {
+      kind: "bar" as const,
+      groupBy: { by: "property" as const, key: "type" },
+      measure: { aggregate: "count" as const },
+    };
+    const widget = createWidget({ owner: "o", db: "d", view: "chart", chart });
+    seedQuery("q", widget);
+    const query = queryStore.getQuery("q")!.value;
+    expect(query.chart).toEqual(chart);
+    // The entry holds a copy, so editing it leaves the widget alone.
+    expect(query.chart).not.toBe(chart);
+    expect(displayDiffers(widget, query)).toBe(false);
+    queryStore.setChart("q", { ...chart, kind: "donut" });
+    expect(displayDiffers(widget, query)).toBe(true);
+    expect(withDisplay(widget, query).chart?.kind).toBe("donut");
+    queryStore.setChart("q", undefined);
+    expect(withDisplay(widget, query).chart).toBeUndefined();
+  });
+
   it("builds the widget from an edited entry", () => {
     const base = createWidget({
       owner: "o",

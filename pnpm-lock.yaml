@@ -1011,6 +1011,9 @@ importers:
       '@agnesoft/agdb_api':
         specifier: workspace:*
         version: link:../../../../agdb_api/typescript
+      '@vueuse/core':
+        specifier: 'catalog:'
+        version: 14.4.0(vue@3.5.44(typescript@6.0.3))
       three:
         specifier: 0.187.0
         version: 0.187.0

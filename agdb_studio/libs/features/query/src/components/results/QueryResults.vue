@@ -15,6 +15,7 @@ import ElementDetailsPanel from "../graph/ElementDetailsPanel.vue";
 import ResultsTable from "./ResultsTable.vue";
 import ResultsJson from "./ResultsJson.vue";
 import ResultScalar from "./ResultScalar.vue";
+import ResultsChart from "./chart/ResultsChart.vue";
 import ColorsPanel from "../graph/ColorsPanel.vue";
 import { LuPalette } from "@kalimahapps/vue-icons";
 import ColorLegend from "../graph/ColorLegend.vue";
@@ -35,6 +36,11 @@ import {
   summarizeResults,
   type ResultView,
 } from "../../utils/resultShape";
+import {
+  resultKeys,
+  suggestChart,
+  type ChartConfig,
+} from "../../utils/chartConfig";
 
 const props = defineProps<{
   /**
@@ -43,6 +49,8 @@ const props = defineProps<{
    * whose results may briefly be empty.
    */
   keepView?: boolean;
+  /** Little room (e.g. a dashboard widget): chart settings open in a popover. */
+  compact?: boolean;
 }>();
 
 const queryId = inject<Ref<string | undefined>>("queryId");
@@ -98,6 +106,19 @@ watch(
 );
 
 const selectView = (next: ResultView) => {
+  // A chart starts from one that fits the results, and is kept with them.
+  // Before any results it stays unset (the chart view suggests one as they
+  // come); one set up for other results (keys they lack) starts over, but
+  // not for results without elements, which say what is missing instead.
+  const saved = query.value?.chart;
+  if (
+    next === "chart" &&
+    lastTab.value &&
+    (!saved ||
+      (mainResults.value.some((r) => r.elements.length) && !chartFits(saved)))
+  ) {
+    setChart(suggestChart(mainResults.value));
+  }
   view.value = next;
   pinned.value = true;
   storeView(next);
@@ -107,6 +128,7 @@ const viewOptions = computed(() => {
   const options: { key: ResultView; label: string }[] = [
     { key: "graph", label: "Graph" },
     { key: "table", label: "Table" },
+    { key: "chart", label: "Chart" },
     { key: "json", label: "JSON" },
   ];
   if (autoView.value === "scalar") {
@@ -147,6 +169,25 @@ const scalar = computed(() => ({
   label: scalarLabel(stepTypes.value, lastTab.value === "exec_mut"),
   value: mainResults.value.reduce((sum, r) => sum + r.result, 0),
 }));
+
+/** The chart uses only keys the results have. */
+const chartFits = (chart: ChartConfig): boolean => {
+  const keys = new Set(resultKeys(mainResults.value).map((k) => k.key));
+  const used = [
+    ...(chart.groupBy.by === "property" ? [chart.groupBy.key] : []),
+    ...(chart.measure.aggregate === "count" ? [] : [chart.measure.key]),
+  ];
+  return used.every((key) => keys.has(key));
+};
+
+const setChart = (config: ChartConfig) => {
+  if (queryId?.value) queryStore.setChart(queryId.value, config);
+};
+
+/** The queries of the batch, as the chart labels its groups by query. */
+const queryLabels = computed(() =>
+  actions.colorQueries.value.map((q) => `#${q.index + 1} ${q.label}`),
+);
 
 const lastRunLabel = computed(() =>
   query.value?.lastRun ? query.value.lastRun.toLocaleTimeString() : "",
@@ -239,7 +280,7 @@ onUnmounted(() => document.removeEventListener("keydown", onKeydown));
         <span v-else class="last-run">Run a query to see results.</span>
       </div>
       <div class="toolbar-actions">
-        <div class="colors-control">
+        <div v-if="view !== 'chart'" class="colors-control">
           <button
             type="button"
             class="button colors-button"
@@ -303,6 +344,15 @@ onUnmounted(() => document.removeEventListener("keydown", onKeydown));
         :results="mainResults"
         :alias-of="actions.aliasOf"
         @menu="openTableMenu"
+      />
+      <ResultsChart
+        v-else-if="view === 'chart'"
+        :results="mainResults"
+        :config="query?.chart"
+        :query-labels="queryLabels"
+        :ran="!!lastTab"
+        :compact="compact"
+        @update:config="setChart"
       />
       <ResultsJson v-else-if="view === 'json'" :results="mainResults" />
       <ResultScalar v-else :label="scalar.label" :value="scalar.value" />

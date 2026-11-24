@@ -1,6 +1,6 @@
 import type { QueryResult } from "@agnesoft/agdb_api";
 
-export type ResultView = "graph" | "table" | "json" | "scalar";
+export type ResultView = "graph" | "table" | "chart" | "json" | "scalar";
 
 export type ResultSummary = {
   index: number;

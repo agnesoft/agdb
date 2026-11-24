@@ -17,6 +17,7 @@ import type {
   TAB,
 } from "./types";
 import type { ResultView } from "../utils/resultShape";
+import { copyChartConfig, type ChartConfig } from "../utils/chartConfig";
 import { TABS } from "./types";
 import { queryApiMock } from "../mock/queryApiMock";
 import {
@@ -277,6 +278,13 @@ const setUnconfirmedLinkedMutation = (queryId: string, value: boolean) => {
 const setView = (queryId: string, view: ResultView | undefined) => {
   const query = getQuery(queryId);
   if (query?.value) query.value.view = view;
+};
+
+/** Sets what the chart view shows (`undefined` = not set up yet). */
+const setChart = (queryId: string, chart: ChartConfig | undefined) => {
+  const query = getQuery(queryId);
+  // Stored plain, so copies (e.g. a dashboard widget's) can be cloned.
+  if (query?.value) query.value.chart = chart && copyChartConfig(chart);
 };
 
 /** Sets the pinned details cards; an empty list clears them. */
@@ -568,6 +576,7 @@ export const useQueryStore = () => {
     setView,
     setPins,
     setPinOffset,
+    setChart,
     validateQuerySteps,
     setQueryResults,
     clearQueryResults,

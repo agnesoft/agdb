@@ -202,7 +202,7 @@ const done = () => {
             type="button"
             class="button button-success"
             data-testid="widget-editor-done"
-            title="Rows, colours, the chosen view and pinned details are saved with the widget"
+            title="Rows, colours, the chosen view, chart and pinned details are saved with the widget"
             :disabled="!canSave"
             @click="done"
           >

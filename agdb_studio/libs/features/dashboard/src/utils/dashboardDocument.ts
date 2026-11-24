@@ -4,6 +4,7 @@ import type {
   ColorRule,
   PaletteSlot,
 } from "@agdb-studio/query/src/utils/graphColorRules";
+import { readChartConfig } from "@agdb-studio/query/src/utils/chartConfig";
 import {
   DEFAULT_WIDGET_SIZE,
   RESULT_VIEWS,
@@ -17,8 +18,12 @@ import {
 } from "../types";
 import { isRefreshInterval } from "./refresh";
 
-/** The document version this Studio writes; newer ones are not read. */
-export const DOCUMENT_VERSION = 2;
+/**
+ * The document version this Studio writes; newer ones are not read. Version 3
+ * added charts: an older Studio would show them as tables and drop their
+ * settings on save.
+ */
+export const DOCUMENT_VERSION = 3;
 
 /** A dashboard saved by a newer Studio: reading it would drop what it added. */
 export class NewerDashboardError extends Error {
@@ -31,7 +36,7 @@ export class NewerDashboardError extends Error {
 }
 
 export const emptyDocument = (): DashboardDocument => ({
-  version: 2,
+  version: DOCUMENT_VERSION,
   widgets: {},
   layout: [],
 });
@@ -151,12 +156,12 @@ const readPins = (value: unknown): PinnedDetail[] => {
   return pins;
 };
 
-/** Version 1 widgets held one query chain and a fixed view; charts are gone. */
+/**
+ * Version 1 widgets held one query chain and a fixed view. Their charts had
+ * no settings: they show the chart suggested for the results.
+ */
 const V1_VIEWS: Record<string, Widget["view"]> = {
   stat: "scalar",
-  table: "table",
-  graph: "graph",
-  chart: "table",
 };
 
 /** Reads one widget, filling defaults; values that are not a widget give `undefined`. */
@@ -184,6 +189,7 @@ export const readWidget = (value: unknown): Widget | undefined => {
     (typeof value.view === "string" ? V1_VIEWS[value.view] : undefined);
   const colors = readColors(value.colors);
   const pins = readPins(value.pins);
+  const chart = readChartConfig(value.chart);
   const refresh = value.refreshSeconds;
   return {
     id,
@@ -194,6 +200,7 @@ export const readWidget = (value: unknown): Widget | undefined => {
     ...(view ? { view } : {}),
     ...(colors ? { colors } : {}),
     ...(pins.length ? { pins } : {}),
+    ...(chart ? { chart } : {}),
     ...(typeof refresh === "number" && isRefreshInterval(refresh)
       ? { refreshSeconds: refresh }
       : {}),

@@ -122,7 +122,7 @@ const firstLoad = computed(() => loading.value && !query.value?.lastRun);
         data-testid="widget-view-changed"
       >
         <span
-          title="The view, colours or pinned details changed here are not saved to the dashboard"
+          title="The view, chart, colours or pinned details changed here are not saved to the dashboard"
         >
           Unsaved view
         </span>
@@ -228,7 +228,7 @@ const firstLoad = computed(() => loading.value && !query.value?.lastRun);
     <div ref="body" class="body">
       <p v-if="error" class="error" data-testid="widget-error">{{ error }}</p>
       <SpinnerIcon v-else-if="firstLoad" />
-      <QueryResults v-else-if="showResults" :key="revision" keep-view />
+      <QueryResults v-else-if="showResults" :key="revision" keep-view compact />
     </div>
   </section>
 </template>

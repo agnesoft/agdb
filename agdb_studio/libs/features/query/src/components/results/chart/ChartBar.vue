@@ -51,6 +51,8 @@ const layout = computed(() => {
   const valueLabels = points.map((p) => formatCompact(p.value));
   const valueLabelWidth =
     Math.max(...valueLabels.map((l) => l.length)) * CHAR_WIDTH + LABEL_PAD;
+    const negative = points.some((p) => p.value < 0);
+    const positive = points.some((p) => p.value > 0);
   if (vertical.value) {
     const axisWidth =
       Math.max(...scale.value.ticks.map((t) => formatCompact(t).length)) *
@@ -58,7 +60,7 @@ const layout = computed(() => {
       LABEL_PAD;
     const left = axisWidth;
     const top = FONT + LABEL_PAD;
-    const bottom = FONT + LABEL_PAD;
+    const bottom = FONT + LABEL_PAD + (negative ? FONT + 4 : 0);
     const plotW = Math.max(1, width - left - 4);
     const plotH = Math.max(1, height - top - bottom);
     const y = (v: number) => top + ((max - v) / (max - min)) * plotH;
@@ -107,10 +109,11 @@ const layout = computed(() => {
   }
   // Labels get up to 40 % of the width, values room after the longest bar.
   const left = Math.min(width * 0.4, maxLabel.value * CHAR_WIDTH + LABEL_PAD);
-  const right = valueLabelWidth;
-  const plotW = Math.max(1, width - left - right);
+  const start = left + (negative ? FONT + 4 : 0);
+  const right = positive ? valueLabelWidth : 4;
+  const plotW = Math.max(1, width - start - right);
   const plotH = Math.max(1, height);
-  const x = (v: number) => left + ((v - min) / (max - min)) * plotW;
+  const x = (v: number) => start + ((v - min) / (max - min)) * plotW;
   const band = plotH / points.length;
   const thickness = Math.max(
     1,

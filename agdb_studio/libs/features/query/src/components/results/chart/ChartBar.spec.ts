@@ -40,6 +40,31 @@ describe("ChartBar", () => {
     expect(fills[2]).toContain("--graph-uncolored-color");
   });
 
+  it("keeps the values of negative bars clear of the category labels", () => {
+    const signed = [
+      { key: "a", label: "gain", value: 50 },
+      { key: "b", label: "loss", value: -100 },
+    ];
+    const at = (wrapper: ReturnType<typeof mountBar>, selector: string) => wrapper.findAll(selector).map((t) => {
+      return {
+        x: Number(t.attributes("x")),
+        y: Number(t.attributes("y")),
+      };
+    });
+    const columns = mountBar({ points: signed });
+    const lowest = at(columns, ".value")[1]!;
+    expect(lowest.y).toBeLessThanOrEqual(at(columns, ".category")[1]!.y -11);
+
+    const bars = mountBar({ points: signed, width: 200, height: 200 });
+    const leftmost = at(bars, ".value")[0]!;
+    const value = bars.findAll(".value")[1]!.text();
+    expect(leftmost.x - value.length * 7).toBeGreaterThan(at(bars, ".category")[1]!.x);
+
+    const losses = mountBar({points: signed.map(p => ({ ...p, value: Math.min(p.value, 0) })), width: 200, height: 200});
+    const zero = Number(losses.find(".baseline").attributes("x1"));
+    expect(zero).toBeGreaterThan(190);
+  });
+
   it("leaves value labels out of columns too thin for them", () => {
     const many = Array.from({ length: 12 }, (_, i) => ({
       key: `${i}`,

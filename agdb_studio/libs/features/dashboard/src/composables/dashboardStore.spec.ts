@@ -74,19 +74,21 @@ describe("dashboardStore", () => {
     vi.clearAllMocks();
     username.value = "me";
     store.closeDashboard();
-    client.value.user_home_dashboard.mockResolvedValue({ data: null });
-    client.value.dashboard_list.mockResolvedValue({
-      data: [{ owner: "me", name: "ops", updated: 1, role: "admin" }],
-    });
-    client.value.dashboard_get.mockResolvedValue({
-      data: {
+    client.value.user_home_dashboard.mockResolvedValue([200, null]);
+    client.value.dashboard_list.mockResolvedValue([
+      200,
+      [{ owner: "me", name: "ops", updated: 1, role: "admin" }],
+    ]);
+    client.value.dashboard_get.mockResolvedValue([
+      200,
+      {
         owner: "me",
         name: "ops",
         config: config("a", "b", "c"),
         updated: 1,
         role: "admin",
       },
-    });
+    ]);
   });
 
   it("fetches the dashboard list", async () => {
@@ -113,7 +115,7 @@ describe("dashboardStore", () => {
     // Edits can't go to the previous dashboard while this one loads.
     expect(store.current.value).toBeUndefined();
     await store.loadDashboard(ops);
-    resolveSlow({ data: { name: "slow", config: config("x"), updated: 1 } });
+    resolveSlow([200, { name: "slow", config: config("x"), updated: 1 }]);
     await slow;
     expect(store.current.value?.name).toBe("ops");
 
@@ -140,7 +142,7 @@ describe("dashboardStore", () => {
     finishSave(undefined);
     await store.saveDashboard();
     expect(client.value.dashboard_save).toHaveBeenCalledTimes(2);
-    const [, body] = client.value.dashboard_save.mock.calls[1]!;
+    const [body] = client.value.dashboard_save.mock.calls[1]!;
     expect(orderedWidgets(parseDocument(body.config)).length).toBe(2);
     expect(store.dirty.value).toBe(false);
     expect(store.saving.value).toBe(false);
@@ -237,10 +239,11 @@ describe("dashboardStore", () => {
       owner: "me",
       name: "new",
     });
-    expect(client.value.dashboard_add).toHaveBeenCalledWith(
-      { owner: "me", name: "new" },
-      { config: serializeDocument(emptyDocument()) },
-    );
+    expect(client.value.dashboard_add).toHaveBeenCalledWith({
+      owner: "me",
+      name: "new",
+      config: serializeDocument(emptyDocument()),
+    });
     expect(client.value.dashboard_list).toHaveBeenCalled();
   });
 
@@ -265,7 +268,8 @@ describe("dashboardStore", () => {
     expect(doc.layout[0]).toEqual({ id: "b", cols: 4, rows: 2 });
 
     await store.saveDashboard();
-    expect(client.value.dashboard_save).toHaveBeenCalledWith(ops, {
+    expect(client.value.dashboard_save).toHaveBeenCalledWith({
+      ...ops,
       config: expect.stringContaining('"id":"d"'),
     });
     expect(store.dirty.value).toBe(false);
@@ -370,17 +374,18 @@ describe("dashboardStore", () => {
 
   it("appends a widget to a saved dashboard", async () => {
     await store.appendWidgets(ops, [widget("z")]);
-    const [params, body] = client.value.dashboard_save.mock.calls[0]!;
-    expect(params).toEqual(ops);
+    const [body] = client.value.dashboard_save.mock.calls[0]!;
+    expect(body).toMatchObject(ops);
     expect(parseDocument(body.config)).toEqual(
       parseDocument(config("a", "b", "c", "z")),
     );
   });
 
   it("does not let a pin overwrite a dashboard saved by a newer Studio", async () => {
-    client.value.dashboard_get.mockResolvedValueOnce({
-      data: { ...ops, config: '{"version":4,"widgets":{}}', updated: 1 },
-    });
+    client.value.dashboard_get.mockResolvedValueOnce([
+      200,
+      { ...ops, config: '{"version":4,"widgets":{}}', updated: 1 },
+    ]);
     await expect(store.appendWidgets(ops, [widget("z")])).rejects.toThrow(
       "newer agdb Studio",
     );
@@ -388,15 +393,16 @@ describe("dashboardStore", () => {
   });
 
   it("opens a dashboard with the user's role", async () => {
-    client.value.dashboard_get.mockResolvedValueOnce({
-      data: {
+    client.value.dashboard_get.mockResolvedValueOnce([
+      200,
+      {
         owner: "ann",
         name: "ops",
         config: config("a"),
         updated: 1,
         role: "read",
       },
-    });
+    ]);
     const open = await store.loadDashboard({ owner: "ann", name: "ops" });
     expect(open.owner).toBe("ann");
     expect(open.role).toBe("read");
@@ -404,12 +410,13 @@ describe("dashboardStore", () => {
 
   it("leaves a shared dashboard, forgetting it", async () => {
     const shared = { owner: "ann", name: "ops" };
-    client.value.dashboard_get.mockResolvedValueOnce({
-      data: { ...shared, config: config("a"), updated: 1, role: "read" },
-    });
+    client.value.dashboard_get.mockResolvedValueOnce([
+      200,
+      { ...shared, config: config("a"), updated: 1, role: "read" },
+    ]);
     await store.loadDashboard(shared);
     store.home.value = { ...shared };
-    client.value.user_home_dashboard.mockResolvedValueOnce({ data: null });
+    client.value.user_home_dashboard.mockResolvedValueOnce([200, null]);
     await store.leaveDashboard(shared);
     expect(client.value.dashboard_user_remove).toHaveBeenCalledWith({
       ...shared,
@@ -424,7 +431,7 @@ describe("dashboardStore", () => {
     const open = { owner: "ann", name: "kpi" };
     await store.loadDashboard(ops);
     store.home.value = { ...open };
-    client.value.user_home_dashboard.mockResolvedValueOnce({ data: open });
+    client.value.user_home_dashboard.mockResolvedValueOnce([200, open]);
     await store.leaveDashboard(open);
     expect(store.home.value).toEqual(open);
     // Another dashboard stays open.
@@ -432,9 +439,9 @@ describe("dashboardStore", () => {
   });
 
   it("fetches, sets and clears the home dashboard", async () => {
-    client.value.user_home_dashboard.mockResolvedValueOnce({ data: null });
+    client.value.user_home_dashboard.mockResolvedValueOnce([200, null]);
     expect(await store.fetchHome()).toBeUndefined();
-    client.value.user_home_dashboard.mockResolvedValueOnce({ data: ops });
+    client.value.user_home_dashboard.mockResolvedValueOnce([200, ops]);
     expect(await store.fetchHome()).toEqual(ops);
 
     await store.setHome({ owner: "ann", name: "x" });
@@ -475,7 +482,7 @@ describe("dashboardStore", () => {
   it("sends an empty owner while the user is unknown", async () => {
     username.value = undefined;
     await store.createDashboard("new");
-    expect(client.value.dashboard_add.mock.calls[0]![0]).toEqual({
+    expect(client.value.dashboard_add.mock.calls[0]![0]).toMatchObject({
       owner: "",
       name: "new",
     });
@@ -495,13 +502,14 @@ describe("dashboardStore", () => {
       public: !member,
       member,
     });
-    client.value.dashboard_list.mockResolvedValueOnce({
-      data: [
+    client.value.dashboard_list.mockResolvedValueOnce([
+      200,
+      [
         summary("ann", "kpi", false),
         summary("ann", "sales", true),
         summary("me", "ops", true),
       ],
-    });
+    ]);
     await store.fetchDashboards();
     const names = (list: { name: string }[]) => list.map((d) => d.name);
     expect(names(store.mine.value)).toEqual(["ops"]);
@@ -510,21 +518,22 @@ describe("dashboardStore", () => {
   });
 
   it("makes a dashboard public, updating the open one", async () => {
-    client.value.dashboard_get.mockResolvedValueOnce({
-      data: {
+    client.value.dashboard_get.mockResolvedValueOnce([
+      200,
+      {
         ...ops,
         config: config(),
         updated: 1,
         role: "admin",
         public: false,
       },
-    });
+    ]);
     await store.loadDashboard(ops);
     expect(store.current.value!.public).toBe(false);
     await store.setPublic(ops, true);
     expect(client.value.dashboard_public).toHaveBeenCalledWith({
       ...ops,
-      public: true,
+      is_public: true,
     });
     expect(store.current.value!.public).toBe(true);
     expect(client.value.dashboard_list).toHaveBeenCalled();
@@ -542,16 +551,17 @@ describe("dashboardStore", () => {
 
     beforeEach(() => {
       setAdmin(true);
-      client.value.admin_dashboard_list.mockResolvedValue({ data: [] });
-      client.value.admin_dashboard_get.mockResolvedValue({
-        data: {
+      client.value.admin_dashboard_list.mockResolvedValue([200, []]);
+      client.value.admin_dashboard_get.mockResolvedValue([
+        200,
+        {
           ...ann,
           config: config("a"),
           updated: 1,
           role: "admin",
           public: true,
         },
-      });
+      ]);
     });
 
     it("needs both the admin view and an admin", () => {
@@ -584,7 +594,9 @@ describe("dashboardStore", () => {
       // Edits save at once.
       store.addWidget(widget("b"));
       await store.settleSaves();
-      expect(client.value.admin_dashboard_save.mock.calls[0]![0]).toEqual(ann);
+      expect(client.value.admin_dashboard_save.mock.calls[0]![0]).toMatchObject(
+        ann,
+      );
 
       await store.appendWidgets(ann, [widget("c")]);
       expect(client.value.admin_dashboard_save).toHaveBeenCalledTimes(2);
@@ -594,7 +606,7 @@ describe("dashboardStore", () => {
       await store.setPublic(ann, false);
       expect(client.value.admin_dashboard_public).toHaveBeenCalledWith({
         ...ann,
-        public: false,
+        is_public: false,
       });
 
       await store.renameDashboard(ann, "kpi");
@@ -615,7 +627,7 @@ describe("dashboardStore", () => {
         owner: "ann",
         name: "new",
       });
-      expect(client.value.admin_dashboard_add.mock.calls[0]![0]).toEqual({
+      expect(client.value.admin_dashboard_add.mock.calls[0]![0]).toMatchObject({
         owner: "ann",
         name: "new",
       });
@@ -625,7 +637,7 @@ describe("dashboardStore", () => {
         name: "mine",
       });
       expect(client.value.admin_dashboard_add).toHaveBeenCalledTimes(1);
-      expect(client.value.dashboard_add.mock.calls[0]![0]).toEqual({
+      expect(client.value.dashboard_add.mock.calls[0]![0]).toMatchObject({
         owner: "me",
         name: "mine",
       });

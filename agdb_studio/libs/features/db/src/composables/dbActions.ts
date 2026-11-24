@@ -1,14 +1,13 @@
 import { useAdmin } from "@agdb-studio/router/src/admin";
 import { checkClient, client } from "@agdb-studio/api/src/api";
 import type {
-  Components,
+  DbAudit,
   DbResource,
   DbKind,
   DbUser,
   DbUserRole,
   ServerDatabase,
 } from "@agnesoft/agdb_api";
-import type { AxiosResponse } from "axios";
 import type { DbIdentification } from "./types";
 
 const { isAdminView, isAdmin } = useAdmin();
@@ -20,7 +19,7 @@ export const dbAdd = async (params: {
   owner: string;
   db: string;
   db_type: DbKind;
-}): Promise<AxiosResponse> => {
+}): Promise<number> => {
   checkClient(client);
   if (shouldRunAdminAction()) {
     return client.value.admin_db_add(params);
@@ -31,7 +30,7 @@ export const dbAdd = async (params: {
 
 export const dbAudit = async (
   params: DbIdentification,
-): Promise<AxiosResponse<Components.Schemas.DbAudit>> => {
+): Promise<[number, DbAudit]> => {
   checkClient(client);
   if (shouldRunAdminAction()) {
     return client.value.admin_db_audit(params);
@@ -40,9 +39,7 @@ export const dbAudit = async (
   return client.value.db_audit(params);
 };
 
-export const dbBackup = async (
-  params: DbIdentification,
-): Promise<AxiosResponse> => {
+export const dbBackup = async (params: DbIdentification): Promise<number> => {
   checkClient(client);
   if (shouldRunAdminAction()) {
     return client.value.admin_db_backup(params);
@@ -53,7 +50,7 @@ export const dbBackup = async (
 
 export const dbClear = async (
   params: DbIdentification & { resource: DbResource },
-): Promise<AxiosResponse> => {
+): Promise<[number, ServerDatabase]> => {
   checkClient(client);
   if (shouldRunAdminAction()) {
     return client.value.admin_db_clear(params);
@@ -64,7 +61,7 @@ export const dbClear = async (
 
 export const dbConvert = async (
   params: DbIdentification & { db_type: DbKind },
-): Promise<AxiosResponse> => {
+): Promise<number> => {
   checkClient(client);
   if (shouldRunAdminAction()) {
     return client.value.admin_db_convert(params);
@@ -78,7 +75,7 @@ export const dbCopy = async (
     new_db: string;
     new_owner: string;
   },
-): Promise<AxiosResponse> => {
+): Promise<number> => {
   checkClient(client);
   if (shouldRunAdminAction()) {
     return client.value.admin_db_copy(params);
@@ -88,9 +85,7 @@ export const dbCopy = async (
   return client.value.db_copy(rest);
 };
 
-export const dbDelete = async (
-  params: DbIdentification,
-): Promise<AxiosResponse> => {
+export const dbDelete = async (params: DbIdentification): Promise<number> => {
   checkClient(client);
   if (shouldRunAdminAction()) {
     return client.value.admin_db_delete(params);
@@ -99,29 +94,7 @@ export const dbDelete = async (
   return client.value.db_delete(params);
 };
 
-export const dbExec = async (
-  params: DbIdentification & { sql: string },
-): Promise<AxiosResponse> => {
-  checkClient(client);
-  if (shouldRunAdminAction()) {
-    return client.value.admin_db_exec(params);
-  }
-
-  return client.value.db_exec(params);
-};
-
-export const dbExecMut = async (
-  params: DbIdentification & { sql: string },
-): Promise<AxiosResponse> => {
-  checkClient(client);
-  if (shouldRunAdminAction()) {
-    return client.value.admin_db_exec_mut(params);
-  }
-
-  return client.value.db_exec_mut(params);
-};
-
-export const dbList = async (): Promise<AxiosResponse<ServerDatabase[]>> => {
+export const dbList = async (): Promise<[number, ServerDatabase[]]> => {
   checkClient(client);
   if (shouldRunAdminAction()) {
     return client.value.admin_db_list();
@@ -132,7 +105,7 @@ export const dbList = async (): Promise<AxiosResponse<ServerDatabase[]>> => {
 
 export const dbOptimize = async (
   params: DbIdentification,
-): Promise<AxiosResponse> => {
+): Promise<[number, ServerDatabase]> => {
   checkClient(client);
   if (shouldRunAdminAction()) {
     return client.value.admin_db_optimize(params);
@@ -141,9 +114,7 @@ export const dbOptimize = async (
   return client.value.db_optimize(params);
 };
 
-export const dbRemove = async (
-  params: DbIdentification,
-): Promise<AxiosResponse> => {
+export const dbRemove = async (params: DbIdentification): Promise<number> => {
   checkClient(client);
   if (shouldRunAdminAction()) {
     return client.value.admin_db_remove(params);
@@ -157,7 +128,7 @@ export const dbRename = async (
     new_db: string;
     new_owner: string;
   },
-): Promise<AxiosResponse> => {
+): Promise<number> => {
   checkClient(client);
   if (shouldRunAdminAction()) {
     return client.value.admin_db_rename(params);
@@ -167,9 +138,7 @@ export const dbRename = async (
   return client.value.db_rename(rest);
 };
 
-export const dbRestore = async (
-  params: DbIdentification,
-): Promise<AxiosResponse> => {
+export const dbRestore = async (params: DbIdentification): Promise<number> => {
   checkClient(client);
   if (shouldRunAdminAction()) {
     return client.value.admin_db_restore(params);
@@ -178,9 +147,7 @@ export const dbRestore = async (
   return client.value.db_restore(params);
 };
 
-export const dbRollback = async (
-  params: DbIdentification,
-): Promise<AxiosResponse> => {
+export const dbRollback = async (params: DbIdentification): Promise<number> => {
   checkClient(client);
   if (shouldRunAdminAction()) {
     return client.value.admin_db_rollback(params);
@@ -194,7 +161,7 @@ export const dbUserAdd = async (
     username: string;
     db_role: DbUserRole;
   } & DbIdentification,
-): Promise<AxiosResponse> => {
+): Promise<number> => {
   checkClient(client);
   if (shouldRunAdminAction()) {
     return client.value.admin_db_user_add(params);
@@ -205,7 +172,7 @@ export const dbUserAdd = async (
 
 export const dbUserList = async (
   params: DbIdentification,
-): Promise<AxiosResponse<DbUser[]>> => {
+): Promise<[number, DbUser[]]> => {
   checkClient(client);
   if (shouldRunAdminAction()) {
     return client.value.admin_db_user_list(params);
@@ -218,7 +185,7 @@ export const dbUserRemove = async (
   params: {
     username: string;
   } & DbIdentification,
-): Promise<AxiosResponse> => {
+): Promise<number> => {
   checkClient(client);
   if (shouldRunAdminAction()) {
     return client.value.admin_db_user_remove(params);

@@ -45,8 +45,9 @@ describe("dbUsers", () => {
     clearAllDbUsers();
   });
   it("should fetch and get users", async () => {
-    db_user_list.mockResolvedValue({
-      data: [
+    db_user_list.mockResolvedValue([
+      200,
+      [
         {
           username: "testUser",
           role: "read",
@@ -56,7 +57,7 @@ describe("dbUsers", () => {
           role: "admin",
         },
       ],
-    });
+    ]);
     expect(getDbUsers(dbIdentification)).toBeUndefined();
 
     await fetchDbUsers(dbIdentification);

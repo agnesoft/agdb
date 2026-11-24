@@ -1,3 +1,4 @@
+import { errorMessage } from "@agdb-studio/api/src/apiError";
 import type { DbKeyValue } from "@agnesoft/agdb_api";
 import {
   computed,
@@ -55,9 +56,6 @@ export const elementLabel = (element: GraphElement): string =>
 
 const plural = (count: number, word: string): string =>
   `${count} ${word}${count === 1 ? "" : "s"}`;
-
-const errorMessage = (error: unknown): string =>
-  error instanceof Error ? error.message : String(error);
 
 export type GraphActionsOptions = {
   /** Keep pins of elements missing from the results (a saved view, e.g. a dashboard widget). */

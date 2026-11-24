@@ -192,8 +192,9 @@ describe("dbConfig", () => {
     it("should print the audit log", async () => {
       const action = dbActions.find((action) => action.key === "audit");
       const params = { db: "test_db", owner: "test_owner" };
-      db_audit.mockResolvedValueOnce({
-        data: [
+      db_audit.mockResolvedValueOnce([
+        200,
+        [
           {
             timestamp: 1704067200,
             username: "test_user",
@@ -207,7 +208,7 @@ describe("dbConfig", () => {
             },
           },
         ],
-      });
+      ]);
       await action?.action?.({ params } as ActionProps<ServerDatabase>);
       expect(db_audit).toHaveBeenCalledWith(params);
 

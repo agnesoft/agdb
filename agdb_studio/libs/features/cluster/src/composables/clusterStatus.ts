@@ -1,5 +1,6 @@
+import { errorMessage } from "@agdb-studio/api/src/apiError";
 import { ref, computed, onMounted, onUnmounted, type Ref } from "vue";
-import { AgdbApi } from "@agnesoft/agdb_api";
+import { AgdbApi, FetchClient } from "@agnesoft/agdb_api";
 import {
   apiUrl,
   client,
@@ -90,10 +91,10 @@ export const useClusterStatus = () => {
     try {
       checkClient(client);
       const response = await client.value.cluster_status();
-      servers.value = response.data;
+      servers.value = response[1];
 
       const token =
-        client.value.get_token() ?? localStorage.getItem(ACCESS_TOKEN) ?? "";
+        client.value.token ?? localStorage.getItem(ACCESS_TOKEN) ?? "";
 
       const shouldRefreshLoginStatus =
         forceLoginStatusRefresh ||
@@ -102,26 +103,28 @@ export const useClusterStatus = () => {
 
       const loginStatusEntries = shouldRefreshLoginStatus
         ? await Promise.all(
-            response.data.map(async (server) => {
+            response[1].map(async (server) => {
               if (!server.status) {
                 return [server.address, null] as const;
               }
 
               try {
-                const serverClient = await AgdbApi.client(
+                // Not the studio client: a 401 of another node is no logout.
+                const serverClient = AgdbApi.new(
+                  new FetchClient(),
                   resolveServerUrl(apiUrl.value, server.address),
                 );
                 if (token) {
-                  serverClient.set_token(token);
+                  serverClient.token = token;
                 }
                 const status = await serverClient.user_status();
-                return [server.address, Boolean(status.data.login)] as const;
+                return [server.address, status[1].login] as const;
               } catch {
                 return [server.address, false] as const;
               }
             }),
           )
-        : response.data.map(
+        : response[1].map(
             (server) =>
               [
                 server.address,
@@ -138,10 +141,7 @@ export const useClusterStatus = () => {
       lastUpdated.value = new Date();
       logger.debug("Cluster status fetched:", servers.value.length, "servers");
     } catch (error) {
-      logger.error(
-        "Failed to fetch cluster status:",
-        error instanceof Error ? error.message : String(error),
-      );
+      logger.error("Failed to fetch cluster status:", errorMessage(error));
       servers.value = [];
       loggedInByServerAddress.value = {};
     } finally {
@@ -200,10 +200,7 @@ export const useClusterStatus = () => {
       await fetchStatus(true);
       logger.info("Switched active cluster node:", server.address);
     } catch (error) {
-      logger.error(
-        "Failed to switch cluster node:",
-        error instanceof Error ? error.message : String(error),
-      );
+      logger.error("Failed to switch cluster node:", errorMessage(error));
     } finally {
       switchingServerAddress.value = null;
     }

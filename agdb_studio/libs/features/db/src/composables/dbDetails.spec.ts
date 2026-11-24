@@ -47,8 +47,9 @@ describe("dbDetails", () => {
     clearAllInputs();
   });
   it("should get user list", async () => {
-    db_user_list.mockResolvedValue({
-      data: [
+    db_user_list.mockResolvedValue([
+      200,
+      [
         {
           username: "testUser",
           role: "read",
@@ -58,7 +59,7 @@ describe("dbDetails", () => {
           role: "admin",
         },
       ],
-    });
+    ]);
     const { users } = useDbDetails(dbParams);
     await fetchDbUsers(dbParams.value);
     expect(users.value).toHaveLength(2);

@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { mount } from "@vue/test-utils";
 import LoginForm from "./LoginForm.vue";
+import { AgdbApiError } from "@agnesoft/agdb_api";
 
 const { loginMock, logoutMock, pushMock, currentRoute } = vi.hoisted(() => {
   return {
@@ -123,9 +124,9 @@ describe("LoginForm", () => {
     expect(pushMock).not.toHaveBeenCalled();
   });
   it("should handle failed login", async () => {
-    loginMock.mockRejectedValue({
-      response: { status: 401, data: { message: "error" } },
-    });
+    loginMock.mockRejectedValue(
+      new AgdbApiError(401, "Invalid username or password."),
+    );
 
     const wrapper = mount(LoginForm);
     await wrapper.find('input[type="text"]#username').setValue("test");

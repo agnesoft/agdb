@@ -26,7 +26,7 @@
         "/dist"
     ],
     "scripts": {
-        "build": "tsc && copyfiles -f src/openapi.d.ts dist/",
+        "build": "tsc",
         "test": "cargo build -r -p agdb_server && cargo run -r -p agdb_server --bin agdb_harness -- vitest run --coverage",
         "type-check": "tsc --noEmit -p tests",
         "lint": "eslint --max-warnings=0 \"**/*.ts\" --fix",
@@ -34,12 +34,7 @@
         "format": "prettier --write src/ tests/ \"examples/**/*.ts\"",
         "format:check": "prettier --check src/ tests/ \"examples/**/*.ts\"",
         "examples": "tsc -p examples/server_client && cargo build -r -p agdb_server && cargo run -r -p agdb_server --bin agdb_harness -- node examples/server_client/dist/main.js",
-        "before-commit": "pnpm run openapi && pnpm run format && pnpm run lint && pnpm run test",
-        "openapi": "pnpm exec openapi typegen ../../agdb_server/openapi.json > src/openapi.d.ts",
-        "regenerate": "pnpm run openapi"
-    },
-    "dependencies": {
-        "openapi-client-axios": "^7.6.0"
+        "before-commit": "pnpm run format && pnpm run lint && pnpm run test"
     },
     "devDependencies": {
         "@eslint/js": "catalog:",
@@ -48,9 +43,7 @@
         "@typescript-eslint/eslint-plugin": "catalog:",
         "@typescript-eslint/parser": "catalog:",
         "@vitest/coverage-v8": "catalog:",
-        "copyfiles": "catalog:",
         "eslint": "catalog:",
-        "openapicmd": "catalog:",
         "prettier": "catalog:",
         "typescript": "catalog:",
         "typescript-eslint": "catalog:",
@@ -62,23 +55,6 @@
         ".": {
             "types": "./dist/index.d.ts",
             "default": "./dist/index.js"
-        },
-        "./openapi": "./dist/openapi.d.ts",
-        "./api": {
-            "types": "./dist/api.d.ts",
-            "default": "./dist/api.js"
-        },
-        "./fetch_client": {
-            "types": "./dist/fetch_client.d.ts",
-            "default": "./dist/fetch_client.js"
-        },
-        "./client": {
-            "types": "./dist/client.d.ts",
-            "default": "./dist/client.js"
-        },
-        "./query_builder": {
-            "types": "./dist/query_builder.d.ts",
-            "default": "./dist/query_builder.js"
         }
     }
 }

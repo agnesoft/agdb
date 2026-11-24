@@ -8,19 +8,10 @@ export const setupApiNotifications = (): void => {
       return;
     }
 
-    if (error.response) {
-      addNotification({
-        type: "error",
-        title: `Error: ${error.response.statusText}`,
-        message: `${error.response.data}`,
-      });
-      return;
-    }
-
     addNotification({
       type: "error",
-      title: "Error",
-      message: `${error.message}`,
+      title: `Error: ${error.status}`,
+      message: error.description,
     });
   });
 

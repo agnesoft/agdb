@@ -9,7 +9,7 @@ const databases = ref<ServerDatabase[]>([]);
 
 const fetchDatabases = async () => {
   const dbs = await dbList();
-  databases.value = dbs.data;
+  databases.value = dbs[1];
 };
 
 export type AddDatabaseProps = {

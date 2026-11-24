@@ -1,12 +1,10 @@
-import { AgdbApi } from "@agnesoft/agdb_api";
-import type { AxiosError, AxiosResponse } from "axios";
+import { AgdbApi, AgdbApiError, FetchClient } from "@agnesoft/agdb_api";
 import {
   ACCESS_TOKEN,
   BASE_CONNECTION_TIMEOUT,
   MAX_CONNECTION_ATTEMPTS,
 } from "./constants";
-import { computed, ref, type ComputedRef } from "vue";
-import type { AgdbApiClient } from "@agnesoft/agdb_api/client";
+import { computed, shallowRef, type ComputedRef } from "vue";
 import { createLogger } from "@agdb-studio/utils/src/logger/logger";
 
 let _onUnauthorized: (() => void) | undefined;
@@ -26,21 +24,60 @@ export const resetUnauthorized = (): void => {
   _isUnauthorized = false;
 };
 
-const _client = ref<AgdbApi.AgdbApiClient | undefined>();
-const _apiUrl = ref(import.meta.env.VITE_API_URL);
-const _lastApiError = ref<AxiosError | undefined>(undefined);
-const _lastConnectionError = ref<string | undefined>(undefined);
+const logger = createLogger("ApiClient");
 
-declare module "axios" {
-  interface AxiosRequestConfig {
-    /** The caller shows its own error: no global error notification. */
-    quietErrors?: boolean;
+/**
+ * The transport of the studio: a 401 logs out and any other error is the
+ * `lastApiError`, unless the client is quiet and its callers show their own.
+ */
+export class StudioClient extends FetchClient {
+  constructor(public quiet: boolean = false) {
+    super("agdb_studio");
+  }
+
+  override delete(uri: string, token: string | undefined): Promise<number> {
+    return this.report(super.delete(uri, token));
+  }
+
+  override get<T>(
+    uri: string,
+    token: string | undefined,
+  ): Promise<[number, T]> {
+    return this.report(super.get<T>(uri, token));
+  }
+
+  override post<T, R>(
+    uri: string,
+    json: T | undefined,
+    token: string | undefined,
+  ): Promise<[number, R]> {
+    return this.report(super.post<T, R>(uri, json, token));
+  }
+
+  override put<T>(
+    uri: string,
+    json: T | undefined,
+    token: string | undefined,
+  ): Promise<number> {
+    return this.report(super.put<T>(uri, json, token));
+  }
+
+  private report<R>(response: Promise<R>): Promise<R> {
+    return response.catch((error: unknown) => {
+      onApiError(error, this.quiet);
+      throw error;
+    });
   }
 }
 
-const logger = createLogger("ApiClient");
+export type StudioApi = AgdbApi<StudioClient>;
 
-export const client = computed((): AgdbApi.AgdbApiClient | undefined => {
+const _client = shallowRef<StudioApi | undefined>();
+const _apiUrl = shallowRef<string>(import.meta.env.VITE_API_URL);
+const _lastApiError = shallowRef<AgdbApiError | undefined>(undefined);
+const _lastConnectionError = shallowRef<string | undefined>(undefined);
+
+export const client = computed((): StudioApi | undefined => {
   return _client.value;
 });
 
@@ -48,7 +85,7 @@ export const apiUrl = computed((): string => {
   return _apiUrl.value;
 });
 
-export const lastApiError = computed((): AxiosError | undefined => {
+export const lastApiError = computed((): AgdbApiError | undefined => {
   return _lastApiError.value;
 });
 
@@ -57,38 +94,46 @@ export const lastConnectionError = computed((): string | undefined => {
 });
 
 export const removeToken = (): void => {
-  client.value?.reset_token();
+  if (client.value) {
+    client.value.token = undefined;
+  }
   localStorage.removeItem(ACCESS_TOKEN);
   notifyUnauthorized();
 };
 
-export const responseInterceptor = (response: AxiosResponse) => {
-  logger.debug("Response Interceptor:", JSON.stringify(response));
-  return response;
+const toApiError = (error: unknown): AgdbApiError =>
+  error instanceof AgdbApiError ? error : new AgdbApiError(500, String(error));
+
+export const onApiError = (error: unknown, quiet: boolean): void => {
+  const apiError = toApiError(error);
+  logger.error("Request failed:", apiError.to_string());
+
+  if (apiError.status === 401) {
+    removeToken();
+    return;
+  }
+
+  if (!_isUnauthorized && !quiet) {
+    _lastApiError.value = apiError;
+  }
 };
 
-export const errorInterceptor = (error: AxiosError) => {
-  logger.error(
-    "Error Interceptor:",
-    error.message,
-    JSON.stringify(error.response),
-    JSON.stringify(error.config),
+/**
+ * A client of the same server and token as `api` whose errors are left to
+ * its callers.
+ */
+export const quietClient = (api: StudioApi): StudioApi => {
+  return new AgdbApi(
+    new StudioClient(true),
+    api.address(),
+    api.base_url(),
+    api.token,
   );
-  if (error.response?.status === 401) {
-    removeToken();
-    return Promise.reject(error);
-  }
-
-  if (!_isUnauthorized && !error.config?.quietErrors) {
-    _lastApiError.value = error;
-  }
-
-  return Promise.reject(error);
 };
 
 export const checkClient: (
-  client: ComputedRef<AgdbApiClient | undefined>,
-) => asserts client is ComputedRef<AgdbApiClient> = (client) => {
+  client: ComputedRef<StudioApi | undefined>,
+) => asserts client is ComputedRef<StudioApi> = (client) => {
   if (!client.value) {
     throw new Error("Client is not initialized");
   }
@@ -96,15 +141,14 @@ export const checkClient: (
 
 let connectionAttempts = 0;
 
-const attachInterceptors = (apiClient: AgdbApiClient): void => {
-  apiClient.interceptors.response.use(responseInterceptor, errorInterceptor);
-};
-
-const connectToUrl = async (
-  url: string,
-): Promise<AgdbApiClient | undefined> => {
-  return AgdbApi.client(url).catch((error: AxiosError) => {
-    logger.error("Failed to initialize client:", error.message);
+const connectToUrl = async (url: string): Promise<StudioApi | undefined> => {
+  try {
+    const api = AgdbApi.new(new StudioClient(true), url);
+    await api.status();
+    api.client.quiet = false;
+    return api;
+  } catch (error) {
+    logger.error("Failed to connect:", toApiError(error).to_string());
     if (connectionAttempts < MAX_CONNECTION_ATTEMPTS) {
       connectionAttempts++;
       const timeout = BASE_CONNECTION_TIMEOUT * connectionAttempts;
@@ -119,7 +163,7 @@ const connectToUrl = async (
       }, timeout);
     }
     return undefined;
-  });
+  }
 };
 
 export const initClient = async (): Promise<void> => {
@@ -127,20 +171,16 @@ export const initClient = async (): Promise<void> => {
   _client.value = nextClient;
   if (nextClient) {
     _lastConnectionError.value = undefined;
-    attachInterceptors(nextClient);
   }
 };
 
 export const reconnectClient = async (url: string): Promise<void> => {
   const token =
-    client.value?.get_token() ??
-    localStorage.getItem(ACCESS_TOKEN) ??
-    undefined;
-  const nextClient = await AgdbApi.client(url);
+    client.value?.token ?? localStorage.getItem(ACCESS_TOKEN) ?? undefined;
+  const nextClient = AgdbApi.new(new StudioClient(), url);
 
-  attachInterceptors(nextClient);
   if (token) {
-    nextClient.set_token(token);
+    nextClient.token = token;
   }
 
   _client.value = nextClient;

@@ -4,7 +4,6 @@ import type {
   DbValue,
   QueryResult,
 } from "@agnesoft/agdb_api";
-import { convertToNativeValue } from "@agnesoft/agdb_api";
 import type {
   GraphData,
   GraphElementSource,
@@ -14,11 +13,14 @@ import type {
 
 /** Converts a DbValue union to a display-friendly string. */
 export const dbValueToString = (value: DbValue): string => {
-  const native = convertToNativeValue(value);
+  if (value === "None" || "VecDbValue" in value) {
+    return "";
+  }
+  const native: unknown = Object.values(value)[0];
   if (Array.isArray(native)) {
     return native.map(String).join(", ");
   }
-  return String(native ?? "");
+  return String(native);
 };
 
 /** Key-values as display strings. */

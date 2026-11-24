@@ -1,5 +1,5 @@
 // Auth & user
-export const OPENAPI_API = "**/api/v1/openapi.json";
+export const STATUS_API = "**/api/v1/status";
 export const LOGIN_API = "**/api/v1/user/login*";
 export const LOGOUT_API = "**/api/v1/user/logout*";
 export const CLUSTER_USER_LOGOUT_API = "**/api/v1/cluster/user/logout*";

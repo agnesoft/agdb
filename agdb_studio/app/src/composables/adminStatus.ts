@@ -1,3 +1,4 @@
+import { errorMessage } from "@agdb-studio/api/src/apiError";
 import { ref, onMounted, onUnmounted, type Ref } from "vue";
 import { client, checkClient } from "@agdb-studio/api/src/api";
 import { useAuth } from "@agdb-studio/auth/src/auth";
@@ -24,14 +25,11 @@ export const useAdminStatus = () => {
     try {
       checkClient(client);
       const response = await client.value.admin_status();
-      status.value = response.data;
+      status.value = response[1];
       lastUpdated.value = new Date();
       logger.debug("Admin status fetched");
     } catch (error) {
-      logger.error(
-        "Failed to fetch admin status:",
-        error instanceof Error ? error.message : String(error),
-      );
+      logger.error("Failed to fetch admin status:", errorMessage(error));
       status.value = null;
     } finally {
       isLoading.value = false;
@@ -42,7 +40,7 @@ export const useAdminStatus = () => {
     isSettingLogLevel.value = true;
     try {
       checkClient(client);
-      await client.value.set_log_level({ new_level: level });
+      await client.value.admin_set_log_level({ level });
       await fetchStatus();
       addNotification({
         type: "success",
@@ -50,10 +48,7 @@ export const useAdminStatus = () => {
         message: `Log level set to "${level}".`,
       });
     } catch (error) {
-      logger.error(
-        "Failed to set log level:",
-        error instanceof Error ? error.message : String(error),
-      );
+      logger.error("Failed to set log level:", errorMessage(error));
       await fetchStatus();
     } finally {
       isSettingLogLevel.value = false;

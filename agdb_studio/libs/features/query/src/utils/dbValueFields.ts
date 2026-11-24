@@ -1,7 +1,7 @@
-import { convertToDbValue, type DbValue } from "@agnesoft/agdb_api";
+import type { DbValue } from "@agnesoft/agdb_api";
 import type { QueryStepFieldValue } from "../composables/types";
 import { VALUE_TYPES } from "../mock/queryApiMock";
-import { parseDbValue } from "./queryExecutionUtils";
+import { parseDbValue, type BuilderDbValueInput } from "./queryExecutionUtils";
 
 /** Edits raw bytes as comma-separated numbers 0-255 (editor-only type). */
 export const BYTES_TYPE = "bytes";
@@ -31,6 +31,30 @@ const splitItems = (raw: string | undefined): string[] =>
     .map((item) => item.trim())
     .filter((item) => item.length > 0);
 
+/**
+ * A parsed field as the `DbValue` the editor shows again: a boolean is its
+ * string and a number an `I64` unless it is fractional.
+ */
+const toDbValue = (value: BuilderDbValueInput): DbValue => {
+  if (typeof value === "string") {
+    return { String: value };
+  }
+  if (typeof value === "boolean") {
+    return { String: String(value) };
+  }
+  if (typeof value === "number") {
+    return Number.isInteger(value) ? { I64: value } : { F64: value };
+  }
+  if (Array.isArray(value)) {
+    // The string arrays return before, as `VecString` also when empty.
+    const numbers = value as number[];
+    return numbers.every(Number.isInteger)
+      ? { VecI64: numbers }
+      : { VecF64: numbers };
+  }
+  return value;
+};
+
 /** Converts a typed form field (type option + raw text) to a `DbValue`. */
 export const fieldToDbValue = (field: QueryStepFieldValue): DbValue => {
   if (field.selectedOption === NONE_TYPE) {
@@ -48,7 +72,7 @@ export const fieldToDbValue = (field: QueryStepFieldValue): DbValue => {
   ) {
     return { VecString: parsed.map(String) };
   }
-  return convertToDbValue(parsed);
+  return toDbValue(parsed);
 };
 
 /**

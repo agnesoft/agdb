@@ -1,75 +1,85 @@
 import { vi } from "vitest";
 
-export const logout = vi.fn().mockResolvedValue(undefined);
-export const login = vi.fn().mockResolvedValue("token");
-export const get_token = vi.fn();
+const status = <T>(value: T) => vi.fn().mockResolvedValue(value);
+
+export const user_login = status(200);
+export const cluster_user_login = status(200);
+export const user_logout = status(201);
+export const user_logout_all = status(201);
+export const user_logout_others = status(201);
+export const user_logout_session = status(201);
+export const cluster_user_logout = status(201);
+export const cluster_user_logout_all = status(201);
+export const cluster_user_logout_others = status(201);
+export const cluster_user_logout_session = status(201);
 export const user_status = vi.fn();
+export const user_change_password = status(201);
 export const db_list = vi.fn();
 export const db_add = vi.fn();
-export const db_backup = vi.fn().mockResolvedValue({});
-export const db_restore = vi.fn().mockResolvedValue({});
-export const db_rollback = vi.fn().mockResolvedValue({});
-export const db_clear = vi.fn().mockResolvedValue({});
-export const db_convert = vi.fn().mockResolvedValue({});
-export const db_remove = vi.fn().mockResolvedValue({});
-export const db_delete = vi.fn().mockResolvedValue({});
-export const db_optimize = vi.fn().mockResolvedValue({});
-export const db_audit = vi.fn().mockResolvedValue({ data: [] });
-export const db_copy = vi.fn().mockResolvedValue({});
-export const db_rename = vi.fn().mockResolvedValue({});
-export const db_user_list = vi.fn().mockResolvedValue({ data: [] });
-export const db_user_add = vi.fn().mockResolvedValue({});
-export const db_user_remove = vi.fn().mockResolvedValue({});
-export const db_exec = vi.fn().mockResolvedValue({});
-export const db_exec_mut = vi.fn().mockResolvedValue({});
-export const user_change_password = vi.fn().mockResolvedValue(true);
-export const user_logout = vi.fn().mockResolvedValue({});
-export const cluster_user_logout = vi.fn().mockResolvedValue({});
+export const db_backup = status(201);
+export const db_restore = status(201);
+export const db_rollback = status(201);
+export const db_clear = status([201, {}]);
+export const db_convert = status(201);
+export const db_remove = status(204);
+export const db_delete = status(204);
+export const db_optimize = status([200, {}]);
+export const db_audit = status([200, []]);
+export const db_copy = status(201);
+export const db_rename = status(201);
+export const db_user_list = status([200, []]);
+export const db_user_add = status(201);
+export const db_user_remove = status(204);
+export const db_exec = status([200, []]);
+export const db_exec_mut = status([200, []]);
 export const admin_db_list = vi.fn();
 export const admin_db_add = vi.fn();
-export const admin_db_backup = vi.fn().mockResolvedValue({});
-export const admin_db_restore = vi.fn().mockResolvedValue({});
-export const admin_db_rollback = vi.fn().mockResolvedValue({});
-export const admin_db_clear = vi.fn().mockResolvedValue({});
-export const admin_db_convert = vi.fn().mockResolvedValue({});
-export const admin_db_remove = vi.fn().mockResolvedValue({});
-export const admin_db_delete = vi.fn().mockResolvedValue({});
-export const admin_db_optimize = vi.fn().mockResolvedValue({});
-export const admin_db_audit = vi.fn().mockResolvedValue({ data: [] });
-export const admin_db_copy = vi.fn().mockResolvedValue({});
-export const admin_db_rename = vi.fn().mockResolvedValue({});
-export const admin_db_user_list = vi.fn().mockResolvedValue({ data: [] });
-export const admin_db_user_add = vi.fn().mockResolvedValue({});
-export const admin_db_user_remove = vi.fn().mockResolvedValue({});
-export const admin_db_exec = vi.fn().mockResolvedValue({});
-export const admin_db_exec_mut = vi.fn().mockResolvedValue({});
-export const admin_user_list = vi.fn().mockResolvedValue({ data: [] });
-export const admin_user_add = vi.fn().mockResolvedValue({});
-export const admin_user_delete = vi.fn().mockResolvedValue({});
-export const admin_user_logout = vi.fn().mockResolvedValue({});
-export const admin_user_logout_all = vi.fn().mockResolvedValue({});
-export const cluster_admin_user_logout = vi.fn().mockResolvedValue({});
-export const cluster_admin_user_logout_all = vi.fn().mockResolvedValue({});
-export const admin_user_change_password = vi.fn().mockResolvedValue(true);
+export const admin_db_backup = status(201);
+export const admin_db_restore = status(201);
+export const admin_db_rollback = status(201);
+export const admin_db_clear = status([201, {}]);
+export const admin_db_convert = status(201);
+export const admin_db_remove = status(204);
+export const admin_db_delete = status(204);
+export const admin_db_optimize = status([200, {}]);
+export const admin_db_audit = status([200, []]);
+export const admin_db_copy = status(201);
+export const admin_db_rename = status(201);
+export const admin_db_user_list = status([200, []]);
+export const admin_db_user_add = status(201);
+export const admin_db_user_remove = status(204);
+export const admin_db_exec = status([200, []]);
+export const admin_db_exec_mut = status([200, []]);
+export const admin_user_list = status([200, []]);
+export const admin_user_add = status(201);
+export const admin_user_delete = status(204);
+export const admin_user_logout = status(201);
+export const admin_user_logout_session = status(201);
+export const admin_user_logout_all = status(201);
+export const cluster_admin_user_logout = status(201);
+export const cluster_admin_user_logout_session = status(201);
+export const cluster_admin_user_logout_all = status(201);
+export const admin_user_change_password = status(201);
 
-export const client = vi.fn().mockResolvedValue({
-  login,
-  logout,
-  set_token: vi.fn(),
-  get_token,
-  reset_token: vi.fn(),
-  interceptors: {
-    request: {
-      use: vi.fn(),
-    },
-    response: {
-      use: vi.fn(),
-    },
-  },
+/** The client `AgdbApi.new` and `new AgdbApi` make. */
+export const api = {
+  token: undefined as string | undefined,
+  client: { quiet: false },
+  address: vi.fn().mockReturnValue("localhost:3000"),
+  base_url: vi.fn().mockReturnValue("http://localhost:3000/api/v1"),
+  status: status(200),
+  user_login,
+  cluster_user_login,
+  user_logout,
+  user_logout_all,
+  user_logout_others,
+  user_logout_session,
+  cluster_user_logout,
+  cluster_user_logout_all,
+  cluster_user_logout_others,
+  cluster_user_logout_session,
   user_status,
   user_change_password,
-  user_logout,
-  cluster_user_logout,
 
   db_list,
   db_add,
@@ -113,15 +123,23 @@ export const client = vi.fn().mockResolvedValue({
   admin_user_add,
   admin_user_delete,
   admin_user_logout,
+  admin_user_logout_session,
   admin_user_logout_all,
   cluster_admin_user_logout,
+  cluster_admin_user_logout_session,
   cluster_admin_user_logout_all,
   admin_user_change_password,
-});
-vi.mock("@agnesoft/agdb_api", () => {
+};
+
+export const newApi = vi.fn().mockReturnValue(api);
+
+vi.mock("@agnesoft/agdb_api", async (importOriginal) => {
+  const original = await importOriginal<typeof import("@agnesoft/agdb_api")>();
+  const AgdbApi = vi.fn(function () {
+    return newApi();
+  });
   return {
-    AgdbApi: {
-      client,
-    },
+    ...original,
+    AgdbApi: Object.assign(AgdbApi, { new: newApi }),
   };
 });

@@ -11,7 +11,7 @@ const fetchUsers = async () => {
     return;
   }
 
-  users.value = [...response.data].sort((left, right) => {
+  users.value = [...response[1]].sort((left, right) => {
     if (left.admin !== right.admin) {
       return Number(right.admin) - Number(left.admin);
     }
@@ -25,7 +25,7 @@ type AddUserParams = {
   password: string;
 };
 const addUser = async ({ username, password }: AddUserParams) => {
-  await client.value?.admin_user_add({ username }, { password }).then(() => {
+  await client.value?.admin_user_add({ username, password }).then(() => {
     addNotification({
       type: "success",
       title: "User added",

@@ -39,7 +39,7 @@ const userActions: Action<UserStatus>[] = [
           content: buildSessionContent(sessions, async (rowIndex) => {
             const session = sessions[rowIndex];
             if (!session) return;
-            await client.value?.admin_user_logout({
+            await client.value?.admin_user_logout_session({
               username: params.username,
               session: session.session,
             });
@@ -59,12 +59,10 @@ const userActions: Action<UserStatus>[] = [
     action: async ({ params }) => {
       const password = getInputValue<string>(KEY_MODAL, "password")?.toString();
       return client.value
-        ?.admin_user_change_password(
-          {
-            username: params.username,
-          },
-          { password },
-        )
+        ?.admin_user_change_password({
+          username: params.username,
+          password,
+        })
         .then(() => {
           addNotification({
             type: "success",
@@ -139,13 +137,18 @@ const userActions: Action<UserStatus>[] = [
             KEY_MODAL,
             "session",
           )?.toString();
-          const logoutParams = {
-            username: params.username,
-            ...(sessionId ? { session: sessionId } : {}),
-          };
-          const call = cluster
-            ? client.value?.cluster_admin_user_logout(logoutParams)
-            : client.value?.admin_user_logout(logoutParams);
+          const username = params.username;
+          const api = client.value;
+          const call = sessionId
+            ? cluster
+              ? api?.cluster_admin_user_logout_session({
+                  username,
+                  session: sessionId,
+                })
+              : api?.admin_user_logout_session({ username, session: sessionId })
+            : cluster
+              ? api?.cluster_admin_user_logout({ username })
+              : api?.admin_user_logout({ username });
           await call;
           addNotification({
             type: "success",

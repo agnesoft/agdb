@@ -30,6 +30,7 @@ import { useQueryStore } from "@agdb-studio/query/src/composables/queryStore";
 import { errorMessage, useWidgetQuery } from "./widgetQuery";
 import { createWidget } from "../utils/dashboardDocument";
 import type { Widget } from "../types";
+import { AgdbApiError } from "@agnesoft/agdb_api";
 
 const USERS = 'select().ids("users")';
 const execResults = [{ result: 1, elements: [] }];
@@ -173,11 +174,11 @@ describe("useWidgetQuery", () => {
     });
     widget.value = { ...widget.value, db: "other" };
     await flushPromises();
-    rejectFirst({ response: { status: 403 } });
+    rejectFirst(new AgdbApiError(403, ""));
     await flushPromises();
     expect(data.error.value).toBeUndefined();
 
-    executeDbQueries.mockRejectedValueOnce({ response: { status: 403 } });
+    executeDbQueries.mockRejectedValueOnce(new AgdbApiError(403, ""));
     await data.run();
     expect(data.error.value).toBe("No access to this database");
   });
@@ -200,9 +201,9 @@ describe("useWidgetQuery", () => {
   });
 
   it.each([
-    [{ response: { status: 403 } }, "No access to this database"],
-    [{ response: { status: 404 } }, "Database not found"],
-    [{ response: { status: 400, data: "bad query" } }, "bad query"],
+    [new AgdbApiError(403, ""), "No access to this database"],
+    [new AgdbApiError(404, ""), "Database not found"],
+    [new AgdbApiError(400, "bad query"), "bad query"],
     [new Error("network"), "network"],
     ["plain", "plain"],
   ])("explains errors (%#)", (error, message) => {
@@ -294,7 +295,7 @@ describe("useWidgetQuery", () => {
 
   it("stops auto refresh after a failure until a run succeeds", async () => {
     vi.useFakeTimers();
-    executeDbQueries.mockRejectedValueOnce({ response: { status: 404 } });
+    executeDbQueries.mockRejectedValueOnce(new AgdbApiError(404, ""));
     const { data } = setup({
       rows: { exec: [{ id: "r1", query: USERS }], context: [] },
       refreshSeconds: 10,

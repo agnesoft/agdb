@@ -20,7 +20,6 @@
     "@openapitools/openapi-generator-cli": "catalog:",
     "@playwright/test": "catalog:",
     "eslint": "catalog:",
-    "openapicmd": "catalog:",
     "prettier": "catalog:",
     "turbo": "catalog:",
     "typescript": "catalog:",

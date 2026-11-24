@@ -19,8 +19,6 @@ import {
   db_user_list,
   db_user_add,
   db_user_remove,
-  db_exec,
-  db_exec_mut,
   admin_db_list,
   admin_db_add,
   admin_db_backup,
@@ -37,8 +35,6 @@ import {
   admin_db_user_list,
   admin_db_user_add,
   admin_db_user_remove,
-  admin_db_exec,
-  admin_db_exec_mut,
 } from "@agdb-studio/testing/mocks/apiMock";
 
 const { username, isAdmin, isAdminView } = vi.hoisted(() => {
@@ -239,32 +235,6 @@ describe("dbActions", () => {
         username: "new_user",
       });
     });
-
-    it("should execute a query", async () => {
-      dbActions.dbExec({
-        owner: "test_user",
-        db: "test_db",
-        sql: "some query",
-      });
-      expect(db_exec).toHaveBeenCalledWith({
-        owner: "test_user",
-        db: "test_db",
-        sql: "some query",
-      });
-    });
-
-    it("should execute a mutation", async () => {
-      dbActions.dbExecMut({
-        owner: "test_user",
-        db: "test_db",
-        sql: "some query",
-      });
-      expect(db_exec_mut).toHaveBeenCalledWith({
-        owner: "test_user",
-        db: "test_db",
-        sql: "some query",
-      });
-    });
   });
 
   describe("admin actions", () => {
@@ -435,32 +405,6 @@ describe("dbActions", () => {
         owner: "test_user",
         db: "test_db",
         username: "new_user",
-      });
-    });
-
-    it("should execute a query", async () => {
-      dbActions.dbExec({
-        owner: "test_user",
-        db: "test_db",
-        sql: "some query",
-      });
-      expect(admin_db_exec).toHaveBeenCalledWith({
-        owner: "test_user",
-        db: "test_db",
-        sql: "some query",
-      });
-    });
-
-    it("should execute a mutation", async () => {
-      dbActions.dbExecMut({
-        owner: "test_user",
-        db: "test_db",
-        sql: "some query",
-      });
-      expect(admin_db_exec_mut).toHaveBeenCalledWith({
-        owner: "test_user",
-        db: "test_db",
-        sql: "some query",
       });
     });
   });

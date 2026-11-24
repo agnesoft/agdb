@@ -8,7 +8,7 @@ import {
   DB_LIST_API,
   DB_USER_LIST_API,
   LOGIN_API,
-  OPENAPI_API,
+  STATUS_API,
   USER_STATUS_API,
   HOME_DASHBOARD_API,
 } from "../api-paths";
@@ -18,15 +18,9 @@ import { MOCK_USER_LIST, MOCK_DB_USERS, MOCK_SESSIONS } from "./user.mock";
 import type { ServerDatabase, UserStatus } from "@agnesoft/agdb_api" with {
   "resolution-mode": "import",
 };
-import openapi from "../../../../agdb_server/openapi.json";
-
-export async function mockOpenApi(page: Page) {
-  await page.route(OPENAPI_API, async (route) => {
-    route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify(openapi),
-    });
+export async function mockStatusApi(page: Page) {
+  await page.route(STATUS_API, async (route) => {
+    route.fulfill({ status: 200 });
   });
 }
 
@@ -88,7 +82,7 @@ export async function mockDatabaseListApi(
 }
 
 export async function mockAllApis(page: Page) {
-  await mockOpenApi(page);
+  await mockStatusApi(page);
   await mockLoginApi(page);
   await mockUserStatusApi(page);
   await mockNoHomeDashboardApi(page);

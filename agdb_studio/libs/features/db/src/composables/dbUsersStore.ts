@@ -11,7 +11,7 @@ const dbUsers = ref(new Map<string, DbUser[]>());
 
 const fetchDbUsers = (params: DbIdentification): Promise<void> | undefined =>
   dbUserList(params).then((users) => {
-    dbUsers.value.set(getDbName(params), users.data);
+    dbUsers.value.set(getDbName(params), users[1]);
   });
 
 const getDbUsers = (params: DbIdentification): DbUser[] | undefined => {

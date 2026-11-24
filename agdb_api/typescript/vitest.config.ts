@@ -8,7 +8,6 @@ export default defineConfig({
                 "src/api.ts",
                 "eslint.config.mjs",
                 "src/index.ts",
-                "src/openapi.d.ts",
                 "src/query_builder.ts",
                 "src/types.ts",
                 "tests/**",

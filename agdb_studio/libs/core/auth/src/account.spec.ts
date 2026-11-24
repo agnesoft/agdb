@@ -40,15 +40,17 @@ describe("useAccount", () => {
   });
 
   it("fetches user status", async () => {
-    user_status.mockResolvedValueOnce({
-      data: {
+    user_status.mockResolvedValueOnce([
+      200,
+      {
         username: "test",
         admin: true,
+        login: true,
         sessions: [
           { agent: "browser", created: 1000, expires_at: 2000, session: "s1" },
         ],
       },
-    });
+    ]);
     const { username, admin, sessions, fetchUserStatus } = useAccount();
     await fetchUserStatus();
 
@@ -79,9 +81,10 @@ describe("useAccount", () => {
 
   describe("token health check", () => {
     beforeEach(async () => {
-      user_status.mockResolvedValue({
-        data: { username: "test", admin: false },
-      });
+      user_status.mockResolvedValue([
+        200,
+        { username: "test", admin: false, login: true, sessions: [] },
+      ]);
       isLoggedIn.value = false;
       await nextTick();
       vi.clearAllTimers();
@@ -91,9 +94,10 @@ describe("useAccount", () => {
     });
 
     it("periodically validates token while logged in", async () => {
-      user_status.mockResolvedValue({
-        data: { username: "test", admin: false },
-      });
+      user_status.mockResolvedValue([
+        200,
+        { username: "test", admin: false, login: true, sessions: [] },
+      ]);
       await vi.advanceTimersByTimeAsync(60000);
       expect(user_status).toHaveBeenCalled();
 
@@ -103,9 +107,10 @@ describe("useAccount", () => {
     });
 
     it("stops periodic validation on logout", async () => {
-      user_status.mockResolvedValue({
-        data: { username: "test", admin: false },
-      });
+      user_status.mockResolvedValue([
+        200,
+        { username: "test", admin: false, login: true, sessions: [] },
+      ]);
       isLoggedIn.value = false;
       await nextTick();
 
@@ -122,9 +127,10 @@ describe("useAccount", () => {
     });
 
     it("does not create duplicate intervals", async () => {
-      user_status.mockResolvedValue({
-        data: { username: "test", admin: false },
-      });
+      user_status.mockResolvedValue([
+        200,
+        { username: "test", admin: false, login: true, sessions: [] },
+      ]);
       isLoggedIn.value = false;
       await nextTick();
       vi.clearAllTimers();

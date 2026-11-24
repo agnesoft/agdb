@@ -13,6 +13,7 @@ import {
   hasColoring,
   type ColorConfig,
 } from "@agdb-studio/query/src/utils/graphColorRules";
+import { copyChartConfig } from "@agdb-studio/query/src/utils/chartConfig";
 import { buildQueryFromSteps } from "@agdb-studio/query/src/utils/queryExecutionUtils";
 import { WIDGET_TABS, type Widget, type WidgetRow } from "../types";
 
@@ -50,7 +51,7 @@ const copyPins = (pins: readonly PinnedDetail[]): PinnedDetail[] =>
     offset ? { id, offset: { x: offset.x, y: offset.y } } : { id },
   );
 
-/** Puts a widget's rows, colours and view into a (new) query store entry. */
+/** Puts a widget's rows, colours, view and chart into a (new) query store entry. */
 export const seedQuery = (queryId: string, widget: Widget): void => {
   const queryStore = useQueryStore();
   const query =
@@ -62,7 +63,7 @@ export const seedQuery = (queryId: string, widget: Widget): void => {
   seedDisplay(queryId, widget);
 };
 
-/** Writes how the widget shows its results (colours, view, pinned details) into its query store entry. */
+/** Writes how the widget shows its results (colours, view, pinned details, chart) into its query store entry. */
 export const seedDisplay = (queryId: string, widget: Widget): void => {
   const queryStore = useQueryStore();
   const query = queryStore.getQuery(queryId);
@@ -73,15 +74,18 @@ export const seedDisplay = (queryId: string, widget: Widget): void => {
     : undefined;
   queryStore.setView(queryId, widget.view);
   queryStore.setPins(queryId, widget.pins ? copyPins(widget.pins) : []);
+  queryStore.setChart(queryId, widget.chart);
 };
 
-/** The widget with the colours, view and pinned details of a query store entry. */
+/** The widget with the colours, view, pinned details and chart of a query store entry. */
 export const withDisplay = (widget: Widget, query: Query): Widget => {
   const result: Widget = { ...widget };
   delete result.view;
   delete result.colors;
   delete result.pins;
+  delete result.chart;
   if (query.view) result.view = query.view;
+  if (query.chart) result.chart = copyChartConfig(query.chart);
   if (query.pins?.length) result.pins = copyPins(query.pins);
   if (query.colors && hasColoring(query.colors)) {
     result.colors = structuredClone(toRaw(query.colors));
@@ -89,7 +93,7 @@ export const withDisplay = (widget: Widget, query: Query): Widget => {
   return result;
 };
 
-/** The widget as edited in a query store entry: rows, colours, view and pins. */
+/** The widget as edited in a query store entry: rows, colours, view, pins and chart. */
 export const widgetFromQuery = (base: Widget, query: Query): Widget =>
   withDisplay(
     {
@@ -121,14 +125,15 @@ const pinning = (pins: PinnedDetail[] | undefined) =>
   pins?.length ? pins : undefined;
 
 /**
- * The entry shows the results differently (colours, view or pinned details)
+ * The entry shows the results differently (colours, view, pinned details or chart)
  * than the widget saves. Reads the entry in full (not a raw copy), so a
  * computed using this tracks every nested change.
  */
 export const displayDiffers = (widget: Widget, query: Query): boolean =>
   (query.view ?? undefined) !== widget.view ||
   stableJson(coloring(query.colors)) !== stableJson(coloring(widget.colors)) ||
-  stableJson(pinning(query.pins)) !== stableJson(pinning(widget.pins));
+  stableJson(pinning(query.pins)) !== stableJson(pinning(widget.pins)) ||
+  stableJson(query.chart) !== stableJson(widget.chart);
 
 /** A row of the exec or context tab is not a complete, valid query yet. */
 export const hasUnfinishedRow = (query: Query): boolean =>

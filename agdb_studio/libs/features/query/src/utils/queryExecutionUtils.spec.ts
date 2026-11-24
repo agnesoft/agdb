@@ -389,6 +389,23 @@ describe("buildQueryFromSteps", () => {
     ).toEqual(QueryBuilder.search().from(1).to("target").query());
   });
 
+  it("inserts edges from and to several ids", () => {
+    expect(
+      buildQueryFromSteps([
+        step("insert"),
+        step("insert.edges"),
+        step("insert.edges.from", [[field("string", "shop")]]),
+        step("insert.edges.from.to", [
+          [field("string", "p1")],
+          [field("signed", "2")],
+          [field("string", "p3")],
+        ]),
+      ]),
+    ).toEqual(
+      QueryBuilder.insert().edges().from("shop").to(["p1", 2, "p3"]).query(),
+    );
+  });
+
   it("maps search order_by for single and multiple entries", () => {
     expect(
       buildQueryFromSteps([

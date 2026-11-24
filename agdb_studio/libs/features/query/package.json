@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "vue": "catalog:",
+    "@vueuse/core": "catalog:",
     "@agdb-studio/design": "workspace:*",
     "@agdb-studio/api": "workspace:*",
     "@agdb-studio/utils": "workspace:*",

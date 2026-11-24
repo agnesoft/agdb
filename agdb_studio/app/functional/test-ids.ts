@@ -48,6 +48,7 @@ export const testIds = createTestIds({
   VIEW_GRAPH: "view-graph",
   VIEW_TABLE: "view-table",
   VIEW_JSON: "view-json",
+  VIEW_CHART: "view-chart",
   ELEMENT_DETAILS_PANEL: "element-details-panel",
   PANEL_VALUE_ROW: "panel-value-row",
   PANEL_VALUE_CELL: "panel-value-cell",

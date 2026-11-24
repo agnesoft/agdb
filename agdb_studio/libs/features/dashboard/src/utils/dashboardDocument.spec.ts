@@ -99,8 +99,48 @@ describe("dashboardDocument", () => {
     expect(doc.widgets.plain!.pins).toBeUndefined();
   });
 
+  it("reads charts, dropping broken ones", () => {
+    const chart = (value: unknown) =>
+      parseDocument(
+        JSON.stringify({
+          version: 3,
+          widgets: { w: { owner: "o", db: "d", view: "chart", chart: value } },
+          layout: [],
+        }),
+      ).widgets.w!;
+    const bar = {
+      kind: "bar",
+      groupBy: { by: "property", key: "type" },
+      measure: { aggregate: "avg", key: "price" },
+    };
+    expect(chart(bar)).toMatchObject({ view: "chart", chart: bar });
+    expect(
+      chart({
+        kind: "stat",
+        groupBy: { by: "query", key: "ignored" },
+        measure: { aggregate: "count", key: "ignored" },
+      }).chart,
+    ).toEqual({
+      kind: "stat",
+      groupBy: { by: "query" },
+      measure: { aggregate: "count" },
+    });
+    for (const broken of [
+      "bar",
+      { ...bar, kind: "pie" },
+      { ...bar, groupBy: "type" },
+      { ...bar, groupBy: { by: "property", key: "" } },
+      { ...bar, groupBy: { by: "value" } },
+      { ...bar, measure: { aggregate: "median", key: "price" } },
+      { ...bar, measure: { aggregate: "sum" } },
+      { ...bar, measure: null },
+    ]) {
+      expect(chart(broken).chart).toBeUndefined();
+    }
+  });
+
   it("refuses a document from a newer Studio", () => {
-    expect(() => parseDocument('{"version":3,"widgets":{}}')).toThrow(
+    expect(() => parseDocument('{"version":4,"widgets":{}}')).toThrow(
       NewerDashboardError,
     );
     expect(parseDocument('{"version":2,"widgets":{}}')).toEqual(
@@ -252,7 +292,7 @@ describe("dashboardDocument", () => {
     ]);
   });
 
-  it("migrates version 1 widgets (one query, fixed view, charts as tables)", () => {
+  it("migrates version 1 widgets (one query, fixed view)", () => {
     const v1 = (view: string) => ({
       id: view,
       title: view,
@@ -268,10 +308,10 @@ describe("dashboardDocument", () => {
         widgets: [v1("stat"), v1("chart"), v1("graph"), v1("table")],
       }),
     );
-    expect(doc.version).toBe(2);
+    expect(doc.version).toBe(3);
     expect(orderedWidgets(doc).map(({ widget }) => widget.view)).toEqual([
       "scalar",
-      "table",
+      "chart",
       "graph",
       "table",
     ]);

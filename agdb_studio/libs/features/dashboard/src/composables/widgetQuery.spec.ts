@@ -229,6 +229,17 @@ describe("useWidgetQuery", () => {
     await flushPromises();
     expect(data.revision.value).toBe(revision + 2);
     expect(data.query.value!.colors?.rows).toEqual({ r1: 2 });
+    // A chart edited elsewhere (the editor, another user) is shown too.
+    const chart = {
+      kind: "donut",
+      groupBy: { by: "query" },
+      measure: { aggregate: "count" },
+    } as const;
+    widget.value = { ...widget.value, chart };
+    await flushPromises();
+    expect(data.revision.value).toBe(revision + 3);
+    expect(data.query.value!.chart).toEqual(chart);
+    expect(data.displayChanged.value).toBe(false);
     expect(executeDbQueries).toHaveBeenCalledTimes(2);
   });
 

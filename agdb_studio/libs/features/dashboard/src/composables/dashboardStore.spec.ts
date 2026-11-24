@@ -379,7 +379,7 @@ describe("dashboardStore", () => {
 
   it("does not let a pin overwrite a dashboard saved by a newer Studio", async () => {
     client.value.dashboard_get.mockResolvedValueOnce({
-      data: { ...ops, config: '{"version":3,"widgets":{}}', updated: 1 },
+      data: { ...ops, config: '{"version":4,"widgets":{}}', updated: 1 },
     });
     await expect(store.appendWidgets(ops, [widget("z")])).rejects.toThrow(
       "newer agdb Studio",

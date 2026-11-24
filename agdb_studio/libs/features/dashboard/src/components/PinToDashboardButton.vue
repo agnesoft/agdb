@@ -120,7 +120,7 @@ const pin = async () => {
       }
       /* v8 ignore next -- @preserve: the button is disabled without a query */
       if (!query.value) return false;
-      // The whole query: its rows, colours, the view and pins shown now.
+      // The whole query: its rows, colours, the view, chart and pins shown now.
       const widget = widgetFromQuery(
         createWidget({
           owner: props.owner,
@@ -160,7 +160,7 @@ const pin = async () => {
     :disabled="!pinnable"
     :title="
       pinnable
-        ? 'Add this query (exec and context rows, colours, view, pinned details) to a dashboard'
+        ? 'Add this query (exec and context rows, colours, view, chart, pinned details) to a dashboard'
         : hasQuery
           ? 'Finish or remove the rows that cannot run yet to add them to a dashboard'
           : 'Write a query in the exec tab to add it to a dashboard'

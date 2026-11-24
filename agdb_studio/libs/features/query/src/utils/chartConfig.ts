@@ -1,5 +1,4 @@
-import type { QueryResult } from "@agnesoft/agdb_api";
-import { convertToNativeValue } from "@agnesoft/agdb_api";
+import type { DbValue, QueryResult } from "@agnesoft/agdb_api";
 import { dbValueToString, dedupeResultElements } from "./graphDataUtils";
 
 export const CHART_KINDS = ["bar", "line", "donut", "stat"] as const;
@@ -74,6 +73,10 @@ export const numericValue = (native: unknown): number | undefined => {
   return undefined;
 };
 
+/** The number in a scalar `DbValue`, if it holds one. */
+export const dbValueNumber = (value: DbValue): number | undefined =>
+  value === "None" ? undefined : numericValue(Object.values(value)[0]);
+
 export type ResultKey = {
   key: string;
   /** Elements that have the key. */
@@ -106,7 +109,7 @@ export const resultKeys = (results: QueryResult[]): ResultKey[] => {
       };
       entry.count++;
       entry.values.add(dbValueToString(kv.value));
-      if (numericValue(convertToNativeValue(kv.value)) === undefined) {
+      if (dbValueNumber(kv.value) === undefined) {
         entry.textual = true;
       } else entry.numeric = true;
       keys.set(key, entry);

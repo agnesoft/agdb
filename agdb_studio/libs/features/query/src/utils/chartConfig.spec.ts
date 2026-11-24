@@ -1,10 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
+import type { DbValue } from "@agnesoft/agdb_api";
 vi.mock("@agnesoft/agdb_api", async (importOriginal) => {
   return await importOriginal<typeof import("@agnesoft/agdb_api")>();
 });
 import {
   chartLabel,
   copyChartConfig,
+  dbValueNumber,
   isSplit,
   measureLabel,
   numericValue,
@@ -48,6 +50,18 @@ describe("chartConfig", () => {
     expect(numericValue("")).toBeUndefined();
     expect(numericValue("abc")).toBeUndefined();
     expect(numericValue(true)).toBeUndefined();
+  });
+
+  it.each<[DbValue, number | undefined]>([
+    [{ I64: -2 }, -2],
+    [{ U64: 3 }, 3],
+    [{ F64: 1.5 }, 1.5],
+    [{ String: "4" }, 4],
+    [{ String: "true" }, undefined],
+    [{ VecI64: [1] }, undefined],
+    ["None", undefined],
+  ])("reads the number of %j", (value, expected) => {
+    expect(dbValueNumber(value)).toBe(expected);
   });
 
   it("lists the keys of the results once per element", () => {

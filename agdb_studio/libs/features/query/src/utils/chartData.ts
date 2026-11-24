@@ -1,8 +1,8 @@
 import type { DbElement, QueryResult } from "@agnesoft/agdb_api";
-import { convertToNativeValue } from "@agnesoft/agdb_api";
 import { dbValueToString, dedupeResultElements } from "./graphDataUtils";
 import { maxOf, minOf } from "./chartScale";
 import {
+  dbValueNumber,
   numericValue,
   type ChartAggregate,
   type ChartConfig,
@@ -98,9 +98,7 @@ const measuredValue = (
 ): number | undefined => {
   if (measure.aggregate === "count") return undefined;
   const raw = valueOf(element, measure.key);
-  return raw === undefined
-    ? undefined
-    : numericValue(convertToNativeValue(raw));
+  return raw === undefined ? undefined : dbValueNumber(raw);
 };
 
 /** Elements grouped by their value of `key`; the rest are counted as skipped. */

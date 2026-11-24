@@ -1,6 +1,7 @@
 import type { ResultView } from "@agdb-studio/query/src/utils/resultShape";
 import type { ColorConfig } from "@agdb-studio/query/src/utils/graphColorRules";
 import type { PinnedDetail } from "@agdb-studio/query/src/composables/types";
+import type { ChartConfig } from "@agdb-studio/query/src/utils/chartConfig";
 
 export const WIDGET_COLS = [1, 2, 3, 4] as const;
 export const WIDGET_ROWS = [1, 2, 3] as const;
@@ -15,6 +16,7 @@ export const DEFAULT_WIDGET_SIZE: Readonly<WidgetSize> = { cols: 2, rows: 1 };
 export const RESULT_VIEWS = [
   "graph",
   "table",
+  "chart",
   "json",
   "scalar",
 ] as const satisfies readonly ResultView[];
@@ -47,6 +49,8 @@ export type Widget = {
   colors?: ColorConfig;
   /** Element details pinned on the graph, with where their cards were dragged. */
   pins?: PinnedDetail[];
+  /** What the chart view shows. */
+  chart?: ChartConfig;
   /** Optional auto refresh interval, see `isRefreshInterval` in utils/refresh.ts. */
   refreshSeconds?: number;
 };
@@ -56,7 +60,7 @@ export type WidgetLayout = WidgetSize & { id: string };
 
 /** The document stored as the server-side dashboard `config`. */
 export type DashboardDocument = {
-  version: 2;
+  version: 3;
   /** Widget content by widget id. */
   widgets: Record<string, Widget>;
   /** Grid order and sizes; every widget has exactly one entry. */

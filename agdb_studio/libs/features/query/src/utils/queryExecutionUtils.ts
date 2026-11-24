@@ -106,7 +106,12 @@ const getStepArgs = (step: QueryStepModel): unknown[] => {
     return [entries.map((entry) => String(entry[0]?.value ?? ""))];
   }
 
-  if (type.endsWith(".ids")) {
+  // insert().edges() takes several ids in from() and to(); search() one.
+  if (
+    type.endsWith(".ids") ||
+    type === "insert.edges.from" ||
+    type === "insert.edges.from.to"
+  ) {
     const ids = parseEntriesToIds(entries);
     return [ids.length === 1 ? ids[0] : ids];
   }

@@ -71,7 +71,7 @@ const run = async (
   await nextTick();
 };
 
-const mountResults = (props: { keepView?: boolean } = {}) =>
+const mountResults = (props: { keepView?: boolean; compact?: boolean } = {}) =>
   mount(QueryResults, {
     props,
     attachTo: document.body,
@@ -565,6 +565,132 @@ describe("QueryResults", () => {
     await wrapper.get("[data-testid=colors-toggle]").trigger("click");
     await wrapper.get("[data-testid=colors-each-query]").trigger("click");
     expect(query.value.colors?.rows).toEqual({ a: 0, b: 1 });
+    wrapper.unmount();
+  });
+  it("charts the results, starting from a suggested chart kept in the store", async () => {
+    const wrapper = mountResults();
+    const query = store.getQuery("q1")!;
+    query.value.rows.exec = ["a", "b"].map((id) => ({
+      id,
+      steps: [{ id: `s${id}`, type: "select" as const }],
+    }));
+    store.setQueryResults(
+      "q1",
+      "exec",
+      [
+        { result: 3, elements: [] },
+        { result: 5, elements: [] },
+      ],
+      { stepTypes: ["select"], rowIds: ["a", "b"] },
+    );
+    await nextTick();
+    expect(wrapper.find("[data-testid=colors-toggle]").exists()).toBe(true);
+    await wrapper.get("[data-testid=view-chart]").trigger("click");
+    expect(query.value.view).toBe("chart");
+    // A batch of counts: one bar per query.
+    expect(query.value.chart).toEqual({
+      kind: "bar",
+      groupBy: { by: "query" },
+      measure: { aggregate: "count" },
+    });
+    expect(wrapper.get("[data-testid=chart-title]").text()).toBe(
+      "Count by query",
+    );
+    expect(wrapper.get("[data-testid=chart-data-table]").text()).toContain(
+      "#1 select3",
+    );
+    // Colours are for the graph.
+    expect(wrapper.find("[data-testid=colors-toggle]").exists()).toBe(false);
+    await wrapper.get("[data-testid=chart-kind-donut]").trigger("click");
+    expect(query.value.chart?.kind).toBe("donut");
+    // Picking the chart again keeps the one set up.
+    await wrapper.get("[data-testid=view-table]").trigger("click");
+    await wrapper.get("[data-testid=view-chart]").trigger("click");
+    expect(query.value.chart?.kind).toBe("donut");
+    wrapper.unmount();
+  });
+
+  it("suggests a chart once there are results, and again for other results", async () => {
+    const wrapper = mountResults();
+    const query = store.getQuery("q1")!;
+    const typed = (id: number, team: string) => ({
+      id,
+      from: 0,
+      to: 0,
+      values: [{ key: { String: "team" }, value: { String: team } }],
+    });
+    // Before the first run there is nothing to fit a chart to.
+    await wrapper.get("[data-testid=view-chart]").trigger("click");
+    expect(query.value.chart).toBeUndefined();
+    await run([
+      {
+        result: 3,
+        elements: [typed(1, "red"), typed(2, "red"), typed(3, "blue")],
+      },
+    ]);
+    await wrapper.get("[data-testid=view-table]").trigger("click");
+    await wrapper.get("[data-testid=view-chart]").trigger("click");
+    expect(query.value.chart).toEqual({
+      kind: "bar",
+      groupBy: { by: "property", key: "team" },
+      measure: { aggregate: "count" },
+    });
+    // A chart of keys the results lack starts over; one that fits is kept.
+    store.setChart("q1", {
+      kind: "donut",
+      groupBy: { by: "property", key: "colour" },
+      measure: { aggregate: "count" },
+    });
+    await wrapper.get("[data-testid=view-table]").trigger("click");
+    await wrapper.get("[data-testid=view-chart]").trigger("click");
+    expect(query.value.chart?.groupBy).toEqual({ by: "property", key: "team" });
+    store.setChart("q1", {
+      kind: "stat",
+      groupBy: { by: "query" },
+      measure: { aggregate: "sum", key: "team" },
+    });
+    await wrapper.get("[data-testid=view-table]").trigger("click");
+    await wrapper.get("[data-testid=view-chart]").trigger("click");
+    expect(query.value.chart?.kind).toBe("stat");
+    // A run without elements keeps the chart set up (it says what is missing).
+    store.setChart("q1", {
+      kind: "bar",
+      groupBy: { by: "property", key: "colour" },
+      measure: { aggregate: "count" },
+    });
+    await run([{ result: 0, elements: [] }]);
+    await wrapper.get("[data-testid=view-table]").trigger("click");
+    await wrapper.get("[data-testid=view-chart]").trigger("click");
+    expect(query.value.chart?.groupBy).toEqual({
+      by: "property",
+      key: "colour",
+    });
+    wrapper.unmount();
+  });
+
+  it("opens the chart settings in a popover when compact", async () => {
+    store.setView("q1", "chart");
+    const wrapper = mountResults({ compact: true });
+    await run([{ result: 1, elements: [el(1)] }]);
+    expect(wrapper.find("[data-testid=chart-settings]").exists()).toBe(false);
+    expect(wrapper.find("[data-testid=chart-settings-toggle]").exists()).toBe(
+      true,
+    );
+    wrapper.unmount();
+  });
+
+  it("charts without a query store entry", async () => {
+    const wrapper = mount(QueryResults, {
+      global: { provide: { queryId: ref(undefined) } },
+    });
+    await wrapper.get("[data-testid=view-chart]").trigger("click");
+    expect(wrapper.get("[data-testid=chart-empty]").text()).toMatch(
+      /run the query/,
+    );
+    // Nowhere to keep a chart: the settings change nothing.
+    const line = () => wrapper.get("[data-testid=chart-kind-line]");
+    await line().trigger("click");
+    expect(line().attributes("aria-pressed")).toBe("false");
     wrapper.unmount();
   });
 });

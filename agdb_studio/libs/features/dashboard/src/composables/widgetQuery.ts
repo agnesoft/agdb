@@ -181,15 +181,17 @@ export const useWidgetQuery = (widget: Ref<Widget>) => {
     },
     { immediate: true },
   );
-  // Colours, view and pins only change how the results show: no re-run.
+  // Colours, view, pins and the chart only change how the results show: no
+  // re-run.
   const display = computed(() =>
     JSON.stringify({
       colors: widget.value.colors,
       view: widget.value.view,
       pins: widget.value.pins,
+      chart: widget.value.chart,
     }),
   );
-  /** Shows the results with the widget's own colours and view again. */
+  /** Shows the results with the widget's own colours, view and chart again. */
   const resetDisplay = () => {
     seedDisplay(queryId.value, widget.value);
     revision.value++;
@@ -201,11 +203,11 @@ export const useWidgetQuery = (widget: Ref<Widget>) => {
   });
 
   const query = computed(() => queryStore.getQuery(queryId.value)?.value);
-  /** Colours, view or pinned details were changed in the results and are not on the widget. */
+  /** Colours, view, pinned details or the chart were changed in the results and are not on the widget. */
   const displayChanged = computed(
     () => !!query.value && displayDiffers(widget.value, query.value),
   );
-  /** The widget with the colours, view and pins shown in its results. */
+  /** The widget with the colours, view, pins and chart shown in its results. */
   const shownWidget = (): Widget =>
     /* v8 ignore next -- @preserve: the entry lives as long as the widget */
     query.value ? withDisplay(widget.value, query.value) : widget.value;

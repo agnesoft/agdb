@@ -1,5 +1,6 @@
 import type { ColorConfig } from "../utils/graphColorRules";
 import type { ResultView } from "../utils/resultShape";
+import type { ChartConfig } from "../utils/chartConfig";
 import type {
   DbKeyValue,
   QueryResult,
@@ -139,6 +140,8 @@ export type Query = {
   view?: ResultView;
   /** Elements whose details stay shown on the graph, in pinning order. */
   pins?: PinnedDetail[];
+  /** What the chart view shows; unset until the chart view is first picked. */
+  chart?: ChartConfig;
 } & AddQueryParams;
 
 /** A point on screen, in px. */

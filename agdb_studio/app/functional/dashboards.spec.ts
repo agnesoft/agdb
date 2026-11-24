@@ -309,6 +309,77 @@ test.describe("Dashboards", () => {
     );
   });
 
+  test("builds a chart widget and changes the chart on the dashboard", async ({
+    page,
+  }) => {
+    const { store, add } = await mockDashboardApi(page);
+    add(ME, "ops");
+    const team = (id: number, name: string) => ({
+      id,
+      from: null,
+      to: null,
+      values: [kv("team", name)],
+    });
+    await page.route(DB_EXEC_API, (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify([
+          {
+            result: 3,
+            elements: [team(1, "red"), team(2, "red"), team(3, "blue")],
+          },
+        ]),
+      }),
+    );
+    await gotoAndWaitForLoad(page, "/studio/dashboards/testuser/ops");
+
+    // Picking "Chart" shows a chart that fits the results at once.
+    await page.getByTestId("dashboard-add-widget").click();
+    const editor = page.getByTestId("widget-editor");
+    await editor.getByTestId("widget-title").fill("Teams");
+    await addSteps(page, ["search", "elements"]);
+    await expect(editor.getByText("result: 3")).toBeVisible();
+    await editor.getByTestId(testIds.VIEW_CHART).click();
+    await expect(editor.getByTestId("chart-title")).toHaveText("Count by team");
+    await expect(editor.getByTestId("chart-bar-0")).toHaveAttribute(
+      "aria-label",
+      "red: 2",
+    );
+    await editor.getByTestId("chart-kind-donut").click();
+    await expect(editor.getByTestId("chart-donut")).toBeVisible();
+    await editor.getByTestId("widget-editor-done").click();
+    await expect(editor).toBeHidden();
+
+    const savedWidget = () =>
+      Object.values(JSON.parse(store.get("testuser/ops")!.config).widgets)[0];
+    await expect.poll(savedWidget).toMatchObject({
+      view: "chart",
+      chart: {
+        kind: "donut",
+        groupBy: { by: "property", key: "team" },
+        measure: { aggregate: "count" },
+      },
+    });
+    expect(JSON.parse(store.get("testuser/ops")!.config).version).toBe(3);
+
+    // On the dashboard the settings sit behind a button; changes wait for Save.
+    const grid = page.getByTestId("dashboard-grid");
+    await expect(grid.getByTestId("chart-donut")).toBeVisible();
+    await grid.getByTestId("chart-settings-toggle").click();
+    await grid.getByTestId("chart-kind-bar").click();
+    await expect(grid.getByTestId("chart-bar")).toBeVisible();
+    await expect(page.getByTestId("widget-view-changed")).toBeVisible();
+    await page.getByTestId("widget-view-save").click();
+    await expect.poll(savedWidget).toMatchObject({ chart: { kind: "bar" } });
+
+    // Reload: the chart comes back as saved.
+    await page.reload();
+    await expect(
+      page.getByTestId("dashboard-grid").getByTestId("chart-bar-1"),
+    ).toHaveAttribute("aria-label", "blue: 1");
+  });
+
   test("pins the query page's query with its view to a new dashboard", async ({
     page,
   }) => {

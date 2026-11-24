@@ -771,3 +771,70 @@ test.describe("Query link", () => {
     await expect(await notifications(page)).toContainText("Link too long");
   });
 });
+
+test.describe("Query charts", () => {
+  const sale = (id: number, day: string, price: number) => ({
+    id,
+    from: null,
+    to: null,
+    values: [
+      { key: { String: "day" }, value: { String: day } },
+      { key: { String: "price" }, value: { I64: price } },
+    ],
+  });
+
+  test.beforeEach(async ({ page }) => {
+    await mockLogin(page);
+    await mockDatabaseListApi(page);
+    await mockDbUserListApi(page);
+    // One result per query of the batch: books, then pens.
+    await mockDbExecApi(page, [
+      {
+        result: 3,
+        elements: [
+          sale(1, "2026-01-01", 10),
+          sale(2, "2026-01-02", 30),
+          sale(3, "2026-01-03", 20),
+        ],
+      },
+      {
+        result: 2,
+        elements: [sale(4, "2026-01-02", 5), sale(5, "2026-01-03", 15)],
+      },
+    ]);
+    await gotoAndWaitForLoad(page, QUERY_PAGE);
+  });
+
+  test("draws a line per query of the batch", async ({ page }) => {
+    // The mock answers any batch the same: books, then pens.
+    await addSteps(page, 0, ["select", "node_count"]);
+    await addQueryButton(page).click();
+    await addSteps(page, 1, ["select", "node_count"]);
+    await expect(rows(page)).toHaveCount(2);
+    await page.getByRole("button", { name: "Run query" }).click();
+    await page.getByTestId(testIds.VIEW_CHART).click();
+
+    await page.getByTestId("chart-kind-line").click();
+    await page.getByTestId("chart-aggregate").selectOption("sum");
+    await page.getByTestId("chart-group-by").selectOption("day");
+    await page.getByTestId("chart-split").selectOption("query");
+    await expect(page.getByTestId("chart-title")).toHaveText(
+      "Sum of price by day, per query",
+    );
+    await expect(page.getByTestId("chart-line-legend")).toContainText("#1");
+    await expect(page.getByTestId("chart-line-legend")).toContainText("#2");
+
+    // Every query's value at the hovered day; pens have none on the first.
+    const plot = page.getByTestId("chart-line-plot");
+    await plot.focus();
+    await page.keyboard.press("ArrowRight");
+    const tooltip = page.getByTestId("chart-tooltip");
+    await expect(tooltip).toContainText("2026-01-01");
+    await expect(tooltip.locator("li")).toHaveText([/10$/, /–$/]);
+
+    // Queries are no ordered axis: grouped by query, the chart is bars.
+    await page.getByTestId("chart-group-by").selectOption({ index: 0 });
+    await expect(page.getByTestId("chart-bar")).toBeVisible();
+    await expect(page.getByTestId("chart-kind-line")).toBeDisabled();
+  });
+});

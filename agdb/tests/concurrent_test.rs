@@ -34,7 +34,12 @@ fn pre_grow(db: &DbMemory) {
     // during resize deadlocks against barrier-blocked readers.)
     db.transaction_mut(|t| -> Result<(), DbError> {
         let root = t
-            .exec_mut(QueryBuilder::insert().nodes().aliases("_warmup_root").query())?
+            .exec_mut(
+                QueryBuilder::insert()
+                    .nodes()
+                    .aliases("_warmup_root")
+                    .query(),
+            )?
             .ids();
         let ids = t
             .exec_mut(
@@ -63,12 +68,8 @@ fn pre_grow(db: &DbMemory) {
         .ids();
     db.exec_mut(QueryBuilder::remove().ids(warmup_ids).query())
         .unwrap();
-    db.exec_mut(
-        QueryBuilder::remove()
-            .aliases("_warmup_root")
-            .query(),
-    )
-    .unwrap();
+    db.exec_mut(QueryBuilder::remove().aliases("_warmup_root").query())
+        .unwrap();
 }
 
 /// Creates a DbMemory with a "root" node and 10 data nodes connected to
@@ -80,12 +81,7 @@ fn setup_db() -> DbMemory {
         .unwrap();
     db.transaction_mut(|t| -> Result<(), DbError> {
         let values: Vec<Vec<agdb::DbKeyValue>> = (0..10)
-            .map(|i| {
-                vec![
-                    ("name", format!("node_{i}")).into(),
-                    ("value", i).into(),
-                ]
-            })
+            .map(|i| vec![("name", format!("node_{i}")).into(), ("value", i).into()])
             .collect();
         let ids = t
             .exec_mut(QueryBuilder::insert().nodes().values(values).query())?
@@ -127,9 +123,7 @@ fn snapshot_isolation_reader_sees_pre_commit_state() {
             wc.wait(); // wait for writer to commit
 
             // Reader still sees the old node count
-            let count = t
-                .exec(QueryBuilder::select().node_count().query())?
-                .result;
+            let count = t.exec(QueryBuilder::select().node_count().query())?.result;
             Ok(count)
         })
         .unwrap()
@@ -271,9 +265,7 @@ fn writer_serialization_all_writes_visible() {
         h.join().unwrap();
     }
 
-    let aliases = db
-        .exec(QueryBuilder::select().aliases().query())
-        .unwrap();
+    let aliases = db.exec(QueryBuilder::select().aliases().query()).unwrap();
     assert_eq!(aliases.result, (n_writers * nodes_per_writer) as u64);
 
     let count = db
@@ -579,9 +571,7 @@ fn mixed_read_write_stress() {
                 barrier.wait();
                 for _ in 0..iterations {
                     db.transaction(|t| -> Result<(), DbError> {
-                        let count = t
-                            .exec(QueryBuilder::select().node_count().query())?
-                            .result;
+                        let count = t.exec(QueryBuilder::select().node_count().query())?.result;
                         assert!(count >= 11);
                         t.exec(QueryBuilder::search().from("root").query())?;
                         Ok(())
@@ -602,10 +592,7 @@ fn mixed_read_write_stress() {
                     db.exec_mut(
                         QueryBuilder::insert()
                             .nodes()
-                            .values([[
-                                ("writer", w as i64).into(),
-                                ("iter", i as i64).into(),
-                            ]])
+                            .values([[("writer", w as i64).into(), ("iter", i as i64).into()]])
                             .query(),
                     )
                     .unwrap();
@@ -731,9 +718,7 @@ fn concurrent_transactions_read_consistency() {
                 barrier.wait();
                 while running.load(Ordering::Relaxed) {
                     db.transaction(|t| -> Result<(), DbError> {
-                        let count = t
-                            .exec(QueryBuilder::select().node_count().query())?
-                            .result;
+                        let count = t.exec(QueryBuilder::select().node_count().query())?.result;
                         let search = t.exec(QueryBuilder::search().from("root").query())?;
                         // Nodes have positive IDs, edges have negative IDs
                         let node_count_in_search =
@@ -803,16 +788,9 @@ fn writer_transaction_atomicity() {
                 barrier.wait();
                 while running.load(Ordering::Relaxed) {
                     db.transaction(|t| -> Result<(), DbError> {
-                        let count = t
-                            .exec(QueryBuilder::select().node_count().query())?
-                            .result;
+                        let count = t.exec(QueryBuilder::select().node_count().query())?.result;
                         let edges = t
-                            .exec(
-                                QueryBuilder::select()
-                                    .edge_count_from()
-                                    .ids("root")
-                                    .query(),
-                            )?
+                            .exec(QueryBuilder::select().edge_count_from().ids("root").query())?
                             .elements[0]
                             .values[0]
                             .value

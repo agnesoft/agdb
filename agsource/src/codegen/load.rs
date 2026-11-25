@@ -1814,6 +1814,7 @@ pub struct S<T> {
                                 vec![("a", generic("A")), ("b", unresolved("B"))]
                             ),
                         ],
+                        unsafety: false
                     })
                 );
             }

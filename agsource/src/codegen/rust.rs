@@ -912,6 +912,9 @@ type Output<T> = <T>::Output<u8>;
     {
         let j = 1;
     }
+    unsafe {
+        let j = 1;
+    }
     let g = |x: u8| -> u8 {
         x
     };

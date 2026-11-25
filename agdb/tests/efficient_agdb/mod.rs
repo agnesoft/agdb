@@ -116,12 +116,7 @@ fn create_post(db: &Db, user: DbId, post: &Post) -> Result<DbId, DbError> {
     })
 }
 
-fn create_comment(
-    db: &Db,
-    user: DbId,
-    parent: DbId,
-    comment: &Comment,
-) -> Result<DbId, DbError> {
+fn create_comment(db: &Db, user: DbId, parent: DbId, comment: &Comment) -> Result<DbId, DbError> {
     db.transaction_mut(|t| -> Result<DbId, DbError> {
         let comment = t
             .exec_mut(QueryBuilder::insert().element(comment).query())?
@@ -346,8 +341,7 @@ fn efficient_agdb() -> Result<(), DbError> {
     let reply_comment = Comment {
         body: "Indeed it is".to_string(),
     };
-    let reply_comment_id =
-        create_comment(&db, user_id, comment_id, &reply_comment)?;
+    let reply_comment_id = create_comment(&db, user_id, comment_id, &reply_comment)?;
 
     like(&db, user_id, post_id)?;
     like(&db, user_id, comment_id)?;

@@ -53,7 +53,6 @@ impl<P: Platform> MemoryStorageImpl<P> {
         &self.buffer
     }
 
-
     /// Constructs the storage `name` loading the file `name` from the file
     /// system of the `platform` if it exists, see [`StorageData::new()`].
     pub fn with_platform(platform: Arc<P>, name: &str) -> Result<Self, DbError> {

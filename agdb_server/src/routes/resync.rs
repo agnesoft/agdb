@@ -286,8 +286,7 @@ async fn stage_snapshot_files(
                 })
                 .await??;
             } else {
-                tokio::task::spawn_blocking(move || db_arc.backup(&staging_path))
-                    .await??;
+                tokio::task::spawn_blocking(move || db_arc.backup(&staging_path)).await??;
             }
         }
 
@@ -775,8 +774,7 @@ async fn stage_single_db(
             })
             .await??;
         } else {
-            tokio::task::spawn_blocking(move || db_arc.backup(&staging_path))
-                .await??;
+            tokio::task::spawn_blocking(move || db_arc.backup(&staging_path)).await??;
         }
     }
 

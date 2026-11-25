@@ -275,9 +275,7 @@ impl DbPool {
     ) -> Result<(), ServerError> {
         let current_path = db_file(owner, db, &self.config);
         if db_type == DbKind::Memory {
-            user_db
-                .0
-                .backup(current_path.to_string_lossy().as_ref())?;
+            user_db.0.backup(current_path.to_string_lossy().as_ref())?;
         }
         *user_db = UserDb::new(
             current_path.to_string_lossy().as_ref(),
@@ -352,10 +350,7 @@ impl DbPool {
         username: &str,
         queries: Queries,
     ) -> ServerResult<Vec<QueryResult>> {
-        let (r, audit) = self
-            .db(owner, db)
-            .await?
-            .exec_mut(queries, username)?;
+        let (r, audit) = self.db(owner, db).await?.exec_mut(queries, username)?;
 
         if !audit.is_empty() {
             audit::append(&db_audit_dir(owner, db, &self.config), &audit)?;

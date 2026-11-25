@@ -300,6 +300,13 @@ impl<'a, S: StorageData> Writer<'a, S> {
         self.overlay.pages.len()
     }
 
+    /// Returns the page numbers of all dirty pages in the overlay.
+    /// Used by the MVCC layer to update `page_epochs` even when no
+    /// readers were active (so old-page data was not captured).
+    pub(crate) fn dirty_pages(&self) -> Vec<u64> {
+        self.overlay.pages.iter().map(|&(page, _)| page).collect()
+    }
+
     fn apply(&mut self) -> Result<(), DbError> {
         self.touched = true;
 

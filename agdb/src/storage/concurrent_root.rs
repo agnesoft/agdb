@@ -9,10 +9,10 @@
 //! per-page epoch tracking, a version store for old pages, and reader
 //! epoch registration for version-store trimming.
 
-use super::pages::{Reader, View};
-use super::root::{Meta, Root};
 use super::StorageData;
 use super::StorageSlice;
+use super::pages::{Reader, View};
+use super::root::{Meta, Root};
 use crate::DbError;
 use crate::DbErrorType;
 use crate::Transaction;
@@ -20,7 +20,7 @@ use crate::TransactionMut;
 use crate::transaction::ReadView;
 use std::borrow::Cow;
 use std::cell::UnsafeCell;
-use std::collections::BTreeSet;
+use std::collections::BTreeMap;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Mutex, RwLock};
@@ -140,7 +140,10 @@ pub(crate) struct ConcurrentRoot<S: StorageData> {
     active_readers: AtomicU64,
 
     /// The snapshot epochs held by active readers, for trimming.
-    reader_epochs: Mutex<BTreeSet<u64>>,
+    /// Maps epoch → count of readers at that epoch. Using a counted
+    /// map instead of a set prevents dedup: two readers at the same
+    /// epoch must both complete before that epoch can be trimmed.
+    reader_epochs: Mutex<BTreeMap<u64, usize>>,
 
     /// Length of the committed storage, used for epoch-reader bounds.
     storage_len: AtomicU64,
@@ -195,7 +198,7 @@ impl<S: StorageData> ConcurrentRoot<S> {
             page_epochs: UnsafeCell::new(page_epochs),
             versions: Mutex::new(VersionStore::new()),
             active_readers: AtomicU64::new(0),
-            reader_epochs: Mutex::new(BTreeSet::new()),
+            reader_epochs: Mutex::new(BTreeMap::new()),
             storage_len: AtomicU64::new(storage_len),
             resizing: std::sync::atomic::AtomicBool::new(false),
             epoch_reads,
@@ -234,10 +237,12 @@ impl<S: StorageData> ConcurrentRoot<S> {
         // storage_len is updated BEFORE meta, so len >= what meta needs.
         let snap_len = self.storage_len.load(Ordering::Acquire);
 
-        self.reader_epochs
+        *self
+            .reader_epochs
             .lock()
             .unwrap()
-            .insert(snap_epoch);
+            .entry(snap_epoch)
+            .or_insert(0) += 1;
 
         Some((
             ReadGuard {
@@ -268,8 +273,7 @@ impl<S: StorageData> ConcurrentRoot<S> {
             let view = SnapshotView { guard: &guard };
             // Borrow from the Arc — the Arc lives for this scope,
             // which outlives the Transaction.
-            let txn =
-                Transaction::new(ReadView::Concurrent(&view), Cow::Borrowed(&meta_arc));
+            let txn = Transaction::new(ReadView::Concurrent(&view), Cow::Borrowed(&meta_arc));
             return f(&txn);
         }
         // Not epoch_reads, or resize in progress — use locked path.
@@ -316,17 +320,23 @@ impl<S: StorageData> ConcurrentRoot<S> {
         let mut transaction = TransactionMut::new(root_mut);
         let result = f(&mut transaction)?;
 
-        // Capture old pages before commit (for version store), but only
-        // if there are active epoch readers that need snapshot data.
-        // When no readers are active, we skip the capture entirely —
-        // this avoids the per-page read + allocation overhead on the
-        // common single-threaded write path.
+        // Always record which pages this transaction modified so that
+        // post_commit can update page_epochs (needed even when no readers
+        // are active — a reader arriving between commit and epoch bump
+        // must see the correct page_epochs).
+        //
+        // Only capture the *old page data* when there are active epoch
+        // readers that need snapshot data for the version store. This
+        // avoids the per-page read + allocation overhead on the common
+        // single-threaded write path.
         let has_readers = self.active_readers.load(Ordering::Acquire) > 0;
+        let dirty_pages = if self.epoch_reads && !transaction.failed() {
+            transaction.root_view().dirty_pages()
+        } else {
+            Vec::new()
+        };
         let captured = if self.epoch_reads && !transaction.failed() && has_readers {
-            transaction
-                .root_view()
-                .capture_pages()
-                .map_err(E::from)?
+            transaction.root_view().capture_pages().map_err(E::from)?
         } else {
             Vec::new()
         };
@@ -353,7 +363,7 @@ impl<S: StorageData> ConcurrentRoot<S> {
         transaction.commit().map_err(E::from)?;
 
         if self.epoch_reads {
-            self.post_commit(captured);
+            self.post_commit(dirty_pages, captured);
         }
 
         // Clear the resizing flag (if it was set). Must happen after
@@ -368,7 +378,11 @@ impl<S: StorageData> ConcurrentRoot<S> {
 
     /// After a successful commit: populate the version store, bump
     /// epoch, update page epochs, update committed meta.
-    fn post_commit(&self, captured: Vec<(u64, Vec<u8>)>) {
+    ///
+    /// `dirty_pages` — page numbers modified by the transaction (always
+    /// collected). `captured` — old page data (only collected when epoch
+    /// readers were active at capture time).
+    fn post_commit(&self, dirty_pages: Vec<u64>, captured: Vec<(u64, Vec<u8>)>) {
         let new_epoch = self.epoch.load(Ordering::Relaxed) + 1;
 
         let page_epochs = unsafe { &mut *self.page_epochs.get() };
@@ -384,33 +398,31 @@ impl<S: StorageData> ConcurrentRoot<S> {
             page_epochs.resize_with(new_pages, || AtomicU64::new(0));
         }
 
-        // Version store + page epoch updates only when we captured pages
-        // (i.e. readers were active during the commit).
+        // Store old pages in version store when readers were active.
         if !captured.is_empty() {
-            // Store old pages in version store (before updating epoch).
-            let mut versions = self.versions.lock().unwrap();
-            versions.push(new_epoch, captured);
+            self.versions.lock().unwrap().push(new_epoch, captured);
+        }
 
-            // Update per-page epochs.
-            // SAFETY: we hold write_mutex. Epoch readers load these
-            // atomically and only act on pages whose epoch > snap_epoch.
-            for entry in versions
-                .entries
-                .iter()
-                .rev()
-                .take_while(|e| e.epoch == new_epoch)
-            {
-                if (entry.page as usize) < page_epochs.len() {
-                    page_epochs[entry.page as usize].store(new_epoch, Ordering::Release);
-                }
+        // ALWAYS update per-page epochs for every modified page.
+        // This is critical: a reader that registers between our capture
+        // check (active_readers == 0) and the epoch bump MUST see the
+        // correct page_epochs so it knows which pages need the version
+        // store. Without this, that reader would see page_epoch == 0
+        // for a page that was just modified and read stale/concurrent data.
+        //
+        // SAFETY: we hold write_mutex. Epoch readers load these
+        // atomically and only act on pages whose epoch > snap_epoch.
+        for &page in &dirty_pages {
+            if (page as usize) < page_epochs.len() {
+                page_epochs[page as usize].store(new_epoch, Ordering::Release);
             }
+        }
 
-            drop(versions);
-
-            // Trim version store.
+        // Trim version store.
+        if !dirty_pages.is_empty() {
             let oldest = {
                 let epochs = self.reader_epochs.lock().unwrap();
-                epochs.iter().next().copied().unwrap_or(new_epoch)
+                epochs.keys().next().copied().unwrap_or(new_epoch)
             };
             self.versions.lock().unwrap().trim(oldest);
         }
@@ -531,14 +543,15 @@ pub(crate) struct ReadGuard<'a, S: StorageData> {
 
 impl<S: StorageData> Drop for ReadGuard<'_, S> {
     fn drop(&mut self) {
-        self.parent
-            .active_readers
-            .fetch_sub(1, Ordering::AcqRel);
-        self.parent
-            .reader_epochs
-            .lock()
-            .unwrap()
-            .remove(&self.snap_epoch);
+        self.parent.active_readers.fetch_sub(1, Ordering::AcqRel);
+
+        let mut epochs = self.parent.reader_epochs.lock().unwrap();
+        if let Some(count) = epochs.get_mut(&self.snap_epoch) {
+            *count -= 1;
+            if *count == 0 {
+                epochs.remove(&self.snap_epoch);
+            }
+        }
     }
 }
 
@@ -618,9 +631,7 @@ impl<S: StorageData> View for SnapshotView<'_, S> {
                     // ReadGuard (see above).
                     let ptr = bytes.as_ptr();
                     let blen = bytes.len();
-                    StorageSlice::Borrowed(unsafe {
-                        std::slice::from_raw_parts(ptr, blen)
-                    })
+                    StorageSlice::Borrowed(unsafe { std::slice::from_raw_parts(ptr, blen) })
                 }
                 Cow::Owned(vec) => StorageSlice::Owned(vec),
             })
@@ -663,8 +674,8 @@ impl<S: StorageData> SnapshotView<'_, S> {
             let read_len = (read_end - read_start) as usize;
 
             let idx = page as usize;
-            let modified = idx < page_epochs.len()
-                && page_epochs[idx].load(Ordering::Acquire) > snap_epoch;
+            let modified =
+                idx < page_epochs.len() && page_epochs[idx].load(Ordering::Acquire) > snap_epoch;
 
             if !modified {
                 // Page is committed — read from storage.
@@ -681,10 +692,21 @@ impl<S: StorageData> SnapshotView<'_, S> {
                         buffer[buf_offset..buf_offset + copy_len]
                             .copy_from_slice(&old_data[page_offset..page_offset + copy_len]);
                     }
+                } else {
+                    // The version store has no entry for this page at our
+                    // snapshot epoch. This means the old data was not
+                    // captured (no readers were active when the commit ran)
+                    // but a reader registered after the commit. This is a
+                    // consistency violation — return an error rather than
+                    // silently serving zero-filled data.
+                    return Err(DbError::storage(
+                        DbErrorType::NotFound,
+                        format!(
+                            "Snapshot read: version store missing page {page} \
+                             at epoch {snap_epoch} (page_epoch > snap_epoch)"
+                        ),
+                    ));
                 }
-                // If no version found, the page was created after our
-                // snapshot — the reader shouldn't access it (allocator
-                // state at snapshot time wouldn't reference it).
             }
         }
 

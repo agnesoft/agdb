@@ -54,7 +54,12 @@ fn setup_db() -> DbMemory {
 // ---- RwLock baseline -------------------------------------------------------
 
 fn rwlock_write(db: &RwLock<DbMemory>, i: u64) -> u64 {
-    let guard = db.read().unwrap();
+    // Use write() — the old API required &mut self for exec_mut, so
+    // the external RwLock needed exclusive access.  This is what MVCC
+    // replaces; read() here would benchmark "MVCC + useless lock" vs
+    // "MVCC", hiding the actual improvement.
+    #[allow(clippy::readonly_write_lock)]
+    let guard = db.write().unwrap();
     guard
         .exec_mut(
             QueryBuilder::insert()

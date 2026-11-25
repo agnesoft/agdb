@@ -165,7 +165,7 @@ impl Load<'_> {
                 (&e.attrs, self.vis(&e.vis), kind)
             }
             syn::Item::Trait(t) => {
-                if t.modifiers.auto_token.is_some() || t.unsafety.is_some() {
+                if t.modifiers.auto_token.is_some() {
                     self.unsupported(t, "trait");
                 }
                 let generics = self.generics(&t.generics);
@@ -178,10 +178,7 @@ impl Load<'_> {
                 (&t.attrs, self.vis(&t.vis), kind)
             }
             syn::Item::Impl(i) => {
-                if i.modifiers.defaultness.is_some()
-                    || i.modifiers.polarity.is_some()
-                    || i.unsafety.is_some()
-                {
+                if i.modifiers.defaultness.is_some() || i.modifiers.polarity.is_some() {
                     self.unsupported(i, "impl");
                 }
                 let generics = self.generics(&i.generics);
@@ -996,6 +993,7 @@ impl Load<'_> {
                 op: self.op(&UnOp::ALL, UnOp::token, &u.op),
                 expr: self.boxed(&u.expr),
             },
+            syn::Expr::Unsafe(u) => Expr::Block(self.block(&u.block)),
             syn::Expr::While(w) if w.label.is_none() => {
                 let scope = self.scope.len();
                 let cond = self.boxed(&w.cond);
@@ -1821,12 +1819,7 @@ pub struct S<T> {
             #[test]
             fn ir_should_report_unsupported_constructs_and_leave_their_items_out() {
                 let cases = [
-                    ("unsafe trait T {}", "trait `unsafe trait T {}`"),
                     ("trait T { #![allow(x)] }", "attribute `#![allow(x)]`"),
-                    (
-                        "unsafe impl Send for S {}",
-                        "impl `unsafe impl Send for S {}`",
-                    ),
                     ("impl !Send for S {}", "impl `impl !Send for S {}`"),
                     ("const C<T>: u8 = 1;", "item `const C<T>: u8 = 1;`"),
                     ("static mut S: u8 = 0;", "static `static mut S: u8 = 0;`"),

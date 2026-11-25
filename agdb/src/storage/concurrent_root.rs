@@ -1,9 +1,9 @@
 //! MVCC concurrent root: internal synchronization for `DbImpl`.
 //!
 //! Wraps [`Root`] so that read transactions are lock-free (epoch-based)
-//! for [`MemoryStorage`], and serialized via an internal `RwLock` for
-//! file-backed storages. Write transactions are always serialized via a
-//! `Mutex`.
+//! for [`MemoryStorage`] and [`FileStorageMemoryMapped`], and serialized
+//! via an internal `RwLock` for [`FileStorage`]. Write transactions are
+//! always serialized via a `Mutex`.
 //!
 //! The epoch protocol matches the benchmark prototype in `/tmp/s1bench`:
 //! per-page epoch tracking, a version store for old pages, and reader
@@ -154,7 +154,8 @@ pub(crate) struct ConcurrentRoot<S: StorageData> {
     /// the buffer that is about to be reallocated.
     resizing: std::sync::atomic::AtomicBool,
 
-    /// `true` for `MemoryStorage` (epoch reads), `false` otherwise.
+    /// `true` for `MemoryStorage` and `FileStorageMemoryMapped` (epoch
+    /// reads), `false` for `FileStorage`.
     epoch_reads: bool,
 }
 
@@ -176,8 +177,8 @@ impl<S: StorageData> ConcurrentRoot<S> {
             root.storage_mut().disable_spill();
         }
 
-        // Only allocate page_epochs for epoch-based storages (MemoryStorage).
-        // File-backed storages use the RwLock path and never read page_epochs.
+        // Only allocate page_epochs for epoch-based storages (MemoryStorage,
+        // FileStorageMemoryMapped). FileStorage uses the RwLock path.
         let page_epochs = if epoch_reads {
             let num_pages = storage_len.div_ceil(1u64 << page_shift) as usize;
             let capacity = num_pages.max(1024) * 4;
@@ -205,11 +206,8 @@ impl<S: StorageData> ConcurrentRoot<S> {
         }
     }
 
-    // -- Reader (epoch-based, for MemoryStorage) --
+    // -- Reader (epoch-based, for MemoryStorage / FileStorageMemoryMapped) --
 
-    /// Start an epoch-based read. Returns the committed meta (as a
-    /// cheap `Arc` clone) and a [`ReadGuard`] that must live for the
-    /// duration of the read.
     /// Try to start an epoch-based read. Returns `None` when a resize
     /// is in progress (the caller should fall back to the locked path).
     fn begin_read_epoch(&self) -> Option<(ReadGuard<'_, S>, Arc<Meta>)> {
@@ -226,23 +224,36 @@ impl<S: StorageData> ConcurrentRoot<S> {
             return None;
         }
 
-        // Capture epoch first — the epoch is bumped AFTER meta and len
-        // are updated, so snap_epoch <= committed epoch means our meta
-        // and len are at least as recent as this epoch.
-        let snap_epoch = self.epoch.load(Ordering::Acquire);
-        // Arc::clone is ~2ns (atomic increment) vs Meta::clone ~100-300ns.
-        // Meta is updated BEFORE epoch is bumped, so this is consistent
-        // with snap_epoch.
-        let meta = Arc::clone(&self.committed_meta.lock().unwrap());
-        // storage_len is updated BEFORE meta, so len >= what meta needs.
-        let snap_len = self.storage_len.load(Ordering::Acquire);
+        // Load epoch, meta and storage_len under a single
+        // committed_meta lock so the reader sees values from the
+        // same commit.  The writer updates all three under this lock
+        // in post_commit / refresh_mvcc_state, so the triple is
+        // always consistent.
+        //
+        // Also register in reader_epochs while still holding
+        // committed_meta.  The writer's trim (in post_commit) locks
+        // reader_epochs THEN later locks committed_meta — never both
+        // at once — so there is no deadlock.  Registering here
+        // closes the gap where a reader has snap_epoch but isn't yet
+        // visible to trim: by the time the writer updates
+        // committed_meta (after trim + push + page_epochs), this
+        // reader is already registered, so a future trim won't
+        // discard entries it needs.
+        let (snap_epoch, meta, snap_len) = {
+            let committed = self.committed_meta.lock().unwrap();
+            let snap_epoch = self.epoch.load(Ordering::Acquire);
+            let meta = Arc::clone(&committed);
+            let snap_len = self.storage_len.load(Ordering::Acquire);
 
-        *self
-            .reader_epochs
-            .lock()
-            .unwrap()
-            .entry(snap_epoch)
-            .or_insert(0) += 1;
+            *self
+                .reader_epochs
+                .lock()
+                .unwrap()
+                .entry(snap_epoch)
+                .or_insert(0) += 1;
+
+            (snap_epoch, meta, snap_len)
+        };
 
         Some((
             ReadGuard {
@@ -320,22 +331,21 @@ impl<S: StorageData> ConcurrentRoot<S> {
         let mut transaction = TransactionMut::new(root_mut);
         let result = f(&mut transaction)?;
 
-        // Always record which pages this transaction modified so that
-        // post_commit can update page_epochs (needed even when no readers
-        // are active — a reader arriving between commit and epoch bump
-        // must see the correct page_epochs).
+        // Always record which pages this transaction modified and
+        // capture their old contents BEFORE the commit overwrites them.
         //
-        // Only capture the *old page data* when there are active epoch
-        // readers that need snapshot data for the version store. This
-        // avoids the per-page read + allocation overhead on the common
-        // single-threaded write path.
-        let has_readers = self.active_readers.load(Ordering::Acquire) > 0;
+        // Both are needed even when active_readers == 0 right now: a
+        // new epoch reader can register between our check and the
+        // post_commit epoch bump. That reader's snap_epoch predates
+        // the bump, so it will consult the version store for any page
+        // whose page_epoch exceeds its snap_epoch — and those entries
+        // must already exist.
         let dirty_pages = if self.epoch_reads && !transaction.failed() {
             transaction.root_view().dirty_pages()
         } else {
             Vec::new()
         };
-        let captured = if self.epoch_reads && !transaction.failed() && has_readers {
+        let captured = if self.epoch_reads && !transaction.failed() {
             transaction.root_view().capture_pages().map_err(E::from)?
         } else {
             Vec::new()
@@ -398,17 +408,29 @@ impl<S: StorageData> ConcurrentRoot<S> {
             page_epochs.resize_with(new_pages, || AtomicU64::new(0));
         }
 
-        // Store old pages in version store when readers were active.
+        // Trim the version store BEFORE pushing new entries. If we
+        // pushed first and then trimmed with no readers registered,
+        // the oldest epoch would default to new_epoch and immediately
+        // discard the entries we just added — racing with a reader
+        // that is mid-registration (active_readers bumped but not yet
+        // in reader_epochs).
+        if !dirty_pages.is_empty() {
+            let oldest = {
+                let epochs = self.reader_epochs.lock().unwrap();
+                epochs.keys().next().copied().unwrap_or(new_epoch)
+            };
+            self.versions.lock().unwrap().trim(oldest);
+        }
+
+        // Store old pages in version store (after trim so they survive).
         if !captured.is_empty() {
             self.versions.lock().unwrap().push(new_epoch, captured);
         }
 
         // ALWAYS update per-page epochs for every modified page.
-        // This is critical: a reader that registers between our capture
-        // check (active_readers == 0) and the epoch bump MUST see the
-        // correct page_epochs so it knows which pages need the version
-        // store. Without this, that reader would see page_epoch == 0
-        // for a page that was just modified and read stale/concurrent data.
+        // This is critical: a reader that registers between our commit
+        // and the epoch bump MUST see the correct page_epochs so it
+        // knows which pages need the version store.
         //
         // SAFETY: we hold write_mutex. Epoch readers load these
         // atomically and only act on pages whose epoch > snap_epoch.
@@ -418,28 +440,19 @@ impl<S: StorageData> ConcurrentRoot<S> {
             }
         }
 
-        // Trim version store.
-        if !dirty_pages.is_empty() {
-            let oldest = {
-                let epochs = self.reader_epochs.lock().unwrap();
-                epochs.keys().next().copied().unwrap_or(new_epoch)
-            };
-            self.versions.lock().unwrap().trim(oldest);
-        }
-
-        // Update storage length FIRST — readers snapshot len before meta,
-        // so the len must be >= what the meta references.
-        self.storage_len.store(new_len, Ordering::Release);
-
-        // Update committed meta (wrap in Arc for cheap reader clones).
+        // Update epoch, meta and storage_len under a single
+        // committed_meta lock so that begin_read_epoch always sees a
+        // consistent triple.  Page epochs are already updated above
+        // (under write_mutex) with Release stores; the mutex Acquire
+        // in begin_read_epoch establishes the happens-before that
+        // makes those stores visible to readers.
         {
             let meta = unsafe { &*self.root.get() }.committed_meta_clone();
-            *self.committed_meta.lock().unwrap() = Arc::new(meta);
+            let mut committed = self.committed_meta.lock().unwrap();
+            self.storage_len.store(new_len, Ordering::Release);
+            *committed = Arc::new(meta);
+            self.epoch.store(new_epoch, Ordering::Release);
         }
-
-        // Bump global epoch LAST — readers snapshot epoch first and use
-        // it to decide which pages need version-store fallback.
-        self.epoch.store(new_epoch, Ordering::Release);
     }
 
     // -- Accessors for DbImpl --
@@ -503,21 +516,20 @@ impl<S: StorageData> ConcurrentRoot<S> {
         let new_len = root.storage().len();
         let new_pages = new_len.div_ceil(1u64 << self.page_shift) as usize;
 
-        // Update committed meta (wrap in Arc for cheap reader clones).
-        *self.committed_meta.lock().unwrap() = Arc::new(root.committed_meta_clone());
-
-        // Update storage length.
-        self.storage_len.store(new_len, Ordering::Release);
-
-        // Reset page epochs (all pages are "committed at epoch 0").
+        // Reset page epochs FIRST (all pages are "committed at epoch 0").
         let page_epochs = unsafe { &mut *self.page_epochs.get() };
         page_epochs.resize_with(new_pages, || AtomicU64::new(0));
         for pe in page_epochs.iter() {
             pe.store(0, Ordering::Relaxed);
         }
 
-        // Reset epoch to 0 — no active versions.
-        self.epoch.store(0, Ordering::Release);
+        // Update all committed state atomically (see post_commit).
+        {
+            let mut committed = self.committed_meta.lock().unwrap();
+            *committed = Arc::new(root.committed_meta_clone());
+            self.storage_len.store(new_len, Ordering::Release);
+            self.epoch.store(0, Ordering::Release);
+        }
 
         // Clear version store.
         self.versions.lock().unwrap().entries.clear();

@@ -3220,7 +3220,6 @@ pub unsafe trait Tr {}
                     errors,
                     vec![
                         "/c/src/lib.rs:7: unsupported macro call `m!()`",
-                        "/c/src/lib.rs:8: unsupported trait `pub unsafe trait Tr {}`",
                         "/c/src/lib.rs:3: unsupported type `m!()`",
                         "/c/src/lib.rs:2: unsupported type `m!()`"
                     ]

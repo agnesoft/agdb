@@ -9,7 +9,7 @@ use test_db::TestDb;
 
 #[test]
 fn search_indexes() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().index("username").query(), 0);
 
     db.exec_mut(
@@ -37,7 +37,7 @@ fn search_indexes() {
 
 #[test]
 fn search_index_multiple_values() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().index("age").query(), 0);
 
     db.exec_mut(
@@ -62,7 +62,7 @@ fn search_index_multiple_values() {
 
 #[test]
 fn search_index_missing_value() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().index("age").query(), 0);
 
     db.exec_mut(
@@ -97,7 +97,7 @@ fn missing_index() {
 
 #[test]
 fn removed_index() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().index("username").query(), 0);
     db.exec_mut(QueryBuilder::remove().index("username").query(), 0);
 
@@ -150,7 +150,7 @@ fn wrong_condition() {
 
 #[test]
 fn search_index_where_key_value() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().index("age").query(), 0);
 
     db.exec_mut(
@@ -179,7 +179,7 @@ fn search_index_where_key_value() {
 
 #[test]
 fn search_index_where_multiple_conditions() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().index("role").query(), 0);
 
     db.exec_mut(
@@ -220,7 +220,7 @@ fn search_index_where_multiple_conditions() {
 
 #[test]
 fn search_index_where_or() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().index("role").query(), 0);
 
     db.exec_mut(
@@ -252,7 +252,7 @@ fn search_index_where_or() {
 
 #[test]
 fn search_index_where_not() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().index("age").query(), 0);
 
     db.exec_mut(
@@ -285,7 +285,7 @@ fn search_index_where_not() {
 
 #[test]
 fn search_index_where_node() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().index("tag").query(), 0);
 
     db.exec_mut(
@@ -309,7 +309,7 @@ fn search_index_where_node() {
 
 #[test]
 fn search_index_limit() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().index("age").query(), 0);
 
     db.exec_mut(
@@ -337,7 +337,7 @@ fn search_index_limit() {
 
 #[test]
 fn search_index_offset() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().index("age").query(), 0);
 
     db.exec_mut(
@@ -365,7 +365,7 @@ fn search_index_offset() {
 
 #[test]
 fn search_index_offset_limit() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().index("age").query(), 0);
 
     db.exec_mut(
@@ -394,7 +394,7 @@ fn search_index_offset_limit() {
 
 #[test]
 fn search_index_order_by() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().index("role").query(), 0);
 
     db.exec_mut(
@@ -421,7 +421,7 @@ fn search_index_order_by() {
 
 #[test]
 fn search_index_order_by_limit() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().index("role").query(), 0);
 
     db.exec_mut(
@@ -449,7 +449,7 @@ fn search_index_order_by_limit() {
 
 #[test]
 fn search_index_where_and_limit() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().index("role").query(), 0);
 
     db.exec_mut(
@@ -479,7 +479,7 @@ fn search_index_where_and_limit() {
 
 #[test]
 fn search_index_where_nested() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().index("role").query(), 0);
 
     db.exec_mut(
@@ -529,7 +529,7 @@ fn search_index_where_nested() {
 
 #[test]
 fn search_index_offset_where() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().index("role").query(), 0);
 
     db.exec_mut(
@@ -560,7 +560,7 @@ fn search_index_offset_where() {
 
 #[test]
 fn search_index_limit_where() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().index("role").query(), 0);
 
     db.exec_mut(
@@ -591,7 +591,7 @@ fn search_index_limit_where() {
 
 #[test]
 fn search_index_offset_limit_where() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().index("role").query(), 0);
 
     db.exec_mut(
@@ -623,7 +623,7 @@ fn search_index_offset_limit_where() {
 
 #[test]
 fn search_index_order_by_where() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().index("role").query(), 0);
 
     db.exec_mut(
@@ -665,7 +665,7 @@ fn search_index_order_by_where() {
 
 #[test]
 fn search_index_offset_limit_beyond_results() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().index("age").query(), 0);
     db.exec_mut(
         QueryBuilder::insert()

@@ -70,6 +70,22 @@ impl<P: Platform + Default> StorageData for AnyStorageImpl<P> {
         }
     }
 
+    fn supports_epoch_reads(&self) -> bool {
+        match self {
+            Self::MemoryMapped(s) => s.supports_epoch_reads(),
+            Self::Memory(s) => s.supports_epoch_reads(),
+            Self::File(s) => s.supports_epoch_reads(),
+        }
+    }
+
+    fn disable_spill(&mut self) {
+        match self {
+            Self::MemoryMapped(s) => s.disable_spill(),
+            Self::Memory(s) => s.disable_spill(),
+            Self::File(s) => s.disable_spill(),
+        }
+    }
+
     fn set_sync_mode(&mut self, mode: super::SyncMode) {
         match self {
             Self::MemoryMapped(s) => s.set_sync_mode(mode),

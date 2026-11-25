@@ -321,6 +321,19 @@ impl<S: StorageData> Root<S> {
         Ok(root)
     }
 
+    pub(crate) fn page_shift(&self) -> u32 {
+        self.overlay.shift()
+    }
+
+    /// Clone of the committed meta. Used by `ConcurrentRoot` to give
+    /// epoch-based readers an independent snapshot.
+    pub(crate) fn committed_meta_clone(&self) -> Meta {
+        match &self.meta {
+            Some(meta) => meta.clone(),
+            None => self.work.clone(),
+        }
+    }
+
     pub(crate) fn storage(&self) -> &S {
         &self.storage
     }

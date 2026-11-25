@@ -25,7 +25,7 @@ fn select_aliases_missing_alias() {
 
 #[test]
 fn select_aliases_ids() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
@@ -54,7 +54,7 @@ fn select_aliases_ids() {
 
 #[test]
 fn select_aliases_aliases() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
@@ -86,7 +86,7 @@ fn select_aliases_aliases() {
 
 #[test]
 fn select_aliases_search() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
 
     db.exec_mut(
         QueryBuilder::insert()
@@ -133,7 +133,7 @@ fn select_aliases_search() {
 
 #[test]
 fn select_aliases_search_alt() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
 
     db.exec_mut(
         QueryBuilder::insert()
@@ -183,7 +183,7 @@ fn select_all_aliases_empty() {
 
 #[test]
 fn select_all_aliases() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()

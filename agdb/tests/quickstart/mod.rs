@@ -5,7 +5,7 @@ use agdb::{Db, DbId, DbType, QueryBuilder};
 #[test]
 fn quickstart() -> Result<(), DbError> {
     let _test_file = TestFile::from("db_file.agdb");
-    let mut db = Db::new("db_file.agdb")?;
+    let db = Db::new("db_file.agdb")?;
 
     db.exec_mut(QueryBuilder::insert().nodes().aliases("users").query())?;
 

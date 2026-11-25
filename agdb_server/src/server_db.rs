@@ -189,7 +189,7 @@ pub(crate) async fn new(
 
 impl ServerDb {
     fn new(name: &str, token_expiry_seconds: u64) -> ServerResult<Self> {
-        let mut db = Db::new(name)?;
+        let db = Db::new(name)?;
         crate::utilities::log_migration(name, &db);
 
         db.transaction_mut(|t| -> ServerResult<()> {
@@ -2101,7 +2101,7 @@ mod tests {
             test_user(&db, "user").await?;
             // A dashboard saved before owners got their role edge.
             db.db
-                .write()
+                .read()
                 .await
                 .transaction_mut(|t| -> ServerResult<()> {
                     let id = t

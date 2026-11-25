@@ -28,15 +28,15 @@ pub(crate) const CLUSTER_LOG_FILE: &str = "agdb_server.log";
 pub(crate) async fn new(config: &Config) -> ServerResult<ClusterLog> {
     std::fs::create_dir_all(&config.data_dir)?;
     let file = format!("{}/{}", config.data_dir, CLUSTER_LOG_FILE);
-    let log = ClusterLog::new(&file).await?;
+    let log = ClusterLog::new(&file)?;
     log.0.write().await.set_storage_config(config.storage);
 
     Ok(log)
 }
 
 impl ClusterLog {
-    async fn new(name: &str) -> ServerResult<Self> {
-        let mut db = Db::new(name)?;
+    fn new(name: &str) -> ServerResult<Self> {
+        let db = Db::new(name)?;
         crate::utilities::log_migration(name, &db);
 
         db.transaction_mut(|t| -> ServerResult<()> {

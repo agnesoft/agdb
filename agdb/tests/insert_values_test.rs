@@ -10,7 +10,7 @@ use test_db::TestDb;
 
 #[test]
 fn insert_values_ids_rollback() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut_ids(QueryBuilder::insert().nodes().count(1).query(), &[1]);
     db.transaction_mut_error(
         |t| -> Result<(), DbError> {
@@ -64,7 +64,7 @@ fn insert_values_ids_rollback() {
 
 #[test]
 fn insert_values_ids() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut_ids(QueryBuilder::insert().nodes().count(2).query(), &[1, 2]);
     db.exec_mut(
         QueryBuilder::insert()
@@ -94,7 +94,7 @@ fn insert_values_ids() {
 
 #[test]
 fn insert_values_invalid_length() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut_error(
         QueryBuilder::insert()
             .values([[("key", "value").into()]])
@@ -106,7 +106,7 @@ fn insert_values_invalid_length() {
 
 #[test]
 fn insert_values_uniform_ids() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut_ids(
         QueryBuilder::insert()
             .nodes()
@@ -142,7 +142,7 @@ fn insert_values_uniform_ids() {
 
 #[test]
 fn insert_values_uniform_search() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().nodes().count(3).query(), 3);
     db.exec_mut(
         QueryBuilder::insert()
@@ -200,7 +200,7 @@ fn insert_values_uniform_search() {
 
 #[test]
 fn insert_values_search() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().nodes().count(3).query(), 3);
     db.exec_mut(QueryBuilder::insert().edges().from(1).to(3).query(), 1);
     db.exec_mut(
@@ -243,7 +243,7 @@ fn insert_values_search() {
 
 #[test]
 fn insert_values_search_alt() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().nodes().count(3).query(), 3);
     db.exec_mut(QueryBuilder::insert().edges().from(1).to(3).query(), 1);
     db.exec_mut(
@@ -287,7 +287,7 @@ fn insert_values_search_alt() {
 
 #[test]
 fn insert_values_search_invalid_length() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().nodes().count(3).query(), 3);
     db.exec_mut(QueryBuilder::insert().edges().from(1).to(3).query(), 1);
     db.exec_mut_error(
@@ -301,7 +301,7 @@ fn insert_values_search_invalid_length() {
 
 #[test]
 fn insert_values_overwrite() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
@@ -329,7 +329,7 @@ fn insert_values_overwrite() {
 
 #[test]
 fn insert_values_overwrite_transaction() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
@@ -364,7 +364,7 @@ fn insert_values_overwrite_transaction() {
 
 #[test]
 fn overwrite_empty_value() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().nodes().count(1).query(), 1);
     db.exec_mut(
         QueryBuilder::insert()
@@ -388,7 +388,7 @@ fn overwrite_empty_value() {
 
 #[test]
 fn amend_add_i64() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
@@ -416,7 +416,7 @@ fn amend_add_i64() {
 
 #[test]
 fn amend_add_i64_negative() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
@@ -444,7 +444,7 @@ fn amend_add_i64_negative() {
 
 #[test]
 fn amend_add_u64_saturating() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
@@ -473,7 +473,7 @@ fn amend_add_u64_saturating() {
 
 #[test]
 fn amend_add_f64() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
@@ -501,7 +501,7 @@ fn amend_add_f64() {
 
 #[test]
 fn amend_add_string() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
@@ -529,7 +529,7 @@ fn amend_add_string() {
 
 #[test]
 fn amend_add_vec_i64() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
@@ -557,7 +557,7 @@ fn amend_add_vec_i64() {
 
 #[test]
 fn amend_add_vec_u64() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
@@ -585,7 +585,7 @@ fn amend_add_vec_u64() {
 
 #[test]
 fn amend_add_vec_f64() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
@@ -613,7 +613,7 @@ fn amend_add_vec_f64() {
 
 #[test]
 fn amend_add_vec_string() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
@@ -647,7 +647,7 @@ fn amend_add_vec_string() {
 
 #[test]
 fn amend_add_bytes() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
@@ -675,7 +675,7 @@ fn amend_add_bytes() {
 
 #[test]
 fn amend_add_missing_key_inserts() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().nodes().count(1).query(), 1);
     db.exec_mut(
         QueryBuilder::insert()
@@ -697,7 +697,7 @@ fn amend_add_missing_key_inserts() {
 
 #[test]
 fn insert_values_new_empty_alias() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut_error(
         QueryBuilder::insert()
             .values([[("key", 1).into()]])
@@ -710,7 +710,7 @@ fn insert_values_new_empty_alias() {
 
 #[test]
 fn amend_add_new_element_creates() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut_ids(
         QueryBuilder::insert()
             .amend([[("counter", 5_i64).into()]])
@@ -731,7 +731,7 @@ fn amend_add_new_element_creates() {
 
 #[test]
 fn amend_add_type_mismatch_error() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
@@ -750,7 +750,7 @@ fn amend_add_type_mismatch_error() {
 
 #[test]
 fn amend_add_uniform() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
@@ -786,7 +786,7 @@ fn amend_add_uniform() {
 
 #[test]
 fn amend_add_with_search() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
@@ -815,7 +815,7 @@ fn amend_add_with_search() {
 
 #[test]
 fn amend_add_multiple_times() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
@@ -849,7 +849,7 @@ fn amend_add_multiple_times() {
 
 #[test]
 fn amend_remove_i64() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
@@ -877,7 +877,7 @@ fn amend_remove_i64() {
 
 #[test]
 fn amend_remove_u64_saturating() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
@@ -906,7 +906,7 @@ fn amend_remove_u64_saturating() {
 
 #[test]
 fn amend_remove_f64() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
@@ -934,7 +934,7 @@ fn amend_remove_f64() {
 
 #[test]
 fn amend_remove_string() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
@@ -963,7 +963,7 @@ fn amend_remove_string() {
 
 #[test]
 fn amend_remove_vec_i64() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
@@ -992,7 +992,7 @@ fn amend_remove_vec_i64() {
 
 #[test]
 fn amend_remove_vec_string() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
@@ -1024,7 +1024,7 @@ fn amend_remove_vec_string() {
 
 #[test]
 fn amend_remove_bytes_error() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
@@ -1043,7 +1043,7 @@ fn amend_remove_bytes_error() {
 
 #[test]
 fn amend_remove_missing_key_noop() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().nodes().count(1).query(), 1);
     // Remove from nonexistent key: should be a no-op (result 0)
     db.exec_mut(
@@ -1057,7 +1057,7 @@ fn amend_remove_missing_key_noop() {
 
 #[test]
 fn amend_remove_new_element_error() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut_error(
         QueryBuilder::remove()
             .amend([[("counter", 5_i64).into()]])
@@ -1069,7 +1069,7 @@ fn amend_remove_new_element_error() {
 
 #[test]
 fn amend_remove_type_mismatch_error() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
@@ -1088,7 +1088,7 @@ fn amend_remove_type_mismatch_error() {
 
 #[test]
 fn amend_remove_uniform() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
@@ -1124,7 +1124,7 @@ fn amend_remove_uniform() {
 
 #[test]
 fn amend_add_scalar_to_vec_i64() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
@@ -1152,7 +1152,7 @@ fn amend_add_scalar_to_vec_i64() {
 
 #[test]
 fn amend_add_scalar_to_vec_string() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
@@ -1186,7 +1186,7 @@ fn amend_add_scalar_to_vec_string() {
 
 #[test]
 fn amend_remove_scalar_from_vec_i64() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
@@ -1215,7 +1215,7 @@ fn amend_remove_scalar_from_vec_i64() {
 
 #[test]
 fn amend_remove_scalar_from_vec_string() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
@@ -1247,7 +1247,7 @@ fn amend_remove_scalar_from_vec_string() {
 
 #[test]
 fn amend_add_f64_with_i64() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
@@ -1275,7 +1275,7 @@ fn amend_add_f64_with_i64() {
 
 #[test]
 fn amend_add_f64_with_u64() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
@@ -1303,7 +1303,7 @@ fn amend_add_f64_with_u64() {
 
 #[test]
 fn amend_remove_f64_with_i64() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
@@ -1331,7 +1331,7 @@ fn amend_remove_f64_with_i64() {
 
 #[test]
 fn amend_remove_f64_with_u64() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
@@ -1359,7 +1359,7 @@ fn amend_remove_f64_with_u64() {
 
 #[test]
 fn amend_or_u64() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
@@ -1387,7 +1387,7 @@ fn amend_or_u64() {
 
 #[test]
 fn amend_or_i64() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
@@ -1415,7 +1415,7 @@ fn amend_or_i64() {
 
 #[test]
 fn amend_and_u64() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
@@ -1443,7 +1443,7 @@ fn amend_and_u64() {
 
 #[test]
 fn amend_and_i64() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
@@ -1471,7 +1471,7 @@ fn amend_and_i64() {
 
 #[test]
 fn amend_xor_u64() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
@@ -1499,7 +1499,7 @@ fn amend_xor_u64() {
 
 #[test]
 fn amend_xor_i64() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
@@ -1527,7 +1527,7 @@ fn amend_xor_i64() {
 
 #[test]
 fn amend_or_missing_key_inserts() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut_ids(QueryBuilder::insert().nodes().count(1).query(), &[1]);
     db.exec_mut(
         QueryBuilder::insert()
@@ -1549,7 +1549,7 @@ fn amend_or_missing_key_inserts() {
 
 #[test]
 fn amend_or_non_integer_falls_back_to_add() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
@@ -1577,7 +1577,7 @@ fn amend_or_non_integer_falls_back_to_add() {
 
 #[test]
 fn amend_or_uniform() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
@@ -1616,7 +1616,7 @@ fn amend_or_uniform() {
 
 #[test]
 fn amend_or_i64_with_u64() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
@@ -1644,7 +1644,7 @@ fn amend_or_i64_with_u64() {
 
 #[test]
 fn amend_or_u64_with_i64() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
@@ -1672,7 +1672,7 @@ fn amend_or_u64_with_i64() {
 
 #[test]
 fn amend_or_bytes() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
@@ -1700,7 +1700,7 @@ fn amend_or_bytes() {
 
 #[test]
 fn amend_and_bytes() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
@@ -1728,7 +1728,7 @@ fn amend_and_bytes() {
 
 #[test]
 fn amend_xor_bytes() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
@@ -1756,7 +1756,7 @@ fn amend_xor_bytes() {
 
 #[test]
 fn amend_or_bytes_different_lengths() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
@@ -1784,7 +1784,7 @@ fn amend_or_bytes_different_lengths() {
 
 #[test]
 fn amend_and_bytes_different_lengths() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
@@ -1813,7 +1813,7 @@ fn amend_and_bytes_different_lengths() {
 
 #[test]
 fn amend_xor_bytes_different_lengths() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
@@ -1844,7 +1844,7 @@ fn amend_xor_bytes_different_lengths() {
 
 #[test]
 fn remove_amend_or_u64() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
@@ -1872,7 +1872,7 @@ fn remove_amend_or_u64() {
 
 #[test]
 fn remove_amend_and_u64() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
@@ -1900,7 +1900,7 @@ fn remove_amend_and_u64() {
 
 #[test]
 fn remove_amend_xor_u64() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
@@ -1928,7 +1928,7 @@ fn remove_amend_xor_u64() {
 
 #[test]
 fn remove_amend_or_missing_key_is_noop() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut_ids(QueryBuilder::insert().nodes().count(1).query(), &[1]);
     db.exec_mut(
         QueryBuilder::remove()
@@ -1951,7 +1951,7 @@ fn remove_amend_or_missing_key_is_noop() {
 
 #[test]
 fn remove_amend_or_non_integer_falls_back_to_remove() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
@@ -1980,7 +1980,7 @@ fn remove_amend_or_non_integer_falls_back_to_remove() {
 
 #[test]
 fn remove_amend_or_uniform() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
@@ -2019,7 +2019,7 @@ fn remove_amend_or_uniform() {
 
 #[test]
 fn amend_add_vec_db_value() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
@@ -2066,7 +2066,7 @@ fn amend_add_vec_db_value() {
 
 #[test]
 fn amend_add_scalar_to_vec_db_value() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
@@ -2104,7 +2104,7 @@ fn amend_add_scalar_to_vec_db_value() {
 
 #[test]
 fn amend_remove_vec_db_value() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
@@ -2150,7 +2150,7 @@ fn amend_remove_vec_db_value() {
 
 #[test]
 fn amend_remove_scalar_from_vec_db_value() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
@@ -2192,7 +2192,7 @@ fn amend_remove_scalar_from_vec_db_value() {
 
 #[test]
 fn amend_or_vec_db_value_falls_back_to_add() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
@@ -2226,7 +2226,7 @@ fn amend_or_vec_db_value_falls_back_to_add() {
 
 #[test]
 fn remove_amend_or_vec_db_value_falls_back_to_remove() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
@@ -2264,7 +2264,7 @@ fn remove_amend_or_vec_db_value_falls_back_to_remove() {
 
 #[test]
 fn insert_select_vec_db_value_roundtrip() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     let items = DbValue::VecDbValue(vec![
         DbValue::I64(42),
         DbValue::String("hello".to_string()),

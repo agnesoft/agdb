@@ -76,6 +76,16 @@ impl<'a, Store: StorageData> TransactionMut<'a, Store> {
         Self { root, failed: None }
     }
 
+    /// Whether one of the transaction's queries failed.
+    pub(crate) fn failed(&self) -> bool {
+        self.failed.is_some()
+    }
+
+    /// Access to the writer for MVCC page capture before commit.
+    pub(crate) fn root_view(&self) -> &crate::storage::pages::Writer<'_, Store> {
+        &self.root.view
+    }
+
     /// Commits the transaction unless one of its queries failed: their
     /// writes may be partial so the transaction is dropped instead.
     pub(crate) fn commit(self) -> Result<(), DbError> {

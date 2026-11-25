@@ -9,7 +9,7 @@ use test_db::TestDb;
 
 #[test]
 fn insert_nodes_aliases_rollback() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.transaction_mut_error(
         |transaction| -> Result<(), DbError> {
             transaction.exec_mut(QueryBuilder::insert().nodes().aliases("alias").query())?;
@@ -25,7 +25,7 @@ fn insert_nodes_aliases_rollback() {
 
 #[test]
 fn insert_node_existing_alias() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut_ids(
         QueryBuilder::insert().nodes().aliases("alias").query(),
         &[1],
@@ -38,7 +38,7 @@ fn insert_node_existing_alias() {
 
 #[test]
 fn insert_nodes_aliases() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut_ids(
         QueryBuilder::insert()
             .nodes()
@@ -50,7 +50,7 @@ fn insert_nodes_aliases() {
 
 #[test]
 fn insert_nodes_empty_alias() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut_error(
         QueryBuilder::insert()
             .nodes()
@@ -63,7 +63,7 @@ fn insert_nodes_empty_alias() {
 
 #[test]
 fn insert_nodes_ids_empty_alias() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().nodes().aliases("alias").query(), 1);
     db.exec_mut_error(
         QueryBuilder::insert().nodes().ids(1).aliases("").query(),
@@ -74,13 +74,13 @@ fn insert_nodes_ids_empty_alias() {
 
 #[test]
 fn insert_nodes_count() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut_ids(QueryBuilder::insert().nodes().count(2).query(), &[1, 2]);
 }
 
 #[test]
 fn insert_nodes_aliases_values() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
@@ -113,7 +113,7 @@ fn insert_nodes_aliases_values() {
 
 #[test]
 fn insert_nodes_aliases_values_rollback() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.transaction_mut_error(
         |transaction| -> Result<(), DbError> {
             transaction
@@ -164,7 +164,7 @@ fn insert_nodes_aliases_values_rollback() {
 
 #[test]
 fn insert_nodes_aliases_values_uniform() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
@@ -194,7 +194,7 @@ fn insert_nodes_aliases_values_uniform() {
 
 #[test]
 fn insert_nodes_count_values_uniform() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
@@ -224,7 +224,7 @@ fn insert_nodes_count_values_uniform() {
 
 #[test]
 fn insert_nodes_values() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
@@ -256,7 +256,7 @@ fn insert_nodes_values() {
 
 #[test]
 fn insert_nodes_existing_aliases_values() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
@@ -298,7 +298,7 @@ fn insert_nodes_existing_aliases_values() {
 
 #[test]
 fn insert_nodes_aliases_values_mismatched_length() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut_error(
         QueryBuilder::insert()
             .nodes()
@@ -311,7 +311,7 @@ fn insert_nodes_aliases_values_mismatched_length() {
 
 #[test]
 fn insert_or_replace_insert_new() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().index("key").query(), 0);
     db.exec_mut_ids(
         QueryBuilder::insert()
@@ -325,7 +325,7 @@ fn insert_or_replace_insert_new() {
 
 #[test]
 fn insert_or_replace_insert_count() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().index("key").query(), 0);
     db.exec_mut_ids(
         QueryBuilder::insert()
@@ -339,7 +339,7 @@ fn insert_or_replace_insert_count() {
 
 #[test]
 fn insert_or_replace_existing() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().nodes().count(1).query(), 1);
     db.exec_mut_ids(
         QueryBuilder::insert()
@@ -353,7 +353,7 @@ fn insert_or_replace_existing() {
 
 #[test]
 fn insert_or_replace_with_new_alias() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().nodes().count(1).query(), 1);
     db.exec_mut_ids(
         QueryBuilder::insert()
@@ -369,7 +369,7 @@ fn insert_or_replace_with_new_alias() {
 
 #[test]
 fn insert_or_replace_update_alias() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert().nodes().aliases("my_alias").query(),
         1,
@@ -391,7 +391,7 @@ fn insert_or_replace_update_alias() {
 
 #[test]
 fn insert_or_replace_mismatch_length() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().nodes().count(2).query(), 2);
     db.exec_mut_error(
         QueryBuilder::insert()
@@ -405,7 +405,7 @@ fn insert_or_replace_mismatch_length() {
 
 #[test]
 fn insert_or_update_edge_id() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().nodes().count(2).query(), 2);
     db.exec_mut(QueryBuilder::insert().edges().from(1).to(2).query(), 1);
     db.exec_mut_error(
@@ -416,7 +416,7 @@ fn insert_or_update_edge_id() {
 
 #[test]
 fn insert_aliases_and_normal_nodes() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
@@ -433,7 +433,7 @@ fn insert_aliases_and_normal_nodes() {
 
 #[test]
 fn insert_nodes_ids_values_uniform() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().nodes().count(2).query(), 2);
     db.exec_mut(
         QueryBuilder::insert()

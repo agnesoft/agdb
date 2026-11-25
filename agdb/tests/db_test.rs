@@ -120,7 +120,7 @@ fn data_persistence() {
     ];
 
     {
-        let mut db = Db::new(test_file.file_name()).unwrap();
+        let db = Db::new(test_file.file_name()).unwrap();
         db.exec_mut(
             QueryBuilder::insert()
                 .nodes()
@@ -203,7 +203,7 @@ fn data_remove_persistence() {
     let test_file = TestFile::new();
 
     {
-        let mut db = Db::new(test_file.file_name()).unwrap();
+        let db = Db::new(test_file.file_name()).unwrap();
         db.exec_mut(
             QueryBuilder::insert()
                 .nodes()
@@ -362,7 +362,7 @@ fn memory_backup() {
     let test_file = TestFile::new();
 
     {
-        let mut db = DbMemory::new("memdb").unwrap();
+        let db = DbMemory::new("memdb").unwrap();
         db.exec_mut(QueryBuilder::insert().nodes().count(1).query())
             .unwrap();
         db.backup(test_file.file_name()).unwrap();
@@ -389,7 +389,7 @@ fn filename() {
 
 #[test]
 fn optimize_storage() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
 
     db.exec_mut(
         QueryBuilder::insert()
@@ -415,7 +415,7 @@ fn optimize_storage() {
 
 #[test]
 fn rename_memory() {
-    let mut db = DbMemory::new("memdb").unwrap();
+    let db = DbMemory::new("memdb").unwrap();
     db.rename("mydb").unwrap();
     assert_eq!(db.filename(), "mydb");
 }
@@ -424,7 +424,7 @@ fn rename_memory() {
 fn rename_mapped() {
     let test_file = TestFile::new();
     let test_file2 = TestFile::new();
-    let mut db = Db::new(test_file.file_name()).unwrap();
+    let db = Db::new(test_file.file_name()).unwrap();
     db.rename(test_file2.file_name()).unwrap();
     assert_eq!(db.filename(), test_file2.file_name());
 }
@@ -434,7 +434,7 @@ fn rename_file() {
     let test_file = TestFile::new();
     let test_file2 = TestFile::new();
     {
-        let mut db = DbFile::new(test_file.file_name()).unwrap();
+        let db = DbFile::new(test_file.file_name()).unwrap();
         db.exec_mut(QueryBuilder::insert().nodes().count(1).query())
             .unwrap();
         db.rename(test_file2.file_name()).unwrap();
@@ -456,7 +456,7 @@ fn rename_file() {
 
 #[test]
 fn copy_memory() {
-    let mut db = DbMemory::new("memdb").unwrap();
+    let db = DbMemory::new("memdb").unwrap();
     db.exec_mut(QueryBuilder::insert().nodes().aliases("root").query())
         .unwrap();
     let other = db.copy("mydb").unwrap();
@@ -474,7 +474,7 @@ fn copy_memory() {
 fn copy_mapped() {
     let test_file = TestFile::new();
     let test_file2 = TestFile::new();
-    let mut db = Db::new(test_file.file_name()).unwrap();
+    let db = Db::new(test_file.file_name()).unwrap();
     db.exec_mut(QueryBuilder::insert().nodes().aliases("root").query())
         .unwrap();
     let other = db.copy(test_file2.file_name()).unwrap();
@@ -492,7 +492,7 @@ fn copy_mapped() {
 fn copy_file() {
     let test_file = TestFile::new();
     let test_file2 = TestFile::new();
-    let mut db = DbFile::new(test_file.file_name()).unwrap();
+    let db = DbFile::new(test_file.file_name()).unwrap();
     db.exec_mut(QueryBuilder::insert().nodes().aliases("root").query())
         .unwrap();
     let other = db.copy(test_file2.file_name()).unwrap();
@@ -509,7 +509,7 @@ fn copy_file() {
 #[test]
 fn queries_as_reference() {
     let test_file = TestFile::new();
-    let mut db = DbFile::new(test_file.file_name()).unwrap();
+    let db = DbFile::new(test_file.file_name()).unwrap();
 
     let query = QueryBuilder::insert()
         .nodes()
@@ -588,7 +588,7 @@ fn queries_as_reference() {
 #[test]
 fn large_queries() {
     const COUNT: i64 = 10000;
-    let mut db = DbMemory::new("test").unwrap();
+    let db = DbMemory::new("test").unwrap();
     db.exec_mut(QueryBuilder::insert().nodes().count(COUNT as u64).query())
         .unwrap();
 
@@ -651,7 +651,7 @@ fn convert_db_v1() {
     let test_file = TestFile::new();
     std::fs::copy("tests/test_db_v1.agdb", test_file.file_name()).unwrap();
 
-    let mut db = Db::new(test_file.file_name()).unwrap();
+    let db = Db::new(test_file.file_name()).unwrap();
 
     assert_eq!(
         db.migration(),
@@ -799,7 +799,7 @@ fn db_any_struct() {
 
 #[test]
 fn with_data() {
-    let mut db = DbMemory::with_data(MemoryStorage::new("test").unwrap()).unwrap();
+    let db = DbMemory::with_data(MemoryStorage::new("test").unwrap()).unwrap();
     db.exec_mut(QueryBuilder::insert().nodes().count(1).query())
         .unwrap();
     let count = db
@@ -834,7 +834,7 @@ fn using_ref_insert_element() {
         }
     }
 
-    let mut db = DbMemory::new("test").unwrap();
+    let db = DbMemory::new("test").unwrap();
     let s = S {};
     db.exec_mut(QueryBuilder::insert().element(&s).query())
         .unwrap();
@@ -844,7 +844,7 @@ fn using_ref_insert_element() {
 
 #[test]
 fn rollback_after_replace() -> Result<(), agdb::DbError> {
-    let mut db = DbMemory::new("test")?;
+    let db = DbMemory::new("test")?;
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
@@ -880,7 +880,7 @@ fn rollback_after_replace() -> Result<(), agdb::DbError> {
 #[test]
 fn file_db_storage_config() -> Result<(), agdb::DbError> {
     let test_file = TestFile::new();
-    let mut db = DbFile::new(test_file.file_name())?;
+    let db = DbFile::new(test_file.file_name())?;
     assert_eq!(db.storage_config(), agdb::StorageConfig::default());
     let config = agdb::StorageConfig {
         sync_mode: agdb::SyncMode::Strict,
@@ -898,7 +898,7 @@ fn file_db_storage_config() -> Result<(), agdb::DbError> {
 #[test]
 fn file_db_sync() -> Result<(), agdb::DbError> {
     let test_file = TestFile::new();
-    let mut db = DbFile::new(test_file.file_name())?;
+    let db = DbFile::new(test_file.file_name())?;
 
     assert_eq!(db.sync_mode(), agdb::SyncMode::None);
 

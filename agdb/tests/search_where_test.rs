@@ -12,7 +12,7 @@ use test_db::TestDb;
 
 #[track_caller]
 fn create_db() -> TestDb {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     //1, 2, 3
     db.exec_mut(
         QueryBuilder::insert()
@@ -477,7 +477,7 @@ fn search_from_to_where() {
 
 #[test]
 fn search_from_to_where_filter() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
@@ -745,7 +745,7 @@ fn not_beyond_or() {
 
 #[test]
 fn search_where_vec_db_value_contains() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().nodes().aliases(["root"]).query(), 1);
 
     let nodes = db.exec_mut_result(QueryBuilder::insert().nodes().count(3).query());
@@ -826,7 +826,7 @@ fn search_where_vec_db_value_contains() {
 
 #[test]
 fn search_where_vec_db_value_starts_with() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().nodes().aliases(["root"]).query(), 1);
 
     let nodes = db.exec_mut_result(QueryBuilder::insert().nodes().count(2).query());
@@ -899,7 +899,7 @@ fn search_where_vec_db_value_starts_with() {
 
 #[test]
 fn search_where_vec_db_value_ends_with() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().nodes().aliases(["root"]).query(), 1);
 
     let nodes = db.exec_mut_result(QueryBuilder::insert().nodes().count(2).query());

@@ -8,7 +8,7 @@ use test_db::TestDb;
 
 #[test]
 fn insert_aliases_of() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().nodes().count(2).query(), 2);
     db.exec_mut(
         QueryBuilder::insert()
@@ -21,7 +21,7 @@ fn insert_aliases_of() {
 
 #[test]
 fn insert_aliases_of_alias() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().nodes().aliases("alias").query(), 1);
     db.exec_mut(QueryBuilder::insert().nodes().count(1).query(), 1);
     db.exec_mut(
@@ -35,7 +35,7 @@ fn insert_aliases_of_alias() {
 
 #[test]
 fn insert_aliases_rollback() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().nodes().aliases("alias").query(), 1);
     db.exec_mut(QueryBuilder::insert().nodes().count(1).query(), 1);
     db.transaction_mut_error(
@@ -61,7 +61,7 @@ fn insert_aliases_rollback() {
 
 #[test]
 fn insert_aliases_moved_alias_rollback() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert().nodes().aliases(["a", "b"]).query(),
         2,
@@ -80,7 +80,7 @@ fn insert_aliases_moved_alias_rollback() {
 
 #[test]
 fn insert_aliases_edge() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().nodes().count(2).query(), 2);
     db.exec_mut(QueryBuilder::insert().edges().from(1).to(2).query(), 1);
     db.exec_mut_error(
@@ -95,7 +95,7 @@ fn insert_aliases_edge() {
 
 #[test]
 fn insert_aliases_same_alias() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().nodes().aliases("a").query(), 1);
     db.exec_mut(QueryBuilder::insert().aliases("a").ids(1).query(), 1);
     db.exec_ids(QueryBuilder::select().ids("a").query(), &[1]);
@@ -103,7 +103,7 @@ fn insert_aliases_same_alias() {
 
 #[test]
 fn insert_aliases_empty_alias() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().nodes().count(1).query(), 1);
     db.exec_mut_error(
         QueryBuilder::insert().aliases(String::new()).ids(1).query(),
@@ -113,7 +113,7 @@ fn insert_aliases_empty_alias() {
 
 #[test]
 fn insert_aliases_ids_mismatched_length() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut_error(
         QueryBuilder::insert()
             .aliases(String::new())
@@ -125,7 +125,7 @@ fn insert_aliases_ids_mismatched_length() {
 
 #[test]
 fn insert_aliases_after_alias_churn() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     let stable: Vec<String> = (0..40).map(|i| format!("stable-{i}")).collect();
     db.exec_mut(QueryBuilder::insert().nodes().aliases(stable).query(), 40);
 

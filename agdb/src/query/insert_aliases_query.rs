@@ -109,7 +109,7 @@ mod tests {
     #[test]
     fn search_query_aliases() {
         let test_file = TestFile::new();
-        let mut db = Db::new(test_file.file_name()).unwrap();
+        let db = Db::new(test_file.file_name()).unwrap();
 
         db.exec_mut(&crate::InsertNodesQuery {
             count: 2,
@@ -139,7 +139,7 @@ mod tests {
     #[test]
     fn search_query_aliases_length_mismatch() {
         let test_file = TestFile::new();
-        let mut db = Db::new(test_file.file_name()).unwrap();
+        let db = Db::new(test_file.file_name()).unwrap();
 
         db.exec_mut(&crate::InsertNodesQuery {
             count: 2,

@@ -71,17 +71,17 @@ impl TestDb {
     }
 
     #[track_caller]
-    pub fn exec_mut<T: QueryMut>(&mut self, query: T, result: u64) {
+    pub fn exec_mut<T: QueryMut>(&self, query: T, result: u64) {
         assert_eq!(self.db.exec_mut(query).unwrap().result, result);
     }
 
     #[track_caller]
-    pub fn exec_mut_result<T: QueryMut>(&mut self, query: T) -> QueryResult {
+    pub fn exec_mut_result<T: QueryMut>(&self, query: T) -> QueryResult {
         self.db.exec_mut(query).unwrap()
     }
 
     #[track_caller]
-    pub fn exec_mut_ids<T: QueryMut>(&mut self, query: T, ids: &[i64]) {
+    pub fn exec_mut_ids<T: QueryMut>(&self, query: T, ids: &[i64]) {
         assert_eq!(
             self.db
                 .exec_mut(query)
@@ -95,13 +95,13 @@ impl TestDb {
     }
 
     #[track_caller]
-    pub fn exec_mut_error<T: QueryMut>(&mut self, query: T, error: &str) {
+    pub fn exec_mut_error<T: QueryMut>(&self, query: T, error: &str) {
         assert_eq!(self.db.exec_mut(query).unwrap_err().description, error);
     }
 
     #[track_caller]
     pub fn transaction_mut<T, E: From<DbError> + std::fmt::Debug>(
-        &mut self,
+        &self,
         f: impl FnMut(&mut DbTransactionMut) -> Result<T, E>,
     ) {
         self.db.transaction_mut(f).unwrap();
@@ -112,7 +112,7 @@ impl TestDb {
         T: std::fmt::Debug,
         E: From<DbError> + std::fmt::Debug + PartialEq,
     >(
-        &mut self,
+        &self,
         f: impl FnMut(&mut DbTransactionMut) -> Result<T, E>,
         error: E,
     ) {

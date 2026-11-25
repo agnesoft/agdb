@@ -20,6 +20,12 @@ pub struct MemoryStorageImpl<P: Platform> {
     platform: Arc<P>,
     buffer: Vec<u8>,
     name: String,
+    /// Overlay limit for the page Writer. Defaults to
+    /// `DEFAULT_OVERLAY_LIMIT`. The MVCC layer sets it to `u64::MAX`
+    /// to disable spills (MemoryStorage has no WAL for recovery).
+    /// The public `set_overlay_limit` is a no-op — only the internal
+    /// `set_internal_overlay_limit` changes this.
+    overlay_limit: u64,
 }
 
 /// The [`MemoryStorageImpl`] on the production [`PlatformImpl`].
@@ -39,12 +45,14 @@ impl<P: Platform> MemoryStorageImpl<P> {
             platform,
             buffer,
             name: name.to_string(),
+            overlay_limit: super::DEFAULT_OVERLAY_LIMIT,
         }
     }
 
     pub(crate) fn bytes(&self) -> &[u8] {
         &self.buffer
     }
+
 
     /// Constructs the storage `name` loading the file `name` from the file
     /// system of the `platform` if it exists, see [`StorageData::new()`].
@@ -115,6 +123,18 @@ impl<P: Platform + Default> StorageData for MemoryStorageImpl<P> {
     fn resize(&mut self, new_len: u64) -> Result<(), DbError> {
         self.buffer.resize(new_len as usize, 0);
         Ok(())
+    }
+
+    fn overlay_limit(&self) -> u64 {
+        self.overlay_limit
+    }
+
+    fn supports_epoch_reads(&self) -> bool {
+        true
+    }
+
+    fn disable_spill(&mut self) {
+        self.overlay_limit = u64::MAX;
     }
 
     fn write(&mut self, pos: u64, bytes: &[u8]) -> Result<(), DbError> {

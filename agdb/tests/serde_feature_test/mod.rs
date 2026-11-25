@@ -21,7 +21,7 @@ fn serialize_deserialize() {
     .unwrap();
     let select_query_json = serde_json::to_string(&QueryBuilder::select().ids(1).query()).unwrap();
 
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     let insert_query: InsertNodesQuery = serde_json::from_str(&insert_query_json).unwrap();
     let select_query: SelectValuesQuery = serde_json::from_str(&select_query_json).unwrap();
 
@@ -141,7 +141,7 @@ fn serialize_deserialize_vec_db_value() {
         DbValue::U64(99),
     ]);
 
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()

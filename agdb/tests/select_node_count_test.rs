@@ -14,7 +14,7 @@ fn select_node_count_empty() {
 
 #[test]
 fn select_node_count() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
 
     db.exec_mut(QueryBuilder::insert().nodes().count(5).query(), 5);
 
@@ -25,7 +25,7 @@ fn select_node_count() {
 
 #[test]
 fn select_node_count_after_removal() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
 
     db.exec_mut(QueryBuilder::insert().nodes().count(5).query(), 5);
     db.exec_mut(QueryBuilder::remove().ids([2, 4]).query(), 2);

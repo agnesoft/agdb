@@ -7,14 +7,14 @@ use test_db::TestDb;
 
 #[test]
 fn select_ids_aliases() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().nodes().aliases("alias").query(), 1);
     db.exec_ids(QueryBuilder::select().ids("alias").query(), &[1]);
 }
 
 #[test]
 fn select_from_ids() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
@@ -60,7 +60,7 @@ fn select_invalid_ids() {
 
 #[test]
 fn select_from_search() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
 
     db.exec_mut(
         QueryBuilder::insert()
@@ -88,7 +88,7 @@ fn select_from_search() {
 
 #[test]
 fn select_embedded_search() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
 
     db.exec_mut(
         QueryBuilder::insert()

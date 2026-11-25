@@ -7,13 +7,13 @@ use test_db::TestDb;
 
 #[test]
 fn insert_empty_index() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().index("username").query(), 0);
 }
 
 #[test]
 fn insert_index_with_existing_data() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
@@ -40,7 +40,7 @@ fn insert_index_with_existing_data() {
 
 #[test]
 fn insert_existing_index() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().index("username").query(), 0);
     db.exec_mut_error(
         QueryBuilder::insert().index("username").query(),
@@ -50,7 +50,7 @@ fn insert_existing_index() {
 
 #[test]
 fn insert_index_rollback() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.transaction_mut_error(
         |t| {
             t.exec_mut(QueryBuilder::insert().index("username").query())?;
@@ -74,7 +74,7 @@ fn insert_index_rollback() {
 
 #[test]
 fn insert_indexed_value() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().index("username").query(), 0);
     db.exec_mut(QueryBuilder::insert().nodes().count(1).query(), 1);
     db.exec_mut(
@@ -88,7 +88,7 @@ fn insert_indexed_value() {
 
 #[test]
 fn update_indexed_value() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().index("username").query(), 0);
     db.exec_mut(
         QueryBuilder::insert()
@@ -108,7 +108,7 @@ fn update_indexed_value() {
 
 #[test]
 fn update_indexed_value_rollback() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().index("username").query(), 0);
     db.exec_mut(
         QueryBuilder::insert()

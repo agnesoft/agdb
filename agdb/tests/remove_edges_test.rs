@@ -8,7 +8,7 @@ use test_db::TestDb;
 
 #[test]
 fn remove_edges_rollback() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().nodes().aliases("alias1").query(), 1);
     db.exec_mut(QueryBuilder::insert().nodes().count(1).query(), 1);
     db.exec_mut(
@@ -27,7 +27,7 @@ fn remove_edges_rollback() {
 
 #[test]
 fn remove_edges() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().nodes().aliases("alias1").query(), 1);
     db.exec_mut(QueryBuilder::insert().nodes().count(1).query(), 1);
     db.exec_mut(
@@ -43,13 +43,13 @@ fn remove_edges() {
 
 #[test]
 fn remove_missing_edges() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::remove().ids(-3).query(), 0);
 }
 
 #[test]
 fn remove_missing_edges_rollback() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.transaction_mut_error(
         |transaction| -> Result<(), DbError> {
             let query = QueryBuilder::remove().ids(-3).query();
@@ -62,7 +62,7 @@ fn remove_missing_edges_rollback() {
 
 #[test]
 fn remove_edges_search() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().nodes().count(2).query(), 2);
     db.exec_mut_ids(QueryBuilder::insert().edges().from(1).to(2).query(), &[-1]);
 
@@ -77,6 +77,6 @@ fn remove_edges_search() {
 
 #[test]
 fn remove_min_id() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::remove().ids(i64::MIN).query(), 0);
 }

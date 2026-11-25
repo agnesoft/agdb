@@ -58,7 +58,7 @@ pub(super) enum Op {
 }
 
 impl Op {
-    pub(super) fn run<S: StorageData>(&self, db: &mut DbImpl<S>) -> Result<QueryResult, DbError> {
+    pub(super) fn run<S: StorageData>(&self, db: &DbImpl<S>) -> Result<QueryResult, DbError> {
         db.transaction_mut(|t| self.exec(t))
     }
 
@@ -657,7 +657,7 @@ impl Run {
     }
 
     /// Runs the next op on the `db` and checks it holds the model after it.
-    pub(super) fn step<S: StorageData>(&mut self, db: &mut DbImpl<S>) {
+    pub(super) fn step<S: StorageData>(&mut self, db: &DbImpl<S>) {
         let op = self.op();
         let result = op.run(db);
         self.apply(&op, &result);

@@ -8,7 +8,7 @@ use test_db::TestDb;
 
 #[test]
 fn select_keys_ids() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
@@ -38,7 +38,7 @@ fn select_keys_ids() {
 
 #[test]
 fn select_keys_no_keys() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().nodes().aliases("alias").query(), 1);
     db.exec_elements(
         QueryBuilder::select().keys().ids("alias").query(),
@@ -53,7 +53,7 @@ fn select_keys_no_keys() {
 
 #[test]
 fn select_keys_search() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
 
     db.exec_mut(
         QueryBuilder::insert()
@@ -114,7 +114,7 @@ fn select_keys_search() {
 
 #[test]
 fn select_keys_search_alt() {
-    let mut db = TestDb::new();
+    let db = TestDb::new();
 
     db.exec_mut(
         QueryBuilder::insert()

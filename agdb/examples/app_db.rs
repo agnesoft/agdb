@@ -7,7 +7,7 @@ use agdb::QueryBuilder;
 
 fn main() -> Result<(), DbError> {
     // Creates in memory database.
-    let mut db = DbMemory::new("agdb_example")?;
+    let db = DbMemory::new("agdb_example")?;
 
     // Inserts root node for users with an alias. You can loosely
     // think of it akin to a table in relational databases.

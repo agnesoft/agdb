@@ -1,5 +1,6 @@
 pub(crate) mod alloc;
 pub mod any_storage;
+pub(crate) mod concurrent_root;
 pub mod file_storage;
 pub mod file_storage_memory_mapped;
 pub mod memory_storage;
@@ -130,6 +131,19 @@ pub trait StorageData: Sized {
     fn overlay_limit(&self) -> u64 {
         DEFAULT_OVERLAY_LIMIT
     }
+
+    /// Whether this storage supports epoch-based concurrent reads
+    /// (lock-free readers). Returns `false` by default; `MemoryStorage`
+    /// returns `true`.
+    fn supports_epoch_reads(&self) -> bool {
+        false
+    }
+
+    /// Disables the page-overlay spill so that the committed buffer
+    /// always holds committed data. Used by the MVCC layer when
+    /// `supports_epoch_reads()` returns `true`. The default is a
+    /// no-op — file-backed storages rely on the WAL for recovery.
+    fn disable_spill(&mut self) {}
 
     /// Sets the sync mode for this storage. The default implementation
     /// does nothing which is appropriate for in-memory storages.

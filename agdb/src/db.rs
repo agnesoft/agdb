@@ -25,6 +25,7 @@ use crate::query::QueryMut;
 use crate::storage::StorageConfig;
 use crate::storage::SyncMode;
 use crate::storage::any_storage::AnyStorage;
+use crate::storage::concurrent_root::ConcurrentRoot;
 use crate::storage::file_storage::FileStorage;
 use crate::storage::file_storage_memory_mapped::FileStorageMemoryMapped;
 use crate::storage::memory_storage::MemoryStorage;
@@ -32,7 +33,6 @@ use crate::storage::pages::Reader;
 use crate::storage::root::Format;
 use crate::storage::root::Layout;
 use crate::storage::root::Root;
-use crate::transaction::ReadView;
 
 /// Version of the database format. A database of an older version is
 /// migrated when opened and a newer one is refused.
@@ -44,7 +44,7 @@ pub const DB_VERSION: u64 = 2;
 /// # let _test_file = agdb::test_utilities::test_file::TestFile::from("db1.agdb");
 /// use agdb::Db;
 ///
-/// let mut db = Db::new("db1.agdb").unwrap();
+/// let db = Db::new("db1.agdb").unwrap();
 /// ```
 ///
 /// This will try to create or load the database at the given file path.
@@ -76,7 +76,7 @@ pub const DB_VERSION: u64 = 2;
 /// # let _test_file = agdb::test_utilities::test_file::TestFile::from("db2.agdb");
 /// use agdb::{Db, QueryBuilder, DbError};
 ///
-/// let mut db = Db::new("db2.agdb").unwrap();
+/// let db = Db::new("db2.agdb").unwrap();
 ///
 /// // Insert single node
 /// db.exec_mut(QueryBuilder::insert().nodes().count(1).query()).unwrap();
@@ -138,7 +138,7 @@ pub const DB_VERSION: u64 = 2;
 /// WAL file. The WAL is then purged on commit of a transaction (all queries are
 /// transactional even if the transaction is not explicitly used).
 pub struct DbImpl<Store: StorageData> {
-    root: Root<Store>,
+    root: ConcurrentRoot<Store>,
     migration: Option<DbMigration>,
 }
 
@@ -208,19 +208,22 @@ impl<Store: StorageData> DbImpl<Store> {
     /// ```
     /// use agdb::{DbMemory, MemoryStorage, StorageData};
     ///
-    /// let mut db = DbMemory::with_data(MemoryStorage::new("test").unwrap()).unwrap();
+    /// let db = DbMemory::with_data(MemoryStorage::new("test").unwrap()).unwrap();
     /// ```
     pub fn with_data(data: Store) -> Result<Self, DbError> {
+        let epoch_reads = data.supports_epoch_reads();
+
         if let Format::Legacy(_) = Format::detect(&Reader::new(&data))? {
             let (root, migration) = rebuild::migrate(data)?;
             return Ok(Self {
-                root,
+                root: ConcurrentRoot::new(root, epoch_reads),
                 migration: Some(migration),
             });
         }
 
+        let root = Root::open(data, Layout::default())?;
         Ok(Self {
-            root: Root::open(data, Layout::default())?,
+            root: ConcurrentRoot::new(root, epoch_reads),
             migration: None,
         })
     }
@@ -282,7 +285,7 @@ impl<Store: StorageData> DbImpl<Store> {
     /// It runs the query as a transaction and returns either the result or
     /// error describing what went wrong (e.g. query error, logic error, data
     /// error etc.).
-    pub fn exec_mut<T: QueryMut>(&mut self, query: T) -> Result<QueryResult, DbError> {
+    pub fn exec_mut<T: QueryMut>(&self, query: T) -> Result<QueryResult, DbError> {
         self.transaction_mut(|transaction| transaction.exec_mut(query))
     }
 
@@ -304,14 +307,14 @@ impl<Store: StorageData> DbImpl<Store> {
     /// used storage segments together. In long running programs it might
     /// be desired to perform the storage file optimization without fully shutting
     /// down.
-    pub fn optimize_storage(&mut self) -> Result<(), DbError> {
-        rebuild::optimize(&mut self.root)
+    pub fn optimize_storage(&self) -> Result<(), DbError> {
+        self.root.with_root_mut(|root| rebuild::optimize(root))
     }
 
     /// Changes the name of the database changing also the names of the files
     /// (if the storage is file based).
-    pub fn rename(&mut self, filename: &str) -> Result<(), DbError> {
-        self.root.storage_mut().rename(filename)
+    pub fn rename(&self, filename: &str) -> Result<(), DbError> {
+        self.root.with_storage_mut(|s| s.rename(filename))
     }
 
     /// Executes immutable transaction. The transaction is running a closure `f`
@@ -323,16 +326,11 @@ impl<Store: StorageData> DbImpl<Store> {
     /// Read transactions cannot be committed or rolled back but their main function is to ensure
     /// that the database data does not change during their duration. Through its generic
     /// parameters it also allows transforming the query results into a type `T`.
-    pub fn transaction<T, E>(
+    pub fn transaction<T, E: From<DbError>>(
         &self,
         f: impl FnOnce(&Transaction<Store>) -> Result<T, E>,
     ) -> Result<T, E> {
-        let transaction = match self.root.read() {
-            Ok((reader, meta)) => Transaction::new(ReadView::Committed(reader), meta),
-            Err(error) => Transaction::failed(Reader::new(self.root.storage()), error),
-        };
-
-        f(&transaction)
+        self.root.transaction(f)
     }
 
     /// Executes mutable transaction. The transaction is running a closure `f`
@@ -352,20 +350,17 @@ impl<Store: StorageData> DbImpl<Store> {
     /// Through its generic parameters the transaction also allows transforming the query
     /// results into a type `T`.
     pub fn transaction_mut<T, E: From<DbError>>(
-        &mut self,
+        &self,
         f: impl FnOnce(&mut TransactionMut<Store>) -> Result<T, E>,
     ) -> Result<T, E> {
-        let mut transaction = TransactionMut::new(self.root.begin()?);
-        let result = f(&mut transaction)?;
-        transaction.commit()?;
-        Ok(result)
+        self.root.transaction_mut(f)
     }
 
     /// Ensures all buffered data reaches durable storage. Call before
     /// reading raw database files for snapshots or backups. This is
     /// independent of `sync_mode` and always issues the sync syscall.
-    pub fn sync(&mut self) -> Result<(), DbError> {
-        self.root.storage_mut().sync()
+    pub fn sync(&self) -> Result<(), DbError> {
+        self.root.with_storage_mut(|s| s.sync())
     }
 
     /// Returns the [`StorageConfig`] of this database.
@@ -378,10 +373,11 @@ impl<Store: StorageData> DbImpl<Store> {
 
     /// Sets the [`StorageConfig`] of this database, see [`SyncMode`] and
     /// [`StorageData::set_overlay_limit()`].
-    pub fn set_storage_config(&mut self, config: StorageConfig) {
-        let storage = self.root.storage_mut();
-        storage.set_sync_mode(config.sync_mode);
-        storage.set_overlay_limit(config.overlay_limit);
+    pub fn set_storage_config(&self, config: StorageConfig) {
+        self.root.with_storage_mut(|s| {
+            s.set_sync_mode(config.sync_mode);
+            s.set_overlay_limit(config.overlay_limit);
+        });
     }
 
     /// Returns the current [`SyncMode`] for this database.
@@ -390,8 +386,8 @@ impl<Store: StorageData> DbImpl<Store> {
     }
 
     /// Sets the sync mode for this database. See [`SyncMode`] for details.
-    pub fn set_sync_mode(&mut self, mode: SyncMode) {
-        self.root.storage_mut().set_sync_mode(mode);
+    pub fn set_sync_mode(&self, mode: SyncMode) {
+        self.root.with_storage_mut(|s| s.set_sync_mode(mode));
     }
 
     /// Returns the database size in bytes. Depending on the underlying storage
@@ -564,7 +560,7 @@ mod tests {
     }
 
     /// Fails the commit of a write transaction and its restore.
-    fn poison(db: &mut DbImpl<FailableFileStorage>, flags: &FailFlags) {
+    fn poison(db: &DbImpl<FailableFileStorage>, flags: &FailFlags) {
         let fail = flags.writes.clone();
         let _ = db.transaction_mut(|t| -> Result<(), DbError> {
             t.exec_mut(
@@ -582,7 +578,7 @@ mod tests {
     #[test]
     fn rollback_failure_with_successful_recovery() {
         let test_file = TestFile::new();
-        let (mut db, flags) = failable_db(test_file.file_name());
+        let (db, flags) = failable_db(test_file.file_name());
 
         db.exec_mut(
             QueryBuilder::insert()
@@ -618,7 +614,7 @@ mod tests {
     #[test]
     fn rollback_with_failing_storage_should_return_the_closure_error() {
         let test_file = TestFile::new();
-        let (mut db, flags) = failable_db(test_file.file_name());
+        let (db, flags) = failable_db(test_file.file_name());
 
         db.exec_mut(
             QueryBuilder::insert()
@@ -656,7 +652,7 @@ mod tests {
     #[test]
     fn poisoned_db_should_refuse_reads_until_a_write_restores_it() {
         let test_file = TestFile::new();
-        let (mut db, flags) = failable_db(test_file.file_name());
+        let (db, flags) = failable_db(test_file.file_name());
 
         db.exec_mut(
             QueryBuilder::insert()
@@ -667,7 +663,7 @@ mod tests {
         )
         .unwrap();
 
-        poison(&mut db, &flags);
+        poison(&db, &flags);
 
         let err = db
             .exec(QueryBuilder::select().ids("n").query())
@@ -691,7 +687,7 @@ mod tests {
         let db_path = test_file.file_name().clone();
 
         {
-            let (mut db, flags) = failable_db(&db_path);
+            let (db, flags) = failable_db(&db_path);
             db.exec_mut(
                 QueryBuilder::insert()
                     .nodes()
@@ -728,7 +724,7 @@ mod tests {
         let db_path = test_file.file_name().clone();
 
         {
-            let (mut db, flags) = failable_db(&db_path);
+            let (db, flags) = failable_db(&db_path);
             db.exec_mut(
                 QueryBuilder::insert()
                     .nodes()
@@ -738,7 +734,7 @@ mod tests {
             )
             .unwrap();
 
-            poison(&mut db, &flags);
+            poison(&db, &flags);
         }
 
         let (db, _) = failable_db(&db_path);
@@ -798,7 +794,7 @@ mod tests {
             ]
             .into_iter()
             .map(|storage| {
-                let mut db = open(storage, StorageConfig::default());
+                let db = open(storage, StorageConfig::default());
                 db.exec_mut(QueryBuilder::insert().index("label").query())
                     .unwrap();
                 db.exec_mut(
@@ -818,13 +814,13 @@ mod tests {
         }
 
         fn open<D: StorageData>(data: D, config: StorageConfig) -> DbImpl<D> {
-            let mut db = DbImpl::with_data(data).unwrap();
+            let db = DbImpl::with_data(data).unwrap();
             db.set_storage_config(config);
             db
         }
 
         fn inserted<D: StorageData>(data: D, config: StorageConfig) -> DbImpl<D> {
-            let mut db = open(data, config);
+            let db = open(data, config);
             db.exec_mut(
                 QueryBuilder::insert()
                     .nodes()
@@ -841,7 +837,7 @@ mod tests {
             db
         }
 
-        fn modify<D: StorageData>(db: &mut DbImpl<D>) -> Result<QueryResult, DbError> {
+        fn modify<D: StorageData>(db: &DbImpl<D>) -> Result<QueryResult, DbError> {
             db.exec_mut(
                 QueryBuilder::insert()
                     .values(vec![vec![("k", "modified").into()]])
@@ -939,7 +935,7 @@ mod tests {
             }
         }
 
-        fn optimized<D: StorageData>(mut db: DbImpl<D>, run: &Run) -> DbImpl<D> {
+        fn optimized<D: StorageData>(db: DbImpl<D>, run: &Run) -> DbImpl<D> {
             db.optimize_storage().unwrap();
             run.check(&db, "optimize_storage");
             db
@@ -1134,7 +1130,7 @@ mod tests {
             #[test]
             fn transaction_mut_failed_query_should_refuse_the_transaction() {
                 let platform = Arc::new(test_platform());
-                let mut db = inserted(file(&platform), StorageConfig::default());
+                let db = inserted(file(&platform), StorageConfig::default());
 
                 let err = db
                     .transaction_mut(|t| -> Result<(), DbError> {
@@ -1214,7 +1210,7 @@ mod tests {
             #[test]
             fn optimize_storage_failure_should_roll_back() {
                 let platform = Arc::new(test_platform());
-                let mut db = inserted(file(&platform), StorageConfig::default());
+                let db = inserted(file(&platform), StorageConfig::default());
                 let len = db.size();
                 fail_once(&platform, FsOp::Write, REBUILD);
 
@@ -1250,7 +1246,7 @@ mod tests {
         const LONG: &str = "longer than the 15 inline bytes";
 
         fn searched(platform: &Arc<TestPlatform>) -> DbImpl<FileStorageImpl<TestPlatform>> {
-            let mut db = open(file(platform), StorageConfig::default());
+            let db = open(file(platform), StorageConfig::default());
             db.exec_mut(
                 QueryBuilder::insert()
                     .nodes()
@@ -1551,7 +1547,7 @@ mod tests {
                 for nth in 0.. {
                     // GIVEN
                     let platform = Arc::new(test_platform());
-                    let mut db = searched(&platform);
+                    let db = searched(&platform);
                     let mut results = vec![None; nth];
                     results.extend([Some(ErrorKind::Other), None]);
                     platform.fs().set_io_errors(FsOp::Read, NAME, results);

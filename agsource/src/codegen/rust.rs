@@ -866,6 +866,7 @@ enum Empty {}
     }
 }
 trait Empty {}
+unsafe trait U {}
 ";
 
             assert_eq!(print(source), source);
@@ -882,6 +883,7 @@ trait Empty {}
     }
 }
 impl S {}
+unsafe impl U {}
 ";
 
             assert_eq!(print(source), source);

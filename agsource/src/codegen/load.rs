@@ -1478,7 +1478,7 @@ mod tests {
     fn expr_paths(expr: &Expr) -> Vec<(String, Target)> {
         match expr {
             Expr::Path(p) => vec![named(p)],
-            Expr::Block(b) => block_paths(b),
+            Expr::Block(b) | Expr::Unsafe(b) => block_paths(b),
             Expr::If {
                 cond,
                 then_branch,

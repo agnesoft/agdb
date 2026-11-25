@@ -54,7 +54,7 @@ fn matches(path: &str, input: &str) -> bool {
 /// project to every project it depends on.
 pub(crate) fn graph(projects: &[Project]) -> Result<DbMemory, CIError> {
     // DbMemory loads an existing file of the given name, an empty name cannot be one.
-    let mut db = DbMemory::new("")?;
+    let db = DbMemory::new("")?;
     db.transaction_mut(|t| -> Result<(), DbError> {
         t.exec_mut(
             QueryBuilder::insert()
